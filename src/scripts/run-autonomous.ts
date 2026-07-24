@@ -24,13 +24,18 @@ import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
+import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { createDefaultPersonas } from "../personas/registry.js";
 import { readOfflineEvents } from "../runtime/data-source.js";
 
-// The universe the momentum bots watch (the Day Trader's big-tech focus).
+// The universe the bots watch (the Day Trader's big-tech focus).
 const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
 const OFFLINE_STARTING_CASH = 1_000_000;
+const ALPACA_DATA_BASE_URL = "https://data.alpaca.markets";
+const EVAL_INTERVAL_MS = 15_000;
+const NEWS_POLL_MS = 60_000;
 
 function enabledIds(): string[] {
   return (process.env.SKYNET_AUTONOMOUS_BOTS ?? "day-trader").split(",").map((s) => s.trim());
@@ -124,6 +129,28 @@ async function runLive(): Promise<void> {
   }
   const risk = { maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03") };
   const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
+  const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
+  const universeSet = new Set(UNIVERSE);
+
+  // News → sentiment, polled for the universe (news is low-frequency; a short poll is plenty).
+  const newsClient = new AlpacaNewsClient(
+    new FetchAlpacaTradingTransport({
+      baseUrl: ALPACA_DATA_BASE_URL,
+      apiKey: dataCreds.apiKey,
+      apiSecret: dataCreds.apiSecret,
+    }),
+  );
+  const pollNews = async () => {
+    try {
+      for (const article of await newsClient.getNews(UNIVERSE)) {
+        sentiment.ingest(article, universeSet);
+      }
+    } catch (error) {
+      console.error("[news] poll failed:", error);
+    }
+  };
+  await pollNews();
+  setInterval(() => void pollNews(), NEWS_POLL_MS);
 
   const traders = bots.map((bot) => ({
     bot,
@@ -163,7 +190,7 @@ async function runLive(): Promise<void> {
     }
     lastEval = now;
     evaluating = true;
-    const context = tracker.context(new Date(now).toISOString());
+    const context = sentiment.overlay(tracker.context(new Date(now).toISOString()));
     for (const { bot, trader } of traders) {
       try {
         await trader.evaluate(context);

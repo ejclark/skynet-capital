@@ -21,6 +21,15 @@ Knobs:
 | `SKYNET_AUTONOMOUS_BOTS` | `day-trader` | Comma-separated persona ids to enable |
 | `SKYNET_MAX_POSITION_PCT` | `0.03` | Max single position as a fraction of equity |
 | `SKYNET_MOMENTUM_WINDOW` | `20` | Ticks in the momentum window |
+| `SKYNET_SENTIMENT_WINDOW` | `10` | Articles kept in the rolling sentiment window |
+
+Two live signals feed the personas: **momentum** (from the price stream) and **news sentiment**
+(from Alpaca news, scored and polled). That means the news-driven personas now act too — enable
+them by name, e.g.:
+
+```sh
+SKYNET_AUTONOMOUS_BOTS=day-trader,rumor-trader,news-fader npm run run:autonomous
+```
 
 Run it alongside `npm run serve:dashboard` (same machine or the deployed server) and watch the
 orders land on the dashboard live.
@@ -50,5 +59,7 @@ Everything above the broker is unit-tested with fakes (no network, no keys).
   bot and a small cap, widen once the loop behaves.
 - **Momentum is tick-based** in this first slice (simple and legible), not time-bar-based. Good
   enough to prove the loop; a bar-based signal is a natural refinement.
-- **News-driven personas** (News Fader, Retail, Rumor) stay idle until a sentiment feed is added —
-  that's the next signal source.
+- **News sentiment** is scored with a simple lexical scorer (`news/sentiment-scorer.ts`) — legible
+  and dependency-free, and swappable for an LLM scorer later since personas only consume the number.
+- News is **polled** (~60s) rather than streamed in this slice; Alpaca's news websocket is the
+  natural event-driven refinement.
