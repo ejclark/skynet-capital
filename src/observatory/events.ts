@@ -1,5 +1,6 @@
 import type { Side } from "../domain/types.js";
 import type { DashboardData } from "./dashboard-data.js";
+import type { ParticipantSnapshot } from "./participant-snapshot.js";
 
 /**
  * The realtime events the observatory reacts to. Two external sources (Alpaca fills and
@@ -12,6 +13,12 @@ import type { DashboardData } from "./dashboard-data.js";
 export type ObservatoryEvent =
   | { readonly type: "snapshot"; readonly data: DashboardData }
   | { readonly type: "price"; readonly symbol: string; readonly price: number; readonly at: string }
+  | {
+      /** A self-service account joined at runtime — append it without disturbing the rest. */
+      readonly type: "participant_added";
+      readonly participant: ParticipantSnapshot;
+      readonly at: string;
+    }
   | {
       readonly type: "fill";
       readonly participantId: string;

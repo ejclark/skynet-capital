@@ -43,6 +43,15 @@ export interface DataSource {
   loadParticipants(): Participant[];
   /** Start the realtime price/fill streams, pushing into `sink`. */
   startStreams(input: StartStreamsInput): void;
+  /**
+   * Start one account's fill stream — used when a participant is added at runtime. Live
+   * opens that account's trade_updates socket; offline is a no-op (replay covers all).
+   */
+  startParticipantStream(
+    participant: Participant,
+    sink: EventSink,
+    onStatus?: (channel: string, status: string) => void,
+  ): void;
 }
 
 export function resolveDataSource(env: Env): DataSource {
@@ -63,10 +72,26 @@ function liveDataSource(env: Env): DataSource {
       }),
     );
 
+  const startParticipantStream: DataSource["startParticipantStream"] = (
+    participant,
+    sink,
+    onStatus,
+  ) => {
+    new AlpacaTradeUpdatesStream({
+      participantId: participant.id,
+      apiKey: participant.credentials.apiKey,
+      apiSecret: participant.credentials.apiSecret,
+      baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
+      onEvent: sink,
+      onStatus: (status) => onStatus?.("trade-updates", status),
+    }).start();
+  };
+
   return {
     mode: "live",
     clientFactory,
     loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
+    startParticipantStream,
     startStreams: ({ participants, heldSymbols, sink, onStatus }) => {
       const dataCreds = participants[0]?.credentials;
       if (heldSymbols.length > 0 && dataCreds) {
@@ -83,14 +108,7 @@ function liveDataSource(env: Env): DataSource {
       }
 
       for (const participant of participants) {
-        new AlpacaTradeUpdatesStream({
-          participantId: participant.id,
-          apiKey: participant.credentials.apiKey,
-          apiSecret: participant.credentials.apiSecret,
-          baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
-          onEvent: sink,
-          onStatus: (status) => onStatus?.("trade-updates", status),
-        }).start();
+        startParticipantStream(participant, sink, onStatus);
       }
       onStatus?.("trade-updates", `subscribed ${participants.length} account(s)`);
     },
@@ -139,6 +157,8 @@ function offlineDataSource(env: Env): DataSource {
     mode: "offline",
     clientFactory,
     loadParticipants: () => specs.map(toParticipant),
+    // Offline replay emits every account's fills already; nothing to open per-account.
+    startParticipantStream: () => {},
     startStreams: ({ sink, onStatus }) => {
       new ReplayEventStream({
         events,
