@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/ejclark/skynet-capital/compare/v1.2.1...v1.3.0) (2026-07-24)
+
+
+### Features
+
+* **auth:** per-user Google/GitHub login with allowlist ([de3265f](https://github.com/ejclark/skynet-capital/commit/de3265f7db00e92def6f9ce0df78599f89ce8be4))
+
 ## [1.2.1](https://github.com/ejclark/skynet-capital/compare/v1.2.0...v1.2.1) (2026-07-24)
 
 
