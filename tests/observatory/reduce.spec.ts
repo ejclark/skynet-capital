@@ -1,0 +1,99 @@
+import type { DashboardData } from "../../src/observatory/dashboard-data.js";
+import type { ObservatoryEvent } from "../../src/observatory/events.js";
+import { reduceObservatory } from "../../src/observatory/reduce.js";
+
+const baseState = (): DashboardData => ({
+  generatedAt: "2026-07-24T15:00:00.000Z",
+  participants: [
+    {
+      id: "news-fader",
+      displayName: "The News Fader",
+      kind: "bot",
+      personaId: "news-fader",
+      cash: 1_000_000,
+      equity: 1_100_000,
+      positions: [{ symbol: "EEM", quantity: 1_000, avgPrice: 100, marketValue: 100_000 }],
+    },
+    {
+      id: "eric",
+      displayName: "Eric",
+      kind: "human",
+      cash: 50_000,
+      equity: 50_000,
+      positions: [],
+    },
+  ],
+});
+
+const fold = (events: ObservatoryEvent[]): DashboardData =>
+  events.reduce(reduceObservatory, baseState());
+
+describe("reduceObservatory", () => {
+  it("snapshot replaces the whole state", () => {
+    const replacement: DashboardData = { generatedAt: "later", participants: [] };
+    expect(reduceObservatory(baseState(), { type: "snapshot", data: replacement })).toBe(
+      replacement,
+    );
+  });
+
+  describe("price", () => {
+    it("re-marks a held position and recomputes equity", () => {
+      const state = fold([
+        { type: "price", symbol: "EEM", price: 110, at: "2026-07-24T15:01:00.000Z" },
+      ]);
+      const fader = state.participants[0];
+      expect(fader?.positions[0]?.marketValue).toBe(110_000);
+      expect(fader?.equity).toBe(1_110_000); // 1,000,000 cash + 110,000
+      expect(state.generatedAt).toBe("2026-07-24T15:01:00.000Z");
+    });
+
+    it("leaves state identity untouched when nobody holds the symbol", () => {
+      const start = baseState();
+      const next = reduceObservatory(start, {
+        type: "price",
+        symbol: "TSLA",
+        price: 400,
+        at: "later",
+      });
+      expect(next).toBe(start);
+    });
+  });
+
+  describe("fill", () => {
+    it("a buy reduces cash and opens/increases the position", () => {
+      const state = fold([
+        {
+          type: "fill",
+          participantId: "eric",
+          symbol: "VWO",
+          side: "buy",
+          quantity: 100,
+          price: 50,
+          at: "2026-07-24T15:02:00.000Z",
+        },
+      ]);
+      const eric = state.participants[1];
+      expect(eric?.cash).toBe(45_000); // 50,000 - 5,000
+      expect(eric?.positions[0]).toMatchObject({ symbol: "VWO", quantity: 100, avgPrice: 50 });
+      expect(eric?.equity).toBe(50_000); // 45,000 + 5,000
+    });
+
+    it("a full sell closes the position and returns cash", () => {
+      const state = fold([
+        {
+          type: "fill",
+          participantId: "news-fader",
+          symbol: "EEM",
+          side: "sell",
+          quantity: 1_000,
+          price: 105,
+          at: "2026-07-24T15:03:00.000Z",
+        },
+      ]);
+      const fader = state.participants[0];
+      expect(fader?.positions).toHaveLength(0);
+      expect(fader?.cash).toBe(1_105_000);
+      expect(fader?.equity).toBe(1_105_000);
+    });
+  });
+});
