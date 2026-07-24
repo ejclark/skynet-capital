@@ -18,7 +18,7 @@ brew install flyctl        # or: curl -L https://fly.io/install.sh | sh
 fly auth login
 
 # 2. Create the app (uses the committed fly.toml; don't deploy yet)
-fly launch --no-deploy --copy-config --name skynet-capital-observatory
+fly launch --no-deploy --copy-config --name skynet-capital
 
 # 3. Create the persistent volume that holds self-service accounts (see fly.toml [mounts])
 fly volumes create skynet_data --region ord --size 1
@@ -38,10 +38,10 @@ fly deploy
 `SKYNET_STORE_SECRET` encrypts the self-service credential store at rest — set it before anyone
 uses `/add`. The volume (`/data`) keeps those accounts across redeploys.
 
-Fly gives you `https://skynet-capital-observatory.fly.dev`. Share it as:
+Fly gives you `https://skynet-capital.fly.dev`. Share it as:
 
 ```
-https://skynet-capital-observatory.fly.dev/?key=choose-a-shared-passphrase
+https://skynet-capital.fly.dev/?key=choose-a-shared-passphrase
 ```
 
 Redeploy any time with `fly deploy` — or wire up continuous deployment below so merging a
@@ -58,7 +58,7 @@ The only thing GitHub needs is a Fly **deploy token** — your app secrets
 
 ```sh
 # 1. Create a deploy-scoped Fly token (locally, one time)
-fly tokens create deploy --app skynet-capital-observatory
+fly tokens create deploy --app skynet-capital
 # → prints "FlyV1 fm2_..." — copy the whole string
 ```
 

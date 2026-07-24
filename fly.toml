@@ -1,7 +1,7 @@
 # Fly.io config for the live observatory server.
 # The dashboard holds SSE connections and Alpaca websockets, so it must stay running —
 # hence always-on (no auto-stop, at least one machine).
-app = "skynet-capital-observatory"
+app = "skynet-capital"
 primary_region = "ord"  # Chicago — closest to Iowa
 
 [build]
