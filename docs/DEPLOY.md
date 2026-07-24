@@ -44,7 +44,33 @@ Fly gives you `https://skynet-capital-observatory.fly.dev`. Share it as:
 https://skynet-capital-observatory.fly.dev/?key=choose-a-shared-passphrase
 ```
 
-Redeploy any time with `fly deploy` (CI could do this on merge to `main` later).
+Redeploy any time with `fly deploy` — or wire up continuous deployment below so merging a
+green PR ships automatically.
+
+## Continuous deployment (merge → deploy)
+
+`.github/workflows/deploy.yml` deploys to Fly automatically **after CI passes on `main`**:
+merge a green PR and the exact commit CI validated is shipped. A failed CI run never deploys.
+
+The only thing GitHub needs is a Fly **deploy token** — your app secrets
+(`SKYNET_DASHBOARD_PASSWORD`, `SKYNET_STORE_SECRET`, any Alpaca keys) stay on Fly and are
+**never** added to GitHub.
+
+```sh
+# 1. Create a deploy-scoped Fly token (locally, one time)
+fly tokens create deploy --app skynet-capital-observatory
+# → prints "FlyV1 fm2_..." — copy the whole string
+```
+
+```
+# 2. Add it to the repo as a secret named FLY_API_TOKEN:
+#    GitHub → repo → Settings → Secrets and variables → Actions →
+#    New repository secret → Name: FLY_API_TOKEN, Value: <paste the token>
+```
+
+That's it. From now on: open a PR → CI runs → merge when green → the Deploy workflow fires and
+runs `flyctl deploy`. Watch it under the repo's **Actions** tab. The first manual `fly deploy`
+above is still needed once (to create the app, volume, and secrets); CD handles every deploy after.
 
 ## Self-service onboarding (`/add`)
 
