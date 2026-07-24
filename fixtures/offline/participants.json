@@ -1,0 +1,84 @@
+[
+  {
+    "id": "day-trader",
+    "displayName": "The Day Trader",
+    "kind": "bot",
+    "personaId": "day-trader",
+    "account": {
+      "id": "sim-day",
+      "cash": "948250.00",
+      "portfolio_value": "1006400.00",
+      "status": "ACTIVE"
+    },
+    "positions": [
+      { "symbol": "NVDA", "qty": "300", "avg_entry_price": "168.40", "market_value": "52350.00" },
+      { "symbol": "AAPL", "qty": "40", "avg_entry_price": "142.10", "market_value": "5800.00" }
+    ],
+    "orders": [
+      {
+        "id": "o1",
+        "symbol": "NVDA",
+        "qty": "300",
+        "side": "buy",
+        "status": "filled",
+        "filled_qty": "300",
+        "filled_avg_price": "168.40",
+        "submitted_at": "2026-07-24T14:31:02Z",
+        "filled_at": "2026-07-24T14:31:03Z"
+      },
+      {
+        "id": "o2",
+        "symbol": "AAPL",
+        "qty": "40",
+        "side": "buy",
+        "status": "filled",
+        "filled_qty": "40",
+        "filled_avg_price": "142.10",
+        "submitted_at": "2026-07-24T15:02:11Z",
+        "filled_at": "2026-07-24T15:02:12Z"
+      }
+    ]
+  },
+  {
+    "id": "rumor-trader",
+    "displayName": "The Rumor Trader",
+    "kind": "bot",
+    "personaId": "rumor-trader",
+    "account": {
+      "id": "sim-rumor",
+      "cash": "1000000.00",
+      "portfolio_value": "1000000.00",
+      "status": "ACTIVE"
+    },
+    "positions": [],
+    "orders": []
+  },
+  {
+    "id": "human-eric",
+    "displayName": "Eric",
+    "kind": "human",
+    "timezone": "America/Chicago",
+    "account": {
+      "id": "sim-eric",
+      "cash": "61200.00",
+      "portfolio_value": "102300.00",
+      "status": "ACTIVE"
+    },
+    "positions": [
+      { "symbol": "EEM", "qty": "950", "avg_entry_price": "42.20", "market_value": "41100.00" }
+    ],
+    "orders": [
+      {
+        "id": "e1",
+        "symbol": "EEM",
+        "qty": "950",
+        "side": "buy",
+        "status": "filled",
+        "filled_qty": "950",
+        "filled_avg_price": "42.20",
+        "submitted_at": "2026-07-23T18:05:00Z",
+        "filled_at": "2026-07-23T18:05:01Z"
+      }
+    ]
+  }
+]

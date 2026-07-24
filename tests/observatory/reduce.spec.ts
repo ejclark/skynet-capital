@@ -36,6 +36,42 @@ describe("reduceObservatory", () => {
     );
   });
 
+  describe("participant_added", () => {
+    it("appends a new participant without disturbing the others", () => {
+      const state = reduceObservatory(baseState(), {
+        type: "participant_added",
+        at: "2026-07-24T16:00:00.000Z",
+        participant: {
+          id: "human-joe",
+          displayName: "Joe",
+          kind: "human",
+          cash: 5,
+          equity: 5,
+          positions: [],
+        },
+      });
+      expect(state.participants.map((p) => p.id)).toEqual(["news-fader", "eric", "human-joe"]);
+      expect(state.generatedAt).toBe("2026-07-24T16:00:00.000Z");
+    });
+
+    it("is a no-op (same identity) when the id already exists", () => {
+      const start = baseState();
+      const next = reduceObservatory(start, {
+        type: "participant_added",
+        at: "later",
+        participant: {
+          id: "eric",
+          displayName: "Eric",
+          kind: "human",
+          cash: 0,
+          equity: 0,
+          positions: [],
+        },
+      });
+      expect(next).toBe(start);
+    });
+  });
+
   describe("price", () => {
     it("re-marks a held position and recomputes equity", () => {
       const state = fold([

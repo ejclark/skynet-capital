@@ -1,0 +1,10 @@
+{"type":"price","symbol":"NVDA","price":174.50,"at":"2026-07-24T15:30:00.000Z"}
+{"type":"price","symbol":"EEM","price":43.60,"at":"2026-07-24T15:30:01.000Z"}
+{"type":"price","symbol":"AAPL","price":145.20,"at":"2026-07-24T15:30:02.000Z"}
+{"type":"price","symbol":"NVDA","price":175.80,"at":"2026-07-24T15:30:05.000Z"}
+{"type":"fill","participantId":"rumor-trader","symbol":"TSLA","side":"buy","quantity":120,"price":233.40,"at":"2026-07-24T15:30:07.000Z"}
+{"type":"price","symbol":"NVDA","price":176.10,"at":"2026-07-24T15:30:10.000Z"}
+{"type":"price","symbol":"EEM","price":43.35,"at":"2026-07-24T15:30:12.000Z"}
+{"type":"fill","participantId":"human-eric","symbol":"EEM","side":"sell","quantity":200,"price":43.35,"at":"2026-07-24T15:30:15.000Z"}
+{"type":"price","symbol":"NVDA","price":177.00,"at":"2026-07-24T15:30:18.000Z"}
+{"type":"price","symbol":"AAPL","price":146.05,"at":"2026-07-24T15:30:20.000Z"}

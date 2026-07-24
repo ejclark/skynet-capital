@@ -3,78 +3,63 @@
  *
  * Usage:
  *   set -a && source .env && set +a
- *   npm run serve:dashboard
+ *   npm run serve:dashboard              # live — reads accounts from .env + the store, streams from Alpaca
+ *   npm run serve:dashboard:offline      # offline — reads fixtures/offline, no network, no keys
  *   # open http://localhost:8787  (add ?key=<password> if SKYNET_DASHBOARD_PASSWORD is set)
  *
  * Reads every participant's account for the initial paint, then pushes updates to browsers
- * over SSE as events arrive: live price ticks now, and engine-emitted fills once autonomous
- * trading is on. No polling — the page updates the instant state changes.
+ * over SSE as events arrive. `/add` lets people self-register their own Alpaca paper account,
+ * which appears live with no restart. The live-vs-offline choice lives behind `resolveDataSource`.
  */
-import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
-import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
-import { AlpacaTradeUpdatesStream } from "../alpaca/trade-updates-stream.js";
-import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
-import { loadParticipants } from "../participants/load-participants.js";
+import { createParticipantStore } from "../participants/participant-store.js";
 import type { Participant } from "../participants/participant.js";
-import { createDefaultPersonas } from "../personas/registry.js";
+import { resolveDataSource } from "../runtime/data-source.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
+import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
 
 const PORT = resolvePort(process.env);
 
-function clientFor(participant: Participant): AlpacaTradingClient {
-  return new AlpacaTradingClient(
-    new FetchAlpacaTradingTransport({
-      baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
-      apiKey: participant.credentials.apiKey,
-      apiSecret: participant.credentials.apiSecret,
-    }),
-  );
+function dedupeById(participants: readonly Participant[]): Participant[] {
+  const byId = new Map<string, Participant>();
+  for (const participant of participants) {
+    if (!byId.has(participant.id)) {
+      byId.set(participant.id, participant);
+    }
+  }
+  return [...byId.values()];
 }
 
 async function main(): Promise<void> {
-  const participants = loadParticipants(createDefaultPersonas(), process.env);
-  if (participants.length === 0) {
-    console.error("No participants found. Populate .env first.");
+  const dataSource = resolveDataSource(process.env);
+  const store = createParticipantStore(process.env);
+  const roster = dedupeById([...dataSource.loadParticipants(), ...store.load()]);
+  if (roster.length === 0 && dataSource.mode === "offline") {
+    console.error("No participants in fixtures/offline/participants.json.");
     process.exit(1);
   }
 
-  const initial = await buildDashboardData(participants, { clientFactory: clientFor });
+  const initial = await buildDashboardData(roster, { clientFactory: dataSource.clientFactory });
   const hub = new ObservatoryHub(initial);
 
-  // Live prices for whatever is currently held (nothing until the bots trade).
+  const sink = (event: Parameters<typeof hub.apply>[0]) => hub.apply(event);
+  const onStatus = (channel: string, status: string) => console.log(`[${channel}] ${status}`);
+
   const heldSymbols = [
     ...new Set(initial.participants.flatMap((p) => p.positions.map((pos) => pos.symbol))),
   ];
-  const dataCreds = participants[0]?.credentials;
-  if (heldSymbols.length > 0 && dataCreds) {
-    new AlpacaMarketDataStream({
-      apiKey: dataCreds.apiKey,
-      apiSecret: dataCreds.apiSecret,
-      symbols: heldSymbols,
-      onEvent: (event) => hub.apply(event),
-      onStatus: (status) => console.log(`[market-data] ${status}`),
-    }).start();
-    console.log(`[market-data] streaming ${heldSymbols.join(", ")}`);
-  } else {
-    console.log("[market-data] no open positions yet — price stream idle");
-  }
+  dataSource.startStreams({ participants: roster, heldSymbols, sink, onStatus });
 
-  // Fills: every participant's trade_updates stream pushes into the hub in realtime.
-  for (const participant of participants) {
-    new AlpacaTradeUpdatesStream({
-      participantId: participant.id,
-      apiKey: participant.credentials.apiKey,
-      apiSecret: participant.credentials.apiSecret,
-      baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
-      onEvent: (event) => hub.apply(event),
-      onStatus: (status) => console.log(`[trade-updates] ${status}`),
-    }).start();
-  }
-  console.log(`[trade-updates] subscribed ${participants.length} account(s)`);
+  const service = new ParticipantService({
+    hub,
+    store,
+    clientFactory: dataSource.clientFactory,
+    startStream: (participant) => dataSource.startParticipantStream(participant, sink, onStatus),
+    baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
+  });
 
   const password = process.env.SKYNET_DASHBOARD_PASSWORD;
   if (!password) {
@@ -82,10 +67,20 @@ async function main(): Promise<void> {
       "⚠️  No SKYNET_DASHBOARD_PASSWORD set — the dashboard is OPEN to anyone who can reach it. Fine for localhost; set a password before exposing it publicly.",
     );
   }
-  createDashboardServer({ hub, password }).listen(PORT, () => {
+  if (!process.env.SKYNET_STORE_SECRET) {
+    console.warn(
+      "⚠️  No SKYNET_STORE_SECRET set — self-service credentials are stored UNENCRYPTED. Set it before exposing /add publicly.",
+    );
+  }
+
+  createDashboardServer({
+    hub,
+    password,
+    addParticipant: (input) => service.addParticipant(input),
+  }).listen(PORT, () => {
     const suffix = password ? " (append ?key=<password>)" : "";
-    console.log(`Observatory live on port ${PORT}${suffix}`);
-    console.log(`Participants: ${participants.map((p) => p.displayName).join(", ")}`);
+    console.log(`Observatory live on port ${PORT} [${dataSource.mode}]${suffix}`);
+    console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
   });
 }
 

@@ -22,6 +22,39 @@ npm run serve:dashboard
 # → http://localhost:8787   (append ?key=<password> if SKYNET_DASHBOARD_PASSWORD is set)
 ```
 
+## Offline mode — run without Alpaca (no keys, no network)
+
+For local development, CI stability, and triaging the UI without touching a live account, the
+server and the autonomous loop can run against **committed fixtures** instead of Alpaca. Set
+`SKYNET_DATA_SOURCE=offline` (or use the `:offline` scripts) — no credentials required:
+
+```sh
+npm run serve:dashboard:offline    # dashboard from fixtures/offline, replayed price/fill stream
+npm run run:autonomous:offline     # personas trade against in-memory brokers off replayed ticks
+```
+
+- **Where the data lives:** `fixtures/offline/participants.json` (each account's cash, positions,
+  orders) and `fixtures/offline/events.jsonl` (the price/fill script replayed on a timer). Point
+  `SKYNET_OFFLINE_FIXTURES` at another directory to use a different capture.
+- **Same code path as live.** Offline only swaps the transport and the stream
+  (`FixtureTradingTransport` + `ReplayEventStream`) behind `resolveDataSource`; the hub, reducer,
+  renderer, and SSE are identical — so what you see offline is what you get live.
+- **Tests never hit the network.** The suite already runs fully offline; the fixtures above are
+  for running the *server* offline, not for the tests.
+
+### Record a real session to replay later
+
+To triage against realistic data, capture a live session once and replay it offline:
+
+```sh
+set -a && source .env && set +a
+npm run record:session -- fixtures/offline/events.jsonl   # Ctrl-C to stop
+npm run serve:dashboard:offline                            # replays what you captured
+```
+
+`record:session` runs the real wiring and writes every price tick and fill (plus a leading
+snapshot of the initial board) to the JSONL file.
+
 ## Keep the laptop awake with the server running
 
 ### macOS — `caffeinate` (simplest)

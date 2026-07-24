@@ -12,6 +12,11 @@ export function reduceObservatory(state: DashboardData, event: ObservatoryEvent)
   switch (event.type) {
     case "snapshot":
       return event.data;
+    case "participant_added":
+      if (state.participants.some((p) => p.id === event.participant.id)) {
+        return state;
+      }
+      return { generatedAt: event.at, participants: [...state.participants, event.participant] };
     case "price":
       return applyToParticipants(state, event.at, (p) => applyPrice(p, event.symbol, event.price));
     case "fill":

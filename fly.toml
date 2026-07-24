@@ -6,12 +6,22 @@ primary_region = "ord"  # Chicago — closest to Iowa
 
 [build]
 
+[env]
+  # Self-service accounts persist here, on the mounted volume below (survives redeploys).
+  SKYNET_PARTICIPANT_STORE = "/data/participants.json"
+
 [http_service]
   internal_port = 8787
   force_https = true
   auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
+
+# Persistent volume for the self-service participant store. Create once with:
+#   fly volumes create skynet_data --region ord --size 1
+[mounts]
+  source = "skynet_data"
+  destination = "/data"
 
 [[vm]]
   size = "shared-cpu-1x"

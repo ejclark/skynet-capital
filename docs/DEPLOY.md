@@ -20,16 +20,23 @@ fly auth login
 # 2. Create the app (uses the committed fly.toml; don't deploy yet)
 fly launch --no-deploy --copy-config --name skynet-capital-observatory
 
-# 3. Set secrets — the same values as your .env, plus a dashboard password
+# 3. Create the persistent volume that holds self-service accounts (see fly.toml [mounts])
+fly volumes create skynet_data --region ord --size 1
+
+# 4. Set secrets — the same values as your .env, plus a dashboard password and a store secret
 fly secrets set \
   SKYNET_DASHBOARD_PASSWORD='choose-a-shared-passphrase' \
+  SKYNET_STORE_SECRET='choose-a-long-random-string' \
   SKYNET_BOT_DAY_TRADER_KEY='...'    SKYNET_BOT_DAY_TRADER_SECRET='...' \
   SKYNET_BOT_RUMOR_TRADER_KEY='...'  SKYNET_BOT_RUMOR_TRADER_SECRET='...' \
   SKYNET_HUMAN_ERIC_KEY='...'        SKYNET_HUMAN_ERIC_SECRET='...'
 
-# 4. Deploy
+# 5. Deploy
 fly deploy
 ```
+
+`SKYNET_STORE_SECRET` encrypts the self-service credential store at rest — set it before anyone
+uses `/add`. The volume (`/data`) keeps those accounts across redeploys.
 
 Fly gives you `https://skynet-capital-observatory.fly.dev`. Share it as:
 
@@ -38,6 +45,22 @@ https://skynet-capital-observatory.fly.dev/?key=choose-a-shared-passphrase
 ```
 
 Redeploy any time with `fly deploy` (CI could do this on merge to `main` later).
+
+## Self-service onboarding (`/add`)
+
+Once deployed, anyone with the dashboard link can add their own Alpaca **paper** account —
+no `.env` edit, no redeploy:
+
+1. They open `https://<app>.fly.dev/add?key=<password>` (the "+ Add your account" link on the
+   board carries the key through).
+2. They paste their Alpaca paper API key/secret and a display name, and submit.
+3. The server validates the key by reading the account, stores it **encrypted** on the `/data`
+   volume, and the account appears on the board live via SSE — no restart.
+
+Security model: the store is encrypted at rest with `SKYNET_STORE_SECRET`; submitted keys are
+only ever read to display balances/positions (nothing is placed on anyone's behalf); the whole
+`/add` route sits behind the same shared `?key=` password as the rest of the dashboard. This
+pass uses one shared password for everyone — per-user auth is a later step.
 
 ## Render / Railway (same Docker image)
 
