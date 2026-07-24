@@ -1,3 +1,11 @@
+# [1.2.0](https://github.com/ejclark/skynet-capital/compare/v1.1.0...v1.2.0) (2026-07-24)
+
+
+### Features
+
+* **runtime:** add offline data source for keyless local runs ([4ac3009](https://github.com/ejclark/skynet-capital/commit/4ac30090d4d94c0b8b6fc428d793cf0fd61f9727))
+* **server:** self-service account onboarding via /add ([b16af23](https://github.com/ejclark/skynet-capital/commit/b16af233ccc9ae92ae64802ab2d79ffafcbee828))
+
 # [1.1.0](https://github.com/ejclark/skynet-capital/compare/v1.0.0...v1.1.0) (2026-07-24)
 
 
