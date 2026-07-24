@@ -1,0 +1,182 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  type AccountFixture,
+  FixtureTradingTransport,
+} from "../adapters/fixture-trading-transport.js";
+import { ReplayEventStream, parseEventsJsonl } from "../adapters/replay-event-stream.js";
+import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
+import { AlpacaTradeUpdatesStream } from "../alpaca/trade-updates-stream.js";
+import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
+import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import type { TradingClientFactory } from "../observatory/dashboard-data.js";
+import type { ObservatoryEvent } from "../observatory/events.js";
+import { loadParticipants } from "../participants/load-participants.js";
+import type { Participant } from "../participants/participant.js";
+import { createDefaultPersonas } from "../personas/registry.js";
+
+type Env = Readonly<Record<string, string | undefined>>;
+
+export type EventSink = (event: ObservatoryEvent) => void;
+
+export interface StartStreamsInput {
+  readonly participants: readonly Participant[];
+  /** Symbols currently held — what the live market-data stream subscribes to. */
+  readonly heldSymbols: readonly string[];
+  readonly sink: EventSink;
+  readonly onStatus?: (channel: string, status: string) => void;
+}
+
+/**
+ * The one seam that decides whether the dashboard/autonomous loop talks to Alpaca or to
+ * committed fixtures. `SKYNET_DATA_SOURCE=offline` swaps the live transport and sockets
+ * for a `FixtureTradingTransport` + `ReplayEventStream` — same interfaces, no network,
+ * no credentials. `live` (the default) is the real thing. Both CLI scripts wire through
+ * here so the choice lives in exactly one place.
+ */
+export interface DataSource {
+  readonly mode: "live" | "offline";
+  /** Builds a trading client per participant (live: real; offline: fixture-backed). */
+  readonly clientFactory: TradingClientFactory;
+  /** The roster (live: env; offline: fixture file). */
+  loadParticipants(): Participant[];
+  /** Start the realtime price/fill streams, pushing into `sink`. */
+  startStreams(input: StartStreamsInput): void;
+}
+
+export function resolveDataSource(env: Env): DataSource {
+  return (env.SKYNET_DATA_SOURCE ?? "live") === "offline"
+    ? offlineDataSource(env)
+    : liveDataSource(env);
+}
+
+// --- live ------------------------------------------------------------------
+
+function liveDataSource(env: Env): DataSource {
+  const clientFactory: TradingClientFactory = (participant) =>
+    new AlpacaTradingClient(
+      new FetchAlpacaTradingTransport({
+        baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
+        apiKey: participant.credentials.apiKey,
+        apiSecret: participant.credentials.apiSecret,
+      }),
+    );
+
+  return {
+    mode: "live",
+    clientFactory,
+    loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
+    startStreams: ({ participants, heldSymbols, sink, onStatus }) => {
+      const dataCreds = participants[0]?.credentials;
+      if (heldSymbols.length > 0 && dataCreds) {
+        new AlpacaMarketDataStream({
+          apiKey: dataCreds.apiKey,
+          apiSecret: dataCreds.apiSecret,
+          symbols: heldSymbols,
+          onEvent: sink,
+          onStatus: (status) => onStatus?.("market-data", status),
+        }).start();
+        onStatus?.("market-data", `streaming ${heldSymbols.join(", ")}`);
+      } else {
+        onStatus?.("market-data", "no open positions yet — price stream idle");
+      }
+
+      for (const participant of participants) {
+        new AlpacaTradeUpdatesStream({
+          participantId: participant.id,
+          apiKey: participant.credentials.apiKey,
+          apiSecret: participant.credentials.apiSecret,
+          baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
+          onEvent: sink,
+          onStatus: (status) => onStatus?.("trade-updates", status),
+        }).start();
+      }
+      onStatus?.("trade-updates", `subscribed ${participants.length} account(s)`);
+    },
+  };
+}
+
+// --- offline ---------------------------------------------------------------
+
+/** A participant plus the canned account it reads — one entry in the fixture file. */
+export interface OfflineParticipantFixture {
+  readonly id: string;
+  readonly displayName: string;
+  readonly kind: Participant["kind"];
+  readonly personaId?: string;
+  readonly timezone?: string;
+  readonly account: unknown;
+  readonly positions?: unknown;
+  readonly orders?: unknown;
+}
+
+const OFFLINE_CREDENTIALS = { apiKey: "offline", apiSecret: "offline" } as const;
+
+/** The recorded price/fill script offline mode replays (empty if none committed). */
+export function readOfflineEvents(env: Env): ObservatoryEvent[] {
+  const dir = env.SKYNET_OFFLINE_FIXTURES ?? join("fixtures", "offline");
+  return parseEventsJsonl(safeRead(join(dir, "events.jsonl")));
+}
+
+function offlineDataSource(env: Env): DataSource {
+  const dir = env.SKYNET_OFFLINE_FIXTURES ?? join("fixtures", "offline");
+  const specs = parseOfflineParticipants(readFileSync(join(dir, "participants.json"), "utf8"));
+  const events = readOfflineEvents(env);
+  const fixtures = new Map<string, AccountFixture>(
+    specs.map((spec) => [
+      spec.id,
+      { account: spec.account, positions: spec.positions, orders: spec.orders },
+    ]),
+  );
+
+  const clientFactory: TradingClientFactory = (participant) =>
+    new AlpacaTradingClient(
+      new FixtureTradingTransport(fixtures.get(participant.id) ?? { account: emptyAccount() }),
+    );
+
+  return {
+    mode: "offline",
+    clientFactory,
+    loadParticipants: () => specs.map(toParticipant),
+    startStreams: ({ sink, onStatus }) => {
+      new ReplayEventStream({
+        events,
+        onEvent: sink,
+        onStatus: (status) => onStatus?.("replay", status),
+      }).start();
+    },
+  };
+}
+
+/** Parse the offline `participants.json` (throws on malformed JSON — fail loud in dev). */
+export function parseOfflineParticipants(json: string): OfflineParticipantFixture[] {
+  const parsed: unknown = JSON.parse(json);
+  if (!Array.isArray(parsed)) {
+    throw new Error("offline participants.json must be a JSON array");
+  }
+  return parsed as OfflineParticipantFixture[];
+}
+
+function toParticipant(spec: OfflineParticipantFixture): Participant {
+  return {
+    id: spec.id,
+    displayName: spec.displayName,
+    kind: spec.kind,
+    credentials: OFFLINE_CREDENTIALS,
+    ...(spec.personaId ? { personaId: spec.personaId } : {}),
+    ...(spec.timezone ? { timezone: spec.timezone } : {}),
+  };
+}
+
+function emptyAccount(): unknown {
+  return { id: "offline", cash: "0", portfolio_value: "0", status: "ACTIVE" };
+}
+
+function safeRead(path: string): string {
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return "";
+  }
+}

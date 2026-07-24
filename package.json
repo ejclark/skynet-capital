@@ -16,7 +16,10 @@
     "format": "biome format --write .",
     "export:dashboard": "tsx src/scripts/export-dashboard.ts",
     "serve:dashboard": "tsx src/scripts/serve-dashboard.ts",
-    "run:autonomous": "tsx src/scripts/run-autonomous.ts"
+    "serve:dashboard:offline": "SKYNET_DATA_SOURCE=offline tsx src/scripts/serve-dashboard.ts",
+    "run:autonomous": "tsx src/scripts/run-autonomous.ts",
+    "run:autonomous:offline": "SKYNET_DATA_SOURCE=offline tsx src/scripts/run-autonomous.ts",
+    "record:session": "tsx src/scripts/record-session.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
