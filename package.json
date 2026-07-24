@@ -1,0 +1,27 @@
+{
+  "name": "skynet-capital",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Autonomous options-trading agent personas competing on paper accounts.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "rstest run",
+    "test:watch": "rstest watch",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "export:dashboard": "tsx src/scripts/export-dashboard.ts",
+    "serve:dashboard": "tsx src/scripts/serve-dashboard.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@rstest/core": "^0.2.0",
+    "@types/node": "^24.13.3",
+    "tsx": "^4.23.1",
+    "typescript": "^5.6.3"
+  }
+}
