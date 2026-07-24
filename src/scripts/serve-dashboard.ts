@@ -16,6 +16,7 @@ import { buildDashboardData } from "../observatory/dashboard-data.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import type { Participant } from "../participants/participant.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { resolveAuth } from "../server/auth/authenticator.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
@@ -61,10 +62,17 @@ async function main(): Promise<void> {
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
   });
 
+  const auth = resolveAuth(process.env);
   const password = process.env.SKYNET_DASHBOARD_PASSWORD;
-  if (!password) {
+  if (auth) {
+    if (auth.allowlistEmpty) {
+      console.warn(
+        "⚠️  OAuth login is on but the allowlist is empty — nobody can sign in. Set SKYNET_ALLOWED_EMAILS.",
+      );
+    }
+  } else if (!password) {
     console.warn(
-      "⚠️  No SKYNET_DASHBOARD_PASSWORD set — the dashboard is OPEN to anyone who can reach it. Fine for localhost; set a password before exposing it publicly.",
+      "⚠️  No auth configured and no SKYNET_DASHBOARD_PASSWORD set — the dashboard is OPEN to anyone who can reach it. Fine for localhost; configure OAuth or a password before exposing it publicly.",
     );
   }
   if (!process.env.SKYNET_STORE_SECRET) {
@@ -76,10 +84,11 @@ async function main(): Promise<void> {
   createDashboardServer({
     hub,
     password,
+    ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
   }).listen(PORT, () => {
-    const suffix = password ? " (append ?key=<password>)" : "";
-    console.log(`Observatory live on port ${PORT} [${dataSource.mode}]${suffix}`);
+    const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
+    console.log(`Observatory live on port ${PORT} [${dataSource.mode}] — auth: ${gate}`);
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
   });
 }

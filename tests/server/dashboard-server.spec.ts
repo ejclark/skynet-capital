@@ -1,5 +1,7 @@
 import type { AddressInfo } from "node:net";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
+import { resolveAuth } from "../../src/server/auth/authenticator.js";
+import { type Session, signSession } from "../../src/server/auth/session.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "../../src/server/participant-service.js";
@@ -19,6 +21,59 @@ async function withServer(
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 }
+
+describe("dashboard-server OAuth gate", () => {
+  const SECRET = "sess";
+  const auth = resolveAuth({
+    SKYNET_SESSION_SECRET: SECRET,
+    SKYNET_GOOGLE_CLIENT_ID: "gid",
+    SKYNET_GOOGLE_CLIENT_SECRET: "gsecret",
+    SKYNET_ALLOWED_EMAILS: "eric@gmail.com",
+  });
+  const validCookie = (): string => {
+    const session: Session = {
+      email: "eric@gmail.com",
+      provider: "google",
+      exp: Date.now() + 60_000,
+    };
+    return `skynet_session=${encodeURIComponent(signSession(session, SECRET))}`;
+  };
+
+  it("redirects an unauthenticated visitor to /login and serves the login page", async () => {
+    await withServer(
+      { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}) },
+      async (base) => {
+        const home = await fetch(`${base}/`, { redirect: "manual" });
+        expect(home.status).toBe(302);
+        expect(home.headers.get("location")).toBe("/login");
+
+        const login = await fetch(`${base}/login`);
+        expect(login.status).toBe(200);
+        expect(await login.text()).toContain("Sign in with Google");
+      },
+    );
+  });
+
+  it("401s the SSE stream without a session", async () => {
+    await withServer(
+      { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}) },
+      async (base) => {
+        expect((await fetch(`${base}/events`)).status).toBe(401);
+      },
+    );
+  });
+
+  it("lets a valid session cookie through to the board", async () => {
+    await withServer(
+      { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}) },
+      async (base) => {
+        const home = await fetch(`${base}/`, { headers: { cookie: validCookie() } });
+        expect(home.status).toBe(200);
+        expect(await home.text()).toContain("Sign out");
+      },
+    );
+  });
+});
 
 describe("dashboard-server /add", () => {
   it("serves the form on GET and registers on POST", async () => {
