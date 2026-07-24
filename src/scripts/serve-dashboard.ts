@@ -21,8 +21,9 @@ import type { Participant } from "../participants/participant.js";
 import { createDefaultPersonas } from "../personas/registry.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
+import { resolvePort } from "../server/resolve-port.js";
 
-const PORT = Number(process.env.SKYNET_DASHBOARD_PORT ?? "8787");
+const PORT = resolvePort(process.env);
 
 function clientFor(participant: Participant): AlpacaTradingClient {
   return new AlpacaTradingClient(
@@ -76,9 +77,14 @@ async function main(): Promise<void> {
   console.log(`[trade-updates] subscribed ${participants.length} account(s)`);
 
   const password = process.env.SKYNET_DASHBOARD_PASSWORD;
+  if (!password) {
+    console.warn(
+      "⚠️  No SKYNET_DASHBOARD_PASSWORD set — the dashboard is OPEN to anyone who can reach it. Fine for localhost; set a password before exposing it publicly.",
+    );
+  }
   createDashboardServer({ hub, password }).listen(PORT, () => {
     const suffix = password ? " (append ?key=<password>)" : "";
-    console.log(`Observatory live at http://localhost:${PORT}${suffix}`);
+    console.log(`Observatory live on port ${PORT}${suffix}`);
     console.log(`Participants: ${participants.map((p) => p.displayName).join(", ")}`);
   });
 }
