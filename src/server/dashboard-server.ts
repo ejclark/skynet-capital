@@ -1,13 +1,22 @@
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
 import { renderDashboardBody } from "../observatory/render-dashboard.js";
+import type { Authenticator } from "./auth/authenticator.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "./participant-service.js";
 import { sseFrame } from "./sse.js";
 
 export interface DashboardServerConfig {
   readonly hub: ObservatoryHub;
-  /** When set, every request must carry ?key=<password>. Leave unset only for localhost. */
+  /**
+   * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
+   * When set, every request must carry ?key=<password>.
+   */
   readonly password?: string;
+  /**
+   * Per-user OAuth login. When present it supersedes `password`: unauthenticated requests are
+   * redirected to `/login`, and identity comes from a signed session cookie (no ?key= in URLs).
+   */
+  readonly auth?: Authenticator;
   /**
    * Self-service onboarding handler. When provided, `GET /add` serves a form and `POST /add`
    * registers a new account. Omit to disable the feature (e.g. offline mode).
@@ -17,38 +26,81 @@ export interface DashboardServerConfig {
 
 /**
  * The live dashboard server. Serves the observatory page and an SSE stream that pushes a
- * freshly-rendered page body every time the hub's state changes — so a browser updates the
- * instant a fill or price tick lands, no polling. When an `addParticipant` handler is wired,
- * it also serves a `/add` form that registers a new account live. Rendering reuses the same
- * pure renderer as the static export, so the live and exported views are identical.
+ * freshly-rendered page body every time the hub's state changes. Access is gated either by
+ * per-user OAuth login (`auth`) or the legacy shared password (`password`). When an
+ * `addParticipant` handler is wired, it also serves a `/add` form that registers a new
+ * account live.
  */
 export function createDashboardServer(config: DashboardServerConfig): Server {
   return createServer((req, res) => {
-    const url = req.url ?? "/";
-    if (!isAuthorized(url, config.password)) {
-      res.writeHead(401, { "content-type": "text/plain" });
-      res.end("unauthorized");
-      return;
-    }
-
-    const path = url.split("?")[0];
-    const method = req.method ?? "GET";
-    if (path === "/events") {
-      streamEvents(req, res, config.hub);
-      return;
-    }
-    if (path === "/add" && config.addParticipant) {
-      handleAdd(req, res, method, keyOf(url), config.addParticipant);
-      return;
-    }
-    if (path === "/" || path === "/index.html") {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(pageHtml(config.hub, keyOf(url), Boolean(config.addParticipant)));
-      return;
-    }
-    res.writeHead(404, { "content-type": "text/plain" });
-    res.end("not found");
+    void handle(req, res, config);
   });
+}
+
+async function handle(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+): Promise<void> {
+  const url = req.url ?? "/";
+  const path = url.split("?")[0] ?? "/";
+  const auth = config.auth;
+
+  if (auth) {
+    const base = baseUrlFrom(req);
+    const secure = base.startsWith("https");
+    if (path === "/login") {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(auth.loginPage());
+      return;
+    }
+    if (path === "/logout") {
+      res.writeHead(302, { location: "/login", "set-cookie": auth.clearCookie(secure) });
+      res.end();
+      return;
+    }
+    if (await auth.handleAuthRoute(req, res, path, base)) {
+      return;
+    }
+    if (!auth.sessionFrom(req)) {
+      if (path === "/events") {
+        res.writeHead(401, { "content-type": "text/plain" });
+        res.end("unauthorized");
+      } else {
+        res.writeHead(302, { location: "/login" });
+        res.end();
+      }
+      return;
+    }
+  } else if (!isAuthorized(url, config.password)) {
+    res.writeHead(401, { "content-type": "text/plain" });
+    res.end("unauthorized");
+    return;
+  }
+
+  // --- authorized routes ---
+  if (path === "/events") {
+    streamEvents(req, res, config.hub);
+    return;
+  }
+  if (path === "/add" && config.addParticipant) {
+    await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
+    return;
+  }
+  if (path === "/" || path === "/index.html") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(pageHtml(config.hub, keyOf(url), Boolean(config.addParticipant), Boolean(auth)));
+    return;
+  }
+  res.writeHead(404, { "content-type": "text/plain" });
+  res.end("not found");
+}
+
+/** External origin of the request (honors Fly's x-forwarded-proto). */
+function baseUrlFrom(req: IncomingMessage): string {
+  const proto = (req.headers["x-forwarded-proto"] as string) ?? "http";
+  const host = req.headers.host ?? "localhost";
+  return `${proto}://${host}`;
 }
 
 function isAuthorized(url: string, password?: string): boolean {
@@ -123,10 +175,17 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 const PAGE_STYLE = "*{margin:0;padding:0;box-sizing:border-box}body{margin:0}";
 
-function pageHtml(hub: ObservatoryHub, key: string, canAdd: boolean): string {
+function pageHtml(hub: ObservatoryHub, key: string, canAdd: boolean, authed: boolean): string {
   const suffix = key ? `?key=${encodeURIComponent(key)}` : "";
-  const addLink = canAdd
-    ? `<div style="padding:12px 16px;font:14px system-ui"><a href="/add${suffix}">+ Add your account</a></div>`
+  const links: string[] = [];
+  if (canAdd) {
+    links.push(`<a href="/add${suffix}">+ Add your account</a>`);
+  }
+  if (authed) {
+    links.push(`<a href="/logout">Sign out</a>`);
+  }
+  const bar = links.length
+    ? `<div style="padding:12px 16px;font:14px system-ui;display:flex;gap:16px">${links.join("")}</div>`
     : "";
   return `<!doctype html>
 <html lang="en">
@@ -137,7 +196,7 @@ function pageHtml(hub: ObservatoryHub, key: string, canAdd: boolean): string {
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
-${addLink}
+${bar}
 <div id="root">${renderDashboardBody(hub.getState())}</div>
 <script>
   (function () {

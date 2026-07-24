@@ -85,8 +85,39 @@ no `.env` edit, no redeploy:
 
 Security model: the store is encrypted at rest with `SKYNET_STORE_SECRET`; submitted keys are
 only ever read to display balances/positions (nothing is placed on anyone's behalf); the whole
-`/add` route sits behind the same shared `?key=` password as the rest of the dashboard. This
-pass uses one shared password for everyone — per-user auth is a later step.
+`/add` route sits behind the same login as the rest of the dashboard (OAuth below, or the legacy
+password).
+
+## Per-user login (Google + GitHub OAuth)
+
+When OAuth is configured the dashboard drops the `?key=` param entirely: visitors hit `/login`,
+sign in with Google or GitHub, and get a signed session cookie. Only people on the allowlist are
+let in. It turns on automatically once `SKYNET_SESSION_SECRET` **and** at least one provider are
+set; otherwise the server falls back to the shared password (fine for localhost).
+
+**1. Create the OAuth apps** (callback URLs must match exactly):
+
+- **Google** — [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services →
+  Credentials → Create OAuth client ID → Web application. Authorized redirect URI:
+  `https://skynet-capital.fly.dev/auth/google/callback`. (Configure the OAuth consent screen as
+  "External"; add your guests as test users while it's in testing.)
+- **GitHub** — [github.com/settings/developers](https://github.com/settings/developers) → New
+  OAuth App. Authorization callback URL: `https://skynet-capital.fly.dev/auth/github/callback`.
+
+**2. Set the secrets on Fly:**
+
+```sh
+fly secrets set -a skynet-capital \
+  SKYNET_SESSION_SECRET="$(openssl rand -hex 32)" \
+  SKYNET_GOOGLE_CLIENT_ID='...'  SKYNET_GOOGLE_CLIENT_SECRET='...' \
+  SKYNET_GITHUB_CLIENT_ID='...'  SKYNET_GITHUB_CLIENT_SECRET='...' \
+  SKYNET_ALLOWED_EMAILS='you@gmail.com,brother@gmail.com,dad@gmail.com'
+```
+
+That's it — `fly deploy` (or the next merge) picks it up. The URL is now clean:
+`https://skynet-capital.fly.dev/`. Add people by appending to `SKYNET_ALLOWED_EMAILS`; for a
+GitHub user whose email is private, add their login to `SKYNET_ALLOWED_GITHUB_LOGINS`. Set only
+one provider's vars if you only want that button. `/logout` clears the session.
 
 ## Render / Railway (same Docker image)
 
