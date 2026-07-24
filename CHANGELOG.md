@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/ejclark/skynet-capital/compare/v1.0.0...v1.1.0) (2026-07-24)
+
+
+### Features
+
+* **autonomous:** add news-sentiment signal to activate the news personas ([714bfa4](https://github.com/ejclark/skynet-capital/commit/714bfa4780059e7b18352819b66b604af7fdeae0))
+
 # 1.0.0 (2026-07-24)
 
 
