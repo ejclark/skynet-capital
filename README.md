@@ -82,5 +82,6 @@ npm run typecheck
 - Architecture and engineering standards: [`docs/ENGINEERING.md`](docs/ENGINEERING.md)
 - Wiring personas to Alpaca paper accounts: [`docs/BOTS.md`](docs/BOTS.md)
 - The shared observatory dashboard: [`docs/DASHBOARD.md`](docs/DASHBOARD.md)
+- Autonomous trading: [`docs/AUTONOMOUS.md`](docs/AUTONOMOUS.md)
 - Running locally & keeping a laptop awake: [`docs/RUNNING.md`](docs/RUNNING.md)
 - Deploying the public live dashboard: [`docs/DEPLOY.md`](docs/DEPLOY.md)

@@ -81,6 +81,12 @@ export class AlpacaTradingClient {
     return ensureOk<AlpacaOrder[]>(await this.transport.get(path));
   }
 
+  /** Market clock — whether the market is currently open. */
+  async isMarketOpen(): Promise<boolean> {
+    const clock = ensureOk<{ is_open?: boolean }>(await this.transport.get("/v2/clock"));
+    return clock.is_open === true;
+  }
+
   async placeOrder(params: PlaceOrderParams): Promise<AlpacaOrder> {
     const response = await this.transport.post("/v2/orders", {
       symbol: params.symbol,

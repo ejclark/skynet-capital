@@ -15,7 +15,8 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "export:dashboard": "tsx src/scripts/export-dashboard.ts",
-    "serve:dashboard": "tsx src/scripts/serve-dashboard.ts"
+    "serve:dashboard": "tsx src/scripts/serve-dashboard.ts",
+    "run:autonomous": "tsx src/scripts/run-autonomous.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
