@@ -1,28 +1,27 @@
-# Fly.io config for the live observatory server.
-# The dashboard holds SSE connections and Alpaca websockets, so it must stay running —
-# hence always-on (no auto-stop, at least one machine).
-app = "skynet-capital-observatory"
-primary_region = "ord"  # Chicago — closest to Iowa
+# fly.toml app configuration file generated for skynet-capital-x6jwtw on 2026-07-24T21:12:45Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'skynet-capital-x6jwtw'
+primary_region = 'ord'
 
 [build]
 
 [env]
-  # Self-service accounts persist here, on the mounted volume below (survives redeploys).
-  SKYNET_PARTICIPANT_STORE = "/data/participants.json"
+  SKYNET_PARTICIPANT_STORE = '/data/participants.json'
+
+[[mounts]]
+  source = 'skynet_data'
+  destination = '/data'
 
 [http_service]
-  internal_port = 8787
+  internal_port = 8080
   force_https = true
-  auto_stop_machines = false
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
-# Persistent volume for the self-service participant store. Create once with:
-#   fly volumes create skynet_data --region ord --size 1
-[mounts]
-  source = "skynet_data"
-  destination = "/data"
-
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = 'shared-cpu-1x'
+  memory = '512mb'
