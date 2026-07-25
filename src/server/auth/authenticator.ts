@@ -765,14 +765,14 @@ export class Authenticator {
   // LEFT-UPPER: the play in words — moved up toward the hero. Signal, name, plain-English idea,
   // the shared anatomy legend, the pivot values, and the live trade-status line.
   function drawPanel(strat, sig, p, A){
-    var e=extrema(strat), px=Math.round(W*0.05), pw=Math.min(W*0.32, 380);
+    var e=extrema(strat), px=Math.round(W*0.04), pw=Math.min(W*0.26, 340);
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    var y=field.top+24;
+    var y=field.top+30;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
-    ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=34;
-    ctx.font="700 28px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
+    ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=32;
+    ctx.font="700 25px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
     ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=24;
     ctx.font="14px "+sans; ctx.fillStyle=hexA(muted,0.95);
     y += wrapText(strat.desc, px, y, pw, 19)*19 + 14;
@@ -794,11 +794,11 @@ export class Authenticator {
   // RIGHT: the signal EVIDENCE — why this play was called. A live RSI gauge (oversold/overbought)
   // and a Bollinger snapshot (recent price vs its bands), so the reasoning is shown, not just named.
   function drawSignalDetail(sig, A){
-    var sx=Math.round(W*0.56), sw=Math.min(W*0.38, 460);
+    var sx=Math.round(W*0.71), sw=Math.min(W*0.25, 340);
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    var y=field.top+24;
+    var y=field.top+30;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▸ WHY THIS PLAY", sx, y); y+=30;
     // --- RSI gauge (0..100) ---
     ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", sx, y);
@@ -839,9 +839,11 @@ export class Authenticator {
   // evidence = RIGHT. Anatomy is consistent: green profit, red loss, muted breakeven.
   function drawPlaybook(strat, p, sig){
     if(!strat) return;
-    var x0=W*0.05, x1=W*0.46;
-    var dTop=Math.max(field.top+168, fieldMid()+6), dBot=field.bottom-8;
-    var midY=(dTop+dBot)/2, amp=(dBot-dTop)/2*0.9, yTop=dTop, yBot=dBot, A=(1-p.out);
+    // The payoff is the FOCAL POINT — centered on the page, with the play text (left) and the
+    // signal evidence (right) flanking it.
+    var x0=W*0.335, x1=W*0.665;
+    var dTop=field.top+34, dBot=field.bottom-10;
+    var midY=(dTop+dBot)/2, amp=(dBot-dTop)/2*0.82, yTop=dTop, yBot=dBot, A=(1-p.out);
     function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
