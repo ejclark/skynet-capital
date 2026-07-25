@@ -769,6 +769,21 @@ export class Authenticator {
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    // Narrow / mobile: stack — signal + name + desc centered on top, pivots inline at the bottom,
+    // the payoff fills the middle (drawPlaybook widens), and the evidence column is dropped.
+    if(W<820){
+      var cx=W/2, ny=field.top+22; ctx.textAlign="center";
+      ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=25;
+      ctx.font="700 22px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fillText(strat.name, cx, ny); ctx.shadowBlur=0; ny+=19;
+      ctx.font="12px "+sans; ctx.fillStyle=hexA(muted,0.95); wrapText(strat.desc, cx, ny, Math.min(W*0.86,420), 16);
+      var by=field.bottom-6; drawAnatomy(cx-116, by-22, A*Math.min(1,p.on));
+      ctx.textAlign="left"; ctx.font="700 11px "+mono;
+      var s1="MAX PROFIT "+money(e.maxY*DOLLARS), s2="MAX LOSS "+money(e.minY*DOLLARS);
+      var w1=ctx.measureText(s1).width, w2=ctx.measureText(s2).width, gap=22, lx=cx-(w1+gap+w2)/2;
+      ctx.fillStyle=hexA(pos,0.95); ctx.fillText(s1, lx, by);
+      ctx.fillStyle=hexA(neg,0.95); ctx.fillText(s2, lx+w1+gap, by);
+      ctx.restore(); return;
+    }
     var y=field.top+30;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
     ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=32;
@@ -795,15 +810,16 @@ export class Authenticator {
   // RIGHT: the signal EVIDENCE — why this play was called. A live RSI gauge (oversold/overbought)
   // and a Bollinger snapshot (recent price vs its bands), so the reasoning is shown, not just named.
   function drawSignalDetail(sig, A){
+    if(W<820) return;   // the evidence column is desktop-only; narrow screens stack (see drawPanel)
     var sx=Math.round(W*0.755), sw=Math.min(W*0.205, 300);
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
     var y=field.top+30;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▸ WHY THIS PLAY", sx, y); y+=30;
-    // --- RSI gauge (0..100) ---
+    // --- RSI gauge (0..100) — value sits right beside the label (no collision with the marker) ---
     ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", sx, y);
-    ctx.textAlign="right"; ctx.fillStyle=hexA(rsiV<30?pos:rsiV>70?neg:txt,0.95); ctx.fillText(rsiV.toFixed(0), sx+sw, y); ctx.textAlign="left"; y+=8;
+    ctx.fillStyle=hexA(rsiV<30?pos:rsiV>70?neg:txt,0.95); ctx.fillText(rsiV.toFixed(0), sx+28, y); y+=8;
     var gh=8;
     ctx.fillStyle=hexA(muted,0.16); ctx.fillRect(sx,y,sw,gh);
     ctx.fillStyle=hexA(pos,0.22); ctx.fillRect(sx,y,sw*0.3,gh);
@@ -842,8 +858,9 @@ export class Authenticator {
     if(!strat) return;
     // The payoff is the FOCAL POINT — centered on the page, with the play text (left) and the
     // signal evidence (right) flanking it.
-    var x0=W*0.27, x1=W*0.73;
-    var dTop=field.top+34, dBot=field.bottom-10;
+    var narrow=W<820;
+    var x0 = narrow?W*0.07:W*0.27, x1 = narrow?W*0.93:W*0.73;
+    var dTop = narrow?field.top+94:field.top+34, dBot = narrow?field.bottom-32:field.bottom-10;
     var midY=(dTop+dBot)/2, amp=(dBot-dTop)/2*0.82, yTop=dTop, yBot=dBot, A=(1-p.out);
     function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
