@@ -254,49 +254,43 @@ export class Authenticator {
       color-mix(in srgb,var(--accent) 7%,transparent), transparent 70%); mix-blend-mode:screen; }
   body.finepointer .cursorglow{ opacity:1; }
 
-  /* Chromatic-aberration wordmark — subtle at rest; the reveal burst amps the split (--burst) */
+  /* Chromatic-aberration wordmark — subtle at rest; amps into the VFX-text-cursor on reveal. */
   .mark[data-text]{ position:relative; }
   .mark[data-text]::before, .mark[data-text]::after{ content:attr(data-text); position:absolute; left:0; top:0;
-    width:100%; opacity:calc(.28 + var(--burst,0)*.55); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit; }
-  .mark[data-text]::before{ color:#FF4D9D; transform:translate(calc(var(--cax,0px)*-1), calc(var(--cay,0px)*-1)); }
-  .mark[data-text]::after{ color:#35D0BA; transform:translate(var(--cax,0px), var(--cay,0px)); }
-  /* Power-on VFX: fires at the START of the flight (from the origin) and rides the title down —
-     a pronounced left→right chromatic-ray wipe that then flows with the downward momentum. */
-  @property --burst{ syntax:"<number>"; inherits:true; initial-value:0; }
+    width:100%; opacity:calc(.26 + var(--vfx,0)*.6); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit; }
+  .mark[data-text]::before{ color:#FF2D95; transform:translate(calc(var(--cax,0px)*-1), calc(var(--cay,0px)*-1)); }
+  .mark[data-text]::after{ color:#22E0C8; transform:translate(var(--cax,0px), var(--cay,0px)); }
+  /* THE single title effect — "vfx-text-cursor": as the narrowing beam reaches the hero, a
+     directional light with chromatic shadow rays sweeps the wordmark. All other title FX removed. */
+  @property --vfx{ syntax:"<number>"; inherits:true; initial-value:0; }
   @property --cax{ syntax:"<length>"; inherits:true; initial-value:0px; }
   @property --cay{ syntax:"<length>"; inherits:true; initial-value:0px; }
-  @keyframes poweron{ 0%{ --burst:.4; --cax:-17px; --cay:-2px; }
-    40%{ --burst:1; --cax:9px; --cay:5px;
-      text-shadow:0 0 60px color-mix(in srgb,var(--accent) 92%,transparent), 0 0 22px color-mix(in srgb,#fff 55%,transparent); }
-    100%{ --burst:0; --cax:0px; --cay:0px; text-shadow:none; } }
-  .mark.burst{ animation:poweron .66s ease-out both; }
-  /* Left→right light pass that travels THROUGH the letters on arrival (the "mic drop") —
-     the shine is clipped to the wordmark glyphs, so it sweeps per-letter, not as a flat band. */
-  .mark-sweep{ position:absolute; left:0; top:0; width:100%; pointer-events:none; }
-  .mark-sweep::after{ content:attr(data-text); display:block; letter-spacing:inherit; opacity:0;
-    background:linear-gradient(100deg, transparent 43%, #fff 49%,
-      color-mix(in srgb,var(--accent) 88%,#fff) 54%, transparent 61%);
-    background-size:250% 100%; background-position:130% 0;
-    -webkit-background-clip:text; background-clip:text; color:transparent; mix-blend-mode:screen; }
-  body.sweeping .mark-sweep::after{ animation:sweep .62s ease-out both; }
-  @keyframes sweep{ 0%{ opacity:0; background-position:130% 0; } 14%{ opacity:1; }
-    100%{ opacity:0; background-position:-40% 0; } }
+  @keyframes vfxcursor{
+    0%{ --vfx:0; --cax:0px; --cay:0px; text-shadow:none; }
+    24%{ --vfx:1; --cax:-17px; --cay:3px;
+      text-shadow:0 0 54px color-mix(in srgb,var(--accent) 92%,transparent),
+        24px 0 30px color-mix(in srgb,#FF2D95 55%,transparent),
+        -24px 0 30px color-mix(in srgb,#22E0C8 55%,transparent); }
+    62%{ --cax:11px; --cay:2px; }
+    100%{ --vfx:0; --cax:0px; --cay:0px; text-shadow:none; } }
+  .mark.vfx{ animation:vfxcursor .9s cubic-bezier(.16,.84,.44,1) both; }
 
-  /* Single toggle — ENTER (chevron up) at rest; CLOSE (chevron down) when the form is open */
+  /* Single toggle — dead-centered on the RING (fixed width, so the label never shifts it), and
+     static when toggling: the button stays put, only the chevron flips (up = enter, down = close). */
   .beacon{ position:fixed; z-index:6; left:50%; bottom:clamp(22px,5vh,52px); transform:translateX(-50%);
-    display:flex; flex-direction:column; align-items:center; gap:12px; cursor:pointer;
+    width:56px; display:flex; flex-direction:column; align-items:center; cursor:pointer;
     background:none; border:0; color:var(--text); font-family:var(--sans); }
-  .beacon-label{ font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted);
-    transition:color .2s ease; }
+  .beacon-label{ position:absolute; top:100%; left:50%; transform:translateX(-50%); margin-top:12px; white-space:nowrap;
+    font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); transition:color .2s ease; }
   .beacon:hover .beacon-label{ color:var(--text); }
   .beacon-ring{ position:relative; display:flex; align-items:center; justify-content:center; width:52px; height:52px;
     border-radius:50%; border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
     box-shadow:0 0 24px -4px color-mix(in srgb,var(--accent) 70%,transparent); animation:beacon 2.4s ease-out infinite; }
   .beacon-chev{ display:block; width:22px; height:22px; color:var(--accent);
-    transition:transform .4s cubic-bezier(.16,.84,.44,1); }
+    transition:transform .35s cubic-bezier(.16,.84,.44,1); }
   @keyframes beacon{ 0%{ box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent); }
     70%{ box-shadow:0 0 0 16px transparent; } 100%{ box-shadow:0 0 0 0 transparent; } }
-  body.revealed .beacon-chev{ transform:rotate(180deg); }
+  body.revealed .beacon-chev{ transform:scaleY(-1); }   /* flip, not rotate — a truer read of the motion */
   body.revealed .beacon-ring{ animation:none; opacity:.32; }
 
   /* Background recede — a scrim drops the live market back so the centered form owns focus */
@@ -353,7 +347,7 @@ export class Authenticator {
   body.playing .skylight{ opacity:.42; }
   /* Reveal NARROWS the lens onto the form: same light over less area → higher intensity, which
      also feeds the title/hero VFX as the beam concentrates. */
-  body.revealed .skylight{ clip-path:polygon(45% 100%, 55% 100%, 67% 0, 33% 0); opacity:.52; }
+  body.flying .skylight, body.revealed .skylight{ clip-path:polygon(45% 100%, 55% 100%, 67% 0, 33% 0); opacity:.52; }
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
@@ -491,7 +485,7 @@ export class Authenticator {
 <div class="stagescrim" id="stagescrim" aria-hidden="true"></div>
 
 <header class="topbrand" id="topbrand">
-  <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL<span class="mark-sweep" data-text="SKYNET·CAPITAL" aria-hidden="true"></span></h1>
+  <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL</h1>
   <div class="herosub" id="herosub">
     <span class="tertiary">PLAY · EXPERIMENT · LEARN</span>
   </div>
@@ -973,18 +967,16 @@ export class Authenticator {
     if(beaconEl) beaconEl.setAttribute("aria-expanded", on?"true":"false");
     if(cardEl) cardEl.style.transform="";          // stable form: drop any pointer tilt while open
     if(!on){ if(beaconLabel) beaconLabel.textContent="Enter the sandbox";
-      body.classList.remove("revealed","flying","sweeping"); flyTitle(false); measureField();
+      body.classList.remove("revealed","flying"); if(wordmark) wordmark.classList.remove("vfx"); flyTitle(false); measureField();
       if(beaconEl){ try{ beaconEl.focus(); }catch(e){} } return; }
     if(reduce){ if(beaconLabel) beaconLabel.textContent="Close"; body.classList.add("revealed"); flyTitle(true); measureField(); focusForm(); return; }
-    body.classList.remove("sweeping","revealed"); body.classList.add("flying");
-    // Fire the VFX at the origin as the title BEGINS to move, so it rides the flight down.
+    body.classList.remove("revealed"); body.classList.add("flying");   // beam starts narrowing immediately
     flyTitle(true); measureField();
-    if(wordmark){ wordmark.classList.remove("burst"); void wordmark.offsetWidth; wordmark.classList.add("burst"); }
-    body.classList.add("sweeping");
+    // As the narrowing beam reaches the hero, the single VFX-text-cursor effect fires on the title.
+    if(wordmark){ wordmark.classList.remove("vfx"); void wordmark.offsetWidth; wordmark.classList.add("vfx"); }
     // Form only falls into place once the title has landed and can be read.
     seq.push(setTimeout(function(){ body.classList.remove("flying"); body.classList.add("revealed");
       if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 760));
-    seq.push(setTimeout(function(){ body.classList.remove("sweeping"); }, 1000));
   }
   if(beaconEl) beaconEl.addEventListener("click", function(){ setReveal(!revealed); });
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && revealed) setReveal(false); });
