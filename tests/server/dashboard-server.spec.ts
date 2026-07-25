@@ -49,7 +49,7 @@ describe("dashboard-server OAuth gate", () => {
 
         const login = await fetch(`${base}/login`);
         expect(login.status).toBe(200);
-        expect(await login.text()).toContain("Sign in with Google");
+        expect(await login.text()).toContain("Continue with Google");
       },
     );
   });
