@@ -46,6 +46,14 @@ async function handle(
   const path = url.split("?")[0] ?? "/";
   const auth = config.auth;
 
+  // Public cohort pulse: two aggregate equity totals (humans vs bots) and head counts.
+  // Deliberately served before any auth gate so the logged-out login page can show the
+  // live "Man vs. Machine" standing. Exposes only cohort sums — never individual accounts.
+  if (path === "/pulse") {
+    servePulse(res, config.hub);
+    return;
+  }
+
   if (auth) {
     const base = baseUrlFrom(req);
     const secure = base.startsWith("https");
@@ -112,6 +120,29 @@ function isAuthorized(url: string, password?: string): boolean {
 
 function keyOf(url: string): string {
   return new URL(url, "http://localhost").searchParams.get("key") ?? "";
+}
+
+/**
+ * Aggregate the live board into the two cohort totals safe to expose publicly: total equity
+ * and head count for humans vs. bots. Individual accounts (names, positions, per-account
+ * equity) are intentionally omitted — those stay behind auth via `/events`.
+ */
+function servePulse(res: ServerResponse, hub: ObservatoryHub): void {
+  const live = hub.getState().participants.filter((p) => !p.error);
+  const sum = (kind: "human" | "bot"): number =>
+    live.filter((p) => p.kind === kind).reduce((total, p) => total + p.equity, 0);
+  const count = (kind: "human" | "bot"): number => live.filter((p) => p.kind === kind).length;
+  const body = JSON.stringify({
+    humans: count("human"),
+    bots: count("bot"),
+    humanEquity: sum("human"),
+    botEquity: sum("bot"),
+  });
+  res.writeHead(200, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+  });
+  res.end(body);
 }
 
 function streamEvents(req: IncomingMessage, res: ServerResponse, hub: ObservatoryHub): void {
