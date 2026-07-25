@@ -609,6 +609,10 @@ export class Authenticator {
     var accent=css("--accent")||"#35D0BA", muted=css("--muted")||"#8B9AAB",
         pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", txt=css("--text")||"#E6EDF3";
     ctx.save(); ctx.globalAlpha=dim;
+    // Camera: during a play we zoom into the signal region (the newest point) to frame the play
+    // against the market condition — this also dissolves the left→right scroll. Ambient zoom = 1.
+    var fpx=(n-1)*dx, fpy=Y(price[n-1]);
+    if(zoom>1.001){ ctx.translate(W*0.84, baseY); ctx.scale(zoom,zoom); ctx.translate(-fpx,-fpy); }
     // Bollinger envelope
     ctx.beginPath();
     for(var i=0;i<bU.length;i++){ var px=i*dx,py=Y(bU[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
@@ -629,9 +633,15 @@ export class Authenticator {
     ctx.strokeStyle="#EAFBF7"; ctx.lineWidth=2.3; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0;
     var lx=(n-1)*dx, ly=Y(price[n-1]);
     ctx.beginPath(); ctx.arc(lx,ly,3.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=20; ctx.fill(); ctx.shadowBlur=0;
-    // RSI readout — synthesizes overbought/oversold at a glance
+    // Signal reticle at the focal point while a play is framed — constant screen size (÷zoom)
+    if(playMode){ var rr=(13+3*Math.sin(pbGlyphT*0.35))/zoom;
+      ctx.strokeStyle=hexA(accent,0.9); ctx.lineWidth=1.4/zoom; ctx.beginPath(); ctx.arc(lx,ly,rr,0,7); ctx.stroke();
+      ctx.strokeStyle=hexA(accent,0.5); ctx.lineWidth=1/zoom;
+      ctx.beginPath(); ctx.moveTo(lx-rr*1.8,ly); ctx.lineTo(lx-rr,ly); ctx.moveTo(lx+rr,ly); ctx.lineTo(lx+rr*1.8,ly); ctx.stroke(); }
+    ctx.restore();
+    // RSI readout — screen space, never zoomed
     var rc = rsiV<32?pos:(rsiV>68?neg:muted);
-    ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
+    ctx.save(); ctx.globalAlpha=dim; ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
     ctx.fillText("RSI "+rsiV.toFixed(0)+(rsiV<32?" OVERSOLD":rsiV>68?" OVERBOUGHT":""), 16, field.top-6);
     ctx.textAlign="start"; ctx.restore();
   }
@@ -827,6 +837,7 @@ export class Authenticator {
     zones:clamp01((e-T_ZON)/ZON), label:clamp01((e-T_LBL)/LBL), enter:clamp01((e-T_ENT)/ENT),
     move:clamp01((e-T_MOV)/MOV), exit:clamp01((e-T_EXT)/EXT), out: e>T_OUT?clamp01((e-T_OUT)/OUT):0 }; }
   var playMode=false, playStart=0, curStrat=0, curSig=null, nextPlayAt=2400, rainBoost=0, rainTint=0;
+  var zoom=1;   // camera zoom into the signal region during a play (1 = ambient)
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -898,15 +909,18 @@ export class Authenticator {
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function loop(now){
     if(!running) return;
-    if(now-last > 50){ last=now; measureField(); fieldStep(); stepMarket();
+    if(now-last > 50){ last=now; measureField(); fieldStep();
+      if(!playMode) stepMarket();   // freeze the trend while a play is framed — the scroll pauses
       if(!playMode && now>=nextPlayAt){ var sig=detectSignal(); if(!sig && now>=nextPlayAt+5000) sig=forceSignal();
         if(sig){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i; } }
-      var p=null, recede=0;
+      var p=null, recede=0, zt=1;
       if(playMode){ var e=now-playStart; p=playProg(e); recede=Math.min(p.on,1)*(1-p.out);
+        zt = 1 + 0.9*clamp01(e/800)*(1-p.out);   // zoom in to frame the signal, hold, zoom back out
         rainBoost=(p.enter>0 && p.exit<1)?1:0; rainTint=(p.exit>0 && p.out<1)?1:0;
         if(e>=T_END){ playMode=false; nextPlayAt=now+3000+Math.random()*2400; p=null; recede=0; rainBoost=0; rainTint=0; } }
+      zoom += (zt-zoom)*0.1;
       document.body.classList.toggle("playing", recede>0.02);
-      drawMarket(1 - recede*0.82);
+      drawMarket(1 - recede*0.5);
       if(p){ drawPlaybook(STRATS[curStrat], p, curSig); pbGlyphT++; }
       rainDraw(rainBoost, rainTint); }
     requestAnimationFrame(loop);
