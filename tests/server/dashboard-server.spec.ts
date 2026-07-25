@@ -75,6 +75,54 @@ describe("dashboard-server OAuth gate", () => {
   });
 });
 
+describe("dashboard-server /pulse", () => {
+  const snap = (
+    id: string,
+    kind: "human" | "bot",
+    equity: number,
+    error?: string,
+  ): DashboardData["participants"][number] => ({
+    id,
+    displayName: id,
+    kind,
+    cash: equity,
+    equity,
+    positions: [],
+    ...(error ? { error } : {}),
+  });
+
+  it("serves public cohort aggregates before any auth gate, omitting individuals", async () => {
+    const auth = resolveAuth({
+      SKYNET_SESSION_SECRET: "s",
+      SKYNET_GOOGLE_CLIENT_ID: "g",
+      SKYNET_GOOGLE_CLIENT_SECRET: "gs",
+    });
+    const data: DashboardData = {
+      generatedAt: "t",
+      participants: [
+        snap("Ann", "human", 5_200_000),
+        snap("Bo", "human", 4_900_000),
+        snap("Bot-1", "bot", 5_500_000),
+        snap("Bot-Down", "bot", 0, "unreachable"), // excluded: errored account
+      ],
+    };
+    await withServer({ hub: new ObservatoryHub(data), ...(auth ? { auth } : {}) }, async (base) => {
+      const res = await fetch(`${base}/pulse`); // no session cookie — must still work
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("application/json");
+      const body = await res.json();
+      expect(body).toEqual({
+        humans: 2,
+        bots: 1, // the errored bot is dropped
+        humanEquity: 10_100_000,
+        botEquity: 5_500_000,
+      });
+      // Never leaks an individual account's name.
+      expect(JSON.stringify(body)).not.toContain("Ann");
+    });
+  });
+});
+
 describe("dashboard-server /add", () => {
   it("serves the form on GET and registers on POST", async () => {
     const calls: AddParticipantInput[] = [];

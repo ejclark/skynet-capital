@@ -307,9 +307,11 @@ export class Authenticator {
   .ticker b{ color:var(--pos); font-weight:600; }
   .ticker .m{ color:var(--accent); }
   .ticker .sep{ opacity:.5; }
-  /* Honest "this is a simulated preview" marker */
+  /* Honest "this is a simulated preview" marker; flips to a live badge when /pulse has data */
   .sim{ font-size:9px; letter-spacing:.18em; color:var(--muted); border:1px solid var(--border);
     border-radius:4px; padding:2px 5px; }
+  .sim.on-air{ color:var(--accent); border-color:color-mix(in srgb,var(--accent) 55%,var(--border));
+    background:color-mix(in srgb,var(--accent) 10%,transparent); }
   /* HUD telemetry row — sells the live command-console feel */
   .hud{ display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;
     font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase;
@@ -427,9 +429,10 @@ export class Authenticator {
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
 
-  // Two seeded, gently diverging equity walks scrolling right→left.
-  var human = { color:"--pos", seed:11.7, pts:[], v:0, val:0 };
-  var machine = { color:"--accent", seed:4.2, pts:[], v:0, val:0 };
+  // Two seeded, gently diverging equity walks scrolling right→left. "drift" is the upward
+  // bias per step; it starts as a pleasant default and is retargeted from live /pulse data.
+  var human = { color:"--pos", seed:11.7, pts:[], v:0, val:0, drift:0.045 };
+  var machine = { color:"--accent", seed:4.2, pts:[], v:0, val:0, drift:0.05 };
   var SPAN = 220;                // sample points across width
   var t = 0;
   function noise(s){ var x=Math.sin(s)*43758.5453; return x-Math.floor(x); }
@@ -443,7 +446,7 @@ export class Authenticator {
   }
   function seedFill(){
     human.pts=[]; machine.pts=[]; human.val=0; machine.val=0; human.v=0; machine.v=0;
-    for(var i=0;i<SPAN;i++){ t=i; step(human,0.045); step(machine,0.05); }
+    for(var i=0;i<SPAN;i++){ t=i; step(human,human.drift); step(machine,machine.drift); }
   }
   seedFill();
 
@@ -490,16 +493,32 @@ export class Authenticator {
     if(s[0]==="#"){ var r=parseInt(s.substr(1,2),16),g=parseInt(s.substr(3,2),16),b=parseInt(s.substr(5,2),16);
       return "rgba("+r+","+g+","+b+","+a+")"; } return s; }catch(e){ return color; } }
 
-  // NOTE: this race is a client-side SIMULATION (labeled "SIM" in the UI), not live data.
-  // A real Humans-vs-Machines metric is derivable from ObservatoryHub.getState(): sum
-  // equity by kind and expose only those two cohort totals via a future unauthenticated
-  // /pulse route (individual account detail must stay behind auth). Poll it here to drive
-  // the curves, falling back to this simulation when no participants are live.
   function pct(line){ var n=line.pts.length; if(n<2) return 0;
     return (line.pts[n-1]-line.pts[0]) / (Math.abs(line.pts[0])+40) * 100; }
   function fmt(p){ return (p>=0?"+":"")+p.toFixed(2)+"%"; }
   var tH=document.getElementById("tHuman"), tM=document.getElementById("tMachine");
   function updateTicker(){ if(tH) tH.textContent=fmt(pct(human)); if(tM) tM.textContent=fmt(pct(machine)); }
+
+  // --- Live cohort standings from the public /pulse endpoint ---
+  // /pulse returns { humans, bots, humanEquity, botEquity } — cohort aggregates only.
+  // When at least one account is live we show real return-on-seed and bias the curves so
+  // the leading cohort visibly climbs; otherwise we stay on the labeled "SIM" simulation.
+  var SEED=5000000, live=false, simEl=document.querySelector(".sim");
+  function roi(equity,count){ return count>0 ? (equity - count*SEED)/(count*SEED)*100 : 0; }
+  function bias(r){ return Math.max(0.005, Math.min(0.075, 0.03 + r*0.004)); }
+  function applyPulse(d){
+    if(!d || ((d.humans|0)+(d.bots|0))===0) return;   // no field yet → keep the sim
+    live=true;
+    var hr=roi(d.humanEquity, d.humans|0), br=roi(d.botEquity, d.bots|0);
+    if(tH) tH.textContent=fmt(hr); if(tM) tM.textContent=fmt(br);
+    human.drift=bias(hr); machine.drift=bias(br);
+    if(simEl && simEl.textContent!=="LIVE"){ simEl.textContent="LIVE"; simEl.classList.add("on-air");
+      simEl.title="Live league standings — return on the $5M seed, humans vs. bots"; }
+  }
+  function poll(){ if(!window.fetch) return;
+    try{ fetch("/pulse",{cache:"no-store"}).then(function(r){ return r.ok?r.json():null; })
+      .then(applyPulse).catch(function(){}); }catch(e){} }
+  poll(); setInterval(poll, 5000);
 
   // --- Ambient Matrix rain (deepest layer, faint) ---
   var rcanvas=document.getElementById("rain"), rctx=null, cols=[], colW=16, RG="0123456789$+-.%△▽ｦｱｲｳｴｵｶｷｸｹﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘ";
@@ -530,14 +549,14 @@ export class Authenticator {
   window.addEventListener("resize", function(){ resize(); rainResize(); });
 
   if(reduce){ draw(); if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
-    for(var s=0;s<26;s++) rainDraw(); } updateTicker(); return; }   // static frame, no loop
+    for(var s=0;s<26;s++) rainDraw(); } if(!live) updateTicker(); return; }   // static frame, no loop
 
   var last=0, running=true;
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function loop(now){
     if(!running) return;
-    if(now-last > 55){ last=now; t++; step(human,0.045); step(machine,0.05); draw(); rainDraw();
-      if(t%6===0) updateTicker(); }
+    if(now-last > 55){ last=now; t++; step(human,human.drift); step(machine,machine.drift); draw(); rainDraw();
+      if(t%6===0 && !live) updateTicker(); }   // in live mode the ticker shows real /pulse numbers
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
