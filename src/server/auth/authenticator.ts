@@ -229,57 +229,84 @@ export class Authenticator {
   @keyframes beam{ 0%{ transform:translateY(-40%); opacity:0; } 12%{ opacity:1; } 88%{ opacity:1; } 100%{ transform:translateY(240%); opacity:0; } }
 
   /* Top-center brand — primary real estate; the animation owns the rest of the screen */
+  /* Single wordmark — top-center hero at rest; flies into the form on reveal (see .mark flight) */
   .topbrand{ position:fixed; z-index:6; top:clamp(20px,5vh,52px); left:0; right:0; text-align:center; pointer-events:none; }
-  .topbrand .mark{ font-size:clamp(26px,5vw,42px); font-weight:700; letter-spacing:.16em; margin:0; }
+  .topbrand .mark{ font-size:clamp(26px,5vw,42px); font-weight:700; letter-spacing:.16em; margin:0;
+    transform-origin:center center; will-change:transform;
+    transition:transform .62s cubic-bezier(.16,.84,.44,1); }
   .topbrand .mark b{ color:var(--accent); text-shadow:0 0 20px color-mix(in srgb,var(--accent) 65%,transparent); }
-  .topbrand .sub{ display:block; margin-top:10px; font-size:clamp(10px,1.4vw,12px); letter-spacing:.42em;
+  /* Secondary (pill) + tertiary line — the idle identity below the title; fade out on reveal */
+  .herosub{ margin-top:16px; display:flex; flex-direction:column; align-items:center; gap:10px;
+    transition:opacity .4s ease, transform .4s ease; }
+  .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px;
+    border:1px solid color-mix(in srgb,var(--accent) 34%,var(--border)); background:color-mix(in srgb,var(--surface) 60%,transparent);
+    font-family:var(--mono); font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--text);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  .pill .live{ width:6px; height:6px; border-radius:50%; background:var(--accent);
+    box-shadow:0 0 10px 1px var(--accent); animation:pulse 2.4s ease-out infinite; }
+  .tertiary{ font-family:var(--mono); font-size:clamp(9px,1.2vw,11px); letter-spacing:.42em;
     text-transform:uppercase; color:var(--muted); }
+  body.revealed .herosub{ opacity:0; transform:translateY(-8px); pointer-events:none; }
 
-  /* Cursor VFX — a light source that follows the pointer, tinting the stage (fine pointers only) */
+  /* Cursor VFX — dialed WAY back to ambient; the dramatic burst is reserved for one reveal moment */
   .cursorglow{ position:fixed; inset:0; z-index:2; pointer-events:none; opacity:0; transition:opacity .5s ease;
-    background:radial-gradient(180px 180px at var(--cx,50%) var(--cy,40%),
-      color-mix(in srgb,var(--accent) 16%,transparent), transparent 70%); mix-blend-mode:screen; }
+    background:radial-gradient(140px 140px at var(--cx,50%) var(--cy,40%),
+      color-mix(in srgb,var(--accent) 7%,transparent), transparent 70%); mix-blend-mode:screen; }
   body.finepointer .cursorglow{ opacity:1; }
 
-  /* Chromatic-aberration wordmark — split direction is driven by the cursor (--cax/--cay) */
+  /* Chromatic-aberration wordmark — subtle at rest; the reveal burst amps the split (--burst) */
   .mark[data-text]{ position:relative; }
   .mark[data-text]::before, .mark[data-text]::after{ content:attr(data-text); position:absolute; left:0; top:0;
-    width:100%; opacity:.5; pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit; }
-  .mark[data-text]::before{ color:#FF4D9D; transform:translate(calc(var(--cax,-1px)*-1), calc(var(--cay,0px)*-1)); }
-  .mark[data-text]::after{ color:#35D0BA; transform:translate(var(--cax,1px), var(--cay,0px)); }
+    width:100%; opacity:calc(.32 + var(--burst,0)*.5); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit;
+    transition:opacity .2s ease; }
+  .mark[data-text]::before{ color:#FF4D9D;
+    transform:translate(calc((var(--cax,-.6px) + var(--burst,0)*6px)*-1), calc(var(--cay,0px)*-1)); }
+  .mark[data-text]::after{ color:#35D0BA;
+    transform:translate(calc(var(--cax,.6px) + var(--burst,0)*6px), var(--cay,0px)); }
+  /* One-shot power-on: a brief chromatic flare + glow as the title lands in the form */
+  @keyframes poweron{ 0%{ --burst:0; } 22%{ --burst:1; text-shadow:0 0 34px color-mix(in srgb,var(--accent) 80%,transparent); }
+    100%{ --burst:0; text-shadow:none; } }
+  @property --burst{ syntax:"<number>"; inherits:true; initial-value:0; }
+  .mark.burst{ animation:poweron .72s ease-out both; }
 
-  /* Enter beacon — the obvious affordance to reveal the sign-in card */
-  .beacon{ position:fixed; z-index:6; left:50%; bottom:clamp(26px,7vh,64px); transform:translateX(-50%);
+  /* Single toggle — ENTER (chevron up) at rest; CLOSE (chevron down) when the form is open */
+  .beacon{ position:fixed; z-index:6; left:50%; bottom:clamp(22px,5vh,52px); transform:translateX(-50%);
     display:flex; flex-direction:column; align-items:center; gap:12px; cursor:pointer;
-    background:none; border:0; color:var(--text); font-family:var(--sans);
-    transition:opacity .5s ease, transform .5s ease; }
-  .beacon-label{ font-size:13px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted);
+    background:none; border:0; color:var(--text); font-family:var(--sans); }
+  .beacon-label{ font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted);
     transition:color .2s ease; }
   .beacon:hover .beacon-label{ color:var(--text); }
   .beacon-ring{ position:absolute; top:-6px; left:50%; transform:translateX(-50%); width:54px; height:54px;
     border-radius:50%; border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
     box-shadow:0 0 24px -4px color-mix(in srgb,var(--accent) 70%,transparent); animation:beacon 2.4s ease-out infinite; }
-  .beacon-chev{ width:14px; height:14px; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent);
-    transform:rotate(45deg); animation:chev 1.8s ease-in-out infinite; }
+  .beacon-chev{ width:13px; height:13px; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent);
+    transform:rotate(-135deg); margin-top:5px; transition:transform .4s cubic-bezier(.16,.84,.44,1); }
   @keyframes beacon{ 0%{ box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent); }
     70%{ box-shadow:0 0 0 16px transparent; } 100%{ box-shadow:0 0 0 0 transparent; } }
-  @keyframes chev{ 0%,100%{ transform:rotate(45deg) translate(0,0); opacity:.6; }
-    50%{ transform:rotate(45deg) translate(3px,3px); opacity:1; } }
-  body.revealed .beacon{ opacity:0; pointer-events:none; transform:translate(-50%,20px); }
+  body.revealed .beacon-chev{ transform:rotate(45deg); margin-top:0; }
+  body.revealed .beacon-ring{ animation:none; opacity:.28; }
 
-  /* Reveal wrapper — the card rises into view when the beacon is triggered */
-  .authwrap{ position:fixed; z-index:5; left:0; right:0; bottom:0; display:flex; justify-content:center;
-    padding:0 20px clamp(28px,8vh,80px); perspective:1200px;
-    opacity:0; transform:translateY(40px); pointer-events:none;
+  /* Background recede — a scrim drops the live market back so the centered form owns focus */
+  .stagescrim{ position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; transition:opacity .55s ease;
+    background:radial-gradient(120% 90% at 50% 46%, color-mix(in srgb,var(--bg) 58%,transparent),
+      color-mix(in srgb,var(--bg) 86%,transparent)); }
+  body.revealed .stagescrim{ opacity:1; }
+
+  /* Reveal wrapper — larger, vertically centered form */
+  .authwrap{ position:fixed; z-index:5; inset:0; display:flex; align-items:center; justify-content:center;
+    padding:clamp(72px,12vh,120px) 20px; perspective:1200px;
+    opacity:0; transform:translateY(30px); pointer-events:none;
     transition:opacity .6s cubic-bezier(.16,.84,.44,1), transform .6s cubic-bezier(.16,.84,.44,1); }
   body.revealed .authwrap{ opacity:1; transform:none; pointer-events:auto; }
-  .authwrap .card{ width:100%; max-width:392px; transform-style:preserve-3d; }
+  .authwrap .card{ width:100%; max-width:460px; transform-style:preserve-3d; }
+  /* Momentary read of the slot's final position for the title FLIP (no visible effect) */
+  body.measuring .authwrap{ transform:none !important; transition:none !important; opacity:1 !important; }
 
-  .card-close{ position:absolute; top:10px; right:12px; z-index:4; width:26px; height:26px; border-radius:8px;
-    border:1px solid var(--border); background:var(--surface-2); color:var(--muted); cursor:pointer;
-    font-size:14px; line-height:1; transition:color .2s ease, border-color .2s ease; }
-  .card-close:hover{ color:var(--text); border-color:color-mix(in srgb,var(--accent) 50%,var(--border)); }
-  .card-close:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  /* Reserved landing zone for the flown title + the sign-in sub beneath it */
+  .brand-slot{ height:56px; }
+  .signin-sub{ margin:6px 0 22px; font-family:var(--mono); font-size:12px; letter-spacing:.3em;
+    text-transform:uppercase; color:var(--muted); opacity:0; transition:opacity .4s ease .32s; }
+  body.revealed .signin-sub{ opacity:1; }
 
   /* Holographic projector — the card is the emitter base; the play projects up into the field */
   .projector{ position:absolute; left:50%; top:0; transform:translate(-50%,-6px);
@@ -429,16 +456,20 @@ export class Authenticator {
 <div class="scanbeam" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 <div class="cursorglow" id="cursorGlow" aria-hidden="true"></div>
+<div class="stagescrim" id="stagescrim" aria-hidden="true"></div>
 
 <header class="topbrand" id="topbrand">
-  <h1 class="mark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL</h1>
-  <span class="sub">Options Sandbox</span>
+  <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL</h1>
+  <div class="herosub" id="herosub">
+    <span class="pill"><span class="live"></span>OPTIONS SANDBOX</span>
+    <span class="tertiary">PLAY · EXPERIMENT · LEARN</span>
+  </div>
 </header>
 
-<button type="button" class="beacon" id="beacon">
+<button type="button" class="beacon" id="beacon" aria-expanded="false" aria-controls="authwrap">
   <span class="beacon-ring" aria-hidden="true"></span>
-  <span class="beacon-label">Enter the sandbox</span>
   <span class="beacon-chev" aria-hidden="true"></span>
+  <span class="beacon-label" id="beaconLabel">Enter the sandbox</span>
 </button>
 
 <div class="authwrap" id="authwrap">
@@ -446,12 +477,8 @@ export class Authenticator {
     <div class="projector" aria-hidden="true"><span class="cone"></span><span class="emitter"></span></div>
     <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
     <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
-    <button type="button" class="card-close" id="cardClose" aria-label="Back to the board">&#8595;</button>
-    <div class="brand">
-      <span class="mark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL</span>
-      <span class="sub">Sign in to the sandbox</span>
-    </div>
-    <span class="tag"><span class="live"></span>PAPER · LEARN · EXPERIMENT</span>
+    <div class="brand-slot" id="brandSlot" aria-hidden="true"></div>
+    <p class="signin-sub">Sign in to the sandbox</p>
     ${banner}
     <div class="btns">
       ${buttons}
@@ -477,8 +504,7 @@ export class Authenticator {
 
   // Reveal state: the animation owns the screen; the sign-in card lives behind the beacon.
   var revealed=false;
-  var beaconEl=document.getElementById("beacon"), cardEl=document.getElementById("card"),
-      closeEl=document.getElementById("cardClose");
+  var beaconEl=document.getElementById("beacon"), cardEl=document.getElementById("card");
   // The "field" = the band the market + playbook render into. When idle it fills most of the
   // screen (centered); when the card is revealed it shrinks to sit ABOVE the card (no overlap).
   var field={ top:0, bottom:0 };
@@ -740,23 +766,43 @@ export class Authenticator {
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
 
-  // Reveal: the beacon opens the sign-in card; close button / Esc returns to the animation.
-  function setReveal(on){ revealed=on; document.body.classList.toggle("revealed", on); measureField();
-    if(on && cardEl){ var b=cardEl.querySelector(".btn"); if(b) setTimeout(function(){ try{ b.focus(); }catch(e){} }, 640); }
+  // Reveal: one toggle opens/closes the form; the single wordmark flies into the form as its title.
+  var wordmark=document.getElementById("wordmark"), brandSlot=document.getElementById("brandSlot"),
+      beaconLabel=document.getElementById("beaconLabel");
+  // Shared-element FLIP: measure the title's rest rect and the form slot's final rect, then glide.
+  function flyTitle(on){
+    if(!wordmark || !brandSlot) return;
+    if(!on){ wordmark.style.transform=""; return; }
+    wordmark.style.transform="none";
+    var wr=wordmark.getBoundingClientRect();
+    document.body.classList.add("measuring");      // read the slot at its final centered position
+    var sr=brandSlot.getBoundingClientRect();
+    document.body.classList.remove("measuring");
+    var dx=(sr.left+sr.width/2)-(wr.left+wr.width/2), dy=(sr.top+sr.height/2)-(wr.top+wr.height/2);
+    void wordmark.offsetWidth;                      // commit before animating (instant under reduced motion)
+    wordmark.style.transform="translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) scale(1.18)";
+    if(!reduce){ wordmark.classList.remove("burst"); void wordmark.offsetWidth; wordmark.classList.add("burst"); }
+  }
+  function setReveal(on){ revealed=on; document.body.classList.toggle("revealed", on);
+    if(beaconLabel) beaconLabel.textContent = on ? "Close" : "Enter the sandbox";
+    if(beaconEl) beaconEl.setAttribute("aria-expanded", on?"true":"false");
+    if(cardEl) cardEl.style.transform="";          // stable form: drop any pointer tilt while open
+    flyTitle(on); measureField();
+    if(on && cardEl){ var b=cardEl.querySelector(".btn"); if(b) setTimeout(function(){ try{ b.focus(); }catch(e){} }, 660); }
     else if(!on && beaconEl){ try{ beaconEl.focus(); }catch(e){} } }
-  if(beaconEl) beaconEl.addEventListener("click", function(){ setReveal(true); });
-  if(closeEl) closeEl.addEventListener("click", function(){ setReveal(false); });
+  if(beaconEl) beaconEl.addEventListener("click", function(){ setReveal(!revealed); });
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && revealed) setReveal(false); });
-  if(document.querySelector(".error")) setReveal(true);   // never hide an error behind the beacon
+  window.addEventListener("resize", function(){ if(revealed) flyTitle(true); });   // keep the landing aligned
+  if(document.querySelector(".error")) setReveal(true);   // never hide an error behind the toggle
 
-  // Cursor VFX: a light source + chromatic split that track the pointer; the card tilts in 3D.
+  // Cursor VFX: subtle ambient pointer glow + chromatic split; the card tilts only while at rest.
   var fine = window.matchMedia && window.matchMedia("(pointer:fine)").matches, root=document.documentElement;
   if(fine && !reduce){ document.body.classList.add("finepointer");
     window.addEventListener("pointermove", function(e){
       root.style.setProperty("--cx", e.clientX+"px"); root.style.setProperty("--cy", e.clientY+"px");
       var dx=(e.clientX/window.innerWidth)-0.5, dy=(e.clientY/window.innerHeight)-0.5;
-      root.style.setProperty("--cax",(1+dx*3).toFixed(2)+"px"); root.style.setProperty("--cay",(dy*2).toFixed(2)+"px");
-      if(cardEl){ cardEl.style.transform="rotateX("+(-dy*6).toFixed(2)+"deg) rotateY("+(dx*8).toFixed(2)+"deg)";
+      root.style.setProperty("--cax",(0.4+dx*1.4).toFixed(2)+"px"); root.style.setProperty("--cay",(dy*1.2).toFixed(2)+"px");
+      if(cardEl && !revealed){ cardEl.style.transform="rotateX("+(-dy*6).toFixed(2)+"deg) rotateY("+(dx*8).toFixed(2)+"deg)";
         cardEl.style.setProperty("--sheen",(115+dx*70).toFixed(0)+"deg"); }
     }); }
 
