@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/ejclark/skynet-capital/compare/v1.3.0...v1.4.0) (2026-07-25)
+
+
+### Features
+
+* Merge pull request [#15](https://github.com/ejclark/skynet-capital/issues/15) from ejclark/claude/login-experience-design-040fi5 ([e371c76](https://github.com/ejclark/skynet-capital/commit/e371c76a39f84d1c57b6d7d73c8e58eab9e9fb79))
+
 # [1.3.0](https://github.com/ejclark/skynet-capital/compare/v1.2.1...v1.3.0) (2026-07-24)
 
 
