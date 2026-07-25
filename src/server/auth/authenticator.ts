@@ -226,35 +226,104 @@ export class Authenticator {
   .vignette{ position:fixed; inset:0; z-index:3; pointer-events:none;
     background:radial-gradient(120% 90% at 50% 40%, transparent 45%, color-mix(in srgb,var(--bg) 82%,transparent) 100%); }
 
-  /* Depth stage — parallax layers ride inside this */
-  .scene{ position:relative; z-index:4; width:100%; max-width:392px; transform-style:preserve-3d; }
   @keyframes beam{ 0%{ transform:translateY(-40%); opacity:0; } 12%{ opacity:1; } 88%{ opacity:1; } 100%{ transform:translateY(240%); opacity:0; } }
 
-  /* Caption slot above the card — cross-fades between the race legend and the Strategy Playbook */
-  .stage-cap{ position:relative; height:52px; margin-bottom:16px; transform:translateZ(38px); }
-  .stage-cap > *{ position:absolute; left:0; right:0; top:0; transition:opacity .5s ease; }
-  .stage-cap .playbook{ opacity:0; }
-  .stage-cap.pb .legend{ opacity:0; }
-  .stage-cap.pb .playbook{ opacity:1; }
+  /* Top-center brand — primary real estate; the animation owns the rest of the screen */
+  /* Single wordmark — top-center hero at rest; flies into the form on reveal (see .mark flight) */
+  .topbrand{ position:fixed; z-index:6; top:clamp(20px,5vh,52px); left:0; right:0; text-align:center; pointer-events:none; }
+  .topbrand .mark{ font-size:clamp(26px,5vw,42px); font-weight:700; letter-spacing:.16em; margin:0;
+    transform-origin:center center; will-change:transform;
+    transition:transform .62s cubic-bezier(.16,.84,.44,1); }
+  .topbrand .mark b{ color:var(--accent); text-shadow:0 0 20px color-mix(in srgb,var(--accent) 65%,transparent); }
+  /* Secondary (pill) + tertiary line — the idle identity below the title; fade out on reveal */
+  .herosub{ margin-top:16px; display:flex; flex-direction:column; align-items:center; gap:10px;
+    transition:opacity .4s ease, transform .4s ease; }
+  .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px;
+    border:1px solid color-mix(in srgb,var(--accent) 34%,var(--border)); background:color-mix(in srgb,var(--surface) 60%,transparent);
+    font-family:var(--mono); font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--text);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  .pill .live{ width:6px; height:6px; border-radius:50%; background:var(--accent);
+    box-shadow:0 0 10px 1px var(--accent); animation:pulse 2.4s ease-out infinite; }
+  .tertiary{ font-family:var(--mono); font-size:clamp(9px,1.2vw,11px); letter-spacing:.42em;
+    text-transform:uppercase; color:var(--muted); }
+  body.revealed .herosub, body.flying .herosub{ opacity:0; transform:translateY(-8px); pointer-events:none; }
 
-  .legend{
-    display:flex; justify-content:center; align-items:center; gap:22px; padding-top:15px;
-    font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
-  }
-  .legend span{ display:inline-flex; align-items:center; gap:7px; color:var(--muted); }
-  .legend i{ width:22px; height:2px; border-radius:2px; display:inline-block; }
-  .legend .lz{ box-shadow:0 0 8px 1px currentColor; }
-  .legend .human i{ background:var(--pos); color:var(--pos); }
-  .legend .machine i{ background:var(--accent); color:var(--accent); }
-  .legend b{ color:var(--text); font-weight:600; }
+  /* Cursor VFX — dialed WAY back to ambient; the dramatic burst is reserved for one reveal moment */
+  .cursorglow{ position:fixed; inset:0; z-index:2; pointer-events:none; opacity:0; transition:opacity .5s ease;
+    background:radial-gradient(140px 140px at var(--cx,50%) var(--cy,40%),
+      color-mix(in srgb,var(--accent) 7%,transparent), transparent 70%); mix-blend-mode:screen; }
+  body.finepointer .cursorglow{ opacity:1; }
 
-  .playbook{ display:flex; flex-direction:column; align-items:center; gap:3px; font-family:var(--mono); }
-  .pb-eyebrow{ font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
-  .pb-cyc{ color:var(--accent); }
-  .pb-name{ font-size:14px; letter-spacing:.16em; font-weight:700; color:var(--accent);
-    text-shadow:0 0 14px color-mix(in srgb,var(--accent) 55%,transparent); }
-  .pb-desc{ font-size:10.5px; letter-spacing:.02em; color:var(--muted); font-family:var(--sans);
-    max-width:32ch; text-align:center; line-height:1.35; }
+  /* Chromatic-aberration wordmark — subtle at rest; the reveal burst amps the split (--burst) */
+  .mark[data-text]{ position:relative; }
+  .mark[data-text]::before, .mark[data-text]::after{ content:attr(data-text); position:absolute; left:0; top:0;
+    width:100%; opacity:calc(.28 + var(--burst,0)*.55); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit; }
+  .mark[data-text]::before{ color:#FF4D9D; transform:translate(calc(var(--cax,0px)*-1), calc(var(--cay,0px)*-1)); }
+  .mark[data-text]::after{ color:#35D0BA; transform:translate(var(--cax,0px), var(--cay,0px)); }
+  /* One-shot power-on: a left→right chromatic-ray wipe + glow as the title lands in the form */
+  @property --burst{ syntax:"<number>"; inherits:true; initial-value:0; }
+  @property --cax{ syntax:"<length>"; inherits:true; initial-value:0px; }
+  @keyframes poweron{ 0%{ --burst:.25; --cax:-13px; }
+    45%{ --burst:1; --cax:11px; text-shadow:0 0 40px color-mix(in srgb,var(--accent) 85%,transparent); }
+    100%{ --burst:0; --cax:0px; text-shadow:none; } }
+  .mark.burst{ animation:poweron .8s ease-out both; }
+  /* Suppress the chromatic split while the title is in flight — the VFX fires only once it lands */
+  body.flying .mark[data-text]::before, body.flying .mark[data-text]::after{ opacity:0; }
+  /* Left→right light pass that travels THROUGH the letters on arrival (the "mic drop") —
+     the shine is clipped to the wordmark glyphs, so it sweeps per-letter, not as a flat band. */
+  .mark-sweep{ position:absolute; left:0; top:0; width:100%; pointer-events:none; }
+  .mark-sweep::after{ content:attr(data-text); display:block; letter-spacing:inherit; opacity:0;
+    background:linear-gradient(100deg, transparent 43%, #fff 49%,
+      color-mix(in srgb,var(--accent) 88%,#fff) 54%, transparent 61%);
+    background-size:250% 100%; background-position:130% 0;
+    -webkit-background-clip:text; background-clip:text; color:transparent; mix-blend-mode:screen; }
+  body.sweeping .mark-sweep::after{ animation:sweep .62s ease-out both; }
+  @keyframes sweep{ 0%{ opacity:0; background-position:130% 0; } 14%{ opacity:1; }
+    100%{ opacity:0; background-position:-40% 0; } }
+
+  /* Single toggle — ENTER (chevron up) at rest; CLOSE (chevron down) when the form is open */
+  .beacon{ position:fixed; z-index:6; left:50%; bottom:clamp(22px,5vh,52px); transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:12px; cursor:pointer;
+    background:none; border:0; color:var(--text); font-family:var(--sans); }
+  .beacon-label{ font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted);
+    transition:color .2s ease; }
+  .beacon:hover .beacon-label{ color:var(--text); }
+  .beacon-ring{ position:relative; display:flex; align-items:center; justify-content:center; width:52px; height:52px;
+    border-radius:50%; border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
+    box-shadow:0 0 24px -4px color-mix(in srgb,var(--accent) 70%,transparent); animation:beacon 2.4s ease-out infinite; }
+  .beacon-chev{ width:13px; height:13px; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent);
+    transform:translateY(-2px) rotate(-135deg); transition:transform .4s cubic-bezier(.16,.84,.44,1); }
+  @keyframes beacon{ 0%{ box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent); }
+    70%{ box-shadow:0 0 0 16px transparent; } 100%{ box-shadow:0 0 0 0 transparent; } }
+  body.revealed .beacon-chev{ transform:translateY(2px) rotate(45deg); }
+  body.revealed .beacon-ring{ animation:none; opacity:.32; }
+
+  /* Background recede — a scrim drops the live market back so the centered form owns focus */
+  .stagescrim{ position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; transition:opacity .55s ease;
+    background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+  body.revealed .stagescrim{ opacity:1; }
+
+  /* Reveal wrapper — larger, vertically centered form */
+  .authwrap{ position:fixed; z-index:5; inset:0; display:flex; align-items:center; justify-content:center;
+    padding:clamp(72px,12vh,120px) 20px; perspective:1200px;
+    opacity:0; transform:translateY(30px); pointer-events:none;
+    transition:opacity .6s cubic-bezier(.16,.84,.44,1), transform .6s cubic-bezier(.16,.84,.44,1); }
+  body.revealed .authwrap{ opacity:1; transform:none; pointer-events:auto; }
+  .authwrap .card{ width:100%; max-width:460px; transform-style:preserve-3d; }
+  /* Momentary read of the slot's final position for the title FLIP (no visible effect) */
+  body.measuring .authwrap{ transform:none !important; transition:none !important; opacity:1 !important; }
+
+  /* Reserved landing zone for the flown title + the sign-in sub beneath it */
+  .brand-slot{ height:56px; }
+  .signin-sub{ margin:6px 0 22px; font-family:var(--mono); font-size:12px; letter-spacing:.3em;
+    text-transform:uppercase; color:var(--muted); }
+  /* Form falls into place after the title lands — staggered, so it no longer pops all at once */
+  .card .signin-sub, .card .btns, .card .foot, .card .error{ opacity:0; transform:translateY(9px);
+    transition:opacity .45s ease, transform .45s ease; }
+  body.revealed .card .signin-sub{ opacity:1; transform:none; transition-delay:.04s; }
+  body.revealed .card .error{ opacity:1; transform:none; transition-delay:.04s; }
+  body.revealed .card .btns{ opacity:1; transform:none; transition-delay:.12s; }
+  body.revealed .card .foot{ opacity:1; transform:none; transition-delay:.2s; }
 
   /* Holographic projector — the card is the emitter base; the play projects up into the field */
   .projector{ position:absolute; left:50%; top:0; transform:translate(-50%,-6px);
@@ -268,8 +337,8 @@ export class Authenticator {
     clip-path:polygon(46% 100%, 54% 100%, 96% 0, 4% 0);
     background:linear-gradient(0deg, color-mix(in srgb,var(--accent) 26%,transparent), transparent 78%);
     opacity:.14; transition:opacity .55s ease; mix-blend-mode:screen; }
-  .scene.playing .projector .cone{ opacity:.34; }
-  .scene.playing .projector .emitter{ opacity:1; width:70%; }
+  body.playing .projector .cone{ opacity:.34; }
+  body.playing .projector .emitter{ opacity:1; width:70%; }
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
@@ -310,13 +379,8 @@ export class Authenticator {
   .card .corner.br{ bottom:9px; right:9px; border-left:0; border-top:0; }
 
   .brand{ transform:translateZ(26px); }
-  .brand .mark{ display:block; font-weight:700; font-size:23px; letter-spacing:.16em; position:relative;
+  .brand .mark{ display:block; font-weight:700; font-size:23px; letter-spacing:.16em;
     animation:glitch 6s steps(1) 1.6s infinite; }
-  /* Chromatic-aberration split on the wordmark */
-  .brand .mark::before, .brand .mark::after{ content:"SKYNET·CAPITAL"; position:absolute; left:0; top:0; width:100%;
-    opacity:.55; pointer-events:none; }
-  .brand .mark::before{ color:#FF4D9D; transform:translateX(-1px); mix-blend-mode:screen; }
-  .brand .mark::after{ color:#35D0BA; transform:translateX(1px); mix-blend-mode:screen; }
   .brand .mark b{ color:var(--accent); text-shadow:0 0 14px color-mix(in srgb,var(--accent) 60%,transparent); }
   .brand .sub{ display:block; margin-top:8px; font-size:11px; letter-spacing:.3em;
     text-transform:uppercase; color:var(--muted); }
@@ -384,28 +448,21 @@ export class Authenticator {
 
   /* Orchestrated page-load sequence */
   @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
-  @keyframes cardIn{ from{ opacity:0; transform:translateY(26px) scale(.985); } to{ opacity:1; transform:none; } }
-  .card{ opacity:0; animation:cardIn .8s cubic-bezier(.16,.84,.44,1) .35s both; }
-  .stage-cap{ opacity:0; animation:rise .7s ease .95s both; }
-  .brand{ opacity:0; animation:rise .7s ease .5s both; }
-  .tag{ opacity:0; animation:rise .7s ease .68s both; }
-  .sub-copy{ opacity:0; animation:rise .7s ease .8s both; }
-  .hud{ opacity:0; animation:rise .7s ease .86s both; }
-  .ticker{ opacity:0; animation:rise .7s ease .92s both; transition:opacity .5s ease; }
-  .ticker.dim{ opacity:.28; }   /* recede while a Strategy Playbook diagram is showing */
-  .error{ opacity:0; animation:rise .6s ease .6s both; }
-  .btn{ opacity:0; animation:rise .6s ease calc(1s + var(--i,0) * .12s) both; }
-  .foot{ opacity:0; animation:rise .7s ease 1.3s both; }
+  .topbrand{ opacity:0; animation:rise .9s ease .35s both; }
+  .beacon{ opacity:0; animation:rise .8s ease 1.1s both; }
+  .brand{ opacity:0; animation:rise .7s ease .1s both; }
+  .tag{ opacity:0; animation:rise .7s ease .2s both; }
+  .error{ opacity:0; animation:rise .6s ease .15s both; }
+  .btn{ opacity:0; animation:rise .6s ease calc(.3s + var(--i,0) * .1s) both; }
+  .foot{ opacity:0; animation:rise .7s ease .5s both; }
 
   @media (prefers-reduced-motion:reduce){
     *{ animation:none !important; transition:none !important; }
-    .card,.stage-cap,.legend,.playbook,.brand,.tag,.sub-copy,.hud,.ticker,.error,.btn,.foot{ opacity:1 !important; }
-    .stage-cap.pb .legend{ opacity:0 !important; }   /* static frame shows the playbook caption */
-    .ticker.dim{ opacity:.28 !important; }
+    .topbrand,.beacon,.card,.brand,.tag,.error,.btn,.foot{ opacity:1 !important; }
     .card::before{ opacity:.9; } .card::after{ display:none; }
-    .scanbeam{ display:none; }
+    .scanbeam,.cursorglow{ display:none; }
     #rain{ opacity:.35; }
-    .tag .live, .hud .on i{ animation:none; }
+    .tag .live{ animation:none; }
   }
 </style>
 </head>
@@ -415,34 +472,29 @@ export class Authenticator {
 <div class="scanlines" aria-hidden="true"></div>
 <div class="scanbeam" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
-<div class="scene" id="scene">
-  <div class="stage-cap" id="stageCap" aria-hidden="true">
-    <div class="legend">
-      <span class="human"><i class="lz"></i><b>Human</b></span>
-      <span class="machine"><i class="lz"></i><b>Machine</b></span>
-    </div>
-    <div class="playbook" id="playbook">
-      <span class="pb-eyebrow">STRATEGY PLAYBOOK · <span class="pb-cyc">LEARN</span></span>
-      <span class="pb-name" id="pbName">IRON CONDOR</span>
-      <span class="pb-desc" id="pbDesc">Bet the market stays calm between the strikes.</span>
-    </div>
+<div class="cursorglow" id="cursorGlow" aria-hidden="true"></div>
+<div class="stagescrim" id="stagescrim" aria-hidden="true"></div>
+
+<header class="topbrand" id="topbrand">
+  <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL<span class="mark-sweep" data-text="SKYNET·CAPITAL" aria-hidden="true"></span></h1>
+  <div class="herosub" id="herosub">
+    <span class="pill"><span class="live"></span>OPTIONS SANDBOX</span>
+    <span class="tertiary">PLAY · EXPERIMENT · LEARN</span>
   </div>
-  <main class="card">
+</header>
+
+<button type="button" class="beacon" id="beacon" aria-expanded="false" aria-controls="authwrap">
+  <span class="beacon-ring" aria-hidden="true"><span class="beacon-chev"></span></span>
+  <span class="beacon-label" id="beaconLabel">Enter the sandbox</span>
+</button>
+
+<div class="authwrap" id="authwrap">
+  <main class="card" id="card">
     <div class="projector" aria-hidden="true"><span class="cone"></span><span class="emitter"></span></div>
     <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
     <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
-    <div class="brand">
-      <span class="mark">SKYNET<b>·</b>CAPITAL</span>
-      <span class="sub">Options Sandbox</span>
-    </div>
-    <span class="tag"><span class="live"></span>PAPER · LEARN · EXPERIMENT</span>
-    <p class="sub-copy">Learn the plays on paper. <span class="em">With friends, family &amp; a few machines.</span></p>
-    <div class="hud" aria-hidden="true">
-      <span class="on"><i></i>SYS ONLINE</span>
-      <span class="modes">SOLO · CO-OP · LEAGUE</span>
-      <span>FEED IEX</span>
-    </div>
-    <p class="ticker" id="ticker" aria-hidden="true">HUMANS <b id="tHuman">+0.00%</b> <span class="sep">·</span> MACHINES <span class="m" id="tMachine">+0.00%</span> <span class="sim" title="Simulated preview — real standings unlock once you're signed in">SIM</span></p>
+    <div class="brand-slot" id="brandSlot" aria-hidden="true"></div>
+    <p class="signin-sub">Sign in to the sandbox</p>
     ${banner}
     <div class="btns">
       ${buttons}
@@ -462,19 +514,28 @@ export class Authenticator {
 
   var W=0,H=0,DPR=1;
   function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
-  // The "projection field": the band ABOVE the card's real top edge. All living viz (race +
-  // payoff diagrams) renders here so the card at the bottom never occludes the focal point.
-  var cardEl=null, field={ top:0, bottom:0 };
+  function clamp01(x){ return x<0?0:x>1?1:x; }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function easeIO(t){ return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+
+  // Reveal state: the animation owns the screen; the sign-in card lives behind the beacon.
+  var revealed=false;
+  var beaconEl=document.getElementById("beacon"), cardEl=document.getElementById("card");
+  // The "field" = the band the market + playbook render into. When idle it fills most of the
+  // screen (centered); when the card is revealed it shrinks to sit ABOVE the card (no overlap).
+  var field={ top:0, bottom:0 };
   function measureField(){
-    cardEl = cardEl || document.querySelector(".card");
-    var bottom = H*0.5;
-    if(cardEl){ var r=cardEl.getBoundingClientRect(); bottom = r.top - 16; }
-    bottom = Math.max(80, bottom);
-    var top = Math.max(16, bottom - Math.min(360, bottom - 16));
-    field.top = top; field.bottom = bottom;
+    var bottom;
+    if(revealed && cardEl){ bottom = cardEl.getBoundingClientRect().top - 18; }
+    else if(beaconEl){ bottom = beaconEl.getBoundingClientRect().top - 24; }
+    else { bottom = H*0.82; }
+    if(!(bottom>0)) bottom = H*0.72;
+    bottom = Math.max(150, Math.min(bottom, H-20));
+    var top = Math.max(H*0.16, bottom - Math.min(H*0.6, 430));
+    field.top=top; field.bottom=bottom;
   }
-  function fieldMid(){ return (field.top + field.bottom) / 2; }
-  function fieldAmp(){ return (field.bottom - field.top) / 2; }
+  function fieldMid(){ return (field.top+field.bottom)/2; }
+  function fieldAmp(){ return (field.bottom-field.top)/2; }
   function resize(){
     DPR = Math.min(window.devicePixelRatio||1, 2);
     W = canvas.clientWidth; H = canvas.clientHeight;
@@ -484,63 +545,76 @@ export class Authenticator {
     measureField();
   }
 
-  // Two seeded, gently diverging equity walks scrolling right→left. "drift" is the upward
-  // bias per step; it starts as a pleasant default and is retargeted from live /pulse data.
-  var human = { color:"--pos", seed:11.7, pts:[], v:0, val:0, drift:0.045 };
-  var machine = { color:"--accent", seed:4.2, pts:[], v:0, val:0, drift:0.05 };
-  var SPAN = 220;                // sample points across width
-  var t = 0;
+  // ===== Market engine: a live underlying with real technical overlays =====
+  // Signals come from indicators that actually make sense — EMA cross, Bollinger squeeze/expansion,
+  // and RSI overbought/oversold — which then summon the matching options play from the playbook.
+  var SPAN=200, price=[], emaF=[], emaS=[], smaA=[], bU=[], bL=[], rsiV=50, t=0;
+  var pv=0, regimeBias=0.02, regimeVol=1, regimeT=0;
   function noise(s){ var x=Math.sin(s)*43758.5453; return x-Math.floor(x); }
-  function step(line, k){
-    line.v += (noise(line.seed + t*0.013) - 0.5) * 0.6;
-    line.v *= 0.94;               // damping
-    line.v += k;                  // slight upward drift (paper gains)
-    line.val += line.v;
-    line.pts.push(line.val);
-    if(line.pts.length > SPAN) line.pts.shift();
+  function cap(a){ if(a.length>SPAN) a.shift(); }
+  function avg(a){ var m=0,i; for(i=0;i<a.length;i++) m+=a[i]; return m/a.length; }
+  function sd(a,m){ var v=0,i; for(i=0;i<a.length;i++){ var d=a[i]-m; v+=d*d; } return Math.sqrt(v/a.length); }
+  function rsi(a,n){ if(a.length<n+1) return 50; var g=0,l=0,i;
+    for(i=a.length-n;i<a.length;i++){ var d=a[i]-a[i-1]; if(d>=0) g+=d; else l-=d; }
+    if(l<=0) return 100; var rs=(g/n)/(l/n); return 100-100/(1+rs); }
+  function stepMarket(){ t++;
+    if(t>regimeT){ regimeT=t+120+Math.floor(Math.random()*160);
+      regimeBias=(Math.random()-0.45)*0.14; regimeVol=0.5+Math.random()*1.4; }
+    pv = pv*0.88 + (noise(t*0.017)-0.5)*0.8*regimeVol + regimeBias;
+    var last = price.length?price[price.length-1]:100;
+    var np = Math.max(5, last+pv); price.push(np); cap(price);
+    var kf=2/10, ks=2/22;
+    var pf=emaF.length?emaF[emaF.length-1]:np, ps=emaS.length?emaS[emaS.length-1]:np;
+    emaF.push(pf+kf*(np-pf)); cap(emaF); emaS.push(ps+ks*(np-ps)); cap(emaS);
+    var win=price.slice(Math.max(0,price.length-20)), m=avg(win), s=sd(win,m);
+    smaA.push(m); cap(smaA); bU.push(m+2*s); cap(bU); bL.push(m-2*s); cap(bL);
+    rsiV = rsi(price,14);
   }
-  function seedFill(){
-    human.pts=[]; machine.pts=[]; human.val=0; machine.val=0; human.v=0; machine.v=0;
-    for(var i=0;i<SPAN;i++){ t=i; step(human,human.drift); step(machine,machine.drift); }
-  }
-  seedFill();
+  for(var _i=0;_i<SPAN;_i++) stepMarket();
 
-  function draw(){
-    ctx.clearRect(0,0,W,H);
-    // faint grid
-    var grid = "color-mix(in srgb, " + (css("--border")||"#223041") + " 55%, transparent)";
-    ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.globalAlpha = 0.5;
-    var gx = 64;
-    for(var x=(t*0.4)%gx; x<W; x+=gx){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    for(var y=0; y<H; y+=gx){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-    ctx.globalAlpha = 1;
-
-    var all = human.pts.concat(machine.pts);
-    var lo=Math.min.apply(null,all), hi=Math.max.apply(null,all);
-    var pad=(hi-lo)*0.35 || 1; lo-=pad; hi+=pad;
-    var baseY = fieldMid(), amp = fieldAmp()*0.9, fbot = field.bottom;
-    function project(v){ return baseY - ((v-lo)/(hi-lo) - 0.5)*(amp*2); }
-
-    [human, machine].forEach(function(line){
-      var col = css(line.color) || "#35D0BA";
-      var n = line.pts.length; if(!n) return;
-      var dx = W/(SPAN-1);
-      // glow line
-      ctx.beginPath();
-      for(var i=0;i<n;i++){ var px=i*dx, py=project(line.pts[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
-      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin="round";
-      ctx.shadowColor = col; ctx.shadowBlur = 16; ctx.globalAlpha = 0.9; ctx.stroke();
-      ctx.shadowBlur = 0;
-      // soft area fill under the curve, down to the field's baseline
-      ctx.lineTo((n-1)*dx, fbot); ctx.lineTo(0, fbot); ctx.closePath();
-      var grad = ctx.createLinearGradient(0, baseY-amp, 0, fbot);
-      grad.addColorStop(0, hexA(col, 0.16)); grad.addColorStop(1, hexA(col, 0));
-      ctx.fillStyle = grad; ctx.globalAlpha = 1; ctx.fill();
-      // leading dot
-      var lx=(n-1)*dx, ly=project(line.pts[n-1]);
-      ctx.beginPath(); ctx.arc(lx,ly,3.4,0,7); ctx.fillStyle=col;
-      ctx.shadowColor=col; ctx.shadowBlur=14; ctx.fill(); ctx.shadowBlur=0;
-    });
+  function valRange(){ var lo=1e9,hi=-1e9,i;
+    for(i=0;i<price.length;i++){ if(price[i]<lo)lo=price[i]; if(price[i]>hi)hi=price[i]; }
+    for(i=0;i<bU.length;i++){ if(bU[i]>hi)hi=bU[i]; }
+    for(i=0;i<bL.length;i++){ if(bL[i]<lo)lo=bL[i]; }
+    var pad=(hi-lo)*0.12||1; return { lo:lo-pad, hi:hi+pad, mid:(lo+hi)/2, span:(hi-lo)+2*pad }; }
+  function strokeSeries(arr,dx,Y,style,w){ ctx.beginPath();
+    for(var i=0;i<arr.length;i++){ var px=i*dx,py=Y(arr[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    ctx.strokeStyle=style; ctx.lineWidth=w; ctx.lineJoin="round"; ctx.stroke(); }
+  function drawGrid(){
+    var grid="color-mix(in srgb, "+(css("--border")||"#223041")+" 55%, transparent)";
+    ctx.strokeStyle=grid; ctx.lineWidth=1; ctx.globalAlpha=0.4; var gx=64;
+    for(var x=(t*0.4)%gx;x<W;x+=gx){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(var y=0;y<H;y+=gx){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.globalAlpha=1; }
+  function drawMarket(dim){
+    ctx.clearRect(0,0,W,H); drawGrid();
+    var n=price.length; if(!n) return;
+    var r=valRange(), baseY=fieldMid(), amp=fieldAmp()*0.94, dx=W/(SPAN-1);
+    function Y(v){ return baseY - ((v-r.mid)/(r.span||1))*amp*2; }
+    var accent=css("--accent")||"#35D0BA", muted=css("--muted")||"#8B9AAB",
+        pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", txt=css("--text")||"#E6EDF3";
+    ctx.save(); ctx.globalAlpha=dim;
+    // Bollinger envelope
+    ctx.beginPath();
+    for(var i=0;i<bU.length;i++){ var px=i*dx,py=Y(bU[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    for(i=bL.length-1;i>=0;i--){ ctx.lineTo(i*dx,Y(bL[i])); }
+    ctx.closePath(); ctx.fillStyle=hexA(accent,0.06); ctx.fill();
+    strokeSeries(bU,dx,Y,hexA(accent,0.20),1);
+    strokeSeries(bL,dx,Y,hexA(accent,0.20),1);
+    strokeSeries(emaS,dx,Y,hexA(muted,0.75),1.4);
+    strokeSeries(emaF,dx,Y,hexA(accent,0.9),1.6);
+    // price line
+    ctx.beginPath();
+    for(i=0;i<n;i++){ var qx=i*dx,qy=Y(price[i]); i?ctx.lineTo(qx,qy):ctx.moveTo(qx,qy); }
+    ctx.strokeStyle=txt; ctx.lineWidth=1.8; ctx.lineJoin="round";
+    ctx.shadowColor=accent; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0;
+    var lx=(n-1)*dx, ly=Y(price[n-1]);
+    ctx.beginPath(); ctx.arc(lx,ly,3,0,7); ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
+    // RSI readout — synthesizes overbought/oversold at a glance
+    var rc = rsiV<32?pos:(rsiV>68?neg:muted);
+    ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
+    ctx.fillText("RSI "+rsiV.toFixed(0)+(rsiV<32?" OVERSOLD":rsiV>68?" OVERBOUGHT":""), 16, field.top-6);
+    ctx.textAlign="start"; ctx.restore();
   }
   // Convert a css color to rgba with alpha via an offscreen paint.
   var _c = document.createElement("canvas").getContext("2d");
@@ -548,32 +622,25 @@ export class Authenticator {
     if(s[0]==="#"){ var r=parseInt(s.substr(1,2),16),g=parseInt(s.substr(3,2),16),b=parseInt(s.substr(5,2),16);
       return "rgba("+r+","+g+","+b+","+a+")"; } return s; }catch(e){ return color; } }
 
-  function pct(line){ var n=line.pts.length; if(n<2) return 0;
-    return (line.pts[n-1]-line.pts[0]) / (Math.abs(line.pts[0])+40) * 100; }
-  function fmt(p){ return (p>=0?"+":"")+p.toFixed(2)+"%"; }
-  var tH=document.getElementById("tHuman"), tM=document.getElementById("tMachine");
-  function updateTicker(){ if(tH) tH.textContent=fmt(pct(human)); if(tM) tM.textContent=fmt(pct(machine)); }
-
-  // --- Live cohort standings from the public /pulse endpoint ---
-  // /pulse returns { humans, bots, humanEquity, botEquity } — cohort aggregates only.
-  // When at least one account is live we show real return-on-seed and bias the curves so
-  // the leading cohort visibly climbs; otherwise we stay on the labeled "SIM" simulation.
-  var SEED=5000000, live=false, simEl=document.querySelector(".sim");
-  function roi(equity,count){ return count>0 ? (equity - count*SEED)/(count*SEED)*100 : 0; }
-  function bias(r){ return Math.max(0.005, Math.min(0.075, 0.03 + r*0.004)); }
-  function applyPulse(d){
-    if(!d || ((d.humans|0)+(d.bots|0))===0) return;   // no field yet → keep the sim
-    live=true;
-    var hr=roi(d.humanEquity, d.humans|0), br=roi(d.botEquity, d.bots|0);
-    if(tH) tH.textContent=fmt(hr); if(tM) tM.textContent=fmt(br);
-    human.drift=bias(hr); machine.drift=bias(br);
-    if(simEl && simEl.textContent!=="LIVE"){ simEl.textContent="LIVE"; simEl.classList.add("on-air");
-      simEl.title="Live league standings — return on the $5M seed, humans vs. bots"; }
+  // Signal → play mapping. Reads the latest indicators and returns the matching playbook entry
+  // with a human-readable reason (the "why"), or null when nothing is set up.
+  function detectSignal(){
+    var n=price.length; if(n<25) return null;
+    var p=price[n-1], f=emaF[n-1], s=emaS[n-1], fu=emaF[n-2], su=emaS[n-2],
+        bu=bU[n-1], bl=bL[n-1], m=smaA[n-1];
+    var width=(bu-bl)/(Math.abs(m)+1);
+    if(rsiV<32 && p<=bl*1.004) return { i:4, sig:"RSI OVERSOLD · LOWER BAND" };
+    if(rsiV>68 && p>=bu*0.996) return { i:0, sig:"RSI OVERBOUGHT · SELL PREMIUM" };
+    if(fu<=su && f>s) return { i:4, sig:"EMA GOLDEN CROSS" };
+    if(fu>=su && f<s) return { i:3, sig:"EMA CROSS DOWN" };
+    if(width<0.02) return { i:2, sig:"BOLLINGER SQUEEZE · LOW VOL" };
+    if(width>0.075) return { i:1, sig:"BOLLINGER EXPANSION" };
+    return null;
   }
-  function poll(){ if(!window.fetch) return;
-    try{ fetch("/pulse",{cache:"no-store"}).then(function(r){ return r.ok?r.json():null; })
-      .then(applyPulse).catch(function(){}); }catch(e){} }
-  poll(); setInterval(poll, 5000);
+  function forceSignal(){ var pool=[
+      { i:0, sig:"MEAN REVERSION SETUP" }, { i:1, sig:"VOLATILITY BID" },
+      { i:3, sig:"PRICE PINNED AT MEAN" }, { i:5, sig:"MOMENTUM BREAKOUT" }];
+    return pool[(Math.random()*pool.length)|0]; }
 
   // --- Ambient Matrix rain (deepest layer, faint) ---
   var rcanvas=document.getElementById("rain"), rctx=null, cols=[], colW=16, RG="0123456789$+-.%△▽ｦｱｲｳｴｵｶｷｸｹﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘ";
@@ -586,18 +653,21 @@ export class Authenticator {
     var n=Math.ceil(rcanvas.clientWidth/colW);
     cols=[]; for(var i=0;i<n;i++){ cols.push(Math.random()*-rcanvas.clientHeight); }
   }
-  function rainDraw(){
+  // boost = the rain reacts to a play (faster, brighter); tint = green flourish on a winning close.
+  function rainDraw(boost,tint){
     if(!rctx) return;
     var w=rcanvas.clientWidth, h=rcanvas.clientHeight;
     rctx.fillStyle="rgba(11,15,20,0.16)"; rctx.fillRect(0,0,w,h);   // fade for trails
-    var col=css("--accent")||"#35D0BA";
+    var col = tint ? (css("--pos")||"#3FB950") : (css("--accent")||"#35D0BA");
     rctx.font="13px "+((css("--mono")||"monospace"));
     for(var i=0;i<cols.length;i++){
       var x=i*colW, y=cols[i], ch=RG[(Math.random()*RG.length)|0];
-      rctx.fillStyle=hexA(col,0.85); rctx.fillText(ch,x,y);                 // bright head
+      rctx.fillStyle=hexA(col, boost?0.95:0.85); rctx.fillText(ch,x,y);    // bright head
       rctx.fillStyle=hexA(col,0.28); rctx.fillText(RG[(Math.random()*RG.length)|0],x,y-14); // dim trail
-      cols[i]= y>h+Math.random()*140 ? 0 : y+ (10+Math.random()*6);
+      cols[i]= y>h+Math.random()*140 ? 0 : y+ (10+Math.random()*6)*(boost?1.6:1);
     }
+    if(boost){ for(var kk=0;kk<6;kk++){ var cxk=(Math.random()*cols.length)|0;
+      rctx.fillStyle=hexA(col,0.95); rctx.fillText(RG[(Math.random()*RG.length)|0], cxk*colW, Math.random()*h); } }
   }
 
   // --- Strategy Playbook: the race periodically recedes and a holographic option-payoff
@@ -618,146 +688,208 @@ export class Authenticator {
     { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Roll up the strikes — limited risk with room to run if the market takes off.",
       pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75] }
   ];
-  var pbGlyphT=0, lastPick=-1;
-  var stageCap=document.getElementById("stageCap"), pbName=document.getElementById("pbName"),
-      pbDesc=document.getElementById("pbDesc"), pbCyc=document.querySelector(".pb-cyc"),
-      tickerEl=document.getElementById("ticker"), sceneEl=document.getElementById("scene");
-  function setStrat(i){ var s=STRATS[i]; if(!s) return;
-    if(pbName) pbName.textContent=s.name; if(pbDesc) pbDesc.textContent=s.desc;
-    if(pbCyc) pbCyc.textContent=s.cue; }
-  function clamp01(x){ return x<0?0:x>1?1:x; }
-  // Regime detection — the race's own volatility / divergence / trend summons the matching play.
-  function pickStrategy(){
-    function tail(a){ return a.slice(Math.max(0,a.length-46)); }
-    var hs=tail(human.pts), ms=tail(machine.pts); if(hs.length<6||ms.length<6) return 0;
-    function std(a){ var m=0,i; for(i=0;i<a.length;i++) m+=a[i]; m/=a.length;
-      var v=0; for(i=0;i<a.length;i++) v+=(a[i]-m)*(a[i]-m); return Math.sqrt(v/a.length); }
-    function slope(a){ return a[a.length-1]-a[0]; }
-    var scale=Math.max(1,(Math.abs(hs[hs.length-1])+Math.abs(ms[ms.length-1]))/2);
-    var volN=(std(hs)+std(ms))/2/scale, diverg=Math.abs(hs[hs.length-1]-ms[ms.length-1])/scale,
-        tr=((slope(hs)+slope(ms))/2)/scale;
-    var s=[0,0,0,0,0,0];
-    s[0]=1.1 - volN*3 - Math.abs(tr)*2;              // condor: calm
-    s[3]=1.25 - volN*4 - Math.abs(tr)*3;             // butterfly: very pinned
-    s[2]=0.85 - volN*2 - Math.abs(tr)*2.5;           // short straddle: range
-    s[1]=volN*3 + diverg*2.2;                        // strangle: vol expanding
-    s[5]=volN*2 + Math.max(0,tr)*3 + diverg;         // ladder: breakout
-    s[4]=Math.max(0,tr)*4 - volN*1.5;                // bull spread: uptrend
-    var best=0,bv=-1e9;
-    for(var i=0;i<6;i++){ var sc=s[i]+Math.random()*0.5 - (i===lastPick?0.8:0);
-      if(sc>bv){ bv=sc; best=i; } }
-    lastPick=best; return best;
-  }
+  var pbGlyphT=0;
   function payoffAt(pts,u){ if(u<=pts[0][0]) return pts[0][1];
     for(var i=1;i<pts.length;i++){ if(u<=pts[i][0]){ var a=pts[i-1],b=pts[i];
       var tt=(u-a[0])/((b[0]-a[0])||1); return a[1]+(b[1]-a[1])*tt; } }
     return pts[pts.length-1][1]; }
-  // Telestrator draw-on. p = { on, strikes, curve, zones, out } progresses in 0..1.
-  function drawPlaybook(strat, p){
-    if(!strat) return;
-    var padX=W*0.06, x0=padX, x1=W-padX, midY=fieldMid(), amp=fieldAmp()*0.86,
-        yTop=field.top-6, yBot=field.bottom+6;
-    function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
+  function extrema(strat){ var pts=strat.pts,maxY=-9,minY=9,i,xs=[],xl=[],be=[];
+    for(i=0;i<pts.length;i++){ if(pts[i][1]>maxY)maxY=pts[i][1]; if(pts[i][1]<minY)minY=pts[i][1]; }
+    for(i=0;i<pts.length;i++){ if(pts[i][1]===maxY)xs.push(pts[i][0]); if(pts[i][1]===minY)xl.push(pts[i][0]); }
+    for(i=1;i<pts.length;i++){ var a=pts[i-1],b=pts[i]; if((a[1]<0)!==(b[1]<0)){ var tt=(0-a[1])/((b[1]-a[1])||1); be.push(a[0]+tt*(b[0]-a[0])); } }
+    return { maxY:maxY, minY:minY, mxX:xs.length?(xs[0]+xs[xs.length-1])/2:0.5,
+      mnX:xl.length?(xl[0]+xl[xl.length-1])/2:0.5, be:be }; }
+  function wrapText(s,x,y,maxW,lh){ var words=s.split(" "),line="",yy=y,i,n=0;
+    for(i=0;i<words.length;i++){ var test=line?line+" "+words[i]:words[i];
+      if(ctx.measureText(test).width>maxW && line){ ctx.fillText(line,x,yy); line=words[i]; yy+=lh; n++; } else line=test; }
+    ctx.fillText(line,x,yy); return n+1; }
+  function money(n){ n=Math.round(n); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
+    return (n<0?"−$":"+$")+s; }
+  var DOLLARS=1240;   // illustrative per-contract scale for the teaching P/L readouts
+
+  // Teaching panel (right column): the play's name, the plain-English idea, the pivot values,
+  // and a live status line — so all the wordy P/L lives here, never stacked on the curve.
+  function drawPanel(strat, sig, p, A){
+    var e=extrema(strat), px=Math.round(W*0.05), pw=W*0.33;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
-        muted=css("--muted")||"#8B9AAB", A=(1-p.out);
-    ctx.save(); ctx.globalAlpha=A;
-    // shaded profit (green) / loss (red) zones, revealed left→right with the curve, alpha by p.zones
-    if(p.zones>0){ var N=140, seg=(x1-x0)/N, zr=p.curve;
-      for(var i=0;i<N;i++){ var u=i/(N-1); if(u>zr) break; var v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
-        ctx.fillStyle=hexA(v>=0?pos:neg, 0.14*p.zones);
-        ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); } }
-    // strike verticals (revealed in sequence) + Matrix glyphs illuminating each leg
-    ctx.font="12px "+(css("--mono")||"monospace"); ctx.textAlign="center";
-    var shown=p.strikes*strat.strikes.length;
-    for(var k=0;k<strat.strikes.length;k++){ var rev=clamp01(shown-k); if(rev<=0) break;
-      var sx=X(strat.strikes[k]);
-      ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(accent,0.34*rev);
-      ctx.beginPath(); ctx.moveTo(sx,yTop); ctx.lineTo(sx,yBot); ctx.stroke(); ctx.setLineDash([]);
-      var gy=yTop+((pbGlyphT*4 + strat.strikes[k]*260) % ((yBot-yTop)+40));
-      ctx.fillStyle=hexA(accent,0.85*rev); ctx.fillText(RG[(Math.random()*RG.length)|0], sx, gy);
-      ctx.fillStyle=hexA(accent,0.3*rev); ctx.fillText(RG[(Math.random()*RG.length)|0], sx, gy-16);
-    }
-    ctx.textAlign="start";
-    // breakeven (zero P/L) baseline, appears with the strikes
-    if(p.strikes>0){ ctx.setLineDash([5,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(muted,0.55*p.strikes);
-      ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]); }
-    // the payoff curve, drawn left→right to p.curve with a glowing "chalk tip"
-    if(p.curve>0){ var f=p.curve, pts=strat.pts, started=false;
-      ctx.beginPath();
-      for(i=0;i<pts.length;i++){ if(pts[i][0]<=f){ var px=X(pts[i][0]), py=Y(pts[i][1]);
-        started?ctx.lineTo(px,py):ctx.moveTo(px,py); started=true; }
-        else { var ex=X(f), ey=Y(payoffAt(pts,f)); if(started) ctx.lineTo(ex,ey); else ctx.moveTo(ex,ey); started=true; break; } }
-      ctx.strokeStyle=accent; ctx.lineWidth=2.4; ctx.lineJoin="round";
-      ctx.shadowColor=accent; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
-      if(f<1){ var tx=X(f), ty=Y(payoffAt(pts,f));   // chalk tip
-        ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fillStyle="#EAFBF7";
-        ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.fill(); ctx.shadowBlur=0; } }
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
+    ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    var y=fieldMid()-86;
+    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
+    ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=34;
+    ctx.font="700 27px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
+    ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=24;
+    ctx.font="14px "+sans; ctx.fillStyle=hexA(muted,0.95);
+    y += wrapText(strat.desc, px, y, pw, 19)*19 + 10;
+    // pivot values — reinforce the diagram's markers in words
+    ctx.font="12px "+mono;
+    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("● MAX PROFIT", px, y);
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=20;
+    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("● MAX LOSS", px, y);
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=20;
+    ctx.fillStyle=hexA(muted,0.9); ctx.fillText("◆ BREAKEVEN", px, y);
+    ctx.fillStyle=hexA(muted,0.8); ctx.textAlign="right"; ctx.fillText("at the strikes", px+pw, y); ctx.textAlign="left"; y+=28;
+    // live status line — the trade arc in words, colour-coded
+    var sxp=lerp(0.5,e.mxX,easeIO(p.move)), pl=payoffAt(strat.pts,sxp)*DOLLARS;
+    if(p.exit>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pos; ctx.shadowColor=pos; ctx.shadowBlur=14;
+      ctx.fillText("✓ CLOSED  "+money(e.maxY*DOLLARS), px, y); ctx.shadowBlur=0; }
+    else if(p.move>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg;
+      ctx.fillText("P / L   "+money(pl), px, y); }
+    else if(p.enter>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95);
+      ctx.fillText("▲ POSITIONS ENTERED", px, y); }
+    else { ctx.font="13px "+mono; ctx.fillStyle=hexA(muted,0.85); ctx.fillText("SETTING UP…", px, y); }
     ctx.restore();
   }
-  // Play controller: cooldown → fire a regime-picked play → telestrator timeline → resume.
-  var PWR=450,STK=500,CRV=1000,ZON=500,LBL=400,HLD=2500,OUT=650;
-  var HOLD_END=PWR+STK+CRV+ZON+LBL+HLD, TOTAL=HOLD_END+OUT;
-  var playMode=false, playStart=0, curStrat=0, nextPlayAt=3600;
-  function playProg(e){
-    return { on:clamp01(e/PWR),
-      strikes:clamp01((e-PWR)/STK), curve:clamp01((e-PWR-STK)/CRV),
-      zones:clamp01((e-PWR-STK-CRV)/ZON), label:clamp01((e-PWR-STK-CRV-ZON)/LBL),
-      out: e>HOLD_END ? clamp01((e-HOLD_END)/OUT) : 0 };
+
+  // Full lifecycle telestrator (diagram = LEFT column): strikes → curve → zones (with Matrix glyphs
+  // illuminating profit/loss) → pivot dots → entry ticks → underlying moves → take-profit close.
+  function drawPlaybook(strat, p, sig){
+    if(!strat) return;
+    var x0=W*0.44, x1=W*0.95, midY=fieldMid()+16, amp=fieldAmp()*0.66,
+        yTop=field.top+26, yBot=field.bottom-6, A=(1-p.out);
+    function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
+    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
+    ctx.save(); ctx.globalAlpha=A;
+    // shaded profit/loss zones
+    if(p.zones>0){ var N=140, seg=(x1-x0)/N;
+      for(var i=0;i<N;i++){ var u=i/(N-1); if(u>p.curve) break; var v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
+        ctx.fillStyle=hexA(v>=0?pos:neg, 0.15*p.zones); ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
+      // Matrix rain confined to the zones — green in profit, red in loss — teaching + contrast pop
+      ctx.font="13px "+mono; var NZ=20;
+      for(var c=0;c<NZ;c++){ var uu=(c+0.5)/NZ; if(uu>p.curve) continue; var vv=payoffAt(strat.pts,uu);
+        var zt=Math.min(Y(vv),Y(0)), zb=Math.max(Y(vv),Y(0)); if(zb-zt<10) continue;
+        var gx=X(uu), gy=zt+((pbGlyphT*3 + c*61) % (zb-zt));
+        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.7*p.zones); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy);
+        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.25*p.zones); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy-15); } }
+    // strike verticals
+    ctx.textAlign="center"; var shown=p.strikes*strat.strikes.length;
+    for(var k=0;k<strat.strikes.length;k++){ var rev=clamp01(shown-k); if(rev<=0) break; var sx=X(strat.strikes[k]);
+      ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(accent,0.3*rev);
+      ctx.beginPath(); ctx.moveTo(sx,yTop); ctx.lineTo(sx,yBot); ctx.stroke(); ctx.setLineDash([]); }
+    // breakeven baseline
+    if(p.strikes>0){ ctx.setLineDash([5,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(muted,0.5*p.strikes);
+      ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]); }
+    // payoff curve + chalk tip
+    if(p.curve>0){ var f=p.curve, pts=strat.pts, started=false;
+      ctx.beginPath();
+      for(i=0;i<pts.length;i++){ if(pts[i][0]<=f){ var cx2=X(pts[i][0]), cy2=Y(pts[i][1]); started?ctx.lineTo(cx2,cy2):ctx.moveTo(cx2,cy2); started=true; }
+        else { var ex=X(f), ey=Y(payoffAt(pts,f)); if(started) ctx.lineTo(ex,ey); else ctx.moveTo(ex,ey); started=true; break; } }
+      ctx.strokeStyle=accent; ctx.lineWidth=2.6; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
+      if(f<1){ var tx=X(f), ty=Y(payoffAt(pts,f)); ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.fill(); ctx.shadowBlur=0; } }
+    // pivot markers — dots only on the curve; the words live in the panel (no stacking)
+    if(p.label>0){ var e1=extrema(strat); ctx.globalAlpha=A*p.label;
+      ctx.fillStyle=hexA(pos,0.95); ctx.beginPath(); ctx.arc(X(e1.mxX),Y(e1.maxY),3.2,0,7); ctx.fill();
+      ctx.fillStyle=hexA(neg,0.95); ctx.beginPath(); ctx.arc(X(e1.mnX),Y(e1.minY),3.2,0,7); ctx.fill();
+      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.textAlign="center";
+      for(i=0;i<e1.be.length;i++){ ctx.fillText("B/E", X(e1.be[i]), Y(0)-8); }
+      ctx.globalAlpha=A; }
+    // entry ticks at the strikes
+    if(p.enter>0){ ctx.globalAlpha=A*p.enter; ctx.textAlign="center"; ctx.font="700 10px "+mono; ctx.fillStyle=hexA(accent,0.95);
+      for(k=0;k<strat.strikes.length;k++){ ctx.fillText("▲", X(strat.strikes[k]), Y(0)+15); }
+      ctx.globalAlpha=A; }
+    // underlying spot glides into profit (value shown in the panel, not on the curve)
+    if(p.move>0){ var e2=extrema(strat), sxp=lerp(0.5, e2.mxX, easeIO(p.move)), mvx=X(sxp), mvy=Y(payoffAt(strat.pts,sxp));
+      ctx.setLineDash([2,5]); ctx.strokeStyle=hexA(txt,0.5); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(mvx,yTop); ctx.lineTo(mvx,yBot); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(mvx,mvy,4.5,0,7); ctx.fillStyle=payoffAt(strat.pts,sxp)>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=14; ctx.fill(); ctx.shadowBlur=0;
+      ctx.textAlign="center"; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(txt,0.8); ctx.fillText("NOW", mvx, yTop-3); }
+    ctx.textAlign="start"; ctx.restore();
+    drawPanel(strat, sig, p, A);
   }
+  // Play timeline (ms): each phase chains into the next — the full trade lifecycle.
+  var PWR=450,STK=550,CRV=1200,ZON=400,LBL=450,ENT=450,MOV=1600,EXT=550,OUT=650;
+  var T_STK=PWR,T_CRV=T_STK+STK,T_ZON=T_CRV+CRV,T_LBL=T_ZON+ZON,T_ENT=T_LBL+LBL,
+      T_MOV=T_ENT+ENT,T_EXT=T_MOV+MOV,T_OUT=T_EXT+EXT,T_END=T_OUT+OUT;
+  function playProg(e){ return {
+    on:clamp01(e/PWR), strikes:clamp01((e-T_STK)/STK), curve:clamp01((e-T_CRV)/CRV),
+    zones:clamp01((e-T_ZON)/ZON), label:clamp01((e-T_LBL)/LBL), enter:clamp01((e-T_ENT)/ENT),
+    move:clamp01((e-T_MOV)/MOV), exit:clamp01((e-T_EXT)/EXT), out: e>T_OUT?clamp01((e-T_OUT)/OUT):0 }; }
+  var playMode=false, playStart=0, curStrat=0, curSig=null, nextPlayAt=2400, rainBoost=0, rainTint=0;
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
 
-  if(reduce){ measureField(); draw();
-    if(stageCap){ setStrat(0); stageCap.classList.add("pb"); }
-    if(sceneEl) sceneEl.classList.add("playing");
-    if(tickerEl) tickerEl.classList.add("dim");
-    ctx.save(); ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.72);
-    ctx.fillRect(0,0,W,field.bottom); ctx.restore();   // recede the race in the field only
-    drawPlaybook(STRATS[0], { on:1,strikes:1,curve:1,zones:1,label:1,out:0 });  // one static diagram
+  // Reveal: one toggle opens/closes the form; the single wordmark flies into the form as its title.
+  var wordmark=document.getElementById("wordmark"), brandSlot=document.getElementById("brandSlot"),
+      beaconLabel=document.getElementById("beaconLabel");
+  // Shared-element FLIP: measure the title's rest rect and the form slot's final rect, then glide.
+  function flyTitle(on){
+    if(!wordmark || !brandSlot) return;
+    if(!on){ wordmark.style.transform=""; return; }
+    wordmark.style.transform="none";
+    var wr=wordmark.getBoundingClientRect();
+    document.body.classList.add("measuring");      // read the slot at its final centered position
+    var sr=brandSlot.getBoundingClientRect(), cw=cardEl?cardEl.getBoundingClientRect().width:sr.width;
+    document.body.classList.remove("measuring");
+    var dx=(sr.left+sr.width/2)-(wr.left+wr.width/2), dy=(sr.top+sr.height/2)-(wr.top+wr.height/2);
+    var sc=Math.max(0.7, Math.min(1.5, (cw*0.84)/(wr.width||1)));   // land sized to fit the form
+    void wordmark.offsetWidth;                      // commit before animating (instant under reduced motion)
+    wordmark.style.transform="translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) scale("+sc.toFixed(3)+")";
+  }
+  var seq=[];
+  function clearSeq(){ for(var i=0;i<seq.length;i++) clearTimeout(seq[i]); seq=[]; }
+  function focusForm(){ if(cardEl){ var b=cardEl.querySelector(".btn"); if(b) setTimeout(function(){ try{ b.focus(); }catch(e){} }, 120); } }
+  // Sequenced reveal: (1) the title flies down alone with no VFX, (2) it lands and a left→right
+  // sweep + chromatic flare fires, (3) THEN the form falls into place — no jarring simultaneous pop.
+  function setReveal(on){ revealed=on; clearSeq(); var body=document.body;
+    if(beaconEl) beaconEl.setAttribute("aria-expanded", on?"true":"false");
+    if(cardEl) cardEl.style.transform="";          // stable form: drop any pointer tilt while open
+    if(!on){ if(beaconLabel) beaconLabel.textContent="Enter the sandbox";
+      body.classList.remove("revealed","flying","sweeping"); flyTitle(false); measureField();
+      if(beaconEl){ try{ beaconEl.focus(); }catch(e){} } return; }
+    if(reduce){ if(beaconLabel) beaconLabel.textContent="Close"; body.classList.add("revealed"); flyTitle(true); measureField(); focusForm(); return; }
+    body.classList.remove("sweeping","revealed"); body.classList.add("flying");
+    flyTitle(true); measureField();
+    seq.push(setTimeout(function(){ body.classList.remove("flying");
+      if(wordmark){ wordmark.classList.remove("burst"); void wordmark.offsetWidth; wordmark.classList.add("burst"); }
+      body.classList.add("sweeping"); }, 650));
+    seq.push(setTimeout(function(){ body.classList.add("revealed");
+      if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 790));
+    seq.push(setTimeout(function(){ body.classList.remove("sweeping"); }, 1500));
+  }
+  if(beaconEl) beaconEl.addEventListener("click", function(){ setReveal(!revealed); });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape" && revealed) setReveal(false); });
+  window.addEventListener("resize", function(){ if(revealed) flyTitle(true); });   // keep the landing aligned
+  if(document.querySelector(".error")) setReveal(true);   // never hide an error behind the toggle
+
+  // Cursor VFX: subtle ambient pointer glow + chromatic split; the card tilts only while at rest.
+  var fine = window.matchMedia && window.matchMedia("(pointer:fine)").matches, root=document.documentElement;
+  if(fine && !reduce){ document.body.classList.add("finepointer");
+    window.addEventListener("pointermove", function(e){
+      root.style.setProperty("--cx", e.clientX+"px"); root.style.setProperty("--cy", e.clientY+"px");
+      var dx=(e.clientX/window.innerWidth)-0.5, dy=(e.clientY/window.innerHeight)-0.5;
+      root.style.setProperty("--cax",(0.4+dx*1.4).toFixed(2)+"px"); root.style.setProperty("--cay",(dy*1.2).toFixed(2)+"px");
+      if(cardEl && !revealed){ cardEl.style.transform="rotateX("+(-dy*6).toFixed(2)+"deg) rotateY("+(dx*8).toFixed(2)+"deg)";
+        cardEl.style.setProperty("--sheen",(115+dx*70).toFixed(0)+"deg"); }
+    }); }
+
+  if(reduce){ measureField(); drawMarket(0.2);
+    drawPlaybook(STRATS[0], { on:1,strikes:1,curve:1,zones:1,label:1,enter:1,move:1,exit:0,out:0 },
+      { sig:"BOLLINGER SQUEEZE · LOW VOL" });
+    document.body.classList.add("playing");
     if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
-      for(var s=0;s<26;s++) rainDraw(); }
-    if(!live) updateTicker(); return; }
+      for(var s=0;s<26;s++) rainDraw(0,0); }
+    return; }
 
   var last=0, running=true;
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function loop(now){
     if(!running) return;
-    if(now-last > 55){ last=now; t++; measureField();
-      // Fire a play when the cooldown elapses; regime picks which one.
-      if(!playMode && now>=nextPlayAt){ playMode=true; playStart=now; curStrat=pickStrategy(); setStrat(curStrat); }
+    if(now-last > 50){ last=now; measureField(); stepMarket();
+      if(!playMode && now>=nextPlayAt){ var sig=detectSignal(); if(!sig && now>=nextPlayAt+5000) sig=forceSignal();
+        if(sig){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i; } }
       var p=null, recede=0;
       if(playMode){ var e=now-playStart; p=playProg(e); recede=Math.min(p.on,1)*(1-p.out);
-        if(e>=TOTAL){ playMode=false; nextPlayAt=now+3400+Math.random()*1600; p=null; recede=0; } }
-      var showing = recede>0.5;
-      if(stageCap){ if(showing) stageCap.classList.add("pb"); else stageCap.classList.remove("pb"); }
-      if(sceneEl){ if(recede>0.02) sceneEl.classList.add("playing"); else sceneEl.classList.remove("playing"); }
-      if(tickerEl){ if(showing) tickerEl.classList.add("dim"); else tickerEl.classList.remove("dim"); }
-      step(human,human.drift); step(machine,machine.drift); draw();
-      if(p){ ctx.save(); ctx.fillStyle=hexA(css("--bg")||"#0B0F14", recede*0.74);
-        ctx.fillRect(0,0,W,field.bottom); ctx.restore();   // recede the race inside the field
-        drawPlaybook(STRATS[curStrat], p); pbGlyphT++; }
-      rainDraw();
-      if(t%6===0 && !live && !showing) updateTicker(); }   // live ticker shows real /pulse numbers
+        rainBoost=(p.enter>0 && p.exit<1)?1:0; rainTint=(p.exit>0 && p.out<1)?1:0;
+        if(e>=T_END){ playMode=false; nextPlayAt=now+3000+Math.random()*2400; p=null; recede=0; rainBoost=0; rainTint=0; } }
+      document.body.classList.toggle("playing", recede>0.02);
+      drawMarket(1 - recede*0.82);
+      if(p){ drawPlaybook(STRATS[curStrat], p, curSig); pbGlyphT++; }
+      rainDraw(rainBoost, rainTint); }
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
-
-  // Pointer-reactive parallax + holographic sheen tilt (fine pointers only).
-  var scene=document.getElementById("scene"), card=scene&&scene.querySelector(".card");
-  if(scene && window.matchMedia && window.matchMedia("(pointer:fine)").matches){
-    var rx=0,ry=0,tx=0,ty=0,nxG=0, raf=0;
-    window.addEventListener("pointermove", function(e){
-      var nx=(e.clientX/window.innerWidth)-0.5, ny=(e.clientY/window.innerHeight)-0.5;
-      tx = -ny*6; ty = nx*8; nxG=nx;
-      if(!raf) raf=requestAnimationFrame(ease);
-    });
-    window.addEventListener("pointerleave", function(){ tx=0; ty=0; if(!raf) raf=requestAnimationFrame(ease); });
-    function ease(){ rx+=(tx-rx)*0.08; ry+=(ty-ry)*0.08;
-      scene.style.transform="rotateX("+rx.toFixed(2)+"deg) rotateY("+ry.toFixed(2)+"deg)";
-      if(card) card.style.setProperty("--sheen", (115 + nxG*70).toFixed(0)+"deg");
-      if(Math.abs(tx-rx)>0.01||Math.abs(ty-ry)>0.01){ raf=requestAnimationFrame(ease); } else { raf=0; } }
-  }
 })();
 </script>
 </body>

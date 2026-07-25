@@ -19,7 +19,9 @@
     "serve:dashboard:offline": "SKYNET_DATA_SOURCE=offline tsx src/scripts/serve-dashboard.ts",
     "run:autonomous": "tsx src/scripts/run-autonomous.ts",
     "run:autonomous:offline": "SKYNET_DATA_SOURCE=offline tsx src/scripts/run-autonomous.ts",
-    "record:session": "tsx src/scripts/record-session.ts"
+    "record:session": "tsx src/scripts/record-session.ts",
+    "shoot:login": "tsx scripts/shoot-login.mjs",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -29,6 +31,8 @@
     "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/git": "^11.0.1",
     "@types/node": "^24.13.3",
+    "husky": "^9.1.7",
+    "playwright-core": "^1.62.0",
     "semantic-release": "^25.0.8",
     "tsx": "^4.23.1",
     "typescript": "^5.6.3"
