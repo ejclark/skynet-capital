@@ -212,13 +212,22 @@ export class Authenticator {
     perspective:1200px;
   }
 
-  /* Living market backdrop */
-  #stage{ position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; }
-  .vignette{ position:fixed; inset:0; z-index:1; pointer-events:none;
+  /* Ambient Matrix rain (deepest layer) + living market backdrop above it */
+  #rain{ position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.55; }
+  #stage{ position:fixed; inset:0; width:100%; height:100%; z-index:1; pointer-events:none; }
+  /* Faint CRT scanlines across the whole stage */
+  .scanlines{ position:fixed; inset:0; z-index:2; pointer-events:none; mix-blend-mode:overlay; opacity:.5;
+    background:repeating-linear-gradient(0deg, color-mix(in srgb,var(--accent) 9%,transparent) 0 1px, transparent 1px 3px); }
+  /* Slow specular scan sweep */
+  .scanbeam{ position:fixed; inset:0; z-index:2; pointer-events:none;
+    background:linear-gradient(180deg, transparent 0%, color-mix(in srgb,var(--accent) 8%,transparent) 50%, transparent 100%);
+    height:38%; animation:beam 7s linear infinite; }
+  .vignette{ position:fixed; inset:0; z-index:3; pointer-events:none;
     background:radial-gradient(120% 90% at 50% 40%, transparent 45%, color-mix(in srgb,var(--bg) 82%,transparent) 100%); }
 
   /* Depth stage — parallax layers ride inside this */
-  .scene{ position:relative; z-index:2; width:100%; max-width:392px; transform-style:preserve-3d; }
+  .scene{ position:relative; z-index:4; width:100%; max-width:392px; transform-style:preserve-3d; }
+  @keyframes beam{ 0%{ transform:translateY(-40%); opacity:0; } 12%{ opacity:1; } 88%{ opacity:1; } 100%{ transform:translateY(240%); opacity:0; } }
 
   .legend{
     display:flex; justify-content:center; gap:22px; margin-bottom:20px;
@@ -234,25 +243,55 @@ export class Authenticator {
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
-    border-radius:20px; transform:translateZ(0);
+    border-radius:20px; transform:translateZ(0); isolation:isolate;
     background:
       linear-gradient(180deg, color-mix(in srgb,var(--surface) 92%,transparent), color-mix(in srgb,var(--surface-2) 96%,transparent));
-    border:1px solid var(--border);
+    border:1px solid transparent;
     box-shadow:
       0 1px 0 0 color-mix(in srgb,#fff 8%,transparent) inset,
       0 40px 90px -40px rgba(0,0,0,.75),
-      0 8px 30px -18px color-mix(in srgb,var(--accent) 45%,transparent);
+      0 8px 34px -16px color-mix(in srgb,var(--accent) 55%,transparent);
     backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2);
   }
-  /* Lit top edge */
-  .card::before{ content:""; position:absolute; inset:0 0 auto 0; height:1px; border-radius:20px 20px 0 0;
-    background:linear-gradient(90deg, transparent, color-mix(in srgb,var(--accent) 70%,transparent), transparent); }
+  /* Iridescent holographic border (masked gradient ring) */
+  .card::before{ content:""; position:absolute; inset:0; border-radius:20px; padding:1px; z-index:-1;
+    background:conic-gradient(from var(--holo,0deg),
+      color-mix(in srgb,var(--accent) 85%,transparent), #7CE7FF, color-mix(in srgb,var(--pos) 80%,transparent),
+      #B69CFF, color-mix(in srgb,var(--accent) 85%,transparent));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite:exclude; opacity:.9; animation:holo 8s linear infinite; }
+  /* Drifting holographic sheen across the glass */
+  .card::after{ content:""; position:absolute; inset:0; border-radius:20px; pointer-events:none; z-index:1;
+    background:linear-gradient(var(--sheen,115deg), transparent 38%, color-mix(in srgb,var(--accent) 14%,transparent) 48%,
+      color-mix(in srgb,#fff 10%,transparent) 52%, transparent 62%);
+    mix-blend-mode:screen; opacity:.7; animation:sheen 9s ease-in-out infinite; }
+  .card > *{ position:relative; z-index:2; }
+  @property --holo{ syntax:"<angle>"; inherits:false; initial-value:0deg; }
+  @keyframes holo{ to{ --holo:360deg; } }
+  @keyframes sheen{ 0%,100%{ transform:translateX(-16%); } 50%{ transform:translateX(16%); } }
+
+  /* HUD corner brackets */
+  .card .corner{ position:absolute; width:14px; height:14px; border:1.5px solid color-mix(in srgb,var(--accent) 70%,transparent);
+    z-index:3; opacity:.8; }
+  .card .corner.tl{ top:9px; left:9px; border-right:0; border-bottom:0; }
+  .card .corner.tr{ top:9px; right:9px; border-left:0; border-bottom:0; }
+  .card .corner.bl{ bottom:9px; left:9px; border-right:0; border-top:0; }
+  .card .corner.br{ bottom:9px; right:9px; border-left:0; border-top:0; }
 
   .brand{ transform:translateZ(26px); }
-  .brand .mark{ display:block; font-weight:700; font-size:23px; letter-spacing:.16em; }
+  .brand .mark{ display:block; font-weight:700; font-size:23px; letter-spacing:.16em; position:relative;
+    animation:glitch 6s steps(1) 1.6s infinite; }
+  /* Chromatic-aberration split on the wordmark */
+  .brand .mark::before, .brand .mark::after{ content:"SKYNET·CAPITAL"; position:absolute; left:0; top:0; width:100%;
+    opacity:.55; pointer-events:none; }
+  .brand .mark::before{ color:#FF4D9D; transform:translateX(-1px); mix-blend-mode:screen; }
+  .brand .mark::after{ color:#35D0BA; transform:translateX(1px); mix-blend-mode:screen; }
   .brand .mark b{ color:var(--accent); text-shadow:0 0 14px color-mix(in srgb,var(--accent) 60%,transparent); }
   .brand .sub{ display:block; margin-top:8px; font-size:11px; letter-spacing:.3em;
     text-transform:uppercase; color:var(--muted); }
+  @keyframes glitch{ 0%,97%,100%{ text-shadow:none; transform:none; }
+    97.5%{ transform:translateX(-1.5px); } 98%{ transform:translateX(1.5px); } 98.5%{ transform:none; } }
 
   .tag{ display:inline-flex; align-items:center; gap:8px; margin:22px 0 4px;
     font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--accent);
@@ -263,10 +302,22 @@ export class Authenticator {
 
   .sub-copy{ color:var(--text); font-size:15px; margin:16px auto 4px; line-height:1.5; max-width:30ch; }
   .sub-copy .em{ color:var(--muted); }
-  .ticker{ font-family:var(--mono); font-size:12px; letter-spacing:.1em; color:var(--muted);
-    margin:8px 0 24px; }
+  .ticker{ display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:12px; letter-spacing:.1em; color:var(--muted); margin:10px 0 22px; }
   .ticker b{ color:var(--pos); font-weight:600; }
   .ticker .m{ color:var(--accent); }
+  .ticker .sep{ opacity:.5; }
+  /* Honest "this is a simulated preview" marker */
+  .sim{ font-size:9px; letter-spacing:.18em; color:var(--muted); border:1px solid var(--border);
+    border-radius:4px; padding:2px 5px; }
+  /* HUD telemetry row — sells the live command-console feel */
+  .hud{ display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 18px; }
+  .hud .on{ display:inline-flex; align-items:center; gap:6px; color:var(--accent); }
+  .hud .on i{ width:5px; height:5px; border-radius:50%; background:var(--accent);
+    box-shadow:0 0 6px 1px var(--accent); animation:blink 2.2s ease-in-out infinite; }
+  @keyframes blink{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
 
   .btns{ display:flex; flex-direction:column; gap:11px; }
   .btn{
@@ -307,20 +358,27 @@ export class Authenticator {
   .brand{ opacity:0; animation:rise .7s ease .5s both; }
   .tag{ opacity:0; animation:rise .7s ease .68s both; }
   .sub-copy{ opacity:0; animation:rise .7s ease .8s both; }
-  .ticker{ opacity:0; animation:rise .7s ease .9s both; }
+  .hud{ opacity:0; animation:rise .7s ease .86s both; }
+  .ticker{ opacity:0; animation:rise .7s ease .92s both; }
   .error{ opacity:0; animation:rise .6s ease .6s both; }
   .btn{ opacity:0; animation:rise .6s ease calc(1s + var(--i,0) * .12s) both; }
   .foot{ opacity:0; animation:rise .7s ease 1.3s both; }
 
   @media (prefers-reduced-motion:reduce){
     *{ animation:none !important; transition:none !important; }
-    .card,.legend,.brand,.tag,.sub-copy,.ticker,.error,.btn,.foot{ opacity:1 !important; }
-    .tag .live{ animation:none; }
+    .card,.legend,.brand,.tag,.sub-copy,.hud,.ticker,.error,.btn,.foot{ opacity:1 !important; }
+    .card::before{ opacity:.9; } .card::after{ display:none; }
+    .scanbeam{ display:none; }
+    #rain{ opacity:.35; }
+    .tag .live, .hud .on i{ animation:none; }
   }
 </style>
 </head>
 <body>
+<canvas id="rain" aria-hidden="true"></canvas>
 <canvas id="stage" aria-hidden="true"></canvas>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="scanbeam" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 <div class="scene" id="scene">
   <div class="legend" aria-hidden="true">
@@ -328,13 +386,20 @@ export class Authenticator {
     <span class="machine"><i class="lz"></i><b>Machine</b></span>
   </div>
   <main class="card">
+    <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
+    <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
     <div class="brand">
       <span class="mark">SKYNET<b>·</b>CAPITAL</span>
       <span class="sub">Observatory</span>
     </div>
     <span class="tag"><span class="live"></span>PAPER · SANDBOX</span>
     <p class="sub-copy">The board is live. <span class="em">Take your seat in the race.</span></p>
-    <p class="ticker" aria-hidden="true">HUMANS <b id="tHuman">+0.00%</b> &nbsp;·&nbsp; MACHINES <span class="m" id="tMachine">+0.00%</span></p>
+    <div class="hud" aria-hidden="true">
+      <span class="on"><i></i>SYS ONLINE</span>
+      <span>NYSE · 40.71°N 74.01°W</span>
+      <span>FEED IEX</span>
+    </div>
+    <p class="ticker" aria-hidden="true">HUMANS <b id="tHuman">+0.00%</b> <span class="sep">·</span> MACHINES <span class="m" id="tMachine">+0.00%</span> <span class="sim" title="Simulated preview — real standings unlock once you're signed in">SIM</span></p>
     ${banner}
     <div class="btns">
       ${buttons}
@@ -425,39 +490,71 @@ export class Authenticator {
     if(s[0]==="#"){ var r=parseInt(s.substr(1,2),16),g=parseInt(s.substr(3,2),16),b=parseInt(s.substr(5,2),16);
       return "rgba("+r+","+g+","+b+","+a+")"; } return s; }catch(e){ return color; } }
 
+  // NOTE: this race is a client-side SIMULATION (labeled "SIM" in the UI), not live data.
+  // A real Humans-vs-Machines metric is derivable from ObservatoryHub.getState(): sum
+  // equity by kind and expose only those two cohort totals via a future unauthenticated
+  // /pulse route (individual account detail must stay behind auth). Poll it here to drive
+  // the curves, falling back to this simulation when no participants are live.
   function pct(line){ var n=line.pts.length; if(n<2) return 0;
     return (line.pts[n-1]-line.pts[0]) / (Math.abs(line.pts[0])+40) * 100; }
   function fmt(p){ return (p>=0?"+":"")+p.toFixed(2)+"%"; }
   var tH=document.getElementById("tHuman"), tM=document.getElementById("tMachine");
   function updateTicker(){ if(tH) tH.textContent=fmt(pct(human)); if(tM) tM.textContent=fmt(pct(machine)); }
 
-  resize();
-  window.addEventListener("resize", resize);
+  // --- Ambient Matrix rain (deepest layer, faint) ---
+  var rcanvas=document.getElementById("rain"), rctx=null, cols=[], colW=16, RG="0123456789$+-.%△▽ｦｱｲｳｴｵｶｷｸｹﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘ";
+  try{ rctx = rcanvas && rcanvas.getContext ? rcanvas.getContext("2d") : null; }catch(e){ rctx=null; }
+  function rainResize(){
+    if(!rctx) return;
+    rcanvas.width=Math.max(1,Math.floor(rcanvas.clientWidth*DPR));
+    rcanvas.height=Math.max(1,Math.floor(rcanvas.clientHeight*DPR));
+    rctx.setTransform(DPR,0,0,DPR,0,0);
+    var n=Math.ceil(rcanvas.clientWidth/colW);
+    cols=[]; for(var i=0;i<n;i++){ cols.push(Math.random()*-rcanvas.clientHeight); }
+  }
+  function rainDraw(){
+    if(!rctx) return;
+    var w=rcanvas.clientWidth, h=rcanvas.clientHeight;
+    rctx.fillStyle="rgba(11,15,20,0.16)"; rctx.fillRect(0,0,w,h);   // fade for trails
+    var col=css("--accent")||"#35D0BA";
+    rctx.font="13px "+((css("--mono")||"monospace"));
+    for(var i=0;i<cols.length;i++){
+      var x=i*colW, y=cols[i], ch=RG[(Math.random()*RG.length)|0];
+      rctx.fillStyle=hexA(col,0.85); rctx.fillText(ch,x,y);                 // bright head
+      rctx.fillStyle=hexA(col,0.28); rctx.fillText(RG[(Math.random()*RG.length)|0],x,y-14); // dim trail
+      cols[i]= y>h+Math.random()*140 ? 0 : y+ (10+Math.random()*6);
+    }
+  }
 
-  if(reduce){ draw(); updateTicker(); return; }   // one static frame, no loop
+  resize(); rainResize();
+  window.addEventListener("resize", function(){ resize(); rainResize(); });
+
+  if(reduce){ draw(); if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
+    for(var s=0;s<26;s++) rainDraw(); } updateTicker(); return; }   // static frame, no loop
 
   var last=0, running=true;
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function loop(now){
     if(!running) return;
-    if(now-last > 55){ last=now; t++; step(human,0.045); step(machine,0.05); draw();
+    if(now-last > 55){ last=now; t++; step(human,0.045); step(machine,0.05); draw(); rainDraw();
       if(t%6===0) updateTicker(); }
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
-  // Pointer-reactive parallax (fine pointers only).
-  var scene=document.getElementById("scene");
+  // Pointer-reactive parallax + holographic sheen tilt (fine pointers only).
+  var scene=document.getElementById("scene"), card=scene&&scene.querySelector(".card");
   if(scene && window.matchMedia && window.matchMedia("(pointer:fine)").matches){
-    var rx=0,ry=0,tx=0,ty=0, raf=0;
+    var rx=0,ry=0,tx=0,ty=0,nxG=0, raf=0;
     window.addEventListener("pointermove", function(e){
       var nx=(e.clientX/window.innerWidth)-0.5, ny=(e.clientY/window.innerHeight)-0.5;
-      tx = -ny*6; ty = nx*8;
+      tx = -ny*6; ty = nx*8; nxG=nx;
       if(!raf) raf=requestAnimationFrame(ease);
     });
     window.addEventListener("pointerleave", function(){ tx=0; ty=0; if(!raf) raf=requestAnimationFrame(ease); });
     function ease(){ rx+=(tx-rx)*0.08; ry+=(ty-ry)*0.08;
       scene.style.transform="rotateX("+rx.toFixed(2)+"deg) rotateY("+ry.toFixed(2)+"deg)";
+      if(card) card.style.setProperty("--sheen", (115 + nxG*70).toFixed(0)+"deg");
       if(Math.abs(tx-rx)>0.01||Math.abs(ty-ry)>0.01){ raf=requestAnimationFrame(ease); } else { raf=0; } }
   }
 })();
