@@ -170,35 +170,98 @@ export class Authenticator {
     const buttons = this.providerIds
       .map((id) => {
         const label = this.providers.get(id)?.label ?? id;
-        return `<a class="btn ${id}" href="/auth/${id}">Sign in with ${label}</a>`;
+        return `<a class="btn btn-${id}" href="/auth/${id}">
+      ${providerGlyph(id)}
+      <span>Continue with ${escapeHtml(label)}</span>
+    </a>`;
       })
-      .join("\n");
-    const banner = error ? `<p class="error">${escapeHtml(error)}</p>` : "";
+      .join("\n    ");
+    const banner = error ? `<p class="error" role="alert">${escapeHtml(error)}</p>` : "";
     return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sign in — Skynet Capital</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}
-  body{font:16px/1.5 system-ui;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b0d10;color:#e8eaed}
-  .card{max-width:360px;width:90%;text-align:center;padding:36px 28px;background:#14181d;border-radius:14px}
-  h1{font-size:22px;margin-bottom:6px} p.sub{color:#9aa0a6;margin-bottom:24px}
-  .btn{display:block;padding:12px;margin:10px 0;border-radius:8px;text-decoration:none;font-weight:600;color:#fff}
-  .btn.google{background:#1a73e8} .btn.github{background:#24292e}
-  .error{background:#3a1d1d;color:#ffb4b4;padding:10px;border-radius:8px;margin-bottom:18px;font-size:14px}
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041;
+    --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --neg:#F85149;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:light){
+    :root{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA;
+      --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --neg:#CF222E; }
+  }
+  body{
+    font-family:var(--sans); color:var(--text); min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+    background:
+      radial-gradient(60% 55% at 50% -8%, color-mix(in srgb,var(--accent) 16%,transparent), transparent 70%),
+      var(--bg);
+  }
+  .card{
+    width:100%; max-width:380px; text-align:center; padding:40px 32px 32px;
+    background:var(--surface); border:1px solid var(--border); border-radius:18px;
+    box-shadow:0 24px 60px -30px rgba(0,0,0,.6);
+  }
+  .brand .mark{ display:block; font-weight:700; font-size:22px; letter-spacing:.14em; }
+  .brand .mark b{ color:var(--accent); }
+  .brand .sub{
+    display:block; margin-top:8px; font-size:11px; letter-spacing:.28em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .tag{
+    display:inline-block; margin:22px 0 6px; font-family:var(--mono); font-size:11px;
+    letter-spacing:.12em; color:var(--accent); border:1px solid var(--accent);
+    border-radius:999px; padding:4px 12px;
+  }
+  .sub-copy{ color:var(--muted); font-size:14px; margin:14px 0 26px; line-height:1.5; }
+  .btns{ display:flex; flex-direction:column; gap:10px; }
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:12px 14px; border-radius:10px; text-decoration:none; font-weight:600;
+    font-size:15px; color:var(--text); background:var(--surface-2);
+    border:1px solid var(--border); transition:border-color .15s ease, transform .05s ease;
+  }
+  .btn:hover{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); }
+  .btn:active{ transform:translateY(1px); }
+  .btn svg{ width:18px; height:18px; flex:0 0 auto; }
+  .error{
+    background:color-mix(in srgb,var(--neg) 16%,transparent); color:var(--neg);
+    border:1px solid color-mix(in srgb,var(--neg) 40%,transparent);
+    padding:10px 12px; border-radius:10px; margin-bottom:20px; font-size:13px; text-align:left;
+  }
+  .foot{ margin-top:24px; font-size:11px; letter-spacing:.04em; color:var(--muted); }
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>Skynet Capital</h1>
-  <p class="sub">Man vs. Machine — sign in to watch the board.</p>
+<main class="card">
+  <div class="brand">
+    <span class="mark">SKYNET<b>·</b>CAPITAL</span>
+    <span class="sub">Observatory</span>
+  </div>
+  <span class="tag">PAPER · SANDBOX</span>
+  <p class="sub-copy">Man vs. Machine — sign in to watch the board.</p>
   ${banner}
-  ${buttons}
-</div>
+  <div class="btns">
+    ${buttons}
+  </div>
+  <p class="foot">Invite-only · access is limited to the league's guest list.</p>
+</main>
 </body>
 </html>`;
   }
+}
+
+/** Inline brand glyph for a provider's sign-in button (self-contained, no external assets). */
+function providerGlyph(id: ProviderId): string {
+  if (id === "google") {
+    return `<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.2-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 6.9l7.1 5.5c4.2-3.9 6.2-9.6 6.2-16.9z"/><path fill="#FBBC05" d="M10.4 28.7a14.6 14.6 0 0 1 0-9.3l-7.8-6.1a24 24 0 0 0 0 21.5l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.4-4.6 2.2-8.8 2.2-6.3 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`;
+  }
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 11 .6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.6 7.9-5.9 7.9-11C23.5 5.6 18.4.5 12 .5z"/></svg>`;
 }
 
 /** Build the authenticator from the environment, or undefined when auth isn't configured. */
