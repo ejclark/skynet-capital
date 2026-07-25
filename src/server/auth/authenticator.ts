@@ -479,7 +479,6 @@ export class Authenticator {
 <header class="topbrand" id="topbrand">
   <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL<span class="mark-sweep" data-text="SKYNET·CAPITAL" aria-hidden="true"></span></h1>
   <div class="herosub" id="herosub">
-    <span class="pill"><span class="live"></span>OPTIONS SANDBOX</span>
     <span class="tertiary">PLAY · EXPERIMENT · LEARN</span>
   </div>
 </header>
@@ -554,7 +553,7 @@ export class Authenticator {
   // ===== Market engine: a live underlying with real technical overlays =====
   // Signals come from indicators that actually make sense — EMA cross, Bollinger squeeze/expansion,
   // and RSI overbought/oversold — which then summon the matching options play from the playbook.
-  var SPAN=200, price=[], emaF=[], emaS=[], smaA=[], bU=[], bL=[], rsiV=50, t=0;
+  var SPAN=300, price=[], emaF=[], emaS=[], smaA=[], bU=[], bL=[], rsiV=50, t=0;
   var pv=0, regimeBias=0.02, regimeVol=1, regimeT=0;
   function noise(s){ var x=Math.sin(s)*43758.5453; return x-Math.floor(x); }
   function cap(a){ if(a.length>SPAN) a.shift(); }
@@ -589,7 +588,8 @@ export class Authenticator {
   function drawGrid(){
     var grid="color-mix(in srgb, "+(css("--border")||"#223041")+" 55%, transparent)";
     ctx.strokeStyle=grid; ctx.lineWidth=1; ctx.globalAlpha=0.4; var gx=64;
-    for(var x=(t*0.4)%gx;x<W;x+=gx){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    // static vertical rules — a fixed "paper" the pen draws across (less of a scrolling feel)
+    for(var x=0;x<W;x+=gx){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
     for(var y=0;y<H;y+=gx){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
     ctx.globalAlpha=1; }
   function drawMarket(dim){
@@ -609,13 +609,17 @@ export class Authenticator {
     strokeSeries(bL,dx,Y,hexA(accent,0.20),1);
     strokeSeries(emaS,dx,Y,hexA(muted,0.75),1.4);
     strokeSeries(emaF,dx,Y,hexA(accent,0.9),1.6);
-    // price line
+    // price line — calm settled history
     ctx.beginPath();
     for(i=0;i<n;i++){ var qx=i*dx,qy=Y(price[i]); i?ctx.lineTo(qx,qy):ctx.moveTo(qx,qy); }
-    ctx.strokeStyle=txt; ctx.lineWidth=1.8; ctx.lineJoin="round";
-    ctx.shadowColor=accent; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0;
+    ctx.strokeStyle=txt; ctx.lineWidth=1.6; ctx.lineJoin="round";
+    ctx.shadowColor=accent; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
+    // freshly-drawn "wet ink" leading segment + glowing pen tip — reads as a pen drawing forward
+    var head=18; ctx.beginPath();
+    for(i=Math.max(0,n-head);i<n;i++){ var wx=i*dx,wy=Y(price[i]); i===Math.max(0,n-head)?ctx.moveTo(wx,wy):ctx.lineTo(wx,wy); }
+    ctx.strokeStyle="#EAFBF7"; ctx.lineWidth=2.3; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0;
     var lx=(n-1)*dx, ly=Y(price[n-1]);
-    ctx.beginPath(); ctx.arc(lx,ly,3,0,7); ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.arc(lx,ly,3.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=20; ctx.fill(); ctx.shadowBlur=0;
     // RSI readout — synthesizes overbought/oversold at a glance
     var rc = rsiV<32?pos:(rsiV>68?neg:muted);
     ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
@@ -720,7 +724,7 @@ export class Authenticator {
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    var y=fieldMid()-86;
+    var y=fieldMid()-104;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
     ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=34;
     ctx.font="700 27px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
