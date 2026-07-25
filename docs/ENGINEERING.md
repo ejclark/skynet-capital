@@ -3,6 +3,12 @@
 These are the non-negotiables. They exist so the codebase scales to many personas and a
 live dashboard without turning into a swamp. Every PR is held to them.
 
+## Architecture decisions
+
+Significant, hard-to-reverse decisions (a new host, an auth model, a data-flow seam, a CI/CD
+pipeline) are recorded as [Architecture Decision Records](adr/README.md) in `docs/adr/`. When a
+PR makes such a decision, add an ADR in the same PR. Routine changes don't need one.
+
 ## Stack
 
 | Concern | Tool | Why |
