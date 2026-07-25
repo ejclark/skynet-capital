@@ -1,3 +1,14 @@
+# [1.5.0](https://github.com/ejclark/skynet-capital/compare/v1.4.0...v1.5.0) (2026-07-25)
+
+
+### Features
+
+* **login:** consolidate to one title, center the form, single toggle, one-shot VFX ([f6049bc](https://github.com/ejclark/skynet-capital/commit/f6049bc1aafbd53c140c7713ed77721faab5f447))
+* **login:** flip play layout — teaching panel left, payoff diagram right ([2a326db](https://github.com/ejclark/skynet-capital/commit/2a326dbc4dd3e6d08cd92aeacc1923592c126b76))
+* **login:** real indicators, full trade lifecycle, progressive reveal + cursor VFX ([840cb71](https://github.com/ejclark/skynet-capital/commit/840cb71048d2279d099186f35822f308a7cd5093))
+* **login:** stronger chromatic reveal sweep and fuller background recede ([2eaa3b7](https://github.com/ejclark/skynet-capital/commit/2eaa3b7324342f1b6485885a1f75fafc770daedd))
+* **login:** two-column play, sequenced title reveal, zone illumination + visual harness ([b338a8e](https://github.com/ejclark/skynet-capital/commit/b338a8e74ff71cd082fbac3f35ec6a6b8bf4e1ae))
+
 # [1.4.0](https://github.com/ejclark/skynet-capital/compare/v1.3.0...v1.4.0) (2026-07-25)
 
 
