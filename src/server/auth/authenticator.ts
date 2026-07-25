@@ -719,17 +719,17 @@ export class Authenticator {
   // These are illustrative teaching diagrams (labeled STRATEGY PLAYBOOK), never live P/L.
   // pts: normalized payoff [ [x 0..1, y -1..1], ... ]; strikes: x positions of the legs.
   var STRATS=[
-    { name:"IRON CONDOR", cue:"LOW VOL", desc:"Bet the market stays calm — keep the credit while price holds between the middle strikes.",
+    { name:"IRON CONDOR", cue:"LOW VOL", desc:"Range-bound — keep the credit while price holds the middle.",
       pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8] },
-    { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Bet on a big move either way — buy a call and a put, profit on a breakout.",
+    { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Volatility building — profit on a breakout either way.",
       pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7] },
-    { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Bet on calm — sell the call and put at one strike; best if price pins it.",
+    { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Dead calm — sell premium; best if price pins the strike.",
       pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5] },
-    { name:"BUTTERFLY", cue:"PINNED", desc:"Pin the target — max profit if price lands on the center strike, tiny risk on the wings.",
+    { name:"BUTTERFLY", cue:"PINNED", desc:"Pinned — max profit if price lands on the center strike.",
       pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65] },
-    { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Lean bullish with a cap — buy a call, sell a higher one to cut the cost.",
+    { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Bullish reversal — capped upside at a lower cost.",
       pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65] },
-    { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Roll up the strikes — limited risk with room to run if the market takes off.",
+    { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Breakout higher — limited risk with room to run.",
       pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75] }
   ];
   var pbGlyphT=0;
@@ -765,7 +765,7 @@ export class Authenticator {
   // LEFT-UPPER: the play in words — moved up toward the hero. Signal, name, plain-English idea,
   // the shared anatomy legend, the pivot values, and the live trade-status line.
   function drawPanel(strat, sig, p, A){
-    var e=extrema(strat), px=Math.round(W*0.04), pw=Math.min(W*0.26, 340);
+    var e=extrema(strat), px=Math.round(W*0.045), pw=Math.min(W*0.2, 238), col=190;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
@@ -773,15 +773,16 @@ export class Authenticator {
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
     ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=32;
     ctx.font="700 25px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
-    ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=24;
-    ctx.font="14px "+sans; ctx.fillStyle=hexA(muted,0.95);
-    y += wrapText(strat.desc, px, y, pw, 19)*19 + 14;
+    ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=23;
+    ctx.font="13px "+sans; ctx.fillStyle=hexA(muted,0.95);
+    y += wrapText(strat.desc, px, y, pw, 18)*18 + 14;
     drawAnatomy(px, y, A*Math.min(1,p.on)); y+=26;
+    // Totals sit right beside their labels (a tight column), not flung to the far right.
     ctx.font="12px "+mono;
     ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=19;
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=19;
     ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=25;
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=25;
     var sxp=lerp(0.5,e.mxX,easeIO(p.move)), pl=payoffAt(strat.pts,sxp)*DOLLARS;
     if(p.exit>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pos; ctx.shadowColor=pos; ctx.shadowBlur=14;
       ctx.fillText("✓ CLOSED  "+money(e.maxY*DOLLARS), px, y); ctx.shadowBlur=0; }
@@ -794,7 +795,7 @@ export class Authenticator {
   // RIGHT: the signal EVIDENCE — why this play was called. A live RSI gauge (oversold/overbought)
   // and a Bollinger snapshot (recent price vs its bands), so the reasoning is shown, not just named.
   function drawSignalDetail(sig, A){
-    var sx=Math.round(W*0.71), sw=Math.min(W*0.25, 340);
+    var sx=Math.round(W*0.755), sw=Math.min(W*0.205, 300);
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
@@ -841,13 +842,15 @@ export class Authenticator {
     if(!strat) return;
     // The payoff is the FOCAL POINT — centered on the page, with the play text (left) and the
     // signal evidence (right) flanking it.
-    var x0=W*0.335, x1=W*0.665;
+    var x0=W*0.27, x1=W*0.73;
     var dTop=field.top+34, dBot=field.bottom-10;
     var midY=(dTop+dBot)/2, amp=(dBot-dTop)/2*0.82, yTop=dTop, yBot=dBot, A=(1-p.out);
     function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
-        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
     ctx.save(); ctx.globalAlpha=A;
+    // Knock the (frozen, zoomed) trend back inside the play box so the payoff stays crisp.
+    var pad=18; ctx.fillStyle=hexA(bg,0.42); ctx.fillRect(x0-pad, dTop-pad, (x1-x0)+pad*2, (dBot-dTop)+pad*2);
     // Zones keep more full colour and only soften near the edges (gentle floor, wider band).
     function edgeFade(u){ return 0.5 + 0.5*Math.min(clamp01(u/0.1), clamp01((1-u)/0.1)); }
     if(p.zones>0){ var N=140, seg=(x1-x0)/N, be0=extrema(strat).be;
@@ -887,9 +890,13 @@ export class Authenticator {
       ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.textAlign="center";
       for(i=0;i<e1.be.length;i++){ ctx.fillText("B/E", X(e1.be[i]), Y(0)-9); }
       ctx.globalAlpha=A; }
-    // entry ticks at the strikes
-    if(p.enter>0){ ctx.globalAlpha=A*p.enter; ctx.textAlign="center"; ctx.font="700 10px "+mono; ctx.fillStyle=hexA(accent,0.95);
-      for(k=0;k<strat.strikes.length;k++){ ctx.fillText("▲", X(strat.strikes[k]), Y(0)+15); }
+    // entry: the strikes flash as positions are entered (correlates with the left status line)
+    if(p.enter>0){ var epulse=0.5+0.5*Math.sin(pbGlyphT*0.5); ctx.globalAlpha=A*p.enter; ctx.textAlign="center"; ctx.font="700 10px "+mono;
+      for(k=0;k<strat.strikes.length;k++){ var ekx=X(strat.strikes[k]);
+        ctx.strokeStyle=hexA(accent, (0.3+0.5*epulse)); ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(ekx,yTop); ctx.lineTo(ekx,yBot); ctx.stroke();
+        ctx.fillStyle=hexA(accent, 0.5+0.4*epulse); ctx.beginPath(); ctx.arc(ekx,Y(0),3+2*epulse,0,7); ctx.fill();
+        ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲", ekx, Y(0)+16); }
       ctx.globalAlpha=A; }
     // underlying spot glides into profit (value shown in the panel)
     if(p.move>0){ var e2=extrema(strat), sxp=lerp(0.5, e2.mxX, easeIO(p.move)), mvx=X(sxp), mvy=Y(payoffAt(strat.pts,sxp));
@@ -897,6 +904,14 @@ export class Authenticator {
       ctx.beginPath(); ctx.moveTo(mvx,yTop); ctx.lineTo(mvx,yBot); ctx.stroke(); ctx.setLineDash([]);
       ctx.beginPath(); ctx.arc(mvx,mvy,4.5,0,7); ctx.fillStyle=payoffAt(strat.pts,sxp)>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=14; ctx.fill(); ctx.shadowBlur=0;
       ctx.textAlign="center"; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(txt,0.8); ctx.fillText("NOW", mvx, yTop-3); }
+    // exit: on take-profit, the profit region flashes green (correlates with "CLOSED +$" left)
+    if(p.exit>0){ var e3=extrema(strat), xpulse=0.5+0.5*Math.sin(pbGlyphT*0.6); ctx.globalAlpha=A*p.exit;
+      var N2=80, seg2=(x1-x0)/N2;
+      for(var j=0;j<N2;j++){ var u2=j/(N2-1), v2=payoffAt(strat.pts,u2); if(v2<=0) continue;
+        ctx.fillStyle=hexA(pos, 0.1+0.16*xpulse); ctx.fillRect(X(u2), Math.min(Y(v2),Y(0)), seg2+1, Math.abs(Y(v2)-Y(0))); }
+      var fxp=X(e3.mxX), fyp=Y(e3.maxY);
+      ctx.strokeStyle=hexA(pos,0.9); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(fxp,fyp,6+7*xpulse,0,7); ctx.stroke();
+      ctx.globalAlpha=A; }
     ctx.textAlign="start"; ctx.restore();
     drawPanel(strat, sig, p, A);
     drawSignalDetail(sig, A*Math.min(1,p.on));
