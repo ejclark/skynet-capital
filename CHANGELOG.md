@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/ejclark/skynet-capital/compare/v1.5.0...v1.6.0) (2026-07-25)
+
+
+### Features
+
+* **onboarding:** add Alpaca OAuth connect provider and bearer transport auth ([2545b63](https://github.com/ejclark/skynet-capital/commit/2545b63cc3ec01fe91e9103c1c79e859ab60feae))
+
 # [1.5.0](https://github.com/ejclark/skynet-capital/compare/v1.4.0...v1.5.0) (2026-07-25)
 
 
