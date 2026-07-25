@@ -231,9 +231,9 @@ export class Authenticator {
   /* Top-center brand — primary real estate; the animation owns the rest of the screen */
   /* Single wordmark — top-center hero at rest; flies into the form on reveal (see .mark flight) */
   .topbrand{ position:fixed; z-index:6; top:clamp(20px,5vh,52px); left:0; right:0; text-align:center; pointer-events:none; }
-  .topbrand .mark{ font-size:clamp(26px,5vw,42px); font-weight:700; letter-spacing:.16em; margin:0;
+  .topbrand .mark{ font-size:clamp(34px,6.4vw,58px); font-weight:700; letter-spacing:.15em; margin:0;
     transform-origin:center center; will-change:transform;
-    transition:transform .62s cubic-bezier(.16,.84,.44,1); }
+    transition:transform .66s cubic-bezier(.16,.84,.44,1); }
   .topbrand .mark b{ color:var(--accent); text-shadow:0 0 20px color-mix(in srgb,var(--accent) 65%,transparent); }
   /* Secondary (pill) + tertiary line — the idle identity below the title; fade out on reveal */
   .herosub{ margin-top:16px; display:flex; flex-direction:column; align-items:center; gap:10px;
@@ -260,15 +260,15 @@ export class Authenticator {
     width:100%; opacity:calc(.28 + var(--burst,0)*.55); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit; }
   .mark[data-text]::before{ color:#FF4D9D; transform:translate(calc(var(--cax,0px)*-1), calc(var(--cay,0px)*-1)); }
   .mark[data-text]::after{ color:#35D0BA; transform:translate(var(--cax,0px), var(--cay,0px)); }
-  /* One-shot power-on: a left→right chromatic-ray wipe + glow as the title lands in the form */
+  /* Power-on VFX: fires at the START of the flight (from the origin) and rides the title down —
+     a pronounced left→right chromatic-ray wipe that then flows with the downward momentum. */
   @property --burst{ syntax:"<number>"; inherits:true; initial-value:0; }
   @property --cax{ syntax:"<length>"; inherits:true; initial-value:0px; }
-  @keyframes poweron{ 0%{ --burst:.25; --cax:-13px; }
-    45%{ --burst:1; --cax:11px; text-shadow:0 0 40px color-mix(in srgb,var(--accent) 85%,transparent); }
-    100%{ --burst:0; --cax:0px; text-shadow:none; } }
-  .mark.burst{ animation:poweron .8s ease-out both; }
-  /* Suppress the chromatic split while the title is in flight — the VFX fires only once it lands */
-  body.flying .mark[data-text]::before, body.flying .mark[data-text]::after{ opacity:0; }
+  @property --cay{ syntax:"<length>"; inherits:true; initial-value:0px; }
+  @keyframes poweron{ 0%{ --burst:.4; --cax:-17px; --cay:-2px; }
+    40%{ --burst:1; --cax:9px; --cay:5px; text-shadow:0 0 46px color-mix(in srgb,var(--accent) 88%,transparent); }
+    100%{ --burst:0; --cax:0px; --cay:0px; text-shadow:none; } }
+  .mark.burst{ animation:poweron .66s ease-out both; }
   /* Left→right light pass that travels THROUGH the letters on arrival (the "mic drop") —
      the shine is clipped to the wordmark glyphs, so it sweeps per-letter, not as a flat band. */
   .mark-sweep{ position:absolute; left:0; top:0; width:100%; pointer-events:none; }
@@ -291,11 +291,11 @@ export class Authenticator {
   .beacon-ring{ position:relative; display:flex; align-items:center; justify-content:center; width:52px; height:52px;
     border-radius:50%; border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
     box-shadow:0 0 24px -4px color-mix(in srgb,var(--accent) 70%,transparent); animation:beacon 2.4s ease-out infinite; }
-  .beacon-chev{ width:13px; height:13px; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent);
-    transform:translateY(-2px) rotate(-135deg); transition:transform .4s cubic-bezier(.16,.84,.44,1); }
+  .beacon-chev{ display:block; width:22px; height:22px; color:var(--accent);
+    transition:transform .4s cubic-bezier(.16,.84,.44,1); }
   @keyframes beacon{ 0%{ box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent); }
     70%{ box-shadow:0 0 0 16px transparent; } 100%{ box-shadow:0 0 0 0 transparent; } }
-  body.revealed .beacon-chev{ transform:translateY(2px) rotate(45deg); }
+  body.revealed .beacon-chev{ transform:rotate(180deg); }
   body.revealed .beacon-ring{ animation:none; opacity:.32; }
 
   /* Background recede — a scrim drops the live market back so the centered form owns focus */
@@ -310,8 +310,9 @@ export class Authenticator {
     transition:opacity .6s cubic-bezier(.16,.84,.44,1), transform .6s cubic-bezier(.16,.84,.44,1); }
   body.revealed .authwrap{ opacity:1; transform:none; pointer-events:auto; }
   .authwrap .card{ width:100%; max-width:460px; transform-style:preserve-3d; }
-  /* Momentary read of the slot's final position for the title FLIP (no visible effect) */
-  body.measuring .authwrap{ transform:none !important; transition:none !important; opacity:1 !important; }
+  /* Momentary read of the slot's final position for the title FLIP. NOTE: no opacity here —
+     forcing opacity:1 during the synchronous measure flashed the form for a frame on reveal. */
+  body.measuring .authwrap{ transform:none !important; transition:none !important; }
 
   /* Reserved landing zone for the flown title + the sign-in sub beneath it */
   .brand-slot{ height:56px; }
@@ -484,7 +485,7 @@ export class Authenticator {
 </header>
 
 <button type="button" class="beacon" id="beacon" aria-expanded="false" aria-controls="authwrap">
-  <span class="beacon-ring" aria-hidden="true"><span class="beacon-chev"></span></span>
+  <span class="beacon-ring" aria-hidden="true"><svg class="beacon-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <span class="beacon-label" id="beaconLabel">Enter the sandbox</span>
 </button>
 
@@ -523,7 +524,9 @@ export class Authenticator {
   var beaconEl=document.getElementById("beacon"), cardEl=document.getElementById("card");
   // The "field" = the band the market + playbook render into. When idle it fills most of the
   // screen (centered); when the card is revealed it shrinks to sit ABOVE the card (no overlap).
-  var field={ top:0, bottom:0 };
+  // field is the live (eased) band; fieldT is its target. On reveal the target jumps to sit
+  // above the card, but field glides toward it each frame so the market/play don't snap.
+  var field={ top:0, bottom:0 }, fieldT={ top:0, bottom:0 }, fieldInit=false;
   function measureField(){
     var bottom;
     if(revealed && cardEl){ bottom = cardEl.getBoundingClientRect().top - 18; }
@@ -532,8 +535,11 @@ export class Authenticator {
     if(!(bottom>0)) bottom = H*0.72;
     bottom = Math.max(150, Math.min(bottom, H-20));
     var top = Math.max(H*0.16, bottom - Math.min(H*0.6, 430));
-    field.top=top; field.bottom=bottom;
+    fieldT.top=top; fieldT.bottom=bottom;
+    if(!fieldInit){ field.top=top; field.bottom=bottom; fieldInit=true; }
   }
+  function fieldSnap(){ field.top=fieldT.top; field.bottom=fieldT.bottom; }
+  function fieldStep(){ field.top+=(fieldT.top-field.top)*0.16; field.bottom+=(fieldT.bottom-field.bottom)*0.16; }
   function fieldMid(){ return (field.top+field.bottom)/2; }
   function fieldAmp(){ return (field.bottom-field.top)/2; }
   function resize(){
@@ -542,7 +548,7 @@ export class Authenticator {
     canvas.width = Math.max(1, Math.floor(W*DPR));
     canvas.height = Math.max(1, Math.floor(H*DPR));
     ctx.setTransform(DPR,0,0,DPR,0,0);
-    measureField();
+    measureField(); fieldSnap();
   }
 
   // ===== Market engine: a live underlying with real technical overlays =====
@@ -752,16 +758,18 @@ export class Authenticator {
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
     ctx.save(); ctx.globalAlpha=A;
     // shaded profit/loss zones
+    // Zones dissolve into the background at the diagram's outer edges (no hard block boundary).
+    function edgeFade(u){ return Math.min(clamp01(u/0.16), clamp01((1-u)/0.16)); }
     if(p.zones>0){ var N=140, seg=(x1-x0)/N;
       for(var i=0;i<N;i++){ var u=i/(N-1); if(u>p.curve) break; var v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
-        ctx.fillStyle=hexA(v>=0?pos:neg, 0.15*p.zones); ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
+        ctx.fillStyle=hexA(v>=0?pos:neg, 0.16*p.zones*edgeFade(u)); ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
       // Matrix rain confined to the zones — green in profit, red in loss — teaching + contrast pop
       ctx.font="13px "+mono; var NZ=20;
-      for(var c=0;c<NZ;c++){ var uu=(c+0.5)/NZ; if(uu>p.curve) continue; var vv=payoffAt(strat.pts,uu);
+      for(var c=0;c<NZ;c++){ var uu=(c+0.5)/NZ; if(uu>p.curve) continue; var vv=payoffAt(strat.pts,uu), ge=edgeFade(uu);
         var zt=Math.min(Y(vv),Y(0)), zb=Math.max(Y(vv),Y(0)); if(zb-zt<10) continue;
         var gx=X(uu), gy=zt+((pbGlyphT*3 + c*61) % (zb-zt));
-        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.7*p.zones); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy);
-        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.25*p.zones); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy-15); } }
+        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.7*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy);
+        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.25*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy-15); } }
     // strike verticals
     ctx.textAlign="center"; var shown=p.strikes*strat.strikes.length;
     for(var k=0;k<strat.strikes.length;k++){ var rev=clamp01(shown-k); if(rev<=0) break; var sx=X(strat.strikes[k]);
@@ -840,13 +848,14 @@ export class Authenticator {
       if(beaconEl){ try{ beaconEl.focus(); }catch(e){} } return; }
     if(reduce){ if(beaconLabel) beaconLabel.textContent="Close"; body.classList.add("revealed"); flyTitle(true); measureField(); focusForm(); return; }
     body.classList.remove("sweeping","revealed"); body.classList.add("flying");
+    // Fire the VFX at the origin as the title BEGINS to move, so it rides the flight down.
     flyTitle(true); measureField();
-    seq.push(setTimeout(function(){ body.classList.remove("flying");
-      if(wordmark){ wordmark.classList.remove("burst"); void wordmark.offsetWidth; wordmark.classList.add("burst"); }
-      body.classList.add("sweeping"); }, 650));
-    seq.push(setTimeout(function(){ body.classList.add("revealed");
-      if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 790));
-    seq.push(setTimeout(function(){ body.classList.remove("sweeping"); }, 1500));
+    if(wordmark){ wordmark.classList.remove("burst"); void wordmark.offsetWidth; wordmark.classList.add("burst"); }
+    body.classList.add("sweeping");
+    // Form only falls into place once the title has landed and can be read.
+    seq.push(setTimeout(function(){ body.classList.remove("flying"); body.classList.add("revealed");
+      if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 760));
+    seq.push(setTimeout(function(){ body.classList.remove("sweeping"); }, 1000));
   }
   if(beaconEl) beaconEl.addEventListener("click", function(){ setReveal(!revealed); });
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && revealed) setReveal(false); });
@@ -864,7 +873,7 @@ export class Authenticator {
         cardEl.style.setProperty("--sheen",(115+dx*70).toFixed(0)+"deg"); }
     }); }
 
-  if(reduce){ measureField(); drawMarket(0.2);
+  if(reduce){ measureField(); fieldSnap(); drawMarket(0.2);
     drawPlaybook(STRATS[0], { on:1,strikes:1,curve:1,zones:1,label:1,enter:1,move:1,exit:0,out:0 },
       { sig:"BOLLINGER SQUEEZE · LOW VOL" });
     document.body.classList.add("playing");
@@ -876,7 +885,7 @@ export class Authenticator {
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function loop(now){
     if(!running) return;
-    if(now-last > 50){ last=now; measureField(); stepMarket();
+    if(now-last > 50){ last=now; measureField(); fieldStep(); stepMarket();
       if(!playMode && now>=nextPlayAt){ var sig=detectSignal(); if(!sig && now>=nextPlayAt+5000) sig=forceSignal();
         if(sig){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i; } }
       var p=null, recede=0;
