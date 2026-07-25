@@ -257,27 +257,29 @@ export class Authenticator {
   /* Chromatic-aberration wordmark — subtle at rest; the reveal burst amps the split (--burst) */
   .mark[data-text]{ position:relative; }
   .mark[data-text]::before, .mark[data-text]::after{ content:attr(data-text); position:absolute; left:0; top:0;
-    width:100%; opacity:calc(.32 + var(--burst,0)*.5); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit;
-    transition:opacity .2s ease; }
-  .mark[data-text]::before{ color:#FF4D9D;
-    transform:translate(calc((var(--cax,-.6px) + var(--burst,0)*6px)*-1), calc(var(--cay,0px)*-1)); }
-  .mark[data-text]::after{ color:#35D0BA;
-    transform:translate(calc(var(--cax,.6px) + var(--burst,0)*6px), var(--cay,0px)); }
-  /* One-shot power-on: a brief chromatic flare + glow as the title lands in the form */
-  @keyframes poweron{ 0%{ --burst:0; } 22%{ --burst:1; text-shadow:0 0 34px color-mix(in srgb,var(--accent) 80%,transparent); }
-    100%{ --burst:0; text-shadow:none; } }
+    width:100%; opacity:calc(.28 + var(--burst,0)*.55); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit; }
+  .mark[data-text]::before{ color:#FF4D9D; transform:translate(calc(var(--cax,0px)*-1), calc(var(--cay,0px)*-1)); }
+  .mark[data-text]::after{ color:#35D0BA; transform:translate(var(--cax,0px), var(--cay,0px)); }
+  /* One-shot power-on: a left→right chromatic-ray wipe + glow as the title lands in the form */
   @property --burst{ syntax:"<number>"; inherits:true; initial-value:0; }
-  .mark.burst{ animation:poweron .72s ease-out both; }
+  @property --cax{ syntax:"<length>"; inherits:true; initial-value:0px; }
+  @keyframes poweron{ 0%{ --burst:.25; --cax:-13px; }
+    45%{ --burst:1; --cax:11px; text-shadow:0 0 40px color-mix(in srgb,var(--accent) 85%,transparent); }
+    100%{ --burst:0; --cax:0px; text-shadow:none; } }
+  .mark.burst{ animation:poweron .8s ease-out both; }
   /* Suppress the chromatic split while the title is in flight — the VFX fires only once it lands */
   body.flying .mark[data-text]::before, body.flying .mark[data-text]::after{ opacity:0; }
-  /* Left→right light sweep across the wordmark on arrival (the "mic drop") */
-  .mark-sweep{ position:absolute; left:0; top:-6px; right:0; bottom:-6px; pointer-events:none; opacity:0;
-    background:linear-gradient(100deg, transparent 40%, color-mix(in srgb,#fff 85%,transparent) 48%,
-      color-mix(in srgb,var(--accent) 85%,transparent) 53%, transparent 62%);
-    background-size:260% 100%; background-position:135% 0; mix-blend-mode:screen; }
-  body.sweeping .mark-sweep{ animation:sweep .6s ease-out both; }
-  @keyframes sweep{ 0%{ opacity:0; background-position:135% 0; } 12%{ opacity:1; }
-    100%{ opacity:0; background-position:-45% 0; } }
+  /* Left→right light pass that travels THROUGH the letters on arrival (the "mic drop") —
+     the shine is clipped to the wordmark glyphs, so it sweeps per-letter, not as a flat band. */
+  .mark-sweep{ position:absolute; left:0; top:0; width:100%; pointer-events:none; }
+  .mark-sweep::after{ content:attr(data-text); display:block; letter-spacing:inherit; opacity:0;
+    background:linear-gradient(100deg, transparent 43%, #fff 49%,
+      color-mix(in srgb,var(--accent) 88%,#fff) 54%, transparent 61%);
+    background-size:250% 100%; background-position:130% 0;
+    -webkit-background-clip:text; background-clip:text; color:transparent; mix-blend-mode:screen; }
+  body.sweeping .mark-sweep::after{ animation:sweep .62s ease-out both; }
+  @keyframes sweep{ 0%{ opacity:0; background-position:130% 0; } 14%{ opacity:1; }
+    100%{ opacity:0; background-position:-40% 0; } }
 
   /* Single toggle — ENTER (chevron up) at rest; CLOSE (chevron down) when the form is open */
   .beacon{ position:fixed; z-index:6; left:50%; bottom:clamp(22px,5vh,52px); transform:translateX(-50%);
@@ -298,7 +300,7 @@ export class Authenticator {
 
   /* Background recede — a scrim drops the live market back so the centered form owns focus */
   .stagescrim{ position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; transition:opacity .55s ease;
-    background:color-mix(in srgb,var(--bg) 80%,transparent); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
+    background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
   body.revealed .stagescrim{ opacity:1; }
 
   /* Reveal wrapper — larger, vertically centered form */
@@ -474,7 +476,7 @@ export class Authenticator {
 <div class="stagescrim" id="stagescrim" aria-hidden="true"></div>
 
 <header class="topbrand" id="topbrand">
-  <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL<span class="mark-sweep" aria-hidden="true"></span></h1>
+  <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL<span class="mark-sweep" data-text="SKYNET·CAPITAL" aria-hidden="true"></span></h1>
   <div class="herosub" id="herosub">
     <span class="pill"><span class="live"></span>OPTIONS SANDBOX</span>
     <span class="tertiary">PLAY · EXPERIMENT · LEARN</span>
