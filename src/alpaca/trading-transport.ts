@@ -14,9 +14,14 @@ export interface AlpacaTradingConfig {
   readonly baseUrl: string;
   readonly apiKey: string;
   readonly apiSecret: string;
+  /** OAuth bearer token (from "Connect with Alpaca"); when set, used instead of key/secret. */
+  readonly accessToken?: string;
 }
 
-/** Real transport: Alpaca's key/secret header auth against the paper Trading API. */
+/**
+ * Real transport for the paper Trading API. Authenticates with an OAuth Bearer token when one
+ * is present (Connect flow), otherwise Alpaca's classic key/secret headers.
+ */
 export class FetchAlpacaTradingTransport implements AlpacaTradingTransport {
   private readonly config: AlpacaTradingConfig;
 
@@ -25,6 +30,9 @@ export class FetchAlpacaTradingTransport implements AlpacaTradingTransport {
   }
 
   private headers(): Record<string, string> {
+    if (this.config.accessToken) {
+      return { Authorization: `Bearer ${this.config.accessToken}` };
+    }
     return {
       "APCA-API-KEY-ID": this.config.apiKey,
       "APCA-API-SECRET-KEY": this.config.apiSecret,
