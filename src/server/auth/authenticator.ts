@@ -342,12 +342,15 @@ export class Authenticator {
   /* The skylight now STEMS FROM the enter/close toggle — a cone rising from the button into the
      field (behind the card). The card's own cone is retired in favor of this. */
   .projector .cone{ display:none; }
-  .skylight{ position:fixed; z-index:4; left:50%; bottom:clamp(22px,5vh,52px); transform:translateX(-50%);
-    width:min(60vw,520px); height:min(56vh,460px); pointer-events:none; mix-blend-mode:screen;
-    clip-path:polygon(47% 100%, 53% 100%, 80% 0, 20% 0);
-    background:linear-gradient(0deg, color-mix(in srgb,var(--accent) 32%,transparent), transparent 74%);
-    opacity:.12; transition:opacity .55s ease; }
-  body.playing .skylight{ opacity:.30; }
+  .skylight{ position:fixed; z-index:4; left:50%; bottom:clamp(20px,4.5vh,48px); transform:translateX(-50%);
+    width:min(82vw,940px); height:min(70vh,600px); pointer-events:none; mix-blend-mode:screen;
+    clip-path:polygon(46% 100%, 54% 100%, 93% 0, 7% 0);
+    background:
+      linear-gradient(0deg, color-mix(in srgb,var(--accent) 20%,transparent), transparent 82%),
+      radial-gradient(52% 46% at 50% 100%, color-mix(in srgb,var(--accent) 30%,transparent), transparent 72%);
+    opacity:.2; transition:opacity .6s ease; }
+  body.playing .skylight{ opacity:.36; }
+  body.revealed .skylight{ opacity:.28; }
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
@@ -645,6 +648,15 @@ export class Authenticator {
     ctx.fillText("RSI "+rsiV.toFixed(0)+(rsiV<32?" OVERSOLD":rsiV>68?" OVERBOUGHT":""), 16, field.top-6);
     ctx.textAlign="start"; ctx.restore();
   }
+  // Projected-beam vignette: the trend + plays read as cast FROM the emitter (the button at
+  // bottom-center) — brightest inside the light cone, fading toward the upper corners.
+  function beamVignette(){
+    var ax=W*0.5, ay=H+H*0.05;
+    var g=ctx.createRadialGradient(ax,ay, H*0.30, ax,ay, H*1.1);
+    g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(0.72,"rgba(0,0,0,0)");
+    g.addColorStop(1, hexA(css("--bg")||"#0B0F14", 0.62));
+    ctx.save(); ctx.globalAlpha=1; ctx.fillStyle=g; ctx.fillRect(0,0,W,H); ctx.restore();
+  }
   // Convert a css color to rgba with alpha via an offscreen paint.
   var _c = document.createElement("canvas").getContext("2d");
   function hexA(color, a){ try{ _c.fillStyle=color; var s=_c.fillStyle;
@@ -899,7 +911,7 @@ export class Authenticator {
 
   if(reduce){ measureField(); fieldSnap(); drawMarket(0.2);
     drawPlaybook(STRATS[0], { on:1,strikes:1,curve:1,zones:1,label:1,enter:1,move:1,exit:0,out:0 },
-      { sig:"BOLLINGER SQUEEZE · LOW VOL" });
+      { sig:"BOLLINGER SQUEEZE · LOW VOL" }); beamVignette();
     document.body.classList.add("playing");
     if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
       for(var s=0;s<26;s++) rainDraw(0,0); }
@@ -922,6 +934,7 @@ export class Authenticator {
       document.body.classList.toggle("playing", recede>0.02);
       drawMarket(1 - recede*0.5);
       if(p){ drawPlaybook(STRATS[curStrat], p, curSig); pbGlyphT++; }
+      beamVignette();
       rainDraw(rainBoost, rainTint); }
     requestAnimationFrame(loop);
   }
