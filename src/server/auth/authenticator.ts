@@ -229,10 +229,16 @@ export class Authenticator {
   .scene{ position:relative; z-index:4; width:100%; max-width:392px; transform-style:preserve-3d; }
   @keyframes beam{ 0%{ transform:translateY(-40%); opacity:0; } 12%{ opacity:1; } 88%{ opacity:1; } 100%{ transform:translateY(240%); opacity:0; } }
 
+  /* Caption slot above the card — cross-fades between the race legend and the Strategy Playbook */
+  .stage-cap{ position:relative; height:52px; margin-bottom:16px; transform:translateZ(38px); }
+  .stage-cap > *{ position:absolute; left:0; right:0; top:0; transition:opacity .5s ease; }
+  .stage-cap .playbook{ opacity:0; }
+  .stage-cap.pb .legend{ opacity:0; }
+  .stage-cap.pb .playbook{ opacity:1; }
+
   .legend{
-    display:flex; justify-content:center; gap:22px; margin-bottom:20px;
+    display:flex; justify-content:center; align-items:center; gap:22px; padding-top:15px;
     font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
-    transform:translateZ(38px);
   }
   .legend span{ display:inline-flex; align-items:center; gap:7px; color:var(--muted); }
   .legend i{ width:22px; height:2px; border-radius:2px; display:inline-block; }
@@ -240,6 +246,14 @@ export class Authenticator {
   .legend .human i{ background:var(--pos); color:var(--pos); }
   .legend .machine i{ background:var(--accent); color:var(--accent); }
   .legend b{ color:var(--text); font-weight:600; }
+
+  .playbook{ display:flex; flex-direction:column; align-items:center; gap:3px; font-family:var(--mono); }
+  .pb-eyebrow{ font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
+  .pb-cyc{ color:var(--accent); }
+  .pb-name{ font-size:14px; letter-spacing:.16em; font-weight:700; color:var(--accent);
+    text-shadow:0 0 14px color-mix(in srgb,var(--accent) 55%,transparent); }
+  .pb-desc{ font-size:10.5px; letter-spacing:.02em; color:var(--muted); font-family:var(--sans);
+    max-width:32ch; text-align:center; line-height:1.35; }
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
@@ -356,19 +370,22 @@ export class Authenticator {
   @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
   @keyframes cardIn{ from{ opacity:0; transform:translateY(26px) scale(.985); } to{ opacity:1; transform:none; } }
   .card{ opacity:0; animation:cardIn .8s cubic-bezier(.16,.84,.44,1) .35s both; }
-  .legend{ opacity:0; animation:rise .7s ease .95s both; }
+  .stage-cap{ opacity:0; animation:rise .7s ease .95s both; }
   .brand{ opacity:0; animation:rise .7s ease .5s both; }
   .tag{ opacity:0; animation:rise .7s ease .68s both; }
   .sub-copy{ opacity:0; animation:rise .7s ease .8s both; }
   .hud{ opacity:0; animation:rise .7s ease .86s both; }
-  .ticker{ opacity:0; animation:rise .7s ease .92s both; }
+  .ticker{ opacity:0; animation:rise .7s ease .92s both; transition:opacity .5s ease; }
+  .ticker.dim{ opacity:.28; }   /* recede while a Strategy Playbook diagram is showing */
   .error{ opacity:0; animation:rise .6s ease .6s both; }
   .btn{ opacity:0; animation:rise .6s ease calc(1s + var(--i,0) * .12s) both; }
   .foot{ opacity:0; animation:rise .7s ease 1.3s both; }
 
   @media (prefers-reduced-motion:reduce){
     *{ animation:none !important; transition:none !important; }
-    .card,.legend,.brand,.tag,.sub-copy,.hud,.ticker,.error,.btn,.foot{ opacity:1 !important; }
+    .card,.stage-cap,.legend,.playbook,.brand,.tag,.sub-copy,.hud,.ticker,.error,.btn,.foot{ opacity:1 !important; }
+    .stage-cap.pb .legend{ opacity:0 !important; }   /* static frame shows the playbook caption */
+    .ticker.dim{ opacity:.28 !important; }
     .card::before{ opacity:.9; } .card::after{ display:none; }
     .scanbeam{ display:none; }
     #rain{ opacity:.35; }
@@ -383,30 +400,37 @@ export class Authenticator {
 <div class="scanbeam" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 <div class="scene" id="scene">
-  <div class="legend" aria-hidden="true">
-    <span class="human"><i class="lz"></i><b>Human</b></span>
-    <span class="machine"><i class="lz"></i><b>Machine</b></span>
+  <div class="stage-cap" id="stageCap" aria-hidden="true">
+    <div class="legend">
+      <span class="human"><i class="lz"></i><b>Human</b></span>
+      <span class="machine"><i class="lz"></i><b>Machine</b></span>
+    </div>
+    <div class="playbook" id="playbook">
+      <span class="pb-eyebrow">STRATEGY PLAYBOOK · <span class="pb-cyc">LEARN</span></span>
+      <span class="pb-name" id="pbName">IRON CONDOR</span>
+      <span class="pb-desc" id="pbDesc">Bet the market stays calm between the strikes.</span>
+    </div>
   </div>
   <main class="card">
     <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
     <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
     <div class="brand">
       <span class="mark">SKYNET<b>·</b>CAPITAL</span>
-      <span class="sub">Observatory</span>
+      <span class="sub">Options Sandbox</span>
     </div>
-    <span class="tag"><span class="live"></span>PAPER · SANDBOX</span>
-    <p class="sub-copy">The board is live. <span class="em">Take your seat in the race.</span></p>
+    <span class="tag"><span class="live"></span>PAPER · LEARN · EXPERIMENT</span>
+    <p class="sub-copy">Learn the plays on paper. <span class="em">With friends, family &amp; a few machines.</span></p>
     <div class="hud" aria-hidden="true">
       <span class="on"><i></i>SYS ONLINE</span>
-      <span>NYSE · 40.71°N 74.01°W</span>
+      <span class="modes">SOLO · CO-OP · LEAGUE</span>
       <span>FEED IEX</span>
     </div>
-    <p class="ticker" aria-hidden="true">HUMANS <b id="tHuman">+0.00%</b> <span class="sep">·</span> MACHINES <span class="m" id="tMachine">+0.00%</span> <span class="sim" title="Simulated preview — real standings unlock once you're signed in">SIM</span></p>
+    <p class="ticker" id="ticker" aria-hidden="true">HUMANS <b id="tHuman">+0.00%</b> <span class="sep">·</span> MACHINES <span class="m" id="tMachine">+0.00%</span> <span class="sim" title="Simulated preview — real standings unlock once you're signed in">SIM</span></p>
     ${banner}
     <div class="btns">
       ${buttons}
     </div>
-    <p class="foot">Invite-only · access is limited to the league's guest list.</p>
+    <p class="foot">Invite-only · a friendly paper league. Everybody's welcome to win.</p>
   </main>
 </div>
 <script>
@@ -545,18 +569,97 @@ export class Authenticator {
     }
   }
 
+  // --- Strategy Playbook: the race periodically recedes and a holographic option-payoff
+  // diagram assembles center-stage, fully annotated, with Matrix glyphs lighting the strikes.
+  // These are illustrative teaching diagrams (labeled STRATEGY PLAYBOOK), never live P/L.
+  // pts: normalized payoff [ [x 0..1, y -1..1], ... ]; strikes: x positions of the legs.
+  var STRATS=[
+    { name:"IRON CONDOR", desc:"Bet the market stays calm — keep the credit while price holds between the middle strikes.",
+      pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8] },
+    { name:"LONG STRANGLE", desc:"Bet on a big move either way — buy a call and a put, profit on a breakout.",
+      pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7] },
+    { name:"SHORT STRADDLE", desc:"Bet on calm — sell the call and put at one strike; best if price pins it.",
+      pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5] },
+    { name:"BUTTERFLY", desc:"Pin the target — max profit if price lands on the center strike, tiny risk on the wings.",
+      pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65] },
+    { name:"BULL CALL SPREAD", desc:"Lean bullish with a cap — buy a call, sell a higher one to cut the cost.",
+      pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65] },
+    { name:"CALL LADDER", desc:"Roll up the strikes — limited risk with room to run if the market takes off.",
+      pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75] }
+  ];
+  var CYCLE=9000, pbIdx=-1, pbGlyphT=0;
+  var stageCap=document.getElementById("stageCap"), pbName=document.getElementById("pbName"),
+      pbDesc=document.getElementById("pbDesc"), pbCyc=document.querySelector(".pb-cyc"),
+      tickerEl=document.getElementById("ticker"), PBCYC=["LEARN","EXPERIMENT","PRACTICE"];
+  function setStrat(i){ var s=STRATS[i]; if(!s) return;
+    if(pbName) pbName.textContent=s.name; if(pbDesc) pbDesc.textContent=s.desc;
+    if(pbCyc) pbCyc.textContent=PBCYC[i%PBCYC.length]; }
+  function pbMix(ms){ var m=ms%CYCLE;
+    if(m<4200) return 0; if(m<5000) return (m-4200)/800; if(m<8200) return 1; return 1-(m-8200)/800; }
+  function payoffAt(pts,u){ if(u<=pts[0][0]) return pts[0][1];
+    for(var i=1;i<pts.length;i++){ if(u<=pts[i][0]){ var a=pts[i-1],b=pts[i];
+      var tt=(u-a[0])/((b[0]-a[0])||1); return a[1]+(b[1]-a[1])*tt; } }
+    return pts[pts.length-1][1]; }
+  function drawPlaybook(strat, a){
+    if(!strat) return;
+    var padX=W*0.06, x0=padX, x1=W-padX, midY=H*0.5, amp=H*0.30;
+    function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
+    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
+        muted=css("--muted")||"#8B9AAB";
+    ctx.save(); ctx.globalAlpha=a;
+    // shaded profit (green) / loss (red) zones between the curve and the breakeven line
+    var N=140, seg=(x1-x0)/N;
+    for(var i=0;i<N;i++){ var u=i/(N-1), v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
+      ctx.fillStyle=hexA(v>=0?pos:neg, 0.13);
+      ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
+    // breakeven (zero P/L) baseline
+    ctx.setLineDash([5,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(muted,0.55);
+    ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]);
+    // strike verticals + Matrix glyphs illuminating each leg
+    ctx.font="12px "+(css("--mono")||"monospace"); ctx.textAlign="center";
+    for(var k=0;k<strat.strikes.length;k++){ var sx=X(strat.strikes[k]);
+      ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(accent,0.34);
+      ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,H); ctx.stroke(); ctx.setLineDash([]);
+      var gy=((pbGlyphT*4 + strat.strikes[k]*260) % (H+48));
+      ctx.fillStyle=hexA(accent,0.85); ctx.fillText(RG[(Math.random()*RG.length)|0], sx, gy);
+      ctx.fillStyle=hexA(accent,0.3); ctx.fillText(RG[(Math.random()*RG.length)|0], sx, gy-16);
+    }
+    ctx.textAlign="start";
+    // the payoff curve, glowing
+    ctx.beginPath();
+    for(i=0;i<strat.pts.length;i++){ var qx=X(strat.pts[i][0]), qy=Y(strat.pts[i][1]);
+      i?ctx.lineTo(qx,qy):ctx.moveTo(qx,qy); }
+    ctx.strokeStyle=accent; ctx.lineWidth=2.4; ctx.lineJoin="round";
+    ctx.shadowColor=accent; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
+    ctx.restore();
+  }
+
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
 
-  if(reduce){ draw(); if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
-    for(var s=0;s<26;s++) rainDraw(); } if(!live) updateTicker(); return; }   // static frame, no loop
+  if(reduce){ draw();
+    if(stageCap){ setStrat(0); stageCap.classList.add("pb"); }
+    if(tickerEl) tickerEl.classList.add("dim");
+    ctx.save(); ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.72); ctx.fillRect(0,0,W,H); ctx.restore();
+    drawPlaybook(STRATS[0], 1);   // one representative diagram, static
+    if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
+      for(var s=0;s<26;s++) rainDraw(); }
+    if(!live) updateTicker(); return; }
 
   var last=0, running=true;
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function loop(now){
     if(!running) return;
-    if(now-last > 55){ last=now; t++; step(human,human.drift); step(machine,machine.drift); draw(); rainDraw();
-      if(t%6===0 && !live) updateTicker(); }   // in live mode the ticker shows real /pulse numbers
+    if(now-last > 55){ last=now; t++;
+      var idx=Math.floor(now/CYCLE)%STRATS.length; if(idx!==pbIdx){ pbIdx=idx; setStrat(idx); }
+      var mix=pbMix(now);
+      if(stageCap){ if(mix>0.5) stageCap.classList.add("pb"); else stageCap.classList.remove("pb"); }
+      if(tickerEl){ if(mix>0.5) tickerEl.classList.add("dim"); else tickerEl.classList.remove("dim"); }
+      step(human,human.drift); step(machine,machine.drift); draw();
+      if(mix>0.01){ ctx.save(); ctx.fillStyle=hexA(css("--bg")||"#0B0F14", mix*0.72);
+        ctx.fillRect(0,0,W,H); ctx.restore(); drawPlaybook(STRATS[pbIdx], mix); pbGlyphT++; }
+      rainDraw();
+      if(t%6===0 && !live && mix<0.5) updateTicker(); }   // live ticker shows real /pulse numbers
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
