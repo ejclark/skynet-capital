@@ -751,71 +751,126 @@ export class Authenticator {
     return (n<0?"−$":"+$")+s; }
   var DOLLARS=1240;   // illustrative per-contract scale for the teaching P/L readouts
 
-  // Teaching panel (right column): the play's name, the plain-English idea, the pivot values,
-  // and a live status line — so all the wordy P/L lives here, never stacked on the curve.
+  // The shared play anatomy — identical grammar across every strategy: green = profit region,
+  // red = loss region, muted diamond = breakeven. Establishing this once builds the association.
+  function drawAnatomy(px, y, A){
+    var pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", muted=css("--muted")||"#8B9AAB", mono=css("--mono")||"monospace";
+    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.font="700 10px "+mono;
+    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("● PROFIT", px, y);
+    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("● LOSS", px+78, y);
+    ctx.fillStyle=hexA(muted,0.95); ctx.fillText("◆ BREAKEVEN", px+142, y);
+    ctx.restore();
+  }
+
+  // LEFT-UPPER: the play in words — moved up toward the hero. Signal, name, plain-English idea,
+  // the shared anatomy legend, the pivot values, and the live trade-status line.
   function drawPanel(strat, sig, p, A){
-    var e=extrema(strat), px=Math.round(W*0.05), pw=W*0.33;
+    var e=extrema(strat), px=Math.round(W*0.05), pw=Math.min(W*0.32, 380);
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    var y=fieldMid()-104;
+    var y=field.top+24;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
     ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=34;
-    ctx.font="700 27px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
+    ctx.font="700 28px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
     ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=24;
     ctx.font="14px "+sans; ctx.fillStyle=hexA(muted,0.95);
-    y += wrapText(strat.desc, px, y, pw, 19)*19 + 10;
-    // pivot values — reinforce the diagram's markers in words
+    y += wrapText(strat.desc, px, y, pw, 19)*19 + 14;
+    drawAnatomy(px, y, A*Math.min(1,p.on)); y+=26;
     ctx.font="12px "+mono;
-    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("● MAX PROFIT", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=20;
-    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("● MAX LOSS", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=20;
-    ctx.fillStyle=hexA(muted,0.9); ctx.fillText("◆ BREAKEVEN", px, y);
-    ctx.fillStyle=hexA(muted,0.8); ctx.textAlign="right"; ctx.fillText("at the strikes", px+pw, y); ctx.textAlign="left"; y+=28;
-    // live status line — the trade arc in words, colour-coded
+    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT", px, y);
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=19;
+    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS", px, y);
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=25;
     var sxp=lerp(0.5,e.mxX,easeIO(p.move)), pl=payoffAt(strat.pts,sxp)*DOLLARS;
     if(p.exit>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pos; ctx.shadowColor=pos; ctx.shadowBlur=14;
       ctx.fillText("✓ CLOSED  "+money(e.maxY*DOLLARS), px, y); ctx.shadowBlur=0; }
-    else if(p.move>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg;
-      ctx.fillText("P / L   "+money(pl), px, y); }
-    else if(p.enter>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95);
-      ctx.fillText("▲ POSITIONS ENTERED", px, y); }
+    else if(p.move>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("P / L   "+money(pl), px, y); }
+    else if(p.enter>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ POSITIONS ENTERED", px, y); }
     else { ctx.font="13px "+mono; ctx.fillStyle=hexA(muted,0.85); ctx.fillText("SETTING UP…", px, y); }
     ctx.restore();
   }
 
-  // Full lifecycle telestrator (diagram = LEFT column): strikes → curve → zones (with Matrix glyphs
-  // illuminating profit/loss) → pivot dots → entry ticks → underlying moves → take-profit close.
+  // RIGHT: the signal EVIDENCE — why this play was called. A live RSI gauge (oversold/overbought)
+  // and a Bollinger snapshot (recent price vs its bands), so the reasoning is shown, not just named.
+  function drawSignalDetail(sig, A){
+    var sx=Math.round(W*0.56), sw=Math.min(W*0.38, 460);
+    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
+    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    var y=field.top+24;
+    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▸ WHY THIS PLAY", sx, y); y+=30;
+    // --- RSI gauge (0..100) ---
+    ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", sx, y);
+    ctx.textAlign="right"; ctx.fillStyle=hexA(rsiV<30?pos:rsiV>70?neg:txt,0.95); ctx.fillText(rsiV.toFixed(0), sx+sw, y); ctx.textAlign="left"; y+=8;
+    var gh=8;
+    ctx.fillStyle=hexA(muted,0.16); ctx.fillRect(sx,y,sw,gh);
+    ctx.fillStyle=hexA(pos,0.22); ctx.fillRect(sx,y,sw*0.3,gh);
+    ctx.fillStyle=hexA(neg,0.22); ctx.fillRect(sx+sw*0.7,y,sw*0.3,gh);
+    var mxp=sx+sw*clamp01(rsiV/100), rc=rsiV<30?pos:(rsiV>70?neg:accent);
+    ctx.fillStyle=rc; ctx.shadowColor=rc; ctx.shadowBlur=8; ctx.fillRect(mxp-1.5,y-3,3,gh+6); ctx.shadowBlur=0; y+=gh+13;
+    ctx.font="9px "+mono; ctx.fillStyle=hexA(pos,0.7); ctx.fillText("OVERSOLD 30", sx, y);
+    ctx.textAlign="right"; ctx.fillStyle=hexA(neg,0.7); ctx.fillText("70 OVERBOUGHT", sx+sw, y); ctx.textAlign="left"; y+=26;
+    // --- Bollinger snapshot ---
+    ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("BOLLINGER BANDS", sx, y); y+=8;
+    var bh=70, bTop=y, bBot=y+bh, M=Math.min(64, price.length), s0=price.length-M, i;
+    if(M>4 && bU.length>=price.length){
+      var lo=1e9,hi=-1e9; for(i=s0;i<price.length;i++){ if(bL[i]<lo)lo=bL[i]; if(bU[i]>hi)hi=bU[i]; }
+      var rng=(hi-lo)||1;
+      var BY=function(v){ return bBot-((v-lo)/rng)*bh; }, BX=function(k){ return sx+((k-s0)/(M-1))*sw; };
+      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bU[i])):ctx.lineTo(BX(i),BY(bU[i])); }
+      for(i=price.length-1;i>=s0;i--){ ctx.lineTo(BX(i),BY(bL[i])); } ctx.closePath();
+      ctx.fillStyle=hexA(accent,0.08); ctx.fill();
+      ctx.strokeStyle=hexA(accent,0.32); ctx.lineWidth=1;
+      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bU[i])):ctx.lineTo(BX(i),BY(bU[i])); } ctx.stroke();
+      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bL[i])):ctx.lineTo(BX(i),BY(bL[i])); } ctx.stroke();
+      ctx.strokeStyle=hexA(txt,0.9); ctx.lineWidth=1.6; ctx.shadowColor=accent; ctx.shadowBlur=6;
+      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(price[i])):ctx.lineTo(BX(i),BY(price[i])); } ctx.stroke(); ctx.shadowBlur=0;
+      var lpx=BX(price.length-1), lpy=BY(price[price.length-1]);
+      ctx.beginPath(); ctx.arc(lpx,lpy,2.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.fill();
+    }
+    y=bBot+22;
+    ctx.font="11px "+mono; ctx.fillStyle=hexA(accent,0.85);
+    wrapText("→ "+(sig?sig.sig:""), sx, y, sw, 16);
+    ctx.restore();
+  }
+
+  // Full lifecycle telestrator. Diagram = LEFT-LOWER (slides below the play text); signal
+  // evidence = RIGHT. Anatomy is consistent: green profit, red loss, muted breakeven.
   function drawPlaybook(strat, p, sig){
     if(!strat) return;
-    var x0=W*0.44, x1=W*0.95, midY=fieldMid()+16, amp=fieldAmp()*0.66,
-        yTop=field.top+26, yBot=field.bottom-6, A=(1-p.out);
+    var x0=W*0.05, x1=W*0.46;
+    var dTop=Math.max(field.top+168, fieldMid()+6), dBot=field.bottom-8;
+    var midY=(dTop+dBot)/2, amp=(dBot-dTop)/2*0.9, yTop=dTop, yBot=dBot, A=(1-p.out);
     function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
     ctx.save(); ctx.globalAlpha=A;
-    // shaded profit/loss zones
-    // Zones dissolve into the background at the diagram's outer edges (no hard block boundary).
-    function edgeFade(u){ return Math.min(clamp01(u/0.16), clamp01((1-u)/0.16)); }
-    if(p.zones>0){ var N=140, seg=(x1-x0)/N;
+    // Zones keep more full colour and only soften near the edges (gentle floor, wider band).
+    function edgeFade(u){ return 0.5 + 0.5*Math.min(clamp01(u/0.1), clamp01((1-u)/0.1)); }
+    if(p.zones>0){ var N=140, seg=(x1-x0)/N, be0=extrema(strat).be;
       for(var i=0;i<N;i++){ var u=i/(N-1); if(u>p.curve) break; var v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
-        ctx.fillStyle=hexA(v>=0?pos:neg, 0.16*p.zones*edgeFade(u)); ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
-      // Matrix rain confined to the zones — green in profit, red in loss — teaching + contrast pop
-      ctx.font="13px "+mono; var NZ=20;
+        ctx.fillStyle=hexA(v>=0?pos:neg, 0.17*p.zones*edgeFade(u)); ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
+      // Matrix rain in the zones — green profit, red loss — brighter as it nears a breakeven line.
+      ctx.font="13px "+mono; var NZ=22;
       for(var c=0;c<NZ;c++){ var uu=(c+0.5)/NZ; if(uu>p.curve) continue; var vv=payoffAt(strat.pts,uu), ge=edgeFade(uu);
+        var near=0; for(var q=0;q<be0.length;q++){ near=Math.max(near, clamp01(1-Math.abs(uu-be0[q])/0.06)); }
         var zt=Math.min(Y(vv),Y(0)), zb=Math.max(Y(vv),Y(0)); if(zb-zt<10) continue;
         var gx=X(uu), gy=zt+((pbGlyphT*3 + c*61) % (zb-zt));
-        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.7*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy);
-        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.25*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy-15); } }
+        var gcol = near>0.5 ? accent : (vv>=0?pos:neg);
+        ctx.fillStyle=hexA(gcol, (0.7+0.3*near)*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy);
+        ctx.fillStyle=hexA(gcol, (0.25+0.25*near)*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy-15); } }
     // strike verticals
     ctx.textAlign="center"; var shown=p.strikes*strat.strikes.length;
     for(var k=0;k<strat.strikes.length;k++){ var rev=clamp01(shown-k); if(rev<=0) break; var sx=X(strat.strikes[k]);
       ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(accent,0.3*rev);
       ctx.beginPath(); ctx.moveTo(sx,yTop); ctx.lineTo(sx,yBot); ctx.stroke(); ctx.setLineDash([]); }
-    // breakeven baseline
+    // breakeven baseline + an illuminated pulse at each breakeven crossing
     if(p.strikes>0){ ctx.setLineDash([5,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(muted,0.5*p.strikes);
-      ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]);
+      var be1=extrema(strat).be, pulse=0.5+0.5*Math.sin(pbGlyphT*0.3);
+      for(k=0;k<be1.length;k++){ var bx=X(be1[k]);
+        ctx.fillStyle=hexA(accent, (0.25+0.4*pulse)*p.strikes); ctx.beginPath(); ctx.arc(bx,Y(0), 5+3*pulse, 0, 7); ctx.fill(); } }
     // payoff curve + chalk tip
     if(p.curve>0){ var f=p.curve, pts=strat.pts, started=false;
       ctx.beginPath();
@@ -823,18 +878,18 @@ export class Authenticator {
         else { var ex=X(f), ey=Y(payoffAt(pts,f)); if(started) ctx.lineTo(ex,ey); else ctx.moveTo(ex,ey); started=true; break; } }
       ctx.strokeStyle=accent; ctx.lineWidth=2.6; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
       if(f<1){ var tx=X(f), ty=Y(payoffAt(pts,f)); ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.fill(); ctx.shadowBlur=0; } }
-    // pivot markers — dots only on the curve; the words live in the panel (no stacking)
+    // pivot markers — dots on the curve (words live in the panel)
     if(p.label>0){ var e1=extrema(strat); ctx.globalAlpha=A*p.label;
       ctx.fillStyle=hexA(pos,0.95); ctx.beginPath(); ctx.arc(X(e1.mxX),Y(e1.maxY),3.2,0,7); ctx.fill();
       ctx.fillStyle=hexA(neg,0.95); ctx.beginPath(); ctx.arc(X(e1.mnX),Y(e1.minY),3.2,0,7); ctx.fill();
       ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.textAlign="center";
-      for(i=0;i<e1.be.length;i++){ ctx.fillText("B/E", X(e1.be[i]), Y(0)-8); }
+      for(i=0;i<e1.be.length;i++){ ctx.fillText("B/E", X(e1.be[i]), Y(0)-9); }
       ctx.globalAlpha=A; }
     // entry ticks at the strikes
     if(p.enter>0){ ctx.globalAlpha=A*p.enter; ctx.textAlign="center"; ctx.font="700 10px "+mono; ctx.fillStyle=hexA(accent,0.95);
       for(k=0;k<strat.strikes.length;k++){ ctx.fillText("▲", X(strat.strikes[k]), Y(0)+15); }
       ctx.globalAlpha=A; }
-    // underlying spot glides into profit (value shown in the panel, not on the curve)
+    // underlying spot glides into profit (value shown in the panel)
     if(p.move>0){ var e2=extrema(strat), sxp=lerp(0.5, e2.mxX, easeIO(p.move)), mvx=X(sxp), mvy=Y(payoffAt(strat.pts,sxp));
       ctx.setLineDash([2,5]); ctx.strokeStyle=hexA(txt,0.5); ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(mvx,yTop); ctx.lineTo(mvx,yBot); ctx.stroke(); ctx.setLineDash([]);
@@ -842,6 +897,7 @@ export class Authenticator {
       ctx.textAlign="center"; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(txt,0.8); ctx.fillText("NOW", mvx, yTop-3); }
     ctx.textAlign="start"; ctx.restore();
     drawPanel(strat, sig, p, A);
+    drawSignalDetail(sig, A*Math.min(1,p.on));
   }
   // Play timeline (ms): each phase chains into the next — the full trade lifecycle.
   var PWR=450,STK=550,CRV=1200,ZON=400,LBL=450,ENT=450,MOV=1600,EXT=550,OUT=650;
