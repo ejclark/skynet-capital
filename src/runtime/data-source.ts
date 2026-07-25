@@ -69,6 +69,9 @@ function liveDataSource(env: Env): DataSource {
         baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
         apiKey: participant.credentials.apiKey,
         apiSecret: participant.credentials.apiSecret,
+        ...(participant.credentials.accessToken
+          ? { accessToken: participant.credentials.accessToken }
+          : {}),
       }),
     );
 
