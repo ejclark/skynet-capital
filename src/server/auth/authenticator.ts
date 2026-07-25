@@ -303,9 +303,9 @@ export class Authenticator {
     background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
   body.revealed .stagescrim{ opacity:1; }
 
-  /* Reveal wrapper — larger, vertically centered form */
-  .authwrap{ position:fixed; z-index:5; inset:0; display:flex; align-items:center; justify-content:center;
-    padding:clamp(72px,12vh,120px) 20px; perspective:1200px;
+  /* Reveal wrapper — larger form, seated low so the toggle's top third overlaps its bottom edge */
+  .authwrap{ position:fixed; z-index:5; inset:0; display:flex; align-items:flex-end; justify-content:center;
+    padding:clamp(56px,9vh,100px) 20px clamp(92px,13vh,124px); perspective:1200px;
     opacity:0; transform:translateY(30px); pointer-events:none;
     transition:opacity .6s cubic-bezier(.16,.84,.44,1), transform .6s cubic-bezier(.16,.84,.44,1); }
   body.revealed .authwrap{ opacity:1; transform:none; pointer-events:auto; }
@@ -338,8 +338,16 @@ export class Authenticator {
     clip-path:polygon(46% 100%, 54% 100%, 96% 0, 4% 0);
     background:linear-gradient(0deg, color-mix(in srgb,var(--accent) 26%,transparent), transparent 78%);
     opacity:.14; transition:opacity .55s ease; mix-blend-mode:screen; }
-  body.playing .projector .cone{ opacity:.34; }
   body.playing .projector .emitter{ opacity:1; width:70%; }
+  /* The skylight now STEMS FROM the enter/close toggle — a cone rising from the button into the
+     field (behind the card). The card's own cone is retired in favor of this. */
+  .projector .cone{ display:none; }
+  .skylight{ position:fixed; z-index:4; left:50%; bottom:clamp(22px,5vh,52px); transform:translateX(-50%);
+    width:min(60vw,520px); height:min(56vh,460px); pointer-events:none; mix-blend-mode:screen;
+    clip-path:polygon(47% 100%, 53% 100%, 80% 0, 20% 0);
+    background:linear-gradient(0deg, color-mix(in srgb,var(--accent) 32%,transparent), transparent 74%);
+    opacity:.12; transition:opacity .55s ease; }
+  body.playing .skylight{ opacity:.30; }
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
@@ -483,6 +491,7 @@ export class Authenticator {
   </div>
 </header>
 
+<div class="skylight" id="skylight" aria-hidden="true"></div>
 <button type="button" class="beacon" id="beacon" aria-expanded="false" aria-controls="authwrap">
   <span class="beacon-ring" aria-hidden="true"><svg class="beacon-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <span class="beacon-label" id="beaconLabel">Enter the sandbox</span>
