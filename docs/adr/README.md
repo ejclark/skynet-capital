@@ -30,3 +30,4 @@ the same contract).
 | [0003](0003-self-service-account-onboarding.md) | Self-service account onboarding via an encrypted store | Accepted |
 | [0004](0004-continuous-deployment-on-green-merge.md) | Continuous deployment to Fly on green merge to main | Accepted |
 | [0005](0005-in-app-oauth-authentication.md) | In-app Google/GitHub OAuth with an allowlist | Accepted |
+| [0006](0006-publish-oauth-consent-allowlist-is-the-gate.md) | Publish the OAuth consent screen; the allowlist is the access gate | Accepted |
