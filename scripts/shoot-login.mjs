@@ -61,5 +61,6 @@ const browser = await chromium.launch(EXE ? { executablePath: EXE } : {});
 const page = await browser.newPage({ deviceScaleFactor: 1, colorScheme: "dark" });
 await shootAt(page, 1440, 900, "desktop");
 await shootAt(page, 900, 620, "short"); // short viewport: does the toggle clear the form?
+await shootAt(page, 400, 820, "mobile"); // narrow: stacked play, evidence column dropped
 await browser.close();
 console.log("shots written to", OUT);

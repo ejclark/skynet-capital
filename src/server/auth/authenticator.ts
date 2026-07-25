@@ -231,9 +231,9 @@ export class Authenticator {
   /* Top-center brand — primary real estate; the animation owns the rest of the screen */
   /* Single wordmark — top-center hero at rest; flies into the form on reveal (see .mark flight) */
   .topbrand{ position:fixed; z-index:6; top:clamp(20px,5vh,52px); left:0; right:0; text-align:center; pointer-events:none; }
-  .topbrand .mark{ font-size:clamp(26px,5vw,42px); font-weight:700; letter-spacing:.16em; margin:0;
+  .topbrand .mark{ font-size:clamp(34px,6.4vw,58px); font-weight:700; letter-spacing:.15em; margin:0;
     transform-origin:center center; will-change:transform;
-    transition:transform .62s cubic-bezier(.16,.84,.44,1); }
+    transition:transform .66s cubic-bezier(.16,.84,.44,1); }
   .topbrand .mark b{ color:var(--accent); text-shadow:0 0 20px color-mix(in srgb,var(--accent) 65%,transparent); }
   /* Secondary (pill) + tertiary line — the idle identity below the title; fade out on reveal */
   .herosub{ margin-top:16px; display:flex; flex-direction:column; align-items:center; gap:10px;
@@ -260,15 +260,16 @@ export class Authenticator {
     width:100%; opacity:calc(.28 + var(--burst,0)*.55); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit; }
   .mark[data-text]::before{ color:#FF4D9D; transform:translate(calc(var(--cax,0px)*-1), calc(var(--cay,0px)*-1)); }
   .mark[data-text]::after{ color:#35D0BA; transform:translate(var(--cax,0px), var(--cay,0px)); }
-  /* One-shot power-on: a left→right chromatic-ray wipe + glow as the title lands in the form */
+  /* Power-on VFX: fires at the START of the flight (from the origin) and rides the title down —
+     a pronounced left→right chromatic-ray wipe that then flows with the downward momentum. */
   @property --burst{ syntax:"<number>"; inherits:true; initial-value:0; }
   @property --cax{ syntax:"<length>"; inherits:true; initial-value:0px; }
-  @keyframes poweron{ 0%{ --burst:.25; --cax:-13px; }
-    45%{ --burst:1; --cax:11px; text-shadow:0 0 40px color-mix(in srgb,var(--accent) 85%,transparent); }
-    100%{ --burst:0; --cax:0px; text-shadow:none; } }
-  .mark.burst{ animation:poweron .8s ease-out both; }
-  /* Suppress the chromatic split while the title is in flight — the VFX fires only once it lands */
-  body.flying .mark[data-text]::before, body.flying .mark[data-text]::after{ opacity:0; }
+  @property --cay{ syntax:"<length>"; inherits:true; initial-value:0px; }
+  @keyframes poweron{ 0%{ --burst:.4; --cax:-17px; --cay:-2px; }
+    40%{ --burst:1; --cax:9px; --cay:5px;
+      text-shadow:0 0 60px color-mix(in srgb,var(--accent) 92%,transparent), 0 0 22px color-mix(in srgb,#fff 55%,transparent); }
+    100%{ --burst:0; --cax:0px; --cay:0px; text-shadow:none; } }
+  .mark.burst{ animation:poweron .66s ease-out both; }
   /* Left→right light pass that travels THROUGH the letters on arrival (the "mic drop") —
      the shine is clipped to the wordmark glyphs, so it sweeps per-letter, not as a flat band. */
   .mark-sweep{ position:absolute; left:0; top:0; width:100%; pointer-events:none; }
@@ -291,11 +292,11 @@ export class Authenticator {
   .beacon-ring{ position:relative; display:flex; align-items:center; justify-content:center; width:52px; height:52px;
     border-radius:50%; border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
     box-shadow:0 0 24px -4px color-mix(in srgb,var(--accent) 70%,transparent); animation:beacon 2.4s ease-out infinite; }
-  .beacon-chev{ width:13px; height:13px; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent);
-    transform:translateY(-2px) rotate(-135deg); transition:transform .4s cubic-bezier(.16,.84,.44,1); }
+  .beacon-chev{ display:block; width:22px; height:22px; color:var(--accent);
+    transition:transform .4s cubic-bezier(.16,.84,.44,1); }
   @keyframes beacon{ 0%{ box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent); }
     70%{ box-shadow:0 0 0 16px transparent; } 100%{ box-shadow:0 0 0 0 transparent; } }
-  body.revealed .beacon-chev{ transform:translateY(2px) rotate(45deg); }
+  body.revealed .beacon-chev{ transform:rotate(180deg); }
   body.revealed .beacon-ring{ animation:none; opacity:.32; }
 
   /* Background recede — a scrim drops the live market back so the centered form owns focus */
@@ -303,15 +304,16 @@ export class Authenticator {
     background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
   body.revealed .stagescrim{ opacity:1; }
 
-  /* Reveal wrapper — larger, vertically centered form */
-  .authwrap{ position:fixed; z-index:5; inset:0; display:flex; align-items:center; justify-content:center;
-    padding:clamp(72px,12vh,120px) 20px; perspective:1200px;
+  /* Reveal wrapper — larger form, seated low so the toggle's top third overlaps its bottom edge */
+  .authwrap{ position:fixed; z-index:5; inset:0; display:flex; align-items:flex-end; justify-content:center;
+    padding:clamp(56px,9vh,100px) 20px clamp(92px,13vh,124px); perspective:1200px;
     opacity:0; transform:translateY(30px); pointer-events:none;
     transition:opacity .6s cubic-bezier(.16,.84,.44,1), transform .6s cubic-bezier(.16,.84,.44,1); }
   body.revealed .authwrap{ opacity:1; transform:none; pointer-events:auto; }
   .authwrap .card{ width:100%; max-width:460px; transform-style:preserve-3d; }
-  /* Momentary read of the slot's final position for the title FLIP (no visible effect) */
-  body.measuring .authwrap{ transform:none !important; transition:none !important; opacity:1 !important; }
+  /* Momentary read of the slot's final position for the title FLIP. NOTE: no opacity here —
+     forcing opacity:1 during the synchronous measure flashed the form for a frame on reveal. */
+  body.measuring .authwrap{ transform:none !important; transition:none !important; }
 
   /* Reserved landing zone for the flown title + the sign-in sub beneath it */
   .brand-slot{ height:56px; }
@@ -337,8 +339,21 @@ export class Authenticator {
     clip-path:polygon(46% 100%, 54% 100%, 96% 0, 4% 0);
     background:linear-gradient(0deg, color-mix(in srgb,var(--accent) 26%,transparent), transparent 78%);
     opacity:.14; transition:opacity .55s ease; mix-blend-mode:screen; }
-  body.playing .projector .cone{ opacity:.34; }
   body.playing .projector .emitter{ opacity:1; width:70%; }
+  /* The skylight now STEMS FROM the enter/close toggle — a cone rising from the button into the
+     field (behind the card). The card's own cone is retired in favor of this. */
+  .projector .cone{ display:none; }
+  .skylight{ position:fixed; z-index:4; left:50%; bottom:clamp(20px,4.5vh,48px); transform:translateX(-50%);
+    width:min(90vw,1060px); height:min(72vh,620px); pointer-events:none; mix-blend-mode:screen;
+    clip-path:polygon(45% 100%, 55% 100%, 95% 0, 5% 0);   /* WIDE lens over the whole board (ambient) */
+    background:
+      linear-gradient(0deg, color-mix(in srgb,var(--accent) 22%,transparent), transparent 84%),
+      radial-gradient(50% 44% at 50% 100%, color-mix(in srgb,var(--accent) 34%,transparent), transparent 72%);
+    opacity:.26; transition:clip-path .6s cubic-bezier(.16,.84,.44,1), opacity .6s ease; }
+  body.playing .skylight{ opacity:.42; }
+  /* Reveal NARROWS the lens onto the form: same light over less area → higher intensity, which
+     also feeds the title/hero VFX as the beam concentrates. */
+  body.revealed .skylight{ clip-path:polygon(45% 100%, 55% 100%, 67% 0, 33% 0); opacity:.52; }
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
@@ -478,13 +493,13 @@ export class Authenticator {
 <header class="topbrand" id="topbrand">
   <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL<span class="mark-sweep" data-text="SKYNET·CAPITAL" aria-hidden="true"></span></h1>
   <div class="herosub" id="herosub">
-    <span class="pill"><span class="live"></span>OPTIONS SANDBOX</span>
     <span class="tertiary">PLAY · EXPERIMENT · LEARN</span>
   </div>
 </header>
 
+<div class="skylight" id="skylight" aria-hidden="true"></div>
 <button type="button" class="beacon" id="beacon" aria-expanded="false" aria-controls="authwrap">
-  <span class="beacon-ring" aria-hidden="true"><span class="beacon-chev"></span></span>
+  <span class="beacon-ring" aria-hidden="true"><svg class="beacon-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <span class="beacon-label" id="beaconLabel">Enter the sandbox</span>
 </button>
 
@@ -523,7 +538,9 @@ export class Authenticator {
   var beaconEl=document.getElementById("beacon"), cardEl=document.getElementById("card");
   // The "field" = the band the market + playbook render into. When idle it fills most of the
   // screen (centered); when the card is revealed it shrinks to sit ABOVE the card (no overlap).
-  var field={ top:0, bottom:0 };
+  // field is the live (eased) band; fieldT is its target. On reveal the target jumps to sit
+  // above the card, but field glides toward it each frame so the market/play don't snap.
+  var field={ top:0, bottom:0 }, fieldT={ top:0, bottom:0 }, fieldInit=false;
   function measureField(){
     var bottom;
     if(revealed && cardEl){ bottom = cardEl.getBoundingClientRect().top - 18; }
@@ -532,8 +549,11 @@ export class Authenticator {
     if(!(bottom>0)) bottom = H*0.72;
     bottom = Math.max(150, Math.min(bottom, H-20));
     var top = Math.max(H*0.16, bottom - Math.min(H*0.6, 430));
-    field.top=top; field.bottom=bottom;
+    fieldT.top=top; fieldT.bottom=bottom;
+    if(!fieldInit){ field.top=top; field.bottom=bottom; fieldInit=true; }
   }
+  function fieldSnap(){ field.top=fieldT.top; field.bottom=fieldT.bottom; }
+  function fieldStep(){ field.top+=(fieldT.top-field.top)*0.16; field.bottom+=(fieldT.bottom-field.bottom)*0.16; }
   function fieldMid(){ return (field.top+field.bottom)/2; }
   function fieldAmp(){ return (field.bottom-field.top)/2; }
   function resize(){
@@ -542,13 +562,13 @@ export class Authenticator {
     canvas.width = Math.max(1, Math.floor(W*DPR));
     canvas.height = Math.max(1, Math.floor(H*DPR));
     ctx.setTransform(DPR,0,0,DPR,0,0);
-    measureField();
+    measureField(); fieldSnap();
   }
 
   // ===== Market engine: a live underlying with real technical overlays =====
   // Signals come from indicators that actually make sense — EMA cross, Bollinger squeeze/expansion,
   // and RSI overbought/oversold — which then summon the matching options play from the playbook.
-  var SPAN=200, price=[], emaF=[], emaS=[], smaA=[], bU=[], bL=[], rsiV=50, t=0;
+  var SPAN=300, price=[], emaF=[], emaS=[], smaA=[], bU=[], bL=[], rsiV=50, t=0;
   var pv=0, regimeBias=0.02, regimeVol=1, regimeT=0;
   function noise(s){ var x=Math.sin(s)*43758.5453; return x-Math.floor(x); }
   function cap(a){ if(a.length>SPAN) a.shift(); }
@@ -583,7 +603,8 @@ export class Authenticator {
   function drawGrid(){
     var grid="color-mix(in srgb, "+(css("--border")||"#223041")+" 55%, transparent)";
     ctx.strokeStyle=grid; ctx.lineWidth=1; ctx.globalAlpha=0.4; var gx=64;
-    for(var x=(t*0.4)%gx;x<W;x+=gx){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    // static vertical rules — a fixed "paper" the pen draws across (less of a scrolling feel)
+    for(var x=0;x<W;x+=gx){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
     for(var y=0;y<H;y+=gx){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
     ctx.globalAlpha=1; }
   function drawMarket(dim){
@@ -594,6 +615,10 @@ export class Authenticator {
     var accent=css("--accent")||"#35D0BA", muted=css("--muted")||"#8B9AAB",
         pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", txt=css("--text")||"#E6EDF3";
     ctx.save(); ctx.globalAlpha=dim;
+    // Camera: during a play we zoom into the signal region (the newest point) to frame the play
+    // against the market condition — this also dissolves the left→right scroll. Ambient zoom = 1.
+    var fpx=(n-1)*dx, fpy=Y(price[n-1]);
+    if(zoom>1.001){ ctx.translate(W*0.84, baseY); ctx.scale(zoom,zoom); ctx.translate(-fpx,-fpy); }
     // Bollinger envelope
     ctx.beginPath();
     for(var i=0;i<bU.length;i++){ var px=i*dx,py=Y(bU[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
@@ -603,18 +628,37 @@ export class Authenticator {
     strokeSeries(bL,dx,Y,hexA(accent,0.20),1);
     strokeSeries(emaS,dx,Y,hexA(muted,0.75),1.4);
     strokeSeries(emaF,dx,Y,hexA(accent,0.9),1.6);
-    // price line
+    // price line — calm settled history
     ctx.beginPath();
     for(i=0;i<n;i++){ var qx=i*dx,qy=Y(price[i]); i?ctx.lineTo(qx,qy):ctx.moveTo(qx,qy); }
-    ctx.strokeStyle=txt; ctx.lineWidth=1.8; ctx.lineJoin="round";
-    ctx.shadowColor=accent; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0;
+    ctx.strokeStyle=txt; ctx.lineWidth=1.6; ctx.lineJoin="round";
+    ctx.shadowColor=accent; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
+    // freshly-drawn "wet ink" leading segment + glowing pen tip — reads as a pen drawing forward
+    var head=18; ctx.beginPath();
+    for(i=Math.max(0,n-head);i<n;i++){ var wx=i*dx,wy=Y(price[i]); i===Math.max(0,n-head)?ctx.moveTo(wx,wy):ctx.lineTo(wx,wy); }
+    ctx.strokeStyle="#EAFBF7"; ctx.lineWidth=2.3; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0;
     var lx=(n-1)*dx, ly=Y(price[n-1]);
-    ctx.beginPath(); ctx.arc(lx,ly,3,0,7); ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
-    // RSI readout — synthesizes overbought/oversold at a glance
+    ctx.beginPath(); ctx.arc(lx,ly,3.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=20; ctx.fill(); ctx.shadowBlur=0;
+    // Signal reticle at the focal point while a play is framed — constant screen size (÷zoom)
+    if(playMode){ var rr=(13+3*Math.sin(pbGlyphT*0.35))/zoom;
+      ctx.strokeStyle=hexA(accent,0.9); ctx.lineWidth=1.4/zoom; ctx.beginPath(); ctx.arc(lx,ly,rr,0,7); ctx.stroke();
+      ctx.strokeStyle=hexA(accent,0.5); ctx.lineWidth=1/zoom;
+      ctx.beginPath(); ctx.moveTo(lx-rr*1.8,ly); ctx.lineTo(lx-rr,ly); ctx.moveTo(lx+rr,ly); ctx.lineTo(lx+rr*1.8,ly); ctx.stroke(); }
+    ctx.restore();
+    // RSI readout — screen space, never zoomed
     var rc = rsiV<32?pos:(rsiV>68?neg:muted);
-    ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
+    ctx.save(); ctx.globalAlpha=dim; ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
     ctx.fillText("RSI "+rsiV.toFixed(0)+(rsiV<32?" OVERSOLD":rsiV>68?" OVERBOUGHT":""), 16, field.top-6);
     ctx.textAlign="start"; ctx.restore();
+  }
+  // Projected-beam vignette: the trend + plays read as cast FROM the emitter (the button at
+  // bottom-center) — brightest inside the light cone, fading toward the upper corners.
+  function beamVignette(){
+    var ax=W*0.5, ay=H+H*0.05;
+    var g=ctx.createRadialGradient(ax,ay, H*0.30, ax,ay, H*1.1);
+    g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(0.72,"rgba(0,0,0,0)");
+    g.addColorStop(1, hexA(css("--bg")||"#0B0F14", 0.62));
+    ctx.save(); ctx.globalAlpha=1; ctx.fillStyle=g; ctx.fillRect(0,0,W,H); ctx.restore();
   }
   // Convert a css color to rgba with alpha via an offscreen paint.
   var _c = document.createElement("canvas").getContext("2d");
@@ -675,17 +719,17 @@ export class Authenticator {
   // These are illustrative teaching diagrams (labeled STRATEGY PLAYBOOK), never live P/L.
   // pts: normalized payoff [ [x 0..1, y -1..1], ... ]; strikes: x positions of the legs.
   var STRATS=[
-    { name:"IRON CONDOR", cue:"LOW VOL", desc:"Bet the market stays calm — keep the credit while price holds between the middle strikes.",
+    { name:"IRON CONDOR", cue:"LOW VOL", desc:"Range-bound — keep the credit while price holds the middle.",
       pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8] },
-    { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Bet on a big move either way — buy a call and a put, profit on a breakout.",
+    { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Volatility building — profit on a breakout either way.",
       pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7] },
-    { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Bet on calm — sell the call and put at one strike; best if price pins it.",
+    { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Dead calm — sell premium; best if price pins the strike.",
       pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5] },
-    { name:"BUTTERFLY", cue:"PINNED", desc:"Pin the target — max profit if price lands on the center strike, tiny risk on the wings.",
+    { name:"BUTTERFLY", cue:"PINNED", desc:"Pinned — max profit if price lands on the center strike.",
       pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65] },
-    { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Lean bullish with a cap — buy a call, sell a higher one to cut the cost.",
+    { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Bullish reversal — capped upside at a lower cost.",
       pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65] },
-    { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Roll up the strikes — limited risk with room to run if the market takes off.",
+    { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Breakout higher — limited risk with room to run.",
       pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75] }
   ];
   var pbGlyphT=0;
@@ -707,69 +751,148 @@ export class Authenticator {
     return (n<0?"−$":"+$")+s; }
   var DOLLARS=1240;   // illustrative per-contract scale for the teaching P/L readouts
 
-  // Teaching panel (right column): the play's name, the plain-English idea, the pivot values,
-  // and a live status line — so all the wordy P/L lives here, never stacked on the curve.
+  // The shared play anatomy — identical grammar across every strategy: green = profit region,
+  // red = loss region, muted diamond = breakeven. Establishing this once builds the association.
+  function drawAnatomy(px, y, A){
+    var pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", muted=css("--muted")||"#8B9AAB", mono=css("--mono")||"monospace";
+    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.font="700 10px "+mono;
+    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("● PROFIT", px, y);
+    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("● LOSS", px+78, y);
+    ctx.fillStyle=hexA(muted,0.95); ctx.fillText("◆ BREAKEVEN", px+142, y);
+    ctx.restore();
+  }
+
+  // LEFT-UPPER: the play in words — moved up toward the hero. Signal, name, plain-English idea,
+  // the shared anatomy legend, the pivot values, and the live trade-status line.
   function drawPanel(strat, sig, p, A){
-    var e=extrema(strat), px=Math.round(W*0.05), pw=W*0.33;
+    var e=extrema(strat), px=Math.round(W*0.045), pw=Math.min(W*0.2, 238), col=190;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    var y=fieldMid()-86;
+    // Narrow / mobile: stack — signal + name + desc centered on top, pivots inline at the bottom,
+    // the payoff fills the middle (drawPlaybook widens), and the evidence column is dropped.
+    if(W<820){
+      var cx=W/2, ny=field.top+22; ctx.textAlign="center";
+      ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=25;
+      ctx.font="700 22px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fillText(strat.name, cx, ny); ctx.shadowBlur=0; ny+=19;
+      ctx.font="12px "+sans; ctx.fillStyle=hexA(muted,0.95); wrapText(strat.desc, cx, ny, Math.min(W*0.86,420), 16);
+      var by=field.bottom-6; drawAnatomy(cx-116, by-22, A*Math.min(1,p.on));
+      ctx.textAlign="left"; ctx.font="700 11px "+mono;
+      var s1="MAX PROFIT "+money(e.maxY*DOLLARS), s2="MAX LOSS "+money(e.minY*DOLLARS);
+      var w1=ctx.measureText(s1).width, w2=ctx.measureText(s2).width, gap=22, lx=cx-(w1+gap+w2)/2;
+      ctx.fillStyle=hexA(pos,0.95); ctx.fillText(s1, lx, by);
+      ctx.fillStyle=hexA(neg,0.95); ctx.fillText(s2, lx+w1+gap, by);
+      ctx.restore(); return;
+    }
+    var y=field.top+30;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
-    ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=34;
-    ctx.font="700 27px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
-    ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=24;
-    ctx.font="14px "+sans; ctx.fillStyle=hexA(muted,0.95);
-    y += wrapText(strat.desc, px, y, pw, 19)*19 + 10;
-    // pivot values — reinforce the diagram's markers in words
+    ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=32;
+    ctx.font="700 25px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
+    ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=23;
+    ctx.font="13px "+sans; ctx.fillStyle=hexA(muted,0.95);
+    y += wrapText(strat.desc, px, y, pw, 18)*18 + 14;
+    drawAnatomy(px, y, A*Math.min(1,p.on)); y+=26;
+    // Totals sit right beside their labels (a tight column), not flung to the far right.
     ctx.font="12px "+mono;
-    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("● MAX PROFIT", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=20;
-    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("● MAX LOSS", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+pw, y); ctx.textAlign="left"; y+=20;
-    ctx.fillStyle=hexA(muted,0.9); ctx.fillText("◆ BREAKEVEN", px, y);
-    ctx.fillStyle=hexA(muted,0.8); ctx.textAlign="right"; ctx.fillText("at the strikes", px+pw, y); ctx.textAlign="left"; y+=28;
-    // live status line — the trade arc in words, colour-coded
+    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT", px, y);
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=19;
+    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS", px, y);
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=25;
     var sxp=lerp(0.5,e.mxX,easeIO(p.move)), pl=payoffAt(strat.pts,sxp)*DOLLARS;
     if(p.exit>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pos; ctx.shadowColor=pos; ctx.shadowBlur=14;
       ctx.fillText("✓ CLOSED  "+money(e.maxY*DOLLARS), px, y); ctx.shadowBlur=0; }
-    else if(p.move>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg;
-      ctx.fillText("P / L   "+money(pl), px, y); }
-    else if(p.enter>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95);
-      ctx.fillText("▲ POSITIONS ENTERED", px, y); }
+    else if(p.move>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("P / L   "+money(pl), px, y); }
+    else if(p.enter>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ POSITIONS ENTERED", px, y); }
     else { ctx.font="13px "+mono; ctx.fillStyle=hexA(muted,0.85); ctx.fillText("SETTING UP…", px, y); }
     ctx.restore();
   }
 
-  // Full lifecycle telestrator (diagram = LEFT column): strikes → curve → zones (with Matrix glyphs
-  // illuminating profit/loss) → pivot dots → entry ticks → underlying moves → take-profit close.
+  // RIGHT: the signal EVIDENCE — why this play was called. A live RSI gauge (oversold/overbought)
+  // and a Bollinger snapshot (recent price vs its bands), so the reasoning is shown, not just named.
+  function drawSignalDetail(sig, A){
+    if(W<820) return;   // the evidence column is desktop-only; narrow screens stack (see drawPanel)
+    var sx=Math.round(W*0.755), sw=Math.min(W*0.205, 300);
+    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
+    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    var y=field.top+30;
+    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▸ WHY THIS PLAY", sx, y); y+=30;
+    // --- RSI gauge (0..100) — value sits right beside the label (no collision with the marker) ---
+    ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", sx, y);
+    ctx.fillStyle=hexA(rsiV<30?pos:rsiV>70?neg:txt,0.95); ctx.fillText(rsiV.toFixed(0), sx+28, y); y+=8;
+    var gh=8;
+    ctx.fillStyle=hexA(muted,0.16); ctx.fillRect(sx,y,sw,gh);
+    ctx.fillStyle=hexA(pos,0.22); ctx.fillRect(sx,y,sw*0.3,gh);
+    ctx.fillStyle=hexA(neg,0.22); ctx.fillRect(sx+sw*0.7,y,sw*0.3,gh);
+    var mxp=sx+sw*clamp01(rsiV/100), rc=rsiV<30?pos:(rsiV>70?neg:accent);
+    ctx.fillStyle=rc; ctx.shadowColor=rc; ctx.shadowBlur=8; ctx.fillRect(mxp-1.5,y-3,3,gh+6); ctx.shadowBlur=0; y+=gh+13;
+    ctx.font="9px "+mono; ctx.fillStyle=hexA(pos,0.7); ctx.fillText("OVERSOLD 30", sx, y);
+    ctx.textAlign="right"; ctx.fillStyle=hexA(neg,0.7); ctx.fillText("70 OVERBOUGHT", sx+sw, y); ctx.textAlign="left"; y+=26;
+    // --- Bollinger snapshot ---
+    ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("BOLLINGER BANDS", sx, y); y+=8;
+    var bh=70, bTop=y, bBot=y+bh, M=Math.min(64, price.length), s0=price.length-M, i;
+    if(M>4 && bU.length>=price.length){
+      var lo=1e9,hi=-1e9; for(i=s0;i<price.length;i++){ if(bL[i]<lo)lo=bL[i]; if(bU[i]>hi)hi=bU[i]; }
+      var rng=(hi-lo)||1;
+      var BY=function(v){ return bBot-((v-lo)/rng)*bh; }, BX=function(k){ return sx+((k-s0)/(M-1))*sw; };
+      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bU[i])):ctx.lineTo(BX(i),BY(bU[i])); }
+      for(i=price.length-1;i>=s0;i--){ ctx.lineTo(BX(i),BY(bL[i])); } ctx.closePath();
+      ctx.fillStyle=hexA(accent,0.08); ctx.fill();
+      ctx.strokeStyle=hexA(accent,0.32); ctx.lineWidth=1;
+      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bU[i])):ctx.lineTo(BX(i),BY(bU[i])); } ctx.stroke();
+      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bL[i])):ctx.lineTo(BX(i),BY(bL[i])); } ctx.stroke();
+      ctx.strokeStyle=hexA(txt,0.9); ctx.lineWidth=1.6; ctx.shadowColor=accent; ctx.shadowBlur=6;
+      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(price[i])):ctx.lineTo(BX(i),BY(price[i])); } ctx.stroke(); ctx.shadowBlur=0;
+      var lpx=BX(price.length-1), lpy=BY(price[price.length-1]);
+      ctx.beginPath(); ctx.arc(lpx,lpy,2.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.fill();
+    }
+    y=bBot+22;
+    ctx.font="11px "+mono; ctx.fillStyle=hexA(accent,0.85);
+    wrapText("→ "+(sig?sig.sig:""), sx, y, sw, 16);
+    ctx.restore();
+  }
+
+  // Full lifecycle telestrator. Diagram = LEFT-LOWER (slides below the play text); signal
+  // evidence = RIGHT. Anatomy is consistent: green profit, red loss, muted breakeven.
   function drawPlaybook(strat, p, sig){
     if(!strat) return;
-    var x0=W*0.44, x1=W*0.95, midY=fieldMid()+16, amp=fieldAmp()*0.66,
-        yTop=field.top+26, yBot=field.bottom-6, A=(1-p.out);
+    // The payoff is the FOCAL POINT — centered on the page, with the play text (left) and the
+    // signal evidence (right) flanking it.
+    var narrow=W<820;
+    var x0 = narrow?W*0.07:W*0.27, x1 = narrow?W*0.93:W*0.73;
+    var dTop = narrow?field.top+94:field.top+34, dBot = narrow?field.bottom-32:field.bottom-10;
+    var midY=(dTop+dBot)/2, amp=(dBot-dTop)/2*0.82, yTop=dTop, yBot=dBot, A=(1-p.out);
     function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
-        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
     ctx.save(); ctx.globalAlpha=A;
-    // shaded profit/loss zones
-    if(p.zones>0){ var N=140, seg=(x1-x0)/N;
+    // Knock the (frozen, zoomed) trend back inside the play box so the payoff stays crisp.
+    var pad=18; ctx.fillStyle=hexA(bg,0.42); ctx.fillRect(x0-pad, dTop-pad, (x1-x0)+pad*2, (dBot-dTop)+pad*2);
+    // Zones keep more full colour and only soften near the edges (gentle floor, wider band).
+    function edgeFade(u){ return 0.5 + 0.5*Math.min(clamp01(u/0.1), clamp01((1-u)/0.1)); }
+    if(p.zones>0){ var N=140, seg=(x1-x0)/N, be0=extrema(strat).be;
       for(var i=0;i<N;i++){ var u=i/(N-1); if(u>p.curve) break; var v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
-        ctx.fillStyle=hexA(v>=0?pos:neg, 0.15*p.zones); ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
-      // Matrix rain confined to the zones — green in profit, red in loss — teaching + contrast pop
-      ctx.font="13px "+mono; var NZ=20;
-      for(var c=0;c<NZ;c++){ var uu=(c+0.5)/NZ; if(uu>p.curve) continue; var vv=payoffAt(strat.pts,uu);
+        ctx.fillStyle=hexA(v>=0?pos:neg, 0.17*p.zones*edgeFade(u)); ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
+      // Matrix rain in the zones — green profit, red loss — brighter as it nears a breakeven line.
+      ctx.font="13px "+mono; var NZ=22;
+      for(var c=0;c<NZ;c++){ var uu=(c+0.5)/NZ; if(uu>p.curve) continue; var vv=payoffAt(strat.pts,uu), ge=edgeFade(uu);
+        var near=0; for(var q=0;q<be0.length;q++){ near=Math.max(near, clamp01(1-Math.abs(uu-be0[q])/0.06)); }
         var zt=Math.min(Y(vv),Y(0)), zb=Math.max(Y(vv),Y(0)); if(zb-zt<10) continue;
         var gx=X(uu), gy=zt+((pbGlyphT*3 + c*61) % (zb-zt));
-        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.7*p.zones); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy);
-        ctx.fillStyle=hexA(vv>=0?pos:neg, 0.25*p.zones); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy-15); } }
+        var gcol = near>0.5 ? accent : (vv>=0?pos:neg);
+        ctx.fillStyle=hexA(gcol, (0.7+0.3*near)*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy);
+        ctx.fillStyle=hexA(gcol, (0.25+0.25*near)*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy-15); } }
     // strike verticals
     ctx.textAlign="center"; var shown=p.strikes*strat.strikes.length;
     for(var k=0;k<strat.strikes.length;k++){ var rev=clamp01(shown-k); if(rev<=0) break; var sx=X(strat.strikes[k]);
       ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(accent,0.3*rev);
       ctx.beginPath(); ctx.moveTo(sx,yTop); ctx.lineTo(sx,yBot); ctx.stroke(); ctx.setLineDash([]); }
-    // breakeven baseline
+    // breakeven baseline + an illuminated pulse at each breakeven crossing
     if(p.strikes>0){ ctx.setLineDash([5,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(muted,0.5*p.strikes);
-      ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]);
+      var be1=extrema(strat).be, pulse=0.5+0.5*Math.sin(pbGlyphT*0.3);
+      for(k=0;k<be1.length;k++){ var bx=X(be1[k]);
+        ctx.fillStyle=hexA(accent, (0.25+0.4*pulse)*p.strikes); ctx.beginPath(); ctx.arc(bx,Y(0), 5+3*pulse, 0, 7); ctx.fill(); } }
     // payoff curve + chalk tip
     if(p.curve>0){ var f=p.curve, pts=strat.pts, started=false;
       ctx.beginPath();
@@ -777,25 +900,38 @@ export class Authenticator {
         else { var ex=X(f), ey=Y(payoffAt(pts,f)); if(started) ctx.lineTo(ex,ey); else ctx.moveTo(ex,ey); started=true; break; } }
       ctx.strokeStyle=accent; ctx.lineWidth=2.6; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
       if(f<1){ var tx=X(f), ty=Y(payoffAt(pts,f)); ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.fill(); ctx.shadowBlur=0; } }
-    // pivot markers — dots only on the curve; the words live in the panel (no stacking)
+    // pivot markers — dots on the curve (words live in the panel)
     if(p.label>0){ var e1=extrema(strat); ctx.globalAlpha=A*p.label;
       ctx.fillStyle=hexA(pos,0.95); ctx.beginPath(); ctx.arc(X(e1.mxX),Y(e1.maxY),3.2,0,7); ctx.fill();
       ctx.fillStyle=hexA(neg,0.95); ctx.beginPath(); ctx.arc(X(e1.mnX),Y(e1.minY),3.2,0,7); ctx.fill();
       ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.textAlign="center";
-      for(i=0;i<e1.be.length;i++){ ctx.fillText("B/E", X(e1.be[i]), Y(0)-8); }
+      for(i=0;i<e1.be.length;i++){ ctx.fillText("B/E", X(e1.be[i]), Y(0)-9); }
       ctx.globalAlpha=A; }
-    // entry ticks at the strikes
-    if(p.enter>0){ ctx.globalAlpha=A*p.enter; ctx.textAlign="center"; ctx.font="700 10px "+mono; ctx.fillStyle=hexA(accent,0.95);
-      for(k=0;k<strat.strikes.length;k++){ ctx.fillText("▲", X(strat.strikes[k]), Y(0)+15); }
+    // entry: the strikes flash as positions are entered (correlates with the left status line)
+    if(p.enter>0){ var epulse=0.5+0.5*Math.sin(pbGlyphT*0.5); ctx.globalAlpha=A*p.enter; ctx.textAlign="center"; ctx.font="700 10px "+mono;
+      for(k=0;k<strat.strikes.length;k++){ var ekx=X(strat.strikes[k]);
+        ctx.strokeStyle=hexA(accent, (0.3+0.5*epulse)); ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(ekx,yTop); ctx.lineTo(ekx,yBot); ctx.stroke();
+        ctx.fillStyle=hexA(accent, 0.5+0.4*epulse); ctx.beginPath(); ctx.arc(ekx,Y(0),3+2*epulse,0,7); ctx.fill();
+        ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲", ekx, Y(0)+16); }
       ctx.globalAlpha=A; }
-    // underlying spot glides into profit (value shown in the panel, not on the curve)
+    // underlying spot glides into profit (value shown in the panel)
     if(p.move>0){ var e2=extrema(strat), sxp=lerp(0.5, e2.mxX, easeIO(p.move)), mvx=X(sxp), mvy=Y(payoffAt(strat.pts,sxp));
       ctx.setLineDash([2,5]); ctx.strokeStyle=hexA(txt,0.5); ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(mvx,yTop); ctx.lineTo(mvx,yBot); ctx.stroke(); ctx.setLineDash([]);
       ctx.beginPath(); ctx.arc(mvx,mvy,4.5,0,7); ctx.fillStyle=payoffAt(strat.pts,sxp)>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=14; ctx.fill(); ctx.shadowBlur=0;
       ctx.textAlign="center"; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(txt,0.8); ctx.fillText("NOW", mvx, yTop-3); }
+    // exit: on take-profit, the profit region flashes green (correlates with "CLOSED +$" left)
+    if(p.exit>0){ var e3=extrema(strat), xpulse=0.5+0.5*Math.sin(pbGlyphT*0.6); ctx.globalAlpha=A*p.exit;
+      var N2=80, seg2=(x1-x0)/N2;
+      for(var j=0;j<N2;j++){ var u2=j/(N2-1), v2=payoffAt(strat.pts,u2); if(v2<=0) continue;
+        ctx.fillStyle=hexA(pos, 0.1+0.16*xpulse); ctx.fillRect(X(u2), Math.min(Y(v2),Y(0)), seg2+1, Math.abs(Y(v2)-Y(0))); }
+      var fxp=X(e3.mxX), fyp=Y(e3.maxY);
+      ctx.strokeStyle=hexA(pos,0.9); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(fxp,fyp,6+7*xpulse,0,7); ctx.stroke();
+      ctx.globalAlpha=A; }
     ctx.textAlign="start"; ctx.restore();
     drawPanel(strat, sig, p, A);
+    drawSignalDetail(sig, A*Math.min(1,p.on));
   }
   // Play timeline (ms): each phase chains into the next — the full trade lifecycle.
   var PWR=450,STK=550,CRV=1200,ZON=400,LBL=450,ENT=450,MOV=1600,EXT=550,OUT=650;
@@ -806,6 +942,7 @@ export class Authenticator {
     zones:clamp01((e-T_ZON)/ZON), label:clamp01((e-T_LBL)/LBL), enter:clamp01((e-T_ENT)/ENT),
     move:clamp01((e-T_MOV)/MOV), exit:clamp01((e-T_EXT)/EXT), out: e>T_OUT?clamp01((e-T_OUT)/OUT):0 }; }
   var playMode=false, playStart=0, curStrat=0, curSig=null, nextPlayAt=2400, rainBoost=0, rainTint=0;
+  var zoom=1;   // camera zoom into the signal region during a play (1 = ambient)
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -840,13 +977,14 @@ export class Authenticator {
       if(beaconEl){ try{ beaconEl.focus(); }catch(e){} } return; }
     if(reduce){ if(beaconLabel) beaconLabel.textContent="Close"; body.classList.add("revealed"); flyTitle(true); measureField(); focusForm(); return; }
     body.classList.remove("sweeping","revealed"); body.classList.add("flying");
+    // Fire the VFX at the origin as the title BEGINS to move, so it rides the flight down.
     flyTitle(true); measureField();
-    seq.push(setTimeout(function(){ body.classList.remove("flying");
-      if(wordmark){ wordmark.classList.remove("burst"); void wordmark.offsetWidth; wordmark.classList.add("burst"); }
-      body.classList.add("sweeping"); }, 650));
-    seq.push(setTimeout(function(){ body.classList.add("revealed");
-      if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 790));
-    seq.push(setTimeout(function(){ body.classList.remove("sweeping"); }, 1500));
+    if(wordmark){ wordmark.classList.remove("burst"); void wordmark.offsetWidth; wordmark.classList.add("burst"); }
+    body.classList.add("sweeping");
+    // Form only falls into place once the title has landed and can be read.
+    seq.push(setTimeout(function(){ body.classList.remove("flying"); body.classList.add("revealed");
+      if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 760));
+    seq.push(setTimeout(function(){ body.classList.remove("sweeping"); }, 1000));
   }
   if(beaconEl) beaconEl.addEventListener("click", function(){ setReveal(!revealed); });
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && revealed) setReveal(false); });
@@ -864,9 +1002,9 @@ export class Authenticator {
         cardEl.style.setProperty("--sheen",(115+dx*70).toFixed(0)+"deg"); }
     }); }
 
-  if(reduce){ measureField(); drawMarket(0.2);
+  if(reduce){ measureField(); fieldSnap(); drawMarket(0.2);
     drawPlaybook(STRATS[0], { on:1,strikes:1,curve:1,zones:1,label:1,enter:1,move:1,exit:0,out:0 },
-      { sig:"BOLLINGER SQUEEZE · LOW VOL" });
+      { sig:"BOLLINGER SQUEEZE · LOW VOL" }); beamVignette();
     document.body.classList.add("playing");
     if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
       for(var s=0;s<26;s++) rainDraw(0,0); }
@@ -876,16 +1014,20 @@ export class Authenticator {
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function loop(now){
     if(!running) return;
-    if(now-last > 50){ last=now; measureField(); stepMarket();
+    if(now-last > 50){ last=now; measureField(); fieldStep();
+      if(!playMode) stepMarket();   // freeze the trend while a play is framed — the scroll pauses
       if(!playMode && now>=nextPlayAt){ var sig=detectSignal(); if(!sig && now>=nextPlayAt+5000) sig=forceSignal();
         if(sig){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i; } }
-      var p=null, recede=0;
+      var p=null, recede=0, zt=1;
       if(playMode){ var e=now-playStart; p=playProg(e); recede=Math.min(p.on,1)*(1-p.out);
+        zt = 1 + 0.9*clamp01(e/800)*(1-p.out);   // zoom in to frame the signal, hold, zoom back out
         rainBoost=(p.enter>0 && p.exit<1)?1:0; rainTint=(p.exit>0 && p.out<1)?1:0;
         if(e>=T_END){ playMode=false; nextPlayAt=now+3000+Math.random()*2400; p=null; recede=0; rainBoost=0; rainTint=0; } }
+      zoom += (zt-zoom)*0.1;
       document.body.classList.toggle("playing", recede>0.02);
-      drawMarket(1 - recede*0.82);
+      drawMarket(1 - recede*0.5);
       if(p){ drawPlaybook(STRATS[curStrat], p, curSig); pbGlyphT++; }
+      beamVignette();
       rainDraw(rainBoost, rainTint); }
     requestAnimationFrame(loop);
   }
