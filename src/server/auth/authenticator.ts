@@ -266,7 +266,8 @@ export class Authenticator {
   @property --cax{ syntax:"<length>"; inherits:true; initial-value:0px; }
   @property --cay{ syntax:"<length>"; inherits:true; initial-value:0px; }
   @keyframes poweron{ 0%{ --burst:.4; --cax:-17px; --cay:-2px; }
-    40%{ --burst:1; --cax:9px; --cay:5px; text-shadow:0 0 46px color-mix(in srgb,var(--accent) 88%,transparent); }
+    40%{ --burst:1; --cax:9px; --cay:5px;
+      text-shadow:0 0 60px color-mix(in srgb,var(--accent) 92%,transparent), 0 0 22px color-mix(in srgb,#fff 55%,transparent); }
     100%{ --burst:0; --cax:0px; --cay:0px; text-shadow:none; } }
   .mark.burst{ animation:poweron .66s ease-out both; }
   /* Left→right light pass that travels THROUGH the letters on arrival (the "mic drop") —
@@ -343,14 +344,16 @@ export class Authenticator {
      field (behind the card). The card's own cone is retired in favor of this. */
   .projector .cone{ display:none; }
   .skylight{ position:fixed; z-index:4; left:50%; bottom:clamp(20px,4.5vh,48px); transform:translateX(-50%);
-    width:min(82vw,940px); height:min(70vh,600px); pointer-events:none; mix-blend-mode:screen;
-    clip-path:polygon(46% 100%, 54% 100%, 93% 0, 7% 0);
+    width:min(90vw,1060px); height:min(72vh,620px); pointer-events:none; mix-blend-mode:screen;
+    clip-path:polygon(45% 100%, 55% 100%, 95% 0, 5% 0);   /* WIDE lens over the whole board (ambient) */
     background:
-      linear-gradient(0deg, color-mix(in srgb,var(--accent) 20%,transparent), transparent 82%),
-      radial-gradient(52% 46% at 50% 100%, color-mix(in srgb,var(--accent) 30%,transparent), transparent 72%);
-    opacity:.2; transition:opacity .6s ease; }
-  body.playing .skylight{ opacity:.36; }
-  body.revealed .skylight{ opacity:.28; }
+      linear-gradient(0deg, color-mix(in srgb,var(--accent) 22%,transparent), transparent 84%),
+      radial-gradient(50% 44% at 50% 100%, color-mix(in srgb,var(--accent) 34%,transparent), transparent 72%);
+    opacity:.26; transition:clip-path .6s cubic-bezier(.16,.84,.44,1), opacity .6s ease; }
+  body.playing .skylight{ opacity:.42; }
+  /* Reveal NARROWS the lens onto the form: same light over less area → higher intensity, which
+     also feeds the title/hero VFX as the beam concentrates. */
+  body.revealed .skylight{ clip-path:polygon(45% 100%, 55% 100%, 67% 0, 33% 0); opacity:.52; }
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
