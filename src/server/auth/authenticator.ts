@@ -204,7 +204,8 @@ export class Authenticator {
   html,body{ height:100%; }
   body{
     font-family:var(--sans); color:var(--text); min-height:100vh; overflow:hidden;
-    display:flex; align-items:center; justify-content:center; padding:24px;
+    display:flex; align-items:flex-end; justify-content:center;
+    padding:24px 24px clamp(26px,7vh,74px);   /* anchor the console to the lower third */
     background:
       radial-gradient(80% 60% at 50% -10%, color-mix(in srgb,var(--accent) 15%,transparent), transparent 65%),
       radial-gradient(60% 50% at 85% 110%, color-mix(in srgb,var(--pos) 10%,transparent), transparent 60%),
@@ -254,6 +255,21 @@ export class Authenticator {
     text-shadow:0 0 14px color-mix(in srgb,var(--accent) 55%,transparent); }
   .pb-desc{ font-size:10.5px; letter-spacing:.02em; color:var(--muted); font-family:var(--sans);
     max-width:32ch; text-align:center; line-height:1.35; }
+
+  /* Holographic projector — the card is the emitter base; the play projects up into the field */
+  .projector{ position:absolute; left:50%; top:0; transform:translate(-50%,-6px);
+    width:82%; height:0; pointer-events:none; z-index:1; }
+  .projector .emitter{ position:absolute; left:50%; top:0; transform:translate(-50%,-50%);
+    width:62%; height:10px; border-radius:50%;
+    background:radial-gradient(closest-side, color-mix(in srgb,var(--accent) 85%,transparent), transparent);
+    filter:blur(1px); opacity:.7; transition:opacity .5s ease, width .5s ease; }
+  .projector .cone{ position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+    width:min(70vw,560px); height:min(46vh,340px);
+    clip-path:polygon(46% 100%, 54% 100%, 96% 0, 4% 0);
+    background:linear-gradient(0deg, color-mix(in srgb,var(--accent) 26%,transparent), transparent 78%);
+    opacity:.14; transition:opacity .55s ease; mix-blend-mode:screen; }
+  .scene.playing .projector .cone{ opacity:.34; }
+  .scene.playing .projector .emitter{ opacity:1; width:70%; }
 
   .card{
     position:relative; width:100%; text-align:center; padding:38px 32px 30px;
@@ -412,6 +428,7 @@ export class Authenticator {
     </div>
   </div>
   <main class="card">
+    <div class="projector" aria-hidden="true"><span class="cone"></span><span class="emitter"></span></div>
     <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
     <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
     <div class="brand">
@@ -445,12 +462,26 @@ export class Authenticator {
 
   var W=0,H=0,DPR=1;
   function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  // The "projection field": the band ABOVE the card's real top edge. All living viz (race +
+  // payoff diagrams) renders here so the card at the bottom never occludes the focal point.
+  var cardEl=null, field={ top:0, bottom:0 };
+  function measureField(){
+    cardEl = cardEl || document.querySelector(".card");
+    var bottom = H*0.5;
+    if(cardEl){ var r=cardEl.getBoundingClientRect(); bottom = r.top - 16; }
+    bottom = Math.max(80, bottom);
+    var top = Math.max(16, bottom - Math.min(360, bottom - 16));
+    field.top = top; field.bottom = bottom;
+  }
+  function fieldMid(){ return (field.top + field.bottom) / 2; }
+  function fieldAmp(){ return (field.bottom - field.top) / 2; }
   function resize(){
     DPR = Math.min(window.devicePixelRatio||1, 2);
     W = canvas.clientWidth; H = canvas.clientHeight;
     canvas.width = Math.max(1, Math.floor(W*DPR));
     canvas.height = Math.max(1, Math.floor(H*DPR));
     ctx.setTransform(DPR,0,0,DPR,0,0);
+    measureField();
   }
 
   // Two seeded, gently diverging equity walks scrolling right→left. "drift" is the upward
@@ -487,8 +518,8 @@ export class Authenticator {
     var all = human.pts.concat(machine.pts);
     var lo=Math.min.apply(null,all), hi=Math.max.apply(null,all);
     var pad=(hi-lo)*0.35 || 1; lo-=pad; hi+=pad;
-    var baseY = H*0.5, amp = H*0.30;
-    function project(v){ return baseY + amp - ((v-lo)/(hi-lo))*(amp*2); }
+    var baseY = fieldMid(), amp = fieldAmp()*0.9, fbot = field.bottom;
+    function project(v){ return baseY - ((v-lo)/(hi-lo) - 0.5)*(amp*2); }
 
     [human, machine].forEach(function(line){
       var col = css(line.color) || "#35D0BA";
@@ -500,9 +531,9 @@ export class Authenticator {
       ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin="round";
       ctx.shadowColor = col; ctx.shadowBlur = 16; ctx.globalAlpha = 0.9; ctx.stroke();
       ctx.shadowBlur = 0;
-      // soft area fill under the curve
-      ctx.lineTo((n-1)*dx, H); ctx.lineTo(0, H); ctx.closePath();
-      var grad = ctx.createLinearGradient(0, baseY-amp, 0, H);
+      // soft area fill under the curve, down to the field's baseline
+      ctx.lineTo((n-1)*dx, fbot); ctx.lineTo(0, fbot); ctx.closePath();
+      var grad = ctx.createLinearGradient(0, baseY-amp, 0, fbot);
       grad.addColorStop(0, hexA(col, 0.16)); grad.addColorStop(1, hexA(col, 0));
       ctx.fillStyle = grad; ctx.globalAlpha = 1; ctx.fill();
       // leading dot
@@ -574,74 +605,116 @@ export class Authenticator {
   // These are illustrative teaching diagrams (labeled STRATEGY PLAYBOOK), never live P/L.
   // pts: normalized payoff [ [x 0..1, y -1..1], ... ]; strikes: x positions of the legs.
   var STRATS=[
-    { name:"IRON CONDOR", desc:"Bet the market stays calm — keep the credit while price holds between the middle strikes.",
+    { name:"IRON CONDOR", cue:"LOW VOL", desc:"Bet the market stays calm — keep the credit while price holds between the middle strikes.",
       pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8] },
-    { name:"LONG STRANGLE", desc:"Bet on a big move either way — buy a call and a put, profit on a breakout.",
+    { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Bet on a big move either way — buy a call and a put, profit on a breakout.",
       pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7] },
-    { name:"SHORT STRADDLE", desc:"Bet on calm — sell the call and put at one strike; best if price pins it.",
+    { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Bet on calm — sell the call and put at one strike; best if price pins it.",
       pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5] },
-    { name:"BUTTERFLY", desc:"Pin the target — max profit if price lands on the center strike, tiny risk on the wings.",
+    { name:"BUTTERFLY", cue:"PINNED", desc:"Pin the target — max profit if price lands on the center strike, tiny risk on the wings.",
       pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65] },
-    { name:"BULL CALL SPREAD", desc:"Lean bullish with a cap — buy a call, sell a higher one to cut the cost.",
+    { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Lean bullish with a cap — buy a call, sell a higher one to cut the cost.",
       pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65] },
-    { name:"CALL LADDER", desc:"Roll up the strikes — limited risk with room to run if the market takes off.",
+    { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Roll up the strikes — limited risk with room to run if the market takes off.",
       pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75] }
   ];
-  var CYCLE=9000, pbIdx=-1, pbGlyphT=0;
+  var pbGlyphT=0, lastPick=-1;
   var stageCap=document.getElementById("stageCap"), pbName=document.getElementById("pbName"),
       pbDesc=document.getElementById("pbDesc"), pbCyc=document.querySelector(".pb-cyc"),
-      tickerEl=document.getElementById("ticker"), PBCYC=["LEARN","EXPERIMENT","PRACTICE"];
+      tickerEl=document.getElementById("ticker"), sceneEl=document.getElementById("scene");
   function setStrat(i){ var s=STRATS[i]; if(!s) return;
     if(pbName) pbName.textContent=s.name; if(pbDesc) pbDesc.textContent=s.desc;
-    if(pbCyc) pbCyc.textContent=PBCYC[i%PBCYC.length]; }
-  function pbMix(ms){ var m=ms%CYCLE;
-    if(m<4200) return 0; if(m<5000) return (m-4200)/800; if(m<8200) return 1; return 1-(m-8200)/800; }
+    if(pbCyc) pbCyc.textContent=s.cue; }
+  function clamp01(x){ return x<0?0:x>1?1:x; }
+  // Regime detection — the race's own volatility / divergence / trend summons the matching play.
+  function pickStrategy(){
+    function tail(a){ return a.slice(Math.max(0,a.length-46)); }
+    var hs=tail(human.pts), ms=tail(machine.pts); if(hs.length<6||ms.length<6) return 0;
+    function std(a){ var m=0,i; for(i=0;i<a.length;i++) m+=a[i]; m/=a.length;
+      var v=0; for(i=0;i<a.length;i++) v+=(a[i]-m)*(a[i]-m); return Math.sqrt(v/a.length); }
+    function slope(a){ return a[a.length-1]-a[0]; }
+    var scale=Math.max(1,(Math.abs(hs[hs.length-1])+Math.abs(ms[ms.length-1]))/2);
+    var volN=(std(hs)+std(ms))/2/scale, diverg=Math.abs(hs[hs.length-1]-ms[ms.length-1])/scale,
+        tr=((slope(hs)+slope(ms))/2)/scale;
+    var s=[0,0,0,0,0,0];
+    s[0]=1.1 - volN*3 - Math.abs(tr)*2;              // condor: calm
+    s[3]=1.25 - volN*4 - Math.abs(tr)*3;             // butterfly: very pinned
+    s[2]=0.85 - volN*2 - Math.abs(tr)*2.5;           // short straddle: range
+    s[1]=volN*3 + diverg*2.2;                        // strangle: vol expanding
+    s[5]=volN*2 + Math.max(0,tr)*3 + diverg;         // ladder: breakout
+    s[4]=Math.max(0,tr)*4 - volN*1.5;                // bull spread: uptrend
+    var best=0,bv=-1e9;
+    for(var i=0;i<6;i++){ var sc=s[i]+Math.random()*0.5 - (i===lastPick?0.8:0);
+      if(sc>bv){ bv=sc; best=i; } }
+    lastPick=best; return best;
+  }
   function payoffAt(pts,u){ if(u<=pts[0][0]) return pts[0][1];
     for(var i=1;i<pts.length;i++){ if(u<=pts[i][0]){ var a=pts[i-1],b=pts[i];
       var tt=(u-a[0])/((b[0]-a[0])||1); return a[1]+(b[1]-a[1])*tt; } }
     return pts[pts.length-1][1]; }
-  function drawPlaybook(strat, a){
+  // Telestrator draw-on. p = { on, strikes, curve, zones, out } progresses in 0..1.
+  function drawPlaybook(strat, p){
     if(!strat) return;
-    var padX=W*0.06, x0=padX, x1=W-padX, midY=H*0.5, amp=H*0.30;
+    var padX=W*0.06, x0=padX, x1=W-padX, midY=fieldMid(), amp=fieldAmp()*0.86,
+        yTop=field.top-6, yBot=field.bottom+6;
     function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
-        muted=css("--muted")||"#8B9AAB";
-    ctx.save(); ctx.globalAlpha=a;
-    // shaded profit (green) / loss (red) zones between the curve and the breakeven line
-    var N=140, seg=(x1-x0)/N;
-    for(var i=0;i<N;i++){ var u=i/(N-1), v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
-      ctx.fillStyle=hexA(v>=0?pos:neg, 0.13);
-      ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
-    // breakeven (zero P/L) baseline
-    ctx.setLineDash([5,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(muted,0.55);
-    ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]);
-    // strike verticals + Matrix glyphs illuminating each leg
+        muted=css("--muted")||"#8B9AAB", A=(1-p.out);
+    ctx.save(); ctx.globalAlpha=A;
+    // shaded profit (green) / loss (red) zones, revealed left→right with the curve, alpha by p.zones
+    if(p.zones>0){ var N=140, seg=(x1-x0)/N, zr=p.curve;
+      for(var i=0;i<N;i++){ var u=i/(N-1); if(u>zr) break; var v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
+        ctx.fillStyle=hexA(v>=0?pos:neg, 0.14*p.zones);
+        ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); } }
+    // strike verticals (revealed in sequence) + Matrix glyphs illuminating each leg
     ctx.font="12px "+(css("--mono")||"monospace"); ctx.textAlign="center";
-    for(var k=0;k<strat.strikes.length;k++){ var sx=X(strat.strikes[k]);
-      ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(accent,0.34);
-      ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,H); ctx.stroke(); ctx.setLineDash([]);
-      var gy=((pbGlyphT*4 + strat.strikes[k]*260) % (H+48));
-      ctx.fillStyle=hexA(accent,0.85); ctx.fillText(RG[(Math.random()*RG.length)|0], sx, gy);
-      ctx.fillStyle=hexA(accent,0.3); ctx.fillText(RG[(Math.random()*RG.length)|0], sx, gy-16);
+    var shown=p.strikes*strat.strikes.length;
+    for(var k=0;k<strat.strikes.length;k++){ var rev=clamp01(shown-k); if(rev<=0) break;
+      var sx=X(strat.strikes[k]);
+      ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(accent,0.34*rev);
+      ctx.beginPath(); ctx.moveTo(sx,yTop); ctx.lineTo(sx,yBot); ctx.stroke(); ctx.setLineDash([]);
+      var gy=yTop+((pbGlyphT*4 + strat.strikes[k]*260) % ((yBot-yTop)+40));
+      ctx.fillStyle=hexA(accent,0.85*rev); ctx.fillText(RG[(Math.random()*RG.length)|0], sx, gy);
+      ctx.fillStyle=hexA(accent,0.3*rev); ctx.fillText(RG[(Math.random()*RG.length)|0], sx, gy-16);
     }
     ctx.textAlign="start";
-    // the payoff curve, glowing
-    ctx.beginPath();
-    for(i=0;i<strat.pts.length;i++){ var qx=X(strat.pts[i][0]), qy=Y(strat.pts[i][1]);
-      i?ctx.lineTo(qx,qy):ctx.moveTo(qx,qy); }
-    ctx.strokeStyle=accent; ctx.lineWidth=2.4; ctx.lineJoin="round";
-    ctx.shadowColor=accent; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
+    // breakeven (zero P/L) baseline, appears with the strikes
+    if(p.strikes>0){ ctx.setLineDash([5,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(muted,0.55*p.strikes);
+      ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]); }
+    // the payoff curve, drawn left→right to p.curve with a glowing "chalk tip"
+    if(p.curve>0){ var f=p.curve, pts=strat.pts, started=false;
+      ctx.beginPath();
+      for(i=0;i<pts.length;i++){ if(pts[i][0]<=f){ var px=X(pts[i][0]), py=Y(pts[i][1]);
+        started?ctx.lineTo(px,py):ctx.moveTo(px,py); started=true; }
+        else { var ex=X(f), ey=Y(payoffAt(pts,f)); if(started) ctx.lineTo(ex,ey); else ctx.moveTo(ex,ey); started=true; break; } }
+      ctx.strokeStyle=accent; ctx.lineWidth=2.4; ctx.lineJoin="round";
+      ctx.shadowColor=accent; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
+      if(f<1){ var tx=X(f), ty=Y(payoffAt(pts,f));   // chalk tip
+        ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fillStyle="#EAFBF7";
+        ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.fill(); ctx.shadowBlur=0; } }
     ctx.restore();
+  }
+  // Play controller: cooldown → fire a regime-picked play → telestrator timeline → resume.
+  var PWR=450,STK=500,CRV=1000,ZON=500,LBL=400,HLD=2500,OUT=650;
+  var HOLD_END=PWR+STK+CRV+ZON+LBL+HLD, TOTAL=HOLD_END+OUT;
+  var playMode=false, playStart=0, curStrat=0, nextPlayAt=3600;
+  function playProg(e){
+    return { on:clamp01(e/PWR),
+      strikes:clamp01((e-PWR)/STK), curve:clamp01((e-PWR-STK)/CRV),
+      zones:clamp01((e-PWR-STK-CRV)/ZON), label:clamp01((e-PWR-STK-CRV-ZON)/LBL),
+      out: e>HOLD_END ? clamp01((e-HOLD_END)/OUT) : 0 };
   }
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
 
-  if(reduce){ draw();
+  if(reduce){ measureField(); draw();
     if(stageCap){ setStrat(0); stageCap.classList.add("pb"); }
+    if(sceneEl) sceneEl.classList.add("playing");
     if(tickerEl) tickerEl.classList.add("dim");
-    ctx.save(); ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.72); ctx.fillRect(0,0,W,H); ctx.restore();
-    drawPlaybook(STRATS[0], 1);   // one representative diagram, static
+    ctx.save(); ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.72);
+    ctx.fillRect(0,0,W,field.bottom); ctx.restore();   // recede the race in the field only
+    drawPlaybook(STRATS[0], { on:1,strikes:1,curve:1,zones:1,label:1,out:0 });  // one static diagram
     if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
       for(var s=0;s<26;s++) rainDraw(); }
     if(!live) updateTicker(); return; }
@@ -650,16 +723,22 @@ export class Authenticator {
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function loop(now){
     if(!running) return;
-    if(now-last > 55){ last=now; t++;
-      var idx=Math.floor(now/CYCLE)%STRATS.length; if(idx!==pbIdx){ pbIdx=idx; setStrat(idx); }
-      var mix=pbMix(now);
-      if(stageCap){ if(mix>0.5) stageCap.classList.add("pb"); else stageCap.classList.remove("pb"); }
-      if(tickerEl){ if(mix>0.5) tickerEl.classList.add("dim"); else tickerEl.classList.remove("dim"); }
+    if(now-last > 55){ last=now; t++; measureField();
+      // Fire a play when the cooldown elapses; regime picks which one.
+      if(!playMode && now>=nextPlayAt){ playMode=true; playStart=now; curStrat=pickStrategy(); setStrat(curStrat); }
+      var p=null, recede=0;
+      if(playMode){ var e=now-playStart; p=playProg(e); recede=Math.min(p.on,1)*(1-p.out);
+        if(e>=TOTAL){ playMode=false; nextPlayAt=now+3400+Math.random()*1600; p=null; recede=0; } }
+      var showing = recede>0.5;
+      if(stageCap){ if(showing) stageCap.classList.add("pb"); else stageCap.classList.remove("pb"); }
+      if(sceneEl){ if(recede>0.02) sceneEl.classList.add("playing"); else sceneEl.classList.remove("playing"); }
+      if(tickerEl){ if(showing) tickerEl.classList.add("dim"); else tickerEl.classList.remove("dim"); }
       step(human,human.drift); step(machine,machine.drift); draw();
-      if(mix>0.01){ ctx.save(); ctx.fillStyle=hexA(css("--bg")||"#0B0F14", mix*0.72);
-        ctx.fillRect(0,0,W,H); ctx.restore(); drawPlaybook(STRATS[pbIdx], mix); pbGlyphT++; }
+      if(p){ ctx.save(); ctx.fillStyle=hexA(css("--bg")||"#0B0F14", recede*0.74);
+        ctx.fillRect(0,0,W,field.bottom); ctx.restore();   // recede the race inside the field
+        drawPlaybook(STRATS[curStrat], p); pbGlyphT++; }
       rainDraw();
-      if(t%6===0 && !live && mix<0.5) updateTicker(); }   // live ticker shows real /pulse numbers
+      if(t%6===0 && !live && !showing) updateTicker(); }   // live ticker shows real /pulse numbers
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
