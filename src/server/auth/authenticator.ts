@@ -710,7 +710,7 @@ export class Authenticator {
   // Teaching panel (right column): the play's name, the plain-English idea, the pivot values,
   // and a live status line — so all the wordy P/L lives here, never stacked on the curve.
   function drawPanel(strat, sig, p, A){
-    var e=extrema(strat), px=Math.round(W*0.63), pw=W*0.33;
+    var e=extrema(strat), px=Math.round(W*0.05), pw=W*0.33;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
@@ -745,7 +745,7 @@ export class Authenticator {
   // illuminating profit/loss) → pivot dots → entry ticks → underlying moves → take-profit close.
   function drawPlaybook(strat, p, sig){
     if(!strat) return;
-    var x0=W*0.05, x1=W*0.56, midY=fieldMid()+16, amp=fieldAmp()*0.66,
+    var x0=W*0.44, x1=W*0.95, midY=fieldMid()+16, amp=fieldAmp()*0.66,
         yTop=field.top+26, yBot=field.bottom-6, A=(1-p.out);
     function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
