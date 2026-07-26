@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/ejclark/skynet-capital/compare/v1.48.0...v1.49.0) (2026-07-26)
+
+
+### Features
+
+* **feedback:** github issue templates + in-app feedback affordance ([#74](https://github.com/ejclark/skynet-capital/issues/74)) ([a548a2a](https://github.com/ejclark/skynet-capital/commit/a548a2a7b97a7702b9e0df0bde775252ab899329))
+
 # [1.48.0](https://github.com/ejclark/skynet-capital/compare/v1.47.0...v1.48.0) (2026-07-26)
 
 
