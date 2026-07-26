@@ -6,7 +6,8 @@ leaderboard. North star: bots that recognize signals → recommend → trade aut
 safeguards. Everything is educational and paper-only.
 
 Engineering standards live in [`docs/ENGINEERING.md`](docs/ENGINEERING.md); the docs index is in the
-README. This file is about **how we work together**, not the code.
+README. This file is about **how we work together**, not the code. The conventions below are portable
+— see [`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md) to lift-and-shift them into another repo.
 
 ## Working with Eric
 
