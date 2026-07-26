@@ -1178,7 +1178,20 @@ ${versionTag}
   // of: e.g. a condor is +theta / -vega (you want calm + time), a strangle is -theta / +vega.
   var _GK=[[0.0,0.8,-0.7,-0.5],[0.0,-0.8,0.9,0.7],[0.0,0.9,-0.9,-0.8],[0.0,0.6,-0.4,-0.3],
     [0.7,-0.1,0.15,0.2],[0.5,-0.2,0.3,0.3],[0.5,0.4,-0.3,-0.2],[0.45,0.4,-0.3,-0.2]];
-  for(var _gi=0;_gi<STRATS.length;_gi++) STRATS[_gi].gk=_GK[_gi];
+  // Realistic underlyings per play — so the sim only ever pairs a strategy with a name it actually
+  // suits (accurate modelling, not "iron condor on NVDA"). Range/premium-selling plays get calmer
+  // mega-caps; volatility/directional plays get the high-beta movers (CRWV, NVDA, TSLA, AMD).
+  var _UN=[
+    ["MSFT","GOOG","AAPL","AVGO"],      // IRON CONDOR — range-bound, low realized vol
+    ["CRWV","NVDA","TSLA","AMD"],       // LONG STRANGLE — coiled, breakout either way
+    ["MSFT","AAPL","GOOG"],             // SHORT STRADDLE — dead calm, pins the strike
+    ["AAPL","MSFT","AVGO","GOOG"],      // BUTTERFLY — pinned to a level
+    ["NVDA","CRWV","AVGO","MSFT"],      // BULL CALL SPREAD — momentum higher
+    ["NVDA","CRWV","TSLA","AMD"],       // CALL LADDER — breakout, room to run
+    ["MSFT","AAPL","AVGO","GOOG"],      // COVERED CALL — steady holding, harvest premium
+    ["MSFT","AAPL","GOOG","AVGO","NVDA"]// CASH-COVERED PUT — quality you would own on a dip
+  ];
+  for(var _gi=0;_gi<STRATS.length;_gi++){ STRATS[_gi].gk=_GK[_gi]; STRATS[_gi].unders=_UN[_gi]; }
   // Map a normalized payoff v∈[minY,maxY] to asymmetric dollars using the play's own max P / max L.
   function dollarsAt(strat, e, v){ if(v>=0) return e.maxY>0?(v/e.maxY)*strat.maxP:0;
     return e.minY<0?(v/e.minY)*strat.maxL:0; }
@@ -1238,6 +1251,32 @@ ${versionTag}
       bx+=gap; }
     ctx.textAlign="left"; ctx.restore();
   }
+  // WATCHING: the influencing inputs the desk monitors to justify the play — the underlying, a
+  // fear/greed read (VIX) with a mini gauge, and the option premium (implied-vol) rate. These are the
+  // "conditions" side of the read; the Greeks above are the position's exposure to them.
+  function drawWatching(px, y, A){
+    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
+    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left";
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("WATCHING", px, y); y+=15;
+    // Underlying — the real name being traded.
+    ctx.font="700 10px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("UNDERLYING", px, y);
+    ctx.fillStyle=hexA(accent,0.95); ctx.shadowColor=accent; ctx.shadowBlur=6; ctx.fillText("▸ "+playTicker, px+92, y); ctx.shadowBlur=0; y+=15;
+    // Fear/Greed via VIX: low VIX = greed (complacent), high VIX = fear. Mini gauge from calm→fear.
+    var fear=clamp01((playVix-12)/26), fg=playVix<16?"GREED":(playVix>24?"FEAR":"NEUTRAL"), fc=playVix<16?pos:(playVix>24?neg:txt);
+    ctx.font="700 10px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("FEAR/GREED", px, y);
+    ctx.fillStyle=hexA(txt,0.9); ctx.fillText("VIX "+playVix, px+92, y);
+    ctx.fillStyle=hexA(fc,0.95); ctx.fillText(fg, px+140, y); y+=6;
+    var gw=138, gh=4; ctx.fillStyle=hexA(muted,0.16); ctx.fillRect(px,y,gw,gh);
+    ctx.fillStyle=hexA(pos,0.2); ctx.fillRect(px,y,gw*0.28,gh); ctx.fillStyle=hexA(neg,0.2); ctx.fillRect(px+gw*0.72,y,gw*0.28,gh);
+    var mp=px+gw*fear; ctx.fillStyle=fc; ctx.fillRect(mp-1.5,y-2,3,gh+4); y+=15;
+    // Premium (implied vol) rate: RICH premium favors selling plays, CHEAP favors buying.
+    var prem=playIV>=52?"RICH":(playIV<=36?"CHEAP":"FAIR"), pcol=playIV>=52?pos:(playIV<=36?neg:txt);
+    ctx.font="700 10px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("PREMIUM IV", px, y);
+    ctx.fillStyle=hexA(txt,0.9); ctx.fillText(playIV+"%", px+92, y);
+    ctx.fillStyle=hexA(pcol,0.95); ctx.fillText(prem, px+140, y);
+    ctx.restore();
+  }
 
   // The bot's job, made visible: it INGESTS data, DETECTS a signal, builds a FORECAST, then
   // EXECUTES the play. This four-step pipeline lights up phase-by-phase so the machine's role reads
@@ -1275,7 +1314,7 @@ ${versionTag}
       var cx=W/2, ny=field.top+18; ctx.textAlign="center";
       drawPipeline(cx-96, ny, p, A*Math.min(1,p.on)); ny+=22;
       ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=16;
-      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("CLASS "+strat.tier, cx, ny); ny+=21;
+      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText(playTicker+" · CLASS "+strat.tier, cx, ny); ny+=21;
       ctx.font="700 22px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fillText(strat.name, cx, ny); ctx.shadowBlur=0; ny+=19;
       ctx.font="12px "+sans; ctx.fillStyle=hexA(muted,0.95); wrapText(strat.desc, cx, ny, Math.min(W*0.86,420), 16);
       var by=field.bottom-6; drawAnatomy(cx-116, by-22, A*Math.min(1,p.on));
@@ -1296,7 +1335,8 @@ ${versionTag}
     ctx.globalAlpha=A*aimA;
     ctx.font="600 11px "+mono; ctx.fillStyle=hexA(accent,0.72);
     ctx.fillText("▸ "+(sig?sig.sig:""), px, y); y+=17;
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("CLASS "+strat.tier, px, y); y+=27;   // complexity tier (clear of the big name below)
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText(playTicker, px, y);   // the real underlying this play suits
+    var _tw=ctx.measureText(playTicker).width; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("  ·  CLASS "+strat.tier, px+_tw, y); y+=27;
     ctx.font="700 30px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=22;
     ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=25;
     ctx.globalAlpha=A*prjA;
@@ -1304,6 +1344,7 @@ ${versionTag}
     y += wrapText(strat.desc, px, y, pw, 18)*18 + 14;
     drawAnatomy(px, y, A*prjA); y+=26;
     drawGreeks(px, y, A*prjA);   // the play's Greeks fingerprint (max P/L + outcome now live at the TARGET, far right)
+    drawWatching(px, y+68, A*prjA);   // the inputs the desk is watching: underlying, fear/greed (VIX), premium (IV)
     ctx.restore();
   }
   // Totals + outcome live at the FAR RIGHT, by the TARGET — the destination the play unfolds toward.
@@ -1644,6 +1685,10 @@ ${versionTag}
     project:clamp01((e-T_PRJ)/PRJ), walk:clamp01((e-T_WLK)/WLK), resolve:clamp01((e-T_RES)/RES),
     out: e>T_OUT?clamp01((e-T_OUT)/OUT):0 }; }
   var playMode=false, playStart=0, curStrat=0, curSig=null, nextPlayAt=2400, rainBoost=0, rainTint=0;
+  // The influencing inputs the desk WATCHES for a play: the underlying it trades (real big-tech names,
+  // weighted to the ones Eric actually runs), a fear/greed read (VIX), and the option premium (IV rate).
+  var TRADES=["CRWV","CRWV","NVDA","NVDA","AMD","MSFT","GOOG","TSLA","AVGO","META"];
+  var playTicker="NVDA", playVix=18, playIV=45;   // set per playcall in startPlay
   // Camera + time: cam (0 ambient → 1 framed), zoom eased; rate = eased time multiplier (slow-mo).
   var zoom=1, cam=0, rate=1, stepAcc=0, signalPrice=100, targetPrice=100, volScale=10, fcastProj=0;
   // Screen anchor for "now" (leading price) + price→pixel scale, exported by drawMarket so the
@@ -1818,6 +1863,7 @@ ${versionTag}
     ctx.restore(); }
   // Render one static, fully-projected forecast for a play (reduced-motion + initial paint).
   function renderStatic(idx){ curStrat=idx; armForecast(idx); cam=0.9; zoom=1.9;
+    playTicker=(STRATS[idx].unders||TRADES)[0];   // a suitable underlying for this play (never a mismatch)
     measureField(); fieldSnap(); drawMarket(0.7);
     drawForecast(STRATS[idx], { sig:STRATS[idx].cue+" · CALLED" }, { on:1,aim:1,zoom:1,project:1,walk:0,resolve:0,out:0 });
     beamVignette(); }
@@ -1883,6 +1929,14 @@ ${versionTag}
     nowIdx=price.length-1; realized=[]; pvR=pv;   // freeze history; seed realized momentum from the live move
     stepTarget=null; setPaused(false);            // fresh transport state each playcall
     armForecast(curStrat); playVol=1.0+Math.random()*0.7; scheduleEvents();   // lively, varied trace + macro events
+    // Snapshot the watched inputs for this playcall from the play's OWN profile, so the read is
+    // accurate: pick an underlying that suits the strategy, and derive the fear/greed (VIX) + premium
+    // (IV) from the play's cue — sellers fire into rich premium, vol plays fire when fear is spiking.
+    var _u=STRATS[curStrat].unders||TRADES, _c=STRATS[curStrat].cue;
+    playTicker=_u[(Math.random()*_u.length)|0];
+    var _seller=(_c==="RANGE-BOUND"||_c==="PINNED"), _volp=(_c==="VOL EXPANDING"||_c==="BREAKOUT RISK");
+    playIV=Math.round(_seller?(50+Math.random()*14):(_volp?(44+Math.random()*16):(32+Math.random()*14)));
+    playVix=Math.round(_volp?(22+Math.random()*12):(_seller?(14+Math.random()*7):(16+Math.random()*8)));
     highlightPlay(manual?sig.i:-1); }
   function loop(now){
     if(!running) return;
