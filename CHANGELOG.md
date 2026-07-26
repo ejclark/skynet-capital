@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/ejclark/skynet-capital/compare/v1.10.0...v1.11.0) (2026-07-26)
+
+
+### Features
+
+* **login:** market-context overlays in the playcall forecast ([#25](https://github.com/ejclark/skynet-capital/issues/25)) ([b1b9199](https://github.com/ejclark/skynet-capital/commit/b1b91999b644ee46cf2af6a92bb34a361b6a643f))
+
 # [1.10.0](https://github.com/ejclark/skynet-capital/compare/v1.9.1...v1.10.0) (2026-07-26)
 
 
