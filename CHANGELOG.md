@@ -1,3 +1,10 @@
+# [1.86.0](https://github.com/ejclark/skynet-capital/compare/v1.85.0...v1.86.0) (2026-07-26)
+
+
+### Features
+
+* **login:** anchor the primary player's tower to a stable central-left spot ([#148](https://github.com/ejclark/skynet-capital/issues/148)) ([0c758e0](https://github.com/ejclark/skynet-capital/commit/0c758e0b95df9084639cce230848186dc55a1ccf))
+
 # [1.85.0](https://github.com/ejclark/skynet-capital/compare/v1.84.0...v1.85.0) (2026-07-26)
 
 
