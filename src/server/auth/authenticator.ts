@@ -1271,21 +1271,28 @@ ${versionTag}
     ctx.font="13px "+sans; ctx.fillStyle=hexA(muted,0.95);
     y += wrapText(strat.desc, px, y, pw, 18)*18 + 14;
     drawAnatomy(px, y, A*prjA); y+=26;
-    // Totals sit right beside their labels (a tight column), not flung to the far right.
-    ctx.font="12px "+mono;
-    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(strat.maxP), px+col, y); ctx.textAlign="left"; y+=19;
-    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(strat.maxL), px+col, y); ctx.textAlign="left"; y+=24;
-    drawGreeks(px, y, A*prjA); y+=58;   // the play's Greeks fingerprint (bars + letters need clearance)
-    ctx.globalAlpha=A;
-    if(p.resolve>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=14;
-      var pctOfMax = strat.maxP>0 ? Math.round(pl/strat.maxP*100) : 0;
-      var tag = (pl>0 && pctOfMax<92) ? "  · "+pctOfMax+"% OF MAX" : (pl>0?"  · LET IT RIDE":"");
-      ctx.fillText("✓ PLAYCALL CLOSED  "+money(pl)+tag, px, y); ctx.shadowBlur=0; }   // book where the market actually landed
-    else if(p.walk>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("PLAYCALL LIVE · P/L "+money(pl), px, y); }
-    else if(p.project>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ PLAYCALL LOCKED", px, y); }
-    else { ctx.font="13px "+mono; ctx.fillStyle=hexA(muted,0.85); ctx.fillText("READING THE TAPE…", px, y); }
+    drawGreeks(px, y, A*prjA);   // the play's Greeks fingerprint (max P/L + outcome now live at the TARGET, far right)
+    ctx.restore();
+  }
+  // Totals + outcome live at the FAR RIGHT, by the TARGET — the destination the play unfolds toward.
+  // Right-aligned at the projection's right edge, stacked in the clear zone above the profit band.
+  function drawTotals(strat, p, A, Xf, SY){
+    var pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", accent=css("--accent")||"#35D0BA",
+        muted=css("--muted")||"#8B9AAB", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
+    var e2=extrema(strat), curP=realized.length?realized[realized.length-1]:nowPrice, hiP=signalPrice+volScale*0.55;
+    var uNow=clamp01((curP-signalPrice)/(volScale||1)+0.5), pl=dollarsAt(strat,e2,payoffAt(strat.pts,uNow));
+    var rx=Xf, ty=SY(hiP)+16, lh=17, prj=easeIO(clamp01(p.project));
+    ctx.save(); ctx.globalAlpha=A*prj; ctx.textAlign="right"; ctx.textBaseline="alphabetic";
+    ctx.fillStyle=hexA(bg,0.5); roundRect(rx-208, ty-14, 214, 74, 6); ctx.fill();   // dark chip for contrast
+    ctx.font="700 11px "+mono;
+    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT  "+money(strat.maxP), rx-6, ty);
+    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS  "+money(strat.maxL), rx-6, ty+lh);
+    var sy=ty+lh+22;
+    if(p.resolve>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=12;
+      var pct=strat.maxP>0?Math.round(pl/strat.maxP*100):0, tag=(pl>0&&pct<92)?" · "+pct+"% OF MAX":(pl>0?" · LET IT RIDE":"");
+      ctx.fillText("✓ CLOSED "+money(pl)+tag, rx-6, sy); ctx.shadowBlur=0; }
+    else if(p.walk>0){ ctx.font="700 14px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("PLAYCALL LIVE · "+money(pl), rx-6, sy); }
+    else { ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ PLAYCALL LOCKED", rx-6, sy); }
     ctx.restore();
   }
 
@@ -1540,6 +1547,7 @@ ${versionTag}
       ctx.textAlign="start"; ctx.restore();
     }
     drawPanel(strat, sig, p, A);
+    if(W>=820 && proj>0.01) drawTotals(strat, p, A, Xf, SY);   // max P/L + outcome at the far right, by the TARGET
     // The thesis + recap cards are desktop-only — on narrow screens they'd collide with the centered
     // stacked panel, which already carries the play's essentials.
     if(W>=820){
