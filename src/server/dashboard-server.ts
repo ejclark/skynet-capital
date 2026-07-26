@@ -13,6 +13,7 @@ import {
 } from "../observatory/render-dashboard.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
+import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "./participant-service.js";
 import { sseFrame } from "./sse.js";
@@ -34,6 +35,12 @@ export interface DashboardServerConfig {
    * registers a new account. Omit to disable the feature (e.g. offline mode).
    */
   readonly addParticipant?: (input: AddParticipantInput) => Promise<AddResult>;
+  /**
+   * Self-service feedback handler. When provided, `GET /feedback` serves a form and `POST /feedback`
+   * files a labelled GitHub issue on the submitter's behalf. Omit (no token) to keep the form but
+   * have submissions report "not switched on yet."
+   */
+  readonly submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>;
 }
 
 /**
@@ -151,6 +158,10 @@ async function handle(
   }
   if (path === "/add" && config.addParticipant) {
     await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
+    return;
+  }
+  if (path === "/feedback") {
+    await handleFeedback(req, res, req.method ?? "GET", session, config.submitFeedback);
     return;
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
@@ -305,6 +316,75 @@ async function handleAdd(
   res.end(addResultHtml(result, key));
 }
 
+// Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
+// repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine (single process).
+const feedbackHits = new Map<string, number[]>();
+function throttled(key: string, now = Date.now(), windowMs = 600_000, max = 5): boolean {
+  const recent = (feedbackHits.get(key) ?? []).filter((t) => now - t < windowMs);
+  if (recent.length >= max) {
+    feedbackHits.set(key, recent);
+    return true;
+  }
+  recent.push(now);
+  feedbackHits.set(key, recent);
+  return false;
+}
+
+async function handleFeedback(
+  req: IncomingMessage,
+  res: ServerResponse,
+  method: string,
+  session: Session | undefined,
+  submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>,
+): Promise<void> {
+  if (method === "GET") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(feedbackFormHtml(Boolean(submitFeedback)));
+    return;
+  }
+  if (method !== "POST") {
+    res.writeHead(405, { "content-type": "text/plain" });
+    res.end("method not allowed");
+    return;
+  }
+  if (!submitFeedback) {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(
+      feedbackResultHtml({
+        ok: false,
+        error:
+          "Feedback isn't switched on yet — ask Eric to set the feedback token. Your note wasn't sent.",
+      }),
+    );
+    return;
+  }
+  if (session && throttled(session.email)) {
+    res.writeHead(429, { "content-type": "text/html; charset=utf-8" });
+    res.end(
+      feedbackResultHtml({
+        ok: false,
+        error: "You've sent a bunch just now — give it a few minutes and try again.",
+      }),
+    );
+    return;
+  }
+
+  const form = new URLSearchParams(await readBody(req));
+  const kindRaw = form.get("kind");
+  const kind: FeedbackKind = kindRaw === "bug" || kindRaw === "idea" ? kindRaw : "feature";
+  const result = await submitFeedback({
+    kind,
+    title: form.get("title") ?? "",
+    details: form.get("details") ?? "",
+    ...(form.get("area") ? { area: form.get("area") as string } : {}),
+    ...(form.get("device") ? { device: form.get("device") as string } : {}),
+    ...(session?.name ? { submitterName: session.name } : {}),
+    ...(session?.email ? { submitterEmail: session.email } : {}),
+  });
+  res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
+  res.end(feedbackResultHtml(result));
+}
+
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -367,6 +447,9 @@ const ADD_STYLE = `${PAGE_STYLE}
   input,select{ width:100%; padding:12px 13px; font-size:15px; font-family:var(--sans); color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:9px; transition:border-color .15s, box-shadow .15s; }
   input::placeholder{ color:color-mix(in srgb,var(--muted) 75%,transparent); }
   input:focus,select:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent); }
+  textarea{ width:100%; padding:12px 13px; font:15px/1.5 var(--sans); color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:9px; resize:vertical; transition:border-color .15s, box-shadow .15s; }
+  textarea::placeholder{ color:color-mix(in srgb,var(--muted) 75%,transparent); }
+  textarea:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent); }
   input[name=apiKey],input[name=apiSecret]{ font-family:var(--mono); letter-spacing:.02em; }
   button{ margin-top:24px; padding:13px 18px; font-size:15px; font-weight:600; font-family:var(--sans); color:var(--bg); background:var(--accent); border:0; border-radius:9px; cursor:pointer; transition:filter .15s; }
   button:hover{ filter:brightness(1.08); }
@@ -453,7 +536,7 @@ doing. It's for learning the plays and having fun — <b>no real money, ever</b>
 </div>
 <a class="cta" href="/login">Get started → Sign in</a>
 <p class="fineprint">Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.<br>
-Found a bug or have an idea? <a href="https://github.com/ejclark/skynet-capital/issues/new/choose" target="_blank" rel="noopener noreferrer">Share feedback</a> — we build this together.</p>`,
+Found a bug or have an idea? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
     true,
   );
 }
@@ -508,6 +591,44 @@ function addResultHtml(result: AddResult, key: string): string {
 <p class="lede">${escapeHtml(result.error)}</p>
 <p class="backrow"><a href="/${suffix}">← Back to the board</a> · <a href="/add${suffix}">Try again</a></p>`;
   return addShell("Skynet Capital", inner);
+}
+
+function feedbackFormHtml(enabled: boolean): string {
+  const banner = enabled
+    ? ""
+    : `<p class="note" style="color:var(--neg)">Heads up — feedback isn't switched on yet, so this won't send until it's configured.</p>`;
+  return addShell(
+    "Feedback — Skynet Capital",
+    `<h1>Share feedback</h1>
+<p class="lede">Found a bug, want an improvement, or have a wild idea? Tell us here — it goes straight to the team. <b>No GitHub account needed.</b></p>
+${banner}
+<form method="post" action="/feedback">
+  <label>What kind?
+    <select name="kind">
+      <option value="bug">🐞 Bug — something's broken or wrong</option>
+      <option value="feature" selected>✨ Feature — make something better</option>
+      <option value="idea">💡 Idea — a bigger what-if</option>
+    </select>
+  </label>
+  <label>Title<input name="title" required maxlength="120" placeholder="Short summary"></label>
+  <label>Details<textarea name="details" rows="6" placeholder="What happened · what you'd like · the idea…"></textarea></label>
+  <label>Where in the app? <small>(optional)</small><input name="area" placeholder="e.g. Leaderboard, the intro animation"></label>
+  <label>Device &amp; browser <small>(optional, helps for bugs)</small><input name="device" placeholder="e.g. iPhone · Safari"></label>
+  <button type="submit">Send it</button>
+</form>
+<p class="note">Screenshots help — once it's filed you can reply to the issue with an image.</p>`,
+  );
+}
+
+function feedbackResultHtml(result: FeedbackResult): string {
+  const inner = result.ok
+    ? `<div class="res-icon">🎉</div><h1>Thanks — got it!</h1>
+<p class="lede">Filed as <b>#${result.number}</b>. We'll take a look. Really appreciate you.</p>
+<p class="backrow"><a href="/feedback">Send another</a> · <a href="/">← Back to the board</a></p>`
+    : `<h1>Hmm, that didn't send</h1>
+<p class="lede">${escapeHtml(result.error)}</p>
+<p class="backrow"><a href="/feedback">Try again</a> · <a href="/">← Back to the board</a></p>`;
+  return addShell("Feedback — Skynet Capital", inner);
 }
 
 function escapeHtml(value: string): string {

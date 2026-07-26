@@ -18,6 +18,7 @@ import type { Participant } from "../participants/participant.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { resolveAuth } from "../server/auth/authenticator.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
+import { resolveFeedback } from "../server/feedback-service.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
@@ -81,14 +82,24 @@ async function main(): Promise<void> {
     );
   }
 
+  const feedback = resolveFeedback(process.env);
+  if (!feedback) {
+    console.warn(
+      "ℹ️  In-app feedback is off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — the /feedback form renders but submissions won't file issues.",
+    );
+  }
+
   createDashboardServer({
     hub,
     password,
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
+    ...(feedback ? { submitFeedback: feedback } : {}),
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
-    console.log(`Observatory live on port ${PORT} [${dataSource.mode}] — auth: ${gate}`);
+    console.log(
+      `Observatory live on port ${PORT} [${dataSource.mode}] — auth: ${gate} — feedback: ${feedback ? "on" : "off"}`,
+    );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
   });
 }
