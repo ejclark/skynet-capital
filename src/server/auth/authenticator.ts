@@ -878,8 +878,9 @@ ${versionTag}
         ctx.strokeStyle=hexA(ccol,0.85); ctx.lineWidth=1.2*lw;
         ctx.beginPath(); ctx.moveTo(ccx,Y(chi)); ctx.lineTo(ccx,Y(clo)); ctx.stroke();            // wick
         var bt=Y(Math.max(o,c)), bh=Math.max(1.4*lw, Y(Math.min(o,c))-bt);
-        ctx.fillStyle=hexA(ccol,cup?0.5:0.78); ctx.fillRect(ccx-cw/2,bt,cw,bh);                    // body
-        ctx.strokeStyle=hexA(ccol,0.95); ctx.lineWidth=lw; ctx.strokeRect(ccx-cw/2,bt,cw,bh); }
+        ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.72); ctx.fillRect(ccx-cw/2,bt,cw,bh);           // dark backing so bodies separate from the green/red band
+        ctx.fillStyle=hexA(ccol,cup?0.66:0.82); ctx.fillRect(ccx-cw/2,bt,cw,bh);                    // body
+        ctx.strokeStyle=hexA(ccol,1); ctx.lineWidth=lw; ctx.strokeRect(ccx-cw/2,bt,cw,bh); }
       // Smoothed guide line traced THROUGH the candles — a short EMA that "smooths everything", so
       // the underlying trend stays legible beneath the noisy OHLC bodies. Seeded from the frozen now.
       var em=price[n-1], ka=2/9; ctx.beginPath(); ctx.moveTo((n-1)*dx, Y(em));
@@ -1130,7 +1131,7 @@ ${versionTag}
       var cx=W/2, ny=field.top+18; ctx.textAlign="center";
       drawPipeline(cx-96, ny, p, A*Math.min(1,p.on)); ny+=22;
       ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=16;
-      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("TIER "+strat.tier, cx, ny); ny+=18;
+      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("TIER "+strat.tier, cx, ny); ny+=21;
       ctx.font="700 22px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fillText(strat.name, cx, ny); ctx.shadowBlur=0; ny+=19;
       ctx.font="12px "+sans; ctx.fillStyle=hexA(muted,0.95); wrapText(strat.desc, cx, ny, Math.min(W*0.86,420), 16);
       var by=field.bottom-6; drawAnatomy(cx-116, by-22, A*Math.min(1,p.on));
@@ -1151,7 +1152,7 @@ ${versionTag}
     ctx.globalAlpha=A*aimA;
     ctx.font="600 11px "+mono; ctx.fillStyle=hexA(accent,0.72);
     ctx.fillText("▸ "+(sig?sig.sig:""), px, y); y+=17;
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("TIER "+strat.tier, px, y); y+=17;   // complexity tier
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("TIER "+strat.tier, px, y); y+=27;   // complexity tier (clear of the big name below)
     ctx.font="700 30px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=22;
     ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=25;
     ctx.globalAlpha=A*prjA;
