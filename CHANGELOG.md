@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/ejclark/skynet-capital/compare/v1.26.0...v1.27.0) (2026-07-26)
+
+
+### Features
+
+* **login:** tune ambient cone, pre-lay the rsi rail, boost chart contrast ([#44](https://github.com/ejclark/skynet-capital/issues/44)) ([9221bf4](https://github.com/ejclark/skynet-capital/commit/9221bf4f7129444e40e6466fa005cc3b166c7c19))
+
 # [1.26.0](https://github.com/ejclark/skynet-capital/compare/v1.25.0...v1.26.0) (2026-07-26)
 
 
