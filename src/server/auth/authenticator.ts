@@ -1581,6 +1581,19 @@ ${versionTag}
 
   // LEFT-UPPER: the play in words — the bot pipeline, the detected signal, the strategy name and
   // plain-English idea, the shared anatomy legend, pivot values, and the live trade status.
+  // A contained terminal-window card behind the play panel, so the readout reads as its own panel and
+  // never bleeds over the cityscape/trend. This clean edge is what lets the city scale behind it.
+  function drawPanelBacking(x,y,w,h,A){
+    if(A<=0.01) return;
+    var bg=css("--bg")||"#0B0F14", accent=css("--accent")||"#35D0BA";
+    ctx.save(); ctx.globalAlpha=A;
+    roundRect(x,y,w,h,11); ctx.fillStyle=hexA(bg,0.9); ctx.fill();
+    roundRect(x,y,w,h,11); ctx.strokeStyle=hexA(accent,0.28); ctx.lineWidth=1; ctx.stroke();
+    // terminal titlebar: three dots + a hairline rule, top-left
+    ctx.fillStyle=hexA(accent,0.5); for(var d=0;d<3;d++){ ctx.beginPath(); ctx.arc(x+12+d*8,y+11,1.7,0,7); ctx.fill(); }
+    ctx.strokeStyle=hexA(accent,0.16); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x+10,y+20); ctx.lineTo(x+w-10,y+20); ctx.stroke();
+    ctx.restore();
+  }
   function drawPanel(strat, sig, p, A){
     var e=extrema(strat), px=Math.round(W*0.045), pw=Math.min(W*0.2, 238), col=190;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
@@ -1605,6 +1618,8 @@ ${versionTag}
       ctx.fillStyle=hexA(neg,0.95); ctx.fillText(s2, lx+w1+gap, by);
       ctx.restore(); return;
     }
+    // Contained terminal-window backing (desktop): the panel sits ON this card, never over the city.
+    drawPanelBacking(px-16, field.top-14, pw+30, (field.bottom-field.top)+30, A*Math.min(1,p.on));
     // Information unfolds in step with the play: pipeline first, then the signal + strategy name as
     // the spotlight aims, then the plain-English idea + anatomy + pivots as the forecast projects.
     var prjA=easeIO(clamp01(p.project));
