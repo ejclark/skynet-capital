@@ -45,6 +45,10 @@ role of responsible owner/steward — shipping lovable work while protecting the
   the metaphor into *faithful mechanics* — don't take it literally, don't flatten it to generic.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
   trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
+- **Positive reinforcement over negative.** Celebrate wins loudly; render losses honestly but without
+  punishing spectacle. Reward the behavior we want (disciplined profit-taking, reinvestment, building
+  effective bots) by making it the most satisfying thing to watch — the fanfare/motion budget goes to
+  what goes right. Never let it distort honesty (the judgment layer still tells the truth about a bet).
 - **Exquisite granular detail is a deliberate process.** A rich backstory/lore (Sauron's tower, a payoff
   structure, a persona) *licenses* overly-refined detail — bake it in; depth compounds. Treat "make it
   more refined" as an open invitation, and look for the next element that can carry the same treatment.

@@ -45,6 +45,9 @@ volatility, market-hours lighting = session, ticker billboards = the tape).
 | **Market session** | skyline lighting waking/resting (shipped) |
 | **A macro event** | a phenomenon: oil shock → smoke plumes / fires; geopolitical (e.g. an oil-disrupting conflict → higher oil, logistics strain) → traffic jams, haze; a print (CPI/FOMC) → a broadcast pulse |
 | **Regime** | bull → construction cranes, new lights, growth; bear → dimming, fog, gridlock |
+| **Uninvested capital** | the **reserve** — a treasury / staging ground / cleared land whose scale says how much empire is *about to be built*; dry powder rendered as potential, not emptiness |
+| **Deploying capital** (a large buy) | ground breaks — **construction begins**, footprint = size of the commitment; the city visibly commits to something new |
+| **Taking profit** (a win realized) | a **building tops out** — the crane comes down, lights come on; the win is cemented into permanent skyline, not just a number ticking up |
 | **Transition / comms** | **matrix tracers** as the connective medium — routing a change, a new contribution arriving, an event propagating across districts |
 
 The point: someone glancing at the city reads the state of affairs — who's exposed where, what the
@@ -71,6 +74,46 @@ the phase of the thesis; **site footprint = magnitude of capital committed**. Th
 big tech's AI capex — trillions in flight. An AI-bull read shows a large share of the city scaffolded
 now (~20-30%), growing toward 70-90% if the transformation lands as predicted (the "old world" shrinks
 at scale). Construction shows what's *being built*, distinct from what's already earning.
+
+### The founding: starting state as a landmark
+
+The world doesn't begin empty — it begins with **a treasury and a charter**. A member arriving with, say,
+$1,000,000 of dry powder is on the verge of building something, and that potential deserves a *strong*
+representation, not a blank lot. The uninvested reserve renders as a landmark in its own right — a vault,
+a staging yard, cleared-and-surveyed land with the grid already laid — scaled to the capital waiting to
+deploy. It reads as **"an empire about to rise,"** which is exactly the emotional truth of sitting on
+capital before the first trade.
+
+**The "key to the city" ceremony.** Crossing the threshold — signing in, and later committing the first
+capital — is marked as an *event*, not a state change. The login reveal is already framed as a **key to
+the city** unlock (the Neo/Maker's-key VFX); the founding ceremony is its post-login twin: the key turns,
+the reserve landmark lights, and the city is formally *founded* in the member's name. Cementing that
+correlation — key → city → your empire — makes the stake feel real from the first second, before a single
+position exists.
+
+### Events as ceremonies (positive-reinforcement bias)
+
+Portfolio milestones are the city's **holidays** — the moments worth animating hard, because they are
+what make the world feel alive and earned. The design bias is **positive reinforcement over negative**:
+celebrate what goes right loudly; render what goes wrong honestly but without punishing spectacle.
+
+- **Deploying capital → ground breaks.** A large buy starts visible construction sized to the
+  commitment — the city commits to something new, and you watch it begin.
+- **Taking profit → a building tops out.** Realizing a meaningful gain (a strong rule of thumb: **~20-30%
+  on a sizable position**) *completes a structure* — the crane comes down, windows light, the win is
+  cemented into permanent skyline. Growing the balance by that kind of margin and **reinvesting** earns a
+  **hard-to-miss development**: a new tower, a district upgrade, a skyline that visibly leveled up. The
+  reward is legible and proportional — you can't miss that you did something good.
+- **Losses, handled with dignity.** A drawdown dims and weathers a building; a blow-up can smoke (the
+  honest-analysis layer still tells the truth). But the *emphasis, motion budget, and fanfare* go to the
+  wins. We reinforce the behavior we want — disciplined profit-taking and reinvestment — by making it the
+  most satisfying thing to watch.
+
+> **Load-bearing dependency:** these are **transition** events — "*took* profit," "*deployed* capital,"
+> "*grew and reinvested*" — which by definition cannot be read from a single snapshot. They need the
+> **history / persistence layer** (realized-P/L on sells + equity samples over time). That backend is the
+> constraint that unlocks this entire ceremony vocabulary; until it exists, the city can show *state*
+> (what you hold) but not *events* (what you just did). See the roadmap note in P2/P3 and IDEAS.
 
 ### Two axes: direction **and** judgment
 
@@ -134,8 +177,13 @@ spread, participation) — they *are* the country-scale units.
    events) atop the sim, plus the **judgment axis** (risk quality, legal exposure, hype-vs-substance)
    and the **construction layer** (maturing bets, capex magnitude). Real once event/risk feeds are
    wired. Iran/oil → smoke + logistics motifs; AI capex → large construction share.
-4. **Contributable personas.** People add bot personas that become part of the universe — the plugin
-   architecture behind the persona-lore seam. Gated by the autonomous-contribution system below.
+4. **Contributable personas — bots as the conduit to nation-building.** People add their own bot
+   personas to practice and encode their trading strategies; a member's bots are the **primary engine
+   that grows their empire and climbs the leaderboard** — the more effective the strategies they build,
+   the greater the nation they lead. This is a first-class engagement driver, not a side feature:
+   building a better bot *is* building a better nation. The plugin architecture behind the persona-lore
+   seam is the mechanism; broadening what a contributed bot may do is gated by the autonomous-contribution
+   system below (tier 1 = additive/display-only; trading authority earns its way up the ladder).
 5. **The full ecosystem.** Trades/events/regimes continuously animate a world that communicates the
    league's live state — the instrument panel that underwrites autonomous real-money trading.
 
@@ -188,6 +236,17 @@ The pieces close into one compounding engine:
 The **lore layer is itself a feedback mechanism**: the deeper context of what the system is doing behind
 the scenes is exactly what sparks "what if…", and those what-ifs become issues that feed the loop. For
 people who love lore, the behind-the-scenes *is* the draw.
+
+**Player agency is the on-ramp — and it elevates the constraint.** Letting members put *personal
+touches* on their own nation's cityscape (choose landmarks, style a district, shape the aesthetic of
+their empire) deepens the stake — a world you built is one you defend and return to. But that authoring
+surface does more than delight: it's a **bridge into AI/Claude development.** A player who customizes
+their city is one step from proposing a change, then contributing one — turning engaged users into direct
+contributors. In Theory-of-Constraints terms this **elevates the binding constraint (Eric's attention)**:
+more capable contributors mean more of the system can advance without him, and fewer single points of
+failure. Onboarding is therefore a *worthwhile investment in the constraint*, not overhead — the same
+"improve the system, not just the work" principle that generates side quests, applied to growing the team
+itself. (Contributions still ride the trust ladder below; the safe first rung stays additive/display.)
 
 **Claude is the synthesizer at the center of the loop.** Feedback arrives from many sources (Eric's
 notes, users' issues, Claude's side quests); Claude finds the commonalities, surfaces the central
