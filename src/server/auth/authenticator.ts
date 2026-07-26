@@ -659,11 +659,13 @@ ${versionTag}
   var noiseTile=document.createElement("canvas"); noiseTile.width=140; noiseTile.height=140;
   (function(){ try{ var nx=noiseTile.getContext("2d"), im=nx.createImageData(140,140), d=im.data, i;
     for(i=0;i<d.length;i+=4){ var v=(Math.random()*255)|0; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; } nx.putImageData(im,0,0); }catch(e){} })();
-  var vfxActive=false, vfxT0=0, VFXD=980;
+  var vfxActive=false, vfxT0=0, VFXD=1150, vfxTargetY=0;
   function vEase(x){ return 1-Math.pow(1-clamp01(x),3); }
   function drawVFX(q){
     var w=vcanvas.clientWidth, h=vcanvas.clientHeight; vctx.clearRect(0,0,w,h);
-    var cy=h*0.42, open=vEase(clamp01(q/0.55)), env=Math.sin(clamp01(q)*Math.PI);
+    // The core opens high, then DRIFTS DOWN to settle over the hero title as it lands — the light
+    // pours onto the wordmark rather than hovering above it.
+    var cy=lerp(h*0.28, vfxTargetY||h*0.5, vEase(q)), open=vEase(clamp01(q/0.55)), env=Math.sin(clamp01(q)*Math.PI);
     var bandH=lerp(h*0.015, h*1.3, open), top=cy-bandH/2, A=0.92*env;
     // chromatic horizontal gradient, feathered top/bottom
     var g=vctx.createLinearGradient(0,0,w,0);
@@ -689,17 +691,22 @@ ${versionTag}
         vctx.strokeStyle="rgba(224,255,250,"+(0.45*conv*env)+")";
         vctx.beginPath(); vctx.moveTo(cx+fx,sy); vctx.lineTo(cx+fx*0.28,cy); vctx.stroke(); }
       vctx.restore(); }
-    // white-hot core flash near the midpoint
-    var flash=Math.max(0,1-Math.abs(q-0.5)/0.16);
+    // white-hot core flash, peaking LATE and on the lowered core so it pours onto the hero title.
+    var flash=Math.max(0,1-Math.abs(q-0.78)/0.22);
     if(flash>0){ vctx.save(); vctx.globalCompositeOperation="lighter";
-      var rg=vctx.createRadialGradient(w*0.5,cy,0,w*0.5,cy,w*0.62);
-      rg.addColorStop(0,"rgba(255,255,255,"+(0.5*flash)+")"); rg.addColorStop(1,"rgba(255,255,255,0)");
+      var rg=vctx.createRadialGradient(w*0.5,cy,0,w*0.5,cy,w*0.5);
+      rg.addColorStop(0,"rgba(255,255,255,"+(0.62*flash)+")"); rg.addColorStop(1,"rgba(255,255,255,0)");
       vctx.fillStyle=rg; vctx.fillRect(0,0,w,h); vctx.restore(); }
   }
   function vfxLoop(now){ if(!vfxActive) return; var q=(now-vfxT0)/VFXD;
     if(q>=1){ vfxActive=false; if(vctx) vctx.clearRect(0,0,vcanvas.clientWidth,vcanvas.clientHeight); if(vcanvas) vcanvas.style.opacity="0"; return; }
     drawVFX(q); requestAnimationFrame(vfxLoop); }
-  function vfxPlay(){ if(!vctx||reduce) return; vfxResize(); vfxActive=true; vfxT0=performance.now(); vcanvas.style.opacity="1"; requestAnimationFrame(vfxLoop); }
+  function vfxPlay(){ if(!vctx||reduce) return; vfxResize();
+    // Measure where the hero title will land (the form's brand slot) so the core drifts onto it.
+    vfxTargetY = vcanvas.clientHeight*0.5;
+    try{ if(brandSlot){ document.body.classList.add("measuring"); var r=brandSlot.getBoundingClientRect();
+      document.body.classList.remove("measuring"); if(r.height>0) vfxTargetY=r.top+r.height/2; } }catch(e){}
+    vfxActive=true; vfxT0=performance.now(); vcanvas.style.opacity="1"; requestAnimationFrame(vfxLoop); }
 
   // ===== Market engine: a live underlying with real technical overlays =====
   // Signals come from indicators that actually make sense — EMA cross, Bollinger squeeze/expansion,
@@ -735,12 +742,14 @@ ${versionTag}
   // Reality thus draws rightward INTO the forecast, overtaking it, without scrolling the history.
   function fillRealized(walk){
     var dx=W/(SPAN-1), cap=Math.max(2, Math.floor((W*0.9-nowSX)/(dx*(zoom||1))));
-    var want=Math.round(clamp01(walk)*cap);   // LINEAR advance → even, ambient-matched pace (no ease)
-    // Continue the market's OWN dynamics — carried momentum (pvR, seeded from the live momentum at
-    // entry) + its natural volatility — with a drift toward the target that firms up over the walk so
-    // the happy-but-realistic path converges into the profit zone (with variance) rather than snapping.
-    while(realized.length<want){ var last=realized.length?realized[realized.length-1]:price[nowIdx], prog=realized.length/cap;
-      t++; pvR = pvR*0.86 + (noise(t*0.017)-0.5)*0.8*regimeVol + (targetPrice-last)*(0.02+0.07*prog);
+    var want=Math.round(clamp01(walk)*cap);   // LINEAR advance → even, ambient-matched pace
+    // The play UNFOLDS across the whole region: the realized line tracks a target that eases from the
+    // entry price to the take-profit price over the full width (natural wiggle on top), reaching the
+    // exit level only at the right edge. So plays traverse the frame and resolve there — never a
+    // 3-point insta-close — while the booked amount still varies via where targetPrice sits.
+    while(realized.length<want){ var i=realized.length, last=i?realized[i-1]:price[nowIdx];
+      var moving=signalPrice+(targetPrice-signalPrice)*easeIO((i+1)/cap);
+      t++; pvR = pvR*0.80 + (moving-last)*0.34 + (noise(t*0.017)-0.5)*0.5*regimeVol;
       realized.push(Math.max(5, last+pvR)); }
     while(realized.length>want) realized.pop();   // trim if the walk was scrubbed back
   }
@@ -995,13 +1004,15 @@ ${versionTag}
     // Information unfolds in step with the play: pipeline first, then the signal + strategy name as
     // the spotlight aims, then the plain-English idea + anatomy + pivots as the forecast projects.
     var aimA=clamp01(p.aim), prjA=easeIO(clamp01(p.project));
-    var y=field.top+24;
-    drawPipeline(px, y, p, A*Math.min(1,p.on)); y+=26;
+    // Hierarchy: the PLAY NAME is the hero of this panel. The pipeline is a quiet process indicator
+    // and the signal reason is small supporting context — neither competes with the name.
+    var y=field.top+22;
+    drawPipeline(px, y, p, A*Math.min(1,p.on)*0.5); y+=23;
     ctx.globalAlpha=A*aimA;
-    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
-    ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=30;
-    ctx.font="700 25px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
-    ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=23;
+    ctx.font="600 11px "+mono; ctx.fillStyle=hexA(accent,0.72);
+    ctx.fillText("▸ "+(sig?sig.sig:""), px, y); y+=29;
+    ctx.font="700 30px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=22;
+    ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=25;
     ctx.globalAlpha=A*prjA;
     ctx.font="13px "+sans; ctx.fillStyle=hexA(muted,0.95);
     y += wrapText(strat.desc, px, y, pw, 18)*18 + 14;
@@ -1190,7 +1201,7 @@ ${versionTag}
   // Three-act playcall: on fire we FREEZE history at nowIdx (stop pushing price[]) so the trend
   // holds still; in Act 3 a separate realized[] pen draws rightward INTO the prediction, overtaking
   // the dotted forecast, then folds back into price[] on zoom-out so ambient continues from reality.
-  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null, exitFrac=1, exitHit=false, curMaxY=1;
+  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null, exitFrac=1;
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -1257,7 +1268,7 @@ ${versionTag}
     // Exit varies: ~30% let it ride to (near) max, otherwise scrape a favorable swing at 55–90% of max.
     exitFrac = Math.random()<0.3 ? (0.94+Math.random()*0.06) : (0.55+Math.random()*0.35);
     var tU=exitU(STRATS[idx], ex, exitFrac);   // take-profit point (partway to max), not always the plateau
-    targetPrice=signalPrice+(tU-0.5)*volScale; curMaxY=ex.maxY; }
+    targetPrice=signalPrice+(tU-0.5)*volScale; }
 
   // Steer the market toward the setup a play needs (from its cue) so the trend visibly transitions
   // into "ripe conditions" before the playcall fires — reuses the regime vars the walk already runs.
@@ -1328,7 +1339,7 @@ ${versionTag}
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function startPlay(now, sig, manual){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i;
     manualPlay=manual; paceScale=1; zoomRippled=false;   // even pace for auto + manual (transport lets you pause/step)
-    nowIdx=price.length-1; realized=[]; pvR=pv; exitHit=false;   // freeze history; seed realized momentum from the live move
+    nowIdx=price.length-1; realized=[]; pvR=pv;   // freeze history; seed realized momentum from the live move
     stepTarget=null; setPaused(false);            // fresh transport state each playcall
     armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
   function loop(now){
@@ -1356,11 +1367,7 @@ ${versionTag}
         if(paused) rateT=0.16;
         camT=clamp01(Math.max(p.zoom, p.aim*0.25))*(1-p.out);   // eased zoom/focal — no snap
         realizedAlpha=1-p.out;                                   // realized pen fades on zoom-out
-        // WALK: grow the pen until the take-profit level is hit, then jump to RESOLVE and freeze the
-        // pen there — so we book where we actually exited (varies), not always the plateau max.
-        if(p.walk>0 && p.out<=0 && !paused && !exitHit){ fillRealized(p.walk);
-          if(realized.length>3){ var uE=(realized[realized.length-1]-signalPrice)/(volScale||1)+0.5;
-            if(payoffAt(STRATS[curStrat].pts,uE) >= exitFrac*curMaxY-0.015){ exitHit=true; playStart=now-T_RES*paceScale; } } }
+        if(p.walk>0 && p.out<=0 && !paused) fillRealized(p.walk);   // unfold across the region to the exit level
         if(p.zoom>0.4 && !zoomRippled){ zoomRippled=true; addRipple(nowSX, nowSY); }   // enhance-zoom ripple, centered once framed
         rainBoost=((p.walk>0 && p.resolve<1)||(p.zoom>0.4&&p.project<0.3))?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
         if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
