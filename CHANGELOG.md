@@ -1,3 +1,10 @@
+## [1.60.1](https://github.com/ejclark/skynet-capital/compare/v1.60.0...v1.60.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** place the Eye of Sauron on a left-side tower for the tractor beam ([#89](https://github.com/ejclark/skynet-capital/issues/89)) ([75a43ef](https://github.com/ejclark/skynet-capital/commit/75a43ef339533450d8e36113e9a2b879d7c0271d))
+
 # [1.60.0](https://github.com/ejclark/skynet-capital/compare/v1.59.0...v1.60.0) (2026-07-26)
 
 
