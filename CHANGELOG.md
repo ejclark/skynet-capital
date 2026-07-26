@@ -1,3 +1,10 @@
+# [1.36.0](https://github.com/ejclark/skynet-capital/compare/v1.35.0...v1.36.0) (2026-07-26)
+
+
+### Features
+
+* **login:** systematic label collision detection for canvas overlays ([#56](https://github.com/ejclark/skynet-capital/issues/56)) ([2ced57a](https://github.com/ejclark/skynet-capital/commit/2ced57af5f338205a4477d3ea33f97171e1ecea4))
+
 # [1.35.0](https://github.com/ejclark/skynet-capital/compare/v1.34.0...v1.35.0) (2026-07-26)
 
 
