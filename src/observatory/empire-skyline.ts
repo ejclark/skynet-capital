@@ -120,6 +120,11 @@ export interface SkylineOptions {
   readonly height?: number;
   /** Thumbnail mode: shorter, no per-building ticker labels or RESERVE text — a glanceable strip. */
   readonly compact?: boolean;
+  /**
+   * The persona landmark's power, 0..1 — the leveling dial. A bot doing better relative to its peers
+   * gets a larger, brighter landmark ("the landmark IS the scoreboard"). Defaults to 1 (full).
+   */
+  readonly personaProminence?: number;
 }
 
 /** Render the empire skyline as an inline SVG string (deterministic; empty holdings → a frontier plot). */
@@ -174,10 +179,12 @@ export function renderEmpireSkyline(
   const lk = snapshot.personaId ? PERSONA_LANDMARK[snapshot.personaId] : undefined;
   const tallest = sorted[0];
   if (lk === "eye" && tallest) {
+    const prom = Math.max(0, Math.min(1, opts.personaProminence ?? 1));
+    const s = (compact ? 5 : 8) * (0.62 + 0.5 * prom); // rank-scaled: better bot → larger Eye
     const bx0 = Math.round(pad + (slot - bw) / 2);
     const cx0 = bx0 + Math.round(bw / 2);
-    const cyTop = baseY - (minH + spanH * (tallest.marketValue / maxVal)) - (compact ? 5 : 8);
-    landmark = renderEyeEmblem(cx0, cyTop, compact ? 5 : 8);
+    const cyTop = baseY - (minH + spanH * (tallest.marketValue / maxVal)) - s;
+    landmark = renderEyeEmblem(cx0, cyTop, s);
   }
 
   return `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline of ${theme.toLowerCase()} holdings" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}${buildings}${park}${landmark}${label}</svg>`;
