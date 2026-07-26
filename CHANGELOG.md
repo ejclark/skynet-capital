@@ -1,3 +1,10 @@
+## [1.88.1](https://github.com/ejclark/skynet-capital/compare/v1.88.0...v1.88.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** calm the playcall candles to match the zoomed-out trend ([#153](https://github.com/ejclark/skynet-capital/issues/153)) ([575524a](https://github.com/ejclark/skynet-capital/commit/575524a3182932836d4bb5c054c27f8fad7719af))
+
 # [1.88.0](https://github.com/ejclark/skynet-capital/compare/v1.87.0...v1.88.0) (2026-07-26)
 
 
