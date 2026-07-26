@@ -1472,6 +1472,39 @@ ${versionTag}
     ctx.strokeStyle=hexA(accent,0.85*aim); ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(tx,ty,rr,0,7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(tx-rr*1.6,ty); ctx.lineTo(tx-rr,ty); ctx.moveTo(tx+rr,ty); ctx.lineTo(tx+rr*1.6,ty); ctx.stroke();
     ctx.restore(); }
+  // The handoff, made to feel CAUSED (not an unmotivated camera pan): when detection locks, the light
+  // MARKS the spot with an imploding reticle; then a gravity WELL opens at the destination and a tractor
+  // beam PULLS the present leftward into it (bright streaks flow toward the well) until the play unfolds.
+  function drawGravityBeam(p){
+    var accent=css("--accent")||"#35D0BA", dstX=W*0.30, dstY=scBaseY||nowSY;
+    // 1) DETECTION MARK — an imploding lock on the signal point as AIM completes, before the pull.
+    var mark=clamp01((easeIO(clamp01(p.aim))-0.45)/0.55)*(1-clamp01(p.zoom/0.18))*(1-clamp01(p.walk));
+    if(mark>0.02){ ctx.save(); ctx.globalCompositeOperation="lighter";
+      var rr=lerp(40,10,mark); ctx.strokeStyle=hexA(accent,0.9*mark); ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.arc(nowSX,nowSY,rr,0,7); ctx.stroke();
+      var tk=lerp(20,7,mark); ctx.lineWidth=1.4;
+      for(var a=0;a<4;a++){ var ca=a*Math.PI/2+Math.PI/4, cX=Math.cos(ca), cY=Math.sin(ca);
+        ctx.beginPath(); ctx.moveTo(nowSX+cX*(tk+6),nowSY+cY*(tk+6)); ctx.lineTo(nowSX+cX*tk,nowSY+cY*tk); ctx.stroke(); }
+      var mg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,16);
+      mg.addColorStop(0,hexA("#EAFFFA",0.8*mark)); mg.addColorStop(1,hexA(accent,0));
+      ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(nowSX,nowSY,16,0,7); ctx.fill(); ctx.restore(); }
+    // 2) GRAVITY WELL + TRACTOR BEAM — active while the present is pulled to the destination.
+    var pull=easeIO(clamp01(p.zoom))*(1-clamp01(p.walk))*(1-p.out), span=nowSX-dstX;
+    if(pull>0.02 && span>6){ ctx.save(); ctx.globalCompositeOperation="lighter";
+      var hP=13*pull, hW=3*pull;
+      var bg2=ctx.createLinearGradient(nowSX,nowSY,dstX,dstY);
+      bg2.addColorStop(0,hexA(accent,0.05*pull)); bg2.addColorStop(1,hexA(accent,0.22*pull));
+      ctx.beginPath(); ctx.moveTo(nowSX,nowSY-hP); ctx.lineTo(dstX,dstY-hW); ctx.lineTo(dstX,dstY+hW); ctx.lineTo(nowSX,nowSY+hP); ctx.closePath();
+      ctx.fillStyle=bg2; ctx.fill();
+      for(var s=0;s<5;s++){ var f=(pbGlyphT*0.03+s/5)%1, sx=lerp(nowSX,dstX,f), sy=lerp(nowSY,dstY,f);
+        ctx.fillStyle=hexA("#EAFFFA",0.5*(1-f)*pull); ctx.fillRect(sx-1.2,sy-1.2,2.4,2.4); }
+      var wp=0.6+0.4*Math.sin(pbGlyphT*0.3);
+      var wg=ctx.createRadialGradient(dstX,dstY,0,dstX,dstY,26);
+      wg.addColorStop(0,hexA("#EAFFFA",0.5*pull*wp)); wg.addColorStop(0.5,hexA(accent,0.3*pull)); wg.addColorStop(1,hexA(accent,0));
+      ctx.fillStyle=wg; ctx.beginPath(); ctx.arc(dstX,dstY,26,0,7); ctx.fill();
+      ctx.strokeStyle=hexA(accent,0.6*pull); ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(dstX,dstY,lerp(20,9,pull),0,7); ctx.stroke();
+      ctx.restore(); }
+  }
   // The signal EVIDENCE + the THESIS, a callout ANCHORED to the aim point (not a right column): RSI +
   // a mini oversold/overbought gauge, the one-line reason, then WHY the market should behave this way
   // and the CONDITION that must hold. This is the "why we're calling it" beat. Fades in on AIM.
@@ -2066,7 +2099,7 @@ ${versionTag}
       document.body.classList.toggle("manualplay", playMode && manualPlay);
       drawMarket(1 - cam*0.34);
       drawScanners(1 - cam);   // roaming signal-scan spotlights — ambient only, recede as a play frames
-      if(p){ drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
+      if(p){ drawGravityBeam(p); drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
       drawRipples();
       beamVignette();
       rainDraw(rainBoost, rainTint); }
