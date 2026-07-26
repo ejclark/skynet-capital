@@ -232,7 +232,7 @@ function summaryStrip(data: DashboardData): string {
 }
 
 /** Which top-level view is active, for the shared nav. */
-export type NavView = "board" | "leaderboard" | "bots" | "you" | "add";
+export type NavView = "board" | "leaderboard" | "bots" | "compare" | "you" | "add";
 
 export interface NavContext {
   readonly active: NavView;
@@ -243,6 +243,7 @@ export interface NavContext {
   /** Views ship incrementally; only link the ones that exist so merged states have no dead links. */
   readonly hasLeaderboard?: boolean;
   readonly hasBots?: boolean;
+  readonly hasCompare?: boolean;
 }
 
 export interface DashboardViewOptions {
@@ -252,6 +253,7 @@ export interface DashboardViewOptions {
 
 const NAV_ICON: Record<string, string> = {
   board: "▦",
+  compare: "⇄",
   leaderboard: "≣",
   bots: "◆",
   you: "◉",
@@ -278,6 +280,9 @@ function renderDrawer(nav: NavContext): string {
   }
   if (nav.hasBots) {
     links.push(drawerLink("/bots-vs-humans", "Bots vs Humans", "bots", nav.active === "bots"));
+  }
+  if (nav.hasCompare) {
+    links.push(drawerLink("/compare", "Compare", "compare", nav.active === "compare"));
   }
   if (nav.currentId) {
     links.push(drawerLink(profileHref(nav.currentId), "You", "you", nav.active === "you"));
@@ -647,6 +652,133 @@ export function renderCohortsBody(data: DashboardData, options: DashboardViewOpt
   return renderShell(options.nav, content, data.generatedAt);
 }
 
+function compareColumn(snapshot: ParticipantSnapshot): string {
+  const pl = participantUnrealized(snapshot);
+  const invested = participantInvested(snapshot);
+  return `<div class="cmp-col">
+      <div class="cmp-who"><a class="cmp-name" href="${profileHref(snapshot.id)}">${escapeHtml(
+        snapshot.displayName,
+      )}</a> ${chip(snapshot)}</div>
+      <div class="cmp-equity num">${formatCurrency(snapshot.equity)}</div>
+      <dl class="cmp-metrics">
+        <div><dt>Cash</dt><dd class="num">${formatCurrency(snapshot.cash)}</dd></div>
+        <div><dt>Invested</dt><dd class="num">${formatCurrency(invested)}</dd></div>
+        <div><dt>Unrealized</dt><dd class="num ${plClass(pl)}">${formatSigned(pl)}</dd></div>
+        <div><dt>Return</dt><dd class="num ${plClass(participantReturnPct(snapshot))}">${pct(
+          participantReturnPct(snapshot),
+        )}</dd></div>
+      </dl>
+    </div>`;
+}
+
+/** A signed delta row for the center column: which side leads on a metric, and by how much. */
+function deltaRow(label: string, aVal: number, bVal: number, fmt: (n: number) => string): string {
+  const d = aVal - bVal;
+  const lead = d === 0 ? "—" : d > 0 ? "◀" : "▶";
+  const cls = d === 0 ? "flat" : d > 0 ? "pos" : "neg";
+  return `<div class="cmp-delta">
+      <span class="cmp-dlabel">${label}</span>
+      <span class="cmp-dval num ${cls}">${lead} ${escapeHtml(fmt(Math.abs(d)))}</span>
+    </div>`;
+}
+
+/** Union of both sides' holdings — shared symbols first (heavier side marked), then the singles. */
+function holdingsCompare(a: ParticipantSnapshot, b: ParticipantSnapshot): string {
+  const byA = new Map(a.positions.map((p) => [p.symbol, p.marketValue]));
+  const byB = new Map(b.positions.map((p) => [p.symbol, p.marketValue]));
+  const symbols = [...new Set([...byA.keys(), ...byB.keys()])].sort(
+    (x, y) => (byA.get(y) ?? 0) + (byB.get(y) ?? 0) - ((byA.get(x) ?? 0) + (byB.get(x) ?? 0)),
+  );
+  if (symbols.length === 0) return `<p class="empty">Neither holds an open position yet.</p>`;
+  const rows = symbols
+    .map((s) => {
+      const av = byA.get(s);
+      const bv = byB.get(s);
+      const shared = av !== undefined && bv !== undefined;
+      const heavier = (av ?? 0) === (bv ?? 0) ? "" : (av ?? 0) > (bv ?? 0) ? "aheavy" : "bheavy";
+      return `<tr class="${shared ? "cmp-shared" : ""} ${heavier}">
+        <td class="num cmp-aval">${av !== undefined ? formatCurrency(av) : "·"}</td>
+        <td class="cmp-sym">${escapeHtml(s)}${shared ? ` <span class="cmp-tag">SHARED</span>` : ""}</td>
+        <td class="num cmp-bval">${bv !== undefined ? formatCurrency(bv) : "·"}</td>
+      </tr>`;
+    })
+    .join("");
+  return `<table class="cmp-holdings"><tbody>${rows}</tbody></table>`;
+}
+
+/** A participant-picker used when /compare is missing a valid pair. */
+function comparePicker(data: DashboardData, nav: NavContext | undefined, aId?: string): string {
+  const live = data.participants.filter((p) => !p.error);
+  const anchor = aId && live.find((p) => p.id === aId);
+  const heading = anchor
+    ? `Compare <strong>${escapeHtml(anchor.displayName)}</strong> with…`
+    : nav?.currentId
+      ? "Pick two to compare"
+      : "Pick two to compare";
+  const links = live
+    .filter((p) => p.id !== aId)
+    .map((p) => {
+      const href = anchor
+        ? `/compare?a=${encodeURIComponent(anchor.id)}&b=${encodeURIComponent(p.id)}`
+        : `/compare?a=${encodeURIComponent(p.id)}`;
+      return `<a class="cmp-pick" href="${href}">${escapeHtml(p.displayName)} ${chip(p)}</a>`;
+    })
+    .join("");
+  return `<section class="cmp-wrap">
+    <div class="ladder-head"><div><h1 class="view-title">Compare</h1><p class="view-sub">${heading}</p></div></div>
+    <div class="cmp-picker">${links || `<p class="empty">No participants to compare yet.</p>`}</div>
+  </section>`;
+}
+
+/**
+ * The COMPARISON view — two participants side by side with a signed delta column and a holdings
+ * overlap (shared symbols marked, heavier side highlighted). Snapshot-based today; deeper
+ * "which plays worked / performed poorly" insights are a history-layer feature (seam shown below).
+ */
+export function renderCompareBody(
+  data: DashboardData,
+  options: DashboardViewOptions & { aId?: string; bId?: string } = {},
+): string {
+  const a = options.aId
+    ? data.participants.find((p) => p.id === options.aId && !p.error)
+    : undefined;
+  const b = options.bId
+    ? data.participants.find((p) => p.id === options.bId && !p.error)
+    : undefined;
+  if (!a || !b) {
+    return renderShell(
+      options.nav,
+      comparePicker(data, options.nav, a?.id ?? options.aId),
+      data.generatedAt,
+    );
+  }
+  const content = `<section class="cmp-wrap">
+    <div class="ladder-head">
+      <div>
+        <h1 class="view-title">${escapeHtml(a.displayName)} <span class="cmp-vs">vs</span> ${escapeHtml(b.displayName)}</h1>
+        <p class="view-sub">Head-to-head — snapshot standings and where the books overlap.</p>
+      </div>
+    </div>
+    <div class="cmp-grid">
+      ${compareColumn(a)}
+      <div class="cmp-mid">
+        ${deltaRow("Equity", a.equity, b.equity, formatCurrency)}
+        ${deltaRow("Unrealized", participantUnrealized(a), participantUnrealized(b), formatSigned)}
+        ${deltaRow("Return", participantReturnPct(a), participantReturnPct(b), pct)}
+        <div class="cmp-legend"><span class="pos">◀</span> ${escapeHtml(a.displayName)} · <span class="neg">▶</span> ${escapeHtml(b.displayName)}</div>
+      </div>
+      ${compareColumn(b)}
+    </div>
+    <h2 class="col-head cmp-holdhead">Holdings overlap</h2>
+    ${holdingsCompare(a, b)}
+    <div class="history-seam">
+      <span class="seam-label">Which plays worked</span>
+      <p class="seam-note">Per-play effectiveness — who timed the entry, whose thesis held — lights up here once we've recorded trade history.</p>
+    </div>
+  </section>`;
+  return renderShell(options.nav, content, data.generatedAt);
+}
+
 const STYLE = `<style>
   .obs { --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
     --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
@@ -838,6 +970,36 @@ const STYLE = `<style>
   .versus-read{ display:flex; flex-wrap:wrap; gap:10px 28px; padding:16px 20px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; font-size:14px; color:var(--muted); }
   .versus-read strong{ color:var(--text); }
   @media (max-width:720px){ .versus{ grid-template-columns:1fr; } .versus-mid{ padding:4px 0; } }
+  /* --- comparison --- */
+  .cmp-vs{ color:var(--muted); font-weight:500; font-size:18px; }
+  .cmp-grid{ display:grid; grid-template-columns:1fr minmax(160px,auto) 1fr; gap:16px; align-items:start; margin-bottom:26px; }
+  .cmp-col{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; }
+  .cmp-who{ display:flex; align-items:center; gap:9px; margin-bottom:12px; flex-wrap:wrap; }
+  .cmp-name{ font-size:16px; font-weight:700; color:var(--text); text-decoration:none; }
+  .cmp-name:hover{ color:var(--accent); }
+  .cmp-equity{ font-size:28px; font-weight:700; margin-bottom:14px; }
+  .cmp-metrics{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; margin:0; }
+  .cmp-metrics div{ display:flex; flex-direction:column; gap:3px; }
+  .cmp-metrics dt{ font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .cmp-metrics dd{ margin:0; font-size:14px; font-weight:600; }
+  .cmp-mid{ display:flex; flex-direction:column; gap:10px; padding:16px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:14px; }
+  .cmp-delta{ display:flex; flex-direction:column; gap:2px; text-align:center; }
+  .cmp-dlabel{ font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .cmp-dval{ font-size:14px; font-weight:700; }
+  .cmp-legend{ margin-top:4px; font-size:10px; color:var(--muted); text-align:center; }
+  .cmp-holdhead{ margin-top:6px; }
+  .cmp-holdings{ width:100%; border-collapse:collapse; font-size:14px; }
+  .cmp-holdings td{ padding:9px 10px; border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent); }
+  .cmp-holdings tr:last-child td{ border-bottom:none; }
+  .cmp-sym{ text-align:center; font-family:var(--mono); font-weight:600; }
+  .cmp-aval{ text-align:right; } .cmp-bval{ text-align:left; }
+  .cmp-tag{ font-family:var(--mono); font-size:8px; letter-spacing:.1em; color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 40%,transparent); border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:middle; }
+  .cmp-shared{ background:color-mix(in srgb,var(--accent) 5%,transparent); }
+  .aheavy .cmp-aval{ color:var(--accent); font-weight:700; } .bheavy .cmp-bval{ color:var(--accent); font-weight:700; }
+  .cmp-picker{ display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+  .cmp-pick{ display:flex; align-items:center; gap:9px; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:11px; text-decoration:none; color:var(--text); font-weight:600; transition:border-color .15s; }
+  .cmp-pick:hover{ border-color:color-mix(in srgb,var(--accent) 50%,var(--border)); }
+  @media (max-width:720px){ .cmp-grid{ grid-template-columns:1fr; } }
 </style>`;
 
 /**

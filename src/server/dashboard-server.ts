@@ -6,6 +6,7 @@ import {
   type NavView,
   renderBoardContent,
   renderCohortsBody,
+  renderCompareBody,
   renderDashboardBody,
   renderIndividualBody,
   renderLeaderboardBody,
@@ -108,6 +109,7 @@ async function handle(
     authed,
     hasLeaderboard: true,
     hasBots: true,
+    hasCompare: true,
   });
 
   if (path === "/events") {
@@ -127,6 +129,17 @@ async function handle(
     const body = renderCohortsBody(config.hub.getState(), { nav: navFor("bots") });
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(shellDocument("Bots vs Humans — Skynet Capital", body));
+    return;
+  }
+  if (path === "/compare") {
+    const params = new URL(url, "http://localhost").searchParams;
+    const body = renderCompareBody(config.hub.getState(), {
+      nav: navFor("compare"),
+      ...(params.get("a") ? { aId: params.get("a") as string } : {}),
+      ...(params.get("b") ? { bId: params.get("b") as string } : {}),
+    });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument("Compare — Skynet Capital", body));
     return;
   }
   if (path === "/add" && config.addParticipant) {
