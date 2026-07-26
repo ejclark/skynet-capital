@@ -65,6 +65,15 @@ legal risk) held to an honest, data-sourced standard. Phased:
   a district/region hierarchy, or a dedicated "explore your empire" surface — that lets detail nest at
   multiple scales instead of competing for one canvas. This design **emerges organically** as pieces stop
   fitting cleanly; watch for the seams and formalize the dimension when they appear. _(src: Eric · while: refining the Eye totem — foreseeing detail outgrowing one canvas)_
+- **Compose the animation board from Lego pieces (scene-graph refactor)** — the login canvas is one
+  large `draw*` monolith; as the sim-city gameboard evolves it needs a **composable piece system**: each
+  element (a tower, the Eye, a scanner, a playcall panel, a ceremony, a forecast) is a self-contained
+  **piece** with a uniform contract (place / size / z-depth / update / draw / reduced-motion), added to
+  the board like Lego instead of hand-wired into one function. Unlocks reuse across the four views + the
+  login, independent testing per piece, and the levels-of-detail nesting above. The seam is showing now
+  (the board is getting crowded). Likely a **layered scene graph** (layers → pieces) with a shared
+  transform/camera. Big refactor — sequence deliberately; until then, prefer adding new board work as
+  observatory-side pieces rather than growing the login monolith. _(src: Eric · while: evolving the sim-city gameboard — build onto it like Lego)_
 
 ### Living Universe — landmarks that level up (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
 - **Persona landmark = a character you level up** — a bot's landmark prominence scales with its standing
