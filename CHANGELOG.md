@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/ejclark/skynet-capital/compare/v1.20.0...v1.21.0) (2026-07-26)
+
+
+### Features
+
+* **login:** rebuild the skyline out of matrix code, shorter and dimmer ([#38](https://github.com/ejclark/skynet-capital/issues/38)) ([876324f](https://github.com/ejclark/skynet-capital/commit/876324f88fe45955c21781bbb2ac0e5382c4b132))
+
 # [1.20.0](https://github.com/ejclark/skynet-capital/compare/v1.19.0...v1.20.0) (2026-07-26)
 
 
