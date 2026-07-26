@@ -204,20 +204,16 @@ export class Authenticator {
 <title>Sign in — Skynet Capital</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
+  /* Dark-only by design: the cityscape reads as a nation, and nations only compare cleanly when every
+     one is lit the same. No light mode — daytime vs. nighttime cities can't be reconciled side by side,
+     so we remove the choice. color-scheme:dark stops mobile UAs auto-lighting form controls/scrollbars. */
   :root{
+    color-scheme: dark;
     --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041;
     --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
     --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
-  @media (prefers-color-scheme:light){
-    :root{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA;
-      --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; }
-  }
-  :root[data-theme="dark"]{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041;
-    --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149; }
-  :root[data-theme="light"]{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA;
-    --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; }
 
   /* Reveal VFX: a grainy chromatic "hangar door" sweep, canvas-rendered above the scene but behind
      the title so the wordmark blooms through the opening light. Only lit during the ~1s reveal. */
