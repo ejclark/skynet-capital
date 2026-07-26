@@ -1,3 +1,10 @@
+# [1.59.0](https://github.com/ejclark/skynet-capital/compare/v1.58.0...v1.59.0) (2026-07-26)
+
+
+### Features
+
+* **personas:** add Sauron — the cold order-imposer bot ([#87](https://github.com/ejclark/skynet-capital/issues/87)) ([8ddc5d9](https://github.com/ejclark/skynet-capital/commit/8ddc5d9ce1deb3bea0939a39725419a54e75bacd))
+
 # [1.58.0](https://github.com/ejclark/skynet-capital/compare/v1.57.0...v1.58.0) (2026-07-26)
 
 
