@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   type FetchFn,
@@ -22,6 +23,21 @@ type Env = Readonly<Record<string, string | undefined>>;
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const STATE_COOKIE = "skynet_oauth_state";
+
+/**
+ * App version, read from package.json at startup (semantic-release bumps it). Shown subtly on the
+ * login page. The repo is private, so it stays plain text — no link to a changelog/release yet.
+ */
+const APP_VERSION: string = (() => {
+  try {
+    const url = new URL("../../../package.json", import.meta.url);
+    const parsed: unknown = JSON.parse(readFileSync(url, "utf8"));
+    const v = (parsed as { version?: unknown }).version;
+    return typeof v === "string" ? v : "";
+  } catch {
+    return "";
+  }
+})();
 
 export interface AuthDeps {
   readonly fetchFn?: FetchFn;
@@ -178,6 +194,8 @@ export class Authenticator {
       })
       .join("\n      ");
     const banner = error ? `<p class="error" role="alert">${escapeHtml(error)}</p>` : "";
+    // Subtle build stamp. Repo is private, so it's plain text for now (no changelog/release link yet).
+    const versionTag = APP_VERSION ? `<div class="version">v${escapeHtml(APP_VERSION)}</div>` : "";
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -275,10 +293,6 @@ export class Authenticator {
   .play:focus-visible{ outline:1px solid var(--accent); outline-offset:2px; border-radius:2px; }
   .play.active{ color:var(--accent); }
   .play.active::before{ content:"● "; }
-  /* Human role, complementing the bot pipeline (ingest→detect→forecast→execute): the human's job
-     is the narrow one — read the call, take the seat. A quiet footnote, dimmer than the modes row. */
-  .rolenote{ font-family:var(--mono); font-size:clamp(8px,1vw,10px); letter-spacing:.34em;
-    text-transform:uppercase; color:color-mix(in srgb,var(--muted) 78%,transparent); }
   /* When the form is open the whole hero fades — make sure the menu can't catch clicks then. */
   body.revealed .modes, body.revealed .playbook, body.flying .modes, body.flying .playbook{ pointer-events:none; }
   body.revealed .herosub, body.flying .herosub{ opacity:0; transform:translateY(-8px); pointer-events:none; }
@@ -327,6 +341,11 @@ export class Authenticator {
     70%{ box-shadow:0 0 0 16px transparent; } 100%{ box-shadow:0 0 0 0 transparent; } }
   body.revealed .beacon-chev{ transform:scaleY(-1); }   /* flip, not rotate — a truer read of the motion */
   body.revealed .beacon-ring{ animation:none; opacity:.32; }
+
+  /* Build stamp — a quiet version marker, bottom-right. No link yet (private repo). */
+  .version{ position:fixed; z-index:6; right:14px; bottom:11px; font-family:var(--mono);
+    font-size:10px; letter-spacing:.12em; color:color-mix(in srgb,var(--muted) 60%,transparent);
+    pointer-events:none; user-select:none; }
 
   /* Background recede — a scrim drops the live market back so the centered form owns focus */
   .stagescrim{ position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0; transition:opacity .55s ease;
@@ -540,7 +559,6 @@ export class Authenticator {
       <button type="button" class="play" data-i="4">Bull Call Spread</button>
       <button type="button" class="play" data-i="5">Call Ladder</button>
     </nav>
-    <p class="rolenote">You call it · the desk runs it</p>
   </div>
 </header>
 
@@ -549,6 +567,7 @@ export class Authenticator {
   <span class="beacon-ring" aria-hidden="true"><svg class="beacon-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <span class="beacon-label" id="beaconLabel">Enter the sandbox</span>
 </button>
+${versionTag}
 
 <div class="authwrap" id="authwrap">
   <main class="card" id="card">
