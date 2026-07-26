@@ -986,7 +986,7 @@ ${versionTag}
     ctx.shadowBlur=0; ctx.lineWidth=1.4; ctx.strokeStyle=hexA(accent,0.95);
     ctx.beginPath(); ctx.arc(lp[0],lp[1],6.6,0,7); ctx.stroke();
     ctx.restore();
-    // (The aiming beam draws the reticle at the signal point during a playcall — see drawAimBeam.)
+    // (During a playcall a glint flashes on the trend, then the Eye locks + pulls — see drawGravityBeam.)
     ctx.restore();
     // RSI readout — idle only (during a play the playbook panel + callout carry the read; this would
     // just collide with the pipeline text top-left).
@@ -1677,19 +1677,21 @@ ${versionTag}
     ctx.moveTo(x1-L,y0); ctx.lineTo(x1,y0); ctx.lineTo(x1,y0+L);
     ctx.moveTo(x0,y1-L); ctx.lineTo(x0,y1); ctx.lineTo(x0+L,y1);
     ctx.moveTo(x1-L,y1); ctx.lineTo(x1,y1); ctx.lineTo(x1,y1-L); ctx.stroke(); }
-  // The spotlight IS the bot's signal detector: it fans from the emitter (button, bottom-center)
-  // and NARROWS to aim precisely at the point on the trend where the condition triggered.
-  function drawAimBeam(tx,ty,p){ var aim=easeIO(clamp01(p.aim))*(1-clamp01(p.walk)); if(aim<=0.01) return;
-    var ax=W*0.5, ay=H+10, accent=css("--accent")||"#35D0BA";
-    var dx=tx-ax, dy=ty-ay, len=Math.sqrt(dx*dx+dy*dy)||1, nx=-dy/len, ny=dx/len;
-    var hNear=lerp(96,10,aim), hFar=lerp(64,7,aim);
-    ctx.save(); ctx.globalAlpha=1;
-    var g=ctx.createLinearGradient(ax,ay,tx,ty); g.addColorStop(0,hexA(accent,0.015)); g.addColorStop(1,hexA(accent,0.16*aim));
-    ctx.beginPath(); ctx.moveTo(ax+nx*hNear, ay+ny*hNear); ctx.lineTo(tx+nx*hFar, ty+ny*hFar);
-    ctx.lineTo(tx-nx*hFar, ty-ny*hFar); ctx.lineTo(ax-nx*hNear, ay-ny*hNear); ctx.closePath(); ctx.fillStyle=g; ctx.fill();
-    var rr=10+3*Math.sin(pbGlyphT*0.4);
-    ctx.strokeStyle=hexA(accent,0.85*aim); ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(tx,ty,rr,0,7); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(tx-rr*1.6,ty); ctx.lineTo(tx-rr,ty); ctx.moveTo(tx+rr,ty); ctx.lineTo(tx+rr*1.6,ty); ctx.stroke();
+  // Not a tracking spotlight anymore: a brief GLINT catches the trend at the signal point — a specular
+  // reflection that flashes as the condition surfaces, then fades. Its only job is to catch the Eye's
+  // attention; it never follows the signal into the pull. The Eye (drawGravityBeam) does the locking.
+  function drawGlint(tx,ty,p){
+    var gl=easeIO(clamp01(p.aim))*(1-easeIO(clamp01(p.zoom)))*(1-clamp01(p.walk)); if(gl<=0.01) return;
+    var accent=css("--accent")||"#35D0BA", flk=0.7+0.3*Math.sin(pbGlyphT*0.5);
+    ctx.save(); ctx.globalCompositeOperation="lighter";
+    // bright specular core on the trendline
+    var r=16*gl+4, cg=ctx.createRadialGradient(tx,ty,0,tx,ty,r);
+    cg.addColorStop(0,hexA("#EAFFFA",0.9*gl*flk)); cg.addColorStop(1,hexA(accent,0));
+    ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(tx,ty,r,0,7); ctx.fill();
+    // a horizontal lens-flare streak — the reflection glinting off the trend
+    var sw=44*gl, lg=ctx.createLinearGradient(tx-sw,ty,tx+sw,ty);
+    lg.addColorStop(0,hexA(accent,0)); lg.addColorStop(0.5,hexA("#EAFFFA",0.7*gl*flk)); lg.addColorStop(1,hexA(accent,0));
+    ctx.strokeStyle=lg; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(tx-sw,ty); ctx.lineTo(tx+sw,ty); ctx.stroke();
     ctx.restore(); }
   // The handoff, made to feel CAUSED (not an unmotivated camera pan): when detection locks, the light
   // MARKS the spot with an imploding reticle; then a gravity WELL opens at the destination and a tractor
@@ -1710,8 +1712,11 @@ ${versionTag}
     // 2) THE GRAVITY BEAM — the Tower of Sauron alone seizes the present: its spire fires a single
     // highly-charged tractor beam (black-hole physics — infinite gravity, immense charge) that CRACKLES
     // with lightning and hauls the present into the framed position. No other tower pulls.
-    var pull=easeIO(clamp01(p.zoom))*(1-clamp01(p.walk))*(1-p.out);
-    eyeWake=Math.max(eyeWake, pull);   // the Eye blazes while it hauls the present forward
+    // The Eye's GAZE first LOCKS on the signal (a reaching beam during AIM), then intensifies into the
+    // full tractor PULL as it hauls the scenario into focus (ZOOM). The Eye — not a spotlight — does this.
+    var lock=easeIO(clamp01(p.aim))*(1-easeIO(clamp01(p.zoom)));
+    var pull=Math.max(easeIO(clamp01(p.zoom)), lock*0.55)*(1-clamp01(p.walk))*(1-p.out);
+    eyeWake=Math.max(eyeWake, pull);   // the Eye blazes while it locks on + hauls the present forward
     if(pull>0.02){
       // The Tower of Sauron ALONE commands the tractor — the Eye is the single source of the gravity
       // beam (no other crowned tower pulls). Its spire tip is the emitter that hauls the present over.
@@ -2023,7 +2028,7 @@ ${versionTag}
       var recapA=A*clamp01((p.resolve-0.45)/0.55)*(1-clamp01(p.out*1.7));
       if(recapA>0.01) drawRecap(strat, sig, X0, yNow, recapA);
     }
-    drawAimBeam(X0, yNow, p);
+    drawGlint(X0, yNow, p);
   }
   // Play phases (ms): DETECT → AIM → ZOOM → PROJECT → WALK-forward → RESOLVE → HOLD → ZOOM-OUT.
   // Each phase is followed by a short DWELL so the last thing shown isn't rushed into the next step —
@@ -2171,7 +2176,7 @@ ${versionTag}
   // breaches a Bollinger band there, the signal is revealed (reticle) — triangulated from different
   // angles, the way you actually spot one. Angled cones (never vertical). Ambient only; composite 'lighter'.
   var scanners=[];
-  function initScanners(){ scanners=[]; var N=6, fb=field.bottom;
+  function initScanners(){ scanners=[]; var N=3, fb=field.bottom;   // a few ambient scanners — their role is downgraded; the Eye does the detecting
     for(var i=0;i<N;i++){
       var ex=W*(0.06+0.88*i/(N-1)) + (Math.random()-0.5)*70;   // scattered vantage points across the base
       scanners.push({ ex:ex, ey:fb+18+Math.random()*70,
