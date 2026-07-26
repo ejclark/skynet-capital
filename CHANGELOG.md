@@ -1,3 +1,10 @@
+## [1.79.1](https://github.com/ejclark/skynet-capital/compare/v1.79.0...v1.79.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** terminal is a fixed frame — stop it pushing the play name down ([#138](https://github.com/ejclark/skynet-capital/issues/138)) ([ed1197e](https://github.com/ejclark/skynet-capital/commit/ed1197ef40ce85690a2fa42d363f3f0dee017045))
+
 # [1.79.0](https://github.com/ejclark/skynet-capital/compare/v1.78.0...v1.79.0) (2026-07-26)
 
 
