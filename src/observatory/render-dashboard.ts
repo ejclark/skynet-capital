@@ -1,6 +1,6 @@
 import type { DashboardData } from "./dashboard-data.js";
-import type { ActivityView, ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
 import { renderEmpireSkyline } from "./empire-skyline.js";
+import type { ActivityView, ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
 import { personaLore } from "./persona-lore.js";
 
 /**
