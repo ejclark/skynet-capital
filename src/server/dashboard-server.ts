@@ -452,7 +452,8 @@ doing. It's for learning the plays and having fun — <b>no real money, ever</b>
   <div class="step"><div class="step-n">3</div><div class="step-b"><h3>Connect it</h3><p>Paste your Alpaca <b>paper</b> API keys once. We read them only to show your balance and trades on the board — nothing is ever placed on your behalf.</p></div></div>
 </div>
 <a class="cta" href="/login">Get started → Sign in</a>
-<p class="fineprint">Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.</p>`,
+<p class="fineprint">Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.<br>
+Found a bug or have an idea? <a href="https://github.com/ejclark/skynet-capital/issues/new/choose" target="_blank" rel="noopener noreferrer">Share feedback</a> — we build this together.</p>`,
     true,
   );
 }

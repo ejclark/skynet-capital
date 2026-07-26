@@ -1,0 +1,6 @@
+# Steer feedback into the three structured forms above rather than blank issues.
+blank_issues_enabled: false
+contact_links:
+  - name: "🚀 New here? Start with the welcome guide"
+    url: https://skynet-capital.fly.dev/welcome
+    about: "What Skynet Capital is and how to join the paper-trading league."

@@ -1,0 +1,49 @@
+name: "🐞 Bug report"
+description: "Something in the observatory or login is broken or wrong."
+title: "[bug] "
+labels: ["bug", "feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for helping make Skynet Capital better. Tell us what went wrong — screenshots help a lot."
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see? What did you expect instead?
+      placeholder: "The leaderboard showed my return as +0.00% even though I have open positions…"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we make it happen again?
+      placeholder: |
+        1. Go to /leaderboard
+        2. Sort by Return %
+        3. See the wrong value
+    validations:
+      required: false
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen?
+      options:
+        - Login / intro page
+        - Observatory board
+        - A profile (/u/…)
+        - Leaderboard
+        - Bots vs Humans
+        - Compare
+        - Connecting my Alpaca account (/add)
+        - Somewhere else
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device / browser
+      placeholder: "iPhone 15 · Safari, or Chrome on Windows"
+    validations:
+      required: false
