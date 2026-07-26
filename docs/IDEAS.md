@@ -66,6 +66,16 @@ legal risk) held to an honest, data-sourced standard. Phased:
   multiple scales instead of competing for one canvas. This design **emerges organically** as pieces stop
   fitting cleanly; watch for the seams and formalize the dimension when they appear. _(src: Eric · while: refining the Eye totem — foreseeing detail outgrowing one canvas)_
 
+### Living Universe — landmarks that level up (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
+- **Persona landmark = a character you level up** — a bot's landmark prominence scales with its standing
+  **relative to peers** (rank by return/equity/win-rate). Two mixed expressions: the tower itself grows
+  more powerful (height/mass/Eye-blaze/beam reach/aura), and/or the district around it clearly thrives
+  (brighter windows, construction, tracers). The landmark IS the scoreboard. Rises and falls as
+  standings shift. _(src: Eric · while: the Tower of Sauron as a levelable character)_
+  - **First real slice (P1):** in the observatory, render each bot-persona's landmark (the Eye for
+    Sauron) into its empire skyline, scaled by rank among bots — snapshot-derivable, connects the login
+    Eye motif to the live board. Persistent leveling/accretion leans on the history layer. _(src: Claude · while: capturing the leveling mechanic)_
+
 ### Governance — Eric's calls (do not build unattended)
 - **Formalize the participation agreement / consent** — the shared universe pools members' trades/
   bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly

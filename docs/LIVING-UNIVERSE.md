@@ -115,6 +115,34 @@ celebrate what goes right loudly; render what goes wrong honestly but without pu
 > constraint that unlocks this entire ceremony vocabulary; until it exists, the city can show *state*
 > (what you hold) but not *events* (what you just did). See the roadmap note in P2/P3 and IDEAS.
 
+### Landmarks that level up — power ∝ standing
+
+A persona's landmark isn't static set-dressing; it's a **character you level up**. The Tower of Sauron is
+the proof: the better the Sauron bot does **relative to its peers**, the more pronounced its presence on
+the board. The landmark *is* the scoreboard — you read a bot's standing by how much its structure
+dominates, without a number. This is the leaderboard rendered as place, and it's what makes building a
+better bot feel like growing a character (ties to *bots as the conduit to nation-building*).
+
+**Two expression modes (use both, mixed):**
+- **The tower grows more powerful.** Height, mass, and detail scale with rank; the Eye blazes brighter,
+  its gaze/tractor beam reaches farther and commands more, the storm and aura around it intensify. A
+  dominant bot's tower towers; a lagging one dims and recedes.
+- **The surroundings clearly thrive.** The *district* around the landmark prospers — brighter windows,
+  active construction, denser traffic/tracers, a healthy glow — so even a modest tower reads as "this
+  quarter is winning." Decline reads as dimming/fog/gridlock (the regime grammar, applied locally).
+
+**Driven by relative performance, honestly.** Power is a function of **standing among peers** (rank by
+return / equity / win-rate among bots), not absolute size — a small account climbing fast can out-shine
+a large stagnant one. It's the same honest, data-derived discipline as the judgment axis: the cue
+reflects real relative performance, never flatters. As standings shift, landmarks **rise and fall** —
+the board is alive because the race is.
+
+**Where it becomes real.** On the pre-auth login the Eye is illustrative (sim, no real standings). It
+becomes *real* in the **observatory**, where bot standings exist: render each bot-persona's landmark
+into its empire (the Eye for Sauron), scaled by its rank among bots — a snapshot-derivable first slice of
+P1 that connects the login's Eye motif to the live game board. Deeper leveling (persistent levels, the
+tower accreting detail over time) leans on the history layer.
+
 ### Two axes: direction **and** judgment
 
 Price direction is not the same as whether a bet is good. The city must encode both, or it just
