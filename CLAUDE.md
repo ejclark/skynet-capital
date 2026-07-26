@@ -56,6 +56,20 @@ Eric may *optionally* prefix a note to skip the guess — treat these as overrid
 No prefix is required — absent one, Claude classifies and states the routing. When in genuine doubt
 between "act now" and "park," park it and ask.
 
+### Side quests — Claude generates ideas too
+
+Always be hunting for questions and clues in *proximity* to the current problem — the adjacent thing
+that, if understood better, would enrich the experience or the delivery. These are **side quests**.
+When one is worth remembering, log it to [`docs/IDEAS.md`](docs/IDEAS.md) the same way Eric's ideas
+are, and surface it as a one-liner so Eric can react. Don't derail the active task to chase it —
+capture and continue. Bias to quality over volume: a side quest earns a log entry when it would
+plausibly improve something, not merely because it exists.
+
+**Every idea records its source and the context that exposed it:**
+`_(src: Eric | Claude · while: <what we were working on>)_`. Source changes the weight — an Eric
+directive is intent; a Claude side quest is a proposal to be pruned — and the `while` context is the
+proximity that makes it worth revisiting. Eric can tell Claude to stop logging a category anytime.
+
 ## Ship loop (quick reference)
 
 - Branch off latest `origin/main` per change; small focused PRs; squash-merge on green.
