@@ -929,8 +929,12 @@ ${versionTag}
   // with a human-readable reason (the "why"), or null when nothing is set up.
   // Auto-plays deal from a shuffled bag so all six rotate before any repeats (variety over strict
   // realism — the user's call). Each carries a plausible indicator reason for the "why".
+  // One signal reason per play — MUST stay index-aligned with STRATS (a missing entry renders as
+  // "undefined" in the panel). Order: condor, strangle, straddle, butterfly, bull spread, ladder,
+  // covered call, cash-covered put.
   var SIGS=["RSI OVERBOUGHT · RANGE HOLDS","BOLLINGER EXPANSION · BREAKOUT","BOLLINGER SQUEEZE · LOW VOL",
-    "PRICE PINNED AT MEAN","EMA GOLDEN CROSS · UPTREND","MOMENTUM BREAKOUT"];
+    "PRICE PINNED AT MEAN","EMA GOLDEN CROSS · UPTREND","MOMENTUM BREAKOUT",
+    "CALM UPTREND · SELL PREMIUM","HOLDING SUPPORT · GET PAID TO WAIT"];
   var playBag=[];
   function dealPlay(){
     if(!playBag.length){ playBag=[0,1,2,3,4,5,6,7];
@@ -1433,11 +1437,15 @@ ${versionTag}
       ctx.textAlign="start"; ctx.restore();
     }
     drawPanel(strat, sig, p, A);
-    // signal callout is anchored to the aim point and fades out once the walk takes over
-    if(p.aim>0) drawSignalCallout(sig, strat, X0, yNow, A*clamp01(p.aim)*(1-clamp01(p.walk*1.4)));
-    // Retrospective recap once the play resolves — confirms the thesis played out (bookends the WHY).
-    var recapA=A*clamp01((p.resolve-0.45)/0.55)*(1-clamp01(p.out*1.7));
-    if(recapA>0.01) drawRecap(strat, sig, X0, yNow, recapA);
+    // The thesis + recap cards are desktop-only — on narrow screens they'd collide with the centered
+    // stacked panel, which already carries the play's essentials.
+    if(W>=820){
+      // signal callout is anchored to the aim point and fades out once the walk takes over
+      if(p.aim>0) drawSignalCallout(sig, strat, X0, yNow, A*clamp01(p.aim)*(1-clamp01(p.walk*1.4)));
+      // Retrospective recap once the play resolves — confirms the thesis played out (bookends the WHY).
+      var recapA=A*clamp01((p.resolve-0.45)/0.55)*(1-clamp01(p.out*1.7));
+      if(recapA>0.01) drawRecap(strat, sig, X0, yNow, recapA);
+    }
     drawAimBeam(X0, yNow, p);
   }
   // Play phases (ms): DETECT → AIM → ZOOM → PROJECT → WALK-forward → RESOLVE → HOLD → ZOOM-OUT.
