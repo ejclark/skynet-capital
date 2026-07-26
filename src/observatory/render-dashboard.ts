@@ -752,6 +752,20 @@ function comparePicker(data: DashboardData, nav: NavContext | undefined, aId?: s
 }
 
 /**
+ * The "two cities" band — each participant's holdings rendered as its own empire skyline,
+ * side by side (see `docs/LIVING-UNIVERSE.md`), so commonality and contrast read at a glance.
+ * Each city is labelled with its participant's displayName; stacks on narrow screens.
+ */
+function compareCities(a: ParticipantSnapshot, b: ParticipantSnapshot): string {
+  const city = (p: ParticipantSnapshot): string =>
+    `<div class="empire-city">
+        <span class="empire-city-name">${escapeHtml(p.displayName)}</span>
+        <div class="empire-band">${renderEmpireSkyline(p)}</div>
+      </div>`;
+  return `<div class="empire-cities">${city(a)}${city(b)}</div>`;
+}
+
+/**
  * The COMPARISON view — two participants side by side with a signed delta column and a holdings
  * overlap (shared symbols marked, heavier side highlighted). Snapshot-based today; deeper
  * "which plays worked / performed poorly" insights are a history-layer feature (seam shown below).
@@ -780,6 +794,7 @@ export function renderCompareBody(
         <p class="view-sub">Head-to-head — snapshot standings and where the books overlap.</p>
       </div>
     </div>
+    ${compareCities(a, b)}
     <div class="cmp-grid">
       ${compareColumn(a)}
       <div class="cmp-mid">
@@ -898,6 +913,12 @@ const STYLE = `<style>
   .persona-legend{ margin:8px 0 0; font-size:13px; color:var(--muted); line-height:1.5; font-style:italic; }
   .empire-band{ margin:0 0 24px; }
   .empire-skyline{ display:block; width:100%; height:auto; max-height:150px; border:1px solid var(--border); border-radius:10px; }
+  /* two cities — a labelled empire skyline per participant, side by side on /compare */
+  .empire-cities{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:0 0 26px; }
+  .empire-city{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .empire-city .empire-band{ margin:0; }
+  .empire-city-name{ font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  @media (max-width:720px){ .empire-cities{ grid-template-columns:1fr; } }
   .indiv-hero{ display:grid; grid-template-columns:minmax(220px,1fr) 2fr; gap:16px; margin-bottom:24px; align-items:stretch; }
   .hero-equity{ background:var(--surface); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
   .hero-num{ font-size:40px; font-weight:700; line-height:1; }

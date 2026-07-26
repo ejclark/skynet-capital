@@ -1,5 +1,5 @@
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
-import { renderDashboardBody } from "../../src/observatory/render-dashboard.js";
+import { renderCompareBody, renderDashboardBody } from "../../src/observatory/render-dashboard.js";
 import { sampleDashboardData } from "../../src/observatory/sample-dashboard-data.js";
 
 describe("renderDashboardBody", () => {
@@ -64,5 +64,46 @@ describe("renderDashboardBody", () => {
       ],
     };
     expect(renderDashboardBody(data)).not.toContain("<script>");
+  });
+});
+
+describe("renderCompareBody — two cities", () => {
+  const data: DashboardData = {
+    generatedAt: "2026-07-24T15:30:00.000Z",
+    participants: [
+      {
+        id: "tech-bot",
+        displayName: "Tech Titan",
+        kind: "bot",
+        personaId: "futurist",
+        cash: 10_000,
+        equity: 120_000,
+        positions: [
+          { symbol: "NVDA", quantity: 100, avgPrice: 900, marketValue: 100_000 },
+          { symbol: "META", quantity: 20, avgPrice: 500, marketValue: 10_000 },
+        ],
+      },
+      {
+        id: "index-human",
+        displayName: "Index Ivy",
+        kind: "human",
+        cash: 25_000,
+        equity: 90_000,
+        positions: [{ symbol: "EEM", quantity: 1_000, avgPrice: 42, marketValue: 65_000 }],
+      },
+    ],
+  };
+
+  const html = renderCompareBody(data, { aId: "tech-bot", bId: "index-human" });
+
+  it("renders one empire skyline per participant (two cities)", () => {
+    const skylines = html.match(/class="empire-skyline"/g) ?? [];
+    expect(skylines).toHaveLength(2);
+    expect(html).toContain("empire-cities");
+  });
+
+  it("labels each city with its participant's displayName", () => {
+    expect(html).toContain('class="empire-city-name">Tech Titan<');
+    expect(html).toContain('class="empire-city-name">Index Ivy<');
   });
 });
