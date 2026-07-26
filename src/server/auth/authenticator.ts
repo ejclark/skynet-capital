@@ -712,7 +712,7 @@ ${versionTag}
   // Signals come from indicators that actually make sense — EMA cross, Bollinger squeeze/expansion,
   // and RSI overbought/oversold — which then summon the matching options play from the playbook.
   var SPAN=300, price=[], emaF=[], emaS=[], smaA=[], bU=[], bL=[], rsiV=50, t=0;
-  var pv=0, regimeBias=0.02, regimeVol=1, regimeT=0;
+  var pv=0, regimeBias=0.02, regimeVol=1, regimeT=0, basePrice=100;
   function noise(s){ var x=Math.sin(s)*43758.5453; return x-Math.floor(x); }
   function cap(a){ if(a.length>SPAN) a.shift(); }
   function avg(a){ var m=0,i; for(i=0;i<a.length;i++) m+=a[i]; return m/a.length; }
@@ -733,9 +733,14 @@ ${versionTag}
   }
   function stepMarket(){ t++;
     if(t>regimeT){ regimeT=t+120+Math.floor(Math.random()*160);
-      regimeBias=(Math.random()-0.45)*0.14; regimeVol=0.5+Math.random()*1.4; }
-    pv = pv*0.88 + (noise(t*0.017)-0.5)*0.8*regimeVol + regimeBias;
-    pushPrice((price.length?price[price.length-1]:100) + pv);
+      regimeBias=(Math.random()-0.5)*0.06; regimeVol=0.6+Math.random()*1.3; }
+    var last=price.length?price[price.length-1]:basePrice;
+    // Mean-reverting (Ornstein-Uhlenbeck-style) walk: a gentle pull back toward basePrice keeps the
+    // tape roaming with real motion and prevents a runaway drift from slamming the price floor and
+    // flat-lining. Reversion strengthens the farther price wanders, so it never sits dead-flat.
+    var revert=(basePrice-last)*0.012;
+    pv = pv*0.85 + (noise(t*0.017)-0.5)*0.9*regimeVol + regimeBias + revert;
+    pushPrice(last + pv);
   }
   // Act 3 of a playcall: grow the REALIZED pen past the frozen history so its tip tracks walk
   // progress — reaching the target (prediction's right edge ~W·0.9) exactly as the trade resolves.
