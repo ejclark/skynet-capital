@@ -1,3 +1,10 @@
+## [1.39.1](https://github.com/ejclark/skynet-capital/compare/v1.39.0...v1.39.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** totals into the headroom above the chart + taller rsi lane ([#61](https://github.com/ejclark/skynet-capital/issues/61)) ([aad0419](https://github.com/ejclark/skynet-capital/commit/aad0419e009313896e8d9a2f973d30b5fd17478d))
+
 # [1.39.0](https://github.com/ejclark/skynet-capital/compare/v1.38.0...v1.39.0) (2026-07-26)
 
 
