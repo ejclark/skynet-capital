@@ -1,3 +1,10 @@
+# [1.60.0](https://github.com/ejclark/skynet-capital/compare/v1.59.0...v1.60.0) (2026-07-26)
+
+
+### Features
+
+* **login:** the Eye of Sauron crowns the empire tower and commands the beam ([#88](https://github.com/ejclark/skynet-capital/issues/88)) ([1238e8f](https://github.com/ejclark/skynet-capital/commit/1238e8fc354f47d08148a15fa0e4d8cefe9ec548))
+
 # [1.59.0](https://github.com/ejclark/skynet-capital/compare/v1.58.0...v1.59.0) (2026-07-26)
 
 
