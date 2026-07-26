@@ -1823,9 +1823,12 @@ ${versionTag}
   function reserveBox(x0,y0,x1,y1){ _lblBoxes.push([x0,y0,x1,y1]); }
   function _boxHit(x0,y0,x1,y1){ for(var i=0;i<_lblBoxes.length;i++){ var o=_lblBoxes[i];
     if(x0<o[2]&&x1>o[0]&&y0<o[3]&&y1>o[1]) return true; } return false; }
-  function placeLabelC(cx, y, text, lh, dir){ var w=ctx.measureText(text).width, x0=cx-w/2-2, x1=cx+w/2+2, ty=y, st=lh||11, d=dir||-1;
-    for(var it=0; it<12; it++){ if(!_boxHit(x0, ty-st, x1, ty+2)) break; ty+=d*(st+1); }
-    _lblBoxes.push([x0, ty-st, x1, ty+2]); return ty; }
+  // Search BOTH directions for a clear slot (preferring the requested dir, default up), so a label
+  // boxed in above drops below instead of stacking into its neighbour. Falls back to the origin.
+  function placeLabelC(cx, y, text, lh, dir){ var w=ctx.measureText(text).width, x0=cx-w/2-2, x1=cx+w/2+2, st=lh||11, d=dir||-1, step=st+2;
+    for(var k=0; k<22; k++){ var m=Math.ceil(k/2)*step, ty=(k===0)?y:(k%2===1? y+d*m : y-d*m);
+      if(!_boxHit(x0, ty-st, x1, ty+2)){ _lblBoxes.push([x0, ty-st, x1, ty+2]); return ty; } }
+    _lblBoxes.push([x0, y-st, x1, y+2]); return y; }
   function drawForecast(strat, sig, p){
     if(!strat) return;
     resetLabels();
@@ -1839,6 +1842,9 @@ ${versionTag}
     var loP=signalPrice-volScale*0.55, hiP=signalPrice+volScale*0.55;
     // Reserve the top-right totals headroom so event labels (which stagger upward) steer clear of it.
     if(W>=820 && proj>0.01) reserveBox(Xf-212, SY(hiP)-66, Xf+4, SY(hiP)-12);
+    // Reserve the signal-callout box (it's drawn later, top-center-right) so event labels dodge it too.
+    if(W>=820 && p.aim>0.05 && p.walk<0.7){ var ccw=228, ccx=Math.min(X0+30, W-ccw-16), ccy=field.top+4;
+      reserveBox(ccx, ccy, ccx+ccw, ccy+178); }
     ctx.save(); ctx.globalAlpha=A;
     if(proj>0.01){
       // Opaque backing behind the whole play chart (bands + candles + RSI rail) so the tape reads
