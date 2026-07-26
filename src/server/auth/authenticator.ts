@@ -1299,6 +1299,43 @@ ${versionTag}
     ctx.restore();
   }
 
+  // The panel reads as a live TERMINAL: the desk runs a sequence of well-named programs and each
+  // prints its result as the playcall advances — ingest, detect, assess, recommend, place, scrape.
+  // A single linear, progressively-revealed story that absorbs the INGEST→DETECT→FORECAST→EXECUTE
+  // pipeline into the Matrix narrative. Font weights retained: program names 700, results lighter.
+  function drawTerminal(px, y, p, sig, strat, A){
+    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
+    var e=extrema(strat), curP=realized.length?realized[realized.length-1]:nowPrice;
+    var uNow=clamp01((curP-signalPrice)/(volScale||1)+0.5), pl=dollarsAt(strat,e,payoffAt(strat.pts,uNow));
+    var fg=playVix<16?"greed":(playVix>24?"fear":"neutral");
+    // program name, its printed result, and the phase threshold at which it runs — ordered = the story.
+    var steps=[
+      ["ingest_feed", playTicker+" · live tape", p.on>0.04],
+      ["detect_signal", (sig?String(sig.sig).toLowerCase():""), p.aim>0.12],
+      ["assess_conditions", "vix "+playVix+" "+fg+" · iv "+playIV+"%", p.project>0.08],
+      ["recommend_play", strat.name.toLowerCase()+" · class "+strat.tier, p.project>0.55],
+      ["place_bet", "entry set · max "+money(strat.maxP), p.walk>0.05],
+      ["scrape_swings", (p.resolve>0.02?"closed "+money(pl):"riding the swing"), p.walk>0.35]
+    ];
+    var act=-1,i; for(i=0;i<steps.length;i++){ if(steps[i][2]) act=i; }
+    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    for(i=0;i<steps.length;i++){ if(!steps[i][2]) continue;
+      var live=(i===act), done=(p.resolve>0.02||p.out>0), lit=live&&!done;
+      ctx.font="700 10px "+mono; ctx.fillStyle=hexA(muted,live?0.75:0.4); ctx.fillText("$", px, y);   // prompt glyph
+      ctx.fillStyle=hexA(lit?accent:muted, live?0.95:0.5);                                            // program name (700 weight retained)
+      if(lit){ ctx.shadowColor=accent; ctx.shadowBlur=6; }
+      ctx.fillText(steps[i][0], px+11, y); ctx.shadowBlur=0;
+      var cw=ctx.measureText(steps[i][0]).width, rx=px+11+cw+8;
+      // printed result (lighter weight), colored by outcome on the final scrape line
+      var rcol=(i===5&&p.resolve>0.02)?(pl>=0?pos:neg):(live?txt:muted);
+      ctx.font="10px "+mono; ctx.fillStyle=hexA(rcol, live?0.85:0.4); ctx.fillText(steps[i][1], rx, y);
+      if(lit&&(pbGlyphT%22)<13){ ctx.fillStyle=hexA(accent,0.9); ctx.fillRect(rx+ctx.measureText(steps[i][1]).width+3, y-8, 5, 9); }   // blinking cursor at line end
+      y+=15;
+    }
+    ctx.restore(); return y;
+  }
+
   // LEFT-UPPER: the play in words — the bot pipeline, the detected signal, the strategy name and
   // plain-English idea, the shared anatomy legend, pivot values, and the live trade status.
   function drawPanel(strat, sig, p, A){
@@ -1327,16 +1364,14 @@ ${versionTag}
     }
     // Information unfolds in step with the play: pipeline first, then the signal + strategy name as
     // the spotlight aims, then the plain-English idea + anatomy + pivots as the forecast projects.
-    var aimA=clamp01(p.aim), prjA=easeIO(clamp01(p.project));
-    // Hierarchy: the PLAY NAME is the hero of this panel. The pipeline is a quiet process indicator
-    // and the signal reason is small supporting context — neither competes with the name.
+    var prjA=easeIO(clamp01(p.project));
+    // Hierarchy: the PLAY NAME is the hero of this panel; the terminal log above narrates the process.
     var y=field.top+22;
-    drawPipeline(px, y, p, A*Math.min(1,p.on)*0.5); y+=23;
-    ctx.globalAlpha=A*aimA;
-    ctx.font="600 11px "+mono; ctx.fillStyle=hexA(accent,0.72);
-    ctx.fillText("▸ "+(sig?sig.sig:""), px, y); y+=17;
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText(playTicker, px, y);   // the real underlying this play suits
-    var _tw=ctx.measureText(playTicker).width; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("  ·  CLASS "+strat.tier, px+_tw, y); y+=27;
+    // The terminal log IS the process narrative now — it prints ingest→detect→assess→recommend→
+    // place→scrape as the play unfolds, so the pipeline row + signal line are absorbed into its story.
+    y=drawTerminal(px, y, p, sig, strat, A*Math.min(1,p.on)); y+=14;
+    // The PLAY NAME lands as the hero once recommend_play has printed (project phase).
+    ctx.globalAlpha=A*prjA;
     ctx.font="700 30px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=22;
     ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=25;
     ctx.globalAlpha=A*prjA;
