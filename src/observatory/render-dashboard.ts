@@ -195,6 +195,7 @@ function participantCard(snapshot: ParticipantSnapshot, opts: CardOptions = {}):
         <div><dt>Invested</dt><dd class="num">${formatCurrency(invested)}</dd></div>
         <div><dt>Unrealized</dt><dd class="num ${plClass(pl)}">${formatSigned(pl)}</dd></div>
       </dl>
+      <div class="empire-thumb">${renderEmpireSkyline(snapshot, { compact: true })}</div>
       ${positionsTable(snapshot)}
       ${activityFeed(snapshot)}
     </${tag}>`;
@@ -913,6 +914,9 @@ const STYLE = `<style>
   .persona-legend{ margin:8px 0 0; font-size:13px; color:var(--muted); line-height:1.5; font-style:italic; }
   .empire-band{ margin:0 0 24px; }
   .empire-skyline{ display:block; width:100%; height:auto; max-height:150px; border:1px solid var(--border); border-radius:10px; }
+  /* glanceable per-card thumbnail — the board reads as a region of cities */
+  .empire-thumb{ margin:0 0 14px; }
+  .empire-thumb .empire-skyline{ max-height:88px; }
   /* two cities — a labelled empire skyline per participant, side by side on /compare */
   .empire-cities{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:0 0 26px; }
   .empire-city{ display:flex; flex-direction:column; gap:8px; min-width:0; }

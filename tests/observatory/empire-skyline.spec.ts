@@ -73,5 +73,15 @@ describe("empire-skyline", () => {
       expect(svg).toContain("no holdings yet");
       expect(svg).toContain("FRONTIER EMPIRE");
     });
+
+    it("compact mode drops per-building ticker labels + RESERVE but keeps the theme", () => {
+      const svg = renderEmpireSkyline(snap([pos("NVDA", 100), pos("META", 60)], { cash: 40 }), {
+        compact: true,
+      });
+      expect(svg).toContain("empire-skyline-compact");
+      expect(svg).toContain("TECH EMPIRE");
+      expect(svg).not.toContain(">NVDA<");
+      expect(svg).not.toContain("RESERVE");
+    });
   });
 });

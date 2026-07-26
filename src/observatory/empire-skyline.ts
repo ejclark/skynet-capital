@@ -107,6 +107,8 @@ function building(
 export interface SkylineOptions {
   readonly width?: number;
   readonly height?: number;
+  /** Thumbnail mode: shorter, no per-building ticker labels or RESERVE text — a glanceable strip. */
+  readonly compact?: boolean;
 }
 
 /** Render the empire skyline as an inline SVG string (deterministic; empty holdings → a frontier plot). */
@@ -114,15 +116,16 @@ export function renderEmpireSkyline(
   snapshot: ParticipantSnapshot,
   opts: SkylineOptions = {},
 ): string {
+  const compact = opts.compact ?? false;
   const W = opts.width ?? 440;
-  const H = opts.height ?? 132;
-  const baseY = H - 16;
+  const H = opts.height ?? (compact ? 84 : 132);
+  const baseY = H - (compact ? 8 : 16);
   const theme = empireTheme(snapshot.positions);
-  const label = `<text x="12" y="15" font-size="10" letter-spacing="1.5" fill="var(--muted)" font-family="var(--mono)">${theme} EMPIRE</text>`;
+  const label = `<text x="12" y="14" font-size="${compact ? 8 : 10}" letter-spacing="1.5" fill="var(--muted)" font-family="var(--mono)">${theme} EMPIRE</text>`;
   const groundline = `<line x1="0" y1="${baseY}" x2="${W}" y2="${baseY}" stroke="var(--border)"/>`;
 
   if (snapshot.positions.length === 0) {
-    return `<svg class="empire-skyline" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline — no holdings yet" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}<text x="${W / 2}" y="${baseY - 18}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--mono)">undeveloped — no holdings yet</text>${label}</svg>`;
+    return `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline — no holdings yet" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}<text x="${W / 2}" y="${baseY - (compact ? 10 : 18)}" text-anchor="middle" font-size="${compact ? 9 : 11}" fill="var(--muted)" font-family="var(--mono)">undeveloped — no holdings yet</text>${label}</svg>`;
   }
 
   const sorted = [...snapshot.positions].sort((a, b) => b.marketValue - a.marketValue).slice(0, 9);
@@ -133,21 +136,27 @@ export function renderEmpireSkyline(
   const slot = zone / sorted.length;
   const bw = Math.max(20, Math.min(46, slot - gap)); // building centered within its slot, evenly spread
 
+  const minH = compact ? 14 : 26;
+  const spanH = compact ? 44 : 74;
   let buildings = "";
   sorted.forEach((p, i) => {
     const bx = Math.round(pad + slot * i + (slot - bw) / 2);
-    const h = 26 + 74 * (p.marketValue / maxVal);
+    const h = minH + spanH * (p.marketValue / maxVal);
     const u = unrealized(p);
     const capColor = u > 0 ? "var(--pos)" : u < 0 ? "var(--neg)" : "var(--muted)";
     buildings += building(sectorOf(p.symbol), bx, baseY, Math.round(bw), Math.round(h), capColor);
-    buildings += `<text x="${bx + Math.round(bw / 2)}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">${p.symbol}</text>`;
+    if (!compact)
+      buildings += `<text x="${bx + Math.round(bw / 2)}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">${p.symbol}</text>`;
   });
 
   // Cash reserve → a park (green space) sized by cash share of equity.
   const cashShare =
     snapshot.equity > 0 ? Math.max(0, Math.min(1, snapshot.cash / snapshot.equity)) : 0;
   const parkW = Math.round(20 + 34 * cashShare);
-  const park = `<g><rect x="${W - parkW - 12}" y="${baseY - 14}" width="${parkW}" height="14" rx="3" fill="var(--pos)" fill-opacity="0.14" stroke="var(--pos)" stroke-opacity="0.3"/><text x="${W - parkW / 2 - 12}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">RESERVE</text></g>`;
+  const parkLabel = compact
+    ? ""
+    : `<text x="${W - parkW / 2 - 12}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">RESERVE</text>`;
+  const park = `<g><rect x="${W - parkW - 12}" y="${baseY - 14}" width="${parkW}" height="14" rx="3" fill="var(--pos)" fill-opacity="0.14" stroke="var(--pos)" stroke-opacity="0.3"/>${parkLabel}</g>`;
 
-  return `<svg class="empire-skyline" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline of ${theme.toLowerCase()} holdings" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}${buildings}${park}${label}</svg>`;
+  return `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline of ${theme.toLowerCase()} holdings" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}${buildings}${park}${label}</svg>`;
 }
