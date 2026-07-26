@@ -492,8 +492,11 @@ export class Authenticator {
 
   /* Orchestrated page-load sequence */
   @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+  /* The beacon is centered with translateX(-50%); its rise MUST preserve that X translate, or the
+     animation's end frame (transform:none) clobbers it and shoves the button 28px off-center. */
+  @keyframes beaconrise{ from{ opacity:0; transform:translate(-50%,14px); } to{ opacity:1; transform:translate(-50%,0); } }
   .topbrand{ opacity:0; animation:rise .9s ease .35s both; }
-  .beacon{ opacity:0; animation:rise .8s ease 1.1s both; }
+  .beacon{ opacity:0; animation:beaconrise .8s ease 1.1s both; }
   .brand{ opacity:0; animation:rise .7s ease .1s both; }
   .tag{ opacity:0; animation:rise .7s ease .2s both; }
   .error{ opacity:0; animation:rise .6s ease .15s both; }
