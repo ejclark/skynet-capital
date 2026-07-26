@@ -1,4 +1,5 @@
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
+import type { EquitySample } from "../observatory/history-store.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import {
   type LeaderMetric,
@@ -41,6 +42,11 @@ export interface DashboardServerConfig {
    * have submissions report "not switched on yet."
    */
   readonly submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>;
+  /**
+   * Reads a participant's recorded equity/realized history for the individual view's performance panel.
+   * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).
+   */
+  readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
 }
 
 /**
@@ -175,10 +181,12 @@ async function handle(
       return;
     }
     const nav = navFor("you");
+    const history = config.readHistory ? await config.readHistory(id) : undefined;
     const body = renderIndividualBody(snapshot, {
       nav: { ...nav, active: nav.currentId === id ? "you" : "board" },
       isSelf: nav.currentId === id,
       generatedAt: state.generatedAt,
+      ...(history ? { history } : {}),
     });
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(shellDocument(`${escapeHtml(snapshot.displayName)} — Skynet Capital`, body));

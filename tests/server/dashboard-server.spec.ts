@@ -261,3 +261,59 @@ describe("dashboard-server /feedback", () => {
     );
   });
 });
+
+describe("dashboard-server /u/:id performance history", () => {
+  const withBot = (): DashboardData => ({
+    generatedAt: "t",
+    participants: [
+      {
+        id: "day-trader",
+        displayName: "JARVIS",
+        kind: "bot",
+        personaId: "day-trader",
+        cash: 900,
+        equity: 1100,
+        realizedPl: 240,
+        positions: [],
+      },
+    ],
+  });
+
+  it("lights up the sparkline when readHistory returns samples", async () => {
+    await withServer(
+      {
+        hub: new ObservatoryHub(withBot()),
+        readHistory: () =>
+          Promise.resolve([
+            {
+              at: "2026-07-26T14:00:00Z",
+              participantId: "day-trader",
+              equity: 1000,
+              cash: 900,
+              realizedPl: 0,
+            },
+            {
+              at: "2026-07-26T15:00:00Z",
+              participantId: "day-trader",
+              equity: 1100,
+              cash: 900,
+              realizedPl: 240,
+            },
+          ]),
+      },
+      async (base) => {
+        const html = await (await fetch(`${base}/u/day-trader`)).text();
+        expect(html).toContain('<svg class="equity-spark"');
+        expect(html).toContain("Realized P/L");
+      },
+    );
+  });
+
+  it("keeps the honest accruing seam when no history is wired", async () => {
+    await withServer({ hub: new ObservatoryHub(withBot()) }, async (base) => {
+      const html = await (await fetch(`${base}/u/day-trader`)).text();
+      expect(html).not.toContain('<svg class="equity-spark"');
+      expect(html).toContain("once we've recorded your history");
+    });
+  });
+});

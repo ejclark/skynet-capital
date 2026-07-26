@@ -103,6 +103,7 @@ async function main(): Promise<void> {
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
     ...(feedback ? { submitFeedback: feedback } : {}),
+    readHistory: (id) => history.list(id),
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(
