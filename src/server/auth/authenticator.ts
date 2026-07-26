@@ -1347,23 +1347,36 @@ ${versionTag}
     }
     // Macro-event callouts — a dotted tick + label at each event the tape has reached, naming the
     // abnormal deviation there (earnings, CPI, …). This is what explains the less-normal wiggles.
-    if(proj>0.01){ ctx.font="700 9px "+mono;
-      for(var ei=0;ei<events.length;ei++){ var ev=events[ei]; if(!ev.fired) continue;
-        var bull=ev.mag>=0, ecol=bull?pos:neg, ex=X0+(Xf-X0)*ev.f, eyTop=SY(hiP);
+    if(proj>0.01){ ctx.textAlign="center";
+      for(var ei=0;ei<events.length;ei++){ var ev=events[ei], ex=X0+(Xf-X0)*ev.f, eyTop=SY(hiP), ay=eyTop-9;
+        if(!ev.fired){
+          // Surprises can't be foreseen — stay hidden until they hit. Scheduled events are PRE-MARKED
+          // faintly (a hollow diamond + dim label + SCHEDULED) since their date is known in advance.
+          if(!ev.scheduled) continue;
+          ctx.setLineDash([1,5]); ctx.strokeStyle=hexA(muted,0.28*proj); ctx.lineWidth=1;
+          ctx.beginPath(); ctx.moveTo(ex,eyTop); ctx.lineTo(ex,SY(loP)); ctx.stroke(); ctx.setLineDash([]);
+          ctx.strokeStyle=hexA(muted,0.55*proj); ctx.lineWidth=1;
+          ctx.beginPath(); ctx.moveTo(ex,ay-6); ctx.lineTo(ex+4,ay-2); ctx.lineTo(ex,ay+2); ctx.lineTo(ex-4,ay-2); ctx.closePath(); ctx.stroke();
+          ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7*proj); ctx.fillText(ev.label, ex, ay-11);
+          ctx.font="700 7px "+mono; ctx.fillStyle=hexA(muted,0.45*proj); ctx.fillText("SCHEDULED", ex, ay-21);
+          continue;
+        }
+        var bull=ev.mag>=0, ecol=bull?pos:neg;
         ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(ecol,0.5*proj); ctx.lineWidth=1;
         ctx.beginPath(); ctx.moveTo(ex,eyTop); ctx.lineTo(ex,SY(loP)); ctx.stroke(); ctx.setLineDash([]);
-        // Directional arrow: green triangle UP for a bullish surprise, red triangle DOWN for bearish —
-        // reinforcing the likely trend reaction the play is positioned for.
-        var ay=eyTop-9, ah=7, aw=5; ctx.fillStyle=hexA(ecol,0.95*proj); ctx.beginPath();
+        // Directional arrow: green triangle UP for a bullish surprise, red triangle DOWN for bearish.
+        var ah=7, aw=5; ctx.fillStyle=hexA(ecol,0.95*proj); ctx.beginPath();
         if(bull){ ctx.moveTo(ex,ay-ah); ctx.lineTo(ex-aw,ay); ctx.lineTo(ex+aw,ay); }
         else { ctx.moveTo(ex,ay); ctx.lineTo(ex-aw,ay-ah); ctx.lineTo(ex+aw,ay-ah); }
         ctx.closePath(); ctx.fill();
-        // The event currently being walked through (slow-mo) gets a pulsing ring + brighter label —
-        // draws the eye to the print as time dilates around it.
         if(ei===warpIdx){ var pz=0.5+0.5*Math.sin(pbGlyphT*0.28);
           ctx.strokeStyle=hexA(ecol,(0.45+0.4*pz)*proj); ctx.lineWidth=1.4;
           ctx.beginPath(); ctx.arc(ex, ay-ah/2, 9+pz*5, 0, 7); ctx.stroke(); }
-        ctx.fillStyle=hexA(ecol,(ei===warpIdx?1:0.9)*proj); ctx.textAlign="center"; ctx.fillText(ev.label, ex, ay-ah-4); }
+        // Unscheduled shocks are flagged with a "!" so they read as a surprise, not a calendar event.
+        ctx.font="700 9px "+mono; ctx.fillStyle=hexA(ecol,(ei===warpIdx?1:0.9)*proj);
+        ctx.fillText((ev.scheduled?"":"! ")+ev.label, ex, ay-ah-4);
+        // Earnings cross-read note (big tech signals peers) under the label.
+        if(ev.note){ ctx.font="700 7px "+mono; ctx.fillStyle=hexA(muted,0.7*proj); ctx.fillText("→ "+ev.note, ex, ay-ah-15); } }
       ctx.textAlign="start"; }
     ctx.textAlign="start"; ctx.restore();
     // RSI oscillator lane, parallel below the candles during the walk — the overbought/oversold read
@@ -1432,13 +1445,24 @@ ${versionTag}
   var eventWarp=1, warpIdx=-1;   // time-dilation as the pen walks through a high-vol event (1 = real-time)
   // Macro events (earnings, CPI, …) that jolt the trend and get a callout — they explain the less
   // normal-looking deviations of the realized line, and add realism + a teaching moment.
-  var EVENTS=["EARNINGS","CPI PRINT","FOMC","JOBS REPORT","GUIDANCE","GEOPOLITICAL"];
+  // SCHEDULED events are known in advance (their DATE is on the calendar; only the outcome surprises) —
+  // so they're pre-marked on the timeline and the shock lands when the tape reaches them. SURPRISES
+  // (geopolitical / black-swan) can't be foreseen, so they only pop in at the moment they hit.
+  var MACRO=["CPI PRINT","FOMC","JOBS REPORT","PPI PRINT"];         // scheduled macro prints
+  var TECH=["NVDA","GOOG","TSLA","MSFT","AAPL","AMD"];              // scheduled earnings, real tickers
+  var SURPRISE=["GEOPOLITICAL","RATE SHOCK","HEADLINE RISK"];       // unscheduled shocks
+  // Big tech drives the tape: one name's earnings is an early read on peers (AI capex, cloud, demand).
+  var CROSS={ NVDA:"AI capex read", GOOG:"cloud + AI capex", TSLA:"demand read", MSFT:"Azure AI spend", AAPL:"consumer read", AMD:"AI silicon read" };
   function scheduleEvents(){ events=[]; var nE=Math.random()<0.4?2:1, k;
     // Bias the shock direction to mostly AGREE with the play's target move, so the arrow reinforces
     // the trend the trade is positioned for (directional plays); range plays stay random either way.
     var tdir=targetPrice>signalPrice+volScale*0.03?1:(targetPrice<signalPrice-volScale*0.03?-1:0);
     for(k=0;k<nE;k++){ var dir=tdir!==0?(Math.random()<0.72?tdir:-tdir):(Math.random()<0.5?-1:1);
-      events.push({ f:0.26+Math.random()*0.34, label:EVENTS[(Math.random()*EVENTS.length)|0],
+      var r=Math.random(), sched=true, label="", note="";
+      if(r<0.42){ var tk=TECH[(Math.random()*TECH.length)|0]; label=tk+" EARNINGS"; note=CROSS[tk]||""; }
+      else if(r<0.76){ label=MACRO[(Math.random()*MACRO.length)|0]; }
+      else { sched=false; label=SURPRISE[(Math.random()*SURPRISE.length)|0]; }
+      events.push({ f:0.26+Math.random()*0.34, label:label, note:note, scheduled:sched,
         mag:dir*volScale*(0.12+Math.random()*0.16), fired:false }); } }   // mid-walk, time to recover
   function eventImpulse(i, cap){ var f=i/cap, s=0, k;
     for(k=0;k<events.length;k++){ if(!events[k].fired && f>=events[k].f){ events[k].fired=true; s+=events[k].mag; } }
