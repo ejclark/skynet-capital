@@ -1,3 +1,10 @@
+# [1.39.0](https://github.com/ejclark/skynet-capital/compare/v1.38.0...v1.39.0) (2026-07-26)
+
+
+### Features
+
+* **login:** 3d depth for the cityscape — parallax layers + block faces ([#60](https://github.com/ejclark/skynet-capital/issues/60)) ([65f0ff2](https://github.com/ejclark/skynet-capital/commit/65f0ff28482c7ccbdb0e8a6655aecbb6e2cbfa41))
+
 # [1.38.0](https://github.com/ejclark/skynet-capital/compare/v1.37.0...v1.38.0) (2026-07-26)
 
 
