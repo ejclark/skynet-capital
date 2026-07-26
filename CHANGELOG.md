@@ -1,3 +1,10 @@
+# [1.84.0](https://github.com/ejclark/skynet-capital/compare/v1.83.0...v1.84.0) (2026-07-26)
+
+
+### Features
+
+* **login:** the Eye's gaze as a volumetric searchlight + the One Ring easter egg ([#145](https://github.com/ejclark/skynet-capital/issues/145)) ([dd8eb9b](https://github.com/ejclark/skynet-capital/commit/dd8eb9bbe1540b4afb718c484b0fa99c28752a50))
+
 # [1.83.0](https://github.com/ejclark/skynet-capital/compare/v1.82.0...v1.83.0) (2026-07-26)
 
 
