@@ -1,3 +1,10 @@
+## [1.52.1](https://github.com/ejclark/skynet-capital/compare/v1.52.0...v1.52.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** gravity beam pulls from the left, more tractor than lightning ([#78](https://github.com/ejclark/skynet-capital/issues/78)) ([ebec2b0](https://github.com/ejclark/skynet-capital/commit/ebec2b0f855e38dfd6045b79d6e123911fd12093))
+
 # [1.52.0](https://github.com/ejclark/skynet-capital/compare/v1.51.0...v1.52.0) (2026-07-26)
 
 
