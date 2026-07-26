@@ -1,3 +1,10 @@
+## [1.14.2](https://github.com/ejclark/skynet-capital/compare/v1.14.1...v1.14.2) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** asymmetric risk/reward and variable take-profit per play ([#30](https://github.com/ejclark/skynet-capital/issues/30)) ([4d9d288](https://github.com/ejclark/skynet-capital/commit/4d9d28862bea9bcbad90b50773378cc413e63391))
+
 ## [1.14.1](https://github.com/ejclark/skynet-capital/compare/v1.14.0...v1.14.1) (2026-07-26)
 
 
