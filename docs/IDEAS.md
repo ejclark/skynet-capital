@@ -20,7 +20,10 @@ Eric-sourced.
 
 ### North-star epic — the Living Universe (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
 The cityscape as a multiplayer, SimCity-like shared world that reflects everyone's trades, bots, and
-market events — **fun as the flywheel** (engagement → legibility/trust → capital → autonomy). Phased:
+market events — **potentially _the brand itself_**, the addictive hook. **Fun as the flywheel**
+(engagement → legibility/trust → capital → autonomy). Reflects portfolio positions, news, economy, and
+politics; domain-themed empires; construction = maturing bets; a judgment axis (good bet vs. hype vs.
+legal risk) held to an honest, data-sourced standard. Phased:
 - **P1 Landmarks from personas** — personas as skyline structures beyond the Eye (display-only). _(src: Eric)_
 - **P2 "Your city"** — logged-in cityscape driven by `ParticipantSnapshot` (positions→towers, P/L→health); needs two-modes (#54) + history layer. _(src: Eric)_
 - **P3 Market-event vocabulary** — regimes + macro events → city phenomena (oil shock→smoke/traffic, bull→cranes, bear→fog); matrix tracers as the transition/comms medium. _(src: Eric)_

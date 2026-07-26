@@ -67,6 +67,14 @@ The recurring visual/narrative language. New work should draw from these, or *ex
 - **The empire built from capital** — the cityscape as generational wealth; the skyline breathes with
   the market (session lighting), and reads as a living market surface (ticker billboards, red rail).
 
+## The signature — the Living Universe
+
+The **living cityscape as a shared, multiplayer world** (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
+is the strongest candidate for *the brand itself* — the defining, addictive property that hooks
+engagement. It reflects portfolios, bots, news, economy, and politics as a place you inhabit and check
+like the news. Everything below (the anchors, the palette, the motifs) serves this: they are how the
+living universe looks and feels. When a choice is unclear, ask what it does for the living world.
+
 ## Identity anchors (Graphify god-nodes → where cohesion lives most vividly)
 
 Elements with rich backstory that *license overly-refined detail*. Depth compounds here.

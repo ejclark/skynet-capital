@@ -5,6 +5,10 @@ gated pieces are Eric's calls. This document is the durable home for the idea �
 
 ## The idea
 
+**This may be _the brand itself_ — the signature, addictive property that hooks engagement.** Not a
+feature of Skynet Capital, but the thing Skynet Capital *is*: a world you check the way you check the
+news, because it *is* the news, rendered as a place you have a stake in.
+
 Skynet Capital as a **multiplayer, SimCity-like shared universe**: the cityscape isn't decoration, it's
 a living reflection of what people do. Trades, positions, bots, and market events weave into the skyline
 as accented detail, so the world visibly grows from everyone's contributions. Sauron's tower is the
@@ -46,15 +50,68 @@ volatility, market-hours lighting = session, ticker billboards = the tape).
 The point: someone glancing at the city reads the state of affairs — who's exposed where, what the
 market is doing, where the risk and opportunity sit — without a single number.
 
+### Personalized empires by domain
+
+Each member's city reflects *what they trade* — the aesthetic follows the expertise, so no two empires
+look alike, and the shared world is a federation of them (districts blend where holdings overlap).
+
+- **Tech** → the current skyline: glass towers, data centers, AI construction (the default today).
+- **Shipping / logistics** → nautical: a dominant port, container cranes, freight yards, shipping lanes.
+- **Energy** → the transfer story rendered literally: railways and coal giving way to reactors and
+  power plants. (And since AI's energy hunger is real — e.g. Microsoft's 20-year contracts for Three
+  Mile Island's output and its own nuclear sourcing — a **nuclear facility** becomes a fitting detail in
+  a tech/AI-heavy empire too.)
+
+The domain theme is a lens on the same grammar below, not a separate system.
+
+### Construction = investment maturing (not yet paid out)
+
+The forward-looking layer: bets that haven't returned yet render as **construction sites**. Progress =
+the phase of the thesis; **site footprint = magnitude of capital committed**. The headline example is
+big tech's AI capex — trillions in flight. An AI-bull read shows a large share of the city scaffolded
+now (~20-30%), growing toward 70-90% if the transformation lands as predicted (the "old world" shrinks
+at scale). Construction shows what's *being built*, distinct from what's already earning.
+
+### Two axes: direction **and** judgment
+
+Price direction is not the same as whether a bet is good. The city must encode both, or it just
+amplifies hype:
+
+- **Direction** (up/down) — green/red, tower health, lighting (already in the grammar).
+- **Judgment / risk quality** — favorable asymmetric bet · a constraint · a foolish-but-popular bet ·
+  legal/regulatory exposure. A name can be up and dominating the news yet be a bad bet; the city says
+  so rather than cheering it. Expressions:
+  - **Hype without substance** (e.g. a crypto run) → flashy but hollow — neon glare over a thin facade,
+    no real foundation.
+  - **Favorable asymmetric bet** → solid foundation, active healthy construction, growth.
+  - **Regulatory / legal exposure** → court / precinct associations, police lights raking a building,
+    investigation cordons.
+  - **Scandal / blow-up** → smoke, fire on the implicated building; the "did you see the fire on the X
+    building?" prompt that turns the city into how people *ingest the news*.
+
+**This is the honest-analysis layer, and it's the point.** Deriving these signals objectively from data
+strips personal bias out — and that objectivity is exactly what makes the conversations approachable and
+drives the dialog the league is for. A neutral, shared surface everyone can point at beats an argument
+about anyone's take.
+
+> **Honesty discipline (upholds [`BRAND.md`](BRAND.md)).** What drives these signals must be
+> **data-derived and honestly sourced** — regulatory filings, disclosed risk metrics, news sentiment —
+> and labeled as *read/opinion* vs. *fact* where it's interpretive. The vocabulary may express risk and
+> legal exposure, but it must never present a contested editorial claim as objective truth. Judgment
+> cues are analysis surfaced transparently, not verdicts asserted.
+
 ## Phased roadmap (each phase a trust stepping stone)
 
 1. **Landmarks from personas** (foundation, in progress). Persona cards shipped; next, personas as
    skyline structures beyond the Eye. Pure display, no account data.
 2. **Your city (post-login, personalized).** Drive a logged-in cityscape from the current
-   `ParticipantSnapshot` — positions → towers, P/L → health. Needs the two-modes split (#54) and leans
-   on the history layer for change-over-time. Login stays sim/aggregate (pre-auth = no personal data).
-3. **Market-event vocabulary.** A data-driven event → phenomenon system (regimes, macro events) atop the
-   existing sim; real once an event feed is wired. The Iran/oil example → smoke + logistics motifs.
+   `ParticipantSnapshot` — positions → towers, P/L → health, **themed by trading domain** (tech skyline
+   / shipping port / energy-and-reactors). Needs the two-modes split (#54) and leans on the history
+   layer for change-over-time. Login stays sim/aggregate (pre-auth = no personal data).
+3. **Market-event & judgment vocabulary.** A data-driven event → phenomenon system (regimes, macro
+   events) atop the sim, plus the **judgment axis** (risk quality, legal exposure, hype-vs-substance)
+   and the **construction layer** (maturing bets, capex magnitude). Real once event/risk feeds are
+   wired. Iran/oil → smoke + logistics motifs; AI capex → large construction share.
 4. **Contributable personas.** People add bot personas that become part of the universe — the plugin
    architecture behind the persona-lore seam. Gated by the autonomous-contribution system below.
 5. **The full ecosystem.** Trades/events/regimes continuously animate a world that communicates the
