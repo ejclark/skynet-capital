@@ -1151,6 +1151,15 @@ ${versionTag}
     rctx.fillStyle=eg; rctx.fill();
     // faint concentric striations in the iris (grain of the burning eye)
     rctx.strokeStyle=hexA("#FFE7B0",0.16*wake); rctx.lineWidth=0.6; almond(0.7); rctx.stroke(); almond(0.4); rctx.stroke();
+    // ELECTRIC energy resonating WITH the volcanic fire — jagged blue-white arcs crackle across the lid,
+    // flickering in and out so the gaze reads as both molten AND charged (its pull is gravity→EM).
+    rctx.globalCompositeOperation="lighter";
+    for(var ea=0;ea<3;ea++){ var lit=noise(rainT*0.4+ea*3.3+cx*0.01); if(lit<0.45) continue;
+      var a0=noise(ea*1.9+Math.floor(rainT*0.3))*6.28, ax=cx+Math.cos(a0)*ew*0.9, ay=cy+Math.sin(a0)*eh*0.42;
+      var bxp=cx-Math.cos(a0)*ew*0.9, byp=cy-Math.sin(a0)*eh*0.42;
+      rctx.strokeStyle=hexA("#CFF3FF",(0.5*(lit-0.45)/0.55)*wake*flk); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(ax,ay);
+      for(var es=1;es<5;es++){ var et=es/5, jx=(noise(ea+es*2.1+rainT*0.5)-0.5)*ew*0.7; rctx.lineTo(ax+(bxp-ax)*et+jx, ay+(byp-ay)*et); }
+      rctx.lineTo(bxp,byp); rctx.stroke(); }
     rctx.restore();
     // 5) the cat-slit pupil — a void with a hot molten rim. AMBIENT GAZE: at rest the pupil slowly
     // WANDERS (the Eye is forever scanning the city); as it WAKES to a signal the wander fades and the
@@ -1191,6 +1200,23 @@ ${versionTag}
     for(i=-3;i<=3;i++){ if(i===0) continue; var hx=midx+i*((sR-sL)/8), hh=6+3*(i<0?-i:i);
       rctx.fillStyle=hexA("#04060A",0.92*dim); rctx.beginPath(); rctx.moveTo(hx-2,shY); rctx.lineTo(hx,shY-hh); rctx.lineTo(hx+2,shY); rctx.closePath(); rctx.fill();
       rctx.strokeStyle=hexA("#FF7A2E",0.12*flk*dim); rctx.lineWidth=0.8; rctx.stroke(); }
+    // 5) THE MASSIF + fortified skirt the tower rises FROM — finer detail on the character's surroundings:
+    // a jagged black-rock base spreading wider than the foot, small horned turrets flanking it, and fire
+    // pooling in the crevices (Barad-dûr sits on a crag, not a flat plaza).
+    var mW=b.w*0.92;
+    rctx.fillStyle=hexA("#04060B",0.96*dim); rctx.beginPath(); rctx.moveTo(bx-mW,bottom);
+    for(i=0;i<=11;i++){ var mf=i/11, mxp=(bx-mW)+((bx+b.w+mW)-(bx-mW))*mf, centre=1-Math.min(1,Math.abs(mf-0.5)*1.7);
+      rctx.lineTo(mxp, bottom-(H*0.21)*(0.22+0.78*centre)*(0.72+0.5*noise(b.seed+i*2.9))); }
+    rctx.lineTo(bx+b.w+mW,bottom); rctx.closePath(); rctx.fill();
+    // small horned turrets flanking the base (mini dark towers)
+    for(var ts=-1;ts<=1;ts+=2){ var ttx=midx+ts*(b.w*0.6+mW*0.28), tby=bottom-H*0.015, tth=H*0.12, ttw=6;
+      rctx.fillStyle=hexA("#05070C",0.95*dim); rctx.beginPath(); rctx.moveTo(ttx-ttw,tby); rctx.lineTo(ttx-ttw*0.55,tby-tth); rctx.lineTo(ttx,tby-tth-5); rctx.lineTo(ttx+ttw*0.55,tby-tth); rctx.lineTo(ttx+ttw,tby); rctx.closePath(); rctx.fill(); }
+    // fire pooling at the foot + turret tips
+    rctx.globalCompositeOperation="lighter";
+    for(i=0;i<8;i++){ var gfx=(bx-mW*0.7)+(b.w+mW*1.4)*noise(b.seed+i*5.1), gfy=bottom-3-7*noise(b.seed+i*3.3);
+      var gg=rctx.createRadialGradient(gfx,gfy,0,gfx,gfy,11); gg.addColorStop(0,hexA("#FF7A2E",0.42*flk*dim)); gg.addColorStop(1,hexA("#F85149",0));
+      rctx.fillStyle=gg; rctx.beginPath(); rctx.arc(gfx,gfy,11,0,7); rctx.fill(); }
+    rctx.globalCompositeOperation="source-over";
     rctx.restore();
   }
   function drawBuilding(L, b, bx, top, bottom, accent, bg, flip){ var dim=L.dim, d=L.depth, lifeK=0.5+0.5*cityLife;
@@ -1801,7 +1827,11 @@ ${versionTag}
           plg.addColorStop(0,hexA("#FFF3DD",0.5*pull)); plg.addColorStop(0.35,hexA("#FFC98A",0.28*pull)); plg.addColorStop(1,hexA(accent,0));
           ctx.fillStyle=plg; ctx.beginPath(); ctx.arc(nowSX,nowSY,poolR,0,7); ctx.fill();
           // a single faint filament (much less lightning than before)
-          bolt(e.x,e.y,nowSX,nowSY, 12*pull, e.seed+11, e.eye?"#FFD9A0":"#CFFBEF", 0.34*pull*flick, 1.1);
+          // the beam resonates BOTH energies: a warm volcanic filament + jittering blue-white ELECTRIC
+          // arcs that crackle down the cone (gravity driving the electromagnetism), flickering per frame.
+          bolt(e.x,e.y,nowSX,nowSY, 12*pull, e.seed+11, "#FFB060", 0.30*pull*flick, 1.2);   // fire filament
+          for(var eb=0;eb<2;eb++){ if(noise(pbGlyphT*0.5+eb*4.1+k)<0.4) continue;
+            bolt(e.x,e.y,nowSX,nowSY, 22*pull, e.seed+eb*7.3+pbGlyphT*0.3, "#CFF3FF", 0.42*pull*flick, 1); }   // electric arcs
           // charge streaming FROM the present toward the tower — the matter being pulled in
           for(var s2=0;s2<6;s2++){ var f=(pbGlyphT*0.05+s2/6+k*0.17)%1, cxp=lerp(nowSX,e.x,f), cyp=lerp(nowSY,e.y,f);
             ctx.fillStyle=hexA("#EAFFFA",0.6*(1-f)*pull); ctx.fillRect(cxp-1.2,cyp-1.2,2.4,2.4); } }
