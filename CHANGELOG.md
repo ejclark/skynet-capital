@@ -1,3 +1,10 @@
+# [1.62.0](https://github.com/ejclark/skynet-capital/compare/v1.61.0...v1.62.0) (2026-07-26)
+
+
+### Features
+
+* **feedback:** brand the idea path as a "side quest" ([#93](https://github.com/ejclark/skynet-capital/issues/93)) ([2e47cf6](https://github.com/ejclark/skynet-capital/commit/2e47cf61afb934168b62271b920815c3cb7a4f81))
+
 # [1.61.0](https://github.com/ejclark/skynet-capital/compare/v1.60.1...v1.61.0) (2026-07-26)
 
 
