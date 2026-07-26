@@ -1,3 +1,10 @@
+# [1.89.0](https://github.com/ejclark/skynet-capital/compare/v1.88.1...v1.89.0) (2026-07-26)
+
+
+### Features
+
+* **login:** barad-dûr detailing — craggy base, and a fire+electric gaze ([#155](https://github.com/ejclark/skynet-capital/issues/155)) ([652f4a6](https://github.com/ejclark/skynet-capital/commit/652f4a6b346efa03d07e80e9e263446a71ea14cc))
+
 ## [1.88.1](https://github.com/ejclark/skynet-capital/compare/v1.88.0...v1.88.1) (2026-07-26)
 
 
