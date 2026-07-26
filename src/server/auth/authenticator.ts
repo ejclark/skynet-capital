@@ -777,9 +777,10 @@ ${versionTag}
     // During a play, keep the forecast's profit/loss bands (signalPrice ± volScale) in frame so
     // the future projection never clips as the camera eases in.
     if(cam>0.01){ lo=Math.min(lo, signalPrice - volScale*0.72*cam); hi=Math.max(hi, signalPrice + volScale*0.72*cam); }
-    // Ambient: leave vertical headroom for the forward-projected vol cone (bands widen into the future).
+    // Ambient: modest headroom so the near bands aren't clipped — the forward cone fans to a fraction
+    // of the visible span (see drawMarket), so it stays deep without flattening the trend here.
     if(cam<0.6 && smaA.length){ var _lm=smaA[smaA.length-1], _lhw=Math.max((bU[bU.length-1]-bL[bL.length-1])/2, 1);
-      hi=Math.max(hi, _lm+_lhw*2.9); lo=Math.min(lo, _lm-_lhw*2.9); }
+      hi=Math.max(hi, _lm+_lhw*2.2); lo=Math.min(lo, _lm-_lhw*2.2); }
     var pad=(hi-lo)*0.12||1; return { lo:lo-pad, hi:hi+pad, mid:(lo+hi)/2, span:(hi-lo)+2*pad }; }
   function strokeSeries(arr,dx,Y,style,w){ ctx.beginPath();
     for(var i=0;i<arr.length;i++){ var px=i*dx,py=Y(arr[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
@@ -826,34 +827,43 @@ ${versionTag}
     // the band itself projected forward. Fades out as a playcall frames in.
     var coneA=clamp01(1-cam*1.8);
     if(coneA>0.01 && smaA.length){
-      var lm=smaA[smaA.length-1], lp2=price[n-1], lhw=Math.max((bU[n-1]-bL[n-1])/2, lp2*0.012);
+      var lm=smaA[smaA.length-1], lp2=price[n-1], lhw=Math.max((bU[n-1]-bL[n-1])/2, lp2*0.02);
       // Center DRIFTS along the recent EMA slope so the projection adjusts course with the market
       // (recomputed every frame → it visibly re-aims as price moves), instead of a flat mean.
       var slope=(emaF.length>10?(emaF[emaF.length-1]-emaF[emaF.length-11])/10:0);
-      var F=Math.ceil((W-(n-1)*dx)/dx)+4, UP=[], LO=[], MD=[], fi;   // reach the right browser edge
-      for(fi=0;fi<=F;fi++){ var tt=fi/F;
-        var breathe=1 + 0.18*Math.sin(rainT*0.028 + tt*3.1) + 0.10*Math.sin(rainT*0.015 + tt*6.2);
-        var hw=lhw*(1 + tt*1.9)*breathe, cen=lm + slope*fi*0.7, px2=(n-1+fi)*dx;
-        UP.push([px2, Y(cen+hw)]); LO.push([px2, Y(cen-hw)]); MD.push([px2, Y(cen)]); }
-      // Fade the whole projection out toward the right edge so the motion eases off-screen.
-      var gX0=(n-1)*dx, gX1=(n-1+F)*dx;
-      var gFill=ctx.createLinearGradient(gX0,0,gX1,0);
-      gFill.addColorStop(0,hexA(accent,0.11)); gFill.addColorStop(0.65,hexA(accent,0.05)); gFill.addColorStop(1,hexA(accent,0));
-      var gEdge=ctx.createLinearGradient(gX0,0,gX1,0);
-      gEdge.addColorStop(0,hexA(accent,0.42)); gEdge.addColorStop(0.7,hexA(accent,0.18)); gEdge.addColorStop(1,hexA(accent,0));
+      var F=Math.ceil((W-(n-1)*dx)/dx)+4, gX0=(n-1)*dx, gX1=(n-1+F)*dx, fi, mono=css("--mono")||"monospace";
+      // Build one cone edge that fans from the band half-width at "now" to a deep target at the right
+      // edge — the target is a fraction of the VISIBLE span (not the tiny band width), so the cone is
+      // always DEEP regardless of how calm the tape is, without flattening the history.
+      function coneEdge(target){ var U=[],L=[];
+        for(fi=0;fi<=F;fi++){ var tt=fi/F, fan=tt*tt*0.6+tt*0.4,
+          breathe=1+0.14*Math.sin(rainT*0.028+tt*3.1)+0.08*Math.sin(rainT*0.015+tt*6.2);
+          var hw=(lhw+(target-lhw)*fan)*breathe, cen=lm+slope*fi*0.7, px2=(n-1+fi)*dx;
+          U.push([px2,Y(cen+hw)]); L.push([px2,Y(cen-hw)]); }
+        return [U,L]; }
       ctx.save(); ctx.globalAlpha=dim*coneA;
-      ctx.beginPath(); for(fi=0;fi<UP.length;fi++){ fi?ctx.lineTo(UP[fi][0],UP[fi][1]):ctx.moveTo(UP[fi][0],UP[fi][1]); }
-      for(fi=LO.length-1;fi>=0;fi--){ ctx.lineTo(LO[fi][0],LO[fi][1]); }
-      ctx.closePath(); ctx.fillStyle=gFill; ctx.fill();
-      ctx.setLineDash([3,5]); ctx.lineWidth=1.1; ctx.strokeStyle=gEdge;
-      ctx.beginPath(); for(fi=0;fi<UP.length;fi++){ fi?ctx.lineTo(UP[fi][0],UP[fi][1]):ctx.moveTo(UP[fi][0],UP[fi][1]); } ctx.stroke();
-      ctx.beginPath(); for(fi=0;fi<LO.length;fi++){ fi?ctx.lineTo(LO[fi][0],LO[fi][1]):ctx.moveTo(LO[fi][0],LO[fi][1]); } ctx.stroke();
-      var gMid=ctx.createLinearGradient(gX0,0,gX1,0);
-      gMid.addColorStop(0,hexA(muted,0.34)); gMid.addColorStop(1,hexA(muted,0));
-      ctx.strokeStyle=gMid; ctx.beginPath(); for(fi=0;fi<MD.length;fi++){ fi?ctx.lineTo(MD[fi][0],MD[fi][1]):ctx.moveTo(MD[fi][0],MD[fi][1]); } ctx.stroke();
+      // Two tiers drawn outer→inner so they NEST and frame the bands: ±3σ (wide, faint) + ±2σ (core).
+      var tiers=[{target:r.span*0.44,fa:0.05,ea:0.22,lab:"3σ"},{target:r.span*0.28,fa:0.075,ea:0.36,lab:"2σ"}];
+      for(var ti=0;ti<tiers.length;ti++){ var T=tiers[ti], pr=coneEdge(T.target), U=pr[0], L=pr[1];
+        var gF=ctx.createLinearGradient(gX0,0,gX1,0);
+        gF.addColorStop(0,hexA(accent,T.fa)); gF.addColorStop(0.7,hexA(accent,T.fa*0.6)); gF.addColorStop(1,hexA(accent,T.fa*0.28));
+        ctx.beginPath(); for(fi=0;fi<U.length;fi++){ fi?ctx.lineTo(U[fi][0],U[fi][1]):ctx.moveTo(U[fi][0],U[fi][1]); }
+        for(fi=L.length-1;fi>=0;fi--){ ctx.lineTo(L[fi][0],L[fi][1]); } ctx.closePath(); ctx.fillStyle=gF; ctx.fill();
+        var gE=ctx.createLinearGradient(gX0,0,gX1,0);
+        gE.addColorStop(0,hexA(accent,T.ea)); gE.addColorStop(0.75,hexA(accent,T.ea*0.5)); gE.addColorStop(1,hexA(accent,T.ea*0.22));
+        ctx.setLineDash([3,5]); ctx.lineWidth=1.1; ctx.strokeStyle=gE;
+        ctx.beginPath(); for(fi=0;fi<U.length;fi++){ fi?ctx.lineTo(U[fi][0],U[fi][1]):ctx.moveTo(U[fi][0],U[fi][1]); } ctx.stroke();
+        ctx.beginPath(); for(fi=0;fi<L.length;fi++){ fi?ctx.lineTo(L[fi][0],L[fi][1]):ctx.moveTo(L[fi][0],L[fi][1]); } ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font="700 8px "+mono; ctx.fillStyle=hexA(accent,T.ea); ctx.textAlign="right";
+        ctx.fillText(T.lab, gX1-4, U[U.length-1][1]+9); ctx.fillText("−"+T.lab, gX1-4, L[L.length-1][1]-3); ctx.textAlign="left"; }
+      // projected mean (drifting along the slope)
+      var gMid=ctx.createLinearGradient(gX0,0,gX1,0); gMid.addColorStop(0,hexA(muted,0.34)); gMid.addColorStop(1,hexA(muted,0.05));
+      ctx.setLineDash([2,5]); ctx.strokeStyle=gMid; ctx.beginPath();
+      for(fi=0;fi<=F;fi++){ var px3=(n-1+fi)*dx, cy=Y(lm+slope*fi*0.7); fi?ctx.lineTo(px3,cy):ctx.moveTo(px3,cy); } ctx.stroke(); ctx.setLineDash([]);
       // "now" divider — the present line the history draws up to and the projection fans out from
       ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(accent,0.22*coneA); ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo((n-1)*dx, Y(lm)-amp*0.9); ctx.lineTo((n-1)*dx, Y(lm)+amp*0.9); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo((n-1)*dx, Y(lm)-amp*0.95); ctx.lineTo((n-1)*dx, Y(lm)+amp*0.95); ctx.stroke();
       ctx.setLineDash([]); ctx.restore(); }
     strokeSeries(emaS,dx,Y,hexA(muted,0.75),1.4);
     strokeSeries(emaF,dx,Y,hexA(accent,0.9),1.6);
