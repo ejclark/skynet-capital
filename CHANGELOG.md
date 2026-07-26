@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/ejclark/skynet-capital/compare/v1.9.0...v1.9.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** keep the enter/close beacon centered after its rise animation ([#23](https://github.com/ejclark/skynet-capital/issues/23)) ([d5fc646](https://github.com/ejclark/skynet-capital/commit/d5fc646af7c679f2fc8b000e65aaf1c57d9b974c))
+
 # [1.9.0](https://github.com/ejclark/skynet-capital/compare/v1.8.0...v1.9.0) (2026-07-26)
 
 
