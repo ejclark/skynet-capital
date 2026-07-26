@@ -96,10 +96,10 @@ export function runScenario(
 
   // --- behavioural quality vs the declared expectation ---
   const notes: string[] = [];
-  if (expect.trades && guarded.length === 0) {
+  if (expect.trades === true && guarded.length === 0) {
     notes.push("expected a trade, placed none");
   }
-  if (!expect.trades && guarded.length > 0) {
+  if (expect.trades === false && guarded.length > 0) {
     notes.push(`expected no trade, placed ${guarded.length}`);
   }
   if (expect.side) {

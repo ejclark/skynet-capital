@@ -18,6 +18,7 @@
     "serve:dashboard": "tsx src/scripts/serve-dashboard.ts",
     "serve:dashboard:offline": "SKYNET_DATA_SOURCE=offline tsx src/scripts/serve-dashboard.ts",
     "eval:persona": "tsx src/scripts/eval-persona.ts",
+    "eval:safety": "tsx src/scripts/eval-safety.ts",
     "run:autonomous": "tsx src/scripts/run-autonomous.ts",
     "run:autonomous:offline": "SKYNET_DATA_SOURCE=offline tsx src/scripts/run-autonomous.ts",
     "record:session": "tsx src/scripts/record-session.ts",
