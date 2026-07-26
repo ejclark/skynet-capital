@@ -1044,6 +1044,7 @@ ${versionTag}
   // so the skyline visibly breathes with the trading session. Refreshed once a minute, eased.
   var cityLife=1, cityLifeTarget=1;
   var weatherDrops=[], boltFlash=0, boltPath=null, nextBoltAt=140;   // storm: rain streaks + blue lightning
+  var eyeWake=0;   // 0..1 — the Eye of Sauron opens/blazes as the gravity beam hauls the present forward
   function marketLife(){
     try{ var et=new Date(new Date().toLocaleString("en-US",{timeZone:"America/New_York"}));
       var day=et.getDay(), min=et.getHours()*60+et.getMinutes();
@@ -1079,7 +1080,7 @@ ${versionTag}
     var t1=-1,t2=-1,si;
     for(si=0;si<near.length;si++){ if(t1<0||near[si].h>near[t1].h){ t2=t1; t1=si; }
       else if(t2<0||near[si].h>near[t2].h){ t2=si; } }
-    if(t1>=0){ var B1=near[t1]; B1.h=Math.min(h*0.40,B1.h*1.6+50); B1.crown=true; B1.shape="spire"; B1.taper=0.30; B1.spire=Math.max(B1.spire,40+Math.random()*20); B1.ant=Math.max(B1.ant,20+Math.random()*14); }
+    if(t1>=0){ var B1=near[t1]; B1.h=Math.min(h*0.40,B1.h*1.6+50); B1.crown=true; B1.eye=true; B1.shape="spire"; B1.taper=0.30; B1.spire=Math.max(B1.spire,40+Math.random()*20); B1.ant=Math.max(B1.ant,20+Math.random()*14); }   // the tallest empire tower bears the Eye of Sauron
     if(t2>=0){ var B2=near[t2]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }
     cityLayers=[
       { b:far,  dim:0.4,  par:0.20, base:h*0.055, depth:0, code:false, haze:0.05 },   // distant, hazy, higher base
@@ -1102,6 +1103,26 @@ ${versionTag}
   // cells. Kept dim (atmosphere, not spectacle). Chars hold ~14 frames then flip so the code breathes.
   // Draw one building with 3D block faces (right side + top), then its front detail. dim = atmospheric
   // perspective (far = fainter); L.code = full matrix-code face + tracers + crown (near layer only).
+  // The Eye of Sauron — a lidless fiery eye atop the tallest empire tower, ever-watchful and drawn
+  // in the app's red accent. It sits half-lidded at rest and OPENS (widens, blazes brighter) as the
+  // gravity beam hauls the present forward (eyeWake), tying the watcher to the pull it commands.
+  function drawEye(cx,cy,dim){
+    var wake=0.42+0.58*eyeWake, flk=0.8+0.2*Math.sin(rainT*0.22)+0.08*(noise(rainT*0.9)-0.5);
+    var eh=17+11*eyeWake, ew=6.5+3.5*eyeWake;   // opens wider as it wakes
+    rctx.save(); rctx.globalCompositeOperation="lighter";
+    var hg=rctx.createRadialGradient(cx,cy,0,cx,cy,eh*1.7);   // flame halo
+    hg.addColorStop(0,hexA("#FF9E3D",0.5*wake*dim*flk)); hg.addColorStop(0.5,hexA("#F85149",0.2*wake*dim)); hg.addColorStop(1,hexA("#F85149",0));
+    rctx.fillStyle=hg; rctx.beginPath(); rctx.arc(cx,cy,eh*1.7,0,7); rctx.fill();
+    rctx.beginPath();   // vertical almond eye
+    rctx.moveTo(cx,cy-eh/2); rctx.quadraticCurveTo(cx+ew,cy, cx,cy+eh/2); rctx.quadraticCurveTo(cx-ew,cy, cx,cy-eh/2); rctx.closePath();
+    var eg=rctx.createRadialGradient(cx,cy,0,cx,cy,eh/2);
+    eg.addColorStop(0,hexA("#FFE7B0",0.95*wake*flk)); eg.addColorStop(0.55,hexA("#FF9E3D",0.85*wake)); eg.addColorStop(1,hexA("#F85149",0.5*wake));
+    rctx.fillStyle=eg; rctx.fill(); rctx.restore();
+    rctx.save();   // dark vertical slit pupil
+    rctx.fillStyle=hexA("#170300",0.82*wake); rctx.beginPath();
+    rctx.moveTo(cx,cy-eh*0.44); rctx.quadraticCurveTo(cx+1.7,cy, cx,cy+eh*0.44); rctx.quadraticCurveTo(cx-1.7,cy, cx,cy-eh*0.44); rctx.closePath();
+    rctx.fill(); rctx.restore();
+  }
   function drawBuilding(L, b, bx, top, bottom, accent, bg, flip){ var dim=L.dim, d=L.depth, lifeK=0.5+0.5*cityLife;
     // Silhouette geometry: sleek towers TAPER, so the top width narrows. Per-row edges are lerped
     // between the base rect and the (centered) top width — used for the outline, windows, and mullions.
@@ -1135,6 +1156,7 @@ ${versionTag}
         var bg2=rctx.createRadialGradient(midx,tipY,0,midx,tipY,7); bg2.addColorStop(0,hexA("#F85149",0.6*bl)); bg2.addColorStop(1,hexA("#F85149",0));
         rctx.fillStyle=bg2; rctx.beginPath(); rctx.arc(midx,tipY,7,0,7); rctx.fill(); rctx.restore(); }
       rctx.fillStyle=hexA(red?"#F85149":"#EAFFFA",bl); rctx.beginPath(); rctx.arc(midx,tipY,red?1.9:1.5,0,7); rctx.fill(); }
+    if(b.eye) drawEye(midx, tipY+8, dim);   // the Eye of Sauron crowns this tower
     if(L.code){
       rctx.save(); if(tapered){ outline(); rctx.clip(); } else { rctx.beginPath(); rctx.rect(bx,top,b.w,b.h); rctx.clip(); }
       // MICRO facade: a fine field of code glyphs; a sparse scatter of lit "windows", some warm-white
@@ -1612,13 +1634,15 @@ ${versionTag}
     // present: each fires a highly-charged tractor beam (black-hole physics — infinite gravity, immense
     // charge) that CRACKLES with lightning, and together they haul it into the framed position.
     var pull=easeIO(clamp01(p.zoom))*(1-clamp01(p.walk))*(1-p.out);
+    eyeWake=Math.max(eyeWake, pull);   // the Eye blazes while it hauls the present forward
     if(pull>0.02){
       // Emitters = crowned tower spire tips. The towers PULL, so only those to the LEFT of the present
       // exert the tractor (the two leftmost) — the beams reach in from the left and haul it over.
       var em=[], ei; for(ei=0;ei<skyline.length;ei++){ var tb=skyline[ei]; if(tb.crown){
-        em.push({ x:tb.x+cityPX+tb.w/2, y:H-tb.h-(tb.ant||0)-(tb.spire||0), seed:tb.seed }); } }
+        em.push({ x:tb.x+cityPX+tb.w/2, y:H-tb.h-(tb.ant||0)-(tb.spire||0), seed:tb.seed, eye:tb.eye }); } }
       em.sort(function(a,b){ return a.x-b.x; });
       var emL=em.filter(function(t){ return t.x < nowSX-30; }); if(!emL.length) emL=em;   // must pull from the left
+      emL.sort(function(a,b){ return (b.eye?1:0)-(a.eye?1:0); });   // the Eye leads the pull
       if(emL.length>2) emL=emL.slice(0,2);
       if(emL.length){ ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.lineCap="round";
         var flick=0.6+0.4*noise(pbGlyphT*0.6);   // gentle energy flicker
@@ -1629,15 +1653,16 @@ ${versionTag}
             ctx.lineTo(x0+ddx*t+nx*j, y0+ddy*t+ny*j); }
           ctx.lineTo(x1,y1); ctx.strokeStyle=hexA(col,al); ctx.lineWidth=wd; ctx.stroke(); };
         for(var k=0;k<emL.length;k++){ var e=emL[k];
-          // charged node at the spire tip
-          var ng=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,12); ng.addColorStop(0,hexA("#EAFFFA",0.6*pull*flick)); ng.addColorStop(1,hexA(accent,0));
-          ctx.fillStyle=ng; ctx.beginPath(); ctx.arc(e.x,e.y,12,0,7); ctx.fill();
+          // charged node at the spire tip — the Eye's is fiery and larger (it commands the pull)
+          var enode=e.eye?"#FFE7B0":"#EAFFFA", ecol=e.eye?"#FF9E3D":accent, ndR=e.eye?16:12;
+          var ng=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,ndR); ng.addColorStop(0,hexA(enode,(e.eye?0.85:0.6)*pull*flick)); ng.addColorStop(1,hexA(ecol,0));
+          ctx.fillStyle=ng; ctx.beginPath(); ctx.arc(e.x,e.y,ndR,0,7); ctx.fill();
           // the TRACTOR CONE — a strong smooth beam glow doing the pulling (brighter + wider than before)
           var dxb=nowSX-e.x, dyb=nowSY-e.y, bl=Math.sqrt(dxb*dxb+dyb*dyb)||1, pnx=-dyb/bl, pny=dxb/bl, bw=lerp(3.5,13,pull);
           var bg3=ctx.createLinearGradient(e.x,e.y,nowSX,nowSY); bg3.addColorStop(0,hexA(accent,0.10*pull)); bg3.addColorStop(0.5,hexA(accent,0.20*pull)); bg3.addColorStop(1,hexA(accent,0.30*pull));
           ctx.beginPath(); ctx.moveTo(e.x+pnx*4,e.y+pny*4); ctx.lineTo(nowSX+pnx*bw,nowSY+pny*bw); ctx.lineTo(nowSX-pnx*bw,nowSY-pny*bw); ctx.lineTo(e.x-pnx*4,e.y-pny*4); ctx.closePath(); ctx.fillStyle=bg3; ctx.fill();
           // a single faint filament (much less lightning than before)
-          bolt(e.x,e.y,nowSX,nowSY, 12*pull, e.seed+11, "#CFFBEF", 0.34*pull*flick, 1.1);
+          bolt(e.x,e.y,nowSX,nowSY, 12*pull, e.seed+11, e.eye?"#FFD9A0":"#CFFBEF", 0.34*pull*flick, 1.1);
           // charge streaming FROM the present toward the tower — the matter being pulled in
           for(var s2=0;s2<6;s2++){ var f=(pbGlyphT*0.05+s2/6+k*0.17)%1, cxp=lerp(nowSX,e.x,f), cyp=lerp(nowSY,e.y,f);
             ctx.fillStyle=hexA("#EAFFFA",0.6*(1-f)*pull); ctx.fillRect(cxp-1.2,cyp-1.2,2.4,2.4); } }
@@ -2233,6 +2258,7 @@ ${versionTag}
           realized=[]; realizedAlpha=1; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
       else { rainBoost=0; rainTint=0; fcastProj=0; }
       cam += (camT-cam)*0.09; rate += (rateT-rate)*0.09;
+      eyeWake*=0.94;   // the Eye relaxes toward its half-lidded rest; drawGravityBeam re-blazes it on a pull
       zoom += ((1+1.05*cam)-zoom)*0.1;
       // Advance time. Ambient only: push the live market. During a play the history is FROZEN — the
       // realized pen (grown from p.walk above) is the only thing that advances; Acts 1/2 hold still.
