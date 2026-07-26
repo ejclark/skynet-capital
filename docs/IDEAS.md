@@ -162,6 +162,25 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   "idea" kind is now a 🗺️ Side quest). Deeper version: a light quest board — proposed side quests
   visible, upvotable, with playful status (open → accepted → shipped), tied into the lore universe.
   _(src: Eric · while: extending the Claude side-quest idea system)_
+- **Timed play events + bounties** — a time-boxed group event where everyone's play is measured over a
+  window, with a **bounty** as the prize; adds a fun competitive beat (and pairs with human-vs-own-bot).
+  Two constraints to design around: (1) **everyone needs powder to participate** — solve in-app by
+  granting a fixed **event stake** (equal starting powder for the event) so entry never depends on a
+  member's balance; (2) **funding a real bounty pot** means moving cash between accounts — see the
+  Alpaca note below. **Recommended framing:** since the league is **paper**, model the bounty as
+  **in-app points / a prize ledger** (no real money movement at all) — sidesteps transfers entirely and
+  keeps it low-stakes. A real-cash bounty is a separate, later, governance-gated step.
+  - _Alpaca transfer feasibility:_ the normal **Trading API / OAuth** path (individual accounts) has **no
+    peer-to-peer transfer** — cash only moves via ACH to an account's **own** linked bank. Moving cash
+    **between** accounts (e.g. a "bank"/secondary-bot account funding others) requires the **Broker API**
+    "**journal**" endpoints (JNLC cash / JNLS securities) between accounts under one firm — a heavy B2B
+    integration (firm onboarding, KYC), not the friends-and-family paper path. And on **paper** accounts
+    the cash is simulated, so there's nothing real to journal. ⟹ real-money bounties = live + Broker API
+    + Eric's irreversible-class call; the in-app points version needs none of that.
+  _(src: Eric · while: brainstorming group engagement — timed events + bounties)_
+- **Time-of-day volatility on the login market** — realism enhancement: mornings run hotter (higher
+  volatility) than midday; drive the ambient `regimeVol` by a time-of-day curve so the tape breathes like
+  a real session. Small, cosmetic; deferred behind the core play work. _(src: Eric · while: calming the playcall candles — market-hours realism)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
 - **Test coverage & quality audit** — the suite (~178) skews to pure logic (personas, reducers, server
