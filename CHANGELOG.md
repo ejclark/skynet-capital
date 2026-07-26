@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/ejclark/skynet-capital/compare/v1.23.0...v1.24.0) (2026-07-26)
+
+
+### Features
+
+* **login:** add rsi oscillator lane below candles in the execute act ([#41](https://github.com/ejclark/skynet-capital/issues/41)) ([75898a1](https://github.com/ejclark/skynet-capital/commit/75898a1c916229d9ce049cebaf67522fd1692249))
+
 # [1.23.0](https://github.com/ejclark/skynet-capital/compare/v1.22.0...v1.23.0) (2026-07-26)
 
 
