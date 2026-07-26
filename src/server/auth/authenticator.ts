@@ -992,17 +992,32 @@ ${versionTag}
   var skyline=[], rainT=0;
   function buildSkyline(w,h){ skyline=[]; var x=-12;
     while(x<w+12){ var bw=26+Math.random()*52, bh=36+Math.random()*Math.min(150,h*0.20);   // shorter towers
-      skyline.push({ x:x, w:bw, h:bh, seed:Math.random()*1000, ant:Math.random()<0.28?(10+Math.random()*22):0 });
-      x += bw + (2+Math.random()*9); } }
+      skyline.push({ x:x, w:bw, h:bh, seed:Math.random()*1000, ant:Math.random()<0.28?(10+Math.random()*22):0, crown:false });
+      x += bw + (2+Math.random()*9); }
+    // Empire towers — elevate the two tallest into crowned landmarks: the wealth built from capital.
+    var t1=-1,t2=-1,si;
+    for(si=0;si<skyline.length;si++){ if(t1<0||skyline[si].h>skyline[t1].h){ t2=t1; t1=si; }
+      else if(t2<0||skyline[si].h>skyline[t2].h){ t2=si; } }
+    if(t1>=0){ var B1=skyline[t1]; B1.h=Math.min(h*0.36,B1.h*1.5+40); B1.crown=true; B1.ant=Math.max(B1.ant,20+Math.random()*14); }
+    if(t2>=0){ var B2=skyline[t2]; B2.h=Math.min(h*0.30,B2.h*1.35+30); B2.crown=true; B2.ant=Math.max(B2.ant,16+Math.random()*12); } }
   // Buildings are BUILT FROM the matrix code — like the walls of the hallway: dark structural masses
   // whose faces are a fine, mostly-dim field of glyphs, with a sparse scatter of brighter "lit window"
   // cells. Kept dim (atmosphere, not spectacle). Chars hold ~14 frames then flip so the code breathes.
   function drawSkyline(w,h){ if(!skyline.length||!rctx) return;
-    var accent=css("--accent")||"#35D0BA", flip=Math.floor(rainT/14);
+    var accent=css("--accent")||"#35D0BA", flip=Math.floor(rainT/14), i;
+    // Empire aura — a soft uplight the skyline casts into the sky: the glow of accumulated capital.
+    var skyTop=h; for(i=0;i<skyline.length;i++){ var st=h-skyline[i].h; if(st<skyTop) skyTop=st; }
+    var ag=rctx.createLinearGradient(0,skyTop-96,0,skyTop+30);
+    ag.addColorStop(0,hexA(accent,0)); ag.addColorStop(1,hexA(accent,0.05));
+    rctx.save(); rctx.globalCompositeOperation="lighter"; rctx.fillStyle=ag; rctx.fillRect(0,skyTop-96,w,126); rctx.restore();
     rctx.font="9px "+(css("--mono")||"monospace");
-    for(var i=0;i<skyline.length;i++){ var b=skyline[i], top=h-b.h;
-      if(b.ant){ rctx.strokeStyle=hexA(accent,0.13); rctx.lineWidth=1;
+    for(i=0;i<skyline.length;i++){ var b=skyline[i], top=h-b.h;
+      if(b.ant){ rctx.strokeStyle=hexA(accent,b.crown?0.22:0.13); rctx.lineWidth=1;
         rctx.beginPath(); rctx.moveTo(b.x+b.w/2, top); rctx.lineTo(b.x+b.w/2, top-b.ant); rctx.stroke(); }
+      if(b.crown){ var bx=b.x+b.w/2, byt=top-b.ant, pulse=0.5+0.5*Math.sin(rainT*0.08+b.seed);   // crowned landmark beacon
+        var cg=rctx.createRadialGradient(bx,byt,0,bx,byt,15); cg.addColorStop(0,hexA(accent,0.34*pulse)); cg.addColorStop(1,hexA(accent,0));
+        rctx.save(); rctx.globalCompositeOperation="lighter"; rctx.fillStyle=cg; rctx.beginPath(); rctx.arc(bx,byt,15,0,7); rctx.fill(); rctx.restore();
+        rctx.fillStyle=hexA(accent,0.5+0.4*pulse); rctx.beginPath(); rctx.arc(bx,byt,1.8,0,7); rctx.fill(); }
       rctx.fillStyle="#03060A"; rctx.fillRect(b.x, top, b.w, b.h);           // dark structural mass
       rctx.save(); rctx.beginPath(); rctx.rect(b.x, top, b.w, b.h); rctx.clip();
       var gx=7, gy=10, cxi=0;
