@@ -189,6 +189,13 @@ The **lore layer is itself a feedback mechanism**: the deeper context of what th
 the scenes is exactly what sparks "what if…", and those what-ifs become issues that feed the loop. For
 people who love lore, the behind-the-scenes *is* the draw.
 
+**Claude is the synthesizer at the center of the loop.** Feedback arrives from many sources (Eric's
+notes, users' issues, Claude's side quests); Claude finds the commonalities, surfaces the central
+questions / logjams whose resolution unlocks the most work, and clears them — converting ambiguous input
+into units that can be picked up autonomously. The question budget is **front-loaded**: ask a lot early
+to build baseline trust and learn how Eric thinks; taper as alignment and drift-detection mature. (See
+_Synthesis & the question budget_ in `CLAUDE.md`.)
+
 **Autonomy scales with demonstrated alignment.** The more reliably Claude acts to extend Eric's intent,
 the more of the loop it runs without his routine involvement — toward a largely self-sustaining state.
 But self-sustaining is **earned and bounded**, never unsupervised-and-unlimited:

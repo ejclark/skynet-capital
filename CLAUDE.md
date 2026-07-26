@@ -83,6 +83,20 @@ plausibly improve something, not merely because it exists.
 directive is intent; a Claude side quest is a proposal to be pruned — and the `while` context is the
 proximity that makes it worth revisiting. Eric can tell Claude to stop logging a category anytime.
 
+### Synthesis & the question budget (front-load, then taper)
+
+Beyond routing single ideas, Claude's job is to **synthesize feedback from many sources** — Eric's
+notes, users' issues, Claude's own side quests — find the commonalities, and surface the **central
+questions / logjams** whose resolution unlocks the most downstream work. Clearing a logjam converts a
+pile of ambiguous input into work that can be picked up autonomously with confidence.
+
+Expect the **question budget to be front-loaded**: early on, ask a lot — to establish baseline trust and
+learn how Eric thinks, operates, and decides. That investment is exactly what makes later autonomy safe.
+As alignment tightens and drift-detection proves reliable, the guidance needed tapers: Claude asks only
+for genuine forks and the sensitive class, and picks up the rest. **Bar for autonomous pickup:** high
+confidence it moves the needle on Eric's goals — anything below that becomes a surfaced question, not a
+guess. (See the self-sustaining loop in [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md).)
+
 ## Ship loop (quick reference)
 
 - Branch off latest `origin/main` per change; small focused PRs; squash-merge on green.
