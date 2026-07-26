@@ -1,3 +1,10 @@
+# [1.83.0](https://github.com/ejclark/skynet-capital/compare/v1.82.0...v1.83.0) (2026-07-26)
+
+
+### Features
+
+* **login:** the insight act + the play's read moves under its name ([#143](https://github.com/ejclark/skynet-capital/issues/143)) ([1293304](https://github.com/ejclark/skynet-capital/commit/1293304b26bcf13f117bc255c804f3ef7bd994bd))
+
 # [1.82.0](https://github.com/ejclark/skynet-capital/compare/v1.81.0...v1.82.0) (2026-07-26)
 
 
