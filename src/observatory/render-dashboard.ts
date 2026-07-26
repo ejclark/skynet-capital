@@ -1,5 +1,7 @@
 import type { DashboardData } from "./dashboard-data.js";
 import { renderEmpireSkyline } from "./empire-skyline.js";
+import { equityChange, renderEquitySparkline } from "./equity-sparkline.js";
+import type { EquitySample } from "./history-store.js";
 import type { ActivityView, ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
 import { personaLore } from "./persona-lore.js";
 
@@ -392,7 +394,11 @@ function tile(label: string, value: string, opts: { lead?: boolean; cls?: string
  */
 export function renderIndividualBody(
   snapshot: ParticipantSnapshot,
-  options: DashboardViewOptions & { isSelf?: boolean; generatedAt?: string } = {},
+  options: DashboardViewOptions & {
+    isSelf?: boolean;
+    generatedAt?: string;
+    history?: readonly EquitySample[];
+  } = {},
 ): string {
   const isSelf = Boolean(options.isSelf);
   const asOf = options.generatedAt ?? new Date().toISOString();
@@ -472,13 +478,45 @@ export function renderIndividualBody(
         ${activityFeed(snapshot) || `<p class="empty">No recent activity.</p>`}
       </div>
     </div>
-    <div class="history-seam">
-      <span class="seam-label">Performance history</span>
-      <p class="seam-note">Equity over time, realized P/L, and per-play win rate light up here once we've recorded your history.</p>
-    </div>
+    ${historyPanel(snapshot, options.history)}
   </section>`,
     asOf,
   );
+}
+
+/**
+ * The performance-history panel. Lights up the equity sparkline + realized P/L once ≥2 samples have
+ * been recorded; otherwise shows the honest "still accruing" seam — never a fabricated line.
+ */
+function historyPanel(snapshot: ParticipantSnapshot, history?: readonly EquitySample[]): string {
+  const spark = history ? renderEquitySparkline(history) : null;
+  if (!spark) {
+    return `<div class="history-seam">
+      <span class="seam-label">Performance history</span>
+      <p class="seam-note">Equity over time, realized P/L, and per-play win rate light up here once we've recorded your history.</p>
+    </div>`;
+  }
+  const change = equityChange(history ?? []);
+  const realized = snapshot.realizedPl;
+  return `<section class="history-panel">
+      <h2 class="col-head">Performance history</h2>
+      <div class="history-spark">${spark}</div>
+      <dl class="metrics history-metrics">
+        ${
+          change
+            ? `<div><dt>Since first sample</dt><dd class="num ${plClass(change.abs)}">${formatSigned(
+                change.abs,
+              )} · ${change.pct >= 0 ? "+" : ""}${change.pct.toFixed(2)}%</dd></div>`
+            : ""
+        }
+        ${
+          realized !== undefined
+            ? `<div><dt>Realized P/L</dt><dd class="num ${plClass(realized)}">${formatSigned(realized)}</dd></div>`
+            : ""
+        }
+      </dl>
+      <p class="seam-note">Per-play win rate lights up as more history accrues.</p>
+    </section>`;
 }
 
 /** Metrics the leaderboard can rank by — all snapshot-derived (no history needed). */
@@ -973,6 +1011,10 @@ const STYLE = `<style>
   .history-seam{ margin-top:26px; padding:18px 20px; border:1px dashed color-mix(in srgb,var(--accent) 30%,var(--border)); border-radius:12px; background:color-mix(in srgb,var(--accent) 4%,transparent); }
   .seam-label{ font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); }
   .seam-note{ margin:6px 0 0; font-size:13px; color:var(--muted); }
+  .history-panel{ margin-top:26px; padding:18px 20px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+  .history-spark{ margin:12px 0 14px; }
+  .equity-spark{ display:block; width:100%; height:64px; }
+  .history-metrics{ grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
   @media (max-width:640px){ .indiv-hero{ grid-template-columns:1fr; } }
   /* --- leaderboard --- */
   .ladder-head{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
