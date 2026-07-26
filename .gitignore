@@ -6,3 +6,6 @@ data/
 .env
 .env.*
 !.env.example
+
+# Graphify generated knowledge-graph outputs (regenerate with: graphify extract . --code-only)
+graphify-out/

@@ -56,18 +56,29 @@ adds identity, consuming the map as one input. The operating model applies both.
 6. **Compound**: refinements flow back into `BRAND.md`; re-run the map when structure shifts materially
    (new god-nodes/communities = new anchor candidates + scopes).
 
-## Worked micro-example (hypothetical, Skynet Capital)
+## Worked example (real — Graphify run 2026-07-26)
 
-If Graphify ran on this repo, the likely shape and its BCP binding:
+Graphify actually ran on this repo (701 nodes, 1835 edges, 19 communities — see
+[`STRUCTURE-graph.md`](STRUCTURE-graph.md)). The result **corrected my hypothesis and proved the core
+rule:**
 
-- **god-nodes** → `src/server/auth/authenticator.ts` (the `/login` world), `src/observatory/render-dashboard.ts`,
-  `src/server/dashboard-server.ts`. Of these, the login world and the observatory renderer are
-  identity-bearing anchors; the server dispatcher is a structural hub but brand-inert.
-- **communities** → *login/cinematic*, *observatory/study-mode*, *personas*, *server/runtime*. Each is
-  a cohesion scope; the deliberate tonal split between *login* (fast, cinematic) and *observatory*
-  (calm, legible) is a sanctioned mode shift, not drift.
-- These bindings match the anchors already in [`BRAND.md`](BRAND.md) — evidence the mapping produces
-  the identity structure we arrived at by instinct.
+- **Real god-nodes are the trading domain model:** `MarketContext` (38), `OrderIntent` (36), `Persona`
+  (32), `Portfolio` (30) — the *engine*. I had guessed the UI files (`authenticator.ts`,
+  `render-dashboard.ts`) would top the list. They did **not**.
+- **Why the guess was wrong is the lesson.** `authenticator.ts` is the most *brand-dense* file (the
+  entire `/login` world) yet structurally *light* — it's one giant inline canvas template, so
+  tree-sitter sees few nodes. **Structural centrality and identity density are near-inverse here.**
+- **So structure ≠ identity, empirically.** The engine's god-nodes are the structural core; the brand
+  anchors in [`BRAND.md`](BRAND.md) (the Eye, the `/login` world, the playbook) are *experience* hubs
+  the graph ranks low. This is exactly rule #1 ("candidacy ≠ anchor") — validated on real data, not
+  asserted. **Never read anchors straight off centrality; centrality gives *candidates*, and the
+  experience-vs-utility judgment selects the anchors.**
+- **`Persona` is the domain heart** — highest betweenness (0.033), bridging market data ↔ the
+  autonomous engine, with every persona (incl. `sauron.ts`) hanging off it. Fitting that the lore
+  layer attaches exactly where the structural bridge is.
+- **Communities → cohesion scopes** landed cleanly (auth/session, personas, observatory renderer,
+  server) and the low-cohesion ones (`MarketContext`, `dashboard-data.ts`) are surfaced as refactor
+  candidates, not drift.
 
 ## Open questions (for a Graphify-scoped session)
 
