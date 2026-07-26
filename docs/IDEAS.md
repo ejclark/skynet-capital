@@ -101,6 +101,15 @@ legal risk) held to an honest, data-sourced standard. Phased:
   allegiance, one-line legend) surfaced on `/u/:id` and woven into trade narration + cityscape + copy;
   keep the system extensible to adopt others' ideas. Confirm the pantheon direction with Eric before
   broad rollout. (task #79; Sauron + the Eye of Sauron are the first thread.)
+  - **Real name + character alias (identity duality).** Real names are ideal for accountability —
+    within the invite gate, people should know who represents what (consistent with the consensual
+    shared-universe boundary). *On top of that*, the gamification warrants a **character alias** people
+    brand their personas with — D&D-style: you create and roleplay a character. So a member carries both:
+    their real identity (known to the league) and one or more persona aliases (the character on the
+    board/leaderboard/cityscape). The alias is the brand; the real name is the record. Bots already have
+    aliases (Sauron, JARVIS); this extends the same to humans' personas. Product decisions for Eric:
+    where the real name shows vs. the alias, and whether aliases are per-account or per-bot.
+    _(src: Eric · while: gamifying persona identity — real names + D&D-style character aliases)_
 
 ### Feedback / engagement
 - **Gamify feedback as "side quests"** — the core group skews D&D/gamer, so framing idea-contribution
