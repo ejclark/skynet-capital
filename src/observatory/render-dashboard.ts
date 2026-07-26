@@ -538,6 +538,115 @@ export function renderLeaderboardBody(
   );
 }
 
+interface CohortStats {
+  readonly kind: "human" | "bot";
+  readonly label: string;
+  readonly count: number;
+  readonly totalEquity: number;
+  readonly avgEquity: number;
+  readonly totalUnrealized: number;
+  readonly returnPct: number;
+  readonly breadthPct: number; // share of the cohort currently in profit
+  readonly best?: { name: string; pct: number };
+  readonly spread: number; // best return% − worst return%
+}
+
+function participantReturnPct(snapshot: ParticipantSnapshot): number {
+  const invested = participantInvested(snapshot);
+  return invested > 0 ? (participantUnrealized(snapshot) / invested) * 100 : 0;
+}
+
+function cohortStats(
+  participants: ParticipantSnapshot[],
+  kind: "human" | "bot",
+  label: string,
+): CohortStats {
+  const c = participants.filter((p) => p.kind === kind && !p.error);
+  const count = c.length;
+  const totalEquity = c.reduce((s, p) => s + p.equity, 0);
+  const totalUnrealized = c.reduce((s, p) => s + participantUnrealized(p), 0);
+  const totalInvested = c.reduce((s, p) => s + participantInvested(p), 0);
+  const returns = c.map(participantReturnPct);
+  const inProfit = c.filter((p) => participantUnrealized(p) >= 0).length;
+  let best: { name: string; pct: number } | undefined;
+  for (const p of c) {
+    const pct = participantReturnPct(p);
+    if (!best || pct > best.pct) best = { name: p.displayName, pct };
+  }
+  return {
+    kind,
+    label,
+    count,
+    totalEquity,
+    avgEquity: count ? totalEquity / count : 0,
+    totalUnrealized,
+    returnPct: totalInvested > 0 ? (totalUnrealized / totalInvested) * 100 : 0,
+    breadthPct: count ? (inProfit / count) * 100 : 0,
+    best,
+    spread: returns.length ? Math.max(...returns) - Math.min(...returns) : 0,
+  };
+}
+
+function pct(value: number): string {
+  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+function cohortCard(stats: CohortStats, leads: boolean): string {
+  const chipCls = stats.kind === "bot" ? "chip-bot" : "chip-human";
+  return `<article class="cohort ${leads ? "cohort-lead" : ""}">
+      <header class="cohort-head">
+        <span class="chip ${chipCls}">${stats.label.toUpperCase()}</span>
+        <span class="cohort-count num">${stats.count}<span class="unit"> account${stats.count === 1 ? "" : "s"}</span></span>
+        ${leads ? `<span class="cohort-badge">LEADS</span>` : ""}
+      </header>
+      <div class="cohort-equity num">${formatCurrency(stats.totalEquity)}</div>
+      <div class="cohort-eqlabel">total equity</div>
+      <dl class="cohort-metrics">
+        <div><dt>Avg equity</dt><dd class="num">${formatCurrency(stats.avgEquity)}</dd></div>
+        <div><dt>Unrealized P/L</dt><dd class="num ${plClass(stats.totalUnrealized)}">${formatSigned(stats.totalUnrealized)}</dd></div>
+        <div><dt>Cohort return</dt><dd class="num ${plClass(stats.returnPct)}">${pct(stats.returnPct)}</dd></div>
+        <div><dt>In profit</dt><dd class="num">${stats.breadthPct.toFixed(0)}%</dd></div>
+        <div><dt>Best</dt><dd>${stats.best ? `${escapeHtml(stats.best.name)} <span class="num ${plClass(stats.best.pct)}">${pct(stats.best.pct)}</span>` : "—"}</dd></div>
+        <div><dt>Spread</dt><dd class="num">${stats.spread.toFixed(2)}%</dd></div>
+      </dl>
+    </article>`;
+}
+
+/**
+ * The BOTS vs HUMANS view — aggregates each cohort and compares the two. Surfaces aggregate-only
+ * reads an individual can't show (cohort average, breadth in profit, dispersion) alongside the
+ * head-to-head on total & average equity. Friendly league framing: it's a friendly rivalry, and
+ * everyone doing well is the ideal. All snapshot-derived.
+ */
+export function renderCohortsBody(data: DashboardData, options: DashboardViewOptions = {}): string {
+  const humans = cohortStats(data.participants, "human", "Humans");
+  const bots = cohortStats(data.participants, "bot", "Bots");
+  const humansLeadTotal = humans.totalEquity >= bots.totalEquity;
+  const avgLeader = humans.avgEquity >= bots.avgEquity ? "Humans" : "Bots";
+  const avgGap = Math.abs(humans.avgEquity - bots.avgEquity);
+  const totalGap = Math.abs(humans.totalEquity - bots.totalEquity);
+
+  const content = `<section class="cohorts">
+    <div class="ladder-head">
+      <div>
+        <h1 class="view-title">Bots vs Humans</h1>
+        <p class="view-sub">A friendly rivalry — the whole league winning is the point.</p>
+      </div>
+    </div>
+    <div class="versus">
+      ${cohortCard(humans, humansLeadTotal)}
+      <div class="versus-mid"><span class="vs">VS</span></div>
+      ${cohortCard(bots, !humansLeadTotal)}
+    </div>
+    <div class="versus-read">
+      <span><strong>${humansLeadTotal ? "Humans" : "Bots"}</strong> lead on total equity by <span class="num">${formatCurrency(totalGap)}</span></span>
+      <span><strong>${avgLeader}</strong> lead on average equity by <span class="num">${formatCurrency(avgGap)}</span></span>
+    </div>
+  </section>
+  <footer class="obs-foot">Read-only observatory · cohort aggregates over the last account read · unrealized P/L is mark-to-market vs. average cost.</footer>`;
+  return renderShell(options.nav, content, data.generatedAt);
+}
+
 const STYLE = `<style>
   .obs { --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
     --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
@@ -710,6 +819,25 @@ const STYLE = `<style>
     .app{ display:block; } .stage{ height:auto; min-height:100vh; }
   }
   @media (prefers-reduced-motion:reduce){ .drawer,.drawer-toggle span{ transition:none; } }
+  /* --- bots vs humans --- */
+  .versus{ display:grid; grid-template-columns:1fr auto 1fr; align-items:stretch; gap:16px; margin-bottom:18px; }
+  .cohort{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px 22px 10px; display:flex; flex-direction:column; }
+  .cohort-lead{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 20%,transparent) inset; }
+  .cohort-head{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .cohort-count{ font-size:13px; color:var(--muted); }
+  .cohort-count .unit{ font-size:11px; }
+  .cohort-badge{ margin-left:auto; font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.14em; color:var(--bg); background:var(--accent); border-radius:5px; padding:3px 7px; }
+  .cohort-equity{ font-size:34px; font-weight:700; line-height:1; }
+  .cohort-eqlabel{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:6px 0 18px; }
+  .cohort-metrics{ display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin:0; }
+  .cohort-metrics div{ display:flex; flex-direction:column; gap:4px; }
+  .cohort-metrics dt{ font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .cohort-metrics dd{ margin:0; font-size:15px; font-weight:600; }
+  .versus-mid{ display:flex; align-items:center; justify-content:center; }
+  .vs{ font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:.1em; color:var(--muted); border:1px solid var(--border); border-radius:999px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+  .versus-read{ display:flex; flex-wrap:wrap; gap:10px 28px; padding:16px 20px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; font-size:14px; color:var(--muted); }
+  .versus-read strong{ color:var(--text); }
+  @media (max-width:720px){ .versus{ grid-template-columns:1fr; } .versus-mid{ padding:4px 0; } }
 </style>`;
 
 /**

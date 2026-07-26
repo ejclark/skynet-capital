@@ -5,6 +5,7 @@ import {
   type NavContext,
   type NavView,
   renderBoardContent,
+  renderCohortsBody,
   renderDashboardBody,
   renderIndividualBody,
   renderLeaderboardBody,
@@ -106,6 +107,7 @@ async function handle(
     canAdd,
     authed,
     hasLeaderboard: true,
+    hasBots: true,
   });
 
   if (path === "/events") {
@@ -119,6 +121,12 @@ async function handle(
     const body = renderLeaderboardBody(state, { nav: navFor("leaderboard"), metric });
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(shellDocument("Leaderboard — Skynet Capital", body));
+    return;
+  }
+  if (path === "/bots-vs-humans") {
+    const body = renderCohortsBody(config.hub.getState(), { nav: navFor("bots") });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument("Bots vs Humans — Skynet Capital", body));
     return;
   }
   if (path === "/add" && config.addParticipant) {
