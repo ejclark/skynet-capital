@@ -660,11 +660,14 @@ ${versionTag}
     pv = pv*0.88 + (noise(t*0.017)-0.5)*0.8*regimeVol + regimeBias;
     pushPrice((price.length?price[price.length-1]:100) + pv);
   }
-  // Scripted walk toward a target price (the play's happy path) — eases price in, lightly jittered.
-  var forecastTarget=100;
-  function stepForecast(){ t++;
-    var last = price[price.length-1];
-    pushPrice(last + (forecastTarget-last)*0.09 + (noise(t*0.05)-0.5)*0.18);
+  // Act 3 of a playcall: grow the REALIZED pen past the frozen history so its tip tracks walk
+  // progress — reaching the target (prediction's right edge ~W·0.9) exactly as the trade resolves.
+  // Reality thus draws rightward INTO the forecast, overtaking it, without scrolling the history.
+  function fillRealized(walk){
+    var dx=W/(SPAN-1), cap=Math.max(2, Math.floor((W*0.9-nowSX)/(dx*(zoom||1))));
+    var want=Math.round(easeIO(clamp01(walk))*cap);
+    while(realized.length<want){ var last=realized.length?realized[realized.length-1]:price[nowIdx];
+      t++; realized.push(last + (targetPrice-last)*0.16 + (noise(t*0.05)-0.5)*0.18); }
   }
   for(var _i=0;_i<SPAN;_i++) stepMarket();
 
@@ -698,8 +701,10 @@ ${versionTag}
     // so the FUTURE region opens on the right for the forecast, and zoom in smoothly. Everything is
     // eased by cam (0 ambient to 1 framed) so nothing snaps. Export the on-screen "now" anchor +
     // the price→pixel scale so drawForecast can draw the future in the same coordinate frame.
+    // During a play, "now" is the FROZEN nowIdx (history doesn't grow); ease it to ~W·0.30 so the
+    // prediction + realized pen own the right ~2/3 of the frame. Ambient = leading edge at the right.
     var fpx=(n-1)*dx, fpy=Y(price[n-1]);
-    var toX=lerp(fpx, W*0.42, cam), toY=lerp(fpy, baseY, cam);
+    var toX=lerp(fpx, W*0.30, cam), toY=lerp(fpy, baseY, cam);
     nowSX=toX; nowSY=toY; nowPrice=price[n-1];
     pxPerPrice=(amp*2/(r.span||1))*zoom;
     if(cam>0.001){ ctx.translate(toX,toY); ctx.scale(zoom,zoom); ctx.translate(-fpx,-fpy); }
@@ -717,12 +722,24 @@ ${versionTag}
     for(i=0;i<n;i++){ var qx=i*dx,qy=Y(price[i]); i?ctx.lineTo(qx,qy):ctx.moveTo(qx,qy); }
     ctx.strokeStyle=txt; ctx.lineWidth=1.6; ctx.lineJoin="round";
     ctx.shadowColor=accent; ctx.shadowBlur=8; ctx.stroke(); ctx.shadowBlur=0;
-    // freshly-drawn "wet ink" leading segment + glowing pen tip — reads as a pen drawing forward
+    // Act 3: the REALIZED line drawn as a continuation past nowIdx (indices n..) in the SAME frame,
+    // reality overtaking the dotted forecast to its right. Fades on zoom-out (realizedAlpha).
+    var rl=realized.length;
+    function LP(k){ return k<n ? [k*dx, Y(price[k])] : [k*dx, Y(realized[k-n])]; }   // unified index→point
+    if(rl){ ctx.save(); ctx.globalAlpha=dim*realizedAlpha;
+      ctx.beginPath(); var h0=LP(n-1); ctx.moveTo(h0[0],h0[1]);
+      for(i=0;i<rl;i++){ var rp=LP(n+i); ctx.lineTo(rp[0],rp[1]); }
+      ctx.strokeStyle=txt; ctx.lineWidth=1.9; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0; ctx.restore(); }
+    // freshly-drawn "wet ink" leading segment + glowing pen tip at the true leading point —
+    // the realized end during a play, the live edge when ambient.
+    var lead = rl ? (n-1+rl) : (n-1), leadA = rl ? realizedAlpha : 1;
+    ctx.save(); ctx.globalAlpha=dim*leadA;
     var head=18; ctx.beginPath();
-    for(i=Math.max(0,n-head);i<n;i++){ var wx=i*dx,wy=Y(price[i]); i===Math.max(0,n-head)?ctx.moveTo(wx,wy):ctx.lineTo(wx,wy); }
+    for(i=Math.max(0,lead-head);i<=lead;i++){ var wp=LP(i); i===Math.max(0,lead-head)?ctx.moveTo(wp[0],wp[1]):ctx.lineTo(wp[0],wp[1]); }
     ctx.strokeStyle="#EAFBF7"; ctx.lineWidth=2.3; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0;
-    var lx=(n-1)*dx, ly=Y(price[n-1]);
-    ctx.beginPath(); ctx.arc(lx,ly,3.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=20; ctx.fill(); ctx.shadowBlur=0;
+    var lp=LP(lead);
+    ctx.beginPath(); ctx.arc(lp[0],lp[1],3.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=20; ctx.fill(); ctx.shadowBlur=0;
+    ctx.restore();
     // (The aiming beam draws the reticle at the signal point during a playcall — see drawAimBeam.)
     ctx.restore();
     // RSI readout — screen space, never zoomed
@@ -880,8 +897,9 @@ ${versionTag}
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    // current underlying along the walk → live P/L
-    var uNow=clamp01((nowPrice-signalPrice)/(volScale||1)+0.5), pl=payoffAt(strat.pts,uNow)*DOLLARS;
+    // live P/L tracks the realized pen (Act 3), not the frozen "now"
+    var curP=realized.length?realized[realized.length-1]:nowPrice;
+    var uNow=clamp01((curP-signalPrice)/(volScale||1)+0.5), pl=payoffAt(strat.pts,uNow)*DOLLARS;
     // Narrow / mobile: stack — pipeline + signal + name + desc centered on top, pivots at the bottom.
     if(W<820){
       var cx=W/2, ny=field.top+18; ctx.textAlign="center";
@@ -1086,6 +1104,10 @@ ${versionTag}
   // to that play's setup before the enhance-zoom fires; manualPlay slows the pace + enables hold.
   var requestedPlay=null, manualPlay=false, paceScale=1, paused=false,
       summoning=false, summonEnd=0, summonIdx=0, zoomRippled=false, ripples=[];
+  // Three-act playcall: on fire we FREEZE history at nowIdx (stop pushing price[]) so the trend
+  // holds still; in Act 3 a separate realized[] pen draws rightward INTO the prediction, overtaking
+  // the dotted forecast, then folds back into price[] on zoom-out so ambient continues from reality.
+  var nowIdx=0, realized=[], realizedAlpha=1;
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -1147,7 +1169,7 @@ ${versionTag}
   function armForecast(idx){ var last=price.length-1;
     signalPrice=price[last];
     volScale=Math.max((bU[last]-bL[last])||0, signalPrice*0.05)*1.7;
-    var ex=extrema(STRATS[idx]); targetPrice=signalPrice+(ex.mxDir-0.5)*volScale; forecastTarget=targetPrice; }
+    var ex=extrema(STRATS[idx]); targetPrice=signalPrice+(ex.mxDir-0.5)*volScale; }
 
   // Steer the market toward the setup a play needs (from its cue) so the trend visibly transitions
   // into "ripe conditions" before the playcall fires — reuses the regime vars the walk already runs.
@@ -1206,7 +1228,9 @@ ${versionTag}
   var last=0, running=true, SUMMON_MS=850;
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function startPlay(now, sig, manual){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i;
-    manualPlay=manual; paceScale=manual?1.4:1; zoomRippled=false; armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
+    manualPlay=manual; paceScale=manual?1.4:1; zoomRippled=false;
+    nowIdx=price.length-1; realized=[];   // freeze history here; realized pen fills the future in Act 3
+    armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
   function loop(now){
     if(!running) return;
     if(now-last > 50){ var dt=now-last; last=now; measureField(); fieldStep();
@@ -1229,18 +1253,20 @@ ${versionTag}
         else rateT=lerp(1, 0.4, clamp01(p.on));
         if(paused) rateT=0.16;
         camT=clamp01(Math.max(p.zoom, p.aim*0.25))*(1-p.out);   // eased zoom/focal — no snap
+        realizedAlpha=1-p.out;                                   // realized pen fades on zoom-out
+        if(p.walk>0 && p.out<=0 && !paused) fillRealized(p.walk); // grow the pen with walk progress
         if(p.zoom>0.4 && !zoomRippled){ zoomRippled=true; addRipple(nowSX, nowSY); }   // enhance-zoom ripple, centered once framed
         rainBoost=((p.walk>0 && p.resolve<1)||(p.zoom>0.4&&p.project<0.3))?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
         if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
-          p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
+          realized=[]; realizedAlpha=1; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
       else { rainBoost=0; rainTint=0; }
       cam += (camT-cam)*0.09; rate += (rateT-rate)*0.09;
       zoom += ((1+1.05*cam)-zoom)*0.1;
-      // Advance time by the eased rate; during the walk the price tracks the happy-path forecast.
-      stepAcc += Math.max(rate, playMode?0:1);
-      var guard=0;
-      while(stepAcc>=1 && guard++<8){ stepAcc-=1;
-        if(playMode && p && p.walk>0 && p.out<=0 && !paused) stepForecast(); else stepMarket(); }
+      // Advance time. Ambient only: push the live market. During a play the history is FROZEN — the
+      // realized pen (grown from p.walk above) is the only thing that advances; Acts 1/2 hold still.
+      if(!playMode){ stepAcc += rate; var guard=0;
+        while(stepAcc>=1 && guard++<8){ stepAcc-=1; stepMarket(); } }
+      else stepAcc=0;
       document.body.classList.toggle("playing", cam>0.02);
       drawMarket(1 - cam*0.34);
       if(p){ drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
