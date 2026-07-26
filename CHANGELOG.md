@@ -1,3 +1,10 @@
+# [1.79.0](https://github.com/ejclark/skynet-capital/compare/v1.78.0...v1.79.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** the Eye levels up — landmark scales with the bot's rank ([#137](https://github.com/ejclark/skynet-capital/issues/137)) ([e5aa03a](https://github.com/ejclark/skynet-capital/commit/e5aa03a83645e98104f59050f7bb4e7b194b708f))
+
 # [1.78.0](https://github.com/ejclark/skynet-capital/compare/v1.77.0...v1.78.0) (2026-07-26)
 
 
