@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/ejclark/skynet-capital/compare/v1.7.0...v1.8.0) (2026-07-26)
+
+
+### Features
+
+* **login:** playbook menu — call your own play from PLAY ([#21](https://github.com/ejclark/skynet-capital/issues/21)) ([11c780d](https://github.com/ejclark/skynet-capital/commit/11c780d1f6441597321a4ab0eeff7a8b0987effd))
+
 # [1.7.0](https://github.com/ejclark/skynet-capital/compare/v1.6.0...v1.7.0) (2026-07-26)
 
 
