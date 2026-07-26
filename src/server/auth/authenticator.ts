@@ -805,7 +805,7 @@ ${versionTag}
     // playcall eases it further to W·0.30 for the forecast. Always translated so the present dot never
     // hugs the right edge — the future opens to its right in every state.
     var fpx=(n-1)*dx, fpy=Y(price[n-1]);
-    var toX=lerp(W*0.68, W*0.30, cam), toY=lerp(fpy, baseY, cam);
+    var toX=lerp(W*0.78, W*0.30, cam), toY=lerp(fpy, baseY, cam);
     nowSX=toX; nowSY=toY; nowPrice=price[n-1];
     pxPerPrice=(amp*2/(r.span||1))*zoom;
     scBaseY=baseY; scMid=r.mid; scSpan=r.span; scAmp=amp;   // ambient price→screen-Y for the roaming scanners
@@ -823,19 +823,30 @@ ${versionTag}
     var coneA=clamp01(1-cam*1.8);
     if(coneA>0.01 && smaA.length){
       var lm=smaA[smaA.length-1], lp2=price[n-1], lhw=Math.max((bU[n-1]-bL[n-1])/2, lp2*0.012);
-      var F=Math.ceil((W-(n-1)*dx)/dx)+3, UP=[], LO=[], fi;
+      // Center DRIFTS along the recent EMA slope so the projection adjusts course with the market
+      // (recomputed every frame → it visibly re-aims as price moves), instead of a flat mean.
+      var slope=(emaF.length>10?(emaF[emaF.length-1]-emaF[emaF.length-11])/10:0);
+      var F=Math.ceil((W-(n-1)*dx)/dx)+4, UP=[], LO=[], MD=[], fi;   // reach the right browser edge
       for(fi=0;fi<=F;fi++){ var tt=fi/F;
         var breathe=1 + 0.18*Math.sin(rainT*0.028 + tt*3.1) + 0.10*Math.sin(rainT*0.015 + tt*6.2);
-        var hw=lhw*(1 + tt*1.9)*breathe, px2=(n-1+fi)*dx;
-        UP.push([px2, Y(lm+hw)]); LO.push([px2, Y(lm-hw)]); }
+        var hw=lhw*(1 + tt*1.9)*breathe, cen=lm + slope*fi*0.7, px2=(n-1+fi)*dx;
+        UP.push([px2, Y(cen+hw)]); LO.push([px2, Y(cen-hw)]); MD.push([px2, Y(cen)]); }
+      // Fade the whole projection out toward the right edge so the motion eases off-screen.
+      var gX0=(n-1)*dx, gX1=(n-1+F)*dx;
+      var gFill=ctx.createLinearGradient(gX0,0,gX1,0);
+      gFill.addColorStop(0,hexA(accent,0.11)); gFill.addColorStop(0.65,hexA(accent,0.05)); gFill.addColorStop(1,hexA(accent,0));
+      var gEdge=ctx.createLinearGradient(gX0,0,gX1,0);
+      gEdge.addColorStop(0,hexA(accent,0.42)); gEdge.addColorStop(0.7,hexA(accent,0.18)); gEdge.addColorStop(1,hexA(accent,0));
       ctx.save(); ctx.globalAlpha=dim*coneA;
       ctx.beginPath(); for(fi=0;fi<UP.length;fi++){ fi?ctx.lineTo(UP[fi][0],UP[fi][1]):ctx.moveTo(UP[fi][0],UP[fi][1]); }
       for(fi=LO.length-1;fi>=0;fi--){ ctx.lineTo(LO[fi][0],LO[fi][1]); }
-      ctx.closePath(); ctx.fillStyle=hexA(accent,0.07); ctx.fill();
-      ctx.setLineDash([3,5]); ctx.lineWidth=1.1; ctx.strokeStyle=hexA(accent,0.34);
+      ctx.closePath(); ctx.fillStyle=gFill; ctx.fill();
+      ctx.setLineDash([3,5]); ctx.lineWidth=1.1; ctx.strokeStyle=gEdge;
       ctx.beginPath(); for(fi=0;fi<UP.length;fi++){ fi?ctx.lineTo(UP[fi][0],UP[fi][1]):ctx.moveTo(UP[fi][0],UP[fi][1]); } ctx.stroke();
       ctx.beginPath(); for(fi=0;fi<LO.length;fi++){ fi?ctx.lineTo(LO[fi][0],LO[fi][1]):ctx.moveTo(LO[fi][0],LO[fi][1]); } ctx.stroke();
-      ctx.strokeStyle=hexA(muted,0.30); ctx.beginPath(); ctx.moveTo((n-1)*dx,Y(lm)); ctx.lineTo((n-1+F)*dx,Y(lm)); ctx.stroke();
+      var gMid=ctx.createLinearGradient(gX0,0,gX1,0);
+      gMid.addColorStop(0,hexA(muted,0.34)); gMid.addColorStop(1,hexA(muted,0));
+      ctx.strokeStyle=gMid; ctx.beginPath(); for(fi=0;fi<MD.length;fi++){ fi?ctx.lineTo(MD[fi][0],MD[fi][1]):ctx.moveTo(MD[fi][0],MD[fi][1]); } ctx.stroke();
       // "now" divider — the present line the history draws up to and the projection fans out from
       ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(accent,0.22*coneA); ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo((n-1)*dx, Y(lm)-amp*0.9); ctx.lineTo((n-1)*dx, Y(lm)+amp*0.9); ctx.stroke();
@@ -1247,6 +1258,10 @@ ${versionTag}
     var loP=signalPrice-volScale*0.55, hiP=signalPrice+volScale*0.55;
     ctx.save(); ctx.globalAlpha=A;
     if(proj>0.01){
+      // Opaque backing behind the whole play chart (bands + candles + RSI rail) so the tape reads
+      // with strong contrast against the busy market/matrix behind it.
+      var chTop=SY(hiP)-14, chBot=Math.min(field.bottom-4, SY(loP)+60);
+      ctx.fillStyle=hexA(css("--bg")||"#0B0F14", 0.55*proj); ctx.fillRect(X0-6, chTop, (Xf+40)-(X0-6), chBot-chTop);
       // --- MARKET CONTEXT projected into the future (all dotted = tentative, drawn UNDER the play
       // so it frames the bigger picture without stealing focus). Which overlays lead depends on the
       // play's setup: vol cone for breakout plays, support/resistance for range plays, momentum for
@@ -1342,16 +1357,18 @@ ${versionTag}
     if(p.walk>0 && realized.length>3){
       var dxL=W/(SPAN-1), comb=price.slice(0,nowIdx+1).concat(realized), rl2=realized.length;
       var lt=SY(loP)+18, lh=40; if(lt+lh>field.bottom-6) lt=field.bottom-6-lh; var lb=lt+lh;
-      var x0L=nowSX+dxL*zoom, xNL=nowSX+rl2*dxL*zoom;
+      // The RSI RAIL (backing, zones, guides, labels) is laid across the WHOLE region up front; only
+      // the RSI LINE grows as the present advances. So the rail spans x0L..Xf; the line stops at xNL.
+      var x0L=nowSX+dxL*zoom, xNL=nowSX+rl2*dxL*zoom, xR=Xf;
       function ryL(v){ return lb-(clamp01(v/100))*lh; }
       ctx.save(); ctx.globalAlpha=A*proj;
-      ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.5); ctx.fillRect(x0L, lt-2, xNL-x0L, lh+4);   // dark backing separates the lane from the P/L bands
-      ctx.fillStyle=hexA(neg,0.06); ctx.fillRect(x0L, ryL(100), xNL-x0L, ryL(70)-ryL(100));   // overbought zone
-      ctx.fillStyle=hexA(pos,0.06); ctx.fillRect(x0L, ryL(30), xNL-x0L, ryL(0)-ryL(30));       // oversold zone
+      ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.72); ctx.fillRect(x0L, lt-2, xR-x0L, lh+4);   // opaque backing for contrast
+      ctx.fillStyle=hexA(neg,0.08); ctx.fillRect(x0L, ryL(100), xR-x0L, ryL(70)-ryL(100));   // overbought zone
+      ctx.fillStyle=hexA(pos,0.08); ctx.fillRect(x0L, ryL(30), xR-x0L, ryL(0)-ryL(30));       // oversold zone
       ctx.setLineDash([2,4]); ctx.lineWidth=1;
-      ctx.strokeStyle=hexA(neg,0.42); ctx.beginPath(); ctx.moveTo(x0L,ryL(70)); ctx.lineTo(xNL,ryL(70)); ctx.stroke();
-      ctx.strokeStyle=hexA(muted,0.25); ctx.beginPath(); ctx.moveTo(x0L,ryL(50)); ctx.lineTo(xNL,ryL(50)); ctx.stroke();
-      ctx.strokeStyle=hexA(pos,0.42); ctx.beginPath(); ctx.moveTo(x0L,ryL(30)); ctx.lineTo(xNL,ryL(30)); ctx.stroke();
+      ctx.strokeStyle=hexA(neg,0.42); ctx.beginPath(); ctx.moveTo(x0L,ryL(70)); ctx.lineTo(xR,ryL(70)); ctx.stroke();
+      ctx.strokeStyle=hexA(muted,0.25); ctx.beginPath(); ctx.moveTo(x0L,ryL(50)); ctx.lineTo(xR,ryL(50)); ctx.stroke();
+      ctx.strokeStyle=hexA(pos,0.42); ctx.beginPath(); ctx.moveTo(x0L,ryL(30)); ctx.lineTo(xR,ryL(30)); ctx.stroke();
       ctx.setLineDash([]);
       ctx.beginPath();
       for(var rk=0;rk<rl2;rk++){ var rv=rsi(comb.slice(0,nowIdx+2+rk),14), rx=nowSX+(rk+1)*dxL*zoom;
@@ -1360,8 +1377,8 @@ ${versionTag}
       ctx.shadowColor=accent; ctx.shadowBlur=5; ctx.stroke(); ctx.shadowBlur=0;
       ctx.font="700 8px "+mono; ctx.textAlign="left";
       ctx.fillStyle=hexA(muted,0.7); ctx.fillText("RSI", x0L+2, lt-3);
-      ctx.fillStyle=hexA(neg,0.6); ctx.fillText("70", xNL+4, ryL(70)+3);
-      ctx.fillStyle=hexA(pos,0.6); ctx.fillText("30", xNL+4, ryL(30)+3);
+      ctx.fillStyle=hexA(neg,0.6); ctx.fillText("70", xR+4, ryL(70)+3);
+      ctx.fillStyle=hexA(pos,0.6); ctx.fillText("30", xR+4, ryL(30)+3);
       ctx.textAlign="start"; ctx.restore();
     }
     drawPanel(strat, sig, p, A);
