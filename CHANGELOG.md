@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/ejclark/skynet-capital/compare/v1.30.0...v1.30.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** signal reason for new plays + no card overlap on mobile ([#49](https://github.com/ejclark/skynet-capital/issues/49)) ([c288603](https://github.com/ejclark/skynet-capital/commit/c2886031b7ad5069f72b4b7eb9b062f52b56580e))
+
 # [1.30.0](https://github.com/ejclark/skynet-capital/compare/v1.29.1...v1.30.0) (2026-07-26)
 
 
