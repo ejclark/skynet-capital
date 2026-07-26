@@ -309,13 +309,22 @@ function renderDrawer(nav: NavContext): string {
       `<a class="dnav-link dnav-muted" href="/logout"><span class="dnav-ico" aria-hidden="true">⏻</span><span class="dnav-label">Sign out</span></a>`,
     );
   }
+  // The drawer is built from the same card language as the participant cards: titled sections in
+  // bordered containers, all anchored top-left. New sections (e.g. a "Your standing" card, filters)
+  // drop in as more `.dcard` blocks — the structure scales to more complexity without a redesign.
   return `<aside class="drawer" id="drawer" aria-label="Navigation">
       <div class="drawer-brand">
         <span class="mark">SKYNET<b>·</b>CAPITAL</span>
         <span class="sub">Observatory</span>
       </div>
-      <nav class="drawer-nav" aria-label="Views">${links.join("")}</nav>
-      <div class="drawer-foot">${foot.join("")}</div>
+      <section class="dcard">
+        <h2 class="dcard-title">Views</h2>
+        <nav class="drawer-nav" aria-label="Views">${links.join("")}</nav>
+      </section>
+      <section class="dcard">
+        <h2 class="dcard-title">Account</h2>
+        <div class="drawer-nav">${foot.join("")}</div>
+      </section>
     </aside>`;
 }
 
@@ -1014,7 +1023,10 @@ const STYLE = `<style>
   .drawer-brand .mark b{ color:var(--accent); }
   .drawer-brand .sub{ font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:var(--muted); }
   .drawer-nav{ display:flex; flex-direction:column; gap:3px; }
-  .drawer-foot{ margin-top:auto; display:flex; flex-direction:column; gap:3px; padding-top:12px; border-top:1px solid var(--border); }
+  /* Drawer sections use the participant-card language — bordered containers with a titled header —
+     so the nav reads as the same design system and new sections stack without a redesign. */
+  .dcard{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:8px 7px; }
+  .dcard-title{ margin:0; font-family:var(--mono); font-weight:600; font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); padding:3px 7px 8px; }
   .dnav-link,.dnav-cta{ display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:9px; text-decoration:none; color:var(--muted); font-size:13px; font-weight:600; transition:color .15s, background .15s; }
   .dnav-link:hover{ color:var(--text); background:color-mix(in srgb,var(--surface) 80%,transparent); }
   .dnav-link.active{ color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
