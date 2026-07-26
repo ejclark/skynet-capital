@@ -1,3 +1,10 @@
+# [1.77.0](https://github.com/ejclark/skynet-capital/compare/v1.76.0...v1.77.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** wire the history read path into /u/:id ([#135](https://github.com/ejclark/skynet-capital/issues/135)) ([909ec60](https://github.com/ejclark/skynet-capital/commit/909ec60317bb0dcb764d51329f3a01eabc1961fa))
+
 # [1.76.0](https://github.com/ejclark/skynet-capital/compare/v1.75.0...v1.76.0) (2026-07-26)
 
 
