@@ -1,3 +1,10 @@
+# [1.66.0](https://github.com/ejclark/skynet-capital/compare/v1.65.0...v1.66.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** empire skyline thumbnail on each board card ([#116](https://github.com/ejclark/skynet-capital/issues/116)) ([640f8b6](https://github.com/ejclark/skynet-capital/commit/640f8b67b6cbb02513c86571bd2924ffd3093eed))
+
 # [1.65.0](https://github.com/ejclark/skynet-capital/compare/v1.64.0...v1.65.0) (2026-07-26)
 
 
