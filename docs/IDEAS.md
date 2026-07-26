@@ -29,6 +29,10 @@ legal risk) held to an honest, data-sourced standard. Phased:
 - **P3 Market-event vocabulary** — regimes + macro events → city phenomena (oil shock→smoke/traffic, bull→cranes, bear→fog); matrix tracers as the transition/comms medium. _(src: Eric)_
 - **P4 Contributable personas** — users add bot personas that join the universe (plugin behind the persona-lore seam). _(src: Eric)_
 - **P5 Full ecosystem** — trades/events continuously animate a world that communicates the league's live state; the instrument panel underwriting autonomous real-money trading. _(src: Eric)_
+- **Scale across the four views** — the sim-city grammar renders at different zoom: individual = a city,
+  comparison = two cities (commonality + contrast), leaderboard = a region/map, bots-vs-humans = country
+  vs country where the *units of measure change* (buildings fall off; GDP/territory/development emerge).
+  A per-view rendering spec over the existing routes. _(src: Eric)_
 
 ### Governance — Eric's calls (do not build unattended)
 - **Formalize the participation agreement / consent** — the shared universe pools members' trades/
