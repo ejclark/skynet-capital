@@ -1,3 +1,10 @@
+# [1.88.0](https://github.com/ejclark/skynet-capital/compare/v1.87.0...v1.88.0) (2026-07-26)
+
+
+### Features
+
+* **login:** make the primary character's tower dominant ([#152](https://github.com/ejclark/skynet-capital/issues/152)) ([033b3ad](https://github.com/ejclark/skynet-capital/commit/033b3adc9ab78c2a0272a162d0fe6dcd629f1415))
+
 # [1.87.0](https://github.com/ejclark/skynet-capital/compare/v1.86.0...v1.87.0) (2026-07-26)
 
 
