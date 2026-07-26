@@ -1409,36 +1409,53 @@ ${versionTag}
       var rad=8+pr*170, a=(1-pr)*0.5;
       ctx.strokeStyle=hexA(accent,a); ctx.lineWidth=2*(1-pr); ctx.beginPath(); ctx.arc(r.x,r.y,rad,0,7); ctx.stroke();
       ctx.strokeStyle=hexA(accent,a*0.5); ctx.lineWidth=1.5*(1-pr); ctx.beginPath(); ctx.arc(r.x,r.y,rad*0.58,0,7); ctx.stroke(); } }
-  // Roaming spotlights: the bots continuously SWEEP the tape hunting for signals. Several soft
-  // beams glide across the field at different speeds; each casts additive light onto the trend
-  // beneath it, and FLARES with a reticle when it passes a slice where price breaches a Bollinger
-  // band (a detected signal). They recede as a playcall zooms in (the single aim-beam takes over) —
-  // reading as "the scan found something, now we focus." Ambient only; cheap; composite 'lighter'.
+  // Roaming spotlights: the bots hunt for signals from MANY vantage points. Each is a narrow beam
+  // fired from a scattered emitter, aimed mostly FORWARD/up at the tape and slowly sweeping. Where a
+  // beam's aim lands it lights the trend; when several beams converge on the same slice AND price
+  // breaches a Bollinger band there, the signal is revealed (reticle) — triangulated from different
+  // angles, the way you actually spot one. Angled cones (never vertical). Ambient only; composite 'lighter'.
   var scanners=[];
-  function initScanners(){ scanners=[]; for(var i=0;i<4;i++){
-    scanners.push({ x:Math.random()*W, v:(0.4+Math.random()*0.55)*(Math.random()<0.5?-1:1),
-      w:64+Math.random()*54, flare:0 }); } }
+  function initScanners(){ scanners=[]; var N=6, fb=field.bottom;
+    for(var i=0;i<N;i++){
+      var ex=W*(0.06+0.88*i/(N-1)) + (Math.random()-0.5)*70;   // scattered vantage points across the base
+      scanners.push({ ex:ex, ey:fb+18+Math.random()*70,
+        base:-Math.PI/2 + (Math.random()-0.5)*0.9,             // aim mostly UP, tilted per vantage
+        amp:0.28+Math.random()*0.30, sw:0.16+Math.random()*0.16, ph:Math.random()*6.28,
+        spread:0.05+Math.random()*0.05, flare:0 }); } }
   function scanY(v){ return scBaseY - ((v-scMid)/(scSpan||1))*scAmp*2; }
   function drawScanners(vis){ if(vis<=0.02) return; if(!scanners.length) initScanners();
     var accent=css("--accent")||"#35D0BA", neg=css("--neg")||"#F85149", n=price.length, dx=W/(SPAN-1);
+    var fmid=(field.top+field.bottom)/2, i, aims=[];
     ctx.save(); ctx.globalCompositeOperation="lighter";
-    for(var i=0;i<scanners.length;i++){ var s=scanners[i]; s.x+=s.v*rate;
-      if(s.x<-s.w) s.x=W+s.w; else if(s.x>W+s.w) s.x=-s.w;
-      var idx=Math.round(s.x/dx); if(idx<0)idx=0; else if(idx>n-1)idx=n-1; var py=scanY(price[idx]);
+    for(i=0;i<scanners.length;i++){ var s=scanners[i]; s.ph += s.sw*0.05*rate;
+      var ang=s.base + Math.sin(s.ph)*s.amp;                   // sweeping aim from this vantage point
+      var dx0=Math.cos(ang), dy0=Math.sin(ang); if(dy0>-0.18) dy0=-0.18;   // always aiming up into the field
+      var t=(fmid-s.ey)/dy0; if(t<60)t=60;                     // reach the trend band
+      var ax=s.ex+dx0*t; var axc=ax<0?0:(ax>W?W:ax);
+      var idx=Math.round(axc/dx); if(idx<0)idx=0; else if(idx>n-1)idx=n-1; var py=scanY(price[idx]);
       var hit=(bU[idx]!=null&&price[idx]>bU[idx])||(bL[idx]!=null&&price[idx]<bL[idx]);
-      s.flare += ((hit?1:0)-s.flare)*0.12;
-      var g=ctx.createLinearGradient(s.x,field.top,s.x,field.bottom+40);
-      g.addColorStop(0,hexA(accent,0)); g.addColorStop(0.5,hexA(accent,vis*(0.045+s.flare*0.12)));
-      g.addColorStop(1,hexA(accent,0));
-      ctx.fillStyle=g; ctx.fillRect(s.x-s.w/2, field.top-12, s.w, (field.bottom-field.top)+64);
-      var pr=ctx.createRadialGradient(s.x,py,0,s.x,py,s.w*0.72);
-      pr.addColorStop(0,hexA(accent,vis*(0.14+s.flare*0.30))); pr.addColorStop(1,hexA(accent,0));
-      ctx.fillStyle=pr; ctx.beginPath(); ctx.arc(s.x,py,s.w*0.72,0,7); ctx.fill();
-      if(s.flare>0.34){ ctx.globalCompositeOperation="source-over";
-        var ra=vis*(s.flare-0.34)*1.5; ctx.strokeStyle=hexA(neg,ra); ctx.lineWidth=1.2;
-        ctx.beginPath(); ctx.arc(s.x,py,7,0,7); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(s.x-11,py); ctx.lineTo(s.x-4,py); ctx.moveTo(s.x+4,py); ctx.lineTo(s.x+11,py); ctx.stroke();
-        ctx.globalCompositeOperation="lighter"; } }
+      s.flare += ((hit?1:0)-s.flare)*0.10;
+      // narrow angled cone from the emitter
+      var a1=ang-s.spread, a2=ang+s.spread, R=t*1.12;
+      var g=ctx.createLinearGradient(s.ex,s.ey, s.ex+dx0*t, s.ey+dy0*t);
+      g.addColorStop(0,hexA(accent, vis*(0.09+s.flare*0.14))); g.addColorStop(1,hexA(accent,0));
+      ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(s.ex,s.ey);
+      ctx.lineTo(s.ex+Math.cos(a1)*R, s.ey+Math.sin(a1)*R);
+      ctx.lineTo(s.ex+Math.cos(a2)*R, s.ey+Math.sin(a2)*R); ctx.closePath(); ctx.fill();
+      // pool where the beam lands on the tape
+      var pr=ctx.createRadialGradient(ax,py,0,ax,py,54);
+      pr.addColorStop(0,hexA(accent,vis*(0.12+s.flare*0.26))); pr.addColorStop(1,hexA(accent,0));
+      ctx.fillStyle=pr; ctx.beginPath(); ctx.arc(ax,py,54,0,7); ctx.fill();
+      aims.push({ ax:ax, py:py, hit:hit }); }
+    // Convergence: a breach lit by 2+ beams from different vantage points = a revealed signal.
+    ctx.globalCompositeOperation="source-over";
+    for(i=0;i<aims.length;i++){ if(!aims[i].hit) continue; var cnt=1;
+      for(var j=0;j<aims.length;j++){ if(j!==i && Math.abs(aims[j].ax-aims[i].ax)<46) cnt++; }
+      if(cnt>=2){ var rr=vis*0.9, cx=aims[i].ax, cy=aims[i].py;
+        ctx.strokeStyle=hexA(neg,rr); ctx.lineWidth=1.3;
+        ctx.beginPath(); ctx.arc(cx,cy,8,0,7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx-12,cy); ctx.lineTo(cx-5,cy); ctx.moveTo(cx+5,cy); ctx.lineTo(cx+12,cy);
+        ctx.moveTo(cx,cy-12); ctx.lineTo(cx,cy-5); ctx.moveTo(cx,cy+5); ctx.lineTo(cx,cy+12); ctx.stroke(); } }
     ctx.restore(); }
   // Render one static, fully-projected forecast for a play (reduced-motion + initial paint).
   function renderStatic(idx){ curStrat=idx; armForecast(idx); cam=0.9; zoom=1.9;
