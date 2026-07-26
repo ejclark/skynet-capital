@@ -876,7 +876,10 @@ ${versionTag}
     // Forward-projected Bollinger cone (ambient INGEST): carry the bands into the FUTURE right of "now",
     // widening AND breathing (expand/contract) like real vol as events unfold. The shaded above/below is
     // the band itself projected forward. Fades out as a playcall frames in.
-    var coneA=clamp01(1-cam*1.8);
+    // The ambient cone hands off to the PLAYCALL forecast: it stays full through detect/aim/zoom (so
+    // the forecast grows OUT of the already-present projection — a seamless segue), then fades only as
+    // the forecast's own bands project in. Ambient (no play) → fcastProj 0 → full cone.
+    var coneA=clamp01(1-fcastProj*1.35);
     if(coneA>0.01 && smaA.length){
       var lm=smaA[smaA.length-1], lp2=price[n-1], lhw=Math.max((bU[n-1]-bL[n-1])/2, lp2*0.02);
       // Center DRIFTS along the recent EMA slope so the projection adjusts course with the market
@@ -1544,7 +1547,7 @@ ${versionTag}
     out: e>T_OUT?clamp01((e-T_OUT)/OUT):0 }; }
   var playMode=false, playStart=0, curStrat=0, curSig=null, nextPlayAt=2400, rainBoost=0, rainTint=0;
   // Camera + time: cam (0 ambient → 1 framed), zoom eased; rate = eased time multiplier (slow-mo).
-  var zoom=1, cam=0, rate=1, stepAcc=0, signalPrice=100, targetPrice=100, volScale=10;
+  var zoom=1, cam=0, rate=1, stepAcc=0, signalPrice=100, targetPrice=100, volScale=10, fcastProj=0;
   // Screen anchor for "now" (leading price) + price→pixel scale, exported by drawMarket so the
   // forecast draws the future in the same frame as the live trend.
   var nowSX=0, nowSY=0, nowPrice=100, pxPerPrice=1;
@@ -1805,6 +1808,7 @@ ${versionTag}
         else rateT=lerp(1, 0.4, clamp01(p.on));
         if(paused) rateT=0.16;
         camT=clamp01(Math.max(p.zoom, p.aim*0.25))*(1-p.out);   // eased zoom/focal — no snap
+        fcastProj=Math.max(clamp01(p.project), p.out);           // ambient cone hands off to the forecast bands
         realizedAlpha=1-p.out;                                   // realized pen fades on zoom-out
         if(p.walk>0 && p.out<=0 && !paused) fillRealized(p.walk);   // unfold across the region to the exit level
         // Slow-mo THROUGH a high-vol event: as the pen crosses an event fraction, dilate the phase clock
@@ -1819,7 +1823,7 @@ ${versionTag}
         rainBoost=((p.walk>0 && p.resolve<1)||(p.zoom>0.4&&p.project<0.3))?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
         if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
           realized=[]; realizedAlpha=1; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
-      else { rainBoost=0; rainTint=0; }
+      else { rainBoost=0; rainTint=0; fcastProj=0; }
       cam += (camT-cam)*0.09; rate += (rateT-rate)*0.09;
       zoom += ((1+1.05*cam)-zoom)*0.1;
       // Advance time. Ambient only: push the live market. During a play the history is FROZEN — the
