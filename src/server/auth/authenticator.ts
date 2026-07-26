@@ -911,12 +911,15 @@ ${versionTag}
         var o=realized[cs], c=realized[ce], chi=-1e9, clo=1e9;
         for(cj=cs;cj<=ce;cj++){ if(realized[cj]>chi)chi=realized[cj]; if(realized[cj]<clo)clo=realized[cj]; }
         var ccx=(n+cs+(ce-cs)/2)*dx, cup=c>=o, ccol=cup?pos:neg;
-        ctx.strokeStyle=hexA(ccol,0.85); ctx.lineWidth=1.2*lw;
+        ctx.strokeStyle=hexA(ccol,1); ctx.lineWidth=1.5*lw;
         ctx.beginPath(); ctx.moveTo(ccx,Y(chi)); ctx.lineTo(ccx,Y(clo)); ctx.stroke();            // wick
         var bt=Y(Math.max(o,c)), bh=Math.max(1.4*lw, Y(Math.min(o,c))-bt);
         ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.72); ctx.fillRect(ccx-cw/2,bt,cw,bh);           // dark backing so bodies separate from the green/red band
-        ctx.fillStyle=hexA(ccol,cup?0.66:0.82); ctx.fillRect(ccx-cw/2,bt,cw,bh);                    // body
-        ctx.strokeStyle=hexA(ccol,1); ctx.lineWidth=lw; ctx.strokeRect(ccx-cw/2,bt,cw,bh); }
+        // Brighter, bolder bodies to match the darker playcall backdrop — with a soft same-colour glow.
+        ctx.shadowColor=ccol; ctx.shadowBlur=4;
+        ctx.fillStyle=hexA(ccol,cup?0.88:0.95); ctx.fillRect(ccx-cw/2,bt,cw,bh);                    // body
+        ctx.shadowBlur=0;
+        ctx.strokeStyle=hexA(ccol,1); ctx.lineWidth=1.4*lw; ctx.strokeRect(ccx-cw/2,bt,cw,bh); }
       // Smoothed guide line traced THROUGH the candles — a short EMA that "smooths everything", so
       // the underlying trend stays legible beneath the noisy OHLC bodies. Seeded from the frozen now.
       var em=price[n-1], ka=2/9; ctx.beginPath(); ctx.moveTo((n-1)*dx, Y(em));
@@ -931,8 +934,12 @@ ${versionTag}
     if(!rl){ var head=18; ctx.beginPath();
       for(i=Math.max(0,lead-head);i<=lead;i++){ var wp=LP(i); i===Math.max(0,lead-head)?ctx.moveTo(wp[0],wp[1]):ctx.lineTo(wp[0],wp[1]); }
       ctx.strokeStyle="#EAFBF7"; ctx.lineWidth=2.3; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0; }
+    // Present marker — brighter + bolder to hold its own on the darker backdrop: a bright core, a
+    // crisp ring, and a stronger glow.
     var lp=LP(lead);
-    ctx.beginPath(); ctx.arc(lp[0],lp[1],3.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=20; ctx.fill(); ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.arc(lp[0],lp[1],4.6,0,7); ctx.fillStyle="#F4FEFB"; ctx.shadowColor=accent; ctx.shadowBlur=26; ctx.fill();
+    ctx.shadowBlur=0; ctx.lineWidth=1.4; ctx.strokeStyle=hexA(accent,0.95);
+    ctx.beginPath(); ctx.arc(lp[0],lp[1],6.6,0,7); ctx.stroke();
     ctx.restore();
     // (The aiming beam draws the reticle at the signal point during a playcall — see drawAimBeam.)
     ctx.restore();
