@@ -1728,6 +1728,28 @@ ${versionTag}
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hx,hy,r+3,0,7); ctx.fill();
     ctx.restore();
   }
+  // THE ONE RING — the easter egg on the Eye's character piece: the signal the gaze locks onto IS the
+  // Ring of Power, caught in the searchlight. A gold band viewed at a tilt, with a specular glint and the
+  // fiery Elvish inscription glowing as the gaze heats it. Rendered small + elegant — a reward for looking.
+  function drawOneRing(x,y,r,heat,al){ if(al<=0.01) return;
+    ctx.save(); ctx.translate(x,y); var ry=r*0.42;
+    // the gold band — a metallic top-light→shadow gradient makes it read as a solid ring, not a circle
+    var mg=ctx.createLinearGradient(0,-r,0,r);
+    mg.addColorStop(0,hexA("#FFF0C4",al)); mg.addColorStop(0.5,hexA("#E7B24C",al)); mg.addColorStop(1,hexA("#8A591A",al));
+    ctx.strokeStyle=mg; ctx.lineWidth=Math.max(2,r*0.3); ctx.lineCap="round";
+    ctx.beginPath(); ctx.ellipse(0,0,r,ry,0,0,7); ctx.stroke();
+    // a bright specular glint riding the upper-left of the band
+    ctx.strokeStyle=hexA("#FFFDF2",0.92*al); ctx.lineWidth=Math.max(1,r*0.12);
+    ctx.beginPath(); ctx.ellipse(0,0,r,ry,0,Math.PI*1.02,Math.PI*1.46); ctx.stroke();
+    // the inscription — a warm ring of fire riding the band + drifting glimmers, lit only when heated
+    if(heat>0.02){ ctx.globalCompositeOperation="lighter";
+      ctx.shadowColor="#FFB060"; ctx.shadowBlur=8*heat;
+      ctx.strokeStyle=hexA("#FF9E3D",0.55*heat*al); ctx.lineWidth=Math.max(1,r*0.14);
+      ctx.beginPath(); ctx.ellipse(0,0,r*0.82,ry*0.82,0,0,7); ctx.stroke(); ctx.shadowBlur=0;
+      for(var gi=0;gi<8;gi++){ var ga=gi/8*Math.PI*2+pbGlyphT*0.015, gx=Math.cos(ga)*r*0.82, gy=Math.sin(ga)*ry*0.82;
+        ctx.fillStyle=hexA("#FFE7B0",0.75*heat*al*(0.4+0.6*Math.sin(pbGlyphT*0.28+gi*1.3)));
+        ctx.beginPath(); ctx.arc(gx,gy,0.9,0,7); ctx.fill(); } }
+    ctx.restore(); }
   function drawGravityBeam(p){
     var accent=css("--accent")||"#35D0BA";
     // 1) DETECTION MARK — an imploding lock on the signal point as AIM completes, before the pull.
@@ -1795,8 +1817,9 @@ ${versionTag}
         var wp=0.6+0.4*Math.sin(pbGlyphT*0.4);
         var pg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,24); pg.addColorStop(0,hexA("#EAFFFA",0.5*pull*wp)); pg.addColorStop(0.5,hexA(accent,0.3*pull)); pg.addColorStop(1,hexA(accent,0));
         ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(nowSX,nowSY,24,0,7); ctx.fill();
-        ctx.strokeStyle=hexA(accent,0.6*pull*flick); ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(nowSX,nowSY,lerp(20,10,pull),0,7); ctx.stroke();
-        ctx.restore(); }
+        ctx.restore();
+        // the signal, revealed as the One Ring in the beam's pool (drawn in normal blend so the gold reads)
+        drawOneRing(nowSX, nowSY, lerp(9,13,pull), pull, clamp01(pull*1.4)); }
     }
   }
   // The signal EVIDENCE + the THESIS, a callout ANCHORED to the aim point (not a right column): RSI +
