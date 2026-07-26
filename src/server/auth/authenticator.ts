@@ -878,7 +878,7 @@ ${versionTag}
     // playcall eases it further to W·0.30 for the forecast. Always translated so the present dot never
     // hugs the right edge — the future opens to its right in every state.
     var fpx=(n-1)*dx, fpy=Y(price[n-1]);
-    var toX=lerp(W*0.78, W*0.30, cam), toY=lerp(fpy, baseY, cam);
+    var toX=lerp(W*0.78, W*0.08, cam), toY=lerp(fpy, baseY, cam);   // play → full-width: "now" eases to the left margin
     nowSX=toX; nowSY=toY; nowPrice=price[n-1];
     pxPerPrice=(amp*2/(r.span||1))*zoom;
     scBaseY=baseY; scMid=r.mid; scSpan=r.span; scAmp=amp;   // ambient price→screen-Y for the roaming scanners
@@ -1091,7 +1091,7 @@ ${versionTag}
       // the browser's left edge and where the playcall renders (~0.30w) — so it's a reliable render point
       // every session rather than wherever a random tower fell. (Per-user personal touches on this fixed
       // anchor are TBD — see IDEAS.) The Eye's gaze then reaches in from here to the signal on the right.
-      BE.x=Math.round(w*0.15-BE.w/2); }
+      BE.x=Math.round(w*0.09-BE.w/2); }   // pushed further LEFT + back so the full-width playcall renders in front, its summit high above the chart
     // Second empire tower (no Eye): the tallest that isn't the Eye tower.
     var t2i=(t1>=0&&t1!==eyeI)?t1:t2;
     if(t2i>=0&&t2i!==eyeI){ var B2=near[t2i]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }
@@ -1980,6 +1980,14 @@ ${versionTag}
       // with strong contrast against the busy market/matrix behind it.
       var chTop=SY(hiP)-14, chBot=Math.min(field.bottom-4, SY(loP)+60);
       ctx.fillStyle=hexA(css("--bg")||"#0B0F14", 0.55*proj); ctx.fillRect(X0-6, chTop, (Xf+40)-(X0-6), chBot-chTop);
+      // EYE BACKLIGHT — the tower behind the chart bleeds light THROUGH the play (backlit flare): a soft
+      // radial from the left/Eye side, molten fire at the core → electric accent at the reach, additive.
+      var blx=X0-24, bly=SY(signalPrice), blr=(Xf-X0)*0.9;
+      var blg=ctx.createLinearGradient(X0-6,0,Xf+40,0);
+      blg.addColorStop(0,hexA("#FF8A3D",0.11*proj*(0.7+0.3*eyeWake))); blg.addColorStop(0.32,hexA(accent,0.05*proj)); blg.addColorStop(1,hexA(accent,0));
+      ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.fillStyle=blg; ctx.fillRect(X0-6, chTop, (Xf+40)-(X0-6), chBot-chTop);
+      var rg=ctx.createRadialGradient(blx,bly,0,blx,bly,blr); rg.addColorStop(0,hexA("#FFB060",0.10*proj*(0.7+0.3*eyeWake))); rg.addColorStop(1,hexA("#FFB060",0));
+      ctx.fillStyle=rg; ctx.fillRect(X0-6, chTop, (Xf+40)-(X0-6), chBot-chTop); ctx.restore();
       // --- MARKET CONTEXT projected into the future (all dotted = tentative, drawn UNDER the play
       // so it frames the bigger picture without stealing focus). Which overlays lead depends on the
       // play's setup: vol cone for breakout plays, support/resistance for range plays, momentum for
@@ -2021,6 +2029,17 @@ ${versionTag}
       for(var i=0;i<NB;i++){ var P=loP+(hiP-loP)*(i/(NB-1)), u=(P-signalPrice)/(volScale||1)+0.5, v=payoffAt(strat.pts,u);
         if(Math.abs(v)<0.05) continue; ctx.fillStyle=hexA(v>0?pos:neg, 0.17*proj*Math.min(1,Math.abs(v)*1.6));
         ctx.fillRect(X0, SY(P)-sh/2, Xf-X0, sh); }
+      // ENERGY FLARE — Sauron's two energies flicker THROUGH the zones: jagged ELECTRIC (blue-white) glints
+      // in the green PROFIT band, rising FIRE embers in the red LOSS band. Faint so the tape stays legible.
+      ctx.save(); ctx.globalCompositeOperation="lighter";
+      for(var fz=0;fz<26;fz++){ var fux=X0+(Xf-X0)*noise(fz*2.7+1.3), fP=loP+(hiP-loP)*noise(fz*3.9+0.7),
+          fv=payoffAt(strat.pts,(fP-signalPrice)/(volScale||1)+0.5); if(Math.abs(fv)<0.12) continue;
+        var fyy=SY(fP), fl=0.35+0.65*Math.sin(pbGlyphT*0.4+fz*1.7); if(fl<0) fl=0;
+        if(fv>0){ ctx.strokeStyle=hexA("#CFF3FF",0.16*proj*fl*Math.min(1,fv*1.5)); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(fux-7,fyy);
+          for(var es=1;es<=3;es++){ ctx.lineTo(fux-7+14*(es/3), fyy+(noise(fz+es+Math.floor(pbGlyphT*0.3))-0.5)*6); } ctx.stroke(); }
+        else { var eg=ctx.createRadialGradient(fux,fyy-3*fl,0,fux,fyy-3*fl,4.5); eg.addColorStop(0,hexA("#FF9E3D",0.30*proj*fl*Math.min(1,-fv*1.5))); eg.addColorStop(1,hexA("#F85149",0));
+          ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(fux,fyy-3*fl,4.5,0,7); ctx.fill(); } }
+      ctx.restore();
       // NEON zone boundaries: fluorescent glowing edges on the top/bottom of the band, colored by the
       // payoff SIGN there (green if that extreme is profit, red if loss) — same tone, magnified contrast.
       var vHi=payoffAt(strat.pts,(hiP-signalPrice)/(volScale||1)+0.5), vLo=payoffAt(strat.pts,(loP-signalPrice)/(volScale||1)+0.5);
@@ -2188,7 +2207,8 @@ ${versionTag}
     // stacked panel, which already carries the play's essentials.
     if(W>=820){
       // signal callout is anchored to the aim point and fades out once the walk takes over
-      if(p.aim>0) drawSignalCallout(sig, strat, X0, yNow, A*clamp01(p.aim)*(1-clamp01(p.walk*1.4)));
+      // Signal modal removed — the dotted forecast trajectory (the ideal path the market should take
+      // given the signal) now communicates the route, with the realized tape tracking it under variance.
       // Retrospective recap once the play resolves — confirms the thesis played out (bookends the WHY).
       var recapA=A*clamp01((p.resolve-0.45)/0.55)*(1-clamp01(p.out*1.7));
       if(recapA>0.01) drawRecap(strat, sig, X0, yNow, recapA);
