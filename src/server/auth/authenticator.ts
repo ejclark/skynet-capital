@@ -1082,7 +1082,10 @@ ${versionTag}
     if(eyeI<0) eyeI=t1;
     // Barad-dûr: a broad, jagged fortress-tower, not a needle — bigger footprint + a gentler taper so
     // the stepped tiers and buttresses read; the summit prongs + Eye crown it (see drawBaradDur/drawEye).
-    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.44,BE.h*1.7+60); BE.w=Math.max(BE.w,64); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.50; BE.spire=Math.max(BE.spire,36+Math.random()*18); BE.ant=Math.max(BE.ant,18+Math.random()*12); }
+    // Foreground hero: a broad, nearer mass that TOWERS over neighbors by width, while its summit is
+    // pulled DOWN the y-axis (shorter body + spire) into the lower third — out of the chart / playcall /
+    // trendline overlap zone. Prominent through mass and proximity, not by spiking into the readout.
+    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.32,BE.h*1.3+34); BE.w=Math.max(BE.w,92); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.56; BE.spire=Math.max(BE.spire,22+Math.random()*10); BE.ant=Math.max(BE.ant,12+Math.random()*8); }
     // Second empire tower (no Eye): the tallest that isn't the Eye tower.
     var t2i=(t1>=0&&t1!==eyeI)?t1:t2;
     if(t2i>=0&&t2i!==eyeI){ var B2=near[t2i]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }
@@ -1112,7 +1115,7 @@ ${versionTag}
   // gravity beam hauls the present forward (eyeWake), tying the watcher to the pull it commands.
   function drawEye(cx,cy,dim){
     var wake=0.5+0.5*eyeWake, flk=0.82+0.18*Math.sin(rainT*0.22)+0.07*(noise(rainT*0.9)-0.5);
-    var eh=(22+13*eyeWake), ew=(8+4.5*eyeWake);   // more pronounced; opens wider as it wakes
+    var eh=(30+14*eyeWake), ew=(11+5*eyeWake);   // a strong beacon at rest; opens wider as it wakes
     var almond=function(sx){ rctx.beginPath(); rctx.moveTo(cx,cy-eh/2*sx);
       rctx.quadraticCurveTo(cx+ew*sx,cy, cx,cy+eh/2*sx); rctx.quadraticCurveTo(cx-ew*sx,cy, cx,cy-eh/2*sx); rctx.closePath(); };
     // 1) Barad-dûr summit — two dark clawed prongs flanking the Eye, with fire-lit inner edges.
