@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/ejclark/skynet-capital/compare/v1.46.0...v1.47.0) (2026-07-26)
+
+
+### Features
+
+* **login:** fancy high-tech cityscape — tapering towers, spires, micro-texture ([#72](https://github.com/ejclark/skynet-capital/issues/72)) ([b503236](https://github.com/ejclark/skynet-capital/commit/b503236ccf0d67f49ef2e439d6aa1846d39db28e)), closes [hi#tech](https://github.com/hi/issues/tech)
+
 # [1.46.0](https://github.com/ejclark/skynet-capital/compare/v1.45.0...v1.46.0) (2026-07-26)
 
 
