@@ -100,6 +100,28 @@ about anyone's take.
 > legal exposure, but it must never present a contested editorial claim as objective truth. Judgment
 > cues are analysis surfaced transparently, not verdicts asserted.
 
+## Scale across the four views
+
+The same grammar renders at different zoom levels — and, like real geography, **the units of measure
+change with scale.** You measure a city by buildings and districts; you measure a nation by territory,
+output, and development. Metrics that dominate at one scale fall away at another. This maps directly onto
+the four observatory routes that already exist (Iteration 12), so the sim-city layer is a visual skin
+over data each view already computes — a per-view rendering spec, not new plumbing.
+
+| View | Scale | You see | Units that apply |
+| --- | --- | --- | --- |
+| **Individual** (`/u/:id`) | a **city** — your empire | buildings = positions, districts = sectors, construction = pending bets, health = P/L | tower height, district density, lit windows, site footprint |
+| **Comparison** (`/compare?a&b`) | **two cities, side by side** | mirrored twin structures for shared holdings; contrasting silhouettes for divergence | overlap vs. divergence, relative size, shared vs. unique districts |
+| **Leaderboard** | a **region / map of cities** | many empires ranked — prominence and size = standing; a skyline of skylines | rank, relative scale, growth trajectory |
+| **Bots vs Humans** | **country vs country** | each cohort aggregated into a nation; individual buildings fall away, territory and output emerge | landmass & GDP (aggregate equity), population & density (participation, breadth), infrastructure maturity (share in profit), specialization (sector concentration), growth rate (construction share), dispersion (inequality) |
+
+The interesting design problem — and the fun of it — is the **scale transition**: what gracefully drops
+out (you stop counting windows) and what emerges (you start measuring GDP and territory) as you zoom
+from a desk to a nation. Comparison highlights **commonality** (the same NVDA tower standing in both
+cities) and **contrast** (one empire's coal-and-rail vs. another's solar-and-silicon) in a single glance.
+The bots-vs-humans nation view is exactly where the aggregate-only metrics belong (cohort average,
+spread, participation) — they *are* the country-scale units.
+
 ## Phased roadmap (each phase a trust stepping stone)
 
 1. **Landmarks from personas** (foundation, in progress). Persona cards shipped; next, personas as
