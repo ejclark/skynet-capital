@@ -858,14 +858,13 @@ export function renderCompareBody(
 }
 
 const STYLE = `<style>
+  /* Dark-only by design — nations only compare cleanly when every cityscape is lit the same (no light mode). */
+  :root{ color-scheme: dark; }
   .obs { --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
     --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:var(--bg); color:var(--text); font-family:var(--sans);
     min-height:100vh; padding:28px clamp(16px,4vw,48px) 64px; box-sizing:border-box; }
-  @media (prefers-color-scheme:light){ .obs{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA; --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; } }
-  :root[data-theme="dark"] .obs{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149; }
-  :root[data-theme="light"] .obs{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA; --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; }
   .obs *{ box-sizing:border-box; }
   .obs .num{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
   .obs .pos{ color:var(--pos); } .obs .neg{ color:var(--neg); } .obs .flat{ color:var(--muted); }
@@ -1005,9 +1004,6 @@ const STYLE = `<style>
     --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     display:flex; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans); }
-  @media (prefers-color-scheme:light){ .app{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA; --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; } }
-  :root[data-theme="dark"] .app{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149; }
-  :root[data-theme="light"] .app{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA; --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; }
   .app *{ box-sizing:border-box; }
   .drawer{ flex:0 0 250px; width:250px; height:100vh; position:sticky; top:0; overflow-y:auto; overflow-x:hidden;
     background:var(--surface-2); border-right:1px solid var(--border); display:flex; flex-direction:column; gap:10px; padding:20px 14px;
