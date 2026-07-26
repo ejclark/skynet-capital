@@ -178,6 +178,40 @@ This is high-stakes and must be **designed rails-first**. Mantra: **Detect · Co
 The safe first rung is tier 1: additive, display-only persona/landmark contributions with full
 detect-correct-maintain rails. Everything beyond earns its place.
 
+## The self-sustaining loop
+
+The pieces close into one compounding engine:
+
+> **lore & the living world fascinate people → they generate ideas (issues via the feedback funnel) →
+> autonomous pickup works them within bounds → the world evolves → deeper engagement → more ideas.**
+
+The **lore layer is itself a feedback mechanism**: the deeper context of what the system is doing behind
+the scenes is exactly what sparks "what if…", and those what-ifs become issues that feed the loop. For
+people who love lore, the behind-the-scenes *is* the draw.
+
+**Autonomy scales with demonstrated alignment.** The more reliably Claude acts to extend Eric's intent,
+the more of the loop it runs without his routine involvement — toward a largely self-sustaining state.
+But self-sustaining is **earned and bounded**, never unsupervised-and-unlimited:
+
+- **The docs are the alignment substrate.** `CLAUDE.md`, [`BRAND.md`](BRAND.md), this vision, the idea
+  routing, and the tier allowlists externalize Eric's will so Claude can act on it faithfully and
+  consistently. The more complete and corrected they are, the more Claude can do without asking —
+  alignment is *encoded and verified*, not assumed. (This is why capturing intent well *is* the
+  accelerator.)
+- **Observability rises as involvement falls.** As routine oversight drops, legibility and
+  drift-detection climb to match — the observability→trust flywheel applied to the loop itself.
+  **Detect · Correct · Maintain** is what lets Eric step out of the routine loop *safely*: the system
+  catches its own drift before it compounds.
+- **Reversible and circuit-broken.** Every autonomous change stays small, verified (tests + brand +
+  Graphify `affected`), and revertible; a tripped rail halts and escalates rather than proceeding. The
+  sensitive class — credentials, anything outward-facing and hard to reverse, and above all **real
+  money** — stays human-gated at every autonomy level.
+
+So the endgame isn't "Claude runs unsupervised." It's: **the routine evolution runs itself, watched by
+rails Eric trusts, while the irreversible decisions stay his.** That boundary is what makes stepping back
+safe — and it's the same discipline that has to be proven at paper stakes before real capital is ever in
+the loop.
+
 ## Foundations we can build on today
 
 - **Shipped:** the storm (volatility), market-hours lighting (session), ticker billboards (tape), the
