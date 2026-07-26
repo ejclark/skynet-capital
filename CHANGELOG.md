@@ -1,3 +1,10 @@
+## [1.14.3](https://github.com/ejclark/skynet-capital/compare/v1.14.2...v1.14.3) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** plays unfold across the frame, vfx lands on hero, name leads panel ([#31](https://github.com/ejclark/skynet-capital/issues/31)) ([24d6044](https://github.com/ejclark/skynet-capital/commit/24d6044710c2fdbcf8cc4882373c9347ee1f6c05))
+
 ## [1.14.2](https://github.com/ejclark/skynet-capital/compare/v1.14.1...v1.14.2) (2026-07-26)
 
 
