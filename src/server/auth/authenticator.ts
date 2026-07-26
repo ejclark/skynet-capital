@@ -773,6 +773,9 @@ ${versionTag}
     // During a play, keep the forecast's profit/loss bands (signalPrice ± volScale) in frame so
     // the future projection never clips as the camera eases in.
     if(cam>0.01){ lo=Math.min(lo, signalPrice - volScale*0.72*cam); hi=Math.max(hi, signalPrice + volScale*0.72*cam); }
+    // Ambient: leave vertical headroom for the forward-projected vol cone (bands widen into the future).
+    if(cam<0.6 && smaA.length){ var _lm=smaA[smaA.length-1], _lhw=Math.max((bU[bU.length-1]-bL[bL.length-1])/2, 1);
+      hi=Math.max(hi, _lm+_lhw*2.9); lo=Math.min(lo, _lm-_lhw*2.9); }
     var pad=(hi-lo)*0.12||1; return { lo:lo-pad, hi:hi+pad, mid:(lo+hi)/2, span:(hi-lo)+2*pad }; }
   function strokeSeries(arr,dx,Y,style,w){ ctx.beginPath();
     for(var i=0;i<arr.length;i++){ var px=i*dx,py=Y(arr[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
@@ -798,12 +801,15 @@ ${versionTag}
     // the price→pixel scale so drawForecast can draw the future in the same coordinate frame.
     // During a play, "now" is the FROZEN nowIdx (history doesn't grow); ease it to ~W·0.30 so the
     // prediction + realized pen own the right ~2/3 of the frame. Ambient = leading edge at the right.
+    // "Now" anchor: ambient sits at W·0.68 (leaving ~1/3 on the right for the forward vol cone), and a
+    // playcall eases it further to W·0.30 for the forecast. Always translated so the present dot never
+    // hugs the right edge — the future opens to its right in every state.
     var fpx=(n-1)*dx, fpy=Y(price[n-1]);
-    var toX=lerp(fpx, W*0.30, cam), toY=lerp(fpy, baseY, cam);
+    var toX=lerp(W*0.68, W*0.30, cam), toY=lerp(fpy, baseY, cam);
     nowSX=toX; nowSY=toY; nowPrice=price[n-1];
     pxPerPrice=(amp*2/(r.span||1))*zoom;
     scBaseY=baseY; scMid=r.mid; scSpan=r.span; scAmp=amp;   // ambient price→screen-Y for the roaming scanners
-    if(cam>0.001){ ctx.translate(toX,toY); ctx.scale(zoom,zoom); ctx.translate(-fpx,-fpy); }
+    ctx.translate(toX,toY); ctx.scale(zoom,zoom); ctx.translate(-fpx,-fpy);
     // Bollinger envelope
     ctx.beginPath();
     for(var i=0;i<bU.length;i++){ var px=i*dx,py=Y(bU[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
@@ -811,6 +817,29 @@ ${versionTag}
     ctx.closePath(); ctx.fillStyle=hexA(accent,0.06); ctx.fill();
     strokeSeries(bU,dx,Y,hexA(accent,0.20),1);
     strokeSeries(bL,dx,Y,hexA(accent,0.20),1);
+    // Forward-projected Bollinger cone (ambient INGEST): carry the bands into the FUTURE right of "now",
+    // widening AND breathing (expand/contract) like real vol as events unfold. The shaded above/below is
+    // the band itself projected forward. Fades out as a playcall frames in.
+    var coneA=clamp01(1-cam*1.8);
+    if(coneA>0.01 && smaA.length){
+      var lm=smaA[smaA.length-1], lp2=price[n-1], lhw=Math.max((bU[n-1]-bL[n-1])/2, lp2*0.012);
+      var F=Math.ceil((W-(n-1)*dx)/dx)+3, UP=[], LO=[], fi;
+      for(fi=0;fi<=F;fi++){ var tt=fi/F;
+        var breathe=1 + 0.18*Math.sin(rainT*0.028 + tt*3.1) + 0.10*Math.sin(rainT*0.015 + tt*6.2);
+        var hw=lhw*(1 + tt*1.9)*breathe, px2=(n-1+fi)*dx;
+        UP.push([px2, Y(lm+hw)]); LO.push([px2, Y(lm-hw)]); }
+      ctx.save(); ctx.globalAlpha=dim*coneA;
+      ctx.beginPath(); for(fi=0;fi<UP.length;fi++){ fi?ctx.lineTo(UP[fi][0],UP[fi][1]):ctx.moveTo(UP[fi][0],UP[fi][1]); }
+      for(fi=LO.length-1;fi>=0;fi--){ ctx.lineTo(LO[fi][0],LO[fi][1]); }
+      ctx.closePath(); ctx.fillStyle=hexA(accent,0.07); ctx.fill();
+      ctx.setLineDash([3,5]); ctx.lineWidth=1.1; ctx.strokeStyle=hexA(accent,0.34);
+      ctx.beginPath(); for(fi=0;fi<UP.length;fi++){ fi?ctx.lineTo(UP[fi][0],UP[fi][1]):ctx.moveTo(UP[fi][0],UP[fi][1]); } ctx.stroke();
+      ctx.beginPath(); for(fi=0;fi<LO.length;fi++){ fi?ctx.lineTo(LO[fi][0],LO[fi][1]):ctx.moveTo(LO[fi][0],LO[fi][1]); } ctx.stroke();
+      ctx.strokeStyle=hexA(muted,0.30); ctx.beginPath(); ctx.moveTo((n-1)*dx,Y(lm)); ctx.lineTo((n-1+F)*dx,Y(lm)); ctx.stroke();
+      // "now" divider — the present line the history draws up to and the projection fans out from
+      ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(accent,0.22*coneA); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo((n-1)*dx, Y(lm)-amp*0.9); ctx.lineTo((n-1)*dx, Y(lm)+amp*0.9); ctx.stroke();
+      ctx.setLineDash([]); ctx.restore(); }
     strokeSeries(emaS,dx,Y,hexA(muted,0.75),1.4);
     strokeSeries(emaF,dx,Y,hexA(accent,0.9),1.6);
     // price line — calm settled history
