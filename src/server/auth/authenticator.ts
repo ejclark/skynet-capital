@@ -836,6 +836,12 @@ ${versionTag}
         var bt=Y(Math.max(o,c)), bh=Math.max(1.4*lw, Y(Math.min(o,c))-bt);
         ctx.fillStyle=hexA(ccol,cup?0.5:0.78); ctx.fillRect(ccx-cw/2,bt,cw,bh);                    // body
         ctx.strokeStyle=hexA(ccol,0.95); ctx.lineWidth=lw; ctx.strokeRect(ccx-cw/2,bt,cw,bh); }
+      // Smoothed guide line traced THROUGH the candles — a short EMA that "smooths everything", so
+      // the underlying trend stays legible beneath the noisy OHLC bodies. Seeded from the frozen now.
+      var em=price[n-1], ka=2/9; ctx.beginPath(); ctx.moveTo((n-1)*dx, Y(em));
+      for(var si=0;si<rl;si++){ em += ka*(realized[si]-em); ctx.lineTo((n+si)*dx, Y(em)); }
+      ctx.strokeStyle=hexA(accent,0.9); ctx.lineWidth=1.7*lw; ctx.lineJoin="round";
+      ctx.shadowColor=accent; ctx.shadowBlur=6; ctx.stroke(); ctx.shadowBlur=0;
       ctx.restore(); }
     // Glowing tip at the leading point. Ambient also gets the wet-ink pen segment; during a play the
     // candles carry the body, so just the tip dot.
@@ -1222,10 +1228,16 @@ ${versionTag}
     // abnormal deviation there (earnings, CPI, …). This is what explains the less-normal wiggles.
     if(proj>0.01){ ctx.font="700 9px "+mono;
       for(var ei=0;ei<events.length;ei++){ var ev=events[ei]; if(!ev.fired) continue;
-        var ex=X0+(Xf-X0)*ev.f, ecol=ev.mag<0?neg:accent;
+        var bull=ev.mag>=0, ecol=bull?pos:neg, ex=X0+(Xf-X0)*ev.f, eyTop=SY(hiP);
         ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(ecol,0.5*proj); ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(ex,SY(hiP)); ctx.lineTo(ex,SY(loP)); ctx.stroke(); ctx.setLineDash([]);
-        ctx.fillStyle=hexA(ecol,0.9*proj); ctx.textAlign="center"; ctx.fillText("◆ "+ev.label, ex, SY(hiP)-6); }
+        ctx.beginPath(); ctx.moveTo(ex,eyTop); ctx.lineTo(ex,SY(loP)); ctx.stroke(); ctx.setLineDash([]);
+        // Directional arrow: green triangle UP for a bullish surprise, red triangle DOWN for bearish —
+        // reinforcing the likely trend reaction the play is positioned for.
+        var ay=eyTop-9, ah=7, aw=5; ctx.fillStyle=hexA(ecol,0.95*proj); ctx.beginPath();
+        if(bull){ ctx.moveTo(ex,ay-ah); ctx.lineTo(ex-aw,ay); ctx.lineTo(ex+aw,ay); }
+        else { ctx.moveTo(ex,ay); ctx.lineTo(ex-aw,ay-ah); ctx.lineTo(ex+aw,ay-ah); }
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle=hexA(ecol,0.9*proj); ctx.textAlign="center"; ctx.fillText(ev.label, ex, ay-ah-4); }
       ctx.textAlign="start"; }
     ctx.textAlign="start"; ctx.restore();
     drawPanel(strat, sig, p, A);
@@ -1263,8 +1275,12 @@ ${versionTag}
   // normal-looking deviations of the realized line, and add realism + a teaching moment.
   var EVENTS=["EARNINGS","CPI PRINT","FOMC","JOBS REPORT","GUIDANCE","GEOPOLITICAL"];
   function scheduleEvents(){ events=[]; var nE=Math.random()<0.4?2:1, k;
-    for(k=0;k<nE;k++){ events.push({ f:0.26+Math.random()*0.34, label:EVENTS[(Math.random()*EVENTS.length)|0],
-      mag:(Math.random()<0.5?-1:1)*volScale*(0.12+Math.random()*0.16), fired:false }); } }   // mid-walk, time to recover
+    // Bias the shock direction to mostly AGREE with the play's target move, so the arrow reinforces
+    // the trend the trade is positioned for (directional plays); range plays stay random either way.
+    var tdir=targetPrice>signalPrice+volScale*0.03?1:(targetPrice<signalPrice-volScale*0.03?-1:0);
+    for(k=0;k<nE;k++){ var dir=tdir!==0?(Math.random()<0.72?tdir:-tdir):(Math.random()<0.5?-1:1);
+      events.push({ f:0.26+Math.random()*0.34, label:EVENTS[(Math.random()*EVENTS.length)|0],
+        mag:dir*volScale*(0.12+Math.random()*0.16), fired:false }); } }   // mid-walk, time to recover
   function eventImpulse(i, cap){ var f=i/cap, s=0, k;
     for(k=0;k<events.length;k++){ if(!events[k].fired && f>=events[k].f){ events[k].fired=true; s+=events[k].mag; } }
     return s; }
