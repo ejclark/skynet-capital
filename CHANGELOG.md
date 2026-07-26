@@ -1,3 +1,10 @@
+# [1.54.0](https://github.com/ejclark/skynet-capital/compare/v1.53.0...v1.54.0) (2026-07-26)
+
+
+### Features
+
+* **login:** ticker billboards on the skyline — the market city comes alive ([#82](https://github.com/ejclark/skynet-capital/issues/82)) ([b358c0a](https://github.com/ejclark/skynet-capital/commit/b358c0aee0fb74202459345810a5a8e9675358ee))
+
 # [1.53.0](https://github.com/ejclark/skynet-capital/compare/v1.52.1...v1.53.0) (2026-07-26)
 
 
