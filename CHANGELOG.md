@@ -1,3 +1,10 @@
+# [1.81.0](https://github.com/ejclark/skynet-capital/compare/v1.80.0...v1.81.0) (2026-07-26)
+
+
+### Features
+
+* **login:** signal-detection lifecycle — ambient gaze + signal→eye hand-off ([#141](https://github.com/ejclark/skynet-capital/issues/141)) ([bb1c17b](https://github.com/ejclark/skynet-capital/commit/bb1c17b2d0a8b8aadee9e7ab9cd6c55988de615a))
+
 # [1.80.0](https://github.com/ejclark/skynet-capital/compare/v1.79.2...v1.80.0) (2026-07-26)
 
 
