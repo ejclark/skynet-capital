@@ -571,12 +571,10 @@ export class Authenticator {
   function rsi(a,n){ if(a.length<n+1) return 50; var g=0,l=0,i;
     for(i=a.length-n;i<a.length;i++){ var d=a[i]-a[i-1]; if(d>=0) g+=d; else l-=d; }
     if(l<=0) return 100; var rs=(g/n)/(l/n); return 100-100/(1+rs); }
-  function stepMarket(){ t++;
-    if(t>regimeT){ regimeT=t+120+Math.floor(Math.random()*160);
-      regimeBias=(Math.random()-0.45)*0.14; regimeVol=0.5+Math.random()*1.4; }
-    pv = pv*0.88 + (noise(t*0.017)-0.5)*0.8*regimeVol + regimeBias;
-    var last = price.length?price[price.length-1]:100;
-    var np = Math.max(5, last+pv); price.push(np); cap(price);
+  // Push one new price and roll the derived series (EMAs, Bollinger, RSI). Shared by the ambient
+  // random walk and the scripted forecast walk so a play flows into and out of the trend seamlessly.
+  function pushPrice(np){
+    np = Math.max(5, np); price.push(np); cap(price);
     var kf=2/10, ks=2/22;
     var pf=emaF.length?emaF[emaF.length-1]:np, ps=emaS.length?emaS[emaS.length-1]:np;
     emaF.push(pf+kf*(np-pf)); cap(emaF); emaS.push(ps+ks*(np-ps)); cap(emaS);
@@ -584,12 +582,27 @@ export class Authenticator {
     smaA.push(m); cap(smaA); bU.push(m+2*s); cap(bU); bL.push(m-2*s); cap(bL);
     rsiV = rsi(price,14);
   }
+  function stepMarket(){ t++;
+    if(t>regimeT){ regimeT=t+120+Math.floor(Math.random()*160);
+      regimeBias=(Math.random()-0.45)*0.14; regimeVol=0.5+Math.random()*1.4; }
+    pv = pv*0.88 + (noise(t*0.017)-0.5)*0.8*regimeVol + regimeBias;
+    pushPrice((price.length?price[price.length-1]:100) + pv);
+  }
+  // Scripted walk toward a target price (the play's happy path) — eases price in, lightly jittered.
+  var forecastTarget=100;
+  function stepForecast(){ t++;
+    var last = price[price.length-1];
+    pushPrice(last + (forecastTarget-last)*0.09 + (noise(t*0.05)-0.5)*0.18);
+  }
   for(var _i=0;_i<SPAN;_i++) stepMarket();
 
   function valRange(){ var lo=1e9,hi=-1e9,i;
     for(i=0;i<price.length;i++){ if(price[i]<lo)lo=price[i]; if(price[i]>hi)hi=price[i]; }
     for(i=0;i<bU.length;i++){ if(bU[i]>hi)hi=bU[i]; }
     for(i=0;i<bL.length;i++){ if(bL[i]<lo)lo=bL[i]; }
+    // During a play, keep the forecast's profit/loss bands (signalPrice ± volScale) in frame so
+    // the future projection never clips as the camera eases in.
+    if(cam>0.01){ lo=Math.min(lo, signalPrice - volScale*0.72*cam); hi=Math.max(hi, signalPrice + volScale*0.72*cam); }
     var pad=(hi-lo)*0.12||1; return { lo:lo-pad, hi:hi+pad, mid:(lo+hi)/2, span:(hi-lo)+2*pad }; }
   function strokeSeries(arr,dx,Y,style,w){ ctx.beginPath();
     for(var i=0;i<arr.length;i++){ var px=i*dx,py=Y(arr[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
@@ -609,10 +622,15 @@ export class Authenticator {
     var accent=css("--accent")||"#35D0BA", muted=css("--muted")||"#8B9AAB",
         pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", txt=css("--text")||"#E6EDF3";
     ctx.save(); ctx.globalAlpha=dim;
-    // Camera: during a play we zoom into the signal region (the newest point) to frame the play
-    // against the market condition — this also dissolves the left→right scroll. Ambient zoom = 1.
+    // Camera: during a play we ease the focal ("now") from the leading edge (right) toward mid-left
+    // so the FUTURE region opens on the right for the forecast, and zoom in smoothly. Everything is
+    // eased by cam (0 ambient to 1 framed) so nothing snaps. Export the on-screen "now" anchor +
+    // the price→pixel scale so drawForecast can draw the future in the same coordinate frame.
     var fpx=(n-1)*dx, fpy=Y(price[n-1]);
-    if(zoom>1.001){ ctx.translate(W*0.84, baseY); ctx.scale(zoom,zoom); ctx.translate(-fpx,-fpy); }
+    var toX=lerp(fpx, W*0.42, cam), toY=lerp(fpy, baseY, cam);
+    nowSX=toX; nowSY=toY; nowPrice=price[n-1];
+    pxPerPrice=(amp*2/(r.span||1))*zoom;
+    if(cam>0.001){ ctx.translate(toX,toY); ctx.scale(zoom,zoom); ctx.translate(-fpx,-fpy); }
     // Bollinger envelope
     ctx.beginPath();
     for(var i=0;i<bU.length;i++){ var px=i*dx,py=Y(bU[i]); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
@@ -633,11 +651,7 @@ export class Authenticator {
     ctx.strokeStyle="#EAFBF7"; ctx.lineWidth=2.3; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0;
     var lx=(n-1)*dx, ly=Y(price[n-1]);
     ctx.beginPath(); ctx.arc(lx,ly,3.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=20; ctx.fill(); ctx.shadowBlur=0;
-    // Signal reticle at the focal point while a play is framed — constant screen size (÷zoom)
-    if(playMode){ var rr=(13+3*Math.sin(pbGlyphT*0.35))/zoom;
-      ctx.strokeStyle=hexA(accent,0.9); ctx.lineWidth=1.4/zoom; ctx.beginPath(); ctx.arc(lx,ly,rr,0,7); ctx.stroke();
-      ctx.strokeStyle=hexA(accent,0.5); ctx.lineWidth=1/zoom;
-      ctx.beginPath(); ctx.moveTo(lx-rr*1.8,ly); ctx.lineTo(lx-rr,ly); ctx.moveTo(lx+rr,ly); ctx.lineTo(lx+rr*1.8,ly); ctx.stroke(); }
+    // (The aiming beam draws the reticle at the signal point during a playcall — see drawAimBeam.)
     ctx.restore();
     // RSI readout — screen space, never zoomed
     var rc = rsiV<32?pos:(rsiV>68?neg:muted);
@@ -659,6 +673,9 @@ export class Authenticator {
   function hexA(color, a){ try{ _c.fillStyle=color; var s=_c.fillStyle;
     if(s[0]==="#"){ var r=parseInt(s.substr(1,2),16),g=parseInt(s.substr(3,2),16),b=parseInt(s.substr(5,2),16);
       return "rgba("+r+","+g+","+b+","+a+")"; } return s; }catch(e){ return color; } }
+  function roundRect(x,y,w,h,r){ ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 
   // Signal → play mapping. Reads the latest indicators and returns the matching playbook entry
   // with a human-readable reason (the "why"), or null when nothing is set up.
@@ -735,7 +752,14 @@ export class Authenticator {
     for(i=0;i<pts.length;i++){ if(pts[i][1]>maxY)maxY=pts[i][1]; if(pts[i][1]<minY)minY=pts[i][1]; }
     for(i=0;i<pts.length;i++){ if(pts[i][1]===maxY)xs.push(pts[i][0]); if(pts[i][1]===minY)xl.push(pts[i][0]); }
     for(i=1;i<pts.length;i++){ var a=pts[i-1],b=pts[i]; if((a[1]<0)!==(b[1]<0)){ var tt=(0-a[1])/((b[1]-a[1])||1); be.push(a[0]+tt*(b[0]-a[0])); } }
-    return { maxY:maxY, minY:minY, mxX:xs.length?(xs[0]+xs[xs.length-1])/2:0.5,
+    // Happy-path direction: if the play profits by price STAYING (center is a profit zone → condor,
+    // straddle, butterfly) the target is the middle; otherwise it's a BREAKOUT (strangle, spread,
+    // ladder) so pick the profit extreme farthest from center, preferring the upside branch.
+    var mxDir; if(payoffAt(pts,0.5)>0.02) mxDir=0.5;
+    else if(xs.length){ var best=xs[0]; for(i=0;i<xs.length;i++){ var d=Math.abs(xs[i]-0.5)-Math.abs(best-0.5);
+      if(d>0.001 || (Math.abs(d)<=0.001 && xs[i]>best)) best=xs[i]; } mxDir=best; }
+    else mxDir=0.5;
+    return { maxY:maxY, minY:minY, mxX:xs.length?(xs[0]+xs[xs.length-1])/2:0.5, mxDir:mxDir,
       mnX:xl.length?(xl[0]+xl[xl.length-1])/2:0.5, be:be }; }
   function wrapText(s,x,y,maxW,lh){ var words=s.split(" "),line="",yy=y,i,n=0;
     for(i=0;i<words.length;i++){ var test=line?line+" "+words[i]:words[i];
@@ -756,18 +780,41 @@ export class Authenticator {
     ctx.restore();
   }
 
-  // LEFT-UPPER: the play in words — moved up toward the hero. Signal, name, plain-English idea,
-  // the shared anatomy legend, the pivot values, and the live trade-status line.
+  // The bot's job, made visible: it INGESTS data, DETECTS a signal, builds a FORECAST, then
+  // EXECUTES the play. This four-step pipeline lights up phase-by-phase so the machine's role reads
+  // at a glance — the humans' role is the narrow one (validate the read, take the seat) shown below.
+  var PIPE=["INGEST","DETECT","FORECAST","EXECUTE"];
+  function pipeActive(p){ if(p.out>0||p.resolve>0) return 3; if(p.walk>0) return 3; if(p.project>0) return 2; if(p.aim>0) return 1; return 0; }
+  function drawPipeline(px, y, p, A){
+    var accent=css("--accent")||"#35D0BA", muted=css("--muted")||"#8B9AAB", mono=css("--mono")||"monospace";
+    var act=pipeActive(p), x=px;
+    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.font="700 10px "+mono;
+    for(var i=0;i<PIPE.length;i++){
+      var on=i<=act, live=i===act, a=on?(live?0.95:0.6):0.28;
+      ctx.fillStyle=hexA(on?accent:muted, a);
+      if(live){ ctx.shadowColor=accent; ctx.shadowBlur=8; }
+      ctx.fillText(PIPE[i], x, y); ctx.shadowBlur=0;
+      var w=ctx.measureText(PIPE[i]).width;
+      if(i<PIPE.length-1){ ctx.fillStyle=hexA(muted, i<act?0.55:0.25); ctx.fillText("→", x+w+7, y); }
+      x+=w+24;
+    }
+    ctx.restore();
+  }
+
+  // LEFT-UPPER: the play in words — the bot pipeline, the detected signal, the strategy name and
+  // plain-English idea, the shared anatomy legend, pivot values, and the live trade status.
   function drawPanel(strat, sig, p, A){
     var e=extrema(strat), px=Math.round(W*0.045), pw=Math.min(W*0.2, 238), col=190;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    // Narrow / mobile: stack — signal + name + desc centered on top, pivots inline at the bottom,
-    // the payoff fills the middle (drawPlaybook widens), and the evidence column is dropped.
+    // current underlying along the walk → live P/L
+    var uNow=clamp01((nowPrice-signalPrice)/(volScale||1)+0.5), pl=payoffAt(strat.pts,uNow)*DOLLARS;
+    // Narrow / mobile: stack — pipeline + signal + name + desc centered on top, pivots at the bottom.
     if(W<820){
-      var cx=W/2, ny=field.top+22; ctx.textAlign="center";
-      ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=25;
+      var cx=W/2, ny=field.top+18; ctx.textAlign="center";
+      drawPipeline(cx-96, ny, p, A*Math.min(1,p.on)); ny+=22;
+      ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=24;
       ctx.font="700 22px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fillText(strat.name, cx, ny); ctx.shadowBlur=0; ny+=19;
       ctx.font="12px "+sans; ctx.fillStyle=hexA(muted,0.95); wrapText(strat.desc, cx, ny, Math.min(W*0.86,420), 16);
       var by=field.bottom-6; drawAnatomy(cx-116, by-22, A*Math.min(1,p.on));
@@ -778,165 +825,156 @@ export class Authenticator {
       ctx.fillStyle=hexA(neg,0.95); ctx.fillText(s2, lx+w1+gap, by);
       ctx.restore(); return;
     }
-    var y=field.top+30;
+    // Information unfolds in step with the play: pipeline first, then the signal + strategy name as
+    // the spotlight aims, then the plain-English idea + anatomy + pivots as the forecast projects.
+    var aimA=clamp01(p.aim), prjA=easeIO(clamp01(p.project));
+    var y=field.top+24;
+    drawPipeline(px, y, p, A*Math.min(1,p.on)); y+=26;
+    ctx.globalAlpha=A*aimA;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95);
-    ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=32;
+    ctx.fillText("▸ SIGNAL · "+(sig?sig.sig:""), px, y); y+=30;
     ctx.font="700 25px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=14;
     ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=23;
+    ctx.globalAlpha=A*prjA;
     ctx.font="13px "+sans; ctx.fillStyle=hexA(muted,0.95);
     y += wrapText(strat.desc, px, y, pw, 18)*18 + 14;
-    drawAnatomy(px, y, A*Math.min(1,p.on)); y+=26;
+    drawAnatomy(px, y, A*prjA); y+=26;
     // Totals sit right beside their labels (a tight column), not flung to the far right.
     ctx.font="12px "+mono;
     ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT", px, y);
     ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=19;
     ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS", px, y);
     ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=25;
-    var sxp=lerp(0.5,e.mxX,easeIO(p.move)), pl=payoffAt(strat.pts,sxp)*DOLLARS;
-    if(p.exit>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pos; ctx.shadowColor=pos; ctx.shadowBlur=14;
-      ctx.fillText("✓ CLOSED  "+money(e.maxY*DOLLARS), px, y); ctx.shadowBlur=0; }
-    else if(p.move>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("P / L   "+money(pl), px, y); }
-    else if(p.enter>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ POSITIONS ENTERED", px, y); }
-    else { ctx.font="13px "+mono; ctx.fillStyle=hexA(muted,0.85); ctx.fillText("SETTING UP…", px, y); }
+    ctx.globalAlpha=A;
+    if(p.resolve>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pos; ctx.shadowColor=pos; ctx.shadowBlur=14;
+      ctx.fillText("✓ PLAYCALL CLOSED  "+money(e.maxY*DOLLARS), px, y); ctx.shadowBlur=0; }
+    else if(p.walk>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("PLAYCALL LIVE · P/L "+money(pl), px, y); }
+    else if(p.project>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ PLAYCALL LOCKED", px, y); }
+    else { ctx.font="13px "+mono; ctx.fillStyle=hexA(muted,0.85); ctx.fillText("READING THE TAPE…", px, y); }
     ctx.restore();
   }
 
-  // RIGHT: the signal EVIDENCE — why this play was called. A live RSI gauge (oversold/overbought)
-  // and a Bollinger snapshot (recent price vs its bands), so the reasoning is shown, not just named.
-  function drawSignalDetail(sig, A){
-    if(W<820) return;   // the evidence column is desktop-only; narrow screens stack (see drawPanel)
-    var sx=Math.round(W*0.755), sw=Math.min(W*0.205, 300);
-    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
-        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", sans=css("--sans")||"sans-serif";
-    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    var y=field.top+30;
-    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▸ WHY THIS PLAY", sx, y); y+=30;
-    // --- RSI gauge (0..100) — value sits right beside the label (no collision with the marker) ---
-    ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", sx, y);
-    ctx.fillStyle=hexA(rsiV<30?pos:rsiV>70?neg:txt,0.95); ctx.fillText(rsiV.toFixed(0), sx+28, y); y+=8;
-    var gh=8;
-    ctx.fillStyle=hexA(muted,0.16); ctx.fillRect(sx,y,sw,gh);
-    ctx.fillStyle=hexA(pos,0.22); ctx.fillRect(sx,y,sw*0.3,gh);
-    ctx.fillStyle=hexA(neg,0.22); ctx.fillRect(sx+sw*0.7,y,sw*0.3,gh);
-    var mxp=sx+sw*clamp01(rsiV/100), rc=rsiV<30?pos:(rsiV>70?neg:accent);
-    ctx.fillStyle=rc; ctx.shadowColor=rc; ctx.shadowBlur=8; ctx.fillRect(mxp-1.5,y-3,3,gh+6); ctx.shadowBlur=0; y+=gh+13;
-    ctx.font="9px "+mono; ctx.fillStyle=hexA(pos,0.7); ctx.fillText("OVERSOLD 30", sx, y);
-    ctx.textAlign="right"; ctx.fillStyle=hexA(neg,0.7); ctx.fillText("70 OVERBOUGHT", sx+sw, y); ctx.textAlign="left"; y+=26;
-    // --- Bollinger snapshot ---
-    ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("BOLLINGER BANDS", sx, y); y+=8;
-    var bh=70, bTop=y, bBot=y+bh, M=Math.min(64, price.length), s0=price.length-M, i;
-    if(M>4 && bU.length>=price.length){
-      var lo=1e9,hi=-1e9; for(i=s0;i<price.length;i++){ if(bL[i]<lo)lo=bL[i]; if(bU[i]>hi)hi=bU[i]; }
-      var rng=(hi-lo)||1;
-      var BY=function(v){ return bBot-((v-lo)/rng)*bh; }, BX=function(k){ return sx+((k-s0)/(M-1))*sw; };
-      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bU[i])):ctx.lineTo(BX(i),BY(bU[i])); }
-      for(i=price.length-1;i>=s0;i--){ ctx.lineTo(BX(i),BY(bL[i])); } ctx.closePath();
-      ctx.fillStyle=hexA(accent,0.08); ctx.fill();
-      ctx.strokeStyle=hexA(accent,0.32); ctx.lineWidth=1;
-      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bU[i])):ctx.lineTo(BX(i),BY(bU[i])); } ctx.stroke();
-      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(bL[i])):ctx.lineTo(BX(i),BY(bL[i])); } ctx.stroke();
-      ctx.strokeStyle=hexA(txt,0.9); ctx.lineWidth=1.6; ctx.shadowColor=accent; ctx.shadowBlur=6;
-      ctx.beginPath(); for(i=s0;i<price.length;i++){ i===s0?ctx.moveTo(BX(i),BY(price[i])):ctx.lineTo(BX(i),BY(price[i])); } ctx.stroke(); ctx.shadowBlur=0;
-      var lpx=BX(price.length-1), lpy=BY(price[price.length-1]);
-      ctx.beginPath(); ctx.arc(lpx,lpy,2.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.fill();
-    }
-    y=bBot+22;
-    ctx.font="11px "+mono; ctx.fillStyle=hexA(accent,0.85);
-    wrapText("→ "+(sig?sig.sig:""), sx, y, sw, 16);
-    ctx.restore();
-  }
-
-  // Full lifecycle telestrator. Diagram = LEFT-LOWER (slides below the play text); signal
-  // evidence = RIGHT. Anatomy is consistent: green profit, red loss, muted breakeven.
-  function drawPlaybook(strat, p, sig){
-    if(!strat) return;
-    // The payoff is the FOCAL POINT — centered on the page, with the play text (left) and the
-    // signal evidence (right) flanking it.
-    var narrow=W<820;
-    var x0 = narrow?W*0.07:W*0.27, x1 = narrow?W*0.93:W*0.73;
-    var dTop = narrow?field.top+94:field.top+34, dBot = narrow?field.bottom-32:field.bottom-10;
-    var midY=(dTop+dBot)/2, amp=(dBot-dTop)/2*0.82, yTop=dTop, yBot=dBot, A=(1-p.out);
-    function X(u){ return x0+u*(x1-x0); } function Y(v){ return midY - v*amp; }
+  // Small helpers for the forecast: direction chevrons along the happy path, Madden-style corner
+  // brackets that frame the "enhanced" future region, and the aiming beam.
+  function drawChevron(x,y,dir,col){ if(!dir) return;
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineJoin="round"; var s=5;
+    ctx.beginPath(); ctx.moveTo(x-s, y-dir*s*0.2); ctx.lineTo(x, y-dir*s); ctx.lineTo(x+s, y-dir*s*0.2); ctx.stroke(); ctx.lineCap="butt"; }
+  function drawBrackets(x0,y0,x1,y1,color){ var L=14; ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.beginPath();
+    ctx.moveTo(x0,y0+L); ctx.lineTo(x0,y0); ctx.lineTo(x0+L,y0);
+    ctx.moveTo(x1-L,y0); ctx.lineTo(x1,y0); ctx.lineTo(x1,y0+L);
+    ctx.moveTo(x0,y1-L); ctx.lineTo(x0,y1); ctx.lineTo(x0+L,y1);
+    ctx.moveTo(x1-L,y1); ctx.lineTo(x1,y1); ctx.lineTo(x1,y1-L); ctx.stroke(); }
+  // The spotlight IS the bot's signal detector: it fans from the emitter (button, bottom-center)
+  // and NARROWS to aim precisely at the point on the trend where the condition triggered.
+  function drawAimBeam(tx,ty,p){ var aim=easeIO(clamp01(p.aim))*(1-clamp01(p.walk)); if(aim<=0.01) return;
+    var ax=W*0.5, ay=H+10, accent=css("--accent")||"#35D0BA";
+    var dx=tx-ax, dy=ty-ay, len=Math.sqrt(dx*dx+dy*dy)||1, nx=-dy/len, ny=dx/len;
+    var hNear=lerp(96,10,aim), hFar=lerp(64,7,aim);
+    ctx.save(); ctx.globalAlpha=1;
+    var g=ctx.createLinearGradient(ax,ay,tx,ty); g.addColorStop(0,hexA(accent,0.015)); g.addColorStop(1,hexA(accent,0.16*aim));
+    ctx.beginPath(); ctx.moveTo(ax+nx*hNear, ay+ny*hNear); ctx.lineTo(tx+nx*hFar, ty+ny*hFar);
+    ctx.lineTo(tx-nx*hFar, ty-ny*hFar); ctx.lineTo(ax-nx*hNear, ay-ny*hNear); ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+    var rr=10+3*Math.sin(pbGlyphT*0.4);
+    ctx.strokeStyle=hexA(accent,0.85*aim); ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(tx,ty,rr,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx-rr*1.6,ty); ctx.lineTo(tx-rr,ty); ctx.moveTo(tx+rr,ty); ctx.lineTo(tx+rr*1.6,ty); ctx.stroke();
+    ctx.restore(); }
+  // The signal EVIDENCE, now a compact callout ANCHORED to the aim point (not a right column):
+  // RSI value + a mini oversold/overbought gauge + the one-line reason. Fades in on AIM.
+  function drawSignalCallout(sig, x, y, A){ if(A<=0.01) return;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
+    var cw=180, ch=92, cx=x-cw-26; if(cx<12) cx=x+26; var cy=y-ch-22; if(cy<field.top) cy=y+22;
     ctx.save(); ctx.globalAlpha=A;
-    // Knock the (frozen, zoomed) trend back inside the play box so the payoff stays crisp.
-    var pad=18; ctx.fillStyle=hexA(bg,0.42); ctx.fillRect(x0-pad, dTop-pad, (x1-x0)+pad*2, (dBot-dTop)+pad*2);
-    // Zones keep more full colour and only soften near the edges (gentle floor, wider band).
-    function edgeFade(u){ return 0.5 + 0.5*Math.min(clamp01(u/0.1), clamp01((1-u)/0.1)); }
-    if(p.zones>0){ var N=140, seg=(x1-x0)/N, be0=extrema(strat).be;
-      for(var i=0;i<N;i++){ var u=i/(N-1); if(u>p.curve) break; var v=payoffAt(strat.pts,u), px=X(u), py=Y(v), zy=Y(0);
-        ctx.fillStyle=hexA(v>=0?pos:neg, 0.17*p.zones*edgeFade(u)); ctx.fillRect(px, Math.min(py,zy), seg+1, Math.abs(py-zy)); }
-      // Matrix rain in the zones — green profit, red loss — brighter as it nears a breakeven line.
-      ctx.font="13px "+mono; var NZ=22;
-      for(var c=0;c<NZ;c++){ var uu=(c+0.5)/NZ; if(uu>p.curve) continue; var vv=payoffAt(strat.pts,uu), ge=edgeFade(uu);
-        var near=0; for(var q=0;q<be0.length;q++){ near=Math.max(near, clamp01(1-Math.abs(uu-be0[q])/0.06)); }
-        var zt=Math.min(Y(vv),Y(0)), zb=Math.max(Y(vv),Y(0)); if(zb-zt<10) continue;
-        var gx=X(uu), gy=zt+((pbGlyphT*3 + c*61) % (zb-zt));
-        var gcol = near>0.5 ? accent : (vv>=0?pos:neg);
-        ctx.fillStyle=hexA(gcol, (0.7+0.3*near)*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy);
-        ctx.fillStyle=hexA(gcol, (0.25+0.25*near)*p.zones*ge); ctx.fillText(RG[(Math.random()*RG.length)|0], gx, gy-15); } }
-    // strike verticals
-    ctx.textAlign="center"; var shown=p.strikes*strat.strikes.length;
-    for(var k=0;k<strat.strikes.length;k++){ var rev=clamp01(shown-k); if(rev<=0) break; var sx=X(strat.strikes[k]);
-      ctx.setLineDash([3,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(accent,0.3*rev);
-      ctx.beginPath(); ctx.moveTo(sx,yTop); ctx.lineTo(sx,yBot); ctx.stroke(); ctx.setLineDash([]); }
-    // breakeven baseline + an illuminated pulse at each breakeven crossing
-    if(p.strikes>0){ ctx.setLineDash([5,6]); ctx.lineWidth=1; ctx.strokeStyle=hexA(muted,0.5*p.strikes);
-      ctx.beginPath(); ctx.moveTo(x0,Y(0)); ctx.lineTo(x1,Y(0)); ctx.stroke(); ctx.setLineDash([]);
-      var be1=extrema(strat).be, pulse=0.5+0.5*Math.sin(pbGlyphT*0.3);
-      for(k=0;k<be1.length;k++){ var bx=X(be1[k]);
-        ctx.fillStyle=hexA(accent, (0.25+0.4*pulse)*p.strikes); ctx.beginPath(); ctx.arc(bx,Y(0), 5+3*pulse, 0, 7); ctx.fill(); } }
-    // payoff curve + chalk tip
-    if(p.curve>0){ var f=p.curve, pts=strat.pts, started=false;
-      ctx.beginPath();
-      for(i=0;i<pts.length;i++){ if(pts[i][0]<=f){ var cx2=X(pts[i][0]), cy2=Y(pts[i][1]); started?ctx.lineTo(cx2,cy2):ctx.moveTo(cx2,cy2); started=true; }
-        else { var ex=X(f), ey=Y(payoffAt(pts,f)); if(started) ctx.lineTo(ex,ey); else ctx.moveTo(ex,ey); started=true; break; } }
-      ctx.strokeStyle=accent; ctx.lineWidth=2.6; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=18; ctx.stroke(); ctx.shadowBlur=0;
-      if(f<1){ var tx=X(f), ty=Y(payoffAt(pts,f)); ctx.beginPath(); ctx.arc(tx,ty,4,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.fill(); ctx.shadowBlur=0; } }
-    // pivot markers — dots on the curve (words live in the panel)
-    if(p.label>0){ var e1=extrema(strat); ctx.globalAlpha=A*p.label;
-      ctx.fillStyle=hexA(pos,0.95); ctx.beginPath(); ctx.arc(X(e1.mxX),Y(e1.maxY),3.2,0,7); ctx.fill();
-      ctx.fillStyle=hexA(neg,0.95); ctx.beginPath(); ctx.arc(X(e1.mnX),Y(e1.minY),3.2,0,7); ctx.fill();
-      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.textAlign="center";
-      for(i=0;i<e1.be.length;i++){ ctx.fillText("B/E", X(e1.be[i]), Y(0)-9); }
-      ctx.globalAlpha=A; }
-    // entry: the strikes flash as positions are entered (correlates with the left status line)
-    if(p.enter>0){ var epulse=0.5+0.5*Math.sin(pbGlyphT*0.5); ctx.globalAlpha=A*p.enter; ctx.textAlign="center"; ctx.font="700 10px "+mono;
-      for(k=0;k<strat.strikes.length;k++){ var ekx=X(strat.strikes[k]);
-        ctx.strokeStyle=hexA(accent, (0.3+0.5*epulse)); ctx.lineWidth=1.5;
-        ctx.beginPath(); ctx.moveTo(ekx,yTop); ctx.lineTo(ekx,yBot); ctx.stroke();
-        ctx.fillStyle=hexA(accent, 0.5+0.4*epulse); ctx.beginPath(); ctx.arc(ekx,Y(0),3+2*epulse,0,7); ctx.fill();
-        ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲", ekx, Y(0)+16); }
-      ctx.globalAlpha=A; }
-    // underlying spot glides into profit (value shown in the panel)
-    if(p.move>0){ var e2=extrema(strat), sxp=lerp(0.5, e2.mxX, easeIO(p.move)), mvx=X(sxp), mvy=Y(payoffAt(strat.pts,sxp));
-      ctx.setLineDash([2,5]); ctx.strokeStyle=hexA(txt,0.5); ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(mvx,yTop); ctx.lineTo(mvx,yBot); ctx.stroke(); ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(mvx,mvy,4.5,0,7); ctx.fillStyle=payoffAt(strat.pts,sxp)>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=14; ctx.fill(); ctx.shadowBlur=0;
-      ctx.textAlign="center"; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(txt,0.8); ctx.fillText("NOW", mvx, yTop-3); }
-    // exit: on take-profit, the profit region flashes green (correlates with "CLOSED +$" left)
-    if(p.exit>0){ var e3=extrema(strat), xpulse=0.5+0.5*Math.sin(pbGlyphT*0.6); ctx.globalAlpha=A*p.exit;
-      var N2=80, seg2=(x1-x0)/N2;
-      for(var j=0;j<N2;j++){ var u2=j/(N2-1), v2=payoffAt(strat.pts,u2); if(v2<=0) continue;
-        ctx.fillStyle=hexA(pos, 0.1+0.16*xpulse); ctx.fillRect(X(u2), Math.min(Y(v2),Y(0)), seg2+1, Math.abs(Y(v2)-Y(0))); }
-      var fxp=X(e3.mxX), fyp=Y(e3.maxY);
-      ctx.strokeStyle=hexA(pos,0.9); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(fxp,fyp,6+7*xpulse,0,7); ctx.stroke();
-      ctx.globalAlpha=A; }
+    ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(accent,0.5); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx+cw/2, cy+ch/2); ctx.lineTo(x,y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=hexA(bg,0.85); roundRect(cx,cy,cw,ch,8); ctx.fill();
+    ctx.strokeStyle=hexA(accent,0.55); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,8); ctx.stroke();
+    var px=cx+13, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▣ SIGNAL DETECTED", px, yy); yy+=19;
+    var rc=rsiV<30?pos:(rsiV>70?neg:txt);
+    ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", px, yy);
+    ctx.fillStyle=hexA(rc,0.95); ctx.fillText(rsiV.toFixed(0), px+30, yy);
+    var gw=cw-26, gx=px, gy=yy+8, gh=6;
+    ctx.fillStyle=hexA(muted,0.16); ctx.fillRect(gx,gy,gw,gh);
+    ctx.fillStyle=hexA(pos,0.22); ctx.fillRect(gx,gy,gw*0.3,gh);
+    ctx.fillStyle=hexA(neg,0.22); ctx.fillRect(gx+gw*0.7,gy,gw*0.3,gh);
+    var mp=gx+gw*clamp01(rsiV/100); ctx.fillStyle=rc; ctx.fillRect(mp-1.5,gy-2,3,gh+4);
+    yy=gy+gh+15; ctx.font="9px "+mono; ctx.fillStyle=hexA(accent,0.85); wrapText((sig?sig.sig:""), px, yy, gw, 12);
+    ctx.restore(); }
+
+  // FORECAST-ON-TREND: the called play is drawn into the FUTURE (right of "now", where there is no
+  // data yet), anchored to the live trend. The bot's forecast = horizontal profit(green)/loss(red)
+  // PRICE BANDS, dotted BREAKEVEN levels, a dotted happy-path PROJECTION with direction arrows, and
+  // an entry→target track. During WALK the solid trend climbs into the band and the trade resolves.
+  // Information unfolds phase-by-phase (aim → project → walk → resolve) so it reads at a digestible
+  // pace rather than arriving all at once.
+  function drawForecast(strat, sig, p){
+    if(!strat) return;
+    var A=1-p.out, proj=easeIO(clamp01(p.project));
+    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
+    var e=extrema(strat);
+    var X0=nowSX, Xf=Math.min(W*0.93, X0+Math.max(180,(W-X0)-40)); if(Xf<X0+90) Xf=X0+90;
+    function SY(P){ return nowSY-(P-nowPrice)*pxPerPrice; }
+    function priceOf(u){ return signalPrice+(u-0.5)*volScale; }
+    var loP=signalPrice-volScale*0.55, hiP=signalPrice+volScale*0.55;
+    ctx.save(); ctx.globalAlpha=A;
+    if(proj>0.01){
+      // horizontal profit/loss PRICE BANDS across the future region
+      var NB=72, sh=Math.abs(SY(hiP)-SY(loP))/(NB-1)+1;
+      for(var i=0;i<NB;i++){ var P=loP+(hiP-loP)*(i/(NB-1)), u=(P-signalPrice)/(volScale||1)+0.5, v=payoffAt(strat.pts,u);
+        if(Math.abs(v)<0.05) continue; ctx.fillStyle=hexA(v>0?pos:neg, 0.14*proj*Math.min(1,Math.abs(v)*1.6));
+        ctx.fillRect(X0, SY(P)-sh/2, Xf-X0, sh); }
+      // "now" divider — the boundary between recorded history and forecast
+      ctx.setLineDash([2,5]); ctx.strokeStyle=hexA(txt,0.35*proj); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(X0,SY(hiP)); ctx.lineTo(X0,SY(loP)); ctx.stroke(); ctx.setLineDash([]);
+      // dotted breakeven levels
+      ctx.setLineDash([4,6]); ctx.font="700 9px "+mono; ctx.textAlign="left";
+      for(var k=0;k<e.be.length;k++){ var by=SY(priceOf(e.be[k]));
+        ctx.strokeStyle=hexA(muted,0.55*proj); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X0,by); ctx.lineTo(Xf,by); ctx.stroke();
+        ctx.fillStyle=hexA(muted,0.85*proj); ctx.fillText("B/E", Xf+5, by+3); }
+      ctx.setLineDash([]);
+      // Madden-style corner brackets that FRAME the enhanced future (the "enhance, zoom" read)
+      drawBrackets(X0-6, SY(hiP)-12, Xf+40, SY(loP)+12, hexA(accent,0.45*proj));
+    }
+    // happy-path dotted PROJECTION from now → target, with direction arrows
+    var up=targetPrice>signalPrice+volScale*0.03, dn=targetPrice<signalPrice-volScale*0.03;
+    var acol=up?pos:(dn?neg:muted), dir=up?-1:(dn?1:0);
+    var yNow=SY(nowPrice), yTgt=SY(targetPrice);
+    if(proj>0.01){
+      ctx.setLineDash([3,5]); ctx.strokeStyle=hexA(acol,0.85*proj); ctx.lineWidth=1.6; ctx.beginPath();
+      var SEG=28; for(var s=0;s<=SEG;s++){ var tt=s/SEG, xx=X0+(Xf-X0)*tt, yy=yNow+(yTgt-yNow)*easeIO(tt); s?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); }
+      ctx.stroke(); ctx.setLineDash([]);
+      for(var a=1;a<=3;a++){ var t2=a/4, ax2=X0+(Xf-X0)*t2, ay2=yNow+(yTgt-yNow)*easeIO(t2); drawChevron(ax2,ay2,dir,hexA(acol,0.95*proj)); }
+      // entry marker (at now) + target marker (max-profit price)
+      ctx.fillStyle=hexA(accent,0.95*proj); ctx.beginPath(); ctx.arc(X0,yNow,3.5,0,7); ctx.fill();
+      ctx.font="700 9px "+mono; ctx.textAlign="left"; ctx.fillStyle=hexA(accent,0.9*proj); ctx.fillText("ENTRY", X0+7, yNow-7);
+      var tpulse=p.resolve>0?(0.5+0.5*Math.sin(pbGlyphT*0.5)):0;
+      ctx.strokeStyle=hexA(acol,0.9*proj); ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(Xf,yTgt,5+5*tpulse,0,7); ctx.stroke();
+      ctx.textAlign="right"; ctx.fillStyle=hexA(acol,0.95*proj); ctx.fillText("TARGET "+money(e.maxY*DOLLARS), Xf-6, yTgt-9);
+    }
     ctx.textAlign="start"; ctx.restore();
     drawPanel(strat, sig, p, A);
-    drawSignalDetail(sig, A*Math.min(1,p.on));
+    // signal callout is anchored to the aim point and fades out once the walk takes over
+    if(p.aim>0) drawSignalCallout(sig, X0, yNow, A*clamp01(p.aim)*(1-clamp01(p.walk*1.4)));
+    drawAimBeam(X0, yNow, p);
   }
-  // Play timeline (ms): each phase chains into the next — the full trade lifecycle.
-  var PWR=450,STK=550,CRV=1200,ZON=400,LBL=450,ENT=450,MOV=1600,EXT=550,OUT=650;
-  var T_STK=PWR,T_CRV=T_STK+STK,T_ZON=T_CRV+CRV,T_LBL=T_ZON+ZON,T_ENT=T_LBL+LBL,
-      T_MOV=T_ENT+ENT,T_EXT=T_MOV+MOV,T_OUT=T_EXT+EXT,T_END=T_OUT+OUT;
+  // Play phases (ms): DETECT → AIM → ZOOM → PROJECT → WALK-forward → RESOLVE → HOLD → ZOOM-OUT.
+  // Each phase is followed by a short DWELL so the last thing shown isn't rushed into the next step —
+  // the reveal breathes. A longer HOLD after RESOLVE lets the "closed +$" land before we zoom out.
+  var DET=520,AIM=680,DW_AIM=280,ZM=620,PRJ=880,DW_PRJ=320,WLK=2600,RES=700,HOLD=1000,OUT=820;
+  var T_AIM=DET, T_ZM=T_AIM+AIM+DW_AIM, T_PRJ=T_ZM+ZM, T_WLK=T_PRJ+PRJ+DW_PRJ,
+      T_RES=T_WLK+WLK, T_OUT=T_RES+RES+HOLD, T_END=T_OUT+OUT;
   function playProg(e){ return {
-    on:clamp01(e/PWR), strikes:clamp01((e-T_STK)/STK), curve:clamp01((e-T_CRV)/CRV),
-    zones:clamp01((e-T_ZON)/ZON), label:clamp01((e-T_LBL)/LBL), enter:clamp01((e-T_ENT)/ENT),
-    move:clamp01((e-T_MOV)/MOV), exit:clamp01((e-T_EXT)/EXT), out: e>T_OUT?clamp01((e-T_OUT)/OUT):0 }; }
+    on:clamp01(e/DET), aim:clamp01((e-T_AIM)/AIM), zoom:clamp01((e-T_ZM)/ZM),
+    project:clamp01((e-T_PRJ)/PRJ), walk:clamp01((e-T_WLK)/WLK), resolve:clamp01((e-T_RES)/RES),
+    out: e>T_OUT?clamp01((e-T_OUT)/OUT):0 }; }
   var playMode=false, playStart=0, curStrat=0, curSig=null, nextPlayAt=2400, rainBoost=0, rainTint=0;
-  var zoom=1;   // camera zoom into the signal region during a play (1 = ambient)
+  // Camera + time: cam (0 ambient → 1 framed), zoom eased; rate = eased time multiplier (slow-mo).
+  var zoom=1, cam=0, rate=1, stepAcc=0, signalPrice=100, targetPrice=100, volScale=10;
+  // Screen anchor for "now" (leading price) + price→pixel scale, exported by drawMarket so the
+  // forecast draws the future in the same frame as the live trend.
+  var nowSX=0, nowSY=0, nowPrice=100, pxPerPrice=1;
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -994,9 +1032,18 @@ export class Authenticator {
         cardEl.style.setProperty("--sheen",(115+dx*70).toFixed(0)+"deg"); }
     }); }
 
-  if(reduce){ measureField(); fieldSnap(); drawMarket(0.2);
-    drawPlaybook(STRATS[0], { on:1,strikes:1,curve:1,zones:1,label:1,enter:1,move:1,exit:0,out:0 },
-      { sig:"BOLLINGER SQUEEZE · LOW VOL" }); beamVignette();
+  // Set the forecast anchors (signal price, vol scale, happy-path target) for a chosen strategy.
+  function armForecast(idx){ var last=price.length-1;
+    signalPrice=price[last];
+    volScale=Math.max((bU[last]-bL[last])||0, signalPrice*0.05)*1.7;
+    var ex=extrema(STRATS[idx]); targetPrice=signalPrice+(ex.mxDir-0.5)*volScale; forecastTarget=targetPrice; }
+
+  if(reduce){ measureField(); fieldSnap();
+    curStrat=4; armForecast(curStrat); cam=0.9; zoom=1.9;   // one static, fully-projected forecast
+    drawMarket(0.7);
+    drawForecast(STRATS[curStrat], { sig:"EMA GOLDEN CROSS · UPTREND" },
+      { on:1,aim:1,zoom:1,project:1,walk:0,resolve:0,out:0 });
+    beamVignette();
     document.body.classList.add("playing");
     if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
       for(var s=0;s<26;s++) rainDraw(0,0); }
@@ -1007,18 +1054,31 @@ export class Authenticator {
   function loop(now){
     if(!running) return;
     if(now-last > 50){ last=now; measureField(); fieldStep();
-      if(!playMode) stepMarket();   // freeze the trend while a play is framed — the scroll pauses
+      // Fire a play when a signal sets up and the cooldown has elapsed; capture its forecast anchors.
       if(!playMode && now>=nextPlayAt){ var sig=detectSignal(); if(!sig && now>=nextPlayAt+5000) sig=forceSignal();
-        if(sig){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i; } }
-      var p=null, recede=0, zt=1;
-      if(playMode){ var e=now-playStart; p=playProg(e); recede=Math.min(p.on,1)*(1-p.out);
-        zt = 1 + 0.9*clamp01(e/800)*(1-p.out);   // zoom in to frame the signal, hold, zoom back out
-        rainBoost=(p.enter>0 && p.exit<1)?1:0; rainTint=(p.exit>0 && p.out<1)?1:0;
-        if(e>=T_END){ playMode=false; nextPlayAt=now+3000+Math.random()*2400; p=null; recede=0; rainBoost=0; rainTint=0; } }
-      zoom += (zt-zoom)*0.1;
-      document.body.classList.toggle("playing", recede>0.02);
-      drawMarket(1 - recede*0.5);
-      if(p){ drawPlaybook(STRATS[curStrat], p, curSig); pbGlyphT++; }
+        if(sig){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i; armForecast(curStrat); } }
+      var p=null, camT=0, rateT=1;
+      if(playMode){ var e=now-playStart; p=playProg(e);
+        // Time never hard-stops: ease into slow-mo through detect/project, then ease back up as the
+        // price walks the forecast forward, and back to real-time on zoom-out. This kills the jumps.
+        if(p.out>0) rateT=1;
+        else if(p.walk>0) rateT=lerp(0.16, 1.0, easeIO(clamp01(p.walk)));
+        else if(p.aim>0) rateT=0.16;
+        else rateT=lerp(1, 0.4, clamp01(p.on));
+        camT=clamp01(Math.max(p.zoom, p.aim*0.25))*(1-p.out);   // eased zoom/focal — no snap
+        rainBoost=(p.walk>0 && p.resolve<1)?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
+        if(e>=T_END){ playMode=false; nextPlayAt=now+3400+Math.random()*2600; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; } }
+      else { rainBoost=0; rainTint=0; }
+      cam += (camT-cam)*0.09; rate += (rateT-rate)*0.09;
+      zoom += ((1+1.05*cam)-zoom)*0.1;
+      // Advance time by the eased rate; during the walk the price tracks the happy-path forecast.
+      stepAcc += Math.max(rate, playMode?0:1);
+      var guard=0;
+      while(stepAcc>=1 && guard++<8){ stepAcc-=1;
+        if(playMode && p && p.walk>0 && p.out<=0) stepForecast(); else stepMarket(); }
+      document.body.classList.toggle("playing", cam>0.02);
+      drawMarket(1 - cam*0.34);
+      if(p){ drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
       beamVignette();
       rainDraw(rainBoost, rainTint); }
     requestAnimationFrame(loop);
