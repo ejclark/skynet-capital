@@ -1476,7 +1476,7 @@ ${versionTag}
   // MARKS the spot with an imploding reticle; then a gravity WELL opens at the destination and a tractor
   // beam PULLS the present leftward into it (bright streaks flow toward the well) until the play unfolds.
   function drawGravityBeam(p){
-    var accent=css("--accent")||"#35D0BA", dstX=W*0.30, dstY=scBaseY||nowSY;
+    var accent=css("--accent")||"#35D0BA";
     // 1) DETECTION MARK — an imploding lock on the signal point as AIM completes, before the pull.
     var mark=clamp01((easeIO(clamp01(p.aim))-0.45)/0.55)*(1-clamp01(p.zoom/0.18))*(1-clamp01(p.walk));
     if(mark>0.02){ ctx.save(); ctx.globalCompositeOperation="lighter";
@@ -1488,22 +1488,43 @@ ${versionTag}
       var mg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,16);
       mg.addColorStop(0,hexA("#EAFFFA",0.8*mark)); mg.addColorStop(1,hexA(accent,0));
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(nowSX,nowSY,16,0,7); ctx.fill(); ctx.restore(); }
-    // 2) GRAVITY WELL + TRACTOR BEAM — active while the present is pulled to the destination.
-    var pull=easeIO(clamp01(p.zoom))*(1-clamp01(p.walk))*(1-p.out), span=nowSX-dstX;
-    if(pull>0.02 && span>6){ ctx.save(); ctx.globalCompositeOperation="lighter";
-      var hP=13*pull, hW=3*pull;
-      var bg2=ctx.createLinearGradient(nowSX,nowSY,dstX,dstY);
-      bg2.addColorStop(0,hexA(accent,0.05*pull)); bg2.addColorStop(1,hexA(accent,0.22*pull));
-      ctx.beginPath(); ctx.moveTo(nowSX,nowSY-hP); ctx.lineTo(dstX,dstY-hW); ctx.lineTo(dstX,dstY+hW); ctx.lineTo(nowSX,nowSY+hP); ctx.closePath();
-      ctx.fillStyle=bg2; ctx.fill();
-      for(var s=0;s<5;s++){ var f=(pbGlyphT*0.03+s/5)%1, sx=lerp(nowSX,dstX,f), sy=lerp(nowSY,dstY,f);
-        ctx.fillStyle=hexA("#EAFFFA",0.5*(1-f)*pull); ctx.fillRect(sx-1.2,sy-1.2,2.4,2.4); }
-      var wp=0.6+0.4*Math.sin(pbGlyphT*0.3);
-      var wg=ctx.createRadialGradient(dstX,dstY,0,dstX,dstY,26);
-      wg.addColorStop(0,hexA("#EAFFFA",0.5*pull*wp)); wg.addColorStop(0.5,hexA(accent,0.3*pull)); wg.addColorStop(1,hexA(accent,0));
-      ctx.fillStyle=wg; ctx.beginPath(); ctx.arc(dstX,dstY,26,0,7); ctx.fill();
-      ctx.strokeStyle=hexA(accent,0.6*pull); ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(dstX,dstY,lerp(20,9,pull),0,7); ctx.stroke();
-      ctx.restore(); }
+    // 2) COMBINED TOWER GRAVITY BEAMS — the crowned empire towers' spires collectively seize the
+    // present: each fires a highly-charged tractor beam (black-hole physics — infinite gravity, immense
+    // charge) that CRACKLES with lightning, and together they haul it into the framed position.
+    var pull=easeIO(clamp01(p.zoom))*(1-clamp01(p.walk))*(1-p.out);
+    if(pull>0.02){
+      // Emitters = crowned tower spire tips, in screen space (rain + stage canvases share the viewport).
+      var em=[], ei; for(ei=0;ei<skyline.length;ei++){ var tb=skyline[ei]; if(tb.crown){
+        em.push({ x:tb.x+cityPX+tb.w/2, y:H-tb.h-(tb.ant||0)-(tb.spire||0), seed:tb.seed }); } }
+      if(em.length){ ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.lineCap="round";
+        var flick=0.55+0.45*noise(pbGlyphT*0.6);   // global electric flicker
+        // jagged lightning polyline from an emitter to the present, jittered perpendicular to the beam
+        var bolt=function(x0,y0,x1,y1,amp,seed,col,al,wd){ var segs=11, ddx=x1-x0, ddy=y1-y0, nx=-ddy, ny=ddx, nl=Math.sqrt(nx*nx+ny*ny)||1; nx/=nl; ny/=nl;
+          ctx.beginPath(); ctx.moveTo(x0,y0);
+          for(var s=1;s<segs;s++){ var t=s/segs, j=(noise(seed+s*3.1+pbGlyphT*0.28)-0.5)*amp*Math.sin(t*Math.PI);
+            ctx.lineTo(x0+ddx*t+nx*j, y0+ddy*t+ny*j); }
+          ctx.lineTo(x1,y1); ctx.strokeStyle=hexA(col,al); ctx.lineWidth=wd; ctx.stroke(); };
+        for(var k=0;k<em.length;k++){ var e=em[k];
+          // charged node at the spire tip
+          var ng=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,13); ng.addColorStop(0,hexA("#EAFFFA",0.72*pull*flick)); ng.addColorStop(1,hexA(accent,0));
+          ctx.fillStyle=ng; ctx.beginPath(); ctx.arc(e.x,e.y,13,0,7); ctx.fill();
+          // soft straight beam glow (the tractor cone)
+          var dxb=nowSX-e.x, dyb=nowSY-e.y, bl=Math.sqrt(dxb*dxb+dyb*dyb)||1, pnx=-dyb/bl, pny=dxb/bl, bw=lerp(2.5,8,pull);
+          var bg3=ctx.createLinearGradient(e.x,e.y,nowSX,nowSY); bg3.addColorStop(0,hexA(accent,0.16*pull)); bg3.addColorStop(1,hexA(accent,0.05*pull));
+          ctx.beginPath(); ctx.moveTo(e.x+pnx*3,e.y+pny*3); ctx.lineTo(nowSX+pnx*bw,nowSY+pny*bw); ctx.lineTo(nowSX-pnx*bw,nowSY-pny*bw); ctx.lineTo(e.x-pnx*3,e.y-pny*3); ctx.closePath(); ctx.fillStyle=bg3; ctx.fill();
+          // lightning: a wide green halo bolt + a bright white-hot core bolt, crackling
+          bolt(e.x,e.y,nowSX,nowSY, 30*pull, e.seed, accent, 0.5*pull*flick, 2.6);
+          bolt(e.x,e.y,nowSX,nowSY, 18*pull, e.seed+11, "#EAFFFA", 0.8*pull*flick, 1.1);
+          // charge packets streaming down the beam into the present
+          for(var s2=0;s2<4;s2++){ var f=(pbGlyphT*0.045+s2/4+k*0.19)%1, cxp=lerp(e.x,nowSX,f), cyp=lerp(e.y,nowSY,f);
+            ctx.fillStyle=hexA("#EAFFFA",0.7*(1-Math.abs(f-0.65))*pull); ctx.fillRect(cxp-1.3,cyp-1.3,2.6,2.6); } }
+        // the present, seized by the combined pull — a charged, imploding well
+        var wp=0.6+0.4*Math.sin(pbGlyphT*0.4);
+        var pg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,24); pg.addColorStop(0,hexA("#EAFFFA",0.5*pull*wp)); pg.addColorStop(0.5,hexA(accent,0.3*pull)); pg.addColorStop(1,hexA(accent,0));
+        ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(nowSX,nowSY,24,0,7); ctx.fill();
+        ctx.strokeStyle=hexA(accent,0.6*pull*flick); ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(nowSX,nowSY,lerp(20,10,pull),0,7); ctx.stroke();
+        ctx.restore(); }
+    }
   }
   // The signal EVIDENCE + the THESIS, a callout ANCHORED to the aim point (not a right column): RSI +
   // a mini oversold/overbought gauge, the one-line reason, then WHY the market should behave this way
