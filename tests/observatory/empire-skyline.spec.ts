@@ -74,6 +74,13 @@ describe("empire-skyline", () => {
       expect(svg).toContain("FRONTIER EMPIRE");
     });
 
+    it("crowns the Sauron persona's tallest tower with the Eye emblem (P1 landmark)", () => {
+      const sauron = renderEmpireSkyline(snap([pos("NVDA", 100)], { personaId: "sauron" }));
+      expect(sauron).toContain("persona-eye");
+      const other = renderEmpireSkyline(snap([pos("NVDA", 100)], { personaId: "day-trader" }));
+      expect(other).not.toContain("persona-eye");
+    });
+
     it("compact mode drops per-building ticker labels + RESERVE but keeps the theme", () => {
       const svg = renderEmpireSkyline(snap([pos("NVDA", 100), pos("META", 60)], { cash: 40 }), {
         compact: true,

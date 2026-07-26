@@ -104,6 +104,17 @@ function building(
   return `<g><rect x="${x}" y="${top}" width="${w}" height="${h}" fill="var(--surface)" stroke="var(--muted)" stroke-opacity="0.45"/>${win("var(--muted)")}${cap}</g>`;
 }
 
+// Persona → landmark: a persona's signature structure crowns its city (the login Eye motif reaches the
+// observatory). Display-only for now; scaling the landmark by the bot's rank is the leveling follow-up.
+const PERSONA_LANDMARK: Record<string, "eye"> = { sauron: "eye" };
+
+/** A small Eye of Sauron emblem — a fiery almond with a slit pupil, flanked by two dark prongs. */
+function renderEyeEmblem(cx: number, cy: number, s: number): string {
+  const ew = s * 0.5;
+  const eh = s;
+  return `<g class="persona-eye" aria-hidden="true"><circle cx="${cx}" cy="${cy}" r="${(s * 1.8).toFixed(1)}" fill="#FF9E3D" fill-opacity="0.18"/><path d="M ${cx} ${cy - eh} Q ${cx + ew} ${cy} ${cx} ${cy + eh} Q ${cx - ew} ${cy} ${cx} ${cy - eh} Z" fill="#FF7A2E"/><path d="M ${cx} ${cy - eh * 0.66} Q ${cx + ew * 0.34} ${cy} ${cx} ${cy + eh * 0.66} Q ${cx - ew * 0.34} ${cy} ${cx} ${cy - eh * 0.66} Z" fill="#140300"/><path d="M ${(cx - ew * 1.7).toFixed(1)} ${(cy + eh * 0.5).toFixed(1)} Q ${(cx - ew * 2).toFixed(1)} ${cy} ${(cx - ew * 1.2).toFixed(1)} ${(cy - eh).toFixed(1)}" stroke="#05070B" stroke-width="1.4" fill="none"/><path d="M ${(cx + ew * 1.7).toFixed(1)} ${(cy + eh * 0.5).toFixed(1)} Q ${(cx + ew * 2).toFixed(1)} ${cy} ${(cx + ew * 1.2).toFixed(1)} ${(cy - eh).toFixed(1)}" stroke="#05070B" stroke-width="1.4" fill="none"/></g>`;
+}
+
 export interface SkylineOptions {
   readonly width?: number;
   readonly height?: number;
@@ -158,5 +169,16 @@ export function renderEmpireSkyline(
     : `<text x="${W - parkW / 2 - 12}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">RESERVE</text>`;
   const park = `<g><rect x="${W - parkW - 12}" y="${baseY - 14}" width="${parkW}" height="14" rx="3" fill="var(--pos)" fill-opacity="0.14" stroke="var(--pos)" stroke-opacity="0.3"/>${parkLabel}</g>`;
 
-  return `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline of ${theme.toLowerCase()} holdings" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}${buildings}${park}${label}</svg>`;
+  // The persona's landmark crowns its tallest tower (sorted[0] is the largest holding by weight).
+  let landmark = "";
+  const lk = snapshot.personaId ? PERSONA_LANDMARK[snapshot.personaId] : undefined;
+  const tallest = sorted[0];
+  if (lk === "eye" && tallest) {
+    const bx0 = Math.round(pad + (slot - bw) / 2);
+    const cx0 = bx0 + Math.round(bw / 2);
+    const cyTop = baseY - (minH + spanH * (tallest.marketValue / maxVal)) - (compact ? 5 : 8);
+    landmark = renderEyeEmblem(cx0, cyTop, compact ? 5 : 8);
+  }
+
+  return `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline of ${theme.toLowerCase()} holdings" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}${buildings}${park}${landmark}${label}</svg>`;
 }
