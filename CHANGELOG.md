@@ -1,3 +1,10 @@
+## [1.72.1](https://github.com/ejclark/skynet-capital/compare/v1.72.0...v1.72.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** contain the playcall panel in a terminal window (stop background bleed) ([#127](https://github.com/ejclark/skynet-capital/issues/127)) ([caf496a](https://github.com/ejclark/skynet-capital/commit/caf496aa4f59c06e0892f8a334777e5800d69fe4))
+
 # [1.72.0](https://github.com/ejclark/skynet-capital/compare/v1.71.0...v1.72.0) (2026-07-26)
 
 
