@@ -1041,21 +1041,30 @@ ${versionTag}
   var skyline=[], rainT=0, cityLayers=[], cityPX=0, cityPXt=0;
   function _genLayer(w,h,o){ var arr=[], x=-20-Math.random()*40;
     while(x<w+40){ var bw=o.bw0+Math.random()*o.bwR, bh=o.bh0+Math.random()*o.bhR;
-      arr.push({ x:x, w:bw, h:bh, seed:Math.random()*1000, ant:Math.random()<o.antP?(8+Math.random()*o.antR):0, crown:false });
+      // Silhouette variety (Dubai/Tokyo high-tech): most sleek towers TAPER toward the top; a share get
+      // a fine SPIRE (Burj/Skytree). Far/hazy layer stays boxy — detail there would be lost anyway.
+      var r=Math.random(), taper=1, spire=0, shape="box";
+      if(o.fancy){
+        if(r<0.36){ shape="taper"; taper=0.40+Math.random()*0.26; }              // sleek tapering supertall
+        else if(r<0.56){ shape="spire"; taper=0.55+Math.random()*0.22; spire=14+Math.random()*26; } // spired
+        else if(r<0.68){ shape="box"; taper=0.86+Math.random()*0.1; }            // slight batter
+      }
+      arr.push({ x:x, w:bw, h:bh, seed:Math.random()*1000, ant:Math.random()<o.antP?(8+Math.random()*o.antR):0,
+        crown:false, taper:taper, spire:spire, shape:shape });
       x += bw + o.gap0 + Math.random()*o.gapR; }
     return arr; }
   function buildSkyline(w,h){
     // Three depth layers for a real 3D read: FAR (small/dim/hazy/high, moves least) → MID → NEAR
     // (tall/crisp/full-detail, moves most under pointer parallax). Painter's order, back to front.
     var far=_genLayer(w,h,{bw0:12,bwR:22,bh0:16,bhR:h*0.09,antP:0.14,antR:10,gap0:1,gapR:4});
-    var mid=_genLayer(w,h,{bw0:20,bwR:36,bh0:30,bhR:h*0.14,antP:0.20,antR:14,gap0:2,gapR:6});
-    var near=_genLayer(w,h,{bw0:28,bwR:52,bh0:44,bhR:Math.min(150,h*0.20),antP:0.28,antR:22,gap0:2,gapR:9});
+    var mid=_genLayer(w,h,{bw0:20,bwR:36,bh0:30,bhR:h*0.14,antP:0.20,antR:14,gap0:2,gapR:6,fancy:true});
+    var near=_genLayer(w,h,{bw0:28,bwR:52,bh0:44,bhR:Math.min(150,h*0.20),antP:0.28,antR:22,gap0:2,gapR:9,fancy:true});
     // Empire towers — crown the two tallest of the NEAR layer (the wealth built from capital).
     var t1=-1,t2=-1,si;
     for(si=0;si<near.length;si++){ if(t1<0||near[si].h>near[t1].h){ t2=t1; t1=si; }
       else if(t2<0||near[si].h>near[t2].h){ t2=si; } }
-    if(t1>=0){ var B1=near[t1]; B1.h=Math.min(h*0.36,B1.h*1.5+40); B1.crown=true; B1.ant=Math.max(B1.ant,20+Math.random()*14); }
-    if(t2>=0){ var B2=near[t2]; B2.h=Math.min(h*0.30,B2.h*1.35+30); B2.crown=true; B2.ant=Math.max(B2.ant,16+Math.random()*12); }
+    if(t1>=0){ var B1=near[t1]; B1.h=Math.min(h*0.40,B1.h*1.6+50); B1.crown=true; B1.shape="spire"; B1.taper=0.30; B1.spire=Math.max(B1.spire,40+Math.random()*20); B1.ant=Math.max(B1.ant,20+Math.random()*14); }
+    if(t2>=0){ var B2=near[t2]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }
     cityLayers=[
       { b:far,  dim:0.4,  par:0.20, base:h*0.055, depth:0, code:false, haze:0.05 },   // distant, hazy, higher base
       { b:mid,  dim:0.68, par:0.5,  base:h*0.02,  depth:3, code:false, haze:0.03 },
@@ -1069,38 +1078,58 @@ ${versionTag}
   // Draw one building with 3D block faces (right side + top), then its front detail. dim = atmospheric
   // perspective (far = fainter); L.code = full matrix-code face + tracers + crown (near layer only).
   function drawBuilding(L, b, bx, top, bottom, accent, bg, flip){ var dim=L.dim, d=L.depth;
-    if(d>0){   // isometric-ish block: right side face (dark) + top face (faintly lit) imply volume
+    // Silhouette geometry: sleek towers TAPER, so the top width narrows. Per-row edges are lerped
+    // between the base rect and the (centered) top width — used for the outline, windows, and mullions.
+    var tp=b.taper||1, tw=b.w*tp, txL=bx+(b.w-tw)/2, txR=txL+tw, tapered=tp<0.985;
+    var edgeL=function(y){ var f=(y-top)/(b.h||1); return txL+(bx-txL)*f; };
+    var edgeR=function(y){ var f=(y-top)/(b.h||1); return txR+(bx+b.w-txR)*f; };
+    var outline=function(){ rctx.beginPath(); rctx.moveTo(bx,bottom); rctx.lineTo(bx+b.w,bottom); rctx.lineTo(txR,top); rctx.lineTo(txL,top); rctx.closePath(); };
+    // 3D block side/top faces — only for boxy masses; sleek glass towers read cleaner without them.
+    if(d>0 && !tapered){
       rctx.fillStyle="#01040A"; rctx.beginPath();
       rctx.moveTo(bx+b.w,top); rctx.lineTo(bx+b.w+d,top-d); rctx.lineTo(bx+b.w+d,bottom-d); rctx.lineTo(bx+b.w,bottom); rctx.closePath(); rctx.fill();
       rctx.beginPath(); rctx.moveTo(bx,top); rctx.lineTo(bx+d,top-d); rctx.lineTo(bx+b.w+d,top-d); rctx.lineTo(bx+b.w,top); rctx.closePath();
       rctx.fillStyle="#060D12"; rctx.fill(); rctx.strokeStyle=hexA(accent,0.12*dim); rctx.lineWidth=1; rctx.stroke(); }
-    rctx.fillStyle="#03060A"; rctx.fillRect(bx, top, b.w, b.h);   // front silhouette
+    rctx.fillStyle="#03060A"; if(tapered){ outline(); rctx.fill(); } else rctx.fillRect(bx, top, b.w, b.h);   // front silhouette
+    // antenna + fine SPIRE (Burj/Skytree) with a blinking aircraft beacon at the tip
+    var midx=bx+b.w/2, antTop=top-b.ant;
+    if(b.ant){ rctx.strokeStyle=hexA(accent,(b.crown?0.22:0.13)*dim); rctx.lineWidth=1;
+      rctx.beginPath(); rctx.moveTo(midx,top); rctx.lineTo(midx,antTop); rctx.stroke(); }
+    var tipY=antTop;
+    if(b.spire>0){ tipY=antTop-b.spire; rctx.strokeStyle=hexA(accent,0.42*dim); rctx.lineWidth=1.3;
+      rctx.beginPath(); rctx.moveTo(midx,antTop); rctx.lineTo(midx,tipY); rctx.stroke(); }
+    if((b.crown||b.spire>0)){ var pulse=0.4+0.6*Math.pow(0.5+0.5*Math.sin(rainT*0.13+b.seed),3);
+      rctx.save(); rctx.globalCompositeOperation="lighter";
+      var cg=rctx.createRadialGradient(midx,tipY,0,midx,tipY,b.crown?15:9);
+      cg.addColorStop(0,hexA(b.crown?"#EAFFFA":accent,(b.crown?0.42:0.5)*pulse*dim)); cg.addColorStop(1,hexA(accent,0));
+      rctx.fillStyle=cg; rctx.beginPath(); rctx.arc(midx,tipY,b.crown?15:9,0,7); rctx.fill(); rctx.restore();
+      rctx.fillStyle=hexA("#EAFFFA",(0.5+0.4*pulse)*dim); rctx.beginPath(); rctx.arc(midx,tipY,1.5,0,7); rctx.fill(); }
     if(L.code){
-      if(b.ant){ rctx.strokeStyle=hexA(accent,(b.crown?0.22:0.13)*dim); rctx.lineWidth=1;
-        rctx.beginPath(); rctx.moveTo(bx+b.w/2,top); rctx.lineTo(bx+b.w/2,top-b.ant); rctx.stroke(); }
-      if(b.crown){ var cbx=bx+b.w/2, byt=top-b.ant, pulse=0.5+0.5*Math.sin(rainT*0.08+b.seed);
-        var cg=rctx.createRadialGradient(cbx,byt,0,cbx,byt,15); cg.addColorStop(0,hexA(accent,0.34*pulse)); cg.addColorStop(1,hexA(accent,0));
-        rctx.save(); rctx.globalCompositeOperation="lighter"; rctx.fillStyle=cg; rctx.beginPath(); rctx.arc(cbx,byt,15,0,7); rctx.fill(); rctx.restore();
-        rctx.fillStyle=hexA(accent,0.5+0.4*pulse); rctx.beginPath(); rctx.arc(cbx,byt,1.8,0,7); rctx.fill(); }
-      rctx.save(); rctx.beginPath(); rctx.rect(bx,top,b.w,b.h); rctx.clip();
-      var gx=7,gy=10,cxi=0;
+      rctx.save(); if(tapered){ outline(); rctx.clip(); } else { rctx.beginPath(); rctx.rect(bx,top,b.w,b.h); rctx.clip(); }
+      // MICRO facade: a fine field of code glyphs; a sparse scatter of lit "windows", some warm-white
+      // for micro-variation, over a very dim base grain so the surface reads textured, not flat.
+      var gx=6,gy=8,cxi=0;
       for(var cx=bx+1; cx<bx+b.w; cx+=gx,cxi++){ var cyi=0;
-        for(var cy=top+9; cy<bottom; cy+=gy,cyi++){ var cell=b.seed+cxi*12.9+cyi*7.3;
-          var lit=noise(cell)<0.14, ch=RG[(noise(cell+flip*0.7)*RG.length)|0], fl=0.5+0.5*Math.sin(rainT*0.05+cxi*1.3+cyi*0.7+b.seed);
-          rctx.fillStyle=hexA(accent,(lit?(0.42+0.34*fl):(0.11+0.07*noise(cell+1.3)))*dim); rctx.fillText(ch,cx,cy); } }
+        for(var cy=top+8; cy<bottom; cy+=gy,cyi++){ var cell=b.seed+cxi*12.9+cyi*7.3, nv=noise(cell);
+          var lit=nv<0.13, ch=RG[(noise(cell+flip*0.7)*RG.length)|0], fl=0.5+0.5*Math.sin(rainT*0.05+cxi*1.3+cyi*0.7+b.seed);
+          var col=accent; if(lit){ var m=noise(cell+3.1); if(m<0.15) col="#EAFFFA"; else if(m<0.32) col="#8DFBE9"; }
+          rctx.fillStyle=hexA(col,(lit?(0.40+0.36*fl):(0.085+0.06*noise(cell+1.3)))*dim); rctx.fillText(ch,cx,cy); } }
+      // vertical structural mullions, following the taper — fine pinstripes catching the light
+      rctx.strokeStyle=hexA(accent,0.09*dim); rctx.lineWidth=1;
+      for(var mi=1;mi<=3;mi++){ var u=mi/4; rctx.beginPath(); rctx.moveTo(bx+b.w*u,bottom); rctx.lineTo(txL+tw*u,top); rctx.stroke(); }
       rctx.restore();
-      rctx.strokeStyle=hexA(accent,0.30*dim); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(bx,top); rctx.lineTo(bx+b.w,top); rctx.stroke();
-      rctx.strokeStyle=hexA(accent,0.14*dim); rctx.beginPath(); rctx.moveTo(bx,bottom); rctx.lineTo(bx,top); rctx.moveTo(bx+b.w,top); rctx.lineTo(bx+b.w,bottom); rctx.stroke();
-      rctx.fillStyle=hexA(accent,0.5*dim); rctx.fillRect(bx-1,top-1,4,2); rctx.fillRect(bx-1,top-1,2,4); rctx.fillRect(bx+b.w-3,top-1,4,2); rctx.fillRect(bx+b.w-1,top-1,2,4);
-      var L1=b.h,L2=b.w,P=2*L1+L2,d0=((rainT*2.4+b.seed*40)%P+P)%P;
-      for(var seg=0;seg<9;seg++){ var ddd=(d0+seg*2)%P, ep;
-        if(ddd<L1) ep=[bx,bottom-ddd]; else if(ddd<L1+L2) ep=[bx+(ddd-L1),top]; else ep=[bx+b.w,top+(ddd-L1-L2)];
-        rctx.fillStyle=hexA(accent,0.55*(1-seg/9)*dim); rctx.fillRect(ep[0]-0.8,ep[1]-0.8,1.8,1.8); }
-    } else {   // far / mid: cheaper — lit top rim, faint antenna, sparse flickering windows
-      rctx.fillStyle=hexA(accent,0.24*dim); rctx.fillRect(bx,top,b.w,1);
-      if(b.ant){ rctx.strokeStyle=hexA(accent,0.12*dim); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(bx+b.w/2,top); rctx.lineTo(bx+b.w/2,top-b.ant); rctx.stroke(); }
-      for(var wx=bx+3; wx<bx+b.w-2; wx+=6){ for(var wy=top+6; wy<bottom-2; wy+=8){ var wc=b.seed+wx*1.7+wy*0.9;
-        if(noise(wc)<0.18){ var wf=0.5+0.5*Math.sin(rainT*0.04+wx+wy); rctx.fillStyle=hexA(accent,(0.12+wf*0.20)*dim); rctx.fillRect(wx,wy,2,2); } } }
+      // top rim + lit slanted edges + corner ticks + a couple of tracer sparks climbing each side
+      rctx.strokeStyle=hexA(accent,0.30*dim); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(txL,top); rctx.lineTo(txR,top); rctx.stroke();
+      rctx.strokeStyle=hexA(accent,0.14*dim); rctx.beginPath(); rctx.moveTo(bx,bottom); rctx.lineTo(txL,top); rctx.moveTo(bx+b.w,bottom); rctx.lineTo(txR,top); rctx.stroke();
+      rctx.fillStyle=hexA(accent,0.5*dim); rctx.fillRect(txL-1,top-1,3,2); rctx.fillRect(txR-2,top-1,3,2);
+      var t0=((rainT*0.9+b.seed)%1+1)%1;
+      for(var sp=0;sp<2;sp++){ var f=(t0+sp*0.5)%1, yy=bottom-(bottom-top)*f;
+        rctx.fillStyle=hexA("#EAFFFA",0.5*(1-f)*dim); rctx.fillRect(edgeL(yy)-0.8,yy-0.8,1.8,1.8); rctx.fillRect(edgeR(yy)-1,yy-0.8,1.8,1.8); }
+    } else {   // far / mid: cheaper — lit top rim, faint windows within the (possibly tapered) edges
+      rctx.fillStyle=hexA(accent,0.24*dim); rctx.fillRect(txL,top,tw,1);
+      for(var wy=top+6; wy<bottom-2; wy+=8){ var lE=edgeL(wy)+2, rE=edgeR(wy)-2;
+        for(var wx=lE; wx<rE; wx+=6){ var wc=b.seed+wx*1.7+wy*0.9;
+          if(noise(wc)<0.18){ var wf=0.5+0.5*Math.sin(rainT*0.04+wx+wy); rctx.fillStyle=hexA(noise(wc+2.2)<0.2?"#8DFBE9":accent,(0.12+wf*0.20)*dim); rctx.fillRect(wx,wy,2,2); } } }
     }
   }
   function drawSkyline(w,h){ if(!cityLayers.length||!rctx) return;
