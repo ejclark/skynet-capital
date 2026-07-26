@@ -1,3 +1,10 @@
+# [1.87.0](https://github.com/ejclark/skynet-capital/compare/v1.86.0...v1.87.0) (2026-07-26)
+
+
+### Features
+
+* **evals:** persona readiness eval harness skeleton ([#151](https://github.com/ejclark/skynet-capital/issues/151)) ([8ebd978](https://github.com/ejclark/skynet-capital/commit/8ebd97849b50ab938d9062ab57fa41172928f8fa))
+
 # [1.86.0](https://github.com/ejclark/skynet-capital/compare/v1.85.0...v1.86.0) (2026-07-26)
 
 
