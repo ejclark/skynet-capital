@@ -1546,6 +1546,33 @@ ${versionTag}
       ctx.fillStyle=hexA(pos,0.6); ctx.fillText("30", xR+4, ryL(30)+3);
       ctx.textAlign="start"; ctx.restore();
     }
+    // Spotlight the most NOTEWORTHY candle: the bots flag an outsized move on the realized tape (the
+    // biggest-range group, when it stands well above the recent norm) with a reticle + a significance
+    // callout — tying it to an event print when one lines up. Only during the walk, desktop.
+    if(W>=820 && p.walk>0 && p.out<=0 && realized.length>=10){
+      var G=4, best=-1, bestR=0, bestHi=0, sumR=0, nR=0, gi, jj;
+      for(gi=0; gi+G<=realized.length; gi+=G){ var chi=-1e9, clo=1e9;
+        for(jj=gi;jj<gi+G;jj++){ if(realized[jj]>chi)chi=realized[jj]; if(realized[jj]<clo)clo=realized[jj]; }
+        var rg=chi-clo; sumR+=rg; nR++; if(rg>bestR){ bestR=rg; best=gi; bestHi=chi; } }
+      var avgR=nR?sumR/nR:0;
+      if(best>=0 && bestR>avgR*1.7){
+        var dxL2=W/(SPAN-1), n2=price.length, cx=nowSX+(best+(G-1)/2+1)*dxL2*zoom, cyH=SY(bestHi);
+        // significance: tie to an event if this candle sits on one, else an outsized move
+        var frac=realized.length?(best+G*0.5)/realized.length:0, tie="", wj2;
+        for(wj2=0;wj2<events.length;wj2++){ if(events[wj2].fired && Math.abs(frac-clamp01(events[wj2].f))<0.09){ tie=events[wj2].label; break; } }
+        var sig2 = tie ? ("◎ MOVE ON "+tie) : "◎ OUTSIZED MOVE";
+        var pz2=0.5+0.5*Math.sin(pbGlyphT*0.3);
+        ctx.save(); ctx.globalAlpha=A;
+        ctx.strokeStyle=hexA(accent,0.5+0.4*pz2); ctx.lineWidth=1.3;
+        ctx.beginPath(); ctx.arc(cx, cyH, 8+pz2*3, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx-13,cyH); ctx.lineTo(cx-6,cyH); ctx.moveTo(cx+6,cyH); ctx.lineTo(cx+13,cyH);
+        ctx.moveTo(cx,cyH-13); ctx.lineTo(cx,cyH-6); ctx.stroke();
+        ctx.font="700 8px "+mono; ctx.textAlign="center";
+        var cly=placeLabelC(cx, cyH-16, sig2, 10);
+        ctx.fillStyle=hexA(accent,0.92); ctx.fillText(sig2, cx, cly);
+        ctx.textAlign="start"; ctx.restore();
+      }
+    }
     drawPanel(strat, sig, p, A);
     if(W>=820 && proj>0.01) drawTotals(strat, p, A, Xf, SY);   // max P/L + outcome at the far right, by the TARGET
     // The thesis + recap cards are desktop-only — on narrow screens they'd collide with the centered
