@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/ejclark/skynet-capital/compare/v1.22.0...v1.23.0) (2026-07-26)
+
+
+### Features
+
+* **login:** angled multi-vantage spotlights replace the vertical scanners ([#40](https://github.com/ejclark/skynet-capital/issues/40)) ([3091fe1](https://github.com/ejclark/skynet-capital/commit/3091fe12c8838c083baa2e0fcb757c8572b14632))
+
 # [1.22.0](https://github.com/ejclark/skynet-capital/compare/v1.21.0...v1.22.0) (2026-07-26)
 
 
