@@ -29,6 +29,11 @@ That is a feature, not noise. Read terse notes generously against these patterns
   system extensible (mixed multiverse) so it can adopt others' ideas organically.
 - **Accuracy in the domain matters** — real tickers, strategy-accurate underlyings, honest labels
   (simulated vs. live). Never let a flourish imply something false about markets or P/L.
+- **Exquisite granular detail is a deliberate process, not a one-off.** Where an element has a rich
+  backstory or lore (Sauron's tower, a payoff structure, a persona), that backstory *licenses*
+  overly-refined detail — bake it in. Depth compounds with time invested; treat "make it more
+  pronounced / more refined" as an open-ended invitation to keep layering craft, and look for the
+  next element that can carry the same treatment.
 
 _This section is Eric's to edit. It gets sharper as he corrects it — treat corrections as updates
 to these notes, not one-offs._

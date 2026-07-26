@@ -1113,21 +1113,46 @@ ${versionTag}
   // in the app's red accent. It sits half-lidded at rest and OPENS (widens, blazes brighter) as the
   // gravity beam hauls the present forward (eyeWake), tying the watcher to the pull it commands.
   function drawEye(cx,cy,dim){
-    var wake=0.42+0.58*eyeWake, flk=0.8+0.2*Math.sin(rainT*0.22)+0.08*(noise(rainT*0.9)-0.5);
-    var eh=17+11*eyeWake, ew=6.5+3.5*eyeWake;   // opens wider as it wakes
+    var wake=0.5+0.5*eyeWake, flk=0.82+0.18*Math.sin(rainT*0.22)+0.07*(noise(rainT*0.9)-0.5);
+    var eh=(22+13*eyeWake), ew=(8+4.5*eyeWake);   // more pronounced; opens wider as it wakes
+    var almond=function(sx){ rctx.beginPath(); rctx.moveTo(cx,cy-eh/2*sx);
+      rctx.quadraticCurveTo(cx+ew*sx,cy, cx,cy+eh/2*sx); rctx.quadraticCurveTo(cx-ew*sx,cy, cx,cy-eh/2*sx); rctx.closePath(); };
+    // 1) Barad-dûr summit — two dark clawed prongs flanking the Eye, with fire-lit inner edges.
+    rctx.save();
+    for(var pr=-1;pr<=1;pr+=2){ var bx0=cx+pr*(ew+2), by0=cy+eh*0.5, tipx=cx+pr*(ew*2.1), tipy=cy-eh*0.72;
+      rctx.beginPath(); rctx.moveTo(bx0,by0); rctx.quadraticCurveTo(cx+pr*(ew*2.4),cy, tipx,tipy);
+      rctx.lineTo(tipx-pr*2.4,tipy+3); rctx.quadraticCurveTo(cx+pr*(ew*1.3),cy+2, bx0-pr*3,by0); rctx.closePath();
+      rctx.fillStyle=hexA("#05070B",0.9*dim); rctx.fill();
+      rctx.strokeStyle=hexA("#FF7A2E",0.35*wake*dim*flk); rctx.lineWidth=1;   // fire-lit inner edge
+      rctx.beginPath(); rctx.moveTo(bx0,by0); rctx.quadraticCurveTo(cx+pr*(ew*1.5),cy, tipx,tipy); rctx.stroke(); }
+    rctx.restore();
     rctx.save(); rctx.globalCompositeOperation="lighter";
-    var hg=rctx.createRadialGradient(cx,cy,0,cx,cy,eh*1.7);   // flame halo
-    hg.addColorStop(0,hexA("#FF9E3D",0.5*wake*dim*flk)); hg.addColorStop(0.5,hexA("#F85149",0.2*wake*dim)); hg.addColorStop(1,hexA("#F85149",0));
-    rctx.fillStyle=hg; rctx.beginPath(); rctx.arc(cx,cy,eh*1.7,0,7); rctx.fill();
-    rctx.beginPath();   // vertical almond eye
-    rctx.moveTo(cx,cy-eh/2); rctx.quadraticCurveTo(cx+ew,cy, cx,cy+eh/2); rctx.quadraticCurveTo(cx-ew,cy, cx,cy-eh/2); rctx.closePath();
+    // 2) radiating flame corona — licking tongues that flicker around the lid
+    for(var i=0;i<12;i++){ var a=(i/12)*6.2832+noise(i*1.7)*0.4, rr=eh*(0.62+0.5*noise(i+Math.floor(rainT*0.18)));
+      var ox=cx+Math.cos(a)*ew*1.15, oy=cy+Math.sin(a)*eh*0.55, lx=cx+Math.cos(a)*rr, ly=cy+Math.sin(a)*rr*0.9;
+      var fg=rctx.createLinearGradient(ox,oy,lx,ly); fg.addColorStop(0,hexA("#FFC24D",0.16*wake*dim*flk)); fg.addColorStop(1,hexA("#F85149",0));
+      rctx.strokeStyle=fg; rctx.lineWidth=1.5; rctx.beginPath(); rctx.moveTo(ox,oy); rctx.lineTo(lx,ly); rctx.stroke(); }
+    // 3) flame halo
+    var hg=rctx.createRadialGradient(cx,cy,0,cx,cy,eh*1.9);
+    hg.addColorStop(0,hexA("#FF9E3D",0.55*wake*dim*flk)); hg.addColorStop(0.42,hexA("#F85149",0.24*wake*dim)); hg.addColorStop(1,hexA("#F85149",0));
+    rctx.fillStyle=hg; rctx.beginPath(); rctx.arc(cx,cy,eh*1.9,0,7); rctx.fill();
+    // 4) layered iris — cool-white core → amber → molten-orange → red rim
+    almond(1);
     var eg=rctx.createRadialGradient(cx,cy,0,cx,cy,eh/2);
-    eg.addColorStop(0,hexA("#FFE7B0",0.95*wake*flk)); eg.addColorStop(0.55,hexA("#FF9E3D",0.85*wake)); eg.addColorStop(1,hexA("#F85149",0.5*wake));
-    rctx.fillStyle=eg; rctx.fill(); rctx.restore();
-    rctx.save();   // dark vertical slit pupil
-    rctx.fillStyle=hexA("#170300",0.82*wake); rctx.beginPath();
-    rctx.moveTo(cx,cy-eh*0.44); rctx.quadraticCurveTo(cx+1.7,cy, cx,cy+eh*0.44); rctx.quadraticCurveTo(cx-1.7,cy, cx,cy-eh*0.44); rctx.closePath();
-    rctx.fill(); rctx.restore();
+    eg.addColorStop(0,hexA("#FFF3D6",0.98*wake*flk)); eg.addColorStop(0.34,hexA("#FFC24D",0.92*wake));
+    eg.addColorStop(0.68,hexA("#FF7A2E",0.82*wake)); eg.addColorStop(1,hexA("#F85149",0.55*wake));
+    rctx.fillStyle=eg; rctx.fill();
+    // faint concentric striations in the iris (grain of the burning eye)
+    rctx.strokeStyle=hexA("#FFE7B0",0.16*wake); rctx.lineWidth=0.6; almond(0.7); rctx.stroke(); almond(0.4); rctx.stroke();
+    rctx.restore();
+    // 5) the cat-slit pupil — a void with a hot molten rim
+    rctx.save();
+    var pupil=function(sc){ rctx.beginPath(); rctx.moveTo(cx,cy-eh*0.46*sc);
+      rctx.quadraticCurveTo(cx+(1.7+2.2*eyeWake)*sc,cy, cx,cy+eh*0.46*sc);
+      rctx.quadraticCurveTo(cx-(1.7+2.2*eyeWake)*sc,cy, cx,cy-eh*0.46*sc); rctx.closePath(); };
+    rctx.globalCompositeOperation="lighter"; rctx.strokeStyle=hexA("#FFE7B0",0.5*wake*flk); rctx.lineWidth=1.1; pupil(1.06); rctx.stroke();
+    rctx.globalCompositeOperation="source-over"; rctx.fillStyle=hexA("#140300",0.9*wake); pupil(1); rctx.fill();
+    rctx.restore();
   }
   function drawBuilding(L, b, bx, top, bottom, accent, bg, flip){ var dim=L.dim, d=L.depth, lifeK=0.5+0.5*cityLife;
     // Silhouette geometry: sleek towers TAPER, so the top width narrows. Per-row edges are lerped
