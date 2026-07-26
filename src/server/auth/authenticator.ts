@@ -1085,7 +1085,12 @@ ${versionTag}
     // Foreground hero: a broad, nearer mass that TOWERS over neighbors by width, while its summit is
     // pulled DOWN the y-axis (shorter body + spire) into the lower third — out of the chart / playcall /
     // trendline overlap zone. Prominent through mass and proximity, not by spiking into the readout.
-    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.32,BE.h*1.3+34); BE.w=Math.max(BE.w,92); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.56; BE.spire=Math.max(BE.spire,22+Math.random()*10); BE.ant=Math.max(BE.ant,12+Math.random()*8); }
+    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.32,BE.h*1.3+34); BE.w=Math.max(BE.w,92); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.56; BE.spire=Math.max(BE.spire,22+Math.random()*10); BE.ant=Math.max(BE.ant,12+Math.random()*8);
+      // PIN the primary player's tower to a STABLE central-left anchor — centred in the window between
+      // the browser's left edge and where the playcall renders (~0.30w) — so it's a reliable render point
+      // every session rather than wherever a random tower fell. (Per-user personal touches on this fixed
+      // anchor are TBD — see IDEAS.) The Eye's gaze then reaches in from here to the signal on the right.
+      BE.x=Math.round(w*0.15-BE.w/2); }
     // Second empire tower (no Eye): the tallest that isn't the Eye tower.
     var t2i=(t1>=0&&t1!==eyeI)?t1:t2;
     if(t2i>=0&&t2i!==eyeI){ var B2=near[t2i]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }

@@ -92,6 +92,11 @@ legal risk) held to an honest, data-sourced standard. Phased:
   is that persona's expression; a Terminator-flavoured bot would express the same mechanics differently
   (reticle/scan-line/HUD instead of a gaze/beam). The mechanics are shared; the skin is the persona.
   Ties to the persona-lore seam (#79) and the levelable-landmark mechanic above. _(src: Eric · while: the signal assessment feeling like a Terminator character — a template for per-nation lead bots)_
+- **The player's tower is a personalised landmark on a fixed anchor** — the primary player's tower now
+  renders at a STABLE central-left position (a reliable render point); that fixed anchor is the canvas for
+  per-user personal touches (silhouette, palette, crown, signature motion) so each member's login/board
+  feels theirs. The primary player is likely a HUMAN, and human towers may carry their own distinct
+  characteristics (vs. the bot Eye/tower) — form TBD. _(src: Eric · while: anchoring the primary tower centrally + per-user personalisation)_
 
 ### Play-feedback system — game-combat model for board telemetry (Eric-directed)
 The single terminal that narrates one play (and pushed the hero down / can't show many characters) is
