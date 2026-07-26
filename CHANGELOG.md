@@ -1,3 +1,10 @@
+# [1.75.0](https://github.com/ejclark/skynet-capital/compare/v1.74.0...v1.75.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** restructure the drawer into card sections, top-anchored ([#131](https://github.com/ejclark/skynet-capital/issues/131)) ([0545199](https://github.com/ejclark/skynet-capital/commit/05451994ca6729c59aaf90126be97e0a909a5bb6))
+
 # [1.74.0](https://github.com/ejclark/skynet-capital/compare/v1.73.0...v1.74.0) (2026-07-26)
 
 
