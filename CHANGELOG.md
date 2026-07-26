@@ -1,3 +1,10 @@
+# [1.76.0](https://github.com/ejclark/skynet-capital/compare/v1.75.0...v1.76.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** equity sparkline piece; light up the /u/:id history seam ([#134](https://github.com/ejclark/skynet-capital/issues/134)) ([4ae5612](https://github.com/ejclark/skynet-capital/commit/4ae5612d8849b363ec987a717c24f30cb0e0a828))
+
 # [1.75.0](https://github.com/ejclark/skynet-capital/compare/v1.74.0...v1.75.0) (2026-07-26)
 
 
