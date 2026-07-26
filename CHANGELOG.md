@@ -1,3 +1,10 @@
+# [1.56.0](https://github.com/ejclark/skynet-capital/compare/v1.55.0...v1.56.0) (2026-07-26)
+
+
+### Features
+
+* **login:** sparse red/amber accents in the cityscape — the market city's pulse ([#84](https://github.com/ejclark/skynet-capital/issues/84)) ([033e72e](https://github.com/ejclark/skynet-capital/commit/033e72e14dfcd5a48b2d29764b38f4319412bbb9))
+
 # [1.55.0](https://github.com/ejclark/skynet-capital/compare/v1.54.0...v1.55.0) (2026-07-26)
 
 
