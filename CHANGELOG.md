@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/ejclark/skynet-capital/compare/v1.49.0...v1.50.0) (2026-07-26)
+
+
+### Features
+
+* **login:** gravity-beam playcall handoff — mark the signal, pull the present ([#75](https://github.com/ejclark/skynet-capital/issues/75)) ([c974680](https://github.com/ejclark/skynet-capital/commit/c974680b6da5b93e3f2148ee985e9ee1fc06dc56))
+
 # [1.49.0](https://github.com/ejclark/skynet-capital/compare/v1.48.0...v1.49.0) (2026-07-26)
 
 
