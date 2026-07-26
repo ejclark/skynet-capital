@@ -275,6 +275,10 @@ export class Authenticator {
   .play:focus-visible{ outline:1px solid var(--accent); outline-offset:2px; border-radius:2px; }
   .play.active{ color:var(--accent); }
   .play.active::before{ content:"● "; }
+  /* Human role, complementing the bot pipeline (ingest→detect→forecast→execute): the human's job
+     is the narrow one — read the call, take the seat. A quiet footnote, dimmer than the modes row. */
+  .rolenote{ font-family:var(--mono); font-size:clamp(8px,1vw,10px); letter-spacing:.34em;
+    text-transform:uppercase; color:color-mix(in srgb,var(--muted) 78%,transparent); }
   /* When the form is open the whole hero fades — make sure the menu can't catch clicks then. */
   body.revealed .modes, body.revealed .playbook, body.flying .modes, body.flying .playbook{ pointer-events:none; }
   body.revealed .herosub, body.flying .herosub{ opacity:0; transform:translateY(-8px); pointer-events:none; }
@@ -533,6 +537,7 @@ export class Authenticator {
       <button type="button" class="play" data-i="4">Bull Call Spread</button>
       <button type="button" class="play" data-i="5">Call Ladder</button>
     </nav>
+    <p class="rolenote">You call it · the desk runs it</p>
   </div>
 </header>
 
