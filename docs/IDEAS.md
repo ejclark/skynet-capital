@@ -28,6 +28,10 @@ market events — **fun as the flywheel** (engagement → legibility/trust → c
 - **P5 Full ecosystem** — trades/events continuously animate a world that communicates the league's live state; the instrument panel underwriting autonomous real-money trading. _(src: Eric)_
 
 ### Governance — Eric's calls (do not build unattended)
+- **Formalize the participation agreement / consent** — the shared universe pools members' trades/
+  bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly
+  (surfaced at signup / `/welcome`) so the basis for data-sharing is on record. Eric to define the
+  wording; low-stakes (paper) but held to a real-cash integrity standard. _(src: Eric · while: clarifying the shared-universe data boundary)_
 - **Autonomous GitHub-issue contribution system** — autonomously pick up & act on issues, starting
   narrow (tier 1: additive, display-only persona/landmark integrations) and widening by a progressive-
   trust ladder. Rails-first, mantra **Detect · Correct · Maintain**: brand + Graphify `affected` +

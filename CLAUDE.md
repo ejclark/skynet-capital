@@ -26,6 +26,12 @@ That is a feature, not noise. Read terse notes generously against these patterns
 - **Governance and credentials are Eric's call.** Build the mechanism; never self-authorize the
   sensitive step (granting repo access, provisioning a token, spending money, anything outward-facing
   and hard to reverse). Hand him the one credentialed step with clear instructions.
+- **Shared-universe data mixing is consensual, gated, and held to a real-cash standard.** Pooling
+  participants' trades/bots/info into the shared world is authorized by the invite-only participation
+  agreement (paper-only, low-stakes) — it is *not* a privacy blocker inside the group. The boundary is
+  the **invite gate**: authenticated members see the shared universe; pre-auth / public surfaces stay
+  aggregate or anonymized. And even at paper stakes, uphold boundaries reliably *as though real cash
+  flowed* — practice like we play, so the integrity rails are proven before real money is ever involved.
 - **Lore / narrative is a welcome flavor layer** (D&D roots; Sauron persona) — but it rides *on top
   of* accurate mechanics. A character name deepens a strategy; it never distorts it. Keep the lore
   system extensible (mixed multiverse) so it can adopt others' ideas organically.
