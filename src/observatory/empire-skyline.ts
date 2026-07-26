@@ -10,11 +10,31 @@ export type Sector = "tech" | "energy" | "broad" | "gold" | "market";
 
 // Curated so the tickers threaded through the app + fixtures theme correctly; extend as holdings grow.
 const SECTOR_BY_TICKER: Record<string, Sector> = {
-  NVDA: "tech", CRWV: "tech", AMD: "tech", AVGO: "tech", MSFT: "tech", GOOG: "tech",
-  GOOGL: "tech", AAPL: "tech", META: "tech", TSLA: "tech", AMZN: "tech", CRM: "tech",
-  XOM: "energy", CVX: "energy", COP: "energy", SLB: "energy", NEE: "energy",
-  EEM: "broad", SPY: "broad", VOO: "broad", QQQ: "broad", IWM: "broad", VTI: "broad",
-  GLD: "gold", IAU: "gold",
+  NVDA: "tech",
+  CRWV: "tech",
+  AMD: "tech",
+  AVGO: "tech",
+  MSFT: "tech",
+  GOOG: "tech",
+  GOOGL: "tech",
+  AAPL: "tech",
+  META: "tech",
+  TSLA: "tech",
+  AMZN: "tech",
+  CRM: "tech",
+  XOM: "energy",
+  CVX: "energy",
+  COP: "energy",
+  SLB: "energy",
+  NEE: "energy",
+  EEM: "broad",
+  SPY: "broad",
+  VOO: "broad",
+  QQQ: "broad",
+  IWM: "broad",
+  VTI: "broad",
+  GLD: "gold",
+  IAU: "gold",
 };
 
 export function sectorOf(symbol: string): Sector {
@@ -22,7 +42,11 @@ export function sectorOf(symbol: string): Sector {
 }
 
 const SECTOR_LABEL: Record<Sector, string> = {
-  tech: "TECH", energy: "ENERGY", broad: "INDEX", gold: "SAFE HAVEN", market: "MARKET",
+  tech: "TECH",
+  energy: "ENERGY",
+  broad: "INDEX",
+  gold: "SAFE HAVEN",
+  market: "MARKET",
 };
 
 /** The dominant sector by invested weight (ties → the first seen); "DIVERSIFIED" if none ≥ 50%. */
@@ -45,7 +69,14 @@ export function empireTheme(positions: readonly PositionView[]): string {
 const unrealized = (p: PositionView): number => p.marketValue - p.quantity * p.avgPrice;
 
 // One building silhouette per sector, drawn from a baseline. x = left, w = width, h = height.
-function building(sector: Sector, x: number, baseY: number, w: number, h: number, capColor: string): string {
+function building(
+  sector: Sector,
+  x: number,
+  baseY: number,
+  w: number,
+  h: number,
+  capColor: string,
+): string {
   const top = baseY - h;
   const cx = x + w / 2;
   const cap = `<rect x="${x + 1}" y="${top - 3}" width="${w - 2}" height="3" fill="${capColor}"/>`;
@@ -53,7 +84,8 @@ function building(sector: Sector, x: number, baseY: number, w: number, h: number
     let cells = "";
     for (let wy = top + 6; wy < baseY - 3; wy += 8)
       for (let wx = x + 3; wx < x + w - 3; wx += 6)
-        if ((wx + wy) % 13 < 4) cells += `<rect x="${wx}" y="${wy}" width="2" height="2" fill="${fill}" opacity="0.55"/>`;
+        if ((wx + wy) % 13 < 4)
+          cells += `<rect x="${wx}" y="${wy}" width="2" height="2" fill="${fill}" opacity="0.55"/>`;
     return cells;
   };
   if (sector === "tech") {
@@ -78,7 +110,10 @@ export interface SkylineOptions {
 }
 
 /** Render the empire skyline as an inline SVG string (deterministic; empty holdings → a frontier plot). */
-export function renderEmpireSkyline(snapshot: ParticipantSnapshot, opts: SkylineOptions = {}): string {
+export function renderEmpireSkyline(
+  snapshot: ParticipantSnapshot,
+  opts: SkylineOptions = {},
+): string {
   const W = opts.width ?? 440;
   const H = opts.height ?? 132;
   const baseY = H - 16;
@@ -109,7 +144,8 @@ export function renderEmpireSkyline(snapshot: ParticipantSnapshot, opts: Skyline
   });
 
   // Cash reserve → a park (green space) sized by cash share of equity.
-  const cashShare = snapshot.equity > 0 ? Math.max(0, Math.min(1, snapshot.cash / snapshot.equity)) : 0;
+  const cashShare =
+    snapshot.equity > 0 ? Math.max(0, Math.min(1, snapshot.cash / snapshot.equity)) : 0;
   const parkW = Math.round(20 + 34 * cashShare);
   const park = `<g><rect x="${W - parkW - 12}" y="${baseY - 14}" width="${parkW}" height="14" rx="3" fill="var(--pos)" fill-opacity="0.14" stroke="var(--pos)" stroke-opacity="0.3"/><text x="${W - parkW / 2 - 12}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">RESERVE</text></g>`;
 

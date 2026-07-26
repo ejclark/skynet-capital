@@ -1,5 +1,12 @@
-import { empireTheme, renderEmpireSkyline, sectorOf } from "../../src/observatory/empire-skyline.js";
-import type { ParticipantSnapshot, PositionView } from "../../src/observatory/participant-snapshot.js";
+import {
+  empireTheme,
+  renderEmpireSkyline,
+  sectorOf,
+} from "../../src/observatory/empire-skyline.js";
+import type {
+  ParticipantSnapshot,
+  PositionView,
+} from "../../src/observatory/participant-snapshot.js";
 
 const pos = (symbol: string, marketValue: number, avgPrice = 1, quantity = 1): PositionView => ({
   symbol,
@@ -7,7 +14,10 @@ const pos = (symbol: string, marketValue: number, avgPrice = 1, quantity = 1): P
   avgPrice,
   marketValue,
 });
-const snap = (positions: PositionView[], extra: Partial<ParticipantSnapshot> = {}): ParticipantSnapshot => ({
+const snap = (
+  positions: PositionView[],
+  extra: Partial<ParticipantSnapshot> = {},
+): ParticipantSnapshot => ({
   id: "x",
   displayName: "X",
   kind: "bot",
