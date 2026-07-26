@@ -246,6 +246,37 @@ export class Authenticator {
     box-shadow:0 0 10px 1px var(--accent); animation:pulse 2.4s ease-out infinite; }
   .tertiary{ font-family:var(--mono); font-size:clamp(9px,1.2vw,11px); letter-spacing:.42em;
     text-transform:uppercase; color:var(--muted); }
+  /* PLAY · EXPERIMENT · LEARN — the ethos triad, now with PLAY as the entry to the Playbook.
+     EXPERIMENT / LEARN stay inert for now (seams for emergent buckets). */
+  .modes{ display:flex; align-items:center; gap:.7em; }
+  .modes .sep{ opacity:.5; }
+  .mode{ font-family:var(--mono); font-size:inherit; letter-spacing:inherit; text-transform:uppercase;
+    color:var(--muted); background:none; border:0; padding:0; }
+  .mode.inert{ opacity:.62; }
+  /* PLAY: subtle affordance — a low-key dotted underline that lights on hover/focus/open, so it
+     invites without shouting "menu" and doesn't break the calm triad read. */
+  .mode.call{ pointer-events:auto; cursor:pointer; color:var(--muted); position:relative;
+    border-bottom:1px dotted color-mix(in srgb,var(--muted) 60%,transparent);
+    transition:color .2s ease, border-color .2s ease, text-shadow .2s ease; }
+  .mode.call:hover, .mode.call:focus-visible, .modes.open .mode.call{
+    color:var(--accent); border-bottom-color:var(--accent);
+    text-shadow:0 0 12px color-mix(in srgb,var(--accent) 55%,transparent); }
+  .mode.call:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:2px; }
+  /* Playbook popover — compact mono list of callable plays; hidden until PLAY invites it. */
+  .playbook{ pointer-events:auto; display:flex; flex-wrap:wrap; justify-content:center; gap:6px 16px;
+    max-width:min(92vw,560px); margin-top:2px; opacity:0; visibility:hidden; transform:translateY(-6px);
+    transition:opacity .26s ease, transform .26s ease, visibility 0s linear .26s; }
+  .playbook.open{ opacity:1; visibility:visible; transform:none; transition-delay:0s; }
+  .play{ font-family:var(--mono); font-size:clamp(9px,1.1vw,11px); letter-spacing:.18em; text-transform:uppercase;
+    color:var(--muted); background:none; border:0; padding:2px 3px; cursor:pointer;
+    transition:color .18s ease, text-shadow .18s ease; }
+  .play:hover, .play:focus-visible{ color:var(--accent);
+    text-shadow:0 0 10px color-mix(in srgb,var(--accent) 55%,transparent); }
+  .play:focus-visible{ outline:1px solid var(--accent); outline-offset:2px; border-radius:2px; }
+  .play.active{ color:var(--accent); }
+  .play.active::before{ content:"● "; }
+  /* When the form is open the whole hero fades — make sure the menu can't catch clicks then. */
+  body.revealed .modes, body.revealed .playbook, body.flying .modes, body.flying .playbook{ pointer-events:none; }
   body.revealed .herosub, body.flying .herosub{ opacity:0; transform:translateY(-8px); pointer-events:none; }
 
   /* Cursor VFX — dialed WAY back to ambient; the dramatic burst is reserved for one reveal moment */
@@ -487,7 +518,21 @@ export class Authenticator {
 <header class="topbrand" id="topbrand">
   <h1 class="mark" id="wordmark" data-text="SKYNET·CAPITAL">SKYNET<b>·</b>CAPITAL</h1>
   <div class="herosub" id="herosub">
-    <span class="tertiary">PLAY · EXPERIMENT · LEARN</span>
+    <div class="tertiary modes" id="modes">
+      <button type="button" class="mode call" id="playMode" aria-haspopup="true" aria-expanded="false" aria-controls="playbook">PLAY</button>
+      <span class="sep" aria-hidden="true">·</span>
+      <span class="mode inert">EXPERIMENT</span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span class="mode inert">LEARN</span>
+    </div>
+    <nav class="playbook" id="playbook" aria-label="Playbook — call a play">
+      <button type="button" class="play" data-i="0">Iron Condor</button>
+      <button type="button" class="play" data-i="1">Long Strangle</button>
+      <button type="button" class="play" data-i="2">Short Straddle</button>
+      <button type="button" class="play" data-i="3">Butterfly</button>
+      <button type="button" class="play" data-i="4">Bull Call Spread</button>
+      <button type="button" class="play" data-i="5">Call Ladder</button>
+    </nav>
   </div>
 </header>
 
@@ -975,6 +1020,10 @@ export class Authenticator {
   // Screen anchor for "now" (leading price) + price→pixel scale, exported by drawMarket so the
   // forecast draws the future in the same frame as the live trend.
   var nowSX=0, nowSY=0, nowPrice=100, pxPerPrice=1;
+  // User-called plays (the Playbook): requestedPlay queues a specific play; SUMMON steers the trend
+  // to that play's setup before the enhance-zoom fires; manualPlay slows the pace + enables hold.
+  var requestedPlay=null, manualPlay=false, paceScale=1, paused=false,
+      summoning=false, summonEnd=0, summonIdx=0, zoomRippled=false, ripples=[];
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -1038,36 +1087,90 @@ export class Authenticator {
     volScale=Math.max((bU[last]-bL[last])||0, signalPrice*0.05)*1.7;
     var ex=extrema(STRATS[idx]); targetPrice=signalPrice+(ex.mxDir-0.5)*volScale; forecastTarget=targetPrice; }
 
-  if(reduce){ measureField(); fieldSnap();
-    curStrat=4; armForecast(curStrat); cam=0.9; zoom=1.9;   // one static, fully-projected forecast
-    drawMarket(0.7);
-    drawForecast(STRATS[curStrat], { sig:"EMA GOLDEN CROSS · UPTREND" },
-      { on:1,aim:1,zoom:1,project:1,walk:0,resolve:0,out:0 });
-    beamVignette();
+  // Steer the market toward the setup a play needs (from its cue) so the trend visibly transitions
+  // into "ripe conditions" before the playcall fires — reuses the regime vars the walk already runs.
+  function steerFor(idx){ var c=STRATS[idx].cue; regimeT=t+400;
+    if(c==="UPTREND"){ regimeBias=0.11; regimeVol=0.8; }
+    else if(c==="VOL EXPANDING"||c==="BREAKOUT RISK"){ regimeBias=(Math.random()<0.5?-1:1)*0.02; regimeVol=1.9; }
+    else { regimeBias=0; regimeVol=0.4; }   // LOW VOL / RANGE-BOUND / PINNED → calm, tight
+  }
+  // A ripple in the matrix at the aim point — the "enhance, zoom in" flourish on playcall entry.
+  function addRipple(x,y){ ripples.push({ x:x, y:y, t:0 }); }
+  function drawRipples(){ var accent=css("--accent")||"#35D0BA";
+    for(var i=ripples.length-1;i>=0;i--){ var r=ripples[i]; r.t++;
+      var pr=r.t/24; if(pr>=1){ ripples.splice(i,1); continue; }
+      var rad=8+pr*170, a=(1-pr)*0.5;
+      ctx.strokeStyle=hexA(accent,a); ctx.lineWidth=2*(1-pr); ctx.beginPath(); ctx.arc(r.x,r.y,rad,0,7); ctx.stroke();
+      ctx.strokeStyle=hexA(accent,a*0.5); ctx.lineWidth=1.5*(1-pr); ctx.beginPath(); ctx.arc(r.x,r.y,rad*0.58,0,7); ctx.stroke(); } }
+  // Render one static, fully-projected forecast for a play (reduced-motion + initial paint).
+  function renderStatic(idx){ curStrat=idx; armForecast(idx); cam=0.9; zoom=1.9;
+    measureField(); fieldSnap(); drawMarket(0.7);
+    drawForecast(STRATS[idx], { sig:STRATS[idx].cue+" · CALLED" }, { on:1,aim:1,zoom:1,project:1,walk:0,resolve:0,out:0 });
+    beamVignette(); }
+  // Call a play from the Playbook: queue it, ease any running playcall out first, then let the loop
+  // steer + fire it. Under reduced motion, just repaint the static forecast for that play.
+  function callPlay(idx){ if(reduce){ renderStatic(idx); highlightPlay(idx); return; }
+    requestedPlay=idx; summoning=true; summonEnd=0;
+    if(playMode) playStart = performance.now() - T_OUT;   // ease the current one out now
+    else nextPlayAt = 0; }
+
+  // --- Playbook menu wiring (PLAY reveals the plays; a click calls one) ---
+  var modesEl=document.getElementById("modes"), playModeBtn=document.getElementById("playMode"),
+      playbookEl=document.getElementById("playbook"), heroEl=document.getElementById("herosub");
+  function openPlaybook(o){ if(!playModeBtn||!playbookEl) return;
+    playModeBtn.setAttribute("aria-expanded", o?"true":"false");
+    if(modesEl) modesEl.classList.toggle("open", o); playbookEl.classList.toggle("open", o); }
+  function highlightPlay(idx){ if(!playbookEl) return; var b=playbookEl.querySelectorAll(".play");
+    for(var i=0;i<b.length;i++) b[i].classList.toggle("active", i===idx); }
+  if(playModeBtn){
+    playModeBtn.addEventListener("click", function(){ openPlaybook(playModeBtn.getAttribute("aria-expanded")!=="true"); });
+    playModeBtn.addEventListener("mouseenter", function(){ openPlaybook(true); }); }
+  if(heroEl) heroEl.addEventListener("mouseleave", function(){ openPlaybook(false); });
+  if(playbookEl){ var plays=playbookEl.querySelectorAll(".play");
+    for(var pi=0;pi<plays.length;pi++){ (function(btn){
+      btn.addEventListener("click", function(){ var idx=parseInt(btn.getAttribute("data-i"),10)||0;
+        highlightPlay(idx); callPlay(idx); openPlaybook(false); }); })(plays[pi]); } }
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape") openPlaybook(false); });
+  // Hold-to-read: while a called playcall runs, hold Space to freeze the walk so nothing is rushed.
+  document.addEventListener("keydown", function(e){ if(e.code==="Space" && playMode && manualPlay){ e.preventDefault(); paused=true; } });
+  document.addEventListener("keyup", function(e){ if(e.code==="Space") paused=false; });
+
+  if(reduce){ renderStatic(4); highlightPlay(4);
     document.body.classList.add("playing");
     if(rctx){ rctx.fillStyle="rgba(11,15,20,1)"; rctx.fillRect(0,0,rcanvas.clientWidth,rcanvas.clientHeight);
       for(var s=0;s<26;s++) rainDraw(0,0); }
     return; }
 
-  var last=0, running=true;
+  var last=0, running=true, SUMMON_MS=850;
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
+  function startPlay(now, sig, manual){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i;
+    manualPlay=manual; paceScale=manual?1.4:1; zoomRippled=false; armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
   function loop(now){
     if(!running) return;
-    if(now-last > 50){ last=now; measureField(); fieldStep();
-      // Fire a play when a signal sets up and the cooldown has elapsed; capture its forecast anchors.
-      if(!playMode && now>=nextPlayAt){ var sig=detectSignal(); if(!sig && now>=nextPlayAt+5000) sig=forceSignal();
-        if(sig){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i; armForecast(curStrat); } }
+    if(now-last > 50){ var dt=now-last; last=now; measureField(); fieldStep();
+      // SUMMON: a called play first steers the trend into its setup, then fires the enhance-zoom.
+      if(summoning && !playMode){ if(summonEnd===0){ summonEnd=now+SUMMON_MS; steerFor(summonIdx=requestedPlay); }
+        if(now>=summonEnd){ summoning=false; var ri=requestedPlay; requestedPlay=null;
+          startPlay(now, { i:ri, sig:STRATS[ri].cue+" · CALLED" }, true); } }
+      // Auto-fire a play when a signal sets up and the cooldown has elapsed.
+      if(!playMode && !summoning && now>=nextPlayAt){ var sg=detectSignal(); if(!sg && now>=nextPlayAt+5000) sg=forceSignal();
+        if(sg){ startPlay(now, sg, false); } }
       var p=null, camT=0, rateT=1;
-      if(playMode){ var e=now-playStart; p=playProg(e);
+      if(playMode){
+        if(paused) playStart += dt;                 // hold-to-read: freeze the phase clock
+        var e=(now-playStart)/paceScale; p=playProg(e);
         // Time never hard-stops: ease into slow-mo through detect/project, then ease back up as the
         // price walks the forecast forward, and back to real-time on zoom-out. This kills the jumps.
         if(p.out>0) rateT=1;
         else if(p.walk>0) rateT=lerp(0.16, 1.0, easeIO(clamp01(p.walk)));
         else if(p.aim>0) rateT=0.16;
         else rateT=lerp(1, 0.4, clamp01(p.on));
+        if(paused) rateT=0.16;
         camT=clamp01(Math.max(p.zoom, p.aim*0.25))*(1-p.out);   // eased zoom/focal — no snap
-        rainBoost=(p.walk>0 && p.resolve<1)?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
-        if(e>=T_END){ playMode=false; nextPlayAt=now+3400+Math.random()*2600; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; } }
+        if(p.zoom>0.4 && !zoomRippled){ zoomRippled=true; addRipple(nowSX, nowSY); }   // enhance-zoom ripple, centered once framed
+        rainBoost=((p.walk>0 && p.resolve<1)||(p.zoom>0.4&&p.project<0.3))?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
+        if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
+          p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
       else { rainBoost=0; rainTint=0; }
       cam += (camT-cam)*0.09; rate += (rateT-rate)*0.09;
       zoom += ((1+1.05*cam)-zoom)*0.1;
@@ -1075,10 +1178,11 @@ export class Authenticator {
       stepAcc += Math.max(rate, playMode?0:1);
       var guard=0;
       while(stepAcc>=1 && guard++<8){ stepAcc-=1;
-        if(playMode && p && p.walk>0 && p.out<=0) stepForecast(); else stepMarket(); }
+        if(playMode && p && p.walk>0 && p.out<=0 && !paused) stepForecast(); else stepMarket(); }
       document.body.classList.toggle("playing", cam>0.02);
       drawMarket(1 - cam*0.34);
       if(p){ drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
+      drawRipples();
       beamVignette();
       rainDraw(rainBoost, rainTint); }
     requestAnimationFrame(loop);
