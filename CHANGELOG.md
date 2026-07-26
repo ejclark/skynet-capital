@@ -1,3 +1,10 @@
+# [1.53.0](https://github.com/ejclark/skynet-capital/compare/v1.52.1...v1.53.0) (2026-07-26)
+
+
+### Features
+
+* **feedback:** in-app self-service feedback funnel to GitHub issues ([#80](https://github.com/ejclark/skynet-capital/issues/80)) ([37ca336](https://github.com/ejclark/skynet-capital/commit/37ca336c510434455bf4272a554e3c81c6f6f483))
+
 ## [1.52.1](https://github.com/ejclark/skynet-capital/compare/v1.52.0...v1.52.1) (2026-07-26)
 
 
