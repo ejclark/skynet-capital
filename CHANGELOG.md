@@ -1,3 +1,11 @@
+# [1.40.0](https://github.com/ejclark/skynet-capital/compare/v1.39.1...v1.40.0) (2026-07-26)
+
+
+### Features
+
+* **login:** neon fluorescent playcall boundaries + cohesive film-grain texture ([4875879](https://github.com/ejclark/skynet-capital/commit/48758790e6fbf7485b48556171149cbc32f67ff6))
+* **login:** watched-inputs panel + strategy-accurate underlyings ([dae1d78](https://github.com/ejclark/skynet-capital/commit/dae1d78198860de196dd2dcf245bcdecefdeca32)), closes [hi#vol](https://github.com/hi/issues/vol) [hi#beta](https://github.com/hi/issues/beta)
+
 ## [1.39.1](https://github.com/ejclark/skynet-capital/compare/v1.39.0...v1.39.1) (2026-07-26)
 
 
