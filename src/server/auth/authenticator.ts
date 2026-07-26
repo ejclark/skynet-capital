@@ -676,10 +676,11 @@ ${versionTag}
     measureField(); fieldSnap();
   }
 
-  // ===== Reveal VFX: grainy chromatic "hangar door" sweep (canvas) =====
-  // A horizontal chromatic band (teal→cyan→white-hot→magenta) opens like hangar doors from the
-  // title's eye-line, light-streaks converge into a core flash, then it blooms and clears — the
-  // "about to take you places" moment. Canvas-rendered so the dust/grain reads (CSS can't).
+  // ===== Reveal VFX: the KEY TO THE CITY — a grainy chromatic door unlocking (canvas) =====
+  // Signing in is the one door only you can open (Neo turning the Maker's key). A lock ring turns a
+  // quarter and disengages, a chromatic band (teal→cyan→white-hot→magenta) opens like a door from the
+  // title's eye-line, and a keyhole of light pours down onto the wordmark as it lands — then it blooms
+  // and clears into the empire beyond. Canvas-rendered so the dust/grain reads (CSS can't).
   var vcanvas=document.getElementById("vfx"), vctx=null;
   try{ vctx = vcanvas && vcanvas.getContext ? vcanvas.getContext("2d") : null; }catch(e){ vctx=null; }
   function vfxResize(){ if(!vctx) return;
@@ -689,7 +690,7 @@ ${versionTag}
   var noiseTile=document.createElement("canvas"); noiseTile.width=140; noiseTile.height=140;
   (function(){ try{ var nx=noiseTile.getContext("2d"), im=nx.createImageData(140,140), d=im.data, i;
     for(i=0;i<d.length;i+=4){ var v=(Math.random()*255)|0; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; } nx.putImageData(im,0,0); }catch(e){} })();
-  var vfxActive=false, vfxT0=0, VFXD=1150, vfxTargetY=0;
+  var vfxActive=false, vfxT0=0, VFXD=1300, vfxTargetY=0;
   function vEase(x){ return 1-Math.pow(1-clamp01(x),3); }
   function drawVFX(q){
     var w=vcanvas.clientWidth, h=vcanvas.clientHeight; vctx.clearRect(0,0,w,h);
@@ -727,6 +728,30 @@ ${versionTag}
       var rg=vctx.createRadialGradient(w*0.5,cy,0,w*0.5,cy,w*0.5);
       rg.addColorStop(0,"rgba(255,255,255,"+(0.62*flash)+")"); rg.addColorStop(1,"rgba(255,255,255,0)");
       vctx.fillStyle=rg; vctx.fillRect(0,0,w,h); vctx.restore(); }
+    // ===== KEY TO THE CITY: this is the ONE door only you can open. A lock ring TURNS a quarter and
+    // disengages, key-turn rays rotate, then a keyhole of light pours down onto the landing wordmark —
+    // the auth moment as Neo turning the Maker's key. =====
+    var turn=vEase(clamp01(q/0.6))*Math.PI*0.5;                 // the key rotates a quarter-turn
+    // key-turn rays sweeping around the core
+    vctx.save(); vctx.globalCompositeOperation="lighter"; vctx.translate(w*0.5,cy); vctx.rotate(turn);
+    var rr=lerp(12, w*0.32, open), kr;
+    for(kr=0;kr<6;kr++){ var ka=kr/6*Math.PI*2; vctx.strokeStyle="rgba(230,255,250,"+(0.26*env)+")"; vctx.lineWidth=2; vctx.lineCap="round";
+      vctx.beginPath(); vctx.moveTo(Math.cos(ka)*rr*0.22,Math.sin(ka)*rr*0.22); vctx.lineTo(Math.cos(ka)*rr,Math.sin(ka)*rr); vctx.stroke(); }
+    vctx.restore();
+    // lock ring — two arcs that rotate apart as the lock releases, fading once disengaged
+    var ringA=Math.max(0,1-clamp01(q/0.55))*env;
+    if(ringA>0){ vctx.save(); vctx.globalCompositeOperation="lighter"; vctx.strokeStyle="rgba(224,255,250,"+(0.6*ringA)+")"; vctx.lineWidth=2.4;
+      var rad=lerp(16,58,open), gp=0.16+turn*0.5;
+      vctx.beginPath(); vctx.arc(w*0.5,cy,rad, gp, Math.PI-gp); vctx.stroke();
+      vctx.beginPath(); vctx.arc(w*0.5,cy,rad, Math.PI+gp, Math.PI*2-gp); vctx.stroke();
+      vctx.restore(); }
+    // keyhole beam — light floods DOWN through the opened door onto the hero title
+    var beamA=Math.max(0,1-Math.abs(q-0.72)/0.3)*0.5;
+    if(beamA>0){ vctx.save(); vctx.globalCompositeOperation="lighter";
+      var bg2=vctx.createLinearGradient(0,cy,0,cy+h*0.42); bg2.addColorStop(0,"rgba(240,255,252,"+beamA+")"); bg2.addColorStop(1,"rgba(240,255,252,0)");
+      var bw=lerp(w*0.02,w*0.15,open); vctx.fillStyle=bg2;
+      vctx.beginPath(); vctx.moveTo(w*0.5-bw*0.32,cy); vctx.lineTo(w*0.5+bw*0.32,cy); vctx.lineTo(w*0.5+bw,cy+h*0.42); vctx.lineTo(w*0.5-bw,cy+h*0.42); vctx.closePath(); vctx.fill();
+      vctx.restore(); }
   }
   function vfxLoop(now){ if(!vfxActive) return; var q=(now-vfxT0)/VFXD;
     if(q>=1){ vfxActive=false; if(vctx) vctx.clearRect(0,0,vcanvas.clientWidth,vcanvas.clientHeight); if(vcanvas) vcanvas.style.opacity="0"; return; }
@@ -1594,7 +1619,7 @@ ${versionTag}
     flyTitle(true); measureField();
     // As the narrowing beam reaches the hero, the single VFX-text-cursor effect fires on the title.
     if(wordmark){ wordmark.classList.remove("vfx"); void wordmark.offsetWidth; wordmark.classList.add("vfx"); }
-    vfxPlay();   // canvas hangar-door sweep behind the blooming title
+    vfxPlay();   // canvas key-to-the-city unlock behind the blooming title
     // Form only falls into place once the title has landed and can be read.
     seq.push(setTimeout(function(){ body.classList.remove("flying"); body.classList.add("revealed");
       if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 760));
