@@ -1,3 +1,10 @@
+## [1.43.1](https://github.com/ejclark/skynet-capital/compare/v1.43.0...v1.43.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** reveal VFX as a short, blinding electric power surge ([#68](https://github.com/ejclark/skynet-capital/issues/68)) ([b111c3e](https://github.com/ejclark/skynet-capital/commit/b111c3e131091c64aca67be7c74caaec1d8a3c69)), closes [hi#energy](https://github.com/hi/issues/energy)
+
 # [1.43.0](https://github.com/ejclark/skynet-capital/compare/v1.42.0...v1.43.0) (2026-07-26)
 
 
