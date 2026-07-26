@@ -1,6 +1,6 @@
 {
   "name": "skynet-capital",
-  "version": "1.51.0",
+  "version": "1.52.0",
   "private": true,
   "type": "module",
   "description": "Autonomous options-trading agent personas competing on paper accounts.",

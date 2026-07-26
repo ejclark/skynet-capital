@@ -1,3 +1,10 @@
+# [1.52.0](https://github.com/ejclark/skynet-capital/compare/v1.51.0...v1.52.0) (2026-07-26)
+
+
+### Features
+
+* **login:** volumetric light shafts raking through the cityscape ([#77](https://github.com/ejclark/skynet-capital/issues/77)) ([5024cf6](https://github.com/ejclark/skynet-capital/commit/5024cf6e9ef086947da9b730d8af8b86b3b50366))
+
 # [1.51.0](https://github.com/ejclark/skynet-capital/compare/v1.50.0...v1.51.0) (2026-07-26)
 
 
