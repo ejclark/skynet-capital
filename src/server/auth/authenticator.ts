@@ -878,7 +878,7 @@ ${versionTag}
     // playcall eases it further to W·0.30 for the forecast. Always translated so the present dot never
     // hugs the right edge — the future opens to its right in every state.
     var fpx=(n-1)*dx, fpy=Y(price[n-1]);
-    var toX=lerp(W*0.78, W*0.30, cam), toY=lerp(fpy, baseY, cam);
+    var toX=lerp(W*0.78, W*0.08, cam), toY=lerp(fpy, baseY, cam);   // play → full-width: "now" eases to the left margin
     nowSX=toX; nowSY=toY; nowPrice=price[n-1];
     pxPerPrice=(amp*2/(r.span||1))*zoom;
     scBaseY=baseY; scMid=r.mid; scSpan=r.span; scAmp=amp;   // ambient price→screen-Y for the roaming scanners
@@ -1091,7 +1091,7 @@ ${versionTag}
       // the browser's left edge and where the playcall renders (~0.30w) — so it's a reliable render point
       // every session rather than wherever a random tower fell. (Per-user personal touches on this fixed
       // anchor are TBD — see IDEAS.) The Eye's gaze then reaches in from here to the signal on the right.
-      BE.x=Math.round(w*0.15-BE.w/2); }
+      BE.x=Math.round(w*0.09-BE.w/2); }   // pushed further LEFT + back so the full-width playcall renders in front, its summit high above the chart
     // Second empire tower (no Eye): the tallest that isn't the Eye tower.
     var t2i=(t1>=0&&t1!==eyeI)?t1:t2;
     if(t2i>=0&&t2i!==eyeI){ var B2=near[t2i]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }
@@ -2188,7 +2188,8 @@ ${versionTag}
     // stacked panel, which already carries the play's essentials.
     if(W>=820){
       // signal callout is anchored to the aim point and fades out once the walk takes over
-      if(p.aim>0) drawSignalCallout(sig, strat, X0, yNow, A*clamp01(p.aim)*(1-clamp01(p.walk*1.4)));
+      // Signal modal removed — the dotted forecast trajectory (the ideal path the market should take
+      // given the signal) now communicates the route, with the realized tape tracking it under variance.
       // Retrospective recap once the play resolves — confirms the thesis played out (bookends the WHY).
       var recapA=A*clamp01((p.resolve-0.45)/0.55)*(1-clamp01(p.out*1.7));
       if(recapA>0.01) drawRecap(strat, sig, X0, yNow, recapA);
