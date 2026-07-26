@@ -1,3 +1,10 @@
+# [1.67.0](https://github.com/ejclark/skynet-capital/compare/v1.66.0...v1.67.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** nation skylines on bots-vs-humans + ignore scratchpad ([#117](https://github.com/ejclark/skynet-capital/issues/117)) ([1929d74](https://github.com/ejclark/skynet-capital/commit/1929d747bc89e4e15049633def674d91a1cce60f))
+
 # [1.66.0](https://github.com/ejclark/skynet-capital/compare/v1.65.0...v1.66.0) (2026-07-26)
 
 
