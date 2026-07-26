@@ -296,6 +296,19 @@ export class Authenticator {
   .play:focus-visible{ outline:1px solid var(--accent); outline-offset:2px; border-radius:2px; }
   .play.active{ color:var(--accent); }
   .play.active::before{ content:"● "; }
+  /* Playcall transport — a minimal HUD stepper shown only during a manual playcall (where the user
+     is deliberately engaging). Lets you pause and step act-by-act: signal → predict → realize → resolve. */
+  .transport{ display:none; align-items:center; gap:12px; margin-top:2px; font-family:var(--mono); pointer-events:auto; }
+  body.manualplay .transport{ display:flex; }
+  body.manualplay .modes, body.manualplay .playbook{ display:none; }   /* transport takes the slot during a manual play */
+  .tbtn{ background:none; border:1px solid color-mix(in srgb,var(--accent) 34%,var(--border)); color:var(--accent);
+    width:26px; height:22px; border-radius:5px; font-size:9px; line-height:1; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; transition:border-color .15s ease, color .15s ease; }
+  .tbtn:hover{ border-color:var(--accent); color:var(--text); }
+  .tbtn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .tacts{ display:inline-flex; gap:10px; font-size:9px; letter-spacing:.24em; }
+  .tacts b{ font-weight:700; color:color-mix(in srgb,var(--muted) 70%,transparent); transition:color .15s ease; }
+  .tacts b.on{ color:var(--accent); text-shadow:0 0 8px color-mix(in srgb,var(--accent) 55%,transparent); }
   /* When the form is open the whole hero fades — make sure the menu can't catch clicks then. */
   body.revealed .modes, body.revealed .playbook, body.flying .modes, body.flying .playbook{ pointer-events:none; }
   body.revealed .herosub, body.flying .herosub{ opacity:0; transform:translateY(-8px); pointer-events:none; }
@@ -563,6 +576,12 @@ export class Authenticator {
       <button type="button" class="play" data-i="4">Bull Call Spread</button>
       <button type="button" class="play" data-i="5">Call Ladder</button>
     </nav>
+    <div class="transport" id="transport" role="group" aria-label="Playcall controls">
+      <button type="button" class="tbtn" id="tPrev" aria-label="Previous act">◀◀</button>
+      <button type="button" class="tbtn tplay" id="tPlay" aria-label="Pause playcall" aria-pressed="false">❚❚</button>
+      <button type="button" class="tbtn" id="tNext" aria-label="Next act">▶▶</button>
+      <span class="tacts" id="tActs" aria-hidden="true"><b data-a="0">SIGNAL</b><b data-a="1">PREDICT</b><b data-a="2">REALIZE</b><b data-a="3">RESOLVE</b></span>
+    </div>
   </div>
 </header>
 
@@ -732,6 +751,7 @@ ${versionTag}
     while(realized.length<want){ var last=realized.length?realized[realized.length-1]:price[nowIdx];
       t++; pvR = pvR*0.86 + (noise(t*0.017)-0.5)*0.8*regimeVol + (targetPrice-last)*0.02;
       realized.push(Math.max(5, last+pvR)); }
+    while(realized.length>want) realized.pop();   // trim if the walk was scrubbed back
   }
   for(var _i=0;_i<SPAN;_i++) stepMarket();
 
@@ -1147,6 +1167,7 @@ ${versionTag}
   var DET=520,AIM=680,DW_AIM=280,ZM=620,PRJ=880,DW_PRJ=320,WLK=2600,RES=700,HOLD=1000,OUT=820;
   var T_AIM=DET, T_ZM=T_AIM+AIM+DW_AIM, T_PRJ=T_ZM+ZM, T_WLK=T_PRJ+PRJ+DW_PRJ,
       T_RES=T_WLK+WLK, T_OUT=T_RES+RES+HOLD, T_END=T_OUT+OUT;
+  var ACTB=[0, T_PRJ, T_WLK, T_RES];   // act boundaries (e-time): SIGNAL · PREDICT · REALIZE · RESOLVE
   function playProg(e){ return {
     on:clamp01(e/DET), aim:clamp01((e-T_AIM)/AIM), zoom:clamp01((e-T_ZM)/ZM),
     project:clamp01((e-T_PRJ)/PRJ), walk:clamp01((e-T_WLK)/WLK), resolve:clamp01((e-T_RES)/RES),
@@ -1164,7 +1185,7 @@ ${versionTag}
   // Three-act playcall: on fire we FREEZE history at nowIdx (stop pushing price[]) so the trend
   // holds still; in Act 3 a separate realized[] pen draws rightward INTO the prediction, overtaking
   // the dotted forecast, then folds back into price[] on zoom-out so ambient continues from reality.
-  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0;
+  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null;
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -1273,9 +1294,20 @@ ${versionTag}
       btn.addEventListener("click", function(){ var idx=parseInt(btn.getAttribute("data-i"),10)||0;
         highlightPlay(idx); callPlay(idx); openPlaybook(false); }); })(plays[pi]); } }
   document.addEventListener("keydown", function(e){ if(e.key==="Escape") openPlaybook(false); });
-  // Hold-to-read: while a called playcall runs, hold Space to freeze the walk so nothing is rushed.
-  document.addEventListener("keydown", function(e){ if(e.code==="Space" && playMode && manualPlay){ e.preventDefault(); paused=true; } });
-  document.addEventListener("keyup", function(e){ if(e.code==="Space") paused=false; });
+  // Playcall transport: pause + step act-by-act through a manual playcall.
+  var tPlayBtn=document.getElementById("tPlay"), tPrevBtn=document.getElementById("tPrev"),
+      tNextBtn=document.getElementById("tNext"), tActsEl=document.getElementById("tActs");
+  function setPaused(v){ paused=v; if(tPlayBtn){ tPlayBtn.textContent=v?"▶":"❚❚";
+    tPlayBtn.setAttribute("aria-pressed", v?"true":"false"); tPlayBtn.setAttribute("aria-label", v?"Resume playcall":"Pause playcall"); } }
+  function seekAct(dir){ if(!playMode) return; var e=(performance.now()-playStart)/paceScale, i;
+    if(dir>0){ var nb=null; for(i=0;i<ACTB.length;i++){ if(ACTB[i]>e+1){ nb=ACTB[i]; break; } } stepTarget=(nb===null?T_RES:nb); setPaused(false); }
+    else { var pb=0; for(i=0;i<ACTB.length;i++){ if(ACTB[i]<e-40) pb=ACTB[i]; }
+      playStart=performance.now()-pb*paceScale; stepTarget=null; realized=[]; pvR=pv; setPaused(true); } }
+  if(tPlayBtn) tPlayBtn.addEventListener("click", function(){ stepTarget=null; setPaused(!paused); });
+  if(tNextBtn) tNextBtn.addEventListener("click", function(){ seekAct(1); });
+  if(tPrevBtn) tPrevBtn.addEventListener("click", function(){ seekAct(-1); });
+  // Space toggles pause during a manual playcall.
+  document.addEventListener("keydown", function(e){ if(e.code==="Space" && playMode && manualPlay){ e.preventDefault(); stepTarget=null; setPaused(!paused); } });
 
   if(reduce){ renderStatic(4); highlightPlay(4);
     document.body.classList.add("playing");
@@ -1288,6 +1320,7 @@ ${versionTag}
   function startPlay(now, sig, manual){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i;
     manualPlay=manual; paceScale=manual?1.4:1; zoomRippled=false;
     nowIdx=price.length-1; realized=[]; pvR=pv;   // freeze history; seed realized momentum from the live move
+    stepTarget=null; setPaused(false);            // fresh transport state each playcall
     armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
   function loop(now){
     if(!running) return;
@@ -1302,6 +1335,9 @@ ${versionTag}
       if(playMode){
         if(paused) playStart += dt;                 // hold-to-read: freeze the phase clock
         var e=(now-playStart)/paceScale; p=playProg(e);
+        if(stepTarget!==null && e>=stepTarget){ stepTarget=null; setPaused(true); }   // step: pause at act boundary
+        if(manualPlay && tActsEl){ var ai=0, aj; for(aj=0;aj<ACTB.length;aj++){ if(e>=ACTB[aj]-1) ai=aj; }
+          var abs=tActsEl.children; for(aj=0;aj<abs.length;aj++) abs[aj].classList.toggle("on", aj===ai); }
         // Time never hard-stops: ease into slow-mo through detect/project, then ease back up as the
         // price walks the forecast forward, and back to real-time on zoom-out. This kills the jumps.
         if(p.out>0) rateT=1;
@@ -1325,6 +1361,7 @@ ${versionTag}
         while(stepAcc>=1 && guard++<8){ stepAcc-=1; stepMarket(); } }
       else stepAcc=0;
       document.body.classList.toggle("playing", cam>0.02);
+      document.body.classList.toggle("manualplay", playMode && manualPlay);
       drawMarket(1 - cam*0.34);
       if(p){ drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
       drawRipples();
