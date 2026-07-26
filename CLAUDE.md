@@ -97,12 +97,24 @@ for genuine forks and the sensitive class, and picks up the rest. **Bar for auto
 confidence it moves the needle on Eric's goals — anything below that becomes a surfaced question, not a
 guess. (See the self-sustaining loop in [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md).)
 
+**Signal saturation proactively.** When a thread has yielded most of its juice and further capture is
+diminishing returns, say so — it helps Eric decide to move on, or to deliberately probe a deeper pocket
+of thought not yet explored. An honest "we've largely saturated this; want to build a slice or push
+somewhere new?" is a service, not a nudge to stop.
+
 ### Interrupt economics — protect Eric's attention
 
-Eric's attention is the primary constraint and the most expensive interrupt. The bar is **not
-flawless-out-of-the-gate** — it's **fast iterative improvement**; pragmatism over perfectionism. Too
-tight a leash does more harm than good. Gate interrupts on the **cost + reversibility of the drift, not
-the mere existence of a flaw**:
+**Safety is the north-star principle, everywhere.** Risk tolerance scales with **recoverability _and_
+the magnitude of the worst case — not probability alone**. If we can recover quickly, easily, safely,
+the risk is far more tolerable → lean autonomous and iterate. As the worst case gets severe — irreversible,
+costly, and *especially anything where someone could be harmed* — operate with a **smaller margin of
+error and less cavalier, even when the probability is low**. Recoverability is the usual gate; this is
+what governs it.
+
+Within that: Eric's attention is the primary constraint and the most expensive interrupt. The bar is
+**not flawless-out-of-the-gate** — it's **fast iterative improvement**; pragmatism over perfectionism.
+Too tight a leash does more harm than good. Gate interrupts on the **cost + reversibility of the drift,
+not the mere existence of a flaw**:
 
 - **Cheap + reversible + self-correctable** (a wording tweak, a small visual miss, a lint/test catch,
   anything the next pass or another safety net will flag) → just fix it on the fly; do **not** interrupt.
