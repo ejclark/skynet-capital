@@ -1,10 +1,13 @@
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import {
+  type LeaderMetric,
   type NavContext,
   type NavView,
+  renderBoardContent,
   renderDashboardBody,
   renderIndividualBody,
+  renderLeaderboardBody,
 } from "../observatory/render-dashboard.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
@@ -102,10 +105,20 @@ async function handle(
     currentId: resolveCurrentId(session, config.hub.getState().participants),
     canAdd,
     authed,
+    hasLeaderboard: true,
   });
 
   if (path === "/events") {
     streamEvents(req, res, config.hub, navFor("board"));
+    return;
+  }
+  if (path === "/leaderboard") {
+    const state = config.hub.getState();
+    const by = new URL(url, "http://localhost").searchParams.get("by");
+    const metric: LeaderMetric = by === "pl" || by === "return" ? by : "equity";
+    const body = renderLeaderboardBody(state, { nav: navFor("leaderboard"), metric });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument("Leaderboard — Skynet Capital", body));
     return;
   }
   if (path === "/add" && config.addParticipant) {
@@ -226,9 +239,9 @@ function streamEvents(
     "cache-control": "no-cache",
     connection: "keep-alive",
   });
-  res.write(sseFrame(JSON.stringify(renderDashboardBody(hub.getState(), { nav }))));
+  res.write(sseFrame(JSON.stringify(renderBoardContent(hub.getState(), { nav }))));
   const unsubscribe = hub.subscribe((state) => {
-    res.write(sseFrame(JSON.stringify(renderDashboardBody(state, { nav }))));
+    res.write(sseFrame(JSON.stringify(renderBoardContent(state, { nav }))));
   });
   req.on("close", unsubscribe);
 }
@@ -291,14 +304,15 @@ function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
-<div id="root">${renderDashboardBody(hub.getState(), { nav })}</div>
+${renderDashboardBody(hub.getState(), { nav })}
 <script>
   (function () {
     var key = new URLSearchParams(location.search).get("key");
     var url = "/events" + (key ? "?key=" + encodeURIComponent(key) : "");
     var source = new EventSource(url);
     source.onmessage = function (e) {
-      document.getElementById("root").innerHTML = JSON.parse(e.data);
+      var root = document.getElementById("root");
+      if (root) root.innerHTML = JSON.parse(e.data);
     };
   })();
 </script>

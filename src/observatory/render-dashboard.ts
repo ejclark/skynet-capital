@@ -250,40 +250,106 @@ export interface DashboardViewOptions {
   readonly nav?: NavContext;
 }
 
-function navLink(href: string, label: string, active: boolean): string {
-  return `<a class="navlink${active ? " active" : ""}" href="${href}"${
+const NAV_ICON: Record<string, string> = {
+  board: "▦",
+  leaderboard: "≣",
+  bots: "◆",
+  you: "◉",
+  add: "＋",
+};
+
+function drawerLink(href: string, label: string, view: NavView, active: boolean): string {
+  return `<a class="dnav-link${active ? " active" : ""}" href="${href}"${
     active ? ' aria-current="page"' : ""
-  }>${label}</a>`;
+  }><span class="dnav-ico" aria-hidden="true">${NAV_ICON[view] ?? "•"}</span><span class="dnav-label">${label}</span></a>`;
 }
 
-/** The shared top navigation — one row of view links, an Add/Sign-out cluster on the right. */
-function renderNav(nav: NavContext): string {
-  const you = nav.currentId ? navLink(profileHref(nav.currentId), "You", nav.active === "you") : "";
-  const right: string[] = [];
+/**
+ * The left DRAWER — an insulated, full-height navigation container. It is a sibling of the main
+ * stage (not an overlay): opening/closing it PUSHES the stage to make room. Holds the brand, the
+ * vertical view nav, and the account actions. This shell is the template every logged-in view uses.
+ */
+function renderDrawer(nav: NavContext): string {
+  const links = [drawerLink("/", "Board", "board", nav.active === "board")];
+  if (nav.hasLeaderboard) {
+    links.push(
+      drawerLink("/leaderboard", "Leaderboard", "leaderboard", nav.active === "leaderboard"),
+    );
+  }
+  if (nav.hasBots) {
+    links.push(drawerLink("/bots-vs-humans", "Bots vs Humans", "bots", nav.active === "bots"));
+  }
+  if (nav.currentId) {
+    links.push(drawerLink(profileHref(nav.currentId), "You", "you", nav.active === "you"));
+  }
+  const foot: string[] = [];
   if (nav.canAdd) {
-    right.push(
-      `<a class="navcta" href="/add">${nav.currentId ? "+ Add account" : "+ Connect your account"}</a>`,
+    foot.push(
+      `<a class="dnav-cta" href="/add"><span class="dnav-ico" aria-hidden="true">${NAV_ICON.add}</span><span class="dnav-label">${
+        nav.currentId ? "Add account" : "Connect account"
+      }</span></a>`,
     );
   }
   if (nav.authed) {
-    right.push(`<a class="navlink navmuted" href="/logout">Sign out</a>`);
+    foot.push(
+      `<a class="dnav-link dnav-muted" href="/logout"><span class="dnav-ico" aria-hidden="true">⏻</span><span class="dnav-label">Sign out</span></a>`,
+    );
   }
-  const leaderboard = nav.hasLeaderboard
-    ? navLink("/leaderboard", "Leaderboard", nav.active === "leaderboard")
-    : "";
-  const bots = nav.hasBots
-    ? navLink("/bots-vs-humans", "Bots vs Humans", nav.active === "bots")
-    : "";
-  return `<nav class="obs-nav" aria-label="Views">
-      <div class="navviews">
-        ${navLink("/", "Board", nav.active === "board")}
-        ${leaderboard}
-        ${bots}
-        ${you}
+  return `<aside class="drawer" id="drawer" aria-label="Navigation">
+      <div class="drawer-brand">
+        <span class="mark">SKYNET<b>·</b>CAPITAL</span>
+        <span class="sub">Observatory</span>
       </div>
-      <div class="navright">${right.join("")}</div>
-    </nav>`;
+      <nav class="drawer-nav" aria-label="Views">${links.join("")}</nav>
+      <div class="drawer-foot">${foot.join("")}</div>
+    </aside>`;
 }
+
+/**
+ * Wrap a view's content in the push-drawer app shell. The drawer is a sibling of the scrolling
+ * stage, so toggling it slides the stage over (content is pushed, never covered). #root carries the
+ * `.obs` design-token scope and is what the SSE stream swaps on the board. No-JS/reduced-motion safe:
+ * the drawer starts open and the toggle simply flips a class (no animation under reduced-motion).
+ */
+function renderShell(nav: NavContext | undefined, content: string, generatedAt: string): string {
+  if (!nav) {
+    // Bare embeddable body (e.g. Artifact publishing) — no shell, just the token-scoped content.
+    return `${STYLE}
+<div class="obs" id="root">${content}</div>`;
+  }
+  return `${STYLE}
+<div class="app" data-drawer="open">
+  ${renderDrawer(nav)}
+  <main class="stage">
+    <button class="drawer-toggle" type="button" aria-controls="drawer" aria-expanded="true" aria-label="Toggle navigation"><span aria-hidden="true">‹‹</span></button>
+    <div class="stage-inner">
+      <div class="stage-meta">
+        <span class="tag">PAPER · SANDBOX</span>
+        <span class="ts num">${escapeHtml(formatTimestamp(generatedAt))}</span>
+      </div>
+      <div class="obs" id="root">${content}</div>
+    </div>
+  </main>
+</div>
+${DRAWER_SCRIPT}`;
+}
+
+/** Drawer toggle: push (not overlay), remembers state, and stays inert under reduced-motion. */
+const DRAWER_SCRIPT = `<script>
+(function(){
+  var app=document.querySelector(".app"), btn=document.querySelector(".drawer-toggle");
+  if(!app||!btn) return;
+  try{ if(localStorage.getItem("obs-drawer")==="closed") app.setAttribute("data-drawer","closed"); }catch(e){}
+  function sync(){ var open=app.getAttribute("data-drawer")!=="closed"; btn.setAttribute("aria-expanded",open?"true":"false"); }
+  sync();
+  btn.addEventListener("click",function(){
+    var closed=app.getAttribute("data-drawer")==="closed";
+    app.setAttribute("data-drawer",closed?"open":"closed");
+    try{ localStorage.setItem("obs-drawer",closed?"open":"closed"); }catch(e){}
+    sync();
+  });
+})();
+</script>`;
 
 /** Signed-in viewer first (marked YOU), then everyone else in the given order. */
 function orderParticipants(
@@ -294,21 +360,6 @@ function orderParticipants(
   const self = participants.filter((p) => p.id === currentId);
   const rest = participants.filter((p) => p.id !== currentId);
   return [...self, ...rest];
-}
-
-/** Header block: brand mark + optional nav + PAPER·SANDBOX tag + timestamp. */
-function obsHeader(generatedAt: string, nav?: NavContext): string {
-  return `<header class="obs-bar">
-    <div class="brand">
-      <span class="mark">SKYNET<b>·</b>CAPITAL</span>
-      <span class="sub">Observatory</span>
-    </div>
-    <div class="meta">
-      <span class="tag">PAPER · SANDBOX</span>
-      <span class="ts">${escapeHtml(formatTimestamp(generatedAt))}</span>
-    </div>
-  </header>
-  ${nav ? renderNav(nav) : ""}`;
 }
 
 /** A labelled stat tile (reused across summary strips and the individual hero row). */
@@ -340,15 +391,14 @@ export function renderIndividualBody(
       : "";
 
   if (snapshot.error) {
-    return `${STYLE}
-<div class="obs">
-  ${obsHeader(asOf, options.nav)}
-  <a class="backlink" href="/">← Board</a>
-  <section class="indiv indiv-error">
+    return renderShell(
+      options.nav,
+      `<section class="indiv indiv-error">
     <h1 class="indiv-name">${escapeHtml(snapshot.displayName)} ${chip(snapshot)}</h1>
     <p class="error-msg">Account unreachable — check this participant's API keys.</p>
-  </section>
-</div>`;
+  </section>`,
+      asOf,
+    );
   }
 
   const pl = participantUnrealized(snapshot);
@@ -356,11 +406,9 @@ export function renderIndividualBody(
   const buyingPower = snapshot.cash;
   const plPct = invested > 0 ? (pl / invested) * 100 : 0;
 
-  return `${STYLE}
-<div class="obs">
-  ${obsHeader(asOf, options.nav)}
-  <a class="backlink" href="/">← Board</a>
-  <section class="indiv">
+  return renderShell(
+    options.nav,
+    `<section class="indiv">
     <header class="indiv-head">
       <div class="indiv-title">
         <span class="indiv-eyebrow">${who}</span>
@@ -401,8 +449,93 @@ export function renderIndividualBody(
       <span class="seam-label">Performance history</span>
       <p class="seam-note">Equity over time, realized P/L, and per-play win rate light up here once we've recorded your history.</p>
     </div>
+  </section>`,
+    asOf,
+  );
+}
+
+/** Metrics the leaderboard can rank by — all snapshot-derived (no history needed). */
+export type LeaderMetric = "equity" | "pl" | "return";
+
+const LEADER_METRICS: ReadonlyArray<{ key: LeaderMetric; label: string }> = [
+  { key: "equity", label: "Equity" },
+  { key: "pl", label: "Unrealized P/L" },
+  { key: "return", label: "Return %" },
+];
+
+function metricValue(snapshot: ParticipantSnapshot, metric: LeaderMetric): number {
+  const pl = participantUnrealized(snapshot);
+  if (metric === "pl") return pl;
+  if (metric === "return") {
+    const invested = participantInvested(snapshot);
+    return invested > 0 ? (pl / invested) * 100 : 0;
+  }
+  return snapshot.equity;
+}
+
+function formatMetric(value: number, metric: LeaderMetric): string {
+  if (metric === "return") return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+  if (metric === "pl") return formatSigned(value);
+  return formatCurrency(value);
+}
+
+/**
+ * The LEADERBOARD view — comparison at scale. Ranks everyone by a selectable metric (equity,
+ * unrealized P/L, or return %), humans and bots interleaved. Friendly/celebratory framing: this
+ * is a friends-and-family league, so it's bragging rights, not a zero-sum war. The metric picker
+ * is plain links (?by=…) so it stays shareable and back/forward-friendly with no JS.
+ */
+export function renderLeaderboardBody(
+  data: DashboardData,
+  options: DashboardViewOptions & { metric?: LeaderMetric } = {},
+): string {
+  const metric = options.metric ?? "equity";
+  const currentId = options.nav?.currentId;
+  const live = data.participants.filter((p) => !p.error);
+  const ranked = [...live].sort((a, b) => metricValue(b, metric) - metricValue(a, metric));
+  const maxAbs = ranked.reduce((m, p) => Math.max(m, Math.abs(metricValue(p, metric))), 0) || 1;
+
+  const picker = LEADER_METRICS.map(
+    (m) =>
+      `<a class="msel${m.key === metric ? " active" : ""}" href="/leaderboard?by=${m.key}">${m.label}</a>`,
+  ).join("");
+
+  const rows = ranked
+    .map((p, i) => {
+      const v = metricValue(p, metric);
+      const width = Math.max(2, (Math.abs(v) / maxAbs) * 100);
+      const sign = metric === "equity" ? "flat" : plClass(v);
+      const self = currentId && p.id === currentId ? " rank-self" : "";
+      const you = currentId && p.id === currentId ? `<span class="you-mark">YOU</span>` : "";
+      const medal = i < 3 ? ` rank-top rank-${i + 1}` : "";
+      return `<li class="rank-row${self}${medal}">
+        <span class="rank">${i + 1}</span>
+        <a class="rank-name" href="${profileHref(p.id)}">${escapeHtml(p.displayName)} ${chip(p)}${you}</a>
+        <span class="rank-bar"><i class="bar-${sign}" style="width:${width.toFixed(1)}%"></i></span>
+        <span class="rank-val num ${sign}">${formatMetric(v, metric)}</span>
+      </li>`;
+    })
+    .join("\n      ");
+
+  return renderShell(
+    options.nav,
+    `<section class="ladder-wrap">
+    <div class="ladder-head">
+      <div>
+        <h1 class="view-title">Leaderboard</h1>
+        <p class="view-sub">Everybody's welcome to win — it's a friendly league.</p>
+      </div>
+      <div class="metricsel">${picker}</div>
+    </div>
+    <ol class="ladder">
+      ${rows || `<li class="empty">No participants on the board yet.</li>`}
+    </ol>
   </section>
-</div>`;
+  <footer class="obs-foot">Read-only observatory · ranked by ${escapeHtml(
+    LEADER_METRICS.find((m) => m.key === metric)?.label ?? "equity",
+  )} · figures reflect the last account read.</footer>`,
+    data.generatedAt,
+  );
 }
 
 const STYLE = `<style>
@@ -508,9 +641,83 @@ const STYLE = `<style>
   .seam-label{ font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); }
   .seam-note{ margin:6px 0 0; font-size:13px; color:var(--muted); }
   @media (max-width:640px){ .indiv-hero{ grid-template-columns:1fr; } }
+  /* --- leaderboard --- */
+  .ladder-head{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
+  .view-title{ margin:0; font-size:24px; font-weight:700; }
+  .view-sub{ margin:6px 0 0; font-size:13px; color:var(--muted); }
+  .metricsel{ display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:4px; }
+  .msel{ font-family:var(--mono); font-size:12px; letter-spacing:.03em; color:var(--muted); text-decoration:none; padding:7px 12px; border-radius:7px; transition:color .15s, background .15s; }
+  .msel:hover{ color:var(--text); }
+  .msel.active{ color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .msel:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .ladder{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .rank-row{ display:grid; grid-template-columns:34px minmax(140px,1.4fr) 3fr auto; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:12px 16px; }
+  .rank-self{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent) inset; }
+  .rank{ font-family:var(--mono); font-size:14px; font-weight:700; color:var(--muted); text-align:center; }
+  .rank-top .rank{ color:var(--accent); }
+  .rank-1 .rank{ font-size:17px; }
+  .rank-name{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; color:inherit; text-decoration:none; font-weight:600; font-size:15px; }
+  .rank-name:hover{ color:var(--accent); }
+  .rank-name:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  .rank-bar{ height:8px; background:color-mix(in srgb,var(--border) 60%,transparent); border-radius:999px; overflow:hidden; }
+  .rank-bar i{ display:block; height:100%; border-radius:999px; }
+  .bar-flat{ background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 40%,transparent),var(--accent)); }
+  .bar-pos{ background:linear-gradient(90deg,color-mix(in srgb,var(--pos) 40%,transparent),var(--pos)); }
+  .bar-neg{ background:linear-gradient(90deg,color-mix(in srgb,var(--neg) 40%,transparent),var(--neg)); }
+  .rank-val{ font-size:15px; font-weight:700; text-align:right; min-width:96px; }
+  @media (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto; } .rank-bar{ display:none; } }
+  /* --- push-drawer app shell --- */
+  .app{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans); }
+  @media (prefers-color-scheme:light){ .app{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA; --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; } }
+  :root[data-theme="dark"] .app{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149; }
+  :root[data-theme="light"] .app{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA; --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; }
+  .app *{ box-sizing:border-box; }
+  .drawer{ flex:0 0 250px; width:250px; height:100vh; position:sticky; top:0; overflow-y:auto; overflow-x:hidden;
+    background:var(--surface-2); border-right:1px solid var(--border); display:flex; flex-direction:column; gap:10px; padding:20px 14px;
+    transition:flex-basis .28s cubic-bezier(.4,0,.2,1), width .28s cubic-bezier(.4,0,.2,1), padding .28s, border-color .28s; white-space:nowrap; }
+  .app[data-drawer="closed"] .drawer{ flex-basis:0; width:0; padding-left:0; padding-right:0; border-right-color:transparent; }
+  .drawer-brand{ display:flex; flex-direction:column; gap:3px; padding:6px 10px 14px; margin-bottom:4px; border-bottom:1px solid var(--border); }
+  .drawer-brand .mark{ font-weight:700; font-size:15px; letter-spacing:.13em; }
+  .drawer-brand .mark b{ color:var(--accent); }
+  .drawer-brand .sub{ font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:var(--muted); }
+  .drawer-nav{ display:flex; flex-direction:column; gap:3px; }
+  .drawer-foot{ margin-top:auto; display:flex; flex-direction:column; gap:3px; padding-top:12px; border-top:1px solid var(--border); }
+  .dnav-link,.dnav-cta{ display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:9px; text-decoration:none; color:var(--muted); font-size:13px; font-weight:600; transition:color .15s, background .15s; }
+  .dnav-link:hover{ color:var(--text); background:color-mix(in srgb,var(--surface) 80%,transparent); }
+  .dnav-link.active{ color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .dnav-link:focus-visible,.dnav-cta:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .dnav-muted{ color:color-mix(in srgb,var(--muted) 85%,transparent); }
+  .dnav-cta{ color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 40%,var(--border)); background:color-mix(in srgb,var(--accent) 8%,transparent); }
+  .dnav-cta:hover{ background:color-mix(in srgb,var(--accent) 16%,transparent); }
+  .dnav-ico{ width:18px; text-align:center; font-size:13px; flex:0 0 auto; }
+  .stage{ flex:1 1 auto; min-width:0; height:100vh; overflow-y:auto; position:relative; }
+  .stage-inner{ padding:60px clamp(16px,4vw,44px) 60px; }
+  .stage-inner .obs{ min-height:0; padding:0; background:none; }
+  .stage-meta{ display:flex; justify-content:flex-end; align-items:center; gap:12px; font-size:12px; color:var(--muted); margin-bottom:20px; }
+  .stage-meta .tag{ font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--accent); border:1px solid var(--accent); border-radius:999px; padding:3px 10px; }
+  .drawer-toggle{ position:absolute; top:16px; left:16px; z-index:5; width:36px; height:36px; border-radius:9px; border:1px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; font-size:13px; line-height:1; display:flex; align-items:center; justify-content:center; transition:color .15s, border-color .15s; }
+  .drawer-toggle:hover{ color:var(--accent); border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); }
+  .drawer-toggle:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .drawer-toggle span{ display:inline-block; transition:transform .28s; }
+  .app[data-drawer="closed"] .drawer-toggle span{ transform:rotate(180deg); }
+  @media (max-width:760px){
+    .drawer{ position:fixed; left:0; top:0; z-index:30; flex-basis:250px; width:250px; box-shadow:0 0 40px -8px rgba(0,0,0,.6); transition:transform .28s cubic-bezier(.4,0,.2,1); }
+    .app[data-drawer="closed"] .drawer{ transform:translateX(-100%); flex-basis:0; width:250px; padding:20px 14px; border-right-color:var(--border); }
+    .app[data-drawer="open"] .drawer{ transform:translateX(0); }
+    .app{ display:block; } .stage{ height:auto; min-height:100vh; }
+  }
+  @media (prefers-reduced-motion:reduce){ .drawer,.drawer-toggle span{ transition:none; } }
 </style>`;
 
-export function renderDashboardBody(
+/**
+ * The BOARD content (summary strip + participant grid + footer) — the piece the SSE stream swaps
+ * into #root on every hub update. Kept separate from the shell so live refresh never re-renders the
+ * drawer or resets its open/closed state.
+ */
+export function renderBoardContent(
   data: DashboardData,
   options: DashboardViewOptions = {},
 ): string {
@@ -524,15 +731,18 @@ export function renderDashboardBody(
       }),
     )
     .join("\n    ");
-  return `${STYLE}
-<div class="obs">
-  ${obsHeader(data.generatedAt, options.nav)}
-  ${summaryStrip(data)}
+  return `${summaryStrip(data)}
   <section class="grid">
     ${cards}
   </section>
-  <footer class="obs-foot">Read-only observatory · figures reflect the last account read · unrealized P/L is mark-to-market vs. average cost.</footer>
-</div>`;
+  <footer class="obs-foot">Read-only observatory · figures reflect the last account read · unrealized P/L is mark-to-market vs. average cost.</footer>`;
+}
+
+export function renderDashboardBody(
+  data: DashboardData,
+  options: DashboardViewOptions = {},
+): string {
+  return renderShell(options.nav, renderBoardContent(data, options), data.generatedAt);
 }
 
 export function renderDashboardDocument(data: DashboardData): string {
