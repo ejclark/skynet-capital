@@ -1,3 +1,10 @@
+# [1.85.0](https://github.com/ejclark/skynet-capital/compare/v1.84.0...v1.85.0) (2026-07-26)
+
+
+### Features
+
+* **login:** dissolve the left playcall card — the tower tells the story ([#146](https://github.com/ejclark/skynet-capital/issues/146)) ([092229e](https://github.com/ejclark/skynet-capital/commit/092229e4df8181ab7a1132d116b38961ffe61b78)), closes [#49](https://github.com/ejclark/skynet-capital/issues/49)
+
 # [1.84.0](https://github.com/ejclark/skynet-capital/compare/v1.83.0...v1.84.0) (2026-07-26)
 
 
