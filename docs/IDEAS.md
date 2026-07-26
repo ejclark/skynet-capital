@@ -68,6 +68,12 @@ legal risk) held to an honest, data-sourced standard. Phased:
   _(src: Eric · while: extending the Claude side-quest idea system)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
+- **Test coverage & quality audit** — the suite (~178) skews to pure logic (personas, reducers, server
+  routes, renderers, empire skyline); the login canvas animation + the vision layer are screenshot- or
+  docs-verified, not unit-tested (by nature). Audit for *logic* behaviors that lack a test (dashboard
+  routes, observatory metrics, reduce/persistence). Balance is the goal: small **single-responsibility**
+  tests (one behavior each — avoid long bundled workflows that hide failures and mix altitudes), but not
+  so granular it becomes death-by-10,000-cuts. _(src: Eric · while: reviewing the suite size)_
 - **Empire skyline on the comparison view** — render two empire skylines side by side on `/compare`
   (the "two cities" from the scale ladder: commonality = shared towers, contrast = coal/rail vs.
   solar/silicon silhouettes). Reuses `renderEmpireSkyline`; the next natural P2 slice.

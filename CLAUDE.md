@@ -103,5 +103,5 @@ _This "how we work" is Eric's to edit; it sharpens as he corrects it — treat c
 - **Structural map:** [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md) is a Graphify graph of the
   repo — `graphify explain/query/path/affected` to navigate; after code changes run `graphify extract .
   --code-only` (free; plain `update` sweeps in docs). Playbook: [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md).
-- Conventional Commits (lowercase-led subject). In burn-down mode, opening + squash-merging small green
+- Background work runs via subagents under [`docs/DELEGATION.md`](docs/DELEGATION.md) (isolated worktrees, verify-before-merge). Conventional Commits (lowercase-led subject). In burn-down mode, opening + squash-merging small green
   PRs is the expected loop.
