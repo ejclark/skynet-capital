@@ -18,6 +18,22 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### North-star epic — the Living Universe (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
+The cityscape as a multiplayer, SimCity-like shared world that reflects everyone's trades, bots, and
+market events — **fun as the flywheel** (engagement → legibility/trust → capital → autonomy). Phased:
+- **P1 Landmarks from personas** — personas as skyline structures beyond the Eye (display-only). _(src: Eric)_
+- **P2 "Your city"** — logged-in cityscape driven by `ParticipantSnapshot` (positions→towers, P/L→health); needs two-modes (#54) + history layer. _(src: Eric)_
+- **P3 Market-event vocabulary** — regimes + macro events → city phenomena (oil shock→smoke/traffic, bull→cranes, bear→fog); matrix tracers as the transition/comms medium. _(src: Eric)_
+- **P4 Contributable personas** — users add bot personas that join the universe (plugin behind the persona-lore seam). _(src: Eric)_
+- **P5 Full ecosystem** — trades/events continuously animate a world that communicates the league's live state; the instrument panel underwriting autonomous real-money trading. _(src: Eric)_
+
+### Governance — Eric's calls (do not build unattended)
+- **Autonomous GitHub-issue contribution system** — autonomously pick up & act on issues, starting
+  narrow (tier 1: additive, display-only persona/landmark integrations) and widening by a progressive-
+  trust ladder. Rails-first, mantra **Detect · Correct · Maintain**: brand + Graphify `affected` +
+  tests + alignment review gate every change; drift blocks/reverts. Sensitive steps (granting
+  autonomy, credentials, **real-money trading**) always Eric's. Framework in `LIVING-UNIVERSE.md`. _(src: Eric)_
+
 ### Larger tasks (need dedicated focus)
 - **Login terminal drawer + backstory** — convert the canvas play-panel into a terminal-style DOM
   drawer that opens with a preamble/backstory. (tasks #68/#72; canvas→DOM migration; best done live.)

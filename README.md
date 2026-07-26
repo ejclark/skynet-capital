@@ -86,6 +86,7 @@ npm run typecheck
 - Running locally & keeping a laptop awake: [`docs/RUNNING.md`](docs/RUNNING.md)
 - Deploying the public live dashboard: [`docs/DEPLOY.md`](docs/DEPLOY.md)
 - In-app feedback → GitHub issues (bot token setup): [`docs/FEEDBACK.md`](docs/FEEDBACK.md)
+- The living-universe north star (gamified shared world → autonomy): [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md)
 - Our working conventions, portable to any repo: [`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md)
 - The brand & identity system (what makes it feel like Skynet): [`docs/BRAND.md`](docs/BRAND.md)
 - Feeding a code-graph (Graphify) into brand cohesion: [`docs/BCP-GRAPHIFY.md`](docs/BCP-GRAPHIFY.md)
