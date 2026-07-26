@@ -85,6 +85,19 @@ legal risk) held to an honest, data-sourced standard. Phased:
     Sauron) into its empire skyline, scaled by rank among bots — snapshot-derivable, connects the login
     Eye motif to the live board. Persistent leveling/accretion leans on the history layer. _(src: Claude · while: capturing the leveling mechanic)_
 
+### Play-feedback system — game-combat model for board telemetry (Eric-directed)
+The single terminal that narrates one play (and pushed the hero down / can't show many characters) is
+the wrong shape. Model it like a **game**: a character invokes a **play** (attack/defense move from its
+playbook); the play **resolves** against the market → **HIT** (paid off) / **MISS** (stopped out) /
+**LIVE**; feedback = damage/reward (realized P/L), health (equity delta), loot (rank climb). Must handle
+**many characters at once** — a log where every bot's actions stack, not one terminal for one play.
+- **Foundation shipped:** `play-feedback.ts` — pure `PlayOutcome` model + `renderPlayFeedbackLog`
+  (multi-character, HIT/MISS/LIVE badges, damage/reward coloring, honest idle + escaping), tested. A
+  composable board piece (Lego direction). _(src: Eric · while: reframing the terminal-input feedback)_
+- **Next:** style + wire it into the observatory (a live "playcall feed" showing every bot's actions),
+  then bring it to the login (replacing the terminal's role there); add floating combat-text on resolve
+  (the "+$420 · HIT" pop) and health/loot deltas. Full system per Eric's game-move framing.
+
 ### Governance — Eric's calls (do not build unattended)
 - **Formalize the participation agreement / consent** — the shared universe pools members' trades/
   bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly
