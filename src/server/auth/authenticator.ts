@@ -1728,6 +1728,28 @@ ${versionTag}
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hx,hy,r+3,0,7); ctx.fill();
     ctx.restore();
   }
+  // THE ONE RING — the easter egg on the Eye's character piece: the signal the gaze locks onto IS the
+  // Ring of Power, caught in the searchlight. A gold band viewed at a tilt, with a specular glint and the
+  // fiery Elvish inscription glowing as the gaze heats it. Rendered small + elegant — a reward for looking.
+  function drawOneRing(x,y,r,heat,al){ if(al<=0.01) return;
+    ctx.save(); ctx.translate(x,y); var ry=r*0.42;
+    // the gold band — a metallic top-light→shadow gradient makes it read as a solid ring, not a circle
+    var mg=ctx.createLinearGradient(0,-r,0,r);
+    mg.addColorStop(0,hexA("#FFF0C4",al)); mg.addColorStop(0.5,hexA("#E7B24C",al)); mg.addColorStop(1,hexA("#8A591A",al));
+    ctx.strokeStyle=mg; ctx.lineWidth=Math.max(2,r*0.3); ctx.lineCap="round";
+    ctx.beginPath(); ctx.ellipse(0,0,r,ry,0,0,7); ctx.stroke();
+    // a bright specular glint riding the upper-left of the band
+    ctx.strokeStyle=hexA("#FFFDF2",0.92*al); ctx.lineWidth=Math.max(1,r*0.12);
+    ctx.beginPath(); ctx.ellipse(0,0,r,ry,0,Math.PI*1.02,Math.PI*1.46); ctx.stroke();
+    // the inscription — a warm ring of fire riding the band + drifting glimmers, lit only when heated
+    if(heat>0.02){ ctx.globalCompositeOperation="lighter";
+      ctx.shadowColor="#FFB060"; ctx.shadowBlur=8*heat;
+      ctx.strokeStyle=hexA("#FF9E3D",0.55*heat*al); ctx.lineWidth=Math.max(1,r*0.14);
+      ctx.beginPath(); ctx.ellipse(0,0,r*0.82,ry*0.82,0,0,7); ctx.stroke(); ctx.shadowBlur=0;
+      for(var gi=0;gi<8;gi++){ var ga=gi/8*Math.PI*2+pbGlyphT*0.015, gx=Math.cos(ga)*r*0.82, gy=Math.sin(ga)*ry*0.82;
+        ctx.fillStyle=hexA("#FFE7B0",0.75*heat*al*(0.4+0.6*Math.sin(pbGlyphT*0.28+gi*1.3)));
+        ctx.beginPath(); ctx.arc(gx,gy,0.9,0,7); ctx.fill(); } }
+    ctx.restore(); }
   function drawGravityBeam(p){
     var accent=css("--accent")||"#35D0BA";
     // 1) DETECTION MARK — an imploding lock on the signal point as AIM completes, before the pull.
@@ -1767,10 +1789,25 @@ ${versionTag}
           var enode=e.eye?"#FFE7B0":"#EAFFFA", ecol=e.eye?"#FF9E3D":accent, ndR=e.eye?16:12;
           var ng=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,ndR); ng.addColorStop(0,hexA(enode,(e.eye?0.85:0.6)*pull*flick)); ng.addColorStop(1,hexA(ecol,0));
           ctx.fillStyle=ng; ctx.beginPath(); ctx.arc(e.x,e.y,ndR,0,7); ctx.fill();
-          // the TRACTOR CONE — a strong smooth beam glow doing the pulling (brighter + wider than before)
-          var dxb=nowSX-e.x, dyb=nowSY-e.y, bl=Math.sqrt(dxb*dxb+dyb*dyb)||1, pnx=-dyb/bl, pny=dxb/bl, bw=lerp(3.5,13,pull);
-          var bg3=ctx.createLinearGradient(e.x,e.y,nowSX,nowSY); bg3.addColorStop(0,hexA(accent,0.10*pull)); bg3.addColorStop(0.5,hexA(accent,0.20*pull)); bg3.addColorStop(1,hexA(accent,0.30*pull));
-          ctx.beginPath(); ctx.moveTo(e.x+pnx*4,e.y+pny*4); ctx.lineTo(nowSX+pnx*bw,nowSY+pny*bw); ctx.lineTo(nowSX-pnx*bw,nowSY-pny*bw); ctx.lineTo(e.x-pnx*4,e.y-pny*4); ctx.closePath(); ctx.fillStyle=bg3; ctx.fill();
+          // THE GAZE AS A VOLUMETRIC SEARCHLIGHT — narrow at the Eye, spreading into a wide soft cone that
+          // lands as a lit pool on the signal (like Barad-dûr's beam finding the ring). Gravity drives the
+          // electromagnetism: the pull IS the light. Layered translucent cones fake the soft volumetric
+          // edges — a warm core fading out to accent — brightest near the Eye, re-brightening at the pool.
+          var dxb=nowSX-e.x, dyb=nowSY-e.y, bl=Math.sqrt(dxb*dxb+dyb*dyb)||1, pnx=-dyb/bl, pny=dxb/bl;
+          var bwBase=lerp(20,64,pull), swav=1+0.05*Math.sin(pbGlyphT*0.5);   // wide spreading base, faint breathe
+          var cone=function(tipH, baseH, col, a){ ctx.beginPath();
+            ctx.moveTo(e.x+pnx*tipH, e.y+pny*tipH); ctx.lineTo(nowSX+pnx*baseH, nowSY+pny*baseH);
+            ctx.lineTo(nowSX-pnx*baseH, nowSY-pny*baseH); ctx.lineTo(e.x-pnx*tipH, e.y-pny*tipH); ctx.closePath();
+            var lg=ctx.createLinearGradient(e.x,e.y,nowSX,nowSY);
+            lg.addColorStop(0,hexA(col,a*pull)); lg.addColorStop(0.55,hexA(col,a*0.5*pull)); lg.addColorStop(1,hexA(col,a*0.72*pull));
+            ctx.fillStyle=lg; ctx.fill(); };
+          cone(5, bwBase*swav, accent, 0.09);              // outer soft haze
+          cone(4, bwBase*0.62*swav, "#FFD9A0", 0.14);      // warm mid body
+          cone(3, bwBase*0.30*swav, "#FFF3DD", 0.22);      // bright inner core
+          // the lit POOL where the gaze lands — the ring caught in the beam
+          var poolR=bwBase*1.15, plg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,poolR);
+          plg.addColorStop(0,hexA("#FFF3DD",0.5*pull)); plg.addColorStop(0.35,hexA("#FFC98A",0.28*pull)); plg.addColorStop(1,hexA(accent,0));
+          ctx.fillStyle=plg; ctx.beginPath(); ctx.arc(nowSX,nowSY,poolR,0,7); ctx.fill();
           // a single faint filament (much less lightning than before)
           bolt(e.x,e.y,nowSX,nowSY, 12*pull, e.seed+11, e.eye?"#FFD9A0":"#CFFBEF", 0.34*pull*flick, 1.1);
           // charge streaming FROM the present toward the tower — the matter being pulled in
@@ -1780,8 +1817,9 @@ ${versionTag}
         var wp=0.6+0.4*Math.sin(pbGlyphT*0.4);
         var pg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,24); pg.addColorStop(0,hexA("#EAFFFA",0.5*pull*wp)); pg.addColorStop(0.5,hexA(accent,0.3*pull)); pg.addColorStop(1,hexA(accent,0));
         ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(nowSX,nowSY,24,0,7); ctx.fill();
-        ctx.strokeStyle=hexA(accent,0.6*pull*flick); ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(nowSX,nowSY,lerp(20,10,pull),0,7); ctx.stroke();
-        ctx.restore(); }
+        ctx.restore();
+        // the signal, revealed as the One Ring in the beam's pool (drawn in normal blend so the gold reads)
+        drawOneRing(nowSX, nowSY, lerp(9,13,pull), pull, clamp01(pull*1.4)); }
     }
   }
   // The signal EVIDENCE + the THESIS, a callout ANCHORED to the aim point (not a right column): RSI +
