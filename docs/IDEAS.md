@@ -140,6 +140,17 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   hinges on **autonomous bot trades being stable/tested first** — that behaviour is not yet proven, so
   build the creation flow only once autonomy is ready (ties to the north-star pipeline below + Eric's
   irreversible-class calls). _(src: Eric · while: leaning into the primary-tower template — bot onboarding)_
+- **Hero-character piece system / skill** — a reusable generator that emits a **high-fidelity primary
+  character out of the box** (the caliber of the Barad-dûr tower), configurable as a **board piece**, so
+  we can **autonomously create new primary characters from user input** (a persona's character sheet →
+  its faithful landmark). Generalises the Sauron work into an archetype template: silhouette + the
+  "surrounding area" detail (massif/base/turrets) + crown + a signature **energy/motion** (Sauron =
+  fire+electric gaze/beam) + the levelable-landmark hooks + a persona binding. Likely a **Claude skill**
+  (documented generation process) that is the visual counterpart to the eval-gated persona flow: the eval
+  proves the persona *trades* soundly; this proves it *renders* as a lovable hero. Depends on the **Lego
+  pieces scene-graph refactor** (uniform piece contract) and feeds **contributable personas (P4)** +
+  bot-creation. Big — needs dedicated focus; Barad-dûr is the first worked example to extract the template
+  from. _(src: Eric · while: detailing the Sauron tower — wanting hero fidelity to be systematic + generable)_
 - **North-star autonomous pipeline** — recycle the playbook artifact as a systems-level pipeline
   toward autonomous deployment (recognize signal → recommend → trade, with safeguards). (task #41)
 - **Lore universe (mixed multiverse)** — give each persona a character card (name, archetype,
