@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/ejclark/skynet-capital/compare/v1.28.0...v1.29.0) (2026-07-26)
+
+
+### Features
+
+* **login:** scheduled vs surprise events + real tech tickers with cross-reads ([#46](https://github.com/ejclark/skynet-capital/issues/46)) ([4f6b7b0](https://github.com/ejclark/skynet-capital/commit/4f6b7b00b416da7e774dfd886809d2830a86dd79))
+
 # [1.28.0](https://github.com/ejclark/skynet-capital/compare/v1.27.0...v1.28.0) (2026-07-26)
 
 
