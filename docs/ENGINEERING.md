@@ -110,3 +110,39 @@ makes the system cheap to extend — including by an agent reading it fresh.
 - `npm run lint:fix` and `npm test` are the whole inner loop. Fast feedback, no ceremony.
 - Errors are values where it matters: brokers return a rejected `OrderResult` with a `reason`
   rather than throwing, so callers handle outcomes uniformly.
+
+## Change communication — commits & PRs are documents
+
+Commits and pull requests are the project's durable record: how a non-author (a teammate, a future
+bot, Eric six months on) reconstructs *what changed and why*. As engagement grows, more members will
+read PRs to follow along — many **analytical but non-technical** (they think like engineers without the
+formal background). Write for them. Structure follows the inverted pyramid: **most important first, the
+weeds below the fold.**
+
+**Commits — concise and articulate.** [Conventional Commits](https://www.conventionalcommits.org)
+(enforced by commitlint), lowercase-led subject, imperative mood ("add", not "added") — the classic
+[Chris Beams rules](https://cbea.ms/git-commit/). The subject says *what*; the body says *why* and any
+non-obvious *how*. One logical change per commit; squash-merge keeps `main` a clean, readable spine.
+
+**PRs — a document with a fold** (mirror [`.github/pull_request_template.md`](../.github/pull_request_template.md)):
+
+1. **Summary** — the gist in plain language, skimmable by a non-technical reader: what ships.
+2. **Why** — the intent / user value in a sentence or two.
+3. **Details, below the fold** (`<details>`): the file-level walkthrough, design trade-offs (link an
+   ADR for hard-to-reverse calls), verification, risk/rollback, follow-ups. The weeds live here so the
+   top stays legible; the depth is one click away for whoever wants it.
+
+Keep it proportional — a one-line typo fix doesn't need every section (don't tax flow with ceremony;
+see the interrupt-economics principle). The template is a layout to populate, not a checklist to
+satisfy.
+
+### Guarding the shared record (higher-stakes trust)
+
+Members are welcome to open issues suggesting *how information is presented* — clearer summaries, better
+templates, naming. These are valuable. But changes to the **shared communication standard itself** (this
+section, the PR template, the commit convention) shape everyone's environment, so they clear a **higher
+review bar** than a feature: Claude reviews them **at Eric's level of scrutiny**, because a well-meaning
+but muddying change can quietly pollute the record and hurt everyone's experience. This is the
+autonomous-contribution trust ladder applied to the record: additive/display contributions are low-risk;
+edits to shared standards are not, and are gated accordingly (see
+[`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md)).

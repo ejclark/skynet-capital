@@ -1,0 +1,54 @@
+<!--
+A PR is a document, not a chore. Most readers are analytical but non-technical — they think like
+engineers without the formal background. Write the top for them; put the weeds below the fold.
+Title: use a Conventional Commit subject, lowercase-led — e.g. `feat(observatory): equity sparkline on /u/:id`.
+Delete these comments and any section that doesn't apply.
+-->
+
+## Summary
+
+<!-- The gist, in plain language. 1–3 bullets a non-technical reader can skim to know what ships. -->
+
+-
+
+## Why
+
+<!-- One or two sentences: the intent / the user value. What's better after this merges? -->
+
+<details>
+<summary><strong>Details — the how &amp; the weeds</strong></summary>
+
+### What changed
+
+<!-- File- or module-level walkthrough for a technical reader. Group by area; explain non-obvious choices. -->
+
+-
+
+### Design notes & trade-offs
+
+<!-- Decisions made and alternatives rejected, and why. Link an ADR (docs/adr/) for hard-to-reverse calls. -->
+
+-
+
+### Verification
+
+<!-- How you know it works: typecheck / lint / tests (counts), screenshots for visual work, manual steps. -->
+
+- [ ] `npm run typecheck`
+- [ ] `npm run lint`
+- [ ] `npm test`
+- [ ] Screenshot / visual check (for UI changes)
+
+### Risk & rollback
+
+<!-- Blast radius, anything reversible-vs-not, and how to back it out. "Additive, no runtime wiring" is a valid answer. -->
+
+-
+
+### Follow-ups
+
+<!-- Deliberately-deferred work, linked issues, the next slice. -->
+
+-
+
+</details>

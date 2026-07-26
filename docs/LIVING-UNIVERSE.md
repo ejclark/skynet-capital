@@ -226,6 +226,15 @@ This is high-stakes and must be **designed rails-first**. Mantra: **Detect · Co
 The safe first rung is tier 1: additive, display-only persona/landmark contributions with full
 detect-correct-maintain rails. Everything beyond earns its place.
 
+**Not all contributions are equal-risk — the shared record is higher-stakes.** A member suggesting how
+information is *presented* (clearer PR summaries, better templates, naming) is welcome, but changes to
+**shared standards** — the communication standard, the PR template, the commit convention, anything that
+shapes everyone's environment — clear a **higher review bar** than an additive feature. Claude reviews
+those at **Eric's level of scrutiny**, because a well-meaning but muddying edit can quietly pollute the
+record and degrade everyone's experience. Additive/display = low-risk (tier 1); edits to shared standards
+= guarded (see `docs/ENGINEERING.md` → _Change communication_). Guarding against unintentional pollution
+of the commons is itself part of upholding the real-cash integrity standard.
+
 ## The self-sustaining loop
 
 The pieces close into one compounding engine:
