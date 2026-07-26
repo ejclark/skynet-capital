@@ -1,5 +1,6 @@
 import type { DashboardData } from "./dashboard-data.js";
 import type { ActivityView, ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
+import { personaLore } from "./persona-lore.js";
 
 /**
  * Renders a `DashboardData` into a self-contained observatory dashboard.
@@ -394,12 +395,23 @@ export function renderIndividualBody(
   const isSelf = Boolean(options.isSelf);
   const asOf = options.generatedAt ?? new Date().toISOString();
   const who = isSelf ? "Your desk" : `${escapeHtml(snapshot.displayName)}'s desk`;
-  const persona =
-    snapshot.kind === "bot" && snapshot.personaId
+  const lore = snapshot.kind === "bot" ? personaLore(snapshot.personaId) : undefined;
+  const persona = lore
+    ? `<div class="persona"><span class="persona-label">Persona</span><span class="persona-id">${escapeHtml(
+        lore.name,
+      )}</span></div>`
+    : snapshot.kind === "bot" && snapshot.personaId
       ? `<div class="persona"><span class="persona-label">Strategy</span><span class="persona-id">${escapeHtml(
           snapshot.personaId,
         )}</span></div>`
       : "";
+  const personaCard = lore
+    ? `<section class="persona-card">
+    <span class="persona-eyebrow">Persona · ${escapeHtml(lore.name)}</span>
+    <p class="persona-thesis">${escapeHtml(lore.thesis)}</p>
+    ${lore.lore ? `<p class="persona-legend">${escapeHtml(lore.lore)}</p>` : ""}
+  </section>`
+    : "";
 
   if (snapshot.error) {
     return renderShell(
@@ -444,6 +456,7 @@ export function renderIndividualBody(
         ${tile("Buying Power", formatCurrency(buyingPower))}
       </div>
     </div>
+    ${personaCard}
     <div class="indiv-cols">
       <div class="indiv-col">
         <h2 class="col-head">Positions</h2>
@@ -877,6 +890,10 @@ const STYLE = `<style>
   .persona{ display:flex; flex-direction:column; gap:3px; text-align:right; }
   .persona-label{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
   .persona-id{ font-family:var(--mono); font-size:14px; color:var(--accent); }
+  .persona-card{ background:var(--surface); border:1px solid var(--border); border-left:2px solid var(--accent); border-radius:12px; padding:14px 18px; margin-bottom:24px; }
+  .persona-eyebrow{ display:block; font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+  .persona-thesis{ margin:0; font-size:14px; color:var(--text); line-height:1.5; }
+  .persona-legend{ margin:8px 0 0; font-size:13px; color:var(--muted); line-height:1.5; font-style:italic; }
   .indiv-hero{ display:grid; grid-template-columns:minmax(220px,1fr) 2fr; gap:16px; margin-bottom:24px; align-items:stretch; }
   .hero-equity{ background:var(--surface); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
   .hero-num{ font-size:40px; font-weight:700; line-height:1; }
