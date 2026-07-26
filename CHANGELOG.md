@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/ejclark/skynet-capital/compare/v1.19.0...v1.20.0) (2026-07-26)
+
+
+### Features
+
+* **login:** slow-mo walk-through of high-vol events ([#37](https://github.com/ejclark/skynet-capital/issues/37)) ([b42cb44](https://github.com/ejclark/skynet-capital/commit/b42cb440207c1c662e266dbf0122f718160d5569)), closes [hi#vol](https://github.com/hi/issues/vol)
+
 # [1.19.0](https://github.com/ejclark/skynet-capital/compare/v1.18.0...v1.19.0) (2026-07-26)
 
 
