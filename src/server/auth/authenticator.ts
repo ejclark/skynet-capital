@@ -999,18 +999,32 @@ ${versionTag}
   // These are illustrative teaching diagrams (labeled STRATEGY PLAYBOOK), never live P/L.
   // pts: normalized payoff [ [x 0..1, y -1..1], ... ]; strikes: x positions of the legs.
   // maxP / maxL: realistic ASYMMETRIC risk-reward per play (illustrative $, per-contract feel).
+  // why: the THESIS — the read of WHY the market should behave this way (evidence → expectation).
+  // hold: the CONDITION that must persist for the play to pay. Surfaced in the signal + recap cards.
   var STRATS=[
     { name:"IRON CONDOR", cue:"LOW VOL", desc:"Range-bound — keep the credit while price holds the middle.",
+      why:"RSI stretched at the band, vol compressed — momentum's spent, so price should oscillate inside the range.",
+      hold:"Holds while price stays between the short strikes.",
       pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8], maxP:420, maxL:-1080 },
     { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Volatility building — profit on a breakout either way.",
+      why:"Bands squeezed and coiling — a volatility expansion is due; the break can come either way.",
+      hold:"Pays once price breaks out past either strike.",
       pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7], maxP:2600, maxL:-720 },
     { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Dead calm — sell premium; best if price pins the strike.",
+      why:"Tape pinned to the mean with vol rich — premium decays fastest if price simply stays put.",
+      hold:"Best if price pins the strike; risk grows as it drifts.",
       pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5], maxP:1180, maxL:-3400 },
     { name:"BUTTERFLY", cue:"PINNED", desc:"Pinned — max profit if price lands on the center strike.",
+      why:"Price magnetised to a level with low vol — it should land near the center strike at expiry.",
+      hold:"Max profit if it expires on the center strike.",
       pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65], maxP:1320, maxL:-340 },
     { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Bullish reversal — capped upside at a lower cost.",
+      why:"Fast EMA crossing up off support, momentum turning — a measured move higher.",
+      hold:"Holds while the uptrend and support persist.",
       pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65], maxP:760, maxL:-540 },
     { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Breakout higher — limited risk with room to run.",
+      why:"Breakout pressure building above resistance — room to run, with defined risk.",
+      hold:"Pays as price breaks and runs higher.",
       pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75], maxP:1900, maxL:-880 }
   ];
   // Map a normalized payoff v∈[minY,maxY] to asymmetric dollars using the play's own max P / max L.
@@ -1160,30 +1174,59 @@ ${versionTag}
     ctx.strokeStyle=hexA(accent,0.85*aim); ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(tx,ty,rr,0,7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(tx-rr*1.6,ty); ctx.lineTo(tx-rr,ty); ctx.moveTo(tx+rr,ty); ctx.lineTo(tx+rr*1.6,ty); ctx.stroke();
     ctx.restore(); }
-  // The signal EVIDENCE, now a compact callout ANCHORED to the aim point (not a right column):
-  // RSI value + a mini oversold/overbought gauge + the one-line reason. Fades in on AIM.
-  function drawSignalCallout(sig, x, y, A){ if(A<=0.01) return;
+  // The signal EVIDENCE + the THESIS, a callout ANCHORED to the aim point (not a right column): RSI +
+  // a mini oversold/overbought gauge, the one-line reason, then WHY the market should behave this way
+  // and the CONDITION that must hold. This is the "why we're calling it" beat. Fades in on AIM.
+  function drawSignalCallout(sig, strat, x, y, A){ if(A<=0.01) return;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
-    // Anchor to the RIGHT of the entry, up near the top of the frame — clear of the left playbook
-    // panel (which owns the left column) so the two never overlap.
-    var cw=180, ch=92, cx=Math.min(x+30, W-cw-16); var cy=field.top+4;
+    // Anchor to the RIGHT of the entry, up near the top of the frame — clear of the left playbook panel.
+    var cw=228, ch=178, cx=Math.min(x+30, W-cw-16); var cy=field.top+4;
     ctx.save(); ctx.globalAlpha=A;
     ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(accent,0.5); ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(cx+16, cy+ch); ctx.lineTo(x,y); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle=hexA(bg,0.85); roundRect(cx,cy,cw,ch,8); ctx.fill();
+    ctx.fillStyle=hexA(bg,0.9); roundRect(cx,cy,cw,ch,8); ctx.fill();
     ctx.strokeStyle=hexA(accent,0.55); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,8); ctx.stroke();
-    var px=cx+13, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▣ SIGNAL DETECTED", px, yy); yy+=19;
+    var px=cx+13, gw=cw-26, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▣ SIGNAL DETECTED", px, yy); yy+=18;
     var rc=rsiV<30?pos:(rsiV>70?neg:txt);
     ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", px, yy);
     ctx.fillStyle=hexA(rc,0.95); ctx.fillText(rsiV.toFixed(0), px+30, yy);
-    var gw=cw-26, gx=px, gy=yy+8, gh=6;
+    var gx=px, gy=yy+8, gh=6;
     ctx.fillStyle=hexA(muted,0.16); ctx.fillRect(gx,gy,gw,gh);
     ctx.fillStyle=hexA(pos,0.22); ctx.fillRect(gx,gy,gw*0.3,gh);
     ctx.fillStyle=hexA(neg,0.22); ctx.fillRect(gx+gw*0.7,gy,gw*0.3,gh);
     var mp=gx+gw*clamp01(rsiV/100); ctx.fillStyle=rc; ctx.fillRect(mp-1.5,gy-2,3,gh+4);
-    yy=gy+gh+15; ctx.font="9px "+mono; ctx.fillStyle=hexA(accent,0.85); wrapText((sig?sig.sig:""), px, yy, gw, 12);
+    yy=gy+gh+14; ctx.font="9px "+mono; ctx.fillStyle=hexA(accent,0.85); yy+=wrapText((sig?sig.sig:""), px, yy, gw, 12)*12+6;
+    ctx.strokeStyle=hexA(muted,0.25); ctx.beginPath(); ctx.moveTo(px,yy-8); ctx.lineTo(px+gw,yy-8); ctx.stroke();
+    ctx.font="700 8px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("WHY", px, yy); yy+=12;
+    ctx.font="9px "+mono; ctx.fillStyle=hexA(txt,0.9); yy+=wrapText(strat?strat.why:"", px, yy, gw, 12)*12+3;
+    ctx.font="700 8px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("IF", px, yy); yy+=12;
+    ctx.font="9px "+mono; ctx.fillStyle=hexA(accent,0.82); wrapText(strat?strat.hold:"", px, yy, gw, 12);
+    ctx.restore(); }
+  // RETROSPECTIVE recap, shown once the play resolves: restates the play, confirms the condition held,
+  // names the events that moved it, and books the result — so the user's read of the animation is
+  // confirmed against the outcome. Anchored where the signal card was (they never coexist).
+  function drawRecap(strat, sig, x, y, A){ if(A<=0.01||!strat) return;
+    var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
+        muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
+    var cw=228, ch=162, cx=Math.min(x+30, W-cw-16), cy=field.top+4;
+    var e=extrema(strat), uEx=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5),
+        pl=dollarsAt(strat,e,payoffAt(strat.pts,uEx)), pct=Math.round(pl/(strat.maxP||1)*100),
+        win=pl>=0, rcol=win?pos:neg;
+    ctx.save(); ctx.globalAlpha=A;
+    ctx.fillStyle=hexA(bg,0.92); roundRect(cx,cy,cw,ch,8); ctx.fill();
+    ctx.strokeStyle=hexA(rcol,0.5); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,8); ctx.stroke();
+    var px=cx+13, gw=cw-26, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(rcol,0.9); ctx.fillText("▣ PLAYCALL RECAP", px, yy); yy+=18;
+    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(txt,0.95); ctx.fillText(strat.name, px, yy); yy+=16;
+    ctx.font="9px "+mono; ctx.fillStyle=hexA(rcol,0.9); ctx.fillText((win?"✓ READ HELD":"✗ READ BROKE"), px, yy); yy+=14;
+    ctx.fillStyle=hexA(txt,0.85); yy+=wrapText(strat.hold, px, yy, gw, 12)*12+3;
+    var evl=""; for(var i=0;i<events.length;i++){ if(events[i].fired) evl+=(evl?" · ":"")+events[i].label; }
+    if(evl){ ctx.font="8px "+mono; ctx.fillStyle=hexA(muted,0.75); yy+=wrapText("through "+evl, px, yy, gw, 11)*11+2; }
+    ctx.strokeStyle=hexA(muted,0.25); ctx.beginPath(); ctx.moveTo(px,yy-4); ctx.lineTo(px+gw,yy-4); ctx.stroke(); yy+=12;
+    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(rcol,0.95); ctx.fillText("BOOKED "+money(pl), px, yy);
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.8); ctx.fillText(pct+"% OF MAX", px, yy+15);
     ctx.restore(); }
 
   // FORECAST-ON-TREND: the called play is drawn into the FUTURE (right of "now", where there is no
@@ -1323,13 +1366,16 @@ ${versionTag}
     }
     drawPanel(strat, sig, p, A);
     // signal callout is anchored to the aim point and fades out once the walk takes over
-    if(p.aim>0) drawSignalCallout(sig, X0, yNow, A*clamp01(p.aim)*(1-clamp01(p.walk*1.4)));
+    if(p.aim>0) drawSignalCallout(sig, strat, X0, yNow, A*clamp01(p.aim)*(1-clamp01(p.walk*1.4)));
+    // Retrospective recap once the play resolves — confirms the thesis played out (bookends the WHY).
+    var recapA=A*clamp01((p.resolve-0.45)/0.55)*(1-clamp01(p.out*1.7));
+    if(recapA>0.01) drawRecap(strat, sig, X0, yNow, recapA);
     drawAimBeam(X0, yNow, p);
   }
   // Play phases (ms): DETECT → AIM → ZOOM → PROJECT → WALK-forward → RESOLVE → HOLD → ZOOM-OUT.
   // Each phase is followed by a short DWELL so the last thing shown isn't rushed into the next step —
   // the reveal breathes. A longer HOLD after RESOLVE lets the "closed +$" land before we zoom out.
-  var DET=520,AIM=680,DW_AIM=280,ZM=620,PRJ=880,DW_PRJ=320,WLK=4200,RES=700,HOLD=1000,OUT=820;
+  var DET=640,AIM=760,DW_AIM=760,ZM=620,PRJ=880,DW_PRJ=320,WLK=4200,RES=700,HOLD=1900,OUT=820;
   var T_AIM=DET, T_ZM=T_AIM+AIM+DW_AIM, T_PRJ=T_ZM+ZM, T_WLK=T_PRJ+PRJ+DW_PRJ,
       T_RES=T_WLK+WLK, T_OUT=T_RES+RES+HOLD, T_END=T_OUT+OUT;
   var ACTB=[0, T_PRJ, T_WLK, T_RES];   // act boundaries (e-time): SIGNAL · PREDICT · REALIZE · RESOLVE
