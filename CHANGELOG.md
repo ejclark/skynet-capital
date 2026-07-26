@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/ejclark/skynet-capital/compare/v1.14.3...v1.15.0) (2026-07-26)
+
+
+### Features
+
+* **login:** realistic realized trace + macro-event callouts ([#32](https://github.com/ejclark/skynet-capital/issues/32)) ([6223352](https://github.com/ejclark/skynet-capital/commit/6223352f6c027a0e5bd6243097211295e400b1cc)), closes [#24](https://github.com/ejclark/skynet-capital/issues/24)
+
 ## [1.14.3](https://github.com/ejclark/skynet-capital/compare/v1.14.2...v1.14.3) (2026-07-26)
 
 
