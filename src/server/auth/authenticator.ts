@@ -1689,20 +1689,16 @@ ${versionTag}
       var mg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,16);
       mg.addColorStop(0,hexA("#EAFFFA",0.8*mark)); mg.addColorStop(1,hexA(accent,0));
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(nowSX,nowSY,16,0,7); ctx.fill(); ctx.restore(); }
-    // 2) COMBINED TOWER GRAVITY BEAMS — the crowned empire towers' spires collectively seize the
-    // present: each fires a highly-charged tractor beam (black-hole physics — infinite gravity, immense
-    // charge) that CRACKLES with lightning, and together they haul it into the framed position.
+    // 2) THE GRAVITY BEAM — the Tower of Sauron alone seizes the present: its spire fires a single
+    // highly-charged tractor beam (black-hole physics — infinite gravity, immense charge) that CRACKLES
+    // with lightning and hauls the present into the framed position. No other tower pulls.
     var pull=easeIO(clamp01(p.zoom))*(1-clamp01(p.walk))*(1-p.out);
     eyeWake=Math.max(eyeWake, pull);   // the Eye blazes while it hauls the present forward
     if(pull>0.02){
-      // Emitters = crowned tower spire tips. The towers PULL, so only those to the LEFT of the present
-      // exert the tractor (the two leftmost) — the beams reach in from the left and haul it over.
-      var em=[], ei; for(ei=0;ei<skyline.length;ei++){ var tb=skyline[ei]; if(tb.crown){
-        em.push({ x:tb.x+cityPX+tb.w/2, y:H-tb.h-(tb.ant||0)-(tb.spire||0), seed:tb.seed, eye:tb.eye }); } }
-      em.sort(function(a,b){ return a.x-b.x; });
-      var emL=em.filter(function(t){ return t.x < nowSX-30; }); if(!emL.length) emL=em;   // must pull from the left
-      emL.sort(function(a,b){ return (b.eye?1:0)-(a.eye?1:0); });   // the Eye leads the pull
-      if(emL.length>2) emL=emL.slice(0,2);
+      // The Tower of Sauron ALONE commands the tractor — the Eye is the single source of the gravity
+      // beam (no other crowned tower pulls). Its spire tip is the emitter that hauls the present over.
+      var emL=[], ei; for(ei=0;ei<skyline.length;ei++){ var tb=skyline[ei]; if(tb.eye){
+        emL.push({ x:tb.x+cityPX+tb.w/2, y:H-tb.h-(tb.ant||0)-(tb.spire||0), seed:tb.seed, eye:true }); } }
       if(emL.length){ ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.lineCap="round";
         var flick=0.6+0.4*noise(pbGlyphT*0.6);   // gentle energy flicker
         // a faint jittered filament for life — kept subtle so the smooth tractor cone leads.
@@ -1725,7 +1721,7 @@ ${versionTag}
           // charge streaming FROM the present toward the tower — the matter being pulled in
           for(var s2=0;s2<6;s2++){ var f=(pbGlyphT*0.05+s2/6+k*0.17)%1, cxp=lerp(nowSX,e.x,f), cyp=lerp(nowSY,e.y,f);
             ctx.fillStyle=hexA("#EAFFFA",0.6*(1-f)*pull); ctx.fillRect(cxp-1.2,cyp-1.2,2.4,2.4); } }
-        // the present, seized by the combined pull — a charged, imploding well
+        // the present, seized by the Eye's pull — a charged, imploding well
         var wp=0.6+0.4*Math.sin(pbGlyphT*0.4);
         var pg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,24); pg.addColorStop(0,hexA("#EAFFFA",0.5*pull*wp)); pg.addColorStop(0.5,hexA(accent,0.3*pull)); pg.addColorStop(1,hexA(accent,0));
         ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(nowSX,nowSY,24,0,7); ctx.fill();
