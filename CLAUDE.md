@@ -97,7 +97,12 @@ _This "how we work" is Eric's to edit; it sharpens as he corrects it — treat c
 
 - Branch off latest `origin/main` per change; small focused PRs; squash-merge on green.
 - Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, + a screenshot for visual work
-  (`npm run shoot:login` or an offline render).
+  (`npm run shoot:login` or an offline render). **Verify by exit status, not tailed output** — piping a
+  check to `tail` masks its exit code (a pipeline exits with `tail`'s status), so `cmd | tail && …` will
+  not halt on failure. A pre-commit hook auto-formats staged files as a backstop.
+- **Blameless retro on detected drift.** When a net catches a slip, do a quick retro: root cause → a
+  full-stop prevention if pragmatic, else a Boy-Scout improvement (leave it better, or no worse). Don't
+  over-engineer process — forcing ceremony that taxes flow at scale is a net negative.
 - **Inline login canvas JS is a TS template literal — no backticks or `${}` inside it** (recurring TS1005
   trap). Honor `prefers-reduced-motion` for anything animated.
 - **Structural map:** [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md) is a Graphify graph of the
