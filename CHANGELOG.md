@@ -1,3 +1,10 @@
+# [1.71.0](https://github.com/ejclark/skynet-capital/compare/v1.70.1...v1.71.0) (2026-07-26)
+
+
+### Features
+
+* **login:** the Tower of Sauron alone emits the gravity beam ([#124](https://github.com/ejclark/skynet-capital/issues/124)) ([d587daa](https://github.com/ejclark/skynet-capital/commit/d587daa48d8059c693c0f3f39955f9ee6ee310e4))
+
 ## [1.70.1](https://github.com/ejclark/skynet-capital/compare/v1.70.0...v1.70.1) (2026-07-26)
 
 
