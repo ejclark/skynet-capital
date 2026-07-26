@@ -269,13 +269,14 @@ export class Authenticator {
   .mode.inert{ opacity:.62; }
   /* PLAY: subtle affordance — a low-key dotted underline that lights on hover/focus/open, so it
      invites without shouting "menu" and doesn't break the calm triad read. */
-  .mode.call{ pointer-events:auto; cursor:pointer; color:var(--muted); position:relative;
+  .mode.call, .mode.learn{ pointer-events:auto; cursor:pointer; color:var(--muted); position:relative;
     border-bottom:1px dotted color-mix(in srgb,var(--muted) 60%,transparent);
     transition:color .2s ease, border-color .2s ease, text-shadow .2s ease; }
-  .mode.call:hover, .mode.call:focus-visible, .modes.open .mode.call{
+  .mode.call:hover, .mode.call:focus-visible, .modes.open .mode.call,
+  .mode.learn:hover, .mode.learn:focus-visible, .learn[aria-expanded="true"]{
     color:var(--accent); border-bottom-color:var(--accent);
     text-shadow:0 0 12px color-mix(in srgb,var(--accent) 55%,transparent); }
-  .mode.call:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:2px; }
+  .mode.call:focus-visible, .mode.learn:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:2px; }
   /* Playbook popover — compact mono list of callable plays; hidden until PLAY invites it. */
   .playbook{ pointer-events:auto; display:flex; flex-wrap:wrap; justify-content:center; gap:6px 16px;
     max-width:min(92vw,560px); margin-top:2px; opacity:0; visibility:hidden; transform:translateY(-6px);
@@ -291,6 +292,18 @@ export class Authenticator {
   .play.active::before{ content:"● "; }
   .play .tier{ display:inline-block; margin-right:.5em; font-size:.82em; letter-spacing:.1em; opacity:.55; }
   .play:hover .tier, .play:focus-visible .tier, .play.active .tier{ opacity:.9; }
+  .learn[aria-expanded="true"]{ color:var(--accent); }
+  .glossary{ pointer-events:auto; box-sizing:border-box; width:min(92vw,440px); margin:8px auto 0; text-align:left;
+    padding:12px 16px; border:1px solid color-mix(in srgb,var(--accent) 32%,transparent); border-radius:10px;
+    background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(4px);
+    opacity:0; visibility:hidden; transform:translateY(-6px);
+    transition:opacity .26s ease, transform .26s ease, visibility 0s linear .26s; }
+  .glossary.open{ opacity:1; visibility:visible; transform:none; transition-delay:0s; }
+  .glossary .gtitle{ font-family:var(--mono); font-size:10px; letter-spacing:.28em; color:var(--accent);
+    margin:0 0 8px; text-transform:uppercase; }
+  .glossary dl{ margin:0; display:grid; grid-template-columns:auto 1fr; gap:5px 12px; }
+  .glossary dt{ font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; color:var(--accent); opacity:.85; white-space:nowrap; }
+  .glossary dd{ margin:0; font-family:var(--mono); font-size:10px; line-height:1.45; color:var(--muted); }
   /* Playcall transport — a minimal HUD stepper shown only during a manual playcall (where the user
      is deliberately engaging). Lets you pause and step act-by-act: signal → predict → realize → resolve. */
   .transport{ display:none; align-items:center; gap:12px; margin-top:2px; font-family:var(--mono); pointer-events:auto; }
@@ -559,8 +572,21 @@ export class Authenticator {
       <span class="sep" aria-hidden="true">·</span>
       <span class="mode inert">EXPERIMENT</span>
       <span class="sep" aria-hidden="true">·</span>
-      <span class="mode inert">LEARN</span>
+      <button type="button" class="mode learn" id="learnMode" aria-haspopup="true" aria-expanded="false" aria-controls="glossary">LEARN</button>
     </div>
+    <nav class="glossary" id="glossary" aria-label="Decode the system — how the pipeline reads the market" hidden>
+      <p class="gtitle">DECODE THE SYSTEM</p>
+      <dl>
+        <dt>PIPELINE</dt><dd>Ingest → Detect → Forecast → Execute. The bots run the loop; you validate &amp; refine the plays.</dd>
+        <dt>CANDLES</dt><dd>Open / high / low / close per slice — green up, red down.</dd>
+        <dt>BANDS</dt><dd>Bollinger ±2σ. Squeeze = calm; expansion = a breakout is brewing.</dd>
+        <dt>RSI</dt><dd>Momentum, 0–100. Above 70 overbought, below 30 oversold.</dd>
+        <dt>GREEKS</dt><dd>Δ direction · Θ time-decay · V volatility · Γ acceleration.</dd>
+        <dt>EVENTS</dt><dd>◆ scheduled (date known) vs ! surprise. ▲ bullish, ▼ bearish.</dd>
+        <dt>PLAYS</dt><dd>Tiered 101→401 by complexity — each is an instruction set with a defined max profit &amp; loss.</dd>
+        <dt>NORTH STAR</dt><dd>Refine the plays until the desk can deploy them autonomously — with safeguards.</dd>
+      </dl>
+    </nav>
     <nav class="playbook" id="playbook" aria-label="Playbook — call a play, easiest first">
       <button type="button" class="play" data-i="6"><span class="tier">101</span>Covered Call</button>
       <button type="button" class="play" data-i="7"><span class="tier">102</span>Cash-Covered Put</button>
@@ -1645,20 +1671,30 @@ ${versionTag}
   // --- Playbook menu wiring (PLAY reveals the plays; a click calls one) ---
   var modesEl=document.getElementById("modes"), playModeBtn=document.getElementById("playMode"),
       playbookEl=document.getElementById("playbook"), heroEl=document.getElementById("herosub");
+  var learnBtn=document.getElementById("learnMode"), glossaryEl=document.getElementById("glossary");
+  function openGlossary(o){ if(!learnBtn||!glossaryEl) return;
+    if(o && glossaryEl.hasAttribute("hidden")) glossaryEl.removeAttribute("hidden");
+    learnBtn.setAttribute("aria-expanded", o?"true":"false");
+    if(o) openPlaybook(false);                                  // the two popovers are mutually exclusive
+    glossaryEl.classList.toggle("open", o); }
   function openPlaybook(o){ if(!playModeBtn||!playbookEl) return;
     playModeBtn.setAttribute("aria-expanded", o?"true":"false");
+    if(o) openGlossary(false);
     if(modesEl) modesEl.classList.toggle("open", o); playbookEl.classList.toggle("open", o); }
+  if(learnBtn){
+    learnBtn.addEventListener("click", function(){ openGlossary(learnBtn.getAttribute("aria-expanded")!=="true"); });
+    learnBtn.addEventListener("mouseenter", function(){ openGlossary(true); }); }
   function highlightPlay(idx){ if(!playbookEl) return; var b=playbookEl.querySelectorAll(".play");
     for(var i=0;i<b.length;i++) b[i].classList.toggle("active", i===idx); }
   if(playModeBtn){
     playModeBtn.addEventListener("click", function(){ openPlaybook(playModeBtn.getAttribute("aria-expanded")!=="true"); });
     playModeBtn.addEventListener("mouseenter", function(){ openPlaybook(true); }); }
-  if(heroEl) heroEl.addEventListener("mouseleave", function(){ openPlaybook(false); });
+  if(heroEl) heroEl.addEventListener("mouseleave", function(){ openPlaybook(false); openGlossary(false); });
   if(playbookEl){ var plays=playbookEl.querySelectorAll(".play");
     for(var pi=0;pi<plays.length;pi++){ (function(btn){
       btn.addEventListener("click", function(){ var idx=parseInt(btn.getAttribute("data-i"),10)||0;
         highlightPlay(idx); callPlay(idx); openPlaybook(false); }); })(plays[pi]); } }
-  document.addEventListener("keydown", function(e){ if(e.key==="Escape") openPlaybook(false); });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape"){ openPlaybook(false); openGlossary(false); } });
   // Playcall transport: pause + step act-by-act through a manual playcall.
   var tPlayBtn=document.getElementById("tPlay"), tPrevBtn=document.getElementById("tPrev"),
       tNextBtn=document.getElementById("tNext"), tActsEl=document.getElementById("tActs");
