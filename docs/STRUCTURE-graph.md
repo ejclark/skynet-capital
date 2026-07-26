@@ -21,6 +21,36 @@ The repo's structure as a knowledge graph — the durable, navigable foundation 
   `dashboard-data.ts`/`data-source.ts` communities — split opportunities, not urgent.
 - **Health:** 99% EXTRACTED edges, no import cycles.
 
+**Named communities (19).** Graphify's auto-labeler needs an external LLM backend; these names were
+assigned in-session from cluster membership instead (no API, no spend) — the organic equivalent of the
+labeling step. Ordered by size.
+
+| # | Name | Nodes | What lives here |
+| --- | --- | --- | --- |
+| C0 | Simulation & autonomous engine | 129 | `InMemoryBroker`, `ScriptedMarketData`, `AutonomousTrader` — paper-sim core + the engine |
+| C1 | Alpaca transport & adapters | 90 | `AlpacaBrokerAdapter`, `FixtureTradingTransport`, `AlpacaTradingClient` |
+| C2 | Observatory data model & reducers | 72 | `DashboardData`, `ParticipantSnapshot`, `reduceObservatory()`, credentials |
+| C3 | Market-data streaming & replay | 61 | `ReplayEventStream`, `AlpacaMarketDataStream`, events JSONL |
+| C4 | Bots & signals | 54 | `Bot`, `loadBots()`, `MomentumTracker`, news articles |
+| C5 | npm project config | 48 | `package.json` scripts + deps |
+| C6 | Observatory renderers | 46 | `render-dashboard.ts` — `positionsTable()`, `formatCurrency()`, chips |
+| C7 | Dashboard HTTP server & routing | 42 | `dashboard-server.ts` — `handle()`, routes, `DashboardServerConfig` |
+| C8 | Biome lint/format config | 30 | `biome.json` |
+| C9 | TypeScript compiler config | 24 | `tsconfig.json` |
+| C10 | Cycle-report persistence | 22 | `CycleReportStore`, JSONL store |
+| C11 | Auth session & cookies | 17 | `session.ts` — `signSession()`, `hmac()`, cookies |
+| C12 | Auth providers & resolveAuth | 16 | `authenticator.ts` env/providers — `googleProvider()`, `githubProvider()` |
+| C13 | Authenticator & login page | 15 | `Authenticator`, `loginPage()`, `handleAuthRoute()` |
+| C14 | Server test harness | 15 | `withServer()`, `signIn()`, fake req/res |
+| C15 | Alpaca OAuth connect | 11 | `alpaca-connect.ts` — `AlpacaConnectProvider` |
+| C16 | Login screenshot harness | 7 | `shoot-login.mjs` |
+| C17 | Commitlint config | 1 | `commitlint.config.js` |
+| C18 | Rstest config | 1 | `rstest.config.ts` |
+
+Note the split between C12/C13 (auth plumbing + the `Authenticator`/`loginPage` shell) and where the
+*brand* actually lives: the `/login` canvas world is inside `loginPage()`'s inline template, which the
+AST sees as one node — again, identity density ≠ structural weight.
+
 ---
 
 # Graph Report - .  (2026-07-26)
