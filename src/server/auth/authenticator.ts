@@ -1281,6 +1281,33 @@ ${versionTag}
         ctx.fillStyle=hexA(ecol,(ei===warpIdx?1:0.9)*proj); ctx.textAlign="center"; ctx.fillText(ev.label, ex, ay-ah-4); }
       ctx.textAlign="start"; }
     ctx.textAlign="start"; ctx.restore();
+    // RSI oscillator lane, parallel below the candles during the walk — the overbought/oversold read
+    // that drives entries + profit-taking, aligned tick-for-tick with the realized tape above it.
+    if(p.walk>0 && realized.length>3){
+      var dxL=W/(SPAN-1), comb=price.slice(0,nowIdx+1).concat(realized), rl2=realized.length;
+      var lt=SY(loP)+18, lh=40; if(lt+lh>field.bottom-6) lt=field.bottom-6-lh; var lb=lt+lh;
+      var x0L=nowSX+dxL*zoom, xNL=nowSX+rl2*dxL*zoom;
+      function ryL(v){ return lb-(clamp01(v/100))*lh; }
+      ctx.save(); ctx.globalAlpha=A*proj;
+      ctx.fillStyle=hexA(css("--bg")||"#0B0F14",0.5); ctx.fillRect(x0L, lt-2, xNL-x0L, lh+4);   // dark backing separates the lane from the P/L bands
+      ctx.fillStyle=hexA(neg,0.06); ctx.fillRect(x0L, ryL(100), xNL-x0L, ryL(70)-ryL(100));   // overbought zone
+      ctx.fillStyle=hexA(pos,0.06); ctx.fillRect(x0L, ryL(30), xNL-x0L, ryL(0)-ryL(30));       // oversold zone
+      ctx.setLineDash([2,4]); ctx.lineWidth=1;
+      ctx.strokeStyle=hexA(neg,0.42); ctx.beginPath(); ctx.moveTo(x0L,ryL(70)); ctx.lineTo(xNL,ryL(70)); ctx.stroke();
+      ctx.strokeStyle=hexA(muted,0.25); ctx.beginPath(); ctx.moveTo(x0L,ryL(50)); ctx.lineTo(xNL,ryL(50)); ctx.stroke();
+      ctx.strokeStyle=hexA(pos,0.42); ctx.beginPath(); ctx.moveTo(x0L,ryL(30)); ctx.lineTo(xNL,ryL(30)); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      for(var rk=0;rk<rl2;rk++){ var rv=rsi(comb.slice(0,nowIdx+2+rk),14), rx=nowSX+(rk+1)*dxL*zoom;
+        rk?ctx.lineTo(rx,ryL(rv)):ctx.moveTo(rx,ryL(rv)); }
+      ctx.strokeStyle=hexA(accent,0.9); ctx.lineWidth=1.4; ctx.lineJoin="round";
+      ctx.shadowColor=accent; ctx.shadowBlur=5; ctx.stroke(); ctx.shadowBlur=0;
+      ctx.font="700 8px "+mono; ctx.textAlign="left";
+      ctx.fillStyle=hexA(muted,0.7); ctx.fillText("RSI", x0L+2, lt-3);
+      ctx.fillStyle=hexA(neg,0.6); ctx.fillText("70", xNL+4, ryL(70)+3);
+      ctx.fillStyle=hexA(pos,0.6); ctx.fillText("30", xNL+4, ryL(30)+3);
+      ctx.textAlign="start"; ctx.restore();
+    }
     drawPanel(strat, sig, p, A);
     // signal callout is anchored to the aim point and fades out once the walk takes over
     if(p.aim>0) drawSignalCallout(sig, X0, yNow, A*clamp01(p.aim)*(1-clamp01(p.walk*1.4)));
