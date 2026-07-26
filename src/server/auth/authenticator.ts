@@ -1472,6 +1472,22 @@ ${versionTag}
     for(i=0;i<words.length;i++){ var test=line?line+" "+words[i]:words[i];
       if(ctx.measureText(test).width>maxW && line){ ctx.fillText(line,x,yy); line=words[i]; yy+=lh; n++; } else line=test; }
     ctx.fillText(line,x,yy); return n+1; }
+  // Line count wrapText WOULD produce for the given font/width — measured without drawing, so a card
+  // can size its backing to its content before laying the text in.
+  function wrapCount(s,maxW,lh,font){ if(!s) return 1; var pf=ctx.font; ctx.font=font; var words=s.split(" "),line="",n=0,i;
+    for(i=0;i<words.length;i++){ var test=line?line+" "+words[i]:words[i];
+      if(ctx.measureText(test).width>maxW && line){ line=words[i]; n++; } else line=test; }
+    ctx.font=pf; return n+1; }
+  function clamp(v,lo,hi){ return v<lo?lo:v>hi?hi:v; }
+  // Where a signal/recap card can sit without colliding: prefer the calm gutter to the LEFT of the entry
+  // (vertically centred on the reticle); but once the camera zooms and "now" sits near W·0.3 that gutter
+  // is eaten by the instrument panel — so fall back to the top headroom, right of the play title and
+  // clear of the totals chip. Returns {cx,cy}. (The play name + its title live at nowSX.)
+  function calloutPos(x, cw, ch){
+    var panelR=Math.round(W*0.045)+Math.min(W*0.2,238)+14, gutterL=panelR+12, left=x-cw-16;
+    if(left>=gutterL) return {cx:left, cy:clamp(nowSY-ch*0.5, field.top+4, field.bottom-ch-4)};
+    return {cx:clamp(nowSX+200, gutterL, Math.max(gutterL, W-cw-224)), cy:field.top+2};
+  }
   function money(n){ n=Math.round(n); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
     return (n<0?"−$":"+$")+s; }
 
@@ -1636,14 +1652,11 @@ ${versionTag}
     // how a console actually behaves, and it keeps the hero + focus stable (repeatedly-flagged bug).
     var termTop=field.top+22, TERM_H=6*15;   // 6 steps × line-height — the reserved terminal viewport
     drawTerminal(px, termTop, p, sig, strat, A*Math.min(1,p.on));
-    var y=termTop+TERM_H+14;   // fixed hero anchor
-    // The PLAY NAME lands as the hero once recommend_play has printed (project phase).
+    // The PLAY NAME + one-liner no longer live here — the chart IS the play's visual form, so the name
+    // labels the graph itself (drawn in drawForecast). This column is now the instrument readout only:
+    // the terminal's running programs, then the play's anatomy / Greeks / the inputs it's watching.
+    var y=termTop+TERM_H+22;
     ctx.globalAlpha=A*prjA;
-    ctx.font="700 30px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=22;
-    ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=25;
-    ctx.globalAlpha=A*prjA;
-    ctx.font="13px "+sans; ctx.fillStyle=hexA(muted,0.95);
-    y += wrapText(strat.desc, px, y, pw, 18)*18 + 14;
     drawAnatomy(px, y, A*prjA); y+=26;
     drawGreeks(px, y, A*prjA);   // the play's Greeks fingerprint (max P/L + outcome now live at the TARGET, far right)
     drawWatching(px, y+68, A*prjA);   // the inputs the desk is watching: underlying, fear/greed (VIX), premium (IV)
@@ -1785,29 +1798,37 @@ ${versionTag}
   function drawSignalCallout(sig, strat, x, y, A){ if(A<=0.01) return;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
-    // Anchor to the RIGHT of the entry, up near the top of the frame — clear of the left playbook panel.
-    var cw=228, ch=178, cx=Math.min(x+30, W-cw-16); var cy=field.top+4;
-    ctx.save(); ctx.globalAlpha=A;
-    ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(accent,0.5); ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(cx+16, cy+ch); ctx.lineTo(x,y); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle=hexA(bg,0.9); roundRect(cx,cy,cw,ch,8); ctx.fill();
-    ctx.strokeStyle=hexA(accent,0.55); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,8); ctx.stroke();
-    var px=cx+13, gw=cw-26, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("▣ SIGNAL DETECTED", px, yy); yy+=18;
     var rc=rsiV<30?pos:(rsiV>70?neg:txt);
-    ctx.font="700 11px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", px, yy);
-    ctx.fillStyle=hexA(rc,0.95); ctx.fillText(rsiV.toFixed(0), px+30, yy);
+    // A RETICLE marks the exact point on the tape where the condition tripped — the callout is an
+    // annotation OF that point, not a slab floating over the forecast.
+    ctx.save(); ctx.globalAlpha=A;
+    ctx.strokeStyle=hexA(rc,0.8); ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(x,y,4.5,0,7); ctx.stroke();
+    ctx.strokeStyle=hexA(rc,0.4); ctx.beginPath(); ctx.arc(x,y,8.5,0,7); ctx.stroke();
+    // The card is COMPACT and sits over the CALM frozen history to the LEFT of the entry, clear of the
+    // live bands on the right — essentials only (the RSI gauge, the condition, one-line why). Its height
+    // hugs the content; a hairline leader connects it back to the reticle so the association is legible.
+    var cw=196, gw=cw-26,
+        cueLines=wrapCount(sig?sig.sig:"", gw, 13, "700 9px "+mono),
+        whyLines=wrapCount(strat?strat.why:"", gw, 12, "9px "+mono),
+        ch=67+cueLines*13+4+whyLines*12+12,
+        cp=calloutPos(x, cw, ch), cx=cp.cx, cy=cp.cy;
+    ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(rc,0.42); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx+cw, cy+ch*0.5); ctx.lineTo(x-9, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=hexA(bg,0.8); roundRect(cx,cy,cw,ch,7); ctx.fill();
+    ctx.strokeStyle=hexA(rc,0.4); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,7); ctx.stroke();
+    // a thin accent spine on the left edge — reads as "wired into the signal", not a boxed panel
+    ctx.fillStyle=hexA(rc,0.7); ctx.fillRect(cx,cy+7,2,ch-14);
+    var px=cx+14, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText("◈ SIGNAL DETECTED", px, yy); yy+=20;
+    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(muted,0.9); ctx.fillText("RSI", px, yy);
+    ctx.fillStyle=hexA(rc,0.95); ctx.fillText(rsiV.toFixed(0), px+32, yy);
     var gx=px, gy=yy+8, gh=6;
     ctx.fillStyle=hexA(muted,0.16); ctx.fillRect(gx,gy,gw,gh);
     ctx.fillStyle=hexA(pos,0.22); ctx.fillRect(gx,gy,gw*0.3,gh);
     ctx.fillStyle=hexA(neg,0.22); ctx.fillRect(gx+gw*0.7,gy,gw*0.3,gh);
     var mp=gx+gw*clamp01(rsiV/100); ctx.fillStyle=rc; ctx.fillRect(mp-1.5,gy-2,3,gh+4);
-    yy=gy+gh+14; ctx.font="9px "+mono; ctx.fillStyle=hexA(accent,0.85); yy+=wrapText((sig?sig.sig:""), px, yy, gw, 12)*12+6;
-    ctx.strokeStyle=hexA(muted,0.25); ctx.beginPath(); ctx.moveTo(px,yy-8); ctx.lineTo(px+gw,yy-8); ctx.stroke();
-    ctx.font="700 8px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("WHY", px, yy); yy+=12;
-    ctx.font="9px "+mono; ctx.fillStyle=hexA(txt,0.9); yy+=wrapText(strat?strat.why:"", px, yy, gw, 12)*12+3;
-    ctx.font="700 8px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("IF", px, yy); yy+=12;
-    ctx.font="9px "+mono; ctx.fillStyle=hexA(accent,0.82); wrapText(strat?strat.hold:"", px, yy, gw, 12);
+    yy=gy+gh+15; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); yy+=wrapText((sig?sig.sig:""), px, yy, gw, 13)*13+4;
+    ctx.font="9px "+mono; ctx.fillStyle=hexA(txt,0.85); wrapText(strat?strat.why:"", px, yy, gw, 12);
     ctx.restore(); }
   // RETROSPECTIVE recap, shown once the play resolves: restates the play, confirms the condition held,
   // names the events that moved it, and books the result — so the user's read of the animation is
@@ -1815,15 +1836,18 @@ ${versionTag}
   function drawRecap(strat, sig, x, y, A){ if(A<=0.01||!strat) return;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
-    var cw=228, ch=162, cx=Math.min(x+30, W-cw-16), cy=field.top+4;
+    // Same organic frame as the signal card it replaces: compact, translucent, an accent SPINE, parked
+    // over the calm history to the LEFT of the entry — never a slab over the resolved candles.
+    var cw=196, ch=162, cp=calloutPos(x, cw, ch), cx=cp.cx, cy=cp.cy;
     var e=extrema(strat), uEx=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5),
         pl=dollarsAt(strat,e,payoffAt(strat.pts,uEx)), pct=Math.round(pl/(strat.maxP||1)*100),
         win=pl>=0, rcol=win?pos:neg;
     ctx.save(); ctx.globalAlpha=A;
-    ctx.fillStyle=hexA(bg,0.92); roundRect(cx,cy,cw,ch,8); ctx.fill();
-    ctx.strokeStyle=hexA(rcol,0.5); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,8); ctx.stroke();
-    var px=cx+13, gw=cw-26, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(rcol,0.9); ctx.fillText("▣ PLAYCALL RECAP", px, yy); yy+=18;
+    ctx.fillStyle=hexA(bg,0.8); roundRect(cx,cy,cw,ch,7); ctx.fill();
+    ctx.strokeStyle=hexA(rcol,0.4); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,7); ctx.stroke();
+    ctx.fillStyle=hexA(rcol,0.7); ctx.fillRect(cx,cy+7,2,ch-14);
+    var px=cx+14, gw=cw-26, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(rcol,0.9); ctx.fillText("◈ PLAYCALL RECAP", px, yy); yy+=18;
     ctx.font="700 12px "+mono; ctx.fillStyle=hexA(txt,0.95); ctx.fillText(strat.name, px, yy); yy+=16;
     ctx.font="9px "+mono; ctx.fillStyle=hexA(rcol,0.9); ctx.fillText((win?"✓ READ HELD":"✗ READ BROKE"), px, yy); yy+=14;
     ctx.fillStyle=hexA(txt,0.85); yy+=wrapText(strat.hold, px, yy, gw, 12)*12+3;
@@ -1955,6 +1979,18 @@ ${versionTag}
       ctx.strokeStyle=hexA(acol,0.9*proj); ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(Xf,yTgt,5+5*tpulse,0,7); ctx.stroke();
       var uT=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5);
       ctx.textAlign="right"; ctx.fillStyle=hexA(acol,0.95*proj); ctx.fillText("TARGET "+money(dollarsAt(strat,e,payoffAt(strat.pts,uT))), Xf-6, yTgt-9);
+    }
+    // PLAY NAME as the chart's OWN title — the graph is the play's visual representation, so it labels
+    // itself here (headroom above the top band, at the entry), not in a detached panel. An eyebrow ties
+    // it to the underlying + complexity class. Reserved so event labels steer clear.
+    if(W>=820 && proj>0.01){
+      var sans2=css("--sans")||"sans-serif", tnx=X0, tnY=SY(hiP)-12, teY=tnY-24;
+      ctx.save(); ctx.globalAlpha=A*proj; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText(playTicker+" · CLASS "+strat.tier, tnx, teY);
+      ctx.font="700 21px "+sans2; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=16;
+      ctx.fillText(strat.name, tnx, tnY); ctx.shadowBlur=0;
+      var tnw=ctx.measureText(strat.name).width; ctx.restore();
+      reserveBox(tnx-2, teY-11, tnx+Math.max(tnw,120)+4, tnY+3);
     }
     // Macro-event callouts — a dotted tick + label at each event the tape has reached, naming the
     // abnormal deviation there (earnings, CPI, …). This is what explains the less-normal wiggles.
