@@ -3,6 +3,7 @@ import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import { resolveAuth } from "../../src/server/auth/authenticator.js";
 import { type Session, signSession } from "../../src/server/auth/session.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
+import type { FeedbackInput, FeedbackResult } from "../../src/server/feedback-service.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "../../src/server/participant-service.js";
 
@@ -175,5 +176,88 @@ describe("dashboard-server /add", () => {
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
       expect((await fetch(`${base}/add`)).status).toBe(404);
     });
+  });
+});
+
+describe("dashboard-server /feedback", () => {
+  it("serves the form and files an issue on POST", async () => {
+    const calls: FeedbackInput[] = [];
+    const submitFeedback = (input: FeedbackInput): Promise<FeedbackResult> => {
+      calls.push(input);
+      return Promise.resolve({ ok: true, url: "https://github.com/x/y/issues/7", number: 7 });
+    };
+    await withServer({ hub: new ObservatoryHub(board()), submitFeedback }, async (base) => {
+      const form = await fetch(`${base}/feedback`);
+      expect(form.status).toBe(200);
+      expect(await form.text()).toContain("Share feedback");
+
+      const post = await fetch(`${base}/feedback`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          kind: "bug",
+          title: "It broke",
+          details: "here's how",
+        }).toString(),
+      });
+      expect(post.status).toBe(200);
+      expect(await post.text()).toContain("#7");
+      expect(calls[0]).toMatchObject({ kind: "bug", title: "It broke", details: "here's how" });
+    });
+  });
+
+  it("shows a friendly error when filing fails", async () => {
+    const submitFeedback = (): Promise<FeedbackResult> =>
+      Promise.resolve({ ok: false, error: "GitHub said no" });
+    await withServer({ hub: new ObservatoryHub(board()), submitFeedback }, async (base) => {
+      const post = await fetch(`${base}/feedback`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ kind: "idea", title: "hi" }).toString(),
+      });
+      expect(post.status).toBe(502);
+      expect(await post.text()).toContain("GitHub said no");
+    });
+  });
+
+  it("renders the form but reports 'not switched on' when no token is wired", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      expect((await fetch(`${base}/feedback`)).status).toBe(200); // form still renders
+      const post = await fetch(`${base}/feedback`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ kind: "bug", title: "x" }).toString(),
+      });
+      expect(post.status).toBe(200);
+      expect(await post.text()).toContain("isn't switched on");
+    });
+  });
+
+  it("is behind the auth gate", async () => {
+    const auth = resolveAuth({
+      SKYNET_SESSION_SECRET: "s",
+      SKYNET_GOOGLE_CLIENT_ID: "g",
+      SKYNET_GOOGLE_CLIENT_SECRET: "gs",
+      SKYNET_ALLOWED_EMAILS: "eric@gmail.com",
+    });
+    const cookie = `skynet_session=${encodeURIComponent(
+      signSession({ email: "eric@gmail.com", provider: "google", exp: Date.now() + 60_000 }, "s"),
+    )}`;
+    await withServer(
+      {
+        hub: new ObservatoryHub(board()),
+        ...(auth ? { auth } : {}),
+        submitFeedback: () => Promise.resolve({ ok: true, url: "u", number: 1 }),
+      },
+      async (base) => {
+        const anon = await fetch(`${base}/feedback`, { redirect: "manual" });
+        expect(anon.status).toBe(302);
+        expect(anon.headers.get("location")).toBe("/login");
+
+        const authed = await fetch(`${base}/feedback`, { headers: { cookie } });
+        expect(authed.status).toBe(200);
+        expect(await authed.text()).toContain("Share feedback");
+      },
+    );
   });
 });
