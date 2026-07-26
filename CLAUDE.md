@@ -99,7 +99,10 @@ _This "how we work" is Eric's to edit; it sharpens as he corrects it — treat c
 
 ## Ship loop
 
-- Branch off latest `origin/main` per change; small focused PRs; squash-merge on green.
+- Branch off latest `origin/main` per change **before editing** (`git checkout -B <branch> origin/main`);
+  small focused PRs; squash-merge on green. Branch-first avoids needing `git stash` — **don't use
+  `git stash` in this environment** (it has silently dropped stashed edits on pop). Subjects are
+  lowercase-led (commitlint rejects a capitalized first word — even "PRs"/"Barad-dûr").
 - **Commits & PRs are documents** (see `docs/ENGINEERING.md` → _Change communication_): Conventional-
   Commit subjects (lowercase-led, imperative); PRs lead with a plain-language **Summary** + **Why**, and
   bury the weeds **below the fold** (`<details>`), written so an analytical-but-non-technical reader gets
