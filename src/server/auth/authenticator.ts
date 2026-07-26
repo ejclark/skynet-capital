@@ -1071,6 +1071,15 @@ ${versionTag}
       { b:near, dim:1.0,  par:1.0,  base:0,       depth:6, code:true,  haze:0 }        // foreground, full detail
     ];
     skyline=near;   // keep the near layer as the skyline reference for the empire-aura pass
+    // Marquee signage — the skyline as a live market surface: mount ticker billboards on the widest
+    // near-layer towers (not the crowned spires, which read cleaner bare). The real tickers threaded
+    // through the plays light the city, each with a seeded base price that ticks green/red over time.
+    var pool=[["NVDA",178],["CRWV",92],["TSLA",340],["AMD",165],["MSFT",430],["GOOG",195],["AVGO",240],["AAPL",232],["META",620]];
+    var cand=[]; for(si=0;si<near.length;si++){ var nb=near[si]; if(!nb.crown && nb.w>=58 && nb.h>70) cand.push(si); }
+    cand.sort(function(a,b){ return near[b].w-near[a].w; });
+    var boards=Math.min(3, cand.length), pk=(Math.random()*pool.length)|0;
+    for(si=0;si<boards;si++){ var bb=near[cand[si]], pr=pool[(pk+si)%pool.length];
+      bb.board={ sym:pr[0], base:pr[1], cur:pr[1], dir:1, nextT:20+si*13, fy:0.16+noise(bb.seed)*0.16 }; }
   }
   // Buildings are BUILT FROM the matrix code — like the walls of the hallway: dark structural masses
   // whose faces are a fine, mostly-dim field of glyphs, with a sparse scatter of brighter "lit window"
@@ -1132,6 +1141,32 @@ ${versionTag}
           if(noise(wc)<0.18){ var wf=0.5+0.5*Math.sin(rainT*0.04+wx+wy); rctx.fillStyle=hexA(noise(wc+2.2)<0.2?"#8DFBE9":accent,(0.12+wf*0.20)*dim); rctx.fillRect(wx,wy,2,2); } } }
     }
   }
+  // Ticker billboards mounted on the near-layer towers — the skyline reads as a live market.
+  // Each sign ticks its seeded price on a slow, seeded walk and glows green/red on the move.
+  function drawBillboards(w,h,accent){
+    var pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", mono=css("--mono")||"monospace";
+    var L=cityLayers[cityLayers.length-1], ox=cityPX*L.par, bottom=h-L.base, i;
+    rctx.save(); rctx.textBaseline="middle"; rctx.textAlign="center";
+    for(i=0;i<L.b.length;i++){ var b=L.b[i], bd=b.board; if(!bd) continue;
+      if(rainT>=bd.nextT){ var chg=bd.base*(noise(b.seed+rainT*0.31)*2-1)*0.006;
+        var nx=bd.cur+chg; if(Math.abs(nx-bd.base)>bd.base*0.045) nx=bd.cur-chg;   // reflect at ±4.5%
+        bd.dir=(nx>=bd.cur)?1:-1; bd.cur=nx; bd.nextT=rainT+30+((noise(b.seed+i)*46)|0); }
+      var up=bd.dir>0, col=up?pos:neg, arw=up?"▲":"▼";
+      var bx=b.x+ox, top=bottom-b.h, pw=Math.min(b.w-8, 68), ph=15;
+      var cx=bx+b.w/2, cy=top+b.h*bd.fy, px0=cx-pw/2, py0=cy-ph/2;
+      var flick=0.72+0.28*Math.pow(0.5+0.5*Math.sin(rainT*0.09+b.seed),2);   // faint neon flicker
+      rctx.fillStyle=hexA("#01050A",0.82); rctx.fillRect(px0,py0,pw,ph);       // sign backing
+      rctx.strokeStyle=hexA(col,0.55*flick); rctx.lineWidth=1; rctx.strokeRect(px0+0.5,py0+0.5,pw-1,ph-1);
+      rctx.save(); rctx.globalCompositeOperation="lighter";                    // sign glow
+      rctx.fillStyle=hexA(col,0.10*flick); rctx.fillRect(px0-2,py0-2,pw+4,ph+4); rctx.restore();
+      var label=bd.sym+" "+bd.cur.toFixed(2);
+      rctx.font="700 8px "+mono; rctx.fillStyle=hexA(accent,0.92*flick);
+      rctx.fillText(label, cx-4, cy);                                          // ticker + price
+      rctx.fillStyle=hexA(col,0.95*flick);
+      rctx.fillText(arw, px0+pw-6, cy);                                        // up/down arrow
+    }
+    rctx.restore();
+  }
   function drawSkyline(w,h){ if(!cityLayers.length||!rctx) return;
     var accent=css("--accent")||"#35D0BA", bg=css("--bg")||"#0B0F14", flip=Math.floor(rainT/14), i, li;
     cityPX += (cityPXt-cityPX)*0.08;   // eased pointer parallax
@@ -1161,6 +1196,7 @@ ${versionTag}
       for(i=0;i<L.b.length;i++){ var b=L.b[i]; if(b.h>maxH)maxH=b.h; drawBuilding(L, b, b.x+ox, bottom-b.h, bottom, accent, bg, flip); }
       if(L.haze>0){ var vy=bottom-maxH-8; rctx.fillStyle=hexA(bg, L.haze*4.5); rctx.fillRect(0, vy, w, h-vy); }   // atmospheric haze veil
     }
+    drawBillboards(w,h,accent);   // ticker marquees ride on top of the near towers — the market city
   }
   try{ rctx = rcanvas && rcanvas.getContext ? rcanvas.getContext("2d") : null; }catch(e){ rctx=null; }
   function rainResize(){
