@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/ejclark/skynet-capital/compare/v1.18.0...v1.19.0) (2026-07-26)
+
+
+### Features
+
+* **login:** smoothed line through candles + directional event arrows ([#36](https://github.com/ejclark/skynet-capital/issues/36)) ([b04792d](https://github.com/ejclark/skynet-capital/commit/b04792d74235c063ffc7025c367c89e00e37ba39))
+
 # [1.18.0](https://github.com/ejclark/skynet-capital/compare/v1.17.0...v1.18.0) (2026-07-26)
 
 
