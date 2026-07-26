@@ -747,9 +747,13 @@ ${versionTag}
     // entry price to the take-profit price over the full width (natural wiggle on top), reaching the
     // exit level only at the right edge. So plays traverse the frame and resolve there — never a
     // 3-point insta-close — while the booked amount still varies via where targetPrice sits.
+    // Carry the market's OWN character: same momentum (0.88) as the ambient walk, a wiggle scaled to
+    // the band so real deviations show (not a flat glide), only a GENTLE pull toward the moving target,
+    // plus one-off event shocks. So the line dips and recovers like a real tape and still lands at the
+    // exit price by the right edge.
     while(realized.length<want){ var i=realized.length, last=i?realized[i-1]:price[nowIdx];
       var moving=signalPrice+(targetPrice-signalPrice)*easeIO((i+1)/cap);
-      t++; pvR = pvR*0.80 + (moving-last)*0.34 + (noise(t*0.017)-0.5)*0.5*regimeVol;
+      t++; pvR = pvR*0.88 + (noise(t*0.017)-0.5)*volScale*0.03*playVol + (moving-last)*0.10 + eventImpulse(i,cap);
       realized.push(Math.max(5, last+pvR)); }
     while(realized.length>want) realized.pop();   // trim if the walk was scrubbed back
   }
@@ -1171,6 +1175,15 @@ ${versionTag}
       var uT=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5);
       ctx.textAlign="right"; ctx.fillStyle=hexA(acol,0.95*proj); ctx.fillText("TARGET "+money(dollarsAt(strat,e,payoffAt(strat.pts,uT))), Xf-6, yTgt-9);
     }
+    // Macro-event callouts — a dotted tick + label at each event the tape has reached, naming the
+    // abnormal deviation there (earnings, CPI, …). This is what explains the less-normal wiggles.
+    if(proj>0.01){ ctx.font="700 9px "+mono;
+      for(var ei=0;ei<events.length;ei++){ var ev=events[ei]; if(!ev.fired) continue;
+        var ex=X0+(Xf-X0)*ev.f, ecol=ev.mag<0?neg:accent;
+        ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(ecol,0.5*proj); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(ex,SY(hiP)); ctx.lineTo(ex,SY(loP)); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle=hexA(ecol,0.9*proj); ctx.textAlign="center"; ctx.fillText("◆ "+ev.label, ex, SY(hiP)-6); }
+      ctx.textAlign="start"; }
     ctx.textAlign="start"; ctx.restore();
     drawPanel(strat, sig, p, A);
     // signal callout is anchored to the aim point and fades out once the walk takes over
@@ -1201,7 +1214,16 @@ ${versionTag}
   // Three-act playcall: on fire we FREEZE history at nowIdx (stop pushing price[]) so the trend
   // holds still; in Act 3 a separate realized[] pen draws rightward INTO the prediction, overtaking
   // the dotted forecast, then folds back into price[] on zoom-out so ambient continues from reality.
-  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null, exitFrac=1;
+  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null, exitFrac=1, events=[], playVol=1;
+  // Macro events (earnings, CPI, …) that jolt the trend and get a callout — they explain the less
+  // normal-looking deviations of the realized line, and add realism + a teaching moment.
+  var EVENTS=["EARNINGS","CPI PRINT","FOMC","JOBS REPORT","GUIDANCE","GEOPOLITICAL"];
+  function scheduleEvents(){ events=[]; var nE=Math.random()<0.4?2:1, k;
+    for(k=0;k<nE;k++){ events.push({ f:0.28+Math.random()*0.5, label:EVENTS[(Math.random()*EVENTS.length)|0],
+      mag:(Math.random()<0.5?-1:1)*volScale*(0.12+Math.random()*0.16), fired:false }); } }
+  function eventImpulse(i, cap){ var f=i/cap, s=0, k;
+    for(k=0;k<events.length;k++){ if(!events[k].fired && f>=events[k].f){ events[k].fired=true; s+=events[k].mag; } }
+    return s; }
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -1341,7 +1363,8 @@ ${versionTag}
     manualPlay=manual; paceScale=1; zoomRippled=false;   // even pace for auto + manual (transport lets you pause/step)
     nowIdx=price.length-1; realized=[]; pvR=pv;   // freeze history; seed realized momentum from the live move
     stepTarget=null; setPaused(false);            // fresh transport state each playcall
-    armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
+    armForecast(curStrat); playVol=1.0+Math.random()*0.7; scheduleEvents();   // lively, varied trace + macro events
+    highlightPlay(manual?sig.i:-1); }
   function loop(now){
     if(!running) return;
     if(now-last > 50){ var dt=now-last; last=now; measureField(); fieldStep();
