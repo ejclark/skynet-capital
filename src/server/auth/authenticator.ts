@@ -1139,6 +1139,22 @@ ${versionTag}
     var skyTop=h; for(i=0;i<skyline.length;i++){ var st=h-skyline[i].h; if(st<skyTop) skyTop=st; }
     var ag=rctx.createLinearGradient(0,skyTop-96,0,skyTop+30); ag.addColorStop(0,hexA(accent,0)); ag.addColorStop(1,hexA(accent,0.05));
     rctx.save(); rctx.globalCompositeOperation="lighter"; rctx.fillStyle=ag; rctx.fillRect(0,skyTop-96,w,126); rctx.restore();
+    // Volumetric light shafts raking DOWN through the skyline — god-rays that catch the towers and haze
+    // for depth. Drawn BEHIND the tower layers (below), so the near towers occlude/silhouette against
+    // them; drifting dust motes inside each shaft sell the volumetric read.
+    rctx.save(); rctx.globalCompositeOperation="lighter";
+    for(var sh=0;sh<3;sh++){
+      var drift=Math.sin(rainT*0.006+sh*2.1)*w*0.05, sx=w*(0.22+0.29*sh)+drift+cityPX*0.3;
+      var topY=skyTop-70, botY=h, wTop=7+sh*3, wBot=50+sh*18, lean=(sh-1)*90;
+      var g2=rctx.createLinearGradient(sx,topY,sx,botY);
+      g2.addColorStop(0,hexA(accent,0.11)); g2.addColorStop(0.55,hexA(accent,0.05)); g2.addColorStop(1,hexA(accent,0));
+      rctx.fillStyle=g2; rctx.beginPath();
+      rctx.moveTo(sx-wTop,topY); rctx.lineTo(sx+wTop,topY);
+      rctx.lineTo(sx+wBot+lean,botY); rctx.lineTo(sx-wBot+lean,botY); rctx.closePath(); rctx.fill();
+      for(var dm=0;dm<7;dm++){ var f=(rainT*0.004+dm/7+sh*0.3)%1, my=lerp(botY,topY,f), mw=lerp(wBot,wTop,f);
+        var mx=sx+lean*(1-f)+(noise(sh*10+dm)-0.5)*mw*1.5;
+        rctx.fillStyle=hexA(accent,0.16*(1-Math.abs(f-0.5))); rctx.fillRect(mx-0.8,my-0.8,1.7,1.7); } }
+    rctx.restore();
     rctx.font="9px "+(css("--mono")||"monospace");
     // Back to front: FAR → MID → NEAR, each shifted by pointer parallax, then veiled with haze to recede.
     for(li=0; li<cityLayers.length; li++){ var L=cityLayers[li], ox=cityPX*L.par, bottom=h-L.base, maxH=0;
