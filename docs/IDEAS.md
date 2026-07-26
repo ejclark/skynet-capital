@@ -33,6 +33,13 @@ Eric-sourced.
   keep the system extensible to adopt others' ideas. Confirm the pantheon direction with Eric before
   broad rollout. (task #79; Sauron + the Eye of Sauron are the first thread.)
 
+### Feedback / engagement
+- **Gamify feedback as "side quests"** — the core group skews D&D/gamer, so framing idea-contribution
+  as accepting/proposing side quests could organically pique interest. v1 shipped (the `/feedback`
+  "idea" kind is now a 🗺️ Side quest). Deeper version: a light quest board — proposed side quests
+  visible, upvotable, with playful status (open → accepted → shipped), tied into the lore universe.
+  _(src: Eric · while: extending the Claude side-quest idea system)_
+
 ### Side quests (surfaced by Claude while working — proposals to prune)
 - **Eye searchlight sweep + drifting embers** — at rest, a slow narrow beam from the Eye scans the
   skyline, and embers drift up from the tower; deepens the lore anchor without stealing focus.

@@ -536,7 +536,7 @@ doing. It's for learning the plays and having fun — <b>no real money, ever</b>
 </div>
 <a class="cta" href="/login">Get started → Sign in</a>
 <p class="fineprint">Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.<br>
-Found a bug or have an idea? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
+Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
     true,
   );
 }
@@ -600,14 +600,14 @@ function feedbackFormHtml(enabled: boolean): string {
   return addShell(
     "Feedback — Skynet Capital",
     `<h1>Share feedback</h1>
-<p class="lede">Found a bug, want an improvement, or have a wild idea? Tell us here — it goes straight to the team. <b>No GitHub account needed.</b></p>
+<p class="lede">Found a bug, want an improvement, or spotted a side quest? Tell us here — it goes straight to the team. <b>No GitHub account needed.</b></p>
 ${banner}
 <form method="post" action="/feedback">
   <label>What kind?
     <select name="kind">
       <option value="bug">🐞 Bug — something's broken or wrong</option>
       <option value="feature" selected>✨ Feature — make something better</option>
-      <option value="idea">💡 Idea — a bigger what-if</option>
+      <option value="idea">🗺️ Side quest — an idea worth exploring</option>
     </select>
   </label>
   <label>Title<input name="title" required maxlength="120" placeholder="Short summary"></label>
