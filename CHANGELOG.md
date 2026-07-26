@@ -1,3 +1,10 @@
+# [1.65.0](https://github.com/ejclark/skynet-capital/compare/v1.64.0...v1.65.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** two-city empire skylines on /compare ([#112](https://github.com/ejclark/skynet-capital/issues/112)) ([af0f097](https://github.com/ejclark/skynet-capital/commit/af0f097adb6754a3ae5e8233bb943e2b1ea79ffe))
+
 # [1.64.0](https://github.com/ejclark/skynet-capital/compare/v1.63.0...v1.64.0) (2026-07-26)
 
 
