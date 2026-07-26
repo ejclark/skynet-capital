@@ -1,3 +1,10 @@
+# [1.90.0](https://github.com/ejclark/skynet-capital/compare/v1.89.0...v1.90.0) (2026-07-26)
+
+
+### Features
+
+* **login:** full-width playcall + eye backlight + fire/electric energy zones ([#157](https://github.com/ejclark/skynet-capital/issues/157)) ([b405a2d](https://github.com/ejclark/skynet-capital/commit/b405a2d150a021007642a651eb2b4121b78d9196))
+
 # [1.89.0](https://github.com/ejclark/skynet-capital/compare/v1.88.1...v1.89.0) (2026-07-26)
 
 
