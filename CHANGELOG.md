@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/ejclark/skynet-capital/compare/v1.13.0...v1.14.0) (2026-07-26)
+
+
+### Features
+
+* **login:** playcall transport — pause and step through the acts ([#28](https://github.com/ejclark/skynet-capital/issues/28)) ([f0f6928](https://github.com/ejclark/skynet-capital/commit/f0f6928b53d175efc575555d166fb03a1f0cb7f5))
+
 # [1.13.0](https://github.com/ejclark/skynet-capital/compare/v1.12.0...v1.13.0) (2026-07-26)
 
 
