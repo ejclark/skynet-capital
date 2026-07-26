@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/ejclark/skynet-capital/compare/v1.16.0...v1.17.0) (2026-07-26)
+
+
+### Features
+
+* **login:** roaming spotlights scan the tape for signals ([#34](https://github.com/ejclark/skynet-capital/issues/34)) ([0e4bafb](https://github.com/ejclark/skynet-capital/commit/0e4bafb2ace64f3bc90c675c3e096ffe650a561f))
+
 # [1.16.0](https://github.com/ejclark/skynet-capital/compare/v1.15.0...v1.16.0) (2026-07-26)
 
 
