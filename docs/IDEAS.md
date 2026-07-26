@@ -41,11 +41,6 @@ Eric-sourced.
   _(src: Eric · while: extending the Claude side-quest idea system)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
-- **Lore cards need data-model threading** — `graphify path SauronPersona → renderIndividualBody()`
-  showed the `/u/:id` renderer consumes `ParticipantSnapshot`, not `Persona`. To surface persona
-  lore/character on a profile, thread persona identity into the snapshot (or a `personaId` → identity
-  lookup) — do NOT just import the persona into the renderer. Unblocks the mechanism half of #79.
-  _(src: Claude · while: exploring Graphify against the lore backlog)_
 - **Machine-checkable brand cohesion (`brand.json`)** — emit tokens + anchor→node bindings + per-scope
   rules so BCP's *Enforce* step can lint deliverables against the brand automatically (per community
   scope). The deeper half of the BCP × Graphify integration. _(src: Claude · while: running Graphify)_
@@ -95,6 +90,8 @@ _(nothing right now)_
 
 ## Shipped (recent)
 
+- Persona character cards on `/u/:id` (lore mechanism half of #79) — persona-lore registry threaded
+  via `personaId`, the approach Graphify's `path` query pointed to — PR (this)
 - Eye of Sauron crowns a left-side empire tower and commands the tractor beam — PR #88, #89
 - Sauron persona (the cold order-imposer bot) — PR #87
 - Taller RSI oscillator lane — PR #86
