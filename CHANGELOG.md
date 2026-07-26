@@ -1,3 +1,10 @@
+# [1.38.0](https://github.com/ejclark/skynet-capital/compare/v1.37.0...v1.38.0) (2026-07-26)
+
+
+### Features
+
+* **login:** spotlight noteworthy candles during the execute walk ([#58](https://github.com/ejclark/skynet-capital/issues/58)) ([081ecf5](https://github.com/ejclark/skynet-capital/commit/081ecf50ddf3a42c7f3ae3607df38cc6d88e5f88))
+
 # [1.37.0](https://github.com/ejclark/skynet-capital/compare/v1.36.0...v1.37.0) (2026-07-26)
 
 
