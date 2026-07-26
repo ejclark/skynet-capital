@@ -1051,6 +1051,12 @@ ${versionTag}
       hold:"Keeps the premium while price stays above the short put.",
       pts:[[0,-1],[0.4,1],[1,1]], strikes:[0.4], maxP:520, maxL:-2600, tier:102 }
   ];
+  // Greeks "fingerprint" — the net position's [Δ delta (direction), Θ theta (time decay),
+  // V vega (vol exposure), Γ gamma (acceleration)] normalized -1..1. Teaches what each play is MADE
+  // of: e.g. a condor is +theta / -vega (you want calm + time), a strangle is -theta / +vega.
+  var _GK=[[0.0,0.8,-0.7,-0.5],[0.0,-0.8,0.9,0.7],[0.0,0.9,-0.9,-0.8],[0.0,0.6,-0.4,-0.3],
+    [0.7,-0.1,0.15,0.2],[0.5,-0.2,0.3,0.3],[0.5,0.4,-0.3,-0.2],[0.45,0.4,-0.3,-0.2]];
+  for(var _gi=0;_gi<STRATS.length;_gi++) STRATS[_gi].gk=_GK[_gi];
   // Map a normalized payoff v∈[minY,maxY] to asymmetric dollars using the play's own max P / max L.
   function dollarsAt(strat, e, v){ if(v>=0) return e.maxY>0?(v/e.maxY)*strat.maxP:0;
     return e.minY<0?(v/e.minY)*strat.maxL:0; }
@@ -1093,6 +1099,22 @@ ${versionTag}
     ctx.fillStyle=hexA(neg,0.95); ctx.fillText("● LOSS", px+78, y);
     ctx.fillStyle=hexA(muted,0.95); ctx.fillText("◆ BREAKEVEN", px+142, y);
     ctx.restore();
+  }
+  // Greeks fingerprint: four signed mini-bars (Δ direction, Θ decay, V vol, Γ accel) — up/green for a
+  // positive exposure, down/red for negative — so the play's "shape" is legible at a glance.
+  function drawGreeks(px, y, A){ var g=STRATS[curStrat]&&STRATS[curStrat].gk; if(!g) return;
+    var pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149", muted=css("--muted")||"#8B9AAB",
+        txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", labs=["Δ","Θ","V","Γ"];
+    ctx.save(); ctx.globalAlpha=A; ctx.textAlign="left";
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("GREEKS", px, y);
+    ctx.font="700 8px "+mono; ctx.fillStyle=hexA(muted,0.45); ctx.fillText("Δ dir · Θ decay · V vol · Γ accel", px+52, y);
+    var bw=12, gap=30, bx=px, mid=y+22, H=13;
+    for(var i=0;i<4;i++){ var v=g[i], col=v>=0?pos:neg, bh=Math.max(1,Math.abs(v)*H);
+      ctx.strokeStyle=hexA(muted,0.22); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(bx,mid); ctx.lineTo(bx+bw,mid); ctx.stroke();
+      ctx.fillStyle=hexA(col,0.82); if(v>=0) ctx.fillRect(bx,mid-bh,bw,bh); else ctx.fillRect(bx,mid,bw,bh);
+      ctx.fillStyle=hexA(col,0.95); ctx.font="700 9px "+mono; ctx.textAlign="center"; ctx.fillText(labs[i], bx+bw/2, mid+22);
+      bx+=gap; }
+    ctx.textAlign="left"; ctx.restore();
   }
 
   // The bot's job, made visible: it INGESTS data, DETECTS a signal, builds a FORECAST, then
@@ -1164,7 +1186,8 @@ ${versionTag}
     ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT", px, y);
     ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(strat.maxP), px+col, y); ctx.textAlign="left"; y+=19;
     ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(strat.maxL), px+col, y); ctx.textAlign="left"; y+=25;
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(strat.maxL), px+col, y); ctx.textAlign="left"; y+=24;
+    drawGreeks(px, y, A*prjA); y+=58;   // the play's Greeks fingerprint (bars + letters need clearance)
     ctx.globalAlpha=A;
     if(p.resolve>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=14;
       var pctOfMax = strat.maxP>0 ? Math.round(pl/strat.maxP*100) : 0;
