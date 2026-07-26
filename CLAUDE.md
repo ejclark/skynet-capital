@@ -79,5 +79,9 @@ proximity that makes it worth revisiting. Eric can tell Claude to stop logging a
   work (`npm run shoot:login`, or an offline server render).
 - **Inline login canvas JS lives in a TS template literal — no backticks or `${}` inside it** (a
   recurring TS1005 trap). Honor `prefers-reduced-motion` for anything animated.
+- **Structural map:** [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md) is a Graphify knowledge
+  graph of the repo. Navigate fast with `graphify explain <Node>` / `graphify query "<q>"` /
+  `graphify path A B`; after material code changes run `graphify update .` (free, no API) and refresh
+  the doc. It feeds brand-anchor selection — see [`docs/BCP-GRAPHIFY.md`](docs/BCP-GRAPHIFY.md).
 - Conventional Commits (lowercase-led). Don't open a PR unless asked — but in autonomous/burn-down
   mode, opening + squash-merging small green PRs is the expected loop.
