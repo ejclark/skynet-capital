@@ -1509,31 +1509,34 @@ ${versionTag}
     // charge) that CRACKLES with lightning, and together they haul it into the framed position.
     var pull=easeIO(clamp01(p.zoom))*(1-clamp01(p.walk))*(1-p.out);
     if(pull>0.02){
-      // Emitters = crowned tower spire tips, in screen space (rain + stage canvases share the viewport).
+      // Emitters = crowned tower spire tips. The towers PULL, so only those to the LEFT of the present
+      // exert the tractor (the two leftmost) — the beams reach in from the left and haul it over.
       var em=[], ei; for(ei=0;ei<skyline.length;ei++){ var tb=skyline[ei]; if(tb.crown){
         em.push({ x:tb.x+cityPX+tb.w/2, y:H-tb.h-(tb.ant||0)-(tb.spire||0), seed:tb.seed }); } }
-      if(em.length){ ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.lineCap="round";
-        var flick=0.55+0.45*noise(pbGlyphT*0.6);   // global electric flicker
-        // jagged lightning polyline from an emitter to the present, jittered perpendicular to the beam
+      em.sort(function(a,b){ return a.x-b.x; });
+      var emL=em.filter(function(t){ return t.x < nowSX-30; }); if(!emL.length) emL=em;   // must pull from the left
+      if(emL.length>2) emL=emL.slice(0,2);
+      if(emL.length){ ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.lineCap="round";
+        var flick=0.6+0.4*noise(pbGlyphT*0.6);   // gentle energy flicker
+        // a faint jittered filament for life — kept subtle so the smooth tractor cone leads.
         var bolt=function(x0,y0,x1,y1,amp,seed,col,al,wd){ var segs=11, ddx=x1-x0, ddy=y1-y0, nx=-ddy, ny=ddx, nl=Math.sqrt(nx*nx+ny*ny)||1; nx/=nl; ny/=nl;
           ctx.beginPath(); ctx.moveTo(x0,y0);
-          for(var s=1;s<segs;s++){ var t=s/segs, j=(noise(seed+s*3.1+pbGlyphT*0.28)-0.5)*amp*Math.sin(t*Math.PI);
+          for(var s=1;s<segs;s++){ var t=s/segs, j=(noise(seed+s*3.1+pbGlyphT*0.22)-0.5)*amp*Math.sin(t*Math.PI);
             ctx.lineTo(x0+ddx*t+nx*j, y0+ddy*t+ny*j); }
           ctx.lineTo(x1,y1); ctx.strokeStyle=hexA(col,al); ctx.lineWidth=wd; ctx.stroke(); };
-        for(var k=0;k<em.length;k++){ var e=em[k];
+        for(var k=0;k<emL.length;k++){ var e=emL[k];
           // charged node at the spire tip
-          var ng=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,13); ng.addColorStop(0,hexA("#EAFFFA",0.72*pull*flick)); ng.addColorStop(1,hexA(accent,0));
-          ctx.fillStyle=ng; ctx.beginPath(); ctx.arc(e.x,e.y,13,0,7); ctx.fill();
-          // soft straight beam glow (the tractor cone)
-          var dxb=nowSX-e.x, dyb=nowSY-e.y, bl=Math.sqrt(dxb*dxb+dyb*dyb)||1, pnx=-dyb/bl, pny=dxb/bl, bw=lerp(2.5,8,pull);
-          var bg3=ctx.createLinearGradient(e.x,e.y,nowSX,nowSY); bg3.addColorStop(0,hexA(accent,0.16*pull)); bg3.addColorStop(1,hexA(accent,0.05*pull));
-          ctx.beginPath(); ctx.moveTo(e.x+pnx*3,e.y+pny*3); ctx.lineTo(nowSX+pnx*bw,nowSY+pny*bw); ctx.lineTo(nowSX-pnx*bw,nowSY-pny*bw); ctx.lineTo(e.x-pnx*3,e.y-pny*3); ctx.closePath(); ctx.fillStyle=bg3; ctx.fill();
-          // lightning: a wide green halo bolt + a bright white-hot core bolt, crackling
-          bolt(e.x,e.y,nowSX,nowSY, 30*pull, e.seed, accent, 0.5*pull*flick, 2.6);
-          bolt(e.x,e.y,nowSX,nowSY, 18*pull, e.seed+11, "#EAFFFA", 0.8*pull*flick, 1.1);
-          // charge packets streaming down the beam into the present
-          for(var s2=0;s2<4;s2++){ var f=(pbGlyphT*0.045+s2/4+k*0.19)%1, cxp=lerp(e.x,nowSX,f), cyp=lerp(e.y,nowSY,f);
-            ctx.fillStyle=hexA("#EAFFFA",0.7*(1-Math.abs(f-0.65))*pull); ctx.fillRect(cxp-1.3,cyp-1.3,2.6,2.6); } }
+          var ng=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,12); ng.addColorStop(0,hexA("#EAFFFA",0.6*pull*flick)); ng.addColorStop(1,hexA(accent,0));
+          ctx.fillStyle=ng; ctx.beginPath(); ctx.arc(e.x,e.y,12,0,7); ctx.fill();
+          // the TRACTOR CONE — a strong smooth beam glow doing the pulling (brighter + wider than before)
+          var dxb=nowSX-e.x, dyb=nowSY-e.y, bl=Math.sqrt(dxb*dxb+dyb*dyb)||1, pnx=-dyb/bl, pny=dxb/bl, bw=lerp(3.5,13,pull);
+          var bg3=ctx.createLinearGradient(e.x,e.y,nowSX,nowSY); bg3.addColorStop(0,hexA(accent,0.10*pull)); bg3.addColorStop(0.5,hexA(accent,0.20*pull)); bg3.addColorStop(1,hexA(accent,0.30*pull));
+          ctx.beginPath(); ctx.moveTo(e.x+pnx*4,e.y+pny*4); ctx.lineTo(nowSX+pnx*bw,nowSY+pny*bw); ctx.lineTo(nowSX-pnx*bw,nowSY-pny*bw); ctx.lineTo(e.x-pnx*4,e.y-pny*4); ctx.closePath(); ctx.fillStyle=bg3; ctx.fill();
+          // a single faint filament (much less lightning than before)
+          bolt(e.x,e.y,nowSX,nowSY, 12*pull, e.seed+11, "#CFFBEF", 0.34*pull*flick, 1.1);
+          // charge streaming FROM the present toward the tower — the matter being pulled in
+          for(var s2=0;s2<6;s2++){ var f=(pbGlyphT*0.05+s2/6+k*0.17)%1, cxp=lerp(nowSX,e.x,f), cyp=lerp(nowSY,e.y,f);
+            ctx.fillStyle=hexA("#EAFFFA",0.6*(1-f)*pull); ctx.fillRect(cxp-1.2,cyp-1.2,2.4,2.4); } }
         // the present, seized by the combined pull — a charged, imploding well
         var wp=0.6+0.4*Math.sin(pbGlyphT*0.4);
         var pg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,24); pg.addColorStop(0,hexA("#EAFFFA",0.5*pull*wp)); pg.addColorStop(0.5,hexA(accent,0.3*pull)); pg.addColorStop(1,hexA(accent,0));
