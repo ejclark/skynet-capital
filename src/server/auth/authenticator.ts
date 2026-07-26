@@ -1626,11 +1626,13 @@ ${versionTag}
     // Information unfolds in step with the play: pipeline first, then the signal + strategy name as
     // the spotlight aims, then the plain-English idea + anatomy + pivots as the forecast projects.
     var prjA=easeIO(clamp01(p.project));
-    // Hierarchy: the PLAY NAME is the hero of this panel; the terminal log above narrates the process.
-    var y=field.top+22;
-    // The terminal log IS the process narrative now — it prints ingest→detect→assess→recommend→
-    // place→scrape as the play unfolds, so the pipeline row + signal line are absorbed into its story.
-    y=drawTerminal(px, y, p, sig, strat, A*Math.min(1,p.on)); y+=14;
+    // The terminal is a FIXED FRAME: it reserves its full height (all 6 program lines) and prints
+    // WITHIN that region as the play unfolds — new lines never reflow the panel. The PLAY NAME (the
+    // hero) is pinned at a stable anchor BELOW the frame, so printing can never push it down. This is
+    // how a console actually behaves, and it keeps the hero + focus stable (repeatedly-flagged bug).
+    var termTop=field.top+22, TERM_H=6*15;   // 6 steps × line-height — the reserved terminal viewport
+    drawTerminal(px, termTop, p, sig, strat, A*Math.min(1,p.on));
+    var y=termTop+TERM_H+14;   // fixed hero anchor
     // The PLAY NAME lands as the hero once recommend_play has printed (project phase).
     ctx.globalAlpha=A*prjA;
     ctx.font="700 30px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=22;
