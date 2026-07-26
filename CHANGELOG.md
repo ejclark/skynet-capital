@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/ejclark/skynet-capital/compare/v1.29.1...v1.30.0) (2026-07-26)
+
+
+### Features
+
+* **login:** greeks fingerprint per play (delta/theta/vega/gamma) ([#48](https://github.com/ejclark/skynet-capital/issues/48)) ([793b611](https://github.com/ejclark/skynet-capital/commit/793b611a3492b672747ca90f88481e86ba90444f))
+
 ## [1.29.1](https://github.com/ejclark/skynet-capital/compare/v1.29.0...v1.29.1) (2026-07-26)
 
 
