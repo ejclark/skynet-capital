@@ -1,3 +1,10 @@
+## [1.70.1](https://github.com/ejclark/skynet-capital/compare/v1.70.0...v1.70.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **theme:** force dark mode everywhere, remove light theme ([#123](https://github.com/ejclark/skynet-capital/issues/123)) ([32dbad5](https://github.com/ejclark/skynet-capital/commit/32dbad5d6ee2f51acba524a758233244d5dd95c5))
+
 # [1.70.0](https://github.com/ejclark/skynet-capital/compare/v1.69.0...v1.70.0) (2026-07-26)
 
 
