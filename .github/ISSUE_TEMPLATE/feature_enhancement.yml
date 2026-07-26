@@ -1,25 +1,41 @@
-name: "✨ Feature / enhancement"
-description: "A concrete improvement to something that already exists."
+name: "✨ Feature / improvement"
+description: "Make something that already exists better, or add something small and concrete."
 title: "[enhancement] "
 labels: ["enhancement", "feedback"]
 body:
   - type: markdown
     attributes:
-      value: "Got an idea to make an existing part of Skynet Capital better? Tell us the what and the why."
-  - type: textarea
-    id: what
+      value: |
+        Love it — the best improvements start from a real moment of friction. Tell us the **problem first**, then your idea.
+        (Big, open-ended concepts fit better under **💡 Idea to explore** — this one's for concrete tweaks.)
+  - type: checkboxes
+    id: preflight
     attributes:
-      label: What would you like to see?
-      description: Describe the improvement.
-      placeholder: "Let me pin a favorite play to the top of the playbook…"
+      label: First checks
+      options:
+        - label: I skimmed the open issues and this doesn't look like a duplicate.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's frustrating or missing right now?
+      description: The problem, in your words — this matters more than the solution.
+      placeholder: "I keep re-scrolling the playbook to find the iron condor; there's no way to keep my favorites handy."
     validations:
       required: true
   - type: textarea
-    id: why
+    id: solution
     attributes:
-      label: Why would it help?
-      description: What does it make easier, clearer, or more fun?
-      placeholder: "I keep re-scrolling to find the iron condor…"
+      label: What would you like to see?
+      description: Your idea for fixing it. A rough sketch or reference is welcome.
+      placeholder: "Let me ⭐ a play so it pins to the top of the list."
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you're doing to work around it today?
+      placeholder: "I just memorized the order."
     validations:
       required: false
   - type: dropdown
@@ -29,12 +45,12 @@ body:
       options:
         - Login / intro animation
         - The playbook / plays
-        - Observatory board
+        - The board (main dashboard)
         - Profiles
         - Leaderboard
         - Bots vs Humans
         - Compare
         - Onboarding / connecting an account
-        - Something else
+        - Something else / cuts across
     validations:
       required: false
