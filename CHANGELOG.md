@@ -1,3 +1,10 @@
+# [1.80.0](https://github.com/ejclark/skynet-capital/compare/v1.79.2...v1.80.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** play-feedback log — a game-combat model for board telemetry ([#140](https://github.com/ejclark/skynet-capital/issues/140)) ([3066e6d](https://github.com/ejclark/skynet-capital/commit/3066e6d219fb4f0df864434735da568544ddf7ab))
+
 ## [1.79.2](https://github.com/ejclark/skynet-capital/compare/v1.79.1...v1.79.2) (2026-07-26)
 
 
