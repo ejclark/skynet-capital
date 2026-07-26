@@ -133,7 +133,7 @@ describe("dashboard-server /add", () => {
     await withServer({ hub: new ObservatoryHub(board()), addParticipant }, async (base) => {
       const form = await fetch(`${base}/add`);
       expect(form.status).toBe(200);
-      expect(await form.text()).toContain("Add your Alpaca account");
+      expect(await form.text()).toContain("Connect your Alpaca account");
 
       const post = await fetch(`${base}/add`, {
         method: "POST",

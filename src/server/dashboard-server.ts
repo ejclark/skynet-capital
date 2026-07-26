@@ -66,6 +66,13 @@ async function handle(
     return;
   }
 
+  // Public self-service onboarding guide — the invite email links straight here.
+  if (path === "/welcome") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(welcomeHtml());
+    return;
+  }
+
   if (auth) {
     const base = baseUrlFrom(req);
     const secure = base.startsWith("https");
@@ -368,9 +375,43 @@ const ADD_STYLE = `${PAGE_STYLE}
   .res-icon{ font-size:34px; margin-bottom:6px; }
   a{ color:var(--accent); text-decoration:none; }
   a:hover{ text-decoration:underline; }
-  .backrow{ margin-top:26px; font-size:14px; color:var(--muted); }`;
+  .backrow{ margin-top:26px; font-size:14px; color:var(--muted); }
+  .wrap.wide{ max-width:760px; }
+  /* --- onboarding / welcome --- */
+  .hero-eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--accent); margin-bottom:14px; }
+  .hero-title{ font-size:34px; font-weight:800; letter-spacing:-.02em; line-height:1.1; margin-bottom:14px; }
+  .hero-title b{ color:var(--accent); }
+  .hero-lede{ color:var(--muted); font-size:16px; line-height:1.6; margin-bottom:30px; max-width:60ch; }
+  .hero-lede b{ color:var(--text); }
+  .feat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:36px; }
+  .feat{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+  .feat-ic{ font-size:18px; margin-bottom:8px; }
+  .feat-h{ font-size:14px; font-weight:700; margin-bottom:5px; }
+  .feat-p{ font-size:13px; color:var(--muted); line-height:1.5; }
+  .sec-label{ font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:0 0 16px; }
+  .steps{ display:flex; flex-direction:column; gap:12px; margin-bottom:32px; }
+  .step{ display:flex; gap:16px; align-items:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+  .step-n{ flex:0 0 auto; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:700; font-size:14px; color:var(--bg); background:var(--accent); }
+  .step-b h3{ font-size:15px; font-weight:700; margin-bottom:4px; }
+  .step-b p{ font-size:13px; color:var(--muted); line-height:1.55; }
+  .cta{ display:inline-flex; align-items:center; gap:10px; padding:14px 22px; font-size:15px; font-weight:700; color:var(--bg); background:var(--accent); border-radius:10px; text-decoration:none; transition:filter .15s; }
+  .cta:hover{ filter:brightness(1.08); text-decoration:none; }
+  .cta:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .fineprint{ margin-top:22px; font-size:12px; color:var(--muted); line-height:1.6; }
+  /* --- /add progressive-reveal stepper --- */
+  .setup{ margin:0 0 26px; display:flex; flex-direction:column; gap:8px; }
+  .step-d{ background:var(--surface); border:1px solid var(--border); border-radius:11px; overflow:hidden; }
+  .step-d[open]{ border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); }
+  .step-d summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px 16px; font-weight:600; font-size:14px; }
+  .step-d summary::-webkit-details-marker{ display:none; }
+  .step-d summary .step-n{ width:26px; height:26px; font-size:13px; }
+  .step-d summary .chev{ margin-left:auto; color:var(--muted); transition:transform .18s; }
+  .step-d[open] summary .chev{ transform:rotate(90deg); }
+  .step-d .sd-body{ padding:2px 18px 18px 54px; font-size:13px; color:var(--muted); line-height:1.6; }
+  .step-d .sd-body b{ color:var(--text); }
+  .step-d .sd-body a{ font-weight:600; }`;
 
-function addShell(title: string, inner: string): string {
+function addShell(title: string, inner: string, wide = false): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -379,20 +420,68 @@ function addShell(title: string, inner: string): string {
 <title>${title}</title>
 <style>${ADD_STYLE}</style>
 </head>
-<body><div class="wrap">
+<body><div class="wrap${wide ? " wide" : ""}">
 <div class="brand">SKYNET<b>·</b>CAPITAL</div>
 ${inner}
 </div></body>
 </html>`;
 }
 
+/**
+ * The self-service onboarding guide (public /welcome). Documents what Skynet Capital is and the
+ * league format, then lays out the join path in numbered steps, so an invite can be a one-line
+ * greeting plus this link. Fully self-serve to sign-in.
+ */
+function welcomeHtml(): string {
+  return addShell(
+    "Welcome — Skynet Capital",
+    `<div class="hero-eyebrow">Invite-only · paper sandbox</div>
+<h1 class="hero-title">A sandbox to learn options — with friends, family, and a few <b>machines</b>.</h1>
+<p class="hero-lede">Skynet Capital is a friendly, <b>paper-money</b> trading league. Everyone trades a simulated
+account, autonomous <b>bots</b> trade alongside the humans, and a live observatory shows how everyone's
+doing. It's for learning the plays and having fun — <b>no real money, ever</b>. Everybody's welcome to win.</p>
+<div class="feat-grid">
+  <div class="feat"><div class="feat-ic">📈</div><div class="feat-h">Paper trading</div><div class="feat-p">Practice real options strategies with a simulated account. Zero risk — it's all on paper.</div></div>
+  <div class="feat"><div class="feat-ic">🤖</div><div class="feat-h">Humans &amp; bots</div><div class="feat-p">Trade solo, co-op against the machines, or just watch the board. The bots each run a persona.</div></div>
+  <div class="feat"><div class="feat-ic">🏆</div><div class="feat-h">Friendly league</div><div class="feat-p">A leaderboard for bragging rights among friends and family — everyone doing well is the point.</div></div>
+</div>
+<p class="sec-label">Join in three steps</p>
+<div class="steps">
+  <div class="step"><div class="step-n">1</div><div class="step-b"><h3>Sign in</h3><p>Use your Google account — the same email Eric added to the guest list. That's your seat at the table.</p></div></div>
+  <div class="step"><div class="step-n">2</div><div class="step-b"><h3>Create a free Alpaca paper account</h3><p>Alpaca provides the simulated brokerage. It's free, takes a minute, and needs no funding — we'll walk you through it after you sign in.</p></div></div>
+  <div class="step"><div class="step-n">3</div><div class="step-b"><h3>Connect it</h3><p>Paste your Alpaca <b>paper</b> API keys once. We read them only to show your balance and trades on the board — nothing is ever placed on your behalf.</p></div></div>
+</div>
+<a class="cta" href="/login">Get started → Sign in</a>
+<p class="fineprint">Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.</p>`,
+    true,
+  );
+}
+
 function addFormHtml(key: string): string {
   const action = `/add${key ? `?key=${encodeURIComponent(key)}` : ""}`;
   return addShell(
     "Add your account — Skynet Capital",
-    `<h1>Add your Alpaca account</h1>
-<p class="lede">Paste your Alpaca <b>paper</b> API key so your account shows up on the board.
-It's read only — to display your balance and trades. Nothing is ever placed on your behalf.</p>
+    `<h1>Connect your Alpaca account</h1>
+<p class="lede">Your account trades on <b>Alpaca</b> paper money. Follow the steps to grab your keys,
+then paste them below — we read them <b>only</b> to show your balance and trades. Nothing is ever placed on your behalf.</p>
+<div class="setup">
+  <details class="step-d" open>
+    <summary><span class="step-n">1</span> Create a free Alpaca account <span class="chev">›</span></summary>
+    <div class="sd-body">Go to <a href="https://alpaca.markets/" target="_blank" rel="noopener noreferrer">alpaca.markets</a> and sign up — it's free and needs no funding. <b>Paper trading is simulated money</b>, so there's nothing to deposit.</div>
+  </details>
+  <details class="step-d">
+    <summary><span class="step-n">2</span> Switch to Paper Trading <span class="chev">›</span></summary>
+    <div class="sd-body">In the Alpaca dashboard, use the toggle near the top-left to switch from <b>Live</b> to <b>Paper</b>. This is important — we only ever use paper keys.</div>
+  </details>
+  <details class="step-d">
+    <summary><span class="step-n">3</span> Generate your paper API keys <span class="chev">›</span></summary>
+    <div class="sd-body">On the paper dashboard's right side, find <b>API Keys</b> and click <b>Generate</b>. Copy the <b>Key ID</b> and <b>Secret Key</b> — the secret shows only once, so grab it now.</div>
+  </details>
+  <details class="step-d">
+    <summary><span class="step-n">4</span> Paste them below <span class="chev">›</span></summary>
+    <div class="sd-body">Drop the Key ID and Secret into the form and give yourself a display name. That's it — you'll land on the board.</div>
+  </details>
+</div>
 <form method="post" action="${action}">
   <label>Display name<input name="displayName" required placeholder="e.g. Uncle Joe"></label>
   <label>Alpaca paper API key<input name="apiKey" required autocomplete="off" placeholder="PK…"></label>
