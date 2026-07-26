@@ -1043,6 +1043,7 @@ ${versionTag}
   // liveliness factor (0..1) computed from New York time scales the lit windows, crowns, and signage
   // so the skyline visibly breathes with the trading session. Refreshed once a minute, eased.
   var cityLife=1, cityLifeTarget=1;
+  var weatherDrops=[], boltFlash=0, boltPath=null, nextBoltAt=140;   // storm: rain streaks + blue lightning
   function marketLife(){
     try{ var et=new Date(new Date().toLocaleString("en-US",{timeZone:"America/New_York"}));
       var day=et.getDay(), min=et.getHours()*60+et.getMinutes();
@@ -1243,7 +1244,36 @@ ${versionTag}
     rctx.setTransform(DPR,0,0,DPR,0,0);
     var n=Math.ceil(rcanvas.clientWidth/colW);
     cols=[]; for(var i=0;i<n;i++){ cols.push(Math.random()*-rcanvas.clientHeight); }
-    buildSkyline(rcanvas.clientWidth, rcanvas.clientHeight);
+    var cw=rcanvas.clientWidth, ch=rcanvas.clientHeight, nd=Math.round(cw/15);
+    weatherDrops=[]; for(var wi=0;wi<nd;wi++){ weatherDrops.push({ x:Math.random()*(cw+90), y:Math.random()*ch, len:9+Math.random()*15, spd:9+Math.random()*7 }); }
+    buildSkyline(cw, ch);
+  }
+  // Storm: cool-blue rain streaks fall in FRONT of the whole scene, punctuated by occasional blue
+  // lightning that jags from the clouds and flashes the sky — the electric storm of refs 3/4. The
+  // green matrix stays the identity; blue is only the weather accent.
+  function spawnBolt(w,h){
+    var x=w*(0.14+Math.random()*0.72), y=-4, endY=h*(0.42+Math.random()*0.22), path=[[x,y]];
+    while(y<endY){ y+=13+Math.random()*22; x+=(Math.random()-0.5)*48; path.push([x,y]); }
+    boltPath=path; boltFlash=1;
+  }
+  function drawWeather(w,h){
+    if(!weatherDrops.length) return;
+    rctx.save();
+    rctx.strokeStyle="rgba(176,208,255,0.16)"; rctx.lineWidth=1; rctx.beginPath();
+    for(var i=0;i<weatherDrops.length;i++){ var d=weatherDrops[i];
+      rctx.moveTo(d.x,d.y); rctx.lineTo(d.x-2.4,d.y+d.len); d.y+=d.spd; d.x-=1.5;
+      if(d.y>h){ d.y=-d.len-Math.random()*40; d.x=Math.random()*(w+90); } }
+    rctx.stroke(); rctx.restore();
+    if(rainT>=nextBoltAt){ spawnBolt(w,h); nextBoltAt=rainT+300+((Math.random()*560)|0); }
+    if(boltFlash>0){
+      rctx.save(); rctx.globalCompositeOperation="lighter";
+      var fg=rctx.createLinearGradient(0,0,0,h*0.7); fg.addColorStop(0,hexA("#9FC8FF",0.15*boltFlash)); fg.addColorStop(1,hexA("#9FC8FF",0));
+      rctx.fillStyle=fg; rctx.fillRect(0,0,w,h*0.7);
+      if(boltPath){ rctx.strokeStyle=hexA("#DCEBFF",0.92*Math.min(1,boltFlash*1.7)); rctx.lineWidth=2;
+        rctx.shadowColor="#8FB8FF"; rctx.shadowBlur=16; rctx.beginPath(); rctx.moveTo(boltPath[0][0],boltPath[0][1]);
+        for(var j=1;j<boltPath.length;j++) rctx.lineTo(boltPath[j][0],boltPath[j][1]); rctx.stroke(); rctx.shadowBlur=0; }
+      rctx.restore(); boltFlash-=0.055; if(boltFlash<0) boltFlash=0;
+    }
   }
   // boost = the rain reacts to a play (faster, brighter); tint = green flourish on a winning close.
   function rainDraw(boost,tint){
@@ -1261,6 +1291,7 @@ ${versionTag}
     if(boost){ for(var kk=0;kk<6;kk++){ var cxk=(Math.random()*cols.length)|0;
       rctx.fillStyle=hexA(col,0.95); rctx.fillText(RG[(Math.random()*RG.length)|0], cxk*colW, Math.random()*h); } }
     rainT++; drawSkyline(w,h);   // city sits in FRONT: the code falls behind the skyline
+    drawWeather(w,h);            // rain + lightning fall in front of the whole scene
   }
 
   // --- Strategy Playbook: the race periodically recedes and a holographic option-payoff
