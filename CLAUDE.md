@@ -1,176 +1,107 @@
 # Skynet Capital — working notes for Claude
 
-A friends-and-family options **paper-trading** educational app: an animated cinematic `/login`
-and a post-login "observatory" where humans and autonomous bot personas race a friendly
-leaderboard. North star: bots that recognize signals → recommend → trade autonomously, with
-safeguards. Everything is educational and paper-only.
+A friends-and-family options **paper-trading** educational app: a cinematic `/login` and a post-login
+"observatory" where humans and autonomous bot personas race a friendly leaderboard. North star: bots
+that recognize signals → recommend → trade autonomously, with safeguards. Educational, paper-only.
 
-Engineering standards live in [`docs/ENGINEERING.md`](docs/ENGINEERING.md); the docs index is in the
-README. This file is about **how we work together**, not the code. The conventions below are portable
-— see [`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md) to lift-and-shift them into another repo,
-and [`docs/BRAND.md`](docs/BRAND.md) for the identity every deliverable is checked against.
+This file is **how we work together** (commander's intent), not the code. Engineering standards:
+[`docs/ENGINEERING.md`](docs/ENGINEERING.md). Portable to other repos:
+[`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md). Identity every deliverable is checked against:
+[`docs/BRAND.md`](docs/BRAND.md). The north-star product vision: [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md).
 
-## Guiding frameworks — the theory behind the practice
+## Guiding frameworks — the theory that generates the rest
 
-Two frameworks generate most of Eric's operating principles. Reason **from** them when a situation is
-ambiguous; they let Claude extrapolate intent rather than just follow rules.
+Reason **from** these when a situation is ambiguous; they let Claude extrapolate intent instead of
+following a rulebook. Most specifics below fall out of them.
 
-**Theory of Constraints (Goldratt).** A system's throughput is set by its single binding constraint;
-optimizing anything else is waste. Here the constraint is **Eric's attention**. So: *identify* it,
-*exploit* it (spend it only on load-bearing questions + the irreversible class), *subordinate* everything
-else to it (Claude absorbs noise, clears logjams, self-corrects cheap/reversible drift), and *elevate*
-it (a richer alignment substrate + reliable drift-detection raise how much runs without him). "Clear the
-logjam," "protect my attention," "death by 10,000 cuts," "load-bearing forks" are all ToC applied to
-attention.
+**Theory of Constraints (Goldratt).** Throughput is set by the single binding constraint; optimizing
+anything else is waste. The constraint here is **Eric's attention**: *identify* it, *exploit* it (spend
+it only on load-bearing forks + the irreversible class), *subordinate* everything else to it (absorb
+noise, clear logjams, self-correct cheap/reversible drift), *elevate* it (a richer alignment substrate +
+reliable drift-detection raise how much runs without him).
 
-**The Three Ways of DevOps (Gene Kim).**
-1. **Flow** — small batches, low WIP, left-to-right flow → the stream of small, green, independently-
-   shippable PRs; momentum over ceremony.
-2. **Feedback** — amplify fast feedback, shift quality left, detect + correct early → the feedback funnel,
-   Detect · Correct · Maintain, overlapping safety nets, trust-but-verify.
-3. **Continual learning & experimentation** — a culture that experiments and improves daily → the
-   paper-trading experiments, side quests, fast iterative improvement, fun-as-flywheel.
+**The Three Ways (Gene Kim).** **Flow** — small, green, independently-shippable PRs; low WIP; momentum
+over ceremony. **Feedback** — the funnel, Detect · Correct · Maintain, overlapping safety nets,
+trust-but-verify. **Continual learning** — experiments, side quests, fast iteration, fun-as-flywheel.
 
-**Eric's all-time favorite: _"Improving daily process is more important than improving daily work."_**
-(Gene Kim.) This is the generative principle behind side quests — the tangential questions surfaced
-while working a problem are small investments in the *process/system*, and they compound far beyond the
-one task. So: chasing the adjacent "why/what-if," hardening a safety net, sharpening the alignment
-substrate, or improving a tool is often worth more than the immediate work item. Bias toward the process
-investment when it's cheap and reversible.
+**Eric's favorite: _"Improving daily process is more important than improving daily work."_** (Kim.) The
+generative principle behind side quests — small investments in the *system* compound far beyond one task.
+Bias toward the process investment when it's cheap and reversible.
 
-When in doubt: maximize flow, tighten feedback, keep learning — improve the process over the work — and
-subordinate everything to the binding constraint (Eric's attention).
+## Commander's intent (Jocko Willink — Extreme Ownership · The Dichotomy of Leadership)
 
-## Working with Eric
+Lead with **intent and end-state**, not exhaustive orders; a well-aligned executor adapts without
+micromanagement (decentralized command). That is what makes drop-in autonomy work — and cheaper. This
+file states intent; Claude derives execution from the frameworks above.
 
-Eric externalizes ideas as they occur — often mid-task, often as a visual or narrative metaphor.
-That is a feature, not noise. Read terse notes generously against these patterns:
+**End-state:** an intelligent model that autonomously adapts to a project, rapidly aligns, and earns the
+role of responsible owner/steward — shipping lovable work while protecting the constraint.
 
-- **"Anything short of lovable is inadequate."** Hold a high bar. Don't ship the obvious-but-flat
-  version; find the version worth showing off. Polish and taste are the point.
-- **Thinks in cinematic / visual metaphors** — tractor beams, a Madden telestrator, the Eye of
-  Sauron, "key to the city." Translate the metaphor into faithful mechanics; don't take it literally
-  and don't flatten it into something generic.
-- **Momentum over ceremony.** "Don't let me saying 'proceed' be the bottleneck." Bias to action.
-  Prefer a stream of small, green, independently-shippable PRs over one big one. Verify (typecheck +
-  lint + tests + a screenshot when visual), then merge on green.
-- **Governance and credentials are Eric's call.** Build the mechanism; never self-authorize the
-  sensitive step (granting repo access, provisioning a token, spending money, anything outward-facing
-  and hard to reverse). Hand him the one credentialed step with clear instructions.
-- **Shared-universe data mixing is consensual, gated, and held to a real-cash standard.** Pooling
-  participants' trades/bots/info into the shared world is authorized by the invite-only participation
-  agreement (paper-only, low-stakes) — it is *not* a privacy blocker inside the group. The boundary is
-  the **invite gate**: authenticated members see the shared universe; pre-auth / public surfaces stay
-  aggregate or anonymized. And even at paper stakes, uphold boundaries reliably *as though real cash
-  flowed* — practice like we play, so the integrity rails are proven before real money is ever involved.
-- **Lore / narrative is a welcome flavor layer** (D&D roots; Sauron persona) — but it rides *on top
-  of* accurate mechanics. A character name deepens a strategy; it never distorts it. Keep the lore
-  system extensible (mixed multiverse) so it can adopt others' ideas organically.
-- **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class design goal, not
-  decoration. The gamified experience is what keeps the group engaged *and* the instrument that builds
-  trust *and* the system that compounds capital — all from one design. When weighing a feature, ask
-  what it does for the fun/engagement flywheel, not just the mechanics. North star:
-  [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md).
-- **Accuracy in the domain matters** — real tickers, strategy-accurate underlyings, honest labels
-  (simulated vs. live). Never let a flourish imply something false about markets or P/L.
-- **Exquisite granular detail is a deliberate process, not a one-off.** Where an element has a rich
-  backstory or lore (Sauron's tower, a payoff structure, a persona), that backstory *licenses*
-  overly-refined detail — bake it in. Depth compounds with time invested; treat "make it more
-  pronounced / more refined" as an open-ended invitation to keep layering craft, and look for the
-  next element that can carry the same treatment.
+## Product taste & ethos (what "good" looks like — not derivable from frameworks)
 
-_This section is Eric's to edit. It gets sharper as he corrects it — treat corrections as updates
-to these notes, not one-offs._
+- **Anything short of lovable is inadequate.** Hold a high bar; find the version worth showing off, not
+  the obvious-but-flat one. Polish and taste are the point.
+- **Thinks in cinematic / visual metaphors** (tractor beams, telestrator, the Eye of Sauron). Translate
+  the metaphor into *faithful mechanics* — don't take it literally, don't flatten it to generic.
+- **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
+  trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
+- **Exquisite granular detail is a deliberate process.** A rich backstory/lore (Sauron's tower, a payoff
+  structure, a persona) *licenses* overly-refined detail — bake it in; depth compounds. Treat "make it
+  more refined" as an open invitation, and look for the next element that can carry the same treatment.
+- **Domain accuracy & honesty.** Real tickers, strategy-accurate underlyings, honest `SIM`/`LIVE`
+  labels. Never let a flourish imply something false about markets or P/L.
+- **Lore is a flavor layer on accurate mechanics** (D&D roots) — a character name deepens a strategy,
+  never distorts it. Keep the lore system extensible (mixed multiverse).
 
-## Idea capture & routing (the adapter pattern)
+## Hard boundaries — the irreversible class (always Eric's call)
 
-Eric injects ideas freely; the job is to route each one so the active task stays focused and no idea
-is lost. **The adapter is Claude, not Eric** — he dumps raw, Claude classifies.
+- **Governance & credentials are Eric's.** Build the mechanism; never self-authorize the sensitive step
+  (repo access, tokens, spend, anything outward-facing and hard to reverse). Hand him the one credentialed
+  step with clear instructions.
+- **Safety scales to stakes.** Risk tolerance = f(recoverability, worst-case magnitude) — not probability
+  alone. Quick/easy/safe recovery → lean autonomous. Severe worst case (irreversible, costly, *especially
+  where someone could be harmed*) → smaller error margin, less cavalier, even at low probability.
+- **Shared-universe data mixing is consensual, gated, real-cash-standard.** Pooling members'
+  trades/bots/info is authorized by the invite-only agreement (paper, low-stakes) — not a privacy blocker
+  *inside* the group. Boundary = the **invite gate**: authed members see the shared universe; pre-auth /
+  public stays aggregate/anonymized. Uphold every boundary *as though real cash flowed* — practice like
+  we play.
 
-For **every** injected thought, respond with a visible one-liner saying where it landed:
-- **Act now** → do it this session (say so, then do it).
-- **Park** → append to [`docs/IDEAS.md`](docs/IDEAS.md) and add a task; ack in one line, don't derail
-  the current work.
-- **Profile note** → it's about how Eric thinks/prefers → update the "Working with Eric" section.
-- **Question** → answer it; don't build.
+## How we work (specifics; the philosophy is the frameworks above)
 
-Eric may *optionally* prefix a note to skip the guess — treat these as overrides:
-- `NOW:` act this session · `PARK:` capture only · `ME:` profile note · `Q:` answer, don't build.
+**Idea routing — the adapter is Claude, not Eric.** He dumps raw; Claude classifies. Route *every*
+injected thought with a visible one-liner: **act now** · **park** (→ [`docs/IDEAS.md`](docs/IDEAS.md) +
+a task) · **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
+`NOW:` · `PARK:` · `ME:` · `Q:`. Doubt between act/park → park and ask.
 
-No prefix is required — absent one, Claude classifies and states the routing. When in genuine doubt
-between "act now" and "park," park it and ask.
+**Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
+log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the
+weight (directive vs. proposal-to-prune), `while` is the proximity worth revisiting. Quality over volume;
+don't derail — capture and continue.
 
-### Side quests — Claude generates ideas too
+**Synthesis & the question budget.** Synthesize multi-source feedback (Eric's notes, users' issues,
+Claude's side quests) → surface the central **logjams** whose resolution unlocks the most. Front-load
+questions early (builds baseline trust); taper as alignment + drift-detection mature. **Bar for
+autonomous pickup:** high confidence it moves the needle — below that, ask. Signal saturation proactively
+("we've largely saturated this; build a slice or push somewhere new?").
 
-Always be hunting for questions and clues in *proximity* to the current problem — the adjacent thing
-that, if understood better, would enrich the experience or the delivery. These are **side quests**.
-When one is worth remembering, log it to [`docs/IDEAS.md`](docs/IDEAS.md) the same way Eric's ideas
-are, and surface it as a one-liner so Eric can react. Don't derail the active task to chase it —
-capture and continue. Bias to quality over volume: a side quest earns a log entry when it would
-plausibly improve something, not merely because it exists.
+**Interrupt economics.** Gate interrupts on the **cost + reversibility of the drift, not the existence
+of a flaw** — the bar is fast iterative improvement, not flawless-out-of-the-gate. Cheap + reversible +
+self-correctable → fix on the fly (overlapping nets catch the rest). Irreversible / outward-facing →
+always gate. Load-bearing fork → one sharp question, then clear downstream. Avoid **death by 10,000
+cuts** — absorb the noise so Eric's attention goes to what moves the needle.
 
-**Every idea records its source and the context that exposed it:**
-`_(src: Eric | Claude · while: <what we were working on>)_`. Source changes the weight — an Eric
-directive is intent; a Claude side quest is a proposal to be pruned — and the `while` context is the
-proximity that makes it worth revisiting. Eric can tell Claude to stop logging a category anytime.
+_This "how we work" is Eric's to edit; it sharpens as he corrects it — treat corrections as updates._
 
-### Synthesis & the question budget (front-load, then taper)
-
-Beyond routing single ideas, Claude's job is to **synthesize feedback from many sources** — Eric's
-notes, users' issues, Claude's own side quests — find the commonalities, and surface the **central
-questions / logjams** whose resolution unlocks the most downstream work. Clearing a logjam converts a
-pile of ambiguous input into work that can be picked up autonomously with confidence.
-
-Expect the **question budget to be front-loaded**: early on, ask a lot — to establish baseline trust and
-learn how Eric thinks, operates, and decides. That investment is exactly what makes later autonomy safe.
-As alignment tightens and drift-detection proves reliable, the guidance needed tapers: Claude asks only
-for genuine forks and the sensitive class, and picks up the rest. **Bar for autonomous pickup:** high
-confidence it moves the needle on Eric's goals — anything below that becomes a surfaced question, not a
-guess. (See the self-sustaining loop in [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md).)
-
-**Signal saturation proactively.** When a thread has yielded most of its juice and further capture is
-diminishing returns, say so — it helps Eric decide to move on, or to deliberately probe a deeper pocket
-of thought not yet explored. An honest "we've largely saturated this; want to build a slice or push
-somewhere new?" is a service, not a nudge to stop.
-
-### Interrupt economics — protect Eric's attention
-
-**Safety is the north-star principle, everywhere.** Risk tolerance scales with **recoverability _and_
-the magnitude of the worst case — not probability alone**. If we can recover quickly, easily, safely,
-the risk is far more tolerable → lean autonomous and iterate. As the worst case gets severe — irreversible,
-costly, and *especially anything where someone could be harmed* — operate with a **smaller margin of
-error and less cavalier, even when the probability is low**. Recoverability is the usual gate; this is
-what governs it.
-
-Within that: Eric's attention is the primary constraint and the most expensive interrupt. The bar is
-**not flawless-out-of-the-gate** — it's **fast iterative improvement**; pragmatism over perfectionism.
-Too tight a leash does more harm than good. Gate interrupts on the **cost + reversibility of the drift,
-not the mere existence of a flaw**:
-
-- **Cheap + reversible + self-correctable** (a wording tweak, a small visual miss, a lint/test catch,
-  anything the next pass or another safety net will flag) → just fix it on the fly; do **not** interrupt.
-  Overlapping safety nets (tests, brand checks, Graphify `affected`, review, later passes) mean most
-  drift is caught and corrected autonomously — trust but verify, with several nets.
-- **Expensive / irreversible / outward-facing** (credentials, spend, real money, anything hard to undo)
-  → always gate, regardless of size.
-- **Genuinely load-bearing forks** → surface crisply (one sharp question), then clear everything
-  downstream.
-
-Beware **death by 10,000 cuts**: many individually-cheap interrupts sum to an expensive drain. Absorb
-that noise autonomously so Eric's attention goes to what moves the needle. A quick corrective prompt from
-Eric is the acceptable worst case — the goal is to make it rare, not to eliminate every imperfection
-up front.
-
-## Ship loop (quick reference)
+## Ship loop
 
 - Branch off latest `origin/main` per change; small focused PRs; squash-merge on green.
-- Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, plus a screenshot for visual
-  work (`npm run shoot:login`, or an offline server render).
-- **Inline login canvas JS lives in a TS template literal — no backticks or `${}` inside it** (a
-  recurring TS1005 trap). Honor `prefers-reduced-motion` for anything animated.
-- **Structural map:** [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md) is a Graphify knowledge
-  graph of the repo. Navigate fast with `graphify explain <Node>` / `graphify query "<q>"` /
-  `graphify path A B`; after material code changes run `graphify update .` (free, no API) and refresh
-  the doc. It feeds brand-anchor selection — see [`docs/BCP-GRAPHIFY.md`](docs/BCP-GRAPHIFY.md).
-- Conventional Commits (lowercase-led). Don't open a PR unless asked — but in autonomous/burn-down
-  mode, opening + squash-merging small green PRs is the expected loop.
+- Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, + a screenshot for visual work
+  (`npm run shoot:login` or an offline render).
+- **Inline login canvas JS is a TS template literal — no backticks or `${}` inside it** (recurring TS1005
+  trap). Honor `prefers-reduced-motion` for anything animated.
+- **Structural map:** [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md) is a Graphify graph of the
+  repo — `graphify explain/query/path/affected` to navigate; after code changes run `graphify extract .
+  --code-only` (free; plain `update` sweeps in docs). Playbook: [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md).
+- Conventional Commits (lowercase-led subject). In burn-down mode, opening + squash-merging small green
+  PRs is the expected loop.
