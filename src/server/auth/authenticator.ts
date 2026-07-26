@@ -219,6 +219,9 @@ export class Authenticator {
   :root[data-theme="light"]{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA;
     --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; }
 
+  /* Reveal VFX: a grainy chromatic "hangar door" sweep, canvas-rendered above the scene but behind
+     the title so the wordmark blooms through the opening light. Only lit during the ~1s reveal. */
+  #vfx{ position:fixed; inset:0; width:100%; height:100%; z-index:5; pointer-events:none; opacity:0; }
   html,body{ height:100%; }
   body{
     font-family:var(--sans); color:var(--text); min-height:100vh; overflow:hidden;
@@ -309,20 +312,20 @@ export class Authenticator {
     width:100%; opacity:calc(.26 + var(--vfx,0)*.6); pointer-events:none; mix-blend-mode:screen; letter-spacing:inherit; }
   .mark[data-text]::before{ color:#FF2D95; transform:translate(calc(var(--cax,0px)*-1), calc(var(--cay,0px)*-1)); }
   .mark[data-text]::after{ color:#22E0C8; transform:translate(var(--cax,0px), var(--cay,0px)); }
-  /* THE single title effect — "vfx-text-cursor": as the narrowing beam reaches the hero, a
-     directional light with chromatic shadow rays sweeps the wordmark. All other title FX removed. */
+  /* Title bloom, synced to the canvas hangar-door sweep: the wordmark flares white-hot with a brief
+     chromatic split as the opening light passes it, then settles. */
   @property --vfx{ syntax:"<number>"; inherits:true; initial-value:0; }
   @property --cax{ syntax:"<length>"; inherits:true; initial-value:0px; }
   @property --cay{ syntax:"<length>"; inherits:true; initial-value:0px; }
-  @keyframes vfxcursor{
+  @keyframes vfxbloom{
     0%{ --vfx:0; --cax:0px; --cay:0px; text-shadow:none; }
-    24%{ --vfx:1; --cax:-17px; --cay:3px;
-      text-shadow:0 0 54px color-mix(in srgb,var(--accent) 92%,transparent),
-        24px 0 30px color-mix(in srgb,#FF2D95 55%,transparent),
-        -24px 0 30px color-mix(in srgb,#22E0C8 55%,transparent); }
-    62%{ --cax:11px; --cay:2px; }
+    42%{ --vfx:1; --cax:-9px; --cay:1px;
+      text-shadow:0 0 34px #EAFBF7, 0 0 70px color-mix(in srgb,var(--accent) 90%,transparent),
+        14px 0 26px color-mix(in srgb,#FF2D95 45%,transparent),
+        -14px 0 26px color-mix(in srgb,#22E0C8 45%,transparent); }
+    70%{ --cax:6px; }
     100%{ --vfx:0; --cax:0px; --cay:0px; text-shadow:none; } }
-  .mark.vfx{ animation:vfxcursor .9s cubic-bezier(.16,.84,.44,1) both; }
+  .mark.vfx{ animation:vfxbloom .95s cubic-bezier(.16,.84,.44,1) both; }
 
   /* Single toggle — dead-centered on the RING (fixed width, so the label never shifts it), and
      static when toggling: the button stays put, only the chevron flips (up = enter, down = close). */
@@ -535,6 +538,7 @@ export class Authenticator {
 <body>
 <canvas id="rain" aria-hidden="true"></canvas>
 <canvas id="stage" aria-hidden="true"></canvas>
+<canvas id="vfx" aria-hidden="true"></canvas>
 <div class="scanlines" aria-hidden="true"></div>
 <div class="scanbeam" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
@@ -628,8 +632,64 @@ ${versionTag}
     canvas.width = Math.max(1, Math.floor(W*DPR));
     canvas.height = Math.max(1, Math.floor(H*DPR));
     ctx.setTransform(DPR,0,0,DPR,0,0);
+    vfxResize();
     measureField(); fieldSnap();
   }
+
+  // ===== Reveal VFX: grainy chromatic "hangar door" sweep (canvas) =====
+  // A horizontal chromatic band (teal→cyan→white-hot→magenta) opens like hangar doors from the
+  // title's eye-line, light-streaks converge into a core flash, then it blooms and clears — the
+  // "about to take you places" moment. Canvas-rendered so the dust/grain reads (CSS can't).
+  var vcanvas=document.getElementById("vfx"), vctx=null;
+  try{ vctx = vcanvas && vcanvas.getContext ? vcanvas.getContext("2d") : null; }catch(e){ vctx=null; }
+  function vfxResize(){ if(!vctx) return;
+    vcanvas.width=Math.max(1,Math.floor(vcanvas.clientWidth*DPR));
+    vcanvas.height=Math.max(1,Math.floor(vcanvas.clientHeight*DPR));
+    vctx.setTransform(DPR,0,0,DPR,0,0); }
+  var noiseTile=document.createElement("canvas"); noiseTile.width=140; noiseTile.height=140;
+  (function(){ try{ var nx=noiseTile.getContext("2d"), im=nx.createImageData(140,140), d=im.data, i;
+    for(i=0;i<d.length;i+=4){ var v=(Math.random()*255)|0; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; } nx.putImageData(im,0,0); }catch(e){} })();
+  var vfxActive=false, vfxT0=0, VFXD=980;
+  function vEase(x){ return 1-Math.pow(1-clamp01(x),3); }
+  function drawVFX(q){
+    var w=vcanvas.clientWidth, h=vcanvas.clientHeight; vctx.clearRect(0,0,w,h);
+    var cy=h*0.42, open=vEase(clamp01(q/0.55)), env=Math.sin(clamp01(q)*Math.PI);
+    var bandH=lerp(h*0.015, h*1.3, open), top=cy-bandH/2, A=0.92*env;
+    // chromatic horizontal gradient, feathered top/bottom
+    var g=vctx.createLinearGradient(0,0,w,0);
+    g.addColorStop(0,   "rgba(28,170,165,"+(A*0.66)+")");
+    g.addColorStop(0.32,"rgba(70,225,215,"+(A*0.85)+")");
+    g.addColorStop(0.5, "rgba(242,255,252,"+A+")");
+    g.addColorStop(0.68,"rgba(255,78,175,"+(A*0.85)+")");
+    g.addColorStop(1,   "rgba(150,34,120,"+(A*0.66)+")");
+    vctx.save(); vctx.fillStyle=g; vctx.fillRect(0,top,w,bandH);
+    var vg=vctx.createLinearGradient(0,top,0,top+bandH);
+    vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(0.5,"rgba(0,0,0,1)"); vg.addColorStop(1,"rgba(0,0,0,0)");
+    vctx.globalCompositeOperation="destination-in"; vctx.fillStyle=vg; vctx.fillRect(0,top,w,bandH); vctx.restore();
+    // dust / grain, clipped to the band
+    vctx.save(); vctx.beginPath(); vctx.rect(0,top,w,bandH); vctx.clip();
+    vctx.globalAlpha=0.16*env; vctx.globalCompositeOperation="overlay";
+    var jx=-((Math.random()*140)|0), jy=top-((Math.random()*140)|0), gx, gy;
+    for(gx=jx;gx<w;gx+=140){ for(gy=jy;gy<top+bandH;gy+=140){ vctx.drawImage(noiseTile,gx,gy); } }
+    vctx.restore();
+    // light-streaks converging into the core (the spotlights rushing in), first ~45%
+    var conv=1-clamp01(q/0.45);
+    if(conv>0){ vctx.save(); vctx.globalCompositeOperation="lighter"; var cx=w*0.5; vctx.lineCap="round"; vctx.lineWidth=2;
+      for(var s=0;s<8;s++){ var sy=cy+((s-3.5)/3.5)*bandH*0.42, fx=(s%2?-1:1)*w*0.62*conv;
+        vctx.strokeStyle="rgba(224,255,250,"+(0.45*conv*env)+")";
+        vctx.beginPath(); vctx.moveTo(cx+fx,sy); vctx.lineTo(cx+fx*0.28,cy); vctx.stroke(); }
+      vctx.restore(); }
+    // white-hot core flash near the midpoint
+    var flash=Math.max(0,1-Math.abs(q-0.5)/0.16);
+    if(flash>0){ vctx.save(); vctx.globalCompositeOperation="lighter";
+      var rg=vctx.createRadialGradient(w*0.5,cy,0,w*0.5,cy,w*0.62);
+      rg.addColorStop(0,"rgba(255,255,255,"+(0.5*flash)+")"); rg.addColorStop(1,"rgba(255,255,255,0)");
+      vctx.fillStyle=rg; vctx.fillRect(0,0,w,h); vctx.restore(); }
+  }
+  function vfxLoop(now){ if(!vfxActive) return; var q=(now-vfxT0)/VFXD;
+    if(q>=1){ vfxActive=false; if(vctx) vctx.clearRect(0,0,vcanvas.clientWidth,vcanvas.clientHeight); if(vcanvas) vcanvas.style.opacity="0"; return; }
+    drawVFX(q); requestAnimationFrame(vfxLoop); }
+  function vfxPlay(){ if(!vctx||reduce) return; vfxResize(); vfxActive=true; vfxT0=performance.now(); vcanvas.style.opacity="1"; requestAnimationFrame(vfxLoop); }
 
   // ===== Market engine: a live underlying with real technical overlays =====
   // Signals come from indicators that actually make sense — EMA cross, Bollinger squeeze/expansion,
@@ -666,8 +726,12 @@ ${versionTag}
   function fillRealized(walk){
     var dx=W/(SPAN-1), cap=Math.max(2, Math.floor((W*0.9-nowSX)/(dx*(zoom||1))));
     var want=Math.round(easeIO(clamp01(walk))*cap);
+    // Continue the market's OWN dynamics — carried momentum (pvR, seeded from the live momentum at
+    // entry) + its natural volatility — with only a gentle drift toward the play's target. This keeps
+    // the realized line flowing naturally from the prior move instead of snapping to a flat glide.
     while(realized.length<want){ var last=realized.length?realized[realized.length-1]:price[nowIdx];
-      t++; realized.push(last + (targetPrice-last)*0.16 + (noise(t*0.05)-0.5)*0.18); }
+      t++; pvR = pvR*0.86 + (noise(t*0.017)-0.5)*0.8*regimeVol + (targetPrice-last)*0.02;
+      realized.push(Math.max(5, last+pvR)); }
   }
   for(var _i=0;_i<SPAN;_i++) stepMarket();
 
@@ -768,23 +832,16 @@ ${versionTag}
 
   // Signal → play mapping. Reads the latest indicators and returns the matching playbook entry
   // with a human-readable reason (the "why"), or null when nothing is set up.
-  function detectSignal(){
-    var n=price.length; if(n<25) return null;
-    var p=price[n-1], f=emaF[n-1], s=emaS[n-1], fu=emaF[n-2], su=emaS[n-2],
-        bu=bU[n-1], bl=bL[n-1], m=smaA[n-1];
-    var width=(bu-bl)/(Math.abs(m)+1);
-    if(rsiV<32 && p<=bl*1.004) return { i:4, sig:"RSI OVERSOLD · LOWER BAND" };
-    if(rsiV>68 && p>=bu*0.996) return { i:0, sig:"RSI OVERBOUGHT · SELL PREMIUM" };
-    if(fu<=su && f>s) return { i:4, sig:"EMA GOLDEN CROSS" };
-    if(fu>=su && f<s) return { i:3, sig:"EMA CROSS DOWN" };
-    if(width<0.02) return { i:2, sig:"BOLLINGER SQUEEZE · LOW VOL" };
-    if(width>0.075) return { i:1, sig:"BOLLINGER EXPANSION" };
-    return null;
+  // Auto-plays deal from a shuffled bag so all six rotate before any repeats (variety over strict
+  // realism — the user's call). Each carries a plausible indicator reason for the "why".
+  var SIGS=["RSI OVERBOUGHT · RANGE HOLDS","BOLLINGER EXPANSION · BREAKOUT","BOLLINGER SQUEEZE · LOW VOL",
+    "PRICE PINNED AT MEAN","EMA GOLDEN CROSS · UPTREND","MOMENTUM BREAKOUT"];
+  var playBag=[];
+  function dealPlay(){
+    if(!playBag.length){ playBag=[0,1,2,3,4,5];
+      for(var k=playBag.length-1;k>0;k--){ var j=(Math.random()*(k+1))|0, tmp=playBag[k]; playBag[k]=playBag[j]; playBag[j]=tmp; } }
+    var i=playBag.shift(); return { i:i, sig:SIGS[i] };
   }
-  function forceSignal(){ var pool=[
-      { i:0, sig:"MEAN REVERSION SETUP" }, { i:1, sig:"VOLATILITY BID" },
-      { i:3, sig:"PRICE PINNED AT MEAN" }, { i:5, sig:"MOMENTUM BREAKOUT" }];
-    return pool[(Math.random()*pool.length)|0]; }
 
   // --- Ambient Matrix rain (deepest layer, faint) ---
   var rcanvas=document.getElementById("rain"), rctx=null, cols=[], colW=16, RG="0123456789$+-.%△▽ｦｱｲｳｴｵｶｷｸｹﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘ";
@@ -1107,7 +1164,7 @@ ${versionTag}
   // Three-act playcall: on fire we FREEZE history at nowIdx (stop pushing price[]) so the trend
   // holds still; in Act 3 a separate realized[] pen draws rightward INTO the prediction, overtaking
   // the dotted forecast, then folds back into price[] on zoom-out so ambient continues from reality.
-  var nowIdx=0, realized=[], realizedAlpha=1;
+  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0;
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -1145,6 +1202,7 @@ ${versionTag}
     flyTitle(true); measureField();
     // As the narrowing beam reaches the hero, the single VFX-text-cursor effect fires on the title.
     if(wordmark){ wordmark.classList.remove("vfx"); void wordmark.offsetWidth; wordmark.classList.add("vfx"); }
+    vfxPlay();   // canvas hangar-door sweep behind the blooming title
     // Form only falls into place once the title has landed and can be read.
     seq.push(setTimeout(function(){ body.classList.remove("flying"); body.classList.add("revealed");
       if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 760));
@@ -1229,7 +1287,7 @@ ${versionTag}
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function startPlay(now, sig, manual){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i;
     manualPlay=manual; paceScale=manual?1.4:1; zoomRippled=false;
-    nowIdx=price.length-1; realized=[];   // freeze history here; realized pen fills the future in Act 3
+    nowIdx=price.length-1; realized=[]; pvR=pv;   // freeze history; seed realized momentum from the live move
     armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
   function loop(now){
     if(!running) return;
@@ -1239,8 +1297,7 @@ ${versionTag}
         if(now>=summonEnd){ summoning=false; var ri=requestedPlay; requestedPlay=null;
           startPlay(now, { i:ri, sig:STRATS[ri].cue+" · CALLED" }, true); } }
       // Auto-fire a play when a signal sets up and the cooldown has elapsed.
-      if(!playMode && !summoning && now>=nextPlayAt){ var sg=detectSignal(); if(!sg && now>=nextPlayAt+5000) sg=forceSignal();
-        if(sg){ startPlay(now, sg, false); } }
+      if(!playMode && !summoning && now>=nextPlayAt){ startPlay(now, dealPlay(), false); }
       var p=null, camT=0, rateT=1;
       if(playMode){
         if(paused) playStart += dt;                 // hold-to-read: freeze the phase clock
