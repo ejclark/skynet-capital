@@ -1,3 +1,10 @@
+# [1.82.0](https://github.com/ejclark/skynet-capital/compare/v1.81.0...v1.82.0) (2026-07-26)
+
+
+### Features
+
+* **login:** the chart titles itself — play name on the graph, organic signal cards ([#142](https://github.com/ejclark/skynet-capital/issues/142)) ([5b303fd](https://github.com/ejclark/skynet-capital/commit/5b303fdcf99d8ff510a5f397c50b6c35925c5839))
+
 # [1.81.0](https://github.com/ejclark/skynet-capital/compare/v1.80.0...v1.81.0) (2026-07-26)
 
 
