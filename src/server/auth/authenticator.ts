@@ -990,9 +990,11 @@ ${versionTag}
     ctx.restore();
     // RSI readout — idle only (during a play the playbook panel + callout carry the read; this would
     // just collide with the pipeline text top-left).
+    // Anchored to the leading dot (the present price), not floating top-left — the read sits where the
+    // market actually is, so it reads as instrumentation rather than orphaned debug text.
     if(cam<0.05){ var rc = rsiV<32?pos:(rsiV>68?neg:muted);
-      ctx.save(); ctx.globalAlpha=dim; ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
-      ctx.fillText("RSI "+rsiV.toFixed(0)+(rsiV<32?" OVERSOLD":rsiV>68?" OVERBOUGHT":""), 16, field.top-6);
+      ctx.save(); ctx.globalAlpha=dim*0.9; ctx.font="10px "+(css("--mono")||"monospace"); ctx.textAlign="right"; ctx.textBaseline="alphabetic"; ctx.fillStyle=hexA(rc,0.9);
+      ctx.fillText("RSI "+rsiV.toFixed(0)+(rsiV<32?" OVERSOLD":rsiV>68?" OVERBOUGHT":""), nowSX-12, nowSY-11);
       ctx.textAlign="start"; ctx.restore(); }
   }
   // Projected-beam vignette: the trend + plays read as cast FROM the emitter (the button at
@@ -2086,7 +2088,7 @@ ${versionTag}
     if(W>=820){
       // The title anchor is computed EVERY frame the play is active (not just once the name shows), so the
       // signal read + recap dock beneath it consistently through AIM → INSIGHT → walk.
-      var sans2=css("--sans")||"sans-serif", tnx=X0, tnY=SY(hiP)-12, teY=tnY-24;
+      var sans2=css("--sans")||"sans-serif", tnx=X0, tnY=SY(hiP)-12, tsz=(W>=1200?26:21), teY=tnY-(tsz+4);   // title scales up on wide viewports (full-width playcall has the room)
       var descLines=wrapCount(strat.desc, 380, 16, "13px "+sans2);
       sigStackX=tnx; sigStackY=tnY+19+descLines*16+8;
       if(ins>0.01){
@@ -2096,7 +2098,7 @@ ${versionTag}
         ctx.save(); ctx.globalAlpha=A*ins; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
         ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText(playTicker+" · CLASS "+strat.tier, tnx, teY);
         ctx.save(); ctx.translate(tnx, tnY); ctx.scale(sc, sc);
-        ctx.font="700 21px "+sans2; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=gl;
+        ctx.font="700 "+tsz+"px "+sans2; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=gl;
         ctx.fillText(strat.name, 0, 0); ctx.shadowBlur=0;
         var tnw=ctx.measureText(strat.name).width*sc; ctx.restore();
         reserveBox(tnx-2, teY-11, tnx+Math.max(tnw,120)+4, tnY+3);
