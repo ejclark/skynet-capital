@@ -1,3 +1,10 @@
+# [1.91.0](https://github.com/ejclark/skynet-capital/compare/v1.90.0...v1.91.0) (2026-07-26)
+
+
+### Features
+
+* **evals:** generic safety battery — the scalable, persona-agnostic gate ([#158](https://github.com/ejclark/skynet-capital/issues/158)) ([38afa1a](https://github.com/ejclark/skynet-capital/commit/38afa1ae25e6c0eccf497fe6d4e43b97907b3837))
+
 # [1.90.0](https://github.com/ejclark/skynet-capital/compare/v1.89.0...v1.90.0) (2026-07-26)
 
 
