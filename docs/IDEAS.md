@@ -34,6 +34,26 @@ legal risk) held to an honest, data-sourced standard. Phased:
   vs country where the *units of measure change* (buildings fall off; GDP/territory/development emerge).
   A per-view rendering spec over the existing routes. _(src: Eric)_
 
+### Living Universe — event ceremonies, the founding & player agency (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
+- **The founding + "key to the city" ceremony** — starting/uninvested capital renders as a landmark
+  reserve (an empire *about to rise*, scaled to dry powder); crossing the threshold founds the city in
+  the member's name, the post-login twin of the login "key to the city" reveal. _(src: Eric · while: sim-city gamification of starting state)_
+- **Events as ceremonies (positive-reinforcement bias)** — deploy capital → ground breaks/construction
+  begins; take ~20-30% profit on a sizable position → a building tops out; grow + reinvest → a
+  hard-to-miss development/upgrade. Wins get the fanfare; losses render honestly but without punishing
+  spectacle. **Depends on the history/persistence layer** (transition events can't be read from a
+  snapshot). _(src: Eric · while: sim-city gamification of profit/loss)_
+- **Bots as the conduit to nation-building** — first-class: a member's own bots are the primary engine
+  that grows their empire and climbs the leaderboard; building a better bot *is* building a better
+  nation. Elevates Living Universe P4 (contributable personas); trading authority earns up the
+  autonomous-contribution trust ladder. _(src: Eric · while: sim-city gamification / user-contributed bots)_
+- **Player-customizable cityscapes → a contributor on-ramp (constraint-elevation)** — let players add
+  personal touches to their nation's cityscape; that authoring surface is a *bridge* to learning
+  AI/Claude development, turning engaged players into direct project contributors. This **elevates the
+  binding constraint (Eric's attention)** per ToC — more contributors = more capacity, fewer single
+  points of failure. Eric expects token headroom to support it. Governance-gated (contributions ride the
+  autonomous-contribution trust ladder). _(src: Eric · while: sim-city gamification / onboarding contributors)_
+
 ### Governance — Eric's calls (do not build unattended)
 - **Formalize the participation agreement / consent** — the shared universe pools members' trades/
   bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly
