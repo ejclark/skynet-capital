@@ -1,3 +1,10 @@
+# [1.70.0](https://github.com/ejclark/skynet-capital/compare/v1.69.0...v1.70.0) (2026-07-26)
+
+
+### Features
+
+* **login:** faithful Barad-dur fortress on the Eye of Sauron tower ([#122](https://github.com/ejclark/skynet-capital/issues/122)) ([b446397](https://github.com/ejclark/skynet-capital/commit/b446397702c0b4aae9f7882daa71e4e8141d58c3))
+
 # [1.69.0](https://github.com/ejclark/skynet-capital/compare/v1.68.0...v1.69.0) (2026-07-26)
 
 
