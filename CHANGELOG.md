@@ -1,3 +1,10 @@
+# [1.72.0](https://github.com/ejclark/skynet-capital/compare/v1.71.0...v1.72.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** sample equity/realized history in the runtime (history layer, step 3) ([#126](https://github.com/ejclark/skynet-capital/issues/126)) ([03c5cc4](https://github.com/ejclark/skynet-capital/commit/03c5cc464b0cfdbc45864df3ebabc93e1f199045))
+
 # [1.71.0](https://github.com/ejclark/skynet-capital/compare/v1.70.1...v1.71.0) (2026-07-26)
 
 
