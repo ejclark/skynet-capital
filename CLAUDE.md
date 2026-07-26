@@ -29,6 +29,11 @@ That is a feature, not noise. Read terse notes generously against these patterns
 - **Lore / narrative is a welcome flavor layer** (D&D roots; Sauron persona) — but it rides *on top
   of* accurate mechanics. A character name deepens a strategy; it never distorts it. Keep the lore
   system extensible (mixed multiverse) so it can adopt others' ideas organically.
+- **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class design goal, not
+  decoration. The gamified experience is what keeps the group engaged *and* the instrument that builds
+  trust *and* the system that compounds capital — all from one design. When weighing a feature, ask
+  what it does for the fun/engagement flywheel, not just the mechanics. North star:
+  [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md).
 - **Accuracy in the domain matters** — real tickers, strategy-accurate underlyings, honest labels
   (simulated vs. live). Never let a flourish imply something false about markets or P/L.
 - **Exquisite granular detail is a deliberate process, not a one-off.** Where an element has a rich
