@@ -899,24 +899,31 @@ ${versionTag}
   // with faint accent-lit windows and a few antennas. Generated once per resize (seeded by layout).
   var skyline=[], rainT=0;
   function buildSkyline(w,h){ skyline=[]; var x=-12;
-    while(x<w+12){ var bw=24+Math.random()*48, bh=58+Math.random()*Math.min(240,h*0.30);
-      var ncol=Math.max(1,Math.floor(bw/11)), nrow=Math.max(1,Math.floor(bh/15)), wins=[];
-      for(var r=0;r<nrow;r++) for(var c=0;c<ncol;c++){ if(Math.random()<0.30) wins.push([c,r]); }
-      skyline.push({ x:x, w:bw, h:bh, ncol:ncol, nrow:nrow, wins:wins, ant:Math.random()<0.34?(12+Math.random()*30):0 });
-      x += bw + (2+Math.random()*10); } }
+    while(x<w+12){ var bw=26+Math.random()*52, bh=36+Math.random()*Math.min(150,h*0.20);   // shorter towers
+      skyline.push({ x:x, w:bw, h:bh, seed:Math.random()*1000, ant:Math.random()<0.28?(10+Math.random()*22):0 });
+      x += bw + (2+Math.random()*9); } }
+  // Buildings are BUILT FROM the matrix code — like the walls of the hallway: dark structural masses
+  // whose faces are a fine, mostly-dim field of glyphs, with a sparse scatter of brighter "lit window"
+  // cells. Kept dim (atmosphere, not spectacle). Chars hold ~14 frames then flip so the code breathes.
   function drawSkyline(w,h){ if(!skyline.length||!rctx) return;
-    var accent=css("--accent")||"#35D0BA";
+    var accent=css("--accent")||"#35D0BA", flip=Math.floor(rainT/14);
+    rctx.font="9px "+(css("--mono")||"monospace");
     for(var i=0;i<skyline.length;i++){ var b=skyline[i], top=h-b.h;
-      if(b.ant){ rctx.strokeStyle=hexA(accent,0.22); rctx.lineWidth=1;
-        rctx.beginPath(); rctx.moveTo(b.x+b.w/2, top); rctx.lineTo(b.x+b.w/2, top-b.ant); rctx.stroke();
-        rctx.fillStyle=hexA(accent, 0.35+0.5*(0.5+0.5*Math.sin(rainT*0.09+i))); rctx.fillRect(b.x+b.w/2-1, top-b.ant-2, 2, 2); }
-      rctx.fillStyle="#04070A"; rctx.fillRect(b.x, top, b.w, b.h);         // solid silhouette mass (darker than bg)
-      rctx.fillStyle=hexA(accent,0.38); rctx.fillRect(b.x, top, b.w, 1.4); // lit top rim
-      rctx.fillStyle=hexA(accent,0.12); rctx.fillRect(b.x, top, 1, b.h);   // left edge catches the light
-      for(var k=0;k<b.wins.length;k++){ var wc=b.wins[k];
-        var wx=b.x+4+wc[0]*((b.w-8)/b.ncol), wy=top+7+wc[1]*((b.h-12)/b.nrow);
-        var fl=0.5+0.5*Math.sin(rainT*0.05 + wc[0]*3.1 + wc[1]*1.7 + i*0.9);
-        rctx.fillStyle=hexA(accent, 0.18+fl*0.5); rctx.fillRect(wx, wy, 2.6, 2.6); } } }
+      if(b.ant){ rctx.strokeStyle=hexA(accent,0.13); rctx.lineWidth=1;
+        rctx.beginPath(); rctx.moveTo(b.x+b.w/2, top); rctx.lineTo(b.x+b.w/2, top-b.ant); rctx.stroke(); }
+      rctx.fillStyle="#03060A"; rctx.fillRect(b.x, top, b.w, b.h);           // dark structural mass
+      rctx.save(); rctx.beginPath(); rctx.rect(b.x, top, b.w, b.h); rctx.clip();
+      var gx=7, gy=10, cxi=0;
+      for(var cx=b.x+1; cx<b.x+b.w; cx+=gx, cxi++){ var cyi=0;
+        for(var cy=top+9; cy<h; cy+=gy, cyi++){
+          var cell=b.seed + cxi*12.9 + cyi*7.3;
+          var lit=noise(cell)<0.14;                                          // sparse bright cells = lit windows
+          var ch=RG[(noise(cell+flip*0.7)*RG.length)|0];                     // char holds ~14 frames then flips
+          var fl=0.5+0.5*Math.sin(rainT*0.05 + cxi*1.3 + cyi*0.7 + b.seed);
+          var a=lit ? (0.42+0.34*fl) : (0.11+0.07*noise(cell+1.3));
+          rctx.fillStyle=hexA(accent,a); rctx.fillText(ch, cx, cy); } }
+      rctx.restore();
+      rctx.fillStyle=hexA(accent,0.18); rctx.fillRect(b.x, top, b.w, 1); } }  // faint lit rim
   try{ rctx = rcanvas && rcanvas.getContext ? rcanvas.getContext("2d") : null; }catch(e){ rctx=null; }
   function rainResize(){
     if(!rctx) return;
