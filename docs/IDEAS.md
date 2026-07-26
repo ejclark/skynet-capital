@@ -84,6 +84,14 @@ legal risk) held to an honest, data-sourced standard. Phased:
   - **First real slice (P1):** in the observatory, render each bot-persona's landmark (the Eye for
     Sauron) into its empire skyline, scaled by rank among bots — snapshot-derivable, connects the login
     Eye motif to the live board. Persistent leveling/accretion leans on the history layer. _(src: Claude · while: capturing the leveling mechanic)_
+- **The signal read IS the lead bot as a character** — the on-chart signal/assessment reads like a
+  Terminator sizing up the situation (HUD target-lock, threat/opportunity appraisal). That "assessment
+  voice" is a *character*, the same way the Tower of Sauron is one: make the lead bot a persona that
+  visibly does the detect→assess→recommend, with its own signature look/motion. Each nation (1 human +
+  ~2 bots) then has ONE bot serving the control-tower role (detect · correct · maintain) — Sauron's Eye
+  is that persona's expression; a Terminator-flavoured bot would express the same mechanics differently
+  (reticle/scan-line/HUD instead of a gaze/beam). The mechanics are shared; the skin is the persona.
+  Ties to the persona-lore seam (#79) and the levelable-landmark mechanic above. _(src: Eric · while: the signal assessment feeling like a Terminator character — a template for per-nation lead bots)_
 
 ### Play-feedback system — game-combat model for board telemetry (Eric-directed)
 The single terminal that narrates one play (and pushed the hero down / can't show many characters) is
