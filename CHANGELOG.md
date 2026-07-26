@@ -1,3 +1,10 @@
+## [1.79.2](https://github.com/ejclark/skynet-capital/compare/v1.79.1...v1.79.2) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** repair label collision — bidirectional search + reserve the callout ([#139](https://github.com/ejclark/skynet-capital/issues/139)) ([adf2257](https://github.com/ejclark/skynet-capital/commit/adf225709dc58dd8f5eb8b228ba035a3fabbe694))
+
 ## [1.79.1](https://github.com/ejclark/skynet-capital/compare/v1.79.0...v1.79.1) (2026-07-26)
 
 
