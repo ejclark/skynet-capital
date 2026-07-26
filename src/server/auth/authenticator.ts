@@ -1374,8 +1374,20 @@ ${versionTag}
   // an entry→target track. During WALK the solid trend climbs into the band and the trade resolves.
   // Information unfolds phase-by-phase (aim → project → walk → resolve) so it reads at a digestible
   // pace rather than arriving all at once.
+  // --- Canvas label collision system: track occupied boxes per frame and nudge labels so intricate
+  // overlays never stomp each other (critical on smaller viewports). reserveBox() marks fixed labels;
+  // placeLabelC() places a CENTER-aligned label, nudging it away (default up) until it clears. ---
+  var _lblBoxes=[];
+  function resetLabels(){ _lblBoxes.length=0; }
+  function reserveBox(x0,y0,x1,y1){ _lblBoxes.push([x0,y0,x1,y1]); }
+  function _boxHit(x0,y0,x1,y1){ for(var i=0;i<_lblBoxes.length;i++){ var o=_lblBoxes[i];
+    if(x0<o[2]&&x1>o[0]&&y0<o[3]&&y1>o[1]) return true; } return false; }
+  function placeLabelC(cx, y, text, lh, dir){ var w=ctx.measureText(text).width, x0=cx-w/2-2, x1=cx+w/2+2, ty=y, st=lh||11, d=dir||-1;
+    for(var it=0; it<12; it++){ if(!_boxHit(x0, ty-st, x1, ty+2)) break; ty+=d*(st+1); }
+    _lblBoxes.push([x0, ty-st, x1, ty+2]); return ty; }
   function drawForecast(strat, sig, p){
     if(!strat) return;
+    resetLabels();
     var A=1-p.out, proj=easeIO(clamp01(p.project));
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace";
@@ -1410,7 +1422,8 @@ ${versionTag}
         for(var ce=0;ce<=CS;ce++){ var t2=ce/CS, hw2=bwHalf*(1+0.9*Math.sqrt(t2)), cx2=X0+(Xf-X0)*t2; ce?ctx.lineTo(cx2,SY(midP+sd*hw2)):ctx.moveTo(cx2,SY(midP+sd*hw2)); } ctx.stroke(); }
       ctx.setLineDash([]);
       ctx.font="700 8px "+mono; ctx.textAlign="left"; ctx.fillStyle=hexA(accent,0.7*proj*emVol);
-      ctx.fillText("VOL", X0+(Xf-X0)*0.5, SY(midP+bwHalf*1.9)-2);
+      var volx=X0+(Xf-X0)*0.5, voly=SY(midP+bwHalf*1.9)-2; ctx.fillText("VOL", volx, voly);
+      reserveBox(volx-2, voly-9, volx+ctx.measureText("VOL").width+2, voly+2);   // event labels avoid VOL
       // Support / Resistance from recent swings — dotted levels extending into the forecast.
       var s0=Math.max(0,nn-80), hiSR=-1e9, loSR=1e9;
       for(var qq=s0;qq<nn;qq++){ if(price[qq]>hiSR)hiSR=price[qq]; if(price[qq]<loSR)loSR=price[qq]; }
@@ -1471,8 +1484,10 @@ ${versionTag}
           ctx.beginPath(); ctx.moveTo(ex,eyTop); ctx.lineTo(ex,SY(loP)); ctx.stroke(); ctx.setLineDash([]);
           ctx.strokeStyle=hexA(muted,0.55*proj); ctx.lineWidth=1;
           ctx.beginPath(); ctx.moveTo(ex,ay-6); ctx.lineTo(ex+4,ay-2); ctx.lineTo(ex,ay+2); ctx.lineTo(ex-4,ay-2); ctx.closePath(); ctx.stroke();
-          ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7*proj); ctx.fillText(ev.label, ex, ay-11);
-          ctx.font="700 7px "+mono; ctx.fillStyle=hexA(muted,0.45*proj); ctx.fillText("SCHEDULED", ex, ay-21);
+          ctx.font="700 9px "+mono; var sy=placeLabelC(ex, ay-11, ev.label, 11);
+          ctx.fillStyle=hexA(muted,0.7*proj); ctx.fillText(ev.label, ex, sy);
+          ctx.font="700 7px "+mono; var sy2=placeLabelC(ex, sy-10, "SCHEDULED", 9);
+          ctx.fillStyle=hexA(muted,0.45*proj); ctx.fillText("SCHEDULED", ex, sy2);
           continue;
         }
         var bull=ev.mag>=0, ecol=bull?pos:neg;
@@ -1487,10 +1502,12 @@ ${versionTag}
           ctx.strokeStyle=hexA(ecol,(0.45+0.4*pz)*proj); ctx.lineWidth=1.4;
           ctx.beginPath(); ctx.arc(ex, ay-ah/2, 9+pz*5, 0, 7); ctx.stroke(); }
         // Unscheduled shocks are flagged with a "!" so they read as a surprise, not a calendar event.
-        ctx.font="700 9px "+mono; ctx.fillStyle=hexA(ecol,(ei===warpIdx?1:0.9)*proj);
-        ctx.fillText((ev.scheduled?"":"! ")+ev.label, ex, ay-ah-4);
-        // Earnings cross-read note (big tech signals peers) under the label.
-        if(ev.note){ ctx.font="700 7px "+mono; ctx.fillStyle=hexA(muted,0.7*proj); ctx.fillText("→ "+ev.note, ex, ay-ah-15); } }
+        var elab=(ev.scheduled?"":"! ")+ev.label;
+        ctx.font="700 9px "+mono; var ly=placeLabelC(ex, ay-ah-4, elab, 11);   // stagger so close events never overlap
+        ctx.fillStyle=hexA(ecol,(ei===warpIdx?1:0.9)*proj); ctx.fillText(elab, ex, ly);
+        // Earnings cross-read note (big tech signals peers) above the label.
+        if(ev.note){ ctx.font="700 7px "+mono; var ny=placeLabelC(ex, ly-10, "→ "+ev.note, 9);
+          ctx.fillStyle=hexA(muted,0.7*proj); ctx.fillText("→ "+ev.note, ex, ny); } }
       ctx.textAlign="start"; }
     ctx.textAlign="start"; ctx.restore();
     // RSI oscillator lane, parallel below the candles during the walk — the overbought/oversold read
