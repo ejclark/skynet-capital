@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/ejclark/skynet-capital/compare/v1.32.0...v1.33.0) (2026-07-26)
+
+
+### Features
+
+* **login:** empire skyline — crowned landmark towers + prosperity aura ([#53](https://github.com/ejclark/skynet-capital/issues/53)) ([6ef583d](https://github.com/ejclark/skynet-capital/commit/6ef583ddbc527578cfd21ef47d6e3e29246dfa69))
+
 # [1.32.0](https://github.com/ejclark/skynet-capital/compare/v1.31.1...v1.32.0) (2026-07-26)
 
 
