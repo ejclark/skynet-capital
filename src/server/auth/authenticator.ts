@@ -889,6 +889,28 @@ ${versionTag}
 
   // --- Ambient Matrix rain (deepest layer, faint) ---
   var rcanvas=document.getElementById("rain"), rctx=null, cols=[], colW=16, RG="0123456789$+-.%△▽ｦｱｲｳｴｵｶｷｸｹﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘ";
+  // High-tech skyline anchoring the bottom of the matrix rain — a dark city the code falls behind,
+  // with faint accent-lit windows and a few antennas. Generated once per resize (seeded by layout).
+  var skyline=[], rainT=0;
+  function buildSkyline(w,h){ skyline=[]; var x=-12;
+    while(x<w+12){ var bw=24+Math.random()*48, bh=58+Math.random()*Math.min(240,h*0.30);
+      var ncol=Math.max(1,Math.floor(bw/11)), nrow=Math.max(1,Math.floor(bh/15)), wins=[];
+      for(var r=0;r<nrow;r++) for(var c=0;c<ncol;c++){ if(Math.random()<0.30) wins.push([c,r]); }
+      skyline.push({ x:x, w:bw, h:bh, ncol:ncol, nrow:nrow, wins:wins, ant:Math.random()<0.34?(12+Math.random()*30):0 });
+      x += bw + (2+Math.random()*10); } }
+  function drawSkyline(w,h){ if(!skyline.length||!rctx) return;
+    var accent=css("--accent")||"#35D0BA";
+    for(var i=0;i<skyline.length;i++){ var b=skyline[i], top=h-b.h;
+      if(b.ant){ rctx.strokeStyle=hexA(accent,0.22); rctx.lineWidth=1;
+        rctx.beginPath(); rctx.moveTo(b.x+b.w/2, top); rctx.lineTo(b.x+b.w/2, top-b.ant); rctx.stroke();
+        rctx.fillStyle=hexA(accent, 0.35+0.5*(0.5+0.5*Math.sin(rainT*0.09+i))); rctx.fillRect(b.x+b.w/2-1, top-b.ant-2, 2, 2); }
+      rctx.fillStyle="#04070A"; rctx.fillRect(b.x, top, b.w, b.h);         // solid silhouette mass (darker than bg)
+      rctx.fillStyle=hexA(accent,0.38); rctx.fillRect(b.x, top, b.w, 1.4); // lit top rim
+      rctx.fillStyle=hexA(accent,0.12); rctx.fillRect(b.x, top, 1, b.h);   // left edge catches the light
+      for(var k=0;k<b.wins.length;k++){ var wc=b.wins[k];
+        var wx=b.x+4+wc[0]*((b.w-8)/b.ncol), wy=top+7+wc[1]*((b.h-12)/b.nrow);
+        var fl=0.5+0.5*Math.sin(rainT*0.05 + wc[0]*3.1 + wc[1]*1.7 + i*0.9);
+        rctx.fillStyle=hexA(accent, 0.18+fl*0.5); rctx.fillRect(wx, wy, 2.6, 2.6); } } }
   try{ rctx = rcanvas && rcanvas.getContext ? rcanvas.getContext("2d") : null; }catch(e){ rctx=null; }
   function rainResize(){
     if(!rctx) return;
@@ -897,6 +919,7 @@ ${versionTag}
     rctx.setTransform(DPR,0,0,DPR,0,0);
     var n=Math.ceil(rcanvas.clientWidth/colW);
     cols=[]; for(var i=0;i<n;i++){ cols.push(Math.random()*-rcanvas.clientHeight); }
+    buildSkyline(rcanvas.clientWidth, rcanvas.clientHeight);
   }
   // boost = the rain reacts to a play (faster, brighter); tint = green flourish on a winning close.
   function rainDraw(boost,tint){
@@ -913,6 +936,7 @@ ${versionTag}
     }
     if(boost){ for(var kk=0;kk<6;kk++){ var cxk=(Math.random()*cols.length)|0;
       rctx.fillStyle=hexA(col,0.95); rctx.fillText(RG[(Math.random()*RG.length)|0], cxk*colW, Math.random()*h); } }
+    rainT++; drawSkyline(w,h);   // city sits in FRONT: the code falls behind the skyline
   }
 
   // --- Strategy Playbook: the race periodically recedes and a holographic option-payoff
