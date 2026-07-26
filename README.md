@@ -89,4 +89,5 @@ npm run typecheck
 - Our working conventions, portable to any repo: [`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md)
 - The brand & identity system (what makes it feel like Skynet): [`docs/BRAND.md`](docs/BRAND.md)
 - Feeding a code-graph (Graphify) into brand cohesion: [`docs/BCP-GRAPHIFY.md`](docs/BCP-GRAPHIFY.md)
+- Navigating the codebase with Graphify (playbook): [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md)
 - The repo structure as a knowledge graph (Graphify): [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md)

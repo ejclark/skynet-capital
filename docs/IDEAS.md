@@ -41,6 +41,23 @@ Eric-sourced.
   _(src: Eric · while: extending the Claude side-quest idea system)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
+- **Lore cards need data-model threading** — `graphify path SauronPersona → renderIndividualBody()`
+  showed the `/u/:id` renderer consumes `ParticipantSnapshot`, not `Persona`. To surface persona
+  lore/character on a profile, thread persona identity into the snapshot (or a `personaId` → identity
+  lookup) — do NOT just import the persona into the renderer. Unblocks the mechanism half of #79.
+  _(src: Claude · while: exploring Graphify against the lore backlog)_
+- **Machine-checkable brand cohesion (`brand.json`)** — emit tokens + anchor→node bindings + per-scope
+  rules so BCP's *Enforce* step can lint deliverables against the brand automatically (per community
+  scope). The deeper half of the BCP × Graphify integration. _(src: Claude · while: running Graphify)_
+- **Refactor candidates from the graph** — Graphify flags low-cohesion communities (`MarketContext`,
+  `dashboard-data.ts`, `data-source.ts`) as split opportunities. Not urgent; run `affected` first on
+  any target. _(src: Claude · while: reading the structural map)_
+- **Dead-code sweep from isolated nodes** — 126 weakly-connected nodes flagged; most are config keys
+  (noise), but some may be genuinely unused exports. Verify carefully (entry points / test-only aren't
+  dead) before removing. _(src: Claude · while: reading the structural map)_
+- **Install Graphify as a native `/graphify` skill** — `graphify install --platform claude` would make
+  the commands first-class in-session; env is ephemeral so it doesn't persist, but worth it if a
+  durable place to store the skill emerges. _(src: Claude · while: exploring Graphify's command surface)_
 - **Eye searchlight sweep + drifting embers** — at rest, a slow narrow beam from the Eye scans the
   skyline, and embers drift up from the tower; deepens the lore anchor without stealing focus.
   _(src: Claude · while: making the Eye of Sauron more pronounced)_
