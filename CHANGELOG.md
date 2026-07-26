@@ -1,3 +1,10 @@
+## [1.29.1](https://github.com/ejclark/skynet-capital/compare/v1.29.0...v1.29.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** design-review polish — tier spacing + candle contrast ([#47](https://github.com/ejclark/skynet-capital/issues/47)) ([9ecbeb0](https://github.com/ejclark/skynet-capital/commit/9ecbeb03c23166e7d83e8c6fdbdb68ae14f1174f))
+
 # [1.29.0](https://github.com/ejclark/skynet-capital/compare/v1.28.0...v1.29.0) (2026-07-26)
 
 
