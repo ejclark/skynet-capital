@@ -751,9 +751,11 @@ ${versionTag}
     // the band so real deviations show (not a flat glide), only a GENTLE pull toward the moving target,
     // plus one-off event shocks. So the line dips and recovers like a real tape and still lands at the
     // exit price by the right edge.
-    while(realized.length<want){ var i=realized.length, last=i?realized[i-1]:price[nowIdx];
-      var moving=signalPrice+(targetPrice-signalPrice)*easeIO((i+1)/cap);
-      t++; pvR = pvR*0.88 + (noise(t*0.017)-0.5)*volScale*0.03*playVol + (moving-last)*0.10 + eventImpulse(i,cap);
+    while(realized.length<want){ var i=realized.length, last=i?realized[i-1]:price[nowIdx], f=(i+1)/cap;
+      var moving=signalPrice+(targetPrice-signalPrice)*easeIO(f);
+      // Pull to target firms up over the walk so an event shock deviates mid-play but the tape still
+      // converges to the profitable exit by the close (the happy-but-realistic path).
+      t++; pvR = pvR*0.88 + (noise(t*0.017)-0.5)*volScale*0.03*playVol + (moving-last)*(0.10+0.24*f) + eventImpulse(i,cap);
       realized.push(Math.max(5, last+pvR)); }
     while(realized.length>want) realized.pop();   // trim if the walk was scrubbed back
   }
@@ -814,17 +816,28 @@ ${versionTag}
     // reality overtaking the dotted forecast to its right. Fades on zoom-out (realizedAlpha).
     var rl=realized.length;
     function LP(k){ return k<n ? [k*dx, Y(price[k])] : [k*dx, Y(realized[k-n])]; }   // unified index→point
+    // Act 3 zoomed in: render the realized tape as CANDLESTICKS (OHLC per group of ticks) — what a
+    // trader actually watches. They form one at a time (slower cadence than the line), which adds the
+    // fine detail and reinforces the time-dilation of the zoom. Green up / red down, wick = range.
     if(rl){ ctx.save(); ctx.globalAlpha=dim*realizedAlpha;
-      ctx.beginPath(); var h0=LP(n-1); ctx.moveTo(h0[0],h0[1]);
-      for(i=0;i<rl;i++){ var rp=LP(n+i); ctx.lineTo(rp[0],rp[1]); }
-      ctx.strokeStyle=txt; ctx.lineWidth=1.9; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0; ctx.restore(); }
-    // freshly-drawn "wet ink" leading segment + glowing pen tip at the true leading point —
-    // the realized end during a play, the live edge when ambient.
+      var G=4, cw=dx*G*0.6, lw=1/zoom, cs, ce, cj;
+      for(cs=0;cs<rl;cs+=G){ ce=Math.min(rl-1,cs+G-1);
+        var o=realized[cs], c=realized[ce], chi=-1e9, clo=1e9;
+        for(cj=cs;cj<=ce;cj++){ if(realized[cj]>chi)chi=realized[cj]; if(realized[cj]<clo)clo=realized[cj]; }
+        var ccx=(n+cs+(ce-cs)/2)*dx, cup=c>=o, ccol=cup?pos:neg;
+        ctx.strokeStyle=hexA(ccol,0.85); ctx.lineWidth=1.2*lw;
+        ctx.beginPath(); ctx.moveTo(ccx,Y(chi)); ctx.lineTo(ccx,Y(clo)); ctx.stroke();            // wick
+        var bt=Y(Math.max(o,c)), bh=Math.max(1.4*lw, Y(Math.min(o,c))-bt);
+        ctx.fillStyle=hexA(ccol,cup?0.5:0.78); ctx.fillRect(ccx-cw/2,bt,cw,bh);                    // body
+        ctx.strokeStyle=hexA(ccol,0.95); ctx.lineWidth=lw; ctx.strokeRect(ccx-cw/2,bt,cw,bh); }
+      ctx.restore(); }
+    // Glowing tip at the leading point. Ambient also gets the wet-ink pen segment; during a play the
+    // candles carry the body, so just the tip dot.
     var lead = rl ? (n-1+rl) : (n-1), leadA = rl ? realizedAlpha : 1;
     ctx.save(); ctx.globalAlpha=dim*leadA;
-    var head=18; ctx.beginPath();
-    for(i=Math.max(0,lead-head);i<=lead;i++){ var wp=LP(i); i===Math.max(0,lead-head)?ctx.moveTo(wp[0],wp[1]):ctx.lineTo(wp[0],wp[1]); }
-    ctx.strokeStyle="#EAFBF7"; ctx.lineWidth=2.3; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0;
+    if(!rl){ var head=18; ctx.beginPath();
+      for(i=Math.max(0,lead-head);i<=lead;i++){ var wp=LP(i); i===Math.max(0,lead-head)?ctx.moveTo(wp[0],wp[1]):ctx.lineTo(wp[0],wp[1]); }
+      ctx.strokeStyle="#EAFBF7"; ctx.lineWidth=2.3; ctx.lineJoin="round"; ctx.shadowColor=accent; ctx.shadowBlur=16; ctx.stroke(); ctx.shadowBlur=0; }
     var lp=LP(lead);
     ctx.beginPath(); ctx.arc(lp[0],lp[1],3.8,0,7); ctx.fillStyle="#EAFBF7"; ctx.shadowColor=accent; ctx.shadowBlur=20; ctx.fill(); ctx.shadowBlur=0;
     ctx.restore();
@@ -1219,8 +1232,8 @@ ${versionTag}
   // normal-looking deviations of the realized line, and add realism + a teaching moment.
   var EVENTS=["EARNINGS","CPI PRINT","FOMC","JOBS REPORT","GUIDANCE","GEOPOLITICAL"];
   function scheduleEvents(){ events=[]; var nE=Math.random()<0.4?2:1, k;
-    for(k=0;k<nE;k++){ events.push({ f:0.28+Math.random()*0.5, label:EVENTS[(Math.random()*EVENTS.length)|0],
-      mag:(Math.random()<0.5?-1:1)*volScale*(0.12+Math.random()*0.16), fired:false }); } }
+    for(k=0;k<nE;k++){ events.push({ f:0.26+Math.random()*0.34, label:EVENTS[(Math.random()*EVENTS.length)|0],
+      mag:(Math.random()<0.5?-1:1)*volScale*(0.12+Math.random()*0.16), fired:false }); } }   // mid-walk, time to recover
   function eventImpulse(i, cap){ var f=i/cap, s=0, k;
     for(k=0;k<events.length;k++){ if(!events[k].fired && f>=events[k].f){ events[k].fired=true; s+=events[k].mag; } }
     return s; }
