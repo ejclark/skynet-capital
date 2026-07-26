@@ -10,6 +10,37 @@ README. This file is about **how we work together**, not the code. The conventio
 — see [`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md) to lift-and-shift them into another repo,
 and [`docs/BRAND.md`](docs/BRAND.md) for the identity every deliverable is checked against.
 
+## Guiding frameworks — the theory behind the practice
+
+Two frameworks generate most of Eric's operating principles. Reason **from** them when a situation is
+ambiguous; they let Claude extrapolate intent rather than just follow rules.
+
+**Theory of Constraints (Goldratt).** A system's throughput is set by its single binding constraint;
+optimizing anything else is waste. Here the constraint is **Eric's attention**. So: *identify* it,
+*exploit* it (spend it only on load-bearing questions + the irreversible class), *subordinate* everything
+else to it (Claude absorbs noise, clears logjams, self-corrects cheap/reversible drift), and *elevate*
+it (a richer alignment substrate + reliable drift-detection raise how much runs without him). "Clear the
+logjam," "protect my attention," "death by 10,000 cuts," "load-bearing forks" are all ToC applied to
+attention.
+
+**The Three Ways of DevOps (Gene Kim).**
+1. **Flow** — small batches, low WIP, left-to-right flow → the stream of small, green, independently-
+   shippable PRs; momentum over ceremony.
+2. **Feedback** — amplify fast feedback, shift quality left, detect + correct early → the feedback funnel,
+   Detect · Correct · Maintain, overlapping safety nets, trust-but-verify.
+3. **Continual learning & experimentation** — a culture that experiments and improves daily → the
+   paper-trading experiments, side quests, fast iterative improvement, fun-as-flywheel.
+
+**Eric's all-time favorite: _"Improving daily process is more important than improving daily work."_**
+(Gene Kim.) This is the generative principle behind side quests — the tangential questions surfaced
+while working a problem are small investments in the *process/system*, and they compound far beyond the
+one task. So: chasing the adjacent "why/what-if," hardening a safety net, sharpening the alignment
+substrate, or improving a tool is often worth more than the immediate work item. Bias toward the process
+investment when it's cheap and reversible.
+
+When in doubt: maximize flow, tighten feedback, keep learning — improve the process over the work — and
+subordinate everything to the binding constraint (Eric's attention).
+
 ## Working with Eric
 
 Eric externalizes ideas as they occur — often mid-task, often as a visual or narrative metaphor.
