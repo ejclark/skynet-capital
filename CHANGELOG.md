@@ -1,3 +1,10 @@
+# [1.74.0](https://github.com/ejclark/skynet-capital/compare/v1.73.0...v1.74.0) (2026-07-26)
+
+
+### Features
+
+* **login:** the Eye detects + pulls; spotlights demoted to a glint ([#129](https://github.com/ejclark/skynet-capital/issues/129)) ([343f3db](https://github.com/ejclark/skynet-capital/commit/343f3db18951b815709c27fade4e9c23801e54ca))
+
 # [1.73.0](https://github.com/ejclark/skynet-capital/compare/v1.72.1...v1.73.0) (2026-07-26)
 
 
