@@ -1039,6 +1039,21 @@ ${versionTag}
   // High-tech skyline anchoring the bottom of the matrix rain — a dark city the code falls behind,
   // with faint accent-lit windows and a few antennas. Generated once per resize (seeded by layout).
   var skyline=[], rainT=0, cityLayers=[], cityPX=0, cityPXt=0;
+  // Market-hours lighting: the city wakes when the market opens and rests when it's closed. A single
+  // liveliness factor (0..1) computed from New York time scales the lit windows, crowns, and signage
+  // so the skyline visibly breathes with the trading session. Refreshed once a minute, eased.
+  var cityLife=1, cityLifeTarget=1;
+  function marketLife(){
+    try{ var et=new Date(new Date().toLocaleString("en-US",{timeZone:"America/New_York"}));
+      var day=et.getDay(), min=et.getHours()*60+et.getMinutes();
+      if(day===0||day===6) return 0.4;                 // weekend — the city rests
+      if(min>=570&&min<960) return 1;                  // 9:30–16:00 regular hours — full life
+      if(min>=240&&min<570) return 0.72;               // 4:00–9:30 pre-market — waking up
+      if(min>=960&&min<1200) return 0.72;              // 16:00–20:00 after-hours — winding down
+      return 0.45;                                     // overnight — dim
+    }catch(e){ return 1; }
+  }
+  cityLifeTarget=marketLife(); cityLife=cityLifeTarget;
   function _genLayer(w,h,o){ var arr=[], x=-20-Math.random()*40;
     while(x<w+40){ var bw=o.bw0+Math.random()*o.bwR, bh=o.bh0+Math.random()*o.bhR;
       // Silhouette variety (Dubai/Tokyo high-tech): most sleek towers TAPER toward the top; a share get
@@ -1086,7 +1101,7 @@ ${versionTag}
   // cells. Kept dim (atmosphere, not spectacle). Chars hold ~14 frames then flip so the code breathes.
   // Draw one building with 3D block faces (right side + top), then its front detail. dim = atmospheric
   // perspective (far = fainter); L.code = full matrix-code face + tracers + crown (near layer only).
-  function drawBuilding(L, b, bx, top, bottom, accent, bg, flip){ var dim=L.dim, d=L.depth;
+  function drawBuilding(L, b, bx, top, bottom, accent, bg, flip){ var dim=L.dim, d=L.depth, lifeK=0.5+0.5*cityLife;
     // Silhouette geometry: sleek towers TAPER, so the top width narrows. Per-row edges are lerped
     // between the base rect and the (centered) top width — used for the outline, windows, and mullions.
     var tp=b.taper||1, tw=b.w*tp, txL=bx+(b.w-tw)/2, txR=txL+tw, tapered=tp<0.985;
@@ -1110,7 +1125,7 @@ ${versionTag}
     if((b.crown||b.spire>0)){ var pulse=0.4+0.6*Math.pow(0.5+0.5*Math.sin(rainT*0.13+b.seed),3);
       rctx.save(); rctx.globalCompositeOperation="lighter";
       var cg=rctx.createRadialGradient(midx,tipY,0,midx,tipY,b.crown?15:9);
-      cg.addColorStop(0,hexA(b.crown?"#EAFFFA":accent,(b.crown?0.42:0.5)*pulse*dim)); cg.addColorStop(1,hexA(accent,0));
+      cg.addColorStop(0,hexA(b.crown?"#EAFFFA":accent,(b.crown?0.42:0.5)*pulse*dim*lifeK)); cg.addColorStop(1,hexA(accent,0));
       rctx.fillStyle=cg; rctx.beginPath(); rctx.arc(midx,tipY,b.crown?15:9,0,7); rctx.fill(); rctx.restore();
       rctx.fillStyle=hexA("#EAFFFA",(0.5+0.4*pulse)*dim); rctx.beginPath(); rctx.arc(midx,tipY,1.5,0,7); rctx.fill(); }
     if(L.code){
@@ -1122,7 +1137,7 @@ ${versionTag}
         for(var cy=top+8; cy<bottom; cy+=gy,cyi++){ var cell=b.seed+cxi*12.9+cyi*7.3, nv=noise(cell);
           var lit=nv<0.13, ch=RG[(noise(cell+flip*0.7)*RG.length)|0], fl=0.5+0.5*Math.sin(rainT*0.05+cxi*1.3+cyi*0.7+b.seed);
           var col=accent; if(lit){ var m=noise(cell+3.1); if(m<0.15) col="#EAFFFA"; else if(m<0.32) col="#8DFBE9"; }
-          rctx.fillStyle=hexA(col,(lit?(0.40+0.36*fl):(0.085+0.06*noise(cell+1.3)))*dim); rctx.fillText(ch,cx,cy); } }
+          rctx.fillStyle=hexA(col,(lit?(0.40+0.36*fl)*lifeK:(0.085+0.06*noise(cell+1.3)))*dim); rctx.fillText(ch,cx,cy); } }
       // vertical structural mullions, following the taper — fine pinstripes catching the light
       rctx.strokeStyle=hexA(accent,0.09*dim); rctx.lineWidth=1;
       for(var mi=1;mi<=3;mi++){ var u=mi/4; rctx.beginPath(); rctx.moveTo(bx+b.w*u,bottom); rctx.lineTo(txL+tw*u,top); rctx.stroke(); }
@@ -1138,7 +1153,7 @@ ${versionTag}
       rctx.fillStyle=hexA(accent,0.24*dim); rctx.fillRect(txL,top,tw,1);
       for(var wy=top+6; wy<bottom-2; wy+=8){ var lE=edgeL(wy)+2, rE=edgeR(wy)-2;
         for(var wx=lE; wx<rE; wx+=6){ var wc=b.seed+wx*1.7+wy*0.9;
-          if(noise(wc)<0.18){ var wf=0.5+0.5*Math.sin(rainT*0.04+wx+wy); rctx.fillStyle=hexA(noise(wc+2.2)<0.2?"#8DFBE9":accent,(0.12+wf*0.20)*dim); rctx.fillRect(wx,wy,2,2); } } }
+          if(noise(wc)<0.18){ var wf=0.5+0.5*Math.sin(rainT*0.04+wx+wy); rctx.fillStyle=hexA(noise(wc+2.2)<0.2?"#8DFBE9":accent,(0.12+wf*0.20)*dim*lifeK); rctx.fillRect(wx,wy,2,2); } } }
     }
   }
   // Ticker billboards mounted on the near-layer towers — the skyline reads as a live market.
@@ -1154,7 +1169,7 @@ ${versionTag}
       var up=bd.dir>0, col=up?pos:neg, arw=up?"▲":"▼";
       var bx=b.x+ox, top=bottom-b.h, pw=Math.min(b.w-8, 68), ph=15;
       var cx=bx+b.w/2, cy=top+b.h*bd.fy, px0=cx-pw/2, py0=cy-ph/2;
-      var flick=0.72+0.28*Math.pow(0.5+0.5*Math.sin(rainT*0.09+b.seed),2);   // faint neon flicker
+      var flick=(0.72+0.28*Math.pow(0.5+0.5*Math.sin(rainT*0.09+b.seed),2))*(0.55+0.45*cityLife);   // neon flicker, dimmed off-hours
       rctx.fillStyle=hexA("#01050A",0.82); rctx.fillRect(px0,py0,pw,ph);       // sign backing
       rctx.strokeStyle=hexA(col,0.55*flick); rctx.lineWidth=1; rctx.strokeRect(px0+0.5,py0+0.5,pw-1,ph-1);
       rctx.save(); rctx.globalCompositeOperation="lighter";                    // sign glow
@@ -1169,6 +1184,8 @@ ${versionTag}
   }
   function drawSkyline(w,h){ if(!cityLayers.length||!rctx) return;
     var accent=css("--accent")||"#35D0BA", bg=css("--bg")||"#0B0F14", flip=Math.floor(rainT/14), i, li;
+    if(rainT%180===0) cityLifeTarget=marketLife();   // re-check the session ~every few seconds
+    cityLife += (cityLifeTarget-cityLife)*0.02;       // ease the day/night transition
     cityPX += (cityPXt-cityPX)*0.08;   // eased pointer parallax
     // Empire aura from the near layer.
     var skyTop=h; for(i=0;i<skyline.length;i++){ var st=h-skyline[i].h; if(st<skyTop) skyTop=st; }
