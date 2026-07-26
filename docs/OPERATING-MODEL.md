@@ -13,8 +13,12 @@ Two ways to use it:
 - **Manual.** Copy the two [Templates](#templates) into the target repo and fill the `<placeholders>`
   yourself.
 
-Nothing here is Skynet-specific — the domain details (options, canvas, personas) are deliberately
-left out. What transfers is the *process*.
+The **process** here is domain-agnostic on purpose. But a scrubbed-agnostic process has a structural
+gap: the branding/identity that makes output *lovable* is exactly what agnosticism removes. We close
+that gap not by shipping a brand (that can't be portable) but by shipping a **method that discovers
+and grows one** — the [Brand Cohesion Protocol](#brand-cohesion-protocol-bcp) below, whose output is a
+domain-specific `BRAND.md` the agnostic process then rides on. So the full artifact is **agnostic
+process + a repeatable way to produce domain-specific identity**.
 
 ---
 
@@ -30,7 +34,16 @@ Install this repo's "operating model" — how we work together, not the code. Do
    commit/PR conventions actually used here. If a convention is unclear, ask me one question rather
    than guess.
 
-2. Create CLAUDE.md at the repo root (or merge into an existing one) with these sections, adapted to
+2. Run the Brand Cohesion Protocol's SENSE + DISTILL steps to close the identity gap. Gather every
+   identity signal: existing assets (palette, type, logo, copy voice), the domain's inherent character
+   (what is this product ABOUT?), and my metaphors/references. If a structural map exists (e.g. a
+   Graphify graph.json), use its god-nodes as identity-anchor candidates and its communities as
+   cohesion scopes. Where identity signal is thin, ask me a few sharp questions rather than defaulting
+   to generic. Then write BRAND.md (see the template) codifying tokens, voice & tone, core
+   metaphors/motifs, 1-3 identity anchors, and the honesty/domain-accuracy rules. All later work is
+   checked against BRAND.md.
+
+3. Create CLAUDE.md at the repo root (or merge into an existing one) with these sections, adapted to
    this repo:
    - A one-paragraph "what this project is."
    - "Working with <me>" — a profile of how I think and my quality bar. Seed it with sensible
@@ -51,12 +64,14 @@ Install this repo's "operating model" — how we work together, not the code. Do
      change; small, focused, independently-shippable PRs; verify before merge (+ a screenshot/render
      for visual work); the repo's commit convention; and any repo-specific traps you noticed.
 
-3. Create docs/IDEAS.md as the durable backlog: an Inbox (with an attribution legend — every idea
+4. Create docs/IDEAS.md as the durable backlog: an Inbox (with an attribution legend — every idea
    tagged (src: … · while: …)), an "In progress", and a "Shipped" section. Seed the Inbox with any
    real TODOs / open threads you found while inspecting the repo, tagged as Claude-sourced side
    quests with their context.
 
-4. Show me the two files for review before committing. Then, from now on, operate this way: route
+5. Show me the three files (BRAND.md, CLAUDE.md, docs/IDEAS.md) for review before committing. Then
+   ENFORCE + COMPOUND: check every deliverable against BRAND.md, extend it (never contradict it) as
+   new elements appear, and flow refinements back into it. From now on, operate this way: route
    every idea I inject with a visible one-liner, hunt side quests as you work, and ship small green
    PRs.
 
@@ -68,6 +83,9 @@ detailed enough to execute.
 
 ## What gets installed (the operating model)
 
+0. **Brand cohesion (`BRAND.md`).** The domain-specific identity the agnostic process rides on,
+   produced by the [Brand Cohesion Protocol](#brand-cohesion-protocol-bcp) — tokens, voice, motifs,
+   identity anchors, honesty rules. This is what keeps portable process from producing generic output.
 1. **Idea OS — capture & routing.** The user externalizes ideas freely; Claude is the adapter that
    classifies each one (act now / park / profile note / question) and *states where it landed*, so the
    working context stays focused and nothing is lost. Optional `NOW:` / `PARK:` / `ME:` / `Q:`
@@ -86,9 +104,79 @@ detailed enough to execute.
 
 ---
 
+## Brand Cohesion Protocol (BCP)
+
+The method that closes the agnosticism gap. It is domain-agnostic in *form* but domain-specific in
+*output*: you don't port a brand, you port a repeatable way to **discover and grow** one. Five moves:
+
+1. **Sense** — gather every identity signal: existing assets (palette, type, logo, copy voice), the
+   domain's inherent character (*what is this actually about?*), and the user's metaphors/references.
+   Thin signal ⇒ elicit it with sharp questions, don't default to generic.
+2. **Distill** — codify into a durable brand system (`BRAND.md`): tokens, voice & tone, core
+   metaphors/motifs, lore hooks, honesty/accuracy rules.
+3. **Anchor** — pick 1-3 **identity anchors**: elements with rich backstory that license exquisite
+   detail and carry cohesion most vividly. Depth compounds here.
+4. **Enforce** — every deliverable is checked against the brand system; new elements must *extend* it,
+   never contradict it. Drift is a defect.
+5. **Compound** — the brand system is living; refinements flow back into `BRAND.md` so identity
+   deepens over time (this is the same principle as "exquisite detail is a scalable process").
+
+Skynet Capital is a **worked example** of BCP output — see [`BRAND.md`](BRAND.md). The protocol was
+run by instinct there; this section extracts the method so the next repo can run it deliberately.
+
+### Handoff to a structural mapper (e.g. Graphify)
+
+A code-knowledge-graph tool like [Graphify](https://github.com/Graphify-Labs/graphify) maps a repo's
+*structure* — nodes/edges, **communities** (subsystems), **god-nodes** (highest-degree hubs) — but has
+no identity layer. BCP is the complementary layer, and it *consumes* that map:
+
+- **god-nodes → identity-anchor candidates** (Anchor). The most central elements are where cohesion
+  should be most vivid.
+- **communities → cohesion scopes** (Enforce). Consistency is checked per subsystem.
+- **the graph → the Sense substrate.** Structure is one identity signal among assets + character +
+  metaphors.
+
+So the division is clean: the mapper answers *"what are the structural hubs?"*; BCP answers *"what is
+the identity, which hubs carry it, and how do we keep it cohesive?"* — and the operating model applies
+both.
+
+---
+
 ## Templates
 
-Fill every `<placeholder>`. These mirror this repo's own `CLAUDE.md` and `docs/IDEAS.md`.
+Fill every `<placeholder>`. These mirror this repo's own [`BRAND.md`](BRAND.md), `CLAUDE.md`, and
+`docs/IDEAS.md`.
+
+### `BRAND.md` (template)
+
+```markdown
+# Brand & Identity System — <Project>
+
+The durable record of what makes <Project> feel like itself. The operating model is agnostic; this is
+the domain-specific counterpart it rides on. Every deliverable is checked against this; new elements
+extend it, never contradict it. Living document — refinements flow back here (BCP step 5).
+
+## Essence
+<one paragraph: what this is, and the feeling it should evoke>
+
+## Color / tokens
+<palette + semantic tokens (name → value → role); light + dark if applicable; which color means what>
+
+## Type
+<the type stacks and their registers (display vs. data/label)>
+
+## Voice & tone
+<how it speaks; honesty/accuracy rules; register shifts by context>
+
+## Core metaphors & motifs
+<the recurring visual/narrative language new work draws from or extends>
+
+## Identity anchors
+<1-3 elements with rich backstory that license exquisite detail — where cohesion lives most vividly>
+
+## Cohesion rules
+<how new work stays on-brand: reuse tokens, honor accessibility, connect motifs, bake in detail where earned>
+```
 
 ### `CLAUDE.md` (template)
 
