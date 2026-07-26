@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/ejclark/skynet-capital/compare/v1.45.0...v1.46.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** head-to-head comparison view ([#71](https://github.com/ejclark/skynet-capital/issues/71)) ([4b5977d](https://github.com/ejclark/skynet-capital/commit/4b5977d82718440e99ed1d06456c6fad5beff5e5))
+
 # [1.45.0](https://github.com/ejclark/skynet-capital/compare/v1.44.0...v1.45.0) (2026-07-26)
 
 
