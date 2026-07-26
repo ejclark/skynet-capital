@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/ejclark/skynet-capital/compare/v1.6.0...v1.7.0) (2026-07-26)
+
+
+### Features
+
+* **login:** forecast-on-trend playcalls with eased camera and bot pipeline ([#20](https://github.com/ejclark/skynet-capital/issues/20)) ([0198a1e](https://github.com/ejclark/skynet-capital/commit/0198a1e0e07c707278627eb72bdf0849fd89cbb7))
+
 # [1.6.0](https://github.com/ejclark/skynet-capital/compare/v1.5.0...v1.6.0) (2026-07-25)
 
 
