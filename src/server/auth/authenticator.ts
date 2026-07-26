@@ -1080,8 +1080,14 @@ ${versionTag}
     var t1=-1,t2=-1,si;
     for(si=0;si<near.length;si++){ if(t1<0||near[si].h>near[t1].h){ t2=t1; t1=si; }
       else if(t2<0||near[si].h>near[t2].h){ t2=si; } }
-    if(t1>=0){ var B1=near[t1]; B1.h=Math.min(h*0.40,B1.h*1.6+50); B1.crown=true; B1.eye=true; B1.shape="spire"; B1.taper=0.30; B1.spire=Math.max(B1.spire,40+Math.random()*20); B1.ant=Math.max(B1.ant,20+Math.random()*14); }   // the tallest empire tower bears the Eye of Sauron
-    if(t2>=0){ var B2=near[t2]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }
+    // The Eye of Sauron takes a LEFT-side tower so its tractor beam reaches in from the left to haul
+    // the present forward. Prefer the tallest tower in the left third; fall back to the tallest overall.
+    var eyeI=-1; for(si=0;si<near.length;si++){ if(near[si].x < w*0.34 && (eyeI<0||near[si].h>near[eyeI].h)) eyeI=si; }
+    if(eyeI<0) eyeI=t1;
+    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.40,BE.h*1.6+50); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.30; BE.spire=Math.max(BE.spire,40+Math.random()*20); BE.ant=Math.max(BE.ant,20+Math.random()*14); }
+    // Second empire tower (no Eye): the tallest that isn't the Eye tower.
+    var t2i=(t1>=0&&t1!==eyeI)?t1:t2;
+    if(t2i>=0&&t2i!==eyeI){ var B2=near[t2i]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }
     cityLayers=[
       { b:far,  dim:0.4,  par:0.20, base:h*0.055, depth:0, code:false, haze:0.05 },   // distant, hazy, higher base
       { b:mid,  dim:0.68, par:0.5,  base:h*0.02,  depth:3, code:false, haze:0.03 },
