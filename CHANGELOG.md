@@ -1,3 +1,10 @@
+# [1.63.0](https://github.com/ejclark/skynet-capital/compare/v1.62.0...v1.63.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** persona character cards on /u/:id (lore mechanism) ([#100](https://github.com/ejclark/skynet-capital/issues/100)) ([580d4a6](https://github.com/ejclark/skynet-capital/commit/580d4a6d8e6ecd6ac72c71280eeb831d821f989a)), closes [#79](https://github.com/ejclark/skynet-capital/issues/79)
+
 # [1.62.0](https://github.com/ejclark/skynet-capital/compare/v1.61.0...v1.62.0) (2026-07-26)
 
 
