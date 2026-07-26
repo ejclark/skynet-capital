@@ -1127,7 +1127,13 @@ ${versionTag}
       var cg=rctx.createRadialGradient(midx,tipY,0,midx,tipY,b.crown?15:9);
       cg.addColorStop(0,hexA(b.crown?"#EAFFFA":accent,(b.crown?0.42:0.5)*pulse*dim*lifeK)); cg.addColorStop(1,hexA(accent,0));
       rctx.fillStyle=cg; rctx.beginPath(); rctx.arc(midx,tipY,b.crown?15:9,0,7); rctx.fill(); rctx.restore();
-      rctx.fillStyle=hexA("#EAFFFA",(0.5+0.4*pulse)*dim); rctx.beginPath(); rctx.arc(midx,tipY,1.5,0,7); rctx.fill(); }
+      // ~40% of tips are red aircraft-warning beacons with a sharp on/off blink; the rest stay white.
+      // Beacons run 24/7, so red ones ignore the day/night dimming (they read even when the city rests).
+      var red=noise(b.seed+9.1)<0.4, bl=red?(Math.sin(rainT*0.11+b.seed)>0.55?1:0.16):(0.5+0.4*pulse)*dim;
+      if(red){ rctx.save(); rctx.globalCompositeOperation="lighter";   // small red halo so the beacon pops
+        var bg2=rctx.createRadialGradient(midx,tipY,0,midx,tipY,7); bg2.addColorStop(0,hexA("#F85149",0.6*bl)); bg2.addColorStop(1,hexA("#F85149",0));
+        rctx.fillStyle=bg2; rctx.beginPath(); rctx.arc(midx,tipY,7,0,7); rctx.fill(); rctx.restore(); }
+      rctx.fillStyle=hexA(red?"#F85149":"#EAFFFA",bl); rctx.beginPath(); rctx.arc(midx,tipY,red?1.9:1.5,0,7); rctx.fill(); }
     if(L.code){
       rctx.save(); if(tapered){ outline(); rctx.clip(); } else { rctx.beginPath(); rctx.rect(bx,top,b.w,b.h); rctx.clip(); }
       // MICRO facade: a fine field of code glyphs; a sparse scatter of lit "windows", some warm-white
@@ -1136,7 +1142,8 @@ ${versionTag}
       for(var cx=bx+1; cx<bx+b.w; cx+=gx,cxi++){ var cyi=0;
         for(var cy=top+8; cy<bottom; cy+=gy,cyi++){ var cell=b.seed+cxi*12.9+cyi*7.3, nv=noise(cell);
           var lit=nv<0.13, ch=RG[(noise(cell+flip*0.7)*RG.length)|0], fl=0.5+0.5*Math.sin(rainT*0.05+cxi*1.3+cyi*0.7+b.seed);
-          var col=accent; if(lit){ var m=noise(cell+3.1); if(m<0.15) col="#EAFFFA"; else if(m<0.32) col="#8DFBE9"; }
+          // Sparse red/amber windows among the green — the up/down pulse of a market city (refs 2/5).
+          var col=accent; if(lit){ var m=noise(cell+3.1); if(m<0.12) col="#EAFFFA"; else if(m<0.26) col="#8DFBE9"; else if(m<0.34) col="#F85149"; else if(m<0.38) col="#FF9E3D"; }
           rctx.fillStyle=hexA(col,(lit?(0.40+0.36*fl)*lifeK:(0.085+0.06*noise(cell+1.3)))*dim); rctx.fillText(ch,cx,cy); } }
       // vertical structural mullions, following the taper — fine pinstripes catching the light
       rctx.strokeStyle=hexA(accent,0.09*dim); rctx.lineWidth=1;
@@ -1153,7 +1160,8 @@ ${versionTag}
       rctx.fillStyle=hexA(accent,0.24*dim); rctx.fillRect(txL,top,tw,1);
       for(var wy=top+6; wy<bottom-2; wy+=8){ var lE=edgeL(wy)+2, rE=edgeR(wy)-2;
         for(var wx=lE; wx<rE; wx+=6){ var wc=b.seed+wx*1.7+wy*0.9;
-          if(noise(wc)<0.18){ var wf=0.5+0.5*Math.sin(rainT*0.04+wx+wy); rctx.fillStyle=hexA(noise(wc+2.2)<0.2?"#8DFBE9":accent,(0.12+wf*0.20)*dim*lifeK); rctx.fillRect(wx,wy,2,2); } } }
+          if(noise(wc)<0.18){ var wf=0.5+0.5*Math.sin(rainT*0.04+wx+wy), mm=noise(wc+2.2);
+            var wcol=mm<0.1?"#F85149":(mm<0.28?"#8DFBE9":accent); rctx.fillStyle=hexA(wcol,(0.12+wf*0.20)*dim*lifeK); rctx.fillRect(wx,wy,2,2); } } }
     }
   }
   // Ticker billboards mounted on the near-layer towers — the skyline reads as a live market.
@@ -1182,6 +1190,17 @@ ${versionTag}
     }
     rctx.restore();
   }
+  // A red neon rail crossing the lower skyline, with bright cars sweeping along it (ref 5).
+  function drawNeonBridge(w,h){
+    var neg=css("--neg")||"#F85149", y=h*0.9, life=0.8+0.2*cityLife;   // a train runs at night too
+    rctx.save(); rctx.globalCompositeOperation="lighter";
+    rctx.strokeStyle=hexA(neg,0.10*life); rctx.lineWidth=3; rctx.beginPath(); rctx.moveTo(0,y); rctx.lineTo(w,y); rctx.stroke();
+    rctx.strokeStyle=hexA(neg,0.34*life); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(0,y); rctx.lineTo(w,y); rctx.stroke();
+    for(var t=0;t<2;t++){ var f=(rainT*0.0016+t*0.5)%1, cx=f*(w+180)-90;   // train cars streak across
+      var g=rctx.createLinearGradient(cx-72,0,cx+12,0); g.addColorStop(0,hexA(neg,0)); g.addColorStop(1,hexA("#FFB0A8",0.85*life));
+      rctx.strokeStyle=g; rctx.lineWidth=2; rctx.beginPath(); rctx.moveTo(cx-72,y); rctx.lineTo(cx+12,y); rctx.stroke(); }
+    rctx.restore();
+  }
   function drawSkyline(w,h){ if(!cityLayers.length||!rctx) return;
     var accent=css("--accent")||"#35D0BA", bg=css("--bg")||"#0B0F14", flip=Math.floor(rainT/14), i, li;
     if(rainT%180===0) cityLifeTarget=marketLife();   // re-check the session ~every few seconds
@@ -1207,6 +1226,7 @@ ${versionTag}
         var mx=sx+lean*(1-f)+(noise(sh*10+dm)-0.5)*mw*1.5;
         rctx.fillStyle=hexA(accent,0.16*(1-Math.abs(f-0.5))); rctx.fillRect(mx-0.8,my-0.8,1.7,1.7); } }
     rctx.restore();
+    drawNeonBridge(w,h);   // red neon rail low in the scene; near towers draw over it
     rctx.font="9px "+(css("--mono")||"monospace");
     // Back to front: FAR → MID → NEAR, each shifted by pointer parallax, then veiled with haze to recede.
     for(li=0; li<cityLayers.length; li++){ var L=cityLayers[li], ox=cityPX*L.par, bottom=h-L.base, maxH=0;
