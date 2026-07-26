@@ -289,6 +289,8 @@ export class Authenticator {
   .play:focus-visible{ outline:1px solid var(--accent); outline-offset:2px; border-radius:2px; }
   .play.active{ color:var(--accent); }
   .play.active::before{ content:"● "; }
+  .play .tier{ display:inline-block; margin-right:.5em; font-size:.82em; letter-spacing:.1em; opacity:.55; }
+  .play:hover .tier, .play:focus-visible .tier, .play.active .tier{ opacity:.9; }
   /* Playcall transport — a minimal HUD stepper shown only during a manual playcall (where the user
      is deliberately engaging). Lets you pause and step act-by-act: signal → predict → realize → resolve. */
   .transport{ display:none; align-items:center; gap:12px; margin-top:2px; font-family:var(--mono); pointer-events:auto; }
@@ -559,13 +561,15 @@ export class Authenticator {
       <span class="sep" aria-hidden="true">·</span>
       <span class="mode inert">LEARN</span>
     </div>
-    <nav class="playbook" id="playbook" aria-label="Playbook — call a play">
-      <button type="button" class="play" data-i="0">Iron Condor</button>
-      <button type="button" class="play" data-i="1">Long Strangle</button>
-      <button type="button" class="play" data-i="2">Short Straddle</button>
-      <button type="button" class="play" data-i="3">Butterfly</button>
-      <button type="button" class="play" data-i="4">Bull Call Spread</button>
-      <button type="button" class="play" data-i="5">Call Ladder</button>
+    <nav class="playbook" id="playbook" aria-label="Playbook — call a play, easiest first">
+      <button type="button" class="play" data-i="6"><span class="tier">101</span>Covered Call</button>
+      <button type="button" class="play" data-i="7"><span class="tier">102</span>Cash-Covered Put</button>
+      <button type="button" class="play" data-i="4"><span class="tier">201</span>Bull Call Spread</button>
+      <button type="button" class="play" data-i="0"><span class="tier">301</span>Iron Condor</button>
+      <button type="button" class="play" data-i="3"><span class="tier">301</span>Butterfly</button>
+      <button type="button" class="play" data-i="1"><span class="tier">301</span>Long Strangle</button>
+      <button type="button" class="play" data-i="2"><span class="tier">401</span>Short Straddle</button>
+      <button type="button" class="play" data-i="5"><span class="tier">401</span>Call Ladder</button>
     </nav>
     <div class="transport" id="transport" role="group" aria-label="Playcall controls">
       <button type="button" class="tbtn" id="tPrev" aria-label="Previous act">◀◀</button>
@@ -928,7 +932,7 @@ ${versionTag}
     "PRICE PINNED AT MEAN","EMA GOLDEN CROSS · UPTREND","MOMENTUM BREAKOUT"];
   var playBag=[];
   function dealPlay(){
-    if(!playBag.length){ playBag=[0,1,2,3,4,5];
+    if(!playBag.length){ playBag=[0,1,2,3,4,5,6,7];
       for(var k=playBag.length-1;k>0;k--){ var j=(Math.random()*(k+1))|0, tmp=playBag[k]; playBag[k]=playBag[j]; playBag[j]=tmp; } }
     var i=playBag.shift(); return { i:i, sig:SIGS[i] };
   }
@@ -1016,27 +1020,35 @@ ${versionTag}
     { name:"IRON CONDOR", cue:"LOW VOL", desc:"Range-bound — keep the credit while price holds the middle.",
       why:"RSI stretched at the band, vol compressed — momentum's spent, so price should oscillate inside the range.",
       hold:"Holds while price stays between the short strikes.",
-      pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8], maxP:420, maxL:-1080 },
+      pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8], maxP:420, maxL:-1080, tier:301 },
     { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Volatility building — profit on a breakout either way.",
       why:"Bands squeezed and coiling — a volatility expansion is due; the break can come either way.",
       hold:"Pays once price breaks out past either strike.",
-      pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7], maxP:2600, maxL:-720 },
+      pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7], maxP:2600, maxL:-720, tier:301 },
     { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Dead calm — sell premium; best if price pins the strike.",
       why:"Tape pinned to the mean with vol rich — premium decays fastest if price simply stays put.",
       hold:"Best if price pins the strike; risk grows as it drifts.",
-      pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5], maxP:1180, maxL:-3400 },
+      pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5], maxP:1180, maxL:-3400, tier:401 },
     { name:"BUTTERFLY", cue:"PINNED", desc:"Pinned — max profit if price lands on the center strike.",
       why:"Price magnetised to a level with low vol — it should land near the center strike at expiry.",
       hold:"Max profit if it expires on the center strike.",
-      pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65], maxP:1320, maxL:-340 },
+      pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65], maxP:1320, maxL:-340, tier:301 },
     { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Bullish reversal — capped upside at a lower cost.",
       why:"Fast EMA crossing up off support, momentum turning — a measured move higher.",
       hold:"Holds while the uptrend and support persist.",
-      pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65], maxP:760, maxL:-540 },
+      pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65], maxP:760, maxL:-540, tier:201 },
     { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Breakout higher — limited risk with room to run.",
       why:"Breakout pressure building above resistance — room to run, with defined risk.",
       hold:"Pays as price breaks and runs higher.",
-      pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75], maxP:1900, maxL:-880 }
+      pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75], maxP:1900, maxL:-880, tier:401 },
+    { name:"COVERED CALL", cue:"UPTREND", desc:"Own the stock, sell a call — collect income, cap the upside.",
+      why:"Holding shares in a calm-to-rising tape — sell a call to harvest premium while it drifts up.",
+      hold:"Keeps the premium while price stays below the short call.",
+      pts:[[0,-1],[0.6,1],[1,1]], strikes:[0.6], maxP:640, maxL:-1900, tier:101 },
+    { name:"CASH-COVERED PUT", cue:"RANGE-BOUND", desc:"Sell a put, hold the cash — get paid to set a buy price.",
+      why:"Willing to own lower — sell a put to collect premium while price holds above your strike.",
+      hold:"Keeps the premium while price stays above the short put.",
+      pts:[[0,-1],[0.4,1],[1,1]], strikes:[0.4], maxP:520, maxL:-2600, tier:102 }
   ];
   // Map a normalized payoff v∈[minY,maxY] to asymmetric dollars using the play's own max P / max L.
   function dollarsAt(strat, e, v){ if(v>=0) return e.maxY>0?(v/e.maxY)*strat.maxP:0;
@@ -1117,7 +1129,8 @@ ${versionTag}
     if(W<820){
       var cx=W/2, ny=field.top+18; ctx.textAlign="center";
       drawPipeline(cx-96, ny, p, A*Math.min(1,p.on)); ny+=22;
-      ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=24;
+      ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=16;
+      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("TIER "+strat.tier, cx, ny); ny+=18;
       ctx.font="700 22px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fillText(strat.name, cx, ny); ctx.shadowBlur=0; ny+=19;
       ctx.font="12px "+sans; ctx.fillStyle=hexA(muted,0.95); wrapText(strat.desc, cx, ny, Math.min(W*0.86,420), 16);
       var by=field.bottom-6; drawAnatomy(cx-116, by-22, A*Math.min(1,p.on));
@@ -1137,7 +1150,8 @@ ${versionTag}
     drawPipeline(px, y, p, A*Math.min(1,p.on)*0.5); y+=23;
     ctx.globalAlpha=A*aimA;
     ctx.font="600 11px "+mono; ctx.fillStyle=hexA(accent,0.72);
-    ctx.fillText("▸ "+(sig?sig.sig:""), px, y); y+=29;
+    ctx.fillText("▸ "+(sig?sig.sig:""), px, y); y+=17;
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("TIER "+strat.tier, px, y); y+=17;   // complexity tier
     ctx.font="700 30px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=22;
     ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=25;
     ctx.globalAlpha=A*prjA;
