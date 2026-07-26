@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/ejclark/skynet-capital/compare/v1.12.0...v1.13.0) (2026-07-26)
+
+
+### Features
+
+* **login:** hangar-door reveal VFX, play rotation, natural realized line ([#27](https://github.com/ejclark/skynet-capital/issues/27)) ([3767bad](https://github.com/ejclark/skynet-capital/commit/3767badda852b1eda0d5e4f6366e50e9dc8fba30))
+
 # [1.12.0](https://github.com/ejclark/skynet-capital/compare/v1.11.0...v1.12.0) (2026-07-26)
 
 
