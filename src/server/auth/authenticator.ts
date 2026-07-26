@@ -1017,61 +1017,85 @@ ${versionTag}
   var rcanvas=document.getElementById("rain"), rctx=null, cols=[], colW=16, RG="0123456789$+-.%△▽ｦｱｲｳｴｵｶｷｸｹﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘ";
   // High-tech skyline anchoring the bottom of the matrix rain — a dark city the code falls behind,
   // with faint accent-lit windows and a few antennas. Generated once per resize (seeded by layout).
-  var skyline=[], rainT=0;
-  function buildSkyline(w,h){ skyline=[]; var x=-12;
-    while(x<w+12){ var bw=26+Math.random()*52, bh=36+Math.random()*Math.min(150,h*0.20);   // shorter towers
-      skyline.push({ x:x, w:bw, h:bh, seed:Math.random()*1000, ant:Math.random()<0.28?(10+Math.random()*22):0, crown:false });
-      x += bw + (2+Math.random()*9); }
-    // Empire towers — elevate the two tallest into crowned landmarks: the wealth built from capital.
+  var skyline=[], rainT=0, cityLayers=[], cityPX=0, cityPXt=0;
+  function _genLayer(w,h,o){ var arr=[], x=-20-Math.random()*40;
+    while(x<w+40){ var bw=o.bw0+Math.random()*o.bwR, bh=o.bh0+Math.random()*o.bhR;
+      arr.push({ x:x, w:bw, h:bh, seed:Math.random()*1000, ant:Math.random()<o.antP?(8+Math.random()*o.antR):0, crown:false });
+      x += bw + o.gap0 + Math.random()*o.gapR; }
+    return arr; }
+  function buildSkyline(w,h){
+    // Three depth layers for a real 3D read: FAR (small/dim/hazy/high, moves least) → MID → NEAR
+    // (tall/crisp/full-detail, moves most under pointer parallax). Painter's order, back to front.
+    var far=_genLayer(w,h,{bw0:12,bwR:22,bh0:16,bhR:h*0.09,antP:0.14,antR:10,gap0:1,gapR:4});
+    var mid=_genLayer(w,h,{bw0:20,bwR:36,bh0:30,bhR:h*0.14,antP:0.20,antR:14,gap0:2,gapR:6});
+    var near=_genLayer(w,h,{bw0:28,bwR:52,bh0:44,bhR:Math.min(150,h*0.20),antP:0.28,antR:22,gap0:2,gapR:9});
+    // Empire towers — crown the two tallest of the NEAR layer (the wealth built from capital).
     var t1=-1,t2=-1,si;
-    for(si=0;si<skyline.length;si++){ if(t1<0||skyline[si].h>skyline[t1].h){ t2=t1; t1=si; }
-      else if(t2<0||skyline[si].h>skyline[t2].h){ t2=si; } }
-    if(t1>=0){ var B1=skyline[t1]; B1.h=Math.min(h*0.36,B1.h*1.5+40); B1.crown=true; B1.ant=Math.max(B1.ant,20+Math.random()*14); }
-    if(t2>=0){ var B2=skyline[t2]; B2.h=Math.min(h*0.30,B2.h*1.35+30); B2.crown=true; B2.ant=Math.max(B2.ant,16+Math.random()*12); } }
+    for(si=0;si<near.length;si++){ if(t1<0||near[si].h>near[t1].h){ t2=t1; t1=si; }
+      else if(t2<0||near[si].h>near[t2].h){ t2=si; } }
+    if(t1>=0){ var B1=near[t1]; B1.h=Math.min(h*0.36,B1.h*1.5+40); B1.crown=true; B1.ant=Math.max(B1.ant,20+Math.random()*14); }
+    if(t2>=0){ var B2=near[t2]; B2.h=Math.min(h*0.30,B2.h*1.35+30); B2.crown=true; B2.ant=Math.max(B2.ant,16+Math.random()*12); }
+    cityLayers=[
+      { b:far,  dim:0.4,  par:0.20, base:h*0.055, depth:0, code:false, haze:0.05 },   // distant, hazy, higher base
+      { b:mid,  dim:0.68, par:0.5,  base:h*0.02,  depth:3, code:false, haze:0.03 },
+      { b:near, dim:1.0,  par:1.0,  base:0,       depth:6, code:true,  haze:0 }        // foreground, full detail
+    ];
+    skyline=near;   // keep the near layer as the skyline reference for the empire-aura pass
+  }
   // Buildings are BUILT FROM the matrix code — like the walls of the hallway: dark structural masses
   // whose faces are a fine, mostly-dim field of glyphs, with a sparse scatter of brighter "lit window"
   // cells. Kept dim (atmosphere, not spectacle). Chars hold ~14 frames then flip so the code breathes.
-  function drawSkyline(w,h){ if(!skyline.length||!rctx) return;
-    var accent=css("--accent")||"#35D0BA", flip=Math.floor(rainT/14), i;
-    // Empire aura — a soft uplight the skyline casts into the sky: the glow of accumulated capital.
+  // Draw one building with 3D block faces (right side + top), then its front detail. dim = atmospheric
+  // perspective (far = fainter); L.code = full matrix-code face + tracers + crown (near layer only).
+  function drawBuilding(L, b, bx, top, bottom, accent, bg, flip){ var dim=L.dim, d=L.depth;
+    if(d>0){   // isometric-ish block: right side face (dark) + top face (faintly lit) imply volume
+      rctx.fillStyle="#01040A"; rctx.beginPath();
+      rctx.moveTo(bx+b.w,top); rctx.lineTo(bx+b.w+d,top-d); rctx.lineTo(bx+b.w+d,bottom-d); rctx.lineTo(bx+b.w,bottom); rctx.closePath(); rctx.fill();
+      rctx.beginPath(); rctx.moveTo(bx,top); rctx.lineTo(bx+d,top-d); rctx.lineTo(bx+b.w+d,top-d); rctx.lineTo(bx+b.w,top); rctx.closePath();
+      rctx.fillStyle="#060D12"; rctx.fill(); rctx.strokeStyle=hexA(accent,0.12*dim); rctx.lineWidth=1; rctx.stroke(); }
+    rctx.fillStyle="#03060A"; rctx.fillRect(bx, top, b.w, b.h);   // front silhouette
+    if(L.code){
+      if(b.ant){ rctx.strokeStyle=hexA(accent,(b.crown?0.22:0.13)*dim); rctx.lineWidth=1;
+        rctx.beginPath(); rctx.moveTo(bx+b.w/2,top); rctx.lineTo(bx+b.w/2,top-b.ant); rctx.stroke(); }
+      if(b.crown){ var cbx=bx+b.w/2, byt=top-b.ant, pulse=0.5+0.5*Math.sin(rainT*0.08+b.seed);
+        var cg=rctx.createRadialGradient(cbx,byt,0,cbx,byt,15); cg.addColorStop(0,hexA(accent,0.34*pulse)); cg.addColorStop(1,hexA(accent,0));
+        rctx.save(); rctx.globalCompositeOperation="lighter"; rctx.fillStyle=cg; rctx.beginPath(); rctx.arc(cbx,byt,15,0,7); rctx.fill(); rctx.restore();
+        rctx.fillStyle=hexA(accent,0.5+0.4*pulse); rctx.beginPath(); rctx.arc(cbx,byt,1.8,0,7); rctx.fill(); }
+      rctx.save(); rctx.beginPath(); rctx.rect(bx,top,b.w,b.h); rctx.clip();
+      var gx=7,gy=10,cxi=0;
+      for(var cx=bx+1; cx<bx+b.w; cx+=gx,cxi++){ var cyi=0;
+        for(var cy=top+9; cy<bottom; cy+=gy,cyi++){ var cell=b.seed+cxi*12.9+cyi*7.3;
+          var lit=noise(cell)<0.14, ch=RG[(noise(cell+flip*0.7)*RG.length)|0], fl=0.5+0.5*Math.sin(rainT*0.05+cxi*1.3+cyi*0.7+b.seed);
+          rctx.fillStyle=hexA(accent,(lit?(0.42+0.34*fl):(0.11+0.07*noise(cell+1.3)))*dim); rctx.fillText(ch,cx,cy); } }
+      rctx.restore();
+      rctx.strokeStyle=hexA(accent,0.30*dim); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(bx,top); rctx.lineTo(bx+b.w,top); rctx.stroke();
+      rctx.strokeStyle=hexA(accent,0.14*dim); rctx.beginPath(); rctx.moveTo(bx,bottom); rctx.lineTo(bx,top); rctx.moveTo(bx+b.w,top); rctx.lineTo(bx+b.w,bottom); rctx.stroke();
+      rctx.fillStyle=hexA(accent,0.5*dim); rctx.fillRect(bx-1,top-1,4,2); rctx.fillRect(bx-1,top-1,2,4); rctx.fillRect(bx+b.w-3,top-1,4,2); rctx.fillRect(bx+b.w-1,top-1,2,4);
+      var L1=b.h,L2=b.w,P=2*L1+L2,d0=((rainT*2.4+b.seed*40)%P+P)%P;
+      for(var seg=0;seg<9;seg++){ var ddd=(d0+seg*2)%P, ep;
+        if(ddd<L1) ep=[bx,bottom-ddd]; else if(ddd<L1+L2) ep=[bx+(ddd-L1),top]; else ep=[bx+b.w,top+(ddd-L1-L2)];
+        rctx.fillStyle=hexA(accent,0.55*(1-seg/9)*dim); rctx.fillRect(ep[0]-0.8,ep[1]-0.8,1.8,1.8); }
+    } else {   // far / mid: cheaper — lit top rim, faint antenna, sparse flickering windows
+      rctx.fillStyle=hexA(accent,0.24*dim); rctx.fillRect(bx,top,b.w,1);
+      if(b.ant){ rctx.strokeStyle=hexA(accent,0.12*dim); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(bx+b.w/2,top); rctx.lineTo(bx+b.w/2,top-b.ant); rctx.stroke(); }
+      for(var wx=bx+3; wx<bx+b.w-2; wx+=6){ for(var wy=top+6; wy<bottom-2; wy+=8){ var wc=b.seed+wx*1.7+wy*0.9;
+        if(noise(wc)<0.18){ var wf=0.5+0.5*Math.sin(rainT*0.04+wx+wy); rctx.fillStyle=hexA(accent,(0.12+wf*0.20)*dim); rctx.fillRect(wx,wy,2,2); } } }
+    }
+  }
+  function drawSkyline(w,h){ if(!cityLayers.length||!rctx) return;
+    var accent=css("--accent")||"#35D0BA", bg=css("--bg")||"#0B0F14", flip=Math.floor(rainT/14), i, li;
+    cityPX += (cityPXt-cityPX)*0.08;   // eased pointer parallax
+    // Empire aura from the near layer.
     var skyTop=h; for(i=0;i<skyline.length;i++){ var st=h-skyline[i].h; if(st<skyTop) skyTop=st; }
-    var ag=rctx.createLinearGradient(0,skyTop-96,0,skyTop+30);
-    ag.addColorStop(0,hexA(accent,0)); ag.addColorStop(1,hexA(accent,0.05));
+    var ag=rctx.createLinearGradient(0,skyTop-96,0,skyTop+30); ag.addColorStop(0,hexA(accent,0)); ag.addColorStop(1,hexA(accent,0.05));
     rctx.save(); rctx.globalCompositeOperation="lighter"; rctx.fillStyle=ag; rctx.fillRect(0,skyTop-96,w,126); rctx.restore();
     rctx.font="9px "+(css("--mono")||"monospace");
-    for(i=0;i<skyline.length;i++){ var b=skyline[i], top=h-b.h;
-      if(b.ant){ rctx.strokeStyle=hexA(accent,b.crown?0.22:0.13); rctx.lineWidth=1;
-        rctx.beginPath(); rctx.moveTo(b.x+b.w/2, top); rctx.lineTo(b.x+b.w/2, top-b.ant); rctx.stroke(); }
-      if(b.crown){ var bx=b.x+b.w/2, byt=top-b.ant, pulse=0.5+0.5*Math.sin(rainT*0.08+b.seed);   // crowned landmark beacon
-        var cg=rctx.createRadialGradient(bx,byt,0,bx,byt,15); cg.addColorStop(0,hexA(accent,0.34*pulse)); cg.addColorStop(1,hexA(accent,0));
-        rctx.save(); rctx.globalCompositeOperation="lighter"; rctx.fillStyle=cg; rctx.beginPath(); rctx.arc(bx,byt,15,0,7); rctx.fill(); rctx.restore();
-        rctx.fillStyle=hexA(accent,0.5+0.4*pulse); rctx.beginPath(); rctx.arc(bx,byt,1.8,0,7); rctx.fill(); }
-      rctx.fillStyle="#03060A"; rctx.fillRect(b.x, top, b.w, b.h);           // dark structural mass
-      rctx.save(); rctx.beginPath(); rctx.rect(b.x, top, b.w, b.h); rctx.clip();
-      var gx=7, gy=10, cxi=0;
-      for(var cx=b.x+1; cx<b.x+b.w; cx+=gx, cxi++){ var cyi=0;
-        for(var cy=top+9; cy<h; cy+=gy, cyi++){
-          var cell=b.seed + cxi*12.9 + cyi*7.3;
-          var lit=noise(cell)<0.14;                                          // sparse bright cells = lit windows
-          var ch=RG[(noise(cell+flip*0.7)*RG.length)|0];                     // char holds ~14 frames then flips
-          var fl=0.5+0.5*Math.sin(rainT*0.05 + cxi*1.3 + cyi*0.7 + b.seed);
-          var a=lit ? (0.42+0.34*fl) : (0.11+0.07*noise(cell+1.3));
-          rctx.fillStyle=hexA(accent,a); rctx.fillText(ch, cx, cy); } }
-      rctx.restore();
-      // Edge tracers: outline the hard surfaces so each structure reads out of the code field. The top
-      // (skyline) edge is the strongest; the sides are fainter. A bright dash RUNS along the perimeter,
-      // tracing the building like a live circuit — subtle, but it defines the form crisply.
-      rctx.strokeStyle=hexA(accent,0.30); rctx.lineWidth=1;
-      rctx.beginPath(); rctx.moveTo(b.x,top); rctx.lineTo(b.x+b.w,top); rctx.stroke();       // top edge (skyline)
-      rctx.strokeStyle=hexA(accent,0.14);
-      rctx.beginPath(); rctx.moveTo(b.x,h); rctx.lineTo(b.x,top); rctx.moveTo(b.x+b.w,top); rctx.lineTo(b.x+b.w,h); rctx.stroke();  // sides
-      rctx.fillStyle=hexA(accent,0.5);                                                        // top corner accent ticks
-      rctx.fillRect(b.x-1,top-1,4,2); rctx.fillRect(b.x-1,top-1,2,4);
-      rctx.fillRect(b.x+b.w-3,top-1,4,2); rctx.fillRect(b.x+b.w-1,top-1,2,4);
-      var L1=b.h, L2=b.w, P=2*L1+L2, d0=((rainT*2.4 + b.seed*40)%P+P)%P;                      // running tracer along the outline
-      for(var seg=0; seg<9; seg++){ var dd=(d0+seg*2)%P, ep;
-        if(dd<L1) ep=[b.x, h-dd]; else if(dd<L1+L2) ep=[b.x+(dd-L1), top]; else ep=[b.x+b.w, top+(dd-L1-L2)];
-        rctx.fillStyle=hexA(accent, 0.55*(1-seg/9)); rctx.fillRect(ep[0]-0.8, ep[1]-0.8, 1.8, 1.8); } } }
+    // Back to front: FAR → MID → NEAR, each shifted by pointer parallax, then veiled with haze to recede.
+    for(li=0; li<cityLayers.length; li++){ var L=cityLayers[li], ox=cityPX*L.par, bottom=h-L.base, maxH=0;
+      for(i=0;i<L.b.length;i++){ var b=L.b[i]; if(b.h>maxH)maxH=b.h; drawBuilding(L, b, b.x+ox, bottom-b.h, bottom, accent, bg, flip); }
+      if(L.haze>0){ var vy=bottom-maxH-8; rctx.fillStyle=hexA(bg, L.haze*4.5); rctx.fillRect(0, vy, w, h-vy); }   // atmospheric haze veil
+    }
+  }
   try{ rctx = rcanvas && rcanvas.getContext ? rcanvas.getContext("2d") : null; }catch(e){ rctx=null; }
   function rainResize(){
     if(!rctx) return;
@@ -1640,6 +1664,8 @@ ${versionTag}
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
+  // Pointer parallax for the cityscape depth layers (near moves most, far least).
+  window.addEventListener("pointermove", function(e){ cityPXt=((e.clientX/(window.innerWidth||1))-0.5)*36; });
 
   // Reveal: one toggle opens/closes the form; the single wordmark flies into the form as its title.
   var wordmark=document.getElementById("wordmark"), brandSlot=document.getElementById("brandSlot"),
