@@ -1,3 +1,10 @@
+# [1.48.0](https://github.com/ejclark/skynet-capital/compare/v1.47.0...v1.48.0) (2026-07-26)
+
+
+### Features
+
+* **onboarding:** self-service /welcome guide + progressive-reveal Alpaca setup ([#73](https://github.com/ejclark/skynet-capital/issues/73)) ([99744e2](https://github.com/ejclark/skynet-capital/commit/99744e28cc9bc49ac1081f77cae1bb06aaf59273))
+
 # [1.47.0](https://github.com/ejclark/skynet-capital/compare/v1.46.0...v1.47.0) (2026-07-26)
 
 
