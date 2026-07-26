@@ -1,3 +1,10 @@
+# [1.61.0](https://github.com/ejclark/skynet-capital/compare/v1.60.1...v1.61.0) (2026-07-26)
+
+
+### Features
+
+* **login:** make the Eye of Sauron more pronounced — Barad-dur detail ([#91](https://github.com/ejclark/skynet-capital/issues/91)) ([db93a55](https://github.com/ejclark/skynet-capital/commit/db93a5578c33e17c70402b168bac59d81f5c87f3))
+
 ## [1.60.1](https://github.com/ejclark/skynet-capital/compare/v1.60.0...v1.60.1) (2026-07-26)
 
 
