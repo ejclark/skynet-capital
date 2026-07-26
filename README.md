@@ -85,3 +85,4 @@ npm run typecheck
 - Autonomous trading: [`docs/AUTONOMOUS.md`](docs/AUTONOMOUS.md)
 - Running locally & keeping a laptop awake: [`docs/RUNNING.md`](docs/RUNNING.md)
 - Deploying the public live dashboard: [`docs/DEPLOY.md`](docs/DEPLOY.md)
+- In-app feedback → GitHub issues (bot token setup): [`docs/FEEDBACK.md`](docs/FEEDBACK.md)
