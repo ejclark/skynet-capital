@@ -239,6 +239,12 @@ export class Authenticator {
   #stage{ position:fixed; inset:0; width:100%; height:100%; z-index:1; pointer-events:none; }
   .vignette{ position:fixed; inset:0; z-index:3; pointer-events:none;
     background:radial-gradient(120% 90% at 50% 40%, transparent 45%, color-mix(in srgb,var(--bg) 82%,transparent) 100%); }
+  /* Film grain: a fine fractal-noise texture over the whole scene (blended in) that unifies the
+     composition and adds a filmic / rendered level-of-detail — subtle, never a spectacle. */
+  .grain{ position:fixed; inset:-60%; z-index:3; pointer-events:none; opacity:.06; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:150px 150px; animation:grain 1.1s steps(3) infinite; will-change:transform; }
+  @keyframes grain{ 0%{transform:translate(0,0);} 33%{transform:translate(-5%,4%);} 66%{transform:translate(4%,-5%);} 100%{transform:translate(-3%,3%);} }
 
   @keyframes beam{ 0%{ transform:translateY(-40%); opacity:0; } 12%{ opacity:1; } 88%{ opacity:1; } 100%{ transform:translateY(240%); opacity:0; } }
 
@@ -551,6 +557,7 @@ export class Authenticator {
     .topbrand,.beacon,.card,.brand,.tag,.error,.btn,.foot{ opacity:1 !important; }
     .card::before{ opacity:.9; } .card::after{ display:none; }
     .scanbeam,.cursorglow{ display:none; }
+    .grain{ animation:none; }
     #rain{ opacity:.35; }
     .tag .live{ animation:none; }
   }
@@ -561,6 +568,7 @@ export class Authenticator {
 <canvas id="stage" aria-hidden="true"></canvas>
 <canvas id="vfx" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
 <div class="cursorglow" id="cursorGlow" aria-hidden="true"></div>
 <div class="stagescrim" id="stagescrim" aria-hidden="true"></div>
 
@@ -1473,22 +1481,32 @@ ${versionTag}
       var mom=emaF[lst]-emaF[Math.max(0,lst-8)], mcol=mom>0.03?pos:(mom<-0.03?neg:muted), msym=mom>0.03?"▲":(mom<-0.03?"▼":"→");
       ctx.font="700 9px "+mono; ctx.textAlign="left"; ctx.fillStyle=hexA(mcol,0.85*proj*emMom);
       ctx.fillText("MOM "+msym, X0+7, SY(nowPrice)+15);
-      // horizontal profit/loss PRICE BANDS across the future region
+      // horizontal profit/loss PRICE BANDS across the future region (a touch richer fill)
       var NB=72, sh=Math.abs(SY(hiP)-SY(loP))/(NB-1)+1;
       for(var i=0;i<NB;i++){ var P=loP+(hiP-loP)*(i/(NB-1)), u=(P-signalPrice)/(volScale||1)+0.5, v=payoffAt(strat.pts,u);
-        if(Math.abs(v)<0.05) continue; ctx.fillStyle=hexA(v>0?pos:neg, 0.14*proj*Math.min(1,Math.abs(v)*1.6));
+        if(Math.abs(v)<0.05) continue; ctx.fillStyle=hexA(v>0?pos:neg, 0.17*proj*Math.min(1,Math.abs(v)*1.6));
         ctx.fillRect(X0, SY(P)-sh/2, Xf-X0, sh); }
+      // NEON zone boundaries: fluorescent glowing edges on the top/bottom of the band, colored by the
+      // payoff SIGN there (green if that extreme is profit, red if loss) — same tone, magnified contrast.
+      var vHi=payoffAt(strat.pts,(hiP-signalPrice)/(volScale||1)+0.5), vLo=payoffAt(strat.pts,(loP-signalPrice)/(volScale||1)+0.5);
+      ctx.save(); ctx.lineWidth=1.6;
+      ctx.shadowColor=vHi>=0?pos:neg; ctx.shadowBlur=9; ctx.strokeStyle=hexA(vHi>=0?pos:neg,0.65*proj);
+      ctx.beginPath(); ctx.moveTo(X0,SY(hiP)); ctx.lineTo(Xf,SY(hiP)); ctx.stroke();
+      ctx.shadowColor=vLo>=0?pos:neg; ctx.shadowBlur=9; ctx.strokeStyle=hexA(vLo>=0?pos:neg,0.65*proj);
+      ctx.beginPath(); ctx.moveTo(X0,SY(loP)); ctx.lineTo(Xf,SY(loP)); ctx.stroke();
+      ctx.restore();
       // "now" divider — the boundary between recorded history and forecast
       ctx.setLineDash([2,5]); ctx.strokeStyle=hexA(txt,0.35*proj); ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(X0,SY(hiP)); ctx.lineTo(X0,SY(loP)); ctx.stroke(); ctx.setLineDash([]);
-      // dotted breakeven levels
-      ctx.setLineDash([4,6]); ctx.font="700 9px "+mono; ctx.textAlign="left";
+      // NEON breakeven levels — the profit↔loss boundary, drawn as a bright fluorescent line with glow.
+      ctx.save(); ctx.setLineDash([4,6]); ctx.font="700 9px "+mono; ctx.textAlign="left"; ctx.shadowColor="#6ff5e0"; ctx.shadowBlur=8;
       for(var k=0;k<e.be.length;k++){ var by=SY(priceOf(e.be[k]));
-        ctx.strokeStyle=hexA(muted,0.55*proj); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(X0,by); ctx.lineTo(Xf,by); ctx.stroke();
-        ctx.fillStyle=hexA(muted,0.85*proj); ctx.fillText("B/E", Xf+5, by+3); }
-      ctx.setLineDash([]);
-      // Madden-style corner brackets that FRAME the enhanced future (the "enhance, zoom" read)
-      drawBrackets(X0-6, SY(hiP)-12, Xf+40, SY(loP)+12, hexA(accent,0.45*proj));
+        ctx.strokeStyle=hexA("#8dfbe9",0.85*proj); ctx.lineWidth=1.3; ctx.beginPath(); ctx.moveTo(X0,by); ctx.lineTo(Xf,by); ctx.stroke();
+        ctx.fillStyle=hexA("#8dfbe9",0.9*proj); ctx.fillText("B/E", Xf+5, by+3); }
+      ctx.setLineDash([]); ctx.shadowBlur=0; ctx.restore();
+      // Madden-style corner brackets that FRAME the enhanced future — neon glow (the "enhance, zoom" read)
+      ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=7;
+      drawBrackets(X0-6, SY(hiP)-12, Xf+40, SY(loP)+12, hexA(accent,0.6*proj)); ctx.restore();
     }
     // happy-path dotted PROJECTION from now → target, with direction arrows
     var up=targetPrice>signalPrice+volScale*0.03, dn=targetPrice<signalPrice-volScale*0.03;
