@@ -5,6 +5,7 @@ import { NewsFaderPersona } from "./news-fader.js";
 import type { Persona } from "./persona.js";
 import { RetailInvestorPersona } from "./retail-investor.js";
 import { RumorTraderPersona } from "./rumor-trader.js";
+import { SauronPersona } from "./sauron.js";
 
 /**
  * The roster. Add a persona here and it's automatically available to any runner
@@ -15,6 +16,7 @@ import { RumorTraderPersona } from "./rumor-trader.js";
  *  - Retail Investor: buys hype, panic-sells (the Fader's mirror)
  *  - Futurist: buys confirmed momentum, ignores news
  *  - Gold Bug: flees to the safe haven on risk-off, hoards it
+ *  - Sauron: the cold order-imposer — fades exhausted euphoria, claims what panic discards
  */
 export function createDefaultPersonas(): Persona[] {
   return [
@@ -24,5 +26,6 @@ export function createDefaultPersonas(): Persona[] {
     new GoldBugPersona(),
     new DayTraderPersona(),
     new RumorTraderPersona(),
+    new SauronPersona(),
   ];
 }
