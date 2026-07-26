@@ -605,7 +605,7 @@ export class Authenticator {
       <button type="button" class="tbtn" id="tPrev" aria-label="Previous act">◀◀</button>
       <button type="button" class="tbtn tplay" id="tPlay" aria-label="Pause playcall" aria-pressed="false">❚❚</button>
       <button type="button" class="tbtn" id="tNext" aria-label="Next act">▶▶</button>
-      <span class="tacts" id="tActs" aria-hidden="true"><b data-a="0">SIGNAL</b><b data-a="1">PREDICT</b><b data-a="2">REALIZE</b><b data-a="3">RESOLVE</b></span>
+      <span class="tacts" id="tActs" aria-hidden="true"><b data-a="0">SIGNAL</b><b data-a="1">INSIGHT</b><b data-a="2">PREDICT</b><b data-a="3">REALIZE</b><b data-a="4">RESOLVE</b></span>
     </div>
   </div>
 </header>
@@ -1479,15 +1479,6 @@ ${versionTag}
       if(ctx.measureText(test).width>maxW && line){ line=words[i]; n++; } else line=test; }
     ctx.font=pf; return n+1; }
   function clamp(v,lo,hi){ return v<lo?lo:v>hi?hi:v; }
-  // Where a signal/recap card can sit without colliding: prefer the calm gutter to the LEFT of the entry
-  // (vertically centred on the reticle); but once the camera zooms and "now" sits near W·0.3 that gutter
-  // is eaten by the instrument panel — so fall back to the top headroom, right of the play title and
-  // clear of the totals chip. Returns {cx,cy}. (The play name + its title live at nowSX.)
-  function calloutPos(x, cw, ch){
-    var panelR=Math.round(W*0.045)+Math.min(W*0.2,238)+14, gutterL=panelR+12, left=x-cw-16;
-    if(left>=gutterL) return {cx:left, cy:clamp(nowSY-ch*0.5, field.top+4, field.bottom-ch-4)};
-    return {cx:clamp(nowSX+200, gutterL, Math.max(gutterL, W-cw-224)), cy:field.top+2};
-  }
   function money(n){ n=Math.round(n); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
     return (n<0?"−$":"+$")+s; }
 
@@ -1655,9 +1646,10 @@ ${versionTag}
     // The PLAY NAME + one-liner no longer live here — the chart IS the play's visual form, so the name
     // labels the graph itself (drawn in drawForecast). This column is now the instrument readout only:
     // the terminal's running programs, then the play's anatomy / Greeks / the inputs it's watching.
+    // Anatomy legend (profit/loss/breakeven grammar) is dropped here — it's already shown on the chart as
+    // the green/red bands + the B/E line during execution, so repeating it in the panel was redundant.
     var y=termTop+TERM_H+22;
     ctx.globalAlpha=A*prjA;
-    drawAnatomy(px, y, A*prjA); y+=26;
     drawGreeks(px, y, A*prjA);   // the play's Greeks fingerprint (max P/L + outcome now live at the TARGET, far right)
     drawWatching(px, y+68, A*prjA);   // the inputs the desk is watching: underlying, fear/greed (VIX), premium (IV)
     ctx.restore();
@@ -1811,9 +1803,10 @@ ${versionTag}
         cueLines=wrapCount(sig?sig.sig:"", gw, 13, "700 9px "+mono),
         whyLines=wrapCount(strat?strat.why:"", gw, 12, "9px "+mono),
         ch=67+cueLines*13+4+whyLines*12+12,
-        cp=calloutPos(x, cw, ch), cx=cp.cx, cy=cp.cy;
+        cx=sigStackX, cy=sigStackY;   // docked directly beneath the play name + one-liner
+    // a hairline leader runs DOWN from the read to the reticle on the tape — "this is the point"
     ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(rc,0.42); ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(cx+cw, cy+ch*0.5); ctx.lineTo(x-9, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(cx+16, cy+ch); ctx.lineTo(x, y-9); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle=hexA(bg,0.8); roundRect(cx,cy,cw,ch,7); ctx.fill();
     ctx.strokeStyle=hexA(rc,0.4); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,7); ctx.stroke();
     // a thin accent spine on the left edge — reads as "wired into the signal", not a boxed panel
@@ -1830,6 +1823,40 @@ ${versionTag}
     yy=gy+gh+15; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); yy+=wrapText((sig?sig.sig:""), px, yy, gw, 13)*13+4;
     ctx.font="9px "+mono; ctx.fillStyle=hexA(txt,0.85); wrapText(strat?strat.why:"", px, yy, gw, 12);
     ctx.restore(); }
+  // THE INSIGHT ACT — the beat between detecting the signal and predicting the play, where the machine
+  // RECOGNISES what it's looking at. The watched facts (the signal + fear/greed + premium) snap together
+  // as converging threads into the entry, collide in a synapse burst, and the recognition surfaces as a
+  // plain-language line — which segues straight into the play name crystallising as the chart title.
+  function drawInsight(strat, p){ if(!strat) return;
+    var ins=clamp01(p.insight); if(ins<=0.01 || p.project>0.55) return;
+    var accent=css("--accent")||"#35D0BA", muted=css("--muted")||"#8B9AAB", mono=css("--mono")||"monospace";
+    var fx=nowSX, fy=nowSY, e=easeIO(ins);
+    ctx.save(); ctx.globalCompositeOperation="lighter";
+    // three input threads converging on the entry — separate facts becoming one conclusion
+    var srcs=[[fx-158,fy-92],[fx-128,fy+74],[fx-196,fy-4]];
+    for(var i=0;i<srcs.length;i++){ var sx=srcs[i][0], sy=srcs[i][1], hx=lerp(sx,fx,e), hy=lerp(sy,fy,e);
+      var lg=ctx.createLinearGradient(sx,sy,hx,hy);
+      lg.addColorStop(0,hexA(accent,0)); lg.addColorStop(1,hexA(accent,0.5*e));
+      ctx.strokeStyle=lg; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.stroke();
+      var r=2.4+1.4*Math.sin(pbGlyphT*0.4+i*2);
+      var g=ctx.createRadialGradient(hx,hy,0,hx,hy,r+2); g.addColorStop(0,hexA("#EAFFFA",0.9)); g.addColorStop(1,hexA(accent,0));
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hx,hy,r+2,0,7); ctx.fill(); }
+    // synapse BURST at convergence — the aha lands
+    if(ins>0.62){ var b=easeIO(clamp01((ins-0.62)/0.38)), br=6+34*b;
+      ctx.strokeStyle=hexA(accent,0.55*(1-b)); ctx.lineWidth=2*(1-b)+0.4; ctx.beginPath(); ctx.arc(fx,fy,br,0,7); ctx.stroke();
+      var fg=ctx.createRadialGradient(fx,fy,0,fx,fy,18); fg.addColorStop(0,hexA("#EAFFFA",Math.min(0.75,b*(1-b)*3))); fg.addColorStop(1,hexA(accent,0));
+      ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(fx,fy,18,0,7); ctx.fill(); }
+    ctx.restore();
+    // the recognition, in plain words — what the convergence MEANS, handed off to the crystallising name
+    var cue=strat.cue, cap="SIGNAL RECOGNISED";
+    if(cue==="VOL EXPANDING"||cue==="BREAKOUT RISK") cap="COILED VOL · NEUTRAL TAPE → EXPANSION DUE";
+    else if(cue==="UPTREND") cap="MOMENTUM CONFIRMED → RIDE IT HIGHER";
+    else cap="TAPE PINNED · CALM → COLLECT THE RANGE";
+    ctx.save(); ctx.globalAlpha=e*(1-clamp01((p.project-0.15)/0.4)); ctx.textAlign="center"; ctx.textBaseline="alphabetic";
+    ctx.font="700 7px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("INSIGHT", fx, fy+34);
+    ctx.font="700 10px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.shadowColor=accent; ctx.shadowBlur=8;
+    ctx.fillText("◇ "+cap, fx, fy+48); ctx.shadowBlur=0;
+    ctx.restore(); }
   // RETROSPECTIVE recap, shown once the play resolves: restates the play, confirms the condition held,
   // names the events that moved it, and books the result — so the user's read of the animation is
   // confirmed against the outcome. Anchored where the signal card was (they never coexist).
@@ -1838,7 +1865,7 @@ ${versionTag}
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
     // Same organic frame as the signal card it replaces: compact, translucent, an accent SPINE, parked
     // over the calm history to the LEFT of the entry — never a slab over the resolved candles.
-    var cw=196, ch=162, cp=calloutPos(x, cw, ch), cx=cp.cx, cy=cp.cy;
+    var cw=196, ch=162, cx=sigStackX, cy=sigStackY;   // docked beneath the play name, where the read was
     var e=extrema(strat), uEx=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5),
         pl=dollarsAt(strat,e,payoffAt(strat.pts,uEx)), pct=Math.round(pl/(strat.maxP||1)*100),
         win=pl>=0, rcol=win?pos:neg;
@@ -1983,14 +2010,30 @@ ${versionTag}
     // PLAY NAME as the chart's OWN title — the graph is the play's visual representation, so it labels
     // itself here (headroom above the top band, at the entry), not in a detached panel. An eyebrow ties
     // it to the underlying + complexity class. Reserved so event labels steer clear.
-    if(W>=820 && proj>0.01){
+    var ins=easeIO(clamp01(p.insight));
+    if(W>=820){
+      // The title anchor is computed EVERY frame the play is active (not just once the name shows), so the
+      // signal read + recap dock beneath it consistently through AIM → INSIGHT → walk.
       var sans2=css("--sans")||"sans-serif", tnx=X0, tnY=SY(hiP)-12, teY=tnY-24;
-      ctx.save(); ctx.globalAlpha=A*proj; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText(playTicker+" · CLASS "+strat.tier, tnx, teY);
-      ctx.font="700 21px "+sans2; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=16;
-      ctx.fillText(strat.name, tnx, tnY); ctx.shadowBlur=0;
-      var tnw=ctx.measureText(strat.name).width; ctx.restore();
-      reserveBox(tnx-2, teY-11, tnx+Math.max(tnw,120)+4, tnY+3);
+      var descLines=wrapCount(strat.desc, 268, 16, "13px "+sans2);
+      sigStackX=tnx; sigStackY=tnY+19+descLines*16+8;
+      if(ins>0.01){
+        // The name CRYSTALLISES out of the insight beat — settling from slightly-large + hot glow into
+        // place — then persists as the chart's title through the forecast + walk.
+        var sc=1+0.16*(1-ins), gl=16+18*(1-ins);
+        ctx.save(); ctx.globalAlpha=A*ins; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+        ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); ctx.fillText(playTicker+" · CLASS "+strat.tier, tnx, teY);
+        ctx.save(); ctx.translate(tnx, tnY); ctx.scale(sc, sc);
+        ctx.font="700 21px "+sans2; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=gl;
+        ctx.fillText(strat.name, 0, 0); ctx.shadowBlur=0;
+        var tnw=ctx.measureText(strat.name).width*sc; ctx.restore();
+        reserveBox(tnx-2, teY-11, tnx+Math.max(tnw,120)+4, tnY+3);
+        // The play's one-liner sits DIRECTLY under the name — the redesign opened the room for it (it used
+        // to be crammed in the left card).
+        ctx.globalAlpha=A*ins; ctx.font="13px "+sans2; ctx.fillStyle=hexA(muted,0.92);
+        wrapText(strat.desc, tnx, tnY+19, 268, 16);
+        ctx.restore();
+      }
     }
     // Macro-event callouts — a dotted tick + label at each event the tape has reached, naming the
     // abnormal deviation there (earnings, CPI, …). This is what explains the less-normal wiggles.
@@ -2102,12 +2145,15 @@ ${versionTag}
   // Play phases (ms): DETECT → AIM → ZOOM → PROJECT → WALK-forward → RESOLVE → HOLD → ZOOM-OUT.
   // Each phase is followed by a short DWELL so the last thing shown isn't rushed into the next step —
   // the reveal breathes. A longer HOLD after RESOLVE lets the "closed +$" land before we zoom out.
-  var DET=640,AIM=760,DW_AIM=760,ZM=620,PRJ=880,DW_PRJ=320,WLK=4200,RES=700,HOLD=1900,OUT=820;
-  var T_AIM=DET, T_ZM=T_AIM+AIM+DW_AIM, T_PRJ=T_ZM+ZM, T_WLK=T_PRJ+PRJ+DW_PRJ,
+  // INSIGHT sits between ZOOM and PROJECT: the beat where the watched inputs SNAP together into the
+  // recognised play (the "aha"), which then crystallises as the chart title and hands off to the forecast.
+  var DET=640,AIM=760,DW_AIM=760,ZM=620,INS=960,DW_INS=280,PRJ=880,DW_PRJ=320,WLK=4200,RES=700,HOLD=1900,OUT=820;
+  var T_AIM=DET, T_ZM=T_AIM+AIM+DW_AIM, T_INS=T_ZM+ZM, T_PRJ=T_INS+INS+DW_INS, T_WLK=T_PRJ+PRJ+DW_PRJ,
       T_RES=T_WLK+WLK, T_OUT=T_RES+RES+HOLD, T_END=T_OUT+OUT;
-  var ACTB=[0, T_PRJ, T_WLK, T_RES];   // act boundaries (e-time): SIGNAL · PREDICT · REALIZE · RESOLVE
+  var ACTB=[0, T_INS, T_PRJ, T_WLK, T_RES];   // act boundaries: SIGNAL · INSIGHT · PREDICT · REALIZE · RESOLVE
   function playProg(e){ return {
     on:clamp01(e/DET), aim:clamp01((e-T_AIM)/AIM), zoom:clamp01((e-T_ZM)/ZM),
+    insight:clamp01((e-T_INS)/INS),
     project:clamp01((e-T_PRJ)/PRJ), walk:clamp01((e-T_WLK)/WLK), resolve:clamp01((e-T_RES)/RES),
     out: e>T_OUT?clamp01((e-T_OUT)/OUT):0 }; }
   var playMode=false, playStart=0, curStrat=0, curSig=null, nextPlayAt=2400, rainBoost=0, rainTint=0;
@@ -2120,6 +2166,9 @@ ${versionTag}
   // Screen anchor for "now" (leading price) + price→pixel scale, exported by drawMarket so the
   // forecast draws the future in the same frame as the live trend.
   var nowSX=0, nowSY=0, nowPrice=100, pxPerPrice=1;
+  // Where the on-chart play-name stack ENDS — the signal read + recap dock directly beneath the name
+  // (set each frame while the title draws), so the play's identity + read read as one column.
+  var sigStackX=0, sigStackY=0;
   var scBaseY=0, scMid=100, scSpan=1, scAmp=1;   // exported ambient Y-mapping (set in drawMarket)
   // User-called plays (the Playbook): requestedPlay queues a specific play; SUMMON steers the trend
   // to that play's setup before the enhance-zoom fires; manualPlay slows the pace + enables hold.
@@ -2291,7 +2340,7 @@ ${versionTag}
   function renderStatic(idx){ curStrat=idx; armForecast(idx); cam=0.9; zoom=1.9;
     playTicker=(STRATS[idx].unders||TRADES)[0];   // a suitable underlying for this play (never a mismatch)
     measureField(); fieldSnap(); drawMarket(0.7);
-    drawForecast(STRATS[idx], { sig:STRATS[idx].cue+" · CALLED" }, { on:1,aim:1,zoom:1,project:1,walk:0,resolve:0,out:0 });
+    drawForecast(STRATS[idx], { sig:STRATS[idx].cue+" · CALLED" }, { on:1,aim:1,zoom:1,insight:1,project:1,walk:0,resolve:0,out:0 });
     beamVignette(); }
   // Call a play from the Playbook: queue it, ease any running playcall out first, then let the loop
   // steer + fire it. Under reduced motion, just repaint the static forecast for that play.
@@ -2416,7 +2465,7 @@ ${versionTag}
       document.body.classList.toggle("manualplay", playMode && manualPlay);
       drawMarket(1 - cam*0.34);
       drawScanners(1 - cam);   // roaming signal-scan spotlights — ambient only, recede as a play frames
-      if(p){ drawHandoff(p); drawGravityBeam(p); drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
+      if(p){ drawHandoff(p); drawGravityBeam(p); drawForecast(STRATS[curStrat], curSig, p); drawInsight(STRATS[curStrat], p); pbGlyphT++; }
       drawRipples();
       beamVignette();
       rainDraw(rainBoost, rainTint); }
