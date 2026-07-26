@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/ejclark/skynet-capital/compare/v1.8.0...v1.9.0) (2026-07-26)
+
+
+### Features
+
+* **login:** human-role caption pairing with the bot pipeline ([#22](https://github.com/ejclark/skynet-capital/issues/22)) ([dcded23](https://github.com/ejclark/skynet-capital/commit/dcded23d98d74d8a1f6c316232e3d49aac99e1b5))
+
 # [1.8.0](https://github.com/ejclark/skynet-capital/compare/v1.7.0...v1.8.0) (2026-07-26)
 
 
