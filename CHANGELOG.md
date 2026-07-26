@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/ejclark/skynet-capital/compare/v1.9.1...v1.10.0) (2026-07-26)
+
+
+### Features
+
+* **login:** stamp the app version and drop the crowding hero caption ([#24](https://github.com/ejclark/skynet-capital/issues/24)) ([cd0a23c](https://github.com/ejclark/skynet-capital/commit/cd0a23cb87c33a2265a05c51ee1604c408e672a1))
+
 ## [1.9.1](https://github.com/ejclark/skynet-capital/compare/v1.9.0...v1.9.1) (2026-07-26)
 
 
