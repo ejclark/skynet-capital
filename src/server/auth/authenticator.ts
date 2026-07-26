@@ -583,7 +583,7 @@ export class Authenticator {
         <dt>RSI</dt><dd>Momentum, 0–100. Above 70 overbought, below 30 oversold.</dd>
         <dt>GREEKS</dt><dd>Δ direction · Θ time-decay · V volatility · Γ acceleration.</dd>
         <dt>EVENTS</dt><dd>◆ scheduled (date known) vs ! surprise. ▲ bullish, ▼ bearish.</dd>
-        <dt>PLAYS</dt><dd>Tiered 101→401 by complexity — each is an instruction set with a defined max profit &amp; loss.</dd>
+        <dt>PLAYS</dt><dd>Classed 101→401 by difficulty — each is an instruction set with a defined max profit &amp; loss.</dd>
         <dt>NORTH STAR</dt><dd>Refine the plays until the desk can deploy them autonomously — with safeguards.</dd>
       </dl>
     </nav>
@@ -1243,7 +1243,7 @@ ${versionTag}
       var cx=W/2, ny=field.top+18; ctx.textAlign="center";
       drawPipeline(cx-96, ny, p, A*Math.min(1,p.on)); ny+=22;
       ctx.font="700 11px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▸ "+(sig?sig.sig:""), cx, ny); ny+=16;
-      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("TIER "+strat.tier, cx, ny); ny+=21;
+      ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("CLASS "+strat.tier, cx, ny); ny+=21;
       ctx.font="700 22px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=12; ctx.fillText(strat.name, cx, ny); ctx.shadowBlur=0; ny+=19;
       ctx.font="12px "+sans; ctx.fillStyle=hexA(muted,0.95); wrapText(strat.desc, cx, ny, Math.min(W*0.86,420), 16);
       var by=field.bottom-6; drawAnatomy(cx-116, by-22, A*Math.min(1,p.on));
@@ -1264,7 +1264,7 @@ ${versionTag}
     ctx.globalAlpha=A*aimA;
     ctx.font="600 11px "+mono; ctx.fillStyle=hexA(accent,0.72);
     ctx.fillText("▸ "+(sig?sig.sig:""), px, y); y+=17;
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("TIER "+strat.tier, px, y); y+=27;   // complexity tier (clear of the big name below)
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.7); ctx.fillText("CLASS "+strat.tier, px, y); y+=27;   // complexity tier (clear of the big name below)
     ctx.font="700 30px "+sans; ctx.fillStyle=txt; ctx.shadowColor=accent; ctx.shadowBlur=22;
     ctx.fillText(strat.name, px, y); ctx.shadowBlur=0; y+=25;
     ctx.globalAlpha=A*prjA;
