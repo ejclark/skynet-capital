@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/ejclark/skynet-capital/compare/v1.25.0...v1.26.0) (2026-07-26)
+
+
+### Features
+
+* **login:** thesis card explains the call + recap confirms it played out ([#43](https://github.com/ejclark/skynet-capital/issues/43)) ([98c41f7](https://github.com/ejclark/skynet-capital/commit/98c41f7f5658d568fa519ff00dbb4763fc5fa6e5))
+
 # [1.25.0](https://github.com/ejclark/skynet-capital/compare/v1.24.0...v1.25.0) (2026-07-26)
 
 
