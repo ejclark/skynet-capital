@@ -1305,18 +1305,20 @@ ${versionTag}
         muted=css("--muted")||"#8B9AAB", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
     var e2=extrema(strat), curP=realized.length?realized[realized.length-1]:nowPrice, hiP=signalPrice+volScale*0.55;
     var uNow=clamp01((curP-signalPrice)/(volScale||1)+0.5), pl=dollarsAt(strat,e2,payoffAt(strat.pts,uNow));
-    var rx=Xf, ty=SY(hiP)+16, lh=17, prj=easeIO(clamp01(p.project));
+    // Live in the natural HEADROOM ABOVE the chart (never over the candles): stacked bottom-up so the
+    // status sits just above the top band edge, max loss + max profit above it, right-aligned.
+    var rx=Xf, prj=easeIO(clamp01(p.project));
+    var syS=SY(hiP)-16, yLo=syS-21, yHi=yLo-16;
     ctx.save(); ctx.globalAlpha=A*prj; ctx.textAlign="right"; ctx.textBaseline="alphabetic";
-    ctx.fillStyle=hexA(bg,0.5); roundRect(rx-208, ty-14, 214, 74, 6); ctx.fill();   // dark chip for contrast
+    ctx.fillStyle=hexA(bg,0.5); roundRect(rx-210, yHi-13, 216, (syS-(yHi-13))+6, 6); ctx.fill();   // dark chip for contrast
     ctx.font="700 11px "+mono;
-    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT  "+money(strat.maxP), rx-6, ty);
-    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS  "+money(strat.maxL), rx-6, ty+lh);
-    var sy=ty+lh+22;
+    ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT  "+money(strat.maxP), rx-6, yHi);
+    ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS  "+money(strat.maxL), rx-6, yLo);
     if(p.resolve>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=12;
       var pct=strat.maxP>0?Math.round(pl/strat.maxP*100):0, tag=(pl>0&&pct<92)?" · "+pct+"% OF MAX":(pl>0?" · LET IT RIDE":"");
-      ctx.fillText("✓ CLOSED "+money(pl)+tag, rx-6, sy); ctx.shadowBlur=0; }
-    else if(p.walk>0){ ctx.font="700 14px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("PLAYCALL LIVE · "+money(pl), rx-6, sy); }
-    else { ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ PLAYCALL LOCKED", rx-6, sy); }
+      ctx.fillText("✓ CLOSED "+money(pl)+tag, rx-6, syS); ctx.shadowBlur=0; }
+    else if(p.walk>0){ ctx.font="700 14px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("PLAYCALL LIVE · "+money(pl), rx-6, syS); }
+    else { ctx.font="700 12px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ PLAYCALL LOCKED", rx-6, syS); }
     ctx.restore();
   }
 
@@ -1427,6 +1429,8 @@ ${versionTag}
     function SY(P){ return nowSY-(P-nowPrice)*pxPerPrice; }
     function priceOf(u){ return signalPrice+(u-0.5)*volScale; }
     var loP=signalPrice-volScale*0.55, hiP=signalPrice+volScale*0.55;
+    // Reserve the top-right totals headroom so event labels (which stagger upward) steer clear of it.
+    if(W>=820 && proj>0.01) reserveBox(Xf-212, SY(hiP)-66, Xf+4, SY(hiP)-12);
     ctx.save(); ctx.globalAlpha=A;
     if(proj>0.01){
       // Opaque backing behind the whole play chart (bands + candles + RSI rail) so the tape reads
@@ -1545,7 +1549,7 @@ ${versionTag}
     // that drives entries + profit-taking, aligned tick-for-tick with the realized tape above it.
     if(p.walk>0 && realized.length>3){
       var dxL=W/(SPAN-1), comb=price.slice(0,nowIdx+1).concat(realized), rl2=realized.length;
-      var lt=SY(loP)+18, lh=40; if(lt+lh>field.bottom-6) lt=field.bottom-6-lh; var lb=lt+lh;
+      var lt=SY(loP)+18, lh=56; if(lt+lh>field.bottom-6) lt=field.bottom-6-lh; var lb=lt+lh;
       // The RSI RAIL (backing, zones, guides, labels) is laid across the WHOLE region up front; only
       // the RSI LINE grows as the present advances. So the rail spans x0L..Xf; the line stops at xNL.
       var x0L=nowSX+dxL*zoom, xNL=nowSX+rl2*dxL*zoom, xR=Xf;
