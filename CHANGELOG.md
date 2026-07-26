@@ -1,3 +1,10 @@
+# [1.58.0](https://github.com/ejclark/skynet-capital/compare/v1.57.0...v1.58.0) (2026-07-26)
+
+
+### Features
+
+* **login:** taller RSI oscillator lane in the playcall (43% more height) ([#86](https://github.com/ejclark/skynet-capital/issues/86)) ([db70e85](https://github.com/ejclark/skynet-capital/commit/db70e85d227ceea902ab3c95efa8d75c315560a6))
+
 # [1.57.0](https://github.com/ejclark/skynet-capital/compare/v1.56.0...v1.57.0) (2026-07-26)
 
 
