@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/ejclark/skynet-capital/compare/v1.44.0...v1.45.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** bots-vs-humans cohort view ([#70](https://github.com/ejclark/skynet-capital/issues/70)) ([dba8bab](https://github.com/ejclark/skynet-capital/commit/dba8bab69e6acfce294b7104f3b0c8d60696109c))
+
 # [1.44.0](https://github.com/ejclark/skynet-capital/compare/v1.43.1...v1.44.0) (2026-07-26)
 
 
