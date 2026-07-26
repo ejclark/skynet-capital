@@ -1,3 +1,10 @@
+# [1.57.0](https://github.com/ejclark/skynet-capital/compare/v1.56.0...v1.57.0) (2026-07-26)
+
+
+### Features
+
+* **login:** rain + blue-lightning storm over the cityscape ([#85](https://github.com/ejclark/skynet-capital/issues/85)) ([752c294](https://github.com/ejclark/skynet-capital/commit/752c294413ddb115ac6585ad3410102c7e3b2bcb))
+
 # [1.56.0](https://github.com/ejclark/skynet-capital/compare/v1.55.0...v1.56.0) (2026-07-26)
 
 
