@@ -97,6 +97,27 @@ for genuine forks and the sensitive class, and picks up the rest. **Bar for auto
 confidence it moves the needle on Eric's goals — anything below that becomes a surfaced question, not a
 guess. (See the self-sustaining loop in [`docs/LIVING-UNIVERSE.md`](docs/LIVING-UNIVERSE.md).)
 
+### Interrupt economics — protect Eric's attention
+
+Eric's attention is the primary constraint and the most expensive interrupt. The bar is **not
+flawless-out-of-the-gate** — it's **fast iterative improvement**; pragmatism over perfectionism. Too
+tight a leash does more harm than good. Gate interrupts on the **cost + reversibility of the drift, not
+the mere existence of a flaw**:
+
+- **Cheap + reversible + self-correctable** (a wording tweak, a small visual miss, a lint/test catch,
+  anything the next pass or another safety net will flag) → just fix it on the fly; do **not** interrupt.
+  Overlapping safety nets (tests, brand checks, Graphify `affected`, review, later passes) mean most
+  drift is caught and corrected autonomously — trust but verify, with several nets.
+- **Expensive / irreversible / outward-facing** (credentials, spend, real money, anything hard to undo)
+  → always gate, regardless of size.
+- **Genuinely load-bearing forks** → surface crisply (one sharp question), then clear everything
+  downstream.
+
+Beware **death by 10,000 cuts**: many individually-cheap interrupts sum to an expensive drain. Absorb
+that noise autonomously so Eric's attention goes to what moves the needle. A quick corrective prompt from
+Eric is the acceptable worst case — the goal is to make it rare, not to eliminate every imperfection
+up front.
+
 ## Ship loop (quick reference)
 
 - Branch off latest `origin/main` per change; small focused PRs; squash-merge on green.
