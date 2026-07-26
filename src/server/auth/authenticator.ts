@@ -2426,7 +2426,10 @@ ${versionTag}
     manualPlay=manual; paceScale=1; zoomRippled=false;   // even pace for auto + manual (transport lets you pause/step)
     nowIdx=price.length-1; realized=[]; pvR=pv;   // freeze history; seed realized momentum from the live move
     stepTarget=null; setPaused(false);            // fresh transport state each playcall
-    armForecast(curStrat); playVol=1.0+Math.random()*0.7; scheduleEvents();   // lively, varied trace + macro events
+    // Candle volatility MATCHES the zoomed-out trend: derive it from the regime the cue steered into
+    // (LOW VOL/RANGE stays calm, VOL EXPANDING is lively) instead of a free-floating random, so zooming
+    // in never contradicts the ambient tape you just saw. Small jitter keeps two same-cue plays distinct.
+    armForecast(curStrat); playVol=Math.max(0.45, regimeVol*(0.9+Math.random()*0.25)); scheduleEvents();
     // Snapshot the watched inputs for this playcall from the play's OWN profile, so the read is
     // accurate: pick an underlying that suits the strategy, and derive the fear/greed (VIX) + premium
     // (IV) from the play's cue — sellers fire into rich premium, vol plays fire when fear is spiking.
