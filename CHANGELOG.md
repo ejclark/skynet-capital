@@ -1,3 +1,10 @@
+# [1.55.0](https://github.com/ejclark/skynet-capital/compare/v1.54.0...v1.55.0) (2026-07-26)
+
+
+### Features
+
+* **login:** market-hours lighting — the skyline wakes and rests with the session ([#83](https://github.com/ejclark/skynet-capital/issues/83)) ([fa69fae](https://github.com/ejclark/skynet-capital/commit/fa69fae8c6c74c02e2fc6a32cbd844dca7af601a))
+
 # [1.54.0](https://github.com/ejclark/skynet-capital/compare/v1.53.0...v1.54.0) (2026-07-26)
 
 
