@@ -130,6 +130,16 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 - **Decoupled playcall drawer** — a left collapsible drawer housing Signal→Play→profit, decoupled from
   the trend chart, carried into the logged-in view; move the playcall recap into it with a connector
   line to its chart position. (tasks #49 + #51-remainder)
+- **Bot creation as a D&D character-sheet flow** — a guided process that walks a user through standing up
+  a bot, leaning into the primary-tower template. Steps: (1) **account setup identical to a human's** —
+  reuse the same account flow, no separate path; (2) **build the bot persona / strategy** — a
+  character-sheet-style profile builder that defines the strategy it employs (archetype, playbook, risk,
+  the tower/landmark skin). Turnaround idea: run persona-building **through GitHub issues** — Claude picks
+  up the issue, comments only when it needs user input, and (as trust matures) completes the work and
+  closes it (extends the autonomous-issue system below + the persona-lore seam #79). **Hard gate:** this
+  hinges on **autonomous bot trades being stable/tested first** — that behaviour is not yet proven, so
+  build the creation flow only once autonomy is ready (ties to the north-star pipeline below + Eric's
+  irreversible-class calls). _(src: Eric · while: leaning into the primary-tower template — bot onboarding)_
 - **North-star autonomous pipeline** — recycle the playbook artifact as a systems-level pipeline
   toward autonomous deployment (recognize signal → recommend → trade, with safeguards). (task #41)
 - **Lore universe (mixed multiverse)** — give each persona a character card (name, archetype,
