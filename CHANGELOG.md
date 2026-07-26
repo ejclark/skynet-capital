@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/ejclark/skynet-capital/compare/v1.15.0...v1.16.0) (2026-07-26)
+
+
+### Features
+
+* **login:** candlesticks in the execute act + fix flat-lining market ([#33](https://github.com/ejclark/skynet-capital/issues/33)) ([968225b](https://github.com/ejclark/skynet-capital/commit/968225b3cb5f76efaa626c3d64baf338f6504857))
+
 # [1.15.0](https://github.com/ejclark/skynet-capital/compare/v1.14.3...v1.15.0) (2026-07-26)
 
 
