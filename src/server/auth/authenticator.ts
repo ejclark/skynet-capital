@@ -952,7 +952,20 @@ ${versionTag}
           var a=lit ? (0.42+0.34*fl) : (0.11+0.07*noise(cell+1.3));
           rctx.fillStyle=hexA(accent,a); rctx.fillText(ch, cx, cy); } }
       rctx.restore();
-      rctx.fillStyle=hexA(accent,0.18); rctx.fillRect(b.x, top, b.w, 1); } }  // faint lit rim
+      // Edge tracers: outline the hard surfaces so each structure reads out of the code field. The top
+      // (skyline) edge is the strongest; the sides are fainter. A bright dash RUNS along the perimeter,
+      // tracing the building like a live circuit — subtle, but it defines the form crisply.
+      rctx.strokeStyle=hexA(accent,0.30); rctx.lineWidth=1;
+      rctx.beginPath(); rctx.moveTo(b.x,top); rctx.lineTo(b.x+b.w,top); rctx.stroke();       // top edge (skyline)
+      rctx.strokeStyle=hexA(accent,0.14);
+      rctx.beginPath(); rctx.moveTo(b.x,h); rctx.lineTo(b.x,top); rctx.moveTo(b.x+b.w,top); rctx.lineTo(b.x+b.w,h); rctx.stroke();  // sides
+      rctx.fillStyle=hexA(accent,0.5);                                                        // top corner accent ticks
+      rctx.fillRect(b.x-1,top-1,4,2); rctx.fillRect(b.x-1,top-1,2,4);
+      rctx.fillRect(b.x+b.w-3,top-1,4,2); rctx.fillRect(b.x+b.w-1,top-1,2,4);
+      var L1=b.h, L2=b.w, P=2*L1+L2, d0=((rainT*2.4 + b.seed*40)%P+P)%P;                      // running tracer along the outline
+      for(var seg=0; seg<9; seg++){ var dd=(d0+seg*2)%P, ep;
+        if(dd<L1) ep=[b.x, h-dd]; else if(dd<L1+L2) ep=[b.x+(dd-L1), top]; else ep=[b.x+b.w, top+(dd-L1-L2)];
+        rctx.fillStyle=hexA(accent, 0.55*(1-seg/9)); rctx.fillRect(ep[0]-0.8, ep[1]-0.8, 1.8, 1.8); } } }
   try{ rctx = rcanvas && rcanvas.getContext ? rcanvas.getContext("2d") : null; }catch(e){ rctx=null; }
   function rainResize(){
     if(!rctx) return;
