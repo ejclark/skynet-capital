@@ -1,3 +1,10 @@
+## [1.31.1](https://github.com/ejclark/skynet-capital/compare/v1.31.0...v1.31.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** deepen the forward vol cone + nest 2σ/3σ tiers ([#51](https://github.com/ejclark/skynet-capital/issues/51)) ([300b9ec](https://github.com/ejclark/skynet-capital/commit/300b9ece058034bef76c220fe0c915ac3460d66a))
+
 # [1.31.0](https://github.com/ejclark/skynet-capital/compare/v1.30.1...v1.31.0) (2026-07-26)
 
 
