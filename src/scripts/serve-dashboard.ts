@@ -13,6 +13,8 @@
  */
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
+import { startHistorySampler } from "../observatory/history-sampler.js";
+import { createHistoryStore } from "../observatory/history-store.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import type { Participant } from "../participants/participant.js";
 import { resolveDataSource } from "../runtime/data-source.js";
@@ -49,6 +51,12 @@ async function main(): Promise<void> {
 
   const sink = (event: Parameters<typeof hub.apply>[0]) => hub.apply(event);
   const onStatus = (channel: string, status: string) => console.log(`[${channel}] ${status}`);
+
+  // Equity/realized history: coarse periodic samples to the mounted volume (SKYNET_HISTORY_DIR →
+  // /data/history in prod, data/history in dev). No database, no host change — the seam that will
+  // unlock performance-over-time and the sim-city event ceremonies. See docs/LIVING-UNIVERSE.md.
+  const history = createHistoryStore(process.env);
+  startHistorySampler({ getState: () => hub.getState(), store: history });
 
   const heldSymbols = [
     ...new Set(initial.participants.flatMap((p) => p.positions.map((pos) => pos.symbol))),
