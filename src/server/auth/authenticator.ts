@@ -992,6 +992,41 @@ ${versionTag}
     var loP=signalPrice-volScale*0.55, hiP=signalPrice+volScale*0.55;
     ctx.save(); ctx.globalAlpha=A;
     if(proj>0.01){
+      // --- MARKET CONTEXT projected into the future (all dotted = tentative, drawn UNDER the play
+      // so it frames the bigger picture without stealing focus). Which overlays lead depends on the
+      // play's setup: vol cone for breakout plays, support/resistance for range plays, momentum for
+      // directional plays. ---
+      var cue=strat.cue, emVol=0.7, emSR=0.9, emMom=0.6;
+      if(cue==="VOL EXPANDING"||cue==="BREAKOUT RISK"){ emVol=1; emSR=0.55; emMom=0.7; }
+      else if(cue==="UPTREND"){ emVol=0.6; emSR=0.8; emMom=1; }
+      else { emVol=0.7; emSR=1; emMom=0.55; }   // LOW VOL / RANGE-BOUND / PINNED
+      var nn=price.length, lst=nn-1;
+      var midP=(smaA[lst]!=null?smaA[lst]:signalPrice), bwHalf=Math.max((bU[lst]-bL[lst])/2, volScale*0.12);
+      // Bollinger volatility cone — the expected dispersion, widening with sqrt(time).
+      var CS=26; ctx.setLineDash([2,5]); ctx.lineWidth=1;
+      ctx.beginPath();
+      for(var cc=0;cc<=CS;cc++){ var t0=cc/CS, hw0=bwHalf*(1+0.9*Math.sqrt(t0)), cx0=X0+(Xf-X0)*t0; cc?ctx.lineTo(cx0,SY(midP+hw0)):ctx.moveTo(cx0,SY(midP+hw0)); }
+      for(var cd=CS;cd>=0;cd--){ var t1=cd/CS, hw1=bwHalf*(1+0.9*Math.sqrt(t1)), cx1=X0+(Xf-X0)*t1; ctx.lineTo(cx1,SY(midP-hw1)); }
+      ctx.closePath(); ctx.fillStyle=hexA(accent,0.05*proj*emVol); ctx.fill();
+      for(var sd=-1;sd<=1;sd+=2){ ctx.strokeStyle=hexA(accent,0.3*proj*emVol); ctx.beginPath();
+        for(var ce=0;ce<=CS;ce++){ var t2=ce/CS, hw2=bwHalf*(1+0.9*Math.sqrt(t2)), cx2=X0+(Xf-X0)*t2; ce?ctx.lineTo(cx2,SY(midP+sd*hw2)):ctx.moveTo(cx2,SY(midP+sd*hw2)); } ctx.stroke(); }
+      ctx.setLineDash([]);
+      ctx.font="700 8px "+mono; ctx.textAlign="left"; ctx.fillStyle=hexA(accent,0.7*proj*emVol);
+      ctx.fillText("VOL", X0+(Xf-X0)*0.5, SY(midP+bwHalf*1.9)-2);
+      // Support / Resistance from recent swings — dotted levels extending into the forecast.
+      var s0=Math.max(0,nn-80), hiSR=-1e9, loSR=1e9;
+      for(var qq=s0;qq<nn;qq++){ if(price[qq]>hiSR)hiSR=price[qq]; if(price[qq]<loSR)loSR=price[qq]; }
+      ctx.setLineDash([1,4]); ctx.lineWidth=1; ctx.font="700 8px "+mono; ctx.textAlign="left";
+      var rY=SY(hiSR), sY=SY(loSR);
+      ctx.strokeStyle=hexA(muted,0.4*proj*emSR); ctx.beginPath(); ctx.moveTo(X0-60,rY); ctx.lineTo(Xf,rY); ctx.stroke();
+      ctx.fillStyle=hexA(muted,0.7*proj*emSR); ctx.fillText("R", Xf+5, rY+3);
+      ctx.strokeStyle=hexA(muted,0.4*proj*emSR); ctx.beginPath(); ctx.moveTo(X0-60,sY); ctx.lineTo(Xf,sY); ctx.stroke();
+      ctx.fillStyle=hexA(muted,0.7*proj*emSR); ctx.fillText("S", Xf+5, sY+3);
+      ctx.setLineDash([]);
+      // Momentum read — sign+strength of the fast EMA slope, near the entry.
+      var mom=emaF[lst]-emaF[Math.max(0,lst-8)], mcol=mom>0.03?pos:(mom<-0.03?neg:muted), msym=mom>0.03?"▲":(mom<-0.03?"▼":"→");
+      ctx.font="700 9px "+mono; ctx.textAlign="left"; ctx.fillStyle=hexA(mcol,0.85*proj*emMom);
+      ctx.fillText("MOM "+msym, X0+7, SY(nowPrice)+15);
       // horizontal profit/loss PRICE BANDS across the future region
       var NB=72, sh=Math.abs(SY(hiP)-SY(loP))/(NB-1)+1;
       for(var i=0;i<NB;i++){ var P=loP+(hiP-loP)*(i/(NB-1)), u=(P-signalPrice)/(volScale||1)+0.5, v=payoffAt(strat.pts,u);
