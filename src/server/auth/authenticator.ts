@@ -1146,11 +1146,15 @@ ${versionTag}
     // faint concentric striations in the iris (grain of the burning eye)
     rctx.strokeStyle=hexA("#FFE7B0",0.16*wake); rctx.lineWidth=0.6; almond(0.7); rctx.stroke(); almond(0.4); rctx.stroke();
     rctx.restore();
-    // 5) the cat-slit pupil — a void with a hot molten rim
+    // 5) the cat-slit pupil — a void with a hot molten rim. AMBIENT GAZE: at rest the pupil slowly
+    // WANDERS (the Eye is forever scanning the city); as it WAKES to a signal the wander fades and the
+    // pupil re-centres + locks — the clear visual difference between watching and detecting.
     rctx.save();
-    var pupil=function(sc){ rctx.beginPath(); rctx.moveTo(cx,cy-eh*0.46*sc);
-      rctx.quadraticCurveTo(cx+(1.7+2.2*eyeWake)*sc,cy, cx,cy+eh*0.46*sc);
-      rctx.quadraticCurveTo(cx-(1.7+2.2*eyeWake)*sc,cy, cx,cy-eh*0.46*sc); rctx.closePath(); };
+    var gazeX=(Math.sin(rainT*0.06)*1.3+Math.sin(rainT*0.028+2.1)*0.7)*(1-eyeWake);
+    var gazeY=(Math.cos(rainT*0.045)*0.8)*(1-eyeWake);
+    var pupil=function(sc){ var pcx=cx+gazeX, pcy=cy+gazeY; rctx.beginPath(); rctx.moveTo(pcx,pcy-eh*0.46*sc);
+      rctx.quadraticCurveTo(pcx+(1.7+2.2*eyeWake)*sc,pcy, pcx,pcy+eh*0.46*sc);
+      rctx.quadraticCurveTo(pcx-(1.7+2.2*eyeWake)*sc,pcy, pcx,pcy-eh*0.46*sc); rctx.closePath(); };
     rctx.globalCompositeOperation="lighter"; rctx.strokeStyle=hexA("#FFE7B0",0.5*wake*flk); rctx.lineWidth=1.1; pupil(1.06); rctx.stroke();
     rctx.globalCompositeOperation="source-over"; rctx.fillStyle=hexA("#140300",0.9*wake); pupil(1); rctx.fill();
     rctx.restore();
@@ -1698,6 +1702,27 @@ ${versionTag}
   // The handoff, made to feel CAUSED (not an unmotivated camera pan): when detection locks, the light
   // MARKS the spot with an imploding reticle; then a gravity WELL opens at the destination and a tractor
   // beam PULLS the present leftward into it (bright streaks flow toward the well) until the play unfolds.
+  // THE HAND-OFF — event sequencing made visible: once a spotlight's glint marks a signal on the trend,
+  // the signal TRAVELS UP to the Tower of Sauron (a bright mote runs the connecting line) — the Eye has
+  // to receive it before it can act. This is the beat that makes detection take time: sparkle → relay to
+  // the Eye → (the Eye then assesses + locks + pulls, below). Runs through the first ~70% of AIM.
+  function drawHandoff(p){
+    var t=easeIO(clamp01(p.aim/0.7))*(1-clamp01((p.zoom-0.05)/0.2))*(1-clamp01(p.walk));
+    if(t<=0.02) return;
+    var ex=-1,ey=-1,i; for(i=0;i<skyline.length;i++){ var tb=skyline[i]; if(tb.eye){ ex=tb.x+cityPX+tb.w/2; ey=H-tb.h-(tb.ant||0)-(tb.spire||0); break; } }
+    if(ex<0) return;
+    var accent=css("--accent")||"#35D0BA";
+    ctx.save(); ctx.globalCompositeOperation="lighter";
+    // the connecting line — signal associated to the Eye (fades in as the relay runs)
+    var lg=ctx.createLinearGradient(nowSX,nowSY,ex,ey);
+    lg.addColorStop(0,hexA(accent,0.02*t)); lg.addColorStop(0.55,hexA(accent,0.12*t)); lg.addColorStop(1,hexA("#FFB060",0.16*t));
+    ctx.strokeStyle=lg; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(nowSX,nowSY); ctx.lineTo(ex,ey); ctx.stroke();
+    // the signal itself, a bright mote travelling UP to the Eye — the hand-off in motion
+    var hx=lerp(nowSX,ex,t), hy=lerp(nowSY,ey,t), r=5+2*Math.sin(pbGlyphT*0.5);
+    var g=ctx.createRadialGradient(hx,hy,0,hx,hy,r+3); g.addColorStop(0,hexA("#EAFFFA",0.95*(1-0.25*t))); g.addColorStop(1,hexA(accent,0));
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hx,hy,r+3,0,7); ctx.fill();
+    ctx.restore();
+  }
   function drawGravityBeam(p){
     var accent=css("--accent")||"#35D0BA";
     // 1) DETECTION MARK — an imploding lock on the signal point as AIM completes, before the pull.
@@ -2355,7 +2380,7 @@ ${versionTag}
       document.body.classList.toggle("manualplay", playMode && manualPlay);
       drawMarket(1 - cam*0.34);
       drawScanners(1 - cam);   // roaming signal-scan spotlights — ambient only, recede as a play frames
-      if(p){ drawGravityBeam(p); drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
+      if(p){ drawHandoff(p); drawGravityBeam(p); drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
       drawRipples();
       beamVignette();
       rainDraw(rainBoost, rainTint); }
