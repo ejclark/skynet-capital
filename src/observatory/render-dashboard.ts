@@ -618,7 +618,45 @@ function pct(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
 
-function cohortCard(stats: CohortStats, leads: boolean): string {
+/**
+ * Collapse a cohort's members into one synthetic snapshot: positions summed by ticker (blended cost
+ * basis so per-symbol unrealized sign survives), cash + equity summed. Feeds the nation skyline —
+ * the cohort rendered as a single country of combined towers (the scale-ladder's country zoom).
+ */
+function cohortSnapshot(
+  participants: ParticipantSnapshot[],
+  kind: "human" | "bot",
+  label: string,
+): ParticipantSnapshot {
+  const c = participants.filter((p) => p.kind === kind && !p.error);
+  const byTicker = new Map<string, { quantity: number; cost: number; marketValue: number }>();
+  for (const p of c)
+    for (const pos of p.positions) {
+      const key = pos.symbol.toUpperCase();
+      const agg = byTicker.get(key) ?? { quantity: 0, cost: 0, marketValue: 0 };
+      agg.quantity += pos.quantity;
+      agg.cost += pos.quantity * pos.avgPrice;
+      agg.marketValue += pos.marketValue;
+      byTicker.set(key, agg);
+    }
+  const positions: PositionView[] = [...byTicker.entries()].map(([symbol, a]) => ({
+    symbol,
+    quantity: a.quantity,
+    avgPrice: a.quantity > 0 ? a.cost / a.quantity : 0,
+    marketValue: a.marketValue,
+  }));
+  return {
+    id: `cohort-${kind}`,
+    displayName: label,
+    kind,
+    cash: c.reduce((s, p) => s + p.cash, 0),
+    equity: c.reduce((s, p) => s + p.equity, 0),
+    positions,
+    activity: [],
+  };
+}
+
+function cohortCard(stats: CohortStats, leads: boolean, nation: ParticipantSnapshot): string {
   const chipCls = stats.kind === "bot" ? "chip-bot" : "chip-human";
   return `<article class="cohort ${leads ? "cohort-lead" : ""}">
       <header class="cohort-head">
@@ -628,6 +666,7 @@ function cohortCard(stats: CohortStats, leads: boolean): string {
       </header>
       <div class="cohort-equity num">${formatCurrency(stats.totalEquity)}</div>
       <div class="cohort-eqlabel">total equity</div>
+      <div class="cohort-nation">${renderEmpireSkyline(nation)}</div>
       <dl class="cohort-metrics">
         <div><dt>Avg equity</dt><dd class="num">${formatCurrency(stats.avgEquity)}</dd></div>
         <div><dt>Unrealized P/L</dt><dd class="num ${plClass(stats.totalUnrealized)}">${formatSigned(stats.totalUnrealized)}</dd></div>
@@ -648,6 +687,8 @@ function cohortCard(stats: CohortStats, leads: boolean): string {
 export function renderCohortsBody(data: DashboardData, options: DashboardViewOptions = {}): string {
   const humans = cohortStats(data.participants, "human", "Humans");
   const bots = cohortStats(data.participants, "bot", "Bots");
+  const humansNation = cohortSnapshot(data.participants, "human", "Humans");
+  const botsNation = cohortSnapshot(data.participants, "bot", "Bots");
   const humansLeadTotal = humans.totalEquity >= bots.totalEquity;
   const avgLeader = humans.avgEquity >= bots.avgEquity ? "Humans" : "Bots";
   const avgGap = Math.abs(humans.avgEquity - bots.avgEquity);
@@ -661,9 +702,9 @@ export function renderCohortsBody(data: DashboardData, options: DashboardViewOpt
       </div>
     </div>
     <div class="versus">
-      ${cohortCard(humans, humansLeadTotal)}
+      ${cohortCard(humans, humansLeadTotal, humansNation)}
       <div class="versus-mid"><span class="vs">VS</span></div>
-      ${cohortCard(bots, !humansLeadTotal)}
+      ${cohortCard(bots, !humansLeadTotal, botsNation)}
     </div>
     <div class="versus-read">
       <span><strong>${humansLeadTotal ? "Humans" : "Bots"}</strong> lead on total equity by <span class="num">${formatCurrency(totalGap)}</span></span>
@@ -1013,6 +1054,8 @@ const STYLE = `<style>
   .cohort-badge{ margin-left:auto; font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.14em; color:var(--bg); background:var(--accent); border-radius:5px; padding:3px 7px; }
   .cohort-equity{ font-size:34px; font-weight:700; line-height:1; }
   .cohort-eqlabel{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:6px 0 18px; }
+  /* the cohort as one nation — members' holdings aggregated into a single country skyline */
+  .cohort-nation{ margin:0 0 18px; }
   .cohort-metrics{ display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin:0; }
   .cohort-metrics div{ display:flex; flex-direction:column; gap:4px; }
   .cohort-metrics dt{ font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }

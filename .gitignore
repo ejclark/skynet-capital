@@ -9,3 +9,6 @@ data/
 
 # Graphify generated knowledge-graph outputs (regenerate with: graphify extract . --code-only)
 graphify-out/
+
+# Scratchpad / throwaway preview + shoot scripts (never committed)
+scratchpad/

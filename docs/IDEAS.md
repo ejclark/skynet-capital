@@ -78,10 +78,6 @@ legal risk) held to an honest, data-sourced standard. Phased:
   (the "two cities" from the scale ladder: commonality = shared towers, contrast = coal/rail vs.
   solar/silicon silhouettes). Reuses `renderEmpireSkyline`; the next natural P2 slice.
   _(src: Claude · while: building the empire skyline)_
-- **Empire thumbnails on the board** — a mini skyline per participant card on `/`, so the board reads
-  as a region of cities at a glance. _(src: Claude · while: building the empire skyline)_
-- **Nation view: aggregate skylines** — bots-vs-humans renders each cohort as a country skyline
-  (country-scale units). _(src: Claude · while: building the empire skyline)_
 - **Sector map from a data source** — `SECTOR_BY_TICKER` is a curated table; as holdings diversify,
   drive it from a real sector feed (or derive) so any ticker themes correctly. _(src: Claude · while: building the empire skyline)_
 - **Refine energy/gold/broad silhouettes** — the non-tech sector shapes are basic; give each the
@@ -137,6 +133,8 @@ _(nothing right now)_
 
 ## Shipped (recent)
 
+- Nation skylines on `/bots-vs-humans` — each cohort's holdings aggregated by ticker into one country skyline — PR (this)
+- Empire thumbnails on the board — a compact skyline per participant card on `/` (region of cities) — PR (this)
 - Empire skyline on `/u/:id` — positions → a domain-themed city (Living Universe P2, first slice) — PR (this)
 - Persona character cards on `/u/:id` (lore mechanism half of #79) — persona-lore registry threaded
   via `personaId`, the approach Graphify's `path` query pointed to — PR (this)
