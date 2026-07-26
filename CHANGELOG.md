@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/ejclark/skynet-capital/compare/v1.24.0...v1.25.0) (2026-07-26)
+
+
+### Features
+
+* **login:** trace the cityscape building edges to define their forms ([#42](https://github.com/ejclark/skynet-capital/issues/42)) ([7269bde](https://github.com/ejclark/skynet-capital/commit/7269bde73c66ea8d0df0882bdd8e1b4b72385b84))
+
 # [1.24.0](https://github.com/ejclark/skynet-capital/compare/v1.23.0...v1.24.0) (2026-07-26)
 
 
