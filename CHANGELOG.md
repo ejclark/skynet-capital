@@ -1,3 +1,10 @@
+# [1.31.0](https://github.com/ejclark/skynet-capital/compare/v1.30.1...v1.31.0) (2026-07-26)
+
+
+### Features
+
+* **login:** activate LEARN — a decode-the-system glossary ([#50](https://github.com/ejclark/skynet-capital/issues/50)) ([8fa7915](https://github.com/ejclark/skynet-capital/commit/8fa7915598b6820bf6e4dd0dce63f2c4e6359e1b))
+
 ## [1.30.1](https://github.com/ejclark/skynet-capital/compare/v1.30.0...v1.30.1) (2026-07-26)
 
 
