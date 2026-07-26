@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/ejclark/skynet-capital/compare/v1.27.0...v1.28.0) (2026-07-26)
+
+
+### Features
+
+* **login:** add covered call + cash-covered put; tier plays 101-401 ([#45](https://github.com/ejclark/skynet-capital/issues/45)) ([5cdeac7](https://github.com/ejclark/skynet-capital/commit/5cdeac75c3328f30cd578d48b69ec575bc39c01f))
+
 # [1.27.0](https://github.com/ejclark/skynet-capital/compare/v1.26.0...v1.27.0) (2026-07-26)
 
 
