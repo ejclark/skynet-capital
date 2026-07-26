@@ -802,6 +802,7 @@ ${versionTag}
     var toX=lerp(fpx, W*0.30, cam), toY=lerp(fpy, baseY, cam);
     nowSX=toX; nowSY=toY; nowPrice=price[n-1];
     pxPerPrice=(amp*2/(r.span||1))*zoom;
+    scBaseY=baseY; scMid=r.mid; scSpan=r.span; scAmp=amp;   // ambient price→screen-Y for the roaming scanners
     if(cam>0.001){ ctx.translate(toX,toY); ctx.scale(zoom,zoom); ctx.translate(-fpx,-fpy); }
     // Bollinger envelope
     ctx.beginPath();
@@ -1225,6 +1226,7 @@ ${versionTag}
   // Screen anchor for "now" (leading price) + price→pixel scale, exported by drawMarket so the
   // forecast draws the future in the same frame as the live trend.
   var nowSX=0, nowSY=0, nowPrice=100, pxPerPrice=1;
+  var scBaseY=0, scMid=100, scSpan=1, scAmp=1;   // exported ambient Y-mapping (set in drawMarket)
   // User-called plays (the Playbook): requestedPlay queues a specific play; SUMMON steers the trend
   // to that play's setup before the enhance-zoom fires; manualPlay slows the pace + enables hold.
   var requestedPlay=null, manualPlay=false, paceScale=1, paused=false,
@@ -1325,6 +1327,37 @@ ${versionTag}
       var rad=8+pr*170, a=(1-pr)*0.5;
       ctx.strokeStyle=hexA(accent,a); ctx.lineWidth=2*(1-pr); ctx.beginPath(); ctx.arc(r.x,r.y,rad,0,7); ctx.stroke();
       ctx.strokeStyle=hexA(accent,a*0.5); ctx.lineWidth=1.5*(1-pr); ctx.beginPath(); ctx.arc(r.x,r.y,rad*0.58,0,7); ctx.stroke(); } }
+  // Roaming spotlights: the bots continuously SWEEP the tape hunting for signals. Several soft
+  // beams glide across the field at different speeds; each casts additive light onto the trend
+  // beneath it, and FLARES with a reticle when it passes a slice where price breaches a Bollinger
+  // band (a detected signal). They recede as a playcall zooms in (the single aim-beam takes over) —
+  // reading as "the scan found something, now we focus." Ambient only; cheap; composite 'lighter'.
+  var scanners=[];
+  function initScanners(){ scanners=[]; for(var i=0;i<4;i++){
+    scanners.push({ x:Math.random()*W, v:(0.4+Math.random()*0.55)*(Math.random()<0.5?-1:1),
+      w:64+Math.random()*54, flare:0 }); } }
+  function scanY(v){ return scBaseY - ((v-scMid)/(scSpan||1))*scAmp*2; }
+  function drawScanners(vis){ if(vis<=0.02) return; if(!scanners.length) initScanners();
+    var accent=css("--accent")||"#35D0BA", neg=css("--neg")||"#F85149", n=price.length, dx=W/(SPAN-1);
+    ctx.save(); ctx.globalCompositeOperation="lighter";
+    for(var i=0;i<scanners.length;i++){ var s=scanners[i]; s.x+=s.v*rate;
+      if(s.x<-s.w) s.x=W+s.w; else if(s.x>W+s.w) s.x=-s.w;
+      var idx=Math.round(s.x/dx); if(idx<0)idx=0; else if(idx>n-1)idx=n-1; var py=scanY(price[idx]);
+      var hit=(bU[idx]!=null&&price[idx]>bU[idx])||(bL[idx]!=null&&price[idx]<bL[idx]);
+      s.flare += ((hit?1:0)-s.flare)*0.12;
+      var g=ctx.createLinearGradient(s.x,field.top,s.x,field.bottom+40);
+      g.addColorStop(0,hexA(accent,0)); g.addColorStop(0.5,hexA(accent,vis*(0.045+s.flare*0.12)));
+      g.addColorStop(1,hexA(accent,0));
+      ctx.fillStyle=g; ctx.fillRect(s.x-s.w/2, field.top-12, s.w, (field.bottom-field.top)+64);
+      var pr=ctx.createRadialGradient(s.x,py,0,s.x,py,s.w*0.72);
+      pr.addColorStop(0,hexA(accent,vis*(0.14+s.flare*0.30))); pr.addColorStop(1,hexA(accent,0));
+      ctx.fillStyle=pr; ctx.beginPath(); ctx.arc(s.x,py,s.w*0.72,0,7); ctx.fill();
+      if(s.flare>0.34){ ctx.globalCompositeOperation="source-over";
+        var ra=vis*(s.flare-0.34)*1.5; ctx.strokeStyle=hexA(neg,ra); ctx.lineWidth=1.2;
+        ctx.beginPath(); ctx.arc(s.x,py,7,0,7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(s.x-11,py); ctx.lineTo(s.x-4,py); ctx.moveTo(s.x+4,py); ctx.lineTo(s.x+11,py); ctx.stroke();
+        ctx.globalCompositeOperation="lighter"; } }
+    ctx.restore(); }
   // Render one static, fully-projected forecast for a play (reduced-motion + initial paint).
   function renderStatic(idx){ curStrat=idx; armForecast(idx); cam=0.9; zoom=1.9;
     measureField(); fieldSnap(); drawMarket(0.7);
@@ -1424,6 +1457,7 @@ ${versionTag}
       document.body.classList.toggle("playing", cam>0.02);
       document.body.classList.toggle("manualplay", playMode && manualPlay);
       drawMarket(1 - cam*0.34);
+      drawScanners(1 - cam);   // roaming signal-scan spotlights — ambient only, recede as a play frames
       if(p){ drawForecast(STRATS[curStrat], curSig, p); pbGlyphT++; }
       drawRipples();
       beamVignette();
