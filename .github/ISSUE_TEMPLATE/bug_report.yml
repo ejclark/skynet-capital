@@ -1,28 +1,44 @@
 name: "🐞 Bug report"
-description: "Something in the observatory or login is broken or wrong."
+description: "Something looks wrong, broke, or didn't do what you expected."
 title: "[bug] "
 labels: ["bug", "feedback"]
 body:
   - type: markdown
     attributes:
-      value: "Thanks for helping make Skynet Capital better. Tell us what went wrong — screenshots help a lot."
+      value: |
+        Thanks for helping make Skynet Capital better! A few quick details get it fixed faster.
+        **The single most useful thing is a screenshot or screen-recording** — a lot of this app moves, and a clip shows what words can't.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: First checks
+      options:
+        - label: I skimmed the open issues and this doesn't look like a duplicate.
+          required: true
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
-      description: What did you see? What did you expect instead?
-      placeholder: "The leaderboard showed my return as +0.00% even though I have open positions…"
+      description: What did you see? A screenshot or short screen-recording here is gold (paste or drag it in).
+      placeholder: "The leaderboard showed my return as +0.00% even though I have open positions. Clip attached…"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+      placeholder: "It should show my actual return, like +2.4%."
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Steps to reproduce
-      description: How can we make it happen again?
+      label: How can we make it happen again?
+      description: Rough steps are fine — even "it just happens when I open the page."
       placeholder: |
-        1. Go to /leaderboard
-        2. Sort by Return %
-        3. See the wrong value
+        1. Sign in
+        2. Open the Leaderboard, sort by Return %
+        3. My row shows 0.00%
     validations:
       required: false
   - type: dropdown
@@ -30,20 +46,38 @@ body:
     attributes:
       label: Where did it happen?
       options:
-        - Login / intro page
-        - Observatory board
-        - A profile (/u/…)
+        - Login / intro animation
+        - The board (main dashboard)
+        - A profile page (/u/…)
         - Leaderboard
         - Bots vs Humans
         - Compare
-        - Connecting my Alpaca account (/add)
-        - Somewhere else
+        - Connecting my Alpaca account (/add or /welcome)
+        - Somewhere else / not sure
+    validations:
+      required: false
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How much is it getting in your way?
+      options:
+        - "Blocking — I can't use it"
+        - "Annoying — but I can work around it"
+        - "Minor — just looks a bit off"
     validations:
       required: false
   - type: input
     id: device
     attributes:
-      label: Device / browser
-      placeholder: "iPhone 15 · Safari, or Chrome on Windows"
+      label: Device & browser
+      description: Rendering can differ by device — this helps a lot.
+      placeholder: "iPhone 15 · Safari  —or—  Windows · Chrome"
     validations:
       required: false
+  - type: checkboxes
+    id: motion
+    attributes:
+      label: Anything else on?
+      options:
+        - label: I have a "reduce motion" / accessibility setting turned on.
+          required: false

@@ -1,24 +1,34 @@
 name: "💡 Idea to explore"
-description: "A bigger, more open-ended idea or direction — not fully formed yet."
+description: "A bigger, open-ended idea or direction — half-formed is totally fine."
 title: "[idea] "
 labels: ["idea", "feedback"]
 body:
   - type: markdown
     attributes:
-      value: "Blue-sky welcome. Half-formed ideas are great here — we'll explore them together."
+      value: |
+        Blue-sky welcome. This is the place for "what if…" — no need to have it figured out.
+        We'll explore it together, and the best ones become real.
   - type: textarea
     id: idea
     attributes:
       label: The idea
-      description: What's the concept? It's fine if it's rough.
-      placeholder: "What if bots could explain their trades in plain English after each play?"
+      description: What's the concept? Rough is good.
+      placeholder: "What if each bot explained its trade in one plain-English sentence after a play closes?"
     validations:
       required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What might it make better?
+      description: Who's it for, and what does it help them do, learn, or enjoy?
+      placeholder: "I'd actually learn *why* a play was picked, instead of just seeing it happen."
+    validations:
+      required: false
   - type: textarea
     id: inspiration
     attributes:
       label: What sparked it?
       description: A moment in the app, something you saw elsewhere, a wish…
-      placeholder: "I saw a play close and wanted to know *why* the bot picked it."
+      placeholder: "Watched a play close and really wanted to know the bot's reasoning."
     validations:
       required: false
