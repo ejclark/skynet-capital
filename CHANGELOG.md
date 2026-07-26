@@ -1,3 +1,10 @@
+# [1.34.0](https://github.com/ejclark/skynet-capital/compare/v1.33.0...v1.34.0) (2026-07-26)
+
+
+### Features
+
+* **login:** reframe reveal vfx as the key to the city ([#54](https://github.com/ejclark/skynet-capital/issues/54)) ([591c7cb](https://github.com/ejclark/skynet-capital/commit/591c7cbe8942666001d3d6629200cf49379bd7e0))
+
 # [1.33.0](https://github.com/ejclark/skynet-capital/compare/v1.32.0...v1.33.0) (2026-07-26)
 
 
