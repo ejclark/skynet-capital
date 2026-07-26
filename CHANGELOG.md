@@ -1,3 +1,10 @@
+# [1.78.0](https://github.com/ejclark/skynet-capital/compare/v1.77.0...v1.78.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** persona landmark — the Eye crowns Sauron's empire (P1) ([#136](https://github.com/ejclark/skynet-capital/issues/136)) ([91c8a68](https://github.com/ejclark/skynet-capital/commit/91c8a687054424bd810eaabd86b070ffd6d35f20))
+
 # [1.77.0](https://github.com/ejclark/skynet-capital/compare/v1.76.0...v1.77.0) (2026-07-26)
 
 
