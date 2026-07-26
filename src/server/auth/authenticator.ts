@@ -1082,10 +1082,11 @@ ${versionTag}
     if(eyeI<0) eyeI=t1;
     // Barad-dûr: a broad, jagged fortress-tower, not a needle — bigger footprint + a gentler taper so
     // the stepped tiers and buttresses read; the summit prongs + Eye crown it (see drawBaradDur/drawEye).
-    // Foreground hero: a broad, nearer mass that TOWERS over neighbors by width, while its summit is
-    // pulled DOWN the y-axis (shorter body + spire) into the lower third — out of the chart / playcall /
-    // trendline overlap zone. Prominent through mass and proximity, not by spiking into the readout.
-    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.32,BE.h*1.3+34); BE.w=Math.max(BE.w,92); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.56; BE.spire=Math.max(BE.spire,22+Math.random()*10); BE.ant=Math.max(BE.ant,12+Math.random()*8);
+    // DOMINANT hero: the primary character's tower carries the weight of the whole party/nation, so it
+    // stands NOTICEABLY taller + broader than everything around it — a true landmark, not just the widest
+    // of a uniform row. Now that the playcall no longer renders in the left window, the summit is free to
+    // rise well above its neighbours (near towers cap ~0.20h; Sauron reaches ~0.56h + a tall spire).
+    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.56,BE.h*1.8+90); BE.w=Math.max(BE.w,112); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.56; BE.spire=Math.max(BE.spire,42+Math.random()*14); BE.ant=Math.max(BE.ant,16+Math.random()*8);
       // PIN the primary player's tower to a STABLE central-left anchor — centred in the window between
       // the browser's left edge and where the playcall renders (~0.30w) — so it's a reliable render point
       // every session rather than wherever a random tower fell. (Per-user personal touches on this fixed
