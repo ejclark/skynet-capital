@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/ejclark/skynet-capital/compare/v1.41.0...v1.42.0) (2026-07-26)
+
+
+### Features
+
+* **login:** playcall panel reads as a live terminal running named programs ([7e5265a](https://github.com/ejclark/skynet-capital/commit/7e5265a5c8f3658d7b2a95581c30ac61ded46c0c))
+
 # [1.41.0](https://github.com/ejclark/skynet-capital/compare/v1.40.0...v1.41.0) (2026-07-26)
 
 
