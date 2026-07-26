@@ -1,3 +1,10 @@
+# [1.37.0](https://github.com/ejclark/skynet-capital/compare/v1.36.0...v1.37.0) (2026-07-26)
+
+
+### Features
+
+* **login:** move playcall totals + outcome to the far right by the target ([#57](https://github.com/ejclark/skynet-capital/issues/57)) ([ab7113a](https://github.com/ejclark/skynet-capital/commit/ab7113afa034a606c004928cb1fcac84d2c05dca))
+
 # [1.36.0](https://github.com/ejclark/skynet-capital/compare/v1.35.0...v1.36.0) (2026-07-26)
 
 
