@@ -251,6 +251,9 @@ export interface DashboardViewOptions {
   readonly nav?: NavContext;
 }
 
+/** Where in-app "Feedback" links point — the repo's structured issue-form chooser. */
+const FEEDBACK_URL = "https://github.com/ejclark/skynet-capital/issues/new/choose";
+
 const NAV_ICON: Record<string, string> = {
   board: "▦",
   compare: "⇄",
@@ -295,6 +298,9 @@ function renderDrawer(nav: NavContext): string {
       }</span></a>`,
     );
   }
+  foot.push(
+    `<a class="dnav-link dnav-muted" href="${FEEDBACK_URL}" target="_blank" rel="noopener noreferrer"><span class="dnav-ico" aria-hidden="true">✎</span><span class="dnav-label">Feedback</span></a>`,
+  );
   if (nav.authed) {
     foot.push(
       `<a class="dnav-link dnav-muted" href="/logout"><span class="dnav-ico" aria-hidden="true">⏻</span><span class="dnav-label">Sign out</span></a>`,

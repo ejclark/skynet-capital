@@ -1,0 +1,24 @@
+name: "💡 Idea to explore"
+description: "A bigger, more open-ended idea or direction — not fully formed yet."
+title: "[idea] "
+labels: ["idea", "feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: "Blue-sky welcome. Half-formed ideas are great here — we'll explore them together."
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What's the concept? It's fine if it's rough.
+      placeholder: "What if bots could explain their trades in plain English after each play?"
+    validations:
+      required: true
+  - type: textarea
+    id: inspiration
+    attributes:
+      label: What sparked it?
+      description: A moment in the app, something you saw elsewhere, a wish…
+      placeholder: "I saw a play close and wanted to know *why* the bot picked it."
+    validations:
+      required: false
