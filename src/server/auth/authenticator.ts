@@ -1390,35 +1390,35 @@ ${versionTag}
   // why: the THESIS — the read of WHY the market should behave this way (evidence → expectation).
   // hold: the CONDITION that must persist for the play to pay. Surfaced in the signal + recap cards.
   var STRATS=[
-    { name:"IRON CONDOR", cue:"LOW VOL", desc:"Range-bound — keep the credit while price holds the middle.",
+    { name:"IRON CONDOR", cue:"LOW VOL", desc:"Range-bound — keep the credit.",
       why:"RSI stretched at the band, vol compressed — momentum's spent, so price should oscillate inside the range.",
       hold:"Holds while price stays between the short strikes.",
       pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8], maxP:420, maxL:-1080, tier:301 },
-    { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Volatility building — profit on a breakout either way.",
+    { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Vol coiling — win on a break either way.",
       why:"Bands squeezed and coiling — a volatility expansion is due; the break can come either way.",
       hold:"Pays once price breaks out past either strike.",
       pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7], maxP:2600, maxL:-720, tier:301 },
-    { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Dead calm — sell premium; best if price pins the strike.",
+    { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Dead calm — sell premium, pin the strike.",
       why:"Tape pinned to the mean with vol rich — premium decays fastest if price simply stays put.",
       hold:"Best if price pins the strike; risk grows as it drifts.",
       pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5], maxP:1180, maxL:-3400, tier:401 },
-    { name:"BUTTERFLY", cue:"PINNED", desc:"Pinned — max profit if price lands on the center strike.",
+    { name:"BUTTERFLY", cue:"PINNED", desc:"Pinned — max profit at the center strike.",
       why:"Price magnetised to a level with low vol — it should land near the center strike at expiry.",
       hold:"Max profit if it expires on the center strike.",
       pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65], maxP:1320, maxL:-340, tier:301 },
-    { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Bullish reversal — capped upside at a lower cost.",
+    { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Bullish reversal — capped upside, lower cost.",
       why:"Fast EMA crossing up off support, momentum turning — a measured move higher.",
       hold:"Holds while the uptrend and support persist.",
       pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65], maxP:760, maxL:-540, tier:201 },
-    { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Breakout higher — limited risk with room to run.",
+    { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Breakout — limited risk, room to run.",
       why:"Breakout pressure building above resistance — room to run, with defined risk.",
       hold:"Pays as price breaks and runs higher.",
       pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75], maxP:1900, maxL:-880, tier:401 },
-    { name:"COVERED CALL", cue:"UPTREND", desc:"Own the stock, sell a call — collect income, cap the upside.",
+    { name:"COVERED CALL", cue:"UPTREND", desc:"Own shares, sell a call — collect income.",
       why:"Holding shares in a calm-to-rising tape — sell a call to harvest premium while it drifts up.",
       hold:"Keeps the premium while price stays below the short call.",
       pts:[[0,-1],[0.6,1],[1,1]], strikes:[0.6], maxP:640, maxL:-1900, tier:101 },
-    { name:"CASH-COVERED PUT", cue:"RANGE-BOUND", desc:"Sell a put, hold the cash — get paid to set a buy price.",
+    { name:"CASH-COVERED PUT", cue:"RANGE-BOUND", desc:"Sell a put — get paid to set a buy price.",
       why:"Willing to own lower — sell a put to collect premium while price holds above your strike.",
       hold:"Keeps the premium while price stays above the short put.",
       pts:[[0,-1],[0.4,1],[1,1]], strikes:[0.4], maxP:520, maxL:-2600, tier:102 }
@@ -1825,8 +1825,7 @@ ${versionTag}
     // hugs the content; a hairline leader connects it back to the reticle so the association is legible.
     var cw=196, gw=cw-26,
         cueLines=wrapCount(sig?sig.sig:"", gw, 13, "700 9px "+mono),
-        whyLines=wrapCount(strat?strat.why:"", gw, 12, "9px "+mono),
-        ch=67+cueLines*13+4+whyLines*12+12,
+        ch=67+cueLines*13+10,
         cx=sigStackX, cy=sigStackY;   // docked directly beneath the play name + one-liner
     // a hairline leader runs DOWN from the read to the reticle on the tape — "this is the point"
     ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(rc,0.42); ctx.lineWidth=1;
@@ -1844,8 +1843,9 @@ ${versionTag}
     ctx.fillStyle=hexA(pos,0.22); ctx.fillRect(gx,gy,gw*0.3,gh);
     ctx.fillStyle=hexA(neg,0.22); ctx.fillRect(gx+gw*0.7,gy,gw*0.3,gh);
     var mp=gx+gw*clamp01(rsiV/100); ctx.fillStyle=rc; ctx.fillRect(mp-1.5,gy-2,3,gh+4);
-    yy=gy+gh+15; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); yy+=wrapText((sig?sig.sig:""), px, yy, gw, 13)*13+4;
-    ctx.font="9px "+mono; ctx.fillStyle=hexA(txt,0.85); wrapText(strat?strat.why:"", px, yy, gw, 12);
+    // The condition (cue) only — the play's rationale/description lives on the chart title, not repeated
+    // here (that duplication was drift). This card is purely the SIGNAL: RSI gauge + what tripped.
+    yy=gy+gh+15; ctx.font="700 9px "+mono; ctx.fillStyle=hexA(accent,0.9); wrapText((sig?sig.sig:""), px, yy, gw, 13);
     ctx.restore(); }
   // THE INSIGHT ACT — the beat between detecting the signal and predicting the play, where the machine
   // RECOGNISES what it's looking at. The watched facts (the signal + fear/greed + premium) snap together
@@ -1887,26 +1887,19 @@ ${versionTag}
   function drawRecap(strat, sig, x, y, A){ if(A<=0.01||!strat) return;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
-    // Same organic frame as the signal card it replaces: compact, translucent, an accent SPINE, parked
-    // over the calm history to the LEFT of the entry — never a slab over the resolved candles.
-    var cw=196, ch=162, cx=sigStackX, cy=sigStackY;   // docked beneath the play name, where the read was
+    // Stripped to the one thing that's UNIQUE to the recap: did the thesis hold? The play name is the
+    // chart title, the booked P/L lives at the TARGET, and the event that moved it is marked on the
+    // timeline — none of that is repeated here. Same organic spine-card, docked beneath the name.
+    var cw=196, ch=54, cx=sigStackX, cy=sigStackY;
     var e=extrema(strat), uEx=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5),
-        pl=dollarsAt(strat,e,payoffAt(strat.pts,uEx)), pct=Math.round(pl/(strat.maxP||1)*100),
-        win=pl>=0, rcol=win?pos:neg;
+        pl=dollarsAt(strat,e,payoffAt(strat.pts,uEx)), win=pl>=0, rcol=win?pos:neg;
     ctx.save(); ctx.globalAlpha=A;
     ctx.fillStyle=hexA(bg,0.8); roundRect(cx,cy,cw,ch,7); ctx.fill();
     ctx.strokeStyle=hexA(rcol,0.4); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,7); ctx.stroke();
     ctx.fillStyle=hexA(rcol,0.7); ctx.fillRect(cx,cy+7,2,ch-14);
-    var px=cx+14, gw=cw-26, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(rcol,0.9); ctx.fillText("◈ PLAYCALL RECAP", px, yy); yy+=18;
-    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(txt,0.95); ctx.fillText(strat.name, px, yy); yy+=16;
-    ctx.font="9px "+mono; ctx.fillStyle=hexA(rcol,0.9); ctx.fillText((win?"✓ READ HELD":"✗ READ BROKE"), px, yy); yy+=14;
-    ctx.fillStyle=hexA(txt,0.85); yy+=wrapText(strat.hold, px, yy, gw, 12)*12+3;
-    var evl=""; for(var i=0;i<events.length;i++){ if(events[i].fired) evl+=(evl?" · ":"")+events[i].label; }
-    if(evl){ ctx.font="8px "+mono; ctx.fillStyle=hexA(muted,0.75); yy+=wrapText("through "+evl, px, yy, gw, 11)*11+2; }
-    ctx.strokeStyle=hexA(muted,0.25); ctx.beginPath(); ctx.moveTo(px,yy-4); ctx.lineTo(px+gw,yy-4); ctx.stroke(); yy+=12;
-    ctx.font="700 12px "+mono; ctx.fillStyle=hexA(rcol,0.95); ctx.fillText("BOOKED "+money(pl), px, yy);
-    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(muted,0.8); ctx.fillText(pct+"% OF MAX", px, yy+15);
+    var px=cx+14, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.font="700 9px "+mono; ctx.fillStyle=hexA(rcol,0.9); ctx.fillText("◈ PLAYCALL RECAP", px, yy); yy+=20;
+    ctx.font="700 14px "+mono; ctx.fillStyle=hexA(rcol,0.95); ctx.fillText((win?"✓ READ HELD":"✗ READ BROKE"), px, yy);
     ctx.restore(); }
 
   // FORECAST-ON-TREND: the called play is drawn into the FUTURE (right of "now", where there is no
@@ -2039,7 +2032,7 @@ ${versionTag}
       // The title anchor is computed EVERY frame the play is active (not just once the name shows), so the
       // signal read + recap dock beneath it consistently through AIM → INSIGHT → walk.
       var sans2=css("--sans")||"sans-serif", tnx=X0, tnY=SY(hiP)-12, teY=tnY-24;
-      var descLines=wrapCount(strat.desc, 268, 16, "13px "+sans2);
+      var descLines=wrapCount(strat.desc, 380, 16, "13px "+sans2);
       sigStackX=tnx; sigStackY=tnY+19+descLines*16+8;
       if(ins>0.01){
         // The name CRYSTALLISES out of the insight beat — settling from slightly-large + hot glow into
@@ -2055,7 +2048,7 @@ ${versionTag}
         // The play's one-liner sits DIRECTLY under the name — the redesign opened the room for it (it used
         // to be crammed in the left card).
         ctx.globalAlpha=A*ins; ctx.font="13px "+sans2; ctx.fillStyle=hexA(muted,0.92);
-        wrapText(strat.desc, tnx, tnY+19, 268, 16);
+        wrapText(strat.desc, tnx, tnY+19, 380, 16);
         ctx.restore();
       }
     }
