@@ -1,5 +1,6 @@
 import type { DashboardData } from "./dashboard-data.js";
 import type { ActivityView, ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
+import { renderEmpireSkyline } from "./empire-skyline.js";
 import { personaLore } from "./persona-lore.js";
 
 /**
@@ -441,6 +442,7 @@ export function renderIndividualBody(
       </div>
       ${persona}
     </header>
+    <div class="empire-band">${renderEmpireSkyline(snapshot)}</div>
     <div class="indiv-hero">
       <div class="hero-equity">
         <span class="tile-label">Equity</span>
@@ -894,6 +896,8 @@ const STYLE = `<style>
   .persona-eyebrow{ display:block; font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
   .persona-thesis{ margin:0; font-size:14px; color:var(--text); line-height:1.5; }
   .persona-legend{ margin:8px 0 0; font-size:13px; color:var(--muted); line-height:1.5; font-style:italic; }
+  .empire-band{ margin:0 0 24px; }
+  .empire-skyline{ display:block; width:100%; height:auto; max-height:150px; border:1px solid var(--border); border-radius:10px; }
   .indiv-hero{ display:grid; grid-template-columns:minmax(220px,1fr) 2fr; gap:16px; margin-bottom:24px; align-items:stretch; }
   .hero-equity{ background:var(--surface); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
   .hero-num{ font-size:40px; font-weight:700; line-height:1; }
