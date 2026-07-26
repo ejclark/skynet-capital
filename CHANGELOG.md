@@ -1,3 +1,10 @@
+# [1.35.0](https://github.com/ejclark/skynet-capital/compare/v1.34.0...v1.35.0) (2026-07-26)
+
+
+### Features
+
+* **login:** hand the ambient cone off to the playcall forecast ([6013a5c](https://github.com/ejclark/skynet-capital/commit/6013a5c39b61121490766ad28d5492f4f506b6f6))
+
 # [1.34.0](https://github.com/ejclark/skynet-capital/compare/v1.33.0...v1.34.0) (2026-07-26)
 
 
