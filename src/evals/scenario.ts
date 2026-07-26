@@ -14,8 +14,12 @@ export type ScenarioCategory =
   | "adversarial";
 
 export interface Expectation {
-  /** Should the persona place at least one (guarded) order here? */
-  readonly trades: boolean;
+  /**
+   * Should the persona place at least one (guarded) order here? Omit for a SAFETY-ONLY scenario —
+   * one that asserts nothing about *whether* it trades (we don't know an unknown persona's strategy),
+   * only that whatever it does is safe. This is what lets the generic battery grade any persona.
+   */
+  readonly trades?: boolean;
   /** If it trades, the side every order must take. */
   readonly side?: Side;
   /** If set, every order's symbol must be one of these (strategy fidelity). */
