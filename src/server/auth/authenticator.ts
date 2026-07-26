@@ -235,15 +235,8 @@ export class Authenticator {
   }
 
   /* Ambient Matrix rain (deepest layer) + living market backdrop above it */
-  #rain{ position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.55; }
+  #rain{ position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.32; }
   #stage{ position:fixed; inset:0; width:100%; height:100%; z-index:1; pointer-events:none; }
-  /* Faint CRT scanlines across the whole stage */
-  .scanlines{ position:fixed; inset:0; z-index:2; pointer-events:none; mix-blend-mode:overlay; opacity:.5;
-    background:repeating-linear-gradient(0deg, color-mix(in srgb,var(--accent) 9%,transparent) 0 1px, transparent 1px 3px); }
-  /* Slow specular scan sweep */
-  .scanbeam{ position:fixed; inset:0; z-index:2; pointer-events:none;
-    background:linear-gradient(180deg, transparent 0%, color-mix(in srgb,var(--accent) 8%,transparent) 50%, transparent 100%);
-    height:38%; animation:beam 7s linear infinite; }
   .vignette{ position:fixed; inset:0; z-index:3; pointer-events:none;
     background:radial-gradient(120% 90% at 50% 40%, transparent 45%, color-mix(in srgb,var(--bg) 82%,transparent) 100%); }
 
@@ -552,8 +545,6 @@ export class Authenticator {
 <canvas id="rain" aria-hidden="true"></canvas>
 <canvas id="stage" aria-hidden="true"></canvas>
 <canvas id="vfx" aria-hidden="true"></canvas>
-<div class="scanlines" aria-hidden="true"></div>
-<div class="scanbeam" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 <div class="cursorglow" id="cursorGlow" aria-hidden="true"></div>
 <div class="stagescrim" id="stagescrim" aria-hidden="true"></div>
@@ -744,12 +735,12 @@ ${versionTag}
   // Reality thus draws rightward INTO the forecast, overtaking it, without scrolling the history.
   function fillRealized(walk){
     var dx=W/(SPAN-1), cap=Math.max(2, Math.floor((W*0.9-nowSX)/(dx*(zoom||1))));
-    var want=Math.round(easeIO(clamp01(walk))*cap);
+    var want=Math.round(clamp01(walk)*cap);   // LINEAR advance → even, ambient-matched pace (no ease)
     // Continue the market's OWN dynamics — carried momentum (pvR, seeded from the live momentum at
-    // entry) + its natural volatility — with only a gentle drift toward the play's target. This keeps
-    // the realized line flowing naturally from the prior move instead of snapping to a flat glide.
-    while(realized.length<want){ var last=realized.length?realized[realized.length-1]:price[nowIdx];
-      t++; pvR = pvR*0.86 + (noise(t*0.017)-0.5)*0.8*regimeVol + (targetPrice-last)*0.02;
+    // entry) + its natural volatility — with a drift toward the target that firms up over the walk so
+    // the happy-but-realistic path converges into the profit zone (with variance) rather than snapping.
+    while(realized.length<want){ var last=realized.length?realized[realized.length-1]:price[nowIdx], prog=realized.length/cap;
+      t++; pvR = pvR*0.86 + (noise(t*0.017)-0.5)*0.8*regimeVol + (targetPrice-last)*(0.02+0.07*prog);
       realized.push(Math.max(5, last+pvR)); }
     while(realized.length>want) realized.pop();   // trim if the walk was scrubbed back
   }
@@ -826,11 +817,12 @@ ${versionTag}
     ctx.restore();
     // (The aiming beam draws the reticle at the signal point during a playcall — see drawAimBeam.)
     ctx.restore();
-    // RSI readout — screen space, never zoomed
-    var rc = rsiV<32?pos:(rsiV>68?neg:muted);
-    ctx.save(); ctx.globalAlpha=dim; ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
-    ctx.fillText("RSI "+rsiV.toFixed(0)+(rsiV<32?" OVERSOLD":rsiV>68?" OVERBOUGHT":""), 16, field.top-6);
-    ctx.textAlign="start"; ctx.restore();
+    // RSI readout — idle only (during a play the playbook panel + callout carry the read; this would
+    // just collide with the pipeline text top-left).
+    if(cam<0.05){ var rc = rsiV<32?pos:(rsiV>68?neg:muted);
+      ctx.save(); ctx.globalAlpha=dim; ctx.font="11px "+(css("--mono")||"monospace"); ctx.textAlign="left"; ctx.fillStyle=hexA(rc,0.92);
+      ctx.fillText("RSI "+rsiV.toFixed(0)+(rsiV<32?" OVERSOLD":rsiV>68?" OVERBOUGHT":""), 16, field.top-6);
+      ctx.textAlign="start"; ctx.restore(); }
   }
   // Projected-beam vignette: the trend + plays read as cast FROM the emitter (the button at
   // bottom-center) — brightest inside the light cone, fading toward the upper corners.
@@ -1013,8 +1005,8 @@ ${versionTag}
     ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS", px, y);
     ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=25;
     ctx.globalAlpha=A;
-    if(p.resolve>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pos; ctx.shadowColor=pos; ctx.shadowBlur=14;
-      ctx.fillText("✓ PLAYCALL CLOSED  "+money(e.maxY*DOLLARS), px, y); ctx.shadowBlur=0; }
+    if(p.resolve>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=14;
+      ctx.fillText("✓ PLAYCALL CLOSED  "+money(pl), px, y); ctx.shadowBlur=0; }   // book where the market actually landed
     else if(p.walk>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("PLAYCALL LIVE · P/L "+money(pl), px, y); }
     else if(p.project>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ PLAYCALL LOCKED", px, y); }
     else { ctx.font="13px "+mono; ctx.fillStyle=hexA(muted,0.85); ctx.fillText("READING THE TAPE…", px, y); }
@@ -1050,10 +1042,12 @@ ${versionTag}
   function drawSignalCallout(sig, x, y, A){ if(A<=0.01) return;
     var accent=css("--accent")||"#35D0BA", pos=css("--pos")||"#3FB950", neg=css("--neg")||"#F85149",
         muted=css("--muted")||"#8B9AAB", txt=css("--text")||"#E6EDF3", mono=css("--mono")||"monospace", bg=css("--bg")||"#0B0F14";
-    var cw=180, ch=92, cx=x-cw-26; if(cx<12) cx=x+26; var cy=y-ch-22; if(cy<field.top) cy=y+22;
+    // Anchor to the RIGHT of the entry, up near the top of the frame — clear of the left playbook
+    // panel (which owns the left column) so the two never overlap.
+    var cw=180, ch=92, cx=Math.min(x+30, W-cw-16); var cy=field.top+4;
     ctx.save(); ctx.globalAlpha=A;
     ctx.setLineDash([2,4]); ctx.strokeStyle=hexA(accent,0.5); ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(cx+cw/2, cy+ch/2); ctx.lineTo(x,y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(cx+16, cy+ch); ctx.lineTo(x,y); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle=hexA(bg,0.85); roundRect(cx,cy,cw,ch,8); ctx.fill();
     ctx.strokeStyle=hexA(accent,0.55); ctx.lineWidth=1; roundRect(cx,cy,cw,ch,8); ctx.stroke();
     var px=cx+13, yy=cy+18; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
@@ -1164,7 +1158,7 @@ ${versionTag}
   // Play phases (ms): DETECT → AIM → ZOOM → PROJECT → WALK-forward → RESOLVE → HOLD → ZOOM-OUT.
   // Each phase is followed by a short DWELL so the last thing shown isn't rushed into the next step —
   // the reveal breathes. A longer HOLD after RESOLVE lets the "closed +$" land before we zoom out.
-  var DET=520,AIM=680,DW_AIM=280,ZM=620,PRJ=880,DW_PRJ=320,WLK=2600,RES=700,HOLD=1000,OUT=820;
+  var DET=520,AIM=680,DW_AIM=280,ZM=620,PRJ=880,DW_PRJ=320,WLK=4200,RES=700,HOLD=1000,OUT=820;
   var T_AIM=DET, T_ZM=T_AIM+AIM+DW_AIM, T_PRJ=T_ZM+ZM, T_WLK=T_PRJ+PRJ+DW_PRJ,
       T_RES=T_WLK+WLK, T_OUT=T_RES+RES+HOLD, T_END=T_OUT+OUT;
   var ACTB=[0, T_PRJ, T_WLK, T_RES];   // act boundaries (e-time): SIGNAL · PREDICT · REALIZE · RESOLVE
@@ -1318,7 +1312,7 @@ ${versionTag}
   var last=0, running=true, SUMMON_MS=850;
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function startPlay(now, sig, manual){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i;
-    manualPlay=manual; paceScale=manual?1.4:1; zoomRippled=false;
+    manualPlay=manual; paceScale=1; zoomRippled=false;   // even pace for auto + manual (transport lets you pause/step)
     nowIdx=price.length-1; realized=[]; pvR=pv;   // freeze history; seed realized momentum from the live move
     stepTarget=null; setPaused(false);            // fresh transport state each playcall
     armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
