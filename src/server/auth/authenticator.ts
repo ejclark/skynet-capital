@@ -1632,26 +1632,12 @@ ${versionTag}
       ctx.fillStyle=hexA(neg,0.95); ctx.fillText(s2, lx+w1+gap, by);
       ctx.restore(); return;
     }
-    // Contained terminal-window backing (desktop): the panel sits ON this card, never over the city.
-    drawPanelBacking(px-16, field.top-14, pw+30, (field.bottom-field.top)+30, A*Math.min(1,p.on));
-    // Information unfolds in step with the play: pipeline first, then the signal + strategy name as
-    // the spotlight aims, then the plain-English idea + anatomy + pivots as the forecast projects.
-    var prjA=easeIO(clamp01(p.project));
-    // The terminal is a FIXED FRAME: it reserves its full height (all 6 program lines) and prints
-    // WITHIN that region as the play unfolds — new lines never reflow the panel. The PLAY NAME (the
-    // hero) is pinned at a stable anchor BELOW the frame, so printing can never push it down. This is
-    // how a console actually behaves, and it keeps the hero + focus stable (repeatedly-flagged bug).
-    var termTop=field.top+22, TERM_H=6*15;   // 6 steps × line-height — the reserved terminal viewport
-    drawTerminal(px, termTop, p, sig, strat, A*Math.min(1,p.on));
-    // The PLAY NAME + one-liner no longer live here — the chart IS the play's visual form, so the name
-    // labels the graph itself (drawn in drawForecast). This column is now the instrument readout only:
-    // the terminal's running programs, then the play's anatomy / Greeks / the inputs it's watching.
-    // Anatomy legend (profit/loss/breakeven grammar) is dropped here — it's already shown on the chart as
-    // the green/red bands + the B/E line during execution, so repeating it in the panel was redundant.
-    var y=termTop+TERM_H+22;
-    ctx.globalAlpha=A*prjA;
-    drawGreeks(px, y, A*prjA);   // the play's Greeks fingerprint (max P/L + outcome now live at the TARGET, far right)
-    drawWatching(px, y+68, A*prjA);   // the inputs the desk is watching: underlying, fear/greed (VIX), premium (IV)
+    // DESKTOP: the left card is gone entirely. Everything it carried now lives where it belongs — the
+    // play name + one-liner + signal read on the chart itself, the max P/L + outcome at the TARGET, and
+    // the detect→recommend→pull STORY told by the Tower of Sauron itself (Eye gaze → searchlight → the
+    // Ring) rather than a terminal readout. Removing it also clears the left WINDOW as the tower's stage,
+    // where it resides, detects the signal, and hauls the play into view. (drawTerminal / drawPipeline /
+    // drawGreeks / drawWatching / drawPanelBacking are retained for the future left drawer, task #49.)
     ctx.restore();
   }
   // Totals + outcome live at the FAR RIGHT, by the TARGET — the destination the play unfolds toward.
