@@ -100,6 +100,10 @@ _This "how we work" is Eric's to edit; it sharpens as he corrects it — treat c
 ## Ship loop
 
 - Branch off latest `origin/main` per change; small focused PRs; squash-merge on green.
+- **Commits & PRs are documents** (see `docs/ENGINEERING.md` → _Change communication_): Conventional-
+  Commit subjects (lowercase-led, imperative); PRs lead with a plain-language **Summary** + **Why**, and
+  bury the weeds **below the fold** (`<details>`), written so an analytical-but-non-technical reader gets
+  the gist. Mirror `.github/pull_request_template.md`; keep it proportional (no ceremony on a typo fix).
 - Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, + a screenshot for visual work
   (`npm run shoot:login` or an offline render). **Verify by exit status, not tailed output** — piping a
   check to `tail` masks its exit code (a pipeline exits with `tail`'s status), so `cmd | tail && …` will
