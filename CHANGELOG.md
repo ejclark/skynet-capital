@@ -1,3 +1,10 @@
+# [1.69.0](https://github.com/ejclark/skynet-capital/compare/v1.68.0...v1.69.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** append-only equity/realized history store (history layer, step 2) ([#120](https://github.com/ejclark/skynet-capital/issues/120)) ([10292e0](https://github.com/ejclark/skynet-capital/commit/10292e057bc3473be7315580f3b1ea049de15ba5))
+
 # [1.68.0](https://github.com/ejclark/skynet-capital/compare/v1.67.0...v1.68.0) (2026-07-26)
 
 
