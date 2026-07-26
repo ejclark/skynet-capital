@@ -54,6 +54,18 @@ legal risk) held to an honest, data-sourced standard. Phased:
   points of failure. Eric expects token headroom to support it. Governance-gated (contributions ride the
   autonomous-contribution trust ladder). _(src: Eric · while: sim-city gamification / onboarding contributors)_
 
+### Detail scaling — a higher-order dimension (emergent architecture)
+- **Barad-dûr: squeeze more juice from the totem** — the Eye is great; the supporting tower now has a
+  faithful fortress pass (stepped tiers, buttresses, forge-slits, iron-horn shoulder crown, bigger
+  footprint). Reads subtle at its far-left mid-depth placement — candidate to push prominence/footprint
+  further, or promote the Eye tower to a foreground hero element. _(src: Eric · while: refining the Eye of Sauron totem)_
+- **A higher-order dimension to keep packing detail at scale** — as rich totems accumulate (Barad-dûr,
+  per-domain empires, event ceremonies), the current flat login-canvas / skyline structure will stop
+  cleanly absorbing them. Expect to need a broader organizing dimension — e.g. zoomable levels-of-detail,
+  a district/region hierarchy, or a dedicated "explore your empire" surface — that lets detail nest at
+  multiple scales instead of competing for one canvas. This design **emerges organically** as pieces stop
+  fitting cleanly; watch for the seams and formalize the dimension when they appear. _(src: Eric · while: refining the Eye totem — foreseeing detail outgrowing one canvas)_
+
 ### Governance — Eric's calls (do not build unattended)
 - **Formalize the participation agreement / consent** — the shared universe pools members' trades/
   bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly

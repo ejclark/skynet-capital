@@ -1084,7 +1084,9 @@ ${versionTag}
     // the present forward. Prefer the tallest tower in the left third; fall back to the tallest overall.
     var eyeI=-1; for(si=0;si<near.length;si++){ if(near[si].x < w*0.34 && (eyeI<0||near[si].h>near[eyeI].h)) eyeI=si; }
     if(eyeI<0) eyeI=t1;
-    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.40,BE.h*1.6+50); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.30; BE.spire=Math.max(BE.spire,40+Math.random()*20); BE.ant=Math.max(BE.ant,20+Math.random()*14); }
+    // Barad-dûr: a broad, jagged fortress-tower, not a needle — bigger footprint + a gentler taper so
+    // the stepped tiers and buttresses read; the summit prongs + Eye crown it (see drawBaradDur/drawEye).
+    if(eyeI>=0){ var BE=near[eyeI]; BE.h=Math.min(h*0.44,BE.h*1.7+60); BE.w=Math.max(BE.w,64); BE.crown=true; BE.eye=true; BE.shape="spire"; BE.taper=0.50; BE.spire=Math.max(BE.spire,36+Math.random()*18); BE.ant=Math.max(BE.ant,18+Math.random()*12); }
     // Second empire tower (no Eye): the tallest that isn't the Eye tower.
     var t2i=(t1>=0&&t1!==eyeI)?t1:t2;
     if(t2i>=0&&t2i!==eyeI){ var B2=near[t2i]; B2.h=Math.min(h*0.32,B2.h*1.4+34); B2.crown=true; B2.shape="spire"; B2.taper=0.38; B2.spire=Math.max(B2.spire,30+Math.random()*16); B2.ant=Math.max(B2.ant,16+Math.random()*12); }
@@ -1154,6 +1156,34 @@ ${versionTag}
     rctx.globalCompositeOperation="source-over"; rctx.fillStyle=hexA("#140300",0.9*wake); pupil(1); rctx.fill();
     rctx.restore();
   }
+  // Barad-dûr — the Dark Tower under the Eye. A stone fortress, not a glass office: stepped battlemented
+  // tiers, heavy buttress ribs, and forge-slit windows that glow hotter toward the summit, crowned by a
+  // row of iron horns at the shoulder. Squeezes the totem for detail while staying on the app's red/amber.
+  function drawBaradDur(b,bx,top,bottom,midx,edgeL,edgeR,dim){
+    var H=bottom-top, flk=0.8+0.2*Math.sin(rainT*0.2+b.seed), i, u;
+    rctx.save();
+    // 1) stepped tiers — jutting battlemented cornices with merlon notches, the fortress read
+    for(i=1;i<6;i++){ var y=top+H*(i/6), lL=edgeL(y), rR=edgeR(y);
+      rctx.fillStyle=hexA("#04060A",0.92*dim); rctx.fillRect(lL-2,y,(rR-lL)+4,3);
+      rctx.strokeStyle=hexA("#FF7A2E",0.14*flk*dim); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(lL-2,y); rctx.lineTo(rR+2,y); rctx.stroke();
+      rctx.fillStyle=hexA("#02040A",0.9*dim); for(var mx=lL;mx<rR-2;mx+=5) rctx.fillRect(mx,y-2,2.4,2); }
+    // 2) heavy buttress ribs following the taper, faint fire-lit edge
+    for(i=0;i<=4;i++){ u=i/4; var xB=bx+b.w*u, xT=edgeL(top)+(edgeR(top)-edgeL(top))*u;
+      rctx.strokeStyle=hexA("#070A10",0.85*dim); rctx.lineWidth=(i===2?3:2); rctx.beginPath(); rctx.moveTo(xB,bottom); rctx.lineTo(xT,top+4); rctx.stroke();
+      rctx.strokeStyle=hexA("#FF7A2E",(i===2?0.10:0.06)*flk*dim); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(xB,bottom); rctx.lineTo(xT,top+4); rctx.stroke(); }
+    // 3) forge-slit windows — inner fire, denser + hotter toward the summit
+    rctx.globalCompositeOperation="lighter";
+    for(i=0;i<26;i++){ var sn=noise(b.seed+i*4.7), fy=top+H*(0.12+0.86*sn), lE=edgeL(fy)+3, rE=edgeR(fy)-3; if(rE<=lE) continue;
+      var fx=lE+(rE-lE)*noise(b.seed+i*2.3+1.1), up=1-(fy-top)/H, glow=(0.12+0.5*up)*(0.6+0.4*Math.sin(rainT*0.09+i+b.seed))*flk*dim;
+      rctx.fillStyle=hexA("#FF9E3D",glow); rctx.fillRect(fx,fy,1.4,3.2+3*up); }
+    rctx.globalCompositeOperation="source-over";
+    // 4) shoulder crown — small jagged iron horns flanking the summit prongs
+    var shY=top+H*0.16, sL=edgeL(shY), sR=edgeR(shY);
+    for(i=-3;i<=3;i++){ if(i===0) continue; var hx=midx+i*((sR-sL)/8), hh=6+3*(i<0?-i:i);
+      rctx.fillStyle=hexA("#04060A",0.92*dim); rctx.beginPath(); rctx.moveTo(hx-2,shY); rctx.lineTo(hx,shY-hh); rctx.lineTo(hx+2,shY); rctx.closePath(); rctx.fill();
+      rctx.strokeStyle=hexA("#FF7A2E",0.12*flk*dim); rctx.lineWidth=0.8; rctx.stroke(); }
+    rctx.restore();
+  }
   function drawBuilding(L, b, bx, top, bottom, accent, bg, flip){ var dim=L.dim, d=L.depth, lifeK=0.5+0.5*cityLife;
     // Silhouette geometry: sleek towers TAPER, so the top width narrows. Per-row edges are lerped
     // between the base rect and the (centered) top width — used for the outline, windows, and mullions.
@@ -1187,8 +1217,10 @@ ${versionTag}
         var bg2=rctx.createRadialGradient(midx,tipY,0,midx,tipY,7); bg2.addColorStop(0,hexA("#F85149",0.6*bl)); bg2.addColorStop(1,hexA("#F85149",0));
         rctx.fillStyle=bg2; rctx.beginPath(); rctx.arc(midx,tipY,7,0,7); rctx.fill(); rctx.restore(); }
       rctx.fillStyle=hexA(red?"#F85149":"#EAFFFA",bl); rctx.beginPath(); rctx.arc(midx,tipY,red?1.9:1.5,0,7); rctx.fill(); }
-    if(b.eye) drawEye(midx, tipY+8, dim);   // the Eye of Sauron crowns this tower
-    if(L.code){
+    if(b.eye){   // Barad-dûr: fortress detailing over the silhouette, then the Eye crowns the summit
+      drawBaradDur(b,bx,top,bottom,midx,edgeL,edgeR,dim);
+      drawEye(midx, tipY+8, dim);
+    } else if(L.code){
       rctx.save(); if(tapered){ outline(); rctx.clip(); } else { rctx.beginPath(); rctx.rect(bx,top,b.w,b.h); rctx.clip(); }
       // MICRO facade: a fine field of code glyphs; a sparse scatter of lit "windows", some warm-white
       // for micro-variation, over a very dim base grain so the surface reads textured, not flat.
