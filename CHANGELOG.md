@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/ejclark/skynet-capital/compare/v1.11.0...v1.12.0) (2026-07-26)
+
+
+### Features
+
+* **login:** three-act playcall — freeze history, realized pen draws into prediction ([4841f46](https://github.com/ejclark/skynet-capital/commit/4841f463feeb8fe07677581f8311f5e15dc0bc3f))
+
 # [1.11.0](https://github.com/ejclark/skynet-capital/compare/v1.10.0...v1.11.0) (2026-07-26)
 
 
