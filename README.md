@@ -86,3 +86,4 @@ npm run typecheck
 - Running locally & keeping a laptop awake: [`docs/RUNNING.md`](docs/RUNNING.md)
 - Deploying the public live dashboard: [`docs/DEPLOY.md`](docs/DEPLOY.md)
 - In-app feedback → GitHub issues (bot token setup): [`docs/FEEDBACK.md`](docs/FEEDBACK.md)
+- Our working conventions, portable to any repo: [`docs/OPERATING-MODEL.md`](docs/OPERATING-MODEL.md)
