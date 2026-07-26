@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/ejclark/skynet-capital/compare/v1.31.1...v1.32.0) (2026-07-26)
+
+
+### Features
+
+* **login:** brighter, bolder candles + present marker on the dark backdrop ([#52](https://github.com/ejclark/skynet-capital/issues/52)) ([bc5f05c](https://github.com/ejclark/skynet-capital/commit/bc5f05ce51588694190cd68877178958f2ee2da6))
+
 ## [1.31.1](https://github.com/ejclark/skynet-capital/compare/v1.31.0...v1.31.1) (2026-07-26)
 
 
