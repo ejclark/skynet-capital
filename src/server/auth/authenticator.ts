@@ -698,23 +698,24 @@ ${versionTag}
   var noiseTile=document.createElement("canvas"); noiseTile.width=140; noiseTile.height=140;
   (function(){ try{ var nx=noiseTile.getContext("2d"), im=nx.createImageData(140,140), d=im.data, i;
     for(i=0;i<d.length;i+=4){ var v=(Math.random()*255)|0; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; } nx.putImageData(im,0,0); }catch(e){} })();
-  var vfxActive=false, vfxT0=0, VFXD=1300, vfxTargetY=0;
+  var vfxActive=false, vfxT0=0, VFXD=880, vfxTargetY=0;   // short + punchy — a power surge, not a slow bloom
   function vEase(x){ return 1-Math.pow(1-clamp01(x),3); }
   function drawVFX(q){
     var w=vcanvas.clientWidth, h=vcanvas.clientHeight; vctx.clearRect(0,0,w,h);
     // The core opens high, then DRIFTS DOWN to settle over the hero title as it lands — the light
     // pours onto the wordmark rather than hovering above it.
-    var cy=lerp(h*0.28, vfxTargetY||h*0.5, vEase(q)), open=vEase(clamp01(q/0.55)), env=Math.sin(clamp01(q)*Math.PI);
-    var bandH=lerp(h*0.015, h*1.3, open), top=cy-bandH/2, A=0.92*env;
-    // electric horizontal gradient — matrix-native fluorescence: teal-green → white-hot → electric
-    // yellow-green (chartreuse) → lime, feathered top/bottom. No off-brand magenta.
+    var cy=lerp(h*0.30, vfxTargetY||h*0.5, vEase(q)), open=vEase(clamp01(q/0.5)), env=Math.sin(clamp01(q)*Math.PI);
+    var bandH=lerp(h*0.015, h*1.35, open), top=cy-bandH/2, A=Math.min(1,1.05*env);
+    // electric horizontal gradient — HIGH-fluorescence matrix energy: charged teal-green → white-hot →
+    // electric chartreuse → lime, feathered top/bottom. Saturated + bright so it reads as raw power.
     var g=vctx.createLinearGradient(0,0,w,0);
-    g.addColorStop(0,   "rgba(38,205,150,"+(A*0.66)+")");
-    g.addColorStop(0.3, "rgba(96,255,170,"+(A*0.9)+")");
-    g.addColorStop(0.5, "rgba(250,255,235,"+A+")");
-    g.addColorStop(0.7, "rgba(198,255,110,"+(A*0.9)+")");
-    g.addColorStop(1,   "rgba(120,225,50,"+(A*0.66)+")");
-    vctx.save(); vctx.fillStyle=g; vctx.fillRect(0,top,w,bandH);
+    g.addColorStop(0,   "rgba(30,255,150,"+(A*0.8)+")");
+    g.addColorStop(0.3, "rgba(120,255,150,"+A+")");
+    g.addColorStop(0.5, "rgba(255,255,240,"+A+")");
+    g.addColorStop(0.7, "rgba(200,255,60,"+A+")");
+    g.addColorStop(1,   "rgba(150,255,40,"+(A*0.8)+")");
+    // additive so the band GLOWS (fluorescent energy) rather than just painting a stripe
+    vctx.save(); vctx.globalCompositeOperation="lighter"; vctx.fillStyle=g; vctx.fillRect(0,top,w,bandH);
     var vg=vctx.createLinearGradient(0,top,0,top+bandH);
     vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(0.5,"rgba(0,0,0,1)"); vg.addColorStop(1,"rgba(0,0,0,0)");
     vctx.globalCompositeOperation="destination-in"; vctx.fillStyle=vg; vctx.fillRect(0,top,w,bandH); vctx.restore();
@@ -731,15 +732,22 @@ ${versionTag}
         vctx.strokeStyle="rgba(198,255,180,"+(0.45*conv*env)+")";
         vctx.beginPath(); vctx.moveTo(cx+fx,sy); vctx.lineTo(cx+fx*0.28,cy); vctx.stroke(); }
       vctx.restore(); }
-    // white-hot core flash, peaking LATE on the lowered core so it pours onto the hero title. Reaches
-    // FULL luminosity at the center, blooming out through electric green-yellow fluorescence.
-    var flash=Math.max(0,1-Math.abs(q-0.78)/0.22);
+    // POWER SURGE — a sharp, BLINDING electric discharge. Quick attack/decay (squared window) so it
+    // reads as a flash, not a glow: a full-viewport fluorescent-green energy wash charges the frame,
+    // then a near-full-screen white blast blinds at the peak. Energy/power is the brand's core.
+    var flash=Math.max(0,1-Math.abs(q-0.58)/0.13); flash=flash*flash;
     if(flash>0){ vctx.save(); vctx.globalCompositeOperation="lighter";
-      var rg=vctx.createRadialGradient(w*0.5,cy,0,w*0.5,cy,w*0.6);
-      rg.addColorStop(0,   "rgba(255,255,255,"+flash+")");           // full-luminosity white core
-      rg.addColorStop(0.28,"rgba(214,255,150,"+(0.8*flash)+")");     // electric chartreuse bloom
-      rg.addColorStop(0.6, "rgba(110,255,140,"+(0.34*flash)+")");    // electric green falloff
-      rg.addColorStop(1,   "rgba(90,255,120,0)");
+      // fluorescent electric-green energy filling the whole frame (the charge)
+      var eg=vctx.createRadialGradient(w*0.5,cy,0,w*0.5,cy,Math.max(w,h)*0.8);
+      eg.addColorStop(0,   "rgba(180,255,120,"+(0.85*flash)+")");
+      eg.addColorStop(0.45,"rgba(90,255,150,"+(0.5*flash)+")");
+      eg.addColorStop(1,   "rgba(50,235,120,0)");
+      vctx.fillStyle=eg; vctx.fillRect(0,0,w,h);
+      // blinding white blast — near full-screen at the peak, edges still hot so it truly blinds
+      var rg=vctx.createRadialGradient(w*0.5,cy,0,w*0.5,cy,Math.max(w,h)*0.72);
+      rg.addColorStop(0,  "rgba(255,255,255,"+flash+")");
+      rg.addColorStop(0.6,"rgba(255,255,255,"+(0.72*flash)+")");
+      rg.addColorStop(1,  "rgba(236,255,180,"+(0.32*flash)+")");
       vctx.fillStyle=rg; vctx.fillRect(0,0,w,h); vctx.restore(); }
     // ===== KEY TO THE CITY: this is the ONE door only you can open. A lock ring TURNS a quarter and
     // disengages, key-turn rays rotate, then a keyhole of light pours down onto the landing wordmark —
@@ -748,18 +756,18 @@ ${versionTag}
     // key-turn rays sweeping around the core
     vctx.save(); vctx.globalCompositeOperation="lighter"; vctx.translate(w*0.5,cy); vctx.rotate(turn);
     var rr=lerp(12, w*0.32, open), kr;
-    for(kr=0;kr<6;kr++){ var ka=kr/6*Math.PI*2; vctx.strokeStyle="rgba(206,255,150,"+(0.28*env)+")"; vctx.lineWidth=2; vctx.lineCap="round";
+    for(kr=0;kr<6;kr++){ var ka=kr/6*Math.PI*2; vctx.strokeStyle="rgba(200,255,140,"+(0.42*env)+")"; vctx.lineWidth=2; vctx.lineCap="round";
       vctx.beginPath(); vctx.moveTo(Math.cos(ka)*rr*0.22,Math.sin(ka)*rr*0.22); vctx.lineTo(Math.cos(ka)*rr,Math.sin(ka)*rr); vctx.stroke(); }
     vctx.restore();
     // lock ring — two arcs that rotate apart as the lock releases, fading once disengaged
     var ringA=Math.max(0,1-clamp01(q/0.55))*env;
-    if(ringA>0){ vctx.save(); vctx.globalCompositeOperation="lighter"; vctx.strokeStyle="rgba(150,255,150,"+(0.62*ringA)+")"; vctx.lineWidth=2.4;
+    if(ringA>0){ vctx.save(); vctx.globalCompositeOperation="lighter"; vctx.strokeStyle="rgba(160,255,150,"+(0.85*ringA)+")"; vctx.lineWidth=2.4;
       var rad=lerp(16,58,open), gp=0.16+turn*0.5;
       vctx.beginPath(); vctx.arc(w*0.5,cy,rad, gp, Math.PI-gp); vctx.stroke();
       vctx.beginPath(); vctx.arc(w*0.5,cy,rad, Math.PI+gp, Math.PI*2-gp); vctx.stroke();
       vctx.restore(); }
     // keyhole beam — light floods DOWN through the opened door onto the hero title
-    var beamA=Math.max(0,1-Math.abs(q-0.72)/0.3)*0.5;
+    var beamA=Math.max(0,1-Math.abs(q-0.62)/0.28)*0.62;
     if(beamA>0){ vctx.save(); vctx.globalCompositeOperation="lighter";
       var bg2=vctx.createLinearGradient(0,cy,0,cy+h*0.42); bg2.addColorStop(0,"rgba(232,255,200,"+beamA+")"); bg2.addColorStop(1,"rgba(160,255,140,0)");
       var bw=lerp(w*0.02,w*0.15,open); vctx.fillStyle=bg2;
