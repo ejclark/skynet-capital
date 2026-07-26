@@ -1,3 +1,10 @@
+# [1.68.0](https://github.com/ejclark/skynet-capital/compare/v1.67.0...v1.68.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** book realized P/L in the reducer (history layer, step 1) ([#119](https://github.com/ejclark/skynet-capital/issues/119)) ([723df54](https://github.com/ejclark/skynet-capital/commit/723df541ed05f955c06c9e01f0f957f20d567302))
+
 # [1.67.0](https://github.com/ejclark/skynet-capital/compare/v1.66.0...v1.67.0) (2026-07-26)
 
 
