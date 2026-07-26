@@ -1237,7 +1237,12 @@ ${versionTag}
         if(bull){ ctx.moveTo(ex,ay-ah); ctx.lineTo(ex-aw,ay); ctx.lineTo(ex+aw,ay); }
         else { ctx.moveTo(ex,ay); ctx.lineTo(ex-aw,ay-ah); ctx.lineTo(ex+aw,ay-ah); }
         ctx.closePath(); ctx.fill();
-        ctx.fillStyle=hexA(ecol,0.9*proj); ctx.textAlign="center"; ctx.fillText(ev.label, ex, ay-ah-4); }
+        // The event currently being walked through (slow-mo) gets a pulsing ring + brighter label —
+        // draws the eye to the print as time dilates around it.
+        if(ei===warpIdx){ var pz=0.5+0.5*Math.sin(pbGlyphT*0.28);
+          ctx.strokeStyle=hexA(ecol,(0.45+0.4*pz)*proj); ctx.lineWidth=1.4;
+          ctx.beginPath(); ctx.arc(ex, ay-ah/2, 9+pz*5, 0, 7); ctx.stroke(); }
+        ctx.fillStyle=hexA(ecol,(ei===warpIdx?1:0.9)*proj); ctx.textAlign="center"; ctx.fillText(ev.label, ex, ay-ah-4); }
       ctx.textAlign="start"; }
     ctx.textAlign="start"; ctx.restore();
     drawPanel(strat, sig, p, A);
@@ -1271,6 +1276,7 @@ ${versionTag}
   // holds still; in Act 3 a separate realized[] pen draws rightward INTO the prediction, overtaking
   // the dotted forecast, then folds back into price[] on zoom-out so ambient continues from reality.
   var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null, exitFrac=1, events=[], playVol=1;
+  var eventWarp=1, warpIdx=-1;   // time-dilation as the pen walks through a high-vol event (1 = real-time)
   // Macro events (earnings, CPI, …) that jolt the trend and get a callout — they explain the less
   // normal-looking deviations of the realized line, and add realism + a teaching moment.
   var EVENTS=["EARNINGS","CPI PRINT","FOMC","JOBS REPORT","GUIDANCE","GEOPOLITICAL"];
@@ -1482,6 +1488,14 @@ ${versionTag}
         camT=clamp01(Math.max(p.zoom, p.aim*0.25))*(1-p.out);   // eased zoom/focal — no snap
         realizedAlpha=1-p.out;                                   // realized pen fades on zoom-out
         if(p.walk>0 && p.out<=0 && !paused) fillRealized(p.walk);   // unfold across the region to the exit level
+        // Slow-mo THROUGH a high-vol event: as the pen crosses an event fraction, dilate the phase clock
+        // so the tape crawls and the reaction candle forms slowly — the "watch the print land" beat that
+        // real trades revolve around. One-frame-lagged off p.walk; imperceptible at this cadence.
+        eventWarp=1; warpIdx=-1;
+        if(p.walk>0 && p.out<=0 && !paused){ var wf=clamp01(p.walk);
+          for(var wj=0;wj<events.length;wj++){ var wd=Math.abs(wf-events[wj].f);
+            if(wd<0.07){ var wv=lerp(0.28,1,wd/0.07); if(wv<eventWarp){ eventWarp=wv; warpIdx=wj; } } }
+          if(eventWarp<1) playStart += dt*(1-eventWarp); }
         if(p.zoom>0.4 && !zoomRippled){ zoomRippled=true; addRipple(nowSX, nowSY); }   // enhance-zoom ripple, centered once framed
         rainBoost=((p.walk>0 && p.resolve<1)||(p.zoom>0.4&&p.project<0.3))?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
         if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
