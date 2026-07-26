@@ -31,6 +31,13 @@ export interface ParticipantSnapshot {
   readonly timezone?: string;
   readonly cash: number;
   readonly equity: number;
+  /**
+   * Cumulative realized P/L booked on this account since the reducer began folding — the gain/loss
+   * locked in by sells (sell price − average cost × quantity sold). Absent on pure Alpaca reads
+   * (which don't return it); the realtime reducer accumulates it. The seed of the history layer:
+   * the first durable record of what a trade *earned*, not just what's currently held.
+   */
+  readonly realizedPl?: number;
   readonly positions: PositionView[];
   readonly activity?: ActivityView[];
   /** True when the account read failed; the snapshot then carries zeros and the error. */
