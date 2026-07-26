@@ -1,3 +1,10 @@
+# [1.73.0](https://github.com/ejclark/skynet-capital/compare/v1.72.1...v1.73.0) (2026-07-26)
+
+
+### Features
+
+* **login:** promote the Eye tower to a foreground hero — lower summit, broader mass ([#128](https://github.com/ejclark/skynet-capital/issues/128)) ([91a5626](https://github.com/ejclark/skynet-capital/commit/91a5626704a44274cb48b8ebe75079719d1c4c4a))
+
 ## [1.72.1](https://github.com/ejclark/skynet-capital/compare/v1.72.0...v1.72.1) (2026-07-26)
 
 
