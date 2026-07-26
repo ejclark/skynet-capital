@@ -195,9 +195,7 @@ export class Authenticator {
       .join("\n      ");
     const banner = error ? `<p class="error" role="alert">${escapeHtml(error)}</p>` : "";
     // Subtle build stamp. Repo is private, so it's plain text for now (no changelog/release link yet).
-    const versionTag = APP_VERSION
-      ? `<div class="version">v${escapeHtml(APP_VERSION)}</div>`
-      : "";
+    const versionTag = APP_VERSION ? `<div class="version">v${escapeHtml(APP_VERSION)}</div>` : "";
     return `<!doctype html>
 <html lang="en">
 <head>
