@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/ejclark/skynet-capital/compare/v1.40.0...v1.41.0) (2026-07-26)
+
+
+### Features
+
+* **login:** recolor reveal VFX to electric matrix fluorescence ([3b762dc](https://github.com/ejclark/skynet-capital/commit/3b762dc313f9cdd20dca2c2af02baf09a398155f))
+
 # [1.40.0](https://github.com/ejclark/skynet-capital/compare/v1.39.1...v1.40.0) (2026-07-26)
 
 
