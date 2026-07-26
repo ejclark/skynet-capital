@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/ejclark/skynet-capital/compare/v1.14.0...v1.14.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **login:** book actual profit, even walk pace, keep panel legible ([#29](https://github.com/ejclark/skynet-capital/issues/29)) ([277fc56](https://github.com/ejclark/skynet-capital/commit/277fc560767059c3be21de367ac0773488fdf9d7))
+
 # [1.14.0](https://github.com/ejclark/skynet-capital/compare/v1.13.0...v1.14.0) (2026-07-26)
 
 
