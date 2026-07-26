@@ -60,6 +60,21 @@ market is doing, where the risk and opportunity sit — without a single number.
 5. **The full ecosystem.** Trades/events/regimes continuously animate a world that communicates the
    league's live state — the instrument panel that underwrites autonomous real-money trading.
 
+## Boundaries & consent
+
+Mixing participants' trades, bots, and info into one shared world is **consensual by the invite-only
+participation agreement** — paper-only and low-stakes, so it is not a privacy blocker inside the group.
+The boundary that matters is the **invite gate**, and integrity is held to a real-cash standard:
+
+- **In-group (authenticated members):** the full shared universe — others' positions, bots, landmarks —
+  is visible by agreement.
+- **Public / pre-auth:** aggregate or anonymized only (e.g. the `/pulse` cohort totals). No individual
+  account detail leaks outside the gate.
+- **Real-cash standard, at paper stakes:** uphold every boundary — the invite gate, honest `SIM`/`LIVE`
+  labeling, the autonomous-system rails — reliably, *as though real cash flowed*. Practice like we play,
+  so the discipline is proven before real money is involved. (Formalizing the participation agreement /
+  consent language is Eric's to define — tracked in IDEAS.)
+
 ## The autonomous-contribution system — GOVERNANCE (Eric's calls; not built unattended)
 
 Eric's emerging system: **autonomously pick up GitHub issues and act on them**, starting narrow (e.g.
