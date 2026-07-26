@@ -1,3 +1,10 @@
+# [1.51.0](https://github.com/ejclark/skynet-capital/compare/v1.50.0...v1.51.0) (2026-07-26)
+
+
+### Features
+
+* **login:** combined tower gravity beams with electric lightning ([#76](https://github.com/ejclark/skynet-capital/issues/76)) ([b8dd340](https://github.com/ejclark/skynet-capital/commit/b8dd340e168e956c4039c90d46ea187c690ff89b))
+
 # [1.50.0](https://github.com/ejclark/skynet-capital/compare/v1.49.0...v1.50.0) (2026-07-26)
 
 
