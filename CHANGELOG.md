@@ -1,3 +1,10 @@
+# [1.44.0](https://github.com/ejclark/skynet-capital/compare/v1.43.1...v1.44.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** push-drawer app-shell + leaderboard view ([#69](https://github.com/ejclark/skynet-capital/issues/69)) ([2c71aa5](https://github.com/ejclark/skynet-capital/commit/2c71aa5c6bbd044b859de23e9aef8954ca41b754))
+
 ## [1.43.1](https://github.com/ejclark/skynet-capital/compare/v1.43.0...v1.43.1) (2026-07-26)
 
 
