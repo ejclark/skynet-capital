@@ -1,6 +1,13 @@
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
-import { renderDashboardBody } from "../observatory/render-dashboard.js";
+import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import {
+  type NavContext,
+  type NavView,
+  renderDashboardBody,
+  renderIndividualBody,
+} from "../observatory/render-dashboard.js";
 import type { Authenticator } from "./auth/authenticator.js";
+import type { Session } from "./auth/session.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "./participant-service.js";
 import { sseFrame } from "./sse.js";
@@ -87,21 +94,84 @@ async function handle(
   }
 
   // --- authorized routes ---
+  const session = auth?.sessionFrom(req);
+  const canAdd = Boolean(config.addParticipant);
+  const authed = Boolean(auth);
+  const navFor = (active: NavView): NavContext => ({
+    active,
+    currentId: resolveCurrentId(session, config.hub.getState().participants),
+    canAdd,
+    authed,
+  });
+
   if (path === "/events") {
-    streamEvents(req, res, config.hub);
+    streamEvents(req, res, config.hub, navFor("board"));
     return;
   }
   if (path === "/add" && config.addParticipant) {
     await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
     return;
   }
+  // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
+  if (path.startsWith("/u/")) {
+    const id = decodeURIComponent(path.slice(3));
+    const state = config.hub.getState();
+    const snapshot = state.participants.find((p) => p.id === id);
+    if (!snapshot) {
+      res.writeHead(404, { "content-type": "text/plain" });
+      res.end("not found");
+      return;
+    }
+    const nav = navFor("you");
+    const body = renderIndividualBody(snapshot, {
+      nav: { ...nav, active: nav.currentId === id ? "you" : "board" },
+      isSelf: nav.currentId === id,
+      generatedAt: state.generatedAt,
+    });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument(`${escapeHtml(snapshot.displayName)} — Skynet Capital`, body));
+    return;
+  }
   if (path === "/" || path === "/index.html") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(pageHtml(config.hub, keyOf(url), Boolean(config.addParticipant), Boolean(auth)));
+    res.end(pageHtml(config.hub, navFor("board")));
     return;
   }
   res.writeHead(404, { "content-type": "text/plain" });
   res.end("not found");
+}
+
+/**
+ * Best-effort resolve the signed-in viewer to a participant, for the "YOU" treatment. Sessions
+ * carry email/name but participants have no email link yet (that arrives with the Alpaca-OAuth
+ * work), so we match display name — exact on session name, then the email local-part. Returns
+ * undefined when there's no confident match; the UI simply shows no self-marker.
+ */
+function resolveCurrentId(
+  session: Session | undefined,
+  participants: readonly ParticipantSnapshot[],
+): string | undefined {
+  if (!session) return undefined;
+  const name = session.name?.toLowerCase().trim();
+  const local = session.email.split("@")[0]?.toLowerCase().trim();
+  const byName = name && participants.find((p) => p.displayName.toLowerCase().trim() === name);
+  if (byName) return byName.id;
+  const byLocal = local && participants.find((p) => p.displayName.toLowerCase().trim() === local);
+  return byLocal ? byLocal.id : undefined;
+}
+
+/** Minimal HTML document shell for a server-rendered view (the body already carries its styles). */
+function shellDocument(title: string, body: string): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>${PAGE_STYLE}</style>
+</head>
+<body>${body}</body>
+</html>`;
 }
 
 /** External origin of the request (honors Fly's x-forwarded-proto). */
@@ -145,15 +215,20 @@ function servePulse(res: ServerResponse, hub: ObservatoryHub): void {
   res.end(body);
 }
 
-function streamEvents(req: IncomingMessage, res: ServerResponse, hub: ObservatoryHub): void {
+function streamEvents(
+  req: IncomingMessage,
+  res: ServerResponse,
+  hub: ObservatoryHub,
+  nav: NavContext,
+): void {
   res.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
     connection: "keep-alive",
   });
-  res.write(sseFrame(JSON.stringify(renderDashboardBody(hub.getState()))));
+  res.write(sseFrame(JSON.stringify(renderDashboardBody(hub.getState(), { nav }))));
   const unsubscribe = hub.subscribe((state) => {
-    res.write(sseFrame(JSON.stringify(renderDashboardBody(state))));
+    res.write(sseFrame(JSON.stringify(renderDashboardBody(state, { nav }))));
   });
   req.on("close", unsubscribe);
 }
@@ -206,18 +281,7 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 const PAGE_STYLE = "*{margin:0;padding:0;box-sizing:border-box}body{margin:0}";
 
-function pageHtml(hub: ObservatoryHub, key: string, canAdd: boolean, authed: boolean): string {
-  const suffix = key ? `?key=${encodeURIComponent(key)}` : "";
-  const links: string[] = [];
-  if (canAdd) {
-    links.push(`<a href="/add${suffix}">+ Add your account</a>`);
-  }
-  if (authed) {
-    links.push(`<a href="/logout">Sign out</a>`);
-  }
-  const bar = links.length
-    ? `<div style="padding:12px 16px;font:14px system-ui;display:flex;gap:16px">${links.join("")}</div>`
-    : "";
+function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -227,8 +291,7 @@ function pageHtml(hub: ObservatoryHub, key: string, canAdd: boolean, authed: boo
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
-${bar}
-<div id="root">${renderDashboardBody(hub.getState())}</div>
+<div id="root">${renderDashboardBody(hub.getState(), { nav })}</div>
 <script>
   (function () {
     var key = new URLSearchParams(location.search).get("key");
@@ -243,32 +306,62 @@ ${bar}
 </html>`;
 }
 
-function addFormHtml(key: string): string {
-  const action = `/add${key ? `?key=${encodeURIComponent(key)}` : ""}`;
+/** Matrix design-system styles for the /add flow — the same tokens as the dashboard/login. */
+const ADD_STYLE = `${PAGE_STYLE}
+  :root{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  @media (prefers-color-scheme:light){ :root{ --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F0F4F8; --border:#DCE3EA; --text:#0B0F14; --muted:#5A6B7B; --accent:#0E9F8C; --pos:#1A7F37; --neg:#CF222E; } }
+  body{ background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; padding:40px clamp(16px,5vw,20px); }
+  .wrap{ max-width:520px; margin:0 auto; }
+  .brand{ font-weight:700; font-size:15px; letter-spacing:.14em; margin-bottom:26px; }
+  .brand b{ color:var(--accent); }
+  h1{ font-size:24px; font-weight:700; margin-bottom:10px; letter-spacing:-.01em; }
+  .lede{ color:var(--muted); font-size:14px; line-height:1.55; margin-bottom:26px; }
+  .lede b{ color:var(--text); }
+  form{ display:flex; flex-direction:column; gap:2px; }
+  label{ display:block; margin:14px 0 6px; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  label small{ text-transform:none; letter-spacing:0; color:var(--muted); font-weight:400; opacity:.8; }
+  input,select{ width:100%; padding:12px 13px; font-size:15px; font-family:var(--sans); color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:9px; transition:border-color .15s, box-shadow .15s; }
+  input::placeholder{ color:color-mix(in srgb,var(--muted) 75%,transparent); }
+  input:focus,select:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent); }
+  input[name=apiKey],input[name=apiSecret]{ font-family:var(--mono); letter-spacing:.02em; }
+  button{ margin-top:24px; padding:13px 18px; font-size:15px; font-weight:600; font-family:var(--sans); color:var(--bg); background:var(--accent); border:0; border-radius:9px; cursor:pointer; transition:filter .15s; }
+  button:hover{ filter:brightness(1.08); }
+  button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .note{ margin-top:22px; font-size:12px; color:var(--muted); font-family:var(--mono); letter-spacing:.02em; }
+  .res-icon{ font-size:34px; margin-bottom:6px; }
+  a{ color:var(--accent); text-decoration:none; }
+  a:hover{ text-decoration:underline; }
+  .backrow{ margin-top:26px; font-size:14px; color:var(--muted); }`;
+
+function addShell(title: string, inner: string): string {
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Add your account — Skynet Capital</title>
-<style>${PAGE_STYLE}
-  body{font:16px/1.5 system-ui;max-width:560px;margin:0 auto;padding:32px 20px}
-  h1{font-size:22px;margin-bottom:8px} p{color:#555;margin-bottom:20px}
-  label{display:block;margin:14px 0 4px;font-weight:600}
-  input,select{width:100%;padding:10px;font-size:15px;border:1px solid #ccc;border-radius:6px}
-  small{color:#777;font-weight:400} button{margin-top:22px;padding:12px 18px;font-size:16px;
-  border:0;border-radius:6px;background:#111;color:#fff;cursor:pointer}
-  .note{margin-top:24px;font-size:13px;color:#777}
-</style>
+<title>${title}</title>
+<style>${ADD_STYLE}</style>
 </head>
-<body>
-<h1>Add your Alpaca account</h1>
-<p>Paste your Alpaca <strong>paper</strong> API key so your account shows up on the board.
-It's read to display your balance and trades — nothing is placed on your behalf.</p>
+<body><div class="wrap">
+<div class="brand">SKYNET<b>·</b>CAPITAL</div>
+${inner}
+</div></body>
+</html>`;
+}
+
+function addFormHtml(key: string): string {
+  const action = `/add${key ? `?key=${encodeURIComponent(key)}` : ""}`;
+  return addShell(
+    "Add your account — Skynet Capital",
+    `<h1>Add your Alpaca account</h1>
+<p class="lede">Paste your Alpaca <b>paper</b> API key so your account shows up on the board.
+It's read only — to display your balance and trades. Nothing is ever placed on your behalf.</p>
 <form method="post" action="${action}">
   <label>Display name<input name="displayName" required placeholder="e.g. Uncle Joe"></label>
-  <label>Alpaca paper API key<input name="apiKey" required autocomplete="off"></label>
-  <label>Alpaca paper API secret<input name="apiSecret" required autocomplete="off"></label>
+  <label>Alpaca paper API key<input name="apiKey" required autocomplete="off" placeholder="PK…"></label>
+  <label>Alpaca paper API secret<input name="apiSecret" required autocomplete="off" placeholder="••••••••"></label>
   <label>Account type
     <select name="kind"><option value="human">Human</option><option value="bot">Bot</option></select>
   </label>
@@ -276,29 +369,20 @@ It's read to display your balance and trades — nothing is placed on your behal
   <label>Time zone <small>(optional)</small><input name="timezone" placeholder="America/Chicago"></label>
   <button type="submit">Add my account</button>
 </form>
-<p class="note">Paper keys only. Get yours at alpaca.markets → Paper Trading → API Keys.</p>
-</body>
-</html>`;
+<p class="note">Paper keys only · alpaca.markets → Paper Trading → API Keys</p>`,
+  );
 }
 
 function addResultHtml(result: AddResult, key: string): string {
   const suffix = key ? `?key=${encodeURIComponent(key)}` : "";
-  const body = result.ok
-    ? `<h1>You're on the board 🎉</h1><p><strong>${escapeHtml(result.displayName)}</strong> is now live on the dashboard.</p>`
-    : `<h1>Couldn't add that account</h1><p>${escapeHtml(result.error)}</p>`;
-  return `<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Skynet Capital</title>
-<style>${PAGE_STYLE} body{font:16px/1.5 system-ui;max-width:560px;margin:0 auto;padding:32px 20px}
-h1{font-size:22px;margin-bottom:10px} a{color:#06c}</style></head>
-<body>
-${body}
-<p style="margin-top:20px"><a href="/${suffix}">← Back to the dashboard</a>${
-    result.ok ? "" : ` · <a href="/add${suffix}">Try again</a>`
-  }</p>
-</body>
-</html>`;
+  const inner = result.ok
+    ? `<div class="res-icon">🎉</div><h1>You're on the board</h1>
+<p class="lede"><b>${escapeHtml(result.displayName)}</b> is now live on the observatory.</p>
+<p class="backrow"><a href="/${suffix}">← Back to the board</a></p>`
+    : `<h1>Couldn't add that account</h1>
+<p class="lede">${escapeHtml(result.error)}</p>
+<p class="backrow"><a href="/${suffix}">← Back to the board</a> · <a href="/add${suffix}">Try again</a></p>`;
+  return addShell("Skynet Capital", inner);
 }
 
 function escapeHtml(value: string): string {
