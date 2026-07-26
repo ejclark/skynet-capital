@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/ejclark/skynet-capital/compare/v1.17.0...v1.18.0) (2026-07-26)
+
+
+### Features
+
+* **login:** high-tech cityscape silhouette in the matrix rain ([#35](https://github.com/ejclark/skynet-capital/issues/35)) ([97ff510](https://github.com/ejclark/skynet-capital/commit/97ff5107fd2df4e2378b6bfd94b9d20059970dc4)), closes [hi#tech](https://github.com/hi/issues/tech)
+
 # [1.17.0](https://github.com/ejclark/skynet-capital/compare/v1.16.0...v1.17.0) (2026-07-26)
 
 
