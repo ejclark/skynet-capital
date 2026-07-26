@@ -138,7 +138,8 @@ no identity layer. BCP is the complementary layer, and it *consumes* that map:
 
 So the division is clean: the mapper answers *"what are the structural hubs?"*; BCP answers *"what is
 the identity, which hubs carry it, and how do we keep it cohesive?"* — and the operating model applies
-both.
+both. The concrete contract (what BCP reads from the map, the mapping rules, the flow) is specified in
+[`BCP-GRAPHIFY.md`](BCP-GRAPHIFY.md).
 
 ---
 
