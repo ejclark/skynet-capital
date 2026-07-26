@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/ejclark/skynet-capital/compare/v1.42.0...v1.43.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** route architecture, individual view, shared nav + restyled /add ([#67](https://github.com/ejclark/skynet-capital/issues/67)) ([19acad3](https://github.com/ejclark/skynet-capital/commit/19acad311f7726b080a0929ae36d4c68d6d8c7ea))
+
 # [1.42.0](https://github.com/ejclark/skynet-capital/compare/v1.41.0...v1.42.0) (2026-07-26)
 
 
