@@ -887,20 +887,29 @@ ${versionTag}
   // diagram assembles center-stage, fully annotated, with Matrix glyphs lighting the strikes.
   // These are illustrative teaching diagrams (labeled STRATEGY PLAYBOOK), never live P/L.
   // pts: normalized payoff [ [x 0..1, y -1..1], ... ]; strikes: x positions of the legs.
+  // maxP / maxL: realistic ASYMMETRIC risk-reward per play (illustrative $, per-contract feel).
   var STRATS=[
     { name:"IRON CONDOR", cue:"LOW VOL", desc:"Range-bound — keep the credit while price holds the middle.",
-      pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8] },
+      pts:[[0,-1],[0.2,-1],[0.34,1],[0.66,1],[0.8,-1],[1,-1]], strikes:[0.2,0.34,0.66,0.8], maxP:420, maxL:-1080 },
     { name:"LONG STRANGLE", cue:"VOL EXPANDING", desc:"Volatility building — profit on a breakout either way.",
-      pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7] },
+      pts:[[0,1],[0.3,-1],[0.7,-1],[1,1]], strikes:[0.3,0.7], maxP:2600, maxL:-720 },
     { name:"SHORT STRADDLE", cue:"RANGE-BOUND", desc:"Dead calm — sell premium; best if price pins the strike.",
-      pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5] },
+      pts:[[0,-1],[0.5,1],[1,-1]], strikes:[0.5], maxP:1180, maxL:-3400 },
     { name:"BUTTERFLY", cue:"PINNED", desc:"Pinned — max profit if price lands on the center strike.",
-      pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65] },
+      pts:[[0,-0.5],[0.35,-0.5],[0.5,1],[0.65,-0.5],[1,-0.5]], strikes:[0.35,0.5,0.65], maxP:1320, maxL:-340 },
     { name:"BULL CALL SPREAD", cue:"UPTREND", desc:"Bullish reversal — capped upside at a lower cost.",
-      pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65] },
+      pts:[[0,-1],[0.35,-1],[0.65,1],[1,1]], strikes:[0.35,0.65], maxP:760, maxL:-540 },
     { name:"CALL LADDER", cue:"BREAKOUT RISK", desc:"Breakout higher — limited risk with room to run.",
-      pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75] }
+      pts:[[0,0.35],[0.4,0.35],[0.55,-1],[0.75,-1],[1,1]], strikes:[0.4,0.55,0.75], maxP:1900, maxL:-880 }
   ];
+  // Map a normalized payoff v∈[minY,maxY] to asymmetric dollars using the play's own max P / max L.
+  function dollarsAt(strat, e, v){ if(v>=0) return e.maxY>0?(v/e.maxY)*strat.maxP:0;
+    return e.minY<0?(v/e.minY)*strat.maxL:0; }
+  // Find the underlying u (between center and the max-profit side) whose payoff is frac-of-max —
+  // the point we take profit at. Lets exits vary: scrape a favorable swing early, or let it ride.
+  function exitU(strat, e, frac){ var tgt=e.maxY*frac, N=48, bestU=e.mxDir, bestD=9, i;
+    for(i=0;i<=N;i++){ var u=lerp(0.5,e.mxDir,i/N), d=Math.abs(payoffAt(strat.pts,u)-tgt); if(d<bestD){ bestD=d; bestU=u; } }
+    return bestU; }
   var pbGlyphT=0;
   function payoffAt(pts,u){ if(u<=pts[0][0]) return pts[0][1];
     for(var i=1;i<pts.length;i++){ if(u<=pts[i][0]){ var a=pts[i-1],b=pts[i];
@@ -925,7 +934,6 @@ ${versionTag}
     ctx.fillText(line,x,yy); return n+1; }
   function money(n){ n=Math.round(n); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
     return (n<0?"−$":"+$")+s; }
-  var DOLLARS=1240;   // illustrative per-contract scale for the teaching P/L readouts
 
   // The shared play anatomy — identical grammar across every strategy: green = profit region,
   // red = loss region, muted diamond = breakeven. Establishing this once builds the association.
@@ -968,7 +976,7 @@ ${versionTag}
     ctx.save(); ctx.globalAlpha=A*Math.min(1,p.on); ctx.textAlign="left"; ctx.textBaseline="alphabetic";
     // live P/L tracks the realized pen (Act 3), not the frozen "now"
     var curP=realized.length?realized[realized.length-1]:nowPrice;
-    var uNow=clamp01((curP-signalPrice)/(volScale||1)+0.5), pl=payoffAt(strat.pts,uNow)*DOLLARS;
+    var uNow=clamp01((curP-signalPrice)/(volScale||1)+0.5), pl=dollarsAt(strat,e,payoffAt(strat.pts,uNow));
     // Narrow / mobile: stack — pipeline + signal + name + desc centered on top, pivots at the bottom.
     if(W<820){
       var cx=W/2, ny=field.top+18; ctx.textAlign="center";
@@ -978,7 +986,7 @@ ${versionTag}
       ctx.font="12px "+sans; ctx.fillStyle=hexA(muted,0.95); wrapText(strat.desc, cx, ny, Math.min(W*0.86,420), 16);
       var by=field.bottom-6; drawAnatomy(cx-116, by-22, A*Math.min(1,p.on));
       ctx.textAlign="left"; ctx.font="700 11px "+mono;
-      var s1="MAX PROFIT "+money(e.maxY*DOLLARS), s2="MAX LOSS "+money(e.minY*DOLLARS);
+      var s1="MAX PROFIT "+money(strat.maxP), s2="MAX LOSS "+money(strat.maxL);
       var w1=ctx.measureText(s1).width, w2=ctx.measureText(s2).width, gap=22, lx=cx-(w1+gap+w2)/2;
       ctx.fillStyle=hexA(pos,0.95); ctx.fillText(s1, lx, by);
       ctx.fillStyle=hexA(neg,0.95); ctx.fillText(s2, lx+w1+gap, by);
@@ -1001,12 +1009,14 @@ ${versionTag}
     // Totals sit right beside their labels (a tight column), not flung to the far right.
     ctx.font="12px "+mono;
     ctx.fillStyle=hexA(pos,0.95); ctx.fillText("MAX PROFIT", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.maxY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=19;
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(strat.maxP), px+col, y); ctx.textAlign="left"; y+=19;
     ctx.fillStyle=hexA(neg,0.95); ctx.fillText("MAX LOSS", px, y);
-    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(e.minY*DOLLARS), px+col, y); ctx.textAlign="left"; y+=25;
+    ctx.fillStyle=hexA(txt,0.9); ctx.textAlign="right"; ctx.fillText(money(strat.maxL), px+col, y); ctx.textAlign="left"; y+=25;
     ctx.globalAlpha=A;
     if(p.resolve>0){ ctx.font="700 16px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=14;
-      ctx.fillText("✓ PLAYCALL CLOSED  "+money(pl), px, y); ctx.shadowBlur=0; }   // book where the market actually landed
+      var pctOfMax = strat.maxP>0 ? Math.round(pl/strat.maxP*100) : 0;
+      var tag = (pl>0 && pctOfMax<92) ? "  · "+pctOfMax+"% OF MAX" : (pl>0?"  · LET IT RIDE":"");
+      ctx.fillText("✓ PLAYCALL CLOSED  "+money(pl)+tag, px, y); ctx.shadowBlur=0; }   // book where the market actually landed
     else if(p.walk>0){ ctx.font="700 15px "+mono; ctx.fillStyle=pl>=0?pos:neg; ctx.fillText("PLAYCALL LIVE · P/L "+money(pl), px, y); }
     else if(p.project>0){ ctx.font="700 13px "+mono; ctx.fillStyle=hexA(accent,0.95); ctx.fillText("▲ PLAYCALL LOCKED", px, y); }
     else { ctx.font="13px "+mono; ctx.fillStyle=hexA(muted,0.85); ctx.fillText("READING THE TAPE…", px, y); }
@@ -1147,7 +1157,8 @@ ${versionTag}
       ctx.font="700 9px "+mono; ctx.textAlign="left"; ctx.fillStyle=hexA(accent,0.9*proj); ctx.fillText("ENTRY", X0+7, yNow-7);
       var tpulse=p.resolve>0?(0.5+0.5*Math.sin(pbGlyphT*0.5)):0;
       ctx.strokeStyle=hexA(acol,0.9*proj); ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(Xf,yTgt,5+5*tpulse,0,7); ctx.stroke();
-      ctx.textAlign="right"; ctx.fillStyle=hexA(acol,0.95*proj); ctx.fillText("TARGET "+money(e.maxY*DOLLARS), Xf-6, yTgt-9);
+      var uT=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5);
+      ctx.textAlign="right"; ctx.fillStyle=hexA(acol,0.95*proj); ctx.fillText("TARGET "+money(dollarsAt(strat,e,payoffAt(strat.pts,uT))), Xf-6, yTgt-9);
     }
     ctx.textAlign="start"; ctx.restore();
     drawPanel(strat, sig, p, A);
@@ -1179,7 +1190,7 @@ ${versionTag}
   // Three-act playcall: on fire we FREEZE history at nowIdx (stop pushing price[]) so the trend
   // holds still; in Act 3 a separate realized[] pen draws rightward INTO the prediction, overtaking
   // the dotted forecast, then folds back into price[] on zoom-out so ambient continues from reality.
-  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null;
+  var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null, exitFrac=1, exitHit=false, curMaxY=1;
 
   resize(); rainResize();
   window.addEventListener("resize", function(){ resize(); rainResize(); });
@@ -1242,7 +1253,11 @@ ${versionTag}
   function armForecast(idx){ var last=price.length-1;
     signalPrice=price[last];
     volScale=Math.max((bU[last]-bL[last])||0, signalPrice*0.05)*1.7;
-    var ex=extrema(STRATS[idx]); targetPrice=signalPrice+(ex.mxDir-0.5)*volScale; }
+    var ex=extrema(STRATS[idx]);
+    // Exit varies: ~30% let it ride to (near) max, otherwise scrape a favorable swing at 55–90% of max.
+    exitFrac = Math.random()<0.3 ? (0.94+Math.random()*0.06) : (0.55+Math.random()*0.35);
+    var tU=exitU(STRATS[idx], ex, exitFrac);   // take-profit point (partway to max), not always the plateau
+    targetPrice=signalPrice+(tU-0.5)*volScale; curMaxY=ex.maxY; }
 
   // Steer the market toward the setup a play needs (from its cue) so the trend visibly transitions
   // into "ripe conditions" before the playcall fires — reuses the regime vars the walk already runs.
@@ -1313,7 +1328,7 @@ ${versionTag}
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
   function startPlay(now, sig, manual){ playMode=true; playStart=now; curSig=sig; curStrat=sig.i;
     manualPlay=manual; paceScale=1; zoomRippled=false;   // even pace for auto + manual (transport lets you pause/step)
-    nowIdx=price.length-1; realized=[]; pvR=pv;   // freeze history; seed realized momentum from the live move
+    nowIdx=price.length-1; realized=[]; pvR=pv; exitHit=false;   // freeze history; seed realized momentum from the live move
     stepTarget=null; setPaused(false);            // fresh transport state each playcall
     armForecast(curStrat); highlightPlay(manual?sig.i:-1); }
   function loop(now){
@@ -1341,7 +1356,11 @@ ${versionTag}
         if(paused) rateT=0.16;
         camT=clamp01(Math.max(p.zoom, p.aim*0.25))*(1-p.out);   // eased zoom/focal — no snap
         realizedAlpha=1-p.out;                                   // realized pen fades on zoom-out
-        if(p.walk>0 && p.out<=0 && !paused) fillRealized(p.walk); // grow the pen with walk progress
+        // WALK: grow the pen until the take-profit level is hit, then jump to RESOLVE and freeze the
+        // pen there — so we book where we actually exited (varies), not always the plateau max.
+        if(p.walk>0 && p.out<=0 && !paused && !exitHit){ fillRealized(p.walk);
+          if(realized.length>3){ var uE=(realized[realized.length-1]-signalPrice)/(volScale||1)+0.5;
+            if(payoffAt(STRATS[curStrat].pts,uE) >= exitFrac*curMaxY-0.015){ exitHit=true; playStart=now-T_RES*paceScale; } } }
         if(p.zoom>0.4 && !zoomRippled){ zoomRippled=true; addRipple(nowSX, nowSY); }   // enhance-zoom ripple, centered once framed
         rainBoost=((p.walk>0 && p.resolve<1)||(p.zoom>0.4&&p.project<0.3))?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
         if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
