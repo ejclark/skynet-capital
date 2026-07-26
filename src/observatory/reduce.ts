@@ -65,11 +65,13 @@ function applyFill(
 ): ParticipantSnapshot {
   const notional = fill.quantity * fill.price;
   const cash = fill.side === "buy" ? participant.cash - notional : participant.cash + notional;
-  const positions =
-    fill.side === "buy"
-      ? applyBuy(participant.positions, fill)
-      : applySell(participant.positions, fill);
-  return reprice({ ...participant, cash, positions });
+  if (fill.side === "buy") {
+    return reprice({ ...participant, cash, positions: applyBuy(participant.positions, fill) });
+  }
+  // A sell books realized P/L: (sale price − average cost) × quantity actually closed.
+  const { positions, realized } = applySell(participant.positions, fill);
+  const realizedPl = (participant.realizedPl ?? 0) + realized;
+  return reprice({ ...participant, cash, positions, realizedPl });
 }
 
 function applyBuy(
@@ -100,18 +102,24 @@ function applyBuy(
 function applySell(
   positions: readonly PositionView[],
   fill: { symbol: string; quantity: number; price: number },
-): PositionView[] {
+): { positions: PositionView[]; realized: number } {
   const existing = positions.find((pos) => pos.symbol === fill.symbol);
   if (!existing) {
-    return [...positions];
+    return { positions: [...positions], realized: 0 };
   }
+  // Realized on the quantity actually closed (never more than is held): (sale − cost) × qty sold.
+  const soldQty = Math.min(fill.quantity, existing.quantity);
+  const realized = (fill.price - existing.avgPrice) * soldQty;
   const remaining = existing.quantity - fill.quantity;
   if (remaining <= 0) {
-    return positions.filter((pos) => pos.symbol !== fill.symbol);
+    return { positions: positions.filter((pos) => pos.symbol !== fill.symbol), realized };
   }
-  return positions.map((pos) =>
-    pos.symbol === fill.symbol
-      ? { ...pos, quantity: remaining, marketValue: remaining * fill.price }
-      : pos,
-  );
+  return {
+    positions: positions.map((pos) =>
+      pos.symbol === fill.symbol
+        ? { ...pos, quantity: remaining, marketValue: remaining * fill.price }
+        : pos,
+    ),
+    realized,
+  };
 }

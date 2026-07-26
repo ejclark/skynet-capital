@@ -131,5 +131,46 @@ describe("reduceObservatory", () => {
       expect(fader?.cash).toBe(1_105_000);
       expect(fader?.equity).toBe(1_105_000);
     });
+
+    it("books realized P/L on a sell (sale − avg cost × qty), and accumulates across sells", () => {
+      const state = fold([
+        // EEM held at avg 100; sell 400 @ 105 → +2,000 realized, 600 left.
+        {
+          type: "fill",
+          participantId: "news-fader",
+          symbol: "EEM",
+          side: "sell",
+          quantity: 400,
+          price: 105,
+          at: "2026-07-24T15:03:00.000Z",
+        },
+        // Sell the remaining 600 @ 95 → −3,000 realized; cumulative = −1,000.
+        {
+          type: "fill",
+          participantId: "news-fader",
+          symbol: "EEM",
+          side: "sell",
+          quantity: 600,
+          price: 95,
+          at: "2026-07-24T15:04:00.000Z",
+        },
+      ]);
+      expect(state.participants[0]?.realizedPl).toBe(-1_000);
+    });
+
+    it("a buy leaves realized P/L untouched", () => {
+      const state = fold([
+        {
+          type: "fill",
+          participantId: "eric",
+          symbol: "VWO",
+          side: "buy",
+          quantity: 100,
+          price: 50,
+          at: "2026-07-24T15:02:00.000Z",
+        },
+      ]);
+      expect(state.participants[1]?.realizedPl).toBeUndefined();
+    });
   });
 });
