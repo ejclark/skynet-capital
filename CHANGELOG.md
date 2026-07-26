@@ -1,3 +1,10 @@
+# [1.64.0](https://github.com/ejclark/skynet-capital/compare/v1.63.0...v1.64.0) (2026-07-26)
+
+
+### Features
+
+* **observatory:** empire skyline on /u/:id — positions as a domain-themed city ([#111](https://github.com/ejclark/skynet-capital/issues/111)) ([f2807f4](https://github.com/ejclark/skynet-capital/commit/f2807f40687440bdcb50454b2848232567c03c76))
+
 # [1.63.0](https://github.com/ejclark/skynet-capital/compare/v1.62.0...v1.63.0) (2026-07-26)
 
 
