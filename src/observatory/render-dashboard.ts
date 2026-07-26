@@ -154,6 +154,29 @@ interface CardOptions {
   readonly isSelf?: boolean;
   /** When true the whole card links to the participant's profile (/u/:id). */
   readonly link?: boolean;
+  /** Persona-landmark power (0..1) — a bot's rank among bots, scaling its Eye on the thumbnail. */
+  readonly prominence?: number;
+}
+
+/**
+ * Rank the bots by return% and map each to a landmark "prominence" 0..1 — the leveling dial for the
+ * persona landmark (best bot = 1, worst = ~0.55, linear by rank). Pure; humans/no-bots → empty map.
+ * The landmark becomes the scoreboard: a better bot's Eye grows larger relative to its peers.
+ */
+export function botLandmarkProminence(
+  participants: readonly ParticipantSnapshot[],
+): Map<string, number> {
+  const bots = participants
+    .filter((p) => p.kind === "bot" && !p.error)
+    .sort((a, b) => participantReturnPct(b) - participantReturnPct(a));
+  const out = new Map<string, number>();
+  if (bots.length === 1) {
+    const only = bots[0];
+    if (only) out.set(only.id, 1);
+    return out;
+  }
+  bots.forEach((p, i) => out.set(p.id, 1 - (i / (bots.length - 1)) * 0.45));
+  return out;
 }
 
 /** Slugified id → the profile URL for a participant. Ids are already URL-safe. */
@@ -197,7 +220,10 @@ function participantCard(snapshot: ParticipantSnapshot, opts: CardOptions = {}):
         <div><dt>Invested</dt><dd class="num">${formatCurrency(invested)}</dd></div>
         <div><dt>Unrealized</dt><dd class="num ${plClass(pl)}">${formatSigned(pl)}</dd></div>
       </dl>
-      <div class="empire-thumb">${renderEmpireSkyline(snapshot, { compact: true })}</div>
+      <div class="empire-thumb">${renderEmpireSkyline(snapshot, {
+        compact: true,
+        ...(opts.prominence !== undefined ? { personaProminence: opts.prominence } : {}),
+      })}</div>
       ${positionsTable(snapshot)}
       ${activityFeed(snapshot)}
     </${tag}>`;
@@ -1158,13 +1184,16 @@ export function renderBoardContent(
 ): string {
   const currentId = options.nav?.currentId;
   const ordered = orderParticipants([...data.participants], currentId);
+  const prominence = botLandmarkProminence(data.participants);
   const cards = ordered
-    .map((p) =>
-      participantCard(p, {
+    .map((p) => {
+      const prom = prominence.get(p.id);
+      return participantCard(p, {
         isSelf: Boolean(currentId) && p.id === currentId,
         link: Boolean(options.nav),
-      }),
-    )
+        ...(prom !== undefined ? { prominence: prom } : {}),
+      });
+    })
     .join("\n    ");
   return `${summaryStrip(data)}
   <section class="grid">
