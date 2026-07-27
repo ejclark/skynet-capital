@@ -71,14 +71,14 @@ describe("resolveAuth", () => {
     const auth = resolveAuth(ENV);
     expect(auth?.providerIds).toEqual(["google"]);
   });
-  it("ships the playcall drawer scaffold in the login page", () => {
+  it("has no side drawer — the playcall self-labels on the chart", () => {
     const html = resolveAuth(ENV)?.loginPage() ?? "";
-    expect(html).toContain('class="playdrawer"');
-    expect(html).toContain('id="pdSignal"');
-    expect(html).toContain('id="pdLive"');
-    expect(html).toContain('id="pdRecap"');
-    expect(html).toContain('id="pdTab"');
-    // hard constraint stays intact alongside the new markup
+    // The DOM playcall drawer was removed; its essentials (name/class/thesis/max P&L/live P/L) now
+    // render on the chart itself so nothing covers the stage.
+    expect(html).not.toContain('class="playdrawer"');
+    expect(html).not.toContain('id="pdSignal"');
+    expect(html).not.toContain('id="pdTab"');
+    // hard constraint stays intact
     expect(html).toContain("Continue with Google");
   });
 });
