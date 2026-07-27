@@ -1,3 +1,10 @@
+## [1.91.1](https://github.com/ejclark/skynet-capital/compare/v1.91.0...v1.91.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **login:** design-review quick wins — anchor idle RSI read, scale full-width title ([#160](https://github.com/ejclark/skynet-capital/issues/160)) ([782f105](https://github.com/ejclark/skynet-capital/commit/782f1058e380cde97b602862dbc82874134b822c))
+
 # [1.91.0](https://github.com/ejclark/skynet-capital/compare/v1.90.0...v1.91.0) (2026-07-26)
 
 
