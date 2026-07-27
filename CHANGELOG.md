@@ -1,3 +1,10 @@
+## [1.92.1](https://github.com/ejclark/skynet-capital/compare/v1.92.0...v1.92.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **login:** short close transition — fold the walk in, settle the last step only ([#162](https://github.com/ejclark/skynet-capital/issues/162)) ([49194f6](https://github.com/ejclark/skynet-capital/commit/49194f671ade41d33a8b07cf25d6b92ee5667d35))
+
 # [1.92.0](https://github.com/ejclark/skynet-capital/compare/v1.91.1...v1.92.0) (2026-07-27)
 
 
