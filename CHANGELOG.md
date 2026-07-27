@@ -1,3 +1,10 @@
+# [1.102.0](https://github.com/ejclark/skynet-capital/compare/v1.101.0...v1.102.0) (2026-07-27)
+
+
+### Features
+
+* **login:** playcall narrative in a collapsible DOM drawer ([#175](https://github.com/ejclark/skynet-capital/issues/175)) ([c480f1a](https://github.com/ejclark/skynet-capital/commit/c480f1af5804fb65f6d7ee92a2c771c0bc4f8913))
+
 # [1.101.0](https://github.com/ejclark/skynet-capital/compare/v1.100.0...v1.101.0) (2026-07-27)
 
 
