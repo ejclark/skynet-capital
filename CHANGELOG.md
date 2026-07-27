@@ -1,3 +1,10 @@
+# [1.103.0](https://github.com/ejclark/skynet-capital/compare/v1.102.0...v1.103.0) (2026-07-27)
+
+
+### Features
+
+* **login:** decouple the playcall narrative from the chart ([#176](https://github.com/ejclark/skynet-capital/issues/176)) ([7ea44a6](https://github.com/ejclark/skynet-capital/commit/7ea44a6c4a04719e36b586d304d868ff3ae1a08e))
+
 # [1.102.0](https://github.com/ejclark/skynet-capital/compare/v1.101.0...v1.102.0) (2026-07-27)
 
 
