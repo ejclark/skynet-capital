@@ -1,72 +1,18 @@
+import { projectEmpire } from "../universe/project.js";
+import type { Sector } from "../universe/sectors.js";
+import type { EmpireState, StructureState } from "../universe/world-state.js";
 /**
  * The empire skyline — a participant's holdings rendered as a small, domain-themed city
- * (the first pixel of the Living Universe, see `docs/LIVING-UNIVERSE.md`). Pure and deterministic:
- * positions → buildings (height = weight, silhouette = sector, cap = P/L), cash → a reserve park.
- * Server-rendered inline SVG so it inherits the observatory design tokens; no animation, no history.
+ * (the first pixel of the Living Universe, see `docs/LIVING-UNIVERSE.md`). Now a THIN SKIN over the
+ * World Projection (`src/universe/project.ts`): every mapping rule (mass, health, theme, reserve,
+ * landmark prominence) is derived there, once, unit-tested — this module only turns an EmpireState
+ * into inline SVG. Pure and deterministic; no animation, no history.
  */
-import type { ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
+import type { ParticipantSnapshot } from "./participant-snapshot.js";
 
-export type Sector = "tech" | "energy" | "broad" | "gold" | "market";
-
-// Curated so the tickers threaded through the app + fixtures theme correctly; extend as holdings grow.
-const SECTOR_BY_TICKER: Record<string, Sector> = {
-  NVDA: "tech",
-  CRWV: "tech",
-  AMD: "tech",
-  AVGO: "tech",
-  MSFT: "tech",
-  GOOG: "tech",
-  GOOGL: "tech",
-  AAPL: "tech",
-  META: "tech",
-  TSLA: "tech",
-  AMZN: "tech",
-  CRM: "tech",
-  XOM: "energy",
-  CVX: "energy",
-  COP: "energy",
-  SLB: "energy",
-  NEE: "energy",
-  EEM: "broad",
-  SPY: "broad",
-  VOO: "broad",
-  QQQ: "broad",
-  IWM: "broad",
-  VTI: "broad",
-  GLD: "gold",
-  IAU: "gold",
-};
-
-export function sectorOf(symbol: string): Sector {
-  return SECTOR_BY_TICKER[symbol.toUpperCase()] ?? "market";
-}
-
-const SECTOR_LABEL: Record<Sector, string> = {
-  tech: "TECH",
-  energy: "ENERGY",
-  broad: "INDEX",
-  gold: "SAFE HAVEN",
-  market: "MARKET",
-};
-
-/** The dominant sector by invested weight (ties → the first seen); "DIVERSIFIED" if none ≥ 50%. */
-export function empireTheme(positions: readonly PositionView[]): string {
-  if (positions.length === 0) return "FRONTIER";
-  const weight = new Map<Sector, number>();
-  let total = 0;
-  for (const p of positions) {
-    const s = sectorOf(p.symbol);
-    weight.set(s, (weight.get(s) ?? 0) + p.marketValue);
-    total += p.marketValue;
-  }
-  let top: Sector = "market";
-  let topW = -1;
-  for (const [s, w] of weight) if (w > topW) [top, topW] = [s, w];
-  if (total > 0 && topW / total < 0.5 && weight.size > 1) return "DIVERSIFIED";
-  return SECTOR_LABEL[top];
-}
-
-const unrealized = (p: PositionView): number => p.marketValue - p.quantity * p.avgPrice;
+// Compatibility re-exports: the sector map + theme rule moved to src/universe (one owner).
+export { sectorOf, type Sector } from "../universe/sectors.js";
+export { empireTheme } from "../universe/project.js";
 
 // One building silhouette per sector, drawn from a baseline. x = left, w = width, h = height.
 function building(
@@ -104,10 +50,6 @@ function building(
   return `<g><rect x="${x}" y="${top}" width="${w}" height="${h}" fill="var(--surface)" stroke="var(--muted)" stroke-opacity="0.45"/>${win("var(--muted)")}${cap}</g>`;
 }
 
-// Persona → landmark: a persona's signature structure crowns its city (the login Eye motif reaches the
-// observatory). Display-only for now; scaling the landmark by the bot's rank is the leveling follow-up.
-const PERSONA_LANDMARK: Record<string, "eye"> = { sauron: "eye" };
-
 /** A small Eye of Sauron emblem — a fiery almond with a slit pupil, flanked by two dark prongs. */
 function renderEyeEmblem(cx: number, cy: number, s: number): string {
   const ew = s * 0.5;
@@ -127,63 +69,62 @@ export interface SkylineOptions {
   readonly personaProminence?: number;
 }
 
+const capColorOf = (s: StructureState): string =>
+  s.unrealizedPl > 0 ? "var(--pos)" : s.unrealizedPl < 0 ? "var(--neg)" : "var(--muted)";
+
 /** Render the empire skyline as an inline SVG string (deterministic; empty holdings → a frontier plot). */
 export function renderEmpireSkyline(
   snapshot: ParticipantSnapshot,
   opts: SkylineOptions = {},
 ): string {
+  const empire: EmpireState = projectEmpire(snapshot, {
+    ...(opts.personaProminence !== undefined ? { personaProminence: opts.personaProminence } : {}),
+  });
   const compact = opts.compact ?? false;
   const W = opts.width ?? 440;
   const H = opts.height ?? (compact ? 84 : 132);
   const baseY = H - (compact ? 8 : 16);
-  const theme = empireTheme(snapshot.positions);
+  const theme = empire.theme;
   const label = `<text x="12" y="14" font-size="${compact ? 8 : 10}" letter-spacing="1.5" fill="var(--muted)" font-family="var(--mono)">${theme} EMPIRE</text>`;
   const groundline = `<line x1="0" y1="${baseY}" x2="${W}" y2="${baseY}" stroke="var(--border)"/>`;
 
-  if (snapshot.positions.length === 0) {
+  if (!empire.founded) {
     return `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline — no holdings yet" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}<text x="${W / 2}" y="${baseY - (compact ? 10 : 18)}" text-anchor="middle" font-size="${compact ? 9 : 11}" fill="var(--muted)" font-family="var(--mono)">undeveloped — no holdings yet</text>${label}</svg>`;
   }
 
-  const sorted = [...snapshot.positions].sort((a, b) => b.marketValue - a.marketValue).slice(0, 9);
-  const maxVal = Math.max(...sorted.map((p) => p.marketValue), 1);
+  const structures = empire.structures;
   const pad = 14;
   const gap = 8;
   const zone = W - pad * 2 - 56; // reserve the right ~56px for the cash park
-  const slot = zone / sorted.length;
+  const slot = zone / structures.length;
   const bw = Math.max(20, Math.min(46, slot - gap)); // building centered within its slot, evenly spread
 
   const minH = compact ? 14 : 26;
   const spanH = compact ? 44 : 74;
   let buildings = "";
-  sorted.forEach((p, i) => {
+  structures.forEach((s, i) => {
     const bx = Math.round(pad + slot * i + (slot - bw) / 2);
-    const h = minH + spanH * (p.marketValue / maxVal);
-    const u = unrealized(p);
-    const capColor = u > 0 ? "var(--pos)" : u < 0 ? "var(--neg)" : "var(--muted)";
-    buildings += building(sectorOf(p.symbol), bx, baseY, Math.round(bw), Math.round(h), capColor);
+    const h = minH + spanH * s.mass;
+    buildings += building(s.sector, bx, baseY, Math.round(bw), Math.round(h), capColorOf(s));
     if (!compact)
-      buildings += `<text x="${bx + Math.round(bw / 2)}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">${p.symbol}</text>`;
+      buildings += `<text x="${bx + Math.round(bw / 2)}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">${s.symbol}</text>`;
   });
 
-  // Cash reserve → a park (green space) sized by cash share of equity.
-  const cashShare =
-    snapshot.equity > 0 ? Math.max(0, Math.min(1, snapshot.cash / snapshot.equity)) : 0;
-  const parkW = Math.round(20 + 34 * cashShare);
+  // Cash reserve → a park (green space) sized by the reserve share (R4, from the projection).
+  const parkW = Math.round(20 + 34 * empire.reserve.share);
   const parkLabel = compact
     ? ""
     : `<text x="${W - parkW / 2 - 12}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">RESERVE</text>`;
   const park = `<g><rect x="${W - parkW - 12}" y="${baseY - 14}" width="${parkW}" height="14" rx="3" fill="var(--pos)" fill-opacity="0.14" stroke="var(--pos)" stroke-opacity="0.3"/>${parkLabel}</g>`;
 
-  // The persona's landmark crowns its tallest tower (sorted[0] is the largest holding by weight).
+  // The persona's landmark crowns its tallest tower (structures[0] is the largest holding by weight).
   let landmark = "";
-  const lk = snapshot.personaId ? PERSONA_LANDMARK[snapshot.personaId] : undefined;
-  const tallest = sorted[0];
-  if (lk === "eye" && tallest) {
-    const prom = Math.max(0, Math.min(1, opts.personaProminence ?? 1));
-    const s = (compact ? 5 : 8) * (0.62 + 0.5 * prom); // rank-scaled: better bot → larger Eye
+  const tallest = structures[0];
+  if (empire.landmark?.kind === "eye" && tallest) {
+    const s = (compact ? 5 : 8) * (0.62 + 0.5 * empire.landmark.prominence); // rank-scaled: better bot → larger Eye
     const bx0 = Math.round(pad + (slot - bw) / 2);
     const cx0 = bx0 + Math.round(bw / 2);
-    const cyTop = baseY - (minH + spanH * (tallest.marketValue / maxVal)) - s;
+    const cyTop = baseY - (minH + spanH * tallest.mass) - s;
     landmark = renderEyeEmblem(cx0, cyTop, s);
   }
 
