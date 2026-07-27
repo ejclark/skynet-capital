@@ -1239,12 +1239,19 @@ ${versionTag}
     // ELECTRIC energy resonating WITH the volcanic fire — jagged blue-white arcs crackle across the lid,
     // flickering in and out so the gaze reads as both molten AND charged (its pull is gravity→EM).
     rctx.globalCompositeOperation="lighter";
-    for(var ea=0;ea<3;ea++){ var lit=noise(rainT*0.4+ea*3.3+cx*0.01); if(lit<0.45) continue;
-      var a0=noise(ea*1.9+Math.floor(rainT*0.3))*6.28, ax=cx+Math.cos(a0)*ew*0.9, ay=cy+Math.sin(a0)*eh*0.42;
-      var bxp=cx-Math.cos(a0)*ew*0.9, byp=cy-Math.sin(a0)*eh*0.42;
-      rctx.strokeStyle=hexA("#CFF3FF",(0.5*(lit-0.45)/0.55)*wake*flk); rctx.lineWidth=1; rctx.beginPath(); rctx.moveTo(ax,ay);
-      for(var es=1;es<5;es++){ var et=es/5, jx=(noise(ea+es*2.1+rainT*0.5)-0.5)*ew*0.7; rctx.lineTo(ax+(bxp-ax)*et+jx, ay+(byp-ay)*et); }
-      rctx.lineTo(bxp,byp); rctx.stroke(); }
+    // Rarer, real arcs: mostly the lid just glows charged; occasionally ONE forked bolt cracks across it
+    // (fractal path, dim halo under a bright core) then vanishes — a charge that discharges, not a buzz.
+    for(var ea=0;ea<2;ea++){ var lit=noise(rainT*0.32+ea*3.3+cx*0.01); if(lit<0.62) continue;
+      var la=(lit-0.62)/0.38, a0=noise(ea*1.9+Math.floor(rainT*0.28))*6.28;
+      var ax=cx+Math.cos(a0)*ew*0.9, ay=cy+Math.sin(a0)*eh*0.42, bxp=cx-Math.cos(a0)*ew*0.9, byp=cy-Math.sin(a0)*eh*0.42;
+      var pth=[[ax,ay]], seg, pv;
+      for(seg=1;seg<7;seg++){ var t=seg/7, jx=(noise(ea+seg*2.1+Math.floor(rainT*0.5))-0.5)*ew*0.5*Math.sin(t*Math.PI);
+        pth.push([ax+(bxp-ax)*t+jx, ay+(byp-ay)*t+(noise(ea+seg)-0.5)*eh*0.2*Math.sin(t*Math.PI)]); }
+      pth.push([bxp,byp]);
+      function traceE(){ rctx.beginPath(); rctx.moveTo(pth[0][0],pth[0][1]); for(pv=1;pv<pth.length;pv++) rctx.lineTo(pth[pv][0],pth[pv][1]); }
+      rctx.lineJoin="round"; rctx.lineCap="round";
+      traceE(); rctx.strokeStyle=hexA("#7FE9FF",0.22*la*wake*flk); rctx.lineWidth=2.6; rctx.stroke();
+      traceE(); rctx.strokeStyle=hexA("#EAFEFF",0.7*la*wake*flk); rctx.lineWidth=0.8; rctx.stroke(); }
     rctx.restore();
     // 5) the cat-slit pupil — a void with a hot molten rim. AMBIENT GAZE: at rest the pupil slowly
     // WANDERS (the Eye is forever scanning the city); as it WAKES to a signal the wander fades and the
@@ -1853,6 +1860,41 @@ ${versionTag}
         ctx.fillStyle=hexA("#FFE7B0",0.75*heat*al*(0.4+0.6*Math.sin(pbGlyphT*0.28+gi*1.3)));
         ctx.beginPath(); ctx.arc(gx,gy,0.9,0,7); ctx.fill(); } }
     ctx.restore(); }
+  // REAL LIGHTNING — a fractal least-resistance path (midpoint displacement) from source toward target,
+  // with a wide dim GLOW pass under a thin bright CORE, plus the odd forking branch that dies out. This
+  // is how a real arc reads: it seeks the target with jagged deviations, not a uniform sine wobble.
+  function lightPath(x0,y0,x1,y1,seed,rough){ var pts=[[x0,y0],[x1,y1]], it, i;
+    for(it=0; it<5; it++){ var np=[], amp=rough/(it+1);
+      for(i=0;i<pts.length-1;i++){ var a=pts[i], b=pts[i+1];
+        var mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2, dx=b[0]-a[0], dy=b[1]-a[1], L=Math.sqrt(dx*dx+dy*dy)||1;
+        var d=(noise(seed+i*2.7+it*5.3)-0.5)*L*amp;   // perpendicular kink; shrinks each generation (fractal)
+        np.push(a); np.push([mx-dy/L*d, my+dx/L*d]); }
+      np.push(pts[pts.length-1]); pts=np; }
+    return pts; }
+  function tracePts(pts){ ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    for(var i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]); }
+  function light(x0,y0,x1,y1,seed,core,glow,al,rough){
+    var pts=lightPath(x0,y0,x1,y1,seed,rough||0.34);
+    ctx.lineJoin="round"; ctx.lineCap="round";
+    tracePts(pts); ctx.strokeStyle=hexA(glow,al*0.3); ctx.lineWidth=3.4; ctx.stroke();   // wide dim halo
+    tracePts(pts); ctx.strokeStyle=hexA(core,al); ctx.lineWidth=1; ctx.stroke();           // thin bright core
+    // one short branch that forks off a mid vertex and dies — real arcs split at kinks
+    var bi=3+((seed*7)|0)%(pts.length-6>0?pts.length-6:1), bp=pts[bi]||pts[0];
+    if(bp && noise(seed*1.7)>0.45){ var bx=bp[0]+(noise(seed+9)-0.5)*40, by=bp[1]+(noise(seed+13)-0.5)*40;
+      var bpts=lightPath(bp[0],bp[1],bx,by,seed+21,0.5);
+      tracePts(bpts); ctx.strokeStyle=hexA(core,al*0.55); ctx.lineWidth=0.8; ctx.stroke(); } }
+  // MOLTEN HEAT — mostly a glowing gradient (hot rock cooling to crust) with only OCCASIONAL flame flares
+  // and sparse embers. Heat is the default read; open flame is the exception, not a uniform row of tongues.
+  function moltenStrip(x0,x1,y,dir,intensity,proj){
+    var w=x1-x0, mg=ctx.createLinearGradient(0,y,0,y+dir*26*intensity);
+    mg.addColorStop(0,hexA("#FF7A2E",0.34*proj*intensity)); mg.addColorStop(0.45,hexA("#C22A16",0.20*proj*intensity)); mg.addColorStop(1,hexA("#5A0E08",0));
+    ctx.fillStyle=mg; ctx.fillRect(x0,dir>0?y:y-26*intensity,w,26*intensity);
+    // hot mottling — irregular bright pockets of exposed melt, breathing (no two the same)
+    var pk=Math.round(w/70)+1, i;
+    for(i=0;i<pk;i++){ var px=x0+w*((i+0.5)/pk)+(noise(i*3.7)-0.5)*40,
+      br=0.35+0.65*Math.abs(Math.sin(pbGlyphT*0.06+i*1.7)), pr=6+7*br;
+      var pgd=ctx.createRadialGradient(px,y,0,px,y,pr); pgd.addColorStop(0,hexA("#FFC24D",0.4*proj*intensity*br)); pgd.addColorStop(1,hexA("#FF5A28",0));
+      ctx.fillStyle=pgd; ctx.beginPath(); ctx.arc(px,y,pr,0,7); ctx.fill(); } }
   function drawGravityBeam(p){
     var accent=css("--accent")||"#35D0BA";
     // 1) DETECTION MARK — an imploding lock on the signal point as AIM completes, before the pull.
@@ -1911,12 +1953,13 @@ ${versionTag}
           var poolR=bwBase*1.15, plg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,poolR);
           plg.addColorStop(0,hexA("#FFF3DD",0.5*pull)); plg.addColorStop(0.35,hexA("#FFC98A",0.28*pull)); plg.addColorStop(1,hexA(accent,0));
           ctx.fillStyle=plg; ctx.beginPath(); ctx.arc(nowSX,nowSY,poolR,0,7); ctx.fill();
-          // a single faint filament (much less lightning than before)
-          // the beam resonates BOTH energies: a warm volcanic filament + jittering blue-white ELECTRIC
-          // arcs that crackle down the cone (gravity driving the electromagnetism), flickering per frame.
-          bolt(e.x,e.y,nowSX,nowSY, 12*pull, e.seed+11, "#FFB060", 0.30*pull*flick, 1.2);   // fire filament
-          for(var eb=0;eb<2;eb++){ if(noise(pbGlyphT*0.5+eb*4.1+k)<0.4) continue;
-            bolt(e.x,e.y,nowSX,nowSY, 22*pull, e.seed+eb*7.3+pbGlyphT*0.3, "#CFF3FF", 0.42*pull*flick, 1); }   // electric arcs
+          // The beam resonates BOTH energies. Molten: a warm filament that reads as flowing melt, not a
+          // torch. Electric: real forked lightning that STRIKES intermittently (a couple of frames, then
+          // gone) rather than a permanent uniform arc — a charged conduit that fires when the pull peaks.
+          bolt(e.x,e.y,nowSX,nowSY, 10*pull, e.seed+11, "#FF8A3D", 0.24*pull*flick, 1.4);   // molten filament (dimmer, warmer)
+          var strike=noise(pbGlyphT*0.14+k*4.1);   // gate: only a fraction of frames carry a live arc
+          if(strike>0.62){ var sa=clamp01((strike-0.62)/0.38);
+            light(e.x,e.y,nowSX,nowSY, e.seed+Math.floor(pbGlyphT*0.5)*3.3, "#EAFEFF", "#7FE9FF", (0.5+0.5*sa)*pull, 0.36); }
           // charge streaming FROM the present toward the tower — the matter being pulled in
           for(var s2=0;s2<6;s2++){ var f=(pbGlyphT*0.05+s2/6+k*0.17)%1, cxp=lerp(nowSX,e.x,f), cyp=lerp(nowSY,e.y,f);
             ctx.fillStyle=hexA("#EAFFFA",0.6*(1-f)*pull); ctx.fillRect(cxp-1.2,cyp-1.2,2.4,2.4); } }
@@ -2137,17 +2180,28 @@ ${versionTag}
       // BOUNDARY ENERGY — Sauron's power SPILLS off the play's edges, matching the tile it borders: a
       // GREEN edge crackles with electric arcs (matrix energy escaping); a RED edge flares with fire /
       // molten tongues + rising embers. Hyper-exaggerated where the energy builds up, flickering per frame.
-      var edgeEnergy=function(y,dir,green){ var cnt=Math.round((Xf-X0)/24);
-        for(var ie=0;ie<cnt;ie++){ var ex=X0+(Xf-X0)*((ie+0.5)/cnt)+(noise(ie*3.1)-0.5)*10,
-            fl=noise(ie*2.3+Math.floor(pbGlyphT*0.35)+dir*7); if(fl<0.5) continue; var amp=(fl-0.5)/0.5;
-          if(green){ ctx.strokeStyle=hexA("#CFF3FF",0.55*proj*amp); ctx.lineWidth=1.1; ctx.beginPath(); ctx.moveTo(ex,y);
-            var len=9+18*amp; for(var s=1;s<=3;s++){ ctx.lineTo(ex+(noise(ie+s+Math.floor(pbGlyphT*0.3))-0.5)*11, y+dir*len*(s/3)); } ctx.stroke();
-            ctx.fillStyle=hexA("#EAFFFA",0.65*proj*amp); ctx.fillRect(ex-0.8,y-0.8,1.6,1.6); }
-          else { var len2=11+22*amp, fgx=ex+(noise(ie+1)-0.5)*6;
-            var fg=ctx.createLinearGradient(ex,y,fgx,y+dir*len2); fg.addColorStop(0,hexA("#FFD24D",0.6*proj*amp)); fg.addColorStop(0.5,hexA("#FF7A2E",0.42*proj*amp)); fg.addColorStop(1,hexA("#F85149",0));
-            ctx.strokeStyle=fg; ctx.lineWidth=2.3; ctx.beginPath(); ctx.moveTo(ex,y); ctx.quadraticCurveTo(ex+(noise(ie+pbGlyphT*0.2)-0.5)*9, y+dir*len2*0.6, fgx, y+dir*len2); ctx.stroke();
-            var ey=y+dir*(len2+7*amp), eg2=ctx.createRadialGradient(ex,ey,0,ex,ey,3.2); eg2.addColorStop(0,hexA("#FFB060",0.55*proj*amp)); eg2.addColorStop(1,hexA("#F85149",0));
-            ctx.fillStyle=eg2; ctx.beginPath(); ctx.arc(ex,ey,3.2,0,7); ctx.fill(); } } };
+      var edgeEnergy=function(y,dir,green){ var cnt=Math.round((Xf-X0)/24), ie;
+        if(green){
+          // A GREEN edge = charged. Mostly a soft electric SHEEN along the boundary, with the odd real
+          // forked arc that fires intermittently and leaps off the edge — not a uniform row of jags.
+          var sg=ctx.createLinearGradient(0,y,0,y+dir*14); sg.addColorStop(0,hexA("#CFF3FF",0.16*proj)); sg.addColorStop(1,hexA("#CFF3FF",0));
+          ctx.fillStyle=sg; ctx.fillRect(X0,dir>0?y:y-14,Xf-X0,14);
+          for(ie=0;ie<cnt;ie++){ var gx=X0+(Xf-X0)*((ie+0.5)/cnt)+(noise(ie*3.1)-0.5)*12,
+              gf=noise(ie*2.3+Math.floor(pbGlyphT*0.28)+dir*7); if(gf<0.78) continue;   // sparse: only the top ~22% fire
+            var glen=14+26*((gf-0.78)/0.22);
+            light(gx,y,gx+(noise(ie+7)-0.5)*20,y+dir*glen, ie*5.1+Math.floor(pbGlyphT*0.5)*2.7, "#EAFFFA","#7FE9FF", 0.6*proj, 0.5); }
+        } else {
+          // A RED edge = molten. A base heat strip does most of the work; open flame is OCCASIONAL.
+          moltenStrip(X0,Xf,y,dir,1,proj);
+          for(ie=0;ie<cnt;ie++){ var fx=X0+(Xf-X0)*((ie+0.5)/cnt)+(noise(ie*3.1)-0.5)*14,
+              ff=noise(ie*2.3+Math.floor(pbGlyphT*0.22)+dir*13); if(ff<0.82) continue;   // sparse, irregular flares only
+            var amp=(ff-0.82)/0.18, len2=14+26*amp, fgx=fx+(noise(ie+1)-0.5)*8;
+            var fg=ctx.createLinearGradient(fx,y,fgx,y+dir*len2); fg.addColorStop(0,hexA("#FFE08A",0.7*proj*amp)); fg.addColorStop(0.5,hexA("#FF7A2E",0.4*proj*amp)); fg.addColorStop(1,hexA("#F85149",0));
+            ctx.strokeStyle=fg; ctx.lineWidth=2.6; ctx.lineCap="round"; ctx.beginPath(); ctx.moveTo(fx,y);
+            ctx.quadraticCurveTo(fx+(noise(ie+pbGlyphT*0.2)-0.5)*12, y+dir*len2*0.55, fgx, y+dir*len2); ctx.stroke();
+            // a couple of rising embers peeling off the flare
+            for(var em=0;em<2;em++){ var ef=(pbGlyphT*0.04+ie*0.3+em*0.5)%1, ex2=fgx+(noise(ie+em)-0.5)*10, ey2=y+dir*(len2+ef*20);
+              ctx.fillStyle=hexA("#FFC24D",0.5*proj*amp*(1-ef)); ctx.beginPath(); ctx.arc(ex2,ey2,1.3,0,7); ctx.fill(); } } } };
       ctx.save(); ctx.globalCompositeOperation="lighter";
       edgeEnergy(SY(hiP), -1, vHi>=0);   // top edge — energy spills UP
       edgeEnergy(SY(loP), 1, vLo>=0);    // bottom edge — energy spills DOWN
