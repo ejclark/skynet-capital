@@ -1,3 +1,10 @@
+# [1.117.0](https://github.com/ejclark/skynet-capital/compare/v1.116.0...v1.117.0) (2026-07-27)
+
+
+### Features
+
+* **observatory:** a live match scoreboard on bots-vs-humans ([#196](https://github.com/ejclark/skynet-capital/issues/196)) ([acacb72](https://github.com/ejclark/skynet-capital/commit/acacb72ea8dc39f8aae1e14eaca6333e115434a2))
+
 # [1.116.0](https://github.com/ejclark/skynet-capital/compare/v1.115.0...v1.116.0) (2026-07-27)
 
 
