@@ -1,3 +1,10 @@
+# [1.122.0](https://github.com/ejclark/skynet-capital/compare/v1.121.0...v1.122.0) (2026-07-27)
+
+
+### Features
+
+* intricate textured barad-dûr — ribbed masonry, fibrous-lightning eye ([2e72d4e](https://github.com/ejclark/skynet-capital/commit/2e72d4ea9d214cff1729177a2a46f3bb54c1c3a3))
+
 # [1.121.0](https://github.com/ejclark/skynet-capital/compare/v1.120.0...v1.121.0) (2026-07-27)
 
 
