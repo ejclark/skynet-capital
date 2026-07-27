@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Options academy — progression & the in-app play picker (follow-ups to the risk ladder)
+The `/learn` academy + `src/domain/plays.ts` risk ladder shipped (PR #178): CCP-first, riskier plays
+gated per level. Natural next threads, in priority order:
+- **Server-side progression.** Academy graduation is client-side localStorage today. Persist a learner's
+  unlocked level per participant so it survives devices and can gate real actions (needs the history/
+  persistence backend, or a small per-user KV). _(src: Claude · while: building the options academy)_
+- **Gate the play picker against the ladder.** When an in-app play-selection surface exists (and the
+  login playbook), hide plays above the learner's unlocked level using `unlockedPlays()` / `isLocked()`
+  — "withhold the complex/risky selections until graduated" enforced for real, one source. _(src: Eric ·
+  while: know-your-audience progressive disclosure)_
+- **Interactive lessons.** Each academy lesson could summon its play on a mini payoff/forecast canvas
+  (reuse the login playcall machinery) so learners *see* the shape, not just read it. _(src: Claude ·
+  while: building the options academy)_
+- **Graduation → capability.** Tie academy level to what a member (or their bot persona) may actually
+  trade — the human-side twin of the bot autonomy-readiness eval ladder. _(src: Claude · while: building
+  the options academy)_
+
 ### North-star epic — the Living Universe (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
 The cityscape as a multiplayer, SimCity-like shared world that reflects everyone's trades, bots, and
 market events — **potentially _the brand itself_**, the addictive hook. **Fun as the flywheel**
