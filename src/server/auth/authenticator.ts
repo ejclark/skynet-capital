@@ -2185,7 +2185,7 @@ ${versionTag}
     // itself here (headroom above the top band, at the entry), not in a detached panel. An eyebrow ties
     // it to the underlying + complexity class. Reserved so event labels steer clear.
     var ins=easeIO(clamp01(p.insight));
-    if(W>=820){
+    if(W>=820 && chartNarr()){
       // The title anchor is computed EVERY frame the play is active (not just once the name shows), so the
       // signal read + recap dock beneath it consistently through AIM → INSIGHT → walk.
       var sans2=css("--sans")||"sans-serif", tnx=X0, tnY=SY(hiP)-12, tsz=(W>=1200?26:21), teY=tnY-(tsz+4);   // title scales up on wide viewports (full-width playcall has the room)
@@ -2304,14 +2304,12 @@ ${versionTag}
       }
     }
     drawPanel(strat, sig, p, A);
-    if(W>=820 && proj>0.01) drawTotals(strat, p, A, Xf, SY);   // max P/L + outcome at the far right, by the TARGET
+    if(W>=820 && proj>0.01 && chartNarr()) drawTotals(strat, p, A, Xf, SY);   // max P/L + outcome at the far right — chart-side only when the drawer is tucked
     // The thesis + recap cards are desktop-only — on narrow screens they'd collide with the centered
     // stacked panel, which already carries the play's essentials.
-    if(W>=820){
-      // signal callout is anchored to the aim point and fades out once the walk takes over
-      // Signal modal removed — the dotted forecast trajectory (the ideal path the market should take
-      // given the signal) now communicates the route, with the realized tape tracking it under variance.
+    if(W>=820 && chartNarr()){
       // Retrospective recap once the play resolves — confirms the thesis played out (bookends the WHY).
+      // Drawer-open: the drawer's RESOLVED + CLOSED P/L carries this, so the chart stays clean.
       var recapA=A*clamp01((p.resolve-0.45)/0.55)*(1-clamp01(p.out*1.7));
       if(recapA>0.01) drawRecap(strat, sig, X0, yNow, recapA);
     }
@@ -2587,6 +2585,11 @@ ${versionTag}
     maxL:document.getElementById("pdMaxL"), live:document.getElementById("pdLive"), ticker:document.getElementById("pdTicker"),
     vix:document.getElementById("pdVix"), iv:document.getElementById("pdIv") }; }
   function pdSet(el, txt){ if(el && el.textContent!==txt) el.textContent=txt; }
+  // Decoupled narrative: when the drawer is OPEN it owns the play's name / thesis / totals / recap, so
+  // the chart stays pure geometry. When it's COLLAPSED (or on mobile, where there's no drawer) the chart
+  // self-labels again — the story is always legible somewhere. "Association, not literal placement."
+  function pdCollapsed(){ return document.body.classList.contains("pd-collapsed"); }
+  function chartNarr(){ return W<820 || pdCollapsed(); }
   function updateDrawer(p){
     if(!pdEls) pdRef(); if(!pdEls || !pdEls.play) return;
     if(!p){ if(pdLastPl!==null){ pdSet(pdEls.phase,"◈ STANDING BY"); pdSet(pdEls.live,"Standing by");
