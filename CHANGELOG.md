@@ -1,3 +1,10 @@
+# [1.98.0](https://github.com/ejclark/skynet-capital/compare/v1.97.1...v1.98.0) (2026-07-27)
+
+
+### Features
+
+* **observatory:** observer mode — the funnel's front door (stage 1 to 2) ([#171](https://github.com/ejclark/skynet-capital/issues/171)) ([2d2aa90](https://github.com/ejclark/skynet-capital/commit/2d2aa906b159b5c4561483226674bf7e8ad9ee38))
+
 ## [1.97.1](https://github.com/ejclark/skynet-capital/compare/v1.97.0...v1.97.1) (2026-07-27)
 
 
