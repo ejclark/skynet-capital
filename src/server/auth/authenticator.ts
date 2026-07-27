@@ -2178,7 +2178,7 @@ ${versionTag}
     // that drives entries + profit-taking, aligned tick-for-tick with the realized tape above it.
     if(p.walk>0 && realized.length>3){
       var dxL=W/(SPAN-1), comb=price.slice(0,nowIdx+1).concat(realized), rl2=realized.length;
-      var lt=SY(loP)+18, lh=80; if(lt+lh>field.bottom-6) lt=field.bottom-6-lh; var lb=lt+lh;
+      var lt=SY(loP)+18, lh=(W>=1200?120:100); if(lt+lh>field.bottom-6) lt=field.bottom-6-lh; if(lt<SY(loP)+8) lt=SY(loP)+8; var lb=lt+lh;
       // The RSI RAIL (backing, zones, guides, labels) is laid across the WHOLE region up front; only
       // the RSI LINE grows as the present advances. So the rail spans x0L..Xf; the line stops at xNL.
       var x0L=nowSX+dxL*zoom, xNL=nowSX+rl2*dxL*zoom, xR=Xf;
