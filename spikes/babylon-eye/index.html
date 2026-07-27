@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Eye — Babylon hero spike</title>
+<style>
+  html,body{ margin:0; height:100%; background:#000; overflow:hidden; }
+  #app{ width:100vw; height:100vh; display:block; touch-action:none; }
+  #hud{ position:fixed; left:18px; bottom:16px; font:11px/1.5 ui-monospace,monospace;
+    letter-spacing:.2em; text-transform:uppercase; color:#FF7A2E; opacity:.7; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="app"></canvas>
+<div id="hud">Sauron · hero piece · procedural fire shader</div>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script>
+(function(){
+  "use strict";
+  const canvas = document.getElementById("app");
+  const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer:true, stencil:true, antialias:true });
+  const scene = new BABYLON.Scene(engine);
+  scene.clearColor = new BABYLON.Color4(0.015, 0.008, 0.006, 1);
+
+  const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI/2, Math.PI/2, 6.2, BABYLON.Vector3.Zero(), scene);
+  camera.attachControl(canvas, true);
+  camera.lowerRadiusLimit = 3.5; camera.upperRadiusLimit = 12; camera.fov = 0.8;
+  new BABYLON.HemisphericLight("h", new BABYLON.Vector3(0,1,0), scene).intensity = 0.05;
+
+  // ================= The fiery iris — a procedural fire shader on a facing disc =================
+  BABYLON.Effect.ShadersStore["eyeVertexShader"] = [
+    "precision highp float;",
+    "attribute vec3 position;",
+    "attribute vec2 uv;",
+    "uniform mat4 worldViewProjection;",
+    "varying vec2 vUV;",
+    "void main(){ vUV = uv; gl_Position = worldViewProjection * vec4(position, 1.0); }"
+  ].join("\n");
+  BABYLON.Effect.ShadersStore["eyeFragmentShader"] = [
+    "precision highp float;",
+    "varying vec2 vUV;",
+    "uniform float time;",
+    "float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }",
+    "float noise(vec2 p){ vec2 i=floor(p), f=fract(p);",
+    "  float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.));",
+    "  vec2 u=f*f*(3.-2.*f); return mix(mix(a,b,u.x),mix(c,d,u.x),u.y); }",
+    "float fbm(vec2 p){ float v=0.,a=.5; for(int i=0;i<6;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7); a*=.5;} return v; }",
+    "void main(){",
+    "  vec2 uv = vUV*2.0-1.0;",
+    "  float r = length(uv);",
+    "  float ang = atan(uv.y, uv.x);",
+    "  // turbulent plasma: domain-warped fbm flowing outward + swirling",
+    "  vec2 q = vec2(ang*1.7 + sin(r*4.0 - time)*0.3, r*3.4 - time*1.1);",
+    "  float warp = fbm(q*1.6 + time*0.25);",
+    "  float n = fbm(q + warp);",
+    "  float body = 1.0 - smoothstep(0.35, 1.02, r);",              // iris disc falloff
+    "  float fire = pow(max(n,0.0), 1.5) * (0.5 + 1.6*body);",
+    "  // fire ramp: deep red -> orange -> gold -> white-hot",
+    "  vec3 col = vec3(1.7*fire, 0.65*fire*fire, 0.12*fire*fire*fire);",
+    "  col += vec3(1.0,0.75,0.35) * smoothstep(1.1, 1.7, fire);",   // white-hot filaments
+    "  // the bright iris ring",
+    "  float ring = exp(-pow((r-0.82)*10.0,2.0));",
+    "  col += vec3(1.0,0.55,0.16) * ring * (1.4 + 0.5*fbm(vec2(ang*8.0, time*2.0)));",
+    "  // vertical slit pupil — an almond of black, edges licked by flame",
+    "  float slitW = 0.14 * (1.0 - pow(abs(uv.y*1.02), 1.6));",
+    "  float slit = smoothstep(0.0, 0.03, abs(uv.x) - slitW);",
+    "  col *= mix(0.015, 1.0, clamp(slit,0.0,1.0));",
+    "  col += vec3(1.0,0.5,0.1) * (1.0-clamp(slit,0.0,1.0)) * smoothstep(0.0,0.05, slitW-abs(uv.x)) * 0.0;",
+    "  // outer corona flames beyond the ring",
+    "  float corona = fbm(vec2(ang*3.0 + time*0.4, r*2.0 - time*0.8)) * smoothstep(1.05, 0.8, r) * smoothstep(0.8,1.0,r);",
+    "  col += vec3(1.4,0.5,0.1) * corona * 1.3;",
+    "  float alpha = clamp(max(fire*body*2.0, ring*1.5) + corona*1.5, 0.0, 1.0);",
+    "  gl_FragColor = vec4(col, alpha);",
+    "}"
+  ].join("\n");
+
+  const irisMat = new BABYLON.ShaderMaterial("iris", scene, { fragment:"eye", vertex:"eye" },
+    { attributes:["position","uv"], uniforms:["worldViewProjection","time"], needAlphaBlending:true });
+  irisMat.backFaceCulling = false;
+  irisMat.alphaMode = BABYLON.Engine.ALPHA_ADD;
+  const iris = BABYLON.MeshBuilder.CreatePlane("iris", { size: 4.6 }, scene);
+  iris.material = irisMat;
+  iris.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+  // ================= Electric arcs radiating from the rim (least-path jagged bolts) =================
+  const boltMat = new BABYLON.StandardMaterial("bolt", scene);
+  boltMat.emissiveColor = new BABYLON.Color3(1.0, 0.92, 0.7);
+  boltMat.disableLighting = true; boltMat.alpha = 0.9;
+  function spawnBolt(){
+    const a0 = Math.random()*Math.PI*2;
+    const R0 = 1.55, R1 = 2.1 + Math.random()*1.3;
+    const pts = []; const n = 10;
+    for (let i=0;i<=n;i++){
+      const t=i/n, R = BABYLON.Scalar.Lerp(R0, R1, t);
+      const a = a0 + (Math.random()-0.5)*0.5*t;
+      const jitter = (Math.random()-0.5)*0.28*t;
+      pts.push(new BABYLON.Vector3(Math.cos(a)*R + Math.cos(a+1.5)*jitter, Math.sin(a)*R + Math.sin(a+1.5)*jitter, (Math.random()-0.5)*0.15));
+    }
+    const bolt = BABYLON.MeshBuilder.CreateTube("b", { path: pts, radius: 0.012 + Math.random()*0.02, tessellation: 4 }, scene);
+    bolt.material = boltMat;
+    setTimeout(()=>bolt.dispose(), 70 + Math.random()*90);
+  }
+
+  // ================= Ember + spark corona (particles) =================
+  const embers = new BABYLON.ParticleSystem("embers", 1400, scene);
+  embers.particleTexture = new BABYLON.Texture("data:image/svg+xml;base64,"+btoa(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="5" fill="white"/></svg>'), scene);
+  const disc = new BABYLON.SphereParticleEmitter(); disc.radius = 1.7; disc.radiusRange = 0.25;
+  embers.particleEmitterType = disc; embers.emitter = BABYLON.Vector3.Zero();
+  embers.color1 = new BABYLON.Color4(1.0,0.7,0.2,1); embers.color2 = new BABYLON.Color4(1.0,0.35,0.05,1);
+  embers.colorDead = new BABYLON.Color4(0.3,0.03,0,0);
+  embers.minSize=0.02; embers.maxSize=0.09; embers.minLifeTime=0.5; embers.maxLifeTime=1.6;
+  embers.emitRate=420; embers.blendMode=BABYLON.ParticleSystem.BLENDMODE_ADD;
+  embers.minEmitPower=0.6; embers.maxEmitPower=2.4; embers.gravity=new BABYLON.Vector3(0,0.3,0);
+  embers.start();
+
+  // ================= Glow + cinematic post-processing =================
+  const glow = new BABYLON.GlowLayer("glow", scene, { blurKernelSize: 48 }); glow.intensity = 1.0;
+  const pipe = new BABYLON.DefaultRenderingPipeline("pipe", true, scene, [camera]);
+  pipe.bloomEnabled = true; pipe.bloomThreshold = 0.5; pipe.bloomWeight = 0.75; pipe.bloomKernel = 64; pipe.bloomScale = 0.6;
+  pipe.imageProcessing.vignetteEnabled = true; pipe.imageProcessing.vignetteWeight = 3.4;
+  pipe.imageProcessing.vignetteColor = new BABYLON.Color4(0,0,0,1);
+  pipe.imageProcessing.contrast = 1.35; pipe.imageProcessing.exposure = 1.1;
+  pipe.imageProcessing.toneMappingEnabled = true;
+  pipe.grainEnabled = true; pipe.grain.intensity = 5; pipe.grain.animated = true;
+  pipe.chromaticAberrationEnabled = true; pipe.chromaticAberration.aberrationAmount = 4;
+
+  let t=0, boltAcc=0;
+  scene.onBeforeRenderObservable.add(function(){
+    const dt = engine.getDeltaTime()*0.001; t += dt;
+    irisMat.setFloat("time", t);
+    boltAcc += dt; if (boltAcc > 0.05){ boltAcc = 0; var nb=3+Math.floor(Math.random()*4); for(var k=0;k<nb;k++) spawnBolt(); }
+    camera.alpha = -Math.PI/2 + Math.sin(t*0.25)*0.12;   // subtle life
+  });
+  engine.runRenderLoop(()=>scene.render());
+  window.addEventListener("resize", ()=>engine.resize());
+  scene.executeWhenReady(()=>{ window.__ready = true; });
+})();
+</script>
+</body>
+</html>
