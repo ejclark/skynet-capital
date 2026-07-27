@@ -18,6 +18,26 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### The University metaphor — elevate the academy into a full "Skynet University"
+Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
+(`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
+learn/experiment/graduate arc as a **university** with a coherent, extensible vocabulary:
+- **Majors / faculties** — options fundamentals, the Wheel, directional longs, volatility, risk mgmt;
+  each a track with its own 100→400-level courses (the tiers already exist).
+- **Degrees gate capability** — graduating a level *unlocks* what a member (or their bot persona) may
+  actually trade — the human-side twin of the bot autonomy-readiness eval (ties to the academy
+  "graduation → capability" thread already in the inbox). A diploma is a real permission, not a badge.
+- **Persona-professors** — the D&D/lore personas (`persona-lore`) teach their specialty (Sauron on
+  disciplined order/risk; the Day Trader on momentum) — lore as the faculty, mechanics stay honest.
+- **Campus in the empire** — a university building rises in the sim-city cityscape as you matriculate;
+  a Living-Universe landmark tying learning to the nation-building metaphor (a natural pairing with the
+  founding-reserve / event-ceremony work).
+- **Semesters / cohorts / a quad** — friendly, social framing (study groups, co-op) over the friends-
+  and-family league; office hours, a syllabus, a transcript (needs the history/persistence layer for a
+  real transcript). Keep it celebratory, everyone-graduates-eventually.
+_(src: Eric · while: reviewing the founding-reserve / academy engagement work — "I like the university
+metaphor, bank it to expand on")_
+
 ### Babylon.js as the composable 3D engine for the gameplay layer
 As the product heads toward SimCity-of-the-empire / human-vs-bot gameplay, the hand-rolled 2D canvas +
 one-off WebGL shaders won't scale to real 3D scenes. **Babylon.js** is the best-in-class
