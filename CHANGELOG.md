@@ -1,3 +1,10 @@
+# [1.119.0](https://github.com/ejclark/skynet-capital/compare/v1.118.0...v1.119.0) (2026-07-27)
+
+
+### Features
+
+* **observatory:** rank the leaderboard by realized P/L ([#198](https://github.com/ejclark/skynet-capital/issues/198)) ([a6fc7a3](https://github.com/ejclark/skynet-capital/commit/a6fc7a345979ec6f85512ea117c9b1ce0572d882))
+
 # [1.118.0](https://github.com/ejclark/skynet-capital/compare/v1.117.0...v1.118.0) (2026-07-27)
 
 
