@@ -1,3 +1,10 @@
+# [1.115.0](https://github.com/ejclark/skynet-capital/compare/v1.114.0...v1.115.0) (2026-07-27)
+
+
+### Features
+
+* **observatory:** dry powder founds a reserve — "the empire about to rise" ([c37ae22](https://github.com/ejclark/skynet-capital/commit/c37ae2242c1f6f4f581d4f8815814547ea41f51e))
+
 # [1.114.0](https://github.com/ejclark/skynet-capital/compare/v1.113.0...v1.114.0) (2026-07-27)
 
 
