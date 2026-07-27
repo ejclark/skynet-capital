@@ -1,3 +1,10 @@
+# [1.107.0](https://github.com/ejclark/skynet-capital/compare/v1.106.0...v1.107.0) (2026-07-27)
+
+
+### Features
+
+* **login:** molten-heat + real forked lightning for the play energy ([#181](https://github.com/ejclark/skynet-capital/issues/181)) ([4d1e526](https://github.com/ejclark/skynet-capital/commit/4d1e526e5ddb39400177085d806195261cf59990))
+
 # [1.106.0](https://github.com/ejclark/skynet-capital/compare/v1.105.0...v1.106.0) (2026-07-27)
 
 
