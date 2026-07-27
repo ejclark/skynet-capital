@@ -1,3 +1,10 @@
+# [1.112.0](https://github.com/ejclark/skynet-capital/compare/v1.111.0...v1.112.0) (2026-07-27)
+
+
+### Features
+
+* **autonomy:** autonomous decisions view on bot profiles (Phase 2.1) ([#187](https://github.com/ejclark/skynet-capital/issues/187)) ([b1a9a82](https://github.com/ejclark/skynet-capital/commit/b1a9a824211ae275f8a3b2fe356fd382d407d38c))
+
 # [1.111.0](https://github.com/ejclark/skynet-capital/compare/v1.110.0...v1.111.0) (2026-07-27)
 
 
