@@ -1,3 +1,10 @@
+# [1.113.0](https://github.com/ejclark/skynet-capital/compare/v1.112.0...v1.113.0) (2026-07-27)
+
+
+### Features
+
+* **autonomy:** always-on hosting mechanism for the bot runner (Phase 3.2) ([#189](https://github.com/ejclark/skynet-capital/issues/189)) ([72e3d10](https://github.com/ejclark/skynet-capital/commit/72e3d1098666f50cee62d043af8c4735c56f8d87))
+
 # [1.112.0](https://github.com/ejclark/skynet-capital/compare/v1.111.0...v1.112.0) (2026-07-27)
 
 
