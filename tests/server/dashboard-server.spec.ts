@@ -147,6 +147,24 @@ describe("dashboard-server /add", () => {
     });
   });
 
+  it("offers a persona class picker instead of a free-text persona id", async () => {
+    await withServer(
+      {
+        hub: new ObservatoryHub(board()),
+        addParticipant: () => Promise.resolve({ ok: true, id: "a", displayName: "a" }),
+      },
+      async (base) => {
+        const html = await (await fetch(`${base}/add`)).text();
+        // radio-cards driven by the registry, not a bare text input
+        expect(html).toContain('class="classpick"');
+        expect(html).toContain('type="radio" name="personaId" value="day-trader"');
+        expect(html).toContain('value="banker"');
+        expect(html).toContain("The Duelist"); // a persona legend surfaces on its card
+        expect(html).not.toContain('name="personaId" placeholder');
+      },
+    );
+  });
+
   it("returns 400 with the error when the handler rejects", async () => {
     const addParticipant = (): Promise<AddResult> => Promise.resolve({ ok: false, error: "nope" });
     await withServer({ hub: new ObservatoryHub(board()), addParticipant }, async (base) => {
