@@ -57,6 +57,59 @@ function renderEyeEmblem(cx: number, cy: number, s: number): string {
   return `<g class="persona-eye" aria-hidden="true"><circle cx="${cx}" cy="${cy}" r="${(s * 1.8).toFixed(1)}" fill="#FF9E3D" fill-opacity="0.18"/><path d="M ${cx} ${cy - eh} Q ${cx + ew} ${cy} ${cx} ${cy + eh} Q ${cx - ew} ${cy} ${cx} ${cy - eh} Z" fill="#FF7A2E"/><path d="M ${cx} ${cy - eh * 0.66} Q ${cx + ew * 0.34} ${cy} ${cx} ${cy + eh * 0.66} Q ${cx - ew * 0.34} ${cy} ${cx} ${cy - eh * 0.66} Z" fill="#140300"/><path d="M ${(cx - ew * 1.7).toFixed(1)} ${(cy + eh * 0.5).toFixed(1)} Q ${(cx - ew * 2).toFixed(1)} ${cy} ${(cx - ew * 1.2).toFixed(1)} ${(cy - eh).toFixed(1)}" stroke="#05070B" stroke-width="1.4" fill="none"/><path d="M ${(cx + ew * 1.7).toFixed(1)} ${(cy + eh * 0.5).toFixed(1)} Q ${(cx + ew * 2).toFixed(1)} ${cy} ${(cx + ew * 1.2).toFixed(1)} ${(cy - eh).toFixed(1)}" stroke="#05070B" stroke-width="1.4" fill="none"/></g>`;
 }
 
+/** Compact money for a tight SVG label: $1.2M / $40K / $920 (no cents). Deterministic, pure. */
+function briefMoney(n: number): string {
+  const v = Math.abs(n);
+  if (v >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `$${Math.round(n / 1e3)}K`;
+  return `$${Math.round(n)}`;
+}
+
+/**
+ * The founding RESERVE — uninvested capital rendered as an empire *about to rise*: a surveyed
+ * foundation, dashed scaffold uprights, and a crane, scaled (log-compressed) by dry powder. The
+ * post-login answer to the login "key to the city" — a watching member with cash sees a city ready
+ * to found, never a blank lot. Pure/deterministic SVG; no animation, honors the theme groundline.
+ */
+function foundingReserve(W: number, baseY: number, cash: number, compact: boolean): string {
+  const scale = Math.min(1, Math.log10(cash + 1) / 6); // ~1.0 at $1M, ~0.67 at $10K — log-compressed
+  const fw = Math.round((compact ? 54 : 108) + (compact ? 60 : 150) * scale); // footprint width
+  const fx = Math.round(W / 2 - fw / 2);
+  const riseH = compact ? 26 : 52;
+  const plotH = compact ? 14 : 22;
+  const topY = baseY - riseH;
+  // Reserve glow — the dry powder's latent energy pooled on the plot.
+  const glow = `<ellipse cx="${W / 2}" cy="${baseY}" rx="${fw * 0.62}" ry="${compact ? 18 : 30}" fill="var(--accent)" fill-opacity="0.10"/>`;
+  // Surveyed foundation footprint (dashed) + corner survey stakes.
+  const footprint = `<rect x="${fx}" y="${baseY - plotH}" width="${fw}" height="${plotH}" rx="2" fill="var(--accent)" fill-opacity="0.06" stroke="var(--accent)" stroke-opacity="0.5" stroke-dasharray="4 3"/>`;
+  let stakes = "";
+  for (const sx of [fx, fx + fw]) {
+    stakes += `<line x1="${sx}" y1="${baseY - plotH - 4}" x2="${sx}" y2="${baseY + 3}" stroke="var(--accent)" stroke-opacity="0.6" stroke-width="1"/>`;
+  }
+  // Dashed scaffold uprights rising off the footprint — the structure not yet built.
+  let scaffold = "";
+  const posts = compact ? 3 : 4;
+  for (let i = 0; i < posts; i++) {
+    const ux = Math.round(fx + (fw * (i + 0.5)) / posts);
+    scaffold += `<line x1="${ux}" y1="${baseY - plotH}" x2="${ux}" y2="${topY}" stroke="var(--accent)" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="3 3"/>`;
+  }
+  // Faint cross-braces at two heights, tying the scaffold together.
+  for (const by of [topY + riseH * 0.35, topY + riseH * 0.7]) {
+    scaffold += `<line x1="${fx + 4}" y1="${by.toFixed(1)}" x2="${fx + fw - 4}" y2="${by.toFixed(1)}" stroke="var(--accent)" stroke-opacity="0.22" stroke-width="1" stroke-dasharray="2 4"/>`;
+  }
+  // A tower crane at the right edge — mast, jib, and a hanging hook line (the build is underway).
+  const mastX = fx + fw - (compact ? 8 : 12);
+  const craneTop = topY - (compact ? 6 : 12);
+  const jibEnd = fx + Math.round(fw * 0.35);
+  const crane = `<g stroke="var(--accent)" stroke-opacity="0.7" stroke-width="1.2" fill="none"><line x1="${mastX}" y1="${baseY - plotH}" x2="${mastX}" y2="${craneTop}"/><line x1="${mastX + 8}" y1="${craneTop}" x2="${jibEnd}" y2="${craneTop}"/><line x1="${jibEnd + 10}" y1="${craneTop}" x2="${jibEnd + 10}" y2="${craneTop + (compact ? 8 : 14)}" stroke-dasharray="2 2"/></g>`;
+  // A key spark at the plot's crown — echoes the login "key to the city" unlock.
+  const spark = `<path d="M ${W / 2} ${(topY - (compact ? 3 : 6)).toFixed(1)} l ${compact ? 3 : 5} ${compact ? 5 : 8} l ${compact ? -3 : -5} ${compact ? -2 : -3} l ${compact ? -3 : -5} ${compact ? 2 : 3} Z" fill="var(--accent)" fill-opacity="0.85"/>`;
+  const labels = compact
+    ? ""
+    : `<text x="${W / 2}" y="${topY - 12}" text-anchor="middle" font-size="9" letter-spacing="1.6" fill="var(--accent)" font-family="var(--mono)">AWAITING FOUNDING</text><text x="${W / 2}" y="${baseY + 12}" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="var(--mono)">${briefMoney(cash)} RESERVE · the empire about to rise</text>`;
+  return `${glow}${footprint}${stakes}${scaffold}${crane}${spark}${labels}`;
+}
+
 export interface SkylineOptions {
   readonly width?: number;
   readonly height?: number;
@@ -89,7 +142,13 @@ export function renderEmpireSkyline(
   const groundline = `<line x1="0" y1="${baseY}" x2="${W}" y2="${baseY}" stroke="var(--border)"/>`;
 
   if (!empire.founded) {
-    return `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline — no holdings yet" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}<text x="${W / 2}" y="${baseY - (compact ? 10 : 18)}" text-anchor="middle" font-size="${compact ? 9 : 11}" fill="var(--muted)" font-family="var(--mono)">undeveloped — no holdings yet</text>${label}</svg>`;
+    const shell = `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline — awaiting founding" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}`;
+    // Dry powder → a landmark RESERVE: the empire "about to rise" (R4). The post-login twin of the
+    // login "key to the city" — uninvested capital reads as founded-and-scaffolded, not a dead plot.
+    if (empire.reserve.cash > 0) {
+      return `${shell}${foundingReserve(W, baseY, empire.reserve.cash, compact)}${label}</svg>`;
+    }
+    return `${shell}<text x="${W / 2}" y="${baseY - (compact ? 10 : 18)}" text-anchor="middle" font-size="${compact ? 9 : 11}" fill="var(--muted)" font-family="var(--mono)">undeveloped — no holdings yet</text>${label}</svg>`;
   }
 
   // Display the top holdings as towers; everything beyond aggregates into a LABELED outer district
