@@ -1,3 +1,10 @@
+## [1.97.1](https://github.com/ejclark/skynet-capital/compare/v1.97.0...v1.97.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **login:** keep present anchored on close; scripted-dotted plan vs. lively realized ink ([#170](https://github.com/ejclark/skynet-capital/issues/170)) ([6ee4b3e](https://github.com/ejclark/skynet-capital/commit/6ee4b3ea48cd1922ee0b4c61ce2540c98ab9849e))
+
 # [1.97.0](https://github.com/ejclark/skynet-capital/compare/v1.96.1...v1.97.0) (2026-07-27)
 
 
