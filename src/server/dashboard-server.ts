@@ -17,6 +17,7 @@ import type { Session } from "./auth/session.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "./participant-service.js";
+import { personaClasses } from "./persona-classes.js";
 import { sseFrame } from "./sse.js";
 
 export interface DashboardServerConfig {
@@ -500,7 +501,21 @@ const ADD_STYLE = `${PAGE_STYLE}
   .step-d[open] summary .chev{ transform:rotate(90deg); }
   .step-d .sd-body{ padding:2px 18px 18px 54px; font-size:13px; color:var(--muted); line-height:1.6; }
   .step-d .sd-body b{ color:var(--text); }
-  .step-d .sd-body a{ font-weight:600; }`;
+  .step-d .sd-body a{ font-weight:600; }
+  /* --- /add persona class picker (character sheet) --- */
+  .classpick{ margin:14px 0 4px; }
+  .cp-label{ display:block; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:10px; }
+  .cp-label small{ text-transform:none; letter-spacing:0; font-weight:400; opacity:.8; }
+  .cp-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+  .cp-card{ position:relative; display:block; margin:0; padding:14px 15px; background:var(--surface); border:1px solid var(--border); border-radius:11px; cursor:pointer; text-transform:none; letter-spacing:normal; transition:border-color .15s, background .15s; }
+  .cp-card:hover{ border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); }
+  .cp-card input{ position:absolute; opacity:0; width:0; height:0; }
+  .cp-card:has(input:checked), .cp-card.sel{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 9%,var(--surface)); }
+  .cp-card:focus-within{ outline:2px solid var(--accent); outline-offset:2px; }
+  .cp-name{ display:block; font-size:14px; font-weight:700; color:var(--text); }
+  .cp-id{ display:block; font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--accent); margin:2px 0 7px; }
+  .cp-thesis{ display:block; font-size:12.5px; color:var(--muted); line-height:1.5; }
+  .cp-legend{ display:block; font-size:11.5px; color:color-mix(in srgb,var(--muted) 85%,transparent); line-height:1.5; margin-top:7px; font-style:italic; }`;
 
 function addShell(title: string, inner: string, wide = false): string {
   return `<!doctype html>
@@ -549,8 +564,33 @@ Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — 
   );
 }
 
+const CLASSPICK_JS = `(function(){
+  var kind=document.getElementById("kind"), pick=document.getElementById("classpick");
+  if(!kind||!pick) return;
+  var radios=pick.querySelectorAll('input[name=personaId]');
+  function sync(){ var bot=kind.value==="bot"; pick.hidden=!bot;
+    for(var i=0;i<radios.length;i++) radios[i].required=bot; }
+  kind.addEventListener("change", sync); sync();
+  // clicking anywhere on a card selects its radio (label already wraps it, but keep keyboard tidy)
+  pick.addEventListener("click", function(e){ var card=e.target.closest(".cp-card"); if(!card) return;
+    var r=card.querySelector('input[name=personaId]'); if(r){ r.checked=true; }
+    var cards=pick.querySelectorAll(".cp-card"); for(var i=0;i<cards.length;i++) cards[i].classList.toggle("sel", cards[i]===card); });
+})();`;
+
 function addFormHtml(key: string): string {
   const action = `/add${key ? `?key=${encodeURIComponent(key)}` : ""}`;
+  const classCards = personaClasses()
+    .map(
+      (c) =>
+        `<label class="cp-card">
+        <input type="radio" name="personaId" value="${escapeHtml(c.id)}">
+        <span class="cp-name">${escapeHtml(c.name)}</span>
+        <span class="cp-id">${escapeHtml(c.id)}</span>
+        <span class="cp-thesis">${escapeHtml(c.thesis)}</span>
+        ${c.legend ? `<span class="cp-legend">${escapeHtml(c.legend)}</span>` : ""}
+      </label>`,
+    )
+    .join("\n      ");
   return addShell(
     "Add your account — Skynet Capital",
     `<h1>Connect your Alpaca account</h1>
@@ -579,13 +619,19 @@ then paste them below — we read them <b>only</b> to show your balance and trad
   <label>Alpaca paper API key<input name="apiKey" required autocomplete="off" placeholder="PK…"></label>
   <label>Alpaca paper API secret<input name="apiSecret" required autocomplete="off" placeholder="••••••••"></label>
   <label>Account type
-    <select name="kind"><option value="human">Human</option><option value="bot">Bot</option></select>
+    <select name="kind" id="kind"><option value="human">Human — you trade it yourself</option><option value="bot">Bot — a persona trades it autonomously</option></select>
   </label>
-  <label>Persona id <small>(only for bots)</small><input name="personaId" placeholder="e.g. day-trader"></label>
+  <div class="classpick" id="classpick" hidden>
+    <span class="cp-label">Choose a class <small>— the persona your bot runs</small></span>
+    <div class="cp-grid">
+      ${classCards}
+    </div>
+  </div>
   <label>Time zone <small>(optional)</small><input name="timezone" placeholder="America/Chicago"></label>
   <button type="submit">Add my account</button>
 </form>
-<p class="note">Paper keys only · alpaca.markets → Paper Trading → API Keys</p>`,
+<p class="note">Paper keys only · alpaca.markets → Paper Trading → API Keys</p>
+<script>${CLASSPICK_JS}</script>`,
   );
 }
 
