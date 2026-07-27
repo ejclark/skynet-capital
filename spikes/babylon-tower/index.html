@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Barad-dûr — Babylon spike</title>
+<style>
+  html,body{ margin:0; height:100%; background:#05070B; overflow:hidden; }
+  #app{ width:100vw; height:100vh; display:block; touch-action:none; }
+  #hud{ position:fixed; left:18px; bottom:16px; font:11px/1.5 ui-monospace,monospace;
+    letter-spacing:.18em; text-transform:uppercase; color:#35D0BA; opacity:.75; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="app"></canvas>
+<div id="hud">Barad-dûr · Babylon spike · WebGL</div>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script>
+(function(){
+  "use strict";
+  const canvas = document.getElementById("app");
+  const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer:true, stencil:true, antialias:true });
+
+  const scene = new BABYLON.Scene(engine);
+  scene.clearColor = new BABYLON.Color4(0.02, 0.03, 0.05, 1);
+  scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+  scene.fogDensity = 0.010;
+  scene.fogColor = new BABYLON.Color3(0.03, 0.05, 0.07);
+
+  // ---- Camera: a slow cinematic orbit looking up at the tower ----
+  const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI/2 + 0.5, 1.28, 78, new BABYLON.Vector3(0, 20, 0), scene);
+  camera.attachControl(canvas, true);
+  camera.lowerRadiusLimit = 42; camera.upperRadiusLimit = 120;
+  camera.fov = 0.9;
+
+  // ---- Lighting: cold ambient + a warm rim from the Eye ----
+  const ambient = new BABYLON.HemisphericLight("amb", new BABYLON.Vector3(0.2, 1, 0.1), scene);
+  ambient.intensity = 0.28;
+  ambient.diffuse = new BABYLON.Color3(0.30, 0.55, 0.75);   // electric-cool key
+  ambient.groundColor = new BABYLON.Color3(0.02, 0.03, 0.05);
+
+  const EYE_Y = 46;
+  const eyeGlow = new BABYLON.PointLight("eyeGlow", new BABYLON.Vector3(0, EYE_Y, 6), scene);
+  eyeGlow.diffuse = new BABYLON.Color3(1.0, 0.42, 0.12);    // fire
+  eyeGlow.intensity = 1.1; eyeGlow.range = 55;
+
+  // ---- Materials ----
+  const stone = new BABYLON.StandardMaterial("stone", scene);
+  stone.diffuseColor = new BABYLON.Color3(0.03, 0.04, 0.05);   // near-black basalt
+  stone.specularColor = new BABYLON.Color3(0.06, 0.10, 0.13);
+  stone.specularPower = 48;
+  stone.emissiveColor = new BABYLON.Color3(0.005, 0.01, 0.015);
+  // Fresnel rim: silhouette edges catch a cold electric light, faces stay black → a menacing fortress.
+  stone.emissiveFresnelParameters = new BABYLON.FresnelParameters();
+  stone.emissiveFresnelParameters.leftColor = new BABYLON.Color3(0.16, 0.62, 0.72);
+  stone.emissiveFresnelParameters.rightColor = new BABYLON.Color3(0.0, 0.0, 0.0);
+  stone.emissiveFresnelParameters.power = 3.2;
+  stone.emissiveFresnelParameters.bias = 0.35;
+
+  const edge = new BABYLON.StandardMaterial("edge", scene);
+  edge.emissiveColor = new BABYLON.Color3(0.05, 0.30, 0.36);   // dim teal tracer rings
+  edge.disableLighting = true;
+
+  // ---- The tower: stacked, tapering, rotated tiers → the jagged Barad-dûr silhouette ----
+  const towerRoot = new BABYLON.TransformNode("tower", scene);
+  const TIERS = 9;
+  for (let i = 0; i < TIERS; i++){
+    const t = i / (TIERS - 1);
+    const y = i * 5.0;
+    const r = BABYLON.Scalar.Lerp(11, 3.2, t);          // taper up
+    const h = 5.4;
+    const seg = BABYLON.MeshBuilder.CreateCylinder("t"+i, { diameterTop: r*1.7, diameterBottom: r*2, height: h, tessellation: 6 }, scene);
+    seg.material = stone;
+    seg.position.y = y;
+    seg.rotation.y = i * 0.28;                            // twist each tier
+    seg.parent = towerRoot;
+    // a glowing tracer ring at each tier joint
+    const ring = BABYLON.MeshBuilder.CreateTorus("r"+i, { diameter: r*2.0, thickness: 0.12, tessellation: 6 }, scene);
+    ring.material = edge; ring.position.y = y + h/2; ring.rotation.y = i*0.28; ring.parent = towerRoot;
+    // buttress spikes flaring off the lower tiers
+    if (i < 5){
+      for (let s = 0; s < 6; s++){
+        const spike = BABYLON.MeshBuilder.CreateCylinder("sp", { diameterTop:0, diameterBottom:1.1, height:4.5, tessellation:4 }, scene);
+        spike.material = stone;
+        const a = s * Math.PI/3 + i*0.28;
+        spike.position.set(Math.cos(a)*r*1.05, y, Math.sin(a)*r*1.05);
+        spike.rotation.z = Math.PI/2; spike.rotation.y = -a;
+        spike.parent = towerRoot;
+      }
+    }
+  }
+  // the crown: sharp horns cradling the Eye
+  for (let s = 0; s < 4; s++){
+    const horn = BABYLON.MeshBuilder.CreateCylinder("horn", { diameterTop:0, diameterBottom:1.6, height:12, tessellation:4 }, scene);
+    horn.material = stone;
+    const a = s * Math.PI/2 + Math.PI/4;
+    horn.position.set(Math.cos(a)*4, (TIERS-1)*5.0 + 4, Math.sin(a)*4);
+    horn.rotation.x = Math.sin(a)*0.5; horn.rotation.z = -Math.cos(a)*0.5;
+    horn.parent = towerRoot;
+  }
+
+  // ---- The Eye of Sauron: a fiery almond with a slit pupil, wreathed in flame ----
+  const eyeRoot = new BABYLON.TransformNode("eyeRoot", scene);
+  eyeRoot.position.y = EYE_Y;
+
+  const fire = new BABYLON.StandardMaterial("fire", scene);
+  fire.emissiveColor = new BABYLON.Color3(1.0, 0.5, 0.14);
+  fire.diffuseColor = new BABYLON.Color3(0,0,0);
+  fire.disableLighting = true;
+  // fresnel makes the rim hotter → a glowing coal, not a flat disc
+  fire.emissiveFresnelParameters = new BABYLON.FresnelParameters();
+  fire.emissiveFresnelParameters.leftColor = new BABYLON.Color3(1.0, 0.85, 0.4);
+  fire.emissiveFresnelParameters.rightColor = new BABYLON.Color3(0.9, 0.18, 0.03);
+  fire.emissiveFresnelParameters.power = 1.6;
+
+  const eyeball = BABYLON.MeshBuilder.CreateSphere("eye", { diameter: 9, segments: 32 }, scene);
+  eyeball.scaling = new BABYLON.Vector3(1.7, 1.0, 0.5);   // almond
+  eyeball.material = fire; eyeball.parent = eyeRoot;
+
+  const pupilMat = new BABYLON.StandardMaterial("pupil", scene);
+  pupilMat.emissiveColor = new BABYLON.Color3(0.02, 0.0, 0.0);
+  pupilMat.diffuseColor = new BABYLON.Color3(0,0,0); pupilMat.disableLighting = true;
+  const pupil = BABYLON.MeshBuilder.CreateSphere("pupil", { diameter: 8.4, segments: 24 }, scene);
+  pupil.scaling = new BABYLON.Vector3(0.22, 0.92, 0.55);
+  pupil.material = pupilMat; pupil.position.z = -0.6; pupil.parent = eyeRoot;
+
+  // ---- The gaze beam: a volumetric cone of fire-light sweeping outward ----
+  const beam = BABYLON.MeshBuilder.CreateCylinder("beam", { diameterTop: 12, diameterBottom: 1.5, height: 52, tessellation: 24 }, scene);
+  const beamMat = new BABYLON.StandardMaterial("beamMat", scene);
+  beamMat.emissiveColor = new BABYLON.Color3(1.0, 0.45, 0.12);
+  beamMat.alpha = 0.035; beamMat.disableLighting = true;
+  beamMat.backFaceCulling = false;
+  beam.material = beamMat;
+  beam.rotation.x = Math.PI/2.3;
+  beam.position.set(0, EYE_Y, 26);
+  beam.parent = null;
+
+  // ---- Embers rising off the crown ----
+  const embers = new BABYLON.ParticleSystem("embers", 900, scene);
+  embers.particleTexture = new BABYLON.Texture("data:image/svg+xml;base64," + btoa(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="white"/></svg>'), scene);
+  embers.emitter = new BABYLON.Vector3(0, EYE_Y - 4, 0);
+  embers.minEmitBox = new BABYLON.Vector3(-6, -2, -6);
+  embers.maxEmitBox = new BABYLON.Vector3(6, 2, 6);
+  embers.color1 = new BABYLON.Color4(1.0, 0.6, 0.15, 1.0);
+  embers.color2 = new BABYLON.Color4(1.0, 0.25, 0.05, 1.0);
+  embers.colorDead = new BABYLON.Color4(0.2, 0.02, 0, 0.0);
+  embers.minSize = 0.15; embers.maxSize = 0.6;
+  embers.minLifeTime = 1.4; embers.maxLifeTime = 3.2;
+  embers.emitRate = 160;
+  embers.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
+  embers.gravity = new BABYLON.Vector3(0, 3.2, 0);        // rise
+  embers.direction1 = new BABYLON.Vector3(-1, 4, -1);
+  embers.direction2 = new BABYLON.Vector3(1, 6, 1);
+  embers.start();
+
+  // ---- Electric arcs crawling the tower (least-path jagged bolts) ----
+  function makeBolt(){
+    const pts = []; const n = 14;
+    const baseA = Math.random()*Math.PI*2;
+    for (let i=0;i<=n;i++){
+      const t = i/n, y = t*44;
+      const rr = BABYLON.Scalar.Lerp(11, 3.2, t) * 2.05;
+      const a = baseA + Math.sin(t*6)*0.25 + (Math.random()-0.5)*0.4;
+      pts.push(new BABYLON.Vector3(Math.cos(a)*rr, y, Math.sin(a)*rr));
+    }
+    const bolt = BABYLON.MeshBuilder.CreateTube("bolt", { path: pts, radius: 0.06, tessellation: 4, updatable:false }, scene);
+    const m = new BABYLON.StandardMaterial("boltM", scene);
+    m.emissiveColor = new BABYLON.Color3(0.35, 0.9, 1.0);   // electric cyan
+    m.disableLighting = true; bolt.material = m;
+    setTimeout(()=>bolt.dispose(), 160 + Math.random()*180);
+  }
+  setInterval(makeBolt, 380);
+
+  // ---- Post-processing: bloom (the fire/electric glow), grain, vignette ----
+  const glow = new BABYLON.GlowLayer("glow", scene, { blurKernelSize: 32 });
+  glow.intensity = 0.55;   // only the fire/electric emissives bloom, not the whole tower
+  const pipeline = new BABYLON.DefaultRenderingPipeline("pipe", true, scene, [camera]);
+  pipeline.bloomEnabled = true; pipeline.bloomThreshold = 0.80; pipeline.bloomWeight = 0.35; pipeline.bloomKernel = 48; pipeline.bloomScale = 0.5;
+  pipeline.grainEnabled = true; pipeline.grain.intensity = 6; pipeline.grain.animated = true;
+  pipeline.imageProcessing.vignetteEnabled = true;
+  pipeline.imageProcessing.vignetteWeight = 4.0;
+  pipeline.imageProcessing.vignetteColor = new BABYLON.Color4(0,0,0,1);
+  pipeline.imageProcessing.contrast = 1.5;
+  pipeline.imageProcessing.exposure = 1.05;
+  pipeline.chromaticAberrationEnabled = true; pipeline.chromaticAberration.aberrationAmount = 3.5;
+
+  // ---- Animate: slow orbit, eye pulse, beam sweep ----
+  let t = 0;
+  scene.onBeforeRenderObservable.add(function(){
+    t += engine.getDeltaTime() * 0.001;
+    camera.alpha += 0.0016;
+    const pulse = 0.85 + Math.sin(t*1.7)*0.15;
+    fire.emissiveColor.set(1.0, 0.42*pulse + 0.1, 0.12*pulse);
+    eyeGlow.intensity = 1.2 + Math.sin(t*1.7)*0.4;
+    beam.rotation.y = Math.sin(t*0.35) * 0.5;
+    beamMat.alpha = 0.025 + Math.abs(Math.sin(t*0.9))*0.02;
+    eyeRoot.rotation.y = Math.sin(t*0.4)*0.18;             // the Eye searches
+  });
+
+  engine.runRenderLoop(()=>scene.render());
+  window.addEventListener("resize", ()=>engine.resize());
+  // signal for the screenshot harness that the first frame drew
+  scene.executeWhenReady(()=>{ window.__ready = true; });
+})();
+</script>
+</body>
+</html>
