@@ -1,3 +1,10 @@
+# [1.104.0](https://github.com/ejclark/skynet-capital/compare/v1.103.0...v1.104.0) (2026-07-27)
+
+
+### Features
+
+* **login:** playcall recap in the drawer with a connector to its target ([#177](https://github.com/ejclark/skynet-capital/issues/177)) ([6e3a1cb](https://github.com/ejclark/skynet-capital/commit/6e3a1cbbbe5c7ee1ac8ad36ce3e2a0f44a701e75))
+
 # [1.103.0](https://github.com/ejclark/skynet-capital/compare/v1.102.0...v1.103.0) (2026-07-27)
 
 
