@@ -1,3 +1,10 @@
+# [1.92.0](https://github.com/ejclark/skynet-capital/compare/v1.91.1...v1.92.0) (2026-07-27)
+
+
+### Features
+
+* **login:** frame the tower + even gaze backlight + boundary energy spill ([#161](https://github.com/ejclark/skynet-capital/issues/161)) ([f118b59](https://github.com/ejclark/skynet-capital/commit/f118b59c643742cb0faca6c0be507cd57ca6f4bb))
+
 ## [1.91.1](https://github.com/ejclark/skynet-capital/compare/v1.91.0...v1.91.1) (2026-07-27)
 
 
