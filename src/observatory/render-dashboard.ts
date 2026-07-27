@@ -638,17 +638,19 @@ function historyPanel(snapshot: ParticipantSnapshot, history?: readonly EquitySa
 }
 
 /** Metrics the leaderboard can rank by — all snapshot-derived (no history needed). */
-export type LeaderMetric = "equity" | "pl" | "return";
+export type LeaderMetric = "equity" | "pl" | "return" | "realized";
 
 const LEADER_METRICS: ReadonlyArray<{ key: LeaderMetric; label: string }> = [
   { key: "equity", label: "Equity" },
   { key: "pl", label: "Unrealized P/L" },
   { key: "return", label: "Return %" },
+  { key: "realized", label: "Realized P/L" },
 ];
 
 function metricValue(snapshot: ParticipantSnapshot, metric: LeaderMetric): number {
   const pl = participantUnrealized(snapshot);
   if (metric === "pl") return pl;
+  if (metric === "realized") return snapshot.realizedPl ?? 0;
   if (metric === "return") {
     const invested = participantInvested(snapshot);
     return invested > 0 ? (pl / invested) * 100 : 0;
@@ -658,7 +660,7 @@ function metricValue(snapshot: ParticipantSnapshot, metric: LeaderMetric): numbe
 
 function formatMetric(value: number, metric: LeaderMetric): string {
   if (metric === "return") return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
-  if (metric === "pl") return formatSigned(value);
+  if (metric === "pl" || metric === "realized") return formatSigned(value);
   return formatCurrency(value);
 }
 
