@@ -1,3 +1,10 @@
+# [1.116.0](https://github.com/ejclark/skynet-capital/compare/v1.115.0...v1.116.0) (2026-07-27)
+
+
+### Features
+
+* **observatory:** invite the first play on a funded-but-untraded desk ([#195](https://github.com/ejclark/skynet-capital/issues/195)) ([70c30e3](https://github.com/ejclark/skynet-capital/commit/70c30e3cfa49f745394fae46d86688f04801bbe3))
+
 # [1.115.0](https://github.com/ejclark/skynet-capital/compare/v1.114.0...v1.115.0) (2026-07-27)
 
 
