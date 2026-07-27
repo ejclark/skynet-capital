@@ -1,3 +1,10 @@
+# [1.97.0](https://github.com/ejclark/skynet-capital/compare/v1.96.1...v1.97.0) (2026-07-27)
+
+
+### Features
+
+* **process:** duel-log hooks — fan-out/fan-in/intent capture for eval mining ([#169](https://github.com/ejclark/skynet-capital/issues/169)) ([657bf14](https://github.com/ejclark/skynet-capital/commit/657bf143668fa81fbb6d3e05e14c02a1db2fa55f))
+
 ## [1.96.1](https://github.com/ejclark/skynet-capital/compare/v1.96.0...v1.96.1) (2026-07-27)
 
 
