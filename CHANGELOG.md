@@ -1,3 +1,10 @@
+# [1.96.0](https://github.com/ejclark/skynet-capital/compare/v1.95.0...v1.96.0) (2026-07-27)
+
+
+### Features
+
+* **personas:** the banker — first character through the sheet→eval→roster pipeline ([#167](https://github.com/ejclark/skynet-capital/issues/167)) ([685049e](https://github.com/ejclark/skynet-capital/commit/685049e4e4344960eccc910a5474dd44be134794))
+
 # [1.95.0](https://github.com/ejclark/skynet-capital/compare/v1.94.0...v1.95.0) (2026-07-27)
 
 
