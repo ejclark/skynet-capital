@@ -81,6 +81,15 @@ describe("empire-skyline", () => {
       expect(other).not.toContain("persona-eye");
     });
 
+    it("aggregates holdings beyond the display cap into a labeled outer district", () => {
+      const many = Array.from({ length: 12 }, (_, i) => pos(`T${i}`, 100 - i));
+      const svg = renderEmpireSkyline(snap(many));
+      expect(svg).toContain(">+3<"); // 12 holdings, 9 towers, 3 aggregated — visibly, never silently
+      expect(svg).toContain(">OUTER<");
+      const few = renderEmpireSkyline(snap([pos("NVDA", 100)]));
+      expect(few).not.toContain("OUTER");
+    });
+
     it("compact mode drops per-building ticker labels + RESERVE but keeps the theme", () => {
       const svg = renderEmpireSkyline(snap([pos("NVDA", 100), pos("META", 60)], { cash: 40 }), {
         compact: true,

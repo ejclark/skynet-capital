@@ -14,8 +14,33 @@ import type { EmpireState, LandmarkState, StructureState, WorldState } from "./w
  *  - an empty portfolio is a FOUNDING state (frontier plot + reserve), never a blank or a fake city.
  */
 
-/** How many structures a skyline renders — the top holdings by weight (matches the SVG renderer). */
+/**
+ * How many structures a compact skyline DISPLAYS as individual towers. The projection itself never
+ * truncates — renderers show the top MAX_STRUCTURES and aggregate the rest via tailOf() so overflow
+ * is visible ("+N OUTER"), never silent.
+ */
 export const MAX_STRUCTURES = 9;
+
+/** A labeled aggregate of the holdings a renderer can't show individually (the "outer district"). */
+export interface TailAggregate {
+  readonly count: number;
+  readonly marketValue: number;
+  readonly unrealizedPl: number;
+}
+
+/** Aggregate the structures beyond a display cap; undefined when everything fits. */
+export function tailOf(
+  structures: readonly StructureState[],
+  max: number = MAX_STRUCTURES,
+): TailAggregate | undefined {
+  if (structures.length <= max) return undefined;
+  const rest = structures.slice(max);
+  return {
+    count: rest.length,
+    marketValue: rest.reduce((s, x) => s + x.marketValue, 0),
+    unrealizedPl: rest.reduce((s, x) => s + x.unrealizedPl, 0),
+  };
+}
 
 const unrealized = (p: PositionView): number => p.marketValue - p.quantity * p.avgPrice;
 
@@ -52,11 +77,11 @@ export function projectEmpire(
   snapshot: ParticipantSnapshot,
   opts: ProjectOptions = {},
 ): EmpireState {
-  // R1+R2+R3 — the skyline's structures: top holdings by weight, mass relative to the largest.
-  const sorted = [...snapshot.positions]
-    .sort((a, b) => b.marketValue - a.marketValue)
-    .slice(0, MAX_STRUCTURES);
+  // R1+R2+R2b+R3 — ALL holdings become structures (no silent truncation), sorted by weight;
+  // mass is value relative to the largest, footprint is cost basis relative to the largest.
+  const sorted = [...snapshot.positions].sort((a, b) => b.marketValue - a.marketValue);
   const maxVal = Math.max(...sorted.map((p) => p.marketValue), 1);
+  const maxBasis = Math.max(...sorted.map((p) => Math.abs(p.quantity * p.avgPrice)), 1);
   const structures: StructureState[] = sorted.map((p) => {
     const u = unrealized(p);
     const basis = Math.abs(p.quantity * p.avgPrice);
@@ -64,6 +89,7 @@ export function projectEmpire(
       symbol: p.symbol,
       sector: sectorOf(p.symbol),
       mass: p.marketValue / maxVal,
+      footprint: basis / maxBasis,
       health: basis > 0 ? clamp(u / basis, -1, 1) : 0,
       unrealizedPl: u,
       marketValue: p.marketValue,

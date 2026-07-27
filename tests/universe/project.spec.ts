@@ -81,6 +81,24 @@ describe("projectEmpire", () => {
     expect(e.structures).toEqual([]);
   });
 
+  it("projects ALL positions — nothing silently truncated (tailOf aggregates for display)", async () => {
+    const many = Array.from({ length: 12 }, (_, i) => pos(`T${i}`, 1, 100, 1000 - i * 10));
+    const e = projectEmpire(snap({ positions: many }));
+    expect(e.structures).toHaveLength(12);
+    const { tailOf, MAX_STRUCTURES } = await import("../../src/universe/project.js");
+    const tail = tailOf(e.structures);
+    expect(tail?.count).toBe(12 - MAX_STRUCTURES);
+    expect(tailOf(e.structures.slice(0, 3))).toBeUndefined();
+  });
+
+  it("R2b — footprint is cost basis relative to the empire's largest commitment", () => {
+    const e = projectEmpire(
+      snap({ positions: [pos("NVDA", 10, 100, 4000), pos("GLD", 10, 25, 1000)] }),
+    );
+    expect(e.structures[0]?.footprint).toBe(1); // 1000 basis
+    expect(e.structures[1]?.footprint).toBeCloseTo(0.25); // 250 basis
+  });
+
   it("is deterministic — same snapshot, same world", () => {
     const s = snap({ positions: [pos("NVDA", 10, 100, 1500), pos("GLD", 5, 200, 900)] });
     expect(projectEmpire(s)).toEqual(projectEmpire(s));
