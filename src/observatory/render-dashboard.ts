@@ -826,6 +826,35 @@ function cohortCard(stats: CohortStats, leads: boolean, nation: ParticipantSnaps
 }
 
 /**
+ * The MATCH scoreboard — a live tug-of-war bar the two cohorts contest. Split is by AVERAGE equity
+ * per account (not total), so a larger cohort can't win the bar on headcount alone — it moves only as
+ * one side's per-account performance pulls ahead. Both cohorts start near parity (equal paper stakes),
+ * so the divider drifts off-center exactly as the race is won. Pure/snapshot-derived.
+ */
+function matchBar(humans: CohortStats, bots: CohortStats): string {
+  const sum = humans.avgEquity + bots.avgEquity;
+  const humanShare = sum > 0 ? humans.avgEquity / sum : 0.5;
+  const humanPct = Math.round(humanShare * 100);
+  const botPct = 100 - humanPct;
+  const leader = humans.avgEquity === bots.avgEquity ? null : humans.avgEquity > bots.avgEquity;
+  const leadLabel =
+    leader === null
+      ? "Dead even — the match is tied"
+      : `<strong>${leader ? "Humans" : "Bots"}</strong> lead the match · ${
+          leader ? humanPct : botPct
+        }% of the field`;
+  return `<section class="match" aria-label="Bots vs Humans live match standings">
+      <div class="match-top"><span class="match-eyebrow">◈ THE MATCH · LIVE</span><span class="match-metric">avg equity per account</span></div>
+      <div class="match-bar" role="img" aria-label="Humans ${humanPct}% versus Bots ${botPct}%">
+        <div class="match-seg match-human" style="width:${humanPct}%"><span class="match-seg-label">Humans ${humanPct}%</span></div>
+        <div class="match-seg match-bot" style="width:${botPct}%"><span class="match-seg-label">${botPct}% Bots</span></div>
+        <div class="match-divider" style="left:${humanPct}%"></div>
+      </div>
+      <p class="match-read">${leadLabel}</p>
+    </section>`;
+}
+
+/**
  * The BOTS vs HUMANS view — aggregates each cohort and compares the two. Surfaces aggregate-only
  * reads an individual can't show (cohort average, breadth in profit, dispersion) alongside the
  * head-to-head on total & average equity. Friendly league framing: it's a friendly rivalry, and
@@ -848,6 +877,7 @@ export function renderCohortsBody(data: DashboardData, options: DashboardViewOpt
         <p class="view-sub">A friendly rivalry — the whole league winning is the point.</p>
       </div>
     </div>
+    ${matchBar(humans, bots)}
     <div class="versus">
       ${cohortCard(humans, humansLeadTotal, humansNation)}
       <div class="versus-mid"><span class="vs">VS</span></div>
@@ -1345,6 +1375,19 @@ const STYLE = `<style>
   }
   @media (prefers-reduced-motion:reduce){ .drawer,.drawer-toggle span{ transition:none; } }
   /* --- bots vs humans --- */
+  /* Live match scoreboard — a contested tug-of-war bar (human green vs bot accent). */
+  .match{ margin:0 0 20px; padding:16px 18px 14px; background:var(--surface-2); border:1px solid var(--border); border-radius:14px; }
+  .match-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; font-family:var(--mono); }
+  .match-eyebrow{ font-size:10px; letter-spacing:.18em; color:var(--accent); }
+  .match-metric{ font-size:10px; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; }
+  .match-bar{ position:relative; display:flex; height:30px; border-radius:8px; overflow:hidden; border:1px solid var(--border); }
+  .match-seg{ display:flex; align-items:center; min-width:0; transition:width .6s cubic-bezier(.2,.7,.2,1); }
+  .match-human{ background:color-mix(in srgb, var(--pos) 30%, transparent); justify-content:flex-start; }
+  .match-bot{ background:color-mix(in srgb, var(--accent) 30%, transparent); justify-content:flex-end; }
+  .match-seg-label{ font-family:var(--mono); font-size:11px; font-weight:700; color:var(--text); padding:0 10px; white-space:nowrap; }
+  .match-divider{ position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--text); transform:translateX(-1px); box-shadow:0 0 8px color-mix(in srgb, var(--text) 60%, transparent); }
+  .match-read{ margin:9px 0 0; font-size:13px; color:var(--muted); }
+  .match-read strong{ color:var(--text); }
   .versus{ display:grid; grid-template-columns:1fr auto 1fr; align-items:stretch; gap:16px; margin-bottom:18px; }
   .cohort{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px 22px 10px; display:flex; flex-direction:column; }
   .cohort-lead{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 20%,transparent) inset; }

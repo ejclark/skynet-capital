@@ -1,6 +1,7 @@
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import {
   renderAcademyBody,
+  renderCohortsBody,
   renderCompareBody,
   renderDashboardBody,
   renderIndividualBody,
@@ -175,6 +176,61 @@ describe("renderAcademyBody — the gamified journey", () => {
   it("awards points on milestones", () => {
     expect(html).toContain("data-ms-check");
     expect(html).toMatch(/\+\d+/); // a points value like +25
+  });
+});
+
+describe("renderCohortsBody — the live match scoreboard", () => {
+  const data: DashboardData = {
+    generatedAt: "2026-07-24T15:30:00.000Z",
+    participants: [
+      { id: "h1", displayName: "Ann", kind: "human", cash: 0, equity: 120_000, positions: [] },
+      {
+        id: "b1",
+        displayName: "Bot A",
+        kind: "bot",
+        personaId: "day-trader",
+        cash: 0,
+        equity: 80_000,
+        positions: [],
+      },
+      {
+        id: "b2",
+        displayName: "Bot B",
+        kind: "bot",
+        personaId: "futurist",
+        cash: 0,
+        equity: 80_000,
+        positions: [],
+      },
+    ],
+  };
+
+  it("splits the match bar by AVERAGE equity, not headcount", () => {
+    const html = renderCohortsBody(data);
+    // Humans avg 120k vs bots avg 80k → 60% / 40% (two bots must NOT win the bar on count).
+    expect(html).toContain("THE MATCH · LIVE");
+    expect(html).toContain("Humans 60%");
+    expect(html).toContain("40% Bots");
+    expect(html).toContain("lead the match");
+  });
+
+  it("reads dead even when the cohort averages match", () => {
+    const even: DashboardData = {
+      generatedAt: data.generatedAt,
+      participants: [
+        { id: "h", displayName: "H", kind: "human", cash: 0, equity: 100_000, positions: [] },
+        {
+          id: "b",
+          displayName: "B",
+          kind: "bot",
+          personaId: "x",
+          cash: 0,
+          equity: 100_000,
+          positions: [],
+        },
+      ],
+    };
+    expect(renderCohortsBody(even)).toContain("Dead even");
   });
 });
 
