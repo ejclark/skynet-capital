@@ -1,3 +1,10 @@
+# [1.105.0](https://github.com/ejclark/skynet-capital/compare/v1.104.0...v1.105.0) (2026-07-27)
+
+
+### Features
+
+* **learn:** options academy with a risk ladder that starts at the cash-covered put ([#178](https://github.com/ejclark/skynet-capital/issues/178)) ([1ad188f](https://github.com/ejclark/skynet-capital/commit/1ad188f113d4e86d47ea7f38d13ae2faaa5daa9e))
+
 # [1.104.0](https://github.com/ejclark/skynet-capital/compare/v1.103.0...v1.104.0) (2026-07-27)
 
 
