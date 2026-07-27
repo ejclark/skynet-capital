@@ -76,6 +76,7 @@ describe("resolveAuth", () => {
     expect(html).toContain('class="playdrawer"');
     expect(html).toContain('id="pdSignal"');
     expect(html).toContain('id="pdLive"');
+    expect(html).toContain('id="pdRecap"');
     expect(html).toContain('id="pdTab"');
     // hard constraint stays intact alongside the new markup
     expect(html).toContain("Continue with Google");

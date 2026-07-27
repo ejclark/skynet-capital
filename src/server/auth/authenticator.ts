@@ -587,6 +587,8 @@ export class Authenticator {
   .pd-num.pos{ color:var(--pos,#3FB950); } .pd-num.neg{ color:var(--neg,#F85149); }
   .pd-status .pd-live{ font-family:var(--mono,monospace); font-size:15px; font-weight:700; color:var(--muted,#8B9AAB); }
   .pd-status .pd-live.pos{ color:var(--pos,#3FB950); } .pd-status .pd-live.neg{ color:var(--neg,#F85149); }
+  .pd-recap{ margin-top:5px; font-family:var(--mono,monospace); font-size:10px; letter-spacing:.14em; }
+  .pd-recap.pos{ color:var(--pos,#3FB950); } .pd-recap.neg{ color:var(--neg,#F85149); }
   .pd-watch{ margin-top:12px; padding-top:11px; border-top:1px solid color-mix(in srgb, var(--border,#223041) 70%, transparent);
     font-family:var(--mono,monospace); font-size:9.5px; letter-spacing:.08em; color:color-mix(in srgb, var(--muted,#8B9AAB) 85%, transparent); }
   @media (max-width:819px){ .playdrawer{ display:none; } }
@@ -685,6 +687,7 @@ ${versionTag}
     <div class="pd-sec pd-status">
       <span class="pd-k">Playcall</span>
       <p class="pd-live" id="pdLive">Standing by</p>
+      <p class="pd-recap" id="pdRecap" hidden></p>
     </div>
     <p class="pd-watch"><span id="pdTicker">—</span> · <span id="pdVix">VIX —</span> · <span id="pdIv">IV —</span></p>
   </div>
@@ -2166,6 +2169,7 @@ ${versionTag}
     var up=targetPrice>signalPrice+volScale*0.03, dn=targetPrice<signalPrice-volScale*0.03;
     var acol=up?pos:(dn?neg:muted), dir=up?-1:(dn?1:0);
     var yNow=SY(nowPrice), yTgt=SY(targetPrice);
+    tgtSX=Xf; tgtSY=yTgt;   // export the TARGET screen point so the drawer can draw a connector to it on resolve
     if(proj>0.01){
       // The plan reads as a SCRIPT: true round dots on a perfectly smooth ease — deliberately too
       // clean to be a tape, so the realized ink (candles, wandering) is unmistakably "what happened".
@@ -2339,6 +2343,7 @@ ${versionTag}
   // Screen anchor for "now" (leading price) + price→pixel scale, exported by drawMarket so the
   // forecast draws the future in the same frame as the live trend.
   var nowSX=0, nowSY=0, nowPrice=100, pxPerPrice=1;
+  var tgtSX=0, tgtSY=0;   // TARGET screen point (set in drawForecast) — the drawer-recap connector aims here
   // Where the on-chart play-name stack ENDS — the signal read + recap dock directly beneath the name
   // (set each frame while the title draws), so the play's identity + read read as one column.
   var sigStackX=0, sigStackY=0;
@@ -2583,7 +2588,7 @@ ${versionTag}
     rsi:document.getElementById("pdRsi"), rsiFill:document.getElementById("pdRsiFill"), play:document.getElementById("pdPlay"),
     cls:document.getElementById("pdClass"), why:document.getElementById("pdWhy"), maxP:document.getElementById("pdMaxP"),
     maxL:document.getElementById("pdMaxL"), live:document.getElementById("pdLive"), ticker:document.getElementById("pdTicker"),
-    vix:document.getElementById("pdVix"), iv:document.getElementById("pdIv") }; }
+    vix:document.getElementById("pdVix"), iv:document.getElementById("pdIv"), recap:document.getElementById("pdRecap") }; }
   function pdSet(el, txt){ if(el && el.textContent!==txt) el.textContent=txt; }
   // Decoupled narrative: when the drawer is OPEN it owns the play's name / thesis / totals / recap, so
   // the chart stays pure geometry. When it's COLLAPSED (or on mobile, where there's no drawer) the chart
@@ -2615,10 +2620,34 @@ ${versionTag}
     if(p.out>0){ pdSet(pdEls.live, "CLOSED "+money(pl)); pdEls.live.className="pd-live "+(pl>=0?"pos":"neg"); }
     else if(p.walk>0){ pdSet(pdEls.live, "LIVE "+money(pl)); pdEls.live.className="pd-live "+(pl>=0?"pos":"neg"); }
     else { pdSet(pdEls.live, "LOCKED · max "+money(strat.maxP)); pdEls.live.className="pd-live"; }
+    // RECAP: on resolve, the one thing unique to the retrospective — did the read hold? Booked at the
+    // TARGET the play walked to, so a connector ties this verdict back to that point on the chart.
+    if(pdEls.recap){ if(p.resolve>0.45){ var uEx=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5),
+        plEx=dollarsAt(strat,e,payoffAt(strat.pts,uEx)), held=plEx>=0;
+        pdSet(pdEls.recap, held?"✓ READ HELD":"✗ READ BROKE"); pdEls.recap.className="pd-recap "+(held?"pos":"neg"); pdEls.recap.hidden=false; }
+      else pdEls.recap.hidden=true; }
     pdSet(pdEls.ticker, playTicker);
     pdSet(pdEls.vix, "VIX "+playVix+(playVix>=26?" · FEAR":playVix<=15?" · CALM":""));
     pdSet(pdEls.iv, "IV "+playIV+"%");
     pdLastPl=pl;
+  }
+  // The connector: on resolve, when the drawer is OPEN, draw a subtle canvas leader from the drawer's
+  // PLAYCALL readout to the TARGET point the play walked to — so "CLOSED +$X · READ HELD" is visibly
+  // tied to where on the chart it resolved (task #51). Reads the live DOM position so it tracks layout.
+  function drawRecapConnector(p){
+    if(!p || p.resolve<=0.45 || W<820 || pdCollapsed() || !pdEls || !pdEls.live) return;
+    if(!tgtSX) return;
+    var r=pdEls.live.getBoundingClientRect(); if(!r.width) return;
+    var sx=r.right+4, sy=r.top+r.height/2, ex=tgtSX, ey=tgtSY;
+    var a=clamp01((p.resolve-0.45)/0.4)*(1-clamp01(p.out*1.7)); if(a<=0.01) return;
+    var accent=css("--accent")||"#35D0BA";
+    ctx.save(); ctx.globalAlpha=a*0.55; ctx.setLineDash([2,5]); ctx.lineWidth=1; ctx.strokeStyle=accent;
+    ctx.beginPath(); ctx.moveTo(sx,sy);
+    ctx.bezierCurveTo(sx+(ex-sx)*0.4, sy, ex-(ex-sx)*0.3, ey, ex, ey); ctx.stroke(); ctx.setLineDash([]);
+    // a small node at each end so the tie reads as deliberate
+    ctx.globalAlpha=a*0.8; ctx.fillStyle=accent;
+    ctx.beginPath(); ctx.arc(sx,sy,2.2,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex,ey,2.2,0,7); ctx.fill(); ctx.restore();
   }
   (function(){ var tab=document.getElementById("pdTab");
     if(tab) tab.addEventListener("click", function(){ var c=document.body.classList.toggle("pd-collapsed");
@@ -2712,6 +2741,7 @@ ${versionTag}
       drawScanners(1 - cam);   // roaming signal-scan spotlights — ambient only, recede as a play frames
       if(p){ drawHandoff(p); drawGravityBeam(p); drawForecast(STRATS[curStrat], curSig, p); drawInsight(STRATS[curStrat], p); pbGlyphT++; }
       updateDrawer(p);
+      if(p) drawRecapConnector(p);
       drawRipples();
       beamVignette();
       rainDraw(rainBoost, rainTint); }
