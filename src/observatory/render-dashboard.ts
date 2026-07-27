@@ -949,6 +949,17 @@ const STYLE = `<style>
   .obs-bar .meta{ display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted); }
   .tag{ font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--accent); border:1px solid var(--accent); border-radius:999px; padding:3px 10px; }
   .meta .ts{ font-family:var(--mono); }
+  .observer-hero{ margin:0 0 26px; padding:22px 24px; border:1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius:14px;
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface-2)), var(--surface-2)); }
+  .obs-eyebrow{ font-family:var(--mono); font-size:10px; letter-spacing:.24em; color:var(--accent); margin-bottom:8px; }
+  .obs-title{ font-size:19px; letter-spacing:.01em; margin-bottom:8px; }
+  .obs-sub{ color:var(--muted); font-size:13.5px; max-width:64ch; margin-bottom:14px; }
+  .obs-ctas{ display:flex; gap:10px; flex-wrap:wrap; }
+  .obs-cta{ display:inline-block; padding:9px 16px; border-radius:9px; border:1px solid var(--border); color:var(--text);
+    text-decoration:none; font-family:var(--mono); font-size:12px; letter-spacing:.06em; transition:border-color .15s ease, background .15s ease; }
+  .obs-cta:hover{ border-color:var(--accent); }
+  .obs-cta-primary{ background:var(--accent); border-color:var(--accent); color:#06251F; font-weight:700; }
+  .obs-cta-primary:hover{ filter:brightness(1.08); }
   .summary{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:28px; }
   .tile{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:8px; }
   .tile-lead{ border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); }
@@ -1195,7 +1206,19 @@ export function renderBoardContent(
       });
     })
     .join("\n    ");
-  return `${summaryStrip(data)}
+  // OBSERVER MODE — the funnel's front door (stage 1 → 2): signed in but no linked account means you
+  // can watch the whole league yet hold no tower. Say so, warmly, and pave the founding path.
+  const observer =
+    Boolean(options.nav) && !currentId
+      ? `<section class="observer-hero">
+    <p class="obs-eyebrow">◈ OBSERVER MODE</p>
+    <h2 class="obs-title">You're watching the league — your empire awaits its founding.</h2>
+    <p class="obs-sub">Every tower below belongs to a member or their bot. Connect a free Alpaca paper account to take the field: your own city on the board, your plays, your seat in the race.</p>
+    <div class="obs-ctas"><a class="obs-cta obs-cta-primary" href="/welcome">Get set up — the guided path</a><a class="obs-cta" href="/add">I have my keys — found my empire</a></div>
+  </section>
+  `
+      : "";
+  return `${observer}${summaryStrip(data)}
   <section class="grid">
     ${cards}
   </section>
