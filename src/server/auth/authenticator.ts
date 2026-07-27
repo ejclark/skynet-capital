@@ -2558,7 +2558,11 @@ ${versionTag}
         // instead of dragging the frozen present all the way back. Captures the tip's current screen-x first.
         if(p.out>0 && !folding && realized.length){
           foldFromX = nowSX + realized.length*(W/(SPAN-1))*zoom;
-          price = price.slice(0, nowIdx+1).concat(realized);
+          // Fold THROUGH pushPrice, never by direct concat: pushPrice rolls the derived series (EMAs,
+          // Bollinger, RSI) and caps everything to SPAN. A raw concat left price[] longer than the
+          // indicator arrays, so the NEXT play read bU[last]=undefined -> NaN geometry -> an invisible
+          // forecast ("only one play ever shows"). Same-length series is a hard invariant.
+          var fr; for(fr=0; fr<realized.length; fr++) pushPrice(realized[fr]);
           realized=[]; realizedAlpha=1; nowIdx=price.length-1; folding=true; }
         if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
           realized=[]; realizedAlpha=1; folding=false; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
