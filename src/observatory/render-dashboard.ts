@@ -490,6 +490,16 @@ export function renderIndividualBody(
       ${persona}
     </header>
     <div class="empire-band">${renderEmpireSkyline(snapshot)}</div>
+    ${
+      isSelf && snapshot.positions.length === 0 && snapshot.cash > 0
+        ? `<div class="founding-cta">
+      <p class="founding-cta-text">Your reserve is staged — <strong>${formatCurrency(
+        snapshot.cash,
+      )}</strong> of dry powder, an empire about to rise. Found your first position to break ground.</p>
+      <a class="obs-cta obs-cta-primary" href="/learn">Begin the Wheel — your first play</a>
+    </div>`
+        : ""
+    }
     <div class="indiv-hero">
       <div class="hero-equity">
         <span class="tile-label">Equity</span>
@@ -1223,6 +1233,12 @@ const STYLE = `<style>
   .persona-thesis{ margin:0; font-size:14px; color:var(--text); line-height:1.5; }
   .persona-legend{ margin:8px 0 0; font-size:13px; color:var(--muted); line-height:1.5; font-style:italic; }
   .empire-band{ margin:0 0 24px; }
+  /* Founding CTA — shown on your own funded-but-untraded desk: the reserve is staged, make the first play. */
+  .founding-cta{ margin:-8px 0 24px; padding:16px 18px; display:flex; flex-wrap:wrap; align-items:center;
+    justify-content:space-between; gap:12px; border:1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+    border-radius:12px; background:color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+  .founding-cta-text{ margin:0; color:var(--muted); font-size:14px; line-height:1.5; max-width:60ch; }
+  .founding-cta-text strong{ color:var(--text); font-family:var(--mono); }
   .empire-skyline{ display:block; width:100%; height:auto; max-height:150px; border:1px solid var(--border); border-radius:10px; }
   /* glanceable per-card thumbnail — the board reads as a region of cities */
   .empire-thumb{ margin:0 0 14px; }

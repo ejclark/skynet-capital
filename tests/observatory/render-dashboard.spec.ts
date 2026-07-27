@@ -247,4 +247,24 @@ describe("renderIndividualBody — autonomous decisions panel", () => {
     const html = renderIndividualBody(human, { decisions: [] });
     expect(html).not.toContain("Autonomous decisions");
   });
+
+  it("invites the first play on your OWN funded-but-untraded desk", () => {
+    const html = renderIndividualBody(human, { isSelf: true });
+    expect(html).toContain("founding-cta");
+    expect(html).toContain("Begin the Wheel");
+  });
+
+  it("does not show the founding CTA when you already hold positions", () => {
+    const funded = {
+      ...human,
+      positions: [{ symbol: "NVDA", quantity: 1, avgPrice: 100, marketValue: 120 }],
+    };
+    const html = renderIndividualBody(funded, { isSelf: true });
+    expect(html).not.toContain("Begin the Wheel"); // CTA copy is markup-only (the class lives in CSS always)
+  });
+
+  it("does not show the founding CTA on someone else's desk", () => {
+    const html = renderIndividualBody(human, { isSelf: false });
+    expect(html).not.toContain("Begin the Wheel"); // CTA copy is markup-only (the class lives in CSS always)
+  });
 });
