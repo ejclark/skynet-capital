@@ -1,3 +1,10 @@
+# [1.110.0](https://github.com/ejclark/skynet-capital/compare/v1.109.0...v1.110.0) (2026-07-27)
+
+
+### Features
+
+* **autonomy:** kill switch + circuit breakers (Phase 0.3) ([#185](https://github.com/ejclark/skynet-capital/issues/185)) ([57872ab](https://github.com/ejclark/skynet-capital/commit/57872abead9c1a3ebeb50bb093d5cd8a3222629e))
+
 # [1.109.0](https://github.com/ejclark/skynet-capital/compare/v1.108.0...v1.109.0) (2026-07-27)
 
 
