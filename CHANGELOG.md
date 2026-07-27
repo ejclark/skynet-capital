@@ -1,3 +1,10 @@
+# [1.101.0](https://github.com/ejclark/skynet-capital/compare/v1.100.0...v1.101.0) (2026-07-27)
+
+
+### Features
+
+* **onboarding:** turn the bot persona field into a character-class picker ([#174](https://github.com/ejclark/skynet-capital/issues/174)) ([0beecd2](https://github.com/ejclark/skynet-capital/commit/0beecd24c731ca0f097fb1c98eee9e5bca3f0c5e))
+
 # [1.100.0](https://github.com/ejclark/skynet-capital/compare/v1.99.0...v1.100.0) (2026-07-27)
 
 
