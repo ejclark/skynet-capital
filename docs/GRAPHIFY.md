@@ -5,6 +5,11 @@ breaks" **without loading files into context**. It's installed in the working en
 the map lives in `graphify-out/` (git-ignored) with a committed snapshot in
 [`STRUCTURE-graph.md`](STRUCTURE-graph.md). Code extraction is local (tree-sitter), free, no API key.
 
+**The committed snapshot stays fresh automatically** — a GitHub Action (`.github/workflows/graph-refresh.yml`)
+regenerates `STRUCTURE-graph.md` after code lands on `main` and commits it with `[skip ci]`. To refresh
+by hand anytime: `npm run graph:refresh` (wraps `scripts/refresh-graph.sh`; free, no API). So don't
+hand-edit the generated section — regenerate it.
+
 ## Commands we actually use
 
 | Command | Use it to… | When |
