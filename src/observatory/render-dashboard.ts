@@ -1,3 +1,4 @@
+import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { COURSES, type Course, type Milestone, RANKS, totalPoints } from "../domain/curriculum.js";
 import type { DashboardData } from "./dashboard-data.js";
 import { renderEmpireSkyline } from "./empire-skyline.js";
@@ -436,6 +437,7 @@ export function renderIndividualBody(
     isSelf?: boolean;
     generatedAt?: string;
     history?: readonly EquitySample[];
+    decisions?: readonly DecisionRecord[];
   } = {},
 ): string {
   const isSelf = Boolean(options.isSelf);
@@ -504,6 +506,7 @@ export function renderIndividualBody(
       </div>
     </div>
     ${personaCard}
+    ${decisionsPanel(snapshot, options.decisions)}
     <div class="indiv-cols">
       <div class="indiv-col">
         <h2 class="col-head">Positions</h2>
@@ -520,6 +523,64 @@ export function renderIndividualBody(
   </section>`,
     asOf,
   );
+}
+
+/**
+ * The AUTONOMOUS DECISIONS panel (Phase 2.1 of the autonomy plan) — surfaces the bot's decision audit
+ * trail so you can watch WHAT it decided and WHY. Bots only; shows the most recent cycles that did
+ * something (placed / observed / halted / cooldown), newest first, each with its mode and rationale.
+ * Absent for humans and when no trail is wired (the honest "not recorded yet" seam).
+ */
+function decisionsPanel(
+  snapshot: ParticipantSnapshot,
+  decisions?: readonly DecisionRecord[],
+): string {
+  if (snapshot.kind !== "bot") return "";
+  if (!decisions) {
+    return `<div class="history-seam">
+      <span class="seam-label">Autonomous decisions</span>
+      <p class="seam-note">Once this bot is running, every cycle it decides — observed or placed — shows here with its reasoning.</p>
+    </div>`;
+  }
+  const active = decisions
+    .filter((d) => d.halted || d.outcomes.length > 0)
+    .slice(-12)
+    .reverse();
+  if (active.length === 0) {
+    return `<section class="decisions-panel">
+      <h2 class="col-head">Autonomous decisions</h2>
+      <p class="empty">No decisions yet — the desk has been quiet.</p>
+    </section>`;
+  }
+  const rows = active
+    .map((d) => {
+      const time = escapeHtml(formatTimestamp(new Date(d.at).toISOString()));
+      if (d.halted) {
+        return `<li class="dcn dcn-halt"><span class="dcn-t">${time}</span><span class="dcn-mode halt">HALTED</span><span class="dcn-body">circuit breaker: ${escapeHtml(d.halted)} — did not trade</span></li>`;
+      }
+      const modeCls = d.mode === "live" ? "live" : "observe";
+      const items = d.outcomes
+        .map((o) => {
+          const verb =
+            o.action === "placed"
+              ? "placed"
+              : o.action === "rejected"
+                ? "rejected"
+                : o.action === "cooldown-skipped"
+                  ? "held (cooldown)"
+                  : "would place";
+          return `${escapeHtml(verb)} ${escapeHtml(o.intent.side)} ${o.intent.quantity} ${escapeHtml(o.intent.symbol)} — ${escapeHtml(o.intent.reason)}`;
+        })
+        .join("; ");
+      return `<li class="dcn"><span class="dcn-t">${time}</span><span class="dcn-mode ${modeCls}">${d.mode.toUpperCase()}</span><span class="dcn-body">${items}</span></li>`;
+    })
+    .join("\n      ");
+  return `<section class="decisions-panel">
+      <h2 class="col-head">Autonomous decisions</h2>
+      <ul class="dcn-list">
+      ${rows}
+      </ul>
+    </section>`;
 }
 
 /**
@@ -1183,6 +1244,17 @@ const STYLE = `<style>
   .seam-label{ font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); }
   .seam-note{ margin:6px 0 0; font-size:13px; color:var(--muted); }
   .history-panel{ margin-top:26px; padding:18px 20px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+  .decisions-panel{ margin-top:26px; padding:18px 20px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+  .dcn-list{ list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; }
+  .dcn{ display:flex; align-items:baseline; gap:12px; padding:9px 0; border-top:1px solid color-mix(in srgb,var(--border) 70%,transparent); font-size:13px; }
+  .dcn:first-child{ border-top:0; }
+  .dcn-t{ font-family:var(--mono); font-size:11px; color:var(--muted); white-space:nowrap; flex:0 0 auto; }
+  .dcn-mode{ font-family:var(--mono); font-size:9px; letter-spacing:.1em; padding:2px 7px; border-radius:999px; border:1px solid var(--border); white-space:nowrap; flex:0 0 auto; }
+  .dcn-mode.live{ color:var(--pos); border-color:color-mix(in srgb,var(--pos) 50%,var(--border)); }
+  .dcn-mode.observe{ color:var(--accent); border-color:color-mix(in srgb,var(--accent) 50%,var(--border)); }
+  .dcn-mode.halt{ color:var(--neg); border-color:color-mix(in srgb,var(--neg) 55%,var(--border)); }
+  .dcn-body{ color:var(--text); line-height:1.5; }
+  .dcn-halt .dcn-body{ color:var(--neg); }
   .history-spark{ margin:12px 0 14px; }
   .equity-spark{ display:block; width:100%; height:64px; }
   .history-metrics{ grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }

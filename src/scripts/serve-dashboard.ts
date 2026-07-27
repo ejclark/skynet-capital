@@ -11,6 +11,7 @@
  * over SSE as events arrive. `/add` lets people self-register their own Alpaca paper account,
  * which appears live with no restart. The live-vs-offline choice lives behind `resolveDataSource`.
  */
+import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
@@ -58,6 +59,10 @@ async function main(): Promise<void> {
   const history = createHistoryStore(process.env);
   startHistorySampler({ getState: () => hub.getState(), store: history });
 
+  // Autonomous decision audit trail (Phase 2.1) — the same JSONL the runner writes when
+  // SKYNET_AUDIT_DIR is set. When present, bot profiles show the live "what it decided and why."
+  const auditDir = process.env.SKYNET_AUDIT_DIR;
+
   const heldSymbols = [
     ...new Set(initial.participants.flatMap((p) => p.positions.map((pos) => pos.symbol))),
   ];
@@ -104,6 +109,7 @@ async function main(): Promise<void> {
     addParticipant: (input) => service.addParticipant(input),
     ...(feedback ? { submitFeedback: feedback } : {}),
     readHistory: (id) => history.list(id),
+    ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(

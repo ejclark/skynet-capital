@@ -1,4 +1,5 @@
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
+import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import {
@@ -49,6 +50,12 @@ export interface DashboardServerConfig {
    * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).
    */
   readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
+  /**
+   * Reads a bot's autonomous decision audit trail for the individual view's decisions panel
+   * (Phase 2.1). Omit to show the honest "not recorded yet" seam. Keyed by participant id, which for
+   * a bot equals its persona id.
+   */
+  readonly readDecisions?: (participantId: string) => Promise<readonly DecisionRecord[]>;
 }
 
 /**
@@ -190,11 +197,14 @@ async function handle(
     }
     const nav = navFor("you");
     const history = config.readHistory ? await config.readHistory(id) : undefined;
+    const decisions =
+      config.readDecisions && snapshot.kind === "bot" ? await config.readDecisions(id) : undefined;
     const body = renderIndividualBody(snapshot, {
       nav: { ...nav, active: nav.currentId === id ? "you" : "board" },
       isSelf: nav.currentId === id,
       generatedAt: state.generatedAt,
       ...(history ? { history } : {}),
+      ...(decisions ? { decisions } : {}),
     });
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(shellDocument(`${escapeHtml(snapshot.displayName)} — Skynet Capital`, body));

@@ -3,6 +3,7 @@ import {
   renderAcademyBody,
   renderCompareBody,
   renderDashboardBody,
+  renderIndividualBody,
 } from "../../src/observatory/render-dashboard.js";
 import { sampleDashboardData } from "../../src/observatory/sample-dashboard-data.js";
 
@@ -174,5 +175,76 @@ describe("renderAcademyBody — the gamified journey", () => {
   it("awards points on milestones", () => {
     expect(html).toContain("data-ms-check");
     expect(html).toMatch(/\+\d+/); // a points value like +25
+  });
+});
+
+describe("renderIndividualBody — autonomous decisions panel", () => {
+  const bot = {
+    id: "day-trader",
+    displayName: "Day Trader",
+    kind: "bot" as const,
+    personaId: "day-trader",
+    cash: 500_000,
+    equity: 1_000_000,
+    positions: [],
+  };
+  const human = {
+    id: "human-eric",
+    displayName: "Eric",
+    kind: "human" as const,
+    cash: 500_000,
+    equity: 1_000_000,
+    positions: [],
+  };
+
+  it("renders a bot's recent decisions with mode and rationale", () => {
+    const html = renderIndividualBody(bot, {
+      decisions: [
+        {
+          at: Date.parse("2026-07-24T14:00:00Z"),
+          personaId: "day-trader",
+          mode: "observe",
+          rawIntents: [],
+          guardedIntents: [],
+          outcomes: [
+            {
+              intent: {
+                symbol: "NVDA",
+                side: "buy",
+                quantity: 5,
+                type: "market",
+                reason: "momentum",
+              },
+              action: "observed",
+            },
+          ],
+        },
+        {
+          at: Date.parse("2026-07-24T14:05:00Z"),
+          personaId: "day-trader",
+          mode: "live",
+          rawIntents: [],
+          guardedIntents: [],
+          outcomes: [],
+          halted: "manual",
+        },
+      ],
+    });
+    expect(html).toContain("Autonomous decisions");
+    expect(html).toContain("OBSERVE");
+    expect(html).toContain("would place buy 5 NVDA — momentum");
+    expect(html).toContain("HALTED");
+    expect(html).toContain("manual");
+  });
+
+  it("shows the honest seam for a bot with no trail wired", () => {
+    const html = renderIndividualBody(bot);
+    expect(html).toContain("Autonomous decisions");
+    expect(html).toContain("every cycle it decides");
+  });
+
+  it("never shows the decisions panel for a human", () => {
+    const html = renderIndividualBody(human, { decisions: [] });
+    expect(html).not.toContain("Autonomous decisions");
   });
 });
