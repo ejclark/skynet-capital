@@ -1,3 +1,10 @@
+# [1.93.0](https://github.com/ejclark/skynet-capital/compare/v1.92.1...v1.93.0) (2026-07-27)
+
+
+### Features
+
+* **universe:** the world projection layer — game-board foundation (s1) ([#163](https://github.com/ejclark/skynet-capital/issues/163)) ([e6b4aa9](https://github.com/ejclark/skynet-capital/commit/e6b4aa96cc2045a9d3ece503f8a41036bd4e9066))
+
 ## [1.92.1](https://github.com/ejclark/skynet-capital/compare/v1.92.0...v1.92.1) (2026-07-27)
 
 
