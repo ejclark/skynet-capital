@@ -19,7 +19,9 @@ import { ReplayEventStream } from "../adapters/replay-event-stream.js";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
-import { AutonomousTrader } from "../autonomous/autonomous-trader.js";
+import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
+import type { DecisionRecord } from "../autonomous/decision-record.js";
+import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
@@ -61,14 +63,24 @@ function runOffline(): void {
   const risk = { maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03") };
   const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
 
+  const audit = auditStore(process.env);
+  const onDecision = decisionSink(audit);
   const brokers: InMemoryBroker[] = [];
   const traders = personas.map((persona) => {
     const broker = new InMemoryBroker(OFFLINE_STARTING_CASH);
     brokers.push(broker);
     return {
       persona,
-      // No cooldown offline — replay ticks are seconds apart and we want to see it act.
-      trader: new AutonomousTrader({ persona, broker, risk, cooldownMs: 0, onResult: logResult }),
+      // Offline replay acts (in-memory, no risk); no cooldown so we see it trade each tick.
+      trader: new AutonomousTrader({
+        persona,
+        broker,
+        risk,
+        cooldownMs: 0,
+        mode: "live",
+        onResult: logResult,
+        onDecision,
+      }),
     };
   });
 
@@ -152,13 +164,21 @@ async function runLive(): Promise<void> {
   await pollNews();
   setInterval(() => void pollNews(), NEWS_POLL_MS);
 
+  const mode = traderMode(process.env);
+  const audit = auditStore(process.env);
+  const onDecision = decisionSink(audit);
+  console.log(
+    `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}`,
+  );
   const traders = bots.map((bot) => ({
     bot,
     trader: new AutonomousTrader({
       persona: bot.persona,
       broker: createBotBroker(bot),
       risk,
+      mode,
       onResult: logResult,
+      onDecision,
     }),
   }));
 
@@ -227,6 +247,35 @@ function logResult(r: {
   console.log(
     `[order] ${r.intent.side} ${r.intent.quantity} ${r.intent.symbol} -> ${r.status}${r.reason ? ` (${r.reason})` : ""}`,
   );
+}
+
+/**
+ * The trader's execution mode. **Defaults to `observe`** — safe by default: a persona must be
+ * explicitly flipped to `live` (SKYNET_AUTONOMOUS_MODE=live), the market-open validation step in
+ * `docs/AUTONOMY-PLAN.md`, before it can place a real (paper) order. Offline replay passes `live`
+ * itself, since the in-memory broker carries no risk and the demo is meant to act.
+ */
+function traderMode(env: NodeJS.ProcessEnv): TraderMode {
+  return env.SKYNET_AUTONOMOUS_MODE === "live" ? "live" : "observe";
+}
+
+/** Audit sink: append every decision to a JSONL store when SKYNET_AUDIT_DIR is set. */
+function auditStore(env: NodeJS.ProcessEnv): JsonlAuditStore | undefined {
+  return env.SKYNET_AUDIT_DIR ? new JsonlAuditStore(env.SKYNET_AUDIT_DIR) : undefined;
+}
+
+/** Console + audit-store sink for one decision cycle. Never throws on the audit write. */
+function decisionSink(audit: JsonlAuditStore | undefined): (r: DecisionRecord) => void {
+  return (r) => {
+    const placed = r.outcomes.filter((o) => o.action === "placed").length;
+    const observed = r.outcomes.filter((o) => o.action === "observed").length;
+    if (r.mode === "observe" && observed > 0) {
+      const names = r.guardedIntents.map((i) => `${i.side} ${i.quantity} ${i.symbol}`).join(", ");
+      console.log(`[observe] ${r.personaId} would place: ${names}`);
+    }
+    if (placed > 0) console.log(`[cycle] ${r.personaId} placed ${placed} order(s)`);
+    audit?.record(r).catch((e) => console.error("[audit] write failed:", e));
+  };
 }
 
 main().catch((error) => {
