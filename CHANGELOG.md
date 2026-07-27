@@ -1,3 +1,10 @@
+## [1.96.1](https://github.com/ejclark/skynet-capital/compare/v1.96.0...v1.96.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **login:** fold the walk through pushprice — restores plays after the first ([#168](https://github.com/ejclark/skynet-capital/issues/168)) ([d74ad5f](https://github.com/ejclark/skynet-capital/commit/d74ad5f81d26f391759a7dee1ebd5d5d937687d3))
+
 # [1.96.0](https://github.com/ejclark/skynet-capital/compare/v1.95.0...v1.96.0) (2026-07-27)
 
 
