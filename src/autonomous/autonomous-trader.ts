@@ -26,6 +26,11 @@ export interface AutonomousTraderConfig {
   readonly onResult?: (result: OrderResult) => void;
   /** Called once per cycle with the full decision record (raw intents, guards, per-intent outcome). */
   readonly onDecision?: (record: DecisionRecord) => void;
+  /**
+   * The kill switch / circuit breakers. Consulted at the top of every cycle — a non-null reason
+   * halts the cycle before the persona is even asked, and nothing is placed. See `SafetyController`.
+   */
+  readonly blockedReason?: () => string | null;
 }
 
 const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
@@ -54,6 +59,21 @@ export class AutonomousTrader {
     const now = (this.config.now ?? Date.now)();
     const cooldown = this.config.cooldownMs ?? DEFAULT_COOLDOWN_MS;
     const mode: TraderMode = this.config.mode ?? "live";
+
+    // Kill switch / circuit breakers first: if halted, decide nothing and place nothing this cycle.
+    const blocked = this.config.blockedReason?.() ?? null;
+    if (blocked) {
+      this.config.onDecision?.({
+        at: now,
+        personaId: this.config.persona.id,
+        mode,
+        rawIntents: [],
+        guardedIntents: [],
+        outcomes: [],
+        halted: blocked,
+      });
+      return [];
+    }
 
     const portfolio = await this.config.broker.getPortfolio();
     const rawIntents = this.config.persona.decide(context, portfolio);

@@ -57,10 +57,12 @@ market open and is Eric's to run). Build order is chosen so the *safe* pieces la
   — timestamp, persona, mode, raw intents, guarded intents, and a per-intent outcome
   (`placed` / `rejected` / `observed` / `cooldown-skipped`). `JsonlAuditStore` persists one append-only
   JSONL per persona (set `SKYNET_AUDIT_DIR`). This is the record everything else reads.
-- **P0.3 Kill switch + circuit breakers.** _(next)_ A **halt** the loop checks every cycle (a flag file /
-  env / small endpoint), plus **auto-halt** on breach conditions: daily-loss cap, order-rate ceiling,
-  cash/position-cap breach, repeated API errors, or a data gap (stale/NaN quotes). Halting is instant and
-  logged. Offline-testable by feeding breach scenarios.
+- **P0.3 Kill switch + circuit breakers. ✅ shipped.** `SafetyController` (`src/autonomous/safety.ts`) is
+  the halt state machine the trader consults via `blockedReason()` at the top of every cycle — halted →
+  it decides and places nothing, and the halt is recorded on the `DecisionRecord`. **Kill switch:**
+  `touch $SKYNET_HALT_FILE`. **Auto-halt breakers:** daily-loss cap, order-rate ceiling, consecutive
+  errors, and a data-gap check (empty / non-finite quotes). Once tripped it stays halted until an
+  explicit `reset()`. Fully unit-tested; the runner wires the halt-file + feeds the breakers.
 
 ### Phase 1 — The readiness gate _(offline)_
 - **P1.1 Readiness registry.** Record `eval:persona` results (id, score, pass/fail, timestamp). The

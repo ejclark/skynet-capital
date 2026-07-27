@@ -136,6 +136,30 @@ describe("AutonomousTrader", () => {
     expect(records[1]?.outcomes[0]?.action).toBe("cooldown-skipped");
   });
 
+  it("halts the cycle when the kill switch is thrown — decides and places nothing", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const records: DecisionRecord[] = [];
+    let halted = false;
+    const trader = new AutonomousTrader({
+      persona: new AlwaysBuys(),
+      broker,
+      blockedReason: () => (halted ? "manual" : null),
+      onDecision: (r) => records.push(r),
+    });
+
+    expect(await trader.evaluate(context(100, 0.05))).toHaveLength(1); // un-halted: trades
+    halted = true;
+    const blocked = await trader.evaluate(context(100, 0.05));
+
+    expect(blocked).toHaveLength(0);
+    expect(records[1]?.halted).toBe("manual");
+    expect(records[1]?.outcomes).toHaveLength(0);
+    // portfolio only reflects the one order from before the halt
+    expect((await broker.getPortfolio()).positions[0]?.quantity).toBe(10);
+  });
+
   it("drives a real persona from a momentum tracker's context", async () => {
     const broker = new InMemoryBroker(1_000_000, [
       { symbol: "NVDA", bid: 140, ask: 140, last: 140, asOf: "t" },
