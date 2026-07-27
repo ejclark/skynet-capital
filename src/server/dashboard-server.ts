@@ -14,6 +14,7 @@ import {
   renderIndividualBody,
   renderLeaderboardBody,
 } from "../observatory/render-dashboard.js";
+import { threeScenePage } from "../three/serve-scene.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
@@ -21,7 +22,6 @@ import type { ObservatoryHub } from "./observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "./participant-service.js";
 import { personaClasses } from "./persona-classes.js";
 import { sseFrame } from "./sse.js";
-import { threeScenePage } from "../three/serve-scene.js";
 
 export interface DashboardServerConfig {
   readonly hub: ObservatoryHub;
