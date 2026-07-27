@@ -1,3 +1,10 @@
+# [1.94.0](https://github.com/ejclark/skynet-capital/compare/v1.93.0...v1.94.0) (2026-07-27)
+
+
+### Features
+
+* **universe:** s1b — project all positions, labeled tail, two-axis towers ([#165](https://github.com/ejclark/skynet-capital/issues/165)) ([dc81e63](https://github.com/ejclark/skynet-capital/commit/dc81e634eb3ae62e50c83e45d7c72a9dcb592b1f))
+
 # [1.93.0](https://github.com/ejclark/skynet-capital/compare/v1.92.1...v1.93.0) (2026-07-27)
 
 
