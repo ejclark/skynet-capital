@@ -24,7 +24,8 @@
     "record:session": "tsx src/scripts/record-session.ts",
     "shoot:login": "tsx scripts/shoot-login.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
-    "prepare": "husky"
+    "prepare": "husky",
+    "arch:scan": "node scripts/arch-scan.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
