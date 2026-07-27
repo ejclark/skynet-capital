@@ -21,6 +21,7 @@ import type { ObservatoryHub } from "./observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "./participant-service.js";
 import { personaClasses } from "./persona-classes.js";
 import { sseFrame } from "./sse.js";
+import { threeScenePage } from "../three/serve-scene.js";
 
 export interface DashboardServerConfig {
   readonly hub: ObservatoryHub;
@@ -92,6 +93,13 @@ async function handle(
   if (path === "/welcome") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(welcomeHtml());
+    return;
+  }
+
+  // Live Babylon.js 3D scene exploration (see src/three/) — public so it's easy to eyeball on deploy.
+  if (path === "/tower") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(threeScenePage());
     return;
   }
 

@@ -78,7 +78,7 @@
   "src/server/auth/authenticator.ts": 2894,
   "src/server/auth/providers.ts": 139,
   "src/server/auth/session.ts": 124,
-  "src/server/dashboard-server.ts": 714,
+  "src/server/dashboard-server.ts": 722,
   "src/server/feedback-service.ts": 114,
   "src/server/observatory-hub.ts": 51,
   "src/server/participant-service.ts": 112,
