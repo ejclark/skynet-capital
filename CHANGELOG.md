@@ -1,3 +1,10 @@
+# [1.108.0](https://github.com/ejclark/skynet-capital/compare/v1.107.0...v1.108.0) (2026-07-27)
+
+
+### Features
+
+* **login:** warmer fire + electric base for the gravity beam ([#182](https://github.com/ejclark/skynet-capital/issues/182)) ([d32a930](https://github.com/ejclark/skynet-capital/commit/d32a930e7d87ed39aba918eae5ad647e2fc4b1a4))
+
 # [1.107.0](https://github.com/ejclark/skynet-capital/compare/v1.106.0...v1.107.0) (2026-07-27)
 
 
