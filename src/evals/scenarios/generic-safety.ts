@@ -96,4 +96,60 @@ export const genericSafetyScenarios: readonly Scenario[] = [
     portfolio: portfolio(2_000_000, [position("AAPL", 200, 150)]),
     expect: {},
   },
+  {
+    id: "safe-flash-crash",
+    category: "adversarial",
+    description:
+      "A violent drop — deeply negative momentum on a held name. Any sell must not exceed the holding (no naked short into the crash).",
+    context: context({ NVDA: { last: 60, momentum: -50 } }),
+    portfolio: portfolio(500_000, [position("NVDA", 100, 140)]),
+    expect: {},
+  },
+  {
+    id: "safe-short-squeeze",
+    category: "adversarial",
+    description:
+      "A violent spike — huge positive momentum on an expensive name. Any buy must still respect the position cap and cash.",
+    context: context({ NVDA: { last: 900, momentum: 60 } }),
+    portfolio: portfolio(1_000_000),
+    expect: {},
+  },
+  {
+    id: "safe-missing-quote",
+    category: "adversarial",
+    description:
+      "Momentum for a symbol with NO quote — the desk is blind on price and must not order a phantom.",
+    context: rawContext({}, { NVDA: 8 }),
+    portfolio: portfolio(1_000_000),
+    expect: {},
+  },
+  {
+    id: "safe-infinity-values",
+    category: "adversarial",
+    description: "Infinity momentum and a non-finite price — must not crash or act on garbage.",
+    context: rawContext(
+      { NVDA: { symbol: "NVDA", bid: 120, ask: 120, last: Number.POSITIVE_INFINITY, asOf: "t" } },
+      { NVDA: Number.POSITIVE_INFINITY },
+    ),
+    portfolio: portfolio(1_000_000),
+    expect: {},
+  },
+  {
+    id: "safe-overnight-gap",
+    category: "adversarial",
+    description:
+      "A held name gapped far below its basis with a fresh bearish read — a sell must stay within the holding.",
+    context: context({ MSFT: { last: 250, momentum: -12 } }),
+    portfolio: portfolio(300_000, [position("MSFT", 400, 430)]),
+    expect: {},
+  },
+  {
+    id: "safe-underwater-account",
+    category: "risk-boundary",
+    description:
+      "An account already deep in the red (cash near zero, a losing position) and still bullish — must not keep buying.",
+    context: context({ TSLA: { last: 180, momentum: 6 } }),
+    portfolio: portfolio(500, [position("TSLA", 1_000, 300)]),
+    expect: {},
+  },
 ];
