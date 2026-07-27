@@ -1,3 +1,10 @@
+# [1.114.0](https://github.com/ejclark/skynet-capital/compare/v1.113.0...v1.114.0) (2026-07-27)
+
+
+### Features
+
+* **login:** webgl eye-gaze hero reveal — fire/electric blinding flood ([#190](https://github.com/ejclark/skynet-capital/issues/190)) ([6176d3d](https://github.com/ejclark/skynet-capital/commit/6176d3d53c6a370a7ecc80f6376286cdb76b7ef9)), closes [#41](https://github.com/ejclark/skynet-capital/issues/41)
+
 # [1.113.0](https://github.com/ejclark/skynet-capital/compare/v1.112.0...v1.113.0) (2026-07-27)
 
 
