@@ -68,10 +68,31 @@ describe("empire-skyline", () => {
       expect(svg).toContain("var(--neg)");
     });
 
-    it("shows a frontier plot when there are no holdings", () => {
+    it("shows a frontier plot when there are no holdings AND no cash", () => {
       const svg = renderEmpireSkyline(snap([]));
       expect(svg).toContain("no holdings yet");
       expect(svg).toContain("FRONTIER EMPIRE");
+    });
+
+    it("renders a founding RESERVE (empire about to rise) when unfounded but holding cash", () => {
+      const svg = renderEmpireSkyline(snap([], { cash: 1_000_000, equity: 1_000_000 }));
+      expect(svg).toContain("AWAITING FOUNDING");
+      expect(svg).toContain("$1.0M RESERVE");
+      expect(svg).not.toContain("no holdings yet"); // dry powder reads as a city-in-waiting, not a blank
+    });
+
+    it("scales the founding reserve label to the dry powder magnitude", () => {
+      expect(renderEmpireSkyline(snap([], { cash: 40_000, equity: 40_000 }))).toContain(
+        "$40K RESERVE",
+      );
+    });
+
+    it("compact founding reserve drops the labels but keeps the scaffold", () => {
+      const svg = renderEmpireSkyline(snap([], { cash: 50_000, equity: 50_000 }), {
+        compact: true,
+      });
+      expect(svg).toContain("empire-skyline-compact");
+      expect(svg).not.toContain("AWAITING FOUNDING");
     });
 
     it("crowns the Sauron persona's tallest tower with the Eye emblem (P1 landmark)", () => {
