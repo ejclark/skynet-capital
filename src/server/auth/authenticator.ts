@@ -878,7 +878,7 @@ ${versionTag}
     // playcall eases it further to W·0.30 for the forecast. Always translated so the present dot never
     // hugs the right edge — the future opens to its right in every state.
     var fpx=(n-1)*dx, fpy=Y(price[n-1]);
-    var toX=lerp(W*0.78, W*0.08, cam), toY=lerp(fpy, baseY, cam);   // play → full-width: "now" eases to the left margin
+    var toX=lerp(W*0.78, W*0.20, cam), toY=lerp(fpy, baseY, cam);   // play frames wide but leaves the left ~20% open so the primary tower stays a visible focal element
     nowSX=toX; nowSY=toY; nowPrice=price[n-1];
     pxPerPrice=(amp*2/(r.span||1))*zoom;
     scBaseY=baseY; scMid=r.mid; scSpan=r.span; scAmp=amp;   // ambient price→screen-Y for the roaming scanners
@@ -1982,13 +1982,13 @@ ${versionTag}
       // with strong contrast against the busy market/matrix behind it.
       var chTop=SY(hiP)-14, chBot=Math.min(field.bottom-4, SY(loP)+60);
       ctx.fillStyle=hexA(css("--bg")||"#0B0F14", 0.55*proj); ctx.fillRect(X0-6, chTop, (Xf+40)-(X0-6), chBot-chTop);
-      // EYE BACKLIGHT — the tower behind the chart bleeds light THROUGH the play (backlit flare): a soft
-      // radial from the left/Eye side, molten fire at the core → electric accent at the reach, additive.
-      var blx=X0-24, bly=SY(signalPrice), blr=(Xf-X0)*0.9;
-      var blg=ctx.createLinearGradient(X0-6,0,Xf+40,0);
-      blg.addColorStop(0,hexA("#FF8A3D",0.11*proj*(0.7+0.3*eyeWake))); blg.addColorStop(0.32,hexA(accent,0.05*proj)); blg.addColorStop(1,hexA(accent,0));
-      ctx.save(); ctx.globalCompositeOperation="lighter"; ctx.fillStyle=blg; ctx.fillRect(X0-6, chTop, (Xf+40)-(X0-6), chBot-chTop);
-      var rg=ctx.createRadialGradient(blx,bly,0,blx,bly,blr); rg.addColorStop(0,hexA("#FFB060",0.10*proj*(0.7+0.3*eyeWake))); rg.addColorStop(1,hexA("#FFB060",0));
+      // EYE BACKLIGHT — the tower's gaze EVENLY backlights the play (not a left-side spill): a uniform
+      // warm wash across the whole chart + a broad soft radial hotspot, additive, brightening as it wakes.
+      var glow=proj*(0.7+0.35*eyeWake), cbx=(X0+Xf)/2, cby=SY(signalPrice);
+      ctx.save(); ctx.globalCompositeOperation="lighter";
+      ctx.fillStyle=hexA("#FF9A4A",0.05*glow); ctx.fillRect(X0-6, chTop, (Xf+40)-(X0-6), chBot-chTop);   // even warm wash
+      var rg=ctx.createRadialGradient(cbx,cby,0,cbx,cby,(Xf-X0)*0.62);
+      rg.addColorStop(0,hexA("#FFC078",0.08*glow)); rg.addColorStop(0.6,hexA(accent,0.04*glow)); rg.addColorStop(1,hexA(accent,0));
       ctx.fillStyle=rg; ctx.fillRect(X0-6, chTop, (Xf+40)-(X0-6), chBot-chTop); ctx.restore();
       // --- MARKET CONTEXT projected into the future (all dotted = tentative, drawn UNDER the play
       // so it frames the bigger picture without stealing focus). Which overlays lead depends on the
@@ -2050,6 +2050,24 @@ ${versionTag}
       ctx.beginPath(); ctx.moveTo(X0,SY(hiP)); ctx.lineTo(Xf,SY(hiP)); ctx.stroke();
       ctx.shadowColor=vLo>=0?pos:neg; ctx.shadowBlur=9; ctx.strokeStyle=hexA(vLo>=0?pos:neg,0.65*proj);
       ctx.beginPath(); ctx.moveTo(X0,SY(loP)); ctx.lineTo(Xf,SY(loP)); ctx.stroke();
+      ctx.restore();
+      // BOUNDARY ENERGY — Sauron's power SPILLS off the play's edges, matching the tile it borders: a
+      // GREEN edge crackles with electric arcs (matrix energy escaping); a RED edge flares with fire /
+      // molten tongues + rising embers. Hyper-exaggerated where the energy builds up, flickering per frame.
+      var edgeEnergy=function(y,dir,green){ var cnt=Math.round((Xf-X0)/24);
+        for(var ie=0;ie<cnt;ie++){ var ex=X0+(Xf-X0)*((ie+0.5)/cnt)+(noise(ie*3.1)-0.5)*10,
+            fl=noise(ie*2.3+Math.floor(pbGlyphT*0.35)+dir*7); if(fl<0.5) continue; var amp=(fl-0.5)/0.5;
+          if(green){ ctx.strokeStyle=hexA("#CFF3FF",0.55*proj*amp); ctx.lineWidth=1.1; ctx.beginPath(); ctx.moveTo(ex,y);
+            var len=9+18*amp; for(var s=1;s<=3;s++){ ctx.lineTo(ex+(noise(ie+s+Math.floor(pbGlyphT*0.3))-0.5)*11, y+dir*len*(s/3)); } ctx.stroke();
+            ctx.fillStyle=hexA("#EAFFFA",0.65*proj*amp); ctx.fillRect(ex-0.8,y-0.8,1.6,1.6); }
+          else { var len2=11+22*amp, fgx=ex+(noise(ie+1)-0.5)*6;
+            var fg=ctx.createLinearGradient(ex,y,fgx,y+dir*len2); fg.addColorStop(0,hexA("#FFD24D",0.6*proj*amp)); fg.addColorStop(0.5,hexA("#FF7A2E",0.42*proj*amp)); fg.addColorStop(1,hexA("#F85149",0));
+            ctx.strokeStyle=fg; ctx.lineWidth=2.3; ctx.beginPath(); ctx.moveTo(ex,y); ctx.quadraticCurveTo(ex+(noise(ie+pbGlyphT*0.2)-0.5)*9, y+dir*len2*0.6, fgx, y+dir*len2); ctx.stroke();
+            var ey=y+dir*(len2+7*amp), eg2=ctx.createRadialGradient(ex,ey,0,ex,ey,3.2); eg2.addColorStop(0,hexA("#FFB060",0.55*proj*amp)); eg2.addColorStop(1,hexA("#F85149",0));
+            ctx.fillStyle=eg2; ctx.beginPath(); ctx.arc(ex,ey,3.2,0,7); ctx.fill(); } } };
+      ctx.save(); ctx.globalCompositeOperation="lighter";
+      edgeEnergy(SY(hiP), -1, vHi>=0);   // top edge — energy spills UP
+      edgeEnergy(SY(loP), 1, vLo>=0);    // bottom edge — energy spills DOWN
       ctx.restore();
       // "now" divider — the boundary between recorded history and forecast
       ctx.setLineDash([2,5]); ctx.strokeStyle=hexA(txt,0.35*proj); ctx.lineWidth=1;
