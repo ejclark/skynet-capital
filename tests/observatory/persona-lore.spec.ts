@@ -24,6 +24,13 @@ describe("persona lore registry", () => {
     expect(personaLore("sauron")?.lore).toContain("order-imposer");
   });
 
+  it("gives every registered persona a character legend (the fantasy lore layer)", () => {
+    for (const p of personas) {
+      const legend = PERSONA_LORE[p.id]?.lore;
+      expect(legend, `missing legend for persona ${p.id}`).toBeTruthy();
+    }
+  });
+
   it("returns undefined for an unknown or missing id", () => {
     expect(personaLore(undefined)).toBeUndefined();
     expect(personaLore("nobody")).toBeUndefined();
