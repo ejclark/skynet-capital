@@ -1,0 +1,52 @@
+name: Graph Refresh
+
+# Keeps the committed Graphify structural map (docs/STRUCTURE-graph.md) in sync with the code.
+# Runs after code lands on main, regenerates the graph from the AST (free, no LLM / no API key),
+# and commits the refreshed doc with [skip ci] so it never loops or triggers CI/release/deploy.
+# Manual equivalent: `npm run graph:refresh`.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'tsconfig.json'
+      - 'package.json'
+
+concurrency:
+  group: graph-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Graphify
+        run: pip install graphifyy
+
+      - name: Refresh the structural map
+        run: bash scripts/refresh-graph.sh
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- docs/STRUCTURE-graph.md; then
+            echo "structural map already current — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/STRUCTURE-graph.md
+          git commit -m "docs(graph): refresh structural map [skip ci]"
+          git push
