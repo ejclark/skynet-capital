@@ -218,6 +218,10 @@ export class Authenticator {
   /* Reveal VFX: a grainy chromatic "hangar door" sweep, canvas-rendered above the scene but behind
      the title so the wordmark blooms through the opening light. Only lit during the ~1s reveal. */
   #vfx{ position:fixed; inset:0; width:100%; height:100%; z-index:5; pointer-events:none; opacity:0; }
+  /* Eye-gaze WebGL reveal: the Eye of Sauron looks at YOU and the wordmark casts volumetric fire/
+     electric rays toward the gaze, blinding at the peak. Screen-blended so black reads as transparent
+     and only the light adds over the scene. Lit only during the ~1s reveal. */
+  #eyevfx{ position:fixed; inset:0; width:100%; height:100%; z-index:6; pointer-events:none; opacity:0; mix-blend-mode:screen; }
   html,body{ height:100%; }
   body{
     font-family:var(--sans); color:var(--text); min-height:100vh; overflow:hidden;
@@ -608,6 +612,7 @@ export class Authenticator {
 <canvas id="rain" aria-hidden="true"></canvas>
 <canvas id="stage" aria-hidden="true"></canvas>
 <canvas id="vfx" aria-hidden="true"></canvas>
+<canvas id="eyevfx" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
 <div class="cursorglow" id="cursorGlow" aria-hidden="true"></div>
@@ -855,6 +860,164 @@ ${versionTag}
     try{ if(brandSlot){ document.body.classList.add("measuring"); var r=brandSlot.getBoundingClientRect();
       document.body.classList.remove("measuring"); if(r.height>0) vfxTargetY=r.top+r.height/2; } }catch(e){}
     vfxActive=true; vfxT0=performance.now(); vcanvas.style.opacity="1"; requestAnimationFrame(vfxLoop); }
+
+  // ===== Eye-gaze WebGL reveal (hi-fi, ported from the vfx-text-cursor block) =====
+  // The Eye of Sauron in the tower turns and gazes at YOU: the wordmark becomes a volumetric emitter
+  // that casts fire rays (recolored from the original chromatic spectrum) with an electric-cyan base
+  // sweep, ray-marched per pixel toward a gaze point that swings from the tower onto the title and
+  // floods blinding-white at the peak. Screen-blended (#eyevfx), so only the light adds over the scene.
+  var egl=null, eProg=null, eBuf=null, eTex=null, eColTex=null, eMaskC=null, eColC=null;
+  var eLoc={}, eActive=false, eT0=0, eW=0, eH=0, EDUR=920;
+  var eCanvas=document.getElementById("eyevfx");
+  var E_VERT=[
+    "attribute vec2 position;",
+    "varying vec2 vUv;",
+    "void main(){ vUv=position*0.5+0.5; gl_Position=vec4(position,0.0,1.0); }"
+  ].join("\\n");
+  var E_FRAG=[
+    "precision highp float;",
+    "varying vec2 vUv;",
+    "uniform vec2 resolution;",
+    "uniform vec2 gaze;",
+    "uniform float effectMix;",
+    "uniform sampler2D src;",
+    "uniform sampler2D colorSrc;",
+    "#define PI 3.141593",
+    "#define SAMPLES 96.0",
+    "float hash(vec2 p){ return fract(sin(dot(p,vec2(489.0,589.0)))*492.0)*2.0-1.0; }",
+    "float hash(vec3 p){ return fract(sin(dot(p,vec3(489.0,589.0,58.0)))*492.0)*2.0-1.0; }",
+    "vec2 hash2(vec3 p){ return vec2(hash(p),hash(p+1.0)); }",
+    "vec4 readMask(vec2 uv){ if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0) return vec4(0.0); return texture2D(src,uv); }",
+    "vec4 readColor(vec2 uv){ if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0) return vec4(0.0); return texture2D(colorSrc,uv); }",
+    // Fire ramp — molten red -> ember orange -> gold-hot -> white, replacing the rainbow spectrum.
+    "vec3 fire(float x){ x=clamp(x*0.5+0.5,0.0,1.0); return vec3(1.35*pow(x,0.42), 0.86*x*x, 0.34*x*x*x*x*x); }",
+    "void main(){",
+    "  vec2 uv=vUv;",
+    "  float mask=readMask(uv).r;",
+    "  vec4 logo=readColor(uv);",
+    "  vec2 p=uv*2.0-1.0; p.x*=resolution.x/resolution.y;",
+    "  vec2 mp=gaze/resolution; mp.y=1.0-mp.y; mp=mp*2.0-1.0; mp.x*=resolution.x/resolution.y;",
+    "  vec2 rp=p; vec2 d=(mp-p)/SAMPLES; float acc=0.0;",
+    "  for(float i=0.0;i<SAMPLES;i++){",
+    "    rp+=d; rp+=hash2(vec3(rp,i))*0.5/SAMPLES;",
+    "    vec2 uv2=rp; uv2.x/=resolution.x/resolution.y; uv2=uv2*0.5+0.5;",
+    "    acc+=readMask(uv2).r/SAMPLES;",
+    "  }",
+    "  vec4 c=vec4(0.0,0.0,0.0,1.0);",
+    "  c-=acc*0.24;",
+    "  c+=vec4(fire(cos(acc*4.9)),1.0)*acc*3.85;",           // fire body of the rays
+    "  c.rgb=max(c.rgb-0.035,0.0); c.rgb*=1.16;",
+    "  float gazeX=gaze.x/resolution.x;",
+    "  float sweep=exp(-pow((uv.x-gazeX)*6.2,2.0));",
+    "  float textProximity=smoothstep(0.006,0.34,acc);",
+    "  float longRay=smoothstep(0.004,0.18,acc);",
+    "  vec3 sweepColor=vec3(0.16,0.72,0.98)+fire(gazeX*1.8)*0.14;",   // electric-cyan base sweep
+    "  c.rgb+=sweepColor*sweep*(0.34+textProximity*2.35);",
+    "  c.rgb+=fire(gazeX+acc*2.0)*longRay*0.58;",
+    "  c.rgb+=logo.rgb*acc*1.18;",
+    "  c.rgb+=logo.rgb*sweep*mask*0.92;",
+    "  c.rgb*=effectMix;",
+    "  c.rgb=mix(c.rgb,logo.rgb,smoothstep(0.02,0.75,logo.a));",
+    "  c.rgb+=vec3(1.0)*smoothstep(0.04,0.38,mask)*0.16*effectMix;",   // white bloom on the glyphs
+    "  float grain=hash(vec3(uv.xyy+gaze.x*0.0007));",
+    "  float dust=smoothstep(0.02,0.38,acc)+smoothstep(0.03,0.22,mask);",
+    "  c.rgb+=grain*0.06*(0.42+dust)*effectMix;",
+    "  c.rgb+=fire(grain+gazeX)*abs(grain)*0.045*smoothstep(0.02,0.5,acc)*effectMix;",
+    "  c.a=1.0; gl_FragColor=c;",
+    "}"
+  ].join("\\n");
+  function eCompile(type,srcTxt){ var s=egl.createShader(type); egl.shaderSource(s,srcTxt); egl.compileShader(s);
+    if(!egl.getShaderParameter(s,egl.COMPILE_STATUS)) throw new Error(egl.getShaderInfoLog(s)); return s; }
+  function eMakeTex(source){ var tx=egl.createTexture(); egl.bindTexture(egl.TEXTURE_2D,tx);
+    egl.pixelStorei(egl.UNPACK_FLIP_Y_WEBGL,true);
+    egl.texImage2D(egl.TEXTURE_2D,0,egl.RGBA,egl.RGBA,egl.UNSIGNED_BYTE,source);
+    egl.texParameteri(egl.TEXTURE_2D,egl.TEXTURE_WRAP_S,egl.CLAMP_TO_EDGE);
+    egl.texParameteri(egl.TEXTURE_2D,egl.TEXTURE_WRAP_T,egl.CLAMP_TO_EDGE);
+    egl.texParameteri(egl.TEXTURE_2D,egl.TEXTURE_MIN_FILTER,egl.LINEAR);
+    egl.texParameteri(egl.TEXTURE_2D,egl.TEXTURE_MAG_FILTER,egl.LINEAR); return tx; }
+  function eInit(){ if(egl||!eCanvas) return egl!==null;
+    try{ egl = eCanvas.getContext("webgl",{alpha:true,premultipliedAlpha:false}) || eCanvas.getContext("experimental-webgl"); }catch(e){ egl=null; }
+    if(!egl) return false;
+    try{
+      eProg=egl.createProgram();
+      egl.attachShader(eProg,eCompile(egl.VERTEX_SHADER,E_VERT));
+      egl.attachShader(eProg,eCompile(egl.FRAGMENT_SHADER,E_FRAG));
+      egl.linkProgram(eProg);
+      if(!egl.getProgramParameter(eProg,egl.LINK_STATUS)) throw new Error(egl.getProgramInfoLog(eProg));
+      eBuf=egl.createBuffer(); egl.bindBuffer(egl.ARRAY_BUFFER,eBuf);
+      egl.bufferData(egl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),egl.STATIC_DRAW);
+      eLoc.position=egl.getAttribLocation(eProg,"position");
+      eLoc.resolution=egl.getUniformLocation(eProg,"resolution");
+      eLoc.gaze=egl.getUniformLocation(eProg,"gaze");
+      eLoc.effectMix=egl.getUniformLocation(eProg,"effectMix");
+      eLoc.src=egl.getUniformLocation(eProg,"src");
+      eLoc.colorSrc=egl.getUniformLocation(eProg,"colorSrc");
+      eMaskC=document.createElement("canvas"); eColC=document.createElement("canvas");
+    }catch(e){ egl=null; return false; }
+    return true; }
+  // Paint the wordmark into the mask (white) + color (fire/electric gradient) offscreen canvases at
+  // its true screen position, so the shader's rays emanate from the actual hero title.
+  function ePaintWordmark(){
+    var wm=document.getElementById("wordmark"); if(!wm||!eMaskC) return false;
+    if(eMaskC.width!==eW||eMaskC.height!==eH){ eMaskC.width=eW; eMaskC.height=eH; eColC.width=eW; eColC.height=eH; }
+    var mc=eMaskC.getContext("2d"), cc=eColC.getContext("2d");
+    mc.clearRect(0,0,eW,eH); cc.clearRect(0,0,eW,eH);
+    var pr=eW/Math.max(1,eCanvas.clientWidth);            // backing px per CSS px
+    var r; try{ r=wm.getBoundingClientRect(); }catch(e){ return false; }
+    var cx=(r.left+r.width/2)*pr, cy=(r.top+r.height/2)*pr;
+    var fs=Math.max(8, r.height*0.72*pr);
+    var font="700 "+fs.toFixed(1)+"px "+
+      "system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+    mc.font=font; cc.font=font; mc.textAlign="center"; cc.textAlign="center";
+    mc.textBaseline="middle"; cc.textBaseline="middle";
+    var txt="SKYNET·CAPITAL", lsp=fs*0.15;
+    // manual letter-spacing so the mask matches the on-screen tracking
+    function drawTracked(g,fill){ var tot=0,i,ws=[];
+      for(i=0;i<txt.length;i++){ var w=g.measureText(txt[i]).width; ws.push(w); tot+=w+lsp; } tot-=lsp;
+      var x=cx-tot/2; for(i=0;i<txt.length;i++){ g.fillStyle=fill; g.fillText(txt[i], x+ws[i]/2, cy); x+=ws[i]+lsp; } }
+    drawTracked(mc,"#ffffff");
+    var grad=cc.createLinearGradient(0,cy-fs*0.6,0,cy+fs*0.6);
+    grad.addColorStop(0,"#FFF2C4"); grad.addColorStop(0.35,"#FFC24D");
+    grad.addColorStop(0.68,"#FF6A1E"); grad.addColorStop(1,"#C22A16");   // gold-hot -> molten
+    drawTracked(cc,grad);
+    return true; }
+  function eResize(){ if(!eCanvas) return;
+    var dpr=Math.min(window.devicePixelRatio||1, 2);
+    eW=Math.max(1,Math.floor(eCanvas.clientWidth*dpr));
+    eH=Math.max(1,Math.floor(eCanvas.clientHeight*dpr));
+    eCanvas.width=eW; eCanvas.height=eH; }
+  function eRender(gx,gy,eff){
+    egl.viewport(0,0,eW,eH); egl.clearColor(0,0,0,1); egl.clear(egl.COLOR_BUFFER_BIT);
+    egl.useProgram(eProg); egl.bindBuffer(egl.ARRAY_BUFFER,eBuf);
+    egl.enableVertexAttribArray(eLoc.position); egl.vertexAttribPointer(eLoc.position,2,egl.FLOAT,false,0,0);
+    egl.activeTexture(egl.TEXTURE0); egl.bindTexture(egl.TEXTURE_2D,eTex);
+    egl.texImage2D(egl.TEXTURE_2D,0,egl.RGBA,egl.RGBA,egl.UNSIGNED_BYTE,eMaskC); egl.uniform1i(eLoc.src,0);
+    egl.activeTexture(egl.TEXTURE1); egl.bindTexture(egl.TEXTURE_2D,eColTex);
+    egl.texImage2D(egl.TEXTURE_2D,0,egl.RGBA,egl.RGBA,egl.UNSIGNED_BYTE,eColC); egl.uniform1i(eLoc.colorSrc,1);
+    egl.uniform2f(eLoc.resolution,eW,eH); egl.uniform2f(eLoc.gaze,gx,gy); egl.uniform1f(eLoc.effectMix,eff);
+    egl.drawArrays(egl.TRIANGLES,0,6); }
+  function eLoop(now){ if(!eActive) return; var q=(now-eT0)/EDUR;
+    if(q>=1){ eActive=false; try{ egl.clear(egl.COLOR_BUFFER_BIT); }catch(e){} if(eCanvas) eCanvas.style.opacity="0"; return; }
+    ePaintWordmark();   // repaint the mask each frame so the rays track the title as it flies + lands
+    // Gaze swings from the tower (upper-left, where Barad-dur stands) onto the wordmark, then holds.
+    var wm=document.getElementById("wordmark"); var pr=eW/Math.max(1,eCanvas.clientWidth);
+    var tx=eW*0.14, ty=eH*0.28, wx=eW*0.5, wy=eH*0.42;
+    try{ if(wm){ var r=wm.getBoundingClientRect(); wx=(r.left+r.width/2)*pr; wy=(r.top+r.height/2)*pr; } }catch(e){}
+    var swing=easeIO(clamp01(q/0.55));
+    var gx=lerp(tx,wx,swing), gy=lerp(ty,wy,swing);
+    // effectMix: rushes up, floods blinding (>1) as the gaze locks on mid-flight, then relaxes — the
+    // bloom peaks while the title is in the air and is gone by the time it settles into the form.
+    var eff = q<0.26 ? (q/0.26) : (q<0.60 ? 1.0+Math.sin((q-0.26)/0.34*PI)*0.8 : Math.max(0,1-(q-0.60)/0.40));
+    // canvas opacity: quick fade-in, hold through the flight, fade to nothing as the title lands.
+    var op = q<0.10 ? q/0.10 : (q>0.58 ? Math.max(0,1-(q-0.58)/0.42) : 1);
+    if(eCanvas) eCanvas.style.opacity=op.toFixed(3);
+    try{ eRender(gx,gy,eff); }catch(e){ eActive=false; }
+    requestAnimationFrame(eLoop); }
+  var PI=Math.PI;
+  function eyeVfxPlay(){ if(reduce||!eCanvas) return; if(!eInit()) return;
+    eResize(); if(!ePaintWordmark()) return;
+    if(!eTex) eTex=eMakeTex(eMaskC); if(!eColTex) eColTex=eMakeTex(eColC);
+    eActive=true; eT0=performance.now(); eCanvas.style.opacity="0"; requestAnimationFrame(eLoop); }
 
   // ===== Market engine: a live underlying with real technical overlays =====
   // Signals come from indicators that actually make sense — EMA cross, Bollinger squeeze/expansion,
@@ -2483,6 +2646,7 @@ ${versionTag}
     // As the narrowing beam reaches the hero, the single VFX-text-cursor effect fires on the title.
     if(wordmark){ wordmark.classList.remove("vfx"); void wordmark.offsetWidth; wordmark.classList.add("vfx"); }
     vfxPlay();   // canvas key-to-the-city unlock behind the blooming title
+    eyeVfxPlay();   // WebGL: the Eye gazes onto the wordmark, casting fire/electric rays (screen-blended)
     // Form only falls into place once the title has landed and can be read.
     seq.push(setTimeout(function(){ body.classList.remove("flying"); body.classList.add("revealed");
       if(beaconLabel) beaconLabel.textContent="Close"; focusForm(); }, 760));

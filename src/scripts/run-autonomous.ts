@@ -139,8 +139,7 @@ async function runLive(): Promise<void> {
     // No credentials yet. On a hosted always-on process, exiting would crash-loop the machine before
     // Eric has set the bot secrets — so idle quietly instead, staying up and ready for a redeploy.
     console.warn(
-      `No enabled bots with credentials (wanted: ${[...enabled].join(", ")}). ` +
-        "Idling — set SKYNET_BOT_<PERSONA>_KEY/SECRET and redeploy to start. Nothing is trading.",
+      `No enabled bots with credentials (wanted: ${[...enabled].join(", ")}). Idling — set SKYNET_BOT_<PERSONA>_KEY/SECRET and redeploy to start. Nothing is trading.`,
     );
     setInterval(() => {}, 60_000);
     return;

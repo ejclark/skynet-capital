@@ -1,6 +1,6 @@
-import { personaClasses } from "../../src/server/persona-classes.js";
-import { createDefaultPersonas } from "../../src/personas/registry.js";
 import { personaLore } from "../../src/observatory/persona-lore.js";
+import { createDefaultPersonas } from "../../src/personas/registry.js";
+import { personaClasses } from "../../src/server/persona-classes.js";
 
 describe("personaClasses", () => {
   const classes = personaClasses();
