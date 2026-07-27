@@ -1,6 +1,9 @@
-# Fly.io config for the live observatory server.
-# The dashboard holds SSE connections and Alpaca websockets, so it must stay running —
-# hence always-on (no auto-stop, at least one machine).
+# Fly.io config for the live observatory server + the always-on autonomous bot runner.
+# Two processes share one image:
+#   app  — the SSE dashboard + Alpaca streams (must stay running to hold connections)
+#   bots — the autonomous trader loop, so bots trade without Eric's laptop (the 24/7 problem)
+# The bots process is SAFE BY DEFAULT: it runs in observe mode (decides + logs, places nothing)
+# until Eric explicitly sets SKYNET_AUTONOMOUS_MODE=live. See docs/AUTONOMY-DEPLOY.md.
 app = "skynet-capital"
 primary_region = "ord"  # Chicago — closest to Iowa
 
@@ -9,6 +12,12 @@ primary_region = "ord"  # Chicago — closest to Iowa
 [env]
   # Self-service accounts persist here, on the mounted volume below (survives redeploys).
   SKYNET_PARTICIPANT_STORE = "/data/participants.json"
+  # Autonomy is OFF by default — the bots process runs but places nothing until this flips to "live".
+  SKYNET_AUTONOMOUS_MODE = "observe"
+
+[processes]
+  app = "npm run serve:dashboard"
+  bots = "npm run run:autonomous"
 
 [http_service]
   internal_port = 8787
@@ -16,12 +25,15 @@ primary_region = "ord"  # Chicago — closest to Iowa
   auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
+  processes = ["app"]  # only the dashboard serves HTTP; the bots process has no web port
 
-# Persistent volume for the self-service participant store. Create once with:
+# Persistent volume for the self-service participant store (dashboard process only — a Fly volume
+# attaches to a single machine, so the bots process runs without it). Create once with:
 #   fly volumes create skynet_data --region ord --size 1
 [mounts]
   source = "skynet_data"
   destination = "/data"
+  processes = ["app"]
 
 [[vm]]
   size = "shared-cpu-1x"

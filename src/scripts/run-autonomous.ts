@@ -136,8 +136,14 @@ async function runLive(): Promise<void> {
     enabled.has(b.persona.id),
   );
   if (bots.length === 0) {
-    console.error(`No enabled bots with credentials. Wanted: ${[...enabled].join(", ")}`);
-    process.exit(1);
+    // No credentials yet. On a hosted always-on process, exiting would crash-loop the machine before
+    // Eric has set the bot secrets — so idle quietly instead, staying up and ready for a redeploy.
+    console.warn(
+      `No enabled bots with credentials (wanted: ${[...enabled].join(", ")}). ` +
+        "Idling — set SKYNET_BOT_<PERSONA>_KEY/SECRET and redeploy to start. Nothing is trading.",
+    );
+    setInterval(() => {}, 60_000);
+    return;
   }
 
   const dataCreds = bots[0]?.credentials;
