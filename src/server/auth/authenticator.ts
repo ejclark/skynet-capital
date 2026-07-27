@@ -878,7 +878,10 @@ ${versionTag}
     // playcall eases it further to W·0.30 for the forecast. Always translated so the present dot never
     // hugs the right edge — the future opens to its right in every state.
     var fpx=(n-1)*dx, fpy=Y(price[n-1]);
-    var toX=lerp(W*0.78, W*0.20, cam), toY=lerp(fpy, baseY, cam);   // play frames wide but leaves the left ~20% open so the primary tower stays a visible focal element
+    // Ambient present at W·0.78; a play eases the focal to W·0.20 (framed, tower visible). On CLOSE, once
+    // the walk is folded in, the focal eases from the tip's own spot (foldFromX) back to ambient — a short
+    // settle, not a full traversal — so the trend doesn't look re-drawn across the page.
+    var toX=lerp(W*0.78, folding?foldFromX:W*0.20, cam), toY=lerp(fpy, baseY, cam);
     nowSX=toX; nowSY=toY; nowPrice=price[n-1];
     pxPerPrice=(amp*2/(r.span||1))*zoom;
     scBaseY=baseY; scMid=r.mid; scSpan=r.span; scAmp=amp;   // ambient price→screen-Y for the roaming scanners
@@ -2271,6 +2274,10 @@ ${versionTag}
   // holds still; in Act 3 a separate realized[] pen draws rightward INTO the prediction, overtaking
   // the dotted forecast, then folds back into price[] on zoom-out so ambient continues from reality.
   var nowIdx=0, realized=[], realizedAlpha=1, pvR=0, stepTarget=null, exitFrac=1, events=[], playVol=1;
+  // Close transition: at zoom-out the realized walk is FOLDED into price[] (time stays advanced) and the
+  // camera eases the focal only from the tip's current spot to the ambient spot — a short settle — instead
+  // of dragging the frozen present all the way back across the page. foldFromX = the tip's screen-x at fold.
+  var folding=false, foldFromX=0;
   var eventWarp=1, warpIdx=-1;   // time-dilation as the pen walks through a high-vol event (1 = real-time)
   // Macro events (earnings, CPI, …) that jolt the trend and get a callout — they explain the less
   // normal-looking deviations of the realized line, and add realism + a teaching moment.
@@ -2546,8 +2553,15 @@ ${versionTag}
           if(eventWarp<1) playStart += dt*(1-eventWarp); }
         if(p.zoom>0.4 && !zoomRippled){ zoomRippled=true; addRipple(nowSX, nowSY); }   // enhance-zoom ripple, centered once framed
         rainBoost=((p.walk>0 && p.resolve<1)||(p.zoom>0.4&&p.project<0.3))?1:0; rainTint=(p.resolve>0 && p.out<1)?1:0;
+        // At zoom-out: FOLD the realized walk into price[] once, so the present continues from where reality
+        // ended (time already pushed forward) and the camera only settles the short last step to ambient —
+        // instead of dragging the frozen present all the way back. Captures the tip's current screen-x first.
+        if(p.out>0 && !folding && realized.length){
+          foldFromX = nowSX + realized.length*(W/(SPAN-1))*zoom;
+          price = price.slice(0, nowIdx+1).concat(realized);
+          realized=[]; realizedAlpha=1; nowIdx=price.length-1; folding=true; }
         if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
-          realized=[]; realizedAlpha=1; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
+          realized=[]; realizedAlpha=1; folding=false; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
       else { rainBoost=0; rainTint=0; fcastProj=0; }
       cam += (camT-cam)*0.09; rate += (rateT-rate)*0.09;
       eyeWake*=0.94;   // the Eye relaxes toward its half-lidded rest; drawGravityBeam re-blazes it on a pull
