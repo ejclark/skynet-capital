@@ -832,7 +832,11 @@ ${versionTag}
       var moving=signalPrice+(targetPrice-signalPrice)*easeIO(f);
       // Pull to target firms up over the walk so an event shock deviates mid-play but the tape still
       // converges to the profitable exit by the close (the happy-but-realistic path).
-      t++; pvR = pvR*0.88 + (noise(t*0.017)-0.5)*volScale*0.03*playVol + (moving-last)*(0.10+0.24*f) + eventImpulse(i,cap);
+      // Ink vs. script: the wiggle is the DOMINANT term through the middle of the walk (the tape
+      // wanders, dips through the plan, recovers), and the pull to the moving target stays gentle
+      // until the final ~12%, where it firms so the close still lands on the exit level.
+      var snap=f>0.88?(f-0.88)/0.12*0.55:0;
+      t++; pvR = pvR*0.88 + (noise(t*0.017)-0.5)*volScale*0.055*playVol + (moving-last)*(0.06+0.12*f+snap) + eventImpulse(i,cap);
       realized.push(Math.max(5, last+pvR)); }
     while(realized.length>want) realized.pop();   // trim if the walk was scrubbed back
   }
@@ -2090,9 +2094,11 @@ ${versionTag}
     var acol=up?pos:(dn?neg:muted), dir=up?-1:(dn?1:0);
     var yNow=SY(nowPrice), yTgt=SY(targetPrice);
     if(proj>0.01){
-      ctx.setLineDash([3,5]); ctx.strokeStyle=hexA(acol,0.85*proj); ctx.lineWidth=1.6; ctx.beginPath();
-      var SEG=28; for(var s=0;s<=SEG;s++){ var tt=s/SEG, xx=X0+(Xf-X0)*tt, yy=yNow+(yTgt-yNow)*easeIO(tt); s?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); }
-      ctx.stroke(); ctx.setLineDash([]);
+      // The plan reads as a SCRIPT: true round dots on a perfectly smooth ease — deliberately too
+      // clean to be a tape, so the realized ink (candles, wandering) is unmistakably "what happened".
+      ctx.save(); ctx.setLineDash([0.1,8]); ctx.lineCap="round"; ctx.strokeStyle=hexA(acol,0.9*proj); ctx.lineWidth=2.6; ctx.beginPath();
+      var SEG=56; for(var s=0;s<=SEG;s++){ var tt=s/SEG, xx=X0+(Xf-X0)*tt, yy=yNow+(yTgt-yNow)*easeIO(tt); s?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); }
+      ctx.stroke(); ctx.restore(); ctx.setLineDash([]);
       for(var a=1;a<=3;a++){ var t2=a/4, ax2=X0+(Xf-X0)*t2, ay2=yNow+(yTgt-yNow)*easeIO(t2); drawChevron(ax2,ay2,dir,hexA(acol,0.95*proj)); }
       // entry marker (at now) + target marker (max-profit price)
       ctx.fillStyle=hexA(accent,0.95*proj); ctx.beginPath(); ctx.arc(X0,yNow,3.5,0,7); ctx.fill();
@@ -2565,9 +2571,13 @@ ${versionTag}
           var fr; for(fr=0; fr<realized.length; fr++) pushPrice(realized[fr]);
           realized=[]; realizedAlpha=1; nowIdx=price.length-1; folding=true; }
         if(e>=T_END){ playMode=false; manualPlay=false; paceScale=1; nextPlayAt=now+3400+Math.random()*2600;
-          realized=[]; realizedAlpha=1; folding=false; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
+          realized=[]; realizedAlpha=1; p=null; camT=0; rateT=1; rainBoost=0; rainTint=0; highlightPlay(-1); } }
       else { rainBoost=0; rainTint=0; fcastProj=0; }
       cam += (camT-cam)*0.09; rate += (rateT-rate)*0.09;
+      // The fold anchor must OUTLIVE the play: clearing it at T_END while cam is still easing down
+      // flipped the focal target back to the play anchor (W*0.20), yanking the present leftward
+      // before it eased home. Keep folding until the camera has actually settled at ambient.
+      if(folding && !playMode && cam<0.02) folding=false;
       eyeWake*=0.94;   // the Eye relaxes toward its half-lidded rest; drawGravityBeam re-blazes it on a pull
       zoom += ((1+1.05*cam)-zoom)*0.1;
       // Advance time. Ambient only: push the live market. During a play the history is FROZEN — the
