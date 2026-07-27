@@ -552,50 +552,6 @@ export class Authenticator {
   .btn{ opacity:0; animation:rise .6s ease calc(.3s + var(--i,0) * .1s) both; }
   .foot{ opacity:0; animation:rise .7s ease .5s both; }
 
-  /* --- Playcall drawer: the Signal → Play → Outlook → Status narrative as a real DOM panel,
-     decoupled from the canvas chart. Slides in from the left edge during a playcall; a tab
-     collapses it to a sliver. The chart keeps its self-labeling title; this is the structured,
-     readable companion (and the seed of the logged-in playcall drawer). --- */
-  .playdrawer{ position:fixed; left:0; top:50%; z-index:6; width:300px; max-width:82vw;
-    transform:translate(-100%,-50%); transition:transform .5s cubic-bezier(.2,.7,.2,1), opacity .4s ease;
-    background:color-mix(in srgb, var(--surface,#131A22) 90%, transparent); border:1px solid var(--border,#223041); border-left:0;
-    border-radius:0 14px 14px 0; backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
-    box-shadow:0 24px 70px rgba(0,0,0,.55); opacity:0; pointer-events:none; }
-  body.playing .playdrawer{ transform:translate(0,-50%); opacity:1; pointer-events:auto; }
-  body.playing.pd-collapsed .playdrawer{ transform:translate(calc(-100% + 30px),-50%); }
-  .pd-tab{ position:absolute; right:-30px; top:50%; transform:translateY(-50%); width:30px; height:66px;
-    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--accent,#35D0BA);
-    background:color-mix(in srgb, var(--surface,#131A22) 90%, transparent); border:1px solid var(--border,#223041); border-left:0;
-    border-radius:0 10px 10px 0; font-family:var(--mono,monospace); font-size:15px; }
-  .pd-tab:hover{ color:var(--text,#E6EDF3); }
-  .pd-tab:focus-visible{ outline:2px solid var(--accent,#35D0BA); outline-offset:2px; }
-  body.pd-collapsed .pd-tab-i{ transform:rotate(180deg); }
-  .pd-tab-i{ transition:transform .3s ease; }
-  .pd-inner{ padding:18px 18px 16px; }
-  .pd-eyebrow{ font-family:var(--mono,monospace); font-size:9.5px; letter-spacing:.22em; color:var(--accent,#35D0BA); margin-bottom:14px; }
-  .pd-sec{ padding:11px 0; border-top:1px solid color-mix(in srgb, var(--border,#223041) 70%, transparent); }
-  .pd-sec:first-of-type{ border-top:0; padding-top:0; }
-  .pd-k{ display:block; font-family:var(--mono,monospace); font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted,#8B9AAB); margin-bottom:6px; }
-  .pd-sig{ font-family:var(--mono,monospace); font-size:11.5px; letter-spacing:.04em; color:var(--accent,#35D0BA); line-height:1.45; margin-bottom:8px; }
-  .pd-rsi{ display:flex; align-items:center; gap:8px; }
-  .pd-rsi-lab{ font-family:var(--mono,monospace); font-size:9.5px; color:var(--muted,#8B9AAB); letter-spacing:.1em; }
-  .pd-rsi-val{ font-family:var(--mono,monospace); font-size:13px; font-weight:700; color:var(--text,#E6EDF3); min-width:22px; }
-  .pd-rsi-bar{ position:relative; flex:1; height:5px; border-radius:3px; background:color-mix(in srgb, var(--muted,#8B9AAB) 18%, transparent); overflow:hidden; }
-  .pd-rsi-bar i{ position:absolute; top:0; left:0; height:100%; width:0; background:var(--accent,#35D0BA); border-radius:3px; transition:width .2s ease, background .2s ease; }
-  .pd-play{ font-family:var(--sans,sans-serif); font-size:17px; font-weight:700; color:var(--text,#E6EDF3); letter-spacing:-.01em; }
-  .pd-class{ font-family:var(--mono,monospace); font-size:9.5px; letter-spacing:.12em; color:var(--accent,#35D0BA); margin:2px 0 7px; }
-  .pd-why{ font-size:12px; color:var(--muted,#8B9AAB); line-height:1.5; }
-  .pd-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .pd-lab{ display:block; font-family:var(--mono,monospace); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted,#8B9AAB); margin-bottom:3px; }
-  .pd-num{ font-family:var(--mono,monospace); font-size:14px; font-weight:700; }
-  .pd-num.pos{ color:var(--pos,#3FB950); } .pd-num.neg{ color:var(--neg,#F85149); }
-  .pd-status .pd-live{ font-family:var(--mono,monospace); font-size:15px; font-weight:700; color:var(--muted,#8B9AAB); }
-  .pd-status .pd-live.pos{ color:var(--pos,#3FB950); } .pd-status .pd-live.neg{ color:var(--neg,#F85149); }
-  .pd-recap{ margin-top:5px; font-family:var(--mono,monospace); font-size:10px; letter-spacing:.14em; }
-  .pd-recap.pos{ color:var(--pos,#3FB950); } .pd-recap.neg{ color:var(--neg,#F85149); }
-  .pd-watch{ margin-top:12px; padding-top:11px; border-top:1px solid color-mix(in srgb, var(--border,#223041) 70%, transparent);
-    font-family:var(--mono,monospace); font-size:9.5px; letter-spacing:.08em; color:color-mix(in srgb, var(--muted,#8B9AAB) 85%, transparent); }
-  @media (max-width:819px){ .playdrawer{ display:none; } }
 
   @media (prefers-reduced-motion:reduce){
     *{ animation:none !important; transition:none !important; }
@@ -667,36 +623,6 @@ export class Authenticator {
 </button>
 ${versionTag}
 
-<aside class="playdrawer" id="playdrawer" aria-hidden="true">
-  <button type="button" class="pd-tab" id="pdTab" aria-label="Collapse the playcall panel"><span class="pd-tab-i">‹</span></button>
-  <div class="pd-inner">
-    <p class="pd-eyebrow" id="pdPhase">◈ STANDING BY</p>
-    <div class="pd-sec">
-      <span class="pd-k">Signal</span>
-      <p class="pd-sig" id="pdSignal">Scanning the tape…</p>
-      <div class="pd-rsi"><span class="pd-rsi-lab">RSI</span><span class="pd-rsi-val" id="pdRsi">—</span><span class="pd-rsi-bar"><i id="pdRsiFill"></i></span></div>
-    </div>
-    <div class="pd-sec">
-      <span class="pd-k">Play</span>
-      <p class="pd-play" id="pdPlay">—</p>
-      <p class="pd-class" id="pdClass"></p>
-      <p class="pd-why" id="pdWhy"></p>
-    </div>
-    <div class="pd-sec">
-      <span class="pd-k">Outlook</span>
-      <div class="pd-grid">
-        <div><span class="pd-lab">Max profit</span><span class="pd-num pos" id="pdMaxP">—</span></div>
-        <div><span class="pd-lab">Max loss</span><span class="pd-num neg" id="pdMaxL">—</span></div>
-      </div>
-    </div>
-    <div class="pd-sec pd-status">
-      <span class="pd-k">Playcall</span>
-      <p class="pd-live" id="pdLive">Standing by</p>
-      <p class="pd-recap" id="pdRecap" hidden></p>
-    </div>
-    <p class="pd-watch"><span id="pdTicker">—</span> · <span id="pdVix">VIX —</span> · <span id="pdIv">IV —</span></p>
-  </div>
-</aside>
 
 <div class="authwrap" id="authwrap">
   <main class="card" id="card">
@@ -2410,7 +2336,7 @@ ${versionTag}
     // itself here (headroom above the top band, at the entry), not in a detached panel. An eyebrow ties
     // it to the underlying + complexity class. Reserved so event labels steer clear.
     var ins=easeIO(clamp01(p.insight));
-    if(W>=820 && chartNarr()){
+    if(W>=820){   // the chart self-labels — play name/class/thesis live here, not in a side panel
       // The title anchor is computed EVERY frame the play is active (not just once the name shows), so the
       // signal read + recap dock beneath it consistently through AIM → INSIGHT → walk.
       var sans2=css("--sans")||"sans-serif", tnx=X0, tnY=SY(hiP)-12, tsz=(W>=1200?26:21), teY=tnY-(tsz+4);   // title scales up on wide viewports (full-width playcall has the room)
@@ -2529,12 +2455,11 @@ ${versionTag}
       }
     }
     drawPanel(strat, sig, p, A);
-    if(W>=820 && proj>0.01 && chartNarr()) drawTotals(strat, p, A, Xf, SY);   // max P/L + outcome at the far right — chart-side only when the drawer is tucked
-    // The thesis + recap cards are desktop-only — on narrow screens they'd collide with the centered
-    // stacked panel, which already carries the play's essentials.
-    if(W>=820 && chartNarr()){
+    if(W>=820 && proj>0.01) drawTotals(strat, p, A, Xf, SY);   // max P/L + outcome at the far right, by the TARGET
+    // The recap card is desktop-only — on narrow screens it'd collide with the centered stacked panel,
+    // which already carries the play's essentials.
+    if(W>=820){
       // Retrospective recap once the play resolves — confirms the thesis played out (bookends the WHY).
-      // Drawer-open: the drawer's RESOLVED + CLOSED P/L carries this, so the chart stays clean.
       var recapA=A*clamp01((p.resolve-0.45)/0.55)*(1-clamp01(p.out*1.7));
       if(recapA>0.01) drawRecap(strat, sig, X0, yNow, recapA);
     }
@@ -2801,79 +2726,6 @@ ${versionTag}
       for(var s=0;s<26;s++) rainDraw(0,0); }
     return; }
 
-  // The playcall DRAWER: mirror the on-canvas playcall narrative into the real DOM panel so it reads
-  // as structured, legible text (decoupled from the chart). Pure sync from play state — writes
-  // textContent only, no markup, so there's nothing to escape. Throttled to ~10Hz (the numbers don't
-  // need 60fps). The tab collapses it; the whole thing hides in ambient via the body.playing class.
-  var pdEls=null, pdLastPl=null, pdAcc=0;
-  function pdRef(){ pdEls={ phase:document.getElementById("pdPhase"), sig:document.getElementById("pdSignal"),
-    rsi:document.getElementById("pdRsi"), rsiFill:document.getElementById("pdRsiFill"), play:document.getElementById("pdPlay"),
-    cls:document.getElementById("pdClass"), why:document.getElementById("pdWhy"), maxP:document.getElementById("pdMaxP"),
-    maxL:document.getElementById("pdMaxL"), live:document.getElementById("pdLive"), ticker:document.getElementById("pdTicker"),
-    vix:document.getElementById("pdVix"), iv:document.getElementById("pdIv"), recap:document.getElementById("pdRecap") }; }
-  function pdSet(el, txt){ if(el && el.textContent!==txt) el.textContent=txt; }
-  // Decoupled narrative: when the drawer is OPEN it owns the play's name / thesis / totals / recap, so
-  // the chart stays pure geometry. When it's COLLAPSED (or on mobile, where there's no drawer) the chart
-  // self-labels again — the story is always legible somewhere. "Association, not literal placement."
-  function pdCollapsed(){ return document.body.classList.contains("pd-collapsed"); }
-  function chartNarr(){ return W<820 || pdCollapsed(); }
-  function updateDrawer(p){
-    if(!pdEls) pdRef(); if(!pdEls || !pdEls.play) return;
-    if(!p){ if(pdLastPl!==null){ pdSet(pdEls.phase,"◈ STANDING BY"); pdSet(pdEls.live,"Standing by");
-      pdEls.live.className="pd-live"; pdLastPl=null; } return; }
-    pdAcc++; if(pdAcc%6!==0) return;   // ~10Hz
-    var strat=STRATS[curStrat]; if(!strat) return;
-    var phase="◈ SIGNAL";
-    if(p.out>0) phase="✓ RESOLVED"; else if(p.walk>0) phase="◈ REALIZE · LIVE";
-    else if(p.project>0.05) phase="◈ PREDICT"; else if(p.insight>0.05) phase="◈ INSIGHT";
-    else if(p.aim>0.05) phase="◈ AIM";
-    pdSet(pdEls.phase, phase);
-    pdSet(pdEls.sig, curSig?curSig.sig:strat.cue);
-    pdSet(pdEls.rsi, rsiV.toFixed(0));
-    if(pdEls.rsiFill){ pdEls.rsiFill.style.width=clamp01(rsiV/100)*100+"%";
-      pdEls.rsiFill.style.background=rsiV<30?(css("--pos")||"#3FB950"):(rsiV>70?(css("--neg")||"#F85149"):(css("--accent")||"#35D0BA")); }
-    pdSet(pdEls.play, strat.name);
-    pdSet(pdEls.cls, playTicker+" · CLASS "+strat.tier);
-    pdSet(pdEls.why, strat.why||strat.desc||"");
-    pdSet(pdEls.maxP, money(strat.maxP));
-    pdSet(pdEls.maxL, money(strat.maxL));
-    var e=extrema(strat), curP=realized.length?realized[realized.length-1]:nowPrice;
-    var uNow=clamp01((curP-signalPrice)/(volScale||1)+0.5), pl=dollarsAt(strat,e,payoffAt(strat.pts,uNow));
-    if(p.out>0){ pdSet(pdEls.live, "CLOSED "+money(pl)); pdEls.live.className="pd-live "+(pl>=0?"pos":"neg"); }
-    else if(p.walk>0){ pdSet(pdEls.live, "LIVE "+money(pl)); pdEls.live.className="pd-live "+(pl>=0?"pos":"neg"); }
-    else { pdSet(pdEls.live, "LOCKED · max "+money(strat.maxP)); pdEls.live.className="pd-live"; }
-    // RECAP: on resolve, the one thing unique to the retrospective — did the read hold? Booked at the
-    // TARGET the play walked to, so a connector ties this verdict back to that point on the chart.
-    if(pdEls.recap){ if(p.resolve>0.45){ var uEx=clamp01((targetPrice-signalPrice)/(volScale||1)+0.5),
-        plEx=dollarsAt(strat,e,payoffAt(strat.pts,uEx)), held=plEx>=0;
-        pdSet(pdEls.recap, held?"✓ READ HELD":"✗ READ BROKE"); pdEls.recap.className="pd-recap "+(held?"pos":"neg"); pdEls.recap.hidden=false; }
-      else pdEls.recap.hidden=true; }
-    pdSet(pdEls.ticker, playTicker);
-    pdSet(pdEls.vix, "VIX "+playVix+(playVix>=26?" · FEAR":playVix<=15?" · CALM":""));
-    pdSet(pdEls.iv, "IV "+playIV+"%");
-    pdLastPl=pl;
-  }
-  // The connector: on resolve, when the drawer is OPEN, draw a subtle canvas leader from the drawer's
-  // PLAYCALL readout to the TARGET point the play walked to — so "CLOSED +$X · READ HELD" is visibly
-  // tied to where on the chart it resolved (task #51). Reads the live DOM position so it tracks layout.
-  function drawRecapConnector(p){
-    if(!p || p.resolve<=0.45 || W<820 || pdCollapsed() || !pdEls || !pdEls.live) return;
-    if(!tgtSX) return;
-    var r=pdEls.live.getBoundingClientRect(); if(!r.width) return;
-    var sx=r.right+4, sy=r.top+r.height/2, ex=tgtSX, ey=tgtSY;
-    var a=clamp01((p.resolve-0.45)/0.4)*(1-clamp01(p.out*1.7)); if(a<=0.01) return;
-    var accent=css("--accent")||"#35D0BA";
-    ctx.save(); ctx.globalAlpha=a*0.55; ctx.setLineDash([2,5]); ctx.lineWidth=1; ctx.strokeStyle=accent;
-    ctx.beginPath(); ctx.moveTo(sx,sy);
-    ctx.bezierCurveTo(sx+(ex-sx)*0.4, sy, ex-(ex-sx)*0.3, ey, ex, ey); ctx.stroke(); ctx.setLineDash([]);
-    // a small node at each end so the tie reads as deliberate
-    ctx.globalAlpha=a*0.8; ctx.fillStyle=accent;
-    ctx.beginPath(); ctx.arc(sx,sy,2.2,0,7); ctx.fill();
-    ctx.beginPath(); ctx.arc(ex,ey,2.2,0,7); ctx.fill(); ctx.restore();
-  }
-  (function(){ var tab=document.getElementById("pdTab");
-    if(tab) tab.addEventListener("click", function(){ var c=document.body.classList.toggle("pd-collapsed");
-      tab.setAttribute("aria-label", c?"Expand the playcall panel":"Collapse the playcall panel"); }); })();
 
   var last=0, running=true, SUMMON_MS=850;
   document.addEventListener("visibilitychange", function(){ running=!document.hidden; if(running) requestAnimationFrame(loop); });
@@ -2962,8 +2814,6 @@ ${versionTag}
       drawMarket(1 - cam*0.34);
       drawScanners(1 - cam);   // roaming signal-scan spotlights — ambient only, recede as a play frames
       if(p){ drawHandoff(p); drawGravityBeam(p); drawForecast(STRATS[curStrat], curSig, p); drawInsight(STRATS[curStrat], p); pbGlyphT++; }
-      updateDrawer(p);
-      if(p) drawRecapConnector(p);
       drawRipples();
       beamVignette();
       rainDraw(rainBoost, rainTint); }
