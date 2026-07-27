@@ -1946,20 +1946,24 @@ ${versionTag}
             var lg=ctx.createLinearGradient(e.x,e.y,nowSX,nowSY);
             lg.addColorStop(0,hexA(col,a*pull)); lg.addColorStop(0.55,hexA(col,a*0.5*pull)); lg.addColorStop(1,hexA(col,a*0.72*pull));
             ctx.fillStyle=lg; ctx.fill(); };
-          cone(5, bwBase*swav, accent, 0.09);              // outer soft haze
-          cone(4, bwBase*0.62*swav, "#FFD9A0", 0.14);      // warm mid body
-          cone(3, bwBase*0.30*swav, "#FFF3DD", 0.22);      // bright inner core
-          // the lit POOL where the gaze lands — the ring caught in the beam
+          // The gaze is FIRE with an ELECTRIC base: a molten body (deep-red → ember-orange → gold) lit
+          // from within, wrapped in a cool electric haze from the gravity pull driving the charge.
+          cone(6, bwBase*1.05*swav, "#59E0FF", 0.07);      // electric outer haze (the charged field)
+          cone(5, bwBase*swav, "#C22A16", 0.11);           // molten-red volume
+          cone(4, bwBase*0.60*swav, "#FF7A2E", 0.16);      // ember-orange mid body
+          cone(3, bwBase*0.30*swav, "#FFD24D", 0.24);      // gold-hot inner core
+          // the lit POOL where the gaze lands — molten-hot, ringed by an electric fringe
           var poolR=bwBase*1.15, plg=ctx.createRadialGradient(nowSX,nowSY,0,nowSX,nowSY,poolR);
-          plg.addColorStop(0,hexA("#FFF3DD",0.5*pull)); plg.addColorStop(0.35,hexA("#FFC98A",0.28*pull)); plg.addColorStop(1,hexA(accent,0));
+          plg.addColorStop(0,hexA("#FFE7A0",0.55*pull)); plg.addColorStop(0.3,hexA("#FF7A2E",0.3*pull)); plg.addColorStop(0.7,hexA("#59E0FF",0.12*pull)); plg.addColorStop(1,hexA(accent,0));
           ctx.fillStyle=plg; ctx.beginPath(); ctx.arc(nowSX,nowSY,poolR,0,7); ctx.fill();
           // The beam resonates BOTH energies. Molten: a warm filament that reads as flowing melt, not a
           // torch. Electric: real forked lightning that STRIKES intermittently (a couple of frames, then
           // gone) rather than a permanent uniform arc — a charged conduit that fires when the pull peaks.
-          bolt(e.x,e.y,nowSX,nowSY, 10*pull, e.seed+11, "#FF8A3D", 0.24*pull*flick, 1.4);   // molten filament (dimmer, warmer)
-          var strike=noise(pbGlyphT*0.14+k*4.1);   // gate: only a fraction of frames carry a live arc
-          if(strike>0.62){ var sa=clamp01((strike-0.62)/0.38);
-            light(e.x,e.y,nowSX,nowSY, e.seed+Math.floor(pbGlyphT*0.5)*3.3, "#EAFEFF", "#7FE9FF", (0.5+0.5*sa)*pull, 0.36); }
+          bolt(e.x,e.y,nowSX,nowSY, 11*pull, e.seed+11, "#FF6A1E", 0.34*pull*flick, 1.8);   // molten fire filament (brighter, redder)
+          bolt(e.x,e.y,nowSX,nowSY, 7*pull, e.seed+5, "#FFD24D", 0.24*pull*flick, 1);      // gold-hot inner streak
+          var strike=noise(pbGlyphT*0.14+k*4.1);   // gate: a live electric arc discharges on a fraction of frames
+          if(strike>0.55){ var sa=clamp01((strike-0.55)/0.45);
+            light(e.x,e.y,nowSX,nowSY, e.seed+Math.floor(pbGlyphT*0.5)*3.3, "#EAFEFF", "#59E0FF", (0.55+0.45*sa)*pull, 0.36); }
           // charge streaming FROM the present toward the tower — the matter being pulled in
           for(var s2=0;s2<6;s2++){ var f=(pbGlyphT*0.05+s2/6+k*0.17)%1, cxp=lerp(nowSX,e.x,f), cyp=lerp(nowSY,e.y,f);
             ctx.fillStyle=hexA("#EAFFFA",0.6*(1-f)*pull); ctx.fillRect(cxp-1.2,cyp-1.2,2.4,2.4); } }
