@@ -15,6 +15,12 @@ export interface StructureState {
   /** R1 — relative mass 0..1 within the empire (market value / the empire's largest position). */
   readonly mass: number;
   /**
+   * R2b — relative footprint 0..1 (cost basis / the empire's largest cost basis). The second honest
+   * axis: footprint = what was COMMITTED, mass = what it's WORTH — a tall thin tower is a big gain on
+   * a small commitment; a squat wide one is a large commitment underwater.
+   */
+  readonly footprint: number;
+  /**
    * R2 — signed health −1..1 from unrealized P/L over cost basis (clamped). Positive = lit/thriving,
    * negative = dim/weathered. Derived from real P/L only — never flatters (honesty invariant).
    */
@@ -48,7 +54,11 @@ export interface EmpireState {
   readonly theme: string;
   /** False = no holdings yet: the pre-founding state (a frontier plot, not a blank). */
   readonly founded: boolean;
-  /** Structures sorted by mass, largest first (the skyline order). */
+  /**
+   * ALL holdings as structures, sorted by mass, largest first — the projection never truncates
+   * (honesty invariant: nothing silently vanishes from your own empire). Renderers that can only
+   * show the top N aggregate the rest into an explicitly LABELED tail (see tailOf in project.ts).
+   */
   readonly structures: readonly StructureState[];
   readonly reserve: ReserveState;
   readonly landmark?: LandmarkState;

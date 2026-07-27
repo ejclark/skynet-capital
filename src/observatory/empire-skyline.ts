@@ -1,4 +1,4 @@
-import { projectEmpire } from "../universe/project.js";
+import { MAX_STRUCTURES, projectEmpire, tailOf } from "../universe/project.js";
 import type { Sector } from "../universe/sectors.js";
 import type { EmpireState, StructureState } from "../universe/world-state.js";
 /**
@@ -92,23 +92,37 @@ export function renderEmpireSkyline(
     return `<svg class="empire-skyline${compact ? " empire-skyline-compact" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Empire skyline — no holdings yet" preserveAspectRatio="xMidYMax meet"><rect width="${W}" height="${H}" fill="var(--surface-2)" rx="10"/>${groundline}<text x="${W / 2}" y="${baseY - (compact ? 10 : 18)}" text-anchor="middle" font-size="${compact ? 9 : 11}" fill="var(--muted)" font-family="var(--mono)">undeveloped — no holdings yet</text>${label}</svg>`;
   }
 
-  const structures = empire.structures;
+  // Display the top holdings as towers; everything beyond aggregates into a LABELED outer district
+  // (truncation is visible, never silent — the projection carries all structures).
+  const structures = empire.structures.slice(0, MAX_STRUCTURES);
+  const tail = tailOf(empire.structures);
   const pad = 14;
   const gap = 8;
-  const zone = W - pad * 2 - 56; // reserve the right ~56px for the cash park
+  const tailW = tail ? 34 : 0;
+  const zone = W - pad * 2 - 56 - tailW; // right side reserves the cash park (+ outer district)
   const slot = zone / structures.length;
-  const bw = Math.max(20, Math.min(46, slot - gap)); // building centered within its slot, evenly spread
+  const bwMax = Math.max(20, Math.min(46, slot - gap));
 
   const minH = compact ? 14 : 26;
   const spanH = compact ? 44 : 74;
   let buildings = "";
   structures.forEach((s, i) => {
+    // Two honest axes: WIDTH from footprint (what was committed), HEIGHT from mass (what it's worth,
+    // whale-compressed ^0.6 so one giant doesn't flatten the rest into stubs).
+    const bw = Math.max(16, Math.round(bwMax * (0.62 + 0.38 * s.footprint)));
     const bx = Math.round(pad + slot * i + (slot - bw) / 2);
-    const h = minH + spanH * s.mass;
-    buildings += building(s.sector, bx, baseY, Math.round(bw), Math.round(h), capColorOf(s));
+    const h = minH + spanH * s.mass ** 0.6;
+    buildings += building(s.sector, bx, baseY, bw, Math.round(h), capColorOf(s));
     if (!compact)
       buildings += `<text x="${bx + Math.round(bw / 2)}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">${s.symbol}</text>`;
   });
+  // The outer district — the aggregated tail as a low block, capped by its aggregate P/L color.
+  if (tail) {
+    const tx = W - 56 - 12 - tailW;
+    const tCap =
+      tail.unrealizedPl > 0 ? "var(--pos)" : tail.unrealizedPl < 0 ? "var(--neg)" : "var(--muted)";
+    buildings += `<g><rect x="${tx}" y="${baseY - 18}" width="${tailW - 6}" height="18" fill="var(--surface)" stroke="var(--muted)" stroke-opacity="0.4"/><rect x="${tx + 1}" y="${baseY - 21}" width="${tailW - 8}" height="3" fill="${tCap}"/><text x="${tx + (tailW - 6) / 2}" y="${baseY - 7}" text-anchor="middle" font-size="6" fill="var(--muted)" font-family="var(--mono)">+${tail.count}</text>${compact ? "" : `<text x="${tx + (tailW - 6) / 2}" y="${baseY + 11}" text-anchor="middle" font-size="7" fill="var(--muted)" font-family="var(--mono)">OUTER</text>`}</g>`;
+  }
 
   // Cash reserve → a park (green space) sized by the reserve share (R4, from the projection).
   const parkW = Math.round(20 + 34 * empire.reserve.share);
@@ -122,9 +136,10 @@ export function renderEmpireSkyline(
   const tallest = structures[0];
   if (empire.landmark?.kind === "eye" && tallest) {
     const s = (compact ? 5 : 8) * (0.62 + 0.5 * empire.landmark.prominence); // rank-scaled: better bot → larger Eye
-    const bx0 = Math.round(pad + (slot - bw) / 2);
-    const cx0 = bx0 + Math.round(bw / 2);
-    const cyTop = baseY - (minH + spanH * tallest.mass) - s;
+    const bwT = Math.max(16, Math.round(bwMax * (0.62 + 0.38 * tallest.footprint)));
+    const bx0 = Math.round(pad + (slot - bwT) / 2);
+    const cx0 = bx0 + Math.round(bwT / 2);
+    const cyTop = baseY - (minH + spanH * tallest.mass ** 0.6) - s;
     landmark = renderEyeEmblem(cx0, cyTop, s);
   }
 
