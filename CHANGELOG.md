@@ -1,3 +1,10 @@
+# [1.95.0](https://github.com/ejclark/skynet-capital/compare/v1.94.0...v1.95.0) (2026-07-27)
+
+
+### Features
+
+* **evals:** world-projection honesty property battery + nan-transparency fix ([#166](https://github.com/ejclark/skynet-capital/issues/166)) ([319c265](https://github.com/ejclark/skynet-capital/commit/319c2658eadba39e8b507ca55c444388a55df0f3))
+
 # [1.94.0](https://github.com/ejclark/skynet-capital/compare/v1.93.0...v1.94.0) (2026-07-27)
 
 
