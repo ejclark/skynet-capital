@@ -24,26 +24,32 @@ export const PERSONA_LORE: Record<string, PersonaLore> = {
   "news-fader": {
     name: "The News Fader",
     thesis: "The crowd over-reacts to headlines; fade the hype, buy the panic.",
+    lore: "The Illusion-Breaker. Every headline casts a glamour the crowd rushes to believe; she reads the enchantment for what it is and takes the other side — selling into the euphoria, buying the panic once the spell breaks.",
   },
   "retail-investor": {
     name: "The Retail Investor",
     thesis: "Buys the hype, sells the fear — the crowd the News Fader trades against.",
+    lore: "The Everyman, swept along by the tide. He chases the roar and flees the shadow, one voice in the great herd — the honest mirror of the crowd whose emotion the sharper players fade. His fortune rises and falls with the mob's.",
   },
   futurist: {
     name: "The Futurist",
     thesis: "Own the future early; buy confirmed strength and hold through the noise.",
+    lore: "The Oracle, who buys tomorrow before it arrives. She waits for the vision to confirm, then commits and holds through every tremor of doubt — conviction is her armor, and time her ally.",
   },
   "gold-bug": {
     name: "The Gold Bug",
     thesis: "When fear spreads, flee to gold and hold it; never trust a risk asset.",
+    lore: "The Dragon on its hoard. When fear spreads across the realm it retreats to the one true metal and coils around it, trusting no paper promise. Slow, ancient, and unmoved — it endures what burns the rest.",
   },
   "day-trader": {
     name: "The Day Trader",
     thesis: "Seasoned tape-reader; rides big-tech momentum and cuts losers fast.",
+    lore: "The Duelist — a fast blade who reads the tape like a fencer reads a stance. She rides momentum while it runs and cuts a losing position without hesitation. No position outlives its edge.",
   },
   "rumor-trader": {
     name: "The Rumor Trader",
     thesis: "Buy the whisper, sell the headline — accumulate the build, exit the euphoria.",
+    lore: "The Whisperer, a spymaster trading in secrets before they become news. He accumulates on the quiet build and slips away the moment the whisper becomes a headline and the crowd floods in.",
   },
   banker: {
     name: "The Banker",
