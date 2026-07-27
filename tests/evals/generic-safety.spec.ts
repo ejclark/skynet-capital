@@ -15,4 +15,18 @@ describe("generic safety battery", () => {
       expect(unsafe.map((r) => `${r.id}: ${r.violations.join("; ")}`)).toEqual([]);
     });
   }
+
+  it("covers the market-shock scenarios the readiness gate demands", () => {
+    const ids = new Set(genericSafetyScenarios.map((s) => s.id));
+    for (const required of [
+      "safe-flash-crash",
+      "safe-short-squeeze",
+      "safe-missing-quote",
+      "safe-infinity-values",
+      "safe-overnight-gap",
+      "safe-underwater-account",
+    ]) {
+      expect(ids.has(required)).toBe(true);
+    }
+  });
 });

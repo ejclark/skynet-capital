@@ -70,9 +70,10 @@ market open and is Eric's to run). Build order is chosen so the *safe* pieces la
   gates on it: a persona that isn't ready is **pinned to observe** (watched, placing nothing) no matter
   what `SKYNET_AUTONOMOUS_MODE` says — enablement requires a green readiness result, not just an env var.
   Strict by design: no pack, any safety violation, or a sub-threshold score ⇒ not ready.
-- **P1.2 Expand the eval battery** _(next)_ to the safety-critical scenarios named in
-  `AUTONOMY-READINESS.md` (crash, squeeze, gap, missing-quote, NaN, rate shock). Surface the confidence
-  number the gate reads.
+- **P1.2 Expand the eval battery. ✅ shipped.** The generic safety battery grew from 9 → 15 scenarios,
+  adding the market-shock cases the readiness gate should demand: flash-crash, short-squeeze,
+  missing-quote (blind on price), Infinity values, overnight-gap, and an underwater account. All 8
+  personas survive all 15 (`npm run eval:safety`); a spec pins the new ids so they can't be dropped.
 
 ### Phase 2 — Observability _(offline + board)_
 - **P2.1 Bot decision view. ✅ shipped.** A bot's `/u/:id` profile now shows an **Autonomous decisions**
