@@ -75,10 +75,12 @@ market open and is Eric's to run). Build order is chosen so the *safe* pieces la
   number the gate reads.
 
 ### Phase 2 — Observability _(offline + board)_
-- **P2.1 Bot decision view.** Surface the P0.2 audit log: extend `/u/:id` for bots (or a small
-  `/u/:id/decisions`) to show recent autonomous decisions + rationale + guard actions. Read-only.
-- **P2.2 Live autonomous cycles on the board.** Wire the audit/CycleReport stream so an autonomous cycle
-  is visible as it happens (SSE), not just after a fill.
+- **P2.1 Bot decision view. ✅ shipped.** A bot's `/u/:id` profile now shows an **Autonomous decisions**
+  panel — recent cycles with mode (LIVE / OBSERVE / HALTED) + per-intent outcome + rationale, read from
+  the P0.2 audit trail (`readDecisions` ← `JsonlAuditStore`, wired when `SKYNET_AUDIT_DIR` is set).
+  Bots only; an honest seam when no trail is wired.
+- **P2.2 Live autonomous cycles on the board.** _(next)_ Wire the audit/CycleReport stream so an
+  autonomous cycle is visible as it happens (SSE), not just after a fill.
 
 ### Phase 3 — Hosting & cadence _(the laptop problem; Eric authorizes the deploy)_
 - **P3.1 Market-hours gating.** The runner only assesses when the market is open (Alpaca calendar/clock),
