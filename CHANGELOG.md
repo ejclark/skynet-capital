@@ -1,3 +1,10 @@
+# [1.109.0](https://github.com/ejclark/skynet-capital/compare/v1.108.0...v1.109.0) (2026-07-27)
+
+
+### Features
+
+* **autonomy:** observe mode + decision audit trail (Phase 0.1/0.2) ([#184](https://github.com/ejclark/skynet-capital/issues/184)) ([5545d3a](https://github.com/ejclark/skynet-capital/commit/5545d3a2cd9a71f8abbedd3f20d77c210add2799))
+
 # [1.108.0](https://github.com/ejclark/skynet-capital/compare/v1.107.0...v1.108.0) (2026-07-27)
 
 
