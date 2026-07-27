@@ -139,33 +139,40 @@ describe("observer mode (funnel front door)", () => {
   });
 });
 
-describe("renderAcademyBody — the risk ladder", () => {
+describe("renderAcademyBody — the gamified journey", () => {
   const nav = { active: "learn" as const, canAdd: true, authed: true };
   const html = renderAcademyBody({ nav });
 
-  it("leads with the cash-covered put badged as the start", () => {
-    expect(html).toContain("Cash-Covered Put");
-    expect(html).toContain("START HERE");
+  it("frames it as a game with points and rank, not homework", () => {
+    expect(html).toContain("Your trading journey");
+    expect(html).toContain("data-points");
+    expect(html).toContain("data-rank");
   });
 
-  it("renders all four levels with level 1 open and higher levels locked", () => {
-    expect(html).toContain("Level 1 · Income basics");
-    expect(html).toContain("Level 4 · Advanced");
-    // level 1 is the only <details open>
-    expect(html).toContain('data-level="1" open');
-    expect(html).toContain('data-level="2"');
-    expect(html).not.toContain('data-level="2" open');
-    // higher levels advertise their gate
-    expect(html).toContain("Complete Level 1");
+  it("teaches the Wheel as the first playbook, starting with buying stock", () => {
+    expect(html).toContain("The Wheel");
+    expect(html).toContain("Buy the stock");
+    expect(html).toContain("Buy your first stock");
+    expect(html).toContain("Sell your first cash-covered put");
   });
 
-  it("flags the uncapped-risk plays honestly", () => {
-    expect(html).toContain("Short Straddle");
-    expect(html).toContain("Uncapped risk");
+  it("opens course 100 and locks course 200 until it's complete", () => {
+    expect(html).toContain('data-course="100" open');
+    expect(html).toContain('data-course="200"');
+    expect(html).not.toContain('data-course="200" open');
+    expect(html).toContain("Finish the level below");
   });
 
-  it("includes the options primer for new traders", () => {
-    expect(html).toContain("The basics, in one minute");
-    expect(html).toContain("Premium");
+  it("keeps risky strategies out of reach with an explicit teaser", () => {
+    expect(html).toContain("unlock as you climb");
+    // long options are a level-200 unlock, not shown as an open course
+    expect(html).toContain("Buy your first long call");
+    // undefined-risk plays (short straddle) are not surfaced here at all yet
+    expect(html).not.toContain("Short Straddle");
+  });
+
+  it("awards points on milestones", () => {
+    expect(html).toContain("data-ms-check");
+    expect(html).toMatch(/\+\d+/); // a points value like +25
   });
 });

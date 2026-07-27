@@ -1,4 +1,4 @@
-import { PLAYS, PLAY_LEVELS, type Play, type PlayLevel } from "../domain/plays.js";
+import { COURSES, type Course, type Milestone, RANKS, totalPoints } from "../domain/curriculum.js";
 import type { DashboardData } from "./dashboard-data.js";
 import { renderEmpireSkyline } from "./empire-skyline.js";
 import { equityChange, renderEquitySparkline } from "./equity-sparkline.js";
@@ -791,107 +791,122 @@ export function renderCohortsBody(data: DashboardData, options: DashboardViewOpt
   return renderShell(options.nav, content, data.generatedAt);
 }
 
-/** One lesson card for a play. `start` badges the very first rung (the cash-covered put). */
-function lessonCard(play: Play, start: boolean): string {
-  return `<article class="lesson${start ? " start" : ""}">
-      ${start ? `<p class="start-tag">◈ START HERE</p>` : ""}
-      <div class="lesson-top">
-        <h4>${escapeHtml(play.name)}</h4>
-        <span class="lesson-risk ${play.risk}">${play.risk === "defined" ? "Defined risk" : "Uncapped risk"}</span>
+/** One milestone row — a self-marked achievement worth points. */
+function milestoneRow(m: Milestone): string {
+  return `<label class="ms" data-ms="${m.id}">
+        <input type="checkbox" class="ms-check" data-ms-check="${m.id}">
+        <span class="ms-mark" aria-hidden="true">✓</span>
+        <span class="ms-body"><span class="ms-title">${escapeHtml(m.title)}</span><span class="ms-detail">${escapeHtml(m.detail)}</span></span>
+        <span class="ms-pts">+${m.points}</span>
+      </label>`;
+}
+
+/** One course card — a chapter of milestones with a progress bar; higher levels lock. */
+function courseCard(course: Course, locked: boolean): string {
+  return `<details class="course${locked ? " locked" : ""}" data-course="${course.level}"${locked ? "" : " open"}>
+      <summary>
+        <span class="course-badge">${course.level}</span>
+        <span class="course-h">
+          <span class="course-title">${escapeHtml(course.title)}</span>
+          <span class="course-sub">${escapeHtml(course.subtitle)}</span>
+          <span class="course-prog"><span class="course-bar"><i data-bar="${course.level}"></i></span><span class="course-count" data-count="${course.level}">0 / ${course.milestones.length}</span></span>
+        </span>
+        <span class="course-lock" data-lock>${locked ? "🔒 Finish the level below" : ""}</span>
+        <span class="lvl-chev" aria-hidden="true">›</span>
+      </summary>
+      <div class="ms-list">
+        ${course.milestones.map(milestoneRow).join("\n        ")}
       </div>
-      <p class="lesson-sum">${escapeHtml(play.summary)}</p>
-      <dl>
-        <dt>When to use</dt><dd>${escapeHtml(play.whenToUse)}</dd>
-        <dt>Max profit</dt><dd class="pos">${escapeHtml(play.maxProfit)}</dd>
-        <dt>Max loss</dt><dd class="neg">${escapeHtml(play.maxLoss)}</dd>
-        <dt>What it teaches</dt><dd>${escapeHtml(play.teaches)}</dd>
-      </dl>
-    </article>`;
+    </details>`;
 }
 
 /**
- * The ACADEMY (`/learn`) — a tutorial that meets new traders where they are. It opens with an
- * options primer, then a RISK LADDER: level 1 (the cash-covered put) is unlocked from the start,
- * and each higher, riskier level stays gated until the learner graduates the one before it. The
- * gate is client-side progress (localStorage) for now; the `src/domain/plays.ts` catalog is the
- * shared source a future in-app play picker will enforce the same ladder against.
+ * The ACADEMY (`/learn`) — a GAMIFIED trading journey, not a textbook. It opens with a points/rank
+ * HUD and the Wheel (buy stock → cash-covered put → covered call → repeat), then a stack of courses
+ * whose milestones are self-marked achievements worth points. Level 100 (the Wheel) is open from the
+ * start; level 200 (directional long options) unlocks only when 100 is complete — and everything
+ * riskier is intentionally not shown yet. The `src/domain/curriculum.ts` model is the single source
+ * of truth; a future engine can auto-complete milestones from real Alpaca activity.
  */
 export function renderAcademyBody(options: DashboardViewOptions = {}): string {
-  const first = PLAYS.reduce((a, b) =>
-    a.level < b.level || (a.level === b.level && a.order <= b.order) ? a : b,
-  );
-  const topLevel: PlayLevel = PLAY_LEVELS[PLAY_LEVELS.length - 1]?.level ?? 4;
-  const ladder = PLAY_LEVELS.map((meta) => {
-    const plays = PLAYS.filter((p) => p.level === meta.level).sort((a, b) => a.order - b.order);
-    const open = meta.level === 1; // level 1 open by default; the script opens more as they unlock
-    return `<details class="lvl${meta.level > 1 ? " locked" : ""}" data-level="${meta.level}"${open ? " open" : ""}>
-      <summary>
-        <span class="lvl-badge">${meta.level}</span>
-        <span class="lvl-h"><h3>Level ${meta.level} · ${escapeHtml(meta.title)}</h3><p>${escapeHtml(meta.summary)}</p></span>
-        <span class="lvl-lock" data-lock>${meta.level > 1 ? `🔒 Complete Level ${meta.level - 1}` : ""}</span>
-        <span class="lvl-chev" aria-hidden="true">›</span>
-      </summary>
-      <div class="lessons">
-        ${plays.map((p) => lessonCard(p, p.id === first.id)).join("\n        ")}
-      </div>
-      <div class="lvl-cta">${
-        meta.level < topLevel
-          ? `<button type="button" class="lvl-grad" data-grad="${meta.level}">I've got Level ${meta.level} — unlock the next →</button>`
-          : `<span class="lvl-done">◆ Top of the ladder — you've graduated the full playbook.</span>`
-      }</div>
-    </details>`;
-  }).join("\n    ");
-
+  const cards = COURSES.map((c, i) => courseCard(c, i > 0)).join("\n    ");
   const content = `<section class="academy">
     <div class="ladder-head">
       <div>
-        <h1 class="view-title">Learn options — one rung at a time</h1>
-        <p class="view-sub">It's all paper money, so there's zero risk to learning. Start with the safest play and earn your way up.</p>
+        <h1 class="view-title">Your trading journey</h1>
+        <p class="view-sub">It's all paper money — the only thing at stake is bragging rights. Complete milestones, earn points, climb the ranks, and unlock the next play.</p>
       </div>
     </div>
-    <div class="primer">
-      <h2>The basics, in one minute</h2>
-      <div class="primer-grid">
-        <div><p class="primer-term">Option</p><p class="primer-def">A contract to buy (a <b>call</b>) or sell (a <b>put</b>) a stock at a set price. You can buy one, or <b>sell</b> one to collect a premium.</p></div>
-        <div><p class="primer-term">Strike</p><p class="primer-def">The agreed price in the contract. It's the level everything is measured against.</p></div>
-        <div><p class="primer-term">Expiration</p><p class="primer-def">The date the contract settles. Options lose value as it nears — <b>time decay</b>.</p></div>
-        <div><p class="primer-term">Premium</p><p class="primer-def">The price of the option. Sell one and you <b>collect</b> it; buy one and you <b>pay</b> it.</p></div>
-        <div><p class="primer-term">Defined vs. uncapped risk</p><p class="primer-def"><b>Defined</b> means the worst case is known up front. <b>Uncapped</b> means a loss can keep growing — save those for last.</p></div>
-        <div><p class="primer-term">Why start small</p><p class="primer-def">The plays below climb from safest to riskiest. Learn each rung before the next unlocks — that's how the pros build.</p></div>
-      </div>
+    <div class="hud">
+      <div class="hud-stat"><span class="hud-k">Rank</span><span class="hud-v" data-rank>Observer</span></div>
+      <div class="hud-stat"><span class="hud-k">Points</span><span class="hud-v" data-points>0</span><span class="hud-of" data-total>/ ${totalPoints()}</span></div>
+      <div class="hud-bar"><i data-hudbar></i></div>
     </div>
-    <div class="ladder">
-    ${ladder}
+    <div class="wheel">
+      <h2>The Wheel — your first playbook</h2>
+      <p class="wheel-lede">The safest way to learn options income. Turn the wheel: own a stock you'd want anyway, get paid to buy it lower, get paid to cap your upside — then repeat.</p>
+      <ol class="wheel-steps">
+        <li><span class="wheel-n">1</span><span class="wheel-t">Buy the stock</span><span class="wheel-d">Own 100 shares of a company you'd be glad to hold.</span></li>
+        <li><span class="wheel-n">2</span><span class="wheel-t">Sell a cash-covered put</span><span class="wheel-d">Get paid to set a price you'd happily buy more at.</span></li>
+        <li><span class="wheel-n">3</span><span class="wheel-t">Sell a covered call</span><span class="wheel-d">Get paid to cap your upside while you hold.</span></li>
+        <li><span class="wheel-n">↻</span><span class="wheel-t">Repeat</span><span class="wheel-d">Collect premium turn after turn — that's the Wheel.</span></li>
+      </ol>
     </div>
+    <div class="courses">
+    ${cards}
+    </div>
+    <p class="more-soon">◆ More strategies — spreads, condors, and advanced plays — unlock as you climb. We keep the risky ones out of reach until you're ready.</p>
   </section>
-  <footer class="obs-foot">Educational · paper trading only · nothing here is financial advice. Plays unlock as you graduate each level.</footer>
+  <footer class="obs-foot">Educational · paper trading only · nothing here is financial advice. Mark a milestone once you've done it in your account — progress saves on this device.</footer>
   ${ACADEMY_SCRIPT}`;
   return renderShell(options.nav, content, new Date().toISOString());
 }
 
 /**
- * Client-side progression: unlock levels as the learner graduates. localStorage remembers how far
- * they've climbed; no-JS still gets a fully readable page (every level is present, level 1 open).
+ * Gamified progression, client-side. localStorage holds the set of completed milestone ids; checking
+ * one awards points, advances the rank HUD + per-course bars, and unlocks the next course once the
+ * current one is fully done. No-JS still gets a fully readable page (level 100 open).
  */
 const ACADEMY_SCRIPT = `<script>
 (function(){
-  var KEY="skynet.academy.level";
-  var levels=[].slice.call(document.querySelectorAll(".lvl"));
-  if(!levels.length) return;
-  function get(){ try{ return Math.max(1, parseInt(localStorage.getItem(KEY)||"1",10)||1); }catch(e){ return 1; } }
-  function set(n){ try{ localStorage.setItem(KEY, String(n)); }catch(e){} }
-  function sync(){ var u=get();
-    levels.forEach(function(el){ var lv=parseInt(el.getAttribute("data-level"),10);
-      var locked=lv>u; el.classList.toggle("locked", locked);
-      var lock=el.querySelector("[data-lock]"); if(lock) lock.textContent=locked?("🔒 Complete Level "+(lv-1)):"";
-      if(!locked && lv>1 && lv===u && !el.open) el.open=true;
+  var KEY="skynet.academy.done";
+  var RANKS=${JSON.stringify(RANKS)};
+  var TOTAL=${totalPoints()};
+  var COURSES=${JSON.stringify(
+    COURSES.map((c) => ({
+      level: c.level,
+      ms: c.milestones.map((m) => ({ id: m.id, points: m.points })),
+    })),
+  )};
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||"[]"); }catch(e){ return []; } }
+  function save(a){ try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch(e){} }
+  var done={}; load().forEach(function(id){ done[id]=true; });
+  function points(){ var p=0; COURSES.forEach(function(c){ c.ms.forEach(function(m){ if(done[m.id]) p+=m.points; }); }); return p; }
+  function rankFor(p){ var r=RANKS[0]; RANKS.forEach(function(x){ if(p>=x.atPoints) r=x; }); return r; }
+  function courseDone(c){ return c.ms.every(function(m){ return done[m.id]; }); }
+  function unlocked(level){ for(var i=0;i<COURSES.length;i++){ if(COURSES[i].level===level){ return i===0 || courseDone(COURSES[i-1]); } } return false; }
+  function set(el,v){ if(el) el.textContent=v; }
+  function sync(){
+    var p=points();
+    set(document.querySelector("[data-points]"), String(p));
+    set(document.querySelector("[data-rank]"), rankFor(p).title);
+    var hb=document.querySelector("[data-hudbar]"); if(hb) hb.style.width=(TOTAL?Math.round(p/TOTAL*100):0)+"%";
+    document.querySelectorAll("[data-ms-check]").forEach(function(cb){ cb.checked=!!done[cb.getAttribute("data-ms-check")]; });
+    COURSES.forEach(function(c){
+      var n=0; c.ms.forEach(function(m){ if(done[m.id]) n++; });
+      var bar=document.querySelector('[data-bar="'+c.level+'"]'); if(bar) bar.style.width=Math.round(n/c.ms.length*100)+"%";
+      set(document.querySelector('[data-count="'+c.level+'"]'), n+" / "+c.ms.length);
+      var el=document.querySelector('.course[data-course="'+c.level+'"]'); if(!el) return;
+      var lock=!unlocked(c.level); el.classList.toggle("locked", lock);
+      var ll=el.querySelector("[data-lock]"); if(ll) ll.textContent=lock?"🔒 Finish the level below":"";
+      if(lock){ el.open=false; el.querySelectorAll("[data-ms-check]").forEach(function(cb){ cb.disabled=true; }); }
+      else el.querySelectorAll("[data-ms-check]").forEach(function(cb){ cb.disabled=false; });
     });
   }
-  levels.forEach(function(el){
-    var btn=el.querySelector("[data-grad]");
-    if(btn) btn.addEventListener("click", function(){ var lv=parseInt(btn.getAttribute("data-grad"),10);
-      if(get()<lv+1) set(lv+1); sync();
-      var next=document.querySelector('.lvl[data-level="'+(lv+1)+'"]'); if(next){ next.open=true; next.scrollIntoView({behavior:"smooth",block:"start"}); }
+  document.querySelectorAll("[data-ms-check]").forEach(function(cb){
+    cb.addEventListener("change", function(){ var id=cb.getAttribute("data-ms-check");
+      if(cb.checked) done[id]=true; else delete done[id];
+      save(Object.keys(done)); sync();
     });
   });
   sync();
@@ -1292,48 +1307,57 @@ const STYLE = `<style>
   .cmp-pick{ display:flex; align-items:center; gap:9px; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:11px; text-decoration:none; color:var(--text); font-weight:600; transition:border-color .15s; }
   .cmp-pick:hover{ border-color:color-mix(in srgb,var(--accent) 50%,var(--border)); }
   @media (max-width:720px){ .cmp-grid{ grid-template-columns:1fr; } }
-  /* --- Academy (/learn): the risk ladder + tutorial --- */
-  .academy{ max-width:920px; }
-  .primer{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px 24px; margin-bottom:26px; }
-  .primer h2{ font-size:15px; margin-bottom:14px; letter-spacing:.02em; }
-  .primer-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
-  .primer-term{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:5px; }
-  .primer-def{ font-size:13px; color:var(--muted); line-height:1.55; }
-  .primer-def b{ color:var(--text); }
-  .ladder{ display:flex; flex-direction:column; gap:16px; }
-  .lvl{ border:1px solid var(--border); border-radius:14px; background:var(--surface-2); overflow:hidden; }
-  .lvl[open]{ border-color:color-mix(in srgb,var(--accent) 35%,var(--border)); }
-  .lvl.locked{ opacity:.62; }
-  .lvl > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:14px; padding:16px 20px; }
-  .lvl > summary::-webkit-details-marker{ display:none; }
-  .lvl-badge{ flex:0 0 auto; width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center;
-    font-family:var(--mono); font-weight:700; font-size:15px; color:var(--bg); background:var(--accent); }
-  .lvl.locked .lvl-badge{ background:var(--muted); }
-  .lvl-h{ flex:1; }
-  .lvl-h h3{ font-size:15px; font-weight:700; }
-  .lvl-h p{ font-size:12.5px; color:var(--muted); margin-top:2px; }
-  .lvl-lock{ font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--muted); white-space:nowrap; }
-  .lvl-chev{ color:var(--muted); transition:transform .2s; } .lvl[open] .lvl-chev{ transform:rotate(90deg); }
-  .lessons{ padding:4px 20px 20px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .lesson{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; position:relative; }
-  .lesson.start{ border-color:var(--accent); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent); }
-  .lesson-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; }
-  .lesson h4{ font-size:15px; font-weight:700; }
-  .lesson-risk{ font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; padding:2px 7px; border-radius:999px; border:1px solid var(--border); color:var(--muted); }
-  .lesson-risk.undefined{ color:var(--neg); border-color:color-mix(in srgb,var(--neg) 55%,var(--border)); }
-  .lesson-risk.defined{ color:var(--pos); border-color:color-mix(in srgb,var(--pos) 45%,var(--border)); }
-  .start-tag{ font-family:var(--mono); font-size:9px; letter-spacing:.14em; color:var(--accent); margin-bottom:8px; }
-  .lesson-sum{ font-size:13px; color:var(--text); line-height:1.5; margin-bottom:10px; }
-  .lesson dl{ margin:0; }
-  .lesson dt{ font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:9px; }
-  .lesson dd{ margin:2px 0 0; font-size:12.5px; color:var(--muted); line-height:1.5; }
-  .lesson dd.pos{ color:color-mix(in srgb,var(--pos) 85%,var(--text)); } .lesson dd.neg{ color:color-mix(in srgb,var(--neg) 85%,var(--text)); }
-  .lvl-cta{ margin:0 20px 20px; }
-  .lvl-grad{ display:inline-flex; align-items:center; gap:8px; padding:10px 16px; font-family:var(--sans); font-size:13px; font-weight:700;
-    color:var(--bg); background:var(--accent); border:0; border-radius:9px; cursor:pointer; }
-  .lvl-grad:hover{ filter:brightness(1.08); } .lvl-grad:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-  .lvl-done{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--pos); }
-  @media (max-width:720px){ .lessons{ grid-template-columns:1fr; } }
+  /* --- Academy (/learn): the gamified trading journey --- */
+  .academy{ max-width:900px; }
+  .hud{ display:flex; align-items:center; gap:22px; flex-wrap:wrap; background:var(--surface); border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));
+    border-radius:14px; padding:16px 22px; margin-bottom:22px; }
+  .hud-stat{ display:flex; flex-direction:column; gap:2px; }
+  .hud-k{ font-family:var(--mono); font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .hud-v{ font-size:22px; font-weight:800; letter-spacing:-.01em; }
+  .hud-of{ font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .hud-bar{ flex:1; min-width:140px; height:8px; border-radius:5px; background:color-mix(in srgb,var(--muted) 18%,transparent); overflow:hidden; }
+  .hud-bar i{ display:block; height:100%; width:0; border-radius:5px; background:var(--accent); transition:width .35s ease; }
+  .wheel{ background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 7%,var(--surface-2)), var(--surface-2));
+    border:1px solid var(--border); border-radius:14px; padding:22px 24px; margin-bottom:24px; }
+  .wheel h2{ font-size:16px; margin-bottom:6px; }
+  .wheel-lede{ font-size:13px; color:var(--muted); line-height:1.55; max-width:66ch; margin-bottom:16px; }
+  .wheel-steps{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; counter-reset:none; }
+  .wheel-steps li{ background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:14px 16px; display:flex; flex-direction:column; gap:5px; }
+  .wheel-n{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:700; font-size:13px; color:var(--bg); background:var(--accent); }
+  .wheel-t{ font-size:13.5px; font-weight:700; } .wheel-d{ font-size:12px; color:var(--muted); line-height:1.5; }
+  .courses{ display:flex; flex-direction:column; gap:16px; }
+  .course{ border:1px solid var(--border); border-radius:14px; background:var(--surface-2); overflow:hidden; }
+  .course[open]{ border-color:color-mix(in srgb,var(--accent) 35%,var(--border)); }
+  .course.locked{ opacity:.6; }
+  .course > summary{ list-style:none; cursor:pointer; display:flex; align-items:flex-start; gap:14px; padding:16px 20px; }
+  .course > summary::-webkit-details-marker{ display:none; }
+  .course-badge{ flex:0 0 auto; width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:14px; color:var(--bg); background:var(--accent); }
+  .course.locked .course-badge{ background:var(--muted); }
+  .course-h{ flex:1; display:flex; flex-direction:column; gap:4px; }
+  .course-title{ font-size:15px; font-weight:700; }
+  .course-sub{ font-size:12.5px; color:var(--muted); line-height:1.5; }
+  .course-prog{ display:flex; align-items:center; gap:10px; margin-top:4px; }
+  .course-bar{ flex:1; max-width:220px; height:6px; border-radius:4px; background:color-mix(in srgb,var(--muted) 18%,transparent); overflow:hidden; }
+  .course-bar i{ display:block; height:100%; width:0; border-radius:4px; background:var(--pos); transition:width .3s ease; }
+  .course-count{ font-family:var(--mono); font-size:10px; color:var(--muted); }
+  .course-lock{ font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--muted); white-space:nowrap; }
+  .lvl-chev{ color:var(--muted); transition:transform .2s; } .course[open] .lvl-chev{ transform:rotate(90deg); }
+  .ms-list{ padding:2px 20px 18px; display:flex; flex-direction:column; gap:8px; }
+  .ms{ display:flex; align-items:flex-start; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:13px 15px; cursor:pointer; transition:border-color .15s; }
+  .ms:hover{ border-color:color-mix(in srgb,var(--accent) 40%,var(--border)); }
+  .ms-check{ position:absolute; opacity:0; width:0; height:0; }
+  .ms-mark{ flex:0 0 auto; width:22px; height:22px; border-radius:6px; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:transparent; transition:all .15s; margin-top:1px; }
+  .ms:has(.ms-check:checked) .ms-mark{ background:var(--pos); border-color:var(--pos); color:var(--bg); }
+  .ms:has(.ms-check:checked) .ms-title{ color:var(--muted); text-decoration:line-through; }
+  .ms:focus-within{ outline:2px solid var(--accent); outline-offset:2px; }
+  .ms-body{ flex:1; display:flex; flex-direction:column; gap:2px; }
+  .ms-title{ font-size:13.5px; font-weight:700; }
+  .ms-detail{ font-size:12px; color:var(--muted); line-height:1.5; }
+  .ms-pts{ flex:0 0 auto; font-family:var(--mono); font-size:11px; font-weight:700; color:var(--accent); }
+  .more-soon{ margin-top:20px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted); line-height:1.6; }
+  @media (max-width:720px){ .hud-v{ font-size:19px; } }
 </style>`;
 
 /**
