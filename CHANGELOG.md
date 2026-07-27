@@ -1,3 +1,10 @@
+# [1.118.0](https://github.com/ejclark/skynet-capital/compare/v1.117.0...v1.118.0) (2026-07-27)
+
+
+### Features
+
+* **observatory:** peak equity + max drawdown in the performance panel ([76cdf9f](https://github.com/ejclark/skynet-capital/commit/76cdf9f75f8ef145492219b7104077df72f6ef92))
+
 # [1.117.0](https://github.com/ejclark/skynet-capital/compare/v1.116.0...v1.117.0) (2026-07-27)
 
 
