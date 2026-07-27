@@ -1,3 +1,10 @@
+# [1.120.0](https://github.com/ejclark/skynet-capital/compare/v1.119.0...v1.120.0) (2026-07-27)
+
+
+### Features
+
+* **ci:** executable god-file gate — architecture line budget ([#204](https://github.com/ejclark/skynet-capital/issues/204)) ([81fc19d](https://github.com/ejclark/skynet-capital/commit/81fc19de06569d2143570239c0863cb7e4e4aeca))
+
 # [1.119.0](https://github.com/ejclark/skynet-capital/compare/v1.118.0...v1.119.0) (2026-07-27)
 
 
