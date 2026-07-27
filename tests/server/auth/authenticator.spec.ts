@@ -71,6 +71,15 @@ describe("resolveAuth", () => {
     const auth = resolveAuth(ENV);
     expect(auth?.providerIds).toEqual(["google"]);
   });
+  it("ships the playcall drawer scaffold in the login page", () => {
+    const html = resolveAuth(ENV)?.loginPage() ?? "";
+    expect(html).toContain('class="playdrawer"');
+    expect(html).toContain('id="pdSignal"');
+    expect(html).toContain('id="pdLive"');
+    expect(html).toContain('id="pdTab"');
+    // hard constraint stays intact alongside the new markup
+    expect(html).toContain("Continue with Google");
+  });
 });
 
 describe("handleAuthRoute", () => {
