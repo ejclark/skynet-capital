@@ -1,5 +1,6 @@
 import { InMemoryBroker } from "../../src/adapters/in-memory-broker.js";
 import { AutonomousTrader } from "../../src/autonomous/autonomous-trader.js";
+import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { MomentumTracker } from "../../src/autonomous/momentum-tracker.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import { DayTraderPersona } from "../../src/personas/day-trader.js";
@@ -70,6 +71,69 @@ describe("AutonomousTrader", () => {
     const second = await trader.evaluate(context(100, 0.05));
 
     expect(second).toHaveLength(1);
+  });
+
+  it("observe mode records the decision but places NO order", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const records: DecisionRecord[] = [];
+    const trader = new AutonomousTrader({
+      persona: new AlwaysBuys(),
+      broker,
+      mode: "observe",
+      onDecision: (r) => records.push(r),
+    });
+
+    const results = await trader.evaluate(context(100, 0.05));
+
+    // nothing submitted, and the portfolio is untouched
+    expect(results).toHaveLength(0);
+    expect((await broker.getPortfolio()).positions).toHaveLength(0);
+    // but the decision was fully recorded, marked observed
+    expect(records).toHaveLength(1);
+    expect(records[0]?.mode).toBe("observe");
+    expect(records[0]?.guardedIntents.length).toBeGreaterThan(0);
+    expect(records[0]?.outcomes[0]?.action).toBe("observed");
+  });
+
+  it("live mode records outcomes as placed with the broker result", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const records: DecisionRecord[] = [];
+    const trader = new AutonomousTrader({
+      persona: new AlwaysBuys(),
+      broker,
+      onDecision: (r) => records.push(r),
+    });
+
+    await trader.evaluate(context(100, 0.05));
+
+    expect(records[0]?.mode).toBe("live");
+    expect(records[0]?.outcomes[0]?.action).toBe("placed");
+    expect(records[0]?.outcomes[0]?.result?.status).toBe("filled");
+  });
+
+  it("records a cooldown skip as its own outcome without re-submitting", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    let clock = 1_000;
+    const records: DecisionRecord[] = [];
+    const trader = new AutonomousTrader({
+      persona: new AlwaysBuys(),
+      broker,
+      cooldownMs: 60_000,
+      now: () => clock,
+      onDecision: (r) => records.push(r),
+    });
+
+    await trader.evaluate(context(100, 0.05));
+    clock += 30_000;
+    await trader.evaluate(context(100, 0.05));
+
+    expect(records[1]?.outcomes[0]?.action).toBe("cooldown-skipped");
   });
 
   it("drives a real persona from a momentum tracker's context", async () => {

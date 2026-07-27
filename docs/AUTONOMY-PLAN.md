@@ -49,16 +49,16 @@ enable/disable a persona and **halt everything instantly**.
 Each phase is one or a few small PRs. **Everything is offline-verifiable except Phase 4** (which needs a
 market open and is Eric's to run). Build order is chosen so the *safe* pieces land first.
 
-### Phase 0 — Safety substrate _(offline; my recommended first pickup)_
-- **P0.1 Observe mode.** `AutonomousTrader` gains a `mode: "observe" | "live"`. In observe it computes
-  and records intents but **places nothing**. Wired to `SKYNET_AUTONOMOUS_MODE` (default `observe` — safe
-  by default). Unit-tested against the in-memory broker (asserts zero orders placed in observe).
-- **P0.2 Audit log.** Every decision — observed or placed — is appended to a JSONL **audit store**
-  (mirror `jsonl-cycle-report-store.ts`): timestamp, persona, context snapshot, raw intents, guard
-  actions (what was clamped/dropped and why), and the resulting order or "observed only." This is the
-  record everything else reads.
-- **P0.3 Kill switch + circuit breakers.** A **halt** the loop checks every cycle (a flag file / env /
-  small endpoint), plus **auto-halt** on breach conditions: daily-loss cap, order-rate ceiling,
+### Phase 0 — Safety substrate _(offline)_
+- **P0.1 Observe mode. ✅ shipped.** `AutonomousTrader` has a `mode: "observe" | "live"`. In observe it
+  computes and records the full decision but **places nothing**. The runner reads `SKYNET_AUTONOMOUS_MODE`
+  (**default `observe` — safe by default** on the live path). Unit-tested: zero orders in observe.
+- **P0.2 Audit log. ✅ shipped.** Every cycle emits a `DecisionRecord` (`src/autonomous/decision-record.ts`)
+  — timestamp, persona, mode, raw intents, guarded intents, and a per-intent outcome
+  (`placed` / `rejected` / `observed` / `cooldown-skipped`). `JsonlAuditStore` persists one append-only
+  JSONL per persona (set `SKYNET_AUDIT_DIR`). This is the record everything else reads.
+- **P0.3 Kill switch + circuit breakers.** _(next)_ A **halt** the loop checks every cycle (a flag file /
+  env / small endpoint), plus **auto-halt** on breach conditions: daily-loss cap, order-rate ceiling,
   cash/position-cap breach, repeated API errors, or a data gap (stale/NaN quotes). Halting is instant and
   logged. Offline-testable by feeding breach scenarios.
 
