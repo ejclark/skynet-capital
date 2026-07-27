@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/duel-log.mjs fanout 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/duel-log.mjs fanin 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/duel-log.mjs intent 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
