@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Babylon.js as the composable 3D engine for the gameplay layer
+As the product heads toward SimCity-of-the-empire / human-vs-bot gameplay, the hand-rolled 2D canvas +
+one-off WebGL shaders won't scale to real 3D scenes. **Babylon.js** is the best-in-class
+batteries-included option (scene graph, PBR materials, physics, GUI, glTF asset pipeline, WebGPU) for a
+composable engine. Evaluate it for the north-star gameplay surface (#41): the empire cityscape as a
+navigable 3D scene, personas as entities, plays as scripted set-pieces. Weigh bundle size + the
+"self-contained inline / no external host" constraint (login is CSP-inline today; a game view would be
+its own route/bundle, so that constraint likely relaxes there). _(src: Eric · while: shipping the WebGL
+eye-gaze hero reveal — "the direction we may be headed")_
+
 ### Options academy — progression & the in-app play picker (follow-ups to the risk ladder)
 The `/learn` academy + `src/domain/plays.ts` risk ladder shipped (PR #178): CCP-first, riskier plays
 gated per level. Natural next threads, in priority order:
