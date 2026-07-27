@@ -1,3 +1,10 @@
+# [1.106.0](https://github.com/ejclark/skynet-capital/compare/v1.105.0...v1.106.0) (2026-07-27)
+
+
+### Features
+
+* **learn:** gamified trading journey — the Wheel, milestones, points & ranks ([#180](https://github.com/ejclark/skynet-capital/issues/180)) ([d2be933](https://github.com/ejclark/skynet-capital/commit/d2be933032e9a6687955bcd09f7a889d75e1e07f))
+
 # [1.105.0](https://github.com/ejclark/skynet-capital/compare/v1.104.0...v1.105.0) (2026-07-27)
 
 
