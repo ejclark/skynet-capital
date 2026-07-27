@@ -1,3 +1,10 @@
+# [1.99.0](https://github.com/ejclark/skynet-capital/compare/v1.98.0...v1.99.0) (2026-07-27)
+
+
+### Features
+
+* **login:** give the RSI lane more height in the playcall walk ([#172](https://github.com/ejclark/skynet-capital/issues/172)) ([68c03b2](https://github.com/ejclark/skynet-capital/commit/68c03b2ee68892cf19f5bee8aebe9ec4de4226ad))
+
 # [1.98.0](https://github.com/ejclark/skynet-capital/compare/v1.97.1...v1.98.0) (2026-07-27)
 
 
