@@ -1,3 +1,4 @@
+import { BankerPersona } from "./banker.js";
 import { DayTraderPersona } from "./day-trader.js";
 import { FuturistPersona } from "./futurist.js";
 import { GoldBugPersona } from "./gold-bug.js";
@@ -17,6 +18,7 @@ import { SauronPersona } from "./sauron.js";
  *  - Futurist: buys confirmed momentum, ignores news
  *  - Gold Bug: flees to the safe haven on risk-off, hoards it
  *  - Sauron: the cold order-imposer — fades exhausted euphoria, claims what panic discards
+ *  - Banker: the house's income engine — underwrites calm, harvests gains, protects the vault
  */
 export function createDefaultPersonas(): Persona[] {
   return [
@@ -27,5 +29,6 @@ export function createDefaultPersonas(): Persona[] {
     new DayTraderPersona(),
     new RumorTraderPersona(),
     new SauronPersona(),
+    new BankerPersona(),
   ];
 }

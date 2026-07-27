@@ -130,6 +130,14 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 - **Decoupled playcall drawer** — a left collapsible drawer housing Signal→Play→profit, decoupled from
   the trend chart, carried into the logged-in view; move the playcall recap into it with a connector
   line to its chart position. (tasks #49 + #51-remainder)
+- **/add as the character sheet — persona field = character class** — the persona-id input on `/add` is
+  really the CLASS slot of a character sheet; redesign the flow around that: bot setup presents the
+  roster as selectable class cards (name, thesis, lore line, risk read from its eval report), Human is
+  the classless default, and the chosen class's readiness-eval badge shows on the card ("READY 100/100").
+  First slice: replace the free-text persona field with a class picker fed from the persona registry +
+  PERSONA_LORE + eval reports. The Banker (shipped) is the first character created THROUGH the
+  sheet→eval→roster pipeline; its realized income is the honest peg for the tournament prize pot
+  (in-app points — no transfers needed). _(src: Eric · while: recognizing the persona field as the character-class slot)_
 - **Bot creation as a D&D character-sheet flow** — a guided process that walks a user through standing up
   a bot, leaning into the primary-tower template. Steps: (1) **account setup identical to a human's** —
   reuse the same account flow, no separate path; (2) **build the bot persona / strategy** — a

@@ -45,6 +45,11 @@ export const PERSONA_LORE: Record<string, PersonaLore> = {
     name: "The Rumor Trader",
     thesis: "Buy the whisper, sell the headline — accumulate the build, exit the euphoria.",
   },
+  banker: {
+    name: "The Banker",
+    thesis: "The house's income engine; underwrites calm markets, banks gains on schedule.",
+    lore: "Keeper of the vault. The Banker never chases and never gambles — it writes its book in quiet markets, collects its due, and its realized income fills the tournament coffers. Raid the vault at your peril.",
+  },
   sauron: {
     name: "Sauron",
     thesis:

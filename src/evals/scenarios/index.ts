@@ -1,4 +1,5 @@
 import type { Scenario } from "../scenario.js";
+import { bankerScenarios } from "./banker.js";
 import { dayTraderScenarios } from "./day-trader.js";
 
 /**
@@ -8,4 +9,5 @@ import { dayTraderScenarios } from "./day-trader.js";
  */
 export const scenarioPacks: Readonly<Record<string, readonly Scenario[]>> = {
   "day-trader": dayTraderScenarios,
+  banker: bankerScenarios,
 };
