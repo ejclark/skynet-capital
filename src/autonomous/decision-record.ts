@@ -31,6 +31,8 @@ export interface DecisionRecord {
   readonly guardedIntents: readonly OrderIntent[];
   /** Per guarded intent, what happened to it this cycle. */
   readonly outcomes: readonly IntentOutcome[];
+  /** Set when the cycle was blocked by the kill switch / a circuit breaker — nothing was decided. */
+  readonly halted?: string;
 }
 
 /** A place to persist decision records. Implementations must never throw on the write path. */

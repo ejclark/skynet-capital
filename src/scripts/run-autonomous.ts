@@ -14,6 +14,7 @@
  *   SKYNET_MAX_POSITION_PCT  per-position cap as a fraction of equity (default: 0.03)
  *   SKYNET_MOMENTUM_WINDOW   ticks in the momentum window (default: 20)
  */
+import { existsSync } from "node:fs";
 import { InMemoryBroker } from "../adapters/in-memory-broker.js";
 import { ReplayEventStream } from "../adapters/replay-event-stream.js";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
@@ -23,6 +24,7 @@ import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trad
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
+import { SafetyController } from "../autonomous/safety.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
@@ -167,8 +169,15 @@ async function runLive(): Promise<void> {
   const mode = traderMode(process.env);
   const audit = auditStore(process.env);
   const onDecision = decisionSink(audit);
+  // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
+  const safety = new SafetyController();
+  const haltFile = process.env.SKYNET_HALT_FILE;
+  const blockedReason = () => {
+    if (haltFile && existsSync(haltFile)) safety.halt("manual");
+    return safety.blockedReason();
+  };
   console.log(
-    `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}`,
+    `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
   const traders = bots.map((bot) => ({
     bot,
@@ -177,8 +186,15 @@ async function runLive(): Promise<void> {
       broker: createBotBroker(bot),
       risk,
       mode,
-      onResult: logResult,
-      onDecision,
+      blockedReason,
+      onResult: (r) => {
+        safety.recordOrder();
+        logResult(r);
+      },
+      onDecision: (r) => {
+        if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
+        onDecision(r);
+      },
     }),
   }));
 
@@ -211,10 +227,13 @@ async function runLive(): Promise<void> {
     lastEval = now;
     evaluating = true;
     const context = sentiment.overlay(tracker.context(new Date(now).toISOString()));
+    safety.checkContext(context); // data-gap breaker — a blind bot must not trade
     for (const { bot, trader } of traders) {
       try {
         await trader.evaluate(context);
+        safety.recordSuccess();
       } catch (error) {
+        safety.recordError();
         console.error(`[eval] ${bot.persona.name} failed:`, error);
       }
     }
