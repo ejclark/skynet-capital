@@ -42,9 +42,15 @@ export function tailOf(
   };
 }
 
-const unrealized = (p: PositionView): number => p.marketValue - p.quantity * p.avgPrice;
+/** Broker feeds can hand us NaN/Infinity; a non-finite number is treated as 0 rather than letting it
+ *  poison downstream math and reach a rendered surface as the string "NaN" (honesty invariant #4). */
+const fin = (v: number): number => (Number.isFinite(v) ? v : 0);
 
-const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+const unrealized = (p: PositionView): number =>
+  fin(p.marketValue) - fin(p.quantity) * fin(p.avgPrice);
+
+const clamp = (v: number, lo: number, hi: number): number =>
+  Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo;
 
 /** The dominant sector by invested weight (ties → the first seen); "DIVERSIFIED" if none ≥ 50%. */
 export function empireTheme(positions: readonly PositionView[]): string {
@@ -79,20 +85,20 @@ export function projectEmpire(
 ): EmpireState {
   // R1+R2+R2b+R3 — ALL holdings become structures (no silent truncation), sorted by weight;
   // mass is value relative to the largest, footprint is cost basis relative to the largest.
-  const sorted = [...snapshot.positions].sort((a, b) => b.marketValue - a.marketValue);
-  const maxVal = Math.max(...sorted.map((p) => p.marketValue), 1);
-  const maxBasis = Math.max(...sorted.map((p) => Math.abs(p.quantity * p.avgPrice)), 1);
+  const sorted = [...snapshot.positions].sort((a, b) => fin(b.marketValue) - fin(a.marketValue));
+  const maxVal = Math.max(...sorted.map((p) => fin(p.marketValue)), 1);
+  const maxBasis = Math.max(...sorted.map((p) => Math.abs(fin(p.quantity) * fin(p.avgPrice))), 1);
   const structures: StructureState[] = sorted.map((p) => {
     const u = unrealized(p);
-    const basis = Math.abs(p.quantity * p.avgPrice);
+    const basis = Math.abs(fin(p.quantity) * fin(p.avgPrice));
     return {
       symbol: p.symbol,
       sector: sectorOf(p.symbol),
-      mass: p.marketValue / maxVal,
-      footprint: basis / maxBasis,
+      mass: clamp(fin(p.marketValue) / maxVal, 0, 1),
+      footprint: clamp(basis / maxBasis, 0, 1),
       health: basis > 0 ? clamp(u / basis, -1, 1) : 0,
       unrealizedPl: u,
-      marketValue: p.marketValue,
+      marketValue: fin(p.marketValue),
     };
   });
 
@@ -117,9 +123,9 @@ export function projectEmpire(
     theme: empireTheme(snapshot.positions),
     founded: structures.length > 0,
     structures,
-    reserve: { share, cash: snapshot.cash },
+    reserve: { share, cash: fin(snapshot.cash) },
     ...(landmark ? { landmark } : {}),
-    equity: snapshot.equity,
+    equity: fin(snapshot.equity),
   };
 }
 
