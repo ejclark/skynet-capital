@@ -5,6 +5,7 @@ import {
   type LeaderMetric,
   type NavContext,
   type NavView,
+  renderAcademyBody,
   renderBoardContent,
   renderCohortsBody,
   renderCompareBody,
@@ -169,6 +170,12 @@ async function handle(
   }
   if (path === "/feedback") {
     await handleFeedback(req, res, req.method ?? "GET", session, config.submitFeedback);
+    return;
+  }
+  if (path === "/learn") {
+    const body = renderAcademyBody({ nav: navFor("learn") });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument("Learn — Skynet Capital", body));
     return;
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
@@ -558,7 +565,8 @@ doing. It's for learning the plays and having fun — <b>no real money, ever</b>
   <div class="step"><div class="step-n">3</div><div class="step-b"><h3>Connect it</h3><p>Paste your Alpaca <b>paper</b> API keys once. We read them only to show your balance and trades on the board — nothing is ever placed on your behalf.</p></div></div>
 </div>
 <a class="cta" href="/login">Get started → Sign in</a>
-<p class="fineprint">Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.<br>
+<p class="fineprint">New to options? Once you're in, the <a href="/learn">Learn</a> section starts you on the safest play and unlocks more as you're ready.<br>
+Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.<br>
 Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
     true,
   );
