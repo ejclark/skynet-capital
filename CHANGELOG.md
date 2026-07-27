@@ -1,3 +1,10 @@
+# [1.100.0](https://github.com/ejclark/skynet-capital/compare/v1.99.0...v1.100.0) (2026-07-27)
+
+
+### Features
+
+* **observatory:** give every bot persona a fantasy legend ([#173](https://github.com/ejclark/skynet-capital/issues/173)) ([6465485](https://github.com/ejclark/skynet-capital/commit/64654854f6e11093696b0e52eed11b468786efd4))
+
 # [1.99.0](https://github.com/ejclark/skynet-capital/compare/v1.98.0...v1.99.0) (2026-07-27)
 
 
