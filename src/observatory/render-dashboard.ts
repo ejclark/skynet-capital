@@ -2,7 +2,7 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { COURSES, type Course, type Milestone, RANKS, totalPoints } from "../domain/curriculum.js";
 import type { DashboardData } from "./dashboard-data.js";
 import { renderEmpireSkyline } from "./empire-skyline.js";
-import { equityChange, renderEquitySparkline } from "./equity-sparkline.js";
+import { equityChange, equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-store.js";
 import type { ActivityView, ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
 import { personaLore } from "./persona-lore.js";
@@ -606,6 +606,7 @@ function historyPanel(snapshot: ParticipantSnapshot, history?: readonly EquitySa
     </div>`;
   }
   const change = equityChange(history ?? []);
+  const dd = equityDrawdown(history ?? []);
   const realized = snapshot.realizedPl;
   return `<section class="history-panel">
       <h2 class="col-head">Performance history</h2>
@@ -621,6 +622,14 @@ function historyPanel(snapshot: ParticipantSnapshot, history?: readonly EquitySa
         ${
           realized !== undefined
             ? `<div><dt>Realized P/L</dt><dd class="num ${plClass(realized)}">${formatSigned(realized)}</dd></div>`
+            : ""
+        }
+        ${dd ? `<div><dt>Peak equity</dt><dd class="num">${formatCurrency(dd.peak)}</dd></div>` : ""}
+        ${
+          dd
+            ? `<div><dt>Max drawdown</dt><dd class="num ${dd.ddPct > 0 ? "neg" : ""}">${
+                dd.ddPct > 0 ? `-${dd.ddPct.toFixed(2)}% · -${formatCurrency(dd.ddAbs)}` : "0.00%"
+              }</dd></div>`
             : ""
         }
       </dl>
