@@ -1,5 +1,9 @@
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
-import { renderCompareBody, renderDashboardBody } from "../../src/observatory/render-dashboard.js";
+import {
+  renderAcademyBody,
+  renderCompareBody,
+  renderDashboardBody,
+} from "../../src/observatory/render-dashboard.js";
 import { sampleDashboardData } from "../../src/observatory/sample-dashboard-data.js";
 
 describe("renderDashboardBody", () => {
@@ -132,5 +136,36 @@ describe("observer mode (funnel front door)", () => {
   it("does not show the observer hero on the bare embed (no nav)", () => {
     const html = renderDashboardBody(sampleDashboardData());
     expect(html).not.toContain("OBSERVER MODE");
+  });
+});
+
+describe("renderAcademyBody — the risk ladder", () => {
+  const nav = { active: "learn" as const, canAdd: true, authed: true };
+  const html = renderAcademyBody({ nav });
+
+  it("leads with the cash-covered put badged as the start", () => {
+    expect(html).toContain("Cash-Covered Put");
+    expect(html).toContain("START HERE");
+  });
+
+  it("renders all four levels with level 1 open and higher levels locked", () => {
+    expect(html).toContain("Level 1 · Income basics");
+    expect(html).toContain("Level 4 · Advanced");
+    // level 1 is the only <details open>
+    expect(html).toContain('data-level="1" open');
+    expect(html).toContain('data-level="2"');
+    expect(html).not.toContain('data-level="2" open');
+    // higher levels advertise their gate
+    expect(html).toContain("Complete Level 1");
+  });
+
+  it("flags the uncapped-risk plays honestly", () => {
+    expect(html).toContain("Short Straddle");
+    expect(html).toContain("Uncapped risk");
+  });
+
+  it("includes the options primer for new traders", () => {
+    expect(html).toContain("The basics, in one minute");
+    expect(html).toContain("Premium");
   });
 });
