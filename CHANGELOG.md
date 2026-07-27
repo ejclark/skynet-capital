@@ -1,3 +1,10 @@
+# [1.111.0](https://github.com/ejclark/skynet-capital/compare/v1.110.0...v1.111.0) (2026-07-27)
+
+
+### Features
+
+* **autonomy:** readiness gate — a bot must earn live trading (Phase 1.1) ([#186](https://github.com/ejclark/skynet-capital/issues/186)) ([10fec0c](https://github.com/ejclark/skynet-capital/commit/10fec0c72c22b7f092041ae5f05cbf68338e99b5))
+
 # [1.110.0](https://github.com/ejclark/skynet-capital/compare/v1.109.0...v1.110.0) (2026-07-27)
 
 
