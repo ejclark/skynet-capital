@@ -79,6 +79,7 @@ npm run lint    # Biome
 npm run typecheck
 ```
 
+- System map — the whole app at a glance (collapsible tree, status + where to aim): [`docs/SYSTEM-MAP.md`](docs/SYSTEM-MAP.md)
 - Architecture and engineering standards: [`docs/ENGINEERING.md`](docs/ENGINEERING.md)
 - Wiring personas to Alpaca paper accounts: [`docs/BOTS.md`](docs/BOTS.md)
 - The shared observatory dashboard: [`docs/DASHBOARD.md`](docs/DASHBOARD.md)
