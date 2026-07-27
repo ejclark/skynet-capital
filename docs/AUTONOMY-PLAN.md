@@ -65,11 +65,14 @@ market open and is Eric's to run). Build order is chosen so the *safe* pieces la
   explicit `reset()`. Fully unit-tested; the runner wires the halt-file + feeds the breakers.
 
 ### Phase 1 — The readiness gate _(offline)_
-- **P1.1 Readiness registry.** Record `eval:persona` results (id, score, pass/fail, timestamp). The
-  runner **refuses to trade** a persona that hasn't passed at/above threshold — enablement requires a
-  green readiness result, not just an env var.
-- **P1.2 Expand the eval battery** to the safety-critical scenarios named in `AUTONOMY-READINESS.md`
-  (crash, squeeze, gap, missing-quote, NaN, rate shock). Surface the confidence number the gate reads.
+- **P1.1 Readiness gate. ✅ shipped.** `assessReadiness(persona, …)` (`src/autonomous/readiness.ts`)
+  runs the generic safety battery + the persona's quality pack and returns a `ready` verdict. The runner
+  gates on it: a persona that isn't ready is **pinned to observe** (watched, placing nothing) no matter
+  what `SKYNET_AUTONOMOUS_MODE` says — enablement requires a green readiness result, not just an env var.
+  Strict by design: no pack, any safety violation, or a sub-threshold score ⇒ not ready.
+- **P1.2 Expand the eval battery** _(next)_ to the safety-critical scenarios named in
+  `AUTONOMY-READINESS.md` (crash, squeeze, gap, missing-quote, NaN, rate shock). Surface the confidence
+  number the gate reads.
 
 ### Phase 2 — Observability _(offline + board)_
 - **P2.1 Bot decision view.** Surface the P0.2 audit log: extend `/u/:id` for bots (or a small

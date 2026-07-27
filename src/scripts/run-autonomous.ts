@@ -24,10 +24,13 @@ import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trad
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
+import { assessReadiness } from "../autonomous/readiness.js";
 import { SafetyController } from "../autonomous/safety.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
+import { scenarioPacks } from "../evals/scenarios/index.js";
 import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { createDefaultPersonas } from "../personas/registry.js";
@@ -179,24 +182,40 @@ async function runLive(): Promise<void> {
   console.log(
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
-  const traders = bots.map((bot) => ({
-    bot,
-    trader: new AutonomousTrader({
-      persona: bot.persona,
-      broker: createBotBroker(bot),
-      risk,
-      mode,
-      blockedReason,
-      onResult: (r) => {
-        safety.recordOrder();
-        logResult(r);
-      },
-      onDecision: (r) => {
-        if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
-        onDecision(r);
-      },
-    }),
-  }));
+  const traders = bots.map((bot) => {
+    // READINESS GATE: a persona may only trade live if it PASSES its readiness eval. A not-ready
+    // persona is pinned to observe (watched, placing nothing) no matter what SKYNET_AUTONOMOUS_MODE says.
+    const readiness = assessReadiness(bot.persona, {
+      pack: scenarioPacks[bot.persona.id],
+      safetyScenarios: genericSafetyScenarios,
+    });
+    const effectiveMode = mode === "live" && readiness.ready ? "live" : "observe";
+    if (mode === "live" && !readiness.ready) {
+      console.warn(
+        `[gate] ${bot.persona.name} is NOT ready — pinned to observe. ${readiness.reason}`,
+      );
+    } else {
+      console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
+    }
+    return {
+      bot,
+      trader: new AutonomousTrader({
+        persona: bot.persona,
+        broker: createBotBroker(bot),
+        risk,
+        mode: effectiveMode,
+        blockedReason,
+        onResult: (r) => {
+          safety.recordOrder();
+          logResult(r);
+        },
+        onDecision: (r) => {
+          if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
+          onDecision(r);
+        },
+      }),
+    };
+  });
 
   // Gate trading on market hours (refreshed periodically).
   const clock = new AlpacaTradingClient(
