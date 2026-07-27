@@ -14,6 +14,7 @@ import {
   renderIndividualBody,
   renderLeaderboardBody,
 } from "../observatory/render-dashboard.js";
+import { threeScenePage } from "../three/serve-scene.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
@@ -92,6 +93,13 @@ async function handle(
   if (path === "/welcome") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(welcomeHtml());
+    return;
+  }
+
+  // Live Babylon.js 3D scene exploration (see src/three/) — public so it's easy to eyeball on deploy.
+  if (path === "/tower") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(threeScenePage());
     return;
   }
 
