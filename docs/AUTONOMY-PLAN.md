@@ -84,11 +84,13 @@ market open and is Eric's to run). Build order is chosen so the *safe* pieces la
   autonomous cycle is visible as it happens (SSE), not just after a fill.
 
 ### Phase 3 — Hosting & cadence _(the laptop problem; Eric authorizes the deploy)_
-- **P3.1 Market-hours gating.** The runner only assesses when the market is open (Alpaca calendar/clock),
-  and sleeps otherwise. Pure logic — offline-testable with a fake clock.
-- **P3.2 Always-on host.** Run the autonomous runner as a **Fly machine** (or scheduled worker) carrying
-  the bot secrets, so it runs without Eric's laptop. **I build the mechanism; Eric provisions the secrets
-  and the hosting spend.**
+- **P3.1 Market-hours gating. ✅ (already in the runner).** The live runner only assesses when Alpaca
+  reports the market open, and idles otherwise.
+- **P3.2 Always-on host — mechanism ✅ shipped; Eric runs the deploy.** `fly.toml` now defines two
+  processes sharing the image: `app` (dashboard) and `bots` (`run:autonomous`), so bots trade without a
+  laptop. **Safe by default:** `bots` runs in **observe** (`SKYNET_AUTONOMOUS_MODE=observe`) and idles
+  quietly with no credentials — no crash-loop. Eric's steps (secrets, `fly deploy`, the observe→live
+  flip, the hosted kill switch) are the runbook in [`AUTONOMY-DEPLOY.md`](AUTONOMY-DEPLOY.md).
 
 ### Phase 4 — Market-open validation _(Eric, live, one market open)_
 - **P4.1** Enable **one** persona (day-trader) in **observe** mode on a market open. Watch decisions
