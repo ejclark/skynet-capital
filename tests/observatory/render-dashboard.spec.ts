@@ -107,3 +107,30 @@ describe("renderCompareBody — two cities", () => {
     expect(html).toContain('class="empire-city-name">Index Ivy<');
   });
 });
+
+describe("observer mode (funnel front door)", () => {
+  const nav = {
+    active: "board" as const,
+    canAdd: true,
+    authed: true,
+  };
+
+  it("shows the observer hero when signed in with no linked account", () => {
+    const html = renderDashboardBody(sampleDashboardData(), { nav });
+    expect(html).toContain("OBSERVER MODE");
+    expect(html).toContain('href="/welcome"');
+    expect(html).toContain('href="/add"');
+  });
+
+  it("hides the observer hero once the viewer has a linked account", () => {
+    const html = renderDashboardBody(sampleDashboardData(), {
+      nav: { ...nav, currentId: "human-eric" },
+    });
+    expect(html).not.toContain("OBSERVER MODE");
+  });
+
+  it("does not show the observer hero on the bare embed (no nav)", () => {
+    const html = renderDashboardBody(sampleDashboardData());
+    expect(html).not.toContain("OBSERVER MODE");
+  });
+});
