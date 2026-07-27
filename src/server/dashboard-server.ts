@@ -148,7 +148,8 @@ async function handle(
   if (path === "/leaderboard") {
     const state = config.hub.getState();
     const by = new URL(url, "http://localhost").searchParams.get("by");
-    const metric: LeaderMetric = by === "pl" || by === "return" ? by : "equity";
+    const metric: LeaderMetric =
+      by === "pl" || by === "return" || by === "realized" ? by : "equity";
     const body = renderLeaderboardBody(state, { nav: navFor("leaderboard"), metric });
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(shellDocument("Leaderboard — Skynet Capital", body));

@@ -5,6 +5,7 @@ import {
   renderCompareBody,
   renderDashboardBody,
   renderIndividualBody,
+  renderLeaderboardBody,
 } from "../../src/observatory/render-dashboard.js";
 import { sampleDashboardData } from "../../src/observatory/sample-dashboard-data.js";
 
@@ -176,6 +177,45 @@ describe("renderAcademyBody — the gamified journey", () => {
   it("awards points on milestones", () => {
     expect(html).toContain("data-ms-check");
     expect(html).toMatch(/\+\d+/); // a points value like +25
+  });
+});
+
+describe("renderLeaderboardBody — realized P/L ranking", () => {
+  const data: DashboardData = {
+    generatedAt: "2026-07-24T15:30:00.000Z",
+    participants: [
+      {
+        id: "a",
+        displayName: "Ann",
+        kind: "human",
+        cash: 0,
+        equity: 100_000,
+        positions: [],
+        realizedPl: 500,
+      },
+      {
+        id: "b",
+        displayName: "Bo",
+        kind: "bot",
+        personaId: "day-trader",
+        cash: 0,
+        equity: 100_000,
+        positions: [],
+        realizedPl: 9_000,
+      },
+    ],
+  };
+
+  it("offers Realized P/L as a rankable metric", () => {
+    expect(renderLeaderboardBody(data)).toContain("/leaderboard?by=realized");
+  });
+
+  it("ranks by booked realized P/L when selected, best first", () => {
+    const html = renderLeaderboardBody(data, { metric: "realized" });
+    // Bo (+$9,000) outranks Ann (+$500): Bo's name appears before Ann's in the ordered list.
+    expect(html.indexOf(">Bo ")).toBeLessThan(html.indexOf(">Ann "));
+    expect(html).toContain("+$9,000");
+    expect(html).toContain("+$500");
   });
 });
 
