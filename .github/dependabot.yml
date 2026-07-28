@@ -1,0 +1,23 @@
+# Mechanized dependency-staleness detection (audit P4). Dependabot opens grouped update PRs weekly;
+# the dep-warden reviews them (read changelogs, run the suite, merge patch/minor on green, escalate
+# majors). This is the eye; dep-warden is the drill. Config file, not a workflow — no approval gate.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "chore"
+      include: scope
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore"
