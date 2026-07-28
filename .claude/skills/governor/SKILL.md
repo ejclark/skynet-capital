@@ -39,6 +39,21 @@ earned after the policy proves out over reps.
 5. **STOP.** One dispatch per coach per cycle. The next cycle recomputes targets from the NEW main —
    that re-derivation is the serializer that prevents two reps racing the same file.
 
+## Feast mode — planned parallel burn-down
+
+When the head coach declares a feast (a batch burn-down), the cycle serializer is replaced by **planned
+partitioning**: each athlete gets an exclusive file territory (fence), multiple seams per dispatch are
+allowed, and all green work assembles into ONE platter branch/PR (distinct commits kept for bisect).
+Three standing rules:
+
+- **Leftovers ledger.** Every skip-for-collision is recorded WITH the fence that caused it. A skip
+  without a recorded fence is a process bug.
+- **Every athlete completion is a mini-cycle trigger.** On each completion: mark that fence lifted,
+  re-check the ledger, and route anything now unfenced — do not idle at an all-done barrier holding
+  actionable work.
+- **Cost test.** Dispatch a backfill athlete only if the freed work exceeds athlete spin-up cost;
+  otherwise fold it into platter assembly. Surface the opportunity either way — never sit on it silently.
+
 ## Merge-policy table — what may auto-merge
 
 | Class | Auto-merge | Rationale |

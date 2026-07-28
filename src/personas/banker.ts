@@ -16,7 +16,7 @@ export interface BankerConfig {
   readonly entryNotional: number;
 }
 
-export const DEFAULT_BANKER_CONFIG: BankerConfig = {
+const DEFAULT_BANKER_CONFIG: BankerConfig = {
   book: ["SPY", "VOO", "QQQ", "MSFT", "AAPL", "GLD"],
   calmBand: 0.008,
   harvestPct: 0.04,

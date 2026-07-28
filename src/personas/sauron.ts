@@ -22,7 +22,7 @@ export interface SauronConfig {
   readonly maxConviction: number;
 }
 
-export const DEFAULT_SAURON_CONFIG: SauronConfig = {
+const DEFAULT_SAURON_CONFIG: SauronConfig = {
   euphoriaSentiment: 0.7,
   panicSentiment: -0.7,
   rolloverMomentumMax: 0,

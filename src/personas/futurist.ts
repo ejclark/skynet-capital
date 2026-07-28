@@ -10,7 +10,7 @@ export interface FuturistConfig {
   readonly entryNotional: number;
 }
 
-export const DEFAULT_FUTURIST_CONFIG: FuturistConfig = {
+const DEFAULT_FUTURIST_CONFIG: FuturistConfig = {
   breakoutMomentum: 0.02,
   entryNotional: 12_000,
 };

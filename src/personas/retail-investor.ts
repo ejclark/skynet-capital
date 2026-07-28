@@ -14,7 +14,7 @@ export interface RetailInvestorConfig {
   readonly entryNotional: number;
 }
 
-export const DEFAULT_RETAIL_INVESTOR_CONFIG: RetailInvestorConfig = {
+const DEFAULT_RETAIL_INVESTOR_CONFIG: RetailInvestorConfig = {
   fomoSentiment: 0.5,
   fomoMomentum: 0.02,
   panicSentiment: -0.5,

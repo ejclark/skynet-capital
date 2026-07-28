@@ -1,4 +1,9 @@
-import type { ParticipantSnapshot, PositionView } from "../observatory/participant-snapshot.js";
+import {
+  fin,
+  type ParticipantSnapshot,
+  type PositionView,
+  unrealizedPl,
+} from "../observatory/participant-snapshot.js";
 import { SECTOR_LABEL, type Sector, sectorOf } from "./sectors.js";
 import type { EmpireState, LandmarkState, StructureState, WorldState } from "./world-state.js";
 
@@ -42,13 +47,6 @@ export function tailOf(
   };
 }
 
-/** Broker feeds can hand us NaN/Infinity; a non-finite number is treated as 0 rather than letting it
- *  poison downstream math and reach a rendered surface as the string "NaN" (honesty invariant #4). */
-const fin = (v: number): number => (Number.isFinite(v) ? v : 0);
-
-const unrealized = (p: PositionView): number =>
-  fin(p.marketValue) - fin(p.quantity) * fin(p.avgPrice);
-
 const clamp = (v: number, lo: number, hi: number): number =>
   Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo;
 
@@ -89,7 +87,7 @@ export function projectEmpire(
   const maxVal = Math.max(...sorted.map((p) => fin(p.marketValue)), 1);
   const maxBasis = Math.max(...sorted.map((p) => Math.abs(fin(p.quantity) * fin(p.avgPrice))), 1);
   const structures: StructureState[] = sorted.map((p) => {
-    const u = unrealized(p);
+    const u = unrealizedPl(p);
     const basis = Math.abs(fin(p.quantity) * fin(p.avgPrice));
     return {
       symbol: p.symbol,

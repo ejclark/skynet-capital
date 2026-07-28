@@ -16,7 +16,7 @@ export interface RumorTraderConfig {
   readonly entryNotional: number;
 }
 
-export const DEFAULT_RUMOR_TRADER_CONFIG: RumorTraderConfig = {
+const DEFAULT_RUMOR_TRADER_CONFIG: RumorTraderConfig = {
   rumorSentimentMin: 0.2,
   rumorSentimentMax: 0.6,
   rumorMomentumMin: 0.005,

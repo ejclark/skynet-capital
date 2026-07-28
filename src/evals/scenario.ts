@@ -5,7 +5,7 @@ import type { MarketContext, Portfolio, Position, Quote, Side } from "../domain/
  * behaviour we expect a sound persona to exhibit. Scenarios are pure DATA so packs
  * stay declarative and reviewable — see docs/AUTONOMY-READINESS.md for the plan.
  */
-export type ScenarioCategory =
+type ScenarioCategory =
   | "signal-soundness"
   | "no-signal-discipline"
   | "exit-discipline"
@@ -13,7 +13,7 @@ export type ScenarioCategory =
   | "risk-boundary"
   | "adversarial";
 
-export interface Expectation {
+interface Expectation {
   /**
    * Should the persona place at least one (guarded) order here? Omit for a SAFETY-ONLY scenario —
    * one that asserts nothing about *whether* it trades (we don't know an unknown persona's strategy),

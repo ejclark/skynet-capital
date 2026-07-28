@@ -12,7 +12,7 @@ export interface GoldBugConfig {
   readonly entryNotional: number;
 }
 
-export const DEFAULT_GOLD_BUG_CONFIG: GoldBugConfig = {
+const DEFAULT_GOLD_BUG_CONFIG: GoldBugConfig = {
   safeHaven: "GLD",
   riskOffSentiment: -0.3,
   entryNotional: 15_000,

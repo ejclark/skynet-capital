@@ -21,7 +21,7 @@ export interface AlpacaConnectConfig {
 }
 
 /** The token we persist as the participant's Alpaca credential. */
-export interface AlpacaConnection {
+interface AlpacaConnection {
   readonly accessToken: string;
   readonly tokenType: string;
   readonly scope?: string;

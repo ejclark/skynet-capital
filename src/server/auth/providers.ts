@@ -6,7 +6,7 @@
  */
 export type ProviderId = "google" | "github";
 
-export interface OAuthIdentity {
+interface OAuthIdentity {
   readonly email?: string;
   readonly login?: string;
   readonly name?: string;
