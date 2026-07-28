@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { escapeHtml } from "../../ui/escape-html.js";
+import { APP_VERSION } from "./app-version.js";
 import { providerGlyph } from "./provider-glyphs.js";
 import type { FetchFn, OAuthProvider, ProviderId } from "./providers.js";
 import {
@@ -17,21 +17,6 @@ import {
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const STATE_COOKIE = "skynet_oauth_state";
-
-/**
- * App version, read from package.json at startup (semantic-release bumps it). Shown subtly on the
- * login page. The repo is private, so it stays plain text — no link to a changelog/release yet.
- */
-const APP_VERSION: string = (() => {
-  try {
-    const url = new URL("../../../package.json", import.meta.url);
-    const parsed: unknown = JSON.parse(readFileSync(url, "utf8"));
-    const v = (parsed as { version?: unknown }).version;
-    return typeof v === "string" ? v : "";
-  } catch {
-    return "";
-  }
-})();
 
 export interface AuthDeps {
   readonly fetchFn?: FetchFn;
