@@ -50,7 +50,7 @@ function issueBody(input: FeedbackInput): string {
   return lines.join("\n");
 }
 
-export interface FeedbackConfig {
+interface FeedbackConfig {
   /** GitHub token with Issues: read & write on the repo. Never logged or echoed. */
   readonly token: string;
   /** `owner/repo`, e.g. `ejclark/skynet-capital`. */
@@ -58,7 +58,7 @@ export interface FeedbackConfig {
 }
 
 /** Build the bound submit function that POSTs a GitHub issue. Live path (uses global fetch). */
-export function createFeedbackIssue(config: FeedbackConfig): SubmitFeedback {
+function createFeedbackIssue(config: FeedbackConfig): SubmitFeedback {
   return async (input) => {
     const title = input.title.trim();
     if (!title) return { ok: false, error: "Please add a short title so we know what it's about." };
