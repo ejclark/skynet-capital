@@ -1,23 +1,25 @@
 name: Pipeline
 
-# One workflow, one runner, one install — the whole path from verify to live.
-# Previously this was three separate workflows (CI + Release + Deploy), each
-# spinning up its own runner and re-running `npm ci`, with Deploy chained behind
-# CI via `workflow_run` (which GitHub schedules with extra latency). Collapsing
-# them removes two runner spin-ups, a duplicate install, and the handoff delay —
-# the "minutes" between merge and live.
+# One workflow, split into two mutually-exclusive jobs so no runner-minute is ever spent twice:
+#   • verify (pull_request only) — commitlint + typecheck + lint + test, on ONE runner.
+#   • deploy  (push to main only) — release + deploy + smoke + rollback, with NO re-verify:
+#     branch protection requires `verify` to pass before merge, so the merged commit is already
+#     validated. Re-running the suite on main was pure duplication — this removes it.
 #
-#   • pull_request → verify only (typecheck · lint · test)
-#   • push to main → verify, then release + deploy + smoke + rollback in the SAME
-#     runner, so nothing ships unless the same tree just went green.
+# Rationing measures (GHA minutes are the metered constraint):
+#   - commitlint folded in here → the separate commitlint.yml workflow is deleted (~240 min/mo saved).
+#   - docs-only PRs (**.md) skip the runner entirely via paths-ignore.
+#   - draft PRs don't run.
+#   - main pushes skip verify (deploy only) → no duplicate test run per merge.
 on:
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - "**.md"
   push:
     branches: [ main ]
 
 concurrency:
-  # Cancel superseded PR runs; never cancel a main run mid-deploy.
   group: pipeline-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -27,13 +29,44 @@ permissions:
   pull-requests: write
 
 jobs:
-  pipeline:
-    name: verify · release · deploy
+  verify:
+    name: verify
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0            # semantic-release needs full history
+          fetch-depth: 0            # commitlint needs the PR commit range
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Commit lint
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint (Biome)
+        run: npm run lint
+      - name: Test (Rstest)
+        run: npm test
+
+  deploy:
+    name: release · deploy
+    # Merged commits are already verified (branch protection required `verify`), so this path
+    # never re-runs the suite — it only ships.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
           persist-credentials: true
 
       - name: Set up Node 24
@@ -45,30 +78,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ---- verify (every event) ----
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Lint (Biome)
-        run: npm run lint
-      - name: Test (Rstest)
-        run: npm test
-
-      # ---- release + deploy (main pushes only, same runner) ----
       - name: Semantic Release
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
       - name: Set up flyctl
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: superfly/flyctl-actions/setup-flyctl@master
 
-      # Remember the image serving RIGHT NOW so a bad release can be rolled back to it.
-      # Best-effort: a failure here still lets us deploy — the smoke check below is the guard.
       - name: Capture previous image
         id: prev
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         continue-on-error: true
         run: |
           IMG=$(flyctl image show -a skynet-capital --json \
@@ -81,16 +100,12 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Deploy to Fly
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      # The harness that makes zero-human deploys safe: probe the live public surface.
-      # A release that doesn't serve is not a release.
       - name: Smoke test the release
         id: smoke
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: bash scripts/smoke.sh https://skynet-capital.fly.dev
 
       - name: Roll back to previous image
