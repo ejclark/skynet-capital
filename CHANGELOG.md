@@ -1,3 +1,10 @@
+# [1.128.0](https://github.com/ejclark/skynet-capital/compare/v1.127.1...v1.128.0) (2026-07-28)
+
+
+### Features
+
+* feast leftovers to zero, mortician recruited, feast doctrine + intent routing ([b3aceda](https://github.com/ejclark/skynet-capital/commit/b3aceda350abbc070d3c551e9e0cbdac43f62d9c))
+
 ## [1.127.1](https://github.com/ejclark/skynet-capital/compare/v1.127.0...v1.127.1) (2026-07-28)
 
 
