@@ -161,7 +161,9 @@ function offlineDataSource(env: Env): DataSource {
     clientFactory,
     loadParticipants: () => specs.map(toParticipant),
     // Offline replay emits every account's fills already; nothing to open per-account.
-    startParticipantStream: () => {},
+    startParticipantStream: () => {
+      /* offline source has no live stream */
+    },
     startStreams: ({ sink, onStatus }) => {
       new ReplayEventStream({
         events,

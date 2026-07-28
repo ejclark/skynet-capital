@@ -1061,7 +1061,7 @@ export function renderCompareBody(
   const b = options.bId
     ? data.participants.find((p) => p.id === options.bId && !p.error)
     : undefined;
-  if (!a || !b) {
+  if (!(a && b)) {
     return renderShell(
       options.nav,
       comparePicker(data, options.nav, a?.id ?? options.aId),

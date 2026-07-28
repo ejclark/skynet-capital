@@ -12,12 +12,66 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 20
+          }
+        },
+        "useSimplifiedLogicExpression": "error"
+      },
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedFunctionParameters": "error",
+        "noUnusedPrivateClassMembers": "error"
+      },
+      "suspicious": {
+        "noConsole": "error",
+        "useAwait": "error",
+        "noEmptyBlockStatements": "error",
+        "useErrorMessage": "error",
+        "noMisplacedAssertion": "error"
+      },
       "style": {
         "useImportType": "error",
-        "noNonNullAssertion": "error"
+        "noNonNullAssertion": "error",
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "filenameCases": ["kebab-case"]
+          }
+        },
+        "noDefaultExport": "error",
+        "useConsistentArrayType": {
+          "level": "error",
+          "options": {
+            "syntax": "shorthand"
+          }
+        },
+        "useCollapsedElseIf": "error",
+        "useShorthandAssign": "error"
+      },
+      "performance": {
+        "noBarrelFile": "error"
       }
     }
   },
+  "overrides": [
+    {
+      "include": ["scripts/**", "src/scripts/**", "commitlint.config.js", "rstest.config.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          },
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    }
+  ],
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -32,6 +86,6 @@
     }
   },
   "files": {
-    "ignore": ["dist", "node_modules", "coverage"]
+    "ignore": ["dist", "node_modules", "coverage", ".claude/worktrees"]
   }
 }

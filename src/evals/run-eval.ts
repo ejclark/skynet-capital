@@ -38,6 +38,7 @@ export interface EvalReport {
 
 const DEFAULT_THRESHOLD = 85;
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: grandfathered (38) — decompose target, do not grow
 export function runScenario(
   persona: Persona,
   scenario: Scenario,

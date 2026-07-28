@@ -10,10 +10,6 @@ import type { EmpireState, StructureState } from "../universe/world-state.js";
  */
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 
-// Compatibility re-exports: the sector map + theme rule moved to src/universe (one owner).
-export { sectorOf, type Sector } from "../universe/sectors.js";
-export { empireTheme } from "../universe/project.js";
-
 // One building silhouette per sector, drawn from a baseline. x = left, w = width, h = height.
 function building(
   sector: Sector,
@@ -126,6 +122,7 @@ const capColorOf = (s: StructureState): string =>
   s.unrealizedPl > 0 ? "var(--pos)" : s.unrealizedPl < 0 ? "var(--neg)" : "var(--muted)";
 
 /** Render the empire skyline as an inline SVG string (deterministic; empty holdings → a frontier plot). */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: grandfathered (33) — decompose target, do not grow
 export function renderEmpireSkyline(
   snapshot: ParticipantSnapshot,
   opts: SkylineOptions = {},

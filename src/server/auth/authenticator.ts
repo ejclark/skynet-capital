@@ -132,7 +132,7 @@ export class Authenticator {
     const state = url.searchParams.get("state") ?? "";
     const code = url.searchParams.get("code") ?? "";
     const expected = parseCookies(req.headers.cookie)[STATE_COOKIE];
-    if (!code || !state || !expected || state !== expected) {
+    if (!(code && state && expected) || state !== expected) {
       res.writeHead(400, { "content-type": "text/html; charset=utf-8" });
       res.end(this.loginPage("Sign-in expired or was tampered with. Please try again."));
       return true;

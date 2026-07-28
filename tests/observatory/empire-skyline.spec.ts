@@ -1,12 +1,10 @@
-import {
-  empireTheme,
-  renderEmpireSkyline,
-  sectorOf,
-} from "../../src/observatory/empire-skyline.js";
+import { renderEmpireSkyline } from "../../src/observatory/empire-skyline.js";
 import type {
   ParticipantSnapshot,
   PositionView,
 } from "../../src/observatory/participant-snapshot.js";
+import { empireTheme } from "../../src/universe/project.js";
+import { sectorOf } from "../../src/universe/sectors.js";
 
 const pos = (symbol: string, marketValue: number, avgPrice = 1, quantity = 1): PositionView => ({
   symbol,
