@@ -12,3 +12,4 @@ graphify-out/
 
 # Scratchpad / throwaway preview + shoot scripts (never committed)
 scratchpad/
+.claude/worktrees/
