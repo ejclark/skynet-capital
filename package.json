@@ -27,8 +27,10 @@
     "prepare": "husky",
     "arch:scan": "node scripts/arch-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
+    "clone:scan": "node scripts/clone-scan.mjs",
     "verify": "run-p typecheck lint test",
     "dead:scan": "node scripts/dead-scan.mjs",
+    "depgraph:scan": "node scripts/dep-graph-scan.mjs",
     "spec:gap": "node scripts/spec-gap-scan.mjs"
   },
   "devDependencies": {
@@ -39,7 +41,9 @@
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
     "@types/node": "24.13.3",
+    "dependency-cruiser": "18.1.0",
     "husky": "9.1.7",
+    "jscpd": "5.0.14",
     "knip": "6.29.0",
     "npm-run-all2": "9.0.2",
     "playwright-core": "1.62.0",
