@@ -1,3 +1,22 @@
+# [1.123.0](https://github.com/ejclark/skynet-capital/compare/v1.122.0...v1.123.0) (2026-07-28)
+
+
+### Bug Fixes
+
+* attach gaze beam to the eyeball; collapse ci/release/deploy into one pipeline ([1bc3d84](https://github.com/ejclark/skynet-capital/commit/1bc3d848a5cc65afe5a61664f311b758908d97ed))
+* string literal in junk-drawer error (biome noUnusedTemplateLiteral) ([a29fb47](https://github.com/ejclark/skynet-capital/commit/a29fb4703284bf2e083dc8fbe1063b66fc6aba72))
+
+
+### Features
+
+* decompose the eye — vertical cat-eye, billboard masonry eyelids, more energy ([521cd85](https://github.com/ejclark/skynet-capital/commit/521cd8526d0eb23afb918d14efa840a1bab6430b))
+* decomposer agent + split playbook + cohesion-aware fitness candidate ([acb1f02](https://github.com/ejclark/skynet-capital/commit/acb1f021b2fd67a269a5b606e0d55750958c2e31))
+* duplication coach (/dedupe) + coach roster + review skills in ship loop ([409c396](https://github.com/ejclark/skynet-capital/commit/409c396a7fe5e27580c3f295a5a0f294b05ee9ee))
+* eye rework, single-runner pipeline, babylon mcp, and the coach system ([#208](https://github.com/ejclark/skynet-capital/issues/208)) ([b0d41c9](https://github.com/ejclark/skynet-capital/commit/b0d41c9c7eafb5b77b929a89a505b306ab27394a)), closes [#207](https://github.com/ejclark/skynet-capital/issues/207)
+* npm run verify + pre-push gate (full local check before anything leaves) ([60522f4](https://github.com/ejclark/skynet-capital/commit/60522f4c897f708fbf26d969df79a03e60c85374))
+* promote decompose to a first-class /decompose skill ([4372313](https://github.com/ejclark/skynet-capital/commit/43723130bf643415ed2f583833c3db7b85dcee28))
+* smell catalog, atomic decompose grammar, rule-of-three, junk-drawer gate ([4282eae](https://github.com/ejclark/skynet-capital/commit/4282eae65233eeb4a69cbe32fba6c33e5b0a9205))
+
 # [1.122.0](https://github.com/ejclark/skynet-capital/compare/v1.121.0...v1.122.0) (2026-07-27)
 
 
