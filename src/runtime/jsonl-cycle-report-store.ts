@@ -1,5 +1,5 @@
-import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { JsonlKeyedStore } from "../storage/jsonl-store.js";
 import type { CycleReportStore, PersistedCycleReport } from "./cycle-report-store.js";
 
 /**
@@ -8,49 +8,19 @@ import type { CycleReportStore, PersistedCycleReport } from "./cycle-report-stor
  * the future learning loop can replay. One file per persona keeps each bot's stream isolated.
  */
 export class JsonlCycleReportStore implements CycleReportStore {
-  private readonly dir: string;
+  private readonly store: JsonlKeyedStore<PersistedCycleReport>;
 
   constructor(dir: string) {
-    this.dir = dir;
+    this.store = new JsonlKeyedStore<PersistedCycleReport>(dir, (personaId) =>
+      join(dir, `${personaId}.jsonl`),
+    );
   }
 
   async save(entry: PersistedCycleReport): Promise<void> {
-    await mkdir(this.dir, { recursive: true });
-    await appendFile(this.fileFor(entry.report.personaId), `${JSON.stringify(entry)}\n`, "utf8");
+    await this.store.append(entry.report.personaId, entry);
   }
 
-  async list(personaId?: string): Promise<PersistedCycleReport[]> {
-    const files = personaId ? [this.fileFor(personaId)] : await this.allFiles();
-    const entries: PersistedCycleReport[] = [];
-    for (const file of files) {
-      entries.push(...(await this.readFileEntries(file)));
-    }
-    return entries;
-  }
-
-  private fileFor(personaId: string): string {
-    return join(this.dir, `${personaId}.jsonl`);
-  }
-
-  private async allFiles(): Promise<string[]> {
-    try {
-      const names = await readdir(this.dir);
-      return names.filter((n) => n.endsWith(".jsonl")).map((n) => join(this.dir, n));
-    } catch {
-      return [];
-    }
-  }
-
-  private async readFileEntries(file: string): Promise<PersistedCycleReport[]> {
-    let contents: string;
-    try {
-      contents = await readFile(file, "utf8");
-    } catch {
-      return [];
-    }
-    return contents
-      .split("\n")
-      .filter((line) => line.length > 0)
-      .map((line) => JSON.parse(line) as PersistedCycleReport);
+  list(personaId?: string): Promise<PersistedCycleReport[]> {
+    return this.store.list(personaId);
   }
 }
