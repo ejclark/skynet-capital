@@ -56,6 +56,7 @@ supply-chain decision: read them fully before adopting.
 | **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` | `/dedupe` | `ui-librarian` | ✅ live |
 | **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
 | **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` | judge: un-export / delete / justify-ignore | `mortician` (recruited on recurrence #3, per the rule of three) | ✅ live |
+| **Dep-graph** (cycles/orphans/layering) | `scripts/dep-graph-scan.mjs` (dependency-cruiser, adopted) + `.dependency-cruiser.cjs` + `dep-graph-budget.json` + `tests/arch/dep-graph.spec.ts` | judge: break cycle / wire-or-delete orphan / restore layer direction (`/decompose` when a cycle wants a split) | none yet (recruit on recurrence #3) | ✅ live |
 | **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | write BDD specs per ENGINEERING.md | `test-backfiller` | ✅ live |
 | **Inline-JS defects** (`<script>` syntax) | extract + `node --check` per page — *not built* | — | — | ⬜ queued |
 | Code review | *(adopted)* | `/code-review` | — | ✅ bundled |
