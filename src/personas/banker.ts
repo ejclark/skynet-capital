@@ -45,6 +45,7 @@ export class BankerPersona implements Persona {
     this.book = new Set(config.book);
   }
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: grandfathered (21) — decompose target, do not grow
   decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
     const intents: OrderIntent[] = [];
 
@@ -53,7 +54,7 @@ export class BankerPersona implements Persona {
         continue;
       }
       const quote = context.quotes[symbol];
-      if (!quote || !(quote.last > 0)) {
+      if (!(quote && quote.last > 0)) {
         continue;
       }
       const momentum = momentumOf(context, symbol);

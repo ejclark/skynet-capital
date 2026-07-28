@@ -4,6 +4,7 @@ import { FetchAlpacaTradingTransport } from "../../src/alpaca/trading-transport.
 function captureHeaders(): { captured: { headers: Record<string, string> }; restore: () => void } {
   const original = globalThis.fetch;
   const captured: { headers: Record<string, string> } = { headers: {} };
+  // biome-ignore lint/suspicious/useAwait: mock must match fetch's async signature
   globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => {
     captured.headers = (init?.headers ?? {}) as Record<string, string>;
     return { status: 200, text: async () => "{}" } as unknown as Response;

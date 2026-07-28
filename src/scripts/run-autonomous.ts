@@ -141,7 +141,9 @@ async function runLive(): Promise<void> {
     console.warn(
       `No enabled bots with credentials (wanted: ${[...enabled].join(", ")}). Idling — set SKYNET_BOT_<PERSONA>_KEY/SECRET and redeploy to start. Nothing is trading.`,
     );
-    setInterval(() => {}, 60_000);
+    setInterval(() => {
+      /* keepalive tick — work happens on the market-event stream */
+    }, 60_000);
     return;
   }
 

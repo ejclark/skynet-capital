@@ -73,6 +73,7 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   });
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: grandfathered (52) — top decompose target, do not grow
 async function handle(
   req: IncomingMessage,
   res: ServerResponse,

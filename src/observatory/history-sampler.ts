@@ -39,7 +39,9 @@ export function startHistorySampler(opts: HistorySamplerOptions): () => void {
     const at = now().toISOString();
     for (const sample of sampleAll(opts.getState(), at)) {
       // Fire-and-forget: a sample write failure must never disrupt the live server.
-      void opts.store.save(sample).catch(() => {});
+      void opts.store.save(sample).catch(() => {
+        /* fire-and-forget: sampling must never break the request path */
+      });
     }
   };
   const handle = setInterval(tick, intervalMs);

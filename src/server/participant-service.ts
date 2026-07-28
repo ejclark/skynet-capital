@@ -52,7 +52,7 @@ export class ParticipantService {
     if (!displayName) {
       return { ok: false, error: "A display name is required." };
     }
-    if (!input.apiKey?.trim() || !input.apiSecret?.trim()) {
+    if (!(input.apiKey?.trim() && input.apiSecret?.trim())) {
       return { ok: false, error: "Both an Alpaca key and secret are required." };
     }
     const kind: ParticipantKind = input.kind ?? "human";

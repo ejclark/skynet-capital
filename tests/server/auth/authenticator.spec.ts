@@ -36,6 +36,7 @@ const ENV = {
 };
 
 function googleFetch(email: string): typeof fetch {
+  // biome-ignore lint/suspicious/useAwait: mock must match fetch's async signature
   return (async (input: string | URL) => {
     const url = String(input);
     const body = url.includes("token") ? { access_token: "t" } : { email, name: "Eric" };
