@@ -1,3 +1,11 @@
+# [1.126.0](https://github.com/ejclark/skynet-capital/compare/v1.125.0...v1.126.0) (2026-07-28)
+
+
+### Features
+
+* parallel verify + incremental typecheck ([ead07b6](https://github.com/ejclark/skynet-capital/commit/ead07b6a286cddce79eea2933b39064a9aa3d854))
+* parallel verify + incremental typecheck ([#215](https://github.com/ejclark/skynet-capital/issues/215)) ([c1fe13c](https://github.com/ejclark/skynet-capital/commit/c1fe13c5343626c6a43b7cae9d3f3640cdfc4259))
+
 # [1.125.0](https://github.com/ejclark/skynet-capital/compare/v1.124.0...v1.125.0) (2026-07-28)
 
 
