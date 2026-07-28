@@ -7,6 +7,18 @@ import { equityChange, equityDrawdown, renderEquitySparkline } from "./equity-sp
 import type { EquitySample } from "./history-store.js";
 import type { ActivityView, ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
 import { personaLore } from "./persona-lore.js";
+import {
+  chip,
+  formatActivityTime,
+  formatCurrency,
+  formatSigned,
+  formatTimestamp,
+  pct,
+  plClass,
+  profileHref,
+  tile,
+  tzAbbrev,
+} from "./render-atoms.js";
 
 /**
  * Renders a `DashboardData` into a self-contained observatory dashboard.
@@ -18,21 +30,6 @@ import { personaLore } from "./persona-lore.js";
  * Pure: same data in, same HTML out — so it's unit-testable and safe to re-run on a
  * schedule to refresh a published dashboard.
  */
-
-function formatCurrency(value: number): string {
-  const sign = value < 0 ? "-" : "";
-  return `${sign}$${Math.abs(Math.round(value)).toLocaleString("en-US")}`;
-}
-
-function formatSigned(value: number): string {
-  return `${value >= 0 ? "+" : ""}${formatCurrency(value)}`;
-}
-
-function plClass(value: number): "pos" | "neg" | "flat" {
-  if (value > 0) return "pos";
-  if (value < 0) return "neg";
-  return "flat";
-}
 
 function costBasis(position: PositionView): number {
   return position.avgPrice * position.quantity;
@@ -48,20 +45,6 @@ function participantUnrealized(snapshot: ParticipantSnapshot): number {
 
 function participantInvested(snapshot: ParticipantSnapshot): number {
   return snapshot.positions.reduce((sum, p) => sum + p.marketValue, 0);
-}
-
-function formatTimestamp(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
-}
-
-function chip(snapshot: ParticipantSnapshot): string {
-  if (snapshot.kind === "bot") {
-    const persona = snapshot.personaId ? escapeHtml(snapshot.personaId) : "bot";
-    return `<span class="chip chip-bot">BOT · ${persona}</span>`;
-  }
-  return `<span class="chip chip-human">HUMAN</span>`;
 }
 
 function positionRow(position: PositionView): string {
@@ -85,36 +68,6 @@ function positionsTable(snapshot: ParticipantSnapshot): string {
       </thead>
       <tbody>${snapshot.positions.map(positionRow).join("")}</tbody>
     </table>`;
-}
-
-function tzAbbrev(timezone?: string): string {
-  if (!timezone) return "UTC";
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone,
-      timeZoneName: "short",
-    }).formatToParts(new Date());
-    return parts.find((p) => p.type === "timeZoneName")?.value ?? timezone;
-  } catch {
-    return timezone;
-  }
-}
-
-function formatActivityTime(iso: string, timezone?: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone ?? "UTC",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(date);
-  } catch {
-    return iso;
-  }
 }
 
 function activityRow(activity: ActivityView, timezone?: string): string {
@@ -172,11 +125,6 @@ export function botLandmarkProminence(
   }
   bots.forEach((p, i) => out.set(p.id, 1 - (i / (bots.length - 1)) * 0.45));
   return out;
-}
-
-/** Slugified id → the profile URL for a participant. Ids are already URL-safe. */
-function profileHref(id: string): string {
-  return `/u/${encodeURIComponent(id)}`;
 }
 
 function participantCard(snapshot: ParticipantSnapshot, opts: CardOptions = {}): string {
@@ -408,14 +356,6 @@ function orderParticipants(
   const self = participants.filter((p) => p.id === currentId);
   const rest = participants.filter((p) => p.id !== currentId);
   return [...self, ...rest];
-}
-
-/** A labelled stat tile (reused across summary strips and the individual hero row). */
-function tile(label: string, value: string, opts: { lead?: boolean; cls?: string } = {}): string {
-  return `<div class="tile${opts.lead ? " tile-lead" : ""}">
-        <span class="tile-label">${label}</span>
-        <span class="tile-num num${opts.cls ? ` ${opts.cls}` : ""}">${value}</span>
-      </div>`;
 }
 
 /**
@@ -763,10 +703,6 @@ function cohortStats(
     best,
     spread: returns.length ? Math.max(...returns) - Math.min(...returns) : 0,
   };
-}
-
-function pct(value: number): string {
-  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
 
 /**
