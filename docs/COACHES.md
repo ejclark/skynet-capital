@@ -41,6 +41,7 @@ supply-chain decision: read them fully before adopting.
 |---|---|---|---|---|
 | **Size/cohesion** (god files) | `scripts/arch-scan.mjs` + `arch-budget.json` + `tests/arch/budget.spec.ts` | `/decompose` | `decomposer` | ✅ live |
 | **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` | `/dedupe` | `ui-librarian` | ✅ live |
+| **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` | manual cleanup / `/dedupe`-style judgment | — | ✅ live |
 | **Coverage** (untested files) | rstest coverage ratchet — *not built* | — | `test-backfiller` | ⬜ next |
 | **Inline-JS defects** (`<script>` syntax) | extract + `node --check` per page — *not built* | — | — | ⬜ queued |
 | Code review | *(adopted)* | `/code-review` | — | ✅ bundled |
