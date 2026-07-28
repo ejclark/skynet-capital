@@ -73,7 +73,6 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   });
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: grandfathered (52) — top decompose target, do not grow
 async function handle(
   req: IncomingMessage,
   res: ServerResponse,
@@ -81,29 +80,64 @@ async function handle(
 ): Promise<void> {
   const url = req.url ?? "/";
   const path = url.split("?")[0] ?? "/";
-  const auth = config.auth;
 
+  if (servePublicRoute(path, res, config.hub)) {
+    return;
+  }
+
+  const gate = await gateRequest(req, res, path, url, config);
+  if (gate.handled) {
+    return;
+  }
+
+  await serveAuthorizedRoute(req, res, path, url, config, gate.session);
+}
+
+/**
+ * Public routes served before any auth gate — never touch session/password state.
+ * Returns true when the request has been fully handled.
+ */
+function servePublicRoute(path: string, res: ServerResponse, hub: ObservatoryHub): boolean {
   // Public cohort pulse: two aggregate equity totals (humans vs bots) and head counts.
   // Deliberately served before any auth gate so the logged-out login page can show the
   // live "Man vs. Machine" standing. Exposes only cohort sums — never individual accounts.
   if (path === "/pulse") {
-    servePulse(res, config.hub);
-    return;
+    servePulse(res, hub);
+    return true;
   }
 
   // Public self-service onboarding guide — the invite email links straight here.
   if (path === "/welcome") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(welcomeHtml());
-    return;
+    return true;
   }
 
   // Live Babylon.js 3D scene exploration (see src/three/) — public so it's easy to eyeball on deploy.
   if (path === "/tower") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(threeScenePage());
-    return;
+    return true;
   }
+
+  return false;
+}
+
+/**
+ * The auth gate — either per-user OAuth (`config.auth`) or the legacy shared password. Exact
+ * same order/behavior as before: OAuth's own routes (/login, /logout, provider callbacks) are
+ * checked first, then the session/password check. Returns `{ handled: true }` once a response
+ * has been written (redirect, 401, or an auth-route response); otherwise `{ handled: false,
+ * session }` so the caller can proceed to the authorized routes with the resolved session.
+ */
+async function gateRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  url: string,
+  config: DashboardServerConfig,
+): Promise<{ handled: true } | { handled: false; session: Session | undefined }> {
+  const auth = config.auth;
 
   if (auth) {
     const base = baseUrlFrom(req);
@@ -111,15 +145,15 @@ async function handle(
     if (path === "/login") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       res.end(auth.loginPage());
-      return;
+      return { handled: true };
     }
     if (path === "/logout") {
       res.writeHead(302, { location: "/login", "set-cookie": auth.clearCookie(secure) });
       res.end();
-      return;
+      return { handled: true };
     }
     if (await auth.handleAuthRoute(req, res, path, base)) {
-      return;
+      return { handled: true };
     }
     if (!auth.sessionFrom(req)) {
       if (path === "/events") {
@@ -129,18 +163,30 @@ async function handle(
         res.writeHead(302, { location: "/login" });
         res.end();
       }
-      return;
+      return { handled: true };
     }
-  } else if (!isAuthorized(url, config.password)) {
-    res.writeHead(401, { "content-type": "text/plain" });
-    res.end("unauthorized");
-    return;
+    return { handled: false, session: auth.sessionFrom(req) };
   }
 
-  // --- authorized routes ---
-  const session = auth?.sessionFrom(req);
+  if (!isAuthorized(url, config.password)) {
+    res.writeHead(401, { "content-type": "text/plain" });
+    res.end("unauthorized");
+    return { handled: true };
+  }
+  return { handled: false, session: undefined };
+}
+
+/** Routes behind the auth gate — same set and order as before the split. */
+async function serveAuthorizedRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  url: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
   const canAdd = Boolean(config.addParticipant);
-  const authed = Boolean(auth);
+  const authed = Boolean(config.auth);
   const navFor = (active: NavView): NavContext => ({
     active,
     currentId: resolveCurrentId(session, config.hub.getState().participants),
@@ -198,27 +244,7 @@ async function handle(
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
   if (path.startsWith("/u/")) {
-    const id = decodeURIComponent(path.slice(3));
-    const state = config.hub.getState();
-    const snapshot = state.participants.find((p) => p.id === id);
-    if (!snapshot) {
-      res.writeHead(404, { "content-type": "text/plain" });
-      res.end("not found");
-      return;
-    }
-    const nav = navFor("you");
-    const history = config.readHistory ? await config.readHistory(id) : undefined;
-    const decisions =
-      config.readDecisions && snapshot.kind === "bot" ? await config.readDecisions(id) : undefined;
-    const body = renderIndividualBody(snapshot, {
-      nav: { ...nav, active: nav.currentId === id ? "you" : "board" },
-      isSelf: nav.currentId === id,
-      generatedAt: state.generatedAt,
-      ...(history ? { history } : {}),
-      ...(decisions ? { decisions } : {}),
-    });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument(`${escapeHtml(snapshot.displayName)} — Skynet Capital`, body));
+    await serveIndividualProfile(res, path, config, navFor);
     return;
   }
   if (path === "/" || path === "/index.html") {
@@ -228,6 +254,36 @@ async function handle(
   }
   res.writeHead(404, { "content-type": "text/plain" });
   res.end("not found");
+}
+
+/** `/u/:id` — an individual's profile, or 404 when the id isn't on the board. */
+async function serveIndividualProfile(
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+  navFor: (active: NavView) => NavContext,
+): Promise<void> {
+  const id = decodeURIComponent(path.slice(3));
+  const state = config.hub.getState();
+  const snapshot = state.participants.find((p) => p.id === id);
+  if (!snapshot) {
+    res.writeHead(404, { "content-type": "text/plain" });
+    res.end("not found");
+    return;
+  }
+  const nav = navFor("you");
+  const history = config.readHistory ? await config.readHistory(id) : undefined;
+  const decisions =
+    config.readDecisions && snapshot.kind === "bot" ? await config.readDecisions(id) : undefined;
+  const body = renderIndividualBody(snapshot, {
+    nav: { ...nav, active: nav.currentId === id ? "you" : "board" },
+    isSelf: nav.currentId === id,
+    generatedAt: state.generatedAt,
+    ...(history ? { history } : {}),
+    ...(decisions ? { decisions } : {}),
+  });
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  res.end(shellDocument(`${escapeHtml(snapshot.displayName)} — Skynet Capital`, body));
 }
 
 /**
