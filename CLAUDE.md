@@ -97,6 +97,17 @@ cuts** — absorb the noise so Eric's attention goes to what moves the needle.
 
 _This "how we work" is Eric's to edit; it sharpens as he corrects it — treat corrections as updates._
 
+## Operations — plain intent routes to machinery (Eric never needs the names)
+
+A quality system runs this repo (docs/COACHES.md): fitness gates in CI (size/cohesion, duplication,
+dead code) with ratchet-down budgets, corrective skills (`/decompose`, `/dedupe`), background agents
+(`decomposer`, `ui-librarian`, `mortician`), and a dispatch policy (`/governor`). **Route plain intent
+to it**: "clean up the code" / "burn down debt" → run a governor cycle; "why did CI fail" → a gate
+probably caught real drift, fix the finding not the gate; big planned burn-downs → feast mode (see the
+governor skill). Structural PRs land batched; auto-merge per the governor's merge-policy table; features
+and visual work always wait for Eric's taste. Eric will not remember these names — that is expected and
+fine; the docs are the memory.
+
 ## Ship loop
 
 - Branch off latest `origin/main` per change **before editing** (`git checkout -B <branch> origin/main`);

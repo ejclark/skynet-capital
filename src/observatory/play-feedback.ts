@@ -8,7 +8,7 @@
  * A self-contained, pure board piece (see the composable-board direction in docs/IDEAS.md): outcomes
  * in, HTML out. Drops into the observatory now and is portable to the login canvas next.
  */
-export type PlayResult = "hit" | "miss" | "live";
+type PlayResult = "hit" | "miss" | "live";
 
 export interface PlayOutcome {
   /** The character (persona alias) invoking the play. */
