@@ -1,3 +1,11 @@
+# [1.127.0](https://github.com/ejclark/skynet-capital/compare/v1.126.0...v1.127.0) (2026-07-28)
+
+
+### Features
+
+* governor drill — codified head-coach dispatch cycle + merge policy ([19e6c0e](https://github.com/ejclark/skynet-capital/commit/19e6c0e75f8789ec52d80ea25c8a0c05f3e5370e))
+* governor drill — codified head-coach dispatch cycle + merge policy ([#217](https://github.com/ejclark/skynet-capital/issues/217)) ([e3e4baf](https://github.com/ejclark/skynet-capital/commit/e3e4baf9be693f611ad789a05df3f332be037adf))
+
 # [1.126.0](https://github.com/ejclark/skynet-capital/compare/v1.125.0...v1.126.0) (2026-07-28)
 
 
