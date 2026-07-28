@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { type Authenticator, resolveAuth } from "../../../src/server/auth/authenticator.js";
+import type { Authenticator } from "../../../src/server/auth/authenticator.js";
+import { resolveAuth } from "../../../src/server/auth/resolve-auth.js";
 
 class FakeRes {
   statusCode?: number;
