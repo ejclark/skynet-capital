@@ -1,7 +1,22 @@
-# The Coach system — detect-and-correct loops against slop
+# The coaching staff — detect-and-correct loops against slop
 
-AI builds fast; unregulated speed compounds into slop. A **Coach** is the anti-slop unit: one quality
-dimension, watched and corrected as a loop —
+AI builds fast; unregulated speed compounds into slop. We run quality like a football staff — three
+seats with distinct jobs:
+
+- **Head coach (orchestrator).** Decides what runs when: WIP limits, dispatch, merge tempo, and the
+  don't-collide-with-feature-work rule. **Today this seat is Eric + Claude in-session**; the mechanized
+  version (WIP-limited dispatcher + auto-merge on trusted green) is the least-built piece and is earned
+  by gate trust, not assumed.
+- **Defensive coordinator.** Protects the standard: breaks down complexity and organizes the pieces.
+  Owns the detect-and-correct units below (gates, ratchets, drills, athletes). Defense keeps entropy
+  from scoring.
+- **Offensive coordinator.** Scales up systems where a **constraint** binds (Theory of Constraints:
+  *elevate*). Owns capability plays: the single-runner pipeline (GHA-minutes constraint), the local
+  verify gate (review-trust constraint), Babylon MCP (domain-knowledge constraint), the local dev loop
+  (iteration-speed constraint). Offense moves the ceiling; each play is triggered by a *measured*
+  constraint, never speculation — same discipline as run-scale infra.
+
+## The defensive unit — one quality dimension per loop
 
 - **Eye (fitness function):** an executable eval that measures the dimension and enforces a committed,
   **ratchet-down-only budget** in CI. Prose audits drift; evals don't.
@@ -10,8 +25,8 @@ dimension, watched and corrected as a loop —
 - **Athlete (agent):** a scoped background worker that runs eye → drill → small green PR, off the
   critical path.
 
-Slop accumulates precisely in the dimensions no Coach watches. Growing this roster *is* the quality
-strategy (audit: `docs/ENGINEERING-AUDIT-2026-07.md`).
+Slop accumulates precisely in the dimensions no defensive loop watches. Growing this roster *is* the
+quality strategy (audit: `docs/ENGINEERING-AUDIT-2026-07.md`).
 
 ## Sourcing rule
 
@@ -20,7 +35,7 @@ review, simplification) is solved — use the bundled skills. Anything that lean
 (arch-budget, dupe-budget, Graphify, the design system) must be crafted here. Community skills are a
 supply-chain decision: read them fully before adopting.
 
-## Roster
+## Defensive roster
 
 | Coach | Eye (eval + budget) | Drill (skill) | Athlete (agent) | Status |
 |---|---|---|---|---|
