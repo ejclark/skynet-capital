@@ -1,6 +1,11 @@
 import { escapeHtml } from "../ui/escape-html.js";
 import { renderEmpireSkyline } from "./empire-skyline.js";
-import type { ActivityView, ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
+import {
+  type ActivityView,
+  type ParticipantSnapshot,
+  type PositionView,
+  unrealizedPl,
+} from "./participant-snapshot.js";
 import {
   chip,
   formatActivityTime,
@@ -17,16 +22,8 @@ import {
  * by the board view; the individual view reuses the positions/activity atoms directly.
  */
 
-function costBasis(position: PositionView): number {
-  return position.avgPrice * position.quantity;
-}
-
-function unrealized(position: PositionView): number {
-  return position.marketValue - costBasis(position);
-}
-
 export function participantUnrealized(snapshot: ParticipantSnapshot): number {
-  return snapshot.positions.reduce((sum, p) => sum + unrealized(p), 0);
+  return snapshot.positions.reduce((sum, p) => sum + unrealizedPl(p), 0);
 }
 
 export function participantInvested(snapshot: ParticipantSnapshot): number {
@@ -40,7 +37,7 @@ export function participantReturnPct(snapshot: ParticipantSnapshot): number {
 }
 
 function positionRow(position: PositionView): string {
-  const pl = unrealized(position);
+  const pl = unrealizedPl(position);
   return `<tr>
       <td class="sym">${escapeHtml(position.symbol)}</td>
       <td class="num">${position.quantity.toLocaleString("en-US")}</td>

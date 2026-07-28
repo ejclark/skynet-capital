@@ -9,6 +9,16 @@ export interface PositionView {
   readonly marketValue: number;
 }
 
+/** Broker feeds can hand us NaN/Infinity; a non-finite number is treated as 0 rather than letting it
+ *  poison downstream math and reach a rendered surface as the string "NaN". */
+export const fin = (v: number): number => (Number.isFinite(v) ? v : 0);
+
+/** A position's unrealized P/L — market value minus cost basis (quantity × average price). The one
+ *  place this arithmetic lives; both the dashboard cards and the world projection read from here. */
+export function unrealizedPl(position: PositionView): number {
+  return fin(position.marketValue) - fin(position.quantity) * fin(position.avgPrice);
+}
+
 /** A single order/transaction as shown in the account's activity feed. */
 export interface ActivityView {
   readonly symbol: string;

@@ -46,7 +46,7 @@
   "src/observatory/history-store.ts": 110,
   "src/observatory/leaderboard-view.ts": 94,
   "src/observatory/participant-card.ts": 145,
-  "src/observatory/participant-snapshot.ts": 100,
+  "src/observatory/participant-snapshot.ts": 110,
   "src/observatory/persona-lore.ts": 71,
   "src/observatory/play-feedback.ts": 57,
   "src/observatory/reduce.ts": 126,
@@ -94,7 +94,7 @@
   "src/server/sse.ts": 14,
   "src/three/serve-scene.ts": 21,
   "src/ui/escape-html.ts": 9,
-  "src/universe/project.ts": 145,
+  "src/universe/project.ts": 146,
   "src/universe/sectors.ts": 47,
   "src/universe/world-state.ts": 72
 }
