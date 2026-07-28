@@ -1,3 +1,11 @@
+## [1.127.1](https://github.com/ejclark/skynet-capital/compare/v1.127.0...v1.127.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* worktree lint — ignore .claude/worktrees via gitignore, not absolute glob ([2f41876](https://github.com/ejclark/skynet-capital/commit/2f418762129ebbd1fe095fc5f813d72b07b89ba8))
+* worktree lint — ignore .claude/worktrees via gitignore, not absolute glob ([#220](https://github.com/ejclark/skynet-capital/issues/220)) ([b53b3b0](https://github.com/ejclark/skynet-capital/commit/b53b3b0a73a2639d9b6a692def3d748a97d9e91e))
+
 # [1.127.0](https://github.com/ejclark/skynet-capital/compare/v1.126.0...v1.127.0) (2026-07-28)
 
 
