@@ -27,7 +27,7 @@
     "prepare": "husky",
     "arch:scan": "node scripts/arch-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
-    "verify": "npm run typecheck && npm run lint && npm test",
+    "verify": "run-p typecheck lint test",
     "dead:scan": "node scripts/dead-scan.mjs"
   },
   "devDependencies": {
@@ -40,6 +40,7 @@
     "@types/node": "^24.13.3",
     "husky": "^9.1.7",
     "knip": "^6.29.0",
+    "npm-run-all2": "^9.0.2",
     "playwright-core": "^1.62.0",
     "semantic-release": "^25.0.8",
     "tsx": "^4.23.1",
