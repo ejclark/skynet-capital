@@ -96,7 +96,7 @@ for (const { file, lines } of files) {
 const JUNK = /(?:^|\/)(?:utils?|helpers?|common|misc|shared|stuff)\.ts$/i;
 const junk = files.filter((x) => JUNK.test(x.file));
 if (junk.length) {
-  console.error(`\n✗ junk-drawer file name(s) — name modules for the job they do:`);
+  console.error("\n✗ junk-drawer file name(s) — name modules for the job they do:");
   for (const j of junk) console.error(`  ${j.file}`);
   process.exit(1);
 }
