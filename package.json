@@ -27,7 +27,8 @@
     "prepare": "husky",
     "arch:scan": "node scripts/arch-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
-    "verify": "npm run typecheck && npm run lint && npm test"
+    "verify": "npm run typecheck && npm run lint && npm test",
+    "dead:scan": "node scripts/dead-scan.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -38,6 +39,7 @@
     "@semantic-release/git": "^11.0.1",
     "@types/node": "^24.13.3",
     "husky": "^9.1.7",
+    "knip": "^6.29.0",
     "playwright-core": "^1.62.0",
     "semantic-release": "^25.0.8",
     "tsx": "^4.23.1",
