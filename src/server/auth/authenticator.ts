@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { escapeHtml } from "../../ui/escape-html.js";
+import { isAllowedIdentity } from "./allowlist.js";
 import { APP_VERSION } from "./app-version.js";
 import { completeOAuthCallback } from "./oauth-callback.js";
 import { providerGlyph } from "./provider-glyphs.js";
@@ -124,10 +125,7 @@ export class Authenticator {
   }
 
   private isAllowed(email?: string, login?: string): boolean {
-    if (email && this.allowedEmails.has(email.toLowerCase())) {
-      return true;
-    }
-    return Boolean(login && this.allowedLogins.has(login.toLowerCase()));
+    return isAllowedIdentity(this.allowedEmails, this.allowedLogins, email, login);
   }
 
   /** The sign-in page: one button per configured provider. */
