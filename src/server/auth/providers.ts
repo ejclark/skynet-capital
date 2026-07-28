@@ -12,6 +12,8 @@ export interface OAuthIdentity {
   readonly name?: string;
 }
 
+import { asString } from "./json-fields.js";
+
 export type FetchFn = typeof fetch;
 
 export interface ProviderConfig {
@@ -131,8 +133,4 @@ async function getJsonArray(
   const response = await fetchFn(url, { headers: { Accept: "application/json", ...headers } });
   const parsed = (await response.json()) as unknown;
   return Array.isArray(parsed) ? parsed : [];
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
 }

@@ -7,6 +7,7 @@
  *
  * Docs: https://docs.alpaca.markets/docs/using-oauth2-and-trading-api
  */
+import { asString } from "./json-fields.js";
 import type { FetchFn } from "./providers.js";
 
 /** Default OAuth scope: read/manage the account (balance + positions) for the board. */
@@ -78,8 +79,4 @@ export function alpacaConnectProvider(config: AlpacaConnectConfig): AlpacaConnec
       };
     },
   };
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
 }
