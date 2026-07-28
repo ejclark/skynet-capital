@@ -28,6 +28,19 @@ function walk(dir, acc = []) {
   return acc;
 }
 const lineCount = (f) => readFileSync(f, "utf8").split("\n").length;
+// A cheap cohesion proxy: how many distinct top-level things a file exports. Size says a file is
+// big; exports say it's doing many jobs. A file that's big AND exports many unrelated symbols is a
+// stronger split candidate than one big cohesive unit — this stops a decomposer from "passing" by
+// shuffling lines into incoherent modules. (Graphify fan-in/community is the richer signal — ADR-0008
+// §C — this is the self-contained stand-in until that's wired.)
+const exportCount = (f) => {
+  const src = readFileSync(f, "utf8");
+  const decl = (
+    src.match(/^export\s+(?:async\s+)?(?:function|const|class|interface|type|enum)\b/gm) || []
+  ).length;
+  const named = (src.match(/^export\s*\{/gm) || []).length;
+  return decl + named;
+};
 const rel = (f) => relative(ROOT, f).split("\\").join("/");
 const sortKeys = (o) =>
   Object.fromEntries(
@@ -37,9 +50,28 @@ const sortKeys = (o) =>
   );
 
 const files = walk(SRC)
-  .map((f) => ({ file: rel(f), lines: lineCount(f) }))
+  .map((f) => ({ file: rel(f), lines: lineCount(f), exports: exportCount(f) }))
   .sort((a, b) => b.lines - a.lines);
 const budget = existsSync(BUDGET_FILE) ? JSON.parse(readFileSync(BUDGET_FILE, "utf8")) : {};
+
+// --candidate: emit the single highest-leverage split target as JSON for the decomposer agent.
+// Score = how far over budget (or how far above the watch line) × a cohesion penalty for many
+// exports. Detection is machine-readable so the loop needs no human to pick the next target.
+if (process.argv.includes("--candidate")) {
+  const scored = files
+    .map((x) => {
+      const cap = budget[x.file] ?? DEFAULT_CAP;
+      const over = x.lines - cap; // >0 means violating; <0 means headroom
+      const base = over > 0 ? over + 400 : Math.max(0, x.lines - WARN_AT);
+      const score = Math.round(base * (1 + Math.max(0, x.exports - 1) * 0.15));
+      return { ...x, cap, over, score, violating: over > 0 };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+  const top = scored[0] ?? null;
+  console.log(JSON.stringify({ candidate: top, runnerUp: scored[1] ?? null }, null, 2));
+  process.exit(0);
+}
 
 if (process.argv.includes("--update")) {
   const next = {};
