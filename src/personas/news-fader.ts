@@ -19,7 +19,7 @@ export interface NewsFaderConfig {
   readonly entryNotional: number;
 }
 
-export const DEFAULT_NEWS_FADER_CONFIG: NewsFaderConfig = {
+const DEFAULT_NEWS_FADER_CONFIG: NewsFaderConfig = {
   hypeSentiment: 0.5,
   hypeMomentum: 0.03,
   panicSentiment: -0.5,

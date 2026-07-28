@@ -8,8 +8,6 @@
 
 export type Side = "buy" | "sell";
 
-export type AssetClass = "equity" | "option";
-
 /** A point-in-time two-sided price for a symbol. */
 export interface Quote {
   readonly symbol: string;
@@ -65,7 +63,7 @@ export interface OrderIntent {
   readonly reason: string;
 }
 
-export type OrderStatus = "filled" | "rejected";
+type OrderStatus = "filled" | "rejected";
 
 /** The outcome of submitting a single order to a broker. */
 export interface OrderResult {

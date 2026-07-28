@@ -31,7 +31,7 @@ export interface StructureState {
 }
 
 /** R4 — the treasury: uninvested capital as a landmark reserve (the empire "about to rise"). */
-export interface ReserveState {
+interface ReserveState {
   /** Cash share of equity, 0..1. */
   readonly share: number;
   readonly cash: number;

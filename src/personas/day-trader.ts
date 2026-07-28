@@ -14,7 +14,7 @@ export interface DayTraderConfig {
   readonly entryNotional: number;
 }
 
-export const DEFAULT_DAY_TRADER_CONFIG: DayTraderConfig = {
+const DEFAULT_DAY_TRADER_CONFIG: DayTraderConfig = {
   focus: ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA"],
   entryMomentum: 0.015,
   exitMomentum: -0.01,

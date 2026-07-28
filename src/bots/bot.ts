@@ -2,7 +2,7 @@ import type { AlpacaCredentials } from "../alpaca/credentials.js";
 import type { Persona } from "../personas/persona.js";
 
 /** The Alpaca paper credentials for one bot's account. */
-export type BotCredentials = AlpacaCredentials;
+type BotCredentials = AlpacaCredentials;
 
 /** A bot is a persona bound to the paper account it trades. */
 export interface Bot {
