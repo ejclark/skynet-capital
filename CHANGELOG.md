@@ -1,3 +1,11 @@
+# [1.129.0](https://github.com/ejclark/skynet-capital/compare/v1.128.0...v1.129.0) (2026-07-28)
+
+
+### Features
+
+* spec-gap coach — untested-file gate + test-backfiller athlete ([713527f](https://github.com/ejclark/skynet-capital/commit/713527fca8d04092a72d215e6500d9719637dd75))
+* spec-gap coach — untested-file gate + test-backfiller athlete ([#225](https://github.com/ejclark/skynet-capital/issues/225)) ([e493b35](https://github.com/ejclark/skynet-capital/commit/e493b35f2d048125c24532ef59be06bf58d05725))
+
 # [1.128.0](https://github.com/ejclark/skynet-capital/compare/v1.127.1...v1.128.0) (2026-07-28)
 
 
