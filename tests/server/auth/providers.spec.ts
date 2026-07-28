@@ -1,6 +1,7 @@
 import { githubProvider, googleProvider } from "../../../src/server/auth/providers.js";
 
 function fakeFetch(routes: Record<string, unknown>): typeof fetch {
+  // biome-ignore lint/suspicious/useAwait: mock must match fetch's async signature
   return (async (input: string | URL) => {
     const url = String(input);
     const key = Object.keys(routes).find((k) => url.includes(k));

@@ -4,16 +4,16 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { escapeHtml } from "../../ui/escape-html.js";
 import {
   type FetchFn,
-  type OAuthProvider,
-  type ProviderId,
   githubProvider,
   googleProvider,
+  type OAuthProvider,
+  type ProviderId,
 } from "./providers.js";
 import {
-  type Session,
   clearSessionCookie,
   cookie,
   parseCookies,
+  type Session,
   sessionCookie,
   sessionTokenFromCookies,
   signSession,
@@ -1693,7 +1693,7 @@ ${versionTag}
       if(ctx.measureText(test).width>maxW && line){ line=words[i]; n++; } else line=test; }
     ctx.font=pf; return n+1; }
   function clamp(v,lo,hi){ return v<lo?lo:v>hi?hi:v; }
-  function money(n){ n=Math.round(n); var s=Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
+  function money(n){ n=Math.round(n); var s=Math.abs(n).toString().replace(/B(?=(d{3})+(?!d))/g,",");
     return (n<0?"−$":"+$")+s; }
 
   // The shared play anatomy — identical grammar across every strategy: green = profit region,

@@ -1,4 +1,4 @@
-import { type Scenario, context, portfolio, position } from "../scenario.js";
+import { context, portfolio, position, type Scenario } from "../scenario.js";
 
 /**
  * First readiness pack — The Day Trader (rides big-tech momentum, cuts losers fast,

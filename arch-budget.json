@@ -47,7 +47,7 @@
   "src/observatory/play-feedback.ts": 57,
   "src/observatory/reduce.ts": 126,
   "src/observatory/render-atoms.ts": 90,
-  "src/observatory/render-dashboard.ts": 1496,
+  "src/observatory/render-dashboard.ts": 1498,
   "src/observatory/sample-dashboard-data.ts": 79,
   "src/participants/load-participants.ts": 77,
   "src/participants/participant-store.ts": 104,

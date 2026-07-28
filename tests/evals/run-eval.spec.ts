@@ -1,6 +1,6 @@
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import { evaluatePersona, runScenario } from "../../src/evals/run-eval.js";
-import { type Scenario, context, portfolio, position } from "../../src/evals/scenario.js";
+import { context, portfolio, position, type Scenario } from "../../src/evals/scenario.js";
 import type { Persona } from "../../src/personas/persona.js";
 
 /** A stub persona that always emits the intents it's handed — lets a scenario drive the grader. */

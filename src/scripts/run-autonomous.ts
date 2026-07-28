@@ -26,9 +26,9 @@ import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { assessReadiness } from "../autonomous/readiness.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
-import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { scenarioPacks } from "../evals/scenarios/index.js";
 import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
@@ -41,7 +41,7 @@ const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA
 const LIVE_EVAL_INTERVAL_MS = 15_000;
 const OFFLINE_STARTING_CASH = 1_000_000;
 const ALPACA_DATA_BASE_URL = "https://data.alpaca.markets";
-const EVAL_INTERVAL_MS = 15_000;
+const _EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 
 function enabledIds(): string[] {

@@ -16,7 +16,7 @@
 <div id="hud">Barad-dûr · Babylon spike · WebGL</div>
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
 <script>
-(function(){
+(()=> {
   "use strict";
   const canvas = document.getElementById("app");
   const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer:true, stencil:true, antialias:true });
@@ -93,7 +93,7 @@
   // collect every stone greeble → merge into a few static meshes for perf
   const greebles = [];
   // broad fortress base that necks quickly into a slender spire (Barad-dûr profile)
-  const rprofile = (t)=> BABYLON.Scalar.Lerp(15.5, 2.4, Math.pow(t, 0.55));   // radius as a function of height fraction
+  const rprofile = (t)=> BABYLON.Scalar.Lerp(15.5, 2.4, t ** 0.55);   // radius as a function of height fraction
 
   // ---- A ring of vertical slats (the fibrous "organ-pipe" masonry) ----
   function slatRing(y, r, h, count, jag){
@@ -133,7 +133,7 @@
   (function displace(){
     const pos = base.getVerticesData(BABYLON.VertexBuffer.PositionKind);
     for (let i=0;i<pos.length;i+=3){
-      let x=pos[i], y=pos[i+1], z=pos[i+2];
+      const x=pos[i], y=pos[i+1], z=pos[i+2];
       const n = Math.sin(x*0.55+z*0.3)*Math.cos(y*0.6) + Math.sin(z*0.9+y*0.4)*0.6 + Math.sin(x*1.7+z*1.1)*0.35;
       const d = 1 + n*0.12;
       pos[i]=x*d*1.15; pos[i+1]=y*d*0.62 - 12; pos[i+2]=z*d*1.15;   // squash + sink
@@ -152,13 +152,13 @@
     const y = t * TOP_Y;
     const r = rprofile(t);
     // structural core drum (six-sided, twisted) — reads as solid mass behind the slats
-    const core = BABYLON.MeshBuilder.CreateCylinder("core"+i, { diameterTop: rprofile(Math.min(1,t+1/RINGS))*1.9, diameterBottom: r*1.95, height: TOP_Y/RINGS + 0.6, tessellation: 6 }, scene);
+    const core = BABYLON.MeshBuilder.CreateCylinder(`core${i}`, { diameterTop: rprofile(Math.min(1,t+1/RINGS))*1.9, diameterBottom: r*1.95, height: TOP_Y/RINGS + 0.6, tessellation: 6 }, scene);
     core.position.y = y; core.rotation.y = i*0.22; greebles.push(core);
     // fibrous slat mantle
     const count = Math.max(10, Math.round(r*2.6));
     slatRing(y, r*1.0, 4.2, count, t < 0.5 ? 1.4 : 0.7);
     // glowing tracer ring at each joint
-    const ring = BABYLON.MeshBuilder.CreateTorus("r"+i, { diameter: r*2.0, thickness: 0.1, tessellation: 6 }, scene);
+    const ring = BABYLON.MeshBuilder.CreateTorus(`r${i}`, { diameter: r*2.0, thickness: 0.1, tessellation: 6 }, scene);
     ring.material = edge; ring.position.y = y; ring.rotation.y = i*0.22; ring.parent = towerRoot;
     // ramparts + flying buttresses on the broad lower fortress
     if (i < 6 && i % 2 === 0){ spikeRing(y, r*1.15, Math.round(r*0.9), 6, 0.15 + t*0.5); }
@@ -202,7 +202,7 @@
   shadows.addShadowCaster(base); base.receiveShadows = true;
 
   // ---- The Eye of Sauron: a fibrous, lightning-fed iris on a camera-facing plane ----
-  BABYLON.Effect.ShadersStore["eyeVertexShader"] = [
+  BABYLON.Effect.ShadersStore.eyeVertexShader = [
     "precision highp float;",
     "attribute vec3 position; attribute vec2 uv;",
     "uniform mat4 worldViewProjection;",
@@ -210,7 +210,7 @@
     "void main(){ vUV = uv; gl_Position = worldViewProjection * vec4(position,1.0); }"
   ].join("\n");
 
-  BABYLON.Effect.ShadersStore["eyeFragmentShader"] = [
+  BABYLON.Effect.ShadersStore.eyeFragmentShader = [
     "precision highp float;",
     "varying vec2 vUV;",
     "uniform float iTime;",
@@ -279,7 +279,7 @@
     }
     const lid = BABYLON.MeshBuilder.CreateTube("lid", {
       path, tessellation: 8, cap: BABYLON.Mesh.CAP_ALL,
-      radiusFunction: (i)=> 0.5 + 2.2*Math.pow(Math.sin((i/N)*Math.PI), 0.7)   // thick brow, tapered to sharp tips
+      radiusFunction: (i)=> 0.5 + 2.2*Math.sin((i/N)*Math.PI) ** 0.7   // thick brow, tapered to sharp tips
     }, scene);
     lid.material = stone;
     lid.parent = lidNode;
@@ -322,8 +322,8 @@
 
   // ---- Embers rising off the crown ----
   const embers = new BABYLON.ParticleSystem("embers", 1200, scene);
-  embers.particleTexture = new BABYLON.Texture("data:image/svg+xml;base64," + btoa(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="white"/></svg>'), scene);
+  embers.particleTexture = new BABYLON.Texture(`data:image/svg+xml;base64,${btoa(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="white"/></svg>')}`, scene);
   embers.emitter = new BABYLON.Vector3(0, EYE_Y - 6, 0);
   embers.minEmitBox = new BABYLON.Vector3(-7, -3, -7);
   embers.maxEmitBox = new BABYLON.Vector3(7, 3, 7);
@@ -395,7 +395,7 @@
 
   // ---- Animate: slow orbit, eye pulse, beam sweep ----
   let t = 0;
-  scene.onBeforeRenderObservable.add(function(){
+  scene.onBeforeRenderObservable.add(()=> {
     t += engine.getDeltaTime() * 0.001;
     camera.alpha += 0.0015;
     eyeMat.setFloat("iTime", t);

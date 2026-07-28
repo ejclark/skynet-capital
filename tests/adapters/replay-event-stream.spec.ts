@@ -1,6 +1,6 @@
 import {
-  ReplayEventStream,
   parseEventsJsonl,
+  ReplayEventStream,
   toEventsJsonl,
 } from "../../src/adapters/replay-event-stream.js";
 import type { ObservatoryEvent } from "../../src/observatory/events.js";

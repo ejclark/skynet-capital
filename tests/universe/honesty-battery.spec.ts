@@ -58,7 +58,10 @@ function walkNumbers(value: unknown, path: string, out: string[]): void {
     if (!Number.isFinite(value)) out.push(`${path} = ${value}`);
     return;
   }
-  if (Array.isArray(value)) value.forEach((v, i) => walkNumbers(v, `${path}[${i}]`, out));
+  if (Array.isArray(value))
+    value.forEach((v, i) => {
+      walkNumbers(v, `${path}[${i}]`, out);
+    });
   else if (value && typeof value === "object")
     for (const [k, v] of Object.entries(value)) walkNumbers(v, `${path}.${k}`, out);
 }

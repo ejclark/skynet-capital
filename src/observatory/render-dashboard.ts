@@ -123,7 +123,9 @@ export function botLandmarkProminence(
     if (only) out.set(only.id, 1);
     return out;
   }
-  bots.forEach((p, i) => out.set(p.id, 1 - (i / (bots.length - 1)) * 0.45));
+  bots.forEach((p, i) => {
+    out.set(p.id, 1 - (i / (bots.length - 1)) * 0.45);
+  });
   return out;
 }
 
@@ -1456,7 +1458,7 @@ export function renderBoardContent(
   // OBSERVER MODE — the funnel's front door (stage 1 → 2): signed in but no linked account means you
   // can watch the whole league yet hold no tower. Say so, warmly, and pave the founding path.
   const observer =
-    Boolean(options.nav) && !currentId
+    options.nav && !currentId
       ? `<section class="observer-hero">
     <p class="obs-eyebrow">◈ OBSERVER MODE</p>
     <h2 class="obs-title">You're watching the league — your empire awaits its founding.</h2>

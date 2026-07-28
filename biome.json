@@ -1,17 +1,21 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
-  "organizeImports": {
-    "enabled": true
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "complexity": {
         "noExcessiveCognitiveComplexity": {
           "level": "error",
@@ -54,12 +58,20 @@
       },
       "performance": {
         "noBarrelFile": "error"
+      },
+      "nursery": {
+        "noFloatingPromises": "error"
       }
     }
   },
   "overrides": [
     {
-      "include": ["scripts/**", "src/scripts/**", "commitlint.config.js", "rstest.config.ts"],
+      "includes": [
+        "**/scripts/**",
+        "**/src/scripts/**",
+        "**/commitlint.config.js",
+        "**/rstest.config.ts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
@@ -86,6 +98,13 @@
     }
   },
   "files": {
-    "ignore": ["dist", "node_modules", "coverage", ".claude/worktrees"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/coverage",
+      "!**/.claude/worktrees",
+      "!**/spikes"
+    ]
   }
 }

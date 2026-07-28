@@ -1,11 +1,11 @@
 import type { AlpacaCredentials } from "../alpaca/credentials.js";
 import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import {
-  type ParticipantSnapshot,
   buildParticipantSnapshot,
+  type ParticipantSnapshot,
 } from "../observatory/participant-snapshot.js";
-import type { ParticipantStore } from "../participants/participant-store.js";
 import type { Participant, ParticipantKind } from "../participants/participant.js";
+import type { ParticipantStore } from "../participants/participant-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 
 /** What the `/add` form submits. Credentials must be a working Alpaca **paper** key. */

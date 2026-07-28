@@ -3,11 +3,11 @@ import { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
 import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
+import type { Participant } from "../../src/participants/participant.js";
 import type {
   ParticipantStore,
   StoredParticipant,
 } from "../../src/participants/participant-store.js";
-import type { Participant } from "../../src/participants/participant.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { ParticipantService } from "../../src/server/participant-service.js";
 

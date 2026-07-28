@@ -1,6 +1,6 @@
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type { OrderIntent } from "../domain/types.js";
-import { DEFAULT_RISK_CONFIG, type RiskConfig, applyGuards } from "../engine/guards.js";
+import { applyGuards, DEFAULT_RISK_CONFIG, type RiskConfig } from "../engine/guards.js";
 import type { Persona } from "../personas/persona.js";
 import type { Scenario } from "./scenario.js";
 

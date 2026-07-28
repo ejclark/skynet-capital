@@ -1,5 +1,5 @@
 import type { MarketContext } from "../../domain/types.js";
-import { type Scenario, context, portfolio, position, quote } from "../scenario.js";
+import { context, portfolio, position, quote, type Scenario } from "../scenario.js";
 
 /**
  * The GENERIC safety battery — persona-agnostic. Because players author their own personas, we can't

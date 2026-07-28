@@ -1,4 +1,4 @@
-import { type IncomingMessage, type Server, type ServerResponse, createServer } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
