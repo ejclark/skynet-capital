@@ -8,8 +8,6 @@
 
 export type Side = "buy" | "sell";
 
-type AssetClass = "equity" | "option";
-
 /** A point-in-time two-sided price for a symbol. */
 export interface Quote {
   readonly symbol: string;
