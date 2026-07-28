@@ -1,3 +1,11 @@
+# [1.125.0](https://github.com/ejclark/skynet-capital/compare/v1.124.0...v1.125.0) (2026-07-28)
+
+
+### Features
+
+* harden biome — 15 new rules, complexity gate, cleanup of all violations ([b93c057](https://github.com/ejclark/skynet-capital/commit/b93c0575efc356dbbce3555e7c8f1c803e8b9572))
+* harden biome — 15 new rules, complexity gate, zero open violations ([#213](https://github.com/ejclark/skynet-capital/issues/213)) ([0a11dad](https://github.com/ejclark/skynet-capital/commit/0a11dadb2a3fd11aa6675a72764814e4097806f7))
+
 # [1.124.0](https://github.com/ejclark/skynet-capital/compare/v1.123.0...v1.124.0) (2026-07-28)
 
 
