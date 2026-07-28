@@ -24,7 +24,7 @@ export interface BreakerConfig {
   readonly maxConsecutiveErrors?: number;
 }
 
-export const DEFAULT_BREAKERS: Required<BreakerConfig> = {
+const DEFAULT_BREAKERS: Required<BreakerConfig> = {
   maxDailyLossPct: 0.05,
   maxOrdersPerWindow: 20,
   orderWindowMs: 60_000,

@@ -10,7 +10,7 @@ import type { OrderIntent, OrderResult } from "../domain/types.js";
  */
 
 /** What the trader did with a single guarded intent this cycle. */
-export type CycleAction = "placed" | "rejected" | "observed" | "cooldown-skipped";
+type CycleAction = "placed" | "rejected" | "observed" | "cooldown-skipped";
 
 export interface IntentOutcome {
   readonly intent: OrderIntent;

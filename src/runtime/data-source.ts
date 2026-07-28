@@ -18,9 +18,9 @@ import { createDefaultPersonas } from "../personas/registry.js";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-export type EventSink = (event: ObservatoryEvent) => void;
+type EventSink = (event: ObservatoryEvent) => void;
 
-export interface StartStreamsInput {
+interface StartStreamsInput {
   readonly participants: readonly Participant[];
   /** Symbols currently held — what the live market-data stream subscribes to. */
   readonly heldSymbols: readonly string[];
