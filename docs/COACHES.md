@@ -32,6 +32,24 @@ supply-chain decision: read them fully before adopting.
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |
 | Simplification | *(adopted)* | `/simplify` | — | ✅ bundled |
 
+## The scaling test — two axes, opposite defaults
+
+Every decision gets asked *"does this scale?"* — but the answer depends on which axis, and the two run
+**opposite** directions:
+
+- **Build-scale (code · architecture · process): design as if thousands contribute.** Solo-with-agents
+  effectively *is* a large team — many parallel hands, high commit velocity, no shared memory between
+  sessions. So the eval question "would 10,000 engineers trip over this?" applies today: cohesion, no
+  junk drawers, single-sourced helpers, machine-checkable conventions. Organized, high-quality code is
+  what scales the *ability to build*.
+- **Run-scale (infrastructure · platform): design for the real load — 5–10 people.** Here the enterprise
+  reflex is the smell: microservices, k8s, caching tiers, queues for ten friends is slop wearing a suit.
+  One Fly app + smoke + rollback is *correct* at this load. Infra earns complexity only when **measured**
+  load demands it — never speculatively.
+
+One line: **scale the ability to build, not the machinery to serve.** Confusing the axes is the classic
+failure in both directions (spaghetti that can't grow ↔ a cluster for ten users).
+
 ## Smell catalog — what the eyes look for (and what stays judgment)
 
 Every smell is either **mechanizable** (→ becomes/extends an eval) or **judgment** (→ lives in a drill's
