@@ -1,3 +1,11 @@
+# [1.124.0](https://github.com/ejclark/skynet-capital/compare/v1.123.0...v1.124.0) (2026-07-28)
+
+
+### Features
+
+* dead-code coach — knip-powered eye with ratchet budget ([e5eda18](https://github.com/ejclark/skynet-capital/commit/e5eda1810607530b70a2828e3183921922fcb061))
+* dead-code coach — knip-powered eye with ratchet budget ([#212](https://github.com/ejclark/skynet-capital/issues/212)) ([76a600e](https://github.com/ejclark/skynet-capital/commit/76a600e6230f187f2decacd3104237774349f8cf)), closes [#1](https://github.com/ejclark/skynet-capital/issues/1)
+
 # [1.123.0](https://github.com/ejclark/skynet-capital/compare/v1.122.0...v1.123.0) (2026-07-28)
 
 
