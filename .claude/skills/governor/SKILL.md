@@ -27,8 +27,14 @@ earned after the policy proves out over reps.
    (branch off origin/main, gate-confirm target, drill, verify by exit status, ratchet, push, report —
    no PR-opening; athletes carry no GitHub tooling). Include the known worktree caveat: node_modules may
    need a temporary symlink from the main checkout.
-4. **LAND.** On a green report: open the PR (title/body from the athlete's report, conventional subject)
-   and **enable auto-merge (SQUASH)** if — and only if — the merge-policy table below allows the class.
+4. **LAND — one cycle, one PR.** Collect all green athlete reports and land them as a SINGLE cycle PR:
+   merge each athlete's branch into one `refactor/governed-cycle-<n>` branch (their commits stay
+   distinct for bisectability), verify green once, open one PR titled
+   `refactor: governed cycle <n> — <rep summaries>`, and **enable auto-merge (SQUASH)** if — and only
+   if — every rep in the batch is a class the merge-policy table allows (one disallowed rep = the whole
+   PR waits for human review, or ship that rep separately). Batching halves CI runs, release entries,
+   and GitHub API calls — the measured constraints. Exception: isolate a rep in its own PR when it is
+   unusually large or risky enough that independent revert matters more than the savings.
    On a failure report: surface it to the human head coach verbatim; do not retry in-cycle.
 5. **STOP.** One dispatch per coach per cycle. The next cycle recomputes targets from the NEW main —
    that re-derivation is the serializer that prevents two reps racing the same file.
