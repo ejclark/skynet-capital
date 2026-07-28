@@ -4,9 +4,11 @@ AI builds fast; unregulated speed compounds into slop. We run quality like a foo
 seats with distinct jobs:
 
 - **Head coach (orchestrator).** Decides what runs when: WIP limits, dispatch, merge tempo, and the
-  don't-collide-with-feature-work rule. **Today this seat is Eric + Claude in-session**; the mechanized
-  version (WIP-limited dispatcher + auto-merge on trusted green) is the least-built piece and is earned
-  by gate trust, not assumed.
+  don't-collide-with-feature-work rule. The policy is codified as the **`/governor`** drill
+  (`.claude/skills/governor/SKILL.md`): one dispatch cycle — WIP check → gate-named target → collision
+  check → cheap-tier athlete → PR with auto-merge per the merge-policy table. Judgment calls (what may
+  auto-merge, recruiting new athletes) remain Eric + Claude in-session; scheduling the cycle is earned
+  by reps, not assumed.
 - **Defensive coordinator.** Protects the standard: breaks down complexity and organizes the pieces.
   Owns the detect-and-correct units below (gates, ratchets, drills, athletes). Defense keeps entropy
   from scoring.
@@ -37,7 +39,7 @@ Work descends this ladder as its contract gets written; each rung frees the head
 3. **Gated** — the trigger is mechanized (`--candidate` names the target); no one picks the work.
 4. **Agent** — the full contract (trigger, procedure, verification, output) is written; a background athlete runs it end to end.
 
-A subagent is what a piece of work becomes when its contract is complete. What cannot yet be contracted — taste, the yay/nay on a scene, which constraint matters next — stays with the head coach. **Model tier follows contract completeness:** rung-4 work runs on cheaper/faster models; judgment-incomplete work stays on the strongest model. Every toil-killer is the same loop (measure → judge → one bounded move → ratchet); defense's move is subtraction, offense's is substitution.
+**The rule of three applies to agents:** do it manually once; codify the skill on the second recurrence; promote to an agent on the third. Speculative roster-building is premature abstraction — the roster recruits itself from demonstrated repetition. A subagent is what a piece of work becomes when its contract is complete. What cannot yet be contracted — taste, the yay/nay on a scene, which constraint matters next — stays with the head coach. **Model tier follows contract completeness:** rung-4 work runs on cheaper/faster models; judgment-incomplete work stays on the strongest model. Every toil-killer is the same loop (measure → judge → one bounded move → ratchet); defense's move is subtraction, offense's is substitution.
 
 ## Sourcing rule
 
