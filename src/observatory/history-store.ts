@@ -1,5 +1,5 @@
-import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { JsonlKeyedStore } from "../storage/jsonl-store.js";
 
 /**
  * One durable point in a participant's history — an equity + realized-P/L sample at a moment in time.
@@ -51,51 +51,21 @@ export class InMemoryHistoryStore implements HistoryStore {
  * history survives redeploys with **no database and no host change** (set `SKYNET_HISTORY_DIR=/data/history`).
  */
 export class JsonlHistoryStore implements HistoryStore {
-  private readonly dir: string;
+  private readonly store: JsonlKeyedStore<EquitySample>;
 
   constructor(dir: string) {
-    this.dir = dir;
+    // A participant id is a slug (`human-<name>` / personaId); safe as a filename. Guard just in case.
+    this.store = new JsonlKeyedStore<EquitySample>(dir, (participantId) =>
+      join(dir, `${participantId.replace(/[^a-zA-Z0-9_-]/g, "_")}.jsonl`),
+    );
   }
 
   async save(sample: EquitySample): Promise<void> {
-    await mkdir(this.dir, { recursive: true });
-    await appendFile(this.fileFor(sample.participantId), `${JSON.stringify(sample)}\n`, "utf8");
+    await this.store.append(sample.participantId, sample);
   }
 
-  async list(participantId?: string): Promise<EquitySample[]> {
-    const files = participantId ? [this.fileFor(participantId)] : await this.allFiles();
-    const samples: EquitySample[] = [];
-    for (const file of files) {
-      samples.push(...(await this.readFileEntries(file)));
-    }
-    return samples;
-  }
-
-  // A participant id is a slug (`human-<name>` / personaId); safe as a filename. Guard just in case.
-  private fileFor(participantId: string): string {
-    return join(this.dir, `${participantId.replace(/[^a-zA-Z0-9_-]/g, "_")}.jsonl`);
-  }
-
-  private async allFiles(): Promise<string[]> {
-    try {
-      const names = await readdir(this.dir);
-      return names.filter((n) => n.endsWith(".jsonl")).map((n) => join(this.dir, n));
-    } catch {
-      return [];
-    }
-  }
-
-  private async readFileEntries(file: string): Promise<EquitySample[]> {
-    let contents: string;
-    try {
-      contents = await readFile(file, "utf8");
-    } catch {
-      return [];
-    }
-    return contents
-      .split("\n")
-      .filter((line) => line.length > 0)
-      .map((line) => JSON.parse(line) as EquitySample);
+  list(participantId?: string): Promise<EquitySample[]> {
+    return this.store.list(participantId);
   }
 }
 

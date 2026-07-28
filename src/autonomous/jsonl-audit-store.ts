@@ -1,5 +1,5 @@
-import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { JsonlKeyedStore } from "../storage/jsonl-store.js";
 import type { AuditStore, DecisionRecord } from "./decision-record.js";
 
 /**
@@ -8,49 +8,19 @@ import type { AuditStore, DecisionRecord } from "./decision-record.js";
  * decision cycle is a durable line the readiness review and the observability view can replay.
  */
 export class JsonlAuditStore implements AuditStore {
-  private readonly dir: string;
+  private readonly store: JsonlKeyedStore<DecisionRecord>;
 
   constructor(dir: string) {
-    this.dir = dir;
+    this.store = new JsonlKeyedStore<DecisionRecord>(dir, (personaId) =>
+      join(dir, `${personaId}.jsonl`),
+    );
   }
 
   async record(entry: DecisionRecord): Promise<void> {
-    await mkdir(this.dir, { recursive: true });
-    await appendFile(this.fileFor(entry.personaId), `${JSON.stringify(entry)}\n`, "utf8");
+    await this.store.append(entry.personaId, entry);
   }
 
-  async list(personaId?: string): Promise<DecisionRecord[]> {
-    const files = personaId ? [this.fileFor(personaId)] : await this.allFiles();
-    const entries: DecisionRecord[] = [];
-    for (const file of files) {
-      entries.push(...(await this.readFileEntries(file)));
-    }
-    return entries;
-  }
-
-  private fileFor(personaId: string): string {
-    return join(this.dir, `${personaId}.jsonl`);
-  }
-
-  private async allFiles(): Promise<string[]> {
-    try {
-      const names = await readdir(this.dir);
-      return names.filter((n) => n.endsWith(".jsonl")).map((n) => join(this.dir, n));
-    } catch {
-      return [];
-    }
-  }
-
-  private async readFileEntries(file: string): Promise<DecisionRecord[]> {
-    let contents: string;
-    try {
-      contents = await readFile(file, "utf8");
-    } catch {
-      return [];
-    }
-    return contents
-      .split("\n")
-      .filter((line) => line.length > 0)
-      .map((line) => JSON.parse(line) as DecisionRecord);
+  list(personaId?: string): Promise<DecisionRecord[]> {
+    return this.store.list(personaId);
   }
 }
