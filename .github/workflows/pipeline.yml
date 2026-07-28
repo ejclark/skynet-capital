@@ -8,14 +8,14 @@ name: Pipeline
 #
 # Rationing measures (GHA minutes are the metered constraint):
 #   - commitlint folded in here → the separate commitlint.yml workflow is deleted (~240 min/mo saved).
-#   - docs-only PRs (**.md) skip the runner entirely via paths-ignore.
+#   - docs-only PRs still run `verify` but SKIP the heavy steps (typecheck/lint/test) — the job
+#     spins up, reports `verify` green in seconds, and lets auto-merge fire. (We can't paths-ignore
+#     `**.md` here: a required check that never runs leaves docs PRs stuck "waiting for status".)
 #   - draft PRs don't run.
 #   - main pushes skip verify (deploy only) → no duplicate test run per merge.
 on:
   pull_request:
     branches: [ main ]
-    paths-ignore:
-      - "**.md"
   push:
     branches: [ main ]
 
@@ -47,14 +47,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Detect non-docs changes
+        id: changes
+        run: |
+          if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} \
+               | grep -qvE '\.md$'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "docs-only PR — skipping typecheck/lint/test; verify still reports green."
+          fi
+
       - name: Commit lint
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
       - name: Typecheck
+        if: steps.changes.outputs.code == 'true'
         run: npm run typecheck
       - name: Lint (Biome)
+        if: steps.changes.outputs.code == 'true'
         run: npm run lint
       - name: Test (Rstest)
+        if: steps.changes.outputs.code == 'true'
         run: npm test
 
   deploy:
