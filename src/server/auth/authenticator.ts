@@ -2,16 +2,14 @@ import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { escapeHtml } from "../../ui/escape-html.js";
 import { APP_VERSION } from "./app-version.js";
+import { completeOAuthCallback } from "./oauth-callback.js";
 import { providerGlyph } from "./provider-glyphs.js";
 import type { FetchFn, OAuthProvider, ProviderId } from "./providers.js";
 import {
   clearSessionCookie,
   cookie,
-  parseCookies,
   type Session,
-  sessionCookie,
   sessionTokenFromCookies,
-  signSession,
   verifySession,
 } from "./session.js";
 
@@ -106,46 +104,18 @@ export class Authenticator {
     }
 
     // Callback: validate state, exchange the code, check the allowlist, set the session.
-    const url = new URL(req.url ?? "/", base);
-    const state = url.searchParams.get("state") ?? "";
-    const code = url.searchParams.get("code") ?? "";
-    const expected = parseCookies(req.headers.cookie)[STATE_COOKIE];
-    if (!(code && state && expected) || state !== expected) {
-      res.writeHead(400, { "content-type": "text/html; charset=utf-8" });
-      res.end(this.loginPage("Sign-in expired or was tampered with. Please try again."));
-      return true;
-    }
-
-    let identity: Awaited<ReturnType<OAuthProvider["exchange"]>>;
-    try {
-      identity = await provider.exchange(code, redirectUri, this.fetchFn);
-    } catch {
-      res.writeHead(502, { "content-type": "text/html; charset=utf-8" });
-      res.end(this.loginPage(`Couldn't complete ${provider.label} sign-in. Please try again.`));
-      return true;
-    }
-
-    if (!this.isAllowed(identity.email, identity.login)) {
-      res.writeHead(403, { "content-type": "text/html; charset=utf-8" });
-      res.end(
-        this.loginPage(
-          `${identity.email ?? "That account"} isn't on the guest list. Ask Eric to add you.`,
-        ),
-      );
-      return true;
-    }
-
-    const session: Session = {
-      email: (identity.email ?? identity.login ?? "unknown").toLowerCase(),
-      provider: provider.id,
-      ...(identity.name ? { name: identity.name } : {}),
-      exp: this.now() + SESSION_TTL_MS,
-    };
-    res.writeHead(302, {
-      location: "/",
-      "set-cookie": sessionCookie(signSession(session, this.secret), SESSION_TTL_MS, secure),
+    await completeOAuthCallback(req, res, base, {
+      provider,
+      redirectUri,
+      secure,
+      stateCookieName: STATE_COOKIE,
+      sessionTtlMs: SESSION_TTL_MS,
+      secret: this.secret,
+      fetchFn: this.fetchFn,
+      now: this.now,
+      isAllowed: (email, login) => this.isAllowed(email, login),
+      loginPage: (error) => this.loginPage(error),
     });
-    res.end();
     return true;
   }
 
