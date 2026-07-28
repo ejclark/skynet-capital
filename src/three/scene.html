@@ -269,14 +269,20 @@
   eyePlane.material = eyeMat;
 
   // ---- The gaze beam: a volumetric cone of fire-light sweeping outward ----
-  const beam = BABYLON.MeshBuilder.CreateCylinder("beam", { diameterTop: 14, diameterBottom: 1.5, height: 60, tessellation: 24 }, scene);
+  // parented to a gaze node under eyeRoot → the beam emanates FROM the pupil and
+  // sweeps WITH the Eye as it searches, instead of floating detached in space.
+  const gaze = new BABYLON.TransformNode("gaze", scene);
+  gaze.parent = eyeRoot;
+  gaze.rotation.x = 0.3;                                   // cast down over the land
+  const beam = BABYLON.MeshBuilder.CreateCylinder("beam", { diameterTop: 1.2, diameterBottom: 16, height: 62, tessellation: 24 }, scene);
   const beamMat = new BABYLON.StandardMaterial("beamMat", scene);
   beamMat.emissiveColor = new BABYLON.Color3(1.0, 0.45, 0.12);
   beamMat.alpha = 0.035; beamMat.disableLighting = true;
   beamMat.backFaceCulling = false;
   beam.material = beamMat;
-  beam.rotation.x = Math.PI/2.3;
-  beam.position.set(0, EYE_Y, 30);
+  beam.parent = gaze;
+  beam.rotation.x = Math.PI/2;                             // lay the cone along +Z
+  beam.position.set(0, 0, 31);                             // narrow apex at the pupil, widening outward
 
   // ---- Embers rising off the crown ----
   const embers = new BABYLON.ParticleSystem("embers", 1200, scene);
@@ -337,9 +343,8 @@
     fill.position.copyFrom(camera.position);          // keep the fill on the camera-facing side
     eyeGlow.intensity = 1.2 + Math.sin(t*1.7)*0.4;
     forge.intensity = 0.45 + Math.abs(Math.sin(t*0.8))*0.2;
-    beam.rotation.y = Math.sin(t*0.35) * 0.5;
     beamMat.alpha = 0.025 + Math.abs(Math.sin(t*0.9))*0.02;
-    eyeRoot.rotation.y = Math.sin(t*0.4)*0.18;             // the Eye searches
+    eyeRoot.rotation.y = Math.sin(t*0.4)*0.28;             // the Eye searches — the gaze follows
   });
 
   engine.runRenderLoop(()=>scene.render());
