@@ -33,6 +33,12 @@ export function participantInvested(snapshot: ParticipantSnapshot): number {
   return snapshot.positions.reduce((sum, p) => sum + p.marketValue, 0);
 }
 
+/** A participant's unrealized return, as a percent of invested — 0 when nothing's invested. */
+export function participantReturnPct(snapshot: ParticipantSnapshot): number {
+  const invested = participantInvested(snapshot);
+  return invested > 0 ? (participantUnrealized(snapshot) / invested) * 100 : 0;
+}
+
 function positionRow(position: PositionView): string {
   const pl = unrealized(position);
   return `<tr>
