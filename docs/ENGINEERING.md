@@ -122,7 +122,14 @@ weeds below the fold.**
 **Commits — concise and articulate.** [Conventional Commits](https://www.conventionalcommits.org)
 (enforced by commitlint), lowercase-led subject, imperative mood ("add", not "added") — the classic
 [Chris Beams rules](https://cbea.ms/git-commit/). The subject says *what*; the body says *why* and any
-non-obvious *how*. One logical change per commit; squash-merge keeps `main` a clean, readable spine.
+non-obvious *how*. One logical change per commit — in-PR commits are working granularity that helps a
+reviewer (and Claude) navigate before merge.
+
+**Squash-merge is configured to use the PR title + PR description**, so on `main` the **PR description
+becomes the squash commit's body** and `semantic-release` analyzes it. Two consequences: the **PR title
+must be a valid Conventional-Commit subject** (it becomes the commit subject and drives the version
+bump), and the **PR description — not the in-PR commit bodies — is the durable record**. Write it as the
+thing a future reader will `git log` on `main`.
 
 **PRs — a document with a fold** (mirror [`.github/pull_request_template.md`](../.github/pull_request_template.md)):
 
@@ -132,9 +139,23 @@ non-obvious *how*. One logical change per commit; squash-merge keeps `main` a cl
    ADR for hard-to-reverse calls), verification, risk/rollback, follow-ups. The weeds live here so the
    top stays legible; the depth is one click away for whoever wants it.
 
-Keep it proportional — a one-line typo fix doesn't need every section (don't tax flow with ceremony;
-see the interrupt-economics principle). The template is a layout to populate, not a checklist to
-satisfy.
+**Quality bar — succinct & high-signal.** The description is `main`'s commit body; make every line earn
+its place:
+
+- **Lead with the outcome, not the process.** The first line is what's *true after merge*, in plain
+  language a non-technical reader skims in ten seconds.
+- **Don't restate the diff.** The diff already shows *which lines* changed; the description says *why it
+  matters* and *what it enables*. Cut any bullet that just narrates code.
+- **1–3 Summary bullets.** If the Summary needs more, it's probably two PRs (or a batched suite whose
+  bullets should each name a shipped capability, not a step).
+- **No filler, no hedging.** Drop "this PR does…", "various improvements", "as requested". Name the *one*
+  non-obvious decision, not every obvious one.
+- **A diagram only when a structure is faster seen than read** (a Mermaid graph for a new data flow or
+  route map) — chiefly for human readers; skip it when a sentence is clearer.
+
+Keep it proportional — a one-line typo fix is a one-line description, not a populated template (don't tax
+flow with ceremony; see the interrupt-economics principle). The template is a layout to populate, not a
+checklist to satisfy.
 
 ### Guarding the shared record (higher-stakes trust)
 

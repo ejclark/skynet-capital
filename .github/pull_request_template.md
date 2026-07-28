@@ -1,7 +1,10 @@
 <!--
 A PR is a document, not a chore. Most readers are analytical but non-technical — they think like
 engineers without the formal background. Write the top for them; put the weeds below the fold.
-Title: use a Conventional Commit subject, lowercase-led — e.g. `feat(observatory): equity sparkline on /u/:id`.
+Squash-merge uses the PR title + this description, so they become the commit on `main` and drive the
+release: the TITLE must be a Conventional-Commit subject, lowercase-led (e.g.
+`feat(observatory): equity sparkline on /u/:id`), and this description is the durable record — succinct,
+high-signal, outcome-first (see docs/ENGINEERING.md → Change communication).
 Delete these comments and any section that doesn't apply.
 -->
 
