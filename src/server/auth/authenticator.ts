@@ -1,36 +1,21 @@
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { escapeHtml } from "../../ui/escape-html.js";
+import { isAllowedIdentity } from "./allowlist.js";
+import { APP_VERSION } from "./app-version.js";
+import { completeOAuthCallback } from "./oauth-callback.js";
+import { providerGlyph } from "./provider-glyphs.js";
 import type { FetchFn, OAuthProvider, ProviderId } from "./providers.js";
 import {
   clearSessionCookie,
   cookie,
-  parseCookies,
   type Session,
-  sessionCookie,
   sessionTokenFromCookies,
-  signSession,
   verifySession,
 } from "./session.js";
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const STATE_COOKIE = "skynet_oauth_state";
-
-/**
- * App version, read from package.json at startup (semantic-release bumps it). Shown subtly on the
- * login page. The repo is private, so it stays plain text — no link to a changelog/release yet.
- */
-const APP_VERSION: string = (() => {
-  try {
-    const url = new URL("../../../package.json", import.meta.url);
-    const parsed: unknown = JSON.parse(readFileSync(url, "utf8"));
-    const v = (parsed as { version?: unknown }).version;
-    return typeof v === "string" ? v : "";
-  } catch {
-    return "";
-  }
-})();
 
 export interface AuthDeps {
   readonly fetchFn?: FetchFn;
@@ -120,46 +105,18 @@ export class Authenticator {
     }
 
     // Callback: validate state, exchange the code, check the allowlist, set the session.
-    const url = new URL(req.url ?? "/", base);
-    const state = url.searchParams.get("state") ?? "";
-    const code = url.searchParams.get("code") ?? "";
-    const expected = parseCookies(req.headers.cookie)[STATE_COOKIE];
-    if (!(code && state && expected) || state !== expected) {
-      res.writeHead(400, { "content-type": "text/html; charset=utf-8" });
-      res.end(this.loginPage("Sign-in expired or was tampered with. Please try again."));
-      return true;
-    }
-
-    let identity: Awaited<ReturnType<OAuthProvider["exchange"]>>;
-    try {
-      identity = await provider.exchange(code, redirectUri, this.fetchFn);
-    } catch {
-      res.writeHead(502, { "content-type": "text/html; charset=utf-8" });
-      res.end(this.loginPage(`Couldn't complete ${provider.label} sign-in. Please try again.`));
-      return true;
-    }
-
-    if (!this.isAllowed(identity.email, identity.login)) {
-      res.writeHead(403, { "content-type": "text/html; charset=utf-8" });
-      res.end(
-        this.loginPage(
-          `${identity.email ?? "That account"} isn't on the guest list. Ask Eric to add you.`,
-        ),
-      );
-      return true;
-    }
-
-    const session: Session = {
-      email: (identity.email ?? identity.login ?? "unknown").toLowerCase(),
-      provider: provider.id,
-      ...(identity.name ? { name: identity.name } : {}),
-      exp: this.now() + SESSION_TTL_MS,
-    };
-    res.writeHead(302, {
-      location: "/",
-      "set-cookie": sessionCookie(signSession(session, this.secret), SESSION_TTL_MS, secure),
+    await completeOAuthCallback(req, res, base, {
+      provider,
+      redirectUri,
+      secure,
+      stateCookieName: STATE_COOKIE,
+      sessionTtlMs: SESSION_TTL_MS,
+      secret: this.secret,
+      fetchFn: this.fetchFn,
+      now: this.now,
+      isAllowed: (email, login) => this.isAllowed(email, login),
+      loginPage: (error) => this.loginPage(error),
     });
-    res.end();
     return true;
   }
 
@@ -168,10 +125,7 @@ export class Authenticator {
   }
 
   private isAllowed(email?: string, login?: string): boolean {
-    if (email && this.allowedEmails.has(email.toLowerCase())) {
-      return true;
-    }
-    return Boolean(login && this.allowedLogins.has(login.toLowerCase()));
+    return isAllowedIdentity(this.allowedEmails, this.allowedLogins, email, login);
   }
 
   /** The sign-in page: one button per configured provider. */
@@ -2818,14 +2772,6 @@ ${versionTag}
 </body>
 </html>`;
   }
-}
-
-/** Inline brand glyph for a provider's sign-in button (self-contained, no external assets). */
-function providerGlyph(id: ProviderId): string {
-  if (id === "google") {
-    return `<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.2-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 6.9l7.1 5.5c4.2-3.9 6.2-9.6 6.2-16.9z"/><path fill="#FBBC05" d="M10.4 28.7a14.6 14.6 0 0 1 0-9.3l-7.8-6.1a24 24 0 0 0 0 21.5l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.4-4.6 2.2-8.8 2.2-6.3 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`;
-  }
-  return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 11 .6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.6 7.9-5.9 7.9-11C23.5 5.6 18.4.5 12 .5z"/></svg>`;
 }
 
 function redirect(res: ServerResponse, location: string): void {
