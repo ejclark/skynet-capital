@@ -25,7 +25,9 @@
     "shoot:login": "tsx scripts/shoot-login.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
     "prepare": "husky",
-    "arch:scan": "node scripts/arch-scan.mjs"
+    "arch:scan": "node scripts/arch-scan.mjs",
+    "dupe:scan": "node scripts/dupe-scan.mjs",
+    "verify": "npm run typecheck && npm run lint && npm test"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

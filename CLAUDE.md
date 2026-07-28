@@ -111,6 +111,11 @@ _This "how we work" is Eric's to edit; it sharpens as he corrects it — treat c
   (`npm run shoot:login` or an offline render). **Verify by exit status, not tailed output** — piping a
   check to `tail` masks its exit code (a pipeline exits with `tail`'s status), so `cmd | tail && …` will
   not halt on failure. A pre-commit hook auto-formats staged files as a backstop.
+- **Solo-dev review substitute:** with no second engineer, the gates are the reviewer. For substantive
+  PRs, run `/code-review` (and `/security-review` when the diff touches auth, tokens, input parsing, or
+  anything outward-facing) before opening the PR. The Coach gates (`arch:scan`, `dupe:scan`) run in the
+  test suite automatically — see [`docs/COACHES.md`](docs/COACHES.md) for the detect-and-correct roster
+  (`/decompose`, `/dedupe`, agents).
 - **Blameless retro on detected drift.** When a net catches a slip, do a quick retro: root cause → a
   full-stop prevention if pragmatic, else a Boy-Scout improvement (leave it better, or no worse). Don't
   over-engineer process — forcing ceremony that taxes flow at scale is a net negative.
