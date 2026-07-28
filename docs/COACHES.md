@@ -32,6 +32,32 @@ supply-chain decision: read them fully before adopting.
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |
 | Simplification | *(adopted)* | `/simplify` | — | ✅ bundled |
 
+## Smell catalog — what the eyes look for (and what stays judgment)
+
+Every smell is either **mechanizable** (→ becomes/extends an eval) or **judgment** (→ lives in a drill's
+checklist). Route new smells accordingly; a smell that stays prose in someone's head protects nothing.
+
+| Smell | Kind | Where it's handled |
+|---|---|---|
+| God file (size × many exports) | mechanized | `arch-scan` |
+| Exact duplication (same symbol, N files) | mechanized | `dupe-scan` |
+| **Junk drawer** (`utils.ts`/`helpers.ts`/`common.ts`/`misc.ts` — cohesion by what it *isn't*) | mechanized | `arch-scan` (junk-drawer check) |
+| Near-duplication ("something similar exists") | judgment | `/dedupe` drill — **rule of three:** abstract on the third occurrence, not the second; premature abstraction couples things that merely look alike |
+| Sanity checks bleeding downstream (re-validating what a boundary should guarantee) | judgment | review checklist — fix the *boundary* (zod at the edges, audit C3), don't scatter guards |
+| Design-system drift (pasted tokens/styles) | mechanized (coarse) | `dupe-scan` today; richer token-diff eval later |
+
+## Atomic design — the decompose grammar
+
+Decomposition needs a *target shape*, not just "smaller." We use atomic design:
+
+- **Atoms** — one job, no siblings' knowledge: `escapeHtml`, `chip()`, a shader, a payoff function.
+- **Molecules** — a few atoms with one purpose: a card, a nav, the Eye (shader + lids + gaze).
+- **Organisms** — molecules composing a surface: a dashboard view, the tower scene, the login stage.
+
+**Atoms are the default floor.** Go sub-atomic only when a concrete need calls (a second consumer wants
+half the atom) — never speculatively. Over-splitting is the mirror-image slop: a thousand two-line files
+with the complexity moved into the wiring.
+
 ## How the loop runs (and stays orderly)
 
 - Every eye enforces in CI through the ordinary test job — a Coach's dimension cannot silently regress.

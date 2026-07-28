@@ -90,6 +90,17 @@ for (const { file, lines } of files) {
   if (lines > cap) violations.push({ file, lines, cap });
 }
 
+// Junk-drawer smell (docs/COACHES.md): a file named for what it ISN'T — utils/helpers/common/misc —
+// has no cohesion story and becomes a dumping ground. Blocked outright for new files (none exist
+// today, so there's nothing to grandfather). Name modules for the job they do.
+const JUNK = /(?:^|\/)(?:utils?|helpers?|common|misc|shared|stuff)\.ts$/i;
+const junk = files.filter((x) => JUNK.test(x.file));
+if (junk.length) {
+  console.error(`\n✗ junk-drawer file name(s) — name modules for the job they do:`);
+  for (const j of junk) console.error(`  ${j.file}`);
+  process.exit(1);
+}
+
 console.log("架 Architecture scan — largest source files");
 for (const { file, lines } of files.slice(0, 8)) {
   const cap = budget[file] ?? DEFAULT_CAP;

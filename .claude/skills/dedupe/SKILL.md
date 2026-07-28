@@ -27,6 +27,9 @@ Emits the most-copied symbol and every file defining it. Take `candidate`. One s
 Open every listed definition and compare. Three cases:
 
 - **True copies** (identical or trivially divergent) → consolidate (step 3).
+- **Merely similar** (common shape, different jobs) → apply the **rule of three**: abstract on the third
+  occurrence, not the second. Two similar things may be coincidence; forcing an abstraction couples code
+  that merely looks alike, and a wrong abstraction costs more than a duplicate. Note it and stop.
 - **Divergent implementations** — the copies drifted and now behave differently. Decide the canonical
   behavior; if call sites genuinely need both behaviors, they're different functions — **rename** one to
   say what it does. Never silently pick a winner where behavior differs; note the divergence in the PR.

@@ -28,7 +28,12 @@ exports — so a smaller file doing many jobs outranks a bigger cohesive one. Ta
 1. **Read for a seam, not a line count.** Find a cohesive cluster that shares a responsibility and could
    be imported as a unit — the `escapeHtml`/`chip`/`tile` render helpers; one route handler; one shader;
    the payoff math. Split along the seam, never mid-idea.
-2. **Extract to a new module** in its natural home (`src/ui/`, `src/scene/lego/`, `src/observatory/`…).
+2. **Split toward the atomic grammar** (`docs/COACHES.md`): **atoms** (one job, no siblings' knowledge) →
+   **molecules** (a few atoms, one purpose: a card, the Eye) → **organisms** (a view, a scene). Atoms are
+   the floor — go sub-atomic only when a concrete need calls (a second consumer wants half the atom),
+   never speculatively. Over-splitting is the mirror slop: complexity moved into the wiring.
+3. **Extract to a new module** in its natural home (`src/ui/`, `src/scene/lego/`, `src/observatory/`…) —
+   **named for the job it does, never `utils`/`helpers`** (the junk-drawer smell; arch-scan blocks it).
    Export the cluster; import it back. **This is a move + re-import, not a rewrite** — names stay identical
    so call sites don't churn, and behavior must not change.
 3. **Check blast radius** before trusting it: `graphify affected <file>` — confirm only expected dependents
