@@ -28,6 +28,17 @@ seats with distinct jobs:
 Slop accumulates precisely in the dimensions no defensive loop watches. Growing this roster *is* the
 quality strategy (audit: `docs/ENGINEERING-AUDIT-2026-07.md`).
 
+## The codification ladder — how work becomes delegable
+
+Work descends this ladder as its contract gets written; each rung frees the head coach's attention:
+
+1. **Manual** — done ad hoc in-session; judgment throughout.
+2. **Skill** — the procedure is codified (a drill, e.g. `/decompose`, `/dedupe`); a human or Claude invokes it.
+3. **Gated** — the trigger is mechanized (`--candidate` names the target); no one picks the work.
+4. **Agent** — the full contract (trigger, procedure, verification, output) is written; a background athlete runs it end to end.
+
+A subagent is what a piece of work becomes when its contract is complete. What cannot yet be contracted — taste, the yay/nay on a scene, which constraint matters next — stays with the head coach. **Model tier follows contract completeness:** rung-4 work runs on cheaper/faster models; judgment-incomplete work stays on the strongest model. Every toil-killer is the same loop (measure → judge → one bounded move → ratchet); defense's move is subtraction, offense's is substitution.
+
 ## Sourcing rule
 
 **Adopt what's generic; craft what's bound to our gates.** Generic craftsmanship (code review, security
@@ -47,6 +58,17 @@ supply-chain decision: read them fully before adopting.
 | Code review | *(adopted)* | `/code-review` | — | ✅ bundled |
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |
 | Simplification | *(adopted)* | `/simplify` | — | ✅ bundled |
+
+## Special teams — situational units
+
+Not every play is a down-in/down-out defensive loop. Special teams are situational crews with their own playbooks, run occasionally:
+
+- **dep-warden** — reviews dependency-update PRs: reads changelogs, runs the suite, merges patch/minor on green, escalates majors. (First named unit; agent not yet built.)
+- **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
+- **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
+- **Release verification** — periodic prod screenshot/probe beyond the smoke test.
+
+Dead-code, duplication, size — those stay regular defense: same eye/drill/ratchet shape every down.
 
 ## The scaling test — two axes, opposite defaults
 
