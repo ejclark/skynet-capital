@@ -1,4 +1,4 @@
-import { type Scenario, context, portfolio, position } from "../scenario.js";
+import { context, portfolio, position, type Scenario } from "../scenario.js";
 
 /**
  * Readiness pack — The Banker (the house's income engine: underwrites calm markets only, harvests

@@ -3,7 +3,7 @@ import type { MarketContext, OrderIntent, OrderResult } from "../domain/types.js
 import type { Persona } from "../personas/persona.js";
 import type { BrokerPort } from "../ports/broker.js";
 import type { MarketDataPort } from "../ports/market-data.js";
-import { DEFAULT_RISK_CONFIG, type RiskConfig, applyGuards } from "./guards.js";
+import { applyGuards, DEFAULT_RISK_CONFIG, type RiskConfig } from "./guards.js";
 
 /** A full record of one decision cycle — the unit the learning loop and recaps consume. */
 export interface CycleReport {

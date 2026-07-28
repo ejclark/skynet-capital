@@ -1,5 +1,5 @@
 import type { ObservatoryEvent } from "../observatory/events.js";
-import { type TradeUpdateMessage, fillEventFromMessage } from "./trade-updates-stream-events.js";
+import { fillEventFromMessage, type TradeUpdateMessage } from "./trade-updates-stream-events.js";
 
 export interface TradeUpdatesStreamConfig {
   /** The observatory participant these fills belong to (matches the dashboard row id). */

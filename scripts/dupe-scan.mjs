@@ -12,7 +12,7 @@
 //   node scripts/dupe-scan.mjs --candidate# emit the highest-leverage consolidation target as JSON
 //
 // Enforced in CI via tests/arch/dupe.spec.ts — runs on every PR, no extra workflow.
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = process.cwd();

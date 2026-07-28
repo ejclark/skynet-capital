@@ -1,6 +1,6 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { type Persona, momentumOf, sentimentOf, sharesForNotional } from "./persona.js";
+import { momentumOf, type Persona, sentimentOf, sharesForNotional } from "./persona.js";
 
 /**
  * Tunable knobs for Sauron. Config, not hardcoded — same rationale as the other personas.

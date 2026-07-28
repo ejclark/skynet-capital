@@ -1,4 +1,4 @@
-import { type JsonResponse, fetchJson } from "../http/fetch-json.js";
+import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 
 /**
  * Network seam for the Alpaca Trading API (paper). Injected everywhere above, so the

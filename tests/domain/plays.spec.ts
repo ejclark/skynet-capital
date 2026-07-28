@@ -1,8 +1,8 @@
 import {
-  PLAYS,
-  PLAY_LEVELS,
   firstPlay,
   isLocked,
+  PLAY_LEVELS,
+  PLAYS,
   playsAtLevel,
   unlockedPlays,
 } from "../../src/domain/plays.js";

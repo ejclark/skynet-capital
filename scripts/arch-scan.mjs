@@ -10,7 +10,7 @@
 //   node scripts/arch-scan.mjs --update   # rewrite arch-budget.json (ratchet: budgets only lower)
 //
 // Enforced in CI via tests/arch/budget.spec.ts, so it runs on every PR with no extra workflow.
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = process.cwd();

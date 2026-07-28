@@ -1,6 +1,6 @@
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { Participant } from "../participants/participant.js";
-import { type ParticipantSnapshot, buildParticipantSnapshot } from "./participant-snapshot.js";
+import { buildParticipantSnapshot, type ParticipantSnapshot } from "./participant-snapshot.js";
 
 /** The whole centralized view the dashboard renders. */
 export interface DashboardData {

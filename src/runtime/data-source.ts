@@ -4,7 +4,7 @@ import {
   type AccountFixture,
   FixtureTradingTransport,
 } from "../adapters/fixture-trading-transport.js";
-import { ReplayEventStream, parseEventsJsonl } from "../adapters/replay-event-stream.js";
+import { parseEventsJsonl, ReplayEventStream } from "../adapters/replay-event-stream.js";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { AlpacaTradeUpdatesStream } from "../alpaca/trade-updates-stream.js";

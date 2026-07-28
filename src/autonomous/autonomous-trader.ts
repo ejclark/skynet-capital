@@ -1,5 +1,5 @@
 import type { MarketContext, OrderResult } from "../domain/types.js";
-import { DEFAULT_RISK_CONFIG, type RiskConfig, applyGuards } from "../engine/guards.js";
+import { applyGuards, DEFAULT_RISK_CONFIG, type RiskConfig } from "../engine/guards.js";
 import type { Persona } from "../personas/persona.js";
 import type { BrokerPort } from "../ports/broker.js";
 import type { DecisionRecord, IntentOutcome } from "./decision-record.js";

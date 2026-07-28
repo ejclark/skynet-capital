@@ -1,6 +1,6 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { type Persona, momentumOf, sharesForNotional } from "./persona.js";
+import { momentumOf, type Persona, sharesForNotional } from "./persona.js";
 
 /** Tunable knobs for the Day Trader. Config, not hardcoded — same rationale as the others. */
 export interface DayTraderConfig {

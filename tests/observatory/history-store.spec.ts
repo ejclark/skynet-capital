@@ -2,10 +2,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  createHistoryStore,
   type EquitySample,
   InMemoryHistoryStore,
   JsonlHistoryStore,
-  createHistoryStore,
 } from "../../src/observatory/history-store.js";
 
 const sample = (participantId: string, equity: number, realizedPl = 0): EquitySample => ({

@@ -1,5 +1,5 @@
-import { createBotBroker } from "../bots/bot-broker.js";
 import type { Bot } from "../bots/bot.js";
+import { createBotBroker } from "../bots/bot-broker.js";
 import type { RiskConfig } from "../engine/guards.js";
 import { TradingEngine } from "../engine/trading-engine.js";
 import type { Persona } from "../personas/persona.js";
