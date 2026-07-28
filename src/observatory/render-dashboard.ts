@@ -1,5 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { COURSES, type Course, type Milestone, RANKS, totalPoints } from "../domain/curriculum.js";
+import { escapeHtml } from "../ui/escape-html.js";
 import type { DashboardData } from "./dashboard-data.js";
 import { renderEmpireSkyline } from "./empire-skyline.js";
 import { equityChange, equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
@@ -17,14 +18,6 @@ import { personaLore } from "./persona-lore.js";
  * Pure: same data in, same HTML out — so it's unit-testable and safe to re-run on a
  * schedule to refresh a published dashboard.
  */
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
 
 function formatCurrency(value: number): string {
   const sign = value < 0 ? "-" : "";

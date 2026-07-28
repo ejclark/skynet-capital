@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { escapeHtml } from "../../ui/escape-html.js";
 import {
   type FetchFn,
   type OAuthProvider,
@@ -2882,12 +2883,4 @@ function parseList(value: string | undefined): Set<string> {
 function redirect(res: ServerResponse, location: string): void {
   res.writeHead(302, { location });
   res.end();
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
