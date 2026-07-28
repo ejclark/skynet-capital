@@ -114,6 +114,11 @@ fine; the docs are the memory.
   small focused PRs; squash-merge on green. Branch-first avoids needing `git stash` — **don't use
   `git stash` in this environment** (it has silently dropped stashed edits on pop). Subjects are
   lowercase-led (commitlint rejects a capitalized first word — even "PRs"/"Barad-dûr").
+- **Auto-merge is the default.** Enable native GitHub auto-merge (SQUASH) on every Claude-authored PR
+  at open, so it merges itself the moment CI goes green — opt-*out*, not opt-in. Hold a PR for Eric only
+  when he asks, or for the carve-outs (workflow files, and the credentials/spend/outward-facing
+  irreversible class). Native auto-merge, never an in-CI REST merge: a `GITHUB_TOKEN` merge wouldn't
+  trigger the `push`→`main` deploy. Full merge policy: `.claude/skills/governor/SKILL.md`.
 - **Commits & PRs are documents** (see `docs/ENGINEERING.md` → _Change communication_): Conventional-
   Commit subjects (lowercase-led, imperative); PRs lead with a plain-language **Summary** + **Why**, and
   bury the weeds **below the fold** (`<details>`), written so an analytical-but-non-technical reader gets
