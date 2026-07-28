@@ -15,6 +15,7 @@ import {
   renderLeaderboardBody,
 } from "../observatory/render-dashboard.js";
 import { threeScenePage } from "../three/serve-scene.js";
+import { escapeHtml } from "../ui/escape-html.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
@@ -710,12 +711,4 @@ function feedbackResultHtml(result: FeedbackResult): string {
 <p class="lede">${escapeHtml(result.error)}</p>
 <p class="backrow"><a href="/feedback">Try again</a> · <a href="/">← Back to the board</a></p>`;
   return addShell("Feedback — Skynet Capital", inner);
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
