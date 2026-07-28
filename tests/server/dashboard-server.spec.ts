@@ -1,6 +1,6 @@
 import type { AddressInfo } from "node:net";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
-import { resolveAuth } from "../../src/server/auth/authenticator.js";
+import { resolveAuth } from "../../src/server/auth/resolve-auth.js";
 import { type Session, signSession } from "../../src/server/auth/session.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
 import type { FeedbackInput, FeedbackResult } from "../../src/server/feedback-service.js";

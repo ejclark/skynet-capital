@@ -19,7 +19,7 @@ import { createHistoryStore } from "../observatory/history-store.js";
 import type { Participant } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
-import { resolveAuth } from "../server/auth/authenticator.js";
+import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
