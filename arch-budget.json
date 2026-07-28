@@ -82,7 +82,7 @@
   "src/server/auth/providers.ts": 137,
   "src/server/auth/resolve-auth.ts": 49,
   "src/server/auth/session.ts": 124,
-  "src/server/dashboard-server.ts": 716,
+  "src/server/dashboard-server.ts": 780,
   "src/server/feedback-service.ts": 114,
   "src/server/observatory-hub.ts": 51,
   "src/server/participant-service.ts": 112,
