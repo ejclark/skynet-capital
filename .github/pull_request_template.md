@@ -18,6 +18,18 @@ Delete these comments and any section that doesn't apply.
 
 <!-- One or two sentences: the intent / the user value. What's better after this merges? -->
 
+## Acceptance criteria (EARS)
+
+<!--
+The behavioral contract this PR fulfills, in EARS (docs/ENGINEERING.md → Requirements in EARS): one
+verifiable `shall` per line, a named system, the right pattern — each line maps to a spec. Cover the
+happy path AND the guards (IF…THEN). Omit for pure docs / refactor / chore PRs with no new behavior.
+  WHEN <trigger>, the <system> shall <response>.
+  IF <condition>, THEN the <system> shall <response>.
+-->
+
+-
+
 <details>
 <summary><strong>Details — the how &amp; the weeds</strong></summary>
 
