@@ -32,6 +32,7 @@
     "dead:scan": "node scripts/dead-scan.mjs",
     "depgraph:scan": "node scripts/dep-graph-scan.mjs",
     "spec:gap": "node scripts/spec-gap-scan.mjs",
+    "incident:scan": "node scripts/incident-scan.mjs",
     "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
     "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs"
   },

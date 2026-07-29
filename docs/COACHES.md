@@ -86,6 +86,31 @@ templates, the `/feedback` form) stays **plain-language** for non-technical frie
 translates their report into EARS acceptance criteria (via `/ears`) *before* it becomes buildable work.
 A convention that taxes the wrong audience is slop wearing a suit.
 
+## Detection lag is the metric that finds the gaps in the system itself
+
+Every coach above watches the *code*. One watches **us**: the learning Coach
+(`scripts/incident-scan.mjs` → `/retro` → `docs/LESSONS.md`). Its dimension is **detection lag** —
+the time between the earliest moment a failure *could* have been noticed and the moment it actually
+was. Lag of seconds (a spec goes red) means the nets are working. Lag of days means an entire class
+of failure is currently invisible, and *that* is the finding — always bigger than the bug that
+revealed it.
+
+Two rules fall out, both paid for the hard way (see the ledger):
+
+- **When you change a shared system, enumerate every actor that crosses it.** Branch protection has
+  more consumers than pull requests (semantic-release pushes to `main`); npm's `prepare` has more
+  callers than developers (the Dockerfile's `npm ci`, which runs *before* `COPY . .`). Both deploy
+  outages were the same move: a correct change to a shared thing, with the consumer list never
+  enumerated. The second name on that list is usually the bug.
+- **Prefer shortening detection lag over preventing the specific bug.** Fixing one instance buys one
+  instance; a signal that surfaces the whole class buys every future one. The outage that motivated
+  this Coach was invisible for four merges *because nothing watched a red `main`* — the missing
+  watcher was the real defect, and it is now the eye.
+
+A failure is also the cheapest map of an unguarded region: while standing in it, log the adjacent
+"what else is exposed this way?" threads to `docs/IDEAS.md` as side quests. That is the learning
+flywheel — each incident buys both a prevention and a set of leads.
+
 ## Sourcing rule
 
 **Adopt what's generic; craft what's bound to our gates.** Generic craftsmanship (code review, security
@@ -103,6 +128,7 @@ supply-chain decision: read them fully before adopting.
 | **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` | judge: un-export / delete / justify-ignore | `mortician` (recruited on recurrence #3, per the rule of three) | ✅ live |
 | **Dep-graph** (cycles/orphans/layering) | `scripts/dep-graph-scan.mjs` (dependency-cruiser, adopted) + `.dependency-cruiser.cjs` + `dep-graph-budget.json` + `tests/arch/dep-graph.spec.ts` | judge: break cycle / wire-or-delete orphan / restore layer direction (`/decompose` when a cycle wants a split) | none yet (recruit on recurrence #3) | ✅ live |
 | **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | write BDD specs per ENGINEERING.md | `test-backfiller` | ✅ live |
+| **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | none yet (recruit on recurrence #3) | ✅ live |
 | **Inline-JS defects** (`<script>` syntax) | extract + `node --check` per page — *not built* | — | — | ⬜ queued |
 | Code review | *(adopted)* | `/code-review` | — | ✅ bundled |
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |
