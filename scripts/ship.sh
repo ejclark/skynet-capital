@@ -16,10 +16,10 @@ set -euo pipefail
 #       for walk-away merge-on-green, and STOP. Do not poll.
 #
 #   scripts/ship.sh merge <pr-number> [--method squash|merge|rebase]
-#       squash-merge over REST (core bucket). Branch protection still enforces the `verify`
-#       check, so this only succeeds once CI is green — call it when the green webhook
-#       arrives (no polling). Use instead of auto-merge when you want zero GraphQL and the
-#       session is present to react to the webhook.
+#       squash-merge over REST (core bucket) — ONLY for an UNPROTECTED base branch. Merging into
+#       a protected branch (i.e. `main` here) is refused for this session type (403), so on `main`
+#       use native auto-merge (the enable_pr_auto_merge call) instead; when GraphQL is exhausted,
+#       Eric web-merges. This subcommand is rarely used here.
 #
 # Carve-outs — NEVER auto-land (open a PR and hand to Eric): workflow files
 # (.github/workflows/**), and the credentials/spend/outward-facing irreversible class.
@@ -106,6 +106,9 @@ cmd_merge() {
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
   case "$http" in
     200) echo "ship: merged #$num." ;;
+    403) echo "ship: 403 — REST merge into a protected branch is refused for this session type." >&2
+         echo "ship: on 'main', use native auto-merge (enable_pr_auto_merge); if GraphQL is exhausted, have Eric web-merge." >&2
+         exit 4 ;;
     405|409) echo "ship: not mergeable yet (HTTP $http) — checks not green or conflict. Retry on the green webhook." >&2; exit 3 ;;
     *) echo "ship: merge returned HTTP $http:" >&2; printf '%s\n' "$body" | head -5 >&2; exit 2 ;;
   esac
