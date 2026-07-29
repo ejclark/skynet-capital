@@ -1,6 +1,7 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { momentumOf, type Persona, sentimentOf, sharesForNotional } from "./persona.js";
+import { ConfiguredPersona } from "./configured-persona.js";
+import { momentumOf, sentimentOf, sharesForNotional } from "./persona.js";
 
 /** Tunable knobs for the Rumor Trader. Config, not hardcoded — same rationale as the others. */
 export interface RumorTraderConfig {
@@ -31,15 +32,13 @@ const DEFAULT_RUMOR_TRADER_CONFIG: RumorTraderConfig = {
  * that's already euphoric (that's the exit, not the entry), which is what separates it from
  * the Retail Investor who buys the top.
  */
-export class RumorTraderPersona implements Persona {
+export class RumorTraderPersona extends ConfiguredPersona<RumorTraderConfig> {
   readonly id = "rumor-trader";
   readonly name = "The Rumor Trader";
   readonly thesis = "Buy the whisper, sell the headline — accumulate the build, exit the euphoria.";
 
-  private readonly config: RumorTraderConfig;
-
   constructor(config: RumorTraderConfig = DEFAULT_RUMOR_TRADER_CONFIG) {
-    this.config = config;
+    super(config);
   }
 
   decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {

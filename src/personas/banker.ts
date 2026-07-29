@@ -1,6 +1,7 @@
 import { positionFor } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { momentumOf, type Persona, sharesForNotional } from "./persona.js";
+import { ConfiguredPersona } from "./configured-persona.js";
+import { momentumOf, sharesForNotional } from "./persona.js";
 
 /** Tunable knobs for the Banker. Config, not hardcoded — same rationale as the others. */
 export interface BankerConfig {
@@ -32,16 +33,15 @@ const DEFAULT_BANKER_CONFIG: BankerConfig = {
  * income is the honest peg for the tournament prize pot (in-app points, no transfers needed):
  * the bank funds the house from interest, not wires.
  */
-export class BankerPersona implements Persona {
+export class BankerPersona extends ConfiguredPersona<BankerConfig> {
   readonly id = "banker";
   readonly name = "The Banker";
   readonly thesis = "The house's income engine; underwrites calm markets, banks gains on schedule.";
 
-  private readonly config: BankerConfig;
   private readonly book: Set<string>;
 
   constructor(config: BankerConfig = DEFAULT_BANKER_CONFIG) {
-    this.config = config;
+    super(config);
     this.book = new Set(config.book);
   }
 

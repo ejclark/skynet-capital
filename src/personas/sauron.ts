@@ -1,6 +1,7 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { momentumOf, type Persona, sentimentOf, sharesForNotional } from "./persona.js";
+import { ConfiguredPersona } from "./configured-persona.js";
+import { momentumOf, sentimentOf, sharesForNotional } from "./persona.js";
 
 /**
  * Tunable knobs for Sauron. Config, not hardcoded — same rationale as the other personas.
@@ -47,16 +48,14 @@ const DEFAULT_SAURON_CONFIG: SauronConfig = {
  * Distinct from the News Fader (who fades sentiment alone): Sauron waits for momentum to confirm
  * the turn, so he is colder and more patient — he does not fade a hype that is still building.
  */
-export class SauronPersona implements Persona {
+export class SauronPersona extends ConfiguredPersona<SauronConfig> {
   readonly id = "sauron";
   readonly name = "Sauron";
   readonly thesis =
     "Impose order on the market's chaos — read the crowd's fear and greed, act on neither; fade exhausted euphoria, claim what panic discards.";
 
-  private readonly config: SauronConfig;
-
   constructor(config: SauronConfig = DEFAULT_SAURON_CONFIG) {
-    this.config = config;
+    super(config);
   }
 
   decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {

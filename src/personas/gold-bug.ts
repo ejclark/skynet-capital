@@ -1,6 +1,7 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { type Persona, sentimentOf, sharesForNotional } from "./persona.js";
+import { ConfiguredPersona } from "./configured-persona.js";
+import { sentimentOf, sharesForNotional } from "./persona.js";
 
 /** Tunable knobs for the Gold Bug. Config, not hardcoded — same rationale as the others. */
 export interface GoldBugConfig {
@@ -23,15 +24,13 @@ const DEFAULT_GOLD_BUG_CONFIG: GoldBugConfig = {
  * sour, it flees to the safe haven and hoards it — it never buys a risk asset, and
  * it never pyramids once it holds gold. A permanent bear on everything but metal.
  */
-export class GoldBugPersona implements Persona {
+export class GoldBugPersona extends ConfiguredPersona<GoldBugConfig> {
   readonly id = "gold-bug";
   readonly name = "The Gold Bug";
   readonly thesis = "When fear spreads, flee to gold and hold it; never trust a risk asset.";
 
-  private readonly config: GoldBugConfig;
-
   constructor(config: GoldBugConfig = DEFAULT_GOLD_BUG_CONFIG) {
-    this.config = config;
+    super(config);
   }
 
   decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
