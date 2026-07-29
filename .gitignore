@@ -13,3 +13,8 @@ graphify-out/
 # Scratchpad / throwaway preview + shoot scripts (never committed)
 scratchpad/
 .claude/worktrees/
+
+# Built Babylon scene bundle + the harness's staged shell (see npm run build:scene).
+# The bundle is generated from src/three/** at install time, never committed.
+public/three/scene.js
+public/tower.html

@@ -35,14 +35,28 @@ const isTypeOnly = (f) => {
   return exports.length > 0 && exports.every((e) => /^export\s+(interface|type)\b/.test(e));
 };
 
+// WebGL/DOM-bound render code. These build meshes, materials and post-process pipelines against a
+// live GPU context; there is no honest unit assertion to make about them without a browser, and a
+// spec that only checked "a mesh was constructed" would be implementation-peeking theatre. They are
+// verified instead by the screenshot harness (scripts/shoot-tower.mjs), which is the real contract.
+// NOTE the deliberate split that makes this narrow: all the *decidable* logic (the tower profile
+// curve, the seeded RNG, state→render params) lives in src/three/kit/{profile,rng,params}.ts, which
+// are pure, excluded from this list, and fully specced in tests/three/kit.spec.ts.
+const isWebglBound = (f) =>
+  f.startsWith("src/three/pieces/") ||
+  f === "src/three/scene-main.ts" ||
+  ["src/three/kit/env.ts", "src/three/kit/materials.ts", "src/three/kit/greebles.ts"].includes(f);
+
 // Every src module, minus files with no unit-testable behavior:
 //   - src/scripts/*  — CLI mains, exercised by running, not import (like d.ts)
 //   - src/evals/scenarios/*  — eval fixture DATA, exercised by the eval harness, not unit specs
 //   - type-only modules  — interfaces/types that compile to nothing (see isTypeOnly)
+//   - WebGL-bound render modules  — verified by screenshot (see isWebglBound)
 const srcFiles = walk(join(ROOT, "src"), (n) => n.endsWith(".ts") && !n.endsWith(".d.ts"))
   .map(rel)
   .filter((f) => !f.startsWith("src/scripts/"))
   .filter((f) => !f.startsWith("src/evals/scenarios/"))
+  .filter((f) => !isWebglBound(f))
   .filter((f) => !isTypeOnly(f));
 
 // Which src files do specs import (directly)?

@@ -24,14 +24,15 @@
     "record:session": "tsx src/scripts/record-session.ts",
     "shoot:login": "tsx scripts/shoot-login.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
-    "prepare": "husky",
+    "prepare": "husky && npm run build:scene",
     "arch:scan": "node scripts/arch-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
     "clone:scan": "node scripts/clone-scan.mjs",
     "verify": "run-p typecheck lint test",
     "dead:scan": "node scripts/dead-scan.mjs",
     "depgraph:scan": "node scripts/dep-graph-scan.mjs",
-    "spec:gap": "node scripts/spec-gap-scan.mjs"
+    "spec:gap": "node scripts/spec-gap-scan.mjs",
+    "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
@@ -42,6 +43,7 @@
     "@semantic-release/git": "11.0.1",
     "@types/node": "26.1.2",
     "dependency-cruiser": "18.1.0",
+    "esbuild": "0.28.1",
     "husky": "9.1.7",
     "jscpd": "5.0.14",
     "knip": "6.29.0",
@@ -50,5 +52,8 @@
     "semantic-release": "25.0.8",
     "tsx": "4.23.1",
     "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "@babylonjs/core": "8.30.0"
   }
 }
