@@ -255,6 +255,16 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   routes, observatory metrics, reduce/persistence). Balance is the goal: small **single-responsibility**
   tests (one behavior each — avoid long bundled workflows that hide failures and mix altitudes), but not
   so granular it becomes death-by-10,000-cuts. _(src: Eric · while: reviewing the suite size)_
+- **Isolated-worktree `node_modules/.bin` is empty** — athletes launched with `isolation: worktree` get a
+  checkout whose `node_modules/.bin` lacks the tool shims (biome/tsx), so husky hooks and the two
+  subprocess-path specs (`app-version`, `dep-graph`) fail until `node_modules` is symlinked from the
+  primary checkout (then removed). Every backfiller hit this and worked around it. Fix: provision the
+  worktree's `.bin` at worktree-create so athletes don't each re-solve it. _(src: Claude · while: running feast athletes in isolated worktrees)_
+- **`bot-broker` drops `credentials.accessToken`** — `createBotBroker` wires `FetchAlpacaTradingTransport`
+  with only `{ baseUrl, apiKey, apiSecret }`, never forwarding `bot.credentials.accessToken`, so an
+  OAuth-connected bot ("Connect with Alpaca", Round B) would auth with a blank key/secret instead of its
+  Bearer token. Latent today (no OAuth bots yet); real fix before Round B ships. A `.todo` in
+  `tests/bots/bot-broker.spec.ts` documents it. _(src: Claude · while: backfilling bot-broker specs)_
 - **Empire skyline on the comparison view** — render two empire skylines side by side on `/compare`
   (the "two cities" from the scale ladder: commonality = shared towers, contrast = coal/rail vs.
   solar/silicon silhouettes). Reuses `renderEmpireSkyline`; the next natural P2 slice.
