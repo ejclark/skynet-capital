@@ -41,6 +41,27 @@ Work descends this ladder as its contract gets written; each rung frees the head
 
 **The rule of three applies to agents:** do it manually once; codify the skill on the second recurrence; promote to an agent on the third. Speculative roster-building is premature abstraction — the roster recruits itself from demonstrated repetition. A subagent is what a piece of work becomes when its contract is complete. What cannot yet be contracted — taste, the yay/nay on a scene, which constraint matters next — stays with the head coach. **Model tier follows contract completeness:** rung-4 work runs on cheaper/faster models; judgment-incomplete work stays on the strongest model. Every toil-killer is the same loop (measure → judge → one bounded move → ratchet); defense's move is subtraction, offense's is substitution.
 
+## Resource cost is a fitness dimension
+
+The constraint isn't only Eric's attention — it's every **finite resource** a run consumes: tokens,
+GitHub API budget (esp. the scarce 5k/hr GraphQL bucket), GHA minutes, wall-clock. Treat waste in
+these the way defense treats slop: measure it, and convert the recurring cost into a one-time one.
+
+**Codify the loop into a script/codemod.** A model-in-the-loop procedure costs tokens (and often API
+calls) *every* time; a script is a one-time build cost, then **~free per run forever** — and it can't
+drift back to the expensive habit the way a prose instruction can. This is the self-healing flywheel:
+each codified loop lowers the marginal cost of the next unit of work, so throughput compounds while
+cost falls. Sound architecture + proper tooling + clean config make the next script cheaper to build,
+compounding it further.
+
+Worked example (the one that motivated this): landing a PR via the GitHub **MCP** spends **GraphQL**
+by the thousands (one create+auto-merge+read cycle measured ~6,000 points; status-*polling* is worse),
+while the same outcome over `git` + repo-scoped **REST** runs on your machine and the plentiful 15k/hr
+**core** bucket. The fix was codified as `scripts/ship.sh` + the `/ship` skill: verify locally → push →
+open over REST → one auto-merge call → **stop, trust the webhook, never poll**. Reach for the script;
+grow the roster of scripts as recurring costs surface. When a finite resource starts binding, that's a
+*measured* constraint the offensive coordinator elevates — never optimize a resource speculatively.
+
 ## Sourcing rule
 
 **Adopt what's generic; craft what's bound to our gates.** Generic craftsmanship (code review, security
