@@ -24,7 +24,7 @@
     "record:session": "tsx src/scripts/record-session.ts",
     "shoot:login": "tsx scripts/shoot-login.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
-    "prepare": "husky && npm run build:scene",
+    "prepare": "husky",
     "arch:scan": "node scripts/arch-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
     "clone:scan": "node scripts/clone-scan.mjs",
@@ -32,7 +32,8 @@
     "dead:scan": "node scripts/dead-scan.mjs",
     "depgraph:scan": "node scripts/dep-graph-scan.mjs",
     "spec:gap": "node scripts/spec-gap-scan.mjs",
-    "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js"
+    "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
+    "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
