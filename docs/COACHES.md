@@ -62,6 +62,21 @@ open over REST → one auto-merge call → **stop, trust the webhook, never poll
 grow the roster of scripts as recurring costs surface. When a finite resource starts binding, that's a
 *measured* constraint the offensive coordinator elevates — never optimize a resource speculatively.
 
+## Adopting a convention creates conformance debt — grandfather, then shrink
+
+Every new convention (a lint rule, EARS requirements, a design token, a naming standard) instantly
+makes the *existing* corpus non-conforming. Do **not** big-bang-rewrite history to conform — that's
+churn with no behavioral gain, the same make-work the budgets exist to avoid. Treat it like every gate
+here: **grandfather the existing violations, conform all NEW work, and let it ratchet forward as files
+are touched.** New requirement → EARS; new PR → the template's EARS criteria; an old spec conforms the
+next time someone edits it, not on a mass sweep. (This is why "adopt EARS" was ~5 files, not 80.)
+
+**Corollary — know who the convention is for.** EARS is a *developer* convention: it lives in
+dev-facing intake (the PR template, plans, the `/ears` drill). User-facing intake (the issue
+templates, the `/feedback` form) stays **plain-language** for non-technical friends & family — triage
+translates their report into EARS acceptance criteria (via `/ears`) *before* it becomes buildable work.
+A convention that taxes the wrong audience is slop wearing a suit.
+
 ## Sourcing rule
 
 **Adopt what's generic; craft what's bound to our gates.** Generic craftsmanship (code review, security
