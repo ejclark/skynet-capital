@@ -37,18 +37,18 @@ repo() {
   esac
 }
 
-# api METHOD PATH [JSON] → prints body; sets global HTTP to the status code.
-HTTP=""
+# api METHOD PATH [JSON] → prints "<body>\n__SHIP_HTTP__<code>". Parse in the CALLER, never via a
+# global — this function runs inside $(...), a subshell, so any var it set would be lost on return.
 api() {
-  local out; out="$(curl -sS -X "$1" -w $'\n%{http_code}' \
+  curl -sS -X "$1" -w '\n__SHIP_HTTP__%{http_code}' \
     -H "Authorization: Bearer $TOKEN" \
     -H "Accept: application/vnd.github+json" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     -H "User-Agent: skynet-ship" \
-    ${3:+-d "$3"} "$API/repos/$(repo)$2")"
-  HTTP="${out##*$'\n'}"; printf '%s' "${out%$'\n'*}"
+    ${3:+-d "$3"} "$API/repos/$(repo)$2"
 }
-
+http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an api() result
+body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
 json_field() { python3 -c "import sys,json; print(json.load(sys.stdin).get('$1',''))"; }
 
 cmd_open() {
@@ -81,15 +81,16 @@ cmd_open() {
   local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4]}))" \
     "$title" "$branch" "$base" "$body")"
   echo "ship: opening PR over REST (core bucket)…"
-  local resp; resp="$(api POST "/pulls" "$payload")"
-  if [ "$HTTP" = 201 ]; then
-    local num url; num="$(printf '%s' "$resp" | json_field number)"; url="$(printf '%s' "$resp" | json_field html_url)"
+  local resp http body; resp="$(api POST "/pulls" "$payload")"
+  http="$(http_of "$resp")"; body="$(body_of "$resp")"
+  if [ "$http" = 201 ]; then
+    local num url; num="$(printf '%s' "$body" | json_field number)"; url="$(printf '%s' "$body" | json_field html_url)"
     echo "ship: opened PR #$num  $url"
     echo "$num"
     echo "ship: NEXT (per .claude/skills/ship) — one enable_pr_auto_merge MCP call, then STOP. No polling."
   else
-    echo "ship: REST open returned HTTP $HTTP (proxy may block writes). Body:" >&2
-    printf '%s\n' "$resp" | head -5 >&2
+    echo "ship: REST open returned HTTP $http (proxy may block writes). Body:" >&2
+    printf '%s\n' "$body" | head -5 >&2
     echo "ship: FALL BACK to the MCP create_pull_request tool for this one call (still ~1 call, not thousands)." >&2
     exit 2
   fi
@@ -101,11 +102,12 @@ cmd_merge() {
   local method="squash"
   while [ $# -gt 0 ]; do case "$1" in --method) method="$2"; shift 2 ;; *) shift ;; esac; done
   echo "ship: squash-merging #$num over REST (core bucket; branch protection still enforces verify)…"
-  local resp; resp="$(api PUT "/pulls/$num/merge" "{\"merge_method\":\"$method\"}")"
-  case "$HTTP" in
+  local resp http body; resp="$(api PUT "/pulls/$num/merge" "{\"merge_method\":\"$method\"}")"
+  http="$(http_of "$resp")"; body="$(body_of "$resp")"
+  case "$http" in
     200) echo "ship: merged #$num." ;;
-    405|409) echo "ship: not mergeable yet (HTTP $HTTP) — checks not green or conflict. Retry on the green webhook." >&2; exit 3 ;;
-    *) echo "ship: merge returned HTTP $HTTP:" >&2; printf '%s\n' "$resp" | head -5 >&2; exit 2 ;;
+    405|409) echo "ship: not mergeable yet (HTTP $http) — checks not green or conflict. Retry on the green webhook." >&2; exit 3 ;;
+    *) echo "ship: merge returned HTTP $http:" >&2; printf '%s\n' "$body" | head -5 >&2; exit 2 ;;
   esac
 }
 
