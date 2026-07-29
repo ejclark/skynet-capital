@@ -32,6 +32,33 @@ compiler is the first line of defense, so we keep it maximally paranoid.
     with no knowledge of *how* the decision is reached.
 - Spec structure mirrors behavior: `describe("when <situation>") → it("<expected behavior>")`.
 
+### Requirements in EARS (the upstream half of BDD)
+
+Before the failing spec, state the **requirement** in **EARS** (Easy Approach to Requirements
+Syntax). One requirement per statement, a **named system**, a single **verifiable** response, the
+word **shall**. Five patterns cover ~everything; reach for the simplest that fits:
+
+| Pattern | Template | Cue |
+|---|---|---|
+| **Ubiquitous** (always true) | `The <system> shall <response>.` | — |
+| **Event-driven** | `WHEN <trigger>, the <system> shall <response>.` | WHEN |
+| **State-driven** | `WHILE <state>, the <system> shall <response>.` | WHILE |
+| **Unwanted behavior** | `IF <condition>, THEN the <system> shall <response>.` | IF/THEN |
+| **Optional feature** | `WHERE <feature is present>, the <system> shall <response>.` | WHERE |
+| **Complex** | combine, e.g. `WHILE <state>, WHEN <trigger>, the <system> shall <response>.` | — |
+
+**EARS *is* our BDD grammar, one layer up** — the mapping is mechanical, which is why we adopt it:
+the `WHEN/WHILE/IF/WHERE` clause becomes the `describe("when …")`, and the `shall <response>`
+becomes the `it("<response>")`. So one EARS line ⇒ one spec.
+
+> **EARS:** `WHEN the persona sees the position at its take-profit target, the persona shall close it.`
+> **Spec:** `describe("when the position hits its take-profit target") → it("closes the position")`.
+
+Write EARS acceptance criteria in plans, issues, and PRs; the `/ears` drill
+(`.claude/skills/ears/SKILL.md`) classifies a raw request into these patterns and scaffolds the
+matching specs. Anti-patterns EARS kills: vague "should/support/handle", compound requirements
+(one `shall` per line), and unverifiable responses (if a spec can't assert it, rewrite it).
+
 **Automated enforcement (Claude Code hooks).** The red-green-refactor loop is backed by harness
 hooks in `.claude/settings.json`, so the suite runs deterministically, not just when someone
 remembers:
