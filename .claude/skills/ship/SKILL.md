@@ -28,15 +28,19 @@ drained it. See `docs/COACHES.md` → *Resource cost is a fitness dimension*.
 2. **Open over REST.** It pushes the branch and `POST`s the PR on the core bucket, printing the PR
    number. (If the proxy blocks REST writes, it exits 2 and tells you to fall back to **one**
    `mcp__github__create_pull_request` call — one call, not thousands.)
-3. **Arm auto-merge — the one GraphQL-only step.** Make exactly **one**
-   `mcp__github__enable_pr_auto_merge` (SQUASH) call. That's ~1 point/PR — trivial; the problem was
-   never a single arm call, it was polling. This gives server-side merge-on-green even if the
-   session ends.
+3. **Arm auto-merge — the one required GraphQL call.** Make exactly **one**
+   `mcp__github__enable_pr_auto_merge` (SQUASH). That's ~1 point/PR — trivial; the problem was never
+   a single arm call, it was polling. This gives server-side merge-on-green even if the session ends.
+   **This call is not optional for `main`:** direct REST merge into a protected branch is refused for
+   this session type (`403 "Merging into a protected base branch is not permitted for this session
+   type"`), so native auto-merge is the *only* way this session can land a PR on `main`.
 4. **STOP. Do not poll.** No `list_pull_requests`, no `pull_request_read`, no status check-ins. The
    merge **webhook** is the completion signal — act when it arrives, not before.
 
-Zero-GraphQL variant (when you're present to react and want to touch GraphQL not at all): skip the
-arm call; on the green webhook, run `scripts/ship.sh merge <n>` (REST `PUT`, core bucket).
+**When GraphQL is exhausted** (can't make the arm call): don't wait or poll. **Eric web-merges** —
+his browser session isn't rate-limited, and a green PR merges in one click. That's the escape hatch,
+not `ship.sh merge`. (`scripts/ship.sh merge <n>` works only for an *unprotected* base branch — never
+`main` here — so it's rarely used.)
 
 ## Carve-outs — never auto-land (open the PR, hand to Eric)
 
