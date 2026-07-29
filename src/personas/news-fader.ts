@@ -1,7 +1,6 @@
-import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 import { ConfiguredPersona } from "./configured-persona.js";
-import { momentumOf, sentimentOf, sharesForNotional } from "./persona.js";
+import { sharesForNotional, signalsOf } from "./persona.js";
 
 /**
  * Tunable knobs for the News Fader. Exposed as config (not hardcoded) so we can
@@ -47,9 +46,7 @@ export class NewsFaderPersona extends ConfiguredPersona<NewsFaderConfig> {
     const intents: OrderIntent[] = [];
 
     for (const symbol of Object.keys(context.quotes)) {
-      const sentiment = sentimentOf(context, symbol);
-      const momentum = momentumOf(context, symbol);
-      const held = heldQuantity(portfolio, symbol);
+      const { sentiment, momentum, held } = signalsOf(context, portfolio, symbol);
 
       const isHype = sentiment >= this.config.hypeSentiment && momentum >= this.config.hypeMomentum;
       const isPanic =

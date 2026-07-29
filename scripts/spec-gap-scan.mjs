@@ -28,11 +28,22 @@ function walk(dir, pred, acc = []) {
 }
 const rel = (f) => relative(ROOT, f).split("\\").join("/");
 
-// Every src module (entrypoint scripts under src/scripts are CLI mains — exercised by running, not
-// import; excluded like d.ts).
+// A file with no runtime behavior to spec: every export is a type/interface, so it compiles away
+// like a .d.ts. Nothing to assert on — a "spec" would be vacuous or fabricate behavior.
+const isTypeOnly = (f) => {
+  const exports = readFileSync(join(ROOT, f), "utf8").match(/^export\s+\S+/gm) ?? [];
+  return exports.length > 0 && exports.every((e) => /^export\s+(interface|type)\b/.test(e));
+};
+
+// Every src module, minus files with no unit-testable behavior:
+//   - src/scripts/*  — CLI mains, exercised by running, not import (like d.ts)
+//   - src/evals/scenarios/*  — eval fixture DATA, exercised by the eval harness, not unit specs
+//   - type-only modules  — interfaces/types that compile to nothing (see isTypeOnly)
 const srcFiles = walk(join(ROOT, "src"), (n) => n.endsWith(".ts") && !n.endsWith(".d.ts"))
   .map(rel)
-  .filter((f) => !f.startsWith("src/scripts/"));
+  .filter((f) => !f.startsWith("src/scripts/"))
+  .filter((f) => !f.startsWith("src/evals/scenarios/"))
+  .filter((f) => !isTypeOnly(f));
 
 // Which src files do specs import (directly)?
 const importRe = /from\s+["']([^"']+)["']/g;
