@@ -18,3 +18,23 @@ export function threeScenePage(): string {
   }
   return cached;
 }
+
+/**
+ * Read one of the scene's static assets (the esbuild bundle, the IBL .env) from `public/three`.
+ * Returns undefined when it's missing so the caller can fall through to a 404 rather than throw —
+ * a missing bundle should degrade to "scene doesn't start", never crash the server.
+ * Cached per path: these are immutable per deploy.
+ */
+const assetCache = new Map<string, Buffer | undefined>();
+export function readSceneAsset(name: string): Buffer | undefined {
+  if (!/^[a-z0-9._-]+$/i.test(name)) return undefined; // no traversal
+  if (assetCache.has(name)) return assetCache.get(name);
+  let data: Buffer | undefined;
+  try {
+    data = readFileSync(join(process.cwd(), "public", "three", name));
+  } catch {
+    data = undefined;
+  }
+  assetCache.set(name, data);
+  return data;
+}

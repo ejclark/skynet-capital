@@ -14,7 +14,7 @@ import {
   renderIndividualBody,
   renderLeaderboardBody,
 } from "../observatory/render-dashboard.js";
-import { threeScenePage } from "../three/serve-scene.js";
+import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
@@ -117,6 +117,22 @@ function servePublicRoute(path: string, res: ServerResponse, hub: ObservatoryHub
   if (path === "/tower") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(threeScenePage());
+    return true;
+  }
+
+  // The scene's own assets: the esbuild bundle (our tree-shaken Babylon + kit) and the prefiltered
+  // IBL environment. Both are served BY US rather than a CDN — a third-party CDN is unreachable from
+  // the headless verification browser and would be an unpinned production dependency.
+  if (path === "/three/scene.js" || path === "/three/environment.env") {
+    const asset = readSceneAsset(path.slice("/three/".length));
+    if (!asset) return false;
+    res.writeHead(200, {
+      "content-type": path.endsWith(".js")
+        ? "application/javascript; charset=utf-8"
+        : "application/octet-stream",
+      "cache-control": "public, max-age=3600",
+    });
+    res.end(asset);
     return true;
   }
 

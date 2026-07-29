@@ -47,7 +47,13 @@ export function tailOf(
   };
 }
 
-const clamp = (v: number, lo: number, hi: number): number =>
+/**
+ * Clamp that also absorbs NaN/Infinity, falling back to the LOW bound. Deliberately NOT the shared
+ * `math/num.clamp`: projection inputs come from live account data where a missing/garbage figure
+ * must degrade to "nothing" rather than leak NaN into the rendered world (the honesty invariant).
+ * The two look alike and are not the same — see tests/observatory/empire-skyline.spec.ts.
+ */
+const clampFinite = (v: number, lo: number, hi: number): number =>
   Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo;
 
 /** The dominant sector by invested weight (ties → the first seen); "DIVERSIFIED" if none ≥ 50%. */
@@ -92,16 +98,16 @@ export function projectEmpire(
     return {
       symbol: p.symbol,
       sector: sectorOf(p.symbol),
-      mass: clamp(fin(p.marketValue) / maxVal, 0, 1),
-      footprint: clamp(basis / maxBasis, 0, 1),
-      health: basis > 0 ? clamp(u / basis, -1, 1) : 0,
+      mass: clampFinite(fin(p.marketValue) / maxVal, 0, 1),
+      footprint: clampFinite(basis / maxBasis, 0, 1),
+      health: basis > 0 ? clampFinite(u / basis, -1, 1) : 0,
       unrealizedPl: u,
       marketValue: fin(p.marketValue),
     };
   });
 
   // R4 — the reserve: cash share of equity (0 when equity is zero/errored — never fabricate).
-  const share = snapshot.equity > 0 ? clamp(snapshot.cash / snapshot.equity, 0, 1) : 0;
+  const share = snapshot.equity > 0 ? clampFinite(snapshot.cash / snapshot.equity, 0, 1) : 0;
 
   // R5 — the persona landmark, scaled by standing among peers (caller supplies the rank dial).
   const kind = snapshot.personaId ? PERSONA_LANDMARK[snapshot.personaId] : undefined;
@@ -110,7 +116,7 @@ export function projectEmpire(
       ? {
           kind,
           personaId: snapshot.personaId,
-          prominence: clamp(opts.personaProminence ?? 1, 0, 1),
+          prominence: clampFinite(opts.personaProminence ?? 1, 0, 1),
         }
       : undefined;
 
