@@ -1,7 +1,6 @@
-import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 import { ConfiguredPersona } from "./configured-persona.js";
-import { momentumOf, sentimentOf, sharesForNotional } from "./persona.js";
+import { sharesForNotional, signalsOf } from "./persona.js";
 
 /** Tunable knobs for the Retail Investor. Config, not hardcoded — same rationale as the others. */
 export interface RetailInvestorConfig {
@@ -41,9 +40,7 @@ export class RetailInvestorPersona extends ConfiguredPersona<RetailInvestorConfi
     const intents: OrderIntent[] = [];
 
     for (const symbol of Object.keys(context.quotes)) {
-      const sentiment = sentimentOf(context, symbol);
-      const momentum = momentumOf(context, symbol);
-      const held = heldQuantity(portfolio, symbol);
+      const { sentiment, momentum, held } = signalsOf(context, portfolio, symbol);
 
       const isFomo = sentiment >= this.config.fomoSentiment && momentum >= this.config.fomoMomentum;
       const isPanic = sentiment <= this.config.panicSentiment;
