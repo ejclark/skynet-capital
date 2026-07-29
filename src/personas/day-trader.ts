@@ -1,6 +1,7 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { momentumOf, type Persona, sharesForNotional } from "./persona.js";
+import { ConfiguredPersona } from "./configured-persona.js";
+import { momentumOf, sharesForNotional } from "./persona.js";
 
 /** Tunable knobs for the Day Trader. Config, not hardcoded — same rationale as the others. */
 export interface DayTraderConfig {
@@ -27,16 +28,15 @@ const DEFAULT_DAY_TRADER_CONFIG: DayTraderConfig = {
  * on, sells anything it holds the moment momentum rolls over. Never strays outside its
  * focus list; conviction comes from knowing a handful of names cold, not from breadth.
  */
-export class DayTraderPersona implements Persona {
+export class DayTraderPersona extends ConfiguredPersona<DayTraderConfig> {
   readonly id = "day-trader";
   readonly name = "The Day Trader";
   readonly thesis = "Seasoned tape-reader; rides big-tech momentum and cuts losers fast.";
 
-  private readonly config: DayTraderConfig;
   private readonly focus: Set<string>;
 
   constructor(config: DayTraderConfig = DEFAULT_DAY_TRADER_CONFIG) {
-    this.config = config;
+    super(config);
     this.focus = new Set(config.focus);
   }
 

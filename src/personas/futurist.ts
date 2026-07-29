@@ -1,6 +1,7 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { momentumOf, type Persona, sharesForNotional } from "./persona.js";
+import { ConfiguredPersona } from "./configured-persona.js";
+import { momentumOf, sharesForNotional } from "./persona.js";
 
 /** Tunable knobs for the Futurist. Config, not hardcoded — same rationale as the News Fader. */
 export interface FuturistConfig {
@@ -21,15 +22,13 @@ const DEFAULT_FUTURIST_CONFIG: FuturistConfig = {
  * and it ignores news sentiment entirely — headlines are noise, the trend is signal.
  * It only opens positions it doesn't already have (no pyramiding in slice 1).
  */
-export class FuturistPersona implements Persona {
+export class FuturistPersona extends ConfiguredPersona<FuturistConfig> {
   readonly id = "futurist";
   readonly name = "The Futurist";
   readonly thesis = "Own the future early; buy confirmed strength and hold through the noise.";
 
-  private readonly config: FuturistConfig;
-
   constructor(config: FuturistConfig = DEFAULT_FUTURIST_CONFIG) {
-    this.config = config;
+    super(config);
   }
 
   decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
