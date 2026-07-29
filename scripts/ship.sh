@@ -10,7 +10,8 @@ set -euo pipefail
 # self-healing flywheel (docs/COACHES.md → "Resource cost is a fitness dimension").
 #
 #   scripts/ship.sh open "<pr title>" [--body-file F] [--base B] [--no-verify]
-#       verify locally (fail fast) → push → open a PR over REST (core bucket). Prints the
+#       verify locally (fail fast) → incident preflight → push → open a PR over REST (core
+#       bucket). Prints the
 #       PR number + URL. THEN, per .claude/skills/ship/SKILL.md: make ONE
 #       `enable_pr_auto_merge` MCP call (the only GraphQL-only step — 1 call/PR, trivial)
 #       for walk-away merge-on-green, and STOP. Do not poll.
@@ -71,6 +72,15 @@ cmd_open() {
     npm run verify >/tmp/ship-verify.log 2>&1 || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 /tmp/ship-verify.log; exit 1; }
     echo "ship: verify green."
   fi
+
+  # Learning-Coach preflight (docs/COACHES.md → detection lag). The incident eye rides the path we
+  # already traverse — every change ships through here — so a red `main` surfaces without a cron, a
+  # scheduled workflow, or a single polled request. One REST call on the core bucket, at the exact
+  # moment it matters: never stack a change on a broken `main`. Advisory, not a hard stop; the point
+  # is that the gap becomes IMPOSSIBLE to not see, not that shipping gets blocked.
+  node scripts/incident-scan.mjs || {
+    echo "ship: ^^ an unlearned incident on $base is above. Run /retro before stacking more on it."
+  }
 
   echo "ship: pushing $branch…"
   local n=0; until git push -u origin "$branch" 2>/dev/null; do

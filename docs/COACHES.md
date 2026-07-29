@@ -107,6 +107,16 @@ Two rules fall out, both paid for the hard way (see the ledger):
   this Coach was invisible for four merges *because nothing watched a red `main`* — the missing
   watcher was the real defect, and it is now the eye.
 
+**Put the watcher on a path you already walk — never add a poller.** The tempting way to watch a red
+`main` is a scheduled workflow: a cron that wakes up and *asks*. That spends GHA minutes and API
+budget on a question, which is exactly the pattern `scripts/ship.sh` exists to delete — a monitor
+built that way is the resource-cost smell wearing a safety vest. Instead, hang the check on traffic
+that already flows. Every change here ships through `ship.sh open`, so the incident eye runs there:
+one REST call on the core bucket, at the one moment the answer changes a decision (don't stack a
+change on a broken `main`). Detection lag collapses to "the next time we ship" for zero recurring
+cost. Generalize it: **a monitor that needs its own schedule is usually a monitor attached to the
+wrong event.** Find the existing checkpoint first.
+
 A failure is also the cheapest map of an unguarded region: while standing in it, log the adjacent
 "what else is exposed this way?" threads to `docs/IDEAS.md` as side quests. That is the learning
 flywheel — each incident buys both a prevention and a set of leads.
