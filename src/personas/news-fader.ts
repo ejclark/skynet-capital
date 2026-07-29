@@ -1,6 +1,7 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { momentumOf, type Persona, sentimentOf, sharesForNotional } from "./persona.js";
+import { ConfiguredPersona } from "./configured-persona.js";
+import { momentumOf, sentimentOf, sharesForNotional } from "./persona.js";
 
 /**
  * Tunable knobs for the News Fader. Exposed as config (not hardcoded) so we can
@@ -33,15 +34,13 @@ const DEFAULT_NEWS_FADER_CONFIG: NewsFaderConfig = {
  *  - Strong negative news + a sharp drop in something we're flat on → buy the panic.
  * It never chases strength and never adds to a euphoric name.
  */
-export class NewsFaderPersona implements Persona {
+export class NewsFaderPersona extends ConfiguredPersona<NewsFaderConfig> {
   readonly id = "news-fader";
   readonly name = "The News Fader";
   readonly thesis = "The crowd over-reacts to headlines; fade the hype, buy the panic.";
 
-  private readonly config: NewsFaderConfig;
-
   constructor(config: NewsFaderConfig = DEFAULT_NEWS_FADER_CONFIG) {
-    this.config = config;
+    super(config);
   }
 
   decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {

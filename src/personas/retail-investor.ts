@@ -1,6 +1,7 @@
 import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
-import { momentumOf, type Persona, sentimentOf, sharesForNotional } from "./persona.js";
+import { ConfiguredPersona } from "./configured-persona.js";
+import { momentumOf, sentimentOf, sharesForNotional } from "./persona.js";
 
 /** Tunable knobs for the Retail Investor. Config, not hardcoded — same rationale as the others. */
 export interface RetailInvestorConfig {
@@ -27,15 +28,13 @@ const DEFAULT_RETAIL_INVESTOR_CONFIG: RetailInvestorConfig = {
  *  - Panic-sells anything it holds the moment the news turns ugly.
  * Buys high, sells low; the archetype the Fader is built to take the other side of.
  */
-export class RetailInvestorPersona implements Persona {
+export class RetailInvestorPersona extends ConfiguredPersona<RetailInvestorConfig> {
   readonly id = "retail-investor";
   readonly name = "The Retail Investor";
   readonly thesis = "Buys the hype, sells the fear — the crowd the News Fader trades against.";
 
-  private readonly config: RetailInvestorConfig;
-
   constructor(config: RetailInvestorConfig = DEFAULT_RETAIL_INVESTOR_CONFIG) {
-    this.config = config;
+    super(config);
   }
 
   decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
