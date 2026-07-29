@@ -9,6 +9,11 @@ RUN npm ci
 
 COPY . .
 
+# Build the Babylon scene bundle. This MUST come after `COPY . .` — it needs src/three/**, which
+# doesn't exist during the earlier `npm ci` layer. (Putting it in package.json's `prepare` broke the
+# image build for exactly that reason.)
+RUN npm run build:scene
+
 # Default port; hosting platforms that inject PORT override it via resolvePort().
 EXPOSE 8787
 
