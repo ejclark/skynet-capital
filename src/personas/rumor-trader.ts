@@ -1,7 +1,6 @@
-import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 import { ConfiguredPersona } from "./configured-persona.js";
-import { momentumOf, sentimentOf, sharesForNotional } from "./persona.js";
+import { sharesForNotional, signalsOf } from "./persona.js";
 
 /** Tunable knobs for the Rumor Trader. Config, not hardcoded — same rationale as the others. */
 export interface RumorTraderConfig {
@@ -45,9 +44,7 @@ export class RumorTraderPersona extends ConfiguredPersona<RumorTraderConfig> {
     const intents: OrderIntent[] = [];
 
     for (const symbol of Object.keys(context.quotes)) {
-      const sentiment = sentimentOf(context, symbol);
-      const momentum = momentumOf(context, symbol);
-      const held = heldQuantity(portfolio, symbol);
+      const { sentiment, momentum, held } = signalsOf(context, portfolio, symbol);
 
       if (held > 0 && sentiment >= this.config.newsSentiment) {
         intents.push({

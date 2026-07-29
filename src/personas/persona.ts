@@ -1,3 +1,4 @@
+import { heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 
 /**
@@ -35,4 +36,25 @@ export function sharesForNotional(notional: number, price: number): number {
     return 0;
   }
   return Math.floor(notional / price);
+}
+
+/** The three signals most personas react to per symbol: sentiment, momentum, and current holding. */
+export interface SymbolSignals {
+  readonly sentiment: number;
+  readonly momentum: number;
+  readonly held: number;
+}
+
+/** Gather sentiment, momentum, and current holding for a symbol in one call — the common inputs
+ * shared by every sentiment/momentum-driven persona's per-symbol loop. */
+export function signalsOf(
+  context: MarketContext,
+  portfolio: Portfolio,
+  symbol: string,
+): SymbolSignals {
+  return {
+    sentiment: sentimentOf(context, symbol),
+    momentum: momentumOf(context, symbol),
+    held: heldQuantity(portfolio, symbol),
+  };
 }
