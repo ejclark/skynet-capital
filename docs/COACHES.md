@@ -64,12 +64,21 @@ grow the roster of scripts as recurring costs surface. When a finite resource st
 
 ## Adopting a convention creates conformance debt — grandfather, then shrink
 
-Every new convention (a lint rule, EARS requirements, a design token, a naming standard) instantly
-makes the *existing* corpus non-conforming. Do **not** big-bang-rewrite history to conform — that's
-churn with no behavioral gain, the same make-work the budgets exist to avoid. Treat it like every gate
-here: **grandfather the existing violations, conform all NEW work, and let it ratchet forward as files
-are touched.** New requirement → EARS; new PR → the template's EARS criteria; an old spec conforms the
-next time someone edits it, not on a mass sweep. (This is why "adopt EARS" was ~5 files, not 80.)
+First separate the two kinds of convention, because they create very different debt:
+
+- **Retroactive-judging** (a lint rule, a design token, a naming standard) — instantly makes the
+  *existing* corpus non-conforming. Do **not** big-bang-rewrite history: **grandfather the existing
+  violations, conform all NEW work, ratchet the budget down as files are touched** — exactly how the
+  arch/clone/spec-gap gates already work. The debt is real but paid down incrementally, never in a
+  churn-heavy sweep.
+- **Forward-additive** (EARS — a *new artifact* you start producing: formal requirement statements) —
+  creates ~**no back-catalog debt**, because there was nothing of that kind before to be non-conforming.
+  You don't grandfather anything; you just start doing it on new work. Beware the category error of
+  "conforming" things the convention doesn't even govern — EARS judges *requirements*, not the existing
+  *specs* (verifications) or shipped plans, so those need no retrofit at all.
+
+"Adopt EARS" was ~5 files precisely because it's forward-additive — not because 80 files were
+grandfathered. Diagnose which kind you're adopting before you reach for a sweep.
 
 **Corollary — know who the convention is for.** EARS is a *developer* convention: it lives in
 dev-facing intake (the PR template, plans, the `/ears` drill). User-facing intake (the issue
