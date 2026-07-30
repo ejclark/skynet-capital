@@ -32,6 +32,20 @@ const SHOTS = [
   { tag: "hero", w: 1600, h: 1000, alpha: -1.15, beta: 1.18, radius: 175 },
   { tag: "silhouette", w: 1600, h: 1000, alpha: 0.72, beta: 1.3, radius: 230 },
   { tag: "crown-close", w: 1600, h: 1000, alpha: -0.6, beta: 1.12, radius: 95 },
+  // The Eye is the piece under active art direction, so it gets its own pose: framed on the
+  // aperture, close enough to judge chatoyancy and the iris parallax.
+  { tag: "eye", w: 1600, h: 1000, faceEye: true, beta: 1.5, radius: 30 },
+  // Same framing swung off-axis: the whole point of the rebuild is that the Eye holds up when
+  // you are NOT in front of it — parallax shifts the pupil, the chatoyant band travels.
+  {
+    tag: "eye-oblique",
+    w: 1600,
+    h: 1000,
+    faceEye: true,
+    alphaOffset: 0.75,
+    beta: 1.32,
+    radius: 34,
+  },
   { tag: "mobile", w: 430, h: 900, alpha: -1.15, beta: 1.18, radius: 210 },
 ];
 
@@ -59,12 +73,18 @@ async function main() {
       await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
 
       // Park the camera at a known pose so shots are comparable run to run.
-      await page.evaluate(({ alpha, beta, radius }) => {
+      await page.evaluate(({ alpha, beta, radius, faceEye, alphaOffset }) => {
         const cam = window.__towerCamera;
-        if (cam) {
+        if (!cam) return;
+        cam.beta = beta;
+        cam.radius = radius;
+        // faceEye poses are described relative to the Eye itself, so they stay correct as the tower's
+        // proportions change; the rest keep their absolute framing of the whole silhouette.
+        if (faceEye && window.__eye) {
+          cam.alpha = window.__eye.facingAlpha + (alphaOffset ?? 0);
+          cam.setTarget(cam.target.set(0, window.__eye.y, 0));
+        } else {
           cam.alpha = alpha;
-          cam.beta = beta;
-          cam.radius = radius;
         }
       }, s);
       // Let the eye shader, bloom and SSAO settle for a few frames.
