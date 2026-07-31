@@ -549,6 +549,47 @@ what makes it teachable — and it is the sharpest available framing for the arc
 _(src: Eric · while: firehosing — "it's possible that an antipattern 'drift' doesn't become a positive
 tradeoff until multiple antipatterns are applied in tandem")_
 
+**18. Hoist the harness to its own repository — harness-as-host, repos pulled in as payload.** The
+convergence point for #2 (fleet management / portability), #8 (battle of the wits) and #16 (swappable
+harnesses). Eric: elevate the "battle of the wits" engineering harness into **its own repo** with fully
+automated GitHub pipelines like `skynet-capital`, where **the harness pulls a repository into itself to
+perform work** — which is what lets multiple projects be developed in tandem.
+
+**The direction of coupling is the whole design decision, and Eric's instinct is right.**
+- **Harness-as-dependency** (each repo installs the harness, the conventional shape) is *precisely where
+  configuration drift comes from* — N repos on N versions, the exact concern from #2.
+- **Harness-as-host** (his proposal — the harness clones the target, runs coaches against it, opens PRs
+  back) makes **drift structurally impossible: there is only one instance to drift from.** Onboarding a
+  new repo becomes "point the harness at it" rather than a port. Improvements propagate to every project
+  at once instead of stranding in whichever copy got them — that is the compounding that makes "projects
+  in tandem" real.
+
+**What hoisting forces, and why the forcing is the point.** The harness is npm/TS-specific today
+(`arch-scan`, `dupe-scan`, biome, rstest). Hoisting demands a **capability descriptor** the target repo
+declares — how to typecheck, lint, test, build, ship. That is the same forcing function as #9
+(portability forces the boundary), #16 (the harness-template interface), and #12 (acceptance criteria as
+the autonomy interface): **three separate threads all resolve to "define the interface."** The Jurassic
+Park warning from #10 applies literally — lift with gaps and the destination environment fills them
+unpredictably, so the descriptor must be explicit rather than inferred.
+
+**Battle of the wits becomes native rather than aspirational.** With repos pulled into one host, running
+a fixed task suite against different harness *versions or configurations* is trivial and — critically —
+**methodologically sound**: same host, same target, one variable. That is exactly the controlled
+experiment #8 said was missing when comparing two unlike repos. Hoisting is what upgrades it from
+opinion to evidence.
+
+**Dogfooding is the first eval.** The harness should be its own first customer: if it cannot measurably
+improve its own repository, it has no business improving others. A clean, honest gate on the whole idea.
+
+**⚠ Governance boundary — Eric's call, do not self-authorize.** A harness with write access to N
+repositories is a **blast-radius multiplier** and needs cross-repo credentials: squarely the irreversible
+class in `CLAUDE.md`. Build the mechanism, keep the token grant, the app installation, and the scope
+decisions as **one clearly-documented credentialed step handed to Eric**. Worth designing narrow from the
+start: per-repo opt-in, least-privilege scopes, PRs only (never direct pushes to `main`), and an explicit
+allowlist rather than org-wide access.
+_(src: Eric · while: firehosing — "hoist the harness to its own repository… the engineering harness has
+the ability to pull a repository into the harness to perform work")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
