@@ -109,6 +109,35 @@ and associates not at all: flat sections, no cross-links, no impact/effort signa
 and nothing reads it back into a decision. The gap is the association + retrieval layer, not capture.
 _(src: Eric · while: asking whether we have a think-tank system — a full raw dump, routed here intact)_
 
+**5. Prescriptive instructions vs. "the general model beats the specialized one."** Eric's instinct is
+detailed, opinionated instructions; the article emphasizes generality. **These are different layers and
+don't actually conflict:** "general beats specialized" is a claim about the *model/agent* (don't build a
+narrow bespoke agent), not about the *context you hand it*. Prescriptive instructions don't specialize
+the model — they supply priors it cannot derive. General model + sharp context beats both a specialized
+model and a general model with vague context.
+- **The throughput argument, and it holds:** deep frontend knowledge → highly prescriptive instructions
+  → less thinking time → better DX → more delivered (better UX) → fewer tokens → more throughput. Same
+  compounding loop as `docs/COACHES.md` → _Resource cost is a fitness dimension_.
+- **Where prescription earns its keep:** (a) choices that are **arbitrary but must be consistent** —
+  the model can't derive them and guesses differently every session, so convention is pure win; (b)
+  **hard-won non-obvious knowledge** — this library breaks in this specific way. Skip prescribing what's
+  derivable from the codebase itself, or what the model already does well; that's context budget spent
+  for nothing.
+- **The caveat worth designing around: prose prescriptions rot,** and a stale confident instruction is
+  *worse* than none because it gets followed. Frontend ecosystem half-life is short. So the highest form
+  of Eric's frontend knowledge is **not prose opinions — it's scripts, gates, and templates** (ladder
+  rungs 3–4), which can't drift back the way prose can and cost ~nothing per run. Exactly the gold-tier
+  Renovate move again: don't write "check dependencies carefully," build the coverage that makes it
+  mechanical. A **frontend doctrine + gate set** is the concrete deliverable, and it's portable.
+- **Gap this exposes — nothing detects redundancy in our own working patterns.** The codification
+  ladder's rule of three (manual once → skill on the second → agent on the third) has **no detector**:
+  `dupe-scan`/`arch-scan` see repetition in *code*, nothing sees "Claude did this same manual dance
+  three sessions running." That's the optimization-opportunity sensor Eric is asking for, and it's the
+  missing input to the whole ladder. Candidate: mine session transcripts / git history for recurring
+  command+edit shapes and surface them as codification candidates.
+_(src: Eric · while: arguing prescriptive instructions against the article's generality claim —
+"if tasks are highly redundant, we should be looking for opportunities to optimize")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
