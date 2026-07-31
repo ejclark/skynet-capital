@@ -509,6 +509,46 @@ exactly the kind of claim a fixed task suite can settle.
 _(src: Eric · while: firehosing — "anti patterns may be a source/collection of patterns worth
 reassessing")_
 
+**17a. The anatomy of an anti-pattern — and the tandem hypothesis.** Eric's sharpening, and it turns
+#17 from a verdict table into a research program. _"Iterating through antipatterns to study/analyze the
+anatomy of what makes it an anti pattern seems worthwhile no matter what."_ Three yields plus one
+genuinely novel claim:
+- **The value is unconditional.** Whether or not a pattern flips, dissecting it yields **a source of
+  problems to avoid → scenarios to guard against → high-quality eval scenarios.** Every anti-pattern's
+  failure mode is a ready-made test: *does the system produce this, and does it detect it?* This fills
+  the missing-eval hole (#2) for the **third** time from a third direction — after #9 (harness metrics)
+  and #8 (the task suite). Eval keeps getting filled from every angle, which by the association-density
+  logic of #15 makes it one of the highest-ceiling items in the Foundry.
+- **A softened stance is itself a journal entry** — and specifically an **ADR**. "We decided X because
+  constraint Y moved" is exactly the ADR form (`docs/adr/`), which is the #16 journal doing its job:
+  recording not the new position but *the reasoning that moved it*.
+
+**The tandem hypothesis (Eric's, and it's the strongest claim in this thread):** _"an antipattern 'drift'
+doesn't become a positive tradeoff until multiple antipatterns are applied in tandem to cover gaps as a
+net positive."_ It holds, and the underlying mechanism generalizes it: **an anti-pattern is a practice
+whose characteristic failure mode is *unguarded*.** The "anti" is doing the work of "unguarded." Name the
+exposed gap, cover it, and the practice becomes legitimate technique. Worked pairs:
+- **Waterfall + rewrite-from-scratch.** Waterfall alone fails on late discovery of wrong requirements;
+  rewrite alone fails on lost accumulated bug fixes. But exhaustive upfront *acceptance criteria* are
+  precisely what preserve accumulated knowledge through a rewrite. **Each covers the other's fatal flaw**
+  — and together they are #12 + #17 already stated as one move.
+- **Duplication + reliable machine-wide refactoring.** Duplication's cost was maintenance across N sites;
+  guard that and you get duplication's *benefit* (no premature coupling — the `clamp`/NaN lesson) without
+  its cost.
+- **BDUF + throwaway prototyping.** BDUF fails because you don't know what you want; prototypes fail by
+  shipping as production. Prototype to *discover* the requirement, then specify it exhaustively. That is
+  the Prototyper→Builder handoff from the archetypes (#3).
+- **Gold plating + an aggressive Sweeper.** Over-building accumulates bloat only if nothing deletes;
+  pair it with reliable subtraction and over-building becomes cheap *search*.
+
+**And this is Eric's own signature move, generalized.** "Automerge everything" is an anti-pattern
+*unguarded* — reckless. Add the test systems, the gates, the ratchet and a rollback path, and it's
+gold-tier Renovate. Same shape as this repo's Coach gates enabling auto-merge-by-default. He has been
+applying compensating controls to anti-patterns his whole career; this names the general form, which is
+what makes it teachable — and it is the sharpest available framing for the archetype case (#3).
+_(src: Eric · while: firehosing — "it's possible that an antipattern 'drift' doesn't become a positive
+tradeoff until multiple antipatterns are applied in tandem")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
