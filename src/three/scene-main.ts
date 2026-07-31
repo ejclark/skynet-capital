@@ -37,23 +37,29 @@ export function start(canvas: HTMLCanvasElement): void {
   for (const mesh of tower.meshes) shadows.addShadowCaster(mesh);
   forge.intensity = params.forgeIntensity;
 
-  const eye = buildEye(scene, tower.crownY + 9, params);
+  const eye = buildEye(scene, tower.crownY + 15, params);
 
   // Bloom-adjacent glow for the emissive bits only; the pipeline's bloom handles the rest.
   const glow = new GlowLayer("glow", scene, { blurKernelSize: 44 });
-  glow.intensity = 0.85;
+  glow.intensity = 0.6;
 
   let t = 0;
   scene.onBeforeRenderObservable.add(() => {
     t += engine.getDeltaTime() / 1000;
     camera.alpha += 0.0014;
     eye.material.setFloat("iTime", t);
-    // The gaze sweeps, searching — never a static spotlight.
-    eye.gaze.rotation.y = Math.sin(t * 0.19) * 0.85;
-    eye.gaze.rotation.x = 0.16 + Math.sin(t * 0.11) * 0.06;
+    // The EYE sweeps, searching — never a static spotlight, and never locked onto the viewer. The
+    // pivot turns the eyeball itself behind its fixed stone aperture, so the pupil crosses the
+    // opening and the beam leaves from wherever it is pointing. Two incommensurate frequencies keep
+    // the scan from reading as a metronome.
+    eye.pivot.rotation.y = Math.sin(t * 0.19) * 0.44 + Math.sin(t * 0.071) * 0.16;
+    eye.pivot.rotation.x = 0.05 + Math.sin(t * 0.11) * 0.05;
+    // A slower, wider sweep for the beam on top of the eye's own aim, so the light rakes the land.
+    eye.gaze.rotation.y = Math.sin(t * 0.13) * 0.3;
+    eye.gaze.rotation.x = 0.12 + Math.sin(t * 0.09) * 0.05;
     // Breathing intensity so the Eye feels alive rather than a lamp.
     const pulse = 0.9 + Math.sin(t * 1.7) * 0.08 + Math.sin(t * 0.53) * 0.05;
-    eye.light.intensity = params.eyeIntensity * 1.8 * pulse;
+    eye.light.intensity = params.eyeIntensity * 1.15 * pulse;
     forge.intensity = params.forgeIntensity * (0.92 + Math.sin(t * 0.9) * 0.1);
   });
 
@@ -65,6 +71,9 @@ export function start(canvas: HTMLCanvasElement): void {
   // The harness pauses the loop before capturing — a continuously-rendering canvas never
   // reaches the 'stable' state screenshot tooling waits for.
   window.__towerPause = () => engine.stopRenderLoop();
+  // Where the Eye is, and which way it faces. The harness needs both to frame the aperture head-on;
+  // hard-coding them there would silently drift the moment the tower's proportions change.
+  window.__eye = { y: eye.root.position.y, facingAlpha: Math.PI / 2 };
   scene.executeWhenReady(() => {
     window.__ready = true;
   });
@@ -79,6 +88,8 @@ declare global {
     __towerCamera?: { alpha: number; beta: number; radius: number };
     /** Stops the render loop so a screenshot can settle. */
     __towerPause?: () => void;
+    /** The Eye's height and the camera alpha that looks straight into its aperture. */
+    __eye?: { y: number; facingAlpha: number };
   }
 }
 
