@@ -343,6 +343,26 @@ cheap; *leaving and returning* is where context is lost — both the main task's
 own thread. So the mode needs an explicit resume anchor (what were we doing before) and a defined trigger
 for breaking out, either back to the main task or into picking work up from the log.
 
+**(a2) The exit signal is the background refinement pass completing — Eric's addition, and it beats the
+alternatives.** Refinement runs **off the main thread** (delegated to a sub-agent, i.e. off the
+constraint), and _"the refinement could finish in the background, at which point a judgement call to
+pivot could be made."_ Why this is the right trigger rather than a timebox or a saturation check:
+- A timebox interrupts **arbitrarily**; saturation-checking requires **self-monitoring mid-flow**, which
+  is itself the expensive evaluation we're trying to avoid. A completed refinement pass instead **arrives
+  carrying exactly the information the pivot decision needs** — ceilings assessed, associations computed,
+  candidates ranked. Maximum information at the moment of interrupt.
+- It is `docs/COACHES.md`'s own doctrine applied to attention: **"put the watcher on a path you already
+  walk — never add a poller."** Don't schedule a check that *asks* whether to stop; hang the signal on
+  work that was already going to finish. Same shape as the incident eye riding `ship.sh`.
+- It is a **non-blocking** interrupt — the pivot becomes *available*, not demanded, which satisfies the
+  obligation rule in `VOICE.md`. Firehose can simply continue if the hand isn't compelling.
+- **Refinement latency is therefore a feature, like response latency** (#11): a ten-minute pass is fine
+  because it runs while he dumps. And the agent is a **non-constraint resource** — running it in parallel
+  costs the constraint nothing, spending it only on the small, well-informed judgment at the end. Textbook
+  subordinate-everything-to-the-constraint.
+- **Output format matters: deliver a ranked hand, not a report.** The pass's completion payload should
+  *be* the quest offer (#10) so the judgment call is a glance, not a reading assignment.
+
 **(b) Ceiling-sensing — "the ability to quickly sense upper limit/capability on ideas is a required
 intuition."** These ideas "could also be groundbreaking," so the payoff is asymmetric: **dropping one
 groundbreaking idea costs far more than over-exploring ten mediocre ones.** Design consequences:
