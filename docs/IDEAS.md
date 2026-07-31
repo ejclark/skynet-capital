@@ -452,6 +452,63 @@ and battle plans visualized. Two strong docks:
 _(src: Eric · while: firehosing themes — "harness-template generator… this would be a killer feature to
 develop evals on the fly")_
 
+**16. The journal — and Eric is right that it's a system-level word like DNA.** A daily journal/diary
+that captures context, builds rapport, and becomes the **data source for stories worth telling** — "a
+chronological bridge to retroactively store context." He then self-corrects: _"perhaps I am simply
+describing our backlog as a journal. If so, the journal is a system level word like DNA."_ Applying the
+#9 rubric to his own idea — and it passes, hard:
+- **Surplus structure, unusually deep.** *Journal* carries at least three battle-tested traditions:
+  the **diary** (chronology, voice changing over time, re-reading, marginalia), **double-entry
+  bookkeeping** (journal → ledger, auditability), and **computing's write-ahead log** (event sourcing,
+  journaling filesystems, crash recovery). Each solved durability and reconstruction under real pressure.
+- **Its sharpest prediction, and it's checkable:** event sourcing says *current state must be derivable
+  from the log — if it isn't, you have hidden state.* Ask that of this repo and the gap appears
+  immediately (below).
+- **Its known breaking point:** journals don't compress. Infinite append is unusable without indexing
+  and summarization — which is precisely why the association layer (#5) and the refinement pass (#15)
+  are its necessary companions, not optional polish.
+
+**The resolution to "am I just describing the backlog?" — no, and the difference is the useful part.**
+**A backlog is forward-looking and mutable** (reorder, edit, delete). **A journal is backward-looking and
+immutable** (append-only; you never rewrite yesterday, you append a correction). `IDEAS.md` currently
+tries to be both — a mutable Inbox *and* an append-only Shipped list — which is why it feels muddled.
+They are two structures and the repo needs both; #15's maturity states are the **pipeline between them**.
+
+**The real gap this names: nothing journals the _reasoning_.** Git journals the code, `docs/adr/`
+journals decisions, `LESSONS.md` journals incidents (already literally called a *ledger*),
+`data/duel-log.jsonl` journals raw intent via the `UserPromptSubmit` hook — a proto-journal already
+running. But the *why*, the path, the discarded branch of thinking is nowhere. **This session is the
+proof:** sixteen-plus ideas emerged from a conversation, and if it ended now only the outcomes would
+survive — the derivation would be gone. That derivation is exactly the "stories worth telling" material,
+and the source for presentations, the ADR main storyline (#16), and the lore layer.
+_(src: Eric · while: firehosing — "a daily journal is a chronological bridge to retroactively store
+context")_
+
+**17. Anti-patterns as a reassessment corpus — the generalization of #12.** Eric: anti-patterns are
+well-known and most probably still apply, _"but it feels like the goalpost has significantly moved on
+certain properties where AP's may be a source/collection of patterns worth reassessing."_ Waterfall (#12)
+was the first instance; this is the general method, and it's a rich vein because **an anti-pattern is a
+cost/benefit judgment frozen into a rule.** Each encodes an economic assumption from its era; when the
+economics shift, the rule outlives its justification but keeps its authority.
+
+**The discriminator that makes this systematic rather than contrarian:** _an anti-pattern flips when its
+cost was borne by **human labor that is now cheap**; it survives — or worsens — when its cost is borne by
+**human attention**, which is still the constraint._
+
+| Anti-pattern | Cost it was pricing | Verdict |
+|---|---|---|
+| **Waterfall / BDUF** | Late discovery of wrong requirements | **Partially flips** — waterfall the *definition of done*, not the design (#12) |
+| **Rewrite from scratch** | Years of work + loss of accumulated bug fixes | **Flips hardest** — if a rewrite takes days *and* the test suite encodes the accumulated fixes, Spolsky's objection largely dissolves. Tests are the knowledge |
+| **Copy-paste / DRY violation** | Maintenance across N sites | **Softens** — and this repo already paid for it: `LESSONS.md` records a consolidation that *dropped a NaN guard*. Premature abstraction's cost didn't fall; duplication's did |
+| **Not Invented Here** | Labor to rebuild what exists | **Flips for small utilities** — cheap to build, while dependencies still carry supply-chain and drift cost (Eric's Renovate domain) |
+| **Speculative generality / YAGNI** | Building for a future that didn't arrive | **Weakens but holds** — building got cheap; *carrying* it (context budget, maintenance) did not |
+| **Gold plating** | Over-building beyond requirements | **Survives, possibly worsens** — the cost is review attention, and cheap generation produces more to review |
+| **Cargo cult programming** | Copying without understanding | **Worsens** — the failure mode is comprehension, which nothing made cheaper |
+Presentation-worthy alongside #12, and **testable via #9's harness**: reassessed anti-patterns are
+exactly the kind of claim a fixed task suite can settle.
+_(src: Eric · while: firehosing — "anti patterns may be a source/collection of patterns worth
+reassessing")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
