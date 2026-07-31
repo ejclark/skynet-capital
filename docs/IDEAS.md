@@ -335,6 +335,48 @@ are gamers). Two notes:
 _(src: Eric · while: naming the one-shot pursuit — "leroy-jenkins feels like a clever name for gamers
 (most engineers)")_
 
+**14. Firehose is its own flow — exit criteria, ceiling-sensing, and idea maturity states.** Three linked
+pieces from one dump:
+
+**(a) Firehose has context that must be retained, and needs an exit criterion.** Entering the flow is
+cheap; *leaving and returning* is where context is lost — both the main task's context and the firehose's
+own thread. So the mode needs an explicit resume anchor (what were we doing before) and a defined trigger
+for breaking out, either back to the main task or into picking work up from the log.
+
+**(b) Ceiling-sensing — "the ability to quickly sense upper limit/capability on ideas is a required
+intuition."** These ideas "could also be groundbreaking," so the payoff is asymmetric: **dropping one
+groundbreaking idea costs far more than over-exploring ten mediocre ones.** Design consequences:
+- **Do not evaluate ceilings mid-flow.** Evaluation is expensive and is exactly the *obligation* that
+  breaks flow (see VOICE.md). Capture is cheap; assessment belongs in the batch refinement pass. The
+  mid-flow exit trigger should use only **cheap** signals — saturation (ideas starting to repeat), a
+  timebox, or an external commitment — never "is this one good enough?"
+- **Ceiling predictors, for the refinement pass:** does it **elevate the binding constraint** or optimize
+  a non-constraint (ToC — the latter has ~zero ceiling no matter how elegant); does it **multiply other
+  work** or terminate; does it **generalize/port** beyond this repo; does it have **surplus structure**
+  (#9) that keeps generating; is it **measurable** (an unmeasurable ceiling is unknown, not high).
+- **The computable proxy, and it's the payoff of the whole think tank: association density.** An idea
+  that docks onto many others is structurally load-bearing. The association layer isn't only for
+  retrieval — **it *is* the ceiling sensor**, which is exactly the "new systems emerge from associations"
+  prediction from #4 coming true. Cross-reference count is a rankable signal available for free once the
+  graph exists.
+
+**(c) Maturity states, and they mirror the codification ladder.** `docs/COACHES.md` already has the
+shape — work descends a ladder as its contract gets written. Ideas want the same: **raw** (captured,
+unassessed) → **refined** (clarified, ceiling-assessed, cross-linked) → **specified** (acceptance
+criteria written) → **queued** (in the backlog, territory assigned) → **in flight** (agent burning down)
+→ **shipped**.
+- **"Specified" is the autonomy boundary**, and #12 says why: an idea becomes handoff-ready *precisely
+  when its acceptance criteria exist*. The waterfall thesis defines the state transition that makes
+  scaled sub-agent handoff safe — the two ideas are one mechanism. `/ears` is the promotion gate.
+- **This resolves the `IDEAS.md` / `BACKLOG.md` split** flagged at the start: they aren't two files,
+  they're two **states** of one pipeline. The "strong associations to the backlog to funnel stuff into
+  the queue" Eric wants is just the raw→queued transition made explicit rather than two disconnected
+  documents.
+- Queue organization and parallel burn-down is the existing governor + athlete roster; it's gated on
+  coordination (#7), not on more agents.
+_(src: Eric · while: firehosing — "the ability to quickly sense upper limit/ceiling capability on ideas
+is a required intuition we need developed")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
