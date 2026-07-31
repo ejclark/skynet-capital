@@ -377,6 +377,61 @@ criteria written) → **queued** (in the backlog, territory assigned) → **in f
 _(src: Eric · while: firehosing — "the ability to quickly sense upper limit/ceiling capability on ideas
 is a required intuition we need developed")_
 
+**15. Swappable harnesses + a harness-template generator — #9 turned from a catalog into an engine.**
+The biggest structural idea yet. A **harness** is a complete metaphorical nomenclature the system runs
+under, changeable as a **setting**: dungeon crawler · coach/team (the current one) · orchestra ·
+CEO/corporate · startup · three branches of government. Eric's reasoning — _"specialties have nuanced
+specialized skillsets that are hyper effective; those skillsets rise to the occasion and is a good way to
+generate ideas."_
+
+**Why it actually works (the mechanism, per the #9 rubric).** Each domain evolved specialized tooling for
+*its own* characteristic failure mode, so swapping harnesses **imports a different problem-solving
+toolkit** — not a coat of paint:
+| Harness | The problem its domain solved | Native question it asks first |
+|---|---|---|
+| Orchestra | **Synchronization** (conductor, shared score, rehearsal) | "who's out of time — is anyone not reading the same score?" |
+| Coach/team | Performance improvement via drills + measurement | "who's underperforming, and which drill fixes it?" |
+| Dungeon crawl | **Exploration under incomplete info with real risk** (mapping, scouting, resources, save points) | "what's the route, what kills us, what do we need before the boss?" |
+| CEO/corporate | **Accountability at scale** (org chart, ownership, RACI) | "who owns this, and what's the return?" |
+| Startup | **Decisions under uncertainty** (MVP, runway, pivot) | "what's the cheapest test, and how long can we fund it?" |
+| 3 branches | **Legitimacy and non-capture** | "who can veto this, and was it legitimate?" |
+**So the swap rule is: adopt the harness whose native domain already solved the problem you currently
+have.** Synchronization trouble → orchestra. Ownership ambiguity → corporate. Unknown territory with
+downside risk → dungeon crawl. That is what "rises to the occasion" means, made operational.
+
+**Why "killer feature for evals on the fly" is correct.** Battle-tested domains come with battle-tested
+**success criteria**: an orchestra scores together/in-tune/on-tempo; a raid scores one-shot vs. wipe
+count; a corporation scores the number; a team has a scoreboard. Adopting a harness therefore yields a
+**scoring rubric for free** — the metaphor *generates* the eval. This is the missing-eval hole (#2) filled
+from a second direction, and it composes with #8: different harnesses are different scoreboards over the
+same work, i.e. multi-lens verification.
+
+**The two design constraints that keep it honest:**
+1. **The mechanics must be invariant.** A harness is a **presentation + question-set layer over an
+   unchanged core** — gates, ratchets, acceptance criteria, and what is *true* never move. Same rule as
+   `CLAUDE.md`'s "lore is a flavor layer on accurate mechanics," and the risk is **metaphor capture**
+   (#9) multiplied by N: six harnesses is six ways to produce plausible-but-wrong architecture.
+2. **The template generator is what makes N affordable.** Eric: _"this effectively requires all paradigms
+   developing in tandem at once… more heavy up front but feels super powerful."_ Correct — without a
+   template, N harnesses is N× maintenance and guaranteed drift. The generator defines the **harness
+   interface** (roles, work units, quality gates, failure modes, success criteria, progression tiers) so
+   a new theme is a filled-in form rather than a rewrite. Building the interface is also what proves the
+   core is genuinely theme-independent.
+
+**Dungeon-crawler specifics (the first theme to build):** a route plan through the dungeon; bosses to
+beat; **diagrams mapping the layout**, with key boss-fight stages, choreography/orchestration, sequencing
+and battle plans visualized. Two strong docks:
+- **"Ties back into the main storyline (ADRs)"** — sharp, and literal: `docs/adr/` (9 entries) is the
+  persistent record of decisions made. **Cleared rooms are ADRs**; the dungeon layout is the accumulated
+  path of decisions; the main storyline is the architecture's history. The map is a *view* of the ADR log,
+  not a new artifact to maintain.
+- It **is** the zoomable interactive systems diagram from the original dump (#2, item 8) — "highly
+  visual, pleasing, zoom in to granular detail and out to higher-altitude systems." First message meets
+  fifteenth: the dungeon map is that diagram wearing a theme, and boss-fight choreography is the
+  zoomed-in detail level.
+_(src: Eric · while: firehosing themes — "harness-template generator… this would be a killer feature to
+develop evals on the fly")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
