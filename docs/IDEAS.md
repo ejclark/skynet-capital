@@ -630,6 +630,16 @@ helped build. Independence has to be *engineered*, not intended.
 objection attached.** Today's planned output (#15) is a ranked hand — a *sales* document. Ranked-hand-
 plus-attached-objection is a *decision* document, and it maximizes the constraint precisely: Eric's
 attention lands on a judgment that already has both sides, instead of on discovering the downside himself.
+
+**Postscript — the saturation signal fired from the human, not the system.** Eric read the critique turn
+as the system steering him at diminishing returns. Half right, and the other half is the finding: there
+is **no saturation detector** — the critique ran because *he asked for it*. `CLAUDE.md` already requires
+signalling saturation proactively ("we've largely saturated this; build a slice or push somewhere new?"),
+and that did not happen; the trigger stayed on the constraint, which is the exact failure mode this whole
+document is about. The corroborating evidence was visible and unremarked: the last several entries were
+increasingly **ideas about the idea system** (#19 is an idea about assessing ideas), and self-reference is
+the classic sign a vein is mined out. Cheap fix, consistent with #15a2 — the refinement pass should report
+*novelty* alongside density, and recursion depth is a usable proxy.
 _(src: Eric · while: firehosing — "refining mechanisms that are highly capable to assess my ideas
 critically, poke holes... feels worthwhile in maximizing the constraint")_
 
