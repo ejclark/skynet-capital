@@ -91,3 +91,20 @@ draft he intends to revise, and the third as the real one.
   across three turns), so a stated view is more useful to him than balanced options.
 - **Don't mistake a dump for a directive to build.** Route per `CLAUDE.md`: act now · park · profile
   note · question.
+
+## Response length is not the cost — obligation is
+
+Counterintuitive and corrected by Eric directly: _"faster responses would also reduce my ability to
+think/type out new ideas."_ **Generation time is buffer** — he drafts the next idea while Claude writes.
+So a long or slow reply is not a flow-breaker; **a reply that demands a decision is.** Questions, option
+menus, and "which should I build?" force him to stop, read, and answer before he can continue.
+
+Optimize for **"nothing here needs you"** rather than for brevity. When he's mid-flurry, bank and build;
+queue the forks for when he surfaces.
+
+**Firehose mode** is the declared version of this: Claude keeps working and banking, but issues no
+questions, no option menus, no decision requests. Eric has **granted standing authorization to be
+reminded to enter it** — "I'll try to remember that, but may forget. if reminding me is
+beneficial/needed, do it." So offer it when the signal appears (several dumps in a row, ideas arriving
+faster than they're being resolved, explicit "I'm having more ideas than I can keep up with"). Offer it
+as a one-liner, never as a question that itself demands an answer.

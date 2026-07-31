@@ -271,12 +271,16 @@ decision choices and even suggest priority based on the possible impact").
   wrapper"). Likely lands as a `/quests` skill.
 _(src: Eric · while: thinking about branding — "side quest generator, choose your own adventure")_
 
-**11. Flow-state capture — the bottleneck is the round trip, not the writing.** Eric is having ideas
-faster than they can be banked. Root cause: capture currently costs a **context switch** — he dumps,
-Claude writes, Claude replies at length, he reads. The reply is the flow-breaker. Fixes, cheapest first:
-- **Firehose mode** — a declared stretch where Claude banks silently: one-line acknowledgment, no
-  synthesis, no questions, no options. Synthesis happens later on request. Analysis is not free; it costs
-  the constraint's attention at the exact moment attention is most productive elsewhere.
+**11. Flow-state capture — the cost is *obligation*, not length or latency.** Eric is having ideas
+faster than they can be banked. First diagnosis (Claude's) was that long replies break flow — **Eric
+corrected it:** _"faster responses would also reduce my ability to think/type out new ideas."_ Generation
+time is **buffer** — he drafts the next idea while Claude writes. So latency is a *feature*, and the real
+tax is a response that **demands a decision**: questions, option menus, anything that must be read and
+answered before he can continue. Optimize for _"nothing here needs you,"_ not for brevity or speed.
+- **Firehose mode** — a declared stretch where Claude keeps working and banking but issues **no
+  questions, no option menus, no decision requests**. Length is fine; obligation is not. Synthesis and
+  forks queue up for when he surfaces. _Eric has standing authorization to be **reminded** to enter it —
+  "I'll try to remember that, but may forget. if reminding me is beneficial/needed, do it."_
 - **Capture without a round trip** — voice memo / phone notes / an append-only scratch file Claude
   ingests in batch. The lowest-friction capture is the one that doesn't need Claude present at all.
 - **Batch refinement as a subagent job** — refine the whole file periodically instead of each idea on
@@ -309,6 +313,27 @@ but for humans the goal has moved toward **one-shotting bosses**.
   instead of an opinion — a strong spine for the presentation.
 _(src: Eric · while: asking how to stay in flow — "we should investigate if this is a moving goalpost…
 it feels presentation worthy")_
+
+**13. Raid vocabulary for the one-shot thesis — and "Leroy Jenkins" as the *anti*-pattern.** Eric wants
+to name the one-shot-boss pursuit and floated **Leroy Jenkins** as gamer-native branding (most engineers
+are gamers). Two notes:
+- **Used straight it inverts the meaning.** The meme is the player who charges in *while the raid is
+  still planning* and wipes the group — the famous audio is three minutes of meticulous prep that Leroy
+  detonates. One-shotting via exhaustive upfront acceptance criteria is his exact opposite. So Leroy is
+  the perfect name for the **named failure mode**: the agent that charges off without the acceptance
+  criteria. Every quest system wants a named anti-pattern; this is a great one, and gamers will get it
+  instantly.
+- **The stronger find: raiding is a genuine skeleton metaphor** (passes the #9 rubric with surplus to
+  spare) because it is *literally a domain that solved "how do you one-shot a boss."* Its answer is
+  Eric's two-loop thesis already proven in the wild: **unlimited cheap practice pulls** (machine
+  iterations) + **exhaustive prep and assigned roles** (upfront acceptance criteria) → **the one-shot**
+  (the expensive human-facing execution). Native vocabulary that maps without forcing: **one-shot** (real
+  raiding term — clearing on the first attempt), **prog** (progression: iterating on a boss you haven't
+  beaten), **wipe** (failed attempt, cheap, expected), **pull**, **raid prep / consumables**, **roles**
+  (tank/healer/DPS — pairs with the persona lenses, #6), **world first**. Boss fights are already the
+  quest-tier name in #10, so the vocabulary is half-adopted.
+_(src: Eric · while: naming the one-shot pursuit — "leroy-jenkins feels like a clever name for gamers
+(most engineers)")_
 
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
