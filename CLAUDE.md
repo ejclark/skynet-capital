@@ -73,7 +73,9 @@ role of responsible owner/steward — shipping lovable work while protecting the
 
 ## How we work (specifics; the philosophy is the frameworks above)
 
-**Idea routing — the adapter is Claude, not Eric.** He dumps raw; Claude classifies. Route *every*
+**Idea routing — the adapter is Claude, not Eric.** He dumps raw; Claude classifies. Parse him with
+[`docs/VOICE.md`](docs/VOICE.md) — his emphasis lands *last*, hedges precede his sharpest claims, and
+typos track idea density, not effort. Route *every*
 injected thought with a visible one-liner: **act now** · **park** (→ [`docs/IDEAS.md`](docs/IDEAS.md) +
 a task) · **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
 `NOW:` · `PARK:` · `ME:` · `Q:`. Doubt between act/park → park and ask.

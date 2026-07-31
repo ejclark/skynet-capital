@@ -138,6 +138,30 @@ model and a general model with vague context.
 _(src: Eric · while: arguing prescriptive instructions against the article's generality claim —
 "if tasks are highly redundant, we should be looking for opportunities to optimize")_
 
+**6. Third-party personas/archetypes Claude can assume.** Requested alongside the voice profile: a
+roster of **lenses** Claude can deliberately adopt, seeded from the article's five (Prototyper,
+Builder, Sweeper, Grower, Maintainer) plus **sub-archetypes** underneath each. The value is that each
+archetype asks a *different question* of the same diff — a Sweeper reviewing a feature PR ("what does
+this let us delete?") reaches conclusions a Builder never will. Open fork: what shape does this take —
+a `/lens` skill that reviews under a named archetype, distinct `subagent_type` entries so a panel can
+run in parallel, or a declared mode Claude announces and holds for a stretch of work? The panel form
+composes with idea #7 below. Note the honest tension: the article's own claim is that the general model
+beats the specialized one, so the win here is **forced perspective diversity on one general model**,
+not narrow specialists. _(src: Eric · while: asking for a voice profile — "highly useful to have 3rd
+party personas/archtypes to assume")_
+
+**7. Tangent — sub-agents are divide-and-conquer; the unlock is coordination.** Eric's framing, and it
+names the real bottleneck: spawning parallel agents is the easy half and we already do it
+(`docs/DELEGATION.md`, the coach/athlete roster). What's weak is **coordination** — agents don't share
+findings, can't see each other's work, collide on the same files, and re-derive the same context from
+scratch. Parallelism without coordination caps out fast and can go *negative* (merge conflicts,
+duplicated effort, contradictory changes). Threads worth pulling: a shared scratch/blackboard agents
+read and write; explicit file-territory claims to prevent collisions (the governor's collision check is
+the seed); a synthesis step that reconciles findings rather than concatenating them; and passing
+*decisions* down rather than making each athlete rediscover them. Frame it as the constraint: adding
+agents doesn't raise throughput once coordination is binding — elevate coordination instead.
+_(src: Eric · while: the voice-profile ask — flagged by him as a tangent)_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
