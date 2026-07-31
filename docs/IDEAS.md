@@ -190,6 +190,63 @@ proposed the mechanism for it.
   engine as the product's own leaderboard — the operating model getting the treatment the product gets.
 _(src: Eric · while: "food for thought" — riffing on portability from the fleet-management thread)_
 
+**9. Load-bearing metaphors — a catalog, and a rubric for *why* they hold.** Eric: certain words/things
+"provide abstract structures that are useful to model… these are key components that carry the weight of
+the architecture," and we should be **hyper-sensitive to detecting and detailing why they're effective**.
+The *why* is the whole idea — a list of nice analogies is decoration; a rubric is a tool.
+
+**The distinction this exposes, which `CLAUDE.md` doesn't yet draw.** There are two classes of metaphor
+here and only one is documented:
+- **Skin** (aesthetic/lore) — the Eye of Sauron, tractor beams, the telestrator. Flavor on accurate
+  mechanics; buys engagement and memorability. This is what CLAUDE.md's "cinematic metaphors" line covers.
+- **Skeleton** (structural/generative) — these *generate mechanics*, not looks, and they answer questions
+  their author never anticipated. Already everywhere in this repo, unnamed as a class: the **coaching
+  staff** (defense/offense/special teams, head coach, athletes, drills), **atomic design**
+  (atoms/molecules/organisms), the **ratchet**, **Theory of Constraints**, **the Three Ways**,
+  **commander's intent** (Jocko), nets/eyes/funnels. The doctrine that made this repo work is almost
+  entirely borrowed skeletons.
+
+**Rubric — what predicts a metaphor carries architectural weight:**
+1. **Surplus structure.** The source domain has more detail than you've spent, so it keeps answering.
+   DNA offers replication, expression, mutation, recombination, junk regions. "The codebase is a garden"
+   answers once and stops.
+2. **The source solved a real constraint under pressure.** Importing a battle-tested structure imports
+   its proof. This is why borrowed beats invented.
+3. **Isomorphism of *relations*, not nouns.** The mapping must preserve how parts interact. Failure mode:
+   only the vocabulary transfers.
+4. **It makes falsifiable, non-obvious predictions.** ToC predicts "optimizing a non-constraint is waste"
+   — checkable, and counterintuitive. A decorative metaphor predicts nothing.
+5. **Its breaking point is nameable.** Knowing where the analogy stops is what keeps it honest.
+   Anti-pattern: **metaphor capture** — driving decisions past the isomorphic region. More dangerous for
+   skeletons than skins, because a wrong skeleton still produces *plausible* architecture.
+
+**DNA (Eric's first example) — the richest unexploited vein.** *Genotype → phenotype* is the mapping:
+a compact spec that **expresses** into a large artifact conditioned on environment — i.e. `CLAUDE.md` is
+genome, each session's behavior is phenotype, and the same genome expresses differently per repo.
+Immediate yields: **configuration drift is mutation** (fleet management = genomic integrity across a
+population, idea #2); **junk regions** are dead code and unread docs (the mortician already patrols);
+**recombination** is the merge-back step of battle-of-the-wits (#8). And the Jurassic Park detail is a
+*warning*, not a flourish: they reconstructed from a **partial** genome and the **gap-filler determined
+the organism**. Porting a system with gaps means the destination environment silently fills them — the
+sharpest argument yet for making the operating model's boundary explicit before lifting it.
+
+**Three branches / checks and balances (his second, and the punchline: "the orchestration layer as a
+team/nation").** The real mechanism is *separated powers with mutual veto* — no single actor completes a
+consequential action alone. Mapped: Claude **proposes** (executive), gates + CI **ratify** (legislative),
+`/retro` + `LESSONS.md` **judge** whether an action conformed to doctrine (judicial), and Eric's
+irreversible class is a **constitutional limit** rather than an office. Two findings the lens produces
+that we didn't have:
+- **The judiciary is our weakest branch.** It only convenes *after* an incident. Nothing asks
+  prospectively "is this action legitimate under our own doctrine?"
+- **There is no amendment process, and doctrine changes are currently *easier* than code changes.** Code
+  passes gates, review, CI; `CLAUDE.md` takes a plain edit. A constitution makes self-modification
+  deliberately *harder* than ordinary action. That inversion is a real structural bug, and the metaphor
+  is what surfaced it — which is itself the argument for the whole idea.
+- Note it also **is** the coordination substrate from tangent #7: checks and balances is precisely a
+  protocol for many actors acting without collision or capture.
+_(src: Eric · while: proposing a system for abstract structures worth modeling — "hyper sensitive to
+detecting and detailing why these are effective")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
