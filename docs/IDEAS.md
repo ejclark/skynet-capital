@@ -643,6 +643,47 @@ the classic sign a vein is mined out. Cheap fix, consistent with #15a2 — the r
 _(src: Eric · while: firehosing — "refining mechanisms that are highly capable to assess my ideas
 critically, poke holes... feels worthwhile in maximizing the constraint")_
 
+**20. The one-shot — a self-replicating bootstrap for the whole system.** A skill (or equivalent) that is
+a **living document able to replicate the complicated system/configuration setup we've built**:
+`CLAUDE.md`, `.claude/` skills and agents, `settings.json` hooks, the gate scripts, the CI workflows, the
+doc spine. Run it once against a fresh repo and get the operating model.
+
+**Why it's the highest-value *verifiable* item in the Foundry.** Portability is claimed in three places —
+#2 (lift-and-shift), #9 (portability **is** comparability), #18 (hoist the harness) — and **none of them
+can be checked today.** A one-shot that executes into an empty repo and yields a working system is the
+**proof** that the model is portable rather than merely described as portable. It is also the cheapest of
+the big items, and a strong portfolio artifact for the archetype case (#3): "a system that replicates
+itself" is an automation engineer's calling card.
+
+**The design fork that decides whether it rots:**
+- **Generated (recommended)** — a script reads the live repo and *emits* the bootstrap, so it cannot drift
+  from what it describes.
+- **Prescriptive** — the document is the source of truth and the repo is generated from it. Zero drift by
+  construction, but a large up-front inversion.
+- Either way, **the real deliverable is not the document — it's the CI job that runs it into a scratch
+  repo and asserts the result.** The DNA test from #10 stated exactly: *can the genome express into a
+  working phenotype?* And the Jurassic Park warning applies literally — a partial genome plus
+  environmental gap-filling yields something you did not intend. **An untested bootstrap is worse than
+  none**, because it carries false confidence. Same shape as gold-tier Renovate for the third time: the
+  automation isn't the rule, it's the verification that makes the rule safe.
+
+**⚠ Objections (attached per #19):**
+1. **It partially overlaps #18 and they may be substitutes, not complements.** If the harness is hoisted
+   as *host*, you point it at a repo instead of installing anything — and the replicator becomes
+   redundant for everything the harness carries. Building both without deciding the boundary is
+   duplicated machinery. Probable split: the **one-shot bootstraps what must live in-repo** (CLAUDE.md,
+   hooks, settings, the doc spine); the **host supplies gates and agents** from outside. That boundary
+   needs deciding *before* either is built.
+2. **Essential vs. accidental is unsolved.** Much of this repo's config is skynet-specific (Fly deploy,
+   brand tokens, the login canvas). A one-shot that copies everything ports the accidents. This is the
+   **fourth** independent thread now demanding the same capability descriptor / interface work (#9, #16,
+   #18, #20) — which is strong evidence that the interface, not any of the four, is the actual next build.
+3. **"Living" is the weakest word in the idea.** Living means maintained, and nothing here is maintained
+   automatically today. Unless it is generated *and* CI-verified, it rots within weeks and becomes a
+   README that no longer works.
+_(src: Eric · while: firehosing — "a living document that has the capability to easily replicate the
+complicated system/configuration setup we've built")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
