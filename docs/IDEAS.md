@@ -162,6 +162,34 @@ the seed); a synthesis step that reconciles findings rather than concatenating t
 agents doesn't raise throughput once coordination is binding — elevate coordination instead.
 _(src: Eric · while: the voice-profile ask — flagged by him as a tangent)_
 
+**8. Battle of the wits — portability makes systems comparable, comparison makes them improvable.**
+Eric's chain: _if we can port systems, we can compare them → a competition between ecosystems → process
+gaps surfaced as enhancements._ The load-bearing insight is that **portability and comparability are the
+same property**. Lifting a system out of a repo forces you to define its boundary — what's the operating
+model vs. what's the project — and a defined boundary is exactly the interface that lets you *substitute*
+one system for another against the same workload. Portability forces the interface; the interface enables
+substitution; substitution is the experiment. This also closes the roster's biggest hole (idea #2 —
+"eval": gates but no scored, repeatable measurement of whether a skill/agent got *better*); Eric has
+proposed the mechanism for it.
+- **Two existing pieces this docks onto.** `scripts/duel-log.mjs` already logs fanout/fanin/intent to
+  mine eval scenarios — a tournament flywheel comparing *agents on one task* (`docs/GAMEBOARD-PLAN.md`
+  §eval seed). This idea is the same flywheel **one altitude up**: systems on one task suite. And
+  `docs/COACHES.md` → _Detection lag_ is the sharpest available scoring dimension, since it measures the
+  system watching itself.
+- **The design correction that makes it evidence instead of vibes:** comparing two *repos* is badly
+  confounded — different domain, size, age, language — so a score gap doesn't attribute to the operating
+  model. The strong form holds the **work** constant and varies the **system**: a fixed task suite
+  (decompose this file, fix this bug, add this feature, catch this planted drift) that any ecosystem
+  instance runs. Then it's a benchmark, not a beauty contest.
+- **Candidate scoreboard, all already emitted in pieces:** detection lag; gate budgets and their ratchet
+  trajectory; resource cost (tokens, GraphQL/core buckets, GHA minutes, wall-clock); PR cycle time;
+  escaped-defect count from `docs/LESSONS.md`.
+- **The deliverable is the process diff, not the trophy.** If system A caught a planted drift in seconds
+  and system B took days, the *gap* is the output — winner-takes-all discards the useful half. Best
+  practices merge back to both; the same judge-panel shape as the persona lenses (#6), and the same
+  engine as the product's own leaderboard — the operating model getting the treatment the product gets.
+_(src: Eric · while: "food for thought" — riffing on portability from the fleet-management thread)_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
