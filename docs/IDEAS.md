@@ -18,6 +18,73 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### The Foundry — meta-system ideas (the machine that builds the machine)
+A distinct class from the product ideas below: these are ideas about **the operating model itself** —
+templates, mechanics, roles, and loops that make Claude-plus-Eric a better system regardless of which
+product it's pointed at. They belong here (one think tank, not two) but they resolve to
+`docs/OPERATING-MODEL.md` / `docs/COACHES.md` / `.claude/` rather than to `src/`. Portable by
+construction — anything here should survive a lift-and-shift to another repo.
+
+**1. Template systems for building artifacts.** A generator + house style for the things we keep
+hand-rolling:
+- **Skills** — a skill template (we author them ad hoc today; `skill-creator` exists upstream but our
+  house conventions — drills, ratchets, gates — aren't encoded in a template).
+- **Instructions that reinforce strong opinions** — an instruction template that *takes a position*
+  rather than staying neutral: TDD/BDD, Theory of Constraints, semantic release, Conventional Commits.
+  The bet: opinionated defaults beat configurable ones for an autonomous executor.
+- **Sub-agents** — a delegation template (the coach/athlete pattern in `docs/COACHES.md` generalized
+  into a fill-in-the-blanks form).
+
+**2. Systems to develop, refine, or reinforce.** The mechanics list, verbatim in intent:
+- **Self-healing systems** — detect *and correct* without a human in the loop (we detect well; the
+  correct half is still mostly Claude-triggered).
+- **Learning loops** — the `/retro` + `docs/LESSONS.md` ledger is the seed; generalize it.
+- **Eval** — we have gates but no *evals*: no scored, repeatable measurement of whether a skill/agent
+  got better. The biggest gap in the roster.
+- **Decomposing skills → reduce complexity** — `/decompose` exists for code; the same drill applied to
+  *skills and instructions* (a god-skill is a god-file).
+- **Maintaining balance** — the explicit anti-goal of over-optimizing one dimension (test granularity,
+  gate strictness, ceremony) at the cost of flow.
+- **Fleet management** — configuration drift across repos/environments; **portability** (lift-and-shift
+  the whole operating model into a new repo in one move). Today `docs/OPERATING-MODEL.md` is the
+  hand-carried version — this asks for the mechanized one.
+- **Research role** — a coach whose job is to *reinforce decisions with data* rather than assert them.
+  Pairs with eval: research finds the evidence, eval scores the outcome.
+- **An interactive systems-level diagram** — highly visual, pleasing, and **zoomable**: out to the
+  altitude of whole systems, in to granular detail. `docs/STRUCTURE-graph.md` (Graphify) is the data
+  layer with no viewer; the cinematic-metaphor bar applies (this is a telestrator for the architecture).
+- **Persona creator** — a template/generator for personas (product-side bot personas and operating-model
+  roles are the same shape).
+
+**3. Archetype: automation engineer (Eric's read on himself).** _Flagged high priority with a real
+deadline — it's meant to influence an onboarding decision for a new position at work._ Anthropic's
+Claude Code team is described as five archetypes and zero job titles: **Prototyper** (many fast
+throwaways to find what's worth building), **Builder** (validated prototype → production), **Sweeper**
+(deletes underperforming features, prevents bloat), **Grower** (iterates on shipped work against real
+user behavior), **Maintainer** (keeps mature systems reliable at scale) — fluid, not sequential; one
+person may prototype Monday and sweep Friday.
+Eric's thesis: **automation engineer is the orthogonal sixth** — not a stage in that pipeline but a
+support/enablement role standing *underneath all five*, because every one of them carries manual
+process. The pairing partner who chips away at that manual work. "The mechanic in the pit crew, not
+the race-car driver."
+_Objective note (Claude, as asked):_ the article does not name an automation/enablement archetype, and
+it leans the other way — "the general model beats the specialized one," with Claude Code itself
+absorbing maintainer work (reviewing PRs before humans do) rather than a specialist tooling role being
+created. Two honest readings: (a) the role is real but *invisible* in that framing because at Anthropic
+it's dissolved into the tooling everyone uses — which is an argument for the archetype's value, not
+against it; (b) the framing genuinely doesn't have a seat for it, and the closest fit is Sweeper +
+Maintainer, whose shared substance is manual-process removal. Worth deciding which reading the
+onboarding conversation should be built on. Note also the article is one writer's secondhand summary,
+not an Anthropic publication — weight it accordingly.
+
+**4. The meta-ask: this file should be a think tank, not a list.** Eric's framing — a "multifaceted
+container" where ideas **interconnect and associate**, so new systems *emerge* from the associations
+and increase resiliency; a source of intent/goals/interests Claude can read to **influence decisions
+and suggest priority by possible impact**; and "another way to index." Today `IDEAS.md` captures well
+and associates not at all: flat sections, no cross-links, no impact/effort signal, no query surface,
+and nothing reads it back into a decision. The gap is the association + retrieval layer, not capture.
+_(src: Eric · while: asking whether we have a think-tank system — a full raw dump, routed here intact)_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
