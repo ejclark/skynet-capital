@@ -247,6 +247,30 @@ that we didn't have:
 _(src: Eric · while: proposing a system for abstract structures worth modeling — "hyper sensitive to
 detecting and detailing why these are effective")_
 
+**10. The side-quest generator — "choose your own adventure" as the think tank's read surface.** Branding
+idea, and it closes the loop on the original ask (#4): a generator that **assesses all available context
+and offers a series of quests to pick up**. Capture exists (`IDEAS.md`), association is forming (these
+Foundry entries cross-reference), but nothing *reads it back into a decision* — this is that missing
+layer, and it's the half Eric named first ("a source of intent/goals/interests you could use to influence
+decision choices and even suggest priority based on the possible impact").
+- **Inputs, all already emitted:** `IDEAS.md` (intent), gate outputs and their ratchet budgets (named
+  targets), `LESSONS.md` open incidents, git history, and *proximity* to whatever is currently being
+  worked — the `while:` tag was designed for exactly this retrieval.
+- **The "choose your own adventure" mechanic is the load-bearing part.** Picking a quest must *change
+  what's offered next* — that branching is the emergence Eric wants, not a static ranked list. A hand of
+  3–5 offers beats a backlog dump; the offer set is the product.
+- **Quest tiers encode impact/effort in vocabulary the repo already speaks** (D&D roots, personas, the
+  academy's ranks): **main quest** (the current thread) · **side quest** (adjacent, cheap, `IDEAS.md`
+  already uses the term) · **bounty** (a gate-named target with a ratchet attached) · **boss fight** (the
+  big structural ones needing dedicated focus). Naming the tier *is* the prioritization.
+- **Composes with the roster:** persona lenses (#6) change which quests get offered — a Sweeper offers
+  deletions, a Grower offers iterations; battle-of-the-wits (#8) supplies the scoreboard; the redundancy
+  detector (#5) generates bounties automatically. This is the surface all of them present through.
+- On-brand by construction: the product is a game where bots race a leaderboard — the operating model
+  getting a quest board is the same treatment at a different altitude ("fun is the flywheel, not the
+  wrapper"). Likely lands as a `/quests` skill.
+_(src: Eric · while: thinking about branding — "side quest generator, choose your own adventure")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
