@@ -590,6 +590,49 @@ allowlist rather than org-wide access.
 _(src: Eric · while: firehosing — "hoist the harness to its own repository… the engineering harness has
 the ability to pull a repository into the harness to perform work")_
 
+**19. Adversarial mechanisms — the think tank needs a prosecutor, not just a librarian.** Eric wants
+mechanisms that **critically assess ideas, poke holes, and rubber-duck continuation toward bigger ideas**,
+explicitly framed as maximizing the constraint. Correct, and urgent — because:
+
+**The honest finding first: this session has a suspicious base rate.** ~21 ideas banked, essentially all
+of them *strengthened*; roughly four meaningfully challenged (the Leroy Jenkins inversion, the confounded
+two-repo comparison, the article naming no enablement role, the harness credential blast radius). Real
+idea distributions contain more duds than that. **A think tank that only amplifies is an echo chamber
+with good typography** — and by Eric's own ToC framing, affirmation is cheap while *falsification is the
+scarce good*: the highest-value act is killing a bad idea before he spends attention on it.
+
+**Why in-thread critique is structurally compromised.** After twenty turns of building a structure,
+Claude is invested in its coherence — critique from inside the thread is biased toward the frame it
+helped build. Independence has to be *engineered*, not intended.
+
+**Mechanisms, ranked by how well they buy real independence:**
+1. **Context-blind refuters.** Fresh sub-agents given **only the idea**, never the affirming build-up,
+   and prompted to **refute** rather than "evaluate" — the verb changes the behavior. Run several, take a
+   majority. Critique is a *non-constraint* resource: run it freely, exactly like machine iterations.
+2. **Perspective-diverse critics beat N identical skeptics** — redundant skeptics miss the same things.
+   Distinct lenses: cost-to-build · what-does-this-replace · who-maintains-this-in-six-months ·
+   what's-the-simplest-thing-that-would-work-instead · how-would-this-fail-silently.
+3. **The persona lenses (#7) already are this roster.** A Sweeper aimed at an *idea* asks "what does this
+   let us delete, and is it worth its own maintenance?" — a native hole-poker. #7 is not only for code.
+4. **Falsification criteria at capture.** Every idea gets a *"this is wrong if ___"* line. Ideas that
+   cannot produce one are unfalsifiable — which is itself the finding. EARS discipline (#12) applied to
+   ideas rather than features.
+5. **Pre-mortem** — assume it shipped and failed; explain why. Cheap, effective, catches optimism.
+6. **A floor sensor to pair with the ceiling sensor.** Association density measures *upside only*.
+   Nothing currently measures build cost, carrying cost, or risk class — so a dense-but-expensive idea
+   and a dense-but-cheap one rank identically today. The refinement pass should compute both.
+7. **Distinguish critique from continuation.** Eric asked for two different things: a **critic**
+   ("where does this break?") and an **extrapolator** ("and therefore what?" — pushing an idea to its
+   logical end until it either breaks or reaches something bigger). Different roles, different prompts;
+   the rubber-duck function is the second one.
+
+**The design change that matters most: the refinement pass should ship every idea with its strongest
+objection attached.** Today's planned output (#15) is a ranked hand — a *sales* document. Ranked-hand-
+plus-attached-objection is a *decision* document, and it maximizes the constraint precisely: Eric's
+attention lands on a judgment that already has both sides, instead of on discovering the downside himself.
+_(src: Eric · while: firehosing — "refining mechanisms that are highly capable to assess my ideas
+critically, poke holes... feels worthwhile in maximizing the constraint")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
