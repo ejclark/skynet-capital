@@ -271,6 +271,45 @@ decision choices and even suggest priority based on the possible impact").
   wrapper"). Likely lands as a `/quests` skill.
 _(src: Eric · while: thinking about branding — "side quest generator, choose your own adventure")_
 
+**11. Flow-state capture — the bottleneck is the round trip, not the writing.** Eric is having ideas
+faster than they can be banked. Root cause: capture currently costs a **context switch** — he dumps,
+Claude writes, Claude replies at length, he reads. The reply is the flow-breaker. Fixes, cheapest first:
+- **Firehose mode** — a declared stretch where Claude banks silently: one-line acknowledgment, no
+  synthesis, no questions, no options. Synthesis happens later on request. Analysis is not free; it costs
+  the constraint's attention at the exact moment attention is most productive elsewhere.
+- **Capture without a round trip** — voice memo / phone notes / an append-only scratch file Claude
+  ingests in batch. The lowest-friction capture is the one that doesn't need Claude present at all.
+- **Batch refinement as a subagent job** — refine the whole file periodically instead of each idea on
+  arrival. Cluster, dedupe, cross-link, promote. This is where "continuously refine" actually belongs.
+- The full pipeline Eric has now specified across these entries: **capture → batch-refine → associate →
+  generate quests (#10) → dispatch with territories (#7)**. Every stage is named; none are built.
+
+**12. Waterfall reconsidered — the economics inverted, and it's presentation-worthy.** Eric's thesis:
+requirements-gathering used to buy weeks/months/years of development per day collected; now that same
+development lands in days, so **exhaustive upfront requirements look worth more than they did.** His
+sharpening is the load-bearing part: *"Should we be reducing iterations, or just iterations with humans
+involved?"* — small iterations under the hood remain the best way to build while meeting quality bars,
+but for humans the goal has moved toward **one-shotting bosses**.
+- **The distinction is right and it's the whole insight: the two loops now have opposite economics.**
+  Machine iterations are cheap, verifiable, and non-constraint → run them constantly. Human iterations
+  spend the actual constraint → make each one resolve maximum uncertainty. That's ToC, not nostalgia for
+  waterfall.
+- **Where the classic anti-waterfall argument survives:** cheap building weakens the *cost-of-late-
+  discovery* half (a wrong requirement now costs days, so the escalation curve flattens) — but it does
+  **not** weaken *"users don't know what they want until they see it."* That's human cognition, not
+  engineering cost. Cheap building actually makes a **prototype a better elicitation instrument than an
+  interview**, which cuts against pure waterfall.
+- **Resolution worth presenting: waterfall the _definition of done_, not the design.** Exhaustive upfront
+  *acceptance criteria* + taste guardrails are what let the machine iterate unsupervised; exhaustive
+  upfront *design* is still wrong and now cheap to fix, so it earns little. This makes `/ears` (the
+  existing EARS skill) the load-bearing upstream artifact rather than a nicety — the requirement format
+  *is* the autonomy interface.
+- **And it's falsifiable via #8:** run the same task suite with thin vs. exhaustive upfront requirements;
+  measure human touches, rework, and cycle time. The battle-of-the-wits harness makes this an experiment
+  instead of an opinion — a strong spine for the presentation.
+_(src: Eric · while: asking how to stay in flow — "we should investigate if this is a moving goalpost…
+it feels presentation worthy")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
