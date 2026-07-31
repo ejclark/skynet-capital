@@ -77,6 +77,30 @@ Maintainer, whose shared substance is manual-process removal. Worth deciding whi
 onboarding conversation should be built on. Note also the article is one writer's secondhand summary,
 not an Anthropic publication — weight it accordingly.
 
+**3a. The archetypes are a lifecycle, and automation is the axis crossing it (Eric's sharpening).**
+Two claims that make the thesis much stronger than "a sixth role":
+- **The five archetypes are a development lifecycle progression** — explore → productionize → prune →
+  iterate → sustain, the traditional SDLC under new names. What Anthropic changed is not the mechanics
+  but their *granularity*: the stages stopped being job titles held by different people and became
+  **modes one person moves between weekly**. This is the pattern overlaying the still-unknown lifecycles
+  of the AI ecosystem — same mechanics, different positions on the timeline, much shorter cycle time.
+- **Therefore automation engineer isn't a sixth stage — it's the axis crossing all five.** If the
+  archetypes are modes rather than roles, the binding constraint stops being headcount-per-stage and
+  becomes **mode-switching cost**, and mode-switching cost *is* manual process. The automation engineer
+  operates on the constraint itself rather than on any one stage. That is Theory of Constraints stated
+  in org terms, and it reframes the role from support to leverage.
+- **Eric's evidence, his own core strengths:** tech-debt cleanup; Renovate automation; and specifically
+  **building the test systems that earn gold-tier Renovate recipes — automerge everything but breaking
+  changes.** The load-bearing insight there: the automation is not the merge rule, it's the *verification
+  coverage that makes the merge rule safe*. Trust is a function of test depth. Dependency upkeep is
+  archetypal Maintainer work, and automating it doesn't delete the mechanic — it relocates it to a
+  machine and hands the human's attention back. That is the whole argument in one artifact.
+- **This repo is the second instance of the same move** — Coach gates (arch/dupe/dead/spec-gap) plus
+  auto-merge-by-default is gold-tier Renovate applied to a codebase's own structure instead of its
+  dependencies. Verification earns autonomy; the ratchet keeps it earned. Useful as a portfolio exhibit
+  for the onboarding conversation: the pattern demonstrated twice, in two domains.
+_(src: Eric · while: reconsidering the archetype thesis after the objective read)_
+
 **4. The meta-ask: this file should be a think tank, not a list.** Eric's framing — a "multifaceted
 container" where ideas **interconnect and associate**, so new systems *emerge* from the associations
 and increase resiliency; a source of intent/goals/interests Claude can read to **influence decisions
