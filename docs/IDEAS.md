@@ -973,6 +973,48 @@ references for potential customers" is a go-to-market step — worth banking, pr
 _(src: Eric · while: the doctrine decoupling work — "I think the brand name is emerging, and it adds
 a new dimension")_
 
+**28. 3D competency (Three.js + Babylon.js) and a cinematic Skynet Capital intro.** Eric wants real
+competency in both engines and **"Blizzard level video cinematic capabilities"** for an intro.
+
+**Neither thread is greenfield — say so before planning as if it were.**
+- **Three.js is live:** `src/three/` is ~1,150 lines across `scene-main.ts`, `pieces/{tower,eye}.ts`
+  and a `kit/` of pure modules (`profile`, `rng`, `params`, `env`, `materials`, `greebles`), with an
+  esbuild `build:scene` step and `scripts/shoot-tower.mjs` as a deterministic screenshot harness.
+- **Babylon is scaffolded but unused:** `docs/babylon-mcp.md`, `.mcp.json`, and two setup scripts
+  wire a local semantic-search server over Babylon docs/API/source, and idea #2 above already banks
+  Babylon as the composable engine for the gameplay layer.
+
+**⚠ The honest read on "Blizzard level", because the gap is a category not a quality slider.**
+Blizzard cinematics are **offline-rendered** — Maya/Houdini/RenderMan, path-traced, hundreds of
+artist-years per minute. No realtime browser engine reaches that, and no amount of Three/Babylon skill
+closes it. Saying otherwise sets up a disappointment.
+- **But the thing that reads as "cinematic" is direction, not polygon count** — camera choreography,
+  timing, lighting, restraint. A well-directed low-poly shot beats an undirected detailed one, every
+  time.
+- **The real unlock, and it is available here: an intro does not have to run in realtime.** Render it
+  **offline, frame by frame, at high sample counts**, then ship an MP4. That decouples visual ambition
+  from the browser's frame budget entirely — the ceiling stops being "what renders at 60fps on a
+  laptop" and becomes "what we are willing to wait for." It is also how the reference cinematics are
+  actually made.
+- **The machinery already exists**: `shoot-tower.mjs` renders the scene headlessly via Playwright and
+  captures deterministically. Frame-stepping that harness (advance a fixed dt, capture, repeat) and
+  piping to ffmpeg is a straight extension, not a new system — the engineering half is small.
+
+**Where the work actually splits, and it matters for who does it:**
+| Half | Nature | Owner |
+|---|---|---|
+| Offline frame-render → video pipeline | pure engineering, deterministic, testable | Claude |
+| Camera choreography, timing, art direction, lore beats | **taste** | Eric (`CLAUDE.md`: visual work waits for his eye) |
+
+**On engine choice — resist picking one on principle.** Three.js is lower-level and already carries
+the Eye/tower; Babylon is batteries-included (scene graph, PBR, GUI, glTF, physics, WebGPU) and better
+suited to a navigable gameplay scene. Running both is a real cost (two mental models, two asset
+pipelines), so it should be a *measured* decision — which is exactly what the battle-of-the-wits
+harness (#9) is for: same scene, both engines, compare. Competency-building doubles as the first real
+eval.
+_(src: Eric · while: the dungeon-map work — "Blizzard level video cinematic capabilities with an
+intro to Skynet Capital")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
