@@ -85,3 +85,24 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** the harness has no gate asserting its own scripts execute — a `verify` step that
   runs each `package.json` script's smoke path would have caught this before the pipeline did
   (→ docs/IDEAS.md).
+
+### A gate scoped to the files that existed, not the category it defended
+- **SHA:** n/a   **DATE:** 2026-08-01   **STATUS:** closed
+- **SIGNAL:** noticed while adding a *new* executable (`harness-bootstrap`) to the harness — the
+  shellcheck step's glob was `harness-*-scan`, so the new launcher would never have been checked.
+  Detection lag: caught before merge, but only because the next change happened to be adjacent to
+  the gate. Nothing would have reported the hole on its own.
+- **ROOT CAUSE:** the gate's scope was written as the **enumeration of files that existed when it
+  was written** rather than as the **category it was meant to defend** ("every shipped executable").
+  `harness-ship` was already silently exempt and had been carrying a real SC2015 the whole time —
+  `git diff --quiet && git diff --cached --quiet || { …fail… }`, where a failure of the *first*
+  command also runs the failure branch, making the two dirty-tree cases indistinguishable. Widening
+  the glob to `plugins/*/bin/*` surfaced it immediately.
+- **PREVENTION:** doctrine — **scope a gate by category, never by enumeration.** A glob that lists
+  today's filenames grants an exemption to every file added later, and the exemption is invisible:
+  the gate still reports green, just for the wrong reason. Prefer a directory or role boundary
+  (`plugins/*/bin/*`) over a name pattern (`harness-*-scan`). Landed in `battle-of-the-wits`
+  (widened glob + comment saying why) and generalized here.
+- **SIDE QUESTS:** the same question applies to every other gate's scope — `arch-scan`/`dupe-scan`
+  read `sourceDir` from the descriptor (category, good), but any future gate matching by filename
+  pattern deserves the same audit (→ docs/IDEAS.md).
