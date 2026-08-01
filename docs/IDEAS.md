@@ -18,6 +18,26 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Voice profiles — decode Eric, and a rack of borrowable expert lenses
+Full reasoning banked in [`JOURNEYS/voice-profiles.md`](JOURNEYS/voice-profiles.md); this is the
+pickup list. Four layers, not one artifact — **stance** (the epistemic contract; when to disagree,
+what to do with a bad premise), **decode** (how Eric compresses intent into words), **perception /
+expression** (a borrowed register, socketed in per skill), **context** (what is true *here*).
+Build order: rack → customer conversations → archetypes → personal profile.
+- **Instrument first.** Tag corrections for a week as *misread* vs. *never told you* — that ratio is
+  the gating number for the whole thesis and nobody knows it. Check what `duel-log.mjs intent`
+  already records before building a second instrument.
+- **Stance layer is the cheapest and highest-yield slice** — a dozen dials, written as commander's
+  intent rather than orders (*"the end state is that when you say 'this looks good,' I can trust
+  it"*), plus a `/stance-audit` that re-reads a transcript with no stake in the original answer.
+- **Lens test before building any borrowed voice:** *did this expert face a constraint that forced
+  them to solve a representation problem we also have?* Descriptive novelists yes; "expert
+  architects" no.
+- Every derived rule must carry the utterance that produced it — the audit surface, not documentation.
+- Later: a `PersonaLore.voice` field so bot personas speak in-character (deferred — product surface).
+_(src: Eric · while: the voice-profile thought experiment — "capture the idiolect and prosody of my
+voice")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
@@ -249,6 +269,33 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   a real session. Small, cosmetic; deferred behind the core play work. _(src: Eric · while: calming the playcall candles — market-hours realism)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
+- **Doc-rot gate — the highest-severity gap found, and it has evidence not just a hypothesis.** Two
+  live instances: `STRUCTURE-graph.md` carries a `"Working with Eric"` node for a heading renamed to
+  "How we work", and `persona-lore.ts` says *"Only Sauron carries one today"* while all eight personas
+  carry lore. Nothing in the repo checks whether docs still describe reality — `incident-scan` checks
+  that incidents produce lessons, not that lessons stay true. A Level-7 self-improving system that
+  drifts degrades **silently**, and it poisons the input every future session loads.
+  _(src: Claude · while: journey on voice-profiles)_
+- **Mutation testing — the one gate that measures whether the other nine work.** Portfolio finding:
+  `arch` · `dupe` · `clone` · `dead` · `depgraph` · `spec:gap` · `incident` are seven scanners, all
+  **static and structural**; `eval:persona` / `eval:safety` are behavioral but example-based. Deep on
+  shape, thin on behavior. Mutation testing is diagnostic rather than additive — delete a condition on
+  purpose and see whether anything screams; if nothing does, the suite is decorative and we'd never
+  have known. _(src: Claude · while: journey on voice-profiles)_
+- **Metamorphic properties on `eval:persona`** — there is no oracle for what trade a persona *should*
+  make, but relations hold regardless: *a bearish persona must not increase exposure when sentiment
+  drops.* Asserting relations instead of outputs tests behavior we never enumerated, which is exactly
+  where the induction gap lives. _(src: Claude · while: journey on voice-profiles)_
+- **Differential window on promotions** — when `/dedupe` or `/decompose` consolidates, keep the
+  pre-promotion original for N weeks and assert the abstraction agrees with it. Detects a boiled-out
+  condition **without knowing in advance what was dropped**, because the two diverge exactly where the
+  discarded condition mattered. The missing partner to `dupe:scan`: we detect duplication and prompt
+  consolidation, but never verify the consolidation preserved behavior across the cases the copies
+  differed on. Pair with a one-line **discard log** beside each promotion (what was dropped and why) —
+  detection tells you *that*, the log tells you *why*. _(src: Claude · while: journey on voice-profiles)_
+- **Is `OPERATING-MODEL.md` still load-bearing after its promotion?** It is `CLAUDE.md` with the
+  Skynet-specific parts boiled out — a promotion already performed, and the live test case for the
+  discard problem. Empirically checkable. _(src: Claude · while: journey on voice-profiles)_
 - **Test coverage & quality audit** — the suite (~178) skews to pure logic (personas, reducers, server
   routes, renderers, empire skyline); the login canvas animation + the vision layer are screenshot- or
   docs-verified, not unit-tested (by nature). Audit for *logic* behaviors that lack a test (dashboard
