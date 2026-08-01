@@ -941,6 +941,38 @@ states it, which is the entire difference between a course and a game.
 _(src: Eric · while: reviewing the dungeon plan of attack — "delightful and could be a valuable
 product for learning/educating")_
 
+**27. The brand is converging — and it adds a _participants_ dimension.** Eric's taxonomy:
+**dungeon-crawler** → **battle of the wits** → **battle bots** ("like battle tanks at Aquent"), with
+his emphasis landing, as usual, on the last items: **a collaboration point**, and **personal
+references for potential customers**.
+
+**The names are coherent rather than three candidates** — all competitive, gamified, friendly-
+adversarial — and they line up with `skynet-capital`'s own core loop (bots racing a leaderboard).
+That consistency is itself evidence the brand is real and not being invented.
+- **"Battle bots" names a mechanic we already specified.** Battle-of-the-wits (#9) *is* agents and
+  systems competing on a held-constant task suite. So the brand converges on the engine rather than
+  decorating it — and the competitive framing is what makes it **multi-participant**, which is the
+  genuinely new dimension here. Until now every idea assumed an audience of one.
+- **Collaboration falls out naturally:** multiple people's harnesses competing on a shared task suite
+  is a community mechanic *and* the eval corpus (#24) at the same time. One build, two payoffs.
+
+**⚠ Flag before this goes anywhere outward-facing:** **BattleBots** is a long-running, actively
+enforced television/robot-combat trademark. Commercial use of that name — or anything close — is a
+real legal exposure, and it is far cheaper to know now than after a logo exists. "Battle of the Wits"
+is much safer (a Princess Bride allusion, not a protected mark) and is already the repo name. If the
+competitive sub-brand matters, find a phrase that isn't one letter from an enforced mark.
+
+**Open question — Claude cannot assess this one.** *"Battle tanks at Aquent"* is a specific thing
+Eric experienced and Claude has no knowledge of it; the collaboration idea rests on what it actually
+was (an internal competition? a team event? a product?). **Do not infer it.** Ask before building on
+it.
+
+**Standing objections carry over from #26:** naming and go-to-market imply a second product against
+one constrained attention, and the harness is six PRs old and proven in one repo. "Personal
+references for potential customers" is a go-to-market step — worth banking, premature to act on.
+_(src: Eric · while: the doctrine decoupling work — "I think the brand name is emerging, and it adds
+a new dimension")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
