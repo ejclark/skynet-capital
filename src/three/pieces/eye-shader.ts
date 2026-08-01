@@ -93,7 +93,8 @@ export const GLOBE_FRAGMENT = [
   "  float ang = atan(P.y, P.x);",
   "  float lick = fbm(vec2(ang * 3.4, dm * 5.0 - iTime * 1.4)) - 0.5;",
   "  float lick2 = fbm(vec2(ang * 9.5 + 11.0, dm * 11.0 - iTime * 2.6)) - 0.5;",
-  "  float edge = dm - (RV + lick * 0.055 + lick2 * 0.028);",
+  "  float tipGuard = 1.0 - smoothstep(0.40, 0.70, abs(P.x));",
+  "  float edge = dm - (RV + (lick * 0.055 + lick2 * 0.028) * tipGuard);",
   // Past the tongues there is nothing. This is the naked silhouette — no stone, no lid, no plate.
   "  if(edge > 0.030){ discard; }",
   // ---- THE FIRE ---------------------------------------------------------------------------------
@@ -112,7 +113,7 @@ export const GLOBE_FRAGMENT = [
   "  float radial = 1.0 - smoothstep(0.42, 1.45, r);",
   "  float heat = clamp(plasma * 1.30 * radial + radial * 0.40, 0.0, 1.0);",
   // ---- THE SLIT: vertical, absolute, no fire in it at all ----------------------------------------
-  "  float slit = smoothstep(0.125, 0.088, abs(iris.x) * (1.0 + abs(iris.y) * 0.60));",
+  "  float slit = smoothstep(0.112, 0.094, abs(iris.x) * (1.0 + abs(iris.y) * 0.60));",
   // ---- CHATOYANCY -------------------------------------------------------------------------------
   // Fibres run radially out of the pupil. T is that direction on the surface; the Kajiya-Kay lobe
   // peaks where the half-vector is PERPENDICULAR to T, laying a bright band across the fibres.
@@ -126,11 +127,11 @@ export const GLOBE_FRAGMENT = [
   "  sheen *= fibre * (1.0 - slit) * smoothstep(0.26, 0.60, r) * (1.0 - smoothstep(-0.40, -0.06, edge));",
   // ---- PALETTE: a forge at the hour the smith stops singing --------------------------------------
   "  vec3 core = vec3(1.0, 0.90, 0.72);",
-  "  vec3 hot  = vec3(1.0, 0.30, 0.03);",
-  "  vec3 scab = vec3(0.78, 0.085, 0.010);",
+  "  vec3 hot  = vec3(0.98, 0.19, 0.015);",
+  "  vec3 scab = vec3(0.66, 0.055, 0.006);",
   "  vec3 deep = vec3(0.34, 0.030, 0.004);",
   "  vec3 col = mix(deep, scab, smoothstep(0.08, 0.42, heat));",
-  "  col = mix(col, hot, smoothstep(0.44, 0.80, heat));",
+  "  col = mix(col, hot, smoothstep(0.56, 0.88, heat));",
   // The white throat: small, central, and gone the moment the pupil covers it.
   "  float throat = (1.0 - smoothstep(0.03, 0.30, r)) * (1.0 - slit);",
   "  col += core * pow(throat, 2.4) * (0.55 + iPower * 0.55);",
@@ -141,7 +142,7 @@ export const GLOBE_FRAGMENT = [
   // A real flame is brightest at its boundary, not its middle. Doubles as cover for the discard edge.
   "  float lipT = edge / 0.075;",
   "  float lip = exp(-lipT * lipT);",
-  "  col += vec3(1.0, 0.34, 0.06) * lip * 0.62;",
+  "  col += vec3(1.0, 0.32, 0.05) * lip * 0.70;",
   // ---- THE ELECTRIC AFFINITY: filaments at the flame tips ----------------------------------------
   // Outer fringe only, and only sometimes. `flash` quantises time into ~8/s cells behind a random gate
   // so an arc is gone before the eye finds it; `fil` is a thin ridge of high-frequency noise, so it

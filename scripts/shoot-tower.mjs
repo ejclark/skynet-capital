@@ -28,6 +28,11 @@ const PORT = 8931;
 const CHROME = process.env.PW_CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 
 /** Camera angles worth reviewing: the hero, the silhouette, and a close read of the masonry. */
+/** The instant every shot is captured at. Fixed so two runs produce comparable frames. Chosen near
+ * the start of the Eye's sweep, where it looks close to straight ahead — mid-sweep the aperture is
+ * foreshortened and the frame can't be judged. */
+const SEEK_TIME = 0.6;
+
 const SHOTS = [
   { tag: "hero", w: 1600, h: 1000, alpha: -1.15, beta: 1.18, radius: 175 },
   { tag: "silhouette", w: 1600, h: 1000, alpha: 0.72, beta: 1.3, radius: 230 },
@@ -87,9 +92,10 @@ async function main() {
           cam.alpha = alpha;
         }
       }, s);
-      // Let the eye shader, bloom and SSAO settle for a few frames.
-      await page.waitForTimeout(1600);
-      await page.evaluate(() => window.__towerPause?.());
+      // Let bloom and SSAO settle, then SEEK to a fixed moment. Pausing on wall-clock alone captured
+      // a different instant every run, which quietly made shot-to-shot comparison meaningless.
+      await page.waitForTimeout(1200);
+      await page.evaluate((time) => window.__towerSeek?.(time), SEEK_TIME);
       await page.waitForTimeout(250);
 
       const file = join(OUT, `tower-${s.tag}.png`);
