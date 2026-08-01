@@ -865,6 +865,47 @@ tools. The correct posture is his default *with* the supply-chain brake attached
 _(src: Eric · while: firehosing — "if we have quality evals in place to measure… we should be able to
 constantly look for better tooling to improve solutions")_
 
+**25. The throughput sequence — rails, then _coordination_, then agents.** Eric's plan: layer safety
+rails in the correct order, then add sub-agents to increase throughput, with token budget as the
+lever — *"if we have tokens to burn, that directly correlates to the speed and amount of work we can
+ship."*
+
+**The correction that changes the order: tokens convert to throughput only until a different
+constraint binds, and two bind first.**
+1. **Coordination** — Eric's own earlier tangent (#7). Athletes don't share findings, collide on
+   files, and re-derive context. Past that point more agents produce conflicts and duplicated work;
+   throughput can go **negative**. Adding fuel to a jammed machine burns fuel.
+2. **Review capacity** — every athlete PR still consumes the actual constraint for taste and
+   architecture. More agents means more PRs means *more* of Eric's attention spent, not less. That is
+   the classic ToC trap: optimizing a non-constraint.
+So the sequence is **rails → coordination substrate → agents**, not rails → agents.
+
+**Safety rails, in dependency order (the loot table already encodes most of this):**
+| # | Rail | State |
+|---|---|---|
+| 1 | Required check on `main` | ✅ landed |
+| 2 | Auto-merge armed at PR-open | ✅ landed |
+| 3 | **Frozen budgets** — gates block growth only; without this athletes fight pre-existing debt | ⬜ |
+| 4 | **Territory claims** — an athlete may not touch files another is holding | ⬜ (governor's collision check is the seed) |
+| 5 | Worktree isolation | ✅ exists |
+| 6 | **Blast-radius limits mechanized** — PRs only, never a push to `main`; never workflow files, credentials, or the irreversible class. Doctrine today, must become a gate | ⬜ |
+| 7 | **WIP cap + kill switch** — max N concurrent athletes, and a way to stop them all | ⬜ |
+| 8 | **Token ceiling per athlete** — a runaway loop must not burn the month | ⬜ |
+Rail 8 is the direct answer to the token point: **if tokens are the fuel, a cost ceiling is the fuel
+gauge** — a safety rail, not an optimization.
+
+**On token burn and UX, the compounding lever is codification, not restraint.** `docs/COACHES.md`
+already says it: a model-in-the-loop procedure costs tokens *every* run; a script is a one-time build
+cost then ~free forever. **Spend tokens once to make a task free, rather than spending fewer tokens
+per task.** This session is the proof — `harness-bootstrap` collapsed a multi-turn manual setup into
+one command, permanently.
+
+**Immediate next build, in order:** (a) freeze `battle-of-the-wits`' own debt — it currently fails
+its own dungeon check, and dogfooding is the honest first eval; (b) the coordination substrate;
+(c) mechanize the blast-radius limits; only then (d) fan out.
+_(src: Eric · while: the dungeon persona work — "sequence the work to layer safety rails in the
+correct order, and start adding sub-agents to increase throughput")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
