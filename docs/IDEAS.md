@@ -1373,6 +1373,56 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ---
 
+**30. A progressive visual ladder: 2D system overviews → SimCity → navigable 3D.** Eric: build the
+skillset in rungs, "starting with 2d overviews of the systems, like sim city style… a progressive
+enhancement approach", toward "3d interactive animated 3d environments".
+
+**Why the rung order is the whole idea, not a hedge.** Each rung ships something usable and teaches
+the layer above it — a 2D overview that reads well is the *layout problem* solved, and layout is what
+a 3D scene fails at first. Skipping to 3D means solving camera, lighting and legibility at once, on a
+scene whose information architecture nobody has validated.
+
+**We already stand on rung one and did not notice.** `harness-map` renders the ADR history as a
+dungeon map — cleared rooms, bosses standing, unlit regions — from measured state, in a standalone
+HTML file. That is a 2D system overview. Making it SimCity-grade (isometric districts sized by
+subsystem, roads = dependencies, lighting = health) is a *refinement of a thing that exists*, which
+is the cheapest possible first rung.
+
+| Rung | Artifact | What it teaches |
+|---|---|---|
+| 1 | 2D system overview (today's `harness-map`, refined) | information architecture, legibility, what a "district" is |
+| 2 | Isometric SimCity view — districts, roads, health lighting | spatial metaphor for a codebase; the sizing/colour language |
+| 3 | Navigable 3D (Babylon/Three) over the same data model | camera, traversal, LOD — with the layout already proven |
+| 4 | Cinematic capture of a traversal (#28) | choreography and timing, on a scene that already reads |
+
+**The load-bearing constraint:** every rung must render from the SAME derived model, so a rung is a
+new *view*, never a new source of truth. Otherwise the 3D scene drifts from the map and both start
+flattering the repository.
+_(src: Eric · while: resolving the release failure — "invest in a progressive set of skillsets to
+build high quality graphics")_
+
+**31. ADRs and dungeons must be navigable, and pictures do the synthesising.** Eric: they "need to be
+easy to navigate and navigate the information. high quality pictures, graphs and charts have more
+headroom on synthesizing information quickly for humans. invest in skills to streamline this process;
+Pursue the ideal paths when possible."
+
+**The diagnosis underneath it.** ADRs are famously *disconnected* — a numbered list where `ADR-0007:
+Use Postgres` says nothing about what it unlocked or foreclosed. That is a navigation failure, not a
+writing failure, and prose cannot fix it: the reader has to hold N documents in their head to see one
+shape. A picture holds the shape for them.
+
+**What "invest in skills to streamline" means concretely** — the bottleneck is that a good diagram is
+currently a bespoke act of taste each time. Worth building: a small vocabulary of *derived* visual
+forms (dependency graph, decision timeline, blast-radius heatmap, budget ratchet over time) that
+render from committed state, so the marginal cost of a diagram approaches zero and the marginal
+*quality* does not. That is the same bet as the gates: mechanise the thing that would otherwise
+depend on someone being careful.
+
+**Pairs with #30 as its first real consumer** — and with the dataviz discipline (one colour system,
+accessible in both themes, charts that read as one family rather than N one-offs).
+_(src: Eric · while: resolving the release failure — "Pursue the ideal paths when possible")_
+
+
 ## In progress
 
 _(nothing right now)_
