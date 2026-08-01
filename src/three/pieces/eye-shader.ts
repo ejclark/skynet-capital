@@ -1,32 +1,32 @@
 /**
- * GLSL for the Eye. Two shaders, because the Eye is now two real objects rather than one flat card:
+ * GLSL for the Eye. The art direction is `docs/art/EYE.md`; this file is its implementation, and the
+ * translation table there is the contract each block below answers to.
  *
- *  - GLOBE — the fiery eyeball itself, an OPAQUE SPHERE. Every bit of dimensionality comes from that
- *    choice: a real surface normal (so light and view direction mean something), real depth writes
- *    (so the stone in front of it genuinely occludes it), and a real tangent frame (so the iris can
- *    be refracted *into* the ball and the fibres can catch light anisotropically).
- *  - SOCKET — a stone SHELL wrapped concentrically around the globe, with the almond aperture cut out
- *    of it by `discard`. A shell rather than a faceplate because a flat plate only works from
- *    head-on: swing the camera and you see its slab silhouette and the eyeball bulging past its
- *    edge. Wrapping the stone means the fire is visible ONLY through the opening, from every angle,
- *    and the aperture rim lands on a curved surface — which is where its sense of thickness comes
- *    from. The shell is fixed to the tower while the globe rotates behind it, so the eye looks
- *    around instead of the whole assembly swinging to face the camera (the old billboard, and the
- *    reason the physics read wrong).
+ * The governing constraint: **the Eye is NAKED.** No lid, no brow, no socket, no stone. Two earlier
+ * attempts failed on exactly this — first a billboarded card (flat, and it turned to face the viewer),
+ * then a stone shell with the almond cut out of it (dimensional, but it *housed* a thing that must not
+ * be housed, so it read as an eyeball under an opaque cover). The almond here is the FLAME'S OWN
+ * SILHOUETTE, carved out of a sphere by `discard`. Nothing holds its edge.
  *
- * The three effects that read as "real eye", in order of how much they carry:
- *  1. **Parallax refraction.** The iris is sampled at an offset along the view direction's tangential
- *     component, so the pupil sits *behind* a curved cornea and slides as the camera orbits. This is
- *     the single strongest depth cue an eye has, and no flat card can fake it.
- *  2. **Chatoyancy** (the cat's-eye). Fibres radiate from the pupil; an anisotropic Kajiya-Kay lobe
- *     puts a bright band PERPENDICULAR to them — a slash across the eye that travels with the light
- *     and the viewer, exactly like a cabochon of tiger's-eye. It is view-dependent by construction,
- *     which is the whole point: a painted-on highlight doesn't move, so it never convinces.
- *  3. **Corneal fresnel + limbal ring.** A glassy grazing-angle sheen and a dark ring where the
- *     sclera turns away: the two cues that say "wet sphere" rather than "disc".
+ * Keeping a sphere underneath is what buys the dimensionality a flat card cannot have — a real normal,
+ * a real tangent frame, real parallax — while the discard means you never see the sphere *as* a sphere.
+ * You see an almond of fire that happens to bulge toward you.
+ *
+ * Four things carry the read, in order:
+ *  1. **A moving edge.** The vesica boundary is displaced by animated fbm, so tongues peel off the rim
+ *     and gutter out while the underlying shape holds. A hard-edged almond reads as a decal; this is
+ *     the largest single difference between "fire" and "a picture of fire".
+ *  2. **Parallax refraction.** The iris samples at an offset along the view direction's tangential
+ *     component, so the pupil sits behind a curved cornea and slides as the camera orbits.
+ *  3. **Chatoyancy.** Radial fibres + an anisotropic Kajiya-Kay lobe put a bright band ACROSS them that
+ *     travels with light and view — tiger's-eye, never where you left it. A static highlight fails the
+ *     brief by definition.
+ *  4. **The electric affinity at the flame tips.** Thin, near-straight blue-white filaments living only
+ *     in the outer fringe, flashing on a quantised clock. Fire is the body; the lightning is the will
+ *     behind it — so if the lightning reads as loudly as the flame, the balance is wrong.
  */
 
-/** Shared noise — value-noise fbm, used for fire churn and fibre irregularity. */
+/** Shared noise — value-noise fbm, used for fire churn, rim tongues and fibre irregularity. */
 const NOISE = [
   "float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }",
   "float noise(vec2 p){",
@@ -79,94 +79,86 @@ export const GLOBE_FRAGMENT = [
   "  vec3 N = normalize(vNormO);",
   "  vec3 V = normalize(C - P);",
   "  float ndv = max(dot(N, V), 0.0);",
-  // ---- 1. PARALLAX REFRACTION -------------------------------------------------------------------
-  // Project the sphere onto the iris plane, then push the sample point along the view direction's
-  // tangential part. Depth scales with how obliquely we're looking (1-ndv), so the pupil swings
-  // inside the eye as the camera orbits — the cue that sells a curved cornea over a sunken iris.
+  // The back of the sphere is never the Eye — kill it before spending anything on it.
+  "  if(P.z < 0.0){ discard; }",
+  // ---- THE ALMOND, cut from the flame itself -----------------------------------------------------
+  // Vesica: two circles offset on Y and intersected, scaled anisotropically so it reads predator-wide
+  // rather than round. SX widens, SY flattens; these two numbers ARE the eye's proportions.
+  "  const float SX = 0.70, SY = 0.455, OFF = 0.882, RV = 1.0;",
+  "  vec2 u = vec2(P.x * SX, P.y * SY);",
+  "  float dm = max(length(vec2(u.x, u.y - OFF)), length(vec2(u.x, u.y + OFF)));",
+  // The rim is DISPLACED by animated noise: tongues of flame peel off and gutter out while the
+  // underlying almond holds its shape. Two octaves at different speeds, advected inward-and-around, so
+  // the motion never reads as one pulsing outline.
+  "  float ang = atan(P.y, P.x);",
+  "  float lick = fbm(vec2(ang * 3.4, dm * 5.0 - iTime * 1.4)) - 0.5;",
+  "  float lick2 = fbm(vec2(ang * 9.5 + 11.0, dm * 11.0 - iTime * 2.6)) - 0.5;",
+  "  float edge = dm - (RV + lick * 0.055 + lick2 * 0.028);",
+  // Past the tongues there is nothing. This is the naked silhouette — no stone, no lid, no plate.
+  "  if(edge > 0.030){ discard; }",
+  // ---- THE FIRE ---------------------------------------------------------------------------------
+  // Parallax refraction first: push the sample point along the view direction's tangential part, by an
+  // amount that grows with obliquity, so the iris sits behind a curved cornea.
   "  vec3 Vt = V - N * dot(V, N);",
-  "  float depth = 0.34 * (1.0 - ndv * 0.55);",
+  "  float depth = 0.32 * (1.0 - ndv * 0.55);",
   "  vec2 iris = P.xy - Vt.xy * depth;",
   "  float r = length(iris);",
-  "  float ang = atan(iris.y, iris.x);",
-  // ---- 2. THE FIRE ------------------------------------------------------------------------------
-  // Domain-warped fbm in refracted iris coords, so the churn lives *inside* the ball.
+  "  float airis = atan(iris.y, iris.x);",
+  // Domain-warped fbm, dragged upward — churn that lives INSIDE the eye.
   "  vec2 q = iris * 2.6;",
-  "  vec2 w = vec2(fbm(q * 1.9 + iTime * 0.17), fbm(q * 1.7 - iTime * 0.13));",
-  "  float plasma = fbm(q * 3.1 + w * 2.2 + vec2(0.0, iTime * 0.46));",
-  "  float radial = 1.0 - smoothstep(0.05, 1.02, r);",
-  "  float heat = clamp(plasma * 1.45 * radial + radial * 0.26, 0.0, 1.0);",
-  // ---- The slit pupil, deep in the refracted frame ----------------------------------------------
-  "  float slit = smoothstep(0.135, 0.055, abs(iris.x) * (1.0 + abs(iris.y) * 0.55));",
-  // ---- 3. CHATOYANCY ---------------------------------------------------------------------------
+  "  vec2 w = vec2(fbm(q * 1.9 + iTime * 0.21), fbm(q * 1.7 - iTime * 0.16));",
+  "  float plasma = fbm(q * 3.1 + w * 2.3 + vec2(0.0, iTime * 0.55));",
+  "  plasma = plasma * 0.82 + fbm(q * 9.5 + w * 3.0 + vec2(0.0, iTime * 1.1)) * 0.26;",
+  "  float radial = 1.0 - smoothstep(0.42, 1.45, r);",
+  "  float heat = clamp(plasma * 1.30 * radial + radial * 0.40, 0.0, 1.0);",
+  // ---- THE SLIT: vertical, absolute, no fire in it at all ----------------------------------------
+  "  float slit = smoothstep(0.125, 0.088, abs(iris.x) * (1.0 + abs(iris.y) * 0.60));",
+  // ---- CHATOYANCY -------------------------------------------------------------------------------
   // Fibres run radially out of the pupil. T is that direction on the surface; the Kajiya-Kay lobe
-  // peaks where the half-vector is PERPENDICULAR to T, which lays a bright band across the fibres.
-  // Broken up by fbm along the angle so it shimmers like stone rather than glowing like plastic.
-  "  vec3 T = normalize(vec3(iris / max(r, 0.001), 0.0) - N * dot(vec3(iris / max(r, 0.001), 0.0), N));",
+  // peaks where the half-vector is PERPENDICULAR to T, laying a bright band across the fibres.
+  "  vec3 Traw = vec3(iris / max(r, 0.001), 0.0);",
+  "  vec3 T = normalize(Traw - N * dot(Traw, N));",
   "  vec3 H = normalize(V + normalize(iLightO));",
   "  float tdh = dot(T, H);",
   "  float sinTH = sqrt(max(0.0, 1.0 - tdh * tdh));",
-  "  float fibre = 0.68 + 0.62 * fbm(vec2(ang * 9.0, r * 4.0 + iTime * 0.05));",
-  "  float sheen = pow(sinTH, 34.0) * 2.1 + pow(sinTH, 5.0) * 0.30;",
-  "  sheen *= fibre * (1.0 - slit * 0.9) * smoothstep(0.02, 0.5, r);",
-  // ---- Palette ---------------------------------------------------------------------------------
-  "  vec3 core = vec3(1.0, 0.74, 0.34);",
-  "  vec3 hot  = vec3(1.0, 0.40, 0.05);",
-  "  vec3 mid  = vec3(0.80, 0.12, 0.01);",
-  "  vec3 rim  = vec3(0.30, 0.04, 0.005);",
-  "  vec3 col = mix(rim, mid, smoothstep(0.10, 0.44, heat));",
-  "  col = mix(col, hot, smoothstep(0.40, 0.73, heat));",
-  "  col = mix(col, core, smoothstep(0.93, 1.0, heat));",
-  // The pupil is a hard black void, as in the reference — the fire must not leak into it.
-  "  col = mix(col, vec3(0.004, 0.001, 0.0), slit);",
-  // Chatoyant band, warm-white so it reads as reflected light rather than more fire.
-  "  col += vec3(1.0, 0.66, 0.30) * sheen * (0.42 + iPower * 0.45);",
-  // ---- Limbal ring + corneal fresnel: the sphere's shoulders --------------------------------------
-  "  col *= 1.0 - smoothstep(0.62, 1.0, r) * 0.72;",
+  "  float fibre = 0.88 + 0.22 * noise(vec2(airis * 2.2, iTime * 0.06));",
+  "  float sheen = pow(sinTH, 14.0) * 0.40 + pow(sinTH, 4.0) * 0.12;",
+  "  sheen *= fibre * (1.0 - slit) * smoothstep(0.26, 0.60, r) * (1.0 - smoothstep(-0.40, -0.06, edge));",
+  // ---- PALETTE: a forge at the hour the smith stops singing --------------------------------------
+  "  vec3 core = vec3(1.0, 0.90, 0.72);",
+  "  vec3 hot  = vec3(1.0, 0.30, 0.03);",
+  "  vec3 scab = vec3(0.78, 0.085, 0.010);",
+  "  vec3 deep = vec3(0.34, 0.030, 0.004);",
+  "  vec3 col = mix(deep, scab, smoothstep(0.08, 0.42, heat));",
+  "  col = mix(col, hot, smoothstep(0.44, 0.80, heat));",
+  // The white throat: small, central, and gone the moment the pupil covers it.
+  "  float throat = (1.0 - smoothstep(0.03, 0.30, r)) * (1.0 - slit);",
+  "  col += core * pow(throat, 2.4) * (0.55 + iPower * 0.55);",
+  "  col += vec3(1.0, 0.62, 0.26) * sheen * (0.42 + iPower * 0.45);",
+  // Absolute. No glow in it anywhere.
+  "  col *= 1.0 - slit;",
+  // ---- THE LIP: hottest where the flame is thinnest ---------------------------------------------
+  // A real flame is brightest at its boundary, not its middle. Doubles as cover for the discard edge.
+  "  float lipT = edge / 0.075;",
+  "  float lip = exp(-lipT * lipT);",
+  "  col += vec3(1.0, 0.34, 0.06) * lip * 0.62;",
+  // ---- THE ELECTRIC AFFINITY: filaments at the flame tips ----------------------------------------
+  // Outer fringe only, and only sometimes. `flash` quantises time into ~8/s cells behind a random gate
+  // so an arc is gone before the eye finds it; `fil` is a thin ridge of high-frequency noise, so it
+  // reads as a filament rather than more flame. Brand-electric teal-white — the lore's secondary
+  // affinity landing on the design system's accent.
+  "  float fringe = smoothstep(-0.12, 0.01, edge);",
+  "  float cell = floor(iTime * 8.0);",
+  "  float flash = step(0.62, hash(vec2(cell, floor(ang * 5.0))));",
+  "  float fil = pow(max(0.0, 1.0 - abs(noise(vec2(ang * 9.0, iTime * 2.6)) - 0.5) * 5.0), 10.0);",
+  "  col += vec3(0.58, 1.0, 0.94) * fil * flash * fringe * (0.35 + iPower * 0.30);",
+  // ---- Corneal fresnel: the wet-sphere cue -------------------------------------------------------
   "  float fres = pow(1.0 - ndv, 4.0);",
-  "  col += vec3(1.0, 0.52, 0.20) * fres * 0.34;",
-  "  col *= 0.34 + iPower * 0.26;",
-  "  gl_FragColor = vec4(min(col, vec3(1.05)), 1.0);",
-  "}",
-].join("\n");
-
-export const SOCKET_VERTEX = [
-  "precision highp float;",
-  "attribute vec3 position;",
-  "uniform mat4 worldViewProjection;",
-  "varying vec3 vPosO;",
-  "void main(void){",
-  "  vPosO = position;",
-  "  gl_Position = worldViewProjection * vec4(position, 1.0);",
-  "}",
-].join("\n");
-
-export const SOCKET_FRAGMENT = [
-  "precision highp float;",
-  "varying vec3 vPosO;",
-  "uniform float iPower;",
-  "uniform float iRadius;",
-  NOISE,
-  "void main(void){",
-  "  vec3 P = vPosO / iRadius;",
-  // Everything behind the eye is wasted fill — the opaque globe hides it.
-  "  if(P.z < -0.25){ discard; }",
-  // The vesica, cut into stone. Two circles offset vertically and intersected gives a wide lens
-  // tapering to points at the canthi. The anisotropic scale sets the almond's proportions here in one
-  // place: SX widens it, SY flattens it. Current values give a half-width of ~0.75 and a half-height
-  // of ~0.30 of the eyeball — the reference's wide lens, not a circle and not a slot.
-  "  const float SX = 0.68, SY = 0.467, OFF = 0.86, RV = 1.0;",
-  "  vec2 u = vec2(P.x * SX, P.y * SY);",
-  "  float dm = max(length(vec2(u.x, u.y - OFF)), length(vec2(u.x, u.y + OFF)));",
-  "  if(dm < RV && P.z > 0.0){ discard; }",
-  // Bevel: stone just outside the opening faces the fire and catches it, so the rim glows hottest and
-  // falls off fast. This is what gives the aperture edge its thickness.
-  "  float bevel = 1.0 - smoothstep(RV, RV + 0.17, dm);",
-  "  float grain = fbm(P.xy * 11.0) * 0.30 + fbm(P.xy * 38.0) * 0.16;",
-  "  vec3 stone = vec3(0.042, 0.040, 0.047) * (0.55 + grain);",
-  "  stone += vec3(1.0, 0.30, 0.07) * bevel * bevel * (0.40 + iPower * 0.45);",
-  // The shell's inner face (visible through the opening as the socket wall) stays near-black, lit
-  // only by the fire it surrounds.
-  "  if(P.z <= 0.0){ stone *= 0.35; }",
-  "  gl_FragColor = vec4(stone, 1.0);",
+  "  col += vec3(1.0, 0.52, 0.20) * fres * 0.30;",
+  "  col *= 0.36 + iPower * 0.28;",
+  // Alpha feathers the last sliver of the tongues into the night, so the discard boundary is never a
+  // visible cut. Everything inboard of the lip stays fully opaque, so the Eye still occludes properly.
+  "  float alpha = 1.0 - smoothstep(-0.006, 0.030, edge);",
+  "  gl_FragColor = vec4(min(col, vec3(1.05)), alpha);",
   "}",
 ].join("\n");

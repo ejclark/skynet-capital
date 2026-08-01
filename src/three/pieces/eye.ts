@@ -9,21 +9,21 @@ import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import type { TowerParams } from "../kit/params.js";
-import { GLOBE_FRAGMENT, GLOBE_VERTEX, SOCKET_FRAGMENT, SOCKET_VERTEX } from "./eye-shader.js";
+import { GLOBE_FRAGMENT, GLOBE_VERTEX } from "./eye-shader.js";
 
 /**
- * THE EYE — a fiery sphere set behind an almond aperture cut in the crown's stone.
+ * THE EYE — a naked almond of fire hung between the tower's horns. Art direction: `docs/art/EYE.md`.
  *
- * The structure IS the design. Earlier the Eye was one billboarded plane: it always turned to face
- * the camera, so it had no fixed place in the tower (the physics read wrong), and being flat it could
- * have no refraction, no view-dependent sheen and no real occlusion — so it looked painted on. Now:
- *
- *   eyeRoot ─ socket        fixed stone faceplate; the aperture is a HOLE in it, not a mask
- *           └ pivot ─ globe an opaque SPHERE that rotates to look around behind the fixed opening
+ *   eyeRoot ─ pivot ─ globe   the Eye: a sphere whose visible surface is CUT to the almond by discard
  *                   └ gaze ─ beam   so the beam leaves from wherever the pupil is actually pointing
  *
- * Nothing billboards. The eye's shape belongs to the tower and the eye moves *within* it — better
- * physics, and the thing that makes a stone socket with real depth possible at all.
+ * There is deliberately no lid, brow, socket or faceplate — the reference has none, and both earlier
+ * attempts died on that: a billboarded card (flat, and it swung to face the viewer) and then a stone
+ * shell with the almond cut out of it (dimensional, but it housed a thing that must not be housed).
+ * The shape now belongs to the flame; see the shader for how the silhouette is carved and licked.
+ *
+ * Nothing billboards. The Eye sweeps on its own schedule and never tracks the camera — being ignored
+ * is the point.
  */
 
 export interface EyeBuild {
@@ -41,13 +41,11 @@ function registerShaders(): void {
   if (!Effect.ShadersStore.skynetEyeGlobeVertexShader) {
     Effect.ShadersStore.skynetEyeGlobeVertexShader = GLOBE_VERTEX;
     Effect.ShadersStore.skynetEyeGlobeFragmentShader = GLOBE_FRAGMENT;
-    Effect.ShadersStore.skynetEyeSocketVertexShader = SOCKET_VERTEX;
-    Effect.ShadersStore.skynetEyeSocketFragmentShader = SOCKET_FRAGMENT;
   }
 }
 
 /** Radius of the eyeball. The aperture is sized off this so the two can't drift apart. */
-const GLOBE_R = 7.6;
+const GLOBE_R = 9.6;
 
 export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild {
   registerShaders();
@@ -57,7 +55,7 @@ export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild
   const pivot = new TransformNode("eyePivot", scene);
   pivot.parent = root;
 
-  // ---- The globe: an opaque sphere, the source of every 3D cue ----
+  // ---- The Eye itself: a sphere, cut to an almond of flame in the fragment shader ----
   const material = new ShaderMaterial(
     "eyeGlobeMat",
     scene,
@@ -65,8 +63,12 @@ export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild
     {
       attributes: ["position", "normal"],
       uniforms: ["worldViewProjection", "iTime", "iPower", "iCamO", "iLightO", "iRadius"],
+      needAlphaBlending: true,
     },
   );
+  // The flame's outer tongues feather out, so the material blends — but the almond's interior is fully
+  // opaque and must still occlude the crown behind it, hence depth writes stay on.
+  material.forceDepthWrite = true;
   material.setFloat("iTime", 0);
   material.setFloat("iPower", params.eyeIntensity);
   material.setVector3("iCamO", new Vector3(0, 0, 20));
@@ -92,30 +94,6 @@ export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild
     Vector3.TransformCoordinatesToRef(cam.globalPosition, inv, camO);
     material.setVector3("iCamO", camO);
   });
-
-  // ---- The socket: a stone shell wrapping the globe, with the almond cut out of it ----
-  const socketMat = new ShaderMaterial(
-    "eyeSocketMat",
-    scene,
-    { vertex: "skynetEyeSocket", fragment: "skynetEyeSocket" },
-    {
-      attributes: ["position"],
-      uniforms: ["worldViewProjection", "iPower", "iRadius"],
-    },
-  );
-  socketMat.setFloat("iPower", params.eyeIntensity);
-  const SHELL_R = GLOBE_R * 1.13;
-  socketMat.setFloat("iRadius", SHELL_R);
-  // Both faces render: through the opening you see the shell's INNER wall, which is what gives the
-  // socket depth rather than a paper-thin cut-out.
-  socketMat.backFaceCulling = false;
-
-  const socket = CreateSphere("eyeSocket", { diameter: SHELL_R * 2, segments: 64 }, scene);
-  socket.material = socketMat;
-  // Parented to the root, NOT the pivot — the aperture belongs to the tower and stays put while the
-  // eye moves behind it.
-  socket.parent = root;
-  socket.isPickable = false;
 
   // The eye lights its own tower — this is what makes the crown feel radioactive.
   const light = new PointLight("eyeGlow", Vector3.Zero(), scene);
