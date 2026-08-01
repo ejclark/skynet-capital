@@ -1,8 +1,9 @@
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
-import { Color3 } from "@babylonjs/core/Maths/math";
+import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { CreateIcoSphere } from "@babylonjs/core/Meshes/Builders/icoSphereBuilder";
 import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
+import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
@@ -197,23 +198,37 @@ export function buildTower(scene: Scene, params: TowerParams): TowerBuild {
   const crownRadius = radiusAt(profile, 1);
   // The film's crown is TWO great curved blades that cradle the Eye between them (plus a bowl of
   // smaller teeth below) — not a radial ring of spikes. That silhouette is most of the recognition.
-  const HORN_SEGMENTS = 9;
+  // Each horn is ONE continuous tube swept along a curve, not a stack of cylinders. The stack was
+  // the most obviously low-budget thing left at close range: nine discrete segments at discrete
+  // angles produce visible stair-steps down the blade's spine, and no amount of shading hides a
+  // silhouette that is literally notched. A tube built from a sampled path is both smoother and
+  // fewer draw calls.
+  const HORN_SAMPLES = 44;
   for (const side of [-1, 1]) {
-    for (let seg = 0; seg < HORN_SEGMENTS; seg++) {
-      const f = seg / (HORN_SEGMENTS - 1); // 0 at the root, 1 at the tip
+    const path: Vector3[] = [];
+    for (let i = 0; i < HORN_SAMPLES; i++) {
+      const f = i / (HORN_SAMPLES - 1); // 0 at the root, 1 at the tip
       // Sweep out then up: the blade leans away from the eye, then curls back vertical.
       const lean = Math.sin(f * 1.25) * 9.2;
-      const rise = f * 30;
-      const thick = 3.0 * (1 - f * 0.86);
-      const segMesh = CreateCylinder(
-        "horn",
-        { diameterTop: thick * 0.78, diameterBottom: thick, height: 4.4, tessellation: 6 },
-        scene,
-      );
-      segMesh.position.set(side * (crownRadius * 0.55 + lean), crownY + rise, 0);
-      segMesh.rotation.z = side * (-0.42 + f * 0.44);
-      ironParts.push(segMesh);
+      const rise = f * 33;
+      path.push(new Vector3(side * (crownRadius * 0.55 + lean), crownY + rise, 0));
     }
+    const horn = CreateTube(
+      "horn",
+      {
+        path,
+        // Tapering to a near-point: a blade, not a post. The floor keeps the tip from degenerating
+        // into a zero-radius ring, which renders as a pinch artefact.
+        radiusFunction: (i) => {
+          const f = i / (HORN_SAMPLES - 1);
+          return Math.max(0.12, 1.55 * (1 - f) ** 1.35);
+        },
+        tessellation: 14,
+        cap: 3,
+      },
+      scene,
+    );
+    ironParts.push(horn);
   }
   // The bowl of teeth beneath the Eye.
   for (let i = 0; i < 9; i++) {
