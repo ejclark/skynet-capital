@@ -117,6 +117,14 @@ change on a broken `main`). Detection lag collapses to "the next time we ship" f
 cost. Generalize it: **a monitor that needs its own schedule is usually a monitor attached to the
 wrong event.** Find the existing checkpoint first.
 
+**Isolate before you attribute.** When a system sums many contributions into one observable — a
+shader's colour, a layout's final position, a number assembled from several terms — the most recent
+edit is the most *available* explanation and usually the wrong one. Prove which path produces the
+symptom by zeroing the suspect and re-observing; if it survives, every further tweak to that suspect
+is waste. This is the same failure as the enumerate-every-actor rule in a different medium: both are
+reasoning about a system from a local edit rather than from its real inputs. The ledger records
+three instances in a single session, each costing a full iteration.
+
 A failure is also the cheapest map of an unguarded region: while standing in it, log the adjacent
 "what else is exposed this way?" threads to `docs/IDEAS.md` as side quests. That is the learning
 flywheel — each incident buys both a prevention and a set of leads.
