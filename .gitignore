@@ -18,3 +18,7 @@ scratchpad/
 # The bundle is generated from src/three/** at install time, never committed.
 public/three/scene.js
 public/tower.html
+
+# Playwright MCP scratch output — page snapshots and console logs written wherever the session's
+# cwd happens to be. Inspection artifacts, never project files.
+.playwright-mcp/
