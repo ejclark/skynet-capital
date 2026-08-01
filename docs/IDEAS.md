@@ -684,6 +684,33 @@ itself" is an automation engineer's calling card.
 _(src: Eric · while: firehosing — "a living document that has the capability to easily replicate the
 complicated system/configuration setup we've built")_
 
+**20a. Scope correction — the one-shot must carry the _plumbing_, not just the drills.** Eric:
+*"tooling and process choices like semantic release, commitlint and all the other plumbing should be
+dropped in as part of the one shot."* Correct, and it names a gap the first build left open: the
+`battle-of-the-wits` plugins ship **drills and gates**, while the process plumbing — the pipeline
+workflow, `commitlint.config.js`, `.releaserc.json`, version sync, the PR template, the lockfile
+discipline — exists only as *that repo's own setup*. An adopter installing the plugins today gets the
+coaches and then has to hand-roll the pipeline that makes them run. That is the whole value gap.
+- **This session is the argument.** Standing up that pipeline cost three red runs — a missing
+  lockfile, an `npm test` script that never executed the suite, and a shellcheck warning that fails
+  the job. All three are *setup* defects, not project defects, and every future adopter would
+  rediscover each one. A drop-in that is **already proven green** deletes that tax permanently. The
+  artifact to template is exactly the one now running: `verify` → merge → `release` → v1.0.0.
+- **Mechanism: a skill, not a plugin file.** Plugins cannot write into a target repo on install
+  (`settings.json` only accepts `agent` / `subagentStatusLine`), so the one-shot has to be an
+  invocable drill — `/harness-core:bootstrap` — that writes the plumbing and reports what it wrote.
+- **It needs the descriptor to choose a template.** The pipeline is Node/npm-shaped; a Python or Go
+  repo needs a different one. That makes this the **fifth** independent thread demanding the
+  capability descriptor (#9, #16, #18, #20, #20a) — the interface is now unambiguously the highest-
+  leverage build.
+- **Being opinionated is the feature, but declare it.** Conventional Commits, semantic-release and
+  ratcheting gates are *choices*, not laws — consistent with Foundry #1 ("instructions that reinforce
+  strong opinions"). The bootstrap should state plainly what it is imposing and why, so an adopter
+  disagrees deliberately rather than discovering it later.
+- **⚠ Workflow files are a carve-out.** Writing `.github/workflows/` changes what runs with repo
+  credentials, so a bootstrap that touches them stays reviewed, never auto-merged (`CLAUDE.md` →
+  merge policy).
+
 **21. A GUI for the harness — and the read/write line that decides whether it's worth building.** Eric
 floats a GUI to make options obvious and let a human pick preferences, settings, configurations, and see
 what mode the system is in — then objects to his own idea (*"replicating a bunch of behavior feels most
