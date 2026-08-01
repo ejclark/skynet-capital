@@ -106,3 +106,26 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** the same question applies to every other gate's scope — `arch-scan`/`dupe-scan`
   read `sourceDir` from the descriptor (category, good), but any future gate matching by filename
   pattern deserves the same audit (→ docs/IDEAS.md).
+
+### A ruleset scoped to "all branches" deadlocks the repository
+- **SHA:** n/a   **DATE:** 2026-08-01   **STATUS:** closed
+- **SIGNAL:** `git push` of a brand-new feature branch was rejected — `GH013 … Required status check
+  "verify" is expected` — on `refs/heads/fix/...`, not on `main`. Detection lag: immediate, but only
+  because a push happened to be attempted; nothing announces the deadlock, and a repo can sit in it
+  indefinitely looking correctly protected.
+- **ROOT CAUSE:** the ruleset's **target** was *All branches* rather than the default branch. A
+  required status check on every ref is circular: the check cannot run on a branch until the branch
+  exists, and the branch cannot be created until the check has run. Nothing can enter the repository.
+  The *rules* were right; only their **scope** was wrong — the same shape as the shellcheck-glob
+  lesson, where a correct check was pointed at the wrong set.
+- **PREVENTION:** doctrine — **branch-protection rules belong on the default branch, never on all
+  branches.** More generally: when a rule constrains *who may write*, enumerate what else writes
+  (this is the third instance of that same root cause in this ledger). The sibling failure the same
+  day: `@semantic-release/git` pushes a version-bump commit directly to `main`, which a
+  "changes must be made through a pull request" rule correctly rejects — so the release job died
+  with `GH013` until the post-merge push was removed entirely. Recorded in
+  `battle-of-the-wits/CLAUDE.md`: restoring semver in manifests requires BOTH the git plugin AND a
+  ruleset bypass actor, never one alone.
+- **SIDE QUESTS:** auto-merge only engages while a check is *pending*, so it must be armed at
+  PR-open time, not after CI passes — and it is meaningless without a required check to wait on
+  (→ docs/IDEAS.md).
