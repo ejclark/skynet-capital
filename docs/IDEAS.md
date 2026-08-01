@@ -684,6 +684,47 @@ itself" is an automation engineer's calling card.
 _(src: Eric · while: firehosing — "a living document that has the capability to easily replicate the
 complicated system/configuration setup we've built")_
 
+**21. A GUI for the harness — and the read/write line that decides whether it's worth building.** Eric
+floats a GUI to make options obvious and let a human pick preferences, settings, configurations, and see
+what mode the system is in — then objects to his own idea (*"replicating a bunch of behavior feels most
+likely like a bad idea due to integration maintenance pitfalls"*) and lands, emphasis-last as usual, on
+the real thesis: **"full automation to remove the need for humans to manually change config seems
+better."**
+
+**His self-objection is correct and stronger than he stated.** A GUI that *replicates* harness behavior
+is a second implementation of the same truth — two sources for what the system does, guaranteed to
+diverge. Every harness change becomes a GUI change, so the wrapper taxes the thing it wraps. That is
+**configuration drift (#2), his own named enemy, reappearing at the UI layer.** Concretely: Claude Code
+already ships `/plugin`, `/context` and `/config`, so a bespoke control panel would partially duplicate
+native surfaces — the integration-maintenance pitfall is not hypothetical.
+
+**The distinction he is circling: read surfaces are safe, write surfaces are not.**
+- **Read / observability** — current budgets, debt trajectory, what the athletes did, which modality is
+  active. **Generated from the system, so it cannot drift**: if it's derived, it's always true. High
+  value, near-zero maintenance. (The Foundry constellation artifact is an instance of exactly this.)
+- **Write / control** — a second input path for state the system already owns. This is the part that
+  rots, and the part he's right to distrust.
+
+**The principle worth adopting outright: every config option is a decision the system failed to make.**
+A setting is deferred judgment. If the system can decide from evidence — measured debt, detected
+toolchain, observed drift — the setting should not exist. **This is already the harness's proven design:
+nobody picks a budget; the ratchet sets it from measurement.** Eric's conclusion is that philosophy
+generalized, not a new idea — which is the best argument for it.
+- Applied to his own example, **modality should be inferred, not selected.** #16's swap rule already
+  says: adopt the harness whose native domain solved the problem you currently have. If the system can
+  classify the problem, it can pick the theme; manual selection is the fallback, not the design.
+
+**Where a control surface *is* legitimate — and it's a precise, small set.** The correct scope is
+**exactly the decisions that cannot be automated by design: the irreversible class** (credentials, spend,
+outward-facing actions). Those are Eric's calls permanently, so surfacing them is not deferred judgment,
+it's the residue. A panel that shows *"here is the one credentialed step waiting on you"* is genuinely
+useful; a panel of toggles is debt.
+- **The one thing automation cannot replace: legibility to someone who didn't build it.** If
+  `battle-of-the-wits` is adopted elsewhere, "what is this doing and why" is a real need — but that is
+  still a *read* surface, so it reinforces the same conclusion rather than qualifying it.
+_(src: Eric · while: reviewing the lifted harness — "full automation to remove the need for humans to
+manually change config seems better")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
