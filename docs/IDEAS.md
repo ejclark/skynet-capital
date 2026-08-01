@@ -1015,6 +1015,44 @@ eval.
 _(src: Eric · while: the dungeon-map work — "Blizzard level video cinematic capabilities with an
 intro to Skynet Capital")_
 
+**29. An integrate/merge sub-agent — the coach's logistics officer.** Eric: valuable to help the coach
+"orchestrate/navigate logistical problems."
+
+**Why it is stronger than it first sounds: it is the coordination constraint (#7) attacked from the
+opposite end, and the two halves need each other.**
+- **Territory claims (#25, rail 4) _prevent_ collisions** before dispatch. Cheap, but prevention
+  alone forces **conservative claims** — an athlete claims broadly to be safe, and broad claims
+  serialize the very work parallelism was for.
+- **An integrator _resolves_ what prevention missed**, which is what lets claims be **narrow instead
+  of paranoid**. That is the actual unlock: resolution is what buys back the parallelism that
+  prevention costs. Neither alone gets there — claims-only over-serializes, integrator-only is chaos.
+
+**The logistics it owns are real and currently unowned:**
+- **Merge order** — a topological sort over in-flight PRs so they land in the sequence that minimizes
+  rework, rather than whichever finishes first.
+- **Staleness** — `main` moves, branches rot. We already receive merge-conflict webhooks and handle
+  them ad hoc, one PR at a time, by hand.
+- **Batching** — structural PRs land batched per the merge-policy table; nothing enforces that today.
+- **Duplicate findings** — two athletes independently discovering the same debt, reconciled once
+  rather than fixed twice.
+
+**⚠ The design boundary that decides whether this is safe — name it before building:**
+1. **Mechanical conflicts vs. semantic ones.** Auto-resolving a *semantic* conflict is the
+   `clamp`/NaN failure with the stakes raised: both sides look fine, the merge picks one, and nothing
+   is red. The integrator may resolve **mechanical** conflicts only (formatting, import order,
+   non-overlapping hunks in one file) and must **escalate** anything where both sides changed
+   behaviour. That line is the whole design, not a detail.
+2. **Re-verify after resolving.** A conflict-resolved branch is a state *nothing has ever tested* —
+   neither side's CI run covers it. The integrator's output must go back through `verify`, never
+   straight to merge.
+3. **Mostly a read surface (#21).** "What order, what is stale, what overlaps, what needs a human" is
+   advisory and safe; the write mandate should stay deliberately narrow.
+
+**Sequencing:** it is *downstream of claims* — build prevention first, then resolution, or the
+integrator spends its time on collisions that never needed to happen.
+_(src: Eric · while: firehosing — "an integrate/merge subagent seems valuable to assist the coach to
+improve their ability to orchestrate/navigate logistical problems")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
