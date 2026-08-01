@@ -984,10 +984,32 @@ competency in both engines and **"Blizzard level video cinematic capabilities"**
   wire a local semantic-search server over Babylon docs/API/source, and idea #2 above already banks
   Babylon as the composable engine for the gameplay layer.
 
-**⚠ The honest read on "Blizzard level", because the gap is a category not a quality slider.**
-Blizzard cinematics are **offline-rendered** — Maya/Houdini/RenderMan, path-traced, hundreds of
-artist-years per minute. No realtime browser engine reaches that, and no amount of Three/Babylon skill
-closes it. Saying otherwise sets up a disappointment.
+**Eric's reframe (and it corrects the framing below): "Blizzard level" is the _vibe and the ideal_,
+not a spec — and he is willing to negotiate.** His argument is the one that should drive the plan:
+*fancy 3D models are within the 80/20, and **the engagement factor of interesting gameplay buys us
+time with entertained users, which enables us to improve gameplay**.* That is a flywheel, and it
+reorders everything: the target is not "match the reference," it is **cross the engagement threshold
+early, then compound**. Time-to-first-engaging-thing matters more than peak quality — which argues
+for one vertical slice that feels great over a broad system that feels flat.
+
+**Where the 80/20 actually sits — the specific answer to his instinct.** Perceived cinematic quality
+comes overwhelmingly from things that are *cheap in realtime*:
+- **Post-processing is the single biggest "looks expensive" lever**: filmic/ACES tone mapping, bloom,
+  depth of field, vignette, subtle grain and chromatic aberration. Cheap, and it does more for the
+  felt result than any geometry budget.
+- **Lighting beats geometry.** Volumetric shafts, rim light, an HDR environment map. A simple model
+  lit well reads far more expensive than a detailed model lit flat.
+- **Camera language is free and does most of the emotional work** — slow dolly, rack focus, a hint of
+  handheld, deliberate framing, eased motion with anticipation and settle. Linear motion reads cheap;
+  eased motion reads *directed*.
+- **Buy the geometry, build the lighting and camera.** Both engines have strong glTF pipelines and
+  there is a large market of high-quality models. Modelling from scratch is the expensive 20% that
+  buys the last sliver.
+
+**⚠ The one thing still worth stating plainly, so nothing is promised that cannot be delivered:**
+Blizzard's own cinematics are **offline path-traced** renders — a different category, not a higher
+setting, and no realtime browser engine reaches them. That is precisely why the offline-render path
+below matters: it is the route to that *vibe* without pretending realtime will get there.
 - **But the thing that reads as "cinematic" is direction, not polygon count** — camera choreography,
   timing, lighting, restraint. A well-directed low-poly shot beats an undirected detailed one, every
   time.
