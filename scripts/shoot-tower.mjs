@@ -34,9 +34,19 @@ const CHROME = process.env.PW_CHROME || "/opt/pw-browsers/chromium-1194/chrome-l
 const SEEK_TIME = 0.6;
 
 const SHOTS = [
-  { tag: "hero", w: 1600, h: 1000, alpha: -1.15, beta: 1.18, radius: 175 },
-  { tag: "silhouette", w: 1600, h: 1000, alpha: 0.72, beta: 1.3, radius: 230 },
-  { tag: "crown-close", w: 1600, h: 1000, alpha: -0.6, beta: 1.12, radius: 95 },
+  // Every pose is now EYE-RELATIVE. With a billboarded Eye any angle worked; a directional one
+  // means a fixed alpha can frame the tower's back, which is how the hero shot lost its Eye.
+  { tag: "hero", w: 1600, h: 1000, faceEye: true, alphaOffset: -0.85, beta: 1.18, radius: 175 },
+  { tag: "silhouette", w: 1600, h: 1000, faceEye: true, alphaOffset: 1.9, beta: 1.3, radius: 230 },
+  {
+    tag: "crown-close",
+    w: 1600,
+    h: 1000,
+    faceEye: true,
+    alphaOffset: -0.5,
+    beta: 1.12,
+    radius: 95,
+  },
   // The Eye is the piece under active art direction, so it gets its own pose: framed on the
   // aperture, close enough to judge chatoyancy and the iris parallax.
   { tag: "eye", w: 1600, h: 1000, faceEye: true, beta: 1.5, radius: 30 },
@@ -51,7 +61,7 @@ const SHOTS = [
     beta: 1.32,
     radius: 34,
   },
-  { tag: "mobile", w: 430, h: 900, alpha: -1.15, beta: 1.18, radius: 210 },
+  { tag: "mobile", w: 430, h: 900, faceEye: true, alphaOffset: -0.85, beta: 1.18, radius: 210 },
 ];
 
 async function main() {
