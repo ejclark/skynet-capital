@@ -788,6 +788,47 @@ tradeoffs. Keep it diagnostic, never moral.
 _(src: Eric · while: the CI/CD port — "a doctor/hospital system which have the ability to diagnose
 problems and prescribe medicines")_
 
+**23. Ingest and index the tooling docs — the research role given a corpus.** Eric: take inventory of
+everything Claude offers (features, parts, strategies), **ingest the docs and index them with
+Graphify**, so the system can identify *proper* paths for a stated goal rather than deferring to gut
+instinct. He frames the trade explicitly: indexing "greatly reduces the tax while squeezing out most
+of the value on demand," and compounds into a knowledge-base powerhouse.
+
+**Immediately actionable, not speculative — the corpus is already published for this.**
+`https://code.claude.com/docs/llms.txt` is a machine-readable index of **174 pages**, each a direct
+`.md` URL with a one-line description. That is an ingestion manifest, purpose-built. No scraping.
+
+**The real prize is _discovery_, not lookup — and that reframes the value.** Doc *access* already
+exists (WebFetch). What doesn't exist is knowing **what to reach for**, and you cannot use a feature
+you don't know is there. Evidence from this session:
+- Eric's flow-state problem was solved by a `UserPromptSubmit` **hook** — surfaced only because
+  `settings.json` happened to get read. Nothing would have suggested it.
+- Building the plugin marketplace required fetching the docs **twice** mid-task (plugins, then
+  plugin-marketplaces) because the manifest schema wasn't known. Each fetch was a stall.
+- Worse: Claude **asserted a wrong capability claim** — that session repo-scope was fixed at attach
+  time and only a new session could clear the 403. It re-checks per request. That was a statement
+  about tooling behavior made without a source, and a corpus is the direct corrective.
+This is a **detection-lag** argument (`docs/COACHES.md`): the failure mode isn't slow lookup, it's
+*never finding out the feature existed* — invisible and unmeasurable today.
+
+**Objections, attached (per #19):**
+1. **Docs rot faster than an index of them.** Claude Code ships fast; a stale snapshot becomes
+   *confidently wrong*, which is worse than absent — the same rot argument that sank "living" in #20
+   and prescriptive prose in #5. Needs a refresh path (`llms.txt` is diffable, so this is tractable)
+   and a visible "indexed as of" stamp.
+2. **Graphify on prose ≠ Graphify on code.** Code edges are real (imports, calls); doc edges are
+   semantic and fuzzier, so the graph may be far lower-signal than `STRUCTURE-graph.md`. Prove it on
+   one slice (hooks + skills + plugins, ~20 pages) before committing to 174.
+3. **"All tooling in our ecosystem" is unbounded.** Start with one corpus, measure whether it changes
+   a decision, then expand. Otherwise this is a research project wearing a task's clothes.
+
+**Where it docks:** it *is* the **research role** from the original dump (#2) — "reinforce decisions
+by data" — with the corpus that makes the role real rather than aspirational. Pure **read surface**
+(#21), so it carries none of the control-plane risk. And it makes ceiling-sensing (#15) cheaper:
+"has someone already solved this?" becomes a query instead of a guess.
+_(src: Eric · while: firehosing after the harness lift — "index it with graphify… over time that
+builds up a knowledge base powerhouse")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
