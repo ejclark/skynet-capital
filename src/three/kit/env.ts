@@ -6,10 +6,14 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { CubeTexture } from "@babylonjs/core/Materials/Textures/cubeTexture";
+import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Color3, Color4, Vector3 } from "@babylonjs/core/Maths/math";
+import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
+import { VolumetricLightScatteringPostProcess } from "@babylonjs/core/PostProcesses/volumetricLightScatteringPostProcess";
 import { Scene } from "@babylonjs/core/scene";
+import { createSky } from "./sky.js";
 // --- Side-effect imports. Tree-shaking strips scene components unless they're imported for effect;
 // without these you get runtime "X needs to be imported before" errors and a black screen. ---
 import "@babylonjs/core/Rendering/depthRendererSceneComponent";
@@ -45,7 +49,6 @@ export interface Stage {
   readonly shadows: ShadowGenerator;
   readonly key: DirectionalLight;
   readonly forge: PointLight;
-  readonly pipeline: DefaultRenderingPipeline;
 }
 
 /** Where the prefiltered IBL lives. Served by us (see public/three) — never a third-party CDN, which
@@ -58,7 +61,7 @@ function attachEnvironment(scene: Scene, url: string): void {
   try {
     const env = CubeTexture.CreateFromPrefilteredData(url, scene);
     scene.environmentTexture = env;
-    scene.environmentIntensity = 0.55; // night siege, but the masonry must still READ
+    scene.environmentIntensity = 0.3; // night siege, but the masonry must still READ
   } catch {
     scene.environmentIntensity = 0;
   }
@@ -80,7 +83,11 @@ function gradeImage(scene: Scene): void {
  * two compete for the camera's post-process chain and the ambient occlusion silently disappears.
  * Learned the hard way; do not reorder without checking a screenshot.
  */
-function attachPost(scene: Scene, camera: ArcRotateCamera): DefaultRenderingPipeline {
+export function attachPost(
+  scene: Scene,
+  camera: ArcRotateCamera,
+  godRayEmitter?: Mesh,
+): DefaultRenderingPipeline {
   if (SSAO2RenderingPipeline.IsSupported) {
     const ssao = new SSAO2RenderingPipeline("ssao", scene, { ssaoRatio: 0.75, blurRatio: 1 }, [
       camera,
@@ -92,12 +99,16 @@ function attachPost(scene: Scene, camera: ArcRotateCamera): DefaultRenderingPipe
     ssao.maxZ = 260;
   }
 
+  // BEFORE the default pipeline — post-processes attach to the camera in creation order, and the
+  // pipeline's tone mapping and bloom must run on a frame that already has the rays in it.
+  if (godRayEmitter) attachGodRays(scene, camera, scene.getEngine() as Engine, godRayEmitter);
+
   const pipe = new DefaultRenderingPipeline("pipe", true, scene, [camera]);
   pipe.samples = 4; // MSAA — kills the jagged slat edges
   pipe.fxaaEnabled = true;
   pipe.bloomEnabled = true;
-  pipe.bloomThreshold = 0.8;
-  pipe.bloomWeight = 0.32;
+  pipe.bloomThreshold = 0.92;
+  pipe.bloomWeight = 0.22;
   pipe.bloomKernel = 72;
   pipe.bloomScale = 0.6;
   pipe.grainEnabled = true;
@@ -109,16 +120,52 @@ function attachPost(scene: Scene, camera: ArcRotateCamera): DefaultRenderingPipe
   return pipe;
 }
 
+/**
+ * God rays from the Eye. The Eye is the only light source in a black sky, and light with nothing to
+ * scatter through has no way to prove it is bright — this is what makes it read as a fire rather
+ * than a lamp bulb. Volumetric scattering renders the emitter against blacked-out occluders and
+ * radial-blurs outward from it, so the crown's horns cast real shafts.
+ *
+ * ORDER MATTERS, same class of trap as SSAO2: post-processes attach to the camera in creation
+ * order, so this must be built BEFORE the default pipeline or the pipeline's tone mapping and bloom
+ * run on a frame that has no rays in it yet.
+ */
+function attachGodRays(scene: Scene, camera: ArcRotateCamera, engine: Engine, emitter: Mesh): void {
+  const rays = new VolumetricLightScatteringPostProcess(
+    "godrays",
+    1.0,
+    camera,
+    emitter,
+    80,
+    Texture.BILINEAR_SAMPLINGMODE,
+    engine,
+    false,
+    scene,
+  );
+  // Restrained: shafts should be findable, not a lens flare. Decay near 1 keeps them long.
+  rays.exposure = 0.11;
+  rays.decay = 0.945;
+  rays.weight = 0.28;
+  rays.density = 0.88;
+}
+
 /** Build the whole stage. `canvas` must already be in the DOM. */
 export function createStage(canvas: HTMLCanvasElement): Stage {
   const engine = new Engine(canvas, true, { stencil: true }, true);
   const scene = new Scene(engine);
-  scene.clearColor = new Color4(0.3, 0.31, 0.33, 1); // LIGHT storm: the tower must read as a black silhouette against it
+  // Night under a volcano. The old flat storm-grey made a clean silhouette but capped the Eye: a
+  // glowing thing cannot read as a LIGHT SOURCE against a background brighter than itself, so every
+  // extra unit of fire only made it flatter. The gradient dome (kit/sky.ts) keeps the silhouette by
+  // lighting the HORIZON instead of the whole sky. Clear colour matches its zenith for the frames
+  // the dome does not cover.
+  scene.clearColor = new Color4(0.012, 0.014, 0.022, 1);
   // Exponential fog is what sells atmosphere/scale — the tower recedes into weather, not into a void.
+  // Tinted to the horizon ember so distance reads as smoke lit from below, not as grey wash.
   scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogDensity = 0.006;
-  scene.fogColor = new Color3(0.34, 0.35, 0.375);
+  scene.fogDensity = 0.0055;
+  scene.fogColor = new Color3(0.055, 0.032, 0.03);
 
+  createSky(scene);
   attachEnvironment(scene, ENV_TEXTURE_URL);
   gradeImage(scene);
 
@@ -152,6 +199,5 @@ export function createStage(canvas: HTMLCanvasElement): Stage {
   forge.intensity = 1.1;
   forge.range = 95;
 
-  const pipeline = attachPost(scene, camera);
-  return { engine, scene, camera, shadows, key, forge, pipeline };
+  return { engine, scene, camera, shadows, key, forge };
 }

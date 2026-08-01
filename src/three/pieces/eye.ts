@@ -6,6 +6,7 @@ import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
 import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
+import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import type { TowerParams } from "../kit/params.js";
@@ -34,6 +35,8 @@ export interface EyeBuild {
   readonly gaze: TransformNode;
   readonly light: PointLight;
   readonly material: ShaderMaterial;
+  /** The flame mesh itself — the emitter volumetric scattering casts its shafts from. */
+  readonly emitter: Mesh;
 }
 
 /** Register the shader sources once per page. */
@@ -45,7 +48,7 @@ function registerShaders(): void {
 }
 
 /** Radius of the eyeball. The aperture is sized off this so the two can't drift apart. */
-const GLOBE_R = 9.6;
+const GLOBE_R = 12.5;
 
 export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild {
   registerShaders();
@@ -117,27 +120,33 @@ export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild
   coreMat.alpha = 0.07;
 
   const reach = params.gazeReach;
+  // The beam starts OUTSIDE the eyeball, not at its centre. Spanning from the origin meant the
+  // cylinder passed through the flame and washed whichever side faced the camera — the pupil went
+  // grey and the almond lost a canthus. Light leaves a surface; it does not begin inside one.
+  const beamStart = GLOBE_R * 1.05;
+  const beamLen = reach - beamStart;
+
   const beam = CreateCylinder(
     "beam",
-    { diameterTop: 1.6, diameterBottom: reach * 0.11, height: reach, tessellation: 24 },
+    { diameterTop: 2.2, diameterBottom: reach * 0.11, height: beamLen, tessellation: 24 },
     scene,
   );
   beam.material = beamMat;
   beam.rotation.x = Math.PI / 2;
-  beam.position.z = reach / 2;
+  beam.position.z = beamStart + beamLen / 2;
   beam.parent = gaze;
   beam.isPickable = false;
 
   const core = CreateCylinder(
     "beamCore",
-    { diameterTop: 0.5, diameterBottom: reach * 0.04, height: reach, tessellation: 20 },
+    { diameterTop: 0.7, diameterBottom: reach * 0.04, height: beamLen, tessellation: 20 },
     scene,
   );
   core.material = coreMat;
   core.rotation.x = Math.PI / 2;
-  core.position.z = reach / 2;
+  core.position.z = beamStart + beamLen / 2;
   core.parent = gaze;
   core.isPickable = false;
 
-  return { root, pivot, gaze, light, material };
+  return { root, pivot, gaze, light, material, emitter: globe };
 }

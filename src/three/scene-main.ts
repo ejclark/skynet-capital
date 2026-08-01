@@ -1,6 +1,7 @@
 import { GlowLayer } from "@babylonjs/core/Layers/glowLayer";
-import { createStage } from "./kit/env.js";
+import { attachPost, createStage } from "./kit/env.js";
 import { DEFAULT_PARAMS, resolveTowerParams } from "./kit/params.js";
+import { createSmoke } from "./kit/smoke.js";
 import { buildEye } from "./pieces/eye.js";
 import { buildTower } from "./pieces/tower.js";
 
@@ -38,6 +39,17 @@ export function start(canvas: HTMLCanvasElement): void {
   forge.intensity = params.forgeIntensity;
 
   const eye = buildEye(scene, tower.crownY + 15, params);
+
+  // Cloud around the crown: atmosphere, but mostly it gives the Eye's light something to land on.
+  createSmoke(scene, {
+    y: tower.crownY + 6,
+    radius: tower.crownRadius * 4.2,
+    glow: params.eyeIntensity,
+  });
+
+  // Post comes AFTER the Eye exists, because volumetric scattering needs it as its emitter — and it
+  // must be built before the default pipeline (see attachPost).
+  attachPost(scene, camera, eye.emitter);
 
   // Bloom-adjacent glow for the emissive bits only; the pipeline's bloom handles the rest.
   const glow = new GlowLayer("glow", scene, { blurKernelSize: 44 });
