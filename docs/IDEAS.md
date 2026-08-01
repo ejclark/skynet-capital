@@ -906,6 +906,41 @@ its own dungeon check, and dogfooding is the honest first eval; (b) the coordina
 _(src: Eric · while: the dungeon persona work — "sequence the work to layer safety rails in the
 correct order, and start adding sub-agents to increase throughput")_
 
+**26. The personas as a _learning_ product.** Eric: the flavors/personas like the Dungeon Crawler are
+"delightful and could be a valuable product for learning/educating."
+
+**Why it holds — the pedagogy is already load-bearing, not decorative.** Engineering *process* is
+abstract and badly taught: bootcamps teach syntax, almost nobody teaches how a codebase stays alive
+over three years. A dungeon crawl makes the three things that are hardest to convey — **sequencing,
+prerequisites, and risk** — legible at a glance. And the strongest property is one the harness already
+has: **loot is capability, earned by verification.** That teaches "autonomy is earned, not granted"
+*through the mechanic* rather than by asserting it. Mechanics that embody the lesson beat prose that
+states it, which is the entire difference between a course and a game.
+- **It converges with the University metaphor already banked above.** "Degrees gate capability — a
+  diploma is a real permission, not a badge" is *exactly* the loot table, one altitude up. Two
+  independently-arrived-at ideas describing one mechanic is a strong signal.
+- **It fits the existing ethos rather than pivoting from it** — skynet is educational-first already;
+  this is the same thesis pointed at a second domain. And it would be the **third** instance of
+  Eric's own gold-tier-Renovate pattern: first applied to dependencies, then to a codebase's
+  structure, now *taught*.
+
+**⚠ Objections, attached — the first is the serious one:**
+1. **This is a second product, and there is one constraint.** `skynet-capital` is unfinished. Two
+   products competing for the same attention is the classic split, and the think tank should say so
+   rather than cheer. **Strongest form of the idea avoids this entirely:** make it the *teaching
+   layer of the harness itself* — an adopter learns the discipline by using it, because the loot
+   table explains why the sequence exists. Zero new product surface, already half-built. Extract a
+   product later only if it proves valuable in place.
+2. **Teaching by metaphor risks cargo-cult understanding** — learners fluent in the vocabulary and
+   innocent of the mechanism. That is **metaphor capture** (#9) aimed at a student. Mitigation is
+   already in the renderer: always show the real number behind the game element.
+3. **Weak willingness-to-pay.** "Learn engineering process" monetizes far worse than "learn to code."
+   More plausible as content/marketing, or as a feature inside something else, than standalone.
+4. **It is downstream of the harness being good.** Four PRs old, proven in one repo. Productizing an
+   unproven thing is premature — the dogfood and portability evidence has to land first.
+_(src: Eric · while: reviewing the dungeon plan of attack — "delightful and could be a valuable
+product for learning/educating")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
