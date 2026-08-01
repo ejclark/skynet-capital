@@ -725,6 +725,42 @@ useful; a panel of toggles is debt.
 _(src: Eric · while: reviewing the lifted harness — "full automation to remove the need for humans to
 manually change config seems better")_
 
+**22. The doctor/hospital harness — diagnose, then prescribe.** Eric: a system that can **diagnose
+problems and prescribe medicines**. A harness theme (#16), and it scores unusually well on the #9
+rubric — but the reason to build it is that it **names a hole the current harness actually has**.
+
+**The finding: we have screening and treatment, and no diagnosis step.** Gates emit *symptoms*
+(`arch-scan`: this file is 600 lines). Drills apply *treatments* (`/decompose`, `/dedupe`,
+`/retro`). Nothing in between asks **"what is actually wrong here?"** — `--candidate` picks a target
+straight off a symptom score. And the single misdiagnosis already in `docs/LESSONS.md` is exactly
+that missing step: *"The false abstraction — consolidating `clamp` dropped a NaN guard."* The gate
+reported a symptom (same symbol, two files), the treatment was applied without a differential, and
+the real condition was two *different* functions that happened to share a name. That is a metaphor
+identifying a defect we paid for, not a reskin.
+
+**What the vocabulary imports that we lack:**
+- **Symptom → differential → diagnosis.** Several conditions produce one symptom: duplication may be
+  copy-paste, convergent evolution, or a false positive. Rule out before treating.
+- **Iatrogenic harm / _first, do no harm_.** A named category for *the treatment causing the
+  disease* — which is precisely what the `clamp` lesson was. The harness has no word for this today.
+- **Contraindications.** A treatment that is unsafe given another active condition — don't `/dedupe`
+  code the mortician is about to delete. This is the collision problem from coordination (#8) with a
+  vocabulary that makes it obvious.
+- **Screening vs. diagnostic tests.** Gates are *screening*: cheap, run on everything, tolerate false
+  positives. That frames tuning as **sensitivity vs. specificity** — a rigorous way to argue about
+  gate thresholds that we currently do by feel.
+- **Chronic vs. acute.** An incident is acute (ER → `/retro`); structural debt is chronic (managed,
+  never "cured"). Different protocols, and the harness currently treats them identically.
+- **Dosage / titration** — one treatment per PR; the ratchet *is* titration. **Prognosis** — will
+  this worsen untreated? Prioritize by trajectory, not just current severity. **The chart** —
+  `LESSONS.md` is the medical record. **Vitals** — the incident eye is monitoring.
+
+**Where it breaks (name it, per the rubric):** code is not a patient — it can be replaced wholesale,
+consent and bodily autonomy have no analogue, and "sick code" can moralize what are ordinary
+tradeoffs. Keep it diagnostic, never moral.
+_(src: Eric · while: the CI/CD port — "a doctor/hospital system which have the ability to diagnose
+problems and prescribe medicines")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole

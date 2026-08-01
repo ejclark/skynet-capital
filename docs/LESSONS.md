@@ -65,3 +65,23 @@ it. Prevention ranks, best first:
   it.** Branch protection has more consumers than PRs (semantic-release); `prepare` has more callers
   than developers (the Dockerfile, CI, `npm ci` anywhere). Landed in `docs/COACHES.md`.
 - **SIDE QUESTS:** none.
+
+### `npm test` never ran the suite — verified with a stand-in for the real command
+- **SHA:** n/a   **DATE:** 2026-08-01   **STATUS:** closed
+- **SIGNAL:** the *second* red CI run on `battle-of-the-wits` PR #1 — `✖ tests 1 / pass 0`, where
+  the one "test" was the runner failing to load. Detection lag: only as long as it took CI to run,
+  but it should have been zero, because every local check had reported 7/7 green minutes earlier.
+- **ROOT CAUSE:** `package.json` declared `"test": "node --test tests/"`, which resolves the
+  directory as a *module* and dies with `MODULE_NOT_FOUND`. I had hit that exact error while
+  building the suite, worked around it at the shell with `node --test tests/*.test.mjs`, and then
+  kept verifying with the workaround — never re-running the script CI invokes. The suite was green
+  in every check I ran and had never once executed in the pipeline.
+- **PREVENTION:** doctrine — **verify by running the project's own commands, not an equivalent.**
+  A hand-typed stand-in tests your shell invocation, not the repo's contract; the moment they
+  diverge, local green and CI red are both correct. Landed in
+  `battle-of-the-wits/CLAUDE.md` → _Ship loop_ (`npm test`, `npm run validate`, sync-check by name)
+  and generalized here. Corollary paid for in the same PR: install the linter the gate uses
+  (shellcheck) locally rather than discovering its warnings from a red run.
+- **SIDE QUESTS:** the harness has no gate asserting its own scripts execute — a `verify` step that
+  runs each `package.json` script's smoke path would have caught this before the pipeline did
+  (→ docs/IDEAS.md).
