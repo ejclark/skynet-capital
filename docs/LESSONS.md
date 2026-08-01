@@ -65,3 +65,24 @@ it. Prevention ranks, best first:
   it.** Branch protection has more consumers than PRs (semantic-release); `prepare` has more callers
   than developers (the Dockerfile, CI, `npm ci` anywhere). Landed in `docs/COACHES.md`.
 - **SIDE QUESTS:** none.
+
+### Diagnosing a render artefact from the diff instead of from the pixel
+- **SHA:** n/a   **DATE:** 2026-08-01   **STATUS:** closed
+- **SIGNAL:** three separate mis-attributions inside one work session, each costing a pass:
+  (1) rays out of the Eye's pupil blamed on the chatoyancy lobe and damped four times — they were
+  fbm's high octaves, since `fbm(angle * 3.2)` carries content past 100 cycles around a circle;
+  (2) a wash across one side of the flame read as a shape problem for two passes — it was the gaze
+  beam starting at the eyeball's centre and passing through it; (3) streaks attributed to volumetric
+  scattering that was wired but never invoked, so it could not have produced them.
+- **ROOT CAUSE:** reasoning from *what I had just changed* rather than proving which code path
+  produces the pixel. The most recent edit is the most available explanation, and in a shader where
+  a dozen terms sum into one colour it is usually the wrong one. Compounding it: shader terms are
+  additive, so a wrong suspect can be damped repeatedly and the artefact only *seems* to respond.
+- **PREVENTION:** doctrine — **isolate before you attribute.** Zero the suspected term and re-render;
+  if the artefact survives, the suspect is innocent and every further tweak to it is waste. One
+  screenshot cycle settles what an argument from the diff cannot. Recorded in `docs/COACHES.md`
+  alongside the enumerate-every-actor rule, which is the same failure in a different medium: both
+  are reasoning about a system from a local edit instead of from its actual inputs.
+- **SIDE QUESTS:** the third instance was caught only because lint flagged an unused parameter —
+  worth noting that the cheapest detector for "this feature never ran" was a general-purpose gate,
+  not anything render-specific.
