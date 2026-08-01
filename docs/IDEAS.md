@@ -829,6 +829,42 @@ by data" — with the corpus that makes the role real rather than aspirational. 
 _(src: Eric · while: firehosing after the harness lift — "index it with graphify… over time that
 builds up a knowledge base powerhouse")_
 
+**24. Extend the index to the _ecosystem_ — continuous tool selection driven by evals.** Eric: take
+#23 beyond first-party docs to **MCP servers and the public skills / instructions / sub-agent
+ecosystem**, and with quality evals plus analytics in place, *constantly look for better tooling to
+improve solutions* — because **"the cost of changing is cheap."**
+
+**This is the first idea that gives eval a _decision to serve_,** and that matters more than it
+sounds. Eval has now been demanded from five directions — harness-native success criteria (#16), the
+fixed task suite (#9), anti-pattern failure modes (#17a), probing questions, and now tool selection.
+The first four *measure*; this one **acts on the measurement**. A scoreboard nobody trades on rots;
+a control loop doesn't. If eval gets built, this should be its first consumer.
+- **It is battle-of-the-wits (#9) pointed at tools instead of harnesses:** hold the task suite
+  constant, vary the tool, keep the winner. Same methodology, same requirement that the suite be real.
+- **The discovery surface already exists** — an MCP registry, `anthropics/claude-plugins-community`,
+  and in-session search over plugins/skills. So this is plumbing, not invention.
+
+**⚠ The load-bearing claim — "the cost of changing is cheap" — is the weakest part, and one failure
+mode is severe:**
+1. **Supply chain is the serious one.** Community MCP servers and plugins execute **with your
+   credentials**. "Constantly adopt better tooling" + "changing is cheap" is a mechanism for pulling
+   arbitrary third-party code into a system that has cross-repo write (#18). That is squarely the
+   irreversible class: adoption must stay a **reviewed, pinned, human-authorized** step — pin to a
+   commit SHA, never a moving ref; read what it does before it runs. Cheap to *try* is not cheap to
+   *trust*.
+2. **Switching cost is not the edit — it is the re-verification and the lost tuning.** A swap
+   invalidates accumulated budgets, ignore lists, and prompt phrasing that worked around a quirk.
+   That is configuration drift (#2) arriving through the front door.
+3. **Churn without hysteresis produces thrash, not compounding.** Swapping on *any* improvement
+   oscillates; require a materially better result over a stable margin before moving.
+
+**Where Eric is right, and it is a real asymmetry:** for a solo operator with strong verification,
+switching cost genuinely *is* far lower than in a team — no retraining, no coordination, and the
+gates make a regression detectable fast. Most orgs err hard in the opposite direction and marry their
+tools. The correct posture is his default *with* the supply-chain brake attached.
+_(src: Eric · while: firehosing — "if we have quality evals in place to measure… we should be able to
+constantly look for better tooling to improve solutions")_
+
 ### The University metaphor — elevate the academy into a full "Skynet University"
 Eric likes the university framing; bank it to expand on. The `/learn` academy + risk ladder
 (`src/domain/curriculum.ts`, `src/domain/plays.ts`, `RANKS`) is the seed — reframe the whole
