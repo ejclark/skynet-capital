@@ -143,9 +143,9 @@ function attachGodRays(scene: Scene, camera: ArcRotateCamera, engine: Engine, em
     scene,
   );
   // Restrained: shafts should be findable, not a lens flare. Decay near 1 keeps them long.
-  rays.exposure = 0.11;
+  rays.exposure = 0.065;
   rays.decay = 0.945;
-  rays.weight = 0.28;
+  rays.weight = 0.17;
   rays.density = 0.88;
 }
 
