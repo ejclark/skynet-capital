@@ -44,23 +44,32 @@ export function start(canvas: HTMLCanvasElement): void {
   glow.intensity = 0.6;
 
   let t = 0;
+
+  /**
+   * Everything time-driven in the scene, as a pure function of the clock. Factored out of the render
+   * observable so a screenshot can SEEK to an exact moment: the harness pins the camera, but until
+   * now the animation ran on wall-clock, so every run captured a different instant and shot-to-shot
+   * comparison — the entire point of the poses — was unreliable.
+   */
+  const applyTime = (time: number): void => {
+    eye.material.setFloat("iTime", time);
+    // The EYE sweeps, searching — never a static spotlight, and never locked onto the viewer. Two
+    // incommensurate frequencies keep the scan from reading as a metronome.
+    eye.pivot.rotation.y = Math.sin(time * 0.19) * 0.44 + Math.sin(time * 0.071) * 0.16;
+    eye.pivot.rotation.x = 0.05 + Math.sin(time * 0.11) * 0.05;
+    // A slower, wider sweep for the beam on top of the eye's own aim, so the light rakes the land.
+    eye.gaze.rotation.y = Math.sin(time * 0.13) * 0.3;
+    eye.gaze.rotation.x = 0.12 + Math.sin(time * 0.09) * 0.05;
+    // Breathing intensity so the Eye feels alive rather than a lamp.
+    const pulse = 0.9 + Math.sin(time * 1.7) * 0.08 + Math.sin(time * 0.53) * 0.05;
+    eye.light.intensity = params.eyeIntensity * 1.15 * pulse;
+    forge.intensity = params.forgeIntensity * (0.92 + Math.sin(time * 0.9) * 0.1);
+  };
+
   scene.onBeforeRenderObservable.add(() => {
     t += engine.getDeltaTime() / 1000;
     camera.alpha += 0.0014;
-    eye.material.setFloat("iTime", t);
-    // The EYE sweeps, searching — never a static spotlight, and never locked onto the viewer. The
-    // pivot turns the eyeball itself behind its fixed stone aperture, so the pupil crosses the
-    // opening and the beam leaves from wherever it is pointing. Two incommensurate frequencies keep
-    // the scan from reading as a metronome.
-    eye.pivot.rotation.y = Math.sin(t * 0.19) * 0.44 + Math.sin(t * 0.071) * 0.16;
-    eye.pivot.rotation.x = 0.05 + Math.sin(t * 0.11) * 0.05;
-    // A slower, wider sweep for the beam on top of the eye's own aim, so the light rakes the land.
-    eye.gaze.rotation.y = Math.sin(t * 0.13) * 0.3;
-    eye.gaze.rotation.x = 0.12 + Math.sin(t * 0.09) * 0.05;
-    // Breathing intensity so the Eye feels alive rather than a lamp.
-    const pulse = 0.9 + Math.sin(t * 1.7) * 0.08 + Math.sin(t * 0.53) * 0.05;
-    eye.light.intensity = params.eyeIntensity * 1.15 * pulse;
-    forge.intensity = params.forgeIntensity * (0.92 + Math.sin(t * 0.9) * 0.1);
+    applyTime(t);
   });
 
   engine.runRenderLoop(() => scene.render());
@@ -71,6 +80,14 @@ export function start(canvas: HTMLCanvasElement): void {
   // The harness pauses the loop before capturing — a continuously-rendering canvas never
   // reaches the 'stable' state screenshot tooling waits for.
   window.__towerPause = () => engine.stopRenderLoop();
+  // Seek to an exact moment and render one frame. This is what makes visual diffs meaningful: two
+  // runs at the same seek time are the same picture, so a difference is a real change.
+  window.__towerSeek = (time: number) => {
+    engine.stopRenderLoop();
+    t = time;
+    applyTime(time);
+    scene.render();
+  };
   // Where the Eye is, and which way it faces. The harness needs both to frame the aperture head-on;
   // hard-coding them there would silently drift the moment the tower's proportions change.
   window.__eye = { y: eye.root.position.y, facingAlpha: Math.PI / 2 };
@@ -90,6 +107,8 @@ declare global {
     __towerPause?: () => void;
     /** The Eye's height and the camera alpha that looks straight into its aperture. */
     __eye?: { y: number; facingAlpha: number };
+    /** Freeze the scene at an exact time and render one frame — deterministic screenshots. */
+    __towerSeek?: (time: number) => void;
   }
 }
 
