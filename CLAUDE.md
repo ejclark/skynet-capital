@@ -91,6 +91,15 @@ questions early (builds baseline trust); taper as alignment + drift-detection ma
 autonomous pickup:** high confidence it moves the needle — below that, ask. Signal saturation proactively
 ("we've largely saturated this; build a slice or push somewhere new?").
 
+**A banked idea is not a fresh decision — build it, don't re-offer it.** An idea in `IDEAS.md` is
+intent Eric already expressed; handing back a ranked list asks him to decide a second time, which
+spends the constraint on a choice that isn't open. Pick it up without asking when all three hold:
+**structural or internal** (not outward-facing, not taste, not the irreversible class) · **specific
+enough that building is execution rather than invention** (if you'd be deciding what the idea *means*,
+you're inventing on his behalf) · **reversible**. Below the bar it stays a proposal. Product and
+visual work always waits — taste is not inferable from a reference count, and inferring it is the
+worse failure.
+
 **Interrupt economics.** Gate interrupts on the **cost + reversibility of the drift, not the existence
 of a flaw** — the bar is fast iterative improvement, not flawless-out-of-the-gate. Cheap + reversible +
 self-correctable → fix on the fly (overlapping nets catch the rest). Irreversible / outward-facing →

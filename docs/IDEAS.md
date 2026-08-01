@@ -247,6 +247,13 @@ that we didn't have:
 _(src: Eric · while: proposing a system for abstract structures worth modeling — "hyper sensitive to
 detecting and detailing why these are effective")_
 
+**Built (2026-08-01):** the catalog + rubric ship as `plugins/harness-core/docs/METAPHORS.md` in
+dungeon-crawler — skin vs. skeleton, the five-question rubric, and every skeleton this harness runs on
+with **where it breaks** (a gate enforces that last part). The DNA vein is deliberately *unspent*: the
+evolutionary half has no mapping here because nothing reproduces differentially, which is recorded in
+the catalog as the richest unexploited surplus and the likeliest to be over-driven. Idea stays open
+for that half.
+
 **10. The side-quest generator — "choose your own adventure" as the think tank's read surface.** Branding
 idea, and it closes the loop on the original ask (#4): a generator that **assesses all available context
 and offers a series of quests to pick up**. Capture exists (`IDEAS.md`), association is forming (these
