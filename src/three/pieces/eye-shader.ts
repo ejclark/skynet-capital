@@ -95,8 +95,11 @@ export const GLOBE_FRAGMENT = [
   "  float lick2 = fbm(vec2(ang * 9.5 + 11.0, dm * 11.0 - iTime * 2.6)) - 0.5;",
   "  float tipGuard = 1.0 - smoothstep(0.40, 0.70, abs(P.x));",
   "  float edge = dm - (RV + (lick * 0.055 + lick2 * 0.028) * tipGuard);",
-  // Past the tongues there is nothing. This is the naked silhouette — no stone, no lid, no plate.
-  "  if(edge > 0.030){ discard; }",
+  // Beyond the tongues, the CORONA: fire streams outward and thins into the night, so the Eye has no
+  // hard outline anywhere. Everything past its reach is discarded — still no stone, no lid, no plate.
+  "  const float CORONA = 0.055;",
+  "  if(edge > CORONA){ discard; }",
+  "  float corona = smoothstep(0.012, CORONA, edge);",
   // ---- THE FIRE ---------------------------------------------------------------------------------
   // Parallax refraction first: push the sample point along the view direction's tangential part, by an
   // amount that grows with obliquity, so the iris sits behind a curved cornea.
@@ -123,8 +126,8 @@ export const GLOBE_FRAGMENT = [
   "  float tdh = dot(T, H);",
   "  float sinTH = sqrt(max(0.0, 1.0 - tdh * tdh));",
   "  float fibre = 0.88 + 0.22 * noise(vec2(airis * 2.2, iTime * 0.06));",
-  "  float sheen = pow(sinTH, 14.0) * 0.40 + pow(sinTH, 4.0) * 0.12;",
-  "  sheen *= fibre * (1.0 - slit) * smoothstep(0.26, 0.60, r) * (1.0 - smoothstep(-0.40, -0.06, edge));",
+  "  float sheen = pow(sinTH, 10.0) * 0.13 + pow(sinTH, 3.0) * 0.07;",
+  "  sheen *= fibre * (1.0 - slit) * smoothstep(0.26, 0.55, r) * (1.0 - smoothstep(0.80, 1.05, r)) * (1.0 - corona);",
   // ---- PALETTE: a forge at the hour the smith stops singing --------------------------------------
   "  vec3 core = vec3(1.0, 0.90, 0.72);",
   "  vec3 hot  = vec3(0.98, 0.19, 0.015);",
@@ -134,7 +137,7 @@ export const GLOBE_FRAGMENT = [
   "  col = mix(col, hot, smoothstep(0.56, 0.88, heat));",
   // The white throat: small, central, and gone the moment the pupil covers it.
   "  float throat = (1.0 - smoothstep(0.03, 0.30, r)) * (1.0 - slit);",
-  "  col += core * pow(throat, 2.4) * (0.55 + iPower * 0.55);",
+  "  col += core * pow(throat, 3.2) * (0.30 + iPower * 0.34);",
   "  col += vec3(1.0, 0.62, 0.26) * sheen * (0.42 + iPower * 0.45);",
   // Absolute. No glow in it anywhere.
   "  col *= 1.0 - slit;",
@@ -153,13 +156,19 @@ export const GLOBE_FRAGMENT = [
   "  float flash = step(0.62, hash(vec2(cell, floor(ang * 5.0))));",
   "  float fil = pow(max(0.0, 1.0 - abs(noise(vec2(ang * 9.0, iTime * 2.6)) - 0.5) * 5.0), 10.0);",
   "  col += vec3(0.58, 1.0, 0.94) * fil * flash * fringe * (0.35 + iPower * 0.30);",
+  // Corona colour: streaming filaments, hottest where they leave the rim, dying to smoke. Keyed to
+  // angle-plus-time so the streams travel around the eye rather than pulsing in place.
+  "  float stream = noise(vec2(ang * 7.0, edge * 9.0 - iTime * 1.1));",
+  "  float tongueMask = smoothstep(0.28, 0.72, stream) * corona;",
+  "  col = mix(col, vec3(1.0, 0.26, 0.03), corona * 0.75);",
+  "  col += vec3(1.0, 0.42, 0.10) * tongueMask * 0.55;",
   // ---- Corneal fresnel: the wet-sphere cue -------------------------------------------------------
   "  float fres = pow(1.0 - ndv, 4.0);",
   "  col += vec3(1.0, 0.52, 0.20) * fres * 0.30;",
   "  col *= 0.36 + iPower * 0.28;",
   // Alpha feathers the last sliver of the tongues into the night, so the discard boundary is never a
   // visible cut. Everything inboard of the lip stays fully opaque, so the Eye still occludes properly.
-  "  float alpha = 1.0 - smoothstep(-0.006, 0.030, edge);",
+  "  float alpha = clamp((1.0 - corona) + corona * smoothstep(0.20, 0.75, stream) * 0.85, 0.0, 1.0);",
   "  gl_FragColor = vec4(min(col, vec3(1.05)), alpha);",
   "}",
 ].join("\n");

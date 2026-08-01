@@ -45,7 +45,12 @@ const isTypeOnly = (f) => {
 const isWebglBound = (f) =>
   f.startsWith("src/three/pieces/") ||
   f === "src/three/scene-main.ts" ||
-  ["src/three/kit/env.ts", "src/three/kit/materials.ts", "src/three/kit/greebles.ts"].includes(f);
+  [
+    "src/three/kit/env.ts",
+    "src/three/kit/materials.ts",
+    "src/three/kit/greebles.ts",
+    "src/three/kit/sky.ts",
+  ].includes(f);
 
 // Every src module, minus files with no unit-testable behavior:
 //   - src/scripts/*  — CLI mains, exercised by running, not import (like d.ts)

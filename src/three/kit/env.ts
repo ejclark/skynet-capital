@@ -10,6 +10,7 @@ import { Color3, Color4, Vector3 } from "@babylonjs/core/Maths/math";
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
 import { Scene } from "@babylonjs/core/scene";
+import { createSky } from "./sky.js";
 // --- Side-effect imports. Tree-shaking strips scene components unless they're imported for effect;
 // without these you get runtime "X needs to be imported before" errors and a black screen. ---
 import "@babylonjs/core/Rendering/depthRendererSceneComponent";
@@ -58,7 +59,7 @@ function attachEnvironment(scene: Scene, url: string): void {
   try {
     const env = CubeTexture.CreateFromPrefilteredData(url, scene);
     scene.environmentTexture = env;
-    scene.environmentIntensity = 0.55; // night siege, but the masonry must still READ
+    scene.environmentIntensity = 0.3; // night siege, but the masonry must still READ
   } catch {
     scene.environmentIntensity = 0;
   }
@@ -96,8 +97,8 @@ function attachPost(scene: Scene, camera: ArcRotateCamera): DefaultRenderingPipe
   pipe.samples = 4; // MSAA — kills the jagged slat edges
   pipe.fxaaEnabled = true;
   pipe.bloomEnabled = true;
-  pipe.bloomThreshold = 0.8;
-  pipe.bloomWeight = 0.32;
+  pipe.bloomThreshold = 0.92;
+  pipe.bloomWeight = 0.22;
   pipe.bloomKernel = 72;
   pipe.bloomScale = 0.6;
   pipe.grainEnabled = true;
@@ -113,12 +114,19 @@ function attachPost(scene: Scene, camera: ArcRotateCamera): DefaultRenderingPipe
 export function createStage(canvas: HTMLCanvasElement): Stage {
   const engine = new Engine(canvas, true, { stencil: true }, true);
   const scene = new Scene(engine);
-  scene.clearColor = new Color4(0.3, 0.31, 0.33, 1); // LIGHT storm: the tower must read as a black silhouette against it
+  // Night under a volcano. The old flat storm-grey made a clean silhouette but capped the Eye: a
+  // glowing thing cannot read as a LIGHT SOURCE against a background brighter than itself, so every
+  // extra unit of fire only made it flatter. The gradient dome (kit/sky.ts) keeps the silhouette by
+  // lighting the HORIZON instead of the whole sky. Clear colour matches its zenith for the frames
+  // the dome does not cover.
+  scene.clearColor = new Color4(0.012, 0.014, 0.022, 1);
   // Exponential fog is what sells atmosphere/scale — the tower recedes into weather, not into a void.
+  // Tinted to the horizon ember so distance reads as smoke lit from below, not as grey wash.
   scene.fogMode = Scene.FOGMODE_EXP2;
-  scene.fogDensity = 0.006;
-  scene.fogColor = new Color3(0.34, 0.35, 0.375);
+  scene.fogDensity = 0.0055;
+  scene.fogColor = new Color3(0.055, 0.032, 0.03);
 
+  createSky(scene);
   attachEnvironment(scene, ENV_TEXTURE_URL);
   gradeImage(scene);
 

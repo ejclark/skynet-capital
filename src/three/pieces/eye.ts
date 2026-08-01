@@ -45,7 +45,7 @@ function registerShaders(): void {
 }
 
 /** Radius of the eyeball. The aperture is sized off this so the two can't drift apart. */
-const GLOBE_R = 9.6;
+const GLOBE_R = 12.5;
 
 export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild {
   registerShaders();
@@ -117,25 +117,31 @@ export function buildEye(scene: Scene, y: number, params: TowerParams): EyeBuild
   coreMat.alpha = 0.07;
 
   const reach = params.gazeReach;
+  // The beam starts OUTSIDE the eyeball, not at its centre. Spanning from the origin meant the
+  // cylinder passed through the flame and washed whichever side faced the camera — the pupil went
+  // grey and the almond lost a canthus. Light leaves a surface; it does not begin inside one.
+  const beamStart = GLOBE_R * 1.05;
+  const beamLen = reach - beamStart;
+
   const beam = CreateCylinder(
     "beam",
-    { diameterTop: 1.6, diameterBottom: reach * 0.11, height: reach, tessellation: 24 },
+    { diameterTop: 2.2, diameterBottom: reach * 0.11, height: beamLen, tessellation: 24 },
     scene,
   );
   beam.material = beamMat;
   beam.rotation.x = Math.PI / 2;
-  beam.position.z = reach / 2;
+  beam.position.z = beamStart + beamLen / 2;
   beam.parent = gaze;
   beam.isPickable = false;
 
   const core = CreateCylinder(
     "beamCore",
-    { diameterTop: 0.5, diameterBottom: reach * 0.04, height: reach, tessellation: 20 },
+    { diameterTop: 0.7, diameterBottom: reach * 0.04, height: beamLen, tessellation: 20 },
     scene,
   );
   core.material = coreMat;
   core.rotation.x = Math.PI / 2;
-  core.position.z = reach / 2;
+  core.position.z = beamStart + beamLen / 2;
   core.parent = gaze;
   core.isPickable = false;
 
