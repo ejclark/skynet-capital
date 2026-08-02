@@ -7,7 +7,10 @@ import { execFileSync } from "node:child_process";
 describe("lessons ledger", () => {
   it("is well-formed and carries no open incidents", () => {
     expect(() =>
-      execFileSync("node", ["scripts/incident-scan.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
+      execFileSync("./node_modules/.bin/harness-incident-scan", [], {
+        cwd: process.cwd(),
+        stdio: "pipe",
+      }),
     ).not.toThrow();
   });
 });

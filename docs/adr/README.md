@@ -33,3 +33,4 @@ the same contract).
 | [0006](0006-publish-oauth-consent-allowlist-is-the-gate.md) | Publish the OAuth consent screen; the allowlist is the access gate | Accepted |
 | [0007](0007-operator-control-plane-mcp.md) | An operator control-plane MCP for the autonomous fleet | Proposed |
 | [0008](0008-spec-surfaces-and-architecture-fitness.md) | Spec surfaces, three-way system parity, and architecture fitness evals | Proposed |
+| [0009](0009-adopt-the-central-harness-gates.md) | Adopt the central harness gates, and delete the vendored copies | Proposed |

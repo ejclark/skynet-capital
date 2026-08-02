@@ -6,7 +6,10 @@ import { execFileSync } from "node:child_process";
 describe("spec-gap budget", () => {
   it("untested src files stay within the committed budget", () => {
     expect(() =>
-      execFileSync("node", ["scripts/spec-gap-scan.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
+      execFileSync("./node_modules/.bin/harness-spec-gap-scan", [], {
+        cwd: process.cwd(),
+        stdio: "pipe",
+      }),
     ).not.toThrow();
   });
 });
