@@ -62,6 +62,36 @@ const SHOTS = [
     radius: 34,
   },
   { tag: "mobile", w: 430, h: 900, faceEye: true, alphaOffset: -0.85, beta: 1.18, radius: 210 },
+  // ---- Full-angle coverage: DEFAULT, not opt-in ----------------------------------------------------
+  // Two real regressions shipped and reached production before anyone looked from these angles — a
+  // shape that silently went empty past ~90° off-axis, and (separately) one that lost its own read from
+  // directly behind. Both were only caught by hand, after the fact, on user report. A piece whose
+  // silhouette is claimed to hold "in every direction" is a testable claim; this suite tests it every
+  // run rather than trusting the claim. Add angles here for any piece under active 3D work; don't rely
+  // on remembering to check by hand (docs/art/EYE.md "the bar" section is the standing checklist this
+  // enforces mechanically instead of by discipline alone).
+  {
+    tag: "eye-side",
+    w: 1600,
+    h: 1000,
+    faceEye: true,
+    alphaOffset: Math.PI / 2,
+    beta: 1.5,
+    radius: 35,
+  },
+  {
+    tag: "eye-behind",
+    w: 1600,
+    h: 1000,
+    faceEye: true,
+    alphaOffset: Math.PI,
+    beta: 1.5,
+    radius: 35,
+  },
+  // beta near the poles: modest values clip into the tower's own crown geometry (a camera-placement
+  // trap, not a shader defect — found and worked around during verification). 0.15 / 2.35 clear it.
+  { tag: "eye-above", w: 1600, h: 1000, faceEye: true, beta: 0.15, radius: 35 },
+  { tag: "eye-below", w: 1600, h: 1000, faceEye: true, beta: 2.35, radius: 55 },
 ];
 
 async function main() {

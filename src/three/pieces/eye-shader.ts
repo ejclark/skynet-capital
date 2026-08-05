@@ -16,40 +16,36 @@
  * A FOURTH attempt overcorrected on the third's own fix (`docs/art/EYE.md` § "the eyeball correction",
  * itself later corrected): it blended the almond into a plain sphere away from the gaze direction, so
  * the eye vanished into a formless round blob outside a narrow front cone — solving 'the body should be
- * round' by breaking 'visible in all directions', which was never supposed to be up for trade. Reverted:
- * the almond stays a full solid of revolution, unconditionally, at every azimuth. Sweeping a wide, short
- * lens 360° around Y already gives it real volume — a plain sphere blend was never required to make it
- * read as dimensional; the raymarch was doing that work the whole time.
+ * round' by breaking 'visible in all directions', which was never supposed to be up for trade.
  *
  * A fifth attempt (the corona addendum's spikes) also regressed the read — a jagged mandala competing
- * with the eye instead of framing it. Removed outright, not re-tuned a third time; EYE.md's own
- * governing rule is "no lid, no brow, no mercy of stone," and a spike burst is exactly the kind of
- * added housing that rule exists to keep out. The collar (a tight rim at the boundary) and the thin
- * electric filaments — both original, pre-corona elements — stay.
+ * with the eye instead of framing it.
  *
- * THIS version is a **raymarched volume**: for every fragment, a ray is cast from the camera through
- * the bounding sphere's own surface and marched through a real 3D density field — the flame's shape is
- * a solid of revolution (the old 2D vesica swept 360° around the vertical axis), so every horizontal
- * viewing angle sees the identical almond profile, and the back half genuinely keeps burning (duller,
- * slit-less) rather than not existing. Nothing is thrown away by which side of the mesh you're looking
- * at; only by how far a ray actually travels through occupied space.
+ * THIS (sixth) version resolves the actual tension the fourth attempt was reaching for, correctly:
+ * **the SHAPE is an unconditional sphere; the eye is a texture, not a cut.** `lensDist` is now
+ * `length(Q) - R` — nothing simpler, nothing that can go directional. That shape is *trivially* the
+ * same from every angle, by construction, forever; there is no gate, blend, or azimuth term anywhere
+ * that can make it vanish or distort. The iris/pupil/electric detail — the part that makes it read as
+ * an EYE rather than a coal — is a colour/emission overlay keyed to `faceCos` (how directly a point
+ * faces the gaze direction), never a change to the density field itself. Facing the gaze: full iris
+ * detail, forge palette, pupil slit, a vein of current. Elsewhere: the same sphere, still burning,
+ * plainer — an ember, not a blind spot. Round and eye-like were never actually in tension; conflating
+ * "shape" with "surface decoration" was the mistake in the fourth attempt, corrected here by keeping
+ * them in genuinely separate math (a density field vs. a colour term), not just separate variables.
  *
  * Four things carry the read, in order:
- *  1. **A moving boundary.** The lens-of-revolution's surface is perturbed by animated 3D fbm sampled
- *     at each march step, so tongues peel off while the underlying solid holds its shape — the
- *     volumetric equivalent of the old 2D rim-lick.
- *  2. **Real depth, not faked parallax.** Because this is an actual raymarch through a 3D density
- *     field, the pupil socket, the throat glow and the boundary lip all have genuine depth — no offset
- *     trick is needed to fake a curved cornea; the camera simply sees further or less far into the fire
- *     as it orbits.
- *  3. **An azimuth-gated pupil on an always-present body.** The almond itself never disappears — only
- *     the SLIT is gated to the gaze direction (`frontGate`), so the front reads as an eye and the back
- *     reads as the same eye-shaped fire with no slit — never a hole, and never a shape that stops being
- *     an eye.
- *  4. **The electric affinity at the flame tips.** Thin, near-straight blue-white filaments living only
- *     in the outer fringe, flashing on a quantised clock, plus a second phase-offset layer that
- *     occasionally reads as a branch. Fire is the body; the lightning is the will behind it — so if the
- *     lightning reads as loudly as the flame, the balance is wrong.
+ *  1. **A moving boundary.** The sphere's surface is perturbed by animated 3D fbm sampled at each march
+ *     step, so tongues peel off while the underlying solid holds its shape.
+ *  2. **Real depth, not faked parallax.** A genuine raymarch through a 3D density field — the pupil
+ *     socket, the throat glow and the boundary lip all have real depth; the camera simply sees further
+ *     or less far into the fire as it orbits.
+ *  3. **An iris that fades in facing the gaze, on a sphere that never changes shape.** `irisWeight`
+ *     (a smooth function of `faceCos`) blends between rich iris detail (palette, grain, pupil slit) and
+ *     plain ember sclera — texture only, the sphere's own silhouette is invariant under this blend.
+ *  4. **The electric affinity.** Thin, near-straight blue-white filaments at the outer fringe (the
+ *     collar/corona, anchored to the ray's closest approach — unchanged by the shape simplification),
+ *     plus a vein of current inside the iris itself. Fire is the body; the lightning is the will behind
+ *     it — so if the lightning reads as loudly as the flame, the balance is wrong.
  */
 
 /** Shared noise — value-noise fbm, used for fire churn, rim tongues and fibre irregularity. */
@@ -121,32 +117,13 @@ export const GLOBE_FRAGMENT = [
   "uniform float iRadius;",
   NOISE,
   // The distance field, shared between the raymarch (evaluated per step) and the outer collar/filament
-  // overlay (evaluated at the ray's closest approach). A pure vesica-of-revolution — the old 2D almond
-  // swept a full 360° around Y — UNCONDITIONALLY, at every azimuth. A prior pass blended this toward a
-  // plain sphere away from the gaze direction (`docs/art/EYE.md` § the eyeball correction) on the
-  // reasoning that 'an eyeball is round first' — but that broke the standing, load-bearing requirement
-  // that the eye be visible in every direction, trading it for a different property (roundness) nobody
-  // asked to trade it for. Reverted: sweeping a wide, short lens 360° around Y is ALREADY volumetric —
-  // real depth via the raymarch, real self-occlusion, a real 3D solid — without ever needing a second
-  // shape to blend toward. Round and always-visible were never in tension.
-  //
-  // LENS_SCALE is a deliberately-checked no-op, kept as a named knob rather than removed. First
-  // instinct was that this needed rescaling — Q is constrained to |Q| <= 1 while the old P.x/P.y were
-  // free flat coordinates — but solving the vesica's ACTUAL near boundary (not the far root of the
-  // max()'s other branch, which is a different, irrelevant crossing) gives a horizontal reach of only
-  // rho ~= 0.67 and a polar reach of only y ~= 0.26: a wide, short lens that already fits comfortably
-  // inside the unit ball at its original proportions — the same proportions the shipped 2D version
-  // used, at the same sphere radius, which is exactly why that version read correctly. No rescaling
-  // needed. (The real bug behind the first raymarch's teal latitude arcs was the corona/collar/filament
-  // overlay being evaluated at the bounding sphere's entry point instead of the ray's actual closest
-  // approach to the lens — fixed below via minD/minAng, not via this constant.)",
-  "  const float LENS_SCALE = 1.0;",
+  // overlay (evaluated at the ray's closest approach). A PLAIN SPHERE — deliberately the simplest
+  // possible field, with nothing in it that can read as directional. R = 0.62 sits comfortably inside
+  // the unit bounding sphere (P is always at |P| = 1, the bounding mesh's own surface), leaving margin
+  // for real raymarch depth on the way in and room for the corona to extend past it on the way out.",
+  "  const float R = 0.62;",
   "float lensDist(vec3 Q){",
-  "  const float SX = 0.70, SY = 0.455, OFF = 0.882, RV = 1.0;",
-  "  vec3 Qs = Q * LENS_SCALE;",
-  "  float rho = length(Qs.xz);",
-  "  vec2 u = vec2(rho * SX, Qs.y * SY);",
-  "  return max(length(vec2(u.x, u.y - OFF)), length(vec2(u.x, u.y + OFF))) - RV;",
+  "  return length(Q) - R;",
   "}",
   "void main(void){",
   "  vec3 P = vPosO / iRadius;",
@@ -165,47 +142,50 @@ export const GLOBE_FRAGMENT = [
   "  float dt = marchLen / float(STEPS);",
   "  vec3 accumColor = vec3(0.0);",
   "  float accumAlpha = 0.0;",
-  // The corona/collar/spikes are a NEAR-SURFACE phenomenon, but the lens sits well inside the (much
-  // larger) bounding sphere used for the march — so "near the surface" cannot be evaluated at the ray's
-  // entry point P (that was the bug the first render caught: edgeP at the bounding sphere was uniformly
-  // large, so the corona's every gate read true almost everywhere, drawing full latitude arcs). Instead
-  // track the ray's CLOSEST APPROACH to the real lens surface from outside, during the same march —
-  // the standard raymarched-glow trick — and anchor the corona there instead.
+  // The corona/collar is a NEAR-SURFACE phenomenon, but the fire sphere (R = 0.62) sits well inside
+  // the (much larger, R = 1) bounding sphere used for the march — so "near the surface" cannot be
+  // evaluated at the ray's entry point P (that was the bug the first render caught: edgeP at the
+  // bounding sphere was uniformly large, so the corona's every gate read true almost everywhere,
+  // drawing full latitude arcs). Instead track the ray's CLOSEST APPROACH to the real fire surface from
+  // outside, during the same march — the standard raymarched-glow trick — and anchor the corona there.
   "  float minD = 999.0;",
   "  float minAng = 0.0;",
   "  for(int i = 0; i < STEPS; i++){",
   "    if(accumAlpha > 0.97){ break; }",
   "    float s = (float(i) + 0.5) * dt;",
   "    vec3 Q = P + rd * s;",
-  "    vec3 Qs = Q * LENS_SCALE;",
   "    float core = lensDist(Q);",
-  // Boundary turbulence: tongues peel off the lens's own surface, drifting upward — the volumetric
-  // twin of the old 2D rim-lick. Sampled in the SAME scaled space as the SDF (Qs, not raw Q) — the
-  // 2.4 frequency was tuned against the eye's own [-1,1]-ish extent, which is what Qs represents; at
-  // raw Q's compressed scale the same frequency would barely vary across the whole lens. One fbm3 call
-  // per step; this is the expensive line, deliberately kept to a single sample.
-  "    float turb = fbm3(Qs * 2.4 + vec3(0.0, -iTime * 0.35, 0.0)) - 0.5;",
+  // Boundary turbulence: tongues peel off the sphere's own surface, drifting upward — the volumetric
+  // twin of the old 2D rim-lick. One fbm3 call per step; this is the expensive line, deliberately kept
+  // to a single sample.
+  "    float turb = fbm3(Q * 2.4 + vec3(0.0, -iTime * 0.35, 0.0)) - 0.5;",
   "    float d = core - turb * 0.10;",
   "    float dens = smoothstep(0.05, -0.03, d);",
-  // ---- THE PUPIL: an absence of density along the gaze plane, gated to the front only -------------
-  // `ang` is the true azimuth around Y (0 = the gaze direction). The ALMOND ITSELF is never gated —
-  // it's the full solid of revolution from `lensDist` — only the slit is. `frontGate` keeps it off the
-  // back half; the eye-shaped fire is present everywhere, but only the front has a socket in it.
-  "    float rho = length(Qs.xz);",
-  "    float ang = atan(-Qs.x, Qs.z);",
-  "    float pupilU = rho * sin(ang);",
-  "    float frontGate = smoothstep(-0.15, 0.15, cos(ang));",
-  "    float pupilCut = smoothstep(0.115, 0.085, abs(pupilU) * (1.0 + abs(Qs.y) * 0.55)) * frontGate;",
+  // ---- FACE GEOMETRY: how directly this point faces the gaze direction — TEXTURE, not shape --------
+  // `faceCos` is a plain dot product against the gaze axis (local +Z, per the vertex shader's own
+  // convention) — 1.0 dead-on, -1.0 at the antipode. `irisWeight` blends iris detail in/out; nothing
+  // below this line ever touches `core`/`d`/the sphere's own radius, so the OUTER SILHOUETTE cannot be
+  // affected by any of it, by construction — this is the actual fix for the fourth attempt's mistake.
+  "    vec3 Qn = normalize(Q + vec3(0.0001));",
+  "    float faceCos = dot(Qn, vec3(0.0, 0.0, 1.0));",
+  "    float ang = atan(-Q.x, Q.z);",
+  "    float irisWeight = smoothstep(0.15, 0.55, faceCos);",
+  // ---- THE PUPIL: a genuine density carve, but confined to the sphere's INTERIOR — an interior socket
+  // never affects the outer boundary that defines the silhouette, so this stays fine to be directional
+  // where the outer shape may not be. Local coordinates near the front pole (Q.x/R, Q.y/R) give the
+  // same vertical-slit shape the flat 2D version used, normalised back to the old tuned thresholds.
+  "    float pupilU = Q.x / R;",
+  "    float pupilV = Q.y / R;",
+  "    float pupilCut = smoothstep(0.115, 0.085, abs(pupilU) * (1.0 + abs(pupilV) * 0.55)) * irisWeight;",
   "    dens *= (1.0 - pupilCut);",
   "    if(d > 0.0 && d < minD){ minD = d; minAng = ang; }",
   "    if(dens > 0.001){",
-  // Fine radial grain (the fibre detail), cheap 2D noise keyed off azimuth+height — not a physically
-  // separate pass, just texture on the density's brightness. A second, much higher-frequency pass on
-  // top is the macro-photo cue: fine capillary-scale grain riding on the coarser fibre pattern, the way
-  // a close macro shot of a real iris shows structure at two very different scales at once. Both are
-  // 2D `noise()` calls (cheap) — the expense stays in the one fbm3 turbulence sample above.
-  "      float grain = noise(vec2(ang * 9.0, Qs.y * 6.0)) - 0.5;",
-  "      float microGrain = noise(vec2(ang * 42.0 + Qs.y * 5.0, Qs.y * 34.0 - ang * 3.0)) - 0.5;",
+  // Fine radial grain (the fibre detail), cheap 2D noise keyed off azimuth+height. A second, much
+  // higher-frequency pass on top is the macro-photo cue: two texture scales at once, structure riding
+  // on structure, the way a close macro shot of a real iris reads. Both cheap 2D `noise()` calls.
+  "      float rho = length(Q.xy);",
+  "      float grain = noise(vec2(ang * 9.0, Q.y * 6.0)) - 0.5;",
+  "      float microGrain = noise(vec2(ang * 42.0 + Q.y * 5.0, Q.y * 34.0 - ang * 3.0)) - 0.5;",
   "      float plasma = clamp(0.55 + 0.85 * turb + grain * 0.12 + microGrain * 0.05, 0.0, 1.0);",
   "      float axisGlow = 1.0 - smoothstep(0.0, 0.34, rho);",
   "      float heat = clamp(plasma * 0.75 + axisGlow * 0.55, 0.0, 1.0);",
@@ -215,14 +195,26 @@ export const GLOBE_FRAGMENT = [
   "      vec3 deep = vec3(0.34, 0.030, 0.004);",
   "      vec3 sampleCol = mix(deep, scab, smoothstep(0.08, 0.42, heat));",
   "      sampleCol = mix(sampleCol, hot, smoothstep(0.56, 0.88, heat));",
-  "      sampleCol += core_c * pow(axisGlow, 3.0) * (0.30 + iPower * 0.34);",
-  // The lip: brightest right at the boundary, same as the old 2D version's rim glow.
+  // The throat glow is IRIS-ONLY (irisWeight-scaled) — the bright pupil-adjacent core is part of the
+  // eye's own detail, not something the plain-ember sclera should show.
+  "      sampleCol += core_c * pow(axisGlow, 3.0) * (0.30 + iPower * 0.34) * irisWeight;",
+  // The lip: brightest right at the boundary — reads everywhere, the rim of the whole sphere, not
+  // just the iris.
   "      float lip = exp(-abs(d) / 0.035);",
   "      sampleCol += vec3(1.0, 0.32, 0.05) * lip * 0.65;",
-  // Duller round the back: the passage's "banked like coals" — a straight key-light-facing term, no
-  // special-cased branch, so it falls naturally out of the existing palette math.
-  "      float backDim = mix(0.55, 1.0, frontGate);",
-  "      sampleCol *= backDim * (0.55 + iPower * 0.5);",
+  // A vein of current inside the iris itself — 'electric textured pupil and iris', not just an outer
+  // fringe effect. High-frequency noise thresholded to a thin ridge, teal-white, its own flicker clock,
+  // strictly confined to the iris by `irisWeight` so it can never bleed onto the plain sclera and stays
+  // clearly secondary to the fire (thin, rare, dim) per the standing balance rule.
+  "      float veinNoise = noise(vec2(ang * 14.0, faceCos * 20.0 - iTime * 0.8));",
+  "      float vein = pow(max(0.0, 1.0 - abs(veinNoise - 0.5) * 8.0), 14.0);",
+  "      float veinCell = floor(iTime * 6.0);",
+  "      float veinFlicker = step(0.55, hash(vec2(veinCell, floor(ang * 6.0))));",
+  "      sampleCol += vec3(0.55, 0.95, 0.92) * vein * veinFlicker * irisWeight * (0.25 + iPower * 0.2);",
+  // Plain ember sclera away from the iris — dimmer, the passage's "banked like coals," no special-cased
+  // branch, just a brightness term keyed to the same irisWeight everything else above already uses.
+  "      float scleraDim = mix(0.45, 1.0, irisWeight);",
+  "      sampleCol *= scleraDim * (0.55 + iPower * 0.5);",
   "      float a = clamp(dens, 0.0, 1.0) * 0.55;",
   "      accumColor += (1.0 - accumAlpha) * a * sampleCol;",
   "      accumAlpha += (1.0 - accumAlpha) * a;",

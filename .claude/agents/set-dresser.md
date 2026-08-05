@@ -26,9 +26,12 @@ what it means, or what its dials do.
 4. **Implement it kit-first** (extend `greebles.ts`/`materials.ts` reusably rather than inlining),
    gated by the piece's existing `detailPasses`-style dial where one exists — detail that scales
    with standing, not unconditional noise.
-5. **Prove it:** `npm run typecheck && npm run lint && npm test` by exit status; **after**
-   screenshots from the same rig; confirm the piece's original salient details still read (dressing
-   must never bury the contract) and `prefers-reduced-motion` still holds.
+5. **Prove it:** `npm run typecheck && npm run lint && npm test` by exit status; **after** screenshots
+   from the rig's full default suite (not a hand-picked subset — for `/tower` that's every pose
+   `npm run shoot:tower` produces, side/behind/above/below included); confirm the piece's original
+   salient details still read from every one of them (dressing must never bury the contract, and a
+   layer that only reads correctly from the front is a layer that silently narrowed the contract) and
+   `prefers-reduced-motion` still holds.
 6. **Commit and push** (lowercase-led, e.g. `feat: weather the reactor dome's leeward face`), 4×
    backoff. Report: the layer, before/after shot paths, and the contract check. Then stop — one
    layer per invocation. **You do not open the PR**: visual work waits for Eric's taste.

@@ -86,6 +86,13 @@ The Eye is judged head-on **and** oblique (`npm run shoot:tower` → `tower-eye`
 Off-axis is where the cheap version fails: the pupil must shift with parallax, the chatoyant band must
 have moved, and the silhouette must still be an almond of fire with nothing holding its edge.
 
+**Full-angle coverage is mechanical, not a step to remember.** `scripts/shoot-tower.mjs`'s default
+suite includes `eye-side`, `eye-behind`, `eye-above`, `eye-below` alongside the front poses — a single
+`npm run shoot:tower` run always covers the whole bar. This exists because two separate regressions
+reached production before anyone looked from these specific angles (see "the walk-around addendum"
+and "the declutter correction" below) — both caught by hand, after the fact, on report. Baking the
+angles into the harness's default set means the next piece doesn't get to skip the check by omission.
+
 ---
 
 ## The corona addendum
@@ -276,3 +283,51 @@ compatible with standing requirements before treating it as a replacement.**
 |---|---|---|
 | Eye vanishes into a formless blob away from the gaze direction | `lensDist` blended toward a plain sphere (`BALL_R`) weighted by `gazeWeight`, breaking "visible in all directions" | `lensDist` is the pure vesica-of-revolution again — no orb, no blend. `gazeWeight` is gone from the shape entirely; the pupil's own gate is renamed back to `frontGate`, matching the original (pre-eyeball-correction) naming, since it's a narrower, differently-purposed gate now. |
 | Jagged spike mandala competing with the eye's silhouette | The corona addendum's `SPIKE_REACH`/`SPIKE_N` ray system, tuned twice, never stopped reading as noise | The entire spike block deleted. Collar and electric filaments (unrelated to the spikes, present since before the corona addendum) are untouched. |
+
+**Process fix, not just a code fix.** The declutter correction shipped alongside a change to
+`scripts/shoot-tower.mjs`: the default suite now includes `eye-side`, `eye-behind`, `eye-above`,
+`eye-below` — a single `npm run shoot:tower` run covers the whole bar above, mechanically, instead of
+depending on someone remembering to check. Both regressions this addendum documents reached production
+because the check that would have caught them wasn't the default one. `piece-wright` and `set-dresser`
+are updated to require the full default suite, not a hand-picked subset, before reporting a piece done.
+
+---
+
+## The sphere/iris addendum — separating shape from texture, correctly this time
+
+The eyeball correction (reverted above) was reaching for something real — "an eye is a ball first" —
+but implemented it by blending the OUTER BOUNDARY, which is exactly the thing that must never move if
+"visible in all directions" is to hold. This addendum resolves the same instinct without that mistake:
+the shape becomes a plain, unconditional sphere; the iris, pupil, and a vein of current become a
+colour/emission overlay, gated by how directly a point faces the gaze — texture, never geometry.
+
+> He is round the way a coal is round, or a planet is, and there is no argument to have about it —
+> walk him, and the curve never breaks, never dents, never opens a seam you could put your hand
+> through. That part of him does not know you are there.
+>
+> The eye is not a hole cut in that curve. It is what the fire is DOING on the side of him that has
+> found you — the surface itself deciding to pay attention. Colour gathers, the grain tightens, and
+> somewhere in the middle of that gathering a black slit opens, the way a coal glows brighter where the
+> draft finds it without ever changing the shape of the coal. Look at the same round curve from where
+> he is not looking and the gathering is gone — plain fire, banked, honest — but the ROUNDNESS never
+> once wavered. That was never the part in question.
+>
+> And in among the gathering, if you stand close, threads move that are not fire — quick, thin, white-
+> blue, gone if you blink at the wrong second. Not the arcs off the rim, that's a different thing. This
+> is inside the eye itself, in the coloured part, like a nerve firing. You would call it decoration if
+> it did not look so much like it hurt.
+
+| The prose says | The mechanism |
+|---|---|
+| "round… the curve never breaks, never dents, never opens a seam" | `lensDist` is `length(Q) - R` — nothing else. No blend term, no azimuth dependence, nothing that CAN make the silhouette directional even by accident. This is the actual fix: not a better-tuned blend, but removing the possibility of one. |
+| "not a hole cut in that curve… the surface deciding to pay attention" | `irisWeight = smoothstep(0.15, 0.55, faceCos)`, where `faceCos = dot(normalize(Q), gazeAxis)`. Purely a colour/brightness term — `core`/`d`/`dens`'s BOUNDARY math never reads `irisWeight`. The pupil slit still carves real density (real depth, a genuine socket), but only in the sphere's interior, which cannot affect the outer silhouette no matter how directional it is. |
+| "the same curve from where he is not looking… plain fire, banked" | `scleraDim = mix(0.45, 1.0, irisWeight)` — a brightness multiplier only, applied after the full palette computation, so the sclera is the same fire, just quieter. |
+| "threads that are not fire… inside the eye itself… like a nerve firing" | A second electric layer, confined to the iris by `irisWeight` (distinct from the collar/filament corona at the outer fringe): high-frequency noise thresholded to a thin ridge, teal-white, its own flicker clock, deliberately dim and rare — the balance rule applies here too. |
+
+### The bar (this addendum)
+
+Everything in "the bar" and "the bar (extended)" still applies, now trivially: the outer silhouette is
+a sphere, so "visible in all directions" is true by construction rather than by tuning. What this
+addendum adds to check: the iris (palette, pupil, throat glow, vein) must be visibly present facing the
+gaze direction and visibly absent — plain ember, no pupil, no vein — on `eye-behind`; the transition
+between them (`eye-side`, `eye-oblique`) must be a smooth fade, not a hard edge.

@@ -30,9 +30,13 @@ screenshot against its vision passage. You do not choose the piece; the sheet's 
 4. **Wire the dials** through a pure `resolve<Piece>Params` mirroring `params.ts`: honest inputs
    (prominence/health/mass) → render dials, non-linear where the reward curve wants it, unit-tested
    without Babylon.
-5. **Prove it:** `npm run typecheck && npm run lint && npm test` by exit status, then
-   `npm run shoot:tower` (or the piece's stated shot rig) and check the bar: every salient detail
-   the passage names must be visible in the named shots, head-on and oblique.
+5. **Prove it:** `npm run typecheck && npm run lint && npm test` by exit status, then run the shot
+   rig's **full default suite**, not a hand-picked subset — for `/tower` that's `npm run shoot:tower`,
+   which now includes side/behind/above/below by default specifically because two regressions once
+   reached production by only being checked head-on-and-oblique. If a claim in the passage or the
+   translation table says a shape holds "in every direction," every angle in the suite is what proves
+   it, not a sample of them. Check the bar: every salient detail the passage names must be visible in
+   the named shots.
 6. **Commit and push** (Conventional Commit, lowercase-led, e.g. `feat: build the cooling-tower
    piece from the reactor build sheet`), 4× backoff on push. Report: the piece, its dials, the
    screenshot paths, which salient details the shots prove, and anything that missed the bar. Then
