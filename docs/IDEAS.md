@@ -85,6 +85,26 @@ gated per level. Natural next threads, in priority order:
   trade — the human-side twin of the bot autonomy-readiness eval ladder. _(src: Claude · while: building
   the options academy)_
 
+### The Eye — volumetric rebuild, and the still-open sun/gravity/electric direction
+Shipped (PR #265): the Eye rebuilt as a real raymarched volume — the shipped 2D-skin version showed
+empty bloom from behind (the tower's own "drag to orbit" invited exactly that view); now a genuine 3D
+density field, correct from every angle, with a round-orb body and an almond gaze-aperture blended by
+azimuth (a direct correction — the first raymarch pass made the whole body almond-shaped). Two real
+bugs found and fixed mid-build (a wrong-root scale miscalculation, a corona system anchored to the
+wrong point in space), both banked in `docs/art/EYE.md` so the next piece doesn't repeat them.
+- **Still open: "burns like the sun, gravity containing the outward fire, friction generating electric
+  charge."** A physically-motivated redesign, not yet built — the sun-like plasma read, a stronger
+  contain-vs-escape dynamic at the boundary, and the electric layer reframed as a genuine consequence
+  of that shear rather than decoration. Verbal brief only so far (the intended reference video turned
+  out to be the wrong file — see below); next pass should run through `render-alchemist` first.
+  _(src: Eric · while: reviewing the volumetric Eye — "the scale of 0-100, this is a 95")_
+- **Lesson: a reference video was a fidelity benchmark, not content reference** — a screen recording of
+  an unrelated AI-video-generator marketing page was shared to point at production polish (atmospheric
+  depth, light falloff, grain, motion), not the literal imagery. Cost a round of clarification;
+  `render-alchemist`'s loop now leads with distinguishing "fidelity gap" from "content-match" asks
+  before spending a research pass on the wrong question. _(src: Claude · while: extracting reference
+  frames that showed no Eye content at all)_
+
 ### The forge — 3D strategy, the vision register, and follow-ups (see [`3D-STRATEGY.md`](3D-STRATEGY.md))
 Shipped on the gamify branch: the 3D deployment playbook (`docs/3D-STRATEGY.md`), the `/vision`
 register skill (Pierce Brown-provenance pastiche generalized from `docs/art/EYE.md`; salience-finding

@@ -86,7 +86,7 @@ is never pasted into a generator; it measurably degrades output).
 ## The forge roster — delegating decomposition of complex pieces
 
 Complex models are built the way this repo already pays down debt: **decomposed into small pieces,
-one green rep per athlete invocation**, with the register as the shared prompt engine. Three agents
+one green rep per athlete invocation**, with the register as the shared prompt engine. Four agents
 (`.claude/agents/`), one relay:
 
 1. **`art-director`** — decomposes a scene ask into a **build sheet**: the piece list (each piece a
@@ -94,11 +94,17 @@ one green rep per athlete invocation**, with the register as the shared prompt e
    the dials each piece exposes (the `params.ts` contract — every piece is a game piece), and a
    `/vision` passage + translation table per piece. It never builds; the gate picks the athlete's
    target, not the athlete.
-2. **`piece-wright`** — takes exactly one build-sheet entry and builds it ground-up from the kit
-   (`profile.ts` data → `greebles.ts` molecules → `materials.ts` atoms, seeded `rng.ts`), exposes
-   its dials, and proves it against the bar: screenshots vs the passage's named salient details,
-   plus verify-by-exit-status.
-3. **`set-dresser`** — the "make it more refined" invitation, made an athlete: one detail layer per
+2. **`render-alchemist`** — the research step, upstream of building: turns "make it look CGI-real" or
+   "closer to this reference" into a cited, buildable technique brief (Babylon.js APIs, GLSL patterns,
+   performance cost class, what's achievable now vs. what needs new infrastructure). Also the one
+   athlete that handles reference media directly — pulls frames from provided video via `ffmpeg`,
+   distinguishes a *fidelity-bar* ask (production polish — atmosphere, grain, light falloff, motion)
+   from a *content-match* ask before researching either. Research only; never touches shader code.
+3. **`piece-wright`** — takes exactly one build-sheet entry (or research brief slice) and builds it
+   ground-up from the kit (`profile.ts` data → `greebles.ts` molecules → `materials.ts` atoms, seeded
+   `rng.ts`), exposes its dials, and proves it against the bar: screenshots vs the passage's named
+   salient details, plus verify-by-exit-status.
+4. **`set-dresser`** — the "make it more refined" invitation, made an athlete: one detail layer per
    invocation (weathering, greebles, light behavior) on a shipped piece, never touching its
    contract, before/after screenshots.
 
