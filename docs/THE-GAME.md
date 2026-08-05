@@ -155,6 +155,9 @@ layer makes it *matter*:
 
 ## The graphics question — 2D or 3D
 
+> Deployment playbook for the 3D side: [`3D-STRATEGY.md`](3D-STRATEGY.md) — the slices, the Babylon
+> capability grounding, the forge roster, and the generated-asset stance.
+
 **Recommendation: hybrid, and the repo is already leaning this way.** The reason it isn't a painful
 either/or is the seam that already shipped: `src/universe/project.ts` → `WorldState` is a pure,
 serializable projection. Renderers are dumb skins over it, so the rendering choice is reversible and

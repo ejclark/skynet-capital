@@ -85,6 +85,26 @@ gated per level. Natural next threads, in priority order:
   trade — the human-side twin of the bot autonomy-readiness eval ladder. _(src: Claude · while: building
   the options academy)_
 
+### The forge — 3D strategy, the vision register, and follow-ups (see [`3D-STRATEGY.md`](3D-STRATEGY.md))
+Shipped on the gamify branch: the 3D deployment playbook (`docs/3D-STRATEGY.md`), the `/vision`
+register skill (Pierce Brown-provenance pastiche generalized from `docs/art/EYE.md`; salience-finding
+prose compiled into bounded generation prompts — long prose measurably degrades generators), and the
+forge roster (`art-director` → `piece-wright` → `set-dresser`: decompose complex 3D models into
+small ground-up pieces, one green screenshot-proven rep each; visual output always waits for Eric's
+taste). Follow-ups, in leverage order:
+- **Compute prominence** — nothing ranks bots 0..1 yet; `projectWorld` takes a caller-supplied map
+  (`project.ts:137`). A small observatory-side rank function unlocks live landmark leveling — the
+  cheapest slice that makes the tower *real*. _(src: Claude · while: grounding the 3D strategy)_
+- **Ceremony-camera slice** — `Animation.CreateAndStartAnimation` on the existing `__towerCamera`
+  + `FramingBehavior` + the pipeline's dormant DOF; fires on topping-out/founding ceremonies.
+- **Package gaps** — `@babylonjs/loaders` (via `registerBuiltInLoaders` from `/dynamic`) and
+  `@babylonjs/gui`, version-matched to core; prerequisites for GLB loading and diegetic labels.
+- **First art-director rep** — run the roster end-to-end on one scene ask (e.g. the energy empire's
+  reactor) to shake out the build-sheet format before it matters. _(src: Claude · while: designing
+  the forge relay)_
+_(src: Eric · while: "guidance on 3D gamification strategies" + "prompt like Pierce Brown" + "sub-agents
+to decompose complex 3d models")_
+
 ### The game layer — rules, renown, and the season loop (see [`THE-GAME.md`](THE-GAME.md))
 Full design banked; this is the pickup list. The premise the design solves: with two never-traded
 members in a five-person league, a percent-return leaderboard produces one winner and two people who
