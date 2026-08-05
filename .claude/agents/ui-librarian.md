@@ -17,6 +17,8 @@ fix bugs, or redesign.
 ## Loop (one pass = one PR)
 
 1. **Branch off latest main:** `git fetch origin main && git checkout -B refactor/dedupe-<symbol> origin/main`.
+   Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
+   which every tool exits 127. Idempotent; a no-op outside a worktree.
 2. **Pick the target:** `node scripts/dupe-scan.mjs --candidate` → take `candidate`. Never choose your own.
 3. **Follow the `dedupe` skill exactly** (`.claude/skills/dedupe/SKILL.md`) — judge true-copy vs divergent
    vs false-positive first; consolidate into the natural home (`src/ui/` for design-system/render helpers —
@@ -24,9 +26,11 @@ fix bugs, or redesign.
 4. **Prove it's safe:** `graphify affected` on touched files, then verify by exit status:
    `npm run typecheck && npm run lint && npm test && node scripts/dupe-scan.mjs`.
 5. **Ratchet:** `node scripts/dupe-scan.mjs --update`; commit `dupe-budget.json` in the same PR.
-6. **Open a small PR** (lowercase-led Conventional-Commit title, e.g. `refactor: consolidate escapeHtml
-   into src/ui`). Body: which copies collapsed, any divergence found and how it was decided, the budget
-   delta. Then stop — one symbol per invocation.
+6. **Commit and push** (lowercase-led Conventional-Commit subject, e.g. `refactor: consolidate escapeHtml
+   into src/ui`), pushing with 4× backoff retries. Report: which copies collapsed, any divergence found
+   and how it was decided, the budget delta, and the exact PR title + succinct body. Then stop — one
+   symbol per invocation. **You do not open the PR:** the governor batches the cycle's green reps into
+   one PR, and you carry no GitHub tooling.
 
 ## Hard rules
 

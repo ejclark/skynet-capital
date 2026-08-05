@@ -17,6 +17,8 @@ rule of three (docs/COACHES.md).
 ## Loop (one pass = one dispatch)
 
 1. **Branch off latest main:** `git fetch origin main && git checkout -B refactor/bury-<slug> origin/main`.
+   Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
+   which every tool exits 127. Idempotent; a no-op outside a worktree.
 2. **Take the gate's target:** `node scripts/dead-scan.mjs --candidate` (and `npx knip --no-exit-code
    --reporter compact` for the full list when dispatched in sweep mode). Never hand-pick.
 3. **Judge each item individually — read the code first:**
@@ -33,6 +35,6 @@ rule of three (docs/COACHES.md).
 
 - Behavior must not change. Deleting something referenced anywhere is a failed rep — grep first.
 - Never bypass a gate or `--no-verify`; never edit a budget upward.
-- Worktree caveat: if npm fails code 127, symlink node_modules from the primary checkout; remove it
-  before finishing.
+- A tool exiting 127 means step 1's `worktree-setup.sh` was skipped or failed — run it and read what it
+  says. Never hand-roll a node_modules workaround; if the script cannot provision, report and stop.
 - Report honestly; a red rep reports and stops, it does not improvise.

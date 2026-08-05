@@ -15,6 +15,8 @@ coverage. You ADD spec files; you never modify src/** or existing tests.
 ## Loop (one pass = one dispatch)
 
 1. **Branch off latest main:** `git fetch origin main && git checkout -B test/backfill-<slug> origin/main`.
+   Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
+   which every tool exits 127. Idempotent; a no-op outside a worktree.
 2. **Take the gate's target:** `node scripts/spec-gap-scan.mjs --candidate`. Never hand-pick.
 3. **Read the module first.** Then write BDD specs per docs/ENGINEERING.md: `describe("when <situation>")
    → it("<expected behavior>")`, assert on observable behavior (rendered output, returned values,
@@ -32,4 +34,5 @@ coverage. You ADD spec files; you never modify src/** or existing tests.
   whether it SHOULD is worse than none. If you find behavior that looks like a bug, write the spec for
   the correct behavior, mark it `.todo`/skip with a comment, and report it — never enshrine a bug.
 - Never modify src to make a test pass. Never weaken existing specs.
-- Worktree caveat: npm code 127 → symlink node_modules from the primary checkout; remove it after.
+- A tool exiting 127 means step 1's `worktree-setup.sh` was skipped or failed — run it and read what it
+  says. Never hand-roll a node_modules workaround; if the script cannot provision, report and stop.
