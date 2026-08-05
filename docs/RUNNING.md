@@ -33,6 +33,23 @@ npm run serve:dashboard:offline    # dashboard from fixtures/offline, replayed p
 npm run run:autonomous:offline     # personas trade against in-memory brokers off replayed ticks
 ```
 
+## Iterating on the `/tower` 3D scene — no server, no credentials, no deploy
+
+The Babylon scene (`src/three/`) is fully client-side, so it doesn't need `serve:dashboard` or any
+env vars at all. For fast local iteration on shader/piece work — instead of a PR → verify → deploy
+cycle to see a change:
+
+```sh
+npm run dev:tower                  # rebuilds public/three/scene.js on every save, serves it locally
+# → http://127.0.0.1:8931/tower.html
+```
+
+Edit a file under `src/three/`, save, refresh the browser tab — no manual rebuild step. Drag to orbit,
+scroll to zoom; check every angle a change might affect, not just the default framing (this is the
+loop that caught the "empty from behind" and "spike clutter" regressions in `docs/art/EYE.md`).
+`npm run shoot:tower` remains the automated, deterministic screenshot harness for the PR record —
+`dev:tower` is for the interactive loop that comes before that.
+
 - **Where the data lives:** `fixtures/offline/participants.json` (each account's cash, positions,
   orders) and `fixtures/offline/events.jsonl` (the price/fill script replayed on a timer). Point
   `SKYNET_OFFLINE_FIXTURES` at another directory to use a different capture.

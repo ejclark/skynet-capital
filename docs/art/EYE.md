@@ -238,3 +238,41 @@ realism" here means convincing at the landmark's own register (macro-detail cues
 a wet highlight), not literal photorealism. If the bar keeps climbing, the next honest step up is
 higher raymarch step counts / more turbulence octaves at a real perf cost, not more noise terms
 layered on the same 18-step march.
+
+---
+
+## The declutter correction — two regressions, reverted rather than re-tuned
+
+Scored 30/100 against the shipped state above. Two separate mistakes, traced to their actual root
+causes rather than papered over with another tuning pass:
+
+**The eyeball correction (above) broke a standing requirement it never should have touched.** The
+original ask behind the whole raymarch rebuild was explicit: the Eye visible **in every direction** —
+that's what "the Eye stops being a skin" addendum fixed. The eyeball correction then blended the
+almond toward a plain sphere away from the gaze direction, on the reasoning that "an eye is a ball
+first." That reasoning wasn't wrong — but the *implementation* traded away all-directions visibility
+to get it, when the two were never actually in tension: a wide, short lens swept 360° around the
+vertical axis is *already* a real 3D volume — raymarched, with genuine depth and self-occlusion. It
+did not need a second shape to blend toward to read as round. **Reverted:** `lensDist` is a pure
+vesica-of-revolution again, unconditionally, at every azimuth. Only the pupil slit stays gated to the
+gaze direction — the eye-shaped fire itself never disappears.
+
+**The corona addendum's spikes were tuned twice and still read as clutter.** Both tuning passes
+(reach, width, electric-vs-fire ratio) treated the spikes as a calibration problem. They weren't one —
+the spike burst competed with the eye's own silhouette instead of framing it, on every angle tested.
+**Removed outright**, not retuned a third time. This is what `docs/art/EYE.md`'s own opening rule
+(`## The governing constraint` in the shader's file header: "no lid, no brow, no mercy of stone")
+already said: a spike mandala is exactly the kind of *added housing* that rule exists to keep off the
+Eye. The collar (a tight rim right at the boundary) and the electric filaments — both original,
+pre-corona elements — stay; they were never the regression.
+
+**The instruction that wasn't missing.** Asked directly what instruction had been left unsaid, the
+honest answer was: none. "Visible in all directions" was never rescinded; a later note about roundness
+was read as *replacing* it instead of *adding to* it, and nothing in that later note actually required
+the trade. The lesson isn't "specify more precisely next time" — it's **check whether a new note is
+compatible with standing requirements before treating it as a replacement.**
+
+| What regressed | Root cause | The revert |
+|---|---|---|
+| Eye vanishes into a formless blob away from the gaze direction | `lensDist` blended toward a plain sphere (`BALL_R`) weighted by `gazeWeight`, breaking "visible in all directions" | `lensDist` is the pure vesica-of-revolution again — no orb, no blend. `gazeWeight` is gone from the shape entirely; the pupil's own gate is renamed back to `frontGate`, matching the original (pre-eyeball-correction) naming, since it's a narrower, differently-purposed gate now. |
+| Jagged spike mandala competing with the eye's silhouette | The corona addendum's `SPIKE_REACH`/`SPIKE_N` ray system, tuned twice, never stopped reading as noise | The entire spike block deleted. Collar and electric filaments (unrelated to the spikes, present since before the corona addendum) are untouched. |

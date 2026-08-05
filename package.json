@@ -34,7 +34,8 @@
     "spec:gap": "node scripts/spec-gap-scan.mjs",
     "incident:scan": "node scripts/incident-scan.mjs",
     "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
-    "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs"
+    "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs",
+    "dev:tower": "node scripts/dev-tower.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
