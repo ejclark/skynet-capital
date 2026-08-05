@@ -85,6 +85,54 @@ gated per level. Natural next threads, in priority order:
   trade — the human-side twin of the bot autonomy-readiness eval ladder. _(src: Claude · while: building
   the options academy)_
 
+### The forge — 3D strategy, the vision register, and follow-ups (see [`3D-STRATEGY.md`](3D-STRATEGY.md))
+Shipped on the gamify branch: the 3D deployment playbook (`docs/3D-STRATEGY.md`), the `/vision`
+register skill (Pierce Brown-provenance pastiche generalized from `docs/art/EYE.md`; salience-finding
+prose compiled into bounded generation prompts — long prose measurably degrades generators), and the
+forge roster (`art-director` → `piece-wright` → `set-dresser`: decompose complex 3D models into
+small ground-up pieces, one green screenshot-proven rep each; visual output always waits for Eric's
+taste). Follow-ups, in leverage order:
+- **Compute prominence** — nothing ranks bots 0..1 yet; `projectWorld` takes a caller-supplied map
+  (`project.ts:137`). A small observatory-side rank function unlocks live landmark leveling — the
+  cheapest slice that makes the tower *real*. _(src: Claude · while: grounding the 3D strategy)_
+- **Ceremony-camera slice** — `Animation.CreateAndStartAnimation` on the existing `__towerCamera`
+  + `FramingBehavior` + the pipeline's dormant DOF; fires on topping-out/founding ceremonies.
+- **Package gaps** — `@babylonjs/loaders` (via `registerBuiltInLoaders` from `/dynamic`) and
+  `@babylonjs/gui`, version-matched to core; prerequisites for GLB loading and diegetic labels.
+- **First art-director rep** — run the roster end-to-end on one scene ask (e.g. the energy empire's
+  reactor) to shake out the build-sheet format before it matters. _(src: Claude · while: designing
+  the forge relay)_
+_(src: Eric · while: "guidance on 3D gamification strategies" + "prompt like Pierce Brown" + "sub-agents
+to decompose complex 3d models")_
+
+### The game layer — rules, renown, and the season loop (see [`THE-GAME.md`](THE-GAME.md))
+Full design banked; this is the pickup list. The premise the design solves: with two never-traded
+members in a five-person league, a percent-return leaderboard produces one winner and two people who
+stop opening the tab. Three moves — **you play your bot, not the market** (the competitive unit is a
+persona, which equalizes honestly *and* is the autonomous-trading north star); **two ledgers**
+(equity = the untouched truth, **renown** = a per-unit-of-risk score paying for discipline, called-it
+theses, degrees, and building bots — so a flat week can still be a great week); and **renown as the
+currency you spend on the city** (the truthful layer — towers, health, construction — stays
+unpurchasable; the earned layer — campus, landmarks, district styling — is what you build). Loop:
+Sunday Council (commit a thesis) → the week runs → Friday Recap → quarterly Season reset with the
+city persisting.
+- **The one blocker is the history/persistence layer** — renown, ceremonies, seasons and called-it
+  all need durable *events*. Flipping the prod sampler on (`SKYNET_HISTORY_DIR=/data/history`) is the
+  cheapest unblocking act in the design and is Eric's op (same dependency `GAMEBOARD-PLAN.md` S5
+  names). _(src: Claude · while: designing the game layer)_
+- **A pure `renown` module** over history + curriculum + trades, same testable pattern as `reduce.ts`.
+- **Degrees as permissions** — `PLAY_LEVELS` 1–4 gate what a bot may trade; needs server-side academy
+  progression (already in this file). Makes the ladder a real safety rail, not a badge.
+- **Thesis capture** — a one-line-per-member-per-week write surface (the Council).
+- **Mentor bounty** — renown for helping another member's bot/thesis, so veterans are incentivized to
+  want the novices to do well. _(src: Claude · while: designing for the two-novice roster)_
+- **Graphics: hybrid, not either/or** — 2.5D isometric for the everyday views, Babylon for hero
+  ceremonies (already real in `src/three/`); `WorldState` keeps the choice reversible and per-surface.
+  Promote 3D to primary when free-orbit exploration of your own city becomes a core interaction.
+- **Eric's forks:** competitive unit (bot-first?) · does renown buy cosmetics? · season length ·
+  divisions at five players · mentor bounty worth the complexity?
+_(src: Eric · while: "I need to figure out a fun way to gamify the premise of skynet-capital")_
+
 ### North-star epic — the Living Universe (see [`LIVING-UNIVERSE.md`](LIVING-UNIVERSE.md))
 The cityscape as a multiplayer, SimCity-like shared world that reflects everyone's trades, bots, and
 market events — **potentially _the brand itself_**, the addictive hook. **Fun as the flywheel**

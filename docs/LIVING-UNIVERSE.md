@@ -3,6 +3,10 @@
 _A living sketch (src: Eric, expanded by Claude). North-star vision; sequencing and the governance-
 gated pieces are Eric's calls. This document is the durable home for the idea — refine it in place._
 
+> **Companion:** this doc is what the world **shows**. [`THE-GAME.md`](THE-GAME.md) is what you
+> **play** — the rules, the two-ledger scoring (equity vs. renown), the weekly loop, and how a
+> first-time trader has a great week one. [`GAMEBOARD-PLAN.md`](GAMEBOARD-PLAN.md) is how it's built.
+
 ## The idea
 
 **This may be _the brand itself_ — the signature, addictive property that hooks engagement.** Not a
