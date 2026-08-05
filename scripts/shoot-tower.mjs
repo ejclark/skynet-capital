@@ -131,7 +131,12 @@ async function main() {
       await page.goto(url, { waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__ready === true, { timeout: 60000 });
 
-      // Park the camera at a known pose so shots are comparable run to run.
+      // Let bloom, SSAO and texture upload settle FIRST, with the scene running freely.
+      await page.waitForTimeout(1200);
+
+      // THEN park the camera. Order matters and used to be reversed: posing before the settle let the
+      // idle orbit drift alpha by ~0.1 rad during the wait, so the captured angle was never the angle
+      // asked for and varied run to run. Pose last, seek immediately, capture — nothing runs in between.
       await page.evaluate(({ alpha, beta, radius, faceEye, alphaOffset }) => {
         const cam = window.__towerCamera;
         if (!cam) return;
@@ -146,9 +151,9 @@ async function main() {
           cam.alpha = alpha;
         }
       }, s);
-      // Let bloom and SSAO settle, then SEEK to a fixed moment. Pausing on wall-clock alone captured
-      // a different instant every run, which quietly made shot-to-shot comparison meaningless.
-      await page.waitForTimeout(1200);
+      // Seek to a fixed moment. `__towerSeek` now holds the clock and camera for its own frame (see
+      // scene-main.ts); before that guard existed this call was decorative and every shot captured a
+      // different instant, which quietly made shot-to-shot comparison meaningless while looking rigorous.
       await page.evaluate((time) => window.__towerSeek?.(time), SEEK_TIME);
       await page.waitForTimeout(250);
 
