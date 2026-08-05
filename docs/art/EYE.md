@@ -85,3 +85,41 @@ layer over accurate mechanics: the vocabulary is Brown's, the numbers are the co
 The Eye is judged head-on **and** oblique (`npm run shoot:tower` → `tower-eye`, `tower-eye-oblique`).
 Off-axis is where the cheap version fails: the pupil must shift with parallax, the chatoyant band must
 have moved, and the silhouette must still be an almond of fire with nothing holding its edge.
+
+---
+
+## The corona addendum
+
+Added after a reader compared the shipped Eye against reference art and asked where the corona was —
+the mandala of straight rays a distant view of the Eye should throw. Same discipline: prose first,
+then the table it's answerable to.
+
+> I have stood the wall three years and I still flinch at the corona.
+>
+> Not the Eye. The Eye you get used to — the flame, the slit, the band of brightness that finds you
+> and slides off again. It's the ring around it. The part that isn't fire exactly, and isn't
+> lightning exactly, and won't sit still long enough to be either.
+>
+> Picture a sun the artificers drew for children, the kind with spikes coming off it in every
+> direction, straight as ruled lines. Now set that on fire and put half the spikes in a storm. That's
+> the corona. It doesn't gutter like the flame does — the flame licks and curls and eats itself. The
+> corona *shoots*. Straight out, past where the eye ends, thin as wire and gone before your eye has
+> finished counting them. Some are the same blood-orange as the rest of him. Some are that blue-white
+> that smells like a pulseFist going off a half-second after you see it. You start trying to tell
+> which is which and you lose count around nine. There is no ninth. There was never a fourth.
+>
+> Between the flame and that ring of spikes there's a seam — a line of brightness tighter than
+> anything else on him, like the rim of a coin held up to a torch. That's the part the old hands call
+> the *collar*. Not because it holds anything. Because it's the last honest edge before the fire
+> stops being a shape and starts being a weapon.
+>
+> Look at the iris too long and you'll see it isn't smooth. Threads run out of the black slit like
+> grain in bad wood, hundreds of them, all pointed the same way — out.
+
+| The prose says | The mechanism |
+|---|---|
+| "a sun drawn with spikes… straight as ruled lines… shoots past the eye" | **Corona spikes**: `SPIKE_N` straight radial rays, angle-quantised into slots, each with its own length (`spikeSeed`) and a taper from wide-at-the-collar to a wire at the tip. Kept short (`SPIKE_REACH = 0.22`) — a first pass at `0.40` pushed fragments into the sphere's own grazing-silhouette curvature, which bent straight rays into visible claws. |
+| "some are blood-orange… some are that blue-white" | Two spike populations by `spikeSeed`: ~90% reuse the fire ramp, ~10% render electric teal-white — and the electric ones are **0.4× the width and 0.8× the brightness** of a fire spike. A first pass gave them equal weight and one electric spike at a hero angle owned the whole frame — a verified violation of the fire-is-the-body/lightning-is-the-will rule below. |
+| "gone before your eye has finished counting… there was never a fourth" | Per-spike flicker on a `hash(slot, timeCell)` gate — each slot's on/off schedule is independent, so the visible pattern never repeats. |
+| "a seam tighter than anything else… the last honest edge" | **The collar**: a narrow, near-white ring pinned exactly at the vesica boundary (`edge ≈ 0`), tighter and whiter than the existing lip falloff — the anchor the spikes launch from. |
+| "threads run out of the slit like grain… hundreds of them, all pointed out" | Explicit radial-fibre grain folded into the iris heat, independent of the chatoyant sheen — visible texture even when the travelling lit band isn't crossing it. |
