@@ -1,4 +1,6 @@
-node_modules/
+# No trailing slash: athlete worktrees get node_modules as a SYMLINK
+# (scripts/worktree-setup.sh), and `node_modules/` matches only real directories.
+node_modules
 dist/
 coverage/
 data/
@@ -13,6 +15,13 @@ graphify-out/
 # Scratchpad / throwaway preview + shoot scripts (never committed)
 scratchpad/
 .claude/worktrees/
+
+# Claude's SSH commit-signing key material (scripts/setup-commit-signing.sh writes it
+# to ~/.ssh at session start, never here). Ignored belt-and-braces: a signing key is
+# the irreversible class, and a stray copy must not be trackable by accident.
+*signing_key*
+claude_signing*
+allowed_signers
 
 # Built Babylon scene bundle + the harness's staged shell (see npm run build:scene).
 # The bundle is generated from src/three/** at install time, never committed.
