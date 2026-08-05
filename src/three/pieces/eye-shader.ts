@@ -108,29 +108,38 @@ export const GLOBE_FRAGMENT = [
   // ---- THE CORONA SPIKES: straight rays launched from the collar, well past the streaming fringe ----
   // A mandala, not a halo: each of SPIKE_N angular slots gets its OWN length (spikeSeed), its own
   // flicker schedule (spikeCell/spikeFlash, same quantised-time trick the electric filaments use below),
-  // and a taper from wide-at-the-collar to a wire at the tip. Most spikes are fire; a minority (~18%,
-  // spikeSeed > 0.82) are the electric affinity. This is a SEPARATE layer from the flame's own fringe —
-  // it lives entirely in edge > CORONA and never touches the iris/plasma math, because it is not fire
-  // inside the eye, it is what the eye throws past its own edge.",
-  "  const float SPIKE_REACH = 0.40, SPIKE_N = 18.0, TAU = 6.28318530718;",
+  // and a taper from wide-at-the-collar to a wire at the tip. Most spikes are fire; a minority (~10%,
+  // spikeSeed > 0.90) are the electric affinity, and electric spikes are kept deliberately THINNER than
+  // fire ones — a first pass gave both equal width, and one unlucky electric slot at a hero angle owned
+  // the entire frame (`docs/art/EYE.md`: "if the lightning reads as loudly as the flame, the balance is
+  // wrong" — verified failure, not a hypothetical). This is a SEPARATE layer from the flame's own
+  // fringe — it lives entirely in edge > CORONA and never touches the iris/plasma math below, because it
+  // is not fire inside the eye, it is what the eye throws past its own edge.
+  //
+  // SPIKE_REACH is deliberately modest (~0.22, not the ~0.4 a first pass tried): fragments that far from
+  // the vesica boundary sit near the sphere's own grazing silhouette, where perspective bends a
+  // constant-angle ray into a visible claw-like arc. Reads fine as a distant mandala either way; a short
+  // reach is what keeps it straight at the close eye/eye-oblique verification poses.",
+  "  const float SPIKE_REACH = 0.22, SPIKE_N = 18.0, TAU = 6.28318530718;",
   "  float slot = TAU / SPIKE_N;",
   "  float si = floor(ang / slot + 0.5);",
   "  float dAng = ang - si * slot;",
   "  float spikeSeed = hash(vec2(si, 7.0));",
+  "  float spikeElectric = step(0.90, spikeSeed);",
   "  float spikeJitter = fbm(vec2(si * 3.1, iTime * 0.35)) - 0.5;",
   "  float spikeLen = CORONA + (SPIKE_REACH - CORONA) * (0.30 + 0.70 * spikeSeed) * (1.0 + spikeJitter * 0.18);",
   "  float spikeT = clamp((edge - CORONA) / max(spikeLen - CORONA, 0.001), 0.0, 1.0);",
-  "  float spikeWidth = mix(0.075, 0.006, spikeT) + spikeJitter * 0.015;",
+  "  float spikeWidth = (mix(0.042, 0.004, spikeT) + spikeJitter * 0.009) * mix(1.0, 0.4, spikeElectric);",
   "  float spikeMask = (1.0 - smoothstep(spikeWidth * 0.5, spikeWidth, abs(dAng)))",
   "    * step(edge, spikeLen) * step(CORONA, edge);",
   "  float spikeCell = floor(iTime * 3.0 + spikeSeed * 40.0);",
   "  spikeMask *= step(0.30, hash(vec2(si, spikeCell)));",
   "  if(spikeMask > 0.001){",
-  "    float electric = step(0.82, spikeSeed);",
   "    vec3 fireSpike = mix(vec3(0.98, 0.19, 0.015), vec3(1.0, 0.55, 0.15), spikeT);",
-  "    vec3 spikeCol = mix(fireSpike, vec3(0.58, 1.0, 0.94), electric);",
+  "    vec3 spikeCol = mix(fireSpike, vec3(0.58, 1.0, 0.94), spikeElectric);",
   "    float spikeAlpha = spikeMask * (1.0 - spikeT * 0.65);",
-  "    gl_FragColor = vec4(min(spikeCol * (0.55 + iPower * 0.55), vec3(1.05)), spikeAlpha);",
+  "    float spikeBrightness = (0.55 + iPower * 0.55) * mix(1.0, 0.8, spikeElectric);",
+  "    gl_FragColor = vec4(min(spikeCol * spikeBrightness, vec3(1.05)), spikeAlpha);",
   "    return;",
   "  }",
   "  if(edge > CORONA){ discard; }",
