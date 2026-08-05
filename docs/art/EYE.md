@@ -331,3 +331,43 @@ a sphere, so "visible in all directions" is true by construction rather than by 
 addendum adds to check: the iris (palette, pupil, throat glow, vein) must be visibly present facing the
 gaze direction and visibly absent — plain ember, no pupil, no vein — on `eye-behind`; the transition
 between them (`eye-side`, `eye-oblique`) must be a smooth fade, not a hard edge.
+
+---
+
+## The real-device addendum — a bug the verification loop could not have caught
+
+A real Pixel 6, live at `skynet-capital.fly.dev/tower`, showed the flame reading as a spiralling coil
+rather than a solid sphere. Every check up to this point — `npm run shoot:tower`'s full 10-pose
+default suite included — ran against a desktop browser's software rasterizer (`swiftshader`) at a
+mobile *viewport size*. Viewport size is not hardware: swiftshader almost certainly runs uniform
+`highp` precision throughout, which real mobile GPU silicon does not reliably do. This is a category of
+bug the whole verification loop this doc otherwise built up (side/behind/above/below, the declutter
+correction, the sphere/iris addendum) was structurally unable to catch, because none of it ever
+touched a real GPU.
+
+**Root cause:** `iTime` — the animation clock — grows unboundedly for as long as the tab stays open,
+and the shader multiplied it (by factors up to 11×) directly into `floor()`/`hash()`/`noise()` calls in
+eight separate places. GLSL ES makes `highp` *optional* in the fragment shader; plenty of real mobile
+GPUs silently run it at `mediump` regardless of the `precision highp float;` declaration. Once a
+multiplied time value outgrows `mediump`'s precision, hash/noise output goes chaotic — the exact visual
+signature of a spiralling coil instead of smooth turbulence. This is a well-known, standard class of
+shader bug (unbounded time uniforms + reduced-precision hardware), not something exotic to this piece.
+
+**The fix:** `float T = mod(iTime, 300.0);`, computed once, used everywhere downstream instead of the
+raw uniform. A 300-second wrap is long enough that the loop is imperceptible against the turbulence
+and short enough that every multiplied use stays comfortably inside safe range on any precision tier.
+
+**What this session could and could not verify.** Could: the wrap doesn't regress the render — checked
+at a fresh `t≈0` load AND at a simulated `t≈50000` (roughly 14 hours of uptime) via `__towerSeek`, both
+producing the identical healthy sphere, proving the wrap logic itself is sound. Could NOT: reproduce
+the actual `mediump` precision downgrade or measure real frame rate/thermal behaviour, because this
+environment has no real mobile GPU and no accurate `mediump` emulation — swiftshader will not surface
+this bug even with the OLD code, which is exactly why it shipped undetected. **This fix needs a real-
+device recheck before it's taken as confirmed**, not just a green CI run.
+
+**The open, separate question: raw performance.** "The CPU seems to struggle" may describe a genuinely
+different problem — 18 raymarch steps × an `fbm3` call per step is real GPU cost, well beyond what the
+old flat 2D shader spent, and mobile GPUs (including the Pixel 6's) have far less headroom than desktop
+software rendering suggests. The time-wrap fixes the correctness bug; it does not address possible
+frame-rate/thermal cost. If a real-device recheck still shows stutter with the corruption gone, the
+next lever is `STEPS` (currently 18) or a quality tier, not more noise-layer tuning.
