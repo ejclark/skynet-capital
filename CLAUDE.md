@@ -125,7 +125,9 @@ dead code) with ratchet-down budgets, corrective skills (`/decompose`, `/dedupe`
 (`decomposer`, `ui-librarian`, `mortician`), and a dispatch policy (`/governor`). **Route plain intent
 to it**: "clean up the code" / "burn down debt" → run a governor cycle; "why did CI fail" → a gate
 probably caught real drift, fix the finding not the gate; big planned burn-downs → feast mode (see the
-governor skill). Structural PRs land batched; auto-merge per the governor's merge-policy table; features
+governor skill); **any reaction to a rendered frame** — "this looks terrible", "that's a 30/100",
+"make it more dramatic" — → `/telestrator`, which names the cause before anything gets changed (the
+inverse of `/vision`: eyes in, engineering out). Structural PRs land batched; auto-merge per the governor's merge-policy table; features
 and visual work always wait for Eric's taste. Eric will not remember these names — that is expected and
 fine; the docs are the memory.
 

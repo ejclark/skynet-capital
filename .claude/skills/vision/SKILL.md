@@ -11,6 +11,11 @@ description: >-
 
 # Vision — the register that forces detail, and the compiler that makes it buildable
 
+> **The inverse skill:** `/vision` turns *intent into buildable prose*. `/telestrator` turns *a reaction
+> to a finished frame back into an engineering decision* — symptom → layer → named cause → fix. Direction
+> flows out through `vision`; feedback flows back in through `telestrator`. Reach for that one whenever
+> Eric is reacting to a picture rather than commissioning one.
+
 A normal brief settles for "a fiery eye." A shader cannot be held to that. `docs/art/EYE.md` proved
 the fix: write the direction in a **descriptive novelist's register**, because a novelist works under
 the exact constraint a builder faces — *no pixels*. The prose must carry the full mental model or the
