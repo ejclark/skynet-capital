@@ -131,6 +131,17 @@ export const GLOBE_FRAGMENT = [
   "  vec3 N = normalize(vNormO);",
   "  vec3 V = normalize(C - P);",
   "  float ndv = max(dot(N, V), 0.0);",
+  // `T` wraps the raw uniform ONCE, here, and every animated term below reads T, never iTime
+  // directly. iTime grows unboundedly for as long as the page stays open — this shader multiplies it
+  // by up to 11x before feeding floor()/hash()/noise(), and `precision highp float` is NOT guaranteed
+  // in the fragment shader on real hardware (the GLSL ES spec makes fragment highp optional; plenty of
+  // mobile GPUs silently run it at mediump regardless of the declaration). Once a multiplied time value
+  // outgrows mediump's precision — verified on a real Pixel 6, not just this repo's desktop/swiftshader
+  // verification loop, which never catches this class of bug because software rasterizers don't
+  // reproduce mobile precision downgrades — hash()/noise() go chaotic: the flame stops looking like
+  // flame and reads as a spiralling coil. 300s is long enough that the wrap is imperceptible against
+  // the turbulence, short enough to keep every multiplied use comfortably inside safe range.
+  "  float T = mod(iTime, 300.0);",
   // ---- THE MARCH: cast the ray from the bounding sphere's own surface, all the way through --------
   // P is already the near intersection (the rendered fragment IS on the sphere); the far root falls out
   // of Vieta's formula for free (tNear*tFar = |C|^2 - 1), no quadratic solve needed.
@@ -158,7 +169,7 @@ export const GLOBE_FRAGMENT = [
   // Boundary turbulence: tongues peel off the sphere's own surface, drifting upward — the volumetric
   // twin of the old 2D rim-lick. One fbm3 call per step; this is the expensive line, deliberately kept
   // to a single sample.
-  "    float turb = fbm3(Q * 2.4 + vec3(0.0, -iTime * 0.35, 0.0)) - 0.5;",
+  "    float turb = fbm3(Q * 2.4 + vec3(0.0, -T * 0.35, 0.0)) - 0.5;",
   "    float d = core - turb * 0.10;",
   "    float dens = smoothstep(0.05, -0.03, d);",
   // ---- FACE GEOMETRY: how directly this point faces the gaze direction — TEXTURE, not shape --------
@@ -206,9 +217,9 @@ export const GLOBE_FRAGMENT = [
   // fringe effect. High-frequency noise thresholded to a thin ridge, teal-white, its own flicker clock,
   // strictly confined to the iris by `irisWeight` so it can never bleed onto the plain sclera and stays
   // clearly secondary to the fire (thin, rare, dim) per the standing balance rule.
-  "      float veinNoise = noise(vec2(ang * 14.0, faceCos * 20.0 - iTime * 0.8));",
+  "      float veinNoise = noise(vec2(ang * 14.0, faceCos * 20.0 - T * 0.8));",
   "      float vein = pow(max(0.0, 1.0 - abs(veinNoise - 0.5) * 8.0), 14.0);",
-  "      float veinCell = floor(iTime * 6.0);",
+  "      float veinCell = floor(T * 6.0);",
   "      float veinFlicker = step(0.55, hash(vec2(veinCell, floor(ang * 6.0))));",
   "      sampleCol += vec3(0.55, 0.95, 0.92) * vein * veinFlicker * irisWeight * (0.25 + iPower * 0.2);",
   // Plain ember sclera away from the iris — dimmer, the passage's "banked like coals," no special-cased
@@ -245,14 +256,14 @@ export const GLOBE_FRAGMENT = [
   // approach search — so this needs an explicit upper bound, not just a lower one, or it saturates to 1
   // for any ray passing anywhere near the lens at all. Confined to roughly the collar's own band.
   "  float fringe = 1.0 - smoothstep(-0.02, 0.16, minD);",
-  "  float cell = floor(iTime * 8.0);",
+  "  float cell = floor(T * 8.0);",
   "  float flash = step(0.62, hash(vec2(cell, floor(minAng * 5.0))));",
-  "  float fil = pow(max(0.0, 1.0 - abs(noise(vec2(minAng * 9.0, iTime * 2.6)) - 0.5) * 5.0), 10.0);",
+  "  float fil = pow(max(0.0, 1.0 - abs(noise(vec2(minAng * 9.0, T * 2.6)) - 0.5) * 5.0), 10.0);",
   // A second, higher-frequency branch offset in phase and angle — where it happens to cross the first,
   // the two thin ridges read as a fork, the cheap fake for a real Lichtenberg branch.
-  "  float branchCell = floor(iTime * 11.0 + 3.7);",
+  "  float branchCell = floor(T * 11.0 + 3.7);",
   "  float branchFlash = step(0.74, hash(vec2(branchCell, floor(minAng * 8.0 + 2.0))));",
-  "  float branch = pow(max(0.0, 1.0 - abs(noise(vec2(minAng * 17.0 + 5.0, iTime * 3.4)) - 0.5) * 7.0), 12.0);",
+  "  float branch = pow(max(0.0, 1.0 - abs(noise(vec2(minAng * 17.0 + 5.0, T * 3.4)) - 0.5) * 7.0), 12.0);",
   "  float filamentA = clamp(fil * flash + branch * branchFlash * 0.7, 0.0, 1.0) * fringe;",
   "  coronaColor += vec3(0.58, 1.0, 0.94) * filamentA * (0.35 + iPower * 0.30);",
   "  coronaAlpha = max(coronaAlpha, filamentA);",
@@ -266,7 +277,7 @@ export const GLOBE_FRAGMENT = [
   // not a uniform plastic sheen.
   "  float fres = pow(1.0 - ndv, 4.0);",
   "  col += vec3(1.0, 0.52, 0.20) * fres * 0.22 * accumAlpha;",
-  "  float wetSpec = pow(1.0 - ndv, 9.0) * (0.7 + 0.3 * noise(vPosO.xy * 0.6 + iTime * 0.02));",
+  "  float wetSpec = pow(1.0 - ndv, 9.0) * (0.7 + 0.3 * noise(vPosO.xy * 0.6 + T * 0.02));",
   "  col += vec3(1.0, 0.95, 0.88) * wetSpec * 0.5 * accumAlpha;",
   "  gl_FragColor = vec4(min(col, vec3(1.05)), clamp(alpha, 0.0, 1.0));",
   "}",
