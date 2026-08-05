@@ -24,6 +24,13 @@
  *  4. **The electric affinity at the flame tips.** Thin, near-straight blue-white filaments living only
  *     in the outer fringe, flashing on a quantised clock. Fire is the body; the lightning is the will
  *     behind it — so if the lightning reads as loudly as the flame, the balance is wrong.
+ *
+ * A fifth layer, added later (`docs/art/EYE.md` § "The corona addendum"): a **collar** (a tight, near-
+ * white ring pinned exactly at the vesica edge — the "last honest edge" before the fire stops being a
+ * shape) and **corona spikes** (straight, uneven rays launched from that collar, most fire-coloured, a
+ * minority electric, each on its own flicker schedule so the pattern never fully repeats). These live
+ * OUTSIDE the streaming fringe (`edge > CORONA`) and `return` early — they never touch the iris math
+ * below, because they are not fire *inside* the eye, they are what the eye throws past its own edge.
  */
 
 /** Shared noise — value-noise fbm, used for fire churn, rim tongues and fibre irregularity. */
@@ -98,6 +105,43 @@ export const GLOBE_FRAGMENT = [
   // Beyond the tongues, the CORONA: fire streams outward and thins into the night, so the Eye has no
   // hard outline anywhere. Everything past its reach is discarded — still no stone, no lid, no plate.
   "  const float CORONA = 0.055;",
+  // ---- THE CORONA SPIKES: straight rays launched from the collar, well past the streaming fringe ----
+  // A mandala, not a halo: each of SPIKE_N angular slots gets its OWN length (spikeSeed), its own
+  // flicker schedule (spikeCell/spikeFlash, same quantised-time trick the electric filaments use below),
+  // and a taper from wide-at-the-collar to a wire at the tip. Most spikes are fire; a minority (~10%,
+  // spikeSeed > 0.90) are the electric affinity, and electric spikes are kept deliberately THINNER than
+  // fire ones — a first pass gave both equal width, and one unlucky electric slot at a hero angle owned
+  // the entire frame (`docs/art/EYE.md`: "if the lightning reads as loudly as the flame, the balance is
+  // wrong" — verified failure, not a hypothetical). This is a SEPARATE layer from the flame's own
+  // fringe — it lives entirely in edge > CORONA and never touches the iris/plasma math below, because it
+  // is not fire inside the eye, it is what the eye throws past its own edge.
+  //
+  // SPIKE_REACH is deliberately modest (~0.22, not the ~0.4 a first pass tried): fragments that far from
+  // the vesica boundary sit near the sphere's own grazing silhouette, where perspective bends a
+  // constant-angle ray into a visible claw-like arc. Reads fine as a distant mandala either way; a short
+  // reach is what keeps it straight at the close eye/eye-oblique verification poses.",
+  "  const float SPIKE_REACH = 0.22, SPIKE_N = 18.0, TAU = 6.28318530718;",
+  "  float slot = TAU / SPIKE_N;",
+  "  float si = floor(ang / slot + 0.5);",
+  "  float dAng = ang - si * slot;",
+  "  float spikeSeed = hash(vec2(si, 7.0));",
+  "  float spikeElectric = step(0.90, spikeSeed);",
+  "  float spikeJitter = fbm(vec2(si * 3.1, iTime * 0.35)) - 0.5;",
+  "  float spikeLen = CORONA + (SPIKE_REACH - CORONA) * (0.30 + 0.70 * spikeSeed) * (1.0 + spikeJitter * 0.18);",
+  "  float spikeT = clamp((edge - CORONA) / max(spikeLen - CORONA, 0.001), 0.0, 1.0);",
+  "  float spikeWidth = (mix(0.042, 0.004, spikeT) + spikeJitter * 0.009) * mix(1.0, 0.4, spikeElectric);",
+  "  float spikeMask = (1.0 - smoothstep(spikeWidth * 0.5, spikeWidth, abs(dAng)))",
+  "    * step(edge, spikeLen) * step(CORONA, edge);",
+  "  float spikeCell = floor(iTime * 3.0 + spikeSeed * 40.0);",
+  "  spikeMask *= step(0.30, hash(vec2(si, spikeCell)));",
+  "  if(spikeMask > 0.001){",
+  "    vec3 fireSpike = mix(vec3(0.98, 0.19, 0.015), vec3(1.0, 0.55, 0.15), spikeT);",
+  "    vec3 spikeCol = mix(fireSpike, vec3(0.58, 1.0, 0.94), spikeElectric);",
+  "    float spikeAlpha = spikeMask * (1.0 - spikeT * 0.65);",
+  "    float spikeBrightness = (0.55 + iPower * 0.55) * mix(1.0, 0.8, spikeElectric);",
+  "    gl_FragColor = vec4(min(spikeCol * spikeBrightness, vec3(1.05)), spikeAlpha);",
+  "    return;",
+  "  }",
   "  if(edge > CORONA){ discard; }",
   "  float corona = smoothstep(0.012, CORONA, edge);",
   // ---- THE FIRE ---------------------------------------------------------------------------------
@@ -122,6 +166,10 @@ export const GLOBE_FRAGMENT = [
   "  plasma = plasma * 0.86 + fbm(q * 11.0 + w * 3.0 - flow * 2.2) * 0.20;",
   "  float radial = 1.0 - smoothstep(0.42, 1.45, r);",
   "  float heat = clamp(plasma * 1.30 * radial + radial * 0.40, 0.0, 1.0);",
+  // Radial grain: fine threads running out of the pupil like an iris's own striations, imitated in
+  // fire. Distinct from chatoyancy below — this is visible texture, not a travelling lit band.
+  "  float fiberGrain = noise(vec2(airis * 26.0, r * 3.0)) - 0.5;",
+  "  heat = clamp(heat + fiberGrain * 0.09 * radial, 0.0, 1.0);",
   // ---- THE SLIT: vertical, absolute, no fire in it at all ----------------------------------------
   "  float slit = smoothstep(0.112, 0.094, abs(iris.x) * (1.0 + abs(iris.y) * 0.60));",
   // ---- CHATOYANCY -------------------------------------------------------------------------------
@@ -153,6 +201,11 @@ export const GLOBE_FRAGMENT = [
   "  float lipT = edge / 0.075;",
   "  float lip = exp(-lipT * lipT);",
   "  col += vec3(1.0, 0.32, 0.05) * lip * 0.70;",
+  // ---- THE COLLAR: a tight, near-white seam pinned at the vesica edge — the last honest edge before
+  // the fire stops being a shape and becomes the spikes above. Narrower and whiter than the lip.
+  "  float collarT = edge / 0.020;",
+  "  float collar = exp(-collarT * collarT);",
+  "  col += vec3(1.0, 0.92, 0.80) * collar * (0.55 + iPower * 0.35);",
   // ---- THE ELECTRIC AFFINITY: filaments at the flame tips ----------------------------------------
   // Outer fringe only, and only sometimes. `flash` quantises time into ~8/s cells behind a random gate
   // so an arc is gone before the eye finds it; `fil` is a thin ridge of high-frequency noise, so it
