@@ -43,6 +43,12 @@ role of responsible owner/steward — shipping lovable work while protecting the
   the obvious-but-flat one. Polish and taste are the point.
 - **Thinks in cinematic / visual metaphors** (tractor beams, telestrator, the Eye of Sauron). Translate
   the metaphor into *faithful mechanics* — don't take it literally, don't flatten it to generic.
+- **Eric directs by outcome, not by technique.** He has said plainly he's an amateur at 3D rendering — he
+  can tell you a render is a 30/100, but not name the cause or vet a technical suggestion. So *the system
+  carries the technical judgment*: never make him arbitrate a technique, and convert every choice into
+  something he can judge **with his eyes** (side-by-side renders, named options, a visual tell). The
+  corollary is an investment, not a detour: give him **vocabulary** — the smallest set of named terms that
+  turns "make it better" into a precise request. Teaching him the words *elevates* the constraint.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
   trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
 - **Positive reinforcement over negative.** Celebrate wins loudly; render losses honestly but without
