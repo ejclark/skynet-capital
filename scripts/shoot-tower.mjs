@@ -24,6 +24,13 @@ const OUT = arg("--out", join(tmpdir(), "skynet-tower-shots"));
 const POWER = arg("--power", "0.62");
 const HEALTH = arg("--health", "0.15");
 const PORT = 8931;
+// `--poses hero,eye` narrows the run to named poses. The DEFAULT is still the full suite — this is a
+// speed dial for tight iteration (A/B-ing one fix at a time), never a way to claim a piece is done.
+// Full-angle coverage is the standing bar; see the pose list below and docs/art/EYE.md.
+const ONLY = arg("--poses", "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 const CHROME = process.env.PW_CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 
@@ -95,6 +102,13 @@ const SHOTS = [
 ];
 
 async function main() {
+  const shots = ONLY.length ? SHOTS.filter((s) => ONLY.includes(s.tag)) : SHOTS;
+  if (!shots.length) {
+    console.error(`no poses matched --poses; known: ${SHOTS.map((s) => s.tag).join(", ")}`);
+    process.exit(1);
+  }
+  if (ONLY.length)
+    console.log(`(subset: ${shots.map((s) => s.tag).join(", ")} of ${SHOTS.length})`);
   mkdirSync(OUT, { recursive: true });
   // Stage the real shell into the static root so we shoot exactly what /tower serves.
   copyFileSync("src/three/scene.html", "public/tower.html");
@@ -111,7 +125,7 @@ async function main() {
     args: ["--no-sandbox", "--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
   });
   try {
-    for (const s of SHOTS) {
+    for (const s of shots) {
       const page = await browser.newPage({ viewport: { width: s.w, height: s.h } });
       const url = `http://127.0.0.1:${PORT}/tower.html?power=${POWER}&health=${HEALTH}`;
       await page.goto(url, { waitUntil: "domcontentloaded" });

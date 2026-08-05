@@ -78,9 +78,16 @@ export function start(canvas: HTMLCanvasElement): void {
     forge.intensity = params.forgeIntensity * (0.92 + Math.sin(time * 0.9) * 0.1);
   };
 
+  // The idle orbit, in radians per SECOND. It used to be `camera.alpha += 0.0014` — per *frame* — so
+  // the scene literally turned at a different speed on different hardware: full rate on a 60fps
+  // desktop, half that on a phone holding 30fps, and it would surge whenever the tab caught up after a
+  // stall. Anything advanced per frame is a bug wearing a constant; time is the only honest clock.
+  const ORBIT_RAD_PER_SEC = 0.0014 * 60;
+
   scene.onBeforeRenderObservable.add(() => {
-    t += engine.getDeltaTime() / 1000;
-    camera.alpha += 0.0014;
+    const dt = engine.getDeltaTime() / 1000;
+    t += dt;
+    camera.alpha += ORBIT_RAD_PER_SEC * dt;
     applyTime(t);
   });
 

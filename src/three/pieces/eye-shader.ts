@@ -161,9 +161,17 @@ export const GLOBE_FRAGMENT = [
   // outside, during the same march — the standard raymarched-glow trick — and anchor the corona there.
   "  float minD = 999.0;",
   "  float minAng = 0.0;",
+  // ---- STEP JITTER: why this shipped as an agate marble ------------------------------------------
+  // Every ray used to sample at IDENTICAL depths — (i + 0.5) * dt — so neighbouring pixels crossed the
+  // same density shells at the same distances, and those shells drew themselves as concentric rings.
+  // That is march-step banding, and with a smooth radial falloff it reads as polished agate, which is
+  // precisely the material agate IS: concentric deposition bands. Offsetting each ray's start by a
+  // per-pixel hash breaks the correlation, converting a coherent ring into incoherent grain the eye
+  // integrates away. Same step count, same cost, no rings. This is the standard fix and it is free.
+  "  float jitter = hash(gl_FragCoord.xy * 0.017 + vec2(T * 0.31));",
   "  for(int i = 0; i < STEPS; i++){",
   "    if(accumAlpha > 0.97){ break; }",
-  "    float s = (float(i) + 0.5) * dt;",
+  "    float s = (float(i) + jitter) * dt;",
   "    vec3 Q = P + rd * s;",
   "    float core = lensDist(Q);",
   // Boundary turbulence: tongues peel off the sphere's own surface, drifting upward — the volumetric
@@ -279,6 +287,16 @@ export const GLOBE_FRAGMENT = [
   "  col += vec3(1.0, 0.52, 0.20) * fres * 0.22 * accumAlpha;",
   "  float wetSpec = pow(1.0 - ndv, 9.0) * (0.7 + 0.3 * noise(vPosO.xy * 0.6 + T * 0.02));",
   "  col += vec3(1.0, 0.95, 0.88) * wetSpec * 0.5 * accumAlpha;",
-  "  gl_FragColor = vec4(min(col, vec3(1.05)), clamp(alpha, 0.0, 1.0));",
+  // ---- HEADROOM: do not clamp the one signal the whole image pipeline was built to receive --------
+  // This line used to read `min(col, vec3(1.05))`. The stage (kit/env.ts) runs ACES tone mapping and
+  // thresholds bloom at 0.92 — machinery whose entire job is to take values ABOVE 1.0 and roll them
+  // into a bright core with falloff. Capping at 1.05 meant nearly every lit texel of the Eye landed in
+  // the narrow band 0.92..1.05, so bloom fired almost uniformly across the whole disc and haloed it
+  // evenly instead of blooming a core. That is the "sticker pasted on the screen" read, and it made
+  // "brighter" structurally impossible: there was no headroom left to be bright INTO.
+  // Now the throat is allowed to run genuinely over-bright and ACES does what it is for. The only
+  // remaining guard is against NaN/Inf poisoning the bloom buffer, not against brightness.
+  "  col = clamp(col, vec3(0.0), vec3(64.0));",
+  "  gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));",
   "}",
 ].join("\n");
