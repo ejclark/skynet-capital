@@ -38,10 +38,10 @@ jobs:
         with:
           fetch-depth: 0            # commitlint needs the PR commit range
 
-      - name: Set up Node 24
+      - name: Set up Node (version from .nvmrc)
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
           cache: npm
 
       - name: Install dependencies
@@ -83,10 +83,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set up Node 24
+      - name: Set up Node (version from .nvmrc)
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
           cache: npm
 
       - name: Install dependencies
