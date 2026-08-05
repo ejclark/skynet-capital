@@ -13,6 +13,20 @@
  * space cut, not view-dependent culling), so orbiting behind it found nothing but bloom bleeding
  * through empty air. A skin painted on the front of a sphere is still a skin.
  *
+ * A FOURTH attempt overcorrected on the third's own fix (`docs/art/EYE.md` § "the eyeball correction",
+ * itself later corrected): it blended the almond into a plain sphere away from the gaze direction, so
+ * the eye vanished into a formless round blob outside a narrow front cone — solving 'the body should be
+ * round' by breaking 'visible in all directions', which was never supposed to be up for trade. Reverted:
+ * the almond stays a full solid of revolution, unconditionally, at every azimuth. Sweeping a wide, short
+ * lens 360° around Y already gives it real volume — a plain sphere blend was never required to make it
+ * read as dimensional; the raymarch was doing that work the whole time.
+ *
+ * A fifth attempt (the corona addendum's spikes) also regressed the read — a jagged mandala competing
+ * with the eye instead of framing it. Removed outright, not re-tuned a third time; EYE.md's own
+ * governing rule is "no lid, no brow, no mercy of stone," and a spike burst is exactly the kind of
+ * added housing that rule exists to keep out. The collar (a tight rim at the boundary) and the thin
+ * electric filaments — both original, pre-corona elements — stay.
+ *
  * THIS version is a **raymarched volume**: for every fragment, a ray is cast from the camera through
  * the bounding sphere's own surface and marched through a real 3D density field — the flame's shape is
  * a solid of revolution (the old 2D vesica swept 360° around the vertical axis), so every horizontal
@@ -20,7 +34,7 @@
  * slit-less) rather than not existing. Nothing is thrown away by which side of the mesh you're looking
  * at; only by how far a ray actually travels through occupied space.
  *
- * Five things carry the read, in order:
+ * Four things carry the read, in order:
  *  1. **A moving boundary.** The lens-of-revolution's surface is perturbed by animated 3D fbm sampled
  *     at each march step, so tongues peel off while the underlying solid holds its shape — the
  *     volumetric equivalent of the old 2D rim-lick.
@@ -28,23 +42,14 @@
  *     field, the pupil socket, the throat glow and the boundary lip all have genuine depth — no offset
  *     trick is needed to fake a curved cornea; the camera simply sees further or less far into the fire
  *     as it orbits.
- *  3. **An azimuth-gated pupil on a round body.** The body itself blends two solids — a plain sphere
- *     (an eyeball is round first) and the old vesica-of-revolution (the almond) — by a wide, smooth
- *     `gazeWeight` centred on the gaze direction, so the almond bulges out of the orb facing whoever
- *     it's watching and rounds off everywhere else. The pupil slit is gated by that SAME weight, so
- *     it only ever appears where the almond aperture is actually open — never a hole in a round back.
+ *  3. **An azimuth-gated pupil on an always-present body.** The almond itself never disappears — only
+ *     the SLIT is gated to the gaze direction (`frontGate`), so the front reads as an eye and the back
+ *     reads as the same eye-shaped fire with no slit — never a hole, and never a shape that stops being
+ *     an eye.
  *  4. **The electric affinity at the flame tips.** Thin, near-straight blue-white filaments living only
- *     in the outer fringe, flashing on a quantised clock. Fire is the body; the lightning is the will
- *     behind it — so if the lightning reads as loudly as the flame, the balance is wrong.
- *  5. **The corona.** A ring of straight spikes launched from a collar pinned at the lens's boundary —
- *     now genuinely AZIMUTHAL (it goes all the way around the vertical axis, matching the volume's own
- *     symmetry) rather than radiating from one 2D face. Evaluated as a cheap surface overlay at the
- *     bounding sphere's entry point, composited over whatever the raymarch itself produced.
- *
- * Descoped for this pass, disclosed rather than silently dropped: the earlier travelling anisotropic
- * chatoyant band (a real 3D tangent-fibre field is its own sub-problem) is replaced by a cheap one-time
- * Fresnel term at the ray's entry point — a "wet sphere" cue, not the full tiger's-eye sheen. Revisit
- * if the simplification reads flat under real lighting.
+ *     in the outer fringe, flashing on a quantised clock, plus a second phase-offset layer that
+ *     occasionally reads as a branch. Fire is the body; the lightning is the will behind it — so if the
+ *     lightning reads as loudly as the flame, the balance is wrong.
  */
 
 /** Shared noise — value-noise fbm, used for fire churn, rim tongues and fibre irregularity. */
@@ -115,13 +120,15 @@ export const GLOBE_FRAGMENT = [
   // ~1.0 clamped out, and all that survived was the sheen — a pale wax ball.
   "uniform float iRadius;",
   NOISE,
-  // The distance field, shared between the raymarch (evaluated per step) and the outer collar/spike
-  // overlay (evaluated at the ray's closest approach). Blends TWO solids by gaze-relative azimuth:
-  // a plain sphere (the orb — an eyeball is round first) and the old vesica-of-revolution (the almond
-  // — the part of the ball that's doing something). Facing the gaze direction, the almond fully wins;
-  // away from it, the boundary is pure sphere; between, one continuous mix, no seam. This is a
-  // correction (`docs/art/EYE.md` § the eyeball correction): the first pass made the almond the WHOLE
-  // body, solving 'every angle answers honestly' but not 'the body should be round at all.'
+  // The distance field, shared between the raymarch (evaluated per step) and the outer collar/filament
+  // overlay (evaluated at the ray's closest approach). A pure vesica-of-revolution — the old 2D almond
+  // swept a full 360° around Y — UNCONDITIONALLY, at every azimuth. A prior pass blended this toward a
+  // plain sphere away from the gaze direction (`docs/art/EYE.md` § the eyeball correction) on the
+  // reasoning that 'an eyeball is round first' — but that broke the standing, load-bearing requirement
+  // that the eye be visible in every direction, trading it for a different property (roundness) nobody
+  // asked to trade it for. Reverted: sweeping a wide, short lens 360° around Y is ALREADY volumetric —
+  // real depth via the raymarch, real self-occlusion, a real 3D solid — without ever needing a second
+  // shape to blend toward. Round and always-visible were never in tension.
   //
   // LENS_SCALE is a deliberately-checked no-op, kept as a named knob rather than removed. First
   // instinct was that this needed rescaling — Q is constrained to |Q| <= 1 while the old P.x/P.y were
@@ -130,23 +137,16 @@ export const GLOBE_FRAGMENT = [
   // rho ~= 0.67 and a polar reach of only y ~= 0.26: a wide, short lens that already fits comfortably
   // inside the unit ball at its original proportions — the same proportions the shipped 2D version
   // used, at the same sphere radius, which is exactly why that version read correctly. No rescaling
-  // needed. (The real bug behind the first render's teal latitude arcs was the corona/collar/filament
+  // needed. (The real bug behind the first raymarch's teal latitude arcs was the corona/collar/filament
   // overlay being evaluated at the bounding sphere's entry point instead of the ray's actual closest
   // approach to the lens — fixed below via minD/minAng, not via this constant.)",
-  "  const float LENS_SCALE = 1.0, BALL_R = 0.60;",
+  "  const float LENS_SCALE = 1.0;",
   "float lensDist(vec3 Q){",
   "  const float SX = 0.70, SY = 0.455, OFF = 0.882, RV = 1.0;",
   "  vec3 Qs = Q * LENS_SCALE;",
   "  float rho = length(Qs.xz);",
-  "  float ang = atan(-Qs.x, Qs.z);",
   "  vec2 u = vec2(rho * SX, Qs.y * SY);",
-  "  float dmAlmond = max(length(vec2(u.x, u.y - OFF)), length(vec2(u.x, u.y + OFF))) - RV;",
-  "  float dmOrb = length(Qs) - BALL_R;",
-  // Wide, gentle blend centred on the gaze direction (ang = 0) — the almond bulges out of the orb over
-  // roughly the front third, rounding fully off by the sides. The pupil below reuses this exact same
-  // weight (not a separately-tuned gate), so the slit only ever opens where the aperture itself does.
-  "  float gazeWeight = smoothstep(-0.35, 0.55, cos(ang));",
-  "  return mix(dmOrb, dmAlmond, gazeWeight);",
+  "  return max(length(vec2(u.x, u.y - OFF)), length(vec2(u.x, u.y + OFF))) - RV;",
   "}",
   "void main(void){",
   "  vec3 P = vPosO / iRadius;",
@@ -187,17 +187,15 @@ export const GLOBE_FRAGMENT = [
   "    float turb = fbm3(Qs * 2.4 + vec3(0.0, -iTime * 0.35, 0.0)) - 0.5;",
   "    float d = core - turb * 0.10;",
   "    float dens = smoothstep(0.05, -0.03, d);",
-  // ---- THE PUPIL: an absence of density along the gaze plane, gated to the almond feature ----------
-  // `ang` is the true azimuth around Y (0 = the gaze direction). Gated by the SAME `gazeWeight` the
-  // shape blend above uses — not a separately-tuned front/back split — so the slit only ever appears
-  // where the almond aperture itself is actually present. Round the back (and through the wide
-  // transition zone where the boundary has already mostly reverted to plain orb) there is no socket,
-  // only the fire that makes the socket possible (docs/art/EYE.md, "the walk-around addendum").
+  // ---- THE PUPIL: an absence of density along the gaze plane, gated to the front only -------------
+  // `ang` is the true azimuth around Y (0 = the gaze direction). The ALMOND ITSELF is never gated —
+  // it's the full solid of revolution from `lensDist` — only the slit is. `frontGate` keeps it off the
+  // back half; the eye-shaped fire is present everywhere, but only the front has a socket in it.
   "    float rho = length(Qs.xz);",
   "    float ang = atan(-Qs.x, Qs.z);",
   "    float pupilU = rho * sin(ang);",
-  "    float gazeWeight = smoothstep(-0.35, 0.55, cos(ang));",
-  "    float pupilCut = smoothstep(0.115, 0.085, abs(pupilU) * (1.0 + abs(Qs.y) * 0.55)) * gazeWeight;",
+  "    float frontGate = smoothstep(-0.15, 0.15, cos(ang));",
+  "    float pupilCut = smoothstep(0.115, 0.085, abs(pupilU) * (1.0 + abs(Qs.y) * 0.55)) * frontGate;",
   "    dens *= (1.0 - pupilCut);",
   "    if(d > 0.0 && d < minD){ minD = d; minAng = ang; }",
   "    if(dens > 0.001){",
@@ -223,7 +221,7 @@ export const GLOBE_FRAGMENT = [
   "      sampleCol += vec3(1.0, 0.32, 0.05) * lip * 0.65;",
   // Duller round the back: the passage's "banked like coals" — a straight key-light-facing term, no
   // special-cased branch, so it falls naturally out of the existing palette math.
-  "      float backDim = mix(0.55, 1.0, gazeWeight);",
+  "      float backDim = mix(0.55, 1.0, frontGate);",
   "      sampleCol *= backDim * (0.55 + iPower * 0.5);",
   "      float a = clamp(dens, 0.0, 1.0) * 0.55;",
   "      accumColor += (1.0 - accumAlpha) * a * sampleCol;",
@@ -231,38 +229,20 @@ export const GLOBE_FRAGMENT = [
   "    }",
   "  }",
   // ---- THE CORONA: collar + azimuthal spikes, anchored to the ray's closest approach ---------------
-  // Now genuinely goes all the way around the vertical axis — the volume's own symmetry — rather than
-  // radiating off one 2D face. `docs/art/EYE.md` "the corona addendum" for the passage this answers to.
-  // Anchored at (minD, minAng) — the march's own closest-approach tracker above — NOT at the bounding
-  // sphere's entry point; that was the bug the first render caught (see the comment above the loop).
+  // The spike system that used to live here (a mandala of straight rays around the collar) is REMOVED,
+  // not re-tuned — it was tuned twice already and still read as clutter competing with the eye rather
+  // than framing it, a direct regression against EYE.md's own governing rule ("no lid, no brow, no
+  // mercy of stone" — a spike burst is exactly the kind of added housing that rule exists to keep out).
+  // What remains are the two original, pre-corona elements: the collar (a tight rim right at the
+  // boundary) and the electric filaments below. Anchored at (minD, minAng) — the march's own closest-
+  // approach tracker above — NOT at the bounding sphere's entry point; that was a real bug the first
+  // raymarch caught (see the comment above the loop).
   "  vec3 coronaColor = vec3(0.0);",
   "  float coronaAlpha = 0.0;",
-  "  const float CORONA = 0.055;",
   "  float collarT = minD / 0.020;",
   "  float collar = exp(-collarT * collarT);",
   "  coronaColor += vec3(1.0, 0.92, 0.80) * collar * (0.55 + iPower * 0.35);",
   "  coronaAlpha += collar;",
-  "  const float SPIKE_REACH = 0.22, SPIKE_N = 18.0, TAU = 6.28318530718;",
-  "  float slot = TAU / SPIKE_N;",
-  "  float si = floor(minAng / slot + 0.5);",
-  "  float dAng = minAng - si * slot;",
-  "  float spikeSeed = hash(vec2(si, 7.0));",
-  "  float spikeElectric = step(0.90, spikeSeed);",
-  "  float spikeJitter = fbm(vec2(si * 3.1, iTime * 0.35)) - 0.5;",
-  "  float spikeLen = CORONA + (SPIKE_REACH - CORONA) * (0.30 + 0.70 * spikeSeed) * (1.0 + spikeJitter * 0.18);",
-  "  float spikeT = clamp((minD - CORONA) / max(spikeLen - CORONA, 0.001), 0.0, 1.0);",
-  "  float spikeWidth = (mix(0.042, 0.004, spikeT) + spikeJitter * 0.009) * mix(1.0, 0.4, spikeElectric);",
-  "  float spikeMask = (1.0 - smoothstep(spikeWidth * 0.5, spikeWidth, abs(dAng)))",
-  "    * step(minD, spikeLen) * step(CORONA, minD);",
-  "  float spikeCell = floor(iTime * 3.0 + spikeSeed * 40.0);",
-  "  spikeMask *= step(0.30, hash(vec2(si, spikeCell)));",
-  "  if(spikeMask > 0.001){",
-  "    vec3 fireSpike = mix(vec3(0.98, 0.19, 0.015), vec3(1.0, 0.55, 0.15), spikeT);",
-  "    vec3 spikeCol = mix(fireSpike, vec3(0.58, 1.0, 0.94), spikeElectric);",
-  "    float spikeBrightness = (0.55 + iPower * 0.55) * mix(1.0, 0.8, spikeElectric);",
-  "    coronaColor += spikeCol * spikeBrightness * spikeMask * (1.0 - spikeT * 0.65);",
-  "    coronaAlpha = max(coronaAlpha, spikeMask * (1.0 - spikeT * 0.65));",
-  "  }",
   // ---- THE ELECTRIC AFFINITY: current off the mass, branching, tightly bounded -------------------
   // Reframed in-lore as the field a mass this dense drags out of the air around it — gravity well as
   // excuse, EM discharge as consequence (`docs/art/EYE.md` § the gravity-current addendum) — but the
