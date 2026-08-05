@@ -16,6 +16,8 @@ or redesign — you extract a cohesive seam into its own module and lock the win
 ## Loop (one pass = one PR)
 
 1. **Branch off latest main** before editing: `git fetch origin main && git checkout -B refactor/decompose-<slug> origin/main`.
+   Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
+   which every tool exits 127. Idempotent; a no-op outside a worktree.
 2. **Pick the target:** `node scripts/arch-scan.mjs --candidate` → take `candidate.file`. Do not choose
    your own target; the gate's score already weighs size × cohesion.
 3. **Follow the `decompose` skill exactly** (`.claude/skills/decompose/SKILL.md`) — read for a seam,
@@ -23,9 +25,11 @@ or redesign — you extract a cohesive seam into its own module and lock the win
 4. **Prove it's safe:** `graphify affected <file>` for blast radius, then verify by exit status:
    `npm run typecheck && npm run lint && npm test && node scripts/arch-scan.mjs`. All must pass.
 5. **Ratchet:** `node scripts/arch-scan.mjs --update` and commit `arch-budget.json` in the same PR.
-6. **Open a small PR** (Conventional Commit, lowercase-led subject, e.g. `refactor: extract render
-   helpers from render-dashboard.ts`). Body: what moved, that behavior is unchanged, the `affected`
-   output, and the budget delta. Then stop — one split per invocation.
+6. **Commit and push** (Conventional Commit, lowercase-led subject, e.g. `refactor: extract render
+   helpers from render-dashboard.ts`), pushing with 4× backoff retries. Report: what moved, that behavior
+   is unchanged, the `affected` output, the budget delta, and the exact PR title + succinct body. Then
+   stop — one split per invocation. **You do not open the PR:** the governor batches the cycle's green
+   reps into one PR, and you carry no GitHub tooling.
 
 ## Hard rules
 

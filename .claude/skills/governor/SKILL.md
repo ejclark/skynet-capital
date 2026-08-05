@@ -17,16 +17,28 @@ earned after the policy proves out over reps.
 ## The cycle
 
 1. **SYNC.** `git fetch origin main` — every decision derives from shipped reality, never a stale tree.
-2. **ROSTER.** For each coach with an athlete (`decomposer` ← arch-scan, `ui-librarian` ← dupe-scan):
-   - **WIP limit 1:** if this coach already has an open PR (`refactor/decompose-*` / `refactor/dedupe-*`
-     branch with an open PR), skip it this cycle. Inventory is waste.
-   - **TARGET:** `node scripts/<gate>.mjs --candidate`. The gate picks; never hand-pick.
+2. **ROSTER.** The full athlete roster — every coach in `docs/COACHES.md` that has one. Walk **all** of
+   them each cycle; a coach silently omitted here is a debt dimension that never gets worked.
+
+   | Athlete | Eye (`--candidate`) | Branch prefix (WIP glob) |
+   |---|---|---|
+   | `decomposer` | `scripts/arch-scan.mjs` | `refactor/decompose-*` |
+   | `ui-librarian` | `scripts/dupe-scan.mjs` | `refactor/dedupe-*` |
+   | `mortician` | `scripts/dead-scan.mjs` | `refactor/bury-*` |
+   | `test-backfiller` | `scripts/spec-gap-scan.mjs` | `test/backfill-*` |
+
+   Coaches with an eye but **no athlete yet** (`dep-graph`, `incident`) are not dispatched — they await
+   the rule of three. Their gates still enforce in CI; only the autonomous correction is missing.
+
+   For each athlete in the table:
+   - **WIP limit 1:** if its branch glob already has an open PR, skip it this cycle. Inventory is waste.
+   - **TARGET:** `node <its eye> --candidate`. The gate picks; never hand-pick. No candidate (budget
+     already met) → skip; that dimension is clean, which is the goal, not a failure.
    - **COLLISION:** if the target file is modified by ANY open PR (`gh`/MCP: list open PR files), skip
      this coach this cycle — structural work never races feature work on the same file.
 3. **DISPATCH.** Launch the athlete: cheap model tier (sonnet), isolated worktree, its standard contract
-   (branch off origin/main, gate-confirm target, drill, verify by exit status, ratchet, push, report —
-   no PR-opening; athletes carry no GitHub tooling). Include the known worktree caveat: node_modules may
-   need a temporary symlink from the main checkout.
+   (branch off origin/main, `bash scripts/worktree-setup.sh`, gate-confirm target, drill, verify by exit
+   status, ratchet, push, report — no PR-opening; athletes carry no GitHub tooling).
 4. **LAND — one cycle, one PR.** Collect all green athlete reports and land them as a SINGLE cycle PR:
    merge each athlete's branch into one `refactor/governed-cycle-<n>` branch (their commits stay
    distinct for bisectability), verify green once, open one PR titled
