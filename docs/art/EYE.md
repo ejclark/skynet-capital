@@ -123,3 +123,118 @@ then the table it's answerable to.
 | "gone before your eye has finished counting… there was never a fourth" | Per-spike flicker on a `hash(slot, timeCell)` gate — each slot's on/off schedule is independent, so the visible pattern never repeats. |
 | "a seam tighter than anything else… the last honest edge" | **The collar**: a narrow, near-white ring pinned exactly at the vesica boundary (`edge ≈ 0`), tighter and whiter than the existing lip falloff — the anchor the spikes launch from. |
 | "threads run out of the slit like grain… hundreds of them, all pointed out" | Explicit radial-fibre grain folded into the iris heat, independent of the chatoyant sheen — visible texture even when the travelling lit band isn't crossing it. |
+
+---
+
+## The walk-around addendum — the Eye stops being a skin
+
+Written after a reader orbited fully behind the tower and found nothing there — bloom bleeding through
+empty air where a landmark should be. Everything above was calibrated for a face-on view; this
+addendum is the correction: the Eye as a body you can walk all the way around, not a mask painted on
+the front of one.
+
+> I have walked the parapet at every hour and I have never once seen him from the side and thought
+> him thin.
+>
+> That's the part the new recruits get wrong. They think the Eye is a face, and a face has a back of
+> the head. It doesn't. Walk the ring — go on, walk it, nobody will stop you — and at every step
+> there's the same almond, the same slit, watching you exactly as hard as it watched you at the gate.
+> He doesn't turn to find you. He was always finding you. That's worse.
+>
+> From the side he's narrower — a spindle, blunt in the belly and drawn to a point at both horns,
+> like a seed pod about to split. You'd swear it was a different shape than the one at the gate until
+> you notice: it's the same eye, just caught edge-on. A coin looks like a line from the rim.
+>
+> Go up on the scaffold and look down into him and the slit doesn't close, it just tips — a black
+> wedge sunk into a disc of fire, and for one dizzy second you understand it the way a bird would,
+> looking down into a well that burns.
+>
+> Go down into the ditch and look up and it's the same disc from underneath, duller, the fire banked
+> like coals under a grate. Heat still comes off it. You just have to earn the angle.
+>
+> Round the back — and I have done this, I have made myself do it, because a man who guards a tower
+> should know what's behind him — and he is still burning. Not facing you. Not hunting. But burning,
+> the way a coal at the bottom of the fire burns without needing anyone to look at it. Duller than the
+> front. Redder. No slit — the slit belongs to the part of him that's looking, and back here nothing
+> is looking, there's just the fire that makes the looking possible. Barlow says that's the worst part.
+> Barlow's right, for once. A thing that stops being dangerous when your back is turned is a trick.
+> A thing that keeps burning anyway is honest, and honest is worse.
+
+**A correction, made before this ever got built** — Eric's own read, checked against a real render:
+the whole body should not be the almond. An eye is a ball first. The almond is the part of the ball
+that is *doing something* — looking.
+
+> You want to know what he is, not what he's doing, look at the shape when nobody's home. It's round.
+> A ball. A coal the size of a man's chest, and it would still be round if you cut it in half and
+> looked at the cut.
+>
+> Then he finds you, and the ball doesn't change — it *opens*. Right where he's looking, the fire
+> pulls itself narrow and sharp, points at both ends, a mouth deciding to speak. That's the almond.
+> That's the part with the slit in it. It isn't the whole of him. It's the part of him aimed at you.
+>
+> Walk round to where he isn't looking and the opening closes back into the ball. Still fire. Still
+> hot enough to feel from the wall. Just round again, the way a fist is round until it isn't.
+
+### Translation — the geometry itself changes
+
+The prior addenda described a **skin**: a flame silhouette painted on the visible face of a sphere,
+the far side thrown away outright (`if(P.z < 0.0){ discard; }` in the shipped shader — an unconditional
+local-space cut, not view-dependent culling). That single line is why the earlier screenshot from
+directly behind showed only bloom. This addendum replaces the skin with a **raymarched volume**: a
+real 3D density field sampled along the view ray through the sphere, so every angle in the passage
+above is the same object answering honestly, not a different trick per angle.
+
+| The prose says | The mechanism |
+|---|---|
+| "it's round… a ball… still round if you cut it in half" | **Superseded below by the eyeball correction** — kept for the record. The first raymarched pass made the solid-of-revolution *itself* the whole body (correct that every angle answers honestly, wrong that the body should be almond-shaped at all — an unforced, uncritiqued carry-over from the flat 2D version, caught on review). |
+| "the ball doesn't change — it opens… that's the almond… the part of him aimed at you" | `lensDist` now blends **two** signed distance fields — a plain sphere (the orb, `length(Qs) - BALL_R`) and the old vesica-of-revolution (the almond) — weighted by a smooth, wide function of azimuth centred on the gaze direction. Facing the gaze: full almond. Away from it: pure sphere. No seam, because it's one continuous `mix()`, not a hard join. |
+| "walk round to where he isn't looking and the opening closes back into the ball" | The blend weight is azimuthal (`cos(ang)`-based), not a hard front/back split — orbit slowly and the almond visibly narrows and rounds off into the sphere rather than snapping. |
+| "from the side… a spindle, blunt in the belly, drawn to a point at both horns" | Superseded by the correction above — the 90°-off read is now most of the way toward the plain orb, not a spindle. Reads as a fireball with the gaze-aperture receding to one side, matching how a real bulging cornea recedes on a round eye viewed from the side. |
+| "look down into him… the slit tips, a black wedge sunk into a disc" | True raymarching gives real depth: looking down the Y axis, the pupil is not a 2D cutout but an actual absence of density carved through the volume, so it reads as a socket with depth, not a mark on a surface. |
+| "the same disc from underneath, duller, banked like coals" | The palette ramp is unchanged, but the underside receives less of the key-light term, so it renders warmer/duller by the existing heat-ramp math alone — no special-cased "underside" branch. |
+| "round the back… still burning, not facing you, no slit… honest" | The pupil carve is gated by `gazeWeight` (the same weight the sphere/almond blend uses), so the back — and the wide transition zone where the boundary has already mostly rounded off — has no slit. The fire density itself is not gated, so the back keeps burning at reduced intensity. Nothing is thrown away; the back is simply the part of the same object that isn't looking. |
+
+### The bar (extended)
+
+The original bar (head-on, oblique) still applies. Add: **behind** (camera at the gaze direction +
+180°) must show the same burning solid, duller and slit-less, never empty; **above** and **below**
+must show the disc-with-a-wedge described in the passage, not a flat cap or a hole.
+
+---
+
+## The gravity-current addendum — what the lightning is, and how close you're allowed to look
+
+Two more corrections from the same review, folded in together: the electric affinity needed an
+in-fiction reason to exist rather than just decorating the fringe, and the surface needed to survive
+being looked at close instead of just from across the plain.
+
+> Nobody built the lightning. That's the part the engineers won't say out loud.
+>
+> A mass like that bends the air around it before it ever bends your eye. Stand close enough, hold a
+> compass, and the needle won't point at anything — it'll point at *him*, and it'll shake doing it. The
+> arcs aren't decoration. They're what the air does when something that dense has stopped agreeing to
+> be still. It doesn't need to want the lightning. It only needs to weigh enough.
+>
+> And because it's a field, not a wick, it doesn't run in one line — it forks, the way a river forks
+> finding the low ground, one white thread splitting into two thinner ones before your eye can hold
+> either. Blink and count wrong. That's correct. Nobody counts a fork right the first time.
+>
+> Get close — closer than the wall allows, closer than sense allows — and the fire isn't flat the way
+> it looks from the yard. It has grain, like a burl in bad wood, like the whorl in a man's own thumb,
+> one pattern riding on a smaller one riding on a smaller one still. And where the light catches it
+> right there's a wet gleam, thin as a film on water, that isn't there a half-second later. Something
+> that hot should not look wet. It does anyway. That's the detail that convinces you it's a THING and
+> not a light someone hung up there.
+
+| The prose says | The mechanism |
+|---|---|
+| "a mass like that bends the air… the arcs are what the air does" | In-fiction framing only — no physics is simulated — but it re-motivates the electric layer as a consequence of the orb's own mass/gravity rather than unmotivated decoration, matching the existing doctrine that lore sits over honest mechanics, never replaces them. |
+| "it forks… one thread splitting into two before your eye can hold either" | A **second filament layer**, higher frequency and phase-offset from the first, on its own flicker clock — where the two thin ridges happen to cross, it reads as a branch. The cheap real-time fake for a Lichtenberg figure; still two THIN layers losing to the flame on area and colour, so the balance rule holds. |
+| "grain… like a burl in bad wood… a pattern riding on a smaller pattern" | A second, much-higher-frequency 2D noise term (`microGrain`) layered on top of the existing radial fibre grain — two texture scales at once, the macro-photo cue of structure-within-structure a flat single-frequency noise never gives. |
+| "a wet gleam, thin as a film on water, that isn't there a half-second later" | A second, tighter Fresnel lobe (`pow(1-ndv, 9)`) on top of the existing one, noise-modulated so it breaks into a highlight rather than a uniform ring — the "wet cornea" cue a real close-up of an eye always shows. |
+
+**Scope note, stated plainly:** this is a stylized real-time shader, not a path-traced render — "CGI
+realism" here means convincing at the landmark's own register (macro-detail cues, two-scale texture,
+a wet highlight), not literal photorealism. If the bar keeps climbing, the next honest step up is
+higher raymarch step counts / more turbulence octaves at a real perf cost, not more noise terms
+layered on the same 18-step march.
