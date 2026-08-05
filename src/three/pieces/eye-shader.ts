@@ -168,7 +168,10 @@ export const GLOBE_FRAGMENT = [
   // precisely the material agate IS: concentric deposition bands. Offsetting each ray's start by a
   // per-pixel hash breaks the correlation, converting a coherent ring into incoherent grain the eye
   // integrates away. Same step count, same cost, no rings. This is the standard fix and it is free.
-  "  float jitter = hash(gl_FragCoord.xy * 0.017 + vec2(T * 0.31));",
+  // Interleaved gradient noise, not a white-noise hash. Both decorrelate the march, but IGN spreads
+  // its error across a fine screen-space lattice the eye integrates away, where a hash leaves visible
+  // salt-and-pepper — with no temporal accumulation to average it, that grain is the final image.
+  "  float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));",
   "  for(int i = 0; i < STEPS; i++){",
   "    if(accumAlpha > 0.97){ break; }",
   "    float s = (float(i) + jitter) * dt;",

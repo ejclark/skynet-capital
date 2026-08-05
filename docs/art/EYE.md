@@ -371,3 +371,51 @@ old flat 2D shader spent, and mobile GPUs (including the Pixel 6's) have far les
 software rendering suggests. The time-wrap fixes the correctness bug; it does not address possible
 frame-rate/thermal cost. If a real-device recheck still shows stutter with the corruption gone, the
 next lever is `STEPS` (currently 18) or a quality tier, not more noise-layer tuning.
+
+## The empty-vessel addendum — fixing the artifact revealed there was no content
+
+Five verified defects were repaired in one pass (see `fix(three): repair five verified render defects`).
+The tower gained enormously: legal albedo and a real tangent-space normal map turned a black blob into
+readable masonry. The Eye did the opposite, and the reason is the most useful thing this project has
+learned so far.
+
+**The concentric rings were the only structure the Eye had.** They were march-step banding — an artifact,
+correctly diagnosed and correctly removed. But once the banding was gone, what remained was a smooth
+orange ball. The "detail" everyone had been reacting to for six rebuilds *was the bug*. Nothing was
+underneath it.
+
+**Measurement beat the plausible story, and this is the part to remember.** The emissive was hard-clamped
+at `1.05` while bloom thresholded at `0.92`, which is a genuine defect and a compelling explanation for
+the flat, evenly-haloed "sticker" read. Removing it changed peak frame luminance from **214 to 213 out of
+255**, with **zero pixels above 250** in either case. The clamp was never the binding constraint: the
+palette does not generate values near 1.0 in the first place. Every narrative reason to believe the fix
+had worked was intact; only the number said otherwise. A render claim that is not measured is a guess
+wearing a citation — `frac>250` and peak luminance take one `ffmpeg` call and should be reported on any
+PR claiming a brightness or contrast change.
+
+**Dither choice, decided by comparison rather than preference.** White-noise hash and interleaved gradient
+noise both decorrelate the march. Side by side at the `eye` pose, IGN is visibly smoother — hash leaves
+salt-and-pepper that, with no temporal accumulation to average it, *is* the final image. IGN shipped.
+
+### The standing brief — Eric's own words, and the target for the next pass
+
+> "The physical shape and anatomy of the eye must be unmistakable. The pupil and iris are iconic details.
+> The sphere shape feels too uniform/perfect. Given the eye represents the eternal essence of Sauron,
+> ever watching, there should be an aberration, ghost-like quality manifesting in the material fire/embers
+> with turbulence on the edges to help frame the pupil/iris, almond part of the eye."
+
+This resolves the contradiction that produced two regressions. Earlier direction was read as *the eye is
+a sphere of fire*, and every attempt then fought over whether the silhouette was round or almond. It is
+neither, exactly:
+
+| The words | What they mean mechanically |
+|---|---|
+| "anatomy must be unmistakable" | Eye anatomy is the SUBJECT. If a frame does not read as an eye, it has failed, whatever else it does well. |
+| "pupil and iris are iconic" | Both must be legible — a dark pupil and a fibrous, **radially** structured iris. Radial spokes, never concentric rings; concentric is the agate signature we just removed. |
+| "sphere feels too uniform/perfect" | The body is round-ish but must not be a clean analytic sphere. Break the silhouette: irregularity, asymmetry, a boundary that varies. |
+| "aberration, ghost-like quality" | The material is not solid fire. It wants translucency, a spectral/afterimage quality — something that reads as an eternal presence rather than a burning object. |
+| "turbulence on the edges to help FRAME the pupil/iris/almond" | The decisive clause. **The fire is not the subject; it is the frame.** Turbulent embers live at the boundary and their job is to enclose and point at the anatomy. Fire filling the middle is what erased the eye. |
+
+The trap this table exists to prevent: treating "fire" and "eye" as the same layer. They are figure and
+ground. The anatomy is figure; the turbulence is ground, and ground that overruns figure is the exact
+failure mode of every attempt so far.
