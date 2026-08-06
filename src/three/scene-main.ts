@@ -49,7 +49,7 @@ export function start(canvas: HTMLCanvasElement): void {
 
   // Post comes AFTER the Eye exists, because volumetric scattering needs it as its emitter — and it
   // must be built before the default pipeline (see attachPost).
-  attachPost(scene, camera, eye.emitter);
+  const pipe = attachPost(scene, camera, eye.emitter);
 
   // Bloom-adjacent glow for the emissive bits only; the pipeline's bloom handles the rest.
   const glow = new GlowLayer("glow", scene, { blurKernelSize: 44 });
@@ -78,9 +78,26 @@ export function start(canvas: HTMLCanvasElement): void {
     forge.intensity = params.forgeIntensity * (0.92 + Math.sin(time * 0.9) * 0.1);
   };
 
+  // The idle orbit, in radians per SECOND. It used to be `camera.alpha += 0.0014` — per *frame* — so
+  // the scene literally turned at a different speed on different hardware: full rate on a 60fps
+  // desktop, half that on a phone holding 30fps, and it would surge whenever the tab caught up after a
+  // stall. Anything advanced per frame is a bug wearing a constant; time is the only honest clock.
+  const ORBIT_RAD_PER_SEC = 0.0014 * 60;
+
+  // A seek OWNS the clock and the camera for its one frame. Without this guard `__towerSeek` was a
+  // lie: it set `t`, then called `scene.render()`, which fires this observable BEFORE drawing, which
+  // advanced `t` and `camera.alpha` right back. Measured drift was 0.14 rad — eight degrees of camera
+  // rotation — and two seeks to the same timestamp produced different pixels. Every screenshot
+  // comparison this project has made was therefore between two different moments from two different
+  // angles, with the difference attributed to the code change. The comment below used to assert the
+  // opposite, which is what made it dangerous rather than merely broken.
+  let seeking = false;
+
   scene.onBeforeRenderObservable.add(() => {
-    t += engine.getDeltaTime() / 1000;
-    camera.alpha += 0.0014;
+    if (seeking) return;
+    const dt = engine.getDeltaTime() / 1000;
+    t += dt;
+    camera.alpha += ORBIT_RAD_PER_SEC * dt;
     applyTime(t);
   });
 
@@ -96,9 +113,17 @@ export function start(canvas: HTMLCanvasElement): void {
   // runs at the same seek time are the same picture, so a difference is a real change.
   window.__towerSeek = (time: number) => {
     engine.stopRenderLoop();
+    seeking = true;
+    // Animated film grain reseeds every frame by design — lovely in motion, fatal to a visual diff,
+    // because it alone guarantees two captures of the identical scene never match. Freeze it for the
+    // captured frame only; the live scene keeps its moving grain.
+    const wasAnimated = pipe.grain.animated;
+    pipe.grain.animated = false;
     t = time;
     applyTime(time);
     scene.render();
+    pipe.grain.animated = wasAnimated;
+    seeking = false;
   };
   // Where the Eye is, and which way it faces. The harness needs both to frame the aperture head-on;
   // hard-coding them there would silently drift the moment the tower's proportions change.
