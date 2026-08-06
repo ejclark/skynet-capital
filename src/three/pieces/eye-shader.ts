@@ -122,8 +122,26 @@ export const GLOBE_FRAGMENT = [
   // the unit bounding sphere (P is always at |P| = 1, the bounding mesh's own surface), leaving margin
   // for real raymarch depth on the way in and room for the corona to extend past it on the way out.",
   "  const float R = 0.62;",
+  // Blackbody-ish ramp: colour AS temperature, which is the thing a hand-picked palette can never
+  // fake. Real fire is not one hue at four brightnesses — it runs deep red at the cool edge through
+  // orange and yellow to white at the throat, because those ARE different temperatures. Channels
+  // switch on at staggered thresholds, which is what the Planckian locus does to a rough
+  // approximation and is three smoothsteps instead of a texture lookup.
+  "vec3 blackbody(float t){",
+  "  t = clamp(t, 0.0, 1.0);",
+  "  return vec3(smoothstep(0.00, 0.22, t),",
+  "              smoothstep(0.30, 0.90, t) * 0.93,",
+  "              smoothstep(0.68, 1.00, t) * 0.98);",
+  "}",
+  // The boundary is round but NOT analytic. "The sphere shape feels too uniform/perfect" — a perfect
+  // `length(Q) - R` is a machined ball, and the eye is supposed to be an eternal presence rather than
+  // a manufactured object. One octave of object-space noise breaks it. Object-space is load-bearing:
+  // the wobble rotates WITH the eye, so it is identical from every viewing angle and cannot make the
+  // silhouette vanish off-axis. That is precisely the mistake the gaze-blended shape made.
   "float lensDist(vec3 Q){",
-  "  return length(Q) - R;",
+  "  vec3 D = normalize(Q + vec3(0.0001));",
+  "  float wob = noise3(D * 2.3 + vec3(13.1, 4.7, 9.2)) - 0.5;",
+  "  return length(Q) - (R + wob * 0.085);",
   "}",
   "void main(void){",
   "  vec3 P = vPosO / iRadius;",
@@ -196,43 +214,72 @@ export const GLOBE_FRAGMENT = [
   // never affects the outer boundary that defines the silhouette, so this stays fine to be directional
   // where the outer shape may not be. Local coordinates near the front pole (Q.x/R, Q.y/R) give the
   // same vertical-slit shape the flat 2D version used, normalised back to the old tuned thresholds.
-  "    float pupilU = Q.x / R;",
-  "    float pupilV = Q.y / R;",
-  "    float pupilCut = smoothstep(0.115, 0.085, abs(pupilU) * (1.0 + abs(pupilV) * 0.55)) * irisWeight;",
-  "    dens *= (1.0 - pupilCut);",
+  // ---- EYE ANATOMY: the almond aperture, and lids that FRAME rather than fill --------------------
+  // Eric's brief: "the physical shape and anatomy of the eye must be unmistakable… turbulence on the
+  // edges to help FRAME the pupil/iris, almond part of the eye." The decisive word is frame. Fire is
+  // GROUND, anatomy is FIGURE, and every previous attempt failed by filling the middle with fire.
+  // So the almond is carved as a LID MASS closing in from top and bottom — dark, turbulent ember that
+  // surrounds and defines a bright aperture. Crucially this shapes BRIGHTNESS, not the density field's
+  // outer boundary, so the silhouette stays the unconditional wobbly sphere from every angle.
+  "    float ax = Q.x / R;",
+  "    float ay = Q.y / R;",
+  "    float lidEdge = 0.47 * (1.0 - ax * ax * 0.72);",
+  "    float lidTurb = (noise(vec2(ax * 7.0, T * 0.13)) - 0.5) * 0.10;",
+  "    float aperture = smoothstep(lidEdge + 0.10, lidEdge - 0.10, abs(ay) + lidTurb);",
+  // ---- THE PUPIL: a genuine density carve, confined to the sphere's INTERIOR so it can never touch
+  // the outer boundary. A vertical slit, wide enough to survive screen-space bloom bleeding inward.
+  "    float pupilCut = smoothstep(0.26, 0.11, abs(ax) * (1.0 + abs(ay) * 0.55)) * aperture * irisWeight;",
+  "    dens *= (1.0 - pupilCut * 0.92);",
   "    if(d > 0.0 && d < minD){ minD = d; minAng = ang; }",
   "    if(dens > 0.001){",
   // Fine radial grain (the fibre detail), cheap 2D noise keyed off azimuth+height. A second, much
   // higher-frequency pass on top is the macro-photo cue: two texture scales at once, structure riding
   // on structure, the way a close macro shot of a real iris reads. Both cheap 2D `noise()` calls.
+  // ---- IRIS FIBRE: RADIAL SPOKES, NOT CONCENTRIC RINGS -------------------------------------------
+  // The single most important line in this file. `ang` above is azimuth about the Y axis — longitude —
+  // so noise keyed to it draws bands that read as CONCENTRIC when you face the eye. Real irises are
+  // radial: fibres run outward from the pupil like spokes. Sampling noise with the SCREEN-PLANE angle
+  // as its first coordinate makes features vary around the pupil and stay coherent along the radius,
+  // which is exactly a spoke. This is the 90-degree error that made the Eye read as polished agate.
   "      float rho = length(Q.xy);",
-  "      float grain = noise(vec2(ang * 9.0, Q.y * 6.0)) - 0.5;",
-  "      float microGrain = noise(vec2(ang * 42.0 + Q.y * 5.0, Q.y * 34.0 - ang * 3.0)) - 0.5;",
-  "      float plasma = clamp(0.55 + 0.85 * turb + grain * 0.12 + microGrain * 0.05, 0.0, 1.0);",
-  "      float axisGlow = 1.0 - smoothstep(0.0, 0.34, rho);",
-  "      float heat = clamp(plasma * 0.75 + axisGlow * 0.55, 0.0, 1.0);",
-  "      vec3 core_c = vec3(1.0, 0.90, 0.72);",
-  "      vec3 hot  = vec3(0.98, 0.19, 0.015);",
-  "      vec3 scab = vec3(0.66, 0.055, 0.006);",
-  "      vec3 deep = vec3(0.34, 0.030, 0.004);",
-  "      vec3 sampleCol = mix(deep, scab, smoothstep(0.08, 0.42, heat));",
-  "      sampleCol = mix(sampleCol, hot, smoothstep(0.56, 0.88, heat));",
+  "      float irisAng = atan(Q.y, Q.x);",
+  "      float irisRad = rho / R;",
+  "      float spoke = noise(vec2(irisAng * 13.0, irisRad * 2.2)) - 0.5;",
+  "      float fibre = noise(vec2(irisAng * 47.0, irisRad * 5.5 - 1.3)) - 0.5;",
+  "      float plasma = clamp(0.55 + 0.85 * turb + spoke * 0.30 + fibre * 0.13, 0.0, 1.0);",
+  // A moat of dim colour between the pupil and the bright ring — screen-space bloom (72px kernel)
+  // will otherwise bridge a bright ring directly into the pupil regardless of how dark the pupil
+  // column itself is, which is what erased the slit on the first attempt at this redesign.
+  "      float irisRing = exp(-pow((irisRad - 0.46) / 0.13, 2.0));",
+  "      float axisGlow = irisRing * (1.0 - smoothstep(0.30, 0.95, irisRad));",
+  "      float lidCool = mix(0.085, 1.0, aperture);",
+  "      float heat = clamp((plasma * 0.62 + axisGlow * 0.72) * mix(lidCool, 1.0, 1.0 - irisWeight), 0.0, 1.0);",
+  "      heat *= 1.0 - pupilCut * 0.95;",
+  "      float moat = smoothstep(0.30, 0.11, abs(ax) * (1.0 + abs(ay) * 0.55));",
+  "      heat *= mix(1.0, 0.35, moat * irisWeight * aperture);",
+  "      vec3 sampleCol = blackbody(heat);",
+  // HDR headroom, deliberately. The stage runs ACES and thresholds bloom at 0.92 — machinery built to
+  // roll off values ABOVE 1.0 — and the old palette topped out near 1.0, so the frame never contained
+  // a single white pixel and "brighter" was structurally impossible. Kept modest (not the first-draft
+  // 7.5x) because past a certain gain the bloom kernel bridges ring and pupil into one white mass.
+  "      sampleCol *= 1.0 + pow(heat, 3.0) * 1.55 * (0.55 + iPower * 0.75);",
   // The throat glow is IRIS-ONLY (irisWeight-scaled) — the bright pupil-adjacent core is part of the
   // eye's own detail, not something the plain-ember sclera should show.
-  "      sampleCol += core_c * pow(axisGlow, 3.0) * (0.30 + iPower * 0.34) * irisWeight;",
+  "      sampleCol += blackbody(0.97) * pow(axisGlow, 2.2) * (0.30 + iPower * 0.4) * irisWeight * aperture * (1.0 - pupilCut);",
   // The lip: brightest right at the boundary — reads everywhere, the rim of the whole sphere, not
   // just the iris.
+  "      sampleCol *= 1.0 - pupilCut * 0.97;",
   "      float lip = exp(-abs(d) / 0.035);",
   "      sampleCol += vec3(1.0, 0.32, 0.05) * lip * 0.65;",
   // A vein of current inside the iris itself — 'electric textured pupil and iris', not just an outer
   // fringe effect. High-frequency noise thresholded to a thin ridge, teal-white, its own flicker clock,
   // strictly confined to the iris by `irisWeight` so it can never bleed onto the plain sclera and stays
   // clearly secondary to the fire (thin, rare, dim) per the standing balance rule.
-  "      float veinNoise = noise(vec2(ang * 14.0, faceCos * 20.0 - T * 0.8));",
+  "      float veinNoise = noise(vec2(irisAng * 16.0, irisRad * 9.0 - T * 0.8));",
   "      float vein = pow(max(0.0, 1.0 - abs(veinNoise - 0.5) * 8.0), 14.0);",
   "      float veinCell = floor(T * 6.0);",
-  "      float veinFlicker = step(0.55, hash(vec2(veinCell, floor(ang * 6.0))));",
-  "      sampleCol += vec3(0.55, 0.95, 0.92) * vein * veinFlicker * irisWeight * (0.25 + iPower * 0.2);",
+  "      float veinFlicker = step(0.55, hash(vec2(veinCell, floor(irisAng * 6.0))));",
+  "      sampleCol += vec3(0.55, 0.95, 0.92) * vein * veinFlicker * irisWeight * aperture * (0.35 + iPower * 0.3);",
   // Plain ember sclera away from the iris — dimmer, the passage's "banked like coals," no special-cased
   // branch, just a brightness term keyed to the same irisWeight everything else above already uses.
   "      float scleraDim = mix(0.45, 1.0, irisWeight);",
