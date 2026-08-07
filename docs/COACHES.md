@@ -156,7 +156,7 @@ supply-chain decision: read them fully before adopting.
 
 Not every play is a down-in/down-out defensive loop. Special teams are situational crews with their own playbooks, run occasionally:
 
-- **dep-warden** — reviews dependency-update PRs: reads changelogs, runs the suite, merges patch/minor on green, escalates majors. (First named unit; agent not yet built.)
+- **dep-warden** — reviews dependency-update PRs: reads changelogs, runs the suite, merges patch/minor on green, escalates majors. Built: `.claude/agents/dep-warden.md`.
 - **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
 - **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
 - **Release verification** — periodic prod screenshot/probe beyond the smoke test.
