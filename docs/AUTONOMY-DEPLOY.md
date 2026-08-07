@@ -18,30 +18,53 @@ and the readiness gate pins any un-vetted persona to observe regardless of the m
 
 ## Eric's steps (the credentialed / irreversible class)
 
-Everything below is Eric's — never self-authorized. Nothing places a real order until step 4.
+Everything below is Eric's — never self-authorized. Nothing places a real order until the go-live flip.
 
-1. **Volume (one-time, if not already created):**
-   ```
-   fly volumes create skynet_data --region ord --size 1
-   ```
-2. **Bot paper credentials** — a paper Alpaca key/secret per persona you want to run
-   (env names derive from the id, e.g. `day-trader` → `SKYNET_BOT_DAY_TRADER_KEY/SECRET`):
-   ```
-   fly secrets set SKYNET_BOT_DAY_TRADER_KEY=PK... SKYNET_BOT_DAY_TRADER_SECRET=...
-   fly secrets set SKYNET_AUTONOMOUS_BOTS=day-trader   # which personas the bots process runs
-   ```
-3. **Deploy** (both processes come up; bots is in **observe** — watching, placing nothing):
-   ```
-   fly deploy
-   fly logs -a skynet-capital   # watch the [autonomous] mode=observe line + [gate] verdicts
-   ```
-   Confirm the readiness gate passed the persona (`[gate] The Day Trader: READY … → live` would show
-   only once mode is live; in observe you'll see it decide but not place).
-4. **Go live (the one irreversible flip — do it during a market open, watching):**
-   ```
-   fly secrets set SKYNET_AUTONOMOUS_MODE=live
-   ```
-   The bots process restarts in live and begins placing **paper** orders; fills show on the board.
+**No volume needed for `bots`.** The persistent volume mentioned in `fly.toml` is for the dashboard
+process's self-service participant store only — a Fly volume attaches to a single machine, so `bots`
+deliberately runs without one. Nothing to create here.
+
+**Deploy is already automatic.** Every merge to `main` already runs `flyctl deploy` in the release
+pipeline (`.github/workflows/pipeline.yml`) — `fly.toml`'s two processes (`app`, `bots`) come up
+together on that same push. There is no separate manual deploy step for the bots process.
+
+### The no-terminal path — `.github/workflows/autonomy-ops.yml`
+
+A manually-triggered GitHub Actions workflow does the remaining steps from a browser, reusing the same
+`FLY_API_TOKEN` the release pipeline already deploys with. **One-time setup, both parts required before
+this actually gates anything:**
+
+1. **Restrict who can run it.** GitHub Actions `workflow_dispatch` alone only requires repo *write*
+   access — for a real allowlist, create a GitHub **Environment**: repo Settings → Environments → New
+   environment → name it exactly `autonomy-ops` → **Required reviewers** → add the allowlisted
+   accounts. Until this exists, referencing `environment: autonomy-ops` in the workflow auto-creates an
+   *unprotected* one — the file alone does not enforce an allowlist, this UI step does.
+2. **Add the bot's paper credentials as repository secrets** (Settings → Secrets and variables →
+   Actions → New repository secret) — `BOT_DAY_TRADER_ALPACA_KEY` and `BOT_DAY_TRADER_ALPACA_SECRET`,
+   a **paper** Alpaca key/secret pair. These are read by the workflow and written on to Fly as
+   `SKYNET_BOT_DAY_TRADER_KEY/SECRET`; they're never typed into a dispatch form or shown in logs.
+
+Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
+
+- **`status`** — read-only, lists Fly secret *names* only (never values). Safe to run any time.
+- **`set-day-trader-credentials`** — writes the bot's Alpaca credentials to Fly from the repo secrets
+  above, and sets `SKYNET_AUTONOMOUS_BOTS=day-trader`.
+- **`flip-mode`**, with `mode: observe` — deploy comes up in **observe**: it decides and logs every
+  cycle but places nothing. Watch `fly logs -a skynet-capital` for `[autonomous] mode=observe` and a
+  `[gate]` line per persona; confirm it reads `READY` before going further.
+- **`flip-mode`**, with `mode: live` — **the one genuinely irreversible step. Run it during a market
+  open, watching the logs.** Bots begin placing real (paper) orders; fills show on the board.
+
+Flip back with `flip-mode` / `mode: observe` any time — same button, same allowlist.
+
+### The terminal path (unchanged, if you'd rather run it locally)
+
+```
+fly secrets set SKYNET_BOT_DAY_TRADER_KEY=PK... SKYNET_BOT_DAY_TRADER_SECRET=...
+fly secrets set SKYNET_AUTONOMOUS_BOTS=day-trader
+fly secrets set SKYNET_AUTONOMOUS_MODE=live   # the irreversible flip — during a market open, watching
+fly logs -a skynet-capital
+```
 
 ## The kill switch (hosted)
 

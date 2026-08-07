@@ -1,0 +1,82 @@
+name: Autonomy ops
+
+# Manually-triggered ops for the always-on bots process — no terminal, no local flyctl. Reuses the
+# same FLY_API_TOKEN the release pipeline already deploys with; adds nothing to the automatic
+# push-to-main path. Gated by the `autonomy-ops` GitHub Environment's required reviewers (configured
+# once in the repo's Settings, not expressible in this file — see docs/AUTONOMY-DEPLOY.md).
+#
+# Adding a second persona: copy the "Set <Persona> bot credentials" step, swap the secret and env-var
+# names, add its action name to the `action` input's options below. Static secret references only —
+# GitHub Actions does not support computing a secret's NAME from another input at expression-eval time
+# (`secrets[format(...)]` fails with "Unrecognized named-value"); each persona gets its own step.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "What to do"
+        required: true
+        type: choice
+        options:
+          - status
+          - set-day-trader-credentials
+          - flip-mode
+      mode:
+        description: "observe or live — only read by flip-mode"
+        required: false
+        type: choice
+        options:
+          - observe
+          - live
+        default: observe
+
+permissions:
+  contents: read
+
+jobs:
+  autonomy-ops:
+    name: autonomy ops · ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    # The actual allowlist. Until the `autonomy-ops` environment is created (Settings -> Environments
+    # -> New environment -> name it exactly `autonomy-ops` -> Required reviewers -> add allowlisted
+    # accounts), this reference auto-creates an UNPROTECTED environment and anyone with repo write
+    # access can run this workflow. The gate exists only once that one-time setup is done.
+    environment: autonomy-ops
+    steps:
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Status — secret NAMES only, values are never shown or settable this way
+        if: ${{ inputs.action == 'status' }}
+        run: flyctl secrets list -a skynet-capital
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Set Day Trader bot credentials
+        if: ${{ inputs.action == 'set-day-trader-credentials' }}
+        run: |
+          if [ -z "$BOT_KEY" ] || [ -z "$BOT_SECRET" ]; then
+            echo "::error::Repository secrets BOT_DAY_TRADER_ALPACA_KEY / BOT_DAY_TRADER_ALPACA_SECRET are not set. Add them under Settings -> Secrets and variables -> Actions, then re-run this workflow."
+            exit 1
+          fi
+          flyctl secrets set \
+            "SKYNET_BOT_DAY_TRADER_KEY=$BOT_KEY" \
+            "SKYNET_BOT_DAY_TRADER_SECRET=$BOT_SECRET" \
+            "SKYNET_AUTONOMOUS_BOTS=day-trader" \
+            -a skynet-capital
+          echo "Set. The bots process restarts on the next deploy or Fly's own secret-apply restart — check with the 'status' action, or 'fly logs -a skynet-capital' for the [gate] line."
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          BOT_KEY: ${{ secrets.BOT_DAY_TRADER_ALPACA_KEY }}
+          BOT_SECRET: ${{ secrets.BOT_DAY_TRADER_ALPACA_SECRET }}
+
+      - name: Flip autonomous mode
+        if: ${{ inputs.action == 'flip-mode' }}
+        run: |
+          echo "Setting SKYNET_AUTONOMOUS_MODE=${{ inputs.mode }}"
+          flyctl secrets set "SKYNET_AUTONOMOUS_MODE=${{ inputs.mode }}" -a skynet-capital
+          if [ "${{ inputs.mode }}" = "live" ]; then
+            echo "::warning::LIVE — bots will begin placing PAPER orders once the market is open and their readiness gate passes. Watch 'fly logs -a skynet-capital' for the [gate]/[order] lines."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
