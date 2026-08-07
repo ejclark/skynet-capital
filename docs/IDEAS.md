@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### A 2D UI/UX agent for `src/observatory` / `src/ui` / the login canvas
+First live application of `/charter`. The forge roster (art-director, piece-wright, set-dresser,
+render-alchemist) directs 3D work; nothing plays the same role for 2D UI — `ui-librarian` only dedupes
+existing code, it doesn't direct new UX. That's a real architectural gap, confirmed by grep (nothing in
+`src/observatory`/`src/ui` has a direction-agent, only debt-paydown coverage).
+- **Charter verdict: candidate, not yet triggered — do not build now.** The 3D roster earned four agents
+  because of REPEATED, high-volume rounds of taste-triggered work (many Eye rebuilds, each with distinct
+  planning/building/detailing/research needs). 2D UI has no equivalent recurrence yet — `src/observatory`
+  is a handful of files with no history of repeated redirection cycles. Building ahead of that evidence
+  risks a second `render-alchemist`-shaped agent: plausible domain, no real trigger yet.
+- **The trigger to watch for:** a second or third round of "this dashboard/card/canvas needs real
+  direction" from Eric on the same surface — the same rule-of-three logic that killed the capability-scout
+  and unpaved-register ideas earlier this session. First round belongs in the main thread (as the Eye
+  redesign did), not delegated to an agent that doesn't exist yet.
+_(src: Claude · while: chartering the requested agent batch — Eric asked for ux research ops / ux
+research / ux design as three of eighteen roles; this is the honest single candidate that survived)_
+
 ### Voice profiles — decode Eric, and a rack of borrowable expert lenses
 Full reasoning banked in [`JOURNEYS/voice-profiles.md`](JOURNEYS/voice-profiles.md); this is the
 pickup list. Four layers, not one artifact — **stance** (the epistemic contract; when to disagree,
