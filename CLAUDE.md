@@ -127,7 +127,9 @@ to it**: "clean up the code" / "burn down debt" → run a governor cycle; "why d
 probably caught real drift, fix the finding not the gate; big planned burn-downs → feast mode (see the
 governor skill); **any reaction to a rendered frame** — "this looks terrible", "that's a 30/100",
 "make it more dramatic" — → `/telestrator`, which names the cause before anything gets changed (the
-inverse of `/vision`: eyes in, engineering out). Structural PRs land batched; auto-merge per the governor's merge-policy table; features
+inverse of `/vision`: eyes in, engineering out); **"we need an agent for X"** → `/charter` before writing
+a single `.claude/agents/*.md` file — it checks for an existing owner first and a REJECT verdict is a
+normal, expected output, not a shortfall. Structural PRs land batched; auto-merge per the governor's merge-policy table; features
 and visual work always wait for Eric's taste. Eric will not remember these names — that is expected and
 fine; the docs are the memory.
 
