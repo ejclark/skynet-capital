@@ -37,10 +37,10 @@ jobs:
   autonomy-ops:
     name: autonomy ops · ${{ inputs.action }}
     runs-on: ubuntu-latest
-    # The actual allowlist. Until the `autonomy-ops` environment is created (Settings -> Environments
-    # -> New environment -> name it exactly `autonomy-ops` -> Required reviewers -> add allowlisted
-    # accounts), this reference auto-creates an UNPROTECTED environment and anyone with repo write
-    # access can run this workflow. The gate exists only once that one-time setup is done.
+    # The actual allowlist: the `autonomy-ops` GitHub Environment (Settings -> Environments), with
+    # required reviewers + "protected branches only" deployment restriction. Verified live — a
+    # workflow_dispatch run sits in "Waiting" until an allowlisted reviewer approves it. Note:
+    # required-reviewer environment protection needs a public repo or a paid plan on a private one.
     environment: autonomy-ops
     steps:
       - name: Set up flyctl
