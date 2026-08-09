@@ -12,6 +12,10 @@ primary_region = "ord"  # Chicago — closest to Iowa
 [env]
   # Self-service accounts persist here, on the mounted volume below (survives redeploys).
   SKYNET_PARTICIPANT_STORE = "/data/participants.json"
+  # Equity/realized-P/L history samples persist here too — on the volume, so history survives
+  # redeploys. Without this the sampler writes inside the container and every deploy erases the
+  # very history the ceremonies/deltas/trophies read (docs/LIVING-UNIVERSE.md's load-bearing layer).
+  SKYNET_HISTORY_DIR = "/data/history"
   # Autonomy is OFF by default — the bots process runs but places nothing until this flips to "live".
   SKYNET_AUTONOMOUS_MODE = "observe"
 

@@ -51,14 +51,17 @@ function makeService(overrides: {
   const store = overrides.store ?? new MemStore();
   const hub = overrides.hub ?? new ObservatoryHub(emptyBoard());
   const started = overrides.started ?? [];
+  const seeds: Array<{ id: string; equity: number; at: string }> = [];
   const service = new ParticipantService({
     hub,
     store,
     clientFactory: overrides.factory ?? okFactory,
     startStream: (p) => started.push(p),
+    recordSeedSample: (snapshot, at) =>
+      seeds.push({ id: snapshot.id, equity: snapshot.equity, at }),
     now: () => new Date("2026-07-24T00:00:00.000Z"),
   });
-  return { service, store, hub, started };
+  return { service, store, hub, started, seeds };
 }
 
 describe("ParticipantService.addParticipant", () => {
@@ -76,8 +79,17 @@ describe("ParticipantService.addParticipant", () => {
     expect(started).toHaveLength(1);
   });
 
+  it("records the founding seed sample at onboarding — the doubling baseline", async () => {
+    const { service, seeds } = makeService({});
+    await service.addParticipant({ displayName: "Uncle Joe", apiKey: "k", apiSecret: "s" });
+
+    expect(seeds).toEqual([
+      { id: "human-uncle_joe", equity: 1000, at: "2026-07-24T00:00:00.000Z" },
+    ]);
+  });
+
   it("rejects a key Alpaca refuses — nothing is stored or shown", async () => {
-    const { service, store, hub } = makeService({
+    const { service, store, hub, seeds } = makeService({
       factory: () => new AlpacaTradingClient(new RejectingTransport()),
     });
     const result = await service.addParticipant({
@@ -89,6 +101,7 @@ describe("ParticipantService.addParticipant", () => {
     expect(result.ok).toBe(false);
     expect(store.items).toHaveLength(0);
     expect(hub.getState().participants).toHaveLength(0);
+    expect(seeds).toHaveLength(0); // no founding record for a rejected key
   });
 
   it("rejects blank fields", async () => {

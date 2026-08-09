@@ -1,6 +1,7 @@
 import type { Side } from "../domain/types.js";
 import type { DashboardData } from "./dashboard-data.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
+import type { WorldTransition } from "./world-transitions.js";
 
 /**
  * The realtime events the observatory reacts to. Two external sources (Alpaca fills and
@@ -26,5 +27,15 @@ export type ObservatoryEvent =
       readonly side: Side;
       readonly quantity: number;
       readonly price: number;
+      readonly at: string;
+    }
+  | {
+      /**
+       * A derived ceremony transition (took profit / deployed capital) from world-transitions.ts.
+       * Carried on the stream so renderers can celebrate it; it never mutates dashboard state —
+       * the state change it describes already arrived via fills/prices.
+       */
+      readonly type: "world_transition";
+      readonly transition: WorldTransition;
       readonly at: string;
     };

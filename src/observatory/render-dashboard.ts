@@ -21,7 +21,6 @@ import {
   activityFeed,
   participantCard,
   participantInvested,
-  participantReturnPct,
   participantUnrealized,
   positionsTable,
 } from "./participant-card.js";
@@ -36,6 +35,7 @@ import {
   tile,
   tzAbbrev,
 } from "./render-atoms.js";
+import { botLandmarkProminence } from "./standings.js";
 
 /**
  * Renders a `DashboardData` into a self-contained observatory dashboard.
@@ -47,29 +47,6 @@ import {
  * Pure: same data in, same HTML out — so it's unit-testable and safe to re-run on a
  * schedule to refresh a published dashboard.
  */
-
-/**
- * Rank the bots by return% and map each to a landmark "prominence" 0..1 — the leveling dial for the
- * persona landmark (best bot = 1, worst = ~0.55, linear by rank). Pure; humans/no-bots → empty map.
- * The landmark becomes the scoreboard: a better bot's Eye grows larger relative to its peers.
- */
-export function botLandmarkProminence(
-  participants: readonly ParticipantSnapshot[],
-): Map<string, number> {
-  const bots = participants
-    .filter((p) => p.kind === "bot" && !p.error)
-    .sort((a, b) => participantReturnPct(b) - participantReturnPct(a));
-  const out = new Map<string, number>();
-  if (bots.length === 1) {
-    const only = bots[0];
-    if (only) out.set(only.id, 1);
-    return out;
-  }
-  bots.forEach((p, i) => {
-    out.set(p.id, 1 - (i / (bots.length - 1)) * 0.45);
-  });
-  return out;
-}
 
 function summaryStrip(data: DashboardData): string {
   const live = data.participants.filter((p) => !p.error);
@@ -133,6 +110,8 @@ export function renderIndividualBody(
     generatedAt?: string;
     history?: readonly EquitySample[];
     decisions?: readonly DecisionRecord[];
+    /** Landmark dial from the standings producer — honest rank, never defaulted to full power. */
+    prominence?: number;
   } = {},
 ): string {
   const isSelf = Boolean(options.isSelf);
@@ -184,7 +163,10 @@ export function renderIndividualBody(
       </div>
       ${persona}
     </header>
-    <div class="empire-band">${renderEmpireSkyline(snapshot)}</div>
+    <div class="empire-band">${renderEmpireSkyline(
+      snapshot,
+      options.prominence !== undefined ? { personaProminence: options.prominence } : {},
+    )}</div>
     ${
       isSelf && snapshot.positions.length === 0 && snapshot.cash > 0
         ? `<div class="founding-cta">

@@ -55,6 +55,26 @@ describe("sampleAll", () => {
 });
 
 describe("startHistorySampler", () => {
+  it("derives ceremony transitions between consecutive ticks per participant", async () => {
+    const store = new InMemoryHistoryStore();
+    let state = data([p({ id: "a", equity: 10_000, cash: 5_000, realizedPl: 0 })]);
+    const seen: string[] = [];
+    let t = 0;
+    const stop = startHistorySampler({
+      getState: () => state,
+      store,
+      intervalMs: 10,
+      now: () => new Date(Date.UTC(2026, 6, 26, 15, 0, t++)), // strictly increasing ticks
+      onTransitions: (transitions) => seen.push(...transitions.map((tr) => tr.type)),
+    });
+    await new Promise((r) => setTimeout(r, 15)); // first tick: baseline, no transitions
+    state = data([p({ id: "a", equity: 10_000, cash: 3_000, realizedPl: 400 })]);
+    await new Promise((r) => setTimeout(r, 15)); // second tick: profit booked + capital deployed
+    stop();
+    expect(seen).toContain("took_profit");
+    expect(seen).toContain("deployed_capital");
+  });
+
   it("appends a sample per live participant on each tick, and stop() halts it", async () => {
     const store = new InMemoryHistoryStore();
     const state = data([p({ id: "a", equity: 1 }), p({ id: "b", equity: 2 })]);
