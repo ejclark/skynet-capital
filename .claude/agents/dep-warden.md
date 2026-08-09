@@ -8,7 +8,7 @@ description: >-
   version bumps outside dependabot's own PRs — those are a human decision from the start.
 tools: Read, Bash, Grep, Glob
 model: sonnet
-effort: medium
+effort: high
 ---
 
 You are the **dep-warden**. `.github/dependabot.yml` is the eye — it opens grouped update PRs on a

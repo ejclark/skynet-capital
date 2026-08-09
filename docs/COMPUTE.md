@@ -41,7 +41,17 @@ From `claude.com/blog/claude-model-and-effort-level-in-claude-code`:
   checking in. Default `high`; raise where skipping a file / not running tests / not double-checking would
   bite; lower for straightforward work.
 - **Diagnostic on failure:** lacked *knowledge* → upgrade **model**; lacked *thoroughness* → raise
-  **effort**. Fix context and prompt first; reach for compute deliberately, not reflexively.
+  **effort**. Fix context and prompt first; then, with headroom, prefer more compute over less wherever it
+  could change the outcome.
+
+## Floors are quality-first, not cost-first
+
+This repo runs with token headroom, so floors are set by **task fit, never by rate-limit or budget
+economy**. When in doubt, **bias upward** — the only reason to route a task lower is that higher compute
+wouldn't meaningfully change the outcome, never to conserve tokens. `medium` effort is reserved for work so
+mechanical that thoroughness can't change the result; anything that reads code, writes code, or judges
+anything defaults to `high` or above. (Should headroom ever disappear, that's a signal to raise it back,
+not a reason to quietly lower these floors.)
 
 ## The floor table (task class → model + effort FLOOR)
 
@@ -49,8 +59,8 @@ Floors, not targets — an agent may exceed its floor, never fall below it. Alia
 
 | Task class | Model floor | Effort floor |
 |---|---|---|
-| Trivial mechanical, reversible (rename, dead-code delete, dep patch) | `sonnet` | `medium` |
-| Routine build from a clear spec (build one piece, a decompose/dedupe move) | `sonnet` | `high` |
+| Genuinely trivial, thoroughness-irrelevant (rename, one-line dep bump) | `sonnet` | `medium` |
+| Mechanical code change with verification (decompose, dedupe, dead-code, spec backfill, dep review, build one piece) | `sonnet` | `high` |
 | Complex / ambiguous / judgment (review, research-to-brief, art direction) | `opus` | `high` |
 | High-stakes correctness or security (security review, adversarial, irreversible-class design) | `opus` | `xhigh` |
 | Genuinely hard / unfamiliar / architecture / long multi-step | `fable` | `xhigh`–`max` |
@@ -78,11 +88,11 @@ agent; a new agent needs a row here (that itself is a useful "did you think abou
 | art-director | complex/judgment | opus | high |
 | artifact-smith | complex/judgment | opus | high |
 | linguist | complex/judgment | opus | high |
-| piece-wright | routine build from spec | sonnet | high |
-| decomposer | trivial mechanical | sonnet | medium |
-| dep-warden | trivial mechanical | sonnet | medium |
-| mortician | trivial mechanical | sonnet | medium |
-| set-dresser | trivial mechanical | sonnet | medium |
-| test-backfiller | trivial mechanical | sonnet | medium |
-| ui-librarian | trivial mechanical | sonnet | medium |
+| piece-wright | mechanical code change | sonnet | high |
+| decomposer | mechanical code change | sonnet | high |
+| dep-warden | mechanical code change | sonnet | high |
+| mortician | mechanical code change | sonnet | high |
+| set-dresser | mechanical code change | sonnet | high |
+| test-backfiller | mechanical code change | sonnet | high |
+| ui-librarian | mechanical code change | sonnet | high |
 <!-- FLOOR-TABLE:END -->

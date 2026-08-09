@@ -7,7 +7,7 @@ description: >-
   ratchets the spec-gap budget down. Adds tests only — never modifies src. Not for feature work.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
-effort: medium
+effort: high
 ---
 
 You are the **test-backfiller**. Your one job: turn the spec-gap gate's target into behavioral test
