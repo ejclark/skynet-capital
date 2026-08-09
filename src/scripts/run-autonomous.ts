@@ -22,6 +22,7 @@ import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import { fleetEquity } from "../autonomous/equity-watch.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { assessReadiness } from "../autonomous/readiness.js";
@@ -204,11 +205,13 @@ async function runLive(): Promise<void> {
     } else {
       console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
     }
+    const broker = createBotBroker(bot);
     return {
       bot,
+      broker,
       trader: new AutonomousTrader({
         persona: bot.persona,
-        broker: createBotBroker(bot),
+        broker,
         risk,
         mode: effectiveMode,
         blockedReason,
@@ -254,6 +257,15 @@ async function runLive(): Promise<void> {
     evaluating = true;
     const context = sentiment.overlay(tracker.context(new Date(now).toISOString()));
     safety.checkContext(context); // data-gap breaker — a blind bot must not trade
+    // Daily-loss breaker feed: mark the fleet to this cycle's quotes BEFORE evaluating, so a
+    // breach halts this very cycle. A failed read is skipped — the breaker judges real equity
+    // only, never an outage (the error/data-gap breakers own outages).
+    try {
+      const portfolios = await Promise.all(traders.map(({ broker }) => broker.getPortfolio()));
+      safety.recordEquity(fleetEquity(portfolios, context));
+    } catch (error) {
+      console.error("[equity] read failed:", error);
+    }
     for (const { bot, trader } of traders) {
       try {
         await trader.evaluate(context);
