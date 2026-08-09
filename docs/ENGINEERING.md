@@ -88,6 +88,10 @@ We don't have one, and we won't add one. Instead:
   `engine/guards.ts`.
 - If a helper doesn't have an obvious named home, that's a signal the concept it serves hasn't
   been named yet — name it and give it a file, don't file it under "utils".
+- **Co-locate intent with structure.** Record *why* next to *what* — a header comment, a cited contract
+  doc — so the reasoning can't drift from the code it governs (`src/three/pieces/eye-shader.ts` narrates
+  why each attempt failed and cites `docs/art/EYE.md`; that's the gold standard). Intent kept in a distant
+  doc rots; intent co-located can't. Structure is Graphify's job, intent is the memory layer's — pair them.
 - Folder structure encodes the architecture, so structure alone tells you where behavior lives:
 
 ```

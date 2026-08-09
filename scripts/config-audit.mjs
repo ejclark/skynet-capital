@@ -93,8 +93,10 @@ function orphanFindings(caps) {
 function contradictionFindings(caps) {
   const findings = [];
   const claudeMd = existsSync(CLAUDE_MD) ? readFileSync(CLAUDE_MD, "utf8") : "";
+  // Case-insensitive: a capability named lowercase is still "named" when CLAUDE.md capitalizes it
+  // (e.g. the "Ship loop" heading matches the `ship` skill) — the case-sensitive form false-flagged it.
   const named = (name) =>
-    new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(claudeMd);
+    new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(claudeMd);
   for (const cap of caps) {
     const body = readFileSync(join(ROOT, cap.file), "utf8");
     // Does the capability CLAIM CLAUDE.md routes to / calls for it?

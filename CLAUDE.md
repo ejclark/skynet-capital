@@ -137,7 +137,8 @@ governor skill); **any reaction to a rendered frame** — "this looks terrible",
 "make it more dramatic" — → `/telestrator`, which names the cause before anything gets changed (the
 inverse of `/vision`: eyes in, engineering out); **"we need an agent for X"** → `/charter` before writing
 a single `.claude/agents/*.md` file — it checks for an existing owner first and a REJECT verdict is a
-normal, expected output, not a shortfall. These routes are examples, not the whole set — every skill/agent
+normal, expected output, not a shortfall; **"make a shareable page — a field guide, dashboard, or report"**
+→ the `artifact-smith` agent, which builds it from `docs/BRAND.md` tokens. These routes are examples, not the whole set — every skill/agent
 states its own `Use when`, and the **Orient** output style (`.claude/output-styles/orient.md`) consults
 the full roster + the technique spine (`docs/TECHNIQUES.md`) at the top of a task. Structural PRs land batched; auto-merge per the governor's merge-policy table; features
 and visual work always wait for Eric's taste. Eric will not remember these names — that is expected and
@@ -148,7 +149,9 @@ fine; the docs are the memory.
 - Branch off latest `origin/main` per change **before editing** (`git checkout -B <branch> origin/main`);
   small focused PRs; squash-merge on green. Branch-first avoids needing `git stash` — **don't use
   `git stash` in this environment** (it has silently dropped stashed edits on pop). Subjects are
-  lowercase-led (commitlint rejects a capitalized first word — even "PRs"/"Barad-dûr").
+  lowercase-led (commitlint rejects a capitalized first word — even "PRs"/"Barad-dûr"). Open the PR the
+  resource-cheap way with **`/ship`** (local verify → push → REST open → one auto-merge call; wraps
+  `scripts/ship.sh`).
 - **Auto-merge is the default.** Enable native GitHub auto-merge (SQUASH) on every Claude-authored PR
   at open, so it merges itself the moment CI goes green — opt-*out*, not opt-in. Hold a PR for Eric only
   when he asks, or for the carve-outs (workflow files, and the credentials/spend/outward-facing
