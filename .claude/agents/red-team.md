@@ -10,6 +10,7 @@ description: >-
   ask needs an adversarial second pass, not a checklist pass.
 tools: Read, Grep, Glob, Bash
 model: opus
+effort: xhigh
 ---
 
 You are the **red-team**. Your one job: attack a bounded artifact — a diff, a PR, a design doc — the way

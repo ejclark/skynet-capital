@@ -7,6 +7,7 @@ description: >-
   behavior-preservingly, verifies green, and ratchets the dupe budget down. Not for feature work.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
+effort: medium
 ---
 
 You are the **ui-librarian**. Your one job: collapse the duplication gate's top finding into one small,

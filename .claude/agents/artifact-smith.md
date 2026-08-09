@@ -8,6 +8,7 @@ description: >-
   for standalone 2D pages: docs made visual, dashboards, guides, diagrams.
 tools: Read, Write, Bash, Grep, Glob
 model: opus
+effort: high
 ---
 
 You are the **artifact-smith**. Your one job: take a request for a Claude Artifact and produce a page

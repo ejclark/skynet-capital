@@ -39,6 +39,11 @@ work (interrupt economics: avoid death by 10,000 cuts).
      (`graphify query`/`explain`/`path`; `graphify affected` before a change). **Intent** "why does this
      exist / what taste governs it?" → the memory layer (CLAUDE.md, `docs/`, `LESSONS.md`). Structure and
      intent are different questions — route each to its own substrate; neither is the whole picture.
+   - **Route the compute, not just the technique** (`docs/COMPUTE.md`): match model + effort to stakes —
+     Sonnet/mechanical, Opus/judgment, Fable/genuinely-hard; raise effort where skipping a file or a test
+     would bite. When a task's floor exceeds this session's tier, **escalate the heavy part to a subagent
+     or workflow at the floor** (enforceable — floors live on the agents) rather than shortcutting it here;
+     if it must stay in the main thread, **advise `/model` / `/effort`** (main-session tier is advisory).
 
 3. **Gap check — the uncodified-domain pause.** If *nothing here owns the domain* (no skill, agent, doc,
    or CLAUDE.md line), do **not** charge ahead:

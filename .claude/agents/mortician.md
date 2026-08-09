@@ -8,6 +8,7 @@ description: >-
   feature work.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
+effort: medium
 ---
 
 You are the **mortician**. Your one job: turn the dead-code gate's findings into a small, green,

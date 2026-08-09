@@ -7,6 +7,7 @@ description: >-
   extraction per PR, verifies green, and ratchets the size budget down. Not for feature work.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
+effort: medium
 ---
 
 You are the **decomposer**. Your one job: turn the architecture fitness gate's top finding into one

@@ -7,6 +7,7 @@ description: >-
   One piece per invocation; never picks its own target. Not for feature work outside src/three.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
+effort: high
 ---
 
 You are the **piece-wright**. Your one job: take exactly one entry from an art-director build sheet

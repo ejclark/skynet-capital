@@ -10,6 +10,7 @@ description: >-
   Produces an actionable technique brief other athletes build from — never touches shader code itself.
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch
 model: opus
+effort: xhigh
 ---
 
 You are the **render-alchemist**. Your one job: turn "make it look better" into a concrete, cited,
