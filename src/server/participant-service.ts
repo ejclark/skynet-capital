@@ -29,6 +29,13 @@ export interface ParticipantServiceDeps {
   readonly clientFactory: TradingClientFactory;
   /** Start this account's live fill stream (data-source specific). */
   readonly startStream: (participant: Participant) => void;
+  /**
+   * Record the FOUNDING equity sample the moment the account joins — the seed baseline
+   * "doubling" is measured against (docs/BACKLOG.md). An unrecorded starting equity can never
+   * be reconstructed later, so this fires at onboarding rather than waiting on the sampler's
+   * next tick. Optional so offline/test wiring can omit it.
+   */
+  readonly recordSeedSample?: (snapshot: ParticipantSnapshot, at: string) => void;
   /** Paper base URL to stamp on stored credentials (defaults to Alpaca paper). */
   readonly baseUrl?: string;
   readonly now?: () => Date;
@@ -96,6 +103,7 @@ export class ParticipantService {
     this.deps.store.add(participant);
     const at = (this.deps.now ?? (() => new Date()))().toISOString();
     this.deps.hub.apply({ type: "participant_added", participant: snapshot, at });
+    this.deps.recordSeedSample?.(snapshot, at);
     this.deps.startStream(participant);
 
     return { ok: true, id, displayName };

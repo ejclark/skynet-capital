@@ -57,7 +57,18 @@ async function main(): Promise<void> {
   // /data/history in prod, data/history in dev). No database, no host change — the seam that will
   // unlock performance-over-time and the sim-city event ceremonies. See docs/LIVING-UNIVERSE.md.
   const history = createHistoryStore(process.env);
-  startHistorySampler({ getState: () => hub.getState(), store: history });
+  startHistorySampler({
+    getState: () => hub.getState(),
+    store: history,
+    // Ceremony seam: derived took-profit / deployed-capital transitions ride the same event
+    // stream as fills, so any renderer can celebrate them (visual treatment is a later, taste-
+    // gated slice — today they simply flow; the reducer passes them through untouched).
+    onTransitions: (transitions) => {
+      for (const transition of transitions) {
+        hub.apply({ type: "world_transition", transition, at: transition.at });
+      }
+    },
+  });
 
   // Autonomous decision audit trail (Phase 2.1) — the same JSONL the runner writes when
   // SKYNET_AUDIT_DIR is set. When present, bot profiles show the live "what it decided and why."
@@ -73,6 +84,21 @@ async function main(): Promise<void> {
     store,
     clientFactory: dataSource.clientFactory,
     startStream: (participant) => dataSource.startParticipantStream(participant, sink, onStatus),
+    // Founding record: capture the seed baseline the moment an account joins (fire-and-forget —
+    // onboarding must never fail on a history write).
+    recordSeedSample: (snapshot, at) => {
+      void history
+        .save({
+          at,
+          participantId: snapshot.id,
+          equity: snapshot.equity,
+          cash: snapshot.cash,
+          realizedPl: snapshot.realizedPl ?? 0,
+        })
+        .catch(() => {
+          /* fire-and-forget: a history write failure must never break onboarding */
+        });
+    },
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
   });
 
