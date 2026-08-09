@@ -23,6 +23,9 @@ export function reduceObservatory(state: DashboardData, event: ObservatoryEvent)
       return applyToParticipants(state, event.at, (p) =>
         p.id === event.participantId ? applyFill(p, event) : p,
       );
+    case "world_transition":
+      // Ceremony flavor, not state: the underlying change already arrived via fill/price events.
+      return state;
   }
 }
 

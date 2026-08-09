@@ -36,6 +36,16 @@ describe("reduceObservatory", () => {
     );
   });
 
+  it("world_transition is ceremony flavor — state passes through untouched", () => {
+    const state = baseState();
+    const next = reduceObservatory(state, {
+      type: "world_transition",
+      transition: { type: "took_profit", participantId: "eric", realized: 500, at: "t" },
+      at: "t",
+    });
+    expect(next).toBe(state);
+  });
+
   describe("participant_added", () => {
     it("appends a new participant without disturbing the others", () => {
       const state = reduceObservatory(baseState(), {
