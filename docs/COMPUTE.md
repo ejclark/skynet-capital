@@ -63,7 +63,7 @@ Floors, not targets — an agent may exceed its floor, never fall below it. Alia
 | Mechanical code change with verification (decompose, dedupe, dead-code, spec backfill, dep review, build one piece) | `sonnet` | `high` |
 | Complex / ambiguous / judgment (review, research-to-brief, art direction) | `opus` | `high` |
 | High-stakes correctness or security (security review, adversarial, irreversible-class design) | `opus` | `xhigh` |
-| Genuinely hard / unfamiliar / architecture / long multi-step | `fable` | `xhigh`–`max` |
+| Genuinely hard / unfamiliar / architecture / long multi-step, adversarial security, rigorous review of subtle diffs | `fable` | `xhigh`–`max` |
 
 ## Honest limit
 
@@ -82,8 +82,8 @@ agent; a new agent needs a row here (that itself is a useful "did you think abou
 <!-- FLOOR-TABLE:START -->
 | agent | class | model floor | effort floor |
 |---|---|---|---|
-| red-team | high-stakes correctness/security | opus | xhigh |
-| reviewer | high-stakes correctness/security | opus | xhigh |
+| red-team | genuinely hard / adversarial | fable | xhigh |
+| reviewer | genuinely hard / adversarial | fable | xhigh |
 | render-alchemist | high-stakes correctness/security | opus | xhigh |
 | art-director | complex/judgment | opus | high |
 | artifact-smith | complex/judgment | opus | high |

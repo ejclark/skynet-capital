@@ -9,7 +9,7 @@ description: >-
   diff, no exploitation beyond proving the finding. Pairs with `/security-review`; use this when the
   ask needs an adversarial second pass, not a checklist pass.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: fable
 effort: xhigh
 ---
 

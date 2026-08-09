@@ -8,7 +8,7 @@ description: >-
   only — for adversarial security attack, use red-team; for structural debt (size/cohesion/duplication),
   the fitness gates already own that and this agent defers to them rather than re-litigating.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: fable
 effort: xhigh
 ---
 
