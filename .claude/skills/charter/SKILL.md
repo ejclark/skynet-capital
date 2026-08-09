@@ -108,6 +108,22 @@ of overlap, the way `red-team`/`reviewer` and `red-team`/`/security-review` each
 `tools` (minimum needed — a research-only agent gets no `Edit`/`Write`), `model` (`sonnet` for mechanical
 debt work, `opus` for research/judgment-heavy work).
 
+### 5.5 Codification pre-mortem — pressure-test the compression before it ships
+
+Codifying a rich intent into a terse instruction is **lossy**, and the lossy form is what gets obeyed at
+execution. (A real miss: ToC compressed to "optimize only the constraint" got applied by its letter and
+opposed fixing cheap debt at discovery — throughput-over-time, the center of Goldratt, was stripped by the
+compression, not missing from the research.) So before finalizing any codified artifact — an agent spec, a
+skill rule, a template, a CLAUDE.md line — stress-test the *compression itself*:
+
+- **Where will this terse form collide with another north star, and does the literal reading survive?** Ask
+  the doctorate-level questions in the first hour: "over what horizon?" "what happens when this fights
+  cost-of-delay / another principle?" A one-sentence rule that only holds under an unstated condition needs
+  that condition attached, or it will be obeyed where it shouldn't.
+- This is a scoped stress-test of the *instruction*, not of the world — cheap, and it catches the
+  letter-vs-spirit gap before it ships. What it can't catch surfaces only through the pain of literal
+  application; that residue is what the config-audit / self-correcting loop reclaims from feedback.
+
 ### 6. Report a BUILD list and a REJECT list — both, every time
 
 A proposal with only accepted candidates is a sign the filter wasn't applied. For every rejected

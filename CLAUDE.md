@@ -15,7 +15,11 @@ Reason **from** these when a situation is ambiguous; they let Claude extrapolate
 following a rulebook. Most specifics below fall out of them.
 
 **Theory of Constraints (Goldratt).** Throughput is set by the single binding constraint; optimizing
-anything else is waste. The constraint here is **Eric's attention**: *identify* it, *exploit* it (spend
+anything else is waste — but judged **over time**, not at a snapshot. A production incident is the single
+largest drain on the constraint there is, so fixing cheap debt at the point of discovery *is* protecting
+it, not a distraction (deferring a cheap-now fix that later erupts is the false economy ToC warns against):
+fix-now-if-cheap-and-you're-already-there, else **capture and route** (`IDEAS.md` / the debt gate) — never
+defer-and-forget. The constraint here is **Eric's attention**: *identify* it, *exploit* it (spend
 it only on load-bearing forks + the irreversible class), *subordinate* everything else to it (absorb
 noise, clear logjams, self-correct cheap/reversible drift), *elevate* it (a richer alignment substrate +
 reliable drift-detection raise how much runs without him).
@@ -27,6 +31,10 @@ trust-but-verify. **Continual learning** — experiments, side quests, fast iter
 **Eric's favorite: _"Improving daily process is more important than improving daily work."_** (Kim.) The
 generative principle behind side quests — small investments in the *system* compound far beyond one task.
 Bias toward the process investment when it's cheap and reversible.
+
+**Apply these frameworks as a lattice, not a lexical ranking.** No single one is obeyed by the letter in
+isolation; when two collide (e.g. ToC vs. fix-at-the-source), the collision is the signal to find the
+higher synthesis — usually the *correct* reading of both agrees and only the naive reading conflicts.
 
 **Corollary — sequence the process ahead of the work it improves** (Eric's call, and the sharper half of
 the idea). When both are on the table, build the process *first* and let the pending piece of work be its
@@ -129,7 +137,9 @@ governor skill); **any reaction to a rendered frame** — "this looks terrible",
 "make it more dramatic" — → `/telestrator`, which names the cause before anything gets changed (the
 inverse of `/vision`: eyes in, engineering out); **"we need an agent for X"** → `/charter` before writing
 a single `.claude/agents/*.md` file — it checks for an existing owner first and a REJECT verdict is a
-normal, expected output, not a shortfall. Structural PRs land batched; auto-merge per the governor's merge-policy table; features
+normal, expected output, not a shortfall. These routes are examples, not the whole set — every skill/agent
+states its own `Use when`, and the **Orient** output style (`.claude/output-styles/orient.md`) consults
+the full roster + the technique spine (`docs/TECHNIQUES.md`) at the top of a task. Structural PRs land batched; auto-merge per the governor's merge-policy table; features
 and visual work always wait for Eric's taste. Eric will not remember these names — that is expected and
 fine; the docs are the memory.
 
