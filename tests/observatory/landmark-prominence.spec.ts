@@ -1,5 +1,8 @@
+import { renderCompareBody } from "../../src/observatory/compare-view.js";
+import { renderEmpireSkyline } from "../../src/observatory/empire-skyline.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
-import { botLandmarkProminence } from "../../src/observatory/render-dashboard.js";
+import { renderIndividualBody } from "../../src/observatory/render-dashboard.js";
+import { botLandmarkProminence } from "../../src/observatory/standings.js";
 
 const bot = (id: string, ret: number): ParticipantSnapshot => ({
   id,
@@ -37,5 +40,28 @@ describe("botLandmarkProminence", () => {
 
   it("a lone bot is fully prominent", () => {
     expect(botLandmarkProminence([bot("solo", 0)]).get("solo")).toBe(1);
+  });
+});
+
+// The landmark is the scoreboard only if every view renders the SAME dial — these pin the
+// threading, so /u/:id and /compare can't silently fall back to a full-power Eye again.
+describe("prominence threading", () => {
+  const sauron = (ret: number): ParticipantSnapshot => ({ ...bot("sauron", ret), id: "sauron" });
+
+  it("/u/:id renders the Eye at the passed rank, not full power", () => {
+    const low = renderIndividualBody(sauron(-5), { prominence: 0.55 });
+    const high = renderIndividualBody(sauron(-5), { prominence: 1 });
+    expect(low).not.toBe(high); // the dial visibly reaches the skyline
+  });
+
+  it("/compare scales each city's landmark by the shared standings", () => {
+    const a = sauron(30);
+    const b = { ...bot("rival", -5), personaId: "sauron", id: "rival" };
+    const data = { generatedAt: "t", participants: [a, b] };
+    const body = renderCompareBody(data, { aId: "sauron", bId: "rival" });
+    // The winner's city renders exactly the full-power skyline; the laggard's exactly the
+    // bottom-rank one — the same dials botLandmarkProminence assigns.
+    expect(body).toContain(renderEmpireSkyline(a, { personaProminence: 1 }));
+    expect(body).toContain(renderEmpireSkyline(b, { personaProminence: 0.55 }));
   });
 });

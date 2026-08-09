@@ -9,6 +9,7 @@ import {
 } from "./participant-card.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { chip, formatCurrency, formatSigned, pct, plClass, profileHref } from "./render-atoms.js";
+import { botLandmarkProminence } from "./standings.js";
 
 /**
  * The COMPARISON view — two participants side by side with a signed delta column and a holdings
@@ -99,12 +100,21 @@ function comparePicker(data: DashboardData, nav: NavContext | undefined, aId?: s
  * side by side (see `docs/LIVING-UNIVERSE.md`), so commonality and contrast read at a glance.
  * Each city is labelled with its participant's displayName; stacks on narrow screens.
  */
-function compareCities(a: ParticipantSnapshot, b: ParticipantSnapshot): string {
-  const city = (p: ParticipantSnapshot): string =>
-    `<div class="empire-city">
+function compareCities(
+  a: ParticipantSnapshot,
+  b: ParticipantSnapshot,
+  prominence: ReadonlyMap<string, number>,
+): string {
+  const city = (p: ParticipantSnapshot): string => {
+    const dial = prominence.get(p.id);
+    return `<div class="empire-city">
         <span class="empire-city-name">${escapeHtml(p.displayName)}</span>
-        <div class="empire-band">${renderEmpireSkyline(p)}</div>
+        <div class="empire-band">${renderEmpireSkyline(
+          p,
+          dial !== undefined ? { personaProminence: dial } : {},
+        )}</div>
       </div>`;
+  };
   return `<div class="empire-cities">${city(a)}${city(b)}</div>`;
 }
 
@@ -132,7 +142,7 @@ export function renderCompareBody(
         <p class="view-sub">Head-to-head — snapshot standings and where the books overlap.</p>
       </div>
     </div>
-    ${compareCities(a, b)}
+    ${compareCities(a, b, botLandmarkProminence(data.participants))}
     <div class="cmp-grid">
       ${compareColumn(a)}
       <div class="cmp-mid">

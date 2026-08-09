@@ -14,6 +14,7 @@ import {
   renderIndividualBody,
   renderLeaderboardBody,
 } from "../observatory/render-dashboard.js";
+import { botLandmarkProminence } from "../observatory/standings.js";
 import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { Authenticator } from "./auth/authenticator.js";
@@ -291,12 +292,15 @@ async function serveIndividualProfile(
   const history = config.readHistory ? await config.readHistory(id) : undefined;
   const decisions =
     config.readDecisions && snapshot.kind === "bot" ? await config.readDecisions(id) : undefined;
+  // Landmark dial from the shared standings producer, so this view's Eye shows real rank too.
+  const prominence = botLandmarkProminence(state.participants).get(id);
   const body = renderIndividualBody(snapshot, {
     nav: { ...nav, active: nav.currentId === id ? "you" : "board" },
     isSelf: nav.currentId === id,
     generatedAt: state.generatedAt,
     ...(history ? { history } : {}),
     ...(decisions ? { decisions } : {}),
+    ...(prominence !== undefined ? { prominence } : {}),
   });
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   res.end(shellDocument(`${escapeHtml(snapshot.displayName)} — Skynet Capital`, body));
