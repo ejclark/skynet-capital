@@ -24,7 +24,12 @@ async function listJsonlFiles(dir: string): Promise<string[]> {
   }
 }
 
-/** Parse every non-empty line of `file` as JSON; empty array if `file` doesn't exist (or any read error). */
+/**
+ * Parse every non-empty line of `file` as JSON; empty array if `file` doesn't exist (or any read
+ * error). A malformed line is skipped and logged rather than thrown: a crash or a full disk mid-append
+ * leaves a torn final line, and that newest line is exactly what history rehydration reads at boot —
+ * one torn byte must not fail a startup, a profile page, or a board-wide metric.
+ */
 async function readJsonlEntries<T>(file: string): Promise<T[]> {
   let contents: string;
   try {
@@ -32,10 +37,19 @@ async function readJsonlEntries<T>(file: string): Promise<T[]> {
   } catch {
     return [];
   }
-  return contents
-    .split("\n")
-    .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line) as T);
+  const entries: T[] = [];
+  for (const line of contents.split("\n")) {
+    if (line.length === 0) continue;
+    try {
+      entries.push(JSON.parse(line) as T);
+    } catch {
+      // `process.emitWarning`, not `console` — this is library code (the repo reserves console for
+      // scripts), and a skipped line must still be *visible*: silent data loss is the failure mode
+      // this guard exists to avoid, not one it should introduce.
+      process.emitWarning(`[jsonl-store] skipping malformed line in ${file}`);
+    }
+  }
+  return entries;
 }
 
 /**
