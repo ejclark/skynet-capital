@@ -354,13 +354,11 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   a real session. Small, cosmetic; deferred behind the core play work. _(src: Eric · while: calming the playcall candles — market-hours realism)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
-- **Doc-rot gate — the highest-severity gap found, and it has evidence not just a hypothesis.** Two
-  live instances: `STRUCTURE-graph.md` carries a `"Working with Eric"` node for a heading renamed to
-  "How we work", and `persona-lore.ts` says *"Only Sauron carries one today"* while all eight personas
-  carry lore. Nothing in the repo checks whether docs still describe reality — `incident-scan` checks
-  that incidents produce lessons, not that lessons stay true. A Level-7 self-improving system that
-  drifts degrades **silently**, and it poisons the input every future session loads.
-  _(src: Claude · while: journey on voice-profiles)_
+- **Doc-rot gate — the highest-severity gap found, and it has evidence not just a hypothesis.** Both
+  known instances fixed (PR #284); the gate itself is now a drafted plan awaiting Eric's ready-flip —
+  [`plans/doc-rot-gate.md`](plans/doc-rot-gate.md), the PM-mode worked example. Nothing in the repo yet
+  checks whether docs still describe reality; a self-improving system that drifts degrades **silently**.
+  _(src: Claude · while: journey on voice-profiles · plan drafted while: PM-mode scaffolding)_
 - **Mutation testing — the one gate that measures whether the other nine work.** Portfolio finding:
   `arch` · `dupe` · `clone` · `dead` · `depgraph` · `spec:gap` · `incident` are seven scanners, all
   **static and structural**; `eval:persona` / `eval:safety` are behavioral but example-based. Deep on
