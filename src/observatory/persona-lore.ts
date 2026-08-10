@@ -8,8 +8,7 @@
  * renderIndividualBody`.)
  *
  * `name`/`thesis` mirror the persona classes; a test asserts parity so they never drift. `lore` is the
- * optional character/legend line — the seed of the extensible mixed-multiverse lore layer. Only Sauron
- * carries one today; the rest await the pantheon direction.
+ * optional character/legend line — the extensible mixed-multiverse lore layer; every persona carries one.
  */
 export interface PersonaLore {
   /** Display name — mirrors the persona class `name`. */
