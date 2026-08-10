@@ -16,21 +16,32 @@ import type { EquitySample } from "./history-store.js";
  * history-metrics.ts (`doubledAt`, `firstAccountToDouble`) where that context exists.
  */
 
+/**
+ * Opaque, compare-only identity for one derived transition — `type:participantId:prevAt:nextAt`.
+ * The **type is part of it** because a single sample pair can emit both a `took_profit` and a
+ * `deployed_capital` (sell one position, buy another inside the same window); an id without the type
+ * would make a fire-once consumer discard the second as a duplicate and drop a real ceremony.
+ * Compare it, never parse it: ISO timestamps contain `:` too.
+ */
+type TransitionId = string;
+
+interface TransitionBase {
+  readonly id: TransitionId;
+  readonly participantId: string;
+  readonly at: string;
+}
+
 export type WorldTransition =
-  | {
+  | (TransitionBase & {
       readonly type: "took_profit";
-      readonly participantId: string;
       /** Realized P/L booked between the two samples (always > 0 here). */
       readonly realized: number;
-      readonly at: string;
-    }
-  | {
+    })
+  | (TransitionBase & {
       readonly type: "deployed_capital";
-      readonly participantId: string;
       /** Net cash committed between the two samples (always > 0 here). */
       readonly committed: number;
-      readonly at: string;
-    };
+    });
 
 export interface TransitionThresholds {
   /** Ignore realized gains at or below this (default 0 — any booked win counts). */
@@ -53,9 +64,13 @@ export function deriveTransitions(
   const minCommittedPct = thresholds.minCommittedPct ?? 0.01;
   const events: WorldTransition[] = [];
 
+  const idFor = (type: WorldTransition["type"]): TransitionId =>
+    `${type}:${next.participantId}:${prev.at}:${next.at}`;
+
   const realized = next.realizedPl - prev.realizedPl;
   if (realized > minRealized) {
     events.push({
+      id: idFor("took_profit"),
       type: "took_profit",
       participantId: next.participantId,
       realized,
@@ -66,6 +81,7 @@ export function deriveTransitions(
   const committed = prev.cash - next.cash;
   if (committed > 0 && committed >= minCommittedPct * Math.max(prev.equity, 0)) {
     events.push({
+      id: idFor("deployed_capital"),
       type: "deployed_capital",
       participantId: next.participantId,
       committed,

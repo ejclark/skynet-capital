@@ -93,16 +93,19 @@ export async function rehydrateHistory(
   store: HistoryStore,
   initial: DashboardData,
   now: () => Date = () => new Date(),
-): Promise<DashboardData> {
+): Promise<{ initial: DashboardData; baseline: EquitySample[] }> {
   const seeded = seedRealizedPl(initial, await store.list());
+  const baseline = bootSamples(seeded, now().toISOString());
   await Promise.all(
-    bootSamples(seeded, now().toISOString()).map((sample) =>
+    baseline.map((sample) =>
       store.save(sample).catch(() => {
         /* fire-and-forget: a history write must never block startup */
       }),
     ),
   );
-  return seeded;
+  // The boot samples are returned, not just written: they are what the ceremony baseline seeds from,
+  // so transitions compare against the present rather than across the restart gap.
+  return { initial: seeded, baseline };
 }
 
 /**

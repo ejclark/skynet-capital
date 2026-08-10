@@ -17,6 +17,7 @@ describe("deriveTransitions", () => {
     const prev = s({ realizedPl: 100 });
     const next = s({ at: later, realizedPl: 350 });
     expect(deriveTransitions(prev, next)).toContainEqual({
+      id: `took_profit:x:${prev.at}:${later}`,
       type: "took_profit",
       participantId: "x",
       realized: 250,
@@ -35,6 +36,7 @@ describe("deriveTransitions", () => {
     const prev = s({ cash: 5_000, equity: 10_000 });
     const next = s({ at: later, cash: 3_000 });
     expect(deriveTransitions(prev, next)).toContainEqual({
+      id: `deployed_capital:x:${prev.at}:${later}`,
       type: "deployed_capital",
       participantId: "x",
       committed: 2_000,

@@ -13,6 +13,7 @@
  */
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import {
   createBootHistoryStore,
@@ -20,6 +21,7 @@ import {
   seedSampleRecorder,
 } from "../observatory/history-boot.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
+import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import type { Participant } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
@@ -57,11 +59,12 @@ async function main(): Promise<void> {
   // history and write the baseline BEFORE the hub exists, so no live fill lands on an unseeded 0 and
   // no `realizedPl: 0` sample is recorded for the next boot to rehydrate.
   const history = createBootHistoryStore(process.env, dataSource.mode);
-  const initial = await rehydrateHistory(
+  const { initial, baseline } = await rehydrateHistory(
     history,
     await buildDashboardData(roster, { clientFactory: dataSource.clientFactory }),
   );
   const hub = new ObservatoryHub(initial);
+  const ceremonies = new CeremonyChannel();
 
   const sink = (event: Parameters<typeof hub.apply>[0]) => hub.apply(event);
   const onStatus = (channel: string, status: string) => console.log(`[${channel}] ${status}`);
@@ -69,13 +72,12 @@ async function main(): Promise<void> {
   startHistorySampler({
     getState: () => hub.getState(),
     store: history,
-    // Ceremony seam: derived took-profit / deployed-capital transitions ride the same event
-    // stream as fills, so any renderer can celebrate them (visual treatment is a later, taste-
-    // gated slice — today they simply flow; the reducer passes them through untouched).
+    // Ceremony seam: transitions ride a dedicated channel that bypasses the state fold —
+    // celebrating one must not repaint the whole board (visual treatment is a later, taste-gated
+    // slice). Baselined on the boot samples so none of them span the restart gap.
+    baseline: new TransitionBaseline(baseline),
     onTransitions: (transitions) => {
-      for (const transition of transitions) {
-        hub.apply({ type: "world_transition", transition, at: transition.at });
-      }
+      for (const transition of transitions) ceremonies.emit(transition);
     },
   });
 

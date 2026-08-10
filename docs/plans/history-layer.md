@@ -89,19 +89,19 @@ activities read — a named non-goal here.
       offline trophies fabricatable). — *verify: spec — two consecutive offline boots render
       identical panels*
 
-**Slice 4 — ceremony data path (data only, no visuals)**
-- [ ] WHEN the server boots, transition derivation shall baseline **from the present** — the boot
+**Slice 4 — ceremony data path (data only, no visuals)** — ✅ shipped (PR #291)
+- [x] WHEN the server boots, transition derivation shall baseline **from the present** — the boot
       synchronization sample — never from pre-restart durable samples. Downtime transitions are
       deliberately swallowed (they were never observed; deriving them from stale cash deltas would
       fire ceremonies for pre-restart activity at boot, and a silently-failed pre-crash save would
       re-fire already-celebrated ones). — *verify: spec — a restart between two samples derives
       nothing across the gap; post-boot pairs derive normally*
-- [ ] WHEN a transition is derived, it shall carry an opaque compare-only id
+- [x] WHEN a transition is derived, it shall carry an opaque compare-only id
       `type:participantId:prevAt:nextAt` (type included — one `(prev,next)` pair can emit both
       `took_profit` and `deployed_capital`; omitting type would dedupe a real ceremony). Fire-once is
       scoped to **within a session / across SSE reconnects** — cross-restart dedupe would need a
       fired-ledger and is unnecessary under baseline-from-present. — *verify: spec*
-- [ ] WHEN transitions are delivered, they shall ride a channel that bypasses the state fold — today
+- [x] WHEN transitions are delivered, they shall ride a channel that bypasses the state fold — today
       `reduce` returns identical state and the hub short-circuits (`observatory-hub.ts:29-31`), so
       transitions reach zero listeners; and delivery must not trigger a full-board re-render per
       transition (the WorldPatch gap, `GAPS-2026-08.md:41-44`). — *verify: spec on the hub channel;
@@ -198,6 +198,19 @@ _(empty — refinement owns getting these to zero before ready)_
 - **Seed-sample idempotency chosen over "carry the rehydrated value"** for the `/add` re-onboarding
   case — skipping a redundant write is simpler and strictly safer than computing a value on a path
   that must never block onboarding.
+- **Slice order changed: 4 before 2 and 3.** Slices 2 (`{since}`, `readAllHistory`) and 3 (panels)
+  both land plumbing with no consumer until the panels exist, and the panels are held for Eric's eye.
+  Slice 4 fixes a live latent bug and builds directly on slice 1's boot sample, so it went first;
+  slice 2's read API will ship *with* its slice-3 consumer rather than as unused surface.
+- **Ceremony channel became its own module, not a hub method.** The first cut put
+  `emitTransition`/`subscribeCeremonies` on `ObservatoryHub` and blew its arch budget (75 > 51). The
+  gate was right: the hub's job is the state fold and this is the deliberate *bypass* of it, so
+  `CeremonyChannel` stands alone. Budget respected, cohesion improved.
+- **The `world_transition` event variant was deleted, not left dormant.** With ceremonies on their own
+  channel it had no producer, and the reducer branch it fed was unreachable — dead code by the
+  mortician's definition, buried in the same PR that orphaned it.
+- **Browser delivery deliberately not wired.** A named SSE event with no client listener is dead
+  plumbing; the channel is spec-verified server-side and the browser hop lands with the visual slice.
 - **Torn-line guard logs and skips** (`jsonl-store.ts`) rather than failing loudly: the newest line is
   exactly what boot rehydration reads, so a torn byte must not fail startup. Behavior guard only — the
   append-compatible format constraint holds.

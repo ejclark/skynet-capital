@@ -44,7 +44,11 @@ describe("when the dashboard boots with durable history", () => {
     await store.save(sample({ at: "2026-08-09T20:00:00.000Z", realizedPl: 100 }));
     await store.save(sample({ at: "2026-08-09T23:55:00.000Z", realizedPl: 420 }));
 
-    const seeded = await rehydrateHistory(store, data([snapshot()]), () => new Date("2026-08-10"));
+    const { initial: seeded } = await rehydrateHistory(
+      store,
+      data([snapshot()]),
+      () => new Date("2026-08-10"),
+    );
 
     expect(seeded.participants[0]?.realizedPl).toBe(420);
   });
@@ -59,7 +63,10 @@ describe("when the dashboard boots with durable history", () => {
   });
 
   it("leaves realized P/L at the honest default when a participant has no history", async () => {
-    const seeded = await rehydrateHistory(new InMemoryHistoryStore(), data([snapshot()]));
+    const { initial: seeded } = await rehydrateHistory(
+      new InMemoryHistoryStore(),
+      data([snapshot()]),
+    );
 
     expect(seeded.participants[0]?.realizedPl).toBeUndefined();
   });
@@ -97,7 +104,7 @@ describe("when the dashboard boots with durable history", () => {
     await store.save(sample({ at: "2026-08-09T23:55:00.000Z", realizedPl: 420 }));
 
     // The restart: a fresh Alpaca read carries no realizedPl at all.
-    const rebooted = await rehydrateHistory(
+    const { initial: rebooted } = await rehydrateHistory(
       store,
       data([snapshot()]),
       () => new Date("2026-08-10"),
@@ -147,7 +154,10 @@ describe("when the server runs offline against looping fixtures", () => {
   it("renders identical realized P/L on two consecutive boots", async () => {
     const boot = async () => {
       const store = createBootHistoryStore({}, "offline");
-      const seeded = await rehydrateHistory(store, data([snapshot({ realizedPl: 230 })]));
+      const { initial: seeded } = await rehydrateHistory(
+        store,
+        data([snapshot({ realizedPl: 230 })]),
+      );
       return seeded.participants[0]?.realizedPl;
     };
 
