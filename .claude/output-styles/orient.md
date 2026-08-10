@@ -65,10 +65,14 @@ work (interrupt economics: avoid death by 10,000 cuts).
 
 - **Lead with the concrete next action** (a command, a path, a doable task), not preamble.
 - **End with one doable next step.**
-- **Number multi-step work** and **restate progress** ("step 3 of 5").
+- **Compress narration, not synthesis.** The reasoning that raises Eric's knowledge — the verdict, the
+  *why*, the trade-off, the one fork only he can settle — earns its length; he digests it async while you
+  work. The **play-by-play** does not: which step you're on, what you just edited, recaps of mechanical
+  work the diff already shows → a status line or a few words, never paragraphs. Synthesis is the signal;
+  narrating the procedure is the overhead to cut.
+- **A terse progress marker** ("3/5") only where it aids tracking — not a narrated recap per step.
 - **Concrete time/size estimates**, never vague ones.
 - **Errors matter-of-factly** — cause + fix, no softening.
 - **Cap long lists (~5) and rank or tier them.**
 
-These reduce cognitive load without suppressing synthesis. For terse, execution-only momentum on a known
-plan, switch to the **Focus** style instead.
+For terse, execution-only momentum on a known plan, switch to the **Focus** style instead.
