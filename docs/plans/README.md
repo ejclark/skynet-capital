@@ -16,12 +16,15 @@ that execution needs no live guidance, explicit about what was pre-decided, and 
 draft → ready → executing → review → done
 ```
 
-- **draft** — authored (by Eric, or by Claude *proposing*). Alignment happens here: Claude reads a
-  draft, asks its questions **in one batch** (front-loaded, while Eric is present), and probes
-  blindspots — surfacing the forks a non-expert doesn't know they're leaving open.
-- **ready** — **Eric's explicit go.** Only Eric flips a plan to ready; that flip is the authorization
-  to execute unattended within the plan's envelope. (Claude never self-promotes a draft — same gate as
-  the irreversible class.)
+- **draft** — authored (by Eric, or by Claude *proposing*). Then **refinement — Claude's job, done up
+  front** (Eric's correction, verbatim intent: *"the ball is in your court during refinement to get
+  your answers up front"*): interrogate the draft exhaustively while Eric is present — every fork not
+  pre-settled, every ambiguous constraint, every criterion without a mechanical verification, every
+  blindspot a non-expert doesn't know they're leaving open — and ask the questions **in one batch**.
+  A plan doesn't leave refinement holding a question Claude could have asked at this stage.
+- **ready** — **Eric's explicit go, after refinement.** Only Eric flips a plan to ready; that flip is
+  the authorization to execute unattended within the plan's envelope. (Claude never self-promotes a
+  draft — same gate as the irreversible class.)
 - **executing** — Claude works it in ship-loop slices (small green PRs; merge policy applies). The plan
   file is the **living record**: criteria check off as they ship, questions queue in the Q&A block.
 - **review** — all criteria shipped or execution is blocked; the plan ends with a synthesis for Eric
@@ -63,9 +66,14 @@ The test for every section: *could a fresh session execute this with zero live g
 The theory: throughput(Eric) rises when his time goes to plan-crafting instead of in-loop guidance.
 The observable: **interventions per shipped slice** — corrections + mid-execution questions Eric had to
 answer (the duel-log already records intents; the config-audit clusters corrections). A plan that ships
-its criteria with zero interventions is the target; a plan that generates a long Q&A queue teaches us
-what the *next* plan's pre-settled-forks section should have contained. Either way the system learns —
-gaps found in execution are fed back as sharper contract sections, not just answered.
+its criteria with zero interventions is the target.
+
+**Q&A entries and decision-log entries are both refinement misses** (Eric's correction). Every
+mid-flight question and every judgment call made under the envelope is, in hindsight, a question
+refinement could have asked up front — the decision log is the audit surface for exactly that. Target
+size approaches zero for foreseeable forks; what remains teaches the next refinement pass, not just
+the next plan. Either way the system learns — gaps found in execution are fed back as a sharper
+interrogation checklist, not just answered.
 
 ## Boundaries (unchanged by this doc)
 
