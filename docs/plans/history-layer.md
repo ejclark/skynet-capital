@@ -107,12 +107,13 @@ activities read — a named non-goal here.
       transition (the WorldPatch gap, `GAPS-2026-08.md:41-44`). — *verify: spec on the hub channel;
       no reducer state change per transition*
 
-**Slice 5 — the record tells the truth**
-- [ ] WHEN this plan ships, `grep -rn "one Eric-owned op\|turn the prod sampler on NOW\|cheapest
-      unblocking act" docs/` shall exit non-zero (the stale claims live at THE-GAME.md:186-189,
-      GAMEBOARD-PLAN.md:55-56, IDEAS.md:156-159), DEPLOY.md/RUNNING.md shall describe what the volume
-      actually holds (accounts + history) and the snapshot-only backup posture, and the doc-rot scan
-      shall stay at 0. — *verify: the named greps + `npm run docrot:scan`*
+**Slice 5 — the record tells the truth** — ✅ shipped (PR #292)
+- [x] WHEN this plan ships, the three docs that asserted the sampler flip was pending shall no longer
+      do so, DEPLOY.md/RUNNING.md shall describe what the volume actually holds (accounts + history)
+      and the snapshot-only backup posture, and the doc-rot scan shall stay at 0. — *verify:
+      `grep -rn "one Eric-owned op\|turn the prod sampler on NOW\|cheapest unblocking act"
+      docs/THE-GAME.md docs/GAMEBOARD-PLAN.md docs/IDEAS.md` exits non-zero, plus
+      `npm run docrot:scan`*
 
 ## Constraints & non-goals
 
@@ -211,6 +212,10 @@ _(empty — refinement owns getting these to zero before ready)_
   mortician's definition, buried in the same PR that orphaned it.
 - **Browser delivery deliberately not wired.** A named SSE event with no client listener is dead
   plumbing; the channel is spec-verified server-side and the browser hop lands with the visual slice.
+- **Slice 5's own verification grep was imprecise** and had to be scoped. As written it searched all
+  of `docs/`, which matches the plan file quoting the phrase in its own criterion and
+  `GAPS-2026-08.md` quoting it *to correct it* — both honest, neither rot. The check now names the
+  three asserting docs. A criterion that fails on its own text is alignment debt, caught at execution.
 - **Torn-line guard logs and skips** (`jsonl-store.ts`) rather than failing loudly: the newest line is
   exactly what boot rehydration reads, so a torn byte must not fail startup. Behavior guard only — the
   append-compatible format constraint holds.

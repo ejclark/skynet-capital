@@ -182,11 +182,13 @@ can differ per surface.
 
 ## What this needs that doesn't exist yet
 
-1. **The history / persistence layer — the one real blocker.** Renown, discipline scoring,
-   ceremonies, seasons and called-it all need durable *events*, not snapshots. **Turning the prod
-   sampler on is the cheapest unblocking act in the whole design** (`SKYNET_HISTORY_DIR=/data/history`)
-   — data starts accruing the day it flips, and every ceremony depends on having history to diff.
-   Already flagged in `GAMEBOARD-PLAN.md` S5 as Eric's one op.
+1. **The history / persistence layer — recording, now being consumed.** Renown, discipline scoring,
+   ceremonies, seasons and called-it all need durable *events*, not snapshots. The prod sampler is
+   **already on** (`SKYNET_HISTORY_DIR=/data/history` on the mounted volume, `fly.toml`), so history
+   has been accruing since that deploy — this was long described here as an un-done Eric op, which it
+   is not. What remains is consumption, tracked in [`plans/history-layer.md`](plans/history-layer.md):
+   realized-P/L continuity across deploys ✅, a restart-safe ceremony data path ✅, then windowed reads
+   and the board metrics. Per-fill *events* (win rate, "which plays worked") remain S7+.
 2. **A `renown` module** — pure, tested, one source of truth, over history + curriculum + trades.
 3. **Thesis capture** — a very small write surface for the Council (one line per member per week).
 4. **Server-side academy progression** — already in `IDEAS.md`; required before a degree can gate

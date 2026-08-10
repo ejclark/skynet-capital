@@ -20,7 +20,7 @@ fly auth login
 # 2. Create the app (uses the committed fly.toml; don't deploy yet)
 fly launch --no-deploy --copy-config --name skynet-capital
 
-# 3. Create the persistent volume that holds self-service accounts (see fly.toml [mounts])
+# 3. Create the persistent volume — self-service accounts AND equity history (see fly.toml [mounts])
 fly volumes create skynet_data --region ord --size 1
 
 # 4. Set secrets — the same values as your .env, plus a dashboard password and a store secret
@@ -37,6 +37,16 @@ fly deploy
 
 `SKYNET_STORE_SECRET` encrypts the self-service credential store at rest — set it before anyone
 uses `/add`. The volume (`/data`) keeps those accounts across redeploys.
+
+**What the volume holds, and how it's protected.** Two things live on `/data`: the self-service
+account store, and the append-only equity history (`SKYNET_HISTORY_DIR=/data/history`, set in
+`fly.toml` — a 5-minute sample per participant, ~13 MB per participant per year). History is the one
+asset here that **cannot be reconstructed** if lost: accounts can be re-added, but a deleted history
+file is gone. The current backup posture is **Fly's platform-default daily volume snapshots** (~5-day
+retention) and nothing else — no off-machine export, no rotation, no restore drill. That is an
+accepted, documented posture rather than an oversight; an explicit export is queued as an Eric-gated
+decision (it touches credentials/spend). A Fly volume is also host-pinned, so a host loss is a
+restore-from-snapshot event, not an automatic failover.
 
 Fly gives you `https://skynet-capital.fly.dev`. Share it as:
 

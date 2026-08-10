@@ -153,10 +153,10 @@ currency you spend on the city** (the truthful layer — towers, health, constru
 unpurchasable; the earned layer — campus, landmarks, district styling — is what you build). Loop:
 Sunday Council (commit a thesis) → the week runs → Friday Recap → quarterly Season reset with the
 city persisting.
-- **The one blocker is the history/persistence layer** — renown, ceremonies, seasons and called-it
-  all need durable *events*. Flipping the prod sampler on (`SKYNET_HISTORY_DIR=/data/history`) is the
-  cheapest unblocking act in the design and is Eric's op (same dependency `GAMEBOARD-PLAN.md` S5
-  names). _(src: Claude · while: designing the game layer)_
+- **History/persistence is recording and being consumed** — renown, ceremonies, seasons and called-it
+  need durable *events*. The prod sampler was already on (`fly.toml`); the un-done work was
+  consumption, now tracked in [`plans/history-layer.md`](plans/history-layer.md) (realized-P/L
+  continuity and the ceremony data path shipped). _(src: Claude · while: designing the game layer)_
 - **A pure `renown` module** over history + curriculum + trades, same testable pattern as `reduce.ts`.
 - **Degrees as permissions** — `PLAY_LEVELS` 1–4 gate what a bot may trade; needs server-side academy
   progression (already in this file). Makes the ladder a real safety rail, not a badge.
@@ -440,9 +440,10 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 - **Feedback triage / auto-fix automation** on the issues the in-app funnel now creates. (task #74)
 - **Self-service "request feedback access"** collaborator flow — largely *superseded* by the in-app
   feedback funnel (PR #80); likely closeable. (task #76)
-- **History / persistence backend** — append-only equity + realized-P/L history to unlock
-  performance-over-time, win rate, and "which plays worked" across the four observatory views (they
-  currently ship with honest "coming once we have history" seams).
+- **History / persistence backend** — shipped and recording; consumption tracked in
+  [`plans/history-layer.md`](plans/history-layer.md). Still Eric's to settle: retention (keep
+  forever vs prune), and whether to add an off-machine backup export beyond Fly's default snapshots.
+  Win rate and "which plays worked" still need the per-fill ledger (S7+), not equity samples.
 
 ---
 
