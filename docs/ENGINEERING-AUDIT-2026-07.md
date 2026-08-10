@@ -45,20 +45,23 @@ Good spine — but it deploys to prod with these holes:
 
 ## 4 · Distillation → prescriptive instruction files
 
-Granular, per-process, tightly scoped — each one page, imperative, checkable. Proposed set under
-`docs/process/` (referenced from CLAUDE.md; enforced by CI where mechanizable):
+Granular, per-process, tightly scoped — each one page, imperative, checkable. The audit proposed a
+`docs/process/` doc set; what actually shipped took different (better) forms — skills fire at the
+decision point where a doc waits to be remembered. The ledger, per proposal:
 
-- **`SHIP.md`** — the only allowed path to prod: branch → small PR → green (typecheck, lint, unit,
-  e2e-smoke, coverage-ratchet, audit) → squash → release → deploy → **post-deploy smoke → rollback on fail**.
-- **`INLINE-UI.md`** — rules for HTML-in-TS: no backticks/`${}` in inline JS; every page's scripts pass
-  `node --check` in CI; all styles import from `src/ui/tokens`; `escapeHtml` only from `src/ui`.
-- **`NEW-VIEW.md`** — adding a route/view: use `shell()`/components, register in the route table, add a
-  render spec + an e2e assertion + a SYSTEM-MAP entry. No copy-paste of style blocks.
-- **`NEW-SYSTEM.md`** — when code doesn't fit an existing system: name it, add to SYSTEM-MAP + diagram,
-  parity check must pass (ADR-0008).
-- **`DECOMPOSE.md`** — when the architecture eval flags a file/community: split playbook (extract →
-  verify with graphify `affected` → ratchet threshold down).
-- **`SECURITY.md`** — boundary validation (zod), secrets only via env/Fly, dependency-update cadence.
+- **Ship playbook** — shipped as the `/ship` skill (`.claude/skills/ship/SKILL.md` + `scripts/ship.sh`)
+  and the pipeline's post-deploy smoke → rollback-on-fail job. Fully realized.
+- **Inline-UI rules** — shipped as the CLAUDE.md ship-loop rule (no backticks/`${}` in inline canvas
+  JS — the recurring TS1005 trap); the per-page `node --check` gate is still queued in
+  `docs/COACHES.md` (⬜ Inline-JS defects row).
+- **New-view playbook** — not built as a doc; conventions live by example in
+  `src/observatory/render-dashboard.ts`. Revisit if view-adding recurs enough to earn a skill.
+- **New-system playbook** — not built; superseded in spirit by the Graphify structural map + `/charter`
+  (which gates new capability creation).
+- **Decompose playbook** — shipped as the `/decompose` skill + the `decomposer` athlete, gate-triggered
+  by `scripts/arch-scan.mjs`. Fully realized.
+- **Security checklist** — shipped as the `/security-review` route (CLAUDE.md ship loop) + the
+  `red-team` agent for adversarial passes. Dependency cadence lives with `dep-warden`.
 
 ## 5 · Agent files (delegation)
 
@@ -66,7 +69,7 @@ Granular `.claude/agents/*` so routine enforcement doesn't spend Eric's attentio
 job, tight tools, and a prescriptive instruction file to follow:
 
 - **`auditor`** — read-only; runs the checks in this doc quarterly; emits a delta report vs. this baseline.
-- **`decomposer`** — picks the top architecture-eval flag; performs one `DECOMPOSE.md` split per PR.
+- **`decomposer`** — picks the top architecture-eval flag; performs one `/decompose` split per PR.
 - **`test-backfiller`** — picks one untested src file (the 30-file list), writes behavioral specs; raises
   the coverage baseline.
 - **`ui-librarian`** — hunts C2-class duplication; migrates one inline copy to `src/ui/` per PR.
