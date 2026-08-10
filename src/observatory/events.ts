@@ -1,7 +1,6 @@
 import type { Side } from "../domain/types.js";
 import type { DashboardData } from "./dashboard-data.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
-import type { WorldTransition } from "./world-transitions.js";
 
 /**
  * The realtime events the observatory reacts to. Two external sources (Alpaca fills and
@@ -28,14 +27,10 @@ export type ObservatoryEvent =
       readonly quantity: number;
       readonly price: number;
       readonly at: string;
-    }
-  | {
-      /**
-       * A derived ceremony transition (took profit / deployed capital) from world-transitions.ts.
-       * Carried on the stream so renderers can celebrate it; it never mutates dashboard state —
-       * the state change it describes already arrived via fills/prices.
-       */
-      readonly type: "world_transition";
-      readonly transition: WorldTransition;
-      readonly at: string;
     };
+
+// Ceremony transitions used to ride this union as a `world_transition` variant. They no longer do:
+// the reducer returned identical state for them and `ObservatoryHub.apply` short-circuits on
+// identity, so they reached zero listeners. They now travel on the hub's dedicated ceremony channel
+// (`emitTransition` / `subscribeCeremonies`), which bypasses the state fold by design — see
+// docs/plans/history-layer.md, slice 4.
