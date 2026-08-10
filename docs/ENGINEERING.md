@@ -59,14 +59,12 @@ Write EARS acceptance criteria in plans, issues, and PRs; the `/ears` drill
 matching specs. Anti-patterns EARS kills: vague "should/support/handle", compound requirements
 (one `shall` per line), and unverifiable responses (if a spec can't assert it, rewrite it).
 
-**Automated enforcement (Claude Code hooks).** The red-green-refactor loop is backed by harness
-hooks in `.claude/settings.json`, so the suite runs deterministically, not just when someone
-remembers:
-- **PostToolUse** (`.claude/hooks/skynet-tdd-postedit.sh`) — on every `.ts` edit under
-  `skynet-capital/`, runs typecheck + tests and feeds any failure straight back into context.
-  Non-blocking: it's a safety net for the green/refactor phases, not a gate.
-- **Stop** (`.claude/hooks/skynet-tdd-stop.sh`) — end-of-turn backstop; runs typecheck + tests +
-  lint and warns if the turn left anything red.
+**Automated enforcement.** The red-green-refactor loop is backed by deterministic gates, so the
+suite runs whether or not anyone remembers:
+- **Pre-commit** (husky) auto-formats staged files; **pre-push** runs the full `npm run verify`
+  (typecheck + lint + tests) and blocks a red push.
+- **CI** re-runs verify plus every ratchet gate (arch, dupe, clone, dead, dep-graph, spec-gap,
+  incidents, doc-rot) on each PR; auto-merge only fires on green.
 - Shared test data lives in `tests/support/builders.ts` — specs state only the fields they care
   about. No copy-pasted fixtures.
 

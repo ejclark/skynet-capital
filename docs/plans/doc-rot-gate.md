@@ -52,11 +52,10 @@ the gate shrinks the surface, honestly.
   needs "Finish your review → Submit" on the Files-changed tab). Execution proceeded on his explicit
   "we are aligned. go" + "work on what you can while I am AFK"; any contract edits his comments call
   for land as follow-ups once submitted.
-- **11 grandfathered findings await paydown** — real rot in AUTONOMOUS.md (moved script path),
-  DEPLOY.md + GRAPHIFY.md + the STRUCTURE-graph header (workflows that don't exist: `deploy.yml`,
-  `graph-refresh.yml`), ENGINEERING.md (deleted `.claude/hooks/*`), and six proposed-doc names in the
-  dated 2026-07 audit. Fix-and-ratchet is cheap; the audit-doc class may instead warrant excluding
-  dated historical audits from the surface — Eric's call which way.
+- **6 grandfathered findings remain** (down from 11 — the five unambiguous ones fixed in this PR:
+  moved script path, ghost workflows, deleted hooks). All six are proposed-doc names inside the dated
+  2026-07 engineering audit — fix them, or exclude dated historical audits from the scan surface the
+  way JOURNEYS/ already is. Eric's call which way.
 
 ## Decision log
 
@@ -66,5 +65,12 @@ the gate shrinks the surface, honestly.
   call (cheap, reversible, structural); the unread feedback is banked above, not dropped.
 - **Basename shorthand accepted** (scanner design): bare `IDEAS.md` in prose resolves against `docs/`
   before flagging — kills the false-positive class without hiding true dead links.
-- **Dated audit docs kept in the scan surface** for now (6 of the 11 grandfathered findings) — the
+- **Dated audit docs kept in the scan surface** for now (the 6 remaining grandfathered findings) — the
   exclusion question is queued above instead of decided unilaterally.
+- **CI-parity lesson (two red runs bought it):** findings must derive only from COMMITTED state.
+  Round 1: a runtime file existed locally but not in CI → judge ignored refs as alive-by-design.
+  Round 2: the ignore rule itself lived in the machine's GLOBAL git config → force
+  `core.excludesFile=/dev/null` so only the repo's committed .gitignore counts, and commit the
+  `.claude/settings.local.json` rule the harness convention implies.
+- **Five unambiguous rot fixes folded into the gate PR** (11→6 ratchet) — same theme, one CI cycle;
+  the queued audit-doc class stays for Eric.

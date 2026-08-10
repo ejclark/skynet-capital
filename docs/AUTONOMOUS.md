@@ -48,7 +48,7 @@ market-data stream ──price──▶ MomentumTracker ──context──▶ A
 - `autonomous/autonomous-trader.ts` — decide → guard → **cooldown** → submit. The cooldown is
   the safety valve: without it a persona that stays bullish would re-fire the same buy on every
   tick before the first fill lands.
-- `scripts/run-autonomous.ts` — wires the stream to the tracker and throttled evaluation,
+- `src/scripts/run-autonomous.ts` — wires the stream to the tracker and throttled evaluation,
   gated on market hours.
 
 Everything above the broker is unit-tested with fakes (no network, no keys).

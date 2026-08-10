@@ -1,6 +1,6 @@
 <!-- AUTO-GENERATED — do not hand-edit below the marker.
-     Regenerate: `npm run graph:refresh` (free, no API). Kept fresh automatically on push to main
-     by .github/workflows/graph-refresh.yml. The live graph lives in graphify-out/ (git-ignored). -->
+     Regenerate: `npm run graph:refresh` (free, no API; run it by hand after code changes — there is
+     no auto-refresh workflow). The live graph lives in graphify-out/ (git-ignored). -->
 
 # Structural map (Graphify)
 

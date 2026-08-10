@@ -57,10 +57,18 @@ function pathRefs(body) {
 }
 const existsSyncRoot = (r) => existsSync(join(ROOT, r));
 
-/** True when the committed ignore rules cover `ref` (a declared local/runtime artifact, not rot). */
+/**
+ * True when the COMMITTED ignore rules cover `ref` (a declared local/runtime artifact, not rot).
+ * core.excludesFile is forced empty so a machine's global ignore file can't make the verdict differ
+ * between environments — caught the hard way: a global rule made local say "ignored" while CI said
+ * "rot". Only rules in the repo (committed .gitignore) count.
+ */
 function isGitIgnored(ref) {
   try {
-    execFileSync("git", ["check-ignore", "-q", ref], { cwd: ROOT, stdio: "ignore" });
+    execFileSync("git", ["-c", "core.excludesFile=/dev/null", "check-ignore", "-q", ref], {
+      cwd: ROOT,
+      stdio: "ignore",
+    });
     return true;
   } catch {
     return false; // not ignored, or not a git repo — either way, judge by existence
