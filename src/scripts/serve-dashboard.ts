@@ -14,8 +14,12 @@
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
+import {
+  createBootHistoryStore,
+  rehydrateHistory,
+  seedSampleRecorder,
+} from "../observatory/history-boot.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
-import { createHistoryStore } from "../observatory/history-store.js";
 import type { Participant } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
@@ -47,16 +51,21 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const initial = await buildDashboardData(roster, { clientFactory: dataSource.clientFactory });
+  // Equity/realized history: coarse periodic samples to the mounted volume (SKYNET_HISTORY_DIR →
+  // /data/history in prod, data/history in dev). See docs/LIVING-UNIVERSE.md.
+  // Boot ORDER is load-bearing (docs/plans/history-layer.md slice 1): seed realized P/L from durable
+  // history and write the baseline BEFORE the hub exists, so no live fill lands on an unseeded 0 and
+  // no `realizedPl: 0` sample is recorded for the next boot to rehydrate.
+  const history = createBootHistoryStore(process.env, dataSource.mode);
+  const initial = await rehydrateHistory(
+    history,
+    await buildDashboardData(roster, { clientFactory: dataSource.clientFactory }),
+  );
   const hub = new ObservatoryHub(initial);
 
   const sink = (event: Parameters<typeof hub.apply>[0]) => hub.apply(event);
   const onStatus = (channel: string, status: string) => console.log(`[${channel}] ${status}`);
 
-  // Equity/realized history: coarse periodic samples to the mounted volume (SKYNET_HISTORY_DIR →
-  // /data/history in prod, data/history in dev). No database, no host change — the seam that will
-  // unlock performance-over-time and the sim-city event ceremonies. See docs/LIVING-UNIVERSE.md.
-  const history = createHistoryStore(process.env);
   startHistorySampler({
     getState: () => hub.getState(),
     store: history,
@@ -84,21 +93,9 @@ async function main(): Promise<void> {
     store,
     clientFactory: dataSource.clientFactory,
     startStream: (participant) => dataSource.startParticipantStream(participant, sink, onStatus),
-    // Founding record: capture the seed baseline the moment an account joins (fire-and-forget —
-    // onboarding must never fail on a history write).
-    recordSeedSample: (snapshot, at) => {
-      void history
-        .save({
-          at,
-          participantId: snapshot.id,
-          equity: snapshot.equity,
-          cash: snapshot.cash,
-          realizedPl: snapshot.realizedPl ?? 0,
-        })
-        .catch(() => {
-          /* fire-and-forget: a history write failure must never break onboarding */
-        });
-    },
+    // Founding record: capture the seed baseline the moment an account joins (fire-and-forget, and
+    // idempotent — a re-onboarding member keeps the history they already have).
+    recordSeedSample: seedSampleRecorder(history),
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
   });
 

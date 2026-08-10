@@ -1,6 +1,6 @@
 # Plan: the history layer — from silently recording to actually consumed
 
-**Status:** draft <!-- awaiting Eric's refinement pass + ready flip -->
+**Status:** executing <!-- Eric: "Plan looks good. we are aligned. execute" (2026-08-10) -->
 **Author:** Claude (proposing) · **Date:** 2026-08-10
 **Provenance:** 4-agent research pass (seam, consumers, ops, game demands) → draft → 3-critic
 adversarial pass (contract, factual truth, execution safety; 3 blocking + 8 important findings folded
@@ -34,25 +34,25 @@ Durable history stops being a write-only artifact, without ever implying a false
 
 ## Acceptance criteria (EARS)
 
-**Slice 1 — realized-P/L continuity (prerequisite for everything below)**
-- [ ] WHEN the dashboard server boots in live mode, it shall seed each participant's cumulative
+**Slice 1 — realized-P/L continuity (prerequisite for everything below)** — ✅ shipped (PR #290)
+- [x] WHEN the dashboard server boots in live mode, it shall seed each participant's cumulative
       `realizedPl` from that participant's **max-`at`** durable sample (list order is unguaranteed —
       `history-store.ts:27`), merged into `initial` **before** `ObservatoryHub` construction, before
       streams, before the sampler. — *verify: spec — boot against a fixture store; first snapshot
       carries the persisted value; a fill arriving pre-seed cannot be clobbered (ordering is
       structural, not temporal)*
-- [ ] WHEN rehydration completes at boot, the server shall write one synchronization sample so the
+- [x] WHEN rehydration completes at boot, the server shall write one synchronization sample so the
       durable stream has a fresh, trusted baseline. — *verify: spec*
-- [ ] IF a participant has no history samples, THEN `realizedPl` shall stay 0 (the honest default). —
+- [x] IF a participant has no history samples, THEN `realizedPl` shall stay 0 (the honest default). —
       *verify: spec*
-- [ ] WHEN a participant with existing history re-onboards via `/add`, the seed-sample path shall not
+- [x] WHEN a participant with existing history re-onboards via `/add`, the seed-sample path shall not
       write a `realizedPl: 0` sample over their record (idempotent or carrying the rehydrated value —
       today's `?? 0` at `serve-dashboard.ts:97` would re-introduce the cliff). — *verify: spec*
-- [ ] WHEN a JSONL line is torn/malformed (crash or ENOSPC mid-append), history reads shall skip and
+- [x] WHEN a JSONL line is torn/malformed (crash or ENOSPC mid-append), history reads shall skip and
       log it rather than throw — today `JSON.parse` escapes `readJsonlEntries`
       (`jsonl-store.ts:28-39`), and after this slice the newest line is exactly the one boot reads. —
       *verify: spec with a truncated-line fixture*
-- [ ] WHEN the server runs offline (fixture replay), it shall use an in-memory history store and skip
+- [x] WHEN the server runs offline (fixture replay), it shall use an in-memory history store and skip
       rehydration — the looping replay (`replay-event-stream.ts:39-46`) re-books realized P/L each
       loop, so a durable offline store + rehydration would compound fabricated P/L per restart. —
       *verify: spec — two offline boots against the same fixture yield identical `realizedPl` and
@@ -183,4 +183,21 @@ _(empty — refinement owns getting these to zero before ready)_
 
 ## Decision log
 
-_(empty until execution)_
+- **Reading of the ready-flip (2026-08-10).** Eric's "Plan looks good. we are aligned. execute" is
+  taken as the flip **with all six proposed answers standing** (each question carried a
+  recommendation). Recorded rather than assumed silently; the two readings where I chose the
+  conservative branch: **Q4** per-position digest → *later, with the ledger* (no scope add), and
+  **Q6** slice-3 panels → *held for Eric's nod* (taste carve-out unchanged). Say the word if either
+  reading is wrong.
+- **Q1 prod verification not run.** `fly ssh console` is credentialed and outward-facing — Eric's, per
+  the hard boundary. Non-credentialed corroboration used instead: `fly.toml:18` is on `main` and the
+  pipeline deploys on every push, so the env is live as of the last green deploy.
+- **Slice 1 landed as a new module** (`src/observatory/history-boot.ts`) rather than inline wiring —
+  `serve-dashboard.ts` is at its arch cap (152/152), and the boot ordering is load-bearing enough to
+  deserve its own spec. The script got *smaller*.
+- **Seed-sample idempotency chosen over "carry the rehydrated value"** for the `/add` re-onboarding
+  case — skipping a redundant write is simpler and strictly safer than computing a value on a path
+  that must never block onboarding.
+- **Torn-line guard logs and skips** (`jsonl-store.ts`) rather than failing loudly: the newest line is
+  exactly what boot rehydration reads, so a torn byte must not fail startup. Behavior guard only — the
+  append-compatible format constraint holds.

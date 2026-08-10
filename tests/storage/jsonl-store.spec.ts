@@ -100,4 +100,29 @@ describe("JsonlKeyedStore", () => {
       expect(await store.list("alpha")).toEqual([{ key: "alpha", value: 1 }]);
     });
   });
+
+  describe("when a crash or a full disk tore the last line mid-append", () => {
+    // The torn line is the NEWEST one — exactly what history rehydration reads at boot. One torn byte
+    // must not fail a startup, a profile page, or a board-wide metric.
+    it("skips the malformed line and returns the intact entries", async () => {
+      mkdirSync(dir, { recursive: true });
+      const file = fileFor(dir)("alpha");
+      writeFileSync(
+        file,
+        `${JSON.stringify({ key: "alpha", value: 1 })}\n{"key":"alpha","val`,
+        "utf8",
+      );
+
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      expect(await store.list("alpha")).toEqual([{ key: "alpha", value: 1 }]);
+    });
+
+    it("keeps one torn file from poisoning a listing across all keys", async () => {
+      const store = new JsonlKeyedStore<Entry>(dir, fileFor(dir));
+      await store.append("beta", { key: "beta", value: 2 });
+      writeFileSync(fileFor(dir)("alpha"), '{"key":"alpha","val', "utf8");
+
+      expect(await store.list()).toEqual([{ key: "beta", value: 2 }]);
+    });
+  });
 });
