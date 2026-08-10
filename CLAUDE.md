@@ -98,6 +98,11 @@ injected thought with a visible one-liner: **act now** · **park** (→ [`docs/I
 a task) · **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
 `NOW:` · `PARK:` · `ME:` · `Q:`. Doubt between act/park → park and ask.
 
+**Plans — PM-mode's unit of alignment** ([`docs/plans/`](docs/plans/README.md)). Eric authors direction
+as plans (intent, EARS criteria, pre-settled forks, an autonomy envelope); Claude executes `ready` plans
+unattended, banking mid-flight questions instead of guessing. Only Eric flips draft→ready. The richer the
+plan, the fewer interventions — that ratio is the experiment's measure.
+
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
 log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the
 weight (directive vs. proposal-to-prune), `while` is the proximity worth revisiting. Quality over volume;
