@@ -29,6 +29,11 @@ const AGENTS_DIR = join(ROOT, ".claude/agents");
 const SKILLS_DIR = join(ROOT, ".claude/skills");
 const CLAUDE_MD = join(ROOT, "CLAUDE.md");
 const DUEL_LOG = join(ROOT, "data/duel-log.jsonl");
+const COMPUTE_MD = join(ROOT, "docs/COMPUTE.md");
+
+// Ordered tiers for floor comparison. A value at index i satisfies a floor at index j iff i >= j.
+const MODEL_RANK = ["haiku", "sonnet", "opus", "fable"];
+const EFFORT_RANK = ["low", "medium", "high", "xhigh", "max"];
 
 // ---- enumerate capabilities -----------------------------------------------------------------------
 
@@ -248,6 +253,80 @@ function recurringIntents() {
   return { clusters: clusterIntents(intents), correctionCount };
 }
 
+// ---- check 4: compute-routing floor (model + effort per task class) -------------------------------
+
+/** Read a `key: value` from the first frontmatter block of an agent file. */
+function frontmatterValue(file, key) {
+  const text = readFileSync(join(ROOT, file), "utf8");
+  const end = text.indexOf("\n---", 3); // frontmatter opens with a leading `---`
+  const block = end === -1 ? text : text.slice(0, end);
+  const m = block.match(new RegExp(`^${key}:\\s*(\\S+)`, "m"));
+  return m ? m[1] : null;
+}
+
+/** Parse the machine-readable FLOOR-TABLE block in docs/COMPUTE.md → Map(agent → {model, effort}). */
+function parseFloorTable() {
+  if (!existsSync(COMPUTE_MD)) return null;
+  const text = readFileSync(COMPUTE_MD, "utf8");
+  const start = text.indexOf("<!-- FLOOR-TABLE:START -->");
+  const stop = text.indexOf("<!-- FLOOR-TABLE:END -->");
+  if (start === -1 || stop === -1) return null;
+  const floors = new Map();
+  for (const line of text.slice(start, stop).split("\n")) {
+    const cells = line.split("|").map((c) => c.trim());
+    // Row shape: ["", agent, class, model, effort, ""]. Skip header ("agent") and separator ("---").
+    if (cells.length < 6) continue;
+    const [, agent, , model, effort] = cells;
+    if (!agent || agent === "agent" || /^-+$/.test(agent)) continue;
+    floors.set(agent, { model, effort });
+  }
+  return floors;
+}
+
+function computeFloorFindings(caps) {
+  const floors = parseFloorTable();
+  if (!floors) {
+    return ["  • docs/COMPUTE.md FLOOR-TABLE block not found — cannot enforce compute floors."];
+  }
+  const findings = [];
+  const agents = caps.filter((c) => c.kind === "agent");
+  for (const cap of agents) {
+    const floor = floors.get(cap.name);
+    if (!floor) {
+      findings.push(
+        `  • agent "${cap.name}" has no row in the COMPUTE.md floor table — assign it a model/effort floor (or confirm it is exempt).`,
+      );
+      continue;
+    }
+    const model = frontmatterValue(cap.file, "model");
+    const effort = frontmatterValue(cap.file, "effort");
+    if (!effort) {
+      findings.push(
+        `  • agent "${cap.name}" declares no \`effort:\` — floor is ${floor.effort}. Add it (no-shortcuts guard).`,
+      );
+    } else if (EFFORT_RANK.indexOf(effort) < EFFORT_RANK.indexOf(floor.effort)) {
+      findings.push(
+        `  • agent "${cap.name}" effort "${effort}" is below its floor "${floor.effort}" — raise it or re-class the agent in COMPUTE.md.`,
+      );
+    }
+    if (model && MODEL_RANK.indexOf(model) < MODEL_RANK.indexOf(floor.model)) {
+      findings.push(
+        `  • agent "${cap.name}" model "${model}" is below its floor "${floor.model}" — upgrade it or re-class the agent in COMPUTE.md.`,
+      );
+    }
+  }
+  // Floor rows with no matching agent — a stale table entry.
+  const names = new Set(agents.map((a) => a.name));
+  for (const agent of floors.keys()) {
+    if (!names.has(agent)) {
+      findings.push(
+        `  • COMPUTE.md floor table names "${agent}", but no such agent exists — remove the stale row.`,
+      );
+    }
+  }
+  return findings;
+}
+
 // ---- report ---------------------------------------------------------------------------------------
 
 function main() {
@@ -255,6 +334,7 @@ function main() {
   const orphans = orphanFindings(caps);
   const contradictions = contradictionFindings(caps);
   const { clusters, correctionCount } = recurringIntents();
+  const floorFindings = computeFloorFindings(caps);
 
   const line = "─".repeat(90);
   console.log(`\n${line}\nCONFIG AUDIT — proposals only; nothing was modified.\n${line}`);
@@ -284,6 +364,13 @@ function main() {
   }
   console.log(
     `\n  ${correctionCount} intent(s) immediately followed a subagent result — likely corrections against just-produced work (the richest templatization signal).`,
+  );
+
+  console.log(
+    "\n④ Compute-routing floor (model + effort below the docs/COMPUTE.md class floor — the no-shortcuts guard):",
+  );
+  console.log(
+    floorFindings.length ? floorFindings.join("\n") : "  • none — every agent meets its floor",
   );
 
   console.log(
