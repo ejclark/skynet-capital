@@ -53,6 +53,13 @@ mechanical that thoroughness can't change the result; anything that reads code, 
 anything defaults to `high` or above. (Should headroom ever disappear, that's a signal to raise it back,
 not a reason to quietly lower these floors.)
 
+**Tie-break — round up (Eric's call).** When a task sits between two tiers, take the higher one. Hitting
+an API rate limit is an **accepted, adjustable cost**, not something to dodge by pre-emptively routing
+lower — we round up and adjust per the data as it arrives. If limit-hits start costing flow, the lever is
+the plan-tier upgrade (Eric's gate — spend), never timidity on compute. Both paths (upgrade-now vs
+wait-for-the-throttle) share one trip-wire; rounding up just means we lean into quality first and let the
+data pick the moment to spend.
+
 ## The floor table (task class → model + effort FLOOR)
 
 Floors, not targets — an agent may exceed its floor, never fall below it. Aliases only.
