@@ -49,7 +49,7 @@ green PR ships automatically.
 
 ## Continuous deployment (merge → deploy)
 
-`.github/workflows/deploy.yml` deploys to Fly automatically **after CI passes on `main`**:
+The `release · deploy` job in `.github/workflows/pipeline.yml` deploys to Fly automatically **after CI passes on `main`**:
 merge a green PR and the exact commit CI validated is shipped. A failed CI run never deploys.
 
 The only thing GitHub needs is a Fly **deploy token** — your app secrets

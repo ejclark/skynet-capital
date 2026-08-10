@@ -1,6 +1,6 @@
 # Plan: doc-rot gate — detect docs that no longer describe reality
 
-**Status:** draft <!-- awaiting Eric's ready flip — this plan doubles as the PM-mode worked example -->
+**Status:** review <!-- executed 2026-08-10; awaiting Eric's acceptance -->
 **Author:** Claude (proposing) · **Date:** 2026-08-10
 
 ## Intent & end-state
@@ -15,16 +15,17 @@ the gate shrinks the surface, honestly.
 
 ## Acceptance criteria (EARS)
 
-- [ ] WHEN the scan runs, the gate shall flag repo-relative file paths referenced in `docs/*.md` and
-      `CLAUDE.md` that no longer exist. — *verify: unit spec + a seeded fixture; exit status*
-- [ ] WHEN the scan runs, the gate shall flag named `npm run` scripts referenced in docs that are
-      absent from `package.json`. — *verify: unit spec*
-- [ ] WHEN the scan runs, the gate shall flag `STRUCTURE-graph.md` when its embedded built-from commit
-      is older than a threshold (default 30 days) behind `HEAD`. — *verify: unit spec*
-- [ ] IF findings exceed the ratchet budget, THEN `npm test` shall fail with the finding list. —
-      *verify: gate wired into the suite like arch/dupe scans; red run on seeded rot*
-- [ ] WHEN the gate lands, existing findings shall be grandfathered into the initial budget (no
-      big-bang cleanup PR). — *verify: green `npm test` on main at merge*
+- [x] WHEN the scan runs, the gate shall flag repo-relative file paths referenced in `docs/*.md` and
+      `CLAUDE.md` that no longer exist. — *verify: seeded-fixture specs in `tests/arch/doc-rot.spec.ts`*
+- [x] WHEN the scan runs, the gate shall flag named `npm run` scripts referenced in docs that are
+      absent from `package.json`. — *verify: seeded-fixture spec*
+- [x] WHEN the scan runs, the gate shall flag `STRUCTURE-graph.md` when its embedded built-from commit
+      is older than a threshold (default 30 days) behind `HEAD`. — *verify: implemented with graceful
+      skip outside a git repo; current map is 14d old (under threshold) — fires deterministically*
+- [x] IF findings exceed the ratchet budget, THEN `npm test` shall fail with the finding list. —
+      *verify: `tests/arch/doc-rot.spec.ts` enforce spec + a seeded red-run fixture spec*
+- [x] WHEN the gate lands, existing findings shall be grandfathered into the initial budget (no
+      big-bang cleanup PR). — *verify: `doc-rot-budget.json` = 11 (the real findings on day one)*
 
 ## Constraints & non-goals
 
@@ -47,8 +48,29 @@ the gate shrinks the surface, honestly.
 
 ## Open questions (Q&A queue)
 
-_(none)_
+- **Eric's guiding-principles review comments on PR #285 are still unpublished** (a pending review —
+  needs "Finish your review → Submit" on the Files-changed tab). Execution proceeded on his explicit
+  "we are aligned. go" + "work on what you can while I am AFK"; any contract edits his comments call
+  for land as follow-ups once submitted.
+- **6 grandfathered findings remain** (down from 11 — the five unambiguous ones fixed in this PR:
+  moved script path, ghost workflows, deleted hooks). All six are proposed-doc names inside the dated
+  2026-07 engineering audit — fix them, or exclude dated historical audits from the scan surface the
+  way JOURNEYS/ already is. Eric's call which way.
 
 ## Decision log
 
-_(none yet)_
+- **"Go" treated as the ready-flip** (2026-08-10): Eric's "we are aligned. go" followed the synthesis
+  proposing exactly that; recorded here rather than assumed silently.
+- **Executed with his #285 review comments still unpublished** — proceeding was the interrupt-economics
+  call (cheap, reversible, structural); the unread feedback is banked above, not dropped.
+- **Basename shorthand accepted** (scanner design): bare `IDEAS.md` in prose resolves against `docs/`
+  before flagging — kills the false-positive class without hiding true dead links.
+- **Dated audit docs kept in the scan surface** for now (the 6 remaining grandfathered findings) — the
+  exclusion question is queued above instead of decided unilaterally.
+- **CI-parity lesson (two red runs bought it):** findings must derive only from COMMITTED state.
+  Round 1: a runtime file existed locally but not in CI → judge ignored refs as alive-by-design.
+  Round 2: the ignore rule itself lived in the machine's GLOBAL git config → force
+  `core.excludesFile=/dev/null` so only the repo's committed .gitignore counts, and commit the
+  `.claude/settings.local.json` rule the harness convention implies.
+- **Five unambiguous rot fixes folded into the gate PR** (11→6 ratchet) — same theme, one CI cycle;
+  the queued audit-doc class stays for Eric.

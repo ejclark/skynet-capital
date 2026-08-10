@@ -27,3 +27,6 @@ allowed_signers
 # The bundle is generated from src/three/** at install time, never committed.
 public/three/scene.js
 public/tower.html
+
+# Claude Code per-machine settings (harness convention — never committed).
+.claude/settings.local.json
