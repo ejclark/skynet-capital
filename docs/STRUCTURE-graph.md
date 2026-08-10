@@ -351,7 +351,7 @@ Nodes (5): createHistoryStore(), dedupeById(), main(), PORT, resolvePort()
 
 ### Community 54 - "Idea capture & routing (the adapter pattern)"
 Cohesion: 0.29
-Nodes (7): Idea capture & routing (the adapter pattern), Interrupt economics — protect Eric's attention, Ship loop (quick reference), Side quests — Claude generates ideas too, Skynet Capital — working notes for Claude, Synthesis & the question budget (front-load, then taper), Working with Eric
+Nodes (7): Idea capture & routing (the adapter pattern), Interrupt economics — protect Eric's attention, Ship loop (quick reference), Side quests — Claude generates ideas too, Skynet Capital — working notes for Claude, Synthesis & the question budget (front-load, then taper), How we work
 
 ### Community 55 - "BCP × Structural Map — integration spec"
 Cohesion: 0.29
