@@ -147,6 +147,7 @@ supply-chain decision: read them fully before adopting.
 | **Dep-graph** (cycles/orphans/layering) | `scripts/dep-graph-scan.mjs` (dependency-cruiser, adopted) + `.dependency-cruiser.cjs` + `dep-graph-budget.json` + `tests/arch/dep-graph.spec.ts` | judge: break cycle / wire-or-delete orphan / restore layer direction (`/decompose` when a cycle wants a split) | none yet (recruit on recurrence #3) | ✅ live |
 | **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | write BDD specs per ENGINEERING.md | `test-backfiller` | ✅ live |
 | **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | none yet (recruit on recurrence #3) | ✅ live |
+| **Doc rot** (docs that no longer describe reality: dead file refs, missing npm scripts, stale structural map) | `scripts/doc-rot-scan.mjs` + `doc-rot-budget.json` + `tests/arch/doc-rot.spec.ts` (semantic-claim rot stays with the config-audit — honestly out of a deterministic eye's reach) | fix doc to match reality, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Inline-JS defects** (`<script>` syntax) | extract + `node --check` per page — *not built* | — | — | ⬜ queued |
 | Code review | *(adopted)* | `/code-review` | — | ✅ bundled |
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |
