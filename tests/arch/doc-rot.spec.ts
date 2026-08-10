@@ -72,6 +72,19 @@ describe("doc-rot scanner behavior (seeded fixtures)", () => {
     expect(out).toContain("npm run does-not-exist");
   });
 
+  it("treats git-ignored refs as declared local artifacts, not rot (CI parity)", () => {
+    // The class that broke CI parity: a doc referencing a runtime/local file (settings.local.json,
+    // data logs) that exists on a dev machine but never in a fresh checkout. The committed ignore
+    // rules — identical in both environments — are the arbiter, not the file's presence.
+    const { status } = scanFixture((root) => {
+      execFileSync("git", ["init", "-q"], { cwd: root });
+      writeFileSync(join(root, ".gitignore"), "docs/local-settings.json\n");
+      writeFileSync(join(root, "docs", "GUIDE.md"), "Saved to `docs/local-settings.json`.");
+      writeFileSync(join(root, "doc-rot-budget.json"), JSON.stringify({ findings: 0 }));
+    });
+    expect(status).toBe(0);
+  });
+
   it("ignores URLs, globs, and placeholder tokens", () => {
     const { status } = scanFixture((root) => {
       writeFileSync(

@@ -57,6 +57,16 @@ function pathRefs(body) {
 }
 const existsSyncRoot = (r) => existsSync(join(ROOT, r));
 
+/** True when the committed ignore rules cover `ref` (a declared local/runtime artifact, not rot). */
+function isGitIgnored(ref) {
+  try {
+    execFileSync("git", ["check-ignore", "-q", ref], { cwd: ROOT, stdio: "ignore" });
+    return true;
+  } catch {
+    return false; // not ignored, or not a git repo — either way, judge by existence
+  }
+}
+
 function deadRefFindings(files) {
   const findings = [];
   for (const doc of files) {
@@ -69,6 +79,11 @@ function deadRefFindings(files) {
       const fromDocs = ref.includes("/") ? null : join(ROOT, "docs", ref);
       if (existsSync(fromRoot) || existsSync(fromDoc) || (fromDocs && existsSync(fromDocs)))
         continue;
+      // A ref covered by .gitignore is a DECLARED local/runtime artifact (settings.local.json, data
+      // logs, build output) — absent in a fresh checkout by design, not rot. Checking the ignore
+      // rules (committed) instead of the file keeps findings identical locally and in CI, where
+      // ignored files don't exist. Caught the hard way: CI counted 12 to a local 11.
+      if (isGitIgnored(ref)) continue;
       // Only flag refs that CLAIM to be repo files: rooted in a known top dir, or resolvable-looking
       // relative doc links (contain no scheme and end .md). Bare tool names (`biome.json` in another
       // repo's context) would false-positive without this.
