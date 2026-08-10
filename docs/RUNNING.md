@@ -22,6 +22,12 @@ npm run serve:dashboard
 # → http://localhost:8787   (append ?key=<password> if SKYNET_DASHBOARD_PASSWORD is set)
 ```
 
+**A live run records history.** Every 5 minutes the server appends one equity sample per participant
+to `SKYNET_HISTORY_DIR` (default `data/history`, git-ignored locally; `/data/history` on the Fly
+volume in prod). At boot it reads the newest sample back to restore cumulative realized P/L, which
+otherwise resets to zero on every restart. Offline runs deliberately keep history **in memory only** —
+the fixture stream loops, so persisting it would compound the same replayed gains on every run.
+
 ## Offline mode — run without Alpaca (no keys, no network)
 
 For local development, CI stability, and triaging the UI without touching a live account, the

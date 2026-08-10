@@ -52,8 +52,10 @@ revealed (the first harvest of the tournament→eval flywheel; see the "mined ev
 5. **S4 — the live board** (placement per Eric's fork): one city, camera, session lighting,
    reduced-motion static frame, `WorldPatch` SSE (the D6 fix). *Pre-slice: one static isometric mock,
    screenshot, taste check — an afternoon, not a slice.*
-6. **S5 — ceremonies v1** from history-sample diffs (turn the prod sampler on NOW so data accrues;
-   `SKYNET_HISTORY_DIR=/data/history` — the one Eric-owned op).
+6. **S5 — ceremonies v1** from history-sample diffs. The prod sampler is already on
+   (`SKYNET_HISTORY_DIR=/data/history` in `fly.toml`) and the derivation + delivery path landed with
+   `plans/history-layer.md` slice 4 (restart-safe baseline, per-transition ids, a channel that
+   bypasses the state fold). What is left here is the *visual* treatment — Eric's taste call.
 7. **S6 — region + nation LODs; compare twinning.** (Budget the city→region transition as its own
    slice — both plans flag it as the hardest craft problem.)
 8. **S7+ — ledger upgrade (per-position attribution/win-rate), hero-character generator, judgment
