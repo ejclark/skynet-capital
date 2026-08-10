@@ -9,7 +9,7 @@ description: >-
   reference media (video/images) needs breaking down into what actually makes it read as premium.
   Produces an actionable technique brief other athletes build from — never touches shader code itself.
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch
-model: opus
+model: fable
 effort: xhigh
 ---
 

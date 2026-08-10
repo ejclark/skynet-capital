@@ -84,7 +84,7 @@ agent; a new agent needs a row here (that itself is a useful "did you think abou
 |---|---|---|---|
 | red-team | genuinely hard / adversarial | fable | xhigh |
 | reviewer | genuinely hard / adversarial | fable | xhigh |
-| render-alchemist | high-stakes correctness/security | opus | xhigh |
+| render-alchemist | genuinely hard / unfamiliar | fable | xhigh |
 | art-director | complex/judgment | opus | high |
 | artifact-smith | complex/judgment | opus | high |
 | linguist | complex/judgment | opus | high |
