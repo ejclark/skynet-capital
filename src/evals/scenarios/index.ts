@@ -1,6 +1,7 @@
 import type { Scenario } from "../scenario.js";
 import { bankerScenarios } from "./banker.js";
 import { dayTraderScenarios } from "./day-trader.js";
+import { prospectorScenarios } from "./prospector.js";
 
 /**
  * Scenario packs keyed by persona id. Add a persona's pack here and it's picked up by
@@ -10,4 +11,5 @@ import { dayTraderScenarios } from "./day-trader.js";
 export const scenarioPacks: Readonly<Record<string, readonly Scenario[]>> = {
   "day-trader": dayTraderScenarios,
   banker: bankerScenarios,
+  prospector: prospectorScenarios,
 };

@@ -4,6 +4,7 @@ import { FuturistPersona } from "./futurist.js";
 import { GoldBugPersona } from "./gold-bug.js";
 import { NewsFaderPersona } from "./news-fader.js";
 import type { Persona } from "./persona.js";
+import { ProspectorPersona, WARM_UP_CLAIMS } from "./prospector.js";
 import { RetailInvestorPersona } from "./retail-investor.js";
 import { RumorTraderPersona } from "./rumor-trader.js";
 import { SauronPersona } from "./sauron.js";
@@ -19,6 +20,8 @@ import { SauronPersona } from "./sauron.js";
  *  - Gold Bug: flees to the safe haven on risk-off, hoards it
  *  - Sauron: the cold order-imposer — fades exhausted euphoria, claims what panic discards
  *  - Banker: the house's income engine — underwrites calm, harvests gains, protects the vault
+ *  - Prospector: the warm-up harness — stakes a small claim on every planned name so the live
+ *    trading path actually gets exercised, cuts barren claims fast, lets a paying seam run
  */
 export function createDefaultPersonas(): Persona[] {
   return [
@@ -30,5 +33,6 @@ export function createDefaultPersonas(): Persona[] {
     new RumorTraderPersona(),
     new SauronPersona(),
     new BankerPersona(),
+    new ProspectorPersona(WARM_UP_CLAIMS),
   ];
 }
