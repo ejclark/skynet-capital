@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Candlestick swing day-trading persona — high volume, lower margin
+A second experiment persona alongside the Prospector: read intraday candles, enter on a swing, exit
+on a swing in our favor. Deliberately **high-turnover / thin-margin**, which is the opposite shape to
+the Prospector (few claims, let winners run) — and that contrast is the point: high volume exercises
+the live order path far harder per session, which is exactly what surfaces bugs while the market is
+only open during Eric's working hours.
+- **Build it after the Prospector proves the path.** Same reason the Prospector exists at all — prove
+  the plumbing with the simple shape before adding an intraday one.
+- **Two real constraints to design against:** (1) the order path is market-orders-only with a
+  per-persona cooldown, so "sell into the swing" is coarser than a limit ladder; (2) pattern-day-trader
+  rules — Alpaca enforces PDT on paper accounts too, so a high-turnover intraday bot on a sub-$25k
+  account can get flagged and blocked. Check the account's equity + PDT status before turning it loose.
+- Needs a candle/bar feed: today's `MarketContext` carries quotes + momentum, not OHLC bars — a bar
+  source (Alpaca `/v2/stocks/bars`) is a prerequisite.
+_(src: Eric · while: designing the warm-up trading experiments — "candle stick day trading, place
+trades on a swing, sell on a swing in your favor")_
+
 ### A 2D UI/UX agent for `src/observatory` / `src/ui` / the login canvas
 First live application of `/charter`. The forge roster (art-director, piece-wright, set-dresser,
 render-alchemist) directs 3D work; nothing plays the same role for 2D UI — `ui-librarian` only dedupes

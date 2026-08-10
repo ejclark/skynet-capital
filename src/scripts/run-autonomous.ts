@@ -37,8 +37,10 @@ import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { createDefaultPersonas } from "../personas/registry.js";
 import { readOfflineEvents } from "../runtime/data-source.js";
 
-// The universe the bots watch (the Day Trader's big-tech focus).
-const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA"];
+// The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
+// claims (CRWV, MRVL). A symbol absent here has no quote, so a persona simply never sees it —
+// adding a claim to the Prospector without adding it here is a silent no-op.
+const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
 const OFFLINE_STARTING_CASH = 1_000_000;
 const ALPACA_DATA_BASE_URL = "https://data.alpaca.markets";

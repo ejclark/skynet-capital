@@ -55,6 +55,12 @@ export const PERSONA_LORE: Record<string, PersonaLore> = {
     thesis: "The house's income engine; underwrites calm markets, banks gains on schedule.",
     lore: "Keeper of the vault. The Banker never chases and never gambles — it writes its book in quiet markets, collects its due, and its realized income fills the tournament coffers. Raid the vault at your peril.",
   },
+  prospector: {
+    name: "The Prospector",
+    thesis:
+      "Stakes a small claim on every name in the plan, cuts the barren ones fast, and lets a paying seam run until it stops paying.",
+    lore: "The Prospector works the frontier with a mule and a hundred small stakes. He does not divine where the gold lies — he digs everywhere the map allows, walks away from barren ground before it eats the season, and when a seam starts paying he follows it down as far as it runs. Patience with the good ground; no sentiment for the bad.",
+  },
   sauron: {
     name: "Sauron",
     thesis:
