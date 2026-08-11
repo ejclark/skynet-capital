@@ -18,6 +18,29 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Roadmap — Eric's stated build order after Sauron goes autonomous
+Season one's premise is **Sauron trading autonomously**; everything below queues behind it.
+
+1. **Sauron autonomous** *(top priority — the season-one premise)*. Readiness pack shipped, so the
+   gate no longer pins him to observe. Remaining: credentials + roster + live mode, all Fly switches.
+   **Open tension worth Eric's call:** Sauron only acts at sentiment extremes (±0.7) *confirmed by a
+   momentum turn*, and sentiment is a lexical score — `(pos − neg) / total` over recent headlines,
+   which averages toward the middle. On a flat book he can only BUY, and only on a genuine panic. He
+   is therefore authentic but close to **inert**: a season could pass with a handful of trades. Four
+   ways out, in ascending intrusiveness: accept rare-but-decisive (in character, quiet season) ·
+   widen the universe so an extreme occurs *somewhere* · soften the thresholds (±0.4) · make the
+   sentiment signal more responsive. This is a taste call about what season one should feel like.
+2. **Browser interface for basic stock trades** — buy/sell equities through our UI, calling Alpaca
+   to execute. Note this is also the substrate for play-tagging (see the metrics idea below): trades
+   placed through our interface are attributable *for free*, which is the cheap answer to the
+   strategy-detection problem.
+3. **Sell cash-covered puts and covered calls** — the wheel's two legs. **Prerequisite:** the order
+   path is equity-market-orders-only today (`OrderIntent.type: "market"`, no option legs), so this
+   step is really "add options to the order path" first, UI second.
+4. **Buy long puts and long calls** — directional options, building on step 3's option order path.
+_(src: Eric · while: sequencing after the metrics plan — "enabling sauron to trade autonomously is
+the top level importance as that's the premise of season one")_
+
 ### Two gate-design findings from the deploy doom loop (see LESSONS.md 2026-08-11)
 - **A gate must never gate the path it measures.** The unlearned-incident gate counts failed `main`
   runs *and* ran inside the job whose failure it counts, so one red deploy fed itself into 28. Any

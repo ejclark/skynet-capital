@@ -31,7 +31,7 @@
   "src/evals/scenarios/banker.ts": 67,
   "src/evals/scenarios/day-trader.ts": 58,
   "src/evals/scenarios/generic-safety.ts": 156,
-  "src/evals/scenarios/index.ts": 16,
+  "src/evals/scenarios/index.ts": 18,
   "src/http/fetch-json.ts": 29,
   "src/news/alpaca-news-client.ts": 46,
   "src/news/sentiment-scorer.ts": 97,
