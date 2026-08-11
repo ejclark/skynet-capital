@@ -36,7 +36,8 @@
     "docrot:scan": "node scripts/doc-rot-scan.mjs",
     "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
     "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs",
-    "dev:tower": "node scripts/dev-tower.mjs"
+    "dev:tower": "node scripts/dev-tower.mjs",
+    "smoke:trade": "tsx src/scripts/smoke-trade.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
