@@ -21,6 +21,7 @@ on:
           - status
           - set-day-trader-credentials
           - set-prospector-credentials
+          - set-sauron-credentials
           - flip-mode
       mode:
         description: "observe or live — only read by flip-mode"
@@ -88,6 +89,24 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           BOT_KEY: ${{ secrets.BOT_PROSPECTOR_ALPACA_KEY }}
           BOT_SECRET: ${{ secrets.BOT_PROSPECTOR_ALPACA_SECRET }}
+
+      - name: Set Sauron bot credentials
+        if: ${{ inputs.action == 'set-sauron-credentials' }}
+        run: |
+          if [ -z "$BOT_KEY" ] || [ -z "$BOT_SECRET" ]; then
+            echo "::error::Repository secrets BOT_SAURON_ALPACA_KEY / BOT_SAURON_ALPACA_SECRET are not set. Create a paper account for Sauron, add its key/secret under Settings -> Secrets and variables -> Actions, then re-run this workflow."
+            exit 1
+          fi
+          flyctl secrets set \
+            "SKYNET_BOT_SAURON_KEY=$BOT_KEY" \
+            "SKYNET_BOT_SAURON_SECRET=$BOT_SECRET" \
+            "SKYNET_AUTONOMOUS_BOTS=sauron" \
+            -a skynet-capital
+          echo "Set. NOTE: like the other credential actions, this makes Sauron the ONLY autonomous bot. Check with 'status', or 'fly logs -a skynet-capital' for the [gate] line."
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          BOT_KEY: ${{ secrets.BOT_SAURON_ALPACA_KEY }}
+          BOT_SECRET: ${{ secrets.BOT_SAURON_ALPACA_SECRET }}
 
       - name: Flip autonomous mode
         if: ${{ inputs.action == 'flip-mode' }}

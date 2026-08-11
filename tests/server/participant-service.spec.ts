@@ -13,6 +13,10 @@ import { ParticipantService } from "../../src/server/participant-service.js";
 
 class MemStore implements ParticipantStore {
   items: StoredParticipant[] = [];
+  secure = true;
+  canStoreSecurely(): boolean {
+    return this.secure;
+  }
   load(): StoredParticipant[] {
     return this.items;
   }
@@ -65,6 +69,26 @@ function makeService(overrides: {
 }
 
 describe("ParticipantService.addParticipant", () => {
+  // Other people's credentials must never land on disk in the clear. When the store has no
+  // encryption key, onboarding is refused up front — before a key is validated, streamed, or
+  // stored — rather than degrading to a plaintext write.
+  it("refuses onboarding entirely when the store cannot encrypt", async () => {
+    const store = new MemStore();
+    store.secure = false;
+    const { service, started, hub } = makeService({ store });
+
+    const result = await service.addParticipant({
+      displayName: "Uncle Joe",
+      apiKey: "k",
+      apiSecret: "s",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(store.items).toHaveLength(0);
+    expect(started).toHaveLength(0);
+    expect(hub.getState().participants).toHaveLength(0);
+  });
+
   it("validates the key, stores, appends to the board live, and opens the stream", async () => {
     const { service, store, hub, started } = makeService({});
     const result = await service.addParticipant({

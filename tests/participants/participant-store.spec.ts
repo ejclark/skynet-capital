@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { StoredParticipant } from "../../src/participants/participant-store.js";
@@ -20,12 +20,19 @@ describe("FileParticipantStore", () => {
     expect(new FileParticipantStore(tmpFile()).load()).toEqual([]);
   });
 
-  it("round-trips entries in plaintext when no secret is set", () => {
+  // Fail closed: a missing secret is a misconfiguration, and the cost of guessing wrong is
+  // someone else's credentials readable on disk. The write is refused, never downgraded.
+  it("refuses to write, and reports itself insecure, when no secret is set", () => {
     const path = tmpFile();
     const store = new FileParticipantStore(path);
-    store.add(entry("human-a"));
-    expect(new FileParticipantStore(path).load().map((p) => p.id)).toEqual(["human-a"]);
-    rmSync(path, { force: true });
+
+    expect(store.canStoreSecurely()).toBe(false);
+    expect(() => store.add(entry("human-a"))).toThrow(/SKYNET_STORE_SECRET/);
+    expect(existsSync(path)).toBe(false); // nothing was written at all
+  });
+
+  it("reports itself secure when a secret is set", () => {
+    expect(new FileParticipantStore(tmpFile(), "s").canStoreSecurely()).toBe(true);
   });
 
   it("encrypts on disk when a secret is set, and decrypts on load", () => {
