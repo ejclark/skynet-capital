@@ -39,7 +39,7 @@
  * touches the trading path, needs no broker credential, and places nothing.
  */
 
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const CACHE = join(process.cwd(), "node_modules", ".cache", "earnings-cycle");
@@ -217,27 +217,12 @@ function table(title, events, fn, base) {
   }
 }
 
-async function main() {
-  const argv = process.argv.slice(2);
-  const symbol = (argv[0] ?? "NVDA").toUpperCase();
-  const flag = (name, fallback) => {
-    const i = argv.indexOf(`--${name}`);
-    return i >= 0 ? argv[i + 1] : fallback;
-  };
-  const benchSym = flag("bench", "QQQ").toUpperCase();
-  const peers = (flag("peers", "") || "")
-    .split(",")
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean);
-  const modernFrom = Number(flag("since", "2023"));
-
-  const px = await bars(symbol);
-  const bench = new Map((await bars(benchSym)).map((b) => [b.date, b]));
+/**
+ * Map each 8-K filing to its trading session. The release lands AFTER the close on day D, so the
+ * market's verdict is D+1 — every window is anchored on that, not on the filing date itself.
+ */
+function toEvents(px, dates) {
   const byDate = new Map(px.map((b, i) => [b.date, i]));
-  const dates = await earningsDates(symbol);
-
-  // Map each filing to its trading session. The release lands AFTER the close on day D, so the
-  // market's reaction is D+1 — every window below is anchored on that, not on the filing date.
   const events = [];
   for (const d of dates) {
     let i;
@@ -245,19 +230,15 @@ async function main() {
       const probe = new Date(Date.parse(d) + k * 86400000).toISOString().slice(0, 10);
       if (byDate.has(probe)) i = byDate.get(probe);
     }
+    // Need 40 sessions of lead-in for the widest run-up window and 25 of follow-through.
     if (i === undefined || i < 40 || i + 25 >= px.length) continue;
     events.push({ i, date: px[i].date, year: Number(px[i].date.slice(0, 4)) });
   }
-  const eventIdx = events.map((e) => e.i);
+  return events;
+}
 
-  console.log(
-    `${symbol} earnings-cycle study — ${events.length} prints, ${events[0].date} .. ${events.at(-1).date}`,
-  );
-  console.log(
-    `price history ${px[0].date} .. ${px.at(-1).date} (${px.length} sessions) · benchmark ${benchSym}`,
-  );
-  console.log(`earnings dates: SEC 8-K Item 2.02 · D = release day (after close) · reaction = D+1`);
-
+/** The run-up windows, the print itself, and the post-print drift. */
+function reportWindows(px, bench, events, eventIdx, benchSym) {
   for (const n of [5, 10, 20, 30]) {
     const b = baseline(px, n, eventIdx);
     table(
@@ -283,19 +264,17 @@ async function main() {
       (e) => ret(px[e.i + 1].close, px[e.i + 1 + k].close),
       b,
     );
-    table(`[POST vs ${benchSym}] same window, ${symbol} minus ${benchSym}`, events, (e) => {
+    table(`[POST vs ${benchSym}] same window, minus the benchmark`, events, (e) => {
       const a = bench.get(px[e.i + 1].date);
       const z = bench.get(px[e.i + 1 + k].date);
-      if (!a || !z) return null;
+      if (!(a && z)) return null;
       return ret(px[e.i + 1].close, px[e.i + 1 + k].close) - ret(a.close, z.close);
     });
   }
+}
 
-  // --- controls: the part that tries to kill the findings -------------------------------------
-  const modern = events.filter((e) => e.year >= modernFrom);
-  const eraFrom = px.findIndex((b) => Number(b.date.slice(0, 4)) >= modernFrom);
-  console.log(`\n${"=".repeat(86)}\nCONTROLS (modern era, ${modernFrom}+, n=${modern.length})`);
-
+/** Is the run-up earnings, or just a bull market? The binomial test against the era's own rate. */
+function controlBaseRate(px, modern, eraFrom) {
   const all20 = [];
   for (let i = eraFrom; i < px.length - 20; i++) all20.push(ret(px[i].close, px[i + 20].close));
   const base20 = stats(all20);
@@ -312,11 +291,14 @@ async function main() {
   console.log(
     `     P(${wins}/${modern.length} positive | base rate) = ${p.toFixed(4)} -> ${p < 0.05 ? "SURVIVES" : "NOT SIGNIFICANT"}`,
   );
+}
 
+/** Where inside the window the run-up happens — the leg that decides the exit date. */
+function controlShape(px, modern) {
   console.log(`\n  2. where inside the window does the run-up actually happen?`);
   for (const [lo, hi, label] of [
     [20, 10, "D-20 -> D-10"],
-    [10, 5, "D-10 -> D-5"],
+    [10, 5, "D-10 -> D-5 "],
     [5, 0, "D-5  -> D   "],
   ]) {
     const s = stats(modern.map((e) => ret(px[e.i - lo].close, px[e.i - hi].close)));
@@ -324,7 +306,10 @@ async function main() {
       `     ${label}  mean ${s.mean.toFixed(2).padStart(6)}%  med ${s.median.toFixed(2).padStart(6)}%  win ${s.win.toFixed(0).padStart(3)}%`,
     );
   }
+}
 
+/** Does the reaction session behave unlike an ordinary one? */
+function controlFade(px, modern, eraFrom) {
   const allIntra = [];
   for (let i = eraFrom; i < px.length; i++) allIntra.push(ret(px[i].open, px[i].close));
   const bi = stats(allIntra);
@@ -332,25 +317,71 @@ async function main() {
   console.log(`\n  3. reaction-day fade vs an ordinary session`);
   console.log(`     every session      : mean ${bi.mean.toFixed(2)}%  win ${bi.win.toFixed(0)}%`);
   console.log(`     earnings reaction  : mean ${fi.mean.toFixed(2)}%  win ${fi.win.toFixed(0)}%`);
+}
 
-  if (peers.length) {
-    console.log(`\n  4. out-of-sample — do peers run up over ${symbol}'s OWN pre-print windows?`);
-    console.log(
-      `     (a sector-seasonal effect would show here; a ${symbol}-specific one would not)`,
-    );
-    for (const sym of peers) {
-      const pk = await bars(sym);
-      const pi = new Map(pk.map((b, i) => [b.date, i]));
-      const xs = modern
-        .filter((e) => pi.has(px[e.i - 20].date) && pi.has(px[e.i].date))
-        .map((e) => ret(pk[pi.get(px[e.i - 20].date)].close, pk[pi.get(px[e.i].date)].close));
-      const s = stats(xs);
-      if (s)
-        console.log(
-          `     ${sym.padEnd(5)} n=${String(s.n).padStart(3)}  mean ${s.mean.toFixed(2).padStart(6)}%  win ${s.win.toFixed(0).padStart(3)}%`,
-        );
+/** A sector-seasonal effect shows up in peers; a name-specific one does not. */
+async function controlPeers(px, modern, peers, symbol) {
+  if (!peers.length) return;
+  console.log(`\n  4. out-of-sample — do peers run up over ${symbol}'s OWN pre-print windows?`);
+  console.log(
+    `     (a sector-seasonal effect would show here; a ${symbol}-specific one would not)`,
+  );
+  for (const sym of peers) {
+    const pk = await bars(sym);
+    const pi = new Map(pk.map((b, i) => [b.date, i]));
+    const xs = modern
+      .filter((e) => pi.has(px[e.i - 20].date) && pi.has(px[e.i].date))
+      .map((e) => ret(pk[pi.get(px[e.i - 20].date)].close, pk[pi.get(px[e.i].date)].close));
+    const s = stats(xs);
+    if (s) {
+      console.log(
+        `     ${sym.padEnd(5)} n=${String(s.n).padStart(3)}  mean ${s.mean.toFixed(2).padStart(6)}%  win ${s.win.toFixed(0).padStart(3)}%`,
+      );
     }
   }
+}
+
+function parseArgs(argv) {
+  const flag = (name, fallback) => {
+    const i = argv.indexOf(`--${name}`);
+    return i >= 0 ? argv[i + 1] : fallback;
+  };
+  return {
+    symbol: (argv[0] ?? "NVDA").toUpperCase(),
+    benchSym: flag("bench", "QQQ").toUpperCase(),
+    peers: (flag("peers", "") || "")
+      .split(",")
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean),
+    modernFrom: Number(flag("since", "2023")),
+  };
+}
+
+async function main() {
+  const { symbol, benchSym, peers, modernFrom } = parseArgs(process.argv.slice(2));
+
+  const px = await bars(symbol);
+  const bench = new Map((await bars(benchSym)).map((b) => [b.date, b]));
+  const events = toEvents(px, await earningsDates(symbol));
+  const eventIdx = events.map((e) => e.i);
+
+  console.log(
+    `${symbol} earnings-cycle study — ${events.length} prints, ${events[0].date} .. ${events.at(-1).date}`,
+  );
+  console.log(
+    `price history ${px[0].date} .. ${px.at(-1).date} (${px.length} sessions) · benchmark ${benchSym}`,
+  );
+  console.log(`earnings dates: SEC 8-K Item 2.02 · D = release day (after close) · reaction = D+1`);
+
+  reportWindows(px, bench, events, eventIdx, benchSym);
+
+  const modern = events.filter((e) => e.year >= modernFrom);
+  const eraFrom = px.findIndex((b) => Number(b.date.slice(0, 4)) >= modernFrom);
+  console.log(`\n${"=".repeat(86)}\nCONTROLS (modern era, ${modernFrom}+, n=${modern.length})`);
+  controlBaseRate(px, modern, eraFrom);
+  controlShape(px, modern);
+  controlFade(px, modern, eraFrom);
+  await controlPeers(px, modern, peers, symbol);
 
   console.log(`\n${"=".repeat(86)}`);
   console.log(
