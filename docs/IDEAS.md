@@ -18,6 +18,29 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Playbooks — refine strategies, and configure when to apply them
+Eric's operating model for the trading side, and it resolves the "Sauron is inert" tension better
+than loosening his thresholds would: **his reserve works in his favor.** The path is not "make the
+bot trade more", it is:
+1. **Prove the machinery with a tiny trade** — buy/sell a single share, observe that behavior is
+   intact. Shipped as `npm run smoke:trade` (see `src/trading/smoke-trade.ts`); the point is that
+   *verifying the path must not depend on a strategy firing*.
+2. **Small calculated experiments, iteratively adapted** — each one teaches something specific.
+3. **Playbooks** — named strategies plus *the conditions under which each applies*. The second half
+   is the part that does not exist yet: a persona today hardcodes one strategy, and there is no
+   layer that says "in regime X, run play Y." A playbook is that mapping.
+4. **Patience, then size** — once playbooks cover the scenario space, wait for genuinely ripe
+   conditions and *increase* the bet because conditions are favorable. Conviction sizing already
+   exists (Sauron, and the Prospector's per-claim multiplier); what is missing is the regime read
+   that justifies raising it.
+- **Design note for when this is built:** a playbook is a *third* thing, distinct from persona
+  (a character with a temperament) and strategy (a decision rule). It is the selector between them,
+  and it is what makes "conditions are ripe" a computable statement rather than a feeling. It will
+  need the metrics layer (`plans/metrics-layer.md`) to know whether a play *worked*.
+_(src: Eric · while: sequencing after Sauron's readiness pack — "as playbooks become refined with
+strategies in page to navigate every possible scenario, we can be patient for conditions to be ripe
+to execute a play from a playbook and increase the size of the bets")_
+
 ### Roadmap — Eric's stated build order after Sauron goes autonomous
 Season one's premise is **Sauron trading autonomously**; everything below queues behind it.
 
@@ -355,6 +378,16 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   bots/info; that's authorized by the invite-only agreement. Capture the consent language explicitly
   (surfaced at signup / `/welcome`) so the basis for data-sharing is on record. Eric to define the
   wording; low-stakes (paper) but held to a real-cash integrity standard. _(src: Eric · while: clarifying the shared-universe data boundary)_
+- **Issue-driven distributed development (Eric, 2026-08-11):** "enable Claude to pick up and work
+  GitHub issues… lets humans create issues that get serviced, as well as orchestration for bots to
+  manage their work." Two consumers, one mechanism — humans file work, and bots file their *own*
+  work as issues, which is what makes the development distributed rather than just delegated.
+  **Honest state:** most of the plumbing already exists and is proven — Claude already reads this
+  repo, opens PRs, and auto-merges on green (this whole session is that loop). What is missing is
+  narrow: (a) the **trigger** — an issue labelled `claude` starting a session, rather than Eric
+  starting one; (b) the **trust ladder** below, deciding which issue classes may be serviced
+  unattended; (c) a **concurrency/ownership rule** so two agents never take the same issue. Worth
+  scoping as its own plan; the credentialed step (granting the trigger write access) stays Eric's.
 - **Autonomous GitHub-issue contribution system** — autonomously pick up & act on issues, starting
   narrow (tier 1: additive, display-only persona/landmark integrations) and widening by a progressive-
   trust ladder. Rails-first, mantra **Detect · Correct · Maintain**: brand + Graphify `affected` +
