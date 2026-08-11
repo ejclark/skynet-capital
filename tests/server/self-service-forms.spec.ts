@@ -85,7 +85,9 @@ describe("handleRotate", () => {
   it("GET serves the rotation form", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "GET", "", () => Promise.reject(new Error("unused"))),
+        void handleRotate(req, res, "GET", "", undefined, () =>
+          Promise.reject(new Error("unused")),
+        ),
       async (base) => {
         const res = await fetch(base);
         expect(res.status).toBe(200);
@@ -99,7 +101,7 @@ describe("handleRotate", () => {
   it("POST submits id + new credentials and renders success", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "POST", "", (input) => {
+        void handleRotate(req, res, "POST", "", undefined, (input) => {
           expect(input.id).toBe("day-trader");
           expect(input.apiKey).toBe("new-key");
           return Promise.resolve({ ok: true, id: "day-trader", displayName: "JARVIS" });
@@ -119,7 +121,7 @@ describe("handleRotate", () => {
   it("POST renders the error page with a 400 when rotation is refused", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "POST", "", () =>
+        void handleRotate(req, res, "POST", "", undefined, () =>
           Promise.resolve({ ok: false, error: "No existing self-service account." }),
         ),
       async (base) => {
@@ -133,7 +135,9 @@ describe("handleRotate", () => {
   it("carries the ?key= password through both the form action and result links", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "GET", "secret123", () => Promise.reject(new Error("unused"))),
+        void handleRotate(req, res, "GET", "secret123", undefined, () =>
+          Promise.reject(new Error("unused")),
+        ),
       async (base) => {
         const res = await fetch(base);
         expect(await res.text()).toContain("key=secret123");

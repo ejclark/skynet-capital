@@ -93,7 +93,7 @@
   "src/server/dashboard-server.ts": 800,
   "src/server/feedback-service.ts": 114,
   "src/server/observatory-hub.ts": 51,
-  "src/server/participant-service.ts": 219,
+  "src/server/participant-service.ts": 236,
   "src/server/persona-classes.ts": 32,
   "src/server/resolve-port.ts": 11,
   "src/server/sse.ts": 14,

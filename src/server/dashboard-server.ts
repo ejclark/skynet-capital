@@ -258,7 +258,7 @@ async function serveAuthorizedRoute(
     res.end(shellDocument("Compare — Skynet Capital", body));
     return;
   }
-  if (await trySelfServiceRoute(req, res, path, url, config)) {
+  if (await trySelfServiceRoute(req, res, path, url, config, session)) {
     return;
   }
   if (path === "/feedback") {
@@ -292,13 +292,29 @@ async function trySelfServiceRoute(
   path: string,
   url: string,
   config: DashboardServerConfig,
+  session: Session | undefined,
 ): Promise<boolean> {
   if (path === "/add" && config.addParticipant) {
     await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
     return true;
   }
   if (path === "/rotate" && config.rotateCredentials) {
-    await handleRotate(req, res, req.method ?? "GET", keyOf(url), config.rotateCredentials);
+    // Who the signed-in session resolves to, when OAuth is configured — the same identity link
+    // "isSelf"/nav highlighting already uses. Passed through so rotateCredentials can refuse to
+    // let one authed member silently redirect ANOTHER member's displayed account to credentials
+    // the member supplies themselves (see docs/LESSONS.md, 2026-08-11: the whole point of this
+    // route is fixing YOUR OWN regenerated key, not reassigning someone else's identity).
+    const requesterId = config.auth
+      ? resolveCurrentId(session, config.hub.getState().participants)
+      : undefined;
+    await handleRotate(
+      req,
+      res,
+      req.method ?? "GET",
+      keyOf(url),
+      requesterId,
+      config.rotateCredentials,
+    );
     return true;
   }
   return false;

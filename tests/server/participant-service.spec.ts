@@ -299,4 +299,73 @@ describe("ParticipantService.rotateCredentials", () => {
 
     expect(result.ok).toBe(false);
   });
+
+  describe("ownership check (2026-08-11: rotate must not let one member hijack another's account)", () => {
+    const humanExisting: StoredParticipant = {
+      id: "human-uncle_joe",
+      displayName: "Uncle Joe",
+      kind: "human",
+      credentials: { apiKey: "old-key", apiSecret: "old-secret" },
+    };
+
+    it("refuses a human target when the requester resolves to a DIFFERENT id", async () => {
+      const store = new MemStore();
+      store.items = [humanExisting];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "human-uncle_joe",
+        apiKey: "attacker-key",
+        apiSecret: "attacker-secret",
+        requesterId: "human-someone_else",
+      });
+
+      expect(result.ok).toBe(false);
+      expect(store.items[0]?.credentials).toEqual(humanExisting.credentials);
+    });
+
+    it("allows a human target when the requester resolves to THAT SAME id", async () => {
+      const store = new MemStore();
+      store.items = [humanExisting];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "human-uncle_joe",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+        requesterId: "human-uncle_joe",
+      });
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("does not enforce the check when requesterId is absent — no OAuth configured", async () => {
+      const store = new MemStore();
+      store.items = [humanExisting];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "human-uncle_joe",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+      });
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("does not enforce the check against a bot target — bots have no session identity", async () => {
+      const store = new MemStore();
+      store.items = [existing]; // kind: "bot"
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "day-trader",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+        requesterId: "human-someone_else",
+      });
+
+      expect(result.ok).toBe(true);
+    });
+  });
 });

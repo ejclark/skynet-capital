@@ -76,6 +76,7 @@ export async function handleRotate(
   res: ServerResponse,
   method: string,
   key: string,
+  requesterId: string | undefined,
   rotateCredentials: (input: RotateCredentialsInput) => Promise<RotateResult>,
 ): Promise<void> {
   await handleSelfServiceForm(
@@ -88,6 +89,7 @@ export async function handleRotate(
         id: form.get("id") ?? "",
         apiKey: form.get("apiKey") ?? "",
         apiSecret: form.get("apiSecret") ?? "",
+        requesterId,
       }),
     (result) => rotateResultHtml(result, key),
   );

@@ -29,6 +29,15 @@ export interface RotateCredentialsInput {
   readonly id: string;
   readonly apiKey: string;
   readonly apiSecret: string;
+  /**
+   * Who the caller's own session resolves to (undefined when OAuth isn't configured, or the
+   * caller's session couldn't be linked to any board participant). Enforced against a HUMAN
+   * target: a human account may only be rotated by that same resolved identity, so one authed
+   * member can't redirect ANOTHER named member's displayed account to credentials of the
+   * member's own choosing. Not enforced for bot targets — bots have no session identity of
+   * their own to match against (see the caller in dashboard-server.ts for the full rationale).
+   */
+  readonly requesterId?: string;
 }
 
 export type RotateResult =
@@ -153,6 +162,14 @@ export class ParticipantService {
         ok: false,
         error: `No existing self-service account named "${id}" — this rotates a key, it doesn't add a new account.`,
       };
+    }
+    // Refuse to let one authed member redirect a DIFFERENT named human's account to
+    // credentials of the member's own choosing — this rotates YOUR key, not anyone else's.
+    // Not enforced for bots (no session identity exists to check against) or when the caller
+    // has no resolvable identity at all (OAuth not configured — the password gate is the only
+    // boundary in that mode, matching every other route's trust level there).
+    if (existing.kind === "human" && input.requesterId !== undefined && input.requesterId !== id) {
+      return { ok: false, error: "You can only rotate your own account's credentials." };
     }
 
     const participant: Participant = {
