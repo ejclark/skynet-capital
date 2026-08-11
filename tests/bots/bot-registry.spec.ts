@@ -41,3 +41,60 @@ describe("loadBots", () => {
     expect(bots[0]?.credentials.baseUrl).toBe("https://example.test");
   });
 });
+
+describe("when a persona has no dedicated account but a shared one exists", () => {
+  const personas = [{ id: "prospector", name: "The Prospector", thesis: "t", decide: () => [] }];
+
+  it("borrows the shared account rather than demanding a brand-new brokerage account", () => {
+    const { bots, missing, sharedAccount } = loadBots(personas, {
+      SKYNET_BOT_KEY: "shared-key",
+      SKYNET_BOT_SECRET: "shared-secret",
+    });
+
+    expect(missing).toEqual([]);
+    expect(sharedAccount).toEqual(["prospector"]);
+    expect(bots[0]?.credentials).toMatchObject({
+      apiKey: "shared-key",
+      apiSecret: "shared-secret",
+    });
+  });
+
+  it("still prefers its own account when it has one", () => {
+    const { bots, sharedAccount } = loadBots(personas, {
+      SKYNET_BOT_PROSPECTOR_KEY: "own-key",
+      SKYNET_BOT_PROSPECTOR_SECRET: "own-secret",
+      SKYNET_BOT_KEY: "shared-key",
+      SKYNET_BOT_SECRET: "shared-secret",
+    });
+
+    expect(sharedAccount).toEqual([]);
+    expect(bots[0]?.credentials).toMatchObject({ apiKey: "own-key" });
+  });
+
+  it("refuses to seat TWO personas on one account — merged positions are a broken experiment", () => {
+    const two = [...personas, { id: "day-trader", name: "DT", thesis: "t", decide: () => [] }];
+
+    const { bots, missing, sharedAccount } = loadBots(two, {
+      SKYNET_BOT_KEY: "shared-key",
+      SKYNET_BOT_SECRET: "shared-secret",
+    });
+
+    expect(bots).toEqual([]);
+    expect(sharedAccount).toEqual([]);
+    expect(missing).toEqual(expect.arrayContaining(["prospector", "day-trader"]));
+  });
+
+  it("lets one persona keep its own account while another borrows the shared one", () => {
+    const two = [...personas, { id: "day-trader", name: "DT", thesis: "t", decide: () => [] }];
+
+    const { bots, sharedAccount } = loadBots(two, {
+      SKYNET_BOT_DAY_TRADER_KEY: "dt-key",
+      SKYNET_BOT_DAY_TRADER_SECRET: "dt-secret",
+      SKYNET_BOT_KEY: "shared-key",
+      SKYNET_BOT_SECRET: "shared-secret",
+    });
+
+    expect(sharedAccount).toEqual(["prospector"]);
+    expect(bots).toHaveLength(2);
+  });
+});
