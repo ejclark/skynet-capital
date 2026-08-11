@@ -39,25 +39,25 @@
     "dev:tower": "node scripts/dev-tower.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.6",
+    "@biomejs/biome": "2.5.7",
     "@commitlint/cli": "21.2.1",
     "@commitlint/config-conventional": "21.2.0",
-    "@rstest/core": "0.11.5",
+    "@rstest/core": "0.11.6",
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
-    "@types/node": "26.1.2",
-    "dependency-cruiser": "18.1.0",
+    "@types/node": "26.2.0",
+    "dependency-cruiser": "18.1.1",
     "esbuild": "0.28.1",
     "husky": "9.1.7",
     "jscpd": "5.0.14",
-    "knip": "6.31.0",
+    "knip": "6.32.0",
     "npm-run-all2": "9.0.3",
     "playwright-core": "1.62.1",
-    "semantic-release": "25.0.8",
-    "tsx": "4.23.1",
+    "semantic-release": "25.0.9",
+    "tsx": "4.23.11",
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "@babylonjs/core": "9.19.0"
+    "@babylonjs/core": "9.20.0"
   }
 }
