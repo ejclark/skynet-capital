@@ -18,6 +18,42 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Metrics as the gamification substrate — multi-axis ladders + per-strategy effectiveness
+Gamification is *all about metrics*: find the stats worth measuring, then let each one be its own way
+onto the leaderboard. Eric's framing, and it sharpens THE-GAME.md's two-ledger idea into something
+more extensible.
+
+- **Two axes, deliberately different games.** *Percentage* isolates raw return from size — it removes
+  capital as an advantage, so anyone can compete and a small account can top the board. *Raw dollars*
+  requires calculated risk and real capital at stake. Neither is "the" leaderboard; both are ladders.
+  This directly answers the design's founding problem (a single percent-return board produces one
+  winner and several people who stop opening the tab).
+  - **Flaw to design around:** a percentage-only ladder is trivially gamed by tiny stakes — a $50
+    position up 20% beats a $50k position up 3%. Needs a minimum-stake floor, or a capital-weighted
+    tiebreak, before it ships as a ranking.
+- **Per-strategy effectiveness as a repeatable template.** "How well does this member run the wheel?"
+  generalizes: for any strategy S, the same metric family — times attempted, win rate, average %,
+  total $, best single, consistency (drawdown / variance), and % per unit of capital-at-risk. One
+  template, many strategies, and the dashboard of insights falls out of it.
+- **The detection problem, and the option Eric didn't name.** Measuring "effectiveness of strategy S"
+  requires knowing which trades *belong* to S. Two obvious paths: route all execution through our
+  interface (heavy), or infer strategy from raw Alpaca fills (Eric's read: more effort than it's
+  worth, and he's right — inferring a wheel from bare fills is genuinely hard). **The cheap third
+  path is tagging at entry:** a one-line "declare the play" surface where a member says *"opening a
+  wheel on NVDA"* once, and every subsequent fill on that symbol links to the declaration. ~1 click
+  per play, not per trade — and it is the **same write surface** THE-GAME.md already needs for the
+  Sunday Council thesis / called-it scoring. The detection problem and the thesis-capture feature are
+  one feature; building either alone is the waste.
+- **Bots need no detection at all** — every bot order already carries `reason` + a persona id, so
+  per-strategy dashboards can ship for bots *immediately*. Do not block the whole metrics layer on
+  solving human-trade attribution; ship bot-side, add humans via opt-in tagging.
+- **Honest blocker for the wheel specifically:** the wheel is an options strategy and `OrderIntent`
+  is equity-market-orders-only. Wheel effectiveness is not measurable today at any effort — it needs
+  the options order path first.
+_(src: Eric · while: thinking through gamification metrics — "percentage focuses on/isolates raw
+return on investment without the amount/risk factor at stake; raw amount requires more calculated
+risk")_
+
 ### Candlestick swing day-trading persona — high volume, lower margin
 A second experiment persona alongside the Prospector: read intraday candles, enter on a swing, exit
 on a swing in our favor. Deliberately **high-turnover / thin-margin**, which is the opposite shape to
