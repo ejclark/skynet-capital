@@ -18,6 +18,17 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Two gate-design findings from the deploy doom loop (see LESSONS.md 2026-08-11)
+- **A gate must never gate the path it measures.** The unlearned-incident gate counts failed `main`
+  runs *and* ran inside the job whose failure it counts, so one red deploy fed itself into 28. Any
+  metric-over-history gate needs a structural rule: it reports on the path it measures, it does not
+  block it. Candidate mechanism — a `reporting-only` class of gate that prints and never exits 1, or
+  moving the incident scan to a scheduled run rather than the test suite.
+- **Nothing alerts on a red `main` after a green PR.** Auto-merge reports the PR check; the post-merge
+  deploy failure is silent unless somebody looks. Three merges deep before Eric spotted it by eye.
+  The cheapest fix is probably a notification on `main` failure, not another gate.
+_(src: Claude · while: diagnosing three consecutive failed releases)_
+
 ### Metrics as the gamification substrate — multi-axis ladders + per-strategy effectiveness
 Gamification is *all about metrics*: find the stats worth measuring, then let each one be its own way
 onto the leaderboard. Eric's framing, and it sharpens THE-GAME.md's two-ledger idea into something
