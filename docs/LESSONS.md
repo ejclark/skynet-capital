@@ -27,6 +27,37 @@ it. Prevention ranks, best first:
 
 ---
 
+### A regenerated Alpaca key landed in the wrong GitHub secret slot, and there was no way to fix it right
+- **SHA:** 9e748be   **DATE:** 2026-08-11   **STATUS:** closed
+- **SIGNAL:** Eric noticed a self-service bot ("JARVIS") showing "Account unreachable," and separately
+  suspected he'd pasted its just-regenerated key into Sauron's `BOT_SAURON_ALPACA_KEY` GitHub secret by
+  hand while trying to fix it. No mechanism caught either half — an invalid key fails loudly, but a key
+  merely pointed at the WRONG account authenticates fine and would have looked completely healthy.
+  Detection lag: unknown — the wrong-account half was self-reported, not detected, because nothing in
+  the system could have detected it.
+- **ROOT CAUSE:** two compounding gaps. (1) No mechanism anywhere compared *which real Alpaca account*
+  two credential pairs resolved to — only whether each pair was individually valid. Two participants
+  silently sharing one account (positions merging, P/L unattributable, each sizing orders against cash
+  the other spends) was invisible by construction. (2) There was no sanctioned way to update a stored
+  credential after regenerating it — `addParticipant` refuses a duplicate id outright — so a regenerated
+  key had nowhere honest to go, which is very plausibly *why* it got pasted into an unrelated secret slot
+  instead.
+- **PREVENTION:** gate + script. `account-collisions.ts`/`account-guard.ts` capture each participant's
+  real Alpaca `account.id` and refuse to trade (autonomous path) or silently display (dashboard boot,
+  loud `console.error`) any pair that resolves to the same one — the confirmed-collision case, never
+  triggered on merely-missing information. `participant-service.ts` gained `rotateCredentials` + a
+  `/rotate` route: the sanctioned path for "I regenerated my key," verified against Alpaca before
+  anything stored changes, so the next regeneration has somewhere honest to go.
+- **SIDE QUESTS:** one, self-caught during `/security-review` on the fix itself (SHA d2e0bdd) — the
+  first cut of `/rotate` checked only that the target id existed, not that the caller had any right to
+  touch it. Ids are fully public (persona names, displayName-derived human slugs on every profile URL),
+  so any authed member could have redirected ANOTHER named participant's account to credentials of their
+  own choosing. Fixed in the same PR before it shipped: the caller's OAuth-resolved identity (the same
+  `resolveCurrentId` "isSelf" nav already uses) must match the target for a human account. Left
+  deliberately unenforced for bot targets (no session identity to check) and password-mode (matches that
+  mode's existing all-trusted model everywhere else) — both are recorded as known, bounded residual gaps
+  rather than silently declared closed.
+
 ### The deploy doom loop — a gate that counted main failures ran inside the job it counted
 - **SHA:** 615a269   **DATE:** 2026-08-11   **STATUS:** closed
 - **SIGNAL:** Eric noticed "the publish/release event is failing." Three consecutive pushes to `main`
