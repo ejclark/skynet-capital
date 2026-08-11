@@ -14,10 +14,10 @@ class FakeTransport implements AlpacaTradingTransport {
   }
 }
 
-const healthy = (cash: string, equity: string): Record<string, JsonResponse> => ({
+const healthy = (cash: string, equity: string, accountId = "a"): Record<string, JsonResponse> => ({
   "/v2/account": {
     status: 200,
-    body: { id: "a", cash, portfolio_value: equity, status: "ACTIVE" },
+    body: { id: accountId, cash, portfolio_value: equity, status: "ACTIVE" },
   },
   "/v2/positions": {
     status: 200,
@@ -42,8 +42,8 @@ const human: Participant = {
 describe("buildDashboardData", () => {
   it("aggregates bots and humans into one dated view", async () => {
     const clients: Record<string, AlpacaTradingClient> = {
-      "news-fader": new AlpacaTradingClient(new FakeTransport(healthy("1000", "5000"))),
-      eric: new AlpacaTradingClient(new FakeTransport(healthy("2000", "9000"))),
+      "news-fader": new AlpacaTradingClient(new FakeTransport(healthy("1000", "5000", "acct-1"))),
+      eric: new AlpacaTradingClient(new FakeTransport(healthy("2000", "9000", "acct-2"))),
     };
 
     const data = await buildDashboardData([bot, human], {
@@ -62,6 +62,23 @@ describe("buildDashboardData", () => {
       avgPrice: 42,
       marketValue: 4300,
     });
+    expect(data.collisions).toEqual([]);
+  });
+
+  it("flags two participants that resolve to the same Alpaca account", async () => {
+    // The incident this guards against: two DIFFERENT credential pairs that happen to point at
+    // the SAME underlying account — both authenticate fine, so nothing else would notice.
+    const clients: Record<string, AlpacaTradingClient> = {
+      "news-fader": new AlpacaTradingClient(new FakeTransport(healthy("1000", "5000", "acct-1"))),
+      eric: new AlpacaTradingClient(new FakeTransport(healthy("2000", "9000", "acct-1"))),
+    };
+
+    const data = await buildDashboardData([bot, human], {
+      clientFactory: (p) => clients[p.id] as AlpacaTradingClient,
+      now: () => new Date("2026-07-24T15:00:00Z"),
+    });
+
+    expect(data.collisions).toEqual([{ accountId: "acct-1", ids: ["news-fader", "eric"] }]);
   });
 
   it("degrades a failing account to an error row instead of failing the whole build", async () => {

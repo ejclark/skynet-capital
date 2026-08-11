@@ -16,6 +16,7 @@ const p = (over: Partial<ParticipantSnapshot>): ParticipantSnapshot => ({
 const data = (participants: ParticipantSnapshot[]): DashboardData => ({
   generatedAt: "2026-07-26T15:00:00.000Z",
   participants,
+  collisions: [],
 });
 
 describe("sampleAll", () => {

@@ -63,6 +63,16 @@ async function main(): Promise<void> {
     history,
     await buildDashboardData(roster, { clientFactory: dataSource.clientFactory }),
   );
+  // Collision check — see docs/LESSONS.md (2026-08-11). Two participants that resolve to the
+  // SAME Alpaca account look completely healthy individually (both authenticate); nothing else
+  // would ever notice. This must be checked at boot, every boot, because it's exactly the shape
+  // of mistake a credential rotation can silently introduce.
+  for (const collision of initial.collisions) {
+    console.error(
+      `[collision] ${collision.ids.join(" and ")} are BOTH pointed at Alpaca account ${collision.accountId} — positions/P&L will merge and be unattributable. Fix the credentials before trusting either account's numbers.`,
+    );
+  }
+
   const hub = new ObservatoryHub(initial);
   const ceremonies = new CeremonyChannel();
 
@@ -132,6 +142,7 @@ async function main(): Promise<void> {
     password,
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
+    rotateCredentials: (input) => service.rotateCredentials(input),
     ...(feedback ? { submitFeedback: feedback } : {}),
     readHistory: (id) => history.list(id),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),

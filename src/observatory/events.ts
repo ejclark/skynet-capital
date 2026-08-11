@@ -20,6 +20,15 @@ export type ObservatoryEvent =
       readonly at: string;
     }
   | {
+      /**
+       * An existing self-service account's credentials were rotated — replace its snapshot
+       * in place (same array position, same id) rather than appending a duplicate.
+       */
+      readonly type: "participant_updated";
+      readonly participant: ParticipantSnapshot;
+      readonly at: string;
+    }
+  | {
       readonly type: "fill";
       readonly participantId: string;
       readonly symbol: string;

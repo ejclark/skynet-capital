@@ -7,7 +7,7 @@ import type { FeedbackInput, FeedbackResult } from "../../src/server/feedback-se
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "../../src/server/participant-service.js";
 
-const board = (): DashboardData => ({ generatedAt: "t", participants: [] });
+const board = (): DashboardData => ({ generatedAt: "t", participants: [], collisions: [] });
 
 async function withServer(
   config: Parameters<typeof createDashboardServer>[0],
@@ -106,6 +106,7 @@ describe("dashboard-server /pulse", () => {
         snap("Bot-1", "bot", 5_500_000),
         snap("Bot-Down", "bot", 0, "unreachable"), // excluded: errored account
       ],
+      collisions: [],
     };
     await withServer({ hub: new ObservatoryHub(data), ...(auth ? { auth } : {}) }, async (base) => {
       const res = await fetch(`${base}/pulse`); // no session cookie — must still work
@@ -295,6 +296,7 @@ describe("dashboard-server /u/:id performance history", () => {
         positions: [],
       },
     ],
+    collisions: [],
   });
 
   it("lights up the sparkline when readHistory returns samples", async () => {

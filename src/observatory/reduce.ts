@@ -1,3 +1,4 @@
+import { findAccountCollisions } from "./account-collisions.js";
 import type { DashboardData } from "./dashboard-data.js";
 import type { ObservatoryEvent } from "./events.js";
 import type { ParticipantSnapshot, PositionView } from "./participant-snapshot.js";
@@ -12,11 +13,33 @@ export function reduceObservatory(state: DashboardData, event: ObservatoryEvent)
   switch (event.type) {
     case "snapshot":
       return event.data;
-    case "participant_added":
+    case "participant_added": {
       if (state.participants.some((p) => p.id === event.participant.id)) {
         return state;
       }
-      return { generatedAt: event.at, participants: [...state.participants, event.participant] };
+      const participants = [...state.participants, event.participant];
+      // A newly-joining account is the one moment a collision can newly appear — an existing pair
+      // never silently starts sharing an account mid-session, so this is the only branch that
+      // needs to recompute rather than carry `state.collisions` forward unchanged.
+      return {
+        generatedAt: event.at,
+        participants,
+        collisions: findAccountCollisions(participants),
+      };
+    }
+    case "participant_updated": {
+      const participants = state.participants.map((p) =>
+        p.id === event.participant.id ? event.participant : p,
+      );
+      // A rotated credential can only ever point the account at a NEW accountId, never make an
+      // existing pair start colliding out of nowhere — but it's cheap enough to just recompute
+      // rather than lean on that assumption staying true forever.
+      return {
+        generatedAt: event.at,
+        participants,
+        collisions: findAccountCollisions(participants),
+      };
+    }
     case "price":
       return applyToParticipants(state, event.at, (p) => applyPrice(p, event.symbol, event.price));
     case "fill":
@@ -36,7 +59,8 @@ function applyToParticipants(
   if (unchanged) {
     return state;
   }
-  return { generatedAt: at, participants };
+  // Price/fill events change balances, never account identity, so the collision set is unchanged.
+  return { generatedAt: at, participants, collisions: state.collisions };
 }
 
 /** Re-mark equity as cash plus the marked value of every position. */

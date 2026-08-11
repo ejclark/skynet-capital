@@ -1,11 +1,14 @@
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { Participant } from "../participants/participant.js";
+import { type AccountCollision, findAccountCollisions } from "./account-collisions.js";
 import { buildParticipantSnapshot, type ParticipantSnapshot } from "./participant-snapshot.js";
 
 /** The whole centralized view the dashboard renders. */
 export interface DashboardData {
   readonly generatedAt: string;
   readonly participants: ParticipantSnapshot[];
+  /** Two-or-more participants that resolved to the SAME Alpaca account — see account-collisions.ts. */
+  readonly collisions: AccountCollision[];
 }
 
 /** Builds the trading client for a participant. Injected so tests use fakes, no network. */
@@ -33,5 +36,9 @@ export async function buildDashboardData(
     ),
   );
   const now = options.now ?? (() => new Date());
-  return { generatedAt: now().toISOString(), participants: snapshots };
+  return {
+    generatedAt: now().toISOString(),
+    participants: snapshots,
+    collisions: findAccountCollisions(snapshots),
+  };
 }

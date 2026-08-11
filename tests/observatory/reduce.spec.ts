@@ -23,6 +23,7 @@ const baseState = (): DashboardData => ({
       positions: [],
     },
   ],
+  collisions: [],
 });
 
 const fold = (events: ObservatoryEvent[]): DashboardData =>
@@ -30,7 +31,7 @@ const fold = (events: ObservatoryEvent[]): DashboardData =>
 
 describe("reduceObservatory", () => {
   it("snapshot replaces the whole state", () => {
-    const replacement: DashboardData = { generatedAt: "later", participants: [] };
+    const replacement: DashboardData = { generatedAt: "later", participants: [], collisions: [] };
     expect(reduceObservatory(baseState(), { type: "snapshot", data: replacement })).toBe(
       replacement,
     );

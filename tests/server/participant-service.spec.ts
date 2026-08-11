@@ -37,7 +37,7 @@ class RejectingTransport implements AlpacaTradingTransport {
   }
 }
 
-const emptyBoard = (): DashboardData => ({ generatedAt: "t0", participants: [] });
+const emptyBoard = (): DashboardData => ({ generatedAt: "t0", participants: [], collisions: [] });
 
 const okFactory = () =>
   new AlpacaTradingClient(
@@ -163,6 +163,140 @@ describe("ParticipantService.addParticipant", () => {
       apiSecret: "s",
       kind: "bot",
     });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects a timezone outside the controlled list — a raw POST bypassing the <select>", async () => {
+    const { service } = makeService({});
+    const result = await service.addParticipant({
+      displayName: "Uncle Joe",
+      apiKey: "k",
+      apiSecret: "s",
+      timezone: "Not/AZone",
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("accepts an offered timezone", async () => {
+    const { service } = makeService({});
+    const result = await service.addParticipant({
+      displayName: "Uncle Joe",
+      apiKey: "k",
+      apiSecret: "s",
+      timezone: "America/Chicago",
+    });
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("ParticipantService.rotateCredentials", () => {
+  const existing: StoredParticipant = {
+    id: "day-trader",
+    displayName: "JARVIS",
+    kind: "bot",
+    personaId: "day-trader",
+    credentials: { apiKey: "old-key", apiSecret: "old-secret" },
+  };
+
+  // The gap this closes (docs/LESSONS.md, 2026-08-11): a regenerated key previously had no
+  // sanctioned home, since addParticipant refuses a duplicate id outright.
+  it("refuses to rotate an id that was never added — this is not a back door around addParticipant", async () => {
+    const { service, store, hub } = makeService({});
+    const result = await service.rotateCredentials({
+      id: "day-trader",
+      apiKey: "new-key",
+      apiSecret: "new-secret",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(store.items).toHaveLength(0);
+    expect(hub.getState().participants).toHaveLength(0);
+  });
+
+  it("swaps only the credentials, preserving displayName/kind/personaId", async () => {
+    const store = new MemStore();
+    store.items = [existing];
+    // The board's live state is rehydrated from the store at boot (serve-dashboard.ts) — a
+    // rotated participant is already ON the board, not just in the store, so seed both here.
+    const boardHub = new ObservatoryHub({
+      generatedAt: "t0",
+      participants: [
+        {
+          id: "day-trader",
+          displayName: "JARVIS",
+          kind: "bot",
+          personaId: "day-trader",
+          cash: 900,
+          equity: 1000,
+          positions: [],
+        },
+      ],
+      collisions: [],
+    });
+    const { service, hub } = makeService({ store, hub: boardHub });
+
+    const result = await service.rotateCredentials({
+      id: "day-trader",
+      apiKey: "new-key",
+      apiSecret: "new-secret",
+    });
+
+    expect(result).toEqual({ ok: true, id: "day-trader", displayName: "JARVIS" });
+    const stored = store.items.find((p) => p.id === "day-trader");
+    expect(stored?.credentials).toEqual({ apiKey: "new-key", apiSecret: "new-secret" });
+    expect(stored?.displayName).toBe("JARVIS");
+    expect(stored?.personaId).toBe("day-trader");
+    // Same array position, new balances — not appended as a second entry.
+    expect(hub.getState().participants).toHaveLength(1);
+  });
+
+  it("verifies the NEW key against Alpaca before storing anything", async () => {
+    const store = new MemStore();
+    store.items = [existing];
+    const { service, hub } = makeService({
+      store,
+      factory: () => new AlpacaTradingClient(new RejectingTransport()),
+    });
+
+    const result = await service.rotateCredentials({
+      id: "day-trader",
+      apiKey: "bad-key",
+      apiSecret: "bad-secret",
+    });
+
+    expect(result.ok).toBe(false);
+    // The old, working credentials are untouched.
+    expect(store.items[0]?.credentials).toEqual(existing.credentials);
+    expect(hub.getState().participants).toHaveLength(0);
+  });
+
+  it("reopens the account's stream with the new credentials", async () => {
+    const store = new MemStore();
+    store.items = [existing];
+    const { service, started } = makeService({ store });
+
+    await service.rotateCredentials({
+      id: "day-trader",
+      apiKey: "new-key",
+      apiSecret: "new-secret",
+    });
+
+    expect(started).toHaveLength(1);
+    expect(started[0]?.credentials).toEqual({ apiKey: "new-key", apiSecret: "new-secret" });
+  });
+
+  it("refuses onboarding when the store cannot encrypt", async () => {
+    const store = new MemStore();
+    store.items = [existing];
+    store.secure = false;
+    const { service } = makeService({ store });
+
+    const result = await service.rotateCredentials({
+      id: "day-trader",
+      apiKey: "new-key",
+      apiSecret: "new-secret",
+    });
+
     expect(result.ok).toBe(false);
   });
 });
