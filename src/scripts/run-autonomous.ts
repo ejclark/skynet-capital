@@ -135,9 +135,16 @@ function runOffline(): void {
 
 async function runLive(): Promise<void> {
   const enabled = new Set(enabledIds());
-  const bots = loadBots(createDefaultPersonas(), process.env).bots.filter((b) =>
-    enabled.has(b.persona.id),
-  );
+  // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
+  // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
+  // registry would also have qualified.
+  const roster = createDefaultPersonas().filter((p) => enabled.has(p.id));
+  const { bots, sharedAccount } = loadBots(roster, process.env);
+  for (const id of sharedAccount) {
+    console.warn(
+      `[creds] ${id} is trading the SHARED account (SKYNET_BOT_KEY) — its P/L is not separable from anything else already on that account.`,
+    );
+  }
   if (bots.length === 0) {
     // No credentials yet. On a hosted always-on process, exiting would crash-loop the machine before
     // Eric has set the bot secrets — so idle quietly instead, staying up and ready for a redeploy.
