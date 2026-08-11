@@ -55,6 +55,14 @@ export class ParticipantService {
   }
 
   async addParticipant(input: AddParticipantInput): Promise<AddResult> {
+    // Checked first, before any credential is touched: if we cannot encrypt it, we do not want it.
+    if (!this.deps.store.canStoreSecurely()) {
+      return {
+        ok: false,
+        error:
+          "Onboarding is disabled: this server has no credential encryption key configured. Ask the host to set SKYNET_STORE_SECRET.",
+      };
+    }
     const displayName = input.displayName?.trim();
     if (!displayName) {
       return { ok: false, error: "A display name is required." };

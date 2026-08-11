@@ -15,6 +15,12 @@ export interface ParticipantStore {
   load(): StoredParticipant[];
   add(participant: StoredParticipant): void;
   has(id: string): boolean;
+  /**
+   * False when the store has no encryption key and therefore cannot accept credentials.
+   * Callers check this to refuse onboarding *before* asking anyone for a key, rather than
+   * letting `add()` throw after the fact.
+   */
+  canStoreSecurely(): boolean;
 }
 
 interface Envelope {
@@ -29,10 +35,14 @@ interface Envelope {
 }
 
 /**
- * File-backed participant store. When `SKYNET_STORE_SECRET` is set, the on-disk blob is
- * encrypted with AES-256-GCM (the secret keys other people's paper credentials, so it is
- * never stored in the clear on a shared host). Without a secret it falls back to plaintext
- * and the caller is expected to have warned — acceptable only for localhost.
+ * File-backed participant store. The on-disk blob is encrypted with AES-256-GCM using
+ * `SKYNET_STORE_SECRET` — the secret keys *other people's* credentials, so they are never
+ * written in the clear on a shared host.
+ *
+ * **Fail closed:** without a secret, `add()` throws rather than degrading to plaintext. A
+ * missing key is a misconfiguration, and the cost of guessing wrong is someone else's
+ * credentials sitting readable on disk — so the write is refused, not warned about. Reads
+ * still work unencrypted so an existing local file is never bricked by the upgrade.
  *
  * Reads/writes the whole (small) file per operation; the roster is a handful of accounts,
  * not a database.
@@ -60,7 +70,16 @@ export class FileParticipantStore implements ParticipantStore {
     return this.load().some((p) => p.id === id);
   }
 
+  canStoreSecurely(): boolean {
+    return this.key !== undefined;
+  }
+
   add(participant: StoredParticipant): void {
+    if (!this.key) {
+      throw new Error(
+        "refusing to store credentials unencrypted — set SKYNET_STORE_SECRET to enable onboarding",
+      );
+    }
     const next = [...this.load().filter((p) => p.id !== participant.id), participant];
     mkdirSync(dirname(this.path), { recursive: true });
     writeFileSync(this.path, JSON.stringify(this.envelope(JSON.stringify(next))));

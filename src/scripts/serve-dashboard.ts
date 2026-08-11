@@ -116,7 +116,7 @@ async function main(): Promise<void> {
   }
   if (!process.env.SKYNET_STORE_SECRET) {
     console.warn(
-      "⚠️  No SKYNET_STORE_SECRET set — self-service credentials are stored UNENCRYPTED. Set it before exposing /add publicly.",
+      "⚠️  No SKYNET_STORE_SECRET set — self-service onboarding (/add) is DISABLED so credentials are never written unencrypted. Set it to enable onboarding.",
     );
   }
 
