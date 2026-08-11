@@ -27,6 +27,29 @@ it. Prevention ranks, best first:
 
 ---
 
+### The deploy doom loop — a gate that counted main failures ran inside the job it counted
+- **SHA:** 615a269   **DATE:** 2026-08-11   **STATUS:** closed
+- **SIGNAL:** Eric noticed "the publish/release event is failing." Three consecutive pushes to `main`
+  had failed while every PR branch passed green — the asymmetry nobody was watching, because
+  auto-merge reports the PR check, not the post-merge deploy. Detection lag: ~3 merges.
+- **ROOT CAUSE:** two mechanisms compounding. (1) `npm ci` in the deploy job ran `prepare: husky`,
+  installing git hooks **in CI**; semantic-release then pushed, the **pre-push hook fired**, and it
+  re-ran the entire suite — exactly what that job's own comment swears never happens ("this path
+  never re-runs the suite — it only ships"). (2) The suite includes the unlearned-incident gate,
+  which counts *failed `main` runs*. So the gate ran inside the job whose failure it counts: one
+  failure became an unlearned incident, which failed the next deploy, which became another incident.
+  Self-amplifying — 28 and climbing. It only bit on `main` because the pre-push hook inherits the
+  step's `GITHUB_TOKEN`; on PRs the same scan 401s and no-ops, which is why PR CI stayed green and
+  hid it.
+- **PREVENTION:** script — `prepare` is now `test -n "$CI" || husky`, so CI never installs hooks and
+  the deploy path cannot re-run the suite. This is a **recurrence**: `docs/COACHES.md` already records
+  "npm's `prepare` has more callers than developers (the Dockerfile's `npm ci`)" from a previous
+  outage of the same shape. The lesson had been written and was still not enough, because it lived as
+  doctrine rather than as a gate — that is the real finding, and the reason this one is mechanized.
+- **SIDE QUESTS:** two, → docs/IDEAS.md — (a) a gate whose own failure mode is self-amplifying should
+  be structurally forbidden from gating the path it measures; (b) nothing alerts on a red `main` after
+  a green PR auto-merges, which is precisely the blind spot that let this run three deep.
+
 ### The false abstraction — consolidating `clamp` dropped a NaN guard
 - **SHA:** n/a   **DATE:** 2026-07-27   **STATUS:** closed
 - **SIGNAL:** a spec (`expect(svg).not.toContain("NaN")`) went red immediately after the dedupe —

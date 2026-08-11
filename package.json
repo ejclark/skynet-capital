@@ -24,7 +24,7 @@
     "record:session": "tsx src/scripts/record-session.ts",
     "shoot:login": "tsx scripts/shoot-login.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
-    "prepare": "husky",
+    "prepare": "test -n \"$CI\" || husky",
     "arch:scan": "node scripts/arch-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
     "clone:scan": "node scripts/clone-scan.mjs",
