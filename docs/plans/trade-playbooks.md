@@ -1,7 +1,7 @@
 # Plan: trade playbooks + the record of why
 
-**Status:** draft <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
-**Author:** Claude (proposing) · **Date:** 2026-08-11
+**Status:** executing <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
+**Author:** Claude (proposing) · **Date:** 2026-08-11 · **Ready:** 2026-08-12 (Eric)
 
 ## Intent & end-state
 
@@ -141,4 +141,12 @@ run-up, S4 daily round-trips, and others) — check it before proposing any earn
 
 ## Decision log
 
-_(none yet)_
+- **2026-08-12 — Eric flipped draft→ready** (in-session "done"). Execution begins with session A:
+  playbook seam (slice 1), earnings calendar (peer-aware, per the sweep), S2 + E1 as guards
+  (slice 4). Playbooks built dark behind an enablement flag; live enablement stays Eric's.
+- **2026-08-12 — provisional default pending open question 2 (date policy):** date-keyed entries
+  require an IR-confirmed print date; cadence estimates only *widen* the S2 flat window. This is
+  the sweep's recommended safe reading (AVGO's 83–98-day spread can put an estimated entry after
+  the real print); Eric can loosen it by answering the question.
+- **Still open (banked, not guessed):** shorting unlock (S3), MOC/MOO + slippage promotion (S4),
+  G1 live enablement — PR #304 questions 1, 4, 6.
