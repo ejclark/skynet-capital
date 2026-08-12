@@ -38,6 +38,14 @@ observatory. Open question #7 of the energy doc asks Eric whether to build it. _
 need to be pulling on all the threads… identify insights that have yet to be realized by the
 market") · while: AI-energy constraint study, 2026-08-12)_
 
+### Research lab — studies on the site, member-commissioned via the feedback funnel
+Planned: [`plans/research-lab.md`](plans/research-lab.md) (draft, awaiting Eric). The `/research`
+shelf renders `docs/research/*` in the house shell behind the invite gate; a `research` feedback
+kind turns member topics into labelled issues that drive studies through the named sweep
+workflow; published docs credit the requester. Eric intends a Claude-design iteration pass on the
+reading experience later. _(src: Eric ("build a research lab on stock market opportunities for
+everyone to benefit") · while: post-sweep, 2026-08-12)_
+
 ### Special-events calendar — own prints, peer prints, product releases
 A forward event calendar as a system component (the research instruments only look backward, and
 next-print dates are cadence estimates). Track per symbol: its own confirmed earnings dates
