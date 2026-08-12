@@ -1,4 +1,4 @@
-import type { OrderIntent } from "../../src/domain/types.js";
+import type { OrderIntent, PlaybookMode } from "../../src/domain/types.js";
 import { applyGuards } from "../../src/engine/guards.js";
 import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
@@ -72,9 +72,10 @@ describe("applyGuards", () => {
     it("survives a buy being clamped", () => {
       const context = aContext({ EEM: { last: 100 } });
       const portfolio = aPortfolio({ cash: 1_000_000 });
+      const mode: PlaybookMode = "standard";
 
       const [approved] = applyGuards(
-        [{ ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        [{ ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: mode }],
         portfolio,
         context,
         { maxPositionPct: 0.2 },
