@@ -83,6 +83,30 @@ SNDK ~43x). Ride it with the exhaustion tells armed.
   constraint theme is an illusion (measured: eight energy lenses fell together on one headline).
   Cap the sleeve.
 
+## Reaction-asymmetry signals (Eric's additions, 2026-08-12)
+
+Signals read off the *gap between an event's magnitude and the market's reaction to it* —
+complementary to the phase clock, which reads supply-side physics:
+
+- **Systematic underestimation revision.** When a structural number (AI capex) gets revised UP
+  every cycle for years and the market treats each revision as news, the market's model of the
+  magnitude is broken in a persistent, exploitable direction. The tell isn't one announcement —
+  it's the *streak* of same-direction surprises. Honest tape note on the flagship example: the
+  CEG–Microsoft TMI 20-year PPA did move CEG +22% in a day (it was the layer's Phase-2 event) —
+  the muted part was the *narrative* reaction relative to what a 20-year commitment implied,
+  and the layer's full repricing took months. The signal class is real; date it off the tape,
+  not the headlines.
+- **Vendor financing — read it both ways.** NVDA financing its own customers reads bullish
+  ("no better investment than our own demand") *and* is the classic late-cycle tell — Lucent and
+  Nortel vendor-financed their way into 2000. It is the same family as the debt-financed-capex
+  tripwire below: demand increasingly funded by the supply side is demand with a shorter fuse.
+  Track it as a **clock-advancing** signal, not a directional one.
+- **Sell-the-news mechanics.** Volume-driven media means events get pre-traded and faded on
+  print with some regularity. Whether that pattern is *systematically* exploitable (fade
+  magnitude vs. coverage volume, by event class) is an open research question — parked in
+  `../IDEAS.md`; do not trade it before an instrument exists. (The reaction-day fade the sweep
+  validated on MSFT/GOOG is this signal's best-evidenced special case.)
+
 ## Master tripwires
 
 1. **The demand anchor's own capex guidance** (for AI: hyperscaler quarterly calls) — the first

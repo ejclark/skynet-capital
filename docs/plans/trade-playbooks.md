@@ -62,6 +62,12 @@ piece of plumbing on the board, not a detour.
   nobody writes.
 - **Which strategies make the first cut** → S1 (positioning bid) + S2 (never hold the print) only.
   They are long-only, need no new order type, and S2 is the safeguard that makes S1 honest.
+- **Play modes (Eric, 2026-08-12)** → every playbook ships with three parameterizations —
+  **conservative / standard / aggressive** (sizing, entry threshold, stop width) — and a play can
+  be run in any or all modes simultaneously on paper. Besides matching conviction to conditions,
+  this triples the information each window yields: one live window scores three parameter sets,
+  which is exactly what the small-n problem needs. The playbook seam (slice 1) carries `mode`
+  alongside `playbookId` so attribution and per-mode scoring come free.
 
 ## The playbooks, ranked
 
@@ -96,8 +102,11 @@ run-up, S4 daily round-trips, and others) — check it before proposing any earn
 2. **Trade notes end-to-end** — notes on manual + smoke paths too, surfaced in the observatory.
    *Visual — waits for Eric's eye.*
 3. **S1 + S2 as a real playbook** — the earnings calendar (SEC 8-K derived, same source as the
-   study), the D-20/D-5 window, the hold-through-print refusal. *Auto-merge on green; live
-   enablement is Eric's.*
+   study), the D-20/D-5 window, the hold-through-print refusal. The calendar must track **peer
+   prints too**, not just the traded symbol's — the sweep measured why: 8 of 14 of MRVL's "own"
+   pre-print windows contain NVDA's print, with NVDA-sympathy gaps supplying ~70% of those
+   windows' return. A playbook that can't see peer events misattributes its own edge.
+   *Auto-merge on green; live enablement is Eric's.*
 4. **E1 execution rule** — defer non-urgent entries past 10:00 ET. Small, improves everything.
 5. **Slippage instrumentation** — record expected-vs-realized on every fill. This is the input
    that decides S4, and it costs nothing but measurement on fills we are already taking.

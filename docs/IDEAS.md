@@ -38,6 +38,23 @@ observatory. Open question #7 of the energy doc asks Eric whether to build it. _
 need to be pulling on all the threads… identify insights that have yet to be realized by the
 market") · while: AI-energy constraint study, 2026-08-12)_
 
+### Special-events calendar — own prints, peer prints, product releases
+A forward event calendar as a system component (the research instruments only look backward, and
+next-print dates are cadence estimates). Track per symbol: its own confirmed earnings dates
+(IR-sourced — the playbook plan's date-policy question), **peer prints** (measured to matter:
+8/14 of MRVL's pre-print windows contain NVDA's print, supplying ~70% of the return — a playbook
+blind to peer events misattributes its edge), product launches, and sector events (PJM auctions,
+FERC dockets from the energy watch list). Feeds the playbook windows and the watch-indicators
+dashboard. _(src: Eric ("are we tracking special events… NVDA benefits from other tech-adjacent
+companies reporting strong AI usage") · while: post-sweep, 2026-08-12)_
+
+### Sell-the-news study — is the pre-trade-and-fade pattern systematically exploitable?
+Volume-driven media means events get pre-traded and faded on print. Build an instrument (same
+discipline as earnings-cycle.mjs: controls, base rates, red team) measuring fade magnitude vs
+coverage volume by event class, before any trade. The reaction-day fade validated on MSFT/GOOG
+is this signal's best-evidenced special case — the study would test whether it generalizes to
+non-earnings events. _(src: Eric · while: post-sweep, 2026-08-12)_
+
 ### Playbooks — refine strategies, and configure when to apply them
 Eric's operating model for the trading side, and it resolves the "Sauron is inert" tension better
 than loosening his thresholds would: **his reserve works in his favor.** The path is not "make the
