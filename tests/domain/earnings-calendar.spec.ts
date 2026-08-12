@@ -57,11 +57,15 @@ describe("earnings calendar", () => {
   });
 
   describe("the seeded table", () => {
-    it("carries only cadence estimates until IR confirms — no entry claims confirmed yet", () => {
+    it("every entry is well-formed, and confirmed status always cites an IR source", () => {
       expect(UPCOMING_PRINTS.length).toBeGreaterThan(0);
       for (const p of UPCOMING_PRINTS) {
-        expect(p.status).toBe("estimate");
+        expect(["confirmed", "estimate"]).toContain(p.status);
         expect(p.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        if (p.status === "confirmed") {
+          // The date policy's teeth: a confirmed flip must carry its IR provenance.
+          expect(p.source).toMatch(/^IR:/);
+        }
       }
     });
   });

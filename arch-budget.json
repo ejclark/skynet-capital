@@ -21,7 +21,7 @@
   "src/bots/bot-registry.ts": 73,
   "src/bots/bot.ts": 26,
   "src/domain/curriculum.ts": 187,
-  "src/domain/earnings-calendar.ts": 125,
+  "src/domain/earnings-calendar.ts": 131,
   "src/domain/plays.ts": 226,
   "src/domain/portfolio.ts": 35,
   "src/domain/types.ts": 104,
