@@ -35,7 +35,13 @@ export interface EarningsPrint {
  * source when the date is announced; that flip is what unlocks date-keyed playbook entries.
  */
 export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
-  { symbol: "NVDA", date: "2026-08-26", status: "estimate", source: "8-K cadence (house plan)" },
+  {
+    symbol: "NVDA",
+    date: "2026-08-26",
+    status: "confirmed",
+    source:
+      "IR: nvidianews.nvidia.com call notice — results ~1:20pm PT Aug 26 (after the 4pm ET close)",
+  },
   {
     symbol: "MRVL",
     date: "2026-08-27",
