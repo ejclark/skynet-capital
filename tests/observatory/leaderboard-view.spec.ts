@@ -2,7 +2,7 @@ import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import { renderLeaderboardBody } from "../../src/observatory/leaderboard-view.js";
 
 function data(participants: DashboardData["participants"]): DashboardData {
-  return { generatedAt: "2026-07-24T15:30:00.000Z", participants };
+  return { generatedAt: "2026-07-24T15:30:00.000Z", participants, collisions: [] };
 }
 
 describe("renderLeaderboardBody — default equity ranking", () => {

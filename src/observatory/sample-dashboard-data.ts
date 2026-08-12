@@ -74,5 +74,6 @@ export function sampleDashboardData(): DashboardData {
         ],
       },
     ],
+    collisions: [],
   };
 }

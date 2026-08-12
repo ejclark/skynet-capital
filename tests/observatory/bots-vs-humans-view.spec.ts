@@ -12,7 +12,7 @@ function data(
   participants: ParticipantSnapshot[],
   generatedAt = "2026-07-24T15:30:00.000Z",
 ): DashboardData {
-  return { generatedAt, participants };
+  return { generatedAt, participants, collisions: [] };
 }
 
 describe("renderCohortsBody — cohort cards", () => {

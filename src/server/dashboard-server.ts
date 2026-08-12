@@ -21,8 +21,14 @@ import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
-import type { AddParticipantInput, AddResult } from "./participant-service.js";
-import { personaClasses } from "./persona-classes.js";
+import { addShell, PAGE_STYLE, readBody } from "./page-shell.js";
+import type {
+  AddParticipantInput,
+  AddResult,
+  RotateCredentialsInput,
+  RotateResult,
+} from "./participant-service.js";
+import { handleAdd, handleRotate } from "./self-service-forms.js";
 import { sseFrame } from "./sse.js";
 
 export interface DashboardServerConfig {
@@ -42,6 +48,13 @@ export interface DashboardServerConfig {
    * registers a new account. Omit to disable the feature (e.g. offline mode).
    */
   readonly addParticipant?: (input: AddParticipantInput) => Promise<AddResult>;
+  /**
+   * Self-service credential rotation. When provided, `GET /rotate` serves a compact form and
+   * `POST /rotate` swaps an EXISTING account's key/secret in place — the sanctioned path for
+   * "I regenerated my Alpaca key," so it never has to be pasted into the wrong slot elsewhere.
+   * Omit to disable (e.g. offline mode).
+   */
+  readonly rotateCredentials?: (input: RotateCredentialsInput) => Promise<RotateResult>;
   /**
    * Self-service feedback handler. When provided, `GET /feedback` serves a form and `POST /feedback`
    * files a labelled GitHub issue on the submitter's behalf. Omit (no token) to keep the form but
@@ -245,8 +258,7 @@ async function serveAuthorizedRoute(
     res.end(shellDocument("Compare — Skynet Capital", body));
     return;
   }
-  if (path === "/add" && config.addParticipant) {
-    await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
+  if (await trySelfServiceRoute(req, res, path, url, config, session)) {
     return;
   }
   if (path === "/feedback") {
@@ -271,6 +283,41 @@ async function serveAuthorizedRoute(
   }
   res.writeHead(404, { "content-type": "text/plain" });
   res.end("not found");
+}
+
+/** `/add` (join the board) and `/rotate` (swap an existing account's key). True when handled. */
+async function trySelfServiceRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  url: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<boolean> {
+  if (path === "/add" && config.addParticipant) {
+    await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
+    return true;
+  }
+  if (path === "/rotate" && config.rotateCredentials) {
+    // Who the signed-in session resolves to, when OAuth is configured — the same identity link
+    // "isSelf"/nav highlighting already uses. Passed through so rotateCredentials can refuse to
+    // let one authed member silently redirect ANOTHER member's displayed account to credentials
+    // the member supplies themselves (see docs/LESSONS.md, 2026-08-11: the whole point of this
+    // route is fixing YOUR OWN regenerated key, not reassigning someone else's identity).
+    const requesterId = config.auth
+      ? resolveCurrentId(session, config.hub.getState().participants)
+      : undefined;
+    await handleRotate(
+      req,
+      res,
+      req.method ?? "GET",
+      keyOf(url),
+      requesterId,
+      config.rotateCredentials,
+    );
+    return true;
+  }
+  return false;
 }
 
 /** `/u/:id` — an individual's profile, or 404 when the id isn't on the board. */
@@ -398,37 +445,6 @@ function streamEvents(
   req.on("close", unsubscribe);
 }
 
-async function handleAdd(
-  req: IncomingMessage,
-  res: ServerResponse,
-  method: string,
-  key: string,
-  addParticipant: (input: AddParticipantInput) => Promise<AddResult>,
-): Promise<void> {
-  if (method === "GET") {
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(addFormHtml(key));
-    return;
-  }
-  if (method !== "POST") {
-    res.writeHead(405, { "content-type": "text/plain" });
-    res.end("method not allowed");
-    return;
-  }
-
-  const form = new URLSearchParams(await readBody(req));
-  const result = await addParticipant({
-    displayName: form.get("displayName") ?? "",
-    apiKey: form.get("apiKey") ?? "",
-    apiSecret: form.get("apiSecret") ?? "",
-    kind: form.get("kind") === "bot" ? "bot" : "human",
-    ...(form.get("personaId") ? { personaId: form.get("personaId") as string } : {}),
-    ...(form.get("timezone") ? { timezone: form.get("timezone") as string } : {}),
-  });
-  res.writeHead(result.ok ? 200 : 400, { "content-type": "text/html; charset=utf-8" });
-  res.end(addResultHtml(result, key));
-}
-
 // Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
 // repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine (single process).
 const feedbackHits = new Map<string, number[]>();
@@ -498,24 +514,6 @@ async function handleFeedback(
   res.end(feedbackResultHtml(result));
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk;
-      if (body.length > 1_000_000) {
-        reject(new Error("body too large"));
-        req.destroy();
-      }
-    });
-    req.on("end", () => resolve(body));
-    req.on("error", reject);
-  });
-}
-
-const PAGE_STYLE =
-  "*{margin:0;padding:0;box-sizing:border-box}html{color-scheme:dark}body{margin:0}";
-
 function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
   return `<!doctype html>
 <html lang="en">
@@ -539,101 +537,6 @@ ${renderDashboardBody(hub.getState(), { nav })}
   })();
 </script>
 </body>
-</html>`;
-}
-
-/** Matrix design-system styles for the /add flow — the same tokens as the dashboard/login. */
-const ADD_STYLE = `${PAGE_STYLE}
-  :root{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
-    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
-  body{ background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; padding:40px clamp(16px,5vw,20px); }
-  .wrap{ max-width:520px; margin:0 auto; }
-  .brand{ font-weight:700; font-size:15px; letter-spacing:.14em; margin-bottom:26px; }
-  .brand b{ color:var(--accent); }
-  h1{ font-size:24px; font-weight:700; margin-bottom:10px; letter-spacing:-.01em; }
-  .lede{ color:var(--muted); font-size:14px; line-height:1.55; margin-bottom:26px; }
-  .lede b{ color:var(--text); }
-  form{ display:flex; flex-direction:column; gap:2px; }
-  label{ display:block; margin:14px 0 6px; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
-  label small{ text-transform:none; letter-spacing:0; color:var(--muted); font-weight:400; opacity:.8; }
-  input,select{ width:100%; padding:12px 13px; font-size:15px; font-family:var(--sans); color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:9px; transition:border-color .15s, box-shadow .15s; }
-  input::placeholder{ color:color-mix(in srgb,var(--muted) 75%,transparent); }
-  input:focus,select:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent); }
-  textarea{ width:100%; padding:12px 13px; font:15px/1.5 var(--sans); color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:9px; resize:vertical; transition:border-color .15s, box-shadow .15s; }
-  textarea::placeholder{ color:color-mix(in srgb,var(--muted) 75%,transparent); }
-  textarea:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent); }
-  input[name=apiKey],input[name=apiSecret]{ font-family:var(--mono); letter-spacing:.02em; }
-  button{ margin-top:24px; padding:13px 18px; font-size:15px; font-weight:600; font-family:var(--sans); color:var(--bg); background:var(--accent); border:0; border-radius:9px; cursor:pointer; transition:filter .15s; }
-  button:hover{ filter:brightness(1.08); }
-  button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-  .note{ margin-top:22px; font-size:12px; color:var(--muted); font-family:var(--mono); letter-spacing:.02em; }
-  .res-icon{ font-size:34px; margin-bottom:6px; }
-  a{ color:var(--accent); text-decoration:none; }
-  a:hover{ text-decoration:underline; }
-  .backrow{ margin-top:26px; font-size:14px; color:var(--muted); }
-  .wrap.wide{ max-width:760px; }
-  /* --- onboarding / welcome --- */
-  .hero-eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--accent); margin-bottom:14px; }
-  .hero-title{ font-size:34px; font-weight:800; letter-spacing:-.02em; line-height:1.1; margin-bottom:14px; }
-  .hero-title b{ color:var(--accent); }
-  .hero-lede{ color:var(--muted); font-size:16px; line-height:1.6; margin-bottom:30px; max-width:60ch; }
-  .hero-lede b{ color:var(--text); }
-  .feat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:36px; }
-  .feat{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
-  .feat-ic{ font-size:18px; margin-bottom:8px; }
-  .feat-h{ font-size:14px; font-weight:700; margin-bottom:5px; }
-  .feat-p{ font-size:13px; color:var(--muted); line-height:1.5; }
-  .sec-label{ font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:0 0 16px; }
-  .steps{ display:flex; flex-direction:column; gap:12px; margin-bottom:32px; }
-  .step{ display:flex; gap:16px; align-items:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
-  .step-n{ flex:0 0 auto; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:700; font-size:14px; color:var(--bg); background:var(--accent); }
-  .step-b h3{ font-size:15px; font-weight:700; margin-bottom:4px; }
-  .step-b p{ font-size:13px; color:var(--muted); line-height:1.55; }
-  .cta{ display:inline-flex; align-items:center; gap:10px; padding:14px 22px; font-size:15px; font-weight:700; color:var(--bg); background:var(--accent); border-radius:10px; text-decoration:none; transition:filter .15s; }
-  .cta:hover{ filter:brightness(1.08); text-decoration:none; }
-  .cta:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-  .fineprint{ margin-top:22px; font-size:12px; color:var(--muted); line-height:1.6; }
-  /* --- /add progressive-reveal stepper --- */
-  .setup{ margin:0 0 26px; display:flex; flex-direction:column; gap:8px; }
-  .step-d{ background:var(--surface); border:1px solid var(--border); border-radius:11px; overflow:hidden; }
-  .step-d[open]{ border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); }
-  .step-d summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px 16px; font-weight:600; font-size:14px; }
-  .step-d summary::-webkit-details-marker{ display:none; }
-  .step-d summary .step-n{ width:26px; height:26px; font-size:13px; }
-  .step-d summary .chev{ margin-left:auto; color:var(--muted); transition:transform .18s; }
-  .step-d[open] summary .chev{ transform:rotate(90deg); }
-  .step-d .sd-body{ padding:2px 18px 18px 54px; font-size:13px; color:var(--muted); line-height:1.6; }
-  .step-d .sd-body b{ color:var(--text); }
-  .step-d .sd-body a{ font-weight:600; }
-  /* --- /add persona class picker (character sheet) --- */
-  .classpick{ margin:14px 0 4px; }
-  .cp-label{ display:block; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:10px; }
-  .cp-label small{ text-transform:none; letter-spacing:0; font-weight:400; opacity:.8; }
-  .cp-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
-  .cp-card{ position:relative; display:block; margin:0; padding:14px 15px; background:var(--surface); border:1px solid var(--border); border-radius:11px; cursor:pointer; text-transform:none; letter-spacing:normal; transition:border-color .15s, background .15s; }
-  .cp-card:hover{ border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); }
-  .cp-card input{ position:absolute; opacity:0; width:0; height:0; }
-  .cp-card:has(input:checked), .cp-card.sel{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 9%,var(--surface)); }
-  .cp-card:focus-within{ outline:2px solid var(--accent); outline-offset:2px; }
-  .cp-name{ display:block; font-size:14px; font-weight:700; color:var(--text); }
-  .cp-id{ display:block; font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--accent); margin:2px 0 7px; }
-  .cp-thesis{ display:block; font-size:12.5px; color:var(--muted); line-height:1.5; }
-  .cp-legend{ display:block; font-size:11.5px; color:color-mix(in srgb,var(--muted) 85%,transparent); line-height:1.5; margin-top:7px; font-style:italic; }`;
-
-function addShell(title: string, inner: string, wide = false): string {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title}</title>
-<style>${ADD_STYLE}</style>
-</head>
-<body><div class="wrap${wide ? " wide" : ""}">
-<div class="brand">SKYNET<b>·</b>CAPITAL</div>
-${inner}
-</div></body>
 </html>`;
 }
 
@@ -667,89 +570,6 @@ Already set up? Head straight to the <a href="/login">observatory</a>. Not on th
 Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
     true,
   );
-}
-
-const CLASSPICK_JS = `(function(){
-  var kind=document.getElementById("kind"), pick=document.getElementById("classpick");
-  if(!kind||!pick) return;
-  var radios=pick.querySelectorAll('input[name=personaId]');
-  function sync(){ var bot=kind.value==="bot"; pick.hidden=!bot;
-    for(var i=0;i<radios.length;i++) radios[i].required=bot; }
-  kind.addEventListener("change", sync); sync();
-  // clicking anywhere on a card selects its radio (label already wraps it, but keep keyboard tidy)
-  pick.addEventListener("click", function(e){ var card=e.target.closest(".cp-card"); if(!card) return;
-    var r=card.querySelector('input[name=personaId]'); if(r){ r.checked=true; }
-    var cards=pick.querySelectorAll(".cp-card"); for(var i=0;i<cards.length;i++) cards[i].classList.toggle("sel", cards[i]===card); });
-})();`;
-
-function addFormHtml(key: string): string {
-  const action = `/add${key ? `?key=${encodeURIComponent(key)}` : ""}`;
-  const classCards = personaClasses()
-    .map(
-      (c) =>
-        `<label class="cp-card">
-        <input type="radio" name="personaId" value="${escapeHtml(c.id)}">
-        <span class="cp-name">${escapeHtml(c.name)}</span>
-        <span class="cp-id">${escapeHtml(c.id)}</span>
-        <span class="cp-thesis">${escapeHtml(c.thesis)}</span>
-        ${c.legend ? `<span class="cp-legend">${escapeHtml(c.legend)}</span>` : ""}
-      </label>`,
-    )
-    .join("\n      ");
-  return addShell(
-    "Add your account — Skynet Capital",
-    `<h1>Connect your Alpaca account</h1>
-<p class="lede">Your account trades on <b>Alpaca</b> paper money. Follow the steps to grab your keys,
-then paste them below — we read them <b>only</b> to show your balance and trades. Nothing is ever placed on your behalf.</p>
-<div class="setup">
-  <details class="step-d" open>
-    <summary><span class="step-n">1</span> Create a free Alpaca account <span class="chev">›</span></summary>
-    <div class="sd-body">Go to <a href="https://alpaca.markets/" target="_blank" rel="noopener noreferrer">alpaca.markets</a> and sign up — it's free and needs no funding. <b>Paper trading is simulated money</b>, so there's nothing to deposit.</div>
-  </details>
-  <details class="step-d">
-    <summary><span class="step-n">2</span> Switch to Paper Trading <span class="chev">›</span></summary>
-    <div class="sd-body">In the Alpaca dashboard, use the toggle near the top-left to switch from <b>Live</b> to <b>Paper</b>. This is important — we only ever use paper keys.</div>
-  </details>
-  <details class="step-d">
-    <summary><span class="step-n">3</span> Generate your paper API keys <span class="chev">›</span></summary>
-    <div class="sd-body">On the paper dashboard's right side, find <b>API Keys</b> and click <b>Generate</b>. Copy the <b>Key ID</b> and <b>Secret Key</b> — the secret shows only once, so grab it now.</div>
-  </details>
-  <details class="step-d">
-    <summary><span class="step-n">4</span> Paste them below <span class="chev">›</span></summary>
-    <div class="sd-body">Drop the Key ID and Secret into the form and give yourself a display name. That's it — you'll land on the board.</div>
-  </details>
-</div>
-<form method="post" action="${action}">
-  <label>Display name<input name="displayName" required placeholder="e.g. Uncle Joe"></label>
-  <label>Alpaca paper API key<input name="apiKey" required autocomplete="off" placeholder="PK…"></label>
-  <label>Alpaca paper API secret<input name="apiSecret" required autocomplete="off" placeholder="••••••••"></label>
-  <label>Account type
-    <select name="kind" id="kind"><option value="human">Human — you trade it yourself</option><option value="bot">Bot — a persona trades it autonomously</option></select>
-  </label>
-  <div class="classpick" id="classpick" hidden>
-    <span class="cp-label">Choose a class <small>— the persona your bot runs</small></span>
-    <div class="cp-grid">
-      ${classCards}
-    </div>
-  </div>
-  <label>Time zone <small>(optional)</small><input name="timezone" placeholder="America/Chicago"></label>
-  <button type="submit">Add my account</button>
-</form>
-<p class="note">Paper keys only · alpaca.markets → Paper Trading → API Keys</p>
-<script>${CLASSPICK_JS}</script>`,
-  );
-}
-
-function addResultHtml(result: AddResult, key: string): string {
-  const suffix = key ? `?key=${encodeURIComponent(key)}` : "";
-  const inner = result.ok
-    ? `<div class="res-icon">🎉</div><h1>You're on the board</h1>
-<p class="lede"><b>${escapeHtml(result.displayName)}</b> is now live on the observatory.</p>
-<p class="backrow"><a href="/${suffix}">← Back to the board</a></p>`
-    : `<h1>Couldn't add that account</h1>
-<p class="lede">${escapeHtml(result.error)}</p>
-<p class="backrow"><a href="/${suffix}">← Back to the board</a> · <a href="/add${suffix}">Try again</a></p>`;
-  return addShell("Skynet Capital", inner);
 }
 
 function feedbackFormHtml(enabled: boolean): string {

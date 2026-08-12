@@ -27,6 +27,7 @@ const snapshot = (over: Partial<ParticipantSnapshot> = {}): ParticipantSnapshot 
 const data = (participants: ParticipantSnapshot[]): DashboardData => ({
   generatedAt: "2026-08-10T00:00:00.000Z",
   participants,
+  collisions: [],
 });
 
 const sample = (over: Partial<EquitySample> = {}): EquitySample => ({

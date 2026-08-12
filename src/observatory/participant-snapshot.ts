@@ -39,6 +39,12 @@ export interface ParticipantSnapshot {
   readonly personaId?: string;
   /** IANA timezone for rendering this account's activity times locally. */
   readonly timezone?: string;
+  /**
+   * Alpaca's own account identifier — present only on a successful read. Two participants
+   * sharing one `accountId` means they're pointed at the same brokerage account regardless of
+   * which credential pair each believes it holds; see `account-collisions.ts`.
+   */
+  readonly accountId?: string;
   readonly cash: number;
   readonly equity: number;
   /**
@@ -75,6 +81,7 @@ export async function buildParticipantSnapshot(
     const [account, positions] = await Promise.all([client.getAccount(), client.getPositions()]);
     return {
       ...base,
+      accountId: account.id,
       cash: Number(account.cash),
       equity: Number(account.portfolio_value),
       positions: positions.map((position) => ({

@@ -43,6 +43,7 @@ describe("renderDashboardBody", () => {
           error: "AlpacaApiError 401",
         },
       ],
+      collisions: [],
     };
 
     const errHtml = renderDashboardBody(withError);
@@ -69,6 +70,7 @@ describe("renderDashboardBody", () => {
       participants: [
         { id: "x", displayName: "<script>", kind: "human", cash: 0, equity: 0, positions: [] },
       ],
+      collisions: [],
     };
     expect(renderDashboardBody(data)).not.toContain("<script>");
   });
@@ -99,6 +101,7 @@ describe("renderCompareBody — two cities", () => {
         positions: [{ symbol: "EEM", quantity: 1_000, avgPrice: 42, marketValue: 65_000 }],
       },
     ],
+    collisions: [],
   };
 
   const html = renderCompareBody(data, { aId: "tech-bot", bId: "index-human" });
@@ -204,6 +207,7 @@ describe("renderLeaderboardBody — realized P/L ranking", () => {
         realizedPl: 9_000,
       },
     ],
+    collisions: [],
   };
 
   it("offers Realized P/L as a rankable metric", () => {
@@ -243,6 +247,7 @@ describe("renderCohortsBody — the live match scoreboard", () => {
         positions: [],
       },
     ],
+    collisions: [],
   };
 
   it("splits the match bar by AVERAGE equity, not headcount", () => {
@@ -269,6 +274,7 @@ describe("renderCohortsBody — the live match scoreboard", () => {
           positions: [],
         },
       ],
+      collisions: [],
     };
     expect(renderCohortsBody(even)).toContain("Dead even");
   });

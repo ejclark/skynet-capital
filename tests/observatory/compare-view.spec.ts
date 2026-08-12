@@ -33,7 +33,7 @@ function aPosition(overrides: Partial<PositionView> & Pick<PositionView, "symbol
 }
 
 function aData(participants: ParticipantSnapshot[]): DashboardData {
-  return { generatedAt: "2026-07-29T12:00:00.000Z", participants };
+  return { generatedAt: "2026-07-29T12:00:00.000Z", participants, collisions: [] };
 }
 
 describe("renderCompareBody", () => {

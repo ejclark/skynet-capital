@@ -27,6 +27,7 @@ import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { assessReadiness } from "../autonomous/readiness.js";
 import { SafetyController } from "../autonomous/safety.js";
+import { guardAccountCollisions } from "../bots/account-guard.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
@@ -139,17 +140,42 @@ async function runLive(): Promise<void> {
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
   // registry would also have qualified.
   const roster = createDefaultPersonas().filter((p) => enabled.has(p.id));
-  const { bots, sharedAccount } = loadBots(roster, process.env);
+  const { bots: loaded, sharedAccount } = loadBots(roster, process.env);
   for (const id of sharedAccount) {
     console.warn(
       `[creds] ${id} is trading the SHARED account (SKYNET_BOT_KEY) — its P/L is not separable from anything else already on that account.`,
     );
   }
+
+  // Confirmed-collision guard (docs/LESSONS.md, 2026-08-11): two bots that authenticate fine but
+  // secretly resolve to the SAME Alpaca account look completely healthy individually — nothing
+  // else here would ever notice. Check once at boot, before anything trades.
+  const { safe: bots, collisions } = await guardAccountCollisions(
+    loaded,
+    (bot) =>
+      new AlpacaTradingClient(
+        new FetchAlpacaTradingTransport({
+          baseUrl: bot.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
+          apiKey: bot.credentials.apiKey,
+          apiSecret: bot.credentials.apiSecret,
+        }),
+      ),
+  );
+  for (const collision of collisions) {
+    console.error(
+      `[collision] ${collision.ids.join(" and ")} are BOTH pointed at Alpaca account ${collision.accountId} — neither will trade until their credentials are fixed.`,
+    );
+  }
+
   if (bots.length === 0) {
-    // No credentials yet. On a hosted always-on process, exiting would crash-loop the machine before
-    // Eric has set the bot secrets — so idle quietly instead, staying up and ready for a redeploy.
+    // No credentials yet, or every loaded bot got refused by the collision guard above — either
+    // way, exiting would crash-loop the machine before it's fixed, so idle quietly instead.
+    const reason =
+      collisions.length > 0
+        ? "every enabled bot was refused by the account-collision guard above"
+        : `set SKYNET_BOT_<PERSONA>_KEY/SECRET and redeploy to start`;
     console.warn(
-      `No enabled bots with credentials (wanted: ${[...enabled].join(", ")}). Idling — set SKYNET_BOT_<PERSONA>_KEY/SECRET and redeploy to start. Nothing is trading.`,
+      `No enabled bots with credentials (wanted: ${[...enabled].join(", ")}). Idling — ${reason}. Nothing is trading.`,
     );
     setInterval(() => {
       /* keepalive tick — work happens on the market-event stream */

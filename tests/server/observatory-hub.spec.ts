@@ -14,6 +14,7 @@ const state = (): DashboardData => ({
       positions: [{ symbol: "NVDA", quantity: 1_000, avgPrice: 100, marketValue: 100_000 }],
     },
   ],
+  collisions: [],
 });
 
 describe("ObservatoryHub", () => {

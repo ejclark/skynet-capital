@@ -57,7 +57,7 @@ describe("prominence threading", () => {
   it("/compare scales each city's landmark by the shared standings", () => {
     const a = sauron(30);
     const b = { ...bot("rival", -5), personaId: "sauron", id: "rival" };
-    const data = { generatedAt: "t", participants: [a, b] };
+    const data = { generatedAt: "t", participants: [a, b], collisions: [] };
     const body = renderCompareBody(data, { aId: "sauron", bId: "rival" });
     // The winner's city renders exactly the full-power skyline; the laggard's exactly the
     // bottom-rank one — the same dials botLandmarkProminence assigns.
