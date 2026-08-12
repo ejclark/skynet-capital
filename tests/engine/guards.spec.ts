@@ -1,4 +1,4 @@
-import type { OrderIntent } from "../../src/domain/types.js";
+import type { OrderIntent, PlaybookMode } from "../../src/domain/types.js";
 import { applyGuards } from "../../src/engine/guards.js";
 import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
@@ -63,6 +63,39 @@ describe("applyGuards", () => {
       const context = aContext({ EEM: { last: 100 } });
 
       expect(applyGuards([sell("EEM", 10)], aPortfolio(), context)).toEqual([]);
+    });
+  });
+
+  // The playbook seam (docs/plans/trade-playbooks.md slice 1): attribution must survive risk
+  // clamping — a clamped order that lost its playbookId would be unscoreable by the metrics layer.
+  describe("playbook attribution on an intent", () => {
+    it("survives a buy being clamped", () => {
+      const context = aContext({ EEM: { last: 100 } });
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+      const mode: PlaybookMode = "standard";
+
+      const [approved] = applyGuards(
+        [{ ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: mode }],
+        portfolio,
+        context,
+        { maxPositionPct: 0.2 },
+      );
+
+      expect(approved?.quantity).toBeLessThan(10_000); // it really was clamped
+      expect(approved).toMatchObject({ playbookId: "S1-NVDA", playbookMode: "standard" });
+    });
+
+    it("survives a sell being clamped", () => {
+      const context = aContext({ EEM: { last: 100 } });
+      const portfolio = aPortfolio({ positions: [aPosition({ symbol: "EEM", quantity: 30 })] });
+
+      const [approved] = applyGuards(
+        [{ ...sell("EEM", 500), playbookId: "G1-GOOG", playbookMode: "aggressive" }],
+        portfolio,
+        context,
+      );
+
+      expect(approved).toMatchObject({ quantity: 30, playbookId: "G1-GOOG" });
     });
   });
 });

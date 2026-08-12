@@ -16,6 +16,26 @@ class AlwaysBuys implements Persona {
   }
 }
 
+/** Persona whose intent carries playbook attribution — exercises the seam end to end. */
+class PlaybookBuys implements Persona {
+  readonly id = "playbook";
+  readonly name = "Playbook";
+  readonly thesis = "test";
+  decide(_c: MarketContext, _p: Portfolio): OrderIntent[] {
+    return [
+      {
+        symbol: "NVDA",
+        side: "buy",
+        quantity: 10,
+        type: "market",
+        reason: "pre-print window open",
+        playbookId: "S1-NVDA",
+        playbookMode: "standard",
+      },
+    ];
+  }
+}
+
 const context = (last: number, momentum: number): MarketContext => ({
   asOf: "2026-07-24T14:00:00Z",
   quotes: { NVDA: { symbol: "NVDA", bid: last, ask: last, last, asOf: "2026-07-24T14:00:00Z" } },
@@ -95,6 +115,31 @@ describe("AutonomousTrader", () => {
     expect(records[0]?.mode).toBe("observe");
     expect(records[0]?.guardedIntents.length).toBeGreaterThan(0);
     expect(records[0]?.outcomes[0]?.action).toBe("observed");
+  });
+
+  // The playbook seam (docs/plans/trade-playbooks.md slice 1): attribution flows from
+  // persona.decide through the guards into the durable audit trail, so the metrics layer can
+  // score per-playbook effectiveness from DecisionRecords alone.
+  it("carries playbookId + mode from the intent into the DecisionRecord", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const records: DecisionRecord[] = [];
+    const trader = new AutonomousTrader({
+      persona: new PlaybookBuys(),
+      broker,
+      onDecision: (r) => records.push(r),
+    });
+
+    await trader.evaluate(context(100, 0.05));
+
+    const record = records[0];
+    expect(record?.rawIntents[0]).toMatchObject({ playbookId: "S1-NVDA" });
+    expect(record?.guardedIntents[0]).toMatchObject({
+      playbookId: "S1-NVDA",
+      playbookMode: "standard",
+    });
+    expect(record?.outcomes[0]?.intent).toMatchObject({ playbookId: "S1-NVDA" });
   });
 
   it("live mode records outcomes as placed with the broker result", async () => {
