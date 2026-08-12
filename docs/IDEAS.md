@@ -18,6 +18,25 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Research-instrument debt — fix earnings-cycle.mjs before its next sweep
+The eight-symbol sweep's red teams caught three pipeline defects the instrument itself missed:
+(1) no EDGAR acceptance-timestamp handling, so a **midday** 8-K (CRWV 2026-08-11) silently breaks
+the after-close/D+1 reaction template; (2) the quarter-dedup can keep a pre-market 8-K or an
+investor-day filing and drop real prints (corrupted MRVL's event list); (3) the forward-window
+guard excludes the newest print on 5 of 8 tickers — hiding exactly the freshest out-of-sample
+point. Fix the instrument first and let the next sweep be its test (open question #6 in
+`plans/trade-playbooks.md`). _(src: Claude · while: eight-symbol sweep red-team, 2026-08-12)_
+
+### Constraint-watch automation — a standing scan for the next binding AI constraint
+Eric's research method (capital floods each successive AI bottleneck: chips → HBM → networking →
+storage → energy) is being written up as a repeatable constraint-watch method doc (landing with
+the AI-energy constraint study). Once the method doc exists, the natural next step is a recurring
+scan —
+news/lead-time/earnings-language signals checked on a cadence against the method's tell list, so
+the *next* frontier is caught early instead of retrospectively. Needs the method validated on
+energy first. _(src: Eric ("we need to be pulling on all the threads… identify insights that have
+yet to be realized by the market") · while: AI-energy constraint study, 2026-08-12)_
+
 ### Playbooks — refine strategies, and configure when to apply them
 Eric's operating model for the trading side, and it resolves the "Sauron is inert" tension better
 than loosening his thresholds would: **his reserve works in his favor.** The path is not "make the
