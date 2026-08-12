@@ -10,8 +10,15 @@
  *
  * DATE POLICY (docs/plans/trade-playbooks.md → decision log, 2026-08-12): an `estimate` may only
  * WIDEN a safety window (S2 goes flat on estimates too — the safe direction); date-keyed ENTRIES
- * require `confirmed` (IR-announced). AVGO's 83–98-day cadence spread is the cautionary tale: an
- * estimated D-5 entry can land after the real print.
+ * require `confirmed`. AVGO's 83–98-day cadence spread is the cautionary tale: an estimated D-5
+ * entry can land after the real print.
+ *
+ * A `confirmed` entry's `source` must cite HOW it was confirmed, one of two classes:
+ *   - `IR:` — a hand-verified primary source (a company's own press release / newsroom).
+ *   - `CAL:` — an automated cross-reference against a third-party earnings-calendar aggregator
+ *     (src/scripts/confirm-print-dates.ts), which itself sources company announcements but is
+ *     one hop removed from them. Both are "confirmed" for playbook purposes; the prefix is what
+ *     makes an audit able to tell how confident to be without re-deriving it.
  *
  * Day math is calendar-day distance on UTC dates. Over weekends this errs toward going flat a
  * day or two early — deliberately the safe direction; do not "fix" it with trading-day math

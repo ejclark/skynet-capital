@@ -18,6 +18,18 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### confirm-print-dates source reliability — Nasdaq's calendar API can block the proxy wholesale
+`npm run confirm:print-dates` (src/scripts/confirm-print-dates.ts) automates the manual step done
+by hand for NVDA (PR #309): cross-references `estimate` calendar entries against Nasdaq's public
+earnings-calendar endpoint and opens an auto-mergeable PR for any hit. Built + shipped 2026-08-12,
+but its first live run found the source **completely blocked** (every date fetch 503'd from this
+environment's egress) — hardened to fail loudly (exit 2, distinct from "checked, found nothing")
+rather than silently no-op, but the underlying reliability gap is real and unresolved. Worth: (a)
+a fallback source (a second calendar API, or SEC EDGAR's own pre-announcement filings where they
+exist) so one source's block doesn't fully starve confirmation, and (b) deciding whether/how to
+schedule this as a recurring Routine — a separate yes/no from building the tool itself. _(src:
+Claude · while: closing the "research → automatically applied" gap Eric asked about, 2026-08-12)_
+
 ### Playbooks — refine strategies, and configure when to apply them
 Eric's operating model for the trading side, and it resolves the "Sauron is inert" tension better
 than loosening his thresholds would: **his reserve works in his favor.** The path is not "make the

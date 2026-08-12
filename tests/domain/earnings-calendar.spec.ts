@@ -63,8 +63,9 @@ describe("earnings calendar", () => {
         expect(["confirmed", "estimate"]).toContain(p.status);
         expect(p.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
         if (p.status === "confirmed") {
-          // The date policy's teeth: a confirmed flip must carry its IR provenance.
-          expect(p.source).toMatch(/^IR:/);
+          // The date policy's teeth: a confirmed flip must cite how (hand-verified IR, or an
+          // automated CAL cross-reference) — see earnings-calendar.ts's header for the classes.
+          expect(p.source).toMatch(/^(IR|CAL):/);
         }
       }
     });
