@@ -29,13 +29,14 @@ point. Fix the instrument first and let the next sweep be its test (open questio
 
 ### Constraint-watch automation — a standing scan for the next binding AI constraint
 Eric's research method (capital floods each successive AI bottleneck: chips → HBM → networking →
-storage → energy) is being written up as a repeatable constraint-watch method doc (landing with
-the AI-energy constraint study). Once the method doc exists, the natural next step is a recurring
-scan —
-news/lead-time/earnings-language signals checked on a cadence against the method's tell list, so
-the *next* frontier is caught early instead of retrospectively. Needs the method validated on
-energy first. _(src: Eric ("we need to be pulling on all the threads… identify insights that have
-yet to be realized by the market") · while: AI-energy constraint study, 2026-08-12)_
+storage → energy) is now a written process: [`research/constraint-watch.md`](research/constraint-watch.md)
+(the five-phase clock, false-positive guards, crowding census, tripwires). The natural next step
+is a recurring scan — lead-time/earnings-language/shock-day signals checked on a cadence against
+the method's tell list, plus the energy study's standing indicator dashboard
+([`research/ai-energy-constraint.md`](research/ai-energy-constraint.md)) flagged into the
+observatory. Open question #7 of the energy doc asks Eric whether to build it. _(src: Eric ("we
+need to be pulling on all the threads… identify insights that have yet to be realized by the
+market") · while: AI-energy constraint study, 2026-08-12)_
 
 ### Playbooks — refine strategies, and configure when to apply them
 Eric's operating model for the trading side, and it resolves the "Sauron is inert" tension better
