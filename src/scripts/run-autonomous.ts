@@ -31,6 +31,7 @@ import { guardAccountCollisions } from "../bots/account-guard.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
+import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { scenarioPacks } from "../evals/scenarios/index.js";
 import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
@@ -187,7 +188,14 @@ async function runLive(): Promise<void> {
   if (!dataCreds) {
     process.exit(1);
   }
-  const risk = { maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03") };
+  // The live path (and ONLY the live path) runs the S2/E1 trade discipline: flat through every
+  // print, defer non-urgent entries past the open. Deliberately absent from the offline replay
+  // and from every eval — see TradeDiscipline in engine/guards.ts for why leaking it into the
+  // eval path would silently re-score readiness.
+  const risk = {
+    maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03"),
+    discipline: { calendar: UPCOMING_PRINTS },
+  };
   const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
   const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
   const universeSet = new Set(UNIVERSE);

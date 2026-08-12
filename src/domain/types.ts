@@ -77,6 +77,18 @@ export interface OrderIntent {
   readonly playbookId?: string;
   /** The mode the playbook ran in. Meaningless without `playbookId`. */
   readonly playbookMode?: PlaybookMode;
+  /**
+   * Explicit opt-OUT of the S2 flat-through-print guard — the eight-symbol sweep's one
+   * universal finding is that every print gap is a fat-tailed coin flip, so holding through
+   * one must be a deliberate, recorded choice, never a default.
+   */
+  readonly allowThroughPrint?: boolean;
+  /**
+   * Explicit opt-out of the E1 defer-the-open guard, for genuinely time-critical entries
+   * (an event play whose edge IS the open). The first hour carries ~30% of daily volatility
+   * at zero mean drift on every symbol measured — urgency must be claimed, not assumed.
+   */
+  readonly urgent?: boolean;
 }
 
 type OrderStatus = "filled" | "rejected";
