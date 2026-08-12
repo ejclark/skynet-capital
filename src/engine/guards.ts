@@ -1,4 +1,4 @@
-import { type EarningsPrint, printWithin } from "../domain/earnings-calendar.js";
+import { type EarningsPrint, etTimeOf, printWithin } from "../domain/earnings-calendar.js";
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 
@@ -45,14 +45,6 @@ export interface RiskConfig {
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
   maxPositionPct: 0.2,
 };
-
-/** ET wall-clock "HH:MM" for an ISO timestamp — the whole market day is anchored on ET. */
-const etTimeOf = (iso: string): string =>
-  new Date(iso).toLocaleTimeString("sv-SE", {
-    timeZone: "America/New_York",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 /**
  * S2 (never hold the print) + E1 (don't trade the open), entry side. Returns null to drop the

@@ -13,6 +13,8 @@
  *   SKYNET_AUTONOMOUS_BOTS   comma-separated persona ids (default: day-trader)
  *   SKYNET_MAX_POSITION_PCT  per-position cap as a fraction of equity (default: 0.03)
  *   SKYNET_MOMENTUM_WINDOW   ticks in the momentum window (default: 20)
+ *   SKYNET_PLAYBOOKS         playbook roster, "id:mode" pairs (e.g. "S1-NVDA:standard,G1-GOOG:conservative").
+ *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only.
  */
 import { existsSync } from "node:fs";
 import { InMemoryBroker } from "../adapters/in-memory-broker.js";
@@ -37,6 +39,8 @@ import { scenarioPacks } from "../evals/scenarios/index.js";
 import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { createDefaultPersonas } from "../personas/registry.js";
+import { enabledPlaybooks } from "../playbooks/registry.js";
+import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import { readOfflineEvents } from "../runtime/data-source.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
@@ -196,6 +200,15 @@ async function runLive(): Promise<void> {
     maxPositionPct: Number(process.env.SKYNET_MAX_POSITION_PCT ?? "0.03"),
     discipline: { calendar: UPCOMING_PRINTS },
   };
+  const playbookRoster = enabledPlaybooks(process.env);
+  for (const bad of playbookRoster.rejected) {
+    console.error(`[playbooks] REFUSED unknown/malformed token "${bad}" in SKYNET_PLAYBOOKS`);
+  }
+  if (playbookRoster.enabled.length > 0) {
+    console.log(
+      `[playbooks] armed: ${playbookRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
+    );
+  }
   const tracker = new MomentumTracker(Number(process.env.SKYNET_MOMENTUM_WINDOW ?? "20"));
   const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
   const universeSet = new Set(UNIVERSE);
@@ -253,7 +266,10 @@ async function runLive(): Promise<void> {
       bot,
       broker,
       trader: new AutonomousTrader({
-        persona: bot.persona,
+        // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose
+        // on top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS
+        // names them — the enablement flip rides the approval-gated autonomy-ops path.
+        persona: withPlaybooks(bot.persona, playbookRoster.enabled, UPCOMING_PRINTS),
         broker,
         risk,
         mode: effectiveMode,

@@ -61,6 +61,14 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
   },
 ];
 
+/** ET wall-clock "HH:MM" for an ISO timestamp — the whole market day is anchored on ET. */
+export const etTimeOf = (iso: string): string =>
+  new Date(iso).toLocaleTimeString("sv-SE", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 /** UTC date-only (YYYY-MM-DD) of an ISO timestamp. */
 const dateOf = (iso: string): string => iso.slice(0, 10);
 
@@ -79,6 +87,26 @@ export function nextPrint(
   return prints
     .filter((p) => p.symbol === symbol && daysUntil(asOfIso, p.date) >= 0)
     .sort((a, b) => a.date.localeCompare(b.date))[0];
+}
+
+/**
+ * The print that already happened within the last `daysBack` calendar days (yesterday or
+ * earlier — day D itself still counts as upcoming). The post-print hygiene question: a playbook
+ * position that somehow survived its print must be exited, not silently carried.
+ */
+export function recentPrint(
+  symbol: string,
+  asOfIso: string,
+  daysBack: number,
+  prints: readonly EarningsPrint[] = UPCOMING_PRINTS,
+): EarningsPrint | undefined {
+  return prints.find((p) => {
+    if (p.symbol !== symbol) {
+      return false;
+    }
+    const days = daysUntil(asOfIso, p.date);
+    return days < 0 && days >= -daysBack;
+  });
 }
 
 /**
