@@ -22,7 +22,7 @@ import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
  * (run-autonomous) is the one place that supplies it. Keep it that way — a discipline field
  * that leaked into the eval path would silently re-score every persona's readiness.
  */
-export interface TradeDiscipline {
+interface TradeDiscipline {
   /** The forward print calendar (S2). Estimates count — they widen the flat window. */
   readonly calendar: readonly EarningsPrint[];
   /** S2: refuse buys when a print is within this many calendar days (default 2 = flat by D-1). */

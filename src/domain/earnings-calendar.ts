@@ -18,7 +18,7 @@
  * without also bringing a holiday calendar.
  */
 
-export type PrintDateStatus = "confirmed" | "estimate";
+type PrintDateStatus = "confirmed" | "estimate";
 
 export interface EarningsPrint {
   readonly symbol: string;
