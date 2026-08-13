@@ -8,14 +8,7 @@ import { DESK_STYLE } from "./desk-style.js";
 import { deskFrame } from "./desk-tabs.js";
 import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.js";
 import type { DeskViewOptions } from "./positions-view.js";
-import {
-  formatActivityTime,
-  formatCurrency,
-  formatSigned,
-  pct,
-  plClass,
-  tzAbbrev,
-} from "./render-atoms.js";
+import { formatActivityTime, formatSigned, pct, plClass, tzAbbrev } from "./render-atoms.js";
 
 /**
  * TRADE HISTORY — the closed trades, not the order log.

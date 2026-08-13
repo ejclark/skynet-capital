@@ -94,7 +94,7 @@ for (const [name, body] of Object.entries(pages)) {
   writeFileSync(join(OUT, `${name}.html`), doc(body));
 }
 
-if (!EXE && !process.env.PW_CHROME) {
+if (!(EXE || process.env.PW_CHROME)) {
   console.log(`Rendered HTML only (no Chromium found): ${OUT}`);
   process.exit(0);
 }

@@ -140,6 +140,7 @@ async function main(): Promise<void> {
     clientFactory: dataSource.clientFactory,
     authConfigured: Boolean(auth),
   });
+  if (desk.warning) console.warn(desk.warning);
 
   const feedback = resolveFeedback(process.env);
   if (!feedback) {

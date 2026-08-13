@@ -98,16 +98,16 @@ async function reviewLive(
 export function resolveDeskTrading(
   env: NodeJS.ProcessEnv,
   deps: Omit<TradeServiceDeps, "tradingEnabled"> & { authConfigured: boolean },
-): { enabled: boolean; submit: SubmitDeskTrade } {
+): { enabled: boolean; submit: SubmitDeskTrade; warning?: string } {
   const requested = env.SKYNET_DESK_TRADING === "on";
   const enabled = requested && deps.authConfigured;
-  if (requested && !deps.authConfigured) {
-    console.warn(
-      "⚠️  SKYNET_DESK_TRADING=on but no OAuth is configured — desk orders stay refused, since no session resolves to an account.",
-    );
-  }
+  const warning =
+    requested && !deps.authConfigured
+      ? "⚠️  SKYNET_DESK_TRADING=on but no OAuth is configured — desk orders stay refused, since no session resolves to an account."
+      : undefined;
   return {
     enabled,
+    ...(warning ? { warning } : {}),
     submit: createTradeService({
       findParticipant: deps.findParticipant,
       clientFactory: deps.clientFactory,

@@ -67,12 +67,13 @@ describe("POST /trade — the review step", () => {
     hub: new ObservatoryHub(board()),
     ...(auth ? { auth } : {}),
     tradingEnabled: true,
-    submitTrade: async () => ({
-      ok: true as const,
-      orderId: "o1",
-      status: "accepted",
-      symbol: "AAPL",
-    }),
+    submitTrade: () =>
+      Promise.resolve({
+        ok: true as const,
+        orderId: "o1",
+        status: "accepted",
+        symbol: "AAPL",
+      }),
   });
 
   it("renders a review screen — and sends nothing — on the first post", async () => {
@@ -80,9 +81,14 @@ describe("POST /trade — the review step", () => {
     await withServer(
       {
         ...config(),
-        submitTrade: async () => {
+        submitTrade: () => {
           submitted += 1;
-          return { ok: true as const, orderId: "o1", status: "accepted", symbol: "AAPL" };
+          return Promise.resolve({
+            ok: true as const,
+            orderId: "o1",
+            status: "accepted",
+            symbol: "AAPL",
+          });
         },
       },
       async (base) => {
@@ -106,9 +112,14 @@ describe("POST /trade — the review step", () => {
     await withServer(
       {
         ...config(),
-        submitTrade: async (request) => {
+        submitTrade: (request) => {
           calls.push(request);
-          return { ok: true as const, orderId: "o1", status: "accepted", symbol: "AAPL" };
+          return Promise.resolve({
+            ok: true as const,
+            orderId: "o1",
+            status: "accepted",
+            symbol: "AAPL",
+          });
         },
       },
       async (base) => {
@@ -131,9 +142,14 @@ describe("POST /trade — the review step", () => {
     await withServer(
       {
         ...config(),
-        submitTrade: async () => {
+        submitTrade: () => {
           submitted += 1;
-          return { ok: true as const, orderId: "o1", status: "accepted", symbol: "AAPL" };
+          return Promise.resolve({
+            ok: true as const,
+            orderId: "o1",
+            status: "accepted",
+            symbol: "AAPL",
+          });
         },
       },
       async (base) => {
@@ -328,9 +344,7 @@ describe("trade service — the server-side gate", () => {
 
   it("reports a broker rejection as a refusal rather than throwing", async () => {
     const angry = client({
-      placeOrder: async () => {
-        throw new Error("insufficient buying power");
-      },
+      placeOrder: () => Promise.reject(new Error("insufficient buying power")),
     });
     const result = await service({ client: angry })(request, "ann");
     expect(result).toMatchObject({ ok: false });
@@ -338,11 +352,7 @@ describe("trade service — the server-side gate", () => {
   });
 
   it("still reviews the order when the market clock can't be read", async () => {
-    const noClock = client({
-      isMarketOpen: async () => {
-        throw new Error("clock down");
-      },
-    });
+    const noClock = client({ isMarketOpen: () => Promise.reject(new Error("clock down")) });
     expect(await service({ client: noClock })(request, "ann")).toMatchObject({ ok: true });
   });
 });
