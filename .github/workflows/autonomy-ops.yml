@@ -24,6 +24,7 @@ on:
           - set-sauron-credentials
           - flip-mode
           - set-playbooks
+          - set-beta-forcing
       mode:
         description: "observe or live — only read by flip-mode"
         required: false
@@ -37,6 +38,14 @@ on:
           Playbook roster, "id:mode" pairs — only read by set-playbooks. Empty string = all
           playbooks dark. e.g. "S1-NVDA:standard,G1-GOOG:conservative". Valid ids/modes are
           enforced at boot (src/playbooks/registry.ts refuses unknown tokens loudly).
+        required: false
+        type: string
+        default: ""
+      beta_forcing:
+        description: >-
+          Beta-phase forced-pick count — only read by set-beta-forcing. Empty or "0" = dark. When
+          armed, and nothing organic trades on a given day, forces up to N small, honestly-labeled
+          BETA-SCOUT picks (see src/playbooks/beta-scout.ts). Eric's beta-phase directive: "2-3".
         required: false
         type: string
         default: ""
@@ -138,6 +147,24 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           PLAYBOOKS: ${{ inputs.playbooks }}
+
+      - name: Set beta-phase forcing
+        if: ${{ inputs.action == 'set-beta-forcing' }}
+        # BETA_FORCING passed via env and read as a shell variable, not interpolated via ${{ }} —
+        # same free-text-input discipline as set-playbooks above (only reviewers already approved
+        # on this environment can supply it, but there's no reason to carry the injection shape).
+        run: |
+          echo "Setting SKYNET_BETA_FORCING=$BETA_FORCING"
+          if [ -z "$BETA_FORCING" ] || [ "$BETA_FORCING" = "0" ]; then
+            flyctl secrets unset SKYNET_BETA_FORCING -a skynet-capital || true
+            echo "Cleared — beta-phase forced trading stays dark."
+          else
+            flyctl secrets set "SKYNET_BETA_FORCING=$BETA_FORCING" -a skynet-capital
+            echo "::warning::Beta-phase forcing armed at $BETA_FORCING pick(s)/day. Fires ONLY when nothing organic trades that day, sized well below every playbook's softest mode, and every pick's reason states plainly that it's a forced non-conviction fill. Watch 'fly logs -a skynet-capital' for the [beta-scout] armed line."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          BETA_FORCING: ${{ inputs.beta_forcing }}
 
       - name: Flip autonomous mode
         if: ${{ inputs.action == 'flip-mode' }}
