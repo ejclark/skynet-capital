@@ -14,11 +14,13 @@ export async function fetchJson(
   url: string,
   headers: Readonly<Record<string, string>>,
   body?: unknown,
+  signal?: AbortSignal,
 ): Promise<JsonResponse> {
   const response = await fetch(url, {
     method,
     headers: { Accept: "application/json", "Content-Type": "application/json", ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
+    ...(signal ? { signal } : {}),
   });
   const text = await response.text();
   return {
