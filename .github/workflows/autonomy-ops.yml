@@ -119,17 +119,25 @@ jobs:
 
       - name: Set playbook roster
         if: ${{ inputs.action == 'set-playbooks' }}
+        # PLAYBOOKS is passed via env and read as a shell variable ($PLAYBOOKS), never
+        # interpolated directly into the script via ${{ }} — this is the only free-text
+        # (type: string) input in this workflow (every other action uses a fixed `choice`
+        # dropdown GitHub validates before the job runs), so it's the one place a naive
+        # ${{ inputs.playbooks }} inline substitution would be a script-injection vector.
+        # Low real-world exposure (only reviewers already approved on this environment can
+        # supply it) but no reason to carry the shape of the risk when this is free to avoid.
         run: |
-          echo "Setting SKYNET_PLAYBOOKS=${{ inputs.playbooks }}"
-          if [ -z "${{ inputs.playbooks }}" ]; then
+          echo "Setting SKYNET_PLAYBOOKS=$PLAYBOOKS"
+          if [ -z "$PLAYBOOKS" ]; then
             flyctl secrets unset SKYNET_PLAYBOOKS -a skynet-capital || true
             echo "Roster cleared — all playbooks dark."
           else
-            flyctl secrets set "SKYNET_PLAYBOOKS=${{ inputs.playbooks }}" -a skynet-capital
+            flyctl secrets set "SKYNET_PLAYBOOKS=$PLAYBOOKS" -a skynet-capital
             echo "::warning::Playbooks armed. They still only ENTER on a confirmed IR print date (estimates stay dark) and only in live mode past the readiness gate. Watch 'fly logs -a skynet-capital' for the [playbooks] armed line."
           fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          PLAYBOOKS: ${{ inputs.playbooks }}
 
       - name: Flip autonomous mode
         if: ${{ inputs.action == 'flip-mode' }}
