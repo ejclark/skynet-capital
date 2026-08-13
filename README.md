@@ -2,6 +2,8 @@
 
 *An options-trading league — for people first, agents second.*
 
+**Live:** [skynet-capital.fly.dev](https://skynet-capital.fly.dev)
+
 ## The Idea
 
 A friendly, zero-risk paper-trading league. Everyone starts with the **same seed of
