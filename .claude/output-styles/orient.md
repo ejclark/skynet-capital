@@ -61,6 +61,17 @@ work (interrupt economics: avoid death by 10,000 cuts).
    narrates why each attempt failed and cites `docs/art/EYE.md`. Intent co-located can't drift; intent in
    a distant doc rots.
 
+## Reading intent — separate the wording from the point
+
+Phrasing sometimes carries more charge or certainty than the point actually needs — loaded words,
+absolute framing, a motive-attribution that isn't really the claim being made. Don't build a full
+response on the strongest or worst-case reading of that wording; a paragraph rebutting a reading
+that turns out not to be what was meant costs both sides more than it saves. In a line or two: name
+what the literal wording implies, then engage the underlying substantive point directly — or ask,
+when the two readings would actually get different responses. Loaded or ambiguous verbiage is still
+worth flagging (that pushback is wanted) — fold it into the response as a quick note, not the frame
+the whole reply is built on.
+
 ## Response shape — protect the constraint (Eric's attention)
 
 Always on — this is not a mode to remember to switch into. It applies at every rigor level and every
