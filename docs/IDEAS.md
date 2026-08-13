@@ -30,6 +30,51 @@ exist) so one source's block doesn't fully starve confirmation, and (b) deciding
 schedule this as a recurring Routine — a separate yes/no from building the tool itself. _(src:
 Claude · while: closing the "research → automatically applied" gap Eric asked about, 2026-08-12)_
 
+### Research-instrument debt — fix earnings-cycle.mjs before its next sweep
+The eight-symbol sweep's red teams caught three pipeline defects the instrument itself missed:
+(1) no EDGAR acceptance-timestamp handling, so a **midday** 8-K (CRWV 2026-08-11) silently breaks
+the after-close/D+1 reaction template; (2) the quarter-dedup can keep a pre-market 8-K or an
+investor-day filing and drop real prints (corrupted MRVL's event list); (3) the forward-window
+guard excludes the newest print on 5 of 8 tickers — hiding exactly the freshest out-of-sample
+point. Fix the instrument first and let the next sweep be its test (open question #6 in
+`plans/trade-playbooks.md`). _(src: Claude · while: eight-symbol sweep red-team, 2026-08-12)_
+
+### Constraint-watch automation — a standing scan for the next binding AI constraint
+Eric's research method (capital floods each successive AI bottleneck: chips → HBM → networking →
+storage → energy) is now a written process: [`research/constraint-watch.md`](research/constraint-watch.md)
+(the five-phase clock, false-positive guards, crowding census, tripwires). The natural next step
+is a recurring scan — lead-time/earnings-language/shock-day signals checked on a cadence against
+the method's tell list, plus the energy study's standing indicator dashboard
+([`research/ai-energy-constraint.md`](research/ai-energy-constraint.md)) flagged into the
+observatory. Open question #7 of the energy doc asks Eric whether to build it. _(src: Eric ("we
+need to be pulling on all the threads… identify insights that have yet to be realized by the
+market") · while: AI-energy constraint study, 2026-08-12)_
+
+### Research lab — studies on the site, member-commissioned via the feedback funnel
+Planned: [`plans/research-lab.md`](plans/research-lab.md) (draft, awaiting Eric). The `/research`
+shelf renders `docs/research/*` in the house shell behind the invite gate; a `research` feedback
+kind turns member topics into labelled issues that drive studies through the named sweep
+workflow; published docs credit the requester. Eric intends a Claude-design iteration pass on the
+reading experience later. _(src: Eric ("build a research lab on stock market opportunities for
+everyone to benefit") · while: post-sweep, 2026-08-12)_
+
+### Special-events calendar — own prints, peer prints, product releases
+A forward event calendar as a system component (the research instruments only look backward, and
+next-print dates are cadence estimates). Track per symbol: its own confirmed earnings dates
+(IR-sourced — the playbook plan's date-policy question), **peer prints** (measured to matter:
+8/14 of MRVL's pre-print windows contain NVDA's print, supplying ~70% of the return — a playbook
+blind to peer events misattributes its edge), product launches, and sector events (PJM auctions,
+FERC dockets from the energy watch list). Feeds the playbook windows and the watch-indicators
+dashboard. _(src: Eric ("are we tracking special events… NVDA benefits from other tech-adjacent
+companies reporting strong AI usage") · while: post-sweep, 2026-08-12)_
+
+### Sell-the-news study — is the pre-trade-and-fade pattern systematically exploitable?
+Volume-driven media means events get pre-traded and faded on print. Build an instrument (same
+discipline as earnings-cycle.mjs: controls, base rates, red team) measuring fade magnitude vs
+coverage volume by event class, before any trade. The reaction-day fade validated on MSFT/GOOG
+is this signal's best-evidenced special case — the study would test whether it generalizes to
+non-earnings events. _(src: Eric · while: post-sweep, 2026-08-12)_
+
 ### Playbooks — refine strategies, and configure when to apply them
 Eric's operating model for the trading side, and it resolves the "Sauron is inert" tension better
 than loosening his thresholds would: **his reserve works in his favor.** The path is not "make the

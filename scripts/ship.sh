@@ -55,11 +55,12 @@ json_field() { python3 -c "import sys,json; print(json.load(sys.stdin).get('$1',
 cmd_open() {
   local title="${1:-}"; shift || true
   [ -n "$title" ] || { echo "ship open: PR title required" >&2; exit 1; }
-  local base="main" bodyfile="" verify=1
+  local base="main" bodyfile="" verify=1 draft=0
   while [ $# -gt 0 ]; do case "$1" in
     --base) base="$2"; shift 2 ;;
     --body-file) bodyfile="$2"; shift 2 ;;
     --no-verify) verify=0; shift ;;
+    --draft) draft=1; shift ;;   # hold-for-Eric PRs (carve-outs, open questions) — no auto-merge arm
     *) echo "ship open: unknown arg $1" >&2; exit 1 ;;
   esac; done
 
@@ -88,8 +89,8 @@ cmd_open() {
     sleep $((2**n)); done
 
   local body="{}"; [ -n "$bodyfile" ] && body="$(cat "$bodyfile")"
-  local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4]}))" \
-    "$title" "$branch" "$base" "$body")"
+  local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':sys.argv[5]=='1'}))" \
+    "$title" "$branch" "$base" "$body" "$draft")"
   echo "ship: opening PR over REST (core bucket)…"
   local resp http body; resp="$(api POST "/pulls" "$payload")"
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
@@ -97,7 +98,11 @@ cmd_open() {
     local num url; num="$(printf '%s' "$body" | json_field number)"; url="$(printf '%s' "$body" | json_field html_url)"
     echo "ship: opened PR #$num  $url"
     echo "$num"
-    echo "ship: NEXT (per .claude/skills/ship) — one enable_pr_auto_merge MCP call, then STOP. No polling."
+    if [ "$draft" = 1 ]; then
+      echo "ship: draft PR — hold for Eric; do NOT arm auto-merge. STOP. No polling."
+    else
+      echo "ship: NEXT (per .claude/skills/ship) — one enable_pr_auto_merge MCP call, then STOP. No polling."
+    fi
   else
     echo "ship: REST open returned HTTP $http (proxy may block writes). Body:" >&2
     printf '%s\n' "$body" | head -5 >&2
