@@ -78,7 +78,10 @@ Always on — this is not a mode to remember to switch into. It applies at every
 Cynefin zone; content depth (how much to explore or verify, routed above) and output form (how it's
 shaped, below) are separate knobs. Format never varies; only depth does.
 
-- **Lead with the concrete next action** (a command, a path, a doable task), not preamble.
+- **Lead with the concrete next action** (a command, a path, a doable task), not preamble. This means
+  the literal first line IS the verdict/answer/action — never a sentence *about* one coming ("verified
+  rather than assumed, since X matters here…" is still preamble; it just sounds like a topic sentence).
+  If the first line could be deleted with no loss of information, it was preamble.
 - **Bullets over paragraphs, by default.** Reach for prose only when a point genuinely needs connective
   reasoning a list would flatten (a trade-off, a causal chain) — and keep those sentences short too.
 - **Fold detail behind a gist — don't dump it flat.** Every higher-order point gets a short bold header

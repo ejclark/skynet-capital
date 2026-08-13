@@ -369,4 +369,14 @@ describe("renderIndividualBody — autonomous decisions panel", () => {
     const html = renderIndividualBody(human, { isSelf: false });
     expect(html).not.toContain("Begin the Wheel"); // CTA copy is markup-only (the class lives in CSS always)
   });
+
+  it("offers a rotate-credentials link on your own unreachable account page", () => {
+    const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { isSelf: true });
+    expect(html).toContain('<a href="/rotate">');
+  });
+
+  it("omits the rotate link on someone else's unreachable account page", () => {
+    const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { isSelf: false });
+    expect(html).not.toContain("/rotate");
+  });
 });
