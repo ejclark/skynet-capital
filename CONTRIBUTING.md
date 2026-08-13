@@ -80,6 +80,21 @@ version and changelog — so the **PR title must itself be a valid Conventional 
 `feat(login): zoom-framed plays`), not a prose sentence. `Commit Lint` validates the commits *on*
 the PR; it does not lint the squash title, so getting the title right is on you.
 
+**If you were explicitly asked to watch / babysit / autofix a PR** (not the default posture above —
+most PRs need none of this): use `subscribe_pr_activity`. It pushes CI failures and review comments
+into the conversation as they happen, which is the event-driven watcher `docs/COACHES.md` already
+prefers ("put the watcher on a path you already walk — never add a poller"). **Don't also arm a
+`send_later` self-check-in on top of it** — a timed re-check duplicates the webhook you just
+subscribed to, which is exactly the poller `/ship` forbids ("no status check-ins… act when the
+webhook arrives, not before"). `subscribe_pr_activity` has no "merged" event, so if you need positive
+confirmation the PR actually closed, arm **at most one** bounded check, worded consistently so
+recurring-intent audits see one templated pattern instead of freehand variance:
+
+> Self check-in: confirm PR #\<n\> merged/closed (and unsubscribe); if still open, note the blocker
+> and stop — don't re-arm again.
+
+One check, not a chain — if it's still open after that, surface it instead of continuing to poll.
+
 ## Keeping agent sessions moving (no PR churn)
 
 The workflow is built so a Claude session never blocks on a PR and never reworks finished history:

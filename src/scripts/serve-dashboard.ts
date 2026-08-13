@@ -12,6 +12,7 @@
  * which appears live with no restart. The live-vs-offline choice lives behind `resolveDataSource`.
  */
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
+import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
@@ -28,6 +29,7 @@ import { resolveDataSource } from "../runtime/data-source.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedback } from "../server/feedback-service.js";
+import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
@@ -152,6 +154,17 @@ async function main(): Promise<void> {
       `Observatory live on port ${PORT} [${dataSource.mode}] — auth: ${gate} — feedback: ${feedback ? "on" : "off"}`,
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
+  });
+
+  // Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — internal-only, so the
+  // `bots` process (no Fly Volume of its own) can persist retrospectives through this process's
+  // mounted volume. Bound to a port deliberately NOT in fly.toml's [http_service]: unreachable
+  // from the public internet, reachable only over Fly's private 6PN network. See
+  // src/server/insights-listener.ts for the full reasoning + what was verified.
+  const insights = createInsightStore(process.env);
+  const insightsPort = resolveInsightsBridgePort(process.env);
+  createInsightsListener({ record: (entry) => insights.record(entry) }).listen(insightsPort, () => {
+    console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
   });
 }
 
