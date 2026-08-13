@@ -50,6 +50,13 @@ export interface Portfolio {
 }
 
 /**
+ * How assertively a playbook is being run. One play, three parameterizations — sizing, entry
+ * threshold, stop width scale with the mode. Running modes side-by-side on paper triples the
+ * evidence each live window yields (docs/plans/trade-playbooks.md → play modes).
+ */
+export type PlaybookMode = "conservative" | "standard" | "aggressive";
+
+/**
  * A persona's proposed trade. Personas express *direction and conviction*; the engine
  * owns *risk and sizing*. `reason` is required — it feeds the touch-point recaps and
  * the future learning loop, and it makes the DX legible when replaying a session.
@@ -61,6 +68,27 @@ export interface OrderIntent {
   /** Slice 1 supports market orders only; the field exists so adapters can widen later. */
   readonly type: "market";
   readonly reason: string;
+  /**
+   * Structured attribution: which named playbook produced this intent (e.g. "S1-NVDA",
+   * "G1-GOOG"). Optional — a bare persona reflex has none. Structured on purpose: the metrics
+   * layer scores per-playbook effectiveness from this field, never by parsing `reason` prose
+   * (docs/plans/trade-playbooks.md → pre-settled forks).
+   */
+  readonly playbookId?: string;
+  /** The mode the playbook ran in. Meaningless without `playbookId`. */
+  readonly playbookMode?: PlaybookMode;
+  /**
+   * Explicit opt-OUT of the S2 flat-through-print guard — the eight-symbol sweep's one
+   * universal finding is that every print gap is a fat-tailed coin flip, so holding through
+   * one must be a deliberate, recorded choice, never a default.
+   */
+  readonly allowThroughPrint?: boolean;
+  /**
+   * Explicit opt-out of the E1 defer-the-open guard, for genuinely time-critical entries
+   * (an event play whose edge IS the open). The first hour carries ~30% of daily volatility
+   * at zero mean drift on every symbol measured — urgency must be claimed, not assumed.
+   */
+  readonly urgent?: boolean;
 }
 
 type OrderStatus = "filled" | "rejected";
