@@ -27,25 +27,23 @@ import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
-import type { DecisionRecord, IntentOutcome } from "../autonomous/decision-record.js";
-import { fleetEquity } from "../autonomous/equity-watch.js";
+import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
+import { type BetaScoutDeps, type LiveBot, LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
 import { assessReadiness } from "../autonomous/readiness.js";
 import { SafetyController } from "../autonomous/safety.js";
 import { guardAccountCollisions } from "../bots/account-guard.js";
-import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
-import type { MarketContext } from "../domain/types.js";
-import { applyGuards } from "../engine/guards.js";
+import type { RiskConfig } from "../engine/guards.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { scenarioPacks } from "../evals/scenarios/index.js";
 import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { createDefaultPersonas } from "../personas/registry.js";
-import { betaScoutExitIntents, betaScoutIntents } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
@@ -254,45 +252,9 @@ async function runLive(): Promise<void> {
   console.log(
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
-  const traders = bots.map((bot) => {
-    // READINESS GATE: a persona may only trade live if it PASSES its readiness eval. A not-ready
-    // persona is pinned to observe (watched, placing nothing) no matter what SKYNET_AUTONOMOUS_MODE says.
-    const readiness = assessReadiness(bot.persona, {
-      pack: scenarioPacks[bot.persona.id],
-      safetyScenarios: genericSafetyScenarios,
-    });
-    const effectiveMode = mode === "live" && readiness.ready ? "live" : "observe";
-    if (mode === "live" && !readiness.ready) {
-      console.warn(
-        `[gate] ${bot.persona.name} is NOT ready — pinned to observe. ${readiness.reason}`,
-      );
-    } else {
-      console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
-    }
-    const broker = createBotBroker(bot);
-    return {
-      bot,
-      broker,
-      trader: new AutonomousTrader({
-        // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose
-        // on top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS
-        // names them — the enablement flip rides the approval-gated autonomy-ops path.
-        persona: withPlaybooks(bot.persona, playbookRoster.enabled, UPCOMING_PRINTS),
-        broker,
-        risk,
-        mode: effectiveMode,
-        blockedReason,
-        onResult: (r) => {
-          safety.recordOrder();
-          logResult(r);
-        },
-        onDecision: (r) => {
-          if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
-          onDecision(r);
-        },
-      }),
-    };
-  });
+  const traders: LiveBot[] = bots.map((bot) =>
+    buildLiveBot(bot, { mode, playbookRoster, risk, blockedReason, safety, onDecision }),
+  );
 
   // --- beta scout: Eric's beta-phase directive (2026-08-13) — "deploying playbooks to observe
   // mechanics acting in live environments gives me confidence"; if nothing organic fires, force
@@ -305,7 +267,7 @@ async function runLive(): Promise<void> {
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
   if (betaForcingMaxPicks > 0 && scoutBroker) {
     console.log(
-      `[beta-scout] armed: up to ${betaForcingMaxPicks} forced pick(s)/day when nothing organic fires, on ${traders[0]?.bot.persona.name}'s account.`,
+      `[beta-scout] armed: up to ${betaForcingMaxPicks} forced pick(s)/day when nothing organic fires, on ${traders[0]?.personaName}'s account.`,
     );
   } else if (betaForcingMaxPicks > 0) {
     console.warn(
@@ -313,89 +275,31 @@ async function runLive(): Promise<void> {
     );
   }
   const managedSymbols = new Set(playbookRoster.enabled.map((e) => e.playbook.symbol));
-  let scoutDay = "";
-  let scoutRanToday = false;
-  let scoutFiredOrganicallyToday = false;
-  const scoutOwnedSymbols = new Set<string>();
 
-  const submitScoutIntents = async (intents: ReturnType<typeof betaScoutIntents>) => {
-    if (intents.length === 0 || !scoutBroker) {
-      return;
-    }
-    const blocked = blockedReason();
-    if (blocked) {
-      console.warn(`[beta-scout] skipped — halted: ${blocked}`);
-      return;
-    }
-    const outcomes: IntentOutcome[] = [];
-    for (const intent of intents) {
-      if (mode !== "live") {
-        console.log(
-          `[beta-scout] would ${intent.side} ${intent.quantity} ${intent.symbol} (observe mode)`,
-        );
-        outcomes.push({ intent, action: "observed" });
-        continue;
-      }
-      const result = await scoutBroker.submit(intent);
-      safety.recordOrder();
-      logResult(result);
-      outcomes.push({ intent, action: result.status === "filled" ? "placed" : "rejected", result });
-    }
-    onDecision({
-      at: Date.now(),
-      personaId: "beta-scout",
-      mode,
-      rawIntents: intents,
-      guardedIntents: intents,
-      outcomes,
-    });
-  };
-
-  // `firedOrganicallyThisCycle` is applied AFTER the day-rollover reset below, not before — otherwise
-  // the first cycle of a new day that also happens to carry an organic fire would set the flag and
-  // then immediately have the rollover wipe it back to false, letting the scout fire anyway.
-  const runBetaScout = async (
-    context: MarketContext,
-    firedOrganicallyThisCycle: boolean,
-  ): Promise<void> => {
-    if (betaForcingMaxPicks <= 0 || !scoutBroker) {
-      return;
-    }
-    const today = context.asOf.slice(0, 10);
-    if (today !== scoutDay) {
-      scoutDay = today;
-      scoutRanToday = false;
-      scoutFiredOrganicallyToday = false;
-      if (scoutOwnedSymbols.size > 0) {
-        const portfolio = await scoutBroker.getPortfolio();
-        const exits = betaScoutExitIntents(portfolio, scoutOwnedSymbols);
-        for (const exit of exits) {
-          scoutOwnedSymbols.delete(exit.symbol);
-        }
-        await submitScoutIntents(exits);
-      }
-    }
-    if (firedOrganicallyThisCycle) {
-      scoutFiredOrganicallyToday = true;
-    }
-    if (scoutRanToday || scoutFiredOrganicallyToday) {
-      return;
-    }
-    scoutRanToday = true; // set BEFORE acting — a failed submit must not retry every cycle
-    const portfolio = await scoutBroker.getPortfolio();
-    const guarded = applyGuards(
-      betaScoutIntents(context, portfolio, UNIVERSE, managedSymbols, false, {
-        maxPicks: betaForcingMaxPicks,
-      }),
-      portfolio,
-      context,
+  // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
+  // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real
+  // brokers, the halt-file-aware blockedReason, and console/audit sinks for its hooks.
+  const runner = new LiveCycleRunner({
+    traders,
+    safety,
+    blockedReason,
+    scout: buildScoutDeps(betaForcingMaxPicks, scoutBroker, {
+      universe: UNIVERSE,
+      managedSymbols,
       risk,
-    );
-    for (const intent of guarded) {
-      scoutOwnedSymbols.add(intent.symbol);
-    }
-    await submitScoutIntents(guarded);
-  };
+      mode,
+    }),
+    onResult: logResult,
+    onDecision,
+    onEquityReadError: (error) => console.error("[equity] read failed:", error),
+    onEvalError: (personaName, error) => console.error(`[eval] ${personaName} failed:`, error),
+    onBetaScoutError: (error) => console.error("[beta-scout] cycle failed:", error),
+    onScoutHalted: (reason) => console.warn(`[beta-scout] skipped — halted: ${reason}`),
+    onScoutObserve: (intent) =>
+      console.log(
+        `[beta-scout] would ${intent.side} ${intent.quantity} ${intent.symbol} (observe mode)`,
+      ),
+  });
 
   // Gate trading on market hours (refreshed periodically).
   const clock = new AlpacaTradingClient(
@@ -426,36 +330,7 @@ async function runLive(): Promise<void> {
     lastEval = now;
     evaluating = true;
     const context = sentiment.overlay(tracker.context(new Date(now).toISOString()));
-    safety.checkContext(context); // data-gap breaker — a blind bot must not trade
-    // Daily-loss breaker feed: mark the fleet to this cycle's quotes BEFORE evaluating, so a
-    // breach halts this very cycle. A failed read is skipped — the breaker judges real equity
-    // only, never an outage (the error/data-gap breakers own outages).
-    try {
-      const portfolios = await Promise.all(traders.map(({ broker }) => broker.getPortfolio()));
-      safety.recordEquity(fleetEquity(portfolios, context));
-    } catch (error) {
-      console.error("[equity] read failed:", error);
-    }
-    let firedOrganicallyThisCycle = false;
-    for (const { bot, trader } of traders) {
-      try {
-        const results = await trader.evaluate(context);
-        if (results.length > 0) {
-          firedOrganicallyThisCycle = true;
-        }
-        safety.recordSuccess();
-      } catch (error) {
-        safety.recordError();
-        console.error(`[eval] ${bot.persona.name} failed:`, error);
-      }
-    }
-    // Beta scout runs AFTER every bot's organic evaluation this cycle, so a real signal always gets
-    // first chance — the scout only fills the silence, never races an organic trade for the fill.
-    try {
-      await runBetaScout(context, firedOrganicallyThisCycle);
-    } catch (error) {
-      console.error("[beta-scout] cycle failed:", error);
-    }
+    await runner.runCycle(context);
     evaluating = false;
   };
 
@@ -475,6 +350,75 @@ async function runLive(): Promise<void> {
   console.log(
     `Autonomous trading started [live] — bots: ${bots.map((b) => b.persona.name).join(", ")}; universe: ${UNIVERSE.join(", ")}; maxPosition ${(risk.maxPositionPct * 100).toFixed(1)}%; market ${marketOpen ? "OPEN" : "closed"}.`,
   );
+}
+
+/** READINESS GATE + wiring for one live bot: a not-ready persona is pinned to `observe` (watched,
+ *  placing nothing) no matter what `SKYNET_AUTONOMOUS_MODE` says. Pulled out of `runLive` to keep
+ *  its own branching off that function's complexity budget (`scripts/arch-scan.mjs`'s sibling
+ *  lint gate) — it has no state of its own, so it's still just wiring, not a `LiveCycleRunner`. */
+function buildLiveBot(
+  bot: Bot,
+  opts: {
+    mode: TraderMode;
+    playbookRoster: ReturnType<typeof enabledPlaybooks>;
+    risk: RiskConfig;
+    blockedReason: () => string | null;
+    safety: SafetyController;
+    onDecision: (r: DecisionRecord) => void;
+  },
+): LiveBot {
+  const readiness = assessReadiness(bot.persona, {
+    pack: scenarioPacks[bot.persona.id],
+    safetyScenarios: genericSafetyScenarios,
+  });
+  const effectiveMode = opts.mode === "live" && readiness.ready ? "live" : "observe";
+  if (opts.mode === "live" && !readiness.ready) {
+    console.warn(
+      `[gate] ${bot.persona.name} is NOT ready — pinned to observe. ${readiness.reason}`,
+    );
+  } else {
+    console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
+  }
+  const broker = createBotBroker(bot);
+  return {
+    personaName: bot.persona.name,
+    broker,
+    trader: new AutonomousTrader({
+      // Readiness is assessed on the BASE persona (its certified judgment); playbooks compose on
+      // top as date-keyed plays with their own evidence trail, dark until SKYNET_PLAYBOOKS names
+      // them — the enablement flip rides the approval-gated autonomy-ops path.
+      persona: withPlaybooks(bot.persona, opts.playbookRoster.enabled, UPCOMING_PRINTS),
+      broker,
+      risk: opts.risk,
+      mode: effectiveMode,
+      blockedReason: opts.blockedReason,
+      onResult: (r) => {
+        opts.safety.recordOrder();
+        logResult(r);
+      },
+      onDecision: (r) => {
+        if (r.halted) console.warn(`[HALTED] ${r.personaId}: ${r.halted} — not trading`);
+        opts.onDecision(r);
+      },
+    }),
+  };
+}
+
+/** The beta scout's config, or `undefined` (dark) when unarmed or no bot account exists yet. */
+function buildScoutDeps(
+  betaForcingMaxPicks: number,
+  scoutBroker: BrokerPort | undefined,
+  opts: {
+    universe: readonly string[];
+    managedSymbols: ReadonlySet<string>;
+    risk: RiskConfig;
+    mode: TraderMode;
+  },
+): BetaScoutDeps | undefined {
+  if (betaForcingMaxPicks <= 0 || !scoutBroker) {
+    return undefined;
+  }
+  return { maxPicks: betaForcingMaxPicks, broker: scoutBroker, ...opts };
 }
 
 function logResult(r: {
