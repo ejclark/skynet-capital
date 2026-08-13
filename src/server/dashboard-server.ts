@@ -1,7 +1,12 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import { renderAnalysisBody } from "../observatory/analysis-view.js";
+import { type DeskTab, parseDeskTab } from "../observatory/desk-tabs.js";
 import type { EquitySample } from "../observatory/history-store.js";
+import { renderHistoryBody } from "../observatory/history-view.js";
+import { type MetricsViewOptions, renderMetricsBody } from "../observatory/metrics-view.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import { type DeskNotice, renderPositionsBody } from "../observatory/positions-view.js";
 import {
   type LeaderMetric,
   type NavContext,
@@ -30,6 +35,8 @@ import type {
 } from "./participant-service.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 import { sseFrame } from "./sse.js";
+import { handleTrade } from "./trade-routes.js";
+import type { SubmitDeskTrade } from "./trade-service.js";
 
 export interface DashboardServerConfig {
   readonly hub: ObservatoryHub;
@@ -72,6 +79,15 @@ export interface DashboardServerConfig {
    * a bot equals its persona id.
    */
   readonly readDecisions?: (participantId: string) => Promise<readonly DecisionRecord[]>;
+  /**
+   * Member-initiated trading from the desk (`/trade`). **Off unless both this flag and
+   * `submitTrade` are set** — building the mechanism is Claude's job, authorizing live order
+   * placement from a browser session is Eric's (CLAUDE.md, the irreversible class). With it off,
+   * the desk still renders its ticket, visibly disabled and honest about why.
+   */
+  readonly tradingEnabled?: boolean;
+  /** The execution seam (`trade-service.ts`). Absent = no order path is wired at all. */
+  readonly submitTrade?: SubmitDeskTrade;
 }
 
 /**
@@ -271,9 +287,13 @@ async function serveAuthorizedRoute(
     res.end(shellDocument("Learn — Skynet Capital", body));
     return;
   }
+  if (path === "/trade") {
+    await serveTradeRoute(req, res, config, session, navFor);
+    return;
+  }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
   if (path.startsWith("/u/")) {
-    await serveIndividualProfile(res, path, config, navFor);
+    await serveIndividualProfile(res, path, url, config, navFor);
     return;
   }
   if (path === "/" || path === "/index.html") {
@@ -283,6 +303,29 @@ async function serveAuthorizedRoute(
   }
   res.writeHead(404, { "content-type": "text/plain" });
   res.end("not found");
+}
+
+/**
+ * `POST /trade` — the desk's order path. Identity comes from the session and nowhere else: with no
+ * authenticator configured no id resolves, and `trade-routes.ts` refuses rather than guessing which
+ * account a request belongs to.
+ */
+async function serveTradeRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+  navFor: (active: NavView) => NavContext,
+): Promise<void> {
+  const participants = config.hub.getState().participants;
+  await handleTrade(req, res, {
+    snapshotFor: (id) => participants.find((p) => p.id === id),
+    requesterId: config.auth ? resolveCurrentId(session, participants) : undefined,
+    tradingEnabled: Boolean(config.tradingEnabled),
+    ...(config.submitTrade ? { submitTrade: config.submitTrade } : {}),
+    nav: navFor("you"),
+    document: shellDocument,
+  });
 }
 
 /** `/add` (join the board) and `/rotate` (swap an existing account's key). True when handled. */
@@ -320,10 +363,35 @@ async function trySelfServiceRoute(
   return false;
 }
 
-/** `/u/:id` — an individual's profile, or 404 when the id isn't on the board. */
+/** Notices are looked up by CODE, never echoed from the URL — a reflected message is an attack. */
+const TRADE_NOTICES: Record<string, DeskNotice> = {
+  submitted: {
+    kind: "ok",
+    message: "Order sent to the broker. It appears in Active and History as it fills.",
+  },
+  refused: {
+    kind: "error",
+    message: "That order didn't go through. Nothing was sent — review it and try again.",
+  },
+};
+
+/** One desk tab → its renderer. Every tab takes the same options; only Metrics reads history. */
+function renderDeskTab(
+  tab: Exclude<DeskTab, "overview">,
+  snapshot: ParticipantSnapshot,
+  options: MetricsViewOptions,
+): string {
+  if (tab === "positions") return renderPositionsBody(snapshot, options);
+  if (tab === "history") return renderHistoryBody(snapshot, options);
+  if (tab === "analysis") return renderAnalysisBody(snapshot, options);
+  return renderMetricsBody(snapshot, options);
+}
+
+/** `/u/:id` — an individual's desk. `?tab=` selects the view; anything unknown falls to overview. */
 async function serveIndividualProfile(
   res: ServerResponse,
   path: string,
+  url: string,
   config: DashboardServerConfig,
   navFor: (active: NavView) => NavContext,
 ): Promise<void> {
@@ -335,15 +403,35 @@ async function serveIndividualProfile(
     res.end("not found");
     return;
   }
+  const params = new URL(url, "http://localhost").searchParams;
   const nav = navFor("you");
+  const isSelf = nav.currentId === id;
+  const deskNav = { ...nav, active: (isSelf ? "you" : "board") as NavView };
+  const tab = parseDeskTab(params.get("tab"));
+  const notice = TRADE_NOTICES[params.get("n") ?? ""];
   const history = config.readHistory ? await config.readHistory(id) : undefined;
+
+  if (tab !== "overview") {
+    const body = renderDeskTab(tab, snapshot, {
+      nav: deskNav,
+      isSelf,
+      generatedAt: state.generatedAt,
+      tradingEnabled: Boolean(config.tradingEnabled && config.submitTrade),
+      ...(notice && isSelf ? { notice } : {}),
+      ...(history ? { history } : {}),
+    });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument(`${escapeHtml(snapshot.displayName)} — Skynet Capital`, body));
+    return;
+  }
+
   const decisions =
     config.readDecisions && snapshot.kind === "bot" ? await config.readDecisions(id) : undefined;
   // Landmark dial from the shared standings producer, so this view's Eye shows real rank too.
   const prominence = botLandmarkProminence(state.participants).get(id);
   const body = renderIndividualBody(snapshot, {
-    nav: { ...nav, active: nav.currentId === id ? "you" : "board" },
-    isSelf: nav.currentId === id,
+    nav: deskNav,
+    isSelf,
     generatedAt: state.generatedAt,
     ...(history ? { history } : {}),
     ...(decisions ? { decisions } : {}),

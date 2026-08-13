@@ -33,6 +33,7 @@ import { createInsightsListener, resolveInsightsBridgePort } from "../server/ins
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
+import { resolveDeskTrading } from "../server/trade-service.js";
 
 const PORT = resolvePort(process.env);
 
@@ -132,6 +133,14 @@ async function main(): Promise<void> {
     );
   }
 
+  // Member-initiated desk trading — off unless switched on AND OAuth is configured (see
+  // resolveDeskTrading; without a signed-in identity there is no account to match an order to).
+  const desk = resolveDeskTrading(process.env, {
+    findParticipant: (id) => [...roster, ...store.load()].find((p) => p.id === id),
+    clientFactory: dataSource.clientFactory,
+    authConfigured: Boolean(auth),
+  });
+
   const feedback = resolveFeedback(process.env);
   if (!feedback) {
     console.warn(
@@ -148,6 +157,8 @@ async function main(): Promise<void> {
     ...(feedback ? { submitFeedback: feedback } : {}),
     readHistory: (id) => history.list(id),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
+    tradingEnabled: desk.enabled,
+    submitTrade: desk.submit,
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(
