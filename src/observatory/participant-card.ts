@@ -102,6 +102,13 @@ export function participantCard(snapshot: ParticipantSnapshot, opts: CardOptions
   const youMark = opts.isSelf ? `<span class="you-mark">YOU</span>` : "";
 
   if (snapshot.error) {
+    // Never render this link when the card itself is `<a href="/u/:id">` (opts.link) — a nested
+    // anchor is invalid HTML with unpredictable click behavior. The profile page (isSelf-only,
+    // never card-wrapped) carries the same hint via renderIndividualBody instead.
+    const rotateHint =
+      opts.isSelf && !opts.link
+        ? ` <a href="/rotate">Regenerated your key? Rotate your credentials</a>.`
+        : "";
     return `<${tag} class="card card-error${self}"${href}>
       <header class="card-head">
         <h3>${escapeHtml(snapshot.displayName)}</h3>
@@ -109,7 +116,7 @@ export function participantCard(snapshot: ParticipantSnapshot, opts: CardOptions
         ${chip(snapshot)}
         <span class="dot dot-error" title="account unreachable"></span>
       </header>
-      <p class="error-msg">Account unreachable — check this participant's API keys.</p>
+      <p class="error-msg">Account unreachable — check this participant's API keys.${rotateHint}</p>
     </${tag}>`;
   }
 

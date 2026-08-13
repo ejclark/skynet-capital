@@ -139,6 +139,24 @@ describe("participant-card", () => {
       expect(html).not.toContain("Equity");
     });
 
+    it("offers a rotate-credentials link on your own unreachable, unlinked card", () => {
+      const html = participantCard(snap({ error: "network error" }), { isSelf: true });
+      expect(html).toContain('<a href="/rotate">');
+    });
+
+    it("omits the rotate link for someone else's unreachable card", () => {
+      const html = participantCard(snap({ error: "network error" }));
+      expect(html).not.toContain("/rotate");
+    });
+
+    it("never nests the rotate link inside the card's own outer <a> (invalid HTML)", () => {
+      const html = participantCard(snap({ error: "network error" }), {
+        isSelf: true,
+        link: true,
+      });
+      expect(html).not.toContain("/rotate");
+    });
+
     it("renders equity, cash, invested and unrealized for a healthy account", () => {
       const html = participantCard(
         snap({

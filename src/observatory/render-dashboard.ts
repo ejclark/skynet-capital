@@ -136,11 +136,14 @@ export function renderIndividualBody(
     : "";
 
   if (snapshot.error) {
+    const rotateHint = isSelf
+      ? ` <a href="/rotate">Regenerated your key? Rotate your credentials</a>.`
+      : "";
     return renderShell(
       options.nav,
       `<section class="indiv indiv-error">
     <h1 class="indiv-name">${escapeHtml(snapshot.displayName)} ${chip(snapshot)}</h1>
-    <p class="error-msg">Account unreachable — check this participant's API keys.</p>
+    <p class="error-msg">Account unreachable — check this participant's API keys.${rotateHint}</p>
   </section>`,
       asOf,
     );

@@ -47,7 +47,7 @@
   "src/observatory/history-sampler.ts": 64,
   "src/observatory/history-store.ts": 110,
   "src/observatory/leaderboard-view.ts": 94,
-  "src/observatory/participant-card.ts": 142,
+  "src/observatory/participant-card.ts": 149,
   "src/observatory/participant-snapshot.ts": 117,
   "src/observatory/persona-lore.ts": 76,
   "src/observatory/play-feedback.ts": 57,
