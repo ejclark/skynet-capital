@@ -140,3 +140,51 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** the third instance was caught only because lint flagged an unused parameter —
   worth noting that the cheapest detector for "this feature never ran" was a general-purpose gate,
   not anything render-specific.
+
+### Concurrent background-agent worktrees raced and flipped the main checkout's core.bare to true
+- **SHA:** n/a   **DATE:** 2026-08-13   **STATUS:** closed
+- **SIGNAL:** the session's stop-hook git-check fired four times in about an hour with "fatal: this
+  operation must be run in a work tree" — `git status` in the main checkout failed outright each
+  time, even though nothing there had actually changed. Detection lag: seconds per occurrence (the
+  stop hook itself catches it immediately); the *pattern* wasn't recognized as a race until the
+  third/fourth repeat.
+- **ROOT CAUSE:** three background agents ran concurrently with `isolation: "worktree"`, each
+  running `git worktree add`/`remove` against the SAME shared `.git` directory (worktrees share
+  their parent repo's `.git` by design). Git 2.43.0's worktree add/prune path writes the shared
+  `.git/config`; concurrent writes from multiple agent processes racing on that file corrupted it,
+  flipping `core.bare` from `false` to `true` — which makes every git command in the main checkout
+  (and every other worktree) fail with "must be run in a work tree," even though the working tree
+  and its files were never touched.
+- **PREVENTION:** ledger-only, deliberately not mechanized tonight — the fix is one command
+  (`git config core.bare false`) and takes seconds once the signature is recognized; building a
+  real fix (serializing worktree operations, or avoiding concurrent `isolation: "worktree"` agents
+  against one repo) costs more engineering than the four recurrences tonight cost to fix by hand.
+  Recognize the signature — "fatal: this operation must be run in a work tree" from a checkout that
+  was fine moments earlier, especially with parallel worktree-isolated agents running — and run
+  `git config core.bare false` immediately. Never treat it as real uncommitted-work loss, and never
+  run a destructive git command (`reset --hard`, `clean -f`) in response to this specific error.
+- **SIDE QUESTS:** worth a future look — does a newer git version fix this race, or does the
+  harness's worktree-isolation feature serialize `git worktree` calls internally so this can't
+  happen? Neither investigated tonight. → docs/IDEAS.md.
+
+### A background agent used `git stash` despite CLAUDE.md's explicit warning, and hit the exact failure mode warned about
+- **SHA:** n/a   **DATE:** 2026-08-13   **STATUS:** closed
+- **SIGNAL:** the agent building PR #318 self-reported, unprompted, in its final report: "I hit the
+  exact `git stash` failure mode CLAUDE.md warns about (silently misapplied a stash across a moving
+  branch ref)... recovered cleanly via `git show <ref>:<path>` restores... no work was lost."
+  Detection lag: none from outside — self-caught and self-recovered inside the same agent run; it
+  only surfaced at all because the agent chose to disclose it in its report.
+- **ROOT CAUSE:** CLAUDE.md already carries an explicit warning ("Branch-first avoids needing
+  `git stash`... don't use `git stash` in this environment — it has silently dropped stashed edits
+  on pop"), but it's prose inside a long file, not a mechanically enforced rule, and a subagent
+  working under branch-motion pressure (its base branch was being actively pushed to by the parent
+  session concurrently) reached for the familiar general-purpose git tool anyway. Same shape as the
+  "deploy doom loop" lesson above: a warning that already existed in doctrine and still wasn't
+  enough, because nothing stops the tool from being reachable.
+- **PREVENTION:** ledger-only, justified explicitly — there is no standard git hook that intercepts
+  `git stash` (hooks fire on commit/push-shaped events, not on stash), and agents run in ordinary
+  shells rather than a restricted git wrapper, so a hard mechanical gate isn't cheaply available
+  today. This entry is the reinforcement: a second, concrete, recent instance to point future
+  sessions at, since the first (prose-only) warning wasn't enough on its own.
+- **SIDE QUESTS:** → docs/IDEAS.md — a `git stash`-blocking shell wrapper for agent bootstraps, if
+  the harness ever exposes a place to inject one.
