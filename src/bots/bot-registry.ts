@@ -2,6 +2,12 @@ import type { AlpacaCredentials } from "../alpaca/credentials.js";
 import type { Persona } from "../personas/persona.js";
 import { type Bot, credentialEnvNames } from "./bot.js";
 
+/** Parse SKYNET_AUTONOMOUS_BOTS ("id,id,..."), defaulting to just the Day Trader — the one
+ *  roster env var every bot-facing script (run-autonomous, morning-brief) reads the same way. */
+export function enabledBotIds(env: Readonly<Record<string, string | undefined>>): string[] {
+  return (env.SKYNET_AUTONOMOUS_BOTS ?? "day-trader").split(",").map((s) => s.trim());
+}
+
 /** The result of loading bots: those wired up, and those still missing credentials. */
 export interface BotLoadResult {
   readonly bots: Bot[];
