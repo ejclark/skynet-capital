@@ -23,6 +23,7 @@
     "run:autonomous:offline": "SKYNET_DATA_SOURCE=offline tsx src/scripts/run-autonomous.ts",
     "record:session": "tsx src/scripts/record-session.ts",
     "confirm:print-dates": "tsx src/scripts/confirm-print-dates.ts",
+    "brief:morning": "tsx src/scripts/morning-brief.ts",
     "shoot:login": "tsx scripts/shoot-login.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
     "prepare": "test -n \"$CI\" || husky",

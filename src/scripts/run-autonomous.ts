@@ -36,7 +36,7 @@ import { SafetyController } from "../autonomous/safety.js";
 import { guardAccountCollisions } from "../bots/account-guard.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { createBotBroker } from "../bots/bot-broker.js";
-import { loadBots } from "../bots/bot-registry.js";
+import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { MarketContext } from "../domain/types.js";
 import { applyGuards } from "../engine/guards.js";
@@ -61,10 +61,6 @@ const ALPACA_DATA_BASE_URL = "https://data.alpaca.markets";
 const _EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 
-function enabledIds(): string[] {
-  return (process.env.SKYNET_AUTONOMOUS_BOTS ?? "day-trader").split(",").map((s) => s.trim());
-}
-
 async function main(): Promise<void> {
   if ((process.env.SKYNET_DATA_SOURCE ?? "live") === "offline") {
     runOffline();
@@ -76,7 +72,7 @@ async function main(): Promise<void> {
 // --- offline: replay fixtures against in-memory brokers, no keys, always "open" ----------
 
 function runOffline(): void {
-  const enabled = new Set(enabledIds());
+  const enabled = new Set(enabledBotIds(process.env));
   const personas = createDefaultPersonas().filter((p) => enabled.has(p.id));
   if (personas.length === 0) {
     console.error(`No enabled personas. Wanted: ${[...enabled].join(", ")}`);
@@ -148,7 +144,7 @@ function runOffline(): void {
 // --- live: the real Alpaca market-data stream + broker, gated on market hours ------------
 
 async function runLive(): Promise<void> {
-  const enabled = new Set(enabledIds());
+  const enabled = new Set(enabledBotIds(process.env));
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
   // registry would also have qualified.

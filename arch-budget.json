@@ -18,7 +18,7 @@
   "src/autonomous/readiness.ts": 75,
   "src/autonomous/safety.ts": 115,
   "src/bots/bot-broker.ts": 19,
-  "src/bots/bot-registry.ts": 73,
+  "src/bots/bot-registry.ts": 79,
   "src/bots/bot.ts": 26,
   "src/domain/curriculum.ts": 187,
   "src/domain/earnings-calendar.ts": 138,
