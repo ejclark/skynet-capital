@@ -15,6 +15,10 @@
  *   SKYNET_MOMENTUM_WINDOW   ticks in the momentum window (default: 20)
  *   SKYNET_PLAYBOOKS         playbook roster, "id:mode" pairs (e.g. "S1-NVDA:standard,G1-GOOG:conservative").
  *                            Empty (default) = all playbooks dark. Flip via autonomy-ops only.
+ *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. When
+ *                            armed, and nothing organic trades on a given day, forces up to N small,
+ *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
+ *                            see src/playbooks/beta-scout.ts. Flip via autonomy-ops only.
  */
 import { existsSync } from "node:fs";
 import { InMemoryBroker } from "../adapters/in-memory-broker.js";
@@ -23,7 +27,7 @@ import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
-import type { DecisionRecord } from "../autonomous/decision-record.js";
+import type { DecisionRecord, IntentOutcome } from "../autonomous/decision-record.js";
 import { fleetEquity } from "../autonomous/equity-watch.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
@@ -34,13 +38,17 @@ import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { loadBots } from "../bots/bot-registry.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import type { MarketContext } from "../domain/types.js";
+import { applyGuards } from "../engine/guards.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { scenarioPacks } from "../evals/scenarios/index.js";
 import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { createDefaultPersonas } from "../personas/registry.js";
+import { betaScoutExitIntents, betaScoutIntents } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
+import type { BrokerPort } from "../ports/broker.js";
 import { readOfflineEvents } from "../runtime/data-source.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
@@ -286,6 +294,109 @@ async function runLive(): Promise<void> {
     };
   });
 
+  // --- beta scout: Eric's beta-phase directive (2026-08-13) — "deploying playbooks to observe
+  // mechanics acting in live environments gives me confidence"; if nothing organic fires, force
+  // a few small, honestly-labeled picks rather than wait indefinitely. Deliberately NOT a
+  // Persona (which the contract requires to be pure — "same inputs, same intents"); this is
+  // stateful orchestration, same category as smoke-trade.ts, run directly against a broker so
+  // its picks still flow through the SAME guards (S2/E1, position cap) and audit trail as every
+  // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off).
+  const betaForcingMaxPicks = Number(process.env.SKYNET_BETA_FORCING ?? "0");
+  const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
+  if (betaForcingMaxPicks > 0 && scoutBroker) {
+    console.log(
+      `[beta-scout] armed: up to ${betaForcingMaxPicks} forced pick(s)/day when nothing organic fires, on ${traders[0]?.bot.persona.name}'s account.`,
+    );
+  } else if (betaForcingMaxPicks > 0) {
+    console.warn(
+      "[beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.",
+    );
+  }
+  const managedSymbols = new Set(playbookRoster.enabled.map((e) => e.playbook.symbol));
+  let scoutDay = "";
+  let scoutRanToday = false;
+  let scoutFiredOrganicallyToday = false;
+  const scoutOwnedSymbols = new Set<string>();
+
+  const submitScoutIntents = async (intents: ReturnType<typeof betaScoutIntents>) => {
+    if (intents.length === 0 || !scoutBroker) {
+      return;
+    }
+    const blocked = blockedReason();
+    if (blocked) {
+      console.warn(`[beta-scout] skipped — halted: ${blocked}`);
+      return;
+    }
+    const outcomes: IntentOutcome[] = [];
+    for (const intent of intents) {
+      if (mode !== "live") {
+        console.log(
+          `[beta-scout] would ${intent.side} ${intent.quantity} ${intent.symbol} (observe mode)`,
+        );
+        outcomes.push({ intent, action: "observed" });
+        continue;
+      }
+      const result = await scoutBroker.submit(intent);
+      safety.recordOrder();
+      logResult(result);
+      outcomes.push({ intent, action: result.status === "filled" ? "placed" : "rejected", result });
+    }
+    onDecision({
+      at: Date.now(),
+      personaId: "beta-scout",
+      mode,
+      rawIntents: intents,
+      guardedIntents: intents,
+      outcomes,
+    });
+  };
+
+  // `firedOrganicallyThisCycle` is applied AFTER the day-rollover reset below, not before — otherwise
+  // the first cycle of a new day that also happens to carry an organic fire would set the flag and
+  // then immediately have the rollover wipe it back to false, letting the scout fire anyway.
+  const runBetaScout = async (
+    context: MarketContext,
+    firedOrganicallyThisCycle: boolean,
+  ): Promise<void> => {
+    if (betaForcingMaxPicks <= 0 || !scoutBroker) {
+      return;
+    }
+    const today = context.asOf.slice(0, 10);
+    if (today !== scoutDay) {
+      scoutDay = today;
+      scoutRanToday = false;
+      scoutFiredOrganicallyToday = false;
+      if (scoutOwnedSymbols.size > 0) {
+        const portfolio = await scoutBroker.getPortfolio();
+        const exits = betaScoutExitIntents(portfolio, scoutOwnedSymbols);
+        for (const exit of exits) {
+          scoutOwnedSymbols.delete(exit.symbol);
+        }
+        await submitScoutIntents(exits);
+      }
+    }
+    if (firedOrganicallyThisCycle) {
+      scoutFiredOrganicallyToday = true;
+    }
+    if (scoutRanToday || scoutFiredOrganicallyToday) {
+      return;
+    }
+    scoutRanToday = true; // set BEFORE acting — a failed submit must not retry every cycle
+    const portfolio = await scoutBroker.getPortfolio();
+    const guarded = applyGuards(
+      betaScoutIntents(context, portfolio, UNIVERSE, managedSymbols, false, {
+        maxPicks: betaForcingMaxPicks,
+      }),
+      portfolio,
+      context,
+      risk,
+    );
+    for (const intent of guarded) {
+      scoutOwnedSymbols.add(intent.symbol);
+    }
+    await submitScoutIntents(guarded);
+  };
+
   // Gate trading on market hours (refreshed periodically).
   const clock = new AlpacaTradingClient(
     new FetchAlpacaTradingTransport({
@@ -325,14 +436,25 @@ async function runLive(): Promise<void> {
     } catch (error) {
       console.error("[equity] read failed:", error);
     }
+    let firedOrganicallyThisCycle = false;
     for (const { bot, trader } of traders) {
       try {
-        await trader.evaluate(context);
+        const results = await trader.evaluate(context);
+        if (results.length > 0) {
+          firedOrganicallyThisCycle = true;
+        }
         safety.recordSuccess();
       } catch (error) {
         safety.recordError();
         console.error(`[eval] ${bot.persona.name} failed:`, error);
       }
+    }
+    // Beta scout runs AFTER every bot's organic evaluation this cycle, so a real signal always gets
+    // first chance — the scout only fills the silence, never races an organic trade for the fill.
+    try {
+      await runBetaScout(context, firedOrganicallyThisCycle);
+    } catch (error) {
+      console.error("[beta-scout] cycle failed:", error);
     }
     evaluating = false;
   };

@@ -95,6 +95,40 @@ MRVL −0.5) — the signature of noise, not edge. The sweep's [kill list](../re
 adds nine more (S1-beyond-NVDA, AVGO/META hold-the-print variants, AAPL late run-up, MSFT D-10
 run-up, S4 daily round-trips, and others) — check it before proposing any earnings-window trade.
 
+## Beta-phase forced trading (deliberately NOT a playbook)
+
+**Eric's directive (2026-08-13):** during the beta/testing phase, money resets, and the goal is
+*observing the machinery in a live environment*, not waiting for a high-conviction signal to arrive
+organically — "if market conditions do not organically trigger a trade, look up a series of trades
+that are the best bets available... operate like you must place 2-3 bets. be transparent about that
+in the context/write-up of the trade."
+
+This is intentionally kept **outside** the playbook system above rather than folded into it — S1/G1
+stay evidence-gated and pure, and this stays honestly labeled as a forced, non-conviction fill. Built
+as `src/playbooks/beta-scout.ts` (module name only — architecturally it is closer to
+`smoke-trade.ts` than to a playbook or persona):
+
+- **When it fires:** once per trading day, only if nothing organic traded that day (any bot's
+  `AutonomousTrader.evaluate` produced a live fill). Never races an organic trade — it runs after
+  every bot's evaluation each cycle.
+- **What it picks:** ranks the universe (minus playbook-managed symbols, minus anything already
+  held) by `|sentiment| + |momentum|` — signals already computed elsewhere, nothing new researched
+  per pick — and forces up to `SKYNET_BETA_FORCING` (Eric: "2-3") small buys, long-only.
+- **Sizing:** 0.5% of cash per pick, below every playbook's softest (`conservative`) floor — a
+  mechanics probe, not a position.
+- **Labeling:** every scout order's `reason` states plainly that no organic trade fired and exactly
+  what thin signal ranked it (`playbookId: "BETA-SCOUT"`, reserved and distinct from every real
+  playbook id), so the metrics layer can and must bucket scout performance separately from a
+  playbook's evidence-backed track record.
+- **Exit:** flattened after one trading day, unconditionally — never carried or managed like a real
+  position.
+- **Enablement:** dark by default (`SKYNET_BETA_FORCING` unset = 0). Flips live via the
+  approval-gated `autonomy-ops.yml` `set-beta-forcing` action, same pattern as `set-playbooks`.
+
+**Open fork (not yet answered):** should the dashboard visually distinguish forced beta-scout picks
+from evidence-gated playbook fills? Proposed default: yes, as a fast-follow once the mechanism has
+run for a few days and there's something real to show.
+
 ## Slices
 
 1. **Playbook seam** — `playbookId` + evidence on `OrderIntent`, threaded through guards into
@@ -141,6 +175,10 @@ run-up, S4 daily round-trips, and others) — check it before proposing any earn
 
 ## Decision log
 
+- **2026-08-13 — beta-phase forced trading added, deliberately outside the playbook roster.** Eric:
+  reset money, deploy to observe mechanics; force 2-3 honestly-labeled non-conviction picks on any
+  day nothing organic fires. Built as `src/playbooks/beta-scout.ts` + orchestration in
+  `run-autonomous.ts`, dark by default behind `SKYNET_BETA_FORCING`. See the section above.
 - **2026-08-12 — Eric flipped draft→ready** (in-session "done"). Execution begins with session A:
   playbook seam (slice 1), earnings calendar (peer-aware, per the sweep), S2 + E1 as guards
   (slice 4). Playbooks built dark behind an enablement flag; live enablement stays Eric's.
