@@ -166,6 +166,15 @@ fine; the docs are the memory.
   when he asks, or for the carve-outs (workflow files, and the credentials/spend/outward-facing
   irreversible class). Native auto-merge, never an in-CI REST merge: a `GITHUB_TOKEN` merge wouldn't
   trigger the `push`→`main` deploy. Full merge policy: `.claude/skills/governor/SKILL.md`.
+- **Draft is a harness artifact, not a judgment — promote it immediately** (Eric's correction). Some
+  Claude Code environments force every PR open as a draft. That is a property of the tool, never a
+  statement that the change isn't ready, and leaving it there is a **throughput bug**: a draft can't
+  auto-merge, so every trivial PR silently becomes a request for Eric's attention — the exact ToC
+  violation this whole model exists to avoid. Its second bite is worse: drafts also skip `verify`
+  (see `docs/LESSONS.md`, 2026-08-14), so draft-by-default once merged code with no CI at all. So the
+  moment a PR is open: **mark it ready for review and arm auto-merge in the same breath**, unless a
+  carve-out above genuinely applies. Draft should last seconds, and only ever when Claude has a
+  specific reason to hold — never by inheritance.
 - **Commits & PRs are documents** (see `docs/ENGINEERING.md` → _Change communication_): Conventional-
   Commit subjects (lowercase-led, imperative); PRs lead with a plain-language **Summary** + **Why**, and
   bury the weeds **below the fold** (`<details>`), written so an analytical-but-non-technical reader gets
