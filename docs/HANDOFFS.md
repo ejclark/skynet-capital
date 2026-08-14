@@ -23,7 +23,36 @@ The payoff is a safety property, not just tidiness: **committing a bundle trigge
 `draft` handoff can sit in the repo indefinitely. The `ready` flip is a deliberate, one-word
 authorization, and it is the same gate the irreversible class already runs through.
 
+## Getting a bundle out of Claude Design — use "Send to Claude Code Web"
+
+Claude Design has a **Send to Claude Code Web** action that seeds the design project directly into a
+Claude Code workspace. Prefer it over exporting a zip: it is instant, it is event-driven (a button in
+Design, not a poll), and it skips the download → unzip → locate → commit chain where the bundle can
+land in the wrong clone or pick up Finder metadata on the way. Nothing here needs to detect it — the
+seeded session simply arrives already holding the files.
+
+**If you are a session that was just seeded from Claude Design, this section is your instruction set.**
+The design project is your input; a handoff folder is your output. Do this before anything else:
+
+1. Pick a slug (kebab-case, the feature's name — `desk-v2`, not `redesign-final-2`).
+2. Write the bundle to `docs/handoffs/<slug>/` — mocks, tokens, screenshots, exactly as seeded.
+3. Author `docs/handoffs/<slug>/README.md` from [`docs/handoffs/TEMPLATE.md`](handoffs/TEMPLATE.md). Translate the
+   design session's own contract rulings into the contract's shape — **reshape, don't rewrite**: its
+   rulings are decisions already made, and re-deciding them silently is the one thing that makes a
+   handoff worse than no handoff. The **Design bundle** table is the section that earns its keep;
+   fill it honestly, naming which file wins on a conflict.
+4. Leave the status at **`draft`**. You are not authorized to set `ready` — that flip is Eric's, and
+   it is the build trigger.
+5. `npm run handoff:scan` until it reports clean, then verify (`typecheck`, `lint`, `test`) and open
+   a PR. Promote it out of draft and arm auto-merge — a docs-only bundle has no carve-out.
+6. Tell Eric it is clean and waiting on the one word.
+
+That is the whole bridge. A session that follows it turns "I finished a design" into "a PR is open"
+with no terminal, no zip, and no file ever touching a local disk.
+
 ## Author a handoff
+
+<!-- The manual path, for a bundle that arrives some other way. -->
 
 1. Copy [`docs/handoffs/TEMPLATE.md`](handoffs/TEMPLATE.md) to `docs/handoffs/<slug>/README.md`.
 2. Drop the bundle beside it — mock HTML, tokens, screenshots.
