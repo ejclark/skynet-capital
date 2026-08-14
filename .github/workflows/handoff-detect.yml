@@ -1,0 +1,101 @@
+name: Handoff detect
+
+# Layer 1 of the design→code pickup (docs/HANDOFFS.md): when a handoff lands on main with
+# `**Status:** ready`, open a `handoff`-labelled issue for it. That issue is the queue, the audit
+# trail, and — once Eric installs the Claude Code app — the thing `@claude` reacts to (claude.yml).
+#
+# Rationing: `paths:` keeps this off every unrelated push, and the scan is dependency-free, so there
+# is no `npm ci` here. A handoff push costs seconds of runner time, not minutes (see pipeline.yml's
+# rationing notes — GHA minutes are the metered constraint).
+#
+# Idempotent by construction: the issue title is exactly "[handoff] <slug>", so a re-push while the
+# handoff is still ready finds the open issue and does nothing.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/handoffs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: handoff-detect
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: detect ready handoffs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node (version from .nvmrc)
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
+
+      - name: Scan for ready handoffs
+        id: scan
+        run: |
+          READY=$(node scripts/handoff-scan.mjs --ready)
+          COUNT=$(echo "$READY" | jq 'length')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "$READY" > /tmp/ready.json
+          echo "$COUNT handoff(s) ready."
+          node scripts/handoff-scan.mjs
+
+      - name: Open an issue per ready handoff
+        if: steps.scan.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          api() { curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$@"; }
+
+          # The label may not exist yet on a fresh repo; creating it twice is a harmless 422.
+          api -X POST "https://api.github.com/repos/$REPO/labels" \
+            -d '{"name":"handoff","color":"5319e7","description":"A Claude Design bundle waiting to be built"}' \
+            >/dev/null || true
+
+          OPEN=$(api "https://api.github.com/repos/$REPO/issues?state=open&labels=handoff&per_page=100")
+
+          jq -c '.[]' /tmp/ready.json | while read -r H; do
+            SLUG=$(echo "$H" | jq -r .slug)
+            TITLE=$(echo "$H" | jq -r .title)
+            HPATH=$(echo "$H" | jq -r .path)
+            README=$(echo "$H" | jq -r .readme)
+            FILES=$(echo "$H" | jq -r '.files[] | "- `" + . + "`"')
+            ISSUE_TITLE="[handoff] $SLUG"
+
+            if [ "$(echo "$OPEN" | jq -r --arg t "$ISSUE_TITLE" '[.[] | select(.title == $t)] | length')" != "0" ]; then
+              echo "· $SLUG — already queued, nothing to do."
+              continue
+            fi
+
+            BODY=$(printf '%s\n' \
+              "@claude — a design handoff is ready to build: **$TITLE**" \
+              "" \
+              "Its contract is [\`$README\`](../blob/main/$README). Read it first, then follow the execution" \
+              "discipline in [\`docs/HANDOFFS.md\`](../blob/main/docs/HANDOFFS.md) — in short:" \
+              "" \
+              "1. Flip the handoff's status \`ready\` → \`executing\` in your first commit (that is the lock)." \
+              "2. Reconcile the bundle's tokens against \`docs/BRAND.md\` before writing code — **the brand wins** on conflict, and the divergence gets a decision-log line." \
+              "3. Reuse \`src/ui\` before adding anything; ship small green PRs via \`/ship\`." \
+              "4. Verify every EARS criterion by its named verification, then flip the status to \`review\` and close this issue with the PR link." \
+              "" \
+              "Bundle at \`$HPATH\`:" \
+              "" \
+              "$FILES" \
+              "" \
+              "---" \
+              "_Opened automatically by the handoff watcher (\`.github/workflows/handoff-detect.yml\`)._")
+
+            api -X POST "https://api.github.com/repos/$REPO/issues" \
+              -d "$(jq -n --arg t "$ISSUE_TITLE" --arg b "$BODY" '{title:$t, body:$b, labels:["handoff"]}')" \
+              | jq -r '"▶ queued " + .html_url'
+          done

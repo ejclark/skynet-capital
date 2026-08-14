@@ -10,6 +10,11 @@ This is the missing layer between `docs/IDEAS.md` (capture — one-liners, not e
 loop (execution — assumes direction already settled). A **plan** is the unit of alignment: rich enough
 that execution needs no live guidance, explicit about what was pre-decided, and honest about what wasn't.
 
+**Plans authored elsewhere:** a design handoff from a Claude Design session is the same object with a
+bundle of mocks attached — it lives in `docs/handoffs/<slug>/README.md`, uses this exact lifecycle and
+these exact sections, and gets picked up automatically on the `ready` flip. See
+[`docs/HANDOFFS.md`](../HANDOFFS.md).
+
 ## Lifecycle
 
 ```
