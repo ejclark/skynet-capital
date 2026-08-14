@@ -155,6 +155,20 @@ the top level importance as that's the premise of season one")_
   The cheapest fix is probably a notification on `main` failure, not another gate.
 _(src: Claude · while: diagnosing three consecutive failed releases)_
 
+### "Skipped ≠ passed" — audit every gate that can skip itself (see LESSONS.md 2026-08-14)
+- A check that skips reports `skipped`, and **branch protection counts that as a pass**. So any gate
+  with a conditional `if:` has a second, invisible failure mode next to "goes red": *quietly doesn't
+  run, and reads as green*. `verify` sat in exactly that state for every draft-opened PR until the
+  `ready_for_review` fix. The class question is what else inherits the shape — `pipeline.yml`'s
+  docs-only skip path is the obvious next one to look at, and the deploy job's conditions after that.
+- Candidate mechanism: a scheduled scan that reads the check runs on recently-merged commits and
+  flags any required check whose conclusion was `skipped` at merge time. That measures the property
+  we actually care about (*did the gate run on what shipped?*), which no in-CI gate can measure about
+  itself — and it deliberately reports rather than blocks, per the doom-loop finding above.
+- Worth pairing with a one-time confirmation that `verify` is in fact a **required** check in branch
+  protection. The `types:` fix guarantees the run happens; only branch protection makes it block.
+_(src: Claude · while: watching PR #322 merge with `verify: skipped`)_
+
 ### Metrics as the gamification substrate — multi-axis ladders + per-strategy effectiveness
 Gamification is *all about metrics*: find the stats worth measuring, then let each one be its own way
 onto the leaderboard. Eric's framing, and it sharpens THE-GAME.md's two-ledger idea into something

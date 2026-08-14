@@ -11,11 +11,19 @@ name: Pipeline
 #   - docs-only PRs still run `verify` but SKIP the heavy steps (typecheck/lint/test) — the job
 #     spins up, reports `verify` green in seconds, and lets auto-merge fire. (We can't paths-ignore
 #     `**.md` here: a required check that never runs leaves docs PRs stuck "waiting for status".)
-#   - draft PRs don't run.
+#   - draft PRs don't run — but see the `types:` note below; "doesn't run yet" must not decay into
+#     "never runs".
 #   - main pushes skip verify (deploy only) → no duplicate test run per merge.
 on:
   pull_request:
     branches: [ main ]
+    # `ready_for_review` is NOT in the default type list (opened/synchronize/reopened), and leaving
+    # it out silently voided the whole gate for any PR that started as a draft: the draft's run
+    # skipped `verify`, promoting it to ready fired no run at all, and that stale `skipped` check
+    # stayed the latest word — which branch protection counts as a PASS. PR #322 merged that way,
+    # having never run a single test in CI. It matters far more than it looks: Claude opens every
+    # PR as a draft by default, so this was every Claude-authored PR, not an edge case.
+    types: [ opened, synchronize, reopened, ready_for_review ]
   push:
     branches: [ main ]
 
