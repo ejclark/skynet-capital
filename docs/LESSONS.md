@@ -27,6 +27,35 @@ it. Prevention ranks, best first:
 
 ---
 
+### Every PR that started as a draft merged without CI ever running
+- **SHA:** 5dcd38b   **DATE:** 2026-08-14   **STATUS:** closed
+- **SIGNAL:** none from the system — the gate reported no failure because it never ran. Caught only
+  because a session watching its own PR read the check runs directly and found `verify: skipped` on a
+  PR that had been marked ready for review. Detection lag: unbounded. Nothing in the repo could have
+  raised this on its own, and the dashboard of green checkmarks looked exactly the same either way —
+  which is what makes a silent gate worse than a red one.
+- **ROOT CAUSE:** `pipeline.yml` filtered `verify` on `draft == false` but never added
+  `ready_for_review` to the `pull_request` trigger's `types:`. GitHub's default types are
+  `opened`/`synchronize`/`reopened` only, so the sequence was: draft PR opens → run fires → `verify`
+  skips (correctly, it's a draft) → PR promoted to ready → **no run fires at all** → the stale
+  `skipped` check remains the latest word on that SHA → branch protection counts a skipped check as
+  a pass → merge allowed. Each half was individually reasonable; the hole existed only in their
+  composition, which is why reading either one in isolation looks fine. Blast radius was not an edge
+  case: Claude opens every PR as a draft by default, so this was the normal path for Claude-authored
+  work, and #322 merged through it having run zero tests in CI.
+- **PREVENTION:** gate — `types: [ opened, synchronize, reopened, ready_for_review ]` in
+  `.github/workflows/pipeline.yml`, so promoting a draft fires a real run and `verify` moves to
+  *pending* (which branch protection blocks on) instead of staying *skipped* (which it doesn't). The
+  rationing intent is preserved exactly: drafts still don't burn runner minutes. The comment block
+  above the trigger carries the *why*, co-located, so a future edit can't quietly drop it again.
+- **SIDE QUESTS:** worth confirming `verify` is actually listed as a required check in branch
+  protection — this fix guarantees the run happens, but only branch protection makes it *block*. That
+  setting is Eric's (repo settings, not expressible in-repo). Broader thread → docs/IDEAS.md: a
+  "skipped ≠ passed" audit over the other gates, since any check that can skip itself inherits this
+  same shape.
+
+---
+
 ### A regenerated Alpaca key landed in the wrong GitHub secret slot, and there was no way to fix it right
 - **SHA:** 9e748be   **DATE:** 2026-08-11   **STATUS:** closed
 - **SIGNAL:** Eric noticed a self-service bot ("JARVIS") showing "Account unreachable," and separately
