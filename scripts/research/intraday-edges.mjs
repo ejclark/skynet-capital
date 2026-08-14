@@ -145,7 +145,7 @@ function report(rows, bh) {
     `\n  ${"strategy".padEnd(34)}${w("n", 5)}${w("gross%/d", 10)}${w("net%/d", 9)}` +
       `${w("net tot%", 10)}${w("win%", 6)}${w("Sharpe", 8)}${w("trades", 8)}${w("b/e bps", 9)}`,
   );
-  console.log("  " + "-".repeat(89));
+  console.log(`  ${"-".repeat(89)}`);
   for (const r of rows.filter(Boolean)) {
     const flag = r.sharpe > bh.sharpe ? " *" : "";
     console.log(
@@ -214,7 +214,7 @@ function reportSegments(daily) {
   console.log(
     `\n  ${"segment".padEnd(34)}${"mean%".padStart(9)}${"sd%".padStart(8)}${"win%".padStart(7)}${"total%".padStart(10)}`,
   );
-  console.log("  " + "-".repeat(68));
+  console.log(`  ${"-".repeat(68)}`);
   for (const [name, fn] of segs) {
     const xs = daily
       .map((d, i) => fn(d, daily[i - 1]))

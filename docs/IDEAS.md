@@ -18,6 +18,29 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### The fill window is 15 orders — History and Analysis are honest but shallow
+The desk reconstructs round trips from `getRecentOrders(limit=15)`, which is the entire fill window
+we hold. The views say so out loud (`truncated` → "history begins mid-trade"), but an active account
+blows through 15 orders in days, and the trade-analysis stats are only as good as the window behind
+them. Two moves: pull deeper (~200) on the desk tabs only, or record fills durably as they stream
+through `trade_updates` — the second doubles as the per-fill ledger the metrics-layer plan's Tier 2
+is blocked on, and as the entry record `plans/trade-insights-loop.md` wants at close. _(src: Claude ·
+while: building the player desk's History/Analysis tabs, 2026-08-13)_
+
+### Limit orders as the educational default on the desk ticket
+The desk ticket is market-only. Every "how not to get hurt" lesson in options and equities starts
+with *don't send a naked market order into a thin book* — so the teaching-correct default may be a
+limit price pre-filled at the mark, with market as the deliberate opt-out. Small UI change, real
+pedagogy, and it makes the review screen's "estimates" caveat mostly disappear. Needs a taste call
+from Eric before building. _(src: Claude · while: building the desk order ticket, 2026-08-13)_
+
+### Position-detail drill-down — one symbol's whole story on one page
+Today a symbol's data is split: the lot sits on Active, its closed history sits on History, its
+per-symbol stats sit on Analysis. Every serious platform has a per-position page that assembles all
+three plus the entry thesis (which, for bots, we already record in the decision audit trail). This
+is the natural next tab once the fill window deepens. _(src: Claude · while: building the player
+desk, 2026-08-13)_
+
 ### confirm-print-dates source reliability — Nasdaq's calendar API can block the proxy wholesale
 `npm run confirm:print-dates` (src/scripts/confirm-print-dates.ts) automates the manual step done
 by hand for NVDA (PR #309): cross-references `estimate` calendar entries against Nasdaq's public

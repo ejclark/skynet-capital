@@ -56,6 +56,47 @@ Engine fills (once trading is on) ────────┼─▶ ObservatoryH
   instant they execute (manual or bot), and the market-data stream pushes price ticks for
   held symbols. Both flow through the same hub → SSE path.
 
+## The player desk — five tabs on one account
+
+`/u/:id` is a member's desk. A `?tab=` param picks the view (plain links, no JS, shareable):
+
+| Tab | URL | Question it answers | Goes blank when |
+|---|---|---|---|
+| Overview | `/u/:id` | who is this, at a glance | — |
+| Active | `?tab=positions` | what am I in right now? | flat |
+| History | `?tab=history` | what did I actually do? | no fills recorded |
+| Analysis | `?tab=analysis` | am I any good at this? | nothing closed yet |
+| Metrics | `?tab=metrics` | how is the account doing over time? | no equity history yet |
+
+Analysis and Metrics are deliberately separate: they take different inputs (closed round trips vs.
+equity samples) and go blank for different reasons. History shows **round trips** — fills matched
+first-in-first-out by `src/trading/round-trips.ts` — with the raw fills folded away beneath as
+receipts. Design rationale and the platform research behind it:
+[`docs/research/trading-desk-ux.md`](research/trading-desk-ux.md).
+
+### Acting on a position (off by default)
+
+The Active tab carries a per-row **Sell** (partial or full) and a **New trade** ticket. Both POST to
+`/trade`, which renders a **review screen** — estimated cost/proceeds, cash after, position after —
+and sends nothing until an explicit confirm. The confirm re-reads the live account and re-runs the
+same rules server-side before submitting, so a position that moved between review and confirm is
+refused rather than sent.
+
+Member-initiated trading is **switched off unless you turn it on**:
+
+```sh
+SKYNET_DESK_TRADING=on     # plus OAuth configured — without a signed-in identity, orders are refused
+```
+
+Rolling renders as a disabled control with its real reason: this account path trades shares, so there
+is no options leg to roll (see the plan for what enabling it would take).
+
+Eyeball the whole desk without a server or a broker:
+
+```sh
+node scripts/shoot-desk.mjs [outdir]   # renders the five surfaces + screenshots them
+```
+
 ## Design
 
 The renderer (`observatory/render-dashboard.ts`) is a pure `DashboardData → HTML` function,

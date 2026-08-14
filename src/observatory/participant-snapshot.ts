@@ -1,13 +1,10 @@
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { Participant } from "../participants/participant.js";
+import { type PositionView, positionsFrom } from "./broker-positions.js";
 
-/** A single holding as shown on the dashboard. */
-export interface PositionView {
-  readonly symbol: string;
-  readonly quantity: number;
-  readonly avgPrice: number;
-  readonly marketValue: number;
-}
+/** A single holding as shown on the dashboard — defined in `broker-positions.ts`, re-exported here
+ *  because this module is where every view already reaches for the account's shapes. */
+export type { PositionView };
 
 /** Broker feeds can hand us NaN/Infinity; a non-finite number is treated as 0 rather than letting it
  *  poison downstream math and reach a rendered surface as the string "NaN". */
@@ -84,12 +81,7 @@ export async function buildParticipantSnapshot(
       accountId: account.id,
       cash: Number(account.cash),
       equity: Number(account.portfolio_value),
-      positions: positions.map((position) => ({
-        symbol: position.symbol,
-        quantity: Number(position.qty),
-        avgPrice: Number(position.avg_entry_price),
-        marketValue: Number(position.market_value),
-      })),
+      positions: positionsFrom(positions),
       // Activity is supplementary — a failure to read it must not blank the account.
       activity: await readActivity(client),
     };

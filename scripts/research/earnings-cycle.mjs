@@ -213,7 +213,7 @@ function table(title, events, fn, base) {
       (i === 0 ? String(v) : v.toFixed(i === 3 ? 0 : 2)).padStart(9),
     );
     if (base != null) cells.push((s.mean - base).toFixed(2).padStart(9));
-    console.log("  " + name.padEnd(11) + cells.join(""));
+    console.log(`  ${name.padEnd(11)}${cells.join("")}`);
   }
 }
 

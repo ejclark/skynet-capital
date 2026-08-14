@@ -85,7 +85,7 @@
   "src/scripts/export-dashboard.ts": 59,
   "src/scripts/record-session.ts": 67,
   "src/scripts/run-autonomous.ts": 467,
-  "src/scripts/serve-dashboard.ts": 175,
+  "src/scripts/serve-dashboard.ts": 187,
   "src/server/auth/allowlist.ts": 17,
   "src/server/auth/alpaca-connect.ts": 83,
   "src/server/auth/app-version.ts": 17,
