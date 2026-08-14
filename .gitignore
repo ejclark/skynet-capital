@@ -30,3 +30,9 @@ public/tower.html
 
 # Claude Code per-machine settings (harness convention — never committed).
 .claude/settings.local.json
+
+# macOS Finder metadata. Not just tidiness: unzipping a Claude Design bundle in Finder writes a
+# .DS_Store INSIDE docs/handoffs/<slug>/, where it would be committed as part of the bundle, listed
+# as a bundle file by scripts/handoff-scan.mjs, and shown to a building session in the watcher's
+# issue body as though it were design input.
+.DS_Store
