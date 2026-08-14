@@ -23,6 +23,29 @@ The payoff is a safety property, not just tidiness: **committing a bundle trigge
 `draft` handoff can sit in the repo indefinitely. The `ready` flip is a deliberate, one-word
 authorization, and it is the same gate the irreversible class already runs through.
 
+## The zip path — one command
+
+When the design session hands back a **zip** (the common case), don't unpack it by hand:
+
+```sh
+node scripts/handoff-import.mjs ~/Downloads/desk-v2.zip
+```
+
+Type the command, then drag the zip from Finder onto the terminal to fill in the path. It runs from
+anywhere — it locates the repo from its own position rather than trusting the current directory — and
+it unpacks, strips Finder metadata, descends any wrapper folder, adds a `**Status:** draft` line if
+the bundle's README lacks one, validates the contract, branches off the latest `main`, commits, and
+pushes. `--slug <name>` overrides the name; `--no-push` stops before pushing.
+
+**It fails loudly rather than quietly doing nothing.** Every check in it corresponds to a step that
+failed silently when this was done by hand (see `docs/LESSONS.md`, 2026-08-14): the wrong clone was
+current, `git add` matched no files, `commit` refused an empty tree, and a branch was pushed carrying
+zero commits — so the bundle *looked* handed off and wasn't. The script refuses to reach `push` unless
+it has verified a non-empty staged diff.
+
+A dirty contract is not a failure of the import: the bundle still lands on a branch, and it cannot
+trigger anything while its status is `draft`. Exit status 1 just means authoring work remains.
+
 ## Getting a bundle out of Claude Design — use "Send to Claude Code Web"
 
 Claude Design has a **Send to Claude Code Web** action that seeds the design project directly into a
