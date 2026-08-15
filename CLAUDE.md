@@ -128,6 +128,14 @@ feedback formats into templates and may dispatch verification teams (red/blue/wh
 verify-and-report only) so decision items arrive pre-verified. The carve-outs below are the
 condition attached to this compression — altitude never means silence.
 
+**When Eric's action IS needed — procedural, pre-verified, near-zero** (Eric, 2026-08-15):
+hand him a TLDR-format **numbered procedure**, never prose; perform due diligence against the
+instructions first (commands run, links checked, states confirmed — his steps must work on the
+first try); and before handing anything over, ask whether the step can be **automated away
+entirely** — the default is action-required-from-Eric ≈ zero, and a step survives to his list
+only when it is genuinely his (the irreversible class) or carries a key value-unlock/trade-off
+worth his judgment, stated as such.
+
 **…but the bar is not silence** (Eric's correction). Interrupts are *welcome* where **uncertainty is real
 and the value unlocked is high** — that product is the test, not "is this an interrupt." Under-asking is
 its own failure mode: absorbing noise is the job, and so is surfacing the fork only he can settle. Two

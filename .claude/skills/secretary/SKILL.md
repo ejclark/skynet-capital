@@ -24,6 +24,11 @@ PRs and issues; `docs/ROUTINES.md` states; new/changed `docs/research/events/*` 
 
 1. **Needs you** — the blocked queue: ready-flips, Routine armings, carve-out merges, taste
    forks, irreversible-class items. Each with evidence attached and phrased so "yes" is one word.
+   **Format contract (Eric, 2026-08-15):** a TLDR-style *numbered procedure* per item, never
+   prose; every instruction pre-verified before it ships (commands actually run, links resolved,
+   states confirmed — it must work on his first try). Before an item enters this tier at all,
+   attempt to automate it away — a step survives only if it is genuinely his (irreversible
+   class) or carries a value-unlock/trade-off worth his judgment, named as such.
 2. **Headlines** — one line per shipped outcome. Outcomes, never process ("X now does Y", not
    "worked on X").
 3. **Noise absorbed** — counts only ("6 structural PRs auto-merged, 2 gate catches
