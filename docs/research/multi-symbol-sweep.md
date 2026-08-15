@@ -71,6 +71,13 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **NVDA earnings-gap hold (anti-S2)** — added 2026-08-15 ([`nvda-aug-2026-print.md`](nvda-aug-2026-print.md)):
+  win 9/14 vs the 60% ordinary-overnight base (p=0.486 — indistinguishable from any overnight);
+  the +5.35% mean is carried entirely by four 2023-24 gaps (ex-top-4 +1.72%) against a pooled
+  −5.49% p10; 3 of the last 5 prints gapped down. Third member of the 0-for-3 hold-the-print
+  family (AVGO, META, NVDA) — any future "the gap pays on X" must clear a win-rate test vs the
+  ordinary-overnight base *before* citing a mean. Do not re-propose without ≥3 new prints showing
+  a repriced gap regime.
 - **S1 beyond NVDA** (six symbols killed outright; see matrix).
 - **MRVL "session drag"** — the load-bearing session mean is t=−0.28, pure noise.
 - **CRWV directional gap read** ("gaps are always down") — windowing artifact; the excluded
