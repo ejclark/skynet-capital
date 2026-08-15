@@ -120,6 +120,14 @@ self-correctable → fix on the fly (overlapping nets catch the rest). Irreversi
 always gate. Load-bearing fork → one sharp question, then clear downstream. Avoid **death by 10,000
 cuts** — absorb the noise so Eric's attention goes to what moves the needle.
 
+**Report at altitude — the secretary discipline** (Eric, 2026-08-15: _"the more autonomously
+changes are getting in, the higher altitude of a report out/feedback i need"_). Completed,
+reversible, in-envelope work reaches Eric as tiered digests (`/secretary` — needs-you ·
+headlines · noise-absorbed), not play-by-play; the secretary also owns codifying recurring
+feedback formats into templates and may dispatch verification teams (red/blue/white/purple/tiger,
+verify-and-report only) so decision items arrive pre-verified. The carve-outs below are the
+condition attached to this compression — altitude never means silence.
+
 **…but the bar is not silence** (Eric's correction). Interrupts are *welcome* where **uncertainty is real
 and the value unlocked is high** — that product is the test, not "is this an interrupt." Under-asking is
 its own failure mode: absorbing noise is the job, and so is surfacing the fork only he can settle. Two
