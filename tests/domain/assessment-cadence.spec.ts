@@ -6,7 +6,7 @@ import { join } from "node:path";
 // The adaptive-cadence decision (impact tier × days-to-event → reassess interval) lives as a pure
 // function inside scripts/event-scan.mjs, and — matching the handoff pattern — the CLI is the unit
 // under test: fixtures in a temp dir, `--today` pinning the clock, `--due` JSON as the observable.
-// Bands under test are the REAL committed table (data/assessment-cadence.json): critical =
+// Bands under test are the REAL committed table (assessment-cadence.json): critical =
 // 61+d→7d · 21–60d→3d · 8–20d→2d · 0–7d→daily; low = 15+d→30d · 0–14d→7d; closeOut 6d.
 const TODAY = "2026-06-01";
 

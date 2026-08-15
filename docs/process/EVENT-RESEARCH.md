@@ -3,7 +3,7 @@
 The foresight loop: an event lands in the calendar (`src/domain/market-events.ts`, or a print in
 `src/domain/earnings-calendar.ts`) → initial research asks *what is likely to happen and how will
 the market react* → periodic reassessments hunt new information and adjust the stance — at a
-frequency that ramps with impact × time-to-event (`data/assessment-cadence.json`) — until the
+frequency that ramps with impact × time-to-event (`assessment-cadence.json`) — until the
 event passes and gets one closing outcome assessment. `scripts/event-scan.mjs` decides *when*;
 this doc defines *what* each assessment does. The daily event-scan Routine (docs/ROUTINES.md)
 executes it; a human session following this doc by hand is equally valid.

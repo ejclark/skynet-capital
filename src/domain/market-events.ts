@@ -52,7 +52,7 @@ export interface MarketEvent {
   readonly status: EventStatus;
   /** Where the date came from — must carry a source prefix (see header). */
   readonly source: string;
-  /** Drives assessment cadence (data/assessment-cadence.json): how hard this can move us. */
+  /** Drives assessment cadence (assessment-cadence.json): how hard this can move us. */
   readonly impact: ImpactTier;
   /** Symbols affected; empty = market-wide (CPI, FOMC). */
   readonly symbols: readonly string[];

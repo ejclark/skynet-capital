@@ -6,7 +6,7 @@
 // Each event's assessment history lives in docs/research/events/<id>.md, whose
 // `**Last assessed:** YYYY-MM-DD` header line is this scanner's machine contract. The ADAPTIVE
 // cadence (impact tier × days-to-event → reassess interval) is a pure function over
-// data/assessment-cadence.json — the daily Routine's cron stays fixed; the frequency ramp
+// assessment-cadence.json — the daily Routine's cron stays fixed; the frequency ramp
 // ("weekly at two months out, daily in the final week") lives entirely here, unit-testable.
 //
 //   node scripts/event-scan.mjs               # human report: every event, band, due mark
@@ -37,7 +37,7 @@ const has = (name) => process.argv.includes(`--${name}`);
 
 const EVENTS_FILE = arg("events-file") ?? join(ROOT, "src", "domain", "market-events.ts");
 const CALENDAR_FILE = arg("calendar-file") ?? join(ROOT, "src", "domain", "earnings-calendar.ts");
-const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "data", "assessment-cadence.json");
+const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json");
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
 
 const KINDS = ["earnings", "macro-print", "product-launch", "sector", "geopolitical"];

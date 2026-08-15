@@ -25,7 +25,7 @@ date; the system does the watching. Slice 2 (later): the observatory renders the
   doc, `event-scan.mjs --due` shall list it with reason `never-assessed`. — *verify:
   tests/domain/assessment-cadence.spec.ts*
 - [x] WHEN a critical event is 21–60 days out and its last assessment is ≥3 days old, `--due`
-  shall list it (weekly→3-day→2-day→daily ramp per `data/assessment-cadence.json`). — *verify:
+  shall list it (weekly→3-day→2-day→daily ramp per `assessment-cadence.json`). — *verify:
   tests/domain/assessment-cadence.spec.ts (band boundaries 61/60, 8/7, day-0)*
 - [x] WHEN an event date passes without a scored `## Outcome`, `--due` shall list it once with
   reason `event-passed-unscored` within `closeOutWithinDays`, then never again. — *verify: same
@@ -64,7 +64,7 @@ date; the system does the watching. Slice 2 (later): the observatory renders the
   rewriter and safety consumers key on the earnings type; leakage impossible by construction).
 - **Ledger format: JSONL vs markdown** → per-event markdown under `docs/research/events/`
   (stances and kill switches must be PR-diff-reviewable; volume is rows/week, not telemetry).
-- **Cadence in code vs data** → `data/assessment-cadence.json`, bands validated in CI.
+- **Cadence in code vs data** → `assessment-cadence.json`, bands validated in CI.
 - **Per-event Routines vs one scanner-driven Routine** → one; the scan is the contract.
 - **Detect workflow** → shipped, but explicitly a latency optimization; the Routine's
   `never-assessed` rule is the guarantee.
