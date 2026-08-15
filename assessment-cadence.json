@@ -1,0 +1,24 @@
+{
+  "$comment": "Assessment cadence per impact tier: bands are 'at least minDaysOut days before the event -> reassess every intervalDays days'. Bands sorted by minDaysOut descending; the terminal band must have minDaysOut 0. closeOutWithinDays: a passed event gets ONE closing outcome assessment within this many days, then ages out forever. Consumed by scripts/event-scan.mjs; validated by its --validate mode and tests/domain/assessment-cadence.spec.ts.",
+  "bands": {
+    "critical": [
+      { "minDaysOut": 61, "intervalDays": 7 },
+      { "minDaysOut": 21, "intervalDays": 3 },
+      { "minDaysOut": 8, "intervalDays": 2 },
+      { "minDaysOut": 0, "intervalDays": 1 }
+    ],
+    "high": [
+      { "minDaysOut": 61, "intervalDays": 14 },
+      { "minDaysOut": 21, "intervalDays": 7 },
+      { "minDaysOut": 8, "intervalDays": 3 },
+      { "minDaysOut": 0, "intervalDays": 1 }
+    ],
+    "medium": [
+      { "minDaysOut": 31, "intervalDays": 21 },
+      { "minDaysOut": 8, "intervalDays": 7 },
+      { "minDaysOut": 0, "intervalDays": 2 }
+    ],
+    "low": [{ "minDaysOut": 15, "intervalDays": 30 }, { "minDaysOut": 0, "intervalDays": 7 }]
+  },
+  "closeOutWithinDays": 6
+}
