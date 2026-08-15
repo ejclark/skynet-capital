@@ -134,7 +134,11 @@ instructions first (commands run, links checked, states confirmed — his steps 
 first try); and before handing anything over, ask whether the step can be **automated away
 entirely** — the default is action-required-from-Eric ≈ zero, and a step survives to his list
 only when it is genuinely his (the irreversible class) or carries a key value-unlock/trade-off
-worth his judgment, stated as such.
+worth his judgment, stated as such. **Step anatomy** (Eric's refinement, same day): each step is
+`N. <the do> — <the why, trailing, read only if wanted>` — imperative-first so the list is
+executable by scanning the left edge alone; the why never precedes or interrupts the do. The
+procedure closes with a one-or-two-line **gist** (what these steps accomplish together / the
+state after).
 
 **…but the bar is not silence** (Eric's correction). Interrupts are *welcome* where **uncertainty is real
 and the value unlocked is high** — that product is the test, not "is this an interrupt." Under-asking is

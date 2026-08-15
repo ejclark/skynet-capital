@@ -29,6 +29,11 @@ PRs and issues; `docs/ROUTINES.md` states; new/changed `docs/research/events/*` 
    states confirmed — it must work on his first try). Before an item enters this tier at all,
    attempt to automate it away — a step survives only if it is genuinely his (irreversible
    class) or carries a value-unlock/trade-off worth his judgment, named as such.
+   **Step anatomy:** `N. <the do> — <the why, trailing, optional read>` — imperative first, so
+   the left edge alone is executable; close the procedure with a one-or-two-line gist (what the
+   steps accomplish together / the state after). Example:
+   `1. Merge PR #329 (link) — the workflow-file carve-out holds it for you; merging activates
+   the detect watcher.`
 2. **Headlines** — one line per shipped outcome. Outcomes, never process ("X now does Y", not
    "worked on X").
 3. **Noise absorbed** — counts only ("6 structural PRs auto-merged, 2 gate catches

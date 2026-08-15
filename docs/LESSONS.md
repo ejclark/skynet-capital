@@ -27,6 +27,21 @@ it. Prevention ranks, best first:
 
 ---
 
+### Three consecutive PRs shipped with a literal `{}` description
+- **SHA:** 6e587aa   **DATE:** 2026-08-15   **STATUS:** closed
+- **SIGNAL:** Eric read a PR page and saw `{}` where the document should be — a human net, after
+  three PRs (#346–#348) over ~2 hours. Nothing mechanical would ever have flagged it: the PRs
+  merged green, and the doctrine ("PRs are documents", CLAUDE.md ship loop) lived only in prose.
+- **ROOT CAUSE:** `scripts/ship.sh cmd_open` silently defaulted the body to the literal string
+  `"{}"` when `--body-file` was omitted, and sessions omitted it on "small" PRs — a silent
+  default plus an unenforced doctrine. The context cache lost three entries.
+- **PREVENTION:** gate + eval. ship.sh now refuses to open without a non-empty `--body-file`
+  (the silent default is deleted), and `tests/arch/ship.spec.ts` proves the refusal in CI so the
+  prevention itself cannot regress (Eric's call: "an eval can likely catch that type of
+  regression"). The PR template now encodes the three-audience layering (human top → hybrid
+  details → optional machine-context fold) and the empty bodies were backfilled.
+- **SIDE QUESTS:** none
+
 ### Every PR that started as a draft merged without CI ever running
 - **SHA:** 5dcd38b   **DATE:** 2026-08-14   **STATUS:** closed
 - **SIGNAL:** none from the system — the gate reported no failure because it never ran. Caught only

@@ -1,10 +1,13 @@
 <!--
-A PR is a document, not a chore. Most readers are analytical but non-technical — they think like
-engineers without the formal background. Write the top for them; put the weeds below the fold.
-Squash-merge uses the PR title + this description, so they become the commit on `main` and drive the
-release: the TITLE must be a Conventional-Commit subject, lowercase-led (e.g.
-`feat(observatory): equity sparkline on /u/:id`), and this description is the durable record — succinct,
-high-signal, outcome-first (see docs/ENGINEERING.md → Change communication).
+A PR is a document, not a chore — the durable context cache future sessions and humans mine
+(never ship one empty; scripts/ship.sh refuses). Three audiences, layered top-down (Eric,
+2026-08-15): the TOP is human-first (analytical but non-technical readers — plain language,
+outcome-first); the DETAILS fold is hybrid human/bot (file-level context an engineer or a session
+picking up the thread needs); the optional MACHINE CONTEXT fold at the bottom is bot-only
+(structured facts automation can parse without re-deriving). Squash-merge uses the PR title +
+this description, so they become the commit on `main` and drive the release: the TITLE must be a
+Conventional-Commit subject, lowercase-led (e.g. `feat(observatory): equity sparkline on /u/:id`)
+— succinct, high-signal (see docs/ENGINEERING.md → Change communication).
 Delete these comments and any section that doesn't apply.
 -->
 
@@ -65,5 +68,17 @@ happy path AND the guards (IF…THEN). Omit for pure docs / refactor / chore PRs
 <!-- Deliberately-deferred work, linked issues, the next slice. -->
 
 -
+
+</details>
+
+<details>
+<summary><strong>Machine context</strong> (optional — automation audience)</summary>
+
+<!-- Bot-only tier: structured facts a future session or Routine can parse without re-deriving —
+     seams/contracts touched, scanner or schema changes, keys the next automation step needs.
+     YAML preferred. Omit the whole section when there is nothing structured to say. -->
+
+```yaml
+```
 
 </details>
