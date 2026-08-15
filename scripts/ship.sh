@@ -64,6 +64,15 @@ cmd_open() {
     *) echo "ship open: unknown arg $1" >&2; exit 1 ;;
   esac; done
 
+  # A PR description is the durable context cache (docs/LESSONS.md 2026-08-15: three PRs shipped
+  # as a literal "{}" because this default was silent). No body, no PR — the drift is impossible.
+  [ -n "$bodyfile" ] && [ -s "$bodyfile" ] || {
+    echo "ship open: --body-file is required and must be non-empty — a PR is a document" >&2
+    echo "  (human summary up top, hybrid details below the fold, optional machine context;" >&2
+    echo "   see .github/pull_request_template.md)." >&2
+    exit 1
+  }
+
   local branch; branch="$(git rev-parse --abbrev-ref HEAD)"
   [ "$branch" != "$base" ] || { echo "ship: refusing to open a PR from $base into itself" >&2; exit 1; }
   git diff --quiet && git diff --cached --quiet || { echo "ship: uncommitted changes — commit first" >&2; exit 1; }
@@ -88,7 +97,7 @@ cmd_open() {
     n=$((n+1)); [ "$n" -le 4 ] || { echo "ship: push failed after retries" >&2; exit 1; }
     sleep $((2**n)); done
 
-  local body="{}"; [ -n "$bodyfile" ] && body="$(cat "$bodyfile")"
+  local body; body="$(cat "$bodyfile")"
   local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':sys.argv[5]=='1'}))" \
     "$title" "$branch" "$base" "$body" "$draft")"
   echo "ship: opening PR over REST (core bucket)…"
