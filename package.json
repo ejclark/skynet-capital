@@ -27,6 +27,7 @@
     "shoot:login": "tsx scripts/shoot-login.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
     "handoff:scan": "node scripts/handoff-scan.mjs",
+    "event:scan": "node scripts/event-scan.mjs",
     "handoff:import": "node scripts/handoff-import.mjs",
     "prepare": "test -n \"$CI\" || husky",
     "arch:scan": "node scripts/arch-scan.mjs",

@@ -82,6 +82,9 @@ reading experience later. _(src: Eric ("build a research lab on stock market opp
 everyone to benefit") · while: post-sweep, 2026-08-12)_
 
 ### Special-events calendar — own prints, peer prints, product releases
+**→ Activated 2026-08-15:** built as the market-event calendar
+([`plans/market-event-calendar.md`](plans/market-event-calendar.md) — `src/domain/market-events.ts`,
+`scripts/event-scan.mjs`, the event-scan Routine). Kept here for the original framing.
 A forward event calendar as a system component (the research instruments only look backward, and
 next-print dates are cadence estimates). Track per symbol: its own confirmed earnings dates
 (IR-sourced — the playbook plan's date-policy question), **peer prints** (measured to matter:
