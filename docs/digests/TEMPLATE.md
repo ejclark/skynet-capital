@@ -10,7 +10,9 @@
 ## Needs you
 
 <!-- The blocked queue: ready-flips, Routine armings, carve-out merges, taste forks,
-     irreversible-class items. Evidence attached; phrased so "yes" is one word. Ranked. -->
+     irreversible-class items. Evidence attached; phrased so "yes" is one word. Ranked.
+     Each item = a numbered, PRE-VERIFIED procedure (commands run, links checked) — and only
+     items that could not be automated away belong here at all. -->
 
 1.
 

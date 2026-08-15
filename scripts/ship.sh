@@ -101,7 +101,7 @@ cmd_open() {
     if [ "$draft" = 1 ]; then
       echo "ship: draft PR — hold for Eric; do NOT arm auto-merge. STOP. No polling."
     else
-      echo "ship: NEXT (per .claude/skills/ship) — one enable_pr_auto_merge MCP call, then STOP. No polling."
+      echo "ship: NEXT (per .claude/skills/ship) — one enable_pr_auto_merge MCP call (or \`scripts/ship.sh automerge $num\` when the MCP tool is unavailable), then STOP. No polling."
     fi
   else
     echo "ship: REST open returned HTTP $http (proxy may block writes). Body:" >&2
@@ -109,6 +109,30 @@ cmd_open() {
     echo "ship: FALL BACK to the MCP create_pull_request tool for this one call (still ~1 call, not thousands)." >&2
     exit 2
   fi
+}
+
+cmd_automerge() {
+  local num="${1:-}"
+  [ -n "$num" ] || { echo "ship automerge: PR number required" >&2; exit 1; }
+  # Native auto-merge via ONE GraphQL call — the documented per-PR exception to the REST-only rule.
+  # Exists so sessions WITHOUT the GitHub MCP tools (Routine-fired sessions carry no connectors)
+  # can still arm walk-away merge-on-green instead of leaving PRs stalled open.
+  local resp http body node
+  resp="$(api GET "/pulls/$num")"; http="$(http_of "$resp")"; body="$(body_of "$resp")"
+  [ "$http" = 200 ] || { echo "ship automerge: GET pull returned HTTP $http" >&2; exit 2; }
+  node="$(printf '%s' "$body" | json_field node_id)"
+  [ -n "$node" ] || { echo "ship automerge: no node_id on PR #$num" >&2; exit 2; }
+  local q payload gql
+  q='mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }'
+  payload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$q" "$node")"
+  gql="$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -H "User-Agent: skynet-ship" -d "$payload" "https://api.github.com/graphql")"
+  if printf '%s' "$gql" | grep -q '"errors"'; then
+    echo "ship automerge: GraphQL errors (PR already clean → merge directly; else Eric web-merges):" >&2
+    printf '%s\n' "$gql" | head -3 >&2
+    exit 3
+  fi
+  echo "ship: auto-merge (SQUASH) armed on #$num."
 }
 
 cmd_merge() {
@@ -132,5 +156,6 @@ cmd_merge() {
 case "${1:-}" in
   open) shift; cmd_open "$@" ;;
   merge) shift; cmd_merge "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash]}" >&2; exit 1 ;;
+  automerge) shift; cmd_automerge "$@" ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n>}" >&2; exit 1 ;;
 esac
