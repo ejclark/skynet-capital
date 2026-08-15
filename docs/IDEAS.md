@@ -18,6 +18,27 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Google Finance as an A2A research source — analyst data now, Ask-AI interrogation next
+Google Finance's beta surfaces per-symbol analyst ratings, 12-month price targets, and an
+AI panel ("Ask AI", Deep Search, auto-generated insights). Eric's read: prompting Google's
+finance-grounded AI agent-to-agent has a very high value ceiling. **Spike findings (2026-08-15):**
+(1) the analyst block is server-rendered and reachable **unauthenticated** — plain curl through
+the egress proxy returned CRWV's full panel (24 analysts, Buy 17/Hold 6/Sell 1, targets
+$74/$136.48/$176) with no Google login, so v1 needs none of Eric's credentials; (2) the Ask-AI
+textarea exists signed-out but needs a JS browser — blocked in this container by a
+Chromium↔egress-proxy TLS wrinkle (curl works; Chromium gets ERR_CONNECTION_RESET; NSS trust
+per /root/.ccr/README.md is the likely fix), solvable config not concept-failure; (3) HTML
+parsing is brittle — build with the loud-failure discipline (confirm-print-dates precedent).
+**Build sequence:** ① a new `analyst-scan` instrument under scripts/research — curl+parse for
+ratings/targets per symbol, feeding event-ledger pulse checks and the adjacency sweep (also a
+second confirmation source for print dates); ② fix headless-browser proxy trust; ③ the A2A
+skill — structured question templates into Ask-AI, answers white-team-validated against Alpaca's
+official API (the app's existing data seam) before any ledger cites them; ④ only if signed-out
+AI proves limited: revisit authed access — **flagged trade-off, Eric's call**: an agent driving
+his logged-in Google session is credential-adjacent (irreversible class), and v1 deliberately
+avoids it. _(src: Eric ("A2A style process… my gut tells me this has a very high ceiling") ·
+while: post-enablement, 2026-08-15)_
+
 ### The fill window is 15 orders — History and Analysis are honest but shallow
 The desk reconstructs round trips from `getRecentOrders(limit=15)`, which is the entire fill window
 we hold. The views say so out loud (`truncated` → "history begins mid-trade"), but an active account
