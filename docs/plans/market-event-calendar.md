@@ -1,7 +1,7 @@
 # Plan: Market-event calendar + adaptive research routines
 
-**Status:** draft <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
-**Author:** Eric (direction) · Claude (design & build) · **Date:** 2026-08-15
+**Status:** ready <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
+**Author:** Eric (direction) · Claude (design & build) · **Date:** 2026-08-15 · **Ready:** 2026-08-15 (Eric — "execute to enable"; Routine armed same day: `trig_01RZ8gs2qC1Fk78v1qCjE8Qb`)
 **Provenance:** Eric's ask 2026-08-15 ("a calendar where we can mark important events… trigger a
 routine to research… periodic assessments adjusted by impact and time window"), activating the
 banked "Special-events calendar" idea (docs/IDEAS.md, 2026-08-12). Eric approved the design and

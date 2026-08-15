@@ -1,7 +1,7 @@
 # Plan: Secretary — regulate feedback to protect the constraint
 
-**Status:** draft <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
-**Author:** Eric (direction) · Claude (charter & build) · **Date:** 2026-08-15
+**Status:** ready <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
+**Author:** Eric (direction) · Claude (charter & build) · **Date:** 2026-08-15 · **Ready:** 2026-08-15 (Eric — "execute to enable"; Routine armed same day: `trig_01KaMC2uR3cFW5XTUL6rzPuS`)
 **Provenance:** Eric's sidebar 2026-08-15: "the more autonomously changes are getting in, the
 higher altitude of a report out/feedback i need.. the less play by play i can manage" + two
 refinements the same day: the template-codification umbrella ("building and refining new
