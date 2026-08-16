@@ -1,6 +1,7 @@
 import { daysUntil, type EarningsPrint } from "../domain/earnings-calendar.js";
 import { allEvents, type MarketEvent } from "../domain/market-events.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import { MG_STYLE, monthGrid, resolveMonth } from "./calendar-widget.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
 import { tile } from "./render-atoms.js";
 
@@ -12,9 +13,10 @@ import { tile } from "./render-atoms.js";
  * Slice 2 of docs/plans/market-event-calendar.md — a pure presentation layer over the domain
  * feed. No network, no new data source: the same date policy applies here, so `estimate` events
  * carry a visible EST badge (they may only widen caution) and every row's `title` attribute
- * carries the source audit trail. An agenda list, not a month grid, on purpose: for options,
- * days-until matters more than date position (docs/research/trading-desk-ux.md deferred the
- * month grid the same way).
+ * carries the source audit trail. The agenda list is the primary register — for options,
+ * days-until matters more than date position — and the desktop month grid (calendar-widget.ts)
+ * rides alongside as a NAVIGATOR, never a filter: `?month=` moves only the widget, the agenda
+ * always renders every upcoming event, so day-cell jump links always have an anchor to land on.
  *
  * The as-of moment is always injected — never derived from the clock here — so specs pin the
  * horizon and the server decides "now" exactly once per request.
@@ -24,6 +26,8 @@ export interface CalendarViewOptions {
   readonly nav?: NavContext;
   /** The render moment (ISO). Everything — countdowns, bands, tiles — is keyed off this. */
   readonly asOfIso: string;
+  /** Widget month ("YYYY-MM", the `?month=` param) — validated/clamped by `resolveMonth`. */
+  readonly month?: string;
   /** Injectable tables for specs; default to the real checked-in calendar. */
   readonly events?: readonly MarketEvent[];
   readonly prints?: readonly EarningsPrint[];
@@ -101,7 +105,7 @@ function dayGroup(date: string, events: readonly MarketEvent[], asOfIso: string)
     events.length > 1
       ? `<span class="cal-stack" title="Multiple events land on this date — compound-risk day">×${events.length} same day</span>`
       : "";
-  return `<section class="cal-day${days <= 7 ? " cal-near" : ""}">
+  return `<section class="cal-day${days <= 7 ? " cal-near" : ""}" id="day-${date}">
       <header class="cal-dayhead">
         <span class="cal-date">${escapeHtml(formatDay(date))}</span>
         <span class="cal-in">${countdown(days)}</span>
@@ -164,7 +168,9 @@ function summaryTiles(upcoming: readonly MarketEvent[], asOfIso: string): string
 export function renderCalendarBody(options: CalendarViewOptions): string {
   const { asOfIso } = options;
   const upcoming = allEvents(asOfIso, options.events, options.prints);
-  const content = `${CAL_STYLE}
+  const month = resolveMonth(options.month, asOfIso, upcoming);
+  const content = `${CAL_STYLE}${MG_STYLE}
+  <div class="cal-layout">
   <div class="calendar">
     <div class="ladder-head">
       <div>
@@ -174,6 +180,8 @@ export function renderCalendarBody(options: CalendarViewOptions): string {
     </div>
     ${summaryTiles(upcoming, asOfIso)}
     ${BANDS.map((band) => bandPanel(band, upcoming, asOfIso)).join("\n")}
+  </div>
+  <aside class="cal-aside">${monthGrid(month, asOfIso, upcoming)}</aside>
   </div>
   <footer class="obs-foot">Dates hand-verified against primary sources (BLS, the Fed, company IR) and reviewed in diffs — hover any event for its audit trail. Educational · paper trading only.</footer>`;
   return renderShell(options.nav, content, asOfIso);
@@ -191,7 +199,9 @@ const CAL_STYLE = `<style>
   .cal-band-title{ margin:0 0 4px; font-size:14px; font-weight:700; }
   .cal-band-sub{ margin:0 0 10px; font-size:12px; color:var(--muted); max-width:74ch; }
   .cal-empty{ font-size:13px; color:var(--muted); font-style:italic; padding:4px 0 8px; margin:0; }
-  .cal-day{ padding:12px 0 6px; border-top:1px solid color-mix(in srgb,var(--border) 70%,transparent); }
+  .cal-day{ padding:12px 0 6px; border-top:1px solid color-mix(in srgb,var(--border) 70%,transparent); scroll-margin-top:16px; }
+  /* Widget jump links scroll the stage (the observatory's scrollport), smoothly unless motion is reduced. */
+  @media (prefers-reduced-motion: no-preference){ .stage{ scroll-behavior:smooth; } }
   .cal-day:first-of-type{ border-top:0; padding-top:4px; }
   .cal-dayhead{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:2px; }
   .cal-date{ font-family:var(--mono); font-size:12.5px; font-weight:700; letter-spacing:.04em; }
