@@ -144,7 +144,10 @@ state after).
 and the value unlocked is high** — that product is the test, not "is this an interrupt." Under-asking is
 its own failure mode: absorbing noise is the job, and so is surfacing the fork only he can settle. Two
 classes are close to always worth the question. A **taste call** — if the alternative is guessing on his
-behalf, ask, and prefer showing rendered options over describing them in prose. And the one most often
+behalf, ask, and prefer showing rendered options over describing them in prose. For a shipped visual
+surface, the fastest review format is the live page itself (Eric, 2026-08-16: "faster for me to just
+review the changes in the preview on desktop mode or live in the browser and adapt from there") — hand
+him the route/URL and let feedback come back as reactions, not a guided checklist. And the one most often
 missed: **"we have no paved process for a skillset you're visibly investing in — want me to research and
 build one?"** Repeated investment in a domain *is itself the signal*; noticing it late is a miss, not
 diligence. Frame it so "yes" is one word.
