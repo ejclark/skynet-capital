@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Options-mechanics event kinds — OPEX, quad witching, VIX expiration, holidays
+The `/calendar` view renders the curated feed; the mechanical dates options traders also watch are
+all rule-computable offline: monthly OPEX = 3rd Friday (holiday → prior Thursday), quad witching =
+Mar/Jun/Sep/Dec subset, VIX expiration = the Wednesday 30 days before the *next* monthly OPEX, NYSE
+holidays/early closes published 3 years out. A pure `expiration-calendar.ts` generator (verifiable
+against Cboe's annual PDF) would feed these in as new `EventKind`s — which also means extending
+`event-scan.mjs --validate`'s kind/source rules, so it's a domain slice, not a view tweak. Known
+edge case worth a unit test: Juneteenth (obs) Fri 2027-06-18 collides with June quad witching →
+expiration moves to Thu 2027-06-17. Also cheap to seed from published schedules: NFP (first-Friday
+rule breaks 3× in 2026 — use the BLS schedule), PPI, PCE; BLS offers no-key iCal feeds as a later
+refresh path. _(src: Claude · while: calendar-view integration research, 2026-08-16)_
+
+### Morning brief reads the full event horizon, not just earnings
+`eventsWithin` was built as the morning-brief seam but the brief still renders only
+`CalendarBriefEntry` earnings rows — swapping it to `MarketEvent[]` puts CPI/FOMC in `brief:morning`
+alongside prints for one small PR. _(src: Claude · while: calendar-view integration, 2026-08-16)_
+
 ### Google Finance as an A2A research source — analyst data now, Ask-AI interrogation next
 Google Finance's beta surfaces per-symbol analyst ratings, 12-month price targets, and an
 AI panel ("Ask AI", Deep Search, auto-generated insights). Eric's read: prompting Google's
