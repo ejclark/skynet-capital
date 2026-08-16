@@ -100,7 +100,7 @@
   "files": {
     "includes": [
       "**",
-      "!docs/handoffs/*/*.html",
+      "!docs/handoffs/**",
       "!**/dist",
       "!**/node_modules",
       "!**/coverage",
