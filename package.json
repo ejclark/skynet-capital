@@ -30,6 +30,7 @@
     "event:scan": "node scripts/event-scan.mjs",
     "digest:scan": "node scripts/digest-scan.mjs",
     "handoff:import": "node scripts/handoff-import.mjs",
+    "handoff:ship": "node scripts/handoff-ship.mjs",
     "prepare": "test -n \"$CI\" || husky",
     "arch:scan": "node scripts/arch-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
