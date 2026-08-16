@@ -37,6 +37,18 @@ it unpacks, strips Finder metadata, descends any wrapper folder, adds a `**Statu
 the bundle's README lacks one, validates the contract, branches off the latest `main`, commits, and
 pushes. `--slug <name>` overrides the name; `--no-push` stops before pushing.
 
+To go further in the same breath — import, validate, PR, auto-merge armed, and (only if you type
+the flag) the `ready` flip — use the wrapper:
+
+```sh
+npm run handoff:ship -- ~/Downloads/desk-v2.zip --slug desk-v2          # lands at draft
+npm run handoff:ship -- ~/Downloads/desk-v2.zip --slug desk-v2 --ready # your one-word flip, as a flag
+```
+
+A dirty contract stops the chain before any flip or PR — the bundle still lands on its branch,
+inert at `draft`. Prereq for the PR step on a laptop: `gh` CLI authenticated (falls back to
+`scripts/ship.sh` when a `GH_TOKEN` is in the environment instead).
+
 **It fails loudly rather than quietly doing nothing.** Every check in it corresponds to a step that
 failed silently when this was done by hand (see `docs/LESSONS.md`, 2026-08-14): the wrong clone was
 current, `git add` matched no files, `commit` refused an empty tree, and a branch was pushed carrying
