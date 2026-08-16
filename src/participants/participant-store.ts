@@ -1,6 +1,6 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { deriveKey, type Envelope, open, seal } from "../storage/secure-envelope.js";
 import type { Participant } from "./participant.js";
 
 /**
@@ -23,17 +23,6 @@ export interface ParticipantStore {
   canStoreSecurely(): boolean;
 }
 
-interface Envelope {
-  readonly v: 1;
-  readonly enc: boolean;
-  /** base64(iv) — present when enc. */
-  readonly iv?: string;
-  /** base64(authTag) — present when enc. */
-  readonly tag?: string;
-  /** base64(ciphertext) when enc, else the raw JSON array. */
-  readonly data: string;
-}
-
 /**
  * File-backed participant store. The on-disk blob is encrypted with AES-256-GCM using
  * `SKYNET_STORE_SECRET` — the secret keys *other people's* credentials, so they are never
@@ -53,7 +42,7 @@ export class FileParticipantStore implements ParticipantStore {
 
   constructor(path: string, secret?: string) {
     this.path = path;
-    this.key = secret ? createHash("sha256").update(secret).digest() : undefined;
+    this.key = deriveKey(secret);
   }
 
   load(): StoredParticipant[] {
@@ -61,7 +50,7 @@ export class FileParticipantStore implements ParticipantStore {
       return [];
     }
     const envelope = JSON.parse(readFileSync(this.path, "utf8")) as Envelope;
-    const json = envelope.enc ? this.decrypt(envelope) : envelope.data;
+    const json = open(envelope, this.key, "participant store");
     const parsed: unknown = JSON.parse(json);
     return Array.isArray(parsed) ? (parsed as StoredParticipant[]) : [];
   }
@@ -82,34 +71,7 @@ export class FileParticipantStore implements ParticipantStore {
     }
     const next = [...this.load().filter((p) => p.id !== participant.id), participant];
     mkdirSync(dirname(this.path), { recursive: true });
-    writeFileSync(this.path, JSON.stringify(this.envelope(JSON.stringify(next))));
-  }
-
-  private envelope(json: string): Envelope {
-    if (!this.key) {
-      return { v: 1, enc: false, data: json };
-    }
-    const iv = randomBytes(12);
-    const cipher = createCipheriv("aes-256-gcm", this.key, iv);
-    const data = Buffer.concat([cipher.update(json, "utf8"), cipher.final()]);
-    return {
-      v: 1,
-      enc: true,
-      iv: iv.toString("base64"),
-      tag: cipher.getAuthTag().toString("base64"),
-      data: data.toString("base64"),
-    };
-  }
-
-  private decrypt(envelope: Envelope): string {
-    if (!this.key) {
-      throw new Error("participant store is encrypted but SKYNET_STORE_SECRET is not set");
-    }
-    const iv = Buffer.from(envelope.iv ?? "", "base64");
-    const decipher = createDecipheriv("aes-256-gcm", this.key, iv);
-    decipher.setAuthTag(Buffer.from(envelope.tag ?? "", "base64"));
-    const data = Buffer.from(envelope.data, "base64");
-    return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
+    writeFileSync(this.path, JSON.stringify(seal(JSON.stringify(next), this.key)));
   }
 }
 

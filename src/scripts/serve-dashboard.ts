@@ -26,7 +26,8 @@ import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import type { Participant } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
-import { resolveAuth } from "../server/auth/resolve-auth.js";
+import { createAllowlistStore } from "../server/auth/allowlist-store.js";
+import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
@@ -114,7 +115,12 @@ async function main(): Promise<void> {
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
   });
 
-  const auth = resolveAuth(process.env);
+  // The guest list lives on the mounted volume, encrypted at rest, and is unioned with the env
+  // allowlist inside resolveAuth. Built here so the /invite route and the authenticator read the
+  // exact same store — two sources of truth for who may sign in is the bug worth designing out.
+  const allowlist = createAllowlistStore(process.env, (m) => console.error(m));
+  const owners = ownerEmails(process.env);
+  const auth = resolveAuth(process.env, undefined, allowlist);
   const password = process.env.SKYNET_DASHBOARD_PASSWORD;
   if (auth) {
     if (auth.allowlistEmpty) {
@@ -155,6 +161,9 @@ async function main(): Promise<void> {
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
     rotateCredentials: (input) => service.rotateCredentials(input),
+    ...(auth
+      ? { invite: { store: allowlist, isOwner: (email: string) => owners.has(email) } }
+      : {}),
     ...(feedback ? { submitFeedback: feedback } : {}),
     readHistory: (id) => history.list(id),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),

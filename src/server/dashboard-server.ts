@@ -25,6 +25,7 @@ import { escapeHtml } from "../ui/escape-html.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
+import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import { addShell, PAGE_STYLE, readBody } from "./page-shell.js";
 import type {
@@ -62,6 +63,12 @@ export interface DashboardServerConfig {
    * Omit to disable (e.g. offline mode).
    */
   readonly rotateCredentials?: (input: RotateCredentialsInput) => Promise<RotateResult>;
+  /**
+   * `GET/POST /invite` — the owner's guest list. Omit to disable (offline mode, or no auth).
+   * Owners are the env-configured identities; everyone they invite lands in the volume-backed
+   * allowlist store and may sign in but not invite (see `invite-form.ts`).
+   */
+  readonly invite?: InviteDeps;
   /**
    * Self-service feedback handler. When provided, `GET /feedback` serves a form and `POST /feedback`
    * files a labelled GitHub issue on the submitter's behalf. Omit (no token) to keep the form but
@@ -339,6 +346,12 @@ async function trySelfServiceRoute(
 ): Promise<boolean> {
   if (path === "/add" && config.addParticipant) {
     await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
+    return true;
+  }
+  if (path === "/invite" && config.invite) {
+    // Identity comes from the signed session and nowhere else — there is no id in the URL to
+    // spoof, and handleInvite re-checks owner status itself rather than trusting this call site.
+    await handleInvite(req, res, req.method ?? "GET", session?.email, config.invite);
     return true;
   }
   if (path === "/rotate" && config.rotateCredentials) {
