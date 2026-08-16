@@ -296,9 +296,7 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path === "/calendar") {
-    const body = renderCalendarBody({ nav: navFor("calendar"), asOfIso: new Date().toISOString() });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Calendar — Skynet Capital", body));
+    serveCalendarRoute(res, url, navFor);
     return;
   }
   if (path === "/trade") {
@@ -317,6 +315,22 @@ async function serveAuthorizedRoute(
   }
   res.writeHead(404, { "content-type": "text/plain" });
   res.end("not found");
+}
+
+/** `/calendar` — the event-horizon view; `?month=` moves the widget (view-validated/clamped). */
+function serveCalendarRoute(
+  res: ServerResponse,
+  url: string,
+  navFor: (active: NavView) => NavContext,
+): void {
+  const month = new URL(url, "http://localhost").searchParams.get("month");
+  const body = renderCalendarBody({
+    nav: navFor("calendar"),
+    asOfIso: new Date().toISOString(),
+    ...(month ? { month } : {}),
+  });
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  res.end(shellDocument("Calendar — Skynet Capital", body));
 }
 
 /**

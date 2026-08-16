@@ -160,6 +160,55 @@ describe("renderCalendarBody", () => {
     expect(html).toContain("Event horizon");
   });
 
+  it("renders the month-grid widget alongside the agenda, on the as-of month by default", () => {
+    const html = renderCalendarBody({
+      asOfIso: AS_OF,
+      events: [event({ id: "cpi", date: "2026-09-11" })],
+      prints: [],
+    });
+
+    expect(html).toContain('<aside class="cal-aside">');
+    expect(html).toContain("August 2026");
+  });
+
+  it("scopes ?month= to the widget only — the agenda keeps every upcoming event", () => {
+    const html = renderCalendarBody({
+      asOfIso: AS_OF,
+      month: "2026-10",
+      events: [
+        event({ id: "cpi", date: "2026-09-11", title: "September CPI" }),
+        event({ id: "fomc", date: "2026-10-28", title: "October FOMC" }),
+      ],
+      prints: [],
+    });
+
+    expect(html).toContain("October 2026");
+    expect(html).toContain("September CPI");
+  });
+
+  it("gives each agenda day group an anchor id the widget's day cells point at", () => {
+    const html = renderCalendarBody({
+      asOfIso: AS_OF,
+      month: "2026-09",
+      events: [event({ id: "fomc", date: "2026-09-16" })],
+      prints: [],
+    });
+
+    expect(html).toContain('id="day-2026-09-16"');
+    expect(html).toContain('href="#day-2026-09-16"');
+  });
+
+  it("falls back to the as-of month when the month option is nonsense", () => {
+    const html = renderCalendarBody({
+      asOfIso: AS_OF,
+      month: "not-a-month",
+      events: [],
+      prints: [],
+    });
+
+    expect(html).toContain("August 2026");
+  });
+
   it("renders the real checked-in calendar when no tables are injected", () => {
     const html = renderCalendarBody({ asOfIso: AS_OF });
 
