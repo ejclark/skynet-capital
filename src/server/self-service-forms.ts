@@ -21,7 +21,7 @@ import { personaClasses } from "./persona-classes.js";
  * Shared by /add and /rotate: both are "GET serves a form, POST parses it and submits" —
  * only the form fields and the submit/render callbacks differ.
  */
-async function handleSelfServiceForm<TResult extends { ok: boolean }>(
+export async function handleSelfServiceForm<TResult extends { ok: boolean }>(
   req: IncomingMessage,
   res: ServerResponse,
   method: string,

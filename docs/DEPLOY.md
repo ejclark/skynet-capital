@@ -125,9 +125,20 @@ fly secrets set -a skynet-capital \
 ```
 
 That's it — `fly deploy` (or the next merge) picks it up. The URL is now clean:
-`https://skynet-capital.fly.dev/`. Add people by appending to `SKYNET_ALLOWED_EMAILS`; for a
-GitHub user whose email is private, add their login to `SKYNET_ALLOWED_GITHUB_LOGINS`. Set only
-one provider's vars if you only want that button. `/logout` clears the session.
+`https://skynet-capital.fly.dev/`. Set only one provider's vars if you only want that button.
+`/logout` clears the session.
+
+**Adding people: use `/invite`, not the secret.** `SKYNET_ALLOWED_EMAILS` is the **owner** tier —
+the identities that may sign in *and* invite others. Everyone else is added from the app itself:
+
+1. Sign in as an owner and open **`/invite`**.
+2. Type the email, submit. They can sign in immediately — no redeploy, no restart.
+
+The guest list lives at `/data/allowlist.json` on the mounted volume, encrypted at rest with
+`SKYNET_STORE_SECRET` (invites are refused, loudly, if that isn't set). Editing the secret still
+works as break-glass, but remember it **replaces** the whole value — which is exactly why `/invite`
+exists. For a GitHub user whose email is private, their login still goes in
+`SKYNET_ALLOWED_GITHUB_LOGINS`. Full rationale: [`adr/0005`](adr/0005-in-app-oauth-authentication.md).
 
 ## Render / Railway (same Docker image)
 
