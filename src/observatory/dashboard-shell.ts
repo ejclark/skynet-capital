@@ -9,7 +9,15 @@ import { formatTimestamp, profileHref } from "./render-atoms.js";
  */
 
 /** Which top-level view is active, for the shared nav. */
-export type NavView = "board" | "leaderboard" | "bots" | "compare" | "you" | "add" | "learn";
+export type NavView =
+  | "board"
+  | "leaderboard"
+  | "bots"
+  | "compare"
+  | "calendar"
+  | "you"
+  | "add"
+  | "learn";
 
 export interface NavContext {
   readonly active: NavView;
@@ -34,6 +42,7 @@ const FEEDBACK_URL = "/feedback";
 const NAV_ICON: Record<string, string> = {
   board: "▦",
   compare: "⇄",
+  calendar: "◷",
   leaderboard: "≣",
   bots: "◆",
   you: "◉",
@@ -65,6 +74,7 @@ function renderDrawer(nav: NavContext): string {
   if (nav.hasCompare) {
     links.push(drawerLink("/compare", "Compare", "compare", nav.active === "compare"));
   }
+  links.push(drawerLink("/calendar", "Calendar", "calendar", nav.active === "calendar"));
   if (nav.currentId) {
     links.push(drawerLink(profileHref(nav.currentId), "You", "you", nav.active === "you"));
   }

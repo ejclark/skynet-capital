@@ -11,7 +11,8 @@
  * WHO READS THIS: scripts/event-scan.mjs (the assessment scanner — it extracts the MARKET_EVENTS
  * literal below by marker string, so keep the `export const MARKET_EVENTS` line intact; the drift
  * gate in tests/arch/event-scan.spec.ts goes red if extraction and this module ever disagree),
- * and — slice 2 — the morning brief via `eventsWithin`.
+ * the observatory's `/calendar` view (calendar-view.ts, via `allEvents`), and — still pending —
+ * the morning brief via `eventsWithin`.
  *
  * DATE POLICY (inherited from earnings-calendar.ts / docs/plans/trade-playbooks.md): an
  * `estimate` may only WIDEN caution; date-keyed action requires `confirmed`. Research is not
@@ -28,8 +29,8 @@
  */
 import { daysUntil, type EarningsPrint, UPCOMING_PRINTS } from "./earnings-calendar.js";
 
-// Not exported yet — slice 2 (morning-brief horizon, LIVING-UNIVERSE event→phenomenon feed)
-// re-exports these when a consumer lands; until then the dead-code gate rightly owns the call.
+// Kept internal — consumers key on `MarketEvent["kind"]` (the calendar view does exactly that),
+// so the union never needs exporting.
 type EventKind =
   | "earnings" // derived from earnings-calendar.ts via earningsAsEvents — never hand-entered here
   | "macro-print" // CPI, PPI, jobs report, FOMC decisions — scheduled, market-wide

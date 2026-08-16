@@ -41,7 +41,7 @@
   "src/observatory/bots-vs-humans-view.ts": 184,
   "src/observatory/compare-view.ts": 165,
   "src/observatory/dashboard-data.ts": 45,
-  "src/observatory/dashboard-shell.ts": 491,
+  "src/observatory/dashboard-shell.ts": 501,
   "src/observatory/empire-skyline.ts": 204,
   "src/observatory/equity-sparkline.ts": 83,
   "src/observatory/events.ts": 46,

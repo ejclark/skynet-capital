@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { renderAnalysisBody } from "../observatory/analysis-view.js";
+import { renderCalendarBody } from "../observatory/calendar-view.js";
 import { type DeskTab, parseDeskTab } from "../observatory/desk-tabs.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import { renderHistoryBody } from "../observatory/history-view.js";
@@ -292,6 +293,12 @@ async function serveAuthorizedRoute(
     const body = renderAcademyBody({ nav: navFor("learn") });
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(shellDocument("Learn — Skynet Capital", body));
+    return;
+  }
+  if (path === "/calendar") {
+    const body = renderCalendarBody({ nav: navFor("calendar"), asOfIso: new Date().toISOString() });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument("Calendar — Skynet Capital", body));
     return;
   }
   if (path === "/trade") {
