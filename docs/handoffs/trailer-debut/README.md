@@ -1,6 +1,74 @@
-# Handoff: Skynet Capital — Season One Trailer + Field Guide
+# Handoff: Season One Trailer + Field Guide
 
-**Status:** draft <!-- only Eric flips draft→ready -->
+**Status:** draft <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
+**Author:** Claude Design "Nocturne" (spec) · Claude Code (contract reshape) · **Date:** 2026-08-16
+**Provenance:** imported from `Skynet Capital - Trailer Debut.zip` via `npm run handoff:ship`
+(2026-08-16) — the first real run of the one-command zip path. The design session's spec is
+preserved verbatim below the contract; reshaped, never re-decided.
+
+## Intent & end-state
+
+Two public-facing surfaces the league can be shown with: **`/trailer`** (an ~82s ink-brush Season One
+promo, served as an exported video with the end card as poster/fallback) and **`/guide`** (The Field
+Guide — the explainer page that turns a curious friend into a signed-up player). The Field Guide is
+the conversion surface: it explains what the league is, answers the first questions, and points at
+`/add`, `/login`, and `/feedback`.
+
+## Acceptance criteria (EARS)
+
+- [ ] WHEN a visitor opens `/guide`, the observatory shall render the Field Guide at 960px content width with the banner flush under the hero, baseline-aligned 01/02/03 numerals, and the FAQ tiers' copy verbatim from the spec. — *verify: screenshot against the bundle's `Field Guide.dc.html`*
+- [ ] WHEN the visitor scrolls past the hero, the sticky progressive header shall appear, and its three step links shall condense in after the banner scrolls out, navigating to `/add`, `/login`, and `/feedback`. — *verify: screenshot + link assertions in a view spec*
+- [ ] WHEN a visitor opens `/trailer`, the page shall play `public/assets/trailer.mp4` if present and otherwise render the end-card component as the placeholder, including the glowing "THE FIELD GUIDE → GETTING STARTED" link to `/guide`. — *verify: view spec covering both branches*
+- [ ] WHILE the trailer page is open, no audio shall play without a user gesture and playback shall not loop. — *verify: rendered markup carries no autoplay/loop attributes*
+- [ ] IF an external link is rendered, THEN it shall carry `target="_blank"` and `rel="noopener"`. — *verify: view spec*
+- [ ] WHEN any slice ships, typecheck, lint, test, and the arch budgets shall stay green. — *verify: npm run verify exit status*
+
+## Design bundle
+
+| File | Authoritative for | Notes |
+|---|---|---|
+| this README (spec sections below) | layout, copy, tokens, interactions, cadence | the design session's own words, verbatim |
+| `Field Guide.dc.html` | the guide's visual bar | design reference — recreate in the repo's renderer idiom, never import |
+| `Animate.dc.html`, `skynet-promo.jsx`, `skynet-sfx.js` | the trailer's visual/audio bar | reference only; the trailer ships as an exported video, not a re-implementation |
+| `INTEGRATE.md` | nothing — superseded | its kickoff prompt/acceptance list predates this contract; the EARS criteria above govern |
+| `support.js`, `animations-v3.jsx`, `tweaks-panel.jsx`, `index.html` | nothing | the design tool's own runtime — **never ship or port** |
+
+## Constraints & non-goals
+
+- **Never import the bundle's HTML/JSX/runtime files into the build.** They are references; the app
+  is server-rendered TypeScript template strings (`src/observatory/*.ts`).
+- Recreating the full trailer animation in-app is explicitly **not expected** — export the video.
+- No raster assets, no webfonts, no client framework, no bundler; inline SVG/CSS only.
+- Honor `prefers-reduced-motion` for the guide's header transition and the end card's breathing glow.
+
+## Autonomy envelope
+
+- Visual work waits for Eric's taste — PRs open without auto-merge; he reviews the live route.
+- Public-facing copy is part of the design contract: use it verbatim, do not improvise marketing claims.
+- Nothing here touches credentials, spend, or trading authorization.
+- The trailer video export is Eric's step (design tool → `public/assets/trailer.mp4`); the build must
+  work without it via the end-card fallback.
+
+## Open questions (Q&A queue)
+
+- **The flame theme vs. `docs/BRAND.md`.** These surfaces deliberately use a warm palette (ground
+  `#14100B`, gold ramp, ember accents) rather than the Nocturne dark-teal system, where BRAND.md
+  reserves the warm ramp for Eye/ember accents only. Standing doctrine is *brand wins on conflict*,
+  but flattening these pages to teal would destroy the intent, and adopting the ramp silently would
+  fork the design system. **Proposed:** treat `/trailer` and `/guide` as a sanctioned "campaign
+  skin" — a named, documented extension of BRAND.md scoped to public marketing surfaces, with the
+  app's own views unchanged. Eric's call before the build starts.
+
+## Decision log
+
+- 2026-08-16 — contract reshaped from the design session's README; every ruling preserved, none
+  re-decided. `INTEGRATE.md`'s kickoff prompt superseded by this contract (the repo's pickup layers
+  supply the execution discipline).
+
+---
+
+<!-- ═══ The design session's spec, verbatim from here down — reshape happened above, not here. ═══ -->
+
 
 ## Overview
 Two deliverables for the Skynet Capital paper-trading league (repo: `ejclark/skynet-capital`, live at https://skynet-capital.fly.dev):
