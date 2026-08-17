@@ -224,6 +224,86 @@ function eventIssueBody(e) {
   ].join("\n");
 }
 
+// ── the claim lease ───────────────────────────────────────────────────────────
+
+/**
+ * ATOMIC CLAIM (Eric, 2026-08-17: "waiting for commits to a doc file — seems flimsy af"). He was
+ * right, and the canary proved it: a session ran 11 minutes, spent 43k tokens, and left the repo
+ * with no trace at all, because the only claim signal was a commit that had not happened yet.
+ *
+ * The lease fixes that with git's own atomicity: `POST /git/refs` **fails with 422 if the ref
+ * already exists**, so creating `claim/<slug>` is a genuine compare-and-set — first writer wins, no
+ * read-then-write race, no prose parsing. And it happens BEFORE any work, so a claim is visible in
+ * seconds rather than at first commit.
+ *
+ * It is a LEASE, not a lock: a claim older than `staleAfterMs` is reclaimable, because a session
+ * that died holding a permanent lock would wedge the handoff forever — which is the failure mode
+ * this whole exercise exists to remove.
+ */
+export const CLAIM_TTL_MS = 2 * 60 * 60 * 1000; // 2h — well past any honest build
+
+/** @returns {{ claimed: boolean, reason: string }} */
+export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
+  const ref = `claim/${slug}`;
+  const existing = (() => {
+    try {
+      return JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/heads/${ref}`]));
+    } catch {
+      return null; // 404 — unclaimed, the common case
+    }
+  })();
+
+  if (existing) {
+    const age = nowMs - Date.parse(claimAgeOf(existing.object.sha));
+    if (age < staleAfterMs) {
+      return { claimed: false, reason: `held by a live claim (${Math.round(age / 60000)}m old)` };
+    }
+    // Stale: the holder died. Reclaim rather than wedge the handoff forever.
+    try {
+      sh("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/heads/${ref}`]);
+    } catch {
+      /* someone else just cleaned it up — the create below will arbitrate */
+    }
+  }
+
+  try {
+    sh("gh", [
+      "api",
+      "-X",
+      "POST",
+      "repos/{owner}/{repo}/git/refs",
+      "-f",
+      `ref=refs/heads/${ref}`,
+      "-f",
+      `sha=${sha}`,
+    ]);
+    return { claimed: true, reason: existing ? "reclaimed a stale lease" : "claimed" };
+  } catch {
+    // 422 — another runner won the race between our check and our create. That is the lock working.
+    return { claimed: false, reason: "lost the race to a concurrent claim" };
+  }
+}
+
+/** Committer date of the claim's commit, for lease age. */
+function claimAgeOf(sha) {
+  try {
+    return JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/commits/${sha}`])).commit.committer
+      .date;
+  } catch {
+    return new Date(0).toISOString(); // unreadable → treat as ancient, i.e. reclaimable
+  }
+}
+
+/** Release a lease once the handoff is no longer being built. */
+export function releaseClaim(slug) {
+  try {
+    sh("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/heads/claim/${slug}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ── the impure half ───────────────────────────────────────────────────────────
 
 const sh = (cmd, args, opts = {}) =>
