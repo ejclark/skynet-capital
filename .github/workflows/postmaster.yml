@@ -21,6 +21,22 @@ name: Postmaster
 #
 # `claude.yml` stays for what it is actually good at: a human typing @claude on an issue or PR.
 # That path works, because a human's token is not GITHUB_TOKEN.
+#
+# ═══ WHY EVERY PR-OPENING STEP PREFERS `HANDOFF_PR_TOKEN` ═══
+#
+# The severance has a second mouth, found the same night one hop past the first fix: the build's
+# final act is opening a PR, also with GITHUB_TOKEN, so `pull_request.opened` is never emitted and
+# `pipeline.yml`'s required `verify` check never runs. PR #371 opened with a clean diff and
+# **zero check runs** — not a red check, no checks, and `mergeable_state: blocked` forever.
+#
+# So the PR-facing steps use `secrets.HANDOFF_PR_TOKEN` — a fine-grained PAT scoped to this repo —
+# and fall back to GITHUB_TOKEN when it is absent or expired. The fallback is DELIBERATE and
+# degrades honestly: the PR still opens (work is never stranded), and the run prints a warning
+# naming the close/reopen workaround, because a PR nobody can merge is worse than a loud notice.
+#
+# What must NOT be done instead: having the build mint its own check run named `verify` via the
+# Checks API. It would work, and it would be a gate certifying itself — strictly worse than a gate
+# that visibly did not run. See docs/LESSONS.md 2026-08-17.
 
 on:
   push:
@@ -73,9 +89,11 @@ jobs:
       # Everything the four old workflows did: sweep for ready handoffs and due events and open
       # their issues, import a zip dropped on a labelled issue, flip a handoff on dispatch, audit
       # for stalls. One entry point, one set of specs.
+      # This step opens PRs (flips, zip imports), so it takes the PAT when there is one. The `||`
+      # is the honest degrade, not an oversight — see the header.
       - name: Run the postmaster
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
         run: node scripts/postmaster.mjs
 
       # Claim BEFORE building, not at first commit. `POST /git/refs` is atomic — 422 if the ref
@@ -122,18 +140,25 @@ jobs:
       - id: gate
         env:
           TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          PR_TOKEN: ${{ secrets.HANDOFF_PR_TOKEN }}
         run: |
           if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
           else
             echo "armed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — ${{ needs.route.outputs.build_slug }} is claimed but nothing will build it. Add the secret, then delete the claim ref to retry."
+            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — ${{ needs.route.outputs.build_slug }} is claimed but nothing will build it. Add the secret, then run the postmaster's release-claim command to retry."
+          fi
+          # Not fatal, but the reader must be told: without the PAT the PR this build opens will
+          # carry ZERO check runs and can never satisfy branch protection.
+          if [ -z "$PR_TOKEN" ]; then
+            echo "::warning::HANDOFF_PR_TOKEN missing — the PR this build opens will have no check runs (GITHUB_TOKEN cannot emit pull_request events). Close and reopen it from any other account to arm CI. Permanent fix: add the secret (docs/HANDOFFS.md)."
           fi
 
       - if: steps.gate.outputs.armed == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # The PAT when present, so the PR this session opens actually triggers `verify`.
+          github_token: ${{ secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
           # WITHOUT THIS THE BUILD SILENTLY DOES NOTHING (2026-08-17, docs/LESSONS.md). The first
           # real run went green having accomplished nothing: the session started, ran 21 turns,
           # spent $0.88 — and logged `permission_denials_count: 6`. Only GitHub's own tools are

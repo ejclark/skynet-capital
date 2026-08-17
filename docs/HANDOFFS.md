@@ -149,6 +149,37 @@ is recorded in the commit, so the audit trail still names the human who authoriz
 
 ### Repo settings the pipeline assumes
 
+#### `HANDOFF_PR_TOKEN` — the secret that makes machine-opened PRs mergeable
+
+**Without it the pipeline still works, but every PR it opens carries zero check runs** and can never
+satisfy branch protection. The cause is GitHub's infinite-loop guard: a PR opened with
+`GITHUB_TOKEN` does not emit `pull_request.opened`, so `pipeline.yml`'s required `verify` never
+runs. Not a red check — *no* checks, and `mergeable_state: blocked` forever (2026-08-17, #371).
+
+Mint it once:
+
+1. Go to **[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)** — fine-grained, not classic; classic tokens can't be scoped to one repo.
+2. Set **Resource owner** `ejclark`, **Repository access → Only select repositories → `skynet-capital`** — nothing this token can touch outside this repo.
+3. Set **Repository permissions** to exactly these three, all *Read and write*, leaving every other permission at *No access*:
+   - **Contents** — push the handoff branch
+   - **Pull requests** — open the PR and arm auto-merge
+   - **Issues** — comment the receipt, close the `[handoff]` issue
+4. Set **Expiration** to your preference and click **Generate token**, then copy it — GitHub shows it once.
+5. Add it at **Settings → Secrets and variables → Actions → New repository secret**, named exactly **`HANDOFF_PR_TOKEN`**.
+
+**Two consequences worth knowing.** PRs the pipeline opens will be **authored by you** rather than
+`github-actions[bot]` — that is the entire point (your identity emits events), but it means the
+audit trail reads as your name; `github.actor` in the commit still records who authorized. And a
+fine-grained PAT **expires**: when it does, the pipeline degrades rather than breaks — every run
+warns `HANDOFF_PR_TOKEN missing`, PRs keep opening, and they need a close/reopen to arm CI until
+it is replaced. A **GitHub App installation token** is the no-expiry alternative if the renewal
+ever becomes annoying.
+
+**The workaround, any time a PR shows no checks:** close it and reopen it from any account that
+isn't the Actions token. `reopened` is in `pipeline.yml`'s `types:` list, so CI arms in seconds.
+
+#### The repo setting
+
 One capability is **off by default on every GitHub repo** and every PR-opening workflow here needs
 it: **Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and
 approve pull requests."** Without it, a workflow can commit and push a branch and then fail at the

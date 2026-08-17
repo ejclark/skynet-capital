@@ -362,11 +362,14 @@ it. Prevention ranks, best first:
   close and reopen the PR from any account that is not the Actions token** — `reopened` is already
   in `pipeline.yml`'s `types:` list (kept there by the draft-skip lesson of 2026-08-14, which pays
   for itself again here), so CI arms within seconds. Used on #371: `verify` went green. (2) **The
-  real fix is a credential and therefore Eric's** — a fine-grained PAT or GitHub App installation
-  token, used solely for the `gh pr create` step, so the PR is authored by an identity whose events
-  GitHub does not suppress. Deliberately **not** self-authorized, and deliberately not worked around
-  by having the build job mint its own check run named `verify`: a gate that certifies itself is
-  worse than a gate that visibly did not run.
+  real fix is a credential and therefore Eric's** — a fine-grained PAT, used for the PR-opening
+  steps, so the PR is authored by an identity whose events GitHub does not suppress. Deliberately
+  **not** self-authorized, and deliberately not worked around by having the build job mint its own
+  check run named `verify`: a gate that certifies itself is worse than a gate that visibly did not
+  run. **Authorized and mechanised same-day** — every PR-facing step now reads
+  `secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN`, the mint-and-paste procedure is in
+  `docs/HANDOFFS.md`, and the fallback degrades loudly (a run warning naming the close/reopen
+  workaround) rather than stranding work, so an expired token is a nuisance and never an outage.
 - **THE CLASS, NOT THE INSTANCE:** every place this repo's automation writes through
   `GITHUB_TOKEN` and expects a downstream reaction is suspect until checked. Three found so far:
   issue-opened (fixed by collapsing the hop), PR-opened (this), and any push to a branch made by a
