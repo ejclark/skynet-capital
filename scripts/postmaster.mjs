@@ -23,7 +23,7 @@
 // (`handoff-import.mjs`) stay exactly as they are and are invoked, never reimplemented — they carry
 // their own hard-won failure modes (docs/LESSONS.md 2026-08-14).
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 
 // ── labels this repo speaks ───────────────────────────────────────────────────
 export const LABELS = {
@@ -143,6 +143,42 @@ function routeFlip(ctx, deps) {
 }
 
 /**
+ * THE LOOP'S EYES (harness-research gap #3: "the loop has a mouth but no eyes"). The router
+ * dispatches work; nothing watched whether dispatched work ever moved. `audit()` is the pure half
+ * of a stall supervisor: given every `executing` handoff's quiet time and every open dispatch
+ * issue that nothing has claimed, emit flag-stall intents past a threshold.
+ *
+ * Deliberately DETERMINISTIC and ceiling-capped: it comments and warns — it never reclaims a lock,
+ * reassigns work, or flips a status. Deciding whether a stalled build is dead or just slow is
+ * judgment, and judgment belongs to the humans and agents the comment summons.
+ */
+export function audit(deps = {}) {
+  const { executingHandoffs = [], unclaimedIssues = [], staleAfterDays = 2 } = deps;
+  const intents = [];
+  for (const h of executingHandoffs) {
+    if (h.quietDays < staleAfterDays) continue;
+    intents.push({
+      kind: "flag-stall",
+      slug: h.slug,
+      issueNumber: h.issueNumber,
+      quietDays: h.quietDays,
+      body: `⏱ **Stall check** — \`${h.slug}\` flipped to \`executing\` (the lock) but its handoff folder has seen no commit in **${h.quietDays} day(s)**.\n\nIf the build is dead, a human should flip the status back to \`ready\` so a pickup layer can re-claim it — the lock is only honest while its holder is alive.\n\n${FOOTER}`,
+    });
+  }
+  for (const i of unclaimedIssues) {
+    if (i.quietDays < staleAfterDays) continue;
+    intents.push({
+      kind: "flag-stall",
+      issueNumber: i.number,
+      title: i.title,
+      quietDays: i.quietDays,
+      body: `⏱ **Stall check** — this was dispatched **${i.quietDays} day(s)** ago and no pickup layer has claimed it (no \`executing\` flip, no ledger). The hourly Routine may be down, or every layer saw a non-ready status.\n\n${FOOTER}`,
+    });
+  }
+  return intents;
+}
+
+/**
  * The attachment URL, out of an issue body. Non-image attachments render as plain links under
  * `/user-attachments/files/<id>/<name>`; images use `/assets/`, and matching only that form is the
  * trap that has bitten other integrations.
@@ -193,32 +229,50 @@ function eventIssueBody(e) {
 const sh = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", ...opts }).trim();
 
-/** Read the real dependencies: scanners, open issues, open PR heads, on-disk statuses. */
+/**
+ * Read the real dependencies: scanners, open issues, open PR heads, on-disk statuses.
+ *
+ * FAIL CLOSED, LOUDLY. An earlier draft swallowed errors and returned `[]` — which made a failed
+ * `gh issue list` indistinguishable from "no open issues", so the title-dedupe silently disarmed
+ * and the duplicate class this router exists to kill was re-armed by its own plumbing (the
+ * harness-engineering research called this the top gap). A dependency that cannot be read is a
+ * hard stop, not an empty list.
+ */
 function gatherDeps(ctx) {
-  const json = (cmd, args) => {
+  const json = (label, cmd, args) => {
+    let out;
     try {
-      return JSON.parse(sh(cmd, args) || "[]");
-    } catch {
-      return [];
+      out = sh(cmd, args);
+    } catch (err) {
+      throw new Error(`${label} failed: ${String(err.stderr || err.message).trim()}`);
     }
-  };
-  const gh = (args) => {
     try {
-      return JSON.parse(sh("gh", args) || "[]");
+      return JSON.parse(out || "[]");
     } catch {
-      return [];
+      throw new Error(`${label} returned unparseable JSON:\n${out.slice(0, 400)}`);
     }
   };
   const needsScan = ctx.eventName === "push" || ctx.inputs?.command === "scan";
   return {
-    readyHandoffs: needsScan ? json("node", ["scripts/handoff-scan.mjs", "--ready"]) : [],
-    dueEvents: needsScan ? json("node", ["scripts/event-scan.mjs", "--due"]) : [],
-    openIssueTitles: needsScan
-      ? gh(["issue", "list", "--state", "open", "--limit", "100", "--json", "title"]).map(
-          (i) => i.title,
-        )
+    readyHandoffs: needsScan
+      ? json("handoff-scan --ready", "node", ["scripts/handoff-scan.mjs", "--ready"])
       : [],
-    openPrHeads: gh([
+    dueEvents: needsScan
+      ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
+      : [],
+    openIssueTitles: needsScan
+      ? json("gh issue list", "gh", [
+          "issue",
+          "list",
+          "--state",
+          "open",
+          "--limit",
+          "100",
+          "--json",
+          "title",
+        ]).map((i) => i.title)
+      : [],
+    openPrHeads: json("gh pr list", "gh", [
       "pr",
       "list",
       "--state",
@@ -237,35 +291,128 @@ function gatherDeps(ctx) {
   };
 }
 
-function execute(intents) {
-  for (const i of intents) {
-    if (i.kind === "noop") {
-      console.log(`· nothing to do (${i.reason})`);
-    } else if (i.kind === "error") {
-      console.error(`::error::${i.reason}`);
-      process.exitCode = 1;
-    } else if (i.kind === "open-issue") {
-      ensureLabel(i.label);
-      const url = sh("gh", [
-        "issue",
-        "create",
-        "--title",
-        i.title,
-        "--body",
-        i.body,
-        "--label",
-        i.label.name,
-      ]);
-      console.log(`▶ queued ${url}`);
-    } else if (i.kind === "comment") {
-      sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
-      console.log(`· commented on #${i.issueNumber}`);
-    } else if (i.kind === "import-zip") {
-      importZip(i);
-    } else if (i.kind === "flip-handoff") {
-      flipHandoff(i);
+/** Audit-mode dependencies: quiet-time per executing handoff, unclaimed dispatch issues. Loud on
+ *  failure, same doctrine as gatherDeps. `now` injected for the day math (never Date.now() in a
+ *  testable path — the caller passes it). */
+function gatherAuditDeps(nowMs) {
+  const json = (label, args) => {
+    let out;
+    try {
+      out = sh("gh", args);
+    } catch (err) {
+      throw new Error(`${label} failed: ${String(err.stderr || err.message).trim()}`);
+    }
+    try {
+      return JSON.parse(out || "[]");
+    } catch {
+      throw new Error(`${label} returned unparseable JSON:\n${out.slice(0, 400)}`);
+    }
+  };
+  const daysSince = (iso) => Math.floor((nowMs - Date.parse(iso)) / 86_400_000);
+  const issues = json("gh issue list", [
+    "issue",
+    "list",
+    "--state",
+    "open",
+    "--limit",
+    "100",
+    "--json",
+    "title,number,updatedAt",
+  ]);
+  const issueFor = (slug) => issues.find((i) => i.title === `[handoff] ${slug}`);
+
+  const executingHandoffs = [];
+  const unclaimedIssues = [];
+  for (const dir of existsSync("docs/handoffs") ? readdirSync("docs/handoffs") : []) {
+    const readme = `docs/handoffs/${dir}/README.md`;
+    if (!existsSync(readme) || dir === "TEMPLATE.md") continue;
+    const status = readFileSync(readme, "utf8").match(/^\*\*Status:\*\* *([a-z]+)/m)?.[1];
+    if (status === "executing") {
+      const lastCommit = sh("git", ["log", "-1", "--format=%cI", "--", `docs/handoffs/${dir}`]);
+      executingHandoffs.push({
+        slug: dir,
+        quietDays: lastCommit ? daysSince(lastCommit) : 999,
+        issueNumber: issueFor(dir)?.number,
+      });
+    }
+    if (status === "ready") {
+      const issue = issueFor(dir);
+      if (issue)
+        unclaimedIssues.push({
+          title: issue.title,
+          number: issue.number,
+          quietDays: daysSince(issue.updatedAt),
+        });
     }
   }
+  for (const i of issues) {
+    const id = i.title.match(/^\[event-research\] (.+)$/)?.[1];
+    if (id && !existsSync(`docs/research/events/${id}.md`)) {
+      unclaimedIssues.push({ title: i.title, number: i.number, quietDays: daysSince(i.updatedAt) });
+    }
+  }
+  return { executingHandoffs, unclaimedIssues };
+}
+
+function execute(intents) {
+  const receipt = [];
+  for (const i of intents) {
+    receipt.push(executeOne(i));
+  }
+  // The durable per-run receipt (research gap #2: the scan path left no trace beyond the run log).
+  // $GITHUB_STEP_SUMMARY renders on the run's summary page; locally it just skips.
+  if (process.env.GITHUB_STEP_SUMMARY && receipt.length) {
+    writeFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      `## Postmaster receipt\n\n${receipt.map((r) => `- ${r}`).join("\n")}\n`,
+      { flag: "a" },
+    );
+  }
+  if (receipt.length === 0) console.log("· nothing to do");
+}
+
+function executeOne(i) {
+  if (i.kind === "noop") {
+    console.log(`· nothing to do (${i.reason})`);
+    return `noop — ${i.reason}`;
+  }
+  if (i.kind === "error") {
+    console.error(`::error::${i.reason}`);
+    process.exitCode = 1;
+    return `❌ refused — ${i.reason}`;
+  }
+  if (i.kind === "open-issue") {
+    ensureLabel(i.label);
+    const url = sh("gh", [
+      "issue",
+      "create",
+      "--title",
+      i.title,
+      "--body",
+      i.body,
+      "--label",
+      i.label.name,
+    ]);
+    console.log(`▶ queued ${url}`);
+    return `opened issue \`${i.title}\` → ${url}`;
+  }
+  if (i.kind === "comment") {
+    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+    console.log(`· commented on #${i.issueNumber}`);
+    return `commented on #${i.issueNumber}`;
+  }
+  if (i.kind === "import-zip") {
+    return importZip(i);
+  }
+  if (i.kind === "flip-handoff") {
+    return flipHandoff(i);
+  }
+  if (i.kind === "flag-stall") {
+    if (i.issueNumber) sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+    console.log(`::warning::stall — ${i.slug ?? i.title} quiet ${i.quietDays}d`);
+    return `⏱ stall flagged — \`${i.slug ?? i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber})` : ""}`;
+  }
+  return `❓ unknown intent kind ${i.kind}`;
 }
 
 function ensureLabel(label) {
@@ -368,6 +515,7 @@ function importZip(intent) {
     ].join("\n"),
   ]);
   console.log(`▶ imported ${intent.slug} (${bytes} bytes, sha256 ${sha.slice(0, 12)}…)`);
+  return `imported \`${intent.slug}\` (${bytes} bytes, sha256 \`${sha.slice(0, 12)}…\`)${prUrl ? ` → ${prUrl}` : " — ⚠️ PR not opened"}`;
 }
 
 function flipHandoff(intent) {
@@ -404,6 +552,7 @@ function flipHandoff(intent) {
   ]);
   sh("gh", ["pr", "merge", "--auto", "--squash", url]);
   console.log(`▶ flipped ${intent.slug} → ready, PR ${url}`);
+  return `flipped \`${intent.slug}\` → ready (by @${intent.actor}) → ${url}`;
 }
 
 // ── entry point ───────────────────────────────────────────────────────────────
@@ -432,7 +581,8 @@ function main(argv) {
     const map = deps.handoffStatusMap;
     deps = { ...deps, handoffStatus: (slug) => map[slug] ?? null };
   }
-  const intents = route(ctx, deps);
+  const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
+  const intents = auditMode ? audit(fixtureDeps ?? gatherAuditDeps(Date.now())) : route(ctx, deps);
 
   if (dry) {
     console.log(JSON.stringify(intents, null, 2));

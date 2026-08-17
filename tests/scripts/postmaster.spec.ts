@@ -99,6 +99,22 @@ describe("postmaster routing", () => {
     expect(intents[0]?.reason).toContain("executing");
   });
 
+  it("the audit flags a quiet executing handoff and an unclaimed dispatch, never a fresh one", () => {
+    const intents = dryRun("audit-stalled.json") as (Intent & { quietDays?: number })[];
+
+    expect(intents).toHaveLength(2);
+    expect(intents[0]?.kind).toBe("flag-stall");
+    expect(intents[0]?.slug).toBe("desk-v2");
+    expect(intents[0]?.body).toContain("the lock is only honest while its holder is alive");
+    expect(intents[1]?.issueNumber).toBe(412);
+    // brief-horizon at 0 quiet days is NOT flagged
+    expect(intents.some((i) => i.slug === "brief-horizon")).toBe(false);
+  });
+
+  it("the audit is silent when everything is inside the threshold", () => {
+    expect(dryRun("audit-all-fresh.json")).toHaveLength(0);
+  });
+
   it("issue bodies carry the Claude attribution footer", () => {
     const intents = dryRun("push-one-ready.json") as Intent[];
 
