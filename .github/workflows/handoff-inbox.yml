@@ -1,0 +1,150 @@
+name: Handoff inbox
+
+# THE FRONT DOOR (docs/HANDOFFS.md). Drop a design zip onto an issue labelled `handoff-inbox` —
+# from a phone, the GitHub mobile app, or a browser — and this imports it, opens the handoff PR, and
+# comments a receipt back on the issue. No laptop, no clone, no `gh`.
+#
+# WHY ATTACHMENTS WORK HERE: this repo is PUBLIC, so `github.com/user-attachments/files/...` 302s to
+# a short-lived pre-signed S3 URL that needs no credentials. Three non-negotiables, each a documented
+# failure mode: follow redirects (`-L`); never forward an Authorization header to the S3 host (it
+# refuses two auth mechanisms); and download in the SAME run that read the body (the signature expires
+# in ~5–10 minutes). If this repo ever goes private, attachments become browser-session-only and this
+# workflow must switch to release assets — see docs/HANDOFFS.md.
+#
+# SAFETY: the import lands the bundle at `**Status:** draft`, which triggers nothing. The `ready`
+# flip stays Eric's, exactly as on the zip path — a mailbox changes who carries the zip, never who
+# authorizes the build.
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write      # push the handoff branch
+  issues: write        # comment the receipt
+  pull-requests: write # open the PR
+
+concurrency:
+  group: handoff-inbox-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    # Only labelled issues, so an ordinary issue that happens to carry a zip is never imported.
+    if: contains(github.event.issue.labels.*.name, 'handoff-inbox')
+    name: import a dropped bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # the importer branches off origin/main
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Find the attached zip
+        id: find
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          # Non-image attachments render as plain links under /user-attachments/files/<id>/<name>.
+          # (Images use /assets/ — matching only that form is the trap that bit claude-code-action.)
+          URL=$(printf '%s' "$BODY" | grep -oE 'https://github\.com/user-attachments/files/[0-9]+/[^ )"]+\.zip' | head -1 || true)
+          if [ -z "$URL" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No .zip attachment found in the issue body."
+            exit 0
+          fi
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Found: $URL"
+
+      - name: Download it
+        id: download
+        if: steps.find.outputs.found == 'true'
+        env:
+          URL: ${{ steps.find.outputs.url }}
+        run: |
+          set -euo pipefail
+          # -L to follow the redirect; NO Authorization header (the pre-signed URL carries its own);
+          # a User-Agent because bare requests draw 403s.
+          curl -fsSL --retry 3 --retry-delay 2 -A "skynet-handoff-inbox/1.0" -o /tmp/bundle.zip "$URL"
+          echo "sha256=$(sha256sum /tmp/bundle.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "bytes=$(stat -c%s /tmp/bundle.zip)" >> "$GITHUB_OUTPUT"
+
+      - name: Derive the slug
+        id: slug
+        if: steps.find.outputs.found == 'true'
+        env:
+          TITLE: ${{ github.event.issue.title }}
+        run: |
+          set -euo pipefail
+          # The issue title names the handoff (kebab-cased); the zip's own name is the fallback.
+          SLUG=$(printf '%s' "$TITLE" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
+          [ -n "$SLUG" ] || SLUG="handoff-${{ github.event.issue.number }}"
+          echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+
+      - name: Import the bundle
+        id: import
+        if: steps.find.outputs.found == 'true'
+        continue-on-error: true   # a dirty contract still lands the branch — the receipt says so
+        run: |
+          set -euo pipefail
+          git config user.name "handoff-inbox[bot]"
+          git config user.email "actions@github.com"
+          node scripts/handoff-import.mjs /tmp/bundle.zip --slug "${{ steps.slug.outputs.slug }}"
+
+      - name: Open the PR
+        id: pr
+        if: steps.find.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLUG: ${{ steps.slug.outputs.slug }}
+          CLEAN: ${{ steps.import.outcome }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          STATUS_LINE="Contract validated clean by \`handoff-scan --validate\`."
+          if [ "$CLEAN" != "success" ]; then
+            STATUS_LINE="⚠️ **The contract needs authoring** — the bundle's README does not yet satisfy \`docs/handoffs/TEMPLATE.md\`. It is safe here at \`draft\` (inert), but a session must reshape it before this can build."
+          fi
+          BODY=$(printf '%s\n' \
+            "## Summary" "" \
+            "- Imports the **$SLUG** design bundle into \`docs/handoffs/$SLUG/\`, dropped on #$ISSUE via the handoff inbox." \
+            "- $STATUS_LINE" \
+            "- Status: **draft — inert until Eric flips it to \`ready\`**." "" \
+            "## Why" "" \
+            "Design→code handoff per \`docs/HANDOFFS.md\`. The mailbox changes who carries the zip, never who authorizes the build." "" \
+            "Closes #$ISSUE" "" "---" "_Opened by the handoff inbox (\`.github/workflows/handoff-inbox.yml\`)._")
+          gh pr create --base main --head "handoff/$SLUG" \
+            --title "docs(handoff): $SLUG design bundle" --body "$BODY" \
+            | tee /tmp/pr-url.txt
+          gh pr merge --auto --squash "$(cat /tmp/pr-url.txt)" || echo "auto-merge not armed (non-fatal)"
+
+      - name: Post the receipt
+        if: always() && steps.find.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # A human who dropped a zip from a phone gets told exactly what the machine received —
+          # attachment retrieval has enough undocumented surface to be worth confirming.
+          FILES=$(unzip -Z1 /tmp/bundle.zip 2>/dev/null | head -20 | sed 's/^/- `/; s/$/`/' || echo "- (could not list)")
+          gh issue comment "${{ github.event.issue.number }}" --body "$(printf '%s\n' \
+            "**Received.** \`${{ steps.download.outputs.bytes }}\` bytes · sha256 \`${{ steps.download.outputs.sha256 }}\`" "" \
+            "Imported as \`docs/handoffs/${{ steps.slug.outputs.slug }}/\` — PR: $(cat /tmp/pr-url.txt 2>/dev/null || echo 'see branch handoff/${{ steps.slug.outputs.slug }}')" "" \
+            "Contents:" "$FILES" "" \
+            "It lands at \`draft\` and builds nothing. Flip its status to \`ready\` when it should." "" \
+            "---" "_Generated by [Claude Code](https://claude.ai/code)_")"
+
+      - name: Say so when there was nothing to import
+        if: steps.find.outputs.found != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --body "$(printf '%s\n' \
+            "No \`.zip\` attachment found in this issue's body, so there was nothing to import." "" \
+            "Drag the design bundle into the issue description (not a comment) and re-apply the \`handoff-inbox\` label. Attachments cap at 25 MB." "" \
+            "---" "_Generated by [Claude Code](https://claude.ai/code)_")"
