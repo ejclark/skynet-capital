@@ -15,6 +15,7 @@ export type NavView =
   | "bots"
   | "compare"
   | "calendar"
+  | "research"
   | "you"
   | "add"
   | "learn";
@@ -75,6 +76,7 @@ function renderDrawer(nav: NavContext): string {
     links.push(drawerLink("/compare", "Compare", "compare", nav.active === "compare"));
   }
   links.push(drawerLink("/calendar", "Calendar", "calendar", nav.active === "calendar"));
+  links.push(drawerLink("/research", "Research", "research", nav.active === "research"));
   if (nav.currentId) {
     links.push(drawerLink(profileHref(nav.currentId), "You", "you", nav.active === "you"));
   }

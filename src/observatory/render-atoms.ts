@@ -87,3 +87,10 @@ export function tile(
         <span class="tile-num num${opts.cls ? ` ${opts.cls}` : ""}">${value}</span>
       </div>`;
 }
+
+/** "today" / "tomorrow" / "in Nd" — the countdown voice shared by the calendar and research views. */
+export function countdown(days: number): string {
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  return `in ${days}d`;
+}
