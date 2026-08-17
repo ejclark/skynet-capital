@@ -223,6 +223,13 @@ built"; and an issue opened by `GITHUB_TOKEN` is a *written* issue but not an *e
   exists, no branch after N minutes* → comment and warn. That is the check that would have caught the
   21-turn, $0.88, zero-commit build with nobody reading a log, and it fits the auditor's existing
   ceiling (it observes and summons a human; it never reclaims a lock).
+- **Sweep the `GITHUB_TOKEN` severance class, don't patch instances.** Three hops found where
+  automation writes through `GITHUB_TOKEN` and something downstream is expected to react:
+  issue-opened (fixed), PR-opened (found the same night, one hop past the fix), and workflow-made
+  pushes (same property, not yet exercised). An auditor rule of the same artifact shape — *PR open
+  N minutes with zero check runs* → comment and warn — would catch the whole family. The real fix
+  for PR authorship is a credential (fine-grained PAT / App installation token for the `pr create`
+  step only) and is **Eric's**, not self-authorizable.
 - **Also worth having:** a repo-settings preflight. "Allow GitHub Actions to create and approve pull
   requests" being off cost a canary run, and that class of defect is invisible to every local gate —
   a scripted check of the capabilities the workflows assume would surface it before a dispatch does.

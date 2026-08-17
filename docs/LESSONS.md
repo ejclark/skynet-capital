@@ -344,3 +344,33 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** → docs/IDEAS.md — have the postmaster's auditor treat "claim ref exists, no
   branch after N minutes" as a stall and say so, which would have caught this without anyone
   reading a log.
+
+### The same severance, one hop over — a PR opened by `GITHUB_TOKEN` gets no checks at all
+- **SHA:** n/a   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** the canary's PR (#371) opened successfully, carrying a clean five-file diff and three
+  well-formed commits — and `get_check_runs` returned **`total_count: 0`**. Not a failing check: no
+  checks. `mergeable_state: "blocked"`, because a required check that never runs never passes.
+  Detection lag: none, but only because the artifact was inspected directly rather than the run's
+  status — the postmaster run itself was green and correct.
+- **ROOT CAUSE:** **the identical `GITHUB_TOKEN` severance banked two entries above, at a hop I had
+  not audited.** The fix for that one removed the *issue* hop (scan and build now share a run), and
+  I stopped there — but the build's final act is opening a PR, also with `GITHUB_TOKEN`, so
+  `pull_request.opened` is never emitted and `pipeline.yml`'s `verify` never fires. Fixing one
+  instance of a class and not sweeping for the rest is the actual mistake here; the mechanism was
+  already fully understood and written down when this defect shipped.
+- **PREVENTION:** two layers, and the honest one is not mechanical yet. (1) **Immediate, token-free:
+  close and reopen the PR from any account that is not the Actions token** — `reopened` is already
+  in `pipeline.yml`'s `types:` list (kept there by the draft-skip lesson of 2026-08-14, which pays
+  for itself again here), so CI arms within seconds. Used on #371: `verify` went green. (2) **The
+  real fix is a credential and therefore Eric's** — a fine-grained PAT or GitHub App installation
+  token, used solely for the `gh pr create` step, so the PR is authored by an identity whose events
+  GitHub does not suppress. Deliberately **not** self-authorized, and deliberately not worked around
+  by having the build job mint its own check run named `verify`: a gate that certifies itself is
+  worse than a gate that visibly did not run.
+- **THE CLASS, NOT THE INSTANCE:** every place this repo's automation writes through
+  `GITHUB_TOKEN` and expects a downstream reaction is suspect until checked. Three found so far:
+  issue-opened (fixed by collapsing the hop), PR-opened (this), and any push to a branch made by a
+  workflow (unexercised today, same property). The sweep is the deliverable, not the patch.
+- **SIDE QUESTS:** → docs/IDEAS.md — an artifact-shaped auditor rule for this exact shape: *PR open
+  for N minutes with zero check runs* → comment and warn. Same family as the claim-with-no-branch
+  rule; both ask "did the thing actually happen?" rather than "did the process report success?".
