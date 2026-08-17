@@ -256,3 +256,32 @@ it. Prevention ranks, best first:
   sessions at, since the first (prose-only) warning wasn't enough on its own.
 - **SIDE QUESTS:** → docs/IDEAS.md — a `git stash`-blocking shell wrapper for agent bootstraps, if
   the harness ever exposes a place to inject one.
+
+### The flip button did all the work, then died at `gh pr create` — Actions can't open PRs by default
+- **SHA:** 76f9276   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** the first-ever dispatch of "Flip a handoff to ready" (the pipeline canary,
+  `brief-horizon`) failed with `GraphQL: GitHub Actions is not permitted to create or approve pull
+  requests (createPullRequest)`. Detection lag: none — it was the run's own exit code, surfaced
+  within seconds, because the canary existed to be watched.
+- **ROOT CAUSE:** **Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to
+  create and approve pull requests"** is **off by default** on GitHub repositories. Every workflow
+  in this repo that opens a PR (`handoff-flip.yml`, `handoff-inbox.yml`) had been written assuming
+  the capability, and none had ever executed its final step against the real repo — the mailbox's
+  live tests were all no-zip smoke tests, which return before the PR step. So the defect sat latent
+  in two workflows at once. Worse than the failure itself was its *shape*: the flip had already
+  committed and pushed the branch, so the run failed after doing all the real work, leaving a
+  correct branch stranded behind an error message that named no next step.
+- **PREVENTION:** two layers. (1) The setting is enabled — the actual fix, one checkbox, and it
+  unblocks every current and future PR-opening workflow. (2) Mechanical, in the postmaster cutover:
+  `execute()` wraps PR creation so a refusal no longer discards the work — it comments the
+  `…/compare/<branch>?expand=1` URL on the originating issue, prints it, writes it into the run
+  receipt, and names the setting in the message, so the reader can fix the cause rather than the
+  symptom. Specced with a fixture where PR creation is refused.
+- **THE CANARY EARNED ITSELF:** this is the case the canary was staged for. Had the first dispatch
+  been `trailer-debut`, the same failure would have landed on a large public-facing bundle instead
+  of a one-line text change — and had it first appeared via the mailbox, it would have struck after
+  downloading and importing a real zip. Fifth defect of the day found by running the thing rather
+  than reasoning about it.
+- **SIDE QUESTS:** → docs/IDEAS.md — a repo-settings preflight (a scripted check that the
+  capabilities the workflows assume are actually enabled), since this class of defect is invisible
+  to every local gate.

@@ -147,6 +147,15 @@ button exists so nobody has to remember that.
 Dispatching needs repo write access — the same permission editing the file needs — and `github.actor`
 is recorded in the commit, so the audit trail still names the human who authorized it.
 
+### Repo settings the pipeline assumes
+
+One capability is **off by default on every GitHub repo** and every PR-opening workflow here needs
+it: **Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and
+approve pull requests."** Without it, a workflow can commit and push a branch and then fail at the
+final `gh pr create` — work done, no PR, an error naming no next step (see `docs/LESSONS.md`,
+2026-08-17). The postmaster degrades honestly if it is ever off again (it comments the compare URL
+instead of dying), but the setting is the real fix.
+
 ## The three pickup layers
 
 All three read the same eye — `scripts/handoff-scan.mjs --ready` — so they can never disagree about
