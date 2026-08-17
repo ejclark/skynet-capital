@@ -437,6 +437,50 @@ function ensureLabel(label) {
   }
 }
 
+/**
+ * Open a PR, or degrade honestly. "Allow GitHub Actions to create and approve pull requests" is OFF
+ * by default on every GitHub repo (docs/LESSONS.md 2026-08-17). When it is off, the branch is
+ * already pushed and the work is already done — only this call fails. Never strand that behind a
+ * raw error: name the cause, hand back the compare URL, and let the caller carry it into the
+ * receipt and any originating issue.
+ *
+ * @returns {{ url: string|null, note: string|null }}
+ */
+function openPrOrExplain({ head, title, body }) {
+  try {
+    const url = sh("gh", [
+      "pr",
+      "create",
+      "--base",
+      "main",
+      "--head",
+      head,
+      "--title",
+      title,
+      "--body",
+      body,
+    ]);
+    try {
+      sh("gh", ["pr", "merge", "--auto", "--squash", url]);
+    } catch {
+      /* auto-merge unavailable is non-fatal — the PR is open, which is the load-bearing part */
+    }
+    return { url, note: null };
+  } catch (err) {
+    const server = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+    const repo = process.env.GITHUB_REPOSITORY ?? "";
+    const compare = `${server}/${repo}/compare/${head}?expand=1`;
+    const refused = /not permitted to create or approve pull requests/.test(
+      String(err.stderr || err.message),
+    );
+    const note = refused
+      ? `⚠️ The branch is pushed and the work is safe, but this run could not open the PR: **GitHub Actions is not permitted to create or approve pull requests** in this repo.\n\n**Open it here:** ${compare}\n\n**To stop this recurring:** Settings → Actions → General → Workflow permissions → tick *Allow GitHub Actions to create and approve pull requests*.`
+      : `⚠️ The branch is pushed and the work is safe, but opening the PR failed:\n\n\`\`\`\n${String(err.stderr || err.message).slice(0, 600)}\n\`\`\`\n\n**Open it manually:** ${compare}`;
+    console.log(`::warning::PR not opened — ${compare}`);
+    return { url: null, note };
+  }
+}
+
 function importZip(intent) {
   // -L to follow the redirect; NO Authorization header (the pre-signed S3 URL carries its own and
   // refuses two auth mechanisms); a User-Agent because bare requests draw 403s. The signature
@@ -479,23 +523,12 @@ function importZip(intent) {
     "",
     FOOTER,
   ].join("\n");
-  let prUrl = "";
-  try {
-    prUrl = sh("gh", [
-      "pr",
-      "create",
-      "--base",
-      "main",
-      "--head",
-      `handoff/${intent.slug}`,
-      "--title",
-      `docs(handoff): ${intent.slug} design bundle`,
-      "--body",
-      prBody,
-    ]);
-  } catch {
-    /* reported in the receipt below */
-  }
+  const pr = openPrOrExplain({
+    head: `handoff/${intent.slug}`,
+    title: `docs(handoff): ${intent.slug} design bundle`,
+    body: prBody,
+  });
+  const prUrl = pr.url ?? "";
 
   sh("gh", [
     "issue",
@@ -509,13 +542,13 @@ function importZip(intent) {
       `- ${bytes} bytes`,
       `- slug: \`${intent.slug}\``,
       `- ${verdict}`,
-      prUrl ? `- PR: ${prUrl}` : "- ⚠️ the PR could not be opened — see the run log",
+      prUrl ? `- PR: ${prUrl}` : pr.note,
       "",
       FOOTER,
     ].join("\n"),
   ]);
   console.log(`▶ imported ${intent.slug} (${bytes} bytes, sha256 ${sha.slice(0, 12)}…)`);
-  return `imported \`${intent.slug}\` (${bytes} bytes, sha256 \`${sha.slice(0, 12)}…\`)${prUrl ? ` → ${prUrl}` : " — ⚠️ PR not opened"}`;
+  return `imported \`${intent.slug}\` (${bytes} bytes, sha256 \`${sha.slice(0, 12)}…\`)${prUrl ? ` → ${prUrl}` : " — ⚠️ PR not opened (compare URL in the issue comment)"}`;
 }
 
 function flipHandoff(intent) {
@@ -538,21 +571,15 @@ function flipHandoff(intent) {
   sh("git", ["push", "-u", "origin", branch, "--force-with-lease"]);
   // A PR, never a direct push: a GITHUB_TOKEN push does not trigger other workflows, so pushing
   // straight to main would silently skip the detect sweep and no issue would ever open.
-  const url = sh("gh", [
-    "pr",
-    "create",
-    "--base",
-    "main",
-    "--head",
-    branch,
-    "--title",
-    `docs(handoff): flip ${intent.slug} to ready`,
-    "--body",
-    `**@${intent.actor} authorized \`${intent.slug}\` to build.**\n\nOn merge the detect sweep opens the \`[handoff] ${intent.slug}\` issue, a pickup layer claims it, and its first commit flips \`ready\` → \`executing\` — that flip is the lock.\n\n${FOOTER}`,
-  ]);
-  sh("gh", ["pr", "merge", "--auto", "--squash", url]);
-  console.log(`▶ flipped ${intent.slug} → ready, PR ${url}`);
-  return `flipped \`${intent.slug}\` → ready (by @${intent.actor}) → ${url}`;
+  const pr = openPrOrExplain({
+    head: branch,
+    title: `docs(handoff): flip ${intent.slug} to ready`,
+    body: `**@${intent.actor} authorized \`${intent.slug}\` to build.**\n\nOn merge the detect sweep opens the \`[handoff] ${intent.slug}\` issue, a pickup layer claims it, and its first commit flips \`ready\` → \`executing\` — that flip is the lock.\n\n${FOOTER}`,
+  });
+  console.log(`▶ flipped ${intent.slug} → ready${pr.url ? `, PR ${pr.url}` : " (PR not opened)"}`);
+  return pr.url
+    ? `flipped \`${intent.slug}\` → ready (by @${intent.actor}) → ${pr.url}`
+    : `flipped \`${intent.slug}\` → ready (by @${intent.actor}) — ⚠️ PR not opened\n\n${pr.note}`;
 }
 
 // ── entry point ───────────────────────────────────────────────────────────────

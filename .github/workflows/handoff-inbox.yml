@@ -157,10 +157,35 @@ jobs:
             "## Why" "" \
             "Design→code handoff per \`docs/HANDOFFS.md\`. The mailbox changes who carries the zip, never who authorizes the build." "" \
             "Closes #$ISSUE" "" "---" "_Opened by the handoff inbox (\`.github/workflows/handoff-inbox.yml\`)._")
-          gh pr create --base main --head "handoff/$SLUG" \
-            --title "docs(handoff): $SLUG design bundle" --body "$BODY" \
-            | tee /tmp/pr-url.txt
-          gh pr merge --auto --squash "$(cat /tmp/pr-url.txt)" || echo "auto-merge not armed (non-fatal)"
+          PR_TITLE="docs(handoff): $SLUG design bundle"
+          PR_BODY="$BODY"
+          # DEGRADE HONESTLY (docs/LESSONS.md 2026-08-17). "Allow GitHub Actions to create and
+          # approve pull requests" is OFF by default on every GitHub repo. When it is off, everything
+          # above has already succeeded — branch pushed, commit made — and only this last call fails.
+          # Stranding that behind a raw error is the "did all the work, then died" shape, so: name the
+          # cause, hand over the compare URL, and exit 0. Nothing is lost; a human finishes it.
+          COMPARE="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/handoff/$SLUG?expand=1"
+          if ! PR_URL=$(gh pr create --base main --head "handoff/$SLUG" --title "$PR_TITLE" --body "$PR_BODY" 2>/tmp/pr-err.txt); then
+            if grep -q "not permitted to create or approve pull requests" /tmp/pr-err.txt; then
+              MSG=$(printf '%s\n' \
+                "⚠️ The branch is pushed and the work is safe, but this workflow could not open the PR:" \
+                "**GitHub Actions is not permitted to create or approve pull requests** in this repo." "" \
+                "**Open it here:** $COMPARE" "" \
+                "**To stop this recurring:** Settings → Actions → General → Workflow permissions →" \
+                "tick *Allow GitHub Actions to create and approve pull requests*.")
+            else
+              MSG=$(printf '%s\n' \
+                "⚠️ The branch is pushed and the work is safe, but opening the PR failed:" "" \
+                "$(head -c 600 /tmp/pr-err.txt)" "" \
+                "**Open it manually:** $COMPARE")
+            fi
+            echo "::warning::PR not opened — $COMPARE"
+            printf '%s\n' "### ⚠️ PR not opened" "" "$MSG" >> "$GITHUB_STEP_SUMMARY"
+            gh issue comment "$ISSUE" --body "$MSG" || true
+            exit 0
+          fi
+          echo "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL" || echo "auto-merge not armed (non-fatal)"
 
       - name: Post the receipt
         if: always() && steps.guard.outputs.skip != 'true' && steps.find.outputs.found == 'true'
