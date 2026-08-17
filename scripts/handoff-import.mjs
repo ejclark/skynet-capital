@@ -225,4 +225,7 @@ if (!clean) {
     "  Contract is clean. It stays inert until its status flips to `ready` — Eric's call.\n",
   );
 }
-process.exit(0);
+// Exit status carries the CONTRACT verdict, not just "did the push succeed" — the push path used to
+// exit 0 unconditionally while `--no-push` reported honestly, so a caller (handoff-ship) read a
+// dirty contract as success and opened a PR claiming it validated clean (2026-08-16, docs/LESSONS.md).
+process.exit(clean ? 0 : 1);

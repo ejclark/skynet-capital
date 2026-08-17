@@ -27,6 +27,30 @@ it. Prevention ranks, best first:
 
 ---
 
+### A wrapper shipped a PR claiming a contract "validated clean" when it hadn't
+- **SHA:** n/a   **DATE:** 2026-08-16   **STATUS:** closed
+- **SIGNAL:** CI red on Eric's first real `handoff:ship` run (#354) — 122 lint errors — and the
+  handoff gate failing the bundle's contract. But the PR body that same script had written said
+  *"Contract validated clean by `handoff-scan --validate` before this PR opened."* Detection lag:
+  minutes, and only because CI ran; the false claim itself was never going to be caught mechanically.
+- **ROOT CAUSE:** two independent misses. (1) `handoff-import.mjs` exited `0` unconditionally after
+  pushing while its `--no-push` path correctly exited `clean ? 0 : 1` — so its documented contract
+  ("exit 1 means authoring work remains", docs/HANDOFFS.md) was true on one path and false on the
+  other. `handoff-ship.mjs` read that exit code as the chain's stop condition, so a dirty contract
+  read as success: PR opened, body asserting a validation that never passed. With `--ready` it would
+  have flipped a *skeleton* contract to `ready` and licensed an unattended build from it. (2) The
+  wrapper's own failure-mode tests exercised the dirty-contract case **only** under `--no-push` —
+  the single mode where the exit code was already right. The test and the bug were blind to each
+  other by construction.
+- **PREVENTION:** gate + spec. The importer now exits `clean ? 0 : 1` on both paths (fix at the
+  source, so every caller inherits it), and `tests/arch/handoff.spec.ts` asserts that *every*
+  terminal exit after the contract scan carries the verdict — a bare `exit(0)` there fails CI. Also
+  doctrine-adjacent: biome no longer lints `docs/handoffs/**`, since design bundles are references,
+  not source.
+- **SIDE QUESTS:** the deeper prompt — "must a bundle merge into the codebase at all?" — became the
+  issue-as-mailbox intake (Eric's question, same session); the repo being public is what makes
+  attachment retrieval viable at all.
+
 ### Three consecutive PRs shipped with a literal `{}` description
 - **SHA:** 6e587aa   **DATE:** 2026-08-15   **STATUS:** closed
 - **SIGNAL:** Eric read a PR page and saw `{}` where the document should be — a human net, after
