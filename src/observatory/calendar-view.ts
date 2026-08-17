@@ -80,12 +80,12 @@ function shortDay(date: string): string {
 }
 
 function eventRow(event: MarketEvent, researchIds: ReadonlySet<string>): string {
-  // Symbol chips deep-link to the symbol's living research page (/research/sym/:SYM).
+  // Symbol chips deep-link to the symbol's living research page (/research/symbol/:SYMBOL).
   const syms = event.symbols.length
     ? event.symbols
         .map(
           (s) =>
-            `<a class="cal-sym" href="/research/sym/${escapeHtml(s)}" title="${escapeHtml(s)} — living research">${escapeHtml(s)}</a>`,
+            `<a class="cal-sym" href="/research/symbol/${escapeHtml(s)}" title="${escapeHtml(s)} — living research">${escapeHtml(s)}</a>`,
         )
         .join("")
     : `<span class="cal-wide">MARKET-WIDE</span>`;

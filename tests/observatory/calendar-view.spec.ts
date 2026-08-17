@@ -242,7 +242,7 @@ describe("calendar ↔ research linkage", () => {
       prints: [print({ symbol: "NVDA", date: "2026-08-26" })],
     });
 
-    expect(html).toContain('href="/research/sym/NVDA"');
+    expect(html).toContain('href="/research/symbol/NVDA"');
   });
 
   it("renders no research links when no ledger set is injected", () => {

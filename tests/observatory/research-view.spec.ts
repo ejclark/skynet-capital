@@ -41,7 +41,7 @@ describe("renderResearchShelfBody", () => {
         { symbol: "NVDA", next: event({ id: "nvda-2026-08-26-print", date: "2026-08-26" }) },
       ],
     });
-    expect(html).toContain('href="/research/sym/NVDA"');
+    expect(html).toContain('href="/research/symbol/NVDA"');
     expect(html).toContain('href="/research/events/nvda-2026-08-26-print"');
     expect(html).toContain('href="/research/alpha-study"');
     expect(html).toContain("last assessed 2026-08-15");

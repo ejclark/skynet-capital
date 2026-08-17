@@ -11,7 +11,7 @@ import { findResearchDoc, listResearch, shelfSymbols, symbolResearch } from "./r
 /**
  * `/research` — the living research surface (docs/plans/research-lab.md slice 1, sharpened
  * 2026-08-17: symbol-first pages + calendar↔research links). Three shapes: the shelf,
- * `/research/sym/:SYM` symbol pages, and `/research/<slug>` rendered docs. Runs behind the same
+ * `/research/symbol/:SYMBOL` symbol pages, and `/research/<slug>` rendered docs. Runs behind the same
  * gate as every other observatory view (dashboard-server dispatches it post-auth); slugs resolve
  * by shelf membership (research-service.ts), so an unknown or hostile path just 404s.
  */
@@ -36,8 +36,11 @@ export function serveResearchRoute(
     html("Research — Skynet Capital", body);
     return;
   }
-  if (path.startsWith("/research/sym/")) {
-    const data = symbolResearch(decodeURIComponent(path.slice("/research/sym/".length)), asOfIso);
+  if (path.startsWith("/research/symbol/")) {
+    const data = symbolResearch(
+      decodeURIComponent(path.slice("/research/symbol/".length)),
+      asOfIso,
+    );
     if (data) {
       html(
         `${data.symbol} research — Skynet Capital`,

@@ -31,9 +31,9 @@ describe("serveResearchRoute", () => {
     expect(out.body).toContain("not investment advice");
   });
 
-  it("serves a living symbol page at /research/sym/:SYM", () => {
+  it("serves a living symbol page at /research/symbol/:SYM", () => {
     const { res, out } = fakeResponse();
-    serveResearchRoute(res, "/research/sym/NVDA", navFor);
+    serveResearchRoute(res, "/research/symbol/NVDA", navFor);
     expect(out.status).toBe(200);
     expect(out.body).toContain("NVDA — living research");
   });
@@ -50,7 +50,7 @@ describe("serveResearchRoute", () => {
       "/research/no-such-doc",
       "/research/../package.json",
       "/research/events/../../.env",
-      "/research/sym/../../x",
+      "/research/symbol/../../x",
     ]) {
       const { res, out } = fakeResponse();
       serveResearchRoute(res, path, navFor);

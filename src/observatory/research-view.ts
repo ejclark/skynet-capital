@@ -5,7 +5,7 @@
  *
  * Three pages, all pure renderers over data the server assembles (research-service.ts):
  *   /research               — the shelf: symbol cards, event ledgers, studies
- *   /research/sym/:SYM      — a symbol's LIVING page: its upcoming events, ledgers, studies,
+ *   /research/symbol/:SYMBOL      — a symbol's LIVING page: its upcoming events, ledgers, studies,
  *                             and the current stance excerpted VERBATIM from the nearest ledger
  *                             (an excerpt is honest; a regenerated summary could drift)
  *   /research/<slug>        — any study or event ledger, rendered in the house shell
@@ -80,7 +80,7 @@ export function renderResearchShelfBody(options: ResearchShelfOptions): string {
       const when = next
         ? `<span class="rs-cardwhen">${escapeHtml(next.title)} ${countdown(daysUntil(asOfIso, next.date))}${next.status === "estimate" ? " (est)" : ""}</span>`
         : `<span class="rs-cardwhen">no dated event ahead</span>`;
-      return `<a class="rs-card" href="/research/sym/${escapeHtml(symbol)}"><span class="rs-cardsym">${escapeHtml(symbol)}</span>${when}</a>`;
+      return `<a class="rs-card" href="/research/symbol/${escapeHtml(symbol)}"><span class="rs-cardsym">${escapeHtml(symbol)}</span>${when}</a>`;
     })
     .join("\n");
   const content = `${RS_STYLE}
