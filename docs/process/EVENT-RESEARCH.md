@@ -9,7 +9,7 @@ this doc defines *what* each assessment does. The daily event-scan Routine (docs
 executes it; a human session following this doc by hand is equally valid.
 
 **Adding an event is the trigger.** Ship it as an ordinary PR; the scanner's `never-assessed`
-rule makes it due on the next cycle (and `.github/workflows/event-detect.yml` opens an
+rule makes it due on the next cycle (and `.github/workflows/postmaster.yml` opens an
 `[event-research] <id>` issue within seconds of the merge). No other ceremony.
 
 ## The three assessment modes (keyed to the scanner's `reason` field)

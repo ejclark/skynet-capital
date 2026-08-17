@@ -1,0 +1,158 @@
+name: Postmaster
+
+# ONE ROUTER FOR EVERY ISSUE-DRIVEN AUTOMATION (docs/HANDOFFS.md), replacing four workflows that
+# had grown to 482 lines carrying 202 lines of untestable bash. The logic lives in
+# scripts/postmaster.mjs, which is pure where it decides and specced against fixture payloads —
+# this file is a trigger shim and nothing else.
+#
+# ═══ WHY THE BUILD RUNS HERE INSTEAD OF VIA AN @claude ISSUE ═══
+#
+# The old chain was: push → handoff-detect opens an issue mentioning @claude → claude.yml sees the
+# `issues.opened` event → builds. It never once worked, and on 2026-08-17 the canary showed why:
+# **events triggered by GITHUB_TOKEN do not start other workflow runs** (GitHub's infinite-loop
+# guard). handoff-detect creates its issue with GITHUB_TOKEN, so the `issues.opened` event was
+# never emitted, so claude.yml had zero runs against it — while the hourly polling Routine quietly
+# carried the load and produced nothing. The chain was structurally severed at the join, and the
+# poller masked it.
+#
+# So the hop is gone: this workflow scans AND builds in the same run. The issue is still opened —
+# as the audit trail and the human-visible queue — but it is a RECEIPT, never a trigger. Nothing
+# in the critical path depends on one workflow's write emitting an event another workflow hears.
+#
+# `claude.yml` stays for what it is actually good at: a human typing @claude on an issue or PR.
+# That path works, because a human's token is not GITHUB_TOKEN.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/handoffs/**'
+      - 'src/domain/market-events.ts'
+      - 'src/domain/earnings-calendar.ts'
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      command:
+        description: What to do
+        required: true
+        type: choice
+        options: [flip-handoff, scan, audit]
+        default: scan
+      slug:
+        description: "Handoff slug (flip-handoff only) — the folder name under docs/handoffs/"
+        required: false
+        type: string
+
+permissions:
+  contents: write       # push handoff/flip branches, create claim refs
+  issues: write         # open issues, comment receipts
+  pull-requests: write  # open the PRs
+  id-token: write       # claude-code-action
+
+concurrency:
+  # Keyed by event so an issue import and a push sweep never queue behind each other.
+  group: postmaster-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  route:
+    name: route
+    runs-on: ubuntu-latest
+    outputs:
+      build_slug: ${{ steps.claim.outputs.slug }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # the importer branches off origin/main
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
+
+      # Everything the four old workflows did: sweep for ready handoffs and due events and open
+      # their issues, import a zip dropped on a labelled issue, flip a handoff on dispatch, audit
+      # for stalls. One entry point, one set of specs.
+      - name: Run the postmaster
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/postmaster.mjs
+
+      # Claim BEFORE building, not at first commit. `POST /git/refs` is atomic — 422 if the ref
+      # exists — so this is a real compare-and-set, and the claim is visible in `git ls-remote`
+      # within seconds instead of whenever a session gets around to committing.
+      - name: Claim a ready handoff, if any
+        id: claim
+        if: github.event_name != 'workflow_dispatch' || inputs.command == 'scan'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          SLUG=$(node scripts/handoff-scan.mjs --ready | jq -r '.[0].slug // empty')
+          if [ -z "$SLUG" ]; then
+            echo "· nothing ready to build."
+            exit 0
+          fi
+          RESULT=$(node -e '
+            import("./scripts/postmaster.mjs").then((m) => {
+              const r = m.claimHandoff(process.argv[1], process.argv[2], Date.now());
+              console.log(JSON.stringify(r));
+            });
+          ' "$SLUG" "$GITHUB_SHA")
+          echo "$RESULT"
+          if [ "$(echo "$RESULT" | jq -r .claimed)" = "true" ]; then
+            echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+            echo "::notice::claimed $SLUG — building in this run"
+          else
+            echo "::notice::not building $SLUG — $(echo "$RESULT" | jq -r .reason)"
+          fi
+
+  build:
+    name: build the handoff
+    needs: route
+    if: needs.route.outputs.build_slug != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Inert without the secret, exactly like claude.yml's gate — the notice says so rather than
+      # failing, so an unarmed repo degrades to "issue opened, nobody built it" instead of red CI.
+      - id: gate
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "armed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — ${{ needs.route.outputs.build_slug }} is claimed but nothing will build it. Add the secret, then delete the claim ref to retry."
+          fi
+
+      - if: steps.gate.outputs.armed == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Build the design handoff `${{ needs.route.outputs.build_slug }}` in this repo.
+
+            Its contract is `docs/handoffs/${{ needs.route.outputs.build_slug }}/README.md` — read it
+            first. Its EARS acceptance criteria define "done"; nothing else does.
+
+            Execution discipline (docs/HANDOFFS.md):
+            1. Branch off the latest origin/main. Flip the handoff's status `ready` → `executing` in
+               your FIRST commit — a lease ref `claim/${{ needs.route.outputs.build_slug }}` already
+               marks this run as the claimant, and that flip is its human-readable mirror.
+            2. Reconcile any bundle tokens against docs/BRAND.md BEFORE writing code. Where they
+               disagree the brand wins, and the divergence gets a line in the decision log.
+            3. Reuse src/ui before adding anything new. Keep the change as small as the contract allows.
+            4. Verify by exit status, never tailed output: `npm run typecheck`, `npm run lint`,
+               `npm test`.
+            5. Open the PR. Do NOT auto-merge it — Eric reviews. Then flip the status to `review` and
+               close the handoff's `[handoff] <slug>` issue with the PR link.
+
+            Boundaries, non-negotiable: never flip a handoff to `ready` yourself (that is Eric's
+            authorization); never widen the autonomy envelope; never touch credentials, spend, or
+            anything outward-facing. Bank anything you cannot answer from the contract in its Q&A
+            queue and continue on unblocked threads rather than guessing.

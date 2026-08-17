@@ -32,7 +32,7 @@ The lowest-friction intake, and the only one that works from the GitHub **mobile
 2. **Drag the design zip into the issue description** (the body, not a comment). Cap: 25 MB.
 3. Apply the **`handoff-inbox`** label.
 
-`.github/workflows/handoff-inbox.yml` then downloads the attachment, runs the same
+The **postmaster** (`.github/workflows/postmaster.yml`) then downloads the attachment, runs the same
 `handoff-import.mjs` as the zip path, opens the handoff PR, and **comments a receipt** on the issue —
 sha256, byte count, and the extracted file list — so a human who dropped a zip from a phone can see
 exactly what the machine received. A dirty contract still lands the branch and the receipt says so.
@@ -131,7 +131,7 @@ npm run handoff:scan -- --validate # enforce the contract — this also runs in 
 
 The authorization is a status change from `draft` to `ready`. Do it the easy way:
 
-**Actions → “Flip a handoff to ready” → Run workflow → type the slug.**
+**Actions → “Postmaster” → Run workflow → command `flip-handoff`, slug `<name>`.**
 
 That opens a PR with a properly-formed commit message and arms auto-merge; on merge the watcher
 fires and the build begins. It refuses any handoff that is not currently `draft`, and any whose
@@ -156,28 +156,31 @@ final `gh pr create` — work done, no PR, an error naming no next step (see `do
 2026-08-17). The postmaster degrades honestly if it is ever off again (it comments the compare URL
 instead of dying), but the setting is the real fix.
 
-## The three pickup layers
+## How a flip becomes a build — one hop, no polling
 
-All three read the same eye — `scripts/handoff-scan.mjs --ready` — so they can never disagree about
-what is live.
+```
+flip → push to main → Postmaster (seconds) → claims the handoff → builds it → PR
+```
 
-| Layer | Latency | Needs | Status |
-|---|---|---|---|
-| **1. Watcher** — `.github/workflows/handoff-detect.yml` opens a `handoff`-labelled issue on push | seconds | nothing | **on** |
-| **2. Routine** — an hourly Claude Code session that scans, no-ops if idle, builds if not | ≤ 1 hour | nothing | **on** |
-| **3. GitHub App** — `@claude` on the issue starts a session immediately | seconds | Eric installs the Claude Code app + adds `CLAUDE_CODE_OAUTH_TOKEN` | **inert until then** |
+One workflow does the whole thing. It opens the `[handoff] <slug>` issue as the **audit receipt**,
+but the issue is no longer a trigger — because it never could be.
 
-Layers 2 and 3 are redundant on purpose and safe together: whichever gets there first flips the
-handoff to `executing` in the same PR, and the other sees a non-`ready` status and stands down.
+**The trap that cost an evening (2026-08-17, docs/LESSONS.md):** the original design was
+`detect opens an issue mentioning @claude` → `claude.yml hears issues.opened` → builds. It never
+fired once. **Events triggered by `GITHUB_TOKEN` do not start other workflow runs** — GitHub's
+infinite-loop guard — so an issue opened by a workflow emits nothing another workflow can hear. The
+chain was severed at the join, and an hourly polling Routine masked it by quietly carrying the load
+and producing nothing. Collapsing scan-and-build into one run removes the hop entirely.
 
-**Layer 3 is the only genuinely event-driven path** (push → session, no polling), and it is the one
-step that needs Eric's credentials. Setup, once:
+**Claiming is atomic and immediate.** Before any work, the postmaster creates a `claim/<slug>` ref
+— `POST /git/refs` fails 422 if it exists, so it is a real compare-and-set, and
+`git ls-remote --heads origin 'claim/*'` shows every live claim within seconds. It is a **lease**,
+not a lock: a claim older than two hours is reclaimable, because a session that dies holding a
+permanent lock would wedge the handoff forever. The `ready` → `executing` flip in the build's first
+commit is now the human-readable *mirror* of the claim, not the claim itself.
 
-1. Install the Claude Code GitHub App on `ejclark/skynet-capital` — <https://github.com/apps/claude>.
-2. Add repository secret `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`).
-
-`.github/workflows/claude.yml` gates on that secret, so until it exists the workflow costs nothing
-and layer 2 carries the load.
+`claude.yml` stays for what it is genuinely good at: a human typing `@claude` on an issue or PR.
+That path works, because a person's token is not `GITHUB_TOKEN`.
 
 ## Execution discipline (what a picked-up handoff does)
 
