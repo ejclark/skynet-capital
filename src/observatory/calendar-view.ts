@@ -3,7 +3,7 @@ import { allEvents, type MarketEvent } from "../domain/market-events.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { MG_STYLE, monthGrid, resolveMonth } from "./calendar-widget.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
-import { tile } from "./render-atoms.js";
+import { countdown, tile } from "./render-atoms.js";
 
 /**
  * The EVENT HORIZON (`/calendar`) — the observatory rendering of the checked-in market-event
@@ -31,6 +31,8 @@ export interface CalendarViewOptions {
   /** Injectable tables for specs; default to the real checked-in calendar. */
   readonly events?: readonly MarketEvent[];
   readonly prints?: readonly EarningsPrint[];
+  /** Event ids that have a research ledger — those rows link to /research/events/<id>. */
+  readonly researchIds?: ReadonlySet<string>;
 }
 
 const KIND_LABEL: Record<MarketEvent["kind"], string> = {
@@ -58,12 +60,6 @@ const BANDS = [
   },
 ] as const;
 
-function countdown(days: number): string {
-  if (days === 0) return "today";
-  if (days === 1) return "tomorrow";
-  return `in ${days}d`;
-}
-
 /** "Wed, Oct 28" — UTC date-only, matching the calendar-day math of the domain model. */
 function formatDay(date: string): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -83,23 +79,37 @@ function shortDay(date: string): string {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
-function eventRow(event: MarketEvent): string {
+function eventRow(event: MarketEvent, researchIds: ReadonlySet<string>): string {
+  // Symbol chips deep-link to the symbol's living research page (/research/sym/:SYM).
   const syms = event.symbols.length
-    ? event.symbols.map((s) => `<span class="cal-sym">${escapeHtml(s)}</span>`).join("")
+    ? event.symbols
+        .map(
+          (s) =>
+            `<a class="cal-sym" href="/research/sym/${escapeHtml(s)}" title="${escapeHtml(s)} — living research">${escapeHtml(s)}</a>`,
+        )
+        .join("")
     : `<span class="cal-wide">MARKET-WIDE</span>`;
   const est =
     event.status === "estimate"
       ? `<span class="cal-est" title="Estimated date — estimates only widen caution; date-keyed action requires confirmed">EST</span>`
       : "";
+  const research = researchIds.has(event.id)
+    ? `<a class="cal-research" href="/research/events/${escapeHtml(event.id)}" title="Assessment ledger — initial research + reassessment rows">research →</a>`
+    : "";
   const notes = event.notes ? `<div class="cal-notes">${escapeHtml(event.notes)}</div>` : "";
   return `<li class="cal-ev imp-${event.impact}" title="${escapeHtml(event.source)}">
         <span class="cal-kind">${KIND_LABEL[event.kind]}</span>
         <span class="cal-title">${escapeHtml(event.title)}</span>
-        ${syms}${est}${notes}
+        ${syms}${est}${research}${notes}
       </li>`;
 }
 
-function dayGroup(date: string, events: readonly MarketEvent[], asOfIso: string): string {
+function dayGroup(
+  date: string,
+  events: readonly MarketEvent[],
+  asOfIso: string,
+  researchIds: ReadonlySet<string>,
+): string {
   const days = daysUntil(asOfIso, date);
   const stacked =
     events.length > 1
@@ -111,7 +121,7 @@ function dayGroup(date: string, events: readonly MarketEvent[], asOfIso: string)
         <span class="cal-in">${countdown(days)}</span>
         ${stacked}
       </header>
-      <ul class="cal-list">${events.map(eventRow).join("\n")}</ul>
+      <ul class="cal-list">${events.map((e) => eventRow(e, researchIds)).join("\n")}</ul>
     </section>`;
 }
 
@@ -120,6 +130,7 @@ function bandPanel(
   band: (typeof BANDS)[number],
   upcoming: readonly MarketEvent[],
   asOfIso: string,
+  researchIds: ReadonlySet<string>,
 ): string {
   const inBand = upcoming.filter((e) => {
     const days = daysUntil(asOfIso, e.date);
@@ -136,7 +147,9 @@ function bandPanel(
   const body =
     inBand.length === 0
       ? `<p class="cal-empty">Nothing inside a week — clear runway.</p>`
-      : [...byDate.entries()].map(([date, evs]) => dayGroup(date, evs, asOfIso)).join("\n");
+      : [...byDate.entries()]
+          .map(([date, evs]) => dayGroup(date, evs, asOfIso, researchIds))
+          .join("\n");
   return `<section class="cal-band">
     <h2 class="cal-band-title">${band.title}</h2>
     <p class="cal-band-sub">${band.sub}</p>
@@ -168,6 +181,7 @@ function summaryTiles(upcoming: readonly MarketEvent[], asOfIso: string): string
 export function renderCalendarBody(options: CalendarViewOptions): string {
   const { asOfIso } = options;
   const upcoming = allEvents(asOfIso, options.events, options.prints);
+  const researchIds = options.researchIds ?? new Set<string>();
   const month = resolveMonth(options.month, asOfIso, upcoming);
   const content = `${CAL_STYLE}${MG_STYLE}
   <div class="cal-layout">
@@ -179,7 +193,7 @@ export function renderCalendarBody(options: CalendarViewOptions): string {
       </div>
     </div>
     ${summaryTiles(upcoming, asOfIso)}
-    ${BANDS.map((band) => bandPanel(band, upcoming, asOfIso)).join("\n")}
+    ${BANDS.map((band) => bandPanel(band, upcoming, asOfIso, researchIds)).join("\n")}
   </div>
   <aside class="cal-aside">${monthGrid(month, asOfIso, upcoming)}</aside>
   </div>
@@ -215,7 +229,10 @@ const CAL_STYLE = `<style>
   .cal-kind{ font-family:var(--mono); font-size:9px; letter-spacing:.12em; padding:2px 7px; border-radius:999px; border:1px solid var(--border); color:var(--muted); white-space:nowrap; }
   .cal-ev.imp-critical .cal-kind{ color:var(--accent); border-color:color-mix(in srgb,var(--accent) 50%,var(--border)); }
   .cal-title{ color:var(--text); font-weight:600; }
-  .cal-sym{ font-family:var(--mono); font-size:10.5px; font-weight:700; color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 35%,transparent); border-radius:5px; padding:1px 6px; }
+  .cal-sym{ font-family:var(--mono); font-size:10.5px; font-weight:700; color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 35%,transparent); border-radius:5px; padding:1px 6px; text-decoration:none; }
+  a.cal-sym:hover{ border-color:var(--accent); }
+  .cal-research{ font-size:11.5px; white-space:nowrap; color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent); }
+  .cal-research:hover{ border-bottom-color:var(--accent); }
   .cal-wide{ font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; color:var(--muted); }
   .cal-est{ font-family:var(--mono); font-size:9px; letter-spacing:.1em; color:var(--muted); border:1px dashed var(--muted); border-radius:5px; padding:1px 6px; }
   .cal-notes{ flex-basis:100%; font-size:12px; color:var(--muted); line-height:1.5; margin:0; }

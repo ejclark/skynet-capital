@@ -110,7 +110,8 @@ describe("renderCalendarBody", () => {
     });
 
     expect(html).toContain("MARKET-WIDE");
-    expect(html).toContain('<span class="cal-sym">NVDA</span>');
+    // Ticker chips are links now — each symbol deep-links to its living research page.
+    expect(html).toMatch(/<a class="cal-sym"[^>]*>NVDA<\/a>/);
   });
 
   it("carries the source audit trail on the row, escaped", () => {
@@ -215,5 +216,42 @@ describe("renderCalendarBody", () => {
     // The seeded feed: a macro print and a derived earnings print both surface.
     expect(html).toContain("FOMC decision (meeting Sep 15–16, SEP + dot plot)");
     expect(html).toContain("NVDA earnings print");
+  });
+});
+
+describe("calendar ↔ research linkage", () => {
+  it("links an event to its assessment ledger when research exists", () => {
+    const html = renderCalendarBody({
+      asOfIso: AS_OF,
+      events: [
+        event({ id: "fomc-2026-09-16", date: "2026-09-16", title: "Researched FOMC" }),
+        event({ id: "cpi-2026-10-14", date: "2026-10-14", title: "Unresearched CPI" }),
+      ],
+      prints: [],
+      researchIds: new Set(["fomc-2026-09-16"]),
+    });
+
+    expect(html).toContain('href="/research/events/fomc-2026-09-16"');
+    expect(html).not.toContain('href="/research/events/cpi-2026-10-14"');
+  });
+
+  it("deep-links symbol chips to the symbol's living research page", () => {
+    const html = renderCalendarBody({
+      asOfIso: AS_OF,
+      events: [],
+      prints: [print({ symbol: "NVDA", date: "2026-08-26" })],
+    });
+
+    expect(html).toContain('href="/research/sym/NVDA"');
+  });
+
+  it("renders no research links when no ledger set is injected", () => {
+    const html = renderCalendarBody({
+      asOfIso: AS_OF,
+      events: [event({ id: "fomc-2026-09-16", date: "2026-09-16" })],
+      prints: [],
+    });
+
+    expect(html).not.toContain("/research/events/");
   });
 });
