@@ -16,6 +16,11 @@ the conversion surface: it explains what the league is, answers the first questi
 
 ## Acceptance criteria (EARS)
 
+- [ ] WHEN the build begins, it shall first deliver ONE screen rendered both ways (flame as
+  bundled, and flattened to the Nocturne teal system) for Eric to judge by eye, and shall not
+  build the remaining surfaces until he picks. — *verify: two renders/routes handed over, and
+  his ruling recorded in the decision log*
+
 - [ ] WHEN a visitor opens `/guide`, the observatory shall render the Field Guide at 960px content width with the banner flush under the hero, baseline-aligned 01/02/03 numerals, and the FAQ tiers' copy verbatim from the spec. — *verify: screenshot against the bundle's `Field Guide.dc.html`*
 - [ ] WHEN the visitor scrolls past the hero, the sticky progressive header shall appear, and its three step links shall condense in after the banner scrolls out, navigating to `/add`, `/login`, and `/feedback`. — *verify: screenshot + link assertions in a view spec*
 - [ ] WHEN a visitor opens `/trailer`, the page shall play `public/assets/trailer.mp4` if present and otherwise render the end-card component as the placeholder, including the glowing "THE FIELD GUIDE → GETTING STARTED" link to `/guide`. — *verify: view spec covering both branches*
@@ -58,6 +63,13 @@ the conversion surface: it explains what the league is, answers the first questi
   fork the design system. **Proposed:** treat `/trailer` and `/guide` as a sanctioned "campaign
   skin" — a named, documented extension of BRAND.md scoped to public marketing surfaces, with the
   app's own views unchanged. Eric's call before the build starts.
+
+  **RULED 2026-08-17 — Eric: "show me both first."** Not settled in prose; settled by eye. The
+  build's FIRST deliverable is therefore a comparison, not a commitment: render **one screen both
+  ways** — the flame treatment as the bundle specifies, and the same screen flattened to the
+  Nocturne dark-teal system — and hand Eric the two renders (or a route serving each) before any
+  further surface is built. Whichever he picks becomes the ruling, recorded here, and only then
+  does the rest of the handoff proceed. Do not build the remaining surfaces against a guess.
 
 ## Decision log
 
