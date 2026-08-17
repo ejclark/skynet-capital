@@ -15,9 +15,13 @@ name: Handoff inbox
 # flip stays Eric's, exactly as on the zip path — a mailbox changes who carries the zip, never who
 # authorizes the build.
 
+# `labeled` ONLY, deliberately. Creating an issue that already carries the label fires BOTH `opened`
+# and `labeled` (proven on the 2026-08-17 smoke test: two runs, two receipts), and with a real zip
+# that means two imports racing for the same `handoff/<slug>` branch. Applying the label IS the
+# gesture, so `labeled` alone covers every path — and re-applying it is a free retry.
 on:
   issues:
-    types: [opened, labeled]
+    types: [labeled]
 
 permissions:
   contents: write      # push the handoff branch
@@ -30,8 +34,8 @@ concurrency:
 
 jobs:
   intake:
-    # Only labelled issues, so an ordinary issue that happens to carry a zip is never imported.
-    if: contains(github.event.issue.labels.*.name, 'handoff-inbox')
+    # Gate on the label that was just applied, so labelling an issue anything else is a no-op.
+    if: github.event.label.name == 'handoff-inbox'
     name: import a dropped bundle
     runs-on: ubuntu-latest
     steps:
@@ -39,12 +43,47 @@ jobs:
         with:
           fetch-depth: 0   # the importer branches off origin/main
 
+      # GitHub auto-creates a label the first time it is applied, but as default grey with no
+      # description. Upsert it so the mailbox self-provisions in any clone and nobody has to know
+      # it needed doing (same defensive pattern as handoff-detect.yml's `handoff` label).
+      - name: Provision the label properly
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          DEF='{"name":"handoff-inbox","color":"1d76db","description":"Drop a design zip here — the inbox imports it and opens the handoff PR"}'
+          api() { curl -sS -o /dev/null -w '%{http_code}' -X "$1" \
+            -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/labels${2:-}" -d "$DEF"; }
+          CODE=$(api PATCH "/handoff-inbox")
+          [ "$CODE" = "200" ] || api POST "" >/dev/null || true
+
+      # Re-applying the label is a legitimate retry, but it must not import a bundle twice. If a PR
+      # for this slug is already open, say so and stop.
+      - name: Skip if this handoff is already in flight
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ github.event.issue.title }}
+        run: |
+          set -euo pipefail
+          SLUG=$(printf '%s' "$TITLE" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
+          EXISTING=$(gh pr list --head "handoff/$SLUG" --state open --json url --jq '.[0].url // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "${{ github.event.issue.number }}" --body "Already imported — see $EXISTING. Close or merge that PR before re-importing this bundle."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
 
       - name: Find the attached zip
         id: find
+        if: steps.guard.outputs.skip != 'true'
         env:
           BODY: ${{ github.event.issue.body }}
         run: |
@@ -63,7 +102,7 @@ jobs:
 
       - name: Download it
         id: download
-        if: steps.find.outputs.found == 'true'
+        if: steps.guard.outputs.skip != 'true' && steps.find.outputs.found == 'true'
         env:
           URL: ${{ steps.find.outputs.url }}
         run: |
@@ -76,7 +115,7 @@ jobs:
 
       - name: Derive the slug
         id: slug
-        if: steps.find.outputs.found == 'true'
+        if: steps.guard.outputs.skip != 'true' && steps.find.outputs.found == 'true'
         env:
           TITLE: ${{ github.event.issue.title }}
         run: |
@@ -88,7 +127,7 @@ jobs:
 
       - name: Import the bundle
         id: import
-        if: steps.find.outputs.found == 'true'
+        if: steps.guard.outputs.skip != 'true' && steps.find.outputs.found == 'true'
         continue-on-error: true   # a dirty contract still lands the branch — the receipt says so
         run: |
           set -euo pipefail
@@ -98,7 +137,7 @@ jobs:
 
       - name: Open the PR
         id: pr
-        if: steps.find.outputs.found == 'true'
+        if: steps.guard.outputs.skip != 'true' && steps.find.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLUG: ${{ steps.slug.outputs.slug }}
@@ -124,7 +163,7 @@ jobs:
           gh pr merge --auto --squash "$(cat /tmp/pr-url.txt)" || echo "auto-merge not armed (non-fatal)"
 
       - name: Post the receipt
-        if: always() && steps.find.outputs.found == 'true'
+        if: always() && steps.guard.outputs.skip != 'true' && steps.find.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -140,7 +179,7 @@ jobs:
             "---" "_Generated by [Claude Code](https://claude.ai/code)_")"
 
       - name: Say so when there was nothing to import
-        if: steps.find.outputs.found != 'true'
+        if: steps.guard.outputs.skip != 'true' && steps.find.outputs.found != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
