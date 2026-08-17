@@ -28,13 +28,15 @@ import type { Session } from "./auth/session.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
-import { addShell, PAGE_STYLE, readBody } from "./page-shell.js";
+import { addShell, PAGE_STYLE, readBody, shellDocument } from "./page-shell.js";
 import type {
   AddParticipantInput,
   AddResult,
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import { serveResearchRoute } from "./research-routes.js";
+import { researchedEventIds } from "./research-service.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 import { sseFrame } from "./sse.js";
 import { handleTrade } from "./trade-routes.js";
@@ -289,14 +291,7 @@ async function serveAuthorizedRoute(
     await handleFeedback(req, res, req.method ?? "GET", session, config.submitFeedback);
     return;
   }
-  if (path === "/learn") {
-    const body = renderAcademyBody({ nav: navFor("learn") });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Learn — Skynet Capital", body));
-    return;
-  }
-  if (path === "/calendar") {
-    serveCalendarRoute(res, url, navFor);
+  if (serveInfoRoute(res, path, url, navFor)) {
     return;
   }
   if (path === "/trade") {
@@ -317,6 +312,34 @@ async function serveAuthorizedRoute(
   res.end("not found");
 }
 
+/**
+ * The read-only info views behind the gate — `/learn`, `/calendar`, `/research` — grouped so the
+ * main dispatch stays within its complexity budget. Returns true when the request was handled;
+ * dispatch order is unchanged from before the extraction.
+ */
+function serveInfoRoute(
+  res: ServerResponse,
+  path: string,
+  url: string,
+  navFor: (active: NavView) => NavContext,
+): boolean {
+  if (path === "/learn") {
+    const body = renderAcademyBody({ nav: navFor("learn") });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument("Learn — Skynet Capital", body));
+    return true;
+  }
+  if (path === "/calendar") {
+    serveCalendarRoute(res, url, navFor);
+    return true;
+  }
+  if (path === "/research" || path.startsWith("/research/")) {
+    serveResearchRoute(res, path, navFor);
+    return true;
+  }
+  return false;
+}
+
 /** `/calendar` — the event-horizon view; `?month=` moves the widget (view-validated/clamped). */
 function serveCalendarRoute(
   res: ServerResponse,
@@ -327,6 +350,7 @@ function serveCalendarRoute(
   const body = renderCalendarBody({
     nav: navFor("calendar"),
     asOfIso: new Date().toISOString(),
+    researchIds: researchedEventIds(),
     ...(month ? { month } : {}),
   });
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -492,20 +516,6 @@ function resolveCurrentId(
   if (byName) return byName.id;
   const byLocal = local && participants.find((p) => p.displayName.toLowerCase().trim() === local);
   return byLocal ? byLocal.id : undefined;
-}
-
-/** Minimal HTML document shell for a server-rendered view (the body already carries its styles). */
-function shellDocument(title: string, body: string): string {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title}</title>
-<style>${PAGE_STYLE}</style>
-</head>
-<body>${body}</body>
-</html>`;
 }
 
 /** External origin of the request (honors Fly's x-forwarded-proto). */

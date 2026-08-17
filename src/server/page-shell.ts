@@ -115,3 +115,17 @@ export function readBody(req: IncomingMessage): Promise<string> {
     req.on("error", reject);
   });
 }
+
+/** Minimal HTML document shell for a server-rendered view (the body already carries its styles). */
+export function shellDocument(title: string, body: string): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>${PAGE_STYLE}</style>
+</head>
+<body>${body}</body>
+</html>`;
+}
