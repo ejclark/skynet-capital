@@ -24,7 +24,16 @@ const baseBrief: MorningBrief = {
     },
   ],
   rejectedPlaybookTokens: [],
-  calendar: [{ symbol: "NVDA", date: "2026-08-26", status: "confirmed", daysUntil: 13 }],
+  calendar: [
+    {
+      id: "nvda-2026-08-26-print",
+      title: "NVDA earnings print",
+      symbols: ["NVDA"],
+      date: "2026-08-26",
+      status: "confirmed",
+      daysUntil: 13,
+    },
+  ],
   positions: [],
   liveSignal: { available: false, note: "not available pre-market" },
 };
@@ -50,11 +59,31 @@ describe("renderMorningBriefText", () => {
     expect(text).toContain("unrecognized token(s): NOT-A-PLAYBOOK:standard");
   });
 
-  it("lists the earnings calendar with days-until", () => {
+  it("lists the event calendar with days-until", () => {
     const text = renderMorningBriefText(baseBrief);
+    expect(text).toContain("EVENT CALENDAR");
     expect(text).toContain("NVDA");
     expect(text).toContain("2026-08-26");
     expect(text).toContain("13d");
+  });
+
+  it("renders a market-wide macro event alongside earnings prints", () => {
+    const text = renderMorningBriefText({
+      ...baseBrief,
+      calendar: [
+        ...baseBrief.calendar,
+        {
+          id: "cpi-2026-09-11",
+          title: "CPI release (Aug 2026 data)",
+          symbols: [],
+          date: "2026-09-11",
+          status: "confirmed",
+          daysUntil: 29,
+        },
+      ],
+    });
+    expect(text).toContain("CPI release (Aug 2026 data)");
+    expect(text).toContain("2026-09-11");
   });
 
   it("states the live-signal gap honestly rather than showing zeros", () => {

@@ -1,5 +1,6 @@
 import type { Bot } from "../../src/bots/bot.js";
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
+import type { MarketEvent } from "../../src/domain/market-events.js";
 import { buildMorningBrief } from "../../src/observatory/morning-brief.js";
 import { createDefaultPersonas } from "../../src/personas/registry.js";
 import { aPortfolio, aPosition } from "../support/builders.js";
@@ -10,6 +11,19 @@ if (!sauron) throw new Error("fixture setup: sauron persona missing from the def
 const PRINTS: readonly EarningsPrint[] = [
   { symbol: "NVDA", date: "2026-08-26", status: "confirmed", source: "IR: test" },
   { symbol: "GOOG", date: "2026-09-15", status: "estimate", source: "cadence" },
+];
+
+const MACRO_EVENTS: readonly MarketEvent[] = [
+  {
+    id: "pjm-capacity-auction-2026-09",
+    kind: "sector",
+    title: "PJM capacity auction window closes",
+    date: "2026-09-11",
+    status: "estimate",
+    source: "EST: test",
+    impact: "medium",
+    symbols: [],
+  },
 ];
 
 const bot = (personaId: string): Bot => ({
@@ -55,10 +69,28 @@ describe("buildMorningBrief", () => {
       personas: [sauron],
       playbookEnv: { SKYNET_PLAYBOOKS: "S1-NVDA:standard" },
       calendar: PRINTS,
+      events: [],
       calendarWindowDays: 60,
     });
-    expect(brief.calendar.map((c) => c.symbol)).toEqual(["NVDA", "GOOG"]);
+    expect(brief.calendar.map((c) => c.title)).toEqual([
+      "NVDA earnings print",
+      "GOOG earnings print",
+    ]);
     expect(brief.calendar[0]?.daysUntil).toBe(13);
+  });
+
+  it("widens the calendar section to the full event horizon, not just earnings prints", async () => {
+    const brief = await buildMorningBrief("2026-08-13T10:00:00Z", {
+      personas: [sauron],
+      playbookEnv: { SKYNET_PLAYBOOKS: "S1-NVDA:standard" },
+      calendar: PRINTS,
+      events: MACRO_EVENTS,
+      calendarWindowDays: 60,
+    });
+    expect(brief.calendar.map((c) => c.id)).toContain("pjm-capacity-auction-2026-09");
+    const macro = brief.calendar.find((c) => c.id === "pjm-capacity-auction-2026-09");
+    // the estimate/confirmed label must survive untouched from the domain record
+    expect(macro?.status).toBe("estimate");
   });
 
   it("skips positions entirely when no bots are supplied — no credentials required", async () => {
