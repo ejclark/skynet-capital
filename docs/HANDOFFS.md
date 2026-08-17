@@ -127,6 +127,26 @@ npm run handoff:scan -- --validate # enforce the contract — this also runs in 
 `--validate` is a real gate, not a formality: a handoff missing its EARS criteria, or still carrying
 `<trigger>` placeholders, fails `npm test` before any session can build the wrong thing from it.
 
+## The flip — Eric's one word, as a button
+
+The authorization is a status change from `draft` to `ready`. Do it the easy way:
+
+**Actions → “Flip a handoff to ready” → Run workflow → type the slug.**
+
+That opens a PR with a properly-formed commit message and arms auto-merge; on merge the watcher
+fires and the build begins. It refuses any handoff that is not currently `draft`, and any whose
+contract does not validate — a skeleton can never be marked buildable.
+
+**Why a button and not just editing the file:** on 2026-08-17 the hand-edit path hit commitlint —
+GitHub's web editor defaults to commit messages like `Update status from draft to ready in README`
+(no type) and `Fix formatting…` (capitalized subject), and the gate rejects both. The single most
+important human action in the pipeline was blocked by message formatting. Editing the file by hand
+still works if you type a conventional subject (`docs(handoff): flip <slug> to ready`), but the
+button exists so nobody has to remember that.
+
+Dispatching needs repo write access — the same permission editing the file needs — and `github.actor`
+is recorded in the commit, so the audit trail still names the human who authorized it.
+
 ## The three pickup layers
 
 All three read the same eye — `scripts/handoff-scan.mjs --ready` — so they can never disagree about
