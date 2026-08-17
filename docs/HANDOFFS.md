@@ -23,6 +23,29 @@ The payoff is a safety property, not just tidiness: **committing a bundle trigge
 `draft` handoff can sit in the repo indefinitely. The `ready` flip is a deliberate, one-word
 authorization, and it is the same gate the irreversible class already runs through.
 
+## The mailbox — drop a zip on an issue (no laptop)
+
+The lowest-friction intake, and the only one that works from the GitHub **mobile app**:
+
+1. Open a new issue. Title it with the handoff's name — that becomes the slug (`Trailer Debut` →
+   `trailer-debut`).
+2. **Drag the design zip into the issue description** (the body, not a comment). Cap: 25 MB.
+3. Apply the **`handoff-inbox`** label.
+
+`.github/workflows/handoff-inbox.yml` then downloads the attachment, runs the same
+`handoff-import.mjs` as the zip path, opens the handoff PR, and **comments a receipt** on the issue —
+sha256, byte count, and the extracted file list — so a human who dropped a zip from a phone can see
+exactly what the machine received. A dirty contract still lands the branch and the receipt says so.
+
+**Why this works:** the repo is public, so `github.com/user-attachments/files/…` redirects to a
+short-lived pre-signed URL that needs no credentials. **If this repo ever goes private, this path
+breaks** — private attachments are browser-session-only (no PAT, no App token, no `GITHUB_TOKEN`) and
+the intake must switch to release assets, which stay token-downloadable. The extraction half is
+shared, so only the fetch step would change.
+
+The mailbox changes *who carries the zip*, never *who authorizes the build*: the bundle still lands
+at `draft`, and the `ready` flip is still Eric's alone.
+
 ## The zip path — one command
 
 When the design session hands back a **zip** (the common case), don't unpack it by hand:
