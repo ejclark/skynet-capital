@@ -285,3 +285,62 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** → docs/IDEAS.md — a repo-settings preflight (a scripted check that the
   capabilities the workflows assume are actually enabled), since this class of defect is invisible
   to every local gate.
+
+### The chain was severed at the join — a workflow's issue can never wake another workflow
+- **SHA:** 099ff3c   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** Eric, watching the canary sit: *"I'm waiting.. when will i know?"* The handoff was
+  `ready`, `handoff-detect` had run green, and the `[handoff] brief-horizon` issue was open — yet
+  nothing built it. `claude.yml` had **4 lifetime runs, all from issues created with my own token**;
+  issue #367, created by a workflow, produced **zero**. Detection lag: the whole evening, and only
+  because a human asked. Every workflow involved was green the entire time.
+- **ROOT CAUSE:** **events triggered by `GITHUB_TOKEN` do not start other workflow runs** —
+  GitHub's infinite-loop guard, and it is silent by design: no error, no annotation, no skipped
+  run to notice. The architecture was `detect opens an issue mentioning @claude` →
+  `claude.yml hears issues.opened` → builds, and the middle arrow never existed. It had never
+  worked once. What made it survive a full day of building was the **hourly polling Routine
+  masking it**: the poller was assumed to be the belt to the event path's braces, so its silence
+  read as "nothing due" rather than "the only path is dead". A backup that quietly carries the
+  load hides the failure of the thing it backs up.
+- **PREVENTION:** structural, not a note — the hop is **deleted**. `postmaster.yml` scans and
+  builds in the same run, so no critical-path step depends on one workflow's write emitting an
+  event another workflow hears. The issue still opens, but it is now explicitly a **receipt, never
+  a trigger**, and both `.github/workflows/postmaster.yml` and `docs/HANDOFFS.md` say so at the
+  top, in the place a future session editing the trigger block will read. Claiming moved to an
+  atomic `POST /git/refs` lease visible in `git ls-remote` within seconds, so "did anything pick
+  this up?" is now answerable in one command instead of inferred from silence. Measured after:
+  claim ref appeared **23 seconds** after dispatch, against a 20-minute blind window before.
+- **THE POLLER WAS THE BUG'S ACCOMPLICE:** Eric named this before the mechanism was found —
+  *"waiting for commits to a doc file - seems flimsy af"*, then *"we want event driven
+  architecture, not polling (shit) architecture"*. The critique was right for a reason neither of
+  us had yet: polling did not just add latency, it **concealed a severed chain** by making the
+  end-to-end outcome look merely slow.
+- **SIDE QUESTS:** → docs/IDEAS.md — retire the hourly pickup Routine once the event path has run
+  clean a few times; a redundant path that can mask a dead one is a liability, not a safety net.
+
+### A build session ran 21 turns, spent $0.88, changed nothing — and CI went green
+- **SHA:** n/a   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** the first real `build the handoff` job finished **successful** with an untouched
+  repo: no branch, no commit, no PR. The result line said it plainly for anyone who read past the
+  status: `"is_error": false, "num_turns": 21, "total_cost_usd": 0.877…,
+  "permission_denials_count": 6`. Detection lag: none once the log was opened — but the workflow's
+  own green check actively argued against opening it.
+- **ROOT CAUSE:** `anthropics/claude-code-action@v1` grants **only GitHub's own tools by default**.
+  Every `git`, `npm`, and file-write call the build prompt asked for was refused, six times, and
+  the session reasoned its way around the refusals for 21 turns. The action then exited `success`
+  because **the session completed without error** — which is a true statement about the session and
+  a false one about the build. That gap is the whole defect: a green check that certifies the
+  wrong noun.
+- **PREVENTION:** mechanical, at the source — `claude_args: --allowedTools "Bash,Read,Write,Edit,
+  Glob,Grep"` on the build step, with the failure narrated in a comment directly above it so the
+  next person to touch that step reads the story before editing the flag. Verified against the
+  action's own configuration reference in `anthropics/claude-code-action` — not from memory: the
+  flag is camelCase *inside* `claude_args`, and a top-level `allowed_tools` input is not the
+  current surface.
+- **GREEN IS NOT DONE — CHECK THE ARTIFACT, NOT THE CHECK:** three of today's seven defects
+  (`handoff-import`'s unconditional exit 0, the severed event chain, this one) share one shape: a
+  success signal describing a *narrower* event than the one being relied on. The durable habit is
+  to verify the **artifact** — is there a branch, a commit, a PR? — never the status of the process
+  that was supposed to produce it.
+- **SIDE QUESTS:** → docs/IDEAS.md — have the postmaster's auditor treat "claim ref exists, no
+  branch after N minutes" as a stall and say so, which would have caught this without anyone
+  reading a log.

@@ -37,10 +37,10 @@ on:
         description: What to do
         required: true
         type: choice
-        options: [flip-handoff, scan, audit]
+        options: [flip-handoff, scan, audit, release-claim]
         default: scan
       slug:
-        description: "Handoff slug (flip-handoff only) — the folder name under docs/handoffs/"
+        description: "Handoff slug (flip-handoff / release-claim) — the folder name under docs/handoffs/"
         required: false
         type: string
 
@@ -134,6 +134,14 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          # WITHOUT THIS THE BUILD SILENTLY DOES NOTHING (2026-08-17, docs/LESSONS.md). The first
+          # real run went green having accomplished nothing: the session started, ran 21 turns,
+          # spent $0.88 — and logged `permission_denials_count: 6`. Only GitHub's own tools are
+          # granted by default, so every git/npm/gh call was refused. The action still exits
+          # `success` because the SESSION completed without error, which is how a green workflow
+          # and an untouched repo coexisted. A build needs to edit files, run the gates, and push.
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep"
           prompt: |
             Build the design handoff `${{ needs.route.outputs.build_slug }}` in this repo.
 

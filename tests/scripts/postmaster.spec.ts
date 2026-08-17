@@ -99,6 +99,25 @@ describe("postmaster routing", () => {
     expect(intents[0]?.reason).toContain("executing");
   });
 
+  it("the release-claim command frees a wedged lease, attributing the dispatching human", () => {
+    // The escape hatch for "the build died holding the claim". Dispatch-only by design: the sweep
+    // must never release someone else's claim, or the lease stops being a lease.
+    const intents = dryRun("dispatch-release-claim.json") as Intent[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("release-claim");
+    expect(intents[0]?.slug).toBe("brief-horizon");
+    expect(intents[0]?.actor).toBe("ejclark");
+  });
+
+  it("release-claim without a slug errors rather than guessing which lease to break", () => {
+    const intents = dryRun("dispatch-release-claim-no-slug.json") as Intent[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("error");
+    expect(intents[0]?.reason).toContain("no slug");
+  });
+
   it("the audit flags a quiet executing handoff and an unclaimed dispatch, never a fresh one", () => {
     const intents = dryRun("audit-stalled.json") as (Intent & { quietDays?: number })[];
 

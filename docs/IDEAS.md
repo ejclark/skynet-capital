@@ -210,6 +210,27 @@ _(src: Claude · while: diagnosing three consecutive failed releases)_
   protection. The `types:` fix guarantees the run happens; only branch protection makes it block.
 _(src: Claude · while: watching PR #322 merge with `verify: skipped`)_
 
+### "Green certifies the wrong noun" — verify the artifact, not the process (see LESSONS.md 2026-08-17)
+Third instance of one shape in a single day, so it is a class and not a coincidence: a success signal
+that describes a **narrower event** than the one being relied on. `handoff-import.mjs` exited 0 for
+"the push happened" while the caller read it as "the contract is clean"; `claude-code-action` exits
+`success` for "the session completed" while the workflow's green check reads as "the handoff was
+built"; and an issue opened by `GITHUB_TOKEN` is a *written* issue but not an *emitted* event.
+- **The habit:** assert on the artifact — is there a branch, a commit, a PR, a claim ref? — never on
+  the status of the process that was supposed to produce it. Cheap to apply by hand, and it is what
+  actually caught all three.
+- **Candidate mechanism:** teach the postmaster's `audit()` an artifact-shaped stall rule — *claim ref
+  exists, no branch after N minutes* → comment and warn. That is the check that would have caught the
+  21-turn, $0.88, zero-commit build with nobody reading a log, and it fits the auditor's existing
+  ceiling (it observes and summons a human; it never reclaims a lock).
+- **Also worth having:** a repo-settings preflight. "Allow GitHub Actions to create and approve pull
+  requests" being off cost a canary run, and that class of defect is invisible to every local gate —
+  a scripted check of the capabilities the workflows assume would surface it before a dispatch does.
+- **And: retire the hourly pickup Routine** once the event path has run clean a few times. It was not
+  merely redundant — it *masked* the severed event chain by making a dead path look slow. A backup
+  that can conceal the failure of the thing it backs up is a liability, not a safety net.
+_(src: Claude · while: fixing the seventh defect of the postmaster cutover)_
+
 ### Metrics as the gamification substrate — multi-axis ladders + per-strategy effectiveness
 Gamification is *all about metrics*: find the stats worth measuring, then let each one be its own way
 onto the leaderboard. Eric's framing, and it sharpens THE-GAME.md's two-ledger idea into something
