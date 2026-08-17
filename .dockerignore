@@ -7,5 +7,10 @@ data
 coverage
 tests
 .github
-docs
+# docs/ is not needed at runtime EXCEPT the research shelf, which the /research
+# route reads as markdown at request time (src/server/research-service.ts). Ship only
+# that subtree — a bare `docs` exclusion silently empties every /research page in prod.
+docs/*
+!docs/research
+!docs/research/**
 *.md
