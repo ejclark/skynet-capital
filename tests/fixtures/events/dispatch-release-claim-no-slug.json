@@ -1,0 +1,6 @@
+{
+  "eventName": "workflow_dispatch",
+  "actor": "ejclark",
+  "event": { "inputs": { "command": "release-claim" } },
+  "deps": {}
+}

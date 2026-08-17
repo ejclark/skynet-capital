@@ -182,6 +182,18 @@ commit is now the human-readable *mirror* of the claim, not the claim itself.
 `claude.yml` stays for what it is genuinely good at: a human typing `@claude` on an issue or PR.
 That path works, because a person's token is not `GITHUB_TOKEN`.
 
+**If a build dies holding the claim:** **Actions → “Postmaster” → Run workflow → command
+`release-claim`, slug `<name>`.** That deletes the lease ref so the next `scan` can pick the handoff
+up again, instead of waiting out the two-hour TTL. It is a dispatch only — the sweep will never
+release a claim on its own, because auto-releasing another run's claim would defeat the lease it is
+built on. Deciding a build is dead is judgment, and judgment stays with the human who dispatches.
+
+**The builder needs its tools granted explicitly.** `claude-code-action` grants only GitHub's own
+tools by default, so the build step passes `claude_args: --allowedTools "Bash,Read,Write,Edit,Glob,
+Grep"`. Without it the session starts, reasons for twenty turns, gets refused on every `git` and
+`npm` call, and the job still exits **green** — because the *session* completed, even though the
+build did not (see `docs/LESSONS.md`, 2026-08-17). Never trim that list to "clean up" the workflow.
+
 ## Execution discipline (what a picked-up handoff does)
 
 A session that takes a handoff follows the plan execution rules

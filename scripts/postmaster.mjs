@@ -68,6 +68,9 @@ export function route(ctx, deps = {}) {
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "flip-handoff") {
     return routeFlip(ctx, deps);
   }
+  if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "release-claim") {
+    return routeRelease(ctx);
+  }
   return [];
 }
 
@@ -140,6 +143,25 @@ function routeFlip(ctx, deps) {
     ];
   }
   return [{ kind: "flip-handoff", slug, actor: ctx.actor }];
+}
+
+/**
+ * Break a wedged lease by hand.
+ *
+ * The claim is a *lease*, not a lock, so it self-heals in two hours — but two hours is a long time
+ * to stare at a handoff that is provably dead, and the only other way to clear one is deleting a
+ * ref through the API, which needs a token nobody carrying a phone has. That made "the build died
+ * holding the claim" a step on Eric's list, which is the one place a step must never be
+ * (CLAUDE.md: action-required-from-Eric ≈ zero). So it becomes a button.
+ *
+ * Deliberately a **dispatch only** — never something the sweep does on its own. Auto-releasing
+ * another run's claim would defeat the lease it is built on; deciding a build is dead is judgment,
+ * and judgment stays with the human who dispatched.
+ */
+function routeRelease(ctx) {
+  const slug = slugify(ctx.inputs?.slug);
+  if (!slug) return [{ kind: "error", reason: "no slug given" }];
+  return [{ kind: "release-claim", slug, actor: ctx.actor }];
 }
 
 /**
@@ -486,6 +508,15 @@ function executeOne(i) {
   }
   if (i.kind === "flip-handoff") {
     return flipHandoff(i);
+  }
+  if (i.kind === "release-claim") {
+    const freed = releaseClaim(i.slug);
+    console.log(
+      `::notice::claim/${i.slug} ${freed ? "released" : "was not held"} (by @${i.actor})`,
+    );
+    return freed
+      ? `🔓 released \`claim/${i.slug}\` — the next scan can pick it up (@${i.actor})`
+      : `· no \`claim/${i.slug}\` to release — nothing was holding it`;
   }
   if (i.kind === "flag-stall") {
     if (i.issueNumber) sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
