@@ -1,6 +1,6 @@
 # Handoff: Morning brief reads the full event horizon
 
-**Status:** draft <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
+**Status:** ready <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
 **Author:** Claude Code · **Date:** 2026-08-17
 **Provenance:** parked in `docs/IDEAS.md` during the calendar-view work (2026-08-16), promoted here
 to serve as the **pipeline canary** — the first handoff the build machinery has ever executed.
