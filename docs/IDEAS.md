@@ -30,11 +30,6 @@ expiration moves to Thu 2027-06-17. Also cheap to seed from published schedules:
 rule breaks 3× in 2026 — use the BLS schedule), PPI, PCE; BLS offers no-key iCal feeds as a later
 refresh path. _(src: Claude · while: calendar-view integration research, 2026-08-16)_
 
-### Morning brief reads the full event horizon, not just earnings
-`eventsWithin` was built as the morning-brief seam but the brief still renders only
-`CalendarBriefEntry` earnings rows — swapping it to `MarketEvent[]` puts CPI/FOMC in `brief:morning`
-alongside prints for one small PR. _(src: Claude · while: calendar-view integration, 2026-08-16)_
-
 ### Google Finance as an A2A research source — analyst data now, Ask-AI interrogation next
 Google Finance's beta surfaces per-symbol analyst ratings, 12-month price targets, and an
 AI panel ("Ask AI", Deep Search, auto-generated insights). Eric's read: prompting Google's
@@ -738,6 +733,8 @@ _(nothing right now)_
 
 ## Shipped (recent)
 
+- Morning brief reads the full event horizon (CPI/FOMC/sector, not just earnings prints) —
+  the pipeline canary, first handoff the build machinery executed end-to-end — PR #371
 - Nation skylines on `/bots-vs-humans` — each cohort's holdings aggregated by ticker into one country skyline — PR (this)
 - Empire thumbnails on the board — a compact skyline per participant card on `/` (region of cities) — PR (this)
 - Empire skyline on `/u/:id` — positions → a domain-themed city (Living Universe P2, first slice) — PR (this)

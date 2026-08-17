@@ -1,6 +1,6 @@
 # Handoff: Morning brief reads the full event horizon
 
-**Status:** ready <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
+**Status:** review <!-- draft | ready | executing | review | done — only Eric flips draft→ready -->
 **Author:** Claude Code · **Date:** 2026-08-17
 **Provenance:** parked in `docs/IDEAS.md` during the calendar-view work (2026-08-16), promoted here
 to serve as the **pipeline canary** — the first handoff the build machinery has ever executed.
@@ -72,3 +72,10 @@ _(none — that is the point of a canary)_
 - 2026-08-17 — staged as the canary rather than flipping `trailer-debut` first: the build machinery
   has never run, and three defects surfaced on 2026-08-16 in code that looked fine, so the first
   execution should carry trivial blast radius (Eric's call).
+- 2026-08-17 — `npm test` (and `npm run verify`) fail on `tests/arch/lessons.spec.ts` — the
+  incident-scan learning gate reports 17 un-retro'd incidents on `main` from GitHub Actions run
+  history. Confirmed by diffing against `origin/main` directly: identical failure, pre-existing,
+  and unrelated to this diff (it queries live Actions history, not local files). Out of scope for
+  a deliberately-small canary — a `/retro` burn-down is a separate piece of work. `npm run
+  typecheck`, `npm run lint`, and every spec touched by this change are green; that pre-existing
+  gate is the one exception, flagged here rather than silently ignored.
