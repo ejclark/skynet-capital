@@ -34,7 +34,7 @@ function fixtureRoot(): string {
   writeFileSync(join(root, "TEMPLATE.md"), "# Never listed\n");
   writeFileSync(
     join(root, "events", "nvda-2026-08-26-print.md"),
-    "# NVDA earnings print — ledger\n\n**Last assessed:** 2026-08-15\n\n## Initial research\n\nBody.\n\n## Stance & kill switches\n\nDefined-risk only; see [`alpha-study.md`](../alpha-study.md).\n\n## Assessment ledger\n\n| Date |\n|---|\n",
+    "# NVDA earnings print — ledger\n\n**Last assessed:** 2026-08-15\n\n## At a glance\n\n**TL;DR.** Guards only; implied ~7% vs ~2.8% realized.\n\n| Horizon | Call | Why |\n|---|---|---|\n| Today | Stand aside | no catalyst |\n\n## Initial research\n\nBody.\n\n## Stance & kill switches\n\nDefined-risk only; see [`alpha-study.md`](../alpha-study.md).\n\n## Assessment ledger\n\n| Date |\n|---|\n",
   );
   writeFileSync(
     join(root, "events", "TEMPLATE.md"),
@@ -83,6 +83,26 @@ describe("findResearchDoc", () => {
 describe("researchedEventIds", () => {
   it("exposes exactly the ledgered event ids — the calendar's link set", () => {
     expect([...researchedEventIds(fixtureRoot())]).toEqual(["nvda-2026-08-26-print"]);
+  });
+});
+
+describe("findResearchDoc — At a glance header", () => {
+  it("extracts the decision header and strips it from the body (no duplication)", () => {
+    const doc = findResearchDoc("events/nvda-2026-08-26-print", fixtureRoot());
+    // The header renders separately, table included…
+    expect(doc?.glanceHtml).toContain("Guards only");
+    expect(doc?.glanceHtml).toContain("<table>");
+    // `~` is "approximately", never strikethrough — GFM single-tilde pairing stays disabled.
+    expect(doc?.glanceHtml).not.toContain("<del>");
+    expect(doc?.glanceHtml).toContain("~7%");
+    // …and is removed from the body, which still carries everything else.
+    expect(doc?.html).not.toContain("Guards only");
+    expect(doc?.html).toContain("Body.");
+    expect(doc?.html).toContain('href="/research/alpha-study"');
+  });
+
+  it("returns a null header for a doc with no At a glance section", () => {
+    expect(findResearchDoc("alpha-study", fixtureRoot())?.glanceHtml).toBeNull();
   });
 });
 

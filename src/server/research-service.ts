@@ -21,7 +21,10 @@ import { marked } from "marked";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { allEvents, type MarketEvent } from "../domain/market-events.js";
 
-marked.use({ gfm: true });
+// GFM on, but strikethrough OFF: research prose uses `~` for "approximately" everywhere (never
+// strikethrough), and GFM's single-tilde pairing silently strikes the span between two of them
+// (e.g. "~$91.8B … ~7%"). Disabling the `del` tokenizer makes every `~` render literally.
+marked.use({ gfm: true, tokenizer: { del: () => undefined } });
 
 export interface ResearchDoc {
   /** URL slug under /research — "multi-symbol-sweep" or "events/nvda-2026-08-26-print". */
@@ -100,6 +103,28 @@ function rewriteDocLinks(html: string): string {
 
 export interface RenderedDoc extends ResearchDoc {
   readonly html: string;
+  /**
+   * The rendered `## At a glance` decision header, when the doc carries one — a faithful
+   * surfacing of the body's stance (TL;DR + horizon table + signal conditions), authored in the
+   * doc, never inferred from prose. Null when the doc has no such section.
+   */
+  readonly glanceHtml: string | null;
+}
+
+/**
+ * Split the authored `## At a glance` decision block out of the body so the view can promote it
+ * to a styled header. Returns the section markdown (or null) and the body with it removed — the
+ * block is authored content, not a generated summary, so this only relocates, never rewrites.
+ */
+function extractGlance(md: string): { glanceMd: string | null; bodyMd: string } {
+  const marker = "## At a glance";
+  const at = md.indexOf(marker);
+  if (at === -1) return { glanceMd: null, bodyMd: md };
+  const rest = md.slice(at + marker.length);
+  const nextRel = rest.search(/^##\s/m);
+  const glanceMd = (nextRel === -1 ? rest : rest.slice(0, nextRel)).trim();
+  const after = nextRel === -1 ? "" : rest.slice(nextRel);
+  return { glanceMd: glanceMd || null, bodyMd: `${md.slice(0, at)}${after}`.trim() };
 }
 
 /**
@@ -111,8 +136,12 @@ export function findResearchDoc(slug: string, root: string = RESEARCH_DIR()): Re
   const doc = [...shelf.studies, ...shelf.ledgers].find((d) => d.slug === slug);
   if (!doc) return null;
   const file = join(root, `${doc.slug}.md`);
-  const md = readFileSync(file, "utf8");
-  return { ...doc, html: rewriteDocLinks(marked.parse(md) as string) };
+  const { glanceMd, bodyMd } = extractGlance(readFileSync(file, "utf8"));
+  return {
+    ...doc,
+    html: rewriteDocLinks(marked.parse(bodyMd) as string),
+    glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
+  };
 }
 
 /** Verbatim section extraction — an excerpt, never a summary (honesty: no lossy compression). */

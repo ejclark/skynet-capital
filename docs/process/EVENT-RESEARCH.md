@@ -20,7 +20,9 @@ Produce `docs/research/events/<id>.md` from `docs/research/events/TEMPLATE.md`. 
 [`nvda-aug-2026-print.md`](../research/nvda-aug-2026-print.md): the question stated plainly →
 one-line verdict → method → each conviction leg tested to SUPPORTED / MIXED / REFUTED with
 sources and dates → what plays the conditions support → honest limits. End with a stance, its
-kill switches, and the first ledger row. Instruments by kind:
+kill switches, and the first ledger row. Open with an `## At a glance` decision header (TL;DR +
+horizon table + signal conditions) — the `/research` page promotes it above the document; it is a
+faithful surfacing of the stance below, never a new claim (see the TEMPLATE). Instruments by kind:
 
 - **earnings / symbol-keyed** — `node scripts/research/earnings-cycle.mjs <SYM> --bench QQQ
   --peers <PEERS>` + `node scripts/research/intraday-edges.mjs <SYM>`, read against the house

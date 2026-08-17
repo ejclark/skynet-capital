@@ -3,6 +3,29 @@
 **Kind:** earnings · **Date:** 2026-08-26 (confirmed, IR: nvidianews.nvidia.com call notice) · **Impact:** critical
 **Last assessed:** 2026-08-17
 
+## At a glance
+
+**TL;DR.** The beat is near-certain but the market stopped paying for it — NVDA has closed **down
+after 6 of the last 8 prints** on beats. The real bar is the **~$94–95B revenue whisper plus a
+~$100B+ Q3 guide**, not the ~$91.8B consensus. Options price **~7% implied vs ~2.8% average
+realized**, so **long premium is the expensive side** — defined-risk structures over unhedged
+gap-holds. Date **confirmed** (IR): Wed **2026-08-26**, after close.
+
+| Horizon | Call | Why |
+|---|---|---|
+| Today | No new run-up entries | The S1 pre-print window has passed; the dead zone opens ~Aug 19 (D-5→D −0.77%, 50% win). |
+| This week | Flat by D-1 (S2) | Any unhedged share position flat before the print; no first-hour entries (E1). |
+| This month | Own it *after* the print | Cheapest entries of the cycle come post-print — reaction day 11/14 red; the D+1→D+6 dead week (FT-7) costs nothing to respect. |
+| This quarter | Revenue intact, multiple at risk | AI-capex still expanding (revenue tailwind), but raises are now *punished* — the re-rating is sentiment about the cycle, not the beat. |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Don't buy the pop** — the single most reliably losing move of the era (11/14 reaction days red).
+- **Sell-premium tilt** — implied > realized on ~75% of the last 16 prints; a defined-risk short-put-spread below the ~7% implied floor is the "conviction holds" expression that doesn't need the market to pay for the beat.
+- **The whisper-breaker (small)** — only if the Q3 guide prints ~$100B+ does the five-quarter muted streak break up; a capped OTM call spread, never averaged up.
+- **Never** — hold unhedged shares through the print for the gap (killed: p=0.486, 3 of last 5 gapped down); naked long premium into a 7%-implied / 2.8%-realized tape.
+- **Watch (dated)** — whisper **$94–95B** · Q3 guide **$100B+** · print **Aug 26 AC** (+ PCE same morning) · Jackson Hole **Aug 28**.
+
 ## Initial research
 
 Done in full before this calendar existed:
