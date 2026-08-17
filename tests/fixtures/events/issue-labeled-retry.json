@@ -1,0 +1,14 @@
+{
+  "eventName": "issues",
+  "actor": "ejclark",
+  "event": {
+    "action": "labeled",
+    "label": { "name": "handoff-inbox" },
+    "issue": {
+      "number": 401,
+      "title": "Trailer Debut",
+      "body": "[bundle.zip](https://github.com/user-attachments/files/12345678/bundle.zip)"
+    }
+  },
+  "deps": { "openPrHeads": ["handoff/trailer-debut"] }
+}

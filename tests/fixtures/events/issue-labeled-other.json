@@ -1,0 +1,10 @@
+{
+  "eventName": "issues",
+  "actor": "ejclark",
+  "event": {
+    "action": "labeled",
+    "label": { "name": "bug" },
+    "issue": { "number": 402, "title": "Something else", "body": "no zip here" }
+  },
+  "deps": {}
+}
