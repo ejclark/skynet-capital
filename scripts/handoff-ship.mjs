@@ -67,8 +67,9 @@ const slug = (slugFlag || zipArg.replace(/^.*\//, "").replace(/\.zip$/i, ""))
 const run = (cmd, args) => execFileSync(cmd, args, { cwd: REPO, stdio: "inherit" });
 
 // ── 1. import (unpack → validate → branch → commit → push) ───────────────────
-// Exit 1 from the importer = the bundle landed but the CONTRACT IS DIRTY. That is a hard stop
-// for the chain: no ready flip, no PR. `draft` keeps it inert on its branch meanwhile.
+// The importer's exit status carries the contract verdict (both paths — see its footer comment).
+// Non-zero here is a hard stop for the chain: no ready flip, no PR. Whatever landed stays `draft`
+// and therefore inert. Never assume a clean contract from a successful push.
 try {
   run("node", [
     "scripts/handoff-import.mjs",
