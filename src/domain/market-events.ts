@@ -69,6 +69,77 @@ export interface MarketEvent {
  */
 export const MARKET_EVENTS: readonly MarketEvent[] = [
   {
+    id: "texas-puct-audit-2026-08-20",
+    kind: "sector",
+    title: "Texas PUCT audit meetings begin (Vistra watch item)",
+    date: "2026-08-20",
+    status: "estimate",
+    source: "EST: docs/research/ai-energy-constraint.md dashboard — confirm vs puct.texas.gov",
+    impact: "low",
+    symbols: [],
+    notes: "Second half of VST's Tier-2 entry condition alongside the Dec PJM auction.",
+  },
+  {
+    id: "pce-2026-08-26",
+    kind: "macro-print",
+    title: "PCE / Personal Income & Outlays (Jul 2026 data)",
+    date: "2026-08-26",
+    status: "estimate",
+    source:
+      "EST: bea.gov/news/schedule — 08:30 ET, checked 2026-08-17 (BEA primary; no BEA: trusted prefix yet)",
+    impact: "high",
+    symbols: [],
+    notes: "The Fed's own inflation gauge — and it lands ON the NVDA print day. Compound-risk.",
+  },
+  {
+    id: "jackson-hole-2026-08-28",
+    kind: "macro-print",
+    title: "Jackson Hole — Fed chair Warsh's first keynote (symposium Aug 27–29)",
+    date: "2026-08-28",
+    status: "estimate",
+    source:
+      "NEWS: kansascityfed.org symposium Aug 27–29; Fri-keynote timing press-reported, checked 2026-08-17",
+    impact: "high",
+    symbols: [],
+    notes:
+      "First extended policy framing from the new chair; lands D+1 of MRVL's print, D+2 of NVDA's.",
+  },
+  {
+    id: "jobs-2026-09-04",
+    kind: "macro-print",
+    title: "Employment Situation (Aug 2026 data)",
+    date: "2026-09-04",
+    status: "confirmed",
+    source: "BLS: bls.gov/schedule/news_release/empsit.htm — 08:30 ET, checked 2026-08-17",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The July −23k print moved Sep hike odds harder than any 2026 CPI; opens the pre-FOMC corridor.",
+  },
+  {
+    id: "aapl-iphone-18-launch-2026-09-09",
+    kind: "product-launch",
+    title: "Apple September event — iPhone 18 line (rumored)",
+    date: "2026-09-09",
+    status: "estimate",
+    source: "NEWS: MacRumors/Forbes/9to5Mac Aug 2026 rumor — official announcement expected ~08-26",
+    impact: "medium",
+    symbols: ["AAPL"],
+    notes: "Rumored $100–200 price increases + a ~$2,000 foldable; FQ1 guide is the pricing event.",
+  },
+  {
+    id: "ppi-2026-09-10",
+    kind: "macro-print",
+    title: "PPI release (Aug 2026 data)",
+    date: "2026-09-10",
+    status: "confirmed",
+    source: "BLS: bls.gov/schedule/news_release/ppi.htm — 08:30 ET, checked 2026-08-17",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Morning before CPI in the same pre-FOMC window — the whipsaw setup for CPI positioning.",
+  },
+  {
     id: "cpi-2026-09-11",
     kind: "macro-print",
     title: "CPI release (Aug 2026 data)",
@@ -88,6 +159,30 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     source: "FED: federalreserve.gov FOMC calendar — statement 14:00 ET, checked 2026-08-15",
     impact: "high",
     symbols: [],
+  },
+  {
+    id: "jobs-2026-10-02",
+    kind: "macro-print",
+    title: "Employment Situation (Sep 2026 data)",
+    date: "2026-10-02",
+    status: "confirmed",
+    source: "BLS: bls.gov/schedule/news_release/empsit.htm — 08:30 ET, checked 2026-08-17",
+    impact: "high",
+    symbols: [],
+    notes:
+      "Last major payroll input between the Sep dots and the Oct 27–28 vote (no SEP at that meeting).",
+  },
+  {
+    id: "mrvl-investor-day-2026-10-06",
+    kind: "product-launch",
+    title: "MRVL Investor Day (NYC)",
+    date: "2026-10-06",
+    status: "confirmed",
+    source: "IR: investor.marvell.com PR 2026-08-03 — Investor Day Tue Oct 6, checked 2026-08-17",
+    impact: "medium",
+    symbols: ["MRVL"],
+    notes:
+      "Company-set; MRVL investor days have filed Item-2.02 8-Ks — the filing class that corrupted the instrument's event list.",
   },
   {
     id: "cpi-2026-10-14",
@@ -111,6 +206,17 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "Lands ON the GOOG/META print date and a day before AMZN/AAPL — a compound-risk day.",
   },
   {
+    id: "jobs-2026-11-06",
+    kind: "macro-print",
+    title: "Employment Situation (Oct 2026 data)",
+    date: "2026-11-06",
+    status: "confirmed",
+    source: "BLS: bls.gov/schedule/news_release/empsit.htm — 08:30 ET, checked 2026-08-17",
+    impact: "high",
+    symbols: [],
+    notes: "Four days before the Nov 10 CPI + est. CRWV print compound day.",
+  },
+  {
     id: "cpi-2026-11-10",
     kind: "macro-print",
     title: "CPI release (Oct 2026 data)",
@@ -119,6 +225,30 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     source: "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
     impact: "high",
     symbols: [],
+  },
+  {
+    id: "aws-reinvent-2026",
+    kind: "sector",
+    title: "AWS re:Invent 2026 (Las Vegas)",
+    date: "2026-11-30",
+    status: "estimate",
+    source:
+      "NEWS: conference listings Nov 30–Dec 4 — not yet verified vs the AWS primary, checked 2026-08-17",
+    impact: "medium",
+    symbols: ["AMZN"],
+    notes:
+      "AWS is the whole AMZN thesis right now ($496B backlog); natural catalyst window ~4wks post-print.",
+  },
+  {
+    id: "jobs-2026-12-04",
+    kind: "macro-print",
+    title: "Employment Situation (Nov 2026 data)",
+    date: "2026-12-04",
+    status: "confirmed",
+    source: "BLS: bls.gov/schedule/news_release/empsit.htm — 08:30 ET, checked 2026-08-17",
+    impact: "high",
+    symbols: [],
+    notes: "First leg of the Dec 4→9→10 compound window (jobs → FOMC+dots → CPI).",
   },
   {
     id: "cpi-2026-12-10",
@@ -150,6 +280,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes: "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator).",
+  },
+  {
+    id: "pjm-capacity-auction-2027-05",
+    kind: "sector",
+    title: "PJM 2030/31 capacity auction — first potentially uncapped print",
+    date: "2027-05-15",
+    status: "estimate",
+    source:
+      "EST: esaipower.com auction calendar — BRA 2030/31 May 2027; confirm vs pjm.com, checked 2026-08-17",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "FERC collar (accepted 2026-04-28) covers only 2028/29 + 2029/30 — this is the cap-sunset event VST's Tier-2 gate keys on.",
   },
 ];
 
