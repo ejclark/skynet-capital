@@ -366,10 +366,15 @@ it. Prevention ranks, best first:
   steps, so the PR is authored by an identity whose events GitHub does not suppress. Deliberately
   **not** self-authorized, and deliberately not worked around by having the build job mint its own
   check run named `verify`: a gate that certifies itself is worse than a gate that visibly did not
-  run. **Authorized and mechanised same-day** — every PR-facing step now reads
-  `secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN`, the mint-and-paste procedure is in
-  `docs/HANDOFFS.md`, and the fallback degrades loudly (a run warning naming the close/reopen
-  workaround) rather than stranding work, so an expired token is a nuisance and never an outage.
+  run. **Authorized and mechanised same-day**, then improved the same afternoon when Eric read the
+  shape and said *"a probot app seems like a superior later abstraction as the postmaster role"* —
+  correct, and for the reason that matters: the **App identity** is what GitHub does not suppress,
+  and unlike a PAT it never expires. Every PR-facing step now reads
+  `steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN`, minting the
+  App token per job (the action revokes it at job end). The middle tier is deliberate — a repo that
+  already minted the PAT must not be silently downgraded by the upgrade. Setup for both is in
+  `docs/HANDOFFS.md`, and the last tier degrades loudly (a run warning naming the close/reopen
+  workaround) rather than stranding work, so a missing identity is a nuisance and never an outage.
 - **THE CLASS, NOT THE INSTANCE:** every place this repo's automation writes through
   `GITHUB_TOKEN` and expects a downstream reaction is suspect until checked. Three found so far:
   issue-opened (fixed by collapsing the hop), PR-opened (this), and any push to a branch made by a
