@@ -84,12 +84,36 @@ jobs:
           BRANCH: ${{ steps.flip.outputs.branch }}
         run: |
           set -euo pipefail
-          URL=$(gh pr create --base main --head "$BRANCH" \
-            --title "docs(handoff): flip $SLUG to ready" \
-            --body "$(printf '%s\n' \
-              "**@$ACTOR authorized \`$SLUG\` to build.**" "" \
-              "Dispatched from the flip button, so the commit message satisfies commitlint without anyone typing one." "" \
-              "On merge: \`handoff-detect\` opens the \`[handoff] $SLUG\` issue, a pickup layer claims it, and its first commit flips \`ready\` → \`executing\` — that flip is the lock." "" \
-              "---" "_Opened automatically by \`.github/workflows/handoff-flip.yml\`._")")
-          echo "$URL"
-          gh pr merge --auto --squash "$URL"
+          PR_TITLE="docs(handoff): flip $SLUG to ready"
+          PR_BODY=$(printf '%s\n' \
+            "**@$ACTOR authorized \`$SLUG\` to build.**" "" \
+            "Dispatched from the flip button, so the commit message satisfies commitlint without anyone typing one." "" \
+            "On merge: \`handoff-detect\` opens the \`[handoff] $SLUG\` issue, a pickup layer claims it, and its first commit flips \`ready\` → \`executing\` — that flip is the lock." "" \
+            "---" "_Opened automatically by \`.github/workflows/handoff-flip.yml\`._")
+          # DEGRADE HONESTLY (docs/LESSONS.md 2026-08-17). "Allow GitHub Actions to create and
+          # approve pull requests" is OFF by default on every GitHub repo. When it is off, everything
+          # above has already succeeded — branch pushed, commit made — and only this last call fails.
+          # Stranding that behind a raw error is the "did all the work, then died" shape, so: name the
+          # cause, hand over the compare URL, and exit 0. Nothing is lost; a human finishes it.
+          COMPARE="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$BRANCH?expand=1"
+          if ! PR_URL=$(gh pr create --base main --head "$BRANCH" --title "$PR_TITLE" --body "$PR_BODY" 2>/tmp/pr-err.txt); then
+            if grep -q "not permitted to create or approve pull requests" /tmp/pr-err.txt; then
+              MSG=$(printf '%s\n' \
+                "⚠️ The branch is pushed and the work is safe, but this workflow could not open the PR:" \
+                "**GitHub Actions is not permitted to create or approve pull requests** in this repo." "" \
+                "**Open it here:** $COMPARE" "" \
+                "**To stop this recurring:** Settings → Actions → General → Workflow permissions →" \
+                "tick *Allow GitHub Actions to create and approve pull requests*.")
+            else
+              MSG=$(printf '%s\n' \
+                "⚠️ The branch is pushed and the work is safe, but opening the PR failed:" "" \
+                "$(head -c 600 /tmp/pr-err.txt)" "" \
+                "**Open it manually:** $COMPARE")
+            fi
+            echo "::warning::PR not opened — $COMPARE"
+            printf '%s\n' "### ⚠️ PR not opened" "" "$MSG" >> "$GITHUB_STEP_SUMMARY"
+            : # dispatch path has no originating issue — the warning and summary carry it
+            exit 0
+          fi
+          echo "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL" || echo "auto-merge not armed (non-fatal)"
