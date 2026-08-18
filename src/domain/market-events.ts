@@ -24,7 +24,8 @@
  *   confirmed — `IR:` company primary source · `CAL:` automated aggregator cross-ref ·
  *               `BLS:` bls.gov release schedule · `FED:` federalreserve.gov FOMC calendar ·
  *               `PJM:` pjm.com auction schedule · `SEC:` an SEC filing ·
- *               `TSY:` treasury.gov / treasurydirect.gov auction schedule
+ *               `TSY:` treasury.gov / treasurydirect.gov auction schedule ·
+ *               `OCC:` options-expiration calendar (theocc.com / Cboe; 3rd-Friday standard)
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  */
@@ -38,6 +39,7 @@ type EventKind =
   | "product-launch"
   | "sector" // PJM capacity auctions, export-control deadlines, FERC dockets
   | "rates" // Treasury auctions & supply — move yields, which move our long-duration AI names
+  | "opex" // options expiration (monthly 3rd Friday; quarterly = triple/quad witching) — pin/gamma
   | "geopolitical"; // dated checkpoints only (a summit, a tariff deadline) — regime shifts with
 // no date belong in the adjacency checklist, not here (see docs/process/EVENT-RESEARCH.md)
 
@@ -95,6 +97,65 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "Long-end real-yield supply the day after the 20Y — the second leg of this week's duration test.",
+  },
+  // Options expiration — 3rd-Friday standard (monthly); quarterly (Mar/Jun/Sep/Dec) is
+  // triple/quad witching. Pin risk, dealer gamma, and volume spikes cluster here; kept market-wide.
+  {
+    id: "opex-2026-08-21",
+    kind: "opex",
+    title: "Monthly options expiration (August)",
+    date: "2026-08-21",
+    status: "confirmed",
+    source: "OCC: theocc.com expiration calendar — 3rd-Friday standard, checked 2026-08-18",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Standard monthly expiration. Pin/gamma effects into the close; single-name weeklies settle too.",
+  },
+  {
+    id: "opex-2026-09-18",
+    kind: "opex",
+    title: "Quarterly options expiration — triple witching (September)",
+    date: "2026-09-18",
+    status: "confirmed",
+    source: "OCC: theocc.com expiration calendar — quarterly triple-witching, checked 2026-08-18",
+    impact: "high",
+    symbols: [],
+    notes:
+      "Index futures + index options + stock options expire together — the year's heaviest-volume, highest-pin sessions.",
+  },
+  {
+    id: "opex-2026-10-16",
+    kind: "opex",
+    title: "Monthly options expiration (October)",
+    date: "2026-10-16",
+    status: "confirmed",
+    source: "OCC: theocc.com expiration calendar — 3rd-Friday standard, checked 2026-08-18",
+    impact: "medium",
+    symbols: [],
+    notes: "Standard monthly expiration.",
+  },
+  {
+    id: "opex-2026-11-20",
+    kind: "opex",
+    title: "Monthly options expiration (November)",
+    date: "2026-11-20",
+    status: "confirmed",
+    source: "OCC: theocc.com expiration calendar — 3rd-Friday standard, checked 2026-08-18",
+    impact: "medium",
+    symbols: [],
+    notes: "Standard monthly expiration.",
+  },
+  {
+    id: "opex-2026-12-18",
+    kind: "opex",
+    title: "Quarterly options expiration — triple witching (December)",
+    date: "2026-12-18",
+    status: "confirmed",
+    source: "OCC: theocc.com expiration calendar — quarterly triple-witching, checked 2026-08-18",
+    impact: "high",
+    symbols: [],
+    notes: "Year-end triple witching — expiries stack with index rebalancing and tax-loss flows.",
   },
   {
     id: "texas-puct-audit-2026-08-20",

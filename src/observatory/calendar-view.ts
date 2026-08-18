@@ -41,6 +41,7 @@ const KIND_LABEL: Record<MarketEvent["kind"], string> = {
   "product-launch": "LAUNCH",
   sector: "SECTOR",
   rates: "TREASURY",
+  opex: "OPEX",
   geopolitical: "GEO",
 };
 

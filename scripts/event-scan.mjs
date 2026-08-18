@@ -40,9 +40,17 @@ const CALENDAR_FILE = arg("calendar-file") ?? join(ROOT, "src", "domain", "earni
 const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json");
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
 
-const KINDS = ["earnings", "macro-print", "product-launch", "sector", "rates", "geopolitical"];
+const KINDS = [
+  "earnings",
+  "macro-print",
+  "product-launch",
+  "sector",
+  "rates",
+  "opex",
+  "geopolitical",
+];
 const TIERS = ["critical", "high", "medium", "low"];
-const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY):/;
+const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC):/;
 const ESTIMATE_PREFIX = /^(EST|NEWS):/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
