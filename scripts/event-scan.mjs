@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Event scan — the eye behind the market-event calendar (docs/process/EVENT-RESEARCH.md).
 //
-// Events live in two checked-in tables: src/domain/market-events.ts (macro/sector/etc, curated)
-// and src/domain/earnings-calendar.ts (prints, derived — one source of truth for print dates).
+// Events live in two checked-in tables: src/domain/market-events-data.ts (macro/sector/etc,
+// curated — re-exported through market-events.ts, where the query logic lives) and
+// src/domain/earnings-calendar.ts (prints, derived — one source of truth for print dates).
 // Each event's assessment history lives in docs/research/events/<id>.md, whose
 // `**Last assessed:** YYYY-MM-DD` header line is this scanner's machine contract. The ADAPTIVE
 // cadence (impact tier × days-to-event → reassess interval) is a pure function over
@@ -35,7 +36,7 @@ const arg = (name) => {
 };
 const has = (name) => process.argv.includes(`--${name}`);
 
-const EVENTS_FILE = arg("events-file") ?? join(ROOT, "src", "domain", "market-events.ts");
+const EVENTS_FILE = arg("events-file") ?? join(ROOT, "src", "domain", "market-events-data.ts");
 const CALENDAR_FILE = arg("calendar-file") ?? join(ROOT, "src", "domain", "earnings-calendar.ts");
 const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json");
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
@@ -50,7 +51,7 @@ const KINDS = [
   "geopolitical",
 ];
 const TIERS = ["critical", "high", "medium", "low"];
-const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC):/;
+const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB):/;
 const ESTIMATE_PREFIX = /^(EST|NEWS):/;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -274,7 +275,7 @@ function printDue(rows) {
 
 function printReport(rows) {
   if (!rows.length) {
-    console.log("No upcoming events. Add one to src/domain/market-events.ts (or a print to");
+    console.log("No upcoming events. Add one to src/domain/market-events-data.ts (or a print to");
     console.log("earnings-calendar.ts) — see docs/process/EVENT-RESEARCH.md.");
     return;
   }
