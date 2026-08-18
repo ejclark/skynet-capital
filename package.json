@@ -69,6 +69,6 @@
   },
   "dependencies": {
     "@babylonjs/core": "9.20.0",
-    "marked": "15.0.12"
+    "marked": "18.0.9"
   }
 }
