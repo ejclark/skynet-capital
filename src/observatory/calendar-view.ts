@@ -40,6 +40,7 @@ const KIND_LABEL: Record<MarketEvent["kind"], string> = {
   "macro-print": "MACRO",
   "product-launch": "LAUNCH",
   sector: "SECTOR",
+  rates: "TREASURY",
   geopolitical: "GEO",
 };
 

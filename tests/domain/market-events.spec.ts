@@ -75,7 +75,7 @@ describe("market events", () => {
 
     it("every confirmed entry cites a trusted source prefix — the date policy's teeth", () => {
       for (const e of MARKET_EVENTS) {
-        if (e.status === "confirmed") expect(e.source).toMatch(/^(IR|CAL|BLS|FED|PJM|SEC):/);
+        if (e.status === "confirmed") expect(e.source).toMatch(/^(IR|CAL|BLS|FED|PJM|SEC|TSY):/);
         else expect(e.source).toMatch(/^(EST|NEWS):/);
       }
     });

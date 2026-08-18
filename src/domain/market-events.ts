@@ -23,7 +23,8 @@
  * calendar). `confirmed` requires a trusted prefix; `estimate` requires an honest one:
  *   confirmed — `IR:` company primary source · `CAL:` automated aggregator cross-ref ·
  *               `BLS:` bls.gov release schedule · `FED:` federalreserve.gov FOMC calendar ·
- *               `PJM:` pjm.com auction schedule · `SEC:` an SEC filing
+ *               `PJM:` pjm.com auction schedule · `SEC:` an SEC filing ·
+ *               `TSY:` treasury.gov / treasurydirect.gov auction schedule
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  */
@@ -36,6 +37,7 @@ type EventKind =
   | "macro-print" // CPI, PPI, jobs report, FOMC decisions — scheduled, market-wide
   | "product-launch"
   | "sector" // PJM capacity auctions, export-control deadlines, FERC dockets
+  | "rates" // Treasury auctions & supply — move yields, which move our long-duration AI names
   | "geopolitical"; // dated checkpoints only (a summit, a tariff deadline) — regime shifts with
 // no date belong in the adjacency checklist, not here (see docs/process/EVENT-RESEARCH.md)
 
@@ -68,6 +70,32 @@ export interface MarketEvent {
  * real Dec 10 — which is the whole case for the prefix discipline).
  */
 export const MARKET_EVENTS: readonly MarketEvent[] = [
+  {
+    id: "treasury-20y-bond-2026-08-19",
+    kind: "rates",
+    title: "20-Year Treasury Bond auction",
+    date: "2026-08-19",
+    status: "confirmed",
+    source:
+      "TSY: treasurydirect.gov auction schedule — 1:00pm ET, announced 08-13, checked 2026-08-18",
+    impact: "high",
+    symbols: [],
+    notes:
+      "Long-end supply. A weak bid-to-cover / tail lifts the 20–30Y and hits long-duration tech (CRWV highest-beta, NVDA). The pre-auction concession is the Aug-18 bond sell-off.",
+  },
+  {
+    id: "treasury-30y-tips-2026-08-20",
+    kind: "rates",
+    title: "30-Year TIPS auction",
+    date: "2026-08-20",
+    status: "confirmed",
+    source:
+      "TSY: treasurydirect.gov auction schedule — 1:00pm ET, announced 08-13, checked 2026-08-18",
+    impact: "high",
+    symbols: [],
+    notes:
+      "Long-end real-yield supply the day after the 20Y — the second leg of this week's duration test.",
+  },
   {
     id: "texas-puct-audit-2026-08-20",
     kind: "sector",
