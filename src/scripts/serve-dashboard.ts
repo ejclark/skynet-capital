@@ -29,6 +29,7 @@ import { resolveDataSource } from "../runtime/data-source.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
+import { resolveFeedbackCoach } from "../server/feedback-coach.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
@@ -154,6 +155,12 @@ async function main(): Promise<void> {
       "ℹ️  In-app feedback is off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — the /feedback form renders but submissions won't file issues.",
     );
   }
+  const feedbackCoach = resolveFeedbackCoach(process.env);
+  if (!feedbackCoach) {
+    console.warn(
+      "ℹ️  The feedback coach is off (no ANTHROPIC_API_KEY) — the plain /feedback form still works.",
+    );
+  }
 
   createDashboardServer({
     hub,
@@ -165,6 +172,7 @@ async function main(): Promise<void> {
       ? { invite: { store: allowlist, isOwner: (email: string) => owners.has(email) } }
       : {}),
     ...(feedback ? { submitFeedback: feedback } : {}),
+    ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
     readHistory: (id) => history.list(id),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
     tradingEnabled: desk.enabled,

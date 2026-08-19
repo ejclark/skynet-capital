@@ -25,6 +25,7 @@ import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
+import { COACH_SCRIPT, type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
@@ -78,6 +79,12 @@ export interface DashboardServerConfig {
    * have submissions report "not switched on yet."
    */
   readonly submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>;
+  /**
+   * The AI feedback coach (#429 slice 2). When present, the /feedback form offers a short guided
+   * dialogue that drafts the report; POST /feedback/coach serves the turns. Omit (no
+   * ANTHROPIC_API_KEY) and the plain form works exactly as before.
+   */
+  readonly coachFeedback?: CoachTurn;
   /**
    * Reads a participant's recorded equity/realized history for the individual view's performance panel.
    * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).
@@ -287,8 +294,8 @@ async function serveAuthorizedRoute(
   if (await trySelfServiceRoute(req, res, path, url, config, session)) {
     return;
   }
-  if (path === "/feedback") {
-    await handleFeedback(req, res, req.method ?? "GET", session, config.submitFeedback);
+  if (path === "/feedback" || path === "/feedback/coach") {
+    await serveFeedbackRoute(req, res, path, session, config);
     return;
   }
   if (serveInfoRoute(res, path, url, navFor)) {
@@ -577,6 +584,29 @@ function streamEvents(
   req.on("close", unsubscribe);
 }
 
+/** The two feedback paths, dispatched together so the main router stays one branch. */
+async function serveFeedbackRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  session: Session | undefined,
+  config: DashboardServerConfig,
+): Promise<void> {
+  const method = req.method ?? "GET";
+  if (path === "/feedback/coach") {
+    await handleFeedbackCoach(req, res, method, session?.email, config.coachFeedback);
+    return;
+  }
+  await handleFeedback(
+    req,
+    res,
+    method,
+    session,
+    config.submitFeedback,
+    Boolean(config.coachFeedback),
+  );
+}
+
 // Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
 // repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine (single process).
 const feedbackHits = new Map<string, number[]>();
@@ -597,10 +627,11 @@ async function handleFeedback(
   method: string,
   session: Session | undefined,
   submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>,
+  coachEnabled = false,
 ): Promise<void> {
   if (method === "GET") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(feedbackFormHtml(Boolean(submitFeedback)));
+    res.end(feedbackFormHtml(Boolean(submitFeedback), coachEnabled));
     return;
   }
   if (method !== "POST") {
@@ -702,10 +733,16 @@ Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — 
   );
 }
 
-function feedbackFormHtml(enabled: boolean): string {
+function feedbackFormHtml(enabled: boolean, coachEnabled = false): string {
   const banner = enabled
     ? ""
     : `<p class="note" style="color:var(--neg)">Heads up — feedback isn't switched on yet, so this won't send until it's configured.</p>`;
+  const coach = coachEnabled
+    ? `<div id="coach-box"><button type="button" id="coach-start">✨ Help me write it</button>
+<p class="note">Jot a rough note in Details, and the coach asks a couple of quick questions, then drafts it for you. You always review before sending.</p>
+<div id="coach-thread"></div></div>
+<script>${COACH_SCRIPT}</script>`
+    : "";
   return addShell(
     "Feedback — Skynet Capital",
     `<h1>Share feedback</h1>
@@ -734,7 +771,8 @@ ${banner}
     </select>
   </label>
   <button type="submit">Send it</button>
-</form>`,
+</form>
+${coach}`,
   );
 }
 
