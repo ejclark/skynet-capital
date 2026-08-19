@@ -511,9 +511,8 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "sector",
     title: "AWS re:Invent 2026 (Las Vegas)",
     date: "2026-11-30",
-    status: "estimate",
-    source:
-      "NEWS: conference listings Nov 30–Dec 4 — not yet verified vs the AWS primary, checked 2026-08-17",
+    status: "confirmed",
+    source: "IR: aws.amazon.com/events/reinvent — Nov 30–Dec 4 Las Vegas, checked 2026-08-19",
     impact: "medium",
     symbols: ["AMZN"],
     notes:

@@ -79,7 +79,7 @@ real, multi-auction trend, not a one-off — the leg is supported.
 ### Leg (b) — "this auction alone will move the tape" → REFUTED as stated / MIXED as a modifier
 
 The 5-year is genuinely the most Fed-path-sensitive point on the coupon curve (belly of the curve
-= near-term rate-cut expectations, as opposed to the 20Y/30Y term-premium story). But Aug 26 is
+= near-term Fed-path expectations, as opposed to the 20Y/30Y term-premium story). But Aug 26 is
 not a quiet day for this signal to operate in: it shares the calendar with PCE (08:30 ET, the
 Fed's preferred inflation gauge) and Q2 GDP second estimate (08:30 ET) *before* the 1:00pm auction,
 and NVDA's earnings *after* the close — already flagged in the calendar's own notes for all three
@@ -91,16 +91,26 @@ the auction's own signal is real but structurally likely to be a minor input in 
 information flow, not the headline. Graded MIXED: the underlying rates signal is real (leg a), but
 "this auction moves markets" as an isolated claim is refuted by the calendar it lands in.
 
-### Leg (c) — "the rate-cut backdrop makes the belly especially sensitive right now" → SUPPORTED
+### Leg (c) — "the belly is especially Fed-path-sensitive into this auction" → SUPPORTED (premise corrected 2026-08-19)
+
+**[Corrected 2026-08-19.** The original write of this leg asserted a "~85% CME probability of a 25bp
+**cut** at the Sep-16 FOMC, dot-plot implying further cuts through year-end." That is **wrong** and
+contradicts this repo's own FOMC ledger ([`fomc-2026-09-16.md`](fomc-2026-09-16.md)): the Sep-16
+base case is a **hawkish hold (~60–70%)**, a **25bp hike live at ~30–40%**, and a **cut priced at
+zero** — under a new chair (Warsh) whose July dissents wanted a *hike*, in an oil-shock-driven live
+hike debate, not an easing cycle. The correction inverts the *direction* of the rate risk; the
+leg's conclusion (the belly is the most Fed-path-sensitive coupon point, so the same-day PCE/GDP
+adjacency dominates the auction) still holds.**]
 
 Fed funds held at 3.50–3.75% through the Jul 2026 meeting (5th consecutive pause per financial
-press, checked 2026-08-19); CME FedWatch-reported probability of a 25bp cut at the **Sep 16, 2026**
-FOMC (the meeting immediately following this auction) was running near ~85% as of mid-August
-2026, with SEP dot-plot median implying further cuts through year-end. That backdrop is exactly
-the condition under which belly-of-curve auctions are most sensitive to any surprise in the
-PCE/GDP prints landing hours before this auction — reinforcing why the adjacency (leg b) matters
-more than the auction in isolation. New Fed chair Warsh's first extended policy remarks land at
-Jackson Hole on **Aug 28** (D+2 of this auction, D+2 of the NVDA print) — a second near-term
+press, checked 2026-08-19); the Sep-16 FOMC (the meeting immediately following this auction) is
+priced as a hawkish hold ~60–70% / 25bp **hike** live ~30–40% / **cut ~0%** (per the FOMC sibling,
+CME FedWatch press-cited ~69% hold as of 2026-08-14). The belly is the coupon point most sensitive
+to that path, so it reprices hardest on any surprise in the PCE/GDP prints landing hours before
+this auction — but because the live path is hold-vs-*hike*, a hot PCE that morning pushes the belly
+toward *higher* yields (a hike-repricing), not lower. That reinforces why the adjacency (leg b)
+matters more than the auction in isolation. New Fed chair Warsh's first extended policy remarks land
+at Jackson Hole on **Aug 28** (D+2 of this auction, D+2 of the NVDA print) — a second near-term
 Fed-path catalyst worth tracking alongside this one, already a separate calendar entry.
 
 ### What plays the conditions support
@@ -156,6 +166,7 @@ would add rates pressure on top of an already crowded macro/earnings day.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D7 | Initial research banked. Prior (Jul 27, 2026) 5Y auction tailed +0.9bp on 59.2% indirect (vs 65.7% avg), bid-to-cover 2.28x (vs 2.33x avg) — a genuine multi-auction demand-weakness trend, per TFTC/Newsquawk/BigGo cross-check. Adjacency sweep: confirmed same-day stack already reflected in `market-events-data.ts` — PCE (08:30 ET) + GDP Q2 2nd estimate (08:30 ET) + this auction (1:00pm ET) + NVDA earnings (after close), all 2026-08-26; Jackson Hole (Warsh's first keynote) follows D+2 on 2026-08-28; Fed funds at 3.50–3.75% with ~85% CME-implied odds of a Sep-16 25bp cut as of mid-Aug 2026 (financial-press reporting, checked 2026-08-19) — no new dated events discovered beyond what the calendar already carries. | — (stance set) | 2026-08-21 |
+| 2026-08-19 | D7 | **Correction (same-day, cross-check).** The initial row above and leg (c) stated a Sep-16 rate **cut** backdrop (~85% CME cut odds, dot-plot easing). That is **wrong** — per the repo's FOMC ledger ([`fomc-2026-09-16.md`](fomc-2026-09-16.md)) the Sep-16 read is hawkish-hold ~60–70% / **hike** ~30–40% live / **cut priced at zero** (oil-shock live-hike debate, hawkish June/July dots, chair Warsh's dissents wanting a hike). Root cause: the initial pass read a stale/pre-oil-shock FedWatch figure and did not cross-check the FOMC sibling. Leg (c) is corrected in-place with a visible marker; the belly-sensitivity finding and the watch-only guard stance **stand** — only the *direction* of the rate risk flips (hot PCE → belly toward higher yields / hike-repricing, not a cut). | Premise corrected; stance unchanged (watch-only guard) | 2026-08-21 |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

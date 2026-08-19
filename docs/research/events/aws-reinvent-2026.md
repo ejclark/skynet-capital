@@ -1,14 +1,15 @@
 # AWS re:Invent 2026 (Las Vegas) — aws-reinvent-2026
 
-**Kind:** sector · **Date:** 2026-11-30 (estimate, NEWS: conference listings Nov 30–Dec 4 — not yet verified vs the AWS primary, checked 2026-08-17) · **Impact:** medium
+**Kind:** sector · **Date:** 2026-11-30 (confirmed, IR: aws.amazon.com/events/reinvent — Nov 30–Dec 4 Las Vegas, checked 2026-08-19) · **Impact:** medium
 **Last assessed:** 2026-08-19
 
 ## At a glance
 
 **TL;DR.** The date now checks out against the **AWS primary** — aws.amazon.com/events/reinvent
 lists **Nov 30–Dec 4, 2026, Las Vegas** (2,200+ sessions), matching the conference listings the
-calendar seeded from. That makes this a **proposed estimate→confirmed** upgrade (reported for Eric
-to flip; not edited here). On substance: re:Invent is AWS's annual product/narrative set-piece, and
+calendar seeded from. On that primary verification the calendar entry + this header are **updated
+estimate→confirmed in this pass** (re-verified against the AWS primary 2026-08-19; see the ledger
+row). On substance: re:Invent is AWS's annual product/narrative set-piece, and
 **AWS is the whole AMZN thesis right now** — Q2 printed AWS +37% (fastest in 18 quarters) on a
 **$496B backlog**, with the offsetting worry a $220B FY capex line and FCF turning negative. But the
 catalyst that actually reprices AMZN is the **est. Oct-29 Q3 print** ~4 weeks *earlier* — the master
@@ -137,6 +138,7 @@ either sustains or discounts whatever the numbers said.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D-103 | Initial research banked (above). **Date primary-verified:** direct fetch of aws.amazon.com/events/reinvent (8/19) lists **Nov 30–Dec 4, Las Vegas** (2,200+ sessions), matching the seeded listings and clearing the calendar's own "not yet verified vs the AWS primary" note → **estimate→confirmed proposed** (reported; header keeps `estimate` until the flip PR). Substance: AWS is the AMZN thesis — Q2 AWS +37%/$42.2B (fastest in 18 qtrs), **$496B backlog**, offset by $220B FY capex + negative FCF and a light Q3 guide ($197–202B vs $204.1B street); consensus crowded-long (mean PT ~$322 vs ~$267 spot, zero Sells). Sequencing read: the **est. Oct-29 Q3 print** is the repricing catalyst (FY27 capex guide = master tripwire, first read late Oct); re:Invent (Dec 1 keynote) is a ~4-wks-later narrative amplifier, not the source. No AMZN positioning edge (S1 killed, p=0.6854). **Adjacency** — *peer prints:* the mega-cap cluster MSFT 10/27 · GOOG/META 10/28 · AMZN/AAPL 10/29 (est.) precedes this by ~4 wks; NVDA 8/26 / MRVL 8/27 / AVGO 9/2 near-term. *Macro:* no CPI/jobs/FOMC since 8/15; July FOMC minutes today (8/19, 9-3 vote) — same-day, no entry; the 10/28 FOMC lands D-1 before the AMZN print. *VIX:* 15.86 close 8/18 (up from 8/15 low 14.56), low regime, elevated SKEW / tail-hedge demand. *Geopolitical:* no new AMZN-specific tariff/export action; capex-driven memory-cost pressure noted (the DRAM/NAND wave shared with the AAPL/MRVL tape). *Event tape:* no published implied move (no conference instrument); consensus = bullish AI-infra showcase, risk = capex-without-payback optics. No new *dated* adjacency to propose beyond calendar. | — (stance set) | 2026-09-09 (medium, ≥31d band: every 21d) |
+| 2026-08-19 | D-103 | **estimate→confirmed executed (same-day).** The upgrade proposed in the row above is applied in this PR: `market-events-data.ts` + this ledger header now read `confirmed`, source `IR: aws.amazon.com/events/reinvent — Nov 30–Dec 4 Las Vegas` (re-verified against the AWS primary 2026-08-19). Date unchanged (2026-11-30, first day of the window). Substance/stance unchanged — the flip is a date-provenance upgrade only, and per house policy `confirmed` licenses nothing on its own here (no symbol-keyed play). | Date status confirmed; stance unchanged | 2026-09-09 (medium, ≥31d band: every 21d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
