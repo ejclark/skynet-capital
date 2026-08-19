@@ -3,6 +3,7 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { renderAnalysisBody } from "../observatory/analysis-view.js";
 import { renderCalendarBody } from "../observatory/calendar-view.js";
 import { type DeskTab, parseDeskTab } from "../observatory/desk-tabs.js";
+import { renderFeedbackFormBody, renderFeedbackResultBody } from "../observatory/feedback-view.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import { renderHistoryBody } from "../observatory/history-view.js";
 import { type MetricsViewOptions, renderMetricsBody } from "../observatory/metrics-view.js";
@@ -25,7 +26,7 @@ import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
-import { COACH_SCRIPT, type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
+import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
@@ -295,7 +296,7 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path === "/feedback" || path === "/feedback/coach") {
-    await serveFeedbackRoute(req, res, path, session, config);
+    await serveFeedbackRoute(req, res, path, session, config, navFor("feedback"));
     return;
   }
   if (serveInfoRoute(res, path, url, navFor)) {
@@ -591,6 +592,7 @@ async function serveFeedbackRoute(
   path: string,
   session: Session | undefined,
   config: DashboardServerConfig,
+  nav: NavContext,
 ): Promise<void> {
   const method = req.method ?? "GET";
   if (path === "/feedback/coach") {
@@ -602,6 +604,7 @@ async function serveFeedbackRoute(
     res,
     method,
     session,
+    nav,
     config.submitFeedback,
     Boolean(config.coachFeedback),
   );
@@ -626,12 +629,18 @@ async function handleFeedback(
   res: ServerResponse,
   method: string,
   session: Session | undefined,
+  nav: NavContext,
   submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>,
   coachEnabled = false,
 ): Promise<void> {
   if (method === "GET") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(feedbackFormHtml(Boolean(submitFeedback), coachEnabled));
+    res.end(
+      shellDocument(
+        "Feedback — Skynet Capital",
+        renderFeedbackFormBody({ nav, enabled: Boolean(submitFeedback), coachEnabled }),
+      ),
+    );
     return;
   }
   if (method !== "POST") {
@@ -642,21 +651,33 @@ async function handleFeedback(
   if (!submitFeedback) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(
-      feedbackResultHtml({
-        ok: false,
-        error:
-          "Feedback isn't switched on yet — ask Eric to set the feedback token. Your note wasn't sent.",
-      }),
+      shellDocument(
+        "Feedback — Skynet Capital",
+        renderFeedbackResultBody({
+          nav,
+          result: {
+            ok: false,
+            error:
+              "Feedback isn't switched on yet — ask Eric to set the feedback token. Your note wasn't sent.",
+          },
+        }),
+      ),
     );
     return;
   }
   if (session && throttled(session.email)) {
     res.writeHead(429, { "content-type": "text/html; charset=utf-8" });
     res.end(
-      feedbackResultHtml({
-        ok: false,
-        error: "You've sent a bunch just now — give it a few minutes and try again.",
-      }),
+      shellDocument(
+        "Feedback — Skynet Capital",
+        renderFeedbackResultBody({
+          nav,
+          result: {
+            ok: false,
+            error: "You've sent a bunch just now — give it a few minutes and try again.",
+          },
+        }),
+      ),
     );
     return;
   }
@@ -672,7 +693,7 @@ async function handleFeedback(
     ...(session?.email ? { submitterEmail: session.email } : {}),
   });
   res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
-  res.end(feedbackResultHtml(result));
+  res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));
 }
 
 function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
@@ -731,58 +752,4 @@ Already set up? Head straight to the <a href="/login">observatory</a>. Not on th
 Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
     true,
   );
-}
-
-function feedbackFormHtml(enabled: boolean, coachEnabled = false): string {
-  const banner = enabled
-    ? ""
-    : `<p class="note" style="color:var(--neg)">Heads up — feedback isn't switched on yet, so this won't send until it's configured.</p>`;
-  const coach = coachEnabled
-    ? `<div id="coach-box"><button type="button" id="coach-start">✨ Help me write it</button>
-<p class="note">Jot a rough note in Details, and the coach asks a couple of quick questions, then drafts it for you. You always review before sending.</p>
-<div id="coach-thread"></div></div>
-<script>${COACH_SCRIPT}</script>`
-    : "";
-  return addShell(
-    "Feedback — Skynet Capital",
-    `<h1>Share feedback</h1>
-<p class="lede">Found a bug, want an improvement, or spotted a side quest? Tell us here — it goes straight to the team. <b>No GitHub account needed.</b></p>
-${banner}
-<form method="post" action="/feedback">
-  <label>What kind?
-    <select name="kind">
-      <option value="bug">🐞 Bug — something's broken or wrong</option>
-      <option value="feature" selected>✨ Feature — make something better</option>
-      <option value="idea">🗺️ Side quest — an idea worth exploring</option>
-    </select>
-  </label>
-  <label>Title<input name="title" required maxlength="120" placeholder="Short summary"></label>
-  <label>Details<textarea name="details" rows="6" placeholder="What happened · what you'd like · the idea…"></textarea></label>
-  <label>Where in the app? <small>(optional)</small>
-    <select name="area">
-      <option value="" selected>— pick a spot —</option>
-      <option>The board (home)</option>
-      <option>The login</option>
-      <option>A player page</option>
-      <option>The trading desk</option>
-      <option>The calendar</option>
-      <option>Research</option>
-      <option>Somewhere else</option>
-    </select>
-  </label>
-  <button type="submit">Send it</button>
-</form>
-${coach}`,
-  );
-}
-
-function feedbackResultHtml(result: FeedbackResult): string {
-  const inner = result.ok
-    ? `<div class="res-icon">🎉</div><h1>Thanks — got it!</h1>
-<p class="lede">Filed as <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener"><b>#${result.number}</b></a> — follow its progress there. Really appreciate you.</p>
-<p class="backrow"><a href="/feedback">Send another</a> · <a href="/">← Back to the board</a></p>`
-    : `<h1>Hmm, that didn't send</h1>
-<p class="lede">${escapeHtml(result.error)}</p>
-<p class="backrow"><a href="/feedback">Try again</a> · <a href="/">← Back to the board</a></p>`;
-  return addShell("Feedback — Skynet Capital", inner);
 }
