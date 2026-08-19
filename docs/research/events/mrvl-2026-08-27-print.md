@@ -1,7 +1,7 @@
 # MRVL earnings print — mrvl-2026-08-27-print
 
 **Kind:** earnings · **Date:** 2026-08-27 (confirmed, IR: investor.marvell.com PR 2026-08-03 — Thu Aug 27 1:45pm PT call (post-close)) · **Impact:** critical
-**Last assessed:** 2026-08-17
+**Last assessed:** 2026-08-19
 
 ## Initial research
 
@@ -94,6 +94,12 @@ confirmation — research reports it, action may not use it.
 **Stance (event date: estimate in the calendar; IR press release 2026-08-03 matches it —
 confirmation is reportable here, not actionable until the calendar PR flips the status).**
 
+**Update, 2026-08-19 pulse:** the calendar's `status` field now reads `confirmed`, resolving this
+date-confirmation caveat — future assessments may drop the "estimate" softening on the date
+itself, while every other estimate-labeled figure below (implied move, consensus, run-up
+characterization) keeps its label. No leg below changed in substance; see the 2026-08-19 ledger
+row for the adjacency sweep that confirmed this.
+
 - **No pre-print directional entry** (estimate) — S1 is killed on MRVL and the kill list's
   new-evidence bar is unmet; the August re-rating (+~29%) means the seasonal run-up shape has
   largely paid out already, to holders of product-news exposure, not print positioning.
@@ -122,6 +128,7 @@ not duplicated.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-17 | D-10 | Date: IR press release 2026-08-03 sets the call Thu Aug 27 1:45pm PT (after-close) — matches the calendar estimate; confirmation PR proposed, table untouched. Tape: consensus ~$0.93/$2.71B (+35% y/y), implied move ~14% (~$36B swing), Polymarket ~67.5% beat-implied; MRVL +~29% since early Aug on the AI-memory portfolio unveil — bar elevated, run-up pre-paid. Peers: no prints since 08-15; NVDA **confirmed** Aug 26 = the night before (sympathy channel ~70% of MRVL window returns, per sweep). Macro: Jul CPI (08-12) in-line at 3.4%, Sep hike odds faded; Jul jobs soft; **Jackson Hole Aug 27–29, Fed chair Warsh's first keynote Fri Aug 28 morning = MRVL's D+1** (proposed as event). VIX 14.56 on 08-15, 2026 low, with reported tail-hedging demand — cheap index vol vs fat single-name implied. Geopolitical: no new MRVL-touching export action (Jan-2026 25% Section 232 semi tariff regime unchanged; China chip-tariff decision deferred to 2027). Also proposed: MRVL Investor Day Oct 6, NYC (IR release 08-03). Instruments fresh; known MRVL event-list corruption confirmed live and caveated. | — (stance set) | 2026-08-19 (critical, 8-20d band: every 2d) |
+| 2026-08-19 | D-8 | Instruments re-run (cache busted, fresh 08-19): every conviction leg reproduces the 08-17 figures near-exactly (S1 D-20→D +9.70%/79%, p=0.084; FT-1 D-5→D +4.87%/79%; S2 overnight −0.28%/43% win, p10 −16.44/p90 +17.12; S3 reaction-day +0.67%/57% vs ordinary +0.01%/51%; peer control NVDA +10.66%/AVGO +6.38%/AMD +8.63% over MRVL's own windows; E1 first-hour 30.4% of vol; S4 overnight Sharpe 1.16 vs buy-hold 1.06, still needs 15.5bps break-even) — no instrument-level change. **Date status: calendar now reads `confirmed`**, resolving the prior estimate caveat. Peers: NVDA's Aug-26 print unchanged/confirmed; consensus firmed to ~$91.8B rev (+67% y/y), Vera Rubin-ramp commentary now the headline watch item — sympathy-gap read unchanged. AVGO: VMware vCenter CVE-2026-59310 active-exploit news hit the stock, then a "buy the dip" rebound; AVGO's own print stays Sept 2 (already tracked, outside MRVL's window) — noise, not signal, for MRVL. Macro: no CPI/jobs/FOMC decision since 08-17; July FOMC minutes released today (08-19) showing a 9-3 vote with the first three-way hawkish dissent since 2016 — same-day release, no forward calendar entry proposed (would age out immediately). Vol: VIX 15.86 close 08-18, up from the 08-15 low of 14.56 but still a low regime — no term-structure stress. Geopolitical: no new export-control/tariff action; Jan-2026 H200-to-China framework unchanged. Tape: MRVL +5.54% Mon 08-17 (close $234.33) then **−8.32% Tue 08-18** in a broad AI-capex-fear semis selloff tied to rising Treasury yields (MU −7.16%, SNDK −9.05%, AVGO/AMD/INTC also down), partially offset by a same-day bullish UBS AI note — the run-up has **stalled and partially round-tripped**, not extended cleanly; consensus and the ~14% implied move unchanged. | Confirmed-status caveat resolved (see Stance note); substantive stance unchanged | 2026-08-21 (critical, 8-20d band: every 2d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
