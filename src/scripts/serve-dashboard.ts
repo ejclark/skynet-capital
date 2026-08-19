@@ -151,9 +151,11 @@ async function main(): Promise<void> {
 
   // Member-initiated desk trading — off unless switched on AND OAuth is configured (see
   // resolveDeskTrading; without a signed-in identity there is no account to match an order to).
+  const findParticipant = (id: string) => [...roster, ...store.load()].find((p) => p.id === id);
   const desk = resolveDeskTrading(process.env, {
-    findParticipant: (id) => [...roster, ...store.load()].find((p) => p.id === id),
+    findParticipant,
     clientFactory: dataSource.clientFactory,
+    optionsClientFactory: dataSource.optionsClientFactory,
     authConfigured: Boolean(auth),
   });
   if (desk.warning) console.warn(desk.warning);
@@ -199,6 +201,11 @@ async function main(): Promise<void> {
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
+    submitOptionTrade: desk.submitOption,
+    optionsClientFor: (id) => {
+      const participant = findParticipant(id);
+      return participant ? dataSource.optionsClientFactory(participant) : undefined;
+    },
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(

@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { renderAnalysisBody } from "../observatory/analysis-view.js";
 import { renderCalendarBody } from "../observatory/calendar-view.js";
@@ -30,6 +31,7 @@ import { COACH_SCRIPT, type CoachTurn, handleFeedbackCoach } from "./feedback-co
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
+import type { SubmitOptionTrade } from "./option-trade-service.js";
 import { addShell, PAGE_STYLE, readBody, shellDocument } from "./page-shell.js";
 import type {
   AddParticipantInput,
@@ -112,6 +114,10 @@ export interface DashboardServerConfig {
   readonly tradingEnabled?: boolean;
   /** The execution seam (`trade-service.ts`). Absent = no order path is wired at all. */
   readonly submitTrade?: SubmitDeskTrade;
+  /** The options execution seam (`option-trade-service.ts`), behind the same switch. */
+  readonly submitOptionTrade?: SubmitOptionTrade;
+  /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
+  readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
 }
 
 /**
@@ -309,7 +315,7 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path === "/trade") {
-    await serveTradeRoute(req, res, config, session, navFor);
+    await serveTradeRoute(req, res, url, config, session, navFor);
     return;
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
@@ -372,24 +378,27 @@ function serveCalendarRoute(
 }
 
 /**
- * `POST /trade` — the desk's order path. Identity comes from the session and nowhere else: with no
- * authenticator configured no id resolves, and `trade-routes.ts` refuses rather than guessing which
- * account a request belongs to.
+ * `/trade` — GET is the ticket view, POST the order path. Identity comes from the session and
+ * nowhere else: with no authenticator configured no id resolves, and `trade-routes.ts` refuses
+ * rather than guessing which account a request belongs to.
  */
 async function serveTradeRoute(
   req: IncomingMessage,
   res: ServerResponse,
+  url: string,
   config: DashboardServerConfig,
   session: Session | undefined,
   navFor: (active: NavView) => NavContext,
 ): Promise<void> {
   const participants = config.hub.getState().participants;
-  await handleTrade(req, res, {
+  await handleTrade(req, res, url, {
     snapshotFor: (id) => participants.find((p) => p.id === id),
     requesterId: config.auth ? resolveCurrentId(session, participants) : undefined,
     tradingEnabled: Boolean(config.tradingEnabled),
     ...(config.submitTrade ? { submitTrade: config.submitTrade } : {}),
-    nav: navFor("you"),
+    ...(config.submitOptionTrade ? { submitOptionTrade: config.submitOptionTrade } : {}),
+    ...(config.optionsClientFor ? { optionsClientFor: config.optionsClientFor } : {}),
+    nav: navFor("trade"),
     document: shellDocument,
   });
 }

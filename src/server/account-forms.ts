@@ -8,8 +8,8 @@ import type {
   UpdateProfileResult,
 } from "./account-service.js";
 import type { Session } from "./auth/session.js";
-import { addShell, readBody } from "./page-shell.js";
-import { handleSelfServiceForm } from "./self-service-forms.js";
+import { addShell } from "./page-shell.js";
+import { handleSelfServiceForm, submitSelfServiceForm } from "./self-service-forms.js";
 
 /**
  * DAY-2 ACCOUNT FORMS — `/account` (edit your profile) and `/account/remove` (leave the board).
@@ -19,7 +19,7 @@ import { handleSelfServiceForm } from "./self-service-forms.js";
  */
 
 /** What the route layer knows about the caller and the account being edited. */
-export interface AccountFormContext {
+interface AccountFormContext {
   /** Who the caller's session resolves to (prefills the forms). */
   readonly requesterId?: string;
   /** Current profile of the resolved account, for prefill. */
@@ -32,7 +32,7 @@ export interface AccountFormContext {
  * What the forms submit. The caller's identity (requesterId, session names, auth mode) is
  * filled in by the route wiring — the browser never supplies it.
  */
-export interface AccountRouteDeps {
+interface AccountRouteDeps {
   readonly updateProfile: (input: {
     id: string;
     displayName?: string;
@@ -108,7 +108,7 @@ export async function handleAccountRoute(
 /** The sentinel a "leave it as it is" timezone option submits — distinct from "" (clear). */
 const KEEP = "__keep";
 
-export async function handleAccountSettings(
+async function handleAccountSettings(
   req: IncomingMessage,
   res: ServerResponse,
   method: string,
@@ -133,7 +133,7 @@ export async function handleAccountSettings(
   );
 }
 
-export async function handleAccountRemove(
+async function handleAccountRemove(
   req: IncomingMessage,
   res: ServerResponse,
   method: string,
@@ -151,13 +151,16 @@ export async function handleAccountRemove(
     res.end("method not allowed");
     return;
   }
-  const form = new URLSearchParams(await readBody(req));
-  const result = await deps.removeAccount({
-    id: form.get("id") ?? "",
-    confirmName: form.get("confirmName") ?? "",
-  });
-  res.writeHead(result.ok ? 200 : 400, { "content-type": "text/html; charset=utf-8" });
-  res.end(removeResultHtml(result, ctx.key));
+  await submitSelfServiceForm(
+    req,
+    res,
+    (form) =>
+      deps.removeAccount({
+        id: form.get("id") ?? "",
+        confirmName: form.get("confirmName") ?? "",
+      }),
+    (result) => removeResultHtml(result, ctx.key),
+  );
 }
 
 function suffix(key: string): string {

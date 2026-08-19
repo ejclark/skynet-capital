@@ -11,6 +11,7 @@ import { formatTimestamp, profileHref } from "./render-atoms.js";
 /** Which top-level view is active, for the shared nav. */
 export type NavView =
   | "board"
+  | "trade"
   | "leaderboard"
   | "bots"
   | "compare"
@@ -42,6 +43,7 @@ const FEEDBACK_URL = "/feedback";
 
 const NAV_ICON: Record<string, string> = {
   board: "▦",
+  trade: "⇅",
   compare: "⇄",
   calendar: "◷",
   leaderboard: "≣",
@@ -64,6 +66,9 @@ function drawerLink(href: string, label: string, view: NavView, active: boolean)
  */
 function renderDrawer(nav: NavContext): string {
   const links = [drawerLink("/", "Board", "board", nav.active === "board")];
+  // Trade is global chrome — one click from every screen (desk-v2 handoff). The ticket
+  // renders honestly in every state, so the link never needs gating.
+  links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
   if (nav.hasLeaderboard) {
     links.push(
       drawerLink("/leaderboard", "Leaderboard", "leaderboard", nav.active === "leaderboard"),
@@ -502,6 +507,8 @@ const STYLE = `<style>
   .ms-title{ font-size:13.5px; font-weight:700; }
   .ms-detail{ font-size:12px; color:var(--muted); line-height:1.5; }
   .ms-pts{ flex:0 0 auto; font-family:var(--mono); font-size:11px; font-weight:700; color:var(--accent); }
+  .ms-go{ flex:0 0 auto; font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--accent); text-decoration:none; }
+  .ms-go:hover{ text-decoration:underline; }
   .more-soon{ margin-top:20px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted); line-height:1.6; }
   @media (max-width:720px){ .hud-v{ font-size:19px; } }
 </style>`;

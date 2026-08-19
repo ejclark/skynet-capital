@@ -39,7 +39,16 @@ export async function handleSelfServiceForm<TResult extends { ok: boolean }>(
     res.end("method not allowed");
     return;
   }
+  await submitSelfServiceForm(req, res, submit, renderResult);
+}
 
+/** Just the POST half — for routes whose GET does something other than render a form. */
+export async function submitSelfServiceForm<TResult extends { ok: boolean }>(
+  req: IncomingMessage,
+  res: ServerResponse,
+  submit: (form: URLSearchParams) => Promise<TResult>,
+  renderResult: (result: TResult) => string,
+): Promise<void> {
   const form = new URLSearchParams(await readBody(req));
   const result = await submit(form);
   res.writeHead(result.ok ? 200 : 400, { "content-type": "text/html; charset=utf-8" });

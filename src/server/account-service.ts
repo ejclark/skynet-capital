@@ -73,8 +73,38 @@ export interface AccountServiceDeps {
 const NOT_IN_STORE =
   "That account is configured on the host, not self-service — it can only be changed by the operator (ask Eric).";
 
-function findStored(store: ParticipantStore, id: string): Participant | undefined {
-  return store.load().find((p) => p.id === id);
+/**
+ * The preamble both write paths share: the store can be rewritten safely, the id names a
+ * SELF-SERVICE account (env-configured ones refuse honestly), and — for a human target when
+ * OAuth is configured — the caller IS that account. Returns the record, or the refusal.
+ */
+function requireEditable(
+  store: ParticipantStore,
+  input: { id: string; requesterId?: string; authConfigured: boolean },
+  verb: string,
+): { existing: Participant } | { error: string } {
+  if (!store.canStoreSecurely()) {
+    return {
+      error: `Account ${verb} is disabled: this server has no credential encryption key configured. Ask the host to set SKYNET_STORE_SECRET.`,
+    };
+  }
+  const id = input.id?.trim();
+  if (!id) {
+    return { error: "An account id is required." };
+  }
+  const existing = store.load().find((p) => p.id === id);
+  if (!existing) {
+    return { error: NOT_IN_STORE };
+  }
+  if (input.authConfigured && existing.kind === "human" && input.requesterId !== id) {
+    return {
+      error:
+        verb === "removal"
+          ? "You can only remove your own account."
+          : "You can only edit your own account's profile.",
+    };
+  }
+  return { existing };
 }
 
 export function createAccountService(deps: AccountServiceDeps): {
@@ -84,21 +114,12 @@ export function createAccountService(deps: AccountServiceDeps): {
   const at = (): string => (deps.now ?? (() => new Date()))().toISOString();
 
   async function updateProfile(input: UpdateProfileInput): Promise<UpdateProfileResult> {
-    if (!deps.store.canStoreSecurely()) {
-      return {
-        ok: false,
-        error:
-          "Account editing is disabled: this server has no credential encryption key configured. Ask the host to set SKYNET_STORE_SECRET.",
-      };
+    const target = requireEditable(deps.store, input, "editing");
+    if ("error" in target) {
+      return { ok: false, error: target.error };
     }
-    const id = input.id?.trim();
-    if (!id) {
-      return { ok: false, error: "An account id is required." };
-    }
-    const existing = findStored(deps.store, id);
-    if (!existing) {
-      return { ok: false, error: NOT_IN_STORE };
-    }
+    const { existing } = target;
+    const id = existing.id;
 
     const displayName = input.displayName?.trim();
     const timezone = input.timezone?.trim();
@@ -133,24 +154,12 @@ export function createAccountService(deps: AccountServiceDeps): {
   }
 
   function removeAccountSync(input: RemoveAccountInput): RemoveAccountResult {
-    if (!deps.store.canStoreSecurely()) {
-      return {
-        ok: false,
-        error:
-          "Account removal is disabled: this server has no credential encryption key configured. Ask the host to set SKYNET_STORE_SECRET.",
-      };
+    const target = requireEditable(deps.store, input, "removal");
+    if ("error" in target) {
+      return { ok: false, error: target.error };
     }
-    const id = input.id?.trim();
-    if (!id) {
-      return { ok: false, error: "An account id is required." };
-    }
-    const existing = findStored(deps.store, id);
-    if (!existing) {
-      return { ok: false, error: NOT_IN_STORE };
-    }
-    if (input.authConfigured && existing.kind === "human" && input.requesterId !== id) {
-      return { ok: false, error: "You can only remove your own account." };
-    }
+    const { existing } = target;
+    const id = existing.id;
     if (input.confirmName.trim().toLowerCase() !== existing.displayName.trim().toLowerCase()) {
       return {
         ok: false,
@@ -178,9 +187,6 @@ function profileEditRefusal(
   displayName: string | undefined,
   timezone: string | undefined,
 ): string | undefined {
-  if (input.authConfigured && existing.kind === "human" && input.requesterId !== existing.id) {
-    return "You can only edit your own account's profile.";
-  }
   if (input.displayName !== undefined && !displayName) {
     return "A display name can't be blank.";
   }

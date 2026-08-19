@@ -164,8 +164,8 @@ describe("markPrice", () => {
 });
 
 describe("rolling", () => {
-  it("states plainly that the desk trades shares, so there is no leg to roll", () => {
-    expect(ROLL_UNAVAILABLE_REASON).toContain("shares only");
-    expect(ROLL_UNAVAILABLE_REASON).toContain("options order path isn't built");
+  it("states plainly that the atomic close-and-reopen order isn't built yet", () => {
+    expect(ROLL_UNAVAILABLE_REASON).toContain("single atomic order");
+    expect(ROLL_UNAVAILABLE_REASON).toContain("isn't built yet");
   });
 });
