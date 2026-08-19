@@ -149,34 +149,46 @@ is recorded in the commit, so the audit trail still names the human who authoriz
 
 ### Repo settings the pipeline assumes
 
-#### `HANDOFF_PR_TOKEN` — the secret that makes machine-opened PRs mergeable
+#### The identity that makes machine-opened PRs mergeable
 
-**Without it the pipeline still works, but every PR it opens carries zero check runs** and can never
-satisfy branch protection. The cause is GitHub's infinite-loop guard: a PR opened with
+**Without one, the pipeline still works, but every PR it opens carries zero check runs** and can
+never satisfy branch protection. The cause is GitHub's infinite-loop guard: a PR opened with
 `GITHUB_TOKEN` does not emit `pull_request.opened`, so `pipeline.yml`'s required `verify` never
 runs. Not a red check — *no* checks, and `mergeable_state: blocked` forever (2026-08-17, #371).
 
-Mint it once:
+GitHub documents exactly two identities whose events are **not** suppressed: a **GitHub App
+installation token** and a **PAT**. The workflow prefers them in that order, then falls back to
+`GITHUB_TOKEN` and warns.
 
-1. Go to **[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)** — fine-grained, not classic; classic tokens can't be scoped to one repo.
-2. Set **Resource owner** `ejclark`, **Repository access → Only select repositories → `skynet-capital`** — nothing this token can touch outside this repo.
-3. Set **Repository permissions** to exactly these three, all *Read and write*, leaving every other permission at *No access*:
+**Preferred — the postmaster GitHub App** (nothing to renew, acts as its own bot):
+
+1. **Settings → Developer settings → GitHub Apps → New GitHub App.** Name it `skynet-postmaster`. **Uncheck Webhook → Active** — this App is an *identity*, not a webhook receiver; nothing here listens.
+2. Set **Repository permissions** to exactly these three, all *Read and write*, everything else *No access* — the same three the workflow declares:
    - **Contents** — push the handoff branch
    - **Pull requests** — open the PR and arm auto-merge
    - **Issues** — comment the receipt, close the `[handoff]` issue
-4. Set **Expiration** to your preference and click **Generate token**, then copy it — GitHub shows it once.
-5. Add it at **Settings → Secrets and variables → Actions → New repository secret**, named exactly **`HANDOFF_PR_TOKEN`**.
+3. **Generate a private key** at the bottom of the App's settings page; a `.pem` downloads.
+4. **Install App → Only select repositories → `skynet-capital`.**
+5. Add the App's **Client ID** as a repository **variable** named **`APP_CLIENT_ID`** (Settings → Secrets and variables → Actions → **Variables**). A client ID is not sensitive, and the workflow's `if:` reads it — `if:` cannot read secrets, which is why this half is a variable.
+6. Add the `.pem` contents (including the `BEGIN`/`END` lines) as a repository **secret** named **`APP_PRIVATE_KEY`**.
 
-**Two consequences worth knowing.** PRs the pipeline opens will be **authored by you** rather than
-`github-actions[bot]` — that is the entire point (your identity emits events), but it means the
-audit trail reads as your name; `github.actor` in the commit still records who authorized. And a
-fine-grained PAT **expires**: when it does, the pipeline degrades rather than breaks — every run
-warns `HANDOFF_PR_TOKEN missing`, PRs keep opening, and they need a close/reopen to arm CI until
-it is replaced. A **GitHub App installation token** is the no-expiry alternative if the renewal
-ever becomes annoying.
+**Alternative — a fine-grained PAT** (~2 minutes, but expires and authors PRs as you). Mint at
+[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)
+— fine-grained, not classic; **Only select repositories → `skynet-capital`**; the same three
+permissions; save as the secret **`HANDOFF_PR_TOKEN`**. Still honoured as the middle tier, so a repo
+that already has one keeps working.
+
+**What changes either way:** PRs the pipeline opens are authored by the App (or by you, with the
+PAT) rather than `github-actions[bot]`. That is the entire mechanism — a non-suppressed identity is
+what emits the event. `github.actor` on the commit still records who authorized the flip.
 
 **The workaround, any time a PR shows no checks:** close it and reopen it from any account that
 isn't the Actions token. `reopened` is in `pipeline.yml`'s `types:` list, so CI arms in seconds.
+
+**Probot, one level up:** a hosted Probot app would use this same App identity to route webhooks in
+TypeScript instead of YAML. That is a *later* question and a real trade-off (an always-on service
+that drops webhooks when it is down, versus workflow runs that stay visible and re-runnable) — the
+reasoning is parked in [`docs/IDEAS.md`](IDEAS.md). Nothing above needs a server.
 
 #### The repo setting
 

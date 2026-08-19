@@ -205,6 +205,29 @@ _(src: Claude · while: diagnosing three consecutive failed releases)_
   protection. The `types:` fix guarantees the run happens; only branch protection makes it block.
 _(src: Claude · while: watching PR #322 merge with `verify: skipped`)_
 
+### Probot as the postmaster's host — the identity is taken, the service is parked
+Eric: *"a probot app seems like a superior later abstraction as the postmaster role, to manage logic
+for githook events."* The proposal splits in two, and only one half was taken.
+
+- **Taken now — the App *identity*.** GitHub's loop guard is scoped to `GITHUB_TOKEN`; the two
+  documented escapes are an App installation token or a PAT. So the App cures the severance class
+  outright, needs **no server**, and beats the PAT on every axis (no expiry, installation-scoped,
+  acts as its own bot). Shipped as `actions/create-github-app-token@v3` in `postmaster.yml`.
+- **Parked — the hosted *service*.** What it would buy: routing in TypeScript with no YAML shim,
+  local webhook replay (`probot receive`) instead of push-to-test, and clean reactions to events
+  Actions handles awkwardly (review threads, cross-repo, fine-grained comment routing).
+- **What it would cost, honestly.** (1) It cannot run `claude-code-action`, so it would dispatch the
+  Actions workflow anyway — a *front door*, not a replacement. (2) An always-on service we don't
+  have today: if it's down, webhooks are dropped and redelivery is manual, where a failed workflow
+  run stays visible and re-runnable in the Actions UI. (3) The original complaint — four workflows,
+  482 lines — is already answered: one workflow, ~200 lines that are mostly comments.
+- **Why "later" costs nothing.** `route(ctx, deps) → Intent[]` is pure and host-agnostic by
+  construction, so migrating swaps `execute()`'s I/O layer and the entry point while every fixture
+  spec comes across untouched. That optionality is the decide-then-do split paying rent.
+- **The trigger to revisit:** when event routing outgrows what `on:` can express — needing review-
+  thread state, cross-repo reactions, or sub-second latency — not before.
+_(src: Eric · while: reviewing the postmaster's abstraction after the canary shipped)_
+
 ### "Green certifies the wrong noun" — verify the artifact, not the process (see LESSONS.md 2026-08-17)
 Third instance of one shape in a single day, so it is a class and not a coincidence: a success signal
 that describes a **narrower event** than the one being relied on. `handoff-import.mjs` exited 0 for
