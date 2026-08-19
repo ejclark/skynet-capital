@@ -1,0 +1,14 @@
+{
+  "eventName": "workflow_dispatch",
+  "actor": "ejclark",
+  "event": { "inputs": { "command": "audit" } },
+  "deps": {
+    "executingHandoffs": [{ "slug": "desk-v2", "quietDays": 3, "issueNumber": 410 }],
+    "unclaimedIssues": [
+      { "title": "[event-research] fomc-2026-12-09", "number": 412, "quietDays": 4 },
+      { "title": "[event-research] cpi-2026-09-11", "number": 413, "quietDays": 5 }
+    ],
+    "alreadyFlagged": [410, 412],
+    "staleAfterDays": 2
+  }
+}
