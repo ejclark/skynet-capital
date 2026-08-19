@@ -228,6 +228,35 @@ describe("dashboard-server /feedback", () => {
     });
   });
 
+  it("serves coach turns as JSON, and reports 'not switched on' without a coach", async () => {
+    const coach = () =>
+      Promise.resolve({ ok: true as const, done: false as const, question: "Where?" });
+    await withServer({ hub: new ObservatoryHub(board()), coachFeedback: coach }, async (base) => {
+      // The form offers the coach only when it's wired — plain form otherwise.
+      expect(await (await fetch(`${base}/feedback`)).text()).toContain("coach-box");
+
+      const post = await fetch(`${base}/feedback/coach`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "bug", messages: [{ role: "user", content: "hm" }] }),
+      });
+      expect(post.status).toBe(200);
+      expect(await post.json()).toEqual({ ok: true, done: false, question: "Where?" });
+
+      const bad = await fetch(`${base}/feedback/coach`, { method: "POST", body: "not json" });
+      expect(bad.status).toBe(400);
+    });
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      expect(await (await fetch(`${base}/feedback`)).text()).not.toContain("coach-box");
+      const off = await fetch(`${base}/feedback/coach`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "bug", messages: [] }),
+      });
+      expect((await off.json()).ok).toBe(false);
+    });
+  });
+
   it("shows a friendly error when filing fails", async () => {
     const submitFeedback = (): Promise<FeedbackResult> =>
       Promise.resolve({ ok: false, error: "GitHub said no" });
