@@ -107,10 +107,19 @@ export function renderResearchDocBody(options: ResearchDocOptions): string {
   const assessed = doc.lastAssessed
     ? `<span class="rs-when">last assessed ${escapeHtml(doc.lastAssessed)}</span>`
     : "";
+  // The decision header — TL;DR + horizon table + signal conditions — surfaced above the full
+  // document when the ledger authors an `## At a glance` section (research-service extracts it).
+  const glance = doc.glanceHtml
+    ? `<section class="rs-glance md-doc" aria-label="At a glance">
+        <div class="rs-glance-tag">At a glance</div>
+        ${doc.glanceHtml}
+      </section>`
+    : "";
   const content = `${RS_STYLE}
   <div class="research">
     <p class="rs-crumb"><a href="/research">← research lab</a>${assessed}</p>
     ${BANNER}
+    ${glance}
     <article class="md-doc">${doc.html}</article>
   </div>
   <footer class="obs-foot">A reviewed, versioned document — history lives in git. Educational · paper trading only.</footer>`;
@@ -178,6 +187,14 @@ const RS_STYLE = `<style>
   .rs-none{ font-size:11.5px; color:var(--muted); font-style:italic; }
   .rs-empty{ font-size:13px; color:var(--muted); font-style:italic; margin:4px 0; }
   .rs-stance{ border-left:2px solid var(--accent); padding-left:14px; }
+  .rs-glance{ background:color-mix(in srgb,var(--accent) 8%,var(--surface)); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:12px 18px 6px; margin:2px 0 4px; }
+  .rs-glance-tag{ font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:2px; }
+  .rs-glance > p:first-of-type{ margin-top:4px; }
+  .rs-glance strong{ color:var(--text); }
+  .rs-glance table{ width:100%; margin:8px 0; }
+  .rs-glance th{ color:var(--accent); font-family:var(--mono); }
+  .rs-glance td:first-child{ font-family:var(--mono); font-size:11.5px; white-space:nowrap; color:var(--accent); font-weight:700; }
+  .rs-glance ul{ margin:4px 0; }
   .md-doc{ font-size:13.5px; line-height:1.65; max-width:80ch; }
   .md-doc h1{ font-size:19px; margin:6px 0 10px; }
   .md-doc h2{ font-size:15px; margin:20px 0 6px; }

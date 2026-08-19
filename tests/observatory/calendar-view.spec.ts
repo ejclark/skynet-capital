@@ -114,6 +114,25 @@ describe("renderCalendarBody", () => {
     expect(html).toMatch(/<a class="cal-sym"[^>]*>NVDA<\/a>/);
   });
 
+  it("labels a Treasury auction with the TREASURY kind chip", () => {
+    const html = renderCalendarBody({
+      asOfIso: AS_OF,
+      events: [
+        event({
+          id: "treasury-20y-bond-2026-09-16",
+          date: "2026-09-16",
+          kind: "rates",
+          title: "20-Year Treasury Bond auction",
+          source: "TSY: treasurydirect.gov auction schedule",
+        }),
+      ],
+      prints: [],
+    });
+
+    expect(html).toContain("TREASURY");
+    expect(html).toContain("20-Year Treasury Bond auction");
+  });
+
   it("carries the source audit trail on the row, escaped", () => {
     const html = renderCalendarBody({
       asOfIso: AS_OF,

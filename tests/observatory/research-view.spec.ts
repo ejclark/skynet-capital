@@ -60,12 +60,31 @@ describe("renderResearchDocBody", () => {
       doc: {
         ...doc("events/x", { lastAssessed: "2026-08-17" }),
         html: "<h1>The doc</h1><table><tr><td>cell</td></tr></table>",
+        glanceHtml: null,
       },
     });
     expect(html).toContain("The doc");
     expect(html).toContain("<td>cell</td>");
     expect(html).toContain("last assessed 2026-08-17");
     expect(html).toContain(BANNER_TEXT);
+    // No At-a-glance section authored → no decision header rendered (the CSS class is always in
+    // the stylesheet, so key off the rendered element's aria-label instead).
+    expect(html).not.toContain('aria-label="At a glance"');
+  });
+
+  it("promotes the At a glance header above the document when present", () => {
+    const html = renderResearchDocBody({
+      asOfIso: AS_OF,
+      doc: {
+        ...doc("events/x", { lastAssessed: "2026-08-17" }),
+        html: "<h1>The body</h1>",
+        glanceHtml: "<p><strong>TL;DR.</strong> Guards only.</p>",
+      },
+    });
+    expect(html).toContain('aria-label="At a glance"');
+    expect(html).toContain("Guards only.");
+    // Header precedes the document body.
+    expect(html.indexOf("Guards only.")).toBeLessThan(html.indexOf("The body"));
   });
 });
 

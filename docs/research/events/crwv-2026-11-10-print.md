@@ -3,6 +3,29 @@
 **Kind:** earnings · **Date:** 2026-11-10 (estimate, 8-K cadence off 2026-08-11 midday print) · **Impact:** critical
 **Last assessed:** 2026-08-17
 
+## At a glance
+
+**TL;DR.** No CRWV play survives scrutiny — every alpha-shaped read (pre-print run-up, gap
+direction, reaction fade, post-print bleed) is kill-listed or under a live forward-test on just
+n=4 prints of anecdote. The only durable rules are the universal guards: **S2 — never hold through
+the print**, and **E1 — don't trade the open**. Treat CRWV as a two-sided variance name (±10–19%
+single-night tails, both directions), not a trend. The Nov-10 print is an **estimate** (IR silent;
+honest window Nov 9–16) and would land on a **confirmed CPI day**.
+
+| Horizon | Call | Why |
+|---|---|---|
+| Today | Stand aside · E1 | No CRWV-specific catalyst; two-sided variance — defer the open. |
+| This week | Watch FT-3 | [Forward-test 3](../forward-tests.md) scores ~Aug 19/26 — settles whether the post-Q2 melt-up holds or bleeds. Observe, don't position. |
+| This month | Trades by proxy | High-beta to the semi complex — NVDA 8/26, MRVL 8/27, AVGO 9/2 reprice AI-infra long before CRWV's own print. |
+| This quarter | Flat the print (S2) | Stand aside directionally into the est. Nov 9–16 window; guide bar $3.45–3.6B, backlog $104B, from a price that already paid ~+37% for Q2. |
+
+**Signals & conditions** — the buy/sell/hold triggers, from the stance's kill switches:
+
+- **No buy signal exists** — S1 pre-print positioning is kill-listed (its +8% D-5→D cell fails its own base-rate *and* peer controls; NVDA/AMZN rally over CRWV's own windows).
+- **Hold-aside is the base case** — implied has *under*-priced realized; ±10–19% tails both ways.
+- **Sell / avoid** — never hold through the print (S2); no directional gap bet either way (kill-list #4); no post-print chase until FT-3 scores.
+- **Watch (dated)** — FT-3 **Aug 19 / 26** · semi-complex reprice **Aug 26–Sep 2** · IR date confirm **~late Oct** · CPI collision **Nov 10** · VIX regime (2026-low ~14.6, elevated tail-hedge demand).
+
 ## Initial research
 
 **The question.** CoreWeave prints Q3 2026 on 2026-11-10 (calendar status: **estimate** — IR has
