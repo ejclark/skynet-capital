@@ -18,6 +18,24 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Issues as the work queue — kill the todo-oriented handoff dump
+Eric's directive: "instead of dumping todo oriented handoffs, we should be creating issues. This
+creates an event that GHA can act on, and leverage claude to incorporate AI logic." The design:
+a human-created issue (or a human-applied label) is simultaneously the work item, the
+authorization, and the trigger event — no status-file flips, no flip-button→PR→push→sweep chain.
+The postmaster's `issues: [labeled]` trigger + claude-code-action already prove the pattern (the
+inbox). First slice: a human-applied `ready-to-build` label on a `[handoff] <slug>` receipt issue
+routes straight to claim+build, retiring the flip-handoff dispatch chain; the README status field
+becomes a machine-updated mirror, not the control surface. Two constraints shape everything:
+(1) the banked 2026-08-17 lesson — workflow-opened issues emit no events (GITHUB_TOKEN
+suppression), so this works precisely because the triggering act is HUMAN (or App-identity);
+(2) this repo is public — anyone can open an issue, so the AI must NEVER trigger on issue
+creation or body content alone: the gate is a label application (requires triage/write perms) or
+an allowlisted actor, always. Fork for Eric: do bundle contracts stay as in-repo files with
+issues as the event layer (likely — zips and tokens need files), or does the issue body become
+the contract for file-less work? _(src: Eric · while: making the postmaster event-driven,
+2026-08-19)_
+
 ### Calendar-driven research wake-ups — the calendar IS the schedule
 Eric's directive: event research "should be driven off of calendar events … Claude is adding events
 to my google calendar for all this information" — daily/weekly/quarterly cadence from the calendar,
