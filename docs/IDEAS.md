@@ -18,45 +18,6 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
-### Issues as the work queue — kill the todo-oriented handoff dump
-Eric's directive: "instead of dumping todo oriented handoffs, we should be creating issues. This
-creates an event that GHA can act on, and leverage claude to incorporate AI logic." The design:
-a human-created issue (or a human-applied label) is simultaneously the work item, the
-authorization, and the trigger event — no status-file flips, no flip-button→PR→push→sweep chain.
-The postmaster's `issues: [labeled]` trigger + claude-code-action already prove the pattern (the
-inbox). First slice: a human-applied `ready-to-build` label on a `[handoff] <slug>` receipt issue
-routes straight to claim+build, retiring the flip-handoff dispatch chain; the README status field
-becomes a machine-updated mirror, not the control surface. Two constraints shape everything:
-(1) the banked 2026-08-17 lesson — workflow-opened issues emit no events (GITHUB_TOKEN
-suppression), so this works precisely because the triggering act is HUMAN (or App-identity);
-(2) this repo is public — anyone can open an issue, so the AI must NEVER trigger on issue
-creation or body content alone: the gate is a label application (requires triage/write perms) or
-an allowlisted actor, always. Fork for Eric: do bundle contracts stay as in-repo files with
-issues as the event layer (likely — zips and tokens need files), or does the issue body become
-the contract for file-less work? _(src: Eric · while: making the postmaster event-driven,
-2026-08-19)_
-
-### Calendar-driven research wake-ups — the calendar IS the schedule
-Eric's directive: event research "should be driven off of calendar events … Claude is adding events
-to my google calendar for all this information" — daily/weekly/quarterly cadence from the calendar,
-not a clock. The design that fits: due times are deterministic in-repo data (event dates ×
-`assessment-cadence.json`), so whenever the calendar or a ledger changes (a push), derive the next
-due timestamp and schedule a **precise one-shot** wake-up for it (CCR `run_once_at` trigger, fired
-via API from the postmaster) that dispatches the postmaster's `scan`. No polling anywhere: the
-calendar entry is the event, its date the emission. Two facts to design around: (1) the Google
-Calendar connector is claude.ai-session-scoped — a GHA research session cannot read it, so
-`src/domain/market-events.ts` stays the canonical projection and Google Calendar the human-visible
-mirror + claude.ai-side source; (2) a workflow scheduling one-shots needs an API credential in repo
-secrets — Eric's gate, one procedural step when he wants it. Until then the postmaster's per-push
-tick carries the load. _(src: Eric · while: killing the postmaster cron, 2026-08-19)_
-
-### Push notifications from repo-side schedules — the poke-Routine bridge
-GHA-resident schedules (the postmaster's daily run) can't ping Eric's phone; claude.ai Routines
-can. If a repo-side run ever needs to notify directly, the bridge is a poke-only Routine (no cron)
-that a workflow fires via the CCR API — the Routine's whole job is carrying the push. Not needed
-yet: the secretary digest Routine covers today's notification path. _(src: Eric · while:
-routines→repo migration review, 2026-08-19)_
-
 ### Options-mechanics event kinds — OPEX, quad witching, VIX expiration, holidays
 The `/calendar` view renders the curated feed; the mechanical dates options traders also watch are
 all rule-computable offline: monthly OPEX = 3rd Friday (holiday → prior Thursday), quad witching =

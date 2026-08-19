@@ -3,8 +3,8 @@
 **Event-driven first — no crons** (Eric, 2026-08-19: *"cron jobs are generally terrible … focus on
 event driven architecture"*, and: *"we can do so much more than basic bitch cron jobs"*). A polling
 clock is the last resort, argued in its row, never the default: the tick is a repository event, and
-the north star for time-indexed work is wake-ups derived from the domain calendar itself (see the
-calendar-driven entry in docs/IDEAS.md).
+the north star for time-indexed work is wake-ups derived from the domain calendar itself
+(issue #431).
 
 Automation runs on two substrates, and the default flipped on 2026-08-19:
 
@@ -44,7 +44,7 @@ Automation runs on two substrates, and the default flipped on 2026-08-19:
 **Known residual, accepted on the record:** a completely quiet repo checks nothing — time-based
 due-ness (a pulse check whose interval lapses, an event date passing) waits for the next merge or a
 manual `scan` dispatch. The real fix is not a cron but calendar-derived one-shots — due times are
-deterministic in-repo data, so the calendar itself can emit the wake-ups (docs/IDEAS.md; needs one
+deterministic in-repo data, so the calendar itself can emit the wake-ups (issue #431; needs one
 Eric-gated credential). The digest's daily clock is the one surviving exception: its deliverable is
 the push notification, which only a claude.ai Routine can send, and it is Eric's own arming.
 
