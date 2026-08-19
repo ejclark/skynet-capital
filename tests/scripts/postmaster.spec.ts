@@ -154,6 +154,15 @@ describe("postmaster routing", () => {
     expect(dryRun("audit-all-fresh.json")).toHaveLength(0);
   });
 
+  it("the audit never re-flags a stall it already labelled — one ping per stall, not per push", () => {
+    // The audit rides every push (2026-08-19); the stall-flagged label is its memory. Without this,
+    // 24 open receipt issues would each draw a fresh comment on every merge past 2 quiet days.
+    const intents = dryRun("audit-already-flagged.json") as Intent[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.issueNumber).toBe(413);
+  });
+
   it("issue bodies carry the Claude attribution footer", () => {
     const intents = dryRun("push-one-ready.json") as Intent[];
 
