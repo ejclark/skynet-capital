@@ -52,21 +52,22 @@ name: Postmaster
 # that visibly did not run. See docs/LESSONS.md 2026-08-17.
 
 on:
+  # EVERY MERGE TO MAIN IS THE TICK — no cron, by directive (Eric, 2026-08-19: "cron jobs are
+  # generally terrible … focus on event driven architecture"; codified in docs/ROUTINES.md).
+  # This works because every check here is LEVEL-BASED: the sweep, the stall audit, and
+  # event-scan --due each read current state from scratch, so any push reconciles everything —
+  # including anything a dropped webhook missed. No path filter, deliberately: repo activity
+  # itself is the clock, and a filtered path would just narrow the reconciliation for no saving
+  # (a no-op route job costs seconds on a public repo's free runners). Research PRs merging are
+  # themselves pushes, so working the event backlog is a self-perpetuating chain: research lands →
+  # push → scan → next due event. The prior generation of this job ran on claude.ai Routine crons
+  # that fired ~130 times into sessions with no repo checkout and produced nothing
+  # (docs/ROUTINES.md, Retired) — a poller that quietly produces nothing is the failure mode this
+  # repo already banked once (2026-08-17). Known residual, accepted on the record: a completely
+  # quiet repo checks nothing until the next merge or a manual `scan` dispatch — see
+  # docs/ROUTINES.md for the escape hatches.
   push:
     branches: [main]
-    paths:
-      - 'docs/handoffs/**'
-      - 'src/domain/market-events.ts'
-      - 'src/domain/earnings-calendar.ts'
-  # The daily clock (2026-08-19). This replaced two claude.ai-side Routines — the hourly handoff
-  # poller and the daily event-scan — after a week proved they fired into sessions with no repo
-  # checkout and produced literally nothing (docs/ROUTINES.md, Retired). A repo-resident schedule
-  # cannot have that failure: checkout is a step. The scheduled run is (1) the event-research
-  # clock, (2) a sweep net under the push trigger for anything a push event missed, and (3) the
-  # stall audit's clock. 11:07 UTC ≈ 06:07/07:07 ET across DST, matching the old event-scan hour;
-  # :07 because GitHub sheds and delays on-the-hour crons hardest.
-  schedule:
-    - cron: '7 11 * * *'
   issues:
     types: [labeled]
   workflow_dispatch:
@@ -129,25 +130,38 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
         run: node scripts/postmaster.mjs
 
-      # The loop's eyes get a clock: the stall audit ran only on manual dispatch before, which is
-      # a watchdog nobody winds. Comment-and-warn only (audit() is ceiling-capped by design).
+      # The loop's eyes, event-driven: the stall audit rides every push instead of a clock — it
+      # ran only on manual dispatch before, a watchdog nobody winds. Comment-and-warn only
+      # (audit() is ceiling-capped by design), and it dedupes nothing itself: quietDays only
+      # crosses the threshold once per day, so repeat comments stay rare.
       - name: Audit for stalls
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/postmaster.mjs --audit
 
-      # Which events owe research today. Only the scheduled run (or a manual `scan`) researches —
-      # a push touching the calendar opens receipt issues via the sweep above, but the deep-dive
-      # work waits for the daily lane so one calendar edit can't trigger an hours-long AI session.
+      # Which events owe research right now. Filtered against open research/<id> PR heads
+      # (dueForResearch, specced) so back-to-back pushes can't double-research an event whose PR
+      # is still open — concurrency serializes runs, and each new run sees the last one's PRs.
       - name: List due events
         id: events
-        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.command == 'scan')
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.command == 'scan')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          DUE=$(node scripts/event-scan.mjs --due | jq -c '[.[] | {id, reason}]')
-          echo "due=$DUE" >> "$GITHUB_OUTPUT"
-          echo "::notice::due events: $DUE"
+          DUE=$(node scripts/event-scan.mjs --due)
+          HEADS=$(gh pr list --state open --limit 100 --json headRefName | jq -c '[.[].headRefName]')
+          FILTERED=$(node -e '
+            import("./scripts/postmaster.mjs").then((m) => {
+              const due = JSON.parse(process.argv[1]);
+              const heads = JSON.parse(process.argv[2]);
+              const out = m.dueForResearch(due, heads).map((e) => ({ id: e.id, reason: e.reason }));
+              console.log(JSON.stringify(out));
+            });
+          ' "$DUE" "$HEADS")
+          echo "due=$FILTERED" >> "$GITHUB_OUTPUT"
+          echo "::notice::due for research: $FILTERED"
 
       # Claim BEFORE building, not at first commit. `POST /git/refs` is atomic — 422 if the ref
       # exists — so this is a real compare-and-set, and the claim is visible in `git ls-remote`
@@ -255,9 +269,10 @@ jobs:
   # ═══ THE EVENT-RESEARCH LANE (2026-08-19) ═══
   # Replaces the daily claude.ai event-scan Routine, which fired for three days into fresh sessions
   # with no repo checkout and produced nothing while interactive sessions carried its load
-  # (docs/ROUTINES.md, Retired). Same protocol, same clock — but repo-resident, versioned, and
-  # incapable of the no-checkout failure. The prompt is docs/ROUTINES.md's old verbatim Routine
-  # prompt adapted for a workflow session; docs/process/EVENT-RESEARCH.md stays the protocol owner.
+  # (docs/ROUTINES.md, Retired). Same protocol — but repo-resident, versioned, event-driven (every
+  # merge is the tick; no cron), and incapable of the no-checkout failure. The prompt is
+  # docs/ROUTINES.md's old verbatim Routine prompt adapted for a workflow session;
+  # docs/process/EVENT-RESEARCH.md stays the protocol owner.
   build-events:
     name: research due events
     needs: route
@@ -312,11 +327,13 @@ jobs:
               node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from
               memory.
 
-            Ship ONE PR per event: branch off origin/main, verify by exit status and never by tailed
-            output (`npm run typecheck`, `npm run lint`, `npm test`), push, open the PR with
-            `gh pr create`, then arm auto-merge with `gh pr merge --auto --squash` — research-ledger
-            docs auto-merge per the governor's merge policy. Conventional-Commit subjects,
-            lowercase-led.
+            Ship ONE PR per event, on a branch named EXACTLY `research/<event-id>` off origin/main —
+            the branch name is the dedupe key that stops the next push-triggered run re-researching
+            an event whose PR is still open, so never improvise it. Verify by exit status and never
+            by tailed output (`npm run typecheck`, `npm run lint`, `npm test`), push, open the PR
+            with `gh pr create`, then arm auto-merge with `gh pr merge --auto --squash` —
+            research-ledger docs auto-merge per the governor's merge policy. Conventional-Commit
+            subjects, lowercase-led.
 
             HARD LIMITS: no trades; no edits to playbooks, guards, or earnings-calendar entries; no
             flipping any `estimate` to `confirmed` without a primary source (IR:/BLS:/FED:); never

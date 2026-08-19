@@ -82,14 +82,24 @@ describe("postmaster routing", () => {
     expect(dryRun("push-already-queued.json")).toHaveLength(0);
   });
 
-  it("the scheduled run sweeps exactly like a push — the daily net under the event trigger", () => {
-    // This is what replaced the hourly claude.ai Routine (deleted 2026-08-19): the sweep logic is
-    // identical, so anything a push event missed is picked up within a day, in the repo, on the record.
-    const intents = dryRun("schedule-sweep.json") as Intent[];
+  it("dueForResearch filters out events whose research PR is still open — the per-push dedupe", () => {
+    // The event lane rides EVERY push (no cron, by directive — docs/ROUTINES.md). This filter plus
+    // the mandated `research/<id>` branch name is what stops back-to-back merges double-researching.
+    const out = execFileSync(
+      "node",
+      [
+        "-e",
+        `import("./scripts/postmaster.mjs").then((m) => {
+           const due = [{ id: "cpi-2026-09-11", reason: "interval-elapsed" },
+                        { id: "fomc-2026-12-09", reason: "never-assessed" }];
+           const heads = ["research/cpi-2026-09-11", "handoff/desk-v2"];
+           console.log(JSON.stringify(m.dueForResearch(due, heads).map((e) => e.id)));
+         });`,
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
 
-    expect(intents).toHaveLength(1);
-    expect(intents[0]?.kind).toBe("open-issue");
-    expect(intents[0]?.title).toBe("[event-research] fomc-2026-12-09");
+    expect(JSON.parse(out)).toEqual(["fomc-2026-12-09"]);
   });
 
   it("the flip command flips a draft handoff, attributing the dispatching human", () => {

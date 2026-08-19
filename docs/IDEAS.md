@@ -18,6 +18,20 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Calendar-driven research wake-ups — the calendar IS the schedule
+Eric's directive: event research "should be driven off of calendar events … Claude is adding events
+to my google calendar for all this information" — daily/weekly/quarterly cadence from the calendar,
+not a clock. The design that fits: due times are deterministic in-repo data (event dates ×
+`assessment-cadence.json`), so whenever the calendar or a ledger changes (a push), derive the next
+due timestamp and schedule a **precise one-shot** wake-up for it (CCR `run_once_at` trigger, fired
+via API from the postmaster) that dispatches the postmaster's `scan`. No polling anywhere: the
+calendar entry is the event, its date the emission. Two facts to design around: (1) the Google
+Calendar connector is claude.ai-session-scoped — a GHA research session cannot read it, so
+`src/domain/market-events.ts` stays the canonical projection and Google Calendar the human-visible
+mirror + claude.ai-side source; (2) a workflow scheduling one-shots needs an API credential in repo
+secrets — Eric's gate, one procedural step when he wants it. Until then the postmaster's per-push
+tick carries the load. _(src: Eric · while: killing the postmaster cron, 2026-08-19)_
+
 ### Push notifications from repo-side schedules — the poke-Routine bridge
 GHA-resident schedules (the postmaster's daily run) can't ping Eric's phone; claude.ai Routines
 can. If a repo-side run ever needs to notify directly, the bridge is a poke-only Routine (no cron)
