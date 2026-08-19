@@ -638,8 +638,6 @@ async function handleFeedback(
     title: form.get("title") ?? "",
     details: form.get("details") ?? "",
     ...(form.get("area") ? { area: form.get("area") as string } : {}),
-    ...(form.get("device") ? { device: form.get("device") as string } : {}),
-    ...(session?.name ? { submitterName: session.name } : {}),
     ...(session?.email ? { submitterEmail: session.email } : {}),
   });
   res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
@@ -723,18 +721,27 @@ ${banner}
   </label>
   <label>Title<input name="title" required maxlength="120" placeholder="Short summary"></label>
   <label>Details<textarea name="details" rows="6" placeholder="What happened · what you'd like · the idea…"></textarea></label>
-  <label>Where in the app? <small>(optional)</small><input name="area" placeholder="e.g. Leaderboard, the intro animation"></label>
-  <label>Device &amp; browser <small>(optional, helps for bugs)</small><input name="device" placeholder="e.g. iPhone · Safari"></label>
+  <label>Where in the app? <small>(optional)</small>
+    <select name="area">
+      <option value="" selected>— pick a spot —</option>
+      <option>The board (home)</option>
+      <option>The login</option>
+      <option>A player page</option>
+      <option>The trading desk</option>
+      <option>The calendar</option>
+      <option>Research</option>
+      <option>Somewhere else</option>
+    </select>
+  </label>
   <button type="submit">Send it</button>
-</form>
-<p class="note">Screenshots help — once it's filed you can reply to the issue with an image.</p>`,
+</form>`,
   );
 }
 
 function feedbackResultHtml(result: FeedbackResult): string {
   const inner = result.ok
     ? `<div class="res-icon">🎉</div><h1>Thanks — got it!</h1>
-<p class="lede">Filed as <b>#${result.number}</b>. We'll take a look. Really appreciate you.</p>
+<p class="lede">Filed as <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener"><b>#${result.number}</b></a> — follow its progress there. Really appreciate you.</p>
 <p class="backrow"><a href="/feedback">Send another</a> · <a href="/">← Back to the board</a></p>`
     : `<h1>Hmm, that didn't send</h1>
 <p class="lede">${escapeHtml(result.error)}</p>

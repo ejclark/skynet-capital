@@ -27,8 +27,10 @@ Least privilege: a token that can only write issues on this one repo.
 7. **Generate token** and copy it — GitHub shows it once. It looks like `github_pat_…`.
 
 Optional: generate the token from a dedicated bot GitHub account so issues are attributed to the
-bot rather than you. Not required — each issue already carries a "Submitted from the app by …"
-footer.
+bot rather than you. Not required — each issue carries a pseudonymous submitter footer
+("Submitted from the app by member `<opaque id>`"). The repo is public, so the footer never
+contains a member's name or email — only a stable opaque marker the app can correlate
+(`opaqueMemberId` in `src/server/feedback-service.ts`; the privacy spec pins this).
 
 ### 2. Give the token to the app
 
@@ -52,7 +54,8 @@ in code — only as a host secret, exactly like the Alpaca keys.
 2. Sign in, open `/feedback`, and submit one **Bug**, one **Feature**, and one **Idea**.
 3. Confirm three issues appear on `ejclark/skynet-capital` — each with the right labels
    (`bug`/`enhancement`/`idea` + `feedback`), a `[bug]`/`[enhancement]`/`[idea]` title tag, and the
-   submitter footer. The success page links to each filed issue.
+   pseudonymous submitter footer (opaque id, never a name or email). The success page links each
+   filed issue so the member can follow its progress.
 
 ## Guardrails
 

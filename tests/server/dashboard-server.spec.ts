@@ -220,7 +220,10 @@ describe("dashboard-server /feedback", () => {
         }).toString(),
       });
       expect(post.status).toBe(200);
-      expect(await post.text()).toContain("#7");
+      const success = await post.text();
+      expect(success).toContain("#7");
+      // The filed issue must be linkable so the member can follow its progress (#436).
+      expect(success).toContain("https://github.com/x/y/issues/7");
       expect(calls[0]).toMatchObject({ kind: "bug", title: "It broke", details: "here's how" });
     });
   });
