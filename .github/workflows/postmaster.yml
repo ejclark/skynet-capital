@@ -58,6 +58,15 @@ on:
       - 'docs/handoffs/**'
       - 'src/domain/market-events.ts'
       - 'src/domain/earnings-calendar.ts'
+  # The daily clock (2026-08-19). This replaced two claude.ai-side Routines — the hourly handoff
+  # poller and the daily event-scan — after a week proved they fired into sessions with no repo
+  # checkout and produced literally nothing (docs/ROUTINES.md, Retired). A repo-resident schedule
+  # cannot have that failure: checkout is a step. The scheduled run is (1) the event-research
+  # clock, (2) a sweep net under the push trigger for anything a push event missed, and (3) the
+  # stall audit's clock. 11:07 UTC ≈ 06:07/07:07 ET across DST, matching the old event-scan hour;
+  # :07 because GitHub sheds and delays on-the-hour crons hardest.
+  schedule:
+    - cron: '7 11 * * *'
   issues:
     types: [labeled]
   workflow_dispatch:
@@ -90,6 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build_slug: ${{ steps.claim.outputs.slug }}
+      due_events: ${{ steps.events.outputs.due }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -118,6 +128,26 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
         run: node scripts/postmaster.mjs
+
+      # The loop's eyes get a clock: the stall audit ran only on manual dispatch before, which is
+      # a watchdog nobody winds. Comment-and-warn only (audit() is ceiling-capped by design).
+      - name: Audit for stalls
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/postmaster.mjs --audit
+
+      # Which events owe research today. Only the scheduled run (or a manual `scan`) researches —
+      # a push touching the calendar opens receipt issues via the sweep above, but the deep-dive
+      # work waits for the daily lane so one calendar edit can't trigger an hours-long AI session.
+      - name: List due events
+        id: events
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.command == 'scan')
+        run: |
+          set -euo pipefail
+          DUE=$(node scripts/event-scan.mjs --due | jq -c '[.[] | {id, reason}]')
+          echo "due=$DUE" >> "$GITHUB_OUTPUT"
+          echo "::notice::due events: $DUE"
 
       # Claim BEFORE building, not at first commit. `POST /git/refs` is atomic — 422 if the ref
       # exists — so this is a real compare-and-set, and the claim is visible in `git ls-remote`
@@ -221,3 +251,75 @@ jobs:
             authorization); never widen the autonomy envelope; never touch credentials, spend, or
             anything outward-facing. Bank anything you cannot answer from the contract in its Q&A
             queue and continue on unblocked threads rather than guessing.
+
+  # ═══ THE EVENT-RESEARCH LANE (2026-08-19) ═══
+  # Replaces the daily claude.ai event-scan Routine, which fired for three days into fresh sessions
+  # with no repo checkout and produced nothing while interactive sessions carried its load
+  # (docs/ROUTINES.md, Retired). Same protocol, same clock — but repo-resident, versioned, and
+  # incapable of the no-checkout failure. The prompt is docs/ROUTINES.md's old verbatim Routine
+  # prompt adapted for a workflow session; docs/process/EVENT-RESEARCH.md stays the protocol owner.
+  build-events:
+    name: research due events
+    needs: route
+    if: needs.route.outputs.due_events != '' && needs.route.outputs.due_events != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Minted per-job, same as `build` — the action revokes its token at job end.
+      - id: app-token
+        if: vars.APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - id: gate
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "armed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — events are due but nothing will research them: ${{ needs.route.outputs.due_events }}"
+          fi
+
+      - if: steps.gate.outputs.armed == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The strongest identity available, so each PR this session opens actually triggers `verify`.
+          github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          # WebSearch/WebFetch on top of the build lane's list: a pulse check without the adjacency
+          # sweep (peer prints, CPI/FOMC surprises, VIX regime) is the protocol minus its point.
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch"
+          prompt: |
+            You are in the skynet-capital repo. Run `node scripts/event-scan.mjs --due`. If it
+            prints `[]`, stop — nothing is due. Otherwise, for each due event, follow the matching
+            mode in `docs/process/EVENT-RESEARCH.md`:
+
+            - `never-assessed` → initial research producing `docs/research/events/<id>.md` from its
+              TEMPLATE (initial research + stance + kill switches + first ledger row).
+            - `interval-elapsed` → pulse check appending ONE ledger row, including the mandatory
+              adjacency sweep (peer prints, CPI/FOMC surprises, VIX regime moves, geopolitics
+              touching the event's symbols) — any dated adjacent event you discover is PROPOSED as
+              an `estimate` entry in `src/domain/market-events.ts` in the same PR, never `confirmed`.
+            - `event-passed-unscored` → closing outcome assessment, scoring registered forward tests
+              from re-run instrument data (bust the instrument cache first: `rm -rf
+              node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from
+              memory.
+
+            Ship ONE PR per event: branch off origin/main, verify by exit status and never by tailed
+            output (`npm run typecheck`, `npm run lint`, `npm test`), push, open the PR with
+            `gh pr create`, then arm auto-merge with `gh pr merge --auto --squash` — research-ledger
+            docs auto-merge per the governor's merge policy. Conventional-Commit subjects,
+            lowercase-led.
+
+            HARD LIMITS: no trades; no edits to playbooks, guards, or earnings-calendar entries; no
+            flipping any `estimate` to `confirmed` without a primary source (IR:/BLS:/FED:); never
+            touch credentials, spend, or anything outward-facing; escalation ceiling is a PR. Every
+            trading-adjacent statement you write must carry the event's confirmed/estimate label
+            honestly — estimates widen caution, never trigger action.

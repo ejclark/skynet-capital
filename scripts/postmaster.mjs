@@ -63,7 +63,11 @@ export const slugify = (s) =>
  * @returns Intent[]  — `[]` means "nothing to do", which is the common and correct outcome.
  */
 export function route(ctx, deps = {}) {
-  if (ctx.eventName === "push" || ctx.inputs?.command === "scan") return routeSweep(deps);
+  // `schedule` is the daily net under the push trigger: same sweep, so a handoff or event whose
+  // push event was missed (or predates the trigger) is picked up within a day instead of never.
+  if (ctx.eventName === "push" || ctx.eventName === "schedule" || ctx.inputs?.command === "scan") {
+    return routeSweep(deps);
+  }
   if (ctx.eventName === "issues") return routeInboxLabel(ctx, deps);
   if (ctx.eventName === "workflow_dispatch" && ctx.inputs?.command === "flip-handoff") {
     return routeFlip(ctx, deps);
@@ -194,7 +198,7 @@ export function audit(deps = {}) {
       issueNumber: i.number,
       title: i.title,
       quietDays: i.quietDays,
-      body: `⏱ **Stall check** — this was dispatched **${i.quietDays} day(s)** ago and no pickup layer has claimed it (no \`executing\` flip, no ledger). The hourly Routine may be down, or every layer saw a non-ready status.\n\n${FOOTER}`,
+      body: `⏱ **Stall check** — this was dispatched **${i.quietDays} day(s)** ago and no pickup layer has claimed it (no \`executing\` flip, no ledger). The scheduled sweep may be failing, or every layer saw a non-ready status.\n\n${FOOTER}`,
     });
   }
   return intents;
@@ -239,7 +243,7 @@ function eventIssueBody(e) {
     "",
     "Run the `never-assessed` mode of [`docs/process/EVENT-RESEARCH.md`](../blob/main/docs/process/EVENT-RESEARCH.md):",
     `produce \`${e.ledger}\` from its TEMPLATE (initial research + stance + kill switches + first`,
-    "ledger row), and ship it via `/ship`. The daily event-scan Routine will take the pulse checks",
+    "ledger row), and ship it via `/ship`. The postmaster's scheduled sweep takes the pulse checks",
     "from there.",
     "",
     FOOTER,
@@ -354,7 +358,8 @@ function gatherDeps(ctx) {
       throw new Error(`${label} returned unparseable JSON:\n${out.slice(0, 400)}`);
     }
   };
-  const needsScan = ctx.eventName === "push" || ctx.inputs?.command === "scan";
+  const needsScan =
+    ctx.eventName === "push" || ctx.eventName === "schedule" || ctx.inputs?.command === "scan";
   return {
     readyHandoffs: needsScan
       ? json("handoff-scan --ready", "node", ["scripts/handoff-scan.mjs", "--ready"])

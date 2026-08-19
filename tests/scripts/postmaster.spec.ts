@@ -82,6 +82,16 @@ describe("postmaster routing", () => {
     expect(dryRun("push-already-queued.json")).toHaveLength(0);
   });
 
+  it("the scheduled run sweeps exactly like a push — the daily net under the event trigger", () => {
+    // This is what replaced the hourly claude.ai Routine (deleted 2026-08-19): the sweep logic is
+    // identical, so anything a push event missed is picked up within a day, in the repo, on the record.
+    const intents = dryRun("schedule-sweep.json") as Intent[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("open-issue");
+    expect(intents[0]?.title).toBe("[event-research] fomc-2026-12-09");
+  });
+
   it("the flip command flips a draft handoff, attributing the dispatching human", () => {
     const intents = dryRun("dispatch-flip-draft.json") as Intent[];
 

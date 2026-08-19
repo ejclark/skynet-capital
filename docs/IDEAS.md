@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Push notifications from repo-side schedules — the poke-Routine bridge
+GHA-resident schedules (the postmaster's daily run) can't ping Eric's phone; claude.ai Routines
+can. If a repo-side run ever needs to notify directly, the bridge is a poke-only Routine (no cron)
+that a workflow fires via the CCR API — the Routine's whole job is carrying the push. Not needed
+yet: the secretary digest Routine covers today's notification path. _(src: Eric · while:
+routines→repo migration review, 2026-08-19)_
+
 ### Options-mechanics event kinds — OPEX, quad witching, VIX expiration, holidays
 The `/calendar` view renders the curated feed; the mechanical dates options traders also watch are
 all rule-computable offline: monthly OPEX = 3rd Friday (holiday → prior Thursday), quad witching =
