@@ -13,7 +13,9 @@ Delete these comments and any section that doesn't apply.
 
 ## Summary
 
-<!-- The gist, in plain language. 1–3 bullets a non-technical reader can skim to know what ships. -->
+<!-- The gist, in plain language. 1–3 bullets, ONE SHORT LINE EACH — the whole top (Summary + Why)
+must skim in ~10 seconds; anything longer belongs below the fold (Eric, 2026-08-19: "this is a
+wall of text"). -->
 
 -
 

@@ -5,7 +5,8 @@ The foresight loop: an event lands in the calendar (`src/domain/market-events.ts
 the market react* → periodic reassessments hunt new information and adjust the stance — at a
 frequency that ramps with impact × time-to-event (`assessment-cadence.json`) — until the
 event passes and gets one closing outcome assessment. `scripts/event-scan.mjs` decides *when*;
-this doc defines *what* each assessment does. The daily event-scan Routine (docs/ROUTINES.md)
+this doc defines *what* each assessment does. The postmaster's event-research lane
+(`.github/workflows/postmaster.yml`, ticked by every merge to main — registered in docs/ROUTINES.md)
 executes it; a human session following this doc by hand is equally valid.
 
 **Adding an event is the trigger.** Ship it as an ordinary PR; the scanner's `never-assessed`

@@ -161,16 +161,19 @@ Not every play is a down-in/down-out defensive loop. Special teams are situation
 - **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
 - **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
 - **Release verification** — periodic prod screenshot/probe beyond the smoke test.
-- **Config audit digest** — a daily Routine fires `node scripts/config-audit.mjs` and reports any
-  non-empty finding to Eric (push notification). Deliberately a Routine, not a periodic GitHub
-  Actions workflow: the audit's most interesting check (recurring-intent clustering) reads
-  `data/duel-log.jsonl`, which is `.gitignore`d machine-local session history a GHA runner's fresh
-  checkout can never see — a workflow would silently run three of four checks forever. The
-  trade-off this accepts: a Routine spends a scheduled session run per firing (a real, ongoing
-  cost) where a workflow would be ~free GHA minutes, but a free eye that's permanently blind to its
-  richest signal isn't actually free. Still evidence-triggered and human-gated: the script writes
-  nothing, opens nothing, and this Routine cannot escalate its own findings past a notification —
-  Eric decides what (if anything) to act on, same as running it by hand.
+- **Config audit digest** — rides the secretary digest Routine (docs/ROUTINES.md): the digest's
+  session runs `node scripts/config-audit.mjs` and folds any non-empty section into the digest's
+  Needs-you tier. Deliberately claude.ai-side, not a periodic GitHub Actions workflow: the audit's
+  most interesting check (recurring-intent clustering) reads `data/duel-log.jsonl`, which is
+  `.gitignore`d machine-local session history a GHA runner's fresh checkout can never see — a
+  workflow would silently run three of four checks forever. (Honest limit: a fresh Routine session
+  without that history degrades the same way — the script returns the other checks and claims
+  nothing false — so the clustering check only bites in sessions on a long-lived checkout.) Still
+  evidence-triggered and human-gated: the script writes nothing, opens nothing, and the digest
+  cannot escalate a finding past its notification — Eric decides what (if anything) to act on,
+  same as running it by hand. It held its own daily Routine until 2026-08-19; that trigger fired
+  into checkout-less sessions and never once ran the script (docs/ROUTINES.md, Retired), so the
+  clock was folded into the digest's.
 
 Dead-code, duplication, size — those stay regular defense: same eye/drill/ratchet shape every down.
 

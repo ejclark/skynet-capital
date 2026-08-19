@@ -82,6 +82,26 @@ describe("postmaster routing", () => {
     expect(dryRun("push-already-queued.json")).toHaveLength(0);
   });
 
+  it("dueForResearch filters out events whose research PR is still open — the per-push dedupe", () => {
+    // The event lane rides EVERY push (no cron, by directive — docs/ROUTINES.md). This filter plus
+    // the mandated `research/<id>` branch name is what stops back-to-back merges double-researching.
+    const out = execFileSync(
+      "node",
+      [
+        "-e",
+        `import("./scripts/postmaster.mjs").then((m) => {
+           const due = [{ id: "cpi-2026-09-11", reason: "interval-elapsed" },
+                        { id: "fomc-2026-12-09", reason: "never-assessed" }];
+           const heads = ["research/cpi-2026-09-11", "handoff/desk-v2"];
+           console.log(JSON.stringify(m.dueForResearch(due, heads).map((e) => e.id)));
+         });`,
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+
+    expect(JSON.parse(out)).toEqual(["fomc-2026-12-09"]);
+  });
+
   it("the flip command flips a draft handoff, attributing the dispatching human", () => {
     const intents = dryRun("dispatch-flip-draft.json") as Intent[];
 

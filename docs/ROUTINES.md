@@ -1,43 +1,64 @@
 # Routine registry — every scheduled session, in one reviewable table
 
-Routines are server-side scheduled Claude sessions (the Claude Code trigger mechanism). They are
-**not** checked-in artifacts — which is exactly why this registry exists: before it, the repo's
-Routines lived only in prose (a line in HANDOFFS.md, a paragraph in COACHES.md), and nothing
-answered "what runs on a clock, and what may it do?" in one place.
+**Event-driven first — no crons** (Eric, 2026-08-19: *"cron jobs are generally terrible … focus on
+event driven architecture"*, and: *"we can do so much more than basic bitch cron jobs"*). A polling
+clock is the last resort, argued in its row, never the default: the tick is a repository event, and
+the north star for time-indexed work is wake-ups derived from the domain calendar itself
+(issue #431).
+
+Automation runs on two substrates, and the default flipped on 2026-08-19:
+
+1. **Repo-resident, event-driven (the default).** The postmaster workflow, triggered by pushes,
+   issue labels, and dispatch buttons. Trigger, prompt, and permissions are version-controlled and
+   PR-reviewed, and the substrate is physically incapable of the failure that killed the first
+   generation of Routines (firing into a session with no repo checkout — see *Retired*, below):
+   checkout is an explicit step. This repo is public, so runs cost nothing in GHA minutes.
+2. **claude.ai Routines (the exception).** Server-side scheduled Claude sessions, account-level,
+   invisible to the repo. Reserved for what a workflow genuinely cannot do: deliverables that live
+   on the claude.ai side — a push notification to Eric's phone, a conversational session he can
+   open and steer from anywhere. A Routine must be **wired to this repository** (repo source
+   configured on the trigger) or it is worthless by construction — that is the lesson the first
+   generation taught, at a cost of ~130 empty firings.
 
 **House rules.**
 
-- **No Routine exists that is not in this table.** Adding the row is part of arming; removing a
-  Routine removes its row in the same change.
-- **Arming is Eric's, always.** A Routine proposal ships as a `proposed` row (prompt and limits
-  fully written); Eric creates the trigger and the row flips to `armed` with his date. Scheduling
-  is an autonomy rung that is earned, not defaulted (docs/DELEGATION.md, trust ladder).
-- **Ceiling is notification + PR.** No Routine trades, touches credentials, edits its own or any
-  other Routine, or escalates its findings past a notification and an ordinary reviewable PR.
-- **No-op must be free.** Every Routine's first act is a cheap scan whose empty result ends the
-  session immediately — the scan is the contract, the Routine is just the clock.
+- **No scheduled automation exists that is not in this table** — workflow schedules and claude.ai
+  Routines alike. Adding the row is part of arming; retiring one moves its row to *Retired* in the
+  same change.
+- **Arming is Eric's, always.** A repo-resident schedule arms when he merges the PR that adds it
+  (workflow files are his carve-out — they never auto-merge); a claude.ai Routine arms when he
+  creates the trigger. Scheduling is an autonomy rung that is earned, not defaulted
+  (docs/DELEGATION.md, trust ladder).
+- **Ceiling is notification + PR.** No scheduled session trades, touches credentials, edits its own
+  or any other schedule, or escalates its findings past a notification and an ordinary reviewable PR.
+- **No-op must be free.** Every schedule's first act is a cheap scan whose empty result ends the
+  run immediately — the scan is the contract, the schedule is just the clock.
 
-| Routine | Schedule (UTC) | Fires into | Contract | May do | May NOT do | Status | Kill switch |
-|---|---|---|---|---|---|---|---|
-| Handoff build | hourly | fresh session | `node scripts/handoff-scan.mjs --ready` → `[]` = stop; else build per docs/HANDOFFS.md | flip ready→executing, build, open PRs via /ship | touch a non-`ready` handoff; widen scope past the bundle | **armed** (see HANDOFFS.md, layer 2) | disable the trigger; handoffs still picked up by the detect workflow + @claude layer |
-| Config audit digest | daily | fresh session | `node scripts/config-audit.mjs` → empty = stop; else push-notify Eric | notify | open PRs, "fix" findings, escalate past notification | **armed** (see COACHES.md, special teams) | disable the trigger; audit still runnable by hand |
-| Event scan | daily 11:00 (`0 11 * * *`, ≈06:00/07:00 ET across DST) | fresh session | `node scripts/event-scan.mjs --due` → `[]` = reply "no events due", stop; else per event follow docs/process/EVENT-RESEARCH.md by `reason` | write/append `docs/research/events/<id>.md`; propose `estimate` events found by the adjacency sweep; one PR per event via /ship | trade; edit playbooks, guards, or earnings-calendar entries; flip any `estimate`→`confirmed` without a primary source (IR:/BLS:/FED:); create or modify Routines | **armed** 2026-08-15 (Eric — "execute to enable"; `trig_01RZ8gs2qC1Fk78v1qCjE8Qb`, first fire 2026-08-16 ~11:03 UTC) | disable the trigger; the calendar keeps working via the detect workflow + manual `npm run event:scan` |
-| Secretary digest | daily 12:00 (`0 12 * * *`) | fresh session | `node scripts/digest-scan.mjs --due` → `due:false` = reply "no digest due", stop; else follow `.claude/skills/secretary` | write `docs/digests/<date>.md` from its TEMPLATE, ship via /ship, push-notify the Needs-you count + top headline | act on findings; deploy verification teams beyond the skill's stakes rules; rewrite a shipped digest; create or modify Routines | **armed** 2026-08-15 (Eric — "execute to enable"; `trig_01KaMC2uR3cFW5XTUL6rzPuS`, first fire 2026-08-16 ~12:07 UTC, push notify on) | disable the trigger; digests remain manual via `/secretary` |
+## Active
 
-## Event-scan Routine — the verbatim prompt (for arming)
+| Automation | Substrate · tick | Contract | May do | May NOT do | Kill switch |
+|---|---|---|---|---|---|
+| **Postmaster** | GHA `postmaster.yml` · **every push to main** (+ issue labels, dispatch buttons — no cron) | sweep (receipt issues for ready handoffs + never-assessed events, deduped) → stall audit → claim-and-build any ready handoff → event-research lane: due events filtered against open `research/<id>` PRs (`dueForResearch`, specced) → one PR per event per docs/process/EVENT-RESEARCH.md | open receipt issues; build claimed handoffs (PRs held for Eric); write/append `docs/research/events/<id>.md`; propose `estimate` events from the adjacency sweep; auto-merge research-ledger PRs | trade; edit playbooks, guards, or earnings-calendar entries; flip any `estimate`→`confirmed` without a primary source (IR:/BLS:/FED:); flip a handoff to `ready`; touch credentials/spend | disable the workflow in Actions, or revert the PR that armed it; everything stays runnable by hand (`workflow_dispatch` → `scan`, `npm run event:scan`) |
+| **Secretary digest** | claude.ai Routine · daily 12:00 (`trig_01KaMC2uR3cFW5XTUL6rzPuS`, repo-wired 2026-08-19) | `node scripts/digest-scan.mjs --due` → `due:false` = reply "no digest due", stop; else follow `.claude/skills/secretary`; **also runs `node scripts/config-audit.mjs`** and folds any non-empty section into the digest's Needs-you tier (see docs/COACHES.md, special teams) | write `docs/digests/<date>.md` from its TEMPLATE, ship via /ship, push-notify the Needs-you count + top headline | act on findings; deploy verification teams beyond the skill's stakes rules; rewrite a shipped digest; create or modify schedules | disable the trigger; digests remain manual via `/secretary`, the audit via `node scripts/config-audit.mjs` |
 
-> You are in the skynet-capital repo. Run `node scripts/event-scan.mjs --due`. If the output is
-> `[]`, reply "no events due" and STOP — do not investigate anything else. Otherwise, for each due
-> event, follow the matching mode in `docs/process/EVENT-RESEARCH.md`: `never-assessed` → initial
-> research producing `docs/research/events/<id>.md` from its TEMPLATE; `interval-elapsed` → pulse
-> check appending ONE ledger row, including the mandatory adjacency sweep (peer prints, CPI/FOMC
-> surprises, VIX regime moves, geopolitics touching the event's symbols) — any dated adjacent
-> event you discover is PROPOSED as an `estimate` entry in `src/domain/market-events.ts` in the
-> same PR, never `confirmed`; `event-passed-unscored` → closing outcome assessment, scoring
-> registered forward tests from re-run instrument data (bust the instrument cache first: `rm -rf
-> node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
-> Ship one PR per event via /ship. HARD LIMITS: no trades; no edits to playbooks, guards, or
-> earnings-calendar entries; no flipping any `estimate` to `confirmed` without a primary source
-> (IR:/BLS:/FED:); no creating or modifying Routines; escalation ceiling is notification + PR.
-> Every trading-adjacent statement you write must carry the event's confirmed/estimate label
-> honestly — estimates widen caution, never trigger action.
+**Known residual, accepted on the record:** a completely quiet repo checks nothing — time-based
+due-ness (a pulse check whose interval lapses, an event date passing) waits for the next merge or a
+manual `scan` dispatch. The real fix is not a cron but calendar-derived one-shots — due times are
+deterministic in-repo data, so the calendar itself can emit the wake-ups (issue #431; needs one
+Eric-gated credential). The digest's daily clock is the one surviving exception: its deliverable is
+the push notification, which only a claude.ai Routine can send, and it is Eric's own arming.
+
+## Retired (2026-08-19 — the no-checkout generation)
+
+The review that retired these found that every fresh-session Routine had been firing into cloud
+sessions with **no repository checkout** — each one's first `cd`/scan failed, so they produced
+nothing, silently, while looking armed. Push notifications made them look alive; the repo's own
+git history proved otherwise (zero digests in 3 due fires, zero event ledger rows at any fire
+time, ~115 empty hourly fires). Their jobs moved into the repo, where the failure mode cannot exist.
+
+| Routine | Fate |
+|---|---|
+| Handoff build (hourly, `trig_01D95znC5tuGNCxDawHqyaaj`) | deleted — its job was already the postmaster's push trigger (docs/HANDOFFS.md, "one hop, no polling"); the daily schedule is now the net under it. The 2026-08-17 lesson (a poller masking a severed chain while producing nothing) stands as the epitaph. |
+| Event scan (daily 11:00, `trig_01RZ8gs2qC1Fk78v1qCjE8Qb`) | deleted — replaced by the postmaster's `build-events` lane: same EVENT-RESEARCH protocol, now ticked by merges instead of a clock, prompt version-controlled in `postmaster.yml`. |
+| Config audit digest (daily 14:00, `trig_01GrqFFLqYSCbm9BZWKWaKjF`) | deleted — the audit now rides the secretary digest Routine (still claude.ai-side, preserving the duel-log rationale in docs/COACHES.md) instead of holding its own clock. |
+| Design handoff poke (poke-only, `trig_017zC6G25nbJNcCzFMFz957F`) | deleted — never fired once, was never registered here (a house-rule violation this review caught), and the handoff inbox (zip on a labeled issue → postmaster import) superseded it on 2026-08-16. |
