@@ -26,6 +26,7 @@ import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import type { Participant } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
@@ -116,6 +117,14 @@ async function main(): Promise<void> {
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
   });
 
+  // Day-2 account management (/account): profile edits + removal for self-service accounts.
+  const accounts = createAccountService({
+    hub,
+    store,
+    clientFactory: dataSource.clientFactory,
+    stopStream: (id) => dataSource.stopParticipantStream(id),
+  });
+
   // The guest list lives on the mounted volume, encrypted at rest, and is unioned with the env
   // allowlist inside resolveAuth. Built here so the /invite route and the authenticator read the
   // exact same store — two sources of truth for who may sign in is the bug worth designing out.
@@ -168,6 +177,19 @@ async function main(): Promise<void> {
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
     rotateCredentials: (input) => service.rotateCredentials(input),
+    accountAdmin: {
+      updateProfile: accounts.updateProfile,
+      removeAccount: accounts.removeAccount,
+      profileFor: (id) => {
+        const stored = store.load().find((p) => p.id === id);
+        return stored
+          ? {
+              displayName: stored.displayName,
+              ...(stored.timezone ? { timezone: stored.timezone } : {}),
+            }
+          : undefined;
+      },
+    },
     ...(auth
       ? { invite: { store: allowlist, isOwner: (email: string) => owners.has(email) } }
       : {}),

@@ -89,6 +89,11 @@ function renderDrawer(nav: NavContext): string {
       }</span></a>`,
     );
   }
+  if (nav.currentId) {
+    foot.push(
+      `<a class="dnav-link dnav-muted" href="/account"><span class="dnav-ico" aria-hidden="true">⚙</span><span class="dnav-label">Manage account</span></a>`,
+    );
+  }
   foot.push(
     `<a class="dnav-link dnav-muted" href="${FEEDBACK_URL}"><span class="dnav-ico" aria-hidden="true">✎</span><span class="dnav-label">Feedback</span></a>`,
   );

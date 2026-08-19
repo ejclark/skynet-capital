@@ -16,6 +16,12 @@ export interface ParticipantStore {
   add(participant: StoredParticipant): void;
   has(id: string): boolean;
   /**
+   * Remove a self-service account. Returns false when the id isn't in the store (env-declared
+   * roster accounts never are — they can't be removed at runtime, only unset from the host).
+   * Same shape as `AllowlistStore.remove`: absent is a false, never a throw.
+   */
+  remove(id: string): boolean;
+  /**
    * False when the store has no encryption key and therefore cannot accept credentials.
    * Callers check this to refuse onboarding *before* asking anyone for a key, rather than
    * letting `add()` throw after the fact.
@@ -69,9 +75,30 @@ export class FileParticipantStore implements ParticipantStore {
         "refusing to store credentials unencrypted — set SKYNET_STORE_SECRET to enable onboarding",
       );
     }
-    const next = [...this.load().filter((p) => p.id !== participant.id), participant];
+    this.write([...this.load().filter((p) => p.id !== participant.id), participant]);
+  }
+
+  remove(id: string): boolean {
+    // Fail closed exactly like add(): a removal rewrites the whole blob, and rewriting the
+    // REMAINING members' credentials without a key would mean writing them in the clear.
+    if (!this.key) {
+      throw new Error(
+        "refusing to rewrite the credential store unencrypted — set SKYNET_STORE_SECRET",
+      );
+    }
+    const current = this.load();
+    const next = current.filter((p) => p.id !== id);
+    if (next.length === current.length) {
+      return false;
+    }
+    this.write(next);
+    return true;
+  }
+
+  private write(participants: readonly StoredParticipant[]): void {
+    if (!this.key) return;
     mkdirSync(dirname(this.path), { recursive: true });
-    writeFileSync(this.path, JSON.stringify(seal(JSON.stringify(next), this.key)));
+    writeFileSync(this.path, JSON.stringify(seal(JSON.stringify(participants), this.key)));
   }
 }
 

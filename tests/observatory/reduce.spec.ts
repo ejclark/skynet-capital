@@ -73,6 +73,62 @@ describe("reduceObservatory", () => {
     });
   });
 
+  describe("participant_removed", () => {
+    it("drops the removed row and leaves the others in place", () => {
+      const state = reduceObservatory(baseState(), {
+        type: "participant_removed",
+        participantId: "eric",
+        at: "2026-08-19T16:00:00.000Z",
+      });
+      expect(state.participants.map((p) => p.id)).toEqual(["news-fader"]);
+      expect(state.generatedAt).toBe("2026-08-19T16:00:00.000Z");
+    });
+
+    it("is a no-op (same identity) when the id isn't on the board", () => {
+      const start = baseState();
+      expect(
+        reduceObservatory(start, {
+          type: "participant_removed",
+          participantId: "nobody",
+          at: "later",
+        }),
+      ).toBe(start);
+    });
+
+    it("clears a collision when one of its members leaves", () => {
+      const colliding: DashboardData = {
+        generatedAt: "t0",
+        participants: [
+          {
+            id: "a",
+            displayName: "A",
+            kind: "human",
+            cash: 0,
+            equity: 0,
+            positions: [],
+            accountId: "acct-1",
+          },
+          {
+            id: "b",
+            displayName: "B",
+            kind: "human",
+            cash: 0,
+            equity: 0,
+            positions: [],
+            accountId: "acct-1",
+          },
+        ],
+        collisions: [{ accountId: "acct-1", ids: ["a", "b"] }],
+      };
+      const state = reduceObservatory(colliding, {
+        type: "participant_removed",
+        participantId: "b",
+        at: "t1",
+      });
+      expect(state.collisions).toEqual([]);
+    });
+  });
+
   describe("price", () => {
     it("re-marks a held position and recomputes equity", () => {
       const state = fold([

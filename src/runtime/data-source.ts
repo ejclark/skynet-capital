@@ -52,6 +52,12 @@ export interface DataSource {
     sink: EventSink,
     onStatus?: (channel: string, status: string) => void,
   ): void;
+  /**
+   * Close one account's fill stream — used when a participant is removed at runtime, so a
+   * departed member's credentials stop being used the moment they leave. Live closes the
+   * tracked socket; offline is a no-op (replay owns its own lifecycle).
+   */
+  stopParticipantStream(participantId: string): void;
 }
 
 export function resolveDataSource(env: Env): DataSource {
@@ -75,19 +81,31 @@ function liveDataSource(env: Env): DataSource {
       }),
     );
 
+  // One tracked socket per participant, so a rotation replaces its stream (instead of leaking
+  // the old socket alongside the new one) and a removal can actually close it.
+  const fillStreams = new Map<string, AlpacaTradeUpdatesStream>();
+
+  const stopParticipantStream: DataSource["stopParticipantStream"] = (participantId) => {
+    fillStreams.get(participantId)?.stop();
+    fillStreams.delete(participantId);
+  };
+
   const startParticipantStream: DataSource["startParticipantStream"] = (
     participant,
     sink,
     onStatus,
   ) => {
-    new AlpacaTradeUpdatesStream({
+    stopParticipantStream(participant.id);
+    const stream = new AlpacaTradeUpdatesStream({
       participantId: participant.id,
       apiKey: participant.credentials.apiKey,
       apiSecret: participant.credentials.apiSecret,
       baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
       onEvent: sink,
       onStatus: (status) => onStatus?.("trade-updates", status),
-    }).start();
+    });
+    fillStreams.set(participant.id, stream);
+    stream.start();
   };
 
   return {
@@ -95,6 +113,7 @@ function liveDataSource(env: Env): DataSource {
     clientFactory,
     loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
     startParticipantStream,
+    stopParticipantStream,
     startStreams: ({ participants, heldSymbols, sink, onStatus }) => {
       const dataCreds = participants[0]?.credentials;
       if (heldSymbols.length > 0 && dataCreds) {
@@ -162,6 +181,9 @@ function offlineDataSource(env: Env): DataSource {
     loadParticipants: () => specs.map(toParticipant),
     // Offline replay emits every account's fills already; nothing to open per-account.
     startParticipantStream: () => {
+      /* offline source has no live stream */
+    },
+    stopParticipantStream: () => {
       /* offline source has no live stream */
     },
     startStreams: ({ sink, onStatus }) => {
