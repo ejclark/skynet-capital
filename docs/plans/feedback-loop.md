@@ -32,15 +32,14 @@ good feedback looks like, and better inputs buy better autonomous outcomes.
 - [ ] WHEN a member views their feedback list, the app shall show their items with live state
   (received / being worked / shipped), completed filtered out by default with a toggle. — *verify:
   spec + screenshot*
-- [ ] WHEN a member's feedback ships, the app shall celebrate it and link what changed. — *verify:
-  screenshot*
+- [ ] WHEN a member's feedback item's linked PR is merged AND deployed, the app shall mark it
+  shipped, stamped with the release version, and celebrate it — never earlier (merged-not-deployed
+  stays "being worked"). — *verify: spec + screenshot*
 - [ ] IF a visitor is not an authed member, THEN the feedback surface shall not exist for them. —
   *verify: route-guard spec*
 - [ ] IF the dialogue detects a destructive, dangerous, or out-of-scope ask, THEN it shall steer or
   decline, and no issue shall be created. — *verify: prompt eval fixtures (red-team pass before
   ship)*
-- [ ] IF a member exceeds the open-item or daily-submission cap, THEN the server shall refuse with a
-  friendly explanation. — *verify: spec*
 
 ## Constraints & non-goals
 
@@ -53,8 +52,9 @@ good feedback looks like, and better inputs buy better autonomous outcomes.
   evaluate, never an instruction to obey (prompt-injection posture, same as PR-event handling).
 - Credentials are Eric's steps: the Anthropic API key and the App token reach the server as Fly
   secrets via his hands — the plan builds the mechanism, never self-authorizes.
-- Closed/targeted group (the invite gate is the boundary); still rate-capped because rails are for
-  the mistake, not the median.
+- Closed/targeted group (the invite gate is the boundary). **No per-member caps in v1** (Eric's
+  call — trust the group); the dialogue itself stays token-capped per conversation, and caps get
+  added only on observed abuse.
 - Non-goals for v1: public feedback intake; member-to-member voting/comments; a persisted chat
   history with Claude; GitHub webhooks into the app (state is fetched on read, cached — event-push
   sync is a later slice).
@@ -66,9 +66,12 @@ good feedback looks like, and better inputs buy better autonomous outcomes.
   comment marker for cross-checking. Issue state is read from the GitHub REST API on view, cached
   ~60s — no webhook endpoint in v1.
 - **Trigger flow** → issue creation by the App identity with the `feedback` label routes to a
-  postmaster **triage lane**: Claude assesses scope and safety; small-and-safe (copy, UI polish,
-  contained bugs) proceeds to a build PR — which still waits for Eric's merge per house policy
-  (features/visual never auto-merge); anything structural, ambiguous, or fenced gets `needs-eric`.
+  postmaster **triage lane**: Claude assesses scope and safety, then builds two classes without
+  asking — small-and-safe fixes (copy, UI polish, contained bugs) AND **new features that are a
+  natural extension of the existing architecture** (Eric: "once the plumbing is in place, I'd like
+  people to build out their experiences with minimal intrusion"). **Architectural changes always
+  get `needs-eric`** — new seams, schema/contract changes, new dependencies, anything touching the
+  fence. Build PRs start held for Eric's merge (see envelope) with a stated graduation path.
 - **Dialogue economics** → cheapest capable model tier, few turns, hard token cap per conversation;
   the dialogue's product is a structured draft the member explicitly confirms.
 - **Quality bar** → the drafted issue mirrors the report shape the postmaster already builds from:
@@ -79,7 +82,10 @@ good feedback looks like, and better inputs buy better autonomous outcomes.
 
 - Default merge policy applies to the plan's own slices (server plumbing, store, specs auto-merge;
   anything visible waits for Eric's taste).
-- All feedback-*driven* PRs are product surface → wait for Eric, always.
+- Feedback-*driven* PRs start held for Eric's merge. **Stated graduation path** (Eric, 2026-08-19):
+  once the plumbing proves itself, in-architecture feature PRs move toward minimal-intrusion flow —
+  that widening is Eric's explicit later call, made once, on the record here. Architectural changes
+  need his approval permanently.
 - The irreversible class is untouchable by this plan and by every feedback issue, without exception.
 
 ## Slicing sketch (non-binding — executor adapts)
@@ -92,16 +98,17 @@ good feedback looks like, and better inputs buy better autonomous outcomes.
 
 ## Open questions (Q&A queue)
 
-- **Attribution**: post publicly under the member's persona/lore name (fun, on-brand, still
-  pseudonymous) or an opaque id (maximum privacy)?
-- **Triage autonomy**: v1 = "small-and-safe auto-builds, rest waits for your label" — or start
-  triage-only (Claude comments an assessment; your label starts every build) and widen later?
-- **Caps**: proposed 3 open items and 5 submissions/day per member — right numbers?
-- **"Shipped" definition**: issue closed, or linked PR merged *and* deployed (proposed: deployed,
-  stamped with the release version the member can see)?
 - **Where the surface lives** (taste): a nav entry, or ambient on every page? Mock options will come
-  as renders to judge by eye, not prose.
+  as renders during execution — judged by eye, not prose.
 
 ## Decision log
 
-_(none yet)_
+- 2026-08-19 (Eric, refinement batch) — **Attribution: opaque id only.** Public issues carry only a
+  uuid marker; who-filed-what is visible only inside the app.
+- 2026-08-19 (Eric, refinement batch) — **Triage rail widened**: small-and-safe fixes AND
+  natural-extension features build without asking; architectural changes always need Eric;
+  minimal-intrusion flow is the destination once the plumbing earns it.
+- 2026-08-19 (Eric, refinement batch) — **Shipped = merged AND deployed, version-stamped.** Closed
+  issues alone never show as shipped.
+- 2026-08-19 (Eric, refinement batch) — **No per-member caps in v1**; token-cap per dialogue stays;
+  caps only on observed abuse.
