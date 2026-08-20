@@ -137,11 +137,15 @@ then paste them below — we read them <b>only</b> to show your balance and trad
     <div class="sd-body">In the Alpaca dashboard, use the toggle near the top-left to switch from <b>Live</b> to <b>Paper</b>. This is important — we only ever use paper keys.</div>
   </details>
   <details class="step-d">
-    <summary><span class="step-n">3</span> Generate your paper API keys <span class="chev">›</span></summary>
+    <summary><span class="step-n">3</span> Set your paper balance to $1,000,000 <span class="chev">›</span></summary>
+    <div class="sd-body">Alpaca paper accounts default to $100,000. Everyone in the league starts from the same capital, so use the paper dashboard's reset/settings option to set your balance to exactly <b>$1,000,000 USD</b> before generating your keys.</div>
+  </details>
+  <details class="step-d">
+    <summary><span class="step-n">4</span> Generate your paper API keys <span class="chev">›</span></summary>
     <div class="sd-body">On the paper dashboard's right side, find <b>API Keys</b> and click <b>Generate</b>. Copy the <b>Key ID</b> and <b>Secret Key</b> — the secret shows only once, so grab it now.</div>
   </details>
   <details class="step-d">
-    <summary><span class="step-n">4</span> Paste them below <span class="chev">›</span></summary>
+    <summary><span class="step-n">5</span> Paste them below <span class="chev">›</span></summary>
     <div class="sd-body">Drop the Key ID and Secret into the form and give yourself a display name. That's it — you'll land on the board.</div>
   </details>
 </div>
@@ -165,7 +169,7 @@ then paste them below — we read them <b>only</b> to show your balance and trad
   </label>
   <button type="submit">Add my account</button>
 </form>
-<p class="note">Paper keys only · alpaca.markets → Paper Trading → API Keys</p>
+<p class="note">Paper keys only · balance set to $1,000,000 USD · alpaca.markets → Paper Trading → API Keys</p>
 <p class="note">Already on the board and just regenerated your key? <a href="/rotate${key ? `?key=${encodeURIComponent(key)}` : ""}">Rotate your credentials</a> instead — adding again will be refused as a duplicate.</p>
 <script>${CLASSPICK_JS}</script>`,
   );
