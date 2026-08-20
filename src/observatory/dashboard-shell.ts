@@ -19,7 +19,8 @@ export type NavView =
   | "research"
   | "you"
   | "add"
-  | "learn";
+  | "learn"
+  | "feedback";
 
 export interface NavContext {
   readonly active: NavView;
@@ -51,6 +52,7 @@ const NAV_ICON: Record<string, string> = {
   you: "◉",
   add: "＋",
   learn: "◈",
+  feedback: "✎",
 };
 
 function drawerLink(href: string, label: string, view: NavView, active: boolean): string {
@@ -99,9 +101,7 @@ function renderDrawer(nav: NavContext): string {
       `<a class="dnav-link dnav-muted" href="/account"><span class="dnav-ico" aria-hidden="true">⚙</span><span class="dnav-label">Manage account</span></a>`,
     );
   }
-  foot.push(
-    `<a class="dnav-link dnav-muted" href="${FEEDBACK_URL}"><span class="dnav-ico" aria-hidden="true">✎</span><span class="dnav-label">Feedback</span></a>`,
-  );
+  foot.push(drawerLink(FEEDBACK_URL, "Feedback", "feedback", nav.active === "feedback"));
   if (nav.authed) {
     foot.push(
       `<a class="dnav-link dnav-muted" href="/logout"><span class="dnav-ico" aria-hidden="true">⏻</span><span class="dnav-label">Sign out</span></a>`,
