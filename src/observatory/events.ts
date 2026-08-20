@@ -29,6 +29,16 @@ export type ObservatoryEvent =
       readonly at: string;
     }
   | {
+      /**
+       * A self-service account left the board at runtime — drop its row. Carries only the id:
+       * by the time this fires the stored record is already gone, and there is nothing else
+       * a reducer needs to forget a participant.
+       */
+      readonly type: "participant_removed";
+      readonly participantId: string;
+      readonly at: string;
+    }
+  | {
       readonly type: "fill";
       readonly participantId: string;
       readonly symbol: string;

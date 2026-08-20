@@ -336,12 +336,23 @@ function delegateCohortsBody(data: DashboardData, options: DashboardViewOptions 
 
 export { delegateCohortsBody as renderCohortsBody };
 
+/** Milestones that are literally a trade map straight to the ticket, pre-set to the play. */
+const MILESTONE_TICKET: Record<string, string> = {
+  "buy-first-stock": "/trade?play=101",
+  "first-cash-covered-put": "/trade?play=201",
+  "first-covered-call": "/trade?play=202",
+  "first-long-put": "/trade?play=301",
+  "first-long-call": "/trade?play=302",
+};
+
 /** One milestone row — a self-marked achievement worth points. */
 function milestoneRow(m: Milestone): string {
+  const ticket = MILESTONE_TICKET[m.id];
   return `<label class="ms" data-ms="${m.id}">
         <input type="checkbox" class="ms-check" data-ms-check="${m.id}">
         <span class="ms-mark" aria-hidden="true">✓</span>
         <span class="ms-body"><span class="ms-title">${escapeHtml(m.title)}</span><span class="ms-detail">${escapeHtml(m.detail)}</span></span>
+        ${ticket ? `<a class="ms-go" href="${ticket}">open the ticket →</a>` : ""}
         <span class="ms-pts">+${m.points}</span>
       </label>`;
 }

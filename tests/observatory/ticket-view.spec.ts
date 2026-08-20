@@ -1,0 +1,123 @@
+import { defaultTradeType, tradeTypeByCode } from "../../src/domain/trade-types.js";
+import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+import {
+  renderTicketBody,
+  type TicketState,
+  ticketHref,
+} from "../../src/observatory/ticket-view.js";
+
+const ann: ParticipantSnapshot = {
+  id: "ann",
+  displayName: "Ann",
+  kind: "human",
+  cash: 100_000,
+  equity: 100_000,
+  positions: [],
+  activity: [],
+};
+
+const state = (over: Partial<TicketState> = {}): TicketState => ({
+  mode: "guided",
+  play: defaultTradeType(),
+  qty: 1,
+  orderType: "limit",
+  view: "chart",
+  ...over,
+});
+
+const cspState = (over: Partial<TicketState> = {}): TicketState =>
+  state({
+    play: tradeTypeByCode("201") as never,
+    symbol: "MSFT",
+    expiration: "2026-09-18",
+    strike: 420,
+    ...over,
+  });
+
+const chain = [
+  { occSymbol: "MSFT260918P00410000", strike: 410, closePrice: 7.2, openInterest: 120 },
+  {
+    occSymbol: "MSFT260918P00420000",
+    strike: 420,
+    bid: 10.5,
+    ask: 10.9,
+    delta: -0.42,
+    openInterest: 812,
+  },
+  { occSymbol: "MSFT260918P00430000", strike: 430, closePrice: 14.1 },
+];
+
+describe("the trade ticket view", () => {
+  it("lists every trade type risk-ordered, with 300-level rows locked by default", () => {
+    const html = renderTicketBody({ state: state(), snapshot: ann, tradingEnabled: true });
+    for (const code of ["101", "102", "201", "202", "301", "302"]) {
+      expect(html).toContain(`<span class="tk-code">${code}</span>`);
+    }
+    expect(html.match(/data-unlock-course="wheel-basics"/g)).toHaveLength(2);
+    expect(html).toContain("level up to unlock");
+    expect(html).toContain("skynet.academy.done"); // unlocks ride the academy's own progress
+  });
+
+  it("is honest about a session with no linked account, and about trading being off", () => {
+    const unlinked = renderTicketBody({ state: state(), tradingEnabled: true });
+    expect(unlinked).toContain("No linked account");
+    const off = renderTicketBody({ state: state(), snapshot: ann, tradingEnabled: false });
+    expect(off).toContain("SKYNET_DESK_TRADING=on");
+  });
+
+  it("stock plays render the share ticket that POSTs to the review step", () => {
+    const html = renderTicketBody({ state: state(), snapshot: ann, tradingEnabled: true });
+    expect(html).toContain('name="action" value="buy"');
+    expect(html).toContain('name="quantity"');
+  });
+
+  it("option plays render the chain with the chosen strike selected and honest numbers", () => {
+    const html = renderTicketBody({
+      state: cspState(),
+      snapshot: ann,
+      tradingEnabled: true,
+      expirations: ["2026-09-18", "2026-10-16"],
+      chain,
+      spot: 428.6,
+    });
+    expect(html).toContain("Premium by strike");
+    expect(html).toContain("2026-10-16"); // the other expiration chip is a link
+    expect(html).toContain("cash-secured"); // the guided explainer
+    expect(html).toContain("Max loss");
+    expect(html).toContain("Review order");
+    expect(html).toContain("review always comes first");
+  });
+
+  it("the table view lists bid/ask/delta/open interest with a gloss", () => {
+    const html = renderTicketBody({
+      state: cspState({ view: "table" }),
+      snapshot: ann,
+      tradingEnabled: true,
+      chain,
+      expirations: ["2026-09-18"],
+    });
+    expect(html).toContain("Δ delta");
+    expect(html).toContain("◂ yours");
+    expect(html).toContain("812");
+  });
+
+  it("renders the chain note instead of a dead chain when data can't load", () => {
+    const html = renderTicketBody({
+      state: cspState(),
+      snapshot: ann,
+      tradingEnabled: true,
+      chainNote: "Couldn't load the option chain right now — offline.",
+    });
+    expect(html).toContain("Couldn't load the option chain");
+  });
+});
+
+describe("ticketHref", () => {
+  it("round-trips state into shareable URLs, omitting defaults", () => {
+    expect(ticketHref(state())).toBe("/trade?play=101");
+    expect(ticketHref(cspState({ qty: 2 }))).toBe(
+      "/trade?play=201&symbol=MSFT&exp=2026-09-18&strike=420&qty=2",
+    );
+    expect(ticketHref(cspState(), { strike: "430", limit: undefined })).toContain("strike=430");
+  });
+});

@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { renderAnalysisBody } from "../observatory/analysis-view.js";
 import { renderCalendarBody } from "../observatory/calendar-view.js";
@@ -24,13 +25,15 @@ import {
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
 import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
-import { addShell, PAGE_STYLE, readBody, shellDocument } from "./page-shell.js";
+import type { SubmitOptionTrade } from "./option-trade-service.js";
+import { PAGE_STYLE, readBody, shellDocument } from "./page-shell.js";
 import type {
   AddParticipantInput,
   AddResult,
@@ -43,6 +46,7 @@ import { handleAdd, handleRotate } from "./self-service-forms.js";
 import { sseFrame } from "./sse.js";
 import { handleTrade } from "./trade-routes.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
+import { welcomeHtml } from "./welcome-page.js";
 
 export interface DashboardServerConfig {
   readonly hub: ObservatoryHub;
@@ -68,6 +72,11 @@ export interface DashboardServerConfig {
    * Omit to disable (e.g. offline mode).
    */
   readonly rotateCredentials?: (input: RotateCredentialsInput) => Promise<RotateResult>;
+  /**
+   * Day-2 account management (`/account`): profile edits and removal. Omit to disable
+   * (offline mode, or no store secret). Authorization rules live in account-service.ts.
+   */
+  readonly accountAdmin?: AccountAdmin;
   /**
    * `GET/POST /invite` — the owner's guest list. Omit to disable (offline mode, or no auth).
    * Owners are the env-configured identities; everyone they invite lands in the volume-backed
@@ -106,6 +115,10 @@ export interface DashboardServerConfig {
   readonly tradingEnabled?: boolean;
   /** The execution seam (`trade-service.ts`). Absent = no order path is wired at all. */
   readonly submitTrade?: SubmitDeskTrade;
+  /** The options execution seam (`option-trade-service.ts`), behind the same switch. */
+  readonly submitOptionTrade?: SubmitOptionTrade;
+  /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
+  readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
 }
 
 /**
@@ -303,7 +316,7 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path === "/trade") {
-    await serveTradeRoute(req, res, config, session, navFor);
+    await serveTradeRoute(req, res, url, config, session, navFor);
     return;
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
@@ -366,24 +379,27 @@ function serveCalendarRoute(
 }
 
 /**
- * `POST /trade` — the desk's order path. Identity comes from the session and nowhere else: with no
- * authenticator configured no id resolves, and `trade-routes.ts` refuses rather than guessing which
- * account a request belongs to.
+ * `/trade` — GET is the ticket view, POST the order path. Identity comes from the session and
+ * nowhere else: with no authenticator configured no id resolves, and `trade-routes.ts` refuses
+ * rather than guessing which account a request belongs to.
  */
 async function serveTradeRoute(
   req: IncomingMessage,
   res: ServerResponse,
+  url: string,
   config: DashboardServerConfig,
   session: Session | undefined,
   navFor: (active: NavView) => NavContext,
 ): Promise<void> {
   const participants = config.hub.getState().participants;
-  await handleTrade(req, res, {
+  await handleTrade(req, res, url, {
     snapshotFor: (id) => participants.find((p) => p.id === id),
     requesterId: config.auth ? resolveCurrentId(session, participants) : undefined,
     tradingEnabled: Boolean(config.tradingEnabled),
     ...(config.submitTrade ? { submitTrade: config.submitTrade } : {}),
-    nav: navFor("you"),
+    ...(config.submitOptionTrade ? { submitOptionTrade: config.submitOptionTrade } : {}),
+    ...(config.optionsClientFor ? { optionsClientFor: config.optionsClientFor } : {}),
+    nav: navFor("trade"),
     document: shellDocument,
   });
 }
@@ -405,6 +421,19 @@ async function trySelfServiceRoute(
     // Identity comes from the signed session and nowhere else — there is no id in the URL to
     // spoof, and handleInvite re-checks owner status itself rather than trusting this call site.
     await handleInvite(req, res, req.method ?? "GET", session?.email, config.invite);
+    return true;
+  }
+  if ((path === "/account" || path === "/account/remove") && config.accountAdmin) {
+    // Same identity resolution /rotate and /trade use; account-service enforces the rules.
+    await handleAccountRoute(req, res, path, req.method ?? "GET", {
+      admin: config.accountAdmin,
+      requesterId: config.auth
+        ? resolveCurrentId(session, config.hub.getState().participants)
+        : undefined,
+      session,
+      authConfigured: Boolean(config.auth),
+      key: keyOf(url),
+    });
     return true;
   }
   if (path === "/rotate" && config.rotateCredentials) {
@@ -722,34 +751,3 @@ ${renderDashboardBody(hub.getState(), { nav })}
 </html>`;
 }
 
-/**
- * The self-service onboarding guide (public /welcome). Documents what Skynet Capital is and the
- * league format, then lays out the join path in numbered steps, so an invite can be a one-line
- * greeting plus this link. Fully self-serve to sign-in.
- */
-function welcomeHtml(): string {
-  return addShell(
-    "Welcome — Skynet Capital",
-    `<div class="hero-eyebrow">Invite-only · paper sandbox</div>
-<h1 class="hero-title">A sandbox to learn options — with friends, family, and a few <b>machines</b>.</h1>
-<p class="hero-lede">Skynet Capital is a friendly, <b>paper-money</b> trading league. Everyone trades a simulated
-account, autonomous <b>bots</b> trade alongside the humans, and a live observatory shows how everyone's
-doing. It's for learning the plays and having fun — <b>no real money, ever</b>. Everybody's welcome to win.</p>
-<div class="feat-grid">
-  <div class="feat"><div class="feat-ic">📈</div><div class="feat-h">Paper trading</div><div class="feat-p">Practice real options strategies with a simulated account. Zero risk — it's all on paper.</div></div>
-  <div class="feat"><div class="feat-ic">🤖</div><div class="feat-h">Humans &amp; bots</div><div class="feat-p">Trade solo, co-op against the machines, or just watch the board. The bots each run a persona.</div></div>
-  <div class="feat"><div class="feat-ic">🏆</div><div class="feat-h">Friendly league</div><div class="feat-p">A leaderboard for bragging rights among friends and family — everyone doing well is the point.</div></div>
-</div>
-<p class="sec-label">Join in three steps</p>
-<div class="steps">
-  <div class="step"><div class="step-n">1</div><div class="step-b"><h3>Sign in</h3><p>Use your Google account — the same email Eric added to the guest list. That's your seat at the table.</p></div></div>
-  <div class="step"><div class="step-n">2</div><div class="step-b"><h3>Create a free Alpaca paper account</h3><p>Alpaca provides the simulated brokerage. It's free, takes a minute, and needs no funding — we'll walk you through it after you sign in.</p></div></div>
-  <div class="step"><div class="step-n">3</div><div class="step-b"><h3>Connect it</h3><p>Paste your Alpaca <b>paper</b> API keys once. We read them only to show your balance and trades on the board — nothing is ever placed on your behalf.</p></div></div>
-</div>
-<a class="cta" href="/login">Get started → Sign in</a>
-<p class="fineprint">New to options? Once you're in, the <a href="/learn">Learn</a> section starts you on the safest play and unlocks more as you're ready.<br>
-Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.<br>
-Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
-    true,
-  );
-}

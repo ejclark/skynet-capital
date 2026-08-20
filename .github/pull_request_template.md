@@ -11,11 +11,19 @@ Conventional-Commit subject, lowercase-led (e.g. `feat(observatory): equity spar
 Delete these comments and any section that doesn't apply.
 -->
 
+## The picture
+
+<!-- REQUIRED, and FIRST — the fridge rule (Eric, 2026-08-20: "draw more pictures"): open with
+something reviewable BY EYE in ~10 seconds, before any prose. UI change → screenshot(s), committed
+small (≤~100KB JPEG) under docs/shots/pr-<n>/ and embedded via the branch's raw.githubusercontent
+URL. Non-visual change → a ```mermaid map of what changed (GitHub renders it natively). A wall of
+text above the fold is a defect. -->
+
 ## Summary
 
-<!-- The gist, in plain language. 1–3 bullets, ONE SHORT LINE EACH — the whole top (Summary + Why)
-must skim in ~10 seconds; anything longer belongs below the fold (Eric, 2026-08-19: "this is a
-wall of text"). -->
+<!-- The gist, in plain language. 1–3 bullets, ONE SHORT LINE EACH — the whole top (picture +
+Summary + Why) must skim in ~10 seconds; anything longer belongs below the fold (Eric, 2026-08-19:
+"this is a wall of text"). -->
 
 -
 

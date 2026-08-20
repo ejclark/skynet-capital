@@ -5,6 +5,7 @@ import {
   FixtureTradingTransport,
 } from "../adapters/fixture-trading-transport.js";
 import { parseEventsJsonl, ReplayEventStream } from "../adapters/replay-event-stream.js";
+import { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { AlpacaTradeUpdatesStream } from "../alpaca/trade-updates-stream.js";
@@ -39,6 +40,11 @@ export interface DataSource {
   readonly mode: "live" | "offline";
   /** Builds a trading client per participant (live: real; offline: fixture-backed). */
   readonly clientFactory: TradingClientFactory;
+  /**
+   * Builds the options client per participant (contracts/chains/option orders). Offline serves
+   * the same fixtures, where the options endpoints simply 404 — callers degrade honestly.
+   */
+  readonly optionsClientFactory: (participant: Participant) => AlpacaOptionsClient;
   /** The roster (live: env; offline: fixture file). */
   loadParticipants(): Participant[];
   /** Start the realtime price/fill streams, pushing into `sink`. */
@@ -52,6 +58,12 @@ export interface DataSource {
     sink: EventSink,
     onStatus?: (channel: string, status: string) => void,
   ): void;
+  /**
+   * Close one account's fill stream — used when a participant is removed at runtime, so a
+   * departed member's credentials stop being used the moment they leave. Live closes the
+   * tracked socket; offline is a no-op (replay owns its own lifecycle).
+   */
+  stopParticipantStream(participantId: string): void;
 }
 
 export function resolveDataSource(env: Env): DataSource {
@@ -62,39 +74,65 @@ export function resolveDataSource(env: Env): DataSource {
 
 // --- live ------------------------------------------------------------------
 
+/** Market-data host (quotes, option snapshots, news) — same credentials, different base. */
+export const ALPACA_DATA_BASE_URL = "https://data.alpaca.markets";
+
 function liveDataSource(env: Env): DataSource {
+  const transportFor = (participant: Participant, baseUrl: string) =>
+    new FetchAlpacaTradingTransport({
+      baseUrl,
+      apiKey: participant.credentials.apiKey,
+      apiSecret: participant.credentials.apiSecret,
+      ...(participant.credentials.accessToken
+        ? { accessToken: participant.credentials.accessToken }
+        : {}),
+    });
+
   const clientFactory: TradingClientFactory = (participant) =>
     new AlpacaTradingClient(
-      new FetchAlpacaTradingTransport({
-        baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
-        apiKey: participant.credentials.apiKey,
-        apiSecret: participant.credentials.apiSecret,
-        ...(participant.credentials.accessToken
-          ? { accessToken: participant.credentials.accessToken }
-          : {}),
-      }),
+      transportFor(participant, participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL),
     );
+
+  const optionsClientFactory = (participant: Participant): AlpacaOptionsClient =>
+    new AlpacaOptionsClient(
+      transportFor(participant, participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL),
+      transportFor(participant, env.ALPACA_DATA_BASE_URL ?? ALPACA_DATA_BASE_URL),
+    );
+
+  // One tracked socket per participant, so a rotation replaces its stream (instead of leaking
+  // the old socket alongside the new one) and a removal can actually close it.
+  const fillStreams = new Map<string, AlpacaTradeUpdatesStream>();
+
+  const stopParticipantStream: DataSource["stopParticipantStream"] = (participantId) => {
+    fillStreams.get(participantId)?.stop();
+    fillStreams.delete(participantId);
+  };
 
   const startParticipantStream: DataSource["startParticipantStream"] = (
     participant,
     sink,
     onStatus,
   ) => {
-    new AlpacaTradeUpdatesStream({
+    stopParticipantStream(participant.id);
+    const stream = new AlpacaTradeUpdatesStream({
       participantId: participant.id,
       apiKey: participant.credentials.apiKey,
       apiSecret: participant.credentials.apiSecret,
       baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
       onEvent: sink,
       onStatus: (status) => onStatus?.("trade-updates", status),
-    }).start();
+    });
+    fillStreams.set(participant.id, stream);
+    stream.start();
   };
 
   return {
     mode: "live",
     clientFactory,
+    optionsClientFactory,
     loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
     startParticipantStream,
+    stopParticipantStream,
     startStreams: ({ participants, heldSymbols, sink, onStatus }) => {
       const dataCreds = participants[0]?.credentials;
       if (heldSymbols.length > 0 && dataCreds) {
@@ -159,9 +197,16 @@ function offlineDataSource(env: Env): DataSource {
   return {
     mode: "offline",
     clientFactory,
+    optionsClientFactory: (participant) =>
+      new AlpacaOptionsClient(
+        new FixtureTradingTransport(fixtures.get(participant.id) ?? { account: emptyAccount() }),
+      ),
     loadParticipants: () => specs.map(toParticipant),
     // Offline replay emits every account's fills already; nothing to open per-account.
     startParticipantStream: () => {
+      /* offline source has no live stream */
+    },
+    stopParticipantStream: () => {
       /* offline source has no live stream */
     },
     startStreams: ({ sink, onStatus }) => {

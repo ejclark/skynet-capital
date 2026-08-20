@@ -49,7 +49,8 @@ export class AlpacaApiError extends Error {
   }
 }
 
-function ensureOk<T>(response: { status: number; body: unknown }): T {
+/** Shared by every Alpaca client wrapper: non-2xx becomes a typed AlpacaApiError. */
+export function ensureOk<T>(response: { status: number; body: unknown }): T {
   if (response.status < 200 || response.status >= 300) {
     throw new AlpacaApiError(response.status, response.body);
   }

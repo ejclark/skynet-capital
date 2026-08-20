@@ -1,0 +1,169 @@
+import { AlpacaOptionsClient, rowPremium } from "../../src/alpaca/alpaca-options-client.js";
+import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
+import type { JsonResponse } from "../../src/http/fetch-json.js";
+
+/** Substring-keyed fake transport, in the alpaca-connect.spec.ts style. */
+function fakeTransport(
+  routes: Record<string, unknown>,
+  log: Array<{ path: string; body?: unknown }> = [],
+): AlpacaTradingTransport {
+  const respond = (path: string): Promise<JsonResponse> => {
+    const hit = Object.entries(routes).find(([key]) => path.includes(key));
+    return Promise.resolve(hit ? { status: 200, body: hit[1] } : { status: 404, body: null });
+  };
+  return {
+    get: (path) => {
+      log.push({ path });
+      return respond(path);
+    },
+    post: (path, body) => {
+      log.push({ path, body });
+      return respond(path);
+    },
+  };
+}
+
+const contract = (symbol: string, expiration: string, strike: string, extra = {}) => ({
+  symbol,
+  expiration_date: expiration,
+  strike_price: strike,
+  type: "put",
+  ...extra,
+});
+
+describe("AlpacaOptionsClient", () => {
+  it("derives sorted, deduped expirations from one contracts page", async () => {
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [
+            contract("A", "2026-10-16", "100"),
+            contract("B", "2026-09-18", "100"),
+            contract("C", "2026-09-18", "105"),
+          ],
+        },
+      }),
+    );
+    expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(["2026-09-18", "2026-10-16"]);
+  });
+
+  it("returns the chain strikes ascending, dropping untradable and unpriced-strike rows", async () => {
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [
+            contract("MSFT260918P00430000", "2026-09-18", "430", { close_price: "14.1" }),
+            contract("MSFT260918P00420000", "2026-09-18", "420", {
+              close_price: "10.7",
+              open_interest: "812",
+            }),
+            contract("DEAD", "2026-09-18", "425", { tradable: false }),
+          ],
+        },
+      }),
+    );
+    const chain = await client.getChain("MSFT", "2026-09-18", "put");
+    expect(chain.map((r) => r.strike)).toEqual([420, 430]);
+    expect(chain[0]).toMatchObject({ closePrice: 10.7, openInterest: 812 });
+  });
+
+  it("merges indicative quotes from the data host, and fails SOFT when it errors", async () => {
+    const withQuotes = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [
+            contract("MSFT260918P00420000", "2026-09-18", "420", { close_price: "10.7" }),
+          ],
+        },
+      }),
+      fakeTransport({
+        "/v1beta1/options/snapshots/MSFT": {
+          snapshots: {
+            MSFT260918P00420000: {
+              latestQuote: { bp: 10.5, ap: 10.9 },
+              greeks: { delta: -0.42 },
+            },
+          },
+        },
+      }),
+    );
+    const chain = await withQuotes.getChain("MSFT", "2026-09-18", "put");
+    expect(chain[0]).toMatchObject({ bid: 10.5, ask: 10.9, delta: -0.42 });
+    expect(rowPremium(chain[0] as never)).toBeCloseTo(10.7); // the mid
+
+    const dataDown = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [
+            contract("MSFT260918P00420000", "2026-09-18", "420", { close_price: "10.7" }),
+          ],
+        },
+      }),
+      fakeTransport({}), // every data-host call 404s
+    );
+    const bare = await dataDown.getChain("MSFT", "2026-09-18", "put");
+    expect(bare[0]?.bid).toBeUndefined();
+    expect(rowPremium(bare[0] as never)).toBe(10.7); // falls back to last close
+  });
+
+  it("reads one contract by symbol and answers undefined for a 404", async () => {
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts/MSFT260918P00420000": contract(
+          "MSFT260918P00420000",
+          "2026-09-18",
+          "420",
+        ),
+      }),
+    );
+    expect((await client.getContract("MSFT260918P00420000"))?.strike_price).toBe("420");
+    expect(await client.getContract("MSFT260918P00990000")).toBeUndefined();
+  });
+
+  it("places option orders day-only, with position intent, and limit price only on limits", async () => {
+    const log: Array<{ path: string; body?: unknown }> = [];
+    const client = new AlpacaOptionsClient(
+      fakeTransport(
+        { "/v2/orders": { id: "o1", symbol: "MSFT260918P00420000", status: "accepted" } },
+        log,
+      ),
+    );
+    await client.placeOptionOrder({
+      occSymbol: "MSFT260918P00420000",
+      contracts: 2,
+      side: "sell",
+      type: "limit",
+      limitPrice: 10.7,
+      positionIntent: "sell_to_open",
+    });
+    expect(log[0]?.body).toEqual({
+      symbol: "MSFT260918P00420000",
+      qty: 2,
+      side: "sell",
+      type: "limit",
+      limit_price: 10.7,
+      time_in_force: "day",
+      position_intent: "sell_to_open",
+    });
+
+    await client.placeOptionOrder({
+      occSymbol: "MSFT260918P00420000",
+      contracts: 1,
+      side: "buy",
+      type: "market",
+      positionIntent: "buy_to_close",
+    });
+    expect(log[1]?.body).not.toHaveProperty("limit_price");
+    expect(log[1]?.body).toMatchObject({ time_in_force: "day" });
+  });
+
+  it("underlying price fails soft with no data transport and on error", async () => {
+    const bare = new AlpacaOptionsClient(fakeTransport({}));
+    expect(await bare.getUnderlyingPrice("MSFT")).toBeUndefined();
+    const priced = new AlpacaOptionsClient(
+      fakeTransport({}),
+      fakeTransport({ "/v2/stocks/MSFT/trades/latest": { trade: { p: 428.6 } } }),
+    );
+    expect(await priced.getUnderlyingPrice("MSFT")).toBe(428.6);
+  });
+});

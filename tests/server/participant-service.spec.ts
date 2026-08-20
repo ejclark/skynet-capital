@@ -26,6 +26,11 @@ class MemStore implements ParticipantStore {
   add(participant: StoredParticipant): void {
     this.items = [...this.items.filter((p) => p.id !== participant.id), participant];
   }
+  remove(id: string): boolean {
+    const before = this.items.length;
+    this.items = this.items.filter((p) => p.id !== id);
+    return this.items.length < before;
+  }
 }
 
 class RejectingTransport implements AlpacaTradingTransport {
