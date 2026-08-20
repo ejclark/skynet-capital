@@ -25,22 +25,34 @@ describe("renderFeedbackFormBody", () => {
     expect(on).not.toContain("isn't switched on yet");
   });
 
-  it("puts the AI-assist panel beside the form, in the same layout, when the coach is wired", () => {
+  it("puts the guided coach intro before the form, as the front door, when the coach is wired (#449)", () => {
     const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: true });
 
-    const layoutOpen = html.indexOf('class="fdbk-layout"');
-    const formOpen = html.indexOf('class="fdbk-form"');
     const coachBox = html.indexOf('id="coach-box"');
-    // Both the form and the assist panel sit inside the same side-by-side layout wrapper —
-    // never the coach trailing the form as a separate block a member has to scroll past (#443).
-    expect(layoutOpen).toBeGreaterThan(-1);
-    expect(formOpen).toBeGreaterThan(layoutOpen);
-    expect(coachBox).toBeGreaterThan(layoutOpen);
+    const formOpen = html.indexOf('id="fdbk-form"');
+    // The guided intro comes first — the AI step is the front door, not a bolt-on the member
+    // scrolls past after already typing (#449) — and the form starts hidden until a draft is
+    // ready or the member skips ahead.
+    expect(coachBox).toBeGreaterThan(-1);
+    expect(formOpen).toBeGreaterThan(coachBox);
+    expect(html).toContain('id="fdbk-form" method="post" action="/feedback" style="display:none"');
   });
 
-  it("omits the assist panel entirely when the coach isn't wired", () => {
+  it("gives a skip escape hatch straight to the plain form", () => {
+    const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: true });
+    expect(html).toContain('id="coach-skip"');
+  });
+
+  it("shows the plain form immediately, with no hidden start state, when the coach isn't wired", () => {
     const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: false });
     expect(html).not.toContain("coach-box");
+    expect(html).toContain('id="fdbk-form" method="post" action="/feedback">');
+  });
+
+  it("degrades gracefully with no JS — a noscript override keeps the plain form usable", () => {
+    const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: true });
+    expect(html).toContain("<noscript>");
+    expect(html).toContain("#fdbk-form{display:flex !important}");
   });
 });
 

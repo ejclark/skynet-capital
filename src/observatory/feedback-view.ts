@@ -1,4 +1,4 @@
-import { COACH_SCRIPT } from "../server/feedback-coach.js";
+import { COACH_SCRIPT } from "../server/feedback-coach-script.js";
 import type { FeedbackResult } from "../server/feedback-service.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
@@ -7,9 +7,13 @@ import { type NavContext, renderShell } from "./dashboard-shell.js";
  * The self-service FEEDBACK form (`/feedback`) — the in-app half of the feedback funnel
  * (feedback-service.ts files the GitHub issue; feedback-coach.ts drafts it). Rides inside the
  * same push-drawer shell as every other logged-in view (#443): losing the drawer here stranded
- * the member outside the app chrome the moment they wanted to talk to it. The AI-assist coach
- * sits beside the form (not beneath the Send button) so it's visible for the whole fill-out,
- * never something to scroll past.
+ * the member outside the app chrome the moment they wanted to talk to it.
+ *
+ * AI-first, pre-writing flow (#449): the coach is the front door, not a bolt-on beside the Send
+ * button. When wired, a member meets the guided intro first — pick a kind, drop a rough note,
+ * answer a couple of short questions — and only then does the real title/details form appear,
+ * pre-filled for review. "Skip →" (and any coach failure) reveals the plain form immediately, so
+ * writing it yourself always stays one click away and the form still works with no JS or no key.
  */
 
 export interface FeedbackFormViewOptions {
@@ -22,13 +26,22 @@ function formField(inner: string): string {
   return `<div class="fdbk-field">${inner}</div>`;
 }
 
-function renderCoachAside(): string {
-  return `<aside class="fdbk-aside" id="coach-box">
-    <h2 class="coach-h">✨ Get help writing it</h2>
-    <p class="coach-lede">Jot a rough note in Details, and the coach asks a couple of quick questions, then drafts it for you. You always review before sending.</p>
-    <button type="button" id="coach-start">Help me write it</button>
+function renderCoachIntro(): string {
+  return `<div class="fdbk-intro" id="coach-box">
+    <h2 class="coach-h">✨ Let's shape your feedback</h2>
+    <p class="coach-lede">Tell me what's on your mind — a rough note is plenty — and I'll ask a couple of quick questions before you write anything formal. You always review the draft before sending.</p>
+    ${formField(`<label for="coach-kind">What kind?</label>
+    <select id="coach-kind">
+      <option value="bug">🐞 Bug — something's broken or wrong</option>
+      <option value="feature" selected>✨ Feature — make something better</option>
+      <option value="idea">🗺️ Side quest — an idea worth exploring</option>
+    </select>`)}
+    ${formField(`<label for="coach-note">What's on your mind?</label>
+    <textarea id="coach-note" rows="4" placeholder="A messy sentence is fine…"></textarea>`)}
+    <button type="button" id="coach-start">Let's shape it</button>
     <div id="coach-thread" class="coach-thread"></div>
-  </aside>
+    <p class="fdbk-skip"><a href="#" id="coach-skip">Prefer to just write it yourself? Skip →</a></p>
+  </div>
   <script>${COACH_SCRIPT}</script>`;
 }
 
@@ -45,8 +58,9 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
       </div>
     </div>
     ${banner}
-    <div class="fdbk-layout">
-      <form class="fdbk-form" method="post" action="/feedback">
+    <div class="fdbk-flow">
+      ${options.coachEnabled ? renderCoachIntro() : ""}
+      <form class="fdbk-form" id="fdbk-form" method="post" action="/feedback"${options.coachEnabled ? ' style="display:none"' : ""}>
         ${formField(`<label for="fdbk-kind">What kind?</label>
         <select name="kind" id="fdbk-kind">
           <option value="bug">🐞 Bug — something's broken or wrong</option>
@@ -70,8 +84,8 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
         </select>`)}
         <button type="submit" class="fdbk-submit">Send it</button>
       </form>
-      ${options.coachEnabled ? renderCoachAside() : ""}
     </div>
+    ${options.coachEnabled ? `<noscript><style>#fdbk-form{display:flex !important}#coach-box{display:none !important}</style></noscript>` : ""}
   </section>`;
   return renderShell(options.nav, content, new Date().toISOString());
 }
@@ -97,14 +111,13 @@ export function renderFeedbackResultBody(options: FeedbackResultViewOptions): st
 
 /**
  * Feedback-only styles, kept out of dashboard-shell.ts (same doctrine as calendar-widget.ts /
- * desk-style.ts). The form and the coach ride side by side above 980px — that's the width the
- * form itself + a readable aside both need room for — and stack on narrower viewports instead of
- * being hidden, since the coach is a feature here, not decoration.
+ * desk-style.ts). The coach intro and the form now run sequentially, not side by side (#449) —
+ * the guided step is the front door, and the form only appears once it's earned its keep (a
+ * draft to review, or the member skipping ahead).
  */
 const FDBK_STYLE = `<style>
-  .fdbk-layout{ display:grid; grid-template-columns:minmax(0,640px) 320px; gap:28px; align-items:start; margin-top:6px; }
-  @media (max-width:980px){ .fdbk-layout{ grid-template-columns:1fr; } }
-  .fdbk-form{ display:flex; flex-direction:column; gap:20px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px 28px; }
+  .fdbk-flow{ display:flex; flex-direction:column; gap:22px; max-width:640px; margin-top:6px; }
+  .fdbk-form, .fdbk-intro{ display:flex; flex-direction:column; gap:20px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px 28px; }
   .fdbk-field{ display:flex; flex-direction:column; gap:8px; }
   .fdbk-field label{ font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
   .fdbk-field label small{ text-transform:none; letter-spacing:0; font-weight:400; opacity:.8; }
@@ -114,9 +127,10 @@ const FDBK_STYLE = `<style>
   .fdbk-submit{ margin-top:2px; padding:13px 20px; font-size:15px; font-weight:600; font-family:var(--sans); color:var(--bg); background:var(--accent); border:0; border-radius:9px; cursor:pointer; align-self:flex-start; min-width:160px; transition:filter .15s; }
   .fdbk-submit:hover{ filter:brightness(1.08); }
   .fdbk-submit:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-  .fdbk-aside{ position:sticky; top:16px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px 22px 24px; }
-  .coach-h{ font-size:14px; font-weight:700; margin:0 0 8px; }
-  .coach-lede{ font-size:12.5px; color:var(--muted); line-height:1.55; margin:0 0 16px; }
+  .coach-h{ font-size:16px; font-weight:700; margin:0; }
+  .coach-lede{ font-size:13px; color:var(--muted); line-height:1.55; margin:-8px 0 0; }
+  .fdbk-skip{ margin:-6px 0 0; font-size:12.5px; color:var(--muted); }
+  .fdbk-skip a{ color:var(--muted); }
   #coach-start{ width:100%; padding:11px 16px; font-size:14px; font-weight:600; font-family:var(--sans); color:var(--bg); background:var(--accent); border:0; border-radius:9px; cursor:pointer; transition:filter .15s; }
   #coach-start:hover{ filter:brightness(1.08); }
   #coach-start:disabled{ opacity:.6; cursor:default; }
