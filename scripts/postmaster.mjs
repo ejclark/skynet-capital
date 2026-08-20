@@ -570,10 +570,13 @@ function ensureLabel(label) {
     "Accept: application/vnd.github+json",
   ];
   try {
-    sh("curl", ["-sS", "-X", "PATCH", ...auth, `${base}/${label.name}`, "-d", body]);
+    // --fail is load-bearing: without it curl exits 0 on a 404 body (the label doesn't exist
+    // yet), the PATCH "succeeds," and the POST-create fallback below never runs — the label is
+    // silently never created (docs/LESSONS.md 2026-08-19, the missing `stall-flagged` label).
+    sh("curl", ["-sS", "--fail", "-X", "PATCH", ...auth, `${base}/${label.name}`, "-d", body]);
   } catch {
     try {
-      sh("curl", ["-sS", "-X", "POST", ...auth, base, "-d", body]);
+      sh("curl", ["-sS", "--fail", "-X", "POST", ...auth, base, "-d", body]);
     } catch {
       /* a label that already exists is a harmless 422 */
     }
