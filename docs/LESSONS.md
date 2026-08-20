@@ -382,3 +382,123 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** → docs/IDEAS.md — an artifact-shaped auditor rule for this exact shape: *PR open
   for N minutes with zero check runs* → comment and warn. Same family as the claim-with-no-branch
   rule; both ask "did the thing actually happen?" rather than "did the process report success?".
+
+### The deploy doom loop, thirteen more times — the same fixed bug, not new incidents
+- **SHA:** fd415ee   **DATE:** 2026-08-11   **STATUS:** closed
+- **SHA:** 0906c84   **DATE:** 2026-08-11   **STATUS:** closed
+- **SHA:** f9526ba   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** c5da8a6   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 4b63c13   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** cbd18bf   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 201c52d   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** d07c0d3   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 1163671   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 494b704   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** b85486e   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 1b6df05   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** a5ebe9d   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** b29b4fb   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** e9390b9   **DATE:** 2026-08-09   **STATUS:** closed
+- **SIGNAL:** `incident-scan.mjs`'s own 14-day lookback still carried 21 unlearned `main` failures
+  when this batch closure was written — only `615a269` (the entry directly above) had a ledger
+  line. Detection lag: none, since the scan is the detector; the gap was that 14 of its 15 findings
+  in the doom-loop window had never been closed out with an entry.
+- **ROOT CAUSE:** every SHA above is the **same defect already root-caused and fixed by `615a269`**
+  ("the deploy doom loop") on the same two days: the pre-push hook re-running the full suite on
+  `main`, which counted its own prior failures via this very gate, climbing self-amplified (28→41
+  and up) until the `prepare` fix landed. They were never separate incidents to investigate — they
+  are the raw symptom the `615a269` entry already explains and closes. Writing 14 near-duplicate
+  postmortems for one bug would be a worse ledger than one, so this entry batch-closes them by
+  reference instead of re-deriving what is already on record.
+- **PREVENTION:** already mechanized (see `615a269`: `prepare` is `test -n "$CI" || husky`). The
+  gap this entry actually closes is process, not code: **an incident isn't done at "root-caused,"
+  it's done at "every commit sha it produced has a ledger line"** — the gate checks individual
+  shas, so a batch failure needs a batch closure the same day the root cause is found, not a lone
+  entry that leaves siblings to accumulate as phantom debt. Doctrine line worth keeping in mind for
+  the next self-amplifying gate: close the *whole blast radius*, not just the sha that got looked at.
+- **SIDE QUESTS:** none — the finding is fully captured under `615a269`.
+
+### The App/PAT fix for `GITHUB_TOKEN` severance was designed 2026-08-17 but never installed
+- **SHA:** e122ee8   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** two consecutive "Flip a handoff to ready" runs on the same commit both failed opening
+  the authorization PR: `pull request create failed: GraphQL: GitHub Actions is not permitted to
+  create or approve pull requests (createPullRequest)`. Separately, in this same session, PR #448
+  (a postmaster-opened feedback PR) sat on "1 workflow awaiting approval" and PR #445 needed a
+  manual push from a real identity before `verify` would even start. Detection lag for the ledger
+  gap: three days, until this retro.
+- **ROOT CAUSE:** this is **not a new defect** — it is the exact class the 2026-08-17 entry two
+  above ("The same severance, one hop over") already diagnosed and built a fix for: work done under
+  the bare `GITHUB_TOKEN` carries no real GitHub identity, so GitHub suppresses the reactions that
+  identity would normally trigger (`pull_request.opened` never fires; and, the piece this session
+  newly confirmed empirically, a **workflow run whose triggering actor is `github-actions[bot]`
+  requires manual approval** — proven live on PR #445: the original push (actor
+  `github-actions[bot]`) sat `action_required`; an identical push moments later from a real
+  collaborator ran immediately, no gate). The fallback chain that entry built —
+  `steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN` — degrades
+  honestly, but **the App was never installed and no PAT was ever added**, so every postmaster run
+  since has been running on the bottom, honest-degrade tier: real GitHub identity, still absent.
+- **PREVENTION:** the gate/script and the doctrine line both already exist (`docs/HANDOFFS.md`
+  steps 1-6, written 2026-08-17). What's missing cannot be mechanized further from inside the
+  repo — a GitHub App installation and its two secrets (`APP_CLIENT_ID`, `APP_PRIVATE_KEY`) are
+  themselves credentials, squarely the irreversible class CLAUDE.md reserves for Eric. Ledger-only
+  by necessity: the fix is one five-minute owner action away, already documented, not a missing
+  mechanism.
+- **SIDE QUESTS:** → docs/IDEAS.md — a check-in nudge (weekly postmaster digest, or the incident
+  scan itself) that names "the App/PAT fallback is still on its bottom tier" explicitly, rather
+  than relying on someone noticing the pattern across unrelated symptoms three days apart.
+
+### `ensureLabel`'s upsert never upserted — curl without `--fail` hid a 404 as success
+- **SHA:** b76ac2e   **DATE:** 2026-08-19   **STATUS:** closed
+- **SIGNAL:** the stall audit's `gh issue edit --add-label stall-flagged` failed outright:
+  `'stall-flagged' not found`. `ensureLabel()` runs immediately before that call specifically to
+  prevent this. Detection lag: immediate (the job failed loudly), but the actual defect sat
+  unnoticed in `ensureLabel` itself until this retro.
+- **ROOT CAUSE:** `ensureLabel`'s upsert-by-PATCH-then-POST-create-fallback pattern is correct in
+  shape, but its `curl` calls were missing `--fail`. Without it, `curl -sS` exits `0` for **any**
+  HTTP response, including a 404 body for a label that doesn't exist yet — so the `try` never
+  threw, the `catch` (which contains the create-via-POST fallback) never ran, and the label was
+  silently never created. The comment directly above the code ("GitHub auto-creates a label the
+  first time it is applied") describes the *intended* self-healing behavior; the missing flag is
+  exactly why it didn't happen.
+- **PREVENTION:** gate/script — `scripts/postmaster.mjs`'s `ensureLabel` now passes `--fail` on
+  both the PATCH and the POST, so a real HTTP failure (including "doesn't exist yet") throws and
+  reaches the fallback, while the intentionally-swallowed "already exists" 422 on the POST still
+  degrades silently exactly as designed. Fixed in this PR, not deferred.
+- **SIDE QUESTS:** none — worth a quick sweep of other bare `curl` calls in the repo's scripts for
+  the same missing-`--fail` shape, but `importZip`'s (the only other one) already carries `-f`.
+
+### A handoff-flip retry raced its own successful predecessor — not a defect
+- **SHA:** 2969eb9   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** "Flip a handoff to ready" failed for `brief-horizon` with `brief-horizon is 'ready',
+  not 'draft' — nothing to authorize.`
+- **ROOT CAUSE:** a precondition check working exactly as designed. An earlier run (`e122ee8`,
+  entry above) had already flipped `brief-horizon` to `ready`; this run was a retry of the same
+  intent arriving after the fact, and `handoff-scan.mjs --validate` correctly refused to re-flip an
+  already-ready handoff. The failure is the guard catching a stale retry, not a gap letting
+  anything wrong happen.
+- **PREVENTION:** ledger-only — this is the system behaving correctly under a race that is itself
+  a symptom of the `e122ee8` PR-creation failures above (retries happen because the first attempt
+  visibly failed to open a PR, even though the flip itself had already landed). No new mechanism
+  needed; closing the `e122ee8` gap removes the retries that produce this shape.
+- **SIDE QUESTS:** none.
+
+### `claude-code-action@v1` rejects `push` as an event type — the event-research lane's first live firing
+- **SHA:** e854590   **DATE:** 2026-08-20   **STATUS:** closed
+- **SHA:** 76f6215   **DATE:** 2026-08-19   **STATUS:** closed
+- **SHA:** 5de1b7f   **DATE:** 2026-08-19   **STATUS:** closed
+- **SIGNAL:** the Postmaster's "research due events" job failed with `##[error]Action failed with
+  error: Unsupported event type: push`. Detection lag: none — the job failed loudly on its own
+  first three real firings.
+- **ROOT CAUSE:** that job runs `anthropics/claude-code-action@v1` on a `push` trigger (research
+  due calendar events after every merge to `main`), but the action's entrypoint does not recognize
+  `push` among its supported GitHub event types and aborts before doing any research. This is a
+  genuinely new defect (not a recurrence of the identity-severance class above) — the lane simply
+  had never fired on a real push before this window.
+- **PREVENTION:** the fix is a `.github/workflows/postmaster.yml` change (guard the job to a
+  supported event, or route push-triggered research through `workflow_dispatch`/a supported
+  trigger instead) — **held for Eric**, deliberately not self-authorized: workflow files are the
+  outward-facing/irreversible carve-out in CLAUDE.md, same as credentials. Proposed, not merged.
+  Doctrine-flagged here so the next session (or Eric) has the exact error and the fix shape without
+  re-diagnosing it.
+- **SIDE QUESTS:** → docs/IDEAS.md — audit every `claude-code-action@v1` trigger in this repo for
+  event types the action actually supports, rather than discovering each gap on its first firing.
