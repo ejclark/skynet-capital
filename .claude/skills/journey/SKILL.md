@@ -29,7 +29,8 @@ Journeys are perishable. Write during or immediately after — never "later," be
 material is gone and what gets written is a memoir instead of a ledger.
 
 One journey per topic. `docs/JOURNEYS/<topic>.md`, kebab-case, named for the question rather than the
-conclusion (the conclusion will move).
+conclusion (the conclusion will move). Start from `docs/JOURNEYS/TEMPLATE.md` — the skeleton below,
+pre-commented, with the optional picture snippets ready to paste.
 
 ## 2. Open with the question, verbatim
 
@@ -44,6 +45,12 @@ the ratings, the build order — whatever the durable output is — *before* the
 
 Any number that appears here carries its evidence basis. If there is no measurement behind it, say
 so in the same breath: *"ordinal judgments with reasoning attached — not measurements."*
+
+"Where it stands" *may* open with one small picture — the open-forks map or the spine scoreboard,
+both ready to paste from `docs/JOURNEYS/TEMPLATE.md` — when it genuinely compresses the state.
+Offered, never required: a journey that fires beats a journey that's pretty (the capture habit is
+the binding constraint — see docs/PICTURES.md). Never mermaid's `journey` diagram type (a
+UX-satisfaction chart — wrong shape for reasoning). Tables must fit a phone: ≤3–4 columns up top.
 
 ## 4. The spine — what moved, and what moved it
 
@@ -87,6 +94,9 @@ the journey rather than duplicating them. Quality over volume; do not derail to 
 ```bash
 npm run verify        # typecheck · lint · test
 ```
+
+`node scripts/journey-scan.mjs --validate` runs inside the suite (tests/arch/journey.spec.ts) —
+required headings and kebab-case filename only, lenient by design; it will never tax the habit.
 
 Land it with `/ship`. A journey is docs-only, so it should be a small green PR that merges on its
 own — the point is banking the material, not staging a review.
