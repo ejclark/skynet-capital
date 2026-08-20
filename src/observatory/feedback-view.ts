@@ -116,7 +116,7 @@ export function renderFeedbackResultBody(options: FeedbackResultViewOptions): st
  * draft to review, or the member skipping ahead).
  */
 const FDBK_STYLE = `<style>
-  .fdbk-flow{ display:flex; flex-direction:column; gap:22px; max-width:640px; margin-top:6px; }
+  .fdbk-flow{ display:flex; flex-direction:column; gap:22px; max-width:900px; margin-top:6px; }
   .fdbk-form, .fdbk-intro{ display:flex; flex-direction:column; gap:20px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px 28px; }
   .fdbk-field{ display:flex; flex-direction:column; gap:8px; }
   .fdbk-field label{ font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
