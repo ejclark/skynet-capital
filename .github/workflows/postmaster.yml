@@ -420,13 +420,36 @@ jobs:
             echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label."
           fi
 
+      # MODEL TIER (2026-08-20, Eric: "adjust the model between haiku 4.5 and sonnet 5 based on
+      # the user's prompt/articulated needs... rewarding their engagement is worth the token burn").
+      # A cheap, transparent heuristic — no extra LLM call, no new credential: a member who writes
+      # real detail (a long body, a code block) is describing something worth Sonnet's judgment;
+      # a short one-liner bug report gets Haiku's cheaper, faster pass. Logged via ::notice:: so
+      # the choice is visible on every run, not a silent guess.
+      - id: tier
+        if: steps.gate.outputs.armed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BODY=$(gh issue view ${{ needs.route.outputs.feedback_issue }} --json body -q .body)
+          LEN=${#BODY}
+          MODEL="claude-haiku-4-5-20251001"
+          REASON="short/simple ask (${LEN} chars, no code block)"
+          if [ "$LEN" -gt 600 ] || printf '%s' "$BODY" | grep -q '```'; then
+            MODEL="claude-sonnet-5"
+            REASON="detailed ask (${LEN} chars$(printf '%s' "$BODY" | grep -q '```' && echo ", includes a code block"))"
+          fi
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+          echo "::notice::feedback #${{ needs.route.outputs.feedback_issue }} — model tier: $MODEL — $REASON"
+
       - if: steps.gate.outputs.armed == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep"
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ steps.tier.outputs.model }}
           prompt: |
             A league member filed feedback through the app as issue #${{ needs.route.outputs.feedback_issue }}
             in this repo. Work it end to end.
