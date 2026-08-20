@@ -88,6 +88,7 @@ permissions:
   issues: write         # open issues, comment receipts
   pull-requests: write  # open the PRs
   id-token: write       # claude-code-action
+  actions: write        # gh workflow run — the push→workflow_dispatch re-fire for event research
 
 concurrency:
   # Keyed by event so an issue import and a push sweep never queue behind each other.
@@ -163,6 +164,17 @@ jobs:
           ' "$DUE" "$HEADS")
           echo "due=$FILTERED" >> "$GITHUB_OUTPUT"
           echo "::notice::due for research: $FILTERED"
+
+      # `claude-code-action@v1` rejects `push` as an event type outright (docs/LESSONS.md
+      # 2026-08-20: "Unsupported event type: push" — the event-research lane's first live firings
+      # all failed this way). It DOES support `workflow_dispatch`, so on a push with due events we
+      # re-fire ourselves as a dispatch instead of letting `build-events` invoke the action directly
+      # under `push`. `build-events` below only runs on that re-dispatched pass (see its `if:`).
+      - name: Re-dispatch for event research (claude-code-action can't see `push`)
+        if: github.event_name == 'push' && steps.events.outputs.due != '' && steps.events.outputs.due != '[]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run postmaster.yml --ref "$GITHUB_REF_NAME" -f command=scan
 
       # THE FEEDBACK LANE'S GATE (2026-08-19, Eric: "I expected the issues to get received and
       # assigned to a claude session"). A `feedback` label was applied — applying labels requires
@@ -304,7 +316,11 @@ jobs:
   build-events:
     name: research due events
     needs: route
-    if: needs.route.outputs.due_events != '' && needs.route.outputs.due_events != '[]'
+    # workflow_dispatch only — claude-code-action@v1 rejects `push` as an event type (see the
+    # re-dispatch step in `route`, which is what fires this job's real run for a push's findings).
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      needs.route.outputs.due_events != '' && needs.route.outputs.due_events != '[]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
