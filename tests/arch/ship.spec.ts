@@ -38,3 +38,118 @@ describe("ship open — the PR-description contract", () => {
     expect(stderr).toContain("--body-file is required");
   });
 });
+
+// The picture/format contract (2026-08-20 hat-team research): comment-only format rules decay
+// (fridge rule: 4/126 bodies), machine-checked ones hold. `checkbody` is the pure linter cmd_open
+// runs before verify/push — existence and honesty gated, taste left to docs/PICTURES.md. The
+// waiver line is first-class: an honest skip beats a decorative diagram on a typo fix.
+describe("ship checkbody — the picture/format contract", () => {
+  let dir: string;
+  const body = (content: string) => {
+    const f = join(dir, `${Math.random().toString(36).slice(2)}.md`);
+    writeFileSync(f, content);
+    return f;
+  };
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "ship-checkbody-"));
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  const PIC_MERMAID = [
+    "## The picture",
+    "",
+    "```mermaid",
+    "flowchart LR",
+    "    a[form] --> b[issue]",
+    "```",
+    "",
+    "_Caption — feedback flow, from the routing design_",
+    "",
+  ].join("\n");
+
+  it("passes a captioned stable-type mermaid picture", () => {
+    const { code } = run(["checkbody", body(`${PIC_MERMAID}\n## Summary\n\n- adds the thing\n`)]);
+    expect(code).toBe(0);
+  });
+
+  it("passes an explicit waiver — trivial PRs stay cheap, skips stay visible", () => {
+    const { code } = run([
+      "checkbody",
+      body(
+        "## The picture\n\nPicture: waived — pure docs, no behavior change\n\n## Summary\n\n- fixes a typo\n",
+      ),
+    ]);
+    expect(code).toBe(0);
+  });
+
+  it("refuses a body with no '## The picture' section", () => {
+    const { code, stderr } = run(["checkbody", body("## Summary\n\n- does stuff\n")]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("The picture");
+  });
+
+  it("refuses a picture section with neither media nor waiver", () => {
+    const { code, stderr } = run([
+      "checkbody",
+      body("## The picture\n\nwords about a picture\n\n## Summary\n\n- does stuff\n"),
+    ]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("waived");
+  });
+
+  it("refuses media without a filled caption — the template placeholder does not count", () => {
+    const noCaption = PIC_MERMAID.replace(
+      "_Caption — feedback flow, from the routing design_",
+      "_Caption —_",
+    );
+    const { code, stderr } = run([
+      "checkbody",
+      body(`${noCaption}\n## Summary\n\n- adds the thing\n`),
+    ]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("caption");
+  });
+
+  it("refuses mermaid types off the stable allowlist (journey is a UX chart)", () => {
+    const { code, stderr } = run([
+      "checkbody",
+      body(
+        "## The picture\n\n```mermaid\njourney\n    title day\n```\n\n_Caption — a chart_\n\n## Summary\n\n- x\n",
+      ),
+    ]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("journey");
+  });
+
+  it("refuses branch-form raw.githubusercontent URLs — they 404 at squash-merge (PR #446)", () => {
+    const { code, stderr } = run([
+      "checkbody",
+      body(
+        '## The picture\n\n<img src="https://raw.githubusercontent.com/o/r/my-branch/docs/shots/pr-9/x.jpg">\n\n_Caption — before/after of /login_\n\n## Summary\n\n- x\n',
+      ),
+    ]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("SHA-pinned");
+  });
+
+  it("accepts SHA-pinned raw URLs", () => {
+    const sha = "a".repeat(40);
+    const { code } = run([
+      "checkbody",
+      body(
+        `## The picture\n\n<img src="https://raw.githubusercontent.com/o/r/${sha}/docs/shots/pr-9/x.jpg">\n\n_Caption — before/after of /login, npm run shoot:login_\n\n## Summary\n\n- x\n`,
+      ),
+    ]);
+    expect(code).toBe(0);
+  });
+
+  it("refuses Summary bullets over 120 chars — one short line each (Eric, 2026-08-19)", () => {
+    const long = `- ${"narrates every mechanical step ".repeat(5)}`;
+    const { code, stderr } = run([
+      "checkbody",
+      body(`## The picture\n\nPicture: waived — chore\n\n## Summary\n\n${long}\n`),
+    ]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("120");
+  });
+});

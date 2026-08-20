@@ -160,29 +160,34 @@ must be a valid Conventional-Commit subject** (it becomes the commit subject and
 bump), and the **PR description — not the in-PR commit bodies — is the durable record**. Write it as the
 thing a future reader will `git log` on `main`.
 
-**PRs — a document with a fold** (mirror [`.github/pull_request_template.md`](../.github/pull_request_template.md)):
+**PRs — picture first, then a fold** (mirror [`.github/pull_request_template.md`](../.github/pull_request_template.md);
+picture grammar: [`PICTURES.md`](PICTURES.md); structure machine-checked by `scripts/ship.sh checkbody`):
 
-1. **Summary** — the gist in plain language, skimmable by a non-technical reader: what ships.
-2. **Why** — the intent / user value in a sentence or two.
-3. **Details, below the fold** (`<details>`): the file-level walkthrough, design trade-offs (link an
-   ADR for hard-to-reverse calls), verification, risk/rollback, follow-ups. The weeds live here so the
-   top stays legible; the depth is one click away for whoever wants it.
+1. **The picture** — the fridge rule: something judgeable by eye in ~10 seconds, before any prose.
+   Chosen by change type (before/after screenshots for UI, a stable-type mermaid for structure, a
+   table for config), captioned, SHA-pinned. Trivial change → an explicit `Picture: waived — <reason>`
+   line: the honest skip *is* the proportional form, and it stays visible for audit.
+2. **Summary** — 1–3 bullets, ≤120 chars each, plain language: what ships. A changed route earns a
+   "Review live after deploy: /route" bullet — the live page is Eric's fastest review format.
+3. **Everything else below the fold** (`<details>`): Why, EARS acceptance criteria, the file-level
+   walkthrough, trade-offs (link an ADR for hard-to-reverse calls), verification, risk/rollback,
+   follow-ups. The weeds are one click away; the top stays a ten-second read.
 
 **Quality bar — succinct & high-signal.** The description is `main`'s commit body; make every line earn
 its place:
 
-- **Lead with the outcome, not the process.** The first line is what's *true after merge*, in plain
-  language a non-technical reader skims in ten seconds.
+- **Lead with the outcome, not the process.** The top is what's *true after merge*, judgeable at a
+  glance by a non-technical reader.
 - **Don't restate the diff.** The diff already shows *which lines* changed; the description says *why it
   matters* and *what it enables*. Cut any bullet that just narrates code.
 - **1–3 Summary bullets.** If the Summary needs more, it's probably two PRs (or a batched suite whose
   bullets should each name a shipped capability, not a step).
 - **No filler, no hedging.** Drop "this PR does…", "various improvements", "as requested". Name the *one*
   non-obvious decision, not every obvious one.
-- **A diagram only when a structure is faster seen than read** (a Mermaid graph for a new data flow or
-  route map) — chiefly for human readers; skip it when a sentence is clearer.
+- **Pictures tell the truth.** Every node/edge names something real in the diff; the picture states what
+  changed, never how good it is; the caption carries provenance. Full honesty rules: `PICTURES.md`.
 
-Keep it proportional — a one-line typo fix is a one-line description, not a populated template (don't tax
+Keep it proportional — a typo fix is a waiver line plus one bullet, not a populated template (don't tax
 flow with ceremony; see the interrupt-economics principle). The template is a layout to populate, not a
 checklist to satisfy.
 

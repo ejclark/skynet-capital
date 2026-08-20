@@ -1,0 +1,121 @@
+# Pictures — the visual vocabulary for PRs, reports, and journeys
+
+The fridge rule (Eric, 2026-08-20: *"dumb this shit down and draw more pictures"*): every PR and
+report-out opens with something judgeable **by eye in ~10 seconds**. This page is the grammar —
+which picture fits which change, the mechanics that keep pictures alive, and the honesty rules
+that make fast review safe. The PR template points here so its own comments stay short; the
+structure is machine-checked by `scripts/ship.sh checkbody`.
+
+Provenance: the 2026-08-20 hat-team communication research (white/red/yellow/blue/black-hat pass
+over every feedback surface). Owner: the secretary skill (template codification). The load-bearing
+finding, one line: **format compliance tracks enforcement + distribution, never willingness** — so
+this guide teaches, the template reminds, and the ship gate enforces existence; taste is never gated.
+
+## The decision table — change type → picture
+
+| Change type | Picture | Why it wins |
+|---|---|---|
+| UI change | before/after screenshots, 2-col table of `<img width="49%">` | the one grammar judged in <10s |
+| Single new screen | one `<img width="600">` | uncapped 2× shots dominate the fold |
+| Dataflow / pipeline | ```` ```mermaid ```` `flowchart LR` | reads like a sentence |
+| New route / request path | `sequenceDiagram` | actors + ordered messages ARE the story |
+| Lifecycle / gate / mode (`SIM`/`LIVE`) | `stateDiagram-v2` | guarded transitions are the point |
+| Schema / data model | `erDiagram` (or `classDiagram`) | relationship deltas seen, not read |
+| Config / constants | table: key · before · after · why | scannable left edge |
+| Risk / irreversible touch | `> [!WARNING]` top-level | pre-attentive; see the caution budget |
+| Trivial (typo/chore/pure docs) | `Picture: waived — <reason>` | an honest skip beats a decorative diagram |
+
+The waiver is a first-class move, not a loophole: a 3-node flowchart on a typo fix burns the
+glance it claims to save and trains the reader to skip the slot. Skips stay visible and auditable.
+
+## Mermaid that renders on GitHub — stable types only
+
+GitHub renders Mermaid natively in PR bodies, issues, and `.md` files. Templates and this guide
+prescribe **stable types only** — `flowchart` (/`graph`), `sequenceDiagram`, `stateDiagram-v2`,
+`erDiagram`, `classDiagram`, `pie`, `gantt`, `timeline`. Beta types (`xychart-beta`, `block-beta`,
+`architecture-beta`…) are permitted ad hoc but never prescribed: GitHub's deployed Mermaid version
+lags releases, and a syntax error renders as the PR's *opening frame*. Never use the `journey`
+type for reasoning journeys — it's a UX-satisfaction chart, the wrong shape entirely.
+
+Copy-paste starters (all field-verified shapes):
+
+````markdown
+```mermaid
+flowchart LR
+    form[/feedback form/] --> issue[labeled issue]
+    issue --> pm{postmaster} --> session[fresh build session] --> pr[PR]
+```
+````
+
+````markdown
+```mermaid
+sequenceDiagram
+    Member->>App: submit feedback
+    App->>GitHub: file labeled issue
+    GitHub->>Claude: label event starts build
+```
+````
+
+````markdown
+```mermaid
+stateDiagram-v2
+    [*] --> draft
+    draft --> ready: Eric flips
+    ready --> executing
+    executing --> done: PR merges
+```
+````
+
+**The legibility budget:** ≤15 nodes; plain words, not paths (`login canvas`, never
+`src/three/pieces/eye-shader.ts`); no SHAs, env vars, or CLI flags in labels; quote labels
+containing special characters. The real reading condition is a phone at 390px.
+
+**Dark mode:** the default is NO `%%{init}%%` block and no `style`/`classDef` statements — GitHub
+auto-themes both modes for free. Brand-styled mermaid is allowed only via a contrast-verified
+snippet checked in here, never improvised per-PR (hand-picked hex that looks right in one theme
+breaks in the other — that exact drift already shipped once).
+
+## Screenshots — mechanics that keep pictures alive
+
+- **≤100KB JPEG**, committed under `docs/shots/pr-<n>/` (the ship gate fails anything larger —
+  screenshot weight is permanent git history, the one irreversible cost here).
+- **SHA-pinned raw URL only:** `https://raw.githubusercontent.com/<owner>/<repo>/<40-hex-sha>/docs/shots/...`.
+  `scripts/ship.sh open` pins this automatically from `HEAD`. Never hand-write a branch-name URL —
+  the branch deletes at squash-merge and the picture 404s from the permanent record within a day
+  (empirical: PR #446's screenshots, the flagship fridge PR, were dead by 2026-08-20).
+- **One representative frame per changed surface**; prefer a before/after composite (one file)
+  over a gallery. Side-by-side via a 2-column GFM table of `<img width="49%">`.
+- The shoot scripts (`npm run shoot:login`, `scripts/shoot-*.mjs`) carry the JPEG quality ceiling —
+  fix size problems there, not by hand-recompressing.
+
+## Alerts — the caution budget
+
+GitHub renders `> [!NOTE]` `> [!TIP]` `> [!IMPORTANT]` `> [!WARNING]` `> [!CAUTION]` as colored
+callouts. They break when indented or nested inside `<details>` — always top-level. Budget: **one
+per PR**, and `WARNING`/`CAUTION` are *reserved* for the irreversible class (workflow files,
+credentials, spend, outward-facing). On a carve-out PR the WARNING comes **before** any
+accomplishment framing — blast radius first is the honest inversion of fanfare-first.
+
+## The honesty rules — what no gate can replace
+
+The repo's hard invariant — *never let a flourish imply something false* — applied to pictures:
+
+1. **Grounding:** every node, edge, and label names a real file, route, event, or behavior present
+   in this diff. A diagram is a claim; an ungrounded diagram is a lie with good kerning.
+2. **No verdicts:** the picture states *what changed*, never how good it is. Judgment belongs to
+   the reader (and the telestrator).
+3. **Provenance in the caption:** every picture carries a one-line plain-language caption naming
+   what it shows and where it came from — e.g. `_Caption — before/after of /login, from npm run
+   shoot:login output_`. The caption is also the degradation story — it's the only element that
+   survives email, mobile notifications, and raw-text renderers.
+4. **Proportionality:** gold-standard treatment on a 5-line config change implies something false
+   about the diff. Match picture weight to change weight — or waive.
+
+## Where else this grammar applies
+
+- **Digests** (`docs/digests/`): a picture slot ratchets in only after the digest loop itself is
+  proven live — never decorate a dead instrument.
+- **Journeys** (`docs/JOURNEYS/`): pictures are *offered, never required* — the open-forks map and
+  spine scoreboard snippets live in `docs/JOURNEYS/TEMPLATE.md`. A journey that fires beats a
+  journey that's pretty.
+- **Plans / handoffs / issues:** same decision table, same honesty rules, same waiver right.

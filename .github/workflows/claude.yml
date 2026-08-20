@@ -189,6 +189,8 @@ jobs:
             If the ask is a question, a review, or a discussion, answer directly in a comment — no
             build needed. If it's a code change: branch off the latest origin/main, verify by exit
             status and never by tailed output (`npm run typecheck`, `npm run lint`, `npm test`),
-            then open a PR. Do NOT auto-merge — hold it for review unless the thread explicitly
-            says otherwise. Conventional-Commit subjects, lowercase-led. End every comment you post
-            with the Claude Code attribution footer.
+            then open a PR whose body follows .github/pull_request_template.md — `## The picture`
+            first (or the explicit line `Picture: waived — <reason>` for trivial changes; grammar
+            in docs/PICTURES.md). Do NOT auto-merge — hold it for review unless the thread
+            explicitly says otherwise. Conventional-Commit subjects, lowercase-led. End every
+            comment you post with the Claude Code attribution footer.

@@ -58,6 +58,10 @@ The secretary owns the templates feedback flows through, and improves the proces
 - **Retro hook:** when a communication lands wrong (a digest misses, a question wastes attention),
   the retro's prevention step is a template refinement here — the feedback channel self-improves
   the way the codebase does.
+- **Gate-or-decline (2026-08-20 hat-team research):** a template refinement isn't done until its
+  format is machine-checked (a scan/gate, e.g. `ship.sh checkbody`, `digest-scan --validate`,
+  `journey-scan --validate`) or the decision *not* to gate is recorded with its reason — in this
+  repo, comment-only format rules decay (fridge rule: 4/126 bodies) while gated ones hold.
 - Codification is lossy (charter §5.5): before shipping a compressed rule, attach the condition
   under which it holds (e.g. altitude *except* the irreversible class).
 

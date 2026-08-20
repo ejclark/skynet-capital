@@ -35,6 +35,9 @@ work (interrupt economics: avoid death by 10,000 cuts).
    - Then **consult the loaded skill/agent roster's own `Use when` triggers and route to the owner if one
      exists** — the roster self-describes; don't reinvent it. (`/telestrator`, `/charter`, `/governor`,
      `/vision`, the debt agents, etc. each state their own trigger.)
+   - **Long exchange, durable thinking, no code — and the session is winding down?** → `/journey`
+     before it ends; the reasoning dies with the context otherwise (journeys are perishable — the
+     least-instrumented capture surface, per the 2026-08-20 hat-team research).
    - **Structural** "who owns this / what does it touch / what breaks?" → query the **Graphify** graph
      (`graphify query`/`explain`/`path`; `graphify affected` before a change). **Intent** "why does this
      exist / what taste governs it?" → the memory layer (CLAUDE.md, `docs/`, `LESSONS.md`). Structure and

@@ -27,6 +27,24 @@ it. Prevention ranks, best first:
 
 ---
 
+### The fridge rule's own instruction embedded link rot — #446's screenshots died a day after merge
+- **SHA:** 29a0113   **DATE:** 2026-08-20   **STATUS:** closed
+- **SIGNAL:** the hat-team communication research (white-hat rendering probe) found PR #446's
+  fridge-rule screenshots — the flagship "pictures first" PR — returning 404 one day after merge,
+  while a SHA-pinned URL to the identical file returned 200. Detection lag: ~1 day, and only
+  because a research pass happened to check; no net watched for dead images in merged bodies.
+- **ROOT CAUSE:** the PR template instructed embedding screenshots "via the branch's
+  raw.githubusercontent URL." Squash-merge deletes the branch, so every image URL written per the
+  instruction dies the moment the PR succeeds — the rule shipped its own rot into the permanent
+  record (`main`'s squash bodies are the durable context cache).
+- **PREVENTION:** gate + script + doctrine. `scripts/ship.sh open` now SHA-pins every
+  `docs/shots/` raw URL to HEAD at open time, and `ship.sh checkbody` refuses any unpinned
+  `raw.githubusercontent.com` URL (both proven in `tests/arch/ship.spec.ts`); the mechanics are
+  doctrine in `docs/PICTURES.md`. The three dead links already baked into #446's immutable squash
+  body stay dead — the files themselves live on `main`, noted here for the record.
+- **SIDE QUESTS:** the landing meter (per-PR picture/waiver/reaction telemetry riding the digest
+  tick) → filed as issue #456 via the new fan-out route.
+
 ### A wrapper shipped a PR claiming a contract "validated clean" when it hadn't
 - **SHA:** n/a   **DATE:** 2026-08-16   **STATUS:** closed
 - **SIGNAL:** CI red on Eric's first real `handoff:ship` run (#354) — 122 lint errors — and the

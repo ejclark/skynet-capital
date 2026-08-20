@@ -1,75 +1,80 @@
 <!--
-A PR is a document, not a chore — the durable context cache future sessions and humans mine
-(never ship one empty; scripts/ship.sh refuses). Three audiences, layered top-down (Eric,
-2026-08-15): the TOP is human-first (analytical but non-technical readers — plain language,
-outcome-first); the DETAILS fold is hybrid human/bot (file-level context an engineer or a session
-picking up the thread needs); the optional MACHINE CONTEXT fold at the bottom is bot-only
-(structured facts automation can parse without re-deriving). Squash-merge uses the PR title +
-this description, so they become the commit on `main` and drive the release: the TITLE must be a
-Conventional-Commit subject, lowercase-led (e.g. `feat(observatory): equity sparkline on /u/:id`)
-— succinct, high-signal (see docs/ENGINEERING.md → Change communication).
-Delete these comments and any section that doesn't apply.
+A PR is a document, not a chore — it becomes the squash commit on `main`. TITLE = Conventional-
+Commit subject, lowercase-led. Picture grammar & format guide: docs/PICTURES.md (read once; after
+that this template is enough). Structure is machine-checked: `scripts/ship.sh checkbody <file>`.
+
+FAST PATH (typo / chore / pure docs — no behavior change): keep `## The picture` but make its body
+the single line `Picture: waived — <reason>`, write 1–2 Summary bullets, delete everything else.
+Any other section is deletable when it doesn't apply; The picture is only ever WAIVED, never deleted.
+`Closes #N` goes in a Summary bullet — never line 1 (GitHub links it from anywhere).
 -->
 
 ## The picture
 
-<!-- REQUIRED, and FIRST — the fridge rule (Eric, 2026-08-20: "draw more pictures"): open with
-something reviewable BY EYE in ~10 seconds, before any prose. UI change → screenshot(s), committed
-small (≤~100KB JPEG) under docs/shots/pr-<n>/ and embedded via the branch's raw.githubusercontent
-URL. Non-visual change → a ```mermaid map of what changed (GitHub renders it natively). A wall of
-text above the fold is a defect. -->
+<!-- REQUIRED & FIRST — the fridge rule (Eric, 2026-08-20): judgeable BY EYE in ~10 seconds,
+before any prose. Pick by change type (copy-paste examples: docs/PICTURES.md):
+UI → before/after screenshots (≤100KB JPEG under docs/shots/pr-<n>/; ship.sh SHA-pins the raw URL —
+never hand-write a branch URL, those 404 the moment the branch deletes at merge) ·
+dataflow/pipeline → flowchart LR · route/request → sequenceDiagram · lifecycle/gate/mode →
+stateDiagram-v2 · schema → erDiagram · config → before/after table.
+Mermaid: stable types only, ≤15 nodes, plain words in labels, no init/style blocks.
+The picture states WHAT changed — never how good it is. -->
+
+_Caption —_
+
+<!-- The caption is required with any picture: one plain-language line naming what it shows and
+where it came from (a route, a shoot script, a diff). It's the line that survives email/mobile. -->
+
+<!-- CARVE-OUT PRs ONLY (workflow files / credentials / spend / outward-facing): add this next,
+top-level, never indented or inside <details> — blast radius comes BEFORE accomplishments:
+> [!WARNING]
+> <what this touches and what could go wrong if it's wrong> -->
 
 ## Summary
 
-<!-- The gist, in plain language. 1–3 bullets, ONE SHORT LINE EACH — the whole top (picture +
-Summary + Why) must skim in ~10 seconds; anything longer belongs below the fold (Eric, 2026-08-19:
-"this is a wall of text"). -->
-
--
-
-## Why
-
-<!-- One or two sentences: the intent / the user value. What's better after this merges? -->
-
-## Acceptance criteria (EARS)
-
-<!--
-The behavioral contract this PR fulfills, in EARS (docs/ENGINEERING.md → Requirements in EARS): one
-verifiable `shall` per line, a named system, the right pattern — each line maps to a spec. Cover the
-happy path AND the guards (IF…THEN). Omit for pure docs / refactor / chore PRs with no new behavior.
-  WHEN <trigger>, the <system> shall <response>.
-  IF <condition>, THEN the <system> shall <response>.
--->
+<!-- 1–3 bullets, ≤120 chars each (ship.sh checks). Plain language, outcome not process.
+If a live route changed, add a bullet: "Review live after deploy: /route". -->
 
 -
 
 <details>
-<summary><strong>Details — the how &amp; the weeds</strong></summary>
+<summary><strong>Why, acceptance &amp; the weeds</strong></summary>
+
+### Why
+
+<!-- One or two sentences: the intent / the user value. What's better after this merges? -->
+
+### Acceptance criteria (EARS)
+
+<!-- For behavior changes (always for auth/privacy/tool-execution): one verifiable `shall` per
+line, each closing `— verified: <spec or test name>`. Omit for pure docs / refactor / chore. -->
+
+-
 
 ### What changed
 
-<!-- File- or module-level walkthrough for a technical reader. Group by area; explain non-obvious choices. -->
+<!-- File- or module-level walkthrough for a technical reader; group by area; non-obvious choices only. -->
 
 -
 
 ### Design notes & trade-offs
 
-<!-- Decisions made and alternatives rejected, and why. Link an ADR (docs/adr/) for hard-to-reverse calls. -->
+<!-- Decisions made, alternatives rejected, and why. Link an ADR (docs/adr/) for hard-to-reverse calls. -->
 
 -
 
 ### Verification
 
-<!-- How you know it works: typecheck / lint / tests (counts), screenshots for visual work, manual steps. -->
-
 - [ ] `npm run typecheck`
 - [ ] `npm run lint`
 - [ ] `npm test`
-- [ ] Screenshot / visual check (for UI changes)
+- [ ] Screenshot / visual check (UI changes)
+
+<!-- Unchecked boxes with an honest reason beat false checkmarks. -->
 
 ### Risk & rollback
 
-<!-- Blast radius, anything reversible-vs-not, and how to back it out. "Additive, no runtime wiring" is a valid answer. -->
+<!-- Blast radius, reversible-vs-not, how to back it out. "Additive, no runtime wiring" is a valid answer. -->
 
 -
 
@@ -84,8 +89,7 @@ happy path AND the guards (IF…THEN). Omit for pure docs / refactor / chore PRs
 <details>
 <summary><strong>Machine context</strong> (optional — automation audience)</summary>
 
-<!-- Bot-only tier: structured facts a future session or Routine can parse without re-deriving —
-     seams/contracts touched, scanner or schema changes, keys the next automation step needs.
+<!-- Bot-only tier: structured facts a future session or Routine can parse without re-deriving.
      YAML preferred. Omit the whole section when there is nothing structured to say. -->
 
 ```yaml
