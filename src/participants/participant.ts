@@ -18,3 +18,15 @@ export interface Participant {
   /** IANA timezone (e.g. "America/Chicago") for showing this account's times locally. */
   readonly timezone?: string;
 }
+
+/**
+ * First occurrence wins when the env roster and the self-service store both name an id — the env
+ * (listed first by every caller) is the owner-configured truth, the store the runtime addition.
+ */
+export function dedupeById(participants: readonly Participant[]): Participant[] {
+  const byId = new Map<string, Participant>();
+  for (const participant of participants) {
+    if (!byId.has(participant.id)) byId.set(participant.id, participant);
+  }
+  return [...byId.values()];
+}

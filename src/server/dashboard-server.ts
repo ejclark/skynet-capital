@@ -1,12 +1,17 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import {
+  parseActivityType,
+  parseActivityWindow,
+  type TradeActivityRecord,
+} from "../observatory/activity-store.js";
 import { renderAnalysisBody } from "../observatory/analysis-view.js";
 import { renderCalendarBody } from "../observatory/calendar-view.js";
 import { type DeskTab, parseDeskTab } from "../observatory/desk-tabs.js";
 import { renderFeedbackFormBody, renderFeedbackResultBody } from "../observatory/feedback-view.js";
 import type { EquitySample } from "../observatory/history-store.js";
-import { renderHistoryBody } from "../observatory/history-view.js";
+import { type HistoryViewOptions, renderHistoryBody } from "../observatory/history-view.js";
 import { type MetricsViewOptions, renderMetricsBody } from "../observatory/metrics-view.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import { type DeskNotice, renderPositionsBody } from "../observatory/positions-view.js";
@@ -106,6 +111,12 @@ export interface DashboardServerConfig {
    * a bot equals its persona id.
    */
   readonly readDecisions?: (participantId: string) => Promise<readonly DecisionRecord[]>;
+  /**
+   * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
+   * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they
+   * stay honest about it via the backfill caveat.
+   */
+  readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   /**
    * Member-initiated trading from the desk (`/trade`). **Off unless both this flag and
    * `submitTrade` are set** — building the mechanism is Claude's job, authorizing live order
@@ -474,12 +485,43 @@ const TRADE_NOTICES: Record<string, DeskNotice> = {
 function renderDeskTab(
   tab: Exclude<DeskTab, "overview">,
   snapshot: ParticipantSnapshot,
-  options: MetricsViewOptions,
+  options: MetricsViewOptions & HistoryViewOptions,
 ): string {
   if (tab === "positions") return renderPositionsBody(snapshot, options);
   if (tab === "history") return renderHistoryBody(snapshot, options);
   if (tab === "analysis") return renderAnalysisBody(snapshot, options);
   return renderMetricsBody(snapshot, options);
+}
+
+/**
+ * Assemble one non-overview desk tab: gather the reads that tab needs — the durable trade ledger
+ * for History (the filtered blotter) and Analysis (stats over the full record), the decision audit
+ * for the per-order "why" fold on a bot's history — and render. Split from
+ * `serveIndividualProfile` to keep that route inside its complexity budget.
+ */
+async function deskTabBody(
+  tab: Exclude<DeskTab, "overview">,
+  snapshot: ParticipantSnapshot,
+  config: DashboardServerConfig,
+  params: URLSearchParams,
+  base: MetricsViewOptions & HistoryViewOptions,
+): Promise<string> {
+  const tradeActivity =
+    config.readTradeActivity && (tab === "history" || tab === "analysis")
+      ? await config.readTradeActivity(snapshot.id)
+      : undefined;
+  const decisions =
+    config.readDecisions && tab === "history" && snapshot.kind === "bot"
+      ? await config.readDecisions(snapshot.id)
+      : undefined;
+  return renderDeskTab(tab, snapshot, {
+    ...base,
+    tradingEnabled: Boolean(config.tradingEnabled && config.submitTrade),
+    activityWindow: parseActivityWindow(params.get("window")),
+    activityType: parseActivityType(params.get("type")),
+    ...(tradeActivity ? { tradeActivity } : {}),
+    ...(decisions ? { decisions } : {}),
+  });
 }
 
 /** `/u/:id` — an individual's desk. `?tab=` selects the view; anything unknown falls to overview. */
@@ -507,11 +549,10 @@ async function serveIndividualProfile(
   const history = config.readHistory ? await config.readHistory(id) : undefined;
 
   if (tab !== "overview") {
-    const body = renderDeskTab(tab, snapshot, {
+    const body = await deskTabBody(tab, snapshot, config, params, {
       nav: deskNav,
       isSelf,
       generatedAt: state.generatedAt,
-      tradingEnabled: Boolean(config.tradingEnabled && config.submitTrade),
       ...(notice && isSelf ? { notice } : {}),
       ...(history ? { history } : {}),
     });

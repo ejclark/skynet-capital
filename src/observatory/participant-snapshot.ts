@@ -16,8 +16,29 @@ export function unrealizedPl(position: PositionView): number {
   return fin(position.marketValue) - fin(position.quantity) * fin(position.avgPrice);
 }
 
+/** A position's cost basis — what was actually paid for what's held. */
+export function costBasis(position: PositionView): number {
+  return fin(position.quantity) * fin(position.avgPrice);
+}
+
+/**
+ * Today's move on a position: market value against yesterday's close when the broker gave us one,
+ * against cost when it didn't (a position with no yesterday — opened this session — has only its
+ * entry to move from). Derived from the live market value rather than the broker's own intraday
+ * fields so it keeps updating as price events fold through the reducer instead of going stale.
+ * `pct` is null (never 0) when the base is unmeasurable.
+ */
+export function dayPl(position: PositionView): { amount: number; pct: number | null } {
+  const lastday = fin(position.lastdayPrice ?? 0);
+  const base = lastday > 0 ? lastday * fin(position.quantity) : costBasis(position);
+  const amount = fin(position.marketValue) - base;
+  return { amount, pct: base > 0 ? (amount / base) * 100 : null };
+}
+
 /** A single order/transaction as shown in the account's activity feed. */
 export interface ActivityView {
+  /** The broker's order id — the identity the durable activity ledger dedupes on. */
+  readonly orderId?: string;
   readonly symbol: string;
   readonly side: string;
   readonly quantity: number;
@@ -94,6 +115,7 @@ async function readActivity(client: AlpacaTradingClient): Promise<ActivityView[]
   try {
     const orders = await client.getRecentOrders();
     return orders.map((order) => ({
+      orderId: order.id,
       symbol: order.symbol,
       side: order.side,
       quantity: Number(order.qty),

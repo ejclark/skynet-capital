@@ -185,9 +185,14 @@ queues it and an hourly Routine builds it unattended ([`docs/HANDOFFS.md`](docs/
 handoff is just a plan authored elsewhere, so `ready` is Eric's flip exactly as it is for a plan).
 These routes are examples, not the whole set — every skill/agent
 states its own `Use when`, and the **Orient** output style (`.claude/output-styles/orient.md`) consults
-the full roster + the technique spine (`docs/TECHNIQUES.md`) at the top of a task. Structural PRs land batched; auto-merge per the governor's merge-policy table; features
-and visual work always wait for Eric's taste. Eric will not remember these names — that is expected and
-fine; the docs are the memory.
+the full roster + the technique spine (`docs/TECHNIQUES.md`) at the top of a task. Structural PRs land
+batched; auto-merge per the governor's merge-policy table — **features and visual work auto-merge too**
+(Eric, 2026-08-20: with Claude authoring ~100% of PRs, a standing pre-merge taste gate makes him the
+constraint on everything; severely softened). His taste review happens **live, post-merge** — hand him
+the deployed route and adapt from reactions; hold a PR pre-merge only when he asks for that one, or when
+Claude has a specific taste fork worth his eyes before shipping (say so on the PR, as the exception).
+The irreversible carve-outs (workflow files, credentials/spend/outward-facing) still never auto-merge.
+Eric will not remember these names — that is expected and fine; the docs are the memory.
 
 ## Ship loop
 

@@ -77,7 +77,7 @@ PR for Eric's eyes, either don't enable auto-merge or add a `no-automerge` label
 |---|---|---|
 | Everything by default: athlete refactors, docs, features, visual work — verified green | ✅ default-on | The gates are the reviewer; revert is cheap; tempo is the point |
 | Config/tooling (lint rules, budgets, scanners) | ✅ only if the same PR lands with zero open violations | Config changes the *system's* behavior |
-| Visual/taste work Eric wants to eyeball first | ⏸ hold on request | Default is still merge; Eric names the ones he wants to see pre-merge |
+| Visual/taste work Eric wants to eyeball first | ⏸ hold on request only | Reaffirmed (Eric, 2026-08-20, PR #459): taste review is live post-merge by default; a pre-merge hold happens only when Eric names the PR or Claude flags a specific taste fork |
 | Workflow files (`.github/workflows/**`) | ❌ never | High blast radius; Eric rations runner minutes — his one-click by design |
 | Auth/tokens/spend, credentials, anything outward-facing & hard to reverse | ❌ never | The irreversible class stays Eric's (CLAUDE.md hard boundaries) |
 

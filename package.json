@@ -45,7 +45,8 @@
     "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs",
     "shoot:research": "tsx scripts/shoot-research.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
-    "smoke:trade": "tsx src/scripts/smoke-trade.ts"
+    "smoke:trade": "tsx src/scripts/smoke-trade.ts",
+    "backfill:activity": "tsx src/scripts/backfill-trade-activity.ts"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",

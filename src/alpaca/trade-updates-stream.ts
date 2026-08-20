@@ -1,5 +1,10 @@
+import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { ObservatoryEvent } from "../observatory/events.js";
-import { fillEventFromMessage, type TradeUpdateMessage } from "./trade-updates-stream-events.js";
+import {
+  activityFromMessage,
+  fillEventFromMessage,
+  type TradeUpdateMessage,
+} from "./trade-updates-stream-events.js";
 
 export interface TradeUpdatesStreamConfig {
   /** The observatory participant these fills belong to (matches the dashboard row id). */
@@ -9,6 +14,8 @@ export interface TradeUpdatesStreamConfig {
   /** HTTP base, e.g. https://paper-api.alpaca.markets. Converted to the wss /stream URL. */
   readonly baseUrl: string;
   readonly onEvent: (event: ObservatoryEvent) => void;
+  /** Durable trade-activity capture — every order update, not just fills (see activity-store.ts). */
+  readonly onActivity?: (record: TradeActivityRecord) => void;
   readonly onStatus?: (status: string) => void;
 }
 
@@ -69,6 +76,10 @@ export class AlpacaTradeUpdatesStream {
       return;
     }
 
+    const record = activityFromMessage(message, this.config.participantId);
+    if (record) {
+      this.config.onActivity?.(record);
+    }
     const event = fillEventFromMessage(message, this.config.participantId);
     if (event) {
       this.config.onEvent(event);

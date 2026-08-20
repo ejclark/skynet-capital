@@ -11,6 +11,7 @@ import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { AlpacaTradeUpdatesStream } from "../alpaca/trade-updates-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import type { ObservatoryEvent } from "../observatory/events.js";
 import { loadParticipants } from "../participants/load-participants.js";
@@ -21,11 +22,15 @@ type Env = Readonly<Record<string, string | undefined>>;
 
 type EventSink = (event: ObservatoryEvent) => void;
 
+type ActivitySink = (record: TradeActivityRecord) => void;
+
 interface StartStreamsInput {
   readonly participants: readonly Participant[];
   /** Symbols currently held — what the live market-data stream subscribes to. */
   readonly heldSymbols: readonly string[];
   readonly sink: EventSink;
+  /** Durable trade-activity capture, fed by each account's trade_updates stream (live mode only). */
+  readonly onActivity?: ActivitySink;
   readonly onStatus?: (channel: string, status: string) => void;
 }
 
@@ -57,6 +62,7 @@ export interface DataSource {
     participant: Participant,
     sink: EventSink,
     onStatus?: (channel: string, status: string) => void,
+    onActivity?: ActivitySink,
   ): void;
   /**
    * Close one account's fill stream — used when a participant is removed at runtime, so a
@@ -112,6 +118,7 @@ function liveDataSource(env: Env): DataSource {
     participant,
     sink,
     onStatus,
+    onActivity,
   ) => {
     stopParticipantStream(participant.id);
     const stream = new AlpacaTradeUpdatesStream({
@@ -120,6 +127,7 @@ function liveDataSource(env: Env): DataSource {
       apiSecret: participant.credentials.apiSecret,
       baseUrl: participant.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
       onEvent: sink,
+      ...(onActivity ? { onActivity } : {}),
       onStatus: (status) => onStatus?.("trade-updates", status),
     });
     fillStreams.set(participant.id, stream);
@@ -133,7 +141,7 @@ function liveDataSource(env: Env): DataSource {
     loadParticipants: () => loadParticipants(createDefaultPersonas(), env),
     startParticipantStream,
     stopParticipantStream,
-    startStreams: ({ participants, heldSymbols, sink, onStatus }) => {
+    startStreams: ({ participants, heldSymbols, sink, onActivity, onStatus }) => {
       const dataCreds = participants[0]?.credentials;
       if (heldSymbols.length > 0 && dataCreds) {
         new AlpacaMarketDataStream({
@@ -149,7 +157,7 @@ function liveDataSource(env: Env): DataSource {
       }
 
       for (const participant of participants) {
-        startParticipantStream(participant, sink, onStatus);
+        startParticipantStream(participant, sink, onStatus, onActivity);
       }
       onStatus?.("trade-updates", `subscribed ${participants.length} account(s)`);
     },

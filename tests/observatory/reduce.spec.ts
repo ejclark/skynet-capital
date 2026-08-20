@@ -150,6 +150,36 @@ describe("reduceObservatory", () => {
       });
       expect(next).toBe(start);
     });
+
+    it("carries lastdayPrice through a re-mark, so the day-change column stays measurable", () => {
+      const start = baseState();
+      const withLastday: DashboardData = {
+        ...start,
+        participants: start.participants.map((p) =>
+          p.id === "news-fader"
+            ? {
+                ...p,
+                positions: [
+                  {
+                    symbol: "EEM",
+                    quantity: 1_000,
+                    avgPrice: 100,
+                    marketValue: 100_000,
+                    lastdayPrice: 105,
+                  },
+                ],
+              }
+            : p,
+        ),
+      };
+      const next = reduceObservatory(withLastday, {
+        type: "price",
+        symbol: "EEM",
+        price: 110,
+        at: "2026-07-24T15:01:00.000Z",
+      });
+      expect(next.participants[0]?.positions[0]?.lastdayPrice).toBe(105);
+    });
   });
 
   describe("fill", () => {

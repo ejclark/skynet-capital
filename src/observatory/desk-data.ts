@@ -1,6 +1,11 @@
 import type { TicketContext } from "../trading/order-ticket.js";
 import { matchRoundTrips, type RoundTripLedger, type TradeFill } from "../trading/round-trips.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import {
+  collapseActivity,
+  recordsFromActivity,
+  type TradeActivityRecord,
+} from "./activity-store.js";
 import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.js";
 
 /**
@@ -23,9 +28,27 @@ export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeF
     }));
 }
 
-/** A participant's closed-trade ledger, reconstructed from whatever fill window we hold. */
-export function deskLedger(snapshot: ParticipantSnapshot): RoundTripLedger {
-  return matchRoundTrips(fillsFrom(snapshot.activity));
+/**
+ * The one activity feed a desk view should read: the durable trade ledger merged with the broker's
+ * recent-order window, folded to one row per order. With no durable records the broker window
+ * passes through untouched (exactly the pre-ledger behavior), so a deployment without the
+ * activity store loses nothing — it just stays bounded by the broker's window.
+ */
+export function mergedDeskActivity(
+  snapshot: ParticipantSnapshot,
+  durable?: readonly TradeActivityRecord[],
+): readonly ActivityView[] {
+  if (!durable || durable.length === 0) return snapshot.activity ?? [];
+  return collapseActivity([...durable, ...recordsFromActivity(snapshot.activity, snapshot.id)]);
+}
+
+/** A participant's closed-trade ledger — over the full durable record when one is supplied,
+ *  else whatever fill window the snapshot holds. */
+export function deskLedger(
+  snapshot: ParticipantSnapshot,
+  durable?: readonly TradeActivityRecord[],
+): RoundTripLedger {
+  return matchRoundTrips(fillsFrom(mergedDeskActivity(snapshot, durable)));
 }
 
 /** The account state an order ticket is reviewed against. */

@@ -101,6 +101,23 @@ export const DESK_STYLE = `<style>
 
   .progress{ height:9px; border-radius:6px; background:color-mix(in srgb,var(--muted) 16%,transparent); overflow:hidden; margin-top:10px; }
   .progress i{ display:block; height:100%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--pos)); }
+
+  .filterbar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:10px 14px; }
+  .filter-k{ font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .fchips{ display:flex; gap:4px; flex-wrap:wrap; margin-right:8px; }
+  .fchip{ font-family:var(--mono); font-size:11px; letter-spacing:.05em; color:var(--muted); text-decoration:none;
+    padding:5px 11px; border:1px solid var(--border); border-radius:999px; transition:color .15s, border-color .15s; }
+  .fchip:hover{ color:var(--text); border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); }
+  .fchip.active{ color:var(--accent); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 9%,transparent); }
+  .fchip:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .src-badge{ font-family:var(--mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+    border:1px solid var(--border); border-radius:5px; padding:1.5px 5px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
+  .why summary{ cursor:pointer; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); }
+  .why summary:hover{ text-decoration:underline; }
+  .why-body{ display:flex; flex-direction:column; gap:6px; margin-top:8px; max-width:44ch; font-size:12px; line-height:1.5; white-space:normal; }
+  .why-line b{ font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-right:5px; }
+  .why-meta{ color:var(--muted); font-size:10.5px; }
   .fills{ margin-top:16px; }
   .fills summary{ cursor:pointer; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:8px 0; }
   .fills summary:hover{ color:var(--text); }
