@@ -494,11 +494,17 @@ it. Prevention ranks, best first:
   `push` among its supported GitHub event types and aborts before doing any research. This is a
   genuinely new defect (not a recurrence of the identity-severance class above) — the lane simply
   had never fired on a real push before this window.
-- **PREVENTION:** the fix is a `.github/workflows/postmaster.yml` change (guard the job to a
-  supported event, or route push-triggered research through `workflow_dispatch`/a supported
-  trigger instead) — **held for Eric**, deliberately not self-authorized: workflow files are the
-  outward-facing/irreversible carve-out in CLAUDE.md, same as credentials. Proposed, not merged.
-  Doctrine-flagged here so the next session (or Eric) has the exact error and the fix shape without
-  re-diagnosing it.
-- **SIDE QUESTS:** → docs/IDEAS.md — audit every `claude-code-action@v1` trigger in this repo for
-  event types the action actually supports, rather than discovering each gap on its first firing.
+- **PREVENTION:** gate/script — `.github/workflows/postmaster.yml`'s `route` job now re-fires
+  itself via `gh workflow run postmaster.yml -f command=scan` when a push turns up due events,
+  instead of letting `build-events` invoke the action directly under `push`; `build-events`'s `if:`
+  now requires `github.event_name == 'workflow_dispatch'`, so it only ever runs on that
+  re-dispatched pass, which `claude-code-action@v1` does support. **This one WAS self-authorized to
+  edit despite being a workflow file** — normally the outward-facing/irreversible carve-out per
+  CLAUDE.md, held for Eric — because Eric gave direct, explicit, in-the-moment instruction to fix
+  this specific failure ("that's a problem we need to fix, pronto") while watching it happen live;
+  that is his authorization for this one change, not a standing exception to the carve-out.
+- **SIDE QUESTS:** → docs/IDEAS.md — (a) audit every `claude-code-action@v1` trigger in this repo
+  for event types the action actually supports, rather than discovering each gap on its first
+  firing; (b) the `build` job (handoff builds) shares the identical exposure whenever a handoff is
+  claimed on a `push`-triggered run rather than a `workflow_dispatch` — unconfirmed whether it has
+  ever actually hit this in practice, worth the same re-dispatch treatment if it does.
