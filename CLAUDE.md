@@ -128,6 +128,15 @@ feedback formats into templates and may dispatch verification teams (red/blue/wh
 verify-and-report only) so decision items arrive pre-verified. The carve-outs below are the
 condition attached to this compression — altitude never means silence.
 
+**Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
+pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
+with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map
+(GitHub renders it natively) for everything else — then at most 3 short bullets; ALL remaining
+text lives below the fold. This is the scaling answer to the review lane he *wants* to grow
+(more user feedback → more PRs → more of his glances, never more of his reading): a wall of text
+above the fold is a defect, not a style choice. The PR template carries the format; screenshots
+commit small (≤~100KB) under `docs/shots/pr-<n>/`.
+
 **When Eric's action IS needed — procedural, pre-verified, near-zero** (Eric, 2026-08-15):
 hand him a TLDR-format **numbered procedure**, never prose; perform due diligence against the
 instructions first (commands run, links checked, states confirmed — his steps must work on the

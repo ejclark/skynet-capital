@@ -8,6 +8,12 @@ import {
   type TicketAction,
   type TicketPreview,
 } from "../trading/order-ticket.js";
+import { marketOpen, openDesk, readReview, submitToBroker } from "./desk-gate.js";
+import {
+  createOptionTradeService,
+  type OptionTradeServiceDeps,
+  type SubmitOptionTrade,
+} from "./option-trade-service.js";
 
 /**
  * THE DESK EXECUTION SEAM — where a member-initiated order actually reaches the broker.
@@ -57,16 +63,6 @@ export type SubmitDeskTrade = (
   requesterId: string | undefined,
 ) => Promise<DeskTradeResult>;
 
-async function marketOpen(client: AlpacaTradingClient): Promise<boolean | undefined> {
-  try {
-    return await client.isMarketOpen();
-  } catch {
-    // An unknown clock must make no claim in either direction — the preview simply omits the
-    // market-hours line rather than asserting a session that may not exist.
-    return undefined;
-  }
-}
-
 /** Re-read the account and re-run the ticket rules against live numbers. */
 async function reviewLive(
   client: AlpacaTradingClient,
@@ -90,15 +86,24 @@ async function reviewLive(
 }
 
 /**
- * Read the deployment's desk-trading switch and build the execution seam behind it. Enabled only
- * when `SKYNET_DESK_TRADING=on` **and** an authenticator is configured: with no signed-in identity
- * there is no account to match an order to, and the service would refuse every request anyway —
- * better to say so at boot than to leave a member clicking a button that can never work.
+ * Read the deployment's desk-trading switch and build the execution seams behind it — shares
+ * and options together, one switch (`SKYNET_DESK_TRADING=on` **and** an authenticator
+ * configured: with no signed-in identity there is no account to match an order to, and the
+ * services would refuse every request anyway — better to say so at boot than to leave a member
+ * clicking a button that can never work).
  */
 export function resolveDeskTrading(
   env: NodeJS.ProcessEnv,
-  deps: Omit<TradeServiceDeps, "tradingEnabled"> & { authConfigured: boolean },
-): { enabled: boolean; submit: SubmitDeskTrade; warning?: string } {
+  deps: Omit<TradeServiceDeps, "tradingEnabled"> & {
+    authConfigured: boolean;
+    optionsClientFactory: OptionTradeServiceDeps["optionsClientFactory"];
+  },
+): {
+  enabled: boolean;
+  submit: SubmitDeskTrade;
+  submitOption: SubmitOptionTrade;
+  warning?: string;
+} {
   const requested = env.SKYNET_DESK_TRADING === "on";
   const enabled = requested && deps.authConfigured;
   const warning =
@@ -113,45 +118,36 @@ export function resolveDeskTrading(
       clientFactory: deps.clientFactory,
       tradingEnabled: enabled,
     }),
+    submitOption: createOptionTradeService({
+      findParticipant: deps.findParticipant,
+      clientFactory: deps.clientFactory,
+      optionsClientFactory: deps.optionsClientFactory,
+      tradingEnabled: enabled,
+    }),
   };
 }
 
 export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
   return async (request, requesterId) => {
-    if (!deps.tradingEnabled) {
-      return {
-        ok: false,
-        refusals: ["Trading from the desk is switched off for this deployment."],
-      };
+    const desk = openDesk(deps, request.participantId, requesterId);
+    if ("refusals" in desk) {
+      return desk;
     }
-    if (!requesterId || requesterId !== request.participantId) {
-      return { ok: false, refusals: ["You can only trade your own account."] };
+    const reviewed = await readReview(() => reviewLive(desk.client, request));
+    if ("refusals" in reviewed) {
+      return { ok: false, refusals: reviewed.refusals };
     }
-    const participant = deps.findParticipant(request.participantId);
-    if (!participant) {
-      return { ok: false, refusals: ["That account isn't on the board."] };
-    }
-
-    const client = deps.clientFactory(participant);
-    let preview: TicketPreview;
-    try {
-      preview = await reviewLive(client, request);
-    } catch (error) {
-      return { ok: false, refusals: [`Couldn't read the account to check this order: ${error}`] };
-    }
+    const preview: TicketPreview = reviewed.preview;
     if (!preview.ok) {
       return { ok: false, refusals: preview.refusals };
     }
 
-    try {
-      const order = await client.placeOrder({
+    return submitToBroker(() =>
+      desk.client.placeOrder({
         symbol: normalizeSymbol(request.symbol),
         qty: request.quantity,
         side: request.action,
-      });
-      return { ok: true, orderId: order.id, status: order.status, symbol: order.symbol };
-    } catch (error) {
-      return { ok: false, refusals: [`The broker rejected the order: ${error}`] };
-    }
+      }),
+    );
   };
 }

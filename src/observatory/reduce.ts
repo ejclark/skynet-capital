@@ -40,6 +40,19 @@ export function reduceObservatory(state: DashboardData, event: ObservatoryEvent)
         collisions: findAccountCollisions(participants),
       };
     }
+    case "participant_removed": {
+      const participants = state.participants.filter((p) => p.id !== event.participantId);
+      if (participants.length === state.participants.length) {
+        return state;
+      }
+      // Dropping an account can only ever shrink the collision set, but recompute rather than
+      // hand-prune — the same cheap-over-clever call participant_updated makes above.
+      return {
+        generatedAt: event.at,
+        participants,
+        collisions: findAccountCollisions(participants),
+      };
+    }
     case "price":
       return applyToParticipants(state, event.at, (p) => applyPrice(p, event.symbol, event.price));
     case "fill":

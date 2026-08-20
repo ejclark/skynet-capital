@@ -211,11 +211,11 @@ export function previewClose(
 }
 
 /**
- * Why rolling isn't offered yet, in one place so every surface tells the same story. A roll closes
- * one option contract and opens another in a single order; this account path is equity-only
- * (`AlpacaTradingClient.placeOrder` submits share orders), so there is no leg to roll. Rendering a
- * disabled "Roll" affordance with this reason is honest; rendering an enabled one that quietly
- * does something else would not be.
+ * Why rolling isn't offered yet, in one place so every surface tells the same story. A roll
+ * closes one option contract and opens another as ONE atomic order; the desk now trades single
+ * option legs (`option-ticket.ts`), but the atomic close-and-reopen order class isn't built.
+ * Rendering a disabled "Roll" affordance with this reason is honest; rendering an enabled one
+ * that quietly does something else would not be.
  */
 export const ROLL_UNAVAILABLE_REASON =
-  "Rolling moves an options contract to a later expiry or a new strike. This desk trades shares only — the options order path isn't built yet, so there's nothing to roll.";
+  "Rolling closes one options contract and opens another as a single atomic order. That combined order isn't built yet — close the position here, then open the new strike/expiry from the Trade ticket.";

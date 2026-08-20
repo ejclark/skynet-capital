@@ -165,13 +165,16 @@ describe("POST /trade — the review step", () => {
     );
   });
 
-  it("refuses a GET — an order must never be a link", async () => {
+  it("serves the ticket VIEW on GET — a read, never an order (those move only by POST)", async () => {
     await withServer(config(), async (base) => {
       const res = await fetch(`${base}/trade`, {
         headers: { cookie: cookie() },
         redirect: "manual",
       });
-      expect(res.status).toBe(405);
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain("New order");
+      expect(html).toContain("Review order");
     });
   });
 
@@ -232,16 +235,24 @@ describe("handleTrade — the route contract in isolation", () => {
     document: (_title: string, body: string) => body,
   };
 
-  it("answers a GET with 405 and an Allow header — an order is never a link", async () => {
+  it("serves the ticket view on GET — orders themselves still only move by POST", async () => {
     const { sent, res } = capture();
-    await handleTrade({ method: "GET" } as IncomingMessage, res, deps);
+    await handleTrade({ method: "GET" } as IncomingMessage, res, "/trade", deps);
+    expect(sent.status).toBe(200);
+    expect(sent.body).toContain("New order");
+    expect(sent.body).toContain("Review order");
+  });
+
+  it("answers other methods with 405 and an Allow header — an order is never a link", async () => {
+    const { sent, res } = capture();
+    await handleTrade({ method: "PUT" } as IncomingMessage, res, "/trade", deps);
     expect(sent.status).toBe(405);
-    expect(sent.headers.allow).toBe("POST");
+    expect(sent.headers.allow).toBe("GET, POST");
   });
 
   it("refuses with 403 when no identity resolved from the session", async () => {
     const { sent, res } = capture();
-    await handleTrade({ method: "POST" } as IncomingMessage, res, {
+    await handleTrade({ method: "POST" } as IncomingMessage, res, "/trade", {
       ...deps,
       requesterId: undefined,
     });
