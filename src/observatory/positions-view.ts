@@ -134,9 +134,9 @@ function blotter(
         <thead><tr>
           <th>Symbol</th>
           <th class="num">Qty</th>
-          <th class="num">Avg entry</th>
-          <th class="num">Mark</th>
-          <th class="num">Cost basis</th>
+          <th class="num" title="Average price paid per share — the cost basis of one share">Cost / share</th>
+          <th class="num" title="The latest price the position is valued at (the &quot;mark&quot;)">Price</th>
+          <th class="num" title="Total paid: shares × cost per share">Cost basis</th>
           <th class="num">Value</th>
           <th class="num">Day P/L</th>
           <th class="num">Day %</th>

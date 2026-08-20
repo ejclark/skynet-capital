@@ -113,13 +113,17 @@ describe("desk data adapters", () => {
 });
 
 describe("positions view — the blotter", () => {
-  it("shows the holding with its mark, cost basis, unrealized P/L and return", () => {
+  it("shows the holding with its price, cost basis, unrealized P/L and return", () => {
     const html = renderPositionsBody(snapshot(), { isSelf: true });
     expect(html).toContain(">AAPL<");
-    expect(html).toContain("$120"); // mark = 1200 / 10
+    expect(html).toContain("$120"); // price (the mark) = 1200 / 10
     expect(html).toContain("$1,000.00"); // cost basis = 10 × 100
     expect(html).toContain("+$200"); // 1200 − 10×100
     expect(html).toContain("+20.00%");
+    // Plain-language headers (Eric, PR #459): per-share cost named as such, "Mark" retired.
+    expect(html).toContain(">Cost / share</th>");
+    expect(html).toContain(">Price</th>");
+    expect(html).not.toContain(">Mark<");
   });
 
   it("measures the day's move from yesterday's close when the broker recorded one", () => {
@@ -202,6 +206,9 @@ describe("history view — closed round trips and the order ledger", () => {
     expect(html).toContain("Order activity");
     expect(html).toContain('class="fchip active"');
     expect(html).toContain("window=7d&type=all"); // every other window is one click away
+    // The two "All" chips must not read as twins: each names what it selects (Eric, PR #459).
+    expect(html).toContain(">All history<");
+    expect(html).toContain(">All types<");
   });
 
   it("filters orders and trips by the selected window", () => {

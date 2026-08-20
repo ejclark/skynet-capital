@@ -130,11 +130,13 @@ export const ACTIVITY_WINDOWS: ReadonlyArray<{
   { key: "7d", label: "7 days", days: 7 },
   { key: "30d", label: "30 days", days: 30 },
   { key: "90d", label: "90 days", days: 90 },
-  { key: "all", label: "All" },
+  // "All history", not "All": this chip used to sit beside the type filter's identical "All" and
+  // read as one ambiguous pair (Eric, PR #459) — each chip now says what it actually selects.
+  { key: "all", label: "All history" },
 ];
 
 export const ACTIVITY_TYPES: ReadonlyArray<{ key: ActivityTypeFilter; label: string }> = [
-  { key: "all", label: "All" },
+  { key: "all", label: "All types" },
   { key: "buy", label: "Buys" },
   { key: "sell", label: "Sells" },
 ];

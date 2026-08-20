@@ -127,8 +127,11 @@ function tripsTable(trips: readonly RoundTrip[], timezone: string | undefined): 
   return `<div class="blotter-wrap">
       <table class="blotter">
         <thead><tr>
-          <th class="tcell">Closed</th><th>Symbol</th><th class="num">Qty</th><th class="num">Entry</th>
-          <th class="num">Exit</th><th class="num">Cost basis</th><th class="num">Held</th><th class="num">Realized</th><th class="num">Return</th>
+          <th class="tcell">Closed</th><th>Symbol</th><th class="num">Qty</th>
+          <th class="num" title="Price paid per share — the cost basis of one share">Entry / share</th>
+          <th class="num" title="Price received per share on the close">Exit / share</th>
+          <th class="num" title="Total paid: shares × entry per share">Cost basis</th>
+          <th class="num">Held</th><th class="num">Realized</th><th class="num">Return</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
