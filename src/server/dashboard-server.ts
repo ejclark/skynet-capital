@@ -750,4 +750,3 @@ ${renderDashboardBody(hub.getState(), { nav })}
 </body>
 </html>`;
 }
-
