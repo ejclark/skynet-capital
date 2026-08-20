@@ -18,6 +18,36 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### In-app "what's new" member feed built from PR pictures
+Extract `## The picture` + Summary from `main`'s squash bodies into a member-facing changelog route —
+the engagement flywheel (non-technical friends following along) and the first real consumer of the
+Machine-context tier. A taste surface: needs a plan draft and Eric's flip, never smuggled into a
+process PR. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+
+### Eric-comment reaction-capture lane (postmaster, second wave)
+Route Eric's PR/issue comments through the act/park/profile/question classifier via a postmaster lane
+(`issue_comment` from OWNER — real-identity events do fire webhooks; emoji reactions don't, so those
+poll on the digest tick instead). Highest-grade landing signal there is; build after the checkbody
+gate + digest delivery prove out. Workflow-file carve-out. _(src: Claude · while: hat-team comms
+research, 2026-08-20)_
+
+### Digest picture slot — ratchet in only after the digest loop is proven live
+Add `## The picture` to `docs/digests/TEMPLATE.md` + `digest-scan` REQUIRED_SECTIONS once 2–3 digests
+have actually shipped on cadence (the instrument has fired once ever; decorating a dead instrument
+decorates an empty room). The digest picture = `## The picture` blocks harvested from squash bodies
+via local git log. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+
+### Long-session journey nudge from duel-log telemetry
+Teach `scripts/duel-log.mjs` (or the postmaster audit) a heuristic: a session with many turns and no
+code diff is a journey candidate — nudge, never auto-write. Complements the orient-time trigger that
+shipped with the comms-research PR. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+
+### IDEAS.md entries have the same wall-of-text disease as Summary bullets had
+This file says "one or two lines — enough to reconstruct intent"; recent entries run 10+. Same cure
+family as the ≤120-char bullet gate — but measure first whether long entries actually hurt retrieval
+before gating a capture surface (the journey lesson: never tax the habit). _(src: Claude · while:
+hat-team comms research, 2026-08-20)_
+
 ### Options-mechanics event kinds — OPEX, quad witching, VIX expiration, holidays
 The `/calendar` view renders the curated feed; the mechanical dates options traders also watch are
 all rule-computable offline: monthly OPEX = 3rd Friday (holiday → prior Thursday), quad witching =

@@ -377,7 +377,10 @@ jobs:
             by tailed output (`npm run typecheck`, `npm run lint`, `npm test`), push, open the PR
             with `gh pr create`, then arm auto-merge with `gh pr merge --auto --squash` —
             research-ledger docs auto-merge per the governor's merge policy. Conventional-Commit
-            subjects, lowercase-led.
+            subjects, lowercase-led. The PR body follows .github/pull_request_template.md: open
+            with `## The picture` — for a ledger row the honest picture is usually the line
+            `Picture: waived — automated research ledger` (never a decorative diagram); Summary
+            bullets ≤120 chars (docs/PICTURES.md).
 
             HARD LIMITS: no trades; no edits to playbooks, guards, or earnings-calendar entries; no
             flipping any `estimate` to `confirmed` without a primary source (IR:/BLS:/FED:); never
@@ -484,8 +487,11 @@ jobs:
                behavior). Keep the change as small as the ask allows.
             3. Verify by exit status, never tailed output: `npm run typecheck`, `npm run lint`,
                `npm test`.
-            4. Open the PR with a body whose first line is `Closes #${{ needs.route.outputs.feedback_issue }}`
-               (so the merge closes the member's issue), then arm auto-merge:
+            4. Open the PR with a body following .github/pull_request_template.md: `## The picture`
+               first (a before/after screenshot for UI changes when cheap; otherwise the line
+               `Picture: waived — automated feedback build`), then a Summary bullet containing
+               `Closes #${{ needs.route.outputs.feedback_issue }}` — GitHub links it from anywhere,
+               so it is never line 1 (the picture is). Then arm auto-merge:
                `gh pr merge --auto --squash <pr-url>`. Merge deploys automatically; the issue
                closing is the member's "shipped" signal.
             5. Conventional-Commit subjects, lowercase-led.

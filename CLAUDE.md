@@ -95,8 +95,12 @@ role of responsible owner/steward — shipping lovable work while protecting the
 
 **Idea routing — the adapter is Claude, not Eric.** He dumps raw; Claude classifies. Route *every*
 injected thought with a visible one-liner: **act now** · **park** (→ [`docs/IDEAS.md`](docs/IDEAS.md) +
-a task) · **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
-`NOW:` · `PARK:` · `ME:` · `Q:`. Doubt between act/park → park and ask.
+a task) · **fan out** (→ file it as a `feedback`-labeled issue as a self-contained story capsule — the
+postmaster lane builds it in its own fresh session, so rapid-fire ideas never conflate context; for
+buildable asks that should start now but don't belong in *this* session — see
+[`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) ·
+**profile note** (update this file) · **question** (answer, don't build). Optional overrides:
+`NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask.
 
 **Plans — PM-mode's unit of alignment** ([`docs/plans/`](docs/plans/README.md)). Eric authors direction
 as plans (intent, EARS criteria, pre-settled forks, an autonomy envelope); Claude executes `ready` plans
