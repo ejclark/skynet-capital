@@ -23,6 +23,29 @@ The payoff is a safety property, not just tidiness: **committing a bundle trigge
 `draft` handoff can sit in the repo indefinitely. The `ready` flip is a deliberate, one-word
 authorization, and it is the same gate the irreversible class already runs through.
 
+## The mailbox — drop a zip on an issue (no laptop)
+
+The lowest-friction intake, and the only one that works from the GitHub **mobile app**:
+
+1. Open a new issue. Title it with the handoff's name — that becomes the slug (`Trailer Debut` →
+   `trailer-debut`).
+2. **Drag the design zip into the issue description** (the body, not a comment). Cap: 25 MB.
+3. Apply the **`handoff-inbox`** label.
+
+The **postmaster** (`.github/workflows/postmaster.yml`) then downloads the attachment, runs the same
+`handoff-import.mjs` as the zip path, opens the handoff PR, and **comments a receipt** on the issue —
+sha256, byte count, and the extracted file list — so a human who dropped a zip from a phone can see
+exactly what the machine received. A dirty contract still lands the branch and the receipt says so.
+
+**Why this works:** the repo is public, so `github.com/user-attachments/files/…` redirects to a
+short-lived pre-signed URL that needs no credentials. **If this repo ever goes private, this path
+breaks** — private attachments are browser-session-only (no PAT, no App token, no `GITHUB_TOKEN`) and
+the intake must switch to release assets, which stay token-downloadable. The extraction half is
+shared, so only the fetch step would change.
+
+The mailbox changes *who carries the zip*, never *who authorizes the build*: the bundle still lands
+at `draft`, and the `ready` flip is still Eric's alone.
+
 ## The zip path — one command
 
 When the design session hands back a **zip** (the common case), don't unpack it by hand:
@@ -36,6 +59,18 @@ anywhere — it locates the repo from its own position rather than trusting the 
 it unpacks, strips Finder metadata, descends any wrapper folder, adds a `**Status:** draft` line if
 the bundle's README lacks one, validates the contract, branches off the latest `main`, commits, and
 pushes. `--slug <name>` overrides the name; `--no-push` stops before pushing.
+
+To go further in the same breath — import, validate, PR, auto-merge armed, and (only if you type
+the flag) the `ready` flip — use the wrapper:
+
+```sh
+npm run handoff:ship -- ~/Downloads/desk-v2.zip --slug desk-v2          # lands at draft
+npm run handoff:ship -- ~/Downloads/desk-v2.zip --slug desk-v2 --ready # your one-word flip, as a flag
+```
+
+A dirty contract stops the chain before any flip or PR — the bundle still lands on its branch,
+inert at `draft`. Prereq for the PR step on a laptop: `gh` CLI authenticated (falls back to
+`scripts/ship.sh` when a `GH_TOKEN` is in the environment instead).
 
 **It fails loudly rather than quietly doing nothing.** Every check in it corresponds to a step that
 failed silently when this was done by hand (see `docs/LESSONS.md`, 2026-08-14): the wrong clone was
@@ -92,28 +127,115 @@ npm run handoff:scan -- --validate # enforce the contract — this also runs in 
 `--validate` is a real gate, not a formality: a handoff missing its EARS criteria, or still carrying
 `<trigger>` placeholders, fails `npm test` before any session can build the wrong thing from it.
 
-## The three pickup layers
+## The flip — Eric's one word, as a button
 
-All three read the same eye — `scripts/handoff-scan.mjs --ready` — so they can never disagree about
-what is live.
+The authorization is a status change from `draft` to `ready`. Do it the easy way:
 
-| Layer | Latency | Needs | Status |
-|---|---|---|---|
-| **1. Watcher** — `.github/workflows/handoff-detect.yml` opens a `handoff`-labelled issue on push | seconds | nothing | **on** |
-| **2. Routine** — an hourly Claude Code session that scans, no-ops if idle, builds if not | ≤ 1 hour | nothing | **on** |
-| **3. GitHub App** — `@claude` on the issue starts a session immediately | seconds | Eric installs the Claude Code app + adds `CLAUDE_CODE_OAUTH_TOKEN` | **inert until then** |
+**Actions → “Postmaster” → Run workflow → command `flip-handoff`, slug `<name>`.**
 
-Layers 2 and 3 are redundant on purpose and safe together: whichever gets there first flips the
-handoff to `executing` in the same PR, and the other sees a non-`ready` status and stands down.
+That opens a PR with a properly-formed commit message and arms auto-merge; on merge the watcher
+fires and the build begins. It refuses any handoff that is not currently `draft`, and any whose
+contract does not validate — a skeleton can never be marked buildable.
 
-**Layer 3 is the only genuinely event-driven path** (push → session, no polling), and it is the one
-step that needs Eric's credentials. Setup, once:
+**Why a button and not just editing the file:** on 2026-08-17 the hand-edit path hit commitlint —
+GitHub's web editor defaults to commit messages like `Update status from draft to ready in README`
+(no type) and `Fix formatting…` (capitalized subject), and the gate rejects both. The single most
+important human action in the pipeline was blocked by message formatting. Editing the file by hand
+still works if you type a conventional subject (`docs(handoff): flip <slug> to ready`), but the
+button exists so nobody has to remember that.
 
-1. Install the Claude Code GitHub App on `ejclark/skynet-capital` — <https://github.com/apps/claude>.
-2. Add repository secret `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`).
+Dispatching needs repo write access — the same permission editing the file needs — and `github.actor`
+is recorded in the commit, so the audit trail still names the human who authorized it.
 
-`.github/workflows/claude.yml` gates on that secret, so until it exists the workflow costs nothing
-and layer 2 carries the load.
+### Repo settings the pipeline assumes
+
+#### The identity that makes machine-opened PRs mergeable
+
+**Without one, the pipeline still works, but every PR it opens carries zero check runs** and can
+never satisfy branch protection. The cause is GitHub's infinite-loop guard: a PR opened with
+`GITHUB_TOKEN` does not emit `pull_request.opened`, so `pipeline.yml`'s required `verify` never
+runs. Not a red check — *no* checks, and `mergeable_state: blocked` forever (2026-08-17, #371).
+
+GitHub documents exactly two identities whose events are **not** suppressed: a **GitHub App
+installation token** and a **PAT**. The workflow prefers them in that order, then falls back to
+`GITHUB_TOKEN` and warns.
+
+**Preferred — the postmaster GitHub App** (nothing to renew, acts as its own bot):
+
+1. **Settings → Developer settings → GitHub Apps → New GitHub App.** Name it `skynet-postmaster`. **Uncheck Webhook → Active** — this App is an *identity*, not a webhook receiver; nothing here listens.
+2. Set **Repository permissions** to exactly these three, all *Read and write*, everything else *No access* — the same three the workflow declares:
+   - **Contents** — push the handoff branch
+   - **Pull requests** — open the PR and arm auto-merge
+   - **Issues** — comment the receipt, close the `[handoff]` issue
+3. **Generate a private key** at the bottom of the App's settings page; a `.pem` downloads.
+4. **Install App → Only select repositories → `skynet-capital`.**
+5. Add the App's **Client ID** as a repository **variable** named **`APP_CLIENT_ID`** (Settings → Secrets and variables → Actions → **Variables**). A client ID is not sensitive, and the workflow's `if:` reads it — `if:` cannot read secrets, which is why this half is a variable.
+6. Add the `.pem` contents (including the `BEGIN`/`END` lines) as a repository **secret** named **`APP_PRIVATE_KEY`**.
+
+**Alternative — a fine-grained PAT** (~2 minutes, but expires and authors PRs as you). Mint at
+[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)
+— fine-grained, not classic; **Only select repositories → `skynet-capital`**; the same three
+permissions; save as the secret **`HANDOFF_PR_TOKEN`**. Still honoured as the middle tier, so a repo
+that already has one keeps working.
+
+**What changes either way:** PRs the pipeline opens are authored by the App (or by you, with the
+PAT) rather than `github-actions[bot]`. That is the entire mechanism — a non-suppressed identity is
+what emits the event. `github.actor` on the commit still records who authorized the flip.
+
+**The workaround, any time a PR shows no checks:** close it and reopen it from any account that
+isn't the Actions token. `reopened` is in `pipeline.yml`'s `types:` list, so CI arms in seconds.
+
+**Probot, one level up:** a hosted Probot app would use this same App identity to route webhooks in
+TypeScript instead of YAML. That is a *later* question and a real trade-off (an always-on service
+that drops webhooks when it is down, versus workflow runs that stay visible and re-runnable) — the
+reasoning is parked in [`docs/IDEAS.md`](IDEAS.md). Nothing above needs a server.
+
+#### The repo setting
+
+One capability is **off by default on every GitHub repo** and every PR-opening workflow here needs
+it: **Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and
+approve pull requests."** Without it, a workflow can commit and push a branch and then fail at the
+final `gh pr create` — work done, no PR, an error naming no next step (see `docs/LESSONS.md`,
+2026-08-17). The postmaster degrades honestly if it is ever off again (it comments the compare URL
+instead of dying), but the setting is the real fix.
+
+## How a flip becomes a build — one hop, no polling
+
+```
+flip → push to main → Postmaster (seconds) → claims the handoff → builds it → PR
+```
+
+One workflow does the whole thing. It opens the `[handoff] <slug>` issue as the **audit receipt**,
+but the issue is no longer a trigger — because it never could be.
+
+**The trap that cost an evening (2026-08-17, docs/LESSONS.md):** the original design was
+`detect opens an issue mentioning @claude` → `claude.yml hears issues.opened` → builds. It never
+fired once. **Events triggered by `GITHUB_TOKEN` do not start other workflow runs** — GitHub's
+infinite-loop guard — so an issue opened by a workflow emits nothing another workflow can hear. The
+chain was severed at the join, and an hourly polling Routine masked it by quietly carrying the load
+and producing nothing. Collapsing scan-and-build into one run removes the hop entirely.
+
+**Claiming is atomic and immediate.** Before any work, the postmaster creates a `claim/<slug>` ref
+— `POST /git/refs` fails 422 if it exists, so it is a real compare-and-set, and
+`git ls-remote --heads origin 'claim/*'` shows every live claim within seconds. It is a **lease**,
+not a lock: a claim older than two hours is reclaimable, because a session that dies holding a
+permanent lock would wedge the handoff forever. The `ready` → `executing` flip in the build's first
+commit is now the human-readable *mirror* of the claim, not the claim itself.
+
+`claude.yml` stays for what it is genuinely good at: a human typing `@claude` on an issue or PR.
+That path works, because a person's token is not `GITHUB_TOKEN`.
+
+**If a build dies holding the claim:** **Actions → “Postmaster” → Run workflow → command
+`release-claim`, slug `<name>`.** That deletes the lease ref so the next `scan` can pick the handoff
+up again, instead of waiting out the two-hour TTL. It is a dispatch only — the sweep will never
+release a claim on its own, because auto-releasing another run's claim would defeat the lease it is
+built on. Deciding a build is dead is judgment, and judgment stays with the human who dispatches.
+
+**The builder needs its tools granted explicitly.** `claude-code-action` grants only GitHub's own
+tools by default, so the build step passes `claude_args: --allowedTools "Bash,Read,Write,Edit,Glob,
+Grep"`. Without it the session starts, reasons for twenty turns, gets refused on every `git` and
+`npm` call, and the job still exits **green** — because the *session* completed, even though the
+build did not (see `docs/LESSONS.md`, 2026-08-17). Never trim that list to "clean up" the workflow.
 
 ## Execution discipline (what a picked-up handoff does)
 

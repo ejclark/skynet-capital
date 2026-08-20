@@ -98,4 +98,14 @@ slice 1 deliberately ships the smallest honest substrate for that pass to improv
 
 ## Decision log
 
-_(none yet)_
+- **2026-08-17 — slice 1 built, sharpened by Eric's direction.** Eric: *"shouldn't the calendar
+  items be linked to the ongoing research… stocks we research should have their own pages that act
+  as a living research document."* Shipped `/research` (shelf), `/research/sym/:SYM` (the living
+  per-symbol page — verbatim current stance from the nearest ledger, dated events, ledgers,
+  mentioning studies), and `/research/<slug>` (any study or ledger rendered in the house shell),
+  plus the two-way calendar↔research link (event rows → their ledger; symbol chips → the living
+  page). Pre-settled fork honored: server-side GFM via `marked`. Slug resolution is by shelf
+  membership, not path-join (traversal structurally impossible). **Note:** built ahead of slice 2
+  (the feedback-kind request loop) because the linking + living-page ask was the live one; slices
+  2–4 remain open. The `/research` nav link is member-gated like every observatory view (open
+  question 1 still unanswered — no public teaser shipped).

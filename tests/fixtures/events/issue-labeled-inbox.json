@@ -1,0 +1,14 @@
+{
+  "eventName": "issues",
+  "actor": "ejclark",
+  "event": {
+    "action": "labeled",
+    "label": { "name": "handoff-inbox" },
+    "issue": {
+      "number": 401,
+      "title": "Skynet Capital - Trailer Debut",
+      "body": "Here is the bundle.\n\n[Skynet.Capital.-.Trailer.Debut.zip](https://github.com/user-attachments/files/12345678/Skynet.Capital.-.Trailer.Debut.zip)"
+    }
+  },
+  "deps": { "openPrHeads": [] }
+}

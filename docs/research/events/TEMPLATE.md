@@ -7,6 +7,18 @@
      every assessment, or the scanner will keep marking this event due. Process:
      docs/process/EVENT-RESEARCH.md. Delete the comments when instantiating. -->
 
+## At a glance
+
+<!-- The decision header the /research page promotes above the document (research-service extracts
+     this exact section). A FAITHFUL surfacing of the stance below — never a new claim, and every
+     trading-adjacent line still carries the event's confirmed/estimate label. Three parts:
+       1. **TL;DR.** one plain-language paragraph — the verdict a non-expert can act on.
+       2. A horizon table — Today / This week / This month / This quarter, each with an honest
+          `Call` (stand aside · watch · flat the print · accumulate small · avoid — never a
+          directional "buy" the evidence doesn't support) and a one-line Why.
+       3. **Signals & conditions** — the buy/sell/hold triggers, drawn from the stance's kill
+          switches and dated watch-list. Keep it to what the body already justifies. -->
+
 ## Initial research
 
 <!-- Genre: docs/research/nvda-aug-2026-print.md — the question plainly → one-line verdict →

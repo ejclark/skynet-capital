@@ -8,6 +8,8 @@
  * Mirrors the `ParticipantService` shape: never throws for expected failures — returns a
  * discriminated `FeedbackResult`.
  */
+import { createHash } from "node:crypto";
+
 import { fetchJson } from "../http/fetch-json.js";
 
 export type FeedbackKind = "bug" | "feature" | "idea";
@@ -17,8 +19,6 @@ export interface FeedbackInput {
   readonly title: string;
   readonly details: string;
   readonly area?: string;
-  readonly device?: string;
-  readonly submitterName?: string;
   readonly submitterEmail?: string;
 }
 
@@ -40,13 +40,27 @@ const TITLE_TAG: Record<FeedbackKind, string> = {
   idea: "[idea]",
 };
 
-function issueBody(input: FeedbackInput): string {
+/**
+ * Opaque, stable member marker for public issues. The repo is public, so the issue body must never
+ * carry a name or email (Eric's attribution ruling, 2026-08-19: opaque id only — who-filed-what is
+ * visible only inside the app). Truncated salted sha256: stable per member so their items
+ * correlate, pseudonymous to readers. Not cryptographically unlinkable for a tiny guest list —
+ * treated as pseudonymity, not secrecy.
+ */
+export function opaqueMemberId(email: string): string {
+  return createHash("sha256")
+    .update(`skynet-feedback:${email.trim().toLowerCase()}`)
+    .digest("hex")
+    .slice(0, 10);
+}
+
+export function issueBody(input: FeedbackInput): string {
   const lines: string[] = [input.details.trim() || "_(no details provided)_", ""];
   if (input.area) lines.push(`**Area:** ${input.area}`);
-  if (input.device) lines.push(`**Device / browser:** ${input.device}`);
-  const who = input.submitterName?.trim() || input.submitterEmail?.trim() || "a league member";
-  const contact = input.submitterEmail?.trim() ? ` (${input.submitterEmail.trim()})` : "";
-  lines.push("", "---", `_Submitted from the app by ${who}${contact}._`);
+  const who = input.submitterEmail?.trim()
+    ? `member \`${opaqueMemberId(input.submitterEmail)}\``
+    : "a league member";
+  lines.push("", "---", `_Submitted from the app by ${who}._`);
   return lines.join("\n");
 }
 

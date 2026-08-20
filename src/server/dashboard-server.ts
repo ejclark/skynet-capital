@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import {
   parseActivityType,
@@ -6,7 +7,9 @@ import {
   type TradeActivityRecord,
 } from "../observatory/activity-store.js";
 import { renderAnalysisBody } from "../observatory/analysis-view.js";
+import { renderCalendarBody } from "../observatory/calendar-view.js";
 import { type DeskTab, parseDeskTab } from "../observatory/desk-tabs.js";
+import { renderFeedbackFormBody, renderFeedbackResultBody } from "../observatory/feedback-view.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import { type HistoryViewOptions, renderHistoryBody } from "../observatory/history-view.js";
 import { type MetricsViewOptions, renderMetricsBody } from "../observatory/metrics-view.js";
@@ -27,22 +30,28 @@ import {
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
+import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
-import { addShell, PAGE_STYLE, readBody } from "./page-shell.js";
+import type { SubmitOptionTrade } from "./option-trade-service.js";
+import { PAGE_STYLE, readBody, shellDocument } from "./page-shell.js";
 import type {
   AddParticipantInput,
   AddResult,
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import { serveResearchRoute } from "./research-routes.js";
+import { researchedEventIds } from "./research-service.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 import { sseFrame } from "./sse.js";
 import { handleTrade } from "./trade-routes.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
+import { welcomeHtml } from "./welcome-page.js";
 
 export interface DashboardServerConfig {
   readonly hub: ObservatoryHub;
@@ -69,6 +78,11 @@ export interface DashboardServerConfig {
    */
   readonly rotateCredentials?: (input: RotateCredentialsInput) => Promise<RotateResult>;
   /**
+   * Day-2 account management (`/account`): profile edits and removal. Omit to disable
+   * (offline mode, or no store secret). Authorization rules live in account-service.ts.
+   */
+  readonly accountAdmin?: AccountAdmin;
+  /**
    * `GET/POST /invite` — the owner's guest list. Omit to disable (offline mode, or no auth).
    * Owners are the env-configured identities; everyone they invite lands in the volume-backed
    * allowlist store and may sign in but not invite (see `invite-form.ts`).
@@ -80,6 +94,12 @@ export interface DashboardServerConfig {
    * have submissions report "not switched on yet."
    */
   readonly submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>;
+  /**
+   * The AI feedback coach (#429 slice 2). When present, the /feedback form offers a short guided
+   * dialogue that drafts the report; POST /feedback/coach serves the turns. Omit (no
+   * ANTHROPIC_API_KEY) and the plain form works exactly as before.
+   */
+  readonly coachFeedback?: CoachTurn;
   /**
    * Reads a participant's recorded equity/realized history for the individual view's performance panel.
    * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).
@@ -106,6 +126,10 @@ export interface DashboardServerConfig {
   readonly tradingEnabled?: boolean;
   /** The execution seam (`trade-service.ts`). Absent = no order path is wired at all. */
   readonly submitTrade?: SubmitDeskTrade;
+  /** The options execution seam (`option-trade-service.ts`), behind the same switch. */
+  readonly submitOptionTrade?: SubmitOptionTrade;
+  /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
+  readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
 }
 
 /**
@@ -295,18 +319,15 @@ async function serveAuthorizedRoute(
   if (await trySelfServiceRoute(req, res, path, url, config, session)) {
     return;
   }
-  if (path === "/feedback") {
-    await handleFeedback(req, res, req.method ?? "GET", session, config.submitFeedback);
+  if (path === "/feedback" || path === "/feedback/coach") {
+    await serveFeedbackRoute(req, res, path, session, config, navFor("feedback"));
     return;
   }
-  if (path === "/learn") {
-    const body = renderAcademyBody({ nav: navFor("learn") });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Learn — Skynet Capital", body));
+  if (serveInfoRoute(res, path, url, navFor)) {
     return;
   }
   if (path === "/trade") {
-    await serveTradeRoute(req, res, config, session, navFor);
+    await serveTradeRoute(req, res, url, config, session, navFor);
     return;
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
@@ -324,24 +345,72 @@ async function serveAuthorizedRoute(
 }
 
 /**
- * `POST /trade` — the desk's order path. Identity comes from the session and nowhere else: with no
- * authenticator configured no id resolves, and `trade-routes.ts` refuses rather than guessing which
- * account a request belongs to.
+ * The read-only info views behind the gate — `/learn`, `/calendar`, `/research` — grouped so the
+ * main dispatch stays within its complexity budget. Returns true when the request was handled;
+ * dispatch order is unchanged from before the extraction.
+ */
+function serveInfoRoute(
+  res: ServerResponse,
+  path: string,
+  url: string,
+  navFor: (active: NavView) => NavContext,
+): boolean {
+  if (path === "/learn") {
+    const body = renderAcademyBody({ nav: navFor("learn") });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(shellDocument("Learn — Skynet Capital", body));
+    return true;
+  }
+  if (path === "/calendar") {
+    serveCalendarRoute(res, url, navFor);
+    return true;
+  }
+  if (path === "/research" || path.startsWith("/research/")) {
+    serveResearchRoute(res, path, navFor);
+    return true;
+  }
+  return false;
+}
+
+/** `/calendar` — the event-horizon view; `?month=` moves the widget (view-validated/clamped). */
+function serveCalendarRoute(
+  res: ServerResponse,
+  url: string,
+  navFor: (active: NavView) => NavContext,
+): void {
+  const month = new URL(url, "http://localhost").searchParams.get("month");
+  const body = renderCalendarBody({
+    nav: navFor("calendar"),
+    asOfIso: new Date().toISOString(),
+    researchIds: researchedEventIds(),
+    ...(month ? { month } : {}),
+  });
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  res.end(shellDocument("Calendar — Skynet Capital", body));
+}
+
+/**
+ * `/trade` — GET is the ticket view, POST the order path. Identity comes from the session and
+ * nowhere else: with no authenticator configured no id resolves, and `trade-routes.ts` refuses
+ * rather than guessing which account a request belongs to.
  */
 async function serveTradeRoute(
   req: IncomingMessage,
   res: ServerResponse,
+  url: string,
   config: DashboardServerConfig,
   session: Session | undefined,
   navFor: (active: NavView) => NavContext,
 ): Promise<void> {
   const participants = config.hub.getState().participants;
-  await handleTrade(req, res, {
+  await handleTrade(req, res, url, {
     snapshotFor: (id) => participants.find((p) => p.id === id),
     requesterId: config.auth ? resolveCurrentId(session, participants) : undefined,
     tradingEnabled: Boolean(config.tradingEnabled),
     ...(config.submitTrade ? { submitTrade: config.submitTrade } : {}),
-    nav: navFor("you"),
+    ...(config.submitOptionTrade ? { submitOptionTrade: config.submitOptionTrade } : {}),
+    ...(config.optionsClientFor ? { optionsClientFor: config.optionsClientFor } : {}),
+    nav: navFor("trade"),
     document: shellDocument,
   });
 }
@@ -363,6 +432,19 @@ async function trySelfServiceRoute(
     // Identity comes from the signed session and nowhere else — there is no id in the URL to
     // spoof, and handleInvite re-checks owner status itself rather than trusting this call site.
     await handleInvite(req, res, req.method ?? "GET", session?.email, config.invite);
+    return true;
+  }
+  if ((path === "/account" || path === "/account/remove") && config.accountAdmin) {
+    // Same identity resolution /rotate and /trade use; account-service enforces the rules.
+    await handleAccountRoute(req, res, path, req.method ?? "GET", {
+      admin: config.accountAdmin,
+      requesterId: config.auth
+        ? resolveCurrentId(session, config.hub.getState().participants)
+        : undefined,
+      session,
+      authConfigured: Boolean(config.auth),
+      key: keyOf(url),
+    });
     return true;
   }
   if (path === "/rotate" && config.rotateCredentials) {
@@ -514,20 +596,6 @@ function resolveCurrentId(
   return byLocal ? byLocal.id : undefined;
 }
 
-/** Minimal HTML document shell for a server-rendered view (the body already carries its styles). */
-function shellDocument(title: string, body: string): string {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title}</title>
-<style>${PAGE_STYLE}</style>
-</head>
-<body>${body}</body>
-</html>`;
-}
-
 /** External origin of the request (honors Fly's x-forwarded-proto). */
 function baseUrlFrom(req: IncomingMessage): string {
   const proto = (req.headers["x-forwarded-proto"] as string) ?? "http";
@@ -587,6 +655,31 @@ function streamEvents(
   req.on("close", unsubscribe);
 }
 
+/** The two feedback paths, dispatched together so the main router stays one branch. */
+async function serveFeedbackRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  session: Session | undefined,
+  config: DashboardServerConfig,
+  nav: NavContext,
+): Promise<void> {
+  const method = req.method ?? "GET";
+  if (path === "/feedback/coach") {
+    await handleFeedbackCoach(req, res, method, session?.email, config.coachFeedback);
+    return;
+  }
+  await handleFeedback(
+    req,
+    res,
+    method,
+    session,
+    nav,
+    config.submitFeedback,
+    Boolean(config.coachFeedback),
+  );
+}
+
 // Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
 // repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine (single process).
 const feedbackHits = new Map<string, number[]>();
@@ -606,11 +699,18 @@ async function handleFeedback(
   res: ServerResponse,
   method: string,
   session: Session | undefined,
+  nav: NavContext,
   submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>,
+  coachEnabled = false,
 ): Promise<void> {
   if (method === "GET") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(feedbackFormHtml(Boolean(submitFeedback)));
+    res.end(
+      shellDocument(
+        "Feedback — Skynet Capital",
+        renderFeedbackFormBody({ nav, enabled: Boolean(submitFeedback), coachEnabled }),
+      ),
+    );
     return;
   }
   if (method !== "POST") {
@@ -621,21 +721,33 @@ async function handleFeedback(
   if (!submitFeedback) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(
-      feedbackResultHtml({
-        ok: false,
-        error:
-          "Feedback isn't switched on yet — ask Eric to set the feedback token. Your note wasn't sent.",
-      }),
+      shellDocument(
+        "Feedback — Skynet Capital",
+        renderFeedbackResultBody({
+          nav,
+          result: {
+            ok: false,
+            error:
+              "Feedback isn't switched on yet — ask Eric to set the feedback token. Your note wasn't sent.",
+          },
+        }),
+      ),
     );
     return;
   }
   if (session && throttled(session.email)) {
     res.writeHead(429, { "content-type": "text/html; charset=utf-8" });
     res.end(
-      feedbackResultHtml({
-        ok: false,
-        error: "You've sent a bunch just now — give it a few minutes and try again.",
-      }),
+      shellDocument(
+        "Feedback — Skynet Capital",
+        renderFeedbackResultBody({
+          nav,
+          result: {
+            ok: false,
+            error: "You've sent a bunch just now — give it a few minutes and try again.",
+          },
+        }),
+      ),
     );
     return;
   }
@@ -648,12 +760,10 @@ async function handleFeedback(
     title: form.get("title") ?? "",
     details: form.get("details") ?? "",
     ...(form.get("area") ? { area: form.get("area") as string } : {}),
-    ...(form.get("device") ? { device: form.get("device") as string } : {}),
-    ...(session?.name ? { submitterName: session.name } : {}),
     ...(session?.email ? { submitterEmail: session.email } : {}),
   });
   res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
-  res.end(feedbackResultHtml(result));
+  res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));
 }
 
 function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
@@ -680,74 +790,4 @@ ${renderDashboardBody(hub.getState(), { nav })}
 </script>
 </body>
 </html>`;
-}
-
-/**
- * The self-service onboarding guide (public /welcome). Documents what Skynet Capital is and the
- * league format, then lays out the join path in numbered steps, so an invite can be a one-line
- * greeting plus this link. Fully self-serve to sign-in.
- */
-function welcomeHtml(): string {
-  return addShell(
-    "Welcome — Skynet Capital",
-    `<div class="hero-eyebrow">Invite-only · paper sandbox</div>
-<h1 class="hero-title">A sandbox to learn options — with friends, family, and a few <b>machines</b>.</h1>
-<p class="hero-lede">Skynet Capital is a friendly, <b>paper-money</b> trading league. Everyone trades a simulated
-account, autonomous <b>bots</b> trade alongside the humans, and a live observatory shows how everyone's
-doing. It's for learning the plays and having fun — <b>no real money, ever</b>. Everybody's welcome to win.</p>
-<div class="feat-grid">
-  <div class="feat"><div class="feat-ic">📈</div><div class="feat-h">Paper trading</div><div class="feat-p">Practice real options strategies with a simulated account. Zero risk — it's all on paper.</div></div>
-  <div class="feat"><div class="feat-ic">🤖</div><div class="feat-h">Humans &amp; bots</div><div class="feat-p">Trade solo, co-op against the machines, or just watch the board. The bots each run a persona.</div></div>
-  <div class="feat"><div class="feat-ic">🏆</div><div class="feat-h">Friendly league</div><div class="feat-p">A leaderboard for bragging rights among friends and family — everyone doing well is the point.</div></div>
-</div>
-<p class="sec-label">Join in three steps</p>
-<div class="steps">
-  <div class="step"><div class="step-n">1</div><div class="step-b"><h3>Sign in</h3><p>Use your Google account — the same email Eric added to the guest list. That's your seat at the table.</p></div></div>
-  <div class="step"><div class="step-n">2</div><div class="step-b"><h3>Create a free Alpaca paper account</h3><p>Alpaca provides the simulated brokerage. It's free, takes a minute, and needs no funding — we'll walk you through it after you sign in.</p></div></div>
-  <div class="step"><div class="step-n">3</div><div class="step-b"><h3>Connect it</h3><p>Paste your Alpaca <b>paper</b> API keys once. We read them only to show your balance and trades on the board — nothing is ever placed on your behalf.</p></div></div>
-</div>
-<a class="cta" href="/login">Get started → Sign in</a>
-<p class="fineprint">New to options? Once you're in, the <a href="/learn">Learn</a> section starts you on the safest play and unlocks more as you're ready.<br>
-Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.<br>
-Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
-    true,
-  );
-}
-
-function feedbackFormHtml(enabled: boolean): string {
-  const banner = enabled
-    ? ""
-    : `<p class="note" style="color:var(--neg)">Heads up — feedback isn't switched on yet, so this won't send until it's configured.</p>`;
-  return addShell(
-    "Feedback — Skynet Capital",
-    `<h1>Share feedback</h1>
-<p class="lede">Found a bug, want an improvement, or spotted a side quest? Tell us here — it goes straight to the team. <b>No GitHub account needed.</b></p>
-${banner}
-<form method="post" action="/feedback">
-  <label>What kind?
-    <select name="kind">
-      <option value="bug">🐞 Bug — something's broken or wrong</option>
-      <option value="feature" selected>✨ Feature — make something better</option>
-      <option value="idea">🗺️ Side quest — an idea worth exploring</option>
-    </select>
-  </label>
-  <label>Title<input name="title" required maxlength="120" placeholder="Short summary"></label>
-  <label>Details<textarea name="details" rows="6" placeholder="What happened · what you'd like · the idea…"></textarea></label>
-  <label>Where in the app? <small>(optional)</small><input name="area" placeholder="e.g. Leaderboard, the intro animation"></label>
-  <label>Device &amp; browser <small>(optional, helps for bugs)</small><input name="device" placeholder="e.g. iPhone · Safari"></label>
-  <button type="submit">Send it</button>
-</form>
-<p class="note">Screenshots help — once it's filed you can reply to the issue with an image.</p>`,
-  );
-}
-
-function feedbackResultHtml(result: FeedbackResult): string {
-  const inner = result.ok
-    ? `<div class="res-icon">🎉</div><h1>Thanks — got it!</h1>
-<p class="lede">Filed as <b>#${result.number}</b>. We'll take a look. Really appreciate you.</p>
-<p class="backrow"><a href="/feedback">Send another</a> · <a href="/">← Back to the board</a></p>`
-    : `<h1>Hmm, that didn't send</h1>
-<p class="lede">${escapeHtml(result.error)}</p>
-<p class="backrow"><a href="/feedback">Try again</a> · <a href="/">← Back to the board</a></p>`;
-  return addShell("Feedback — Skynet Capital", inner);
 }

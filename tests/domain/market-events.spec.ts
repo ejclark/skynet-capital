@@ -1,11 +1,9 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
-import {
-  allEvents,
-  earningsAsEvents,
-  eventsWithin,
-  MARKET_EVENTS,
-  type MarketEvent,
-} from "../../src/domain/market-events.js";
+// The query API (functions) lives in market-events.ts; the curated table + its shape live in the
+// market-events-data.ts leaf. The "seeded table" block below tests that leaf directly, so it imports
+// MARKET_EVENTS + the shape straight from the data module (closing the spec-gap on the leaf honestly).
+import { allEvents, earningsAsEvents, eventsWithin } from "../../src/domain/market-events.js";
+import { MARKET_EVENTS, type MarketEvent } from "../../src/domain/market-events-data.js";
 
 const prints: readonly EarningsPrint[] = [
   { symbol: "NVDA", date: "2026-08-26", status: "confirmed", source: "IR: test" },
@@ -75,7 +73,8 @@ describe("market events", () => {
 
     it("every confirmed entry cites a trusted source prefix — the date policy's teeth", () => {
       for (const e of MARKET_EVENTS) {
-        if (e.status === "confirmed") expect(e.source).toMatch(/^(IR|CAL|BLS|FED|PJM|SEC):/);
+        if (e.status === "confirmed")
+          expect(e.source).toMatch(/^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB):/);
         else expect(e.source).toMatch(/^(EST|NEWS):/);
       }
     });

@@ -8,6 +8,9 @@ body:
       value: |
         Love it — the best improvements start from a real moment of friction. Tell us the **problem first**, then your idea.
         (Big, open-ended concepts fit better under **💡 Idea to explore** — this one's for concrete tweaks.)
+
+        **What happens next:** once this is triaged, an AI build session picks it up fresh — everything it
+        knows about your ask is what's written here. Progress shows up as comments on this issue.
   - type: checkboxes
     id: preflight
     attributes:
@@ -36,6 +39,14 @@ body:
     attributes:
       label: Anything you're doing to work around it today?
       placeholder: "I just memorized the order."
+    validations:
+      required: false
+  - type: textarea
+    id: done-looks-like
+    attributes:
+      label: How would you know it's done?
+      description: Finish the sentence — "I'd consider this shipped when…" It's the single best steer you can give the builder.
+      placeholder: "…I can star a play and it's still pinned at the top the next time I sign in."
     validations:
       required: false
   - type: dropdown

@@ -52,14 +52,14 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
   {
     symbol: "MRVL",
     date: "2026-08-27",
-    status: "estimate",
-    source: "8-K cadence, fiscal Q2 late-Aug pattern",
+    status: "confirmed",
+    source: "IR: investor.marvell.com PR 2026-08-03 — Thu Aug 27 1:45pm PT call (post-close)",
   },
   {
     symbol: "AVGO",
-    date: "2026-09-03",
+    date: "2026-09-02",
     status: "estimate",
-    source: "8-K cadence; true window Aug 27–Sep 10 (83–98d spread)",
+    source: "NEWS: Broadcom PR 2026-08-03 — Wed Sep 2 AMC; IR fetch blocked 2026-08-17",
   },
   { symbol: "MSFT", date: "2026-10-27", status: "estimate", source: "8-K cadence" },
   { symbol: "GOOG", date: "2026-10-28", status: "estimate", source: "8-K cadence" },

@@ -220,8 +220,40 @@ describe("dashboard-server /feedback", () => {
         }).toString(),
       });
       expect(post.status).toBe(200);
-      expect(await post.text()).toContain("#7");
+      const success = await post.text();
+      expect(success).toContain("#7");
+      // The filed issue must be linkable so the member can follow its progress (#436).
+      expect(success).toContain("https://github.com/x/y/issues/7");
       expect(calls[0]).toMatchObject({ kind: "bug", title: "It broke", details: "here's how" });
+    });
+  });
+
+  it("serves coach turns as JSON, and reports 'not switched on' without a coach", async () => {
+    const coach = () =>
+      Promise.resolve({ ok: true as const, done: false as const, question: "Where?" });
+    await withServer({ hub: new ObservatoryHub(board()), coachFeedback: coach }, async (base) => {
+      // The form offers the coach only when it's wired — plain form otherwise.
+      expect(await (await fetch(`${base}/feedback`)).text()).toContain("coach-box");
+
+      const post = await fetch(`${base}/feedback/coach`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "bug", messages: [{ role: "user", content: "hm" }] }),
+      });
+      expect(post.status).toBe(200);
+      expect(await post.json()).toEqual({ ok: true, done: false, question: "Where?" });
+
+      const bad = await fetch(`${base}/feedback/coach`, { method: "POST", body: "not json" });
+      expect(bad.status).toBe(400);
+    });
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      expect(await (await fetch(`${base}/feedback`)).text()).not.toContain("coach-box");
+      const off = await fetch(`${base}/feedback/coach`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "bug", messages: [] }),
+      });
+      expect((await off.json()).ok).toBe(false);
     });
   });
 

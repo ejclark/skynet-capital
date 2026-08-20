@@ -1,0 +1,6 @@
+{
+  "eventName": "workflow_dispatch",
+  "actor": "ejclark",
+  "event": { "inputs": { "command": "flip-handoff", "slug": "brief-horizon" } },
+  "deps": { "handoffStatusMap": { "brief-horizon": "executing" } }
+}

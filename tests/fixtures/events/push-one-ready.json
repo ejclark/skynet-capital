@@ -1,0 +1,29 @@
+{
+  "eventName": "push",
+  "actor": "ejclark",
+  "event": {},
+  "deps": {
+    "readyHandoffs": [
+      {
+        "slug": "brief-horizon",
+        "title": "Morning brief reads the full event horizon",
+        "path": "docs/handoffs/brief-horizon",
+        "readme": "docs/handoffs/brief-horizon/README.md",
+        "files": ["docs/handoffs/brief-horizon/README.md"]
+      }
+    ],
+    "dueEvents": [
+      { "id": "cpi-2026-09-11", "reason": "interval-elapsed" },
+      {
+        "id": "fomc-2026-12-09",
+        "reason": "never-assessed",
+        "title": "FOMC decision",
+        "date": "2026-12-09",
+        "status": "confirmed",
+        "impact": "high",
+        "ledger": "docs/research/events/fomc-2026-12-09.md"
+      }
+    ],
+    "openIssueTitles": []
+  }
+}

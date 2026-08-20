@@ -1,7 +1,8 @@
 /**
  * The morning brief — everything knowable BEFORE the market opens, assembled into one view:
- * persona readiness, what each enabled playbook wants today, upcoming earnings proximity, and
- * current positions. Eric's ask (2026-08-13): a pre-market plan for Sauron (and any active bot)
+ * persona readiness, what each enabled playbook wants today, the upcoming event horizon
+ * (earnings prints plus CPI/FOMC/sector dates), and current positions. Eric's ask (2026-08-13): a
+ * pre-market plan for Sauron (and any active bot)
  * given "all the events, state of the market, overnight developments, premarket positions."
  *
  * HONEST GAP, BY DESIGN: Sauron's own triggers (and beta-scout's ranking) run on live
@@ -15,12 +16,8 @@
 
 import { assessReadiness } from "../autonomous/readiness.js";
 import type { Bot } from "../bots/bot.js";
-import {
-  daysUntil,
-  type EarningsPrint,
-  nextPrint,
-  UPCOMING_PRINTS,
-} from "../domain/earnings-calendar.js";
+import { daysUntil, type EarningsPrint, UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import { eventsWithin, MARKET_EVENTS, type MarketEvent } from "../domain/market-events.js";
 import type { Portfolio } from "../domain/types.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { scenarioPacks } from "../evals/scenarios/index.js";
@@ -47,7 +44,10 @@ interface PlaybookBriefEntry {
 }
 
 interface CalendarBriefEntry {
-  readonly symbol: string;
+  readonly id: string;
+  readonly title: string;
+  /** Symbols affected; empty = market-wide (CPI, FOMC). */
+  readonly symbols: readonly string[];
   readonly date: string;
   readonly status: "confirmed" | "estimate";
   readonly daysUntil: number;
@@ -93,7 +93,10 @@ export interface MorningBriefDeps {
   /** SKYNET_PLAYBOOKS + friends. */
   readonly playbookEnv: Readonly<Record<string, string | undefined>>;
   readonly calendar?: readonly EarningsPrint[];
-  /** How many days ahead to list upcoming prints. Default 14. */
+  /** Non-earnings events (CPI/FOMC/sector) — default MARKET_EVENTS; injectable for tests, same
+   *  pattern as `calendar`. */
+  readonly events?: readonly MarketEvent[];
+  /** How many days ahead to list upcoming events (earnings, macro, sector). Default 14. */
   readonly calendarWindowDays?: number;
 }
 
@@ -114,25 +117,25 @@ function personaEntry(persona: Persona): PersonaBriefEntry {
   };
 }
 
+/**
+ * The full event horizon — earnings prints plus CPI/FOMC/sector dates, via the `eventsWithin`
+ * seam (src/domain/market-events.ts) so this stays the one query, not a parallel one.
+ * `eventsWithin` already sorts by date, which is nearest-first from a fixed `asOfIso`.
+ */
 function calendarEntries(
-  symbols: readonly string[],
   asOfIso: string,
   calendar: readonly EarningsPrint[],
+  events: readonly MarketEvent[],
   windowDays: number,
 ): CalendarBriefEntry[] {
-  const entries: CalendarBriefEntry[] = [];
-  for (const symbol of symbols) {
-    const print = nextPrint(symbol, asOfIso, calendar);
-    if (print && daysUntil(asOfIso, print.date) <= windowDays) {
-      entries.push({
-        symbol,
-        date: print.date,
-        status: print.status,
-        daysUntil: daysUntil(asOfIso, print.date),
-      });
-    }
-  }
-  return entries.sort((a, b) => a.daysUntil - b.daysUntil);
+  return eventsWithin(asOfIso, windowDays, events, calendar).map((event) => ({
+    id: event.id,
+    title: event.title,
+    symbols: event.symbols,
+    date: event.date,
+    status: event.status,
+    daysUntil: daysUntil(asOfIso, event.date),
+  }));
 }
 
 async function positionEntry(
@@ -162,6 +165,7 @@ export async function buildMorningBrief(
   deps: MorningBriefDeps,
 ): Promise<MorningBrief> {
   const calendar = deps.calendar ?? UPCOMING_PRINTS;
+  const events = deps.events ?? MARKET_EVENTS;
   const windowDays = deps.calendarWindowDays ?? DEFAULT_CALENDAR_WINDOW_DAYS;
   const roster = enabledPlaybooks(deps.playbookEnv);
 
@@ -173,10 +177,6 @@ export async function buildMorningBrief(
     mode,
     desiredState: playbook.desiredState(asOfIso, calendar),
   }));
-
-  const calendarSymbols = [
-    ...new Set([...roster.enabled.map((e) => e.playbook.symbol), ...calendar.map((p) => p.symbol)]),
-  ];
 
   // Positions need a brokerFactory to actually read anything — bots without one degrade to an
   // explicit error row rather than a silent omission (the honesty rule this whole brief follows).
@@ -197,7 +197,7 @@ export async function buildMorningBrief(
     personas: deps.personas.map(personaEntry),
     playbooks,
     rejectedPlaybookTokens: roster.rejected,
-    calendar: calendarEntries(calendarSymbols, asOfIso, calendar, windowDays),
+    calendar: calendarEntries(asOfIso, calendar, events, windowDays),
     positions,
     liveSignal: {
       available: false,

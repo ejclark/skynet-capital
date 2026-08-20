@@ -47,7 +47,7 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
-import { readOfflineEvents } from "../runtime/data-source.js";
+import { ALPACA_DATA_BASE_URL, readOfflineEvents } from "../runtime/data-source.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
 // claims (CRWV, MRVL). A symbol absent here has no quote, so a persona simply never sees it —
@@ -55,7 +55,6 @@ import { readOfflineEvents } from "../runtime/data-source.js";
 const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
 const OFFLINE_STARTING_CASH = 1_000_000;
-const ALPACA_DATA_BASE_URL = "https://data.alpaca.markets";
 const _EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 

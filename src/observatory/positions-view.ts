@@ -1,3 +1,4 @@
+import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
 import { ROLL_UNAVAILABLE_REASON } from "../trading/order-ticket.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type DashboardViewOptions, renderShell } from "./dashboard-shell.js";
@@ -62,12 +63,12 @@ function blotterRow(
   const returnPct = basis > 0 ? (pl / basis) * 100 : 0;
   const day = dayPl(position);
   const mark = position.quantity !== 0 ? position.marketValue / position.quantity : 0;
-  const weight = invested > 0 ? (position.marketValue / invested) * 100 : 0;
+  const weight = invested > 0 ? (Math.max(0, position.marketValue) / invested) * 100 : 0;
   const symbol = escapeHtml(position.symbol);
 
   return `<tr>
       <td>
-        <span class="sym">${symbol}</span>
+        <span class="sym" title="${symbol}">${escapeHtml(humanizeOptionSymbol(position.symbol))}</span>
         <span class="weight-bar" title="${weight.toFixed(1)}% of invested capital"><i style="width:${Math.min(100, Math.max(2, weight)).toFixed(1)}%"></i></span>
       </td>
       <td class="num">${position.quantity.toLocaleString("en-US")}</td>
@@ -91,6 +92,19 @@ function rowActions(
   if (!options.isSelf) return `<span class="desk-note">—</span>`;
   const symbol = escapeHtml(position.symbol);
   const disabled = options.tradingEnabled ? "" : " disabled";
+  if (isOccSymbol(position.symbol)) {
+    // Option rows close in the right DIRECTION automatically: a long sells to close, a short
+    // (a put/call you wrote) buys to close — the route reads the held sign, not this form.
+    const held = Math.abs(position.quantity);
+    const verb = position.quantity < 0 ? "Buy to close" : "Sell to close";
+    return `<form class="rowform" method="post" action="/trade">
+        <input type="hidden" name="close" value="${symbol}">
+        <label class="visually-hidden" for="qty-${symbol}">Contracts of ${symbol} to close</label>
+        <input class="qty" id="qty-${symbol}" name="contracts" type="number" min="1" step="1" max="${held}" value="${held}" inputmode="numeric"${disabled}>
+        <button class="btn btn-sell" type="submit"${disabled}>${verb}</button>
+        <button class="btn" type="button" disabled title="${escapeHtml(ROLL_UNAVAILABLE_REASON)}">Roll</button>
+      </form>`;
+  }
   return `<form class="rowform" method="post" action="/trade">
         <input type="hidden" name="symbol" value="${symbol}">
         <input type="hidden" name="action" value="sell">
@@ -143,7 +157,7 @@ function orderTicket(tradingEnabled: boolean): string {
     : `<p class="caveat"><b>Preview only.</b> Placing orders from the desk is switched off for this deployment — the ticket reviews and refuses rather than sending. Turning it on is the owner's call (<code>SKYNET_DESK_TRADING=on</code>).</p>`;
   return `<section class="panel">
       <h2 class="panel-title">New trade</h2>
-      <p class="panel-sub">Shares only, on your paper account. Options — and the rolls that go with them — aren't wired up yet.</p>
+      <p class="panel-sub">Quick share ticket. For options — cash-secured puts, covered calls, long calls and puts — open the <a href="/trade">Trade ticket</a>, which walks the play and shows the chain.</p>
       <form class="ticket" method="post" action="/trade">
         <div class="field">
           <label for="t-symbol">Symbol</label>

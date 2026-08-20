@@ -8,6 +8,9 @@ body:
       value: |
         Blue-sky welcome. This is the place for "what if…" — no need to have it figured out.
         We'll explore it together, and the best ones become real.
+
+        **What happens next:** once this is triaged, an AI build session picks it up fresh — everything it
+        knows about your idea is what's written here. Progress shows up as comments on this issue.
   - type: textarea
     id: idea
     attributes:
@@ -30,5 +33,13 @@ body:
       label: What sparked it?
       description: A moment in the app, something you saw elsewhere, a wish…
       placeholder: "Watched a play close and really wanted to know the bot's reasoning."
+    validations:
+      required: false
+  - type: textarea
+    id: done-looks-like
+    attributes:
+      label: If this existed, what would you see?
+      description: Paint the picture — one concrete moment of using it. It's the single best steer you can give the builder.
+      placeholder: "A play closes, and under it a line appears: 'Sold the spread — IV crushed after earnings, the edge was gone.'"
     validations:
       required: false

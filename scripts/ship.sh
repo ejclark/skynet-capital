@@ -52,6 +52,69 @@ http_of() { printf '%s' "${1##*__SHIP_HTTP__}"; }              # code from an ap
 body_of() { printf '%s' "${1%$'\n'__SHIP_HTTP__*}"; }         # body from an api() result
 json_field() { python3 -c "import sys,json; print(json.load(sys.stdin).get('$1',''))"; }
 
+# checkbody — the picture/format contract as a pure, testable linter (no network, no git writes).
+# The 2026-08-20 hat-team research finding this encodes: format compliance tracks enforcement,
+# never willingness (fridge rule adopted by 4/126 bodies while comment-only; every machine-gated
+# format in the repo thrives). Existence and honesty are gated; TASTE is not — that lives in
+# docs/PICTURES.md. The waiver line keeps trivial PRs cheap and skips visible:
+#   Picture: waived — <reason>
+cmd_checkbody() {
+  local f="${1:-}"
+  [ -n "$f" ] && [ -s "$f" ] || { echo "ship checkbody: a non-empty body file is required" >&2; exit 1; }
+  local fails=0
+  fail() { echo "ship checkbody: $1" >&2; fails=$((fails+1)); }
+
+  # 1. The picture — section present, holding media OR an explicit waiver (never presence-only:
+  #    a decorative mermaid on a typo fix is worse than an honest skip).
+  if ! grep -q '^## The picture' "$f"; then
+    fail "missing '## The picture' — the fridge rule is section one. Trivial PR? Waive it explicitly: 'Picture: waived — <reason>' (docs/PICTURES.md)."
+  else
+    local pic; pic="$(awk '/^## The picture/{flag=1;next}/^## /{flag=0}flag' "$f")"
+    if printf '%s\n' "$pic" | grep -qE '!\[|<img |^```mermaid'; then
+      # media present → a FILLED caption is required (the template placeholder '_Caption —_' fails)
+      printf '%s\n' "$pic" | grep -qE '^_?Caption( —|:) .{3,}' \
+        || fail "picture has no filled caption — one plain-language line: what it shows + where it came from (docs/PICTURES.md → honesty rules)."
+    elif ! printf '%s\n' "$pic" | grep -qE '^Picture: waived — .+'; then
+      fail "'## The picture' has neither media nor a waiver — add a screenshot/mermaid, or the line 'Picture: waived — <reason>'."
+    fi
+  fi
+
+  # 2. Screenshot URLs must be SHA-pinned — branch-form raw URLs 404 the moment squash-merge
+  #    deletes the branch (PR #446's fridge screenshots were dead within a day — empirical).
+  if grep -E 'raw\.githubusercontent\.com/[^/)]+/[^/)]+/[^/)]+/' "$f" \
+     | grep -vE 'raw\.githubusercontent\.com/[^/)]+/[^/)]+/[0-9a-f]{40}/' >/dev/null; then
+    fail "raw.githubusercontent.com URL is not SHA-pinned — branch URLs rot at merge. 'ship open' pins docs/shots/ URLs automatically; pin others to a 40-hex commit SHA."
+  fi
+
+  # 3. Summary bullets ≤120 chars — 'ONE SHORT LINE EACH' (Eric, 2026-08-19) had 0% compliance
+  #    as a comment; as a check it is unmissable.
+  if grep -q '^## Summary' "$f"; then
+    local over; over="$(awk '/^## Summary/{flag=1;next}/^## |^<details>/{flag=0}flag' "$f" | grep -E '^- ' | awk 'length($0) > 120' | head -3)"
+    [ -z "$over" ] || fail "Summary bullet over 120 chars — one short line each; the detail belongs below the fold:
+$over"
+  fi
+
+  # 4. Mermaid stable-types allowlist — GitHub's deployed mermaid lags releases, and a syntax
+  #    error renders as the PR's OPENING FRAME. Beta types are fine in comments/discussion, never
+  #    as the fridge picture. (This checks the diagram TYPE, not full syntax — the honest limit.)
+  local t bad=""
+  while IFS= read -r t; do
+    case "$t" in
+      flowchart|graph|sequenceDiagram|stateDiagram-v2|erDiagram|classDiagram|pie|gantt|timeline|"") ;;
+      *) bad="$bad $t" ;;
+    esac
+  done <<EOF_TYPES
+$(awk '/^```mermaid/{want=1;next} want && /^[[:space:]]*$/{next} want && /^%%/{next} want{print $1; want=0}' "$f")
+EOF_TYPES
+  [ -z "$bad" ] || fail "mermaid type(s) not in the stable allowlist:$bad — use flowchart/sequenceDiagram/stateDiagram-v2/erDiagram/classDiagram/pie/gantt/timeline (docs/PICTURES.md; 'journey' is a UX chart, wrong shape for reasoning)."
+
+  if [ "$fails" -gt 0 ]; then
+    echo "ship checkbody: $fails problem(s) — the PR body is the durable record; see docs/PICTURES.md." >&2
+    exit 1
+  fi
+  echo "ship checkbody: ✓ body passes the picture/format contract."
+}
+
 cmd_open() {
   local title="${1:-}"; shift || true
   [ -n "$title" ] || { echo "ship open: PR title required" >&2; exit 1; }
@@ -77,6 +140,37 @@ cmd_open() {
   [ "$branch" != "$base" ] || { echo "ship: refusing to open a PR from $base into itself" >&2; exit 1; }
   git diff --quiet && git diff --cached --quiet || { echo "ship: uncommitted changes — commit first" >&2; exit 1; }
 
+  # SHA-pin docs/shots/ raw URLs to HEAD (the commit about to be pushed — tree is clean, so HEAD
+  # is exactly what ships). Branch-form URLs 404 at squash-merge; already-pinned SHAs pass through.
+  local sha pinned; sha="$(git rev-parse HEAD)"; pinned="/tmp/ship-body-pinned.md"
+  python3 - "$bodyfile" "$sha" > "$pinned" <<'PY'
+import re, sys
+body = open(sys.argv[1]).read()
+sha = sys.argv[2]
+def pin(m):
+    return m.group(0) if re.fullmatch(r"[0-9a-f]{40}", m.group(3)) else \
+        f"raw.githubusercontent.com/{m.group(1)}/{m.group(2)}/{sha}/docs/shots/"
+sys.stdout.write(re.sub(r"raw\.githubusercontent\.com/([^/\s)]+)/([^/\s)]+)/([^/\s)]+)/docs/shots/", pin, body))
+PY
+  bodyfile="$pinned"
+
+  # The picture/format contract — fail fast, before spending verify or a push.
+  cmd_checkbody "$bodyfile"
+
+  # Screenshot weight is permanent git history (the one irreversible cost) — budget by construction.
+  if git rev-parse --verify -q "origin/$base" >/dev/null; then
+    local big=""
+    while IFS= read -r p; do
+      if [ -n "$p" ] && [ -f "$p" ] && [ "$(wc -c <"$p")" -gt 102400 ]; then
+        big="$big
+  $p ($(wc -c <"$p") bytes)"
+      fi
+    done <<EOF_SHOTS
+$(git diff --name-only "origin/$base...HEAD" -- 'docs/shots/')
+EOF_SHOTS
+    [ -z "$big" ] || { echo "ship: docs/shots file(s) exceed the 100KB budget (recompress via the shoot scripts):$big" >&2; exit 1; }
+  fi
+
   if [ "$verify" = 1 ]; then
     echo "ship: local verify (parity with CI — fail fast before spending a runner)…"
     npm run verify >/tmp/ship-verify.log 2>&1 || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 /tmp/ship-verify.log; exit 1; }
@@ -91,6 +185,10 @@ cmd_open() {
   node scripts/incident-scan.mjs || {
     echo "ship: ^^ an unlearned incident on $base is above. Run /retro before stacking more on it."
   }
+
+  # Digest advisory (same rides-the-path doctrine): the altitude instrument going quiet is drift
+  # nobody sees — surface DUE-ness at the moment every change already passes through. Advisory only.
+  node scripts/digest-scan.mjs 2>/dev/null || true
 
   echo "ship: pushing $branch…"
   local n=0; until git push -u origin "$branch" 2>/dev/null; do
@@ -166,5 +264,6 @@ case "${1:-}" in
   open) shift; cmd_open "$@" ;;
   merge) shift; cmd_merge "$@" ;;
   automerge) shift; cmd_automerge "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n>}" >&2; exit 1 ;;
+  checkbody) shift; cmd_checkbody "$@" ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file>}" >&2; exit 1 ;;
 esac

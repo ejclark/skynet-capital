@@ -1,5 +1,6 @@
 # Auto-format staged files so biome format drift can't be committed (retro: PR #111 lint slip).
-files=$(git diff --cached --name-only --diff-filter=ACMR)
-[ -z "$files" ] && exit 0
-./node_modules/.bin/biome format --write --no-errors-on-unmatched $files 2>/dev/null
-git add $files
+# NUL-safe on purpose: filenames with spaces (e.g. handoff bundles like "Field Guide.dc.html")
+# word-split under an unquoted $files and fatal the whole commit.
+git diff --cached --name-only --diff-filter=ACMR -z |
+  xargs -0 -r ./node_modules/.bin/biome format --write --no-errors-on-unmatched 2>/dev/null
+git diff --cached --name-only --diff-filter=ACMR -z | xargs -0 -r git add

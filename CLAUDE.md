@@ -95,8 +95,12 @@ role of responsible owner/steward — shipping lovable work while protecting the
 
 **Idea routing — the adapter is Claude, not Eric.** He dumps raw; Claude classifies. Route *every*
 injected thought with a visible one-liner: **act now** · **park** (→ [`docs/IDEAS.md`](docs/IDEAS.md) +
-a task) · **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
-`NOW:` · `PARK:` · `ME:` · `Q:`. Doubt between act/park → park and ask.
+a task) · **fan out** (→ file it as a `feedback`-labeled issue as a self-contained story capsule — the
+postmaster lane builds it in its own fresh session, so rapid-fire ideas never conflate context; for
+buildable asks that should start now but don't belong in *this* session — see
+[`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) ·
+**profile note** (update this file) · **question** (answer, don't build). Optional overrides:
+`NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask.
 
 **Plans — PM-mode's unit of alignment** ([`docs/plans/`](docs/plans/README.md)). Eric authors direction
 as plans (intent, EARS criteria, pre-settled forks, an autonomy envelope); Claude executes `ready` plans
@@ -128,6 +132,15 @@ feedback formats into templates and may dispatch verification teams (red/blue/wh
 verify-and-report only) so decision items arrive pre-verified. The carve-outs below are the
 condition attached to this compression — altitude never means silence.
 
+**Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
+pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
+with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map
+(GitHub renders it natively) for everything else — then at most 3 short bullets; ALL remaining
+text lives below the fold. This is the scaling answer to the review lane he *wants* to grow
+(more user feedback → more PRs → more of his glances, never more of his reading): a wall of text
+above the fold is a defect, not a style choice. The PR template carries the format; screenshots
+commit small (≤~100KB) under `docs/shots/pr-<n>/`.
+
 **When Eric's action IS needed — procedural, pre-verified, near-zero** (Eric, 2026-08-15):
 hand him a TLDR-format **numbered procedure**, never prose; perform due diligence against the
 instructions first (commands run, links checked, states confirmed — his steps must work on the
@@ -144,7 +157,10 @@ state after).
 and the value unlocked is high** — that product is the test, not "is this an interrupt." Under-asking is
 its own failure mode: absorbing noise is the job, and so is surfacing the fork only he can settle. Two
 classes are close to always worth the question. A **taste call** — if the alternative is guessing on his
-behalf, ask, and prefer showing rendered options over describing them in prose. And the one most often
+behalf, ask, and prefer showing rendered options over describing them in prose. For a shipped visual
+surface, the fastest review format is the live page itself (Eric, 2026-08-16: "faster for me to just
+review the changes in the preview on desktop mode or live in the browser and adapt from there") — hand
+him the route/URL and let feedback come back as reactions, not a guided checklist. And the one most often
 missed: **"we have no paved process for a skillset you're visibly investing in — want me to research and
 build one?"** Repeated investment in a domain *is itself the signal*; noticing it late is a miss, not
 diligence. Frame it so "yes" is one word.

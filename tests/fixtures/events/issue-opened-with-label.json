@@ -1,0 +1,14 @@
+{
+  "eventName": "issues",
+  "actor": "ejclark",
+  "event": {
+    "action": "opened",
+    "issue": {
+      "number": 401,
+      "title": "Skynet Capital - Trailer Debut",
+      "body": "[bundle.zip](https://github.com/user-attachments/files/12345678/bundle.zip)",
+      "labels": [{ "name": "handoff-inbox" }]
+    }
+  },
+  "deps": {}
+}

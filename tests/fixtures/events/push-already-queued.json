@@ -1,0 +1,12 @@
+{
+  "eventName": "push",
+  "actor": "ejclark",
+  "event": {},
+  "deps": {
+    "readyHandoffs": [
+      { "slug": "brief-horizon", "title": "t", "path": "p", "readme": "r", "files": [] }
+    ],
+    "dueEvents": [],
+    "openIssueTitles": ["[handoff] brief-horizon"]
+  }
+}

@@ -1,156 +1,27 @@
 /**
  * The forward market-event calendar — every dated thing that can move the names we trade, one
  * model: our own prints (derived from earnings-calendar.ts, never duplicated), macro prints
- * (CPI/FOMC), product launches, sector events, and dated geopolitical checkpoints.
+ * (CPI/FOMC), product launches, sector events, Treasury supply, options expiration, and dated
+ * geopolitical checkpoints.
  *
- * WHY A CHECKED-IN TABLE (same doctrine as earnings-calendar.ts): event dates change rarely, must
- * be reviewable in a diff (a wrong date silently corrupts every window and every assessment keyed
- * to it), and the trading path must never fetch the network to decide. Past dates age out safely
- * because every query below ignores them.
- *
- * WHO READS THIS: scripts/event-scan.mjs (the assessment scanner — it extracts the MARKET_EVENTS
- * literal below by marker string, so keep the `export const MARKET_EVENTS` line intact; the drift
- * gate in tests/arch/event-scan.spec.ts goes red if extraction and this module ever disagree),
- * and — slice 2 — the morning brief via `eventsWithin`.
+ * This module owns the TYPES and the QUERY functions. The curated table itself lives in
+ * market-events-data.ts (re-exported below as MARKET_EVENTS) so the hand-maintained data can grow
+ * with coverage without inflating this logic module's line budget — the source-prefix / date
+ * policy that governs that table is documented at the top of that file.
  *
  * DATE POLICY (inherited from earnings-calendar.ts / docs/plans/trade-playbooks.md): an
  * `estimate` may only WIDEN caution; date-keyed action requires `confirmed`. Research is not
  * action — estimate events still get researched — but every trading-adjacent statement written
  * about an event must carry its confirmed/estimate label honestly.
- *
- * SOURCE PREFIXES (the audit trail of HOW a date is known, extending IR:/CAL: from the earnings
- * calendar). `confirmed` requires a trusted prefix; `estimate` requires an honest one:
- *   confirmed — `IR:` company primary source · `CAL:` automated aggregator cross-ref ·
- *               `BLS:` bls.gov release schedule · `FED:` federalreserve.gov FOMC calendar ·
- *               `PJM:` pjm.com auction schedule · `SEC:` an SEC filing
- *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
- * The scanner's `--validate` mode enforces this mapping.
  */
 import { daysUntil, type EarningsPrint, UPCOMING_PRINTS } from "./earnings-calendar.js";
+import { type ImpactTier, MARKET_EVENTS, type MarketEvent } from "./market-events-data.js";
 
-// Not exported yet — slice 2 (morning-brief horizon, LIVING-UNIVERSE event→phenomenon feed)
-// re-exports these when a consumer lands; until then the dead-code gate rightly owns the call.
-type EventKind =
-  | "earnings" // derived from earnings-calendar.ts via earningsAsEvents — never hand-entered here
-  | "macro-print" // CPI, PPI, jobs report, FOMC decisions — scheduled, market-wide
-  | "product-launch"
-  | "sector" // PJM capacity auctions, export-control deadlines, FERC dockets
-  | "geopolitical"; // dated checkpoints only (a summit, a tariff deadline) — regime shifts with
-// no date belong in the adjacency checklist, not here (see docs/process/EVENT-RESEARCH.md)
-
-export type ImpactTier = "critical" | "high" | "medium" | "low";
-type EventStatus = "confirmed" | "estimate";
-
-export interface MarketEvent {
-  /** Stable slug (lowercase, hyphenated) — the join key to the assessment ledger doc at
-   *  docs/research/events/<id>.md and to the `[event-research] <id>` issue title. */
-  readonly id: string;
-  readonly kind: EventKind;
-  readonly title: string;
-  /** YYYY-MM-DD (UTC date-only; same calendar-day math as earnings-calendar.ts). */
-  readonly date: string;
-  readonly status: EventStatus;
-  /** Where the date came from — must carry a source prefix (see header). */
-  readonly source: string;
-  /** Drives assessment cadence (assessment-cadence.json): how hard this can move us. */
-  readonly impact: ImpactTier;
-  /** Symbols affected; empty = market-wide (CPI, FOMC). */
-  readonly symbols: readonly string[];
-  readonly notes?: string;
-}
-
-/**
- * Hand-curated non-earnings events. Earnings NEVER go here — they are derived from
- * UPCOMING_PRINTS so print dates keep exactly one source of truth (and confirm-print-dates.ts
- * keeps working unchanged). Seeded 2026-08-15; BLS/FED dates hand-verified against the primary
- * schedules that day (the aggregator check that day had the Dec CPI date WRONG — Dec 18 vs the
- * real Dec 10 — which is the whole case for the prefix discipline).
- */
-export const MARKET_EVENTS: readonly MarketEvent[] = [
-  {
-    id: "cpi-2026-09-11",
-    kind: "macro-print",
-    title: "CPI release (Aug 2026 data)",
-    date: "2026-09-11",
-    status: "confirmed",
-    source: "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
-    impact: "high",
-    symbols: [],
-    notes: "Rate-path input; AI-infra names trade as long-duration assets on it.",
-  },
-  {
-    id: "fomc-2026-09-16",
-    kind: "macro-print",
-    title: "FOMC decision (meeting Sep 15–16, SEP + dot plot)",
-    date: "2026-09-16",
-    status: "confirmed",
-    source: "FED: federalreserve.gov FOMC calendar — statement 14:00 ET, checked 2026-08-15",
-    impact: "high",
-    symbols: [],
-  },
-  {
-    id: "cpi-2026-10-14",
-    kind: "macro-print",
-    title: "CPI release (Sep 2026 data)",
-    date: "2026-10-14",
-    status: "confirmed",
-    source: "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
-    impact: "high",
-    symbols: [],
-  },
-  {
-    id: "fomc-2026-10-28",
-    kind: "macro-print",
-    title: "FOMC decision (meeting Oct 27–28)",
-    date: "2026-10-28",
-    status: "confirmed",
-    source: "FED: federalreserve.gov FOMC calendar — statement 14:00 ET, checked 2026-08-15",
-    impact: "high",
-    symbols: [],
-    notes: "Lands ON the GOOG/META print date and a day before AMZN/AAPL — a compound-risk day.",
-  },
-  {
-    id: "cpi-2026-11-10",
-    kind: "macro-print",
-    title: "CPI release (Oct 2026 data)",
-    date: "2026-11-10",
-    status: "confirmed",
-    source: "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
-    impact: "high",
-    symbols: [],
-  },
-  {
-    id: "cpi-2026-12-10",
-    kind: "macro-print",
-    title: "CPI release (Nov 2026 data)",
-    date: "2026-12-10",
-    status: "confirmed",
-    source: "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
-    impact: "high",
-    symbols: [],
-  },
-  {
-    id: "fomc-2026-12-09",
-    kind: "macro-print",
-    title: "FOMC decision (meeting Dec 8–9, SEP + dot plot)",
-    date: "2026-12-09",
-    status: "confirmed",
-    source: "FED: federalreserve.gov FOMC calendar — statement 14:00 ET, checked 2026-08-15",
-    impact: "high",
-    symbols: [],
-  },
-  {
-    id: "pjm-capacity-auction-2026-12",
-    kind: "sector",
-    title: "PJM capacity auction window closes",
-    date: "2026-12-15",
-    status: "estimate",
-    source: "EST: docs/research/ai-energy-constraint.md watch list — confirm vs pjm.com",
-    impact: "medium",
-    symbols: [],
-    notes: "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator).",
-  },
-];
+// Re-exported so every consumer keeps importing the shape AND the table from this module — the
+// query API — while the leaf (market-events-data.ts) owns both. The drift gate in
+// tests/arch/event-scan.spec.ts compares MARKET_EVENTS byte-for-byte against the scanner's
+// marker-string extraction of the literal in that leaf.
+export { type ImpactTier, MARKET_EVENTS, type MarketEvent };
 
 /** Default earnings impact: prints on tracked names are the 10–25%-swing class. */
 const EARNINGS_IMPACT: ImpactTier = "critical";

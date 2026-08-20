@@ -1,5 +1,6 @@
 import type { TicketContext } from "../trading/order-ticket.js";
 import { matchRoundTrips, type RoundTripLedger, type TradeFill } from "../trading/round-trips.js";
+import { escapeHtml } from "../ui/escape-html.js";
 import {
   collapseActivity,
   recordsFromActivity,
@@ -109,4 +110,19 @@ export function formatPctOrDash(value: number | null, signed = false): string {
   if (value === null) return "—";
   const sign = signed && value >= 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
+}
+
+/** One label/value line on a review screen — shared by the share and option review views. */
+export function reviewLine(label: string, value: string, cls?: string): string {
+  return `<div class="review-line"><span>${escapeHtml(label)}</span><span${
+    cls ? ` class="${cls}"` : ""
+  }>${escapeHtml(value)}</span></div>`;
+}
+
+/** A ticket's warnings then refusals, in the house notice styles. */
+export function reviewNotices(warnings: readonly string[], refusals: readonly string[]): string {
+  return [
+    ...warnings.map((warning) => `<p class="note-warn">${escapeHtml(warning)}</p>`),
+    ...refusals.map((refusal) => `<p class="note-stop">${escapeHtml(refusal)}</p>`),
+  ].join("");
 }

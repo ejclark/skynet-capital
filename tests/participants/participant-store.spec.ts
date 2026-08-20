@@ -50,6 +50,29 @@ describe("FileParticipantStore", () => {
     rmSync(path, { force: true });
   });
 
+  it("removes by id, reporting false for an id it never held", () => {
+    const path = tmpFile();
+    const store = new FileParticipantStore(path, "s");
+    store.add(entry("human-d"));
+    store.add(entry("human-e"));
+
+    expect(store.remove("human-d")).toBe(true);
+    expect(store.load().map((p) => p.id)).toEqual(["human-e"]);
+    expect(store.remove("human-d")).toBe(false); // already gone — absent is a false, not a throw
+
+    // The rewritten blob stays encrypted — the survivors' secrets must not surface in the clear.
+    const onDisk = readFileSync(path, "utf8");
+    expect(onDisk).not.toContain("secret-human-e");
+    expect(JSON.parse(onDisk).enc).toBe(true);
+    rmSync(path, { force: true });
+  });
+
+  it("refuses to remove without a secret — the survivors' blob can't be rewritten safely", () => {
+    expect(() => new FileParticipantStore(tmpFile()).remove("human-a")).toThrow(
+      /SKYNET_STORE_SECRET/,
+    );
+  });
+
   it("upserts by id and answers has()", () => {
     const path = tmpFile();
     const store = new FileParticipantStore(path, "s");

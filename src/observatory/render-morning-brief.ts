@@ -25,9 +25,9 @@ function playbookSection(brief: MorningBrief): string {
 function calendarSection(brief: MorningBrief): string {
   const lines = brief.calendar.map((c) => {
     const when = c.daysUntil === 0 ? "TODAY" : c.daysUntil === 1 ? "tomorrow" : `${c.daysUntil}d`;
-    return `  ${c.symbol.padEnd(6)} ${c.date}  ${c.status.padEnd(9)} (${when})`;
+    return `  ${c.title.padEnd(34)} ${c.date}  ${c.status.padEnd(9)} (${when})`;
   });
-  return `EARNINGS CALENDAR\n${lines.join("\n") || "  (nothing upcoming in the window)"}`;
+  return `EVENT CALENDAR\n${lines.join("\n") || "  (nothing upcoming in the window)"}`;
 }
 
 function liveSignalSection(brief: MorningBrief): string {

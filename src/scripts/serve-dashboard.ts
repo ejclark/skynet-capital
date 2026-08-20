@@ -31,9 +31,11 @@ import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { dedupeById } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
+import { resolveFeedbackCoach } from "../server/feedback-coach.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
@@ -124,6 +126,14 @@ async function main(): Promise<void> {
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
   });
 
+  // Day-2 account management (/account): profile edits + removal for self-service accounts.
+  const accounts = createAccountService({
+    hub,
+    store,
+    clientFactory: dataSource.clientFactory,
+    stopStream: (id) => dataSource.stopParticipantStream(id),
+  });
+
   // The guest list lives on the mounted volume, encrypted at rest, and is unioned with the env
   // allowlist inside resolveAuth. Built here so the /invite route and the authenticator read the
   // exact same store — two sources of truth for who may sign in is the bug worth designing out.
@@ -150,9 +160,11 @@ async function main(): Promise<void> {
 
   // Member-initiated desk trading — off unless switched on AND OAuth is configured (see
   // resolveDeskTrading; without a signed-in identity there is no account to match an order to).
+  const findParticipant = (id: string) => [...roster, ...store.load()].find((p) => p.id === id);
   const desk = resolveDeskTrading(process.env, {
-    findParticipant: (id) => [...roster, ...store.load()].find((p) => p.id === id),
+    findParticipant,
     clientFactory: dataSource.clientFactory,
+    optionsClientFactory: dataSource.optionsClientFactory,
     authConfigured: Boolean(auth),
   });
   if (desk.warning) console.warn(desk.warning);
@@ -163,6 +175,12 @@ async function main(): Promise<void> {
       "ℹ️  In-app feedback is off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — the /feedback form renders but submissions won't file issues.",
     );
   }
+  const feedbackCoach = resolveFeedbackCoach(process.env);
+  if (!feedbackCoach) {
+    console.warn(
+      "ℹ️  The feedback coach is off (no ANTHROPIC_API_KEY) — the plain /feedback form still works.",
+    );
+  }
 
   createDashboardServer({
     hub,
@@ -170,15 +188,34 @@ async function main(): Promise<void> {
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
     rotateCredentials: (input) => service.rotateCredentials(input),
+    accountAdmin: {
+      updateProfile: accounts.updateProfile,
+      removeAccount: accounts.removeAccount,
+      profileFor: (id) => {
+        const stored = store.load().find((p) => p.id === id);
+        return stored
+          ? {
+              displayName: stored.displayName,
+              ...(stored.timezone ? { timezone: stored.timezone } : {}),
+            }
+          : undefined;
+      },
+    },
     ...(auth
       ? { invite: { store: allowlist, isOwner: (email: string) => owners.has(email) } }
       : {}),
     ...(feedback ? { submitFeedback: feedback } : {}),
+    ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
+    submitOptionTrade: desk.submitOption,
+    optionsClientFor: (id) => {
+      const participant = findParticipant(id);
+      return participant ? dataSource.optionsClientFactory(participant) : undefined;
+    },
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(

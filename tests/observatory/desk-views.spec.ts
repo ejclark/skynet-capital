@@ -159,7 +159,7 @@ describe("positions view — the blotter", () => {
   it("renders roll as disabled with its real reason rather than hiding or faking it", () => {
     const html = renderPositionsBody(snapshot(), { isSelf: true, tradingEnabled: true });
     expect(html).toContain(">Roll</button>");
-    expect(html).toContain("options order path isn't built yet");
+    expect(html).toContain("single atomic order");
   });
 
   it("disables the ticket and says why when desk trading is switched off", () => {

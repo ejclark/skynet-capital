@@ -18,6 +18,48 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### In-app "what's new" member feed built from PR pictures
+Extract `## The picture` + Summary from `main`'s squash bodies into a member-facing changelog route —
+the engagement flywheel (non-technical friends following along) and the first real consumer of the
+Machine-context tier. A taste surface: needs a plan draft and Eric's flip, never smuggled into a
+process PR. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+
+### Eric-comment reaction-capture lane (postmaster, second wave)
+Route Eric's PR/issue comments through the act/park/profile/question classifier via a postmaster lane
+(`issue_comment` from OWNER — real-identity events do fire webhooks; emoji reactions don't, so those
+poll on the digest tick instead). Highest-grade landing signal there is; build after the checkbody
+gate + digest delivery prove out. Workflow-file carve-out. _(src: Claude · while: hat-team comms
+research, 2026-08-20)_
+
+### Digest picture slot — ratchet in only after the digest loop is proven live
+Add `## The picture` to `docs/digests/TEMPLATE.md` + `digest-scan` REQUIRED_SECTIONS once 2–3 digests
+have actually shipped on cadence (the instrument has fired once ever; decorating a dead instrument
+decorates an empty room). The digest picture = `## The picture` blocks harvested from squash bodies
+via local git log. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+
+### Long-session journey nudge from duel-log telemetry
+Teach `scripts/duel-log.mjs` (or the postmaster audit) a heuristic: a session with many turns and no
+code diff is a journey candidate — nudge, never auto-write. Complements the orient-time trigger that
+shipped with the comms-research PR. _(src: Claude · while: hat-team comms research, 2026-08-20)_
+
+### IDEAS.md entries have the same wall-of-text disease as Summary bullets had
+This file says "one or two lines — enough to reconstruct intent"; recent entries run 10+. Same cure
+family as the ≤120-char bullet gate — but measure first whether long entries actually hurt retrieval
+before gating a capture surface (the journey lesson: never tax the habit). _(src: Claude · while:
+hat-team comms research, 2026-08-20)_
+
+### Options-mechanics event kinds — OPEX, quad witching, VIX expiration, holidays
+The `/calendar` view renders the curated feed; the mechanical dates options traders also watch are
+all rule-computable offline: monthly OPEX = 3rd Friday (holiday → prior Thursday), quad witching =
+Mar/Jun/Sep/Dec subset, VIX expiration = the Wednesday 30 days before the *next* monthly OPEX, NYSE
+holidays/early closes published 3 years out. A pure `expiration-calendar.ts` generator (verifiable
+against Cboe's annual PDF) would feed these in as new `EventKind`s — which also means extending
+`event-scan.mjs --validate`'s kind/source rules, so it's a domain slice, not a view tweak. Known
+edge case worth a unit test: Juneteenth (obs) Fri 2027-06-18 collides with June quad witching →
+expiration moves to Thu 2027-06-17. Also cheap to seed from published schedules: NFP (first-Friday
+rule breaks 3× in 2026 — use the BLS schedule), PPI, PCE; BLS offers no-key iCal feeds as a later
+refresh path. _(src: Claude · while: calendar-view integration research, 2026-08-16)_
+
 ### Google Finance as an A2A research source — analyst data now, Ask-AI interrogation next
 Google Finance's beta surfaces per-symbol analyst ratings, 12-month price targets, and an
 AI panel ("Ask AI", Deep Search, auto-generated insights). Eric's read: prompting Google's
@@ -192,6 +234,57 @@ _(src: Claude · while: diagnosing three consecutive failed releases)_
 - Worth pairing with a one-time confirmation that `verify` is in fact a **required** check in branch
   protection. The `types:` fix guarantees the run happens; only branch protection makes it block.
 _(src: Claude · while: watching PR #322 merge with `verify: skipped`)_
+
+### Probot as the postmaster's host — the identity is taken, the service is parked
+Eric: *"a probot app seems like a superior later abstraction as the postmaster role, to manage logic
+for githook events."* The proposal splits in two, and only one half was taken.
+
+- **Taken now — the App *identity*.** GitHub's loop guard is scoped to `GITHUB_TOKEN`; the two
+  documented escapes are an App installation token or a PAT. So the App cures the severance class
+  outright, needs **no server**, and beats the PAT on every axis (no expiry, installation-scoped,
+  acts as its own bot). Shipped as `actions/create-github-app-token@v3` in `postmaster.yml`.
+- **Parked — the hosted *service*.** What it would buy: routing in TypeScript with no YAML shim,
+  local webhook replay (`probot receive`) instead of push-to-test, and clean reactions to events
+  Actions handles awkwardly (review threads, cross-repo, fine-grained comment routing).
+- **What it would cost, honestly.** (1) It cannot run `claude-code-action`, so it would dispatch the
+  Actions workflow anyway — a *front door*, not a replacement. (2) An always-on service we don't
+  have today: if it's down, webhooks are dropped and redelivery is manual, where a failed workflow
+  run stays visible and re-runnable in the Actions UI. (3) The original complaint — four workflows,
+  482 lines — is already answered: one workflow, ~200 lines that are mostly comments.
+- **Why "later" costs nothing.** `route(ctx, deps) → Intent[]` is pure and host-agnostic by
+  construction, so migrating swaps `execute()`'s I/O layer and the entry point while every fixture
+  spec comes across untouched. That optionality is the decide-then-do split paying rent.
+- **The trigger to revisit:** when event routing outgrows what `on:` can express — needing review-
+  thread state, cross-repo reactions, or sub-second latency — not before.
+_(src: Eric · while: reviewing the postmaster's abstraction after the canary shipped)_
+
+### "Green certifies the wrong noun" — verify the artifact, not the process (see LESSONS.md 2026-08-17)
+Third instance of one shape in a single day, so it is a class and not a coincidence: a success signal
+that describes a **narrower event** than the one being relied on. `handoff-import.mjs` exited 0 for
+"the push happened" while the caller read it as "the contract is clean"; `claude-code-action` exits
+`success` for "the session completed" while the workflow's green check reads as "the handoff was
+built"; and an issue opened by `GITHUB_TOKEN` is a *written* issue but not an *emitted* event.
+- **The habit:** assert on the artifact — is there a branch, a commit, a PR, a claim ref? — never on
+  the status of the process that was supposed to produce it. Cheap to apply by hand, and it is what
+  actually caught all three.
+- **Candidate mechanism:** teach the postmaster's `audit()` an artifact-shaped stall rule — *claim ref
+  exists, no branch after N minutes* → comment and warn. That is the check that would have caught the
+  21-turn, $0.88, zero-commit build with nobody reading a log, and it fits the auditor's existing
+  ceiling (it observes and summons a human; it never reclaims a lock).
+- **Sweep the `GITHUB_TOKEN` severance class, don't patch instances.** Three hops found where
+  automation writes through `GITHUB_TOKEN` and something downstream is expected to react:
+  issue-opened (fixed), PR-opened (found the same night, one hop past the fix), and workflow-made
+  pushes (same property, not yet exercised). An auditor rule of the same artifact shape — *PR open
+  N minutes with zero check runs* → comment and warn — would catch the whole family. The real fix
+  for PR authorship is a credential (fine-grained PAT / App installation token for the `pr create`
+  step only) and is **Eric's**, not self-authorizable.
+- **Also worth having:** a repo-settings preflight. "Allow GitHub Actions to create and approve pull
+  requests" being off cost a canary run, and that class of defect is invisible to every local gate —
+  a scripted check of the capabilities the workflows assume would surface it before a dispatch does.
+- **And: retire the hourly pickup Routine** once the event path has run clean a few times. It was not
+  merely redundant — it *masked* the severed event chain by making a dead path look slow. A backup
+  that can conceal the failure of the thing it backs up is a liability, not a safety net.
+_(src: Claude · while: fixing the seventh defect of the postmaster cutover)_
 
 ### Metrics as the gamification substrate — multi-axis ladders + per-strategy effectiveness
 Gamification is *all about metrics*: find the stats worth measuring, then let each one be its own way
@@ -693,6 +786,8 @@ _(nothing right now)_
 
 ## Shipped (recent)
 
+- Morning brief reads the full event horizon (CPI/FOMC/sector, not just earnings prints) —
+  the pipeline canary, first handoff the build machinery executed end-to-end — PR #371
 - Nation skylines on `/bots-vs-humans` — each cohort's holdings aggregated by ticker into one country skyline — PR (this)
 - Empire thumbnails on the board — a compact skyline per participant card on `/` (region of cities) — PR (this)
 - Empire skyline on `/u/:id` — positions → a domain-themed city (Living Universe P2, first slice) — PR (this)

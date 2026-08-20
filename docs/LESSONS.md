@@ -27,6 +27,48 @@ it. Prevention ranks, best first:
 
 ---
 
+### The fridge rule's own instruction embedded link rot — #446's screenshots died a day after merge
+- **SHA:** 29a0113   **DATE:** 2026-08-20   **STATUS:** closed
+- **SIGNAL:** the hat-team communication research (white-hat rendering probe) found PR #446's
+  fridge-rule screenshots — the flagship "pictures first" PR — returning 404 one day after merge,
+  while a SHA-pinned URL to the identical file returned 200. Detection lag: ~1 day, and only
+  because a research pass happened to check; no net watched for dead images in merged bodies.
+- **ROOT CAUSE:** the PR template instructed embedding screenshots "via the branch's
+  raw.githubusercontent URL." Squash-merge deletes the branch, so every image URL written per the
+  instruction dies the moment the PR succeeds — the rule shipped its own rot into the permanent
+  record (`main`'s squash bodies are the durable context cache).
+- **PREVENTION:** gate + script + doctrine. `scripts/ship.sh open` now SHA-pins every
+  `docs/shots/` raw URL to HEAD at open time, and `ship.sh checkbody` refuses any unpinned
+  `raw.githubusercontent.com` URL (both proven in `tests/arch/ship.spec.ts`); the mechanics are
+  doctrine in `docs/PICTURES.md`. The three dead links already baked into #446's immutable squash
+  body stay dead — the files themselves live on `main`, noted here for the record.
+- **SIDE QUESTS:** the landing meter (per-PR picture/waiver/reaction telemetry riding the digest
+  tick) → filed as issue #456 via the new fan-out route.
+
+### A wrapper shipped a PR claiming a contract "validated clean" when it hadn't
+- **SHA:** n/a   **DATE:** 2026-08-16   **STATUS:** closed
+- **SIGNAL:** CI red on Eric's first real `handoff:ship` run (#354) — 122 lint errors — and the
+  handoff gate failing the bundle's contract. But the PR body that same script had written said
+  *"Contract validated clean by `handoff-scan --validate` before this PR opened."* Detection lag:
+  minutes, and only because CI ran; the false claim itself was never going to be caught mechanically.
+- **ROOT CAUSE:** two independent misses. (1) `handoff-import.mjs` exited `0` unconditionally after
+  pushing while its `--no-push` path correctly exited `clean ? 0 : 1` — so its documented contract
+  ("exit 1 means authoring work remains", docs/HANDOFFS.md) was true on one path and false on the
+  other. `handoff-ship.mjs` read that exit code as the chain's stop condition, so a dirty contract
+  read as success: PR opened, body asserting a validation that never passed. With `--ready` it would
+  have flipped a *skeleton* contract to `ready` and licensed an unattended build from it. (2) The
+  wrapper's own failure-mode tests exercised the dirty-contract case **only** under `--no-push` —
+  the single mode where the exit code was already right. The test and the bug were blind to each
+  other by construction.
+- **PREVENTION:** gate + spec. The importer now exits `clean ? 0 : 1` on both paths (fix at the
+  source, so every caller inherits it), and `tests/arch/handoff.spec.ts` asserts that *every*
+  terminal exit after the contract scan carries the verdict — a bare `exit(0)` there fails CI. Also
+  doctrine-adjacent: biome no longer lints `docs/handoffs/**`, since design bundles are references,
+  not source.
+- **SIDE QUESTS:** the deeper prompt — "must a bundle merge into the codebase at all?" — became the
+  issue-as-mailbox intake (Eric's question, same session); the repo being public is what makes
+  attachment retrieval viable at all.
+
 ### Three consecutive PRs shipped with a literal `{}` description
 - **SHA:** 6e587aa   **DATE:** 2026-08-15   **STATUS:** closed
 - **SIGNAL:** Eric read a PR page and saw `{}` where the document should be — a human net, after
@@ -232,3 +274,255 @@ it. Prevention ranks, best first:
   sessions at, since the first (prose-only) warning wasn't enough on its own.
 - **SIDE QUESTS:** → docs/IDEAS.md — a `git stash`-blocking shell wrapper for agent bootstraps, if
   the harness ever exposes a place to inject one.
+
+### The flip button did all the work, then died at `gh pr create` — Actions can't open PRs by default
+- **SHA:** 76f9276   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** the first-ever dispatch of "Flip a handoff to ready" (the pipeline canary,
+  `brief-horizon`) failed with `GraphQL: GitHub Actions is not permitted to create or approve pull
+  requests (createPullRequest)`. Detection lag: none — it was the run's own exit code, surfaced
+  within seconds, because the canary existed to be watched.
+- **ROOT CAUSE:** **Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to
+  create and approve pull requests"** is **off by default** on GitHub repositories. Every workflow
+  in this repo that opens a PR (`handoff-flip.yml`, `handoff-inbox.yml`) had been written assuming
+  the capability, and none had ever executed its final step against the real repo — the mailbox's
+  live tests were all no-zip smoke tests, which return before the PR step. So the defect sat latent
+  in two workflows at once. Worse than the failure itself was its *shape*: the flip had already
+  committed and pushed the branch, so the run failed after doing all the real work, leaving a
+  correct branch stranded behind an error message that named no next step.
+- **PREVENTION:** two layers. (1) The setting is enabled — the actual fix, one checkbox, and it
+  unblocks every current and future PR-opening workflow. (2) Mechanical, in the postmaster cutover:
+  `execute()` wraps PR creation so a refusal no longer discards the work — it comments the
+  `…/compare/<branch>?expand=1` URL on the originating issue, prints it, writes it into the run
+  receipt, and names the setting in the message, so the reader can fix the cause rather than the
+  symptom. Specced with a fixture where PR creation is refused.
+- **THE CANARY EARNED ITSELF:** this is the case the canary was staged for. Had the first dispatch
+  been `trailer-debut`, the same failure would have landed on a large public-facing bundle instead
+  of a one-line text change — and had it first appeared via the mailbox, it would have struck after
+  downloading and importing a real zip. Fifth defect of the day found by running the thing rather
+  than reasoning about it.
+- **SIDE QUESTS:** → docs/IDEAS.md — a repo-settings preflight (a scripted check that the
+  capabilities the workflows assume are actually enabled), since this class of defect is invisible
+  to every local gate.
+
+### The chain was severed at the join — a workflow's issue can never wake another workflow
+- **SHA:** 099ff3c   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** Eric, watching the canary sit: *"I'm waiting.. when will i know?"* The handoff was
+  `ready`, `handoff-detect` had run green, and the `[handoff] brief-horizon` issue was open — yet
+  nothing built it. `claude.yml` had **4 lifetime runs, all from issues created with my own token**;
+  issue #367, created by a workflow, produced **zero**. Detection lag: the whole evening, and only
+  because a human asked. Every workflow involved was green the entire time.
+- **ROOT CAUSE:** **events triggered by `GITHUB_TOKEN` do not start other workflow runs** —
+  GitHub's infinite-loop guard, and it is silent by design: no error, no annotation, no skipped
+  run to notice. The architecture was `detect opens an issue mentioning @claude` →
+  `claude.yml hears issues.opened` → builds, and the middle arrow never existed. It had never
+  worked once. What made it survive a full day of building was the **hourly polling Routine
+  masking it**: the poller was assumed to be the belt to the event path's braces, so its silence
+  read as "nothing due" rather than "the only path is dead". A backup that quietly carries the
+  load hides the failure of the thing it backs up.
+- **PREVENTION:** structural, not a note — the hop is **deleted**. `postmaster.yml` scans and
+  builds in the same run, so no critical-path step depends on one workflow's write emitting an
+  event another workflow hears. The issue still opens, but it is now explicitly a **receipt, never
+  a trigger**, and both `.github/workflows/postmaster.yml` and `docs/HANDOFFS.md` say so at the
+  top, in the place a future session editing the trigger block will read. Claiming moved to an
+  atomic `POST /git/refs` lease visible in `git ls-remote` within seconds, so "did anything pick
+  this up?" is now answerable in one command instead of inferred from silence. Measured after:
+  claim ref appeared **23 seconds** after dispatch, against a 20-minute blind window before.
+- **THE POLLER WAS THE BUG'S ACCOMPLICE:** Eric named this before the mechanism was found —
+  *"waiting for commits to a doc file - seems flimsy af"*, then *"we want event driven
+  architecture, not polling (shit) architecture"*. The critique was right for a reason neither of
+  us had yet: polling did not just add latency, it **concealed a severed chain** by making the
+  end-to-end outcome look merely slow.
+- **SIDE QUESTS:** → docs/IDEAS.md — retire the hourly pickup Routine once the event path has run
+  clean a few times; a redundant path that can mask a dead one is a liability, not a safety net.
+
+### A build session ran 21 turns, spent $0.88, changed nothing — and CI went green
+- **SHA:** n/a   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** the first real `build the handoff` job finished **successful** with an untouched
+  repo: no branch, no commit, no PR. The result line said it plainly for anyone who read past the
+  status: `"is_error": false, "num_turns": 21, "total_cost_usd": 0.877…,
+  "permission_denials_count": 6`. Detection lag: none once the log was opened — but the workflow's
+  own green check actively argued against opening it.
+- **ROOT CAUSE:** `anthropics/claude-code-action@v1` grants **only GitHub's own tools by default**.
+  Every `git`, `npm`, and file-write call the build prompt asked for was refused, six times, and
+  the session reasoned its way around the refusals for 21 turns. The action then exited `success`
+  because **the session completed without error** — which is a true statement about the session and
+  a false one about the build. That gap is the whole defect: a green check that certifies the
+  wrong noun.
+- **PREVENTION:** mechanical, at the source — `claude_args: --allowedTools "Bash,Read,Write,Edit,
+  Glob,Grep"` on the build step, with the failure narrated in a comment directly above it so the
+  next person to touch that step reads the story before editing the flag. Verified against the
+  action's own configuration reference in `anthropics/claude-code-action` — not from memory: the
+  flag is camelCase *inside* `claude_args`, and a top-level `allowed_tools` input is not the
+  current surface.
+- **GREEN IS NOT DONE — CHECK THE ARTIFACT, NOT THE CHECK:** three of today's seven defects
+  (`handoff-import`'s unconditional exit 0, the severed event chain, this one) share one shape: a
+  success signal describing a *narrower* event than the one being relied on. The durable habit is
+  to verify the **artifact** — is there a branch, a commit, a PR? — never the status of the process
+  that was supposed to produce it.
+- **SIDE QUESTS:** → docs/IDEAS.md — have the postmaster's auditor treat "claim ref exists, no
+  branch after N minutes" as a stall and say so, which would have caught this without anyone
+  reading a log.
+
+### The same severance, one hop over — a PR opened by `GITHUB_TOKEN` gets no checks at all
+- **SHA:** n/a   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** the canary's PR (#371) opened successfully, carrying a clean five-file diff and three
+  well-formed commits — and `get_check_runs` returned **`total_count: 0`**. Not a failing check: no
+  checks. `mergeable_state: "blocked"`, because a required check that never runs never passes.
+  Detection lag: none, but only because the artifact was inspected directly rather than the run's
+  status — the postmaster run itself was green and correct.
+- **ROOT CAUSE:** **the identical `GITHUB_TOKEN` severance banked two entries above, at a hop I had
+  not audited.** The fix for that one removed the *issue* hop (scan and build now share a run), and
+  I stopped there — but the build's final act is opening a PR, also with `GITHUB_TOKEN`, so
+  `pull_request.opened` is never emitted and `pipeline.yml`'s `verify` never fires. Fixing one
+  instance of a class and not sweeping for the rest is the actual mistake here; the mechanism was
+  already fully understood and written down when this defect shipped.
+- **PREVENTION:** two layers, and the honest one is not mechanical yet. (1) **Immediate, token-free:
+  close and reopen the PR from any account that is not the Actions token** — `reopened` is already
+  in `pipeline.yml`'s `types:` list (kept there by the draft-skip lesson of 2026-08-14, which pays
+  for itself again here), so CI arms within seconds. Used on #371: `verify` went green. (2) **The
+  real fix is a credential and therefore Eric's** — a fine-grained PAT, used for the PR-opening
+  steps, so the PR is authored by an identity whose events GitHub does not suppress. Deliberately
+  **not** self-authorized, and deliberately not worked around by having the build job mint its own
+  check run named `verify`: a gate that certifies itself is worse than a gate that visibly did not
+  run. **Authorized and mechanised same-day**, then improved the same afternoon when Eric read the
+  shape and said *"a probot app seems like a superior later abstraction as the postmaster role"* —
+  correct, and for the reason that matters: the **App identity** is what GitHub does not suppress,
+  and unlike a PAT it never expires. Every PR-facing step now reads
+  `steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN`, minting the
+  App token per job (the action revokes it at job end). The middle tier is deliberate — a repo that
+  already minted the PAT must not be silently downgraded by the upgrade. Setup for both is in
+  `docs/HANDOFFS.md`, and the last tier degrades loudly (a run warning naming the close/reopen
+  workaround) rather than stranding work, so a missing identity is a nuisance and never an outage.
+- **THE CLASS, NOT THE INSTANCE:** every place this repo's automation writes through
+  `GITHUB_TOKEN` and expects a downstream reaction is suspect until checked. Three found so far:
+  issue-opened (fixed by collapsing the hop), PR-opened (this), and any push to a branch made by a
+  workflow (unexercised today, same property). The sweep is the deliverable, not the patch.
+- **SIDE QUESTS:** → docs/IDEAS.md — an artifact-shaped auditor rule for this exact shape: *PR open
+  for N minutes with zero check runs* → comment and warn. Same family as the claim-with-no-branch
+  rule; both ask "did the thing actually happen?" rather than "did the process report success?".
+
+### The deploy doom loop, thirteen more times — the same fixed bug, not new incidents
+- **SHA:** fd415ee   **DATE:** 2026-08-11   **STATUS:** closed
+- **SHA:** 0906c84   **DATE:** 2026-08-11   **STATUS:** closed
+- **SHA:** f9526ba   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** c5da8a6   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 4b63c13   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** cbd18bf   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 201c52d   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** d07c0d3   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 1163671   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 494b704   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** b85486e   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** 1b6df05   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** a5ebe9d   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** b29b4fb   **DATE:** 2026-08-10   **STATUS:** closed
+- **SHA:** e9390b9   **DATE:** 2026-08-09   **STATUS:** closed
+- **SIGNAL:** `incident-scan.mjs`'s own 14-day lookback still carried 21 unlearned `main` failures
+  when this batch closure was written — only `615a269` (the entry directly above) had a ledger
+  line. Detection lag: none, since the scan is the detector; the gap was that 14 of its 15 findings
+  in the doom-loop window had never been closed out with an entry.
+- **ROOT CAUSE:** every SHA above is the **same defect already root-caused and fixed by `615a269`**
+  ("the deploy doom loop") on the same two days: the pre-push hook re-running the full suite on
+  `main`, which counted its own prior failures via this very gate, climbing self-amplified (28→41
+  and up) until the `prepare` fix landed. They were never separate incidents to investigate — they
+  are the raw symptom the `615a269` entry already explains and closes. Writing 14 near-duplicate
+  postmortems for one bug would be a worse ledger than one, so this entry batch-closes them by
+  reference instead of re-deriving what is already on record.
+- **PREVENTION:** already mechanized (see `615a269`: `prepare` is `test -n "$CI" || husky`). The
+  gap this entry actually closes is process, not code: **an incident isn't done at "root-caused,"
+  it's done at "every commit sha it produced has a ledger line"** — the gate checks individual
+  shas, so a batch failure needs a batch closure the same day the root cause is found, not a lone
+  entry that leaves siblings to accumulate as phantom debt. Doctrine line worth keeping in mind for
+  the next self-amplifying gate: close the *whole blast radius*, not just the sha that got looked at.
+- **SIDE QUESTS:** none — the finding is fully captured under `615a269`.
+
+### The App/PAT fix for `GITHUB_TOKEN` severance was designed 2026-08-17 but never installed
+- **SHA:** e122ee8   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** two consecutive "Flip a handoff to ready" runs on the same commit both failed opening
+  the authorization PR: `pull request create failed: GraphQL: GitHub Actions is not permitted to
+  create or approve pull requests (createPullRequest)`. Separately, in this same session, PR #448
+  (a postmaster-opened feedback PR) sat on "1 workflow awaiting approval" and PR #445 needed a
+  manual push from a real identity before `verify` would even start. Detection lag for the ledger
+  gap: three days, until this retro.
+- **ROOT CAUSE:** this is **not a new defect** — it is the exact class the 2026-08-17 entry two
+  above ("The same severance, one hop over") already diagnosed and built a fix for: work done under
+  the bare `GITHUB_TOKEN` carries no real GitHub identity, so GitHub suppresses the reactions that
+  identity would normally trigger (`pull_request.opened` never fires; and, the piece this session
+  newly confirmed empirically, a **workflow run whose triggering actor is `github-actions[bot]`
+  requires manual approval** — proven live on PR #445: the original push (actor
+  `github-actions[bot]`) sat `action_required`; an identical push moments later from a real
+  collaborator ran immediately, no gate). The fallback chain that entry built —
+  `steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN` — degrades
+  honestly, but **the App was never installed and no PAT was ever added**, so every postmaster run
+  since has been running on the bottom, honest-degrade tier: real GitHub identity, still absent.
+- **PREVENTION:** the gate/script and the doctrine line both already exist (`docs/HANDOFFS.md`
+  steps 1-6, written 2026-08-17). What's missing cannot be mechanized further from inside the
+  repo — a GitHub App installation and its two secrets (`APP_CLIENT_ID`, `APP_PRIVATE_KEY`) are
+  themselves credentials, squarely the irreversible class CLAUDE.md reserves for Eric. Ledger-only
+  by necessity: the fix is one five-minute owner action away, already documented, not a missing
+  mechanism.
+- **SIDE QUESTS:** → docs/IDEAS.md — a check-in nudge (weekly postmaster digest, or the incident
+  scan itself) that names "the App/PAT fallback is still on its bottom tier" explicitly, rather
+  than relying on someone noticing the pattern across unrelated symptoms three days apart.
+
+### `ensureLabel`'s upsert never upserted — curl without `--fail` hid a 404 as success
+- **SHA:** b76ac2e   **DATE:** 2026-08-19   **STATUS:** closed
+- **SIGNAL:** the stall audit's `gh issue edit --add-label stall-flagged` failed outright:
+  `'stall-flagged' not found`. `ensureLabel()` runs immediately before that call specifically to
+  prevent this. Detection lag: immediate (the job failed loudly), but the actual defect sat
+  unnoticed in `ensureLabel` itself until this retro.
+- **ROOT CAUSE:** `ensureLabel`'s upsert-by-PATCH-then-POST-create-fallback pattern is correct in
+  shape, but its `curl` calls were missing `--fail`. Without it, `curl -sS` exits `0` for **any**
+  HTTP response, including a 404 body for a label that doesn't exist yet — so the `try` never
+  threw, the `catch` (which contains the create-via-POST fallback) never ran, and the label was
+  silently never created. The comment directly above the code ("GitHub auto-creates a label the
+  first time it is applied") describes the *intended* self-healing behavior; the missing flag is
+  exactly why it didn't happen.
+- **PREVENTION:** gate/script — `scripts/postmaster.mjs`'s `ensureLabel` now passes `--fail` on
+  both the PATCH and the POST, so a real HTTP failure (including "doesn't exist yet") throws and
+  reaches the fallback, while the intentionally-swallowed "already exists" 422 on the POST still
+  degrades silently exactly as designed. Fixed in this PR, not deferred.
+- **SIDE QUESTS:** none — worth a quick sweep of other bare `curl` calls in the repo's scripts for
+  the same missing-`--fail` shape, but `importZip`'s (the only other one) already carries `-f`.
+
+### A handoff-flip retry raced its own successful predecessor — not a defect
+- **SHA:** 2969eb9   **DATE:** 2026-08-17   **STATUS:** closed
+- **SIGNAL:** "Flip a handoff to ready" failed for `brief-horizon` with `brief-horizon is 'ready',
+  not 'draft' — nothing to authorize.`
+- **ROOT CAUSE:** a precondition check working exactly as designed. An earlier run (`e122ee8`,
+  entry above) had already flipped `brief-horizon` to `ready`; this run was a retry of the same
+  intent arriving after the fact, and `handoff-scan.mjs --validate` correctly refused to re-flip an
+  already-ready handoff. The failure is the guard catching a stale retry, not a gap letting
+  anything wrong happen.
+- **PREVENTION:** ledger-only — this is the system behaving correctly under a race that is itself
+  a symptom of the `e122ee8` PR-creation failures above (retries happen because the first attempt
+  visibly failed to open a PR, even though the flip itself had already landed). No new mechanism
+  needed; closing the `e122ee8` gap removes the retries that produce this shape.
+- **SIDE QUESTS:** none.
+
+### `claude-code-action@v1` rejects `push` as an event type — the event-research lane's first live firing
+- **SHA:** e854590   **DATE:** 2026-08-20   **STATUS:** closed
+- **SHA:** 76f6215   **DATE:** 2026-08-19   **STATUS:** closed
+- **SHA:** 5de1b7f   **DATE:** 2026-08-19   **STATUS:** closed
+- **SIGNAL:** the Postmaster's "research due events" job failed with `##[error]Action failed with
+  error: Unsupported event type: push`. Detection lag: none — the job failed loudly on its own
+  first three real firings.
+- **ROOT CAUSE:** that job runs `anthropics/claude-code-action@v1` on a `push` trigger (research
+  due calendar events after every merge to `main`), but the action's entrypoint does not recognize
+  `push` among its supported GitHub event types and aborts before doing any research. This is a
+  genuinely new defect (not a recurrence of the identity-severance class above) — the lane simply
+  had never fired on a real push before this window.
+- **PREVENTION:** gate/script — `.github/workflows/postmaster.yml`'s `route` job now re-fires
+  itself via `gh workflow run postmaster.yml -f command=scan` when a push turns up due events,
+  instead of letting `build-events` invoke the action directly under `push`; `build-events`'s `if:`
+  now requires `github.event_name == 'workflow_dispatch'`, so it only ever runs on that
+  re-dispatched pass, which `claude-code-action@v1` does support. **This one WAS self-authorized to
+  edit despite being a workflow file** — normally the outward-facing/irreversible carve-out per
+  CLAUDE.md, held for Eric — because Eric gave direct, explicit, in-the-moment instruction to fix
+  this specific failure ("that's a problem we need to fix, pronto") while watching it happen live;
+  that is his authorization for this one change, not a standing exception to the carve-out.
+- **SIDE QUESTS:** → docs/IDEAS.md — (a) audit every `claude-code-action@v1` trigger in this repo
+  for event types the action actually supports, rather than discovering each gap on its first
+  firing; (b) the `build` job (handoff builds) shares the identical exposure whenever a handoff is
+  claimed on a `push`-triggered run rather than a `workflow_dispatch` — unconfirmed whether it has
+  ever actually hit this in practice, worth the same re-dispatch treatment if it does.

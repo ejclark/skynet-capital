@@ -8,6 +8,9 @@ body:
       value: |
         Thanks for helping make Skynet Capital better! A few quick details get it fixed faster.
         **The single most useful thing is a screenshot or screen-recording** — a lot of this app moves, and a clip shows what words can't.
+
+        **What happens next:** once this is triaged, an AI build session picks it up fresh — everything it
+        knows about the bug is what's written here. Progress shows up as comments on this issue.
   - type: checkboxes
     id: preflight
     attributes:
