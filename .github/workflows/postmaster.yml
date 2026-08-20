@@ -351,6 +351,13 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The strongest identity available, so each PR this session opens actually triggers `verify`.
           github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          # This job only ever runs on the `route` job's own re-dispatch (`gh workflow run`, see
+          # above) — no human ever triggers it directly — so the run's actor is `github-actions`,
+          # a bot. claude-code-action refuses to act for a non-human actor by default (2026-08-20:
+          # "Workflow initiated by non-human actor: github-actions (type: Bot)"); this is the one
+          # and only bot that can ever legitimately land here, so it's named explicitly rather than
+          # `*` (allow every bot).
+          allowed_bots: "github-actions"
           # WebSearch/WebFetch on top of the build lane's list: a pulse check without the adjacency
           # sweep (peer prints, CPI/FOMC surprises, VIX regime) is the protocol minus its point.
           claude_args: |
