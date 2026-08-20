@@ -6,6 +6,8 @@ import { DESK_STYLE } from "./desk-style.js";
 import { deskFrame } from "./desk-tabs.js";
 import { participantInvested, participantUnrealized } from "./participant-card.js";
 import {
+  costBasis,
+  dayPl,
   type ParticipantSnapshot,
   type PositionView,
   unrealizedPl,
@@ -56,8 +58,9 @@ function blotterRow(
   options: { isSelf: boolean; tradingEnabled: boolean },
 ): string {
   const pl = unrealizedPl(position);
-  const basis = position.quantity * position.avgPrice;
+  const basis = costBasis(position);
   const returnPct = basis > 0 ? (pl / basis) * 100 : 0;
+  const day = dayPl(position);
   const mark = position.quantity !== 0 ? position.marketValue / position.quantity : 0;
   const weight = invested > 0 ? (position.marketValue / invested) * 100 : 0;
   const symbol = escapeHtml(position.symbol);
@@ -70,7 +73,10 @@ function blotterRow(
       <td class="num">${position.quantity.toLocaleString("en-US")}</td>
       <td class="num">${formatPrice(position.avgPrice)}</td>
       <td class="num">${formatPrice(mark)}</td>
+      <td class="num">${formatPrice(basis)}</td>
       <td class="num">${formatCurrency(position.marketValue)}</td>
+      <td class="num ${plClass(day.amount)}">${formatSigned(day.amount)}</td>
+      <td class="num ${plClass(day.amount)}">${day.pct === null ? "—" : pct(day.pct)}</td>
       <td class="num ${plClass(pl)}">${formatSigned(pl)}</td>
       <td class="num ${plClass(pl)}">${pct(returnPct)}</td>
       <td class="num">${rowActions(position, options)}</td>
@@ -116,8 +122,11 @@ function blotter(
           <th class="num">Qty</th>
           <th class="num">Avg entry</th>
           <th class="num">Mark</th>
+          <th class="num">Cost basis</th>
           <th class="num">Value</th>
-          <th class="num">Unrealized</th>
+          <th class="num">Day P/L</th>
+          <th class="num">Day %</th>
+          <th class="num">Total P/L</th>
           <th class="num">Return</th>
           <th class="num">Actions</th>
         </tr></thead>
@@ -167,6 +176,7 @@ export function renderPositionsBody(
   const pl = participantUnrealized(snapshot);
   const invested = participantInvested(snapshot);
   const returnPct = invested > 0 ? (pl / invested) * 100 : 0;
+  const dayTotal = snapshot.positions.reduce((sum, position) => sum + dayPl(position).amount, 0);
 
   const { isSelf, asOf, header } = deskFrame(snapshot, "positions", options, {
     title: "Active trades",
@@ -194,6 +204,7 @@ export function renderPositionsBody(
     <div class="desk-tiles">
       <div class="desk-tile lead"><span class="desk-k">Open positions</span><span class="desk-v">${snapshot.positions.length}</span></div>
       <div class="desk-tile"><span class="desk-k">Invested</span><span class="desk-v">${formatCurrency(invested)}</span></div>
+      <div class="desk-tile"><span class="desk-k">Day P/L</span><span class="desk-v ${plClass(dayTotal)}">${formatSigned(dayTotal)}</span><span class="desk-note">today's move, all positions</span></div>
       <div class="desk-tile"><span class="desk-k">Unrealized P/L</span><span class="desk-v ${plClass(pl)}">${formatSigned(pl)}</span><span class="desk-note">${pct(returnPct)} on cost</span></div>
       <div class="desk-tile"><span class="desk-k">Cash</span><span class="desk-v">${formatCurrency(snapshot.cash)}</span><span class="desk-note">dry powder</span></div>
     </div>

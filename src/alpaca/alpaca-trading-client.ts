@@ -15,6 +15,8 @@ export interface AlpacaPosition {
   readonly qty: string;
   readonly avg_entry_price: string;
   readonly market_value: string;
+  /** Yesterday's closing price — the base the desk's day-change column measures from. */
+  readonly lastday_price?: string;
 }
 
 /** Alpaca order payload (subset). */
@@ -76,9 +78,24 @@ export class AlpacaTradingClient {
   }
 
   /** Most-recent orders (any status), newest first — the account's transaction history. */
-  async getRecentOrders(limit = 15): Promise<AlpacaOrder[]> {
-    const path = `/v2/orders?status=all&limit=${limit}&direction=desc&nested=false`;
-    return ensureOk<AlpacaOrder[]>(await this.transport.get(path));
+  getRecentOrders(limit = 15): Promise<AlpacaOrder[]> {
+    return this.listOrders({ limit });
+  }
+
+  /**
+   * One page of order history, newest first. `until` (an ISO timestamp, exclusive, matched on
+   * submission time) is the pagination cursor: pass the previous page's oldest `submitted_at` to
+   * walk arbitrarily far back — Alpaca caps `limit` at 500 per request but keeps the full record.
+   */
+  async listOrders(params: { limit?: number; until?: string } = {}): Promise<AlpacaOrder[]> {
+    const query = new URLSearchParams({
+      status: "all",
+      limit: String(params.limit ?? 15),
+      direction: "desc",
+      nested: "false",
+      ...(params.until ? { until: params.until } : {}),
+    });
+    return ensureOk<AlpacaOrder[]>(await this.transport.get(`/v2/orders?${query.toString()}`));
   }
 
   /** Market clock — whether the market is currently open. */

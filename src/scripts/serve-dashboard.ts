@@ -14,6 +14,11 @@
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
+import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
+import {
+  createBootActivityStore,
+  type TradeActivityRecord,
+} from "../observatory/activity-store.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import {
@@ -23,7 +28,7 @@ import {
 } from "../observatory/history-boot.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
-import type { Participant } from "../participants/participant.js";
+import { dedupeById } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
@@ -37,16 +42,6 @@ import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
 
 const PORT = resolvePort(process.env);
-
-function dedupeById(participants: readonly Participant[]): Participant[] {
-  const byId = new Map<string, Participant>();
-  for (const participant of participants) {
-    if (!byId.has(participant.id)) {
-      byId.set(participant.id, participant);
-    }
-  }
-  return [...byId.values()];
-}
 
 async function main(): Promise<void> {
   const dataSource = resolveDataSource(process.env);
@@ -83,6 +78,19 @@ async function main(): Promise<void> {
   const sink = (event: Parameters<typeof hub.apply>[0]) => hub.apply(event);
   const onStatus = (channel: string, status: string) => console.log(`[${channel}] ${status}`);
 
+  // Durable trade-activity ledger (SKYNET_ACTIVITY_DIR → /data/activity in prod): every order
+  // update from every account's trade_updates stream is journaled, so trade history survives the
+  // broker's recent-order window. Boot banks that window first — the restart-gap net.
+  const activity = createBootActivityStore(process.env, dataSource.mode);
+  const onActivity = (record: TradeActivityRecord) => {
+    void activity.record(record).catch((e) => console.error("[activity] write failed:", e));
+  };
+  void reconcileBrokerActivity(activity, initial.participants)
+    .then((n) => {
+      if (n > 0) console.log(`[activity] banked ${n} order update(s) from the broker window`);
+    })
+    .catch((e) => console.error("[activity] boot reconcile failed:", e));
+
   startHistorySampler({
     getState: () => hub.getState(),
     store: history,
@@ -102,13 +110,14 @@ async function main(): Promise<void> {
   const heldSymbols = [
     ...new Set(initial.participants.flatMap((p) => p.positions.map((pos) => pos.symbol))),
   ];
-  dataSource.startStreams({ participants: roster, heldSymbols, sink, onStatus });
+  dataSource.startStreams({ participants: roster, heldSymbols, sink, onActivity, onStatus });
 
   const service = new ParticipantService({
     hub,
     store,
     clientFactory: dataSource.clientFactory,
-    startStream: (participant) => dataSource.startParticipantStream(participant, sink, onStatus),
+    startStream: (participant) =>
+      dataSource.startParticipantStream(participant, sink, onStatus, onActivity),
     // Founding record: capture the seed baseline the moment an account joins (fire-and-forget, and
     // idempotent — a re-onboarding member keeps the history they already have).
     recordSeedSample: seedSampleRecorder(history),
@@ -166,6 +175,7 @@ async function main(): Promise<void> {
       : {}),
     ...(feedback ? { submitFeedback: feedback } : {}),
     readHistory: (id) => history.list(id),
+    readTradeActivity: (id) => activity.list(id),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,

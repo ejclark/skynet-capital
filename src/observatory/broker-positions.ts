@@ -13,13 +13,23 @@ export interface PositionView {
   readonly quantity: number;
   readonly avgPrice: number;
   readonly marketValue: number;
+  /**
+   * Yesterday's close for the symbol, from the broker read. Absent on a position the realtime
+   * reducer created mid-session (opened today) — the day-change math then measures from entry,
+   * which is what "today's move" honestly means for a position that didn't exist yesterday.
+   */
+  readonly lastdayPrice?: number;
 }
 
 export function positionsFrom(positions: readonly AlpacaPosition[]): PositionView[] {
-  return positions.map((position) => ({
-    symbol: position.symbol,
-    quantity: Number(position.qty),
-    avgPrice: Number(position.avg_entry_price),
-    marketValue: Number(position.market_value),
-  }));
+  return positions.map((position) => {
+    const lastday = Number(position.lastday_price);
+    return {
+      symbol: position.symbol,
+      quantity: Number(position.qty),
+      avgPrice: Number(position.avg_entry_price),
+      marketValue: Number(position.market_value),
+      ...(Number.isFinite(lastday) && lastday > 0 ? { lastdayPrice: lastday } : {}),
+    };
+  });
 }

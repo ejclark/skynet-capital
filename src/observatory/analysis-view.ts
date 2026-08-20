@@ -1,6 +1,7 @@
 import type { RoundTrip } from "../trading/round-trips.js";
 import { statsBySymbol, type TradeStats, tradeStats } from "../trading/trade-stats.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import type { TradeActivityRecord } from "./activity-store.js";
 import { renderShell } from "./dashboard-shell.js";
 import { deskLedger, formatHold, formatPctOrDash, formatRatio } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
@@ -158,13 +159,15 @@ function bySymbolTable(trips: readonly RoundTrip[]): string {
 
 export function renderAnalysisBody(
   snapshot: ParticipantSnapshot,
-  options: DeskViewOptions = {},
+  options: DeskViewOptions & { tradeActivity?: readonly TradeActivityRecord[] } = {},
 ): string {
   const { asOf, header } = deskFrame(snapshot, "analysis", options, {
     title: "Trade analysis",
     sub: "How the trades behave — not what the account is worth. Every number here comes from closed round trips.",
   });
-  const ledger = deskLedger(snapshot);
+  // Stats run over the durable ledger when one exists, so win rate/expectancy measure the whole
+  // record — not just whatever the broker's recent-order window happened to still hold.
+  const ledger = deskLedger(snapshot, options.tradeActivity);
   const stats = tradeStats(ledger.trips);
 
   if (stats.trades === 0) {

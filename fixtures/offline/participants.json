@@ -11,8 +11,18 @@
       "status": "ACTIVE"
     },
     "positions": [
-      { "symbol": "NVDA", "qty": "300", "avg_entry_price": "168.40", "market_value": "52350.00" },
-      { "symbol": "AAPL", "qty": "40", "avg_entry_price": "142.10", "market_value": "5800.00" }
+      {
+        "symbol": "NVDA",
+        "qty": "300",
+        "avg_entry_price": "168.40",
+        "market_value": "52350.00"
+      },
+      {
+        "symbol": "AAPL",
+        "qty": "40",
+        "avg_entry_price": "142.10",
+        "market_value": "5800.00"
+      }
     ],
     "orders": [
       {
@@ -60,13 +70,25 @@
     "personaId": "sauron",
     "account": {
       "id": "sim-sauron",
-      "cash": "512400.00",
-      "portfolio_value": "1043900.00",
+      "cash": "526830.00",
+      "portfolio_value": "574790.00",
       "status": "ACTIVE"
     },
     "positions": [
-      { "symbol": "NVDA", "qty": "180", "avg_entry_price": "121.60", "market_value": "32040.00" },
-      { "symbol": "META", "qty": "60", "avg_entry_price": "402.10", "market_value": "37320.00" }
+      {
+        "symbol": "NVDA",
+        "qty": "80",
+        "avg_entry_price": "118.20",
+        "market_value": "10640.00",
+        "lastday_price": "131.10"
+      },
+      {
+        "symbol": "META",
+        "qty": "60",
+        "avg_entry_price": "402.10",
+        "market_value": "37320.00",
+        "lastday_price": "615.00"
+      }
     ],
     "orders": [
       {
@@ -90,6 +112,39 @@
         "filled_avg_price": "402.10",
         "submitted_at": "2026-07-23T17:12:33Z",
         "filled_at": "2026-07-23T17:12:34Z"
+      },
+      {
+        "id": "s3",
+        "symbol": "NVDA",
+        "qty": "100",
+        "side": "buy",
+        "status": "filled",
+        "filled_qty": "100",
+        "filled_avg_price": "118.20",
+        "submitted_at": "2026-08-11T14:05:20Z",
+        "filled_at": "2026-08-11T14:05:21Z"
+      },
+      {
+        "id": "s4",
+        "symbol": "NVDA",
+        "qty": "200",
+        "side": "sell",
+        "status": "filled",
+        "filled_qty": "200",
+        "filled_avg_price": "131.25",
+        "submitted_at": "2026-08-18T15:20:02Z",
+        "filled_at": "2026-08-18T15:20:03Z"
+      },
+      {
+        "id": "s5",
+        "symbol": "AVGO",
+        "qty": "40",
+        "side": "buy",
+        "status": "canceled",
+        "filled_qty": "0",
+        "filled_avg_price": null,
+        "submitted_at": "2026-08-19T13:31:00Z",
+        "filled_at": null
       }
     ]
   },
@@ -105,7 +160,12 @@
       "status": "ACTIVE"
     },
     "positions": [
-      { "symbol": "EEM", "qty": "950", "avg_entry_price": "42.20", "market_value": "41100.00" }
+      {
+        "symbol": "EEM",
+        "qty": "950",
+        "avg_entry_price": "42.20",
+        "market_value": "41100.00"
+      }
     ],
     "orders": [
       {
