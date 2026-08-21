@@ -1,5 +1,10 @@
 # Plans — PM-mode: Eric authors direction, Claude executes autonomously
 
+> **Superseded (2026-08-21): new plans are GitHub issues, not files here.** Eric: "plans belong in
+> github issues, not in source code." This directory holds only the legacy in-flight plans listed
+> below until they reach `done`; see `CLAUDE.md` → _Plans_ for the issue format (#429, #466 are the
+> worked examples). Everything else in this README still describes the lifecycle those issues follow.
+
 The experiment this scaffolding serves (Eric's framing, banked verbatim in intent): *"I focus a
 majority of my time crafting plans where we align on direction… systems autonomously iterate on
 evaluating and executing the plan when I am offline. The more plans require no guidance from me, the

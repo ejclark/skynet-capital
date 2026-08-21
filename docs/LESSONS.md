@@ -27,6 +27,21 @@ it. Prevention ranks, best first:
 
 ---
 
+### Plans kept landing as committed files after Eric had moved them to GitHub issues
+- **SHA:** n/a   **DATE:** 2026-08-21   **STATUS:** closed
+- **SIGNAL:** Eric, on "draft the plans": "plans belong in github issues, not in source code. This is
+  an error you persistently make." A repeat: #433 had already migrated the committed plans and
+  #461/#462 the handoffs, yet the next session reached for `docs/plans/` again.
+- **ROOT CAUSE:** the alignment substrate taught the old flow. `CLAUDE.md` → _Plans_ pointed at
+  `docs/plans/` and `docs/plans/README.md` described a file lifecycle, so every session loaded the
+  stale doctrine; the correction lived only in chat and in Eric's memory — never in the one doc that
+  steers the next decision. Doc rot in the file read every session.
+- **PREVENTION:** doctrine. `CLAUDE.md` → _Plans_ now says issues-only, names the house format
+  (#429, #466) and forbids new files under `docs/plans/`; the README carries a superseded banner;
+  persistent memory banks the correction. Ledger-only would not do — the doctrine line is what the
+  next session actually reads.
+- **SIDE QUESTS:** none
+
 ### The AI-first feedback front door shipped dead — its inline script ran before the form existed
 - **SHA:** f7d91d7   **DATE:** 2026-08-21   **STATUS:** closed
 - **SIGNAL:** Eric, within hours of the deploy: "the feedback form looks to be broken.. clicking on
