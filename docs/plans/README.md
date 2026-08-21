@@ -11,8 +11,9 @@ loop (execution — assumes direction already settled). A **plan** is the unit o
 that execution needs no live guidance, explicit about what was pre-decided, and honest about what wasn't.
 
 **Plans authored elsewhere:** a design handoff from a Claude Design session is the same object with a
-bundle of mocks attached — it lives in `docs/handoffs/<slug>/README.md`, uses this exact lifecycle and
-these exact sections, and gets picked up automatically on the `ready` flip. See
+bundle of mocks attached — it lives as a `[handoff]` GitHub issue (never in the source tree, since
+2026-08-21), carries this same contract shape and these exact sections, and starts only on Eric's
+explicit go (a comment or label — the issue-world equivalent of the `ready` flip). See
 [`docs/HANDOFFS.md`](../HANDOFFS.md).
 
 ## Lifecycle
