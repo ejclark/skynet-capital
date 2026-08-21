@@ -164,9 +164,16 @@ function caveats(ledger: RoundTripLedger, hasDurable: boolean): string {
   return notes.map((note) => `<p class="caveat">${note}</p>`).join("");
 }
 
-/** The one-click-away decision context behind a bot's order (Eric, 2026-08-20). */
+/** The one-click-away decision context behind a bot's order (Eric, 2026-08-20): the logic that
+ *  drove the action, the strategy being deployed, and how we expected the market to behave. */
 function whyCell(context: DecisionContext | undefined): string {
   if (!context) return `<td class="num"><span class="desk-note">—</span></td>`;
+  const strategy = context.strategy
+    ? `<span class="why-line"><b>Strategy</b> ${escapeHtml(context.strategy)}</span>`
+    : "";
+  const expecting = context.expectation
+    ? `<span class="why-line"><b>Expecting</b> ${escapeHtml(context.expectation)}</span>`
+    : "";
   const play = context.playbookId
     ? `<span class="why-line"><b>Playbook</b> ${escapeHtml(context.playbookId)}${context.playbookMode ? ` (${escapeHtml(context.playbookMode)})` : ""}</span>`
     : "";
@@ -175,7 +182,7 @@ function whyCell(context: DecisionContext | undefined): string {
     : "";
   return `<td><details class="why"><summary>why</summary><div class="why-body">
       <span class="why-line">${escapeHtml(context.reason)}</span>
-      ${play}${guard}
+      ${strategy}${expecting}${play}${guard}
       <span class="why-line why-meta">${escapeHtml(context.mode)} cycle · ${escapeHtml(context.action)} · matched from the decision log by symbol and time</span>
     </div></details></td>`;
 }

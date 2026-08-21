@@ -316,6 +316,34 @@ describe("history view — closed round trips and the order ledger", () => {
     expect(html).toContain("persona asked for 9, risk guards sized it to 4");
   });
 
+  it("unfolds the strategy and expectation lines when the intent carries them", () => {
+    const bot = snapshot({ id: "sauron", kind: "bot", displayName: "Sauron" });
+    const contextualized = {
+      symbol: "MSFT",
+      side: "sell" as const,
+      quantity: 4,
+      type: "market" as const,
+      reason: "banking half",
+      strategy: "hc-euphoria-fade",
+      expectation: "expect the rally to stall as exhausted greed unwinds",
+    };
+    const html = renderHistoryBody(bot, {
+      ...opts,
+      decisions: [
+        {
+          at: new Date("2026-08-04T13:59:00.000Z").getTime(),
+          personaId: "sauron",
+          mode: "live",
+          rawIntents: [contextualized],
+          guardedIntents: [contextualized],
+          outcomes: [{ intent: contextualized, action: "placed" }],
+        },
+      ],
+    });
+    expect(html).toContain("<b>Strategy</b> hc-euphoria-fade");
+    expect(html).toContain("<b>Expecting</b> expect the rally to stall");
+  });
+
   it("says history begins mid-trade when a sell had no matching lot", () => {
     const html = renderHistoryBody(
       snapshot({

@@ -89,6 +89,19 @@ export interface OrderIntent {
    * at zero mean drift on every symbol measured — urgency must be claimed, not assumed.
    */
   readonly urgent?: boolean;
+  /**
+   * Structured strategy tag for research/observation modes (e.g. "hc-panic-claim"). Like
+   * `playbookId`, this exists so trades group by strategy WITHOUT parsing `reason` prose —
+   * Eric's hardcore-mode directive (2026-08-20): the context that drove an action must be
+   * first-class data, because it later feeds per-strategy confidence ratings.
+   */
+  readonly strategy?: string;
+  /**
+   * How we expect the market to behave from here, and what would invalidate the thesis. The
+   * forward-looking half of the trade's context: `reason` says why we acted, `expectation` says
+   * what we predicted — so intent can be scored against outcome later.
+   */
+  readonly expectation?: string;
 }
 
 type OrderStatus = "filled" | "rejected";

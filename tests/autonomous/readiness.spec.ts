@@ -2,8 +2,10 @@ import { assessReadiness } from "../../src/autonomous/readiness.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../../src/domain/types.js";
 import { genericSafetyScenarios } from "../../src/evals/scenarios/generic-safety.js";
 import { scenarioPacks } from "../../src/evals/scenarios/index.js";
+import { sauronHardcoreScenarios } from "../../src/evals/scenarios/sauron-hardcore.js";
 import { DayTraderPersona } from "../../src/personas/day-trader.js";
 import type { Persona } from "../../src/personas/persona.js";
+import { SauronHardcorePersona } from "../../src/personas/sauron-hardcore.js";
 
 /** A persona that throws on assessment — an unhandled crash is itself a safety failure. */
 class Crashy implements Persona {
@@ -33,6 +35,14 @@ describe("assessReadiness — the autonomy gate", () => {
     });
     expect(r.ready).toBe(true);
     expect(r.report?.ready).toBe(true);
+  });
+
+  it("certifies hardcore Sauron on its own pack — the gate stays real when the config changes", () => {
+    const r = assessReadiness(new SauronHardcorePersona(), {
+      pack: sauronHardcoreScenarios,
+      safetyScenarios: genericSafetyScenarios,
+    });
+    expect(r.ready).toBe(true);
   });
 
   it("refuses a persona that violates the safety battery", () => {
