@@ -30,7 +30,7 @@ import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { dedupeById } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
-import { createDefaultPersonas, hasHardcoreBuild } from "../personas/registry.js";
+import { createDefaultPersonas } from "../personas/registry.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
@@ -226,7 +226,6 @@ async function main(): Promise<void> {
                 .getState()
                 .participants.filter((p) => p.kind === "bot" && knownPersonaIds.has(p.id))
                 .map((p) => ({ id: p.id, displayName: p.displayName })),
-            hasHardcore: hasHardcoreBuild,
           },
         }
       : {}),

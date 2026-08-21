@@ -48,11 +48,6 @@ const HARDCORE_BUILDS: Readonly<Record<string, () => Persona>> = {
   sauron: () => new SauronHardcorePersona(),
 };
 
-/** Whether a persona id has a hardcore build to offer — Mission Control shows the switch only then. */
-export function hasHardcoreBuild(id: string): boolean {
-  return Boolean(HARDCORE_BUILDS[id]);
-}
-
 export interface HardcoreRoster {
   readonly personas: Persona[];
   /** Ids actually swapped to their hardcore build (the runner tunes cooldown + pack by these). */

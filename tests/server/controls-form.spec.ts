@@ -27,7 +27,6 @@ async function withControls(
     store,
     isOwner: (email) => OWNERS.has(email),
     bots: () => BOTS,
-    hasHardcore: (id) => id === "sauron",
     now: () => new Date("2026-08-21T12:00:00.000Z"),
   };
   const server: Server = createServer((req, res) => {
@@ -75,10 +74,11 @@ describe("Mission Control (/controls)", () => {
       const html = await (await fetch(`${base}/controls`)).text();
       expect(html).toContain("Mission Control");
       expect(html).toContain("Sauron");
-      expect(html).toContain("applies in ~30 s");
-      expect(html).toContain("applies on bots restart");
-      // Only bots with a hardcore build get the switch.
-      expect(html).toContain("no hardcore build");
+      expect(html).toContain("within ~30 seconds");
+      // V1 is suspend-only (Eric, 2026-08-21): no restart-gated knobs on the page at all.
+      expect(html).not.toContain("bots restart");
+      expect(html).not.toContain("hardcore");
+      expect(html).not.toContain("observe");
     });
   });
 
@@ -103,21 +103,24 @@ describe("Mission Control (/controls)", () => {
     });
   });
 
-  it("records mode and hardcore as boot-applied settings", async () => {
+  it("stamps who changed what", async () => {
     await withControls("owner@example.com", store, async (base) => {
-      await post(base, { action: "set-mode", bot: "sauron", mode: "observe" });
-      await post(base, { action: "set-hardcore", bot: "sauron", hardcore: "on" });
-      expect(store.load().bots.sauron).toMatchObject({ mode: "observe", hardcore: true });
+      await post(base, { action: "suspend", bot: "sauron" });
       expect(store.load().updatedBy).toBe("owner@example.com");
+      expect(store.load().updatedAt).toBe("2026-08-21T12:00:00.000Z");
     });
   });
 
-  it("refuses unknown bots, unknown actions, and hardcore on a bot with no build", async () => {
+  it("refuses unknown bots and any action the page does not render", async () => {
     await withControls("owner@example.com", store, async (base) => {
       expect((await post(base, { action: "suspend", bot: "nobody" })).status).toBe(400);
       expect((await post(base, { action: "explode", bot: "sauron" })).status).toBe(400);
+      // The retired knobs are not merely hidden — the control plane refuses them outright.
+      expect((await post(base, { action: "set-mode", bot: "sauron", mode: "live" })).status).toBe(
+        400,
+      );
       expect(
-        (await post(base, { action: "set-hardcore", bot: "banker", hardcore: "on" })).status,
+        (await post(base, { action: "set-hardcore", bot: "sauron", hardcore: "on" })).status,
       ).toBe(400);
       expect(store.load()).toEqual({ bots: {} });
     });
