@@ -102,10 +102,14 @@ buildable asks that should start now but don't belong in *this* session — see
 **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
 `NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask.
 
-**Plans — PM-mode's unit of alignment** ([`docs/plans/`](docs/plans/README.md)). Eric authors direction
-as plans (intent, EARS criteria, pre-settled forks, an autonomy envelope); Claude executes `ready` plans
-unattended, banking mid-flight questions instead of guessing. Only Eric flips draft→ready. The richer the
-plan, the fewer interventions — that ratio is the experiment's measure.
+**Plans — PM-mode's unit of alignment — live in GitHub issues, never in the repo** (Eric, 2026-08-21:
+_"plans belong in github issues, not in source code"_ — a correction he has had to repeat; #433 moved
+the committed ones). A plan is an issue in the house format (intent & end-state · EARS criteria ·
+constraints · settled forks · open questions · Eric's steps · slicing sketch — see #429, #466), labelled
+`enhancement` + `needs-eric`; Eric's label/comment on the issue is the `ready` flip, and Claude executes
+it unattended, banking mid-flight questions as comments instead of guessing. The richer the issue, the
+fewer interventions — that ratio is the experiment's measure. [`docs/plans/`](docs/plans/README.md) holds
+only the legacy in-flight plans; **do not add files there.**
 
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
 log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the
