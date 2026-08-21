@@ -3,8 +3,9 @@
   "actor": "ejclark",
   "event": { "inputs": { "command": "audit" } },
   "deps": {
-    "executingHandoffs": [{ "slug": "brief-horizon", "quietDays": 1 }],
-    "unclaimedIssues": [{ "title": "[handoff] desk-v2", "number": 413, "quietDays": 1 }],
+    "unclaimedIssues": [
+      { "title": "[event-research] jobs-2026-09-04", "number": 413, "quietDays": 1 }
+    ],
     "staleAfterDays": 2
   }
 }

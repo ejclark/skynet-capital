@@ -3,10 +3,17 @@
   "actor": "ejclark",
   "event": {},
   "deps": {
-    "readyHandoffs": [
-      { "slug": "brief-horizon", "title": "t", "path": "p", "readme": "r", "files": [] }
+    "dueEvents": [
+      {
+        "id": "fomc-2026-12-09",
+        "reason": "never-assessed",
+        "title": "FOMC decision",
+        "date": "2026-12-09",
+        "status": "confirmed",
+        "impact": "high",
+        "ledger": "docs/research/events/fomc-2026-12-09.md"
+      }
     ],
-    "dueEvents": [],
-    "openIssueTitles": ["[handoff] brief-horizon"]
+    "openIssueTitles": ["[event-research] fomc-2026-12-09"]
   }
 }

@@ -30,11 +30,13 @@ other piece of ephemeral work (see
 The bundles themselves remain permanently readable at commit `9792fcb` (the last `main` commit that
 carried `docs/handoffs/`); the issues link every file.
 
-## What remains to tear down
+## The machinery is gone too
 
-The watcher machinery (`scripts/handoff-*.mjs`, the postmaster's handoff lanes, their specs) is
-removed in a follow-up PR — workflow files are a hold-for-Eric carve-out. Until that lands, the
-machinery scans an empty directory and finds nothing, which is a no-op by construction.
+The watcher machinery went with the directory: `scripts/handoff-*.mjs`, the postmaster's ready-
+sweep / inbox zip-import / flip-button lanes and the handoff build job, their fixtures and specs.
+What survives in the postmaster: the event-research sweep, the stall audit, the feedback lane —
+and the claim **lease** (`claimHandoff`/`releaseClaim`, named for its origin), which the feedback
+lane runs on.
 
 _History: the original system (bundle in `docs/handoffs/<slug>/`, `draft`→`ready` flip, postmaster
 claim-and-build) and its design rationale live in this file's git history and in
