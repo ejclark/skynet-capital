@@ -84,6 +84,11 @@ const ADD_STYLE = `${PAGE_STYLE}
   .cp-legend{ display:block; font-size:11.5px; color:color-mix(in srgb,var(--muted) 85%,transparent); line-height:1.5; margin-top:7px; font-style:italic; }`;
 
 /** The shared page chrome for /add, /rotate, /welcome, and /feedback — brand mark + one card. */
+/** The branded page wrapper the owner-only admin forms share (guest list, Mission Control). */
+export function brandedShell(title: string, inner: string): string {
+  return addShell(`${title} · Skynet Capital`, inner);
+}
+
 export function addShell(title: string, inner: string, wide = false): string {
   return `<!doctype html>
 <html lang="en">

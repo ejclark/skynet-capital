@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { AllowlistEntry, AllowlistStore } from "./auth/allowlist-store.js";
-import { addShell } from "./page-shell.js";
-import { handleSelfServiceForm } from "./self-service-forms.js";
+import { brandedShell } from "./page-shell.js";
+import { handleSelfServiceForm, requireOwner } from "./self-service-forms.js";
 
 /**
  * `/invite` — the owner's guest-list view: who is on it, and a field to add someone.
@@ -32,13 +32,8 @@ export async function handleInvite(
   viewerEmail: string | undefined,
   deps: InviteDeps,
 ): Promise<void> {
-  if (!(viewerEmail && deps.isOwner(viewerEmail.toLowerCase()))) {
-    // Deliberately identical for "not signed in" and "signed in but not an owner": a member
-    // probing this page learns nothing about whether it exists for someone else.
-    res.writeHead(403, { "content-type": "text/html; charset=utf-8" });
-    res.end(page("Not available", `<p class="err">This page isn't available on your account.</p>`));
-    return;
-  }
+  const owner = requireOwner(res, viewerEmail, deps.isOwner, brandedShell);
+  if (!owner) return;
 
   // Same GET-serves-a-form / POST-parses-it shape as /add and /rotate, so it reuses their
   // dispatcher rather than pasting the method handling a third time (the clone gate caught
@@ -48,9 +43,9 @@ export async function handleInvite(
     req,
     res,
     method,
-    () => page("Guest list", list()),
-    (form) => Promise.resolve(invite(form, viewerEmail, deps)),
-    (result) => page("Guest list", result.note + list()),
+    () => brandedShell("Guest list", list()),
+    (form) => Promise.resolve(invite(form, owner, deps)),
+    (result) => brandedShell("Guest list", result.note + list()),
   );
 }
 
@@ -87,10 +82,6 @@ function invite(
       note: `<p class="err">Couldn't save: ${escapeHtml((err as Error).message)}</p>`,
     };
   }
-}
-
-function page(title: string, inner: string): string {
-  return addShell(`${title} · Skynet Capital`, inner);
 }
 
 function listHtml(entries: readonly AllowlistEntry[], canWrite: boolean): string {

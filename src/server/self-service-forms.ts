@@ -21,6 +21,24 @@ import { personaClasses } from "./persona-classes.js";
  * Shared by /add and /rotate: both are "GET serves a form, POST parses it and submits" —
  * only the form fields and the submit/render callbacks differ.
  */
+/**
+ * The owner gate the admin forms share: resolves the viewer to a lowercased owner email, or
+ * writes the 403 and returns null. Deliberately identical for "not signed in" and "signed in but
+ * not an owner" — a member probing an owner page learns nothing about whether it exists.
+ */
+export function requireOwner(
+  res: ServerResponse,
+  viewerEmail: string | undefined,
+  isOwner: (email: string) => boolean,
+  page: (title: string, inner: string) => string,
+): string | null {
+  const email = viewerEmail?.toLowerCase();
+  if (email && isOwner(email)) return email;
+  res.writeHead(403, { "content-type": "text/html; charset=utf-8" });
+  res.end(page("Not available", `<p class="err">This page isn't available on your account.</p>`));
+  return null;
+}
+
 export async function handleSelfServiceForm<TResult extends { ok: boolean }>(
   req: IncomingMessage,
   res: ServerResponse,
