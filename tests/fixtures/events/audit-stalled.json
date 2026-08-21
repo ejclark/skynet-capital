@@ -3,12 +3,9 @@
   "actor": "ejclark",
   "event": { "inputs": { "command": "audit" } },
   "deps": {
-    "executingHandoffs": [
-      { "slug": "desk-v2", "quietDays": 3, "issueNumber": 410 },
-      { "slug": "brief-horizon", "quietDays": 0, "issueNumber": 411 }
-    ],
     "unclaimedIssues": [
-      { "title": "[event-research] fomc-2026-12-09", "number": 412, "quietDays": 4 }
+      { "title": "[event-research] fomc-2026-12-09", "number": 412, "quietDays": 4 },
+      { "title": "[event-research] jobs-2026-09-04", "number": 414, "quietDays": 0 }
     ],
     "staleAfterDays": 2
   }

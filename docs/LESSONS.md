@@ -80,11 +80,12 @@ it. Prevention ranks, best first:
   wrapper's own failure-mode tests exercised the dirty-contract case **only** under `--no-push` —
   the single mode where the exit code was already right. The test and the bug were blind to each
   other by construction.
-- **PREVENTION:** gate + spec. The importer now exits `clean ? 0 : 1` on both paths (fix at the
-  source, so every caller inherits it), and `tests/arch/handoff.spec.ts` asserts that *every*
-  terminal exit after the contract scan carries the verdict — a bare `exit(0)` there fails CI. Also
-  doctrine-adjacent: biome no longer lints `docs/handoffs/**`, since design bundles are references,
-  not source.
+- **PREVENTION:** gate + spec. The importer exited `clean ? 0 : 1` on both paths (fix at the
+  source, so every caller inherits it), and an arch spec asserted every terminal exit after the
+  contract scan carried the verdict. *(2026-08-21: importer, spec, and the handoff system they
+  guarded were all retired together — handoffs live as GitHub issues now, docs/HANDOFFS.md. The
+  transferable lesson stands: a wrapper's exit code IS its contract, and specs must exercise the
+  path that ships, not only the dry-run path.)*
 - **SIDE QUESTS:** the deeper prompt — "must a bundle merge into the codebase at all?" — became the
   issue-as-mailbox intake (Eric's question, same session); the repo being public is what makes
   attachment retrieval viable at all.

@@ -1,6 +1,0 @@
-{
-  "eventName": "push",
-  "actor": "ejclark",
-  "event": {},
-  "deps": { "readyHandoffs": [], "dueEvents": [], "openIssueTitles": [] }
-}
