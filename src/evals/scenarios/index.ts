@@ -3,6 +3,7 @@ import { bankerScenarios } from "./banker.js";
 import { dayTraderScenarios } from "./day-trader.js";
 import { prospectorScenarios } from "./prospector.js";
 import { sauronScenarios } from "./sauron.js";
+import { sauronHardcoreScenarios } from "./sauron-hardcore.js";
 
 /**
  * Scenario packs keyed by persona id. Add a persona's pack here and it's picked up by
@@ -14,4 +15,12 @@ export const scenarioPacks: Readonly<Record<string, readonly Scenario[]>> = {
   banker: bankerScenarios,
   prospector: prospectorScenarios,
   sauron: sauronScenarios,
+};
+
+/**
+ * Packs for the HARDCORE research-mode builds (`SKYNET_HARDCORE_BOTS`) — a hardcore persona is
+ * graded on its own rubric, so the readiness gate keeps meaning when the config changes.
+ */
+export const hardcoreScenarioPacks: Readonly<Record<string, readonly Scenario[]>> = {
+  sauron: sauronHardcoreScenarios,
 };

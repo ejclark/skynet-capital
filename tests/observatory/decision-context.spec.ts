@@ -47,6 +47,25 @@ describe("decisionContextFor", () => {
     ).toBeUndefined();
   });
 
+  it("carries the strategy tag and forward expectation when the intent has them", () => {
+    const hardcore = cycle("2026-08-04T14:00:00.000Z", {
+      outcomes: [
+        {
+          intent: {
+            ...intent("NVDA", "buy", 5, "tranche into the discarded"),
+            strategy: "hc-panic-claim",
+            expectation: "expect a mean-reversion bounce; invalidated below the stop",
+          },
+          action: "placed",
+        },
+      ],
+    });
+    expect(decisionContextFor(order, [hardcore])).toMatchObject({
+      strategy: "hc-panic-claim",
+      expectation: "expect a mean-reversion bounce; invalidated below the stop",
+    });
+  });
+
   it("carries the playbook attribution when the intent has one", () => {
     const played = cycle("2026-08-04T14:00:00.000Z", {
       outcomes: [

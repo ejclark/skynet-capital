@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Intent-vs-outcome scoring → per-strategy confidence ratings
+Hardcore research mode now records a forward `expectation` on every intent (alongside `strategy`),
+and the durable activity ledger records what actually happened. Join them: score each closed trade's
+outcome against its stated expectation, aggregate per strategy tag, and the confidence ratings Eric
+named as the goal ("build confidence ratings … that drive larger profit margins") fall out — the
+ratings then gate sizing (small while unproven, scaling with demonstrated edge). The data collection
+side ships with hardcore mode; this is the read side. _(src: Eric ("this will enable us to build
+confidence ratings in the future") · while: hardcore research mode build, 2026-08-20)_
+
 ### Real-browser smoke of the critical funnels in CI
 The feedback front door shipped dead (2026-08-21 lesson) with every unit spec green — wiring-time
 bugs are invisible to string-level specs. A tiny Playwright pass (login renders; /feedback coach

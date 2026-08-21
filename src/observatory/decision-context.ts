@@ -26,6 +26,10 @@ export interface DecisionContext {
   readonly playbookMode?: string;
   /** Set when risk guards resized the persona's ask (raw quantity → guarded quantity). */
   readonly guardNote?: string;
+  /** Structured strategy tag (e.g. "hc-panic-claim") — research modes label every trade. */
+  readonly strategy?: string;
+  /** The forward thesis: how the market was expected to behave, and what invalidates it. */
+  readonly expectation?: string;
 }
 
 /** How far an order fill may land from its decision cycle and still match (fills trail cycles by
@@ -77,6 +81,8 @@ export function decisionContextFor(
     reason: outcome.intent.reason,
     ...(outcome.intent.playbookId ? { playbookId: outcome.intent.playbookId } : {}),
     ...(outcome.intent.playbookMode ? { playbookMode: outcome.intent.playbookMode } : {}),
+    ...(outcome.intent.strategy ? { strategy: outcome.intent.strategy } : {}),
+    ...(outcome.intent.expectation ? { expectation: outcome.intent.expectation } : {}),
     ...(note ? { guardNote: note } : {}),
   };
 }

@@ -19,6 +19,11 @@
  *                            armed, and nothing organic trades on a given day, forces up to N small,
  *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
  *                            see src/playbooks/beta-scout.ts. Flip via autonomy-ops only.
+ *   SKYNET_HARDCORE_BOTS     comma-separated persona ids to run in HARDCORE research mode (Eric,
+ *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
+ *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
+ *                            volume as research data. Unset (default) = dark. Currently: sauron.
+ *                            Flip via autonomy-ops only.
  */
 import { existsSync } from "node:fs";
 import { InMemoryBroker } from "../adapters/in-memory-broker.js";
@@ -40,10 +45,10 @@ import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { RiskConfig } from "../engine/guards.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
-import { scenarioPacks } from "../evals/scenarios/index.js";
+import { hardcoreScenarioPacks, scenarioPacks } from "../evals/scenarios/index.js";
 import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
-import { createDefaultPersonas } from "../personas/registry.js";
+import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
@@ -55,6 +60,8 @@ import { ALPACA_DATA_BASE_URL, readOfflineEvents } from "../runtime/data-source.
 const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
 const OFFLINE_STARTING_CASH = 1_000_000;
+/** Hardcore research mode paces per-symbol orders at 90s (standard: 5m) — iteration is the goal. */
+const HARDCORE_COOLDOWN_MS = 90_000;
 const _EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 
@@ -70,7 +77,7 @@ async function main(): Promise<void> {
 
 function runOffline(): void {
   const enabled = new Set(enabledBotIds(process.env));
-  const personas = createDefaultPersonas().filter((p) => enabled.has(p.id));
+  const personas = resolveRoster(enabled).personas;
   if (personas.length === 0) {
     console.error(`No enabled personas. Wanted: ${[...enabled].join(", ")}`);
     process.exit(1);
@@ -145,7 +152,8 @@ async function runLive(): Promise<void> {
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
   // registry would also have qualified.
-  const roster = createDefaultPersonas().filter((p) => enabled.has(p.id));
+  const hardcoreRoster = resolveRoster(enabled);
+  const roster = hardcoreRoster.personas;
   const { bots: loaded, sharedAccount } = loadBots(roster, process.env);
   for (const id of sharedAccount) {
     console.warn(
@@ -248,7 +256,15 @@ async function runLive(): Promise<void> {
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
   const traders: LiveBot[] = bots.map((bot) =>
-    buildLiveBot(bot, { mode, playbookRoster, risk, blockedReason, safety, onDecision }),
+    buildLiveBot(bot, {
+      mode,
+      playbookRoster,
+      risk,
+      blockedReason,
+      safety,
+      onDecision,
+      hardcore: hardcoreRoster.hardcore,
+    }),
   );
 
   // --- beta scout: Eric's beta-phase directive (2026-08-13) — "deploying playbooks to observe
@@ -360,10 +376,13 @@ function buildLiveBot(
     blockedReason: () => string | null;
     safety: SafetyController;
     onDecision: (r: DecisionRecord) => void;
+    /** Ids running their hardcore research-mode build — own readiness pack, faster cooldown. */
+    hardcore: ReadonlySet<string>;
   },
 ): LiveBot {
+  const hardcore = opts.hardcore.has(bot.persona.id);
   const readiness = assessReadiness(bot.persona, {
-    pack: scenarioPacks[bot.persona.id],
+    pack: hardcore ? hardcoreScenarioPacks[bot.persona.id] : scenarioPacks[bot.persona.id],
     safetyScenarios: genericSafetyScenarios,
   });
   const effectiveMode = opts.mode === "live" && readiness.ready ? "live" : "observe";
@@ -386,6 +405,9 @@ function buildLiveBot(
       broker,
       risk: opts.risk,
       mode: effectiveMode,
+      // Hardcore research mode iterates fast: 90s between orders in a symbol instead of 5m.
+      // Small tranches keep the order-rate breaker (20/min) and daily-loss breaker (5%) binding.
+      ...(hardcore ? { cooldownMs: HARDCORE_COOLDOWN_MS } : {}),
       blockedReason: opts.blockedReason,
       onResult: (r) => {
         opts.safety.recordOrder();
@@ -397,6 +419,30 @@ function buildLiveBot(
       },
     }),
   };
+}
+
+/** The enabled personas with hardcore builds applied and announced — shared by both runners. */
+function resolveRoster(enabled: ReadonlySet<string>): ReturnType<typeof applyHardcore> {
+  const roster = applyHardcore(
+    createDefaultPersonas().filter((p) => enabled.has(p.id)),
+    process.env,
+  );
+  logHardcore(roster);
+  return roster;
+}
+
+/** Announce the hardcore roster at boot — armed loudly, unknown ids refused, dark silently. */
+function logHardcore(roster: ReturnType<typeof applyHardcore>): void {
+  for (const bad of roster.rejected) {
+    console.error(
+      `[hardcore] REFUSED unknown id "${bad}" in SKYNET_HARDCORE_BOTS — no hardcore build exists for it`,
+    );
+  }
+  if (roster.hardcore.size > 0) {
+    console.log(
+      `[hardcore] armed: ${[...roster.hardcore].join(", ")} — research mode (loosened extremes, tranche scale-in/out, momentum scalps, ${HARDCORE_COOLDOWN_MS / 1000}s cooldown, E1 waived per-intent, S2 + breakers intact)`,
+    );
+  }
 }
 
 /** The beta scout's config, or `undefined` (dark) when unarmed or no bot account exists yet. */
