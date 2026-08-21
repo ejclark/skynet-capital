@@ -13,6 +13,7 @@
  */
 export const COACH_SCRIPT = `
 (function () {
+  function init() {
   var box = document.getElementById('coach-box');
   var form = document.getElementById('fdbk-form');
   if (!box || !form) return;
@@ -124,5 +125,15 @@ export const COACH_SCRIPT = `
     e.preventDefault();
     revealForm();
   });
+  }
+  // Attach only once the whole document is parsed. This script is inlined mid-page, and on
+  // 2026-08-20 it ran ABOVE the (later-parsed) #fdbk-form, hit the guard's early return
+  // silently, and left the entire coach front door dead with the real form display:none —
+  // the funnel down for every member. Readiness-guarded, markup order can never break it again.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 `;
