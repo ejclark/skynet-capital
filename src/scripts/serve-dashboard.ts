@@ -30,7 +30,7 @@ import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { dedupeById } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
-import { hasHardcoreBuild } from "../personas/registry.js";
+import { createDefaultPersonas, hasHardcoreBuild } from "../personas/registry.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
@@ -144,6 +144,7 @@ async function main(): Promise<void> {
   // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
   // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
   const botControls = createBotControlsStore(process.env, (m) => console.error(m));
+  const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
   const auth = resolveAuth(process.env, undefined, allowlist);
   const password = process.env.SKYNET_DASHBOARD_PASSWORD;
   if (auth) {
@@ -217,10 +218,13 @@ async function main(): Promise<void> {
           controls: {
             store: botControls,
             isOwner: (email: string) => owners.has(email),
+            // Roster restricted to KNOWN personas: a self-service /add can mint a kind:"bot"
+            // row with any id, and a planted row must never appear on the switchboard as a
+            // confusable twin of a real runner persona (security review, 2026-08-21).
             bots: () =>
               hub
                 .getState()
-                .participants.filter((p) => p.kind === "bot")
+                .participants.filter((p) => p.kind === "bot" && knownPersonaIds.has(p.id))
                 .map((p) => ({ id: p.id, displayName: p.displayName })),
             hasHardcore: hasHardcoreBuild,
           },
