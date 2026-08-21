@@ -27,6 +27,26 @@ it. Prevention ranks, best first:
 
 ---
 
+### The AI-first feedback front door shipped dead — its inline script ran before the form existed
+- **SHA:** f7d91d7   **DATE:** 2026-08-21   **STATUS:** closed
+- **SIGNAL:** Eric, within hours of the deploy: "the feedback form looks to be broken.. clicking on
+  ai does nothing." Reproduced locally with Playwright: no console error, no network call, the click
+  handler simply never attached. No mechanical net fired — the script's spec checked every DOM id
+  existed on both sides, but never WHEN the script ran; the spec and the bug were blind to each
+  other by construction (same shape as the 2026-08-16 wrapper miss).
+- **ROOT CAUSE:** #449 made the coach the front door: intro box above the form, real form
+  `display:none` until the coach yields a draft — but the inline `<script>` stayed attached to the
+  intro markup, ABOVE the form. Inline scripts execute at parse time, `#fdbk-form` didn't exist
+  yet, and the script's own `if (!box || !form) return;` null-guard exited silently. Dead "Let's
+  shape it", dead "Skip →", hidden form: the entire member feedback funnel down, invisibly — every
+  click path was designed to fail loudly except the wiring itself.
+- **PREVENTION:** by-construction fix + gate. The script now attaches on `DOMContentLoaded`
+  (markup order can never break it again) AND renders below the form; the spec pins both nets
+  (readiness guard present; script rendered after every id it queries) in
+  `tests/server/feedback-coach-script.spec.ts`.
+- **SIDE QUESTS:** a real-browser CI smoke of the critical funnels (/feedback click-through) —
+  parked in docs/IDEAS.md.
+
 ### The fridge rule's own instruction embedded link rot — #446's screenshots died a day after merge
 - **SHA:** 29a0113   **DATE:** 2026-08-20   **STATUS:** closed
 - **SIGNAL:** the hat-team communication research (white-hat rendering probe) found PR #446's

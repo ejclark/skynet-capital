@@ -18,6 +18,13 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Real-browser smoke of the critical funnels in CI
+The feedback front door shipped dead (2026-08-21 lesson) with every unit spec green — wiring-time
+bugs are invisible to string-level specs. A tiny Playwright pass (login renders; /feedback coach
+click produces a visible response; Send path reachable) run in `verify` or post-deploy would catch
+the class. Weigh runner cost vs. the funnel's importance. _(src: Claude · while: feedback front-door
+regression fix, 2026-08-21)_
+
 ### In-app "what's new" member feed built from PR pictures
 Extract `## The picture` + Summary from `main`'s squash bodies into a member-facing changelog route —
 the engagement flywheel (non-technical friends following along) and the first real consumer of the

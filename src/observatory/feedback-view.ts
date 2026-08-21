@@ -41,8 +41,7 @@ function renderCoachIntro(): string {
     <button type="button" id="coach-start">Let's shape it</button>
     <div id="coach-thread" class="coach-thread"></div>
     <p class="fdbk-skip"><a href="#" id="coach-skip">Prefer to just write it yourself? Skip →</a></p>
-  </div>
-  <script>${COACH_SCRIPT}</script>`;
+  </div>`;
 }
 
 export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string {
@@ -85,6 +84,7 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
         <button type="submit" class="fdbk-submit">Send it</button>
       </form>
     </div>
+    ${options.coachEnabled ? `<script>${COACH_SCRIPT}</script>` : ""}
     ${options.coachEnabled ? `<noscript><style>#fdbk-form{display:flex !important}#coach-box{display:none !important}</style></noscript>` : ""}
   </section>`;
   return renderShell(options.nav, content, new Date().toISOString());
