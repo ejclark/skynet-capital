@@ -24,7 +24,8 @@ async function withRoute(
 describe("handleAdd", () => {
   it("GET serves the onboarding form", async () => {
     await withRoute(
-      (req, res) => void handleAdd(req, res, "GET", "", () => Promise.reject(new Error("unused"))),
+      (req, res) =>
+        void handleAdd(req, res, "GET", "", undefined, () => Promise.reject(new Error("unused"))),
       async (base) => {
         const res = await fetch(base);
         expect(res.status).toBe(200);
@@ -38,7 +39,7 @@ describe("handleAdd", () => {
   it("POST submits the parsed form and renders success", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "POST", "", (input) => {
+        void handleAdd(req, res, "POST", "", undefined, (input) => {
           expect(input.displayName).toBe("Uncle Joe");
           expect(input.apiKey).toBe("PK123");
           return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
@@ -55,10 +56,29 @@ describe("handleAdd", () => {
     );
   });
 
+  it("stamps the signed-in session's email as the owner — never a form field", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleAdd(req, res, "POST", "", "uncle_joe@example.com", (input) => {
+          expect(input.ownerEmail).toBe("uncle_joe@example.com");
+          return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
+        }),
+      async (base) => {
+        const res = await fetch(base, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          // The form carries no identity field at all — ownership can only come from the session.
+          body: "displayName=Uncle+Joe&apiKey=PK123&apiSecret=s",
+        });
+        expect(res.status).toBe(200);
+      },
+    );
+  });
+
   it("POST renders the error page with a 400 when the service refuses", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "POST", "", () =>
+        void handleAdd(req, res, "POST", "", undefined, () =>
           Promise.resolve({ ok: false, error: "That key was rejected." }),
         ),
       async (base) => {
@@ -72,7 +92,9 @@ describe("handleAdd", () => {
   it("refuses any method besides GET/POST", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "DELETE", "", () => Promise.reject(new Error("unused"))),
+        void handleAdd(req, res, "DELETE", "", undefined, () =>
+          Promise.reject(new Error("unused")),
+        ),
       async (base) => {
         const res = await fetch(base, { method: "DELETE" });
         expect(res.status).toBe(405);

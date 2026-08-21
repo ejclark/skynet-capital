@@ -16,8 +16,9 @@ import {
   marketOpen,
   openDesk,
   readReview,
-  submitToBroker,
+  submitAndAudit,
 } from "./desk-gate.js";
+import type { OrderAuditRecord } from "./order-audit-log.js";
 
 /**
  * THE OPTIONS EXECUTION SEAM — the desk's option orders reach the broker only through here,
@@ -27,10 +28,9 @@ import {
  * exist and be tradable — a hand-edited strike dies here, not at the broker), re-runs the same
  * pure `previewOptionOrder`/`previewOptionClose` rules on fresh numbers, and only then submits.
  *
- * Inherits the share desk's structural refusals unchanged: off by default (the owner's
- * `SKYNET_DESK_TRADING` switch — the mechanism ships, enabling live order placement is Eric's
- * call), your own account only, and the discipline rules from `option-ticket.ts` (cash-secured
- * means secured, covered means covered, no naked premium).
+ * Inherits the share desk's structural refusals unchanged: your own (owner-linked) account
+ * only, sign-in required, and the discipline rules from `option-ticket.ts` (cash-secured means
+ * secured, covered means covered, no naked premium).
  */
 
 export type DeskOptionRequest =
@@ -59,6 +59,10 @@ export interface OptionTradeServiceDeps {
   readonly clientFactory: TradingClientFactory;
   readonly optionsClientFactory: (participant: Participant) => AlpacaOptionsClient;
   readonly tradingEnabled: boolean;
+  /** Appends the per-order audit line (#466) after a successful broker submit. Optional so
+   *  offline/test wiring can omit it. */
+  readonly recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
+  readonly now?: () => Date;
 }
 
 export type SubmitOptionTrade = (
@@ -148,15 +152,18 @@ export function createOptionTradeService(deps: OptionTradeServiceDeps): SubmitOp
     }
     const preview = outcome.preview;
 
-    return submitToBroker(() =>
-      options.placeOptionOrder({
-        occSymbol: preview.occSymbol as string,
-        contracts: preview.contracts,
-        side: preview.side,
-        type: preview.orderType,
-        ...(preview.orderType === "limit" ? { limitPrice: preview.limitPrice } : {}),
-        positionIntent: preview.positionIntent,
-      }),
+    return submitAndAudit(
+      () =>
+        options.placeOptionOrder({
+          occSymbol: preview.occSymbol as string,
+          contracts: preview.contracts,
+          side: preview.side,
+          type: preview.orderType,
+          ...(preview.orderType === "limit" ? { limitPrice: preview.limitPrice } : {}),
+          positionIntent: preview.positionIntent,
+        }),
+      desk.participant,
+      deps,
     );
   };
 }

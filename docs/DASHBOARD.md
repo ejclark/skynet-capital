@@ -74,7 +74,7 @@ first-in-first-out by `src/trading/round-trips.ts` — with the raw fills folded
 receipts. Design rationale and the platform research behind it:
 [`docs/research/trading-desk-ux.md`](research/trading-desk-ux.md).
 
-### Acting on a position (off by default)
+### Acting on a position (owner-linked accounts only)
 
 The Active tab carries a per-row **Sell** (partial or full) and a **New trade** ticket. Both POST to
 `/trade`, which renders a **review screen** — estimated cost/proceeds, cash after, position after —
@@ -82,11 +82,10 @@ and sends nothing until an explicit confirm. The confirm re-reads the live accou
 same rules server-side before submitting, so a position that moved between review and confirm is
 refused rather than sent.
 
-Member-initiated trading is **switched off unless you turn it on**:
-
-```sh
-SKYNET_DESK_TRADING=on     # plus OAuth configured — without a signed-in identity, orders are refused
-```
+Member-initiated trading needs no switch — it's on the moment OAuth is configured (Eric's ruling,
+2026-08-21, #466: no separate kill switch). Without a signed-in identity there is no account to
+match an order to, so orders are refused; once a member's account carries an owner link
+(`Participant.ownerEmail`, stamped from their session at `/add`), they may trade it.
 
 Rolling renders as a disabled control with its real reason: this account path trades shares, so there
 is no options leg to roll (see the plan for what enabling it would take).

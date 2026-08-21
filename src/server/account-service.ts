@@ -11,20 +11,18 @@ import type { ObservatoryHub } from "./observatory-hub.js";
  * live in `participant-service.ts`; this module is deliberately separate so the day-1 flow's
  * verified invariants stay untouched.
  *
- * The authorization posture here is STRICTER than /rotate's, on purpose. The session→account
- * link is display-name matching (`resolveCurrentId`), which makes an unconstrained rename an
- * account-takeover: rename any account to your own session name and the board starts
- * resolving YOU to it — trading rights included. docs/LESSONS.md (2026-08-11) is exactly this
- * shape of miss ("checked the target existed, not that the caller had a right to touch it"),
- * so:
+ * The authorization posture here is STRICTER than /rotate's, on purpose. docs/LESSONS.md
+ * (2026-08-11) is exactly this shape of miss ("checked the target existed, not that the caller
+ * had a right to touch it"), so:
  *  - a human account's profile may only be edited by that same resolved identity (hard —
  *    an unresolved session is a refusal, matching /trade's posture, not /rotate's);
- *  - a human rename must keep resolving to the requester's own session (their sign-in name
- *    or email local-part) — anything else would orphan the member or forge a link;
- *  - bots take timezone edits only; renaming a bot is remove + re-add, so a bot can never be
- *    renamed into someone's session identity.
- * When no OAuth is configured there is no session link to protect or forge; the password
- * gate is the boundary and the checks relax, matching every other route's trust level there.
+ *  - the rename-must-match-session-name rule below predates the owner link (#466): the
+ *    session→account link is now `Participant.ownerEmail`, immutable here, so a rename can no
+ *    longer forge that link — the rule is now a stricter-than-needed legacy guard, kept as-is
+ *    pending a follow-up UX pass rather than loosened in this security-sensitive PR;
+ *  - bots take timezone edits only; renaming a bot is remove + re-add.
+ * When no OAuth is configured there is no session link to protect; the password gate is the
+ * boundary and the checks relax, matching every other route's trust level there.
  */
 
 export interface UpdateProfileInput {

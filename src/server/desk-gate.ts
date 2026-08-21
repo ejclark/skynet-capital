@@ -1,6 +1,7 @@
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import type { Participant } from "../participants/participant.js";
+import type { OrderAuditRecord } from "./order-audit-log.js";
 
 /**
  * THE SHARED DESK MACHINERY — what the share desk (`trade-service.ts`) and the options desk
@@ -66,7 +67,7 @@ export async function readReview<T>(
 }
 
 /** Shared submit wrapper: a broker throw becomes a refusal string, never an exception. */
-export async function submitToBroker(
+async function submitToBroker(
   place: () => Promise<{ id: string; status: string; symbol: string }>,
 ): Promise<DeskSubmitResult> {
   try {
@@ -75,4 +76,28 @@ export async function submitToBroker(
   } catch (error) {
     return { ok: false, refusals: [`The broker rejected the order: ${error}`] };
   }
+}
+
+/**
+ * Submit through the broker, then append the per-order audit line (#466) on success only — the
+ * one step both desks must do identically, so it lives here rather than copied into each.
+ */
+export async function submitAndAudit(
+  place: () => Promise<{ id: string; status: string; symbol: string }>,
+  participant: Participant,
+  deps: {
+    recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
+    now?: () => Date;
+  },
+): Promise<DeskSubmitResult> {
+  const result = await submitToBroker(place);
+  if (result.ok) {
+    await deps.recordAudit?.({
+      participantId: participant.id,
+      ...(participant.ownerEmail ? { ownerEmail: participant.ownerEmail } : {}),
+      orderId: result.orderId,
+      at: (deps.now ?? (() => new Date()))().toISOString(),
+    });
+  }
+  return result;
 }

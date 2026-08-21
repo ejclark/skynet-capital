@@ -18,6 +18,8 @@ export interface AddParticipantInput {
   /** Required when kind is "bot" — the persona driving the account. */
   readonly personaId?: string;
   readonly timezone?: string;
+  /** The signed-in member's session email, stamped as owner — from the route wiring, never the form. */
+  readonly ownerEmail?: string;
 }
 
 export type AddResult =
@@ -59,6 +61,13 @@ export interface ParticipantServiceDeps {
   readonly recordSeedSample?: (snapshot: ParticipantSnapshot, at: string) => void;
   /** Paper base URL to stamp on stored credentials (defaults to Alpaca paper). */
   readonly baseUrl?: string;
+  /**
+   * True when `id` already names an env-configured (roster) participant. Checked alongside
+   * `store.has(id)` so a submitted display name can never collide with a roster account's slug
+   * — otherwise `findParticipant`'s roster-wins precedence would let a self-service row's owner
+   * link resolve trade requests that execute against the ROSTER account's real credentials.
+   */
+  readonly isReservedId?: (id: string) => boolean;
   readonly now?: () => Date;
 }
 
@@ -105,7 +114,7 @@ export class ParticipantService {
     }
 
     const id = kind === "bot" ? (input.personaId as string) : `human-${slugify(displayName)}`;
-    if (this.deps.store.has(id)) {
+    if (this.deps.store.has(id) || this.deps.isReservedId?.(id)) {
       return { ok: false, error: `An account named "${displayName}" already exists.` };
     }
 
@@ -116,6 +125,7 @@ export class ParticipantService {
       credentials: this.credentialsFrom(input.apiKey, input.apiSecret),
       ...(kind === "bot" && input.personaId ? { personaId: input.personaId.trim() } : {}),
       ...(timezone ? { timezone } : {}),
+      ...(kind === "human" && input.ownerEmail ? { ownerEmail: input.ownerEmail } : {}),
     };
 
     const verified = await this.verify(participant);

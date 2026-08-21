@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Boot-time quarantine for a store row that collides with the roster
+The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already
+claimed by an env-configured account), but a row written *before* that fix shipped — none should
+exist, since this deployment never ran the vulnerable code — would still resolve trades onto the
+roster account's real credentials, since `resolveOwnerId`/`findParticipant` don't re-check at
+boot. Cheap defense-in-depth: at startup, flag any store id that collides with `envRoster` and
+refuse to serve it rather than trusting the write-time guard alone. _(src: Claude · while: #466
+owner-link security review, red-team verification pass, 2026-08-21)_
+
+### Retire the display-name rename guard now that ownerEmail is the real link
+`account-service.ts`'s `profileEditRefusal` still requires a human rename to match the session's
+sign-in name/email local-part — a rule that existed only because `resolveCurrentId` used to
+resolve by display name. Now that `Participant.ownerEmail` is the actual (immutable) link, the
+rule is stricter than needed and blocks legitimate renames for no security reason. Loosen it in a
+follow-up UX pass, not in the owner-link security PR itself. _(src: Claude · while: #466 owner-link
+security review, 2026-08-21)_
+
 ### Intent-vs-outcome scoring → per-strategy confidence ratings
 Hardcore research mode now records a forward `expectation` on every intent (alongside `strategy`),
 and the durable activity ledger records what actually happened. Join them: score each closed trade's

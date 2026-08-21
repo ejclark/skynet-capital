@@ -8,12 +8,13 @@ import {
   type TicketAction,
   type TicketPreview,
 } from "../trading/order-ticket.js";
-import { marketOpen, openDesk, readReview, submitToBroker } from "./desk-gate.js";
+import { marketOpen, openDesk, readReview, submitAndAudit } from "./desk-gate.js";
 import {
   createOptionTradeService,
   type OptionTradeServiceDeps,
   type SubmitOptionTrade,
 } from "./option-trade-service.js";
+import type { OrderAuditRecord } from "./order-audit-log.js";
 
 /**
  * THE DESK EXECUTION SEAM — where a member-initiated order actually reaches the broker.
@@ -24,12 +25,13 @@ import {
  * `previewOrder` rules against fresh numbers, and only then submits — a stale mark or a position
  * that moved between review and confirm gets caught here rather than being sent.
  *
- * Three refusals are structural, not tunable:
- *  1. **Off by default.** Member-initiated trading ships switched off; enabling it is the owner's
- *     call (`docs/CLAUDE.md` — governance and anything outward-facing is never self-authorized).
- *  2. **Your own account only.** The requester's resolved identity must equal the target. Without a
- *     resolved identity (no OAuth configured) there is nothing to match, so the answer is no.
- *  3. **No shorting, no fractional shares, no spending cash you don't have** — inherited whole from
+ * Two refusals are structural, not tunable:
+ *  1. **Your own account only, sign-in required.** The requester's resolved identity — the owner
+ *     link stamped at `/add` (see `dashboard-server.ts`'s `resolveOwnerId`) — must equal the
+ *     target. No resolved identity (no OAuth configured, or the account has no owner link yet)
+ *     means nothing to match, so the answer is no. There is deliberately no separate kill switch
+ *     (Eric's ruling, 2026-08-21, #466): the moment a member's account is linked, they may trade it.
+ *  2. **No shorting, no fractional shares, no spending cash you don't have** — inherited whole from
  *     `trading/order-ticket.ts`, so the desk and the bots obey the same limits.
  */
 
@@ -56,6 +58,10 @@ export interface TradeServiceDeps {
   readonly clientFactory: TradingClientFactory;
   /** Member-initiated trading is enabled for this deployment. */
   readonly tradingEnabled: boolean;
+  /** Appends the per-order audit line (#466) after a successful broker submit. Optional so
+   *  offline/test wiring can omit it. */
+  readonly recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
+  readonly now?: () => Date;
 }
 
 export type SubmitDeskTrade = (
@@ -86,14 +92,13 @@ async function reviewLive(
 }
 
 /**
- * Read the deployment's desk-trading switch and build the execution seams behind it — shares
- * and options together, one switch (`SKYNET_DESK_TRADING=on` **and** an authenticator
- * configured: with no signed-in identity there is no account to match an order to, and the
- * services would refuse every request anyway — better to say so at boot than to leave a member
- * clicking a button that can never work).
+ * Build the execution seams behind the desk gate — shares and options together. Trading is
+ * enabled purely by an authenticator being configured: with no signed-in identity there is no
+ * account to match an order to, so the services would refuse every request anyway. There is
+ * deliberately no separate on/off switch (Eric's ruling, 2026-08-21, #466 — `SKYNET_DESK_TRADING`
+ * is removed): the moment a member's account carries an owner link, they may trade it.
  */
 export function resolveDeskTrading(
-  env: NodeJS.ProcessEnv,
   deps: Omit<TradeServiceDeps, "tradingEnabled"> & {
     authConfigured: boolean;
     optionsClientFactory: OptionTradeServiceDeps["optionsClientFactory"];
@@ -102,27 +107,24 @@ export function resolveDeskTrading(
   enabled: boolean;
   submit: SubmitDeskTrade;
   submitOption: SubmitOptionTrade;
-  warning?: string;
 } {
-  const requested = env.SKYNET_DESK_TRADING === "on";
-  const enabled = requested && deps.authConfigured;
-  const warning =
-    requested && !deps.authConfigured
-      ? "⚠️  SKYNET_DESK_TRADING=on but no OAuth is configured — desk orders stay refused, since no session resolves to an account."
-      : undefined;
+  const enabled = deps.authConfigured;
   return {
     enabled,
-    ...(warning ? { warning } : {}),
     submit: createTradeService({
       findParticipant: deps.findParticipant,
       clientFactory: deps.clientFactory,
       tradingEnabled: enabled,
+      ...(deps.recordAudit ? { recordAudit: deps.recordAudit } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
     }),
     submitOption: createOptionTradeService({
       findParticipant: deps.findParticipant,
       clientFactory: deps.clientFactory,
       optionsClientFactory: deps.optionsClientFactory,
       tradingEnabled: enabled,
+      ...(deps.recordAudit ? { recordAudit: deps.recordAudit } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
     }),
   };
 }
@@ -142,12 +144,15 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
       return { ok: false, refusals: preview.refusals };
     }
 
-    return submitToBroker(() =>
-      desk.client.placeOrder({
-        symbol: normalizeSymbol(request.symbol),
-        qty: request.quantity,
-        side: request.action,
-      }),
+    return submitAndAudit(
+      () =>
+        desk.client.placeOrder({
+          symbol: normalizeSymbol(request.symbol),
+          qty: request.quantity,
+          side: request.action,
+        }),
+      desk.participant,
+      deps,
     );
   };
 }

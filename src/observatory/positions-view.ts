@@ -154,7 +154,7 @@ function orderTicket(tradingEnabled: boolean): string {
   const disabled = tradingEnabled ? "" : " disabled";
   const gate = tradingEnabled
     ? `<p class="desk-note">Paper account · market order · you'll review the estimated cost before anything is sent.</p>`
-    : `<p class="caveat"><b>Preview only.</b> Placing orders from the desk is switched off for this deployment — the ticket reviews and refuses rather than sending. Turning it on is the owner's call (<code>SKYNET_DESK_TRADING=on</code>).</p>`;
+    : `<p class="caveat"><b>Preview only.</b> Placing orders from the desk needs sign-in configured for this deployment — the ticket reviews and refuses rather than sending.</p>`;
   return `<section class="panel">
       <h2 class="panel-title">New trade</h2>
       <p class="panel-sub">Quick share ticket. For options — cash-secured puts, covered calls, long calls and puts — open the <a href="/trade">Trade ticket</a>, which walks the play and shows the chain.</p>
