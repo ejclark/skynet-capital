@@ -180,9 +180,10 @@ inverse of `/vision`: eyes in, engineering out); **"we need an agent for X"** �
 a single `.claude/agents/*.md` file — it checks for an existing owner first and a REJECT verdict is a
 normal, expected output, not a shortfall; **"make a shareable page — a field guide, dashboard, or report"**
 → the `artifact-smith` agent, which builds it from `docs/BRAND.md` tokens; **a finished Claude Design
-session** → drop the bundle in `docs/handoffs/<slug>/` and flip its status to `ready` — a watcher
-queues it and an hourly Routine builds it unattended ([`docs/HANDOFFS.md`](docs/HANDOFFS.md); a
-handoff is just a plan authored elsewhere, so `ready` is Eric's flip exactly as it is for a plan).
+session** → file it as a `[handoff]` GitHub issue carrying the contract + the bundle (zip attached, or
+files at a pinned SHA) — issues are the home for ephemeral queue state, never the source tree
+([`docs/HANDOFFS.md`](docs/HANDOFFS.md)); filing triggers nothing, and Eric's comment or label is the
+go signal, exactly as `ready` was for a plan.
 These routes are examples, not the whole set — every skill/agent
 states its own `Use when`, and the **Orient** output style (`.claude/output-styles/orient.md`) consults
 the full roster + the technique spine (`docs/TECHNIQUES.md`) at the top of a task. Structural PRs land

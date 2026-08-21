@@ -114,3 +114,10 @@ _(none)_
 - 2026-08-20 · Plan drafted from Eric's three mid-turn messages during the hat-team communication
   research; slices 1–2 land with that research's PR so the pending work tests the process
   (CLAUDE.md: "sequence the process ahead of the work").
+- 2026-08-21 · Eric extends the doctrine to handoffs, verbatim: *"docs/handoffs should be completed
+  so we can remove that system. temporary documents like this should be managed in github issues,
+  not baked into the sourcecode."* Executed: `brief-horizon` confirmed shipped (#367), `desk-v2` →
+  issue #461, `trailer-debut` → issue #462 (contracts verbatim, bundles SHA-pinned at `9792fcb`),
+  `docs/handoffs/` deleted, HANDOFFS.md rewritten as the issue-intake doc. The watcher-machinery
+  teardown follows as a held PR (workflow carve-out). Generalized rule this bakes in: **ephemeral
+  queue state lives in issues; the repo holds only durable intent and code.**
