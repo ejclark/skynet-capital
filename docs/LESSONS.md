@@ -27,6 +27,30 @@ it. Prevention ranks, best first:
 
 ---
 
+### A filter compared `undefined` to a string, and the sweep could never close anything
+
+- **SHA:** 0ec180c   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** none, for the entire life of the code. `· nothing to do` is also the correct output on
+  nearly every push, so a net that could never fire and a net with nothing to catch printed the same
+  sentence. It surfaced only because #475 sat visibly open after its PR merged and someone went
+  looking for why.
+- **ROOT CAUSE:** `gh issue list --json closedByPullRequestsReferences` returns each reference as
+  exactly `{id, number, repository, url}` — **there is no `state` key**. The sweep filtered
+  `refs.find((p) => p.state === "MERGED")`, evaluating `undefined === "MERGED"` on every reference
+  `gh` has ever returned. `close-shipped` was dead by construction from the day it was written. The
+  earlier `closedByPullRequests` incident the same day was the same class one step upstream: a wrong
+  field **name** fails loudly on the first call, a wrong field **read** is silent forever.
+- **PREVENTION:** gate + fix. `tests/arch/gh-json-fields.spec.ts` now forbids reading a `state` off a
+  closing reference at all (comments stripped first, so the prose explaining the bug does not trip
+  its own rule), and `resolveShipped` reads the merge state rather than filtering for it, re-checking
+  an issue individually before calling the queue empty and warning out loud when the two disagree.
+  Both shipped in #495, whose diagnosis ran against real `gh` output on a runner before any code
+  changed — the capsule for #494 asked for exactly that, and it is why the cause is known rather than
+  inferred.
+- **SIDE QUESTS:** the `Test (Rstest)` step in `pipeline.yml` passes no `GH_TOKEN`, so
+  `incident-scan` degrades to a clean no-op and the incident gate never actually fires in CI — a gate
+  that only bites locally (→ docs/IDEAS.md).
+
 ### A bot-armed auto-merge emits no push, and one rule blinded the deploy, the receipt and the audit
 
 - **SHA:** 4f234c0   **DATE:** 2026-08-22   **STATUS:** closed
@@ -54,6 +78,18 @@ it. Prevention ranks, best first:
   could report it is the one that already cured it. The doctrine half corrects the half-right line in
   `CLAUDE.md`'s ship loop. The root fix is a credential, not code — an identity that is not
   `GITHUB_TOKEN` — and that is Eric's step, filed as such.
+- **CONFIRMED LATER THE SAME EVENING, and it widens the blast radius twice over.** Two more things
+  turn on the arming identity, neither of them guessed in advance:
+  **(1) GitHub's own `Closes #` auto-close.** #492, merged by `github-actions[bot]`, left #475 open;
+  #495, merged by auto-merge armed as `ejclark`, closed #494 at the merge second, attributed to
+  `ejclark`. So the sweep is the backstop, not the primary mechanism — the primary one works fine
+  once a real identity merges.
+  **(2) CI itself.** The bot's PR (#495) came back `action_required` — its `verify` run would not
+  start without approval. Approving it over the API returns `403 Resource not accessible by
+  integration`; a **re-run** under a real identity clears it, which is also (retroactively) what the
+  unexplained `run_attempt: 2, triggering_actor: ejclark` on #492 was.
+  One missing credential therefore costs four things, not one: no deploy, no auto-close, no receipt
+  sweep, and CI that will not start unattended.
 - **SIDE QUESTS:** the deploy job's comment claims "merged commits are already verified (branch
   protection required `verify`)" — worth confirming that protection is actually armed, since nothing
   in this incident would have noticed if it were not (→ docs/IDEAS.md).
