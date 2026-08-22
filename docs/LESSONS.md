@@ -27,6 +27,25 @@ it. Prevention ranks, best first:
 
 ---
 
+### One wrong `gh --json` field name took every push run of the postmaster down
+
+- **SHA:** 1eb7c3c   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** noticed while retriggering issue #475 — a red `Postmaster` push run sitting beside the
+  merge that had just landed. No alert; the CI Medic's own run for it was cancelled by the next
+  push before it could file. Minutes, and only because someone was already reading the run list.
+- **ROOT CAUSE:** the shipped-feedback join and the stall audit both asked
+  `gh issue list --json …,closedByPullRequests`. That field does not exist on `gh issue list`; the
+  real name is `closedByPullRequestsReferences`. `gh` exits 1 and prints its allow-list, so
+  `gatherDeps` — correctly fail-closed — threw, and the ENTIRE route job died: feedback claim,
+  event research and stall audit with it. The call is only exercised on a runner with a token, so
+  no local check and no spec touched it; `npm test` was green on the branch that shipped it.
+- **PREVENTION:** gate. `tests/arch/gh-json-fields.spec.ts` reads every `--json` field list out of
+  `scripts/postmaster.mjs` and checks it against the allow-list `gh` itself printed in the failure,
+  offline and with no token. Verified in both directions: it passes on the corrected source and
+  names `closedByPullRequests` when handed the broken form.
+- **SIDE QUESTS:** the medic could not report this one — its run was cancelled by the next push,
+  so a failure that repairs itself into silence is still possible (→ docs/IDEAS.md).
+
 ### A narrowing written to stop one false positive licensed the class it never meant to cover
 
 - **SHA:** 07cc032   **DATE:** 2026-08-22   **STATUS:** closed

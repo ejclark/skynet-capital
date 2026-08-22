@@ -490,12 +490,15 @@ function gatherDeps(ctx) {
         "--limit",
         "100",
         "--json",
-        "number,title,closedByPullRequests",
+        // `closedByPullRequestsReferences`, NOT `closedByPullRequests` — the latter is not a
+        // field `gh issue list` knows, and asking for it exits 1 with the allow-list, which took
+        // every push run of this router down on 2026-08-22 (docs/LESSONS.md).
+        "number,title,closedByPullRequestsReferences",
       ])
         .map((i) => ({
           number: i.number,
           title: i.title,
-          pr: (i.closedByPullRequests ?? []).find((p) => p.state === "MERGED")?.number,
+          pr: (i.closedByPullRequestsReferences ?? []).find((p) => p.state === "MERGED")?.number,
         }))
         .filter((i) => i.pr)
     : [];
@@ -546,8 +549,8 @@ function gatherAuditDeps(nowMs) {
     "--limit",
     "100",
     "--json",
-    "title,number,state,updatedAt,createdAt,labels,closedByPullRequests",
-  ]);
+    "title,number,state,updatedAt,createdAt,labels,closedByPullRequestsReferences",
+  ]).map((i) => ({ ...i, closedByPullRequests: i.closedByPullRequestsReferences ?? [] }));
   const alreadyFlagged = issues
     .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.stall.name))
     .map((i) => i.number);
