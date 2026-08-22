@@ -151,6 +151,68 @@ export function routeShipped(deps = {}) {
 }
 
 /**
+ * WHICH REFERENCE IS THE MERGED PR — and why this needed its own function.
+ *
+ * `gh issue list --json closedByPullRequestsReferences` returns, per reference, exactly
+ * `{ id, number, repository, url }`. **There is no state key.** The sweep filtered
+ * `refs.find((p) => p.state === "MERGED")`, which evaluates `undefined === "MERGED"` for every
+ * reference `gh` has ever handed back — so `close-shipped` could not fire for any issue, ever.
+ * It was dead by construction from the day it was written, and silent because "no shipped
+ * feedback" is also the correct answer on the overwhelming majority of pushes (2026-08-22, #475:
+ * `· nothing to do` on two separate runs while the PR side plainly showed #492 MERGED).
+ *
+ * The merged state therefore has to be READ, not filtered — hence the injected predicate, which
+ * keeps this half pure and fixture-drivable. A reference that carries its own state is still
+ * honoured first, so a future `gh` that returns one costs us zero extra calls.
+ *
+ * @param refs      closing references as `gh` returns them
+ * @param isMerged  (ref) => boolean — the impure lookup, injected
+ */
+export function mergedReference(refs = [], isMerged = () => false) {
+  for (const r of refs ?? []) {
+    if (r?.number == null) continue;
+    if (r.state ? String(r.state).toUpperCase() === "MERGED" : isMerged(r)) return r.number;
+  }
+  return undefined;
+}
+
+/**
+ * Join the list query to the per-issue re-check, and be LOUD when the two disagree.
+ *
+ * The re-check is a FALLBACK, never the default path: it runs only for an issue the list query
+ * showed no merged reference for, so a quiet repo pays nothing and the one case that matters —
+ * "the queue looks empty" — is the case that gets a second look. That ordering is the whole lesson
+ * of #475: an under-reporting query and an empty queue printed the same sentence.
+ *
+ * Pure, given its three injected dependencies, so every branch is fixture-drivable.
+ *
+ * @param issues  `[{ number, title, closedByPullRequestsReferences }]` from the list query
+ * @param deps    { isMerged, recheckRefs, warn }
+ */
+export function resolveShipped(issues = [], deps = {}) {
+  const silent = () => {
+    /* a caller that does not care where the warning goes */
+  };
+  const { isMerged = () => false, recheckRefs = () => [], warn = silent } = deps;
+  const shipped = [];
+  for (const issue of issues ?? []) {
+    const listed = issue?.closedByPullRequestsReferences ?? [];
+    let pr = mergedReference(listed, isMerged);
+    if (pr === undefined) {
+      const rechecked = recheckRefs(issue?.number) ?? [];
+      pr = mergedReference(rechecked, isMerged);
+      if (pr !== undefined) {
+        warn(
+          `#${issue?.number}: the list query showed no merged PR, but the per-issue re-check found #${pr} — the list query is under-reporting`,
+        );
+      }
+    }
+    if (pr !== undefined) shipped.push({ number: issue.number, title: issue.title, pr });
+  }
+  return shipped;
+}
+
+/**
  * Break a wedged lease by hand.
  *
  * The claim is a *lease*, not a lock, so it self-heals in two hours — but two hours is a long time
@@ -477,6 +539,37 @@ const sh = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", ...opts }).trim();
 
 /**
+ * Is this closing reference a MERGED PR? The read `gh issue list` cannot do for us (see
+ * `mergedReference`). Addressed by URL when there is one, so a PR in another repo is asked about
+ * in its own repo rather than mistaken for a local number.
+ *
+ * Memoised per run: one issue can reference the same PR twice, and the sweep rides every push.
+ *
+ * NOT fail-closed, unlike everything else in `gatherDeps`, and deliberately: a reference we cannot
+ * read (a deleted PR, an inaccessible fork) would otherwise wedge EVERY push sweep — the event lane
+ * and the stall audit included — over one dangling link. It degrades to "not merged" instead, but
+ * loudly: a `::warning::` annotation on the run, which is the opposite of the silence #475 died of.
+ */
+const prMergedCache = new Map();
+function prIsMerged(ref) {
+  const target = ref?.url ?? String(ref?.number ?? "");
+  if (!target) return false;
+  if (!prMergedCache.has(target)) {
+    let state = "";
+    try {
+      state = JSON.parse(sh("gh", ["pr", "view", target, "--json", "state"])).state;
+    } catch (err) {
+      const detail = String(err.stderr || err.message)
+        .trim()
+        .slice(0, 200);
+      console.log(`::warning::shipped sweep — could not read the state of ${target}: ${detail}`);
+    }
+    prMergedCache.set(target, String(state).toUpperCase() === "MERGED");
+  }
+  return prMergedCache.get(target);
+}
+
+/**
  * Read the real dependencies: scanners, open issues, open PR heads, on-disk statuses.
  *
  * FAIL CLOSED, LOUDLY. An earlier draft swallowed errors and returned `[]` — which made a failed
@@ -504,27 +597,36 @@ function gatherDeps(ctx) {
   // `Closes #` link keeps missing on bot-opened, bot-merged PRs. Joined here (impure) so
   // `routeShipped` stays pure and fixture-drivable.
   const shippedFeedback = needsScan
-    ? json("gh issue list (shipped)", "gh", [
-        "issue",
-        "list",
-        "--state",
-        "open",
-        "--label",
-        "feedback",
-        "--limit",
-        "100",
-        "--json",
-        // `closedByPullRequestsReferences`, NOT `closedByPullRequests` — the latter is not a
-        // field `gh issue list` knows, and asking for it exits 1 with the allow-list, which took
-        // every push run of this router down on 2026-08-22 (docs/LESSONS.md).
-        "number,title,closedByPullRequestsReferences",
-      ])
-        .map((i) => ({
-          number: i.number,
-          title: i.title,
-          pr: (i.closedByPullRequestsReferences ?? []).find((p) => p.state === "MERGED")?.number,
-        }))
-        .filter((i) => i.pr)
+    ? resolveShipped(
+        json("gh issue list (shipped)", "gh", [
+          "issue",
+          "list",
+          "--state",
+          "open",
+          "--label",
+          "feedback",
+          "--limit",
+          "100",
+          "--json",
+          // `closedByPullRequestsReferences`, NOT `closedByPullRequests` — the latter is not a
+          // field `gh issue list` knows, and asking for it exits 1 with the allow-list, which took
+          // every push run of this router down on 2026-08-22 (docs/LESSONS.md).
+          "number,title,closedByPullRequestsReferences",
+        ]),
+        {
+          isMerged: prIsMerged,
+          // The fallback second look, for an issue the list showed nothing merged for.
+          recheckRefs: (n) =>
+            json("gh issue view (re-check)", "gh", [
+              "issue",
+              "view",
+              String(n),
+              "--json",
+              "closedByPullRequestsReferences",
+            ]).closedByPullRequestsReferences ?? [],
+          warn: (msg) => console.log(`::warning::shipped sweep — ${msg}`),
+        },
+      )
     : [];
   return {
     shippedFeedback,

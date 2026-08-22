@@ -174,6 +174,108 @@ describe("closing the last mile", () => {
   });
 });
 
+// ── the sweep that could never fire (2026-08-22, #494) ────────────────────────
+// #475 shipped in PR #492 and stayed open. The sweep — the net built for exactly that — printed
+// `· nothing to do` on a manual scan AND a real push run. The cause was not an under-reporting
+// query: `gh issue list --json closedByPullRequestsReferences` returns `{id, number, repository,
+// url}` per reference and NO state, so `refs.find((p) => p.state === "MERGED")` compared
+// `undefined === "MERGED"` on every reference gh has ever returned. Dead by construction, and
+// invisible because an empty result is also the right answer on nearly every push.
+const resolve = (issues: unknown, merged: number[], recheck: unknown = {}): unknown => {
+  const out = execFileSync(
+    "node",
+    [
+      "-e",
+      `import("./scripts/postmaster.mjs").then((m) => {
+         const merged = new Set(${JSON.stringify(merged)});
+         const recheck = ${JSON.stringify(recheck)};
+         const warnings = [];
+         const shipped = m.resolveShipped(${JSON.stringify(issues)}, {
+           isMerged: (ref) => merged.has(ref.number),
+           recheckRefs: (n) => recheck[String(n)] ?? [],
+           warn: (msg) => warnings.push(msg),
+         });
+         console.log(JSON.stringify({ shipped, warnings }));
+       });`,
+    ],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+  return JSON.parse(out);
+};
+
+describe("resolving which feedback issues have shipped", () => {
+  it("names the merged PR for a reference gh returns without a state field — #475's exact shape", () => {
+    // Verbatim from `gh issue list --state all --label feedback` on 2026-08-22: a reference object
+    // with id/number/repository/url and nothing else. The old filter dropped this on the floor.
+    const issues = [
+      {
+        number: 475,
+        title: "Mission control on the account desk",
+        closedByPullRequestsReferences: [
+          {
+            id: "PR_kwDOTh1FlM8AAAABAqx0Zw",
+            number: 492,
+            repository: { name: "skynet-capital", owner: { login: "ejclark" } },
+            url: "https://github.com/ejclark/skynet-capital/pull/492",
+          },
+        ],
+      },
+    ];
+
+    expect(resolve(issues, [492])).toEqual({
+      shipped: [{ number: 475, title: "Mission control on the account desk", pr: 492 }],
+      warnings: [],
+    });
+  });
+
+  it("leaves an issue alone while its PR is still open — only a merge is a ship", () => {
+    const issues = [
+      { number: 494, title: "in flight", closedByPullRequestsReferences: [{ number: 500 }] },
+    ];
+
+    expect(resolve(issues, [])).toEqual({ shipped: [], warnings: [] });
+  });
+
+  it("stays silent and does nothing when no feedback issue has a merged PR", () => {
+    const issues = [
+      { number: 455, title: "no PR at all", closedByPullRequestsReferences: [] },
+      { number: 449, title: "also none" },
+    ];
+
+    expect(resolve(issues, [452])).toEqual({ shipped: [], warnings: [] });
+  });
+
+  it("re-checks the issue individually before concluding there is nothing to do, and says so", () => {
+    // The fallback path: the list query showed nothing, the per-issue read knows better. It runs
+    // only for an issue that looked empty, so the everyday quiet push pays for none of it — and
+    // the warning is what stops a future under-reporting query passing as an empty queue.
+    const issues = [{ number: 447, title: "shipped in #448", closedByPullRequestsReferences: [] }];
+
+    expect(resolve(issues, [448], { 447: [{ number: 448 }] })).toEqual({
+      shipped: [{ number: 447, title: "shipped in #448", pr: 448 }],
+      warnings: [
+        "#447: the list query showed no merged PR, but the per-issue re-check found #448 — the list query is under-reporting",
+      ],
+    });
+  });
+
+  it("honours an explicit MERGED state without spending a lookup, if gh ever returns one", () => {
+    const issues = [
+      {
+        number: 443,
+        title: "state included",
+        closedByPullRequestsReferences: [{ number: 457, state: "MERGED" }],
+      },
+    ];
+
+    // `merged` is empty — nothing was looked up, and it still resolved.
+    expect(resolve(issues, [])).toEqual({
+      shipped: [{ number: 443, title: "state included", pr: 457 }],
+      warnings: [],
+    });
+  });
+});
+
 describe("the stall audit sees outcomes, not chatter", () => {
   // THE DEFECT THIS FIXES: the audit keyed on `comments.length === 0`, but the build prompt posts a
   // receipt as step 0 — before the branch and the build. So the likeliest failure of all (receipt
