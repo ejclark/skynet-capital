@@ -48,6 +48,16 @@ describe("desk tabs", () => {
     expect(parseDeskTab("analysis")).toBe("analysis");
   });
 
+  it("downgrades the owner-only settings tab to the overview without owner rights (#475)", () => {
+    expect(parseDeskTab("settings")).toBe("overview");
+    expect(parseDeskTab("settings", false)).toBe("overview");
+    expect(parseDeskTab("settings", true)).toBe("settings");
+    // Indistinguishable from a typo, so probing the URL reveals nothing about owner status.
+    expect(deskTabs("ann", parseDeskTab("settings"))).toBe(
+      deskTabs("ann", parseDeskTab("nonsense")),
+    );
+  });
+
   it("links the overview at the bare profile url and the rest with ?tab=", () => {
     expect(deskHref("ann", "overview")).toBe("/u/ann");
     expect(deskHref("ann", "positions")).toBe("/u/ann?tab=positions");

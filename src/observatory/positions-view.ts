@@ -4,7 +4,7 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { type DashboardViewOptions, renderShell } from "./dashboard-shell.js";
 import { formatPrice } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
-import { deskFrame } from "./desk-tabs.js";
+import { type DeskNotice, deskFrame, deskNoticeBanner } from "./desk-tabs.js";
 import { participantInvested, participantUnrealized } from "./participant-card.js";
 import {
   costBasis,
@@ -33,11 +33,6 @@ import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
  *    preview rather than silently inert.
  */
 
-export interface DeskNotice {
-  readonly kind: "ok" | "error";
-  readonly message: string;
-}
-
 export interface DeskViewOptions extends DashboardViewOptions {
   readonly isSelf?: boolean;
   readonly generatedAt?: string;
@@ -45,12 +40,6 @@ export interface DeskViewOptions extends DashboardViewOptions {
   readonly tradingEnabled?: boolean;
   /** Result of the action that redirected back here. */
   readonly notice?: DeskNotice;
-}
-
-function noticeBanner(notice: DeskNotice | undefined): string {
-  if (!notice) return "";
-  const cls = notice.kind === "ok" ? "note-warn" : "note-stop";
-  return `<p class="${cls}">${escapeHtml(notice.message)}</p>`;
 }
 
 function blotterRow(
@@ -214,7 +203,7 @@ export function renderPositionsBody(
     options.nav,
     `${DESK_STYLE}<section class="desk">
     ${header}
-    ${noticeBanner(options.notice)}
+    ${deskNoticeBanner(options.notice)}
     <div class="desk-tiles">
       <div class="desk-tile lead"><span class="desk-k">Open positions</span><span class="desk-v">${snapshot.positions.length}</span></div>
       <div class="desk-tile"><span class="desk-k">Invested</span><span class="desk-v">${formatCurrency(invested)}</span></div>

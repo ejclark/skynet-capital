@@ -2,6 +2,7 @@ import type { AddressInfo } from "node:net";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import { resolveAuth } from "../../src/server/auth/resolve-auth.js";
 import { type Session, signSession } from "../../src/server/auth/session.js";
+import type { BotControlsStore } from "../../src/server/bot-controls-store.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
 import type { FeedbackInput, FeedbackResult } from "../../src/server/feedback-service.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
@@ -366,6 +367,110 @@ describe("dashboard-server /u/:id performance history", () => {
       const html = await (await fetch(`${base}/u/day-trader`)).text();
       expect(html).not.toContain('<svg class="equity-spark"');
       expect(html).toContain("once we've recorded your history");
+    });
+  });
+});
+
+/**
+ * Mission Control's relocation onto the desk (#475) — the ROUTING half. The switchboard's own
+ * behavior is `tests/server/controls-form.spec.ts`; what's asserted here is that the URL an owner
+ * lands on serves it, that the retired `/controls` bookmark still gets there, and that a member
+ * asking for the tab by hand is answered exactly like a typo'd tab.
+ */
+describe("dashboard-server desk settings (#475)", () => {
+  const SECRET = "sess";
+  const auth = resolveAuth({
+    SKYNET_SESSION_SECRET: SECRET,
+    SKYNET_GOOGLE_CLIENT_ID: "gid",
+    SKYNET_GOOGLE_CLIENT_SECRET: "gsecret",
+    SKYNET_ALLOWED_EMAILS: "eric@gmail.com,member@gmail.com",
+  });
+  const cookieFor = (email: string): string =>
+    `skynet_session=${encodeURIComponent(
+      signSession({ email, provider: "google", exp: Date.now() + 60_000 }, SECRET),
+    )}`;
+  const fleet = (): DashboardData => ({
+    generatedAt: "t",
+    participants: [
+      {
+        id: "sauron",
+        displayName: "Sauron",
+        kind: "bot",
+        personaId: "sauron",
+        cash: 1_000,
+        equity: 1_000,
+        positions: [],
+      },
+    ],
+    collisions: [],
+  });
+  const config = () => ({
+    hub: new ObservatoryHub(fleet()),
+    ...(auth ? { auth } : {}),
+    resolveOwnerId: (email: string) => (email === "eric@gmail.com" ? "sauron" : undefined),
+    controls: {
+      // A stub store: this block asserts ROUTING, and the real store is covered by its own spec.
+      store: {
+        load: () => ({ bots: {} }),
+        setBot: () => undefined,
+        setAllSuspended: () => undefined,
+      } as unknown as BotControlsStore,
+      isOwner: (email: string) => email === "eric@gmail.com",
+      bots: () => [{ id: "sauron", displayName: "Sauron" }],
+    },
+  });
+
+  it("serves Mission Control on the owner's desk, inside the app shell", async () => {
+    await withServer(config(), async (base) => {
+      const res = await fetch(`${base}/u/sauron?tab=settings`, {
+        headers: { cookie: cookieFor("eric@gmail.com") },
+      });
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain("Mission Control");
+      expect(html).toContain('<aside class="drawer"');
+      expect(html).toContain('href="/u/sauron?tab=settings"');
+    });
+  });
+
+  it("answers a member's ?tab=settings with the plain overview — no owner-shaped tell", async () => {
+    await withServer(config(), async (base) => {
+      const res = await fetch(`${base}/u/sauron?tab=settings`, {
+        headers: { cookie: cookieFor("member@gmail.com") },
+      });
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).not.toContain("Mission Control");
+      expect(html).not.toContain("Suspend ALL autonomous trading");
+      // Identical to any unrecognized tab: the overview, with no Settings entry in the strip.
+      const typo = await (
+        await fetch(`${base}/u/sauron?tab=nonsense`, {
+          headers: { cookie: cookieFor("member@gmail.com") },
+        })
+      ).text();
+      expect(html).toBe(typo);
+    });
+  });
+
+  it("redirects the retired /controls bookmark to the viewer's own desk settings", async () => {
+    await withServer(config(), async (base) => {
+      const res = await fetch(`${base}/controls`, {
+        headers: { cookie: cookieFor("eric@gmail.com") },
+        redirect: "manual",
+      });
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe("/u/sauron?tab=settings");
+    });
+  });
+
+  it("sends a viewer with no resolvable account back to the board rather than nowhere", async () => {
+    await withServer(config(), async (base) => {
+      const res = await fetch(`${base}/controls`, {
+        headers: { cookie: cookieFor("member@gmail.com") },
+        redirect: "manual",
+      });
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe("/");
     });
   });
 });

@@ -8,12 +8,12 @@ import {
 } from "../observatory/activity-store.js";
 import { renderAnalysisBody } from "../observatory/analysis-view.js";
 import { renderCalendarBody } from "../observatory/calendar-view.js";
-import { type DeskTab, parseDeskTab } from "../observatory/desk-tabs.js";
+import { type DeskNotice, type DeskTab, deskHref, parseDeskTab } from "../observatory/desk-tabs.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import { type HistoryViewOptions, renderHistoryBody } from "../observatory/history-view.js";
 import { type MetricsViewOptions, renderMetricsBody } from "../observatory/metrics-view.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
-import { type DeskNotice, renderPositionsBody } from "../observatory/positions-view.js";
+import { renderPositionsBody } from "../observatory/positions-view.js";
 import {
   type LeaderMetric,
   type NavContext,
@@ -32,7 +32,7 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
-import { type ControlsDeps, handleControls } from "./controls-form.js";
+import { type ControlsDeps, handleDeskSettings } from "./controls-form.js";
 import type { CoachTurn } from "./feedback-coach.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import type { FeedbackInput, FeedbackResult } from "./feedback-service.js";
@@ -90,8 +90,9 @@ export interface DashboardServerConfig {
    */
   readonly invite?: InviteDeps;
   /**
-   * `GET/POST /controls` — Mission Control, the owner's switchboard for the autonomous fleet.
-   * Omit to disable (offline mode, or no auth). Owner-gated inside the handler itself.
+   * `GET/POST /u/:id?tab=settings` — Mission Control, the owner's switchboard for the autonomous
+   * fleet, served as an account's Settings tab (#475). Omit to disable (offline mode, or no auth).
+   * Owner-gated inside the handler itself. The old `/controls` URL redirects here.
    */
   readonly controls?: ControlsDeps;
   /**
@@ -348,7 +349,7 @@ async function serveAuthorizedRoute(
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
   if (path.startsWith("/u/")) {
-    await serveIndividualProfile(res, path, url, config, navFor);
+    await serveIndividualProfile(req, res, path, url, config, navFor, session);
     return;
   }
   if (path === "/" || path === "/index.html") {
@@ -431,6 +432,23 @@ async function serveTradeRoute(
   });
 }
 
+/**
+ * Mission Control moved onto the account desk (#475), so the old `/controls` URL survives only as a
+ * redirect — bookmarks and the pre-relocation drawer link keep working. It lands on the signed-in
+ * viewer's OWN desk, whose Settings tab is owner-gated on arrival, so sending a member there is
+ * safe and leaks nothing: they simply get their overview. A viewer whose session resolves to no
+ * account has no desk to land on and goes to the board rather than a dead URL.
+ */
+function redirectToDeskSettings(
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): void {
+  const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  res.writeHead(302, { location: id ? deskHref(id, "settings") : "/" });
+  res.end();
+}
+
 /** `/add` (join the board) and `/rotate` (swap an existing account's key). True when handled. */
 async function trySelfServiceRoute(
   req: IncomingMessage,
@@ -454,9 +472,7 @@ async function trySelfServiceRoute(
     return true;
   }
   if (path === "/controls" && config.controls) {
-    // Mission Control — identity comes from the signed session; handleControls re-checks owner
-    // status itself (never trusts the call site), the same defense layering as /invite.
-    await handleControls(req, res, req.method ?? "GET", session?.email, config.controls);
+    redirectToDeskSettings(res, config, session);
     return true;
   }
   if (path === "/invite" && config.invite) {
@@ -510,7 +526,7 @@ const TRADE_NOTICES: Record<string, DeskNotice> = {
 
 /** One desk tab → its renderer. Every tab takes the same options; only Metrics reads history. */
 function renderDeskTab(
-  tab: Exclude<DeskTab, "overview">,
+  tab: Exclude<DeskTab, "overview" | "settings">,
   snapshot: ParticipantSnapshot,
   options: MetricsViewOptions & HistoryViewOptions,
 ): string {
@@ -527,7 +543,7 @@ function renderDeskTab(
  * `serveIndividualProfile` to keep that route inside its complexity budget.
  */
 async function deskTabBody(
-  tab: Exclude<DeskTab, "overview">,
+  tab: Exclude<DeskTab, "overview" | "settings">,
   snapshot: ParticipantSnapshot,
   config: DashboardServerConfig,
   params: URLSearchParams,
@@ -553,11 +569,13 @@ async function deskTabBody(
 
 /** `/u/:id` — an individual's desk. `?tab=` selects the view; anything unknown falls to overview. */
 async function serveIndividualProfile(
+  req: IncomingMessage,
   res: ServerResponse,
   path: string,
   url: string,
   config: DashboardServerConfig,
   navFor: (active: NavView) => NavContext,
+  session: Session | undefined,
 ): Promise<void> {
   const id = decodeURIComponent(path.slice(3));
   const state = config.hub.getState();
@@ -571,11 +589,24 @@ async function serveIndividualProfile(
   const nav = navFor("you");
   const isSelf = nav.currentId === id;
   const deskNav = { ...nav, active: (isSelf ? "you" : "board") as NavView };
-  const tab = parseDeskTab(params.get("tab"));
+  // Owner-only tabs downgrade to the overview inside `parseDeskTab`, so a member asking for
+  // `?tab=settings` is answered exactly like a typo — there is no owner-shaped tell to probe for.
+  const tab = parseDeskTab(params.get("tab"), Boolean(nav.canControl));
   const notice = TRADE_NOTICES[params.get("n") ?? ""];
+
+  if (tab === "settings" && config.controls) {
+    // Mission Control (#475). `handleDeskSettings` re-checks owner status itself rather than
+    // trusting this call site, and owns the POST path — the same layering /invite uses.
+    await handleDeskSettings(req, res, req.method ?? "GET", session?.email, config.controls, {
+      snapshot,
+      options: { nav: deskNav, isSelf, generatedAt: state.generatedAt },
+    });
+    return;
+  }
+
   const history = config.readHistory ? await config.readHistory(id) : undefined;
 
-  if (tab !== "overview") {
+  if (tab !== "overview" && tab !== "settings") {
     const body = await deskTabBody(tab, snapshot, config, params, {
       nav: deskNav,
       isSelf,

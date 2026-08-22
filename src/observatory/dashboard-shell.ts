@@ -28,7 +28,7 @@ export interface NavContext {
   readonly currentId?: string;
   readonly canAdd: boolean;
   readonly authed: boolean;
-  /** Owner-only: link Mission Control (`/controls`). Members never see the entry. */
+  /** Owner-only: link Mission Control + show the desk's Settings tab. Members see neither. */
   readonly canControl?: boolean;
   /** Views ship incrementally; only link the ones that exist so merged states have no dead links. */
   readonly hasLeaderboard?: boolean;
@@ -105,7 +105,7 @@ function renderDrawer(nav: NavContext): string {
   }
   if (nav.canControl) {
     foot.push(
-      `<a class="dnav-link dnav-muted" href="/controls"><span class="dnav-ico" aria-hidden="true">⛭</span><span class="dnav-label">Mission Control</span></a>`,
+      `<a class="dnav-link dnav-muted" href="${nav.currentId ? `${profileHref(nav.currentId)}?tab=settings` : "/controls"}"><span class="dnav-ico" aria-hidden="true">⛭</span><span class="dnav-label">Mission Control</span></a>`,
     );
   }
   foot.push(drawerLink(FEEDBACK_URL, "Feedback", "feedback", nav.active === "feedback"));

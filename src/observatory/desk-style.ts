@@ -31,6 +31,10 @@ export const DESK_STYLE = `<style>
   .blotter tbody tr:hover{ background:color-mix(in srgb,var(--accent) 4%,transparent); }
   .blotter .sym{ font-family:var(--mono); font-weight:700; letter-spacing:.02em; }
   .blotter .tcell{ text-align:left; font-family:var(--mono); white-space:nowrap; }
+  /* A row's own link (a bot's desk from the Settings roster) reads as the row, not as web-page text. */
+  .blotter a{ color:inherit; text-decoration:none; font-weight:700; }
+  .blotter a:hover{ color:var(--accent); }
+  .blotter a:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
   .blotter-inline{ overflow-x:auto; margin-top:4px; }
   .blotter-wrap{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; overflow-x:auto; }
   .weight-bar{ display:block; height:3px; margin-top:5px; border-radius:2px; background:color-mix(in srgb,var(--muted) 22%,transparent); overflow:hidden; max-width:120px; }
