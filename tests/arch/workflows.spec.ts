@@ -85,6 +85,23 @@ describe("workflow structure gate", () => {
     expect(stderr).toContain("declares no step `tier`");
   });
 
+  it("fails a workflow_run trigger with no workflows list — the 2026-08-22 repeat", () => {
+    const { code, stderr } = withWorkflow(
+      "name: X\non:\n  workflow_run:\n    types: [completed]\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n",
+    );
+
+    expect(code).toBe(1);
+    expect(stderr).toContain("no `workflows:` list");
+  });
+
+  it("passes a workflow_run trigger that names its workflows", () => {
+    const { code } = withWorkflow(
+      'name: X\non:\n  workflow_run:\n    workflows: ["Pipeline"]\n    types: [completed]\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n',
+    );
+
+    expect(code).toBe(0);
+  });
+
   it("fails a needs: naming a job that does not exist", () => {
     const { code, stderr } = withWorkflow(SOUND.replace("needs: route", "needs: routte"));
 
