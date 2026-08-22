@@ -9,7 +9,6 @@ import {
 import { renderAnalysisBody } from "../observatory/analysis-view.js";
 import { renderCalendarBody } from "../observatory/calendar-view.js";
 import { type DeskTab, parseDeskTab } from "../observatory/desk-tabs.js";
-import { renderFeedbackFormBody, renderFeedbackResultBody } from "../observatory/feedback-view.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import { type HistoryViewOptions, renderHistoryBody } from "../observatory/history-view.js";
 import { type MetricsViewOptions, renderMetricsBody } from "../observatory/metrics-view.js";
@@ -33,12 +32,13 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
-import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
-import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
+import type { CoachTurn } from "./feedback-coach.js";
+import { serveFeedbackRoute } from "./feedback-routes.js";
+import type { FeedbackInput, FeedbackResult } from "./feedback-service.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
-import { PAGE_STYLE, readBody, shellDocument } from "./page-shell.js";
+import { PAGE_STYLE, shellDocument } from "./page-shell.js";
 import type {
   AddParticipantInput,
   AddResult,
@@ -319,7 +319,7 @@ async function serveAuthorizedRoute(
   if (await trySelfServiceRoute(req, res, path, url, config, session)) {
     return;
   }
-  if (path === "/feedback" || path === "/feedback/coach") {
+  if (path === "/feedback" || path === "/feedback/coach" || path === "/feedback/preview") {
     await serveFeedbackRoute(req, res, path, session, config, navFor("feedback"));
     return;
   }
@@ -653,117 +653,6 @@ function streamEvents(
     res.write(sseFrame(JSON.stringify(renderBoardContent(state, { nav }))));
   });
   req.on("close", unsubscribe);
-}
-
-/** The two feedback paths, dispatched together so the main router stays one branch. */
-async function serveFeedbackRoute(
-  req: IncomingMessage,
-  res: ServerResponse,
-  path: string,
-  session: Session | undefined,
-  config: DashboardServerConfig,
-  nav: NavContext,
-): Promise<void> {
-  const method = req.method ?? "GET";
-  if (path === "/feedback/coach") {
-    await handleFeedbackCoach(req, res, method, session?.email, config.coachFeedback);
-    return;
-  }
-  await handleFeedback(
-    req,
-    res,
-    method,
-    session,
-    nav,
-    config.submitFeedback,
-    Boolean(config.coachFeedback),
-  );
-}
-
-// Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
-// repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine (single process).
-const feedbackHits = new Map<string, number[]>();
-function throttled(key: string, now = Date.now(), windowMs = 600_000, max = 5): boolean {
-  const recent = (feedbackHits.get(key) ?? []).filter((t) => now - t < windowMs);
-  if (recent.length >= max) {
-    feedbackHits.set(key, recent);
-    return true;
-  }
-  recent.push(now);
-  feedbackHits.set(key, recent);
-  return false;
-}
-
-async function handleFeedback(
-  req: IncomingMessage,
-  res: ServerResponse,
-  method: string,
-  session: Session | undefined,
-  nav: NavContext,
-  submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>,
-  coachEnabled = false,
-): Promise<void> {
-  if (method === "GET") {
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(
-      shellDocument(
-        "Feedback — Skynet Capital",
-        renderFeedbackFormBody({ nav, enabled: Boolean(submitFeedback), coachEnabled }),
-      ),
-    );
-    return;
-  }
-  if (method !== "POST") {
-    res.writeHead(405, { "content-type": "text/plain" });
-    res.end("method not allowed");
-    return;
-  }
-  if (!submitFeedback) {
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(
-      shellDocument(
-        "Feedback — Skynet Capital",
-        renderFeedbackResultBody({
-          nav,
-          result: {
-            ok: false,
-            error:
-              "Feedback isn't switched on yet — ask Eric to set the feedback token. Your note wasn't sent.",
-          },
-        }),
-      ),
-    );
-    return;
-  }
-  if (session && throttled(session.email)) {
-    res.writeHead(429, { "content-type": "text/html; charset=utf-8" });
-    res.end(
-      shellDocument(
-        "Feedback — Skynet Capital",
-        renderFeedbackResultBody({
-          nav,
-          result: {
-            ok: false,
-            error: "You've sent a bunch just now — give it a few minutes and try again.",
-          },
-        }),
-      ),
-    );
-    return;
-  }
-
-  const form = new URLSearchParams(await readBody(req));
-  const kindRaw = form.get("kind");
-  const kind: FeedbackKind = kindRaw === "bug" || kindRaw === "idea" ? kindRaw : "feature";
-  const result = await submitFeedback({
-    kind,
-    title: form.get("title") ?? "",
-    details: form.get("details") ?? "",
-    ...(form.get("area") ? { area: form.get("area") as string } : {}),
-    ...(session?.email ? { submitterEmail: session.email } : {}),
-  });
-  res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
-  res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));
 }
 
 function pageHtml(hub: ObservatoryHub, nav: NavContext): string {

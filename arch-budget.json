@@ -99,7 +99,7 @@
   "src/server/auth/session.ts": 124,
   "src/server/dashboard-server.ts": 800,
   "src/server/feedback-coach.ts": 300,
-  "src/server/feedback-service.ts": 128,
+  "src/server/feedback-service.ts": 145,
   "src/server/observatory-hub.ts": 51,
   "src/server/participant-service.ts": 236,
   "src/server/persona-classes.ts": 32,

@@ -1,4 +1,4 @@
-import type { IncomingMessage } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 
 /** The base reset every server-rendered page starts from. */
 export const PAGE_STYLE =
@@ -114,6 +114,12 @@ export function readBody(req: IncomingMessage): Promise<string> {
     req.on("end", () => resolve(body));
     req.on("error", reject);
   });
+}
+
+/** JSON reply for the small POST endpoints (the coach turn, the markdown preview). */
+export function sendJson(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify(body));
 }
 
 /** Minimal HTML document shell for a server-rendered view (the body already carries its styles). */
