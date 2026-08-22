@@ -27,6 +27,29 @@ it. Prevention ranks, best first:
 
 ---
 
+### A branch ref was pointed at a tag object, and the feedback lane could not claim anything
+
+- **SHA:** c1af6d2   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** four retriggers of issue #475, each answered "not building — lost the race to a
+  concurrent claim" while `claim/feedback-475` was verified **404 before and after**. A race against
+  a ref that does not exist is impossible, so the message was known-false long before the cause was
+  known. ~7h from the change landing to the cause being named, all of it while the lane looked busy
+  rather than broken.
+- **ROOT CAUSE:** the same-day timestamped-lease change made the lease point at an annotated tag
+  object — the right idea, since a tag's `tagger.date` is the one git primitive that carries its own
+  timestamp, and the previous scheme aged a lease off the head COMMIT (born stale on a quiet repo).
+  But it kept creating the ref under `refs/heads/`, and a branch ref must point at a commit. GitHub
+  answers that with `Reference update failed (HTTP 422)`, which is neither "already exists" nor
+  anything a reader would connect to object types. Two diagnosis layers had to be fixed first — a
+  bare `catch {}`, then a matcher testing the 422 STATUS rather than its message — before the API
+  said what it actually objected to.
+- **PREVENTION:** gate. `tests/arch/lease-namespace.spec.ts` reads the ref the claim writes and
+  fails if a lease is created under `refs/heads/` while it points at a stamped tag, offline and
+  tokenless. The lease now lives at `refs/tags/claim/<slug>`, keeping the timestamp; leases written
+  under `heads/` before the move are still read, aged and released, so nothing loses its lock.
+- **SIDE QUESTS:** none new — the "no release-on-failure path" quest already banked today is the
+  reason six stale `claim/feedback-*` refs are still sitting in the repo.
+
 ### One wrong `gh --json` field name took every push run of the postmaster down
 
 - **SHA:** 1eb7c3c   **DATE:** 2026-08-22   **STATUS:** closed
