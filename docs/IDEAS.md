@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### The CI medic can be cancelled before it files
+
+The 2026-08-22 `gh --json` failure produced a medic run that was **cancelled** by the next push's
+medic run (concurrency group is per watched-workflow name, `cancel-in-progress: false` — but the
+queued run was superseded). A failure that never gets filed is the exact silence the lane exists to
+break. Options: key the concurrency group by the failed run id rather than the workflow name, or
+have the medic re-scan recent failed runs on each firing rather than only the one that woke it.
+_(src: Claude · while: fixing the postmaster's gh field name)_
+
 ### Scripted file edits need an anchor-order assertion
 
 `s[:start] + s[end:]` silently duplicates a region when `end < start`, which is what took the
