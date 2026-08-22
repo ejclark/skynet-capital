@@ -87,6 +87,32 @@ describe("feedback coach", () => {
     });
   });
 
+  // The coach interrogates "where in the app" as part of its completeness bar, so the answer is
+  // already in the conversation. Carrying it to the field is what stops every report arriving as
+  // "Area: Somewhere else" — which is how both #449 and #455 themselves were filed.
+  it("carries an area it recognises through to the form", () => {
+    const result = parseCoachReply(
+      JSON.stringify({
+        draft: { title: "t", details: "d", area: "The trading desk", readiness: "partial" },
+      }),
+    );
+
+    expect(result).toMatchObject({ done: true, area: "The trading desk" });
+  });
+
+  it("drops an area it does not recognise rather than pre-selecting the wrong spot", () => {
+    // Conservative degrade, same rule toSpec applies: a wrong pre-selection is worse than none,
+    // because the member has no reason to re-check a field that looks already answered.
+    const result = parseCoachReply(
+      JSON.stringify({
+        draft: { title: "t", details: "d", area: "the vibes tab", readiness: "partial" },
+      }),
+    );
+
+    expect(result).toMatchObject({ done: true });
+    expect(result).not.toHaveProperty("area");
+  });
+
   it("downgrades a spec-complete claim with no acceptance criteria to partial", () => {
     const result = parseCoachReply(
       '{"draft": {"title": "t", "details": "d", "readiness": "spec-complete"}}',

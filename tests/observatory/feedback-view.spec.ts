@@ -2,6 +2,7 @@ import {
   renderFeedbackFormBody,
   renderFeedbackResultBody,
 } from "../../src/observatory/feedback-view.js";
+import { FEEDBACK_AREAS } from "../../src/server/feedback-areas.js";
 
 const NAV = {
   active: "feedback" as const,
@@ -92,5 +93,16 @@ describe("renderFeedbackResultBody", () => {
     });
 
     expect(html).toContain("GitHub said no");
+  });
+});
+
+describe("feedback form — the area select", () => {
+  it("renders every offered area from the one shared list, so the coach and the form cannot drift", () => {
+    const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: true });
+    for (const area of FEEDBACK_AREAS) {
+      expect(html).toContain(`<option>${area}</option>`);
+    }
+    // The placeholder stays the selected default — an unanswered area is honest, not guessed.
+    expect(html).toContain('<option value="" selected>— pick a spot —</option>');
   });
 });

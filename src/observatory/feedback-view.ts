@@ -1,3 +1,4 @@
+import { FEEDBACK_AREAS } from "../server/feedback-areas.js";
 import { COACH_SCRIPT } from "../server/feedback-coach-script.js";
 import { PREVIEW_SCRIPT } from "../server/feedback-preview-script.js";
 import type { FeedbackResult } from "../server/feedback-service.js";
@@ -86,13 +87,7 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
         ${formField(`<label for="fdbk-area">Where in the app? <small>(optional)</small></label>
         <select name="area" id="fdbk-area">
           <option value="" selected>— pick a spot —</option>
-          <option>The board (home)</option>
-          <option>The login</option>
-          <option>A player page</option>
-          <option>The trading desk</option>
-          <option>The calendar</option>
-          <option>Research</option>
-          <option>Somewhere else</option>
+          ${FEEDBACK_AREAS.map((area) => `<option>${escapeHtml(area)}</option>`).join("\n          ")}
         </select>`)}
         <input type="hidden" name="spec" id="fdbk-spec">
         <button type="submit" class="fdbk-submit">Send it</button>

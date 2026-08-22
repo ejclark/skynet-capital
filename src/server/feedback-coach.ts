@@ -19,6 +19,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
+import { AREA_PROMPT_CLAUSE, areaFrom, type FeedbackArea } from "./feedback-areas.js";
 // The cost dials live in their own module because they are gated by envelope.json — see its header
 // for the seam (what costs money vs. what improves quality) and the route-by-who-pays rule.
 import {
@@ -69,6 +70,8 @@ export type CoachResult =
       readonly done: true;
       readonly title: string;
       readonly details: string;
+      /** The form's "where in the app" value, when the coach established one it recognises. */
+      readonly area?: FeedbackArea;
       readonly spec: FeedbackSpec;
     }
   | { readonly ok: false; readonly error: string };
@@ -92,7 +95,7 @@ Rules:
 - When the bar is met — or when told to finish — produce the draft.
 - Reply with STRICT JSON only, no prose around it, in exactly one of these shapes:
   {"question": "<your one question>"}
-  {"draft": {"title": "<imperative summary of the ask, max 80 chars — never "Fix bug" or "Improvement">", "details": "<the capsule, exactly as specified below>", "criteria": ["<observable acceptance criterion, EARS-lite: 'When <trigger>, the app shall <response>' or 'The app shall <requirement>'>"], "assumptions": ["<anything you had to assume because it was never answered — empty when the bar was fully met>"], "outOfScope": ["<anything the member explicitly did NOT ask for that a builder might otherwise add>"], "readiness": "spec-complete" | "partial", "needsEric": "<one sentence naming why this needs the owner, or omit entirely>"}}
+  {"draft": {"title": "<imperative summary of the ask, max 80 chars — never "Fix bug" or "Improvement">", "details": "<the capsule, exactly as specified below>", ${AREA_PROMPT_CLAUSE}"criteria": ["<observable acceptance criterion, EARS-lite: 'When <trigger>, the app shall <response>' or 'The app shall <requirement>'>"], "assumptions": ["<anything you had to assume because it was never answered — empty when the bar was fully met>"], "outOfScope": ["<anything the member explicitly did NOT ask for that a builder might otherwise add>"], "readiness": "spec-complete" | "partial", "needsEric": "<one sentence naming why this needs the owner, or omit entirely>"}}
 
 The draft's "details" is a CAPSULE — it becomes a GitHub issue two audiences read at once: a human deciding in ten seconds whether to care, and a build session that has nothing but this text. Its shape is fixed:
 1. Two to four markdown bullets, each ONE short line (max 120 chars): what they want, why it matters, and — for a bug — what they saw vs. expected.
@@ -166,6 +169,7 @@ export function parseCoachReply(text: string, rounds = 0): CoachResult {
         done: true,
         title: draft.title.slice(0, 120),
         details: draft.details,
+        ...areaFrom(draft),
         spec: toSpec(draft, rounds),
       };
     }

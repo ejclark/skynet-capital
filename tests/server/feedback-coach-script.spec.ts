@@ -58,3 +58,19 @@ describe("feedback coach client script", () => {
     }
   });
 });
+
+describe("feedback coach client script — the area field", () => {
+  it("wires the area select the coach now fills (#455)", () => {
+    const html = renderFeedbackFormBody({
+      nav: { active: "feedback", canAdd: false, authed: true },
+      enabled: true,
+      coachEnabled: true,
+    });
+
+    // The script looks the field up by name, so the form must actually render that name.
+    expect(COACH_SCRIPT).toContain(`form.querySelector('[name="area"]')`);
+    expect(html).toContain('name="area"');
+    // Only assigned when the server sent one — an unrecognised area never reaches here.
+    expect(COACH_SCRIPT).toContain("if (areaEl && res.area) areaEl.value = res.area;");
+  });
+});
