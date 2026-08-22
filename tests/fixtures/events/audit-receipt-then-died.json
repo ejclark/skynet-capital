@@ -1,0 +1,12 @@
+{
+  "eventName": "workflow_dispatch",
+  "actor": "ejclark",
+  "event": { "inputs": { "command": "audit" } },
+  "deps": {
+    "silentFeedback": [
+      { "title": "[enhancement] Move Mission Control", "number": 475, "hoursSinceFiled": 15 }
+    ],
+    "alreadyFlagged": [],
+    "silentAfterHours": 6
+  }
+}

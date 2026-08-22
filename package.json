@@ -46,7 +46,8 @@
     "shoot:feedback": "tsx scripts/shoot-feedback.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
-    "backfill:activity": "tsx src/scripts/backfill-trade-activity.ts"
+    "backfill:activity": "tsx src/scripts/backfill-trade-activity.ts",
+    "feedback:scan": "node scripts/feedback-scan.mjs"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",

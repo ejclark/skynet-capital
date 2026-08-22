@@ -85,6 +85,19 @@ one queue — and the third got buried under the first two.
 | Needs the member to clarify | `needs-info` | **the member** |
 | A decision only Eric can make | `needs-eric` | **Eric — and only this one** |
 
+### Is it working? — `npm run feedback:scan`
+
+The lane's record is measured, not recalled: `scripts/feedback-scan.mjs` joins every `feedback`
+issue to its PR, its labels and its comment timeline, and prints how many members got an answer and
+how fast. **The metric is "a member got a real answer, fast"** (Eric, 2026-08-22) — a merged PR
+counts, a shipped slice counts, and so does an honest question back; the lane's own "a build session
+has started" receipt does *not*, because it is a promise rather than an answer.
+
+First measurement, the day the instrument was built: **0 of 7** issues had gone filed → built →
+merged → closed untouched, and **3 of 7 produced no output at all**. Silence — not over-escalation —
+was the lane's largest failure mode. It also reads `rounds` out of each curated issue's spec block,
+so the coach's question ceiling can be set from the observed distribution.
+
 ### The coach is what makes the wide envelope safe
 
 Members who go through the guided path at `/feedback` are interrogated against a per-kind
