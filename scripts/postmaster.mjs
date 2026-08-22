@@ -303,16 +303,30 @@ export function claimFailureReason(err) {
   return `could not create the lease — ${detail || "no error text"}`;
 }
 
-/** @returns {{ claimed: boolean, reason: string }} */
+/**
+ * THE LEASE LIVES UNDER `refs/tags/`, NOT `refs/heads/`.
+ *
+ * A branch ref must point at a COMMIT. The 2026-08-22 timestamped-lease change pointed it at an
+ * annotated tag object instead — the right idea, since only a tag carries its own date — and
+ * GitHub answered every create with `Reference update failed (HTTP 422)`. The feedback lane could
+ * not claim anything from that merge onward: four retriggers of #475, no lease ever written.
+ * A tag ref accepts a tag object, so the timestamp survives and the create is legal.
+ *
+ * Leases written under `heads/` before the move are still read and still expire, so nothing that
+ * was holding an issue silently loses its lock.
+ *
+ * @returns {{ claimed: boolean, reason: string }}
+ */
 export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
   const ref = `claim/${slug}`;
-  const existing = (() => {
+  const readRef = (ns) => {
     try {
-      return JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/heads/${ref}`]));
+      return { ns, ...JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/${ns}/${ref}`])) };
     } catch {
-      return null; // 404 — unclaimed, the common case
+      return null; // 404 — unclaimed in this namespace
     }
-  })();
+  };
+  const existing = readRef("tags") ?? readRef("heads");
 
   if (existing) {
     const age = nowMs - Date.parse(claimAgeOf(existing.object.sha));
@@ -321,7 +335,7 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
     }
     // Stale: the holder died. Reclaim rather than wedge the work forever.
     try {
-      sh("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/heads/${ref}`]);
+      sh("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/${existing.ns}/${ref}`]);
     } catch {
       /* someone else just cleaned it up — the create below will arbitrate */
     }
@@ -343,7 +357,7 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
       "POST",
       "repos/{owner}/{repo}/git/refs",
       "-f",
-      `ref=refs/heads/${ref}`,
+      `ref=refs/tags/${ref}`,
       "-f",
       `sha=${target}`,
     ]);
@@ -443,12 +457,18 @@ export function modelTier(body = "") {
 
 /** Release a lease once its work is no longer being built. */
 export function releaseClaim(slug) {
-  try {
-    sh("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/heads/claim/${slug}`]);
-    return true;
-  } catch {
-    return false;
+  // Both namespaces: `tags/` is where leases live now, `heads/` is where the pre-2026-08-22 ones
+  // still sit. Releasing one that was never taken is a 404 and a no-op, which is the desired shape.
+  let released = false;
+  for (const ns of ["tags", "heads"]) {
+    try {
+      sh("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/${ns}/claim/${slug}`]);
+      released = true;
+    } catch {
+      /* not held in this namespace */
+    }
   }
+  return released;
 }
 
 // ── the impure half ───────────────────────────────────────────────────────────
