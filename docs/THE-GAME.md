@@ -119,9 +119,12 @@ earned development accrues.
 | **Friday** | **The Recap.** Auto-generated per member: what your bot did and why, what it cost or earned, one lesson, renown awarded **with the reason named**. | Closes every loop. Wins get the fanfare; losses get an honest post-mortem and no punishing spectacle. |
 | **Quarter** | **The Season.** Renown standings reset; **the city persists**. | New race every quarter so nobody runs away with it in week two — but you keep your empire, which is the emotional contract that makes building worth it. |
 
-Season awards are the trophies already banked in [`BACKLOG.md`](BACKLOG.md) — first to double,
-biggest single-day gain, longest green streak — plus the process-side ones this design adds: best
-risk-adjusted quarter, most disciplined exit record, best called-it rate, most improved.
+Season awards build on the capital trophies. **First to double** is built today
+(`firstAccountToDouble`, [`history-metrics.ts`](../src/observatory/history-metrics.ts)); **biggest
+single-day gain** and **longest green streak** are named here but not yet implemented — they are
+issue [#503](https://github.com/ejclark/skynet-capital/issues/503). On top of those sit the
+process-side awards this design adds: best risk-adjusted quarter, most disciplined exit record,
+best called-it rate, most improved.
 
 ## Fairness without dishonesty
 
