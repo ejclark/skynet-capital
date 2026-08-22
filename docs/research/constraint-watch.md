@@ -107,6 +107,26 @@ complementary to the phase clock, which reads supply-side physics:
   `../IDEAS.md`; do not trade it before an instrument exists. (The reaction-day fade the sweep
   validated on MSFT/GOOG is this signal's best-evidenced special case.)
 
+## Method additions (2026-08-22, from the [full-stack hardware sweep](ai-hardware-constraints-aug-2026.md))
+
+- **Constraint contagion is subtractive, not just sequential.** Amkor's −22.9% guide-down
+  (2026-07-28) was partly caused by the *memory* shortage suppressing smartphone units — one
+  layer's scarcity destroying another layer's volume, simultaneously. When dating a layer, ask
+  which *other* layer's scarcity is eating its demand.
+- **When the crowding census finds nothing under 4%, the wrapper is the constraint.** The
+  2026-08-18 census across ~30 US-listed hardware names found zero uncrowded expressions; the
+  genuinely early pure plays were all in Taipei/Tokyo/Seoul. At that point the actionable
+  question stops being "which layer" and becomes "can the book hold the listing" — a governance
+  fork, not a research one.
+- **Tripwire #2 must count off-balance-sheet commitments.** The 9%→32% debt-financed-capex
+  series missed the bigger half: ~$3.0T of purchase obligations + uncommenced leases across nine
+  companies (WSJ filing analysis, ~2026-08-17) — 4× the prior year's disclosure — and that
+  number, not the debt series, is what broke the 2026-08-18 tape.
+- **Vendor-financing de-escalation is asymmetric on the tape.** NVDA's Ohio backstop cut
+  ($250B → $105B, 08-14/17) gave back none of the ~4–5% the escalation had cost — the clock
+  advances on escalation and does not rewind on retreat. Track direction-of-change; expect no
+  symmetric relief rally.
+
 ## Master tripwires
 
 1. **The demand anchor's own capex guidance** (for AI: hyperscaler quarterly calls) — the first
