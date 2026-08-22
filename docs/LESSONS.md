@@ -27,6 +27,31 @@ it. Prevention ranks, best first:
 
 ---
 
+### A feedback build died in bash before Claude was ever invoked, and nothing was watching
+
+- **SHA:** 2d5921f   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** Eric, reading the Actions tab by hand — "a feedback submission job failed … blocking
+  automatic pr generation." Zero automated signal: run 32545818804 failed at 02:17, the issue kept
+  its `feedback` label and its claim lease, and the only eye on red runs (`incident-scan`) reports
+  at the *next* test run and asks for a lesson, never a repair. Detection was a human, hours later.
+- **ROOT CAUSE:** the model-tier heuristic in `postmaster.yml` built its reason string as
+  `"…$(printf '%s' "$BODY" | grep -q '```' && echo ", includes a code block")"`. Under
+  `set -euo pipefail` a command substitution whose `&&` short-circuits exits 1, and an assignment
+  taking that status aborts the step. So every feedback issue **over 600 chars with no code fence**
+  killed its own build — the branch was unreachable in testing because the only bodies exercised
+  were short ones or fenced ones. Introduced by 4f60f18; first live body to hit it was #475 (1,410
+  chars, no fence). Worse than a loud failure: the claim lease was already taken, so the issue read
+  as claimed-and-building while nothing built it.
+- **PREVENTION:** gate + script + doctrine. (1) The decision moved out of the workflow into
+  `modelTier()` in `scripts/postmaster.mjs` — pure, and specced across all three branches including
+  the exact 1,410-char body (`tests/scripts/model-tier.spec.ts`). (2) The claim step is now one
+  specced call (`--claim-feedback`), deleting the last inline `node -e` + `jq` bash in that lane.
+  (3) The **CI Medic** lane (`.github/workflows/ci-medic.yml`, `scripts/ci-medic.mjs`) turns a red
+  run on `main` into a capsule issue plus a dispatched repair session, so the *next* silent failure
+  is noticed by the system rather than by Eric.
+- **SIDE QUESTS:** the claim lease has no release-on-failure path — a job that dies after claiming
+  leaves the lease to expire on its 2h TTL (→ docs/IDEAS.md).
+
 ### Plans kept landing as committed files after Eric had moved them to GitHub issues
 - **SHA:** n/a   **DATE:** 2026-08-21   **STATUS:** closed
 - **SIGNAL:** Eric, on "draft the plans": "plans belong in github issues, not in source code. This is

@@ -18,6 +18,15 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### A claim lease has no release-on-failure path
+
+A build lane takes `claim/feedback-<n>` and then dies (the 2026-08-22 bash failure did exactly
+this). The lease is correct — it stops double-builds — but nothing releases it when the job that
+holds it fails, so the issue reads as claimed-and-building for the full 2h TTL and re-labelling does
+nothing until it expires. Options: an `if: failure()` step that calls `releaseClaim`, or the CI
+Medic releasing the lease named in the failed run. Cheap either way; the TTL already bounds the
+damage. _(src: Claude · while: fixing the feedback-lane tier failure and building the medic)_
+
 ### Intent-vs-outcome scoring → per-strategy confidence ratings
 Hardcore research mode now records a forward `expectation` on every intent (alongside `strategy`),
 and the durable activity ledger records what actually happened. Join them: score each closed trade's
