@@ -23,7 +23,9 @@ set -euo pipefail
 #       Eric web-merges. This subcommand is rarely used here.
 #
 # Carve-outs — NEVER auto-land (open a PR and hand to Eric): workflow files
-# (.github/workflows/**), and the credentials/spend/outward-facing irreversible class.
+# (.github/workflows/**), and the credentials/spend/outward-facing-AND-HARD-TO-REVERSE class.
+# The authoritative list is envelope.json; `node scripts/envelope-scan.mjs --check <paths>` answers
+# it mechanically rather than from a prose copy, several of which had drifted.
 
 TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
 [ -n "$TOKEN" ] || { echo "ship: no GH_TOKEN/GITHUB_TOKEN in env" >&2; exit 1; }

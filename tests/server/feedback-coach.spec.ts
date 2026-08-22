@@ -3,6 +3,7 @@ import {
   createFeedbackCoach,
   parseCoachReply,
   resolveFeedbackCoach,
+  toCapsule,
 } from "../../src/server/feedback-coach.js";
 
 const anthropicReply = (text: string): JsonResponse => ({
@@ -44,31 +45,112 @@ describe("feedback coach", () => {
     expect(result).toMatchObject({ ok: true, done: true, title: "fix the wobble" });
   });
 
+  // The capsule is what earns the wide build envelope: a curated ask is treated as the SPEC and
+  // built unattended. So "spec-complete" has to be earned, never merely asserted by the model —
+  // a capsule that falsely claims completeness is the one failure that reaches production.
+  it("parses the story capsule and marks it spec-complete only when criteria back the claim", () => {
+    const complete = parseCoachReply(
+      JSON.stringify({
+        draft: {
+          title: "widen the form",
+          details: "## What",
+          criteria: ["When a member opens /feedback, the form shall span 900px."],
+          assumptions: [],
+          outOfScope: ["Changing the Send button copy"],
+          readiness: "spec-complete",
+        },
+      }),
+    );
+
+    expect(complete).toMatchObject({
+      done: true,
+      capsule: {
+        readiness: "spec-complete",
+        criteria: ["When a member opens /feedback, the form shall span 900px."],
+      },
+    });
+  });
+
+  it("downgrades a spec-complete claim with no acceptance criteria to partial", () => {
+    const result = parseCoachReply(
+      '{"draft": {"title": "t", "details": "d", "readiness": "spec-complete"}}',
+    );
+
+    expect(result).toMatchObject({ done: true, capsule: { readiness: "partial", criteria: [] } });
+  });
+
+  // The issue body is public markdown; a backtick in a capsule field would break the fenced block
+  // the build lane parses, and an unbounded list would let one submission flood the issue.
+  it("bounds and de-fences capsule fields — the issue body is public markdown", () => {
+    const capsule = toCapsule({
+      criteria: Array.from({ length: 40 }, (_, i) => `c${i}`),
+      assumptions: ["```javascript evil"],
+      readiness: "spec-complete",
+      needsEric: "raises the `spend` cap",
+    });
+
+    expect(capsule.criteria).toHaveLength(12);
+    expect(capsule.assumptions[0]).not.toContain("`");
+    expect(capsule.needsEric).toBe("raises the 'spend' cap");
+  });
+
+  it("degrades a malformed capsule to the conservative reading rather than throwing", () => {
+    expect(toCapsule(undefined)).toEqual({
+      criteria: [],
+      assumptions: [],
+      outOfScope: [],
+      readiness: "partial",
+    });
+    expect(toCapsule({ criteria: "not an array", readiness: "spec-complete" })).toMatchObject({
+      readiness: "partial",
+    });
+  });
+
   it("degrades an unparseable reply to a question — the member just sees text, nothing breaks", () => {
     const result = parseCoachReply("Could you say more about which chart?");
 
     expect(result).toMatchObject({ ok: true, done: false });
   });
 
-  it("tells the model to finish once the member has answered three rounds", async () => {
+  // Six rounds, not three (2026-08-22). Three was too few to clear the completeness bar, and the
+  // old nudge force-drafted regardless — manufacturing confident-looking capsules out of
+  // unresolved asks, which downstream had only one exit: escalating to Eric.
+  it("keeps asking through six member rounds before nudging toward a draft", async () => {
+    const bodies: unknown[] = [];
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
+      bodies.push(body);
+      return Promise.resolve(anthropicReply('{"question": "which page?"}'));
+    });
+    const rounds = (n: number) =>
+      Array.from({ length: n }, (_, i) => [
+        { role: "assistant" as const, content: `q${i}` },
+        { role: "user" as const, content: `a${i}` },
+      ]).flat();
+
+    await coach({ kind: "idea", messages: [{ role: "user", content: "raw" }, ...rounds(3)] });
+
+    expect(JSON.stringify(bodies[0])).not.toContain("asked enough questions");
+  });
+
+  // The cut-off demands HONESTY about the gaps rather than a confident guess — a truthful
+  // "partial" routes the follow-up back to the member, never to Eric.
+  it("at the cut-off asks for partial readiness rather than a guessed-full draft", async () => {
     const bodies: unknown[] = [];
     const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
       bodies.push(body);
       return Promise.resolve(anthropicReply('{"draft": {"title": "t", "details": "d"}}'));
     });
+    const messages = Array.from({ length: 6 }, (_, i) => [
+      { role: "user" as const, content: `a${i}` },
+      { role: "assistant" as const, content: `q${i}` },
+    ]).flat();
 
-    await coach({
-      kind: "idea",
-      messages: [
-        { role: "user", content: "raw" },
-        { role: "assistant", content: "q1" },
-        { role: "user", content: "a1" },
-        { role: "assistant", content: "q2" },
-        { role: "user", content: "a2" },
-      ],
-    });
+    await coach({ kind: "idea", messages });
 
-    expect(JSON.stringify(bodies[0])).toContain("produce the draft NOW");
+    const sent = JSON.stringify(bodies[0]);
+    expect(sent).toContain("asked enough questions");
+    expect(sent).toContain("partial");
+    expect(sent).toContain("Do not guess it full");
   });
 
   it("bounds the conversation — size and length are server-enforced, not model-trusted", async () => {

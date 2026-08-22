@@ -10,6 +10,10 @@
  * title/details fields and the intro gives way to the real form, ready to review → the member
  * uses the ordinary Send button. "Skip →", or any coach failure, reveals the plain form directly
  * instead. The coach never submits.
+ *
+ * The draft now carries a story capsule (criteria / assumptions / out-of-scope / readiness) into a
+ * hidden field. That capsule is what earns the wide build envelope downstream: a curated ask is
+ * treated as a spec and built unattended, where a bare paste still gets the cautious path.
  */
 export const COACH_SCRIPT = `
 (function () {
@@ -26,6 +30,7 @@ export const COACH_SCRIPT = `
   var titleEl = form.querySelector('[name="title"]');
   var detailsEl = form.querySelector('[name="details"]');
   var kindEl = form.querySelector('[name="kind"]');
+  var capsuleEl = form.querySelector('[name="capsule"]');
   var msgs = [];
 
   function line(who, text) {
@@ -98,7 +103,16 @@ export const COACH_SCRIPT = `
         if (res.done) {
           if (titleEl) titleEl.value = res.title;
           if (detailsEl) detailsEl.value = res.details;
-          line('ai', 'Drafted! Review it below, tweak anything, then hit Send.');
+          // The capsule rides a hidden field so the filed issue records HOW it was written. The
+          // server re-validates it — this value is member-editable like any form field.
+          if (capsuleEl && res.capsule) capsuleEl.value = JSON.stringify(res.capsule);
+          var gaps = res.capsule && res.capsule.readiness === 'partial';
+          line('ai', gaps
+            ? 'Drafted — I noted the bits we did not pin down as assumptions. Review it below, fill in anything you know, then hit Send.'
+            : 'Drafted! Review it below, tweak anything, then hit Send.');
+          if (res.capsule && res.capsule.needsEric) {
+            line('ai', 'Heads up: this one needs Eric to sign off (' + res.capsule.needsEric + '). It still gets filed and flagged for him — nothing is lost.');
+          }
           revealForm();
         } else {
           askAnswer(res.question);

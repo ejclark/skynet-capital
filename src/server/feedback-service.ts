@@ -8,61 +8,24 @@
  * Mirrors the `ParticipantService` shape: never throws for expected failures — returns a
  * discriminated `FeedbackResult`.
  */
-import { createHash } from "node:crypto";
-
 import { fetchJson } from "../http/fetch-json.js";
+import {
+  type FeedbackInput,
+  type FeedbackKind,
+  issueBody,
+  labelsFor,
+  titleFor,
+} from "./feedback-issue.js";
 
-export type FeedbackKind = "bug" | "feature" | "idea";
-
-export interface FeedbackInput {
-  readonly kind: FeedbackKind;
-  readonly title: string;
-  readonly details: string;
-  readonly area?: string;
-  readonly submitterEmail?: string;
-}
+// Re-exported so every existing consumer keeps one import site. The shapes live with the module
+// that decides what an issue SAYS, which is also what breaks the import cycle between the two.
+export type { FeedbackInput, FeedbackKind };
 
 export type FeedbackResult =
   | { readonly ok: true; readonly url: string; readonly number: number }
   | { readonly ok: false; readonly error: string };
 
 export type SubmitFeedback = (input: FeedbackInput) => Promise<FeedbackResult>;
-
-// Labels match the .github/ISSUE_TEMPLATE forms so app + GitHub submissions triage the same way.
-const LABELS: Record<FeedbackKind, readonly string[]> = {
-  bug: ["bug", "feedback"],
-  feature: ["enhancement", "feedback"],
-  idea: ["idea", "feedback"],
-};
-const TITLE_TAG: Record<FeedbackKind, string> = {
-  bug: "[bug]",
-  feature: "[enhancement]",
-  idea: "[idea]",
-};
-
-/**
- * Opaque, stable member marker for public issues. The repo is public, so the issue body must never
- * carry a name or email (Eric's attribution ruling, 2026-08-19: opaque id only — who-filed-what is
- * visible only inside the app). Truncated salted sha256: stable per member so their items
- * correlate, pseudonymous to readers. Not cryptographically unlinkable for a tiny guest list —
- * treated as pseudonymity, not secrecy.
- */
-export function opaqueMemberId(email: string): string {
-  return createHash("sha256")
-    .update(`skynet-feedback:${email.trim().toLowerCase()}`)
-    .digest("hex")
-    .slice(0, 10);
-}
-
-export function issueBody(input: FeedbackInput): string {
-  const lines: string[] = [input.details.trim() || "_(no details provided)_", ""];
-  if (input.area) lines.push(`**Area:** ${input.area}`);
-  const who = input.submitterEmail?.trim()
-    ? `member \`${opaqueMemberId(input.submitterEmail)}\``
-    : "a league member";
-  lines.push("", "---", `_Submitted from the app by ${who}._`);
-  return lines.join("\n");
-}
 
 interface FeedbackConfig {
   /** GitHub token with Issues: read & write on the repo. Never logged or echoed. */
@@ -86,9 +49,9 @@ function createFeedbackIssue(config: FeedbackConfig): SubmitFeedback {
           Accept: "application/vnd.github+json",
         },
         {
-          title: `${TITLE_TAG[input.kind]} ${title}`,
+          title: titleFor({ ...input, title }),
           body: issueBody(input),
-          labels: LABELS[input.kind],
+          labels: labelsFor(input),
         },
       );
       if (res.status === 201 && res.body && typeof res.body === "object") {

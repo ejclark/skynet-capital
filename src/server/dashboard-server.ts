@@ -34,6 +34,7 @@ import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
 import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
+import { capsuleFromForm } from "./feedback-issue.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
@@ -761,6 +762,7 @@ async function handleFeedback(
     details: form.get("details") ?? "",
     ...(form.get("area") ? { area: form.get("area") as string } : {}),
     ...(session?.email ? { submitterEmail: session.email } : {}),
+    ...(capsuleFromForm(form.get("capsule")) ?? {}),
   });
   res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
   res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));

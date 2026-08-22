@@ -82,6 +82,13 @@ role of responsible owner/steward — shipping lovable work while protecting the
 - **Governance & credentials are Eric's.** Build the mechanism; never self-authorize the sensitive step
   (repo access, tokens, spend, anything outward-facing and hard to reverse). Hand him the one credentialed
   step with clear instructions.
+- **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
+  --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
+  CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
+  `and hard to reverse`, which is how "outward-facing" came to fire on copy changes. Cite the file;
+  don't re-copy the list. **Read the words narrowly:** *outward-facing* = reachable by a non-member
+  or changing an external contract; *spend* = provisioning a credential or raising a cap, never
+  picking a model tier on a lane already paid for.
 - **Safety scales to stakes.** Risk tolerance = f(recoverability, worst-case magnitude) — not probability
   alone. Quick/easy/safe recovery → lean autonomous. Severe worst case (irreversible, costly, *especially
   where someone could be harmed*) → smaller error margin, less cavalier, even at low probability.
@@ -100,16 +107,26 @@ postmaster lane builds it in its own fresh session, so rapid-fire ideas never co
 buildable asks that should start now but don't belong in *this* session — see
 [`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) ·
 **profile note** (update this file) · **question** (answer, don't build). Optional overrides:
-`NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask.
+`NOW:` · `PARK:` · `FAN:` · `ME:` · `Q:`. Doubt between act/park/fan → park and ask. *(That
+doubt-rule is about **routing a raw thought in a live session**, where Eric is right there. It is
+not a general escalation default: once an ask is a filed, labelled issue, doubt routes to the
+member or to the narrowest honest build — never back to Eric. See
+[`.github/prompts/feedback-build.md`](.github/prompts/feedback-build.md).)*
 
 **Plans — PM-mode's unit of alignment — live in GitHub issues, never in the repo** (Eric, 2026-08-21:
 _"plans belong in github issues, not in source code"_ — a correction he has had to repeat; #433 moved
 the committed ones). A plan is an issue in the house format (intent & end-state · EARS criteria ·
 constraints · settled forks · open questions · Eric's steps · slicing sketch — see #429, #466), labelled
-`enhancement` + `needs-eric`; Eric's label/comment on the issue is the `ready` flip, and Claude executes
+`enhancement` + `plan`; Eric's label/comment on the issue is the `ready` flip, and Claude executes
 it unattended, banking mid-flight questions as comments instead of guessing. The richer the issue, the
 fewer interventions — that ratio is the experiment's measure. [`docs/plans/`](docs/plans/README.md) holds
 only the legacy in-flight plans; **do not add files there.**
+
+_`plan`, not `needs-eric` (2026-08-22)._ The two meanings shared one label — "awaiting a ready-flip"
+and "blocked on a decision only Eric can make" — so his queue read as far more blocked than it was
+(two of the five open `needs-eric` issues were simply plans). **`needs-eric` now means exactly one
+thing: a decision only he can make.** Everything else that isn't shippable yet has its own marker
+that waits on somebody else — `needs-info` (the member), `next-slice` (nobody), `plan` (a ready-flip).
 
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
 log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the

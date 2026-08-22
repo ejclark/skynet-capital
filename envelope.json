@@ -1,0 +1,58 @@
+{
+  "$comment": "The autonomous-lane build envelope — the SINGLE source of truth for what an unattended Claude session may not change. Prose copies (CLAUDE.md, governor/SKILL.md, ship/SKILL.md, orient.md) cite this file rather than restating the list; restating it is how the wording drifted before (several copies dropped 'and hard to reverse' from CLAUDE.md's original). Enforced by scripts/envelope-scan.mjs via tests/arch/envelope.spec.ts.",
+  "lanes": ["feedback/", "research/"],
+  "allowNewRuntimeDeps": false,
+  "protected": [
+    {
+      "pattern": ".github/workflows/**",
+      "why": "workflow files — high blast radius, and a lane that can edit its own trigger has no envelope at all"
+    },
+    {
+      "pattern": ".github/prompts/**",
+      "why": "the lanes' own instructions — self-modification is the one thing an envelope must never permit"
+    },
+    { "pattern": ".github/dependabot.yml", "why": "dependency automation config" },
+    { "pattern": ".claude/settings.json", "why": "harness permissions and hooks" },
+    { "pattern": "envelope.json", "why": "this file — a lane may not widen its own envelope" },
+
+    { "pattern": "src/server/auth/**", "why": "auth — sessions, providers, the allowlist" },
+    { "pattern": "src/server/desk-gate.ts", "why": "the trading-desk authorization gate" },
+    {
+      "pattern": "src/server/invite-form.ts",
+      "why": "the invite gate — who gets into the shared universe"
+    },
+
+    { "pattern": "src/alpaca/credentials.ts", "why": "brokerage credentials" },
+    {
+      "pattern": "src/alpaca/alpaca-trading-client.ts",
+      "why": "the brokerage client that can place orders"
+    },
+    {
+      "pattern": "src/alpaca/alpaca-options-client.ts",
+      "why": "the brokerage client that can place option orders"
+    },
+
+    { "pattern": "src/server/trade-service.ts", "why": "money-moving logic — order submission" },
+    {
+      "pattern": "src/server/option-trade-service.ts",
+      "why": "money-moving logic — option order submission"
+    },
+    {
+      "pattern": "src/trading/order-ticket.ts",
+      "why": "money-moving logic — order construction and sizing"
+    },
+    {
+      "pattern": "src/trading/option-ticket.ts",
+      "why": "money-moving logic — option order construction and sizing"
+    },
+
+    { "pattern": "src/engine/guards.ts", "why": "risk guards" },
+    { "pattern": "src/bots/account-guard.ts", "why": "per-account risk guard" },
+    { "pattern": "src/playbooks/**", "why": "playbook definitions — the strategies bots trade" },
+
+    { "pattern": "fly.toml", "why": "hosting config — spend and deploy topology" },
+    { "pattern": "Dockerfile", "why": "the deployed image" },
+    { "pattern": "**/.env*", "why": "environment/credential files" }
+  ],
+  "$openOnPurpose": "Deliberately NOT protected (Eric, 2026-08-22 — 'gate money-moving logic only'): src/observatory/**, src/ui/**, src/three/**, and everything that merely RENDERS trades, P/L, leaderboards or bot cards. Presentation of trading data is ordinary buildable work. The honesty invariants (real tickers, truthful SIM/LIVE labels, paper-only) are a judgment stop stated in .github/prompts/feedback-build.md, not a path — no file list can enforce 'this flourish implies something false'."
+}

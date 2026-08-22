@@ -127,6 +127,22 @@ describe("postmaster routing", () => {
     expect(intents[0]?.issueNumber).toBe(413);
   });
 
+  // SILENCE IS THE WORSE FAILURE. #455 sat 41 hours with no receipt, no triage, and no label — the
+  // member saw nothing at all. An over-escalation at least tells someone something; a dropped issue
+  // teaches a member that filing feedback does nothing.
+  it("the audit flags a feedback issue the lane never spoke on, never a fresh one", () => {
+    const intents = dryRun("audit-silent-feedback.json") as (Intent & {
+      hoursSinceFiled?: number;
+    })[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("flag-silent-feedback");
+    expect(intents[0]?.issueNumber).toBe(455);
+    expect(intents[0]?.body).toContain("needs-info");
+    // filed an hour ago — the build session may still be running
+    expect(intents.some((i) => i.issueNumber === 456)).toBe(false);
+  });
+
   it("issue bodies carry the Claude attribution footer", () => {
     const intents = dryRun("push-one-due.json") as Intent[];
 

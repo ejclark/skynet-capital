@@ -79,7 +79,12 @@ PR for Eric's eyes, either don't enable auto-merge or add a `no-automerge` label
 | Config/tooling (lint rules, budgets, scanners) | ✅ only if the same PR lands with zero open violations | Config changes the *system's* behavior |
 | Visual/taste work Eric wants to eyeball first | ⏸ hold on request only | Reaffirmed (Eric, 2026-08-20, PR #459): taste review is live post-merge by default; a pre-merge hold happens only when Eric names the PR or Claude flags a specific taste fork |
 | Workflow files (`.github/workflows/**`) | ❌ never | High blast radius; Eric rations runner minutes — his one-click by design |
-| Auth/tokens/spend, credentials, anything outward-facing & hard to reverse | ❌ never | The irreversible class stays Eric's (CLAUDE.md hard boundaries) |
+| Auth/tokens/spend, credentials, anything outward-facing **and hard to reverse** | ❌ never | The irreversible class stays Eric's (CLAUDE.md hard boundaries). The list is `envelope.json` — check with `envelope-scan --check`, don't reason from memory |
+
+**"Outward-facing" means reachable by a non-member, or changing a contract with an external service
+— not "a user can see it".** This is a web app: every UI string is literally outward-facing, and the
+copies of this rule that dropped `and hard to reverse` are where the over-triggering came from. A
+copy tweak is not the irreversible class.
 
 Auto-merge adds tempo, not trust: every auto-merged PR still passes typecheck · lint · full tests ·
 all ratchet gates · commitlint, and post-merge the pipeline smoke-tests prod and rolls back on failure.
@@ -91,4 +96,9 @@ Native auto-merge (not an in-CI REST merge) is deliberate: a GITHUB_TOKEN merge 
 - **No new athletes from here.** The governor dispatches the existing roster; recruiting a new agent
   follows the rule of three (docs/COACHES.md) and is a head-coach decision.
 - **Never bypass a gate, never `--no-verify`, never edit a budget upward on an athlete's behalf.**
-- **If in doubt about a PR's class, it does not auto-merge.** Default to human review.
+- **In doubt about a PR's class → check, don't hold.** `node scripts/envelope-scan.mjs --check
+  <paths>` answers it mechanically; if nothing comes back protected, arm auto-merge and revert if it
+  turns out wrong. This line used to say the opposite ("default to human review"), which quietly
+  re-instated the universal pre-merge gate `CLAUDE.md` calls a throughput bug — *"every trivial PR
+  silently becomes a request for Eric's attention — the exact ToC violation this whole model exists
+  to avoid."* Doubt is cheap to resolve and reverts are cheap to make; his attention is neither.
