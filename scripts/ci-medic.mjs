@@ -165,8 +165,10 @@ function gatherFailures(runId) {
     let logTail = "";
     try {
       logTail = sh("gh", ["api", `repos/{owner}/{repo}/actions/jobs/${j.id}/logs`]);
-    } catch {
-      logTail = "(log unavailable — the run may have expired)";
+    } catch (err) {
+      // Say why, don't guess: "may have expired" was itself a guess, and the one time it was
+      // checked (#482) the logs were still there — the `gh api` call just failed some other way.
+      logTail = `(log fetch failed: ${String(err.stderr || err.message).trim()})`;
     }
     return {
       job: j.name,
