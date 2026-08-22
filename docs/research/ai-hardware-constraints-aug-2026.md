@@ -21,40 +21,46 @@ not run at all (see *Instrument debt*). Grades: `[P]` = attributed to a primary 
 flowchart LR
   subgraph EARLY["Phase 1-2 — earliest"]
     CU["HVLP4 copper foil"]
-    ABF["ABF build-up film"]
     TEST["chip test + probe cards"]
     SUP["scale-up links"]
+    EUV["EUV litho — priced"]
   end
-  subgraph MID["Phase 3 — rent collecting"]
+  subgraph MID["Phase 2-3 — rent collecting"]
+    ABF["ABF build-up film"]
     INP["InP substrates + lasers"]
-    FAB["foundry + EUV litho"]
+    FAB["foundry wafers"]
     MLCC["high-cap MLCC"]
   end
-  subgraph LATE["Late phase 3 — tells armed"]
+  subgraph LATE["Phase 3-4 — tells printed"]
     MEM["memory DRAM/HBM — MU"]
     OPT["optics module tier"]
     HDD["nearline HDD"]
-  end
-  subgraph DONE["Phase 4 — fired"]
-    COOL["liquid cooling"]
     COWOS["CoWoS packaging"]
+  end
+  subgraph DONE["Phase 4 — market has paid"]
+    COOL["liquid cooling"]
   end
   EARLY --> MID --> LATE --> DONE
 ```
 
 _Caption —_ every physical layer of the AI buildout placed on the constraint clock as of
-2026-08-22. The trade pays the left half; the market has already paid the right half.
+2026-08-22, from the five research lanes below. The trade pays the left half — **but only if the
+wrapper fork opens, and only on shock-day entries**: of the three left-half layers, chip test is
+already crowded and the foil/film pure plays are not US-listed.
 
 ## The headline
 
 **The physical shortage is real everywhere; the equity opportunity is not.** Demand exceeds
 supply on Eric's 1–3-year horizon in nearly every layer measured — and the market has already
-paid for most of it. Memory sits in **late Phase 3 with two of three exhaustion tells armed**;
-MU's remaining upside is a multiple re-rating argument, not an earnings argument. The layers
-where the clock still reads early (HVLP4 copper foil, ABF film) have **no US-listed pure play**
-— the binding constraint on the shortlist is the wrapper, which is Eric's fork. The crowding
-census found **zero uncrowded US-listed expressions** across the entire hardware complex — a
-first since the method existed.
+paid for most of it. **Memory has two of three exhaustion tells firing, which by the method's
+letter is Phase 4**, held open only by a real counter-set (spot at records, 2027 fully booked,
+inventories at multi-cycle lows); MU's documented bull case is a *multiple re-rating* argument,
+though the FY27 earnings base under it is genuinely unresolved ($96–$161). The layers still
+early on the clock — HVLP4 copper foil (Phase 1), ABF film (Phase 2–3, with no capacity relief
+before 2030–32) — have **no US-listed pure play**, so the binding constraint on the shortlist is
+the wrapper, which is Eric's fork. And **no measured US-listed name printed clearly under 4% on
+the 08-18 shock** (26 of ~30+ cells; holes listed in §5) — the first sweep where the method's
+uncrowded-entry test found nothing clean.
 
 ## 1 · The signal, corrected
 
@@ -69,8 +75,9 @@ same day `[S on P]`):
   have processed this news** — it published on a Saturday. First tradeable session: Mon 08-24.
   NVDA prints **Wed 08-26 after close**.
 - **Mechanism: pass-through, not NVIDIA pricing power.** The hike is indexed to memory
-  configuration; memory moved from ~5–10% to **25–30% of rack BOM** (~29% per TrendForce
-  `[P]`, corroborating `[thin]` aggregator claims of a +435% memory cost); NVIDIA **halved Vera
+  configuration; memory is now **~29% of Vera Rubin system BOM** (TrendForce `[P]` — the only
+  independently corroborated figure), with `[thin]` aggregators putting the full shift at
+  ~5–10% → 25–30% of rack BOM on a +435% memory cost; NVIDIA **halved Vera
   Rubin's SOCAMM memory capacity** to contain cost — de-contenting your own flagship is a
   margin-defense action. The pricing power on display belongs to **the memory makers**, which is
   Bloomberg's own stated thesis. NVDA holds ~75% GM% guidance while passing the cost on, so its
@@ -86,22 +93,39 @@ The NVDA print's **Q3 FY27 gross-margin guide is now the highest-leverage number
 
 ## 2 · Memory / MU — Eric's core question answered
 
-**Verdict: late Phase 3, two of three Phase-4 tells armed, "priced-and-disputed" — not unpriced.
-MU is not fully priced on the multiple and is approximately fully priced on the earnings path
-the market believes.**
+**Verdict: Phase 4 has begun by the letter of the method — and it is contested.** The method says
+[any ONE exhaustion tell suffices](constraint-watch.md); memory has **two firing**, and the tape
+already paid out a full Phase-4 repricing (−39% peak-to-trough) and half-retraced it. An earlier
+draft of this doc dated memory "late Phase 3" while dating liquid cooling Phase 4 on the same tell
+count — that was inconsistent, and the correction runs against the bullish read, so it stands.
+What keeps this from being a clean Phase-4 kill is a genuinely unusual counter-set (prices still
+rising every quarter, spot at records, inventories 3–5 weeks vs >15 before every prior downturn,
+2027 output fully booked at all three vendors, and the demand anchor's capex still revised up) —
+which is the definition of **priced-and-disputed**, not unpriced. **On Eric's question: MU is not
+fully priced on the multiple, and is approximately fully priced on the earnings path the market
+believes — though that path is itself unmeasured (see the EPS dispersion below).** The method's
+own instruction for this square is a variant view with a dated catalyst, sized smaller — never a
+"the cycle is broken" hold.
 
 - **Tell #1 (second derivative down) — FIRED, with a counter-signal.** Conventional DRAM
   contract QoQ: **+90–95% (1Q26) → +58–63% → +13–18% → +3–8% guided (4Q26)** (TrendForce `[P]`);
-  Goldman cut SK Hynix realized-ASP growth 39%→19% `[S]`. Counter-signal: TrendForce *revised
-  Q3/Q4 up* in August (undated `[thin]` — weakest load-bearing item here) and spot is at all-time
-  records (DDR4 $42.45 08-07; DDR5 +9% in 30 days) — deceleration is slowing, and the spot/contract
-  gap is the LTA two-tier market. 2027: DRAM stays tight, no ASP declines until 2028 `[P]`.
+  Goldman cut SK Hynix realized-ASP growth 39%→19% `[S]`. **Live counter-signal, corroborated by
+  two independent lanes:** TrendForce *revised both quarters up* in August — Q3 to +15–20% from
+  +8–13%, Q4 to +3–8% from 0–5% (one lane undated) — citing restocking and rock-bottom supplier
+  inventories. That is the method's own **systematic-underestimation-revision** pattern pointing
+  the opposite way from the level series, and the two sit in genuine conflict: the *level* is
+  decelerating hard, the *estimates of that level* are being revised up. Spot is at all-time
+  records (DDR4 $42.45 08-07; DDR5 +9% in 30 days) — the spot/contract gap is the LTA two-tier
+  market. 2027: DRAM stays tight, no ASP declines until 2028 `[P]`.
 - **Tell #2 (the rent gets capped) — FIRING, contractually and voluntarily.** TrendForce's own
   headline: *"Long-Term Agreements Cap Price Increases."* Micron's **$100B, 16-agreement SCA
   book** passes the Phase-1 guard at the highest class that exists — **take-or-pay with >$22B
   deposits (~$18B cash)** — but its price collars are **anchored at Q2-2026 prices**, forfeiting
   upside on ~20% of DRAM / ~33% of NAND bits, and management targets >50% of revenue covered.
-  The rent-collector capped its own rent.
+  The rent-collector capped its own rent. **Read the collar both ways, though:** the same clause
+  is two-sided — the ceiling forfeits upside (the tell), and the **floor plus take-or-pay
+  cushions the downside**, propping revenue above spot in a decline. That floor is the strongest
+  honest evidence for the "de-cyclical" bull case, and both halves should inform sizing.
 - **Tell #3 (capacity response) — partially armed.** Ten dated adds, **six inside the 8-quarter
   window** (SK Hynix M15X + Yongin Q1-27, Samsung HBM +47% end-26, CXMT ~350k wpm end-26, Micron
   ID1 + Clay NY mid-27); MU+Samsung+SKH capex ~+340% 2024→2027; CXMT's IPO closed **+460%**
@@ -110,13 +134,19 @@ the market believes.**
   downturn** `[thin]`, cleanroom as the stated structural gate pinning real relief to 2028, and
   the ramp-cost tell **not firing** (MU GM 84.6% → ~86% guided).
 - **Priced-in test:** MU $966.78 (08-21 close), −20.3% from the 06-25 ATH close $1,213.37, after
-  a −39% July collapse (worst month since 2005) and +30% recovery — **the tape already delivered
-  one full Phase-4 repricing and half-retraced it.** Forward P/E **6.0×**: the market is
-  *refusing to capitalize* ~$160 FY27 EPS, exactly as it does at every memory peak (6–12× at
-  peaks, 20–40× at troughs). Every bull case ($1,254 New Street / $1,458 consensus / $1,550
-  BofA) is a **multiple re-rating argument** ("AI broke the cycle"), not an earnings argument.
-- **Crowding census: fails decisively.** Seven shock days since Jul 1; MU printed −6% to −10.6%
-  on *every* one, including headlines with zero memory content. The whole complex
+  a **−39% peak-to-trough collapse (06-25 close-high → the 07-29 low; July itself was −28.7%,
+  its worst month since June 2005)** and a +30% recovery — the tape already delivered one full
+  Phase-4 repricing and half-retraced it. Forward P/E **6.0×** is the robust fact; **the EPS
+  behind it is not** — FY27 estimates run **$96 (Erste) / $98.5 / $112 / ~$161 (implied by the
+  6.0× at spot)**, unresolved, and at ~$100 the multiple is nearer 9–10× and part of the
+  sell-side headroom becomes an *earnings* argument rather than a re-rating one. What is
+  documented: **BofA's $1,550 is explicitly a multiple/SOTP argument** (cyclical memory at 3×
+  2028 P/B + HBM at 31× 2028 EPS, "AI may have broken the memory cycle"); New Street's ~$1,254
+  and the ~$1,458–1,502 consensus methodologies were never sourced, so do not generalize "every
+  bull case." The 6–12×-at-peaks / 20–40×-at-troughs cycle history is the frame either way.
+- **Crowding census: fails decisively.** Six dated shock days since Jul 1 (plus a June session
+  whose MU move is unquantified); MU printed −6% to −10.6% on every dated one, including
+  headlines with zero memory content. The whole complex
   (MU/SNDK/WDC/STX/SKH/Samsung) moves as one position — cap the sleeve, size for the measured
   −20/−30% gap class. Positioning is a live *disagreement* (Burry short, Capital Group trimming
   vs Soros/Appaloosa top-weight) — the method's "priced-and-disputed" case: variant view with a
@@ -154,13 +184,15 @@ us (NVDA's $4B Lumentum/Coherent capacity lock-up, March 2026 — and the tape f
   **8.2% → 45.0% in four quarters** with a **$22.29M cash prepayment** from Coherent (the
   hardest demand-evidence class there is). AXTI +487% YTD, −12.5% on the 08-18 shock — right
   choke, badly priced, plus realized China export-permit risk.
-- **Module/DSP tier — late Phase 3, Tell #1 firing.** CRDO sequential: **+50% → +7.4% → ~5–8%
-  guided**, with the entire >80% FY27 story loaded into an unshipped 2H optics ramp; FN guided
-  +4.5–8.3% QoQ off +45% YoY and took **−20%** in a day; beats-and-raises are being sold. Tell
-  #3 firing alongside with dates (Coherent quadrupling InP wafers within 12 months, AAOI to 930k
-  units/mo end-27, Corning 10×, Chinese CR3 already >55% share). **CRDO prints 2026-09-01** —
-  the nearest binary: a guide above ~+15% QoQ with optical revenue actually shipping kills the
-  exhaustion read.
+- **Module/DSP tier — late Phase 3, Tell #1 firing on two names, not the tier.** CRDO
+  sequential: **+50% → +7.4% → +6.4–8.7% guided**, with the entire >80% FY27 story loaded into
+  an unshipped 2H optics ramp; FN guided +4.5–8.3% QoQ off +45% YoY and took **−20%** in a day;
+  COHR decelerates only mildly at the midpoint. **But scope it honestly — same-tier names are
+  still accelerating:** AAOI guides **+51% QoQ**, LITE +21–26%, MTSI +21–24%. The exhaustion read
+  is CRDO/FN-specific; the tier-wide version is thinner than it looks. Tell #3 firing alongside
+  with dates (Coherent quadrupling InP wafers within 12 months, AAOI to 930k units/mo end-27,
+  Corning 10×; Chinese CR3 >55% share `[thin]`). **CRDO prints 2026-09-01** — the nearest binary:
+  a guide above ~+15% QoQ with optical revenue actually shipping kills the exhaustion read.
 - **Scale-up (NVLink/PCIe/UALink) — earliest (Phase 1→2), worst template fit.** ALAB still
   accelerating (+40% QoQ guide). But it is a design-win layer, not a materials choke — the
   clock dates it with low confidence. UALink as a distinct layer fails the 8-quarter filter.
@@ -178,11 +210,15 @@ us (NVDA's $4B Lumentum/Coherent capacity lock-up, March 2026 — and the tape f
 Ranked shortlist from the Phase-0 sweep across everything else (storage, packaging, foundry,
 cooling, electrical, test, materials, gases):
 
-1. **HVLP4 copper foil / high-end CCL — the best true Phase-1 find.** Quantified gap (**~1,500t
-   2026 → ~2,500t 2027**) against a *named single-supplier ceiling* (Mitsui Kinzoku ~490t/mo vs
-   ≥560t/mo 2H26 demand); Korea CCL import price **$20,728/t in March, +74.5% YoY, first
-   >$20k/t since records began**; **NVIDIA intervening directly to secure supply** — the anchor
-   customer going around its own supply chain is a top-tier confirmation. Monetization
+1. **HVLP4 copper foil / high-end CCL — the best phase fit, on the weakest evidence class.**
+   ⚠️ **Every load-bearing number here is `[thin]`** (Digitimes rebroadcasts, PCB-vendor blogs,
+   aggregators) — it ranks #1 on *phase fit*, not on evidence quality, and by this doc's own
+   legend `[thin]` means do not size on it. Quantified gap (**~1,500t 2026 → ~2,500t 2027**)
+   against a *named single-supplier ceiling* (Mitsui Kinzoku ~490t/mo vs ≥560t/mo 2H26 demand);
+   Korea CCL import price **$20,728/t, +74.5% YoY, first >$20k/t since records began** — but
+   that is a **March 2026 print and Apr–Jul releases were not found, so the series is stale at
+   this doc's own date**; **NVIDIA intervening directly to secure supply** — the anchor customer
+   going around its own supply chain is a top-tier confirmation if it holds. Monetization
    in-window via Co-Tech (**8358.TWO**) — the only qualified second source, Goldman TP just
    doubled (priced-and-disputed warning). **No US-listed pure play** (TTMI is a cost-taker).
    *Falsifiers:* Mitsui capacity >~600t/mo or the 2027 gap revised <1,500t by the Q4 Taiwanese
@@ -207,8 +243,9 @@ cooling, electrical, test, materials, gases):
 **Killed, on the record** (full reasoning in the sweep transcript): nearline **HDD** (the repo's
 own Sep-2025 signal fully matured — Phase 3 late, STX +203% YTD at 63–70× earnings, allocated
 into CY2028; keep only the $/TB-deceleration tripwire, next read ~late-Oct print) · **liquid
-cooling** (two Phase-4 tells printed: VRT beat-and-raise met with −17.5%; Modine ramp costs
-eating margins — the PSIX pattern) · **CoWoS as *next*** (it is the *current* constraint with
+cooling** (Modine's ramp costs eating margins is the method's tell #3 — the PSIX pattern; VRT's
+beat-and-raise met with −17.5% is not one of the three tells but is the market pricing the same
+exhaustion) · **CoWoS as *next*** (it is the *current* constraint with
 supplier-dated relief: gap 20%→~10% by end-26, +60% capacity by 2027) · **glass substrates**
 (out-of-window — the OKLO class) · **300mm wafers** (no allocation language anywhere) ·
 **Navitas/800VDC pure plays** ($8.6M revenue, 2027 monetization — textbook false-positive
@@ -225,26 +262,37 @@ second derivative of the +30% hike steps, not the entry).
 - **Tripwire #1 (demand anchor's capex): NOT tripped** — all four hyperscalers raised in July
   (~$725B 2026, +77% YoY; Meta explicitly citing *higher component pricing*), no digestion
   language. But raises are now *punished*, and a **new tripwire appeared one layer up: the model
-  labs' own revenue** (Anthropic ARR ~$65B vs an $80B+ whisper is what broke the 08-18 tape,
-  alongside the 30-yr at 5.33%).
+  labs' own revenue** (Anthropic ARR ~$65B vs an $80B+ whisper). **08-18 was a multi-trigger
+  session** — that revenue miss, the WSJ off-balance-sheet report, and the 30-yr at 5.33%
+  together; the lanes disagree on the mix, so no single cause should be assigned to it, including
+  when reading the crowding census that day.
 - **Tripwire #2 (funding mix): FIRED and moved the tape.** Debt-financed capex 9% (FY24) → 32%
   (LTM Jun-26) — and the WSJ's filing analysis (~08-17) found that was the *small half*:
   **~$3.0T off-balance-sheet across nine companies** ($1.9T purchase obligations, $1.2T
   uncommenced leases = 4× the prior year's disclosure; Meta ~$420B ≈ 3× its reported debt).
 - **Vendor financing now reads two-way.** NVDA scaled its Ohio OpenAI backstop **$250B → $105B**
-  (WSJ Fri 08-14; filing-confirmed 08-17): the escalation had cost ~4–5%; the de-escalation was
-  a price non-event (−0.07% on 64% volume). And the NVDA–SK pact printed SK Hynix **−9%** — the
-  deal class that *lit* layers in 2024 now prints negative. The market has started discounting
-  circularity.
+  (WSJ Fri 08-14; filing-confirmed 08-17): NVDA had fallen ~4–5% on the July escalation report
+  — **on a session it shared with a broad semis/AI selloff, so the move is confounded** — while
+  the de-escalation was a price non-event (−0.07% on 64% volume). Treat the asymmetry as **n=1
+  and unattributed**, pending a second clean observation. Firmer: the NVDA–SK pact printed SK
+  Hynix **−9%** — the deal class that *lit* layers in 2024 now prints negative, i.e. the market
+  has started discounting circularity.
 - **Structural finding 1 — constraint contagion is now subtractive.** Amkor's −22.9% guide-down
   (07-28) was partly caused by *the memory shortage suppressing smartphone units*: one layer's
   scarcity destroying another layer's volume. The clock models layers as sequential; this is
   simultaneous and negative. Method note added to `constraint-watch.md`.
-- **Structural finding 2 — the wrapper is now the binding constraint on the shortlist.** Census
-  across ~30 US-listed names found *nothing* under 4% on 08-18/19; the least-crowded were the
-  two hardest monopolies (TSM −4.1%, ASML −4.3% vs SOX −5%) — low beta, not undiscovered. The
-  genuinely uncrowded pure plays are in Taipei/Tokyo/Seoul (Co-Tech, Ajinomoto, Mitsui). Whether
-  this paper book can hold non-US listings/ADRs is **Eric's fork** (below).
+- **Structural finding 2 — the wrapper is now the binding constraint on the shortlist.** Of ~26
+  measured cells across ~30+ US-listed names, **none printed clearly under 4% on 08-18/19**; the
+  least-crowded were the two hardest monopolies (TSM −4.1%, ASML −4.3% vs SOX −5%) — low beta,
+  not undiscovered. **Honest holes in that census:** AVGO, CIEN, MTSI, AAOI and ALAB's close were
+  never measured; ETN was measured only on 08-20 at −1.54% (either an uncrowded print that
+  contradicts the sweep's own summary line, or a sixth empty cell — unresolved); NVDA itself was
+  never censused; three names sit within half a point of the 4% line; and no computed price
+  series exists behind any of it. So the claim is "nothing measured came in clean," not "the
+  complex contains no uncrowded name." Even discounted, the direction holds: the genuinely
+  uncrowded pure plays this sweep found are in Taipei/Tokyo/Seoul (Co-Tech, Ajinomoto, Mitsui).
+  Whether this paper book can hold non-US listings/ADRs is **Eric's fork** (below) — and it
+  should be settled on the shortlist's merits, not on a census with six holes in it.
 
 ## 6 · Playbook fit & standing guards
 
@@ -260,8 +308,13 @@ second derivative of the +30% hike steps, not the entry).
   strength; size for the measured −20/−30% single-day gap class; the whole AI-hardware theme is
   **one trade in N costumes** — cap the sleeve across memory + optics + test + foil, because the
   census shows they all fall together.
-- **Immediate S2 applications:** NVDA flat by the 08-25 close (print 08-26, IR-confirmed);
-  MRVL flat by 08-26 (print 08-27); AVGO with feeling (~09-02 est., last print gapped −14.66%).
+- **Immediate S2 applications:** NVDA flat by the 08-25 close (print 08-26 — the repo calendar
+  carries it IR-confirmed from a prior session, but **this session's re-verification was blocked**,
+  so the standing "re-verify against IR before any date-keyed action" instruction is still unmet;
+  aggregator + syndicated-scheduling-PR corroboration only); MRVL flat by 08-26 (print 08-27,
+  same status); AVGO with feeling (~09-02 est., last print gapped −14.66%). S2 is unaffected by
+  the distinction — going flat on an unconfirmed date is the safe direction; **date-keyed
+  entries are not licensed by any of these.**
 
 ## 7 · Eric's steps — procedural, pre-verified
 
@@ -291,7 +344,15 @@ decides whether the best forward finds are tradeable or watch-only; step 3 is th
 - **No computed price series exists** — the census and drawdowns are reconstructed from dated
   news reports of per-name moves, not daily closes. Known unresolved conflicts: COHR's −12%
   (08-10 vs 08-18), AVGO's 08-19 move (−3% vs −6.2%), AXT's capacity targets (two inconsistent
-  versions), four empty census cells (AVGO/CIEN/MTSI/AAOI).
+  versions), MU's analyst PT (~$1,458 vs ~$1,502 consensus), and six empty/ambiguous census
+  cells (AVGO/CIEN/MTSI/AAOI/ALAB-close/ETN-08-18, plus NVDA never censused).
+- **MU's FY27 EPS is unresolved ($96 / $98.5 / $112 / ~$161)** — the 6.0× forward multiple is
+  the robust fact, the earnings base under it is not, and the priced-in verdict is sensitive to
+  which end is right.
+- **Re-verify before sizing, priority order:** the TrendForce contract series and its August
+  upward revision (undated in one lane); Micron's SCA terms; the InP price series; **the entire
+  HVLP4 gap / Mitsui-ceiling / Korea-CCL-price set (all `[thin]`, and the CCL print is stale to
+  March)**; NVDA's and MRVL's print dates against IR.
 - **Multiplicity:** this sweep looked at ~15 layers with ~4 guards each; some Phase-1 signals
   are the battery's expected false positives. The falsifiers are dated so the forward tape, not
   the narrative, adjudicates.
@@ -306,9 +367,11 @@ decides whether the best forward finds are tradeable or watch-only; step 3 is th
 
 - **Mon 08-24** — first session to trade the price-hike story; census-grade observation of
   whether a pre-traded theme fades its own confirmation.
-- **Wed 08-26 AMC** — NVDA print (IR-confirmed). The Q3 FY27 **gross-margin guide** is the
-  pass-through test. S2: flat by the 08-25 close.
-- **Thu 08-27** — MRVL print (IR-confirmed); FT-1/FT-9/FT-10 observations land 08-27/28.
+- **Wed 08-26 AMC** — NVDA print (repo calendar says IR-confirmed; **not re-verified this
+  session — IR blocked**). The Q3 FY27 **gross-margin guide** is the pass-through test. S2: flat
+  by the 08-25 close.
+- **Thu 08-27** — MRVL print (same status; the networking lane sourced it to TipRanks with
+  "confirm vs IR" outstanding); FT-1/FT-9/FT-10 observations land 08-27/28.
 - **Tue 09-01** — CRDO print: the module-tier exhaustion binary.
 - **Wed 09-02 (est.)** — AVGO print, date unconfirmed; no date-keyed entries on estimates.
 - **~Early Oct** — TrendForce 4Q26 DRAM contract print: the MU falsifier's first half.

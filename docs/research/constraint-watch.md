@@ -114,18 +114,23 @@ complementary to the phase clock, which reads supply-side physics:
   layer's scarcity destroying another layer's volume, simultaneously. When dating a layer, ask
   which *other* layer's scarcity is eating its demand.
 - **When the crowding census finds nothing under 4%, the wrapper is the constraint.** The
-  2026-08-18 census across ~30 US-listed hardware names found zero uncrowded expressions; the
-  genuinely early pure plays were all in Taipei/Tokyo/Seoul. At that point the actionable
-  question stops being "which layer" and becomes "can the book hold the listing" — a governance
-  fork, not a research one.
+  2026-08-18 census (~26 measured cells across ~30+ US-listed hardware names) found no clean
+  uncrowded expression, while the genuinely early pure plays were all in Taipei/Tokyo/Seoul. At
+  that point the actionable question stops being "which layer" and becomes "can the book hold
+  the listing" — a governance fork, not a research one. *Corollary from the same run: state the
+  census's empty cells whenever it is used as evidence — that sweep left six, and "nothing
+  measured came in clean" is a weaker claim than "no uncrowded name exists."*
 - **Tripwire #2 must count off-balance-sheet commitments.** The 9%→32% debt-financed-capex
   series missed the bigger half: ~$3.0T of purchase obligations + uncommenced leases across nine
   companies (WSJ filing analysis, ~2026-08-17) — 4× the prior year's disclosure — and that
-  number, not the debt series, is what broke the 2026-08-18 tape.
-- **Vendor-financing de-escalation is asymmetric on the tape.** NVDA's Ohio backstop cut
-  ($250B → $105B, 08-14/17) gave back none of the ~4–5% the escalation had cost — the clock
-  advances on escalation and does not rewind on retreat. Track direction-of-change; expect no
-  symmetric relief rally.
+  number, not the debt series, is the commitment measure that matters — and it was one of three
+  co-triggers on the 2026-08-18 session (with a model-lab revenue miss and the 30-yr at 5.33%);
+  the lanes disagree on the mix, so do not assign it sole cause.
+- **Vendor-financing de-escalation looks asymmetric on the tape — n=1, confounded.** NVDA's Ohio
+  backstop cut ($250B → $105B, 08-14/17) gave back none of the ~4–5% the escalation had cost,
+  but that escalation day was also a broad AI selloff, so the move is unattributed. Working
+  hypothesis only — the clock may advance on escalation without rewinding on retreat; do not
+  treat it as a rule until a second, cleaner observation lands.
 
 ## Master tripwires
 
