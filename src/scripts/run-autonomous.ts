@@ -32,6 +32,12 @@ import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
+import {
+  type ControlsState,
+  effectiveMode as controlsMode,
+  EMPTY_CONTROLS,
+} from "../autonomous/bot-controls.js";
+import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-controls-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { type BetaScoutDeps, type LiveBot, LiveCycleRunner } from "../autonomous/live-cycle.js";
@@ -149,10 +155,11 @@ function runOffline(): void {
 
 async function runLive(): Promise<void> {
   const enabled = new Set(enabledBotIds(process.env));
+  const { controls, bootControls } = await bootMissionControl();
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
   // registry would also have qualified.
-  const hardcoreRoster = resolveRoster(enabled);
+  const hardcoreRoster = resolveRoster(enabled, bootControls);
   const roster = hardcoreRoster.personas;
   const { bots: loaded, sharedAccount } = loadBots(roster, process.env);
   for (const id of sharedAccount) {
@@ -250,8 +257,11 @@ async function runLive(): Promise<void> {
   const haltFile = process.env.SKYNET_HALT_FILE;
   const blockedReason = () => {
     if (haltFile && existsSync(haltFile)) safety.halt("manual");
-    return safety.blockedReason();
+    // The owner's global suspend gates everything this seam gates — the beta scout included.
+    // Empty id = only the all-bots switch can match; per-bot suspends compose in buildLiveBot.
+    return safety.blockedReason() ?? controls.suspendedReason("");
   };
+  controls.start();
   console.log(
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
@@ -264,6 +274,8 @@ async function runLive(): Promise<void> {
       safety,
       onDecision,
       hardcore: hardcoreRoster.hardcore,
+      controls,
+      bootControls,
     }),
   );
 
@@ -378,6 +390,9 @@ function buildLiveBot(
     onDecision: (r: DecisionRecord) => void;
     /** Ids running their hardcore research-mode build — own readiness pack, faster cooldown. */
     hardcore: ReadonlySet<string>;
+    /** Mission Control: dynamic suspend checks (polled) + the boot snapshot for mode overrides. */
+    controls: BotControlsClient;
+    bootControls: ControlsState;
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
@@ -385,8 +400,14 @@ function buildLiveBot(
     pack: hardcore ? hardcoreScenarioPacks[bot.persona.id] : scenarioPacks[bot.persona.id],
     safetyScenarios: genericSafetyScenarios,
   });
-  const effectiveMode = opts.mode === "live" && readiness.ready ? "live" : "observe";
-  if (opts.mode === "live" && !readiness.ready) {
+  // The owner's per-bot mode override (Mission Control, boot-applied) narrows the env default;
+  // the readiness gate still has the final say below.
+  const wantedMode = controlsMode(opts.bootControls, bot.persona.id, opts.mode);
+  if (wantedMode !== opts.mode) {
+    console.log(`[controls] ${bot.persona.name}: mode ${wantedMode} (owner override)`);
+  }
+  const effectiveMode = wantedMode === "live" && readiness.ready ? "live" : "observe";
+  if (wantedMode === "live" && !readiness.ready) {
     console.warn(
       `[gate] ${bot.persona.name} is NOT ready — pinned to observe. ${readiness.reason}`,
     );
@@ -408,7 +429,9 @@ function buildLiveBot(
       // Hardcore research mode iterates fast: 90s between orders in a symbol instead of 5m.
       // Small tranches keep the order-rate breaker (20/min) and daily-loss breaker (5%) binding.
       ...(hardcore ? { cooldownMs: HARDCORE_COOLDOWN_MS } : {}),
-      blockedReason: opts.blockedReason,
+      // Per-bot suspend (Mission Control, polled) composes with the kill switch/breakers: either
+      // blocks the cycle, and the decision record carries the owner's reason verbatim.
+      blockedReason: () => opts.controls.suspendedReason(bot.persona.id) ?? opts.blockedReason(),
       onResult: (r) => {
         opts.safety.recordOrder();
         logResult(r);
@@ -421,11 +444,31 @@ function buildLiveBot(
   };
 }
 
+/** Mission Control boot (Eric, 2026-08-21): one bounded fetch for the boot-applied overrides
+ *  (mode/hardcore); the dynamic suspend toggles ride the background poll started in runLive. */
+async function bootMissionControl(): Promise<{
+  controls: BotControlsClient;
+  bootControls: ControlsState;
+}> {
+  const controls = resolveBotControls(process.env);
+  const bootControls = (await controls.fetchOnce()) ?? EMPTY_CONTROLS;
+  console.log(
+    controls.enabled
+      ? "[controls] bridge armed — Mission Control suspend toggles apply within ~30s"
+      : "[controls] bridge unset (SKYNET_INSIGHTS_BRIDGE_URL) — env-only controls",
+  );
+  return { controls, bootControls };
+}
+
 /** The enabled personas with hardcore builds applied and announced — shared by both runners. */
-function resolveRoster(enabled: ReadonlySet<string>): ReturnType<typeof applyHardcore> {
+function resolveRoster(
+  enabled: ReadonlySet<string>,
+  controls: ControlsState = EMPTY_CONTROLS,
+): ReturnType<typeof applyHardcore> {
   const roster = applyHardcore(
     createDefaultPersonas().filter((p) => enabled.has(p.id)),
     process.env,
+    controls,
   );
   logHardcore(roster);
   return roster;

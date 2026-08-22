@@ -1,5 +1,6 @@
 import { fetchJson } from "../http/fetch-json.js";
 import {
+  BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
   type InsightRecord,
@@ -10,8 +11,6 @@ import {
 export interface InsightBridgeClient {
   recordInsight(entry: InsightRecord): Promise<void>;
 }
-
-const REQUEST_TIMEOUT_MS = 2_000;
 
 /** A client that never sends anything and never fails — the resolved shape when the bridge is
  * unconfigured, so every call site can call `recordInsight` unconditionally. */
@@ -42,7 +41,7 @@ export function resolveInsightBridge(env: NodeJS.ProcessEnv = process.env): Insi
     recordInsight: async (entry) => {
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        const timer = setTimeout(() => controller.abort(), BRIDGE_REQUEST_TIMEOUT_MS);
         try {
           const response = await fetchJson(
             "POST",
