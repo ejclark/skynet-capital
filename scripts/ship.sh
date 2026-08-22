@@ -94,7 +94,7 @@ cmd_checkbody() {
   # 3. Summary bullets ≤120 chars — 'ONE SHORT LINE EACH' (Eric, 2026-08-19) had 0% compliance
   #    as a comment; as a check it is unmissable.
   if grep -q '^## Summary' "$f"; then
-    local over; over="$(awk '/^## Summary/{flag=1;next}/^## |^<details>/{flag=0}flag' "$f" | grep -E '^- ' | awk 'length($0) > 120' | head -3)"
+    local over; over="$(awk '/^## Summary/{flag=1;next}/^## |^<details>/{flag=0}flag' "$f" | grep -E '^- ' | awk 'length($0) > 120' | head -3 || true)"
     [ -z "$over" ] || fail "Summary bullet over 120 chars — one short line each; the detail belongs below the fold:
 $over"
   fi
