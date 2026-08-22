@@ -24,7 +24,7 @@ other piece of ephemeral work (see
 | Handoff | Disposition |
 |---|---|
 | `brief-horizon` (the pipeline canary) | **shipped** — the morning brief reads the full event horizon (`eventsWithin`), spec-verified; issue #367 closed 2026-08-17 |
-| `desk-v2` (Desk Chassis v2 + Trade Ticket) | migrated → issue **#461**, contract + SHA-pinned bundle links intact; awaiting Eric's go |
+| `desk-v2` (Desk Chassis v2 + Trade Ticket) | migrated → issue **#461**; EARS 2 (trade ticket, rulings 6/10/16) shipped in PR #446 — EARS 1 (Chassis v2 desk) is still fully unbuilt, awaiting Eric's go |
 | `trailer-debut` (Season One Trailer + Field Guide) | migrated → issue **#462**, same treatment; first deliverable is the ruled flame-vs-teal comparison |
 
 The bundles themselves remain permanently readable at commit `9792fcb` (the last `main` commit that
