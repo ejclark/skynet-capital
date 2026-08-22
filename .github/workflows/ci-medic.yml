@@ -110,6 +110,12 @@ jobs:
       - if: steps.gate.outputs.armed == 'true'
         uses: anthropics/claude-code-action@v1
         with:
+          # Without this the lane can DETECT but never REPAIR. A medic run is woken by
+          # `workflow_run` and inherits the failed run's actor, so a failure that a bot triggered
+          # produced a capsule issue and then died here — verified on the lane's first live outing
+          # (2026-08-22, issue #487). Same two names as the feedback lane, same reasoning; the
+          # triage job's guards already restrict this to failures on the default branch.
+          allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
           claude_args: |

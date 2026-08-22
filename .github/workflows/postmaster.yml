@@ -297,6 +297,16 @@ jobs:
       - if: steps.gate.outputs.armed == 'true'
         uses: anthropics/claude-code-action@v1
         with:
+          # WHO MAY START A BUILD (Eric's call, 2026-08-22). The action discards a bot-initiated run
+          # unless the bot is named, and that refusal is load-bearing on a public repo: the LABEL is
+          # the authorization, so whoever can label can spend a session. Two bots legitimately land
+          # here — `github-actions` (the postmaster's own re-dispatch, already trusted by the
+          # event-research lane for the same reason) and `claude` (a session retrying a build that
+          # died; without it no retry is possible at all, which is why four retriggers of #475 could
+          # not get past this even after the three real bugs behind them were fixed). Both already
+          # need repo write to apply the label, so this grants no authority they lacked — it only
+          # stops the action throwing away a run they could already authorize. NEVER `*`.
+          allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
           claude_args: |
