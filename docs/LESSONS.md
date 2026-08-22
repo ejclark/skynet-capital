@@ -30,6 +30,9 @@ it. Prevention ranks, best first:
 ### The same zero-job outage, on the medic itself, one commit after its gate shipped
 
 - **SHA:** e40638b   **DATE:** 2026-08-22   **STATUS:** closed
+- **SHA:** a419ad2 — the same rejected file, hit a second time by the digest merge (#479) that
+  landed in the window before the fix. One incident, two run shas; the ledger names both so the
+  incident scan can close them together.
 - **SIGNAL:** the merge of #477 produced a healthy `Postmaster` run **and** a red run named
   `.github/workflows/ci-medic.yml` — GitHub's tell for a file it cannot parse, spotted in the same
   post-merge check that confirmed the postmaster had recovered. ~1 minute, only because someone was
