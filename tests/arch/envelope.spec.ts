@@ -78,6 +78,16 @@ describe("autonomous-lane envelope", () => {
   // stops a bad change reaching main — the rest above only prove the rule table.
   it("fails a lane branch that touches a protected path, and passes one that does not", () => {
     const dir = mkdtempSync(join(tmpdir(), "envelope-"));
+    // `--lane` explicitly, and GITHUB_HEAD_REF scrubbed: in Actions that variable names the PR's
+    // OWN branch and outranks the checked-out one (correct in production — CI checks out a detached
+    // merge ref, so `rev-parse --abbrev-ref HEAD` says "HEAD"). Inside this temp repo it made the
+    // scan skip, and the assertion below passed for the wrong reason on a green local run.
+    const scanTemp = (...args: string[]): string =>
+      execFileSync("node", ["scripts/envelope-scan.mjs", "--lane", "feedback/1", ...args], {
+        cwd: dir,
+        encoding: "utf8",
+        env: { ...process.env, GITHUB_HEAD_REF: "" },
+      });
     const run = (...args: string[]): string =>
       execFileSync("git", ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args], {
         cwd: dir,
@@ -97,22 +107,13 @@ describe("autonomous-lane envelope", () => {
       writeFileSync(join(dir, "src/observatory/feedback-view.ts"), "export const ok = 1;\n");
       run("add", "-A");
       run("commit", "-m", "open path");
-      const passing = execFileSync("node", ["scripts/envelope-scan.mjs", "--base", "main"], {
-        cwd: dir,
-        encoding: "utf8",
-      });
-      expect(passing).toContain("nothing in the protected envelope was touched");
+      expect(scanTemp("--base", "main")).toContain("nothing in the protected envelope was touched");
 
       mkdirSync(join(dir, "src/server/auth"), { recursive: true });
       writeFileSync(join(dir, "src/server/auth/session.ts"), "export const nope = 1;\n");
       run("add", "-A");
       run("commit", "-m", "protected path");
-      expect(() =>
-        execFileSync("node", ["scripts/envelope-scan.mjs", "--base", "main"], {
-          cwd: dir,
-          stdio: "pipe",
-        }),
-      ).toThrow();
+      expect(() => scanTemp("--base", "main")).toThrow();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

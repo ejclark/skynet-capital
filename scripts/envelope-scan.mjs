@@ -110,8 +110,11 @@ if (process.argv.includes("--list")) {
   process.exit(0);
 }
 
-// Which branch are we on? GITHUB_HEAD_REF is the PR's source branch in Actions; locally it's the
-// checked-out branch. Either way, an off-lane branch is none of this gate's business.
+// Which branch are we on? GITHUB_HEAD_REF FIRST and deliberately: on a PR, actions/checkout leaves
+// a detached HEAD at the merge ref, so `rev-parse --abbrev-ref HEAD` answers "HEAD" and would skip
+// every lane in CI. The local branch is only the fallback, for a developer running this by hand.
+// `--lane` overrides both — pass it whenever cwd is not the branch you mean (a spec's temp repo
+// inherits the outer PR's GITHUB_HEAD_REF otherwise, and silently skips).
 let branch = argOf("--lane") ?? process.env.GITHUB_HEAD_REF ?? "";
 if (!branch) {
   try {
