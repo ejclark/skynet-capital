@@ -51,6 +51,7 @@ describe("feedback-service issue body", () => {
 // the lane build a curated ask unattended instead of routing it to Eric.
 describe("feedback provenance", () => {
   const spec = {
+    rounds: 2,
     criteria: ["When a member opens /feedback, the form shall span 900px."],
     assumptions: [],
     outOfScope: [],

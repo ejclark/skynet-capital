@@ -29,8 +29,25 @@ Everything else is buildable. In particular, these are **not** reasons to stop:
   schema is ordinary work here.
 - The ask touches how trades, P/L, leaderboards, or bot cards are **rendered**. Presentation of
   trading data is open; only money-moving logic is protected, and `envelope-scan` names it exactly.
-- The ask names a model tier, a prompt, or a copy change on a lane that is already paid for. That is
-  **not** spend. Spend means provisioning a credential or raising a cap — nothing else.
+- The ask names a **prompt** or a **copy change** on a lane that is already provisioned. That is not
+  spend — build it.
+
+**But read the spend line carefully, because it has two sides and only one of them is open:**
+
+- **Not spend, build it:** which model runs a task on a lane already provisioned, at its existing
+  usage levels. (This is #449's false positive — a member asked for a better model on a lane that
+  was already paid for, and the lane escalated it as a "token-spend decision". It was not.)
+- **Spend — Eric's, always, no matter how small the diff:** anything that changes how much a lane
+  *consumes per use* or *how often it runs*. Round caps, token caps, throttles, retry counts, poll
+  intervals, or adding a new call to a metered API. A one-line change to a constant is still spend
+  if the constant is what the bill is computed from. `needs-eric`, with the estimated per-use delta
+  in your comment.
+
+Know which side a lane is on before you judge it. `ANTHROPIC_API_KEY` → `api.anthropic.com` is
+**metered per token** — a real bill, and the cheapest model that does the job is the right one there.
+`CLAUDE_CODE_OAUTH_TOKEN` → claude-code-action is a **flat-rate subscription** — economizing there
+buys nothing, so the strongest available model is the right one. `envelope.json` protects the
+metered lane's dials; if `envelope-scan --check` names the file, it is Eric's call, full stop.
 - It is bigger than one PR. Slice it (see below).
 - You are not certain it is what the member meant. See the next section.
 

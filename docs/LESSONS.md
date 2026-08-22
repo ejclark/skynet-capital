@@ -27,6 +27,35 @@ it. Prevention ranks, best first:
 
 ---
 
+### A narrowing written to stop one false positive licensed the class it never meant to cover
+
+- **SHA:** 07cc032   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** Eric, reading a status line: *"so you're financing the bill now?"* Nothing mechanical
+  caught it. The clause shipped through a green suite, six fitness gates, and a full PR body review;
+  the envelope gate passed it because the file it would have protected was not on the list.
+- **ROOT CAUSE:** `.github/prompts/feedback-build.md` narrowed "spend" to *"provisioning a credential
+  or raising a cap — nothing else"*. That was written for #449, where the lane refused to build a
+  member's model-tier request and escalated it as a "token-spend decision" — a real false positive.
+  The wording over-generalized from *don't escalate a model-tier mention* to *recurring consumption
+  isn't spend*, and `src/server/feedback-coach.ts` was absent from `envelope.json`. A member could
+  therefore file "have the coach ask more questions", and an autonomous session would raise
+  `MAX_USER_ROUNDS`, pass every gate, auto-merge, and multiply a metered per-token bill with no
+  human in the loop. Claude then walked through the same hole by hand, raising rounds 3→6 and
+  reporting it as not-Eric's-call. The premise was wrong twice over: the coach bills the metered
+  Anthropic API, not the flat-rate Claude Code subscription the build session uses — a distinction
+  the coach's own docstring already recorded.
+- **PREVENTION:** gate + seam + doctrine. (1) The cost dials moved to
+  `src/server/feedback-coach-limits.ts`, which IS in `envelope.json` — while the coach's system
+  prompt stays open, because improving the curator is the lever Eric named. Freezing the whole file
+  would have blocked the work he asked for; the seam separates what costs money from what improves
+  quality. (2) `tests/server/feedback-coach-limits.spec.ts` asserts the metered lane never names a
+  premium model — the failure mode a behavioral test cannot see, because it changes only the bill.
+  (3) The prompt clause now states both sides: which model runs a task on a provisioned lane is
+  open; anything changing consumption per use or run frequency is Eric's, however small the diff.
+- **SIDE QUESTS:** the inverse error, found by applying the same rule — the postmaster's model tier
+  was economizing on a FLAT-RATE lane, sending short asks to Haiku where thrift buys nothing and
+  costs build quality. Retired in the same change; `ci-medic.yml` likewise.
+
 ### The fix for that bug landed as a duplicate job key, so it never took effect
 
 - **SHA:** 4235123   **DATE:** 2026-08-22   **STATUS:** closed

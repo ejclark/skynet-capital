@@ -112,6 +112,7 @@ describe("feedback coach", () => {
 
   it("degrades a malformed spec to the conservative reading rather than throwing", () => {
     expect(toSpec(undefined)).toEqual({
+      rounds: 0,
       criteria: [],
       assumptions: [],
       outOfScope: [],
@@ -200,5 +201,69 @@ describe("feedback coach", () => {
     const result = await coach({ kind: "bug", messages: [{ role: "user", content: "hi" }] });
 
     expect(result).toMatchObject({ ok: false });
+  });
+});
+
+// ROUTE THE MODEL BY WHO PAYS (Eric, 2026-08-22). The coach is the METERED lane — ANTHROPIC_API_KEY
+// against api.anthropic.com, billed per token — so it takes the cheapest model that clears the bar.
+// The expensive reasoning happens downstream in the build session, which is flat-rate.
+describe("feedback coach — metered-lane economics", () => {
+  it("asks the cheap model, on the wire", async () => {
+    const bodies: unknown[] = [];
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
+      bodies.push(body);
+      return Promise.resolve(anthropicReply('{"question": "where?"}'));
+    });
+
+    await coach({ kind: "bug", messages: [{ role: "user", content: "broken" }] });
+
+    expect((bodies[0] as { model: string }).model).toBe("claude-haiku-4-5");
+  });
+
+  // THE PROPERTY THE CHEAP MODEL RESTS ON. A weaker model is likelier to malform the draft JSON, so
+  // every degradation path must land on the conservative side: `partial`, which routes the follow-up
+  // to the MEMBER, never a confident `spec-complete` that a build session would treat as a spec.
+  it("degrades a weak model's slips to `partial`, never to a false spec-complete", async () => {
+    const slips = [
+      "{ not json at all",
+      '{"draft": {"title": "t", "details": "d", "readiness": "spec-complete"}}',
+      '{"draft": {"title": "t", "details": "d", "criteria": "should have been an array", "readiness": "spec-complete"}}',
+    ];
+    for (const slip of slips) {
+      const coach = createFeedbackCoach({ apiKey: "k" }, () =>
+        Promise.resolve(anthropicReply(slip)),
+      );
+
+      const result = await coach({ kind: "bug", messages: [{ role: "user", content: "x" }] });
+
+      if ("done" in result && result.done) {
+        expect(result.spec.readiness, `slip: ${slip}`).toBe("partial");
+      } else {
+        expect(result).toMatchObject({ ok: true, done: false });
+      }
+    }
+  });
+
+  // Eric asked how many questions it actually takes; nothing measured it. Now every curated issue
+  // carries the answer, so the ceiling can next be set from the distribution instead of by argument.
+  it("records how many rounds the draft actually took", async () => {
+    const coach = createFeedbackCoach({ apiKey: "k" }, () =>
+      Promise.resolve(
+        anthropicReply(
+          '{"draft": {"title": "t", "details": "d", "criteria": ["The app shall X."], "readiness": "spec-complete"}}',
+        ),
+      ),
+    );
+
+    const result = await coach({
+      kind: "feature",
+      messages: [
+        { role: "user", content: "raw" },
+        { role: "assistant", content: "q1" },
+        { role: "user", content: "a1" },
+      ],
+    });
+
+    expect(result).toMatchObject({ done: true, spec: { rounds: 2 } });
   });
 });

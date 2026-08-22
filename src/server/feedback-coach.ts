@@ -19,6 +19,17 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
+// The cost dials live in their own module because they are gated by envelope.json — see its header
+// for the seam (what costs money vs. what improves quality) and the route-by-who-pays rule.
+import {
+  MAX_MESSAGE_CHARS,
+  MAX_MESSAGES,
+  MAX_TOKENS,
+  MAX_USER_ROUNDS,
+  MODEL,
+  THROTTLE_MAX,
+  THROTTLE_WINDOW_MS,
+} from "./feedback-coach-limits.js";
 import { readBody, sendJson } from "./page-shell.js";
 
 interface CoachMessage {
@@ -42,6 +53,8 @@ interface CoachInput {
  * sentence at the form rather than a whole build session discovering it later.
  */
 export interface FeedbackSpec {
+  /** How many questions it actually took — the measurement the round ceiling should be set from. */
+  readonly rounds: number;
   readonly criteria: readonly string[];
   readonly assumptions: readonly string[];
   readonly outOfScope: readonly string[];
@@ -64,17 +77,6 @@ export type CoachTurn = (input: CoachInput) => Promise<CoachResult>;
 
 // Hard rails, tuned for pennies: few short rounds, small replies, bounded input. The member's
 // text is DATA to organize — the system prompt says so, and the server enforces the shape.
-// Rounds went 3 → 6 on 2026-08-22. Three was too few to clear the completeness bar below, and at
-// three the server force-drafted whatever it had — which is how vague issues reached the build
-// lane, where the only available response was escalating to Eric. Eric, 2026-08-20: "rewarding
-// their engagement is worth the token burn." The reply cap still bounds each turn, so the worst
-// case is a few more small calls, and the member can finish early at any point.
-const MAX_MESSAGES = 14;
-const MAX_MESSAGE_CHARS = 4000;
-const MAX_USER_ROUNDS = 6;
-const MODEL = "claude-sonnet-5";
-const MAX_TOKENS = 1300;
-
 const SYSTEM_PROMPT = `You are the feedback coach for Skynet Capital, a friends-and-family options paper-trading league app. A signed-in member is drafting feedback; your job is to turn their raw note into a specific, actionable report a build session can work from.
 
 That last clause is the whole job. Downstream, a draft you mark spec-complete is treated as the specification and built unattended. A vague one costs the member their feature. Ask the questions now.
@@ -113,8 +115,7 @@ interface CoachConfig {
 
 type DoFetch = typeof fetchJson;
 
-/** Bounded string list out of untrusted JSON — the issue body is public, so nothing unbounded and
- *  no backticks (a stray fence would break the spec block the build lane parses). */
+/** Bounded, de-fenced string list — the issue body is public, and a stray fence breaks the block. */
 const strList = (value: unknown, max: number): readonly string[] =>
   Array.isArray(value)
     ? value
@@ -126,12 +127,13 @@ const strList = (value: unknown, max: number): readonly string[] =>
 /** Normalize the model's draft into a build spec. Never trusts the model's shape: a missing or
  *  malformed field degrades to the CONSERVATIVE reading (partial, no criteria), because a spec that
  *  falsely claims completeness is the one failure that reaches production. */
-export function toSpec(raw: unknown): FeedbackSpec {
+export function toSpec(raw: unknown, rounds = 0): FeedbackSpec {
   const d = (raw ?? {}) as Record<string, unknown>;
   const criteria = strList(d.criteria, 12);
   const needsEric =
     typeof d.needsEric === "string" ? d.needsEric.replace(/`/g, "'").trim().slice(0, 300) : "";
   return {
+    rounds: Number.isFinite(rounds) && rounds > 0 ? Math.min(Math.trunc(rounds), 99) : 0,
     criteria,
     assumptions: strList(d.assumptions, 12),
     outOfScope: strList(d.outOfScope, 12),
@@ -144,7 +146,7 @@ export function toSpec(raw: unknown): FeedbackSpec {
 
 /** Parse the model's reply: strict JSON, tolerating a code fence; anything else degrades to a
  *  question (the safe shape — the member just sees the text and can answer or bail). */
-export function parseCoachReply(text: string): CoachResult {
+export function parseCoachReply(text: string, rounds = 0): CoachResult {
   const stripped = text
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
@@ -164,7 +166,7 @@ export function parseCoachReply(text: string): CoachResult {
         done: true,
         title: draft.title.slice(0, 120),
         details: draft.details,
-        spec: toSpec(draft),
+        spec: toSpec(draft, rounds),
       };
     }
   } catch {
@@ -225,7 +227,9 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
       return { ok: false, error: error instanceof Error ? error.message : "coach unreachable" };
     }
     const reply = replyText(res);
-    return reply.text ? parseCoachReply(reply.text) : { ok: false, error: reply.error ?? "" };
+    return reply.text
+      ? parseCoachReply(reply.text, userRounds)
+      : { ok: false, error: reply.error ?? "" };
   };
 }
 
@@ -241,7 +245,12 @@ export function resolveFeedbackCoach(
 // Coach-specific burst throttle: a conversation is several turns, so the cap is looser than the
 // submission throttle (30 / 10 min per member). In-memory is fine — single process.
 const coachHits = new Map<string, number[]>();
-function coachThrottled(key: string, now = Date.now(), windowMs = 600_000, max = 30): boolean {
+function coachThrottled(
+  key: string,
+  now = Date.now(),
+  windowMs = THROTTLE_WINDOW_MS,
+  max = THROTTLE_MAX,
+): boolean {
   const recent = (coachHits.get(key) ?? []).filter((t) => now - t < windowMs);
   if (recent.length >= max) {
     coachHits.set(key, recent);
