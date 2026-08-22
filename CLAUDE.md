@@ -233,7 +233,11 @@ Eric will not remember these names — that is expected and fine; the docs are t
   at open, so it merges itself the moment CI goes green — opt-*out*, not opt-in. Hold a PR for Eric only
   when he asks, or for the carve-outs (workflow files, and the credentials/spend/outward-facing
   irreversible class). Native auto-merge, never an in-CI REST merge: a `GITHUB_TOKEN` merge wouldn't
-  trigger the `push`→`main` deploy. Full merge policy: `.claude/skills/governor/SKILL.md`.
+  trigger the `push`→`main` deploy. **The axis is whose token *arms* the merge, not REST-vs-native**
+  (2026-08-22): auto-merge lands as the identity that armed it, so arming it with `GITHUB_TOKEN` is
+  the same hole — it took out the deploy, the receipt scan and the stall audit at once, silently.
+  `node scripts/deploy-lag.mjs` answers "is `main` actually deployed?". Full merge policy:
+  `.claude/skills/governor/SKILL.md`.
 - **Draft is a harness artifact, not a judgment — promote it immediately** (Eric's correction). Some
   Claude Code environments force every PR open as a draft. That is a property of the tool, never a
   statement that the change isn't ready, and leaving it there is a **throughput bug**: a draft can't

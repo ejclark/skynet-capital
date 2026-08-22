@@ -27,6 +27,37 @@ it. Prevention ranks, best first:
 
 ---
 
+### A bot-armed auto-merge emits no push, and one rule blinded the deploy, the receipt and the audit
+
+- **SHA:** 4f234c0   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** none — and that is the entry. The feedback lane worked perfectly end to end: it
+  claimed #475, built it, opened PR #492, CI passed, auto-merge landed it. Every surface said
+  success. It was found only because a check-in went looking for the PR and noticed the release tag
+  `v1.190.0` still pointed at the *previous* commit. Nothing anywhere reported a problem, and
+  nothing would have: the member's fix would have sat undeployed until the next unrelated merge.
+- **ROOT CAUSE:** native auto-merge performs the merge as the identity that **armed** it, and the
+  lane armed it with `GITHUB_TOKEN`. A push attributed to `GITHUB_TOKEN` starts no further workflow
+  runs (GitHub's infinite-loop guard), so the `push` → `main` event was never emitted. This repo
+  hangs three separate mechanisms on that one event, and all three went down together: the deploy
+  job (`pipeline.yml`), the shipped-feedback receipt scan, and the stall audit — the very eye whose
+  job is noticing that dispatched work stopped moving. `CLAUDE.md` already warned that "a
+  `GITHUB_TOKEN` merge wouldn't trigger the push→main deploy" and prescribed **native auto-merge**
+  as the cure; that was half right. The axis is not REST-vs-native, it is *whose token arms the
+  merge* — and the lane falls back to `GITHUB_TOKEN` whenever `vars.APP_CLIENT_ID` and
+  `secrets.HANDOFF_PR_TOKEN` are both unset, which is today.
+- **PREVENTION:** script + doctrine. `scripts/deploy-lag.mjs` answers "is `main` actually deployed?"
+  by comparing head against the latest release and attributing each stranded commit to its merger,
+  naming `silent-merge` only when *every* one was merged by a push-less identity (a human-merged
+  straggler means the deploy job ran and failed, a different fault with a different fix); specced in
+  `tests/scripts/deploy-lag.spec.ts`. It is deliberately **not** wired into the postmaster's sweep:
+  that sweep runs on `push` → `main`, and the condition is "no push happened", so the only run that
+  could report it is the one that already cured it. The doctrine half corrects the half-right line in
+  `CLAUDE.md`'s ship loop. The root fix is a credential, not code — an identity that is not
+  `GITHUB_TOKEN` — and that is Eric's step, filed as such.
+- **SIDE QUESTS:** the deploy job's comment claims "merged commits are already verified (branch
+  protection required `verify`)" — worth confirming that protection is actually armed, since nothing
+  in this incident would have noticed if it were not (→ docs/IDEAS.md).
+
 ### A branch ref was pointed at a tag object, and the feedback lane could not claim anything
 
 - **SHA:** c1af6d2   **DATE:** 2026-08-22   **STATUS:** closed
