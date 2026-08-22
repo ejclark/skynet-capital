@@ -93,6 +93,20 @@ describe("deploy lag", () => {
     expect(verdict.cause).toBe("unknown");
   });
 
+  // THE FALSE POSITIVE THIS SCRIPT SHIPPED WITH, caught an hour later on the repo's own state.
+  // The first cut baselined against `releases/latest`, but semantic-release makes no release for a
+  // `docs:`/`chore:`/`test:` commit — so `main` sits legitimately ahead of the newest tag every time
+  // one merges, and the check exited 1 on a healthy repo (`ac3cafa`, a docs commit that had already
+  // deployed). The baseline is now the last SUCCESSFUL DEPLOY, which is the thing whose absence this
+  // script exists to notice. A detector that cries wolf is worse than no detector.
+  it("says nothing when a docs commit deployed but cut no release", () => {
+    const deployed = "ac3cafa0000000000000000000000000000000dd";
+    const { text, verdict } = explain({ head: deployed, released: deployed });
+
+    expect(verdict.lagging).toBe(false);
+    expect(text).toContain("deploy is current");
+  });
+
   it("cannot decide without both ends of the comparison", () => {
     expect(explain({ head: "abc" }).verdict.lagging).toBe(false);
     expect(explain({ released: "abc" }).verdict.lagging).toBe(false);

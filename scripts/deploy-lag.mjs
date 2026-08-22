@@ -2,6 +2,7 @@
 // Is `main` actually deployed? — the eye for the gap nothing else can see.
 //
 //   node scripts/deploy-lag.mjs            # human-readable; exit 1 when main is undeployed
+//                                          # baseline = the last SUCCESSFUL DEPLOY, not the last tag
 //   node scripts/deploy-lag.mjs --json     # machine-readable, always exit 0
 //
 // WHAT HAPPENED (2026-08-22). The feedback lane built #475 correctly, opened PR #492, CI passed,
@@ -64,25 +65,40 @@ export function deployLag(state = {}) {
 
 /** One-line summary for a run log, a digest, or a terminal. */
 export function describeLag(lag, { released, head } = {}) {
-  if (!lag.lagging) return `deploy is current — main (${short(head)}) is the released commit`;
+  if (!lag.lagging) return `deploy is current — main (${short(head)}) is the deployed commit`;
   const why =
     lag.cause === "silent-merge"
       ? "every one merged by a token that emits no `push`, so the deploy never fired"
       : "cause unclear — check whether the deploy job failed rather than never starting";
-  return `main is ${lag.behind} commit(s) ahead of the last release (${short(released)} → ${short(head)}) — ${why}`;
+  return `main is ${lag.behind} commit(s) ahead of the last deploy (${short(released)} → ${short(head)}) — ${why}`;
 }
 
 const short = (sha) => String(sha ?? "").slice(0, 7) || "unknown";
 
 const gh = (args) => execFileSync("gh", args, { encoding: "utf8" });
 
-/** Impure boundary: read the real state, hand it to the pure half. */
+/**
+ * Impure boundary: read the real state, hand it to the pure half.
+ *
+ * THE BASELINE IS THE LAST SUCCESSFUL DEPLOY, NOT THE LAST RELEASE TAG. The first cut of this
+ * script compared against `releases/latest` and was wrong within the hour: semantic-release makes
+ * no release for a `docs:`/`chore:`/`test:` commit, so `main` sits legitimately ahead of the newest
+ * tag every time one merges. It flagged `ac3cafa` — a docs commit that had deployed successfully —
+ * as stranded. A detector that cries wolf on a healthy repo is worse than none, and this file's own
+ * header is about layers that misreport themselves.
+ *
+ * The deploy job's own run is the honest baseline: it is exactly the thing whose absence this
+ * script exists to notice.
+ */
 function readState() {
   const head = JSON.parse(gh(["api", "repos/{owner}/{repo}/commits/main"])).sha;
-  const release = JSON.parse(gh(["api", "repos/{owner}/{repo}/releases/latest"]));
-  // A release tag may be annotated, so resolve it to the commit it actually points at rather than
-  // trusting the tag object's own sha — the same trap the claim lease hit on 2026-08-22.
-  const released = JSON.parse(gh(["api", `repos/{owner}/{repo}/commits/${release.tag_name}`])).sha;
+  const runs = JSON.parse(
+    gh([
+      "api",
+      "repos/{owner}/{repo}/actions/workflows/pipeline.yml/runs?event=push&branch=main&status=success&per_page=1",
+    ]),
+  );
+  const released = runs.workflow_runs?.[0]?.head_sha ?? "";
   const stranded =
     head === released
       ? []
@@ -93,7 +109,7 @@ function readState() {
             mergedBy: c.author?.login ?? c.committer?.login ?? "",
           }),
         );
-  return { head, released, tag: release.tag_name, stranded };
+  return { head, released, stranded };
 }
 
 /** Read a whole stdin stream synchronously — the `--explain` fixture channel. */
@@ -112,7 +128,7 @@ if (process.argv[1]?.endsWith("deploy-lag.mjs")) {
   const state = process.argv.includes("--explain") ? JSON.parse(readStdin() || "{}") : readState();
   const lag = deployLag(state);
   if (process.argv.includes("--json")) {
-    console.log(JSON.stringify({ ...lag, released: state.released, tag: state.tag }, null, 2));
+    console.log(JSON.stringify({ ...lag, released: state.released }, null, 2));
     process.exit(0);
   }
   console.log(describeLag(lag, state));
