@@ -160,6 +160,11 @@ must be a valid Conventional-Commit subject** (it becomes the commit subject and
 bump), and the **PR description — not the in-PR commit bodies — is the durable record**. Write it as the
 thing a future reader will `git log` on `main`.
 
+**Issues — the same contract, one audience wider.** An issue is read by a human deciding whether to
+care *and* by a zero-context build session that has nothing else. One-line ask, metadata table, 2–4
+talking points and a picture above the fold; the brief inside one `<details>`. Grammar and the
+research behind it: [`ISSUES.md`](ISSUES.md); gate: `npm run issue:lint`; drill: `/issue`.
+
 **PRs — picture first, then a fold** (mirror [`.github/pull_request_template.md`](../.github/pull_request_template.md);
 picture grammar: [`PICTURES.md`](PICTURES.md); structure machine-checked by `scripts/ship.sh checkbody`):
 

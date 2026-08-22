@@ -1,4 +1,5 @@
 import { COACH_SCRIPT } from "../server/feedback-coach-script.js";
+import { PREVIEW_SCRIPT } from "../server/feedback-preview-script.js";
 import type { FeedbackResult } from "../server/feedback-service.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
@@ -14,6 +15,12 @@ import { type NavContext, renderShell } from "./dashboard-shell.js";
  * answer a couple of short questions — and only then does the real title/details form appear,
  * pre-filled for review. "Skip →" (and any coach failure) reveals the plain form immediately, so
  * writing it yourself always stays one click away and the form still works with no JS or no key.
+ *
+ * The details field carries a Write | Preview tab pair (2026-08-22): the body becomes a GitHub
+ * issue, so a member should see their markdown rendered before they send it — bullets, a table and
+ * a `<details>` fold are exactly what the house issue shape asks for (docs/ISSUES.md). The tabs
+ * render `hidden` and are unhidden by script, so a no-JS member gets a plain textarea, never dead
+ * tabs.
  */
 
 export interface FeedbackFormViewOptions {
@@ -69,7 +76,13 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
         ${formField(`<label for="fdbk-title">Title</label>
         <input name="title" id="fdbk-title" required maxlength="120" placeholder="Short summary">`)}
         ${formField(`<label for="fdbk-details">Details</label>
-        <textarea name="details" id="fdbk-details" rows="8" placeholder="What happened · what you'd like · the idea…"></textarea>`)}
+        <div class="fdbk-tabs" id="fdbk-tabs" role="tablist" hidden>
+          <button type="button" id="fdbk-tab-write" class="on" role="tab" aria-selected="true">Write</button>
+          <button type="button" id="fdbk-tab-preview" role="tab" aria-selected="false">Preview</button>
+          <span class="fdbk-tabs-hint">Markdown — bullets, tables and a <code>&lt;details&gt;</code> fold all render on GitHub.</span>
+        </div>
+        <textarea name="details" id="fdbk-details" rows="8" placeholder="What happened · what you'd like · the idea…"></textarea>
+        <div class="fdbk-preview" id="fdbk-preview" role="tabpanel" hidden></div>`)}
         ${formField(`<label for="fdbk-area">Where in the app? <small>(optional)</small></label>
         <select name="area" id="fdbk-area">
           <option value="" selected>— pick a spot —</option>
@@ -81,11 +94,12 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
           <option>Research</option>
           <option>Somewhere else</option>
         </select>`)}
-        <input type="hidden" name="capsule" id="fdbk-capsule">
+        <input type="hidden" name="spec" id="fdbk-spec">
         <button type="submit" class="fdbk-submit">Send it</button>
       </form>
     </div>
     ${options.coachEnabled ? `<script>${COACH_SCRIPT}</script>` : ""}
+    <script>${PREVIEW_SCRIPT}</script>
     ${options.coachEnabled ? `<noscript><style>#fdbk-form{display:flex !important}#coach-box{display:none !important}</style></noscript>` : ""}
   </section>`;
   return renderShell(options.nav, content, new Date().toISOString());
@@ -143,6 +157,30 @@ const FDBK_STYLE = `<style>
   .coach-thread > div input{ flex:1; padding:10px 12px; font-size:13.5px; font-family:var(--sans); color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:9px; }
   .coach-thread > div input:focus{ outline:none; border-color:var(--accent); }
   .coach-thread > div button{ padding:10px 14px; font-size:13px; font-weight:600; font-family:var(--sans); color:var(--bg); background:var(--accent); border:0; border-radius:9px; cursor:pointer; }
+  .fdbk-tabs{ display:flex; align-items:center; gap:6px; margin-bottom:-2px; }
+  .fdbk-tabs button{ padding:6px 13px; font-size:12.5px; font-weight:600; font-family:var(--sans); color:var(--muted); background:transparent; border:1px solid transparent; border-radius:8px 8px 0 0; cursor:pointer; }
+  .fdbk-tabs button.on{ color:var(--text); background:var(--surface-2); border-color:var(--border); border-bottom-color:var(--surface-2); }
+  .fdbk-tabs button:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .fdbk-tabs-hint{ margin-left:auto; font-size:11.5px; color:var(--muted); opacity:.85; }
+  .fdbk-tabs-hint code{ font-size:11px; }
+  .fdbk-preview{ min-height:210px; padding:14px 16px; font-size:14.5px; line-height:1.6; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:9px; overflow-x:auto; }
+  .fdbk-preview > :first-child{ margin-top:0; }
+  .fdbk-preview > :last-child{ margin-bottom:0; }
+  .fdbk-preview h2,.fdbk-preview h3,.fdbk-preview h4,.fdbk-preview h5{ margin:16px 0 8px; font-size:15px; font-weight:700; }
+  .fdbk-preview p{ margin:0 0 10px; }
+  .fdbk-preview ul,.fdbk-preview ol{ margin:0 0 10px; padding-left:22px; }
+  .fdbk-preview li{ margin:3px 0; }
+  .fdbk-preview code{ padding:1px 5px; font-size:12.5px; background:color-mix(in srgb,var(--accent) 12%,transparent); border-radius:5px; }
+  .fdbk-preview pre{ margin:0 0 10px; padding:11px 13px; overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:8px; }
+  .fdbk-preview pre code{ padding:0; background:none; }
+  .fdbk-preview table{ margin:0 0 10px; border-collapse:collapse; font-size:13.5px; }
+  .fdbk-preview th,.fdbk-preview td{ padding:6px 11px; border:1px solid var(--border); text-align:left; }
+  .fdbk-preview th{ background:var(--surface); font-weight:700; }
+  .fdbk-preview blockquote{ margin:0 0 10px; padding:2px 0 2px 13px; border-left:3px solid var(--border); color:var(--muted); }
+  .fdbk-preview details{ margin:0 0 10px; padding:10px 13px; background:var(--surface); border:1px solid var(--border); border-radius:8px; }
+  .fdbk-preview summary{ cursor:pointer; font-weight:600; }
+  .fdbk-preview hr{ margin:14px 0; border:0; border-top:1px solid var(--border); }
+  .fdbk-preview-wait{ color:var(--muted); }
   .fdbk-banner{ margin:-6px 0 4px; font-size:13px; color:var(--neg); }
   .fdbk-res{ max-width:520px; }
   .fdbk-res .res-icon{ font-size:34px; margin-bottom:6px; }

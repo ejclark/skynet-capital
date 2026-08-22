@@ -118,4 +118,6 @@ The repo's hard invariant — *never let a flourish imply something false* — a
 - **Journeys** (`docs/JOURNEYS/`): pictures are *offered, never required* — the open-forks map and
   spine scoreboard snippets live in `docs/JOURNEYS/TEMPLATE.md`. A journey that fires beats a
   journey that's pretty.
-- **Plans / handoffs / issues:** same decision table, same honesty rules, same waiver right.
+- **Plans / handoffs / issues:** same decision table, same honesty rules, same waiver right — plus
+  the issue-specific rules (a proposed diagram is captioned as proposed; GitHub hosts issue
+  screenshots, so the ≤100KB git-history rule does not apply) in [`ISSUES.md`](ISSUES.md).

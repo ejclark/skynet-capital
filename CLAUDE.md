@@ -102,7 +102,8 @@ role of responsible owner/steward — shipping lovable work while protecting the
 
 **Idea routing — the adapter is Claude, not Eric.** He dumps raw; Claude classifies. Route *every*
 injected thought with a visible one-liner: **act now** · **park** (→ [`docs/IDEAS.md`](docs/IDEAS.md) +
-a task) · **fan out** (→ file it as a `feedback`-labeled issue as a self-contained story capsule — the
+a task) · **fan out** (→ file it as a `feedback`-labeled issue as a self-contained story capsule, shaped by
+**`/issue`** → [`docs/ISSUES.md`](docs/ISSUES.md) — the
 postmaster lane builds it in its own fresh session, so rapid-fire ideas never conflate context; for
 buildable asks that should start now but don't belong in *this* session — see
 [`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) ·
@@ -118,7 +119,10 @@ _"plans belong in github issues, not in source code"_ — a correction he has ha
 the committed ones). A plan is an issue in the house format (intent & end-state · EARS criteria ·
 constraints · settled forks · open questions · Eric's steps · slicing sketch — see #429, #466), labelled
 `enhancement` + `plan`; Eric's label/comment on the issue is the `ready` flip, and Claude executes
-it unattended, banking mid-flight questions as comments instead of guessing. The richer the issue, the
+it unattended, banking mid-flight questions as comments instead of guessing. The body follows the
+**capsule** shape every issue uses ([`docs/ISSUES.md`](docs/ISSUES.md)): a one-line ask, a metadata
+table, 2–4 talking points and a picture above the fold; the whole brief inside one `<details>` — a
+fold is invisible to a human and fully present for the session reading raw markdown. The richer the issue, the
 fewer interventions — that ratio is the experiment's measure. [`docs/plans/`](docs/plans/README.md) holds
 only the legacy in-flight plans; **do not add files there.**
 
@@ -195,7 +199,8 @@ dead code) with ratchet-down budgets, corrective skills (`/decompose`, `/dedupe`
 (`decomposer`, `ui-librarian`, `mortician`), and a dispatch policy (`/governor`). **Route plain intent
 to it**: "clean up the code" / "burn down debt" → run a governor cycle; "why did CI fail" → a gate
 probably caught real drift, fix the finding not the gate; big planned burn-downs → feast mode (see the
-governor skill); **any reaction to a rendered frame** — "this looks terrible", "that's a 30/100",
+governor skill); **"file this as an issue"**, or an issue that reads as a wall → **`/issue`**, which shapes the capsule
+and lints it before it is filed (`npm run issue:lint`); **any reaction to a rendered frame** — "this looks terrible", "that's a 30/100",
 "make it more dramatic" — → `/telestrator`, which names the cause before anything gets changed (the
 inverse of `/vision`: eyes in, engineering out); **"we need an agent for X"** → `/charter` before writing
 a single `.claude/agents/*.md` file — it checks for an existing owner first and a REJECT verdict is a

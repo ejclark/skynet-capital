@@ -9,6 +9,8 @@ body:
         Love it — the best improvements start from a real moment of friction. Tell us the **problem first**, then your idea.
         (Big, open-ended concepts fit better under **💡 Idea to explore** — this one's for concrete tweaks.)
 
+        **Title tip:** one clear sentence naming the outcome — *"Let me pin a favorite play to the top"*. Short beats thorough; we'll ask if we need more.
+
         **What happens next:** once this is triaged, an AI build session picks it up fresh — everything it
         knows about your ask is what's written here. Progress shows up as comments on this issue.
   - type: checkboxes

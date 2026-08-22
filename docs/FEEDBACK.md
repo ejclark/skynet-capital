@@ -89,10 +89,14 @@ one queue — and the third got buried under the first two.
 
 Members who go through the guided path at `/feedback` are interrogated against a per-kind
 completeness bar before anything is filed, and the issue carries a `curated` label plus a fenced
-` ```skynet-capsule ` block: acceptance criteria, assumptions, explicit out-of-scope. The build
-session treats that capsule as the specification instead of re-litigating what the member meant.
+` ```skynet-spec ` block: acceptance criteria, assumptions, explicit out-of-scope, readiness. The
+build session treats that spec as the specification instead of re-litigating what the member meant.
 An ask that needs Eric is recognized **at the form**, so it costs a sentence rather than a whole
 build session discovering it later.
+
+Two things shape a filed issue and they compose rather than compete: the **capsule**
+([`docs/ISSUES.md`](ISSUES.md)) is how the body *reads* — talking points above one fold; the
+**build spec** is what it *commits to*.
 
 The coach needs `ANTHROPIC_API_KEY`; without it members fall through to the plain form and file
 uncurated issues, which the lane still builds — just more cautiously.

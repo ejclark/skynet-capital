@@ -20,6 +20,18 @@ describe("feedback-service issue body", () => {
     expect(body).toContain(`member \`${opaqueMemberId(input.submitterEmail)}\``);
   });
 
+  it("puts the metadata in a table, under the member's own words", () => {
+    const body = issueBody(input);
+
+    expect(body.indexOf("the chart wobbled")).toBeLessThan(body.indexOf("| **Kind** |"));
+    expect(body).toContain("| **Kind** | 🐞 Bug |");
+    expect(body).toContain("| **Where** | The calendar |");
+  });
+
+  it("omits the where row when the member didn't pick one", () => {
+    expect(issueBody({ kind: "idea", title: "t", details: "d" })).not.toContain("**Where**");
+  });
+
   it("derives a stable, case-insensitive member id", () => {
     expect(opaqueMemberId("Member@Example.com")).toBe(opaqueMemberId("  member@example.com "));
     expect(opaqueMemberId("member@example.com")).toHaveLength(10);
@@ -34,11 +46,11 @@ describe("feedback-service issue body", () => {
 });
 
 // Provenance (2026-08-22). Before this, a filed issue recorded NOTHING about how it was written, so
-// a fully-interrogated capsule and a one-line paste looked identical to the build lane and both had
-// to be treated as the vaguer one. The `curated` label plus the fenced capsule block is what lets
+// a fully-interrogated spec and a one-line paste looked identical to the build lane and both had
+// to be treated as the vaguer one. The `curated` label plus the fenced spec block is what lets
 // the lane build a curated ask unattended instead of routing it to Eric.
 describe("feedback provenance", () => {
-  const capsule = {
+  const spec = {
     criteria: ["When a member opens /feedback, the form shall span 900px."],
     assumptions: [],
     outOfScope: [],
@@ -46,7 +58,7 @@ describe("feedback provenance", () => {
   };
 
   it("labels a coach-written submission `curated`, and a bare one not", () => {
-    expect(labelsFor({ kind: "feature", title: "t", details: "d", capsule })).toEqual([
+    expect(labelsFor({ kind: "feature", title: "t", details: "d", spec })).toEqual([
       "enhancement",
       "feedback",
       "curated",
@@ -65,7 +77,7 @@ describe("feedback provenance", () => {
       kind: "feature",
       title: "t",
       details: "d",
-      capsule: { ...capsule, needsEric: "provisions a new API key" },
+      spec: { ...spec, needsEric: "provisions a new API key" },
     });
 
     expect(labels).toContain("needs-eric");
@@ -77,26 +89,24 @@ describe("feedback provenance", () => {
       kind: "bug",
       title: "t",
       details: "d",
-      capsule: { ...capsule, readiness: "partial", assumptions: ["never said which page"] },
+      spec: { ...spec, readiness: "partial", assumptions: ["never said which page"] },
     });
 
     expect(labels).toContain("needs-info");
     expect(labels).not.toContain("needs-eric");
   });
 
-  it("emits the machine-readable capsule block the build lane reads as the spec", () => {
-    const body = issueBody({ kind: "feature", title: "t", details: "Wider form", capsule });
+  it("emits the machine-readable spec block the build lane reads as the spec", () => {
+    const body = issueBody({ kind: "feature", title: "t", details: "Wider form", spec });
 
     expect(body).toContain("**Acceptance criteria**");
-    expect(body).toContain("```skynet-capsule");
-    expect(JSON.parse(body.split("```skynet-capsule\n")[1]?.split("\n```")[0] ?? "{}")).toEqual(
-      capsule,
-    );
+    expect(body).toContain("```skynet-spec");
+    expect(JSON.parse(body.split("```skynet-spec\n")[1]?.split("\n```")[0] ?? "{}")).toEqual(spec);
   });
 
-  it("omits the capsule block entirely for a bare submission", () => {
+  it("omits the spec block entirely for a bare submission", () => {
     expect(issueBody({ kind: "idea", title: "t", details: "just a thought" })).not.toContain(
-      "skynet-capsule",
+      "skynet-spec",
     );
   });
 });

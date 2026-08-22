@@ -3,7 +3,7 @@ import {
   createFeedbackCoach,
   parseCoachReply,
   resolveFeedbackCoach,
-  toCapsule,
+  toSpec,
 } from "../../src/server/feedback-coach.js";
 
 const anthropicReply = (text: string): JsonResponse => ({
@@ -15,6 +15,22 @@ describe("feedback coach", () => {
   it("is inert until ANTHROPIC_API_KEY is set — the plain form must keep working without it", () => {
     expect(resolveFeedbackCoach({})).toBeUndefined();
     expect(resolveFeedbackCoach({ ANTHROPIC_API_KEY: "sk-ant-x" })).toBeInstanceOf(Function);
+  });
+
+  it("asks the model for the house capsule, not a wall of prose (docs/ISSUES.md)", async () => {
+    let sent: { system?: string } = {};
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_method, _url, _headers, body) => {
+      sent = body as { system?: string };
+      return Promise.resolve(anthropicReply('{"question": "where?"}'));
+    });
+
+    await coach({ kind: "bug", messages: [{ role: "user", content: "chart bad" }] });
+
+    const system = sent.system ?? "";
+    expect(system).toContain("<details><summary><strong>The brief</strong></summary>");
+    expect(system).toContain("max 120 chars");
+    // #455 filed its whole note twice — the coach is told not to do that to a reader again.
+    expect(system).toContain("never repeat the same sentence or paragraph twice");
   });
 
   it("returns a question turn when the model asks one", async () => {
@@ -45,10 +61,10 @@ describe("feedback coach", () => {
     expect(result).toMatchObject({ ok: true, done: true, title: "fix the wobble" });
   });
 
-  // The capsule is what earns the wide build envelope: a curated ask is treated as the SPEC and
+  // The build spec is what earns the wide build envelope: a curated ask is treated as the SPEC and
   // built unattended. So "spec-complete" has to be earned, never merely asserted by the model —
-  // a capsule that falsely claims completeness is the one failure that reaches production.
-  it("parses the story capsule and marks it spec-complete only when criteria back the claim", () => {
+  // a spec that falsely claims completeness is the one failure that reaches production.
+  it("parses the build spec and marks it spec-complete only when criteria back the claim", () => {
     const complete = parseCoachReply(
       JSON.stringify({
         draft: {
@@ -64,7 +80,7 @@ describe("feedback coach", () => {
 
     expect(complete).toMatchObject({
       done: true,
-      capsule: {
+      spec: {
         readiness: "spec-complete",
         criteria: ["When a member opens /feedback, the form shall span 900px."],
       },
@@ -76,32 +92,32 @@ describe("feedback coach", () => {
       '{"draft": {"title": "t", "details": "d", "readiness": "spec-complete"}}',
     );
 
-    expect(result).toMatchObject({ done: true, capsule: { readiness: "partial", criteria: [] } });
+    expect(result).toMatchObject({ done: true, spec: { readiness: "partial", criteria: [] } });
   });
 
   // The issue body is public markdown; a backtick in a capsule field would break the fenced block
   // the build lane parses, and an unbounded list would let one submission flood the issue.
-  it("bounds and de-fences capsule fields — the issue body is public markdown", () => {
-    const capsule = toCapsule({
+  it("bounds and de-fences build-spec fields — the issue body is public markdown", () => {
+    const spec = toSpec({
       criteria: Array.from({ length: 40 }, (_, i) => `c${i}`),
       assumptions: ["```javascript evil"],
       readiness: "spec-complete",
       needsEric: "raises the `spend` cap",
     });
 
-    expect(capsule.criteria).toHaveLength(12);
-    expect(capsule.assumptions[0]).not.toContain("`");
-    expect(capsule.needsEric).toBe("raises the 'spend' cap");
+    expect(spec.criteria).toHaveLength(12);
+    expect(spec.assumptions[0]).not.toContain("`");
+    expect(spec.needsEric).toBe("raises the 'spend' cap");
   });
 
-  it("degrades a malformed capsule to the conservative reading rather than throwing", () => {
-    expect(toCapsule(undefined)).toEqual({
+  it("degrades a malformed spec to the conservative reading rather than throwing", () => {
+    expect(toSpec(undefined)).toEqual({
       criteria: [],
       assumptions: [],
       outOfScope: [],
       readiness: "partial",
     });
-    expect(toCapsule({ criteria: "not an array", readiness: "spec-complete" })).toMatchObject({
+    expect(toSpec({ criteria: "not an array", readiness: "spec-complete" })).toMatchObject({
       readiness: "partial",
     });
   });
@@ -113,7 +129,7 @@ describe("feedback coach", () => {
   });
 
   // Six rounds, not three (2026-08-22). Three was too few to clear the completeness bar, and the
-  // old nudge force-drafted regardless — manufacturing confident-looking capsules out of
+  // old nudge force-drafted regardless — manufacturing confident-looking specs out of
   // unresolved asks, which downstream had only one exit: escalating to Eric.
   it("keeps asking through six member rounds before nudging toward a draft", async () => {
     const bodies: unknown[] = [];

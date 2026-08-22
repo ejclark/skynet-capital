@@ -38,9 +38,11 @@
     "spec:gap": "node scripts/spec-gap-scan.mjs",
     "incident:scan": "node scripts/incident-scan.mjs",
     "docrot:scan": "node scripts/doc-rot-scan.mjs",
+    "issue:lint": "node scripts/issue-lint.mjs",
     "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
     "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs",
     "shoot:research": "tsx scripts/shoot-research.mjs",
+    "shoot:feedback": "tsx scripts/shoot-feedback.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
     "backfill:activity": "tsx src/scripts/backfill-trade-activity.ts"
