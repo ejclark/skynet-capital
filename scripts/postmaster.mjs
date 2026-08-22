@@ -295,7 +295,11 @@ export function claimFailureReason(err) {
     .slice(-2)
     .join(" ")
     .trim();
-  if (/already exists|422/i.test(detail)) return "lost the race to a concurrent claim";
+  // MESSAGE, not status. GitHub answers 422 for several unrelated problems — "Reference already
+  // exists" (the genuine race), "Object does not exist" (a bad sha), "Reference update failed"
+  // (a ruleset) — so matching the CODE re-hid everything this function exists to reveal. Caught by
+  // using it: three more retriggers of #475 read as a race with no lease anywhere (2026-08-22).
+  if (/already exists/i.test(detail)) return "lost the race to a concurrent claim";
   return `could not create the lease — ${detail || "no error text"}`;
 }
 

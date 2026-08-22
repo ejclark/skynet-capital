@@ -25,6 +25,15 @@ describe("claim lease failure reasons", () => {
     );
   });
 
+  it("does not call a 422 a race when the message says otherwise", () => {
+    // GitHub uses 422 for a bad sha and a ruleset refusal too; only "already exists" is the lock.
+    const said = reason({ stderr: "HTTP 422: Object does not exist (…/git/refs)" });
+
+    expect(said).toContain("could not create the lease");
+    expect(said).toContain("Object does not exist");
+    expect(said).not.toContain("race");
+  });
+
   it("reports a permissions failure as a fault, not a race", () => {
     const said = reason({ stderr: "HTTP 403: Resource not accessible by integration" });
 
