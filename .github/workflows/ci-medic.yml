@@ -1,0 +1,108 @@
+name: CI Medic
+
+# THE LANE THAT WATCHES THE LANES. A run fails on `main`, this files one capsule issue with the
+# evidence and dispatches a session to fix it — instead of the failure sitting red until someone
+# happens to look at the Actions tab.
+#
+# WHY (Eric, 2026-08-22): run 32545818804 died in a bash step of the feedback lane AFTER taking the
+# issue's claim lease, so issue #475 looked claimed and nothing built it. Silent, and it would have
+# stayed silent. "We should have a job kicked off that automatically resolves these types of
+# failures."
+#
+# This file is a trigger shim, exactly like postmaster.yml: every decision lives in
+# scripts/ci-medic.mjs, which is pure where it decides and specced against fixture payloads
+# (tests/scripts/ci-medic.spec.ts). Logic in `run:` blocks is what caused the failure this lane
+# exists to catch — see docs/LESSONS.md.
+#
+# THE LOOP GUARDS (a self-healing lane that can trigger itself is a bill, not a net). Three live in
+# the router and are specced; the fourth is the `workflows:` list below, which never names this
+# workflow:
+#   1. `CI Medic`'s own failures are ignored.
+#   2. Only default-branch runs are acted on — a red PR belongs to that PR's author and its
+#      watching session, and repair PRs opened here would otherwise feed the lane its own output.
+#   3. One open issue per failure signature; a recurrence comments instead of filing again.
+#   4. A signature carrying `needs-eric` silences the medic for that signature entirely.
+
+on:
+  workflow_run:
+    # Named explicitly. NEVER add "CI Medic" here, and never use a catch-all.
+    workflows: ["Postmaster", "Pipeline", "Autonomy ops"]
+    types: [completed]
+
+permissions:
+  contents: read        # the repair session mints its own token for pushes
+  issues: write         # file the capsule, comment recurrences
+  actions: read         # read the failed run's jobs and logs
+  pull-requests: write  # the repair session opens the PR
+
+concurrency:
+  # Per signature-ish: one medic run per watched workflow at a time, never cancelling a triage
+  # mid-file (a half-filed issue is worse than a queued one).
+  group: ci-medic-${{ github.event.workflow_run.name }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    name: triage the failure
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    outputs:
+      issue: ${{ steps.medic.outputs.issue }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
+
+      # One line, on purpose. Evidence gathering, dedupe and the decision are all in the router.
+      - id: medic
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ci-medic.mjs
+
+  repair:
+    name: repair the failure
+    needs: triage
+    if: needs.triage.outputs.issue != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # The App identity, so the repair PR emits `pull_request.opened` and `verify` actually runs.
+      # Same reasoning as postmaster.yml's header — a PR with zero checks is worse than a red one.
+      - id: app-token
+        if: vars.APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - id: gate
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "armed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — issue #${{ needs.triage.outputs.issue }} carries the evidence but nothing will repair it."
+          fi
+
+      - if: steps.gate.outputs.armed == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-sonnet-5
+          # The repair envelope lives in .github/prompts/ci-medic-repair.md, not here. Those hard
+          # limits are exactly the kind of rule that must stay tunable without a carve-out merge —
+          # and `.github/prompts/**` is protected by envelope.json, so this lane cannot loosen its
+          # own leash.
+          prompt: |
+            Read `.github/prompts/ci-medic-repair.md` in this repo and follow it exactly. It is your
+            complete instruction set for this run.
+
+            The medic's issue is #${{ needs.triage.outputs.issue }} in this repo.

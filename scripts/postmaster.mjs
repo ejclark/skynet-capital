@@ -3,6 +3,8 @@
 //
 //   node scripts/postmaster.mjs                          # read $GITHUB_EVENT_PATH, act
 //   node scripts/postmaster.mjs --dry-run --event f.json # print the intents, touch nothing
+//   node scripts/postmaster.mjs --claim-feedback         # claim the labelled issue + pick its model
+//   node scripts/postmaster.mjs --model-tier < body.md   # just the tier decision
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -27,7 +29,7 @@
 // no flip button, no handoff build job. Design handoffs are now `[handoff]` issues (docs/HANDOFFS.md)
 // built by comment-triggered sessions. The claim LEASE survives — the feedback lane runs on it.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 
 // ── labels this repo speaks ───────────────────────────────────────────────────
 export const LABELS = {
@@ -51,7 +53,7 @@ export const LABELS = {
   curated: {
     name: "curated",
     color: "0e8a16",
-    description: "Written through the AI coach — the capsule is the spec; build it unattended",
+    description: "Written through the AI coach — its build spec is the spec; build it unattended",
   },
   needsInfo: {
     name: "needs-info",
@@ -290,6 +292,35 @@ function claimAgeOf(sha) {
   }
 }
 
+/**
+ * Which model tier builds a feedback issue (Eric, 2026-08-20: "adjust the model between haiku 4.5
+ * and sonnet 5 based on the user's prompt/articulated needs… rewarding their engagement is worth
+ * the token burn"). A member who writes real detail is describing something worth Sonnet's
+ * judgment; a one-liner gets Haiku's cheaper, faster pass.
+ *
+ * THIS LIVED IN THE WORKFLOW AS BASH UNTIL 2026-08-22, AND IT BROKE THE LANE. Under
+ * `set -euo pipefail`, a `$(… && echo …)` inside the reason string exits 1 whenever the `&&` short-
+ * circuits — so every feedback issue over 600 chars WITHOUT a code fence killed its own build step
+ * before Claude was ever invoked (run 32545818804, issue #475, 1,410 chars). Silent: the job failed
+ * after the claim lease was taken, so the issue looked claimed and nothing built it. The fix is not
+ * a better `&&`; it is this function, which is pure, specced, and cannot short-circuit.
+ *
+ * @returns {{ model: string, reason: string }}
+ */
+export function modelTier(body = "") {
+  const text = String(body ?? "");
+  const fenced = text.includes("```");
+  const detailed = text.length > 600 || fenced;
+  if (!detailed) {
+    return {
+      model: "claude-haiku-4-5-20251001",
+      reason: `short/simple ask (${text.length} chars, no code block)`,
+    };
+  }
+  const extra = fenced ? ", includes a code block" : "";
+  return { model: "claude-sonnet-5", reason: `detailed ask (${text.length} chars${extra})` };
+}
+
 /** Release a lease once its work is no longer being built. */
 export function releaseClaim(slug) {
   try {
@@ -514,6 +545,28 @@ function ensureLabel(label) {
   }
 }
 
+/**
+ * The feedback lane's one step: claim the labelled issue's lease, and decide its model tier from
+ * the body already in the event payload (no `gh issue view`, no second network hop). Appends
+ * `number=` / `model=` to $GITHUB_OUTPUT when the claim wins, and narrates on stdout either way —
+ * notices on stdout, outputs to the file, so neither can contaminate the other.
+ */
+export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? "") {
+  const issue = ctx.payload?.issue;
+  if (!issue) return { claimed: false, reason: "no issue in the payload" };
+  const result = claimHandoff(`feedback-${issue.number}`, sha, nowMs);
+  if (!result.claimed) {
+    console.log(`::notice::not building feedback #${issue.number} — ${result.reason}`);
+    return result;
+  }
+  const tier = modelTier(issue.body ?? "");
+  const out = process.env.GITHUB_OUTPUT;
+  if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
+  console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
+  console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
+  return { ...result, number: issue.number, model: tier.model };
+}
+
 // ── entry point ───────────────────────────────────────────────────────────────
 function main(argv) {
   const dry = argv.includes("--dry-run");
@@ -533,6 +586,20 @@ function main(argv) {
     repo: process.env.GITHUB_REPOSITORY ?? "",
     actor: raw.actor ?? process.env.GITHUB_ACTOR ?? "unknown",
   };
+
+  // The tier heuristic, runnable on its own: `… --model-tier < body.md`. Exists so the decision
+  // that once broke the lane has a spec that runs it exactly as production does.
+  if (argv.includes("--model-tier")) {
+    const { model, reason } = modelTier(readFileSync(0, "utf8"));
+    console.log(`model=${model}`);
+    console.log(`reason=${reason}`);
+    return;
+  }
+
+  if (argv.includes("--claim-feedback")) {
+    claimFeedback(ctx);
+    return;
+  }
 
   const deps = fixtureDeps ?? (dry ? {} : gatherDeps(ctx));
   const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
