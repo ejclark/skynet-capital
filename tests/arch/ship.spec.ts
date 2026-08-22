@@ -88,6 +88,28 @@ describe("ship checkbody — the picture/format contract", () => {
     expect(stderr).toContain("The picture");
   });
 
+  it("accepts a captioned before/after table — the picture PICTURES.md prescribes for config", () => {
+    // The gate used to demand an image or a mermaid, so a config change with the right picture had
+    // to add a decorative diagram to pass. That is the waiver doctrine inverted (2026-08-22).
+    const table = [
+      "## The picture",
+      "",
+      "| | before | after |",
+      "|---|---|---|",
+      "| `workflows:` filter | absent | names + paths |",
+      "",
+      "_Caption — the trigger block, before and after this change._",
+      "",
+      "## Summary",
+      "",
+      "- restores the filter",
+      "",
+    ].join("\n");
+
+    const { code } = run(["checkbody", body(table)]);
+    expect(code).toBe(0);
+  });
+
   it("refuses a picture section with neither media nor waiver", () => {
     const { code, stderr } = run([
       "checkbody",

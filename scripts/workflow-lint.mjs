@@ -18,6 +18,8 @@
 //   2. A `steps.<id>.outputs` reference with no step declaring that id in the same job — the state
 //      the file was in for several minutes while the tier step was being removed.
 //   3. A `needs:` naming a job that does not exist.
+//   4. A `workflow_run` trigger with no `workflows:` list — added after the same outage recurred on
+//      ci-medic.yml itself when that list was removed.
 //
 // Dependency-free on purpose (same doctrine as arch-scan/dupe-scan): a gate that guards CI must not
 // itself depend on a package resolving. It parses only the block-style, 2-space-indented subset
@@ -117,6 +119,19 @@ export function danglingStepRefs(text) {
   return problems;
 }
 
+/**
+ * A `workflow_run` trigger must name its workflows. HOUSE RULE FROM AN INCIDENT, not from the
+ * schema: SchemaStore marks `workflows` optional, and on 2026-08-22 removing it (to catch
+ * unparseable files, whose runs are named by path) got ci-medic.yml rejected by GitHub outright —
+ * a zero-job run named by its own path. Whatever the validator's exact objection, a listed trigger
+ * is the shape that provably works here, and the path forms cover the unparseable case.
+ */
+export function unfilteredWorkflowRun(text) {
+  if (!/^\s{2}workflow_run:/m.test(text)) return [];
+  const block = /^\s{2}workflow_run:\n((?:\s{4}\S[^\n]*\n|\s*\n|\s{6,}[^\n]*\n)*)/m.exec(text);
+  return /^\s{4}workflows:\s*\S/m.test(block?.[1] ?? "") ? [] : ["missing-workflows"];
+}
+
 /** `needs:` entries naming a job the file does not define. */
 export function danglingNeeds(text) {
   const names = new Set(jobs(text).map((j) => j.name));
@@ -147,6 +162,10 @@ export function lintWorkflow(name, text) {
     ...danglingStepRefs(text).map(
       (d) =>
         `${name} job \`${d.job}\` reads \`steps.${d.ref}.outputs\` but declares no step \`${d.ref}\``,
+    ),
+    ...unfilteredWorkflowRun(text).map(
+      () =>
+        `${name} has a \`workflow_run\` trigger with no \`workflows:\` list — GitHub rejected exactly that shape on 2026-08-22 (docs/LESSONS.md); name the workflows, paths included`,
     ),
     ...danglingNeeds(text).map(
       (d) => `${name} job \`${d.job}\` needs \`${d.need}\`, which this file does not define`,

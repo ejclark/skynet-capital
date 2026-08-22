@@ -27,6 +27,30 @@ it. Prevention ranks, best first:
 
 ---
 
+### The same zero-job outage, on the medic itself, one commit after its gate shipped
+
+- **SHA:** e40638b   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** the merge of #477 produced a healthy `Postmaster` run **and** a red run named
+  `.github/workflows/ci-medic.yml` — GitHub's tell for a file it cannot parse, spotted in the same
+  post-merge check that confirmed the postmaster had recovered. ~1 minute, only because someone was
+  already looking at that list.
+- **ROOT CAUSE:** a pre-merge amendment removed the medic's `workflows:` filter, on the sound
+  reasoning that the filter matches a run's workflow NAME and an unparseable file has no name (its
+  run is titled by path) — so the medic was blind to the exact failure it was built for. Removing
+  the list got the file rejected. SchemaStore marks `workflows` optional; GitHub's validator
+  evidently does not agree, and a zero-job run exposes no readable error through the API, so the
+  precise objection is unconfirmed — the amendment also folded the job's `if:` across lines.
+  **The deeper cause is not the YAML: it is that a workflow file cannot be tested before merge**, so
+  a plausible improvement to one went in on reasoning alone.
+- **PREVENTION:** gate + doctrine. (1) `workflow-lint` gained a fourth rule — a `workflow_run`
+  trigger must name its workflows — labelled in the source as a house rule from this incident, not
+  a schema requirement. (2) The filter is restored with the workflow PATHS listed alongside the
+  names, which covers the unparseable case without removing the list. (3) Doctrine, now in the
+  file's own header: on a workflow file, revert to the last shape that provably parsed and keep the
+  delta minimal, rather than guessing between two candidate causes.
+- **SIDE QUESTS:** none new — this is the third face of the 2026-08-22 workflow-fragility theme
+  already banked above.
+
 ### A duplicated job key made postmaster.yml unparseable, and the run reported zero jobs
 
 - **SHA:** 4235123   **DATE:** 2026-08-22   **STATUS:** closed
