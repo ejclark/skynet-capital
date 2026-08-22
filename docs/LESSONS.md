@@ -27,6 +27,30 @@ it. Prevention ranks, best first:
 
 ---
 
+### A duplicated job key made postmaster.yml unparseable, and the run reported zero jobs
+
+- **SHA:** 4235123   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** a re-label of issue #475 produced no Postmaster run at all. Working backwards from
+  that silence found two red runs on `main` whose *name* was `.github/workflows/postmaster.yml`
+  rather than `Postmaster` — GitHub's tell for a file it could not parse. ~7 minutes, and only
+  because someone was already looking; no notification fires for a workflow that never starts.
+- **ROOT CAUSE:** a scripted edit computed its deletion range as `s[:start] + s[end:]` where `end`
+  matched an EARLIER occurrence of the anchor string (the event-research lane has the same
+  `- if: steps.gate.outputs.armed == 'true'` step shape). With `end < start` the slice does not
+  delete a region, it **duplicates** one — leaving `build-feedback:` defined twice. The local check
+  was `yaml.safe_load`, which silently keeps the last duplicate key, so the file parsed clean
+  locally and was rejected by GitHub. A rejected workflow does not fail one job; it produces a run
+  with zero jobs, so the whole postmaster — feedback lane, event research, stall audit — was dead
+  while `main` showed one anonymous red run.
+- **PREVENTION:** gate. `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` check the three
+  states that file was actually in: duplicate mapping keys, a `steps.<id>.outputs` reference whose
+  step no longer exists, and a `needs:` naming an undefined job. Verified against the broken file
+  itself before landing. Second prevention: the CI Medic now treats a failed run with **zero**
+  failing jobs as the workflow-rejected shape and files it (`parseFailure()`), instead of finding
+  no failing job and filing nothing — the exact hole this incident would have fallen through.
+- **SIDE QUESTS:** an anchor-based scripted edit should assert `end > start`; the deeper habit is to
+  diff against the last-good file before pushing a workflow (→ docs/IDEAS.md).
+
 ### A feedback build died in bash before Claude was ever invoked, and nothing was watching
 
 - **SHA:** 2d5921f   **DATE:** 2026-08-22   **STATUS:** closed
