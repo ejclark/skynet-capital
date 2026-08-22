@@ -20,6 +20,18 @@ describe("feedback-service issue body", () => {
     expect(body).toContain(`member \`${opaqueMemberId(input.submitterEmail)}\``);
   });
 
+  it("puts the metadata in a table, under the member's own words", () => {
+    const body = issueBody(input);
+
+    expect(body.indexOf("the chart wobbled")).toBeLessThan(body.indexOf("| **Kind** |"));
+    expect(body).toContain("| **Kind** | 🐞 Bug |");
+    expect(body).toContain("| **Where** | The calendar |");
+  });
+
+  it("omits the where row when the member didn't pick one", () => {
+    expect(issueBody({ kind: "idea", title: "t", details: "d" })).not.toContain("**Where**");
+  });
+
   it("derives a stable, case-insensitive member id", () => {
     expect(opaqueMemberId("Member@Example.com")).toBe(opaqueMemberId("  member@example.com "));
     expect(opaqueMemberId("member@example.com")).toHaveLength(10);

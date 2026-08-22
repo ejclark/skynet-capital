@@ -16,6 +16,22 @@ describe("feedback coach", () => {
     expect(resolveFeedbackCoach({ ANTHROPIC_API_KEY: "sk-ant-x" })).toBeInstanceOf(Function);
   });
 
+  it("asks the model for the house capsule, not a wall of prose (docs/ISSUES.md)", async () => {
+    let sent: { system?: string } = {};
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_method, _url, _headers, body) => {
+      sent = body as { system?: string };
+      return Promise.resolve(anthropicReply('{"question": "where?"}'));
+    });
+
+    await coach({ kind: "bug", messages: [{ role: "user", content: "chart bad" }] });
+
+    const system = sent.system ?? "";
+    expect(system).toContain("<details><summary><strong>The brief</strong></summary>");
+    expect(system).toContain("max 120 chars");
+    // #455 filed its whole note twice — the coach is told not to do that to a reader again.
+    expect(system).toContain("never repeat the same sentence or paragraph twice");
+  });
+
   it("returns a question turn when the model asks one", async () => {
     const coach = createFeedbackCoach({ apiKey: "k" }, () =>
       Promise.resolve(anthropicReply('{"question": "Where in the app did the chart wobble?"}')),
