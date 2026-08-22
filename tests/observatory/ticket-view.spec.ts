@@ -62,7 +62,7 @@ describe("the trade ticket view", () => {
     const unlinked = renderTicketBody({ state: state(), tradingEnabled: true });
     expect(unlinked).toContain("No linked account");
     const off = renderTicketBody({ state: state(), snapshot: ann, tradingEnabled: false });
-    expect(off).toContain("SKYNET_DESK_TRADING=on");
+    expect(off).toContain("needs sign-in configured");
   });
 
   it("stock plays render the share ticket that POSTs to the review step", () => {

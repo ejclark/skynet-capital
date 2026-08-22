@@ -17,6 +17,12 @@ export interface Participant {
   readonly personaId?: string;
   /** IANA timezone (e.g. "America/Chicago") for showing this account's times locally. */
   readonly timezone?: string;
+  /**
+   * The signed-in member who owns this account, stamped from the session at `/add` — the ONLY
+   * link a session may trade through. Absent (legacy roster/store rows, or bots) means no owner
+   * until one is linked from `/invite`, and the account can't be traded until then.
+   */
+  readonly ownerEmail?: string;
 }
 
 /**

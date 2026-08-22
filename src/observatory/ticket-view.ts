@@ -374,7 +374,7 @@ function viewPreview(model: TicketViewModel): OptionTicketPreview | undefined {
 /** The honest banner for a ticket that can't send: trading off, or no linked account. */
 function gateBanner(model: TicketViewModel): string {
   if (!model.tradingEnabled) {
-    return `<p class="caveat"><b>Preview only.</b> Placing orders from the desk is switched off for this deployment — the ticket reviews and refuses rather than sending. Turning it on is the owner's call (<code>SKYNET_DESK_TRADING=on</code>).</p>`;
+    return `<p class="caveat"><b>Preview only.</b> Placing orders from the desk needs sign-in configured for this deployment — the ticket reviews and refuses rather than sending.</p>`;
   }
   if (!model.snapshot) {
     return `<p class="caveat"><b>No linked account.</b> Your sign-in doesn't resolve to an account on the board, so orders can't be sent. You can still explore every play. <a href="/add">Connect an account</a>.</p>`;

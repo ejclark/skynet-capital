@@ -78,6 +78,7 @@ export async function handleAdd(
   res: ServerResponse,
   method: string,
   key: string,
+  ownerEmail: string | undefined,
   addParticipant: (input: AddParticipantInput) => Promise<AddResult>,
 ): Promise<void> {
   await handleSelfServiceForm(
@@ -93,6 +94,7 @@ export async function handleAdd(
         kind: form.get("kind") === "bot" ? "bot" : "human",
         ...(form.get("personaId") ? { personaId: form.get("personaId") as string } : {}),
         ...(form.get("timezone") ? { timezone: form.get("timezone") as string } : {}),
+        ...(ownerEmail ? { ownerEmail } : {}),
       }),
     (result) => addResultHtml(result, key),
   );

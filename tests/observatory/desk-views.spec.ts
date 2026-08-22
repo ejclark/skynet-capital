@@ -169,7 +169,7 @@ describe("positions view — the blotter", () => {
   it("disables the ticket and says why when desk trading is switched off", () => {
     const html = renderPositionsBody(snapshot(), { isSelf: true, tradingEnabled: false });
     expect(html).toContain("Preview only.");
-    expect(html).toContain("SKYNET_DESK_TRADING=on");
+    expect(html).toContain("needs sign-in configured");
   });
 
   it("degrades to an honest message when the account read failed", () => {

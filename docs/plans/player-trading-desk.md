@@ -92,8 +92,9 @@ The research this is built on: [`docs/research/trading-desk-ux.md`](../research/
 ## Autonomy envelope
 
 - Default merge policy applies; this PR waits for Eric (feature + visual work).
-- **Never widenable:** switching desk trading on in any deployed environment. That is one env var
-  (`SKYNET_DESK_TRADING=on`) and it is Eric's to set, on a host that already has OAuth configured.
+- **Superseded (2026-08-21, #466):** desk trading is no longer a separate switch — Eric's ruling
+  removed `SKYNET_DESK_TRADING`. Trading is on the moment OAuth is configured; the actual gate is
+  the owner link (`Participant.ownerEmail`, stamped from the session at `/add`).
 
 ## What "roll" actually needs (sizing the blocked criterion)
 

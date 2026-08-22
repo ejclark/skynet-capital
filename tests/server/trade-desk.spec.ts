@@ -8,6 +8,7 @@ import { resolveAuth } from "../../src/server/auth/resolve-auth.js";
 import { type Session, signSession } from "../../src/server/auth/session.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
+import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import { handleTrade } from "../../src/server/trade-routes.js";
 import { createTradeService } from "../../src/server/trade-service.js";
 
@@ -62,10 +63,15 @@ const post = (base: string, body: Record<string, string>, headers: Record<string
     body: new URLSearchParams(body).toString(),
   });
 
+// The session's email owns "ann" — mirrors resolveOwnerId's real wiring in serve-dashboard.ts.
+const resolveOwnerId = (email: string): string | undefined =>
+  email === "ann@gmail.com" ? "ann" : undefined;
+
 describe("POST /trade — the review step", () => {
   const config = () => ({
     hub: new ObservatoryHub(board()),
     ...(auth ? { auth } : {}),
+    resolveOwnerId,
     tradingEnabled: true,
     submitTrade: () =>
       Promise.resolve({
@@ -199,7 +205,12 @@ describe("POST /trade — the review step", () => {
 
   it("still refuses at the review step when desk trading is switched off", async () => {
     await withServer(
-      { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}), tradingEnabled: false },
+      {
+        hub: new ObservatoryHub(board()),
+        ...(auth ? { auth } : {}),
+        resolveOwnerId,
+        tradingEnabled: false,
+      },
       async (base) => {
         const res = await post(
           base,
@@ -293,6 +304,7 @@ describe("trade service — the server-side gate", () => {
     displayName: "Ann",
     kind: "human",
     credentials: { apiKey: "k", apiSecret: "s", baseUrl: "https://paper" },
+    ownerEmail: "ann@gmail.com",
   };
 
   const client = (over: Partial<AlpacaTradingClient> = {}): AlpacaTradingClient =>
@@ -317,11 +329,19 @@ describe("trade service — the server-side gate", () => {
       ...over,
     }) as unknown as AlpacaTradingClient;
 
-  const service = (over: { tradingEnabled?: boolean; client?: AlpacaTradingClient } = {}) =>
+  const service = (
+    over: {
+      tradingEnabled?: boolean;
+      client?: AlpacaTradingClient;
+      recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
+    } = {},
+  ) =>
     createTradeService({
       findParticipant: (id) => (id === "ann" ? participant : undefined),
       clientFactory: () => over.client ?? client(),
       tradingEnabled: over.tradingEnabled ?? true,
+      ...(over.recordAudit ? { recordAudit: over.recordAudit } : {}),
+      now: () => new Date("2026-08-21T00:00:00.000Z"),
     });
 
   const request = { participantId: "ann", symbol: "AAPL", quantity: 4, action: "sell" as const };
@@ -329,6 +349,31 @@ describe("trade service — the server-side gate", () => {
   it("places the order when everything checks out on fresh numbers", async () => {
     const result = await service()(request, "ann");
     expect(result).toEqual({ ok: true, orderId: "o1", status: "accepted", symbol: "AAPL" });
+  });
+
+  it("appends an audit line naming the account, its owner, and the order (#466)", async () => {
+    const audited: OrderAuditRecord[] = [];
+    await service({ recordAudit: (entry) => Promise.resolve(void audited.push(entry)) })(
+      request,
+      "ann",
+    );
+    expect(audited).toEqual([
+      {
+        participantId: "ann",
+        ownerEmail: "ann@gmail.com",
+        orderId: "o1",
+        at: "2026-08-21T00:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("never audits a refused order", async () => {
+    const audited: OrderAuditRecord[] = [];
+    await service({
+      tradingEnabled: false,
+      recordAudit: (entry) => Promise.resolve(void audited.push(entry)),
+    })(request, "ann");
+    expect(audited).toEqual([]);
   });
 
   it("refuses to trade an account that isn't the requester's own", async () => {

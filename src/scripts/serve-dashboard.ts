@@ -41,6 +41,7 @@ import { resolveFeedbackCoach } from "../server/feedback-coach.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
+import { createOrderAuditLog } from "../server/order-audit-log.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
@@ -50,7 +51,8 @@ const PORT = resolvePort(process.env);
 async function main(): Promise<void> {
   const dataSource = resolveDataSource(process.env);
   const store = createParticipantStore(process.env);
-  const roster = dedupeById([...dataSource.loadParticipants(), ...store.load()]);
+  const envRoster = dataSource.loadParticipants();
+  const roster = dedupeById([...envRoster, ...store.load()]);
   if (roster.length === 0 && dataSource.mode === "offline") {
     console.error("No participants in fixtures/offline/participants.json.");
     process.exit(1);
@@ -126,6 +128,7 @@ async function main(): Promise<void> {
     // idempotent — a re-onboarding member keeps the history they already have).
     recordSeedSample: seedSampleRecorder(history),
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
+    isReservedId: (id) => envRoster.some((p) => p.id === id),
   });
 
   // Day-2 account management (/account): profile edits + removal for self-service accounts.
@@ -164,16 +167,20 @@ async function main(): Promise<void> {
     );
   }
 
-  // Member-initiated desk trading — off unless switched on AND OAuth is configured (see
-  // resolveDeskTrading; without a signed-in identity there is no account to match an order to).
+  // Desk trading is on whenever OAuth is configured — no separate kill switch (#466).
   const findParticipant = (id: string) => [...roster, ...store.load()].find((p) => p.id === id);
-  const desk = resolveDeskTrading(process.env, {
+  // The owner link: session email -> Participant.ownerEmail. Never exposed on ParticipantSnapshot.
+  const resolveOwnerId = (email: string): string | undefined =>
+    [...roster, ...store.load()].find((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
+      ?.id;
+  const orderAudit = createOrderAuditLog(process.env);
+  const desk = resolveDeskTrading({
     findParticipant,
     clientFactory: dataSource.clientFactory,
     optionsClientFactory: dataSource.optionsClientFactory,
     authConfigured: Boolean(auth),
+    recordAudit: (entry) => orderAudit.record(entry),
   });
-  if (desk.warning) console.warn(desk.warning);
 
   const feedback = resolveFeedback(process.env);
   if (!feedback) {
@@ -208,7 +215,10 @@ async function main(): Promise<void> {
       },
     },
     ...(auth
-      ? { invite: { store: allowlist, isOwner: (email: string) => owners.has(email) } }
+      ? {
+          invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
+          resolveOwnerId,
+        }
       : {}),
     // Mission Control (Eric, 2026-08-21): the owner's switchboard for the autonomous fleet.
     // OAuth-only — owner identity comes from the signed session, so password mode has no one

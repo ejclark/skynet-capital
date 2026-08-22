@@ -124,10 +124,9 @@ export interface DashboardServerConfig {
    */
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   /**
-   * Member-initiated trading from the desk (`/trade`). **Off unless both this flag and
-   * `submitTrade` are set** — building the mechanism is Claude's job, authorizing live order
-   * placement from a browser session is Eric's (CLAUDE.md, the irreversible class). With it off,
-   * the desk still renders its ticket, visibly disabled and honest about why.
+   * Member-initiated trading from the desk (`/trade`). On whenever OAuth is configured (Eric's
+   * ruling, 2026-08-21, #466: no separate switch) — with it off, the desk still renders its
+   * ticket, visibly disabled and honest about why.
    */
   readonly tradingEnabled?: boolean;
   /** The execution seam (`trade-service.ts`). Absent = no order path is wired at all. */
@@ -136,6 +135,13 @@ export interface DashboardServerConfig {
   readonly submitOptionTrade?: SubmitOptionTrade;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /**
+   * Resolve the signed-in session's email to the participant it owns (`Participant.ownerEmail`)
+   * — the ONLY link a session may trade or self-manage through (#466). Reads the roster + store
+   * directly; `ParticipantSnapshot` deliberately omits `ownerEmail` so it's never handed to a
+   * browser. Omit when OAuth isn't configured.
+   */
+  readonly resolveOwnerId?: (email: string) => string | undefined;
 }
 
 /**
@@ -286,7 +292,7 @@ async function serveAuthorizedRoute(
   );
   const navFor = (active: NavView): NavContext => ({
     active,
-    currentId: resolveCurrentId(session, config.hub.getState().participants),
+    currentId: resolveCurrentId(session, config.resolveOwnerId),
     canAdd,
     authed,
     ...(canControl ? { canControl } : {}),
@@ -415,7 +421,7 @@ async function serveTradeRoute(
   const participants = config.hub.getState().participants;
   await handleTrade(req, res, url, {
     snapshotFor: (id) => participants.find((p) => p.id === id),
-    requesterId: config.auth ? resolveCurrentId(session, participants) : undefined,
+    requesterId: config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined,
     tradingEnabled: Boolean(config.tradingEnabled),
     ...(config.submitTrade ? { submitTrade: config.submitTrade } : {}),
     ...(config.submitOptionTrade ? { submitOptionTrade: config.submitOptionTrade } : {}),
@@ -435,7 +441,16 @@ async function trySelfServiceRoute(
   session: Session | undefined,
 ): Promise<boolean> {
   if (path === "/add" && config.addParticipant) {
-    await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
+    // The owner link: whoever's signed in is who this account belongs to, full stop — never a
+    // field the form could fill in on someone else's behalf (Eric's ruling, 2026-08-21, #466).
+    await handleAdd(
+      req,
+      res,
+      req.method ?? "GET",
+      keyOf(url),
+      session?.email,
+      config.addParticipant,
+    );
     return true;
   }
   if (path === "/controls" && config.controls) {
@@ -454,9 +469,7 @@ async function trySelfServiceRoute(
     // Same identity resolution /rotate and /trade use; account-service enforces the rules.
     await handleAccountRoute(req, res, path, req.method ?? "GET", {
       admin: config.accountAdmin,
-      requesterId: config.auth
-        ? resolveCurrentId(session, config.hub.getState().participants)
-        : undefined,
+      requesterId: config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined,
       session,
       authConfigured: Boolean(config.auth),
       key: keyOf(url),
@@ -469,9 +482,7 @@ async function trySelfServiceRoute(
     // let one authed member silently redirect ANOTHER member's displayed account to credentials
     // the member supplies themselves (see docs/LESSONS.md, 2026-08-11: the whole point of this
     // route is fixing YOUR OWN regenerated key, not reassigning someone else's identity).
-    const requesterId = config.auth
-      ? resolveCurrentId(session, config.hub.getState().participants)
-      : undefined;
+    const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
     await handleRotate(
       req,
       res,
@@ -594,22 +605,16 @@ async function serveIndividualProfile(
 }
 
 /**
- * Best-effort resolve the signed-in viewer to a participant, for the "YOU" treatment. Sessions
- * carry email/name but participants have no email link yet (that arrives with the Alpaca-OAuth
- * work), so we match display name — exact on session name, then the email local-part. Returns
- * undefined when there's no confident match; the UI simply shows no self-marker.
+ * Resolve the signed-in viewer to the participant they own (#466) — undefined when no
+ * `resolveOwnerId` is wired, or the session's email owns no account (a legacy account with no
+ * owner link resolves to nobody until linked from `/invite`).
  */
 function resolveCurrentId(
   session: Session | undefined,
-  participants: readonly ParticipantSnapshot[],
+  resolveOwnerId: ((email: string) => string | undefined) | undefined,
 ): string | undefined {
-  if (!session) return undefined;
-  const name = session.name?.toLowerCase().trim();
-  const local = session.email.split("@")[0]?.toLowerCase().trim();
-  const byName = name && participants.find((p) => p.displayName.toLowerCase().trim() === name);
-  if (byName) return byName.id;
-  const byLocal = local && participants.find((p) => p.displayName.toLowerCase().trim() === local);
-  return byLocal ? byLocal.id : undefined;
+  if (!(session && resolveOwnerId)) return undefined;
+  return resolveOwnerId(session.email);
 }
 
 /** External origin of the request (honors Fly's x-forwarded-proto). */

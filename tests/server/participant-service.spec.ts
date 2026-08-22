@@ -56,6 +56,7 @@ function makeService(overrides: {
   hub?: ObservatoryHub;
   factory?: () => AlpacaTradingClient;
   started?: Participant[];
+  isReservedId?: (id: string) => boolean;
 }) {
   const store = overrides.store ?? new MemStore();
   const hub = overrides.hub ?? new ObservatoryHub(emptyBoard());
@@ -69,6 +70,7 @@ function makeService(overrides: {
     recordSeedSample: (snapshot, at) =>
       seeds.push({ id: snapshot.id, equity: snapshot.equity, at }),
     now: () => new Date("2026-07-24T00:00:00.000Z"),
+    ...(overrides.isReservedId ? { isReservedId: overrides.isReservedId } : {}),
   });
   return { service, store, hub, started, seeds };
 }
@@ -158,6 +160,20 @@ describe("ParticipantService.addParticipant", () => {
       apiSecret: "s",
     });
     expect(result.ok).toBe(false);
+  });
+
+  it("refuses an id colliding with an env-configured (roster) account, not just the store", async () => {
+    // Otherwise a self-service row's owner link could resolve trade requests that
+    // `findParticipant`'s roster-wins precedence then executes against the ROSTER
+    // account's real credentials — a takeover chain, not just a display-name clash.
+    const { service, store } = makeService({ isReservedId: (id) => id === "human-eric_clark" });
+    const result = await service.addParticipant({
+      displayName: "Eric Clark",
+      apiKey: "k",
+      apiSecret: "s",
+    });
+    expect(result.ok).toBe(false);
+    expect(store.items).toHaveLength(0);
   });
 
   it("requires a personaId for bot accounts", async () => {
