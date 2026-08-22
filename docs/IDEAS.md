@@ -868,3 +868,11 @@ _(nothing right now)_
   (the orphaned `tier` step's output was referenced by nothing and flagged by nothing), shell
   problems inside `run:` blocks, expression typos. A devDependency, so it is outside the envelope's
   new-runtime-dep rule. _(src: Claude · while: resolving the #476 duplicate-job merge on PR #474)_
+
+- **Confirm branch protection actually requires `verify` on `main`.** The deploy job's comment
+  asserts "merged commits are already verified (branch protection required `verify`)" and skips the
+  suite on that basis. The 2026-08-22 undeployed-main incident showed nothing in the system would
+  notice if that protection were absent or misconfigured — and a wrong assumption there means an
+  unverified commit deploys straight to Fly. Cheap to check (one API read of the branch protection
+  rules); worth a spec that reads the live rule and fails if `verify` is not a required check.
+  _(src: Claude · while: tracing why PR #492 merged but never deployed)_
