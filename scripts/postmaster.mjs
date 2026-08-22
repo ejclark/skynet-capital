@@ -244,6 +244,26 @@ function eventIssueBody(e) {
  */
 export const CLAIM_TTL_MS = 2 * 60 * 60 * 1000; // 2h — well past any honest build
 
+/**
+ * Why a lease create failed, in words that distinguish the two cases.
+ *
+ * A 422 IS the lock working — another runner won the race between our check and our create. Every
+ * OTHER failure (a token without `contents: write`, a malformed sha, a ruleset refusing the ref)
+ * used to be reported with that same sentence, so a lane that could never claim looked exactly
+ * like a lane that was merely busy. On 2026-08-22 that cost three rounds of diagnosis on issue
+ * #475 while no lease existed at all.
+ */
+export function claimFailureReason(err) {
+  const detail = String(err?.stderr || err?.message || "")
+    .trim()
+    .split("\n")
+    .slice(-2)
+    .join(" ")
+    .trim();
+  if (/already exists|422/i.test(detail)) return "lost the race to a concurrent claim";
+  return `could not create the lease — ${detail || "no error text"}`;
+}
+
 /** @returns {{ claimed: boolean, reason: string }} */
 export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
   const ref = `claim/${slug}`;
@@ -280,9 +300,8 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
       `sha=${sha}`,
     ]);
     return { claimed: true, reason: existing ? "reclaimed a stale lease" : "claimed" };
-  } catch {
-    // 422 — another runner won the race between our check and our create. That is the lock working.
-    return { claimed: false, reason: "lost the race to a concurrent claim" };
+  } catch (err) {
+    return { claimed: false, reason: claimFailureReason(err) };
   }
 }
 
