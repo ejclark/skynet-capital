@@ -45,6 +45,16 @@ describe("ci medic — routing a failed run", () => {
     expect(intent?.reason).toContain("escalated");
   });
 
+  it("files for a run that failed with no jobs — the workflow file itself was rejected", () => {
+    // 2026-08-22: a duplicate job key made postmaster.yml unparseable. GitHub names the run after
+    // the file path and creates zero jobs, so "no failing job" is the loudest failure there is.
+    const [intent] = dryRun("workflow-run-unparseable.json");
+
+    expect(intent?.type).toBe("open-issue");
+    expect(intent?.body).toContain("zero jobs were created");
+    expect(intent?.body).toContain("scripts/workflow-lint.mjs");
+  });
+
   it("ignores a red PR branch — that failure belongs to the PR and its author", () => {
     expect(dryRun("workflow-run-failed-on-pr.json")).toEqual([]);
   });

@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Scripted file edits need an anchor-order assertion
+
+`s[:start] + s[end:]` silently duplicates a region when `end < start`, which is what took the
+postmaster down on 2026-08-22 (the anchor matched an earlier, identical step shape). Any scripted
+edit that computes two offsets should assert their order, and any workflow edit should be diffed
+against the last-good file before it is pushed — `git diff <last-good-sha> -- <file>` showed the
+duplication instantly once someone looked. _(src: Claude · while: fixing the outage it caused)_
+
 ### A claim lease has no release-on-failure path
 
 A build lane takes `claim/feedback-<n>` and then dies (the 2026-08-22 bash failure did exactly
@@ -827,9 +835,10 @@ _(nothing right now)_
 - Cityscape: ticker billboards — PR #82
 - In-app self-service feedback funnel + setup runbook — PR #80, #81
 
-- **Lint the workflow files properly (`actionlint`).** `tests/arch/workflow-shape.spec.ts` now
-  catches duplicate job keys and dangling prompt paths, but that is two rules hand-written after two
-  incidents. `actionlint` covers the whole class — bad `needs:` graphs, undefined `steps.*` contexts
+- **Lint the workflow files properly (`actionlint`).** `scripts/workflow-lint.mjs` now catches
+  duplicate keys, dangling `steps.*` refs, dangling `needs:`, unfiltered `workflow_run`, and prompt
+  shims pointing at nothing — but that is five rules hand-written after three incidents.
+  `actionlint` covers the whole class — bad `needs:` graphs, undefined `steps.*` contexts
   (the orphaned `tier` step's output was referenced by nothing and flagged by nothing), shell
   problems inside `run:` blocks, expression typos. A devDependency, so it is outside the envelope's
   new-runtime-dep rule. _(src: Claude · while: resolving the #476 duplicate-job merge on PR #474)_
