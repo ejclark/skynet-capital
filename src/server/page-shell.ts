@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { TOKEN_DECLS } from "../ui/tokens.js";
 
 /** The base reset every server-rendered page starts from. */
 export const PAGE_STYLE =
@@ -6,9 +7,7 @@ export const PAGE_STYLE =
 
 /** Matrix design-system styles for the /add, /rotate, /welcome, and /feedback pages. */
 const ADD_STYLE = `${PAGE_STYLE}
-  :root{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
-    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  :root{ ${TOKEN_DECLS} }
   body{ background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; padding:40px clamp(16px,5vw,20px); }
   .wrap{ max-width:520px; margin:0 auto; }
   .brand{ font-weight:700; font-size:15px; letter-spacing:.14em; margin-bottom:26px; }
