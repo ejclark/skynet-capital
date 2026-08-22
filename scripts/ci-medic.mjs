@@ -132,6 +132,26 @@ function json(label, args) {
   }
 }
 
+/**
+ * A run that failed with NO failing job — GitHub rejected the workflow file itself (a duplicate
+ * key, bad syntax), so nothing ever started. Learned the hard way on 2026-08-22, when exactly this
+ * shape would have slipped past the medic silently: the run is named after the file path, carries
+ * zero jobs, and is the most urgent failure there is, because the whole lane is dead.
+ */
+export function parseFailure(run) {
+  return {
+    job: "(the workflow never started)",
+    step: "GitHub rejected the workflow file — zero jobs were created",
+    logTail: [
+      `Run ${run.id} completed with conclusion "failure" and no jobs.`,
+      `The run is named "${run.name}", which is the file path rather than the workflow's name —`,
+      "GitHub falls back to the path when it cannot parse the file.",
+      "",
+      "Check the file with: node scripts/workflow-lint.mjs",
+    ].join("\n"),
+  };
+}
+
 /** The failing jobs of a run, each with its failing step and the tail of its log. */
 function gatherFailures(runId) {
   const jobs = json("gh api jobs", [
@@ -140,25 +160,29 @@ function gatherFailures(runId) {
     "--jq",
     ".jobs",
   ]);
-  return jobs
-    .filter((j) => j.conclusion === "failure")
-    .map((j) => {
-      let logTail = "";
-      try {
-        logTail = sh("gh", ["api", `repos/{owner}/{repo}/actions/jobs/${j.id}/logs`]);
-      } catch {
-        logTail = "(log unavailable — the run may have expired)";
-      }
-      return {
-        job: j.name,
-        step: (j.steps ?? []).find((s) => s.conclusion === "failure")?.name,
-        // Strip the ISO timestamp each line carries; it is noise in a fold and eats the budget.
-        logTail: logTail
-          .split("\n")
-          .map((l) => l.replace(/^\S+Z\s/, ""))
-          .join("\n"),
-      };
-    });
+  const failed = jobs.filter((j) => j.conclusion === "failure");
+  return failed.map((j) => {
+    let logTail = "";
+    try {
+      logTail = sh("gh", ["api", `repos/{owner}/{repo}/actions/jobs/${j.id}/logs`]);
+    } catch {
+      logTail = "(log unavailable — the run may have expired)";
+    }
+    return {
+      job: j.name,
+      step: (j.steps ?? []).find((s) => s.conclusion === "failure")?.name,
+      // Strip the ISO timestamp each line carries; it is noise in a fold and eats the budget.
+      logTail: logTail
+        .split("\n")
+        .map((l) => l.replace(/^\S+Z\s/, ""))
+        .join("\n"),
+    };
+  });
+}
+
+/** Zero failing jobs on a failed run is the workflow-rejected shape, not "nothing to report". */
+function withParseFallback(run, failures) {
+  return failures.length || run.conclusion !== "failure" ? failures : [parseFailure(run)];
 }
 
 function ensureLabel() {
@@ -224,8 +248,9 @@ function main(argv) {
   const ctx = {
     run,
     defaultBranch: raw.repository?.default_branch ?? process.env.DEFAULT_BRANCH ?? "main",
-    // A fixture supplies its own failures; a live run reads them from the API.
-    failures: raw.failures ?? (dry ? [] : gatherFailures(run.id)),
+    // A fixture supplies its own failures; a live run reads them from the API. A failed run with
+    // no failing job means the workflow file itself was rejected — still a failure, still ours.
+    failures: raw.failures ?? withParseFallback(run, dry ? [] : gatherFailures(run.id)),
   };
   const deps = fixture ?? (dry ? {} : { openIssues: openIssues() });
   const intents = routeFailure(ctx, deps);

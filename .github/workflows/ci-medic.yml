@@ -14,19 +14,31 @@ name: CI Medic
 # (tests/scripts/ci-medic.spec.ts). Logic in `run:` blocks is what caused the failure this lane
 # exists to catch — see docs/LESSONS.md.
 #
-# THE LOOP GUARDS (a self-healing lane that can trigger itself is a bill, not a net). Three live in
-# the router and are specced; the fourth is the `workflows:` list below, which never names this
-# workflow:
+# THE LOOP GUARDS (a self-healing lane that can trigger itself is a bill, not a net). All four live
+# in the router, where they are specced against fixture payloads:
 #   1. `CI Medic`'s own failures are ignored.
 #   2. Only default-branch runs are acted on — a red PR belongs to that PR's author and its
 #      watching session, and repair PRs opened here would otherwise feed the lane its own output.
 #   3. One open issue per failure signature; a recurrence comments instead of filing again.
 #   4. A signature carrying `needs-eric` silences the medic for that signature entirely.
+#
+# The triage job's `if:` also screens out healthy runs before a runner starts; the router's copies
+# of the guards are the specced ones, and the job condition is an optimisation, not the contract.
 
 on:
+  # THE LIST IS REQUIRED IN PRACTICE. Dropping it (to catch unparseable files, whose runs are named
+  # by path rather than by workflow name) made GitHub reject THIS file — a run named
+  # `.github/workflows/ci-medic.yml` with zero jobs, the same shape the lane exists to catch, on the
+  # lane itself. SchemaStore marks `workflows` optional; GitHub's own validator evidently does not.
+  # Empirical beats documented: the list stays.
+  #
+  # The path forms are here for the unparseable case: when GitHub cannot parse a file it names the
+  # run after the path, so the path is what a name filter has to match. NEVER add this workflow's
+  # own name or path — that is loop guard 1.
   workflow_run:
-    # Named explicitly. NEVER add "CI Medic" here, and never use a catch-all.
-    workflows: ["Postmaster", "Pipeline", "Autonomy ops"]
+    workflows:
+      ["Postmaster", "Pipeline", "Autonomy ops", ".github/workflows/postmaster.yml",
+       ".github/workflows/pipeline.yml", ".github/workflows/autonomy-ops.yml"]
     types: [completed]
 
 permissions:
@@ -44,6 +56,11 @@ concurrency:
 jobs:
   triage:
     name: triage the failure
+    # Back to the single-line condition that provably parsed. Two things changed in the amendment
+    # GitHub rejected — the missing `workflows:` list and this condition becoming a folded multi-line
+    # expression — and with no readable error from a zero-job run, the honest move is a minimal delta
+    # from the known-good file rather than a second guess. The router enforces all four guards from
+    # the payload, and those are the specced ones; this line only keeps healthy runs off a runner.
     if: github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
     outputs:
