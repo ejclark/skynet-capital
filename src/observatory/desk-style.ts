@@ -80,7 +80,7 @@ export const DESK_STYLE = `<style>
     background:var(--surface-2); color:var(--text); }
   .field input:focus-visible, .field select:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
 
-  .review{ display:flex; flex-direction:column; gap:14px; max-width:560px; }
+  .review{ display:flex; flex-direction:column; gap:14px; max-width:var(--col-narrow); }
   .review-line{ display:flex; justify-content:space-between; gap:16px; font-size:13.5px; padding:9px 0;
     border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent); }
   .review-line:last-of-type{ border-bottom:none; }
@@ -125,7 +125,7 @@ export const DESK_STYLE = `<style>
   .fills{ margin-top:16px; }
   .fills summary{ cursor:pointer; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:8px 0; }
   .fills summary:hover{ color:var(--text); }
-  @media (max-width:640px){
+  @container stage (max-width:640px){
     .desk-v{ font-size:18px; }
     .blotter{ font-size:12.5px; }
     .blotter td, .blotter th{ padding-left:6px; padding-right:6px; }

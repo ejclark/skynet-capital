@@ -158,7 +158,7 @@ export function renderFeedbackResultBody(options: FeedbackResultViewOptions): st
  * draft to review, or the member skipping ahead).
  */
 const FDBK_STYLE = `<style>
-  .fdbk-flow{ display:flex; flex-direction:column; gap:22px; max-width:900px; margin-top:6px; }
+  .fdbk-flow{ display:flex; flex-direction:column; gap:22px; max-width:var(--col-form); margin-top:6px; }
   .fdbk-form, .fdbk-intro{ display:flex; flex-direction:column; gap:20px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px 28px; }
   .fdbk-field{ display:flex; flex-direction:column; gap:8px; }
   .fdbk-field label{ font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
@@ -215,7 +215,7 @@ const FDBK_STYLE = `<style>
   .fdbk-recent-row{ display:flex; align-items:baseline; gap:9px; padding:9px 12px; font-size:13.5px; background:var(--surface); border:1px solid var(--border); border-radius:9px; }
   .fdbk-recent-row a{ color:var(--text); font-weight:600; }
   .fdbk-recent-meta{ margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap; }
-  .fdbk-res{ max-width:520px; }
+  .fdbk-res{ max-width:var(--col-narrow); }
   .fdbk-res .res-icon{ font-size:34px; margin-bottom:6px; }
   .fdbk-res h1{ margin:0 0 10px; font-size:24px; font-weight:700; }
   .fdbk-backrow{ margin-top:22px; font-size:14px; color:var(--muted); }

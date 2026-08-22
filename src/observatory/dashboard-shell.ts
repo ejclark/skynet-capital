@@ -1,4 +1,5 @@
 import { escapeHtml } from "../ui/escape-html.js";
+import { FLUID_LAYOUT_TOKENS } from "./fluid-layout.js";
 import { formatTimestamp, profileHref } from "./render-atoms.js";
 
 /**
@@ -185,12 +186,12 @@ ${DRAWER_SCRIPT}`;
 
 const STYLE = `<style>
   /* Dark-only by design — nations only compare cleanly when every cityscape is lit the same (no light mode). */
-  :root{ color-scheme: dark; }
+  :root{ color-scheme: dark; } ${FLUID_LAYOUT_TOKENS}
   .obs { --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
     --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:var(--bg); color:var(--text); font-family:var(--sans);
-    min-height:100vh; padding:28px clamp(16px,4vw,48px) 64px; box-sizing:border-box; }
+    min-height:100vh; padding:28px clamp(16px,4vw,48px) 64px; box-sizing:border-box; max-width:var(--shell-max); margin-inline:auto; container-type:inline-size; container-name:stage; /* fluid-layout.ts: views break on THIS box, not the window */ }
   .obs *{ box-sizing:border-box; }
   .obs .num{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
   .obs .pos{ color:var(--pos); } .obs .neg{ color:var(--neg); } .obs .flat{ color:var(--muted); }
@@ -228,8 +229,7 @@ const STYLE = `<style>
   .chip-bot{ background:color-mix(in srgb,var(--accent) 16%,transparent); color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 40%,transparent); }
   .chip-human{ background:color-mix(in srgb,var(--muted) 16%,transparent); color:var(--muted); border:1px solid color-mix(in srgb,var(--muted) 34%,transparent); }
   .dot{ width:8px; height:8px; border-radius:50%; margin-left:auto; flex:0 0 auto; }
-  .dot-live{ background:var(--pos); box-shadow:0 0 0 3px color-mix(in srgb,var(--pos) 22%,transparent); }
-  .dot-error{ background:var(--neg); box-shadow:0 0 0 3px color-mix(in srgb,var(--neg) 22%,transparent); }
+  .dot-live{ background:var(--pos); box-shadow:0 0 0 3px color-mix(in srgb,var(--pos) 22%,transparent); } .dot-error{ background:var(--neg); box-shadow:0 0 0 3px color-mix(in srgb,var(--neg) 22%,transparent); }
   .equity{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:6px 0 14px; border-bottom:1px solid var(--border); }
   .equity-label{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
   .equity-num{ font-size:26px; font-weight:700; }
@@ -298,14 +298,13 @@ const STYLE = `<style>
   .founding-cta-text strong{ color:var(--text); font-family:var(--mono); }
   .empire-skyline{ display:block; width:100%; height:auto; max-height:150px; border:1px solid var(--border); border-radius:10px; }
   /* glanceable per-card thumbnail — the board reads as a region of cities */
-  .empire-thumb{ margin:0 0 14px; }
-  .empire-thumb .empire-skyline{ max-height:88px; }
+  .empire-thumb{ margin:0 0 14px; } .empire-thumb .empire-skyline{ max-height:88px; }
   /* two cities — a labelled empire skyline per participant, side by side on /compare */
   .empire-cities{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:0 0 26px; }
   .empire-city{ display:flex; flex-direction:column; gap:8px; min-width:0; }
   .empire-city .empire-band{ margin:0; }
   .empire-city-name{ font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-  @media (max-width:720px){ .empire-cities{ grid-template-columns:1fr; } }
+  @container stage (max-width:720px){ .empire-cities{ grid-template-columns:1fr; } }
   .indiv-hero{ display:grid; grid-template-columns:minmax(220px,1fr) 2fr; gap:16px; margin-bottom:24px; align-items:stretch; }
   .hero-equity{ background:var(--surface); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
   .hero-num{ font-size:40px; font-weight:700; line-height:1; }
@@ -331,7 +330,7 @@ const STYLE = `<style>
   .history-spark{ margin:12px 0 14px; }
   .equity-spark{ display:block; width:100%; height:64px; }
   .history-metrics{ grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
-  @media (max-width:640px){ .indiv-hero{ grid-template-columns:1fr; } }
+  @container stage (max-width:640px){ .indiv-hero{ grid-template-columns:1fr; } }
   /* --- leaderboard --- */
   .ladder-head{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
   .view-title{ margin:0; font-size:24px; font-weight:700; }
@@ -356,14 +355,15 @@ const STYLE = `<style>
   .bar-pos{ background:linear-gradient(90deg,color-mix(in srgb,var(--pos) 40%,transparent),var(--pos)); }
   .bar-neg{ background:linear-gradient(90deg,color-mix(in srgb,var(--neg) 40%,transparent),var(--neg)); }
   .rank-val{ font-size:15px; font-weight:700; text-align:right; min-width:96px; }
-  @media (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto; } .rank-bar{ display:none; } }
+  @container stage (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto; } .rank-bar{ display:none; } }
   /* --- push-drawer app shell --- */
   .app{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
     --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    display:flex; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans); }
+    display:flex; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans);
+    max-width:var(--shell-max); margin-inline:auto; box-shadow:0 0 0 100vmax var(--bg); }
   .app *{ box-sizing:border-box; }
-  .drawer{ flex:0 0 250px; width:250px; height:100vh; position:sticky; top:0; overflow-y:auto; overflow-x:hidden;
+  .drawer{ flex:0 0 var(--drawer-w); width:var(--drawer-w); height:100vh; position:sticky; top:0; overflow-y:auto; overflow-x:hidden;
     background:var(--surface-2); border-right:1px solid var(--border); display:flex; flex-direction:column; gap:10px; padding:20px 14px;
     transition:flex-basis .28s cubic-bezier(.4,0,.2,1), width .28s cubic-bezier(.4,0,.2,1), padding .28s, border-color .28s; white-space:nowrap; }
   .app[data-drawer="closed"] .drawer{ flex-basis:0; width:0; padding-left:0; padding-right:0; border-right-color:transparent; }
@@ -395,8 +395,8 @@ const STYLE = `<style>
   .drawer-toggle span{ display:inline-block; transition:transform .28s; }
   .app[data-drawer="closed"] .drawer-toggle span{ transform:rotate(180deg); }
   @media (max-width:760px){
-    .drawer{ position:fixed; left:0; top:0; z-index:30; flex-basis:250px; width:250px; box-shadow:0 0 40px -8px rgba(0,0,0,.6); transition:transform .28s cubic-bezier(.4,0,.2,1); }
-    .app[data-drawer="closed"] .drawer{ transform:translateX(-100%); flex-basis:0; width:250px; padding:20px 14px; border-right-color:var(--border); }
+    .drawer{ position:fixed; left:0; top:0; z-index:30; flex-basis:var(--drawer-w); width:var(--drawer-w); box-shadow:0 0 40px -8px rgba(0,0,0,.6); transition:transform .28s cubic-bezier(.4,0,.2,1); }
+    .app[data-drawer="closed"] .drawer{ transform:translateX(-100%); flex-basis:0; width:var(--drawer-w); padding:20px 14px; border-right-color:var(--border); }
     .app[data-drawer="open"] .drawer{ transform:translateX(0); }
     .app{ display:block; } .stage{ height:auto; min-height:100vh; }
   }
@@ -434,7 +434,7 @@ const STYLE = `<style>
   .vs{ font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:.1em; color:var(--muted); border:1px solid var(--border); border-radius:999px; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
   .versus-read{ display:flex; flex-wrap:wrap; gap:10px 28px; padding:16px 20px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; font-size:14px; color:var(--muted); }
   .versus-read strong{ color:var(--text); }
-  @media (max-width:720px){ .versus{ grid-template-columns:1fr; } .versus-mid{ padding:4px 0; } }
+  @container stage (max-width:720px){ .versus{ grid-template-columns:1fr; } .versus-mid{ padding:4px 0; } }
   /* --- comparison --- */
   .cmp-vs{ color:var(--muted); font-weight:500; font-size:18px; }
   .cmp-grid{ display:grid; grid-template-columns:1fr minmax(160px,auto) 1fr; gap:16px; align-items:start; margin-bottom:26px; }
@@ -464,9 +464,9 @@ const STYLE = `<style>
   .cmp-picker{ display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
   .cmp-pick{ display:flex; align-items:center; gap:9px; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:11px; text-decoration:none; color:var(--text); font-weight:600; transition:border-color .15s; }
   .cmp-pick:hover{ border-color:color-mix(in srgb,var(--accent) 50%,var(--border)); }
-  @media (max-width:720px){ .cmp-grid{ grid-template-columns:1fr; } }
+  @container stage (max-width:720px){ .cmp-grid{ grid-template-columns:1fr; } }
   /* --- Academy (/learn): the gamified trading journey --- */
-  .academy{ max-width:900px; }
+  .academy{ max-width:var(--col-read); }
   .hud{ display:flex; align-items:center; gap:22px; flex-wrap:wrap; background:var(--surface); border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));
     border-radius:14px; padding:16px 22px; margin-bottom:22px; }
   .hud-stat{ display:flex; flex-direction:column; gap:2px; }
@@ -517,5 +517,5 @@ const STYLE = `<style>
   .ms-go{ flex:0 0 auto; font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--accent); text-decoration:none; }
   .ms-go:hover{ text-decoration:underline; }
   .more-soon{ margin-top:20px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--muted); line-height:1.6; }
-  @media (max-width:720px){ .hud-v{ font-size:19px; } }
+  @container stage (max-width:720px){ .hud-v{ font-size:19px; } }
 </style>`;
