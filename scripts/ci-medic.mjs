@@ -1,0 +1,256 @@
+#!/usr/bin/env node
+// THE CI MEDIC — the lane that notices a failed run on `main` and gets it worked, instead of it
+// sitting red until someone happens to look.
+//
+//   node scripts/ci-medic.mjs                            # read $GITHUB_EVENT_PATH, act
+//   node scripts/ci-medic.mjs --dry-run --event f.json   # print the intents, touch nothing
+//
+// WHY IT EXISTS (Eric, 2026-08-22, after run 32545818804 blocked a feedback build): "we should
+// have a job kicked off that automatically resolves these types of failures." The failure that
+// prompted it was silent in the worst way — the feedback lane took the issue's claim lease, then
+// died in a bash step, so the issue looked claimed and nothing built it. Nothing was watching.
+//
+// SHAPE — decide, then do, the same doctrine as postmaster.mjs: `routeFailure()` is pure (an event
+// plus its dependencies in, a list of intents out) and `execute()` is the only part that touches
+// GitHub. Every branch is therefore testable from a fixture payload.
+//
+// WHY IT IS A SEPARATE ROUTER FROM THE POSTMASTER: the postmaster is issue-driven and its own
+// header says so. This one is driven by `workflow_run`, and giving the postmaster that trigger
+// would arm it to fire on its own failures. Separate files, separate blast radius.
+//
+// THE LOOP GUARDS, ALL FOUR (a self-healing lane that can trigger itself is a bill, not a net):
+//   1. It ignores its own workflow's failures.
+//   2. It only acts on runs against the default branch — a red PR belongs to that PR's author and
+//      its watching session, and repair PRs opened here would otherwise feed themselves.
+//   3. One open issue per failure signature: a recurrence comments, it never files again.
+//   4. Once a signature carries `needs-eric`, the medic goes quiet on it entirely.
+import { execFileSync } from "node:child_process";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+
+/** This workflow's own `name:`. Guard 1 — never treat the medic's failure as work for the medic. */
+export const MEDIC_WORKFLOW = "CI Medic";
+export const LABEL = { name: "ci-failure", color: "b60205", description: "A run failed on main" };
+/** Enough log to diagnose from, little enough to stay inside one fold. */
+const LOG_TAIL_CHARS = 3500;
+
+const sh = (cmd, args, opts = {}) =>
+  execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", ...opts }).trim();
+
+/** `[ci] Postmaster — build feedback issue` — the dedupe key, stable across recurrences. */
+export function signature(run, jobName) {
+  return `[ci] ${run.name} — ${jobName}`;
+}
+
+/**
+ * The capsule (docs/ISSUES.md): the ask, a metadata table and the talking points above the fold;
+ * the evidence — the failing step and the log tail — inside one `<details>`. A machine-filed issue
+ * is still an issue a human reads first, so it obeys the same contract Claude-authored ones do.
+ */
+export function issueBody(run, failure) {
+  const tail = (failure.logTail ?? "").slice(-LOG_TAIL_CHARS).trim();
+  return [
+    `**\`${failure.job}\` failed on \`main\` and the work it carries is not getting done.**`,
+    "",
+    "| | |",
+    "|---|---|",
+    `| **Workflow** | ${run.name} |`,
+    `| **Job** | \`${failure.job}\` |`,
+    `| **Failing step** | ${failure.step ?? "unknown"} |`,
+    `| **Run** | [${run.id}](${run.html_url}) |`,
+    "",
+    `- Triggered by \`${run.event}\` on \`${run.head_branch}\`; the run's own conclusion is failure.`,
+    "- A repair session is dispatched from this issue — it opens a PR or explains why it cannot.",
+    "- Workflow-file fixes never auto-merge: those stop with `needs-eric` for Eric's call.",
+    "",
+    "<details>",
+    "<summary><strong>The evidence</strong> — failing step and log tail</summary>",
+    "",
+    "```text",
+    tail || "(no log captured)",
+    "```",
+    "",
+    "</details>",
+  ].join("\n");
+}
+
+/**
+ * Decide what to do about a completed run. Pure.
+ *
+ * @param ctx {{ run: object, defaultBranch: string, failures: {job: string, step?: string, logTail?: string}[] }}
+ * @param deps {{ openIssues?: {number: number, title: string, labels?: string[]}[] }}
+ * @returns intents — `[]` means deliberately nothing.
+ */
+export function routeFailure(ctx, deps = {}) {
+  const run = ctx.run ?? {};
+  if (run.conclusion !== "failure") return [];
+  if (run.name === MEDIC_WORKFLOW) return [];
+  if (run.event === "pull_request") return [];
+  if (run.head_branch !== (ctx.defaultBranch || "main")) return [];
+
+  const open = deps.openIssues ?? [];
+  const intents = [];
+  for (const failure of ctx.failures ?? []) {
+    const title = signature(run, failure.job);
+    const existing = open.find((i) => i.title === title);
+    if (!existing) {
+      intents.push({
+        type: "open-issue",
+        title,
+        body: issueBody(run, failure),
+        labels: [LABEL.name],
+        dispatch: true,
+      });
+      continue;
+    }
+    if ((existing.labels ?? []).includes("needs-eric")) {
+      intents.push({ type: "skip", issue: existing.number, reason: "already escalated to Eric" });
+      continue;
+    }
+    intents.push({
+      type: "comment",
+      issue: existing.number,
+      body: `Failed again — run [${run.id}](${run.html_url}), step \`${failure.step ?? "unknown"}\`. Same signature, so this is a recurrence, not a new fault.`,
+    });
+  }
+  return intents;
+}
+
+// ── the impure half ───────────────────────────────────────────────────────────
+
+/** Loud on failure, same doctrine as postmaster's gatherDeps: unreadable ≠ empty. */
+function json(label, args) {
+  let out;
+  try {
+    out = sh("gh", args);
+  } catch (err) {
+    throw new Error(`${label} failed: ${String(err.stderr || err.message).trim()}`);
+  }
+  try {
+    return JSON.parse(out || "[]");
+  } catch {
+    throw new Error(`${label} returned unparseable JSON:\n${out.slice(0, 400)}`);
+  }
+}
+
+/** The failing jobs of a run, each with its failing step and the tail of its log. */
+function gatherFailures(runId) {
+  const jobs = json("gh api jobs", [
+    "api",
+    `repos/{owner}/{repo}/actions/runs/${runId}/jobs`,
+    "--jq",
+    ".jobs",
+  ]);
+  return jobs
+    .filter((j) => j.conclusion === "failure")
+    .map((j) => {
+      let logTail = "";
+      try {
+        logTail = sh("gh", ["api", `repos/{owner}/{repo}/actions/jobs/${j.id}/logs`]);
+      } catch {
+        logTail = "(log unavailable — the run may have expired)";
+      }
+      return {
+        job: j.name,
+        step: (j.steps ?? []).find((s) => s.conclusion === "failure")?.name,
+        // Strip the ISO timestamp each line carries; it is noise in a fold and eats the budget.
+        logTail: logTail
+          .split("\n")
+          .map((l) => l.replace(/^\S+Z\s/, ""))
+          .join("\n"),
+      };
+    });
+}
+
+function ensureLabel() {
+  try {
+    sh("gh", [
+      "api",
+      "-X",
+      "POST",
+      "repos/{owner}/{repo}/labels",
+      "-f",
+      `name=${LABEL.name}`,
+      "-f",
+      `color=${LABEL.color}`,
+      "-f",
+      `description=${LABEL.description}`,
+    ]);
+  } catch {
+    /* 422 — the label already exists, which is the point */
+  }
+}
+
+function execute(intents) {
+  const dispatch = [];
+  for (const intent of intents) {
+    if (intent.type === "skip") {
+      console.log(`::notice::medic quiet on #${intent.issue} — ${intent.reason}`);
+      continue;
+    }
+    if (intent.type === "comment") {
+      sh("gh", ["issue", "comment", String(intent.issue), "--body", intent.body]);
+      console.log(`::notice::commented recurrence on #${intent.issue}`);
+      continue;
+    }
+    if (intent.type === "open-issue") {
+      ensureLabel();
+      const url = sh("gh", [
+        "issue",
+        "create",
+        "--title",
+        intent.title,
+        "--body",
+        intent.body,
+        "--label",
+        intent.labels.join(","),
+      ]);
+      const number = url.split("/").pop();
+      console.log(`::notice::filed ${intent.title} as #${number}`);
+      if (intent.dispatch) dispatch.push(number);
+    }
+  }
+  const out = process.env.GITHUB_OUTPUT;
+  if (out && dispatch[0]) appendFileSync(out, `issue=${dispatch[0]}\n`);
+}
+
+function main(argv) {
+  const dry = argv.includes("--dry-run");
+  const evIdx = argv.indexOf("--event");
+  const eventFile = evIdx >= 0 ? argv[evIdx + 1] : process.env.GITHUB_EVENT_PATH;
+  const raw = eventFile && existsSync(eventFile) ? JSON.parse(readFileSync(eventFile, "utf8")) : {};
+  const fixture = raw.deps;
+  const run = raw.workflow_run ?? raw.run ?? {};
+
+  const ctx = {
+    run,
+    defaultBranch: raw.repository?.default_branch ?? process.env.DEFAULT_BRANCH ?? "main",
+    // A fixture supplies its own failures; a live run reads them from the API.
+    failures: raw.failures ?? (dry ? [] : gatherFailures(run.id)),
+  };
+  const deps = fixture ?? (dry ? {} : { openIssues: openIssues() });
+  const intents = routeFailure(ctx, deps);
+
+  if (dry) {
+    console.log(JSON.stringify(intents, null, 2));
+    return;
+  }
+  execute(intents);
+}
+
+/** Open medic issues, by signature. Only this label — the medic never reads the wider backlog. */
+function openIssues() {
+  return json("gh issue list", [
+    "issue",
+    "list",
+    "--state",
+    "open",
+    "--label",
+    LABEL.name,
+    "--limit",
+    "50",
+    "--json",
+    "number,title,labels",
+  ]).map((i) => ({ ...i, labels: (i.labels ?? []).map((l) => l.name) }));
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) main(process.argv.slice(2));

@@ -1,0 +1,19 @@
+{
+  "repository": { "default_branch": "main" },
+  "workflow_run": {
+    "id": 32545818804,
+    "name": "Postmaster",
+    "conclusion": "failure",
+    "event": "issues",
+    "head_branch": "main",
+    "html_url": "https://github.com/ejclark/skynet-capital/actions/runs/32545818804"
+  },
+  "failures": [
+    {
+      "job": "build feedback issue",
+      "step": "Run set -euo pipefail",
+      "logTail": "##[error]Process completed with exit code 1."
+    }
+  ],
+  "deps": { "openIssues": [] }
+}

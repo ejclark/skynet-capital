@@ -1,0 +1,13 @@
+{
+  "repository": { "default_branch": "main" },
+  "workflow_run": {
+    "id": 32546000003,
+    "name": "CI Medic",
+    "conclusion": "failure",
+    "event": "workflow_run",
+    "head_branch": "main",
+    "html_url": "https://github.com/ejclark/skynet-capital/actions/runs/32546000003"
+  },
+  "failures": [{ "job": "triage", "step": "Run the medic" }],
+  "deps": { "openIssues": [] }
+}
