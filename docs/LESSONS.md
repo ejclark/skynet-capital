@@ -27,6 +27,31 @@ it. Prevention ranks, best first:
 
 ---
 
+### The fix for that bug landed as a duplicate job key, so it never took effect
+
+- **SHA:** 4235123   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** none of the usual ones. #476 was reviewed, merged, and its own specs passed — the
+  entry above was written as `closed` on the strength of it. The duplicate was found only because a
+  concurrent branch had to resolve a conflict in the same file and read the merged result. Nothing
+  in CI, in the specs, or in review looked at the *shape* of the file.
+- **ROOT CAUSE:** #476's deletion of the broken `tier` step landed as a **second `build-feedback:`
+  block** rather than an edit of the first. YAML takes the last duplicate key, so the job that
+  actually ran was the new one — which still carried the `set -euo pipefail` bash the PR existed to
+  delete, plus a `--model` arg reading the new `feedback_model` output that made the dead step's
+  output unused but did not stop it running. The shadowed first block held a stray copy of the
+  *event-research* prompt, a copy-paste artifact. Net effect: the lane still died on any feedback
+  body over 600 chars with no code fence. The fix read as merged and was not in effect — the one
+  failure mode a green suite cannot see, because no spec was reading the workflow files at all.
+- **PREVENTION:** gate. `tests/arch/workflow-shape.spec.ts` asserts every workflow declares each job
+  exactly once (a duplicate key is never intentional) and that every `.github/prompts/*.md` a shim
+  names actually exists. Verified in both directions: it passes on the fixed file and fails on the
+  merged-to-main one. Doctrine half: prompts and decisions leave the YAML entirely
+  (`.github/prompts/`, `scripts/*.mjs`), so a workflow file becomes small enough that a duplicated
+  block is visible in review.
+- **SIDE QUESTS:** a workflow file is the only artifact in this repo that nothing lints beyond
+  "does it parse" — `actionlint` would cover ordering, expression and context errors this gate
+  does not (→ docs/IDEAS.md).
+
 ### A feedback build died in bash before Claude was ever invoked, and nothing was watching
 
 - **SHA:** 2d5921f   **DATE:** 2026-08-22   **STATUS:** closed
