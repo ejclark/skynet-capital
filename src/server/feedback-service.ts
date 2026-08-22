@@ -34,6 +34,11 @@ const LABELS: Record<FeedbackKind, readonly string[]> = {
   feature: ["enhancement", "feedback"],
   idea: ["idea", "feedback"],
 };
+const FEEDBACK_KIND_LABEL: Record<FeedbackKind, string> = {
+  bug: "🐞 Bug",
+  feature: "✨ Feature",
+  idea: "🗺️ Side quest",
+};
 const TITLE_TAG: Record<FeedbackKind, string> = {
   bug: "[bug]",
   feature: "[enhancement]",
@@ -54,9 +59,17 @@ export function opaqueMemberId(email: string): string {
     .slice(0, 10);
 }
 
+/**
+ * The filed issue's body: the member's words first (the ask is what a human reads first), then the
+ * metadata as a small table rather than a run of `**Key:** value` lines — repeated key/value facts
+ * are scanned in a table and skipped as prose (docs/ISSUES.md). The pseudonymous footer is last
+ * and unchanged.
+ */
 export function issueBody(input: FeedbackInput): string {
   const lines: string[] = [input.details.trim() || "_(no details provided)_", ""];
-  if (input.area) lines.push(`**Area:** ${input.area}`);
+  const meta: [string, string][] = [["Kind", FEEDBACK_KIND_LABEL[input.kind]]];
+  if (input.area) meta.push(["Where", input.area]);
+  lines.push("| | |", "|---|---|", ...meta.map(([k, v]) => `| **${k}** | ${v} |`));
   const who = input.submitterEmail?.trim()
     ? `member \`${opaqueMemberId(input.submitterEmail)}\``
     : "a league member";

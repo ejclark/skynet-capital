@@ -164,6 +164,21 @@ describe("applyHardcore — the SKYNET_HARDCORE_BOTS roster swap", () => {
     expect(roster.hardcore.has("sauron")).toBe(true);
   });
 
+  it("Mission Control overrides the env in both directions", () => {
+    const disarmed = applyHardcore(
+      createDefaultPersonas(),
+      { SKYNET_HARDCORE_BOTS: "sauron" } as NodeJS.ProcessEnv,
+      { bots: { sauron: { hardcore: false } } },
+    );
+    expect(disarmed.hardcore.size).toBe(0);
+
+    const armed = applyHardcore(createDefaultPersonas(), {} as NodeJS.ProcessEnv, {
+      bots: { sauron: { hardcore: true } },
+    });
+    expect(armed.hardcore.has("sauron")).toBe(true);
+    expect(armed.personas.find((p) => p.id === "sauron")).toBeInstanceOf(SauronHardcorePersona);
+  });
+
   it("refuses ids with no hardcore build instead of guessing", () => {
     const roster = applyHardcore(createDefaultPersonas(), {
       SKYNET_HARDCORE_BOTS: "sauron, banker",

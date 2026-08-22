@@ -1,3 +1,8 @@
+import {
+  type ControlsState,
+  EMPTY_CONTROLS,
+  effectiveHardcoreIds,
+} from "../autonomous/bot-controls.js";
 import { BankerPersona } from "./banker.js";
 import { DayTraderPersona } from "./day-trader.js";
 import { FuturistPersona } from "./futurist.js";
@@ -54,19 +59,30 @@ export interface HardcoreRoster {
 /**
  * Swap the personas named in `SKYNET_HARDCORE_BOTS` (comma-separated ids) for their hardcore
  * research-mode builds (Eric's directive, 2026-08-20 — see `sauron-hardcore.ts`). Dark by
- * default: an empty/unset var changes nothing, and flipping it rides the same approval-gated
- * autonomy-ops path as `SKYNET_PLAYBOOKS`.
+ * default: an empty/unset var changes nothing. The owner's Mission Control state, when given,
+ * overrides the env per bot (an explicit store boolean can both arm and disarm), so the GUI —
+ * not env pushes — is the day-to-day switch (Eric, 2026-08-21).
  */
-export function applyHardcore(personas: Persona[], env: NodeJS.ProcessEnv): HardcoreRoster {
-  const wanted = (env.SKYNET_HARDCORE_BOTS ?? "")
+export function applyHardcore(
+  personas: Persona[],
+  env: NodeJS.ProcessEnv,
+  controls: ControlsState = EMPTY_CONTROLS,
+): HardcoreRoster {
+  const envWanted = (env.SKYNET_HARDCORE_BOTS ?? "")
     .split(",")
     .map((id) => id.trim())
     .filter((id) => id.length > 0);
+  const rejected = envWanted.filter((id) => !HARDCORE_BUILDS[id]);
+  const envIds = new Set(envWanted.filter((id) => HARDCORE_BUILDS[id]));
+  const wanted = effectiveHardcoreIds(
+    personas.map((p) => p.id),
+    envIds,
+    controls,
+  );
   const hardcore = new Set<string>();
-  const rejected: string[] = [];
   for (const id of wanted) {
     if (HARDCORE_BUILDS[id]) hardcore.add(id);
-    else rejected.push(id);
+    else rejected.push(id); // store armed a bot with no hardcore build — refuse loudly, never guess
   }
   return {
     personas: personas.map((p) => {

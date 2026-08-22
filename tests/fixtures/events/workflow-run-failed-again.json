@@ -1,0 +1,17 @@
+{
+  "repository": { "default_branch": "main" },
+  "workflow_run": {
+    "id": 32545999999,
+    "name": "Postmaster",
+    "conclusion": "failure",
+    "event": "issues",
+    "head_branch": "main",
+    "html_url": "https://github.com/ejclark/skynet-capital/actions/runs/32545999999"
+  },
+  "failures": [{ "job": "build feedback issue", "step": "Run set -euo pipefail" }],
+  "deps": {
+    "openIssues": [
+      { "number": 480, "title": "[ci] Postmaster — build feedback issue", "labels": [] }
+    ]
+  }
+}

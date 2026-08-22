@@ -70,7 +70,10 @@ cmd_checkbody() {
     fail "missing '## The picture' — the fridge rule is section one. Trivial PR? Waive it explicitly: 'Picture: waived — <reason>' (docs/PICTURES.md)."
   else
     local pic; pic="$(awk '/^## The picture/{flag=1;next}/^## /{flag=0}flag' "$f")"
-    if printf '%s\n' "$pic" | grep -qE '!\[|<img |^```mermaid'; then
+    # A GFM table counts as media: docs/PICTURES.md prescribes exactly that for a config or
+    # constants change ("table: key · before · after · why"), and the gate rejecting one pushed two
+    # PRs on 2026-08-22 toward a decorative diagram — the opposite of the waiver doctrine.
+    if printf '%s\n' "$pic" | grep -qE '!\[|<img |^```mermaid|^\|.*\|'; then
       # media present → a FILLED caption is required (the template placeholder '_Caption —_' fails)
       printf '%s\n' "$pic" | grep -qE '^_?Caption( —|:) .{3,}' \
         || fail "picture has no filled caption — one plain-language line: what it shows + where it came from (docs/PICTURES.md → honesty rules)."

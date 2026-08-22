@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Scripted file edits need an anchor-order assertion
+
+`s[:start] + s[end:]` silently duplicates a region when `end < start`, which is what took the
+postmaster down on 2026-08-22 (the anchor matched an earlier, identical step shape). Any scripted
+edit that computes two offsets should assert their order, and any workflow edit should be diffed
+against the last-good file before it is pushed — `git diff <last-good-sha> -- <file>` showed the
+duplication instantly once someone looked. _(src: Claude · while: fixing the outage it caused)_
+
+### A claim lease has no release-on-failure path
+
+A build lane takes `claim/feedback-<n>` and then dies (the 2026-08-22 bash failure did exactly
+this). The lease is correct — it stops double-builds — but nothing releases it when the job that
+holds it fails, so the issue reads as claimed-and-building for the full 2h TTL and re-labelling does
+nothing until it expires. Options: an `if: failure()` step that calls `releaseClaim`, or the CI
+Medic releasing the lease named in the failed run. Cheap either way; the TTL already bounds the
+damage. _(src: Claude · while: fixing the feedback-lane tier failure and building the medic)_
+
 ### Boot-time quarantine for a store row that collides with the roster
 The owner-link PR (#466) closed the write-time hole (`addParticipant` now refuses an id already
 claimed by an env-configured account), but a row written *before* that fix shipped — none should

@@ -49,6 +49,23 @@ describe("renderFeedbackFormBody", () => {
     expect(html).toContain('id="fdbk-form" method="post" action="/feedback">');
   });
 
+  it("offers Write | Preview on the details field — the body becomes markdown on GitHub", () => {
+    const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: false });
+
+    expect(html).toContain('id="fdbk-tab-write"');
+    expect(html).toContain('id="fdbk-tab-preview"');
+    expect(html).toContain('id="fdbk-preview"');
+    // Hidden until script unhides them: dead tabs are worse than no tabs.
+    expect(html).toContain('id="fdbk-tabs" role="tablist" hidden');
+  });
+
+  it("ships the preview script whether or not the coach is wired", () => {
+    for (const coachEnabled of [true, false]) {
+      const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled });
+      expect(html).toContain("/feedback/preview");
+    }
+  });
+
   it("degrades gracefully with no JS — a noscript override keeps the plain form usable", () => {
     const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: true });
     expect(html).toContain("<noscript>");

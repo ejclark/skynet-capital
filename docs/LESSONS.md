@@ -27,6 +27,79 @@ it. Prevention ranks, best first:
 
 ---
 
+### The same zero-job outage, on the medic itself, one commit after its gate shipped
+
+- **SHA:** e40638b   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** the merge of #477 produced a healthy `Postmaster` run **and** a red run named
+  `.github/workflows/ci-medic.yml` — GitHub's tell for a file it cannot parse, spotted in the same
+  post-merge check that confirmed the postmaster had recovered. ~1 minute, only because someone was
+  already looking at that list.
+- **ROOT CAUSE:** a pre-merge amendment removed the medic's `workflows:` filter, on the sound
+  reasoning that the filter matches a run's workflow NAME and an unparseable file has no name (its
+  run is titled by path) — so the medic was blind to the exact failure it was built for. Removing
+  the list got the file rejected. SchemaStore marks `workflows` optional; GitHub's validator
+  evidently does not agree, and a zero-job run exposes no readable error through the API, so the
+  precise objection is unconfirmed — the amendment also folded the job's `if:` across lines.
+  **The deeper cause is not the YAML: it is that a workflow file cannot be tested before merge**, so
+  a plausible improvement to one went in on reasoning alone.
+- **PREVENTION:** gate + doctrine. (1) `workflow-lint` gained a fourth rule — a `workflow_run`
+  trigger must name its workflows — labelled in the source as a house rule from this incident, not
+  a schema requirement. (2) The filter is restored with the workflow PATHS listed alongside the
+  names, which covers the unparseable case without removing the list. (3) Doctrine, now in the
+  file's own header: on a workflow file, revert to the last shape that provably parsed and keep the
+  delta minimal, rather than guessing between two candidate causes.
+- **SIDE QUESTS:** none new — this is the third face of the 2026-08-22 workflow-fragility theme
+  already banked above.
+
+### A duplicated job key made postmaster.yml unparseable, and the run reported zero jobs
+
+- **SHA:** 4235123   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** a re-label of issue #475 produced no Postmaster run at all. Working backwards from
+  that silence found two red runs on `main` whose *name* was `.github/workflows/postmaster.yml`
+  rather than `Postmaster` — GitHub's tell for a file it could not parse. ~7 minutes, and only
+  because someone was already looking; no notification fires for a workflow that never starts.
+- **ROOT CAUSE:** a scripted edit computed its deletion range as `s[:start] + s[end:]` where `end`
+  matched an EARLIER occurrence of the anchor string (the event-research lane has the same
+  `- if: steps.gate.outputs.armed == 'true'` step shape). With `end < start` the slice does not
+  delete a region, it **duplicates** one — leaving `build-feedback:` defined twice. The local check
+  was `yaml.safe_load`, which silently keeps the last duplicate key, so the file parsed clean
+  locally and was rejected by GitHub. A rejected workflow does not fail one job; it produces a run
+  with zero jobs, so the whole postmaster — feedback lane, event research, stall audit — was dead
+  while `main` showed one anonymous red run.
+- **PREVENTION:** gate. `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` check the three
+  states that file was actually in: duplicate mapping keys, a `steps.<id>.outputs` reference whose
+  step no longer exists, and a `needs:` naming an undefined job. Verified against the broken file
+  itself before landing. Second prevention: the CI Medic now treats a failed run with **zero**
+  failing jobs as the workflow-rejected shape and files it (`parseFailure()`), instead of finding
+  no failing job and filing nothing — the exact hole this incident would have fallen through.
+- **SIDE QUESTS:** an anchor-based scripted edit should assert `end > start`; the deeper habit is to
+  diff against the last-good file before pushing a workflow (→ docs/IDEAS.md).
+
+### A feedback build died in bash before Claude was ever invoked, and nothing was watching
+
+- **SHA:** 2d5921f   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** Eric, reading the Actions tab by hand — "a feedback submission job failed … blocking
+  automatic pr generation." Zero automated signal: run 32545818804 failed at 02:17, the issue kept
+  its `feedback` label and its claim lease, and the only eye on red runs (`incident-scan`) reports
+  at the *next* test run and asks for a lesson, never a repair. Detection was a human, hours later.
+- **ROOT CAUSE:** the model-tier heuristic in `postmaster.yml` built its reason string as
+  `"…$(printf '%s' "$BODY" | grep -q '```' && echo ", includes a code block")"`. Under
+  `set -euo pipefail` a command substitution whose `&&` short-circuits exits 1, and an assignment
+  taking that status aborts the step. So every feedback issue **over 600 chars with no code fence**
+  killed its own build — the branch was unreachable in testing because the only bodies exercised
+  were short ones or fenced ones. Introduced by 4f60f18; first live body to hit it was #475 (1,410
+  chars, no fence). Worse than a loud failure: the claim lease was already taken, so the issue read
+  as claimed-and-building while nothing built it.
+- **PREVENTION:** gate + script + doctrine. (1) The decision moved out of the workflow into
+  `modelTier()` in `scripts/postmaster.mjs` — pure, and specced across all three branches including
+  the exact 1,410-char body (`tests/scripts/model-tier.spec.ts`). (2) The claim step is now one
+  specced call (`--claim-feedback`), deleting the last inline `node -e` + `jq` bash in that lane.
+  (3) The **CI Medic** lane (`.github/workflows/ci-medic.yml`, `scripts/ci-medic.mjs`) turns a red
+  run on `main` into a capsule issue plus a dispatched repair session, so the *next* silent failure
+  is noticed by the system rather than by Eric.
+- **SIDE QUESTS:** the claim lease has no release-on-failure path — a job that dies after claiming
+  leaves the lease to expire on its 2h TTL (→ docs/IDEAS.md).
+
 ### Plans kept landing as committed files after Eric had moved them to GitHub issues
 - **SHA:** n/a   **DATE:** 2026-08-21   **STATUS:** closed
 - **SIGNAL:** Eric, on "draft the plans": "plans belong in github issues, not in source code. This is
