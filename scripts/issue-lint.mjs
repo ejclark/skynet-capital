@@ -6,6 +6,8 @@
 //   node scripts/issue-lint.mjs --stdin                    # lint a body on stdin
 //   node scripts/issue-lint.mjs --json body.md             # findings as JSON (specs, tooling)
 //   node scripts/issue-lint.mjs --audit                    # live adoption report (needs GITHUB_TOKEN)
+//   node scripts/issue-lint.mjs --audit --all              # …naming every failing issue, not the top 8
+//   node scripts/issue-lint.mjs --audit --fixture f.json   # audit a saved issue list, no network
 //
 // WHY: the PR surface has a template, a guide and a gate; the issue surface had none of the three,
 // and the 2026-08-21 corpus shows exactly that delta — 1/71 issues carry a fold, 0/71 a picture,
@@ -210,7 +212,51 @@ export function lintIssue({ title = "", body = "" } = {}) {
 /** Issues this contract does not judge: machine-filed, machine-read (the event-research lane). */
 const AUTOMATION_TAG = /^\[(event-research)\]/i;
 
-async function audit(repo) {
+/** How many failing issues the audit names before it summarizes the remainder. The cap keeps the
+ *  report scannable; naming what it dropped keeps it honest. A top-N that prints no remainder
+ *  reads as "that was all of them" — the silent truncation CLAUDE.md rules out. `--all` lifts it. */
+export const AUDIT_LIST_LIMIT = 8;
+
+/** The audit's report, as pure lines — no network, no process exit, so a spec can assert on it.
+ *  Takes the raw issue rows GitHub returns (`{ number, title, body }`). */
+export function auditReport(issues, { repo = "", limit = AUDIT_LIST_LIMIT } = {}) {
+  if (!issues.length) return ["issue-lint --audit: no issues found."];
+  const pct = (n) => `${Math.round((100 * n) / issues.length)}%`;
+  const count = (f) => issues.filter((i) => f(i.body ?? "")).length;
+  const human = issues.filter((i) => !AUTOMATION_TAG.test(i.title ?? ""));
+  const failing = human
+    .map((i) => ({ issue: i, ...lintIssue({ title: i.title ?? "", body: i.body ?? "" }) }))
+    .filter((r) => r.problems.length);
+
+  const lines = [
+    `issue corpus: ${issues.length} issues on ${repo} (${human.length} human-facing)`,
+    "",
+    `  fold      ${pct(count((b) => b.includes("<details")))}`,
+    `  picture   ${pct(count((b) => /!\[|<img |```mermaid/.test(b)))}`,
+    `  table     ${pct(count((b) => /^\|.+\|$/m.test(b)))}`,
+    `  headings  ${pct(count((b) => /^#{2,3} /m.test(b)))}`,
+    "",
+    `  ${failing.length}/${human.length} human-facing issues fail the capsule contract (docs/ISSUES.md).`,
+  ];
+
+  const shown = failing.slice(0, limit);
+  for (const { issue, problems } of shown) {
+    // Each issue shows its first problem; say how many more it carries rather than implying one.
+    const rest = problems.length - 1;
+    lines.push(
+      `    #${issue.number} — ${problems[0]}${rest ? ` (+${rest} more on this issue)` : ""}`,
+    );
+  }
+  const dropped = failing.length - shown.length;
+  if (dropped) {
+    lines.push(
+      `    … and ${dropped} more failing issue${dropped === 1 ? "" : "s"} not listed — re-run with --all to name them.`,
+    );
+  }
+  return lines;
+}
+
+async function audit(repo, { limit = AUDIT_LIST_LIMIT } = {}) {
   // Node does not honour HTTPS_PROXY for global fetch; re-exec once with the env flag rather than
   // failing with a bare 401 behind a corporate/agent proxy.
   if (process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY) {
@@ -243,36 +289,25 @@ async function audit(repo) {
     rows.push(...batch);
   }
   const issues = rows.filter((r) => !r.pull_request);
-  if (!issues.length) {
-    console.log("issue-lint --audit: no issues found.");
-    return;
-  }
-  const pct = (n) => `${Math.round((100 * n) / issues.length)}%`;
-  const count = (f) => issues.filter((i) => f(i.body ?? "")).length;
-  const human = issues.filter((i) => !AUTOMATION_TAG.test(i.title));
-  const failing = human.filter(
-    (i) => lintIssue({ title: i.title, body: i.body ?? "" }).problems.length,
-  );
-  console.log(`issue corpus: ${issues.length} issues on ${repo} (${human.length} human-facing)\n`);
-  console.log(`  fold      ${pct(count((b) => b.includes("<details")))}`);
-  console.log(`  picture   ${pct(count((b) => /!\[|<img |```mermaid/.test(b)))}`);
-  console.log(`  table     ${pct(count((b) => /^\|.+\|$/m.test(b)))}`);
-  console.log(`  headings  ${pct(count((b) => /^#{2,3} /m.test(b)))}`);
-  console.log(
-    `\n  ${failing.length}/${human.length} human-facing issues fail the capsule contract (docs/ISSUES.md).`,
-  );
-  for (const i of failing.slice(0, 8)) {
-    console.log(
-      `    #${i.number} — ${lintIssue({ title: i.title, body: i.body ?? "" }).problems[0]}`,
-    );
-  }
+  console.log(auditReport(issues, { repo, limit }).join("\n"));
 }
 
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.includes("--audit")) {
     const at = argv.indexOf("--repo");
-    await audit(at === -1 ? "ejclark/skynet-capital" : argv[at + 1]);
+    const repo = at === -1 ? "ejclark/skynet-capital" : argv[at + 1];
+    const limit = argv.includes("--all") ? Number.POSITIVE_INFINITY : AUDIT_LIST_LIMIT;
+    // --fixture scores a saved list with no network, the same seam feedback-scan.mjs uses so its
+    // spec can drive the real CLI instead of a reimplementation of it.
+    const fixture = argv[argv.indexOf("--fixture") + 1];
+    if (argv.includes("--fixture") && fixture) {
+      console.log(
+        auditReport(JSON.parse(readFileSync(fixture, "utf8")), { repo, limit }).join("\n"),
+      );
+      return;
+    }
+    await audit(repo, { limit });
     return;
   }
   const json = argv.includes("--json");
