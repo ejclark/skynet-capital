@@ -123,3 +123,32 @@ describe("matchRoundTrips — honesty invariants", () => {
     });
   });
 });
+
+describe("matchRoundTrips — option round trips in real dollars", () => {
+  // The end-to-end guard on the 100x understatement: whatever the adapter does upstream, one
+  // contract bought at $4.20 and closed at $5.20 is $100 of realized P/L, not $1.
+  const fill = (side: "buy" | "sell", price: number, at: string): TradeFill => ({
+    symbol: "MSFT260918P00420000",
+    side,
+    quantity: 1,
+    price,
+    at,
+  });
+
+  it("realizes $100 on a one-contract dollar move, not $1", () => {
+    const { trips } = matchRoundTrips([fill("buy", 420, "t1"), fill("sell", 520, "t2")]);
+    expect(trips).toHaveLength(1);
+    expect(trips[0]?.realized).toBe(100);
+    // The percentage is a ratio, so it is scale-free and must not move with the fix.
+    expect(trips[0]?.returnPct).toBeCloseTo(23.81, 2);
+  });
+
+  it("flags a written option's opening sell rather than silently dropping it", () => {
+    // 201/202 open with a sell. There is no short lot to match, so the premium is counted as
+    // truncated — under-reported and visible, never invented. Short-lot matching is #468's job.
+    const ledger = matchRoundTrips([fill("sell", 420, "t1")]);
+    expect(ledger.trips).toHaveLength(0);
+    expect(ledger.truncated).toBe(true);
+    expect(totalRealized(ledger.trips)).toBe(0);
+  });
+});

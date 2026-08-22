@@ -108,6 +108,34 @@ describe("desk data adapters", () => {
     expect(fills).toEqual([{ symbol: "AAPL", side: "buy", quantity: 5, price: 10, at: "t2" }]);
   });
 
+  it("scales an option premium to per-contract dollars, leaving stock untouched", () => {
+    // A contract controls 100 shares. Reporting the raw $4.20 premium made a closed option trade
+    // read as 1/100th of its real P/L, while the positions tab scaled the same broker price
+    // correctly — two surfaces disagreeing about one trade.
+    const fills = fillsFrom([
+      {
+        symbol: "MSFT260918P00420000",
+        side: "buy",
+        quantity: 1,
+        filledQuantity: 1,
+        price: 4.2,
+        status: "filled",
+        at: "t1",
+      },
+      {
+        symbol: "MSFT",
+        side: "buy",
+        quantity: 1,
+        filledQuantity: 1,
+        price: 4.2,
+        status: "filled",
+        at: "t2",
+      },
+    ]);
+    expect(fills[0]).toMatchObject({ quantity: 1, price: 420 });
+    expect(fills[1]).toMatchObject({ quantity: 1, price: 4.2 });
+  });
+
   it("carries the deployment's trading flag into the ticket context", () => {
     const context = ticketContext(snapshot(), { tradingEnabled: false, isSelf: true });
     expect(context).toMatchObject({ tradingEnabled: false, isSelf: true, cash: 5_000 });

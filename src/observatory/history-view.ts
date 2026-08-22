@@ -1,4 +1,5 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import { humanizeOptionSymbol } from "../trading/option-symbols.js";
 import { type RoundTrip, type RoundTripLedger, totalRealized } from "../trading/round-trips.js";
 import { realizedByDay } from "../trading/trade-stats.js";
 import { escapeHtml } from "../ui/escape-html.js";
@@ -105,7 +106,7 @@ function tripRow(trip: RoundTrip, timezone: string | undefined): string {
   const basis = trip.entryPrice * trip.quantity;
   return `<tr>
       <td class="tcell">${escapeHtml(formatActivityTime(trip.closedAt, timezone))}</td>
-      <td><span class="sym">${escapeHtml(trip.symbol)}</span></td>
+      <td><span class="sym" title="${escapeHtml(trip.symbol)}">${escapeHtml(humanizeOptionSymbol(trip.symbol))}</span></td>
       <td class="num">${trip.quantity.toLocaleString("en-US")}</td>
       <td class="num">${formatPrice(trip.entryPrice)}</td>
       <td class="num">${formatPrice(trip.exitPrice)}</td>
@@ -196,7 +197,7 @@ function ledgerRow(
   const badge = row.source === "backfill" ? ` <span class="src-badge">backfilled</span>` : "";
   return `<tr>
       <td class="tcell">${escapeHtml(formatActivityTime(row.at, timezone))}</td>
-      <td><span class="${row.side === "buy" ? "pos" : "neg"}">${escapeHtml(row.side.toUpperCase())}</span> <span class="sym">${escapeHtml(row.symbol)}</span></td>
+      <td><span class="${row.side === "buy" ? "pos" : "neg"}">${escapeHtml(row.side.toUpperCase())}</span> <span class="sym" title="${escapeHtml(row.symbol)}">${escapeHtml(humanizeOptionSymbol(row.symbol))}</span></td>
       <td class="num">${row.filledQuantity.toLocaleString("en-US")}/${row.quantity.toLocaleString("en-US")}</td>
       <td class="num">${row.price !== undefined ? formatPrice(row.price) : "—"}</td>
       <td>${escapeHtml(row.status)}${badge}</td>
