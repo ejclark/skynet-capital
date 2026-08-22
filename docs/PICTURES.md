@@ -21,7 +21,7 @@ this guide teaches, the template reminds, and the ship gate enforces existence; 
 | New route / request path | `sequenceDiagram` | actors + ordered messages ARE the story |
 | Lifecycle / gate / mode (`SIM`/`LIVE`) | `stateDiagram-v2` | guarded transitions are the point |
 | Schema / data model | `erDiagram` (or `classDiagram`) | relationship deltas seen, not read |
-| Config / constants | table: key · before · after · why | scannable left edge |
+| Config / constants | table: key · before · after · why | scannable left edge (the gate counts a GFM table as media — 2026-08-22) |
 | Risk / irreversible touch | `> [!WARNING]` top-level | pre-attentive; see the caution budget |
 | Trivial (typo/chore/pure docs) | `Picture: waived — <reason>` | an honest skip beats a decorative diagram |
 
