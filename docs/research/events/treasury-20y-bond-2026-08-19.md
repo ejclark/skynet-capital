@@ -1,7 +1,7 @@
 # 20-Year Treasury Bond auction — treasury-20y-bond-2026-08-19
 
 **Kind:** rates · **Date:** 2026-08-19 (confirmed, TSY: treasurydirect.gov auction schedule — 1:00pm ET, announced 08-13, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-22
 
 ## At a glance
 
@@ -176,3 +176,61 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-08-22**, from re-checked source data (press coverage cross-checked across
+independent searches + one direct fetch of the primary write-up; TreasuryDirect's own result PDF
+exists at a guessable URL but returned unparseable binary this session — same honest-limits
+caveat the initial doc already carried for auction-day figures).
+
+**The print (confirmed via press, TSY primary PDF unparseable this session).** $18B 20-year bond,
+high yield **5.204%** vs a **5.199%** when-issued yield → a **0.5bp tail** — same direction and
+magnitude as July's tail, not a widening of it. Bid-to-cover **2.53x**, at the very floor of the
+~2.55–2.75 recent range (not materially below it). Bidder mix: **indirect 62.93%** (soft vs the
+recent ~67–71% norm, ~3–4pp light — the "mildly weak" tag hangs mostly here), **direct 24.59%**
+(back inside/above the ~20–24% norm — a sharp recovery from July's collapsed 10.2%), **dealer
+12.49%** (elevated vs the ~8.5–9.7% norm, but well below July's 14.7%). Press grade: **"mildly
+weak"** (investinglive.com, 2026-08-19, cross-confirmed via two independent aggregated searches).
+Same day, Treasury separately announced it would **double its long-end buyback operations** (10–
+30Y, to $4B/operation) — this, not the auction itself, was the dominant story for yields and
+equities that afternoon.
+
+**Market reaction, auction day (Aug 19).** S&P 500 **+0.21%** (7,707.98), Nasdaq **+0.16%**
+(26,331.09), Dow **+0.22%** — buyback relief outweighed the mildly-weak print; TheStreet's own
+headline read it as "S&P 500 rises despite tech weakness." Tracked names: **CRWV -2.47%**
+(close $90.87) — its move was already spent the session *before* the auction (**-12.10%** on
+8/18, on rate/financing fear pre-print, per the initial doc); **NVDA -0.99%** ($217.56); **AVGO
+-5.40%**, but idiosyncratic (Marvell's Google chip-partnership news), not rate-driven — flagged so
+it isn't misread as this event's reaction-function signal. Sources: stockanalysis.com daily
+history (CRWV, NVDA), aggregated search (AVGO/MRVL-Google, TheStreet market wrap), both
+2026-08-19/20.
+
+**Follow-through (Aug 20).** The buyback relief reversed: S&P **-0.87%** (7,641.16), Nasdaq
+**-1.00%** (26,067.17), Dow **-1.32%**; CRWV **-1.22%**, NVDA **-0.33%** — continued grinding
+softness, not a violent single-session break. The same-day **30Y TIPS auction printed strong**:
+real yield **2.973%** (highest since Oct 2001), **1.8bp through** a 2.991% WI (investors accepted
+a *lower* yield than priced — the opposite signal from the 20Y bond a day earlier), bid-to-cover
+**2.82x**, indirect **84.4%**. Sources: investinglive.com, tipswatch.com (both 2026-08-20).
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"Confirmed-weak print"** (bid-to-cover materially <2.55, a tail wider than July's +0.5bp,
+  direct share again well under ~20–24%) — **did not fire.** BC (2.53) sits at the range floor
+  rather than materially below it, the tail did not widen, and direct-bidder share *recovered*
+  into the norm band. Reads as a repeat of "mildly weak," not an escalation.
+- **"Firm/strong print"** (BC ≥2.75, negative tail, indirect ≥71%) — **did not fire either.**
+  Indirect (62.93%) ran below, not above, the recent norm.
+- **"Repeat >5% single-session move in CRWV or another high-duration name on auction day"** —
+  **did not fire.** CRWV's week-defining move (-12.10%) landed the session *before* the auction,
+  on fear alone; the print itself and the day after produced only -2.47%/-1.22%. The 2025 analog's
+  ~1-hour violent tech selloff did not replay this cycle.
+
+**Verdict vs. the stance.** The no-new-risk, no-directional-bet call held up as the right read:
+neither kill switch cleanly fired, and the week's actual driver — for both yields and equities —
+was the Treasury buyback announcement and its one-day fade, not the 20Y auction result in
+isolation. The week produced a **split verdict across its two long-end demand tests**: the Aug-19
+20Y bond mildly weak, the Aug-20 30Y TIPS auction strong — consistent with leg 3's "no clean
+trend" read from the initial doc, not with either the deterioration or the relief scenario
+resolving cleanly. The structural fiscal/term-premium story (leg 2) remains open and unresolved by
+this week's mixed auctions; no forward test in `forward-tests.md` is keyed to this specific event,
+so nothing scores there. This doc goes quiet after this entry per the close-out rule.
