@@ -89,3 +89,60 @@ describe("issue lint — the capsule contract", () => {
     expect(notes.join(" ")).toContain("no picture");
   });
 });
+
+const audit = (fixture: string, ...flags: string[]): string =>
+  execFileSync(
+    "node",
+    [
+      "scripts/issue-lint.mjs",
+      "--audit",
+      "--repo",
+      "o/r",
+      "--fixture",
+      `tests/fixtures/issues/${fixture}`,
+      ...flags,
+    ],
+    { encoding: "utf8" },
+  );
+
+describe("issue lint — the audit report", () => {
+  // The audit is the instrument used to triage the issue corpus. An instrument that counts 14
+  // failures and names 8 with no remainder line reads as "that was all of them" — the silent
+  // truncation CLAUDE.md rules out ("No silent caps: log() what was dropped"). Same for showing
+  // problems[0] and never saying an issue carried twenty more.
+  const named = (out: string) => out.match(/^ {4}#\d+ —/gm) ?? [];
+
+  it("names every failing issue it counted, or says how many it did not", () => {
+    const out = audit("twelve-walls.json");
+    expect(out).toContain("12/12 human-facing issues fail");
+    expect(named(out)).toHaveLength(8);
+    expect(out).toContain(
+      "… and 4 more failing issues not listed — re-run with --all to name them.",
+    );
+  });
+
+  it("drops the remainder line when the list is already complete", () => {
+    const out = audit("mixed.json");
+    expect(out).toContain("1/2 human-facing issues fail");
+    expect(named(out)).toHaveLength(1);
+    expect(out).not.toContain("not listed");
+  });
+
+  it("lifts the cap so --all names the whole corpus", () => {
+    const out = audit("twelve-walls.json", "--all");
+    expect(named(out)).toHaveLength(12);
+    expect(out).not.toContain("not listed");
+  });
+
+  it("says how many problems an issue carries beyond the one it shows", () => {
+    // #466 carried 22 problems and reported one. The count is what makes the row honest.
+    const out = audit("multi-problem.json");
+    expect(out).toMatch(/#7 — .+ \(\+\d+ more on this issue\)/);
+  });
+
+  it("exempts the machine lane from the human-facing denominator", () => {
+    const out = audit("machine-lane.json");
+    expect(out).toContain("2 issues on o/r (1 human-facing)");
+    expect(out).toContain("0/1 human-facing issues fail");
+  });
+});
