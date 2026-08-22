@@ -1,0 +1,41 @@
+[
+  {
+    "number": 447,
+    "title": "Add $1M USD limit guidance",
+    "state": "OPEN",
+    "createdAt": "2026-08-20T04:32:24Z",
+    "closedAt": null,
+    "labels": [{ "name": "feedback" }],
+    "comments": [{ "createdAt": "2026-08-20T04:37:00Z", "body": "a build session has started" }],
+    "closedByPullRequests": [
+      { "number": 448, "state": "MERGED", "createdAt": "2026-08-20T04:37:23Z" }
+    ],
+    "body": "no spec block here"
+  },
+  {
+    "number": 475,
+    "title": "Move Mission Control",
+    "state": "OPEN",
+    "createdAt": "2026-08-22T02:16:47Z",
+    "closedAt": null,
+    "labels": [{ "name": "feedback" }, { "name": "stall-flagged" }],
+    "comments": [{ "createdAt": "2026-08-22T17:44:30Z", "body": "🔇 No answer yet" }],
+    "closedByPullRequests": [],
+    "body": "raw paste"
+  },
+  {
+    "number": 443,
+    "title": "Improve form layout",
+    "state": "CLOSED",
+    "createdAt": "2026-08-19T05:31:55Z",
+    "closedAt": "2026-08-20T07:03:56Z",
+    "labels": [{ "name": "feedback" }],
+    "comments": [
+      { "createdAt": "2026-08-19T12:52:00Z", "body": "@claude are you going to pick this up?" }
+    ],
+    "closedByPullRequests": [
+      { "number": 457, "state": "MERGED", "createdAt": "2026-08-20T06:45:00Z" }
+    ],
+    "body": "curated\n```skynet-spec\n{\"rounds\":3,\"criteria\":[\"x\"],\"readiness\":\"spec-complete\"}\n```"
+  }
+]

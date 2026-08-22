@@ -112,7 +112,7 @@ export function route(ctx, deps = {}) {
 
 /** Something landed on main (or the `scan` command re-ran the sweep by hand — same path, never a
  *  second one that can drift). One issue per never-assessed event, deduped by exact open-issue
- *  title. */
+ *  title; plus the close-the-loop pass below. */
 function routeSweep(deps) {
   const { dueEvents = [], openIssueTitles = [] } = deps;
   const intents = [];
@@ -123,7 +123,31 @@ function routeSweep(deps) {
     queued.add(title);
     intents.push({ kind: "open-issue", label: LABELS.event, title, body: eventIssueBody(e) });
   }
-  return intents;
+  return [...intents, ...routeShipped(deps)];
+}
+
+/**
+ * THE LAST MILE. A feedback issue whose work has MERGED but which is still open.
+ *
+ * GitHub is supposed to close it: PR #448 carried `Closes #447` on line 1 and merged to the default
+ * branch. #447 is still open, and so is #449 (via #452). Both of those PRs were authored AND merged
+ * by `github-actions[bot]`; the two that did close were merged by a human. That is the same
+ * GITHUB_TOKEN-actor suppression class this file's header documents twice already, and the standing
+ * doctrine from it is: never depend on an event firing.
+ *
+ * So this does not depend on one. Every push to main is the postmaster's tick, so the sweep can
+ * simply look at which feedback issues have a merged PR and no longer being open, and close them
+ * itself. Pure: the caller supplies the joined list.
+ */
+export function routeShipped(deps = {}) {
+  const { shippedFeedback = [] } = deps;
+  return shippedFeedback.map((f) => ({
+    kind: "close-shipped",
+    issueNumber: f.number,
+    title: f.title,
+    pr: f.pr,
+    body: `🚀 **Shipped** — this landed in #${f.pr} and is live.\n\nClosing the loop explicitly: GitHub's own \`Closes #\` link does not fire reliably for PRs a bot both opens and merges (it silently missed #447 and #449), so the postmaster closes these itself rather than depending on an event.\n\n${FOOTER}`,
+  }));
 }
 
 /**
@@ -143,6 +167,17 @@ function routeRelease(ctx) {
   const slug = slugify(ctx.inputs?.slug);
   if (!slug) return [{ kind: "error", reason: "no slug given" }];
   return [{ kind: "release-claim", slug, actor: ctx.actor }];
+}
+
+/**
+ * Did this issue get an ANSWER? A linked PR (open or merged) is an answer; a closed issue is an
+ * answer; a terminal label is an answer. Comments are not — the lane comments before it works.
+ * Pure so the fixtures can drive every branch.
+ */
+export function answered(issue = {}) {
+  if (issue.state && String(issue.state).toUpperCase() === "CLOSED") return true;
+  const linked = issue.closedByPullRequests ?? issue.linkedPullRequests ?? [];
+  return Array.isArray(linked) && linked.length > 0;
 }
 
 /**
@@ -192,7 +227,7 @@ export function audit(deps = {}) {
       issueNumber: f.number,
       title: f.title,
       hoursSinceFiled: f.hoursSinceFiled,
-      body: `🔇 **No receipt** — this feedback was filed **${f.hoursSinceFiled}h** ago and the build lane has said nothing on it. Every session must end visibly: a PR, \`next-slice\`, \`needs-info\`, or \`needs-eric\`. Re-apply the \`feedback\` label to retry the build (the claim lease makes a re-label a safe retry, not a second build), or say here what it is waiting on.\n\n${FOOTER}`,
+      body: `🔇 **No answer yet** — this was filed **${f.hoursSinceFiled}h** ago and has not reached a PR or a verdict. Every session must end somewhere a member can see: a PR, \`next-slice\`, \`needs-info\`, or \`needs-eric\`.\n\nRe-apply the \`feedback\` label to retry the build — the claim lease makes a re-label a safe retry, not a second build. If it is waiting on something, say so here so it stops looking dropped.\n\n${FOOTER}`,
     });
   }
   return intents;
@@ -269,6 +304,15 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
   }
 
   try {
+    // Point the ref at a timestamped tag object, so the lease carries its OWN age (see claimAgeOf).
+    // If stamping fails for any reason, fall back to the raw sha — a lease with a slightly wrong
+    // clock still beats no lease at all, and the TTL bounds the damage either way.
+    let target = sha;
+    try {
+      target = claimStamp(slug, sha, nowMs);
+    } catch {
+      console.log(`::warning::claim ${ref}: could not stamp the lease; ageing off the head commit`);
+    }
     sh("gh", [
       "api",
       "-X",
@@ -277,7 +321,7 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
       "-f",
       `ref=refs/heads/${ref}`,
       "-f",
-      `sha=${sha}`,
+      `sha=${target}`,
     ]);
     return { claimed: true, reason: existing ? "reclaimed a stale lease" : "claimed" };
   } catch {
@@ -287,13 +331,59 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
 }
 
 /** Committer date of the claim's commit, for lease age. */
+/**
+ * When was this lease TAKEN? Not "when was the commit it points at authored" — that was the bug.
+ *
+ * Until 2026-08-22 the ref pointed at `GITHUB_SHA` (main's head at claim time) and the age was read
+ * from that COMMIT's committer date. Two ways wrong, in opposite directions: on a quiet repo the
+ * head can be hours old, so a brand-new lease is **born stale** and dedupes nothing exactly when it
+ * is cheapest to have; on a busy repo a lease from a build that died five minutes ago looks fresh
+ * for the full 2h, wedging the issue.
+ *
+ * The fix is an annotated tag object, whose `tagger.date` we set to the claim moment — the one
+ * primitive git gives us for "a ref that carries its own timestamp". Legacy commit-backed refs
+ * still resolve through the fallback, so existing leases age out normally rather than wedging.
+ */
 function claimAgeOf(sha) {
+  try {
+    const tag = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/tags/${sha}`]));
+    if (tag?.tagger?.date) return tag.tagger.date;
+  } catch {
+    /* not a tag object — fall through to the legacy commit read */
+  }
   try {
     return JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/commits/${sha}`])).commit.committer
       .date;
   } catch {
     return new Date(0).toISOString(); // unreadable → treat as ancient, i.e. reclaimable
   }
+}
+
+/** A tag object stamped with the claim moment; the ref points at this, not at the head commit. */
+function claimStamp(slug, sha, nowMs) {
+  const tag = JSON.parse(
+    sh("gh", [
+      "api",
+      "-X",
+      "POST",
+      "repos/{owner}/{repo}/git/tags",
+      "-f",
+      `tag=claim-${slug}-${nowMs}`,
+      "-f",
+      `message=lease taken ${new Date(nowMs).toISOString()}`,
+      "-f",
+      `object=${sha}`,
+      "-f",
+      "type=commit",
+      "-f",
+      `tagger[name]=postmaster`,
+      "-f",
+      `tagger[email]=noreply@anthropic.com`,
+      "-f",
+      `tagger[date]=${new Date(nowMs).toISOString()}`,
+    ]),
+  );
+  return tag.sha;
 }
 
 /**
@@ -367,7 +457,31 @@ function gatherDeps(ctx) {
     }
   };
   const needsScan = ctx.eventName === "push" || ctx.inputs?.command === "scan";
+  // Feedback issues whose work has merged but which are still open — the last mile GitHub's own
+  // `Closes #` link keeps missing on bot-opened, bot-merged PRs. Joined here (impure) so
+  // `routeShipped` stays pure and fixture-drivable.
+  const shippedFeedback = needsScan
+    ? json("gh issue list (shipped)", "gh", [
+        "issue",
+        "list",
+        "--state",
+        "open",
+        "--label",
+        "feedback",
+        "--limit",
+        "100",
+        "--json",
+        "number,title,closedByPullRequests",
+      ])
+        .map((i) => ({
+          number: i.number,
+          title: i.title,
+          pr: (i.closedByPullRequests ?? []).find((p) => p.state === "MERGED")?.number,
+        }))
+        .filter((i) => i.pr)
+    : [];
   return {
+    shippedFeedback,
     dueEvents: needsScan
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
@@ -413,7 +527,7 @@ function gatherAuditDeps(nowMs) {
     "--limit",
     "100",
     "--json",
-    "title,number,updatedAt,createdAt,labels,comments",
+    "title,number,state,updatedAt,createdAt,labels,closedByPullRequests",
   ]);
   const alreadyFlagged = issues
     .filter((i) => (i.labels ?? []).some((l) => l.name === LABELS.stall.name))
@@ -426,15 +540,18 @@ function gatherAuditDeps(nowMs) {
       unclaimedIssues.push({ title: i.title, number: i.number, quietDays: daysSince(i.updatedAt) });
     }
   }
-  // A feedback issue the build lane never spoke on. Zero comments is the signal — the lane's very
-  // first act is a receipt, so silence means the session never ran, died, or ended without a
-  // verdict. A terminal label counts as having spoken even without a comment.
+  // A feedback issue that reached no OUTCOME. The signal was "zero comments" until 2026-08-22, and
+  // that was blind to the likeliest failure there is: the build prompt's step 0 posts a receipt
+  // BEFORE the branch and the build, so a session that dies at typecheck or PR-open leaves exactly
+  // one comment and was invisible to this audit forever. Comments measure chatter; what a member
+  // actually needs is an answer. So the signal is now the absence of one — no PR linked, and none
+  // of the terminal labels — however much the lane said along the way.
   const spoke = new Set([LABELS.needsEric.name, LABELS.needsInfo.name, LABELS.nextSlice.name]);
   const silentFeedback = issues
     .filter(
       (i) =>
         (i.labels ?? []).some((l) => l.name === "feedback") &&
-        (i.comments ?? []).length === 0 &&
+        !answered(i) &&
         !(i.labels ?? []).some((l) => spoke.has(l.name)),
     )
     .map((i) => ({
@@ -447,6 +564,13 @@ function gatherAuditDeps(nowMs) {
 }
 
 function execute(intents) {
+  // The vocabulary first: a session that cannot apply `needs-info` has no way to say "I asked the
+  // member", which is the outcome this lane most needs to be able to reach.
+  try {
+    ensureVocabulary();
+  } catch (err) {
+    console.log(`::warning::could not upsert labels: ${String(err.message).slice(0, 200)}`);
+  }
   const receipt = [];
   for (const i of intents) {
     receipt.push(executeOne(i));
@@ -512,6 +636,12 @@ function executeOne(i) {
     console.log(`::warning::stall — ${i.title} quiet ${i.quietDays}d`);
     return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber})` : ""}`;
   }
+  if (i.kind === "close-shipped") {
+    sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+    sh("gh", ["issue", "close", String(i.issueNumber), "--reason", "completed"]);
+    console.log(`::notice::closed #${i.issueNumber} — shipped in #${i.pr}`);
+    return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
+  }
   if (i.kind === "flag-silent-feedback") {
     if (i.issueNumber) {
       sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
@@ -525,6 +655,19 @@ function executeOne(i) {
     return `🔇 silent feedback — \`${i.title}\` no receipt after ${i.hoursSinceFiled}h (commented on #${i.issueNumber})`;
   }
   return `❓ unknown intent kind ${i.kind}`;
+}
+
+/**
+ * Upsert every label this repo's prompts name. Until 2026-08-22 only `event-research` and
+ * `stall-flagged` were ever passed to `ensureLabel`, so `curated`, `needs-info` and `next-slice`
+ * were declared in LABELS and **never created** — they 404'd on the repo. A build session told to
+ * end in `needs-info` therefore hit a failing `gh issue edit --add-label` and fell back to the two
+ * exits that did exist: a PR, or `needs-eric`. The four-state design was two-thirds fictional.
+ *
+ * Cheap and idempotent, so it runs on every postmaster invocation rather than per-intent.
+ */
+export function ensureVocabulary() {
+  for (const label of Object.values(LABELS)) ensureLabel(label);
 }
 
 function ensureLabel(label) {

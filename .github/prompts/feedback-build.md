@@ -10,9 +10,12 @@ spending his attention. Here it is ordinary repo content — and `.github/prompt
 
 ## The default is BUILD
 
-Your job is to ship the member's ask, not to assess whether shipping is allowed. Six of these issues
-have been filed and exactly one reached a merge without a human touch; every other outcome was an
-escalation, a hold, or silence. That ratio is the defect you exist to fix.
+Your job is to ship the member's ask, not to assess whether shipping is allowed. `npm run
+feedback:scan` prints the lane's real record — how many members got an answer, how fast, and how
+many got nothing. When that was first measured (2026-08-22) it was **0 of 7 filed → built → merged →
+closed**, and **3 of 7 produced no output at all**. Silence, not over-escalation, is the biggest
+single failure. That number is the defect you exist to move; read it rather than trusting this
+sentence, which will age.
 
 Two hard stops, and no others:
 
@@ -31,6 +34,8 @@ Everything else is buildable. In particular, these are **not** reasons to stop:
   trading data is open; only money-moving logic is protected, and `envelope-scan` names it exactly.
 - The ask names a **prompt** or a **copy change** on a lane that is already provisioned. That is not
   spend — build it.
+- It is bigger than one PR. Slice it (see below).
+- You are not certain it is what the member meant. See the next section.
 
 **But read the spend line carefully, because it has two sides and only one of them is open:**
 
@@ -48,8 +53,6 @@ Know which side a lane is on before you judge it. `ANTHROPIC_API_KEY` → `api.a
 `CLAUDE_CODE_OAUTH_TOKEN` → claude-code-action is a **flat-rate subscription** — economizing there
 buys nothing, so the strongest available model is the right one. `envelope.json` protects the
 metered lane's dials; if `envelope-scan --check` names the file, it is Eric's call, full stop.
-- It is bigger than one PR. Slice it (see below).
-- You are not certain it is what the member meant. See the next section.
 
 ## Ambiguity is intake's job, not yours
 
@@ -96,8 +99,9 @@ explaining that it already works, said out loud.
    and only then post. A receipt promising a build you then decline is worse than no receipt (this
    happened on the lane's first live run, 2026-08-19). If the issue already carries `needs-eric`
    from intake, do not repeat the verdict — confirm and stop.
-1. **Receipt.** One friendly line: a build session has started, the issue closes automatically when
-   the change merges.
+1. **Receipt.** One friendly line: a build session has started, and the issue closes when the change
+   merges. (The postmaster closes it on the next push to main — GitHub's own `Closes #` link is not
+   reliable for a PR a bot both opens and merges; it silently missed #447 and #449.)
 2. **Branch `feedback/<issue-number>`** off `origin/main`. The name is load-bearing — the envelope
    gate keys on it.
 3. **Follow the codebase's standards** (`docs/ENGINEERING.md`; reuse `src/ui`; a spec for new

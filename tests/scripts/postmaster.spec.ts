@@ -151,3 +151,41 @@ describe("postmaster routing", () => {
     }
   });
 });
+
+// ── the 2026-08-22 automation-gap round ───────────────────────────────────────
+// Measured baseline that motivated these: of 7 feedback issues ever filed, 0 went
+// filed→built→merged→closed untouched, and 3 (43%) produced no build output at all. Eric's
+// definition of done is "member got a real answer, fast" — so silence is the failure to attack.
+
+describe("closing the last mile", () => {
+  // #447 shipped in #448 — `Closes #447` on line 1, merged to main, released as v1.181.1 — and the
+  // issue is still open. So is #449 via #452. Both PRs were opened AND merged by a bot; the two
+  // that did close were human-merged. Rather than chase GitHub's reason, the sweep closes them.
+  it("closes a feedback issue whose PR has merged, instead of trusting `Closes #`", () => {
+    const intents = dryRun("sweep-shipped-feedback.json") as (Intent & { pr?: number })[];
+
+    expect(intents).toHaveLength(2);
+    expect(intents.map((i) => [i.issueNumber, i.pr])).toEqual([
+      [447, 448],
+      [449, 452],
+    ]);
+    expect(intents[0]?.kind).toBe("close-shipped");
+    expect(intents[0]?.body).toContain("Shipped");
+  });
+});
+
+describe("the stall audit sees outcomes, not chatter", () => {
+  // THE DEFECT THIS FIXES: the audit keyed on `comments.length === 0`, but the build prompt posts a
+  // receipt as step 0 — before the branch and the build. So the likeliest failure of all (receipt
+  // posted, session dies at typecheck or PR-open) left exactly one comment and was invisible
+  // forever. #475 sat in precisely that state.
+  it("flags an issue that got a receipt and then died", () => {
+    const intents = dryRun("audit-receipt-then-died.json") as (Intent & {
+      hoursSinceFiled?: number;
+    })[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("flag-silent-feedback");
+    expect(intents[0]?.issueNumber).toBe(475);
+  });
+});
