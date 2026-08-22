@@ -876,3 +876,11 @@ _(nothing right now)_
   unverified commit deploys straight to Fly. Cheap to check (one API read of the branch protection
   rules); worth a spec that reads the live rule and fails if `verify` is not a required check.
   _(src: Claude · while: tracing why PR #492 merged but never deployed)_
+
+- **`incident-scan` never fires in CI — the gate only bites locally.** The `Test (Rstest)` step in
+  `pipeline.yml` passes no `GH_TOKEN`, so `tests/arch/lessons.spec.ts` degrades to a clean no-op on
+  every CI run; the unlearned-incident budget is enforced only when someone happens to run `npm test`
+  with a token in their environment. That is how 7 unlearned incidents accumulated while `main` stayed
+  green. Passing `GH_TOKEN` to that step is a workflow-file change (carve-out), so it needs Eric's
+  merge — worth pairing with whatever else next touches `pipeline.yml`.
+  _(src: Claude · while: reviewing PR #495, which self-reported the pre-existing failure)_
