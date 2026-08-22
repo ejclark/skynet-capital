@@ -38,6 +38,7 @@ import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedbackCoach } from "../server/feedback-coach.js";
+import { createFeedbackLogStore } from "../server/feedback-log.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
@@ -194,6 +195,8 @@ async function main(): Promise<void> {
       "ℹ️  The feedback coach is off (no ANTHROPIC_API_KEY) — the plain /feedback form still works.",
     );
   }
+  // What a member filed, correlated to the issue it became (#429).
+  const feedbackLog = createFeedbackLogStore(process.env);
 
   createDashboardServer({
     hub,
@@ -241,6 +244,8 @@ async function main(): Promise<void> {
       : {}),
     ...(feedback ? { submitFeedback: feedback } : {}),
     ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
+    recordFeedback: (entry) => feedbackLog.record(entry),
+    readFeedback: (id) => feedbackLog.list(id),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),

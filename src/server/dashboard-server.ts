@@ -33,9 +33,7 @@ import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
 import { type ControlsDeps, handleDeskSettings } from "./controls-form.js";
-import type { CoachTurn } from "./feedback-coach.js";
-import { serveFeedbackRoute } from "./feedback-routes.js";
-import type { FeedbackInput, FeedbackResult } from "./feedback-service.js";
+import { type FeedbackRouteDeps, serveFeedbackRoute } from "./feedback-routes.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
@@ -54,7 +52,12 @@ import { handleTrade } from "./trade-routes.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import { welcomeHtml } from "./welcome-page.js";
 
-export interface DashboardServerConfig {
+/**
+ * `FeedbackRouteDeps` (the /feedback surface's own dependency list) is inherited rather than
+ * repeated here — this config object IS what `serveFeedbackRoute` receives as its deps, so
+ * duplicating those fields would drift the two definitions apart with no way to catch it.
+ */
+export interface DashboardServerConfig extends FeedbackRouteDeps {
   readonly hub: ObservatoryHub;
   /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
@@ -95,18 +98,6 @@ export interface DashboardServerConfig {
    * Owner-gated inside the handler itself. The old `/controls` URL redirects here.
    */
   readonly controls?: ControlsDeps;
-  /**
-   * Self-service feedback handler. When provided, `GET /feedback` serves a form and `POST /feedback`
-   * files a labelled GitHub issue on the submitter's behalf. Omit (no token) to keep the form but
-   * have submissions report "not switched on yet."
-   */
-  readonly submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>;
-  /**
-   * The AI feedback coach (#429 slice 2). When present, the /feedback form offers a short guided
-   * dialogue that drafts the report; POST /feedback/coach serves the turns. Omit (no
-   * ANTHROPIC_API_KEY) and the plain form works exactly as before.
-   */
-  readonly coachFeedback?: CoachTurn;
   /**
    * Reads a participant's recorded equity/realized history for the individual view's performance panel.
    * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).

@@ -96,6 +96,54 @@ describe("renderFeedbackResultBody", () => {
   });
 });
 
+describe("feedback form — your recent feedback (#429)", () => {
+  it("renders nothing when the member has no filings yet", () => {
+    const html = renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      recent: [],
+    });
+    expect(html).not.toContain("Your recent feedback");
+  });
+
+  it("lists past filings newest first, linking out to the issue", () => {
+    const html = renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      recent: [
+        {
+          uuid: "u-1",
+          opaqueMemberId: "m",
+          issueNumber: 7,
+          url: "https://github.com/x/y/issues/7",
+          kind: "bug",
+          title: "Older bug",
+          filedAt: "2026-08-19T00:00:00.000Z",
+        },
+        {
+          uuid: "u-2",
+          opaqueMemberId: "m",
+          issueNumber: 9,
+          url: "https://github.com/x/y/issues/9",
+          kind: "idea",
+          title: "Newer idea",
+          filedAt: "2026-08-22T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(html).toContain("Your recent feedback");
+    const newer = html.indexOf("Newer idea");
+    const older = html.indexOf("Older bug");
+    expect(newer).toBeGreaterThan(-1);
+    expect(older).toBeGreaterThan(newer);
+    expect(html).toContain('href="https://github.com/x/y/issues/9"');
+    expect(html).toContain("#9");
+  });
+});
+
 describe("feedback form — the area select", () => {
   it("renders every offered area from the one shared list, so the coach and the form cannot drift", () => {
     const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: true });
