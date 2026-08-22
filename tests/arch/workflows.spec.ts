@@ -109,3 +109,53 @@ describe("workflow structure gate", () => {
     expect(stderr).toContain("needs `routte`");
   });
 });
+
+// Rule 5, added 2026-08-22 with the prompt shims. The AI lanes now read their instructions from
+// `.github/prompts/*.md` rather than inline YAML — which keeps the envelope tunable without a
+// carve-out merge, but makes a wrong path silent: the workflow parses, the run starts, and a live
+// session works with no orders. Cheap to check, so it is checked.
+describe("workflow lint — prompt shims", () => {
+  const withPrompts = (yaml: string, prompts: string[]): { code: number; stderr: string } => {
+    const dir = mkdtempSync(join(tmpdir(), "wf-prompts-"));
+    const workflows = join(dir, "workflows");
+    mkdirSync(join(dir, "prompts"), { recursive: true });
+    mkdirSync(workflows, { recursive: true });
+    writeFileSync(join(workflows, "sample.yml"), yaml);
+    for (const p of prompts) writeFileSync(join(dir, "prompts", p), "# stub\n");
+    const result = run(workflows);
+    rmSync(dir, { recursive: true, force: true });
+    return result;
+  };
+
+  const SHIM = `name: Sample
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          prompt: |
+            Read \`.github/prompts/feedback-build.md\` in this repo and follow it exactly.
+`;
+
+  it("flags a shim pointing at a prompt file that does not exist", () => {
+    const { code, stderr } = withPrompts(SHIM, ["other.md"]);
+
+    expect(code).toBe(1);
+    expect(stderr).toContain("feedback-build.md");
+    expect(stderr).toContain("no instructions");
+  });
+
+  it("passes a shim whose prompt file exists", () => {
+    expect(withPrompts(SHIM, ["feedback-build.md"]).code).toBe(0);
+  });
+
+  it("holds for the real workflows in this repo", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/workflow-lint.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
+    ).not.toThrow();
+  });
+});

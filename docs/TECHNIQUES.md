@@ -17,7 +17,7 @@ waste (Theory of Constraints). Cynefin picks *which* technique; the rigor formul
 | Delegated by a non-expert | **Probe blindspots / elicit constraints** (paraphrase-confirm always; options-they-can-judge for high stakes) | Routine, reversible, fully specified |
 | Irreversible, high-consequence (one-way door) | **Pre-mortem** at the outset + plan-first + Eric's gate | Reversible two-way door — decide fast, correct later |
 | Checkable output, error-cost matters | **Independent review** — a fresh-context pass that sees only the diff + criteria | A deterministic test already covers it — run the test |
-| Auth / input-parsing / spend / outward-facing | **`/security-review`** + Eric's gate | Internal, reversible, no boundary touched |
+| Auth · credentials · spend · parsing UNTRUSTED input across a trust boundary · outward-facing **and hard to reverse** | **`/security-review`** + Eric's gate — the list is `envelope.json`, checkable with `envelope-scan --check` | Internal, reversible, no boundary crossed. A form field the app already owns is not "input-parsing", and a UI string is not "outward-facing" |
 
 Load-bearing caveats from the research:
 

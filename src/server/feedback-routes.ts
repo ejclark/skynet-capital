@@ -15,7 +15,12 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { renderFeedbackFormBody, renderFeedbackResultBody } from "../observatory/feedback-view.js";
 import type { NavContext } from "../observatory/render-dashboard.js";
 import type { Session } from "./auth/session.js";
-import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
+import {
+  type CoachTurn,
+  type FeedbackSpec,
+  handleFeedbackCoach,
+  toSpec,
+} from "./feedback-coach.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { readBody, shellDocument } from "./page-shell.js";
@@ -67,6 +72,22 @@ function throttled(key: string, now = Date.now(), windowMs = 600_000, max = 5): 
   recent.push(now);
   feedbackHits.set(key, recent);
   return false;
+}
+
+/**
+ * The build spec as it comes back off the form. It rides a hidden field, so it is member-editable
+ * like every other field — `toSpec` re-normalizes it server-side (bounded strings, no backticks,
+ * and `spec-complete` re-earned rather than asserted), so a hand-crafted POST cannot inject
+ * markdown into a public issue body. What a forged spec CAN do is claim curation; that is bounded
+ * by `scripts/envelope-scan.mjs`, which no prompt or payload can argue past.
+ */
+function specFromForm(raw: string | null): { spec: FeedbackSpec } | undefined {
+  if (!raw?.trim()) return undefined;
+  try {
+    return { spec: toSpec(JSON.parse(raw.slice(0, 8000)) as unknown) };
+  } catch {
+    return undefined;
+  }
 }
 
 async function handleFeedback(
@@ -136,6 +157,7 @@ async function handleFeedback(
     details: form.get("details") ?? "",
     ...(form.get("area") ? { area: form.get("area") as string } : {}),
     ...(session?.email ? { submitterEmail: session.email } : {}),
+    ...(specFromForm(form.get("spec")) ?? {}),
   });
   res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
   res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));

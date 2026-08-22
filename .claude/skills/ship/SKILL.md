@@ -45,7 +45,11 @@ not `ship.sh merge`. (`scripts/ship.sh merge <n>` works only for an *unprotected
 ## Carve-outs — never auto-land (open the PR, hand to Eric)
 
 - **Workflow files** (`.github/workflows/**`) — high blast radius; Eric's one-click.
-- **Credentials / spend / outward-facing irreversible class** (CLAUDE.md hard boundaries).
+- **Credentials / spend / outward-facing *and hard to reverse*** (CLAUDE.md hard boundaries). The
+  authoritative list is `envelope.json` — `node scripts/envelope-scan.mjs --check <paths>` answers
+  "is this a carve-out?" mechanically. "Outward-facing" means reachable by a non-member or changing
+  an external contract, NOT "a user can see it"; on a web app the loose reading catches every copy
+  change, which is exactly how this gate over-triggered.
 - **Visual/taste work Eric asked to eyeball first.**
 
 For these: `scripts/ship.sh open` to create the PR, but do **not** arm auto-merge.

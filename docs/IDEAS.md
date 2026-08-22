@@ -834,3 +834,11 @@ _(nothing right now)_
 - Cityscape: market-hours lighting — PR #83
 - Cityscape: ticker billboards — PR #82
 - In-app self-service feedback funnel + setup runbook — PR #80, #81
+
+- **Lint the workflow files properly (`actionlint`).** `scripts/workflow-lint.mjs` now catches
+  duplicate keys, dangling `steps.*` refs, dangling `needs:`, unfiltered `workflow_run`, and prompt
+  shims pointing at nothing — but that is five rules hand-written after three incidents.
+  `actionlint` covers the whole class — bad `needs:` graphs, undefined `steps.*` contexts
+  (the orphaned `tier` step's output was referenced by nothing and flagged by nothing), shell
+  problems inside `run:` blocks, expression typos. A devDependency, so it is outside the envelope's
+  new-runtime-dep rule. _(src: Claude · while: resolving the #476 duplicate-job merge on PR #474)_

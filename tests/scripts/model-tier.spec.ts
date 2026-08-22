@@ -24,27 +24,34 @@ const tier = (body: string): Record<string, string> => {
 };
 
 describe("feedback model tier", () => {
-  it("sends a one-liner to Haiku — the cheap, fast pass", () => {
-    const { model, reason } = tier("the leaderboard shows 0.00%");
-
-    expect(model).toBe("claude-haiku-4-5-20251001");
-    expect(reason).toContain("short/simple ask");
+  // THE HEURISTIC IS RETIRED, AND THAT IS THE ASSERTION (2026-08-22). It sent short asks to Haiku
+  // and long ones to Sonnet — economizing on a lane billed to a FLAT-RATE subscription, where
+  // economizing saves nothing and costs build quality on exactly the detailed asks that deserve the
+  // most. Cheap belongs on the METERED side (src/server/feedback-coach-limits.ts), not here.
+  it("gives every ask the strong model — this lane is flat-rate, so thrift buys nothing", () => {
+    for (const body of [
+      "the leaderboard shows 0.00%",
+      "a".repeat(1410),
+      `x\n${FENCE}js\n1\n${FENCE}`,
+    ]) {
+      expect(tier(body).model).toBe("claude-opus-5");
+    }
   });
 
-  it("sends a long prose body to Sonnet — the shape that used to kill the step", () => {
-    const { model, reason } = tier("a".repeat(1410));
-
-    expect(model).toBe("claude-sonnet-5");
-    expect(reason).toBe("detailed ask (1410 chars)");
+  it("never downgrades to a cheap model, whatever the body", () => {
+    for (const body of ["", "a", "b".repeat(5000)]) {
+      expect(tier(body).model).not.toContain("haiku");
+      expect(tier(body).model).not.toContain("sonnet");
+    }
   });
 
-  it("sends a short body with a code block to Sonnet, and says so", () => {
-    const { model, reason } = tier(`short\n${FENCE}js\nx\n${FENCE}\n`);
-
-    expect(model).toBe("claude-sonnet-5");
-    expect(reason).toContain("includes a code block");
+  it("still reports the body shape it saw, for the run log", () => {
+    expect(tier("a".repeat(1410)).reason).toBe("member ask (1410 chars)");
+    expect(tier(`short\n${FENCE}js\nx\n${FENCE}\n`).reason).toContain("includes a code block");
   });
 
+  // The regression test for the incident that created this function: the decision lived in bash and
+  // exited 1 under `set -euo pipefail` on a body over 600 chars with no code fence.
   it("never fails, whatever the body — the decision cannot take the lane down again", () => {
     for (const body of ["", " ", "a".repeat(601), FENCE, `${"b".repeat(700)}\n${FENCE}\n`]) {
       expect(() => tier(body)).not.toThrow();

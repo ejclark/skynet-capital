@@ -94,6 +94,7 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
           <option>Research</option>
           <option>Somewhere else</option>
         </select>`)}
+        <input type="hidden" name="spec" id="fdbk-spec">
         <button type="submit" class="fdbk-submit">Send it</button>
       </form>
     </div>

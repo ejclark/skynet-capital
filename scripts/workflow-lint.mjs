@@ -20,6 +20,9 @@
 //   3. A `needs:` naming a job that does not exist.
 //   4. A `workflow_run` trigger with no `workflows:` list — added after the same outage recurred on
 //      ci-medic.yml itself when that list was removed.
+//   5. A prompt shim naming a `.github/prompts/*.md` that does not exist. Since 2026-08-22 the AI
+//      lanes read their instructions from files rather than inline YAML; a wrong path is silent
+//      here and only shows up as a live session running with no orders.
 //
 // Dependency-free on purpose (same doctrine as arch-scan/dupe-scan): a gate that guards CI must not
 // itself depend on a package resolving. It parses only the block-style, 2-space-indented subset
@@ -153,7 +156,17 @@ export function danglingNeeds(text) {
   return problems;
 }
 
-export function lintWorkflow(name, text) {
+/**
+ * Prompt shims pointing at nothing. Pure like the rest, so the caller supplies the set of prompt
+ * files that exist — specs pass a fixture set, `main` passes the real directory.
+ */
+export function danglingPrompts(text, available = []) {
+  const have = new Set(available);
+  const referenced = [...text.matchAll(/\.github\/prompts\/([a-z0-9-]+\.md)/g)].map((m) => m[1]);
+  return [...new Set(referenced)].filter((f) => !have.has(f));
+}
+
+export function lintWorkflow(name, text, prompts = []) {
   return [
     ...duplicateKeys(text).map(
       (d) =>
@@ -170,13 +183,25 @@ export function lintWorkflow(name, text) {
     ...danglingNeeds(text).map(
       (d) => `${name} job \`${d.job}\` needs \`${d.need}\`, which this file does not define`,
     ),
+    ...danglingPrompts(text, prompts).map(
+      (f) =>
+        `${name} points a prompt shim at \`.github/prompts/${f}\`, which does not exist — that lane would run with no instructions`,
+    ),
   ];
 }
 
 function main(argv) {
   const dir = argv.find((a) => !a.startsWith("--")) ?? ".github/workflows";
   const files = readdirSync(dir).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
-  const problems = files.flatMap((f) => lintWorkflow(f, readFileSync(join(dir, f), "utf8")));
+  let prompts = [];
+  try {
+    prompts = readdirSync(join(dir, "..", "prompts"));
+  } catch {
+    /* a repo with no prompt files simply has no shims to check */
+  }
+  const problems = files.flatMap((f) =>
+    lintWorkflow(f, readFileSync(join(dir, f), "utf8"), prompts),
+  );
   for (const p of problems) console.error(`✗ ${p}`);
   if (problems.length) {
     console.error(`\n${problems.length} problem(s) in ${dir} — see docs/LESSONS.md 2026-08-22.`);

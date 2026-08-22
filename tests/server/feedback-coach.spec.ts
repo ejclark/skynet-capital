@@ -3,6 +3,7 @@ import {
   createFeedbackCoach,
   parseCoachReply,
   resolveFeedbackCoach,
+  toSpec,
 } from "../../src/server/feedback-coach.js";
 
 const anthropicReply = (text: string): JsonResponse => ({
@@ -60,31 +61,113 @@ describe("feedback coach", () => {
     expect(result).toMatchObject({ ok: true, done: true, title: "fix the wobble" });
   });
 
+  // The build spec is what earns the wide build envelope: a curated ask is treated as the SPEC and
+  // built unattended. So "spec-complete" has to be earned, never merely asserted by the model —
+  // a spec that falsely claims completeness is the one failure that reaches production.
+  it("parses the build spec and marks it spec-complete only when criteria back the claim", () => {
+    const complete = parseCoachReply(
+      JSON.stringify({
+        draft: {
+          title: "widen the form",
+          details: "## What",
+          criteria: ["When a member opens /feedback, the form shall span 900px."],
+          assumptions: [],
+          outOfScope: ["Changing the Send button copy"],
+          readiness: "spec-complete",
+        },
+      }),
+    );
+
+    expect(complete).toMatchObject({
+      done: true,
+      spec: {
+        readiness: "spec-complete",
+        criteria: ["When a member opens /feedback, the form shall span 900px."],
+      },
+    });
+  });
+
+  it("downgrades a spec-complete claim with no acceptance criteria to partial", () => {
+    const result = parseCoachReply(
+      '{"draft": {"title": "t", "details": "d", "readiness": "spec-complete"}}',
+    );
+
+    expect(result).toMatchObject({ done: true, spec: { readiness: "partial", criteria: [] } });
+  });
+
+  // The issue body is public markdown; a backtick in a capsule field would break the fenced block
+  // the build lane parses, and an unbounded list would let one submission flood the issue.
+  it("bounds and de-fences build-spec fields — the issue body is public markdown", () => {
+    const spec = toSpec({
+      criteria: Array.from({ length: 40 }, (_, i) => `c${i}`),
+      assumptions: ["```javascript evil"],
+      readiness: "spec-complete",
+      needsEric: "raises the `spend` cap",
+    });
+
+    expect(spec.criteria).toHaveLength(12);
+    expect(spec.assumptions[0]).not.toContain("`");
+    expect(spec.needsEric).toBe("raises the 'spend' cap");
+  });
+
+  it("degrades a malformed spec to the conservative reading rather than throwing", () => {
+    expect(toSpec(undefined)).toEqual({
+      rounds: 0,
+      criteria: [],
+      assumptions: [],
+      outOfScope: [],
+      readiness: "partial",
+    });
+    expect(toSpec({ criteria: "not an array", readiness: "spec-complete" })).toMatchObject({
+      readiness: "partial",
+    });
+  });
+
   it("degrades an unparseable reply to a question — the member just sees text, nothing breaks", () => {
     const result = parseCoachReply("Could you say more about which chart?");
 
     expect(result).toMatchObject({ ok: true, done: false });
   });
 
-  it("tells the model to finish once the member has answered three rounds", async () => {
+  // Six rounds, not three (2026-08-22). Three was too few to clear the completeness bar, and the
+  // old nudge force-drafted regardless — manufacturing confident-looking specs out of
+  // unresolved asks, which downstream had only one exit: escalating to Eric.
+  it("keeps asking through six member rounds before nudging toward a draft", async () => {
+    const bodies: unknown[] = [];
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
+      bodies.push(body);
+      return Promise.resolve(anthropicReply('{"question": "which page?"}'));
+    });
+    const rounds = (n: number) =>
+      Array.from({ length: n }, (_, i) => [
+        { role: "assistant" as const, content: `q${i}` },
+        { role: "user" as const, content: `a${i}` },
+      ]).flat();
+
+    await coach({ kind: "idea", messages: [{ role: "user", content: "raw" }, ...rounds(3)] });
+
+    expect(JSON.stringify(bodies[0])).not.toContain("asked enough questions");
+  });
+
+  // The cut-off demands HONESTY about the gaps rather than a confident guess — a truthful
+  // "partial" routes the follow-up back to the member, never to Eric.
+  it("at the cut-off asks for partial readiness rather than a guessed-full draft", async () => {
     const bodies: unknown[] = [];
     const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
       bodies.push(body);
       return Promise.resolve(anthropicReply('{"draft": {"title": "t", "details": "d"}}'));
     });
+    const messages = Array.from({ length: 6 }, (_, i) => [
+      { role: "user" as const, content: `a${i}` },
+      { role: "assistant" as const, content: `q${i}` },
+    ]).flat();
 
-    await coach({
-      kind: "idea",
-      messages: [
-        { role: "user", content: "raw" },
-        { role: "assistant", content: "q1" },
-        { role: "user", content: "a1" },
-        { role: "assistant", content: "q2" },
-        { role: "user", content: "a2" },
-      ],
-    });
+    await coach({ kind: "idea", messages });
 
-    expect(JSON.stringify(bodies[0])).toContain("produce the draft NOW");
+    const sent = JSON.stringify(bodies[0]);
+    expect(sent).toContain("asked enough questions");
+    expect(sent).toContain("partial");
+    expect(sent).toContain("Do not guess it full");
   });
 
   it("bounds the conversation — size and length are server-enforced, not model-trusted", async () => {
@@ -118,5 +201,69 @@ describe("feedback coach", () => {
     const result = await coach({ kind: "bug", messages: [{ role: "user", content: "hi" }] });
 
     expect(result).toMatchObject({ ok: false });
+  });
+});
+
+// ROUTE THE MODEL BY WHO PAYS (Eric, 2026-08-22). The coach is the METERED lane — ANTHROPIC_API_KEY
+// against api.anthropic.com, billed per token — so it takes the cheapest model that clears the bar.
+// The expensive reasoning happens downstream in the build session, which is flat-rate.
+describe("feedback coach — metered-lane economics", () => {
+  it("asks the cheap model, on the wire", async () => {
+    const bodies: unknown[] = [];
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
+      bodies.push(body);
+      return Promise.resolve(anthropicReply('{"question": "where?"}'));
+    });
+
+    await coach({ kind: "bug", messages: [{ role: "user", content: "broken" }] });
+
+    expect((bodies[0] as { model: string }).model).toBe("claude-haiku-4-5");
+  });
+
+  // THE PROPERTY THE CHEAP MODEL RESTS ON. A weaker model is likelier to malform the draft JSON, so
+  // every degradation path must land on the conservative side: `partial`, which routes the follow-up
+  // to the MEMBER, never a confident `spec-complete` that a build session would treat as a spec.
+  it("degrades a weak model's slips to `partial`, never to a false spec-complete", async () => {
+    const slips = [
+      "{ not json at all",
+      '{"draft": {"title": "t", "details": "d", "readiness": "spec-complete"}}',
+      '{"draft": {"title": "t", "details": "d", "criteria": "should have been an array", "readiness": "spec-complete"}}',
+    ];
+    for (const slip of slips) {
+      const coach = createFeedbackCoach({ apiKey: "k" }, () =>
+        Promise.resolve(anthropicReply(slip)),
+      );
+
+      const result = await coach({ kind: "bug", messages: [{ role: "user", content: "x" }] });
+
+      if ("done" in result && result.done) {
+        expect(result.spec.readiness, `slip: ${slip}`).toBe("partial");
+      } else {
+        expect(result).toMatchObject({ ok: true, done: false });
+      }
+    }
+  });
+
+  // Eric asked how many questions it actually takes; nothing measured it. Now every curated issue
+  // carries the answer, so the ceiling can next be set from the distribution instead of by argument.
+  it("records how many rounds the draft actually took", async () => {
+    const coach = createFeedbackCoach({ apiKey: "k" }, () =>
+      Promise.resolve(
+        anthropicReply(
+          '{"draft": {"title": "t", "details": "d", "criteria": ["The app shall X."], "readiness": "spec-complete"}}',
+        ),
+      ),
+    );
+
+    const result = await coach({
+      kind: "feature",
+      messages: [
+        { role: "user", content: "raw" },
+        { role: "assistant", content: "q1" },
+        { role: "user", content: "a1" },
+      ],
+    });
+
+    expect(result).toMatchObject({ done: true, spec: { rounds: 2 } });
   });
 });

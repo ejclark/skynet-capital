@@ -30,6 +30,10 @@ work (interrupt economics: avoid death by 10,000 cuts).
    - Chaotic (on fire) → **stabilize, then act, then sense.**
    - **Irreversible / outward-facing / auth · token · spend → always plan-first + an independent security
      review (`/security-review`) + Eric's gate**, regardless of Cynefin (the irreversible class).
+     *Read this narrowly — the list is `envelope.json`, and `node scripts/envelope-scan.mjs --check
+     <paths>` answers it mechanically.* "Outward-facing" means reachable by a non-member or changing
+     an external contract, **and hard to reverse** — not "a user can see it". This is a web app, so
+     the loose reading fires on every copy change, which is how the gate came to over-trigger.
    - Correctness/requirements doubt on a diff → **`/code-review`, scoped to correctness/requirements
      only** (never "find gaps" — a reviewer told to find gaps manufactures them).
    - Then **consult the loaded skill/agent roster's own `Use when` triggers and route to the owner if one

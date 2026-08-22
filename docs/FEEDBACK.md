@@ -57,6 +57,50 @@ in code — only as a host secret, exactly like the Alpaca keys.
    pseudonymous submitter footer (opaque id, never a name or email). The success page links each
    filed issue so the member can follow its progress.
 
+## What the lane will build
+
+A `feedback`-labelled issue is picked up by `postmaster.yml` and built end to end in a fresh Claude
+session. **The default is build.** The triage rules live in `.github/prompts/feedback-build.md`;
+what the lane may not touch lives in [`envelope.json`](../envelope.json) and is enforced as a red CI
+check (`scripts/envelope-scan.mjs`) on every `feedback/*` branch — not as prompt text a session can
+reason its way past.
+
+Protected: workflow files and the lanes' own prompts, auth and the invite gate, credentials, the
+brokerage clients, order placement/sizing, the risk guards, playbook definitions, hosting config,
+and new **runtime** dependencies. Everything else — including anything that merely *renders* trades,
+P/L, leaderboards, or bot cards — is ordinary buildable work.
+
+Run `node scripts/envelope-scan.mjs --list` for the live table with reasons.
+
+### The four ways a build session ends
+
+Three of the four cost Eric nothing. That split is the point: `needs-eric` used to be the only
+non-PR exit, so "too big", "unclear what the member meant", and "genuinely his call" all landed in
+one queue — and the third got buried under the first two.
+
+| Outcome | Marker | Waits on |
+| --- | --- | --- |
+| Shipped — PR opened, auto-merge armed | — | nobody |
+| Sliced — first slice shipped, remainder on the issue | `next-slice` | nobody |
+| Needs the member to clarify | `needs-info` | **the member** |
+| A decision only Eric can make | `needs-eric` | **Eric — and only this one** |
+
+### The coach is what makes the wide envelope safe
+
+Members who go through the guided path at `/feedback` are interrogated against a per-kind
+completeness bar before anything is filed, and the issue carries a `curated` label plus a fenced
+` ```skynet-spec ` block: acceptance criteria, assumptions, explicit out-of-scope, readiness. The
+build session treats that spec as the specification instead of re-litigating what the member meant.
+An ask that needs Eric is recognized **at the form**, so it costs a sentence rather than a whole
+build session discovering it later.
+
+Two things shape a filed issue and they compose rather than compete: the **capsule**
+([`docs/ISSUES.md`](ISSUES.md)) is how the body *reads* — talking points above one fold; the
+**build spec** is what it *commits to*.
+
+The coach needs `ANTHROPIC_API_KEY`; without it members fall through to the plain form and file
+uncurated issues, which the lane still builds — just more cautiously.
+
 ## Guardrails
 
 The bot token can write issues, so the endpoint is protected in depth:

@@ -10,6 +10,11 @@
  * title/details fields and the intro gives way to the real form, ready to review → the member
  * uses the ordinary Send button. "Skip →", or any coach failure, reveals the plain form directly
  * instead. The coach never submits.
+ *
+ * The draft now carries a BUILD SPEC (criteria / assumptions / out-of-scope / readiness) into a
+ * hidden field — distinct from the capsule, which is how the body READS (docs/ISSUES.md). The spec
+ * is what earns the wide build envelope downstream: a curated ask is
+ * treated as a spec and built unattended, where a bare paste still gets the cautious path.
  */
 export const COACH_SCRIPT = `
 (function () {
@@ -26,6 +31,7 @@ export const COACH_SCRIPT = `
   var titleEl = form.querySelector('[name="title"]');
   var detailsEl = form.querySelector('[name="details"]');
   var kindEl = form.querySelector('[name="kind"]');
+  var specEl = form.querySelector('[name="spec"]');
   var msgs = [];
 
   function line(who, text) {
@@ -98,7 +104,16 @@ export const COACH_SCRIPT = `
         if (res.done) {
           if (titleEl) titleEl.value = res.title;
           if (detailsEl) detailsEl.value = res.details;
-          line('ai', 'Drafted! Review it below, tweak anything, then hit Send.');
+          // The spec rides a hidden field so the filed issue records HOW it was written. The
+          // server re-validates it — this value is member-editable like any form field.
+          if (specEl && res.spec) specEl.value = JSON.stringify(res.spec);
+          var gaps = res.spec && res.spec.readiness === 'partial';
+          line('ai', gaps
+            ? 'Drafted — I noted the bits we did not pin down as assumptions. Review it below, fill in anything you know, then hit Send.'
+            : 'Drafted! Review it below, tweak anything, then hit Send.');
+          if (res.spec && res.spec.needsEric) {
+            line('ai', 'Heads up: this one needs Eric to sign off (' + res.spec.needsEric + '). It still gets filed and flagged for him — nothing is lost.');
+          }
           revealForm();
         } else {
           askAnswer(res.question);
