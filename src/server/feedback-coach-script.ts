@@ -7,7 +7,7 @@
  *
  * Flow (#449, AI-first): the member picks a kind and drops a rough note in the guided intro →
  * "Let's shape it" → up to three short question/answer rounds → the draft fills the
- * title/details fields and the intro gives way to the real form, ready to review → the member
+ * title/details/area fields and the intro gives way to the real form, ready to review → the member
  * uses the ordinary Send button. "Skip →", or any coach failure, reveals the plain form directly
  * instead. The coach never submits.
  *
@@ -32,6 +32,7 @@ export const COACH_SCRIPT = `
   var detailsEl = form.querySelector('[name="details"]');
   var kindEl = form.querySelector('[name="kind"]');
   var specEl = form.querySelector('[name="spec"]');
+  var areaEl = form.querySelector('[name="area"]');
   var msgs = [];
 
   function line(who, text) {
@@ -104,6 +105,10 @@ export const COACH_SCRIPT = `
         if (res.done) {
           if (titleEl) titleEl.value = res.title;
           if (detailsEl) detailsEl.value = res.details;
+          // The coach already asks "where in the app" as part of its completeness bar, so the
+          // answer was being collected and then thrown away at the field. The server only sends
+          // an area it recognised, so this never invents a selection. #455
+          if (areaEl && res.area) areaEl.value = res.area;
           // The spec rides a hidden field so the filed issue records HOW it was written. The
           // server re-validates it — this value is member-editable like any form field.
           if (specEl && res.spec) specEl.value = JSON.stringify(res.spec);
