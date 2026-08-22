@@ -1,25 +1,39 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { BotControls, ControlsState } from "../autonomous/bot-controls.js";
+import type { ControlsState } from "../autonomous/bot-controls.js";
+import type { DeskNotice } from "../observatory/desk-tabs.js";
+import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import {
+  type FleetControls,
+  renderSettingsBody,
+  type SettingsViewOptions,
+} from "../observatory/settings-view.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { BotControlsStore } from "./bot-controls-store.js";
-import { brandedShell } from "./page-shell.js";
+import { brandedShell, shellDocument } from "./page-shell.js";
 import { handleSelfServiceForm, requireOwner } from "./self-service-forms.js";
 
 /**
- * `/controls` — MISSION CONTROL: the owner's switchboard for the autonomous fleet (Eric,
- * 2026-08-21: settings belong behind toggles, not env pushes).
+ * MISSION CONTROL: the owner's switchboard for the autonomous fleet (Eric, 2026-08-21: settings
+ * belong behind toggles, not env pushes).
  *
- * V1 is DELIBERATELY only the suspend/resume toggles (Eric's follow-up, same day: start with the
+ * It is served as the `settings` tab of an account's desk — `GET/POST /u/:id?tab=settings` — not
+ * as the standalone `/controls` page it started as (#475). The move is not cosmetic: a standalone
+ * page rendered through the bare form shell has no left rail, and "stop creating views that ignore
+ * the application-wide template" was the member's actual ask. As a desk tab it inherits the drawer,
+ * the tokens and the tab strip for free, and can't drift out of the template again.
+ *
+ * V1 is DELIBERATELY only the suspend/resume toggles (Eric's follow-up, 2026-08-21: start with the
  * easy features; mode/hardcore/persona knobs confused more than they controlled). Everything on
  * this page acts within ~30 s with no restart — the store schema and the runner already support
  * mode/hardcore overrides, but those stay env-only until they earn a self-explanatory control.
  *
- * Security model, in order of the walls:
+ * Security model, in order of the walls — unchanged by the relocation:
  *  1. The whole observatory sits behind the invite-gated login.
- *  2. This page answers only to OWNERS (env-allowlisted identities) — members get the same 403 a
- *     signed-out probe gets, exactly like `/invite`, so its existence leaks nothing.
+ *  2. This tab answers only to OWNERS (env-allowlisted identities). A member who asks for it by URL
+ *     gets the desk's overview, exactly as a typo'd `?tab=` does, so its existence leaks nothing.
  *  3. State-changing POSTs additionally require a same-origin `Sec-Fetch-Site` when the browser
  *     sends one — a cross-site form can't flip the fleet's switches with a rider's cookie.
+ *  4. The owner check is re-run HERE on every request, never inherited from the call site.
  */
 export interface ControlsDeps {
   readonly store: BotControlsStore;
@@ -30,12 +44,19 @@ export interface ControlsDeps {
   readonly now?: () => Date;
 }
 
-export async function handleControls(
+/** The desk this tab is being rendered on, plus the shell context every desk view receives. */
+export interface DeskSettingsView {
+  readonly snapshot: ParticipantSnapshot;
+  readonly options: Omit<SettingsViewOptions, "controls" | "notice">;
+}
+
+export async function handleDeskSettings(
   req: IncomingMessage,
   res: ServerResponse,
   method: string,
   viewerEmail: string | undefined,
   deps: ControlsDeps,
+  view: DeskSettingsView,
 ): Promise<void> {
   const owner = requireOwner(res, viewerEmail, deps.isOwner, brandedShell);
   if (!owner) return;
@@ -45,14 +66,24 @@ export async function handleControls(
     return;
   }
 
-  const render = () => brandedShell("Mission Control", panelHtml(deps));
+  // Read the store INSIDE the renderer, never before: on a POST this runs after the switch has
+  // been flipped, so the page an owner reads back is the state they just created.
+  const render = (notice?: DeskNotice) =>
+    shellDocument(
+      `Settings · ${escapeHtml(view.snapshot.displayName)} — Skynet Capital`,
+      renderSettingsBody(view.snapshot, {
+        ...view.options,
+        controls: fleetControls(deps),
+        ...(notice ? { notice } : {}),
+      }),
+    );
   await handleSelfServiceForm(
     req,
     res,
     method,
-    render,
+    () => render(),
     (form) => Promise.resolve(applyAction(form, owner, deps)),
-    (result) => brandedShell("Mission Control", result.note + panelHtml(deps)),
+    (result) => render(result.notice),
   );
 }
 
@@ -63,7 +94,22 @@ function sameOrigin(req: IncomingMessage): boolean {
   return site === undefined || site === "same-origin" || site === "none";
 }
 
-type ActionResult = { ok: boolean; note: string };
+/** Flatten the store's state and the live roster into what the view renders. */
+function fleetControls(deps: ControlsDeps): FleetControls {
+  const state: ControlsState = deps.store.load();
+  return {
+    allSuspended: state.allSuspended === true,
+    bots: deps.bots().map((bot) => ({
+      id: bot.id,
+      displayName: bot.displayName,
+      suspended: state.bots[bot.id]?.suspended === true,
+    })),
+    ...(state.updatedAt ? { updatedAt: state.updatedAt } : {}),
+    ...(state.updatedBy ? { updatedBy: state.updatedBy } : {}),
+  };
+}
+
+type ActionResult = { ok: boolean; notice: DeskNotice };
 
 /** One POST = one switch flipped. The action surface is exactly what the page renders — a control
  *  plane accepts nothing it doesn't show. Unknown actions/bots refuse loudly, never guess. */
@@ -80,12 +126,12 @@ function applyAction(form: URLSearchParams, editor: string, deps: ControlsDeps):
       );
     }
     if (action !== "suspend" && action !== "resume") {
-      return { ok: false, note: `<p class="err">Unknown action.</p>` };
+      return { ok: false, notice: { kind: "error", message: "Unknown action." } };
     }
 
     const botId = form.get("bot") ?? "";
     if (!deps.bots().some((b) => b.id === botId)) {
-      return { ok: false, note: `<p class="err">Unknown bot.</p>` };
+      return { ok: false, notice: { kind: "error", message: "Unknown bot." } };
     }
     const suspended = action === "suspend";
     deps.store.setBot(botId, { suspended }, editor, at);
@@ -95,59 +141,10 @@ function applyAction(form: URLSearchParams, editor: string, deps: ControlsDeps):
         : "Trading resumed — takes effect within ~30 seconds.",
     );
   } catch (err) {
-    return { ok: false, note: `<p class="err">Couldn't save: ${escapeHtml(String(err))}</p>` };
+    return { ok: false, notice: { kind: "error", message: `Couldn't save: ${String(err)}` } };
   }
 }
 
-function okNote(note: string): ActionResult {
-  return { ok: true, note: `<p class="ok">${note}</p>` };
-}
-
-// --- rendering --------------------------------------------------------------------------------
-
-function botRow(bot: { id: string; displayName: string }, controls: BotControls): string {
-  const id = escapeHtml(bot.id);
-  const suspended = controls.suspended === true;
-  // Green-means-trading / red-means-suspended, the market-color rule (docs/BRAND.md).
-  const stateChip = suspended
-    ? `<span style="color:#F2555A;font-weight:700;letter-spacing:.08em">SUSPENDED</span>`
-    : `<span style="color:#35D0BA;font-weight:700;letter-spacing:.08em">TRADING</span>`;
-  return `<tr>
-      <td><b>${escapeHtml(bot.displayName)}</b><br><code>${id}</code></td>
-      <td>${stateChip}</td>
-      <td><form method="post" action="/controls" class="inlineform">
-        <input type="hidden" name="bot" value="${id}">
-        <input type="hidden" name="action" value="${suspended ? "resume" : "suspend"}">
-        <button type="submit">${suspended ? "Resume trading" : "Suspend trading"}</button>
-      </form></td>
-    </tr>`;
-}
-
-function panelHtml(deps: ControlsDeps): string {
-  const state: ControlsState = deps.store.load();
-  const bots = deps.bots();
-  const rows = bots.length
-    ? bots.map((b) => botRow(b, state.bots[b.id] ?? {})).join("")
-    : `<tr><td colspan="3">No bots on the board.</td></tr>`;
-  const globalBanner = state.allSuspended
-    ? `<p class="err"><b>ALL AUTONOMOUS TRADING IS SUSPENDED.</b> Lift it and each bot returns to its own setting below.</p>
-       <form method="post" action="/controls"><input type="hidden" name="action" value="resume-all">
-       <button type="submit">Lift global suspend</button></form>`
-    : `<form method="post" action="/controls"><input type="hidden" name="action" value="suspend-all">
-       <button type="submit">Suspend ALL autonomous trading</button></form>
-       <p><small>The everything-stops switch — every bot (and the beta scout) stands down within ~30 seconds.</small></p>`;
-  const audit = state.updatedAt
-    ? `<p><small>Last change ${escapeHtml(state.updatedAt.slice(0, 16).replace("T", " "))} UTC by ${escapeHtml(state.updatedBy ?? "unknown")}</small></p>`
-    : "";
-
-  return `<h1>Mission Control</h1>
-<p>The autonomous fleet's switchboard. Every control here takes effect within ~30 seconds —
-no restarts, no env pushes.</p>
-${globalBanner}
-<table><thead><tr><th>Bot</th><th>Status</th><th></th></tr></thead>
-<tbody>${rows}</tbody></table>
-${audit}
-<p><small>Suspending stops a bot from placing new (paper) orders; existing positions are left as
-they are. Safety nets are independent of this page — the readiness gate, risk guards, circuit
-breakers, and the host kill switch all still apply.</small></p>`;
+function okNote(message: string): ActionResult {
+  return { ok: true, notice: { kind: "ok", message } };
 }
