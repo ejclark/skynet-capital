@@ -41,6 +41,10 @@ const ISSUE_FIELDS = new Set([
   "url",
 ]);
 
+/** Source with comments removed — a rule about CODE must not be tripped by prose describing it. */
+const codeOnly = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/[^\n]*$/gm, "");
+
 /** Every `"--json"` argument list in a script that shells out to `gh issue list`. */
 const jsonFieldLists = (source: string): string[][] =>
   [...source.matchAll(/"--json",\s*(?:\/\/[^\n]*\n\s*)*"([^"]+)"/g)].map((m) =>
@@ -55,6 +59,20 @@ describe("gh --json fields", () => {
     expect(lists.length).toBeGreaterThan(0);
     const unknown = lists.flat().filter((f) => f && !ISSUE_FIELDS.has(f));
     expect(unknown).toEqual([]);
+  });
+
+  // THE SECOND HALF OF THE SAME LESSON (2026-08-22, #494). Asking `gh` for a field it knows is
+  // necessary but not sufficient — you also have to use the SHAPE it hands back. Every
+  // `closedByPullRequestsReferences` element is exactly `{id, number, repository, url}`; there is
+  // no state. The sweep filtered on `.state === "MERGED"` for its whole life, comparing
+  // `undefined === "MERGED"` every time, and so could never close anything. A wrong field NAME
+  // fails loudly on the first call; a wrong field READ is silent forever, which is worse.
+  it("never reads a state off a closing reference — gh does not return one", () => {
+    const source = codeOnly(readFileSync("scripts/postmaster.mjs", "utf8"));
+
+    // The literal shape of the dead filter, and any near-relative of it. Prose is stripped first,
+    // so the comments explaining the bug do not themselves fail the rule.
+    expect(source).not.toMatch(/closedByPullRequestsReferences[\s\S]{0,200}?\.state\s*===/);
   });
 
   it("rejects the exact typo that broke main", () => {
