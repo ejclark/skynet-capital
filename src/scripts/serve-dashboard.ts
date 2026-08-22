@@ -30,10 +30,12 @@ import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { dedupeById } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
+import { createDefaultPersonas } from "../personas/registry.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
+import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedbackCoach } from "../server/feedback-coach.js";
 import { resolveFeedback } from "../server/feedback-service.js";
@@ -139,6 +141,10 @@ async function main(): Promise<void> {
   // exact same store — two sources of truth for who may sign in is the bug worth designing out.
   const allowlist = createAllowlistStore(process.env, (m) => console.error(m));
   const owners = ownerEmails(process.env);
+  // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
+  // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
+  const botControls = createBotControlsStore(process.env, (m) => console.error(m));
+  const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
   const auth = resolveAuth(process.env, undefined, allowlist);
   const password = process.env.SKYNET_DASHBOARD_PASSWORD;
   if (auth) {
@@ -204,6 +210,25 @@ async function main(): Promise<void> {
     ...(auth
       ? { invite: { store: allowlist, isOwner: (email: string) => owners.has(email) } }
       : {}),
+    // Mission Control (Eric, 2026-08-21): the owner's switchboard for the autonomous fleet.
+    // OAuth-only — owner identity comes from the signed session, so password mode has no one
+    // to grant it to.
+    ...(auth
+      ? {
+          controls: {
+            store: botControls,
+            isOwner: (email: string) => owners.has(email),
+            // Roster restricted to KNOWN personas: a self-service /add can mint a kind:"bot"
+            // row with any id, and a planted row must never appear on the switchboard as a
+            // confusable twin of a real runner persona (security review, 2026-08-21).
+            bots: () =>
+              hub
+                .getState()
+                .participants.filter((p) => p.kind === "bot" && knownPersonaIds.has(p.id))
+                .map((p) => ({ id: p.id, displayName: p.displayName })),
+          },
+        }
+      : {}),
     ...(feedback ? { submitFeedback: feedback } : {}),
     ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
     readHistory: (id) => history.list(id),
@@ -231,7 +256,11 @@ async function main(): Promise<void> {
   // src/server/insights-listener.ts for the full reasoning + what was verified.
   const insights = createInsightStore(process.env);
   const insightsPort = resolveInsightsBridgePort(process.env);
-  createInsightsListener({ record: (entry) => insights.record(entry) }).listen(insightsPort, () => {
+  createInsightsListener({
+    record: (entry) => insights.record(entry),
+    // The bots process polls Mission Control state over the same private-net bridge.
+    controls: () => botControls.load(),
+  }).listen(insightsPort, () => {
     console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
   });
 }

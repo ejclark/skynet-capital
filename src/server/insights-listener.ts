@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { CONTROLS_BRIDGE_PATH, type ControlsState } from "../autonomous/bot-controls.js";
 import {
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
@@ -14,6 +15,12 @@ const MAX_BODY_BYTES = 16 * 1024;
 
 export interface InsightsListenerConfig {
   readonly record: (entry: InsightRecord) => Promise<void>;
+  /**
+   * Current bot-controls state for `GET /controls` — the `bots` process polls it so the owner's
+   * Mission Control toggles reach the runner without a restart. Omit to 404 the route (e.g. a
+   * deployment with no controls store).
+   */
+  readonly controls?: () => ControlsState;
 }
 
 /**
@@ -71,6 +78,12 @@ async function handleInsightPost(
   config: InsightsListenerConfig,
 ): Promise<void> {
   const path = (req.url ?? "/").split("?")[0];
+
+  if (path === CONTROLS_BRIDGE_PATH) {
+    handleControlsGet(req, res, config);
+    return;
+  }
+
   if (path !== "/insights") {
     respond(res, 404, { error: "not found" });
     return;
@@ -122,6 +135,34 @@ async function handleInsightPost(
   }
 
   respond(res, 200, { ok: true });
+}
+
+/** `GET /controls` — the runner's Mission Control poll. Same trust boundary as `/insights`:
+ *  the 6PN-only port plus the shared-secret header as defense-in-depth. Read-only. */
+function handleControlsGet(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: InsightsListenerConfig,
+): void {
+  if (req.method !== "GET") {
+    res.setHeader("allow", "GET");
+    respond(res, 405, { error: "method not allowed" });
+    return;
+  }
+  if (req.headers[INSIGHTS_BRIDGE_SECRET_HEADER] !== INSIGHTS_BRIDGE_SHARED_SECRET) {
+    respond(res, 401, { error: "unauthorized" });
+    return;
+  }
+  if (!config.controls) {
+    respond(res, 404, { error: "controls not configured" });
+    return;
+  }
+  try {
+    respond(res, 200, config.controls() as unknown as Record<string, unknown>);
+  } catch (error) {
+    process.emitWarning(`[insights-listener] controls read failed: ${String(error)}`);
+    respond(res, 502, { error: "read failed" });
+  }
 }
 
 type BodyResult =

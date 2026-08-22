@@ -41,6 +41,9 @@ export interface InsightRecord {
 export const INSIGHTS_BRIDGE_SECRET_HEADER = "x-skynet-insights-secret";
 export const INSIGHTS_BRIDGE_SHARED_SECRET = "skynet-insights-bridge-v1";
 
+/** One bounded-fetch budget for every bridge client — a slow bridge must never stall a trade loop. */
+export const BRIDGE_REQUEST_TIMEOUT_MS = 2_000;
+
 /** A plain JSON object — not an array, not null, not a primitive. */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

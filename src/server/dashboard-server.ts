@@ -32,6 +32,7 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
+import { type ControlsDeps, handleControls } from "./controls-form.js";
 import type { CoachTurn } from "./feedback-coach.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import type { FeedbackInput, FeedbackResult } from "./feedback-service.js";
@@ -88,6 +89,11 @@ export interface DashboardServerConfig {
    * allowlist store and may sign in but not invite (see `invite-form.ts`).
    */
   readonly invite?: InviteDeps;
+  /**
+   * `GET/POST /controls` — Mission Control, the owner's switchboard for the autonomous fleet.
+   * Omit to disable (offline mode, or no auth). Owner-gated inside the handler itself.
+   */
+  readonly controls?: ControlsDeps;
   /**
    * Self-service feedback handler. When provided, `GET /feedback` serves a form and `POST /feedback`
    * files a labelled GitHub issue on the submitter's behalf. Omit (no token) to keep the form but
@@ -275,11 +281,15 @@ async function serveAuthorizedRoute(
 ): Promise<void> {
   const canAdd = Boolean(config.addParticipant);
   const authed = Boolean(config.auth);
+  const canControl = Boolean(
+    config.controls && session && config.controls.isOwner(session.email.toLowerCase()),
+  );
   const navFor = (active: NavView): NavContext => ({
     active,
     currentId: resolveCurrentId(session, config.hub.getState().participants),
     canAdd,
     authed,
+    ...(canControl ? { canControl } : {}),
     hasLeaderboard: true,
     hasBots: true,
     hasCompare: true,
@@ -426,6 +436,12 @@ async function trySelfServiceRoute(
 ): Promise<boolean> {
   if (path === "/add" && config.addParticipant) {
     await handleAdd(req, res, req.method ?? "GET", keyOf(url), config.addParticipant);
+    return true;
+  }
+  if (path === "/controls" && config.controls) {
+    // Mission Control — identity comes from the signed session; handleControls re-checks owner
+    // status itself (never trusts the call site), the same defense layering as /invite.
+    await handleControls(req, res, req.method ?? "GET", session?.email, config.controls);
     return true;
   }
   if (path === "/invite" && config.invite) {
