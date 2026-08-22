@@ -233,6 +233,7 @@ jobs:
           fi
 
       - if: steps.gate.outputs.armed == 'true'
+        id: build
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -311,3 +312,12 @@ jobs:
             complete instruction set for this run.
 
             The feedback issue is #${{ needs.route.outputs.feedback_issue }} in this repo.
+      # THE LEASE IS PART OF THE TERMINAL-STATE PROMISE. A build that dies leaves the issue claimed
+      # for the full 2h TTL, so a member's feedback reads as "in progress" while nothing is running
+      # and a re-label is a no-op — the exact shape that hid three separate failures on 2026-08-22.
+      # Freeing it here makes a retry immediate; the claim itself still prevents double-builds.
+      - if: failure() && needs.route.outputs.feedback_issue != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/postmaster.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
+

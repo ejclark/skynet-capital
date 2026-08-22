@@ -792,6 +792,20 @@ function main(argv) {
     return;
   }
 
+  // `--release <slug>`: hand the lease back. Exists so a job that failed can free the issue in its
+  // own `if: failure()` step, rather than leaving it claimed-and-silent for the full TTL — the
+  // shape that made the 2026-08-22 feedback failures look like builds in progress (docs/LESSONS.md).
+  const relIdx = argv.indexOf("--release");
+  if (relIdx >= 0 && argv[relIdx + 1]) {
+    const slug = slugify(argv[relIdx + 1]);
+    console.log(
+      releaseClaim(slug)
+        ? `::notice::released the lease for ${slug}`
+        : `::notice::no lease held for ${slug} — nothing to release`,
+    );
+    return;
+  }
+
   if (argv.includes("--claim-feedback")) {
     claimFeedback(ctx);
     return;
