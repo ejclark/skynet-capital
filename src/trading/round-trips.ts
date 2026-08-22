@@ -15,8 +15,12 @@
  *    trade.
  *  - the fill window is finite (the broker returns the last N orders), so a sell with no visible
  *    opening lot is **dropped and flagged** (`truncated`), never matched against an unrelated
- *    later buy. This app's order path cannot short (`engine/guards.ts` clamps every sell to the
- *    held quantity), so an unmatched sell means "opened before this window", not "went short".
+ *    later buy. For stock this means "opened before this window": `engine/guards.ts` clamps every
+ *    sell to the held quantity, so the path cannot short. **Options are the exception** — a
+ *    written put or covered call (course 201/202) opens with a sell, so its premium currently
+ *    lands in `unmatchedSellQuantity` and sets `truncated` rather than opening a short lot. That
+ *    is under-reporting, never over-reporting, and it is flagged rather than silent; short-lot
+ *    matching is tracked on #468 and deliberately not faked here.
  *  - what's still open is returned (`open`), so a caller can reconcile matched lots against the
  *    broker's live positions instead of assuming the window covered everything.
  */

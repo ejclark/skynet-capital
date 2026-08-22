@@ -1,3 +1,4 @@
+import { isOccSymbol } from "../trading/option-symbols.js";
 import type { TicketContext } from "../trading/order-ticket.js";
 import { matchRoundTrips, type RoundTripLedger, type TradeFill } from "../trading/round-trips.js";
 import { escapeHtml } from "../ui/escape-html.js";
@@ -6,6 +7,7 @@ import {
   recordsFromActivity,
   type TradeActivityRecord,
 } from "./activity-store.js";
+import { OPTION_MULTIPLIER } from "./broker-positions.js";
 import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.js";
 
 /**
@@ -15,17 +17,29 @@ import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.j
  * anywhere near it.
  */
 
-/** Only FILLED shares are trades. A submitted, cancelled, or rejected order is not history. */
+/**
+ * Only FILLED shares are trades. A submitted, cancelled, or rejected order is not history.
+ *
+ * Option fills arrive as a PER-SHARE premium against a contract count, so the premium is scaled to
+ * per-contract dollars here — the same scaling `positionsFrom` applies to every per-share broker
+ * price. Scaling the price rather than the quantity keeps `quantity` reading as contracts (what
+ * the blotter says) while `realized`, `basis` and `returnPct` all come out in real dollars.
+ * Without it a closed option trade reported 1/100th of its true P/L, and the positions tab and the
+ * history tab contradicted each other about the same trade.
+ */
 export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeFill[] {
   return (activity ?? [])
     .filter((row) => row.filledQuantity > 0 && (row.side === "buy" || row.side === "sell"))
-    .map((row) => ({
-      symbol: row.symbol,
-      side: row.side as "buy" | "sell",
-      quantity: row.filledQuantity,
-      ...(row.price !== undefined ? { price: row.price } : {}),
-      at: row.at,
-    }));
+    .map((row) => {
+      const scale = isOccSymbol(row.symbol) ? OPTION_MULTIPLIER : 1;
+      return {
+        symbol: row.symbol,
+        side: row.side as "buy" | "sell",
+        quantity: row.filledQuantity,
+        ...(row.price !== undefined ? { price: row.price * scale } : {}),
+        at: row.at,
+      };
+    });
 }
 
 /**

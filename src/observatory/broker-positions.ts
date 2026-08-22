@@ -28,7 +28,11 @@ export interface PositionView {
   readonly lastdayPrice?: number;
 }
 
-const OPTION_MULTIPLIER = 100;
+/** One option contract controls 100 shares, so every per-share broker price on an OCC symbol is
+ *  a per-contract price waiting to be scaled. Exported because the round-trip adapter needs the
+ *  SAME multiplier — when only one of the two surfaces scaled, positions and history disagreed
+ *  by 100x about the same trade. */
+export const OPTION_MULTIPLIER = 100;
 
 export function positionsFrom(positions: readonly AlpacaPosition[]): PositionView[] {
   return positions.map((position) => {
