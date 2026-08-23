@@ -6,7 +6,7 @@ import { join } from "node:path";
 // full server. Usage: npm run shoot:login [outdir]
 // Needs a Chromium: either set PW_CHROME to a binary, or run `npx playwright install chromium`.
 import { chromium } from "playwright-core";
-import { resolveAuth } from "../src/server/auth/authenticator.ts";
+import { resolveAuth } from "../src/server/auth/resolve-auth.ts";
 
 const OUT = process.argv[2] || join(tmpdir(), "skynet-login-shots");
 mkdirSync(OUT, { recursive: true });

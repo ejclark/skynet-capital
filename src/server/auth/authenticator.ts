@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { escapeHtml } from "../../ui/escape-html.js";
+import { TOKEN_DECLS } from "../../ui/tokens.js";
 import { isAllowedIdentity } from "./allowlist.js";
 import { APP_VERSION } from "./app-version.js";
 import { completeOAuthCallback } from "./oauth-callback.js";
@@ -156,10 +157,7 @@ export class Authenticator {
      so we remove the choice. color-scheme:dark stops mobile UAs auto-lighting form controls/scrollbars. */
   :root{
     color-scheme: dark;
-    --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041;
-    --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
-    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    ${TOKEN_DECLS}
   }
 
   /* Reveal VFX: a grainy chromatic "hangar door" sweep, canvas-rendered above the scene but behind
