@@ -209,7 +209,7 @@ export function renderCalendarBody(options: CalendarViewOptions): string {
  * meaning only (docs/BRAND.md).
  */
 const CAL_STYLE = `<style>
-  .calendar{ display:flex; flex-direction:column; gap:16px; max-width:980px; }
+  .calendar{ display:flex; flex-direction:column; gap:16px; max-width:var(--col-wide); }
   .calendar .summary{ margin-bottom:4px; }
   .cal-band{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 20px 12px; }
   .cal-band-title{ margin:0 0 4px; font-size:14px; font-weight:700; }
