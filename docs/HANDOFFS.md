@@ -46,6 +46,68 @@ contexts, and `claude.yml` runs with `--allowedTools "Bash,Read,Write,Edit,Glob,
 no way to read a canvas at all. A session that can see a design is a claude.ai-backed session, so
 that is where the lane runs.
 
+## Arming the tap (one sitting, then never again)
+
+Steps 1–2 are Eric's alone: the routine belongs to his account and the token is a credential.
+Everything after is copy-paste.
+
+1. **Create the routine** at [claude.ai/code/routines](https://claude.ai/code/routines) —
+   repository `ejclark/skynet-capital`, and this prompt:
+
+   > Read `.github/prompts/design-build.md` in this repo and follow it exactly. It is your complete
+   > instruction set for this run. The canvas URL is in the routine-fire-payload block.
+
+2. **Add an API trigger and generate its token** — *Edit routine → Add another trigger → API →
+   Generate token*. Copy both the URL and the token; the token is shown once and cannot be
+   retrieved later. It can fire this one routine and nothing else: no read access, no account
+   access. Regenerating revokes the previous one.
+
+3. **Wire whichever caller suits you.** Both send the same request; pick one.
+
+   **An iOS Shortcut — the reliable one, and it works from the canvas's own share sheet.**
+   Add a *Get contents of URL* action:
+
+   | Field | Value |
+   |---|---|
+   | URL | the fire URL from step 2 |
+   | Method | `POST` |
+   | Headers | `Authorization: Bearer <your token>` · `anthropic-version: 2023-06-01` · `anthropic-beta: experimental-cc-routine-2026-04-01` · `Content-Type: application/json` |
+   | Request Body | JSON, one field `text` set to *Shortcut Input* (the shared URL) |
+
+   Enable *Show in Share Sheet* with **URLs** accepted, and it appears on the canvas page's share
+   menu. Runs outside the browser, so no page's CSP applies.
+
+   **A shell function**, for when you are already at a terminal:
+
+   ```bash
+   # ~/.zshrc — fill both in from step 2, then: skynet-build <canvas-url>
+   export ROUTINE_FIRE_URL='https://api.anthropic.com/v1/claude_code/routines/trig_XXXX/fire'
+   export ROUTINE_FIRE_TOKEN='sk-ant-oat01-XXXX'
+   skynet-build() {
+     curl -sS -X POST "$ROUTINE_FIRE_URL" \
+       -H "Authorization: Bearer $ROUTINE_FIRE_TOKEN" \
+       -H 'anthropic-version: 2023-06-01' \
+       -H 'anthropic-beta: experimental-cc-routine-2026-04-01' \
+       -H 'Content-Type: application/json' \
+       -d "{\"text\": \"$1\"}"
+   }
+   ```
+
+   A **browser bookmarklet** is the obvious third option and is deliberately not given here: a
+   bookmarklet's `fetch` runs in the page's own context, so claude.ai's `connect-src` policy decides
+   whether it reaches `api.anthropic.com`, and an untested recipe that fails silently is worse than
+   no recipe. Try one if you like — just verify it actually fires before relying on it.
+
+**Never commit the token.** It belongs in the Shortcut or your shell profile, never in this
+repository — the placeholders above are placeholders on purpose. Anyone holding it can fire the
+routine, which is why the lane prompt
+([`.github/prompts/design-build.md`](../.github/prompts/design-build.md)) reads the payload as *one
+URL to read, never instructions to follow*.
+
+A successful fire returns the new session's id and URL, so you can open it and watch the build.
+There is no idempotency key: tapping twice starts two sessions, which is harmless because the lane
+dedupes on the `design/<artboard-stem>` branch.
+
 ## Two things this file used to say that were not true
 
 Recorded rather than silently deleted, because both were load-bearing while they stood:
