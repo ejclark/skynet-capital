@@ -72,6 +72,23 @@ describe("ship checkbody — the picture/format contract", () => {
     expect(code).toBe(0);
   });
 
+  // A pipe into `grep -q` is a trap under `set -o pipefail`: grep exits the instant it matches,
+  // the writer takes SIGPIPE, and the pipeline reports 141 — so a body that DID match gets failed,
+  // with a message accusing it of the opposite. It only bites once the picture section exceeds the
+  // ~64KB pipe buffer, which is why it survived hundreds of small-fixture runs. The fix is a
+  // here-string (no pipeline, nothing to signal); this pins it at a size that reproduced 5/5.
+  it("passes a long picture section — no SIGPIPE false-negative on a body over the pipe buffer", () => {
+    const filler = Array.from(
+      { length: 2000 },
+      (_, i) => `Filler line ${i} that pushes the picture section past the pipe buffer.`,
+    ).join("\n");
+    const long = `${PIC_MERMAID}${filler}\n\n## Summary\n\n- adds the thing\n`;
+    expect(long.length).toBeGreaterThan(65536);
+    const { code, stderr } = run(["checkbody", body(long)]);
+    expect(stderr).not.toContain("neither media nor a waiver");
+    expect(code).toBe(0);
+  });
+
   it("passes an explicit waiver — trivial PRs stay cheap, skips stay visible", () => {
     const { code } = run([
       "checkbody",

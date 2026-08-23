@@ -13,6 +13,7 @@ import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPi
 import { SSAO2RenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline";
 import { VolumetricLightScatteringPostProcess } from "@babylonjs/core/PostProcesses/volumetricLightScatteringPostProcess";
 import { Scene } from "@babylonjs/core/scene";
+import { TOKEN_HEX } from "../../ui/tokens.js";
 import { createSky } from "./sky.js";
 // --- Side-effect imports. Tree-shaking strips scene components unless they're imported for effect;
 // without these you get runtime "X needs to be imported before" errors and a black screen. ---
@@ -35,9 +36,12 @@ import "@babylonjs/core/Misc/dds";
  *   4. MSAA + FXAA (jagged edges are what read as "cheap" more than anything else)
  */
 
-/** Brand tokens, mirrored from the observatory design system (dashboard-shell.ts). */
+/** Brand tokens for the scene. `accent` is derived from the one source of truth in
+ *  `src/ui/tokens.ts` — it was a hand-copied hex, which is the drift that file exists to stop.
+ *  `ground` and `forge` are scene-only (the tower's night ground, the Eye's forge glow) and have no
+ *  observatory twin, so they stay here. */
 export const TOKENS = {
-  accent: Color3.FromHexString("#35D0BA"),
+  accent: Color3.FromHexString(TOKEN_HEX.accent),
   ground: Color3.FromHexString("#05070B"),
   forge: new Color3(1.0, 0.34, 0.09),
 } as const;

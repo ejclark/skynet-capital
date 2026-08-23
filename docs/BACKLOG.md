@@ -1,27 +1,17 @@
 # Backlog
 
-Ideas captured but not yet built. Ordered loosely by when they'll matter.
+**The backlog lives in GitHub issues, not here** (#433 — *"plans belong in github issues, not source
+code"*). This file is a pointer; it is kept rather than deleted because several docs and source
+headers cite it by path.
 
-## Gamify the dashboard
+Where its contents went:
 
-Make the observatory fun to check — turn it from a data readout into a competition.
+| what this file used to hold | where it lives now |
+|---|---|
+| the gamify spec — trophies, measurements, derived state | **built**: [`src/observatory/history-metrics.ts`](../src/observatory/history-metrics.ts) — `firstAccountToDouble`, `aggregateDoubling`, `seedBaseline`, `doubledAt`, `changeOver` |
+| the seed baseline recorded at onboarding | **built**: `ParticipantService.recordSeedSample` ([`src/server/participant-service.ts`](../src/server/participant-service.ts)) |
+| the "room to grow" trophies — first to +50%, biggest single-day gain, longest green streak | **open**: issue [#503](https://github.com/ejclark/skynet-capital/issues/503) |
+| anything new | file an issue — `/issue` shapes the capsule ([`ISSUES.md`](ISSUES.md)) |
 
-### Milestones / trophies
-- **Total capital across all accounts doubles** (aggregate 2×).
-- **First account to double** — a race trophy, awarded once, names the winner.
-- (room to grow: first to +50%, biggest single-day gain, longest green streak.)
-
-### Measurements
-- **Total capital** across all participants (already the summary strip — build on it).
-- **Daily** change: $ and %.
-- **Monthly** change: $ and %.
-- Per-participant and aggregate, for both.
-
-### Notes for implementation
-- Daily/monthly deltas need a **baseline history** — we already persist cycle reports
-  (`runtime/*-cycle-report-store`); add periodic equity snapshots per participant so
-  deltas are computable without re-deriving from trades.
-- Trophies are **derived state**: a pure function over the equity history + seed, same
-  testable pattern as the reducer. One place computes "has X account doubled yet".
-- Seed baseline per participant (starting equity) must be recorded at onboarding so
-  "doubling" has a reference point.
+The spec this file carried is not lost: it is the header commentary on the functions that implement
+it, which is where intent stops being able to drift from the code (`CLAUDE.md` — *co-locate intent*).

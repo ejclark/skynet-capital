@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 
 import type { Session } from "../../src/server/auth/session.js";
+import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import { serveFeedbackRoute } from "../../src/server/feedback-routes.js";
 import type { FeedbackInput } from "../../src/server/feedback-service.js";
 
@@ -67,6 +68,81 @@ describe("serveFeedbackRoute", () => {
 
     expect(filed[0]).toMatchObject({ kind: "bug", title: "Chart wobbles", details: "it wobbled" });
     expect(out.body).toContain("#7");
+  });
+
+  it("records a successful filing to the feedback log, keyed by the member's opaque id", async () => {
+    const logged: FeedbackLogEntry[] = [];
+    const { res } = capture();
+
+    await serveFeedbackRoute(
+      request("kind=bug&title=Chart+wobbles&details=it+wobbled", "POST"),
+      res,
+      "/feedback",
+      session("filer@example.com"),
+      {
+        submitFeedback: () =>
+          Promise.resolve({ ok: true as const, url: "https://github.com/x/y/issues/7", number: 7 }),
+        recordFeedback: (entry) => {
+          logged.push(entry);
+          return Promise.resolve();
+        },
+      },
+      NAV,
+    );
+
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).toMatchObject({ issueNumber: 7, title: "Chart wobbles", kind: "bug" });
+    // Same marker the issue body carries — never the raw email.
+    expect(logged[0]?.opaqueMemberId).not.toContain("@");
+  });
+
+  it("never lets a log-write failure cost the member their filed issue", async () => {
+    const { res, out } = capture();
+
+    await serveFeedbackRoute(
+      request("kind=bug&title=t&details=d", "POST"),
+      res,
+      "/feedback",
+      session("filer@example.com"),
+      {
+        submitFeedback: () =>
+          Promise.resolve({ ok: true as const, url: "https://github.com/x/y/issues/7", number: 7 }),
+        recordFeedback: () => Promise.reject(new Error("disk full")),
+      },
+      NAV,
+    );
+
+    expect(out.status).toBe(200);
+    expect(out.body).toContain("#7");
+  });
+
+  it("renders the member's recent feedback under the form on GET", async () => {
+    const { res, out } = capture();
+
+    await serveFeedbackRoute(
+      request(),
+      res,
+      "/feedback",
+      session("filer@example.com"),
+      {
+        readFeedback: (id) =>
+          Promise.resolve([
+            {
+              uuid: "u-1",
+              opaqueMemberId: id,
+              issueNumber: 12,
+              url: "https://github.com/x/y/issues/12",
+              kind: "idea" as const,
+              title: "A past idea",
+              filedAt: "2026-08-20T00:00:00.000Z",
+            },
+          ]),
+      },
+      NAV,
+    );
+
+    expect(out.body).toContain("A past idea");
+    expect(out.body).toContain("#12");
   });
 
   it("tells the member nothing was sent when no filer is wired", async () => {

@@ -162,7 +162,7 @@ export function renderSymbolResearchBody(options: SymbolResearchOptions): string
 
 /** Research styles — kept out of dashboard-shell.ts (size budget doctrine, like desk-style.ts). */
 const RS_STYLE = `<style>
-  .research{ display:flex; flex-direction:column; gap:14px; max-width:900px; }
+  .research{ display:flex; flex-direction:column; gap:14px; max-width:var(--col-read); }
   .research a, .research .md-doc a{ color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent); }
   .research a:hover{ border-bottom-color:var(--accent); }
   .rs-banner{ font-size:12px; color:var(--muted); border:1px dashed var(--border); border-radius:10px; padding:8px 12px; margin:0; }

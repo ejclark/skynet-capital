@@ -21,6 +21,8 @@ import {
   handleFeedbackCoach,
   toSpec,
 } from "./feedback-coach.js";
+import { opaqueMemberId } from "./feedback-issue.js";
+import { type FeedbackLogEntry, feedbackLogEntry } from "./feedback-log.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
 import { readBody, shellDocument } from "./page-shell.js";
@@ -29,6 +31,11 @@ import { readBody, shellDocument } from "./page-shell.js";
 export interface FeedbackRouteDeps {
   readonly submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>;
   readonly coachFeedback?: CoachTurn;
+  /** Records a successful filing (#429 slice: the feedback log). Failure never fails the submit —
+   *  it's recorded in a try/catch so a store hiccup can't cost the member their filed issue. */
+  readonly recordFeedback?: (entry: FeedbackLogEntry) => Promise<void>;
+  /** Reads a member's own filing history, for the "Your recent feedback" list under the form. */
+  readonly readFeedback?: (opaqueMemberId: string) => Promise<readonly FeedbackLogEntry[]>;
 }
 
 /** The feedback paths, dispatched together so the main router stays one branch. */
@@ -57,6 +64,8 @@ export async function serveFeedbackRoute(
     nav,
     config.submitFeedback,
     Boolean(config.coachFeedback),
+    config.recordFeedback,
+    config.readFeedback,
   );
 }
 
@@ -98,13 +107,17 @@ async function handleFeedback(
   nav: NavContext,
   submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>,
   coachEnabled = false,
+  recordFeedback?: (entry: FeedbackLogEntry) => Promise<void>,
+  readFeedback?: (opaqueMemberId: string) => Promise<readonly FeedbackLogEntry[]>,
 ): Promise<void> {
   if (method === "GET") {
+    const recent =
+      readFeedback && session?.email ? await readFeedback(opaqueMemberId(session.email)) : [];
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(
       shellDocument(
         "Feedback — Skynet Capital",
-        renderFeedbackFormBody({ nav, enabled: Boolean(submitFeedback), coachEnabled }),
+        renderFeedbackFormBody({ nav, enabled: Boolean(submitFeedback), coachEnabled, recent }),
       ),
     );
     return;
@@ -151,14 +164,29 @@ async function handleFeedback(
   const form = new URLSearchParams(await readBody(req));
   const kindRaw = form.get("kind");
   const kind: FeedbackKind = kindRaw === "bug" || kindRaw === "idea" ? kindRaw : "feature";
+  const title = form.get("title") ?? "";
   const result = await submitFeedback({
     kind,
-    title: form.get("title") ?? "",
+    title,
     details: form.get("details") ?? "",
     ...(form.get("area") ? { area: form.get("area") as string } : {}),
     ...(session?.email ? { submitterEmail: session.email } : {}),
     ...(specFromForm(form.get("spec")) ?? {}),
   });
+  if (result.ok && recordFeedback && session?.email) {
+    try {
+      await recordFeedback(
+        feedbackLogEntry(
+          { kind, title },
+          opaqueMemberId(session.email),
+          result,
+          new Date().toISOString(),
+        ),
+      );
+    } catch (error) {
+      process.emitWarning(`[feedback-log] record failed: ${String(error)}`);
+    }
+  }
   res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
   res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));
 }

@@ -138,11 +138,12 @@ export function monthGrid(month: string, asOfIso: string, events: readonly Marke
 
 /**
  * Widget + two-column layout styles. Sticky works because the observatory's scrollport is `.stage`
- * (dashboard-shell.ts), not the window. Below 1120px (≈ drawer + agenda width) the aside hides —
- * on small screens the agenda IS the navigation.
+ * (dashboard-shell.ts), not the window. The agenda column is fluid and the calendar rail is a
+ * viewport-scaled clamp; once the CONTENT box (not the window — see fluid-layout.ts) drops under
+ * 860px the rail hides, because at that width the agenda IS the navigation.
  */
 export const MG_STYLE = `<style>
-  .cal-layout{ display:grid; grid-template-columns:minmax(0,980px) 300px; gap:24px; align-items:start; }
+  .cal-layout{ display:grid; grid-template-columns:minmax(0,1fr) clamp(240px,20vw,320px); gap:24px; align-items:start; }
   .cal-aside{ position:sticky; top:16px; }
   .mg{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 16px 12px; }
   .mg-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
@@ -169,5 +170,5 @@ export const MG_STYLE = `<style>
   a.mg-evt:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
   .mg-count{ position:absolute; top:2px; right:3px; font-style:normal; font-size:8px; font-weight:700; color:var(--accent); }
   .mg-legend{ margin:10px 0 0; font-family:var(--mono); font-size:9.5px; letter-spacing:.03em; color:var(--muted); }
-  @media (max-width:1120px){ .cal-layout{ grid-template-columns:1fr; } .cal-aside{ display:none; } }
+  @container stage (max-width:860px){ .cal-layout{ grid-template-columns:1fr; } .cal-aside{ display:none; } }
 </style>`;

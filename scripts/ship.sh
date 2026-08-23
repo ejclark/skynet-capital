@@ -75,11 +75,16 @@ cmd_checkbody() {
     # A GFM table counts as media: docs/PICTURES.md prescribes exactly that for a config or
     # constants change ("table: key · before · after · why"), and the gate rejecting one pushed two
     # PRs on 2026-08-22 toward a decorative diagram — the opposite of the waiver doctrine.
-    if printf '%s\n' "$pic" | grep -qE '!\[|<img |^```mermaid|^\|.*\|'; then
+    # HERE-STRINGS, never `printf | grep -q`. `grep -q` exits the instant it matches, which can
+    # SIGPIPE the writer; under `set -o pipefail` (line 2) the pipeline then reports 141 even though
+    # the match SUCCEEDED, and a passing body gets failed. That raced on body size and CI load — it
+    # went red once on PR #505's verify and survived 7+ local reruns, which is what a race looks
+    # like. A here-string is not a pipeline, so there is nothing to signal.
+    if grep -qE '!\[|<img |^```mermaid|^\|.*\|' <<<"$pic"; then
       # media present → a FILLED caption is required (the template placeholder '_Caption —_' fails)
-      printf '%s\n' "$pic" | grep -qE '^_?Caption( —|:) .{3,}' \
+      grep -qE '^_?Caption( —|:) .{3,}' <<<"$pic" \
         || fail "picture has no filled caption — one plain-language line: what it shows + where it came from (docs/PICTURES.md → honesty rules)."
-    elif ! printf '%s\n' "$pic" | grep -qE '^Picture: waived — .+'; then
+    elif ! grep -qE '^Picture: waived — .+' <<<"$pic"; then
       fail "'## The picture' has neither media nor a waiver — add a screenshot/mermaid, or the line 'Picture: waived — <reason>'."
     fi
   fi
@@ -94,7 +99,7 @@ cmd_checkbody() {
   # 3. Summary bullets ≤120 chars — 'ONE SHORT LINE EACH' (Eric, 2026-08-19) had 0% compliance
   #    as a comment; as a check it is unmissable.
   if grep -q '^## Summary' "$f"; then
-    local over; over="$(awk '/^## Summary/{flag=1;next}/^## |^<details>/{flag=0}flag' "$f" | grep -E '^- ' | awk 'length($0) > 120' | head -3)"
+    local over; over="$(awk '/^## Summary/{flag=1;next}/^## |^<details>/{flag=0}flag' "$f" | grep -E '^- ' | awk 'length($0) > 120' | head -3 || true)"
     [ -z "$over" ] || fail "Summary bullet over 120 chars — one short line each; the detail belongs below the fold:
 $over"
   fi
@@ -239,7 +244,7 @@ cmd_automerge() {
   payload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$q" "$node")"
   gql="$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "User-Agent: skynet-ship" -d "$payload" "https://api.github.com/graphql")"
-  if printf '%s' "$gql" | grep -q '"errors"'; then
+  if grep -q '"errors"' <<<"$gql"; then  # here-string: same SIGPIPE-under-pipefail trap as checkbody
     echo "ship automerge: GraphQL errors (PR already clean → merge directly; else Eric web-merges):" >&2
     printf '%s\n' "$gql" | head -3 >&2
     exit 3

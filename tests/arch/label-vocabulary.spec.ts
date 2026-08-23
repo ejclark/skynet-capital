@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // EVERY LABEL THE PROMPTS NAME MUST BE ONE THE CODE PROVISIONS.
 //
@@ -13,6 +14,8 @@ import { readFileSync } from "node:fs";
 //
 // Static, no network: the prompt text and the provisioning table are both in the repo, so the
 // mismatch is checkable here rather than discovered on a live issue.
+const PROMPTS = ".github/prompts";
+
 const declared = (): string[] =>
   JSON.parse(
     execFileSync(
@@ -28,17 +31,24 @@ const declared = (): string[] =>
     ),
   );
 
-/** Labels the prompt tells a session to apply — the backticked ones in its terminal-state table. */
-function namedInPrompt(): string[] {
-  const text = readFileSync(".github/prompts/feedback-build.md", "utf8");
+/** Labels the prompts tell a session to apply — the backticked ones in their terminal-state tables.
+ *  EVERY prompt, not just the feedback lane's: this gate was written for one file, which left the
+ *  identical hole open for the next lane added. A prompt naming an unprovisioned label fails the
+ *  same way wherever it lives. */
+function namedInPrompts(): string[] {
   const known = ["needs-eric", "needs-info", "next-slice", "curated", "stall-flagged"];
-  return known.filter((l) => text.includes(`\`${l}\``));
+  const named = new Set<string>();
+  for (const file of readdirSync(PROMPTS).filter((f) => f.endsWith(".md"))) {
+    const text = readFileSync(join(PROMPTS, file), "utf8");
+    for (const label of known) if (text.includes(`\`${label}\``)) named.add(label);
+  }
+  return [...named];
 }
 
 describe("label vocabulary", () => {
-  it("provisions every label the build prompt instructs a session to apply", () => {
+  it("provisions every label any build prompt instructs a session to apply", () => {
     const provisioned = new Set(declared());
-    const named = namedInPrompt();
+    const named = namedInPrompts();
 
     expect(named.length).toBeGreaterThan(0);
     for (const label of named) {

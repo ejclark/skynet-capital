@@ -1,9 +1,19 @@
 import { FEEDBACK_AREAS } from "../server/feedback-areas.js";
 import { COACH_SCRIPT } from "../server/feedback-coach-script.js";
+import type { FeedbackLogEntry } from "../server/feedback-log.js";
 import { PREVIEW_SCRIPT } from "../server/feedback-preview-script.js";
 import type { FeedbackResult } from "../server/feedback-service.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
+
+// Mirrors feedback-issue.ts's private FEEDBACK_KIND_LABEL — kept separate rather than exported
+// across the module boundary, since feedback-issue.ts sits right at its architecture budget
+// (127/130) and any addition there needs its own decompose-first PR first (#429, #502).
+const FEEDBACK_KIND_ICON: Record<FeedbackLogEntry["kind"], string> = {
+  bug: "🐞",
+  feature: "✨",
+  idea: "🗺️",
+};
 
 /**
  * The self-service FEEDBACK form (`/feedback`) — the in-app half of the feedback funnel
@@ -28,10 +38,31 @@ export interface FeedbackFormViewOptions {
   readonly nav?: NavContext;
   readonly enabled: boolean;
   readonly coachEnabled: boolean;
+  /** The signed-in member's own past filings (#429 slice), newest first. Omit/empty renders nothing
+   *  — a member who hasn't filed anything yet sees just the form, not an empty list. */
+  readonly recent?: readonly FeedbackLogEntry[];
 }
 
 function formField(inner: string): string {
   return `<div class="fdbk-field">${inner}</div>`;
+}
+
+function renderRecentFeedback(recent: readonly FeedbackLogEntry[]): string {
+  if (recent.length === 0) return "";
+  const rows = [...recent]
+    .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
+    .map(
+      (e) => `<li class="fdbk-recent-row">
+      <span class="fdbk-recent-kind" title="${escapeHtml(e.kind)}">${FEEDBACK_KIND_ICON[e.kind]}</span>
+      <a href="${escapeHtml(e.url)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>
+      <span class="fdbk-recent-meta">#${e.issueNumber} · ${escapeHtml(new Date(e.filedAt).toLocaleDateString())}</span>
+    </li>`,
+    )
+    .join("\n");
+  return `<div class="fdbk-recent">
+    <h2 class="fdbk-recent-h">Your recent feedback</h2>
+    <ul class="fdbk-recent-list">${rows}</ul>
+  </div>`;
 }
 
 function renderCoachIntro(): string {
@@ -92,6 +123,7 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
         <input type="hidden" name="spec" id="fdbk-spec">
         <button type="submit" class="fdbk-submit">Send it</button>
       </form>
+      ${renderRecentFeedback(options.recent ?? [])}
     </div>
     ${options.coachEnabled ? `<script>${COACH_SCRIPT}</script>` : ""}
     <script>${PREVIEW_SCRIPT}</script>
@@ -126,7 +158,7 @@ export function renderFeedbackResultBody(options: FeedbackResultViewOptions): st
  * draft to review, or the member skipping ahead).
  */
 const FDBK_STYLE = `<style>
-  .fdbk-flow{ display:flex; flex-direction:column; gap:22px; max-width:900px; margin-top:6px; }
+  .fdbk-flow{ display:flex; flex-direction:column; gap:22px; max-width:var(--col-form); margin-top:6px; }
   .fdbk-form, .fdbk-intro{ display:flex; flex-direction:column; gap:20px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px 28px; }
   .fdbk-field{ display:flex; flex-direction:column; gap:8px; }
   .fdbk-field label{ font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; }
@@ -177,7 +209,13 @@ const FDBK_STYLE = `<style>
   .fdbk-preview hr{ margin:14px 0; border:0; border-top:1px solid var(--border); }
   .fdbk-preview-wait{ color:var(--muted); }
   .fdbk-banner{ margin:-6px 0 4px; font-size:13px; color:var(--neg); }
-  .fdbk-res{ max-width:520px; }
+  .fdbk-recent{ display:flex; flex-direction:column; gap:10px; }
+  .fdbk-recent-h{ margin:0; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .fdbk-recent-list{ display:flex; flex-direction:column; gap:6px; margin:0; padding:0; list-style:none; }
+  .fdbk-recent-row{ display:flex; align-items:baseline; gap:9px; padding:9px 12px; font-size:13.5px; background:var(--surface); border:1px solid var(--border); border-radius:9px; }
+  .fdbk-recent-row a{ color:var(--text); font-weight:600; }
+  .fdbk-recent-meta{ margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap; }
+  .fdbk-res{ max-width:var(--col-narrow); }
   .fdbk-res .res-icon{ font-size:34px; margin-bottom:6px; }
   .fdbk-res h1{ margin:0 0 10px; font-size:24px; font-weight:700; }
   .fdbk-backrow{ margin-top:22px; font-size:14px; color:var(--muted); }
