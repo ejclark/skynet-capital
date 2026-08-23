@@ -1,4 +1,5 @@
 import { escapeHtml } from "../ui/escape-html.js";
+import { TOKEN_DECLS } from "../ui/tokens.js";
 import { FLUID_LAYOUT_TOKENS } from "./fluid-layout.js";
 import { formatTimestamp, profileHref } from "./render-atoms.js";
 
@@ -187,9 +188,7 @@ ${DRAWER_SCRIPT}`;
 const STYLE = `<style>
   /* Dark-only by design — nations only compare cleanly when every cityscape is lit the same (no light mode). */
   :root{ color-scheme: dark; } ${FLUID_LAYOUT_TOKENS}
-  .obs { --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
-    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  .obs { ${TOKEN_DECLS}
     background:var(--bg); color:var(--text); font-family:var(--sans);
     min-height:100vh; padding:28px clamp(16px,4vw,48px) 64px; box-sizing:border-box; max-width:var(--shell-max); margin-inline:auto; container-type:inline-size; container-name:stage; /* fluid-layout.ts: views break on THIS box, not the window */ }
   .obs *{ box-sizing:border-box; }
@@ -357,9 +356,7 @@ const STYLE = `<style>
   .rank-val{ font-size:15px; font-weight:700; text-align:right; min-width:96px; }
   @container stage (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto; } .rank-bar{ display:none; } }
   /* --- push-drawer app shell --- */
-  .app{ --bg:#0B0F14; --surface:#131A22; --surface-2:#0F151C; --border:#223041; --text:#E6EDF3; --muted:#8B9AAB; --accent:#35D0BA; --pos:#3FB950; --neg:#F85149;
-    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  .app{ ${TOKEN_DECLS}
     display:flex; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans);
     max-width:var(--shell-max); margin-inline:auto; box-shadow:0 0 0 100vmax var(--bg); }
   .app *{ box-sizing:border-box; }

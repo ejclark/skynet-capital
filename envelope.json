@@ -1,6 +1,6 @@
 {
   "$comment": "The autonomous-lane build envelope — the SINGLE source of truth for what an unattended Claude session may not change. Prose copies (CLAUDE.md, governor/SKILL.md, ship/SKILL.md, orient.md) cite this file rather than restating the list; restating it is how the wording drifted before (several copies dropped 'and hard to reverse' from CLAUDE.md's original). Enforced by scripts/envelope-scan.mjs via tests/arch/envelope.spec.ts.",
-  "lanes": ["feedback/", "research/"],
+  "lanes": ["feedback/", "research/", "design/"],
   "allowNewRuntimeDeps": false,
   "protected": [
     {

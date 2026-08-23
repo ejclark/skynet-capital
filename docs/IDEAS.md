@@ -884,3 +884,26 @@ _(nothing right now)_
   green. Passing `GH_TOKEN` to that step is a workflow-file change (carve-out), so it needs Eric's
   merge — worth pairing with whatever else next touches `pipeline.yml`.
   _(src: Claude · while: reviewing PR #495, which self-reported the pre-existing failure)_
+
+- **Earnings-calendar coverage check.** The MU sweep's red team found the S2 flat-through-print
+  guard silently blind to MU because `src/domain/earnings-calendar.ts` had no row — and the gap
+  is systemic: every roster addition escapes the guard until someone seeds a row. Worth a spec
+  that diffs the traded universe against `UPCOMING_PRINTS` and fails on any uncovered symbol.
+  _(src: Claude · while: MU symbol-sweep red team, 2026-08-22)_
+
+- **Retail-flow instrument for constraint peaks.** Eric's hypothesis (2026-08-22): retail
+  overinvests in hardware-constraint names expecting AI-style continued growth, then the peak
+  produces an emotional pullback. The July-2026 MU tape (−39% on a price-hike *deceleration*)
+  confirms the pullback half; the overinvestment half is untestable here — no retail-vs-
+  institutional flow data source exists in the repo. Candidate instruments: retail net-flow
+  datasets, options open-interest skew by account class, the 6× forward multiple as the
+  institutional-refusal proxy. Do not trade the hypothesis before an instrument exists.
+  _(src: Eric · while: AI-hardware constraint research, 2026-08-22)_
+
+- **AI monetization + labor-displacement macro thesis.** Eric (2026-08-22): tech companies begin
+  monetizing AI near-term; the low/high-performer gap plus fewer-roles pressure produces
+  significant layoffs. Adjacent tape evidence already in hand: model-lab revenue is now the
+  tripwire that moves the complex (Anthropic ARR whisper-miss broke the 08-18 tape). Parked as a
+  research question — what would the tradeable expression even be (software margins? staffing
+  firms inverse?) — not buildable until framed.
+  _(src: Eric · while: AI-hardware constraint research, 2026-08-22)_

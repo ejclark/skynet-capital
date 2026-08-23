@@ -72,6 +72,12 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
     status: "estimate",
     source: "8-K cadence off 2026-08-11 midday print",
   },
+  {
+    symbol: "MU",
+    date: "2026-09-29",
+    status: "estimate",
+    source: "NEWS: Tue Sep 29 AMC per TipRanks/WSH/MarketBeat triangulation 2026-08-22; IR blocked",
+  },
 ];
 
 /** ET wall-clock "HH:MM" for an ISO timestamp — the whole market day is anchored on ET. */
