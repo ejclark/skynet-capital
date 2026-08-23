@@ -166,6 +166,26 @@ text lives below the fold. This is the scaling answer to the review lane he *wan
 above the fold is a defect, not a style choice. The PR template carries the format; screenshots
 commit small (≤~100KB) under `docs/shots/pr-<n>/`.
 
+**Research leads with the CALL, not the taxonomy** (Eric, 2026-08-23: _"shouldn't tldr provide
+more direct indication of trends — 'expect pull back, bad time to buy, consider exiting positions
+| all signals point to stock price increasing, consider buying before this date' type of
+comments"_). This app exists to make money on the market; a research doc that describes a
+situation without saying **what to do about it** has done half the job. So every research
+deliverable opens with a **call sheet** — one row per name: **the call** (buy / don't initiate /
+exit / stand aside / hold), **confidence**, the one-line why, and **the dated event that proves
+it wrong**. The provenance is `docs/research/nvda-aug-2026-print.md` (verdict in one line, then
+ranked P0–P4 plays including an explicit "not recommended, on the record"); the current example
+is `docs/research/ai-hardware-constraints-aug-2026.md`.
+
+Three rules keep the calls honest rather than merely confident. **Confidence is stated and drives
+size** — a low-confidence call is a stand-aside, never a small version of a high-confidence one.
+**Every call carries its falsifier with a date**, so the tape adjudicates instead of the
+narrative. And **"don't" is a first-class call**: the kill list records that no directional alpha
+playbook has survived on the semis while both no-alpha guards survived everywhere, so an honest
+sheet is often mostly refusals — avoiding one −8% gap night beats a marginal edge, and in a
+compounding book refusals are P&L. Method caveats never gate the call; they live below the fold
+and inform *size*. Paper-only, educational — the deploy decision on real capital stays Eric's.
+
 **When Eric's action IS needed — procedural, pre-verified, near-zero** (Eric, 2026-08-15):
 hand him a TLDR-format **numbered procedure**, never prose; perform due diligence against the
 instructions first (commands run, links checked, states confirmed — his steps must work on the
