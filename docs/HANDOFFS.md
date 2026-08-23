@@ -11,8 +11,8 @@ to be, and why no directory, no zip and no import script are needed any more.
 ```mermaid
 flowchart LR
   A["/design brief"] --> B["canvas Artifact<br/>artboards live in the page"]
-  B --> C{"mark a board<br/>and Save"}
-  C -->|republish| D["design lane wakes"]
+  B --> C{"mark a board,<br/>Save, tap fire"}
+  C -->|routine API trigger| D["design lane runs"]
   D --> E["Artifact read<br/>design-extract.mjs"]
   E --> F["build, verify, ship"]
   F --> G["receipt on the canvas"]
@@ -28,8 +28,16 @@ flowchart LR
    annotation, or a canvas comment — see
    [`.github/prompts/design-build.md`](../.github/prompts/design-build.md) for the exact table. Note
    a filename cannot contain `[`, so the filename form is a bare `BUILD ` prefix.
-3. **Save.** That republishes the canvas, which wakes the lane. There is no second gesture and no
-   trip to GitHub — the Save *is* the go signal.
+3. **Save, then fire the lane** — one tap (a share-sheet Shortcut or a bookmarklet) that POSTs the
+   canvas URL to the design routine's API trigger. No trip to GitHub, no session open, laptop closed.
+
+   *Why a tap and not the Save itself:* the platform emits **no artifact event of any kind** — the
+   beta webhook catalogue covers agents, deployments, environments, memory stores, sessions and
+   vaults, never artifacts — and `Artifact action: "watch"` cannot register a durable subscription
+   from a cloud session (verified 2026-08-23). A Save is silent. Routine GitHub triggers only cover
+   `pull_request` and `release`, and Channels push webhooks into a *local* session that is already
+   running. So one tap is the floor today, and it is a platform gap rather than a design choice.
+   Polling was rejected outright (Eric, 2026-08-19: cron jobs are generally terrible).
 4. The lane extracts the artboards to a scratch dir, builds on branch `design/<artboard-stem>`,
    verifies, ships a PR with a picture, and replies on the canvas thread with the link.
 
