@@ -48,6 +48,35 @@ _Caption —_ every physical layer of the AI buildout placed on the constraint c
 wrapper fork opens, and only on shock-day entries**: of the three left-half layers, chip test is
 already crowded and the foil/film pure plays are not US-listed.
 
+## The call — what to do, by name
+
+**Read this table and nothing else if you read nothing else.** Confidence is the honest strength of
+the evidence, not enthusiasm; **size follows confidence, and a low-confidence call is not a small
+version of a high-confidence one — it is a stand-aside.** Every call carries the dated event that
+proves it right or wrong. Paper-only, educational; the deploy call on real capital is Eric's.
+
+| Name | The call | Confidence | Why, in one line | Proves me wrong |
+|---|---|---|---|---|
+| **MU** | **Don't initiate here.** Not a short either. | **High** on don't-buy · **low** on short | Two of three exhaustion tells firing; the −39% already happened and half-retraced; you'd be buying the disputed middle | 4Q26 DRAM contract >+18% QoQ (~early Oct) **and** FQ4 guide >$58B/>86% GM (**~Sep 29**) |
+| **NVDA into 08-26** | **Don't hold the print unhedged. Don't buy the D+1 pop.** | **High** — this is a measured guard, not a forecast | Gap-hold is kill-listed (9/14 wins ≈ any random overnight; 3 of last 5 gapped down); reaction day 11/14 red | A gap-up that holds through D+1 close, twice running |
+| **NVDA after the print** | **The cheap entry is ~D+6, not now.** | Medium | Post-print dead week is where the cycle's best entries have landed; run-up window already closed | Post-print drift turning positive across the next 2 prints |
+| **Memory complex (MU/SNDK/WDC/STX/SKH)** | **Treat as ONE position. Cap the sleeve.** | **High** | All six fell together on all six measured shock days — cross-name diversification here is an illusion | Any shock day where the complex disperses |
+| **CRDO / optics modules** | **Stand aside into 09-01.** | Medium | Sequential growth +50% → +7.4% → +6.4–8.7%; whole FY27 story rides an unshipped 2H ramp | 09-01 guide >+15% QoQ with optical revenue actually shipping |
+| **AXT / InP** | **Right choke, wrong price. Watch only.** | Medium-low (thin sources) | GM 8.2%→45% is real Phase-3 rent, but +487% YTD and −12.5% on the shock day | A shock-day drawdown that resets the entry, with the InP price series verified primary |
+| **HVLP4 foil / ABF film** | **Best forward finds — and untradeable from this book.** | Medium on the thesis · **high** on the blocker | No US-listed pure play; the names are 8358.TWO / 2802.T / 5706.T | Eric opens the wrapper fork, or a US-listed proxy is found |
+| **Everything else on the shock day** | **No clean entry exists right now.** | Medium-high | 26 measured names, none clearly under 4% on 08-18 — the method's uncrowded test found nothing | The next shock day printing a genuine <4% name |
+
+**The one-line synthesis:** *the AI-hardware trade is late, crowded, and mostly already paid —
+the profitable moves available this week are refusals, not purchases.* Two dated events could
+change that: **NVDA's 08-26 gross-margin guide** (the pass-through test) and **CRDO's 09-01
+guide** (the optics-exhaustion binary).
+
+**Why this sheet is mostly "don't":** across ~40–70 statistical looks, the repo's own kill list
+records that no directional alpha playbook survived on the semis, while both no-alpha guards
+survived everywhere. That asymmetry *is* the finding. Avoiding one −8% gap night is worth more
+than a marginal edge, and in a paper book that compounds, refusals are P&L. When a genuine buy
+signal clears the bar, this table will say buy.
+
 ## The headline
 
 **The physical shortage is real everywhere; the equity opportunity is not.** Demand exceeds
