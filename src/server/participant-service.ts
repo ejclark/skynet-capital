@@ -115,7 +115,10 @@ export class ParticipantService {
 
     const id = kind === "bot" ? (input.personaId as string) : `human-${slugify(displayName)}`;
     if (this.deps.store.has(id) || this.deps.isReservedId?.(id)) {
-      return { ok: false, error: `An account named "${displayName}" already exists.` };
+      // Says what to do next, not just "no" (#546): a member whose account predates the connect
+      // form lands here, and re-adding is the wrong remedy — see `claim-form.ts`.
+      const error = `An account named "${displayName}" is already on the board. If it's yours, it doesn't need re-adding — it needs linking to your sign-in, which a league owner can do. If it isn't yours, pick a different display name.`;
+      return { ok: false, error };
     }
 
     const participant: Participant = {

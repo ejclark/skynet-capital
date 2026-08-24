@@ -36,6 +36,7 @@ import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
+import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedbackCoach } from "../server/feedback-coach.js";
 import { createFeedbackLogStore } from "../server/feedback-log.js";
@@ -43,6 +44,7 @@ import { resolveFeedback } from "../server/feedback-service.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
+import { createOwnerLinkStore, resolveOwnedId } from "../server/owner-link-store.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
@@ -170,10 +172,14 @@ async function main(): Promise<void> {
 
   // Desk trading is on whenever OAuth is configured — no separate kill switch (#466).
   const findParticipant = (id: string) => [...roster, ...store.load()].find((p) => p.id === id);
-  // The owner link: session email -> Participant.ownerEmail. Never exposed on ParticipantSnapshot.
+  // Owner links for accounts that carry no `ownerEmail` of their own — every env-declared roster
+  // row, and anything added before the connect form existed (#546). Plain JSON on the volume
+  // beside bot-controls.json: an id and an already-admitted email, no credentials.
+  const ownerLinks = createOwnerLinkStore(process.env, (m) => console.error(m));
+  // The owner link: session email -> the account it owns. Never exposed on ParticipantSnapshot.
+  // The precedence rule (a stamped owner always beats a volume link) lives in `resolveOwnedId`.
   const resolveOwnerId = (email: string): string | undefined =>
-    [...roster, ...store.load()].find((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
-      ?.id;
+    resolveOwnedId(dedupeById([...roster, ...store.load()]), ownerLinks.load().links, email);
   const orderAudit = createOrderAuditLog(process.env);
   const desk = resolveDeskTrading({
     findParticipant,
@@ -220,6 +226,15 @@ async function main(): Promise<void> {
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
+          // The account-link table (#546). Reads the live board so a just-added account is
+          // linkable immediately, and refuses any address that can't sign in — a link to
+          // somebody outside the gate is a link nobody could ever use.
+          claim: {
+            store: ownerLinks,
+            isOwner: (email: string) => owners.has(email),
+            accounts: () => toClaimAccounts(dedupeById([...roster, ...store.load()])),
+            canSignIn: (email: string) => owners.has(email) || allowlist.emails().has(email),
+          },
           resolveOwnerId,
         }
       : {}),

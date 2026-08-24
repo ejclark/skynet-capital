@@ -18,9 +18,11 @@ export interface Participant {
   /** IANA timezone (e.g. "America/Chicago") for showing this account's times locally. */
   readonly timezone?: string;
   /**
-   * The signed-in member who owns this account, stamped from the session at `/add` — the ONLY
-   * link a session may trade through. Absent (legacy roster/store rows, or bots) means no owner
-   * until one is linked from `/invite`, and the account can't be traded until then.
+   * The signed-in member who owns this account, stamped from the session at `/add`, and the
+   * strongest link a session may trade through. Absent on every env-declared roster row (rebuilt
+   * from the host environment each boot, so there is nowhere to stamp) and on anything added
+   * before that form existed — such an account renders and keeps its history but cannot be traded
+   * until an owner attaches one from `/claim` (`owner-link-store.ts`). A stamp here always wins.
    */
   readonly ownerEmail?: string;
 }
