@@ -1,7 +1,7 @@
 # 10-Year Treasury Note auction (reopening) — treasury-10y-note-2026-09-09
 
 **Kind:** rates · **Date:** 2026-09-09 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -167,6 +167,7 @@ no-new-risk window, not a trade.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D21 | Initial research banked (doc above). Adjacency — peers: no tracked-name prints since 8/17 (NVDA 8/26, MRVL 8/27, AVGO 9/2 still ahead); live peer signal is macro-driven — CRWV −12.1%, NVDA −2.4%, SOX −5% on 8/18 long-end rate fear. Macro: 30Y at 19-yr high (~5.33% intraday 8/18, +40bp since June) on term-premium/fiscal drivers ($432B July deficit, ~$1.7T corp issuance, oil); Sep-16 FOMC odds ~60–70% hold / ~30–40% hike / 0% cut per the FOMC sibling doc — unchanged. VIX ~15.2–15.9 on 8/18 (sources disagree on exact print), up from the 14.56 2026-low — mild vol pickup tracking the selloff. Geopolitical: US–Iran deadline expired, WTI/oil spike — live inflation-uncertainty leg of the term-premium story. Event tape (date **confirmed**; size/yield figures **estimate**/press-sourced): this is a **reopening of the well-bid Aug-12 10Y** (that new issue: $42B, 4.683% highest-since-2007, tail +0.1bp, B/C 2.53 vs 2.47 avg, indirect 76.7% near-record); the 10Y is the *strong* tenor vs the tailing 20Y/30Y — the risk is contagion, not a standalone weak 10Y. Reopening size/WI for 9/9 not yet announced (~9/3). No new dated adjacencies beyond what the calendar already tracks (30Y 9/10, CPI 9/11, jobs 9/4, 20Y+FOMC 9/15–16, TIPS 9/17, OpEx 9/18). Conflicting Aug-12 aggregator figure ($32B/4.402%) flagged as un-corroborated error. | — (stance set) | 2026-08-26 (high, ≥21d band: every 7d) |
+| 2026-08-24 | D16 | Adjacency sweep (band now 8-20d, cadence shortens to every 3d per the scanner's own recompute). Event tape: reopening size/WI for 9/9 still not announced (~9/3 expected) — no update. 10Y cash yield **4.71-4.72%** as of 8/24, up modestly from the 4.683% Aug-12 new-issue print cited at D21 — continued, gradual climb, consistent with the broader long-end selloff already logged across the sibling 20Y/30Y-TIPS docs, not a sharp break. Peers: AVGO's XPV overhang deepened (-4.61% on 8/19, own doc); MRVL's implied move jumped to ~18.4% (own doc) — sector context, not 10Y-specific. Macro: no CPI/jobs/FOMC surprise since 8/19; Sep-16 read unchanged (hawkish-hold ~60-70%/hike ~30-40%/cut ~0%, per FOMC sibling doc). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new dated adjacency found. | — (no change; 10Y stays the relatively strong tenor, contagion-from-20Y/30Y still the risk to watch, not standalone weakness) | 2026-08-27 (high, 8-20d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
