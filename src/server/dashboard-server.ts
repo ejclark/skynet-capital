@@ -268,6 +268,14 @@ async function gateRequest(
   return { handled: false, session: undefined };
 }
 
+/** True when the signed-in session's email is an owner on the given owner-gated dep, if wired. */
+function isOwnerOf(
+  dep: { isOwner: (email: string) => boolean } | undefined,
+  session: Session | undefined,
+): boolean {
+  return Boolean(dep && session && dep.isOwner(session.email.toLowerCase()));
+}
+
 /** Routes behind the auth gate — same set and order as before the split. */
 async function serveAuthorizedRoute(
   req: IncomingMessage,
@@ -279,15 +287,15 @@ async function serveAuthorizedRoute(
 ): Promise<void> {
   const canAdd = Boolean(config.addParticipant);
   const authed = Boolean(config.auth);
-  const canControl = Boolean(
-    config.controls && session && config.controls.isOwner(session.email.toLowerCase()),
-  );
+  const canControl = isOwnerOf(config.controls, session);
+  const canInvite = isOwnerOf(config.invite, session);
   const navFor = (active: NavView): NavContext => ({
     active,
     currentId: resolveCurrentId(session, config.resolveOwnerId),
     canAdd,
     authed,
     ...(canControl ? { canControl } : {}),
+    ...(canInvite ? { canInvite } : {}),
     hasLeaderboard: true,
     hasBots: true,
     hasCompare: true,

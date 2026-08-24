@@ -32,6 +32,8 @@ export interface NavContext {
   readonly authed: boolean;
   /** Owner-only: link Mission Control + show the desk's Settings tab. Members see neither. */
   readonly canControl?: boolean;
+  /** Owner-only: link the guest list (`/invite`). Members see neither the link nor the page. */
+  readonly canInvite?: boolean;
   /** Views ship incrementally; only link the ones that exist so merged states have no dead links. */
   readonly hasLeaderboard?: boolean;
   readonly hasBots?: boolean;
@@ -108,6 +110,11 @@ function renderDrawer(nav: NavContext): string {
   if (nav.canControl) {
     foot.push(
       `<a class="dnav-link dnav-muted" href="${nav.currentId ? `${profileHref(nav.currentId)}?tab=settings` : "/controls"}"><span class="dnav-ico" aria-hidden="true">⛭</span><span class="dnav-label">Mission Control</span></a>`,
+    );
+  }
+  if (nav.canInvite) {
+    foot.push(
+      `<a class="dnav-link dnav-muted" href="/invite"><span class="dnav-ico" aria-hidden="true">✉</span><span class="dnav-label">Guest list</span></a>`,
     );
   }
   foot.push(drawerLink(FEEDBACK_URL, "Feedback", "feedback", nav.active === "feedback"));
