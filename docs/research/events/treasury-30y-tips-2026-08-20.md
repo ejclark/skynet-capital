@@ -1,7 +1,7 @@
 # 30-Year TIPS auction — treasury-30y-tips-2026-08-20
 
 **Kind:** rates · **Date:** 2026-08-20 (confirmed, TSY: treasurydirect.gov auction schedule — 1:00pm ET, announced 08-13, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -145,3 +145,52 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-08-24.** No treasurydirect.gov result PDF fetch attempted this session (rates
+kind carries no `earnings-cycle`/`intraday-edges` instrument to re-run — cache-bust rule doesn't
+apply); outcome sourced from tipswatch.com's own auction write-up (primary-adjacent, the same
+publication the initial doc already used for the Feb-2026 comparison) cross-checked against the
+sibling `treasury-20y-bond-2026-08-19.md` doc's own Aug-20 follow-through row.
+
+**The print.** $8B 30-year TIPS reopening: real yield **2.973%**, highest since **October 2001**
+— stopped **1.8bp through** a 2.991% when-issued yield (a negative tail, i.e. investors accepted a
+*lower* yield than priced). Bid-to-cover **2.82x**, indirect **84.4%** — both comfortably above
+the auction's own strong-demand kill-switch bar (BC ≥2.6). Implied 30-year breakeven **2.26%**,
+squarely inside the 2.20–2.30% range the initial doc's leg 2 already established as flat
+(tipswatch.com, 2026-08-20).
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"Stops through WI (negative tail) with BC ≥2.6"** — **fired.** Both conditions cleared
+  cleanly (tail -1.8bp, BC 2.82) — the demand-collapse read this event was watching for did not
+  happen; long-end absorption for *this specific tenor* eased.
+- **"Tails >3bp with BC <2.3" (fourth consecutive tailed long-end auction)** — **did not fire.**
+  The opposite result printed; the Aug-13 tailing streak broke here.
+- **"Fresh breakeven move (either direction)"** — **did not fire.** 2.26% sits inside the
+  2.20–2.30% range already established across Dec-2025–Aug-2026 — leg 2's real-rate-not-inflation
+  read holds.
+- **"Middle East de-escalation reversing the Aug-18 oil/yield spike"** — **did not fire.** Brent
+  continued climbing after this auction (~$94/bbl by 8/21, a second straight weekly gain per the
+  sibling `consumer-confidence-2026-08-25.md` doc's 8/22 row) — the geopolitical driver stayed
+  live, it just didn't show up as demand weakness at this specific auction.
+
+**Market reaction, same/next day.** Per the sibling 20Y-bond doc's own Aug-20 row: S&P 500 -0.87%,
+Nasdaq -1.00%; tracked names CRWV -1.22%, NVDA -0.33% — continued grinding softness, not a reversal.
+The strong TIPS print did **not** flow through to a relief rally in the real-rate-sensitive names
+it was meant to signal caution on; that day's dominant driver was the Treasury buyback-relief fade
+(per the sibling doc), not this auction.
+
+**Verdict vs. the stance.** Mixed but resolves toward the cautious side holding for the right
+reason. The auction-specific kill switch (this tenor's own demand) fired clean and calls off
+*this particular* caution trigger — but the broader "hold normal caution on fresh
+duration-sensitive entries" stance was never contingent on this one auction alone (it explicitly
+layered on top of each name's own event-specific stance), and the next day's tape (still soft,
+buyback-driven) shows why: a single strong auction did not reverse the week's broader long-end
+pressure. No forward test was registered for this event specifically (the registered CRWV/NVDA
+reaction-function test lives on the sibling 20Y-bond doc, already scored there) — nothing new to
+add to `forward-tests.md`. Scanner goes quiet on this event.
+
+Sources: [tipswatch.com — 30-year TIPS reopening 2.973%](https://tipswatch.com/2026/08/20/30-year-tips-reopening-gets-real-yield-of-2-973-highest-in-nearly-25-years/),
+`docs/research/events/treasury-20y-bond-2026-08-19.md` (Aug-20 follow-through row),
+`docs/research/events/consumer-confidence-2026-08-25.md` (Aug-22 row, Brent level).
