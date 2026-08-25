@@ -245,8 +245,6 @@ export const SHELL_STYLE = `<style>
   .cohort-badge{ margin-left:auto; font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.14em; color:var(--bg); background:var(--accent); border-radius:5px; padding:3px 7px; }
   .cohort-equity{ font-size:34px; font-weight:700; line-height:1; }
   .cohort-eqlabel{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:6px 0 18px; }
-  /* the cohort as one nation — members' holdings aggregated into a single country skyline */
-  .cohort-nation{ margin:0 0 18px; }
   .cohort-metrics{ display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin:0; }
   .cohort-metrics div{ display:flex; flex-direction:column; gap:4px; }
   .cohort-metrics dt{ font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }

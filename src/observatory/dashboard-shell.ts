@@ -13,8 +13,6 @@ import { SHELL_STYLE } from "./shell-style.js";
 export type NavView =
   | "board"
   | "trade"
-  | "leaderboard"
-  | "bots"
   | "compare"
   | "research"
   | "you"
@@ -33,8 +31,6 @@ export interface NavContext {
   /** Owner-only: link the guest list (`/invite`). Members see neither the link nor the page. */
   readonly canInvite?: boolean;
   /** Views ship incrementally; only link the ones that exist so merged states have no dead links. */
-  readonly hasLeaderboard?: boolean;
-  readonly hasBots?: boolean;
   readonly hasCompare?: boolean;
 }
 
@@ -51,8 +47,6 @@ const NAV_ICON: Record<string, string> = {
   trade: "⇅",
   compare: "⇄",
   research: "◷",
-  leaderboard: "≣",
-  bots: "◆",
   you: "◉",
   add: "＋",
   learn: "◈",
@@ -71,18 +65,10 @@ function drawerLink(href: string, label: string, view: NavView, active: boolean)
  * vertical view nav, and the account actions. This shell is the template every logged-in view uses.
  */
 function renderDrawer(nav: NavContext): string {
-  const links = [drawerLink("/", "Board", "board", nav.active === "board")];
+  const links = [drawerLink("/", "Standings", "board", nav.active === "board")];
   // Trade is global chrome — one click from every screen (desk-v2 handoff). The ticket
   // renders honestly in every state, so the link never needs gating.
   links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
-  if (nav.hasLeaderboard) {
-    links.push(
-      drawerLink("/leaderboard", "Leaderboard", "leaderboard", nav.active === "leaderboard"),
-    );
-  }
-  if (nav.hasBots) {
-    links.push(drawerLink("/bots-vs-humans", "Bots vs Humans", "bots", nav.active === "bots"));
-  }
   if (nav.hasCompare) {
     links.push(drawerLink("/compare", "Compare", "compare", nav.active === "compare"));
   }
