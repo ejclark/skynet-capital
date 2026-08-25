@@ -269,8 +269,8 @@ export function todayCallOf(md: string): EventCall | null {
   const rows = header.split("\n").filter((l) => l.trim().startsWith("|"));
   if (rows.length < 3) return null;
   const cols = cellsOf(rows[0] ?? "").map((c) => c.toLowerCase());
-  const callAt = cols.findIndex((c) => c === "call" || c === "the call");
-  const confAt = cols.findIndex((c) => c === "confidence");
+  const callAt = cols.includes("call") ? cols.indexOf("call") : cols.indexOf("the call");
+  const confAt = cols.indexOf("confidence");
   if (callAt === -1) return null;
   // Row 1 is the |---|---| separator. Prefer an explicit Today row — its label often carries a
   // parenthetical ("Today (D-13)", "Today (8/19)"), so match the prefix — and otherwise fall back
