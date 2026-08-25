@@ -44,6 +44,7 @@
     "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs",
     "shoot:research": "tsx scripts/shoot-research.mjs",
     "shoot:standings": "tsx scripts/shoot-standings.mjs",
+    "shoot:portfolio": "tsx scripts/shoot-portfolio.mjs",
     "shoot:feedback": "tsx scripts/shoot-feedback.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",

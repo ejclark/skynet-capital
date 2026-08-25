@@ -77,23 +77,29 @@ describe("renderShell", () => {
       expect(html).not.toContain('href="/compare"');
     });
 
-    it("omits the You link when no current participant id is resolved", () => {
+    it("omits the Portfolio link when no current participant id is resolved", () => {
       const html = renderShell(baseNav({ currentId: undefined }), "<p>x</p>", GENERATED_AT);
 
-      expect(html).not.toContain(">You<");
+      expect(html).not.toContain(">Portfolio<");
     });
 
-    it("links the You tab to the viewer's profile when a current id is resolved", () => {
+    it("links Portfolio to the accounts index, first in the nav, when a current id is resolved", () => {
       const html = renderShell(baseNav({ currentId: "eric" }), "<p>x</p>", GENERATED_AT);
 
-      expect(html).toContain('href="/u/eric"');
-      expect(html).toContain(">You<");
+      expect(html).toContain('href="/u"');
+      expect(html).toContain(">Portfolio<");
+      // Portfolio leads the nav (consolidation study): it renders before the Standings link.
+      expect(html.indexOf(">Portfolio<")).toBeLessThan(html.indexOf(">Standings<"));
     });
 
-    it("escapes a current id that requires URL encoding in the profile link", () => {
-      const html = renderShell(baseNav({ currentId: "a b" }), "<p>x</p>", GENERATED_AT);
+    it("keeps the Mission Control foot link on the viewer's own desk (URL-encoded id)", () => {
+      const html = renderShell(
+        baseNav({ currentId: "a b", canControl: true }),
+        "<p>x</p>",
+        GENERATED_AT,
+      );
 
-      expect(html).toContain("/u/a%20b");
+      expect(html).toContain("/u/a%20b?tab=settings");
     });
 
     it("omits the account CTA when the viewer cannot add an account", () => {

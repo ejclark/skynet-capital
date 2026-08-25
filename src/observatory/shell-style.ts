@@ -182,7 +182,9 @@ export const SHELL_STYLE = `<style>
     background:var(--surface-2); border:1px dashed color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:12px; padding:10px 16px; margin-bottom:16px; }
   .cmp-cancel{ font-family:var(--mono); font-size:11px; color:var(--muted); text-decoration:none; white-space:nowrap; }
   .cmp-cancel:hover{ color:var(--accent); }
-  @container stage (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto auto; } .rank-bar{ display:none; } }
+  /* the Portfolio index's rows carry no compare pill — drop the fifth track */
+  .rank-row.rank-plain{ grid-template-columns:34px minmax(140px,1.4fr) 3fr auto; }
+  @container stage (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto auto; } .rank-row.rank-plain{ grid-template-columns:28px 1fr auto; } .rank-bar{ display:none; } }
   /* --- push-drawer app shell --- */
   .app{ ${TOKEN_DECLS}
     display:flex; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans);

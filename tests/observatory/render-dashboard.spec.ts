@@ -1,4 +1,8 @@
-import { renderAcademyBody, renderIndividualBody } from "../../src/observatory/render-dashboard.js";
+import {
+  renderAcademyBody,
+  renderIndividualBody,
+  renderPortfolioIndexBody,
+} from "../../src/observatory/render-dashboard.js";
 
 describe("renderAcademyBody — the gamified journey", () => {
   const nav = { active: "learn" as const, canAdd: true, authed: true };
@@ -136,5 +140,75 @@ describe("renderIndividualBody — autonomous decisions panel", () => {
   it("omits the rotate link on someone else's unreachable account page", () => {
     const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { isSelf: false });
     expect(html).not.toContain("/rotate");
+  });
+});
+
+describe("renderPortfolioIndexBody — the member's accounts index (/u)", () => {
+  const nav = { active: "you" as const, canAdd: true, authed: true, currentId: "human-eric" };
+  const account = (overrides: Record<string, unknown> = {}) => ({
+    id: "human-eric",
+    displayName: "Eric",
+    kind: "human" as const,
+    cash: 40_000,
+    equity: 100_000,
+    positions: [{ symbol: "NVDA", quantity: 100, avgPrice: 500, marketValue: 60_000 }],
+    ...overrides,
+  });
+
+  it("opens with the Portfolio eyebrow, an honest count line, and a combined-equity hero", () => {
+    const html = renderPortfolioIndexBody([account()], { nav });
+
+    expect(html).toContain("Portfolio");
+    expect(html).toContain("Your accounts");
+    expect(html).toContain("1 Alpaca paper account — 1 human");
+    expect(html).toContain("Combined equity");
+    expect(html).toContain("$100,000");
+  });
+
+  it("sums equity, cash, invested, and unrealized across every readable account", () => {
+    const bot = account({
+      id: "news-fader",
+      displayName: "News Fader",
+      kind: "bot",
+      personaId: "news-fader",
+      cash: 10_000,
+      equity: 50_000,
+      positions: [{ symbol: "TSM", quantity: 10, avgPrice: 100, marketValue: 2_000 }],
+    });
+    const html = renderPortfolioIndexBody([account(), bot], { nav });
+
+    expect(html).toContain("$150,000"); // combined equity
+    expect(html).toContain("$50,000"); // combined cash
+    expect(html).toContain("$62,000"); // combined invested
+    expect(html).toContain("2 Alpaca paper accounts — 1 human, 1 bot");
+  });
+
+  it("links each row to that account's desk with a YOU mark", () => {
+    const html = renderPortfolioIndexBody([account()], { nav });
+
+    expect(html).toContain('href="/u/human-eric"');
+    expect(html).toContain("you-mark");
+  });
+
+  it("lists an unreachable account but excludes it from the combined figures", () => {
+    const dead = account({ id: "b", displayName: "Broken", error: "AlpacaApiError 401" });
+    const html = renderPortfolioIndexBody([account(), dead], { nav });
+
+    expect(html).toContain("unreachable");
+    expect(html).toContain("$100,000"); // only the readable account's equity
+    expect(html).toContain("1 account unreachable — excluded from the combined figures above.");
+  });
+
+  it("renders the honest empty state with a connect CTA when nothing is owned", () => {
+    const html = renderPortfolioIndexBody([], { nav });
+
+    expect(html).toContain("No accounts linked yet");
+    expect(html).toContain('href="/add"');
+  });
+
+  it("omits the connect CTA when the viewer cannot add an account", () => {
+    const html = renderPortfolioIndexBody([], { nav: { ...nav, canAdd: false } });
+
+    expect(html).not.toContain('href="/add"');
   });
 });

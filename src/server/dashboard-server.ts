@@ -19,6 +19,7 @@ import {
   type NavView,
   renderAcademyBody,
   renderIndividualBody,
+  renderPortfolioIndexBody,
 } from "../observatory/render-dashboard.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import {
@@ -134,6 +135,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps {
    * browser. Omit when OAuth isn't configured.
    */
   readonly resolveOwnerId?: (email: string) => string | undefined;
+  /**
+   * Every participant id the session's email owns — the Portfolio index (`/u`) lists these.
+   * Same ownership link as `resolveOwnerId`, plural; omit to fall back to that single id.
+   */
+  readonly resolveOwnerIds?: (email: string) => readonly string[];
 }
 
 /**
@@ -347,6 +353,19 @@ async function serveAuthorizedRoute(
   }
   if (path === "/trade") {
     await serveTradeRoute(req, res, url, config, session, navFor);
+    return;
+  }
+  // Portfolio index — /u bare: every account the session's email owns, one level above the desks.
+  if (path === "/u") {
+    const ownedIds = resolveOwnedIds(session, config);
+    const state = config.hub.getState();
+    const accounts = state.participants.filter((p) => ownedIds.includes(p.id));
+    const body = renderPortfolioIndexBody(accounts, {
+      nav: navFor("you"),
+      generatedAt: state.generatedAt,
+    });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(body);
     return;
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
@@ -634,6 +653,17 @@ function resolveCurrentId(
 ): string | undefined {
   if (!(session && resolveOwnerId)) return undefined;
   return resolveOwnerId(session.email);
+}
+
+/** All ids the session owns — plural hook first, else the single `resolveOwnerId` as a list. */
+function resolveOwnedIds(
+  session: Session | undefined,
+  config: DashboardServerConfig,
+): readonly string[] {
+  if (!session) return [];
+  if (config.resolveOwnerIds) return config.resolveOwnerIds(session.email);
+  const single = resolveCurrentId(session, config.resolveOwnerId);
+  return single ? [single] : [];
 }
 
 /** External origin of the request (honors Fly's x-forwarded-proto). */
