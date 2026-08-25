@@ -19,6 +19,7 @@ import {
   createBootActivityStore,
   type TradeActivityRecord,
 } from "../observatory/activity-store.js";
+import { createBrokerSync } from "../observatory/broker-sync.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import {
@@ -207,6 +208,17 @@ async function main(): Promise<void> {
     return linkedId ? [linkedId] : [];
   };
   const resolveOwnerId = (email: string): string | undefined => resolveOwnerIds(email)[0];
+  // The broker's last word (#591): the fill stream is the fast path, this is the authoritative slow
+  // one that repairs whatever it missed — a socket gap, a restart, an order placed outside this app.
+  // Reads the LIVE roster, so a runtime-added or rotated account is covered too.
+  const brokerSync = createBrokerSync({
+    getState: () => hub.getState(),
+    apply: sink,
+    findParticipant,
+    clientFactory: dataSource.clientFactory,
+  });
+  brokerSync.start();
+
   const orderAudit = createOrderAuditLog(process.env);
   const desk = resolveDeskTrading({
     findParticipant,
@@ -295,6 +307,7 @@ async function main(): Promise<void> {
     readFeedback: (id) => feedbackLog.list(id),
     ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
+    refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
     // `/wire`'s cross-participant feed: the same stores, called with no id.
