@@ -162,13 +162,22 @@ describe("renderIndividualBody — autonomous decisions panel", () => {
     expect(html).not.toContain("Begin the Wheel"); // CTA copy is markup-only (the class lives in CSS always)
   });
 
-  it("offers a rotate-credentials link on your own unreachable account page", () => {
-    const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { isSelf: true });
-    expect(html).toContain('<a href="/rotate">');
+  // 2026-08-25: gated on rotate being enabled, not isSelf — an unreachable account that's
+  // actually YOURS never resolves isSelf true (that's the whole "not connected" gap), so the
+  // old gate hid the fix from exactly the person who needed it. The id rides in the link so
+  // nobody has to know or type an opaque account id.
+  it("offers a rotate-credentials link, with the id embedded, on any unreachable account page when rotate is enabled", () => {
+    const nav = { active: "you" as const, canAdd: true, authed: true };
+    const html = renderIndividualBody(
+      { ...human, id: "human-uncle_joe", error: "AlpacaApiError 401" },
+      { isSelf: false, nav },
+    );
+    expect(html).toContain('<a href="/rotate?id=human-uncle_joe">');
   });
 
-  it("omits the rotate link on someone else's unreachable account page", () => {
-    const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { isSelf: false });
+  it("omits the rotate link when self-service is disabled", () => {
+    const nav = { active: "you" as const, canAdd: false, authed: true };
+    const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { nav });
     expect(html).not.toContain("/rotate");
   });
 });

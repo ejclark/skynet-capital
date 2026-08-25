@@ -480,17 +480,22 @@ async function serveTradeRoute(
 
 /**
  * Mission Control moved onto the account desk (#475), so the old `/controls` URL survives only as a
- * redirect — bookmarks and the pre-relocation drawer link keep working. It lands on the signed-in
- * viewer's OWN desk, whose Settings tab is owner-gated on arrival, so sending a member there is
- * safe and leaks nothing: they simply get their overview. A viewer whose session resolves to no
- * account has no desk to land on and goes to the board rather than a dead URL.
+ * redirect — bookmarks and the pre-relocation drawer link keep working. The Settings tab is
+ * owner-gated on arrival regardless of WHICH desk it's reached through (`handleDeskSettings`
+ * re-checks independently of this call site), so landing a non-owner here is safe and leaks
+ * nothing: they simply get that desk's overview. Prefers the viewer's OWN linked desk when one
+ * exists, but Mission Control controls the whole fleet, not that one account — an owner with no
+ * linked desk (2026-08-25: a real, expected state, not an edge case) still needs a door in, so
+ * this falls back to any bot's desk rather than bouncing to the board with no way to reach the
+ * switchboard at all.
  */
 function redirectToDeskSettings(
   res: ServerResponse,
   config: DashboardServerConfig,
   session: Session | undefined,
 ): void {
-  const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  const ownId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  const id = ownId ?? config.controls?.bots()[0]?.id;
   res.writeHead(302, { location: id ? deskHref(id, "settings") : "/" });
   res.end();
 }
@@ -565,6 +570,7 @@ async function trySelfServiceRoute(
       res,
       req.method ?? "GET",
       keyOf(url),
+      idOf(url),
       rotateRequester(config, session),
       config.rotateCredentials,
     );
@@ -753,6 +759,11 @@ function isAuthorized(url: string, password?: string): boolean {
 
 function keyOf(url: string): string {
   return new URL(url, "http://localhost").searchParams.get("key") ?? "";
+}
+
+/** `/rotate?id=…` — the id a link that already names the account carries in, so nobody types it. */
+function idOf(url: string): string {
+  return new URL(url, "http://localhost").searchParams.get("id") ?? "";
 }
 
 /**

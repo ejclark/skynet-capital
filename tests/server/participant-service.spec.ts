@@ -337,11 +337,14 @@ describe("ParticipantService.rotateCredentials", () => {
   });
 
   describe("ownership check (2026-08-11: rotate must not let one member hijack another's account)", () => {
+    // A CLAIMED account (ownerEmail on file) — the scenario this whole describe block guards.
+    // An UNCLAIMED one is a different, newer scenario: see "auto-claim on rotate" below.
     const humanExisting: StoredParticipant = {
       id: "human-uncle_joe",
       displayName: "Uncle Joe",
       kind: "human",
       credentials: { apiKey: "old-key", apiSecret: "old-secret" },
+      ownerEmail: "uncle_joe@example.com",
     };
 
     it("refuses a human target when the requester resolves to a DIFFERENT id", async () => {
@@ -402,6 +405,116 @@ describe("ParticipantService.rotateCredentials", () => {
       });
 
       expect(result.ok).toBe(true);
+    });
+  });
+
+  // 2026-08-25 (Eric: "does rotating a key automatically connect an account?"): yes, for a
+  // store account nobody has claimed — a verified new key IS the proof of ownership #547 already
+  // accepted for /add, so a legacy row with no ownerEmail on file (added pre-OAuth, or before a
+  // session existed to stamp one) adopts whoever successfully rotates it. This also closes a
+  // real gap the old requesterId-only check left open: an unclaimed row had no ownerEmail to
+  // match against, so `input.requesterId !== existing.id` was true for EVERY signed-in member
+  // (their id, if any, is never this unclaimed one) EXCEPT one with no linked account at all —
+  // for THAT member the check was vacuously skipped, silently permitting an anonymous rotation.
+  // Naming the rotator as owner turns that same action into an accountable, intentional claim.
+  describe("auto-claim on rotate (an unclaimed store account adopts its rotator)", () => {
+    const unclaimed: StoredParticipant = {
+      id: "human-legacy",
+      displayName: "Legacy Account",
+      kind: "human",
+      credentials: { apiKey: "old-key", apiSecret: "old-secret" },
+      // No ownerEmail — this is the whole point of the fixture.
+    };
+
+    it("stamps the rotator's session email as owner on success", async () => {
+      const store = new MemStore();
+      store.items = [unclaimed];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "human-legacy",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+        requesterEmail: "finder@example.com",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(store.items[0]?.ownerEmail).toBe("finder@example.com");
+    });
+
+    it("does not require the rotator to already own some OTHER account", async () => {
+      const store = new MemStore();
+      store.items = [unclaimed];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "human-legacy",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+        requesterId: "human-someone_else", // owns a different account — irrelevant here
+        requesterEmail: "finder@example.com",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(store.items[0]?.ownerEmail).toBe("finder@example.com");
+    });
+
+    it("does not auto-claim in password mode — no identity exists to stamp", async () => {
+      const store = new MemStore();
+      store.items = [unclaimed];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "human-legacy",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(store.items[0]?.ownerEmail).toBeUndefined();
+    });
+
+    it("never stamps ownerEmail onto a bot — bots aren't claimable", async () => {
+      const store = new MemStore();
+      store.items = [existing]; // kind: "bot", no ownerEmail
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "day-trader",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+        requesterEmail: "finder@example.com",
+      });
+
+      expect(result.ok).toBe(true);
+      expect(store.items[0]?.ownerEmail).toBeUndefined();
+    });
+
+    // Stamping ownerEmail onto a roster id's STORE row would be a silent no-op — mergeRoster
+    // always keeps the env row's ownerEmail on a collision — so it must never even try, or a
+    // future refactor could make that stamp start "working" in a way nobody reviewed.
+    it("never stamps a roster id's store row — mergeRoster would ignore it anyway", async () => {
+      const unownedRosterHuman: Participant = {
+        id: "human-eric",
+        displayName: "Eric",
+        kind: "human",
+        credentials: { apiKey: "revoked", apiSecret: "revoked" },
+        // No ownerEmail, no SKYNET_HUMAN_ERIC_EMAIL — an owner-configured account nobody linked.
+      };
+      const { service, store } = makeService({
+        roster: [unownedRosterHuman],
+        owners: ["eric@example.com"],
+      });
+
+      const result = await service.rotateCredentials({
+        id: "human-eric",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+        requesterEmail: "eric@example.com", // owner — refuseRotation's roster branch allows it
+      });
+
+      expect(result.ok).toBe(true);
+      expect(store.items[0]?.ownerEmail).toBeUndefined();
     });
   });
 

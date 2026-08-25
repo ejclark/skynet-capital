@@ -519,7 +519,7 @@ describe("observer mode (funnel front door)", () => {
 
   it("shows the observer hero when signed in with no linked account", () => {
     const html = renderStandingsBody(data([]), { nav });
-    expect(html).toContain("OBSERVER MODE");
+    expect(html).toContain("NOT CONNECTED");
     expect(html).toContain('href="/welcome"');
     expect(html).toContain('href="/add"');
   });
@@ -531,17 +531,17 @@ describe("observer mode (funnel front door)", () => {
     const html = renderStandingsBody(data([]), { nav });
     expect(html).toContain("isn't linked to any account");
     expect(html).toContain("Already see your account below?");
-    expect(html).toContain('href="/rotate"');
+    expect(html).toContain("Rotate link");
   });
 
   it("hides the observer hero once the viewer has a linked account", () => {
     const html = renderStandingsBody(data([]), { nav: { ...nav, currentId: "human-eric" } });
-    expect(html).not.toContain("OBSERVER MODE");
+    expect(html).not.toContain("NOT CONNECTED");
   });
 
   it("does not show the observer hero on the bare embed (no nav)", () => {
     const html = renderStandingsBody(data([]));
-    expect(html).not.toContain("OBSERVER MODE");
+    expect(html).not.toContain("NOT CONNECTED");
   });
 });
 

@@ -107,7 +107,7 @@ describe("handleRotate", () => {
   it("GET serves the rotation form", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "GET", "", {}, () => Promise.reject(new Error("unused"))),
+        void handleRotate(req, res, "GET", "", "", {}, () => Promise.reject(new Error("unused"))),
       async (base) => {
         const res = await fetch(base);
         expect(res.status).toBe(200);
@@ -121,7 +121,7 @@ describe("handleRotate", () => {
   it("POST submits id + new credentials and renders success", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "POST", "", {}, (input) => {
+        void handleRotate(req, res, "POST", "", "", {}, (input) => {
           expect(input.id).toBe("day-trader");
           expect(input.apiKey).toBe("new-key");
           return Promise.resolve({ ok: true, id: "day-trader", displayName: "JARVIS" });
@@ -146,6 +146,7 @@ describe("handleRotate", () => {
           res,
           "POST",
           "",
+          "",
           { id: "human-eric", email: "eric@example.com" },
           (input) => {
             expect(input.requesterId).toBe("human-eric");
@@ -167,7 +168,7 @@ describe("handleRotate", () => {
   it("POST renders the error page with a 400 when rotation is refused", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "POST", "", {}, () =>
+        void handleRotate(req, res, "POST", "", "", {}, () =>
           Promise.resolve({ ok: false, error: "No existing self-service account." }),
         ),
       async (base) => {
@@ -181,12 +182,59 @@ describe("handleRotate", () => {
   it("carries the ?key= password through both the form action and result links", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "GET", "secret123", {}, () =>
+        void handleRotate(req, res, "GET", "secret123", "", {}, () =>
           Promise.reject(new Error("unused")),
         ),
       async (base) => {
         const res = await fetch(base);
         expect(await res.text()).toContain("key=secret123");
+      },
+    );
+  });
+
+  // 2026-08-25: the id nobody remembers. A link that already names the account (the error card,
+  // a profile page) locks it in rather than making the member retype an opaque slug.
+  it("pre-fills and locks the account id when the link already names one", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleRotate(req, res, "GET", "", "human-uncle_joe", {}, () =>
+          Promise.reject(new Error("unused")),
+        ),
+      async (base) => {
+        const body = await (await fetch(base)).text();
+        expect(body).toContain('value="human-uncle_joe" readonly');
+        expect(body).toContain('type="hidden" name="id" value="human-uncle_joe"');
+        expect(body).not.toContain('name="id" required');
+      },
+    );
+  });
+
+  it("submits the locked id even though the visible field is readonly, not name=id", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleRotate(req, res, "POST", "", "human-uncle_joe", {}, (input) => {
+          expect(input.id).toBe("human-uncle_joe");
+          return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
+        }),
+      async (base) => {
+        const res = await fetch(base, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: "id=human-uncle_joe&apiKey=new-key&apiSecret=new-secret",
+        });
+        expect(res.status).toBe(200);
+      },
+    );
+  });
+
+  it("falls back to the free-text field when no id rides in the link", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleRotate(req, res, "GET", "", "", {}, () => Promise.reject(new Error("unused"))),
+      async (base) => {
+        const body = await (await fetch(base)).text();
+        expect(body).toContain('name="id" required');
+        expect(body).not.toContain("readonly");
       },
     );
   });

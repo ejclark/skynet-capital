@@ -26,9 +26,13 @@ export const SHELL_STYLE = `<style>
   .obs-bar .meta{ display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted); }
   .tag{ font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--accent); border:1px solid var(--accent); border-radius:999px; padding:3px 10px; }
   .meta .ts{ font-family:var(--mono); }
-  .observer-hero{ margin:0 0 26px; padding:22px 24px; border:1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius:14px;
-    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface-2)), var(--surface-2)); }
-  .obs-eyebrow{ font-family:var(--mono); font-size:10px; letter-spacing:.24em; color:var(--accent); margin-bottom:8px; }
+  /* Alarm treatment, not the machine-teal informative one: this banner only ever renders when
+     the viewer genuinely can't trade or see "their" views yet (standings-view.ts), never as a
+     status note on an otherwise-fine state — so it earns --neg, the sanctioned danger role
+     (docs/BRAND.md), the same as an unreachable account's card. */
+  .observer-hero{ margin:0 0 26px; padding:22px 24px; border:1px solid color-mix(in srgb, var(--neg) 55%, var(--border)); border-radius:14px;
+    background:linear-gradient(135deg, color-mix(in srgb, var(--neg) 12%, var(--surface-2)), var(--surface-2)); }
+  .obs-eyebrow{ font-family:var(--mono); font-size:10px; letter-spacing:.24em; color:var(--neg); margin-bottom:8px; font-weight:700; }
   .obs-title{ font-size:19px; letter-spacing:.01em; margin-bottom:8px; }
   .obs-sub{ color:var(--muted); font-size:13.5px; max-width:64ch; margin-bottom:14px; }
   .obs-ctas{ display:flex; gap:10px; flex-wrap:wrap; }

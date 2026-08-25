@@ -385,9 +385,9 @@ export function renderStandingsContent(
   const observer =
     options.nav && !currentId
       ? `<section class="observer-hero">
-    <p class="obs-eyebrow">◈ OBSERVER MODE</p>
-    <h2 class="obs-title">This sign-in isn't linked to any account on the board.</h2>
-    <p class="obs-sub">Watching works; trading and "your" views don't, until a link exists. <b>New here?</b> Connect a free Alpaca paper account to take the field — your own city on the board, your seat in the race. <b>Already see your account below?</b> It's on the board and syncing, but nothing ties it to this sign-in — don't re-add it, and don't regenerate keys to try (regenerating revokes the working pair; if you already did, <a href="/rotate">rotate the new key in</a>). An owner links your sign-in to the account — no keys involved.</p>
+    <p class="obs-eyebrow">⚠ NOT CONNECTED</p>
+    <h2 class="obs-title">This sign-in isn't linked to any account — you can't trade yet.</h2>
+    <p class="obs-sub">Watching works; trading and "your" views don't, until a link exists. <b>New here?</b> Connect a free Alpaca paper account to take the field — your own city on the board, your seat in the race. <b>Already see your account below?</b> It's on the board and syncing, but nothing ties it to this sign-in — don't re-add it, and don't regenerate keys to try (regenerating revokes the working pair). If you already did: click into that account below and use the Rotate link on it — it carries the account with it, so you won't have to type an id. An owner links your sign-in to the account — no keys involved.</p>
     <div class="obs-ctas"><a class="obs-cta obs-cta-primary" href="/welcome">Get set up — the guided path</a><a class="obs-cta" href="/add">I'm new — I have my keys</a></div>
   </section>
   `
