@@ -108,7 +108,8 @@ before gating a capture surface (the journey lesson: never tax the habit). _(src
 hat-team comms research, 2026-08-20)_
 
 ### Options-mechanics event kinds — OPEX, quad witching, VIX expiration, holidays
-The `/calendar` view renders the curated feed; the mechanical dates options traders also watch are
+The `/research` shelf's event horizon renders the curated feed (folded from the old `/calendar`
+view, 2026-08-25); the mechanical dates options traders also watch are
 all rule-computable offline: monthly OPEX = 3rd Friday (holiday → prior Thursday), quad witching =
 Mar/Jun/Sep/Dec subset, VIX expiration = the Wednesday 30 days before the *next* monthly OPEX, NYSE
 holidays/early closes published 3 years out. A pure `expiration-calendar.ts` generator (verifiable

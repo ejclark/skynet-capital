@@ -1,12 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { renderCalendarBody } from "../../src/observatory/calendar-view.js";
 import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import { renderShell } from "../../src/observatory/dashboard-shell.js";
 import { DESK_STYLE } from "../../src/observatory/desk-style.js";
 import { renderFeedbackFormBody } from "../../src/observatory/feedback-view.js";
 import { FLUID_LAYOUT_TOKENS } from "../../src/observatory/fluid-layout.js";
-import { renderResearchShelfBody } from "../../src/observatory/research-view.js";
+import {
+  renderResearchDocBody,
+  renderResearchShelfBody,
+} from "../../src/observatory/research-view.js";
 
 const NAV: NavContext = { active: "board", canAdd: false, authed: true };
 const AS_OF = "2026-08-22T14:30:00Z";
@@ -61,8 +63,13 @@ describe("the fluid layout scale", () => {
 });
 
 describe("the page columns", () => {
-  it("sizes the calendar agenda and its rail from the scale, not from fixed pixels", () => {
-    const html = renderCalendarBody({ nav: NAV, asOfIso: AS_OF });
+  it("sizes the research shelf's event horizon and its rail from the scale, not fixed pixels", () => {
+    const html = renderResearchShelfBody({
+      nav: NAV,
+      asOfIso: AS_OF,
+      shelf: { studies: [], ledgers: [] },
+      symbols: [],
+    });
 
     expect(html).toContain("max-width:var(--col-wide)");
     expect(html).not.toContain("max-width:980px");
@@ -70,12 +77,13 @@ describe("the page columns", () => {
     expect(html).toContain("grid-template-columns:minmax(0,1fr) clamp(240px,20vw,320px)");
   });
 
-  it("sizes the research shelf from the reading cap", () => {
-    const html = renderResearchShelfBody({
+  it("sizes the standalone research doc/symbol pages from the narrower reading cap", () => {
+    // The shelf carries the event horizon now, so it takes the wider cap above — but a doc or
+    // symbol page is still prose-first and keeps the narrower reading measure.
+    const html = renderResearchDocBody({
       nav: NAV,
       asOfIso: AS_OF,
-      shelf: { studies: [], ledgers: [] },
-      symbols: [],
+      doc: { slug: "x", title: "x", lastAssessed: null, html: "<p>x</p>", glanceHtml: null },
     });
 
     expect(html).toContain("max-width:var(--col-read)");

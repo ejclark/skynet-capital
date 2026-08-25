@@ -16,7 +16,6 @@ export type NavView =
   | "leaderboard"
   | "bots"
   | "compare"
-  | "calendar"
   | "research"
   | "you"
   | "add"
@@ -51,7 +50,7 @@ const NAV_ICON: Record<string, string> = {
   board: "▦",
   trade: "⇅",
   compare: "⇄",
-  calendar: "◷",
+  research: "◷",
   leaderboard: "≣",
   bots: "◆",
   you: "◉",
@@ -87,7 +86,6 @@ function renderDrawer(nav: NavContext): string {
   if (nav.hasCompare) {
     links.push(drawerLink("/compare", "Compare", "compare", nav.active === "compare"));
   }
-  links.push(drawerLink("/calendar", "Calendar", "calendar", nav.active === "calendar"));
   links.push(drawerLink("/research", "Research", "research", nav.active === "research"));
   if (nav.currentId) {
     links.push(drawerLink(profileHref(nav.currentId), "You", "you", nav.active === "you"));
