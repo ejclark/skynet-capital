@@ -140,6 +140,13 @@ works as break-glass, but remember it **replaces** the whole value — which is 
 exists. For a GitHub user whose email is private, their login still goes in
 `SKYNET_ALLOWED_GITHUB_LOGINS`. Full rationale: [`adr/0005`](adr/0005-in-app-oauth-authentication.md).
 
+**Why `/data` and not `data`.** Every store in `src/` defaults to a *relative* path
+(`env.SKYNET_ALLOWLIST_STORE ?? "data/allowlist.json"`), which on Fly resolves inside the container
+image at `/app/data` — wiped by every deploy, and silently, since an absent store file reads as an
+empty one. `fly.toml`'s `[env]` block is what pins each store to the mounted volume, and
+`tests/arch/volume-persistence.spec.ts` fails CI if a newly added store is missing a line there. A
+guest list that lost its members on every merge to `main` is the reason that gate exists.
+
 ## Render / Railway (same Docker image)
 
 The `Dockerfile` is host-agnostic. On Render: New → Web Service → point at this repo →

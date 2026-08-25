@@ -27,6 +27,40 @@ it. Prevention ranks, best first:
 
 ---
 
+### The guest list was never on the volume, so every deploy locked the members out and left the owners in
+
+- **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** a screenshot from Eric — "Tony is locked out **again**". The word *again* is the whole
+  signal: this had been happening on every merge to `main` for three days (the store shipped in #506
+  on 2026-08-22) and was read each time as a one-off invite that didn't take. Detection lag ≈ 3 days
+  and an unknown number of re-invites, because the only person who could see the app was the one
+  person the bug could not affect.
+- **ROOT CAUSE:** `createAllowlistStore` resolves `env.SKYNET_ALLOWLIST_STORE ?? "data/allowlist.json"`
+  — a **relative** default. `fly.toml` pinned three stores to the mounted volume
+  (`SKYNET_PARTICIPANT_STORE`, `SKYNET_HISTORY_DIR`, `SKYNET_INSIGHTS_DIR`) and never pinned this one,
+  so on Fly (`WORKDIR /app`) the guest list was written to `/app/data/allowlist.json` — inside the
+  container image, not on `/data`. Every push to `main` redeploys, so the file died with the machine.
+  It was silent in both directions: `add()` succeeded and reported "They can sign in now", and
+  `entries()` treats an absent file as an empty list rather than an error. The asymmetry is what hid
+  it — `resolveAuth` unions the store with `SKYNET_ALLOWED_EMAILS`, a Fly *secret* that persists, so
+  owners sailed through a gate that had silently dropped every member. **The same class had already
+  been caught once and not generalized:** the `SKYNET_HISTORY_DIR` comment in `fly.toml` explains this
+  exact failure ("every deploy erases the very history…") for one store instead of for the rule. Four
+  more stores were unpinned alongside the allowlist — bot controls, trade activity, the feedback log,
+  and the **order audit trail**.
+- **PREVENTION:** gate + fix. `tests/arch/volume-persistence.spec.ts` scans `src/**` for the
+  `env.SKYNET_X ?? "data/…"` idiom and fails CI unless every store it finds is pinned under
+  `fly.toml`'s `[mounts] destination`, with an `EPHEMERAL` map as the on-the-record escape hatch. It
+  is asserted in both directions — the scan must find the known stores, so it can never pass by
+  discovering nothing — and was proven to fail by removing the allowlist line before it was trusted.
+  All five missing paths are now pinned in `fly.toml`.
+- **SIDE QUESTS:** an empty guest list is indistinguishable from an unreadable one at the boundary
+  `entries()` guards — `existsSync` returns `[]` with no report while a parse failure logs loudly. A
+  store that has *never* existed and one that *vanished* deserve different volume (→ docs/IDEAS.md).
+  Separately: `SKYNET_AUDIT_DIR` and `SKYNET_HALT_FILE` are read on the autonomy path with no default
+  and are set nowhere, so the decision audit and the kill-file are inert in production — a safety
+  question, not a persistence one, and deliberately out of this diff's scope (→ docs/IDEAS.md).
+
 ### A filter compared `undefined` to a string, and the sweep could never close anything
 
 - **SHA:** 0ec180c   **DATE:** 2026-08-22   **STATUS:** closed
