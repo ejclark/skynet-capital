@@ -46,6 +46,8 @@ import { createInsightsListener, resolveInsightsBridgePort } from "../server/ins
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
 import { ParticipantService } from "../server/participant-service.js";
+import { createProgressionService } from "../server/progression-service.js";
+import { createProgressionStore } from "../server/progression-store.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
 
@@ -267,6 +269,11 @@ async function main(): Promise<void> {
     ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
+    progression: createProgressionService({
+      readFills: (id) => activity.list(id),
+      readTags: (id) => orderAudit.list(id),
+      store: createProgressionStore(process.env, (m) => console.error(m)),
+    }),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
