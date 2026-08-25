@@ -3,6 +3,31 @@
 **Kind:** earnings · **Date:** 2026-10-27 (estimate, 8-K cadence) · **Impact:** critical
 **Last assessed:** 2026-08-24
 
+## At a glance
+
+**TL;DR.** No MSFT position and no pre-print entry at any horizon — S1 and the D-10 run-up are killed
+on this symbol and stay killed. The guards are the whole stance: flat by the Oct-26 close and stay
+flat until the date is IR-confirmed. The S3 fade is blocked twice over (the shorting lock, plus a
+queue item on hold until the July 2026 reaction session is measured), and this cycle would be a poor
+test regardless — the confirmed FOMC statement owns the afternoon of Oct 28. Azure ≥45% cc is the
+guided bar; consensus drift above it argues for *more* caution, never an entry. Date is an
+**estimate** (D-63) and every line inherits that label.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** — no pre-print play exists | High | S1 and the D-10 run-up are both killed on MSFT; nothing since re-opens them | ≥3 new prints showing a repriced gap regime |
+| This week | **No action; watch MSFT investor relations** | High | Aggregators split 10-27 vs 10-28, which is why the estimate label stands | An IR posting confirming or moving the **2026-10-27** date |
+| This month | **Watch the Azure bar, don't trade it** | Medium | Consensus drifting above the guided ≥45% cc raises the whisper bar — that is a caution input, not an entry | Consensus settling above 45% cc before ~2026-10-06 |
+| This quarter | **Flat by the Oct-26 close (S2); S3 stays on hold** | High | A no-alpha guard needs no edge to justify it; and the FOMC statement on Oct 28 contaminates any reaction-day test this cycle | A re-run showing the 2026-07-30 session leg was green, then a second consecutive green October reaction session |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Never** — hold unhedged MSFT exposure through the print; flat by the **2026-10-26** close and stay flat until confirmation narrows the window.
+- **Never** — read consensus drift above Azure ≥45% cc as bullish; a higher whisper bar is a caution input.
+- **S3 stays on hold** — blocked on the shorting lock, and separately until the July 2026 reaction-session leg is measured from re-run instrument data.
+- **Watch (dated)** — IR date confirmation (nothing posted as of 2026-08-24) · estimated print **2026-10-27** · FOMC statement **2026-10-28** 14:00 ET, which owns the D+1 afternoon.
+- **Re-keys everything if** — IR confirms any date other than 2026-10-27.
+
 ## Initial research
 
 **The question.** MSFT prints fiscal Q1 FY27 in ~10 weeks (date **estimate**). What is likely to

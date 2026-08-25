@@ -3,6 +3,30 @@
 **Kind:** earnings · **Date:** 2026-10-28 (estimate, 8-K cadence) · **Impact:** critical
 **Last assessed:** 2026-08-24
 
+## At a glance
+
+**TL;DR.** GOOG is the one name on the roster with a *planned* pre-print play — and it is not open,
+and cannot open while the date is an **estimate**. IR confirmation is the unlock; without it there is
+no entry, full stop. If it confirms, the run-up hold is small (the pooled −3.39% p10 is the sizing
+anchor), exits at the close of D, and never rides through the print. Two overhangs could sour the
+window itself: the pending ad-tech remedies ruling and capex/equity supply. Everything below inherits
+the estimate label.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** — D-64 is outside the window and the date is unconfirmed | High | The run-up entry point is ~D-20; an estimated date never keys an entry at any distance | IR confirms the date, moving the ~**2026-09-28** entry point into play |
+| This week | **No action; watch abc.xyz/investor** | High | Aggregators split on 10-27 vs 10-28, which is exactly why the label stays estimate | An IR posting that confirms or moves the **2026-10-28** date |
+| This month | **Prepare the run-up, don't pre-empt it** | Medium | Entry is only live if confirmation lands before the ~D-20 point; no confirmation, no cycle | No IR-confirmed date by ~**2026-09-28** — the play dies for this cycle |
+| This quarter | **Flat by the Oct-26 close (S2); exit at D's close if long** | High | Never hold through the print; and if any other pre-print long is live, GOOG takes the slot alone — stacking is one leveraged AI-beta bet | A mid-window break below the pooled −3.39% p10 stops the position out |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **No confirmation, no entry** — the single hard gate on this play; date-keyed action requires `confirmed`.
+- **Size small, one slot** — the pooled p10 **−3.39%** is the sizing anchor, and GOOG takes the pre-print slot alone or not at all.
+- **Exit at the close of D** — never through the print, whatever the run-up did.
+- **Discretionary early exit** — an adverse ad-tech remedies ruling or a fresh equity-supply event landing inside the window; logged when taken.
+- **Watch (dated)** — IR confirmation (nothing posted as of 2026-08-24) · entry point ~**2026-09-28** · FOMC **2026-10-28** on the estimated print day itself.
+
 ## Initial research
 
 **The question.** Alphabet prints Q3 2026 in ~10 weeks (date **estimate**). What is likely to

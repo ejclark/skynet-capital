@@ -3,6 +3,31 @@
 **Kind:** earnings · **Date:** 2026-10-29 (estimate, 8-K cadence) · **Impact:** critical
 **Last assessed:** 2026-08-24
 
+## At a glance
+
+**TL;DR.** No AMZN positioning into this print at any horizon — the one pre-print edge was killed in
+the sweep and re-confirmed on a fresh run (p=0.6854), so nothing here pays for taking the date. What
+the print *does* carry is measured ±10% single-night tails, which makes it a risk-management event:
+be flat across it, sized to those tails. Date is an **estimate** (D-65), so the flat-by rule keys to
+the earliest plausible day of the cadence window, never the point estimate. The live question is not
+direction but narrative — the first quarter $220B capex reads as a liability rather than AI
+conviction changes the reaction function.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** | High | No surviving pre-print edge on AMZN; S1 killed 2026-08-12 and re-confirmed p=0.6854 on 2026-08-17 | ≥3 new prints clearing a base-rate + peer control for the gap family |
+| This week | **Nothing to do** — watch for the IR date | High | The date is an estimate; IR normally announces 2–3 weeks out, so no announcement is due yet | An IR announcement landing early, or on a date ≠ **2026-10-29** |
+| This month | **Watch consensus drift, don't trade it** | Medium | The light $197–202B guide is the bar; drift against it changes the print's difficulty, not its tradability | Consensus settling above the guide range before ~2026-10-08 |
+| This quarter | **Flat across the print night (S2), E1 on any execution** | High | ±10% measured overnight tails with no edge to pay for them — a guard, not a bet | Nothing kills a no-alpha guard; only ≥3 repriced-regime prints revise it |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Never** — carry unhedged AMZN exposure across the print night for the gap; the tails are ±10% and no edge pays for them.
+- **Watch (dated)** — IR date announcement expected ~**2026-10-08** to **2026-10-15** · the estimated print **2026-10-29** · FOMC **2026-10-28**, D-1.
+- **The narrative tell** — $220B capex read as a liability rather than conviction; that reaction-function shift matters more than the beat.
+- **Zero-size observation only** — the S3 direction lean dies if the reaction day closes green on 2 of the next 3 prints.
+- **Re-keys everything if** — the IR date lands anywhere other than 2026-10-29.
+
 ## Initial research
 
 **The question.** AMZN's Q3 2026 print lands in ~73 days (date **estimate**). After a blowout Q2
