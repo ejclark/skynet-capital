@@ -2,11 +2,11 @@ import { STARTER_PLAYS } from "../../src/domain/starter-plays.js";
 import { defaultTradeType, tradeTypeByCode } from "../../src/domain/trade-types.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import {
-  renderTicketBody,
   type TicketProgression,
   type TicketState,
   ticketHref,
-} from "../../src/observatory/ticket-view.js";
+} from "../../src/observatory/ticket-picker.js";
+import { renderTicketBody } from "../../src/observatory/ticket-view.js";
 
 const ann: ParticipantSnapshot = {
   id: "ann",
@@ -77,6 +77,9 @@ describe("the trade ticket view", () => {
     });
     expect(html.match(/<span class="tk-row locked/g)).toHaveLength(5); // all but 101
     expect(html).toContain("opens after your first filled 101");
+    expect(html).toContain("NEXT UP"); // the rail points at the rung to chase
+    expect(html).toContain("training wheels on — one rung at a time");
+    expect(html).toContain('class="st-bar"'); // guidance chrome rides WITH the wheels
     // lock truth is rendered, never computed client-side — the old script's hooks are gone
     expect(html).not.toContain("data-unlock-course");
     expect(html).not.toContain("data-href");
@@ -96,8 +99,11 @@ describe("the trade ticket view", () => {
       },
     });
     expect(html).not.toContain("tk-row locked");
-    expect(html).toContain("✓ earned");
+    expect(html).toContain("✓ earned 2026-08-25"); // the rail shows the fill date
     expect(html).toContain('name="wheels" value="on"');
+    // Wheels off = the clean desk: guidance chrome (starter chips) sheds with them.
+    expect(html).not.toContain('class="st-bar"');
+    expect(html).not.toContain("NEXT UP");
   });
 
   it("renders the honest locked panel — no order form — when the selected play is locked", () => {

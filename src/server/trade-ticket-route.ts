@@ -9,11 +9,8 @@ import {
 } from "../domain/trade-types.js";
 import type { NavContext } from "../observatory/dashboard-shell.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
-import {
-  renderTicketBody,
-  type TicketState,
-  type TicketViewModel,
-} from "../observatory/ticket-view.js";
+import type { TicketState } from "../observatory/ticket-picker.js";
+import { renderTicketBody, type TicketViewModel } from "../observatory/ticket-view.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
 import type { ParticipantProgression, ProgressionService } from "./progression-service.js";
 import type { SubmitDeskTrade } from "./trade-service.js";

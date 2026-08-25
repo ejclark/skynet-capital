@@ -10,7 +10,7 @@ import {
 import { ticketContext } from "../observatory/desk-data.js";
 import { deskHref } from "../observatory/desk-tabs.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
-import { ticketHref } from "../observatory/ticket-view.js";
+import { ticketHref } from "../observatory/ticket-picker.js";
 import { renderOptionReviewBody, renderTradeReviewBody } from "../observatory/trade-review-view.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import {
