@@ -188,9 +188,27 @@ export class ParticipantService {
       return { ok: false, error: refusal };
     }
 
+    // Answers "does rotating a key connect an account?" (Eric, 2026-08-25): yes, for a STORE
+    // human account nobody has claimed yet. A successful rotation IS the honest proof of
+    // ownership #547 already endorsed for /add — the new key just verified against Alpaca — so
+    // requiring a SEPARATE owner-driven /claim afterward would be asking for proof twice.
+    // MUST exclude roster ids, not just say so: `mergeRoster` always keeps the ENV row's
+    // identity (ownerEmail included) on a collision, so stamping ownerEmail onto a roster id's
+    // store row would look like it worked (this returns ok:true) while the live merged roster
+    // silently ignores it — worse than not stamping at all. Roster accounts stay owner-gated
+    // (refuseRotation above; a real link needs SKYNET_HUMAN_<ID>_EMAIL). An ALREADY-claimed
+    // store account is never silently repointed — only a genuinely unclaimed one adopts the
+    // rotator.
+    const claims =
+      existing.kind === "human" &&
+      existing.ownerEmail === undefined &&
+      input.requesterEmail !== undefined &&
+      !this.deps.findRosterParticipant?.(existing.id);
+
     const participant: Participant = {
       ...existing,
       credentials: this.credentialsFrom(input.apiKey, input.apiSecret),
+      ...(claims ? { ownerEmail: input.requesterEmail } : {}),
     };
 
     // Prove the NEW key works before anything stored or shown changes.
@@ -218,8 +236,14 @@ export class ParticipantService {
    * SKYNET_HUMAN_<ID>_EMAIL or a future link). Anything else could silently redirect a
    * host-configured account — Eric's own, or a bot's — to credentials of a member's choosing.
    *
-   * STORE ids (unchanged): a human account may only be rotated by its own resolved identity
-   * when one resolves; bots have no session identity to match against.
+   * STORE ids: an ALREADY-CLAIMED human account (one with an `ownerEmail` on file) may only be
+   * rotated by that same resolved identity. An UNCLAIMED one (2026-08-25 — legacy rows added
+   * before OAuth, or before `/add` had a session to stamp) has nobody to check against, so any
+   * signed-in member may rotate it — `rotateCredentials` then stamps them as its owner on
+   * success, so "signed in + a verified new key" is the one claim it takes, same as `/add`.
+   * Under PASSWORD mode (no `requesterEmail`), nobody is signed in to become an owner either, so
+   * this is unreachable — falls through to the unconditional pass below. Bots have no session
+   * identity to match against, claimed or not.
    *
    * BOTH tiers: `requesterEmail`/`requesterId` undefined means OAuth isn't configured — the
    * password gate is the only boundary in that mode, matching every other route's trust level.
@@ -236,6 +260,7 @@ export class ParticipantService {
     }
     if (
       existing.kind === "human" &&
+      existing.ownerEmail !== undefined &&
       input.requesterId !== undefined &&
       input.requesterId !== existing.id
     ) {

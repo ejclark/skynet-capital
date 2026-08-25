@@ -672,8 +672,40 @@ describe("dashboard-server desk settings (#475)", () => {
     });
   });
 
-  it("sends a viewer with no resolvable account back to the board rather than nowhere", async () => {
-    await withServer(config(), async (base) => {
+  // 2026-08-25: an owner with no linked desk of their own is a real, expected state (exactly the
+  // bug that motivated this fallback) — Mission Control controls the whole fleet, not one
+  // account, so it must stay reachable even then. Falling back to ANY bot's desk is safe for
+  // ANY viewer, owner or not: the destination re-checks ownership independently on arrival
+  // (see the two tests above), so a non-owner just lands on that desk's plain overview.
+  it("falls back to any bot's desk when the viewer has no linked account of their own", async () => {
+    const noOwnAccount = {
+      ...config(),
+      resolveOwnerId: () => undefined,
+    };
+    await withServer(noOwnAccount, async (base) => {
+      const owner = await fetch(`${base}/controls`, {
+        headers: { cookie: cookieFor("eric@gmail.com") },
+        redirect: "manual",
+      });
+      expect(owner.status).toBe(302);
+      expect(owner.headers.get("location")).toBe("/u/sauron?tab=settings");
+
+      const member = await fetch(`${base}/controls`, {
+        headers: { cookie: cookieFor("member@gmail.com") },
+        redirect: "manual",
+      });
+      expect(member.status).toBe(302);
+      expect(member.headers.get("location")).toBe("/u/sauron?tab=settings");
+    });
+  });
+
+  it("sends a viewer to the board when no fallback desk exists either (no bots on the fleet)", async () => {
+    const noFallback = {
+      ...config(),
+      resolveOwnerId: () => undefined,
+      controls: { ...config().controls, bots: () => [] },
+    };
+    await withServer(noFallback, async (base) => {
       const res = await fetch(`${base}/controls`, {
         headers: { cookie: cookieFor("member@gmail.com") },
         redirect: "manual",

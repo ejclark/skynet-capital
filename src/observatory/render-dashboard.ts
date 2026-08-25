@@ -87,8 +87,12 @@ export function renderIndividualBody(
     : "";
 
   if (snapshot.error) {
-    const rotateHint = isSelf
-      ? ` <a href="/rotate">Regenerated your key? Rotate your credentials</a>.`
+    // Gated on rotate being enabled at all, not `isSelf`: an account can be unreachable and
+    // yours WITHOUT your session resolving to it yet (2026-08-25 — that's the whole "connected"
+    // gap), so isSelf is never true for exactly the account that needs this most. The id rides
+    // in the link — this IS the account the card is showing — so nobody has to know or type it.
+    const rotateHint = options.nav?.canAdd
+      ? ` <a href="/rotate?id=${encodeURIComponent(snapshot.id)}">Regenerated this account's key? Rotate it in</a>.`
       : "";
     return renderShell(
       options.nav,

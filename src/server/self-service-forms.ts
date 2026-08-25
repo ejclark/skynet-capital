@@ -105,6 +105,13 @@ export async function handleRotate(
   res: ServerResponse,
   method: string,
   key: string,
+  /**
+   * The id nobody remembers (Eric, 2026-08-25): a link that ALREADY names the account — from its
+   * own error card, or the observer hero once one is picked — carries it here instead of asking
+   * the member to type an opaque slug from memory. Locked, not just pre-filled: the link is the
+   * one honest source for "which account", so a stray edit shouldn't silently retarget it.
+   */
+  prefillId: string,
   requester: { readonly id?: string; readonly email?: string },
   rotateCredentials: (input: RotateCredentialsInput) => Promise<RotateResult>,
 ): Promise<void> {
@@ -112,7 +119,7 @@ export async function handleRotate(
     req,
     res,
     method,
-    () => rotateFormHtml(key),
+    () => rotateFormHtml(key, prefillId),
     (form) =>
       rotateCredentials({
         id: form.get("id") ?? "",
@@ -224,8 +231,15 @@ function addResultHtml(result: AddResult, key: string): string {
  * A wrong id is caught immediately: `rotateCredentials` refuses anything that isn't already on
  * the board.
  */
-function rotateFormHtml(key: string): string {
+function rotateFormHtml(key: string, prefillId = ""): string {
   const action = `/rotate${key ? `?key=${encodeURIComponent(key)}` : ""}`;
+  // Arrived from a link that already names the account (the error card, a profile page) — the
+  // id is locked (readonly + a hidden mirror, since a readonly field still posts) rather than
+  // asking the member to confirm a slug they never chose to know in the first place. Arrived
+  // cold (typed the URL, an old bookmark) — same free-text field as always.
+  const idField = prefillId
+    ? `<label>Account<input value="${escapeHtml(prefillId)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
+    : `<label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>`;
   return addShell(
     "Rotate credentials — Skynet Capital",
     `<h1>Rotate an account's Alpaca key</h1>
@@ -234,7 +248,7 @@ function rotateFormHtml(key: string): string {
 immediately. This covers self-added accounts <i>and</i> the host-configured originals; it won't create
 a new account, and it refuses anything that isn't already on the board.</p>
 <form method="post" action="${action}">
-  <label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>
+  ${idField}
   <label>New Alpaca paper API key<input name="apiKey" required autocomplete="off" placeholder="PK…"></label>
   <label>New Alpaca paper API secret<input name="apiSecret" required autocomplete="off" placeholder="••••••••"></label>
   <button type="submit">Rotate credentials</button>
