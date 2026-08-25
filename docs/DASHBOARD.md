@@ -94,12 +94,12 @@ is no options leg to roll (see the plan for what enabling it would take).
 Eyeball the whole desk without a server or a broker:
 
 ```sh
-node scripts/shoot-desk.mjs [outdir]   # renders the five surfaces + screenshots them
+node scripts/shoot-desk.mjs [outdir]   # renders the desk's surfaces + screenshots them
 ```
 
 ## Design
 
-The renderer (`observatory/render-dashboard.ts`) is a pure `DashboardData → HTML` function,
+The renderer (`observatory/standings-view.ts`) is a pure `DashboardData → HTML` function,
 so the exact layout is unit-tested and reproducible. Trading-terminal treatment: dark-first
 and theme-aware, monospace tabular figures, semantic green/red for P/L kept separate from
 the teal brand accent, BOT·persona vs HUMAN chips, live/error status dots.
@@ -108,5 +108,5 @@ the teal brand accent, BOT·persona vs HUMAN chips, live/error status dots.
 
 ```
 loadParticipants(env)  →  buildDashboardData (reads each Alpaca account, in parallel)
-                            →  renderDashboardDocument  →  dist/dashboard.html  →  Artifact
+                            →  renderStandingsDocument  →  dist/dashboard.html  →  Artifact
 ```

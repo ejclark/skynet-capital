@@ -15,18 +15,19 @@ import {
 } from "../observatory/performance-view.js";
 import { renderPositionsBody } from "../observatory/positions-view.js";
 import {
-  type LeaderMetric,
   type NavContext,
   type NavView,
   renderAcademyBody,
-  renderBoardContent,
-  renderCohortsBody,
   renderCompareBody,
-  renderDashboardBody,
   renderIndividualBody,
-  renderLeaderboardBody,
 } from "../observatory/render-dashboard.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
+import {
+  type LeaderMetric,
+  parseLeaderMetric,
+  renderStandingsBody,
+  renderStandingsContent,
+} from "../observatory/standings-view.js";
 import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
@@ -295,29 +296,26 @@ async function serveAuthorizedRoute(
     authed,
     ...(canControl ? { canControl } : {}),
     ...(canInvite ? { canInvite } : {}),
-    hasLeaderboard: true,
-    hasBots: true,
     hasCompare: true,
   });
 
   if (path === "/events") {
-    streamEvents(req, res, config.hub, navFor("board"));
+    const metric = parseLeaderMetric(new URL(url, "http://localhost").searchParams.get("by"));
+    streamEvents(req, res, config.hub, navFor("board"), metric);
     return;
   }
   if (path === "/leaderboard") {
-    const state = config.hub.getState();
+    // Leaderboard folded into Standings (/) 2026-08-25 — an old bookmark still lands somewhere
+    // real rather than 404ing. Its own metric param maps onto Standings' identically-shaped one.
     const by = new URL(url, "http://localhost").searchParams.get("by");
-    const metric: LeaderMetric =
-      by === "pl" || by === "return" || by === "realized" ? by : "equity";
-    const body = renderLeaderboardBody(state, { nav: navFor("leaderboard"), metric });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Leaderboard — Skynet Capital", body));
+    res.writeHead(302, { location: by ? `/?by=${by}` : "/" });
+    res.end();
     return;
   }
   if (path === "/bots-vs-humans") {
-    const body = renderCohortsBody(config.hub.getState(), { nav: navFor("bots") });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Bots vs Humans — Skynet Capital", body));
+    // Bots vs Humans folded into Standings (/) 2026-08-25 — same reasoning as /leaderboard above.
+    res.writeHead(302, { location: "/" });
+    res.end();
     return;
   }
   if (path === "/compare") {
@@ -351,8 +349,9 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path === "/" || path === "/index.html") {
+    const metric = parseLeaderMetric(new URL(url, "http://localhost").searchParams.get("by"));
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(pageHtml(config.hub, navFor("board")));
+    res.end(pageHtml(config.hub, navFor("board"), metric));
     return;
   }
   res.writeHead(404, { "content-type": "text/plain" });
@@ -671,25 +670,32 @@ function servePulse(res: ServerResponse, hub: ObservatoryHub): void {
   res.end(body);
 }
 
+/**
+ * The SSE stream backing Standings' live refresh. `metric` is read ONCE, from the `/events`
+ * connection's own URL, at connect time — the inline script in `pageHtml` forwards the page's full
+ * query string (not just `key`) so a viewer who picked `?by=return` keeps seeing Return % on every
+ * live push instead of being silently reset to the default Equity view.
+ */
 function streamEvents(
   req: IncomingMessage,
   res: ServerResponse,
   hub: ObservatoryHub,
   nav: NavContext,
+  metric: LeaderMetric,
 ): void {
   res.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
     connection: "keep-alive",
   });
-  res.write(sseFrame(JSON.stringify(renderBoardContent(hub.getState(), { nav }))));
+  res.write(sseFrame(JSON.stringify(renderStandingsContent(hub.getState(), { nav, metric }))));
   const unsubscribe = hub.subscribe((state) => {
-    res.write(sseFrame(JSON.stringify(renderBoardContent(state, { nav }))));
+    res.write(sseFrame(JSON.stringify(renderStandingsContent(state, { nav, metric }))));
   });
   req.on("close", unsubscribe);
 }
 
-function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
+function pageHtml(hub: ObservatoryHub, nav: NavContext, metric: LeaderMetric): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -699,11 +705,12 @@ function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
-${renderDashboardBody(hub.getState(), { nav })}
+${renderStandingsBody(hub.getState(), { nav, metric })}
 <script>
   (function () {
-    var key = new URLSearchParams(location.search).get("key");
-    var url = "/events" + (key ? "?key=" + encodeURIComponent(key) : "");
+    // Forward the whole query string (not just "key") so /events sees ?by= too — the metric
+    // picker's selection survives a live push instead of reverting to the default on refresh.
+    var url = "/events" + location.search;
     var source = new EventSource(url);
     source.onmessage = function (e) {
       var root = document.getElementById("root");

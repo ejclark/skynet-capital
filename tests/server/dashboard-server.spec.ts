@@ -24,6 +24,30 @@ async function withServer(
   }
 }
 
+/** Reads `count` SSE `data:` frames off a streaming `/events` response, JSON-decoded. */
+async function readSseFrames(res: Response, count: number): Promise<string[]> {
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("no readable body");
+  const decoder = new TextDecoder();
+  let buf = "";
+  const frames: string[] = [];
+  while (frames.length < count) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx = buf.indexOf("\n\n");
+    while (idx !== -1) {
+      const raw = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      const line = raw.split("\n").find((l) => l.startsWith("data: "));
+      if (line) frames.push(JSON.parse(line.slice("data: ".length)));
+      idx = buf.indexOf("\n\n");
+    }
+  }
+  await reader.cancel();
+  return frames;
+}
+
 describe("dashboard-server OAuth gate", () => {
   const SECRET = "sess";
   const auth = resolveAuth({
@@ -74,6 +98,55 @@ describe("dashboard-server OAuth gate", () => {
         expect(await home.text()).toContain("Sign out");
       },
     );
+  });
+});
+
+describe("dashboard-server — Standings fold (2026-08-25)", () => {
+  it("redirects the old /leaderboard route to Standings, carrying ?by= forward", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const bare = await fetch(`${base}/leaderboard`, { redirect: "manual" });
+      expect(bare.status).toBe(302);
+      expect(bare.headers.get("location")).toBe("/");
+
+      const withMetric = await fetch(`${base}/leaderboard?by=return`, { redirect: "manual" });
+      expect(withMetric.status).toBe(302);
+      expect(withMetric.headers.get("location")).toBe("/?by=return");
+    });
+  });
+
+  it("redirects the old /bots-vs-humans route to Standings", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const res = await fetch(`${base}/bots-vs-humans`, { redirect: "manual" });
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe("/");
+    });
+  });
+
+  it("threads the connecting request's ?by= into every live SSE push, not just the first frame", async () => {
+    // The SSE-threading decision the plan called for explicitly: `nav` (and now `metric`) are
+    // fixed at connect time, so the client forwards the WHOLE query string to /events — a viewer
+    // who picked Return % must keep seeing it on every live push, never silently reset to Equity.
+    const hub = new ObservatoryHub(board());
+    await withServer({ hub }, async (base) => {
+      const res = await fetch(`${base}/events?by=return`);
+      expect(res.status).toBe(200);
+      const framesPromise = readSseFrames(res, 2);
+      hub.apply({
+        type: "participant_added",
+        at: "2026-08-25T00:00:00.000Z",
+        participant: {
+          id: "p1",
+          displayName: "Push Test",
+          kind: "human",
+          cash: 0,
+          equity: 1,
+          positions: [],
+        },
+      });
+      const [initial, pushed] = await framesPromise;
+      expect(initial).toContain('class="msel active" href="/?by=return"');
+      expect(pushed).toContain('class="msel active" href="/?by=return"');
+    });
   });
 });
 

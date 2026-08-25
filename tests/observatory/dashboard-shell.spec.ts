@@ -56,40 +56,30 @@ describe("renderShell", () => {
       expect(html).toContain("obs-drawer");
     });
 
-    it("always links the Board view and marks it active when active", () => {
+    it("always links the Standings view and marks it active when active", () => {
       const html = renderShell(baseNav({ active: "board" }), "<p>x</p>", GENERATED_AT);
 
       expect(html).toContain('<a class="dnav-link active" href="/" aria-current="page">');
-      expect(html).toContain("Board");
+      expect(html).toContain("Standings");
     });
 
-    it("marks a non-Board active view as active instead of Board", () => {
+    it("marks a non-Standings active view as active instead of Standings", () => {
       const html = renderShell(baseNav({ active: "learn" }), "<p>x</p>", GENERATED_AT);
 
       expect(html).toContain('<a class="dnav-link active" href="/learn" aria-current="page">');
-      // Board link is present but not marked active (no "active" class, no aria-current).
+      // Standings link is present but not marked active (no "active" class, no aria-current).
       expect(html).toContain('<a class="dnav-link" href="/">');
     });
 
-    it("omits leaderboard, bots, and compare links when the views are not yet enabled", () => {
+    it("omits the compare link when the view is not yet enabled", () => {
       const html = renderShell(baseNav(), "<p>x</p>", GENERATED_AT);
 
-      expect(html).not.toContain('href="/leaderboard"');
-      expect(html).not.toContain('href="/bots-vs-humans"');
       expect(html).not.toContain('href="/compare"');
     });
 
-    it("links leaderboard, bots, and compare when the corresponding flags are set", () => {
-      const html = renderShell(
-        baseNav({ hasLeaderboard: true, hasBots: true, hasCompare: true }),
-        "<p>x</p>",
-        GENERATED_AT,
-      );
+    it("links compare when the flag is set", () => {
+      const html = renderShell(baseNav({ hasCompare: true }), "<p>x</p>", GENERATED_AT);
 
-      expect(html).toContain('href="/leaderboard"');
-      expect(html).toContain("Leaderboard");
-      expect(html).toContain('href="/bots-vs-humans"');
-      expect(html).toContain("Bots vs Humans");
       expect(html).toContain('href="/compare"');
       expect(html).toContain("Compare");
     });

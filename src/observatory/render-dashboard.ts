@@ -1,7 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { COURSES, type Course, type Milestone, RANKS, totalPoints } from "../domain/curriculum.js";
 import { escapeHtml } from "../ui/escape-html.js";
-import { renderCohortsBody as renderCohortsBodyImpl } from "./bots-vs-humans-view.js";
 import { renderCompareBody as renderCompareBodyImpl } from "./compare-view.js";
 import type { DashboardData } from "./dashboard-data.js";
 import {
@@ -14,12 +13,7 @@ import { renderEmpireSkyline } from "./empire-skyline.js";
 import { equityChange, equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-store.js";
 import {
-  type LeaderMetric,
-  renderLeaderboardBody as renderLeaderboardBodyImpl,
-} from "./leaderboard-view.js";
-import {
   activityFeed,
-  participantCard,
   participantInvested,
   participantUnrealized,
   positionsTable,
@@ -35,67 +29,17 @@ import {
   tile,
   tzAbbrev,
 } from "./render-atoms.js";
-import { botLandmarkProminence } from "./standings.js";
 
 /**
- * Renders a `DashboardData` into a self-contained observatory dashboard.
- *
- * `renderDashboardBody` returns page content (a `<style>` block plus markup) suitable for
- * publishing directly as a Claude Artifact (which supplies the document skeleton).
- * `renderDashboardDocument` wraps that in a full HTML document for standalone files.
- *
- * Pure: same data in, same HTML out — so it's unit-testable and safe to re-run on a
- * schedule to refresh a published dashboard.
+ * The INDIVIDUAL desk, the Academy, and Compare — what's left of this module after Board +
+ * Leaderboard + Bots vs Humans moved to `standings-view.ts` (the Aug 2026 IA consolidation).
+ * Pure: same data in, same HTML out — so it's unit-testable and safe to re-run on a schedule.
  */
-
-function summaryStrip(data: DashboardData): string {
-  const live = data.participants.filter((p) => !p.error);
-  const totalEquity = live.reduce((s, p) => s + p.equity, 0);
-  const totalCash = live.reduce((s, p) => s + p.cash, 0);
-  const totalInvested = live.reduce((s, p) => s + participantInvested(p), 0);
-  const totalPl = live.reduce((s, p) => s + participantUnrealized(p), 0);
-  const bots = data.participants.filter((p) => p.kind === "bot").length;
-  const humans = data.participants.filter((p) => p.kind === "human").length;
-
-  return `<section class="summary">
-      <div class="tile tile-lead">
-        <span class="tile-label">Total Equity</span>
-        <span class="tile-num num">${formatCurrency(totalEquity)}</span>
-      </div>
-      <div class="tile">
-        <span class="tile-label">Cash</span>
-        <span class="tile-num num">${formatCurrency(totalCash)}</span>
-      </div>
-      <div class="tile">
-        <span class="tile-label">Invested</span>
-        <span class="tile-num num">${formatCurrency(totalInvested)}</span>
-      </div>
-      <div class="tile">
-        <span class="tile-label">Unrealized P/L</span>
-        <span class="tile-num num ${plClass(totalPl)}">${formatSigned(totalPl)}</span>
-      </div>
-      <div class="tile tile-count">
-        <span class="tile-label">Participants</span>
-        <span class="tile-num num">${bots}<span class="unit"> bots</span> · ${humans}<span class="unit"> human${humans === 1 ? "" : "s"}</span></span>
-      </div>
-    </section>`;
-}
 
 // NavView / NavContext / DashboardViewOptions / renderShell now live in `dashboard-shell.ts`, the
 // shared push-drawer app shell every view delegates to. Re-exported here so
 // `dashboard-server.ts`/tests importing them from this module keep working unchanged.
 export type { DashboardViewOptions, NavContext, NavView };
-
-/** Signed-in viewer first (marked YOU), then everyone else in the given order. */
-function orderParticipants(
-  participants: ParticipantSnapshot[],
-  currentId?: string,
-): ParticipantSnapshot[] {
-  if (!currentId) return participants;
-  const self = participants.filter((p) => p.id === currentId);
-  const rest = participants.filter((p) => p.id !== currentId);
-  return [...self, ...rest];
-}
 
 /**
  * The INDIVIDUAL view — one participant's own performance. Hero equity + a stat row, then the
@@ -317,25 +261,6 @@ function historyPanel(snapshot: ParticipantSnapshot, history?: readonly EquitySa
     </section>`;
 }
 
-export type { LeaderMetric };
-
-/** Thin delegate to the LEADERBOARD view module — kept here so the public API is unchanged. */
-function delegateLeaderboardBody(
-  data: DashboardData,
-  options: DashboardViewOptions & { metric?: LeaderMetric } = {},
-): string {
-  return renderLeaderboardBodyImpl(data, options);
-}
-
-export { delegateLeaderboardBody as renderLeaderboardBody };
-
-/** Thin delegate to the BOTS VS HUMANS view module — kept here so the public API is unchanged. */
-function delegateCohortsBody(data: DashboardData, options: DashboardViewOptions = {}): string {
-  return renderCohortsBodyImpl(data, options);
-}
-
-export { delegateCohortsBody as renderCohortsBody };
-
 /** Milestones that are literally a trade map straight to the ticket, pre-set to the play. */
 const MILESTONE_TICKET: Record<string, string> = {
   "buy-first-stock": "/trade?play=101",
@@ -478,66 +403,3 @@ function delegateCompareBody(
 }
 
 export { delegateCompareBody as renderCompareBody };
-
-/**
- * The BOARD content (summary strip + participant grid + footer) — the piece the SSE stream swaps
- * into #root on every hub update. Kept separate from the shell so live refresh never re-renders the
- * drawer or resets its open/closed state.
- */
-export function renderBoardContent(
-  data: DashboardData,
-  options: DashboardViewOptions = {},
-): string {
-  const currentId = options.nav?.currentId;
-  const ordered = orderParticipants([...data.participants], currentId);
-  const prominence = botLandmarkProminence(data.participants);
-  const cards = ordered
-    .map((p) => {
-      const prom = prominence.get(p.id);
-      return participantCard(p, {
-        isSelf: Boolean(currentId) && p.id === currentId,
-        link: Boolean(options.nav),
-        ...(prom !== undefined ? { prominence: prom } : {}),
-      });
-    })
-    .join("\n    ");
-  // OBSERVER MODE — the funnel's front door (stage 1 → 2): signed in but no linked account means you
-  // can watch the whole league yet hold no tower. Say so, warmly, and pave the founding path.
-  const observer =
-    options.nav && !currentId
-      ? `<section class="observer-hero">
-    <p class="obs-eyebrow">◈ OBSERVER MODE</p>
-    <h2 class="obs-title">You're watching the league — your empire awaits its founding.</h2>
-    <p class="obs-sub">Every tower below belongs to a member or their bot. Connect a free Alpaca paper account to take the field: your own city on the board, your plays, your seat in the race.</p>
-    <div class="obs-ctas"><a class="obs-cta obs-cta-primary" href="/welcome">Get set up — the guided path</a><a class="obs-cta" href="/add">I have my keys — found my empire</a></div>
-  </section>
-  `
-      : "";
-  return `${observer}${summaryStrip(data)}
-  <section class="grid">
-    ${cards}
-  </section>
-  <footer class="obs-foot">Read-only observatory · figures reflect the last account read · unrealized P/L is mark-to-market vs. average cost.</footer>`;
-}
-
-export function renderDashboardBody(
-  data: DashboardData,
-  options: DashboardViewOptions = {},
-): string {
-  return renderShell(options.nav, renderBoardContent(data, options), data.generatedAt);
-}
-
-export function renderDashboardDocument(data: DashboardData): string {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Skynet Capital — Observatory</title>
-<style>*{margin:0;padding:0}body{margin:0}</style>
-</head>
-<body>
-${renderDashboardBody(data)}
-</body>
-</html>`;
-}
