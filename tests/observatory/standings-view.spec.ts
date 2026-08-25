@@ -524,6 +524,16 @@ describe("observer mode (funnel front door)", () => {
     expect(html).toContain('href="/add"');
   });
 
+  // 2026-08-25: the old copy read as "you have no account" to a viewer whose account WAS on the
+  // board, and walked them into /add's duplicate refusal and a key regeneration that revoked
+  // their working pair. The hero must name the real state and both exits.
+  it("names the unlinked state and the already-on-the-board exit, not just the new-member one", () => {
+    const html = renderStandingsBody(data([]), { nav });
+    expect(html).toContain("isn't linked to any account");
+    expect(html).toContain("Already see your account below?");
+    expect(html).toContain('href="/rotate"');
+  });
+
   it("hides the observer hero once the viewer has a linked account", () => {
     const html = renderStandingsBody(data([]), { nav: { ...nav, currentId: "human-eric" } });
     expect(html).not.toContain("OBSERVER MODE");

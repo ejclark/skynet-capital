@@ -376,14 +376,19 @@ export function renderStandingsContent(
     ? data.participants.find((p) => p.id === options.bId && !p.error)
     : undefined;
   // OBSERVER MODE — the funnel's front door (stage 1 → 2): signed in but no linked account means
-  // you can watch the whole league yet hold no tower. Say so, warmly, and pave the founding path.
+  // you can watch the whole league yet hold no tower. The state is "this SIGN-IN isn't linked to
+  // an account", which has TWO exits — brand new, or an account already on the board that predates
+  // linking — and the copy must name both. The old "your empire awaits its founding" read as "you
+  // have no account" to someone whose account was right there on the board, and walked them into
+  // /add's duplicate refusal and a key regeneration that revoked their working env key
+  // (2026-08-25). Vague here isn't warm, it's a trap.
   const observer =
     options.nav && !currentId
       ? `<section class="observer-hero">
     <p class="obs-eyebrow">◈ OBSERVER MODE</p>
-    <h2 class="obs-title">You're watching the league — your empire awaits its founding.</h2>
-    <p class="obs-sub">Every account below belongs to a member or their bot. Connect a free Alpaca paper account to take the field: your own city on the board, your plays, your seat in the race.</p>
-    <div class="obs-ctas"><a class="obs-cta obs-cta-primary" href="/welcome">Get set up — the guided path</a><a class="obs-cta" href="/add">I have my keys — found my empire</a></div>
+    <h2 class="obs-title">This sign-in isn't linked to any account on the board.</h2>
+    <p class="obs-sub">Watching works; trading and "your" views don't, until a link exists. <b>New here?</b> Connect a free Alpaca paper account to take the field — your own city on the board, your seat in the race. <b>Already see your account below?</b> It's on the board and syncing, but nothing ties it to this sign-in — don't re-add it, and don't regenerate keys to try (regenerating revokes the working pair; if you already did, <a href="/rotate">rotate the new key in</a>). An owner links your sign-in to the account — no keys involved.</p>
+    <div class="obs-ctas"><a class="obs-cta obs-cta-primary" href="/welcome">Get set up — the guided path</a><a class="obs-cta" href="/add">I'm new — I have my keys</a></div>
   </section>
   `
       : "";
