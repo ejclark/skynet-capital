@@ -399,7 +399,8 @@ async function serveAuthorizedRoute(
  * The Milestones page (`/learn`) — the one info view that knows WHO is looking: the session's
  * identity resolves exactly as `/trade`'s does, and the viewer's derived progression (earned
  * milestones, points, rank) rides into the render. No identity, or no progression service wired,
- * degrades to the browsable journey at zero — honestly, never a fabricated state.
+ * degrades to the browsable journey at zero — honestly, never a fabricated state. The session email
+ * rides along so the community track resolves (#567); the wiring layer owns the hash it keys on.
  */
 async function serveLearnRoute(
   res: ServerResponse,
@@ -408,7 +409,8 @@ async function serveLearnRoute(
   navFor: (active: NavView) => NavContext,
 ): Promise<void> {
   const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
-  const progress = id && config.progression ? await config.progression.view(id) : undefined;
+  const progress =
+    id && config.progression ? await config.progression.view(id, session?.email) : undefined;
   const body = renderAcademyBody({ nav: navFor("learn"), ...(progress ? { progress } : {}) });
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   res.end(shellDocument("Milestones — Skynet Capital", body));

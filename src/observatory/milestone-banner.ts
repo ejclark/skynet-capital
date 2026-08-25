@@ -1,3 +1,5 @@
+import type { EarnedContribution } from "../domain/community.js";
+import { milestoneById } from "../domain/curriculum.js";
 import { type EarnedMilestone, ladderNeighbor, milestoneForCode } from "../domain/progression.js";
 import { escapeHtml } from "../ui/escape-html.js";
 
@@ -10,6 +12,10 @@ import { escapeHtml } from "../ui/escape-html.js";
  *
  * Styled on the ACCENT teal, deliberately never the P/L green — an unlock is an achievement,
  * not a market outcome, and green carries market meaning everywhere else on the desk.
+ *
+ * Carries two kinds of earn (#567): a ladder rung, proven by a fill, and a community-track
+ * milestone, proven by a filed issue. Same panel, same Claim, different sentence — the copy never
+ * says a filing was "filled".
  */
 
 const BANNER_STYLE = `<style>
@@ -22,27 +28,39 @@ const BANNER_STYLE = `<style>
   .unlock-line b{ color:var(--accent); }
 </style>`;
 
+/** One ladder earn's line — the rung it completes, and the rung it opens. */
+function ladderLine(m: EarnedMilestone): string {
+  const name = milestoneForCode(m.code)?.title ?? `course ${m.code}`;
+  const next = ladderNeighbor(m.code, 1);
+  const opened = next
+    ? `Course <b>${next.code} — ${escapeHtml(next.name)}</b> is now open.`
+    : `That was the top rung — <b>the whole ladder is yours</b>.`;
+  return `<span class="unlock-line">Course <b>${m.code}</b> complete — ${escapeHtml(name)}, filled ✓ · ${opened}</span>`;
+}
+
 /**
- * One celebratory panel for every unclaimed earn, with a single Claim. Empty list = empty string.
- * `back` is where the claim returns to — the caller passes its own route.
+ * One community earn's line (#567). Deliberately says FILED, never "filled", and cites the issue
+ * number rather than an order id — the same fanfare, an honest account of what actually happened.
+ */
+function communityLine(c: EarnedContribution): string {
+  const name = milestoneById(c.milestoneId)?.title ?? "Community milestone";
+  return `<span class="unlock-line"><b>The league</b> — ${escapeHtml(name)}, filed ✓ · issue <b>#${c.issueNumber}</b> is on the board. Thanks — that's how this desk gets better.</span>`;
+}
+
+/**
+ * One celebratory panel for every unclaimed earn, with a single Claim. Nothing to claim = empty
+ * string. `back` is where the claim returns to — the caller passes its own route.
  */
 export function renderMilestoneBanner(
   celebrating: readonly EarnedMilestone[],
-  opts: { readonly back: string },
+  opts: { readonly back: string; readonly contributions?: readonly EarnedContribution[] },
 ): string {
-  if (celebrating.length === 0) return "";
-  const lines = celebrating
-    .map((m) => {
-      const milestone = milestoneForCode(m.code);
-      const name = milestone?.title ?? `course ${m.code}`;
-      const next = ladderNeighbor(m.code, 1);
-      const opened = next
-        ? `Course <b>${next.code} — ${escapeHtml(next.name)}</b> is now open.`
-        : `That was the top rung — <b>the whole ladder is yours</b>.`;
-      return `<span class="unlock-line">Course <b>${m.code}</b> complete — ${escapeHtml(name)}, filled ✓ · ${opened}</span>`;
-    })
-    .join("\n      ");
-  const ids = celebrating.map((m) => m.milestoneId).join(",");
+  const contributions = opts.contributions ?? [];
+  if (celebrating.length === 0 && contributions.length === 0) return "";
+  const lines = [...celebrating.map(ladderLine), ...contributions.map(communityLine)].join(
+    "\n      ",
+  );
+  const ids = [...celebrating, ...contributions].map((m) => m.milestoneId).join(",");
   return `${BANNER_STYLE}<section class="unlock-banner" aria-live="polite">
     <div class="unlock-rows">
       <span class="unlock-eyebrow">🎉 Milestone unlocked</span>

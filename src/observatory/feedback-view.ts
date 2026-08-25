@@ -48,6 +48,20 @@ function formField(inner: string): string {
   return `<div class="fdbk-field">${inner}</div>`;
 }
 
+/**
+ * The member's own filing count (#567) — read straight off the durable log, never a second counter
+ * that could drift from it. Doubles as the pointer to the milestone the first filing earns, so the
+ * reward is visible from the place the behavior happens.
+ */
+function renderFeedbackCount(count: number): string {
+  if (count === 0) return "";
+  const noun = count === 1 ? "piece of feedback" : "pieces of feedback";
+  return `<div class="fdbk-count">
+    <span class="fdbk-count-n">${count}</span>
+    <span class="fdbk-count-l">${noun} filed — thank you. <a href="/learn">See it on your Milestones →</a></span>
+  </div>`;
+}
+
 function renderRecentFeedback(recent: readonly FeedbackLogEntry[]): string {
   if (recent.length === 0) return "";
   const rows = [...recent]
@@ -62,6 +76,7 @@ function renderRecentFeedback(recent: readonly FeedbackLogEntry[]): string {
     .join("\n");
   return `<div class="fdbk-recent">
     <h2 class="fdbk-recent-h">Your recent feedback</h2>
+    ${renderFeedbackCount(recent.length)}
     <ul class="fdbk-recent-list">${rows}</ul>
   </div>`;
 }
@@ -148,6 +163,7 @@ export function renderFeedbackResultBody(options: FeedbackResultViewOptions): st
   const inner = result.ok
     ? `<div class="res-icon">🎉</div><h1>Thanks — got it!</h1>
 <p class="view-sub">Filed as <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener"><b>#${result.number}</b></a> — follow its progress there. Really appreciate you.</p>
+<p class="view-sub">Filing feedback earns a League milestone, proven by that issue number — it's waiting on <a href="/learn">Milestones</a>.</p>
 <p class="fdbk-backrow"><a href="/feedback">Send another</a> · <a href="/">← Back to the board</a></p>`
     : `<h1>Hmm, that didn't send</h1>
 <p class="view-sub">${escapeHtml(result.error)}</p>
@@ -226,6 +242,10 @@ const FDBK_STYLE = `<style>
   .fdbk-recent-row{ display:flex; align-items:baseline; gap:9px; padding:9px 12px; font-size:13.5px; background:var(--surface); border:1px solid var(--border); border-radius:9px; }
   .fdbk-recent-row a{ color:var(--text); font-weight:600; }
   .fdbk-recent-meta{ margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap; }
+  .fdbk-count{ display:flex; align-items:center; gap:11px; padding:11px 14px; border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:10px; background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 10%,var(--surface)), var(--surface)); }
+  .fdbk-count-n{ font-family:var(--mono); font-size:22px; font-weight:700; line-height:1; color:var(--accent); }
+  .fdbk-count-l{ font-size:13px; color:var(--muted); }
+  .fdbk-count-l a{ color:var(--accent); font-weight:600; }
   .fdbk-res{ max-width:var(--col-narrow); }
   .fdbk-res .res-icon{ font-size:34px; margin-bottom:6px; }
   .fdbk-res h1{ margin:0 0 10px; font-size:24px; font-weight:700; }

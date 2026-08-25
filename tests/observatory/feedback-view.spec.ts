@@ -156,6 +156,42 @@ describe("feedback form — your recent feedback (#429)", () => {
   });
 });
 
+describe("feedback form — the feedback-given counter (#567)", () => {
+  const entry = (n: number) => ({
+    uuid: `u-${n}`,
+    opaqueMemberId: "m",
+    issueNumber: n,
+    url: `https://github.com/x/y/issues/${n}`,
+    kind: "bug" as const,
+    title: `Bug ${n}`,
+    filedAt: "2026-08-22T00:00:00.000Z",
+  });
+  const render = (recent: ReturnType<typeof entry>[]) =>
+    renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: false, recent });
+
+  it("counts the member's filings off the same durable log the list reads — no second counter", () => {
+    const html = render([entry(7), entry(9), entry(11)]);
+    expect(html).toContain('class="fdbk-count-n">3<');
+    expect(html).toContain("pieces of feedback filed");
+  });
+
+  it("reads as one piece, singular, for a first-time filer", () => {
+    const html = render([entry(7)]);
+    expect(html).toContain('class="fdbk-count-n">1<');
+    expect(html).toContain("piece of feedback filed");
+    expect(html).not.toContain("pieces of feedback filed");
+  });
+
+  it("points at the milestone the filing earned, so the reward is visible where the act happens", () => {
+    expect(render([entry(7)])).toContain('href="/learn"');
+  });
+
+  it("shows no counter at zero — an empty stat is noise, not encouragement", () => {
+    expect(render([])).not.toContain('class="fdbk-count-n"');
+    expect(render([])).not.toContain("feedback filed");
+  });
+});
+
 describe("feedback form — the area select", () => {
   it("renders every offered area from the one shared list, so the coach and the form cannot drift", () => {
     const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: true });

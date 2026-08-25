@@ -39,4 +39,30 @@ describe("the unlock banner — fanfare for what went right", () => {
     expect(html).toContain("the whole ladder is yours");
     expect(html).not.toContain("is now open");
   });
+
+  it("celebrates a community earn on its own terms — FILED, with the issue number as proof", () => {
+    const html = renderMilestoneBanner([], {
+      back: "/learn",
+      contributions: [
+        { milestoneId: "first-feedback", issueNumber: 567, at: "2026-08-25T14:00:00.000Z" },
+      ],
+    });
+    expect(html).toContain("Milestone unlocked");
+    expect(html).toContain("File your first piece of feedback");
+    expect(html).toContain("filed ✓");
+    expect(html).toContain("<b>#567</b>");
+    // it is not a trade, so it must never claim a course number or a fill
+    expect(html).not.toContain("complete —");
+    expect(html).not.toContain("filled ✓");
+  });
+
+  it("claims both tracks through the one form, so a member never claims twice", () => {
+    const html = renderMilestoneBanner([earn({})], {
+      back: "/learn",
+      contributions: [
+        { milestoneId: "first-feedback", issueNumber: 567, at: "2026-08-25T14:00:00.000Z" },
+      ],
+    });
+    expect(html).toContain('name="ack" value="first-buy,first-feedback"');
+  });
 });

@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Filing } from "../../src/domain/community.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import {
@@ -86,6 +87,41 @@ describe("progression service — the ledgers ARE the progress", () => {
   });
 });
 
+describe("the community track — a third ledger, folded the same way", () => {
+  const withFilings = (filings: readonly Filing[]) =>
+    createProgressionService({
+      readFills: () => Promise.resolve([]),
+      readTags: () => Promise.resolve([]),
+      readFilings: () => Promise.resolve(filings),
+    });
+
+  it("earns the feedback milestone and its points from a real filing", async () => {
+    const view = await withFilings([
+      { issueNumber: 567, filedAt: "2026-08-25T14:00:00.000Z" },
+    ]).view("ann", "ann@example.com");
+    expect(view.contributions.map((c) => c.milestoneId)).toEqual(["first-feedback"]);
+    expect(view.points).toBe(15);
+  });
+
+  it("never fabricates the track when no member email resolves — the reader stays honest", async () => {
+    const view = await withFilings([
+      { issueNumber: 567, filedAt: "2026-08-25T14:00:00.000Z" },
+    ]).view("ann");
+    expect(view.contributions).toEqual([]);
+    expect(view.points).toBe(0);
+  });
+
+  it("leaves the trade ladder exactly where it was — a filing unlocks no rung", async () => {
+    const view = await withFilings([
+      { issueNumber: 567, filedAt: "2026-08-25T14:00:00.000Z" },
+    ]).view("ann", "ann@example.com");
+    expect(view.earned).toEqual([]);
+    expect([...view.unlocked]).toEqual(["101"]);
+    expect(view.nextUp).toBe("101");
+    expect(view.unlockedLevels.has(200)).toBe(false);
+  });
+});
+
 describe("progression service + store — seeding, the toggle, and one-time celebrations", () => {
   let dir: string;
 
@@ -148,6 +184,25 @@ describe("progression service + store — seeding, the toggle, and one-time cele
     await svc.view("ann");
     await svc.acknowledge("ann", ["not-a-milestone", "<script>", "first-buy"]);
     expect(store.get("ann")?.acknowledged).toEqual(["first-buy"]);
+  });
+
+  it("celebrates a community earn once, and Claim banks it through the same path", async () => {
+    const { svc } = stored([], "2026-08-25T16:00:00.000Z");
+    await svc.view("ann"); // seed first — nothing filed yet
+
+    const svc2 = createProgressionService({
+      readFills: () => Promise.resolve([]),
+      readTags: () => Promise.resolve([]),
+      readFilings: () => Promise.resolve([{ issueNumber: 567, filedAt: "2026-08-26T14:00:00Z" }]),
+      store: new ProgressionStore(join(dir, "progression.json")),
+      now: () => new Date("2026-08-26T14:01:00.000Z"),
+    });
+    const view = await svc2.view("ann", "ann@example.com");
+    expect(view.celebratingContributions.map((c) => c.milestoneId)).toEqual(["first-feedback"]);
+    expect(view.celebrating).toEqual([]); // the ladder banner stays silent — no fill happened
+
+    await svc2.acknowledge("ann", ["first-feedback"]);
+    expect((await svc2.view("ann", "ann@example.com")).celebratingContributions).toEqual([]);
   });
 
   it("persists the wheels toggle across service instances", async () => {

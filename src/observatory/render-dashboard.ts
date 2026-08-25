@@ -1,5 +1,7 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import type { EarnedContribution } from "../domain/community.js";
 import {
+  ALL_COURSES,
   COURSES,
   type Course,
   type CourseLevel,
@@ -379,19 +381,33 @@ export interface AcademyProgress {
   readonly unlockedLevels: ReadonlySet<CourseLevel>;
   /** Fresh earns awaiting their one-time celebration (`milestone-banner.ts`). */
   readonly celebrating?: readonly EarnedMilestone[];
+  /** Community-track earns, proven by a filed issue rather than a fill (#567). */
+  readonly contributions?: readonly EarnedContribution[];
+  readonly celebratingContributions?: readonly EarnedContribution[];
 }
 
-/** One milestone row — earned by a real filled order (the order id is the proof), never a checkbox. */
-function milestoneRow(m: Milestone, earned: EarnedMilestone | undefined): string {
-  // A milestone that IS a trade maps straight to the ticket, pre-set to its play.
-  const ticket = m.tradeType ? `/trade?play=${m.tradeType}` : undefined;
-  const proof = earned
-    ? `<span class="ms-proof">filled ${escapeHtml(earned.at.slice(0, 10))} · order ${escapeHtml(earned.orderId)}</span>`
-    : "";
+/**
+ * One earn as a ROW reads it: when, and the one line of server-side proof. Both tracks collapse to
+ * this here — a fill's order id and a filing's issue number are the same kind of claim, and the
+ * row renderer stays one function rather than two that drift.
+ */
+interface EarnedProof {
+  readonly at: string;
+  readonly proof: string;
+}
+
+/** One milestone row — earned by real server-side evidence (order id / issue #), never a checkbox. */
+function milestoneRow(m: Milestone, earned: EarnedProof | undefined): string {
+  // A milestone that IS a trade maps straight to the ticket, pre-set to its play; anything else
+  // names its own earning place (`earnAt`), so no row is a dead end.
+  const go = m.tradeType
+    ? { href: `/trade?play=${m.tradeType}`, label: "open the ticket →" }
+    : m.earnAt;
+  const proof = earned ? `<span class="ms-proof">${escapeHtml(earned.proof)}</span>` : "";
   return `<div class="ms${earned ? " done" : ""}" data-ms="${m.id}">
         <span class="ms-mark" aria-hidden="true">✓</span>
         <span class="ms-body"><span class="ms-title">${escapeHtml(m.title)}</span><span class="ms-detail">${escapeHtml(m.detail)}</span>${proof}</span>
-        ${!earned && ticket ? `<a class="ms-go" href="${ticket}">open the ticket →</a>` : ""}
+        ${!earned && go ? `<a class="ms-go" href="${escapeHtml(go.href)}">${escapeHtml(go.label)}</a>` : ""}
         <span class="ms-pts">+${m.points}</span>
       </div>`;
 }
@@ -400,18 +416,18 @@ function milestoneRow(m: Milestone, earned: EarnedMilestone | undefined): string
 function courseCard(
   course: Course,
   locked: boolean,
-  earnedById: ReadonlyMap<string, EarnedMilestone>,
+  earnedById: ReadonlyMap<string, EarnedProof>,
 ): string {
   const done = course.milestones.filter((m) => earnedById.has(m.id)).length;
   const pct = course.milestones.length ? Math.round((done / course.milestones.length) * 100) : 0;
   const open = !locked && done < course.milestones.length;
-  return `<details class="course${locked ? " locked" : ""}" data-course="${course.level}"${open ? " open" : ""}>
+  return `<details class="course${locked ? " locked" : ""}" data-course="${course.id}"${open ? " open" : ""}>
       <summary>
         <span class="course-badge">${course.level}</span>
         <span class="course-h">
           <span class="course-title">${escapeHtml(course.title)}</span>
           <span class="course-sub">${escapeHtml(course.subtitle)}</span>
-          <span class="course-prog"><span class="course-bar"><i data-bar="${course.level}" style="width:${pct}%"></i></span><span class="course-count" data-count="${course.level}">${done} / ${course.milestones.length}</span></span>
+          <span class="course-prog"><span class="course-bar"><i data-bar="${course.id}" style="width:${pct}%"></i></span><span class="course-count" data-count="${course.id}">${done} / ${course.milestones.length}</span></span>
         </span>
         <span class="course-lock" data-lock>${locked ? "🔒 Finish the level below" : ""}</span>
         <span class="lvl-chev" aria-hidden="true">›</span>
@@ -431,17 +447,40 @@ function courseCard(
  * `src/domain/curriculum.ts` is the content's single source of truth; the viewer's derived
  * progression (`domain/progression.ts` over the fill + audit ledgers) arrives as `progress` —
  * absent when the session resolves to no account, which renders a browsable journey at zero.
+ *
+ * The COMMUNITY card (#567) stacks in beside level 100 and never locks: its milestone is earned by
+ * a filed issue rather than a fill, so it sits outside the ladder's chain and cannot gate options.
+ * Its row still carries hard proof — the issue number — and says "filed", never "filled".
  */
 export function renderAcademyBody(
   options: DashboardViewOptions & { progress?: AcademyProgress } = {},
 ): string {
   const progress = options.progress;
-  const earnedById = new Map((progress?.earned ?? []).map((m) => [m.milestoneId, m]));
+  // Both tracks collapse to the same row-level proof line — "filled … order …" for a fill,
+  // "filed … issue #…" for a filing. Never the same verb: only one of them was a trade.
+  const earnedById = new Map<string, EarnedProof>([
+    ...(progress?.earned ?? []).map(
+      (m) =>
+        [
+          m.milestoneId,
+          { at: m.at, proof: `filled ${m.at.slice(0, 10)} · order ${m.orderId}` },
+        ] as const,
+    ),
+    ...(progress?.contributions ?? []).map(
+      (c) =>
+        [
+          c.milestoneId,
+          { at: c.at, proof: `filed ${c.at.slice(0, 10)} · issue #${c.issueNumber}` },
+        ] as const,
+    ),
+  ]);
   const levels = progress?.unlockedLevels ?? new Set<CourseLevel>([COURSES[0]?.level ?? 100]);
   const points = progress?.points ?? 0;
   const rankTitle = progress?.rank.title ?? "Observer";
   const pct = totalPoints() ? Math.round((points / totalPoints()) * 100) : 0;
-  const cards = COURSES.map((c) => courseCard(c, !levels.has(c.level), earnedById)).join("\n    ");
+  const cards = ALL_COURSES.map((c) => courseCard(c, !levels.has(c.level), earnedById)).join(
+    "\n    ",
+  );
   const linkNote = progress
     ? ""
     : `<p class="view-sub">Milestones light up from orders you fill on your own desk — this session isn't linked to an account yet, so the journey shows from the start.</p>`;
@@ -453,7 +492,10 @@ export function renderAcademyBody(
         ${linkNote}
       </div>
     </div>
-    ${renderMilestoneBanner(progress?.celebrating ?? [], { back: "/learn" })}
+    ${renderMilestoneBanner(progress?.celebrating ?? [], {
+      back: "/learn",
+      contributions: progress?.celebratingContributions ?? [],
+    })}
     <div class="hud">
       <div class="hud-stat"><span class="hud-k">Rank</span><span class="hud-v" data-rank>${escapeHtml(rankTitle)}</span></div>
       <div class="hud-stat"><span class="hud-k">Points</span><span class="hud-v" data-points>${points}</span><span class="hud-of" data-total>/ ${totalPoints()}</span></div>
@@ -474,6 +516,6 @@ export function renderAcademyBody(
     </div>
     <p class="more-soon">◆ More strategies — spreads, condors, and advanced plays — unlock as you climb. We keep the risky ones out of reach until you're ready.</p>
   </section>
-  <footer class="obs-foot">Educational · paper trading only · nothing here is financial advice. Milestones are earned the moment a real order fills — nothing here is self-marked.</footer>`;
+  <footer class="obs-foot">Educational · paper trading only · nothing here is financial advice. Milestones are earned by real evidence — a filled order, or a feedback note that became a tracked issue. Nothing here is self-marked.</footer>`;
   return renderShell(options.nav, content, new Date().toISOString());
 }

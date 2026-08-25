@@ -36,6 +36,8 @@ const progression = (over: Partial<ParticipantProgression> = {}): ParticipantPro
   rank: { title: "Observer", atPoints: 0 },
   unlockedLevels: new Set([100]),
   celebrating: [],
+  contributions: [],
+  celebratingContributions: [],
   ...over,
 });
 

@@ -20,7 +20,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
 import { JsonlKeyedStore } from "../storage/jsonl-store.js";
-import type { FeedbackKind } from "./feedback-issue.js";
+import { type FeedbackKind, opaqueMemberId } from "./feedback-issue.js";
 
 export interface FeedbackLogEntry {
   /** This log entry's own identity — distinct from the issue-body marker, which stays
@@ -81,6 +81,20 @@ export class JsonlFeedbackLogStore implements FeedbackLogStore {
 /** Build the store from the environment (`SKYNET_FEEDBACK_LOG_DIR`, default `data/feedback-log`). */
 export function createFeedbackLogStore(env: NodeJS.ProcessEnv): FeedbackLogStore {
   return new JsonlFeedbackLogStore(env.SKYNET_FEEDBACK_LOG_DIR ?? "data/feedback-log");
+}
+
+/**
+ * One member's filings from their signed-in EMAIL — the community-track reader (#567). The
+ * email→`opaqueMemberId` hash lives here, beside the log it keys, so neither the progression
+ * service nor the `/learn` route ever learns this store's key shape (they pass an email and get
+ * filings back). Same entries the member's own `/feedback` list reads: one durable record, one
+ * count, nothing that can drift.
+ */
+export function filingsByEmail(
+  store: FeedbackLogStore,
+  email: string,
+): Promise<readonly FeedbackLogEntry[]> {
+  return store.list(opaqueMemberId(email));
 }
 
 /** One successful filing → one log entry. */

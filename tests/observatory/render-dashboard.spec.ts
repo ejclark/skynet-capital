@@ -22,12 +22,21 @@ describe("renderAcademyBody — the gamified journey", () => {
   });
 
   it("opens course 100 and locks the higher courses until each level below is complete", () => {
-    expect(html).toContain('data-course="100" open');
-    expect(html).toContain('data-course="200"');
-    expect(html).not.toContain('data-course="200" open');
-    expect(html).toContain('data-course="300"');
-    expect(html).not.toContain('data-course="300" open');
+    expect(html).toContain('data-course="stock-basics" open');
+    expect(html).toContain('data-course="the-wheel"');
+    expect(html).not.toContain('data-course="the-wheel" open');
+    expect(html).toContain('data-course="directional-longs"');
+    expect(html).not.toContain('data-course="directional-longs" open');
     expect(html).toContain("Finish the level below");
+  });
+
+  it("stacks the community track beside level 100 and never locks it — it gates no trade", () => {
+    expect(html).toContain('data-course="community" open');
+    expect(html.indexOf('data-course="community"')).toBeLessThan(
+      html.indexOf('data-course="the-wheel"'),
+    );
+    expect(html).toContain("File your first piece of feedback");
+    expect(html).toContain('href="/feedback">share feedback →');
   });
 
   it("keeps risky strategies out of reach with an explicit teaser", () => {
@@ -43,7 +52,7 @@ describe("renderAcademyBody — the gamified journey", () => {
     expect(html).not.toContain("checkbox");
     expect(html).not.toContain("skynet.academy.done");
     expect(html).toMatch(/\+\d+/); // a points value like +25
-    expect(html).toContain("nothing here is self-marked");
+    expect(html).toContain("Nothing here is self-marked");
   });
 
   it("renders an earned milestone with its fill date and order id as the proof", () => {
@@ -69,6 +78,27 @@ describe("renderAcademyBody — the gamified journey", () => {
     expect(withProgress).toContain("data-points>25<");
     // an earned milestone no longer needs its "open the ticket" nudge
     expect(withProgress.split('data-ms="first-buy"')[1]?.split("</div>")[0]).not.toContain("ms-go");
+  });
+
+  it("renders an earned community milestone with its FILED date and issue number as the proof", () => {
+    const withProgress = renderAcademyBody({
+      nav,
+      progress: {
+        earned: [],
+        points: 15,
+        rank: { title: "Observer", atPoints: 0 },
+        unlockedLevels: new Set([100 as const]),
+        contributions: [
+          { milestoneId: "first-feedback", issueNumber: 567, at: "2026-08-25T14:30:00.000Z" },
+        ],
+      },
+    });
+    expect(withProgress).toContain("filed 2026-08-25 · issue #567");
+    // never "filled" — a filing is not a trade, and the copy must not imply it was
+    expect(withProgress).not.toContain("filled 2026-08-25 · issue");
+    expect(withProgress.split('data-ms="first-feedback"')[1]?.split("</div>")[0]).not.toContain(
+      "ms-go",
+    );
   });
 });
 

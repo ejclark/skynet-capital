@@ -328,6 +328,8 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
         rank: { title: "Observer", atPoints: 0 },
         unlockedLevels: new Set<100 | 200 | 300>([100]),
         celebrating: [],
+        contributions: [],
+        celebratingContributions: [],
         ...over,
       }),
     setWheels: (id, on) => {

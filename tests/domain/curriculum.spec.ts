@@ -1,4 +1,5 @@
 import {
+  ALL_COURSES,
   COURSES,
   courseComplete,
   pointsFor,
@@ -41,9 +42,16 @@ describe("curriculum", () => {
   it("sums points and climbs ranks as milestones complete", () => {
     expect(pointsFor(new Set())).toBe(0);
     expect(rankFor(0).title).toBe("Observer");
-    const all = new Set(COURSES.flatMap((c) => c.milestones.map((m) => m.id)));
+    // The denominator spans every track, so the community milestone counts toward the HUD total.
+    const all = new Set(ALL_COURSES.flatMap((c) => c.milestones.map((m) => m.id)));
     expect(pointsFor(all)).toBe(totalPoints());
     expect(rankFor(totalPoints()).title).toBe("Strategist");
+  });
+
+  it("cannot promote a member past Observer on community points alone", () => {
+    const community = ALL_COURSES.find((c) => c.id === "community");
+    const feedbackOnly = new Set(community?.milestones.map((m) => m.id) ?? []);
+    expect(rankFor(pointsFor(feedbackOnly)).title).toBe("Observer");
   });
 
   it("aligns 1:1 with the desk's trade-type ladder — every milestone is a real trade", () => {

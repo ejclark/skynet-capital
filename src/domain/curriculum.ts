@@ -26,8 +26,10 @@ export interface Milestone {
   readonly detail: string;
   /** Points awarded when completed — the score that drives the game. */
   readonly points: number;
-  /** Trade-type code whose first FILLED order earns this milestone (every v1 milestone has one). */
+  /** Trade-type code whose first FILLED order earns this milestone (every trade milestone has one). */
   readonly tradeType?: TradeTypeCode;
+  /** Where a NON-trade milestone is earned — a trade milestone derives its own ticket link. */
+  readonly earnAt?: { readonly href: string; readonly label: string };
 }
 
 export interface Course {
@@ -124,15 +126,65 @@ export const COURSES: readonly Course[] = [
   },
 ];
 
+/** The one community milestone's id — the earning path derives it (`domain/community.ts`). */
+export const FEEDBACK_MILESTONE_ID = "first-feedback";
+
+/**
+ * THE COMMUNITY TRACK — a 100-level course (Eric, 2026-08-25: "giving feedback should be listed as
+ * a 100 level milestone"), deliberately held BESIDE the trade ladder rather than inside it.
+ *
+ * Two reasons it is its own track, not a `10x` trade code. It must never gate the Wheel — course
+ * locks chain off `COURSES` alone, so filing feedback cannot become a prerequisite for options.
+ * And it does not claim to be a trade, which is what lets it satisfy the fill-only ruling instead
+ * of bending it: a trade milestone's proof is an order id, and this one's proof is the GitHub issue
+ * number the filing produced (`server/feedback-log.ts`). Both are server-created evidence the
+ * member cannot self-assert — the standard the ruling actually sets. `progression.ts` is untouched.
+ */
+const COMMUNITY_COURSE: Course = {
+  level: 100,
+  id: "community",
+  title: "The league — build the desk with us",
+  subtitle:
+    "This desk gets better because members say what's broken and what's missing. Sending that note is a real contribution, and it counts like one.",
+  milestones: [
+    {
+      id: FEEDBACK_MILESTONE_ID,
+      title: "File your first piece of feedback",
+      detail:
+        "Send a bug, a feature idea, or a side quest from the Feedback page. It becomes a real tracked issue, and that issue number is the proof — so this one can't be self-marked either.",
+      points: 15,
+      earnAt: { href: "/feedback", label: "share feedback →" },
+    },
+  ],
+};
+
+/**
+ * Every course points can be earned in — the trade ladder plus the community track, in the order
+ * the Milestones page stacks them. Sorted by level (a stable sort, so the community card lands
+ * just after the trade course it shares level 100 with, never after the 300s).
+ */
+export const ALL_COURSES: readonly Course[] = [...COURSES, COMMUNITY_COURSE].sort(
+  (a, b) => a.level - b.level,
+);
+
+/** One milestone by id, across every track — the lookup the unlock banner reads. */
+export function milestoneById(id: string): Milestone | undefined {
+  for (const course of ALL_COURSES) {
+    const hit = course.milestones.find((m) => m.id === id);
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
 /** Total points available across every course — the denominator for a completion percentage. */
 export function totalPoints(): number {
-  return COURSES.reduce((sum, c) => sum + c.milestones.reduce((s, m) => s + m.points, 0), 0);
+  return ALL_COURSES.reduce((sum, c) => sum + c.milestones.reduce((s, m) => s + m.points, 0), 0);
 }
 
 /** Points earned for a set of completed milestone ids. */
 export function pointsFor(completed: ReadonlySet<string>): number {
   let total = 0;
-  for (const c of COURSES) {
+  for (const c of ALL_COURSES) {
     for (const m of c.milestones) {
       if (completed.has(m.id)) total += m.points;
     }
@@ -150,6 +202,9 @@ export function courseComplete(course: Course, completed: ReadonlySet<string>): 
  * only when the one before it is fully complete. Display truth for the Milestones page — the
  * progression service unions in any course that already holds an earned milestone, so seeded
  * history with ladder gaps never shows an earn inside a locked course.
+ *
+ * Walks `COURSES`, never `ALL_COURSES`: the community track sits at level 100 (always open) and is
+ * deliberately outside this chain, so filing feedback can never become a prerequisite for options.
  */
 export function unlockedLevels(completed: ReadonlySet<string>): Set<CourseLevel> {
   const open = new Set<CourseLevel>([COURSES[0]?.level ?? 100]);

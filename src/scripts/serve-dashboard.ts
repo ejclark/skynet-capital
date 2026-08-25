@@ -39,7 +39,7 @@ import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedbackCoach } from "../server/feedback-coach.js";
-import { createFeedbackLogStore } from "../server/feedback-log.js";
+import { createFeedbackLogStore, filingsByEmail } from "../server/feedback-log.js";
 import { resolveFeedback } from "../server/feedback-service.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
@@ -268,6 +268,7 @@ async function main(): Promise<void> {
     progression: createProgressionService({
       readFills: (id) => activity.list(id),
       readTags: (id) => orderAudit.list(id),
+      readFilings: (email) => filingsByEmail(feedbackLog, email),
       store: createProgressionStore(process.env, (m) => console.error(m)),
     }),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
