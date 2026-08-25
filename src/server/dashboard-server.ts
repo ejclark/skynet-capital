@@ -503,23 +503,37 @@ async function trySelfServiceRoute(
     return true;
   }
   if (path === "/rotate" && config.rotateCredentials) {
-    // Who the signed-in session resolves to, when OAuth is configured — the same identity link
-    // "isSelf"/nav highlighting already uses. Passed through so rotateCredentials can refuse to
-    // let one authed member silently redirect ANOTHER member's displayed account to credentials
-    // the member supplies themselves (see docs/LESSONS.md, 2026-08-11: the whole point of this
-    // route is fixing YOUR OWN regenerated key, not reassigning someone else's identity).
-    const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
     await handleRotate(
       req,
       res,
       req.method ?? "GET",
       keyOf(url),
-      requesterId,
+      rotateRequester(config, session),
       config.rotateCredentials,
     );
     return true;
   }
   return false;
+}
+
+/**
+ * The identity /rotate hands the service: who the signed-in session resolves to (the same link
+ * "isSelf"/nav highlighting uses), so rotateCredentials can refuse to let one authed member
+ * silently redirect ANOTHER member's displayed account to credentials the member supplies
+ * themselves (docs/LESSONS.md, 2026-08-11: this route fixes YOUR OWN regenerated key, not
+ * someone else's identity). The session EMAIL rides along for env-roster targets, which are
+ * owner-gated in the service; both fields are absent exactly when OAuth isn't configured.
+ */
+function rotateRequester(
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): { id?: string; email?: string } {
+  if (!config.auth) return {};
+  const id = resolveCurrentId(session, config.resolveOwnerId);
+  return {
+    ...(id !== undefined ? { id } : {}),
+    ...(session ? { email: session.email } : {}),
+  };
 }
 
 /** Notices are looked up by CODE, never echoed from the URL — a reflected message is an attack. */

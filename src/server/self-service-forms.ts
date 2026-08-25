@@ -105,7 +105,7 @@ export async function handleRotate(
   res: ServerResponse,
   method: string,
   key: string,
-  requesterId: string | undefined,
+  requester: { readonly id?: string; readonly email?: string },
   rotateCredentials: (input: RotateCredentialsInput) => Promise<RotateResult>,
 ): Promise<void> {
   await handleSelfServiceForm(
@@ -118,7 +118,8 @@ export async function handleRotate(
         id: form.get("id") ?? "",
         apiKey: form.get("apiKey") ?? "",
         apiSecret: form.get("apiSecret") ?? "",
-        requesterId,
+        ...(requester.id !== undefined ? { requesterId: requester.id } : {}),
+        ...(requester.email !== undefined ? { requesterEmail: requester.email } : {}),
       }),
     (result) => rotateResultHtml(result, key),
   );
@@ -228,9 +229,10 @@ function rotateFormHtml(key: string): string {
   return addShell(
     "Rotate credentials — Skynet Capital",
     `<h1>Rotate an account's Alpaca key</h1>
-<p class="lede">Regenerated your key in Alpaca? Paste the <b>new</b> key/secret here for the account you already
-added — this updates it in place. It won't create a new account, and it refuses anything that isn't
-already on the board.</p>
+<p class="lede">Regenerated your key in Alpaca? <b>The old key stops working the moment you regenerate</b> — paste the
+<b>new</b> key/secret here for any account already on the board and it updates in place, syncing again
+immediately. This covers self-added accounts <i>and</i> the host-configured originals; it won't create
+a new account, and it refuses anything that isn't already on the board.</p>
 <form method="post" action="${action}">
   <label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>
   <label>New Alpaca paper API key<input name="apiKey" required autocomplete="off" placeholder="PK…"></label>

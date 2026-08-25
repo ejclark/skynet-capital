@@ -12,7 +12,7 @@
  */
 import { backfillParticipantActivity } from "../observatory/activity-backfill.js";
 import { createActivityStore } from "../observatory/activity-store.js";
-import { dedupeById } from "../participants/participant.js";
+import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 
@@ -25,10 +25,10 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const roster = dedupeById([
-    ...dataSource.loadParticipants(),
-    ...createParticipantStore(process.env).load(),
-  ]);
+  const roster = mergeRoster(
+    dataSource.loadParticipants(),
+    createParticipantStore(process.env).load(),
+  );
   if (roster.length === 0) {
     console.error("No participants configured — nothing to backfill.");
     process.exit(1);
