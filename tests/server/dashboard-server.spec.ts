@@ -715,3 +715,65 @@ describe("dashboard-server desk settings (#475)", () => {
     });
   });
 });
+
+/**
+ * `/rotate` identity resolution (Eric, 2026-08-25: "ensure the email is used as the unique
+ * identifier — they know email, they don't know their account ID"). A link that names an id
+ * still wins, but absent one, a viewer whose sign-in already resolves to an account gets it
+ * prefilled automatically — no id typed, no id clicked-through, just their email via the session.
+ */
+describe("dashboard-server /rotate identity resolution (2026-08-25)", () => {
+  const SECRET = "sess";
+  const auth = resolveAuth({
+    SKYNET_SESSION_SECRET: SECRET,
+    SKYNET_GOOGLE_CLIENT_ID: "gid",
+    SKYNET_GOOGLE_CLIENT_SECRET: "gsecret",
+    SKYNET_ALLOWED_EMAILS: "eric@gmail.com",
+  });
+  const cookieFor = (email: string): string =>
+    `skynet_session=${encodeURIComponent(
+      signSession({ email, provider: "google", exp: Date.now() + 60_000 }, SECRET),
+    )}`;
+  const config = () => ({
+    hub: new ObservatoryHub(board()),
+    ...(auth ? { auth } : {}),
+    resolveOwnerId: (email: string) => (email === "eric@gmail.com" ? "human-eric" : undefined),
+    rotateCredentials: () => Promise.reject(new Error("unused")),
+  });
+
+  it("prefills and locks the viewer's own account when their sign-in already resolves to one", async () => {
+    await withServer(config(), async (base) => {
+      const res = await fetch(`${base}/rotate`, {
+        headers: { cookie: cookieFor("eric@gmail.com") },
+      });
+      const body = await res.text();
+      expect(body).toContain('value="human-eric" readonly');
+      expect(body).toContain("resolved from your sign-in");
+      expect(body).not.toContain('name="id" required');
+    });
+  });
+
+  it("still asks for an id when the viewer's sign-in resolves to nothing", async () => {
+    await withServer(config(), async (base) => {
+      // Nobody in this fixture resolves to someone-unlinked@gmail.com — the exact unlinked
+      // state this whole area is about.
+      const res = await fetch(`${base}/rotate`, {
+        headers: { cookie: cookieFor("someone-unlinked@gmail.com") },
+      });
+      const body = await res.text();
+      expect(body).toContain('name="id" required');
+      expect(body).not.toContain("readonly");
+    });
+  });
+
+  it("a link's explicit ?id= still wins over the session's own resolved account", async () => {
+    await withServer(config(), async (base) => {
+      const res = await fetch(`${base}/rotate?id=sauron`, {
+        headers: { cookie: cookieFor("eric@gmail.com") },
+      });
+      const body = await res.text();
+      expect(body).toContain('value="sauron" readonly');
+      expect(body).not.toContain("resolved from your sign-in");
+    });
+  });
+});

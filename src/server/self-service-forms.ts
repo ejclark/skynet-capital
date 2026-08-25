@@ -115,11 +115,15 @@ export async function handleRotate(
   requester: { readonly id?: string; readonly email?: string },
   rotateCredentials: (input: RotateCredentialsInput) => Promise<RotateResult>,
 ): Promise<void> {
+  // True when the prefill came from the VIEWER'S OWN sign-in resolving to this account (not from
+  // a link naming some other account, e.g. an owner fixing a bot's key) — the case worth telling
+  // them "this is you, no id needed" rather than leaving the source of the fill unexplained.
+  const resolvedFromEmail = prefillId !== "" && requester.id === prefillId;
   await handleSelfServiceForm(
     req,
     res,
     method,
-    () => rotateFormHtml(key, prefillId),
+    () => rotateFormHtml(key, prefillId, resolvedFromEmail),
     (form) =>
       rotateCredentials({
         id: form.get("id") ?? "",
@@ -231,15 +235,19 @@ function addResultHtml(result: AddResult, key: string): string {
  * A wrong id is caught immediately: `rotateCredentials` refuses anything that isn't already on
  * the board.
  */
-function rotateFormHtml(key: string, prefillId = ""): string {
+function rotateFormHtml(key: string, prefillId = "", resolvedFromEmail = false): string {
   const action = `/rotate${key ? `?key=${encodeURIComponent(key)}` : ""}`;
-  // Arrived from a link that already names the account (the error card, a profile page) — the
-  // id is locked (readonly + a hidden mirror, since a readonly field still posts) rather than
-  // asking the member to confirm a slug they never chose to know in the first place. Arrived
-  // cold (typed the URL, an old bookmark) — same free-text field as always.
-  const idField = prefillId
-    ? `<label>Account<input value="${escapeHtml(prefillId)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
-    : `<label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>`;
+  // Three sources for the id, in priority order: a link that already names the account (the
+  // error card, a profile page) — LOCKED, since the link is the one honest "which account" and a
+  // stray edit shouldn't silently retarget it; the viewer's OWN sign-in, when it already resolves
+  // to an account (Eric, 2026-08-25: "email is the identifier, they don't know their account ID")
+  // — also locked, and said so plainly, so nobody wonders where the value came from; or arrived
+  // cold (typed the URL, an old bookmark, still unlinked) — the free-text field, unchanged.
+  const idField = resolvedFromEmail
+    ? `<label>Account <small>— resolved from your sign-in, no id needed</small><input value="${escapeHtml(prefillId)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
+    : prefillId
+      ? `<label>Account<input value="${escapeHtml(prefillId)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
+      : `<label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>`;
   return addShell(
     "Rotate credentials — Skynet Capital",
     `<h1>Rotate an account's Alpaca key</h1>
