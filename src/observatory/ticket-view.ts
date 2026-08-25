@@ -1,8 +1,7 @@
 import type { OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
-import { COURSES } from "../domain/curriculum.js";
 import { STARTER_PLAYS, type StarterPlay } from "../domain/starter-plays.js";
-import { TRADE_TYPES, type TradeType } from "../domain/trade-types.js";
+import { TRADE_TYPES, type TradeType, type TradeTypeCode } from "../domain/trade-types.js";
 import {
   type OptionPlayCode,
   type OptionTicketPreview,
@@ -19,9 +18,10 @@ import { premiumByStrikeSvg, windowChain } from "./ticket-charts.js";
 /**
  * THE TRADE TICKET (`GET /trade`) — the desk's order-entry view, built to the desk-v2 handoff's
  * ticket spec: GUIDED and RAW are two modes of ONE ticket (guided default), trade types are
- * risk-ordered by course code and the 300-level rows stay locked until The Wheel is complete
- * (the academy's own localStorage progress), every broker term carries a plain gloss, and
- * NOTHING fires from this screen — the review step (`POST /trade`) always comes first.
+ * risk-ordered by course code, and with TRAINING WHEELS on the ladder locks every rung past the
+ * member's real progression (server-derived from filled orders — `progression-service.ts`; the
+ * route and services enforce it, this view only renders the truth). Every broker term carries a
+ * plain gloss, and NOTHING fires from this screen — the review step (`POST /trade`) comes first.
  *
  * State is URL-param-backed (mode, play, symbol, exp, strike, qty, ordertype, limit, view), so
  * every step is shareable, back-button-friendly, and works with JavaScript off: expiration
@@ -42,17 +42,41 @@ export interface TicketState {
   readonly view: "chart" | "table";
 }
 
+/**
+ * The viewer's ladder state, server-derived (`progression-service.ts`) — the ticket renders lock
+ * truth, it never computes it. Absent = no signed-in progression (offline, or service unwired),
+ * which renders as wheels-off: the full catalog, nothing restricted.
+ */
+export interface TicketProgression {
+  readonly wheels: boolean;
+  readonly unlocked: ReadonlySet<TradeTypeCode>;
+  readonly earned: ReadonlyMap<TradeTypeCode, { readonly at: string }>;
+  readonly nextUp?: TradeTypeCode;
+}
+
 export interface TicketViewModel extends DashboardViewOptions {
   readonly state: TicketState;
   /** The signed-in member's own snapshot; absent = browsing with no linked account. */
   readonly snapshot?: ParticipantSnapshot;
   readonly tradingEnabled: boolean;
+  readonly progression?: TicketProgression;
   readonly expirations?: readonly string[];
   readonly chain?: readonly OptionChainRow[];
   readonly spot?: number;
   /** Honest reason chain data is missing (offline fixtures, fetch failure, no account). */
   readonly chainNote?: string;
   readonly generatedAt?: string;
+}
+
+/** With wheels on, a rung outside the unlocked set is locked; wheels off locks nothing. */
+function isLockedPlay(code: TradeTypeCode, progression: TicketProgression | undefined): boolean {
+  return Boolean(progression?.wheels) && !progression?.unlocked.has(code);
+}
+
+/** The rung directly before `code` on the ladder — what a locked row tells you to go fill. */
+function previousRung(code: TradeTypeCode): TradeType | undefined {
+  const i = TRADE_TYPES.findIndex((t) => t.code === code);
+  return i > 0 ? TRADE_TYPES[i - 1] : undefined;
 }
 
 /** Build a /trade URL from state, with overrides. Omits everything unset. */
@@ -87,24 +111,47 @@ function modeToggle(state: TicketState): string {
   return `<div style="display:flex;gap:6px">${seg("guided", "Guided")}${seg("raw", "Raw")}</div>`;
 }
 
-/** The risk-ordered play picker (ruling 16). Locked rows unlock client-side from academy progress. */
-function playPicker(state: TicketState): string {
+/** The risk-ordered play picker (ruling 16). Lock state is SERVER truth, never client-side. */
+function playPicker(state: TicketState, progression: TicketProgression | undefined): string {
   const rows = TRADE_TYPES.map((t) => {
     const selected = t.code === state.play.code;
-    const inner = `<span class="tk-code">${t.code}</span><span class="tk-name">${escapeHtml(t.name)}</span><span class="tk-tldr">${escapeHtml(t.tldr)}</span>${t.kind === "option" ? '<span class="tk-opt">OPTIONS</span>' : ""}${selected ? '<span class="tk-sel">✓</span>' : ""}`;
-    if (t.unlockCourse) {
-      return `<a class="tk-row locked${selected ? " sel" : ""}" data-unlock-course="${escapeHtml(t.unlockCourse)}" data-href="${ticketHref(state, { play: t.code, strike: undefined, exp: undefined, limit: undefined })}" aria-disabled="true">${inner}<span class="tk-lock">🔒 level up to unlock</span></a>`;
+    const earned = progression?.earned.get(t.code);
+    const done = earned
+      ? `<span class="tk-done" title="first filled ${escapeHtml(earned.at.slice(0, 10))}">✓ earned</span>`
+      : "";
+    const inner = `<span class="tk-code">${t.code}</span><span class="tk-name">${escapeHtml(t.name)}</span><span class="tk-tldr">${escapeHtml(t.tldr)}</span>${t.kind === "option" ? '<span class="tk-opt">OPTIONS</span>' : ""}${done}${selected ? '<span class="tk-sel">✓</span>' : ""}`;
+    if (isLockedPlay(t.code, progression)) {
+      const prev = previousRung(t.code);
+      return `<span class="tk-row locked${selected ? " sel" : ""}" aria-disabled="true">${inner}<span class="tk-lock">🔒 opens after your first filled ${prev ? `${prev.code} — ${escapeHtml(prev.name)}` : "trade"}</span></span>`;
     }
     return `<a class="tk-row${selected ? " sel" : ""}" href="${ticketHref(state, { play: t.code, strike: undefined, exp: undefined, limit: undefined })}">${inner}</a>`;
   }).join("");
+  const footer = progression?.wheels
+    ? `training wheels on — fill each course's trade to open the next · milestones land on <a href="/learn">Milestones</a>`
+    : `ordered by risk · the course number is the difficulty · progress lives on <a href="/learn">Milestones</a>`;
   return `<details class="panel tk-picker"${state.symbol ? "" : " open"}>
     <summary><span class="desk-k" style="letter-spacing:.16em">1 · The play</span>
       <b style="margin-left:10px">${escapeHtml(state.play.name)}</b>
       <span class="desk-note" style="margin-left:8px">${escapeHtml(state.play.tldr)}</span>
       <span class="desk-note" style="margin-left:auto">change play ▾</span></summary>
     <div class="tk-rows">${rows}</div>
-    <p class="desk-note" style="margin-top:10px">ordered by risk · the course number is the difficulty · 300-level unlocks when The Wheel course is complete on <a href="/learn">Learn</a></p>
+    <p class="desk-note" style="margin-top:10px">${footer}</p>
   </details>`;
+}
+
+/**
+ * The training-wheels toggle — a tiny POST (state changes are never links), carrying the current
+ * ticket URL so the desk lands the member right back where they were. Rendered only when a
+ * signed-in progression exists: with nothing to restrict there is nothing to toggle.
+ */
+function wheelsToggle(state: TicketState, progression: TicketProgression | undefined): string {
+  if (!progression) return "";
+  const on = progression.wheels;
+  return `<form method="post" action="/trade" class="tk-wheels">
+      <input type="hidden" name="wheels" value="${on ? "off" : "on"}">
+      <input type="hidden" name="back" value="${escapeHtml(ticketHref(state))}">
+      <button class="btn" type="submit" title="${on ? "Open every trade type — your call" : "Back to the guided ladder"}">${on ? "🛞 Training wheels ON" : "Training wheels off"}</button>
+    </form>`;
 }
 
 function expirationChips(model: TicketViewModel): string {
@@ -345,23 +392,30 @@ const TICKET_STYLE = `<style>
   .tk-opt{ font-family:var(--mono); font-size:9px; letter-spacing:.12em; border:1px solid var(--border); border-radius:5px; padding:2px 6px; color:var(--muted); }
   .tk-sel{ margin-left:auto; color:var(--accent); font-weight:700; }
   .tk-lock{ margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--muted); }
+  .tk-done{ font-family:var(--mono); font-size:10px; font-weight:700; color:var(--pos); }
+  .tk-wheels button{ white-space:nowrap; }
+  .tk-locked-panel{ text-align:center; padding:34px 22px; }
+  .tk-locked-panel h2{ font-size:17px; margin-bottom:8px; }
+  .tk-locked-panel p{ color:var(--muted); font-size:13px; line-height:1.6; max-width:56ch; margin:0 auto; }
+  .tk-locked-panel .btn{ margin-top:16px; }
 </style>`;
 
-/** Unlocks 300-level rows when The Wheel is complete — same localStorage the academy writes. */
-const TICKET_LOCK_SCRIPT = `<script>
-(function(){
-  var KEY="skynet.academy.done";
-  var COURSES=${JSON.stringify(COURSES.map((c) => ({ id: c.id, ms: c.milestones.map((m) => m.id) })))};
-  var done; try{ done=JSON.parse(localStorage.getItem(KEY)||"[]"); }catch(e){ done=[]; }
-  function complete(id){ var c=COURSES.find(function(x){return x.id===id;}); return !!c && c.ms.every(function(m){ return done.indexOf(m)>=0; }); }
-  document.querySelectorAll("[data-unlock-course]").forEach(function(row){
-    if(!complete(row.getAttribute("data-unlock-course"))) return;
-    row.classList.remove("locked"); row.removeAttribute("aria-disabled");
-    row.setAttribute("href", row.getAttribute("data-href"));
-    var lock=row.querySelector(".tk-lock"); if(lock) lock.remove();
-  });
-})();
-</script>`;
+/**
+ * The honest LOCKED state for a `?play=` the ladder hasn't opened — the URL stays shareable and
+ * truthful, the ticket just isn't actionable: no fields, no review form, only the path to the
+ * unlock. The service is the real gate; this is the courtesy that explains it.
+ */
+function lockedPanel(state: TicketState): string {
+  const prev = previousRung(state.play.code);
+  const step = prev
+    ? `It opens after your first filled <b>${prev.code} — ${escapeHtml(prev.name)}</b>.`
+    : "";
+  return `<section class="panel tk-locked-panel">
+    <h2>🔒 Course ${state.play.code} — ${escapeHtml(state.play.name)} — is still locked</h2>
+    <p>Training wheels are on, so the desk walks the ladder one rung at a time. ${step} Every fill is banked on your <a href="/learn">Milestones</a> — or take the wheels off above to open the full catalog.</p>
+    ${prev ? `<a class="btn btn-primary" href="${ticketHref(state, { play: prev.code, strike: undefined, exp: undefined, limit: undefined })}">Open the ${prev.code} ticket →</a>` : ""}
+  </section>`;
+}
 
 /**
  * Best-effort preview for the on-page estimates (the review + service re-verify everything).
@@ -409,10 +463,16 @@ function gateBanner(model: TicketViewModel): string {
 }
 
 export function renderTicketBody(model: TicketViewModel): string {
-  const { state, snapshot } = model;
+  const { state, snapshot, progression } = model;
   const isOption = state.play.kind === "option";
-  const preview = isOption ? viewPreview(model) : undefined;
+  const locked = isLockedPlay(state.play.code, progression);
+  const preview = isOption && !locked ? viewPreview(model) : undefined;
   const gate = gateBanner(model);
+  const ticket = locked
+    ? lockedPanel(state)
+    : isOption
+      ? optionTicket(model, preview)
+      : stockTicket(model);
 
   const content = `${DESK_STYLE}${TICKET_STYLE}<section class="desk">
     <header class="desk-head">
@@ -421,15 +481,14 @@ export function renderTicketBody(model: TicketViewModel): string {
         <h1 class="desk-title">${escapeHtml(state.play.name)}</h1>
         <p class="desk-sub">Course ${state.play.code} · ${escapeHtml(state.play.tldr)} · every order lands on a review screen before it's sent.</p>
       </div>
-      ${modeToggle(state)}
+      <div style="display:flex;gap:6px;align-items:flex-start">${wheelsToggle(state, progression)}${modeToggle(state)}</div>
     </header>
     ${gate}
     ${starterBar(state)}
-    ${playPicker(state)}
-    ${isOption ? optionTicket(model, preview) : stockTicket(model)}
+    ${playPicker(state, progression)}
+    ${ticket}
     <p class="caveat"><b>Paper account.</b> Real prices, real mechanics, simulated money. Options premiums shown are indicative (bid/ask mid, or last close) — fills settle at the market. Options orders on Alpaca are day-only.</p>
-  </section>
-  ${TICKET_LOCK_SCRIPT}`;
+  </section>`;
 
   return renderShell(model.nav, content, model.generatedAt ?? new Date().toISOString());
 }

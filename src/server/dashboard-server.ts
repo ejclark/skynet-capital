@@ -458,6 +458,7 @@ async function serveTradeRoute(
     snapshotFor: (id) => participants.find((p) => p.id === id),
     requesterId: config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined,
     tradingEnabled: Boolean(config.tradingEnabled),
+    ...(config.progression ? { progression: config.progression } : {}),
     ...(config.submitTrade ? { submitTrade: config.submitTrade } : {}),
     ...(config.submitOptionTrade ? { submitOptionTrade: config.submitOptionTrade } : {}),
     ...(config.optionsClientFor ? { optionsClientFor: config.optionsClientFor } : {}),

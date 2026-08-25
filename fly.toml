@@ -16,6 +16,9 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # redeploys. Without this the sampler writes inside the container and every deploy erases the
   # very history the ceremonies/deltas/trophies read (docs/LIVING-UNIVERSE.md's load-bearing layer).
   SKYNET_HISTORY_DIR = "/data/history"
+  # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned
+  # milestones are NOT here — they re-derive from the activity + order-audit ledgers on read.
+  SKYNET_PROGRESSION_FILE = "/data/progression.json"
   # Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — the bots process has no
   # volume of its own (see [mounts] below), so it relays insight records to the app process's
   # internal-only listener (src/server/insights-listener.ts) on port 8788 — deliberately NOT in

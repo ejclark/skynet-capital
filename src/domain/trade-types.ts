@@ -31,8 +31,6 @@ export interface TradeType {
   readonly optionType?: OptionType;
   /** The guided-mode explainer — what you get, what you promise, in dollars-first words. */
   readonly gloss: string;
-  /** Curriculum course (by id, from curriculum.ts) that unlocks this row; absent = always open. */
-  readonly unlockCourse?: string;
 }
 
 export const TRADE_TYPES: readonly TradeType[] = [
@@ -86,7 +84,6 @@ export const TRADE_TYPES: readonly TradeType[] = [
     kind: "option",
     side: "buy",
     optionType: "put",
-    unlockCourse: "the-wheel",
     gloss:
       "You pay a premium for the right to sell 100 shares per contract at your strike. The stock falling makes it worth more; the most you can lose is the premium you paid.",
   },
@@ -98,7 +95,6 @@ export const TRADE_TYPES: readonly TradeType[] = [
     kind: "option",
     side: "buy",
     optionType: "call",
-    unlockCourse: "the-wheel",
     gloss:
       "You pay a premium for the right to buy 100 shares per contract at your strike. The stock rising makes it worth more; the most you can lose is the premium you paid.",
   },

@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
+import type { TradeTypeCode } from "../../src/domain/trade-types.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import type { Participant } from "../../src/participants/participant.js";
@@ -9,6 +10,10 @@ import { type Session, signSession } from "../../src/server/auth/session.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
+import type {
+  ParticipantProgression,
+  ProgressionService,
+} from "../../src/server/progression-service.js";
 import { handleTrade } from "../../src/server/trade-routes.js";
 import { createTradeService } from "../../src/server/trade-service.js";
 
@@ -303,6 +308,157 @@ describe("handleTrade — the route contract in isolation", () => {
     const academy = capture();
     await handleTrade({ method: "GET" } as IncomingMessage, academy.res, "/trade?play=201", deps);
     expect(academy.sent.body).toContain("cash-secured put");
+  });
+});
+
+describe("the training-wheels gate — the ladder is enforced server-side, not by the picker", () => {
+  const progressionStub = (
+    over: Partial<ParticipantProgression> = {},
+    wheelsLog: string[] = [],
+  ): ProgressionService => ({
+    view: () =>
+      Promise.resolve({
+        wheels: true,
+        earned: [],
+        earnedByCode: new Map(),
+        unlocked: new Set<TradeTypeCode>(["101"]),
+        nextUp: "101",
+        points: 0,
+        rank: { title: "Observer", atPoints: 0 },
+        unlockedLevels: new Set<100 | 200 | 300>([100]),
+        celebrating: [],
+        ...over,
+      }),
+    setWheels: (id, on) => {
+      wheelsLog.push(`${id}:${on}`);
+      return Promise.resolve();
+    },
+    acknowledge: () => Promise.resolve(),
+  });
+
+  const gateConfig = (
+    progression: ProgressionService,
+    counters: { stock: number; option: number },
+  ) => ({
+    hub: new ObservatoryHub(board()),
+    ...(auth ? { auth } : {}),
+    resolveOwnerId,
+    tradingEnabled: true,
+    progression,
+    submitTrade: () => {
+      counters.stock += 1;
+      return Promise.resolve({
+        ok: true as const,
+        orderId: "o1",
+        status: "accepted",
+        symbol: "AAPL",
+      });
+    },
+    submitOptionTrade: () => {
+      counters.option += 1;
+      return Promise.resolve({ ok: true as const, orderId: "o2", status: "accepted", symbol: "X" });
+    },
+  });
+
+  const counters = () => ({ stock: 0, option: 0 });
+
+  it("GET of a locked play renders the honest locked panel, never an actionable ticket", async () => {
+    await withServer(gateConfig(progressionStub(), counters()), async (base) => {
+      const res = await fetch(`${base}/trade?play=201`, { headers: { cookie: cookie() } });
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain("is still locked");
+      expect(html).not.toContain("2 · Shape it");
+    });
+  });
+
+  it("refuses a POST for a locked option play with 403 — nothing reaches the desk", async () => {
+    const c = counters();
+    await withServer(gateConfig(progressionStub(), c), async (base) => {
+      const res = await post(
+        base,
+        {
+          play: "201",
+          symbol: "MSFT",
+          contracts: "1",
+          strike: "420",
+          exp: "2026-09-18",
+          confirm: "1",
+        },
+        { cookie: cookie() },
+      );
+      expect(res.status).toBe(403);
+      expect(await res.text()).toContain("Training wheels are on");
+      expect(c.option).toBe(0);
+    });
+  });
+
+  it("refuses a locked stock rung too — selling needs 102, which needs a filled 101", async () => {
+    const c = counters();
+    await withServer(gateConfig(progressionStub(), c), async (base) => {
+      const res = await post(
+        base,
+        { symbol: "AAPL", quantity: "1", action: "sell", confirm: "1" },
+        { cookie: cookie() },
+      );
+      expect(res.status).toBe(403);
+      expect(c.stock).toBe(0);
+    });
+  });
+
+  it("lets the unlocked rung straight through to the normal review", async () => {
+    await withServer(gateConfig(progressionStub(), counters()), async (base) => {
+      const res = await post(
+        base,
+        { symbol: "AAPL", quantity: "1", action: "buy" },
+        { cookie: cookie() },
+      );
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain("Review order");
+    });
+  });
+
+  it("never gates a close — exiting a position is always allowed with wheels on", async () => {
+    await withServer(gateConfig(progressionStub(), counters()), async (base) => {
+      const res = await post(base, { close: "MSFT260918P00420000" }, { cookie: cookie() });
+      expect(res.status).toBe(200); // the review pipeline answers (it will refuse: no holding)
+      expect(await res.text()).not.toContain("Training wheels are on");
+    });
+  });
+
+  it("does not restrict anything with the wheels off, whatever the ladder says", async () => {
+    const c = counters();
+    await withServer(gateConfig(progressionStub({ wheels: false }), c), async (base) => {
+      const res = await post(
+        base,
+        { symbol: "AAPL", quantity: "1", action: "sell" },
+        { cookie: cookie() },
+      );
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain("Review order");
+    });
+  });
+
+  it("persists the toggle for the requester only, then returns to the ticket it came from", async () => {
+    const log: string[] = [];
+    await withServer(gateConfig(progressionStub({}, log), counters()), async (base) => {
+      const res = await post(
+        base,
+        { wheels: "off", back: "/trade?play=102&symbol=AAPL" },
+        { cookie: cookie() },
+      );
+      expect(res.status).toBe(303);
+      expect(res.headers.get("location")).toBe("/trade?play=102&symbol=AAPL");
+      expect(log).toEqual(["ann:false"]);
+    });
+  });
+
+  it("never open-redirects the toggle's return path", async () => {
+    await withServer(gateConfig(progressionStub(), counters()), async (base) => {
+      const res = await post(base, { wheels: "on", back: "//evil.example" }, { cookie: cookie() });
+      expect(res.status).toBe(303);
+      expect(res.headers.get("location")).toBe("/trade");
+    });
   });
 });
 

@@ -1,18 +1,16 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
-import { starterPlayById } from "../domain/starter-plays.js";
-import { defaultTradeType, type TradeType, tradeTypeByCode } from "../domain/trade-types.js";
-import type { NavContext } from "../observatory/dashboard-shell.js";
+import {
+  TRADE_TYPES,
+  type TradeType,
+  type TradeTypeCode,
+  tradeTypeByCode,
+} from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
 import { deskHref } from "../observatory/desk-tabs.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
-import {
-  renderTicketBody,
-  type TicketState,
-  type TicketViewModel,
-  ticketHref,
-} from "../observatory/ticket-view.js";
+import { ticketHref } from "../observatory/ticket-view.js";
 import { renderOptionReviewBody, renderTradeReviewBody } from "../observatory/trade-review-view.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import {
@@ -22,9 +20,20 @@ import {
   previewOptionOrder,
 } from "../trading/option-ticket.js";
 import { previewOrder, type TicketAction } from "../trading/order-ticket.js";
-import type { DeskOptionRequest, SubmitOptionTrade } from "./option-trade-service.js";
+import type { DeskOptionRequest } from "./option-trade-service.js";
 import { readBody } from "./page-shell.js";
-import type { DeskTradeResult, SubmitDeskTrade } from "./trade-service.js";
+import type { DeskTradeResult } from "./trade-service.js";
+import {
+  html,
+  playLocked,
+  posNumber,
+  serveTicket,
+  type TradeRouteDeps,
+  viewerProgression,
+} from "./trade-ticket-route.js";
+
+// The deps contract lives with the view half; re-exported so existing importers keep working.
+export type { TradeRouteDeps } from "./trade-ticket-route.js";
 
 /**
  * `/trade` — the desk's trade view and its one write route.
@@ -42,35 +51,9 @@ import type { DeskTradeResult, SubmitDeskTrade } from "./trade-service.js";
  * here beyond being *shown back*.
  */
 
-export interface TradeRouteDeps {
-  /** The board snapshot for a participant id, from the live hub. */
-  readonly snapshotFor: (id: string) => ParticipantSnapshot | undefined;
-  /** Who the caller's session resolves to. Undefined = no identity = no trading. */
-  readonly requesterId: string | undefined;
-  readonly tradingEnabled: boolean;
-  /** Absent when the deployment wires no execution path at all (offline/export builds). */
-  readonly submitTrade?: SubmitDeskTrade;
-  readonly submitOptionTrade?: SubmitOptionTrade;
-  /** Options data (chains/expirations/spot) for a participant's own credentials. */
-  readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
-  readonly nav: NavContext;
-  readonly document: (title: string, body: string) => string;
-}
-
-function html(res: ServerResponse, status: number, body: string): void {
-  res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
-  res.end(body);
-}
-
 function parseAction(raw: string | null): TicketAction {
   return raw === "sell" ? "sell" : "buy";
 }
-
-const posNumber = (raw: string | null): number | undefined => {
-  if (raw === null || raw.trim() === "") return undefined;
-  const value = Number(raw);
-  return Number.isFinite(value) && value > 0 ? value : undefined;
-};
 
 /** A refusal with no account to render it against — kept plain rather than half-rendering a desk. */
 function refusalPage(deps: TradeRouteDeps, res: ServerResponse, status: number, why: string): void {
@@ -96,100 +79,17 @@ function resultRedirect(res: ServerResponse, snapshotId: string, ok: boolean): v
 
 // --- GET: the ticket view ---------------------------------------------------
 
-function stateFromParams(params: URLSearchParams): TicketState {
-  // `?starter=` pre-fills the stock-buy ticket; explicit params always win over the preset,
-  // and an unknown token is simply ignored. Disjoint from `?play=` by design (2026-08-25).
-  const starter = starterPlayById(params.get("starter"));
-  const play: TradeType = tradeTypeByCode(params.get("play")) ?? defaultTradeType();
-  const qty = posNumber(params.get("qty"));
-  const strike = posNumber(params.get("strike"));
-  const limit = posNumber(params.get("limit"));
-  const exp = params.get("exp");
-  const symbol = params.get("symbol")?.trim().toUpperCase() ?? starter?.symbol;
-  return {
-    mode: params.get("mode") === "raw" ? "raw" : "guided",
-    play,
-    ...(symbol ? { symbol } : {}),
-    ...(starter ? { starter: starter.id } : {}),
-    qty: qty && Number.isInteger(qty) ? qty : (starter?.qty ?? 1),
-    ...(exp && /^\d{4}-\d{2}-\d{2}$/.test(exp) ? { expiration: exp } : {}),
-    ...(strike !== undefined ? { strike } : {}),
-    orderType: params.get("ordertype") === "market" ? "market" : "limit",
-    ...(limit !== undefined ? { limitPrice: limit } : {}),
-    view: params.get("view") === "table" ? "table" : "chart",
-  };
-}
-
-/** Chain/expiration/spot data for the ticket — every failure degrades to an honest note. */
-async function ticketData(
-  state: TicketState,
-  client: AlpacaOptionsClient | undefined,
-): Promise<
-  Pick<TicketViewModel, "expirations" | "chain" | "spot" | "chainNote"> & {
-    expiration?: string;
-  }
-> {
-  if (state.play.kind !== "option" || !state.symbol) return {};
-  if (!client) {
-    return {
-      chainNote:
-        "Live option chains load through your own connected account, and your session isn't linked to one yet.",
-    };
-  }
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const expirations = await client.getExpirations(state.symbol, today);
-    if (expirations.length === 0) {
-      return { chainNote: `No listed options found for ${state.symbol}. Check the symbol.` };
-    }
-    const expiration =
-      state.expiration && expirations.includes(state.expiration)
-        ? state.expiration
-        : (expirations[0] as string);
-    const [chain, spot] = await Promise.all([
-      client.getChain(state.symbol, expiration, state.play.optionType ?? "call"),
-      client.getUnderlyingPrice(state.symbol),
-    ]);
-    return {
-      expirations,
-      expiration,
-      chain,
-      ...(spot !== undefined ? { spot } : {}),
-    };
-  } catch (error) {
-    return {
-      chainNote: `Couldn't load the option chain right now — ${String(error)}. The ticket still works; premiums just can't be estimated.`,
-    };
-  }
-}
-
-async function serveTicket(res: ServerResponse, url: string, deps: TradeRouteDeps): Promise<void> {
-  const params = new URL(url, "http://localhost").searchParams;
-  const parsed = stateFromParams(params);
-  const snapshot = deps.requesterId ? deps.snapshotFor(deps.requesterId) : undefined;
-  const client =
-    deps.requesterId && deps.optionsClientFor ? deps.optionsClientFor(deps.requesterId) : undefined;
-  const data = await ticketData(parsed, client);
-  const state: TicketState = {
-    ...parsed,
-    ...(data.expiration ? { expiration: data.expiration } : {}),
-  };
-  html(
+/** The refusal a locked POST gets — names the rung to fill, sends nothing to the broker. */
+function lockedRefusal(deps: TradeRouteDeps, res: ServerResponse, code: TradeTypeCode): void {
+  const i = TRADE_TYPES.findIndex((t) => t.code === code);
+  const prev = i > 0 ? TRADE_TYPES[i - 1] : undefined;
+  refusalPage(
+    deps,
     res,
-    200,
-    deps.document(
-      "Trade — Skynet Capital",
-      renderTicketBody({
-        state,
-        nav: deps.nav,
-        ...(snapshot ? { snapshot } : {}),
-        tradingEnabled: deps.tradingEnabled,
-        ...(data.expirations ? { expirations: data.expirations } : {}),
-        ...(data.chain ? { chain: data.chain } : {}),
-        ...(data.spot !== undefined ? { spot: data.spot } : {}),
-        ...(data.chainNote ? { chainNote: data.chainNote } : {}),
-      }),
-    ),
+    403,
+    `Training wheels are on, and course ${code} hasn't been unlocked yet${
+      prev ? ` — it opens after your first filled ${prev.code} (${prev.name})` : ""
+    }. Nothing was sent. Turn the wheels off on the ticket to open the full catalog.`,
   );
 }
 
@@ -345,6 +245,28 @@ async function handleOptionPost(
 
 // --- dispatch ---------------------------------------------------------------
 
+/**
+ * The training-wheels toggle POST — handled before anything order-shaped so a preference write
+ * can never double as an order. Mutates only the requester's OWN record, then returns to the
+ * ticket it was clicked from (`back` is ours from a hidden field, but validated anyway: a
+ * constructed local path or the bare ticket, never an open redirect). True = handled.
+ */
+async function handleWheelsPost(
+  res: ServerResponse,
+  form: URLSearchParams,
+  deps: TradeRouteDeps,
+  requesterId: string,
+): Promise<boolean> {
+  const wheels = form.get("wheels");
+  if (wheels !== "on" && wheels !== "off") return false;
+  await deps.progression?.setWheels(requesterId, wheels === "on");
+  const back = form.get("back") ?? "";
+  const target = back.startsWith("/") && !back.startsWith("//") ? back : "/trade";
+  res.writeHead(303, { location: target });
+  res.end();
+  return true;
+}
+
 /** Handle `/trade` — GET renders the ticket, POST reviews/executes. */
 export async function handleTrade(
   req: IncomingMessage,
@@ -378,11 +300,33 @@ export async function handleTrade(
   }
 
   const form = new URLSearchParams(await readBody(req));
+  if (await handleWheelsPost(res, form, deps, deps.requesterId)) {
+    return;
+  }
+
+  // THE LADDER GATE — with wheels on, a locked play is refused before anything is previewed or
+  // sent. Closes are exempt by construction: exiting a position is never restricted (an option
+  // close carries no code; an equity sell is 102, which owning shares has already unlocked).
+  const progression = await viewerProgression(deps);
 
   // Options ride their own preview/confirm pair; everything else is the share desk unchanged.
   const optionReview = await optionPreviewFromForm(form, snapshot, deps);
   if (optionReview) {
+    if (
+      optionReview.request.kind === "open" &&
+      playLocked(optionReview.request.code, progression)
+    ) {
+      lockedRefusal(deps, res, optionReview.request.code);
+      return;
+    }
     await handleOptionPost(res, form, snapshot, deps, optionReview);
+    return;
+  }
+
+  const action = parseAction(form.get("action"));
+  const stockCode: TradeTypeCode = action === "buy" ? "101" : "102";
+  if (playLocked(stockCode, progression)) {
+    lockedRefusal(deps, res, stockCode);
     return;
   }
 
@@ -390,7 +334,7 @@ export async function handleTrade(
     {
       symbol: form.get("symbol") ?? "",
       quantity: Number(form.get("quantity") ?? Number.NaN),
-      action: parseAction(form.get("action")),
+      action,
     },
     ticketContext(snapshot, { tradingEnabled: deps.tradingEnabled, isSelf: true }),
   );
