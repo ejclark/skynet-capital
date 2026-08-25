@@ -170,6 +170,7 @@ export async function serveTicket(
                 unlocked: progression.unlocked,
                 earned: progression.earnedByCode,
                 ...(progression.nextUp ? { nextUp: progression.nextUp } : {}),
+                celebrating: progression.celebrating,
               },
             }
           : {}),

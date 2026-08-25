@@ -260,11 +260,38 @@ async function handleWheelsPost(
   const wheels = form.get("wheels");
   if (wheels !== "on" && wheels !== "off") return false;
   await deps.progression?.setWheels(requesterId, wheels === "on");
+  redirectBack(res, form);
+  return true;
+}
+
+/**
+ * The celebration's Claim POST — marks fresh earns acknowledged so the banner shows once. Ids
+ * come from our own hidden field; the service filters them to real curriculum ids regardless.
+ * Handled with the wheels toggle, before anything order-shaped. True = handled.
+ */
+async function handleAckPost(
+  res: ServerResponse,
+  form: URLSearchParams,
+  deps: TradeRouteDeps,
+  requesterId: string,
+): Promise<boolean> {
+  const ack = form.get("ack");
+  if (ack === null) return false;
+  const ids = ack
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  await deps.progression?.acknowledge(requesterId, ids);
+  redirectBack(res, form);
+  return true;
+}
+
+/** 303 back to the local path a hidden `back` field names — constructed, never an open redirect. */
+function redirectBack(res: ServerResponse, form: URLSearchParams): void {
   const back = form.get("back") ?? "";
   const target = back.startsWith("/") && !back.startsWith("//") ? back : "/trade";
   res.writeHead(303, { location: target });
   res.end();
-  return true;
 }
 
 /** Handle `/trade` — GET renders the ticket, POST reviews/executes. */
@@ -300,7 +327,10 @@ export async function handleTrade(
   }
 
   const form = new URLSearchParams(await readBody(req));
-  if (await handleWheelsPost(res, form, deps, deps.requesterId)) {
+  if (
+    (await handleWheelsPost(res, form, deps, deps.requesterId)) ||
+    (await handleAckPost(res, form, deps, deps.requesterId))
+  ) {
     return;
   }
 

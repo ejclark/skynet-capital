@@ -18,6 +18,7 @@ import {
 import { renderEmpireSkyline } from "./empire-skyline.js";
 import { equityChange, equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-store.js";
+import { renderMilestoneBanner } from "./milestone-banner.js";
 import {
   activityFeed,
   participantInvested,
@@ -376,6 +377,8 @@ export interface AcademyProgress {
   readonly points: number;
   readonly rank: Rank;
   readonly unlockedLevels: ReadonlySet<CourseLevel>;
+  /** Fresh earns awaiting their one-time celebration (`milestone-banner.ts`). */
+  readonly celebrating?: readonly EarnedMilestone[];
 }
 
 /** One milestone row — earned by a real filled order (the order id is the proof), never a checkbox. */
@@ -450,6 +453,7 @@ export function renderAcademyBody(
         ${linkNote}
       </div>
     </div>
+    ${renderMilestoneBanner(progress?.celebrating ?? [], { back: "/learn" })}
     <div class="hud">
       <div class="hud-stat"><span class="hud-k">Rank</span><span class="hud-v" data-rank>${escapeHtml(rankTitle)}</span></div>
       <div class="hud-stat"><span class="hud-k">Points</span><span class="hud-v" data-points>${points}</span><span class="hud-of" data-total>/ ${totalPoints()}</span></div>

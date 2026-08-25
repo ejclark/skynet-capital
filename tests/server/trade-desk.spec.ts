@@ -315,6 +315,7 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
   const progressionStub = (
     over: Partial<ParticipantProgression> = {},
     wheelsLog: string[] = [],
+    ackLog: string[] = [],
   ): ProgressionService => ({
     view: () =>
       Promise.resolve({
@@ -333,7 +334,10 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
       wheelsLog.push(`${id}:${on}`);
       return Promise.resolve();
     },
-    acknowledge: () => Promise.resolve(),
+    acknowledge: (id, ids) => {
+      ackLog.push(`${id}:${ids.join("+")}`);
+      return Promise.resolve();
+    },
   });
 
   const gateConfig = (
@@ -459,6 +463,32 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
       expect(res.status).toBe(303);
       expect(res.headers.get("location")).toBe("/trade");
     });
+  });
+
+  it("shows the unlock banner for a fresh earn, and the Claim POST banks it", async () => {
+    const acks: string[] = [];
+    const celebrating = [
+      {
+        milestoneId: "first-buy",
+        code: "101" as const,
+        orderId: "o1",
+        at: "2026-08-25T14:00:00.000Z",
+      },
+    ];
+    await withServer(
+      gateConfig(progressionStub({ celebrating }, [], acks), counters()),
+      async (base) => {
+        const page = await fetch(`${base}/trade`, { headers: { cookie: cookie() } });
+        const html = await page.text();
+        expect(html).toContain("Milestone unlocked");
+        expect(html).toContain("102 — Sell stock</b> is now open");
+
+        const claim = await post(base, { ack: "first-buy", back: "/learn" }, { cookie: cookie() });
+        expect(claim.status).toBe(303);
+        expect(claim.headers.get("location")).toBe("/learn");
+        expect(acks).toEqual(["ann:first-buy"]);
+      },
+    );
   });
 });
 

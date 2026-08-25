@@ -9,6 +9,7 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { type DashboardViewOptions, renderShell } from "./dashboard-shell.js";
 import { formatPrice, reviewNotices, ticketContext } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
+import { renderMilestoneBanner } from "./milestone-banner.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { formatCurrency } from "./render-atoms.js";
 import { premiumByStrikeSvg, windowChain } from "./ticket-charts.js";
@@ -328,6 +329,7 @@ export function renderTicketBody(model: TicketViewModel): string {
       <div style="display:flex;gap:6px;align-items:flex-start">${wheelsToggle(state, progression)}${modeToggle(state)}</div>
     </header>
     ${gate}
+    ${renderMilestoneBanner(progression?.celebrating ?? [], { back: ticketHref(state) })}
     ${starterBar(state, progression)}
     ${playPicker(state, progression)}
     ${ticket}

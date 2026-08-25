@@ -1,4 +1,5 @@
 import {
+  COURSES,
   type CourseLevel,
   pointsFor,
   type Rank,
@@ -115,13 +116,12 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       return Promise.resolve();
     },
     acknowledge(participantId, milestoneIds) {
-      if (deps.store && milestoneIds.length > 0) {
+      // Only real curriculum ids are banked — the form field is ours, but never trusted.
+      const known = new Set(COURSES.flatMap((c) => c.milestones.map((m) => m.id)));
+      const ids = milestoneIds.filter((id) => known.has(id));
+      if (deps.store && ids.length > 0) {
         const held = deps.store.get(participantId)?.acknowledged ?? [];
-        deps.store.set(
-          participantId,
-          { acknowledged: [...new Set([...held, ...milestoneIds])] },
-          now(),
-        );
+        deps.store.set(participantId, { acknowledged: [...new Set([...held, ...ids])] }, now());
       }
       return Promise.resolve();
     },

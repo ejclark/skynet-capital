@@ -143,6 +143,13 @@ describe("progression service + store — seeding, the toggle, and one-time cele
     expect((await svc2.view("ann")).celebrating).toEqual([]);
   });
 
+  it("banks only real curriculum ids — forged ack values never reach the store", async () => {
+    const { svc, store } = stored([]);
+    await svc.view("ann");
+    await svc.acknowledge("ann", ["not-a-milestone", "<script>", "first-buy"]);
+    expect(store.get("ann")?.acknowledged).toEqual(["first-buy"]);
+  });
+
   it("persists the wheels toggle across service instances", async () => {
     const { svc } = stored([]);
     await svc.view("ann"); // seeds wheels on

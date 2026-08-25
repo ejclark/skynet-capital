@@ -1,3 +1,4 @@
+import type { EarnedMilestone } from "../domain/progression.js";
 import { STARTER_PLAYS, type StarterPlay } from "../domain/starter-plays.js";
 import { TRADE_TYPES, type TradeType, type TradeTypeCode } from "../domain/trade-types.js";
 import { escapeHtml } from "../ui/escape-html.js";
@@ -33,6 +34,8 @@ export interface TicketProgression {
   readonly unlocked: ReadonlySet<TradeTypeCode>;
   readonly earned: ReadonlyMap<TradeTypeCode, { readonly at: string }>;
   readonly nextUp?: TradeTypeCode;
+  /** Fresh earns awaiting their one-time celebration (`milestone-banner.ts`). */
+  readonly celebrating?: readonly EarnedMilestone[];
 }
 
 /** Build a /trade URL from state, with overrides. Omits everything unset. */
