@@ -171,9 +171,11 @@ async function main(): Promise<void> {
   // Desk trading is on whenever OAuth is configured — no separate kill switch (#466).
   const findParticipant = (id: string) => [...roster, ...store.load()].find((p) => p.id === id);
   // The owner link: session email -> Participant.ownerEmail. Never exposed on ParticipantSnapshot.
-  const resolveOwnerId = (email: string): string | undefined =>
-    [...roster, ...store.load()].find((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
-      ?.id;
+  const resolveOwnerIds = (email: string): string[] =>
+    [...roster, ...store.load()]
+      .filter((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
+      .map((p) => p.id);
+  const resolveOwnerId = (email: string): string | undefined => resolveOwnerIds(email)[0];
   const orderAudit = createOrderAuditLog(process.env);
   const desk = resolveDeskTrading({
     findParticipant,
@@ -221,6 +223,7 @@ async function main(): Promise<void> {
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
           resolveOwnerId,
+          resolveOwnerIds,
         }
       : {}),
     // Mission Control (Eric, 2026-08-21): the owner's switchboard for the autonomous fleet.

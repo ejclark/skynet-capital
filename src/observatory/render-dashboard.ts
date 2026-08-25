@@ -158,6 +158,106 @@ export function renderIndividualBody(
 }
 
 /**
+ * The PORTFOLIO index (`/u`) — the member's home, one level above their desks: every account they
+ * own, with a combined-equity hero answering "how am I doing overall" before the per-account split.
+ * The server resolves ownership (session email → `Participant.ownerEmail`) and passes only the owned
+ * snapshots in, so this stays pure and never sees an email. Today most members own exactly one
+ * account; the view renders honestly for any count, including zero.
+ */
+export function renderPortfolioIndexBody(
+  accounts: readonly ParticipantSnapshot[],
+  options: DashboardViewOptions & { generatedAt?: string } = {},
+): string {
+  const asOf = options.generatedAt ?? new Date().toISOString();
+  const readable = accounts.filter((a) => !a.error);
+  const head = `<div class="ladder-head">
+      <div>
+        <span class="indiv-eyebrow">Portfolio</span>
+        <h1 class="view-title">Your accounts</h1>
+        <p class="view-sub">${accountCountLine(accounts)}</p>
+      </div>
+    </div>`;
+
+  if (accounts.length === 0) {
+    const cta = options.nav?.canAdd
+      ? `<a class="obs-cta obs-cta-primary" href="/add">Connect an account</a>`
+      : "";
+    return renderShell(
+      options.nav,
+      `<section class="portfolio">${head}
+      <div class="founding-cta">
+        <p class="founding-cta-text">No accounts linked yet — connect a free Alpaca paper account to take the field.</p>
+        ${cta}
+      </div>
+    </section>`,
+      asOf,
+    );
+  }
+
+  const combined = readable.reduce((sum, a) => sum + a.equity, 0);
+  const cash = readable.reduce((sum, a) => sum + a.cash, 0);
+  const invested = readable.reduce((sum, a) => sum + participantInvested(a), 0);
+  const pl = readable.reduce((sum, a) => sum + participantUnrealized(a), 0);
+  const unreachable = accounts.length - readable.length;
+  const hero = `<div class="indiv-hero">
+      <div class="hero-equity">
+        <span class="tile-label">Combined equity</span>
+        <span class="hero-num num">${formatCurrency(combined)}</span>
+        <span class="hero-sub num ${plClass(pl)}">${formatSigned(pl)} unrealized</span>
+      </div>
+      <div class="summary indiv-tiles">
+        ${tile("Cash", formatCurrency(cash))}
+        ${tile("Invested", formatCurrency(invested))}
+        ${tile("Unrealized P/L", formatSigned(pl), { cls: plClass(pl) })}
+      </div>
+    </div>`;
+  const maxEquity = Math.max(...readable.map((a) => a.equity), 1);
+  const rows = accounts
+    .map((a, i) => {
+      const value = a.error
+        ? `<span class="rank-val num neg">unreachable</span>`
+        : `<span class="rank-val num">${formatCurrency(a.equity)}</span>`;
+      const width = a.error ? 0 : Math.max((a.equity / maxEquity) * 100, 2).toFixed(1);
+      return `<li class="rank-row rank-plain">
+        <span class="rank">${i + 1}</span>
+        <a class="rank-name" href="/u/${encodeURIComponent(a.id)}">${escapeHtml(a.displayName)} ${chip(a)}${
+          a.id === options.nav?.currentId ? `<span class="you-mark">YOU</span>` : ""
+        }</a>
+        <span class="rank-bar"><i class="bar-flat" style="width:${width}%"></i></span>
+        ${value}
+      </li>`;
+    })
+    .join("\n      ");
+  const note =
+    unreachable > 0
+      ? `<p class="seam-note">${unreachable} account${unreachable === 1 ? "" : "s"} unreachable — excluded from the combined figures above.</p>`
+      : "";
+  return renderShell(
+    options.nav,
+    `<section class="portfolio">${head}
+    ${hero}
+    <ol class="ladder">
+      ${rows}
+    </ol>
+    ${note}
+  </section>`,
+    asOf,
+  );
+}
+
+/** The honest count line — never claims bots or a plural the member doesn't have. */
+function accountCountLine(accounts: readonly ParticipantSnapshot[]): string {
+  if (accounts.length === 0) return "Your home base — accounts you connect appear here.";
+  const bots = accounts.filter((a) => a.kind === "bot").length;
+  const humans = accounts.length - bots;
+  const parts = [
+    humans > 0 ? `${humans} human` : "",
+    bots > 0 ? `${bots} bot${bots === 1 ? "" : "s"}` : "",
+  ].filter(Boolean);
+  return `${accounts.length} Alpaca paper account${accounts.length === 1 ? "" : "s"} — ${parts.join(", ")} · a row's name opens that account's desk`;
+}
+
+/**
  * The AUTONOMOUS DECISIONS panel (Phase 2.1 of the autonomy plan) — surfaces the bot's decision audit
  * trail so you can watch WHAT it decided and WHY. Bots only; shows the most recent cycles that did
  * something (placed / observed / halted / cooldown), newest first, each with its mode and rationale.

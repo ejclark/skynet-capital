@@ -54,14 +54,17 @@ function drawerLink(href: string, label: string, view: NavView, active: boolean)
  * vertical view nav, and the account actions. This shell is the template every logged-in view uses.
  */
 function renderDrawer(nav: NavContext): string {
-  const links = [drawerLink("/", "Standings", "board", nav.active === "board")];
+  const links: string[] = [];
+  // Portfolio leads the nav (consolidation study, 2026-08-25): the member's home is their own
+  // accounts index (/u), one level above each desk — "You" renamed, the `"you"` discriminant kept.
+  if (nav.currentId) {
+    links.push(drawerLink("/u", "Portfolio", "you", nav.active === "you"));
+  }
+  links.push(drawerLink("/", "Standings", "board", nav.active === "board"));
   // Trade is global chrome — one click from every screen (desk-v2 handoff). The ticket
   // renders honestly in every state, so the link never needs gating.
   links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
   links.push(drawerLink("/research", "Research", "research", nav.active === "research"));
-  if (nav.currentId) {
-    links.push(drawerLink(profileHref(nav.currentId), "You", "you", nav.active === "you"));
-  }
   links.push(drawerLink("/learn", "Learn", "learn", nav.active === "learn"));
   const foot: string[] = [];
   if (nav.canAdd) {

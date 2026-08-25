@@ -58,6 +58,10 @@ Engine fills (once trading is on) ────────┼─▶ ObservatoryH
 
 ## The player desk — three tabs on one account
 
+`/u` (bare) is the **Portfolio index** — the member's home, listing every account their signed-in
+email owns (`Participant.ownerEmail`) with a combined-equity hero above the per-account split. The
+drawer's "Portfolio" link (formerly "You") lands here; each row opens that account's desk.
+
 `/u/:id` is a member's desk. A `?tab=` param picks the view (plain links, no JS, shareable):
 
 | Tab | URL | Question it answers | Goes blank when |

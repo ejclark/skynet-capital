@@ -99,6 +99,58 @@ describe("dashboard-server OAuth gate", () => {
       },
     );
   });
+
+  it("serves the Portfolio index at /u listing every account the session owns", async () => {
+    const hub = new ObservatoryHub({
+      generatedAt: "t",
+      collisions: [],
+      participants: [
+        {
+          id: "human-eric",
+          displayName: "Eric",
+          kind: "human",
+          cash: 1_000,
+          equity: 10_000,
+          positions: [],
+        },
+        {
+          id: "news-fader",
+          displayName: "News Fader",
+          kind: "bot",
+          cash: 0,
+          equity: 5_000,
+          positions: [],
+        },
+      ],
+    });
+    await withServer(
+      {
+        hub,
+        ...(auth ? { auth } : {}),
+        resolveOwnerIds: (email: string) => (email === "eric@gmail.com" ? ["human-eric"] : []),
+      },
+      async (base) => {
+        const res = await fetch(`${base}/u`, { headers: { cookie: validCookie() } });
+        expect(res.status).toBe(200);
+        const html = await res.text();
+        expect(html).toContain("Your accounts");
+        expect(html).toContain('href="/u/human-eric"');
+        // The bot isn't owned by this session, so the index never lists it.
+        expect(html).not.toContain('href="/u/news-fader"');
+      },
+    );
+  });
+
+  it("gates /u behind the login redirect like every member page", async () => {
+    await withServer(
+      { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}) },
+      async (base) => {
+        const res = await fetch(`${base}/u`, { redirect: "manual" });
+        expect(res.status).toBe(302);
+        expect(res.headers.get("location")).toBe("/login");
+      },
+    );
+  });
 });
 
 describe("dashboard-server — Standings fold (2026-08-25)", () => {
