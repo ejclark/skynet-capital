@@ -54,13 +54,15 @@ import { sseFrame } from "./sse.js";
 import { handleTrade } from "./trade-routes.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import { welcomeHtml } from "./welcome-page.js";
+import { serveWireRoute, type WireRouteDeps } from "./wire-routes.js";
 
 /**
- * `FeedbackRouteDeps` (the /feedback surface's own dependency list) is inherited rather than
- * repeated here — this config object IS what `serveFeedbackRoute` receives as its deps, so
- * duplicating those fields would drift the two definitions apart with no way to catch it.
+ * `FeedbackRouteDeps` and `WireRouteDeps` (each surface's own dependency list) are inherited
+ * rather than repeated here — this config object IS what `serveFeedbackRoute`/`serveWireRoute`
+ * receive as their deps, so duplicating those fields would drift the definitions apart with no
+ * way to catch it.
  */
-export interface DashboardServerConfig extends FeedbackRouteDeps {
+export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps {
   readonly hub: ObservatoryHub;
   /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
@@ -364,6 +366,10 @@ async function serveAuthorizedRoute(
   }
   if (path === "/feedback" || path === "/feedback/coach" || path === "/feedback/preview") {
     await serveFeedbackRoute(req, res, path, session, config, navFor("feedback"));
+    return;
+  }
+  if (path === "/wire") {
+    await serveWireRoute(res, config, Boolean(config.submitFeedback), navFor);
     return;
   }
   if (path === "/learn") {

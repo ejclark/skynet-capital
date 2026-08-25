@@ -10,7 +10,15 @@ import { SHELL_STYLE } from "./shell-style.js";
  */
 
 /** Which top-level view is active, for the shared nav. */
-export type NavView = "board" | "trade" | "research" | "you" | "add" | "learn" | "feedback";
+export type NavView =
+  | "board"
+  | "wire"
+  | "trade"
+  | "research"
+  | "you"
+  | "add"
+  | "learn"
+  | "feedback";
 
 export interface NavContext {
   readonly active: NavView;
@@ -34,6 +42,7 @@ const FEEDBACK_URL = "/feedback";
 
 const NAV_ICON: Record<string, string> = {
   board: "▦",
+  wire: "▤",
   trade: "⇅",
   research: "◷",
   you: "◉",
@@ -61,6 +70,9 @@ function renderDrawer(nav: NavContext): string {
     links.push(drawerLink("/u", "Portfolio", "you", nav.active === "you"));
   }
   links.push(drawerLink("/", "Standings", "board", nav.active === "board"));
+  // The Wire (2026-08-25): who's trading, what's booked, what's open — the shared activity/status
+  // board. Sits beside Standings — both are "what's happening" views, just sliced differently.
+  links.push(drawerLink("/wire", "The Wire", "wire", nav.active === "wire"));
   // Trade is global chrome — one click from every screen (desk-v2 handoff). The ticket
   // renders honestly in every state, so the link never needs gating.
   links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
