@@ -16,12 +16,12 @@ extending the tailing pattern is the base-case risk, and it hits high-duration, 
 names first. Auction **date confirmed**; every size/when-issued/demand figure below is
 **estimate/press-sourced** and drifts. No symbol-keyed action — guard-shaped, no-new-duration-risk.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | 22 days out; today's own 20Y auction result isn't posted yet — information-gathering only. |
-| This week | Watch | The 30Y is the tenor doing the selling (19-yr-high yields); its trend into the reopening is the live tape now. |
-| This month | Flat the print for high-duration names | 9/9→9/10→9/11 (10Y · 30Y · CPI) is a compound-risk corridor; CRWV/NVDA/AVGO/MRVL sized for both tails through it. |
-| This quarter | Two live channels, not one | Term premium (this auction — the sharpest expression of it) and the Fed path (Sep-16 FOMC, hike live ~30–40%) can compound; neither resolves the other. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | 22 days out; today's own 20Y auction result isn't posted yet — information-gathering only. | Nothing at 22 days out; the prior 20Y result is not posted |
+| This week | Watch | Medium | The 30Y is the tenor doing the selling (19-yr-high yields); its trend into the reopening is the live tape now. | The 30Y trend into the auction reversing off its 19-year-high yields |
+| This month | Flat the print for high-duration names | High | 9/9→9/10→9/11 (10Y · 30Y · CPI) is a compound-risk corridor; CRWV/NVDA/AVGO/MRVL sized for both tails through it. | A confirmed-weak print — bid-to-cover below ~2.3, a positive tail wider than 2026-08-13's — on **2026-09-10** |
+| This quarter | Two live channels, not one | Medium | Term premium (this auction — the sharpest expression of it) and the Fed path (Sep-16 FOMC, hike live ~30–40%) can compound; neither resolves the other. | A firm print (bid-to-cover ≥2.5, negative tail, indirects near/above ~68%) relieving the term-premium channel |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 

@@ -19,12 +19,12 @@ honesty stakes: (1) the date is an **estimate** — PJM Inside Lines says it *ex
 and it is not in the nine. The nearer, upstream event is the **Dec-15-2026** 2029/30 auction, where
 the first *cap-sunset signaling* toward this print appears.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | ~269 days out, **estimate**, no symbol attached — no play, and even VST (the sensitive name) is not in the tracked nine. |
-| This week (8/19–8/22) | Stand aside | No proximity; the relevant near-term reads are the Dec-15-2026 auction and the Texas PUCT audit, not this. |
-| This month (through ~9/19) | Stand aside | Nothing tradable at this range; the auction's own rules/parameters aren't posted yet. |
-| This quarter (through ~11/19) | Watch | Watch the run-up to the **Dec-15-2026 2029/30 auction** — the last *capped* print, and the first place credible cap-sunset language toward this uncapped 2030/31 BRA would surface (VST's Tier-2 gate). This event is a thesis-maintenance checkpoint, not a play on any of the nine. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | ~269 days out, **estimate**, no symbol attached — no play, and even VST (the sensitive name) is not in the tracked nine. | Nothing at ~269 days out; the date is an estimate with no symbol attached |
+| This week (8/19–8/22) | Stand aside | High | No proximity; the relevant near-term reads are the Dec-15-2026 auction and the Texas PUCT audit, not this. | The **2026-12-15** 2029/30 auction, which is the nearer read |
+| This month (through ~9/19) | Stand aside | Medium | Nothing tradable at this range; the auction's own rules/parameters aren't posted yet. | PJM's posted schedule moving the 2030/31 auction out of ~May 2027 |
+| This quarter (through ~11/19) | Watch | Medium | Watch the run-up to the **Dec-15-2026 2029/30 auction** — the last *capped* print, and the first place credible cap-sunset language toward this uncapped 2030/31 BRA would surface (VST's Tier-2 gate). This event is a thesis-maintenance checkpoint, not a play on any of the nine. | FERC or PJM extending the collar to cover 2030/31, which kills the cap-sunset premise |
 
 **Signals & conditions.**
 - **Date-confirm tell (not an entry trigger):** PJM posts an official 2030/31 BRA schedule with an

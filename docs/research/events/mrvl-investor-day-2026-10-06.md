@@ -20,12 +20,12 @@ that corrupted the earnings instrument's event list (it kept the 2025-05-06 inve
 filing and dropped the real 2025-05-29 print). Treat any filing around Oct 6 as a corruption risk
 for the next earnings-cycle run, not a new print.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Watch | 48 days out, **confirmed** — a real narrative catalyst worth tracking, but no positioning edge (S1 killed on MRVL) and no play today. |
-| This week (8/19–8/22) | Watch | The nearer, bigger MRVL catalyst is the **Aug-27 earnings print** (critical), and NVDA 8/26 the night before — the investor day is downstream of both; nothing here front-runs it. |
-| This month (through ~9/19) | Watch | Content is a custom-silicon TAM/ramp reset; consensus will form off the Aug-27 print and AVGO 9/2. No entry — MRVL has no researched pre-event structure. |
-| This quarter (through ~11/19) | Watch | Oct 6 is the set-piece: watch for a **raised** custom-ASIC TAM (vs the ~$94B/2028, ~$55.4B-custom baseline) and a reaffirmed FY28 doubling with named hyperscaler programs. A guidance *cut* or vaguer ramp is the negative surprise. Guard-and-observe, not a bet. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Watch | High | 48 days out, **confirmed** — a real narrative catalyst worth tracking, but no positioning edge (S1 killed on MRVL) and no play today. | Marvell IR rescheduling or cancelling the **2026-10-06** date |
+| This week (8/19–8/22) | Watch | High | The nearer, bigger MRVL catalyst is the **Aug-27 earnings print** (critical), and NVDA 8/26 the night before — the investor day is downstream of both; nothing here front-runs it. | The **2026-08-27** earnings print, which is the nearer and bigger MRVL catalyst |
+| This month (through ~9/19) | Watch | Medium | Content is a custom-silicon TAM/ramp reset; consensus will form off the Aug-27 print and AVGO 9/2. No entry — MRVL has no researched pre-event structure. | Consensus for the custom-silicon TAM resetting before the event, pricing the reset early |
+| This quarter (through ~11/19) | Watch | Medium | Oct 6 is the set-piece: watch for a **raised** custom-ASIC TAM (vs the ~$94B/2028, ~$55.4B-custom baseline) and a reaffirmed FY28 doubling with named hyperscaler programs. A guidance *cut* or vaguer ramp is the negative surprise. Guard-and-observe, not a bet. | A study pricing MRVL's investor-day reaction history, which would kill the narrative-only read |
 
 **Signals & conditions.**
 - **Watch (thesis, not trade):** an Oct-6 custom-silicon/ASIC TAM **raised** above the ~$94B-by-2028

@@ -243,7 +243,15 @@ const RS_STYLE = `<style>
   .rs-none{ font-size:11.5px; color:var(--muted); font-style:italic; }
   .rs-empty{ font-size:13px; color:var(--muted); font-style:italic; margin:4px 0; }
   .rs-stance{ border-left:2px solid var(--accent); padding-left:14px; }
-  .rs-glance{ background:color-mix(in srgb,var(--accent) 8%,var(--surface)); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:12px 18px 6px; margin:2px 0 4px; }
+  /* The decision surface earns more width than the reading column: it carries the five-column call
+     sheet (call · confidence · why · dated falsifier), and squeezing that into 80ch is what made
+     the old header hard to scan. The prose below keeps the narrower measure. */
+  .rs-glance{ background:color-mix(in srgb,var(--accent) 8%,var(--surface)); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:12px 18px 6px; margin:2px 0 4px; max-width:100%; }
+  /* Both classes are on the same element, so this out-specifies .md-doc's 80ch reading cap. */
+  .rs-glance.md-doc{ max-width:none; }
+  .rs-glance table{ table-layout:auto; width:100%; }
+  .rs-glance td:nth-child(3){ font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+  .rs-glance th:last-child, .rs-glance td:last-child{ color:var(--muted); }
   .rs-glance-tag{ font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:2px; }
   .rs-glance > p:first-of-type{ margin-top:4px; }
   .rs-glance strong{ color:var(--text); }

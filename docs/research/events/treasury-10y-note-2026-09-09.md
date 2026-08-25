@@ -17,12 +17,12 @@ into the belly, or a hot 9/11 CPI forcing a concession the day after. Auction **
 every size/when-issued/demand figure below is **estimate/press-sourced** and drifts. No symbol-keyed
 action — guard-shaped, no-new-duration-risk window.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | 21 days out; today's own 20Y auction result isn't even posted yet — pure information-gathering. |
-| This week | Watch | The long-end selloff (30Y 19-yr high) is the live tape; the 10Y's own demand read is 3 weeks out, but the trend into it starts now. |
-| This month | Flat the print for high-duration names | 9/9→9/10→9/11 (10Y · 30Y · CPI) is a genuine three-day compound-risk corridor; CRWV/NVDA/AVGO/MRVL sized as if both tails are live through it. |
-| This quarter | Two live channels, not one | Term premium (this auction + 30Y) and the Fed path (Sep-16 FOMC, hike live ~30–40%) are separate risks that can compound; neither resolves the other. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | 21 days out; today's own 20Y auction result isn't even posted yet — pure information-gathering. | Nothing at 21 days out; the prior 20Y result is not even posted |
+| This week | Watch | Medium | The long-end selloff (30Y 19-yr high) is the live tape; the 10Y's own demand read is 3 weeks out, but the trend into it starts now. | The long-end selloff reversing, which removes the demand question this auction tests |
+| This month | Flat the print for high-duration names | High | 9/9→9/10→9/11 (10Y · 30Y · CPI) is a genuine three-day compound-risk corridor; CRWV/NVDA/AVGO/MRVL sized as if both tails are live through it. | A weak print — bid-to-cover materially below ~2.47, a positive tail, or indirects below trend — on **2026-09-09** |
+| This quarter | Two live channels, not one | Medium | Term premium (this auction + 30Y) and the Fed path (Sep-16 FOMC, hike live ~30–40%) are separate risks that can compound; neither resolves the other. | A strong print (bid-to-cover ≥2.53, negative tail, indirects near/above 76%) confirming demand is intact |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
