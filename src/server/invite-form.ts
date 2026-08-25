@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { NavContext } from "../observatory/dashboard-shell.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { AllowlistEntry, AllowlistStore } from "./auth/allowlist-store.js";
-import { brandedShell } from "./page-shell.js";
+import { brandedShell, railedShell } from "./page-shell.js";
 import { handleSelfServiceForm, requireOwner } from "./self-service-forms.js";
 
 /**
@@ -31,7 +32,12 @@ export async function handleInvite(
   method: string,
   viewerEmail: string | undefined,
   deps: InviteDeps,
+  nav: NavContext,
 ): Promise<void> {
+  // The refusal stays on the bare shell (`brandedShell`) — a one-line "not available" page has
+  // nothing for a rail to navigate to, and it's the same "learns nothing" page for every viewer
+  // who isn't an owner. The real content, once past the gate, gets the app shell (Eric,
+  // 2026-08-25: "/add and /invite continue to ignore page templates and remove the rails").
   const owner = requireOwner(res, viewerEmail, deps.isOwner, brandedShell);
   if (!owner) return;
 
@@ -43,9 +49,9 @@ export async function handleInvite(
     req,
     res,
     method,
-    () => brandedShell("Guest list", list()),
+    () => railedShell("Guest list", nav, list()),
     (form) => Promise.resolve(invite(form, owner, deps)),
-    (result) => brandedShell("Guest list", result.note + list()),
+    (result) => railedShell("Guest list", nav, result.note + list()),
   );
 }
 

@@ -355,7 +355,7 @@ async function serveAuthorizedRoute(
     res.end();
     return;
   }
-  if (await trySelfServiceRoute(req, res, path, url, config, session)) {
+  if (await trySelfServiceRoute(req, res, path, url, config, session, navFor("add"))) {
     return;
   }
   if (path === "/feedback" || path === "/feedback/coach" || path === "/feedback/preview") {
@@ -512,9 +512,10 @@ async function tryOwnerPage(
   path: string,
   config: DashboardServerConfig,
   session: Session | undefined,
+  nav: NavContext,
 ): Promise<boolean> {
   if (path === "/invite" && config.invite) {
-    await handleInvite(req, res, req.method ?? "GET", session?.email, config.invite);
+    await handleInvite(req, res, req.method ?? "GET", session?.email, config.invite, nav);
     return true;
   }
   if (path === "/claim" && config.claim) {
@@ -532,6 +533,7 @@ async function trySelfServiceRoute(
   url: string,
   config: DashboardServerConfig,
   session: Session | undefined,
+  nav: NavContext,
 ): Promise<boolean> {
   if (path === "/add" && config.addParticipant) {
     // The owner link: whoever's signed in is who this account belongs to, full stop — never a
@@ -543,6 +545,7 @@ async function trySelfServiceRoute(
       keyOf(url),
       session?.email,
       config.addParticipant,
+      nav,
     );
     return true;
   }
@@ -550,7 +553,7 @@ async function trySelfServiceRoute(
     redirectToDeskSettings(res, config, session);
     return true;
   }
-  if (await tryOwnerPage(req, res, path, config, session)) {
+  if (await tryOwnerPage(req, res, path, config, session, nav)) {
     return true;
   }
   if ((path === "/account" || path === "/account/remove") && config.accountAdmin) {
