@@ -46,6 +46,7 @@ import type {
   RotateCredentialsInput,
   RotateResult,
 } from "./participant-service.js";
+import type { ProgressionService } from "./progression-service.js";
 import { serveResearchRoute } from "./research-routes.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 import { sseFrame } from "./sse.js";
@@ -116,6 +117,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps {
    * stay honest about it via the backfill caveat.
    */
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
+  /**
+   * Per-participant progression derived from the fill + audit ledgers — drives the Milestones
+   * page and (with training wheels on) the desk's trade-type gate. Omit and `/learn` renders
+   * a browsable journey at zero while the desk behaves as wheels-off.
+   */
+  readonly progression?: ProgressionService;
   /**
    * Member-initiated trading from the desk (`/trade`). On whenever OAuth is configured (Eric's
    * ruling, 2026-08-21, #466: no separate switch) — with it off, the desk still renders its
@@ -348,6 +355,10 @@ async function serveAuthorizedRoute(
     await serveFeedbackRoute(req, res, path, session, config, navFor("feedback"));
     return;
   }
+  if (path === "/learn") {
+    await serveLearnRoute(res, config, session, navFor);
+    return;
+  }
   if (serveInfoRoute(res, path, url, navFor)) {
     return;
   }
@@ -385,9 +396,28 @@ async function serveAuthorizedRoute(
 }
 
 /**
- * The read-only info views behind the gate — `/learn`, `/research` — grouped so the main dispatch
- * stays within its complexity budget. Returns true when the request was handled; dispatch order is
- * unchanged from before the extraction.
+ * The Milestones page (`/learn`) — the one info view that knows WHO is looking: the session's
+ * identity resolves exactly as `/trade`'s does, and the viewer's derived progression (earned
+ * milestones, points, rank) rides into the render. No identity, or no progression service wired,
+ * degrades to the browsable journey at zero — honestly, never a fabricated state.
+ */
+async function serveLearnRoute(
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+  navFor: (active: NavView) => NavContext,
+): Promise<void> {
+  const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  const progress = id && config.progression ? await config.progression.view(id) : undefined;
+  const body = renderAcademyBody({ nav: navFor("learn"), ...(progress ? { progress } : {}) });
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  res.end(shellDocument("Milestones — Skynet Capital", body));
+}
+
+/**
+ * The read-only info views behind the gate — `/research`, the `/calendar` redirect — grouped so
+ * the main dispatch stays within its complexity budget. Returns true when the request was handled;
+ * dispatch order is unchanged from before the extraction.
  */
 function serveInfoRoute(
   res: ServerResponse,
@@ -395,12 +425,6 @@ function serveInfoRoute(
   url: string,
   navFor: (active: NavView) => NavContext,
 ): boolean {
-  if (path === "/learn") {
-    const body = renderAcademyBody({ nav: navFor("learn") });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Learn — Skynet Capital", body));
-    return true;
-  }
   if (path === "/calendar") {
     // The event horizon folded into the Research shelf 2026-08-25 — an old bookmark still lands
     // somewhere real rather than 404ing. Its month param carries over unchanged.

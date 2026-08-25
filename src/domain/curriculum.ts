@@ -165,7 +165,7 @@ export interface Rank {
   readonly title: string;
   readonly atPoints: number;
 }
-export const RANKS: readonly Rank[] = [
+const RANKS: readonly Rank[] = [
   { title: "Observer", atPoints: 0 },
   { title: "Apprentice", atPoints: 25 },
   { title: "Trader", atPoints: 50 },

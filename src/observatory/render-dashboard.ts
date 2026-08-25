@@ -1,5 +1,13 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
-import { COURSES, type Course, type Milestone, RANKS, totalPoints } from "../domain/curriculum.js";
+import {
+  COURSES,
+  type Course,
+  type CourseLevel,
+  type Milestone,
+  type Rank,
+  totalPoints,
+} from "../domain/curriculum.js";
+import type { EarnedMilestone } from "../domain/progression.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import {
   type DashboardViewOptions,
@@ -359,59 +367,93 @@ function historyPanel(snapshot: ParticipantSnapshot, history?: readonly EquitySa
     </section>`;
 }
 
-/** One milestone row — a self-marked achievement worth points. */
-function milestoneRow(m: Milestone): string {
+/**
+ * The viewer's derived progression, as the Milestones page consumes it — a structural subset of
+ * the server's `ParticipantProgression`, declared here so the view depends only on domain types.
+ */
+export interface AcademyProgress {
+  readonly earned: readonly EarnedMilestone[];
+  readonly points: number;
+  readonly rank: Rank;
+  readonly unlockedLevels: ReadonlySet<CourseLevel>;
+}
+
+/** One milestone row — earned by a real filled order (the order id is the proof), never a checkbox. */
+function milestoneRow(m: Milestone, earned: EarnedMilestone | undefined): string {
   // A milestone that IS a trade maps straight to the ticket, pre-set to its play.
   const ticket = m.tradeType ? `/trade?play=${m.tradeType}` : undefined;
-  return `<label class="ms" data-ms="${m.id}">
-        <input type="checkbox" class="ms-check" data-ms-check="${m.id}">
+  const proof = earned
+    ? `<span class="ms-proof">filled ${escapeHtml(earned.at.slice(0, 10))} · order ${escapeHtml(earned.orderId)}</span>`
+    : "";
+  return `<div class="ms${earned ? " done" : ""}" data-ms="${m.id}">
         <span class="ms-mark" aria-hidden="true">✓</span>
-        <span class="ms-body"><span class="ms-title">${escapeHtml(m.title)}</span><span class="ms-detail">${escapeHtml(m.detail)}</span></span>
-        ${ticket ? `<a class="ms-go" href="${ticket}">open the ticket →</a>` : ""}
+        <span class="ms-body"><span class="ms-title">${escapeHtml(m.title)}</span><span class="ms-detail">${escapeHtml(m.detail)}</span>${proof}</span>
+        ${!earned && ticket ? `<a class="ms-go" href="${ticket}">open the ticket →</a>` : ""}
         <span class="ms-pts">+${m.points}</span>
-      </label>`;
+      </div>`;
 }
 
 /** One course card — a chapter of milestones with a progress bar; higher levels lock. */
-function courseCard(course: Course, locked: boolean): string {
-  return `<details class="course${locked ? " locked" : ""}" data-course="${course.level}"${locked ? "" : " open"}>
+function courseCard(
+  course: Course,
+  locked: boolean,
+  earnedById: ReadonlyMap<string, EarnedMilestone>,
+): string {
+  const done = course.milestones.filter((m) => earnedById.has(m.id)).length;
+  const pct = course.milestones.length ? Math.round((done / course.milestones.length) * 100) : 0;
+  const open = !locked && done < course.milestones.length;
+  return `<details class="course${locked ? " locked" : ""}" data-course="${course.level}"${open ? " open" : ""}>
       <summary>
         <span class="course-badge">${course.level}</span>
         <span class="course-h">
           <span class="course-title">${escapeHtml(course.title)}</span>
           <span class="course-sub">${escapeHtml(course.subtitle)}</span>
-          <span class="course-prog"><span class="course-bar"><i data-bar="${course.level}"></i></span><span class="course-count" data-count="${course.level}">0 / ${course.milestones.length}</span></span>
+          <span class="course-prog"><span class="course-bar"><i data-bar="${course.level}" style="width:${pct}%"></i></span><span class="course-count" data-count="${course.level}">${done} / ${course.milestones.length}</span></span>
         </span>
         <span class="course-lock" data-lock>${locked ? "🔒 Finish the level below" : ""}</span>
         <span class="lvl-chev" aria-hidden="true">›</span>
       </summary>
       <div class="ms-list">
-        ${course.milestones.map(milestoneRow).join("\n        ")}
+        ${course.milestones.map((m) => milestoneRow(m, earnedById.get(m.id))).join("\n        ")}
       </div>
     </details>`;
 }
 
 /**
- * The ACADEMY (`/learn`) — a GAMIFIED trading journey, not a textbook. It opens with a points/rank
- * HUD and the Wheel (buy stock → cash-covered put → covered call → repeat), then a stack of courses
- * whose milestones are self-marked achievements worth points. Level 100 (the Wheel) is open from the
- * start; level 200 (directional long options) unlocks only when 100 is complete — and everything
- * riskier is intentionally not shown yet. The `src/domain/curriculum.ts` model is the single source
- * of truth; a future engine can auto-complete milestones from real Alpaca activity.
+ * The MILESTONES page (`/learn`) — a GAMIFIED trading journey, not a textbook. It opens with a
+ * points/rank HUD and the Wheel narrative, then a stack of courses whose milestones are EARNED by
+ * real filled orders — the desk's own ledgers are the proof, and nothing here can be self-marked
+ * (Eric's ruling, 2026-08-25: progress a user can claim with zero proof is worthless). Level 100
+ * (stock basics) is open from the start; each higher course unlocks when the one below completes.
+ * `src/domain/curriculum.ts` is the content's single source of truth; the viewer's derived
+ * progression (`domain/progression.ts` over the fill + audit ledgers) arrives as `progress` —
+ * absent when the session resolves to no account, which renders a browsable journey at zero.
  */
-export function renderAcademyBody(options: DashboardViewOptions = {}): string {
-  const cards = COURSES.map((c, i) => courseCard(c, i > 0)).join("\n    ");
+export function renderAcademyBody(
+  options: DashboardViewOptions & { progress?: AcademyProgress } = {},
+): string {
+  const progress = options.progress;
+  const earnedById = new Map((progress?.earned ?? []).map((m) => [m.milestoneId, m]));
+  const levels = progress?.unlockedLevels ?? new Set<CourseLevel>([COURSES[0]?.level ?? 100]);
+  const points = progress?.points ?? 0;
+  const rankTitle = progress?.rank.title ?? "Observer";
+  const pct = totalPoints() ? Math.round((points / totalPoints()) * 100) : 0;
+  const cards = COURSES.map((c) => courseCard(c, !levels.has(c.level), earnedById)).join("\n    ");
+  const linkNote = progress
+    ? ""
+    : `<p class="view-sub">Milestones light up from orders you fill on your own desk — this session isn't linked to an account yet, so the journey shows from the start.</p>`;
   const content = `<section class="academy">
     <div class="ladder-head">
       <div>
         <h1 class="view-title">Your trading journey</h1>
-        <p class="view-sub">It's all paper money — the only thing at stake is bragging rights. Complete milestones, earn points, climb the ranks, and unlock the next play.</p>
+        <p class="view-sub">It's all paper money — the only thing at stake is bragging rights. Fill real orders to earn milestones, climb the ranks, and unlock the next play.</p>
+        ${linkNote}
       </div>
     </div>
     <div class="hud">
-      <div class="hud-stat"><span class="hud-k">Rank</span><span class="hud-v" data-rank>Observer</span></div>
-      <div class="hud-stat"><span class="hud-k">Points</span><span class="hud-v" data-points>0</span><span class="hud-of" data-total>/ ${totalPoints()}</span></div>
-      <div class="hud-bar"><i data-hudbar></i></div>
+      <div class="hud-stat"><span class="hud-k">Rank</span><span class="hud-v" data-rank>${escapeHtml(rankTitle)}</span></div>
+      <div class="hud-stat"><span class="hud-k">Points</span><span class="hud-v" data-points>${points}</span><span class="hud-of" data-total>/ ${totalPoints()}</span></div>
+      <div class="hud-bar"><i data-hudbar style="width:${pct}%"></i></div>
     </div>
     <div class="wheel">
       <h2>The Wheel — your first playbook</h2>
@@ -428,58 +470,6 @@ export function renderAcademyBody(options: DashboardViewOptions = {}): string {
     </div>
     <p class="more-soon">◆ More strategies — spreads, condors, and advanced plays — unlock as you climb. We keep the risky ones out of reach until you're ready.</p>
   </section>
-  <footer class="obs-foot">Educational · paper trading only · nothing here is financial advice. Mark a milestone once you've done it in your account — progress saves on this device.</footer>
-  ${ACADEMY_SCRIPT}`;
+  <footer class="obs-foot">Educational · paper trading only · nothing here is financial advice. Milestones are earned the moment a real order fills — nothing here is self-marked.</footer>`;
   return renderShell(options.nav, content, new Date().toISOString());
 }
-
-/**
- * Gamified progression, client-side. localStorage holds the set of completed milestone ids; checking
- * one awards points, advances the rank HUD + per-course bars, and unlocks the next course once the
- * current one is fully done. No-JS still gets a fully readable page (level 100 open).
- */
-const ACADEMY_SCRIPT = `<script>
-(function(){
-  var KEY="skynet.academy.done";
-  var RANKS=${JSON.stringify(RANKS)};
-  var TOTAL=${totalPoints()};
-  var COURSES=${JSON.stringify(
-    COURSES.map((c) => ({
-      level: c.level,
-      ms: c.milestones.map((m) => ({ id: m.id, points: m.points })),
-    })),
-  )};
-  function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||"[]"); }catch(e){ return []; } }
-  function save(a){ try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch(e){} }
-  var done={}; load().forEach(function(id){ done[id]=true; });
-  function points(){ var p=0; COURSES.forEach(function(c){ c.ms.forEach(function(m){ if(done[m.id]) p+=m.points; }); }); return p; }
-  function rankFor(p){ var r=RANKS[0]; RANKS.forEach(function(x){ if(p>=x.atPoints) r=x; }); return r; }
-  function courseDone(c){ return c.ms.every(function(m){ return done[m.id]; }); }
-  function unlocked(level){ for(var i=0;i<COURSES.length;i++){ if(COURSES[i].level===level){ return i===0 || courseDone(COURSES[i-1]); } } return false; }
-  function set(el,v){ if(el) el.textContent=v; }
-  function sync(){
-    var p=points();
-    set(document.querySelector("[data-points]"), String(p));
-    set(document.querySelector("[data-rank]"), rankFor(p).title);
-    var hb=document.querySelector("[data-hudbar]"); if(hb) hb.style.width=(TOTAL?Math.round(p/TOTAL*100):0)+"%";
-    document.querySelectorAll("[data-ms-check]").forEach(function(cb){ cb.checked=!!done[cb.getAttribute("data-ms-check")]; });
-    COURSES.forEach(function(c){
-      var n=0; c.ms.forEach(function(m){ if(done[m.id]) n++; });
-      var bar=document.querySelector('[data-bar="'+c.level+'"]'); if(bar) bar.style.width=Math.round(n/c.ms.length*100)+"%";
-      set(document.querySelector('[data-count="'+c.level+'"]'), n+" / "+c.ms.length);
-      var el=document.querySelector('.course[data-course="'+c.level+'"]'); if(!el) return;
-      var lock=!unlocked(c.level); el.classList.toggle("locked", lock);
-      var ll=el.querySelector("[data-lock]"); if(ll) ll.textContent=lock?"🔒 Finish the level below":"";
-      if(lock){ el.open=false; el.querySelectorAll("[data-ms-check]").forEach(function(cb){ cb.disabled=true; }); }
-      else el.querySelectorAll("[data-ms-check]").forEach(function(cb){ cb.disabled=false; });
-    });
-  }
-  document.querySelectorAll("[data-ms-check]").forEach(function(cb){
-    cb.addEventListener("change", function(){ var id=cb.getAttribute("data-ms-check");
-      if(cb.checked) done[id]=true; else delete done[id];
-      save(Object.keys(done)); sync();
-    });
-  });
-  sync();
-})();
-</script>`;

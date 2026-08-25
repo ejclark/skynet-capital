@@ -327,14 +327,13 @@ export const SHELL_STYLE = `<style>
   .course-lock{ font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--muted); white-space:nowrap; }
   .lvl-chev{ color:var(--muted); transition:transform .2s; } .course[open] .lvl-chev{ transform:rotate(90deg); }
   .ms-list{ padding:2px 20px 18px; display:flex; flex-direction:column; gap:8px; }
-  .ms{ display:flex; align-items:flex-start; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:13px 15px; cursor:pointer; transition:border-color .15s; }
+  .ms{ display:flex; align-items:flex-start; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:13px 15px; transition:border-color .15s; }
   .ms:hover{ border-color:color-mix(in srgb,var(--accent) 40%,var(--border)); }
-  .ms-check{ position:absolute; opacity:0; width:0; height:0; }
   .ms-mark{ flex:0 0 auto; width:22px; height:22px; border-radius:6px; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center;
     font-size:12px; color:transparent; transition:all .15s; margin-top:1px; }
-  .ms:has(.ms-check:checked) .ms-mark{ background:var(--pos); border-color:var(--pos); color:var(--bg); }
-  .ms:has(.ms-check:checked) .ms-title{ color:var(--muted); text-decoration:line-through; }
-  .ms:focus-within{ outline:2px solid var(--accent); outline-offset:2px; }
+  .ms.done .ms-mark{ background:var(--pos); border-color:var(--pos); color:var(--bg); }
+  .ms.done{ border-color:color-mix(in srgb,var(--pos) 30%,var(--border)); }
+  .ms-proof{ font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--muted); margin-top:3px; }
   .ms-body{ flex:1; display:flex; flex-direction:column; gap:2px; }
   .ms-title{ font-size:13.5px; font-weight:700; }
   .ms-detail{ font-size:12px; color:var(--muted); line-height:1.5; }
