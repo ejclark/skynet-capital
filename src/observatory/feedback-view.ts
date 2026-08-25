@@ -12,7 +12,9 @@ import { IMAGE_SCRIPT } from "./feedback-image-script.js";
 // Mirrors feedback-issue.ts's private FEEDBACK_KIND_LABEL — kept separate rather than exported
 // across the module boundary, since feedback-issue.ts sits right at its architecture budget
 // (127/130) and any addition there needs its own decompose-first PR first (#429, #502).
-const FEEDBACK_KIND_ICON: Record<FeedbackLogEntry["kind"], string> = {
+// Exported (2026-08-25): the wire view's cross-member feedback pulse renders the same kind icon
+// against the same FeedbackLogEntry shape — importing this beats a second copy drifting from it.
+export const FEEDBACK_KIND_ICON: Record<FeedbackLogEntry["kind"], string> = {
   bug: "🐞",
   feature: "✨",
   idea: "🗺️",
@@ -56,7 +58,8 @@ function formField(inner: string): string {
   return `<div class="fdbk-field">${inner}</div>`;
 }
 
-function statusBadge(status: FeedbackStatus | undefined): string {
+/** Exported for wire-view.ts — same status pill on a cross-member list as on a member's own. */
+export function statusBadge(status: FeedbackStatus | undefined): string {
   if (!status) return "";
   return `<span class="fdbk-recent-status fdbk-status-${status}">${escapeHtml(FEEDBACK_STATUS_LABEL[status])}</span>`;
 }

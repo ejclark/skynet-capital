@@ -947,6 +947,38 @@ _(nothing right now)_
   own framing before anyone builds toward it — not a flag to flip.
   _(src: Eric · while: account-connection follow-up, 2026-08-25)_
 
+- **Let a member comment on someone ELSE's feedback from inside the app, not just their own.**
+  The Wire (`/wire`, 2026-08-25) surfaces every member's filed feedback so people can see and get
+  inspired by each other's ideas, and links each item out to its GitHub issue for the real
+  discussion — but `feedback-followup.ts`'s in-app "Follow up" only lets a member comment on an
+  issue **they themselves filed** (ownership is checked against their own logged filings). Widening
+  that to "comment on anyone's open item" is a real design surface of its own — what identity shows
+  on the comment (the same opaque-id-only rule as filing?), throttling shared across all commenters
+  posting through one bot token, and whether it's worth building at all versus just teaching people
+  the GitHub-native path (create an account, comment there) that already works today at zero
+  engineering cost. Deliberately not built in the same slice as The Wire.
+  _(src: Eric · while: "let users post directly on the issue," activity dashboard request, 2026-08-25)_
+
+- **Only Eric's `@claude` mentions actually trigger anything today — the onramp copy has to say so.**
+  `.github/workflows/claude.yml`'s gate requires `author_association` of OWNER/MEMBER/COLLABORATOR;
+  a friend-and-family member who signs up for a fresh GitHub account and tags `@claude` on an issue
+  gets silently ignored (by design — no reply rewards an unauthorized mention) unless Eric has
+  separately added them as a repo collaborator. The Wire's onramp copy says this plainly rather than
+  overpromising, but the actual fix — deciding whether trusted members should get collaborator
+  access so the mention they're taught to use actually works — is Eric's call (repo access is the
+  irreversible class) and worth deciding once rather than leaving every onramping member to discover
+  the gap by a comment that goes nowhere.
+  _(src: Claude · while: building The Wire's GitHub onramp, 2026-08-25)_
+
+- **`dashboard-server.ts` is back at its ceiling (870/870) the moment `/wire` landed.** It's the
+  single largest "OVER→raised" file in the repo now, and every new top-level route adds another
+  branch to its one dispatch function. The Wire PR raised the budget rather than decomposing it
+  (out of scope for a feature PR), but the file is a standing decompose candidate — a natural split
+  is by route family (trade/research/feedback/wire already delegate to their own `serve*Route`; the
+  remaining self-service/account/positions branches could follow the same pattern) rather than
+  waiting for the next feature to push it further over.
+  _(src: Claude · while: building The Wire, 2026-08-25)_
+
 ### `ship.sh verifybody <pr>` — lint what GitHub actually stored, not the file you sent
 `checkbody` lints a body **file**; nothing checks the body GitHub ended up with. That gap is exactly
 how the fridge rule shipped unfolded on #561 (LESSONS.md, 2026-08-25): the MCP write tools stripped
