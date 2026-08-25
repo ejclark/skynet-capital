@@ -106,3 +106,7 @@ Elements with rich backstory that *license overly-refined detail*. Depth compoun
 - Honor `prefers-reduced-motion`; both themes must be legible.
 - When an element earns it (a backstory, an anchor), **bake in exquisite detail** — and record the
   refinement so it compounds.
+- **Celebration pairs with explanation.** No delight animation (a milestone banner, a future ceremony)
+  fires without adjacent plain-language text on what just happened. Robinhood's own 2021 post-confetti
+  redesign learned this the hard way — pure fanfare with no explanation reads as pushing the action,
+  not celebrating the understanding.
