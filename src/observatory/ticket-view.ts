@@ -1,6 +1,7 @@
 import type { OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
 import { COURSES } from "../domain/curriculum.js";
+import { STARTER_PLAYS, type StarterPlay } from "../domain/starter-plays.js";
 import { TRADE_TYPES, type TradeType } from "../domain/trade-types.js";
 import {
   type OptionPlayCode,
@@ -31,6 +32,8 @@ export interface TicketState {
   readonly mode: "guided" | "raw";
   readonly play: TradeType;
   readonly symbol?: string;
+  /** Which starter-play chip filled this ticket (`?starter=`), for the bar's active state. */
+  readonly starter?: StarterPlay["id"];
   readonly qty: number;
   readonly expiration?: string;
   readonly strike?: number;
@@ -287,6 +290,20 @@ function optionTicket(model: TicketViewModel, preview: OptionTicketPreview | und
 }
 
 /** Stock ticket (101/102) — the share desk's fields, review-first exactly as before. */
+/**
+ * The STARTER-PLAY bar — three pre-filled first trades, plain links to `?starter=<id>`. Guided
+ * mode only (raw is the power-user surface); the active chip marks the preset that filled the
+ * ticket, and editing any field resubmits without the param, so the chips never lie about state.
+ */
+function starterBar(state: TicketState): string {
+  if (state.mode !== "guided") return "";
+  const chips = STARTER_PLAYS.map((p) => {
+    const active = state.starter === p.id;
+    return `<a class="st-chip${active ? " sel" : ""}"${active ? ' aria-current="true"' : ""} href="/trade?starter=${p.id}"><span class="st-title">${escapeHtml(p.title)}</span><span class="st-detail">${escapeHtml(p.detail)}</span></a>`;
+  }).join("");
+  return `<div class="st-bar" aria-label="Starter plays">${chips}</div>`;
+}
+
 function stockTicket(model: TicketViewModel): string {
   const { state } = model;
   const disabled = model.tradingEnabled && model.snapshot ? "" : " disabled";
@@ -305,6 +322,15 @@ function stockTicket(model: TicketViewModel): string {
 }
 
 const TICKET_STYLE = `<style>
+  .st-bar{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .st-chip{ display:flex; flex-direction:column; gap:2px; padding:9px 14px; border:1px solid var(--border); border-radius:10px;
+    text-decoration:none; color:var(--text); transition:border-color .15s, background .15s; }
+  .st-chip:hover{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); }
+  .st-chip:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .st-chip.sel{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 8%,transparent); }
+  .st-title{ font-weight:600; font-size:12.5px; }
+  .st-detail{ font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .st-chip.sel .st-detail{ color:var(--accent); }
   .tk-picker summary{ list-style:none; cursor:pointer; display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
   .tk-picker summary::-webkit-details-marker{ display:none; }
   .tk-rows{ display:flex; flex-direction:column; gap:6px; margin-top:14px; }
@@ -398,6 +424,7 @@ export function renderTicketBody(model: TicketViewModel): string {
       ${modeToggle(state)}
     </header>
     ${gate}
+    ${starterBar(state)}
     ${playPicker(state)}
     ${isOption ? optionTicket(model, preview) : stockTicket(model)}
     <p class="caveat"><b>Paper account.</b> Real prices, real mechanics, simulated money. Options premiums shown are indicative (bid/ask mid, or last close) — fills settle at the market. Options orders on Alpaca are day-only.</p>

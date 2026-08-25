@@ -270,6 +270,40 @@ describe("handleTrade — the route contract in isolation", () => {
     expect(sent.status).toBe(403);
     expect(sent.body).toContain("Order refused");
   });
+
+  // Starter plays live on their own ?starter= param — never ?play=, whose codes are the desk's
+  // course catalog the academy links against (Eric's call, 2026-08-25).
+  it("pre-fills the stock ticket from ?starter= — symbol, size, and the active chip", async () => {
+    const { sent, res } = capture();
+    await handleTrade({ method: "GET" } as IncomingMessage, res, "/trade?starter=spy100", deps);
+    expect(sent.status).toBe(200);
+    expect(sent.body).toContain('value="SPY"');
+    expect(sent.body).toContain('value="100"');
+    expect(sent.body).toContain('class="st-chip sel"');
+  });
+
+  it("lets explicit params beat the starter preset", async () => {
+    const { sent, res } = capture();
+    await handleTrade(
+      { method: "GET" } as IncomingMessage,
+      res,
+      "/trade?starter=qqq25&symbol=NVDA&qty=3",
+      deps,
+    );
+    expect(sent.body).toContain('value="NVDA"');
+    expect(sent.body).toContain('value="3"');
+  });
+
+  it("ignores an unknown starter token and leaves ?play= untouched by the whole feature", async () => {
+    const { sent, res } = capture();
+    await handleTrade({ method: "GET" } as IncomingMessage, res, "/trade?starter=yolo9000", deps);
+    expect(sent.status).toBe(200);
+    expect(sent.body).not.toContain('class="st-chip sel"');
+
+    const academy = capture();
+    await handleTrade({ method: "GET" } as IncomingMessage, academy.res, "/trade?play=201", deps);
+    expect(academy.sent.body).toContain("cash-secured put");
+  });
 });
 
 describe("desk tabs are served off the profile route", () => {

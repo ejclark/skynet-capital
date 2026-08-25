@@ -1,3 +1,4 @@
+import { STARTER_PLAYS } from "../../src/domain/starter-plays.js";
 import { defaultTradeType, tradeTypeByCode } from "../../src/domain/trade-types.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import {
@@ -119,5 +120,34 @@ describe("ticketHref", () => {
       "/trade?play=201&symbol=MSFT&exp=2026-09-18&strike=420&qty=2",
     );
     expect(ticketHref(cspState(), { strike: "430", limit: undefined })).toContain("strike=430");
+  });
+});
+
+describe("the starter-play bar", () => {
+  it("offers all three starter plays as plain ?starter= links in guided mode", () => {
+    const html = renderTicketBody({ state: state(), snapshot: ann, tradingEnabled: true });
+    for (const p of STARTER_PLAYS) {
+      expect(html).toContain(`href="/trade?starter=${p.id}"`);
+      expect(html).toContain(p.title);
+      expect(html).toContain(p.detail);
+    }
+  });
+
+  it("marks the chip that filled the ticket as active", () => {
+    const html = renderTicketBody({
+      state: state({ starter: "qqq25", symbol: "QQQ", qty: 25 }),
+      snapshot: ann,
+      tradingEnabled: true,
+    });
+    expect(html).toContain('class="st-chip sel" aria-current="true" href="/trade?starter=qqq25"');
+  });
+
+  it("keeps the bar out of raw mode — the power-user surface stays clean", () => {
+    const html = renderTicketBody({
+      state: state({ mode: "raw" }),
+      snapshot: ann,
+      tradingEnabled: true,
+    });
+    expect(html).not.toContain('class="st-bar"');
   });
 });
