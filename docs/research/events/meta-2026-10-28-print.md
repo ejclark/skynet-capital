@@ -1,7 +1,7 @@
 # META earnings print — meta-2026-10-28-print
 
 **Kind:** earnings · **Date:** 2026-10-28 (estimate, 8-K cadence) · **Impact:** critical
-**Last assessed:** 2026-08-17
+**Last assessed:** 2026-08-24
 
 ## Initial research
 
@@ -101,6 +101,7 @@ licensing a trade (estimates only widen caution, never license action).
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-17 | D-72 | Initial research banked; both instruments fresh (event list ends 2026-04-29 — the 2026-07-29 print is missing per the sweep's known forward-window blindness; caveated, not repaired). Date hunt: Meta IR lists no upcoming events (checked 2026-08-17); aggregators converge Wed 10-28 AMC — stays **estimate**. Adjacency: no peer prints since 08-15 (weekend); NVDA 08-26 confirmed / MRVL 08-27 confirmed / AVGO 09-02 announced — all already proposed via the NVDA doc's 08-17 row; no macro prints since 08-15; VIX 14.56 Fri 08-15 (2026 low) with SKEW +6.6% m/m and Brent +6.0%/wk — calm index, rising tail-hedge demand; no new export-control/policy action touching META. Event tape (**estimate**): Q3 consensus ~$63.1–63.3B rev / ~$6.95 EPS vs company guide $61–64B; stock has round-tripped the July −9.6% AH selloff back toward highs (~25% off the low); implied move not quotable at D-72. FT-4 (META post-print stand-aside) scores ~08-27, before this doc's next check. | — (stance set) | 2026-08-24 (critical, 61+d band: every 7d) |
+| 2026-08-24 | D-65 | Adjacency sweep. Event tape: date convergence on 10/28 holds (TipRanks/Investing.com "confirmed," one Wall Street Horizon page still flags "unconfirmed") — no Meta IR primary posted, stays **estimate**. Consensus drifted slightly: EPS ~$6.75 (from ~$6.95 at D-72), revenue ~$63.26B (essentially unchanged from ~$63.1-63.3B) — normal estimate-revision noise, not material. Peers: NVDA/MRVL both report this week (own docs); AVGO's XPV overhang deepened (own doc). Macro: no CPI/jobs surprise since 8/17; Sep-16 FOMC read is 68.4% hold/31.6% hike as of 8/20 (FOMC sibling doc). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new dated adjacency found. | — (no change; too far out for a substantive stance shift) | 2026-08-31 (critical, 61+d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
