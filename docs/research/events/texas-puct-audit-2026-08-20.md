@@ -17,12 +17,12 @@ is well-corroborated but not primary-confirmed. On the substance: Vistra's own m
 contracted projects — this reads closer to queue-cleanup tailwind than regulatory overhang for
 VST specifically.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Watch | Event is tomorrow; nothing tradable today, estimate-labeled. |
-| This week (8/19–8/22) | Watch | The Aug 20 meeting item is procedural (an exception filing on a queue-classification deadline), not a ruling on audit substance — low odds of a VST-moving surprise. |
-| This month (through ~9/19) | Stand aside | Audit is explicitly multi-month (ERCOT's own estimate: "several months, less than nine"); no near-term catalyst on Vistra fundamentals is expected, and management has already signaled comfort. |
-| This quarter (through ~11/19) | Watch | This is the "Texas audit resolving" half of VST's Tier-2 entry condition in `ai-energy-constraint.md` (paired with the Dec-15 PJM auction leg) — worth tracking over the quarter as the audit produces real output, not actionable on any single meeting. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Watch | High | Event is tomorrow; nothing tradable today, estimate-labeled. | A direct fetch of the **2026-08-20** PUCT agenda confirming or moving the item |
+| This week (8/19–8/22) | Watch | Medium | The Aug 20 meeting item is procedural (an exception filing on a queue-classification deadline), not a ruling on audit substance — low odds of a VST-moving surprise. | The meeting item proving substantive rather than a procedural exception filing |
+| This month (through ~9/19) | Stand aside | Medium | Audit is explicitly multi-month (ERCOT's own estimate: "several months, less than nine"); no near-term catalyst on Vistra fundamentals is expected, and management has already signaled comfort. | The audit concluding early against ERCOT's own multi-month estimate |
+| This quarter (through ~11/19) | Watch | Medium | This is the "Texas audit resolving" half of VST's Tier-2 entry condition in `ai-energy-constraint.md` (paired with the Dec-15 PJM auction leg) — worth tracking over the quarter as the audit produces real output, not actionable on any single meeting. | Findings or a PUCT order naming Vistra's units, which kills the no-threat read |
 
 **Signals & conditions.**
 - **Entry-relevant (still requires the paired PJM leg — never licensed by this event alone):** the

@@ -3,6 +3,32 @@
 **Kind:** sector · **Date:** 2026-12-15 (estimate, EST: docs/research/ai-energy-constraint.md watch list — confirm vs pjm.com) · **Impact:** medium
 **Last assessed:** 2026-08-17
 
+## At a glance
+
+**TL;DR.** **Watch-only** for the AI-energy sleeve — no action on any tracked name, and the date is an
+**estimate**, so no date-keyed action is licensed regardless. The base case (estimate) is that the
+2029/30 base residual auction clears at the ~$325/MW-day cap for a fourth straight year with a
+persistent shortfall against the reliability requirement, and that the IPP equity reaction is small:
+the collar (confirmed, FERC 2026-04-28) has turned the price into a **known number**. The value here
+is not the trade, it is the information — shortfall MW, PJM's uncapped-price simulation, and any
+credible cap-sunset signalling toward the ~May 2027 auction, which is the named gate on VST's Tier-2
+entry condition.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** — watch-only | High | The collar makes the clearing price a known number; there is no price discovery to trade | FERC or PJM modifying or vacating the collar before the auction (a live docket) |
+| This week | **No action** | High | The date itself is an estimate and PJM's schedule is not final | PJM posting a day materially different from **2026-12-15**, or moving it out of December |
+| This month | **Harvest information, not a position** | Medium | Shortfall MW and the uncapped-price simulation are the read on the scarcity layer | A below-cap RTO-wide clear, which kills the scarcity leg outright |
+| This quarter | **Hold the sleeve's Tier-2 gate closed** | Medium | VST's Tier-2 entry condition waits on credible cap-sunset signalling toward the ~May 2027 auction | Credible cap-sunset signalling emerging at or before this print |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Never** — take a date-keyed position; the date is an estimate and the price is collared.
+- **The three things to read at the print** — shortfall MW · PJM's uncapped-price simulation · any cap-sunset signalling toward the ~**May 2027** 2030/31 auction.
+- **The tell that de-risks the whole layer** — a below-cap RTO-wide clear (the capacity-response signal from `constraint-watch.md` Phase 4).
+- **Upgrades this event's impact tier if** — the collar is modified or vacated, restoring genuine price discovery.
+- **Watch (dated)** — the FERC collar docket · PJM's posted schedule · the estimated auction ~**2026-12-15**.
+
 ## Initial research
 
 **The question, plainly.** PJM's Base Residual Auction for the 2029/30 delivery year runs in

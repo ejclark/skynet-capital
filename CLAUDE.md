@@ -268,6 +268,11 @@ Eric will not remember these names — that is expected and fine; the docs are t
   the same hole — it took out the deploy, the receipt scan and the stall audit at once, silently.
   `node scripts/deploy-lag.mjs` answers "is `main` actually deployed?". Full merge policy:
   `.claude/skills/governor/SKILL.md`.
+- **Open and edit PR bodies over REST (`/ship`), never through the GitHub MCP write tools** — they
+  silently strip `<details>`/`<summary>`, so the whole brief lands above the fold and the tool still
+  reports success (`docs/LESSONS.md`, 2026-08-25). `ship.sh checkbody` lints the *file*, not what
+  GitHub stored, so it passes while the shipped body is broken. If a body must go through those
+  tools, re-read the PR and count the `<details>` before calling it done.
 - **Draft is a harness artifact, not a judgment — promote it immediately** (Eric's correction). Some
   Claude Code environments force every PR open as a draft. That is a property of the tool, never a
   statement that the change isn't ready, and leaving it there is a **throughput bug**: a draft can't

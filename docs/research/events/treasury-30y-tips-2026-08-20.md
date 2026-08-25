@@ -14,12 +14,12 @@ real-rate / term-premium story, not the market repricing inflation higher. Nothi
 trade; the auction's stop (tail vs. when-issued, bid-to-cover, indirect %) is simply this week's
 cleanest read on whether that long-end pressure is easing or continuing into NVDA's Aug 26 print.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (08-19) | Watch | 20Y nominal auction (1pm ET) lands first; its stop sets the tone for tomorrow's TIPS reopening. |
-| This week | Stand aside on fresh duration-sensitive entries | Compound long-end supply (20Y 08-19, 30Y TIPS 08-20, 5Y 08-26, 7Y 08-27) into an already-soft demand run — no edge to trade, only variance to respect. |
-| This month | Watch, weighted toward caution | Aug-26 NVDA print + PCE + 5Y auction stack the same day; a continuing-tail pattern from this week compounds that risk. |
-| This quarter | Stand aside (event-specific) | Belongs to the broader rate-path picture (CPI 09-11, FOMC 09-16) more than to this single auction — reassess there. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (08-19) | Watch | High | 20Y nominal auction (1pm ET) lands first; its stop sets the tone for tomorrow's TIPS reopening. | The **2026-08-19** 20Y nominal stop setting a tone this auction then contradicts |
+| This week | Stand aside on fresh duration-sensitive entries | High | Compound long-end supply (20Y 08-19, 30Y TIPS 08-20, 5Y 08-26, 7Y 08-27) into an already-soft demand run — no edge to trade, only variance to respect. | 30Y TIPS stopping through WI with bid-to-cover ≥2.6, signalling absorbed demand |
+| This month | Watch, weighted toward caution | Medium | Aug-26 NVDA print + PCE + 5Y auction stack the same day; a continuing-tail pattern from this week compounds that risk. | The **2026-08-26** NVDA/PCE/5Y stack dominating the session and burying the read |
+| This quarter | Stand aside (event-specific) | Medium | Belongs to the broader rate-path picture (CPI 09-11, FOMC 09-16) more than to this single auction — reassess there. | 30Y TIPS tailing >3bp with bid-to-cover <2.3, extending the 2026-08-13 pattern to a fourth |
 
 **Signals & conditions.** Read the Aug-20 stop itself: tail ≤0bp (stops through WI) with
 bid-to-cover ≥2.6 eases the caution overlay; tail >3bp with bid-to-cover <2.3 (extending the Aug-13

@@ -16,12 +16,12 @@ sets the day before. The honest read: a second-order signal, useful as a duratio
 on long-duration AI names, not a market-mover on its own. Auction **date confirmed**; every
 size/when-issued/demand figure below is **estimate/press-sourced**. Watch-only, no standalone play.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | 36 days out; medium-impact symbol-less belly event that closes the Sep coupon block — nothing here licenses action. |
-| This week | Stand aside | The Aug-27 7Y (this month's belly print, day after NVDA) is next week and is the nearer data point; Sep-24 is over a month out. |
-| This month | Watch | The Aug-27 7Y result (stacked with the NVDA reaction + MRVL print) is the fresher soft-not-disastrous read that carries into this Sep-24 auction. |
-| This quarter | Watch | Closes the Sep coupon block; the belly-softness narrative (5Y-led) is the duration-sensitivity input worth tracking for long-duration AI names, not a standalone trade. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | 36 days out; medium-impact symbol-less belly event that closes the Sep coupon block — nothing here licenses action. | Nothing at 36 days out; a symbol-less belly event licenses no action |
+| This week | Stand aside | High | The Aug-27 7Y (this month's belly print, day after NVDA) is next week and is the nearer data point; Sep-24 is over a month out. | The **2026-08-27** 7Y result, stacked with the NVDA reaction and MRVL print |
+| This month | Watch | Medium | The Aug-27 7Y result (stacked with the NVDA reaction + MRVL print) is the fresher soft-not-disastrous read that carries into this Sep-24 auction. | A markedly weak print — bid-to-cover well under ~2.40, tail beyond ~1.5bp, indirects below trend |
+| This quarter | Watch | Medium | Closes the Sep coupon block; the belly-softness narrative (5Y-led) is the duration-sensitivity input worth tracking for long-duration AI names, not a standalone trade. | A clean print (bid-to-cover near/above the ~2.50 band, tail near zero) removing the belly-softness narrative |
 
 **Signals & conditions** (confirmed-status auction; a weak print only *widens caution*, never
 licenses a trade):

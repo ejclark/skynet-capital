@@ -926,3 +926,11 @@ _(nothing right now)_
   door, so it was deliberately left out of that diff. Worth deciding on its own: the halt file is the
   manual stop for a live autonomous trader.
   _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_
+
+### `ship.sh verifybody <pr>` — lint what GitHub actually stored, not the file you sent
+`checkbody` lints a body **file**; nothing checks the body GitHub ended up with. That gap is exactly
+how the fridge rule shipped unfolded on #561 (LESSONS.md, 2026-08-25): the MCP write tools stripped
+`<details>` and the file-side lint still passed. A `verifybody` subcommand — fetch the stored body
+over REST, pipe it through the existing `cmd_checkbody`, exit non-zero on a mismatch — closes it
+mechanically and costs one curl. Could run as a post-open step inside `ship.sh open` itself, so the
+check is automatic rather than remembered. _(src: Claude · while: research-lab readability PR, 2026-08-25)_

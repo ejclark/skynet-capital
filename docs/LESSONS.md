@@ -27,6 +27,33 @@ it. Prevention ranks, best first:
 
 ---
 
+### The GitHub MCP tool silently strips `<details>` from a PR body, so the fridge rule shipped unfolded
+
+- **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** reading PR #561 back through `mcp__github__pull_request_read` after opening it — the
+  `<summary>` line was there as bare `<strong>` text with the whole brief expanded beneath it, and the
+  `<details>`/`<summary>` tags were simply *gone*. Detection lag ≈ 5 minutes, and only because the PR
+  was re-read at all; nothing would have reported it otherwise. The control that made it certain:
+  reading #560 (opened via `scripts/ship.sh`) back through the same tool shows `&lt;details&gt;`
+  **escaped but present**, so the read path preserves the tags and the write path is what dropped them.
+- **ROOT CAUSE:** `mcp__github__create_pull_request` / `update_pull_request` sanitize the body they
+  send, removing `<details>` and `<summary>` while leaving `<strong>`, `<img>` and GFM tables intact.
+  The PR is created successfully and the tool reports success, so there is no error to notice. The
+  effect is precisely the defect `docs/PICTURES.md` exists to prevent: **everything lands above the
+  fold**. It bit hardest here because #561's own subject was wall-of-text readability — the PR
+  arguing for folds arrived without one.
+- **PREVENTION:** doctrine + the existing gate, pointed at the right target. `scripts/ship.sh open`
+  writes bodies over REST with a token and is unaffected; `ship.sh checkbody` already refuses a body
+  with no fold — but it lints the **file**, not what GitHub stored, so it passes while the shipped
+  body is broken. So: open and edit PR bodies through `ship.sh`/REST, never through the GitHub MCP
+  write tools; and when a body must go through them, re-read the PR and count `<details>` before
+  calling it done. Landed in `CLAUDE.md`'s ship loop (the line the next session actually reads) and
+  in `docs/PICTURES.md` beside the screenshot mechanics.
+- **SIDE QUESTS:** a `ship.sh verifybody <pr>` that fetches the stored body and re-runs `checkbody`
+  against it would close the file-vs-stored gap mechanically (→ docs/IDEAS.md).
+
+---
+
 ### The guest list was never on the volume, so every deploy locked the members out and left the owners in
 
 - **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed
