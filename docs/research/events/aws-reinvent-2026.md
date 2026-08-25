@@ -18,12 +18,12 @@ downstream narrative amplifier: it can extend or puncture the AI-infrastructure 
 numbers set, but it is not where the guide lives. No AMZN positioning playbook survives the sweep
 (S1 killed), so this is a watch-the-narrative event, not an entry.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | ~103 days out; the near-term AMZN catalyst is the est. Oct-29 print, not this. Nothing tradable today. |
-| This week (8/19–8/22) | Stand aside | No proximity; AMZN's own print (est. 10/29) and the mega-cap cluster around it come first. |
-| This month (through ~9/19) | Stand aside | Far out, and the thesis-setting event (Q3 print / FY27 capex guide) hasn't happened — re:Invent reads *after* it, not before. |
-| This quarter (through ~11/19) | Watch | This is where re:Invent enters the window's tail. Watch the **Dec-1 keynote** as a narrative confirm/puncture of the AWS-acceleration + $496B-backlog story the Oct-29 print will have already priced — a follow-through read, not a fresh catalyst. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | ~103 days out; the near-term AMZN catalyst is the est. Oct-29 print, not this. Nothing tradable today. | Nothing at ~100 days out; the near-term AMZN catalyst is the estimated **2026-10-29** print |
+| This week (8/19–8/22) | Stand aside | High | No proximity; AMZN's own print (est. 10/29) and the mega-cap cluster around it come first. | The estimated **2026-10-29** print and FY27 capex guide, which is the thesis-setting event |
+| This month (through ~9/19) | Stand aside | Medium | Far out, and the thesis-setting event (Q3 print / FY27 capex guide) hasn't happened — re:Invent reads *after* it, not before. | AWS pre-announcing something material before the keynote window opens |
+| This quarter (through ~11/19) | Watch | Medium | This is where re:Invent enters the window's tail. Watch the **Dec-1 keynote** as a narrative confirm/puncture of the AWS-acceleration + $496B-backlog story the Oct-29 print will have already priced — a follow-through read, not a fresh catalyst. | A material, market-moving announcement at the **2026-12-01** keynote, killing the amplifier-not-source read |
 
 **Signals & conditions.**
 - **Date-confirm (reportable, not an entry trigger):** the AWS primary already lists Nov 30–Dec 4 —

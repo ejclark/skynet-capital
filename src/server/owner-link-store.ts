@@ -1,4 +1,4 @@
-import { JsonFileStore } from "./json-file-store.js";
+import { JsonFileStore } from "../storage/json-file-store.js";
 
 /**
  * The owner-link file on the mounted volume (`SKYNET_OWNER_LINKS_FILE`, prod
@@ -35,7 +35,7 @@ export interface OwnerLinkState {
   readonly updatedAt?: string;
 }
 
-const EMPTY: OwnerLinkState = { links: [] };
+const EMPTY_LINKS: OwnerLinkState = { links: [] };
 
 /** Total parse: anything that isn't a well-formed link is dropped, never thrown over. */
 function parseOwnerLinkState(raw: unknown): OwnerLinkState | undefined {
@@ -68,7 +68,7 @@ export class OwnerLinkStore {
   constructor(path: string, onReadError?: (message: string) => void) {
     this.file = new JsonFileStore({
       path,
-      empty: EMPTY,
+      empty: EMPTY_LINKS,
       parse: parseOwnerLinkState,
       label: "owner-links",
       ...(onReadError ? { onReadError } : {}),

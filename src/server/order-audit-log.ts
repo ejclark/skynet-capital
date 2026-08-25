@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { TradeTypeCode } from "../domain/trade-types.js";
 import { JsonlKeyedStore } from "../storage/jsonl-store.js";
 
 /**
@@ -8,6 +9,12 @@ import { JsonlKeyedStore } from "../storage/jsonl-store.js";
  * blotter; this one is written synchronously by the desk seam itself at the moment of submission,
  * and its whole point is to answer "who submitted this order" — the account AND the signed-in
  * owner who confirmed it — durably, on the mounted volume, even if the fill stream is slow or down.
+ *
+ * The line also carries the desk's TAG-AT-ENTRY (docs/IDEAS.md, strategy attribution): the play
+ * code the member confirmed, stamped at the one moment it is known for sure. Milestone derivation
+ * (`domain/progression.ts`) joins these tags with the fill ledger — an option fill earns its
+ * course code only when the tag says it OPENED that play, so a buy-to-close never masquerades as
+ * a long. All tag fields are optional: pre-tag lines parse unchanged.
  */
 export interface OrderAuditRecord {
   readonly participantId: string;
@@ -15,6 +22,12 @@ export interface OrderAuditRecord {
   readonly ownerEmail?: string;
   readonly orderId: string;
   readonly at: string;
+  /** The play the member confirmed — absent on a close (a close is an exit, not a play). */
+  readonly code?: TradeTypeCode;
+  readonly intent?: "open" | "close";
+  /** The wire symbol the broker echoed — OCC for options, ticker for shares. */
+  readonly symbol?: string;
+  readonly side?: "buy" | "sell";
 }
 
 export interface OrderAuditLog {

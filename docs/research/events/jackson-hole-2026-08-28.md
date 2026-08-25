@@ -15,12 +15,12 @@ policy signal — but Jackson Hole's own history is fat-tailed (flat on average,
 corridor with NVDA's (8/26) and MRVL's (8/27) confirmed earnings on either side — the exact adjacency the
 research was asked to flag. Nothing here licenses a trade; it sharpens what to guard against.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (D-9) | Stand aside | Nothing actionable at 9 days out; normal pre-earnings-week positioning. |
-| This week (through ~8/23) | Watch | NVDA earnings-week setup building into 8/26; monitor VIX/skew ahead of the compound window rather than react yet. |
-| This month (8/26–9/16 window) | Flat the print / defined-risk only | NVDA (8/26) → MRVL (8/27) → Warsh keynote (8/28), stacked on PCE/GDP (8/26) and Treasury supply (8/26–27), flows straight into the Sep 16 FOMC — treat 8/26–8/28 as one corridor, not three separate events. |
-| This quarter | Avoid new directional bets on Fed communication | Warsh's stated playbook (framework, not guidance) argues against extrapolating any single speech; the historical base rate for JH itself is flat/mixed (median 0% over the 2-day window) — the tail (2022-style) is what defined risk guards against, not what a directional bet should chase. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (D-9) | Stand aside | High | Nothing actionable at 9 days out; normal pre-earnings-week positioning. | kansascityfed.org publishing a full agenda that moves or drops the keynote |
+| This week (through ~8/23) | Watch | Medium | NVDA earnings-week setup building into 8/26; monitor VIX/skew ahead of the compound window rather than react yet. | NVDA (**2026-08-26**) or MRVL (**2026-08-27**) producing outsized moves that reprice the window before the keynote |
+| This month (8/26–9/16 window) | Flat the print / defined-risk only | High | NVDA (8/26) → MRVL (8/27) → Warsh keynote (8/28), stacked on PCE/GDP (8/26) and Treasury supply (8/26–27), flows straight into the Sep 16 FOMC — treat 8/26–8/28 as one corridor, not three separate events. | Any credible signal Warsh intends near-term rate-path guidance, contradicting his framework-not-guidance stance |
+| This quarter | Avoid new directional bets on Fed communication | Medium | Warsh's stated playbook (framework, not guidance) argues against extrapolating any single speech; the historical base rate for JH itself is flat/mixed (median 0% over the 2-day window) — the tail (2022-style) is what defined risk guards against, not what a directional bet should chase. | A widening or narrowing of the hike-favoring FOMC dissent count before **2026-09-16** |
 
 **Signals & conditions.**
 - Any explicit near-term rate-path signal in the keynote text (contradicting Warsh's own July 29

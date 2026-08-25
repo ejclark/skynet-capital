@@ -17,12 +17,12 @@ price into the **FQ1 guide** at the *estimated* Oct-29 earnings print, and only 
 killed on the symbol (see the [Oct-29 earnings ledger](aapl-2026-10-29-print.md)), so this event
 adds no entry — it is a confirm-the-date and read-the-price-signal watch.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | Event is 21 days out, **estimate**, and Apple hasn't announced it — nothing tradable, no AAPL positioning edge survives the sweep. |
-| This week (8/19–8/22) | Watch | The confirm tell is Apple's invitation, expected ~Aug 26 (same day as NVDA's print). If it lands, the date becomes primary-confirmable — a proposed calendar upgrade, still not an entry license. |
-| This month (through ~9/19) | Stand aside | The keynote itself is a known sell-the-news; Sept is AAPL's statistically worst month; the rumored features are already leaked, so the reveal carries little surprise. Flat/no-play is the honest read. |
-| This quarter (through ~11/19) | Watch | The launch *prices* into the FQ1 **guide** at the est. Oct-29 print, not into the event — that (plus the ~$1.1B tariff cost this quarter) is where the pricing decision actually shows up. Watch the guide, hold no pre-print position (S1 killed on AAPL). |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | Event is 21 days out, **estimate**, and Apple hasn't announced it — nothing tradable, no AAPL positioning edge survives the sweep. | Apple posting its official event invitation, expected ~**2026-08-26**, which upgrades the date leg |
+| This week (8/19–8/22) | Watch | High | The confirm tell is Apple's invitation, expected ~Aug 26 (same day as NVDA's print). If it lands, the date becomes primary-confirmable — a proposed calendar upgrade, still not an entry license. | That invitation landing on a date away from the rumoured **2026-09-09** |
+| This month (through ~9/19) | Stand aside | Medium | The keynote itself is a known sell-the-news; Sept is AAPL's statistically worst month; the rumored features are already leaked, so the reveal carries little surprise. Flat/no-play is the honest read. | Announced pricing or the foldable surprising hard against the leaked baseline, killing the sell-the-news read |
+| This quarter (through ~11/19) | Watch | Medium | The launch *prices* into the FQ1 **guide** at the est. Oct-29 print, not into the event — that (plus the ~$1.1B tariff cost this quarter) is where the pricing decision actually shows up. Watch the guide, hold no pre-print position (S1 killed on AAPL). | Evidence clearing the sweep's ≥3-print bar for a direct play on the launch |
 
 **Signals & conditions.**
 - **Date-confirm tell (not an entry trigger):** Apple's official event invitation, expected ~Aug 26

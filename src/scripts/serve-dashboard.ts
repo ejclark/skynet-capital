@@ -40,13 +40,17 @@ import { createBotControlsStore } from "../server/bot-controls-store.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedbackCoach } from "../server/feedback-coach.js";
+import { resolveFeedbackFollowup } from "../server/feedback-followup.js";
 import { createFeedbackLogStore } from "../server/feedback-log.js";
 import { resolveFeedback } from "../server/feedback-service.js";
+import { resolveFeedbackStatus } from "../server/feedback-status.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
 import { createOwnerLinkStore, resolveOwnedId } from "../server/owner-link-store.js";
 import { ParticipantService } from "../server/participant-service.js";
+import { createProgressionService } from "../server/progression-service.js";
+import { createProgressionStore } from "../server/progression-store.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
 
@@ -226,6 +230,10 @@ async function main(): Promise<void> {
   }
   // What a member filed, correlated to the issue it became (#429).
   const feedbackLog = createFeedbackLogStore(process.env);
+  // Live status for those filings — GitHub itself, never a local store (#429 follow-up).
+  const feedbackStatus = resolveFeedbackStatus(process.env);
+  // A member adding more to a filing they already own, and the re-trigger that comes with it.
+  const feedbackFollowup = resolveFeedbackFollowup(process.env);
 
   createDashboardServer({
     hub,
@@ -285,8 +293,15 @@ async function main(): Promise<void> {
     ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
     recordFeedback: (entry) => feedbackLog.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
+    ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
+    ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
+    progression: createProgressionService({
+      readFills: (id) => activity.list(id),
+      readTags: (id) => orderAudit.list(id),
+      store: createProgressionStore(process.env, (m) => console.error(m)),
+    }),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,

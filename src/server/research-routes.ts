@@ -7,6 +7,7 @@ import {
 } from "../observatory/research-view.js";
 import { shellDocument } from "./page-shell.js";
 import {
+  eventCalls,
   findResearchDoc,
   listResearch,
   researchedEventIds,
@@ -43,6 +44,7 @@ export function serveResearchRoute(
       shelf: listResearch(),
       symbols: shelfSymbols(asOfIso),
       researchIds: researchedEventIds(),
+      calls: eventCalls(),
       ...(month ? { month } : {}),
     });
     html("Research — Skynet Capital", body);

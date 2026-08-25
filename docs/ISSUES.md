@@ -107,9 +107,14 @@ Two issue-specific cautions:
   end-state flow, not yet built._` PICTURES.md's grounding rule (every node names something real)
   applies to the *shipped* frame; an issue's diagram is allowed to draw the target, never allowed to
   imply it exists.
-- **Screenshots on issues are hosted by GitHub** (drag-drop → `user-images.githubusercontent.com`),
-  not committed to `docs/shots/`. The ≤100KB rule is a git-history rule and does not apply; the
-  SHA-pinning rule does apply to any raw repo URL you paste.
+- **Screenshots on issues authored directly on GitHub are hosted by GitHub** (drag-drop →
+  `user-images.githubusercontent.com`), not committed to `docs/shots/`. The ≤100KB rule is a
+  git-history rule and does not apply; the SHA-pinning rule does apply to any raw repo URL you
+  paste.
+- **`/feedback`-filed issues are the one exception**: that form has no GitHub session to drag-drop
+  into, so an attached screenshot is committed to a dedicated `feedback-assets` branch (never
+  `main` — that would fire the deploy pipeline) and linked as a SHA-pinned
+  `raw.githubusercontent.com` URL, same mechanics as a PR screenshot (src/server/feedback-images.ts).
 
 ## What is gated, what is taste
 

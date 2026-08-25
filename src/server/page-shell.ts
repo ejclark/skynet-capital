@@ -112,13 +112,15 @@ ${inner}
 </html>`;
 }
 
-/** Reads a request body as text, capped at 1MB — every POST form on this server is tiny. */
-export function readBody(req: IncomingMessage): Promise<string> {
+/** Reads a request body as text, capped at 1MB by default — every POST form on this server is
+ *  tiny, except /feedback's submit once image attachments ride along (feedback-routes.ts raises
+ *  the cap there only). */
+export function readBody(req: IncomingMessage, maxBytes = 1_000_000): Promise<string> {
   return new Promise((resolve, reject) => {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 1_000_000) {
+      if (body.length > maxBytes) {
         reject(new Error("body too large"));
         req.destroy();
       }

@@ -9,6 +9,7 @@ import {
   createOptionTradeService,
   type DeskOptionRequest,
 } from "../../src/server/option-trade-service.js";
+import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 
 const ann: Participant = {
   id: "ann",
@@ -71,6 +72,7 @@ function makeService(options: {
   enabled?: boolean;
 }) {
   const orders: Array<{ path: string; body: unknown }> = [];
+  const audited: OrderAuditRecord[] = [];
   const t = transport(
     {
       cash: options.cash ?? "100000",
@@ -84,8 +86,9 @@ function makeService(options: {
     clientFactory: () => new AlpacaTradingClient(t),
     optionsClientFactory: () => new AlpacaOptionsClient(t),
     tradingEnabled: options.enabled ?? true,
+    recordAudit: (entry) => Promise.resolve(void audited.push(entry)),
   });
-  return { submit, orders };
+  return { submit, orders, audited };
 }
 
 describe("openDesk — the structural gate both desks share", () => {
@@ -182,6 +185,33 @@ describe("option trade service — the gate", () => {
       type: "market",
       position_intent: "buy_to_close",
     });
+  });
+
+  it("tags an OPEN's audit line with its play code (tag-at-entry)", async () => {
+    const { submit, audited } = makeService({});
+    await submit(openRequest, "ann");
+    expect(audited[0]).toMatchObject({
+      code: "201",
+      intent: "open",
+      side: "sell",
+      symbol: "MSFT260918P00420000",
+    });
+  });
+
+  it("tags a CLOSE's audit line with intent close and NO play code — an exit is not a play", async () => {
+    const { submit, audited } = makeService({
+      positions: [
+        {
+          symbol: "MSFT260918P00420000",
+          qty: "-2",
+          avg_entry_price: "10.70",
+          market_value: "-2140",
+        },
+      ],
+    });
+    await submit({ kind: "close", participantId: "ann", occSymbol: "MSFT260918P00420000" }, "ann");
+    expect(audited[0]).toMatchObject({ intent: "close", side: "buy" });
+    expect(audited[0]?.code).toBeUndefined();
   });
 
   it("refuses closing a contract the account doesn't hold", async () => {

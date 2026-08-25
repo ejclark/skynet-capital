@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### `arch-budget.json` is a conflict magnet on hot files
+
+Hit twice in one PR (#566): two branches that each grew `serve-dashboard.ts` (a shared wiring
+root nearly every feature touches) collided on the same ratchet line in `arch-budget.json`, even
+though the actual code merged cleanly. The flat-JSON, one-line-per-file design makes every hot
+file's budget a shared merge point. A `.gitattributes` custom merge driver that resolves same-key
+conflicts by taking `max(ours, theirs)` would auto-resolve the common case (two PRs both growing
+the same file) — mechanically what got done by hand both times — leaving only the rarer
+shrink-vs-grow race for a human/session glance. _(src: Eric · while: PR #566 hit the conflict live)_
+
 ### The CI medic can be cancelled before it files
 
 The 2026-08-22 `gh --json` failure produced a medic run that was **cancelled** by the next push's
@@ -926,3 +936,11 @@ _(nothing right now)_
   door, so it was deliberately left out of that diff. Worth deciding on its own: the halt file is the
   manual stop for a live autonomous trader.
   _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_
+
+### `ship.sh verifybody <pr>` — lint what GitHub actually stored, not the file you sent
+`checkbody` lints a body **file**; nothing checks the body GitHub ended up with. That gap is exactly
+how the fridge rule shipped unfolded on #561 (LESSONS.md, 2026-08-25): the MCP write tools stripped
+`<details>` and the file-side lint still passed. A `verifybody` subcommand — fetch the stored body
+over REST, pipe it through the existing `cmd_checkbody`, exit non-zero on a mismatch — closes it
+mechanically and costs one curl. Could run as a post-open step inside `ship.sh open` itself, so the
+check is automatic rather than remembered. _(src: Claude · while: research-lab readability PR, 2026-08-25)_

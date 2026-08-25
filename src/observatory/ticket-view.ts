@@ -1,8 +1,5 @@
 import type { OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
-import { COURSES } from "../domain/curriculum.js";
-import { STARTER_PLAYS, type StarterPlay } from "../domain/starter-plays.js";
-import { TRADE_TYPES, type TradeType } from "../domain/trade-types.js";
 import {
   type OptionPlayCode,
   type OptionTicketPreview,
@@ -12,68 +9,47 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { type DashboardViewOptions, renderShell } from "./dashboard-shell.js";
 import { formatPrice, reviewNotices, ticketContext } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
+import { renderMilestoneBanner } from "./milestone-banner.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { formatCurrency } from "./render-atoms.js";
 import { premiumByStrikeSvg, windowChain } from "./ticket-charts.js";
+import {
+  isLockedPlay,
+  lockedPanel,
+  PICKER_STYLE,
+  playPicker,
+  starterBar,
+  type TicketProgression,
+  type TicketState,
+  ticketHref,
+  wheelsToggle,
+} from "./ticket-picker.js";
 
 /**
  * THE TRADE TICKET (`GET /trade`) — the desk's order-entry view, built to the desk-v2 handoff's
  * ticket spec: GUIDED and RAW are two modes of ONE ticket (guided default), trade types are
- * risk-ordered by course code and the 300-level rows stay locked until The Wheel is complete
- * (the academy's own localStorage progress), every broker term carries a plain gloss, and
- * NOTHING fires from this screen — the review step (`POST /trade`) always comes first.
+ * risk-ordered by course code, and with TRAINING WHEELS on the ladder locks every rung past the
+ * member's real progression (server-derived from filled orders — `progression-service.ts`; the
+ * route and services enforce it, this view only renders the truth). Every broker term carries a
+ * plain gloss, and NOTHING fires from this screen — the review step (`POST /trade`) comes first.
  *
  * State is URL-param-backed (mode, play, symbol, exp, strike, qty, ordertype, limit, view), so
  * every step is shareable, back-button-friendly, and works with JavaScript off: expiration
  * chips and strike bars are plain links, and estimates recompute on an ordinary GET submit.
  */
 
-export interface TicketState {
-  readonly mode: "guided" | "raw";
-  readonly play: TradeType;
-  readonly symbol?: string;
-  /** Which starter-play chip filled this ticket (`?starter=`), for the bar's active state. */
-  readonly starter?: StarterPlay["id"];
-  readonly qty: number;
-  readonly expiration?: string;
-  readonly strike?: number;
-  readonly orderType: "limit" | "market";
-  readonly limitPrice?: number;
-  readonly view: "chart" | "table";
-}
-
 export interface TicketViewModel extends DashboardViewOptions {
   readonly state: TicketState;
   /** The signed-in member's own snapshot; absent = browsing with no linked account. */
   readonly snapshot?: ParticipantSnapshot;
   readonly tradingEnabled: boolean;
+  readonly progression?: TicketProgression;
   readonly expirations?: readonly string[];
   readonly chain?: readonly OptionChainRow[];
   readonly spot?: number;
   /** Honest reason chain data is missing (offline fixtures, fetch failure, no account). */
   readonly chainNote?: string;
   readonly generatedAt?: string;
-}
-
-/** Build a /trade URL from state, with overrides. Omits everything unset. */
-export function ticketHref(state: TicketState, over: Partial<Record<string, string>> = {}): string {
-  const base: Record<string, string | undefined> = {
-    mode: state.mode === "guided" ? undefined : state.mode,
-    play: state.play.code,
-    symbol: state.symbol,
-    exp: state.expiration,
-    strike: state.strike === undefined ? undefined : String(state.strike),
-    qty: state.qty === 1 ? undefined : String(state.qty),
-    ordertype: state.orderType === "limit" ? undefined : state.orderType,
-    limit: state.limitPrice === undefined ? undefined : String(state.limitPrice),
-    view: state.view === "chart" ? undefined : state.view,
-    ...over,
-  };
-  const params = Object.entries(base)
-    .filter(([, value]) => value !== undefined && value !== "")
-    .map(([key, value]) => `${key}=${encodeURIComponent(value as string)}`)
-    .join("&");
-  return params ? `/trade?${params}` : "/trade";
 }
 
 const glossLabel = (term: string, gloss: string): string =>
@@ -85,26 +61,6 @@ function modeToggle(state: TicketState): string {
     return `<a class="btn${active ? " btn-primary" : ""}" aria-current="${active}" href="${ticketHref(state, { mode: mode === "guided" ? undefined : mode })}">${label}</a>`;
   };
   return `<div style="display:flex;gap:6px">${seg("guided", "Guided")}${seg("raw", "Raw")}</div>`;
-}
-
-/** The risk-ordered play picker (ruling 16). Locked rows unlock client-side from academy progress. */
-function playPicker(state: TicketState): string {
-  const rows = TRADE_TYPES.map((t) => {
-    const selected = t.code === state.play.code;
-    const inner = `<span class="tk-code">${t.code}</span><span class="tk-name">${escapeHtml(t.name)}</span><span class="tk-tldr">${escapeHtml(t.tldr)}</span>${t.kind === "option" ? '<span class="tk-opt">OPTIONS</span>' : ""}${selected ? '<span class="tk-sel">✓</span>' : ""}`;
-    if (t.unlockCourse) {
-      return `<a class="tk-row locked${selected ? " sel" : ""}" data-unlock-course="${escapeHtml(t.unlockCourse)}" data-href="${ticketHref(state, { play: t.code, strike: undefined, exp: undefined, limit: undefined })}" aria-disabled="true">${inner}<span class="tk-lock">🔒 level up to unlock</span></a>`;
-    }
-    return `<a class="tk-row${selected ? " sel" : ""}" href="${ticketHref(state, { play: t.code, strike: undefined, exp: undefined, limit: undefined })}">${inner}</a>`;
-  }).join("");
-  return `<details class="panel tk-picker"${state.symbol ? "" : " open"}>
-    <summary><span class="desk-k" style="letter-spacing:.16em">1 · The play</span>
-      <b style="margin-left:10px">${escapeHtml(state.play.name)}</b>
-      <span class="desk-note" style="margin-left:8px">${escapeHtml(state.play.tldr)}</span>
-      <span class="desk-note" style="margin-left:auto">change play ▾</span></summary>
-    <div class="tk-rows">${rows}</div>
-    <p class="desk-note" style="margin-top:10px">ordered by risk · the course number is the difficulty · 300-level unlocks when The Wheel course is complete on <a href="/learn">Learn</a></p>
-  </details>`;
 }
 
 function expirationChips(model: TicketViewModel): string {
@@ -282,26 +238,11 @@ function optionTicket(model: TicketViewModel, preview: OptionTicketPreview | und
     </form>
     ${raw ? "" : expirationChips(model)}
     ${chainBlock(model)}
-    ${explainer(state, preview)}
+    ${model.progression && !model.progression.wheels ? "" : explainer(state, preview)}
     ${payoffRow(preview)}
     ${reviewNotices(preview?.warnings ?? [], preview?.refusals ?? [])}
     ${reviewForm(model, preview)}
   </section>`;
-}
-
-/** Stock ticket (101/102) — the share desk's fields, review-first exactly as before. */
-/**
- * The STARTER-PLAY bar — three pre-filled first trades, plain links to `?starter=<id>`. Guided
- * mode only (raw is the power-user surface); the active chip marks the preset that filled the
- * ticket, and editing any field resubmits without the param, so the chips never lie about state.
- */
-function starterBar(state: TicketState): string {
-  if (state.mode !== "guided") return "";
-  const chips = STARTER_PLAYS.map((p) => {
-    const active = state.starter === p.id;
-    return `<a class="st-chip${active ? " sel" : ""}"${active ? ' aria-current="true"' : ""} href="/trade?starter=${p.id}"><span class="st-title">${escapeHtml(p.title)}</span><span class="st-detail">${escapeHtml(p.detail)}</span></a>`;
-  }).join("");
-  return `<div class="st-bar" aria-label="Starter plays">${chips}</div>`;
 }
 
 function stockTicket(model: TicketViewModel): string {
@@ -320,48 +261,6 @@ function stockTicket(model: TicketViewModel): string {
     <p class="desk-note" style="margin-top:10px">${escapeHtml(state.play.gloss)} Market order, day — you'll see the estimated ${state.play.side === "buy" ? "cost" : "proceeds"} on the review screen before anything is sent.</p>
   </section>`;
 }
-
-const TICKET_STYLE = `<style>
-  .st-bar{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
-  .st-chip{ display:flex; flex-direction:column; gap:2px; padding:9px 14px; border:1px solid var(--border); border-radius:10px;
-    text-decoration:none; color:var(--text); transition:border-color .15s, background .15s; }
-  .st-chip:hover{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); }
-  .st-chip:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-  .st-chip.sel{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 8%,transparent); }
-  .st-title{ font-weight:600; font-size:12.5px; }
-  .st-detail{ font-family:var(--mono); font-size:11px; color:var(--muted); }
-  .st-chip.sel .st-detail{ color:var(--accent); }
-  .tk-picker summary{ list-style:none; cursor:pointer; display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
-  .tk-picker summary::-webkit-details-marker{ display:none; }
-  .tk-rows{ display:flex; flex-direction:column; gap:6px; margin-top:14px; }
-  .tk-row{ display:flex; align-items:baseline; gap:12px; padding:10px 13px; border:1px solid var(--border); border-radius:10px;
-    text-decoration:none; color:var(--text); transition:border-color .15s; flex-wrap:wrap; }
-  .tk-row:hover{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); }
-  .tk-row.sel{ border-color:var(--accent); background:color-mix(in srgb,var(--accent) 8%,transparent); }
-  .tk-row.locked{ opacity:.55; cursor:not-allowed; }
-  .tk-code{ font-family:var(--mono); font-size:11px; font-weight:700; color:var(--accent); min-width:28px; }
-  .tk-name{ font-weight:600; font-size:13.5px; }
-  .tk-tldr{ color:var(--muted); font-size:12px; }
-  .tk-opt{ font-family:var(--mono); font-size:9px; letter-spacing:.12em; border:1px solid var(--border); border-radius:5px; padding:2px 6px; color:var(--muted); }
-  .tk-sel{ margin-left:auto; color:var(--accent); font-weight:700; }
-  .tk-lock{ margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--muted); }
-</style>`;
-
-/** Unlocks 300-level rows when The Wheel is complete — same localStorage the academy writes. */
-const TICKET_LOCK_SCRIPT = `<script>
-(function(){
-  var KEY="skynet.academy.done";
-  var COURSES=${JSON.stringify(COURSES.map((c) => ({ id: c.id, ms: c.milestones.map((m) => m.id) })))};
-  var done; try{ done=JSON.parse(localStorage.getItem(KEY)||"[]"); }catch(e){ done=[]; }
-  function complete(id){ var c=COURSES.find(function(x){return x.id===id;}); return !!c && c.ms.every(function(m){ return done.indexOf(m)>=0; }); }
-  document.querySelectorAll("[data-unlock-course]").forEach(function(row){
-    if(!complete(row.getAttribute("data-unlock-course"))) return;
-    row.classList.remove("locked"); row.removeAttribute("aria-disabled");
-    row.setAttribute("href", row.getAttribute("data-href"));
-    var lock=row.querySelector(".tk-lock"); if(lock) lock.remove();
-  });
-})();
-</script>`;
 
 /**
  * Best-effort preview for the on-page estimates (the review + service re-verify everything).
@@ -414,27 +313,33 @@ function gateBanner(model: TicketViewModel): string {
 }
 
 export function renderTicketBody(model: TicketViewModel): string {
-  const { state, snapshot } = model;
+  const { state, snapshot, progression } = model;
   const isOption = state.play.kind === "option";
-  const preview = isOption ? viewPreview(model) : undefined;
+  const locked = isLockedPlay(state.play.code, progression);
+  const preview = isOption && !locked ? viewPreview(model) : undefined;
   const gate = gateBanner(model);
+  const ticket = locked
+    ? lockedPanel(state)
+    : isOption
+      ? optionTicket(model, preview)
+      : stockTicket(model);
 
-  const content = `${DESK_STYLE}${TICKET_STYLE}<section class="desk">
+  const content = `${DESK_STYLE}${PICKER_STYLE}<section class="desk">
     <header class="desk-head">
       <div>
         <div class="desk-eyebrow">New order${snapshot ? ` · ${escapeHtml(snapshot.displayName)}` : ""}</div>
         <h1 class="desk-title">${escapeHtml(state.play.name)}</h1>
-        <p class="desk-sub">Course ${state.play.code} · ${escapeHtml(state.play.tldr)} · every order lands on a review screen before it's sent.</p>
+        <p class="desk-sub">Course ${state.play.code} · ${escapeHtml(state.play.tldr)} · ${progression?.wheels ? "training wheels on — one rung at a time" : "every order lands on a review screen before it's sent"}.</p>
       </div>
-      ${modeToggle(state)}
+      <div style="display:flex;gap:6px;align-items:flex-start">${wheelsToggle(state, progression)}${modeToggle(state)}</div>
     </header>
     ${gate}
-    ${starterBar(state)}
-    ${playPicker(state)}
-    ${isOption ? optionTicket(model, preview) : stockTicket(model)}
+    ${renderMilestoneBanner(progression?.celebrating ?? [], { back: ticketHref(state) })}
+    ${starterBar(state, progression)}
+    ${playPicker(state, progression)}
+    ${ticket}
     <p class="caveat"><b>Paper account.</b> Real prices, real mechanics, simulated money. Options premiums shown are indicative (bid/ask mid, or last close) — fills settle at the market. Options orders on Alpaca are day-only.</p>
-  </section>
-  ${TICKET_LOCK_SCRIPT}`;
+  </section>`;
 
   return renderShell(model.nav, content, model.generatedAt ?? new Date().toISOString());
 }

@@ -80,7 +80,9 @@ async function submitToBroker(
 
 /**
  * Submit through the broker, then append the per-order audit line (#466) on success only — the
- * one step both desks must do identically, so it lives here rather than copied into each.
+ * one step both desks must do identically, so it lives here rather than copied into each. The
+ * caller's `tag` (play code / intent / side) rides the line so milestone derivation can classify
+ * the fill later; the symbol comes from the broker's own echo, never the form.
  */
 export async function submitAndAudit(
   place: () => Promise<{ id: string; status: string; symbol: string }>,
@@ -89,6 +91,7 @@ export async function submitAndAudit(
     recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
     now?: () => Date;
   },
+  tag?: Pick<OrderAuditRecord, "code" | "intent" | "side">,
 ): Promise<DeskSubmitResult> {
   const result = await submitToBroker(place);
   if (result.ok) {
@@ -97,6 +100,8 @@ export async function submitAndAudit(
       ...(participant.ownerEmail ? { ownerEmail: participant.ownerEmail } : {}),
       orderId: result.orderId,
       at: (deps.now ?? (() => new Date()))().toISOString(),
+      symbol: result.symbol,
+      ...tag,
     });
   }
   return result;
