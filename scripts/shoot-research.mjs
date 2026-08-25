@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-// Visual harness for the research surface: render the shelf, a living symbol page, a ledger doc,
-// and the research-linked calendar from the REAL docs/research shelf, and screenshot them with
-// Chromium — the surface judged by eye (CLAUDE.md: every choice becomes something Eric can see)
-// without standing up a server. Usage: node scripts/shoot-research.mjs [outdir]
+// Visual harness for the research surface: render the shelf (which now carries the event horizon
+// too — proximity-banded agenda + month-grid navigator), a living symbol page, and a ledger doc
+// from the REAL docs/research shelf, and screenshot them with Chromium — the surface judged by eye
+// (CLAUDE.md: every choice becomes something Eric can see) without standing up a server.
+// Usage: node scripts/shoot-research.mjs [outdir]
 import { chromium } from "playwright-core";
-import { renderCalendarBody } from "../src/observatory/calendar-view.ts";
 import {
   renderResearchDocBody,
   renderResearchShelfBody,
@@ -41,6 +41,7 @@ const pages = [
       asOfIso,
       shelf: listResearch(),
       symbols: shelfSymbols(asOfIso),
+      researchIds: researchedEventIds(),
     }),
   },
   {
@@ -53,14 +54,6 @@ const pages = [
       nav,
       asOfIso,
       doc: findResearchDoc("events/nvda-2026-08-26-print"),
-    }),
-  },
-  {
-    name: "calendar-linked",
-    body: renderCalendarBody({
-      nav: { ...nav, active: "calendar" },
-      asOfIso,
-      researchIds: researchedEventIds(),
     }),
   },
 ];

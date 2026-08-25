@@ -6,7 +6,6 @@ import {
   parseActivityWindow,
   type TradeActivityRecord,
 } from "../observatory/activity-store.js";
-import { renderCalendarBody } from "../observatory/calendar-view.js";
 import { type DeskNotice, type DeskTab, deskHref, parseDeskTab } from "../observatory/desk-tabs.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
@@ -46,7 +45,6 @@ import type {
   RotateResult,
 } from "./participant-service.js";
 import { serveResearchRoute } from "./research-routes.js";
-import { researchedEventIds } from "./research-service.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 import { sseFrame } from "./sse.js";
 import { handleTrade } from "./trade-routes.js";
@@ -362,9 +360,9 @@ async function serveAuthorizedRoute(
 }
 
 /**
- * The read-only info views behind the gate — `/learn`, `/calendar`, `/research` — grouped so the
- * main dispatch stays within its complexity budget. Returns true when the request was handled;
- * dispatch order is unchanged from before the extraction.
+ * The read-only info views behind the gate — `/learn`, `/research` — grouped so the main dispatch
+ * stays within its complexity budget. Returns true when the request was handled; dispatch order is
+ * unchanged from before the extraction.
  */
 function serveInfoRoute(
   res: ServerResponse,
@@ -379,31 +377,18 @@ function serveInfoRoute(
     return true;
   }
   if (path === "/calendar") {
-    serveCalendarRoute(res, url, navFor);
+    // The event horizon folded into the Research shelf 2026-08-25 — an old bookmark still lands
+    // somewhere real rather than 404ing. Its month param carries over unchanged.
+    const month = new URL(url, "http://localhost").searchParams.get("month");
+    res.writeHead(302, { location: month ? `/research?month=${month}` : "/research" });
+    res.end();
     return true;
   }
   if (path === "/research" || path.startsWith("/research/")) {
-    serveResearchRoute(res, path, navFor);
+    serveResearchRoute(res, path, url, navFor);
     return true;
   }
   return false;
-}
-
-/** `/calendar` — the event-horizon view; `?month=` moves the widget (view-validated/clamped). */
-function serveCalendarRoute(
-  res: ServerResponse,
-  url: string,
-  navFor: (active: NavView) => NavContext,
-): void {
-  const month = new URL(url, "http://localhost").searchParams.get("month");
-  const body = renderCalendarBody({
-    nav: navFor("calendar"),
-    asOfIso: new Date().toISOString(),
-    researchIds: researchedEventIds(),
-    ...(month ? { month } : {}),
-  });
-  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(shellDocument("Calendar — Skynet Capital", body));
 }
 
 /**
