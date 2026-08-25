@@ -6,13 +6,14 @@ import {
   parseActivityWindow,
   type TradeActivityRecord,
 } from "../observatory/activity-store.js";
-import { renderAnalysisBody } from "../observatory/analysis-view.js";
 import { renderCalendarBody } from "../observatory/calendar-view.js";
 import { type DeskNotice, type DeskTab, deskHref, parseDeskTab } from "../observatory/desk-tabs.js";
 import type { EquitySample } from "../observatory/history-store.js";
-import { type HistoryViewOptions, renderHistoryBody } from "../observatory/history-view.js";
-import { type MetricsViewOptions, renderMetricsBody } from "../observatory/metrics-view.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import {
+  type PerformanceViewOptions,
+  renderPerformanceBody,
+} from "../observatory/performance-view.js";
 import { renderPositionsBody } from "../observatory/positions-view.js";
 import {
   type LeaderMetric,
@@ -523,22 +524,19 @@ const TRADE_NOTICES: Record<string, DeskNotice> = {
   },
 };
 
-/** One desk tab → its renderer. Every tab takes the same options; only Metrics reads history. */
+/** One desk tab → its renderer. Every tab takes the same options; only Performance reads history. */
 function renderDeskTab(
   tab: Exclude<DeskTab, "overview" | "settings">,
   snapshot: ParticipantSnapshot,
-  options: MetricsViewOptions & HistoryViewOptions,
+  options: PerformanceViewOptions,
 ): string {
   if (tab === "positions") return renderPositionsBody(snapshot, options);
-  if (tab === "history") return renderHistoryBody(snapshot, options);
-  if (tab === "analysis") return renderAnalysisBody(snapshot, options);
-  return renderMetricsBody(snapshot, options);
+  return renderPerformanceBody(snapshot, options);
 }
 
 /**
  * Assemble one non-overview desk tab: gather the reads that tab needs — the durable trade ledger
- * for History (the filtered blotter) and Analysis (stats over the full record), the decision audit
- * for the per-order "why" fold on a bot's history — and render. Split from
+ * and the decision audit for Performance's folded order ledger "why" — and render. Split from
  * `serveIndividualProfile` to keep that route inside its complexity budget.
  */
 async function deskTabBody(
@@ -546,14 +544,14 @@ async function deskTabBody(
   snapshot: ParticipantSnapshot,
   config: DashboardServerConfig,
   params: URLSearchParams,
-  base: MetricsViewOptions & HistoryViewOptions,
+  base: PerformanceViewOptions,
 ): Promise<string> {
   const tradeActivity =
-    config.readTradeActivity && (tab === "history" || tab === "analysis")
+    config.readTradeActivity && tab === "performance"
       ? await config.readTradeActivity(snapshot.id)
       : undefined;
   const decisions =
-    config.readDecisions && tab === "history" && snapshot.kind === "bot"
+    config.readDecisions && tab === "performance" && snapshot.kind === "bot"
       ? await config.readDecisions(snapshot.id)
       : undefined;
   return renderDeskTab(tab, snapshot, {
