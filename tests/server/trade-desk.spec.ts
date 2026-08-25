@@ -397,8 +397,22 @@ describe("trade service — the server-side gate", () => {
         ownerEmail: "ann@gmail.com",
         orderId: "o1",
         at: "2026-08-21T00:00:00.000Z",
+        // tag-at-entry: a share sell is course 102, an exit — milestone derivation reads this.
+        code: "102",
+        intent: "close",
+        side: "sell",
+        symbol: "AAPL",
       },
     ]);
+  });
+
+  it("tags a share buy as course 101, an open (tag-at-entry)", async () => {
+    const audited: OrderAuditRecord[] = [];
+    await service({ recordAudit: (entry) => Promise.resolve(void audited.push(entry)) })(
+      { ...request, action: "buy" },
+      "ann",
+    );
+    expect(audited[0]).toMatchObject({ code: "101", intent: "open", side: "buy" });
   });
 
   it("never audits a refused order", async () => {
