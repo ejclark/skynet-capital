@@ -147,8 +147,9 @@ export function courseComplete(course: Course, completed: ReadonlySet<string>): 
 
 /**
  * Which course levels a learner has unlocked. Level 100 is always open; each higher course unlocks
- * only when the one before it is fully complete. Display truth for the Milestones page — the desk's
- * per-trade ladder (`progression.ts`) implies it, so the two surfaces can never disagree.
+ * only when the one before it is fully complete. Display truth for the Milestones page — the
+ * progression service unions in any course that already holds an earned milestone, so seeded
+ * history with ladder gaps never shows an earn inside a locked course.
  */
 export function unlockedLevels(completed: ReadonlySet<string>): Set<CourseLevel> {
   const open = new Set<CourseLevel>([COURSES[0]?.level ?? 100]);

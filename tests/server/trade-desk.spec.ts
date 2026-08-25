@@ -397,16 +397,17 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
     });
   });
 
-  it("refuses a locked stock rung too — selling needs 102, which needs a filled 101", async () => {
-    const c = counters();
-    await withServer(gateConfig(progressionStub(), c), async (base) => {
+  it("never gates an equity sell — exiting shares is an exit, even with 102 still locked", async () => {
+    // A member can hold shares with no journaled fill (assignment, pre-ledger history); the desk
+    // never shorts, so any accepted sell is a close — restricting it would lock them into a position.
+    await withServer(gateConfig(progressionStub(), counters()), async (base) => {
       const res = await post(
         base,
-        { symbol: "AAPL", quantity: "1", action: "sell", confirm: "1" },
+        { symbol: "AAPL", quantity: "1", action: "sell" },
         { cookie: cookie() },
       );
-      expect(res.status).toBe(403);
-      expect(c.stock).toBe(0);
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain("Review order");
     });
   });
 
@@ -459,7 +460,14 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
 
   it("never open-redirects the toggle's return path — double-slash and backslash alike", async () => {
     await withServer(gateConfig(progressionStub(), counters()), async (base) => {
-      for (const back of ["//evil.example", "/\\evil.example", "https://evil.example", "\\x"]) {
+      // %0a decodes to \n — an unrejected control char makes writeHead throw, not redirect.
+      for (const back of [
+        "//evil.example",
+        "/\\evil.example",
+        "https://evil.example",
+        "\\x",
+        "/x\ny",
+      ]) {
         const res = await post(base, { wheels: "on", back }, { cookie: cookie() });
         expect(res.status).toBe(303);
         expect(res.headers.get("location")).toBe("/trade");

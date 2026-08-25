@@ -1,4 +1,4 @@
-import type { EarnedMilestone } from "../domain/progression.js";
+import { type EarnedMilestone, ladderNeighbor, lockedOnLadder } from "../domain/progression.js";
 import { STARTER_PLAYS, type StarterPlay } from "../domain/starter-plays.js";
 import { TRADE_TYPES, type TradeType, type TradeTypeCode } from "../domain/trade-types.js";
 import { escapeHtml } from "../ui/escape-html.js";
@@ -64,13 +64,12 @@ export function isLockedPlay(
   code: TradeTypeCode,
   progression: TicketProgression | undefined,
 ): boolean {
-  return Boolean(progression?.wheels) && !progression?.unlocked.has(code);
+  return lockedOnLadder(code, progression);
 }
 
 /** The rung directly before `code` on the ladder — what a locked row tells you to go fill. */
 function previousRung(code: TradeTypeCode): TradeType | undefined {
-  const i = TRADE_TYPES.findIndex((t) => t.code === code);
-  return i > 0 ? TRADE_TYPES[i - 1] : undefined;
+  return ladderNeighbor(code, -1);
 }
 
 /** One rung of the rail — an earned/next-up-decorated link, or a locked span (never a link). */

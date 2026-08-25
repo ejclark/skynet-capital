@@ -1,5 +1,4 @@
-import { type EarnedMilestone, milestoneForCode } from "../domain/progression.js";
-import { TRADE_TYPES } from "../domain/trade-types.js";
+import { type EarnedMilestone, ladderNeighbor, milestoneForCode } from "../domain/progression.js";
 import { escapeHtml } from "../ui/escape-html.js";
 
 /**
@@ -23,12 +22,6 @@ const BANNER_STYLE = `<style>
   .unlock-line b{ color:var(--accent); }
 </style>`;
 
-/** The rung after `code` on the ladder — what this earn just opened. */
-function nextRung(code: string): (typeof TRADE_TYPES)[number] | undefined {
-  const i = TRADE_TYPES.findIndex((t) => t.code === code);
-  return i >= 0 ? TRADE_TYPES[i + 1] : undefined;
-}
-
 /**
  * One celebratory panel for every unclaimed earn, with a single Claim. Empty list = empty string.
  * `back` is where the claim returns to — the caller passes its own route.
@@ -42,7 +35,7 @@ export function renderMilestoneBanner(
     .map((m) => {
       const milestone = milestoneForCode(m.code);
       const name = milestone?.title ?? `course ${m.code}`;
-      const next = nextRung(m.code);
+      const next = ladderNeighbor(m.code, 1);
       const opened = next
         ? `Course <b>${next.code} — ${escapeHtml(next.name)}</b> is now open.`
         : `That was the top rung — <b>the whole ladder is yours</b>.`;

@@ -80,6 +80,12 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       const milestoneIds = new Set(earned.map((m) => m.milestoneId));
       const points = pointsFor(milestoneIds);
       const next = nextUp(unlocked, codes);
+      // Course locks follow completion order, UNIONED with any course already holding an earn —
+      // seeded history with gaps must never render an earned milestone inside a "locked" course.
+      const levels = unlockedLevels(milestoneIds);
+      for (const c of COURSES) {
+        if (c.milestones.some((m) => milestoneIds.has(m.id))) levels.add(c.level);
+      }
 
       let record = deps.store?.get(participantId);
       if (deps.store && !record) {
@@ -107,7 +113,7 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         ...(next ? { nextUp: next } : {}),
         points,
         rank: rankFor(points),
-        unlockedLevels: unlockedLevels(milestoneIds),
+        unlockedLevels: levels,
         celebrating,
       };
     },

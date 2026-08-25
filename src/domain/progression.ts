@@ -1,6 +1,6 @@
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { COURSES, type Milestone } from "./curriculum.js";
-import { TRADE_TYPES, type TradeTypeCode } from "./trade-types.js";
+import { TRADE_TYPES, type TradeType, type TradeTypeCode } from "./trade-types.js";
 
 /**
  * MILESTONE DERIVATION — the pure function that turns two append-only ledgers into earned
@@ -113,4 +113,18 @@ export function nextUp(
   earned: ReadonlySet<TradeTypeCode>,
 ): TradeTypeCode | undefined {
   return TRADE_TYPES.find((t) => unlocked.has(t.code) && !earned.has(t.code))?.code;
+}
+
+/** The ladder neighbor `offset` rungs from `code` — the ONE place ladder adjacency is walked. */
+export function ladderNeighbor(code: TradeTypeCode, offset: -1 | 1): TradeType | undefined {
+  const i = TRADE_TYPES.findIndex((t) => t.code === code);
+  return i >= 0 ? TRADE_TYPES[i + offset] : undefined;
+}
+
+/** With wheels on, a rung outside the unlocked set is locked; wheels off (or no view) locks nothing. */
+export function lockedOnLadder(
+  code: TradeTypeCode,
+  view: { readonly wheels: boolean; readonly unlocked: ReadonlySet<TradeTypeCode> } | undefined,
+): boolean {
+  return Boolean(view?.wheels) && !view?.unlocked.has(code);
 }

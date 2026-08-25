@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
+import { lockedOnLadder } from "../domain/progression.js";
 import { starterPlayById } from "../domain/starter-plays.js";
 import {
   defaultTradeType,
@@ -133,7 +134,7 @@ export function playLocked(
   code: TradeTypeCode,
   progression: ParticipantProgression | undefined,
 ): boolean {
-  return Boolean(progression?.wheels) && !progression?.unlocked.has(code);
+  return lockedOnLadder(code, progression);
 }
 
 export async function serveTicket(

@@ -1,12 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
-import {
-  TRADE_TYPES,
-  type TradeType,
-  type TradeTypeCode,
-  tradeTypeByCode,
-} from "../domain/trade-types.js";
+import { ladderNeighbor } from "../domain/progression.js";
+import { type TradeType, type TradeTypeCode, tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
 import { deskHref } from "../observatory/desk-tabs.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
@@ -81,8 +77,7 @@ function resultRedirect(res: ServerResponse, snapshotId: string, ok: boolean): v
 
 /** The refusal a locked POST gets — names the rung to fill, sends nothing to the broker. */
 function lockedRefusal(deps: TradeRouteDeps, res: ServerResponse, code: TradeTypeCode): void {
-  const i = TRADE_TYPES.findIndex((t) => t.code === code);
-  const prev = i > 0 ? TRADE_TYPES[i - 1] : undefined;
+  const prev = ladderNeighbor(code, -1);
   refusalPage(
     deps,
     res,
@@ -288,12 +283,15 @@ async function handleAckPost(
 
 /**
  * 303 back to the local path a hidden `back` field names — constructed, never an open redirect.
- * Backslashes are rejected outright: browsers' URL parsers treat `\` as `/`, so `/\evil.example`
- * would slip a single-slash prefix check and become a protocol-relative hop off-site.
+ * Backslashes are rejected outright (browsers' URL parsers treat `\` as `/`, so `/\evil.example`
+ * would slip a single-slash prefix check and hop off-site), and so are control characters —
+ * a decoded `%0a` in a Location value makes `writeHead` throw, which nothing above catches.
  */
 function redirectBack(res: ServerResponse, form: URLSearchParams): void {
   const back = form.get("back") ?? "";
-  const local = back.startsWith("/") && !back.startsWith("//") && !back.includes("\\");
+  const local =
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting them IS the point
+    back.startsWith("/") && !back.startsWith("//") && !/[\\\u0000-\u001F\u007F]/.test(back);
   res.writeHead(303, { location: local ? back : "/trade" });
   res.end();
 }
@@ -338,29 +336,32 @@ export async function handleTrade(
     return;
   }
 
-  // THE LADDER GATE — with wheels on, a locked play is refused before anything is previewed or
-  // sent. Closes are exempt by construction: exiting a position is never restricted (an option
-  // close carries no code; an equity sell is 102, which owning shares has already unlocked).
+  // THE LADDER GATE — with wheels on, a locked play is refused before ANY preview or broker
+  // read. Every EXIT is exempt by construction: an option close carries no play code, and an
+  // equity sell only ever closes shares actually held (this desk never shorts — `previewOrder`
+  // refuses the rest), so selling is never locked behind the ladder. The 102 milestone still
+  // exists; it just gates nothing — restricting how someone leaves a position would be a
+  // safety bug, and a member can hold shares with no journaled fill (assignment, pre-ledger).
+  // (An equity BUY is always course 101, the ladder's ever-open first rung — nothing to gate.)
   const progression = await viewerProgression(deps);
+  const formPlay = tradeTypeByCode(form.get("play"));
+  const isCloseShaped =
+    Boolean(form.get("close")) || isOccSymbol((form.get("symbol") ?? "").trim().toUpperCase());
+  if (
+    formPlay &&
+    OPTION_CODES.has(formPlay.code) &&
+    !isCloseShaped &&
+    playLocked(formPlay.code, progression)
+  ) {
+    lockedRefusal(deps, res, formPlay.code);
+    return;
+  }
+  const action = parseAction(form.get("action"));
 
   // Options ride their own preview/confirm pair; everything else is the share desk unchanged.
   const optionReview = await optionPreviewFromForm(form, snapshot, deps);
   if (optionReview) {
-    if (
-      optionReview.request.kind === "open" &&
-      playLocked(optionReview.request.code, progression)
-    ) {
-      lockedRefusal(deps, res, optionReview.request.code);
-      return;
-    }
     await handleOptionPost(res, form, snapshot, deps, optionReview);
-    return;
-  }
-
-  const action = parseAction(form.get("action"));
-  const stockCode: TradeTypeCode = action === "buy" ? "101" : "102";
-  if (playLocked(stockCode, progression)) {
-    lockedRefusal(deps, res, stockCode);
     return;
   }
 
