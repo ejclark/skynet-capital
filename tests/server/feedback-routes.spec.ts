@@ -70,6 +70,53 @@ describe("serveFeedbackRoute", () => {
     expect(out.body).toContain("#7");
   });
 
+  it("passes attached images through to the filer, parsed from the hidden field", async () => {
+    const filed: FeedbackInput[] = [];
+    const { res } = capture();
+    const images = JSON.stringify([
+      { name: "bug.jpg", type: "image/jpeg", dataUrl: `data:image/jpeg;base64,${"A".repeat(100)}` },
+    ]);
+
+    await serveFeedbackRoute(
+      request(`kind=bug&title=t&details=d&images=${encodeURIComponent(images)}`, "POST"),
+      res,
+      "/feedback",
+      session("filer@example.com"),
+      {
+        submitFeedback: (input) => {
+          filed.push(input);
+          return Promise.resolve({ ok: true as const, url: "u", number: 1 });
+        },
+      },
+      NAV,
+    );
+
+    expect(filed[0]?.images).toHaveLength(1);
+    expect(filed[0]?.images?.[0]).toMatchObject({ name: "bug.jpg", type: "image/jpeg" });
+  });
+
+  it("ignores a malformed images field rather than failing the submission", async () => {
+    const filed: FeedbackInput[] = [];
+    const { res, out } = capture();
+
+    await serveFeedbackRoute(
+      request("kind=bug&title=t&details=d&images=not-json", "POST"),
+      res,
+      "/feedback",
+      session("filer@example.com"),
+      {
+        submitFeedback: (input) => {
+          filed.push(input);
+          return Promise.resolve({ ok: true as const, url: "u", number: 1 });
+        },
+      },
+      NAV,
+    );
+
+    expect(filed[0]?.images).toBeUndefined();
+    expect(out.status).toBe(200);
+  });
+
   it("records a successful filing to the feedback log, keyed by the member's opaque id", async () => {
     const logged: FeedbackLogEntry[] = [];
     const { res } = capture();

@@ -45,6 +45,33 @@ describe("feedback-service issue body", () => {
   });
 });
 
+// Screenshots ride separately from the member's raw form input: feedback-service.ts uploads them
+// first (feedback-images.ts) and hands issueBody the resulting SHA-pinned URLs, never a data URL.
+describe("feedback-service issue body — attached screenshots", () => {
+  it("embeds each uploaded image right under the member's own words, ahead of the metadata table", () => {
+    const body = issueBody({ kind: "bug", title: "t", details: "the chart wobbled" }, [
+      "https://raw.githubusercontent.com/x/y/abc/docs/shots/feedback/m/1.jpg",
+    ]);
+
+    expect(body).toContain(
+      "![attachment 1](https://raw.githubusercontent.com/x/y/abc/docs/shots/feedback/m/1.jpg)",
+    );
+    expect(body.indexOf("the chart wobbled")).toBeLessThan(body.indexOf("![attachment 1]"));
+    expect(body.indexOf("![attachment 1]")).toBeLessThan(body.indexOf("| **Kind** |"));
+  });
+
+  it("numbers multiple attachments in order", () => {
+    const body = issueBody({ kind: "bug", title: "t", details: "d" }, ["url-a", "url-b"]);
+
+    expect(body).toContain("![attachment 1](url-a)");
+    expect(body).toContain("![attachment 2](url-b)");
+  });
+
+  it("omits any image markup when nothing uploaded", () => {
+    expect(issueBody({ kind: "bug", title: "t", details: "d" })).not.toContain("attachment");
+  });
+});
+
 // Provenance (2026-08-22). Before this, a filed issue recorded NOTHING about how it was written, so
 // a fully-interrogated spec and a one-line paste looked identical to the build lane and both had
 // to be treated as the vaguer one. The `curated` label plus the fenced spec block is what lets
