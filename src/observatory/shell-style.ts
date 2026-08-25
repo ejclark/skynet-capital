@@ -148,6 +148,28 @@ export const SHELL_STYLE = `<style>
   .equity-spark{ display:block; width:100%; height:64px; }
   .history-metrics{ grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
   @container stage (max-width:640px){ .indiv-hero{ grid-template-columns:1fr; } }
+  /* --- the night shift (#562): which venue is awake, and what the account holds there --- */
+  .night-shift{ margin-top:26px; padding:18px 20px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+  .ns-title{ margin:6px 0 0; font-size:17px; font-weight:700; }
+  .ns-sub{ margin:5px 0 0; font-size:13px; color:var(--muted); line-height:1.55; max-width:70ch; }
+  .ns-venues{ list-style:none; margin:16px 0 0; padding:0; display:flex; flex-direction:column; gap:14px; }
+  .ns-venue{ display:flex; flex-direction:column; gap:7px; }
+  .ns-venue-top{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .ns-venue-name{ font-size:13.5px; font-weight:700; }
+  .ns-pill{ font-family:var(--mono); font-size:9px; letter-spacing:.12em; padding:2px 8px; border-radius:999px; border:1px solid var(--border); white-space:nowrap; }
+  /* Accent, not --pos: green/red mean UP/DOWN in this app (docs/BRAND.md), and an open venue is a
+     system state, not a gain. The accent is the machine voice, which is exactly what a clock is. */
+  .ns-pill.ns-open{ color:var(--accent); border-color:color-mix(in srgb,var(--accent) 50%,var(--border)); }
+  .ns-pill.ns-shut{ color:var(--muted); }
+  .ns-sched{ font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .ns-hours{ margin-left:auto; font-size:10.5px; color:var(--muted); white-space:nowrap; }
+  .ns-bar{ display:block; height:7px; border-radius:5px; background:color-mix(in srgb,var(--muted) 16%,transparent); overflow:hidden; }
+  .ns-bar i{ display:block; height:100%; border-radius:5px; background:color-mix(in srgb,var(--muted) 45%,transparent); }
+  .ns-bar i.ns-bar-live{ background:var(--accent); }
+  .ns-detail{ margin:0; font-size:12px; color:var(--muted); line-height:1.5; max-width:70ch; }
+  .ns-holdings{ margin-top:20px; }
+  .ns-positions{ margin-top:0; }
+  .ns-exposure{ margin:8px 0 0; font-size:12px; color:var(--muted); }
   /* --- leaderboard --- */
   .ladder-head{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
   .view-title{ margin:0; font-size:24px; font-weight:700; }

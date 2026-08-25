@@ -10,6 +10,7 @@ import {
 import { renderEmpireSkyline } from "./empire-skyline.js";
 import { equityChange, equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
 import type { EquitySample } from "./history-store.js";
+import { renderNightShift } from "./night-shift.js";
 import {
   activityFeed,
   participantInvested,
@@ -151,10 +152,17 @@ export function renderIndividualBody(
         ${activityFeed(snapshot) || `<p class="empty">No recent activity.</p>`}
       </div>
     </div>
+    ${renderNightShift(snapshot, { now: deskClock(asOf), isSelf })}
     ${historyPanel(snapshot, options.history)}
   </section>`,
     asOf,
   );
+}
+
+/** The page's own "now" for the venue clock — `generatedAt` when it parses, wall clock when it
+ *  doesn't, so a malformed timestamp degrades to the real time instead of an NaN board. */
+function deskClock(asOf: string): Date {
+  return Number.isNaN(Date.parse(asOf)) ? new Date() : new Date(asOf);
 }
 
 /**
