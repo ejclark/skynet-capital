@@ -108,7 +108,7 @@ describe("the observatory stylesheets", () => {
     for (const file of files) {
       const src = readFileSync(join(DIR, file), "utf8");
       for (const [match] of src.matchAll(/@media\s*\(max-width:[^)]+\)\s*\{/g)) {
-        if (file === "dashboard-shell.ts" && match.includes("760px")) continue;
+        if (file === "shell-style.ts" && match.includes("760px")) continue;
         offenders.push(`${file}: ${match.trim()}`);
       }
     }

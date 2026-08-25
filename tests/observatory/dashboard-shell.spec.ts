@@ -1,5 +1,7 @@
 import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import { renderShell } from "../../src/observatory/dashboard-shell.js";
+import { SHELL_STYLE } from "../../src/observatory/shell-style.js";
+import { TOKEN_DECLS, TOKEN_HEX } from "../../src/ui/tokens.js";
 
 const baseNav = (overrides: Partial<NavContext> = {}): NavContext => ({
   active: "board",
@@ -157,5 +159,27 @@ describe("renderShell", () => {
       expect(html).toContain('href="/logout"');
       expect(html).toContain("Sign out");
     });
+  });
+});
+
+describe("shell styling", () => {
+  it("reuses the brand tokens rather than hard-coding a parallel palette", () => {
+    expect(SHELL_STYLE).toContain("var(--accent)");
+    expect(SHELL_STYLE).toContain("var(--pos)");
+  });
+
+  it("declares its tokens from the one source, never a duplicated hex", () => {
+    // Unlike DESK_STYLE (which only ever references var(--accent) etc.), SHELL_STYLE is where the
+    // `.obs`/`.app` scopes get their tokens in the first place — so TOKEN_DECLS's raw hexes are
+    // expected here, exactly once each, sourced from src/ui/tokens.ts and nowhere hand-pasted again.
+    expect(SHELL_STYLE).toContain(TOKEN_DECLS);
+    const withoutDecls = SHELL_STYLE.split(TOKEN_DECLS).join("");
+    expect(withoutDecls).not.toContain(TOKEN_HEX.accent);
+  });
+
+  it("is what renderShell actually injects", () => {
+    const html = renderShell(undefined, "<p>x</p>", GENERATED_AT);
+
+    expect(html).toContain(SHELL_STYLE);
   });
 });
