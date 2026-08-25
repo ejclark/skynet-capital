@@ -18,7 +18,6 @@ import {
   type NavContext,
   type NavView,
   renderAcademyBody,
-  renderCompareBody,
   renderIndividualBody,
 } from "../observatory/render-dashboard.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
@@ -27,6 +26,7 @@ import {
   parseLeaderMetric,
   renderStandingsBody,
   renderStandingsContent,
+  type StandingsOptions,
 } from "../observatory/standings-view.js";
 import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
@@ -276,6 +276,15 @@ function isOwnerOf(
   return Boolean(dep && session && dep.isOwner(session.email.toLowerCase()));
 }
 
+/** `?a=`/`?b=` for Standings' folded-in compare — shared by `/events` and `/` so neither route
+ *  re-derives the same conditional spread inline. */
+function parseCompareParams(params: URLSearchParams): Pick<StandingsOptions, "aId" | "bId"> {
+  return {
+    ...(params.get("a") ? { aId: params.get("a") as string } : {}),
+    ...(params.get("b") ? { bId: params.get("b") as string } : {}),
+  };
+}
+
 /** Routes behind the auth gate — same set and order as before the split. */
 async function serveAuthorizedRoute(
   req: IncomingMessage,
@@ -296,12 +305,12 @@ async function serveAuthorizedRoute(
     authed,
     ...(canControl ? { canControl } : {}),
     ...(canInvite ? { canInvite } : {}),
-    hasCompare: true,
   });
 
   if (path === "/events") {
-    const metric = parseLeaderMetric(new URL(url, "http://localhost").searchParams.get("by"));
-    streamEvents(req, res, config.hub, navFor("board"), metric);
+    const params = new URL(url, "http://localhost").searchParams;
+    const metric = parseLeaderMetric(params.get("by"));
+    streamEvents(req, res, config.hub, navFor("board"), metric, parseCompareParams(params));
     return;
   }
   if (path === "/leaderboard") {
@@ -319,14 +328,11 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path === "/compare") {
-    const params = new URL(url, "http://localhost").searchParams;
-    const body = renderCompareBody(config.hub.getState(), {
-      nav: navFor("compare"),
-      ...(params.get("a") ? { aId: params.get("a") as string } : {}),
-      ...(params.get("b") ? { bId: params.get("b") as string } : {}),
-    });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Compare — Skynet Capital", body));
+    // Compare folded into Standings (/) as ?a=&b= 2026-08-25 — same params, same shapes, so the
+    // query string carries over unchanged rather than 404ing an old bookmark.
+    const qs = new URL(url, "http://localhost").search;
+    res.writeHead(302, { location: `/${qs}` });
+    res.end();
     return;
   }
   if (await trySelfServiceRoute(req, res, path, url, config, session)) {
@@ -349,9 +355,10 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path === "/" || path === "/index.html") {
-    const metric = parseLeaderMetric(new URL(url, "http://localhost").searchParams.get("by"));
+    const params = new URL(url, "http://localhost").searchParams;
+    const metric = parseLeaderMetric(params.get("by"));
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(pageHtml(config.hub, navFor("board"), metric));
+    res.end(pageHtml(config.hub, navFor("board"), metric, parseCompareParams(params)));
     return;
   }
   res.writeHead(404, { "content-type": "text/plain" });
@@ -671,10 +678,10 @@ function servePulse(res: ServerResponse, hub: ObservatoryHub): void {
 }
 
 /**
- * The SSE stream backing Standings' live refresh. `metric` is read ONCE, from the `/events`
- * connection's own URL, at connect time — the inline script in `pageHtml` forwards the page's full
- * query string (not just `key`) so a viewer who picked `?by=return` keeps seeing Return % on every
- * live push instead of being silently reset to the default Equity view.
+ * The SSE stream backing Standings' live refresh. `metric`/`compare` are read ONCE, from the
+ * `/events` connection's own URL, at connect time — the inline script in `pageHtml` forwards the
+ * page's full query string (not just `key`) so a viewer who picked `?by=return` or is mid-compare
+ * (`?a=&b=`) keeps seeing the same state on every live push instead of being silently reset.
  */
 function streamEvents(
   req: IncomingMessage,
@@ -682,20 +689,27 @@ function streamEvents(
   hub: ObservatoryHub,
   nav: NavContext,
   metric: LeaderMetric,
+  compare: Pick<StandingsOptions, "aId" | "bId">,
 ): void {
   res.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
     connection: "keep-alive",
   });
-  res.write(sseFrame(JSON.stringify(renderStandingsContent(hub.getState(), { nav, metric }))));
+  const opts = { nav, metric, ...compare };
+  res.write(sseFrame(JSON.stringify(renderStandingsContent(hub.getState(), opts))));
   const unsubscribe = hub.subscribe((state) => {
-    res.write(sseFrame(JSON.stringify(renderStandingsContent(state, { nav, metric }))));
+    res.write(sseFrame(JSON.stringify(renderStandingsContent(state, opts))));
   });
   req.on("close", unsubscribe);
 }
 
-function pageHtml(hub: ObservatoryHub, nav: NavContext, metric: LeaderMetric): string {
+function pageHtml(
+  hub: ObservatoryHub,
+  nav: NavContext,
+  metric: LeaderMetric,
+  compare: Pick<StandingsOptions, "aId" | "bId">,
+): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -705,11 +719,12 @@ function pageHtml(hub: ObservatoryHub, nav: NavContext, metric: LeaderMetric): s
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
-${renderStandingsBody(hub.getState(), { nav, metric })}
+${renderStandingsBody(hub.getState(), { nav, metric, ...compare })}
 <script>
   (function () {
-    // Forward the whole query string (not just "key") so /events sees ?by= too — the metric
-    // picker's selection survives a live push instead of reverting to the default on refresh.
+    // Forward the whole query string (not just "key") so /events sees ?by=/?a=/?b= too — the
+    // metric picker's selection and any in-progress compare survive a live push instead of
+    // reverting on the next update.
     var url = "/events" + location.search;
     var source = new EventSource(url);
     source.onmessage = function (e) {

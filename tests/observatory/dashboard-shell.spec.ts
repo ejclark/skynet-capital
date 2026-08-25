@@ -71,17 +71,10 @@ describe("renderShell", () => {
       expect(html).toContain('<a class="dnav-link" href="/">');
     });
 
-    it("omits the compare link when the view is not yet enabled", () => {
+    it("never links the standalone /compare route — Compare folded into Standings' per-row pill", () => {
       const html = renderShell(baseNav(), "<p>x</p>", GENERATED_AT);
 
       expect(html).not.toContain('href="/compare"');
-    });
-
-    it("links compare when the flag is set", () => {
-      const html = renderShell(baseNav({ hasCompare: true }), "<p>x</p>", GENERATED_AT);
-
-      expect(html).toContain('href="/compare"');
-      expect(html).toContain("Compare");
     });
 
     it("omits the You link when no current participant id is resolved", () => {

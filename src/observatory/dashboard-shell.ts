@@ -10,15 +10,7 @@ import { SHELL_STYLE } from "./shell-style.js";
  */
 
 /** Which top-level view is active, for the shared nav. */
-export type NavView =
-  | "board"
-  | "trade"
-  | "compare"
-  | "research"
-  | "you"
-  | "add"
-  | "learn"
-  | "feedback";
+export type NavView = "board" | "trade" | "research" | "you" | "add" | "learn" | "feedback";
 
 export interface NavContext {
   readonly active: NavView;
@@ -30,8 +22,6 @@ export interface NavContext {
   readonly canControl?: boolean;
   /** Owner-only: link the guest list (`/invite`). Members see neither the link nor the page. */
   readonly canInvite?: boolean;
-  /** Views ship incrementally; only link the ones that exist so merged states have no dead links. */
-  readonly hasCompare?: boolean;
 }
 
 export interface DashboardViewOptions {
@@ -45,7 +35,6 @@ const FEEDBACK_URL = "/feedback";
 const NAV_ICON: Record<string, string> = {
   board: "▦",
   trade: "⇅",
-  compare: "⇄",
   research: "◷",
   you: "◉",
   add: "＋",
@@ -69,9 +58,6 @@ function renderDrawer(nav: NavContext): string {
   // Trade is global chrome — one click from every screen (desk-v2 handoff). The ticket
   // renders honestly in every state, so the link never needs gating.
   links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
-  if (nav.hasCompare) {
-    links.push(drawerLink("/compare", "Compare", "compare", nav.active === "compare"));
-  }
   links.push(drawerLink("/research", "Research", "research", nav.active === "research"));
   if (nav.currentId) {
     links.push(drawerLink(profileHref(nav.currentId), "You", "you", nav.active === "you"));

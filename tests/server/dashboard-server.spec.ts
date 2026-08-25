@@ -148,6 +148,63 @@ describe("dashboard-server — Standings fold (2026-08-25)", () => {
       expect(pushed).toContain('class="msel active" href="/?by=return"');
     });
   });
+
+  it("redirects the old /compare route to Standings, carrying ?a=&b= forward", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const bare = await fetch(`${base}/compare`, { redirect: "manual" });
+      expect(bare.status).toBe(302);
+      expect(bare.headers.get("location")).toBe("/");
+
+      const withPair = await fetch(`${base}/compare?a=p1&b=p2`, { redirect: "manual" });
+      expect(withPair.status).toBe(302);
+      expect(withPair.headers.get("location")).toBe("/?a=p1&b=p2");
+    });
+  });
+
+  it("threads the connecting request's ?a=&b= into every live SSE push, not just the first frame", async () => {
+    const hub = new ObservatoryHub({
+      generatedAt: "t",
+      collisions: [],
+      participants: [
+        {
+          id: "p1",
+          displayName: "Alice",
+          kind: "human",
+          cash: 0,
+          equity: 1,
+          positions: [],
+        },
+        {
+          id: "p2",
+          displayName: "Bob",
+          kind: "human",
+          cash: 0,
+          equity: 1,
+          positions: [],
+        },
+      ],
+    });
+    await withServer({ hub }, async (base) => {
+      const res = await fetch(`${base}/events?a=p1&b=p2`);
+      expect(res.status).toBe(200);
+      const framesPromise = readSseFrames(res, 2);
+      hub.apply({
+        type: "participant_added",
+        at: "2026-08-25T00:00:00.000Z",
+        participant: {
+          id: "p3",
+          displayName: "Push Test",
+          kind: "human",
+          cash: 0,
+          equity: 1,
+          positions: [],
+        },
+      });
+      const [initial, pushed] = await framesPromise;
+      expect(initial).toContain('Alice <span class="cmp-vs">vs</span> Bob');
+      expect(pushed).toContain('Alice <span class="cmp-vs">vs</span> Bob');
+    });
+  });
 });
 
 describe("dashboard-server /pulse", () => {
