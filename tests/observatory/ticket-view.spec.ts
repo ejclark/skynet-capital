@@ -54,7 +54,7 @@ describe("the trade ticket view", () => {
     for (const code of ["101", "102", "201", "202", "301", "302"]) {
       expect(html).toContain(`<span class="tk-code">${code}</span>`);
     }
-    expect(html.match(/data-unlock-course="wheel-basics"/g)).toHaveLength(2);
+    expect(html.match(/data-unlock-course="the-wheel"/g)).toHaveLength(2);
     expect(html).toContain("level up to unlock");
     expect(html).toContain("skynet.academy.done"); // unlocks ride the academy's own progress
   });

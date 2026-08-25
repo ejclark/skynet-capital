@@ -359,18 +359,10 @@ function historyPanel(snapshot: ParticipantSnapshot, history?: readonly EquitySa
     </section>`;
 }
 
-/** Milestones that are literally a trade map straight to the ticket, pre-set to the play. */
-const MILESTONE_TICKET: Record<string, string> = {
-  "buy-first-stock": "/trade?play=101",
-  "first-cash-covered-put": "/trade?play=201",
-  "first-covered-call": "/trade?play=202",
-  "first-long-put": "/trade?play=301",
-  "first-long-call": "/trade?play=302",
-};
-
 /** One milestone row — a self-marked achievement worth points. */
 function milestoneRow(m: Milestone): string {
-  const ticket = MILESTONE_TICKET[m.id];
+  // A milestone that IS a trade maps straight to the ticket, pre-set to its play.
+  const ticket = m.tradeType ? `/trade?play=${m.tradeType}` : undefined;
   return `<label class="ms" data-ms="${m.id}">
         <input type="checkbox" class="ms-check" data-ms-check="${m.id}">
         <span class="ms-mark" aria-hidden="true">✓</span>
@@ -426,7 +418,7 @@ export function renderAcademyBody(options: DashboardViewOptions = {}): string {
       <p class="wheel-lede">The safest way to learn options income. Turn the wheel: own a stock you'd want anyway, get paid to buy it lower, get paid to cap your upside — then repeat.</p>
       <ol class="wheel-steps">
         <li><span class="wheel-n">1</span><span class="wheel-t">Buy the stock</span><span class="wheel-d">Own 100 shares of a company you'd be glad to hold.</span></li>
-        <li><span class="wheel-n">2</span><span class="wheel-t">Sell a cash-covered put</span><span class="wheel-d">Get paid to set a price you'd happily buy more at.</span></li>
+        <li><span class="wheel-n">2</span><span class="wheel-t">Sell a cash-secured put</span><span class="wheel-d">Get paid to set a price you'd happily buy more at.</span></li>
         <li><span class="wheel-n">3</span><span class="wheel-t">Sell a covered call</span><span class="wheel-d">Get paid to cap your upside while you hold.</span></li>
         <li><span class="wheel-n">↻</span><span class="wheel-t">Repeat</span><span class="wheel-d">Collect premium turn after turn — that's the Wheel.</span></li>
       </ol>

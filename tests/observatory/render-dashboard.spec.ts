@@ -18,13 +18,15 @@ describe("renderAcademyBody — the gamified journey", () => {
     expect(html).toContain("The Wheel");
     expect(html).toContain("Buy the stock");
     expect(html).toContain("Buy your first stock");
-    expect(html).toContain("Sell your first cash-covered put");
+    expect(html).toContain("Sell your first cash-secured put");
   });
 
-  it("opens course 100 and locks course 200 until it's complete", () => {
+  it("opens course 100 and locks the higher courses until each level below is complete", () => {
     expect(html).toContain('data-course="100" open');
     expect(html).toContain('data-course="200"');
     expect(html).not.toContain('data-course="200" open');
+    expect(html).toContain('data-course="300"');
+    expect(html).not.toContain('data-course="300" open');
     expect(html).toContain("Finish the level below");
   });
 
