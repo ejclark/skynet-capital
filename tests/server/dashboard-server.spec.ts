@@ -100,6 +100,33 @@ describe("dashboard-server OAuth gate", () => {
     );
   });
 
+  it("stamps the guest list's joined status the first time a session lands on the board", async () => {
+    const joined: string[] = [];
+    const store = {
+      entries: () => [],
+      emails: () => new Set<string>(),
+      logins: () => new Set<string>(),
+      canStoreSecurely: () => true,
+      add: () => false,
+      remove: () => false,
+      markJoined: (value: string) => {
+        joined.push(value);
+        return true;
+      },
+    };
+    await withServer(
+      {
+        hub: new ObservatoryHub(board()),
+        ...(auth ? { auth } : {}),
+        invite: { store, isOwner: () => false },
+      },
+      async (base) => {
+        await fetch(`${base}/`, { headers: { cookie: validCookie() } });
+        expect(joined).toEqual(["eric@gmail.com"]);
+      },
+    );
+  });
+
   it("serves the Portfolio index at /u listing every account the session owns", async () => {
     const hub = new ObservatoryHub({
       generatedAt: "t",

@@ -392,6 +392,10 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path === "/" || path === "/index.html") {
+    // The board is where every sign-in lands (OAuth's callback redirects here), so it's the
+    // cheapest reliable place to stamp "joined" for the /invite observability view — idempotent
+    // and fails silently, never blocking the render it rides along with.
+    if (session) config.invite?.store.markJoined(session.email, new Date().toISOString());
     const params = new URL(url, "http://localhost").searchParams;
     const metric = parseLeaderMetric(params.get("by"));
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
