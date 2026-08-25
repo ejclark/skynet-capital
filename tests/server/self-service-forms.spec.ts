@@ -107,9 +107,7 @@ describe("handleRotate", () => {
   it("GET serves the rotation form", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "GET", "", undefined, () =>
-          Promise.reject(new Error("unused")),
-        ),
+        void handleRotate(req, res, "GET", "", {}, () => Promise.reject(new Error("unused"))),
       async (base) => {
         const res = await fetch(base);
         expect(res.status).toBe(200);
@@ -123,7 +121,7 @@ describe("handleRotate", () => {
   it("POST submits id + new credentials and renders success", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "POST", "", undefined, (input) => {
+        void handleRotate(req, res, "POST", "", {}, (input) => {
           expect(input.id).toBe("day-trader");
           expect(input.apiKey).toBe("new-key");
           return Promise.resolve({ ok: true, id: "day-trader", displayName: "JARVIS" });
@@ -140,10 +138,36 @@ describe("handleRotate", () => {
     );
   });
 
+  it("forwards the session's resolved id AND email — the roster owner-gate needs both", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleRotate(
+          req,
+          res,
+          "POST",
+          "",
+          { id: "human-eric", email: "eric@example.com" },
+          (input) => {
+            expect(input.requesterId).toBe("human-eric");
+            expect(input.requesterEmail).toBe("eric@example.com");
+            return Promise.resolve({ ok: true, id: "human-eric", displayName: "Eric" });
+          },
+        ),
+      async (base) => {
+        const res = await fetch(base, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: "id=human-eric&apiKey=new-key&apiSecret=new-secret",
+        });
+        expect(res.status).toBe(200);
+      },
+    );
+  });
+
   it("POST renders the error page with a 400 when rotation is refused", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "POST", "", undefined, () =>
+        void handleRotate(req, res, "POST", "", {}, () =>
           Promise.resolve({ ok: false, error: "No existing self-service account." }),
         ),
       async (base) => {
@@ -157,7 +181,7 @@ describe("handleRotate", () => {
   it("carries the ?key= password through both the form action and result links", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "GET", "secret123", undefined, () =>
+        void handleRotate(req, res, "GET", "secret123", {}, () =>
           Promise.reject(new Error("unused")),
         ),
       async (base) => {

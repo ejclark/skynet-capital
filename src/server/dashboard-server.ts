@@ -6,27 +6,29 @@ import {
   parseActivityWindow,
   type TradeActivityRecord,
 } from "../observatory/activity-store.js";
-import { renderAnalysisBody } from "../observatory/analysis-view.js";
-import { renderCalendarBody } from "../observatory/calendar-view.js";
 import { type DeskNotice, type DeskTab, deskHref, parseDeskTab } from "../observatory/desk-tabs.js";
 import type { EquitySample } from "../observatory/history-store.js";
-import { type HistoryViewOptions, renderHistoryBody } from "../observatory/history-view.js";
-import { type MetricsViewOptions, renderMetricsBody } from "../observatory/metrics-view.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
+import {
+  type PerformanceViewOptions,
+  renderPerformanceBody,
+} from "../observatory/performance-view.js";
 import { renderPositionsBody } from "../observatory/positions-view.js";
 import {
-  type LeaderMetric,
   type NavContext,
   type NavView,
   renderAcademyBody,
-  renderBoardContent,
-  renderCohortsBody,
-  renderCompareBody,
-  renderDashboardBody,
   renderIndividualBody,
-  renderLeaderboardBody,
+  renderPortfolioIndexBody,
 } from "../observatory/render-dashboard.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
+import {
+  type LeaderMetric,
+  parseLeaderMetric,
+  renderStandingsBody,
+  renderStandingsContent,
+  type StandingsOptions,
+} from "../observatory/standings-view.js";
 import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
@@ -46,7 +48,6 @@ import type {
   RotateResult,
 } from "./participant-service.js";
 import { serveResearchRoute } from "./research-routes.js";
-import { researchedEventIds } from "./research-service.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 import { sseFrame } from "./sse.js";
 import { handleTrade } from "./trade-routes.js";
@@ -141,6 +142,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps {
    * browser. Omit when OAuth isn't configured.
    */
   readonly resolveOwnerId?: (email: string) => string | undefined;
+  /**
+   * Every participant id the session's email owns — the Portfolio index (`/u`) lists these.
+   * Same ownership link as `resolveOwnerId`, plural; omit to fall back to that single id.
+   */
+  readonly resolveOwnerIds?: (email: string) => readonly string[];
 }
 
 /**
@@ -275,6 +281,23 @@ async function gateRequest(
   return { handled: false, session: undefined };
 }
 
+/** True when the signed-in session's email is an owner on the given owner-gated dep, if wired. */
+function isOwnerOf(
+  dep: { isOwner: (email: string) => boolean } | undefined,
+  session: Session | undefined,
+): boolean {
+  return Boolean(dep && session && dep.isOwner(session.email.toLowerCase()));
+}
+
+/** `?a=`/`?b=` for Standings' folded-in compare — shared by `/events` and `/` so neither route
+ *  re-derives the same conditional spread inline. */
+function parseCompareParams(params: URLSearchParams): Pick<StandingsOptions, "aId" | "bId"> {
+  return {
+    ...(params.get("a") ? { aId: params.get("a") as string } : {}),
+    ...(params.get("b") ? { bId: params.get("b") as string } : {}),
+  };
+}
+
 /** Routes behind the auth gate — same set and order as before the split. */
 async function serveAuthorizedRoute(
   req: IncomingMessage,
@@ -286,49 +309,43 @@ async function serveAuthorizedRoute(
 ): Promise<void> {
   const canAdd = Boolean(config.addParticipant);
   const authed = Boolean(config.auth);
-  const canControl = Boolean(
-    config.controls && session && config.controls.isOwner(session.email.toLowerCase()),
-  );
+  const canControl = isOwnerOf(config.controls, session);
+  const canInvite = isOwnerOf(config.invite, session);
   const navFor = (active: NavView): NavContext => ({
     active,
     currentId: resolveCurrentId(session, config.resolveOwnerId),
     canAdd,
     authed,
     ...(canControl ? { canControl } : {}),
-    hasLeaderboard: true,
-    hasBots: true,
-    hasCompare: true,
+    ...(canInvite ? { canInvite } : {}),
   });
 
   if (path === "/events") {
-    streamEvents(req, res, config.hub, navFor("board"));
+    const params = new URL(url, "http://localhost").searchParams;
+    const metric = parseLeaderMetric(params.get("by"));
+    streamEvents(req, res, config.hub, navFor("board"), metric, parseCompareParams(params));
     return;
   }
   if (path === "/leaderboard") {
-    const state = config.hub.getState();
+    // Leaderboard folded into Standings (/) 2026-08-25 — an old bookmark still lands somewhere
+    // real rather than 404ing. Its own metric param maps onto Standings' identically-shaped one.
     const by = new URL(url, "http://localhost").searchParams.get("by");
-    const metric: LeaderMetric =
-      by === "pl" || by === "return" || by === "realized" ? by : "equity";
-    const body = renderLeaderboardBody(state, { nav: navFor("leaderboard"), metric });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Leaderboard — Skynet Capital", body));
+    res.writeHead(302, { location: by ? `/?by=${by}` : "/" });
+    res.end();
     return;
   }
   if (path === "/bots-vs-humans") {
-    const body = renderCohortsBody(config.hub.getState(), { nav: navFor("bots") });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Bots vs Humans — Skynet Capital", body));
+    // Bots vs Humans folded into Standings (/) 2026-08-25 — same reasoning as /leaderboard above.
+    res.writeHead(302, { location: "/" });
+    res.end();
     return;
   }
   if (path === "/compare") {
-    const params = new URL(url, "http://localhost").searchParams;
-    const body = renderCompareBody(config.hub.getState(), {
-      nav: navFor("compare"),
-      ...(params.get("a") ? { aId: params.get("a") as string } : {}),
-      ...(params.get("b") ? { bId: params.get("b") as string } : {}),
-    });
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(shellDocument("Compare — Skynet Capital", body));
+    // Compare folded into Standings (/) as ?a=&b= 2026-08-25 — same params, same shapes, so the
+    // query string carries over unchanged rather than 404ing an old bookmark.
+    const qs = new URL(url, "http://localhost").search;
+    res.writeHead(302, { location: `/${qs}` });
+    res.end();
     return;
   }
   if (await trySelfServiceRoute(req, res, path, url, config, session)) {
@@ -345,14 +362,29 @@ async function serveAuthorizedRoute(
     await serveTradeRoute(req, res, url, config, session, navFor);
     return;
   }
+  // Portfolio index — /u bare: every account the session's email owns, one level above the desks.
+  if (path === "/u") {
+    const ownedIds = resolveOwnedIds(session, config);
+    const state = config.hub.getState();
+    const accounts = state.participants.filter((p) => ownedIds.includes(p.id));
+    const body = renderPortfolioIndexBody(accounts, {
+      nav: navFor("you"),
+      generatedAt: state.generatedAt,
+    });
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(body);
+    return;
+  }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
   if (path.startsWith("/u/")) {
     await serveIndividualProfile(req, res, path, url, config, navFor, session);
     return;
   }
   if (path === "/" || path === "/index.html") {
+    const params = new URL(url, "http://localhost").searchParams;
+    const metric = parseLeaderMetric(params.get("by"));
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(pageHtml(config.hub, navFor("board")));
+    res.end(pageHtml(config.hub, navFor("board"), metric, parseCompareParams(params)));
     return;
   }
   res.writeHead(404, { "content-type": "text/plain" });
@@ -360,9 +392,9 @@ async function serveAuthorizedRoute(
 }
 
 /**
- * The read-only info views behind the gate — `/learn`, `/calendar`, `/research` — grouped so the
- * main dispatch stays within its complexity budget. Returns true when the request was handled;
- * dispatch order is unchanged from before the extraction.
+ * The read-only info views behind the gate — `/learn`, `/research` — grouped so the main dispatch
+ * stays within its complexity budget. Returns true when the request was handled; dispatch order is
+ * unchanged from before the extraction.
  */
 function serveInfoRoute(
   res: ServerResponse,
@@ -377,31 +409,18 @@ function serveInfoRoute(
     return true;
   }
   if (path === "/calendar") {
-    serveCalendarRoute(res, url, navFor);
+    // The event horizon folded into the Research shelf 2026-08-25 — an old bookmark still lands
+    // somewhere real rather than 404ing. Its month param carries over unchanged.
+    const month = new URL(url, "http://localhost").searchParams.get("month");
+    res.writeHead(302, { location: month ? `/research?month=${month}` : "/research" });
+    res.end();
     return true;
   }
   if (path === "/research" || path.startsWith("/research/")) {
-    serveResearchRoute(res, path, navFor);
+    serveResearchRoute(res, path, url, navFor);
     return true;
   }
   return false;
-}
-
-/** `/calendar` — the event-horizon view; `?month=` moves the widget (view-validated/clamped). */
-function serveCalendarRoute(
-  res: ServerResponse,
-  url: string,
-  navFor: (active: NavView) => NavContext,
-): void {
-  const month = new URL(url, "http://localhost").searchParams.get("month");
-  const body = renderCalendarBody({
-    nav: navFor("calendar"),
-    asOfIso: new Date().toISOString(),
-    researchIds: researchedEventIds(),
-    ...(month ? { month } : {}),
-  });
-  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(shellDocument("Calendar — Skynet Capital", body));
 }
 
 /**
@@ -512,23 +531,37 @@ async function trySelfServiceRoute(
     return true;
   }
   if (path === "/rotate" && config.rotateCredentials) {
-    // Who the signed-in session resolves to, when OAuth is configured — the same identity link
-    // "isSelf"/nav highlighting already uses. Passed through so rotateCredentials can refuse to
-    // let one authed member silently redirect ANOTHER member's displayed account to credentials
-    // the member supplies themselves (see docs/LESSONS.md, 2026-08-11: the whole point of this
-    // route is fixing YOUR OWN regenerated key, not reassigning someone else's identity).
-    const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
     await handleRotate(
       req,
       res,
       req.method ?? "GET",
       keyOf(url),
-      requesterId,
+      rotateRequester(config, session),
       config.rotateCredentials,
     );
     return true;
   }
   return false;
+}
+
+/**
+ * The identity /rotate hands the service: who the signed-in session resolves to (the same link
+ * "isSelf"/nav highlighting uses), so rotateCredentials can refuse to let one authed member
+ * silently redirect ANOTHER member's displayed account to credentials the member supplies
+ * themselves (docs/LESSONS.md, 2026-08-11: this route fixes YOUR OWN regenerated key, not
+ * someone else's identity). The session EMAIL rides along for env-roster targets, which are
+ * owner-gated in the service; both fields are absent exactly when OAuth isn't configured.
+ */
+function rotateRequester(
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): { id?: string; email?: string } {
+  if (!config.auth) return {};
+  const id = resolveCurrentId(session, config.resolveOwnerId);
+  return {
+    ...(id !== undefined ? { id } : {}),
+    ...(session ? { email: session.email } : {}),
+  };
 }
 
 /** Notices are looked up by CODE, never echoed from the URL — a reflected message is an attack. */
@@ -543,22 +576,19 @@ const TRADE_NOTICES: Record<string, DeskNotice> = {
   },
 };
 
-/** One desk tab → its renderer. Every tab takes the same options; only Metrics reads history. */
+/** One desk tab → its renderer. Every tab takes the same options; only Performance reads history. */
 function renderDeskTab(
   tab: Exclude<DeskTab, "overview" | "settings">,
   snapshot: ParticipantSnapshot,
-  options: MetricsViewOptions & HistoryViewOptions,
+  options: PerformanceViewOptions,
 ): string {
   if (tab === "positions") return renderPositionsBody(snapshot, options);
-  if (tab === "history") return renderHistoryBody(snapshot, options);
-  if (tab === "analysis") return renderAnalysisBody(snapshot, options);
-  return renderMetricsBody(snapshot, options);
+  return renderPerformanceBody(snapshot, options);
 }
 
 /**
  * Assemble one non-overview desk tab: gather the reads that tab needs — the durable trade ledger
- * for History (the filtered blotter) and Analysis (stats over the full record), the decision audit
- * for the per-order "why" fold on a bot's history — and render. Split from
+ * and the decision audit for Performance's folded order ledger "why" — and render. Split from
  * `serveIndividualProfile` to keep that route inside its complexity budget.
  */
 async function deskTabBody(
@@ -566,14 +596,14 @@ async function deskTabBody(
   snapshot: ParticipantSnapshot,
   config: DashboardServerConfig,
   params: URLSearchParams,
-  base: MetricsViewOptions & HistoryViewOptions,
+  base: PerformanceViewOptions,
 ): Promise<string> {
   const tradeActivity =
-    config.readTradeActivity && (tab === "history" || tab === "analysis")
+    config.readTradeActivity && tab === "performance"
       ? await config.readTradeActivity(snapshot.id)
       : undefined;
   const decisions =
-    config.readDecisions && tab === "history" && snapshot.kind === "bot"
+    config.readDecisions && tab === "performance" && snapshot.kind === "bot"
       ? await config.readDecisions(snapshot.id)
       : undefined;
   return renderDeskTab(tab, snapshot, {
@@ -667,6 +697,17 @@ function resolveCurrentId(
   return resolveOwnerId(session.email);
 }
 
+/** All ids the session owns — plural hook first, else the single `resolveOwnerId` as a list. */
+function resolveOwnedIds(
+  session: Session | undefined,
+  config: DashboardServerConfig,
+): readonly string[] {
+  if (!session) return [];
+  if (config.resolveOwnerIds) return config.resolveOwnerIds(session.email);
+  const single = resolveCurrentId(session, config.resolveOwnerId);
+  return single ? [single] : [];
+}
+
 /** External origin of the request (honors Fly's x-forwarded-proto). */
 function baseUrlFrom(req: IncomingMessage): string {
   const proto = (req.headers["x-forwarded-proto"] as string) ?? "http";
@@ -708,25 +749,39 @@ function servePulse(res: ServerResponse, hub: ObservatoryHub): void {
   res.end(body);
 }
 
+/**
+ * The SSE stream backing Standings' live refresh. `metric`/`compare` are read ONCE, from the
+ * `/events` connection's own URL, at connect time — the inline script in `pageHtml` forwards the
+ * page's full query string (not just `key`) so a viewer who picked `?by=return` or is mid-compare
+ * (`?a=&b=`) keeps seeing the same state on every live push instead of being silently reset.
+ */
 function streamEvents(
   req: IncomingMessage,
   res: ServerResponse,
   hub: ObservatoryHub,
   nav: NavContext,
+  metric: LeaderMetric,
+  compare: Pick<StandingsOptions, "aId" | "bId">,
 ): void {
   res.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
     connection: "keep-alive",
   });
-  res.write(sseFrame(JSON.stringify(renderBoardContent(hub.getState(), { nav }))));
+  const opts = { nav, metric, ...compare };
+  res.write(sseFrame(JSON.stringify(renderStandingsContent(hub.getState(), opts))));
   const unsubscribe = hub.subscribe((state) => {
-    res.write(sseFrame(JSON.stringify(renderBoardContent(state, { nav }))));
+    res.write(sseFrame(JSON.stringify(renderStandingsContent(state, opts))));
   });
   req.on("close", unsubscribe);
 }
 
-function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
+function pageHtml(
+  hub: ObservatoryHub,
+  nav: NavContext,
+  metric: LeaderMetric,
+  compare: Pick<StandingsOptions, "aId" | "bId">,
+): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -736,11 +791,13 @@ function pageHtml(hub: ObservatoryHub, nav: NavContext): string {
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
-${renderDashboardBody(hub.getState(), { nav })}
+${renderStandingsBody(hub.getState(), { nav, metric, ...compare })}
 <script>
   (function () {
-    var key = new URLSearchParams(location.search).get("key");
-    var url = "/events" + (key ? "?key=" + encodeURIComponent(key) : "");
+    // Forward the whole query string (not just "key") so /events sees ?by=/?a=/?b= too — the
+    // metric picker's selection and any in-progress compare survive a live push instead of
+    // reverting on the next update.
+    var url = "/events" + location.search;
     var source = new EventSource(url);
     source.onmessage = function (e) {
       var root = document.getElementById("root");

@@ -1,7 +1,7 @@
 # AMZN earnings print — amzn-2026-10-29-print
 
 **Kind:** earnings · **Date:** 2026-10-29 (estimate, 8-K cadence) · **Impact:** critical
-**Last assessed:** 2026-08-17
+**Last assessed:** 2026-08-24
 
 ## Initial research
 
@@ -106,6 +106,7 @@ correction proposal (estimate → confirmed) and every window in this doc re-key
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-17 | D-73 | Initial research banked. Instruments fresh (cache busted): S1 kill re-confirmed (D-20 control p=0.6854; GOOG/META outrun AMZN over its own windows); gap all-era win 48% ±10% tails (S2); fade direction-lean only (29% win modern, inert); S4 net +2.4% vs B&H +78% (killed stands). Instrument debt: event list ends 2026-04-29 — the 2026-07-30 print is missing (forward-window guard, known sweep debt), so all n=14 modern cells exclude the +9%-gap AWS print. Date hunt: IR silent; WSH forecasts 10/29 AMC unconfirmed (matches 8-K cadence); Bybit "Oct 22 confirmed" rejected as unsourced aggregator. Adjacency: no peer prints or macro releases since 8/15 (weekend); VIX 14.56 Fri 8/15 (2026 low) but SKEW +6.6% m/m and Brent +6%/wk — calm index, rising tail-hedge demand (shared with the NVDA 8/17 row); no new AMZN-specific tariff/policy action found, capex-driven memory-cost pressure noted (CNBC 7/30); tape: consensus Buy, mean PT ~$322 vs ~$267 spot, zero Sells — crowded long; Q3 guide $197–202B vs street $204.1B is the bar; implied move not yet quotable at D-73. Dated discovery: AWS re:Invent Nov 30–Dec 4 2026, Las Vegas — proposed as estimate. Congestion: MSFT 10/27 · GOOG/META 10/28 · AMZN/AAPL 10/29 (all est.) — never-stack binds that week. | — (stance set) | 2026-08-24 (critical, 61+d band: every 7d) |
+| 2026-08-24 | D-66 | Adjacency sweep. Event tape: date estimate still 10/29, no IR notice this session, unchanged. AMZN spot **$260.11** (8/24), down from the ~$267 cited at D-73 — a modest pullback, not a break. One search returned an internally inconsistent "$267.30 PT, 21.5% upside" figure that doesn't reconcile arithmetically with the quoted spot (267.30/260.11 ≈ +2.8%, not +21.5%) — likely conflated with the D-73 row's own ~$322 mean PT; discarded as an unreliable extraction, the D-73 PT figure stands uncorrected. Peers: NVDA/MRVL both report this week (own docs); AVGO's XPV overhang deepened, MRVL's implied move jumped on its Google deal (own docs) — AI-capex sentiment context, not AMZN-specific (AMZN's own capex-driven memory-cost pressure thread from D-73 unchanged, no update found). Macro: no CPI/jobs surprise since 8/17; Sep-16 FOMC read is 68.4% hold/31.6% hike as of 8/20 (FOMC sibling doc). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new dated adjacency found — AWS re:Invent (Nov 30-Dec 4) already proposed at D-73. | — (no change; too far out for a substantive stance shift) | 2026-08-31 (critical, 61+d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see [EVENT-RESEARCH.md](../../process/EVENT-RESEARCH.md)) runs in

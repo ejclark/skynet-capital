@@ -28,10 +28,11 @@ import {
 } from "../observatory/history-boot.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
-import { dedupeById } from "../participants/participant.js";
+import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { createDefaultPersonas } from "../personas/registry.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
 import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
@@ -52,10 +53,12 @@ import { resolveDeskTrading } from "../server/trade-service.js";
 const PORT = resolvePort(process.env);
 
 async function main(): Promise<void> {
+  // Boot-time backstop for drift the CI gate can't see (docs/LESSONS.md, "guest list … volume").
+  for (const warning of volumePersistenceWarnings(process.env)) console.warn(warning);
   const dataSource = resolveDataSource(process.env);
   const store = createParticipantStore(process.env);
   const envRoster = dataSource.loadParticipants();
-  const roster = dedupeById([...envRoster, ...store.load()]);
+  const roster = mergeRoster(envRoster, store.load());
   if (roster.length === 0 && dataSource.mode === "offline") {
     console.error("No participants in fixtures/offline/participants.json.");
     process.exit(1);
@@ -121,6 +124,7 @@ async function main(): Promise<void> {
   ];
   dataSource.startStreams({ participants: roster, heldSymbols, sink, onActivity, onStatus });
 
+  const owners = ownerEmails(process.env);
   const service = new ParticipantService({
     hub,
     store,
@@ -131,22 +135,27 @@ async function main(): Promise<void> {
     // idempotent — a re-onboarding member keeps the history they already have).
     recordSeedSample: seedSampleRecorder(history),
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
-    isReservedId: (id) => envRoster.some((p) => p.id === id),
+    // /add refuses these ids; /rotate falls back to them so a host-configured account's
+    // regenerated key has a self-service home (owner-gated in the service under OAuth).
+    findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
+    isOwnerEmail: (email) => owners.has(email.toLowerCase()),
   });
 
   // Day-2 account management (/account): profile edits + removal for self-service accounts.
+  // Host-configured roster accounts are off-limits here — including a rotation's store row under
+  // a roster id — so the same tier /rotate enforces is enforced on edit/remove too.
   const accounts = createAccountService({
     hub,
     store,
     clientFactory: dataSource.clientFactory,
     stopStream: (id) => dataSource.stopParticipantStream(id),
+    findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
   });
 
   // The guest list lives on the mounted volume, encrypted at rest, and is unioned with the env
   // allowlist inside resolveAuth. Built here so the /invite route and the authenticator read the
   // exact same store — two sources of truth for who may sign in is the bug worth designing out.
   const allowlist = createAllowlistStore(process.env, (m) => console.error(m));
-  const owners = ownerEmails(process.env);
   // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
   // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
   const botControls = createBotControlsStore(process.env, (m) => console.error(m));
@@ -171,15 +180,29 @@ async function main(): Promise<void> {
   }
 
   // Desk trading is on whenever OAuth is configured — no separate kill switch (#466).
-  const findParticipant = (id: string) => [...roster, ...store.load()].find((p) => p.id === id);
+  // Resolved through the LIVE merge (not the boot-time `roster`) so a credential rotated at
+  // runtime takes effect on the next order, not the next restart.
+  const liveRoster = () => mergeRoster(envRoster, store.load());
+  const findParticipant = (id: string) => liveRoster().find((p) => p.id === id);
   // Owner links for accounts that carry no `ownerEmail` of their own — every env-declared roster
-  // row, and anything added before the connect form existed (#546). Plain JSON on the volume
-  // beside bot-controls.json: an id and an already-admitted email, no credentials.
+  // row without a stamp, and anything added before the connect form existed (#546). Plain JSON on
+  // the volume beside bot-controls.json: an id and an already-admitted email, no credentials.
   const ownerLinks = createOwnerLinkStore(process.env, (m) => console.error(m));
-  // The owner link: session email -> the account it owns. Never exposed on ParticipantSnapshot.
-  // The precedence rule (a stamped owner always beats a volume link) lives in `resolveOwnedId`.
-  const resolveOwnerId = (email: string): string | undefined =>
-    resolveOwnedId(dedupeById([...roster, ...store.load()]), ownerLinks.load().links, email);
+  // The owner link: session email -> the account(s) it owns. Never exposed on ParticipantSnapshot.
+  // Every stamped `ownerEmail` match wins outright (multiple, when the host stamps more than one
+  // env id to the same address); only when NONE is stamped does a volume link fill the gap — the
+  // same "a stamp always beats a link" precedence `resolveOwnedId` specifies, generalized to a
+  // roster that can hand back more than one id.
+  const resolveOwnerIds = (email: string): string[] => {
+    const participants = liveRoster();
+    const stampedIds = participants
+      .filter((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
+      .map((p) => p.id);
+    if (stampedIds.length > 0) return stampedIds;
+    const linkedId = resolveOwnedId(participants, ownerLinks.load().links, email);
+    return linkedId ? [linkedId] : [];
+  };
+  const resolveOwnerId = (email: string): string | undefined => resolveOwnerIds(email)[0];
   const orderAudit = createOrderAuditLog(process.env);
   const desk = resolveDeskTrading({
     findParticipant,
@@ -232,10 +255,11 @@ async function main(): Promise<void> {
           claim: {
             store: ownerLinks,
             isOwner: (email: string) => owners.has(email),
-            accounts: () => toClaimAccounts(dedupeById([...roster, ...store.load()])),
+            accounts: () => toClaimAccounts(liveRoster()),
             canSignIn: (email: string) => owners.has(email) || allowlist.emails().has(email),
           },
           resolveOwnerId,
+          resolveOwnerIds,
         }
       : {}),
     // Mission Control (Eric, 2026-08-21): the owner's switchboard for the autonomous fleet.

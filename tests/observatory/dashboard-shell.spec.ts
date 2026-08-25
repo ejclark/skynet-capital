@@ -1,5 +1,7 @@
 import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import { renderShell } from "../../src/observatory/dashboard-shell.js";
+import { SHELL_STYLE } from "../../src/observatory/shell-style.js";
+import { TOKEN_DECLS, TOKEN_HEX } from "../../src/ui/tokens.js";
 
 const baseNav = (overrides: Partial<NavContext> = {}): NavContext => ({
   active: "board",
@@ -54,61 +56,50 @@ describe("renderShell", () => {
       expect(html).toContain("obs-drawer");
     });
 
-    it("always links the Board view and marks it active when active", () => {
+    it("always links the Standings view and marks it active when active", () => {
       const html = renderShell(baseNav({ active: "board" }), "<p>x</p>", GENERATED_AT);
 
       expect(html).toContain('<a class="dnav-link active" href="/" aria-current="page">');
-      expect(html).toContain("Board");
+      expect(html).toContain("Standings");
     });
 
-    it("marks a non-Board active view as active instead of Board", () => {
+    it("marks a non-Standings active view as active instead of Standings", () => {
       const html = renderShell(baseNav({ active: "learn" }), "<p>x</p>", GENERATED_AT);
 
       expect(html).toContain('<a class="dnav-link active" href="/learn" aria-current="page">');
-      // Board link is present but not marked active (no "active" class, no aria-current).
+      // Standings link is present but not marked active (no "active" class, no aria-current).
       expect(html).toContain('<a class="dnav-link" href="/">');
     });
 
-    it("omits leaderboard, bots, and compare links when the views are not yet enabled", () => {
+    it("never links the standalone /compare route — Compare folded into Standings' per-row pill", () => {
       const html = renderShell(baseNav(), "<p>x</p>", GENERATED_AT);
 
-      expect(html).not.toContain('href="/leaderboard"');
-      expect(html).not.toContain('href="/bots-vs-humans"');
       expect(html).not.toContain('href="/compare"');
     });
 
-    it("links leaderboard, bots, and compare when the corresponding flags are set", () => {
+    it("omits the Portfolio link when no current participant id is resolved", () => {
+      const html = renderShell(baseNav({ currentId: undefined }), "<p>x</p>", GENERATED_AT);
+
+      expect(html).not.toContain(">Portfolio<");
+    });
+
+    it("links Portfolio to the accounts index, first in the nav, when a current id is resolved", () => {
+      const html = renderShell(baseNav({ currentId: "eric" }), "<p>x</p>", GENERATED_AT);
+
+      expect(html).toContain('href="/u"');
+      expect(html).toContain(">Portfolio<");
+      // Portfolio leads the nav (consolidation study): it renders before the Standings link.
+      expect(html.indexOf(">Portfolio<")).toBeLessThan(html.indexOf(">Standings<"));
+    });
+
+    it("keeps the Mission Control foot link on the viewer's own desk (URL-encoded id)", () => {
       const html = renderShell(
-        baseNav({ hasLeaderboard: true, hasBots: true, hasCompare: true }),
+        baseNav({ currentId: "a b", canControl: true }),
         "<p>x</p>",
         GENERATED_AT,
       );
 
-      expect(html).toContain('href="/leaderboard"');
-      expect(html).toContain("Leaderboard");
-      expect(html).toContain('href="/bots-vs-humans"');
-      expect(html).toContain("Bots vs Humans");
-      expect(html).toContain('href="/compare"');
-      expect(html).toContain("Compare");
-    });
-
-    it("omits the You link when no current participant id is resolved", () => {
-      const html = renderShell(baseNav({ currentId: undefined }), "<p>x</p>", GENERATED_AT);
-
-      expect(html).not.toContain(">You<");
-    });
-
-    it("links the You tab to the viewer's profile when a current id is resolved", () => {
-      const html = renderShell(baseNav({ currentId: "eric" }), "<p>x</p>", GENERATED_AT);
-
-      expect(html).toContain('href="/u/eric"');
-      expect(html).toContain(">You<");
-    });
-
-    it("escapes a current id that requires URL encoding in the profile link", () => {
-      const html = renderShell(baseNav({ currentId: "a b" }), "<p>x</p>", GENERATED_AT);
-
-      expect(html).toContain("/u/a%20b");
+      expect(html).toContain("/u/a%20b?tab=settings");
     });
 
     it("omits the account CTA when the viewer cannot add an account", () => {
@@ -157,5 +148,27 @@ describe("renderShell", () => {
       expect(html).toContain('href="/logout"');
       expect(html).toContain("Sign out");
     });
+  });
+});
+
+describe("shell styling", () => {
+  it("reuses the brand tokens rather than hard-coding a parallel palette", () => {
+    expect(SHELL_STYLE).toContain("var(--accent)");
+    expect(SHELL_STYLE).toContain("var(--pos)");
+  });
+
+  it("declares its tokens from the one source, never a duplicated hex", () => {
+    // Unlike DESK_STYLE (which only ever references var(--accent) etc.), SHELL_STYLE is where the
+    // `.obs`/`.app` scopes get their tokens in the first place — so TOKEN_DECLS's raw hexes are
+    // expected here, exactly once each, sourced from src/ui/tokens.ts and nowhere hand-pasted again.
+    expect(SHELL_STYLE).toContain(TOKEN_DECLS);
+    const withoutDecls = SHELL_STYLE.split(TOKEN_DECLS).join("");
+    expect(withoutDecls).not.toContain(TOKEN_HEX.accent);
+  });
+
+  it("is what renderShell actually injects", () => {
+    const html = renderShell(undefined, "<p>x</p>", GENERATED_AT);
+
+    expect(html).toContain(SHELL_STYLE);
   });
 });

@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
+import { starterPlayById } from "../domain/starter-plays.js";
 import { defaultTradeType, type TradeType, tradeTypeByCode } from "../domain/trade-types.js";
 import type { NavContext } from "../observatory/dashboard-shell.js";
 import { ticketContext } from "../observatory/desk-data.js";
@@ -96,17 +97,21 @@ function resultRedirect(res: ServerResponse, snapshotId: string, ok: boolean): v
 // --- GET: the ticket view ---------------------------------------------------
 
 function stateFromParams(params: URLSearchParams): TicketState {
+  // `?starter=` pre-fills the stock-buy ticket; explicit params always win over the preset,
+  // and an unknown token is simply ignored. Disjoint from `?play=` by design (2026-08-25).
+  const starter = starterPlayById(params.get("starter"));
   const play: TradeType = tradeTypeByCode(params.get("play")) ?? defaultTradeType();
   const qty = posNumber(params.get("qty"));
   const strike = posNumber(params.get("strike"));
   const limit = posNumber(params.get("limit"));
   const exp = params.get("exp");
-  const symbol = params.get("symbol")?.trim().toUpperCase();
+  const symbol = params.get("symbol")?.trim().toUpperCase() ?? starter?.symbol;
   return {
     mode: params.get("mode") === "raw" ? "raw" : "guided",
     play,
     ...(symbol ? { symbol } : {}),
-    qty: qty && Number.isInteger(qty) ? qty : 1,
+    ...(starter ? { starter: starter.id } : {}),
+    qty: qty && Number.isInteger(qty) ? qty : (starter?.qty ?? 1),
     ...(exp && /^\d{4}-\d{2}-\d{2}$/.test(exp) ? { expiration: exp } : {}),
     ...(strike !== undefined ? { strike } : {}),
     orderType: params.get("ordertype") === "market" ? "market" : "limit",

@@ -24,6 +24,30 @@ async function withServer(
   }
 }
 
+/** Reads `count` SSE `data:` frames off a streaming `/events` response, JSON-decoded. */
+async function readSseFrames(res: Response, count: number): Promise<string[]> {
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("no readable body");
+  const decoder = new TextDecoder();
+  let buf = "";
+  const frames: string[] = [];
+  while (frames.length < count) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx = buf.indexOf("\n\n");
+    while (idx !== -1) {
+      const raw = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      const line = raw.split("\n").find((l) => l.startsWith("data: "));
+      if (line) frames.push(JSON.parse(line.slice("data: ".length)));
+      idx = buf.indexOf("\n\n");
+    }
+  }
+  await reader.cancel();
+  return frames;
+}
+
 describe("dashboard-server OAuth gate", () => {
   const SECRET = "sess";
   const auth = resolveAuth({
@@ -74,6 +98,164 @@ describe("dashboard-server OAuth gate", () => {
         expect(await home.text()).toContain("Sign out");
       },
     );
+  });
+
+  it("serves the Portfolio index at /u listing every account the session owns", async () => {
+    const hub = new ObservatoryHub({
+      generatedAt: "t",
+      collisions: [],
+      participants: [
+        {
+          id: "human-eric",
+          displayName: "Eric",
+          kind: "human",
+          cash: 1_000,
+          equity: 10_000,
+          positions: [],
+        },
+        {
+          id: "news-fader",
+          displayName: "News Fader",
+          kind: "bot",
+          cash: 0,
+          equity: 5_000,
+          positions: [],
+        },
+      ],
+    });
+    await withServer(
+      {
+        hub,
+        ...(auth ? { auth } : {}),
+        resolveOwnerIds: (email: string) => (email === "eric@gmail.com" ? ["human-eric"] : []),
+      },
+      async (base) => {
+        const res = await fetch(`${base}/u`, { headers: { cookie: validCookie() } });
+        expect(res.status).toBe(200);
+        const html = await res.text();
+        expect(html).toContain("Your accounts");
+        expect(html).toContain('href="/u/human-eric"');
+        // The bot isn't owned by this session, so the index never lists it.
+        expect(html).not.toContain('href="/u/news-fader"');
+      },
+    );
+  });
+
+  it("gates /u behind the login redirect like every member page", async () => {
+    await withServer(
+      { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}) },
+      async (base) => {
+        const res = await fetch(`${base}/u`, { redirect: "manual" });
+        expect(res.status).toBe(302);
+        expect(res.headers.get("location")).toBe("/login");
+      },
+    );
+  });
+});
+
+describe("dashboard-server — Standings fold (2026-08-25)", () => {
+  it("redirects the old /leaderboard route to Standings, carrying ?by= forward", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const bare = await fetch(`${base}/leaderboard`, { redirect: "manual" });
+      expect(bare.status).toBe(302);
+      expect(bare.headers.get("location")).toBe("/");
+
+      const withMetric = await fetch(`${base}/leaderboard?by=return`, { redirect: "manual" });
+      expect(withMetric.status).toBe(302);
+      expect(withMetric.headers.get("location")).toBe("/?by=return");
+    });
+  });
+
+  it("redirects the old /bots-vs-humans route to Standings", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const res = await fetch(`${base}/bots-vs-humans`, { redirect: "manual" });
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe("/");
+    });
+  });
+
+  it("threads the connecting request's ?by= into every live SSE push, not just the first frame", async () => {
+    // The SSE-threading decision the plan called for explicitly: `nav` (and now `metric`) are
+    // fixed at connect time, so the client forwards the WHOLE query string to /events — a viewer
+    // who picked Return % must keep seeing it on every live push, never silently reset to Equity.
+    const hub = new ObservatoryHub(board());
+    await withServer({ hub }, async (base) => {
+      const res = await fetch(`${base}/events?by=return`);
+      expect(res.status).toBe(200);
+      const framesPromise = readSseFrames(res, 2);
+      hub.apply({
+        type: "participant_added",
+        at: "2026-08-25T00:00:00.000Z",
+        participant: {
+          id: "p1",
+          displayName: "Push Test",
+          kind: "human",
+          cash: 0,
+          equity: 1,
+          positions: [],
+        },
+      });
+      const [initial, pushed] = await framesPromise;
+      expect(initial).toContain('class="msel active" href="/?by=return"');
+      expect(pushed).toContain('class="msel active" href="/?by=return"');
+    });
+  });
+
+  it("redirects the old /compare route to Standings, carrying ?a=&b= forward", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const bare = await fetch(`${base}/compare`, { redirect: "manual" });
+      expect(bare.status).toBe(302);
+      expect(bare.headers.get("location")).toBe("/");
+
+      const withPair = await fetch(`${base}/compare?a=p1&b=p2`, { redirect: "manual" });
+      expect(withPair.status).toBe(302);
+      expect(withPair.headers.get("location")).toBe("/?a=p1&b=p2");
+    });
+  });
+
+  it("threads the connecting request's ?a=&b= into every live SSE push, not just the first frame", async () => {
+    const hub = new ObservatoryHub({
+      generatedAt: "t",
+      collisions: [],
+      participants: [
+        {
+          id: "p1",
+          displayName: "Alice",
+          kind: "human",
+          cash: 0,
+          equity: 1,
+          positions: [],
+        },
+        {
+          id: "p2",
+          displayName: "Bob",
+          kind: "human",
+          cash: 0,
+          equity: 1,
+          positions: [],
+        },
+      ],
+    });
+    await withServer({ hub }, async (base) => {
+      const res = await fetch(`${base}/events?a=p1&b=p2`);
+      expect(res.status).toBe(200);
+      const framesPromise = readSseFrames(res, 2);
+      hub.apply({
+        type: "participant_added",
+        at: "2026-08-25T00:00:00.000Z",
+        participant: {
+          id: "p3",
+          displayName: "Push Test",
+          kind: "human",
+          cash: 0,
+          equity: 1,
+          positions: [],
+        },
+      });
+      const [initial, pushed] = await framesPromise;
+      expect(initial).toContain('Alice <span class="cmp-vs">vs</span> Bob');
+      expect(pushed).toContain('Alice <span class="cmp-vs">vs</span> Bob');
+    });
   });
 });
 

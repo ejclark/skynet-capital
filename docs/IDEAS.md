@@ -108,7 +108,8 @@ before gating a capture surface (the journey lesson: never tax the habit). _(src
 hat-team comms research, 2026-08-20)_
 
 ### Options-mechanics event kinds — OPEX, quad witching, VIX expiration, holidays
-The `/calendar` view renders the curated feed; the mechanical dates options traders also watch are
+The `/research` shelf's event horizon renders the curated feed (folded from the old `/calendar`
+view, 2026-08-25); the mechanical dates options traders also watch are
 all rule-computable offline: monthly OPEX = 3rd Friday (holiday → prior Thursday), quad witching =
 Mar/Jun/Sep/Dec subset, VIX expiration = the Wednesday 30 days before the *next* monthly OPEX, NYSE
 holidays/early closes published 3 years out. A pure `expiration-calendar.ts` generator (verifiable
@@ -907,3 +908,21 @@ _(nothing right now)_
   research question — what would the tradeable expression even be (software margins? staffing
   firms inverse?) — not buildable until framed.
   _(src: Eric · while: AI-hardware constraint research, 2026-08-22)_
+
+- **Absent vs. vanished: a store's boundary should be able to tell them apart.** `FileAllowlistStore.entries()`
+  reports loudly when the blob is unreadable but returns `[]` in silence when the file simply isn't
+  there — and those are very different facts. "Never existed" is the normal first-boot state;
+  "existed on the last boot and is gone now" is an incident, and it is what a lost volume, a bad
+  mount, or an unpinned path all look like. A written-once marker beside the store (or a recorded
+  entry count) would let the boundary say which it is. The same blind spot applies to the participant
+  store and the history/insight stores.
+  _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_
+
+- **`SKYNET_AUDIT_DIR` and `SKYNET_HALT_FILE` are inert in production.** Both are read on the
+  autonomy path (`src/scripts/run-autonomous.ts`) with **no default** — `SKYNET_AUDIT_DIR` builds a
+  `JsonlAuditStore` only when set, and the halt-file check is skipped when unset — and neither is set
+  in `fly.toml`. So the deployed bots process writes no decision audit and honors no kill-file. That
+  is a safety/observability decision (turning them on changes behavior), not the persistence bug next
+  door, so it was deliberately left out of that diff. Worth deciding on its own: the halt file is the
+  manual stop for a live autonomous trader.
+  _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_

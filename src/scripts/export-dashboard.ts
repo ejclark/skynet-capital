@@ -15,7 +15,7 @@ import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
-import { renderDashboardDocument } from "../observatory/render-dashboard.js";
+import { renderStandingsDocument } from "../observatory/standings-view.js";
 import { loadParticipants } from "../participants/load-participants.js";
 import { createDefaultPersonas } from "../personas/registry.js";
 
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   });
 
   mkdirSync("dist", { recursive: true });
-  writeFileSync(OUTPUT_FILE, renderDashboardDocument(data));
+  writeFileSync(OUTPUT_FILE, renderStandingsDocument(data));
 
   for (const p of data.participants) {
     const state = p.error ? "ERROR" : `$${Math.round(p.equity).toLocaleString("en-US")}`;

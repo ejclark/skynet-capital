@@ -1,7 +1,7 @@
 # ISM Manufacturing PMI (Aug 2026 data) — ism-manufacturing-2026-09-01
 
 **Kind:** macro-print · **Date:** 2026-09-01 (confirmed, ISM: ismworld.org ROB calendar — 10:00 ET (1st business day), checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -172,6 +172,7 @@ high-multiple semis hardest.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D-13 | Initial research banked (above). Date confirmed via ISM cadence rule (1st business day, 10:00 ET) + convergent aggregation; ROB primary calendar is SSO-gated (flagged). July print (rel 8/1): PMI 55.6 (+2.3, strongest since May 2022, beat ~54.0), Output 58.5, New Orders 56.7, Employment 52.8 (first expansion since Jan 2025), Prices-paid 71.1 (>70 for 6th straight month) — strong, hawkish-tilted; contributed to fresh-2026-high yields that week (Penn Mutual 8/3). Adjacency — peers: no tracked-name prints since 8/18. Macro: standing regime per the sibling CPI/FOMC/GDP ledgers (Jul CPI in-line 3.4% 8/12; Jul jobs miss 8/7; Aug 13 PPI flat → Sep hike odds <40%; energy shock/Hormuz still hot). VIX 15.84 close 8/18 (up 4.28% on day), ticked up from the 14.56 2026-low noted 8/17 — still a calm regime, no shift. Geopolitical: Hormuz tanker attacks / failed ceasefire continuing, the goods-inflation pass-through behind sticky prices-paid. Event tape: no August consensus/whisper found at D-13 (flagged as a limit). No new dated adjacencies — the existing calendar already covers the full Sep 1→Sep 16 corridor (JOLTS 9/1, ISM-svcs 9/3, jobs 9/4, PPI 9/10, CPI 9/11, FOMC 9/16); nothing to propose. | — (stance set) | 2026-08-22 (high, 8–20d band: every 3d) |
+| 2026-08-24 | D-8 | Adjacency sweep. Event tape: **a consensus surfaced since D-13** — Polymarket now clusters ~28.5% on PMI 55.0–55.9, ~24% on 54.0–54.9, ~17.6% on 56.0–56.9 (nearly 60% combined in the mid-55 band), continuing straight-line off July's 55.6 beat rather than pricing a reversal. Peers: no tracked-name prints since 8/18; NVDA's implied move fell to ~5.3%, MRVL's jumped to ~18.4% (both own docs) — tape context, not ISM-specific. Macro: no CPI/jobs/FOMC surprise since 8/19; standing regime unchanged (Sep-16 read hawkish-hold ~60-70%/hike ~30-40%/cut ~0%, per the FOMC sibling doc — supersedes the D-13 row's "<40% hike odds" framing, which predates that doc's own correction). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs; still the live driver behind sticky prices-paid if August repeats the >70 streak. No new dated adjacency found. | — (no change; consensus now exists and sits in-line with the strong-July base case, not a surprise setup) | 2026-08-27 (high, 8-20d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

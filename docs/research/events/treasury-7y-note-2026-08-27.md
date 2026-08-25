@@ -2,7 +2,7 @@
 
 **Kind:** rates · **Date:** 2026-08-27 (confirmed, TSY: treasurydirect.gov upcoming auctions — announced,
 1:00pm ET, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -172,6 +172,7 @@ carries no symbols and medium impact, and its main value is context for that wee
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D8 | Initial research banked. 7-year's weak-demand reputation is real historically (Jan 2024 BTC 2.23, Apr 2025 BTC 2.55 vs 2.64 avg, Mar 2026 wider-than-normal tails) but the *sharpest* 2026 softness currently sits at the 5-year (Jul 27: BTC lowest in ~5yrs, indirect weakest since Jul 2025), not the 7-year, whose Jun 25/Jul 28 prints were soft-not-disastrous (BTC 2.50 → 2.49, yield 4.26% → 4.47%, Jun indirect 57.6% vs 64.8% avg). Adjacency confirmed and dated: this auction lands the day after NVDA's confirmed 8/26 AC print and the same day as MRVL's confirmed 8/27 print, with the 5Y auction/PCE/GDP also stacked onto 8/26 — a genuinely compound-risk session where the 7Y result is more likely to get overshadowed by the NVDA reaction than to move the tape on its own, unless NVDA disappoints and risk-off compounds through the auction. | — (stance set) | 2026-08-26 |
+| 2026-08-24 | D3 | Adjacency sweep. Peers/event tape: MRVL's own doc (prints same day, 8/27) logs a major move since D8 — MRVL spiked +5.79% on a disclosed Google/Alphabet warrant deal (8/19/8/20), then round-tripped essentially the entire gain by 8/21; MRVL's implied move for its own print jumped ~14%→~18.4%. NVDA's implied move fell ~7.0%→~5.3% over the same window (own doc). Neither changes this auction's own demand read directly, but both raise how much idiosyncratic single-name noise this compound-risk session (NVDA AC 8/26, 5Y auction + PCE + GDP 8/26, this 7Y auction + MRVL print 8/27) will carry relative to the 7Y's own signal. Macro: no CPI/jobs/FOMC surprise since 8/19; Sep-16 FOMC read unchanged (hawkish-hold ~60-70%/hike ~30-40%/cut ~0%, per the FOMC sibling doc). Volatility regime: VIX 15.13 (down from the 15.86 cited by sibling docs at D7-equivalent dates) — calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new 7Y-specific demand data since the Jul-28 auction (this is the next one); no new dated adjacency found. | — (no change; compound-risk framing reinforced, not altered) | 2026-08-27 (event day; next assessment is this event's own outcome) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
