@@ -17,6 +17,7 @@ export const PERSISTED_STORES: Readonly<Record<string, string>> = {
   SKYNET_ORDER_AUDIT_DIR: "data/order-audit",
   SKYNET_HISTORY_DIR: "data/history",
   SKYNET_INSIGHTS_DIR: "data/insights",
+  SKYNET_PROGRESSION_FILE: "data/progression.json",
 };
 
 /**

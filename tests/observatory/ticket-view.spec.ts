@@ -2,10 +2,11 @@ import { STARTER_PLAYS } from "../../src/domain/starter-plays.js";
 import { defaultTradeType, tradeTypeByCode } from "../../src/domain/trade-types.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import {
-  renderTicketBody,
+  type TicketProgression,
   type TicketState,
   ticketHref,
-} from "../../src/observatory/ticket-view.js";
+} from "../../src/observatory/ticket-picker.js";
+import { renderTicketBody } from "../../src/observatory/ticket-view.js";
 
 const ann: ParticipantSnapshot = {
   id: "ann",
@@ -49,14 +50,75 @@ const chain = [
 ];
 
 describe("the trade ticket view", () => {
-  it("lists every trade type risk-ordered, with 300-level rows locked by default", () => {
+  const wheelsOn = (over: Partial<TicketProgression> = {}): TicketProgression => ({
+    wheels: true,
+    unlocked: new Set(["101"]),
+    earned: new Map(),
+    nextUp: "101",
+    ...over,
+  });
+
+  it("lists every trade type risk-ordered, nothing locked without a signed-in progression", () => {
     const html = renderTicketBody({ state: state(), snapshot: ann, tradingEnabled: true });
     for (const code of ["101", "102", "201", "202", "301", "302"]) {
       expect(html).toContain(`<span class="tk-code">${code}</span>`);
     }
-    expect(html.match(/data-unlock-course="wheel-basics"/g)).toHaveLength(2);
-    expect(html).toContain("level up to unlock");
-    expect(html).toContain("skynet.academy.done"); // unlocks ride the academy's own progress
+    expect(html).not.toContain("tk-row locked");
+    expect(html).not.toContain("skynet.academy.done"); // the localStorage gate is gone for good
+    expect(html).not.toContain('name="wheels"'); // nothing to toggle without a progression
+  });
+
+  it("locks every rung past the ladder with training wheels on — server truth, no script, no link", () => {
+    const html = renderTicketBody({
+      state: state(),
+      snapshot: ann,
+      tradingEnabled: true,
+      progression: wheelsOn(),
+    });
+    expect(html.match(/<span class="tk-row locked/g)).toHaveLength(5); // all but 101
+    expect(html).toContain("opens after your first filled 101");
+    expect(html).toContain("NEXT UP"); // the rail points at the rung to chase
+    expect(html).toContain("training wheels on — one rung at a time");
+    expect(html).toContain('class="st-bar"'); // guidance chrome rides WITH the wheels
+    // lock truth is rendered, never computed client-side — the old script's hooks are gone
+    expect(html).not.toContain("data-unlock-course");
+    expect(html).not.toContain("data-href");
+    expect(html).toContain("🛞 Training wheels ON");
+    expect(html).toContain('name="wheels" value="off"'); // the toggle posts the OTHER state
+  });
+
+  it("marks earned rungs and unlocks everything with the wheels off", () => {
+    const html = renderTicketBody({
+      state: state(),
+      snapshot: ann,
+      tradingEnabled: true,
+      progression: {
+        wheels: false,
+        unlocked: new Set(["101", "102", "201", "202", "301", "302"]),
+        earned: new Map([["101", { at: "2026-08-25T14:00:00.000Z" }]]),
+      },
+    });
+    expect(html).not.toContain("tk-row locked");
+    expect(html).toContain("✓ earned 2026-08-25"); // the rail shows the fill date
+    expect(html).toContain('name="wheels" value="on"');
+    // Wheels off = the clean desk: guidance chrome (starter chips) sheds with them.
+    expect(html).not.toContain('class="st-bar"');
+    expect(html).not.toContain("NEXT UP");
+  });
+
+  it("renders the honest locked panel — no order form — when the selected play is locked", () => {
+    const html = renderTicketBody({
+      state: cspState(),
+      snapshot: ann,
+      tradingEnabled: true,
+      progression: wheelsOn(),
+      chain,
+    });
+    expect(html).toContain("Course 201");
+    expect(html).toContain("is still locked");
+    expect(html).toContain("opens after your first filled");
+    expect(html).not.toContain("2 · Shape it");
+    expect(html).not.toContain('name="confirm"');
   });
 
   it("is honest about a session with no linked account, and about trading being off", () => {

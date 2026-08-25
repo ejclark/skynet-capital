@@ -153,6 +153,11 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
         }),
       desk.participant,
       deps,
+      {
+        code: request.action === "buy" ? "101" : "102",
+        intent: request.action === "buy" ? "open" : "close",
+        side: request.action,
+      },
     );
   };
 }
