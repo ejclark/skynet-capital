@@ -177,6 +177,16 @@ it wrong**. The provenance is `docs/research/nvda-aug-2026-print.md` (verdict in
 ranked P0–P4 plays including an explicit "not recommended, on the record"); the current example
 is `docs/research/ai-hardware-constraints-aug-2026.md`.
 
+**The call sheet is one grammar, and it is gated** (2026-08-25). Five columns — **the call ·
+confidence · the one-line why · the dated observation that proves it wrong** — keyed by *horizon*
+(Today / This week / This month / This quarter) in a single-event ledger, and by *name* in a
+multi-name study. `npm run research:lint` fails a research document that states a call without a
+confidence grade or a dated falsifier, because a call missing either is not the thing this section
+asks for. Reading is the renderer's job, not the author's: `/research` folds the method and the
+append-only ledger behind the decision header automatically, so a document nobody rewrote still
+opens on its call — and the fold costs the next assessment session nothing, since it reads the raw
+markdown. Contract: [`docs/process/EVENT-RESEARCH.md`](docs/process/EVENT-RESEARCH.md).
+
 Three rules keep the calls honest rather than merely confident. **Confidence is stated and drives
 size** — a low-confidence call is a stand-aside, never a small version of a high-confidence one.
 **Every call carries its falsifier with a date**, so the tape adjudicates instead of the

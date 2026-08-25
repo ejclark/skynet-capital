@@ -14,6 +14,7 @@ import {
 } from "../src/observatory/research-view.ts";
 import { shellDocument } from "../src/server/page-shell.ts";
 import {
+  eventCalls,
   findResearchDoc,
   listResearch,
   researchedEventIds,
@@ -42,6 +43,20 @@ const pages = [
       shelf: listResearch(),
       symbols: shelfSymbols(asOfIso),
       researchIds: researchedEventIds(),
+      calls: eventCalls(),
+    }),
+  },
+  {
+    // The same shelf with a day selected from the month grid — the correlation, by eye.
+    name: "research-shelf-day",
+    hash: "#day-2026-08-26",
+    body: renderResearchShelfBody({
+      nav,
+      asOfIso,
+      shelf: listResearch(),
+      symbols: shelfSymbols(asOfIso),
+      researchIds: researchedEventIds(),
+      calls: eventCalls(),
     }),
   },
   {
@@ -60,10 +75,10 @@ const pages = [
 
 const browser = await chromium.launch(EXE ? { executablePath: EXE } : {});
 const page = await browser.newPage({ viewport: { width: 1360, height: 940 } });
-for (const { name, body } of pages) {
+for (const { name, body, hash } of pages) {
   const file = join(OUT, `${name}.html`);
   writeFileSync(file, shellDocument(`${name} — shoot`, body));
-  await page.goto(`file://${file}`);
+  await page.goto(`file://${file}${hash ?? ""}`);
   await page.screenshot({ path: join(OUT, `${name}.png`), fullPage: false });
   console.log(`shot ${join(OUT, `${name}.png`)}`);
 }

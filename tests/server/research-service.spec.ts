@@ -3,11 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { MarketEvent } from "../../src/domain/market-events.js";
 import {
+  eventCalls,
   findResearchDoc,
   listResearch,
   researchedEventIds,
   shelfSymbols,
   symbolResearch,
+  todayCallOf,
 } from "../../src/server/research-service.js";
 
 const AS_OF = "2026-08-16T12:00:00Z";
@@ -155,5 +157,93 @@ describe("shelfSymbols", () => {
     expect(nvda?.next?.id).toBe("nvda-2026-08-26-print");
     // ZZZT is on the calendar but has no ledger — no card until research exists.
     expect(cards.some((c) => c.symbol === "ZZZT")).toBe(false);
+  });
+});
+
+describe("todayCallOf — the call, read verbatim", () => {
+  const header = (table: string): string =>
+    `# T\n\n## At a glance\n\n**TL;DR.** Something.\n\n${table}\n\n## Initial research\n\nBody.\n`;
+
+  it("reads the Today row's call out of the three-column shape", () => {
+    const md = header(
+      "| Horizon | Call | Why |\n|---|---|---|\n| Today | Stand aside | no catalyst |",
+    );
+    expect(todayCallOf(md)).toEqual({ call: "Stand aside", horizon: "Today" });
+  });
+
+  it("reads confidence when the five-column shape carries it", () => {
+    const md = header(
+      "| Horizon | Call | Confidence | Why | Proves it wrong |\n|---|---|---|---|---|\n| Today | Stand aside | High | no catalyst | a close over 135 |",
+    );
+    expect(todayCallOf(md)).toEqual({ call: "Stand aside", horizon: "Today", confidence: "High" });
+  });
+
+  it("locates columns by NAME, so column order never changes the answer", () => {
+    const md = header(
+      "| Horizon | Why | Call |\n|---|---|---|\n| Today | no catalyst | Stand aside |",
+    );
+    expect(todayCallOf(md)?.call).toBe("Stand aside");
+  });
+
+  it("matches a Today label carrying a parenthetical", () => {
+    const md = header(
+      "| Horizon | Call | Why |\n|---|---|---|\n| Today (D-13) | Flat by D-1 | gap risk |",
+    );
+    expect(todayCallOf(md)).toEqual({ call: "Flat by D-1", horizon: "Today (D-13)" });
+  });
+
+  it("falls back to the nearest horizon row when no Today row exists", () => {
+    const md = header("| Horizon | Call | Why |\n|---|---|---|\n| This week | Watch | pending |");
+    expect(todayCallOf(md)).toEqual({ call: "Watch", horizon: "This week" });
+  });
+
+  it("strips authoring emphasis so the chip carries text, not markup", () => {
+    const md = header("| Horizon | Call | Why |\n|---|---|---|\n| Today | **Stand aside** | x |");
+    expect(todayCallOf(md)?.call).toBe("Stand aside");
+  });
+
+  it("also reads a study's `## The call` header, trailing clause and all", () => {
+    const md =
+      "# S\n\n## The call — what to do, by name\n\n| Name | The call | Confidence | Why | Proves me wrong |\n|---|---|---|---|---|\n| MU | Don't initiate here | High | priced in | DRAM over +18% QoQ |\n\n## The headline\n\nBody.\n";
+    expect(todayCallOf(md)?.call).toBe("Don't initiate here");
+  });
+
+  it("returns null rather than guessing when the header states no call", () => {
+    expect(todayCallOf("# T\n\n## Initial research\n\nNo header at all.\n")).toBeNull();
+    expect(todayCallOf(header("Just prose, no table."))).toBeNull();
+    expect(
+      todayCallOf(header("| Horizon | Why |\n|---|---|\n| Today | no call column |")),
+    ).toBeNull();
+    expect(
+      todayCallOf(header("| Horizon | Call | Why |\n|---|---|---|\n| Today |  | empty |")),
+    ).toBeNull();
+  });
+});
+
+describe("eventCalls", () => {
+  it("maps event ids to the calls their ledgers reached", () => {
+    const calls = eventCalls(fixtureRoot());
+    expect(calls.get("nvda-2026-08-26-print")).toEqual({ call: "Stand aside", horizon: "Today" });
+  });
+});
+
+describe("findResearchDoc — reader-side folds", () => {
+  it("folds the method wall and the append-only ledger, leaving the stance open", () => {
+    const rendered = findResearchDoc("events/nvda-2026-08-26-print", fixtureRoot());
+    expect(rendered?.html).toContain("Initial research");
+    expect(rendered?.html).toContain('<details class="rs-fold"');
+    // The stance renders as a plain heading — never folded away.
+    expect(rendered?.html).toContain("<h2>Stance &amp; kill switches</h2>");
+  });
+
+  it("labels each fold with its size, so nothing is hidden silently", () => {
+    const rendered = findResearchDoc("events/nvda-2026-08-26-print", fixtureRoot());
+    expect(rendered?.html).toContain("rs-foldsize");
+  });
+
+  it("keeps every word — a fold relocates, it never rewrites", () => {
+    const rendered = findResearchDoc("events/nvda-2026-08-26-print", fixtureRoot());
+    expect(rendered?.html).toContain("Body.");
+    expect(rendered?.html).toContain("Defined-risk only");
   });
 });

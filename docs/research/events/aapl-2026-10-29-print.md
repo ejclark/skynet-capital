@@ -3,6 +3,30 @@
 **Kind:** earnings · **Date:** 2026-10-29 (estimate, 8-K cadence) · **Impact:** critical
 **Last assessed:** 2026-08-24
 
+## At a glance
+
+**TL;DR.** There is no AAPL trade here, and that is the finding — the sweep killed every
+positioning-shaped playbook on this symbol, so the print is a **guards-plus-observation date**, not
+an opportunity. The pre-print window is measurably *worse* than a random 20-day window (+1.27%/win
+57% against the era's +2.20%/win 64%), and holding the print unhedged is a coin flip with a fat left
+tail (gap mean +0.33%, win 50%, p10 −3.39%). Date is an **estimate** (8-K cadence, D-65) — that only
+widens the flat window, it never licenses an entry. The one live interest is FT-5, at zero size.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** — no pre-print play exists | High | S1, the late run-up, S3 and S4 are all killed on AAPL; the pre-print window underperforms its own base rate | ≥3 new prints clearing the sweep's bars for a killed hypothesis (earliest read ~2027-07) |
+| This week | **Nothing to do** — the date is unconfirmed | High | At D-65 no consensus or implied move is findable, and an estimated date never keys action | An IR announcement confirming or moving the **2026-10-29** print (notice window ~2026-10-01) |
+| This month | **Watch the date, not the trade** | Medium | The only dated catalyst before the print is the iPhone 18 event, still rumour-only | Apple confirms an event date away from the rumoured **2026-09-09** |
+| This quarter | **Flat by D-1 (S2); FT-5 only, zero size** | Medium | The gap is a coin flip with a −3.39% p10 — nothing pays for holding it; post-print drift is the only untested edge left | FT-5 vs-QQQ excess ≤ 0 or win ~50% over ~6 prints, scored after D+11 (~2026-11-16) |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Never** — hold unhedged AAPL shares through the print for the gap (killed: win 50%, p10 −3.39%).
+- **Never** — open a pre-print position off the estimated date; date-keyed action needs `confirmed`.
+- **FT-5 only** — long close D+1 → close D+11, zero size, scored from re-run instrument data.
+- **Watch (dated)** — IR date confirmation ~**2026-10-01** · iPhone 18 event rumoured **2026-09-09** · FOMC **2026-10-28**, landing D-1 of the estimated print.
+- **Re-opens the no-play only if** — ≥3 new prints show a repriced regime for a killed hypothesis.
+
 ## Initial research
 
 **The question.** AAPL's FQ4 2026 print is estimated for 2026-10-29 (8-K cadence — the same day

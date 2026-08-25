@@ -121,3 +121,15 @@ The repo's hard invariant — *never let a flourish imply something false* — a
 - **Plans / handoffs / issues:** same decision table, same honesty rules, same waiver right — plus
   the issue-specific rules (a proposed diagram is captioned as proposed; GitHub hosts issue
   screenshots, so the ≤100KB git-history rule does not apply) in [`ISSUES.md`](ISSUES.md).
+- **Research** (`docs/research/`, `docs/research/events/`): the fridge rule reaches here too, and
+  arrived last (2026-08-25 — Eric: *"the researched events present walls of text that are difficult
+  to read"*). A research document's picture slot is its **decision header**: the TL;DR plus the
+  five-column call sheet — call · confidence · why · dated falsifier — which the `hasPicture` rule
+  already counts as media, because a table is scanned where the same content as prose is skipped.
+  A mermaid map earns its place when the argument is a *structure* (a constraint chain, a reaction
+  function); [`research/ai-hardware-constraints-aug-2026.md`](research/ai-hardware-constraints-aug-2026.md)
+  is the worked example. Everything downstream of
+  the decision — method, instrument runs, the append-only assessment ledger — is **folded by the
+  renderer**, not by the author: `/research` collapses those sections automatically, so a document
+  nobody rewrote still opens on its call. Gated by `npm run research:lint`; contract in
+  [`process/EVENT-RESEARCH.md`](process/EVENT-RESEARCH.md).

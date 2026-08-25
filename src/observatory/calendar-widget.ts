@@ -135,7 +135,32 @@ export function monthGrid(month: string, asOfIso: string, events: readonly Marke
     </header>
     <div class="mg-grid">${weekdays}${cells.join("")}</div>
     <p class="mg-legend">● event day · brighter = critical · click a day to jump</p>
-  </div>`;
+  </div>${selectedDayRules([...byDate.keys()].filter((d) => d.startsWith(month)))}`;
+}
+
+/**
+ * The CALENDAR half of the day-selection correlation (Eric, 2026-08-25: "when clicking on the
+ * calendar, more visual indication should be presented to correlate the date-related events with
+ * the date(s) selected"). The agenda half is `.cal-day:target` in event-agenda.ts.
+ *
+ * CSS cannot walk from a `:target` in one column to the link that points at it in another, so the
+ * server — which already knows the month's event dates — emits one `:has()` rule per event day.
+ * `.cal-layout` contains both columns (research-view.ts), so the relationship resolves there.
+ * Bounded by construction: at most one rule per event day in the visible month.
+ *
+ * Still a navigator, never a filter — this only paints the cell; nothing is hidden or reordered.
+ */
+function selectedDayRules(dates: readonly string[]): string {
+  if (dates.length === 0) return "";
+  const rules = dates
+    .map(
+      (d) =>
+        `.cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"]{ background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700; }
+      .cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"]::after{ background:var(--bg); }
+      .cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"] .mg-count{ color:var(--bg); }`,
+    )
+    .join("\n      ");
+  return `<style>${rules}</style>`;
 }
 
 /**
