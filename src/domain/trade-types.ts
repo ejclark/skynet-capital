@@ -2,17 +2,20 @@ import type { OptionType } from "../trading/option-symbols.js";
 
 /**
  * THE TRADE-TYPE CATALOG — the six transactions the desk ticket offers, exactly the set the
- * `/learn` academy teaches (docs/handoffs/desk-v2, Chassis Contract ruling 16). Risk-ordered by
- * course code: the number IS the difficulty, and the 300-level rows stay locked until the
- * learner completes The Wheel (course 100 in `curriculum.ts` — the same client-side progress
- * the academy tracks). Course codes here are the DESK's codes from the contract; `plays.ts`
- * numbers its login-animation tiers differently and the two must not be mixed.
+ * `/learn` milestones teach (docs/handoffs/desk-v2, Chassis Contract ruling 16). Risk-ordered by
+ * course code: the number IS the difficulty, and the ARRAY ORDER IS THE LADDER — with training
+ * wheels on, each row unlocks when the one before it has a filled order (`progression.ts`).
+ * Course codes here are the DESK's codes from the contract; `plays.ts` numbers its
+ * login-animation tiers differently and the two must not be mixed.
  *
  * Every entry keeps its real broker term with a plain gloss (ruling 6), and the ticket built
  * on this catalog never fires an order without the review screen (ruling 10).
  */
 
 type TradeSide = "buy" | "sell";
+
+/** A course code — the desk's ladder rung ids, risk-ordered. */
+export type TradeTypeCode = TradeType["code"];
 
 export interface TradeType {
   /** Course code — mono label in the picker, risk-ordered ("101" is the safest). */
@@ -28,8 +31,6 @@ export interface TradeType {
   readonly optionType?: OptionType;
   /** The guided-mode explainer — what you get, what you promise, in dollars-first words. */
   readonly gloss: string;
-  /** Curriculum course (by id, from curriculum.ts) that unlocks this row; absent = always open. */
-  readonly unlockCourse?: string;
 }
 
 export const TRADE_TYPES: readonly TradeType[] = [
@@ -83,7 +84,6 @@ export const TRADE_TYPES: readonly TradeType[] = [
     kind: "option",
     side: "buy",
     optionType: "put",
-    unlockCourse: "wheel-basics",
     gloss:
       "You pay a premium for the right to sell 100 shares per contract at your strike. The stock falling makes it worth more; the most you can lose is the premium you paid.",
   },
@@ -95,7 +95,6 @@ export const TRADE_TYPES: readonly TradeType[] = [
     kind: "option",
     side: "buy",
     optionType: "call",
-    unlockCourse: "wheel-basics",
     gloss:
       "You pay a premium for the right to buy 100 shares per contract at your strike. The stock rising makes it worth more; the most you can lose is the premium you paid.",
   },

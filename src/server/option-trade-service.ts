@@ -164,6 +164,11 @@ export function createOptionTradeService(deps: OptionTradeServiceDeps): SubmitOp
         }),
       desk.participant,
       deps,
+      {
+        ...(request.kind === "open" ? { code: request.code } : {}),
+        intent: request.kind,
+        side: preview.side,
+      },
     );
   };
 }

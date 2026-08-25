@@ -18,13 +18,15 @@ describe("renderAcademyBody — the gamified journey", () => {
     expect(html).toContain("The Wheel");
     expect(html).toContain("Buy the stock");
     expect(html).toContain("Buy your first stock");
-    expect(html).toContain("Sell your first cash-covered put");
+    expect(html).toContain("Sell your first cash-secured put");
   });
 
-  it("opens course 100 and locks course 200 until it's complete", () => {
+  it("opens course 100 and locks the higher courses until each level below is complete", () => {
     expect(html).toContain('data-course="100" open');
     expect(html).toContain('data-course="200"');
     expect(html).not.toContain('data-course="200" open');
+    expect(html).toContain('data-course="300"');
+    expect(html).not.toContain('data-course="300" open');
     expect(html).toContain("Finish the level below");
   });
 
@@ -36,9 +38,37 @@ describe("renderAcademyBody — the gamified journey", () => {
     expect(html).not.toContain("Short Straddle");
   });
 
-  it("awards points on milestones", () => {
-    expect(html).toContain("data-ms-check");
+  it("offers no self-marking — milestones are earned by fills, never checked off", () => {
+    expect(html).not.toContain("data-ms-check");
+    expect(html).not.toContain("checkbox");
+    expect(html).not.toContain("skynet.academy.done");
     expect(html).toMatch(/\+\d+/); // a points value like +25
+    expect(html).toContain("nothing here is self-marked");
+  });
+
+  it("renders an earned milestone with its fill date and order id as the proof", () => {
+    const withProgress = renderAcademyBody({
+      nav,
+      progress: {
+        earned: [
+          {
+            milestoneId: "first-buy",
+            code: "101",
+            orderId: "order-9f3c",
+            at: "2026-08-25T14:30:00.000Z",
+          },
+        ],
+        points: 25,
+        rank: { title: "Apprentice", atPoints: 25 },
+        unlockedLevels: new Set([100 as const]),
+      },
+    });
+    expect(withProgress).toContain('class="ms done"');
+    expect(withProgress).toContain("filled 2026-08-25 · order order-9f3c");
+    expect(withProgress).toContain(">Apprentice<");
+    expect(withProgress).toContain("data-points>25<");
+    // an earned milestone no longer needs its "open the ticket" nudge
+    expect(withProgress.split('data-ms="first-buy"')[1]?.split("</div>")[0]).not.toContain("ms-go");
   });
 });
 

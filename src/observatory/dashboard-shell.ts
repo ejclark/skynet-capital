@@ -65,7 +65,8 @@ function renderDrawer(nav: NavContext): string {
   // renders honestly in every state, so the link never needs gating.
   links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
   links.push(drawerLink("/research", "Research", "research", nav.active === "research"));
-  links.push(drawerLink("/learn", "Learn", "learn", nav.active === "learn"));
+  // "Milestones", not "Learn" (Eric, 2026-08-25): they're captured achievements, not homework.
+  links.push(drawerLink("/learn", "Milestones", "learn", nav.active === "learn"));
   const foot: string[] = [];
   if (nav.canAdd) {
     foot.push(

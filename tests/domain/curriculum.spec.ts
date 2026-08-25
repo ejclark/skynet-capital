@@ -6,30 +6,36 @@ import {
   totalPoints,
   unlockedLevels,
 } from "../../src/domain/curriculum.js";
+import { TRADE_TYPES, tradeTypeByCode } from "../../src/domain/trade-types.js";
 
 describe("curriculum", () => {
-  it("starts the journey with the Wheel (level 100), buying stock first", () => {
+  it("starts the journey with stock basics (level 100), buying stock first", () => {
     const first = COURSES[0];
     expect(first?.level).toBe(100);
-    expect(first?.milestones[0]?.id).toBe("buy-first-stock");
+    expect(first?.id).toBe("stock-basics");
+    expect(first?.milestones[0]?.id).toBe("first-buy");
   });
 
-  it("keeps level 100 open and level 200 locked until 100 is complete", () => {
+  it("unlocks each level only when the one below is complete (100 → 200 → 300)", () => {
     const empty = new Set<string>();
     expect(unlockedLevels(empty).has(100)).toBe(true);
     expect(unlockedLevels(empty).has(200)).toBe(false);
 
-    const done = new Set((COURSES[0]?.milestones ?? []).map((m) => m.id));
-    expect(unlockedLevels(done).has(200)).toBe(true);
+    const stocks = new Set((COURSES[0]?.milestones ?? []).map((m) => m.id));
+    expect(unlockedLevels(stocks).has(200)).toBe(true);
+    expect(unlockedLevels(stocks).has(300)).toBe(false);
+
+    const throughWheel = new Set(COURSES.slice(0, 2).flatMap((c) => c.milestones.map((m) => m.id)));
+    expect(unlockedLevels(throughWheel).has(300)).toBe(true);
   });
 
   it("only marks a course complete when every milestone is done", () => {
-    const wheel = COURSES[0];
-    if (!wheel) throw new Error("no wheel course");
-    const partial = new Set([wheel.milestones[0]?.id ?? ""]);
-    expect(courseComplete(wheel, partial)).toBe(false);
-    const all = new Set(wheel.milestones.map((m) => m.id));
-    expect(courseComplete(wheel, all)).toBe(true);
+    const stocks = COURSES[0];
+    if (!stocks) throw new Error("no stock-basics course");
+    const partial = new Set([stocks.milestones[0]?.id ?? ""]);
+    expect(courseComplete(stocks, partial)).toBe(false);
+    const all = new Set(stocks.milestones.map((m) => m.id));
+    expect(courseComplete(stocks, all)).toBe(true);
   });
 
   it("sums points and climbs ranks as milestones complete", () => {
@@ -38,5 +44,24 @@ describe("curriculum", () => {
     const all = new Set(COURSES.flatMap((c) => c.milestones.map((m) => m.id)));
     expect(pointsFor(all)).toBe(totalPoints());
     expect(rankFor(totalPoints()).title).toBe("Strategist");
+  });
+
+  it("aligns 1:1 with the desk's trade-type ladder — every milestone is a real trade", () => {
+    const milestones = COURSES.flatMap((c) => c.milestones);
+    // Every milestone names a real desk trade type…
+    for (const m of milestones) {
+      expect(m.tradeType).toBeDefined();
+      expect(tradeTypeByCode(m.tradeType)).toBeDefined();
+    }
+    // …every desk trade type has exactly one milestone…
+    for (const t of TRADE_TYPES) {
+      expect(milestones.filter((m) => m.tradeType === t.code)).toHaveLength(1);
+    }
+    // …and each course teaches its own hundreds — the numbering can never drift apart.
+    for (const c of COURSES) {
+      for (const m of c.milestones) {
+        expect(Math.floor(Number(m.tradeType) / 100) * 100).toBe(c.level);
+      }
+    }
   });
 });

@@ -28,6 +28,9 @@ primary_region = "ord"  # Chicago — closest to Iowa
   SKYNET_ACTIVITY_DIR = "/data/activity"
   SKYNET_FEEDBACK_LOG_DIR = "/data/feedback-log"
   SKYNET_ORDER_AUDIT_DIR = "/data/order-audit"
+  # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned
+  # milestones are NOT here — they re-derive from the activity + order-audit ledgers on read.
+  SKYNET_PROGRESSION_FILE = "/data/progression.json"
   # Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — the bots process has no
   # volume of its own (see [mounts] below), so it relays insight records to the app process's
   # internal-only listener (src/server/insights-listener.ts) on port 8788 — deliberately NOT in
