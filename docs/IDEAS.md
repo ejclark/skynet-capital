@@ -937,6 +937,16 @@ _(nothing right now)_
   manual stop for a live autonomous trader.
   _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_
 
+- **Bots don't trade options — not restricted, just not built.** The desk's progression ladder
+  (`domain/trade-types.ts`, `progression.ts`) is a human-only teaching gate on the manual `/trade`
+  ticket; the autonomous loop (`run-autonomous.ts`, every persona, `trading-engine.ts`) never
+  references it and never emits an options order — the engine only knows stock buy/sell. So
+  "bots shouldn't have to follow the restriction" has no restriction to lift; giving bots options
+  means building execution for it into the engine + a persona strategy that uses it, which is a
+  real design surface (which structures, how sized, how a persona decides strike/expiry) worth its
+  own framing before anyone builds toward it — not a flag to flip.
+  _(src: Eric · while: account-connection follow-up, 2026-08-25)_
+
 ### `ship.sh verifybody <pr>` — lint what GitHub actually stored, not the file you sent
 `checkbody` lints a body **file**; nothing checks the body GitHub ended up with. That gap is exactly
 how the fridge rule shipped unfolded on #561 (LESSONS.md, 2026-08-25): the MCP write tools stripped
