@@ -297,6 +297,9 @@ async function main(): Promise<void> {
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
+    // `/wire`'s cross-participant feed: the same stores, called with no id.
+    readAllTradeActivity: () => activity.list(),
+    readAllFeedback: () => feedbackLog.list(),
     progression: createProgressionService({
       readFills: (id) => activity.list(id),
       readTags: (id) => orderAudit.list(id),
