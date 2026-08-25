@@ -147,6 +147,13 @@ empty one. `fly.toml`'s `[env]` block is what pins each store to the mounted vol
 `tests/arch/volume-persistence.spec.ts` fails CI if a newly added store is missing a line there. A
 guest list that lost its members on every merge to `main` is the reason that gate exists.
 
+**A second net runs at boot, not just at merge.** `src/runtime/volume-guard.ts` re-checks the same
+list against the live environment on every start and warns in `fly logs`
+(`⚠️  SKYNET_ALLOWLIST_STORE resolves to "data/allowlist.json" — not on the mounted volume…`) the
+moment a pinned store drifts off the volume by any route CI can't see — a hand-edited `[env]`
+block, an override set outside git, a var unset after the fact. If you ever see that warning after
+a deploy, fix `fly.toml`'s `[env]` block and redeploy before anyone invites a new member.
+
 ## Render / Railway (same Docker image)
 
 The `Dockerfile` is host-agnostic. On Render: New → Web Service → point at this repo →

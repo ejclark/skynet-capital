@@ -48,12 +48,21 @@ it. Prevention ranks, best first:
   exact failure ("every deploy erases the very history…") for one store instead of for the rule. Four
   more stores were unpinned alongside the allowlist — bot controls, trade activity, the feedback log,
   and the **order audit trail**.
-- **PREVENTION:** gate + fix. `tests/arch/volume-persistence.spec.ts` scans `src/**` for the
-  `env.SKYNET_X ?? "data/…"` idiom and fails CI unless every store it finds is pinned under
-  `fly.toml`'s `[mounts] destination`, with an `EPHEMERAL` map as the on-the-record escape hatch. It
-  is asserted in both directions — the scan must find the known stores, so it can never pass by
-  discovering nothing — and was proven to fail by removing the allowlist line before it was trusted.
-  All five missing paths are now pinned in `fly.toml`.
+- **PREVENTION:** two gates, deliberately not one — Eric's own read on this ("the process to add
+  users seems brittle... I expect safety rails") was that a single net wasn't enough, and he was
+  right: a pre-merge gate can't see drift that never touches a diff. **Pre-merge:**
+  `tests/arch/volume-persistence.spec.ts` scans `src/**` for the `env.SKYNET_X ?? "data/…"` idiom
+  and fails CI unless every store it finds is pinned under `fly.toml`'s `[mounts] destination`,
+  with an `EPHEMERAL` map as the on-the-record escape hatch. Asserted in both directions — the
+  scan must find the known stores, so it can never pass by discovering nothing — and proven to
+  fail by removing the allowlist line before it was trusted. **Boot-time:**
+  `src/runtime/volume-guard.ts` re-checks the same list against the environment the process
+  actually has, on every start, and warns loudly (`fly logs`) the moment a pinned store resolves
+  off the volume — catching a hand-edited env block, an override set outside git, or a var simply
+  unset after the fact, none of which the file-reading CI gate can see. The two lists are
+  hand-kept in sync rather than sharing code (the boot check must not scan the filesystem on
+  every start), so `tests/arch/volume-persistence.spec.ts` also asserts they match. All five
+  missing paths are now pinned in `fly.toml`.
 - **SIDE QUESTS:** an empty guest list is indistinguishable from an unreadable one at the boundary
   `entries()` guards — `existsSync` returns `[]` with no report while a parse failure logs loudly. A
   store that has *never* existed and one that *vanished* deserve different volume (→ docs/IDEAS.md).

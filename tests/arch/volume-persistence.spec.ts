@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PERSISTED_STORES } from "../../src/runtime/volume-guard.js";
 
 // Volume-persistence gate — the mechanical answer to "will this store survive a deploy?".
 //
@@ -79,6 +80,27 @@ describe("volume persistence", () => {
 
   it("mounts a volume the stores can be pinned to", () => {
     expect(mount).toBe("/data");
+  });
+
+  // This CI-time scan is only half the guard — src/runtime/volume-guard.ts runs the other half
+  // at boot, against whatever the process actually has, so drift is caught even when it never
+  // touched src/ or fly.toml at all (a manual override, a config edit outside git). The two
+  // lists are hand-kept in sync rather than sharing code (the runtime guard must not scan the
+  // filesystem on every boot), so this is what keeps that sync honest instead of assumed.
+  it("keeps the runtime boot-time guard in sync with what's actually declared in src/", () => {
+    for (const [name, fallback] of stores) {
+      expect(
+        PERSISTED_STORES[name],
+        `${name} is declared in src/ but missing from PERSISTED_STORES in ` +
+          `src/runtime/volume-guard.ts — the boot-time warning can't see it. Add it there too.`,
+      ).toBe(fallback);
+    }
+    for (const name of Object.keys(PERSISTED_STORES)) {
+      expect(
+        stores.has(name),
+        `${name} is in PERSISTED_STORES but no longer declared in src/ — remove the stale entry.`,
+      ).toBe(true);
+    }
   });
 
   it.each([...declaredStores().keys()].sort())(
