@@ -1,7 +1,7 @@
 # 30-Year Treasury Bond auction (reopening) — treasury-30y-bond-2026-09-10
 
 **Kind:** rates · **Date:** 2026-09-10 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -156,6 +156,7 @@ high-duration exposure — **CRWV** (highest beta, −12.1% on 8/18 fear alone),
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D22 | Initial research banked (doc above). Adjacency — peers: no tracked-name prints since 8/17 (NVDA 8/26, MRVL 8/27, AVGO 9/2 ahead); live peer signal macro-driven — CRWV −12.1%, NVDA −2.4%, SOX −5% on 8/18 long-end rate fear. Macro: 30Y at a fresh 19-yr high (~5.33% intraday 8/18, +40bp since June) on term-premium/fiscal drivers ($432B July deficit, ~$1.7T corp issuance, oil); the Aug-13 30Y predecessor cleared 5.216% (highest since 2001) and **tailed +0.4bp** on B/C 2.39, dealer 11.5% — third tailed long-end auction in a row (per TIPS sibling doc). Sep-16 FOMC odds ~60–70% hold / ~30–40% hike / 0% cut per the FOMC sibling — unchanged. VIX ~15.2–15.9 on 8/18 (sources disagree), up from the 14.56 2026-low — mild vol pickup tracking the selloff. Geopolitical: US–Iran deadline expired, oil spike — live inflation-uncertainty leg of the term-premium story. Event tape (date **confirmed**; size/yield figures **estimate**/press-sourced): this **reopens the tailing Aug-13 30Y**; the 30Y is where long-end weakness concentrates (vs the well-bid 10Y). Reopening size/WI for 9/10 not yet announced (~9/4). No new dated adjacencies beyond what the calendar already tracks (10Y 9/9, CPI 9/11, jobs 9/4, 20Y+FOMC 9/15–16, TIPS 9/17, OpEx 9/18). | — (stance set) | 2026-08-26 (high, ≥21d band: every 7d) |
+| 2026-08-24 | D17 | Adjacency sweep (band now 8-20d, cadence shortens to every 3d). Event tape: reopening size/WI for 9/10 still not announced (~9/4 expected) — no update. 30Y cash yield **eased to ~5.285%** as of 8/21, off the 5.33% intraday high flagged at D22 — a modest pullback, not a reversal of the term-premium trend; the sibling 30Y-TIPS doc's own close-out (this session) found the Aug-20 TIPS reopening printed strong (BC 2.82, tail -1.8bp), breaking the prior tailing streak for *that* tenor — worth watching whether the nominal 30Y's Sep-10 reopening does the same or extends the Aug-13 tail. Peers: AVGO's XPV overhang deepened (-4.61% on 8/19); MRVL's implied move jumped to ~18.4% — sector context. Macro: no CPI/jobs/FOMC surprise since 8/19; Sep-16 read unchanged (hawkish-hold, per FOMC sibling doc). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new dated adjacency found. | — (no change; contagion-from-long-end still the framing, TIPS sibling's strong print is a mild positive tell worth re-testing at the 30Y bond's own auction) | 2026-08-27 (high, 8-20d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
