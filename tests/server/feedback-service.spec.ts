@@ -1,8 +1,10 @@
 import { issueBody, labelsFor, opaqueMemberId } from "../../src/server/feedback-issue.js";
 
 // The repo is public, so a filed issue's body is public. These specs are the privacy net for
-// Eric's attribution ruling (2026-08-19): opaque id only — a member's name or email must never
-// appear in an issue body again.
+// Eric's attribution ruling (2026-08-19, amended 2026-08-25): the email must never appear in an
+// issue body — the opaque id is what makes items correlate, including across a future rename. The
+// member's OAuth profile name MAY appear alongside the id (Eric, 2026-08-25: "the player name lets
+// people in the project identify other contributors" — it may or may not be their real name).
 describe("feedback-service issue body", () => {
   const input = {
     kind: "bug" as const,
@@ -18,6 +20,22 @@ describe("feedback-service issue body", () => {
     expect(body).not.toContain("Member@Example.com");
     expect(body).not.toContain("member@example.com");
     expect(body).toContain(`member \`${opaqueMemberId(input.submitterEmail)}\``);
+  });
+
+  it("names the submitter alongside the id when the session carries a profile name", () => {
+    const body = issueBody({ ...input, submitterName: "Tony" });
+
+    expect(body).toContain(
+      `_Submitted from the app by **Tony** (member \`${opaqueMemberId(input.submitterEmail)}\`)._`,
+    );
+  });
+
+  it("falls back to the id alone when no profile name is on the session", () => {
+    const body = issueBody(input);
+
+    expect(body).toContain(
+      `_Submitted from the app by member \`${opaqueMemberId(input.submitterEmail)}\`._`,
+    );
   });
 
   it("puts the metadata in a table, under the member's own words", () => {
@@ -95,6 +113,19 @@ describe("feedback provenance", () => {
       "enhancement",
       "feedback",
     ]);
+  });
+
+  // Every issue here is filed by the same bot token, so GitHub's own `author:` search can't
+  // isolate one member's items — this label is what makes that filterable (Eric, 2026-08-25).
+  it("adds a per-member label keyed by the opaque id, so a member's items are filterable in GitHub search", () => {
+    const email = "member@example.com";
+    const labels = labelsFor({ kind: "bug", title: "t", details: "d", submitterEmail: email });
+
+    expect(labels).toContain(`member-${opaqueMemberId(email)}`);
+  });
+
+  it("omits the member label entirely for an anonymous submission", () => {
+    expect(labelsFor({ kind: "bug", title: "t", details: "d" })).toEqual(["bug", "feedback"]);
   });
 
   // The envelope check moved to intake: an ask that was always going to need Eric is flagged at the

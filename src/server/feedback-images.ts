@@ -20,6 +20,7 @@
 import { randomBytes } from "node:crypto";
 
 import { fetchJson } from "../http/fetch-json.js";
+import { githubHeaders } from "./github-api.js";
 
 type DoFetch = typeof fetchJson;
 
@@ -72,14 +73,6 @@ export function parseImages(raw: string | null | undefined): readonly FeedbackIm
   return valid;
 }
 
-function headers(config: FeedbackImageUploadConfig): Record<string, string> {
-  return {
-    Authorization: `Bearer ${config.token}`,
-    "User-Agent": "skynet-capital",
-    Accept: "application/vnd.github+json",
-  };
-}
-
 /** Makes sure `feedback-assets` exists, branched off `main`'s current tip. Idempotent — a 422
  *  ("Reference already exists") means a concurrent submission just created it, which counts as
  *  success. */
@@ -90,13 +83,13 @@ async function ensureAssetBranch(
   const existing = await doFetch(
     "GET",
     `https://api.github.com/repos/${config.repo}/git/ref/heads/${ASSET_BRANCH}`,
-    headers(config),
+    githubHeaders(config.token),
   );
   if (existing.status === 200) return true;
   const main = await doFetch(
     "GET",
     `https://api.github.com/repos/${config.repo}/git/ref/heads/main`,
-    headers(config),
+    githubHeaders(config.token),
   );
   const sha =
     main.status === 200 && main.body && typeof main.body === "object"
@@ -106,7 +99,7 @@ async function ensureAssetBranch(
   const created = await doFetch(
     "POST",
     `https://api.github.com/repos/${config.repo}/git/refs`,
-    headers(config),
+    githubHeaders(config.token),
     { ref: `refs/heads/${ASSET_BRANCH}`, sha },
   );
   return created.status === 201 || created.status === 422;
@@ -122,7 +115,7 @@ async function uploadOne(
   const res = await doFetch(
     "PUT",
     `https://api.github.com/repos/${config.repo}/contents/${path}`,
-    headers(config),
+    githubHeaders(config.token),
     { message: "feedback: attach image", content, branch: ASSET_BRANCH },
   );
   const sha =

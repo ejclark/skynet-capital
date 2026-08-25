@@ -18,6 +18,7 @@ import {
   opaqueMemberId,
   titleFor,
 } from "./feedback-issue.js";
+import { githubErrorMessage, githubHeaders } from "./github-api.js";
 
 // Re-exported so every existing consumer keeps one import site. The shapes live with the module
 // that decides what an issue SAYS, which is also what breaks the import cycle between the two.
@@ -57,11 +58,7 @@ function createFeedbackIssue(config: FeedbackConfig): SubmitFeedback {
       const res = await fetchJson(
         "POST",
         `https://api.github.com/repos/${config.repo}/issues`,
-        {
-          Authorization: `Bearer ${config.token}`,
-          "User-Agent": "skynet-capital",
-          Accept: "application/vnd.github+json",
-        },
+        githubHeaders(config.token),
         {
           title: titleFor({ ...input, title }),
           body: issueBody(input, imageUrls),
@@ -76,14 +73,7 @@ function createFeedbackIssue(config: FeedbackConfig): SubmitFeedback {
           number: body.number ?? 0,
         };
       }
-      const message =
-        res.body && typeof res.body === "object"
-          ? (res.body as { message?: string }).message
-          : undefined;
-      return {
-        ok: false,
-        error: `GitHub responded ${res.status}${message ? `: ${message}` : ""}.`,
-      };
+      return { ok: false, error: githubErrorMessage(res) };
     } catch (error) {
       return {
         ok: false,

@@ -1,8 +1,10 @@
 import { FEEDBACK_AREAS } from "../server/feedback-areas.js";
 import { COACH_SCRIPT } from "../server/feedback-coach-script.js";
+import type { FollowupResult } from "../server/feedback-followup.js";
 import type { FeedbackLogEntry } from "../server/feedback-log.js";
 import { PREVIEW_SCRIPT } from "../server/feedback-preview-script.js";
 import type { FeedbackResult } from "../server/feedback-service.js";
+import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
 import { IMAGE_SCRIPT } from "./feedback-image-script.js";
@@ -42,27 +44,75 @@ export interface FeedbackFormViewOptions {
   /** The signed-in member's own past filings (#429 slice), newest first. Omit/empty renders nothing
    *  — a member who hasn't filed anything yet sees just the form, not an empty list. */
   readonly recent?: readonly FeedbackLogEntry[];
+  /** Live status per filed issue number, when the status fetch is wired. A row with no entry here
+   *  (unwired, or GitHub unreachable) renders with no badge — never a stale or guessed one. */
+  readonly statuses?: ReadonlyMap<number, FeedbackStatus>;
+  /** Whether `/feedback/followup` is wired — gates the per-row "Follow up" disclosure. A member
+   *  can only ever follow up on an issue this same list already shows is theirs. */
+  readonly followupEnabled?: boolean;
 }
 
 function formField(inner: string): string {
   return `<div class="fdbk-field">${inner}</div>`;
 }
 
-function renderRecentFeedback(recent: readonly FeedbackLogEntry[]): string {
-  if (recent.length === 0) return "";
-  const rows = [...recent]
-    .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
-    .map(
-      (e) => `<li class="fdbk-recent-row">
+function statusBadge(status: FeedbackStatus | undefined): string {
+  if (!status) return "";
+  return `<span class="fdbk-recent-status fdbk-status-${status}">${escapeHtml(FEEDBACK_STATUS_LABEL[status])}</span>`;
+}
+
+/** A zero-JS disclosure: `<details>` needs no script to open, and the form inside posts for real
+ *  — this works identically with or without the page's other scripts loaded. */
+function followupDisclosure(e: FeedbackLogEntry): string {
+  return `<details class="fdbk-followup">
+      <summary>💬 Follow up</summary>
+      <form method="post" action="/feedback/followup">
+        <input type="hidden" name="issueNumber" value="${e.issueNumber}">
+        <textarea name="details" rows="3" placeholder="Add more detail, a correction, or say it's still happening…" required></textarea>
+        <button type="submit">Post &amp; re-open the build</button>
+      </form>
+    </details>`;
+}
+
+function recentRow(
+  e: FeedbackLogEntry,
+  statuses: ReadonlyMap<number, FeedbackStatus> | undefined,
+  followupEnabled: boolean,
+): string {
+  return `<li class="fdbk-recent-row">
       <span class="fdbk-recent-kind" title="${escapeHtml(e.kind)}">${FEEDBACK_KIND_ICON[e.kind]}</span>
       <a href="${escapeHtml(e.url)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>
+      ${statusBadge(statuses?.get(e.issueNumber))}
       <span class="fdbk-recent-meta">#${e.issueNumber} · ${escapeHtml(new Date(e.filedAt).toLocaleDateString())}</span>
-    </li>`,
-    )
-    .join("\n");
+      ${followupEnabled ? followupDisclosure(e) : ""}
+    </li>`;
+}
+
+/** Closed reads as `shipped` — the lane never closes a filed issue any other way
+ *  (docs/FEEDBACK.md, "the four ways a build session ends"). No status known (unwired, or GitHub
+ *  unreachable) defaults an entry to open — never hide a filing the app can't confirm is done. */
+function isClosed(
+  e: FeedbackLogEntry,
+  statuses: ReadonlyMap<number, FeedbackStatus> | undefined,
+): boolean {
+  return statuses?.get(e.issueNumber) === "shipped";
+}
+
+function renderRecentFeedback(
+  recent: readonly FeedbackLogEntry[],
+  statuses: ReadonlyMap<number, FeedbackStatus> | undefined,
+  followupEnabled: boolean,
+): string {
+  if (recent.length === 0) return "";
+  const sorted = [...recent].sort((a, b) => b.filedAt.localeCompare(a.filedAt));
+  const open = sorted.filter((e) => !isClosed(e, statuses));
+  const closed = sorted.filter((e) => isClosed(e, statuses));
+  const list = (rows: readonly FeedbackLogEntry[]) =>
+    `<ul class="fdbk-recent-list">${rows.map((e) => recentRow(e, statuses, followupEnabled)).join("\n")}</ul>`;
   return `<div class="fdbk-recent">
     <h2 class="fdbk-recent-h">Your recent feedback</h2>
-    <ul class="fdbk-recent-list">${rows}</ul>
+    ${list(open)}
+    ${closed.length ? `<h3 class="fdbk-recent-h fdbk-recent-h-closed">Closed</h3>${list(closed)}` : ""}
   </div>`;
 }
 
@@ -128,13 +178,37 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
         <input type="hidden" name="spec" id="fdbk-spec">
         <button type="submit" class="fdbk-submit">Send it</button>
       </form>
-      ${renderRecentFeedback(options.recent ?? [])}
+      ${renderRecentFeedback(options.recent ?? [], options.statuses, Boolean(options.followupEnabled))}
     </div>
     ${options.coachEnabled ? `<script>${COACH_SCRIPT}</script>` : ""}
     <script>${PREVIEW_SCRIPT}</script>
     <script>${IMAGE_SCRIPT}</script>
     ${options.coachEnabled ? `<noscript><style>#fdbk-form{display:flex !important}#coach-box{display:none !important}</style></noscript>` : ""}
   </section>`;
+  return renderShell(options.nav, content, new Date().toISOString());
+}
+
+export interface FeedbackFollowupResultViewOptions {
+  readonly nav?: NavContext;
+  readonly result: FollowupResult;
+}
+
+/** The result page after posting a follow-up comment — a smaller cousin of
+ *  renderFeedbackResultBody's success/failure split, without the "Send another" framing (a
+ *  follow-up isn't a new filing) and pointing back at the issue it was added to. */
+export function renderFeedbackFollowupResultBody(
+  options: FeedbackFollowupResultViewOptions,
+): string {
+  const { result } = options;
+  const inner = result.ok
+    ? `<div class="res-icon">💬</div><h1>Added to the thread</h1>
+<p class="view-sub">Your note is on <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener">the issue</a> now, and the build lane picked it back up.</p>
+<p class="fdbk-backrow"><a href="/feedback">← Back to your feedback</a></p>`
+    : `<h1>Hmm, that didn't send</h1>
+<p class="view-sub">${escapeHtml(result.error)}</p>
+<p class="fdbk-backrow"><a href="/feedback">← Back to your feedback</a></p>`;
+  const content = `${FDBK_STYLE}
+  <section class="fdbk fdbk-res">${inner}</section>`;
   return renderShell(options.nav, content, new Date().toISOString());
 }
 
@@ -222,9 +296,22 @@ const FDBK_STYLE = `<style>
   .fdbk-img-remove:hover{ color:var(--text); border-color:var(--accent); }
   .fdbk-recent{ display:flex; flex-direction:column; gap:10px; }
   .fdbk-recent-h{ margin:0; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .fdbk-recent-h-closed{ margin-top:6px; padding-top:10px; border-top:1px solid var(--border); font-size:11px; opacity:.75; }
   .fdbk-recent-list{ display:flex; flex-direction:column; gap:6px; margin:0; padding:0; list-style:none; }
-  .fdbk-recent-row{ display:flex; align-items:baseline; gap:9px; padding:9px 12px; font-size:13.5px; background:var(--surface); border:1px solid var(--border); border-radius:9px; }
+  .fdbk-recent-row{ display:flex; flex-wrap:wrap; align-items:baseline; gap:9px; padding:9px 12px; font-size:13.5px; background:var(--surface); border:1px solid var(--border); border-radius:9px; }
   .fdbk-recent-row a{ color:var(--text); font-weight:600; }
+  .fdbk-followup{ flex-basis:100%; }
+  .fdbk-followup summary{ cursor:pointer; font-size:12px; color:var(--accent); font-weight:600; list-style:none; }
+  .fdbk-followup summary::-webkit-details-marker{ display:none; }
+  .fdbk-followup form{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .fdbk-followup textarea{ width:100%; box-sizing:border-box; padding:8px 10px; font:inherit; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; resize:vertical; }
+  .fdbk-followup button{ align-self:flex-start; padding:7px 14px; font-size:12.5px; font-weight:600; font-family:var(--sans); color:var(--bg); background:var(--accent); border:0; border-radius:8px; cursor:pointer; }
+  .fdbk-recent-status{ padding:2px 8px; font-size:11px; font-weight:600; letter-spacing:.02em; border-radius:999px; white-space:nowrap; }
+  .fdbk-status-open{ color:var(--muted); background:var(--surface-2); }
+  .fdbk-status-needs-info{ color:var(--accent); background:color-mix(in srgb, var(--accent) 16%, transparent); }
+  .fdbk-status-needs-eric{ color:var(--neg); background:color-mix(in srgb, var(--neg) 16%, transparent); }
+  .fdbk-status-next-slice{ color:var(--pos); background:color-mix(in srgb, var(--pos) 16%, transparent); }
+  .fdbk-status-shipped{ color:var(--pos); background:color-mix(in srgb, var(--pos) 16%, transparent); }
   .fdbk-recent-meta{ margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap; }
   .fdbk-res{ max-width:var(--col-narrow); }
   .fdbk-res .res-icon{ font-size:34px; margin-bottom:6px; }

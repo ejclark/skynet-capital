@@ -12,7 +12,11 @@
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { renderFeedbackFormBody, renderFeedbackResultBody } from "../observatory/feedback-view.js";
+import {
+  renderFeedbackFollowupResultBody,
+  renderFeedbackFormBody,
+  renderFeedbackResultBody,
+} from "../observatory/feedback-view.js";
 import type { NavContext } from "../observatory/render-dashboard.js";
 import type { Session } from "./auth/session.js";
 import {
@@ -21,11 +25,13 @@ import {
   handleFeedbackCoach,
   toSpec,
 } from "./feedback-coach.js";
+import type { FollowupResult, SubmitFollowup } from "./feedback-followup.js";
 import { type FeedbackImageInput, parseImages } from "./feedback-images.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { type FeedbackLogEntry, feedbackLogEntry } from "./feedback-log.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
+import type { FetchFeedbackStatuses } from "./feedback-status.js";
 import { readBody, shellDocument } from "./page-shell.js";
 
 /** What the feedback surface needs from the server config — never the whole config object. */
@@ -37,6 +43,14 @@ export interface FeedbackRouteDeps {
   readonly recordFeedback?: (entry: FeedbackLogEntry) => Promise<void>;
   /** Reads a member's own filing history, for the "Your recent feedback" list under the form. */
   readonly readFeedback?: (opaqueMemberId: string) => Promise<readonly FeedbackLogEntry[]>;
+  /** Live status (open/needs-info/needs-eric/next-slice/shipped) for that same list — omitted
+   *  (undefined) means unwired, same as the other feedback deps; the list still renders, just
+   *  without status badges. */
+  readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
+  /** Posts a follow-up comment on an issue the signed-in member already filed, and re-triggers a
+   *  build (feedback-followup.ts). Requires `readFeedback` too — ownership is checked against the
+   *  member's own logged filings, never trusted from the form. */
+  readonly submitFollowup?: SubmitFollowup;
 }
 
 /** The feedback paths, dispatched together so the main router stays one branch. */
@@ -57,17 +71,11 @@ export async function serveFeedbackRoute(
     await handleFeedbackPreview(req, res, method);
     return;
   }
-  await handleFeedback(
-    req,
-    res,
-    method,
-    session,
-    nav,
-    config.submitFeedback,
-    Boolean(config.coachFeedback),
-    config.recordFeedback,
-    config.readFeedback,
-  );
+  if (path === "/feedback/followup") {
+    await handleFollowup(req, res, method, session, nav, config);
+    return;
+  }
+  await handleFeedback(req, res, method, session, nav, config);
 }
 
 // Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
@@ -119,6 +127,7 @@ function feedbackInputFromForm(form: URLSearchParams, session: Session | undefin
     details: form.get("details") ?? "",
     ...(form.get("area") ? { area: form.get("area") as string } : {}),
     ...(session?.email ? { submitterEmail: session.email } : {}),
+    ...(session?.name ? { submitterName: session.name } : {}),
     ...(specFromForm(form.get("spec")) ?? {}),
     ...(imagesFromForm(form.get("images")) ?? {}),
   };
@@ -130,19 +139,29 @@ async function handleFeedback(
   method: string,
   session: Session | undefined,
   nav: NavContext,
-  submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>,
-  coachEnabled = false,
-  recordFeedback?: (entry: FeedbackLogEntry) => Promise<void>,
-  readFeedback?: (opaqueMemberId: string) => Promise<readonly FeedbackLogEntry[]>,
+  config: FeedbackRouteDeps,
 ): Promise<void> {
+  const { submitFeedback, recordFeedback, readFeedback, fetchFeedbackStatus, submitFollowup } =
+    config;
   if (method === "GET") {
     const recent =
       readFeedback && session?.email ? await readFeedback(opaqueMemberId(session.email)) : [];
+    const statuses =
+      fetchFeedbackStatus && recent.length
+        ? await fetchFeedbackStatus(recent.map((e) => e.issueNumber))
+        : undefined;
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(
       shellDocument(
         "Feedback — Skynet Capital",
-        renderFeedbackFormBody({ nav, enabled: Boolean(submitFeedback), coachEnabled, recent }),
+        renderFeedbackFormBody({
+          nav,
+          enabled: Boolean(submitFeedback),
+          coachEnabled: Boolean(config.coachFeedback),
+          recent,
+          followupEnabled: Boolean(submitFollowup && readFeedback),
+          ...(statuses ? { statuses } : {}),
+        }),
       ),
     );
     return;
@@ -207,4 +226,55 @@ async function handleFeedback(
   }
   res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
   res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));
+}
+
+/** A follow-up comment on a filed issue, and the retrigger that comes with it (feedback-followup.ts).
+ *  Ownership is checked against the member's own logged filings — never trusted from the posted
+ *  `issueNumber` — so a member can only ever follow up on their own feedback. */
+async function handleFollowup(
+  req: IncomingMessage,
+  res: ServerResponse,
+  method: string,
+  session: Session | undefined,
+  nav: NavContext,
+  config: FeedbackRouteDeps,
+): Promise<void> {
+  const respond = (status: number, result: FollowupResult) => {
+    res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
+    res.end(
+      shellDocument("Feedback — Skynet Capital", renderFeedbackFollowupResultBody({ nav, result })),
+    );
+  };
+  if (method !== "POST") {
+    res.writeHead(405, { "content-type": "text/plain" });
+    res.end("method not allowed");
+    return;
+  }
+  const { submitFollowup, readFeedback } = config;
+  if (!(submitFollowup && readFeedback && session)) {
+    respond(200, { ok: false, error: "Following up isn't switched on yet." });
+    return;
+  }
+  if (throttled(session.email)) {
+    respond(429, {
+      ok: false,
+      error: "You've sent a bunch just now — give it a few minutes and try again.",
+    });
+    return;
+  }
+  const form = new URLSearchParams(await readBody(req, 8_000));
+  const issueNumber = Number(form.get("issueNumber"));
+  const details = form.get("details") ?? "";
+  const owned = await readFeedback(opaqueMemberId(session.email));
+  if (!(Number.isInteger(issueNumber) && owned.some((e) => e.issueNumber === issueNumber))) {
+    respond(200, { ok: false, error: "That doesn't look like one of your own filings." });
+    return;
+  }
+  const result = await submitFollowup({
+    issueNumber,
+    body: details,
+    submitterEmail: session.email,
+    ...(session.name ? { submitterName: session.name } : {}),
+  });
+  respond(result.ok ? 200 : 502, result);
 }
