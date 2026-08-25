@@ -14,12 +14,12 @@ Nothing here is a trade: it is a regime-context read, most relevant to AMZN/AAPL
 exposure and to the broader recession-odds narrative feeding the Sep-16 FOMC, not a standalone
 setup.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (D-6) | Stand aside | Six days from the print; no consensus published yet to react to. |
-| This week (through 8/25) | Watch | Confirmed 10:00 ET Tue release; second-tier print — watch the Expectations subcomponent and the labor differential, size nothing into it. |
-| This month | Watch | Stacks into the Aug 26–28 corridor (PCE + GDP 2nd-est + NVDA print next day, Warsh's Jackson Hole keynote two days later) — this print is the first domino, not an isolated event. |
-| This quarter | Stand aside on this print specifically | The standing signal (Expectations Index under the 80-level recession threshold for six straight months) is more useful as ongoing regime context than as a single-print trade. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (D-6) | Stand aside | High | Six days from the print; no consensus published yet to react to. | A published August consensus emerging before **2026-08-25**, which resolves this doc's biggest honest limit |
+| This week (through 8/25) | Watch | Medium | Confirmed 10:00 ET Tue release; second-tier print — watch the Expectations subcomponent and the labor differential, size nothing into it. | A sharp Expectations-Index break below ~70 on **2026-08-25**, accelerating away from the 80-level threshold |
+| This month | Watch | Medium | Stacks into the Aug 26–28 corridor (PCE + GDP 2nd-est + NVDA print next day, Warsh's Jackson Hole keynote two days later) — this print is the first domino, not an isolated event. | Energy de-escalation — a holding ceasefire or Hormuz reopening — defusing the Aug 26–28 corridor |
+| This quarter | Stand aside on this print specifically | Low | The standing signal (Expectations Index under the 80-level recession threshold for six straight months) is more useful as ongoing regime context than as a single-print trade. | Two consecutive prints (Aug + Sep) back above ~92–93, killing the consumer-is-cracking read |
 
 **Signals & conditions.**
 - August print materially below 90 **and** Expectations sub-70 → sharpens the "consumer is

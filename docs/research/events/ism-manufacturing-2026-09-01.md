@@ -17,12 +17,12 @@ is a rate-path read. The asymmetry is the point — a *hot* prices-paid / strong
 print lifts yields and pressures our long-duration AI names into the corridor; a soft print is
 dovish relief.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (D-13) | Stand aside | Thirteen days out; no firm August consensus to react to, no name-keyed setup. |
-| This week | Watch | Confirmed 9/1 10:00 ET; the rate-relevant read is prices-paid + new-orders, not the headline — size nothing into it. |
-| This month | Watch | Opens the Sep-1→Sep-16 pre-FOMC corridor (JOLTS same day, ISM-svcs 9/3, jobs 9/4, PPI 9/10, CPI 9/11); this print is the first domino, read into the hike-odds channel every corridor print reprices. |
-| This quarter | Stand aside on this print specifically | The binding constraint on our duration names runs through the Sep FOMC/CPI corridor, not a single ISM release; treat this as regime context. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (D-13) | Stand aside | High | Thirteen days out; no firm August consensus to react to, no name-keyed setup. | A published August consensus emerging before **2026-09-01**, which resolves this doc's biggest limit |
+| This week | Watch | Medium | Confirmed 9/1 10:00 ET; the rate-relevant read is prices-paid + new-orders, not the headline — size nothing into it. | A soft print — headline back below ~52 with prices-paid under 65 — killing the hawkish read |
+| This month | Watch | Medium | Opens the Sep-1→Sep-16 pre-FOMC corridor (JOLTS same day, ISM-svcs 9/3, jobs 9/4, PPI 9/10, CPI 9/11); this print is the first domino, read into the hike-odds channel every corridor print reprices. | A weak JOLTS the same day or a weak jobs print on **2026-09-04** collapsing hike odds toward zero |
+| This quarter | Stand aside on this print specifically | Medium | The binding constraint on our duration names runs through the Sep FOMC/CPI corridor, not a single ISM release; treat this as regime context. | The **2026-09-16** FOMC resolving the duration question this print only feeds |
 
 **Signals & conditions.**
 - Prices-paid re-accelerating back toward the low-70s or higher (July 71.1, down from June's 73.0

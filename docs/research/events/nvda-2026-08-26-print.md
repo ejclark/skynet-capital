@@ -11,12 +11,12 @@ after 6 of the last 8 prints** on beats. The real bar is the **~$94–95B revenu
 realized**, so **long premium is the expensive side** — defined-risk structures over unhedged
 gap-holds. Date **confirmed** (IR): Wed **2026-08-26**, after close.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today | No new run-up entries | The S1 pre-print window has passed; the dead zone opens ~Aug 19 (D-5→D −0.77%, 50% win). |
-| This week | Flat by D-1 (S2) | Any unhedged share position flat before the print; no first-hour entries (E1). |
-| This month | Own it *after* the print | Cheapest entries of the cycle come post-print — reaction day 11/14 red; the D+1→D+6 dead week (FT-7) costs nothing to respect. |
-| This quarter | Revenue intact, multiple at risk | AI-capex still expanding (revenue tailwind), but raises are now *punished* — the re-rating is sentiment about the cycle, not the beat. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | No new run-up entries | High | The S1 pre-print window has passed; the dead zone opens ~Aug 19 (D-5→D −0.77%, 50% win). | A close above the S1 window's own base rate on 2 of the next 3 prints |
+| This week | Flat by D-1 (S2) | High | Any unhedged share position flat before the print; no first-hour entries (E1). | ≥3 new prints showing a repriced gap regime (the family is 0-for-3) |
+| This month | Own it *after* the print | Medium | Cheapest entries of the cycle come post-print — reaction day 11/14 red; the D+1→D+6 dead week (FT-7) costs nothing to respect. | Reaction day closing green on 2 of the next 3 prints, killing the post-print entry edge |
+| This quarter | Revenue intact, multiple at risk | Medium | AI-capex still expanding (revenue tailwind), but raises are now *punished* — the re-rating is sentiment about the cycle, not the beat. | A Q3 guide at ~$100B+ on **2026-08-26**, which breaks the five-quarter muted streak |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 

@@ -18,12 +18,12 @@ more likely to get lost in NVDA-reaction noise than to move the tape on its own 
 and risk-off compounds. No position is licensed by this doc; it exists to sharpen the risk read around
 that week for rate-sensitive long-duration names already being tracked (NVDA and peers).
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | 8 days out; medium-impact, symbol-less rates event — nothing here licenses action yet. |
-| This week (8/19–8/23) | Stand aside | Pre-auction; the 5Y/7Y/NVDA/MRVL/PCE/GDP stack is next week, not this one. |
-| Into 8/26–8/27 | Watch | 5Y auction (8/26) sets the concession tone the 7Y inherits the next morning, same day NVDA's overnight reaction and PCE/GDP hit the tape — a genuinely stacked-risk session for anything rate- or duration-sensitive. |
-| This quarter (Q3) | Watch | Feeds the belly-of-curve softness narrative into the Sep 9–24 coupon block (10Y/30Y/20Y/7Y) and the Sep 16 FOMC; context for the rates read on long-duration AI names, not a standalone trade. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | 8 days out; medium-impact, symbol-less rates event — nothing here licenses action yet. | Nothing at 8 days out; a symbol-less rates event licenses no action |
+| This week (8/19–8/23) | Stand aside | High | Pre-auction; the 5Y/7Y/NVDA/MRVL/PCE/GDP stack is next week, not this one. | The **2026-08-26** 5Y result setting a concession tone the 7Y visibly inherits |
+| Into 8/26–8/27 | Watch | Medium | 5Y auction (8/26) sets the concession tone the 7Y inherits the next morning, same day NVDA's overnight reaction and PCE/GDP hit the tape — a genuinely stacked-risk session for anything rate- or duration-sensitive. | A markedly weak print — bid-to-cover well under ~2.40, tail beyond ~1.5bp, indirects materially below trend |
+| This quarter (Q3) | Watch | Medium | Feeds the belly-of-curve softness narrative into the Sep 9–24 coupon block (10Y/30Y/20Y/7Y) and the Sep 16 FOMC; context for the rates read on long-duration AI names, not a standalone trade. | A clean print — bid-to-cover near or above the ~2.50–2.64 band with a tail near zero — killing the belly-softness narrative |
 
 **Signals & conditions** (all confirmed-status auction; a weak print still only *widens caution*, never
 licenses a new trade on its own):
