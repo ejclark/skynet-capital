@@ -62,17 +62,19 @@ const okFactory = () =>
     }),
   );
 
-function makeService(overrides: { store?: MemStore } = {}) {
+function makeService(overrides: { store?: MemStore; roster?: StoredParticipant[] } = {}) {
   const store = overrides.store ?? new MemStore();
   if (!overrides.store) store.items = [ann, bot];
   const hub = new ObservatoryHub(board());
   const stopped: string[] = [];
+  const roster = overrides.roster;
   const service = createAccountService({
     hub,
     store,
     clientFactory: okFactory,
     stopStream: (id) => stopped.push(id),
     now: () => new Date("2026-08-19T00:00:00.000Z"),
+    ...(roster ? { findRosterParticipant: (id) => roster.find((p) => p.id === id) } : {}),
   });
   return { service, store, hub, stopped };
 }
@@ -93,6 +95,20 @@ describe("account service — updateProfile", () => {
     const result = await service.updateProfile({ id: "env-bot", ...selfInput });
     expect(result).toMatchObject({ ok: false });
     if (!result.ok) expect(result.error).toContain("configured on the host");
+  });
+
+  it("refuses a timezone edit on a roster bot with a rotation store row (the /account sibling of the removal hole)", async () => {
+    const store = new MemStore();
+    store.items = [{ ...bot, credentials: { apiKey: "rotated", apiSecret: "rotated" } }];
+    const { service, store: s } = makeService({ store, roster: [bot] });
+    const result = await service.updateProfile({
+      id: "sauron",
+      timezone: "America/Chicago",
+      requesterId: "human-ann",
+      authConfigured: true,
+    });
+    expect(result).toMatchObject({ ok: false });
+    expect(s.items[0]?.timezone).toBeUndefined();
   });
 
   it("refuses to edit ANOTHER human's profile, and an unresolved session too", async () => {
@@ -264,6 +280,48 @@ describe("account service — removeAccount", () => {
     expect(store.items.map((p) => p.id)).toEqual(["sauron"]);
     expect(stopped).toEqual(["human-ann"]);
     expect(hub.getState().participants.map((p) => p.id)).toEqual(["sauron"]);
+  });
+
+  // Red-team, 2026-08-25: /rotate now leaves a store row under a roster id, so a rotated roster
+  // BOT would otherwise fall through the human-only ownership guard and be removable by anyone —
+  // deleting an owner's rotated credential and re-bricking the account on next boot.
+  it("refuses to remove a host-configured roster bot even when a rotation left a store row under its id", async () => {
+    const store = new MemStore();
+    store.items = [{ ...bot, credentials: { apiKey: "rotated", apiSecret: "rotated" } }];
+    const { service } = makeService({ store, roster: [bot] });
+
+    const result = await service.removeAccount({
+      id: "sauron",
+      confirmName: "Sauron",
+      requesterId: "human-ann",
+      authConfigured: true,
+    });
+
+    expect(result).toMatchObject({ ok: false });
+    if (!result.ok) expect(result.error).toContain("configured on the host");
+    expect(store.items).toHaveLength(1);
+  });
+
+  it("refuses to remove a roster HUMAN by id-provenance, not just the human-ownership guard", async () => {
+    const rosterHuman: StoredParticipant = {
+      id: "human-eric",
+      displayName: "Eric",
+      kind: "human",
+      credentials: { apiKey: "rotated", apiSecret: "rotated" },
+    };
+    const store = new MemStore();
+    store.items = [rosterHuman];
+    const { service } = makeService({ store, roster: [rosterHuman] });
+
+    const result = await service.removeAccount({
+      id: "human-eric",
+      confirmName: "Eric",
+      requesterId: "human-eric", // even the "self" case: host accounts are the operator's
+      authConfigured: true,
+    });
+
+    expect(result).toMatchObject({ ok: false });
+    expect(store.items).toHaveLength(1);
   });
 
   it("lets an authed member retire a bot with the typed-name confirmation", async () => {

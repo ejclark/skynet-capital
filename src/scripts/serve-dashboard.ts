@@ -137,11 +137,14 @@ async function main(): Promise<void> {
   });
 
   // Day-2 account management (/account): profile edits + removal for self-service accounts.
+  // Host-configured roster accounts are off-limits here — including a rotation's store row under
+  // a roster id — so the same tier /rotate enforces is enforced on edit/remove too.
   const accounts = createAccountService({
     hub,
     store,
     clientFactory: dataSource.clientFactory,
     stopStream: (id) => dataSource.stopParticipantStream(id),
+    findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
   });
 
   // The guest list lives on the mounted volume, encrypted at rest, and is unioned with the env

@@ -65,6 +65,16 @@ export interface AccountServiceDeps {
   readonly clientFactory: TradingClientFactory;
   /** Close this account's live fill stream (data-source specific). */
   readonly stopStream: (participantId: string) => void;
+  /**
+   * Resolve an env-configured (roster) participant by id. Host-managed accounts are never
+   * editable or removable here — the store's own contract (participant-store.ts) is that env
+   * rows "can only be removed by unsetting from the host." This closes the same downgrade
+   * `refuseRotation` guards against: since /rotate now leaves a store row under a roster id, a
+   * roster BOT would otherwise fall through the human-only ownership guard below and be
+   * removable by any member (red-team, 2026-08-25) — deleting an owner's rotated credential and
+   * re-bricking the account on next boot. Checked by id provenance, not store presence.
+   */
+  readonly findRosterParticipant?: (id: string) => Participant | undefined;
   readonly now?: () => Date;
 }
 
@@ -73,13 +83,15 @@ const NOT_IN_STORE =
 
 /**
  * The preamble both write paths share: the store can be rewritten safely, the id names a
- * SELF-SERVICE account (env-configured ones refuse honestly), and — for a human target when
- * OAuth is configured — the caller IS that account. Returns the record, or the refusal.
+ * SELF-SERVICE account (env-configured ones refuse honestly, whether or not a rotation has left
+ * a store row under their id), and — for a human target when OAuth is configured — the caller IS
+ * that account. Returns the record, or the refusal.
  */
 function requireEditable(
   store: ParticipantStore,
   input: { id: string; requesterId?: string; authConfigured: boolean },
   verb: string,
+  findRosterParticipant?: (id: string) => Participant | undefined,
 ): { existing: Participant } | { error: string } {
   if (!store.canStoreSecurely()) {
     return {
@@ -89,6 +101,11 @@ function requireEditable(
   const id = input.id?.trim();
   if (!id) {
     return { error: "An account id is required." };
+  }
+  // Host-managed first, before the store lookup: a roster id is off-limits here even once a
+  // rotation has written a store row under it, so the tier can never downgrade to store rules.
+  if (findRosterParticipant?.(id)) {
+    return { error: NOT_IN_STORE };
   }
   const existing = store.load().find((p) => p.id === id);
   if (!existing) {
@@ -112,7 +129,7 @@ export function createAccountService(deps: AccountServiceDeps): {
   const at = (): string => (deps.now ?? (() => new Date()))().toISOString();
 
   async function updateProfile(input: UpdateProfileInput): Promise<UpdateProfileResult> {
-    const target = requireEditable(deps.store, input, "editing");
+    const target = requireEditable(deps.store, input, "editing", deps.findRosterParticipant);
     if ("error" in target) {
       return { ok: false, error: target.error };
     }
@@ -152,7 +169,7 @@ export function createAccountService(deps: AccountServiceDeps): {
   }
 
   function removeAccountSync(input: RemoveAccountInput): RemoveAccountResult {
-    const target = requireEditable(deps.store, input, "removal");
+    const target = requireEditable(deps.store, input, "removal", deps.findRosterParticipant);
     if ("error" in target) {
       return { ok: false, error: target.error };
     }
