@@ -27,6 +27,12 @@ function memoryStore(seed: AllowlistEntry[] = []): AllowlistStore & { added: str
       return true;
     },
     remove: () => false,
+    markJoined(value, at) {
+      const entry = entries.find((e) => e.value === value);
+      if (!entry || entry.joinedAt) return false;
+      entries[entries.indexOf(entry)] = { ...entry, joinedAt: at };
+      return true;
+    },
   };
 }
 
@@ -69,6 +75,29 @@ describe("handleInvite", () => {
       const body = await res.text();
       expect(body).toContain("guest@example.com");
       expect(body).toContain('name="email"');
+    });
+  });
+
+  it("shows joined status for each guest — joined vs. not yet", async () => {
+    const store = memoryStore([
+      {
+        value: "joined@example.com",
+        kind: "email",
+        addedAt: "2026-08-01T00:00:00.000Z",
+        addedBy: "owner@example.com",
+        joinedAt: "2026-08-05T00:00:00.000Z",
+      },
+      {
+        value: "pending@example.com",
+        kind: "email",
+        addedAt: "2026-08-01T00:00:00.000Z",
+        addedBy: "owner@example.com",
+      },
+    ]);
+    await withInvite("owner@example.com", store, async (base) => {
+      const body = await (await fetch(base)).text();
+      expect(body).toContain("Joined 2026-08-05");
+      expect(body).toContain("Not yet");
     });
   });
 

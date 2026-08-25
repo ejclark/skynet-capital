@@ -94,6 +94,26 @@ describe("file allowlist store", () => {
     expect(new FileAllowlistStore(path(), "different").emails().size).toBe(0);
   });
 
+  it("stamps joinedAt the first time, and is a no-op after that", () => {
+    const store = new FileAllowlistStore(path(), "s");
+    store.add(entry("guest@example.com"));
+    expect(store.markJoined("Guest@Example.com", "2026-08-20T00:00:00.000Z")).toBe(true);
+    const reopened = new FileAllowlistStore(path(), "s");
+    expect(reopened.entries()[0]?.joinedAt).toBe("2026-08-20T00:00:00.000Z");
+    expect(reopened.markJoined("guest@example.com", "2026-08-21T00:00:00.000Z")).toBe(false);
+    expect(reopened.entries()[0]?.joinedAt).toBe("2026-08-20T00:00:00.000Z");
+  });
+
+  it("markJoined is a no-op for an identity not on the list", () => {
+    const store = new FileAllowlistStore(path(), "s");
+    expect(store.markJoined("nobody@example.com", "2026-08-20T00:00:00.000Z")).toBe(false);
+  });
+
+  it("markJoined never throws without a store secret — it must not break the board", () => {
+    const store = new FileAllowlistStore(path(), undefined);
+    expect(store.markJoined("guest@example.com", "2026-08-20T00:00:00.000Z")).toBe(false);
+  });
+
   it("removes an entry", () => {
     const store = new FileAllowlistStore(path(), "s");
     store.add(entry("guest@example.com"));

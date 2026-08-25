@@ -84,16 +84,21 @@ function invite(
   }
 }
 
+/** The "have they joined" column — the observability field this view exists for. */
+function joinedCell(joinedAt: string | undefined): string {
+  return joinedAt ? `Joined ${escapeHtml(joinedAt.slice(0, 10))}` : "Not yet";
+}
+
 function listHtml(entries: readonly AllowlistEntry[], canWrite: boolean): string {
   const rows = entries.length
     ? entries
         .map(
           (e) =>
             `<tr><td>${escapeHtml(e.value)}</td><td>${escapeHtml(e.addedAt.slice(0, 10))}</td>` +
-            `<td>${escapeHtml(e.addedBy)}</td></tr>`,
+            `<td>${escapeHtml(e.addedBy)}</td><td>${joinedCell(e.joinedAt)}</td></tr>`,
         )
         .join("")
-    : `<tr><td colspan="3">Nobody invited yet — the owners on <code>SKYNET_ALLOWED_EMAILS</code> can always sign in.</td></tr>`;
+    : `<tr><td colspan="4">Nobody invited yet — the owners on <code>SKYNET_ALLOWED_EMAILS</code> can always sign in.</td></tr>`;
 
   const form = canWrite
     ? `<form method="post" action="/invite">
@@ -106,6 +111,6 @@ function listHtml(entries: readonly AllowlistEntry[], canWrite: boolean): string
 
   return `<h1>Guest list</h1>
 <p>Anyone here can sign in. Owners are configured on the host and aren't listed below.</p>
-<table><thead><tr><th>Email</th><th>Added</th><th>By</th></tr></thead><tbody>${rows}</tbody></table>
+<table><thead><tr><th>Email</th><th>Added</th><th>By</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
 ${form}`;
 }
