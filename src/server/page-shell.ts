@@ -34,6 +34,14 @@ const ADD_STYLE = `${PAGE_STYLE}
   a:hover{ text-decoration:underline; }
   .backrow{ margin-top:26px; font-size:14px; color:var(--muted); }
   .wrap.wide{ max-width:760px; }
+  /* --- admin tables (the guest list, the account links): unstyled, they render as run-on text --- */
+  table{ width:100%; border-collapse:collapse; margin:18px 0 6px; font-size:14px; }
+  th{ text-align:left; padding:8px 10px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; border-bottom:1px solid var(--border); }
+  td{ padding:10px; border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent); vertical-align:middle; }
+  td small{ display:block; color:var(--muted); font-family:var(--mono); font-size:11px; letter-spacing:.02em; }
+  td button{ margin:0; padding:6px 12px; font-size:12px; background:transparent; color:var(--muted); border:1px solid var(--border); }
+  td button:hover{ color:var(--text); border-color:var(--accent); }
+  td form{ margin:0; }
   /* --- onboarding / welcome --- */
   .hero-eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.24em; text-transform:uppercase; color:var(--accent); margin-bottom:14px; }
   .hero-title{ font-size:34px; font-weight:800; letter-spacing:-.02em; line-height:1.1; margin-bottom:14px; }

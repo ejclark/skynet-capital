@@ -119,9 +119,12 @@ export class ParticipantService {
 
     const id = kind === "bot" ? (input.personaId as string) : `human-${slugify(displayName)}`;
     if (this.deps.store.has(id) || this.deps.findRosterParticipant?.(id)) {
+      // Says what to do next, not just "no" (#546/#558): a member whose account predates the
+      // connect form lands here, and re-adding is the wrong remedy for either a dead key
+      // (/rotate) or a missing sign-in link (/claim, owner-gated).
       return {
         ok: false,
-        error: `An account named "${displayName}" is already on the board. If it's yours, don't re-add it — a regenerated Alpaca key goes to /rotate, and linking your sign-in to the account is a separate step that never touches keys.`,
+        error: `An account named "${displayName}" is already on the board. If it's yours, don't re-add it — a regenerated Alpaca key goes to /rotate, and linking your sign-in to the account is a separate step (a league owner can do it at /claim) that never touches keys. If it isn't yours, pick a different display name.`,
       };
     }
 

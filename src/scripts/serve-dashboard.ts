@@ -37,6 +37,7 @@ import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
+import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedbackCoach } from "../server/feedback-coach.js";
 import { resolveFeedbackFollowup } from "../server/feedback-followup.js";
@@ -46,6 +47,7 @@ import { resolveFeedbackStatus } from "../server/feedback-status.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
+import { createOwnerLinkStore, resolveOwnedId } from "../server/owner-link-store.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { createProgressionService } from "../server/progression-service.js";
 import { createProgressionStore } from "../server/progression-store.js";
@@ -186,11 +188,24 @@ async function main(): Promise<void> {
   // runtime takes effect on the next order, not the next restart.
   const liveRoster = () => mergeRoster(envRoster, store.load());
   const findParticipant = (id: string) => liveRoster().find((p) => p.id === id);
-  // The owner link: session email -> Participant.ownerEmail. Never exposed on ParticipantSnapshot.
-  const resolveOwnerIds = (email: string): string[] =>
-    liveRoster()
+  // Owner links for accounts that carry no `ownerEmail` of their own — every env-declared roster
+  // row without a stamp, and anything added before the connect form existed (#546). Plain JSON on
+  // the volume beside bot-controls.json: an id and an already-admitted email, no credentials.
+  const ownerLinks = createOwnerLinkStore(process.env, (m) => console.error(m));
+  // The owner link: session email -> the account(s) it owns. Never exposed on ParticipantSnapshot.
+  // Every stamped `ownerEmail` match wins outright (multiple, when the host stamps more than one
+  // env id to the same address); only when NONE is stamped does a volume link fill the gap — the
+  // same "a stamp always beats a link" precedence `resolveOwnedId` specifies, generalized to a
+  // roster that can hand back more than one id.
+  const resolveOwnerIds = (email: string): string[] => {
+    const participants = liveRoster();
+    const stampedIds = participants
       .filter((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
       .map((p) => p.id);
+    if (stampedIds.length > 0) return stampedIds;
+    const linkedId = resolveOwnedId(participants, ownerLinks.load().links, email);
+    return linkedId ? [linkedId] : [];
+  };
   const resolveOwnerId = (email: string): string | undefined => resolveOwnerIds(email)[0];
   const orderAudit = createOrderAuditLog(process.env);
   const desk = resolveDeskTrading({
@@ -242,6 +257,15 @@ async function main(): Promise<void> {
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
+          // The account-link table (#546). Reads the live board so a just-added account is
+          // linkable immediately, and refuses any address that can't sign in — a link to
+          // somebody outside the gate is a link nobody could ever use.
+          claim: {
+            store: ownerLinks,
+            isOwner: (email: string) => owners.has(email),
+            accounts: () => toClaimAccounts(liveRoster()),
+            canSignIn: (email: string) => owners.has(email) || allowlist.emails().has(email),
+          },
           resolveOwnerId,
           resolveOwnerIds,
         }

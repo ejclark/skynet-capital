@@ -13,7 +13,8 @@ import { JsonFileStore } from "../storage/json-file-store.js";
  * Plain JSON, deliberately NOT encrypted: unlike the allowlist and participant stores this holds
  * no credentials and no personal data — only which bots the owner suspended and which build they
  * run. The `JsonFileStore` primitive underneath owns the pattern: atomic tmp+rename writes,
- * total reads (a missing or malformed file is just EMPTY_CONTROLS, reported once).
+ * total reads (a missing or malformed file is just EMPTY_CONTROLS, reported once), shared with
+ * the owner-link table.
  */
 export class BotControlsStore {
   private readonly file: JsonFileStore<ControlsState>;

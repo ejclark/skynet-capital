@@ -28,6 +28,8 @@ primary_region = "ord"  # Chicago — closest to Iowa
   SKYNET_ACTIVITY_DIR = "/data/activity"
   SKYNET_FEEDBACK_LOG_DIR = "/data/feedback-log"
   SKYNET_ORDER_AUDIT_DIR = "/data/order-audit"
+  # Owner→member account links (#546, owner-link-store.ts) — who claimed an unowned board account.
+  SKYNET_OWNER_LINKS_FILE = "/data/owner-links.json"
   # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned
   # milestones are NOT here — they re-derive from the activity + order-audit ledgers on read.
   SKYNET_PROGRESSION_FILE = "/data/progression.json"

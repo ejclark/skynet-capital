@@ -34,6 +34,7 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { Session } from "./auth/session.js";
+import { type ClaimDeps, handleClaim } from "./claim-form.js";
 import { type ControlsDeps, handleDeskSettings } from "./controls-form.js";
 import { type FeedbackRouteDeps, serveFeedbackRoute } from "./feedback-routes.js";
 import { handleInvite, type InviteDeps } from "./invite-form.js";
@@ -94,6 +95,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps {
    * allowlist store and may sign in but not invite (see `invite-form.ts`).
    */
   readonly invite?: InviteDeps;
+  /**
+   * `GET/POST /claim` — the owner's account-link table (#546): attach an account that is already
+   * on the board, but carries no owner, to a member's sign-in. Omit to disable (offline mode, or
+   * no auth). Owner-gated inside the handler itself, exactly like `/invite`.
+   */
+  readonly claim?: ClaimDeps;
   /**
    * `GET/POST /u/:id?tab=settings` — Mission Control, the owner's switchboard for the autonomous
    * fleet, served as an account's Settings tab (#475). Omit to disable (offline mode, or no auth).
@@ -488,6 +495,30 @@ function redirectToDeskSettings(
   res.end();
 }
 
+/**
+ * The owner-only admin pages — `/invite` (who may sign in) and `/claim` (which account each
+ * sign-in owns). Grouped because they share one property: identity comes from the signed session
+ * and nowhere else — there is no id in the URL to spoof — and each handler re-checks owner status
+ * itself rather than trusting this call site. True when handled.
+ */
+async function tryOwnerPage(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<boolean> {
+  if (path === "/invite" && config.invite) {
+    await handleInvite(req, res, req.method ?? "GET", session?.email, config.invite);
+    return true;
+  }
+  if (path === "/claim" && config.claim) {
+    await handleClaim(req, res, req.method ?? "GET", session?.email, config.claim);
+    return true;
+  }
+  return false;
+}
+
 /** `/add` (join the board) and `/rotate` (swap an existing account's key). True when handled. */
 async function trySelfServiceRoute(
   req: IncomingMessage,
@@ -514,10 +545,7 @@ async function trySelfServiceRoute(
     redirectToDeskSettings(res, config, session);
     return true;
   }
-  if (path === "/invite" && config.invite) {
-    // Identity comes from the signed session and nowhere else — there is no id in the URL to
-    // spoof, and handleInvite re-checks owner status itself rather than trusting this call site.
-    await handleInvite(req, res, req.method ?? "GET", session?.email, config.invite);
+  if (await tryOwnerPage(req, res, path, config, session)) {
     return true;
   }
   if ((path === "/account" || path === "/account/remove") && config.accountAdmin) {
@@ -687,8 +715,8 @@ async function serveIndividualProfile(
 
 /**
  * Resolve the signed-in viewer to the participant they own (#466) — undefined when no
- * `resolveOwnerId` is wired, or the session's email owns no account (a legacy account with no
- * owner link resolves to nobody until linked from `/invite`).
+ * `resolveOwnerId` is wired, or the session's email owns no account (an account with no owner
+ * link resolves to nobody until an owner attaches one from `/claim`).
  */
 function resolveCurrentId(
   session: Session | undefined,

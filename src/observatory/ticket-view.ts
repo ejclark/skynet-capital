@@ -302,7 +302,12 @@ function gateBanner(model: TicketViewModel): string {
     return `<p class="caveat"><b>Preview only.</b> Placing orders from the desk needs sign-in configured for this deployment — the ticket reviews and refuses rather than sending.</p>`;
   }
   if (!model.snapshot) {
-    return `<p class="caveat"><b>No linked account.</b> Your sign-in doesn't resolve to an account on the board, so orders can't be sent. You can still explore every play. <a href="/add">Connect an account</a>.</p>`;
+    // Two different situations wear the same symptom, and sending both to /add dead-ends the
+    // second one: an account already on the board is refused there as a duplicate (#546). It
+    // doesn't need re-adding — it needs linking, which an owner does from /claim.
+    // `.caveat` is a flex row, so everything after the bold label must be ONE child — an inline
+    // link between bare text nodes would otherwise break into its own column.
+    return `<p class="caveat"><b>No linked account.</b><span>Your sign-in isn't linked to an account on the board, so orders can't be sent — you can still explore every play. New here? <a href="/add">Connect an account</a>. Already on the board, trades and all? It doesn't need re-adding, just linking to this sign-in — ask a league owner.</span></p>`;
   }
   return "";
 }
