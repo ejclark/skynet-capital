@@ -565,13 +565,23 @@ async function trySelfServiceRoute(
     return true;
   }
   if (path === "/rotate" && config.rotateCredentials) {
+    const requester = rotateRequester(config, session);
+    // Eric, 2026-08-25: "ensure the email is used as the unique identifier — they know email,
+    // they don't know their account ID." A link that names an id (an error card, a profile page)
+    // still wins — it's the most specific signal — but absent one, a viewer whose SIGN-IN already
+    // resolves to an account (linked via ownerEmail, however that link was made) gets that account
+    // prefilled automatically. Email, via the session, becomes the identifier for the return
+    // visit — nobody re-derives or types an id once they're linked. An unlinked viewer is the one
+    // case this can't solve (there's nothing yet to resolve the email against); the form still
+    // falls back to free text there, same as before.
+    const prefillId = idOf(url) || requester.id || "";
     await handleRotate(
       req,
       res,
       req.method ?? "GET",
       keyOf(url),
-      idOf(url),
-      rotateRequester(config, session),
+      prefillId,
+      requester,
       config.rotateCredentials,
     );
     return true;
