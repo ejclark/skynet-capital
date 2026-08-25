@@ -286,11 +286,15 @@ async function handleAckPost(
   return true;
 }
 
-/** 303 back to the local path a hidden `back` field names — constructed, never an open redirect. */
+/**
+ * 303 back to the local path a hidden `back` field names — constructed, never an open redirect.
+ * Backslashes are rejected outright: browsers' URL parsers treat `\` as `/`, so `/\evil.example`
+ * would slip a single-slash prefix check and become a protocol-relative hop off-site.
+ */
 function redirectBack(res: ServerResponse, form: URLSearchParams): void {
   const back = form.get("back") ?? "";
-  const target = back.startsWith("/") && !back.startsWith("//") ? back : "/trade";
-  res.writeHead(303, { location: target });
+  const local = back.startsWith("/") && !back.startsWith("//") && !back.includes("\\");
+  res.writeHead(303, { location: local ? back : "/trade" });
   res.end();
 }
 

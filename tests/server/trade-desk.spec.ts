@@ -457,11 +457,13 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
     });
   });
 
-  it("never open-redirects the toggle's return path", async () => {
+  it("never open-redirects the toggle's return path — double-slash and backslash alike", async () => {
     await withServer(gateConfig(progressionStub(), counters()), async (base) => {
-      const res = await post(base, { wheels: "on", back: "//evil.example" }, { cookie: cookie() });
-      expect(res.status).toBe(303);
-      expect(res.headers.get("location")).toBe("/trade");
+      for (const back of ["//evil.example", "/\\evil.example", "https://evil.example", "\\x"]) {
+        const res = await post(base, { wheels: "on", back }, { cookie: cookie() });
+        expect(res.status).toBe(303);
+        expect(res.headers.get("location")).toBe("/trade");
+      }
     });
   });
 
