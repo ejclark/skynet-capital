@@ -9,11 +9,13 @@
  * discriminated `FeedbackResult`.
  */
 import { fetchJson } from "../http/fetch-json.js";
+import { uploadFeedbackImages } from "./feedback-images.js";
 import {
   type FeedbackInput,
   type FeedbackKind,
   issueBody,
   labelsFor,
+  opaqueMemberId,
   titleFor,
 } from "./feedback-issue.js";
 
@@ -34,12 +36,24 @@ interface FeedbackConfig {
   readonly repo: string;
 }
 
+/** Images upload first (never fatal on their own — see feedback-images.ts) so a partial or total
+ *  attachment failure still files the member's words. Empty when the member attached nothing. */
+function resolveImageUrls(
+  input: FeedbackInput,
+  config: FeedbackConfig,
+): Promise<readonly string[]> {
+  if (!input.images?.length) return Promise.resolve([]);
+  const memberId = input.submitterEmail ? opaqueMemberId(input.submitterEmail) : "anon";
+  return uploadFeedbackImages(input.images, config, memberId);
+}
+
 /** Build the bound submit function that POSTs a GitHub issue. Live path (uses global fetch). */
 function createFeedbackIssue(config: FeedbackConfig): SubmitFeedback {
   return async (input) => {
     const title = input.title.trim();
     if (!title) return { ok: false, error: "Please add a short title so we know what it's about." };
     try {
+      const imageUrls = await resolveImageUrls(input, config);
       const res = await fetchJson(
         "POST",
         `https://api.github.com/repos/${config.repo}/issues`,
@@ -50,7 +64,7 @@ function createFeedbackIssue(config: FeedbackConfig): SubmitFeedback {
         },
         {
           title: titleFor({ ...input, title }),
-          body: issueBody(input),
+          body: issueBody(input, imageUrls),
           labels: labelsFor(input),
         },
       );

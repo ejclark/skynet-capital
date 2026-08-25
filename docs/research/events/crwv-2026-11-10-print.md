@@ -12,12 +12,12 @@ the print**, and **E1 — don't trade the open**. Treat CRWV as a two-sided vari
 single-night tails, both directions), not a trend. The Nov-10 print is an **estimate** (IR silent;
 honest window Nov 9–16) and would land on a **confirmed CPI day**.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today | Stand aside · E1 | No CRWV-specific catalyst; two-sided variance — defer the open. |
-| This week | Watch FT-3 | [Forward-test 3](../forward-tests.md) scores ~Aug 19/26 — settles whether the post-Q2 melt-up holds or bleeds. Observe, don't position. |
-| This month | Trades by proxy | High-beta to the semi complex — NVDA 8/26, MRVL 8/27, AVGO 9/2 reprice AI-infra long before CRWV's own print. |
-| This quarter | Flat the print (S2) | Stand aside directionally into the est. Nov 9–16 window; guide bar $3.45–3.6B, backlog $104B, from a price that already paid ~+37% for Q2. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | Stand aside · E1 | High | No CRWV-specific catalyst; two-sided variance — defer the open. | FT-3 scoring ~**2026-08-26** and settling the post-Q2 question |
+| This week | Watch FT-3 | High | [Forward-test 3](../forward-tests.md) scores ~Aug 19/26 — settles whether the post-Q2 melt-up holds or bleeds. Observe, don't position. | FT-3 clearing its control, which would reopen a CRWV-specific read |
+| This month | Trades by proxy | Medium | High-beta to the semi complex — NVDA 8/26, MRVL 8/27, AVGO 9/2 reprice AI-infra long before CRWV's own print. | NVDA **2026-08-26**, MRVL **2026-08-27** or AVGO **2026-09-02** repricing AI-infra without CRWV following |
+| This quarter | Flat the print (S2) | Medium | Stand aside directionally into the est. Nov 9–16 window; guide bar $3.45–3.6B, backlog $104B, from a price that already paid ~+37% for Q2. | ≥3 new prints showing a repriced gap regime, the only bar that reopens the hold-the-print question |
 
 **Signals & conditions** — the buy/sell/hold triggers, from the stance's kill switches:
 

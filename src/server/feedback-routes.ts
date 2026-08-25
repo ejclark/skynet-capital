@@ -21,6 +21,7 @@ import {
   handleFeedbackCoach,
   toSpec,
 } from "./feedback-coach.js";
+import { type FeedbackImageInput, parseImages } from "./feedback-images.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { type FeedbackLogEntry, feedbackLogEntry } from "./feedback-log.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
@@ -99,6 +100,30 @@ function specFromForm(raw: string | null): { spec: FeedbackSpec } | undefined {
   }
 }
 
+/** Attached screenshots off the hidden `images` field — bounded/sanitized by `parseImages`
+ *  (feedback-images.ts). Wrapped the same way as `specFromForm` so the spread below never
+ *  branches on its own. */
+function imagesFromForm(raw: string | null): { images: readonly FeedbackImageInput[] } | undefined {
+  const images = parseImages(raw);
+  return images.length ? { images } : undefined;
+}
+
+/** Assembles the submission from the posted form — pulled out of `handleFeedback` so its four
+ *  optional fields (area, submitter, spec, images) don't inflate that function's own complexity. */
+function feedbackInputFromForm(form: URLSearchParams, session: Session | undefined): FeedbackInput {
+  const kindRaw = form.get("kind");
+  const kind: FeedbackKind = kindRaw === "bug" || kindRaw === "idea" ? kindRaw : "feature";
+  return {
+    kind,
+    title: form.get("title") ?? "",
+    details: form.get("details") ?? "",
+    ...(form.get("area") ? { area: form.get("area") as string } : {}),
+    ...(session?.email ? { submitterEmail: session.email } : {}),
+    ...(specFromForm(form.get("spec")) ?? {}),
+    ...(imagesFromForm(form.get("images")) ?? {}),
+  };
+}
+
 async function handleFeedback(
   req: IncomingMessage,
   res: ServerResponse,
@@ -161,23 +186,16 @@ async function handleFeedback(
     return;
   }
 
-  const form = new URLSearchParams(await readBody(req));
-  const kindRaw = form.get("kind");
-  const kind: FeedbackKind = kindRaw === "bug" || kindRaw === "idea" ? kindRaw : "feature";
-  const title = form.get("title") ?? "";
-  const result = await submitFeedback({
-    kind,
-    title,
-    details: form.get("details") ?? "",
-    ...(form.get("area") ? { area: form.get("area") as string } : {}),
-    ...(session?.email ? { submitterEmail: session.email } : {}),
-    ...(specFromForm(form.get("spec")) ?? {}),
-  });
+  // Raised past the shared 1MB default: up to 3 attached screenshots ride this same POST as
+  // base64 in the `images` hidden field (feedback-view.ts) — plain text submissions stay tiny.
+  const form = new URLSearchParams(await readBody(req, 8_000_000));
+  const input = feedbackInputFromForm(form, session);
+  const result = await submitFeedback(input);
   if (result.ok && recordFeedback && session?.email) {
     try {
       await recordFeedback(
         feedbackLogEntry(
-          { kind, title },
+          { kind: input.kind, title: input.title },
           opaqueMemberId(session.email),
           result,
           new Date().toISOString(),

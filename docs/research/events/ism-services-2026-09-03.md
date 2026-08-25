@@ -18,12 +18,12 @@ here is a trade; it is the corridor's most important rate-path read short of CPI
 hot August Prices Index lifts yields and hits our long-duration AI names; a soft print is dovish
 relief.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (D-15) | Stand aside | Fifteen days out; no firm August consensus to react to, no name-keyed setup. |
-| This week | Watch | Confirmed 9/3 10:00 ET; the Prices Index is the load-bearing subcomponent — the biggest non-CPI rate-path mover in the set — watch it, size nothing into it. |
-| This month | Watch closely | Lands the day before jobs (9/4) and inside the Sep 1→Sep 16 pre-FOMC corridor; of the two ISM prints this is the one that moves rates, read into the hike-odds channel. |
-| This quarter | Stand aside on this print specifically | The binding constraint on our duration names is the Sep FOMC/CPI corridor; this is its most important non-CPI input, treated as regime context, not a standalone trade. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (D-15) | Stand aside | High | Fifteen days out; no firm August consensus to react to, no name-keyed setup. | A published August consensus emerging before **2026-09-03** |
+| This week | Watch | Medium | Confirmed 9/3 10:00 ET; the Prices Index is the load-bearing subcomponent — the biggest non-CPI rate-path mover in the set — watch it, size nothing into it. | A soft Prices Index — below ~65 — on **2026-09-03**, flipping the hawkish base case |
+| This month | Watch closely | Medium | Lands the day before jobs (9/4) and inside the Sep 1→Sep 16 pre-FOMC corridor; of the two ISM prints this is the one that moves rates, read into the hike-odds channel. | A weak jobs print the next day (**2026-09-04**) collapsing hike odds toward zero |
+| This quarter | Stand aside on this print specifically | Medium | The binding constraint on our duration names is the Sep FOMC/CPI corridor; this is its most important non-CPI input, treated as regime context, not a standalone trade. | The **2026-09-16** FOMC corridor resolving the binding constraint on the duration names |
 
 **Signals & conditions.**
 - Prices Index holding ≥70 or re-accelerating (July 70.3, up from June's 67.7) → the corridor's

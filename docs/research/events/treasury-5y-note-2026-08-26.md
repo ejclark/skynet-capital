@@ -16,12 +16,12 @@ likely to be a minor, easily-overshadowed input on a very crowded macro day, not
 event on its own. Treat it as a background condition for sizing/timing NVDA-adjacent and other
 long-duration tech positions that day, never as a trade in itself.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (Aug 19) | Stand aside | Pure information-gathering day; the auction is a week out and today's own 20Y auction result isn't posted yet. |
-| This week (thru Aug 24) | Watch | Pre-auction concession (yield drift into supply) is the normal tell; no position is sized on a rates auction alone. |
-| This month (thru Aug 26 + settlement) | Watch / flat the print | Confirmed same-day stack: 5Y auction (1:00pm ET) sits between the 8:30am PCE + GDP prints and NVDA's after-close report — don't isolate the auction's signal from that noise; don't let auction-day yield chop drive NVDA-adjacent share timing. |
-| This quarter | Watch | Belly supply recurs monthly (next 5Y: Sep 23) — the tailing trend, not any one auction, is the thing worth tracking as a duration-sensitivity input for long-duration AI names elsewhere in the calendar. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (Aug 19) | Stand aside | High | Pure information-gathering day; the auction is a week out and today's own 20Y auction result isn't posted yet. | Nothing at this distance; the auction result itself is the only new information |
+| This week (thru Aug 24) | Watch | Medium | Pre-auction concession (yield drift into supply) is the normal tell; no position is sized on a rates auction alone. | A size/CUSIP announcement ~1 week out showing a materially different size than assumed |
+| This month (thru Aug 26 + settlement) | Watch / flat the print | Medium | Confirmed same-day stack: 5Y auction (1:00pm ET) sits between the 8:30am PCE + GDP prints and NVDA's after-close report — don't isolate the auction's signal from that noise; don't let auction-day yield chop drive NVDA-adjacent share timing. | The **2026-08-26** result stopping through or tailing unusually far in either direction |
+| This quarter | Watch | Low | Belly supply recurs monthly (next 5Y: Sep 23) — the tailing trend, not any one auction, is the thing worth tracking as a duration-sensitivity input for long-duration AI names elsewhere in the calendar. | The monthly belly-supply tailing trend reversing across the next two auctions (next 5Y: **2026-09-23**) |
 
 **Signals & conditions.**
 - **Bearish-for-duration tell:** a fourth consecutive tail (stop-out yield > when-issued) with

@@ -16,6 +16,18 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # redeploys. Without this the sampler writes inside the container and every deploy erases the
   # very history the ceremonies/deltas/trophies read (docs/LIVING-UNIVERSE.md's load-bearing layer).
   SKYNET_HISTORY_DIR = "/data/history"
+  # The rest of the app's durable stores. EVERY `data/…` default in src/ is relative, so an unset
+  # var writes inside the container at /app/data and every deploy erases it — silently, because an
+  # absent store file is indistinguishable from an empty one. That is how the guest list kept
+  # vanishing: members invited through /invite were wiped on each merge to main while the owners on
+  # SKYNET_ALLOWED_EMAILS (a Fly *secret*, which persists) sailed through, so the app looked fine
+  # from the inside. tests/arch/volume-persistence.spec.ts now fails CI if a new store is added
+  # without a line here.
+  SKYNET_ALLOWLIST_STORE = "/data/allowlist.json"
+  SKYNET_CONTROLS_FILE = "/data/bot-controls.json"
+  SKYNET_ACTIVITY_DIR = "/data/activity"
+  SKYNET_FEEDBACK_LOG_DIR = "/data/feedback-log"
+  SKYNET_ORDER_AUDIT_DIR = "/data/order-audit"
   # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned
   # milestones are NOT here — they re-derive from the activity + order-audit ledgers on read.
   SKYNET_PROGRESSION_FILE = "/data/progression.json"

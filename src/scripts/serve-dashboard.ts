@@ -32,6 +32,7 @@ import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { createDefaultPersonas } from "../personas/registry.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
 import { createAccountService } from "../server/account-service.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
@@ -52,6 +53,8 @@ import { resolveDeskTrading } from "../server/trade-service.js";
 const PORT = resolvePort(process.env);
 
 async function main(): Promise<void> {
+  // Boot-time backstop for drift the CI gate can't see (docs/LESSONS.md, "guest list … volume").
+  for (const warning of volumePersistenceWarnings(process.env)) console.warn(warning);
   const dataSource = resolveDataSource(process.env);
   const store = createParticipantStore(process.env);
   const envRoster = dataSource.loadParticipants();

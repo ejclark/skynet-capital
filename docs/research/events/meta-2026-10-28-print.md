@@ -3,6 +3,29 @@
 **Kind:** earnings · **Date:** 2026-10-28 (estimate, 8-K cadence) · **Impact:** critical
 **Last assessed:** 2026-08-24
 
+## At a glance
+
+**TL;DR.** Stand aside directionally and let the guards do the work. META's print is a known-date
+variance bomb — 2026 tails run ±10% in a single night — and no META-specific edge survived the
+sweep's red team. The one genuinely new fact, the market's punish-capex-then-forgive reaction to Q2,
+*raises* event risk without licensing a trade. Date is an **estimate** (D-64), and an estimate only
+ever widens caution.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** | High | No META-specific edge survived the red team, and nothing since 2026-08-12 resurrects one | ≥3 new prints showing a repriced gap regime — the only stated bar |
+| This week | **Nothing to do** | High | The date is unconfirmed and no catalyst sits between here and the IR announcement | IR confirms a date ≠ **2026-10-28**, re-keying the S2 flat-by date |
+| This month | **Watch FT-4's score, not the tape** | Medium | The July stand-aside window scores ~**2026-08-27**; a real signal either way rewrites the post-print leg | FT-4 scoring on 2026-08-27 with signal in either direction |
+| This quarter | **S2 and E1 only — flat across the print** | High | ±10% single-night tails with no edge to pay for them; the capex reaction raises risk, not opportunity | Nothing kills a no-alpha guard; shorting unblocking activates S3 on MSFT first, META only as a lean |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Never** — take a directional META position into the print; the tails are ±10% and nothing pays for them.
+- **Never** — treat the punish-capex-then-forgive pattern as a signal; it is a risk observation, not an edge.
+- **Watch (dated)** — FT-4 scores ~**2026-08-27** · IR date announcement, expected ~**2026-10-07** · estimated print **2026-10-28**, the same day as the confirmed FOMC statement.
+- **If shorting unblocks** — the S3 mega-cap fade activates on MSFT first; META is a direction-only lean, never at MSFT sizing.
+- **Re-opens the gap-capture kill only on** — ≥3 new prints showing a repriced gap regime.
+
 ## Initial research
 
 **The question, plainly.** META reports Q3 2026 around 2026-10-28 (**estimate**). What is likely

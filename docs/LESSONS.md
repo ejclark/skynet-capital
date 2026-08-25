@@ -27,6 +27,76 @@ it. Prevention ranks, best first:
 
 ---
 
+### The GitHub MCP tool silently strips `<details>` from a PR body, so the fridge rule shipped unfolded
+
+- **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** reading PR #561 back through `mcp__github__pull_request_read` after opening it — the
+  `<summary>` line was there as bare `<strong>` text with the whole brief expanded beneath it, and the
+  `<details>`/`<summary>` tags were simply *gone*. Detection lag ≈ 5 minutes, and only because the PR
+  was re-read at all; nothing would have reported it otherwise. The control that made it certain:
+  reading #560 (opened via `scripts/ship.sh`) back through the same tool shows `&lt;details&gt;`
+  **escaped but present**, so the read path preserves the tags and the write path is what dropped them.
+- **ROOT CAUSE:** `mcp__github__create_pull_request` / `update_pull_request` sanitize the body they
+  send, removing `<details>` and `<summary>` while leaving `<strong>`, `<img>` and GFM tables intact.
+  The PR is created successfully and the tool reports success, so there is no error to notice. The
+  effect is precisely the defect `docs/PICTURES.md` exists to prevent: **everything lands above the
+  fold**. It bit hardest here because #561's own subject was wall-of-text readability — the PR
+  arguing for folds arrived without one.
+- **PREVENTION:** doctrine + the existing gate, pointed at the right target. `scripts/ship.sh open`
+  writes bodies over REST with a token and is unaffected; `ship.sh checkbody` already refuses a body
+  with no fold — but it lints the **file**, not what GitHub stored, so it passes while the shipped
+  body is broken. So: open and edit PR bodies through `ship.sh`/REST, never through the GitHub MCP
+  write tools; and when a body must go through them, re-read the PR and count `<details>` before
+  calling it done. Landed in `CLAUDE.md`'s ship loop (the line the next session actually reads) and
+  in `docs/PICTURES.md` beside the screenshot mechanics.
+- **SIDE QUESTS:** a `ship.sh verifybody <pr>` that fetches the stored body and re-runs `checkbody`
+  against it would close the file-vs-stored gap mechanically (→ docs/IDEAS.md).
+
+---
+
+### The guest list was never on the volume, so every deploy locked the members out and left the owners in
+
+- **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** a screenshot from Eric — "Tony is locked out **again**". The word *again* is the whole
+  signal: this had been happening on every merge to `main` for three days (the store shipped in #506
+  on 2026-08-22) and was read each time as a one-off invite that didn't take. Detection lag ≈ 3 days
+  and an unknown number of re-invites, because the only person who could see the app was the one
+  person the bug could not affect.
+- **ROOT CAUSE:** `createAllowlistStore` resolves `env.SKYNET_ALLOWLIST_STORE ?? "data/allowlist.json"`
+  — a **relative** default. `fly.toml` pinned three stores to the mounted volume
+  (`SKYNET_PARTICIPANT_STORE`, `SKYNET_HISTORY_DIR`, `SKYNET_INSIGHTS_DIR`) and never pinned this one,
+  so on Fly (`WORKDIR /app`) the guest list was written to `/app/data/allowlist.json` — inside the
+  container image, not on `/data`. Every push to `main` redeploys, so the file died with the machine.
+  It was silent in both directions: `add()` succeeded and reported "They can sign in now", and
+  `entries()` treats an absent file as an empty list rather than an error. The asymmetry is what hid
+  it — `resolveAuth` unions the store with `SKYNET_ALLOWED_EMAILS`, a Fly *secret* that persists, so
+  owners sailed through a gate that had silently dropped every member. **The same class had already
+  been caught once and not generalized:** the `SKYNET_HISTORY_DIR` comment in `fly.toml` explains this
+  exact failure ("every deploy erases the very history…") for one store instead of for the rule. Four
+  more stores were unpinned alongside the allowlist — bot controls, trade activity, the feedback log,
+  and the **order audit trail**.
+- **PREVENTION:** two gates, deliberately not one — Eric's own read on this ("the process to add
+  users seems brittle... I expect safety rails") was that a single net wasn't enough, and he was
+  right: a pre-merge gate can't see drift that never touches a diff. **Pre-merge:**
+  `tests/arch/volume-persistence.spec.ts` scans `src/**` for the `env.SKYNET_X ?? "data/…"` idiom
+  and fails CI unless every store it finds is pinned under `fly.toml`'s `[mounts] destination`,
+  with an `EPHEMERAL` map as the on-the-record escape hatch. Asserted in both directions — the
+  scan must find the known stores, so it can never pass by discovering nothing — and proven to
+  fail by removing the allowlist line before it was trusted. **Boot-time:**
+  `src/runtime/volume-guard.ts` re-checks the same list against the environment the process
+  actually has, on every start, and warns loudly (`fly logs`) the moment a pinned store resolves
+  off the volume — catching a hand-edited env block, an override set outside git, or a var simply
+  unset after the fact, none of which the file-reading CI gate can see. The two lists are
+  hand-kept in sync rather than sharing code (the boot check must not scan the filesystem on
+  every start), so `tests/arch/volume-persistence.spec.ts` also asserts they match. All five
+  missing paths are now pinned in `fly.toml`.
+- **SIDE QUESTS:** an empty guest list is indistinguishable from an unreadable one at the boundary
+  `entries()` guards — `existsSync` returns `[]` with no report while a parse failure logs loudly. A
+  store that has *never* existed and one that *vanished* deserve different volume (→ docs/IDEAS.md).
+  Separately: `SKYNET_AUDIT_DIR` and `SKYNET_HALT_FILE` are read on the autonomy path with no default
+  and are set nowhere, so the decision audit and the kill-file are inert in production — a safety
+  question, not a persistence one, and deliberately out of this diff's scope (→ docs/IDEAS.md).
+
 ### A filter compared `undefined` to a string, and the sweep could never close anything
 
 - **SHA:** 0ec180c   **DATE:** 2026-08-22   **STATUS:** closed

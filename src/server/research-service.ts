@@ -20,6 +20,7 @@ import { join } from "node:path";
 import { marked } from "marked";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { allEvents, type MarketEvent } from "../domain/market-events.js";
+import { escapeHtml } from "../ui/escape-html.js";
 
 // GFM on, but strikethrough OFF: research prose uses `~` for "approximately" everywhere (never
 // strikethrough), and GFM's single-tilde pairing silently strikes the span between two of them
@@ -117,14 +118,186 @@ export interface RenderedDoc extends ResearchDoc {
  * block is authored content, not a generated summary, so this only relocates, never rewrites.
  */
 function extractGlance(md: string): { glanceMd: string | null; bodyMd: string } {
-  const marker = "## At a glance";
-  const at = md.indexOf(marker);
-  if (at === -1) return { glanceMd: null, bodyMd: md };
-  const rest = md.slice(at + marker.length);
-  const nextRel = rest.search(/^##\s/m);
-  const glanceMd = (nextRel === -1 ? rest : rest.slice(0, nextRel)).trim();
-  const after = nextRel === -1 ? "" : rest.slice(nextRel);
-  return { glanceMd: glanceMd || null, bodyMd: `${md.slice(0, at)}${after}`.trim() };
+  for (const marker of DECISION_HEADINGS) {
+    const at = md.indexOf(marker);
+    if (at === -1) continue;
+    // The heading may carry a trailing clause ("## The call — what to do, by name"), so cut at the
+    // end of the heading LINE rather than at the end of the marker.
+    const lineEnd = md.indexOf("\n", at);
+    const rest = lineEnd === -1 ? "" : md.slice(lineEnd + 1);
+    const nextRel = rest.search(/^##\s/m);
+    const glanceMd = (nextRel === -1 ? rest : rest.slice(0, nextRel)).trim();
+    if (!glanceMd) continue;
+    const after = nextRel === -1 ? "" : rest.slice(nextRel);
+    return { glanceMd, bodyMd: `${md.slice(0, at)}${after}`.trim() };
+  }
+  return { glanceMd: null, bodyMd: md };
+}
+
+/**
+ * Sections that stay EXPANDED. Everything else in a research document folds.
+ *
+ * The rule is Eric's (2026-08-25): a ledger should open on what it concluded, not on how it was
+ * worked out. The decision header is already promoted above the article, and the stance is the
+ * live position — those are the two things a reader is here for. `Initial research` (8,000–10,000
+ * chars of method), the append-only `Assessment ledger` (single table cells running past 2,000
+ * chars), and the closed-out `Outcome` are all receipts: present, one click away, never the wall
+ * you land on.
+ *
+ * This costs the machine audience NOTHING — the docs/ISSUES.md synthesis, applied here: a fold
+ * collapses for humans while staying fully present in the raw markdown the next assessment session
+ * reads. There is no trade-off to manage.
+ */
+const OPEN_SECTIONS = ["stance & kill switches", "the picture", "the headline"];
+
+/** Rough word count — the honest size label on a fold, so nothing is hidden silently. */
+function wordCount(md: string): number {
+  return md.split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * Split a document body into its `## ` sections, fence-aware so a heading-shaped line inside a
+ * code block is never mistaken for a real heading. Returns the preamble (anything before the first
+ * heading) plus one entry per section.
+ */
+function splitSections(md: string): {
+  preamble: string;
+  sections: { heading: string; body: string }[];
+} {
+  const lines = md.split("\n");
+  const sections: { heading: string; body: string }[] = [];
+  const preamble: string[] = [];
+  let current: { heading: string; body: string[] } | null = null;
+  let fenced = false;
+  for (const line of lines) {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    const heading = !fenced && /^##\s+(.+)$/.exec(line);
+    if (heading) {
+      if (current) sections.push({ heading: current.heading, body: current.body.join("\n") });
+      current = { heading: (heading[1] ?? "").trim(), body: [] };
+    } else if (current) {
+      current.body.push(line);
+    } else {
+      preamble.push(line);
+    }
+  }
+  if (current) sections.push({ heading: current.heading, body: current.body.join("\n") });
+  return { preamble: preamble.join("\n"), sections };
+}
+
+/**
+ * Fold a document's sections for reading: render each one, leaving OPEN_SECTIONS expanded and
+ * wrapping the rest in `<details>` whose summary names the section AND its size.
+ *
+ * RELOCATES, NEVER REWRITES — the same honesty doctrine extractGlance follows. Not one word of a
+ * document changes; only its default disclosure does. Safe to parse per-section because no
+ * document in the corpus uses reference-style link definitions, the one hazard of splitting before
+ * marked.parse.
+ */
+function renderFolded(md: string): string {
+  const { preamble, sections } = splitSections(md);
+  const head = preamble.trim() ? (marked.parse(preamble) as string) : "";
+  const body = sections
+    .map(({ heading, body }) => {
+      const inner = marked.parse(`## ${heading}\n${body}`) as string;
+      if (OPEN_SECTIONS.includes(heading.toLowerCase())) return inner;
+      const words = wordCount(body);
+      const size =
+        words > 0 ? ` <span class="rs-foldsize">~${words.toLocaleString()} words</span>` : "";
+      return `<details class="rs-fold">
+        <summary><span class="rs-foldname">${escapeHtml(heading)}</span>${size}</summary>
+        ${marked.parse(body) as string}
+      </details>`;
+    })
+    .join("\n");
+  return `${head}${body}`;
+}
+
+/** The verbatim call a ledger's decision header reached for the current moment. */
+export interface EventCall {
+  /** The `Call` cell of the nearest horizon row, exactly as authored. */
+  readonly call: string;
+  /** That row's horizon label ("Today", "Today (D-13)", "This week"), for the row's tooltip. */
+  readonly horizon: string;
+  /** The `Confidence` cell, when the header carries that column. */
+  readonly confidence?: string;
+}
+
+/**
+ * The decision-header headings we recognise, in priority order. Event ledgers author
+ * `## At a glance` (docs/research/events/TEMPLATE.md); the multi-name studies author
+ * `## The call — what to do, by name`, so the match is by PREFIX, not equality.
+ */
+const DECISION_HEADINGS = ["## At a glance", "## The call"];
+
+/** The decision-header section of a doc, or null — the block the shelf and the agenda both read. */
+function decisionHeaderOf(md: string): string | null {
+  for (const heading of DECISION_HEADINGS) {
+    const at = md.indexOf(heading);
+    if (at === -1) continue;
+    const rest = md.slice(at + heading.length);
+    const nextRel = rest.search(/^##\s/m);
+    const body = (nextRel === -1 ? rest : rest.slice(0, nextRel)).trim();
+    if (body) return body;
+  }
+  return null;
+}
+
+/** Split one GFM table row into trimmed cells, dropping the leading/trailing pipe fences. */
+const cellsOf = (line: string): string[] =>
+  line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((c) => c.trim());
+
+/**
+ * The `Today` row of a decision header's horizon table, read VERBATIM.
+ *
+ * Columns are located BY HEADER NAME, never by index: the corpus is mid-migration from the old
+ * three-column `| Horizon | Call | Why |` shape to the five-column shape that also carries
+ * confidence and a dated falsifier, so both must parse with the same code. Confidence is optional
+ * for exactly that reason.
+ *
+ * Honesty: this EXTRACTS, it never summarises. Anything unparseable returns null and the row falls
+ * back to its plain research link — a missing call is honest, an invented one is not.
+ */
+export function todayCallOf(md: string): EventCall | null {
+  const header = decisionHeaderOf(md);
+  if (!header) return null;
+  const rows = header.split("\n").filter((l) => l.trim().startsWith("|"));
+  if (rows.length < 3) return null;
+  const cols = cellsOf(rows[0] ?? "").map((c) => c.toLowerCase());
+  const callAt = cols.includes("call") ? cols.indexOf("call") : cols.indexOf("the call");
+  const confAt = cols.indexOf("confidence");
+  if (callAt === -1) return null;
+  // Row 1 is the |---|---| separator. Prefer an explicit Today row — its label often carries a
+  // parenthetical ("Today (D-13)", "Today (8/19)"), so match the prefix — and otherwise fall back
+  // to the first data row, which is the nearest horizon by the table's own ordering.
+  const data = rows.slice(2);
+  const row = data.find((r) => /^\|\s*\**\s*today\b/i.test(r)) ?? data[0];
+  if (!row) return null;
+  const cells = cellsOf(row);
+  const plain = (i: number): string => (cells[i] ?? "").replace(/\*\*/g, "").trim();
+  const call = plain(callAt);
+  if (!call) return null;
+  const horizon = plain(0);
+  const confidence = confAt === -1 ? undefined : plain(confAt);
+  return confidence ? { call, horizon, confidence } : { call, horizon };
+}
+
+/**
+ * Event id → the call its ledger reached, for every ledger that states one. Built the same way
+ * researchedEventIds builds the link set, so the agenda gets both from one directory read.
+ */
+export function eventCalls(root: string = RESEARCH_DIR()): ReadonlyMap<string, EventCall> {
+  const calls = new Map<string, EventCall>();
+  for (const doc of listResearch(root).ledgers) {
+    const found = todayCallOf(readFileSync(join(root, `${doc.slug}.md`), "utf8"));
+    if (found) calls.set(doc.slug.slice("events/".length), found);
+  }
+  return calls;
 }
 
 /**
@@ -139,7 +312,7 @@ export function findResearchDoc(slug: string, root: string = RESEARCH_DIR()): Re
   const { glanceMd, bodyMd } = extractGlance(readFileSync(file, "utf8"));
   return {
     ...doc,
-    html: rewriteDocLinks(marked.parse(bodyMd) as string),
+    html: rewriteDocLinks(renderFolded(bodyMd)),
     glanceHtml: glanceMd ? rewriteDocLinks(marked.parse(glanceMd) as string) : null,
   };
 }
