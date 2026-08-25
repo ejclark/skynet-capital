@@ -192,6 +192,57 @@ describe("serveFeedbackRoute", () => {
     expect(out.body).toContain("#12");
   });
 
+  it("shows a status badge on the member's recent feedback when the status fetch is wired", async () => {
+    const { res, out } = capture();
+
+    await serveFeedbackRoute(
+      request(),
+      res,
+      "/feedback",
+      session("filer@example.com"),
+      {
+        readFeedback: () =>
+          Promise.resolve([
+            {
+              uuid: "u-1",
+              opaqueMemberId: "m",
+              issueNumber: 12,
+              url: "https://github.com/x/y/issues/12",
+              kind: "idea" as const,
+              title: "A past idea",
+              filedAt: "2026-08-20T00:00:00.000Z",
+            },
+          ]),
+        fetchFeedbackStatus: (numbers) =>
+          Promise.resolve(new Map(numbers.map((n) => [n, "needs-eric" as const]))),
+      },
+      NAV,
+    );
+
+    expect(out.body).toContain("Needs Eric's call");
+  });
+
+  it("never calls the status fetch when there's nothing to check", async () => {
+    let called = false;
+    const { res } = capture();
+
+    await serveFeedbackRoute(
+      request(),
+      res,
+      "/feedback",
+      session("filer@example.com"),
+      {
+        fetchFeedbackStatus: () => {
+          called = true;
+          return Promise.resolve(new Map());
+        },
+      },
+      NAV,
+    );
+
+    expect(called).toBe(false);
+  });
+
   it("tells the member nothing was sent when no filer is wired", async () => {
     const { res, out } = capture();
 

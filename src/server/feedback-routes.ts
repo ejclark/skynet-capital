@@ -26,6 +26,7 @@ import { opaqueMemberId } from "./feedback-issue.js";
 import { type FeedbackLogEntry, feedbackLogEntry } from "./feedback-log.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
 import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
+import type { FetchFeedbackStatuses } from "./feedback-status.js";
 import { readBody, shellDocument } from "./page-shell.js";
 
 /** What the feedback surface needs from the server config — never the whole config object. */
@@ -37,6 +38,10 @@ export interface FeedbackRouteDeps {
   readonly recordFeedback?: (entry: FeedbackLogEntry) => Promise<void>;
   /** Reads a member's own filing history, for the "Your recent feedback" list under the form. */
   readonly readFeedback?: (opaqueMemberId: string) => Promise<readonly FeedbackLogEntry[]>;
+  /** Live status (open/needs-info/needs-eric/next-slice/shipped) for that same list — omitted
+   *  (undefined) means unwired, same as the other feedback deps; the list still renders, just
+   *  without status badges. */
+  readonly fetchFeedbackStatus?: FetchFeedbackStatuses;
 }
 
 /** The feedback paths, dispatched together so the main router stays one branch. */
@@ -57,17 +62,7 @@ export async function serveFeedbackRoute(
     await handleFeedbackPreview(req, res, method);
     return;
   }
-  await handleFeedback(
-    req,
-    res,
-    method,
-    session,
-    nav,
-    config.submitFeedback,
-    Boolean(config.coachFeedback),
-    config.recordFeedback,
-    config.readFeedback,
-  );
+  await handleFeedback(req, res, method, session, nav, config);
 }
 
 // Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
@@ -119,6 +114,7 @@ function feedbackInputFromForm(form: URLSearchParams, session: Session | undefin
     details: form.get("details") ?? "",
     ...(form.get("area") ? { area: form.get("area") as string } : {}),
     ...(session?.email ? { submitterEmail: session.email } : {}),
+    ...(session?.name ? { submitterName: session.name } : {}),
     ...(specFromForm(form.get("spec")) ?? {}),
     ...(imagesFromForm(form.get("images")) ?? {}),
   };
@@ -130,19 +126,27 @@ async function handleFeedback(
   method: string,
   session: Session | undefined,
   nav: NavContext,
-  submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>,
-  coachEnabled = false,
-  recordFeedback?: (entry: FeedbackLogEntry) => Promise<void>,
-  readFeedback?: (opaqueMemberId: string) => Promise<readonly FeedbackLogEntry[]>,
+  config: FeedbackRouteDeps,
 ): Promise<void> {
+  const { submitFeedback, recordFeedback, readFeedback, fetchFeedbackStatus } = config;
   if (method === "GET") {
     const recent =
       readFeedback && session?.email ? await readFeedback(opaqueMemberId(session.email)) : [];
+    const statuses =
+      fetchFeedbackStatus && recent.length
+        ? await fetchFeedbackStatus(recent.map((e) => e.issueNumber))
+        : undefined;
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(
       shellDocument(
         "Feedback — Skynet Capital",
-        renderFeedbackFormBody({ nav, enabled: Boolean(submitFeedback), coachEnabled, recent }),
+        renderFeedbackFormBody({
+          nav,
+          enabled: Boolean(submitFeedback),
+          coachEnabled: Boolean(config.coachFeedback),
+          recent,
+          ...(statuses ? { statuses } : {}),
+        }),
       ),
     );
     return;

@@ -3,6 +3,7 @@ import { COACH_SCRIPT } from "../server/feedback-coach-script.js";
 import type { FeedbackLogEntry } from "../server/feedback-log.js";
 import { PREVIEW_SCRIPT } from "../server/feedback-preview-script.js";
 import type { FeedbackResult } from "../server/feedback-service.js";
+import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
 import { IMAGE_SCRIPT } from "./feedback-image-script.js";
@@ -42,13 +43,24 @@ export interface FeedbackFormViewOptions {
   /** The signed-in member's own past filings (#429 slice), newest first. Omit/empty renders nothing
    *  — a member who hasn't filed anything yet sees just the form, not an empty list. */
   readonly recent?: readonly FeedbackLogEntry[];
+  /** Live status per filed issue number, when the status fetch is wired. A row with no entry here
+   *  (unwired, or GitHub unreachable) renders with no badge — never a stale or guessed one. */
+  readonly statuses?: ReadonlyMap<number, FeedbackStatus>;
 }
 
 function formField(inner: string): string {
   return `<div class="fdbk-field">${inner}</div>`;
 }
 
-function renderRecentFeedback(recent: readonly FeedbackLogEntry[]): string {
+function statusBadge(status: FeedbackStatus | undefined): string {
+  if (!status) return "";
+  return `<span class="fdbk-recent-status fdbk-status-${status}">${escapeHtml(FEEDBACK_STATUS_LABEL[status])}</span>`;
+}
+
+function renderRecentFeedback(
+  recent: readonly FeedbackLogEntry[],
+  statuses: ReadonlyMap<number, FeedbackStatus> | undefined,
+): string {
   if (recent.length === 0) return "";
   const rows = [...recent]
     .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
@@ -56,6 +68,7 @@ function renderRecentFeedback(recent: readonly FeedbackLogEntry[]): string {
       (e) => `<li class="fdbk-recent-row">
       <span class="fdbk-recent-kind" title="${escapeHtml(e.kind)}">${FEEDBACK_KIND_ICON[e.kind]}</span>
       <a href="${escapeHtml(e.url)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>
+      ${statusBadge(statuses?.get(e.issueNumber))}
       <span class="fdbk-recent-meta">#${e.issueNumber} · ${escapeHtml(new Date(e.filedAt).toLocaleDateString())}</span>
     </li>`,
     )
@@ -128,7 +141,7 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
         <input type="hidden" name="spec" id="fdbk-spec">
         <button type="submit" class="fdbk-submit">Send it</button>
       </form>
-      ${renderRecentFeedback(options.recent ?? [])}
+      ${renderRecentFeedback(options.recent ?? [], options.statuses)}
     </div>
     ${options.coachEnabled ? `<script>${COACH_SCRIPT}</script>` : ""}
     <script>${PREVIEW_SCRIPT}</script>
@@ -225,6 +238,12 @@ const FDBK_STYLE = `<style>
   .fdbk-recent-list{ display:flex; flex-direction:column; gap:6px; margin:0; padding:0; list-style:none; }
   .fdbk-recent-row{ display:flex; align-items:baseline; gap:9px; padding:9px 12px; font-size:13.5px; background:var(--surface); border:1px solid var(--border); border-radius:9px; }
   .fdbk-recent-row a{ color:var(--text); font-weight:600; }
+  .fdbk-recent-status{ padding:2px 8px; font-size:11px; font-weight:600; letter-spacing:.02em; border-radius:999px; white-space:nowrap; }
+  .fdbk-status-open{ color:var(--muted); background:var(--surface-2); }
+  .fdbk-status-needs-info{ color:var(--accent); background:color-mix(in srgb, var(--accent) 16%, transparent); }
+  .fdbk-status-needs-eric{ color:var(--neg); background:color-mix(in srgb, var(--neg) 16%, transparent); }
+  .fdbk-status-next-slice{ color:var(--pos); background:color-mix(in srgb, var(--pos) 16%, transparent); }
+  .fdbk-status-shipped{ color:var(--pos); background:color-mix(in srgb, var(--pos) 16%, transparent); }
   .fdbk-recent-meta{ margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap; }
   .fdbk-res{ max-width:var(--col-narrow); }
   .fdbk-res .res-icon{ font-size:34px; margin-bottom:6px; }

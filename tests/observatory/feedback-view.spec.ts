@@ -154,6 +154,68 @@ describe("feedback form — your recent feedback (#429)", () => {
     expect(html).toContain('href="https://github.com/x/y/issues/9"');
     expect(html).toContain("#9");
   });
+
+  it("shows a status badge next to a filing when its status is known, and none when it isn't", () => {
+    const recent = [
+      {
+        uuid: "u-1",
+        opaqueMemberId: "m",
+        issueNumber: 7,
+        url: "https://github.com/x/y/issues/7",
+        kind: "bug" as const,
+        title: "Tracked bug",
+        filedAt: "2026-08-19T00:00:00.000Z",
+      },
+      {
+        uuid: "u-2",
+        opaqueMemberId: "m",
+        issueNumber: 9,
+        url: "https://github.com/x/y/issues/9",
+        kind: "idea" as const,
+        title: "Unknown-status idea",
+        filedAt: "2026-08-22T00:00:00.000Z",
+      },
+    ];
+
+    const html = renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      recent,
+      statuses: new Map([[7, "shipped"]]),
+    });
+
+    expect(html).toContain('<span class="fdbk-recent-status fdbk-status-shipped">Shipped</span>');
+    // The badge sits in the TRACKED row, not the unknown-status one — and only one renders, so the
+    // row with no known status gets none, not a default one.
+    const trackedRow = html.slice(
+      html.indexOf("Tracked bug"),
+      html.indexOf("</li>", html.indexOf("Tracked bug")),
+    );
+    expect(trackedRow).toContain('class="fdbk-recent-status');
+    expect(html.match(/<span class="fdbk-recent-status/g)).toHaveLength(1);
+  });
+
+  it("renders no status badges at all when the status fetch isn't wired", () => {
+    const html = renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      recent: [
+        {
+          uuid: "u-1",
+          opaqueMemberId: "m",
+          issueNumber: 7,
+          url: "https://github.com/x/y/issues/7",
+          kind: "bug" as const,
+          title: "A bug",
+          filedAt: "2026-08-19T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(html).not.toContain('class="fdbk-recent-status');
+  });
 });
 
 describe("feedback form — the area select", () => {

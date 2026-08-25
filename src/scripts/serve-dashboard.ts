@@ -41,6 +41,7 @@ import { createDashboardServer } from "../server/dashboard-server.js";
 import { resolveFeedbackCoach } from "../server/feedback-coach.js";
 import { createFeedbackLogStore } from "../server/feedback-log.js";
 import { resolveFeedback } from "../server/feedback-service.js";
+import { resolveFeedbackStatus } from "../server/feedback-status.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
@@ -211,6 +212,8 @@ async function main(): Promise<void> {
   }
   // What a member filed, correlated to the issue it became (#429).
   const feedbackLog = createFeedbackLogStore(process.env);
+  // Live status for those filings — GitHub itself, never a local store (#429 follow-up).
+  const feedbackStatus = resolveFeedbackStatus(process.env);
 
   createDashboardServer({
     hub,
@@ -261,6 +264,7 @@ async function main(): Promise<void> {
     ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
     recordFeedback: (entry) => feedbackLog.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
+    ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
