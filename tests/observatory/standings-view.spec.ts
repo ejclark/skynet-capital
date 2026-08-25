@@ -592,3 +592,233 @@ describe("renderStandingsContent — the SSE-swappable inner content", () => {
     expect(html).toContain('class="msel active" href="/?by=realized"');
   });
 });
+
+// Compare, folded into Standings as ?a=&b= (2026-08-25) — was the standalone /compare route.
+// The resolution logic is preserved exactly: an id must exist in data.participants, match by
+// .id, carry no .error; missing/unknown/errored falls through — here, to the plain field with
+// every row still offering its arm-compare pill, since there's no separate "picker" page anymore.
+
+/** Build a comparison-ready snapshot; overrides let each spec state only what it cares about. */
+function aSnapshot(overrides: Partial<ParticipantSnapshot> & Pick<ParticipantSnapshot, "id">) {
+  const snapshot: ParticipantSnapshot = {
+    id: overrides.id,
+    displayName: overrides.displayName ?? overrides.id,
+    kind: overrides.kind ?? "human",
+    cash: overrides.cash ?? 1_000,
+    equity: overrides.equity ?? 10_000,
+    positions: overrides.positions ?? [],
+    ...(overrides.personaId !== undefined ? { personaId: overrides.personaId } : {}),
+    ...(overrides.realizedPl !== undefined ? { realizedPl: overrides.realizedPl } : {}),
+    ...(overrides.error !== undefined ? { error: overrides.error } : {}),
+  };
+  return snapshot;
+}
+
+describe("head-to-head — both sides resolve", () => {
+  const a = aSnapshot({ id: "human-eric", displayName: "Eric", equity: 12_000, kind: "human" });
+  const b = aSnapshot({ id: "news-fader", displayName: "News Fader", equity: 9_000, kind: "bot" });
+
+  it("renders each participant's name, chip, and equity in their own column", () => {
+    const html = renderStandingsBody(data([a, b]), { aId: a.id, bId: b.id });
+
+    expect(html).toContain("Eric");
+    expect(html).toContain("News Fader");
+    expect(html).toContain("$12,000");
+    expect(html).toContain("$9,000");
+    expect(html).toContain("HUMAN");
+    expect(html).toContain("BOT");
+    expect(html).toContain('Eric <span class="cmp-vs">vs</span> News Fader');
+  });
+
+  it("marks the leading side with a forward marker when A is ahead on equity", () => {
+    const ahead = aSnapshot({ id: "a", displayName: "Ahead", equity: 20_000 });
+    const behind = aSnapshot({ id: "b", displayName: "Behind", equity: 10_000 });
+    const html = renderStandingsBody(data([ahead, behind]), { aId: ahead.id, bId: behind.id });
+
+    expect(html).toMatch(/◀ \+?\$10,000/);
+  });
+
+  it("marks the leading side with a backward marker when B is ahead on equity", () => {
+    const behind = aSnapshot({ id: "a", displayName: "Behind", equity: 10_000 });
+    const ahead = aSnapshot({ id: "b", displayName: "Ahead", equity: 20_000 });
+    const html = renderStandingsBody(data([behind, ahead]), { aId: behind.id, bId: ahead.id });
+
+    expect(html).toMatch(/▶ \+?\$10,000/);
+  });
+
+  it("shows a flat delta with no directional marker when both sides are tied", () => {
+    const tiedA = aSnapshot({ id: "a", displayName: "Tied A", equity: 10_000 });
+    const tiedB = aSnapshot({ id: "b", displayName: "Tied B", equity: 10_000 });
+    const html = renderStandingsBody(data([tiedA, tiedB]), { aId: tiedA.id, bId: tiedB.id });
+
+    expect(html).toContain(`<span class="cmp-dval num flat">— $0</span>`);
+  });
+
+  it("renders identical participants without error, with a flat delta on every metric", () => {
+    const solo = aSnapshot({
+      id: "same",
+      displayName: "Solo",
+      equity: 5_000,
+      positions: [{ symbol: "AAPL", marketValue: 500, avgPrice: 100, quantity: 5 }],
+    });
+    // Same id resolves to the same snapshot on both sides — the comparison still renders cleanly.
+    const html = renderStandingsBody(data([solo]), { aId: solo.id, bId: solo.id });
+
+    expect(html).toContain('Solo <span class="cmp-vs">vs</span> Solo');
+    expect(html.match(/flat/g)?.length).toBeGreaterThan(0);
+  });
+
+  it("shows shared holdings tagged SHARED with both sides' values", () => {
+    const heavy = aSnapshot({
+      id: "a",
+      displayName: "A",
+      positions: [{ symbol: "AAPL", marketValue: 2_000, avgPrice: 90, quantity: 10 }],
+    });
+    const light = aSnapshot({
+      id: "b",
+      displayName: "B",
+      positions: [{ symbol: "AAPL", marketValue: 1_000, avgPrice: 90, quantity: 10 }],
+    });
+    const html = renderStandingsBody(data([heavy, light]), { aId: heavy.id, bId: light.id });
+
+    expect(html).toContain("SHARED");
+    expect(html).toContain("cmp-shared");
+    // The heavier side (A, at $2,000) is marked distinctly from the lighter side.
+    expect(html).toContain("aheavy");
+  });
+
+  it("shows a symbol only one side holds with a placeholder dash on the other side", () => {
+    const holder = aSnapshot({
+      id: "a",
+      displayName: "A",
+      positions: [{ symbol: "TSLA", marketValue: 3_000, avgPrice: 90, quantity: 10 }],
+    });
+    const flat = aSnapshot({ id: "b", displayName: "B", positions: [] });
+    const html = renderStandingsBody(data([holder, flat]), { aId: holder.id, bId: flat.id });
+
+    expect(html).toContain("TSLA");
+    expect(html).not.toContain("SHARED");
+    expect(html).toMatch(/<td class="num cmp-bval">·<\/td>/);
+  });
+
+  it("shows an empty-state message when neither side holds any position", () => {
+    const emptyA = aSnapshot({ id: "a", displayName: "A", positions: [] });
+    const emptyB = aSnapshot({ id: "b", displayName: "B", positions: [] });
+    const html = renderStandingsBody(data([emptyA, emptyB]), { aId: emptyA.id, bId: emptyB.id });
+
+    expect(html).toContain("Neither holds an open position yet.");
+  });
+
+  it("escapes HTML in display names to prevent markup injection", () => {
+    const evil = aSnapshot({ id: "a", displayName: "<script>bad</script>" });
+    const plain = aSnapshot({ id: "b", displayName: "B" });
+    const html = renderStandingsBody(data([evil, plain]), { aId: evil.id, bId: plain.id });
+
+    expect(html).not.toContain("<script>bad</script>");
+    expect(html).toContain("&lt;script&gt;bad&lt;/script&gt;");
+  });
+
+  it("includes the history-layer seam note for future per-play insights", () => {
+    const p1 = aSnapshot({ id: "a" });
+    const p2 = aSnapshot({ id: "b" });
+    const html = renderStandingsBody(data([p1, p2]), { aId: p1.id, bId: p2.id });
+
+    expect(html).toContain("Which plays worked");
+  });
+
+  it("renders no nation skyline — density, not decoration (design brief, 2026-08-25)", () => {
+    const p1 = aSnapshot({ id: "a" });
+    const p2 = aSnapshot({ id: "b" });
+    const html = renderStandingsBody(data([p1, p2]), { aId: p1.id, bId: p2.id });
+
+    expect(html).not.toContain("empire-cities");
+    expect(html).not.toContain("empire-city-name");
+  });
+
+  it("offers a × clear link back to plain Standings, carrying the selected metric", () => {
+    const p1 = aSnapshot({ id: "a" });
+    const p2 = aSnapshot({ id: "b" });
+    const html = renderStandingsBody(data([p1, p2]), {
+      aId: p1.id,
+      bId: p2.id,
+      metric: "return",
+    });
+
+    expect(html).toContain('<a class="cmp-cancel" href="/?by=return">× clear</a>');
+  });
+});
+
+// These assert absence, so they use renderStandingsContent — the shell's <style> block always
+// names .cmp-hint/.cmp-grid as CSS selectors, which would false-positive a body-level check.
+describe("head-to-head — an incomplete or invalid pair falls through", () => {
+  it("renders the plain field, no hint and no head-to-head, when neither id is given", () => {
+    const alice = aSnapshot({ id: "a", displayName: "Alice" });
+    const bob = aSnapshot({ id: "b", displayName: "Bob" });
+    const html = renderStandingsContent(data([alice, bob]));
+
+    expect(html).not.toContain("cmp-hint");
+    expect(html).not.toContain("cmp-grid");
+    // Every row still offers an unarmed compare pill.
+    expect(html.match(/class="cmp-toggle"/g)?.length).toBe(2);
+  });
+
+  it("shows the armed hint banner naming the anchor when only aId resolves", () => {
+    const alice = aSnapshot({ id: "a", displayName: "Alice" });
+    const bob = aSnapshot({ id: "b", displayName: "Bob" });
+    const html = renderStandingsContent(data([alice, bob]), { aId: alice.id });
+
+    expect(html).toContain("cmp-hint");
+    expect(html).toContain("Comparing <strong>Alice</strong>");
+    expect(html).toContain("pick a second empire on any row below");
+    expect(html).not.toContain("cmp-grid");
+  });
+
+  it("falls through to the plain field when aId resolves to a participant with a read error", () => {
+    const errored = aSnapshot({ id: "a", displayName: "Alice", error: "unreachable" });
+    const bob = aSnapshot({ id: "b", displayName: "Bob" });
+    const html = renderStandingsContent(data([errored, bob]), { aId: errored.id, bId: bob.id });
+
+    expect(html).not.toContain("cmp-hint");
+    expect(html).not.toContain("cmp-grid");
+  });
+
+  it("shows the armed hint (not the head-to-head) when bId does not resolve to any participant", () => {
+    const alice = aSnapshot({ id: "a", displayName: "Alice" });
+    const html = renderStandingsContent(data([alice]), { aId: alice.id, bId: "missing" });
+
+    expect(html).toContain("Comparing <strong>Alice</strong>");
+    expect(html).not.toContain("cmp-grid");
+  });
+});
+
+describe("the field's compare pill — arms, completes, and cancels with no client JS", () => {
+  const alice = aSnapshot({ id: "a", displayName: "Alice" });
+  const bob = aSnapshot({ id: "b", displayName: "Bob" });
+  const carol = aSnapshot({ id: "c", displayName: "Carol" });
+
+  it("arms this row when nothing is armed yet", () => {
+    const html = renderStandingsBody(data([alice, bob]));
+    expect(html).toContain('href="/?by=equity&a=a"');
+  });
+
+  it("offers a cancel on the armed row itself", () => {
+    const html = renderStandingsBody(data([alice, bob]), { aId: alice.id });
+    expect(html).toMatch(/cmp-toggle cmp-armed" href="\/\?by=equity"[^>]*>×</);
+  });
+
+  it("completes the pair on every other row once one is armed", () => {
+    const html = renderStandingsBody(data([alice, bob, carol]), { aId: alice.id });
+    expect(html).toContain('href="/?by=equity&a=a&b=b"');
+    expect(html).toContain('href="/?by=equity&a=a&b=c"');
+  });
+
+  it("offers a cancel on both rows once the pair is complete", () => {
+    const html = renderStandingsBody(data([alice, bob]), { aId: alice.id, bId: bob.id });
+    expect(html.match(/cmp-toggle cmp-armed"/g)?.length).toBe(2);
+  });
+
+  it("preserves the ranked metric through every pill href", () => {
+    const html = renderStandingsBody(data([alice, bob]), { metric: "return" });
+    expect(html).toContain('href="/?by=return&a=a"');
+  });
+});

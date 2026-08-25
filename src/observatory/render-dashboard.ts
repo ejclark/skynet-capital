@@ -1,8 +1,6 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { COURSES, type Course, type Milestone, RANKS, totalPoints } from "../domain/curriculum.js";
 import { escapeHtml } from "../ui/escape-html.js";
-import { renderCompareBody as renderCompareBodyImpl } from "./compare-view.js";
-import type { DashboardData } from "./dashboard-data.js";
 import {
   type DashboardViewOptions,
   type NavContext,
@@ -31,8 +29,8 @@ import {
 } from "./render-atoms.js";
 
 /**
- * The INDIVIDUAL desk, the Academy, and Compare — what's left of this module after Board +
- * Leaderboard + Bots vs Humans moved to `standings-view.ts` (the Aug 2026 IA consolidation).
+ * The INDIVIDUAL desk and the Academy — what's left of this module after Board + Leaderboard +
+ * Bots vs Humans + Compare all moved to `standings-view.ts` (the Aug 2026 IA consolidation).
  * Pure: same data in, same HTML out — so it's unit-testable and safe to re-run on a schedule.
  */
 
@@ -393,13 +391,3 @@ const ACADEMY_SCRIPT = `<script>
   sync();
 })();
 </script>`;
-
-/** Thin delegate to the COMPARE view module — kept here so the public API is unchanged. */
-function delegateCompareBody(
-  data: DashboardData,
-  options: DashboardViewOptions & { aId?: string; bId?: string } = {},
-): string {
-  return renderCompareBodyImpl(data, options);
-}
-
-export { delegateCompareBody as renderCompareBody };

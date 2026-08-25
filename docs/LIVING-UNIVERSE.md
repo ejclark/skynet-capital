@@ -186,7 +186,7 @@ over data each view already computes — a per-view rendering spec, not new plum
 | View | Scale | You see | Units that apply |
 | --- | --- | --- | --- |
 | **Individual** (`/u/:id`) | a **city** — your empire | buildings = positions, districts = sectors, construction = pending bets, health = P/L | tower height, district density, lit windows, site footprint |
-| **Comparison** (`/compare?a&b`) | **two cities, side by side** | mirrored twin structures for shared holdings; contrasting silhouettes for divergence | overlap vs. divergence, relative size, shared vs. unique districts |
+| **Comparison** (`/?a=&b=`, inline on Standings) | **two cities, side by side** | mirrored twin structures for shared holdings; contrasting silhouettes for divergence | overlap vs. divergence, relative size, shared vs. unique districts |
 | **Leaderboard** | a **region / map of cities** | many empires ranked — prominence and size = standing; a skyline of skylines | rank, relative scale, growth trajectory |
 | **Bots vs Humans** | **country vs country** | each cohort aggregated into a nation; individual buildings fall away, territory and output emerge | landmass & GDP (aggregate equity), population & density (participation, breadth), infrastructure maturity (share in profit), specialization (sector concentration), growth rate (construction share), dispersion (inequality) |
 

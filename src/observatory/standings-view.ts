@@ -11,21 +11,33 @@ import { chip, formatCurrency, formatSigned, pct, plClass, profileHref } from ".
 
 /**
  * STANDINGS (`/`) — the whole race on one board, replacing the old Board + Leaderboard + Bots vs
- * Humans (folded 2026-08-25; Compare joins in the next slice). Three tiers, richest first:
+ * Humans + Compare (folded 2026-08-25). Four tiers, richest first:
  *   1. The MATCH — the two cohorts (bots vs humans) head to head, split by average equity so a
  *      larger cohort can't win on headcount alone.
  *   2. Cohort cards — the aggregate read for each side (avg equity, unrealized P/L, breadth,
  *      best performer, spread). No nation skyline here — that flourish stays on an individual's
  *      own desk; a comparison view wants density, not decoration (design brief, 2026-08-25).
- *   3. THE FIELD — every participant ranked by a selectable metric (`?by=`), a dense ladder
- *      rather than the old card grid. Per-participant detail (activity feed, positions) lives on
- *      that participant's own `/u/:id` desk, not duplicated here.
+ *   3. Head-to-head (`?a=&b=`) — an IN-PAGE section, not a separate view: tap a row's compare
+ *      pill to arm `?a=<id>` (a dashed hint banner offers a plain-language cancel), tap a second
+ *      row to complete the pair and render the head-to-head grid + holdings overlap. No nation
+ *      skyline here either — same "density, not decoration" call as the cohort cards.
+ *   4. THE FIELD — every participant ranked by a selectable metric (`?by=`), a dense ladder
+ *      rather than a card grid. Per-participant detail (activity feed, positions) lives on that
+ *      participant's own `/u/:id` desk, not duplicated here.
  *
  * `renderStandingsContent` is the piece the SSE stream (`/events`) swaps into `#root` on every hub
  * update — kept separate from the shell so live refresh never resets the drawer. Live pushes
- * thread the connecting request's own `?by=` back through (`dashboard-server.ts`'s `streamEvents`),
- * so a viewer who picked Return % doesn't get silently reset to Equity on the next push.
+ * thread the connecting request's own `?by=`/`?a=`/`?b=` back through (`dashboard-server.ts`'s
+ * `streamEvents`), so a viewer's selected metric or in-progress compare never gets silently reset.
  */
+
+export interface StandingsOptions extends DashboardViewOptions {
+  readonly metric?: LeaderMetric;
+  /** `?a=`/`?b=` — an id must exist in `data.participants`, match by `.id`, carry no `.error`;
+   *  missing/unknown/errored falls through exactly like the old standalone `/compare` did. */
+  readonly aId?: string;
+  readonly bId?: string;
+}
 
 /** Metrics the field can rank by — all snapshot-derived (no history needed). */
 export type LeaderMetric = "equity" | "pl" | "return" | "realized";
@@ -59,12 +71,45 @@ function formatMetric(value: number, metric: LeaderMetric): string {
   return formatCurrency(value);
 }
 
+/** Every Standings-internal link carries `?by=` explicitly, plus `a`/`b` when a compare is live —
+ *  so switching the ranked metric never drops an in-progress or completed comparison. */
+function standingsHref(metric: LeaderMetric, aId?: string, bId?: string): string {
+  const params = new URLSearchParams({ by: metric });
+  if (aId) params.set("a", aId);
+  if (bId) params.set("b", bId);
+  return `/?${params.toString()}`;
+}
+
 /** The right-aligned segmented metric picker — plain links, so it's shareable with no JS. */
-function metricPicker(metric: LeaderMetric): string {
+function metricPicker(
+  metric: LeaderMetric,
+  aId: string | undefined,
+  bId: string | undefined,
+): string {
   return LEADER_METRICS.map(
     (m) =>
-      `<a class="msel${m.key === metric ? " active" : ""}" href="/?by=${m.key}">${m.label}</a>`,
+      `<a class="msel${m.key === metric ? " active" : ""}" href="${standingsHref(m.key, aId, bId)}">${m.label}</a>`,
   ).join("");
+}
+
+/**
+ * One row's compare pill. Three shapes: nothing armed (or a pair already showing) → arm this row;
+ * armed on this exact row (or this row is part of the showing pair) → cancel; armed on some OTHER
+ * row → complete the pair with this one.
+ */
+function comparePill(
+  rowId: string,
+  metric: LeaderMetric,
+  aId: string | undefined,
+  bId: string | undefined,
+): string {
+  if (aId && (rowId === aId || rowId === bId)) {
+    return `<a class="cmp-toggle cmp-armed" href="${standingsHref(metric)}" title="Cancel compare" aria-label="Cancel compare">×</a>`;
+  }
+  if (aId && !bId) {
+    return `<a class="cmp-toggle" href="${standingsHref(metric, aId, rowId)}" title="Compare with ${escapeHtml(aId)}" aria-label="Compare with the armed pick">⇄</a>`;
+  }
+  return `<a class="cmp-toggle" href="${standingsHref(metric, rowId)}" title="Compare" aria-label="Compare this account">⇄</a>`;
 }
 
 /** THE FIELD — every live participant, ranked by the selected metric. */
@@ -72,6 +117,8 @@ function fieldLadder(
   data: DashboardData,
   metric: LeaderMetric,
   currentId: string | undefined,
+  aId: string | undefined,
+  bId: string | undefined,
 ): string {
   const live = data.participants.filter((p) => !p.error);
   const ranked = [...live].sort((a, b) => metricValue(b, metric) - metricValue(a, metric));
@@ -90,6 +137,7 @@ function fieldLadder(
         <a class="rank-name" href="${profileHref(p.id)}">${escapeHtml(p.displayName)} ${chip(p)}${you}</a>
         <span class="rank-bar"><i class="bar-${sign}" style="width:${width.toFixed(1)}%"></i></span>
         <span class="rank-val num ${sign}">${formatMetric(v, metric)}</span>
+        ${comparePill(p.id, metric, aId, bId)}
       </li>`;
     })
     .join("\n      ");
@@ -215,6 +263,98 @@ function cohortSection(data: DashboardData): string {
     </div>`;
 }
 
+/** The dashed "armed" hint — one side picked, waiting on the second row tap. */
+function compareHint(anchor: ParticipantSnapshot, metric: LeaderMetric): string {
+  return `<div class="cmp-hint">
+      <span>Comparing <strong>${escapeHtml(anchor.displayName)}</strong> — pick a second empire on any row below.</span>
+      <a class="cmp-cancel" href="${standingsHref(metric)}">× cancel</a>
+    </div>`;
+}
+
+function compareColumn(snapshot: ParticipantSnapshot): string {
+  const pl = participantUnrealized(snapshot);
+  const invested = participantInvested(snapshot);
+  return `<div class="cmp-col">
+      <div class="cmp-who"><a class="cmp-name" href="${profileHref(snapshot.id)}">${escapeHtml(
+        snapshot.displayName,
+      )}</a> ${chip(snapshot)}</div>
+      <div class="cmp-equity num">${formatCurrency(snapshot.equity)}</div>
+      <dl class="cmp-metrics">
+        <div><dt>Cash</dt><dd class="num">${formatCurrency(snapshot.cash)}</dd></div>
+        <div><dt>Invested</dt><dd class="num">${formatCurrency(invested)}</dd></div>
+        <div><dt>Unrealized</dt><dd class="num ${plClass(pl)}">${formatSigned(pl)}</dd></div>
+        <div><dt>Return</dt><dd class="num ${plClass(participantReturnPct(snapshot))}">${pct(
+          participantReturnPct(snapshot),
+        )}</dd></div>
+      </dl>
+    </div>`;
+}
+
+/** A signed delta row for the center column: which side leads on a metric, and by how much. */
+function deltaRow(label: string, aVal: number, bVal: number, fmt: (n: number) => string): string {
+  const d = aVal - bVal;
+  const lead = d === 0 ? "—" : d > 0 ? "◀" : "▶";
+  const cls = d === 0 ? "flat" : d > 0 ? "pos" : "neg";
+  return `<div class="cmp-delta">
+      <span class="cmp-dlabel">${label}</span>
+      <span class="cmp-dval num ${cls}">${lead} ${escapeHtml(fmt(Math.abs(d)))}</span>
+    </div>`;
+}
+
+/** Union of both sides' holdings — shared symbols first (heavier side marked), then the singles. */
+function holdingsCompare(a: ParticipantSnapshot, b: ParticipantSnapshot): string {
+  const byA = new Map(a.positions.map((p) => [p.symbol, p.marketValue]));
+  const byB = new Map(b.positions.map((p) => [p.symbol, p.marketValue]));
+  const symbols = [...new Set([...byA.keys(), ...byB.keys()])].sort(
+    (x, y) => (byA.get(y) ?? 0) + (byB.get(y) ?? 0) - ((byA.get(x) ?? 0) + (byB.get(x) ?? 0)),
+  );
+  if (symbols.length === 0) return `<p class="empty">Neither holds an open position yet.</p>`;
+  const rows = symbols
+    .map((s) => {
+      const av = byA.get(s);
+      const bv = byB.get(s);
+      const shared = av !== undefined && bv !== undefined;
+      const heavier = (av ?? 0) === (bv ?? 0) ? "" : (av ?? 0) > (bv ?? 0) ? "aheavy" : "bheavy";
+      return `<tr class="${shared ? "cmp-shared" : ""} ${heavier}">
+        <td class="num cmp-aval">${av !== undefined ? formatCurrency(av) : "·"}</td>
+        <td class="cmp-sym">${escapeHtml(s)}${shared ? ` <span class="cmp-tag">SHARED</span>` : ""}</td>
+        <td class="num cmp-bval">${bv !== undefined ? formatCurrency(bv) : "·"}</td>
+      </tr>`;
+    })
+    .join("");
+  return `<table class="cmp-holdings"><tbody>${rows}</tbody></table>`;
+}
+
+/** The completed head-to-head — both sides resolved. No nation skyline (design brief, 2026-08-25):
+ *  this is a comparison surface, not a showcase; the flourish stays on an individual's own desk. */
+function headToHead(a: ParticipantSnapshot, b: ParticipantSnapshot, metric: LeaderMetric): string {
+  return `<section class="cmp-wrap">
+    <div class="ladder-head">
+      <div>
+        <h2 class="view-title">${escapeHtml(a.displayName)} <span class="cmp-vs">vs</span> ${escapeHtml(b.displayName)}</h2>
+        <p class="view-sub">Head-to-head — snapshot standings and where the books overlap.</p>
+      </div>
+      <a class="cmp-cancel" href="${standingsHref(metric)}">× clear</a>
+    </div>
+    <div class="cmp-grid">
+      ${compareColumn(a)}
+      <div class="cmp-mid">
+        ${deltaRow("Equity", a.equity, b.equity, formatCurrency)}
+        ${deltaRow("Unrealized", participantUnrealized(a), participantUnrealized(b), formatSigned)}
+        ${deltaRow("Return", participantReturnPct(a), participantReturnPct(b), pct)}
+        <div class="cmp-legend"><span class="pos">◀</span> ${escapeHtml(a.displayName)} · <span class="neg">▶</span> ${escapeHtml(b.displayName)}</div>
+      </div>
+      ${compareColumn(b)}
+    </div>
+    <h3 class="col-head cmp-holdhead">Holdings overlap</h3>
+    ${holdingsCompare(a, b)}
+    <div class="history-seam">
+      <span class="seam-label">Which plays worked</span>
+      <p class="seam-note">Per-play effectiveness — who timed the entry, whose thesis held — lights up here once we've recorded trade history.</p>
+    </div>
+  </section>`;
+}
+
 /**
  * The STANDINGS content — the piece the SSE stream swaps into `#root` on every hub update. Kept
  * separate from the shell so live refresh never re-renders the drawer or resets its open/closed
@@ -222,10 +362,19 @@ function cohortSection(data: DashboardData): string {
  */
 export function renderStandingsContent(
   data: DashboardData,
-  options: DashboardViewOptions & { metric?: LeaderMetric } = {},
+  options: StandingsOptions = {},
 ): string {
   const metric = options.metric ?? "equity";
   const currentId = options.nav?.currentId;
+  // Exactly the old /compare route's resolution: an id must exist in data.participants, match by
+  // .id, and carry no .error. Missing/unknown/errored falls through — never a crash, never a
+  // partial render.
+  const a = options.aId
+    ? data.participants.find((p) => p.id === options.aId && !p.error)
+    : undefined;
+  const b = options.bId
+    ? data.participants.find((p) => p.id === options.bId && !p.error)
+    : undefined;
   // OBSERVER MODE — the funnel's front door (stage 1 → 2): signed in but no linked account means
   // you can watch the whole league yet hold no tower. Say so, warmly, and pave the founding path.
   const observer =
@@ -238,21 +387,20 @@ export function renderStandingsContent(
   </section>
   `
       : "";
+  const compareSection = a && b ? headToHead(a, b, metric) : a ? compareHint(a, metric) : "";
   return `${observer}<div class="ladder-head">
       <div>
         <h1 class="view-title">Standings</h1>
         <p class="view-sub">The whole race on one board — a friendly league, bots and humans both welcome to win.</p>
       </div>
-      <div class="metricsel">${metricPicker(metric)}</div>
+      <div class="metricsel">${metricPicker(metric, a?.id, b?.id)}</div>
     </div>
     ${cohortSection(data)}
-    ${fieldLadder(data, metric, currentId)}`;
+    ${compareSection}
+    ${fieldLadder(data, metric, currentId, a?.id, b?.id)}`;
 }
 
-export function renderStandingsBody(
-  data: DashboardData,
-  options: DashboardViewOptions & { metric?: LeaderMetric } = {},
-): string {
+export function renderStandingsBody(data: DashboardData, options: StandingsOptions = {}): string {
   return renderShell(options.nav, renderStandingsContent(data, options), data.generatedAt);
 }
 

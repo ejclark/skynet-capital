@@ -25,6 +25,11 @@ const data = sampleDashboardData();
 const pages = [
   { name: "standings-equity", body: renderStandingsBody(data, { nav }) },
   { name: "standings-return", body: renderStandingsBody(data, { nav, metric: "return" }) },
+  { name: "standings-cmp-armed", body: renderStandingsBody(data, { nav, aId: "eric" }) },
+  {
+    name: "standings-cmp-pair",
+    body: renderStandingsBody(data, { nav, aId: "eric", bId: "news-fader" }),
+  },
 ];
 
 const browser = await chromium.launch(EXE ? { executablePath: EXE } : {});

@@ -122,12 +122,6 @@ export const SHELL_STYLE = `<style>
   .empire-skyline{ display:block; width:100%; height:auto; max-height:150px; border:1px solid var(--border); border-radius:10px; }
   /* glanceable per-card thumbnail — the board reads as a region of cities */
   .empire-thumb{ margin:0 0 14px; } .empire-thumb .empire-skyline{ max-height:88px; }
-  /* two cities — a labelled empire skyline per participant, side by side on /compare */
-  .empire-cities{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:0 0 26px; }
-  .empire-city{ display:flex; flex-direction:column; gap:8px; min-width:0; }
-  .empire-city .empire-band{ margin:0; }
-  .empire-city-name{ font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-  @container stage (max-width:720px){ .empire-cities{ grid-template-columns:1fr; } }
   .indiv-hero{ display:grid; grid-template-columns:minmax(220px,1fr) 2fr; gap:16px; margin-bottom:24px; align-items:stretch; }
   .hero-equity{ background:var(--surface); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
   .hero-num{ font-size:40px; font-weight:700; line-height:1; }
@@ -164,7 +158,7 @@ export const SHELL_STYLE = `<style>
   .msel.active{ color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .msel:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .ladder{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
-  .rank-row{ display:grid; grid-template-columns:34px minmax(140px,1.4fr) 3fr auto; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:12px 16px; }
+  .rank-row{ display:grid; grid-template-columns:34px minmax(140px,1.4fr) 3fr auto auto; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:12px 16px; }
   .rank-self{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent) inset; }
   .rank{ font-family:var(--mono); font-size:14px; font-weight:700; color:var(--muted); text-align:center; }
   .rank-top .rank{ color:var(--accent); }
@@ -178,7 +172,17 @@ export const SHELL_STYLE = `<style>
   .bar-pos{ background:linear-gradient(90deg,color-mix(in srgb,var(--pos) 40%,transparent),var(--pos)); }
   .bar-neg{ background:linear-gradient(90deg,color-mix(in srgb,var(--neg) 40%,transparent),var(--neg)); }
   .rank-val{ font-size:15px; font-weight:700; text-align:right; min-width:96px; }
-  @container stage (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto; } .rank-bar{ display:none; } }
+  /* the field's per-row compare toggle — arms/completes/cancels a head-to-head, no client JS */
+  .cmp-toggle{ font-family:var(--mono); font-size:13px; line-height:1; width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--border); border-radius:7px; color:var(--muted); text-decoration:none; transition:color .15s, border-color .15s, background .15s; }
+  .cmp-toggle:hover{ color:var(--accent); border-color:color-mix(in srgb,var(--accent) 45%,var(--border)); }
+  .cmp-toggle:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .cmp-toggle.cmp-armed{ color:var(--accent); border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
+  .cmp-hint{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:13px;
+    background:var(--surface-2); border:1px dashed color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:12px; padding:10px 16px; margin-bottom:16px; }
+  .cmp-cancel{ font-family:var(--mono); font-size:11px; color:var(--muted); text-decoration:none; white-space:nowrap; }
+  .cmp-cancel:hover{ color:var(--accent); }
+  @container stage (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto auto; } .rank-bar{ display:none; } }
   /* --- push-drawer app shell --- */
   .app{ ${TOKEN_DECLS}
     display:flex; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans);
