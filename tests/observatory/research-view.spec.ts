@@ -548,3 +548,68 @@ describe("monthGrid", () => {
     expect(html).not.toContain('class="cal-est"');
   });
 });
+
+describe("the shelf leads with the decision surface", () => {
+  const shelf = {
+    studies: [doc("alpha-study")],
+    ledgers: [doc("events/nvda-2026-08-26-print")],
+  };
+
+  it("renders the agenda ABOVE the document lists — the actionable register comes first", () => {
+    const html = renderResearchShelfBody({
+      asOfIso: AS_OF,
+      shelf,
+      symbols: [],
+      events: [event({ id: "near", date: "2026-08-18", title: "Near macro" })],
+      prints: [],
+    });
+    const agenda = html.indexOf("Next 7 days");
+    expect(agenda).toBeGreaterThan(-1);
+    expect(agenda).toBeLessThan(html.indexOf(">Symbols<"));
+    expect(agenda).toBeLessThan(html.indexOf(">Event ledgers<"));
+    expect(agenda).toBeLessThan(html.indexOf("Studies &amp; registers"));
+  });
+
+  it("carries a call onto the row when the ledger states one", () => {
+    const html = renderResearchShelfBody({
+      asOfIso: AS_OF,
+      shelf,
+      symbols: [],
+      events: [event({ id: "near", date: "2026-08-18" })],
+      prints: [],
+      researchIds: new Set(["near"]),
+      calls: new Map([["near", { call: "Stand aside", horizon: "Today" }]]),
+    });
+    expect(html).toContain("cal-call");
+    expect(html).toContain("Stand aside");
+  });
+});
+
+describe("day-selection correlation", () => {
+  const events = [event({ id: "near", date: "2026-08-18" })];
+
+  it("emits a :has() rule pairing each event day with its agenda anchor", () => {
+    const html = renderResearchShelfBody({
+      asOfIso: AS_OF,
+      shelf: emptyShelf,
+      symbols: [],
+      events,
+      prints: [],
+    });
+    expect(html).toContain(
+      '.cal-layout:has(#day-2026-08-18:target) a.mg-cell[href="#day-2026-08-18"]',
+    );
+    expect(html).toContain(".cal-day:target");
+  });
+
+  it("highlights without filtering — every upcoming event still renders", () => {
+    const html = renderResearchShelfBody({
+      asOfIso: AS_OF,
+      shelf: emptyShelf,
+      symbols: [],
+      events: [...events, event({ id: "far", date: "2026-11-20", title: "Far macro" })],
+      prints: [],
+    });
+    expect(html).toContain("Far macro");
+  });
+});
