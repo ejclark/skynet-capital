@@ -3,6 +3,32 @@
 **Kind:** earnings · **Date:** 2026-08-27 (confirmed, IR: investor.marvell.com PR 2026-08-03 — Thu Aug 27 1:45pm PT call (post-close)) · **Impact:** critical
 **Last assessed:** 2026-08-24
 
+## At a glance
+
+**TL;DR.** MRVL prints in two days and there is nothing to do about it but get flat. The date is now
+**confirmed** (IR, after close). No pre-print entry exists — S1 is killed on this symbol, and the
+August re-rating of roughly **+29%** means the seasonal run-up already paid out, to holders of
+product-news exposure rather than to print positioning. Implied is about **14%**, which is the live
+price of ignoring the flat rule, and there is no researched defined-risk structure here: at that
+implied, long premium and short premium are both uninstrumented bets. Post-print is not a chase
+either — tested windows win ≤48% with excess near zero, and D+1 is macro-confounded by the Warsh
+keynote.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** — no pre-print entry | High | S1 killed on MRVL; the run-up shape already paid out in the +29% August re-rating | FT-1 passing its registered 2-of-3-prints test with the NVDA-sympathy control clean |
+| This week | **Flat by the 2026-08-27 close (S2)** | High | ~14% implied on a confirmed after-close print; nothing pays for carrying that overnight | ≥3 new prints showing a repriced gap regime — the hold-the-print family is 0-for-3 |
+| This month | **No post-print chase D+1 → D+6** | High | Tested post windows win ≤48% with excess ≈ 0, and **2026-08-28** is confounded by the Warsh keynote | A registered post-print study clearing its controls; none exists |
+| This quarter | **No options structure — stay uninstrumented** | Medium | With ~14% implied and no priced implied-vs-realized history for MRVL, both premium sides are guesses | A study pricing MRVL's implied-vs-realized print history |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Flat by the 2026-08-27 close** — the IR-reported 1:45pm PT call is after close, so the deadline only tightens.
+- **Never** — hold unhedged MRVL through a ~14% implied print for the gap.
+- **Never** — sell or buy premium here; there is no instrumented view, and that is an honesty stance, not a market view.
+- **Watch (dated)** — the print **2026-08-27** after close · Warsh's Jackson Hole keynote **2026-08-28**, landing on D+1 · NVDA's print **2026-08-26**, the sympathy input on D-1.
+- **Re-opens the late-week bid only if** — FT-1 clears its 2-of-3 test sympathy-decontaminated.
+
 ## Initial research
 
 **The question.** MRVL prints fiscal Q2 FY2027 on 2026-08-27 (calendar status: **estimate**;

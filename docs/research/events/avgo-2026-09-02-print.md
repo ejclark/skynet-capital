@@ -3,6 +3,31 @@
 **Kind:** earnings · **Date:** 2026-09-02 (estimate, NEWS: Broadcom PR 2026-08-03 — Wed Sep 2 AMC; IR fetch blocked 2026-08-17) · **Impact:** critical
 **Last assessed:** 2026-08-24
 
+## At a glance
+
+**TL;DR.** No position into AVGO's print. S1 is dead on this symbol, so there is no positioning bid
+to take, and the late-week window is FT-2's **zero-size** observation — contaminated this cycle
+anyway, because NVDA's 2026-08-26 print sits at its open. Get flat by the **2026-09-02 close** and
+let it pass. The thing that makes this print unusual is not the beat: the XPV financing overhang plus
+the VMware exploit raise the odds it trades on **disclosure quality** instead of the number — which
+widens caution and licenses nothing. The calendar carries an estimate; Sep 2 is primary-sourced and a
+correction is proposed, and the *earlier* of the two governs the flat deadline.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** — no pre-print position | High | S1 is dead on AVGO; the only late-week interest is FT-2 at zero size, and NVDA's 08-26 print contaminates it this cycle | FT-2 clearing its base rate under the 2-of-3 rule, sympathy-decontaminated |
+| This week | **Flat by the 2026-09-02 close (S2)** | High | The earlier of the estimated and primary-sourced dates governs the deadline; an estimate never licenses an entry, only an earlier exit | ≥3 new prints showing a repriced gap regime |
+| This month | **Nothing pre-committed post-print** | High | The D+1 fade is absent on AVGO and the gap-hold is kill-listed — there is no researched post-print play to pre-commit to | A registered post-print study clearing controls on this symbol |
+| This quarter | **Treat XPV as live event risk, not a thesis** | Medium | Residual-value guarantees plus the VMware exploit make disclosure quality the swing factor; that is risk, not an edge | Broadcom quantifying or capping the guarantees in a filing, or AVGO round-tripping the 8/14 drop above ~$417 |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Never** — hold unhedged AVGO through the print for the gap; the family is kill-listed.
+- **Flat deadline** — the **2026-09-02** close, governed by the earlier of the estimated and primary-sourced dates.
+- **FT-2 only, zero size** — and treat this cycle's observation as contaminated by NVDA's **2026-08-26** print at the open.
+- **Watch (dated)** — the honest print window **2026-08-27** to **2026-09-10** until IR confirms · NVDA print **2026-08-26** · any XPV disclosure in a filing or PR.
+- **Redo the cadence math immediately if** — Broadcom's IR moves or contradicts the Sep 2 date.
+
 ## Initial research
 
 **The question.** What is likely to happen at Broadcom's Q3 FY2026 print and how will the market
