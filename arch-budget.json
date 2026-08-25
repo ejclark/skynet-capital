@@ -94,7 +94,7 @@
   "src/server/auth/providers.ts": 137,
   "src/server/auth/resolve-auth.ts": 71,
   "src/server/auth/session.ts": 124,
-  "src/server/dashboard-server.ts": 861,
+  "src/server/dashboard-server.ts": 864,
   "src/server/feedback-coach.ts": 304,
   "src/server/feedback-issue.ts": 135,
   "src/server/feedback-service.ts": 105,

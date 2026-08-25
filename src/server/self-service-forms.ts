@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { NavContext } from "../observatory/dashboard-shell.js";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { escapeHtml } from "../ui/escape-html.js";
-import { addShell, readBody } from "./page-shell.js";
+import { addShell, railedShell, readBody } from "./page-shell.js";
 import type {
   AddParticipantInput,
   AddResult,
@@ -80,12 +81,13 @@ export async function handleAdd(
   key: string,
   ownerEmail: string | undefined,
   addParticipant: (input: AddParticipantInput) => Promise<AddResult>,
+  nav: NavContext,
 ): Promise<void> {
   await handleSelfServiceForm(
     req,
     res,
     method,
-    () => addFormHtml(key),
+    () => addFormHtml(key, nav),
     (form) =>
       addParticipant({
         displayName: form.get("displayName") ?? "",
@@ -96,7 +98,7 @@ export async function handleAdd(
         ...(form.get("timezone") ? { timezone: form.get("timezone") as string } : {}),
         ...(ownerEmail ? { ownerEmail } : {}),
       }),
-    (result) => addResultHtml(result, key),
+    (result) => addResultHtml(result, key, nav),
   );
 }
 
@@ -149,7 +151,7 @@ const CLASSPICK_JS = `(function(){
     var cards=pick.querySelectorAll(".cp-card"); for(var i=0;i<cards.length;i++) cards[i].classList.toggle("sel", cards[i]===card); });
 })();`;
 
-function addFormHtml(key: string): string {
+function addFormHtml(key: string, nav: NavContext): string {
   const action = `/add${key ? `?key=${encodeURIComponent(key)}` : ""}`;
   const classCards = personaClasses()
     .map(
@@ -163,8 +165,9 @@ function addFormHtml(key: string): string {
       </label>`,
     )
     .join("\n      ");
-  return addShell(
+  return railedShell(
     "Add your account — Skynet Capital",
+    nav,
     `<h1>Connect your Alpaca account</h1>
 <p class="lede">Your account trades on <b>Alpaca</b> paper money. Follow the steps to grab your keys,
 then paste them below — we read them <b>only</b> to show your balance and trades. Nothing is ever placed on your behalf.</p>
@@ -216,7 +219,7 @@ then paste them below — we read them <b>only</b> to show your balance and trad
   );
 }
 
-function addResultHtml(result: AddResult, key: string): string {
+function addResultHtml(result: AddResult, key: string, nav: NavContext): string {
   const suffix = key ? `?key=${encodeURIComponent(key)}` : "";
   const inner = result.ok
     ? `<div class="res-icon">🎉</div><h1>You're on the board</h1>
@@ -225,7 +228,7 @@ function addResultHtml(result: AddResult, key: string): string {
     : `<h1>Couldn't add that account</h1>
 <p class="lede">${escapeHtml(result.error)}</p>
 <p class="backrow"><a href="/${suffix}">← Back to the board</a> · <a href="/add${suffix}">Try again</a></p>`;
-  return addShell("Skynet Capital", inner);
+  return railedShell("Skynet Capital", nav, inner);
 }
 
 /**

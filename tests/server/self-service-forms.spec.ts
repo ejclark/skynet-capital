@@ -1,5 +1,6 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import { handleAdd, handleRotate } from "../../src/server/self-service-forms.js";
 
 /**
@@ -7,6 +8,7 @@ import { handleAdd, handleRotate } from "../../src/server/self-service-forms.js"
  * exercising them over the wire is the honest way to test their behavior (status codes, body
  * content) without peeking at their internals.
  */
+const nav: NavContext = { active: "add", canAdd: true, authed: true };
 async function withRoute(
   handler: (req: Parameters<typeof handleAdd>[0], res: Parameters<typeof handleAdd>[1]) => void,
   run: (base: string) => Promise<void>,
@@ -25,7 +27,15 @@ describe("handleAdd", () => {
   it("GET serves the onboarding form", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "GET", "", undefined, () => Promise.reject(new Error("unused"))),
+        void handleAdd(
+          req,
+          res,
+          "GET",
+          "",
+          undefined,
+          () => Promise.reject(new Error("unused")),
+          nav,
+        ),
       async (base) => {
         const res = await fetch(base);
         expect(res.status).toBe(200);
@@ -36,14 +46,44 @@ describe("handleAdd", () => {
     );
   });
 
+  // 2026-08-25 (Eric: "/add ... continue[s] to ignore page templates and remove the rails"):
+  // /add renders inside the real app shell now, not the bare one-card page.
+  it("renders inside the app shell — the drawer rail, not a bare card", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleAdd(
+          req,
+          res,
+          "GET",
+          "",
+          undefined,
+          () => Promise.reject(new Error("unused")),
+          nav,
+        ),
+      async (base) => {
+        const body = await (await fetch(base)).text();
+        expect(body).toContain('<aside class="drawer"');
+        expect(body).toContain("Standings");
+      },
+    );
+  });
+
   it("POST submits the parsed form and renders success", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "POST", "", undefined, (input) => {
-          expect(input.displayName).toBe("Uncle Joe");
-          expect(input.apiKey).toBe("PK123");
-          return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
-        }),
+        void handleAdd(
+          req,
+          res,
+          "POST",
+          "",
+          undefined,
+          (input) => {
+            expect(input.displayName).toBe("Uncle Joe");
+            expect(input.apiKey).toBe("PK123");
+            return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
+          },
+          nav,
+        ),
       async (base) => {
         const res = await fetch(base, {
           method: "POST",
@@ -59,10 +99,18 @@ describe("handleAdd", () => {
   it("stamps the signed-in session's email as the owner — never a form field", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "POST", "", "uncle_joe@example.com", (input) => {
-          expect(input.ownerEmail).toBe("uncle_joe@example.com");
-          return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
-        }),
+        void handleAdd(
+          req,
+          res,
+          "POST",
+          "",
+          "uncle_joe@example.com",
+          (input) => {
+            expect(input.ownerEmail).toBe("uncle_joe@example.com");
+            return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
+          },
+          nav,
+        ),
       async (base) => {
         const res = await fetch(base, {
           method: "POST",
@@ -78,8 +126,14 @@ describe("handleAdd", () => {
   it("POST renders the error page with a 400 when the service refuses", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "POST", "", undefined, () =>
-          Promise.resolve({ ok: false, error: "That key was rejected." }),
+        void handleAdd(
+          req,
+          res,
+          "POST",
+          "",
+          undefined,
+          () => Promise.resolve({ ok: false, error: "That key was rejected." }),
+          nav,
         ),
       async (base) => {
         const res = await fetch(base, { method: "POST", body: "" });
@@ -92,8 +146,14 @@ describe("handleAdd", () => {
   it("refuses any method besides GET/POST", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "DELETE", "", undefined, () =>
-          Promise.reject(new Error("unused")),
+        void handleAdd(
+          req,
+          res,
+          "DELETE",
+          "",
+          undefined,
+          () => Promise.reject(new Error("unused")),
+          nav,
         ),
       async (base) => {
         const res = await fetch(base, { method: "DELETE" });
