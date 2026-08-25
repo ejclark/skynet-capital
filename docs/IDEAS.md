@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### `arch-budget.json` is a conflict magnet on hot files
+
+Hit twice in one PR (#566): two branches that each grew `serve-dashboard.ts` (a shared wiring
+root nearly every feature touches) collided on the same ratchet line in `arch-budget.json`, even
+though the actual code merged cleanly. The flat-JSON, one-line-per-file design makes every hot
+file's budget a shared merge point. A `.gitattributes` custom merge driver that resolves same-key
+conflicts by taking `max(ours, theirs)` would auto-resolve the common case (two PRs both growing
+the same file) — mechanically what got done by hand both times — leaving only the rarer
+shrink-vs-grow race for a human/session glance. _(src: Eric · while: PR #566 hit the conflict live)_
+
 ### The CI medic can be cancelled before it files
 
 The 2026-08-22 `gh --json` failure produced a medic run that was **cancelled** by the next push's

@@ -12,6 +12,7 @@
  * load re-fetches from GitHub, never a loss of the underlying record.
  */
 import { fetchJson } from "../http/fetch-json.js";
+import { githubHeaders } from "./github-api.js";
 
 type DoFetch = typeof fetchJson;
 
@@ -73,11 +74,7 @@ export function createStatusFetcher(
           const res = await doFetch(
             "GET",
             `https://api.github.com/repos/${config.repo}/issues/${n}`,
-            {
-              Authorization: `Bearer ${config.token}`,
-              "User-Agent": "skynet-capital",
-              Accept: "application/vnd.github+json",
-            },
+            githubHeaders(config.token),
           );
           if (res.status !== 200 || !res.body || typeof res.body !== "object") return;
           const state = (res.body as { state?: string }).state ?? "open";

@@ -298,6 +298,144 @@ describe("serveFeedbackRoute", () => {
     expect(JSON.parse(out.body).html).toContain("<li>a point</li>");
   });
 
+  it("posts a follow-up on an issue the member owns, and re-triggers the build lane", async () => {
+    const followedUp: unknown[] = [];
+    const { res, out } = capture();
+
+    await serveFeedbackRoute(
+      request("issueNumber=12&details=still+happening", "POST"),
+      res,
+      "/feedback/followup",
+      session("owner@example.com"),
+      {
+        readFeedback: () =>
+          Promise.resolve([
+            {
+              uuid: "u-1",
+              opaqueMemberId: "m",
+              issueNumber: 12,
+              url: "https://github.com/x/y/issues/12",
+              kind: "idea" as const,
+              title: "A past idea",
+              filedAt: "2026-08-20T00:00:00.000Z",
+            },
+          ]),
+        submitFollowup: (input) => {
+          followedUp.push(input);
+          return Promise.resolve({ ok: true as const, url: "https://github.com/x/y/issues/12" });
+        },
+      },
+      NAV,
+    );
+
+    expect(followedUp).toEqual([
+      { issueNumber: 12, body: "still happening", submitterEmail: "owner@example.com" },
+    ]);
+    expect(out.status).toBe(200);
+    expect(out.body).toContain("Added to the thread");
+  });
+
+  it("refuses a follow-up on an issue number that isn't in the member's own filings", async () => {
+    let called = false;
+    const { res, out } = capture();
+
+    await serveFeedbackRoute(
+      request("issueNumber=999&details=nice+try", "POST"),
+      res,
+      "/feedback/followup",
+      session("stranger@example.com"),
+      {
+        readFeedback: () =>
+          Promise.resolve([
+            {
+              uuid: "u-1",
+              opaqueMemberId: "m",
+              issueNumber: 12,
+              url: "https://github.com/x/y/issues/12",
+              kind: "idea" as const,
+              title: "Someone else's idea",
+              filedAt: "2026-08-20T00:00:00.000Z",
+            },
+          ]),
+        submitFollowup: () => {
+          called = true;
+          return Promise.resolve({ ok: true as const, url: "u" });
+        },
+      },
+      NAV,
+    );
+
+    expect(called).toBe(false);
+    expect(out.body).toContain("doesn't look like one of your own filings");
+  });
+
+  it("tells the member follow-up isn't switched on when unwired", async () => {
+    const { res, out } = capture();
+
+    await serveFeedbackRoute(
+      request("issueNumber=12&details=hi", "POST"),
+      res,
+      "/feedback/followup",
+      session("nofollowup@example.com"),
+      {},
+      NAV,
+    );
+
+    expect(out.body).toContain("isn't switched on yet");
+  });
+
+  it("rejects a GET on the follow-up route", async () => {
+    const { res, out } = capture();
+
+    await serveFeedbackRoute(
+      request(),
+      res,
+      "/feedback/followup",
+      session("m@example.com"),
+      {},
+      NAV,
+    );
+
+    expect(out.status).toBe(405);
+  });
+
+  it("only shows the follow-up disclosure on /feedback when both deps are wired", async () => {
+    const recentEntry = {
+      uuid: "u-1",
+      opaqueMemberId: "m",
+      issueNumber: 12,
+      url: "https://github.com/x/y/issues/12",
+      kind: "idea" as const,
+      title: "A past idea",
+      filedAt: "2026-08-20T00:00:00.000Z",
+    };
+
+    const { res: withRes, out: withOut } = capture();
+    await serveFeedbackRoute(
+      request(),
+      withRes,
+      "/feedback",
+      session("m1@example.com"),
+      {
+        readFeedback: () => Promise.resolve([recentEntry]),
+        submitFollowup: () => Promise.resolve({ ok: true as const, url: "u" }),
+      },
+      NAV,
+    );
+    expect(withOut.body).toContain("Follow up");
+
+    const { res: withoutRes, out: withoutOut } = capture();
+    await serveFeedbackRoute(
+      request(),
+      withoutRes,
+      "/feedback",
+      session("m2@example.com"),
+      { readFeedback: () => Promise.resolve([recentEntry]) },
+      NAV,
+    );
+    expect(withoutOut.body).not.toContain("Follow up");
+  });
+
   it("answers the coach path honestly when the coach isn't wired", async () => {
     const { res, out } = capture();
 

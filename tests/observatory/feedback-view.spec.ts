@@ -1,4 +1,5 @@
 import {
+  renderFeedbackFollowupResultBody,
   renderFeedbackFormBody,
   renderFeedbackResultBody,
 } from "../../src/observatory/feedback-view.js";
@@ -108,6 +109,28 @@ describe("renderFeedbackResultBody", () => {
   });
 });
 
+describe("renderFeedbackFollowupResultBody", () => {
+  it("links back to the issue on success, without a Send-another prompt", () => {
+    const html = renderFeedbackFollowupResultBody({
+      nav: NAV,
+      result: { ok: true, url: "https://github.com/x/y/issues/12" },
+    });
+
+    expect(html).toContain("https://github.com/x/y/issues/12");
+    expect(html).toContain("Added to the thread");
+    expect(html).not.toContain("Send another");
+  });
+
+  it("shows the honest error on failure", () => {
+    const html = renderFeedbackFollowupResultBody({
+      nav: NAV,
+      result: { ok: false, error: "GitHub said no" },
+    });
+
+    expect(html).toContain("GitHub said no");
+  });
+});
+
 describe("feedback form — your recent feedback (#429)", () => {
   it("renders nothing when the member has no filings yet", () => {
     const html = renderFeedbackFormBody({
@@ -196,6 +219,95 @@ describe("feedback form — your recent feedback (#429)", () => {
     expect(html.match(/<span class="fdbk-recent-status/g)).toHaveLength(1);
   });
 
+  it("keeps open filings on top, newest first, with closed ones separated below", () => {
+    const recent = [
+      {
+        uuid: "u-1",
+        opaqueMemberId: "m",
+        issueNumber: 1,
+        url: "https://github.com/x/y/issues/1",
+        kind: "bug" as const,
+        title: "Newest, but shipped",
+        filedAt: "2026-08-23T00:00:00.000Z",
+      },
+      {
+        uuid: "u-2",
+        opaqueMemberId: "m",
+        issueNumber: 2,
+        url: "https://github.com/x/y/issues/2",
+        kind: "idea" as const,
+        title: "Older, still open",
+        filedAt: "2026-08-20T00:00:00.000Z",
+      },
+      {
+        uuid: "u-3",
+        opaqueMemberId: "m",
+        issueNumber: 3,
+        url: "https://github.com/x/y/issues/3",
+        kind: "feature" as const,
+        title: "Newest open one",
+        filedAt: "2026-08-24T00:00:00.000Z",
+      },
+      {
+        uuid: "u-4",
+        opaqueMemberId: "m",
+        issueNumber: 4,
+        url: "https://github.com/x/y/issues/4",
+        kind: "bug" as const,
+        title: "Oldest, shipped too",
+        filedAt: "2026-08-10T00:00:00.000Z",
+      },
+    ];
+
+    const html = renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      recent,
+      statuses: new Map([
+        [1, "shipped"],
+        [2, "needs-info"],
+        [4, "shipped"],
+      ]),
+    });
+
+    const closedHeaderIndex = html.indexOf("Closed");
+    const iNewestOpen = html.indexOf("Newest open one");
+    const iOlderOpen = html.indexOf("Older, still open");
+    const iNewestShipped = html.indexOf("Newest, but shipped");
+    const iOldestShipped = html.indexOf("Oldest, shipped too");
+
+    // Both open rows come before the "Closed" divider, newest first.
+    expect(iNewestOpen).toBeGreaterThan(-1);
+    expect(closedHeaderIndex).toBeGreaterThan(-1);
+    expect(iNewestOpen).toBeLessThan(iOlderOpen);
+    expect(iOlderOpen).toBeLessThan(closedHeaderIndex);
+    // Both closed rows come after the divider, newest first.
+    expect(closedHeaderIndex).toBeLessThan(iNewestShipped);
+    expect(iNewestShipped).toBeLessThan(iOldestShipped);
+  });
+
+  it("keeps a single flat list, with no Closed divider, when status isn't known for anything", () => {
+    const html = renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      recent: [
+        {
+          uuid: "u-1",
+          opaqueMemberId: "m",
+          issueNumber: 1,
+          url: "https://github.com/x/y/issues/1",
+          kind: "bug" as const,
+          title: "Some bug",
+          filedAt: "2026-08-19T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(html).not.toContain("Closed</h3>");
+  });
+
   it("renders no status badges at all when the status fetch isn't wired", () => {
     const html = renderFeedbackFormBody({
       nav: NAV,
@@ -215,6 +327,52 @@ describe("feedback form — your recent feedback (#429)", () => {
     });
 
     expect(html).not.toContain('class="fdbk-recent-status');
+  });
+
+  it("offers a follow-up disclosure per row, posting the right issue number, when wired", () => {
+    const html = renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      followupEnabled: true,
+      recent: [
+        {
+          uuid: "u-1",
+          opaqueMemberId: "m",
+          issueNumber: 12,
+          url: "https://github.com/x/y/issues/12",
+          kind: "bug" as const,
+          title: "A bug",
+          filedAt: "2026-08-19T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(html).toContain('action="/feedback/followup"');
+    expect(html).toContain('<input type="hidden" name="issueNumber" value="12">');
+    expect(html).toContain("Follow up");
+  });
+
+  it("offers no follow-up disclosure at all when it isn't wired", () => {
+    const html = renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      recent: [
+        {
+          uuid: "u-1",
+          opaqueMemberId: "m",
+          issueNumber: 12,
+          url: "https://github.com/x/y/issues/12",
+          kind: "bug" as const,
+          title: "A bug",
+          filedAt: "2026-08-19T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(html).not.toContain("/feedback/followup");
+    expect(html).not.toContain("Follow up");
   });
 });
 
