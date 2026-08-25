@@ -17,6 +17,7 @@
 import { createHash } from "node:crypto";
 
 import type { FeedbackSpec } from "./feedback-coach.js";
+import type { FeedbackImageInput } from "./feedback-images.js";
 
 export type FeedbackKind = "bug" | "feature" | "idea";
 
@@ -32,6 +33,9 @@ export interface FeedbackInput {
    * completeness bar, and may therefore be built unattended rather than escalated.
    */
   readonly spec?: FeedbackSpec;
+  /** Screenshots the member attached, raw off the form — feedback-service.ts uploads these before
+   *  filing and hands `issueBody` the resulting URLs, never these data URLs directly. */
+  readonly images?: readonly FeedbackImageInput[];
 }
 
 /** The issue title a submission gets — the tag mirrors the .github/ISSUE_TEMPLATE forms. */
@@ -113,8 +117,10 @@ export function opaqueMemberId(email: string): string {
  * are scanned in a table and skipped as prose (docs/ISSUES.md). The pseudonymous footer is last
  * and unchanged.
  */
-export function issueBody(input: FeedbackInput): string {
+export function issueBody(input: FeedbackInput, imageUrls: readonly string[] = []): string {
   const lines: string[] = [input.details.trim() || "_(no details provided)_", ""];
+  if (imageUrls.length)
+    lines.push(...imageUrls.map((url, i) => `![attachment ${i + 1}](${url})`), "");
   if (input.spec) lines.push(...specBlock(input.spec), "");
   const meta: [string, string][] = [["Kind", FEEDBACK_KIND_LABEL[input.kind]]];
   if (input.area) meta.push(["Where", input.area]);

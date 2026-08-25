@@ -5,6 +5,7 @@ import { PREVIEW_SCRIPT } from "../server/feedback-preview-script.js";
 import type { FeedbackResult } from "../server/feedback-service.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
+import { IMAGE_SCRIPT } from "./feedback-image-script.js";
 
 // Mirrors feedback-issue.ts's private FEEDBACK_KIND_LABEL — kept separate rather than exported
 // across the module boundary, since feedback-issue.ts sits right at its architecture budget
@@ -115,6 +116,10 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
         </div>
         <textarea name="details" id="fdbk-details" rows="8" placeholder="What happened · what you'd like · the idea…"></textarea>
         <div class="fdbk-preview" id="fdbk-preview" role="tabpanel" hidden></div>`)}
+        ${formField(`<label for="fdbk-image-input">Attach a screenshot <small>(optional, up to 3 — helps us see what you saw)</small></label>
+        <input type="file" id="fdbk-image-input" accept="image/*" multiple>
+        <div class="fdbk-images" id="fdbk-image-list"></div>
+        <input type="hidden" id="fdbk-images-field" name="images">`)}
         ${formField(`<label for="fdbk-area">Where in the app? <small>(optional)</small></label>
         <select name="area" id="fdbk-area">
           <option value="" selected>— pick a spot —</option>
@@ -127,6 +132,7 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
     </div>
     ${options.coachEnabled ? `<script>${COACH_SCRIPT}</script>` : ""}
     <script>${PREVIEW_SCRIPT}</script>
+    <script>${IMAGE_SCRIPT}</script>
     ${options.coachEnabled ? `<noscript><style>#fdbk-form{display:flex !important}#coach-box{display:none !important}</style></noscript>` : ""}
   </section>`;
   return renderShell(options.nav, content, new Date().toISOString());
@@ -209,6 +215,11 @@ const FDBK_STYLE = `<style>
   .fdbk-preview hr{ margin:14px 0; border:0; border-top:1px solid var(--border); }
   .fdbk-preview-wait{ color:var(--muted); }
   .fdbk-banner{ margin:-6px 0 4px; font-size:13px; color:var(--neg); }
+  .fdbk-images{ display:flex; flex-direction:column; gap:6px; }
+  .fdbk-img-row{ display:flex; align-items:center; gap:10px; padding:8px 12px; font-size:13px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; }
+  .fdbk-img-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+  .fdbk-img-remove{ margin-left:auto; padding:5px 10px; font-size:12px; font-weight:600; font-family:var(--sans); color:var(--muted); background:transparent; border:1px solid var(--border); border-radius:7px; cursor:pointer; }
+  .fdbk-img-remove:hover{ color:var(--text); border-color:var(--accent); }
   .fdbk-recent{ display:flex; flex-direction:column; gap:10px; }
   .fdbk-recent-h{ margin:0; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; }
   .fdbk-recent-list{ display:flex; flex-direction:column; gap:6px; margin:0; padding:0; list-style:none; }

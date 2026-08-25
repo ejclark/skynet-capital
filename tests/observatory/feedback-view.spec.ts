@@ -74,6 +74,18 @@ describe("renderFeedbackFormBody", () => {
   });
 });
 
+describe("feedback form — screenshot attachment", () => {
+  it("renders the file input and its hidden JSON field, wired for the image script", () => {
+    const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: false });
+
+    // No `name` on the file input — the raw file never rides the POST as multipart, only the
+    // script's re-encoded JSON in the hidden field does.
+    expect(html).toContain('<input type="file" id="fdbk-image-input" accept="image/*" multiple>');
+    expect(html).toContain('<input type="hidden" id="fdbk-images-field" name="images">');
+    expect(html).toContain('id="fdbk-image-list"');
+  });
+});
+
 describe("renderFeedbackResultBody", () => {
   it("links the filed issue on success, still inside the app shell", () => {
     const html = renderFeedbackResultBody({
