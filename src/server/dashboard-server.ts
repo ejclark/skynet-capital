@@ -112,6 +112,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps {
    * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).
    */
   readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
+  /** Re-reads this account from the broker before its desk renders, so the screen shows what Alpaca
+   *  holds rather than only what the fill stream delivered (#591). Rate-limited and failure-swallowing
+   *  in `createBrokerSync`; omit (offline/tests) and the desk renders live memory as before. */
+  readonly refreshParticipant?: (participantId: string) => Promise<void>;
   /**
    * Reads a bot's autonomous decision audit trail for the individual view's decisions panel
    * (Phase 2.1). Omit to show the honest "not recorded yet" seam. Keyed by participant id, which for
@@ -675,6 +679,9 @@ async function serveIndividualProfile(
   session: Session | undefined,
 ): Promise<void> {
   const id = decodeURIComponent(path.slice(3));
+  // Awaited, so a member who refreshes because a holding is missing gets the corrected board on
+  // THAT response rather than the next one (#591).
+  await config.refreshParticipant?.(id);
   const state = config.hub.getState();
   const snapshot = state.participants.find((p) => p.id === id);
   if (!snapshot) {
