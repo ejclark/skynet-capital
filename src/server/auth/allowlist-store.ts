@@ -26,6 +26,12 @@ export interface AllowlistEntry {
   readonly addedAt: string;
   /** Who invited them — an audit trail for a gate that grants access to everyone's data. */
   readonly addedBy: string;
+  /**
+   * ISO timestamp of this identity's first completed sign-in, or undefined if they've never
+   * shown up. The admin observability field #2 (fields #3+ land the same way — an optional
+   * column on this entry, stamped from wherever that signal happens).
+   */
+  readonly joinedAt?: string;
 }
 
 export interface AllowlistStore {
@@ -37,6 +43,12 @@ export interface AllowlistStore {
   /** Returns false when the value was already present (idempotent, not an error). */
   add(entry: AllowlistEntry): boolean;
   remove(value: string): boolean;
+  /**
+   * Stamp `joinedAt` the first time this identity is seen, for the `/invite` observability view.
+   * A no-op (false) once already stamped, for an unknown value, or on any read/write failure —
+   * this runs on the board's hot path, so it must never throw or break the page.
+   */
+  markJoined(value: string, at: string): boolean;
 }
 
 /** The default reporter: silent. Used by tests and by callers that handle reporting themselves. */
@@ -120,6 +132,20 @@ export class FileAllowlistStore implements AllowlistStore {
     }
     this.write(next);
     return true;
+  }
+
+  markJoined(value: string, at: string): boolean {
+    if (!this.key) return false;
+    try {
+      const target = value.trim().toLowerCase();
+      const current = this.entries();
+      const entry = current.find((e) => e.value === target);
+      if (!entry || entry.joinedAt) return false;
+      this.write(current.map((e) => (e === entry ? { ...e, joinedAt: at } : e)));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private valuesOf(kind: AllowlistEntry["kind"]): Set<string> {
