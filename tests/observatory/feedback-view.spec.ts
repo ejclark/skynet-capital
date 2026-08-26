@@ -386,3 +386,89 @@ describe("feedback form — the area select", () => {
     expect(html).toContain('<option value="" selected>— pick a spot —</option>');
   });
 });
+
+describe("feedback form — the contribution tally", () => {
+  const entry = (issueNumber: number) => ({
+    uuid: `u-${issueNumber}`,
+    opaqueMemberId: "m",
+    issueNumber,
+    url: `https://github.com/x/y/issues/${issueNumber}`,
+    kind: "bug" as const,
+    title: `Filing ${issueNumber}`,
+    filedAt: "2026-08-20T00:00:00.000Z",
+  });
+
+  const render = (recent: ReturnType<typeof entry>[], statuses?: Map<number, string>) =>
+    renderFeedbackFormBody({
+      nav: NAV,
+      enabled: true,
+      coachEnabled: false,
+      recent,
+      ...(statuses
+        ? { statuses: statuses as unknown as ReadonlyMap<number, "shipped" | "open"> }
+        : {}),
+    });
+
+  it("counts every filing the member has made, not the page they're looking at", () => {
+    const html = render([entry(1), entry(2), entry(3)]);
+
+    expect(html).toContain("Filed");
+    expect(html).toContain('<span class="desk-v">3</span>');
+  });
+
+  it("says nothing at all to a member who has never filed", () => {
+    expect(render([])).not.toContain('<div class="desk-tiles">');
+  });
+
+  it("greets a first filing differently from a tenth", () => {
+    expect(render([entry(1)])).toContain("your first one");
+    expect(render([entry(1), entry(2)])).not.toContain("your first one");
+  });
+
+  it("reports how many of their asks were actually built, once every status is known", () => {
+    const html = render(
+      [entry(1), entry(2), entry(3)],
+      new Map([
+        [1, "shipped"],
+        [2, "shipped"],
+        [3, "open"],
+      ]),
+    );
+
+    expect(html).toContain("Shipped");
+    expect(html).toContain('<span class="desk-v pos">2</span>');
+    expect(html).toContain("built and live in the app because you asked");
+  });
+
+  it("says none built yet plainly, rather than dressing a zero as a win", () => {
+    const html = render([entry(1)], new Map([[1, "open"]]));
+
+    expect(html).toContain('<span class="desk-v">0</span>');
+    expect(html).toContain("still in the queue");
+    // A zero is not a celebration — it never gets the positive treatment.
+    expect(html).not.toContain('<span class="desk-v pos">0</span>');
+  });
+
+  it("renders ABSENT rather than a lower bound when a status is missing", () => {
+    // Two shipped out of three is a FACT only if the third is known. Printing "2" while one
+    // filing's state is unknown would tell a member their third ask was rejected.
+    const html = render(
+      [entry(1), entry(2), entry(3)],
+      new Map([
+        [1, "shipped"],
+        [2, "shipped"],
+      ]),
+    );
+
+    expect(html).toContain('<span class="desk-v">—</span>');
+    expect(html).toContain("waiting on 1 status from GitHub");
+    expect(html).not.toContain('<span class="desk-v pos">2</span>');
+  });
+
+  it("names GitHub as the gap when no status is known at all", () => {
+    const html = render([entry(1), entry(2)]);
+
+    expect(html).toContain('<span class="desk-v">—</span>');
+    expect(html).toContain("can't reach GitHub");
+  });
+});

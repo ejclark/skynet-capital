@@ -1,9 +1,11 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-// Visual harness for the /feedback form's Write | Preview tabs: render the real view, type a real
-// capsule into the details field, and screenshot both tabs with Chromium — the surface judged by
-// eye (CLAUDE.md) without standing up a server or a GitHub token.
+// Visual harness for the /feedback surface: render the real view, type a real capsule into the
+// details field, and screenshot the Write | Preview tabs plus the contribution tally with
+// Chromium — the surface judged by eye (CLAUDE.md) without standing up a server or a GitHub token.
+// The tally is shot in BOTH of its honest states, because the interesting thing about it is what
+// it refuses to claim when GitHub's statuses are missing.
 // The preview request is fulfilled in-process by the SAME renderer the route uses, so the frame
 // shows real output, not a mock. Usage: node scripts/shoot-feedback.mjs [outdir]
 import { chromium } from "playwright-core";
@@ -90,6 +92,57 @@ await shot("feedback-write");
 await tab.click("#fdbk-tab-preview");
 await tab.waitForSelector("#fdbk-preview table");
 await shot("feedback-preview");
+
+// The contribution tally (#567) — a member's own filing record, in both of its honest states.
+const entry = (n, kind, title, filedAt) => ({
+  uuid: `u-${n}`,
+  opaqueMemberId: "m",
+  issueNumber: n,
+  url: `https://github.com/ejclark/skynet-capital/issues/${n}`,
+  kind,
+  title,
+  filedAt,
+});
+const RECENT = [
+  entry(566, "feature", "Let me preview my markdown before I send it", "2026-08-25T09:00:00.000Z"),
+  entry(455, "idea", "Seed the feedback categories from real requests", "2026-08-20T06:26:00.000Z"),
+  entry(
+    449,
+    "bug",
+    "The coach front door was dead on the /feedback page",
+    "2026-08-19T18:00:00.000Z",
+  ),
+];
+
+const tallyShot = async (name, statuses) => {
+  await tab.setContent(
+    shellDocument(
+      "Feedback — Skynet Capital",
+      renderFeedbackFormBody({
+        nav: { active: "feedback", canAdd: false, authed: true },
+        enabled: true,
+        coachEnabled: false,
+        recent: RECENT,
+        ...(statuses ? { statuses } : {}),
+      }),
+    ),
+    { waitUntil: "load" },
+  );
+  const path = join(OUT, `${name}.jpg`);
+  await tab.locator(".fdbk-recent").screenshot({ path, quality: 80, type: "jpeg" });
+  console.log(`· ${path}`);
+};
+
+await tallyShot(
+  "feedback-tally",
+  new Map([
+    [566, "shipped"],
+    [455, "open"],
+    [449, "shipped"],
+  ]),
+);
+// No statuses at all: GitHub unwired or unreachable. "Shipped" must read ABSENT, never 0.
+await tallyShot("feedback-tally-absent", undefined);
 
 await browser.close();
 console.log(`✓ shots in ${OUT}`);

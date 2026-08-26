@@ -50,6 +50,22 @@ export function dayTrophyTiles(
   ];
 }
 
+/**
+ * The tile row's own styles, co-located with the markup that needs them.
+ *
+ * `DESK_STYLE` used to own these six rules outright, which made the component un-reusable: any
+ * other view wanting a tile row had to import the whole desk stylesheet or paste the CSS. Both
+ * consumers now interpolate this one string, so the markup and its styles can never drift apart.
+ * Desk-specific responsive overrides stay in `desk-style.ts` — they are layout, not the component.
+ */
+export const STAT_TILE_CSS = `
+  .desk-tiles{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .desk-tile{ background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:14px 16px; display:flex; flex-direction:column; gap:5px; }
+  .desk-tile.lead{ border-color:color-mix(in srgb,var(--accent) 40%,var(--border)); }
+  .desk-k{ font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .desk-v{ font-size:21px; font-weight:700; letter-spacing:-.01em; font-family:var(--mono); font-variant-numeric:tabular-nums; }
+  .desk-note{ font-size:11px; color:var(--muted); line-height:1.45; }`;
+
 export function renderStatTiles(tiles: StatTile[]): string {
   return `<div class="desk-tiles">${tiles
     .map(
