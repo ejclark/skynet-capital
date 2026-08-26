@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // Autonomous-lane envelope gate — the mechanical replacement for a paragraph. Before this, the only
 // thing stopping an unattended session from editing auth, credentials, or its own workflow was
@@ -102,12 +103,13 @@ describe("autonomous-lane envelope", () => {
       execFileSync("node", ["scripts/envelope-scan.mjs", "--lane", "feedback/1", ...args], {
         cwd: dir,
         encoding: "utf8",
-        env: { ...process.env, GITHUB_HEAD_REF: "" },
+        env: hermeticGitEnv({ GITHUB_HEAD_REF: "" }),
       });
     const run = (...args: string[]): string =>
       execFileSync("git", ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args], {
         cwd: dir,
         encoding: "utf8",
+        env: hermeticGitEnv(),
       });
     try {
       run("init", "-b", "main");

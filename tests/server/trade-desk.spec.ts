@@ -1,16 +1,17 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
-import type { Participant } from "../../src/participants/participant.js";
 import { resolveAuth } from "../../src/server/auth/resolve-auth.js";
 import { type Session, signSession } from "../../src/server/auth/session.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
-import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import { handleTrade } from "../../src/server/trade-routes.js";
-import { createTradeService } from "../../src/server/trade-service.js";
+
+// Sibling: trade-desk-gate.spec.ts (split 2026-08-26 to stay under the per-file line cap) —
+// that half covers the training-wheels ladder gate and the trade service's server-side checks,
+// with its own copy of the shared HTTP fixtures below. This file keeps the review-step routing,
+// the isolated handleTrade contract, and the desk tabs.
 
 const SECRET = "sess";
 const auth = resolveAuth({
@@ -270,6 +271,40 @@ describe("handleTrade — the route contract in isolation", () => {
     expect(sent.status).toBe(403);
     expect(sent.body).toContain("Order refused");
   });
+
+  // Starter plays live on their own ?starter= param — never ?play=, whose codes are the desk's
+  // course catalog the academy links against (Eric's call, 2026-08-25).
+  it("pre-fills the stock ticket from ?starter= — symbol, size, and the active chip", async () => {
+    const { sent, res } = capture();
+    await handleTrade({ method: "GET" } as IncomingMessage, res, "/trade?starter=spy100", deps);
+    expect(sent.status).toBe(200);
+    expect(sent.body).toContain('value="SPY"');
+    expect(sent.body).toContain('value="100"');
+    expect(sent.body).toContain('class="st-chip sel"');
+  });
+
+  it("lets explicit params beat the starter preset", async () => {
+    const { sent, res } = capture();
+    await handleTrade(
+      { method: "GET" } as IncomingMessage,
+      res,
+      "/trade?starter=qqq25&symbol=NVDA&qty=3",
+      deps,
+    );
+    expect(sent.body).toContain('value="NVDA"');
+    expect(sent.body).toContain('value="3"');
+  });
+
+  it("ignores an unknown starter token and leaves ?play= untouched by the whole feature", async () => {
+    const { sent, res } = capture();
+    await handleTrade({ method: "GET" } as IncomingMessage, res, "/trade?starter=yolo9000", deps);
+    expect(sent.status).toBe(200);
+    expect(sent.body).not.toContain('class="st-chip sel"');
+
+    const academy = capture();
+    await handleTrade({ method: "GET" } as IncomingMessage, academy.res, "/trade?play=201", deps);
+    expect(academy.sent.body).toContain("cash-secured put");
+  });
 });
 
 describe("desk tabs are served off the profile route", () => {
@@ -295,120 +330,5 @@ describe("desk tabs are served off the profile route", () => {
         expect(res.status).toBe(200);
       },
     );
-  });
-});
-
-describe("trade service — the server-side gate", () => {
-  const participant: Participant = {
-    id: "ann",
-    displayName: "Ann",
-    kind: "human",
-    credentials: { apiKey: "k", apiSecret: "s", baseUrl: "https://paper" },
-    ownerEmail: "ann@gmail.com",
-  };
-
-  const client = (over: Partial<AlpacaTradingClient> = {}): AlpacaTradingClient =>
-    ({
-      getAccount: async () => ({
-        id: "acct",
-        cash: "5000",
-        portfolio_value: "6200",
-        status: "ACTIVE",
-      }),
-      getPositions: async () => [
-        { symbol: "AAPL", qty: "10", avg_entry_price: "100", market_value: "1200" },
-      ],
-      isMarketOpen: async () => true,
-      placeOrder: async () => ({
-        id: "o1",
-        symbol: "AAPL",
-        qty: "4",
-        side: "sell" as const,
-        status: "accepted",
-      }),
-      ...over,
-    }) as unknown as AlpacaTradingClient;
-
-  const service = (
-    over: {
-      tradingEnabled?: boolean;
-      client?: AlpacaTradingClient;
-      recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
-    } = {},
-  ) =>
-    createTradeService({
-      findParticipant: (id) => (id === "ann" ? participant : undefined),
-      clientFactory: () => over.client ?? client(),
-      tradingEnabled: over.tradingEnabled ?? true,
-      ...(over.recordAudit ? { recordAudit: over.recordAudit } : {}),
-      now: () => new Date("2026-08-21T00:00:00.000Z"),
-    });
-
-  const request = { participantId: "ann", symbol: "AAPL", quantity: 4, action: "sell" as const };
-
-  it("places the order when everything checks out on fresh numbers", async () => {
-    const result = await service()(request, "ann");
-    expect(result).toEqual({ ok: true, orderId: "o1", status: "accepted", symbol: "AAPL" });
-  });
-
-  it("appends an audit line naming the account, its owner, and the order (#466)", async () => {
-    const audited: OrderAuditRecord[] = [];
-    await service({ recordAudit: (entry) => Promise.resolve(void audited.push(entry)) })(
-      request,
-      "ann",
-    );
-    expect(audited).toEqual([
-      {
-        participantId: "ann",
-        ownerEmail: "ann@gmail.com",
-        orderId: "o1",
-        at: "2026-08-21T00:00:00.000Z",
-      },
-    ]);
-  });
-
-  it("never audits a refused order", async () => {
-    const audited: OrderAuditRecord[] = [];
-    await service({
-      tradingEnabled: false,
-      recordAudit: (entry) => Promise.resolve(void audited.push(entry)),
-    })(request, "ann");
-    expect(audited).toEqual([]);
-  });
-
-  it("refuses to trade an account that isn't the requester's own", async () => {
-    expect(await service()(request, "bob")).toEqual({
-      ok: false,
-      refusals: ["You can only trade your own account."],
-    });
-  });
-
-  it("refuses when no identity resolved at all", async () => {
-    expect(await service()(request, undefined)).toMatchObject({ ok: false });
-  });
-
-  it("refuses when desk trading is switched off, whoever is asking", async () => {
-    expect(await service({ tradingEnabled: false })(request, "ann")).toMatchObject({ ok: false });
-  });
-
-  it("re-checks against the LIVE account, catching a position that shrank since review", async () => {
-    const shrunk = client({ getPositions: async () => [] });
-    const result = await service({ client: shrunk })(request, "ann");
-    expect(result).toMatchObject({ ok: false });
-    expect((result as { refusals: string[] }).refusals.join(" ")).toContain("short");
-  });
-
-  it("reports a broker rejection as a refusal rather than throwing", async () => {
-    const angry = client({
-      placeOrder: () => Promise.reject(new Error("insufficient buying power")),
-    });
-    const result = await service({ client: angry })(request, "ann");
-    expect(result).toMatchObject({ ok: false });
-    expect((result as { refusals: string[] }).refusals.join(" ")).toContain("rejected the order");
-  });
-
-  it("still reviews the order when the market clock can't be read", async () => {
-    const noClock = client({ isMarketOpen: () => Promise.reject(new Error("clock down")) });
-    expect(await service({ client: noClock })(request, "ann")).toMatchObject({ ok: true });
   });
 });

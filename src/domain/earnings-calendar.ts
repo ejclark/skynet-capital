@@ -37,6 +37,31 @@ export interface EarningsPrint {
 }
 
 /**
+ * The three print-proximity windows the house already trades on, gathered here so a READER (a
+ * view, a report) never has to invent a fourth number to describe them.
+ *
+ *   - `entryFlatDays`     — S2's entry guard: don't OPEN a buy with a print this close (`engine/guards.ts`).
+ *   - `postPrintFlatDays` — post-print hygiene: a position that somehow survived its print is
+ *                           exited within this many days (`playbooks/registry.ts`).
+ *   - `deadZoneDays`      — S1's dead zone: inside this, the pre-print positioning bid is over
+ *                           (docs/research/nvda-earnings-cycle.md — D-5→D is NVDA's dead week).
+ *
+ * WHY THESE MIRROR RATHER THAN DRIVE. `engine/guards.ts` and `playbooks/**` are envelope-protected
+ * — a read-only display change may not edit them — so they still hold their own literals and these
+ * are copies. Copies drift, so `tests/domain/earnings-calendar.spec.ts` PINS each value to the
+ * behaviour it claims: change a guard's number without changing this one and the suite goes red.
+ * Rewiring those two files to import from here is the right end state and is Eric's call.
+ *
+ * These are TRADING-DISCIPLINE numbers. A display that wants a proximity horizon reads one of
+ * them; retuning one to make a badge look better would be changing the discipline, so don't.
+ */
+export const PRINT_WINDOWS = {
+  entryFlatDays: 2,
+  postPrintFlatDays: 3,
+  deadZoneDays: 5,
+} as const;
+
+/**
  * Seeded from the 2026-08-12 eight-symbol sweep (docs/research/multi-symbol-sweep.md) — all
  * cadence estimates until IR confirms. Replace an entry's status with `confirmed` + the IR
  * source when the date is announced; that flip is what unlocks date-keyed playbook entries.

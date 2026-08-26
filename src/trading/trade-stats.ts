@@ -1,3 +1,4 @@
+import { MARKET_TIMEZONE, marketDayKey } from "../domain/market-day.js";
 import type { RoundTrip } from "./round-trips.js";
 
 /**
@@ -153,17 +154,6 @@ export interface DayResult {
   readonly trades: number;
 }
 
-function dayKey(iso: string, timezone: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
-  try {
-    // en-CA renders ISO-shaped YYYY-MM-DD, which sorts lexically — the property the strip needs.
-    return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(date);
-  } catch {
-    return date.toISOString().slice(0, 10);
-  }
-}
-
 /**
  * Realized P/L bucketed by close date, oldest first. Days are computed in the participant's own
  * timezone (defaulting to US market time) so a trade closed at 3:55pm ET never lands on the next
@@ -171,11 +161,11 @@ function dayKey(iso: string, timezone: string): string {
  */
 export function realizedByDay(
   trips: readonly RoundTrip[],
-  timezone = "America/New_York",
+  timezone = MARKET_TIMEZONE,
 ): DayResult[] {
   const days = new Map<string, { realized: number; trades: number }>();
   for (const trip of trips) {
-    const key = dayKey(trip.closedAt, timezone);
+    const key = marketDayKey(trip.closedAt, timezone);
     const entry = days.get(key) ?? { realized: 0, trades: 0 };
     entry.realized += trip.realized;
     entry.trades += 1;

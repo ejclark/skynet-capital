@@ -1,15 +1,9 @@
-import { renderAnalysisBody } from "../../src/observatory/analysis-view.js";
 import { positionsFrom } from "../../src/observatory/broker-positions.js";
 import { fillsFrom, formatHold, ticketContext } from "../../src/observatory/desk-data.js";
 import { DESK_STYLE } from "../../src/observatory/desk-style.js";
 import { deskHref, deskTabs, parseDeskTab } from "../../src/observatory/desk-tabs.js";
-import type { EquitySample } from "../../src/observatory/history-store.js";
-import { renderHistoryBody } from "../../src/observatory/history-view.js";
-import { renderMetricsBody } from "../../src/observatory/metrics-view.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import { renderPositionsBody } from "../../src/observatory/positions-view.js";
-import { renderTradeReviewBody } from "../../src/observatory/trade-review-view.js";
-import { previewOrder } from "../../src/trading/order-ticket.js";
 
 const snapshot = (over: Partial<ParticipantSnapshot> = {}): ParticipantSnapshot => ({
   id: "ann",
@@ -45,7 +39,7 @@ describe("desk tabs", () => {
   it("defaults to the overview for a missing or unknown tab", () => {
     expect(parseDeskTab(null)).toBe("overview");
     expect(parseDeskTab("nonsense")).toBe("overview");
-    expect(parseDeskTab("analysis")).toBe("analysis");
+    expect(parseDeskTab("performance")).toBe("performance");
   });
 
   it("downgrades the owner-only settings tab to the overview without owner rights (#475)", () => {
@@ -64,8 +58,8 @@ describe("desk tabs", () => {
   });
 
   it("marks exactly one tab active, for assistive tech too", () => {
-    const html = deskTabs("ann", "history");
-    expect(html).toContain('class="desk-tab active" href="/u/ann?tab=history"');
+    const html = deskTabs("ann", "performance");
+    expect(html).toContain('class="desk-tab active" href="/u/ann?tab=performance"');
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
   });
 });
@@ -222,290 +216,6 @@ describe("positions view — the blotter", () => {
       notice: { kind: "ok", message: "Order sent to the broker." },
     });
     expect(html).toContain("Order sent to the broker.");
-  });
-});
-
-describe("history view — closed round trips and the order ledger", () => {
-  // Pinned "now" so the window math never depends on the wall clock (fixture fills are early Aug).
-  const AS_OF = "2026-08-05T00:00:00.000Z";
-  const opts = { isSelf: true, generatedAt: AS_OF };
-
-  it("renders the matched trip with realized P/L, return and cost basis", () => {
-    const html = renderHistoryBody(snapshot(), opts);
-    expect(html).toContain(">MSFT<");
-    expect(html).toContain("+$120"); // (330 − 300) × 4
-    expect(html).toContain("+10.00%");
-    expect(html).toContain("Cost basis");
-    expect(html).toContain("$1,200.00"); // 300 × 4
-  });
-
-  it("shows the order ledger as a first-class blotter with the filter chips", () => {
-    const html = renderHistoryBody(snapshot(), opts);
-    expect(html).toContain("Order activity");
-    expect(html).toContain('class="fchip active"');
-    expect(html).toContain("window=7d&type=all"); // every other window is one click away
-    // The two "All" chips must not read as twins: each names what it selects (Eric, PR #459).
-    expect(html).toContain(">All history<");
-    expect(html).toContain(">All types<");
-  });
-
-  it("filters orders and trips by the selected window", () => {
-    const withOld = snapshot({
-      activity: [
-        ...(snapshot().activity ?? []),
-        {
-          symbol: "GME",
-          side: "buy",
-          quantity: 1,
-          filledQuantity: 1,
-          price: 20,
-          status: "filled",
-          at: "2026-06-01T14:00:00.000Z",
-        },
-      ],
-    });
-    const week = renderHistoryBody(withOld, { ...opts, activityWindow: "7d" });
-    expect(week).not.toContain(">GME<");
-    const all = renderHistoryBody(withOld, { ...opts, activityWindow: "all" });
-    expect(all).toContain(">GME<");
-  });
-
-  it("filters the order ledger by trade type without touching the trips", () => {
-    const html = renderHistoryBody(snapshot(), { ...opts, activityType: "sell" });
-    expect(html).not.toContain(">BUY<");
-    expect(html).toContain(">SELL<");
-    expect(html).toContain("+$120"); // the round trip (buy + sell) still scores
-  });
-
-  it("extends history beyond the broker window from the durable ledger, badging backfill", () => {
-    const durable = [
-      {
-        orderId: "b1",
-        participantId: "ann",
-        symbol: "CRWV",
-        side: "buy" as const,
-        quantity: 2,
-        filledQuantity: 2,
-        price: 50,
-        status: "filled",
-        at: "2026-06-02T14:00:00.000Z",
-        source: "backfill" as const,
-      },
-      {
-        orderId: "b2",
-        participantId: "ann",
-        symbol: "CRWV",
-        side: "sell" as const,
-        quantity: 2,
-        filledQuantity: 2,
-        price: 60,
-        status: "filled",
-        at: "2026-06-03T14:00:00.000Z",
-        source: "backfill" as const,
-      },
-    ];
-    const html = renderHistoryBody(snapshot(), {
-      ...opts,
-      activityWindow: "all",
-      tradeActivity: durable,
-    });
-    expect(html).toContain(">CRWV<");
-    expect(html).toContain("backfilled");
-    expect(html).not.toContain("backfill:activity"); // the ledger exists — no setup caveat
-  });
-
-  it("points at the backfill when the durable ledger has nothing yet", () => {
-    const html = renderHistoryBody(snapshot(), opts);
-    expect(html).toContain("backfill:activity");
-  });
-
-  it("unfolds a bot order's decision context one click away", () => {
-    const bot = snapshot({ id: "sauron", kind: "bot", displayName: "Sauron" });
-    const html = renderHistoryBody(bot, {
-      ...opts,
-      decisions: [
-        {
-          at: new Date("2026-08-04T13:59:00.000Z").getTime(),
-          personaId: "sauron",
-          mode: "live",
-          rawIntents: [
-            { symbol: "MSFT", side: "sell", quantity: 9, type: "market", reason: "lock the gain" },
-          ],
-          guardedIntents: [
-            { symbol: "MSFT", side: "sell", quantity: 4, type: "market", reason: "lock the gain" },
-          ],
-          outcomes: [
-            {
-              intent: {
-                symbol: "MSFT",
-                side: "sell",
-                quantity: 4,
-                type: "market",
-                reason: "lock the gain",
-              },
-              action: "placed",
-            },
-          ],
-        },
-      ],
-    });
-    expect(html).toContain('<details class="why"><summary>why</summary>');
-    expect(html).toContain("lock the gain");
-    expect(html).toContain("persona asked for 9, risk guards sized it to 4");
-  });
-
-  it("unfolds the strategy and expectation lines when the intent carries them", () => {
-    const bot = snapshot({ id: "sauron", kind: "bot", displayName: "Sauron" });
-    const contextualized = {
-      symbol: "MSFT",
-      side: "sell" as const,
-      quantity: 4,
-      type: "market" as const,
-      reason: "banking half",
-      strategy: "hc-euphoria-fade",
-      expectation: "expect the rally to stall as exhausted greed unwinds",
-    };
-    const html = renderHistoryBody(bot, {
-      ...opts,
-      decisions: [
-        {
-          at: new Date("2026-08-04T13:59:00.000Z").getTime(),
-          personaId: "sauron",
-          mode: "live",
-          rawIntents: [contextualized],
-          guardedIntents: [contextualized],
-          outcomes: [{ intent: contextualized, action: "placed" }],
-        },
-      ],
-    });
-    expect(html).toContain("<b>Strategy</b> hc-euphoria-fade");
-    expect(html).toContain("<b>Expecting</b> expect the rally to stall");
-  });
-
-  it("says history begins mid-trade when a sell had no matching lot", () => {
-    const html = renderHistoryBody(
-      snapshot({
-        activity: [
-          {
-            symbol: "TSLA",
-            side: "sell",
-            quantity: 3,
-            filledQuantity: 3,
-            price: 200,
-            status: "filled",
-            at: "2026-08-02T14:00:00.000Z",
-          },
-        ],
-      }),
-      opts,
-    );
-    expect(html).toContain("History begins mid-trade");
-  });
-
-  it("states plainly when there is nothing closed yet", () => {
-    const html = renderHistoryBody(snapshot({ activity: [] }), opts);
-    expect(html).toContain("No closed trades");
-  });
-});
-
-describe("analysis view — trade behavior", () => {
-  it("reports the stat family from closed trips", () => {
-    const html = renderAnalysisBody(snapshot(), { isSelf: true });
-    expect(html).toContain("Win rate");
-    expect(html).toContain("100.00%");
-    expect(html).toContain("Profit factor");
-  });
-
-  it("refuses to invent analysis from open positions alone", () => {
-    const html = renderAnalysisBody(snapshot({ activity: [] }), { isSelf: true });
-    expect(html).toContain("Analysis needs closed trades");
-    expect(html).not.toContain("Win rate");
-  });
-
-  it("prints an em-dash, never 0.00, for a ratio with no losses to divide by", () => {
-    const html = renderAnalysisBody(snapshot(), { isSelf: true });
-    expect(html).toContain("nothing lost yet — no ratio to take");
-  });
-});
-
-describe("metrics view — account performance", () => {
-  const samples: EquitySample[] = [
-    {
-      at: "2026-07-01T14:00:00.000Z",
-      participantId: "ann",
-      equity: 10_000,
-      cash: 10_000,
-      realizedPl: 0,
-    },
-    {
-      at: "2026-08-01T14:00:00.000Z",
-      participantId: "ann",
-      equity: 11_000,
-      cash: 5_000,
-      realizedPl: 120,
-    },
-  ];
-
-  it("draws the equity curve and the drawdown once there are samples", () => {
-    const html = renderMetricsBody(snapshot(), {
-      isSelf: true,
-      history: samples,
-      generatedAt: "2026-08-02T14:00:00.000Z",
-    });
-    expect(html).toContain("equity-spark");
-    expect(html).toContain("Max drawdown");
-  });
-
-  it("says history is still accruing instead of drawing a flat line", () => {
-    const html = renderMetricsBody(snapshot(), { isSelf: true, history: [] });
-    expect(html).toContain("No recorded history yet");
-    expect(html).not.toContain('<svg class="equity-spark"');
-  });
-
-  it("measures the doubling race against the founding baseline", () => {
-    const html = renderMetricsBody(snapshot(), {
-      isSelf: true,
-      history: samples,
-      generatedAt: "2026-08-02T14:00:00.000Z",
-    });
-    expect(html).toContain("The doubling race");
-    expect(html).toContain("10.0% of the way to 2×");
-  });
-});
-
-describe("review screen", () => {
-  const preview = previewOrder(
-    { symbol: "AAPL", quantity: 10, action: "sell" },
-    { cash: 5_000, positions: snapshot().positions, tradingEnabled: true, isSelf: true },
-  );
-
-  it("restates the whole order and asks for a second, explicit confirm", () => {
-    const html = renderTradeReviewBody(snapshot(), preview);
-    expect(html).toContain("SELL 10 AAPL · market");
-    expect(html).toContain("Estimated proceeds");
-    expect(html).toContain("Cash after (est.)");
-    expect(html).toContain('name="confirm" value="1"');
-    expect(html).toContain("Cancel");
-  });
-
-  it("surfaces warnings without blocking the confirm", () => {
-    const html = renderTradeReviewBody(snapshot(), preview);
-    expect(html).toContain("closes the position completely");
-    expect(html).toContain("Confirm —");
-  });
-
-  it("replaces the confirm with the refusal reasons when the order can't go", () => {
-    const refused = previewOrder(
-      { symbol: "AAPL", quantity: 99, action: "sell" },
-      { cash: 5_000, positions: snapshot().positions, tradingEnabled: true, isSelf: true },
-    );
-    const html = renderTradeReviewBody(snapshot(), refused);
-    expect(html).toContain("You hold 10 shares");
-    expect(html).not.toContain('name="confirm" value="1"');
-  });
-
-  it("labels the account as paper, every time", () => {
-    expect(renderTradeReviewBody(snapshot(), preview)).toContain("Paper account.");
   });
 });
 

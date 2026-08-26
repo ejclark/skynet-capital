@@ -17,12 +17,12 @@ double as an immediate post-Fed inflation-expectations gauge. Auction **date con
 size/when-issued/demand figure below is **estimate/press-sourced**. No symbol-keyed action —
 guard-shaped, watch-only.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | 29 days out; medium-impact real-yield reopening — nothing here licenses action, and today's own 20Y result isn't posted yet. |
-| This week | Stand aside | The 30Y TIPS auction (8/20) is this week's real-yield read; this 10Y TIPS is a month out. |
-| This month | Watch the breakeven, not just the stop | Lands D+1 to the FOMC; a real-yield stop with a jump in breakevens flips the "real-rate not inflation" read the long end has run on. |
-| This quarter | Watch | Feeds the real-rate/term-premium narrative through the Sep coupon block and into the Fed-path picture; context for long-duration names, not a standalone trade. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | 29 days out; medium-impact real-yield reopening — nothing here licenses action, and today's own 20Y result isn't posted yet. | Nothing at 29 days out; a medium-impact real-yield reopening licenses no action |
+| This week | Stand aside | High | The 30Y TIPS auction (8/20) is this week's real-yield read; this 10Y TIPS is a month out. | The **2026-08-20** 30Y TIPS auction giving the week's real-yield read |
+| This month | Watch the breakeven, not just the stop | Medium | Lands D+1 to the FOMC; a real-yield stop with a jump in breakevens flips the "real-rate not inflation" read the long end has run on. | 10-year breakevens jumping alongside the auction — the distinctive kill switch here |
+| This quarter | Watch | Medium | Feeds the real-rate/term-premium narrative through the Sep coupon block and into the Fed-path picture; context for long-duration names, not a standalone trade. | A weak-demand stop — real yield tailing well above when-issued, bid-to-cover below ~2.30 |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 

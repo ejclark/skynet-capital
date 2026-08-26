@@ -27,6 +27,121 @@ it. Prevention ranks, best first:
 
 ---
 
+### An explicit instruction was quietly overridden by a research-backed counter-recommendation
+
+- **SHA:** 0dddc1a   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** Eric: "I gave explicit instruction to tear down arch-budget.json and you added nearly
+  150 lines to a 110 line file." Detection lag: an entire session — the deviation shipped in a merged
+  PR before anyone flagged it.
+- **ROOT CAUSE:** Eric's first message said "I'd expect tooling/process like biome, linting, evals,
+  etc. should be able to **fully dismantle this custom process**" — a plain, explicit instruction. A
+  research workflow later concluded the ratchet-budget *chassis* was worth keeping (citing real
+  precedent: ESLint's own Bulk Suppressions, Notion's `eslint-seatbelt`). That conclusion may have
+  been reasonable on its own, but it directly contradicted what Eric had already said, and it was
+  presented as settled fact in a report rather than surfaced as a fork needing his sign-off. Proceeding
+  on a research conclusion that reverses an explicit instruction is the same failure as proceeding on
+  a guess — the confidence of the reasoning doesn't change whose call it was.
+- **PREVENTION:** doctrine line, this entry. When a user gives an explicit, specific instruction
+  ("tear down X", "delete Y") and later analysis suggests otherwise, that conflict gets surfaced as an
+  explicit question *before* acting on the counter-recommendation — never silently substituted and
+  reported as if it were the original ask. "I did more research and think X is better than what you
+  asked for" is a question, not a status update.
+- **SIDE QUESTS:** none — the correction is the second half of this same entry's story, see below.
+
+### Biome's `noExcessiveLinesPerFile` silently misses files dominated by a large template literal
+
+- **SHA:** 5ca2c6c → corrected same day   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** verifying the arch-budget.json teardown (above), `src/server/auth/authenticator.ts`
+  (2779 lines) showed zero Biome diagnostics despite the rule being enabled at `"error"`, 300-line cap,
+  no override. Detection lag: caught before merge, by verifying rather than trusting the plan — not
+  caught by any gate.
+- **ROOT CAUSE:** `authenticator.ts` has one template literal spanning lines 147–2771 (the entire
+  cinematic `/login` page's HTML, ~94% of the file). Confirmed empirically — bisecting the file,
+  then isolating `biome.json` down to a single rule in a scratch directory outside the repo — that
+  Biome's line-counting for this rule does not count physical lines the same way inside a large
+  template literal. This repo's dashboard views are written as exactly that pattern
+  (`render-dashboard.ts`, `standings-view.ts`, `shell-style.ts`, `ticket-view.ts`,
+  `feedback-view.ts`, `feedback-coach.ts` all confirmed affected), so a real, adopted, already-enabled
+  tool had a blind spot for this codebase's single most common god-file shape.
+- **PREVENTION:** gate — `scripts/arch-scan.mjs` keeps its own reliable `readFileSync(...).split("\n")`
+  count as the actual enforcement (`arch-grandfather.json`, a flat exceptions list, not a numbered
+  budget); Biome's rule stays on as a secondary IDE/CI signal for the files it does read correctly, but
+  is never trusted as sole authority for a codebase whose dominant file pattern it can't see.
+  Doctrine line: **when adopting a third-party tool to replace custom logic, verify it against the
+  worst real case in the codebase before deleting the custom logic, not against the docs.**
+- **SIDE QUESTS:** worth a minimal upstream report to biomejs/biome if this reproduces outside this
+  repo — not filed here. _(src: Claude · while: verifying the arch-budget.json teardown)_
+
+### The GitHub MCP tool silently strips `<details>` from a PR body, so the fridge rule shipped unfolded
+
+- **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** reading PR #561 back through `mcp__github__pull_request_read` after opening it — the
+  `<summary>` line was there as bare `<strong>` text with the whole brief expanded beneath it, and the
+  `<details>`/`<summary>` tags were simply *gone*. Detection lag ≈ 5 minutes, and only because the PR
+  was re-read at all; nothing would have reported it otherwise. The control that made it certain:
+  reading #560 (opened via `scripts/ship.sh`) back through the same tool shows `&lt;details&gt;`
+  **escaped but present**, so the read path preserves the tags and the write path is what dropped them.
+- **ROOT CAUSE:** `mcp__github__create_pull_request` / `update_pull_request` sanitize the body they
+  send, removing `<details>` and `<summary>` while leaving `<strong>`, `<img>` and GFM tables intact.
+  The PR is created successfully and the tool reports success, so there is no error to notice. The
+  effect is precisely the defect `docs/PICTURES.md` exists to prevent: **everything lands above the
+  fold**. It bit hardest here because #561's own subject was wall-of-text readability — the PR
+  arguing for folds arrived without one.
+- **PREVENTION:** doctrine + the existing gate, pointed at the right target. `scripts/ship.sh open`
+  writes bodies over REST with a token and is unaffected; `ship.sh checkbody` already refuses a body
+  with no fold — but it lints the **file**, not what GitHub stored, so it passes while the shipped
+  body is broken. So: open and edit PR bodies through `ship.sh`/REST, never through the GitHub MCP
+  write tools; and when a body must go through them, re-read the PR and count `<details>` before
+  calling it done. Landed in `CLAUDE.md`'s ship loop (the line the next session actually reads) and
+  in `docs/PICTURES.md` beside the screenshot mechanics.
+- **SIDE QUESTS:** a `ship.sh verifybody <pr>` that fetches the stored body and re-runs `checkbody`
+  against it would close the file-vs-stored gap mechanically (→ docs/IDEAS.md).
+
+---
+
+### The guest list was never on the volume, so every deploy locked the members out and left the owners in
+
+- **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** a screenshot from Eric — "Tony is locked out **again**". The word *again* is the whole
+  signal: this had been happening on every merge to `main` for three days (the store shipped in #506
+  on 2026-08-22) and was read each time as a one-off invite that didn't take. Detection lag ≈ 3 days
+  and an unknown number of re-invites, because the only person who could see the app was the one
+  person the bug could not affect.
+- **ROOT CAUSE:** `createAllowlistStore` resolves `env.SKYNET_ALLOWLIST_STORE ?? "data/allowlist.json"`
+  — a **relative** default. `fly.toml` pinned three stores to the mounted volume
+  (`SKYNET_PARTICIPANT_STORE`, `SKYNET_HISTORY_DIR`, `SKYNET_INSIGHTS_DIR`) and never pinned this one,
+  so on Fly (`WORKDIR /app`) the guest list was written to `/app/data/allowlist.json` — inside the
+  container image, not on `/data`. Every push to `main` redeploys, so the file died with the machine.
+  It was silent in both directions: `add()` succeeded and reported "They can sign in now", and
+  `entries()` treats an absent file as an empty list rather than an error. The asymmetry is what hid
+  it — `resolveAuth` unions the store with `SKYNET_ALLOWED_EMAILS`, a Fly *secret* that persists, so
+  owners sailed through a gate that had silently dropped every member. **The same class had already
+  been caught once and not generalized:** the `SKYNET_HISTORY_DIR` comment in `fly.toml` explains this
+  exact failure ("every deploy erases the very history…") for one store instead of for the rule. Four
+  more stores were unpinned alongside the allowlist — bot controls, trade activity, the feedback log,
+  and the **order audit trail**.
+- **PREVENTION:** two gates, deliberately not one — Eric's own read on this ("the process to add
+  users seems brittle... I expect safety rails") was that a single net wasn't enough, and he was
+  right: a pre-merge gate can't see drift that never touches a diff. **Pre-merge:**
+  `tests/arch/volume-persistence.spec.ts` scans `src/**` for the `env.SKYNET_X ?? "data/…"` idiom
+  and fails CI unless every store it finds is pinned under `fly.toml`'s `[mounts] destination`,
+  with an `EPHEMERAL` map as the on-the-record escape hatch. Asserted in both directions — the
+  scan must find the known stores, so it can never pass by discovering nothing — and proven to
+  fail by removing the allowlist line before it was trusted. **Boot-time:**
+  `src/runtime/volume-guard.ts` re-checks the same list against the environment the process
+  actually has, on every start, and warns loudly (`fly logs`) the moment a pinned store resolves
+  off the volume — catching a hand-edited env block, an override set outside git, or a var simply
+  unset after the fact, none of which the file-reading CI gate can see. The two lists are
+  hand-kept in sync rather than sharing code (the boot check must not scan the filesystem on
+  every start), so `tests/arch/volume-persistence.spec.ts` also asserts they match. All five
+  missing paths are now pinned in `fly.toml`.
+- **SIDE QUESTS:** an empty guest list is indistinguishable from an unreadable one at the boundary
+  `entries()` guards — `existsSync` returns `[]` with no report while a parse failure logs loudly. A
+  store that has *never* existed and one that *vanished* deserve different volume (→ docs/IDEAS.md).
+  Separately: `SKYNET_AUDIT_DIR` and `SKYNET_HALT_FILE` are read on the autonomy path with no default
+  and are set nowhere, so the decision audit and the kill-file are inert in production — a safety
+  question, not a persistence one, and deliberately out of this diff's scope (→ docs/IDEAS.md).
+
 ### A filter compared `undefined` to a string, and the sweep could never close anything
 
 - **SHA:** 0ec180c   **DATE:** 2026-08-22   **STATUS:** closed
@@ -274,6 +389,62 @@ it. Prevention ranks, best first:
   `tests/server/feedback-coach-script.spec.ts`.
 - **SIDE QUESTS:** a real-browser CI smoke of the critical funnels (/feedback click-through) —
   parked in docs/IDEAS.md.
+
+### `/security-review` reported clean over an EMPTY diff, on an envelope-protected file
+- **SHA:** n/a   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** the session building #579 ran `/security-review` on `src/alpaca/alpaca-options-client.ts`
+  — the brokerage client that can place option orders, and one of the narrowest files in
+  `envelope.json`. The skill first failed to load (`origin/HEAD` is unset in a fresh worktree); after
+  `git remote set-head`, it loaded and harvested **nothing**, because its command targets
+  `origin/HEAD...` and the changes were still uncommitted. It was on course to return a clean verdict
+  over a zero-line diff. Caught only because that session noticed the harvest was empty and reviewed
+  the real diff by hand instead — no net would have caught it.
+- **ROOT CAUSE:** two stacked, and the second is the dangerous one. (1) A git worktree does not
+  inherit `origin/HEAD`, so the skill cannot resolve its base. (2) The harvest is `origin/HEAD...`,
+  which by definition excludes uncommitted work — and **CLAUDE.md's own ship-loop instruction said to
+  run it "before opening the PR"**, i.e. exactly when the changes are uncommitted. The documented
+  workflow led directly into the silent case. A review that examines nothing and says "clean" is
+  worse than one that errors, because it reads as assurance precisely where assurance is load-bearing.
+- **PREVENTION:** the ship-loop bullet now says **commit first**, and in a worktree run
+  `git remote set-head origin -a` first, with the reason attached so the instruction cannot decay back
+  into the trap. The skill itself is a Claude Code built-in and cannot be fixed from this repo.
+- **THE PATTERN, third sighting tonight:** a check that validates the wrong artefact reports success
+  forever. `ship.sh checkbody` lints the local file while the transport rewrites the payload (the
+  stripped `<details>` folds, 2026-08-25, and the defanged image embeds recorded directly below).
+  Now a review skill grading an empty harvest. **When a gate passes, confirm it examined the thing you
+  meant** — an empty input is not a pass.
+- **SIDE QUESTS:** a `ship.sh` preflight that refuses to open a PR when a review skill's harvest came
+  back empty would close all three; banked rather than built, since it wants its own specs.
+
+### A fridge-rule picture did not render — and the cause is still open, so verify the STORED body
+- **SHA:** n/a   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** a build session shipping #575 wrote a fridge-rule screenshot into its PR body the
+  documented way — a committed `docs/shots/` PNG, SHA-pinned, `checkbody` green. Reading back what
+  GitHub had actually **stored** showed the markdown defanged: the leading `!` stripped and the URL
+  wrapped in backticks, so the image rendered as a literal code span, not a picture. Detection lag:
+  minutes, and only because that session re-read the stored body instead of trusting `checkbody`.
+- **ROOT CAUSE:** **not established** — corrected 2026-08-26, same night. The first version of this
+  entry blamed "the outbound path for this session type." Three later sessions produced evidence
+  against that, and the claim should not have been written as settled:
+  - PR #605 carries an intact `![...]` embed in its stored body, so embeds plainly CAN survive.
+  - `ship.sh open`'s SHA-pinning rewrites only the URL path segment (`scripts/ship.sh`, the
+    `re.sub` over `raw.githubusercontent.com/…/docs/shots/`); it cannot strip a `!` or add backticks.
+  - Three Wave-4 sessions independently found the GitHub MCP **read** tool strips
+    `<details>`/`<summary>` *on display* while the stored body is intact — so a session that reads
+    its own PR back through that tool can mistake sanitised output for a broken publish.
+  Whether #575's embed was genuinely mangled on the way out, or merely looked mangled on read-back,
+  is unresolved. What IS solid is the blind spot: `ship.sh checkbody` lints the local FILE, never
+  what the API stored — the same gap that let MCP-stripped folds pass (2026-08-25). A gate that
+  checks the input while something downstream may rewrite it reports success forever.
+- **PREVENTION:** **verify the stored body over REST after opening** — not via the MCP read tool,
+  which sanitises, and not from `checkbody`, which never saw it. Do NOT stop committing screenshots
+  on the strength of this entry: the fridge rule stands, `docs/shots/` is still where they go, and a
+  mermaid diagram remains a fine picture when a diagram is the honest one. If a REST read-back shows
+  an embed actually mangled, THEN fall back to pointing at the committed PNG in Files changed. The
+  durable fix is for `checkbody` to verify the STORED body, which closes this and the `<details>`
+  case together.
+- **SIDE QUESTS:** teach `ship.sh` a `--verify-stored <pr>` pass that re-reads the opened PR and
+  fails on a defanged embed or a missing fold — one check closing two recorded incidents.
 
 ### The fridge rule's own instruction embedded link rot — #446's screenshots died a day after merge
 - **SHA:** 29a0113   **DATE:** 2026-08-20   **STATUS:** closed

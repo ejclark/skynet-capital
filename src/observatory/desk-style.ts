@@ -125,6 +125,11 @@ export const DESK_STYLE = `<style>
   .fills{ margin-top:16px; }
   .fills summary{ cursor:pointer; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:8px 0; }
   .fills summary:hover{ color:var(--text); }
+
+  .perf-top{ display:grid; grid-template-columns:3fr 2fr; gap:16px; align-items:start; }
+  @container stage (max-width:860px){
+    .perf-top{ grid-template-columns:1fr; }
+  }
   @container stage (max-width:640px){
     .desk-v{ font-size:18px; }
     .blotter{ font-size:12.5px; }

@@ -12,13 +12,13 @@
  * which appears live with no restart. The live-vs-offline choice lives behind `resolveDataSource`.
  */
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
-import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
 import {
   createBootActivityStore,
   type TradeActivityRecord,
 } from "../observatory/activity-store.js";
+import { createBrokerSync } from "../observatory/broker-sync.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import {
@@ -28,32 +28,34 @@ import {
 } from "../observatory/history-boot.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
-import { dedupeById } from "../participants/participant.js";
+import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
-import { createDefaultPersonas } from "../personas/registry.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
 import { createAccountService } from "../server/account-service.js";
-import { createAllowlistStore } from "../server/auth/allowlist-store.js";
-import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
-import { createBotControlsStore } from "../server/bot-controls-store.js";
+import { ownerEmails } from "../server/auth/resolve-auth.js";
+import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
-import { resolveFeedbackCoach } from "../server/feedback-coach.js";
-import { createFeedbackLogStore } from "../server/feedback-log.js";
-import { resolveFeedback } from "../server/feedback-service.js";
-import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
 import { ParticipantService } from "../server/participant-service.js";
+import { createProgressionService } from "../server/progression-service.js";
+import { createProgressionStore } from "../server/progression-store.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
+import { setupAccess } from "./dashboard-access.js";
+import { setupFeedback } from "./dashboard-feedback.js";
+import { startInsightsBridge } from "./dashboard-insights-bridge.js";
 
 const PORT = resolvePort(process.env);
 
 async function main(): Promise<void> {
+  // Boot-time backstop for drift the CI gate can't see (docs/LESSONS.md, "guest list … volume").
+  for (const warning of volumePersistenceWarnings(process.env)) console.warn(warning);
   const dataSource = resolveDataSource(process.env);
   const store = createParticipantStore(process.env);
   const envRoster = dataSource.loadParticipants();
-  const roster = dedupeById([...envRoster, ...store.load()]);
+  const roster = mergeRoster(envRoster, store.load());
   if (roster.length === 0 && dataSource.mode === "offline") {
     console.error("No participants in fixtures/offline/participants.json.");
     process.exit(1);
@@ -119,6 +121,7 @@ async function main(): Promise<void> {
   ];
   dataSource.startStreams({ participants: roster, heldSymbols, sink, onActivity, onStatus });
 
+  const owners = ownerEmails(process.env);
   const service = new ParticipantService({
     hub,
     store,
@@ -129,51 +132,51 @@ async function main(): Promise<void> {
     // idempotent — a re-onboarding member keeps the history they already have).
     recordSeedSample: seedSampleRecorder(history),
     baseUrl: process.env.ALPACA_PAPER_BASE_URL ?? ALPACA_PAPER_BASE_URL,
-    isReservedId: (id) => envRoster.some((p) => p.id === id),
+    // /add refuses these ids; /rotate falls back to them so a host-configured account's
+    // regenerated key has a self-service home (owner-gated in the service under OAuth).
+    findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
+    isOwnerEmail: (email) => owners.has(email.toLowerCase()),
   });
 
   // Day-2 account management (/account): profile edits + removal for self-service accounts.
+  // Host-configured roster accounts are off-limits here — including a rotation's store row under
+  // a roster id — so the same tier /rotate enforces is enforced on edit/remove too.
   const accounts = createAccountService({
     hub,
     store,
     clientFactory: dataSource.clientFactory,
     stopStream: (id) => dataSource.stopParticipantStream(id),
+    findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
   });
 
-  // The guest list lives on the mounted volume, encrypted at rest, and is unioned with the env
-  // allowlist inside resolveAuth. Built here so the /invite route and the authenticator read the
-  // exact same store — two sources of truth for who may sign in is the bug worth designing out.
-  const allowlist = createAllowlistStore(process.env, (m) => console.error(m));
-  const owners = ownerEmails(process.env);
-  // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
-  // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
-  const botControls = createBotControlsStore(process.env, (m) => console.error(m));
-  const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
-  const auth = resolveAuth(process.env, undefined, allowlist);
-  const password = process.env.SKYNET_DASHBOARD_PASSWORD;
-  if (auth) {
-    if (auth.allowlistEmpty) {
-      console.warn(
-        "⚠️  OAuth login is on but the allowlist is empty — nobody can sign in. Set SKYNET_ALLOWED_EMAILS.",
-      );
-    }
-  } else if (!password) {
-    console.warn(
-      "⚠️  No auth configured and no SKYNET_DASHBOARD_PASSWORD set — the dashboard is OPEN to anyone who can reach it. Fine for localhost; configure OAuth or a password before exposing it publicly.",
-    );
-  }
-  if (!process.env.SKYNET_STORE_SECRET) {
-    console.warn(
-      "⚠️  No SKYNET_STORE_SECRET set — self-service onboarding (/add) is DISABLED so credentials are never written unencrypted. Set it to enable onboarding.",
-    );
-  }
-
   // Desk trading is on whenever OAuth is configured — no separate kill switch (#466).
-  const findParticipant = (id: string) => [...roster, ...store.load()].find((p) => p.id === id);
-  // The owner link: session email -> Participant.ownerEmail. Never exposed on ParticipantSnapshot.
-  const resolveOwnerId = (email: string): string | undefined =>
-    [...roster, ...store.load()].find((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
-      ?.id;
+  // Resolved through the LIVE merge (not the boot-time `roster`) so a credential rotated at
+  // runtime takes effect on the next order, not the next restart.
+  const liveRoster = () => mergeRoster(envRoster, store.load());
+  const findParticipant = (id: string) => liveRoster().find((p) => p.id === id);
+
+  // Guest list, Mission Control store, authenticator, and owner-link lookup (dashboard-access.ts).
+  const {
+    allowlist,
+    botControls,
+    knownPersonaIds,
+    auth,
+    password,
+    ownerLinks,
+    resolveOwnerIds,
+    resolveOwnerId,
+  } = setupAccess(process.env, liveRoster);
+  // The broker's last word (#591): the fill stream is the fast path, this is the authoritative slow
+  // one that repairs whatever it missed — a socket gap, a restart, an order placed outside this app.
+  // Reads the LIVE roster, so a runtime-added or rotated account is covered too.
+  const brokerSync = createBrokerSync({
+    getState: () => hub.getState(),
+    apply: sink,
+    findParticipant,
+    clientFactory: dataSource.clientFactory,
+  });
+  brokerSync.start();
+
   const orderAudit = createOrderAuditLog(process.env);
   const desk = resolveDeskTrading({
     findParticipant,
@@ -183,23 +186,14 @@ async function main(): Promise<void> {
     recordAudit: (entry) => orderAudit.record(entry),
   });
 
-  const feedback = resolveFeedback(process.env);
-  if (!feedback) {
-    console.warn(
-      "ℹ️  In-app feedback is off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — the /feedback form renders but submissions won't file issues.",
-    );
-  }
-  const feedbackCoach = resolveFeedbackCoach(process.env);
-  if (!feedbackCoach) {
-    console.warn(
-      "ℹ️  The feedback coach is off (no ANTHROPIC_API_KEY) — the plain /feedback form still works.",
-    );
-  }
-  // What a member filed, correlated to the issue it became (#429).
-  const feedbackLog = createFeedbackLogStore(process.env);
+  const { feedback, feedbackCoach, feedbackLog, feedbackStatus, feedbackFollowup } = setupFeedback(
+    process.env,
+  );
 
   createDashboardServer({
     hub,
+    // Ceremonies ride the board's seq-numbered patch stream as fire-once cues (#573).
+    ceremonies,
     password,
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
@@ -220,7 +214,17 @@ async function main(): Promise<void> {
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
+          // The account-link table (#546). Reads the live board so a just-added account is
+          // linkable immediately, and refuses any address that can't sign in — a link to
+          // somebody outside the gate is a link nobody could ever use.
+          claim: {
+            store: ownerLinks,
+            isOwner: (email: string) => owners.has(email),
+            accounts: () => toClaimAccounts(liveRoster()),
+            canSignIn: (email: string) => owners.has(email) || allowlist.emails().has(email),
+          },
           resolveOwnerId,
+          resolveOwnerIds,
         }
       : {}),
     // Mission Control (Eric, 2026-08-21): the owner's switchboard for the autonomous fleet.
@@ -246,8 +250,19 @@ async function main(): Promise<void> {
     ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
     recordFeedback: (entry) => feedbackLog.record(entry),
     readFeedback: (id) => feedbackLog.list(id),
+    ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
+    ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
+    refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
+    // `/wire`'s cross-participant feed: the same stores, called with no id.
+    readAllTradeActivity: () => activity.list(),
+    readAllFeedback: () => feedbackLog.list(),
+    progression: createProgressionService({
+      readFills: (id) => activity.list(id),
+      readTags: (id) => orderAudit.list(id),
+      store: createProgressionStore(process.env, (m) => console.error(m)),
+    }),
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
@@ -264,20 +279,9 @@ async function main(): Promise<void> {
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
   });
 
-  // Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — internal-only, so the
-  // `bots` process (no Fly Volume of its own) can persist retrospectives through this process's
-  // mounted volume. Bound to a port deliberately NOT in fly.toml's [http_service]: unreachable
-  // from the public internet, reachable only over Fly's private 6PN network. See
-  // src/server/insights-listener.ts for the full reasoning + what was verified.
-  const insights = createInsightStore(process.env);
-  const insightsPort = resolveInsightsBridgePort(process.env);
-  createInsightsListener({
-    record: (entry) => insights.record(entry),
-    // The bots process polls Mission Control state over the same private-net bridge.
-    controls: () => botControls.load(),
-  }).listen(insightsPort, () => {
-    console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
-  });
+  // Interim insight bridge (dashboard-insights-bridge.ts) — internal-only, private-net port for
+  // the `bots` process to persist retrospectives and poll Mission Control through this process.
+  startInsightsBridge(process.env, botControls);
 }
 
 main().catch((error) => {

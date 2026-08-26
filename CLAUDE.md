@@ -177,6 +177,16 @@ it wrong**. The provenance is `docs/research/nvda-aug-2026-print.md` (verdict in
 ranked P0–P4 plays including an explicit "not recommended, on the record"); the current example
 is `docs/research/ai-hardware-constraints-aug-2026.md`.
 
+**The call sheet is one grammar, and it is gated** (2026-08-25). Five columns — **the call ·
+confidence · the one-line why · the dated observation that proves it wrong** — keyed by *horizon*
+(Today / This week / This month / This quarter) in a single-event ledger, and by *name* in a
+multi-name study. `npm run research:lint` fails a research document that states a call without a
+confidence grade or a dated falsifier, because a call missing either is not the thing this section
+asks for. Reading is the renderer's job, not the author's: `/research` folds the method and the
+append-only ledger behind the decision header automatically, so a document nobody rewrote still
+opens on its call — and the fold costs the next assessment session nothing, since it reads the raw
+markdown. Contract: [`docs/process/EVENT-RESEARCH.md`](docs/process/EVENT-RESEARCH.md).
+
 Three rules keep the calls honest rather than merely confident. **Confidence is stated and drives
 size** — a low-confidence call is a stand-aside, never a small version of a high-confidence one.
 **Every call carries its falsifier with a date**, so the tape adjudicates instead of the
@@ -258,6 +268,11 @@ Eric will not remember these names — that is expected and fine; the docs are t
   the same hole — it took out the deploy, the receipt scan and the stall audit at once, silently.
   `node scripts/deploy-lag.mjs` answers "is `main` actually deployed?". Full merge policy:
   `.claude/skills/governor/SKILL.md`.
+- **Open and edit PR bodies over REST (`/ship`), never through the GitHub MCP write tools** — they
+  silently strip `<details>`/`<summary>`, so the whole brief lands above the fold and the tool still
+  reports success (`docs/LESSONS.md`, 2026-08-25). `ship.sh checkbody` lints the *file*, not what
+  GitHub stored, so it passes while the shipped body is broken. If a body must go through those
+  tools, re-read the PR and count the `<details>` before calling it done.
 - **Draft is a harness artifact, not a judgment — promote it immediately** (Eric's correction). Some
   Claude Code environments force every PR open as a draft. That is a property of the tool, never a
   statement that the change isn't ready, and leaving it there is a **throughput bug**: a draft can't
@@ -277,7 +292,12 @@ Eric will not remember these names — that is expected and fine; the docs are t
   not halt on failure. A pre-commit hook auto-formats staged files as a backstop.
 - **Solo-dev review substitute:** with no second engineer, the gates are the reviewer. For substantive
   PRs, run `/code-review` (and `/security-review` when the diff touches auth, tokens, input parsing, or
-  anything outward-facing) before opening the PR. The Coach gates (`arch:scan`, `dupe:scan`) run in the
+  anything outward-facing) before opening the PR — but **commit first, and in a worktree set
+  `origin/HEAD` first**. Both review skills harvest `origin/HEAD...`, so on uncommitted changes they
+  review an EMPTY diff and report clean; a fresh worktree has no `origin/HEAD` at all
+  (`git remote set-head origin -a`). A clean verdict over nothing is worse than an error, because it
+  reads as assurance — it produced exactly that on #612, an envelope-protected file
+  (`docs/LESSONS.md`, 2026-08-26). The Coach gates (`arch:scan`, `dupe:scan`) run in the
   test suite automatically — see [`docs/COACHES.md`](docs/COACHES.md) for the detect-and-correct roster
   (`/decompose`, `/dedupe`, agents).
 - **Blameless retro on detected drift.** When a net catches a slip, do a quick retro: root cause → a

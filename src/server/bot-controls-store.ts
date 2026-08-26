@@ -1,11 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
 import {
   type BotControls,
   type ControlsState,
   EMPTY_CONTROLS,
   parseControlsState,
 } from "../autonomous/bot-controls.js";
+import { JsonFileStore } from "../storage/json-file-store.js";
 
 /**
  * The bot-controls file on the mounted volume (`SKYNET_CONTROLS_FILE`, prod
@@ -13,34 +12,25 @@ import {
  *
  * Plain JSON, deliberately NOT encrypted: unlike the allowlist and participant stores this holds
  * no credentials and no personal data — only which bots the owner suspended and which build they
- * run. Writes are atomic (tmp + rename) so a crash mid-write leaves the previous state, never a
- * torn file; reads are total (a missing or malformed file is just EMPTY_CONTROLS, reported once).
- *
- * Synchronous fs on purpose, matching `FileAllowlistStore`: edits are owner-clicks (rare) and
- * reads are one small file — the simplicity is worth more than the microseconds.
+ * run. The `JsonFileStore` primitive underneath owns the pattern: atomic tmp+rename writes,
+ * total reads (a missing or malformed file is just EMPTY_CONTROLS, reported once), shared with
+ * the owner-link table.
  */
 export class BotControlsStore {
-  private readonly path: string;
-  private readonly onReadError: (message: string) => void;
+  private readonly file: JsonFileStore<ControlsState>;
 
-  constructor(path: string, onReadError: (message: string) => void = () => undefined) {
-    this.path = path;
-    this.onReadError = onReadError;
+  constructor(path: string, onReadError?: (message: string) => void) {
+    this.file = new JsonFileStore({
+      path,
+      parse: (raw) => parseControlsState(raw) ?? undefined,
+      empty: EMPTY_CONTROLS,
+      label: "controls",
+      ...(onReadError ? { onReadError } : {}),
+    });
   }
 
   load(): ControlsState {
-    if (!existsSync(this.path)) return EMPTY_CONTROLS;
-    try {
-      const parsed = parseControlsState(JSON.parse(readFileSync(this.path, "utf8")));
-      if (!parsed) {
-        this.onReadError(`[controls] ${this.path} did not parse as a controls state — using empty`);
-        return EMPTY_CONTROLS;
-      }
-      return parsed;
-    } catch (error) {
-      this.onReadError(`[controls] failed to read ${this.path}: ${String(error)} — using empty`);
-      return EMPTY_CONTROLS;
-    }
+    return this.file.load();
   }
 
   /** Merge a per-bot patch (undefined fields untouched) and stamp the audit line. */
@@ -52,7 +42,7 @@ export class BotControlsStore {
       updatedAt: at.toISOString(),
       updatedBy,
     };
-    this.write(next);
+    this.file.write(next);
     return next;
   }
 
@@ -64,15 +54,8 @@ export class BotControlsStore {
       updatedAt: at.toISOString(),
       updatedBy,
     };
-    this.write(next);
+    this.file.write(next);
     return next;
-  }
-
-  private write(state: ControlsState): void {
-    mkdirSync(dirname(this.path), { recursive: true });
-    const tmp = `${this.path}.tmp`;
-    writeFileSync(tmp, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-    renameSync(tmp, this.path);
   }
 }
 

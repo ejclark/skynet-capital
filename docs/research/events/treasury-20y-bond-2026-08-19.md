@@ -15,12 +15,12 @@ debt-financed name we track) fell **-12.1% the day before** the auction on rate/
 alone. Auction result **confirmed date**, everything about size/demand below is **estimate/press-
 sourced** and drifts hourly. No symbol-keyed action — this is a guard-shaped, no-new-risk window.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today | Stand aside · watch the 1:02pm ET print | Bid-to-cover, tail, and indirect % are the tell; no new duration-sensitive entries into the release. |
-| This week | Watch the 30Y TIPS auction (8/20) | Second long-end demand data point, same week — confirms or breaks the "deteriorating demand" read. |
-| This month | Flat the print for high-duration names | CRWV/NVDA/AVGO/MRVL exposure sized as if both tails (relief vs. confirmed weak-demand trend) are live through the Sep-16 FOMC. |
-| This quarter | Two live channels, not one | Term premium (fiscal/supply — this auction) and Fed path (Sep FOMC hike risk, ~30–40%) are separate risks that can compound; neither is resolved by today. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | Stand aside · watch the 1:02pm ET print | High | Bid-to-cover, tail, and indirect % are the tell; no new duration-sensitive entries into the release. | The 1:02pm ET result itself — bid-to-cover, tail and indirect share are the tell |
+| This week | Watch the 30Y TIPS auction (8/20) | High | Second long-end demand data point, same week — confirms or breaks the "deteriorating demand" read. | The **2026-08-20** 30Y TIPS auction contradicting this one's demand read |
+| This month | Flat the print for high-duration names | Medium | CRWV/NVDA/AVGO/MRVL exposure sized as if both tails (relief vs. confirmed weak-demand trend) are live through the Sep-16 FOMC. | A confirmed-weak print — bid-to-cover materially below ~2.55, a positive tail wider than July's |
+| This quarter | Two live channels, not one | Medium | Term premium (fiscal/supply — this auction) and Fed path (Sep FOMC hike risk, ~30–40%) are separate risks that can compound; neither is resolved by today. | A firm print (bid-to-cover ≥2.75, negative tail, indirects ≥71%) relieving the long end near-term |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 

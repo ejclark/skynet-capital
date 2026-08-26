@@ -41,22 +41,8 @@ export interface FeedbackLogStore {
   list(opaqueMemberId?: string): Promise<readonly FeedbackLogEntry[]>;
 }
 
-/** In-memory store: the reference implementation, used by tests. */
-export class InMemoryFeedbackLogStore implements FeedbackLogStore {
-  private readonly entries: FeedbackLogEntry[] = [];
-
-  record(entry: FeedbackLogEntry): Promise<void> {
-    this.entries.push(entry);
-    return Promise.resolve();
-  }
-
-  list(opaqueMemberId?: string): Promise<readonly FeedbackLogEntry[]> {
-    const all = [...this.entries];
-    return Promise.resolve(
-      opaqueMemberId ? all.filter((e) => e.opaqueMemberId === opaqueMemberId) : all,
-    );
-  }
-}
+/** The in-memory reference implementation (`InMemoryFeedbackLogStore`) lives in its own file,
+ *  `feedback-log-memory-store.ts` (Biome `noExcessiveClassesPerFile` — one class per module). */
 
 /** File-backed store: one append-only JSONL file per member under `dir` (on the mounted volume
  *  in prod — set `SKYNET_FEEDBACK_LOG_DIR=/data/feedback-log` — so the log survives redeploys). */

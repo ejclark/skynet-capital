@@ -1,5 +1,6 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import { handleAdd, handleRotate } from "../../src/server/self-service-forms.js";
 
 /**
@@ -7,6 +8,7 @@ import { handleAdd, handleRotate } from "../../src/server/self-service-forms.js"
  * exercising them over the wire is the honest way to test their behavior (status codes, body
  * content) without peeking at their internals.
  */
+const nav: NavContext = { active: "add", canAdd: true, authed: true };
 async function withRoute(
   handler: (req: Parameters<typeof handleAdd>[0], res: Parameters<typeof handleAdd>[1]) => void,
   run: (base: string) => Promise<void>,
@@ -25,7 +27,15 @@ describe("handleAdd", () => {
   it("GET serves the onboarding form", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "GET", "", undefined, () => Promise.reject(new Error("unused"))),
+        void handleAdd(
+          req,
+          res,
+          "GET",
+          "",
+          undefined,
+          () => Promise.reject(new Error("unused")),
+          nav,
+        ),
       async (base) => {
         const res = await fetch(base);
         expect(res.status).toBe(200);
@@ -36,14 +46,44 @@ describe("handleAdd", () => {
     );
   });
 
+  // 2026-08-25 (Eric: "/add ... continue[s] to ignore page templates and remove the rails"):
+  // /add renders inside the real app shell now, not the bare one-card page.
+  it("renders inside the app shell — the drawer rail, not a bare card", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleAdd(
+          req,
+          res,
+          "GET",
+          "",
+          undefined,
+          () => Promise.reject(new Error("unused")),
+          nav,
+        ),
+      async (base) => {
+        const body = await (await fetch(base)).text();
+        expect(body).toContain('<aside class="drawer"');
+        expect(body).toContain("Standings");
+      },
+    );
+  });
+
   it("POST submits the parsed form and renders success", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "POST", "", undefined, (input) => {
-          expect(input.displayName).toBe("Uncle Joe");
-          expect(input.apiKey).toBe("PK123");
-          return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
-        }),
+        void handleAdd(
+          req,
+          res,
+          "POST",
+          "",
+          undefined,
+          (input) => {
+            expect(input.displayName).toBe("Uncle Joe");
+            expect(input.apiKey).toBe("PK123");
+            return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
+          },
+          nav,
+        ),
       async (base) => {
         const res = await fetch(base, {
           method: "POST",
@@ -59,10 +99,18 @@ describe("handleAdd", () => {
   it("stamps the signed-in session's email as the owner — never a form field", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "POST", "", "uncle_joe@example.com", (input) => {
-          expect(input.ownerEmail).toBe("uncle_joe@example.com");
-          return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
-        }),
+        void handleAdd(
+          req,
+          res,
+          "POST",
+          "",
+          "uncle_joe@example.com",
+          (input) => {
+            expect(input.ownerEmail).toBe("uncle_joe@example.com");
+            return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
+          },
+          nav,
+        ),
       async (base) => {
         const res = await fetch(base, {
           method: "POST",
@@ -78,8 +126,14 @@ describe("handleAdd", () => {
   it("POST renders the error page with a 400 when the service refuses", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "POST", "", undefined, () =>
-          Promise.resolve({ ok: false, error: "That key was rejected." }),
+        void handleAdd(
+          req,
+          res,
+          "POST",
+          "",
+          undefined,
+          () => Promise.resolve({ ok: false, error: "That key was rejected." }),
+          nav,
         ),
       async (base) => {
         const res = await fetch(base, { method: "POST", body: "" });
@@ -92,8 +146,14 @@ describe("handleAdd", () => {
   it("refuses any method besides GET/POST", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(req, res, "DELETE", "", undefined, () =>
-          Promise.reject(new Error("unused")),
+        void handleAdd(
+          req,
+          res,
+          "DELETE",
+          "",
+          undefined,
+          () => Promise.reject(new Error("unused")),
+          nav,
         ),
       async (base) => {
         const res = await fetch(base, { method: "DELETE" });
@@ -107,8 +167,17 @@ describe("handleRotate", () => {
   it("GET serves the rotation form", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "GET", "", undefined, () =>
-          Promise.reject(new Error("unused")),
+        void handleRotate(
+          req,
+          res,
+          "GET",
+          "",
+          "",
+          "",
+          [],
+          {},
+          () => Promise.reject(new Error("unused")),
+          nav,
         ),
       async (base) => {
         const res = await fetch(base);
@@ -123,11 +192,22 @@ describe("handleRotate", () => {
   it("POST submits id + new credentials and renders success", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "POST", "", undefined, (input) => {
-          expect(input.id).toBe("day-trader");
-          expect(input.apiKey).toBe("new-key");
-          return Promise.resolve({ ok: true, id: "day-trader", displayName: "JARVIS" });
-        }),
+        void handleRotate(
+          req,
+          res,
+          "POST",
+          "",
+          "",
+          "",
+          [],
+          {},
+          (input) => {
+            expect(input.id).toBe("day-trader");
+            expect(input.apiKey).toBe("new-key");
+            return Promise.resolve({ ok: true, id: "day-trader", displayName: "JARVIS" });
+          },
+          nav,
+        ),
       async (base) => {
         const res = await fetch(base, {
           method: "POST",
@@ -140,11 +220,50 @@ describe("handleRotate", () => {
     );
   });
 
+  it("forwards the session's resolved id AND email — the roster owner-gate needs both", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleRotate(
+          req,
+          res,
+          "POST",
+          "",
+          "",
+          "",
+          [],
+          { id: "human-eric", email: "eric@example.com" },
+          (input) => {
+            expect(input.requesterId).toBe("human-eric");
+            expect(input.requesterEmail).toBe("eric@example.com");
+            return Promise.resolve({ ok: true, id: "human-eric", displayName: "Eric" });
+          },
+          nav,
+        ),
+      async (base) => {
+        const res = await fetch(base, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: "id=human-eric&apiKey=new-key&apiSecret=new-secret",
+        });
+        expect(res.status).toBe(200);
+      },
+    );
+  });
+
   it("POST renders the error page with a 400 when rotation is refused", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "POST", "", undefined, () =>
-          Promise.resolve({ ok: false, error: "No existing self-service account." }),
+        void handleRotate(
+          req,
+          res,
+          "POST",
+          "",
+          "",
+          "",
+          [],
+          {},
+          () => Promise.resolve({ ok: false, error: "No existing self-service account." }),
+          nav,
         ),
       async (base) => {
         const res = await fetch(base, { method: "POST", body: "" });
@@ -157,12 +276,102 @@ describe("handleRotate", () => {
   it("carries the ?key= password through both the form action and result links", async () => {
     await withRoute(
       (req, res) =>
-        void handleRotate(req, res, "GET", "secret123", undefined, () =>
-          Promise.reject(new Error("unused")),
+        void handleRotate(
+          req,
+          res,
+          "GET",
+          "secret123",
+          "",
+          "",
+          [],
+          {},
+          () => Promise.reject(new Error("unused")),
+          nav,
         ),
       async (base) => {
         const res = await fetch(base);
         expect(await res.text()).toContain("key=secret123");
+      },
+    );
+  });
+
+  // 2026-08-25: the id nobody remembers. A link that already names the account (the error card,
+  // a profile page) locks it in rather than making the member retype an opaque slug.
+  // 2026-08-26: the locked field shows the board NAME, never the raw id — the id travels only in
+  // the hidden field (Eric: "account id is made up by you.. why do you even bother showing it?").
+  it("pre-fills and locks the account by NAME when the link already names an id", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleRotate(
+          req,
+          res,
+          "GET",
+          "",
+          "human-uncle_joe",
+          "Uncle Joe",
+          [],
+          {},
+          () => Promise.reject(new Error("unused")),
+          nav,
+        ),
+      async (base) => {
+        const body = await (await fetch(base)).text();
+        expect(body).toContain('value="Uncle Joe" readonly');
+        expect(body).not.toContain('value="human-uncle_joe" readonly');
+        expect(body).toContain('type="hidden" name="id" value="human-uncle_joe"');
+        expect(body).not.toContain('name="id" required');
+      },
+    );
+  });
+
+  it("submits the locked id even though the visible field is readonly, not name=id", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleRotate(
+          req,
+          res,
+          "POST",
+          "",
+          "human-uncle_joe",
+          "Uncle Joe",
+          [],
+          {},
+          (input) => {
+            expect(input.id).toBe("human-uncle_joe");
+            return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
+          },
+          nav,
+        ),
+      async (base) => {
+        const res = await fetch(base, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: "id=human-uncle_joe&apiKey=new-key&apiSecret=new-secret",
+        });
+        expect(res.status).toBe(200);
+      },
+    );
+  });
+
+  it("falls back to the free-text field when no id rides in the link", async () => {
+    await withRoute(
+      (req, res) =>
+        void handleRotate(
+          req,
+          res,
+          "GET",
+          "",
+          "",
+          "",
+          [],
+          {},
+          () => Promise.reject(new Error("unused")),
+          nav,
+        ),
+      async (base) => {
+        const body = await (await fetch(base)).text();
+        expect(body).toContain('name="id" required');
+        expect(body).not.toContain("readonly");
       },
     );
   });

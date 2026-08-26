@@ -10,6 +10,13 @@ import type { Sector } from "./sectors.js";
 
 /** One holding rendered as a structure (a tower). Identity = the ticker; size/health = the position. */
 export interface StructureState {
+  /**
+   * The STABLE piece key — `participantId:SYMBOL` (see `pieceKey` in project.ts). Load-bearing, not
+   * decorative: it is what lets a patch address one tower without re-rendering the board, what keeps
+   * an in-flight animation attached to the same piece across a state change, and what makes a
+   * replayed patch idempotent (GAMEBOARD-PLAN, "structure identity").
+   */
+  readonly key: string;
   readonly symbol: string;
   readonly sector: Sector;
   /** R1 — relative mass 0..1 within the empire (market value / the empire's largest position). */

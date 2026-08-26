@@ -25,7 +25,7 @@ const navFor = (active: NavView): NavContext => ({ active, canAdd: false, authed
 describe("serveResearchRoute", () => {
   it("serves the shelf at /research", () => {
     const { res, out } = fakeResponse();
-    serveResearchRoute(res, "/research", navFor);
+    serveResearchRoute(res, "/research", "/research", navFor);
     expect(out.status).toBe(200);
     expect(out.body).toContain("Research lab");
     expect(out.body).toContain("not investment advice");
@@ -33,14 +33,19 @@ describe("serveResearchRoute", () => {
 
   it("serves a living symbol page at /research/symbol/:SYM", () => {
     const { res, out } = fakeResponse();
-    serveResearchRoute(res, "/research/symbol/NVDA", navFor);
+    serveResearchRoute(res, "/research/symbol/NVDA", "/research/symbol/NVDA", navFor);
     expect(out.status).toBe(200);
     expect(out.body).toContain("NVDA — living research");
   });
 
   it("renders a real shelf doc at /research/<slug>", () => {
     const { res, out } = fakeResponse();
-    serveResearchRoute(res, "/research/events/nvda-2026-08-26-print", navFor);
+    serveResearchRoute(
+      res,
+      "/research/events/nvda-2026-08-26-print",
+      "/research/events/nvda-2026-08-26-print",
+      navFor,
+    );
     expect(out.status).toBe(200);
     expect(out.body).toContain("NVDA earnings print");
   });
@@ -53,8 +58,15 @@ describe("serveResearchRoute", () => {
       "/research/symbol/../../x",
     ]) {
       const { res, out } = fakeResponse();
-      serveResearchRoute(res, path, navFor);
+      serveResearchRoute(res, path, path, navFor);
       expect(out.status).toBe(404);
     }
+  });
+
+  it("threads ?month= into the shelf's month-grid widget", () => {
+    const { res, out } = fakeResponse();
+    serveResearchRoute(res, "/research", "/research?month=2026-09", navFor);
+    expect(out.status).toBe(200);
+    expect(out.body).toContain("September 2026");
   });
 });

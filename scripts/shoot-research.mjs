@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-// Visual harness for the research surface: render the shelf, a living symbol page, a ledger doc,
-// and the research-linked calendar from the REAL docs/research shelf, and screenshot them with
-// Chromium — the surface judged by eye (CLAUDE.md: every choice becomes something Eric can see)
-// without standing up a server. Usage: node scripts/shoot-research.mjs [outdir]
+// Visual harness for the research surface: render the shelf (which now carries the event horizon
+// too — proximity-banded agenda + month-grid navigator), a living symbol page, and a ledger doc
+// from the REAL docs/research shelf, and screenshot them with Chromium — the surface judged by eye
+// (CLAUDE.md: every choice becomes something Eric can see) without standing up a server.
+// Usage: node scripts/shoot-research.mjs [outdir]
 import { chromium } from "playwright-core";
-import { renderCalendarBody } from "../src/observatory/calendar-view.ts";
 import {
   renderResearchDocBody,
   renderResearchShelfBody,
@@ -14,6 +14,7 @@ import {
 } from "../src/observatory/research-view.ts";
 import { shellDocument } from "../src/server/page-shell.ts";
 import {
+  eventCalls,
   findResearchDoc,
   listResearch,
   researchedEventIds,
@@ -41,6 +42,21 @@ const pages = [
       asOfIso,
       shelf: listResearch(),
       symbols: shelfSymbols(asOfIso),
+      researchIds: researchedEventIds(),
+      calls: eventCalls(),
+    }),
+  },
+  {
+    // The same shelf with a day selected from the month grid — the correlation, by eye.
+    name: "research-shelf-day",
+    hash: "#day-2026-08-26",
+    body: renderResearchShelfBody({
+      nav,
+      asOfIso,
+      shelf: listResearch(),
+      symbols: shelfSymbols(asOfIso),
+      researchIds: researchedEventIds(),
+      calls: eventCalls(),
     }),
   },
   {
@@ -55,22 +71,14 @@ const pages = [
       doc: findResearchDoc("events/nvda-2026-08-26-print"),
     }),
   },
-  {
-    name: "calendar-linked",
-    body: renderCalendarBody({
-      nav: { ...nav, active: "calendar" },
-      asOfIso,
-      researchIds: researchedEventIds(),
-    }),
-  },
 ];
 
 const browser = await chromium.launch(EXE ? { executablePath: EXE } : {});
 const page = await browser.newPage({ viewport: { width: 1360, height: 940 } });
-for (const { name, body } of pages) {
+for (const { name, body, hash } of pages) {
   const file = join(OUT, `${name}.html`);
   writeFileSync(file, shellDocument(`${name} — shoot`, body));
-  await page.goto(`file://${file}`);
+  await page.goto(`file://${file}${hash ?? ""}`);
   await page.screenshot({ path: join(OUT, `${name}.png`), fullPage: false });
   console.log(`shot ${join(OUT, `${name}.png`)}`);
 }

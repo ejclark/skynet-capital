@@ -1,7 +1,7 @@
 # CRWV earnings print — crwv-2026-11-10-print
 
 **Kind:** earnings · **Date:** 2026-11-10 (estimate, 8-K cadence off 2026-08-11 midday print) · **Impact:** critical
-**Last assessed:** 2026-08-17
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -12,12 +12,12 @@ the print**, and **E1 — don't trade the open**. Treat CRWV as a two-sided vari
 single-night tails, both directions), not a trend. The Nov-10 print is an **estimate** (IR silent;
 honest window Nov 9–16) and would land on a **confirmed CPI day**.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today | Stand aside · E1 | No CRWV-specific catalyst; two-sided variance — defer the open. |
-| This week | Watch FT-3 | [Forward-test 3](../forward-tests.md) scores ~Aug 19/26 — settles whether the post-Q2 melt-up holds or bleeds. Observe, don't position. |
-| This month | Trades by proxy | High-beta to the semi complex — NVDA 8/26, MRVL 8/27, AVGO 9/2 reprice AI-infra long before CRWV's own print. |
-| This quarter | Flat the print (S2) | Stand aside directionally into the est. Nov 9–16 window; guide bar $3.45–3.6B, backlog $104B, from a price that already paid ~+37% for Q2. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | Stand aside · E1 | High | No CRWV-specific catalyst; two-sided variance — defer the open. | FT-3 scoring ~**2026-08-26** and settling the post-Q2 question |
+| This week | Watch FT-3 | High | [Forward-test 3](../forward-tests.md) scores ~Aug 19/26 — settles whether the post-Q2 melt-up holds or bleeds. Observe, don't position. | FT-3 clearing its control, which would reopen a CRWV-specific read |
+| This month | Trades by proxy | Medium | High-beta to the semi complex — NVDA 8/26, MRVL 8/27, AVGO 9/2 reprice AI-infra long before CRWV's own print. | NVDA **2026-08-26**, MRVL **2026-08-27** or AVGO **2026-09-02** repricing AI-infra without CRWV following |
+| This quarter | Flat the print (S2) | Medium | Stand aside directionally into the est. Nov 9–16 window; guide bar $3.45–3.6B, backlog $104B, from a price that already paid ~+37% for Q2. | ≥3 new prints showing a repriced gap regime, the only bar that reopens the hold-the-print question |
 
 **Signals & conditions** — the buy/sell/hold triggers, from the stance's kill switches:
 
@@ -168,6 +168,7 @@ observation #2) — FT-3 already owns the August print's post-window and is not 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-17 | D-85 | Initial research banked. Instruments fresh (cache busted upstream): S1 cells fail controls (P=0.638, peers rally same windows); gap cell 0%-win but blind to the excluded 08-11 print's ~+18.6% up-gap — forward-window blindness confirmed live and caveated, not repaired. Date: IR silent; aggregators model **Nov 16** vs our cadence **Nov 10** — honest window ~Nov 9–16 (estimate); **CPI (Oct data) confirmed same day 11-10, 08:30 ET** — compound-risk day if cadence holds. Tape (all NEWS-grade): Q2 beat 08-11 ($2.6B, +112% y/y), Q3 guide $3.45–3.6B vs $3.43B consensus, FY26 $12.4–13.2B on $35–39B capex, backlog $104B ex-$25B+ new commitments; stock ~$117 multi-month high, ~+37% post-print wk — bleed template broken so far, FT-3 scores 08-19/08-26. Peers: no prints since 08-15 (weekend); NVDA **confirmed** 08-26 + MRVL 08-27 + AVGO 09-02 reprice the complex well before Nov (dated confirmations already proposed by the sibling scans, see their docs). Macro since 08-15: none; Jul CPI (08-12) in-line 3.4% predates. VIX 14.56 on 08-15 — 2026 low — with elevated SKEW/tail-hedge demand (per today's NVDA scan). Geopolitical: standing export/tariff regime, no new action touching CRWV's GPU supply chain. CoreWeave "Fully Connected" conference reported for September — no exact date discoverable, so not proposable yet. | — (stance set) | 2026-08-24 (critical, 61+d band: every 7d) |
+| 2026-08-24 | D-78 | Adjacency sweep. Event tape: Q3 date still not IR-announced, no aggregator update found this session — estimate window unchanged (~Nov 9-16). **Major tape reversal since D-85:** CRWV traded **$85.90** on 8/24 (range $87.44-$92.60) — down sharply from the "~$117 multi-month high, ~+37% post-print" framing the D-85 row logged just one week ago; the "bleed template broken so far" read does **not** hold at this distance — this is consistent with (not new information beyond) the long-end rate-selloff pressure already logged in the sibling Treasury-auction docs, which flagged CRWV as the single most rate-sensitive tracked name (-12.1% on 8/18 alone) and named it explicitly as the highest-beta name to weak long-end auctions. Goldman Sachs raised its PT to $139 from $121 on 8/21 (bullish analyst read persists despite the price action) — a genuine divergence between sell-side target and realized tape, worth carrying into FT-3's scheduled scoring. Peers: NVDA/MRVL both report this week (own docs); AVGO's XPV overhang deepened (own doc) — same long-duration/AI-capex-rate-sensitivity mechanism. Macro: no CPI/jobs surprise since 8/17; Sep-16 FOMC read is 68.4% hold/31.6% hike as of 8/20 (FOMC sibling doc). Volatility regime: VIX 15.13, calm, no shift — notable that CRWV's move happened without a broad vol-regime break, consistent with a name-specific/sector-specific rate-duration story, not a market-wide event. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. CoreWeave's "Fully Connected" conference date still not discoverable. No new dated adjacency found. | — (no change in playbook stance, but the "bleed template broken" framing from D-85 needs re-testing, not carried forward uncritically — FT-3's scheduled scoring is now more consequential given this reversal) | 2026-08-31 (critical, 61+d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

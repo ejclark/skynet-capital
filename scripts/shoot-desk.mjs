@@ -1,14 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-// Visual harness for the player desk: render the four tabs + the review screen from real sample
+// Visual harness for the player desk: render the desk tabs + the review screen from real sample
 // data and screenshot them with Chromium, so the surface can be judged by eye (docs/CLAUDE.md —
 // every choice becomes something Eric can see) without standing up a server or a broker.
 // Usage: node scripts/shoot-desk.mjs [outdir]
 import { chromium } from "playwright-core";
-import { renderAnalysisBody } from "../src/observatory/analysis-view.ts";
-import { renderHistoryBody } from "../src/observatory/history-view.ts";
-import { renderMetricsBody } from "../src/observatory/metrics-view.ts";
+import { renderPerformanceBody } from "../src/observatory/performance-view.ts";
 import { renderPositionsBody } from "../src/observatory/positions-view.ts";
 import { renderTradeReviewBody } from "../src/observatory/trade-review-view.ts";
 import { previewOrder } from "../src/trading/order-ticket.ts";
@@ -79,9 +77,7 @@ const review = previewOrder(
 
 const pages = {
   positions: renderPositionsBody(snapshot, options),
-  history: renderHistoryBody(snapshot, options),
-  analysis: renderAnalysisBody(snapshot, options),
-  metrics: renderMetricsBody(snapshot, { ...options, history }),
+  performance: renderPerformanceBody(snapshot, { ...options, history }),
   review: renderTradeReviewBody(snapshot, review, options),
 };
 

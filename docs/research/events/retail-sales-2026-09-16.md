@@ -19,12 +19,12 @@ fiscal-deficit pressure offset the weak-consumer read — a stagflation tinge. N
 consensus exists at D-28. Nothing here is a trade; it is the FOMC-morning consumer read. Among our
 names, **AAPL and AMZN** carry direct consumer exposure on top of the rate-path channel.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (D-28) | Stand aside | Four weeks out; no firm August consensus, no name-keyed setup. |
-| This week | Stand aside | Nothing actionable pre-print; a high-impact read but four weeks away. |
-| This month | Watch | Confirmed 9/16 08:30 ET on FOMC morning — the last major data print before the decision; watch the control-group and the Prime-Day bounce-back, size nothing into it. |
-| This quarter | Watch (FOMC-day compound risk) | Because it lands *on* the 9/16 FOMC day, any retail-driven yield move feeds directly into a live hold-vs-hike decision hours later — treat the whole 9/16 session as a known-date variance day governed by the FOMC stance doc, not this one. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (D-28) | Stand aside | High | Four weeks out; no firm August consensus, no name-keyed setup. | Nothing at 28 days out; no firm August consensus and no name-keyed setup |
+| This week | Stand aside | High | Nothing actionable pre-print; a high-impact read but four weeks away. | A high-impact read four weeks away licenses nothing today |
+| This month | Watch | Medium | Confirmed 9/16 08:30 ET on FOMC morning — the last major data print before the decision; watch the control-group and the Prime-Day bounce-back, size nothing into it. | The **2026-09-04** jobs print — retail's higher-reaction sibling — collapsing hike odds toward zero |
+| This quarter | Watch (FOMC-day compound risk) | Medium | Because it lands *on* the 9/16 FOMC day, any retail-driven yield move feeds directly into a live hold-vs-hike decision hours later — treat the whole 9/16 session as a known-date variance day governed by the FOMC stance doc, not this one. | A hot August control group, the consumer re-accelerating beyond the Prime-Day bounce-back |
 
 **Signals & conditions.**
 - A hot August print (strong control group, consumer re-accelerating) → yields up into the 14:00 ET

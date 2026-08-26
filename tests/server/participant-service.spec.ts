@@ -11,6 +11,10 @@ import type {
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { ParticipantService } from "../../src/server/participant-service.js";
 
+// Sibling: participant-service-rotate.spec.ts (split 2026-08-26 to stay under the per-file line
+// cap) — that half covers ParticipantService.rotateCredentials in full, with its own copy of
+// the fixtures below. This file keeps ParticipantService.addParticipant.
+
 class MemStore implements ParticipantStore {
   items: StoredParticipant[] = [];
   secure = true;
@@ -56,11 +60,16 @@ function makeService(overrides: {
   hub?: ObservatoryHub;
   factory?: () => AlpacaTradingClient;
   started?: Participant[];
-  isReservedId?: (id: string) => boolean;
+  /** The env-configured roster, when the scenario has one. */
+  roster?: Participant[];
+  /** Emails on the env owner allowlist, when the scenario has OAuth owners. */
+  owners?: string[];
 }) {
   const store = overrides.store ?? new MemStore();
   const hub = overrides.hub ?? new ObservatoryHub(emptyBoard());
   const started = overrides.started ?? [];
+  const roster = overrides.roster;
+  const owners = overrides.owners;
   const seeds: Array<{ id: string; equity: number; at: string }> = [];
   const service = new ParticipantService({
     hub,
@@ -70,7 +79,8 @@ function makeService(overrides: {
     recordSeedSample: (snapshot, at) =>
       seeds.push({ id: snapshot.id, equity: snapshot.equity, at }),
     now: () => new Date("2026-07-24T00:00:00.000Z"),
-    ...(overrides.isReservedId ? { isReservedId: overrides.isReservedId } : {}),
+    ...(roster ? { findRosterParticipant: (id) => roster.find((p) => p.id === id) } : {}),
+    ...(owners ? { isOwnerEmail: (email) => owners.includes(email) } : {}),
   });
   return { service, store, hub, started, seeds };
 }
@@ -166,7 +176,16 @@ describe("ParticipantService.addParticipant", () => {
     // Otherwise a self-service row's owner link could resolve trade requests that
     // `findParticipant`'s roster-wins precedence then executes against the ROSTER
     // account's real credentials — a takeover chain, not just a display-name clash.
-    const { service, store } = makeService({ isReservedId: (id) => id === "human-eric_clark" });
+    const { service, store } = makeService({
+      roster: [
+        {
+          id: "human-eric_clark",
+          displayName: "Eric Clark",
+          kind: "human",
+          credentials: { apiKey: "env-k", apiSecret: "env-s" },
+        },
+      ],
+    });
     const result = await service.addParticipant({
       displayName: "Eric Clark",
       apiKey: "k",
@@ -207,186 +226,5 @@ describe("ParticipantService.addParticipant", () => {
       timezone: "America/Chicago",
     });
     expect(result.ok).toBe(true);
-  });
-});
-
-describe("ParticipantService.rotateCredentials", () => {
-  const existing: StoredParticipant = {
-    id: "day-trader",
-    displayName: "JARVIS",
-    kind: "bot",
-    personaId: "day-trader",
-    credentials: { apiKey: "old-key", apiSecret: "old-secret" },
-  };
-
-  // The gap this closes (docs/LESSONS.md, 2026-08-11): a regenerated key previously had no
-  // sanctioned home, since addParticipant refuses a duplicate id outright.
-  it("refuses to rotate an id that was never added — this is not a back door around addParticipant", async () => {
-    const { service, store, hub } = makeService({});
-    const result = await service.rotateCredentials({
-      id: "day-trader",
-      apiKey: "new-key",
-      apiSecret: "new-secret",
-    });
-
-    expect(result.ok).toBe(false);
-    expect(store.items).toHaveLength(0);
-    expect(hub.getState().participants).toHaveLength(0);
-  });
-
-  it("swaps only the credentials, preserving displayName/kind/personaId", async () => {
-    const store = new MemStore();
-    store.items = [existing];
-    // The board's live state is rehydrated from the store at boot (serve-dashboard.ts) — a
-    // rotated participant is already ON the board, not just in the store, so seed both here.
-    const boardHub = new ObservatoryHub({
-      generatedAt: "t0",
-      participants: [
-        {
-          id: "day-trader",
-          displayName: "JARVIS",
-          kind: "bot",
-          personaId: "day-trader",
-          cash: 900,
-          equity: 1000,
-          positions: [],
-        },
-      ],
-      collisions: [],
-    });
-    const { service, hub } = makeService({ store, hub: boardHub });
-
-    const result = await service.rotateCredentials({
-      id: "day-trader",
-      apiKey: "new-key",
-      apiSecret: "new-secret",
-    });
-
-    expect(result).toEqual({ ok: true, id: "day-trader", displayName: "JARVIS" });
-    const stored = store.items.find((p) => p.id === "day-trader");
-    expect(stored?.credentials).toEqual({ apiKey: "new-key", apiSecret: "new-secret" });
-    expect(stored?.displayName).toBe("JARVIS");
-    expect(stored?.personaId).toBe("day-trader");
-    // Same array position, new balances — not appended as a second entry.
-    expect(hub.getState().participants).toHaveLength(1);
-  });
-
-  it("verifies the NEW key against Alpaca before storing anything", async () => {
-    const store = new MemStore();
-    store.items = [existing];
-    const { service, hub } = makeService({
-      store,
-      factory: () => new AlpacaTradingClient(new RejectingTransport()),
-    });
-
-    const result = await service.rotateCredentials({
-      id: "day-trader",
-      apiKey: "bad-key",
-      apiSecret: "bad-secret",
-    });
-
-    expect(result.ok).toBe(false);
-    // The old, working credentials are untouched.
-    expect(store.items[0]?.credentials).toEqual(existing.credentials);
-    expect(hub.getState().participants).toHaveLength(0);
-  });
-
-  it("reopens the account's stream with the new credentials", async () => {
-    const store = new MemStore();
-    store.items = [existing];
-    const { service, started } = makeService({ store });
-
-    await service.rotateCredentials({
-      id: "day-trader",
-      apiKey: "new-key",
-      apiSecret: "new-secret",
-    });
-
-    expect(started).toHaveLength(1);
-    expect(started[0]?.credentials).toEqual({ apiKey: "new-key", apiSecret: "new-secret" });
-  });
-
-  it("refuses onboarding when the store cannot encrypt", async () => {
-    const store = new MemStore();
-    store.items = [existing];
-    store.secure = false;
-    const { service } = makeService({ store });
-
-    const result = await service.rotateCredentials({
-      id: "day-trader",
-      apiKey: "new-key",
-      apiSecret: "new-secret",
-    });
-
-    expect(result.ok).toBe(false);
-  });
-
-  describe("ownership check (2026-08-11: rotate must not let one member hijack another's account)", () => {
-    const humanExisting: StoredParticipant = {
-      id: "human-uncle_joe",
-      displayName: "Uncle Joe",
-      kind: "human",
-      credentials: { apiKey: "old-key", apiSecret: "old-secret" },
-    };
-
-    it("refuses a human target when the requester resolves to a DIFFERENT id", async () => {
-      const store = new MemStore();
-      store.items = [humanExisting];
-      const { service } = makeService({ store });
-
-      const result = await service.rotateCredentials({
-        id: "human-uncle_joe",
-        apiKey: "attacker-key",
-        apiSecret: "attacker-secret",
-        requesterId: "human-someone_else",
-      });
-
-      expect(result.ok).toBe(false);
-      expect(store.items[0]?.credentials).toEqual(humanExisting.credentials);
-    });
-
-    it("allows a human target when the requester resolves to THAT SAME id", async () => {
-      const store = new MemStore();
-      store.items = [humanExisting];
-      const { service } = makeService({ store });
-
-      const result = await service.rotateCredentials({
-        id: "human-uncle_joe",
-        apiKey: "new-key",
-        apiSecret: "new-secret",
-        requesterId: "human-uncle_joe",
-      });
-
-      expect(result.ok).toBe(true);
-    });
-
-    it("does not enforce the check when requesterId is absent — no OAuth configured", async () => {
-      const store = new MemStore();
-      store.items = [humanExisting];
-      const { service } = makeService({ store });
-
-      const result = await service.rotateCredentials({
-        id: "human-uncle_joe",
-        apiKey: "new-key",
-        apiSecret: "new-secret",
-      });
-
-      expect(result.ok).toBe(true);
-    });
-
-    it("does not enforce the check against a bot target — bots have no session identity", async () => {
-      const store = new MemStore();
-      store.items = [existing]; // kind: "bot"
-      const { service } = makeService({ store });
-
-      const result = await service.rotateCredentials({
-        id: "day-trader",
-        apiKey: "new-key",
-        apiSecret: "new-secret",
-        requesterId: "human-someone_else",
-      });
-
-      expect(result.ok).toBe(true);
-    });
   });
 });

@@ -26,7 +26,19 @@ export interface OptionChainRow {
   readonly openInterest?: number;
   readonly bid?: number;
   readonly ask?: number;
+  // The greeks the data host quoted for this contract, each carried ONLY when it arrived as a
+  // finite number. A greek the feed omitted stays absent, so the desk reads it as ABSENT rather
+  // than as a confident 0.00 — "no decay", "no convexity" — that nobody actually measured.
+  /** Premium change per $1 of spot. Calls (0,1); puts (-1,0). */
   readonly delta?: number;
+  /** Delta change per $1 of spot. */
+  readonly gamma?: number;
+  /** Dollars per share per day of decay. Negative for a long option. */
+  readonly theta?: number;
+  /** Dollars per share per 1 volatility point. */
+  readonly vega?: number;
+  /** Dollars per share per 1 rate point. */
+  readonly rho?: number;
 }
 
 /** Contract payload subset (Trading API `/v2/options/contracts`). Numbers arrive as strings. */
@@ -53,6 +65,35 @@ export interface PlaceOptionOrderParams {
 const num = (value: unknown): number | undefined => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+/** The greeks the snapshot payload carries, in the order a chain reads them. */
+const GREEK_KEYS = ["delta", "gamma", "theta", "vega", "rho"] as const;
+type GreekKey = (typeof GREEK_KEYS)[number];
+/** The `greeks` block of a snapshot, before any of it is trusted. */
+type RawGreeks = Partial<Record<GreekKey, unknown>>;
+
+/**
+ * Parse one greek. Unlike `num`, zero and negatives are legitimate here (a deep-OTM gamma, a put's
+ * delta, any long option's theta), so finiteness is the only gate. Everything that is not a number
+ * or a numeric string is ABSENT — `Number` would otherwise hand back a confident 0 for `null`, `""`
+ * and `[]`, and a 1 for `true`, and a fabricated greek is worse on a desk than a blank one.
+ */
+const greek = (value: unknown): number | undefined => {
+  if (typeof value !== "number" && typeof value !== "string") return undefined;
+  if (value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+/** Every greek the snapshot quoted honestly, omitting each one it did not. */
+const greeksOf = (raw: RawGreeks | undefined): Partial<Record<GreekKey, number>> => {
+  const out: Partial<Record<GreekKey, number>> = {};
+  for (const key of GREEK_KEYS) {
+    const value = greek(raw?.[key]);
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
 };
 
 export class AlpacaOptionsClient {
@@ -139,7 +180,7 @@ export class AlpacaOptionsClient {
     return ensureOk<AlpacaOrder>(response);
   }
 
-  /** Indicative bid/ask/delta from the data host, merged onto the chain. Fail-soft. */
+  /** Indicative bid/ask/greeks from the data host, merged onto the chain. Fail-soft. */
   private async mergeQuotes(
     underlying: string,
     expiration: string,
@@ -155,14 +196,13 @@ export class AlpacaOptionsClient {
       const body = response.body as {
         snapshots?: Record<
           string,
-          { latestQuote?: { bp?: unknown; ap?: unknown }; greeks?: { delta?: unknown } }
+          { latestQuote?: { bp?: unknown; ap?: unknown }; greeks?: RawGreeks }
         >;
       } | null;
       const snapshots = body?.snapshots ?? {};
       return rows.map((row) => {
         const snap = snapshots[row.occSymbol];
         if (!snap) return row;
-        const delta = Number(snap.greeks?.delta);
         return {
           ...row,
           ...(num(snap.latestQuote?.bp) !== undefined
@@ -171,7 +211,7 @@ export class AlpacaOptionsClient {
           ...(num(snap.latestQuote?.ap) !== undefined
             ? { ask: num(snap.latestQuote?.ap) as number }
             : {}),
-          ...(Number.isFinite(delta) ? { delta } : {}),
+          ...greeksOf(snap.greeks),
         };
       });
     } catch {
