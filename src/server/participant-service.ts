@@ -232,25 +232,36 @@ export class ParticipantService {
    * ENV-ROSTER ids (stricter — the tier never downgrades even after a first rotation leaves a
    * store row behind, which is why this checks the ID's provenance, not where the row was
    * found): these are owner-configured accounts, so under OAuth the caller must be an owner, or
-   * the human member the account itself is linked to (`requesterId === id`, via
-   * SKYNET_HUMAN_<ID>_EMAIL or a future link). Anything else could silently redirect a
-   * host-configured account — Eric's own, or a bot's — to credentials of a member's choosing.
+   * the member the account itself is linked to (`requesterId === id`, via
+   * SKYNET_HUMAN_<ID>_EMAIL for a human, or an OwnerLinkStore link via `/claim` for either kind —
+   * claim-form.ts is explicit that a roster row, bot included, is claimable). `self` used to also
+   * require `kind === "human"`, which predates that: a claimed roster BOT's linked member could
+   * never rotate "their own" bot's key, only an owner could — tightened correctly for a bot with
+   * no link, wrong for one that now has one (2026-08-26, alongside the STORE-tier fix below).
+   * Anything else could silently redirect a host-configured account — Eric's own, or an unlinked
+   * bot's — to credentials of a member's choosing.
    *
-   * STORE ids: an ALREADY-CLAIMED human account (one with an `ownerEmail` on file) may only be
-   * rotated by that same resolved identity. An UNCLAIMED one (2026-08-25 — legacy rows added
-   * before OAuth, or before `/add` had a session to stamp) has nobody to check against, so any
-   * signed-in member may rotate it — `rotateCredentials` then stamps them as its owner on
-   * success, so "signed in + a verified new key" is the one claim it takes, same as `/add`.
-   * Under PASSWORD mode (no `requesterEmail`), nobody is signed in to become an owner either, so
-   * this is unreachable — falls through to the unconditional pass below. Bots have no session
-   * identity to match against, claimed or not.
+   * STORE ids: an ALREADY-CLAIMED account — human OR bot, one with an `ownerEmail` on file —
+   * may only be rotated by that same resolved identity. This used to read `kind === "human"`
+   * because a bot could never carry `ownerEmail` before `/claim` (#546) learned to link any
+   * account kind; that necessity is gone, and a claimed bot exempted from this check is
+   * rotatable — its credentials silently swapped — by any signed-in member, no check at all
+   * (2026-08-26, same gap as `requireEditable` in account-service.ts, closed alongside it). An
+   * UNCLAIMED one (2026-08-25 — legacy rows added before OAuth, or before `/add` had a session
+   * to stamp) has nobody to check against, so any signed-in member may rotate it —
+   * `rotateCredentials` then stamps THE HUMAN case as its owner on success ("signed in + a
+   * verified new key" is the one claim it takes, same as `/add`); a bot stays unclaimed either
+   * way — claiming a bot is deliberately owner-only, via `/claim`, never an implicit side effect
+   * of rotating its key. Under PASSWORD mode (no `requesterEmail`), nobody is signed in to
+   * become an owner either, so this is unreachable — falls through to the unconditional pass
+   * below.
    *
    * BOTH tiers: `requesterEmail`/`requesterId` undefined means OAuth isn't configured — the
    * password gate is the only boundary in that mode, matching every other route's trust level.
    */
   private refuseRotation(existing: Participant, input: RotateCredentialsInput): string | undefined {
     if (this.deps.findRosterParticipant?.(existing.id)) {
-      const self = existing.kind === "human" && input.requesterId === existing.id;
+      const self = input.requesterId === existing.id;
       const owner =
         input.requesterEmail !== undefined && this.deps.isOwnerEmail?.(input.requesterEmail);
       if (input.requesterEmail !== undefined && !self && !owner) {
@@ -259,7 +270,6 @@ export class ParticipantService {
       return undefined;
     }
     if (
-      existing.kind === "human" &&
       existing.ownerEmail !== undefined &&
       input.requesterId !== undefined &&
       input.requesterId !== existing.id

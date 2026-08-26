@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { NavContext } from "../observatory/dashboard-shell.js";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { escapeHtml } from "../ui/escape-html.js";
-import { addShell, railedShell, readBody } from "./page-shell.js";
+import { railedShell, readBody } from "./page-shell.js";
 import type {
   AddParticipantInput,
   AddResult,
@@ -18,10 +18,6 @@ import { personaClasses } from "./persona-classes.js";
  * with no dependency on the live dashboard/SSE machinery around them.
  */
 
-/**
- * Shared by /add and /rotate: both are "GET serves a form, POST parses it and submits" —
- * only the form fields and the submit/render callbacks differ.
- */
 /**
  * The owner gate the admin forms share: resolves the viewer to a lowercased owner email, or
  * writes the 403 and returns null. Deliberately identical for "not signed in" and "signed in but
@@ -40,6 +36,8 @@ export function requireOwner(
   return null;
 }
 
+/** Shared by /add and /rotate: "GET serves a form, POST parses it and submits" — only the form
+ *  fields and the submit/render callbacks differ. */
 export async function handleSelfServiceForm<TResult extends { ok: boolean }>(
   req: IncomingMessage,
   res: ServerResponse,
@@ -102,30 +100,40 @@ export async function handleAdd(
   );
 }
 
+export interface OwnedAccountOption {
+  readonly id: string;
+  readonly displayName: string;
+  readonly kind: "bot" | "human";
+}
+
 export async function handleRotate(
   req: IncomingMessage,
   res: ServerResponse,
   method: string,
   key: string,
-  /**
-   * The id nobody remembers (Eric, 2026-08-25): a link that ALREADY names the account — from its
-   * own error card, or the observer hero once one is picked — carries it here instead of asking
-   * the member to type an opaque slug from memory. Locked, not just pre-filled: the link is the
-   * one honest source for "which account", so a stray edit shouldn't silently retarget it.
-   */
+  /** The id nobody remembers (Eric, 2026-08-25): a link that ALREADY names the account carries it
+   *  here, locked — not just pre-filled — so a stray edit can't retarget it. Empty when no link
+   *  named one, including when the viewer owns MORE than one account (falls to the picker below). */
   prefillId: string,
+  /** `prefillId`'s board display name, shown in its place — the id itself is an internal slug
+   *  nobody should have to read (Eric, 2026-08-26: "why do you even bother showing it?"). */
+  prefillName: string,
+  /** Every account the viewer's sign-in owns (Eric, 2026-08-25: "a dropdown of the accounts tied
+   *  to the email address"). Zero, one, or many — `/claim` makes more than one a normal state. */
+  ownedAccounts: readonly OwnedAccountOption[],
   requester: { readonly id?: string; readonly email?: string },
   rotateCredentials: (input: RotateCredentialsInput) => Promise<RotateResult>,
+  nav: NavContext,
 ): Promise<void> {
-  // True when the prefill came from the VIEWER'S OWN sign-in resolving to this account (not from
-  // a link naming some other account, e.g. an owner fixing a bot's key) — the case worth telling
-  // them "this is you, no id needed" rather than leaving the source of the fill unexplained.
+  // True when the prefill came from the VIEWER'S OWN sign-in resolving to exactly one account
+  // (not from a link naming some other account, e.g. an owner fixing a bot's key) — the case
+  // worth telling them "this is you, no id needed" rather than leaving the fill unexplained.
   const resolvedFromEmail = prefillId !== "" && requester.id === prefillId;
   await handleSelfServiceForm(
     req,
     res,
     method,
-    () => rotateFormHtml(key, prefillId, resolvedFromEmail),
+    () => rotateFormHtml(key, nav, prefillId, prefillName, resolvedFromEmail, ownedAccounts),
     (form) =>
       rotateCredentials({
         id: form.get("id") ?? "",
@@ -134,7 +142,7 @@ export async function handleRotate(
         ...(requester.id !== undefined ? { requesterId: requester.id } : {}),
         ...(requester.email !== undefined ? { requesterEmail: requester.email } : {}),
       }),
-    (result) => rotateResultHtml(result, key),
+    (result) => rotateResultHtml(result, key, nav),
   );
 }
 
@@ -232,28 +240,38 @@ function addResultHtml(result: AddResult, key: string, nav: NavContext): string 
 }
 
 /**
- * The credential-rotation form (self-service `/rotate`). Deliberately asks for the account's
- * `id` as plain text rather than a picker — the roster isn't exposed here pre-auth, and typing
- * the id you already know is safer than listing every account's id to anyone who finds the URL.
- * A wrong id is caught immediately: `rotateCredentials` refuses anything that isn't already on
- * the board.
+ * The credential-rotation form (self-service `/rotate`). The account field has three sources, in
+ * priority order: a link that already names the account (an error card, a profile page) — LOCKED,
+ * since the link is the one honest "which account" and a stray edit shouldn't silently retarget
+ * it; the viewer's OWN sign-in resolving to exactly ONE account (Eric, 2026-08-25: "email is the
+ * identifier, they don't know their account ID") — also locked, and said so plainly; the viewer's
+ * sign-in resolving to SEVERAL accounts (`/claim` makes this a normal state, not an edge case;
+ * Eric: "this should be a dropdown of the accounts tied to the email address") — a picker, by
+ * name. Arrived cold (typed the URL, an old bookmark, still unlinked) falls back to free text —
+ * the one case nothing can resolve, since there's genuinely nothing yet to resolve against.
  */
-function rotateFormHtml(key: string, prefillId = "", resolvedFromEmail = false): string {
+function rotateFormHtml(
+  key: string,
+  nav: NavContext,
+  prefillId = "",
+  prefillName = "",
+  resolvedFromEmail = false,
+  ownedAccounts: readonly OwnedAccountOption[] = [],
+): string {
   const action = `/rotate${key ? `?key=${encodeURIComponent(key)}` : ""}`;
-  // Three sources for the id, in priority order: a link that already names the account (the
-  // error card, a profile page) — LOCKED, since the link is the one honest "which account" and a
-  // stray edit shouldn't silently retarget it; the viewer's OWN sign-in, when it already resolves
-  // to an account (Eric, 2026-08-25: "email is the identifier, they don't know their account ID")
-  // — also locked, and said so plainly, so nobody wonders where the value came from; or arrived
-  // cold (typed the URL, an old bookmark, still unlinked) — the free-text field, unchanged.
+  // Shows the board NAME, never the internal id ("human-ann") — an id nobody reads or types here
+  // anyway, since both branches lock the field (Eric, 2026-08-26: "why do you even bother showing
+  // it?"). The submitted value is still the real id, via the paired hidden input.
   const idField = resolvedFromEmail
-    ? `<label>Account <small>— resolved from your sign-in, no id needed</small><input value="${escapeHtml(prefillId)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
+    ? `<label>Account <small>— resolved from your sign-in, no id needed</small><input value="${escapeHtml(prefillName)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
     : prefillId
-      ? `<label>Account<input value="${escapeHtml(prefillId)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
-      : `<label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>`;
-  return addShell(
-    "Rotate credentials — Skynet Capital",
-    `<h1>Rotate an account's Alpaca key</h1>
+      ? `<label>Account<input value="${escapeHtml(prefillName)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
+      : ownedAccounts.length > 1
+        ? `<label>Account <small>— one of yours, from your sign-in</small><select name="id" required>${ownedAccounts
+            .map((a) => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.displayName)}</option>`)
+            .join("")}</select></label>`
+        : `<label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>`;
+  const inner = `<h1>Rotate an account's Alpaca key</h1>
 <p class="lede">Regenerated your key in Alpaca? <b>The old key stops working the moment you regenerate</b> — paste the
 <b>new</b> key/secret here for any account already on the board and it updates in place, syncing again
 immediately. This covers self-added accounts <i>and</i> the host-configured originals; it won't create
@@ -264,11 +282,11 @@ a new account, and it refuses anything that isn't already on the board.</p>
   <label>New Alpaca paper API secret<input name="apiSecret" required autocomplete="off" placeholder="••••••••"></label>
   <button type="submit">Rotate credentials</button>
 </form>
-<p class="note">Paper keys only · this replaces the key on file, nothing else about the account changes.</p>`,
-  );
+<p class="note">Paper keys only · this replaces the key on file, nothing else about the account changes.</p>`;
+  return railedShell("Rotate credentials — Skynet Capital", nav, inner);
 }
 
-function rotateResultHtml(result: RotateResult, key: string): string {
+function rotateResultHtml(result: RotateResult, key: string, nav: NavContext): string {
   const suffix = key ? `?key=${encodeURIComponent(key)}` : "";
   const inner = result.ok
     ? `<div class="res-icon">🔄</div><h1>Credentials rotated</h1>
@@ -277,5 +295,5 @@ function rotateResultHtml(result: RotateResult, key: string): string {
     : `<h1>Couldn't rotate that account</h1>
 <p class="lede">${escapeHtml(result.error)}</p>
 <p class="backrow"><a href="/${suffix}">← Back to the board</a> · <a href="/rotate${suffix}">Try again</a></p>`;
-  return addShell("Skynet Capital", inner);
+  return railedShell("Skynet Capital", nav, inner);
 }

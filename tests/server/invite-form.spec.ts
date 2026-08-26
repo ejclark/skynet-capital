@@ -99,12 +99,14 @@ describe("handleInvite", () => {
     });
   });
 
-  // The refusal is the one case that stays bare — nothing for a rail to navigate a non-owner to.
-  it("keeps the 403 refusal on the bare page — no rail for a page you can't use", async () => {
+  // 2026-08-26 (Eric: "the view ignores the page template.. only the 12th gd time..."): no
+  // exceptions, including refusals — a signed-in guest still gets the rail to navigate away with.
+  it("keeps the rail on the 403 refusal — a guest can still navigate away from it", async () => {
     const store = memoryStore();
     await withInvite("guest@example.com", store, async (base) => {
       const body = await (await fetch(base)).text();
-      expect(body).not.toContain('<aside class="drawer"');
+      expect(body).toContain('<aside class="drawer"');
+      expect(body).toContain("isn't available");
     });
   });
 

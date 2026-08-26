@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { NavContext } from "../observatory/dashboard-shell.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { OwnerLinkStore } from "./owner-link-store.js";
-import { addShell, railedShell } from "./page-shell.js";
+import { railedShell } from "./page-shell.js";
 import { handleSelfServiceForm, requireOwner } from "./self-service-forms.js";
 
 /**
@@ -71,19 +71,16 @@ export async function handleClaim(
   deps: ClaimDeps,
   nav: NavContext,
 ): Promise<void> {
-  // The refusal stays on the bare, wide shell — nothing for a rail to navigate a non-owner to
-  // (same call as /invite, /add). The real content gets the app shell, wide (four columns of
-  // accounts don't fit the 520px form column the other self-service pages use, and a table that
-  // wraps is a table nobody reads) — this page was previously reachable ONLY by typing the URL,
-  // with no nav link anywhere (Eric, 2026-08-25: it's the actual zero-typing fix for "link my
-  // account", and it was invisible).
-  const refusalShell = (title: string, inner: string) =>
-    addShell(`${title} · Skynet Capital`, inner, true);
-  const owner = requireOwner(res, viewerEmail, deps.isOwner, refusalShell);
-  if (!owner) return;
-
+  // Rails on every page, refusal included (Eric, 2026-08-25, repeated: the app template applies
+  // everywhere). Wide (four columns of accounts don't fit the 520px form column the other
+  // self-service pages use, and a table that wraps is a table nobody reads) — this page was
+  // previously reachable ONLY by typing the URL, with no nav link anywhere (it's the actual
+  // zero-typing fix for "link my account", and it was invisible).
   const shell = (title: string, inner: string) =>
     railedShell(`${title} · Skynet Capital`, nav, inner, true);
+  const owner = requireOwner(res, viewerEmail, deps.isOwner, shell);
+  if (!owner) return;
+
   const page = () => claimPageHtml(deps);
   await handleSelfServiceForm(
     req,
