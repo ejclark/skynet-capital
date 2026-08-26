@@ -1,5 +1,6 @@
 import type { OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
+import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import {
   type OptionPlayCode,
   type OptionTicketPreview,
@@ -9,6 +10,7 @@ import { escapeHtml } from "../ui/escape-html.js";
 import { type DashboardViewOptions, renderShell } from "./dashboard-shell.js";
 import { formatPrice, reviewNotices, ticketContext } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
+import { earningsBadge, expirationPrintMark } from "./earnings-chain-badge.js";
 import { renderMilestoneBanner } from "./milestone-banner.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { formatCurrency } from "./render-atoms.js";
@@ -49,8 +51,13 @@ export interface TicketViewModel extends DashboardViewOptions {
   readonly spot?: number;
   /** Honest reason chain data is missing (offline fixtures, fetch failure, no account). */
   readonly chainNote?: string;
+  /** Earnings calendar behind the chain's proximity badge; defaults to the checked-in table. */
+  readonly prints?: readonly EarningsPrint[];
   readonly generatedAt?: string;
 }
+
+/** The clock every date-relative render on this page reads — one value, one page. */
+const asOfOf = (model: TicketViewModel): string => model.generatedAt ?? new Date().toISOString();
 
 const glossLabel = (term: string, gloss: string): string =>
   `<span>${escapeHtml(term)} <small style="text-transform:none;letter-spacing:0;opacity:.75">· ${escapeHtml(gloss)}</small></span>`;
@@ -66,10 +73,11 @@ function modeToggle(state: TicketState): string {
 function expirationChips(model: TicketViewModel): string {
   const { state, expirations } = model;
   if (!expirations || expirations.length === 0) return "";
+  const asOf = asOfOf(model);
   const chips = expirations
     .map((exp) => {
       const active = exp === state.expiration;
-      return `<a class="btn${active ? " btn-primary" : ""}" href="${ticketHref(state, { exp, strike: undefined, limit: undefined })}">${escapeHtml(exp)}</a>`;
+      return `<a class="btn${active ? " btn-primary" : ""}" href="${ticketHref(state, { exp, strike: undefined, limit: undefined })}">${escapeHtml(exp)}${expirationPrintMark(state.symbol, exp, asOf, model.prints)}</a>`;
     })
     .join("");
   return `<div class="field"><label>${glossLabel("By when", "the expiration")}</label><div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div></div>`;
@@ -112,6 +120,7 @@ function chainBlock(model: TicketViewModel): string {
   return `<div class="panel" style="background:var(--surface-2)">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <span class="desk-k">Premium by strike · ${escapeHtml(state.expiration ?? "")} ${type} · $/share</span>
+      ${earningsBadge(state.symbol, asOfOf(model), model.prints)}
       <span style="margin-left:auto;display:flex;gap:6px">${toggle("chart", "Chart")}${toggle("table", "Table")}</span>
     </div>
     ${
@@ -341,5 +350,5 @@ export function renderTicketBody(model: TicketViewModel): string {
     <p class="caveat"><b>Paper account.</b> Real prices, real mechanics, simulated money. Options premiums shown are indicative (bid/ask mid, or last close) — fills settle at the market. Options orders on Alpaca are day-only.</p>
   </section>`;
 
-  return renderShell(model.nav, content, model.generatedAt ?? new Date().toISOString());
+  return renderShell(model.nav, content, asOfOf(model));
 }

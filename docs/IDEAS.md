@@ -976,3 +976,13 @@ how the fridge rule shipped unfolded on #561 (LESSONS.md, 2026-08-25): the MCP w
 over REST, pipe it through the existing `cmd_checkbody`, exit non-zero on a mismatch — closes it
 mechanically and costs one curl. Could run as a post-open step inside `ship.sh open` itself, so the
 check is automatic rather than remembered. _(src: Claude · while: research-lab readability PR, 2026-08-25)_
+
+- **`PRINT_WINDOWS` should DRIVE the guards, not mirror them.** The chain's earnings badge needs the
+  same day-counts the S2 entry guard and the playbooks trade on, so `domain/earnings-calendar.ts`
+  now names them (`entryFlatDays` 2 · `postPrintFlatDays` 3 · `deadZoneDays` 5) — but
+  `engine/guards.ts` and `playbooks/registry.ts` are envelope-protected, so they still hold their
+  own literals and the new constants are copies pinned by spec (`tests/domain/earnings-calendar.spec.ts`).
+  The pins make drift loud, not impossible. The end state is a three-line change inside those two
+  files to import the constants instead; it is behaviour-identical, but it lands in the protected
+  class, so it wants Eric's eyes rather than an autonomous PR.
+  _(src: Claude · while: badging the options chain with earnings proximity, #575, 2026-08-26)_
