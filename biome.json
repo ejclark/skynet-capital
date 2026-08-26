@@ -90,6 +90,23 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/tests/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": {
+              "level": "warn",
+              "options": {
+                "maxLines": 500,
+                "skipBlankLines": false
+              }
+            },
+            "noExcessiveClassesPerFile": "off"
+          }
+        }
+      }
     }
   ],
   "formatter": {
