@@ -335,6 +335,16 @@ cmd_automerge() {
       cmd_merge "$num"
       return
     fi
+    # THE PROXY CASE, and the reason this whole check existed to be wrong (2026-08-26). Some
+    # Claude Code session types serve only a pinned set of PR-review GraphQL operations;
+    # `enablePullRequestAutoMerge` is not among them, so arming from here has NEVER worked in
+    # those sessions — it just said it had. Name it, so the next session reaches for the MCP tool
+    # or a direct merge instead of believing this one.
+    if grep -qi 'not enabled for this session\|pinned set of PR-review' <<<"$gql"; then
+      echo "ship automerge: this session's GraphQL proxy does not serve enablePullRequestAutoMerge." >&2
+      echo "ship automerge: #$num is NOT armed. Use the enable_pr_auto_merge MCP tool, or merge it when green (scripts/ship.sh merge $num)." >&2
+      exit 3
+    fi
     if grep -qi 'rate limit' <<<"$gql"; then
       echo "ship automerge: the GraphQL budget is exhausted — arming is impossible until it resets." >&2
       echo "ship automerge: #$num is NOT armed. Merge it when green (scripts/ship.sh merge $num)." >&2
