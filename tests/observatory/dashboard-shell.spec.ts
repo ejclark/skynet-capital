@@ -71,6 +71,14 @@ describe("renderShell", () => {
       expect(html).toContain('<a class="dnav-link" href="/">');
     });
 
+    it("links the Collections browse surface beside Research", () => {
+      const html = renderShell(baseNav(), "<p>x</p>", GENERATED_AT);
+
+      expect(html).toContain('href="/collections"');
+      expect(html).toContain("Collections");
+      expect(html.indexOf('href="/research"')).toBeLessThan(html.indexOf('href="/collections"'));
+    });
+
     it("never links the standalone /compare route — Compare folded into Standings' per-row pill", () => {
       const html = renderShell(baseNav(), "<p>x</p>", GENERATED_AT);
 

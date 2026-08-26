@@ -47,6 +47,7 @@
     "shoot:standings": "tsx scripts/shoot-standings.mjs",
     "shoot:portfolio": "tsx scripts/shoot-portfolio.mjs",
     "shoot:feedback": "tsx scripts/shoot-feedback.mjs",
+    "shoot:collections": "tsx scripts/shoot-collections.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
     "scan:flow": "tsx src/scripts/scan-unusual-flow.ts",

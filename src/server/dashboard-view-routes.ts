@@ -1,10 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { DeskIndex } from "../observatory/collections-view.js";
 import {
   type NavContext,
   type NavView,
   renderAcademyBody,
 } from "../observatory/render-dashboard.js";
 import type { Session } from "./auth/session.js";
+import { serveCollectionsRoute } from "./collections-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { shellDocument } from "./page-shell.js";
@@ -31,15 +33,21 @@ export async function serveLearnRoute(
 }
 
 /**
- * The read-only info views behind the gate — `/research`, the `/calendar` redirect — grouped so
- * the main dispatch stays within its complexity budget. Returns true when the request was handled;
- * dispatch order is unchanged from before the extraction.
+ * The read-only info views behind the gate — `/research`, `/collections`, the `/calendar` redirect
+ * — grouped so the main dispatch stays within its complexity budget. Returns true when the request
+ * was handled; dispatch order is unchanged from before the extraction.
+ *
+ * `desks` is a THUNK so the participant snapshot is only read on the one route that needs it
+ * (Collections links each persona to the live desk running it); every other route pays nothing.
+ * Without it Collections still renders — every persona simply shows as having no live desk, which
+ * is the honest reading of "the server wired no participants".
  */
 export function serveInfoRoute(
   res: ServerResponse,
   path: string,
   url: string,
   navFor: (active: NavView) => NavContext,
+  desks?: () => DeskIndex,
 ): boolean {
   if (path === "/calendar") {
     // The event horizon folded into the Research shelf 2026-08-25 — an old bookmark still lands
@@ -52,6 +60,9 @@ export function serveInfoRoute(
   if (path === "/research" || path.startsWith("/research/")) {
     serveResearchRoute(res, path, url, navFor);
     return true;
+  }
+  if (path === "/collections" || path.startsWith("/collections/")) {
+    return serveCollectionsRoute(res, path, navFor, desks?.() ?? new Map());
   }
   return false;
 }

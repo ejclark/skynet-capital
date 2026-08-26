@@ -45,6 +45,36 @@ describe("serveInfoRoute", () => {
     expect(out.status).toBe(200);
   });
 
+  it("serves the collections browse index at /collections", () => {
+    const { res, out } = fakeResponse();
+    const handled = serveInfoRoute(res, "/collections", "/collections", navFor);
+    expect(handled).toBe(true);
+    expect(out.status).toBe(200);
+    expect(out.body).toContain("Collections — Skynet Capital");
+  });
+
+  it("serves one collection, resolving the desk index only for that route", () => {
+    const { res, out } = fakeResponse();
+    let reads = 0;
+    const desks = () => {
+      reads += 1;
+      return new Map([["sauron", { participantId: "sauron", displayName: "Sauron" }]]);
+    };
+
+    serveInfoRoute(res, "/research", "/research", navFor, desks);
+    expect(reads).toBe(0);
+
+    serveInfoRoute(
+      res,
+      "/collections/against-the-crowd",
+      "/collections/against-the-crowd",
+      navFor,
+      desks,
+    );
+    expect(reads).toBe(1);
+    expect(out.body).toContain('href="/u/sauron"');
+  });
+
   it("leaves an unrecognized path unhandled", () => {
     const { res } = fakeResponse();
     expect(serveInfoRoute(res, "/nope", "/nope", navFor)).toBe(false);

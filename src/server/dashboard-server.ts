@@ -14,6 +14,7 @@ import {
   serveBoardFrame,
   streamBoardPatches,
 } from "./board-patch-routes.js";
+import { deskIndex } from "./collections-routes.js";
 import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
 import { pageHtml, servePublicRoute } from "./dashboard-board-routes.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
@@ -150,7 +151,7 @@ async function serveAuthorizedRoute(
     await serveLearnRoute(res, config, session, navFor);
     return;
   }
-  if (serveInfoRoute(res, path, url, navFor)) {
+  if (serveInfoRoute(res, path, url, navFor, () => deskIndex(config.hub.getState().participants))) {
     return;
   }
   if (path === "/trade") {
