@@ -1,4 +1,5 @@
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import { fin } from "../domain/finite.js";
 import type { Participant } from "../participants/participant.js";
 import { type PositionView, positionsFrom } from "./broker-positions.js";
 
@@ -6,9 +7,9 @@ import { type PositionView, positionsFrom } from "./broker-positions.js";
  *  because this module is where every view already reaches for the account's shapes. */
 export type { PositionView };
 
-/** Broker feeds can hand us NaN/Infinity; a non-finite number is treated as 0 rather than letting it
- *  poison downstream math and reach a rendered surface as the string "NaN". */
-export const fin = (v: number): number => (Number.isFinite(v) ? v : 0);
+/** The guard lives in `src/domain/finite.ts`, shared with the options greek math; re-exported here
+ *  because this module is where every view already reaches for the account's shapes. */
+export { fin };
 
 /** A position's unrealized P/L — market value minus cost basis (quantity × average price). The one
  *  place this arithmetic lives; both the dashboard cards and the world projection read from here. */
