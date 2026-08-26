@@ -1,5 +1,10 @@
 import type { OptionType } from "./option-symbols.js";
-import { buildOccSymbol, EXPIRATION_PATTERN, UNDERLYING_PATTERN } from "./option-symbols.js";
+import {
+  buildOccSymbol,
+  EXPIRATION_PATTERN,
+  MAX_OCC_STRIKE,
+  OCC_ROOT_PATTERN,
+} from "./option-symbols.js";
 import { normalizeSymbol } from "./order-ticket.js";
 
 /**
@@ -86,13 +91,16 @@ export function emptyDraft(): DraftOrder {
 function legRefusals(draft: DraftOrder, leg: NewLeg): string[] {
   const refusals: string[] = [];
   const underlying = normalizeSymbol(leg.underlying);
-  if (!UNDERLYING_PATTERN.test(underlying)) {
-    refusals.push("That doesn't look like a stock symbol.");
+  // The OCC ROOT pattern, not the looser one a share ticket uses: every leg here is destined for
+  // `buildOccSymbol`, and a root it cannot encode (a dotted class share) would assemble into a
+  // string no broker recognises. Refusing at the door is what keeps `draftSymbols` total.
+  if (!OCC_ROOT_PATTERN.test(underlying)) {
+    refusals.push("That doesn't look like a symbol with listed options.");
   }
   if (!EXPIRATION_PATTERN.test(leg.expiration)) {
     refusals.push("Pick an expiration date from the chain.");
   }
-  if (!(Number.isFinite(leg.strike) && leg.strike > 0)) {
+  if (!(Number.isFinite(leg.strike) && leg.strike > 0 && leg.strike <= MAX_OCC_STRIKE)) {
     refusals.push("Pick a strike price from the chain.");
   }
   if (!(Number.isInteger(leg.contracts) && leg.contracts > 0)) {

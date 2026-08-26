@@ -94,6 +94,18 @@ describe("the draft — building it", () => {
     expect(both.legs).toHaveLength(2);
   });
 
+  it("refuses a leg it could not write down as an OCC symbol", () => {
+    // `draftSymbols` promises never to throw, and it can only keep that promise if the draft
+    // never accepts a leg `buildOccSymbol` would reject. Both edges of that are checked here.
+    const dotted = addLeg(emptyDraft(), { ...CALL, underlying: "BRK.A" });
+    const huge = addLeg(emptyDraft(), { ...CALL, strike: 250_000 });
+
+    expect(dotted.legs).toEqual([]);
+    expect(dotted.refusals[0]).toContain("listed options");
+    expect(huge.legs).toEqual([]);
+    expect(() => draftSymbols(addLeg(emptyDraft(), { ...CALL, strike: 99_999 }))).not.toThrow();
+  });
+
   it("refuses to touch a leg that isn't in the order", () => {
     const draft = addLeg(emptyDraft(), CALL);
 
