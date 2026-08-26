@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { logArgVariants, sanitizeLog } from "../../scripts/ci-medic-logs.mjs";
 
 // The self-healing lane's router, exercised the way postmaster.spec.ts exercises its own: feed a
 // fixture `workflow_run` payload through `--dry-run` and assert the INTENTS. The dry run never
@@ -110,5 +111,37 @@ describe("ci medic — the issue it writes", () => {
     expect(body.indexOf("Process completed with exit code 1")).toBeGreaterThan(
       body.indexOf("<details>"),
     );
+  });
+});
+
+// 2026-08-26, run 33021825722: the medic filed #670 with an empty evidence fold reading "(log
+// fetch failed: the response contains terminal escape sequences; pass --allow-escape-sequences to
+// output it anyway)". Actions logs are colourized and `gh api` refuses to print them by default,
+// so the repair session it dispatched opened with no evidence at all. That failure, specced.
+describe("ci medic — fetching the evidence", () => {
+  it("asks gh for a colourized log, which it refuses to print unless asked", () => {
+    const [best] = logArgVariants(98353791650);
+
+    expect(best).toContain("--allow-escape-sequences");
+    expect(best?.at(-1)).toBe("repos/{owner}/{repo}/actions/jobs/98353791650/logs");
+  });
+
+  it("keeps a bare fallback for a gh too old to know the flag", () => {
+    const variants = logArgVariants(1);
+
+    expect(variants).toHaveLength(2);
+    expect(variants.at(-1)).not.toContain("--allow-escape-sequences");
+  });
+
+  it("strips the escapes, the BOM and the timestamps so the fold reads as text", () => {
+    const raw = "\uFEFF2026-08-26T23:03:39.9335057Z \^[[31mError: unauthorized\^[[0m";
+
+    expect(sanitizeLog(raw)).toBe("Error: unauthorized");
+  });
+
+  it("leaves the Actions annotations alone — they are the diagnosis, not decoration", () => {
+    const raw = "2026-08-26T23:03:39.9371678Z ##[error]App creation was refused";
+
+    expect(sanitizeLog(raw)).toBe("##[error]App creation was refused");
   });
 });

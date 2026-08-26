@@ -26,6 +26,7 @@
 //   4. Once a signature carries `needs-eric`, the medic goes quiet on it entirely.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { jobLog } from "./ci-medic-logs.mjs";
 import { LABELS } from "./postmaster.mjs";
 
 /** This workflow's own `name:`. Guard 1 — never treat the medic's failure as work for the medic. */
@@ -167,25 +168,11 @@ function gatherFailures(runId) {
     ".jobs",
   ]);
   const failed = jobs.filter((j) => j.conclusion === "failure");
-  return failed.map((j) => {
-    let logTail = "";
-    try {
-      logTail = sh("gh", ["api", `repos/{owner}/{repo}/actions/jobs/${j.id}/logs`]);
-    } catch (err) {
-      // Say why, don't guess: "may have expired" was itself a guess, and the one time it was
-      // checked (#482) the logs were still there — the `gh api` call just failed some other way.
-      logTail = `(log fetch failed: ${String(err.stderr || err.message).trim()})`;
-    }
-    return {
-      job: j.name,
-      step: (j.steps ?? []).find((s) => s.conclusion === "failure")?.name,
-      // Strip the ISO timestamp each line carries; it is noise in a fold and eats the budget.
-      logTail: logTail
-        .split("\n")
-        .map((l) => l.replace(/^\S+Z\s/, ""))
-        .join("\n"),
-    };
-  });
+  return failed.map((j) => ({
+    job: j.name,
+    step: (j.steps ?? []).find((s) => s.conclusion === "failure")?.name,
+    logTail: jobLog(j.id),
+  }));
 }
 
 /** Zero failing jobs on a failed run is the workflow-rejected shape, not "nothing to report". */
