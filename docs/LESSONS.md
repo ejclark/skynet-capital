@@ -416,24 +416,33 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** a `ship.sh` preflight that refuses to open a PR when a review skill's harvest came
   back empty would close all three; banked rather than built, since it wants its own specs.
 
-### PR-body image embeds are defanged in flight — the fridge rule's picture never rendered
+### A fridge-rule picture did not render — and the cause is still open, so verify the STORED body
 - **SHA:** n/a   **DATE:** 2026-08-26   **STATUS:** closed
 - **SIGNAL:** a build session shipping #575 wrote a fridge-rule screenshot into its PR body the
   documented way — a committed `docs/shots/` PNG, SHA-pinned, `checkbody` green. Reading back what
   GitHub had actually **stored** showed the markdown defanged: the leading `!` stripped and the URL
   wrapped in backticks, so the image rendered as a literal code span, not a picture. Detection lag:
   minutes, and only because that session re-read the stored body instead of trusting `checkbody`.
-- **ROOT CAUSE:** distinct from #446's link rot, which this file already records. There the URL
-  died after merge; here the *syntax* never survives the outbound path for this session type, so
-  the picture is already broken at open. `ship.sh checkbody` lints the local FILE, never what the
-  API stored — the same blind spot that let MCP-stripped `<details>` folds pass (2026-08-25). A
-  gate that checks the input while the transport mutates it will report success forever.
-- **PREVENTION:** doctrine, pending a gate. For UI work from a session type that defangs embeds,
-  lead with a **mermaid** picture (which does survive) and point the reader at the committed PNG
-  under Files changed — the file still belongs in `docs/shots/`, it just cannot be the above-the-fold
-  render. **Always read the PR back after opening and confirm the picture and the fold survived**;
-  never conclude from `checkbody` alone. The durable fix is for `checkbody` to verify the STORED
-  body rather than the file, which is the shape of the fix both this and the `<details>` case want.
+- **ROOT CAUSE:** **not established** — corrected 2026-08-26, same night. The first version of this
+  entry blamed "the outbound path for this session type." Three later sessions produced evidence
+  against that, and the claim should not have been written as settled:
+  - PR #605 carries an intact `![...]` embed in its stored body, so embeds plainly CAN survive.
+  - `ship.sh open`'s SHA-pinning rewrites only the URL path segment (`scripts/ship.sh`, the
+    `re.sub` over `raw.githubusercontent.com/…/docs/shots/`); it cannot strip a `!` or add backticks.
+  - Three Wave-4 sessions independently found the GitHub MCP **read** tool strips
+    `<details>`/`<summary>` *on display* while the stored body is intact — so a session that reads
+    its own PR back through that tool can mistake sanitised output for a broken publish.
+  Whether #575's embed was genuinely mangled on the way out, or merely looked mangled on read-back,
+  is unresolved. What IS solid is the blind spot: `ship.sh checkbody` lints the local FILE, never
+  what the API stored — the same gap that let MCP-stripped folds pass (2026-08-25). A gate that
+  checks the input while something downstream may rewrite it reports success forever.
+- **PREVENTION:** **verify the stored body over REST after opening** — not via the MCP read tool,
+  which sanitises, and not from `checkbody`, which never saw it. Do NOT stop committing screenshots
+  on the strength of this entry: the fridge rule stands, `docs/shots/` is still where they go, and a
+  mermaid diagram remains a fine picture when a diagram is the honest one. If a REST read-back shows
+  an embed actually mangled, THEN fall back to pointing at the committed PNG in Files changed. The
+  durable fix is for `checkbody` to verify the STORED body, which closes this and the `<details>`
+  case together.
 - **SIDE QUESTS:** teach `ship.sh` a `--verify-stored <pr>` pass that re-reads the opened PR and
   fails on a defanged embed or a missing fold — one check closing two recorded incidents.
 
