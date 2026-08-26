@@ -53,10 +53,19 @@ describe("the field — default equity ranking", () => {
     expect(html).toContain('class="msel active" href="/?by=equity"');
   });
 
-  it("numbers the ranks starting at 1 and marks the top three", () => {
-    expect(html).toContain('<span class="rank" data-field="rank">1</span>');
-    expect(html).toContain('<span class="rank" data-field="rank">2</span>');
-    expect(html).toContain("rank-top rank-1");
+  it("states no placing at all — no ordinal, no podium, no ordered list", () => {
+    // Eric, 2026-08-26: "focus on performance, not rank position". A number beside a name is the
+    // thing that invites "copy whoever is first"; the figures stay, the placing does not.
+    expect(html).not.toContain('data-field="rank"');
+    expect(html).not.toContain('class="rank"');
+    expect(html).not.toContain("rank-top");
+    expect(html).not.toContain("<ol");
+    expect(html).toContain('<ul class="ladder" data-sortable>');
+  });
+
+  it("still shows each desk's performance figure and bar", () => {
+    expect(html).toContain('class="rank-val num');
+    expect(html).toContain('class="rank-bar"');
   });
 });
 
@@ -215,11 +224,11 @@ describe("the field — ties and edge cases", () => {
     );
   });
 
-  it("renders a single participant as rank 1 without dividing by a zero max", () => {
+  it("renders a single participant without dividing by a zero max", () => {
     const html = renderStandingsBody(
       data([{ id: "solo", displayName: "Solo", kind: "human", cash: 0, equity: 0, positions: [] }]),
     );
-    expect(html).toContain('<span class="rank" data-field="rank">1</span>');
+    expect(html).toContain("Solo");
     expect(html).not.toContain("NaN");
   });
 
@@ -279,7 +288,7 @@ describe("the field — ties and edge cases", () => {
 
   it("labels the footer with the currently selected metric's name", () => {
     const html = renderStandingsBody(data([]), { metric: "realized" });
-    expect(html).toContain("ranked by Realized P/L");
+    expect(html).toContain("sorted by Realized P/L");
   });
 });
 

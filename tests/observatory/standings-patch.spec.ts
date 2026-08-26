@@ -52,7 +52,7 @@ describe("standingsFieldOps", () => {
   it("carries the moved row's new value and its sort position", () => {
     const ops = standingsFieldOps(board(), board(160_000), { metric: "equity" });
     const row = ops.find((op) => op.kind === "field" && op.key === "human-eric");
-    expect(row).toMatchObject({ text: { rank: "1", value: "$160,000" }, sortValue: 160_000 });
+    expect(row).toMatchObject({ text: { value: "$160,000" }, sortValue: 160_000 });
   });
 
   it("leaves an untouched board alone — a row is on the wire only when its render moved", () => {
@@ -63,7 +63,7 @@ describe("standingsFieldOps", () => {
     expect(standingsFieldOps(still, still, { metric: "equity" })).toEqual([]);
   });
 
-  it("re-ranks in place: the row that overtakes carries its new rank as text", () => {
+  it("reorders in place by sort value, carrying no placing text", () => {
     const before = data(
       snap({ id: "h1", displayName: "Eric", equity: 150_000 }),
       snap({ id: "h2", displayName: "Ada", equity: 140_000 }),
@@ -75,14 +75,17 @@ describe("standingsFieldOps", () => {
       snap({ id: "bot-sauron", displayName: "Sauron", kind: "bot", equity: 90_000 }),
     );
     const ops = standingsFieldOps(before, after, { metric: "equity" });
-    expect(ops.find((op) => op.kind === "field" && op.key === "h1")).toMatchObject({
-      text: { rank: "2" },
-      sortValue: 130_000,
-    });
-    // Ada's own equity never changed — only her rank did, and that alone is enough to patch.
-    expect(ops.find((op) => op.kind === "field" && op.key === "h2")).toMatchObject({
-      text: { rank: "1" },
-    });
+    // The overtaken row carries its new SORT VALUE, which is what repositions it. There is no
+    // ordinal on the wire any more (#576) — position is a consequence of the figure, not a label.
+    const h1 = ops.find((op) => op.kind === "field" && op.key === "h1");
+    expect(h1).toMatchObject({ sortValue: 130_000 });
+    expect(JSON.stringify(h1)).not.toContain("rank");
+
+    // Ada's own equity never moved, but the field's largest value did, so her BAR is redrawn —
+    // that, not a placing, is why she is on the wire.
+    const h2 = ops.find((op) => op.kind === "field" && op.key === "h2");
+    expect(h2).toMatchObject({ sortValue: 140_000 });
+    expect(JSON.stringify(h2)).not.toContain("rank");
   });
 
   it("formats each viewer's own metric, not a single shared one", () => {
@@ -140,7 +143,7 @@ describe("standingsFieldOps", () => {
     for (const key of ["human-eric", "cohort:human", "cohort:bot", "match", "versus"]) {
       expect(html).toContain(`data-field-key="${key}"`);
     }
-    for (const field of ["rank", "value", "totalEquity", "humanLabel", "totalGap"]) {
+    for (const field of ["value", "totalEquity", "humanLabel", "totalGap"]) {
       expect(html).toContain(`data-field="${field}"`);
     }
     expect(html).toContain("data-sortable");
