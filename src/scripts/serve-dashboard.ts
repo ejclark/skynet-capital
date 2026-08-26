@@ -12,7 +12,6 @@
  * which appears live with no restart. The live-vs-offline choice lives behind `resolveDataSource`.
  */
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
-import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
 import {
@@ -31,29 +30,22 @@ import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
-import { createDefaultPersonas } from "../personas/registry.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
 import { createAccountService } from "../server/account-service.js";
-import { createAllowlistStore } from "../server/auth/allowlist-store.js";
-import { ownerEmails, resolveAuth } from "../server/auth/resolve-auth.js";
-import { createBotControlsStore } from "../server/bot-controls-store.js";
+import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
-import { resolveFeedbackCoach } from "../server/feedback-coach.js";
-import { resolveFeedbackFollowup } from "../server/feedback-followup.js";
-import { createFeedbackLogStore } from "../server/feedback-log.js";
-import { resolveFeedback } from "../server/feedback-service.js";
-import { resolveFeedbackStatus } from "../server/feedback-status.js";
-import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
-import { createOwnerLinkStore, resolveOwnedId } from "../server/owner-link-store.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { createProgressionService } from "../server/progression-service.js";
 import { createProgressionStore } from "../server/progression-store.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
+import { setupAccess } from "./dashboard-access.js";
+import { setupFeedback } from "./dashboard-feedback.js";
+import { startInsightsBridge } from "./dashboard-insights-bridge.js";
 
 const PORT = resolvePort(process.env);
 
@@ -157,57 +149,23 @@ async function main(): Promise<void> {
     findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
   });
 
-  // The guest list lives on the mounted volume, encrypted at rest, and is unioned with the env
-  // allowlist inside resolveAuth. Built here so the /invite route and the authenticator read the
-  // exact same store — two sources of truth for who may sign in is the bug worth designing out.
-  const allowlist = createAllowlistStore(process.env, (m) => console.error(m));
-  // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
-  // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
-  const botControls = createBotControlsStore(process.env, (m) => console.error(m));
-  const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
-  const auth = resolveAuth(process.env, undefined, allowlist);
-  const password = process.env.SKYNET_DASHBOARD_PASSWORD;
-  if (auth) {
-    if (auth.allowlistEmpty) {
-      console.warn(
-        "⚠️  OAuth login is on but the allowlist is empty — nobody can sign in. Set SKYNET_ALLOWED_EMAILS.",
-      );
-    }
-  } else if (!password) {
-    console.warn(
-      "⚠️  No auth configured and no SKYNET_DASHBOARD_PASSWORD set — the dashboard is OPEN to anyone who can reach it. Fine for localhost; configure OAuth or a password before exposing it publicly.",
-    );
-  }
-  if (!process.env.SKYNET_STORE_SECRET) {
-    console.warn(
-      "⚠️  No SKYNET_STORE_SECRET set — self-service onboarding (/add) is DISABLED so credentials are never written unencrypted. Set it to enable onboarding.",
-    );
-  }
-
   // Desk trading is on whenever OAuth is configured — no separate kill switch (#466).
   // Resolved through the LIVE merge (not the boot-time `roster`) so a credential rotated at
   // runtime takes effect on the next order, not the next restart.
   const liveRoster = () => mergeRoster(envRoster, store.load());
   const findParticipant = (id: string) => liveRoster().find((p) => p.id === id);
-  // Owner links for accounts that carry no `ownerEmail` of their own — every env-declared roster
-  // row without a stamp, and anything added before the connect form existed (#546). Plain JSON on
-  // the volume beside bot-controls.json: an id and an already-admitted email, no credentials.
-  const ownerLinks = createOwnerLinkStore(process.env, (m) => console.error(m));
-  // The owner link: session email -> the account(s) it owns. Never exposed on ParticipantSnapshot.
-  // Every stamped `ownerEmail` match wins outright (multiple, when the host stamps more than one
-  // env id to the same address); only when NONE is stamped does a volume link fill the gap — the
-  // same "a stamp always beats a link" precedence `resolveOwnedId` specifies, generalized to a
-  // roster that can hand back more than one id.
-  const resolveOwnerIds = (email: string): string[] => {
-    const participants = liveRoster();
-    const stampedIds = participants
-      .filter((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
-      .map((p) => p.id);
-    if (stampedIds.length > 0) return stampedIds;
-    const linkedId = resolveOwnedId(participants, ownerLinks.load().links, email);
-    return linkedId ? [linkedId] : [];
-  };
-  const resolveOwnerId = (email: string): string | undefined => resolveOwnerIds(email)[0];
+
+  // Guest list, Mission Control store, authenticator, and owner-link lookup (dashboard-access.ts).
+  const {
+    allowlist,
+    botControls,
+    knownPersonaIds,
+    auth,
+    password,
+    ownerLinks,
+    resolveOwnerIds,
+    resolveOwnerId,
+  } = setupAccess(process.env, liveRoster);
   // The broker's last word (#591): the fill stream is the fast path, this is the authoritative slow
   // one that repairs whatever it missed — a socket gap, a restart, an order placed outside this app.
   // Reads the LIVE roster, so a runtime-added or rotated account is covered too.
@@ -228,24 +186,9 @@ async function main(): Promise<void> {
     recordAudit: (entry) => orderAudit.record(entry),
   });
 
-  const feedback = resolveFeedback(process.env);
-  if (!feedback) {
-    console.warn(
-      "ℹ️  In-app feedback is off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — the /feedback form renders but submissions won't file issues.",
-    );
-  }
-  const feedbackCoach = resolveFeedbackCoach(process.env);
-  if (!feedbackCoach) {
-    console.warn(
-      "ℹ️  The feedback coach is off (no ANTHROPIC_API_KEY) — the plain /feedback form still works.",
-    );
-  }
-  // What a member filed, correlated to the issue it became (#429).
-  const feedbackLog = createFeedbackLogStore(process.env);
-  // Live status for those filings — GitHub itself, never a local store (#429 follow-up).
-  const feedbackStatus = resolveFeedbackStatus(process.env);
-  // A member adding more to a filing they already own, and the re-trigger that comes with it.
-  const feedbackFollowup = resolveFeedbackFollowup(process.env);
+  const { feedback, feedbackCoach, feedbackLog, feedbackStatus, feedbackFollowup } = setupFeedback(
+    process.env,
+  );
 
   createDashboardServer({
     hub,
@@ -334,20 +277,9 @@ async function main(): Promise<void> {
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
   });
 
-  // Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — internal-only, so the
-  // `bots` process (no Fly Volume of its own) can persist retrospectives through this process's
-  // mounted volume. Bound to a port deliberately NOT in fly.toml's [http_service]: unreachable
-  // from the public internet, reachable only over Fly's private 6PN network. See
-  // src/server/insights-listener.ts for the full reasoning + what was verified.
-  const insights = createInsightStore(process.env);
-  const insightsPort = resolveInsightsBridgePort(process.env);
-  createInsightsListener({
-    record: (entry) => insights.record(entry),
-    // The bots process polls Mission Control state over the same private-net bridge.
-    controls: () => botControls.load(),
-  }).listen(insightsPort, () => {
-    console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
-  });
+  // Interim insight bridge (dashboard-insights-bridge.ts) — internal-only, private-net port for
+  // the `bots` process to persist retrospectives and poll Mission Control through this process.
+  startInsightsBridge(process.env, botControls);
 }
 
 main().catch((error) => {
