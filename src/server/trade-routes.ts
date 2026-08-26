@@ -5,9 +5,10 @@ import { ticketContext } from "../observatory/desk-data.js";
 import { renderTradeReviewBody } from "../observatory/trade-review-view.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { previewOrder, type TicketAction } from "../trading/order-ticket.js";
+import { handleCheckPost } from "./comprehension-routes.js";
 import { handleOptionPost, OPTION_CODES, optionPreviewFromForm } from "./option-order-review.js";
 import { readBody } from "./page-shell.js";
-import { refusalPage, resultRedirect } from "./trade-response-pages.js";
+import { redirectBack, refusalPage, resultRedirect } from "./trade-response-pages.js";
 import type { DeskTradeResult } from "./trade-service.js";
 import {
   html,
@@ -103,21 +104,6 @@ async function handleAckPost(
   return true;
 }
 
-/**
- * 303 back to the local path a hidden `back` field names — constructed, never an open redirect.
- * Backslashes are rejected outright (browsers' URL parsers treat `\` as `/`, so `/\evil.example`
- * would slip a single-slash prefix check and hop off-site), and so are control characters —
- * a decoded `%0a` in a Location value makes `writeHead` throw, which nothing above catches.
- */
-function redirectBack(res: ServerResponse, form: URLSearchParams): void {
-  const back = form.get("back") ?? "";
-  const local =
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting them IS the point
-    back.startsWith("/") && !back.startsWith("//") && !/[\\\u0000-\u001F\u007F]/.test(back);
-  res.writeHead(303, { location: local ? back : "/trade" });
-  res.end();
-}
-
 /** Handle `/trade` — GET renders the ticket, POST reviews/executes. */
 export async function handleTrade(
   req: IncomingMessage,
@@ -153,7 +139,8 @@ export async function handleTrade(
   const form = new URLSearchParams(await readBody(req));
   if (
     (await handleWheelsPost(res, form, deps, deps.requesterId)) ||
-    (await handleAckPost(res, form, deps, deps.requesterId))
+    (await handleAckPost(res, form, deps, deps.requesterId)) ||
+    (await handleCheckPost(res, form, deps, deps.requesterId))
   ) {
     return;
   }

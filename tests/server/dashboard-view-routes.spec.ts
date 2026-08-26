@@ -78,6 +78,7 @@ describe("serveLearnRoute", () => {
             rank: { title: "Apprentice", atPoints: 25 },
             unlockedLevels: new Set([100]),
             celebrating: [],
+            pendingChecks: [],
           };
         },
       },

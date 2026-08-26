@@ -9,6 +9,7 @@ import {
 } from "../domain/curriculum.js";
 import type { EarnedMilestone } from "../domain/progression.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import { renderComprehensionCheck } from "./comprehension-check-view.js";
 import {
   type DashboardViewOptions,
   type NavContext,
@@ -383,6 +384,8 @@ export interface AcademyProgress {
   readonly unlockedLevels: ReadonlySet<CourseLevel>;
   /** Fresh earns awaiting their one-time celebration (`milestone-banner.ts`). */
   readonly celebrating?: readonly EarnedMilestone[];
+  /** Fresh earns still gated on a comprehension check (`comprehension-check-view.ts`). */
+  readonly pendingChecks?: readonly EarnedMilestone[];
 }
 
 /** One milestone row — earned by a real filled order (the order id is the proof), never a checkbox. */
@@ -457,6 +460,7 @@ export function renderAcademyBody(
         ${linkNote}
       </div>
     </div>
+    ${renderComprehensionCheck(progress?.pendingChecks ?? [], { back: "/learn" })}
     ${renderMilestoneBanner(progress?.celebrating ?? [], { back: "/learn" })}
     <div class="hud">
       <div class="hud-stat"><span class="hud-k">Rank</span><span class="hud-v" data-rank>${escapeHtml(rankTitle)}</span></div>

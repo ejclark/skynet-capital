@@ -3,6 +3,30 @@ import { deskHref } from "../observatory/desk-tabs.js";
 import { html, type TradeRouteDeps } from "./trade-ticket-route.js";
 
 /**
+ * The local path a hidden `back` field names, or `/trade` — constructed, never an open redirect.
+ * Backslashes are rejected outright (browsers' URL parsers treat a backslash as a slash, so
+ * `/\evil.example` would slip a single-slash prefix check and hop off-site), and so are control
+ * characters — a decoded `%0a` in a Location value makes `writeHead` throw, which nothing above
+ * catches.
+ *
+ * One copy, because every POST that returns a member to where they were needs the same answer:
+ * the wheels toggle, the celebration claim, and the comprehension check.
+ */
+export function localBack(raw: string | null): string {
+  const back = raw ?? "";
+  const local =
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting them IS the point
+    back.startsWith("/") && !back.startsWith("//") && !/[\\\u0000-\u001F\u007F]/.test(back);
+  return local ? back : "/trade";
+}
+
+/** 303 back to the local path a hidden `back` field names. */
+export function redirectBack(res: ServerResponse, form: URLSearchParams): void {
+  res.writeHead(303, { location: localBack(form.get("back")) });
+  res.end();
+}
+
+/**
  * A refusal with no account to render it against — kept plain rather than half-rendering a desk.
  * Shared by trade-routes.ts and option-order-review.ts.
  */

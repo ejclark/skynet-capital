@@ -36,6 +36,7 @@ const progression = (over: Partial<ParticipantProgression> = {}): ParticipantPro
   rank: { title: "Observer", atPoints: 0 },
   unlockedLevels: new Set([100]),
   celebrating: [],
+  pendingChecks: [],
   ...over,
 });
 
@@ -49,6 +50,7 @@ const deps = (view: ParticipantProgression | undefined) => ({
           view: () => Promise.resolve(view),
           setWheels: () => Promise.resolve(),
           acknowledge: () => Promise.resolve(),
+          submitCheck: () => Promise.resolve(undefined),
         },
       }
     : {}),

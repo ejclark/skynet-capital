@@ -36,6 +36,8 @@ export interface TicketProgression {
   readonly nextUp?: TradeTypeCode;
   /** Fresh earns awaiting their one-time celebration (`milestone-banner.ts`). */
   readonly celebrating?: readonly EarnedMilestone[];
+  /** Fresh earns still gated on a comprehension check (`comprehension-check-view.ts`). */
+  readonly pendingChecks?: readonly EarnedMilestone[];
 }
 
 /** Build a /trade URL from state, with overrides. Omits everything unset. */
