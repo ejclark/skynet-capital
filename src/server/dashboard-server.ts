@@ -4,10 +4,18 @@ import {
   type NavView,
   renderPortfolioIndexBody,
 } from "../observatory/render-dashboard.js";
-import { parseLeaderMetric, type StandingsOptions } from "../observatory/standings-view.js";
+import { parseLeaderMetric } from "../observatory/standings-metric.js";
+import type { StandingsOptions } from "../observatory/standings-view.js";
 import type { Session } from "./auth/session.js";
+import {
+  type BoardPatchChannel,
+  createBoardChannel,
+  driveBoardChannel,
+  serveBoardFrame,
+  streamBoardPatches,
+} from "./board-patch-routes.js";
 import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
-import { pageHtml, servePublicRoute, streamEvents } from "./dashboard-board-routes.js";
+import { pageHtml, servePublicRoute } from "./dashboard-board-routes.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import { serveIndividualProfile } from "./dashboard-profile-routes.js";
 import { trySelfServiceRoute } from "./dashboard-self-service-routes.js";
@@ -19,15 +27,20 @@ import { serveWireRoute } from "./wire-routes.js";
 export type { DashboardServerConfig };
 
 /**
- * The live dashboard server. Serves the observatory page and an SSE stream that pushes a
- * freshly-rendered page body every time the hub's state changes. Access is gated either by
- * per-user OAuth login (`auth`) or the legacy shared password (`password`). When an
+ * The live dashboard server. Serves the observatory page and a seq-numbered patch stream that
+ * describes only what changed on each hub tick — never a re-rendered page body, which used to
+ * destroy every scrap of client state ~4 times a second (see board-patch-routes.ts). Access is
+ * gated either by per-user OAuth login (`auth`) or the legacy shared password (`password`). When an
  * `addParticipant` handler is wired, it also serves a `/add` form that registers a new
- * account live.
+ * account.
  */
 export function createDashboardServer(config: DashboardServerConfig): Server {
+  // ONE channel per server, driven by ONE hub subscription: the board diff is computed once per
+  // tick regardless of how many viewers are watching, and every viewer shares one seq run.
+  const channel = createBoardChannel();
+  driveBoardChannel(config.hub, channel, config.ceremonies);
   return createServer((req, res) => {
-    void handle(req, res, config);
+    void handle(req, res, config, channel);
   });
 }
 
@@ -35,6 +48,7 @@ async function handle(
   req: IncomingMessage,
   res: ServerResponse,
   config: DashboardServerConfig,
+  channel: BoardPatchChannel,
 ): Promise<void> {
   const url = req.url ?? "/";
   const path = url.split("?")[0] ?? "/";
@@ -48,7 +62,7 @@ async function handle(
     return;
   }
 
-  await serveAuthorizedRoute(req, res, path, url, config, gate.session);
+  await serveAuthorizedRoute(req, res, path, url, config, gate.session, channel);
 }
 
 /** `?a=`/`?b=` for Standings' folded-in compare — shared by `/events` and `/` so neither route
@@ -68,6 +82,7 @@ async function serveAuthorizedRoute(
   url: string,
   config: DashboardServerConfig,
   session: Session | undefined,
+  channel: BoardPatchChannel,
 ): Promise<void> {
   const canAdd = Boolean(config.addParticipant);
   const authed = Boolean(config.auth);
@@ -87,7 +102,15 @@ async function serveAuthorizedRoute(
   if (path === "/events") {
     const params = new URL(url, "http://localhost").searchParams;
     const metric = parseLeaderMetric(params.get("by"));
-    streamEvents(req, res, config.hub, navFor("board"), metric, parseCompareParams(params));
+    streamBoardPatches(req, res, channel, metric, parseCompareParams(params));
+    return;
+  }
+  // The patch channel's honest fallback: the same Standings content, whole, for the changes a patch
+  // cannot express (a row appearing, the cohort lead flipping, a seq gap after a reconnect).
+  if (path === "/board/frame") {
+    const params = new URL(url, "http://localhost").searchParams;
+    const metric = parseLeaderMetric(params.get("by"));
+    serveBoardFrame(res, config.hub, navFor("board"), metric, parseCompareParams(params));
     return;
   }
   if (path === "/leaderboard") {

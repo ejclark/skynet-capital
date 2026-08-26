@@ -8,6 +8,14 @@ import {
 } from "./participant-card.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { chip, formatCurrency, formatSigned, pct, plClass, profileHref } from "./render-atoms.js";
+import { type CohortStats, cohortStats } from "./standings-cohort.js";
+import {
+  formatMetric,
+  LEADER_METRICS,
+  type LeaderMetric,
+  metricLabel,
+  metricValue,
+} from "./standings-metric.js";
 
 /**
  * STANDINGS (`/`) — the whole race on one board, replacing the old Board + Leaderboard + Bots vs
@@ -25,10 +33,11 @@ import { chip, formatCurrency, formatSigned, pct, plClass, profileHref } from ".
  *      rather than a card grid. Per-participant detail (activity feed, positions) lives on that
  *      participant's own `/u/:id` desk, not duplicated here.
  *
- * `renderStandingsContent` is the piece the SSE stream (`/events`) swaps into `#root` on every hub
- * update — kept separate from the shell so live refresh never resets the drawer. Live pushes
- * thread the connecting request's own `?by=`/`?a=`/`?b=` back through (`dashboard-server.ts`'s
- * `streamEvents`), so a viewer's selected metric or in-progress compare never gets silently reset.
+ * `renderStandingsContent` renders the whole view ONCE. Live updates no longer replace it: `/events`
+ * carries seq-numbered patches and the page rewrites only the keyed nodes below (`data-field-key` +
+ * `data-field`), so an in-flight animation, a focused control or a canvas survives every push. The
+ * same markup is re-served whole at `/board/frame` for the cases a patch honestly cannot express —
+ * a row appearing, the cohort lead flipping, a head-to-head compare on screen.
  */
 
 export interface StandingsOptions extends DashboardViewOptions {
@@ -37,38 +46,6 @@ export interface StandingsOptions extends DashboardViewOptions {
    *  missing/unknown/errored falls through exactly like the old standalone `/compare` did. */
   readonly aId?: string;
   readonly bId?: string;
-}
-
-/** Metrics the field can rank by — all snapshot-derived (no history needed). */
-export type LeaderMetric = "equity" | "pl" | "return" | "realized";
-
-const LEADER_METRICS: ReadonlyArray<{ key: LeaderMetric; label: string }> = [
-  { key: "equity", label: "Equity" },
-  { key: "pl", label: "Unrealized P/L" },
-  { key: "return", label: "Return %" },
-  { key: "realized", label: "Realized P/L" },
-];
-
-/** Parse the `?by=` param, defaulting to equity for anything unrecognized. */
-export function parseLeaderMetric(raw: string | null | undefined): LeaderMetric {
-  return raw === "pl" || raw === "return" || raw === "realized" ? raw : "equity";
-}
-
-function metricValue(snapshot: ParticipantSnapshot, metric: LeaderMetric): number {
-  const pl = participantUnrealized(snapshot);
-  if (metric === "pl") return pl;
-  if (metric === "realized") return snapshot.realizedPl ?? 0;
-  if (metric === "return") {
-    const invested = participantInvested(snapshot);
-    return invested > 0 ? (pl / invested) * 100 : 0;
-  }
-  return snapshot.equity;
-}
-
-function formatMetric(value: number, metric: LeaderMetric): string {
-  if (metric === "return") return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
-  if (metric === "pl" || metric === "realized") return formatSigned(value);
-  return formatCurrency(value);
 }
 
 /** Every Standings-internal link carries `?by=` explicitly, plus `a`/`b` when a compare is live —
@@ -132,85 +109,46 @@ function fieldLadder(
       const self = currentId && p.id === currentId ? " rank-self" : "";
       const you = currentId && p.id === currentId ? `<span class="you-mark">YOU</span>` : "";
       const medal = i < 3 ? ` rank-top rank-${i + 1}` : "";
-      return `<li class="rank-row${self}${medal}">
-        <span class="rank">${i + 1}</span>
+      // data-field-key/data-field are the live patch's addresses; data-sort is what lets the list
+      // reorder itself in place on a rank change instead of being rebuilt (see standings-patch.ts).
+      return `<li class="rank-row${self}${medal}" data-field-key="${escapeHtml(p.id)}" data-empire-key="${escapeHtml(p.id)}" data-sort="${v}">
+        <span class="rank" data-field="rank">${i + 1}</span>
         <a class="rank-name" href="${profileHref(p.id)}">${escapeHtml(p.displayName)} ${chip(p)}${you}</a>
-        <span class="rank-bar"><i class="bar-${sign}" style="width:${width.toFixed(1)}%"></i></span>
-        <span class="rank-val num ${sign}">${formatMetric(v, metric)}</span>
+        <span class="rank-bar"><i class="bar-${sign}" data-field-bar="bar" data-field-tone="bar" data-tone-prefix="bar-" style="width:${width.toFixed(1)}%"></i></span>
+        <span class="rank-val num ${sign}" data-field="value" data-field-tone="value">${formatMetric(v, metric)}</span>
         ${comparePill(p.id, metric, aId, bId)}
       </li>`;
     })
     .join("\n      ");
 
-  return `<ol class="ladder">
+  return `<ol class="ladder" data-sortable>
       ${rows || `<li class="empty">No participants on the board yet.</li>`}
     </ol>
   <footer class="obs-foot">Read-only observatory · ranked by ${escapeHtml(
-    LEADER_METRICS.find((m) => m.key === metric)?.label ?? "equity",
+    metricLabel(metric),
   )} · figures reflect the last account read.</footer>`;
-}
-
-interface CohortStats {
-  readonly kind: "human" | "bot";
-  readonly label: string;
-  readonly count: number;
-  readonly totalEquity: number;
-  readonly avgEquity: number;
-  readonly totalUnrealized: number;
-  readonly returnPct: number;
-  readonly breadthPct: number; // share of the cohort currently in profit
-  readonly best?: { name: string; pct: number };
-  readonly spread: number; // best return% − worst return%
-}
-
-function cohortStats(
-  participants: ParticipantSnapshot[],
-  kind: "human" | "bot",
-  label: string,
-): CohortStats {
-  const c = participants.filter((p) => p.kind === kind && !p.error);
-  const count = c.length;
-  const totalEquity = c.reduce((s, p) => s + p.equity, 0);
-  const totalUnrealized = c.reduce((s, p) => s + participantUnrealized(p), 0);
-  const totalInvested = c.reduce((s, p) => s + participantInvested(p), 0);
-  const returns = c.map(participantReturnPct);
-  const inProfit = c.filter((p) => participantUnrealized(p) >= 0).length;
-  let best: { name: string; pct: number } | undefined;
-  for (const p of c) {
-    const pct = participantReturnPct(p);
-    if (!best || pct > best.pct) best = { name: p.displayName, pct };
-  }
-  return {
-    kind,
-    label,
-    count,
-    totalEquity,
-    avgEquity: count ? totalEquity / count : 0,
-    totalUnrealized,
-    returnPct: totalInvested > 0 ? (totalUnrealized / totalInvested) * 100 : 0,
-    breadthPct: count ? (inProfit / count) * 100 : 0,
-    best,
-    spread: returns.length ? Math.max(...returns) - Math.min(...returns) : 0,
-  };
 }
 
 function cohortCard(stats: CohortStats, leads: boolean): string {
   const chipCls = stats.kind === "bot" ? "chip-bot" : "chip-human";
-  return `<article class="cohort ${leads ? "cohort-lead" : ""}">
+  // Every figure carries a `data-field` name; the live patch writes text into these nodes rather
+  // than replacing the card. Absence stays absent — no best performer renders "—" and an EMPTY
+  // figure, never a fabricated 0%.
+  return `<article class="cohort ${leads ? "cohort-lead" : ""}" data-field-key="cohort:${stats.kind}">
       <header class="cohort-head">
         <span class="chip ${chipCls}">${stats.label.toUpperCase()}</span>
-        <span class="cohort-count num">${stats.count}<span class="unit"> account${stats.count === 1 ? "" : "s"}</span></span>
+        <span class="cohort-count num"><span data-field="count">${stats.count}</span><span class="unit" data-field="countUnit"> account${stats.count === 1 ? "" : "s"}</span></span>
         ${leads ? `<span class="cohort-badge">LEADS</span>` : ""}
       </header>
-      <div class="cohort-equity num">${formatCurrency(stats.totalEquity)}</div>
+      <div class="cohort-equity num" data-field="totalEquity">${formatCurrency(stats.totalEquity)}</div>
       <div class="cohort-eqlabel">total equity</div>
       <dl class="cohort-metrics">
-        <div><dt>Avg equity</dt><dd class="num">${formatCurrency(stats.avgEquity)}</dd></div>
-        <div><dt>Unrealized P/L</dt><dd class="num ${plClass(stats.totalUnrealized)}">${formatSigned(stats.totalUnrealized)}</dd></div>
-        <div><dt>Cohort return</dt><dd class="num ${plClass(stats.returnPct)}">${pct(stats.returnPct)}</dd></div>
-        <div><dt>In profit</dt><dd class="num">${stats.breadthPct.toFixed(0)}%</dd></div>
-        <div><dt>Best</dt><dd>${stats.best ? `${escapeHtml(stats.best.name)} <span class="num ${plClass(stats.best.pct)}">${pct(stats.best.pct)}</span>` : "—"}</dd></div>
-        <div><dt>Spread</dt><dd class="num">${stats.spread.toFixed(2)}%</dd></div>
+        <div><dt>Avg equity</dt><dd class="num" data-field="avgEquity">${formatCurrency(stats.avgEquity)}</dd></div>
+        <div><dt>Unrealized P/L</dt><dd class="num ${plClass(stats.totalUnrealized)}" data-field="unrealized" data-field-tone="unrealized">${formatSigned(stats.totalUnrealized)}</dd></div>
+        <div><dt>Cohort return</dt><dd class="num ${plClass(stats.returnPct)}" data-field="return" data-field-tone="return">${pct(stats.returnPct)}</dd></div>
+        <div><dt>In profit</dt><dd class="num" data-field="breadth">${stats.breadthPct.toFixed(0)}%</dd></div>
+        <div><dt>Best</dt><dd><span data-field="bestName">${stats.best ? escapeHtml(stats.best.name) : "—"}</span> <span class="num ${plClass(stats.best?.pct ?? 0)}" data-field="bestPct" data-field-tone="bestPct">${stats.best ? pct(stats.best.pct) : ""}</span></dd></div>
+        <div><dt>Spread</dt><dd class="num" data-field="spread">${stats.spread.toFixed(2)}%</dd></div>
       </dl>
     </article>`;
 }
@@ -226,18 +164,22 @@ function matchBar(humans: CohortStats, bots: CohortStats): string {
   const humanPct = Math.round(humanShare * 100);
   const botPct = 100 - humanPct;
   const leader = humans.avgEquity === bots.avgEquity ? null : humans.avgEquity > bots.avgEquity;
+  // Split across two keyed nodes so the live patch can rewrite the leader and the read separately
+  // (a tie carries an EMPTY leader rather than a fabricated one).
   const leadLabel =
     leader === null
-      ? "Dead even — the match is tied"
-      : `<strong>${leader ? "Humans" : "Bots"}</strong> lead the match · ${
+      ? `<strong data-field="readLeader"></strong><span data-field="readRest">Dead even — the match is tied</span>`
+      : `<strong data-field="readLeader">${leader ? "Humans" : "Bots"}</strong><span data-field="readRest"> lead the match · ${
           leader ? humanPct : botPct
-        }% of the field`;
-  return `<section class="match" aria-label="Bots vs Humans live match standings">
+        }% of the field</span>`;
+  // The bar's accessible name is deliberately percentage-FREE: the visible labels are patched live,
+  // and an aria-label frozen at first render would keep announcing a number that has since moved.
+  return `<section class="match" aria-label="Bots vs Humans live match standings" data-field-key="match">
       <div class="match-top"><span class="match-eyebrow">◈ THE MATCH · LIVE</span><span class="match-metric">avg equity per account</span></div>
-      <div class="match-bar" role="img" aria-label="Humans ${humanPct}% versus Bots ${botPct}%">
-        <div class="match-seg match-human" style="width:${humanPct}%"><span class="match-seg-label">Humans ${humanPct}%</span></div>
-        <div class="match-seg match-bot" style="width:${botPct}%"><span class="match-seg-label">${botPct}% Bots</span></div>
-        <div class="match-divider" style="left:${humanPct}%"></div>
+      <div class="match-bar" role="img" aria-label="Humans versus Bots, by average equity per account">
+        <div class="match-seg match-human" data-field-bar="human" style="width:${humanPct}%"><span class="match-seg-label" data-field="humanLabel">Humans ${humanPct}%</span></div>
+        <div class="match-seg match-bot" data-field-bar="bot" style="width:${botPct}%"><span class="match-seg-label" data-field="botLabel">${botPct}% Bots</span></div>
+        <div class="match-divider" data-field-bar="divider" data-bar-axis="left" style="left:${humanPct}%"></div>
       </div>
       <p class="match-read">${leadLabel}</p>
     </section>`;
@@ -257,9 +199,9 @@ function cohortSection(data: DashboardData): string {
       <div class="versus-mid"><span class="vs">VS</span></div>
       ${cohortCard(bots, !humansLeadTotal)}
     </div>
-    <div class="versus-read">
-      <span><strong>${humansLeadTotal ? "Humans" : "Bots"}</strong> lead on total equity by <span class="num">${formatCurrency(totalGap)}</span></span>
-      <span><strong>${avgLeader}</strong> lead on average equity by <span class="num">${formatCurrency(avgGap)}</span></span>
+    <div class="versus-read" data-field-key="versus">
+      <span><strong data-field="totalLeader">${humansLeadTotal ? "Humans" : "Bots"}</strong> lead on total equity by <span class="num" data-field="totalGap">${formatCurrency(totalGap)}</span></span>
+      <span><strong data-field="avgLeader">${avgLeader}</strong> lead on average equity by <span class="num" data-field="avgGap">${formatCurrency(avgGap)}</span></span>
     </div>`;
 }
 

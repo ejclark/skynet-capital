@@ -31,10 +31,10 @@ describe("the match — cohort cards", () => {
     expect(html).toContain(">HUMANS<");
     expect(html).toContain(">BOTS<");
     expect(html).toContain(
-      '<span class="cohort-count num">2<span class="unit"> accounts</span></span>',
+      '<span data-field="count">2</span><span class="unit" data-field="countUnit"> accounts</span>',
     );
     expect(html).toContain(
-      '<span class="cohort-count num">1<span class="unit"> account</span></span>',
+      '<span data-field="count">1</span><span class="unit" data-field="countUnit"> account</span>',
     );
   });
 
@@ -98,7 +98,9 @@ describe("the match — the bar", () => {
     expect(html).toContain("THE MATCH · LIVE");
     expect(html).toContain("Humans 60%");
     expect(html).toContain("40% Bots");
-    expect(html).toContain("<strong>Humans</strong> lead the match");
+    expect(html).toContain(
+      '<strong data-field="readLeader">Humans</strong><span data-field="readRest"> lead the match',
+    );
   });
 
   it("reads dead even when the cohort averages are tied", () => {
@@ -131,7 +133,9 @@ describe("the match — the bar", () => {
       },
     ]);
     const html = renderStandingsBody(botsAhead);
-    expect(html).toContain("<strong>Bots</strong> lead the match");
+    expect(html).toContain(
+      '<strong data-field="readLeader">Bots</strong><span data-field="readRest"> lead the match',
+    );
     expect(html).toContain("75%");
   });
 });
@@ -155,10 +159,10 @@ describe("the match — the head-to-head read line", () => {
     // Total: humans 200,000 vs bots 50,000 -> humans lead by 150,000.
     // Average: humans 100,000 vs bots 50,000 -> humans lead by 50,000.
     expect(html).toContain(
-      '<strong>Humans</strong> lead on total equity by <span class="num">$150,000</span>',
+      '<strong data-field="totalLeader">Humans</strong> lead on total equity by <span class="num" data-field="totalGap">$150,000</span>',
     );
     expect(html).toContain(
-      '<strong>Humans</strong> lead on average equity by <span class="num">$50,000</span>',
+      '<strong data-field="avgLeader">Humans</strong> lead on average equity by <span class="num" data-field="avgGap">$50,000</span>',
     );
   });
 });
@@ -178,7 +182,7 @@ describe("the match — edge cases", () => {
     ]);
     const html = renderStandingsBody(botsOnly);
     expect(html).toContain(
-      '<span class="cohort-count num">0<span class="unit"> accounts</span></span>',
+      '<span data-field="count">0</span><span class="unit" data-field="countUnit"> accounts</span>',
     );
     expect(html).not.toContain("NaN");
     expect(html).toContain("$0");
@@ -190,7 +194,7 @@ describe("the match — edge cases", () => {
     ]);
     const html = renderStandingsBody(humansOnly);
     expect(html).toContain(
-      '<span class="cohort-count num">0<span class="unit"> accounts</span></span>',
+      '<span data-field="count">0</span><span class="unit" data-field="countUnit"> accounts</span>',
     );
     expect(html).not.toContain("NaN");
   });
@@ -199,7 +203,7 @@ describe("the match — edge cases", () => {
     const html = renderStandingsBody(data([]));
     expect(html).toContain("Dead even — the match is tied");
     expect(html).not.toContain("NaN");
-    expect(html).toContain("<dt>Best</dt><dd>—</dd>");
+    expect(html).toContain('<dt>Best</dt><dd><span data-field="bestName">—</span>');
   });
 
   it("excludes errored accounts from cohort totals and breadth", () => {
@@ -217,7 +221,7 @@ describe("the match — edge cases", () => {
     ]);
     const html = renderStandingsBody(withError);
     expect(html).toContain(
-      '<span class="cohort-count num">1<span class="unit"> account</span></span>',
+      '<span data-field="count">1</span><span class="unit" data-field="countUnit"> account</span>',
     );
     expect(html).toContain("$100,000");
   });
