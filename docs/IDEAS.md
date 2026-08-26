@@ -18,6 +18,18 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### 15 unlearned incidents have crossed the learning-coach budget
+
+`node scripts/incident-scan.mjs` currently reports 15 un-retro'd failed `main` runs (Postmaster/CI
+Medic, 2026-08-20 → 2026-08-25) against a budget of 0 — `tests/arch/lessons.spec.ts` fails locally
+whenever `npm test` runs with a live `GH_TOKEN`. Confirmed non-blocking for real merges: `pipeline.yml`
+skips typecheck/lint/test entirely on docs-only PRs, and even on code-touching PRs the `Test (Rstest)`
+step has no `GITHUB_TOKEN` wired into its env, so the remote check no-ops there by design (see the
+comment atop `tests/arch/lessons.spec.ts`) — it only surfaces in a sandbox with `gh` already
+authenticated, which is why it hadn't blocked the last several merges. Still real, unaddressed debt:
+worth a `/retro` cycle to close the oldest incidents and pull the count back to 0. _(src: Claude ·
+while: probing the event-research lane before fanning out to 20 due events, 2026-08-26)_
+
 ### `arch-budget.json` is a conflict magnet on hot files
 
 Hit twice in one PR (#566): two branches that each grew `serve-dashboard.ts` (a shared wiring
