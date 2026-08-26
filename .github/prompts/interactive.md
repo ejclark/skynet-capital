@@ -42,7 +42,7 @@ attribution footer.
 
 ## Merging — auto-merge on green, same as every other lane
 
-**Arm auto-merge (`gh pr merge --auto --squash`) unless a carve-out below applies.** This lane used
+**Arm auto-merge (`gh pr merge --auto --squash`) unless a carve-out below applies.** If that arm is refused with **"Pull request is in clean status"**, the PR simply went green before you got to it (`verify` on a small PR takes ~45s) — auto-merge only takes while checks are still pending. That is not a failure and never a reason to leave it: **merge it directly** (`gh pr merge --squash`), which is the condition auto-merge was waiting for, met early. Leaving it stalled 16 research PRs on 2026-08-26. This lane used
 to hold *every* PR it opened, with no scope test. That blanket rule outlived the ruling it came from
 (`CLAUDE.md`, 2026-08-20: *features and visual work auto-merge too* — a standing pre-merge taste
 gate makes Eric the constraint on everything). It held a pure-CSS PR for sixteen hours, and held

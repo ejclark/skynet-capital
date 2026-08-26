@@ -20,7 +20,7 @@ PR is still open, and it is what puts the branch inside the envelope gate. Never
 
 Verify by exit status and never by tailed output (`npm run typecheck`, `npm run lint`, `npm test`),
 push, open the PR with `gh pr create`, then arm auto-merge with `gh pr merge --auto --squash` —
-research-ledger docs auto-merge per the governor's merge policy. Conventional-Commit subjects,
+research-ledger docs auto-merge per the governor's merge policy. If that arm is refused with **"Pull request is in clean status"**, the PR simply went green before you got to it (`verify` on a small PR takes ~45s) — auto-merge only takes while checks are still pending. That is not a failure and never a reason to leave it: **merge it directly** (`gh pr merge --squash`), which is the condition auto-merge was waiting for, met early. Leaving it stalled 16 research PRs on 2026-08-26. Conventional-Commit subjects,
 lowercase-led and **≤100 characters** (commitlint's `header-max-length`, which fails `verify`). The PR body follows `.github/pull_request_template.md`: open with `## The picture` —
 for a ledger row the honest picture is usually the line `Picture: waived — automated research
 ledger` (never a decorative diagram); Summary bullets ≤120 chars (`docs/PICTURES.md`).
