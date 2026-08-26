@@ -106,6 +106,94 @@ describe("AlpacaOptionsClient", () => {
     expect(rowPremium(bare[0] as never)).toBe(10.7); // falls back to last close
   });
 
+  it("carries all five greeks the snapshot quotes, negatives and zeros included", async () => {
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [
+            contract("MSFT260918P00420000", "2026-09-18", "420", { close_price: "10.7" }),
+          ],
+        },
+      }),
+      fakeTransport({
+        "/v1beta1/options/snapshots/MSFT": {
+          snapshots: {
+            MSFT260918P00420000: {
+              latestQuote: { bp: 10.5, ap: 10.9 },
+              // A real put: negative delta, negative theta, and a rho that rounds to a true zero.
+              greeks: { delta: -0.42, gamma: 0.0138, theta: -0.19, vega: 0.53, rho: 0 },
+            },
+          },
+        },
+      }),
+    );
+    const chain = await client.getChain("MSFT", "2026-09-18", "put");
+    expect(chain[0]).toMatchObject({
+      delta: -0.42,
+      gamma: 0.0138,
+      theta: -0.19,
+      vega: 0.53,
+      rho: 0,
+    });
+  });
+
+  it("OMITS any greek the feed left missing, null or non-finite — never a false zero", async () => {
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [
+            contract("A", "2026-09-18", "410"),
+            contract("B", "2026-09-18", "420"),
+            contract("C", "2026-09-18", "430"),
+          ],
+        },
+      }),
+      fakeTransport({
+        "/v1beta1/options/snapshots/MSFT": {
+          snapshots: {
+            // Each greek gets its own way of being absent — none may surface as a number.
+            A: { greeks: { delta: -0.31, gamma: null, theta: "", vega: "not-a-number", rho: NaN } },
+            // Shapes `Number()` would happily coerce: [] -> 0, true -> 1, {} -> NaN.
+            B: { greeks: { delta: [], gamma: true, theta: {}, vega: [0.5], rho: undefined } },
+            C: { latestQuote: { bp: 1.1, ap: 1.3 } }, // no greeks block at all
+          },
+        },
+      }),
+    );
+    const [a, b, c] = await client.getChain("MSFT", "2026-09-18", "put");
+    expect(a).toMatchObject({ delta: -0.31 });
+    for (const key of ["gamma", "theta", "vega", "rho"] as const) {
+      expect(a?.[key]).toBeUndefined();
+      expect(a).not.toHaveProperty(key);
+    }
+    for (const key of ["delta", "gamma", "theta", "vega", "rho"] as const) {
+      expect(b?.[key]).toBeUndefined();
+      expect(b).not.toHaveProperty(key);
+      expect(c?.[key]).toBeUndefined();
+    }
+    expect(c).toMatchObject({ bid: 1.1, ask: 1.3 }); // quotes still merge without greeks
+  });
+
+  it("parses greeks that arrive as numeric strings, as the contracts endpoint does", async () => {
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: [contract("MSFT260918P00420000", "2026-09-18", "420")],
+        },
+      }),
+      fakeTransport({
+        "/v1beta1/options/snapshots/MSFT": {
+          snapshots: {
+            MSFT260918P00420000: { greeks: { delta: "-0.42", theta: "-0.19" } },
+          },
+        },
+      }),
+    );
+    const chain = await client.getChain("MSFT", "2026-09-18", "put");
+    expect(chain[0]).toMatchObject({ delta: -0.42, theta: -0.19 });
+    expect(chain[0]?.vega).toBeUndefined();
+  });
+
   it("reads one contract by symbol and answers undefined for a 404", async () => {
     const client = new AlpacaOptionsClient(
       fakeTransport({
