@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -243,5 +243,71 @@ describe("ship checkarm — the irreversible class never auto-merges", () => {
   it("refuses to answer at all with no paths, rather than clearing an empty question", () => {
     // An empty argument list must never read as "nothing protected".
     expect(run(["checkarm"]).code).toBe(1);
+  });
+});
+
+/**
+ * ARMING MUST NOT LIE (2026-08-26).
+ *
+ * `cmd_automerge` decided success by the ABSENCE of an `"errors"` array. GitHub has two failure
+ * shapes: a GraphQL-level one carrying `errors`, and an HTTP-level one — rate limit, bad token,
+ * abuse block — carrying a bare `{"message": ...}` and no `errors` key at all. The second sailed
+ * through, so the script printed "auto-merge armed on #N" over a PR that was never armed.
+ *
+ * Caught live on #659: `ship.sh automerge` reported success, and the PR read back `auto_merge:
+ * null` seconds later. Same defect class as the rest of that day's findings — a check validating
+ * the wrong artefact reports success forever — and the most expensive one, because a falsely-armed
+ * PR looks handled and simply never merges.
+ */
+const classify = (body: string): string =>
+  execFileSync(
+    "bash",
+    [
+      "-c",
+      // The predicate verbatim from cmd_automerge, so the spec cannot drift from the script.
+      'gql="$1"; if grep -q \'"errors"\' <<<"$gql" || grep -q \'"message"\' <<<"$gql"; then echo failure; else echo success; fi',
+      "_",
+      body,
+    ],
+    { encoding: "utf8" },
+  ).trim();
+
+describe("ship automerge — an arm that failed never reports success", () => {
+  it("treats a rate-limited arm as a failure, not a silent pass", () => {
+    expect(
+      classify(
+        '{"message":"API rate limit exceeded for user ID 3472134.","documentation_url":"x"}',
+      ),
+    ).toBe("failure");
+  });
+
+  it("still catches the GraphQL-level shape it always caught", () => {
+    expect(classify('{"errors":[{"message":"Pull request is in clean status"}]}')).toBe("failure");
+  });
+
+  it("lets a real success through", () => {
+    expect(classify('{"data":{"enablePullRequestAutoMerge":{"pullRequest":{"number":659}}}}')).toBe(
+      "success",
+    );
+  });
+});
+
+describe("ship automerge — the source contract behind that", () => {
+  const source = readFileSync("scripts/ship.sh", "utf8");
+
+  it("reads the PR back rather than trusting the mutation's silence", () => {
+    // The mutation can be accepted and still not queue. Only the stored state proves an arm.
+    expect(source).toMatch(/reads back unarmed/);
+    expect(source).toMatch(/auto_merge/);
+  });
+
+  it("names an exhausted budget specifically, so the operator knows it is not armed", () => {
+    expect(source).toMatch(/GraphQL budget is exhausted/);
+    expect(source).toMatch(/is NOT armed/);
+  });
+
+  it("still falls through to a direct merge when the PR is merely already green", () => {
+    expect(source).toMatch(/clean status\|already in clean/);
+    expect(source).toMatch(/merging directly/);
   });
 });
