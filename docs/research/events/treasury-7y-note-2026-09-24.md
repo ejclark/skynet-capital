@@ -1,7 +1,7 @@
 # 7-Year Treasury Note auction — treasury-7y-note-2026-09-24
 
 **Kind:** rates · **Date:** 2026-09-24 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-26
 
 ## At a glance
 
@@ -141,6 +141,7 @@ belly tenor; the 7-year is soft-not-disastrous.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D36 | Initial research banked (doc above). Adjacency — peers: no tracked-name prints since 8/17 (NVDA 8/26, MRVL 8/27, AVGO 9/2 ahead); live peer signal macro-driven — CRWV −12.1%, NVDA −2.4% on 8/18 rate fear, though the belly is less directly driven by the long-end term-premium move. Macro: 7-year is soft-not-disastrous (Jun-25 B/C 2.50 indirect 57.6%; Jul-28 B/C 2.49 tail +0.2bp indirect 70.1%) — the *sharpest* 2026 belly weakness sits at the 5-year (Jul-27 tailed +0.9bp, indirect 59.2%), not the 7-year. Sep-24 closes the coupon block, reads the belly **after** the Sep-16 FOMC (~60–70% hold / ~30–40% hike / 0% cut per the FOMC sibling) and Sep-18 OpEx, and inherits the Sep-23 5Y's tone the day before. Fresher belly read is the Aug-27 7Y (sibling doc; day after NVDA, same day as MRVL). VIX ~15.2–15.9 on 8/18 (sources disagree), up from the 14.56 2026-low — mild vol pickup. Geopolitical: US–Iran deadline expired, oil spike — more a long-end than a belly driver. Event tape (date **confirmed**; size/yield figures **estimate**/press-sourced): Sep-24 size/CUSIP not yet announced (~9/18). No new dated adjacencies beyond what the calendar already tracks (Aug-27 7Y, FOMC 9/16, OpEx 9/18, 5Y 9/23). | — (stance set) | 2026-09-09 (medium, ≥31d band: every 21d) |
+| 2026-08-26 | D29 | Adjacency sweep — now inside the 8-30d medium band (interval 7d, tighter than D36's 21d). The fresher belly read (Aug-27 7Y, sibling doc) has not posted yet — it's tomorrow. That sibling's own D1 pulse today notes peer de-stress (NVDA implied move ~6%, MRVL's deflating to ~8.5% from 18.4%) heading into tomorrow's auction, and a same-window 8/12 10Y comparison (bid-to-cover 2.53x, strong 76.7% indirect) — belly-adjacent context, not this tenor's own demand data. Macro: Sep 15–16 FOMC odds firmed to ~73% hold/26% hike/1% cut (Kalshi, checked today) from the ~60-70%/30-40%/0% split carried since D36 — hold conviction building. Volatility regime: VIX ~15.8, calm, no shift. Geopolitical: Strait of Hormuz escalated further overnight (tanker hit off Oman 8/25) — more a long-end than belly driver, per the standing read. Size/CUSIP for this Sep-24 auction still not announced (~9/18). No new dated adjacency to propose. | — (no change; watch-only stance holds, awaiting the fresher Aug-27 7Y result tomorrow) | 2026-09-09 (medium, 8-30d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
