@@ -719,10 +719,8 @@ function execute(intents) {
   } catch (err) {
     console.log(`::warning::could not upsert labels: ${String(err.message).slice(0, 200)}`);
   }
-  const receipt = [];
-  for (const i of intents) {
-    receipt.push(executeOne(i));
-  }
+  const { receipt, failed } = runIntents(intents);
+  if (failed) process.exitCode = 1;
   // The durable per-run receipt (research gap #2: the scan path left no trace beyond the run log).
   // $GITHUB_STEP_SUMMARY renders on the run's summary page; locally it just skips.
   if (process.env.GITHUB_STEP_SUMMARY && receipt.length) {
@@ -733,6 +731,51 @@ function execute(intents) {
     );
   }
   if (receipt.length === 0) console.log("· nothing to do");
+}
+
+/**
+ * ONE FAILED DELIVERY MUST NOT STOP THE ROUND.
+ *
+ * `execute` used to be a bare `for` loop over `executeOne`, so the FIRST intent whose `gh` call
+ * threw unwound the whole process: every later intent was skipped, the step-summary receipt was
+ * never written, and — because the sweep is step 1 of `route` — the stall audit, the event scan
+ * and the research re-dispatch all skipped with it. On 2026-08-25 that turned one un-permitted
+ * `gh issue comment` (#546, the identity gap tracked on #593) into seven consecutive pushes where
+ * the postmaster did *nothing at all*, and the receipt that would have named the cause was the
+ * first casualty. A router is a sequence of INDEPENDENT deliveries; one undeliverable letter
+ * belongs in the receipt, not on the whole round.
+ *
+ * Still fails the run — `failed` is true if any intent threw — because a write we could not make
+ * is a real fault and a green run would be a lie. What changes is the blast radius, not the signal.
+ *
+ * Pure given its injected executor, so the failure branch is fixture-drivable without a network.
+ *
+ * @param intents  the routed intents
+ * @param run      (intent) => receiptLine — the impure executor, injected
+ * @param out      console-shaped sink for the error annotation
+ */
+export function runIntents(intents = [], run = executeOne, out = console) {
+  const receipt = [];
+  let failed = false;
+  for (const i of intents) {
+    try {
+      receipt.push(run(i));
+    } catch (err) {
+      failed = true;
+      const why = String(err?.stderr || err?.message || err)
+        .trim()
+        .slice(0, 300);
+      out.error(`::error::postmaster could not ${intentLabel(i)} — ${why}`);
+      receipt.push(`❌ failed to ${intentLabel(i)} — ${why}`);
+    }
+  }
+  return { receipt, failed };
+}
+
+/** A short human name for an intent, for the receipt and the error annotation. Pure. */
+export function intentLabel(i = {}) {
+  const target = i.issueNumber ? ` #${i.issueNumber}` : i.slug ? ` \`${i.slug}\`` : "";
+  return `${i.kind ?? "unknown"}${target}`;
 }
 
 function executeOne(i) {

@@ -27,6 +27,53 @@ it. Prevention ranks, best first:
 
 ---
 
+### One undeliverable letter stopped the whole round — the postmaster sweep ran on a PR-opening token and died on it
+- **SHA:** 1d889f8   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** 745237b   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** fbfa281   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** 971e91c   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** c5eea18   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** 0b60b29   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** 763ac89   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** the CI Medic filed #570 at 13:23 and then commented "Failed again" on it six more
+  times over the next ten hours before filing #595 for the seventh. Detection was instant — the
+  medic lane worked exactly as designed — but the *diagnosis* stopped at the credential and the
+  bleeding never stopped: a repair session closed #570 as a duplicate of #593 (the open,
+  `needs-eric` provisioning ask) and the eighth push failed identically. Seven red runs, one
+  root cause, zero postmaster work done in between.
+- **ROOT CAUSE:** two defects stacked, and only the first had been seen.
+  1. **The wrong identity.** `postmaster.yml`'s `Run the postmaster` step took the `app-token ||
+     HANDOFF_PR_TOKEN || GITHUB_TOKEN` ladder. That ladder exists for exactly one property — a step
+     that OPENS A PR needs an identity whose writes emit events, or `verify` never runs — and the
+     sweep opens no PR. It comments on issues, closes them, labels them, deletes claim refs. Tier 2
+     (`HANDOFF_PR_TOKEN`, the fine-grained PAT minted in #386 for pushing branches) can do none of
+     those: `gh issue comment 546` returned `Resource not accessible by personal access token
+     (addComment)`. The other three postmaster invocations *in the same job* — audit, event scan,
+     feedback claim — have always used plain `GITHUB_TOKEN`, which the workflow's own `permissions:`
+     block already grants `issues: write`. The sweep was the odd one out, and nothing said so.
+  2. **No failure isolation.** `execute()` was a bare `for` loop over `executeOne`, so the first
+     intent that threw unwound the process. Every later intent was skipped, the step-summary receipt
+     that would have *named the cause* was never written, and — because the sweep is step 1 of
+     `route` — the stall audit, the event scan and the research re-dispatch all skipped with it.
+     One un-permitted comment on one issue took the entire router offline for ten hours.
+- **PREVENTION:** gate + code, both landed.
+  - `runIntents()` (`scripts/postmaster.mjs`) executes each intent in isolation, records the failure
+    in the receipt naming the intent and the reason, emits `::error::`, and continues. It still
+    fails the run — the blast radius shrinks, the signal does not. Specced in
+    `tests/scripts/postmaster.spec.ts` ("one failed delivery does not stop the round"), which is red
+    against the pre-fix module.
+  - `postmaster.yml`'s sweep step now takes `secrets.GITHUB_TOKEN` explicitly, with the reasoning
+    inline so the next reader does not re-derive it. Workflow file → Eric's merge, never auto.
+- **THE CLASS, NOT THE INSTANCE:** an identity ladder is scoped to a *property*, not to a job. The
+  header documented the ladder under "WHY EVERY PR-OPENING STEP MINTS A GITHUB APP TOKEN" and it was
+  still pasted onto a step that opens nothing — where the "stronger" token is strictly weaker. Worth
+  a sweep: every `${{ steps.app-token.outputs.token || … }}` in this repo should be traceable to a
+  step that actually needs an event emitted.
+- **SIDE QUESTS:** a repair session that closes a medic issue as a duplicate of an open `needs-eric`
+  ask has produced a *diagnosis*, not a repair — the failure keeps recurring on every push. → the
+  medic lane should treat "the credential fix is Eric's" as a floor, not a ceiling, and still ask
+  what code change bounds the damage while he is not looking.
+
 ### The GitHub MCP tool silently strips `<details>` from a PR body, so the fridge rule shipped unfolded
 
 - **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed

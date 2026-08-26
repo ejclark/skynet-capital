@@ -291,3 +291,71 @@ describe("the stall audit sees outcomes, not chatter", () => {
     expect(intents[0]?.issueNumber).toBe(475);
   });
 });
+
+// ── the round survives an undeliverable letter ────────────────────────────────
+//
+// THE DEFECT THIS FIXES (2026-08-25, #595): `execute` was a bare loop over `executeOne`, so the
+// first intent whose `gh` call threw unwound the whole process — every later intent skipped, the
+// step-summary receipt never written, and the three steps that run AFTER the sweep in the same job
+// (stall audit, event scan, research re-dispatch) skipped with it. One un-permitted
+// `gh issue comment` on #546 therefore meant seven consecutive pushes where the postmaster did
+// nothing at all. `runIntents` isolates each delivery and still fails the run.
+const runIntents = (
+  intents: unknown,
+  throwOn: string[],
+): { receipt: string[]; failed: boolean; errors: string[] } => {
+  const out = execFileSync(
+    "node",
+    [
+      "-e",
+      `import("./scripts/postmaster.mjs").then((m) => {
+         const boom = new Set(${JSON.stringify(throwOn)});
+         const errors = [];
+         const { receipt, failed } = m.runIntents(${JSON.stringify(intents)},
+           (i) => {
+             if (boom.has(i.kind)) {
+               const err = new Error("nope");
+               err.stderr = "GraphQL: Resource not accessible by personal access token (addComment)";
+               throw err;
+             }
+             return "did " + i.kind;
+           },
+           { error: (msg) => errors.push(msg) },
+         );
+         console.log(JSON.stringify({ receipt, failed, errors }));
+       });`,
+    ],
+    { cwd: process.cwd(), encoding: "utf8" },
+  );
+  return JSON.parse(out);
+};
+
+describe("one failed delivery does not stop the round", () => {
+  const intents = [
+    { kind: "close-shipped", issueNumber: 546 },
+    { kind: "open-issue", title: "[event-research] fomc-2026-12-09" },
+    { kind: "flag-stall", issueNumber: 470 },
+  ];
+
+  it("executes every later intent after one throws — the whole point", () => {
+    const { receipt } = runIntents(intents, ["close-shipped"]);
+
+    expect(receipt).toHaveLength(3);
+    expect(receipt[1]).toBe("did open-issue");
+    expect(receipt[2]).toBe("did flag-stall");
+  });
+
+  it("records the failure in the receipt, naming the intent and the reason", () => {
+    const { receipt, errors } = runIntents(intents, ["close-shipped"]);
+
+    expect(receipt[0]).toContain("close-shipped #546");
+    expect(receipt[0]).toContain("not accessible by personal access token");
+    expect(errors[0]).toContain("::error::");
+    expect(errors[0]).toContain("close-shipped #546");
+  });
+
+  it("still fails the run — the blast radius shrinks, the signal does not", () => {
+    expect(runIntents(intents, ["close-shipped"]).failed).toBe(true);
+    expect(runIntents(intents, []).failed).toBe(false);
+  });
+});
