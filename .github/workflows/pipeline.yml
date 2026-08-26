@@ -204,13 +204,13 @@ jobs:
       - name: Preflight — should the bots app deploy?
         id: preflight
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_bots_deploy && 'true' || 'false' }}
         run: |
           skip() { echo "deploy=false" >> "$GITHUB_OUTPUT"; echo "skip: $1"; exit 0; }
           go()   { echo "deploy=true"  >> "$GITHUB_OUTPUT"; echo "deploy: $1"; exit 0; }
           # Not provisioned yet → this job is a safe no-op until Eric creates the app + token.
-          [ -n "$FLY_API_TOKEN" ] || skip "FLY_API_TOKEN_BOTS not provisioned (see docs/AUTONOMY-DEPLOY.md)"
+          [ -n "$FLY_API_TOKEN" ] || skip "no bots-app Fly token (FLY_API_TOKEN_BOTS or FLY_ORG_TOKEN) — see docs/AUTONOMY-DEPLOY.md"
           # Pre-cutover guard: while fly.toml still declares the bots group, the OLD world is
           # authoritative — standing the sibling app up beside it would contend for Alpaca's
           # one-data-connection-per-account limit and starve the live fleet. The tiny cutover PR
@@ -256,7 +256,7 @@ jobs:
           echo "image=$IMG" >> "$GITHUB_OUTPUT"
           echo "previous bots image: ${IMG:-<none — rollback unavailable this run>}"
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
       - name: Deploy bots
         # deploy-lag.mjs reads THIS step's conclusion (by name) to find the last real bots deploy —
@@ -267,14 +267,14 @@ jobs:
           --image "${{ steps.image.outputs.image }}"
           --env "GIT_SHA=${{ github.sha }}"
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
       - name: Smoke test the bots release
         if: ${{ steps.preflight.outputs.deploy == 'true' }}
         id: smoke-bots
         run: bash scripts/smoke-bots.sh skynet-capital-bots "${{ github.sha }}"
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
       - name: Roll back bots to previous image
         # A rollback drops the GIT_SHA stamp (fly.toml env only), so the NEXT push's preflight
@@ -284,4 +284,4 @@ jobs:
           echo "bots smoke failed — rolling back to ${{ steps.prev-bots.outputs.image }}"
           flyctl deploy --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}

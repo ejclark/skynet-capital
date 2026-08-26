@@ -21,12 +21,14 @@ on:
         type: choice
         options:
           - status
+          - bootstrap-bots-app
           - set-day-trader-credentials
           - set-prospector-credentials
           - set-sauron-credentials
           - flip-mode
           - set-playbooks
           - set-beta-forcing
+          - set-hardcore
       target_app:
         description: >-
           Which Fly app to operate on. After the deploy split the bots fleet lives in
@@ -62,6 +64,14 @@ on:
         required: false
         type: string
         default: ""
+      hardcore_bots:
+        description: >-
+          Comma-separated persona ids for HARDCORE research mode — only read by set-hardcore.
+          Empty string = hardcore dark. Unknown ids are refused loudly at boot
+          (src/personas/registry.ts). Currently built: sauron.
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -85,7 +95,30 @@ jobs:
         if: ${{ inputs.action == 'status' }}
         run: flyctl secrets list -a "$TARGET_APP"
         env:
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+
+      - name: Bootstrap the bots app — create skynet-capital-bots on the default org network
+        # The one infra action that no app-scoped token can do (app creation is org-level), which
+        # is why it needs FLY_ORG_TOKEN specifically — the single laptop-minted secret
+        # (`fly tokens create deploy -o personal`) that makes every other step here phone-clickable.
+        # Idempotent: an app that already exists is reported, not an error. Never passes --network:
+        # a custom network would silently sever the bots↔dashboard controls bridge (fly.bots.toml).
+        if: ${{ inputs.action == 'bootstrap-bots-app' }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::error::Repository secret FLY_ORG_TOKEN is not set. Mint it once from a terminal — fly tokens create deploy -o personal — and add it under Settings -> Secrets and variables -> Actions. This is the ONE step that needs a laptop; everything after is buttons."
+            exit 1
+          fi
+          if flyctl status -a skynet-capital-bots >/dev/null 2>&1; then
+            echo "skynet-capital-bots already exists — nothing to create."
+          else
+            flyctl apps create skynet-capital-bots --org personal
+            echo "Created. Next buttons: set-sauron-credentials (writes Alpaca creds + roster), set-hardcore if wanted, then Pipeline -> force_bots_deploy to stand the machine up in observe."
+          fi
+        env:
+          # Deliberately ONLY the org token — running this under an app-scoped token would fail
+          # confusingly halfway; better to fail at the guard with the exact fix.
+          FLY_API_TOKEN: ${{ secrets.FLY_ORG_TOKEN }}
 
       - name: Set Day Trader bot credentials
         if: ${{ inputs.action == 'set-day-trader-credentials' }}
@@ -103,7 +136,7 @@ jobs:
         env:
           # Step-scoped on purpose: job-level env would hand the token to the third-party
           # setup-flyctl action too. Fly deploy tokens are APP-scoped, so it follows target_app.
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
           BOT_KEY: ${{ secrets.BOT_DAY_TRADER_ALPACA_KEY }}
           BOT_SECRET: ${{ secrets.BOT_DAY_TRADER_ALPACA_SECRET }}
 
@@ -123,7 +156,7 @@ jobs:
         env:
           # Step-scoped on purpose: job-level env would hand the token to the third-party
           # setup-flyctl action too. Fly deploy tokens are APP-scoped, so it follows target_app.
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
           BOT_KEY: ${{ secrets.BOT_PROSPECTOR_ALPACA_KEY }}
           BOT_SECRET: ${{ secrets.BOT_PROSPECTOR_ALPACA_SECRET }}
 
@@ -143,7 +176,7 @@ jobs:
         env:
           # Step-scoped on purpose: job-level env would hand the token to the third-party
           # setup-flyctl action too. Fly deploy tokens are APP-scoped, so it follows target_app.
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
           BOT_KEY: ${{ secrets.BOT_SAURON_ALPACA_KEY }}
           BOT_SECRET: ${{ secrets.BOT_SAURON_ALPACA_SECRET }}
 
@@ -166,7 +199,7 @@ jobs:
             echo "::warning::Playbooks armed. They still only ENTER on a confirmed IR print date (estimates stay dark) and only in live mode past the readiness gate. Watch fly logs -a $TARGET_APP for the [playbooks] armed line."
           fi
         env:
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
           PLAYBOOKS: ${{ inputs.playbooks }}
 
       - name: Set beta-phase forcing
@@ -184,8 +217,25 @@ jobs:
             echo "::warning::Beta-phase forcing armed at $BETA_FORCING pick(s)/day. Fires ONLY when nothing organic trades that day, sized well below every playbook's softest mode, and every pick's reason states plainly that it's a forced non-conviction fill. Watch fly logs -a $TARGET_APP for the [beta-scout] armed line."
           fi
         env:
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
           BETA_FORCING: ${{ inputs.beta_forcing }}
+
+      - name: Set hardcore roster
+        if: ${{ inputs.action == 'set-hardcore' }}
+        # HARDCORE_BOTS passed via env and read as a shell variable, not interpolated via ${{ }} —
+        # same free-text-input discipline as set-playbooks/set-beta-forcing above.
+        run: |
+          echo "Setting SKYNET_HARDCORE_BOTS=$HARDCORE_BOTS"
+          if [ -z "$HARDCORE_BOTS" ]; then
+            flyctl secrets unset SKYNET_HARDCORE_BOTS -a "$TARGET_APP" || true
+            echo "Cleared — hardcore research mode dark; personas run their standard builds."
+          else
+            flyctl secrets set "SKYNET_HARDCORE_BOTS=$HARDCORE_BOTS" -a "$TARGET_APP"
+            echo "::warning::Hardcore armed for: $HARDCORE_BOTS — loosened thresholds, tranche scale-in/out, 90s cooldown (research volume). Watch fly logs -a $TARGET_APP for the [hardcore] armed line."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+          HARDCORE_BOTS: ${{ inputs.hardcore_bots }}
 
       - name: Preflight — refuse live on the bots app while the old shared-app bots group survives
         # The mechanical anti-double-trade gate for the deploy-split cutover. The boot-time
@@ -214,5 +264,5 @@ jobs:
             echo "::warning::LIVE — bots will begin placing PAPER orders once the market is open and their readiness gate passes. Watch fly logs -a $TARGET_APP for the [gate]/[order] lines."
           fi
         env:
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
 

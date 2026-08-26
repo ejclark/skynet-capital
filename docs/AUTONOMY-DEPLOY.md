@@ -28,39 +28,42 @@ fetched` line on every bots deploy as the tripwire.
 Market-hours gating already lives in the runner (it only assesses when Alpaca reports the market
 open), and the readiness gate pins any un-vetted persona to observe regardless of the mode flag.
 
-## Eric's cutover procedure (the credentialed / irreversible class)
+## Eric's provisioning procedure (the credentialed / irreversible class)
 
 Everything below is Eric's — never self-authorized. Nothing places a real order until the go-live
-flip, and order matters: **provision first (1–3), then cut over (4), then flip (5).**
+flip. One laptop command; every other step is a button (the cutover PR that removes the `bots`
+group from `fly.toml` merged 2026-08-26 — post-cutover, this is the whole list):
 
-1. `fly apps create skynet-capital-bots --org personal` — creates the sibling app on the org's
-   default private network. **No `--network` flag, ever** — a custom network silently severs the
-   controls bridge.
-2. `fly tokens create deploy --app skynet-capital-bots`, then verify it can pull the dashboard's
-   image — `FLY_API_TOKEN=<new token> flyctl deploy --config fly.bots.toml --image "$(flyctl image
-   show -a skynet-capital --json | jq -r '.[0] | "\(.Registry)/\(.Repository)@\(.Digest)"')"` — and
-   add it as repo secret **`FLY_API_TOKEN_BOTS`** (Settings → Secrets → Actions). If the deploy is
-   refused for scope, mint `fly tokens create deploy -o personal` (org-scoped) instead — the
-   verification is the point, not the flavor of token.
-3. Stage the bot secrets on the new app (nothing restarts; they land with the next deploy):
-   `fly secrets set -a skynet-capital-bots --stage SKYNET_AUTONOMOUS_BOTS=sauron
-   SKYNET_BOT_SAURON_KEY=... SKYNET_BOT_SAURON_SECRET=... SKYNET_HARDCORE_BOTS=...` — check the
-   full list of names against `fly secrets list -a skynet-capital` first (add the day-trader/
-   prospector pairs, `SKYNET_PLAYBOOKS`, `SKYNET_BETA_FORCING` if set there). **Do NOT unset
-   anything on `skynet-capital` yet** — the dashboard reads the same `SKYNET_BOT_*` creds for the
-   roster/leaderboard, and those must stay on **both** apps permanently.
-4. Merge the held **cutover PR** (it removes the `bots` process group from `fly.toml`) — that
-   push's deploy retires the old bots machine, then `deploy-bots` stands the new app up in
-   observe. Claude verifies both halves (old machine + its † standby gone — destroy survivors
-   with the prepared `fly machine destroy` commands if not; new app's smoke green) and reports.
-5. Run **Actions → Autonomy ops → `flip-mode`, mode `live`** (target `skynet-capital-bots`, the
-   default). The workflow refuses mechanically if any old bots machine survives — that check, not
-   vigilance, is what prevents double-trading. During a market open, watching the logs.
+1. `fly tokens create deploy -o personal` (laptop, once, ~30s) — the org-scoped deploy token.
+   Copy the whole `FlyV1 fm2_...` string. **The only step that ever needs a terminal**: app
+   creation is an org-level action no app-scoped token can perform.
+2. Add it as repo secret **`FLY_ORG_TOKEN`** (Settings → Secrets and variables → Actions — works
+   from a phone browser). Every bots-side workflow prefers `FLY_API_TOKEN_BOTS` when present and
+   falls back to this, so you can narrow to an app-scoped token later without touching any file.
+3. Click **Actions → Autonomy ops → Run workflow → `bootstrap-bots-app`** — creates
+   `skynet-capital-bots` on the default org network (idempotent; refuses loudly if the secret is
+   missing).
+4. Click **Autonomy ops → `set-sauron-credentials`** (target `skynet-capital-bots`, the default) —
+   writes the Alpaca paper creds from the existing repo secrets and sets the roster. Add
+   **`set-hardcore`** with `sauron` if research mode is wanted. **Unset nothing on
+   `skynet-capital`** — the dashboard reads the same `SKYNET_BOT_*` creds for the roster and
+   leaderboard; they live on both apps permanently.
+5. Click **Actions → Pipeline → Run workflow → check `force_bots_deploy`** — stands the machine up
+   in **observe** mode; the bots smoke verifies boot + the controls bridge automatically.
+6. Click **Autonomy ops → `flip-mode`, mode `live`** — during a market open, watching the logs.
+   The workflow refuses mechanically if any old shared-app bots machine somehow survives; that
+   check, not vigilance, is what prevents double-trading.
 
-**Gist:** 1–3 provision the sibling app, its deploy token, and its credentials (the genuinely
-irreversible part); 4–5 are one PR merge and one workflow click, each with a Claude verification
-gate between. End state: the dashboard deploys on every merge exactly as before; the bots machine
+**Gist:** one terminal command mints the org token (the genuinely credentialed part); everything
+after — app creation, credentials, deploy, go-live — is reviewer-gated buttons runnable from a
+phone. End state: the dashboard deploys on every merge exactly as before; the bots machine
 restarts only when bot code actually changes.
+
+**Token trade-off, on the record:** `FLY_ORG_TOKEN` is org-wide deploy power sitting in repo
+secrets — usable by any workflow that names it, gated by workflow-file review (the envelope) and
+the autonomy-ops Environment. Accepted deliberately (2026-08-26) to make ops phone-operable; to
+narrow later, mint `fly tokens create deploy --app skynet-capital-bots` as `FLY_API_TOKEN_BOTS`
+(it takes precedence) and delete `FLY_ORG_TOKEN`.
 
 **No volume for `bots`, still.** Durable writes relay to the dashboard's volume over the bridge;
 the bots app deliberately has no `[mounts]`.
