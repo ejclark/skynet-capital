@@ -99,6 +99,85 @@ describe("applyGuards", () => {
     });
   });
 
+  // The graduated risk ladder (src/risk/risk-ladder.ts), block rung. Like the discipline config
+  // it is OPT-IN by absence: with no tier supplied the guards behave exactly as they did before
+  // the ladder existed, which is what keeps evals and the readiness gate untouched.
+  describe("the account risk ladder", () => {
+    const context = aContext({ EEM: { last: 100 } });
+    const funded = aPortfolio({ cash: 1_000_000 });
+    const held = aPortfolio({ positions: [aPosition({ symbol: "EEM", quantity: 30 })] });
+
+    it("without a tier, buys pass exactly as before — ABSENT is not 'clear'", () => {
+      expect(applyGuards([buy("EEM", 10)], funded, context, { maxPositionPct: 0.2 })).toHaveLength(
+        1,
+      );
+    });
+
+    it("lets buys through at clear", () => {
+      const approved = applyGuards([buy("EEM", 10)], funded, context, {
+        maxPositionPct: 0.2,
+        accountTier: "clear",
+      });
+      expect(approved).toHaveLength(1);
+    });
+
+    it("still lets buys through at watch — the soft rung warns, it does not block", () => {
+      const approved = applyGuards([buy("EEM", 10)], funded, context, {
+        maxPositionPct: 0.2,
+        accountTier: "watch",
+      });
+      expect(approved).toHaveLength(1);
+    });
+
+    it("blocks a buy at restricted", () => {
+      const approved = applyGuards([buy("EEM", 10)], funded, context, {
+        maxPositionPct: 0.2,
+        accountTier: "restricted",
+      });
+      expect(approved).toEqual([]);
+    });
+
+    it("blocks a buy at liquidate", () => {
+      const approved = applyGuards([buy("EEM", 10)], funded, context, {
+        maxPositionPct: 0.2,
+        accountTier: "liquidate",
+      });
+      expect(approved).toEqual([]);
+    });
+
+    it("leaves EXISTING positions untouched at every rung — blocking is not closing", () => {
+      // The guard's job at the block rung is to refuse NEW risk. It emits nothing of its own,
+      // so a blocked cycle leaves the book exactly where the member left it.
+      for (const tier of ["watch", "restricted", "liquidate"] as const) {
+        expect(applyGuards([], held, context, { maxPositionPct: 0.2, accountTier: tier })).toEqual(
+          [],
+        );
+      }
+    });
+
+    it("never blocks an exit, at any rung — a guard that blocks risk reduction is a hazard", () => {
+      for (const tier of ["watch", "restricted", "liquidate"] as const) {
+        const approved = applyGuards([sell("EEM", 30)], held, context, {
+          maxPositionPct: 0.2,
+          accountTier: tier,
+        });
+        expect(approved).toMatchObject([{ side: "sell", quantity: 30 }]);
+      }
+    });
+
+    it("blocks the buys and passes the sells out of one mixed batch", () => {
+      const portfolio = aPortfolio({
+        cash: 1_000_000,
+        positions: [aPosition({ symbol: "EEM", quantity: 30 })],
+      });
+      const approved = applyGuards([buy("EEM", 10), sell("EEM", 30)], portfolio, context, {
+        maxPositionPct: 0.2,
+        accountTier: "restricted",
+      });
+      expect(approved).toMatchObject([{ side: "sell", quantity: 30 }]);
+    });
+  });
+
   // S2 + E1 (docs/plans/trade-playbooks.md slices 3/4, entry side) — opt-in via
   // RiskConfig.discipline, and INERT without it: that absence is what keeps evals and the
   // readiness gate untouched, so the first spec here is the inertness itself.

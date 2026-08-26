@@ -1,6 +1,7 @@
 import { type EarningsPrint, etTimeOf, printWithin } from "../domain/earnings-calendar.js";
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
+import { blocksRiskIncrease, type RiskTier } from "../risk/risk-ladder.js";
 
 /**
  * Risk guardrails, applied by the engine to every persona's raw intents.
@@ -40,6 +41,16 @@ export interface RiskConfig {
   readonly maxPositionPct: number;
   /** S2 + E1 (opt-in — see `TradeDiscipline`). Absent = both guards inert. */
   readonly discipline?: TradeDiscipline;
+  /**
+   * The ACCOUNT-level rung of the graduated risk ladder (`src/risk/risk-ladder.ts`), supplied by
+   * whoever is watching equity — `SafetyController.riskReading()` in the autonomous lane.
+   *
+   * Absent means ABSENT, not `clear`: with no reading available the guards behave exactly as they
+   * did before the ladder existed, which is what keeps evals, the readiness gate and every current
+   * caller untouched. Read the tier from a real reading or leave it off; never default it to
+   * `clear`, which would assert a safety this file cannot see.
+   */
+  readonly accountTier?: RiskTier;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -114,8 +125,18 @@ export function applyGuards(
   config: RiskConfig = DEFAULT_RISK_CONFIG,
 ): OrderIntent[] {
   const approved: OrderIntent[] = [];
+  const ladderBlocks = config.accountTier !== undefined && blocksRiskIncrease(config.accountTier);
   for (const intent of intents) {
-    // Trade discipline first (S2/E1, buys only): a dropped entry needs no sizing.
+    // The ladder's BLOCK rung, ahead of everything else: no point sizing an order that is refused.
+    //
+    // A buy is the risk-INCREASING side here, and a sell can only ever be risk-reducing, because
+    // `clampSell` below refuses to sell more than is actually held (no accidental shorting). So
+    // blocking buys alone satisfies the rung exactly: new risk is refused, EXISTING POSITIONS ARE
+    // UNTOUCHED, and exits stay open — including the force-flatten sells the bottom rung emits.
+    if (intent.side === "buy" && ladderBlocks) {
+      continue;
+    }
+    // Trade discipline next (S2/E1, buys only): a dropped entry needs no sizing.
     const disciplined =
       intent.side === "buy" && config.discipline
         ? clampDiscipline(intent, context, config.discipline)
