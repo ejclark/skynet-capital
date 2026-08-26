@@ -3,8 +3,11 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import { type ClaimAccount, handleClaim } from "../../src/server/claim-form.js";
 import { OwnerLinkStore } from "../../src/server/owner-link-store.js";
+
+const nav: NavContext = { active: "add", canAdd: true, authed: true };
 
 /**
  * `/claim` — the owner's account-link table (#546). Exercised over a real socket, like the other
@@ -36,13 +39,20 @@ async function withClaim(
   run: (base: string) => Promise<void>,
 ): Promise<void> {
   const server: Server = createServer((req, res) => {
-    void handleClaim(req, res, req.method ?? "GET", viewer, {
-      store,
-      isOwner: (email) => OWNERS.has(email),
-      accounts: () => ACCOUNTS,
-      canSignIn: (email) => OWNERS.has(email) || MEMBERS.has(email),
-      now: () => new Date("2026-08-24T12:00:00.000Z"),
-    });
+    void handleClaim(
+      req,
+      res,
+      req.method ?? "GET",
+      viewer,
+      {
+        store,
+        isOwner: (email) => OWNERS.has(email),
+        accounts: () => ACCOUNTS,
+        canSignIn: (email) => OWNERS.has(email) || MEMBERS.has(email),
+        now: () => new Date("2026-08-24T12:00:00.000Z"),
+      },
+      nav,
+    );
   });
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
@@ -81,6 +91,16 @@ describe("handleClaim", () => {
       // Already owned: listed for context, never offered as a link target.
       expect(body).toContain("joe@example.com");
       expect(body).not.toContain('<option value="human-uncle_joe">');
+    });
+  });
+
+  // 2026-08-25 (Eric: pointed at an env-var workaround, because this — the actual zero-typing
+  // fix — was reachable only by typing the URL, with no nav link and no rails anywhere).
+  it("renders inside the app shell now, not a bare card", async () => {
+    await withClaim("owner@example.com", store, async (base) => {
+      const body = await (await fetch(base)).text();
+      expect(body).toContain('<aside class="drawer"');
+      expect(body).toContain("Standings");
     });
   });
 

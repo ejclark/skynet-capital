@@ -324,6 +324,7 @@ async function serveAuthorizedRoute(
   const authed = Boolean(config.auth);
   const canControl = isOwnerOf(config.controls, session);
   const canInvite = isOwnerOf(config.invite, session);
+  const canClaim = isOwnerOf(config.claim, session);
   const navFor = (active: NavView): NavContext => ({
     active,
     currentId: resolveCurrentId(session, config.resolveOwnerId),
@@ -331,6 +332,7 @@ async function serveAuthorizedRoute(
     authed,
     ...(canControl ? { canControl } : {}),
     ...(canInvite ? { canInvite } : {}),
+    ...(canClaim ? { canClaim } : {}),
   });
 
   if (path === "/events") {
@@ -529,7 +531,7 @@ async function tryOwnerPage(
     return true;
   }
   if (path === "/claim" && config.claim) {
-    await handleClaim(req, res, req.method ?? "GET", session?.email, config.claim);
+    await handleClaim(req, res, req.method ?? "GET", session?.email, config.claim, nav);
     return true;
   }
   return false;
