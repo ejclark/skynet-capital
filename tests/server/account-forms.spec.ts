@@ -75,7 +75,9 @@ describe("GET /account", () => {
         expect(html).toContain('type="hidden" name="id" value="human-ann"');
         expect(html).not.toContain('value="human-ann" required readonly');
         expect(html).toContain("Remove this account");
-        expect(html).toContain("/rotate");
+        // Locked to this exact account, not left to /rotate's own session-resolution guesswork —
+        // load-bearing when the session owns more than one account.
+        expect(html).toContain('href="/rotate?id=human-ann"');
       },
     );
   });
@@ -193,6 +195,28 @@ describe("POST /account", () => {
       });
       expect(res.status).toBe(400);
       expect(await res.text()).toContain("only edit your own");
+    });
+  });
+
+  // Eric, 2026-08-26: "there needs to be a clear path to regenerate API secrets... part of the
+  // current process for managing accounts" — a host-configured refusal renders a real link to
+  // /rotate for the exact account, not just a mention of it in the refusal prose.
+  it("offers a real link to /rotate when the service names a rotateId", async () => {
+    const admin: AccountAdmin = {
+      updateProfile: () =>
+        Promise.resolve({ ok: false, error: "configured on the host", rotateId: "human-eric" }),
+      removeAccount: () => Promise.resolve({ ok: false, error: "no" }),
+      profileFor: () => undefined,
+    };
+    await withRoute({ admin, key: "pw" }, async (base) => {
+      const res = await fetch(`${base}/account`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "id=human-eric&displayName=X",
+      });
+      const html = await res.text();
+      expect(html).toContain('href="/rotate?id=human-eric&key=pw"');
+      expect(html).toContain("Rotate this account's Alpaca credentials");
     });
   });
 });

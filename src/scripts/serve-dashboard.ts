@@ -147,6 +147,7 @@ async function main(): Promise<void> {
     clientFactory: dataSource.clientFactory,
     stopStream: (id) => dataSource.stopParticipantStream(id),
     findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
+    isOwnerEmail: (email) => owners.has(email.toLowerCase()),
   });
 
   // Desk trading is on whenever OAuth is configured — no separate kill switch (#466).

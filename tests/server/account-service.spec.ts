@@ -62,12 +62,15 @@ const okFactory = () =>
     }),
   );
 
-function makeService(overrides: { store?: MemStore; roster?: StoredParticipant[] } = {}) {
+function makeService(
+  overrides: { store?: MemStore; roster?: StoredParticipant[]; owners?: string[] } = {},
+) {
   const store = overrides.store ?? new MemStore();
   if (!overrides.store) store.items = [ann, bot];
   const hub = new ObservatoryHub(board());
   const stopped: string[] = [];
   const roster = overrides.roster;
+  const owners = overrides.owners;
   const service = createAccountService({
     hub,
     store,
@@ -75,6 +78,7 @@ function makeService(overrides: { store?: MemStore; roster?: StoredParticipant[]
     stopStream: (id) => stopped.push(id),
     now: () => new Date("2026-08-19T00:00:00.000Z"),
     ...(roster ? { findRosterParticipant: (id) => roster.find((p) => p.id === id) } : {}),
+    ...(owners ? { isOwnerEmail: (email) => owners.includes(email) } : {}),
   });
   return { service, store, hub, stopped };
 }
@@ -90,11 +94,46 @@ describe("account service — updateProfile", () => {
     if (!result.ok) expect(result.error).toContain("SKYNET_STORE_SECRET");
   });
 
-  it("refuses an account that isn't in the self-service store (env-configured)", async () => {
-    const { service } = makeService();
-    const result = await service.updateProfile({ id: "env-bot", ...selfInput });
+  it("refuses an env-configured account with an honest reason, and a rotateId to act on", async () => {
+    const { service } = makeService({ roster: [{ ...ann, id: "env-human" }] });
+    const result = await service.updateProfile({ id: "env-human", ...selfInput });
     expect(result).toMatchObject({ ok: false });
-    if (!result.ok) expect(result.error).toContain("configured on the host");
+    if (!result.ok) {
+      expect(result.error).toContain("configured on the host");
+      expect(result.rotateId).toBe("env-human");
+    }
+  });
+
+  it("refuses an id that isn't on the board at all, distinctly from a host-configured one", async () => {
+    const { service } = makeService();
+    const result = await service.updateProfile({ id: "nobody-here", ...selfInput });
+    expect(result).toMatchObject({ ok: false });
+    if (!result.ok) {
+      expect(result.error).toContain("No self-service account");
+      expect(result.error).not.toContain("configured on the host");
+      expect(result.rotateId).toBeUndefined();
+    }
+  });
+
+  // Eric, 2026-08-26: hit this on his own roster account and the message told him to "ask Eric" —
+  // absurd when he IS the operator. An owner gets the honest, actionable reason instead.
+  it("tells an OWNER who hits a host-configured wall the real reason, not to ask themselves", async () => {
+    const { service } = makeService({
+      roster: [{ ...ann, id: "env-human" }],
+      owners: ["eric@example.com"],
+    });
+    const result = await service.updateProfile({
+      id: "env-human",
+      requesterId: "env-human",
+      requesterEmail: "eric@example.com",
+      authConfigured: true,
+    });
+    expect(result).toMatchObject({ ok: false });
+    if (!result.ok) {
+      expect(result.error).toContain("even to you, the operator");
+      expect(result.error).toContain("/rotate");
+      expect(result.error).not.toContain("ask Eric");
+    }
   });
 
   it("refuses a timezone edit on a roster bot with a rotation store row (the /account sibling of the removal hole)", async () => {
@@ -248,15 +287,32 @@ describe("account service — removeAccount", () => {
     expect(result).toMatchObject({ ok: false });
   });
 
-  it("refuses an env-configured account with an honest reason", async () => {
-    const { service } = makeService();
+  it("refuses an env-configured account with an honest reason, and a rotateId to act on", async () => {
+    const { service } = makeService({ roster: [{ ...ann, id: "env-human" }] });
     const result = await service.removeAccount({
       id: "env-human",
       confirmName: "Env Human",
       ...selfInput,
     });
     expect(result).toMatchObject({ ok: false });
-    if (!result.ok) expect(result.error).toContain("configured on the host");
+    if (!result.ok) {
+      expect(result.error).toContain("configured on the host");
+      expect(result.rotateId).toBe("env-human");
+    }
+  });
+
+  it("refuses an id that isn't on the board at all, distinctly from a host-configured one", async () => {
+    const { service } = makeService();
+    const result = await service.removeAccount({
+      id: "nobody-here",
+      confirmName: "Whoever",
+      ...selfInput,
+    });
+    expect(result).toMatchObject({ ok: false });
+    if (!result.ok) {
+      expect(result.error).toContain("No self-service account");
+      expect(result.error).not.toContain("configured on the host");
+    }
   });
 
   it("refuses to remove another human's account, and an unresolved session too", async () => {

@@ -81,6 +81,7 @@ export async function handleAccountRoute(
   const { admin, requesterId, ownedAccounts, authConfigured, key, nav, controls } = options;
   const identity = {
     ...(requesterId ? { requesterId } : {}),
+    ...(options.session ? { requesterEmail: options.session.email } : {}),
     authConfigured,
   };
   const owned = ownedAccounts.find((a) => a.id === requesterId);
@@ -224,7 +225,7 @@ anything on this page; this only changes what Skynet Capital stores and shows.</
 </form>
 <p class="note">Renames stay linked to your sign-in: the name must match your sign-in name or your
 email's local part, so the board keeps recognizing you. Bots can't be renamed — remove and re-add.</p>
-<p class="note">Regenerated your Alpaca key? <a href="/rotate${suffix(key)}">Rotate your credentials</a> — that swaps the key and changes nothing else on this page.</p>
+<p class="note">Regenerated your Alpaca key? <a href="${ctx.requesterId ? rotateHref(ctx.requesterId, key) : `/rotate${suffix(key)}`}">Rotate your credentials</a> — that swaps the key and changes nothing else on this page.</p>
 ${botControlsBlock(ctx)}
 <div style="margin-top:34px;padding:18px;border:1px solid color-mix(in srgb,var(--neg) 55%,var(--border));border-radius:11px">
   <h1 style="font-size:16px;color:var(--neg)">Remove this account</h1>
@@ -245,6 +246,24 @@ ${botControlsBlock(ctx)}
   );
 }
 
+/** `/rotate`, locked to a specific account rather than left to guess from the session — the same
+ *  id this `/account` page is already showing. */
+function rotateHref(id: string, key: string): string {
+  return `/rotate?id=${encodeURIComponent(id)}${key ? `&key=${encodeURIComponent(key)}` : ""}`;
+}
+
+/**
+ * The one prominent next step out of a host-configured refusal — a regenerated or dead Alpaca key
+ * is fixed by rotating it, never by removing and re-adding the account (Eric, 2026-08-26: "there
+ * needs to be a clear path to regenerate API secrets... part of the current process for managing
+ * accounts"). A real link, not just a mention in the refusal prose — whoever legitimately lands on
+ * this refusal already owns or is linked to the account, so `/rotate` is always the right door.
+ */
+function rotateCallout(rotateId: string | undefined, key: string): string {
+  if (!rotateId) return "";
+  return `<p class="backrow"><a href="${rotateHref(rotateId, key)}">→ Rotate this account's Alpaca credentials</a></p>`;
+}
+
 function updateResultHtml(result: UpdateProfileResult, key: string, nav: NavContext): string {
   const inner = result.ok
     ? `<div class="res-icon">✅</div><h1>Profile updated</h1>
@@ -252,6 +271,7 @@ function updateResultHtml(result: UpdateProfileResult, key: string, nav: NavCont
 <p class="backrow"><a href="/${suffix(key)}">← Back to the board</a> · <a href="/account${suffix(key)}">Manage account</a></p>`
     : `<h1>Couldn't update that account</h1>
 <p class="lede">${escapeHtml(result.error)}</p>
+${rotateCallout(result.rotateId, key)}
 <p class="backrow"><a href="/account${suffix(key)}">← Try again</a> · <a href="/${suffix(key)}">Back to the board</a></p>`;
   return railedShell("Skynet Capital", nav, inner);
 }
@@ -265,6 +285,7 @@ your recorded history picks back up.</p>
 <p class="backrow"><a href="/${suffix(key)}">← Back to the board</a></p>`
     : `<h1>Couldn't remove that account</h1>
 <p class="lede">${escapeHtml(result.error)}</p>
+${rotateCallout(result.rotateId, key)}
 <p class="backrow"><a href="/account${suffix(key)}">← Try again</a> · <a href="/${suffix(key)}">Back to the board</a></p>`;
   return railedShell("Skynet Capital", nav, inner);
 }
