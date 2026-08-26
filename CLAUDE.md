@@ -292,7 +292,12 @@ Eric will not remember these names — that is expected and fine; the docs are t
   not halt on failure. A pre-commit hook auto-formats staged files as a backstop.
 - **Solo-dev review substitute:** with no second engineer, the gates are the reviewer. For substantive
   PRs, run `/code-review` (and `/security-review` when the diff touches auth, tokens, input parsing, or
-  anything outward-facing) before opening the PR. The Coach gates (`arch:scan`, `dupe:scan`) run in the
+  anything outward-facing) before opening the PR — but **commit first, and in a worktree set
+  `origin/HEAD` first**. Both review skills harvest `origin/HEAD...`, so on uncommitted changes they
+  review an EMPTY diff and report clean; a fresh worktree has no `origin/HEAD` at all
+  (`git remote set-head origin -a`). A clean verdict over nothing is worse than an error, because it
+  reads as assurance — it produced exactly that on #612, an envelope-protected file
+  (`docs/LESSONS.md`, 2026-08-26). The Coach gates (`arch:scan`, `dupe:scan`) run in the
   test suite automatically — see [`docs/COACHES.md`](docs/COACHES.md) for the detect-and-correct roster
   (`/decompose`, `/dedupe`, agents).
 - **Blameless retro on detected drift.** When a net catches a slip, do a quick retro: root cause → a
