@@ -93,11 +93,11 @@ describe("feedback coach", () => {
   it("carries an area it recognises through to the form", () => {
     const result = parseCoachReply(
       JSON.stringify({
-        draft: { title: "t", details: "d", area: "The trading desk", readiness: "partial" },
+        draft: { title: "t", details: "d", area: "Trade", readiness: "partial" },
       }),
     );
 
-    expect(result).toMatchObject({ done: true, area: "The trading desk" });
+    expect(result).toMatchObject({ done: true, area: "Trade" });
   });
 
   it("drops an area it does not recognise rather than pre-selecting the wrong spot", () => {

@@ -9,12 +9,10 @@
  * the member's explicit submit stays the only path that posts anything anywhere.
  *
  * Token-gated exactly like the GitHub half (feedback-service.ts): `resolveFeedbackCoach(env)` is
- * undefined until ANTHROPIC_API_KEY is set, so the app runs inert without it. Running on Sonnet 5
- * (#449) rather than Haiku — Eric's call: more ideation headroom for members who engage deeply is
- * worth the token trade-off, and the hard rails below (short rounds, small replies, bounded
- * input) keep the per-conversation cost bounded regardless of model. The heavy lifting downstream
- * — the postmaster's build session on the filed issue — still runs on the Claude Code
- * subscription, not the API meter.
+ * undefined until ANTHROPIC_API_KEY is set, so the app runs inert without it. Which model it runs
+ * is not this file's call — `MODEL` and every other cost dial live in `feedback-coach-limits.ts`,
+ * whose header carries the route-by-who-pays rule that sets them. The hard rails below (short
+ * rounds, small replies, bounded input) keep a conversation's cost bounded regardless of model.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
