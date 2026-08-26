@@ -8,7 +8,7 @@ import { formatMetric, type LeaderMetric, metricValue } from "./standings-metric
  * THE STANDINGS FIELD PATCH — what the live board says instead of re-rendering itself.
  *
  * A pure function of (previous dashboard state, next dashboard state) → the ops that move the page
- * from one to the other: a row's rank/value/bar, the two cohort cards, the match bar, the versus
+ * from one to the other: a row's value/bar, the two cohort cards, the match bar, the versus
  * read line. Every value is formatted HERE, on the server, by the same helpers the initial render
  * used, so the browser never re-derives a number and the two can't drift.
  *
@@ -30,23 +30,22 @@ export interface StandingsPatchOptions {
 
 interface RowView {
   readonly key: string;
-  readonly rank: string;
   readonly value: string;
   readonly tone: FieldTone;
   readonly bar: number;
   readonly sortValue: number;
 }
 
-/** Mirrors `fieldLadder` in standings-view.ts — same ranking, same widths, same tone rule. */
+/** Mirrors `fieldLadder` in standings-view.ts — same sort, same widths, same tone rule. No
+ *  ordinal: the view stopped rendering one (#576), so there is no rank text to patch. */
 function rowViews(data: DashboardData, metric: LeaderMetric): RowView[] {
   const live = data.participants.filter((p) => !p.error);
   const ranked = [...live].sort((a, b) => metricValue(b, metric) - metricValue(a, metric));
   const maxAbs = ranked.reduce((m, p) => Math.max(m, Math.abs(metricValue(p, metric))), 0) || 1;
-  return ranked.map((p, i) => {
+  return ranked.map((p) => {
     const v = metricValue(p, metric);
     return {
       key: p.id,
-      rank: String(i + 1),
       value: formatMetric(v, metric),
       tone: metric === "equity" ? "flat" : plClass(v),
       bar: Math.max(2, (Math.abs(v) / maxAbs) * 100),
@@ -175,19 +174,13 @@ export function standingsFieldOps(
   const wasByKey = new Map(before.map((r) => [r.key, r]));
   for (const row of after) {
     const was = wasByKey.get(row.key);
-    if (
-      was &&
-      was.rank === row.rank &&
-      was.value === row.value &&
-      was.tone === row.tone &&
-      was.bar === row.bar
-    ) {
+    if (was && was.value === row.value && was.tone === row.tone && was.bar === row.bar) {
       continue;
     }
     ops.push({
       kind: "field",
       key: row.key,
-      text: { rank: row.rank, value: row.value },
+      text: { value: row.value },
       tone: { value: row.tone, bar: row.tone },
       bar: { bar: row.bar },
       sortValue: row.sortValue,

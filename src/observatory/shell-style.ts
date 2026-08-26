@@ -162,11 +162,8 @@ export const SHELL_STYLE = `<style>
   .msel.active{ color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); }
   .msel:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .ladder{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
-  .rank-row{ display:grid; grid-template-columns:34px minmax(140px,1.4fr) 3fr auto auto; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:12px 16px; }
+  .rank-row{ display:grid; grid-template-columns:minmax(140px,1.4fr) 3fr auto auto; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:12px 16px; }
   .rank-self{ border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 22%,transparent) inset; }
-  .rank{ font-family:var(--mono); font-size:14px; font-weight:700; color:var(--muted); text-align:center; }
-  .rank-top .rank{ color:var(--accent); }
-  .rank-1 .rank{ font-size:17px; }
   .rank-name{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; color:inherit; text-decoration:none; font-weight:600; font-size:15px; }
   .rank-name:hover{ color:var(--accent); }
   .rank-name:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
@@ -187,8 +184,8 @@ export const SHELL_STYLE = `<style>
   .cmp-cancel{ font-family:var(--mono); font-size:11px; color:var(--muted); text-decoration:none; white-space:nowrap; }
   .cmp-cancel:hover{ color:var(--accent); }
   /* the Portfolio index's rows carry no compare pill — drop the fifth track */
-  .rank-row.rank-plain{ grid-template-columns:34px minmax(140px,1.4fr) 3fr auto; }
-  @container stage (max-width:560px){ .rank-row{ grid-template-columns:28px 1fr auto auto; } .rank-row.rank-plain{ grid-template-columns:28px 1fr auto; } .rank-bar{ display:none; } }
+  .rank-row.rank-plain{ grid-template-columns:minmax(140px,1.4fr) 3fr auto; }
+  @container stage (max-width:560px){ .rank-row{ grid-template-columns:1fr auto auto; } .rank-row.rank-plain{ grid-template-columns:1fr auto; } .rank-bar{ display:none; } }
   /* --- push-drawer app shell --- */
   .app{ ${TOKEN_DECLS}
     display:flex; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans);

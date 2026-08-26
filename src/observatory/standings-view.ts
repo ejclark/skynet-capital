@@ -29,7 +29,7 @@ import {
  *      pill to arm `?a=<id>` (a dashed hint banner offers a plain-language cancel), tap a second
  *      row to complete the pair and render the head-to-head grid + holdings overlap. No nation
  *      skyline here either — same "density, not decoration" call as the cohort cards.
- *   4. THE FIELD — every participant ranked by a selectable metric (`?by=`), a dense ladder
+ *   4. THE FIELD — every participant's performance on a selectable metric (`?by=`), a dense list
  *      rather than a card grid. Per-participant detail (activity feed, positions) lives on that
  *      participant's own `/u/:id` desk, not duplicated here.
  *
@@ -89,7 +89,15 @@ function comparePill(
   return `<a class="cmp-toggle" href="${standingsHref(metric, rowId)}" title="Compare" aria-label="Compare this account">⇄</a>`;
 }
 
-/** THE FIELD — every live participant, ranked by the selected metric. */
+/**
+ * THE FIELD — every live participant's performance on the selected metric.
+ *
+ * Deliberately NOT a ranked ladder (Eric, 2026-08-26: "focus on performance, not rank position").
+ * No ordinal, no podium: a numbered placing invites "copy whoever is first", which is the reading
+ * Public.com dropped its leaderboard to avoid, and this is paper money on an educational desk where
+ * the figure is the lesson and the standing is not. Rows stay SORTED by the metric — that is simply
+ * how a column of numbers is read — but in a `<ul>`, because nothing here claims a place.
+ */
 function fieldLadder(
   data: DashboardData,
   metric: LeaderMetric,
@@ -102,17 +110,15 @@ function fieldLadder(
   const maxAbs = ranked.reduce((m, p) => Math.max(m, Math.abs(metricValue(p, metric))), 0) || 1;
 
   const rows = ranked
-    .map((p, i) => {
+    .map((p) => {
       const v = metricValue(p, metric);
       const width = Math.max(2, (Math.abs(v) / maxAbs) * 100);
       const sign = metric === "equity" ? "flat" : plClass(v);
       const self = currentId && p.id === currentId ? " rank-self" : "";
       const you = currentId && p.id === currentId ? `<span class="you-mark">YOU</span>` : "";
-      const medal = i < 3 ? ` rank-top rank-${i + 1}` : "";
       // data-field-key/data-field are the live patch's addresses; data-sort is what lets the list
       // reorder itself in place on a rank change instead of being rebuilt (see standings-patch.ts).
-      return `<li class="rank-row${self}${medal}" data-field-key="${escapeHtml(p.id)}" data-empire-key="${escapeHtml(p.id)}" data-sort="${v}">
-        <span class="rank" data-field="rank">${i + 1}</span>
+      return `<li class="rank-row${self}" data-field-key="${escapeHtml(p.id)}" data-empire-key="${escapeHtml(p.id)}" data-sort="${v}">
         <a class="rank-name" href="${profileHref(p.id)}">${escapeHtml(p.displayName)} ${chip(p)}${you}</a>
         <span class="rank-bar"><i class="bar-${sign}" data-field-bar="bar" data-field-tone="bar" data-tone-prefix="bar-" style="width:${width.toFixed(1)}%"></i></span>
         <span class="rank-val num ${sign}" data-field="value" data-field-tone="value">${formatMetric(v, metric)}</span>
@@ -121,10 +127,10 @@ function fieldLadder(
     })
     .join("\n      ");
 
-  return `<ol class="ladder" data-sortable>
+  return `<ul class="ladder" data-sortable>
       ${rows || `<li class="empty">No participants on the board yet.</li>`}
-    </ol>
-  <footer class="obs-foot">Read-only observatory · ranked by ${escapeHtml(
+    </ul>
+  <footer class="obs-foot">Read-only observatory · sorted by ${escapeHtml(
     metricLabel(metric),
   )} · figures reflect the last account read.</footer>`;
 }
@@ -338,7 +344,7 @@ export function renderStandingsContent(
   return `${observer}<div class="ladder-head">
       <div>
         <h1 class="view-title">Standings</h1>
-        <p class="view-sub">The whole race on one board — a friendly league, bots and humans both welcome to win.</p>
+        <p class="view-sub">How every desk is performing — bots and humans, same board. Figures, not placings.</p>
       </div>
       <div class="metricsel">${metricPicker(metric, a?.id, b?.id)}</div>
     </div>
