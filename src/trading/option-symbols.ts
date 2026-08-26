@@ -20,6 +20,18 @@ export interface OptionContractParts {
 
 const OCC_PATTERN = /^([A-Z]{1,6})(\d{6})([CP])(\d{8})$/;
 
+/**
+ * The shape of a contract's PARTS, before they are assembled into a wire symbol — what a ticket
+ * checks a member's typed input against.
+ *
+ * These live here, beside `OCC_PATTERN`, because "what an option contract's parts look like" is
+ * one question with one answer. They were defined twice (`option-ticket.ts` and, briefly,
+ * `draft-order.ts`), which is exactly the drift the duplication gate exists to catch: two copies
+ * of a validation rule are two rules the moment either is edited.
+ */
+export const UNDERLYING_PATTERN = /^[A-Z]{1,5}(\.[A-Z]{1,2})?$/;
+export const EXPIRATION_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 /** True when a broker symbol names an option contract rather than a share of stock. */
 export function isOccSymbol(symbol: string): boolean {
   return OCC_PATTERN.test(symbol.trim().toUpperCase());
