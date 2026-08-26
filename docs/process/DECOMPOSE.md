@@ -8,5 +8,5 @@ Invoke it interactively with `/decompose`, or let the `decomposer` agent
 
 **In one breath:** the fitness gate (`scripts/arch-scan.mjs --candidate`) names the highest-leverage
 target; you split along a cohesive seam (extract → import back, behavior unchanged), verify green by exit
-status, and ratchet `arch-budget.json` down — one safe split per PR, recursing on the next PR if the new
-module is still too big.
+status, and shrink `arch-grandfather.json` if the file was on it — one safe split per PR, recursing on the
+next PR if the new module is still too big.

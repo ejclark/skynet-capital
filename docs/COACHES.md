@@ -143,14 +143,14 @@ flywheel — each incident buys both a prevention and a set of leads.
 
 **Adopt what's generic; craft what's bound to our gates.** Generic craftsmanship (code review, security
 review, simplification) is solved — use the bundled skills. Anything that leans on our mechanics
-(arch-budget, dupe-budget, Graphify, the design system) must be crafted here. Community skills are a
+(arch-grandfather, dupe-budget, Graphify, the design system) must be crafted here. Community skills are a
 supply-chain decision: read them fully before adopting.
 
 ## Defensive roster
 
 | Coach | Eye (eval + budget) | Drill (skill) | Athlete (agent) | Status |
 |---|---|---|---|---|
-| **Size/cohesion** (god files) | `scripts/arch-scan.mjs` + `arch-budget.json` + `tests/arch/budget.spec.ts` | `/decompose` | `decomposer` | ✅ live |
+| **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts` | `/decompose` | `decomposer` | ✅ live |
 | **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` | `/dedupe` | `ui-librarian` | ✅ live |
 | **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
 | **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` | judge: un-export / delete / justify-ignore | `mortician` (recruited on recurrence #3, per the rule of three) | ✅ live |
@@ -213,7 +213,7 @@ checklist). Route new smells accordingly; a smell that stays prose in someone's 
 
 | Smell | Kind | Where it's handled |
 |---|---|---|
-| God file (size × many exports) | mechanized | `arch-scan` |
+| God file (size) | mechanized | `arch-scan` |
 | Exact duplication (same symbol, N files) | mechanized | `dupe-scan` |
 | **Junk drawer** (`utils.ts`/`helpers.ts`/`common.ts`/`misc.ts` — cohesion by what it *isn't*) | mechanized | `arch-scan` (junk-drawer check) |
 | Near-duplication ("something similar exists") | judgment | `/dedupe` drill — **rule of three:** abstract on the third occurrence, not the second; premature abstraction couples things that merely look alike |
