@@ -24,8 +24,12 @@
 
 import type { OptionType } from "../trading/option-symbols.js";
 
-/** Calendar-day year. Options decay on the calendar, not the trading tape. */
-const DAYS_PER_YEAR = 365;
+/**
+ * Calendar-day year. Options decay on the calendar, not the trading tape. Exported so the
+ * probability engine annualizes on exactly the same convention this model discounts on — two
+ * day-count conventions in one repo is how a surface and its odds quietly stop agreeing.
+ */
+export const DAYS_PER_YEAR = 365;
 /** Solver search band for annualized vol: 0.0001% to 500%. */
 const MIN_VOLATILITY = 1e-6;
 const MAX_VOLATILITY = 5;
