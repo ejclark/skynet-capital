@@ -1,7 +1,7 @@
 # Conference Board Consumer Confidence (Aug 2026) — consumer-confidence-2026-08-25
 
 **Kind:** macro-print · **Date:** 2026-08-25 (confirmed, CB: conference-board.org — 10:00 ET, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-08-24
+**Last assessed:** 2026-08-25
 
 ## At a glance
 
@@ -175,3 +175,78 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-08-25, event day).** Re-sourced fresh (no macro-print price instrument exists for
+this event, per EVENT-RESEARCH.md — scored from freshly re-fetched facts). Primary source:
+The Conference Board's own release, distributed via PRNewswire and mirrored on
+conference-board.org/topics/consumer-confidence (both fetched 2026-08-25), cross-checked against
+investinglive.com's calendar-reaction post and Reuters/Yahoo Finance/Seeking Alpha wire coverage.
+
+**What printed.** Headline Consumer Confidence Index **89.4**, down 0.8 pts from a **revised-down**
+July — the July 90.8 this doc researched at D-6/D-3/D-1 was itself revised to **90.2** in this
+release (the same downward-revision pattern the doc's own "Honest limits" section flagged as a live
+risk to any surprise framing). Consensus, once it did surface, ran ~90.1–90.2
+(investinglive.com), so August also missed consensus — this resolves the doc's biggest D-6 honest
+limit ("a published August consensus emerging before 8/25"), just barely, and after the fact rather
+than in time to react to it.
+
+**Component split — the real story, and a genuine divergence from the base case.** The two
+subcomponents moved in *opposite* directions, which the doc's trend-extrapolation base case did not
+anticipate:
+- **Expectations Index: 68.2, down 5.8 pts from 74.7** — a sharp break clear below the ~80
+  recession-signal threshold it had merely sat at/under for six months, and specifically below the
+  doc's own ~70 kill-switch line. Households' 12-month inflation expectations rose to ~5.8% from
+  ~5.6% (per PRNewswire), and anticipated discretionary spending "pared back... after a pop in
+  July" (Seeking Alpha) — both read through directly to the doc's AMZN/AAPL discretionary-exposure
+  watch item.
+- **Present Situation Index: 121.2, up 6.8 pts** — its *first improvement in four months*, snapping
+  the three-straight-month decline (incl. July's -3.6-pt leg) the doc had flagged as a labor-cooling
+  watch item. The "jobs plentiful minus jobs hard to get" differential improved to ~+7.5% (from
+  July's +3.1%), the strongest reading since April 2026 — the current-conditions labor read actually
+  firmed even as forward-looking labor/income expectations soured (17.6% of consumers expect income
+  to rise, down from 19.5%; 13.8% expect it to fall, up from 12.6%, per PRNewswire).
+
+**Vs. the stance's base case.** The base case ("a print in the high-80s/low-90s continuing the
+three-month slide, driven by the same labor-cooling read as July") got the headline number right
+(89.4 is high-80s, and the slide continued) but got the *composition* wrong: the slide was driven
+entirely by a plunge in forward expectations, not by current-conditions/labor deterioration — the
+Present Situation Index actually broke its losing streak. The "consumer is cracking" read is
+**partially confirmed, on the forward-looking leg only** — not the broad-based crack the base case's
+"labor-cooling" framing implied.
+
+**Kill switches — one fired, one did not.**
+- **Expectations Index break below ~70 — FIRED.** 68.2 is below the doc's own ~70 line, "away from
+  the 80-level threshold." Per the doc's own rule, this elevates the standing regime signal "from
+  regime-context to a recession-odds signal worth a dedicated reassessment ahead of schedule" — flagged
+  here for whoever next re-derives context/risk state for AMZN/AAPL or the broader recession-odds
+  narrative feeding the Sep-16 FOMC; this doc itself goes quiet after this close-out per the scanner
+  contract.
+- **Two consecutive prints back above ~92-93 — did NOT fire** (opposite: 89.4, a seven-month low
+  per Yahoo Finance/CNBC).
+
+**Market reaction — muted, as the doc's SUPPORTED leg #5 predicted.** Broad tape shrugged the print
+off: S&P 500 +0.3% to 7,675.54, Nasdaq +0.7% to 26,151.30, Dow +0.3% to 53,577.17 (CNBC, 2026-08-25),
+with gains attributed to falling Treasury yields and easing oil prices, not to the confidence data.
+No AMZN/AAPL-specific reaction tied to this print was found in same-day coverage (AAPL closed
+$309.90, AMZN closed $261.06, per Yahoo Finance historical quotes) — the discretionary-exposure
+watch item stayed a background regime read, exactly the "nothing here is a trade" framing the doc's
+stance called for, not a same-day catalyst. This is consistent with, not contradicted by, the
+Expectations-Index kill switch firing: the doc explicitly treated this print as *regime context*
+feeding a multi-week corridor (PCE/GDP/NVDA/Jackson Hole), not a single-session trade signal, and
+that's exactly how the tape treated it too.
+
+**Honest limits at close-out.** Same-day AMZN/AAPL-specific commentary tied causally to this print
+was not found (only general discretionary-spend-pared-back language from the CB release itself,
+plus the unrelated AMZN/AAPL Aug-1-earnings divergence, which is a different event and not
+conflated here). The energy-de-escalation kill switch was not independently re-checked in this
+close-out (out of scope for a macro-print outcome fill — it lives primarily in the sibling CPI doc);
+the inflation-expectations uptick (5.6%→5.8%) is at least consistent with no de-escalation having
+occurred.
+
+**Verdict.** Base-case direction and magnitude: correct. Base-case *driver* (broad labor-cooling):
+wrong — the crack was concentrated entirely in forward expectations while current conditions
+improved. One of two primary kill switches fired (Expectations sub-70); the other (a rebound above
+92-93) did not, and the print moved decisively away from it. No trade was made or implied; none
+was warranted. Stance validated as "regime-context, not a trade."
