@@ -130,4 +130,52 @@ describe("deploy lag", () => {
       }),
     ).not.toThrow();
   });
+
+  // The bots app's half, post deploy-split: skynet-capital-bots deploys selectively, so "behind
+  // main" is healthy until the commits since its last REAL deploy include a bot-relevant one.
+  describe("bots app lag (deploy split)", () => {
+    const current = { head: HEAD, released: HEAD };
+
+    it("stays silent on pre-split state — fixtures without bots fields keep their exact output", () => {
+      const { text, verdict } = explain(current);
+      expect(text).not.toContain("bots app");
+      expect(verdict.bots).toBeUndefined();
+    });
+
+    it("calls docs-only drift healthy — that is the split working as designed", () => {
+      const { text, verdict } = explain({
+        ...current,
+        botsReleased: RELEASED,
+        botsChanged: ["docs/IDEAS.md", "docs/research/x.md"],
+      });
+      expect((verdict.bots as { lagging: boolean }).lagging).toBe(false);
+      expect(text).toContain("bots app is current");
+    });
+
+    it("flags bot-relevant commits past the last bots deploy, and exits 1", () => {
+      const state = {
+        ...current,
+        botsReleased: RELEASED,
+        botsChanged: ["src/domain/types.ts", "docs/IDEAS.md"],
+      };
+      const { text, verdict } = explain(state);
+      expect((verdict.bots as { lagging: boolean }).lagging).toBe(true);
+      expect(text).toContain("bots app is STALE");
+      expect(text).toContain("force_bots_deploy");
+      expect(() =>
+        execFileSync("node", ["scripts/deploy-lag.mjs", "--explain"], {
+          input: JSON.stringify(state),
+          stdio: "pipe",
+        }),
+      ).toThrow();
+    });
+
+    it("reports no-baseline and unknown as themselves, never as an alarm", () => {
+      const none = explain({ ...current, botsReleased: "", botsChanged: [] });
+      expect(none.text).toContain("no deploy baseline");
+      const unknown = explain({ ...current, botsReleased: undefined, botsChanged: undefined });
+      // JSON.stringify drops undefined keys, so this exercises the true absent-field path.
+      expect(unknown.text).not.toContain("bots app");
+    });
+  });
 });

@@ -1,0 +1,54 @@
+# Fly.io config for skynet-capital-bots — the STATEFUL half of the deploy split.
+#
+# The autonomous trader loop lives alone in this app so the dashboard's every-merge deploys stop
+# restarting it. Its in-memory trading state (momentum/sentiment windows, cooldown clocks, the
+# SafetyController's daily-loss baseline) dies with every restart — on 2026-08-26 the shared-app
+# topology restarted it ~every 15 minutes across 41 merges and Sauron never accumulated enough
+# signal history to trade. This app deploys ONLY when scripts/bot-relevant.mjs says a push touched
+# the bots runtime (see pipeline.yml's deploy-bots job), and it reuses the image the dashboard
+# deploy just built — one build per push, never a second.
+#
+# CONTRACT FACTS — each one load-bearing, none enforceable by this file alone:
+#
+#  • This app must live on the org's DEFAULT 6PN network. `fly apps create` with a custom
+#    `--network` would sever SKYNET_INSIGHTS_BRIDGE_URL below — and the failure is SILENT by
+#    design (bot-controls-client fails open to env-only controls; Eric's Mission Control suspend
+#    toggles just stop arriving). scripts/smoke-bots.sh greps the boot log's
+#    "[controls] bridge armed — controls fetched" line as the tripwire.
+#
+#  • NEVER add [http_service], allocate an IP, or run a machine without the bots process command:
+#    the shared image's default CMD is the DASHBOARD (serve:dashboard) with no auth store on this
+#    app — a machine falling back to it would boot an unauthenticated dashboard on the private
+#    network. The [processes] block below is what overrides the CMD; keep it.
+#
+#  • The bridge wire (src/autonomous/bot-controls*.ts, src/autonomous/insight-record.ts,
+#    src/server/insights-listener.ts) is a CROSS-APP protocol after the split: the two apps can
+#    run different commits (bots ≤ app, bounded by the skip-list). Evolve it expand/contract —
+#    add the new field/route listener-first, let both apps roll, remove the old shape in a later
+#    commit; never rename the header, routes, or port in one commit.
+#
+#  • CI stamps each deploy with `--env GIT_SHA=<commit>`; the deploy-bots preflight reads it back
+#    from the running machine as the diff baseline (ground truth beats workflow-run archaeology —
+#    a cancelled or superseded CI run can never strand a bot-relevant commit undeployed).
+#
+# No [mounts]: this app has no volume ON PURPOSE — durable writes relay to the dashboard app's
+# volume over the 6PN insight bridge (fly.toml's SKYNET_INSIGHTS_DIR). No [build]: CI injects the
+# dashboard deploy's image via --image; the Dockerfile only applies if someone deploys this config
+# directly, which should never happen in CI.
+app = "skynet-capital-bots"
+primary_region = "ord"  # Chicago — same region as the dashboard, so the bridge stays local
+
+[env]
+  # Safe by default, exactly like the shared app was: decides + logs, places nothing, until the
+  # autonomy-ops flip-mode action (targeting THIS app) sets SKYNET_AUTONOMOUS_MODE=live.
+  SKYNET_AUTONOMOUS_MODE = "observe"
+  # Still points at the DASHBOARD app — 6PN DNS resolves org-wide, so the hostname survives the
+  # split verbatim. If this var is absent the runner silently runs env-only controls; see above.
+  SKYNET_INSIGHTS_BRIDGE_URL = "http://app.process.skynet-capital.internal:8788"
+
+[processes]
+  bots = "npm run run:autonomous"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
