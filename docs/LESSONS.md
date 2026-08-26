@@ -27,6 +27,35 @@ it. Prevention ranks, best first:
 
 ---
 
+### Auto-merge was armed on an envelope-protected diff, past a check that had already said no
+
+- **SHA:** ffd76db   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** Self-caught while reading `.claude/skills/governor/SKILL.md` to decide whether three
+  unrelated docs PRs could merge — its merge-policy table names the never-auto-merge class as
+  "the list is `envelope.json` — check with `envelope-scan --check`, don't reason from memory".
+  Detection lag: ~4 minutes after arming. Too late — CI was green and PR #635 auto-merged at
+  12:22:58, before the disable call landed ("Can't disable auto-merge for this pull request").
+- **ROOT CAUSE:** Not missing information. `envelope-scan --check` had been run on the diff and had
+  returned `src/trading/option-ticket.ts` → `protected: true`, and `ship.sh`'s own header states the
+  carve-out and points at that same command. The failure was reasoning from the class NAMES in the
+  prose ("workflow files, credentials, spend, outward-facing and hard to reverse") and concluding a
+  paper-trading order module was not in that class — when the prose says, explicitly, that the list
+  IS the file and the file had already answered. Every ingredient of the right decision was present
+  and the decision was still wrong, which is what makes prose the wrong instrument at this step.
+  Compounding it: the arming happens through the `enable_pr_auto_merge` MCP tool, which never runs
+  `ship.sh` — so no amount of correctness in that script's comments could have intercepted it.
+- **PREVENTION:** gate. `scripts/ship.sh checkarm <paths...>` exits 5 when any path is protected,
+  and is now called from two places: `ship automerge` runs it against the PR's OWN file list from
+  the API (not the local tree, which may have moved on), and `ship open` runs it against the diff
+  and prints "do NOT arm auto-merge, by ANY route" as the next step instead of the usual arm-it
+  line — that printed instruction is the last point the envelope answer can reach a session that
+  arms through MCP. `ship automerge` also refuses outright on a 100+ file PR, where the page size
+  makes "nothing protected" unproven rather than true. Specced in `tests/arch/ship.spec.ts`.
+- **SIDE QUESTS:** the merged diff was left in place rather than reverted — the protected touch is
+  two character-identical regexes replaced by an import of the same regexes, with no call-site or
+  control-flow change, so a revert costs more churn than the risk it removes. Flagged to Eric with
+  the one-command revert rather than decided unilaterally.
+
 ### An explicit instruction was quietly overridden by a research-backed counter-recommendation
 
 - **SHA:** 0dddc1a   **DATE:** 2026-08-26   **STATUS:** closed
