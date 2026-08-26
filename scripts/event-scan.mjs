@@ -27,6 +27,7 @@
 // never an empty result — a scheduled caller must not mistake "broken" for "nothing due".
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { DATE_RE, runValidate } from "./event-scan-validation.mjs";
 
 const ROOT = process.cwd();
 
@@ -40,21 +41,6 @@ const EVENTS_FILE = arg("events-file") ?? join(ROOT, "src", "domain", "market-ev
 const CALENDAR_FILE = arg("calendar-file") ?? join(ROOT, "src", "domain", "earnings-calendar.ts");
 const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json");
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
-
-const KINDS = [
-  "earnings",
-  "macro-print",
-  "product-launch",
-  "sector",
-  "rates",
-  "opex",
-  "geopolitical",
-];
-const TIERS = ["critical", "high", "medium", "low"];
-const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB):/;
-const ESTIMATE_PREFIX = /^(EST|NEWS):/;
-const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Whole calendar days from today's UTC date to `date` (negative = past) — mirrors
  *  earnings-calendar.ts daysUntil, re-implemented because this script must not need `npm ci`. */
@@ -163,94 +149,8 @@ function assessmentDue(event, ledger, today, cadence) {
   return { due, reason: due ? "interval-elapsed" : null, intervalDays: interval, nextDueDate };
 }
 
-function validateTierBands(tier, bands, problems) {
-  if (!Array.isArray(bands) || bands.length === 0) {
-    problems.push(`cadence: missing bands for tier "${tier}"`);
-    return;
-  }
-  if (bands.at(-1).minDaysOut !== 0)
-    problems.push(`cadence: "${tier}" terminal band must have minDaysOut 0`);
-  for (let i = 0; i < bands.length; i++) {
-    const b = bands[i];
-    if (!(Number.isInteger(b.minDaysOut) && b.minDaysOut >= 0 && b.intervalDays >= 1))
-      problems.push(`cadence: "${tier}" band ${i} malformed (${JSON.stringify(b)})`);
-    if (i > 0 && bands[i - 1].minDaysOut <= b.minDaysOut)
-      problems.push(`cadence: "${tier}" bands must be sorted by minDaysOut descending`);
-  }
-}
-
-function validateCadence(cadence, problems) {
-  for (const tier of TIERS) validateTierBands(tier, cadence.bands?.[tier], problems);
-  if (!(Number.isInteger(cadence.closeOutWithinDays) && cadence.closeOutWithinDays >= 1))
-    problems.push("cadence: closeOutWithinDays must be an integer >= 1");
-}
-
-// The date policy made lintable: confirmed needs a trusted prefix, estimates an honest one.
-function validateStatus(e, where, problems) {
-  if (e.status === "confirmed") {
-    if (!CONFIRMED_PREFIX.test(e.source ?? ""))
-      problems.push(
-        `${where}: confirmed but source lacks a trusted prefix (IR/CAL/BLS/FED/PJM/SEC)`,
-      );
-  } else if (e.status === "estimate") {
-    if (e.kind !== "earnings" && !ESTIMATE_PREFIX.test(e.source ?? ""))
-      problems.push(`${where}: estimate but source lacks an EST:/NEWS: prefix`);
-  } else {
-    problems.push(`${where}: unknown status "${e.status}"`);
-  }
-}
-
-function validateEvent(e, ids, problems) {
-  const where = `event "${e.id ?? "?"}"`;
-  if (!SLUG_RE.test(e.id ?? "")) problems.push(`${where}: id must be a lowercase slug`);
-  if (ids.has(e.id)) problems.push(`${where}: duplicate id`);
-  ids.add(e.id);
-  if (!KINDS.includes(e.kind)) problems.push(`${where}: unknown kind "${e.kind}"`);
-  if (!DATE_RE.test(e.date ?? "")) problems.push(`${where}: date must be YYYY-MM-DD`);
-  if (!TIERS.includes(e.impact)) problems.push(`${where}: unknown impact "${e.impact}"`);
-  if (!Array.isArray(e.symbols)) problems.push(`${where}: symbols must be an array`);
-  validateStatus(e, where, problems);
-}
-
-function validateLedgers(ledgers, ids, problems, warnings) {
-  for (const [id, ledger] of ledgers) {
-    if (!(ledger.lastAssessed && DATE_RE.test(ledger.lastAssessed)))
-      problems.push(`${ledger.file}: missing or malformed "**Last assessed:** YYYY-MM-DD" line`);
-    if (!ids.has(id))
-      warnings.push(`${ledger.file}: no matching event id "${id}" (aged out of the tables?)`);
-  }
-}
-
-function validate({ curated, all }, cadence, ledgers) {
-  const problems = [];
-  const warnings = [];
-  const ids = new Set();
-  validateCadence(cadence, problems);
-  for (const e of all) validateEvent(e, ids, problems);
-  for (const e of curated)
-    if (e.kind === "earnings")
-      problems.push(
-        `event "${e.id}": earnings are derived from earnings-calendar.ts — never hand-entered here`,
-      );
-  validateLedgers(ledgers, ids, problems, warnings);
-  return { problems, warnings };
-}
-
-function runValidate(tables, cadence, ledgers) {
-  const { problems, warnings } = validate(tables, cadence, ledgers);
-  for (const w of warnings) console.error(`⚠ ${w}`);
-  for (const p of problems) console.error(`✗ ${p}`);
-  if (problems.length) {
-    console.error(
-      `\n${problems.length} contract violation(s). A malformed calendar is worse than none —` +
-        " the Routine would assess the wrong thing and look green doing so.",
-    );
-    process.exit(1);
-  }
-  console.log(
-    `✓ ${tables.all.length} event(s) and ${ledgers.size} ledger(s) satisfy the contract.`,
-  );
-}
+// Contract validation (validateEvent, validateCadence, validateLedgers, runValidate) lives in
+// event-scan-validation.mjs — a distinct concern from extraction and cadence math below.
 
 function printDue(rows) {
   const due = rows

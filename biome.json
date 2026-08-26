@@ -54,7 +54,15 @@
           }
         },
         "useCollapsedElseIf": "error",
-        "useShorthandAssign": "error"
+        "useShorthandAssign": "error",
+        "noExcessiveLinesPerFile": {
+          "level": "warn",
+          "options": {
+            "maxLines": 300,
+            "skipBlankLines": false
+          }
+        },
+        "noExcessiveClassesPerFile": "warn"
       },
       "performance": {
         "noBarrelFile": "error"
@@ -79,6 +87,23 @@
           },
           "style": {
             "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/tests/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": {
+              "level": "warn",
+              "options": {
+                "maxLines": 500,
+                "skipBlankLines": false
+              }
+            },
+            "noExcessiveClassesPerFile": "off"
           }
         }
       }

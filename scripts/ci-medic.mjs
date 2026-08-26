@@ -26,10 +26,16 @@
 //   4. Once a signature carries `needs-eric`, the medic goes quiet on it entirely.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { LABELS } from "./postmaster.mjs";
 
 /** This workflow's own `name:`. Guard 1 — never treat the medic's failure as work for the medic. */
 export const MEDIC_WORKFLOW = "CI Medic";
-export const LABEL = { name: "ci-failure", color: "b60205", description: "A run failed on main" };
+/**
+ * `ci-failure` used to be declared right here, a SECOND label registry beside the postmaster's —
+ * the exact split #500 is about. One vocabulary now (scripts/postmaster.mjs `LABELS`); this stays
+ * exported under its old name so existing call sites and specs keep working.
+ */
+export const LABEL = LABELS.ciFailure;
 /** Enough log to diagnose from, little enough to stay inside one fold. */
 const LOG_TAIL_CHARS = 3500;
 
@@ -102,7 +108,7 @@ export function routeFailure(ctx, deps = {}) {
       });
       continue;
     }
-    if ((existing.labels ?? []).includes("needs-eric")) {
+    if ((existing.labels ?? []).includes(LABELS.needsEric.name)) {
       intents.push({ type: "skip", issue: existing.number, reason: "already escalated to Eric" });
       continue;
     }

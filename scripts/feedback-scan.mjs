@@ -18,8 +18,12 @@
 // Read-only, no network writes. Uses `gh`, which is present wherever the postmaster runs.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { LABELS } from "./postmaster.mjs";
 
-const TERMINAL = ["needs-info", "next-slice", "needs-eric"];
+// One vocabulary, not a set of string literals that can drift from it (#500). This scan is the
+// concrete consequence that issue names: it classifies by label, so a label it spells differently
+// from the lane that applies one is an issue that appears in no queue and no digest.
+const TERMINAL = [LABELS.needsInfo.name, LABELS.nextSlice.name, LABELS.needsEric.name];
 
 const gh = (args) => execFileSync("gh", args, { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
 
@@ -32,7 +36,7 @@ function fetchIssues() {
       "--state",
       "all",
       "--label",
-      "feedback",
+      LABELS.feedback.name,
       "--limit",
       "200",
       "--json",
@@ -73,9 +77,9 @@ export function outcomeOf(issue) {
   let outcome = "no-answer";
   if (merged.length && issue.state === "CLOSED") outcome = "shipped-and-closed";
   else if (merged.length) outcome = "shipped-not-closed";
-  else if (labels.includes("needs-eric")) outcome = "needs-eric";
-  else if (labels.includes("needs-info")) outcome = "needs-info";
-  else if (labels.includes("next-slice")) outcome = "next-slice";
+  else if (labels.includes(LABELS.needsEric.name)) outcome = LABELS.needsEric.name;
+  else if (labels.includes(LABELS.needsInfo.name)) outcome = LABELS.needsInfo.name;
+  else if (labels.includes(LABELS.nextSlice.name)) outcome = LABELS.nextSlice.name;
   else if (issue.state === "CLOSED") outcome = "closed-without-pr";
 
   return {
@@ -84,7 +88,7 @@ export function outcomeOf(issue) {
     outcome,
     answered: outcome !== "no-answer",
     hoursToAnswer: hours,
-    curated: labels.includes("curated"),
+    curated: labels.includes(LABELS.curated.name),
     rounds: roundsOf(issue.body),
     terminal: labels.filter((l) => TERMINAL.includes(l)),
   };

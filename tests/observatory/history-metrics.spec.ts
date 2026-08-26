@@ -1,14 +1,16 @@
 import {
-  aggregateDoubling,
   biggestSingleDayGain,
+  dailyChanges,
+  greenStreakBoard,
+  longestGreenStreak,
+} from "../../src/observatory/day-trophies.js";
+import {
+  aggregateDoubling,
   changeOver,
   DAY_MS,
-  dailyChanges,
   doubledAt,
   firstAccountToDouble,
   firstAccountToFiftyPercent,
-  greenStreakBoard,
-  longestGreenStreak,
   MONTH_MS,
   reachedMultipleAt,
   seedBaseline,

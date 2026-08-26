@@ -146,3 +146,61 @@ describe("issue lint — the audit report", () => {
     expect(out).toContain("0/1 human-facing issues fail");
   });
 });
+
+// #500's one open question, resolved ADVISORY. An unregistered label is usually a real defect
+// (#461 and #462 carried `idea` where they meant `handoff`, so two waiting handoffs appeared in no
+// queue, no scan and no digest) — but members apply arbitrary labels through the GitHub UI, and
+// failing a lint over one would tax exactly the reporter this linter must never tax.
+describe("issue lint — the label advisory", () => {
+  const capsule = [
+    "**One-line ask.**",
+    "",
+    "| | |",
+    "|---|---|",
+    "| **Type** | bug |",
+    "",
+    "- A talking point.",
+    "",
+    "Picture: waived — a registry change has nothing to draw.",
+  ].join("\n");
+
+  const withLabels = (labels: string) => {
+    const args = ["scripts/issue-lint.mjs", "--stdin", "--json", "--labels", labels];
+    try {
+      const out = execFileSync("node", args, { input: capsule, encoding: "utf8" });
+      return { code: 0, ...JSON.parse(out) } as {
+        code: number;
+        problems: string[];
+        notes: string[];
+      };
+    } catch (error) {
+      const e = error as { status?: number; stdout?: Buffer };
+      return {
+        code: e.status ?? -1,
+        ...JSON.parse(e.stdout?.toString() || '{"problems":[],"notes":[]}'),
+      } as { code: number; problems: string[]; notes: string[] };
+    }
+  };
+
+  it("notes an unregistered label without failing the gate", () => {
+    const { code, problems, notes } = withLabels("bug,not-a-real-label");
+
+    expect(notes.join("\n")).toContain("not-a-real-label");
+    // The whole point of the resolution: it points, it never gates.
+    expect(problems).toEqual([]);
+    expect(code).toBe(0);
+  });
+
+  it("stays silent on labels the registry knows", () => {
+    const { problems, notes } = withLabels("bug,feedback,idea,handoff,plan,ci-failure");
+    expect(notes.join("\n")).not.toContain("unregistered label");
+    expect(problems).toEqual([]);
+  });
+
+  it("does not check labels that were never supplied — absent is not clean", () => {
+    // A body linted before filing carries no labels yet; that must read as "not checked", never
+    // as "checked and passed".
+    const { notes } = lint(capsule);
+    expect(notes.join("\n")).not.toContain("unregistered label");
+  });
+});

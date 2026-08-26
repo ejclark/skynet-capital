@@ -1,12 +1,10 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
-import { humanizeOptionSymbol } from "../trading/option-symbols.js";
-import type { RoundTrip, RoundTripLedger } from "../trading/round-trips.js";
-import { realizedByDay, type TradeStats, tradeStats } from "../trading/trade-stats.js";
+import type { RoundTrip } from "../trading/round-trips.js";
+import { type TradeStats, tradeStats } from "../trading/trade-stats.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import {
   ACTIVITY_TYPES,
   ACTIVITY_WINDOWS,
-  type ActivitySource,
   type ActivityTypeFilter,
   type ActivityWindow,
   filterActivity,
@@ -14,36 +12,29 @@ import {
   windowCutoff,
 } from "./activity-store.js";
 import { renderShell } from "./dashboard-shell.js";
-import { type DecisionContext, decisionContextFor } from "./decision-context.js";
+import { biggestSingleDayGain, longestGreenStreak } from "./day-trophies.js";
 import {
   deskLedger,
   formatHold,
   formatPctOrDash,
-  formatPrice,
   formatRatio,
   mergedDeskActivity,
 } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
 import { deskFrame, deskHref } from "./desk-tabs.js";
 import { equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
-import {
-  biggestSingleDayGain,
-  doubledAt,
-  longestGreenStreak,
-  seedBaseline,
-} from "./history-metrics.js";
+import { doubledAt, seedBaseline } from "./history-metrics.js";
 import type { EquitySample } from "./history-store.js";
-import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.js";
+import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import type { DeskViewOptions } from "./positions-view.js";
+import { formatCurrency, formatSigned, formatTimestamp, plClass } from "./render-atoms.js";
 import {
-  formatActivityTime,
-  formatCurrency,
-  formatSigned,
-  formatTimestamp,
-  pct,
-  plClass,
-  tzAbbrev,
-} from "./render-atoms.js";
+  type ActivityRow,
+  caveats,
+  dayStrip,
+  foldedLedger,
+  tripsTable,
+} from "./trade-ledgers-view.js";
 
 /**
  * PERFORMANCE — the desk's one "how am I doing" tab, replacing the old History / Analysis /
@@ -62,8 +53,6 @@ export interface PerformanceViewOptions extends DeskViewOptions {
   readonly decisions?: readonly DecisionRecord[];
   readonly history?: readonly EquitySample[];
 }
-
-type ActivityRow = ActivityView & { readonly source?: ActivitySource };
 
 interface StatTile {
   readonly label: string;
@@ -88,7 +77,9 @@ function dayTrophyTiles(
     {
       label: "Best day",
       value: bestDay ? formatSigned(bestDay.abs) : "—",
-      note: bestDay ? `${bestDay.day} · ${pct(bestDay.pct)}` : "needs two days of history",
+      note: bestDay
+        ? `${bestDay.day} · ${formatPctOrDash(bestDay.pct, true)}`
+        : "needs two days of history",
       ...(bestDay ? { cls: "pos" } : {}),
     },
     {
@@ -281,163 +272,6 @@ function filterBar(
       <span class="filter-k">Window</span><span class="fchips">${windowChips}</span>
       <span class="filter-k">Type</span><span class="fchips">${typeChips}</span>
     </nav>`;
-}
-
-function dayStrip(trips: readonly RoundTrip[], timezone: string | undefined): string {
-  const days = realizedByDay(trips, timezone ?? "America/New_York");
-  if (days.length === 0) return "";
-  const green = days.filter((d) => d.realized > 0).length;
-  const red = days.filter((d) => d.realized < 0).length;
-  const squares = days
-    .map(
-      (day) =>
-        `<span class="day ${plClass(day.realized)}" title="${escapeHtml(day.day)} · ${formatSigned(
-          day.realized,
-        )} over ${day.trades} trade${day.trades === 1 ? "" : "s"}"></span>`,
-    )
-    .join("");
-  return `<section class="panel">
-      <h2 class="panel-title">Trading days</h2>
-      <p class="panel-sub">One square per day you closed something in this window, oldest first. Green days paid; red days cost.</p>
-      <div class="daystrip">${squares}</div>
-      <div class="daystrip-legend">
-        <span><i class="swatch" style="background:var(--pos)"></i>${green} green</span>
-        <span><i class="swatch" style="background:var(--neg)"></i>${red} red</span>
-        <span>${days.length} day${days.length === 1 ? "" : "s"} with a close</span>
-      </div>
-    </section>`;
-}
-
-function tripRow(trip: RoundTrip, timezone: string | undefined): string {
-  const basis = trip.entryPrice * trip.quantity;
-  return `<tr>
-      <td class="tcell">${escapeHtml(formatActivityTime(trip.closedAt, timezone))}</td>
-      <td><span class="sym" title="${escapeHtml(trip.symbol)}">${escapeHtml(humanizeOptionSymbol(trip.symbol))}</span></td>
-      <td class="num">${trip.quantity.toLocaleString("en-US")}</td>
-      <td class="num">${formatPrice(trip.entryPrice)}</td>
-      <td class="num">${formatPrice(trip.exitPrice)}</td>
-      <td class="num">${formatPrice(basis)}</td>
-      <td class="num">${escapeHtml(formatHold(trip.holdMs))}</td>
-      <td class="num ${plClass(trip.realized)}">${formatSigned(trip.realized)}</td>
-      <td class="num ${plClass(trip.realized)}">${pct(trip.returnPct)}</td>
-    </tr>`;
-}
-
-function tripsTable(trips: readonly RoundTrip[], timezone: string | undefined): string {
-  if (trips.length === 0) {
-    return `<div class="blotter-wrap"><p class="desk-empty">No closed trades in this window. A trade lands here the moment you sell what you bought — that's when a paper gain becomes a real one. Try a wider window above.</p></div>`;
-  }
-  const rows = [...trips]
-    .sort((a, b) => b.closedAt.localeCompare(a.closedAt))
-    .map((trip) => tripRow(trip, timezone))
-    .join("");
-  return `<div class="blotter-wrap">
-      <table class="blotter">
-        <thead><tr>
-          <th class="tcell">Closed</th><th>Symbol</th><th class="num">Qty</th>
-          <th class="num" title="Price paid per share — the cost basis of one share">Entry / share</th>
-          <th class="num" title="Price received per share on the close">Exit / share</th>
-          <th class="num" title="Total paid: shares × entry per share">Cost basis</th>
-          <th class="num">Held</th><th class="num">Realized</th><th class="num">Return</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
-}
-
-/** Says out loud what the record couldn't see, instead of presenting a partial as a whole. */
-function caveats(ledger: RoundTripLedger, hasDurable: boolean): string {
-  const notes: string[] = [];
-  if (!hasDurable) {
-    notes.push(
-      `<b>Only the broker's recent-order window is visible here.</b> The durable trade ledger has no records for this account yet — run <code>npm run backfill:activity</code> once to capture the full history retroactively.`,
-    );
-  }
-  if (ledger.truncated) {
-    notes.push(
-      `<b>History begins mid-trade.</b> ${ledger.unmatchedSellQuantity.toLocaleString("en-US")} share(s) were sold out of a position opened before the recorded history, so those closes aren't scored here.`,
-    );
-  }
-  if (ledger.unpricedFills > 0) {
-    notes.push(
-      `<b>${ledger.unpricedFills} fill(s) carry no recorded price</b>, so they're excluded rather than counted as zero.`,
-    );
-  }
-  if (ledger.open.length > 0) {
-    notes.push(
-      `<b>${ledger.open.length} lot(s) still open</b> — they'll appear here once closed. See <a href="?tab=positions">Active</a>.`,
-    );
-  }
-  return notes.map((note) => `<p class="caveat">${note}</p>`).join("");
-}
-
-function whyCell(context: DecisionContext | undefined): string {
-  if (!context) return `<td class="num"><span class="desk-note">—</span></td>`;
-  const strategy = context.strategy
-    ? `<span class="why-line"><b>Strategy</b> ${escapeHtml(context.strategy)}</span>`
-    : "";
-  const expecting = context.expectation
-    ? `<span class="why-line"><b>Expecting</b> ${escapeHtml(context.expectation)}</span>`
-    : "";
-  const play = context.playbookId
-    ? `<span class="why-line"><b>Playbook</b> ${escapeHtml(context.playbookId)}${context.playbookMode ? ` (${escapeHtml(context.playbookMode)})` : ""}</span>`
-    : "";
-  const guard = context.guardNote
-    ? `<span class="why-line"><b>Guards</b> ${escapeHtml(context.guardNote)}</span>`
-    : "";
-  return `<td><details class="why"><summary>why</summary><div class="why-body">
-      <span class="why-line">${escapeHtml(context.reason)}</span>
-      ${strategy}${expecting}${play}${guard}
-      <span class="why-line why-meta">${escapeHtml(context.mode)} cycle · ${escapeHtml(context.action)} · matched from the decision log by symbol and time</span>
-    </div></details></td>`;
-}
-
-function ledgerRow(
-  row: ActivityRow,
-  timezone: string | undefined,
-  context: DecisionContext | undefined,
-  showWhy: boolean,
-): string {
-  const badge = row.source === "backfill" ? ` <span class="src-badge">backfilled</span>` : "";
-  return `<tr>
-      <td class="tcell">${escapeHtml(formatActivityTime(row.at, timezone))}</td>
-      <td><span class="${row.side === "buy" ? "pos" : "neg"}">${escapeHtml(row.side.toUpperCase())}</span> <span class="sym" title="${escapeHtml(row.symbol)}">${escapeHtml(humanizeOptionSymbol(row.symbol))}</span></td>
-      <td class="num">${row.filledQuantity.toLocaleString("en-US")}/${row.quantity.toLocaleString("en-US")}</td>
-      <td class="num">${row.price !== undefined ? formatPrice(row.price) : "—"}</td>
-      <td>${escapeHtml(row.status)}${badge}</td>
-      ${showWhy ? whyCell(context) : ""}
-    </tr>`;
-}
-
-/** The raw order ledger, folded — receipts behind the round-trips table, not the headline. */
-function foldedLedger(
-  rows: readonly ActivityRow[],
-  snapshot: ParticipantSnapshot,
-  decisions: readonly DecisionRecord[],
-): string {
-  const showWhy = snapshot.kind === "bot" && decisions.length > 0;
-  const body =
-    rows.length === 0
-      ? `<p class="desk-empty">No orders match this window and type. Try widening the filters above.</p>`
-      : `<div class="blotter-inline">
-      <table class="blotter">
-        <thead><tr><th class="tcell">Time ${escapeHtml(tzAbbrev(snapshot.timezone))}</th><th>Order</th><th class="num">Filled</th><th class="num">Price</th><th>Status</th>${showWhy ? "<th>Context</th>" : ""}</tr></thead>
-        <tbody>${rows
-          .map((row) =>
-            ledgerRow(
-              row,
-              snapshot.timezone,
-              showWhy ? decisionContextFor(row, decisions) : undefined,
-              showWhy,
-            ),
-          )
-          .join("")}</tbody>
-      </table>
-    </div>`;
-  return `<details class="fills">
-      <summary>Order activity — ${rows.length} order${rows.length === 1 ? "" : "s"} · the raw ledger behind the trips, folded as receipts</summary>
-      ${body}
-    </details>`;
 }
 
 export function renderPerformanceBody(
