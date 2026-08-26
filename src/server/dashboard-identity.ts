@@ -45,6 +45,16 @@ export function ownedAccountOptions(
   });
 }
 
+/**
+ * A board display name for ANY id, not just ones the caller owns — for showing a locked `/rotate`
+ * target by name instead of its internal slug (Eric, 2026-08-26: "account id is made up by you..
+ * why do you even bother showing it?"). Falls back to the id itself only when the account genuinely
+ * isn't on the board (a stale link) — there's nothing better to show at that point.
+ */
+export function displayNameFor(config: DashboardServerConfig, id: string): string {
+  return config.hub.getState().participants.find((p) => p.id === id)?.displayName ?? id;
+}
+
 export function keyOf(url: string): string {
   return new URL(url, "http://localhost").searchParams.get("key") ?? "";
 }

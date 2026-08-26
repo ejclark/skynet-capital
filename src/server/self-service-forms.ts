@@ -111,18 +111,15 @@ export async function handleRotate(
   res: ServerResponse,
   method: string,
   key: string,
-  /**
-   * The id nobody remembers (Eric, 2026-08-25): a link that ALREADY names the account carries it
-   * here instead of asking the member to type an opaque slug from memory — locked, not just
-   * pre-filled, since a stray edit shouldn't silently retarget it. Empty when no link named one,
-   * including when the viewer owns MORE than one account, so the form falls to the picker below.
-   */
+  /** The id nobody remembers (Eric, 2026-08-25): a link that ALREADY names the account carries it
+   *  here, locked — not just pre-filled — so a stray edit can't retarget it. Empty when no link
+   *  named one, including when the viewer owns MORE than one account (falls to the picker below). */
   prefillId: string,
-  /**
-   * Every account the viewer's sign-in owns (Eric, 2026-08-25: "this should be a dropdown of the
-   * accounts tied to the email address"). Zero, one, or many — `/claim` makes owning more than
-   * one a normal state, not an edge case.
-   */
+  /** `prefillId`'s board display name, shown in its place — the id itself is an internal slug
+   *  nobody should have to read (Eric, 2026-08-26: "why do you even bother showing it?"). */
+  prefillName: string,
+  /** Every account the viewer's sign-in owns (Eric, 2026-08-25: "a dropdown of the accounts tied
+   *  to the email address"). Zero, one, or many — `/claim` makes more than one a normal state. */
   ownedAccounts: readonly OwnedAccountOption[],
   requester: { readonly id?: string; readonly email?: string },
   rotateCredentials: (input: RotateCredentialsInput) => Promise<RotateResult>,
@@ -136,7 +133,7 @@ export async function handleRotate(
     req,
     res,
     method,
-    () => rotateFormHtml(key, nav, prefillId, resolvedFromEmail, ownedAccounts),
+    () => rotateFormHtml(key, nav, prefillId, prefillName, resolvedFromEmail, ownedAccounts),
     (form) =>
       rotateCredentials({
         id: form.get("id") ?? "",
@@ -257,14 +254,18 @@ function rotateFormHtml(
   key: string,
   nav: NavContext,
   prefillId = "",
+  prefillName = "",
   resolvedFromEmail = false,
   ownedAccounts: readonly OwnedAccountOption[] = [],
 ): string {
   const action = `/rotate${key ? `?key=${encodeURIComponent(key)}` : ""}`;
+  // Shows the board NAME, never the internal id ("human-ann") — an id nobody reads or types here
+  // anyway, since both branches lock the field (Eric, 2026-08-26: "why do you even bother showing
+  // it?"). The submitted value is still the real id, via the paired hidden input.
   const idField = resolvedFromEmail
-    ? `<label>Account <small>— resolved from your sign-in, no id needed</small><input value="${escapeHtml(prefillId)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
+    ? `<label>Account <small>— resolved from your sign-in, no id needed</small><input value="${escapeHtml(prefillName)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
     : prefillId
-      ? `<label>Account<input value="${escapeHtml(prefillId)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
+      ? `<label>Account<input value="${escapeHtml(prefillName)}" readonly><input type="hidden" name="id" value="${escapeHtml(prefillId)}"></label>`
       : ownedAccounts.length > 1
         ? `<label>Account <small>— one of yours, from your sign-in</small><select name="id" required>${ownedAccounts
             .map((a) => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.displayName)}</option>`)

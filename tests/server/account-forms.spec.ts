@@ -65,8 +65,10 @@ describe("GET /account", () => {
         const res = await fetch(`${base}/account`);
         const html = await res.text();
         expect(res.status).toBe(200);
-        expect(html).toContain('value="human-ann"');
-        expect(html).toContain("readonly");
+        // The id travels only in a hidden field — Eric, 2026-08-26: "account id is made up by
+        // you.. why do you even bother showing it?" — never as a visible, readonly value.
+        expect(html).toContain('type="hidden" name="id" value="human-ann"');
+        expect(html).not.toContain('value="human-ann" required readonly');
         expect(html).toContain("Remove this account");
         expect(html).toContain("/rotate");
       },
@@ -80,7 +82,7 @@ describe("GET /account", () => {
       const html = await res.text();
       expect(res.status).toBe(200);
       expect(html).toContain('placeholder="human-uncle_joe"');
-      expect(html).not.toContain("readonly");
+      expect(html).not.toContain('type="hidden" name="id"');
     });
   });
 });

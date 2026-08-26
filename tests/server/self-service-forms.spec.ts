@@ -173,6 +173,7 @@ describe("handleRotate", () => {
           "GET",
           "",
           "",
+          "",
           [],
           {},
           () => Promise.reject(new Error("unused")),
@@ -195,6 +196,7 @@ describe("handleRotate", () => {
           req,
           res,
           "POST",
+          "",
           "",
           "",
           [],
@@ -227,6 +229,7 @@ describe("handleRotate", () => {
           "POST",
           "",
           "",
+          "",
           [],
           { id: "human-eric", email: "eric@example.com" },
           (input) => {
@@ -256,6 +259,7 @@ describe("handleRotate", () => {
           "POST",
           "",
           "",
+          "",
           [],
           {},
           () => Promise.resolve({ ok: false, error: "No existing self-service account." }),
@@ -278,6 +282,7 @@ describe("handleRotate", () => {
           "GET",
           "secret123",
           "",
+          "",
           [],
           {},
           () => Promise.reject(new Error("unused")),
@@ -292,7 +297,9 @@ describe("handleRotate", () => {
 
   // 2026-08-25: the id nobody remembers. A link that already names the account (the error card,
   // a profile page) locks it in rather than making the member retype an opaque slug.
-  it("pre-fills and locks the account id when the link already names one", async () => {
+  // 2026-08-26: the locked field shows the board NAME, never the raw id — the id travels only in
+  // the hidden field (Eric: "account id is made up by you.. why do you even bother showing it?").
+  it("pre-fills and locks the account by NAME when the link already names an id", async () => {
     await withRoute(
       (req, res) =>
         void handleRotate(
@@ -301,6 +308,7 @@ describe("handleRotate", () => {
           "GET",
           "",
           "human-uncle_joe",
+          "Uncle Joe",
           [],
           {},
           () => Promise.reject(new Error("unused")),
@@ -308,7 +316,8 @@ describe("handleRotate", () => {
         ),
       async (base) => {
         const body = await (await fetch(base)).text();
-        expect(body).toContain('value="human-uncle_joe" readonly');
+        expect(body).toContain('value="Uncle Joe" readonly');
+        expect(body).not.toContain('value="human-uncle_joe" readonly');
         expect(body).toContain('type="hidden" name="id" value="human-uncle_joe"');
         expect(body).not.toContain('name="id" required');
       },
@@ -324,6 +333,7 @@ describe("handleRotate", () => {
           "POST",
           "",
           "human-uncle_joe",
+          "Uncle Joe",
           [],
           {},
           (input) => {
@@ -350,6 +360,7 @@ describe("handleRotate", () => {
           req,
           res,
           "GET",
+          "",
           "",
           "",
           [],

@@ -216,8 +216,7 @@ function accountSwitcher(ctx: AccountFormContext): string {
 }
 
 /** A link to the bot's own desk Settings tab (suspend/resume) — the OTHER "manage this account"
- *  surface, for the accounts that have one (Eric, 2026-08-25: suspend "seems like managing the
- *  account type behavior... all the account related actions should live under one roof"). They
+ *  surface (Eric, 2026-08-25: "all the account related actions should live under one roof"). They
  *  stay two pages — Mission Control is the OWNER's fleet-wide switchboard, a different tier than
  *  this page's session-linked self-service — but nothing should hide the way between them. */
 function botControlsLink(ctx: AccountFormContext): string {
@@ -230,8 +229,11 @@ function botControlsLink(ctx: AccountFormContext): string {
 function settingsFormHtml(ctx: AccountFormContext): string {
   const key = ctx.key;
   const id = ctx.requesterId ?? "";
+  // Resolved from the session: a submitted value, never shown — an internal slug ("human-ann")
+  // that means nothing to the member (Eric: "why do you even bother showing it?"). Only the
+  // no-session fallback below is genuinely a field someone must type.
   const idField = ctx.requesterId
-    ? `<label>Account id <small>— your account, from your session</small><input name="id" required readonly value="${escapeHtml(id)}"></label>`
+    ? `<input type="hidden" name="id" value="${escapeHtml(id)}">`
     : `<label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>`;
   return railedShell(
     "Manage account — Skynet Capital",

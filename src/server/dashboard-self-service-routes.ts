@@ -4,7 +4,13 @@ import type { NavContext } from "../observatory/render-dashboard.js";
 import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Session } from "./auth/session.js";
 import { handleClaim } from "./claim-form.js";
-import { idOf, keyOf, ownedAccountOptions, resolveCurrentId } from "./dashboard-identity.js";
+import {
+  displayNameFor,
+  idOf,
+  keyOf,
+  ownedAccountOptions,
+  resolveCurrentId,
+} from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { handleInvite } from "./invite-form.js";
 import type { RotateCredentialsInput, RotateResult } from "./participant-service.js";
@@ -174,12 +180,14 @@ async function handleRotateSelfServiceRoute(
   const requester = rotateRequester(config, session);
   const ownedAccounts = config.auth ? ownedAccountOptions(session, config) : [];
   const prefillId = idOf(url) || (ownedAccounts.length === 1 ? (ownedAccounts[0]?.id ?? "") : "");
+  const prefillName = prefillId ? displayNameFor(config, prefillId) : "";
   await handleRotate(
     req,
     res,
     req.method ?? "GET",
     keyOf(url),
     prefillId,
+    prefillName,
     ownedAccounts,
     requester,
     rotateCredentials,
