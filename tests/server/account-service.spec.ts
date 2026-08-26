@@ -173,18 +173,36 @@ describe("account service — updateProfile", () => {
 
   it("refuses to rename a bot (remove + re-add is the sanctioned path)", async () => {
     const { service } = makeService();
+    // The bot's own linked owner, so this hits the rename ban specifically — not the ownership
+    // gate a non-owner would hit first.
     const result = await service.updateProfile({
       id: "sauron",
       displayName: "The Eye",
-      requesterId: "human-ann",
-      sessionNames: ["ann"],
+      requesterId: "sauron",
       authConfigured: true,
     });
     expect(result).toMatchObject({ ok: false });
     if (!result.ok) expect(result.error).toContain("can't be renamed");
   });
 
-  it("lets an authed member set a bot's timezone (matching /rotate's bot posture)", async () => {
+  // 2026-08-26: this used to read `existing.kind === "human"`, exempting every bot outright —
+  // correct back when a bot could never carry a resolved identity, stale once /claim (#546)
+  // linked one to sauron's fixture below. A bot exempted from this check is editable by ANY
+  // signed-in member with no ownership check at all — the same gap closed in rotate's
+  // participant-service.ts.
+  it("lets the bot's linked owner set its timezone", async () => {
+    const { service, store } = makeService();
+    const result = await service.updateProfile({
+      id: "sauron",
+      timezone: "America/Chicago",
+      requesterId: "sauron", // resolved via /claim's OwnerLinkStore, same shape as a human's link
+      authConfigured: true,
+    });
+    expect(result).toMatchObject({ ok: true });
+    expect(store.items.find((p) => p.id === "sauron")?.timezone).toBe("America/Chicago");
+  });
+
+  it("refuses a bot timezone edit from a member who isn't its linked owner", async () => {
     const { service, store } = makeService();
     const result = await service.updateProfile({
       id: "sauron",
@@ -193,8 +211,8 @@ describe("account service — updateProfile", () => {
       sessionNames: ["ann"],
       authConfigured: true,
     });
-    expect(result).toMatchObject({ ok: true });
-    expect(store.items.find((p) => p.id === "sauron")?.timezone).toBe("America/Chicago");
+    expect(result).toMatchObject({ ok: false });
+    expect(store.items.find((p) => p.id === "sauron")?.timezone).toBeUndefined();
   });
 
   it("validates the timezone and can clear it with an empty value", async () => {
@@ -324,16 +342,31 @@ describe("account service — removeAccount", () => {
     expect(store.items).toHaveLength(1);
   });
 
-  it("lets an authed member retire a bot with the typed-name confirmation", async () => {
+  // 2026-08-26: same gap as the updateProfile case above, sharper here — removal is destructive.
+  // Before /claim (#546) could link a bot, "any signed-in member" was the only posture available;
+  // it should have tightened the moment a bot could carry a resolved owner, and didn't.
+  it("lets the bot's linked owner retire it with the typed-name confirmation", async () => {
     const { service, store, hub } = makeService();
     const result = await service.removeAccount({
       id: "sauron",
       confirmName: "sauron", // case-insensitive on purpose — the friction is typing it, not casing
-      requesterId: "human-ann",
+      requesterId: "sauron", // resolved via /claim's OwnerLinkStore, same shape as a human's link
       authConfigured: true,
     });
     expect(result).toMatchObject({ ok: true });
     expect(store.items.map((p) => p.id)).toEqual(["human-ann"]);
     expect(hub.getState().participants.map((p) => p.id)).toEqual(["human-ann"]);
+  });
+
+  it("refuses to retire a bot from a member who isn't its linked owner", async () => {
+    const { service, store } = makeService();
+    const result = await service.removeAccount({
+      id: "sauron",
+      confirmName: "sauron",
+      requesterId: "human-ann",
+      authConfigured: true,
+    });
+    expect(result).toMatchObject({ ok: false });
+    expect(store.items.map((p) => p.id)).toEqual(["human-ann", "sauron"]);
   });
 });

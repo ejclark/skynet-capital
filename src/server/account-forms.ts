@@ -1,4 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { NavContext } from "../observatory/dashboard-shell.js";
+import { profileHref } from "../observatory/render-atoms.js";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type {
@@ -8,8 +10,12 @@ import type {
   UpdateProfileResult,
 } from "./account-service.js";
 import type { Session } from "./auth/session.js";
-import { addShell } from "./page-shell.js";
-import { handleSelfServiceForm, submitSelfServiceForm } from "./self-service-forms.js";
+import { railedShell } from "./page-shell.js";
+import {
+  handleSelfServiceForm,
+  type OwnedAccountOption,
+  submitSelfServiceForm,
+} from "./self-service-forms.js";
 
 /**
  * DAY-2 ACCOUNT FORMS — `/account` (edit your profile) and `/account/remove` (leave the board).
@@ -20,12 +26,24 @@ import { handleSelfServiceForm, submitSelfServiceForm } from "./self-service-for
 
 /** What the route layer knows about the caller and the account being edited. */
 interface AccountFormContext {
-  /** Who the caller's session resolves to (prefills the forms). */
+  /**
+   * The account this page-view is managing — whichever of the caller's owned accounts `?id=`
+   * named (validated against `ownedAccounts` by the route wiring), or the first when none did.
+   * Both forms on the page (edit, remove) act on this SAME id, so switching accounts is a real
+   * page navigation, never two forms silently disagreeing about which account is "current".
+   */
   readonly requesterId?: string;
   /** Current profile of the resolved account, for prefill. */
   readonly profile?: { readonly displayName: string; readonly timezone?: string };
+  /**
+   * Every account the caller's sign-in owns, for the account switcher — rendered only when
+   * there's more than one (Eric, 2026-08-25: "this should be a dropdown of the accounts tied to
+   * the email address").
+   */
+  readonly ownedAccounts: readonly OwnedAccountOption[];
   /** Legacy `?key=` password, propagated into form actions and links. */
   readonly key: string;
+  readonly nav: NavContext;
 }
 
 /**
@@ -75,19 +93,23 @@ export async function handleAccountRoute(
   options: {
     readonly admin: AccountAdmin;
     readonly requesterId: string | undefined;
+    readonly ownedAccounts: readonly OwnedAccountOption[];
     readonly session: Session | undefined;
     readonly authConfigured: boolean;
     readonly key: string;
+    readonly nav: NavContext;
   },
 ): Promise<void> {
-  const { admin, requesterId, authConfigured, key } = options;
+  const { admin, requesterId, ownedAccounts, authConfigured, key, nav } = options;
   const identity = {
     ...(requesterId ? { requesterId } : {}),
     authConfigured,
   };
   const ctx: AccountFormContext = {
     ...(requesterId ? { requesterId, profile: admin.profileFor(requesterId) } : {}),
+    ownedAccounts,
     key,
+    nav,
   };
   const deps: AccountRouteDeps = {
     updateProfile: (input) =>
@@ -129,7 +151,7 @@ async function handleAccountSettings(
         ...(timezone === null || timezone === KEEP ? {} : { timezone }),
       });
     },
-    (result) => updateResultHtml(result, ctx.key),
+    (result) => updateResultHtml(result, ctx.key, ctx.nav),
   );
 }
 
@@ -159,7 +181,7 @@ async function handleAccountRemove(
         id: form.get("id") ?? "",
         confirmName: form.get("confirmName") ?? "",
       }),
-    (result) => removeResultHtml(result, ctx.key),
+    (result) => removeResultHtml(result, ctx.key, ctx.nav),
   );
 }
 
@@ -175,18 +197,50 @@ function timezoneOptions(current: string | undefined): string {
   return `<option value="${KEEP}">— keep current setting —</option><option value="">No preference — show UTC-relative</option>${zones}`;
 }
 
+/**
+ * The switcher between the caller's own accounts — rendered only when there's more than one to
+ * pick from. A real navigation (links to `/account?id=<id>`), never an inline form field, so the
+ * profile-edit form and the remove form below always agree on the same account: switching is a
+ * page load, not a value the two forms could silently drift apart on.
+ */
+function accountSwitcher(ctx: AccountFormContext): string {
+  if (ctx.ownedAccounts.length <= 1) return "";
+  const pills = ctx.ownedAccounts
+    .map((a) =>
+      a.id === ctx.requesterId
+        ? `<b>${escapeHtml(a.displayName)}</b>`
+        : `<a href="/account?id=${encodeURIComponent(a.id)}${ctx.key ? `&key=${encodeURIComponent(ctx.key)}` : ""}">${escapeHtml(a.displayName)}</a>`,
+    )
+    .join(" · ");
+  return `<p class="note" style="margin:0 0 18px">Managing: ${pills}</p>`;
+}
+
+/** A link to the bot's own desk Settings tab (suspend/resume) — the OTHER "manage this account"
+ *  surface, for the accounts that have one (Eric, 2026-08-25: suspend "seems like managing the
+ *  account type behavior... all the account related actions should live under one roof"). They
+ *  stay two pages — Mission Control is the OWNER's fleet-wide switchboard, a different tier than
+ *  this page's session-linked self-service — but nothing should hide the way between them. */
+function botControlsLink(ctx: AccountFormContext): string {
+  const account = ctx.ownedAccounts.find((a) => a.id === ctx.requesterId);
+  if (account?.kind !== "bot") return "";
+  return `<p class="note">This is a bot account — its autonomous-trading suspend/resume switch lives on
+  <a href="${profileHref(account.id)}?tab=settings">its Settings tab</a>, not here.</p>`;
+}
+
 function settingsFormHtml(ctx: AccountFormContext): string {
   const key = ctx.key;
   const id = ctx.requesterId ?? "";
   const idField = ctx.requesterId
     ? `<label>Account id <small>— your account, from your session</small><input name="id" required readonly value="${escapeHtml(id)}"></label>`
     : `<label>Account id <small>— exactly as shown on your profile URL, e.g. <code>human-uncle_joe</code></small><input name="id" required placeholder="human-uncle_joe"></label>`;
-  return addShell(
+  return railedShell(
     "Manage account — Skynet Capital",
+    ctx.nav,
     `<h1>Manage your account</h1>
-<p class="lede">Change how your account appears on the board, rotate a regenerated Alpaca key, or
-remove the account entirely. Your Alpaca <b>paper</b> account itself is never touched — this only
-changes what Skynet Capital stores and shows.</p>
+${accountSwitcher(ctx)}
+<p class="lede">Change how this account appears on the board — its display name and time zone — or
+remove it from the board entirely. Your Alpaca <b>paper</b> account itself is never touched by
+anything on this page; this only changes what Skynet Capital stores and shows.</p>
 <form method="post" action="/account${suffix(key)}">
   ${idField}
   <label>Display name <small>— leave blank to keep the current one</small><input name="displayName" placeholder="${escapeHtml(ctx.profile?.displayName ?? "e.g. Uncle Joe")}"></label>
@@ -197,7 +251,8 @@ changes what Skynet Capital stores and shows.</p>
 </form>
 <p class="note">Renames stay linked to your sign-in: the name must match your sign-in name or your
 email's local part, so the board keeps recognizing you. Bots can't be renamed — remove and re-add.</p>
-<p class="note">Regenerated your Alpaca key? <a href="/rotate${suffix(key)}">Rotate your credentials</a> — that swaps the key and changes nothing else.</p>
+<p class="note">Regenerated your Alpaca key? <a href="/rotate${suffix(key)}">Rotate your credentials</a> — that swaps the key and changes nothing else on this page.</p>
+${botControlsLink(ctx)}
 <div style="margin-top:34px;padding:18px;border:1px solid color-mix(in srgb,var(--neg) 55%,var(--border));border-radius:11px">
   <h1 style="font-size:16px;color:var(--neg)">Remove this account</h1>
   <p class="lede" style="margin-bottom:8px;font-size:13px">Takes the account off the board and deletes its stored
@@ -217,7 +272,7 @@ email's local part, so the board keeps recognizing you. Bots can't be renamed �
   );
 }
 
-function updateResultHtml(result: UpdateProfileResult, key: string): string {
+function updateResultHtml(result: UpdateProfileResult, key: string, nav: NavContext): string {
   const inner = result.ok
     ? `<div class="res-icon">✅</div><h1>Profile updated</h1>
 <p class="lede"><b>${escapeHtml(result.displayName)}</b> is showing the new details now.</p>
@@ -225,10 +280,10 @@ function updateResultHtml(result: UpdateProfileResult, key: string): string {
     : `<h1>Couldn't update that account</h1>
 <p class="lede">${escapeHtml(result.error)}</p>
 <p class="backrow"><a href="/account${suffix(key)}">← Try again</a> · <a href="/${suffix(key)}">Back to the board</a></p>`;
-  return addShell("Skynet Capital", inner);
+  return railedShell("Skynet Capital", nav, inner);
 }
 
-function removeResultHtml(result: RemoveAccountResult, key: string): string {
+function removeResultHtml(result: RemoveAccountResult, key: string, nav: NavContext): string {
   const inner = result.ok
     ? `<div class="res-icon">👋</div><h1>Account removed</h1>
 <p class="lede"><b>${escapeHtml(result.displayName)}</b> is off the board and the stored credentials are
@@ -238,5 +293,5 @@ your recorded history picks back up.</p>
     : `<h1>Couldn't remove that account</h1>
 <p class="lede">${escapeHtml(result.error)}</p>
 <p class="backrow"><a href="/account${suffix(key)}">← Try again</a> · <a href="/${suffix(key)}">Back to the board</a></p>`;
-  return addShell("Skynet Capital", inner);
+  return railedShell("Skynet Capital", nav, inner);
 }

@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import {
   type AccountAdmin,
   handleAccountRoute,
@@ -7,6 +8,8 @@ import {
 } from "../../src/server/account-forms.js";
 import type { UpdateProfileInput } from "../../src/server/account-service.js";
 import type { Session } from "../../src/server/auth/session.js";
+
+const nav: NavContext = { active: "add", canAdd: true, authed: true };
 
 /**
  * Same posture as self-service-forms.spec.ts: real HTTP over a real socket, a bare inline
@@ -22,9 +25,11 @@ async function withRoute(
     const path = (req.url ?? "/").split("?")[0] ?? "/";
     void handleAccountRoute(req, res, path, req.method ?? "GET", {
       requesterId: undefined,
+      ownedAccounts: [],
       session: undefined,
       authConfigured: false,
       key: "",
+      nav,
       ...options,
     });
   });

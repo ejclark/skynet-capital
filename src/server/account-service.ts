@@ -14,8 +14,14 @@ import type { ObservatoryHub } from "./observatory-hub.js";
  * The authorization posture here is STRICTER than /rotate's, on purpose. docs/LESSONS.md
  * (2026-08-11) is exactly this shape of miss ("checked the target existed, not that the caller
  * had a right to touch it"), so:
- *  - a human account's profile may only be edited by that same resolved identity (hard —
- *    an unresolved session is a refusal, matching /trade's posture, not /rotate's);
+ *  - an account's profile may only be edited by that same resolved identity (hard — an
+ *    unresolved session is a refusal, matching /trade's posture, not /rotate's) — a HUMAN or a
+ *    BOT: a bot could never carry that resolved identity before `/claim` (#546) added
+ *    owner-linking for any account kind, so the check was human-only by necessity, not by
+ *    design; that necessity is gone, and a bot exempted from it is now editable AND REMOVABLE by
+ *    literally any signed-in member with no check at all — worse than the convenience it kept
+ *    (2026-08-26: closed alongside the multi-account picker, which is what made an owner-linked
+ *    bot a normal, not hypothetical, target);
  *  - the rename-must-match-session-name rule below predates the owner link (#466): the
  *    session→account link is now `Participant.ownerEmail`, immutable here, so a rename can no
  *    longer forge that link — the rule is now a stricter-than-needed legacy guard, kept as-is
@@ -111,7 +117,7 @@ function requireEditable(
   if (!existing) {
     return { error: NOT_IN_STORE };
   }
-  if (input.authConfigured && existing.kind === "human" && input.requesterId !== id) {
+  if (input.authConfigured && input.requesterId !== id) {
     return {
       error:
         verb === "removal"
