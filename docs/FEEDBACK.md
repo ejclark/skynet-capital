@@ -27,10 +27,11 @@ Least privilege: a token that can only write issues on this one repo.
 7. **Generate token** and copy it — GitHub shows it once. It looks like `github_pat_…`.
 
 Optional: generate the token from a dedicated bot GitHub account so issues are attributed to the
-bot rather than you. Not required — each issue carries a pseudonymous submitter footer
-("Submitted from the app by member `<opaque id>`"). The repo is public, so the footer never
-contains a member's name or email — only a stable opaque marker the app can correlate
-(`opaqueMemberId` in `src/server/feedback-service.ts`; the privacy spec pins this).
+bot rather than you. Not required — each issue carries a submitter footer
+("Submitted from the app by **Tony** (member `<opaque id>`)"). The repo is public, so the footer
+never contains a member's email — only their OAuth profile name (may or may not be their real
+name) alongside a stable opaque marker the app can correlate even across a future rename
+(`opaqueMemberId` in `src/server/feedback-attribution.ts`; the privacy spec pins the email half).
 
 ### 2. Give the token to the app
 
@@ -54,8 +55,24 @@ in code — only as a host secret, exactly like the Alpaca keys.
 2. Sign in, open `/feedback`, and submit one **Bug**, one **Feature**, and one **Idea**.
 3. Confirm three issues appear on `ejclark/skynet-capital` — each with the right labels
    (`bug`/`enhancement`/`idea` + `feedback`), a `[bug]`/`[enhancement]`/`[idea]` title tag, and the
-   pseudonymous submitter footer (opaque id, never a name or email). The success page links each
-   filed issue so the member can follow its progress.
+   submitter footer (profile name + opaque id — the id alone if the OAuth profile has no name, and
+   never an email). The success page links each filed issue so the member can follow its progress.
+4. Every issue also carries a `member-<opaque id>` label (`memberLabelFor` in
+   `src/server/feedback-attribution.ts`) — every issue here is filed by the same bot token, so
+   GitHub's own `author:` search can't isolate one member's items; `label:member-<id>` (or clicking
+   the label) can, the same way `author:` would on a normal repo.
+5. Back on `/feedback`, "Your recent feedback" shows a live status badge per filing (In the queue ·
+   Needs your input · Needs Eric's call · First slice shipped · Shipped) once
+   `SKYNET_FEEDBACK_GITHUB_TOKEN` is set — `resolveFeedbackStatus` in `src/server/feedback-status.ts`
+   reads it straight off the issue's current state and triage label, so there's nothing local to
+   keep in sync across a deploy.
+6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
+   they already filed without leaving the app. It posts a GitHub comment (never edits the original
+   issue body, which the build lane parses) and re-triggers a build by cycling the `feedback`
+   label, the same retry path already documented in `scripts/postmaster.mjs`. Deliberately routed
+   through this structured, envelope-bound lane rather than the free-form `claude.yml`
+   comment-steering lane — see `src/server/feedback-followup.ts` for why. Ownership is checked
+   against the member's own logged filings before anything posts.
 
 ## What the lane will build
 

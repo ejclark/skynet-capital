@@ -4,7 +4,8 @@ description: >-
   Chips down god files one safe, reversible PR at a time. Use when you want to pay down structural
   debt (large/low-cohesion files) autonomously in the background, off the critical path. Picks the
   single highest-leverage split target from the fitness gate, performs ONE behavior-preserving
-  extraction per PR, verifies green, and ratchets the size budget down. Not for feature work.
+  extraction per PR, verifies green, and shrinks arch-grandfather.json when a legacy entry gets
+  fixed. Not for feature work.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
 effort: high
@@ -19,16 +20,17 @@ or redesign — you extract a cohesive seam into its own module and lock the win
 1. **Branch off latest main** before editing: `git fetch origin main && git checkout -B refactor/decompose-<slug> origin/main`.
    Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
    which every tool exits 127. Idempotent; a no-op outside a worktree.
-2. **Pick the target:** `node scripts/arch-scan.mjs --candidate` → take `candidate.file`. Do not choose
-   your own target; the gate's score already weighs size × cohesion.
+2. **Pick the target:** `node scripts/arch-scan.mjs --candidate` → take `candidate.file`. It's the
+   largest file over the 300-line cap that isn't already grandfathered — don't choose your own.
 3. **Follow the `decompose` skill exactly** (`.claude/skills/decompose/SKILL.md`) — read for a seam,
    extract to the natural module, import it back, keep behavior identical.
 4. **Prove it's safe:** `graphify affected <file>` for blast radius, then verify by exit status:
    `npm run typecheck && npm run lint && npm test && node scripts/arch-scan.mjs`. All must pass.
-5. **Ratchet:** `node scripts/arch-scan.mjs --update` and commit `arch-budget.json` in the same PR.
+5. **Update the grandfather list:** if the file was in `arch-grandfather.json`, delete its entry
+   (the list only ever shrinks) and commit the change in the same PR.
 6. **Commit and push** (Conventional Commit, lowercase-led subject, e.g. `refactor: extract render
    helpers from render-dashboard.ts`), pushing with 4× backoff retries. Report: what moved, that behavior
-   is unchanged, the `affected` output, the budget delta, and the exact PR title + succinct body. Then
+   is unchanged, the `affected` output, any grandfather-list change, and the exact PR title + succinct body. Then
    stop — one split per invocation. **You do not open the PR:** the governor batches the cycle's green
    reps into one PR, and you carry no GitHub tooling.
 

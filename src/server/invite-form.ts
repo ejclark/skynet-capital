@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { NavContext } from "../observatory/dashboard-shell.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { AllowlistEntry, AllowlistStore } from "./auth/allowlist-store.js";
-import { brandedShell } from "./page-shell.js";
+import { railedShell } from "./page-shell.js";
 import { handleSelfServiceForm, requireOwner } from "./self-service-forms.js";
 
 /**
@@ -31,8 +32,14 @@ export async function handleInvite(
   method: string,
   viewerEmail: string | undefined,
   deps: InviteDeps,
+  nav: NavContext,
 ): Promise<void> {
-  const owner = requireOwner(res, viewerEmail, deps.isOwner, brandedShell);
+  // Rails on every page, refusal included (Eric, 2026-08-25, repeated: the app template applies
+  // everywhere) — a signed-in non-owner refused this page still gets the drawer to navigate away
+  // with, not a dead end.
+  const owner = requireOwner(res, viewerEmail, deps.isOwner, (title, inner) =>
+    railedShell(title, nav, inner),
+  );
   if (!owner) return;
 
   // Same GET-serves-a-form / POST-parses-it shape as /add and /rotate, so it reuses their
@@ -43,9 +50,9 @@ export async function handleInvite(
     req,
     res,
     method,
-    () => brandedShell("Guest list", list()),
+    () => railedShell("Guest list", nav, list()),
     (form) => Promise.resolve(invite(form, owner, deps)),
-    (result) => brandedShell("Guest list", result.note + list()),
+    (result) => railedShell("Guest list", nav, result.note + list()),
   );
 }
 
@@ -84,16 +91,21 @@ function invite(
   }
 }
 
+/** The "have they joined" column — the observability field this view exists for. */
+function joinedCell(joinedAt: string | undefined): string {
+  return joinedAt ? `Joined ${escapeHtml(joinedAt.slice(0, 10))}` : "Not yet";
+}
+
 function listHtml(entries: readonly AllowlistEntry[], canWrite: boolean): string {
   const rows = entries.length
     ? entries
         .map(
           (e) =>
             `<tr><td>${escapeHtml(e.value)}</td><td>${escapeHtml(e.addedAt.slice(0, 10))}</td>` +
-            `<td>${escapeHtml(e.addedBy)}</td></tr>`,
+            `<td>${escapeHtml(e.addedBy)}</td><td>${joinedCell(e.joinedAt)}</td></tr>`,
         )
         .join("")
-    : `<tr><td colspan="3">Nobody invited yet — the owners on <code>SKYNET_ALLOWED_EMAILS</code> can always sign in.</td></tr>`;
+    : `<tr><td colspan="4">Nobody invited yet — the owners on <code>SKYNET_ALLOWED_EMAILS</code> can always sign in.</td></tr>`;
 
   const form = canWrite
     ? `<form method="post" action="/invite">
@@ -106,6 +118,6 @@ function listHtml(entries: readonly AllowlistEntry[], canWrite: boolean): string
 
   return `<h1>Guest list</h1>
 <p>Anyone here can sign in. Owners are configured on the host and aren't listed below.</p>
-<table><thead><tr><th>Email</th><th>Added</th><th>By</th></tr></thead><tbody>${rows}</tbody></table>
+<table><thead><tr><th>Email</th><th>Added</th><th>By</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
 ${form}`;
 }

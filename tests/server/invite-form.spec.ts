@@ -1,7 +1,10 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import type { AllowlistEntry, AllowlistStore } from "../../src/server/auth/allowlist-store.js";
 import { handleInvite } from "../../src/server/invite-form.js";
+
+const nav: NavContext = { active: "add", canAdd: true, authed: true };
 
 /**
  * `/invite` — the owner's guest list. Exercised over a real socket, like the other route specs.
@@ -27,6 +30,12 @@ function memoryStore(seed: AllowlistEntry[] = []): AllowlistStore & { added: str
       return true;
     },
     remove: () => false,
+    markJoined(value, at) {
+      const entry = entries.find((e) => e.value === value);
+      if (!entry || entry.joinedAt) return false;
+      entries[entries.indexOf(entry)] = { ...entry, joinedAt: at };
+      return true;
+    },
   };
 }
 
@@ -38,11 +47,18 @@ async function withInvite(
   run: (base: string) => Promise<void>,
 ): Promise<void> {
   const server: Server = createServer((req, res) => {
-    void handleInvite(req, res, req.method ?? "GET", viewer, {
-      store,
-      isOwner: (email) => OWNERS.has(email),
-      now: () => new Date("2026-08-14T12:00:00.000Z"),
-    });
+    void handleInvite(
+      req,
+      res,
+      req.method ?? "GET",
+      viewer,
+      {
+        store,
+        isOwner: (email) => OWNERS.has(email),
+        now: () => new Date("2026-08-14T12:00:00.000Z"),
+      },
+      nav,
+    );
   });
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
@@ -69,6 +85,51 @@ describe("handleInvite", () => {
       const body = await res.text();
       expect(body).toContain("guest@example.com");
       expect(body).toContain('name="email"');
+    });
+  });
+
+  // 2026-08-25 (Eric: "/invite ... continue[s] to ignore page templates and remove the rails"):
+  // the owner's real content renders inside the app shell now, not a bare one-card page.
+  it("renders inside the app shell — the drawer rail, not a bare card", async () => {
+    const store = memoryStore();
+    await withInvite("owner@example.com", store, async (base) => {
+      const body = await (await fetch(base)).text();
+      expect(body).toContain('<aside class="drawer"');
+      expect(body).toContain("Standings");
+    });
+  });
+
+  // 2026-08-26 (Eric: "the view ignores the page template.. only the 12th gd time..."): no
+  // exceptions, including refusals — a signed-in guest still gets the rail to navigate away with.
+  it("keeps the rail on the 403 refusal — a guest can still navigate away from it", async () => {
+    const store = memoryStore();
+    await withInvite("guest@example.com", store, async (base) => {
+      const body = await (await fetch(base)).text();
+      expect(body).toContain('<aside class="drawer"');
+      expect(body).toContain("isn't available");
+    });
+  });
+
+  it("shows joined status for each guest — joined vs. not yet", async () => {
+    const store = memoryStore([
+      {
+        value: "joined@example.com",
+        kind: "email",
+        addedAt: "2026-08-01T00:00:00.000Z",
+        addedBy: "owner@example.com",
+        joinedAt: "2026-08-05T00:00:00.000Z",
+      },
+      {
+        value: "pending@example.com",
+        kind: "email",
+        addedAt: "2026-08-01T00:00:00.000Z",
+        addedBy: "owner@example.com",
+      },
+    ]);
+    await withInvite("owner@example.com", store, async (base) => {
+      const body = await (await fetch(base)).text();
+      expect(body).toContain("Joined 2026-08-05");
+      expect(body).toContain("Not yet");
     });
   });
 

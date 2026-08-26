@@ -1,10 +1,14 @@
 /**
  * THE RESEARCH LAB (`/research`) — the observatory's living research surface
  * (docs/plans/research-lab.md slice 1, sharpened 2026-08-17: symbol-first pages +
- * calendar↔research links).
+ * calendar↔research links; folded with the event horizon 2026-08-25, "what's coming, and what do
+ * we think about it?" as one page — the old standalone `/calendar` view is gone, absorbed here as
+ * a fourth shape).
  *
- * Three pages, all pure renderers over data the server assembles (research-service.ts):
- *   /research               — the shelf: symbol cards, event ledgers, studies
+ * Four pages, all pure renderers over data the server assembles (research-service.ts /
+ * market-events.ts):
+ *   /research               — the shelf: symbol cards, event ledgers, studies, AND the event
+ *                             horizon (proximity-banded agenda + month-grid navigator)
  *   /research/symbol/:SYMBOL      — a symbol's LIVING page: its upcoming events, ledgers, studies,
  *                             and the current stance excerpted VERBATIM from the nearest ledger
  *                             (an excerpt is honest; a regenerated summary could drift)
@@ -12,18 +16,24 @@
  *
  * Honesty invariants: every page carries the standing educational banner; estimate/confirmed
  * labels arrive inside the docs themselves and render untouched; ledgers name their
- * `Last assessed` date so staleness is visible, never hidden.
+ * `Last assessed` date so staleness is visible, never hidden. The agenda is the primary register —
+ * for options, days-until matters more than date position — and the month grid
+ * (`calendar-widget.ts`) rides alongside as a NAVIGATOR, never a filter: `?month=` moves only the
+ * widget, the agenda always renders every upcoming event.
  */
-import { daysUntil } from "../domain/earnings-calendar.js";
-import type { MarketEvent } from "../domain/market-events.js";
+import { daysUntil, type EarningsPrint } from "../domain/earnings-calendar.js";
+import { allEvents, type MarketEvent } from "../domain/market-events.js";
 import type {
+  EventCall,
   RenderedDoc,
   ResearchDoc,
   ResearchShelf,
   SymbolResearch,
 } from "../server/research-service.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import { MG_STYLE, monthGrid, resolveMonth } from "./calendar-widget.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
+import { AGENDA_STYLE, renderAgenda, shortDay } from "./event-agenda.js";
 import { countdown, tile } from "./render-atoms.js";
 
 export interface ResearchShelfOptions {
@@ -32,6 +42,15 @@ export interface ResearchShelfOptions {
   readonly shelf: ResearchShelf;
   /** Symbols that have a living page, with their next upcoming event (if any) for the card. */
   readonly symbols: readonly { readonly symbol: string; readonly next?: MarketEvent }[];
+  /** Widget month ("YYYY-MM", the `?month=` param) — validated/clamped by `resolveMonth`. */
+  readonly month?: string;
+  /** Injectable tables for specs; default to the real checked-in calendar. */
+  readonly events?: readonly MarketEvent[];
+  readonly prints?: readonly EarningsPrint[];
+  /** Event ids that have a research ledger — those rows link to /research/events/<id>. */
+  readonly researchIds?: ReadonlySet<string>;
+  /** Event id → the verbatim call its ledger reached, promoted onto the agenda row. */
+  readonly calls?: ReadonlyMap<string, EventCall>;
 }
 
 export interface ResearchDocOptions {
@@ -61,6 +80,28 @@ function ledgerLine(d: ResearchDoc): string {
   return `<li><a href="/research/${escapeHtml(d.slug)}">${escapeHtml(d.title)}</a>${assessed}</li>`;
 }
 
+/** The horizon summary row: next event, this week's count, next print, and researched breadth. */
+function horizonTiles(
+  upcoming: readonly MarketEvent[],
+  asOfIso: string,
+  symbolCount: number,
+): string {
+  const next = upcoming[0];
+  const weekCount = upcoming.filter((e) => daysUntil(asOfIso, e.date) <= 7).length;
+  const nextPrint = upcoming.find((e) => e.kind === "earnings");
+  const pair = (e: MarketEvent | undefined, label: (e: MarketEvent) => string): string =>
+    e ? `${label(e)} <span class="unit">${shortDay(e.date)}</span>` : "—";
+  return `<div class="summary">
+    ${tile("Next event", next ? countdown(daysUntil(asOfIso, next.date)) : "—", { lead: true })}
+    ${tile("Next 7 days", `${weekCount} <span class="unit">event${weekCount === 1 ? "" : "s"}</span>`)}
+    ${tile(
+      "Next print",
+      pair(nextPrint, (e) => escapeHtml(e.symbols[0] ?? "")),
+    )}
+    ${tile("Researched symbols", String(symbolCount))}
+  </div>`;
+}
+
 function eventLine(e: MarketEvent, asOfIso: string, hasLedger: boolean): string {
   const days = daysUntil(asOfIso, e.date);
   const link = hasLedger
@@ -75,6 +116,9 @@ function eventLine(e: MarketEvent, asOfIso: string, hasLedger: boolean): string 
 
 export function renderResearchShelfBody(options: ResearchShelfOptions): string {
   const { shelf, symbols, asOfIso } = options;
+  const upcoming = allEvents(asOfIso, options.events, options.prints);
+  const researchIds = options.researchIds ?? new Set<string>();
+  const month = resolveMonth(options.month, asOfIso, upcoming);
   const cards = symbols
     .map(({ symbol, next }) => {
       const when = next
@@ -83,13 +127,19 @@ export function renderResearchShelfBody(options: ResearchShelfOptions): string {
       return `<a class="rs-card" href="/research/symbol/${escapeHtml(symbol)}"><span class="rs-cardsym">${escapeHtml(symbol)}</span>${when}</a>`;
     })
     .join("\n");
-  const content = `${RS_STYLE}
-  <div class="research">
+  // ORDER IS THE POINT (Eric, 2026-08-25): the agenda is the actionable register, so it leads —
+  // what to do this week, each row carrying the call its research reached. The document lists are
+  // an archive you go looking for, so they follow.
+  const content = `${RS_STYLE}${AGENDA_STYLE}${MG_STYLE}
+  <div class="cal-layout">
+  <div class="research rs-wide">
     <div class="ladder-head"><div>
       <h1 class="view-title">Research lab</h1>
-      <p class="view-sub">The house research, live on the site: per-symbol living pages, event assessment ledgers on an adaptive cadence, and the red-teamed studies they rest on.</p>
+      <p class="view-sub">What's coming, and what we think about it: the event horizon first, each date carrying the call its research reached — then per-symbol living pages, the assessment ledgers behind those calls, and the red-teamed studies underneath. Confirmed dates key action; estimates only widen caution.</p>
     </div></div>
     ${BANNER}
+    ${horizonTiles(upcoming, asOfIso, symbols.length)}
+    ${renderAgenda(upcoming, asOfIso, { researchIds, calls: options.calls })}
     <section class="rs-sec"><h2>Symbols</h2><div class="rs-cards">${cards || `<p class="rs-empty">No researched symbols yet.</p>`}</div></section>
     <section class="rs-sec"><h2>Event ledgers</h2>
       <p class="rs-sub">One living document per dated market event — initial research, then append-only reassessment rows until the event passes and is scored.</p>
@@ -98,7 +148,9 @@ export function renderResearchShelfBody(options: ResearchShelfOptions): string {
       <p class="rs-sub">The red-teamed foundations: instrument studies, the forward-test register, the kill list.</p>
       <ul class="rs-list">${shelf.studies.map(ledgerLine).join("\n")}</ul></section>
   </div>
-  <footer class="obs-foot">Git is the CMS — every page here is a reviewed, versioned document. Educational · paper trading only.</footer>`;
+  <aside class="cal-aside">${monthGrid(month, asOfIso, upcoming)}</aside>
+  </div>
+  <footer class="obs-foot">Git is the CMS — every page here is a reviewed, versioned document. Dates hand-verified against primary sources (BLS, the Fed, company IR) and reviewed in diffs — hover any event for its audit trail. Educational · paper trading only.</footer>`;
   return renderShell(options.nav, content, asOfIso);
 }
 
@@ -163,6 +215,10 @@ export function renderSymbolResearchBody(options: SymbolResearchOptions): string
 /** Research styles — kept out of dashboard-shell.ts (size budget doctrine, like desk-style.ts). */
 const RS_STYLE = `<style>
   .research{ display:flex; flex-direction:column; gap:14px; max-width:var(--col-read); }
+  /* The merged shelf carries the wider event horizon alongside the reading sections, so it takes
+     the calendar's former width rather than the narrower reading cap the doc/symbol pages keep. */
+  .research.rs-wide{ max-width:var(--col-wide); }
+  .research .summary{ margin-bottom:4px; }
   .research a, .research .md-doc a{ color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent); }
   .research a:hover{ border-bottom-color:var(--accent); }
   .rs-banner{ font-size:12px; color:var(--muted); border:1px dashed var(--border); border-radius:10px; padding:8px 12px; margin:0; }
@@ -187,7 +243,15 @@ const RS_STYLE = `<style>
   .rs-none{ font-size:11.5px; color:var(--muted); font-style:italic; }
   .rs-empty{ font-size:13px; color:var(--muted); font-style:italic; margin:4px 0; }
   .rs-stance{ border-left:2px solid var(--accent); padding-left:14px; }
-  .rs-glance{ background:color-mix(in srgb,var(--accent) 8%,var(--surface)); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:12px 18px 6px; margin:2px 0 4px; }
+  /* The decision surface earns more width than the reading column: it carries the five-column call
+     sheet (call · confidence · why · dated falsifier), and squeezing that into 80ch is what made
+     the old header hard to scan. The prose below keeps the narrower measure. */
+  .rs-glance{ background:color-mix(in srgb,var(--accent) 8%,var(--surface)); border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:14px; padding:12px 18px 6px; margin:2px 0 4px; max-width:100%; }
+  /* Both classes are on the same element, so this out-specifies .md-doc's 80ch reading cap. */
+  .rs-glance.md-doc{ max-width:none; }
+  .rs-glance table{ table-layout:auto; width:100%; }
+  .rs-glance td:nth-child(3){ font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+  .rs-glance th:last-child, .rs-glance td:last-child{ color:var(--muted); }
   .rs-glance-tag{ font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:2px; }
   .rs-glance > p:first-of-type{ margin-top:4px; }
   .rs-glance strong{ color:var(--text); }
@@ -208,4 +272,21 @@ const RS_STYLE = `<style>
   .md-doc th{ font-family:var(--mono); font-size:11px; letter-spacing:.04em; }
   .md-doc blockquote{ margin:8px 0; padding:2px 14px; border-left:2px solid var(--border); color:var(--muted); }
   .md-doc ul, .md-doc ol{ padding-left:22px; margin:8px 0; }
+
+  /* Reader-side folds — the method and the receipts are one click away, never the wall you land on.
+     The content is unchanged and fully present; only its default disclosure differs. */
+  .rs-fold{ border:1px solid var(--border); border-radius:10px; margin:10px 0; background:color-mix(in srgb,var(--border) 12%,transparent); }
+  .rs-fold > summary{ cursor:pointer; list-style:none; padding:9px 14px; display:flex; align-items:baseline;
+    gap:10px; flex-wrap:wrap; border-radius:10px; }
+  .rs-fold > summary::-webkit-details-marker{ display:none; }
+  .rs-fold > summary::before{ content:"▸"; color:var(--accent); font-size:11px; line-height:1.4; }
+  .rs-fold[open] > summary::before{ content:"▾"; }
+  .rs-fold > summary:hover{ background:color-mix(in srgb,var(--accent) 7%,transparent); }
+  .rs-fold > summary:focus-visible{ outline:2px solid var(--accent); outline-offset:-2px; }
+  .rs-foldname{ font-size:13.5px; font-weight:700; color:var(--text); }
+  .rs-foldsize{ font-family:var(--mono); font-size:10px; letter-spacing:.06em; color:var(--muted); }
+  .rs-fold[open] > summary{ border-bottom:1px solid var(--border); border-radius:10px 10px 0 0; }
+  .rs-fold > :not(summary){ padding:0 14px; }
+  .rs-fold > :last-child{ padding-bottom:10px; }
+
 </style>`;

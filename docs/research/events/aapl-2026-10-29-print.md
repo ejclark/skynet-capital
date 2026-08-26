@@ -1,7 +1,31 @@
 # AAPL earnings print — aapl-2026-10-29-print
 
 **Kind:** earnings · **Date:** 2026-10-29 (estimate, 8-K cadence) · **Impact:** critical
-**Last assessed:** 2026-08-17
+**Last assessed:** 2026-08-24
+
+## At a glance
+
+**TL;DR.** There is no AAPL trade here, and that is the finding — the sweep killed every
+positioning-shaped playbook on this symbol, so the print is a **guards-plus-observation date**, not
+an opportunity. The pre-print window is measurably *worse* than a random 20-day window (+1.27%/win
+57% against the era's +2.20%/win 64%), and holding the print unhedged is a coin flip with a fat left
+tail (gap mean +0.33%, win 50%, p10 −3.39%). Date is an **estimate** (8-K cadence, D-65) — that only
+widens the flat window, it never licenses an entry. The one live interest is FT-5, at zero size.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** — no pre-print play exists | High | S1, the late run-up, S3 and S4 are all killed on AAPL; the pre-print window underperforms its own base rate | ≥3 new prints clearing the sweep's bars for a killed hypothesis (earliest read ~2027-07) |
+| This week | **Nothing to do** — the date is unconfirmed | High | At D-65 no consensus or implied move is findable, and an estimated date never keys action | An IR announcement confirming or moving the **2026-10-29** print (notice window ~2026-10-01) |
+| This month | **Watch the date, not the trade** | Medium | The only dated catalyst before the print is the iPhone 18 event, still rumour-only | Apple confirms an event date away from the rumoured **2026-09-09** |
+| This quarter | **Flat by D-1 (S2); FT-5 only, zero size** | Medium | The gap is a coin flip with a −3.39% p10 — nothing pays for holding it; post-print drift is the only untested edge left | FT-5 vs-QQQ excess ≤ 0 or win ~50% over ~6 prints, scored after D+11 (~2026-11-16) |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Never** — hold unhedged AAPL shares through the print for the gap (killed: win 50%, p10 −3.39%).
+- **Never** — open a pre-print position off the estimated date; date-keyed action needs `confirmed`.
+- **FT-5 only** — long close D+1 → close D+11, zero size, scored from re-run instrument data.
+- **Watch (dated)** — IR date confirmation ~**2026-10-01** · iPhone 18 event rumoured **2026-09-09** · FOMC **2026-10-28**, landing D-1 of the estimated print.
+- **Re-opens the no-play only if** — ≥3 new prints show a repriced regime for a killed hypothesis.
 
 ## Initial research
 
@@ -127,6 +151,7 @@ scored from re-run instrument data after D+11.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-17 | D-73 | Initial research banked (above); both instruments fresh (cache busted today), event list blind to the 07-30 print (known guard debt). Adjacency: **peer prints** — none since 08-15; next NVDA 08-26 (confirmed) · MRVL 08-27 (confirmed) · AVGO 09-02 (announced, a day before the calendar's 09-03 estimate — already proposed via the NVDA doc's same-day row). **Macro** — none since 08-15 (weekend); next CPI 09-11, FOMC 09-16 (both on calendar); the 10-28 FOMC (confirmed) lands D-1 before this estimated print — compound-risk cluster with GOOG/META (est. 10-28) and AMZN (est. 10-29). **VIX** — 14.56 Fri 08-15, a 2026 low, but SKEW +6.6% m/m and Brent +6%/wk: calm index, rising tail-hedge demand. **Geopolitical** — 10% tariffs on 60 countries in effect since 07-24, no exemptions; AAPL guided ~$1.1B tariff cost into this quarter after a ~$2.19B refund flattered the July beat. **Event tape** (date **estimate**) — no consensus/implied move findable at D-73; stock −10% off the 07-28 ATH ($339.79→$305.93 by 08-14) on the weak-guide reaction, logged as FT-5 context only. Dated find: iPhone 18 event rumored Wed **09-09** (announcement expected ~08-26) — proposed as an estimate event. | — (stance set) | 2026-08-24 (critical, 61+d band: every 7d) |
+| 2026-08-24 | D-66 | Adjacency sweep. Event tape: iPhone 18 event date unchanged at rumored **9/9**, still no official Apple announcement this session (Forbes/9to5mac/MacRumors coverage through 8/22 all still frame it as the leading prediction, invitation itself predicted ~8/26, two days from now) — stays proposed-estimate, not upgraded. **New fundamental thread since D-73:** press (tradingkey, checked 8/24) now flags 3nm-chip-supply shortages and rising memory prices constraining iPhone/Mac/iPad shipment volumes into Q4 — a supply-side risk distinct from the tariff-cost thread the D-73 row logged; worth carrying into the October print's bar alongside the ~$1.1B tariff-cost guide. AAPL stock **$301.86 as of 8/21**, lowest since July — softer than the $305.93 cited at D-73, continued drift down, not a reversal. Consensus price target $326.34 (+5.5% implied) unchanged in direction. Peers: NVDA/MRVL both report this week (own docs); AVGO's XPV overhang deepened (own doc). Macro: no CPI/jobs surprise since 8/17; Sep-16 FOMC read is 68.4% hold/31.6% hike as of 8/20 (FOMC sibling doc). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs; the 10% blanket tariff regime unchanged. No new dated adjacency found beyond the already-proposed iPhone 18 event. | — (no change; supply-constraint thread noted as a new watch item, not yet a stance trigger) | 2026-08-31 (critical, 61+d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

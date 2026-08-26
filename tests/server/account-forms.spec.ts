@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import {
   type AccountAdmin,
   handleAccountRoute,
@@ -7,6 +8,8 @@ import {
 } from "../../src/server/account-forms.js";
 import type { UpdateProfileInput } from "../../src/server/account-service.js";
 import type { Session } from "../../src/server/auth/session.js";
+
+const nav: NavContext = { active: "add", canAdd: true, authed: true };
 
 /**
  * Same posture as self-service-forms.spec.ts: real HTTP over a real socket, a bare inline
@@ -22,9 +25,11 @@ async function withRoute(
     const path = (req.url ?? "/").split("?")[0] ?? "/";
     void handleAccountRoute(req, res, path, req.method ?? "GET", {
       requesterId: undefined,
+      ownedAccounts: [],
       session: undefined,
       authConfigured: false,
       key: "",
+      nav,
       ...options,
     });
   });
@@ -60,8 +65,10 @@ describe("GET /account", () => {
         const res = await fetch(`${base}/account`);
         const html = await res.text();
         expect(res.status).toBe(200);
-        expect(html).toContain('value="human-ann"');
-        expect(html).toContain("readonly");
+        // The id travels only in a hidden field — Eric, 2026-08-26: "account id is made up by
+        // you.. why do you even bother showing it?" — never as a visible, readonly value.
+        expect(html).toContain('type="hidden" name="id" value="human-ann"');
+        expect(html).not.toContain('value="human-ann" required readonly');
         expect(html).toContain("Remove this account");
         expect(html).toContain("/rotate");
       },
@@ -75,7 +82,7 @@ describe("GET /account", () => {
       const html = await res.text();
       expect(res.status).toBe(200);
       expect(html).toContain('placeholder="human-uncle_joe"');
-      expect(html).not.toContain("readonly");
+      expect(html).not.toContain('type="hidden" name="id"');
     });
   });
 });

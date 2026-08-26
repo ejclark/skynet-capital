@@ -39,29 +39,34 @@
     "incident:scan": "node scripts/incident-scan.mjs",
     "docrot:scan": "node scripts/doc-rot-scan.mjs",
     "issue:lint": "node scripts/issue-lint.mjs",
+    "research:lint": "node scripts/research-lint.mjs",
     "workflow:lint": "node scripts/workflow-lint.mjs",
     "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
     "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs",
     "shoot:research": "tsx scripts/shoot-research.mjs",
+    "shoot:standings": "tsx scripts/shoot-standings.mjs",
+    "shoot:portfolio": "tsx scripts/shoot-portfolio.mjs",
     "shoot:feedback": "tsx scripts/shoot-feedback.mjs",
+    "shoot:collections": "tsx scripts/shoot-collections.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
+    "scan:flow": "tsx src/scripts/scan-unusual-flow.ts",
     "backfill:activity": "tsx src/scripts/backfill-trade-activity.ts",
     "feedback:scan": "node scripts/feedback-scan.mjs"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",
-    "@biomejs/biome": "2.5.8",
+    "@biomejs/biome": "2.5.10",
     "@commitlint/cli": "21.2.2",
     "@commitlint/config-conventional": "21.2.2",
-    "@rstest/core": "0.11.8",
+    "@rstest/core": "0.11.9",
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
     "@types/node": "26.2.0",
     "dependency-cruiser": "18.2.0",
     "esbuild": "0.28.2",
     "husky": "9.1.7",
-    "jscpd": "5.0.15",
+    "jscpd": "5.0.16",
     "knip": "6.32.2",
     "npm-run-all2": "9.0.3",
     "playwright-core": "1.62.1",
@@ -70,7 +75,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
-    "@babylonjs/core": "9.21.2",
-    "marked": "18.0.9"
+    "@babylonjs/core": "9.22.1",
+    "marked": "18.0.10"
   }
 }

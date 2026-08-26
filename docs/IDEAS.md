@@ -108,7 +108,8 @@ before gating a capture surface (the journey lesson: never tax the habit). _(src
 hat-team comms research, 2026-08-20)_
 
 ### Options-mechanics event kinds — OPEX, quad witching, VIX expiration, holidays
-The `/calendar` view renders the curated feed; the mechanical dates options traders also watch are
+The `/research` shelf's event horizon renders the curated feed (folded from the old `/calendar`
+view, 2026-08-25); the mechanical dates options traders also watch are
 all rule-computable offline: monthly OPEX = 3rd Friday (holiday → prior Thursday), quad witching =
 Mar/Jun/Sep/Dec subset, VIX expiration = the Wednesday 30 days before the *next* monthly OPEX, NYSE
 holidays/early closes published 3 years out. A pure `expiration-calendar.ts` generator (verifiable
@@ -907,3 +908,81 @@ _(nothing right now)_
   research question — what would the tradeable expression even be (software margins? staffing
   firms inverse?) — not buildable until framed.
   _(src: Eric · while: AI-hardware constraint research, 2026-08-22)_
+
+- **Absent vs. vanished: a store's boundary should be able to tell them apart.** `FileAllowlistStore.entries()`
+  reports loudly when the blob is unreadable but returns `[]` in silence when the file simply isn't
+  there — and those are very different facts. "Never existed" is the normal first-boot state;
+  "existed on the last boot and is gone now" is an incident, and it is what a lost volume, a bad
+  mount, or an unpinned path all look like. A written-once marker beside the store (or a recorded
+  entry count) would let the boundary say which it is. The same blind spot applies to the participant
+  store and the history/insight stores.
+  _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_
+
+- **`SKYNET_AUDIT_DIR` and `SKYNET_HALT_FILE` are inert in production.** Both are read on the
+  autonomy path (`src/scripts/run-autonomous.ts`) with **no default** — `SKYNET_AUDIT_DIR` builds a
+  `JsonlAuditStore` only when set, and the halt-file check is skipped when unset — and neither is set
+  in `fly.toml`. So the deployed bots process writes no decision audit and honors no kill-file. That
+  is a safety/observability decision (turning them on changes behavior), not the persistence bug next
+  door, so it was deliberately left out of that diff. Worth deciding on its own: the halt file is the
+  manual stop for a live autonomous trader.
+  _(src: Claude · while: root-causing the guest-list lockout, 2026-08-25)_
+
+- **Bots don't trade options — not restricted, just not built.** The desk's progression ladder
+  (`domain/trade-types.ts`, `progression.ts`) is a human-only teaching gate on the manual `/trade`
+  ticket; the autonomous loop (`run-autonomous.ts`, every persona, `trading-engine.ts`) never
+  references it and never emits an options order — the engine only knows stock buy/sell. So
+  "bots shouldn't have to follow the restriction" has no restriction to lift; giving bots options
+  means building execution for it into the engine + a persona strategy that uses it, which is a
+  real design surface (which structures, how sized, how a persona decides strike/expiry) worth its
+  own framing before anyone builds toward it — not a flag to flip.
+  _(src: Eric · while: account-connection follow-up, 2026-08-25)_
+
+- **Let a member comment on someone ELSE's feedback from inside the app, not just their own.**
+  The Wire (`/wire`, 2026-08-25) surfaces every member's filed feedback so people can see and get
+  inspired by each other's ideas, and links each item out to its GitHub issue for the real
+  discussion — but `feedback-followup.ts`'s in-app "Follow up" only lets a member comment on an
+  issue **they themselves filed** (ownership is checked against their own logged filings). Widening
+  that to "comment on anyone's open item" is a real design surface of its own — what identity shows
+  on the comment (the same opaque-id-only rule as filing?), throttling shared across all commenters
+  posting through one bot token, and whether it's worth building at all versus just teaching people
+  the GitHub-native path (create an account, comment there) that already works today at zero
+  engineering cost. Deliberately not built in the same slice as The Wire.
+  _(src: Eric · while: "let users post directly on the issue," activity dashboard request, 2026-08-25)_
+
+- **Only Eric's `@claude` mentions actually trigger anything today — the onramp copy has to say so.**
+  `.github/workflows/claude.yml`'s gate requires `author_association` of OWNER/MEMBER/COLLABORATOR;
+  a friend-and-family member who signs up for a fresh GitHub account and tags `@claude` on an issue
+  gets silently ignored (by design — no reply rewards an unauthorized mention) unless Eric has
+  separately added them as a repo collaborator. The Wire's onramp copy says this plainly rather than
+  overpromising, but the actual fix — deciding whether trusted members should get collaborator
+  access so the mention they're taught to use actually works — is Eric's call (repo access is the
+  irreversible class) and worth deciding once rather than leaving every onramping member to discover
+  the gap by a comment that goes nowhere.
+  _(src: Claude · while: building The Wire's GitHub onramp, 2026-08-25)_
+
+- **`dashboard-server.ts` is back at its ceiling (870/870) the moment `/wire` landed.** It's the
+  single largest "OVER→raised" file in the repo now, and every new top-level route adds another
+  branch to its one dispatch function. The Wire PR raised the budget rather than decomposing it
+  (out of scope for a feature PR), but the file is a standing decompose candidate — a natural split
+  is by route family (trade/research/feedback/wire already delegate to their own `serve*Route`; the
+  remaining self-service/account/positions branches could follow the same pattern) rather than
+  waiting for the next feature to push it further over.
+  _(src: Claude · while: building The Wire, 2026-08-25)_
+
+### `ship.sh verifybody <pr>` — lint what GitHub actually stored, not the file you sent
+`checkbody` lints a body **file**; nothing checks the body GitHub ended up with. That gap is exactly
+how the fridge rule shipped unfolded on #561 (LESSONS.md, 2026-08-25): the MCP write tools stripped
+`<details>` and the file-side lint still passed. A `verifybody` subcommand — fetch the stored body
+over REST, pipe it through the existing `cmd_checkbody`, exit non-zero on a mismatch — closes it
+mechanically and costs one curl. Could run as a post-open step inside `ship.sh open` itself, so the
+check is automatic rather than remembered. _(src: Claude · while: research-lab readability PR, 2026-08-25)_
+
+- **`PRINT_WINDOWS` should DRIVE the guards, not mirror them.** The chain's earnings badge needs the
+  same day-counts the S2 entry guard and the playbooks trade on, so `domain/earnings-calendar.ts`
+  now names them (`entryFlatDays` 2 · `postPrintFlatDays` 3 · `deadZoneDays` 5) — but
+  `engine/guards.ts` and `playbooks/registry.ts` are envelope-protected, so they still hold their
+  own literals and the new constants are copies pinned by spec (`tests/domain/earnings-calendar.spec.ts`).
+  The pins make drift loud, not impossible. The end state is a three-line change inside those two
+  files to import the constants instead; it is behaviour-identical, but it lands in the protected
+  class, so it wants Eric's eyes rather than an autonomous PR.
+  _(src: Claude · while: badging the options chain with earnings proximity, #575, 2026-08-26)_

@@ -1,7 +1,10 @@
 /**
  * The curated forward market-event table — the data half of market-events.ts (types + query
  * functions live there; this file is nothing but the hand-maintained literal so the calendar can
- * grow with coverage without inflating the logic module's line budget).
+ * grow with coverage without inflating the logic module's line budget). The MarketEvent shape
+ * itself (EventKind/EventStatus/ImpactTier/the MarketEvent interface) lives one leaf further down,
+ * in market-events-types.ts, and is imported + re-exported below — split out so the type
+ * definitions and this hand-maintained table can each stay clear of Biome's per-file line budget.
  *
  * WHY A CHECKED-IN TABLE (same doctrine as earnings-calendar.ts): event dates change rarely, must
  * be reviewable in a diff (a wrong date silently corrupts every window and every assessment keyed
@@ -10,10 +13,13 @@
  *
  * WHO READS THIS: scripts/event-scan.mjs (the assessment scanner — it extracts the MARKET_EVENTS
  * literal below by matching the exported declaration line as a marker string, so keep that line's
- * exact `export const` + type-annotation + opening-bracket shape intact; the drift gate in
- * tests/arch/event-scan.spec.ts goes red if extraction and the real re-export from market-events.ts
- * ever disagree), plus every value-consumer of MARKET_EVENTS, which all import it through
- * market-events.ts (the re-export), never from here directly.
+ * exact `export const` + type-annotation + opening-bracket shape intact, AND keep the literal
+ * itself — every element, inline — physically in this file: the scanner reads this file's raw
+ * text and evaluates the bracket-balanced literal standalone, so it cannot resolve identifiers
+ * from anywhere else; the drift gate in tests/arch/event-scan.spec.ts goes red if extraction and
+ * the real re-export from market-events.ts ever disagree), plus every value-consumer of
+ * MARKET_EVENTS, which all import it through market-events.ts (the re-export), never from here
+ * directly.
  *
  * DATE POLICY (inherited from earnings-calendar.ts / docs/plans/trade-playbooks.md): an
  * `estimate` may only WIDEN caution; date-keyed action requires `confirmed`. Research is not
@@ -33,43 +39,15 @@
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *
- * This file is the LEAF of the pair: it owns the MarketEvent shape AND the instances, imports
- * nothing from market-events.ts, and market-events.ts imports (and re-exports) down into it. Types
- * and data live together here so the query layer depends on this one-directionally — no cycle.
+ * This file is the LEAF of the pair for market-events.ts: it owns the MARKET_EVENTS instances and
+ * imports the MarketEvent shape from market-events-types.ts (a leaf below it). market-events.ts
+ * imports (and re-exports) down into this file, and this file re-exports the shape unchanged —
+ * one-directional all the way down (market-events.ts → market-events-data.ts →
+ * market-events-types.ts), no cycle.
  */
+import type { ImpactTier, MarketEvent } from "./market-events-types.js";
 
-// Kept internal — consumers key on `MarketEvent["kind"]` (the calendar view does exactly that),
-// so the union never needs exporting.
-type EventKind =
-  | "earnings" // derived from earnings-calendar.ts via earningsAsEvents — never hand-entered here
-  | "macro-print" // CPI, PPI, jobs report, FOMC decisions — scheduled, market-wide
-  | "product-launch"
-  | "sector" // PJM capacity auctions, export-control deadlines, FERC dockets
-  | "rates" // Treasury auctions & supply — move yields, which move our long-duration AI names
-  | "opex" // options expiration (monthly 3rd Friday; quarterly = triple/quad witching) — pin/gamma
-  | "geopolitical"; // dated checkpoints only (a summit, a tariff deadline) — regime shifts with
-// no date belong in the adjacency checklist, not here (see docs/process/EVENT-RESEARCH.md)
-
-export type ImpactTier = "critical" | "high" | "medium" | "low";
-type EventStatus = "confirmed" | "estimate";
-
-export interface MarketEvent {
-  /** Stable slug (lowercase, hyphenated) — the join key to the assessment ledger doc at
-   *  docs/research/events/<id>.md and to the `[event-research] <id>` issue title. */
-  readonly id: string;
-  readonly kind: EventKind;
-  readonly title: string;
-  /** YYYY-MM-DD (UTC date-only; same calendar-day math as earnings-calendar.ts). */
-  readonly date: string;
-  readonly status: EventStatus;
-  /** Where the date came from — must carry a source prefix (see header). */
-  readonly source: string;
-  /** Drives assessment cadence (assessment-cadence.json): how hard this can move us. */
-  readonly impact: ImpactTier;
-  /** Symbols affected; empty = market-wide (CPI, FOMC). */
-  readonly symbols: readonly string[];
-  readonly notes?: string;
-}
+export type { ImpactTier, MarketEvent };
 
 /**
  * Hand-curated non-earnings events. Earnings NEVER go here — they are derived from

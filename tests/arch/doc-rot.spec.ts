@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // Doc-rot fitness gate — runs the real scanner (scripts/doc-rot-scan.mjs) so docs that no longer
 // describe reality can't accumulate silently. Contract: docs/plans/doc-rot-gate.md. To adjust the
@@ -77,7 +78,7 @@ describe("doc-rot scanner behavior (seeded fixtures)", () => {
     // data logs) that exists on a dev machine but never in a fresh checkout. The committed ignore
     // rules — identical in both environments — are the arbiter, not the file's presence.
     const { status } = scanFixture((root) => {
-      execFileSync("git", ["init", "-q"], { cwd: root });
+      execFileSync("git", ["init", "-q"], { cwd: root, env: hermeticGitEnv() });
       writeFileSync(join(root, ".gitignore"), "docs/local-settings.json\n");
       writeFileSync(join(root, "docs", "GUIDE.md"), "Saved to `docs/local-settings.json`.");
       writeFileSync(join(root, "doc-rot-budget.json"), JSON.stringify({ findings: 0 }));

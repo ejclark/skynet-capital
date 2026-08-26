@@ -2,7 +2,7 @@
 
 **Kind:** rates · **Date:** 2026-08-26 (confirmed, TSY: treasurydirect.gov upcoming auctions —
 1:00pm ET, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -16,12 +16,12 @@ likely to be a minor, easily-overshadowed input on a very crowded macro day, not
 event on its own. Treat it as a background condition for sizing/timing NVDA-adjacent and other
 long-duration tech positions that day, never as a trade in itself.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (Aug 19) | Stand aside | Pure information-gathering day; the auction is a week out and today's own 20Y auction result isn't posted yet. |
-| This week (thru Aug 24) | Watch | Pre-auction concession (yield drift into supply) is the normal tell; no position is sized on a rates auction alone. |
-| This month (thru Aug 26 + settlement) | Watch / flat the print | Confirmed same-day stack: 5Y auction (1:00pm ET) sits between the 8:30am PCE + GDP prints and NVDA's after-close report — don't isolate the auction's signal from that noise; don't let auction-day yield chop drive NVDA-adjacent share timing. |
-| This quarter | Watch | Belly supply recurs monthly (next 5Y: Sep 23) — the tailing trend, not any one auction, is the thing worth tracking as a duration-sensitivity input for long-duration AI names elsewhere in the calendar. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (Aug 19) | Stand aside | High | Pure information-gathering day; the auction is a week out and today's own 20Y auction result isn't posted yet. | Nothing at this distance; the auction result itself is the only new information |
+| This week (thru Aug 24) | Watch | Medium | Pre-auction concession (yield drift into supply) is the normal tell; no position is sized on a rates auction alone. | A size/CUSIP announcement ~1 week out showing a materially different size than assumed |
+| This month (thru Aug 26 + settlement) | Watch / flat the print | Medium | Confirmed same-day stack: 5Y auction (1:00pm ET) sits between the 8:30am PCE + GDP prints and NVDA's after-close report — don't isolate the auction's signal from that noise; don't let auction-day yield chop drive NVDA-adjacent share timing. | The **2026-08-26** result stopping through or tailing unusually far in either direction |
+| This quarter | Watch | Low | Belly supply recurs monthly (next 5Y: Sep 23) — the tailing trend, not any one auction, is the thing worth tracking as a duration-sensitivity input for long-duration AI names elsewhere in the calendar. | The monthly belly-supply tailing trend reversing across the next two auctions (next 5Y: **2026-09-23**) |
 
 **Signals & conditions.**
 - **Bearish-for-duration tell:** a fourth consecutive tail (stop-out yield > when-issued) with
@@ -167,6 +167,7 @@ would add rates pressure on top of an already crowded macro/earnings day.
 |---|---|---|---|---|
 | 2026-08-19 | D7 | Initial research banked. Prior (Jul 27, 2026) 5Y auction tailed +0.9bp on 59.2% indirect (vs 65.7% avg), bid-to-cover 2.28x (vs 2.33x avg) — a genuine multi-auction demand-weakness trend, per TFTC/Newsquawk/BigGo cross-check. Adjacency sweep: confirmed same-day stack already reflected in `market-events-data.ts` — PCE (08:30 ET) + GDP Q2 2nd estimate (08:30 ET) + this auction (1:00pm ET) + NVDA earnings (after close), all 2026-08-26; Jackson Hole (Warsh's first keynote) follows D+2 on 2026-08-28; Fed funds at 3.50–3.75% with ~85% CME-implied odds of a Sep-16 25bp cut as of mid-Aug 2026 (financial-press reporting, checked 2026-08-19) — no new dated events discovered beyond what the calendar already carries. | — (stance set) | 2026-08-21 |
 | 2026-08-19 | D7 | **Correction (same-day, cross-check).** The initial row above and leg (c) stated a Sep-16 rate **cut** backdrop (~85% CME cut odds, dot-plot easing). That is **wrong** — per the repo's FOMC ledger ([`fomc-2026-09-16.md`](fomc-2026-09-16.md)) the Sep-16 read is hawkish-hold ~60–70% / **hike** ~30–40% live / **cut priced at zero** (oil-shock live-hike debate, hawkish June/July dots, chair Warsh's dissents wanting a hike). Root cause: the initial pass read a stale/pre-oil-shock FedWatch figure and did not cross-check the FOMC sibling. Leg (c) is corrected in-place with a visible marker; the belly-sensitivity finding and the watch-only guard stance **stand** — only the *direction* of the rate risk flips (hot PCE → belly toward higher yields / hike-repricing, not a cut). | Premise corrected; stance unchanged (watch-only guard) | 2026-08-21 |
+| 2026-08-24 | D2 | Adjacency sweep. Peers: NVDA's own doc's implied move dropped to ~5.3% (from ~7.0%) since D7 — tape context only. Macro: no CPI/jobs/FOMC surprise since 8/19; the Sep-16 read stays hawkish-hold ~60–70%/hike ~30–40%/cut ~0% per the FOMC sibling doc, unchanged — the corrected (leg-c) direction still holds: a hot PCE the same morning as this auction pushes the belly toward higher yields, not lower. Size/CUSIP for this specific auction still not confirmed this session (treasurydirect.gov's pending-auctions PDF returned 403 both attempts) — the $70B figure stays a carried-forward pattern, not a confirmed number; re-verify at close-out. Volatility regime: VIX 15.13 (down from 15.86 at D7) — calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending, not de-escalation) — same finding as the sibling PCE/GDP/consumer-confidence docs. Event tape: no new 5Y-specific demand data since the Jul-27 auction (this is the next one); no new dated adjacency found. | — (no change; watch-only context stance, kill switches unfired) | 2026-08-26 (event day; next assessment is this event's own outcome) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

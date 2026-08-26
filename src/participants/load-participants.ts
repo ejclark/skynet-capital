@@ -45,12 +45,19 @@ function loadHumanParticipants(env: Env): Participant[] {
     const apiSecret = env[`SKYNET_HUMAN_${slug}_SECRET`];
     if (apiKey && apiSecret) {
       const timezone = timezoneForHuman(slug);
+      // SKYNET_HUMAN_<ID>_EMAIL stamps the owner link the /add form stamps for self-service
+      // rows. Without it an env-declared account can NEVER be "connected": the roster is
+      // rebuilt from env on every boot, ownerEmail has no other source here, and the desk
+      // resolves a session to an account only through that field — so the account syncs yet
+      // reads as nobody's (the exact confusion reported 2026-08-25).
+      const ownerEmail = env[`SKYNET_HUMAN_${slug}_EMAIL`]?.trim().toLowerCase();
       participants.push({
         id: `human-${slug.toLowerCase()}`,
         displayName: humanizeSlug(slug),
         kind: "human",
         credentials: withBaseUrl({ apiKey, apiSecret }, env),
         ...(timezone ? { timezone } : {}),
+        ...(ownerEmail ? { ownerEmail } : {}),
       });
     }
   }

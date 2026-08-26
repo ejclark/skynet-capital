@@ -1,0 +1,138 @@
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  type OwnerLink,
+  OwnerLinkStore,
+  resolveOwnedId,
+} from "../../src/server/owner-link-store.js";
+
+const AT = new Date("2026-08-24T12:00:00.000Z");
+
+const link = (participantId: string, email: string): OwnerLink => ({
+  participantId,
+  email,
+  linkedBy: "owner@example.com",
+  at: AT.toISOString(),
+});
+
+describe("OwnerLinkStore", () => {
+  let dir: string;
+  let path: string;
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "skynet-owner-links-"));
+    path = join(dir, "owner-links.json");
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("loads an empty link set when no file exists", () => {
+    expect(new OwnerLinkStore(path).load()).toEqual({ links: [] });
+    expect(new OwnerLinkStore(path).emailFor("human-apala")).toBeUndefined();
+    expect(new OwnerLinkStore(path).idsFor("member@example.com")).toEqual([]);
+  });
+
+  it("links an account to a member and stamps who did it", () => {
+    const store = new OwnerLinkStore(path);
+    store.link("human-apala", "Member@Example.com", "Owner@Example.com", AT);
+
+    expect(store.emailFor("human-apala")).toBe("member@example.com");
+    expect(store.load().links[0]).toEqual({
+      participantId: "human-apala",
+      email: "member@example.com",
+      linkedBy: "owner@example.com",
+      at: AT.toISOString(),
+    });
+  });
+
+  it("answers idsFor case-insensitively, in link order", () => {
+    const store = new OwnerLinkStore(path);
+    store.link("human-apala", "member@example.com", "owner@example.com", AT);
+    store.link("sauron", "member@example.com", "owner@example.com", AT);
+    store.link("human-other", "someone@example.com", "owner@example.com", AT);
+
+    expect(store.idsFor("MEMBER@example.com")).toEqual(["human-apala", "sauron"]);
+  });
+
+  it("replaces rather than duplicates when the same account is linked again", () => {
+    const store = new OwnerLinkStore(path);
+    store.link("human-apala", "typo@example.com", "owner@example.com", AT);
+    store.link("human-apala", "member@example.com", "owner@example.com", AT);
+
+    expect(store.load().links).toHaveLength(1);
+    expect(store.emailFor("human-apala")).toBe("member@example.com");
+  });
+
+  it("unlinks an account, and reports a miss as false rather than throwing", () => {
+    const store = new OwnerLinkStore(path);
+    store.link("human-apala", "member@example.com", "owner@example.com", AT);
+
+    expect(store.unlink("human-apala", AT)).toBe(true);
+    expect(store.emailFor("human-apala")).toBeUndefined();
+    expect(store.unlink("human-apala", AT)).toBe(false);
+  });
+
+  it("treats a torn or malformed file as empty and reports, never throws", async () => {
+    await writeFile(path, "{ definitely not js", "utf8");
+    const reports: string[] = [];
+    expect(new OwnerLinkStore(path, (m) => reports.push(m)).load()).toEqual({ links: [] });
+    expect(reports).toHaveLength(1);
+  });
+
+  it("drops malformed entries but keeps the well-formed ones around them", async () => {
+    await writeFile(
+      path,
+      JSON.stringify({
+        links: [
+          { participantId: "human-apala", email: "member@example.com", linkedBy: "o", at: "x" },
+          { participantId: "", email: "member@example.com", linkedBy: "o", at: "x" },
+          "not-an-object",
+        ],
+      }),
+      "utf8",
+    );
+    expect(new OwnerLinkStore(path).load().links).toHaveLength(1);
+  });
+
+  it("writes durable JSON a fresh store reads back", async () => {
+    new OwnerLinkStore(path).link("sauron", "member@example.com", "owner@example.com", AT);
+    const raw = JSON.parse(await readFile(path, "utf8"));
+
+    expect(raw.links[0].participantId).toBe("sauron");
+    expect(new OwnerLinkStore(path).emailFor("sauron")).toBe("member@example.com");
+  });
+});
+
+describe("resolveOwnedId", () => {
+  const APALA = { id: "human-apala" };
+  const JOE = { id: "human-uncle_joe", ownerEmail: "Joe@Example.com" };
+
+  it("resolves nobody when an account carries no owner and no link — the #546 symptom", () => {
+    expect(resolveOwnedId([APALA], [], "member@example.com")).toBeUndefined();
+  });
+
+  it("resolves a linked account, which is what makes it tradeable again", () => {
+    expect(
+      resolveOwnedId([APALA], [link("human-apala", "member@example.com")], "Member@example.com"),
+    ).toBe("human-apala");
+  });
+
+  it("prefers a stamped ownerEmail over any link", () => {
+    expect(resolveOwnedId([JOE], [link("human-apala", "joe@example.com")], "joe@example.com")).toBe(
+      "human-uncle_joe",
+    );
+  });
+
+  it("ignores a link pointed at an account somebody else already connected", () => {
+    expect(
+      resolveOwnedId([JOE], [link("human-uncle_joe", "member@example.com")], "member@example.com"),
+    ).toBeUndefined();
+  });
+
+  it("ignores a link left behind by an account that is no longer on the board", () => {
+    expect(
+      resolveOwnedId([APALA], [link("removed", "member@example.com")], "member@example.com"),
+    ).toBeUndefined();
+  });
+});

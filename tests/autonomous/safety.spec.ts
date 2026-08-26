@@ -1,5 +1,11 @@
+import type { Alert } from "../../src/alerts/alert.js";
 import { SafetyController } from "../../src/autonomous/safety.js";
 import type { MarketContext } from "../../src/domain/types.js";
+import {
+  FLATTEN_DRAWDOWN_PCT,
+  RESTRICT_DRAWDOWN_PCT,
+  WATCH_DRAWDOWN_PCT,
+} from "../../src/risk/risk-ladder.js";
 
 const ctx = (quotes: MarketContext["quotes"]): MarketContext => ({
   asOf: "2026-07-24T14:00:00Z",
@@ -76,5 +82,191 @@ describe("SafetyController", () => {
     const ok = new SafetyController();
     ok.checkContext(ctx({ NVDA: { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" } }));
     expect(ok.blockedReason()).toBeNull();
+  });
+});
+
+/**
+ * The graduated ladder, read off the SAME equity feed as the daily-loss breaker. Baseline is
+ * $100k and every equity below is a whole dollar, so each drawdown is bit-exact against its
+ * threshold — a boundary spec that needed a tolerance would not be specifying the boundary.
+ */
+describe("SafetyController — the graduated risk ladder", () => {
+  const BASELINE = 100_000;
+  const at = (drawdownPct: number): number => BASELINE - Math.round(BASELINE * drawdownPct);
+  const EPSILON = 0.0001;
+
+  /** A controller with its day-opening baseline already fed. */
+  const opened = (
+    config: ConstructorParameters<typeof SafetyController>[0] = {},
+  ): SafetyController => {
+    const s = new SafetyController(config, () => 1_700_000_000_000);
+    s.recordEquity(BASELINE);
+    return s;
+  };
+
+  describe("the rung boundaries, on the live feed", () => {
+    const tierAfter = (drawdownPct: number): string | undefined => {
+      const s = opened();
+      s.recordEquity(at(drawdownPct));
+      return s.riskReading()?.tier;
+    };
+
+    it("is clear just under warn, and warns exactly ON it", () => {
+      expect(tierAfter(WATCH_DRAWDOWN_PCT - EPSILON)).toBe("clear");
+      expect(tierAfter(WATCH_DRAWDOWN_PCT)).toBe("watch");
+    });
+
+    it("is watch just under block, and restricted exactly ON it", () => {
+      expect(tierAfter(RESTRICT_DRAWDOWN_PCT - EPSILON)).toBe("watch");
+      expect(tierAfter(RESTRICT_DRAWDOWN_PCT)).toBe("restricted");
+    });
+
+    it("is restricted just under flatten, and liquidate exactly ON it", () => {
+      expect(tierAfter(FLATTEN_DRAWDOWN_PCT - EPSILON)).toBe("restricted");
+      expect(tierAfter(FLATTEN_DRAWDOWN_PCT)).toBe("liquidate");
+    });
+  });
+
+  describe("what the reading is before there is one", () => {
+    it("reads ABSENT before any equity is fed — not a cheerful 'clear'", () => {
+      expect(new SafetyController().riskReading()).toBeNull();
+    });
+
+    it("reads clear on the baseline tick, which is flat by definition", () => {
+      expect(opened().riskReading()?.tier).toBe("clear");
+    });
+
+    it("forgets the reading on reset, along with the baseline", () => {
+      const s = opened();
+      s.recordEquity(at(0.09));
+      expect(s.riskReading()?.tier).toBe("liquidate");
+      s.reset();
+      expect(s.riskReading()).toBeNull();
+    });
+  });
+
+  describe("force-flatten is for autonomous bots only", () => {
+    it("is required for a bot at the bottom rung", () => {
+      const s = opened({ actor: "bot" });
+      s.recordEquity(at(FLATTEN_DRAWDOWN_PCT));
+      expect(s.flattenRequired()).toBe(true);
+    });
+
+    it("is NEVER required for a member at the same rung — their positions are theirs to close", () => {
+      const s = opened({ actor: "member" });
+      s.recordEquity(at(FLATTEN_DRAWDOWN_PCT));
+      expect(s.riskReading()?.tier).toBe("liquidate");
+      expect(s.flattenRequired()).toBe(false);
+    });
+
+    it("defaults to member — the permissive answer has to be asked for by name", () => {
+      const s = opened();
+      s.recordEquity(at(0.5));
+      expect(s.flattenRequired()).toBe(false);
+    });
+
+    it("is not required for a bot above the bottom rung", () => {
+      const s = opened({ actor: "bot" });
+      s.recordEquity(at(FLATTEN_DRAWDOWN_PCT - EPSILON));
+      expect(s.flattenRequired()).toBe(false);
+    });
+
+    it("is not required before any equity has been fed", () => {
+      expect(new SafetyController({ actor: "bot" }).flattenRequired()).toBe(false);
+    });
+  });
+
+  describe("the warning is visible, and non-blocking", () => {
+    const collect = (config: Parameters<typeof opened>[0] = {}) => {
+      const alerts: Alert[] = [];
+      const s = opened({ ...config, onRiskAlert: (alert) => alerts.push(alert) });
+      return { s, alerts };
+    };
+
+    it("announces the soft rung as a warning rather than silently allowing or refusing", () => {
+      const { s, alerts } = collect();
+      s.recordEquity(at(0.04));
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0]?.priority).toBe("warning");
+      expect(s.blockedReason()).toBeNull(); // …and it blocked nothing
+    });
+
+    it("says nothing at all while the account is clear", () => {
+      const { s, alerts } = collect();
+      s.recordEquity(at(0.01));
+      expect(alerts).toEqual([]);
+    });
+
+    it("speaks once per rung CHANGE, not once per equity tick", () => {
+      const { s, alerts } = collect();
+      s.recordEquity(at(0.035));
+      s.recordEquity(at(0.04));
+      s.recordEquity(at(0.045));
+      expect(alerts).toHaveLength(1);
+    });
+
+    it("escalates as the account walks down the ladder", () => {
+      const { s, alerts } = collect();
+      s.recordEquity(at(0.04));
+      s.recordEquity(at(0.06));
+      s.recordEquity(at(0.09));
+      expect(alerts.map((a) => a.data?.tier)).toEqual(["watch", "restricted", "liquidate"]);
+    });
+
+    it("announces the recovery too — a lifted block is news the desk needs", () => {
+      const { s, alerts } = collect();
+      s.recordEquity(at(0.06));
+      s.recordEquity(at(0.01));
+      expect(alerts.map((a) => a.data?.tier)).toEqual(["restricted", "clear"]);
+    });
+
+    it("banks the halt BEFORE the listener runs — a throwing consumer cannot skip a breaker", () => {
+      // The listener is foreign code. If it ran first and threw, it would abort recordEquity
+      // before the daily-loss halt landed: an unrelated broken consumer silently disabling a
+      // money-moving safety control. Ordering, not try/catch, is what makes that impossible.
+      const s = opened({
+        maxDailyLossPct: 0.05,
+        onRiskAlert: () => {
+          throw new Error("a broken consumer");
+        },
+      });
+
+      expect(() => s.recordEquity(at(0.06))).toThrow("a broken consumer");
+      expect(s.blockedReason()).toBe("daily-loss");
+      expect(s.riskReading()?.tier).toBe("restricted");
+    });
+
+    it("still reads and enforces the ladder with no listener attached", () => {
+      const s = opened({ actor: "bot" });
+      s.recordEquity(at(0.09));
+      expect(s.flattenRequired()).toBe(true);
+    });
+  });
+
+  describe("the binary breaker it generalises", () => {
+    it("still halts on the daily-loss cap, unchanged, while the ladder reads alongside it", () => {
+      const s = opened({ maxDailyLossPct: 0.05 });
+      s.recordEquity(at(0.06));
+      expect(s.blockedReason()).toBe("daily-loss");
+      expect(s.riskReading()?.tier).toBe("restricted");
+    });
+
+    it("halts without flattening — which is exactly the gap the bottom rung exists for", () => {
+      // The halt stops ORDERING. Open positions keep marking against you, so equity can walk on
+      // past the halt to the flatten rung; only then does a bot's book get closed.
+      const s = opened({ actor: "bot" });
+      s.recordEquity(at(0.06));
+      expect(s.blockedReason()).toBe("daily-loss");
+      expect(s.flattenRequired()).toBe(false);
+      s.recordEquity(at(0.09));
+      expect(s.flattenRequired()).toBe(true);
+    });
+
+    it("ignores a non-finite mark on the ladder as well as on the breaker", () => {
+      const s = opened();
+      s.recordEquity(at(0.04));
+      s.recordEquity(Number.NaN);
+      expect(s.riskReading()?.tier).toBe("watch"); // the last good reading stands
+    });
   });
 });

@@ -2,13 +2,49 @@ import type { AddressInfo } from "node:net";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import { resolveAuth } from "../../src/server/auth/resolve-auth.js";
 import { type Session, signSession } from "../../src/server/auth/session.js";
-import type { BotControlsStore } from "../../src/server/bot-controls-store.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
-import type { FeedbackInput, FeedbackResult } from "../../src/server/feedback-service.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import type { AddParticipantInput, AddResult } from "../../src/server/participant-service.js";
 
+// Sibling: dashboard-server-routes.spec.ts (split 2026-08-26 to stay under the per-file line
+// cap) — that half covers /feedback, /u/:id performance history, desk settings (#475), and
+// /rotate identity resolution. This file keeps the auth gate, the Standings-fold redirects,
+// /pulse, and /add.
+
 const board = (): DashboardData => ({ generatedAt: "t", participants: [], collisions: [] });
+
+const holder = (id: string, displayName: string): DashboardData["participants"][number] => ({
+  id,
+  displayName,
+  kind: "human",
+  cash: 1_000,
+  equity: 61_000,
+  positions: [{ symbol: "NVDA", quantity: 100, avgPrice: 500, marketValue: 60_000 }],
+});
+
+/** A board whose figures actually move when a price tick folds through the reducer. */
+const livingBoard = (): DashboardData => ({
+  generatedAt: "t",
+  collisions: [],
+  participants: [holder("p1", "Alice")],
+});
+
+const comparableBoard = (): DashboardData => ({
+  generatedAt: "t",
+  collisions: [],
+  participants: [holder("p1", "Alice"), holder("p2", "Bob")],
+});
+
+interface WirePatch {
+  readonly seq: number;
+  readonly ops: readonly Record<string, unknown>[];
+}
+
+/** The `value` text a patch carries for row `p1` — i.e. what that viewer's ladder will show. */
+function rowValue(patch: WirePatch | undefined): string | undefined {
+  const row = patch?.ops.find((op) => op.kind === "field" && op.key === "p1");
+  return (row?.text as Record<string, string> | undefined)?.value;
+}
 
 async function withServer(
   config: Parameters<typeof createDashboardServer>[0],
@@ -22,6 +58,30 @@ async function withServer(
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
+}
+
+/** Reads `count` SSE `data:` frames off a streaming `/events` response, JSON-decoded. */
+async function readSsePatches(res: Response, count: number): Promise<WirePatch[]> {
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("no readable body");
+  const decoder = new TextDecoder();
+  let buf = "";
+  const frames: WirePatch[] = [];
+  while (frames.length < count) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx = buf.indexOf("\n\n");
+    while (idx !== -1) {
+      const raw = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      const line = raw.split("\n").find((l) => l.startsWith("data: "));
+      if (line) frames.push(JSON.parse(line.slice("data: ".length)) as WirePatch);
+      idx = buf.indexOf("\n\n");
+    }
+  }
+  await reader.cancel();
+  return frames;
 }
 
 describe("dashboard-server OAuth gate", () => {
@@ -74,6 +134,165 @@ describe("dashboard-server OAuth gate", () => {
         expect(await home.text()).toContain("Sign out");
       },
     );
+  });
+
+  it("stamps the guest list's joined status the first time a session lands on the board", async () => {
+    const joined: string[] = [];
+    const store = {
+      entries: () => [],
+      emails: () => new Set<string>(),
+      logins: () => new Set<string>(),
+      canStoreSecurely: () => true,
+      add: () => false,
+      remove: () => false,
+      markJoined: (value: string) => {
+        joined.push(value);
+        return true;
+      },
+    };
+    await withServer(
+      {
+        hub: new ObservatoryHub(board()),
+        ...(auth ? { auth } : {}),
+        invite: { store, isOwner: () => false },
+      },
+      async (base) => {
+        await fetch(`${base}/`, { headers: { cookie: validCookie() } });
+        expect(joined).toEqual(["eric@gmail.com"]);
+      },
+    );
+  });
+
+  it("serves the Portfolio index at /u listing every account the session owns", async () => {
+    const hub = new ObservatoryHub({
+      generatedAt: "t",
+      collisions: [],
+      participants: [
+        {
+          id: "human-eric",
+          displayName: "Eric",
+          kind: "human",
+          cash: 1_000,
+          equity: 10_000,
+          positions: [],
+        },
+        {
+          id: "news-fader",
+          displayName: "News Fader",
+          kind: "bot",
+          cash: 0,
+          equity: 5_000,
+          positions: [],
+        },
+      ],
+    });
+    await withServer(
+      {
+        hub,
+        ...(auth ? { auth } : {}),
+        resolveOwnerIds: (email: string) => (email === "eric@gmail.com" ? ["human-eric"] : []),
+      },
+      async (base) => {
+        const res = await fetch(`${base}/u`, { headers: { cookie: validCookie() } });
+        expect(res.status).toBe(200);
+        const html = await res.text();
+        expect(html).toContain("Your accounts");
+        expect(html).toContain('href="/u/human-eric"');
+        // The bot isn't owned by this session, so the index never lists it.
+        expect(html).not.toContain('href="/u/news-fader"');
+      },
+    );
+  });
+
+  it("gates /u behind the login redirect like every member page", async () => {
+    await withServer(
+      { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}) },
+      async (base) => {
+        const res = await fetch(`${base}/u`, { redirect: "manual" });
+        expect(res.status).toBe(302);
+        expect(res.headers.get("location")).toBe("/login");
+      },
+    );
+  });
+});
+
+describe("dashboard-server — Standings fold (2026-08-25)", () => {
+  it("redirects the old /leaderboard route to Standings, carrying ?by= forward", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const bare = await fetch(`${base}/leaderboard`, { redirect: "manual" });
+      expect(bare.status).toBe(302);
+      expect(bare.headers.get("location")).toBe("/");
+
+      const withMetric = await fetch(`${base}/leaderboard?by=return`, { redirect: "manual" });
+      expect(withMetric.status).toBe(302);
+      expect(withMetric.headers.get("location")).toBe("/?by=return");
+    });
+  });
+
+  it("redirects the old /bots-vs-humans route to Standings", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const res = await fetch(`${base}/bots-vs-humans`, { redirect: "manual" });
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe("/");
+    });
+  });
+
+  it("threads each connection's own ?by= into the patches IT receives", async () => {
+    // Same decision as before the patch channel, one layer down: `metric` is fixed at connect time
+    // and now shapes the ops that connection is sent, so two viewers share one seq run and each
+    // still sees their own metric. A viewer who picked Return % is never silently reset to Equity.
+    const hub = new ObservatoryHub(livingBoard());
+    await withServer({ hub }, async (base) => {
+      const returnStream = await fetch(`${base}/events?by=return`);
+      const equityStream = await fetch(`${base}/events`);
+      const returnFrames = readSsePatches(returnStream, 2);
+      const equityFrames = readSsePatches(equityStream, 2);
+      hub.apply({ type: "price", symbol: "NVDA", price: 700, at: "2026-08-25T00:00:00.000Z" });
+      const [, onReturn] = await returnFrames;
+      const [, onEquity] = await equityFrames;
+      expect(rowValue(onReturn)).toMatch(/%$/);
+      expect(rowValue(onEquity)).toMatch(/^\$/);
+    });
+  });
+
+  it("serves the patch fallback frame with the connection's own ?by= applied", async () => {
+    await withServer({ hub: new ObservatoryHub(livingBoard()) }, async (base) => {
+      const frame = await fetch(`${base}/board/frame?by=return`);
+      expect(frame.status).toBe(200);
+      expect(await frame.text()).toContain('class="msel active" href="/?by=return"');
+    });
+  });
+
+  it("redirects the old /compare route to Standings, carrying ?a=&b= forward", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const bare = await fetch(`${base}/compare`, { redirect: "manual" });
+      expect(bare.status).toBe(302);
+      expect(bare.headers.get("location")).toBe("/");
+
+      const withPair = await fetch(`${base}/compare?a=p1&b=p2`, { redirect: "manual" });
+      expect(withPair.status).toBe(302);
+      expect(withPair.headers.get("location")).toBe("/?a=p1&b=p2");
+    });
+  });
+
+  it("keeps a head-to-head compare on the full-render path rather than half-patching it", async () => {
+    // `?a=&b=` is the analytical view folded into Standings. Its grid cannot be expressed as field
+    // patches, so the stream says `reframe` and the client takes one whole frame — which must carry
+    // the SAME pair the connection asked for, never a silently reset comparison.
+    const hub = new ObservatoryHub(comparableBoard());
+    await withServer({ hub }, async (base) => {
+      const stream = await fetch(`${base}/events?a=p1&b=p2`);
+      const framesPromise = readSsePatches(stream, 2);
+      hub.apply({ type: "price", symbol: "NVDA", price: 700, at: "2026-08-25T00:00:00.000Z" });
+      const [, pushed] = await framesPromise;
+      expect(pushed?.ops).toContainEqual({
+        kind: "reframe",
+        reason: "head-to-head compare keeps the full-render path",
+      });
+
+      const frame = await fetch(`${base}/board/frame?a=p1&b=p2`);
+      expect(await frame.text()).toContain('Alice <span class="cmp-vs">vs</span> Bob');
+    });
   });
 });
 
@@ -195,282 +414,6 @@ describe("dashboard-server /add", () => {
     // No handler wired → /add is not a route.
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
       expect((await fetch(`${base}/add`)).status).toBe(404);
-    });
-  });
-});
-
-describe("dashboard-server /feedback", () => {
-  it("serves the form and files an issue on POST", async () => {
-    const calls: FeedbackInput[] = [];
-    const submitFeedback = (input: FeedbackInput): Promise<FeedbackResult> => {
-      calls.push(input);
-      return Promise.resolve({ ok: true, url: "https://github.com/x/y/issues/7", number: 7 });
-    };
-    await withServer({ hub: new ObservatoryHub(board()), submitFeedback }, async (base) => {
-      const form = await fetch(`${base}/feedback`);
-      expect(form.status).toBe(200);
-      expect(await form.text()).toContain("Share feedback");
-
-      const post = await fetch(`${base}/feedback`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          kind: "bug",
-          title: "It broke",
-          details: "here's how",
-        }).toString(),
-      });
-      expect(post.status).toBe(200);
-      const success = await post.text();
-      expect(success).toContain("#7");
-      // The filed issue must be linkable so the member can follow its progress (#436).
-      expect(success).toContain("https://github.com/x/y/issues/7");
-      expect(calls[0]).toMatchObject({ kind: "bug", title: "It broke", details: "here's how" });
-    });
-  });
-
-  it("serves coach turns as JSON, and reports 'not switched on' without a coach", async () => {
-    const coach = () =>
-      Promise.resolve({ ok: true as const, done: false as const, question: "Where?" });
-    await withServer({ hub: new ObservatoryHub(board()), coachFeedback: coach }, async (base) => {
-      // The form offers the coach only when it's wired — plain form otherwise.
-      expect(await (await fetch(`${base}/feedback`)).text()).toContain("coach-box");
-
-      const post = await fetch(`${base}/feedback/coach`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "bug", messages: [{ role: "user", content: "hm" }] }),
-      });
-      expect(post.status).toBe(200);
-      expect(await post.json()).toEqual({ ok: true, done: false, question: "Where?" });
-
-      const bad = await fetch(`${base}/feedback/coach`, { method: "POST", body: "not json" });
-      expect(bad.status).toBe(400);
-    });
-    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
-      expect(await (await fetch(`${base}/feedback`)).text()).not.toContain("coach-box");
-      const off = await fetch(`${base}/feedback/coach`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "bug", messages: [] }),
-      });
-      expect((await off.json()).ok).toBe(false);
-    });
-  });
-
-  it("shows a friendly error when filing fails", async () => {
-    const submitFeedback = (): Promise<FeedbackResult> =>
-      Promise.resolve({ ok: false, error: "GitHub said no" });
-    await withServer({ hub: new ObservatoryHub(board()), submitFeedback }, async (base) => {
-      const post = await fetch(`${base}/feedback`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ kind: "idea", title: "hi" }).toString(),
-      });
-      expect(post.status).toBe(502);
-      expect(await post.text()).toContain("GitHub said no");
-    });
-  });
-
-  it("renders the form but reports 'not switched on' when no token is wired", async () => {
-    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
-      expect((await fetch(`${base}/feedback`)).status).toBe(200); // form still renders
-      const post = await fetch(`${base}/feedback`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ kind: "bug", title: "x" }).toString(),
-      });
-      expect(post.status).toBe(200);
-      expect(await post.text()).toContain("isn't switched on");
-    });
-  });
-
-  it("is behind the auth gate", async () => {
-    const auth = resolveAuth({
-      SKYNET_SESSION_SECRET: "s",
-      SKYNET_GOOGLE_CLIENT_ID: "g",
-      SKYNET_GOOGLE_CLIENT_SECRET: "gs",
-      SKYNET_ALLOWED_EMAILS: "eric@gmail.com",
-    });
-    const cookie = `skynet_session=${encodeURIComponent(
-      signSession({ email: "eric@gmail.com", provider: "google", exp: Date.now() + 60_000 }, "s"),
-    )}`;
-    await withServer(
-      {
-        hub: new ObservatoryHub(board()),
-        ...(auth ? { auth } : {}),
-        submitFeedback: () => Promise.resolve({ ok: true, url: "u", number: 1 }),
-      },
-      async (base) => {
-        const anon = await fetch(`${base}/feedback`, { redirect: "manual" });
-        expect(anon.status).toBe(302);
-        expect(anon.headers.get("location")).toBe("/login");
-
-        const authed = await fetch(`${base}/feedback`, { headers: { cookie } });
-        expect(authed.status).toBe(200);
-        expect(await authed.text()).toContain("Share feedback");
-      },
-    );
-  });
-});
-
-describe("dashboard-server /u/:id performance history", () => {
-  const withBot = (): DashboardData => ({
-    generatedAt: "t",
-    participants: [
-      {
-        id: "day-trader",
-        displayName: "JARVIS",
-        kind: "bot",
-        personaId: "day-trader",
-        cash: 900,
-        equity: 1100,
-        realizedPl: 240,
-        positions: [],
-      },
-    ],
-    collisions: [],
-  });
-
-  it("lights up the sparkline when readHistory returns samples", async () => {
-    await withServer(
-      {
-        hub: new ObservatoryHub(withBot()),
-        readHistory: () =>
-          Promise.resolve([
-            {
-              at: "2026-07-26T14:00:00Z",
-              participantId: "day-trader",
-              equity: 1000,
-              cash: 900,
-              realizedPl: 0,
-            },
-            {
-              at: "2026-07-26T15:00:00Z",
-              participantId: "day-trader",
-              equity: 1100,
-              cash: 900,
-              realizedPl: 240,
-            },
-          ]),
-      },
-      async (base) => {
-        const html = await (await fetch(`${base}/u/day-trader`)).text();
-        expect(html).toContain('<svg class="equity-spark"');
-        expect(html).toContain("Realized P/L");
-      },
-    );
-  });
-
-  it("keeps the honest accruing seam when no history is wired", async () => {
-    await withServer({ hub: new ObservatoryHub(withBot()) }, async (base) => {
-      const html = await (await fetch(`${base}/u/day-trader`)).text();
-      expect(html).not.toContain('<svg class="equity-spark"');
-      expect(html).toContain("once we've recorded your history");
-    });
-  });
-});
-
-/**
- * Mission Control's relocation onto the desk (#475) — the ROUTING half. The switchboard's own
- * behavior is `tests/server/controls-form.spec.ts`; what's asserted here is that the URL an owner
- * lands on serves it, that the retired `/controls` bookmark still gets there, and that a member
- * asking for the tab by hand is answered exactly like a typo'd tab.
- */
-describe("dashboard-server desk settings (#475)", () => {
-  const SECRET = "sess";
-  const auth = resolveAuth({
-    SKYNET_SESSION_SECRET: SECRET,
-    SKYNET_GOOGLE_CLIENT_ID: "gid",
-    SKYNET_GOOGLE_CLIENT_SECRET: "gsecret",
-    SKYNET_ALLOWED_EMAILS: "eric@gmail.com,member@gmail.com",
-  });
-  const cookieFor = (email: string): string =>
-    `skynet_session=${encodeURIComponent(
-      signSession({ email, provider: "google", exp: Date.now() + 60_000 }, SECRET),
-    )}`;
-  const fleet = (): DashboardData => ({
-    generatedAt: "t",
-    participants: [
-      {
-        id: "sauron",
-        displayName: "Sauron",
-        kind: "bot",
-        personaId: "sauron",
-        cash: 1_000,
-        equity: 1_000,
-        positions: [],
-      },
-    ],
-    collisions: [],
-  });
-  const config = () => ({
-    hub: new ObservatoryHub(fleet()),
-    ...(auth ? { auth } : {}),
-    resolveOwnerId: (email: string) => (email === "eric@gmail.com" ? "sauron" : undefined),
-    controls: {
-      // A stub store: this block asserts ROUTING, and the real store is covered by its own spec.
-      store: {
-        load: () => ({ bots: {} }),
-        setBot: () => undefined,
-        setAllSuspended: () => undefined,
-      } as unknown as BotControlsStore,
-      isOwner: (email: string) => email === "eric@gmail.com",
-      bots: () => [{ id: "sauron", displayName: "Sauron" }],
-    },
-  });
-
-  it("serves Mission Control on the owner's desk, inside the app shell", async () => {
-    await withServer(config(), async (base) => {
-      const res = await fetch(`${base}/u/sauron?tab=settings`, {
-        headers: { cookie: cookieFor("eric@gmail.com") },
-      });
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain("Mission Control");
-      expect(html).toContain('<aside class="drawer"');
-      expect(html).toContain('href="/u/sauron?tab=settings"');
-    });
-  });
-
-  it("answers a member's ?tab=settings with the plain overview — no owner-shaped tell", async () => {
-    await withServer(config(), async (base) => {
-      const res = await fetch(`${base}/u/sauron?tab=settings`, {
-        headers: { cookie: cookieFor("member@gmail.com") },
-      });
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).not.toContain("Mission Control");
-      expect(html).not.toContain("Suspend ALL autonomous trading");
-      // Identical to any unrecognized tab: the overview, with no Settings entry in the strip.
-      const typo = await (
-        await fetch(`${base}/u/sauron?tab=nonsense`, {
-          headers: { cookie: cookieFor("member@gmail.com") },
-        })
-      ).text();
-      expect(html).toBe(typo);
-    });
-  });
-
-  it("redirects the retired /controls bookmark to the viewer's own desk settings", async () => {
-    await withServer(config(), async (base) => {
-      const res = await fetch(`${base}/controls`, {
-        headers: { cookie: cookieFor("eric@gmail.com") },
-        redirect: "manual",
-      });
-      expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/u/sauron?tab=settings");
-    });
-  });
-
-  it("sends a viewer with no resolvable account back to the board rather than nowhere", async () => {
-    await withServer(config(), async (base) => {
-      const res = await fetch(`${base}/controls`, {
-        headers: { cookie: cookieFor("member@gmail.com") },
-        redirect: "manual",
-      });
-      expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/");
     });
   });
 });

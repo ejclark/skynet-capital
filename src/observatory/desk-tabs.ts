@@ -3,31 +3,29 @@ import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { chip, profileHref } from "./render-atoms.js";
 
 /**
- * The DESK TAB STRIP — one participant, five ways of looking at them. Tabs (not separate nav
+ * The DESK TAB STRIP — one participant, four ways of looking at them. Tabs (not separate nav
  * entries) because these are all the same subject: switching between them should feel like turning
  * a page, not navigating away. Plain links with a `?tab=` param, so every view is shareable,
  * back/forward-friendly, and works with no JavaScript at all — the same principle the leaderboard's
  * metric picker follows.
  *
- * The split between Analysis and Metrics is deliberate and is the honest one:
- *  - **Analysis** measures your *trades* (win rate, expectancy) — it needs CLOSED round trips.
- *  - **Metrics** measures your *account* (equity curve, drawdown) — it needs recorded HISTORY.
- * They answer different questions and go blank for different reasons, so merging them would make
- * one empty state lie about the other.
+ * **Performance** folds what used to be three separate tabs (History, Analysis, Metrics) into one:
+ * closed round trips, trade-behavior stats, and the equity curve all live on the same page now, but
+ * each section still renders its own empty state from its own input — a member with fills but no
+ * equity history yet still sees their trades, and vice versa. Folding the view is a layout change,
+ * never a data merge that lets one dataset's presence paper over another's absence.
  *
- * **Settings** is the sixth, and owner-only: Mission Control lives here (#475) rather than on a
+ * **Settings** is the fourth, and owner-only: Mission Control lives here (#475) rather than on a
  * standalone `/controls` page, because the fleet's switchboard is an account setting and belongs
  * inside the app-wide shell — a view outside the shell loses the left rail, which is the whole
  * defect that issue reported.
  */
-export type DeskTab = "overview" | "positions" | "history" | "analysis" | "metrics" | "settings";
+export type DeskTab = "overview" | "positions" | "performance" | "settings";
 
 const TABS: ReadonlyArray<{ key: DeskTab; label: string; ownerOnly?: boolean }> = [
   { key: "overview", label: "Overview" },
   { key: "positions", label: "Active" },
-  { key: "history", label: "History" },
-  { key: "analysis", label: "Analysis" },
-  { key: "metrics", label: "Metrics" },
+  { key: "performance", label: "Performance" },
   { key: "settings", label: "Settings", ownerOnly: true },
 ];
 

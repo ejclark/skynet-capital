@@ -56,7 +56,11 @@ Engine fills (once trading is on) ────────┼─▶ ObservatoryH
   instant they execute (manual or bot), and the market-data stream pushes price ticks for
   held symbols. Both flow through the same hub → SSE path.
 
-## The player desk — five tabs on one account
+## The player desk — three tabs on one account
+
+`/u` (bare) is the **Portfolio index** — the member's home, listing every account their signed-in
+email owns (`Participant.ownerEmail`) with a combined-equity hero above the per-account split. The
+drawer's "Portfolio" link (formerly "You") lands here; each row opens that account's desk.
 
 `/u/:id` is a member's desk. A `?tab=` param picks the view (plain links, no JS, shareable):
 
@@ -64,14 +68,15 @@ Engine fills (once trading is on) ────────┼─▶ ObservatoryH
 |---|---|---|---|
 | Overview | `/u/:id` | who is this, at a glance | — |
 | Active | `?tab=positions` | what am I in right now? | flat |
-| History | `?tab=history` | what did I actually do? | no fills recorded |
-| Analysis | `?tab=analysis` | am I any good at this? | nothing closed yet |
-| Metrics | `?tab=metrics` | how is the account doing over time? | no equity history yet |
+| Performance | `?tab=performance` | how am I doing? | see below — each section answers separately |
 
-Analysis and Metrics are deliberately separate: they take different inputs (closed round trips vs.
-equity samples) and go blank for different reasons. History shows **round trips** — fills matched
-first-in-first-out by `src/trading/round-trips.ts` — with the raw fills folded away beneath as
-receipts. Design rationale and the platform research behind it:
+Performance folds what used to be three separate tabs (History, Analysis, Metrics) into one page,
+but keeps them **honestly separate underneath**: closed round trips, trade-behavior stats, and the
+equity curve are three different inputs that go blank for three different reasons, so each section
+renders its own empty state from its own data — never one blended gate that hides a real equity
+curve just because nothing's closed yet, or vice versa. Round trips are fills matched
+first-in-first-out by `src/trading/round-trips.ts`; the raw order ledger folds away beneath the
+round-trips table as receipts. Design rationale and the platform research behind it:
 [`docs/research/trading-desk-ux.md`](research/trading-desk-ux.md).
 
 ### Acting on a position (owner-linked accounts only)
@@ -93,12 +98,12 @@ is no options leg to roll (see the plan for what enabling it would take).
 Eyeball the whole desk without a server or a broker:
 
 ```sh
-node scripts/shoot-desk.mjs [outdir]   # renders the five surfaces + screenshots them
+node scripts/shoot-desk.mjs [outdir]   # renders the desk's surfaces + screenshots them
 ```
 
 ## Design
 
-The renderer (`observatory/render-dashboard.ts`) is a pure `DashboardData → HTML` function,
+The renderer (`observatory/standings-view.ts`) is a pure `DashboardData → HTML` function,
 so the exact layout is unit-tested and reproducible. Trading-terminal treatment: dark-first
 and theme-aware, monospace tabular figures, semantic green/red for P/L kept separate from
 the teal brand accent, BOT·persona vs HUMAN chips, live/error status dots.
@@ -107,5 +112,5 @@ the teal brand accent, BOT·persona vs HUMAN chips, live/error status dots.
 
 ```
 loadParticipants(env)  →  buildDashboardData (reads each Alpaca account, in parallel)
-                            →  renderDashboardDocument  →  dist/dashboard.html  →  Artifact
+                            →  renderStandingsDocument  →  dist/dashboard.html  →  Artifact
 ```

@@ -1,7 +1,7 @@
 # ISM Services PMI (Aug 2026 data) — ism-services-2026-09-03
 
 **Kind:** macro-print · **Date:** 2026-09-03 (confirmed, ISM: ismworld.org ROB calendar — 10:00 ET (3rd business day), checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -18,12 +18,12 @@ here is a trade; it is the corridor's most important rate-path read short of CPI
 hot August Prices Index lifts yields and hits our long-duration AI names; a soft print is dovish
 relief.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (D-15) | Stand aside | Fifteen days out; no firm August consensus to react to, no name-keyed setup. |
-| This week | Watch | Confirmed 9/3 10:00 ET; the Prices Index is the load-bearing subcomponent — the biggest non-CPI rate-path mover in the set — watch it, size nothing into it. |
-| This month | Watch closely | Lands the day before jobs (9/4) and inside the Sep 1→Sep 16 pre-FOMC corridor; of the two ISM prints this is the one that moves rates, read into the hike-odds channel. |
-| This quarter | Stand aside on this print specifically | The binding constraint on our duration names is the Sep FOMC/CPI corridor; this is its most important non-CPI input, treated as regime context, not a standalone trade. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (D-15) | Stand aside | High | Fifteen days out; no firm August consensus to react to, no name-keyed setup. | A published August consensus emerging before **2026-09-03** |
+| This week | Watch | Medium | Confirmed 9/3 10:00 ET; the Prices Index is the load-bearing subcomponent — the biggest non-CPI rate-path mover in the set — watch it, size nothing into it. | A soft Prices Index — below ~65 — on **2026-09-03**, flipping the hawkish base case |
+| This month | Watch closely | Medium | Lands the day before jobs (9/4) and inside the Sep 1→Sep 16 pre-FOMC corridor; of the two ISM prints this is the one that moves rates, read into the hike-odds channel. | A weak jobs print the next day (**2026-09-04**) collapsing hike odds toward zero |
+| This quarter | Stand aside on this print specifically | Medium | The binding constraint on our duration names is the Sep FOMC/CPI corridor; this is its most important non-CPI input, treated as regime context, not a standalone trade. | The **2026-09-16** FOMC corridor resolving the binding constraint on the duration names |
 
 **Signals & conditions.**
 - Prices Index holding ≥70 or re-accelerating (July 70.3, up from June's 67.7) → the corridor's
@@ -170,6 +170,7 @@ hitting CRWV and the high-multiple semis hardest.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D-15 | Initial research banked (above). Date confirmed via ISM cadence rule (3rd business day, 10:00 ET → Thu 9/3) + convergent aggregation; ROB primary calendar is SSO-gated (flagged). July print (rel 8/5): headline 54.1 (est 54.5, 25th month expansion), **Prices 70.3 (est 65.0, prior 67.7 — hottest 12-mo avg since Apr 2023)**, Business Activity 59.1 (2nd-highest since May 2024), New Orders 57.2, Employment 47.4 (contraction) — hot-prices/strong-activity/soft-labor divergence; drove 10Y ~+9bps to ~4.17% (highest since Nov 2022), equities pressured. Adjacency — peers: no tracked-name prints since 8/18. Macro: standing regime per the sibling CPI/FOMC/GDP ledgers (Jul CPI in-line 3.4% 8/12; Jul jobs miss 8/7; Aug 13 PPI flat → Sep hike odds <40%; energy shock/Hormuz still hot). VIX 15.84 close 8/18 (up 4.28% on day), ticked up from the 14.56 2026-low noted 8/17 — calm regime, no shift. Geopolitical: Hormuz tanker attacks / failed ceasefire continuing, feeding services input-cost pass-through. Event tape: no August consensus/whisper found at D-15 (flagged). No new dated adjacencies — the existing calendar covers the full Sep 1→Sep 16 corridor (ISM-mfg + JOLTS 9/1, jobs 9/4, PPI 9/10, CPI 9/11, FOMC 9/16); nothing to propose. | — (stance set) | 2026-08-22 (high, 8–20d band: every 3d) |
+| 2026-08-24 | D-10 | Adjacency sweep. Event tape: **a consensus surfaced since D-15** — economists' median forecast is **54.0** (PNC Economics, ecmarkets, checked 2026-08-24), just below July's 54.1 actual; prediction-market probability mass concentrates on 54.0-54.9 as the single highest-probability band but the aggregated alternative bands still command a combined majority — genuine two-sided uncertainty on the exact print, not a lopsided base case. No forecast found specifically for the Prices or Employment subcomponents (the two legs this doc's stance actually watches) — still a gap. Peers: no tracked-name prints since 8/18; AVGO's XPV overhang deepened further (-4.61% on 8/19, own doc) — sector context, not services-specific. Macro: no CPI/jobs/FOMC surprise since 8/19; Sep-16 read unchanged (hawkish-hold, per FOMC sibling doc — supersedes the D-15 row's stale "<40% hike odds" framing). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs; still the live driver behind services input-cost pass-through if Prices repeats its hot streak. No new dated adjacency found. | — (no change; headline consensus now exists but the load-bearing subcomponents — Prices, Employment — remain unforecast) | 2026-08-27 (high, 8-20d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

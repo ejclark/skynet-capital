@@ -6,18 +6,28 @@ import {
   renderSymbolResearchBody,
 } from "../observatory/research-view.js";
 import { shellDocument } from "./page-shell.js";
-import { findResearchDoc, listResearch, shelfSymbols, symbolResearch } from "./research-service.js";
+import {
+  eventCalls,
+  findResearchDoc,
+  listResearch,
+  researchedEventIds,
+  shelfSymbols,
+  symbolResearch,
+} from "./research-service.js";
 
 /**
  * `/research` — the living research surface (docs/plans/research-lab.md slice 1, sharpened
- * 2026-08-17: symbol-first pages + calendar↔research links). Three shapes: the shelf,
- * `/research/symbol/:SYMBOL` symbol pages, and `/research/<slug>` rendered docs. Runs behind the same
- * gate as every other observatory view (dashboard-server dispatches it post-auth); slugs resolve
- * by shelf membership (research-service.ts), so an unknown or hostile path just 404s.
+ * 2026-08-17: symbol-first pages + calendar↔research links; folded with the event horizon
+ * 2026-08-25). Three routes serving four shapes: the shelf (which now also carries the event
+ * horizon — `?month=` moves its month-grid widget), `/research/symbol/:SYMBOL` symbol pages, and
+ * `/research/<slug>` rendered docs. Runs behind the same gate as every other observatory view
+ * (dashboard-server dispatches it post-auth); slugs resolve by shelf membership
+ * (research-service.ts), so an unknown or hostile path just 404s.
  */
 export function serveResearchRoute(
   res: ServerResponse,
   path: string,
+  url: string,
   navFor: (active: NavView) => NavContext,
 ): void {
   const asOfIso = new Date().toISOString();
@@ -27,11 +37,15 @@ export function serveResearchRoute(
     res.end(shellDocument(title, body));
   };
   if (path === "/research") {
+    const month = new URL(url, "http://localhost").searchParams.get("month");
     const body = renderResearchShelfBody({
       nav,
       asOfIso,
       shelf: listResearch(),
       symbols: shelfSymbols(asOfIso),
+      researchIds: researchedEventIds(),
+      calls: eventCalls(),
+      ...(month ? { month } : {}),
     });
     html("Research — Skynet Capital", body);
     return;

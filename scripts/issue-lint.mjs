@@ -3,6 +3,7 @@
 //
 //   node scripts/issue-lint.mjs body.md                    # lint a body file
 //   node scripts/issue-lint.mjs --title "…" body.md        # lint the title too
+//   node scripts/issue-lint.mjs --labels bug,idea body.md  # …and check the labels are registered
 //   node scripts/issue-lint.mjs --stdin                    # lint a body on stdin
 //   node scripts/issue-lint.mjs --json body.md             # findings as JSON (specs, tooling)
 //   node scripts/issue-lint.mjs --audit                    # live adoption report (needs GITHUB_TOKEN)
@@ -19,6 +20,12 @@
 //
 // Dependency-free (node built-ins). Loud-failure doctrine: an unreadable input is an error.
 import { readFileSync } from "node:fs";
+import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
+import { LABEL_NAMES } from "./postmaster-labels.mjs";
+
+// Re-exported so callers of issue-lint.mjs keep the same public surface — the live-corpus audit
+// itself (AUTOMATION_TAG, `audit`, `auditReport`) now lives in issue-lint-audit.mjs.
+export { AUDIT_LIST_LIMIT, auditReport };
 
 /** ~one phone screen at 390px. Above this, the reader scrolls before knowing whether to care. */
 export const MAX_ABOVE_FOLD = 1200;
@@ -186,11 +193,38 @@ function collectNotes(text, notes) {
   }
 }
 
+/** The vocabulary an issue's labels are checked against — one registry, shared with the lanes that
+ *  apply them (scripts/postmaster-labels.mjs `LABELS`). */
+const KNOWN_LABELS = new Set(LABEL_NAMES);
+
+/**
+ * Labels, and WARN is deliberate (#500's one open question, resolved advisory).
+ *
+ * A label nobody registered is usually a real defect — #461 and #462 carried `idea` where they
+ * meant `handoff`, so two waiting handoffs appeared in no queue, no scan and no digest, and
+ * nothing anywhere noticed. But members apply arbitrary labels through the GitHub UI, and failing
+ * a lint because a human invented a useful new label would tax exactly the reporter this linter's
+ * header says it must never tax. So it points, it does not gate — same as every other note here.
+ */
+function checkLabels(labels, notes) {
+  const unknown = labels
+    .map((l) => (typeof l === "string" ? l : (l?.name ?? "")))
+    .filter((n) => n && !KNOWN_LABELS.has(n));
+  if (!unknown.length) return;
+  notes.push(
+    `unregistered label${unknown.length === 1 ? "" : "s"} ${unknown.map((n) => `\`${n}\``).join(", ")} — ` +
+      "no lane reads a label it does not know; register it in scripts/postmaster-labels.mjs LABELS or fix the name",
+  );
+}
+
 /**
  * Lint one issue. Returns `{ problems, notes }` — problems fail the gate (existence and honesty),
  * notes are advisory (taste is never gated).
+ *
+ * `labels` is optional: a body linted before filing has none yet, and absent labels must read as
+ * "not checked", never as "checked and clean".
  */
-export function lintIssue({ title = "", body = "" } = {}) {
+export function lintIssue({ title = "", body = "", labels } = {}) {
   const problems = [];
   const notes = [];
   const text = body.replace(/\r\n/g, "\n");
@@ -204,92 +238,40 @@ export function lintIssue({ title = "", body = "" } = {}) {
   checkMedia(text, problems);
   checkTitle(title, problems, notes);
   collectNotes(text, notes);
+  if (Array.isArray(labels)) checkLabels(labels, notes);
 
   return { problems, notes };
 }
 
-// ── audit: what the live corpus actually looks like ───────────────────────────
-/** Issues this contract does not judge: machine-filed, machine-read (the event-research lane). */
-const AUTOMATION_TAG = /^\[(event-research)\]/i;
+// The live-corpus audit (`audit`, `auditReport`, `AUDIT_LIST_LIMIT`) lives in issue-lint-audit.mjs
+// and is re-exported above; `lintIssue` is what it runs per issue.
 
-/** How many failing issues the audit names before it summarizes the remainder. The cap keeps the
- *  report scannable; naming what it dropped keeps it honest. A top-N that prints no remainder
- *  reads as "that was all of them" — the silent truncation CLAUDE.md rules out. `--all` lifts it. */
-export const AUDIT_LIST_LIMIT = 8;
+/** The lint path's flags, parsed apart from the control flow that acts on them.
+ *
+ *  `labels` is `undefined` when `--labels` was not passed, never `[]`: a body linted before filing
+ *  carries no labels yet, and "not checked" must never render as "checked and clean". */
+function parseLintArgs(argv) {
+  const flagValue = (flag) => {
+    const at = argv.indexOf(flag);
+    return at === -1 ? { at, value: undefined } : { at, value: argv[at + 1] };
+  };
+  const { at: titleAt, value: titleValue } = flagValue("--title");
+  const { at: labelsAt, value: labelsValue } = flagValue("--labels");
+  const valueArgs = new Set([titleAt + 1, labelsAt + 1].filter((i) => i > 0));
 
-/** The audit's report, as pure lines — no network, no process exit, so a spec can assert on it.
- *  Takes the raw issue rows GitHub returns (`{ number, title, body }`). */
-export function auditReport(issues, { repo = "", limit = AUDIT_LIST_LIMIT } = {}) {
-  if (!issues.length) return ["issue-lint --audit: no issues found."];
-  const pct = (n) => `${Math.round((100 * n) / issues.length)}%`;
-  const count = (f) => issues.filter((i) => f(i.body ?? "")).length;
-  const human = issues.filter((i) => !AUTOMATION_TAG.test(i.title ?? ""));
-  const failing = human
-    .map((i) => ({ issue: i, ...lintIssue({ title: i.title ?? "", body: i.body ?? "" }) }))
-    .filter((r) => r.problems.length);
-
-  const lines = [
-    `issue corpus: ${issues.length} issues on ${repo} (${human.length} human-facing)`,
-    "",
-    `  fold      ${pct(count((b) => b.includes("<details")))}`,
-    `  picture   ${pct(count((b) => /!\[|<img |```mermaid/.test(b)))}`,
-    `  table     ${pct(count((b) => /^\|.+\|$/m.test(b)))}`,
-    `  headings  ${pct(count((b) => /^#{2,3} /m.test(b)))}`,
-    "",
-    `  ${failing.length}/${human.length} human-facing issues fail the capsule contract (docs/ISSUES.md).`,
-  ];
-
-  const shown = failing.slice(0, limit);
-  for (const { issue, problems } of shown) {
-    // Each issue shows its first problem; say how many more it carries rather than implying one.
-    const rest = problems.length - 1;
-    lines.push(
-      `    #${issue.number} — ${problems[0]}${rest ? ` (+${rest} more on this issue)` : ""}`,
-    );
-  }
-  const dropped = failing.length - shown.length;
-  if (dropped) {
-    lines.push(
-      `    … and ${dropped} more failing issue${dropped === 1 ? "" : "s"} not listed — re-run with --all to name them.`,
-    );
-  }
-  return lines;
-}
-
-async function audit(repo, { limit = AUDIT_LIST_LIMIT } = {}) {
-  // Node does not honour HTTPS_PROXY for global fetch; re-exec once with the env flag rather than
-  // failing with a bare 401 behind a corporate/agent proxy.
-  if (process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY) {
-    const { spawnSync } = await import("node:child_process");
-    const r = spawnSync(process.execPath, process.argv.slice(1), {
-      env: { ...process.env, NODE_USE_ENV_PROXY: "1", NODE_NO_WARNINGS: "1" },
-      stdio: "inherit",
-    });
-    process.exit(r.status ?? 1);
-  }
-  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-  if (!token) {
-    console.error(
-      "issue-lint --audit: set GITHUB_TOKEN (read-only issues scope) to measure the corpus.",
-    );
-    process.exit(1);
-  }
-  const rows = [];
-  for (let page = 1; page <= 10; page++) {
-    const res = await fetch(
-      `https://api.github.com/repos/${repo}/issues?state=all&per_page=100&page=${page}`,
-      { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } },
-    );
-    if (!res.ok) {
-      console.error(`issue-lint --audit: GitHub responded ${res.status}`);
-      process.exit(1);
-    }
-    const batch = await res.json();
-    if (!batch.length) break;
-    rows.push(...batch);
-  }
-  const issues = rows.filter((r) => !r.pull_request);
-  console.log(auditReport(issues, { repo, limit }).join("\n"));
+  return {
+    json: argv.includes("--json"),
+    stdin: argv.includes("--stdin"),
+    title: titleValue ?? "",
+    labels:
+      labelsAt === -1
+        ? undefined
+        : (labelsValue ?? "")
+            .split(",")
+            .map((l) => l.trim())
+            .filter(Boolean),
+    file: argv.find((a, i) => !(a.startsWith("--") || valueArgs.has(i))),
+  };
 }
 
 async function main() {
@@ -310,20 +292,17 @@ async function main() {
     await audit(repo, { limit });
     return;
   }
-  const json = argv.includes("--json");
-  const titleAt = argv.indexOf("--title");
-  const title = titleAt === -1 ? "" : (argv[titleAt + 1] ?? "");
-  const file = argv.find((a, i) => !a.startsWith("--") && i !== titleAt + 1);
+  const { json, stdin, title, labels, file } = parseLintArgs(argv);
 
   let body;
-  if (argv.includes("--stdin")) body = readFileSync(0, "utf8");
+  if (stdin) body = readFileSync(0, "utf8");
   else if (file) body = readFileSync(file, "utf8");
   else {
     console.error("issue-lint: pass a body file, or --stdin. See docs/ISSUES.md.");
     process.exit(1);
   }
 
-  const { problems, notes } = lintIssue({ title, body });
+  const { problems, notes } = lintIssue({ title, body, labels });
   if (json) {
     console.log(JSON.stringify({ problems, notes }, null, 2));
     process.exit(problems.length ? 1 : 0);

@@ -1,7 +1,7 @@
 # Texas PUCT audit meetings begin (Vistra watch item) — texas-puct-audit-2026-08-20
 
 **Kind:** sector · **Date:** 2026-08-20 (estimate, EST: docs/research/ai-energy-constraint.md dashboard — confirm vs puct.texas.gov) · **Impact:** low
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -17,12 +17,12 @@ is well-corroborated but not primary-confirmed. On the substance: Vistra's own m
 contracted projects — this reads closer to queue-cleanup tailwind than regulatory overhang for
 VST specifically.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Watch | Event is tomorrow; nothing tradable today, estimate-labeled. |
-| This week (8/19–8/22) | Watch | The Aug 20 meeting item is procedural (an exception filing on a queue-classification deadline), not a ruling on audit substance — low odds of a VST-moving surprise. |
-| This month (through ~9/19) | Stand aside | Audit is explicitly multi-month (ERCOT's own estimate: "several months, less than nine"); no near-term catalyst on Vistra fundamentals is expected, and management has already signaled comfort. |
-| This quarter (through ~11/19) | Watch | This is the "Texas audit resolving" half of VST's Tier-2 entry condition in `ai-energy-constraint.md` (paired with the Dec-15 PJM auction leg) — worth tracking over the quarter as the audit produces real output, not actionable on any single meeting. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Watch | High | Event is tomorrow; nothing tradable today, estimate-labeled. | A direct fetch of the **2026-08-20** PUCT agenda confirming or moving the item |
+| This week (8/19–8/22) | Watch | Medium | The Aug 20 meeting item is procedural (an exception filing on a queue-classification deadline), not a ruling on audit substance — low odds of a VST-moving surprise. | The meeting item proving substantive rather than a procedural exception filing |
+| This month (through ~9/19) | Stand aside | Medium | Audit is explicitly multi-month (ERCOT's own estimate: "several months, less than nine"); no near-term catalyst on Vistra fundamentals is expected, and management has already signaled comfort. | The audit concluding early against ERCOT's own multi-month estimate |
+| This quarter (through ~11/19) | Watch | Medium | This is the "Texas audit resolving" half of VST's Tier-2 entry condition in `ai-energy-constraint.md` (paired with the Dec-15 PJM auction leg) — worth tracking over the quarter as the audit produces real output, not actionable on any single meeting. | Findings or a PUCT order naming Vistra's units, which kills the no-threat read |
 
 **Signals & conditions.**
 - **Entry-relevant (still requires the paired PJM leg — never licensed by this event alone):** the
@@ -147,3 +147,47 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-08-24** (sector kind carries no price/options instrument — sourced web research
+only, per the initial doc). Direct fetch of `puc.texas.gov`'s own filing document
+(`interchange.puc.texas.gov/Documents/55999_116_1491473.PDF`) failed in this session (TLS/cert
+error, not a data limitation) — same honest-limits caveat the initial doc carried; outcome is
+corroborated via law-firm coverage (Baker Botts, Beatty & Wozniak) plus the ERCOT market notice
+this doc already cited, not the regulator's own posted minutes.
+
+**The agenda item.** PUCT approved ERCOT's Project 59142 good-cause-exception request at (or
+around) the Aug 20 open meeting: (1) conditional Base/Studied/Batch-0-Ineligible classification of
+large loads pushed to Aug 31, 2026; (2) conditionally-classified base loads still included in the
+Aug 1/Nov 1 QSA; (3) a 24-day cure window for large-load developers with dynamic-data deficiencies
+found after the Aug 7 deadline. All three requested exceptions were granted — a routine
+scheduling/procedural approval, exactly as leg 2 of the initial doc framed the agenda item, not a
+ruling on audit substance.
+
+**Market reaction.** VST closed **-2.63%** on 8/20 (~$138.94) against a broad market selloff — S&P
+500 -0.87%, Nasdaq -1.00% the same session (Treasury buyback relief fading, oil up on
+US-Iran tension, per the sibling `treasury-20y-bond-2026-08-19.md` doc's Aug-20 follow-through
+row). VST's move is directionally worse than the index but well within single-name noise for a
+power/utility name in a broad risk-off tape — no source ties the move specifically to the PUCT
+agenda item, and Q2 guidance (reaffirmed 8/7: adjusted EBITDA $6.8–7.6B FY26) was already public.
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"No threat to Vistra"** — **did not fire.** The approved exceptions are procedural relief for
+  ERCOT/developers, not a finding or order naming Vistra's fleet or its contracted projects.
+- **"Audit scope expands to existing generation" / "retroactive requirements" / "management walks
+  back Aug-14 comfort"** — **none fired.** No source found ties this approval to Vistra's existing
+  assets or Comanche Peak/Amazon; no subsequent Vistra statement contradicts the Aug-14 call.
+
+**Verdict vs. the stance.** The watch-only, no-play call held: the Aug 20 item was exactly the
+procedural scheduling matter the initial doc identified (leg 2), it was granted without
+controversy, and nothing in the outcome licenses activating VST's Tier-2 entry condition — that
+still requires the audit's eventual substantive output **and** the Dec-15 PJM auction leg, per
+`ai-energy-constraint.md`. No forward test was registered for this event (impact:low, no play
+proposed) — nothing to score in `forward-tests.md`. Scanner goes quiet on this event.
+
+Sources: [ERCOT M-A080326-01](https://www.ercot.com/services/comm/mkt_notices/M-A080326-01),
+[Baker Botts — Batch Zero Pause and Verification Process](https://www.bakerbotts.com/thought-leadership/publications/2026/august/texas-large-load-interconnection-update---ercot-batch-zero-pause-and-verification-process),
+[Beatty & Wozniak — Batch Zero delay](https://www.bwenergylaw.com/blog/2026/08/texas-data-center-review-delays-batch-zero-and-puts-behind-the-meter-power-in-focus/),
+[stockanalysis.com VST](https://stockanalysis.com/stocks/vst/),
+[TheStreet — market Aug 20 2026](https://www.thestreet.com/stock-market-today/stock-market-today-dow-jones-sp-500-nasdaq-updates-aug-20-2026).

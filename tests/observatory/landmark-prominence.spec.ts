@@ -1,5 +1,3 @@
-import { renderCompareBody } from "../../src/observatory/compare-view.js";
-import { renderEmpireSkyline } from "../../src/observatory/empire-skyline.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import { renderIndividualBody } from "../../src/observatory/render-dashboard.js";
 import { botLandmarkProminence } from "../../src/observatory/standings.js";
@@ -43,8 +41,10 @@ describe("botLandmarkProminence", () => {
   });
 });
 
-// The landmark is the scoreboard only if every view renders the SAME dial — these pin the
-// threading, so /u/:id and /compare can't silently fall back to a full-power Eye again.
+// The landmark is the scoreboard only if every view renders the SAME dial — this pins the
+// threading, so /u/:id can't silently fall back to a full-power Eye again. (The old /compare half
+// of this pin is gone: Standings' folded-in head-to-head renders no nation skyline at all — design
+// brief, 2026-08-25 — so there's nothing left to thread a dial through on that surface.)
 describe("prominence threading", () => {
   const sauron = (ret: number): ParticipantSnapshot => ({ ...bot("sauron", ret), id: "sauron" });
 
@@ -52,16 +52,5 @@ describe("prominence threading", () => {
     const low = renderIndividualBody(sauron(-5), { prominence: 0.55 });
     const high = renderIndividualBody(sauron(-5), { prominence: 1 });
     expect(low).not.toBe(high); // the dial visibly reaches the skyline
-  });
-
-  it("/compare scales each city's landmark by the shared standings", () => {
-    const a = sauron(30);
-    const b = { ...bot("rival", -5), personaId: "sauron", id: "rival" };
-    const data = { generatedAt: "t", participants: [a, b], collisions: [] };
-    const body = renderCompareBody(data, { aId: "sauron", bId: "rival" });
-    // The winner's city renders exactly the full-power skyline; the laggard's exactly the
-    // bottom-rank one — the same dials botLandmarkProminence assigns.
-    expect(body).toContain(renderEmpireSkyline(a, { personaProminence: 1 }));
-    expect(body).toContain(renderEmpireSkyline(b, { personaProminence: 0.55 }));
   });
 });

@@ -26,6 +26,16 @@ import type { EmpireState, LandmarkState, StructureState, WorldState } from "./w
  */
 export const MAX_STRUCTURES = 9;
 
+/**
+ * The stable identity of one rendered piece — `participantId:SYMBOL`, uppercased so a broker that
+ * reports `nvda` and one that reports `NVDA` address the SAME tower rather than two. Defined here,
+ * beside the projection that stamps it, because identity is a projection rule: every renderer,
+ * patch and animation downstream keys off this one string (GAMEBOARD-PLAN, "structure identity").
+ */
+export function pieceKey(participantId: string, symbol: string): string {
+  return `${participantId}:${symbol.toUpperCase()}`;
+}
+
 /** A labeled aggregate of the holdings a renderer can't show individually (the "outer district"). */
 export interface TailAggregate {
   readonly count: number;
@@ -96,6 +106,7 @@ export function projectEmpire(
     const u = unrealizedPl(p);
     const basis = Math.abs(fin(p.quantity) * fin(p.avgPrice));
     return {
+      key: pieceKey(snapshot.id, p.symbol),
       symbol: p.symbol,
       sector: sectorOf(p.symbol),
       mass: clampFinite(fin(p.marketValue) / maxVal, 0, 1),

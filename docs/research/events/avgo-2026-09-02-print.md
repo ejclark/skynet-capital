@@ -1,7 +1,32 @@
 # AVGO earnings print — avgo-2026-09-02-print
 
 **Kind:** earnings · **Date:** 2026-09-02 (estimate, NEWS: Broadcom PR 2026-08-03 — Wed Sep 2 AMC; IR fetch blocked 2026-08-17) · **Impact:** critical
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
+
+## At a glance
+
+**TL;DR.** No position into AVGO's print. S1 is dead on this symbol, so there is no positioning bid
+to take, and the late-week window is FT-2's **zero-size** observation — contaminated this cycle
+anyway, because NVDA's 2026-08-26 print sits at its open. Get flat by the **2026-09-02 close** and
+let it pass. The thing that makes this print unusual is not the beat: the XPV financing overhang plus
+the VMware exploit raise the odds it trades on **disclosure quality** instead of the number — which
+widens caution and licenses nothing. The calendar carries an estimate; Sep 2 is primary-sourced and a
+correction is proposed, and the *earlier* of the two governs the flat deadline.
+
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today | **Stand aside** — no pre-print position | High | S1 is dead on AVGO; the only late-week interest is FT-2 at zero size, and NVDA's 08-26 print contaminates it this cycle | FT-2 clearing its base rate under the 2-of-3 rule, sympathy-decontaminated |
+| This week | **Flat by the 2026-09-02 close (S2)** | High | The earlier of the estimated and primary-sourced dates governs the deadline; an estimate never licenses an entry, only an earlier exit | ≥3 new prints showing a repriced gap regime |
+| This month | **Nothing pre-committed post-print** | High | The D+1 fade is absent on AVGO and the gap-hold is kill-listed — there is no researched post-print play to pre-commit to | A registered post-print study clearing controls on this symbol |
+| This quarter | **Treat XPV as live event risk, not a thesis** | Medium | Residual-value guarantees plus the VMware exploit make disclosure quality the swing factor; that is risk, not an edge | Broadcom quantifying or capping the guarantees in a filing, or AVGO round-tripping the 8/14 drop above ~$417 |
+
+**Signals & conditions** — the buy/sell/hold triggers:
+
+- **Never** — hold unhedged AVGO through the print for the gap; the family is kill-listed.
+- **Flat deadline** — the **2026-09-02** close, governed by the earlier of the estimated and primary-sourced dates.
+- **FT-2 only, zero size** — and treat this cycle's observation as contaminated by NVDA's **2026-08-26** print at the open.
+- **Watch (dated)** — the honest print window **2026-08-27** to **2026-09-10** until IR confirms · NVDA print **2026-08-26** · any XPV disclosure in a filing or PR.
+- **Redo the cadence math immediately if** — Broadcom's IR moves or contradicts the Sep 2 date.
 
 ## Initial research
 
@@ -134,6 +159,7 @@ which *widens* caution and licenses nothing.
 |---|---|---|---|---|
 | 2026-08-17 | D-17 | Initial research banked (above). Both instruments run clean on today's fresh cache (history through 8/14); AVGO's 33-print event list passes the cadence sanity check — the sweep's forward-window blindness no longer applies to AVGO. **Date:** Broadcom newsroom PR sets the Q3 FY26 print at **Wed 9/2 AMC** (call 2pm PT) — the calendar's 9/3 estimate is one day late; correction proposed same-PR (primary IR source, confirmed-grade). Adjacency: no peer prints since 8/15 (weekend); NVDA 8/26 + MRVL 8/27 confirmations already proposed via today's NVDA scan ([`nvda-2026-08-26-print.md`](nvda-2026-08-26-print.md)). Macro: none since 8/15; **Jackson Hole 8/27–29 with new Fed chair Warsh's first keynote Fri 8/28** lands inside AVGO's D-5→D window (proposed); Aug jobs Fri 9/4 (est) = D+2; CPI 9/11 post-print. VIX ~14.56 at Friday's close (2026 low) but SKEW +6.6% m/m and Brent +6%/wk — calm index, rising tail-hedge demand (per the same-day NVDA row). Geopolitical: standing Jan-2026 Section 232 25% semi-tariff / H200-license regime; nothing new AVGO-specific. Event tape (date estimate in table, Sep 2 primary-sourced): **AVGO −5.94% Fri 8/14 to $392.99** on BofA's ~$370B XPV off-balance-sheet AI-financing note (Apollo/Blackstone vehicle, residual-value guarantees) + actively exploited VMware vCenter CVE-2026-59310 — two bear narratives a beat doesn't answer. Consensus ~$29.4–29.9B rev / ~$3.24–3.30 EPS / ~$16B AI semi rev; per-print implied move not yet cleanly priced (stale-quarter figures circulating; 8-print median realized ~5.6%). FT-2 note: with a Sep 2 print, the D-5 close is Aug 26 — NVDA's print night opens inside FT-2's window; score with the sympathy caveat. | — (stance set) | 2026-08-19 (critical, 8–20d band: every 2d) |
 | 2026-08-19 | D-14 | Cache busted; both instruments re-run clean on fresh cache (history through 8/18). No new AVGO print since last quarter, so cells are essentially unchanged from 8/17 (rounding-level drift only: E1 first-hour vol share 30.0% vs 30.1%, mean −0.090% vs −0.086%, win 47% vs 48% — verdict holds). **IR blocker resolved:** `investor.broadcom.com` now 301-redirects cleanly to `www.broadcom.com` (no longer 503-blocked), and the primary source cited in the initial doc is directly fetchable and confirms "Wednesday, September 2, 2026" — a **PROPOSED confirmed-grade flip** (IR: prefix) for `earnings-calendar.ts`'s AVGO row, not actioned here; table stays **estimate**. Adjacency — peers: NVDA −2.19% 8/18 on AMD competitive-pressure narrative (Advancing AI event); MRVL −8.32% 8/18 on macro/yield-driven sector pullback, not company news — both peers softening into their 8/26 and 8/27 prints, raising odds the sympathy-gap signal into AVGO's Sep-2 print trades weak rather than strong this cycle (widens caution only). Macro: no CPI/FOMC/jobs surprises since 8/17. VIX closed 15.84 on 8/19 (+4.28% day), up from the 8/17 row's ~14.56 2026-low. Geopolitical: no new export-control/tariff news touching AVGO since 8/17. Event tape: AVGO extended its XPV-driven slide, −3.33% on 8/18 on top of Friday's −5.94%, landing well below the $417 round-trip kill-switch bar — the XPV overhang reads as deepening, not fading; VMware vCenter CVE coverage continues, no new development. Consensus unchanged; no whisper number found; implied move still not cleanly priced. | unchanged | 2026-08-21 (critical, 8–20d band: every 2d) |
+| 2026-08-24 | D-9 | Both instruments re-run clean, cache busted (history through 8/21): modern-era run-up still NOT SIGNIFICANT (11/14, p=0.254, unchanged read); D-5→D leg +4.21%/71%; reaction-day fade −0.67%/50% — no edge, consistent with the 8/17 row. Adjacency — peers: MRVL's Google/Alphabet warrant deal (8/19, own doc) is now drawing explicit press comparison to AVGO's financing model ("Broadcom Guarantee Grows With Every AI Rack Sold: BofA Warning Meets Marvell-Google Deal," techtimes 8/20) — a competitive narrative framing AVGO's balance-sheet-heavy XPV structure against MRVL's lighter-touch deal, worth watching into both prints. NVDA's implied move fell to ~5.3% (own doc). Macro: no CPI/jobs/FOMC surprise since 8/19; Sep-16 read unchanged (hawkish-hold, per FOMC sibling). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation — same finding as sibling docs. Event tape: **XPV overhang deepened, not faded** — AVGO fell a further -4.61% on 8/19 (BofA's $370B modeled ceiling), and SiliconANGLE (8/20) reported Broadcom is separately seeking up to $100B in fresh debt financing for an AI chip deal, extending rather than resolving the financing-risk narrative; AVGO now $368.90 (8/24), well below the $417 round-trip kill-switch bar and below even the D-17 row's already-depressed $392.99. No new VMware CVE development found. Consensus unchanged; still no clean implied-move figure. | unchanged (XPV overhang still live, kill switch further from firing not closer) | 2026-08-26 (critical, 8-20d band: every 2d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

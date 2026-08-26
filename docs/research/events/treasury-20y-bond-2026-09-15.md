@@ -17,12 +17,12 @@ ET, doesn't exist as this is written) is the direct predecessor whose demand thi
 Auction **date confirmed**; every size/when-issued/demand figure below is **estimate/press-sourced**.
 No symbol-keyed action — guard-shaped, no-new-duration-risk window.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside · watch the 1:02pm ET print | Today's 20Y *new issue* result is the predecessor this Sep-15 reopening inherits; no new duration entries into the release. |
-| This week | Watch the 30Y TIPS auction (8/20) | Second long-end demand data point this week; confirms or breaks the deteriorating-demand read that carries into Sep. |
-| This month | Flat the print for high-duration names | 9/15 auction → 9/16 FOMC is a two-day compound-rate window; CRWV/NVDA/AVGO/MRVL sized for both tails across it. |
-| This quarter | Two live channels, adjacent | Term premium (this auction) and Fed path (next-day FOMC, hike live ~30–40%) land back-to-back — the one week they can visibly compound. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside · watch the 1:02pm ET print | High | Today's 20Y *new issue* result is the predecessor this Sep-15 reopening inherits; no new duration entries into the release. | The **2026-08-19** 20Y new-issue result, which is the fresher read |
+| This week | Watch the 30Y TIPS auction (8/20) | High | Second long-end demand data point this week; confirms or breaks the deteriorating-demand read that carries into Sep. | The **2026-08-20** 30Y TIPS auction contradicting that demand read |
+| This month | Flat the print for high-duration names | Medium | 9/15 auction → 9/16 FOMC is a two-day compound-rate window; CRWV/NVDA/AVGO/MRVL sized for both tails across it. | A confirmed-weak print — bid-to-cover materially below ~2.55, a positive tail, or a direct-bidder spike |
+| This quarter | Two live channels, adjacent | Medium | Term premium (this auction) and Fed path (next-day FOMC, hike live ~30–40%) land back-to-back — the one week they can visibly compound. | A firm print (bid-to-cover ≥2.75, negative tail, indirects ≥71%) relieving the term-premium channel |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 

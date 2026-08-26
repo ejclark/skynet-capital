@@ -27,4 +27,22 @@ describe("loadParticipants", () => {
     const env = { SKYNET_HUMAN_JOE_KEY: "hk" };
     expect(loadParticipants(personas, env)).toHaveLength(0);
   });
+
+  // The owner link is what makes an account "connected" (tradeable from its owner's session).
+  // Env-declared humans get it from env or not at all — the roster is rebuilt every boot.
+  it("stamps ownerEmail from SKYNET_HUMAN_<ID>_EMAIL, normalized to lowercase", () => {
+    const env = {
+      SKYNET_HUMAN_ERIC_KEY: "hk",
+      SKYNET_HUMAN_ERIC_SECRET: "hs",
+      SKYNET_HUMAN_ERIC_EMAIL: " EJClark83@Gmail.com ",
+    };
+    const [eric] = loadParticipants(personas, env);
+    expect(eric?.ownerEmail).toBe("ejclark83@gmail.com");
+  });
+
+  it("leaves ownerEmail absent when no _EMAIL is declared", () => {
+    const env = { SKYNET_HUMAN_ERIC_KEY: "hk", SKYNET_HUMAN_ERIC_SECRET: "hs" };
+    const [eric] = loadParticipants(personas, env);
+    expect(eric?.ownerEmail).toBeUndefined();
+  });
 });

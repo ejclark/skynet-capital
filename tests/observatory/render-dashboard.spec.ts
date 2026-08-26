@@ -1,149 +1,8 @@
-import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import {
   renderAcademyBody,
-  renderCohortsBody,
-  renderCompareBody,
-  renderDashboardBody,
   renderIndividualBody,
-  renderLeaderboardBody,
+  renderPortfolioIndexBody,
 } from "../../src/observatory/render-dashboard.js";
-import { sampleDashboardData } from "../../src/observatory/sample-dashboard-data.js";
-
-describe("renderDashboardBody", () => {
-  const html = renderDashboardBody(sampleDashboardData());
-
-  it("renders each participant with their kind chip", () => {
-    expect(html).toContain("The News Fader");
-    expect(html).toContain("BOT · news-fader");
-    expect(html).toContain("Eric");
-    expect(html).toContain(">HUMAN<");
-  });
-
-  it("shows a gain in the positive class and a loss in the negative class", () => {
-    // News Fader EEM: mktValue 528,000 vs cost 12,000*42.10 = 505,200 -> +22,800 (gain)
-    expect(html).toContain("+$22,800");
-    // Futurist NVDA: mktValue 98,400 vs cost 800*140 = 112,000 -> -13,600 (loss)
-    expect(html).toContain("-$13,600");
-    expect(html).toContain('class="num neg"');
-    expect(html).toContain('class="num pos"');
-  });
-
-  it("renders an error state for an unreachable account", () => {
-    const withError: DashboardData = {
-      generatedAt: "2026-07-24T15:30:00.000Z",
-      participants: [
-        {
-          id: "x",
-          displayName: "Broken Bot",
-          kind: "bot",
-          personaId: "futurist",
-          cash: 0,
-          equity: 0,
-          positions: [],
-          error: "AlpacaApiError 401",
-        },
-      ],
-      collisions: [],
-    };
-
-    const errHtml = renderDashboardBody(withError);
-    expect(errHtml).toContain("card-error");
-    expect(errHtml).toContain("Account unreachable");
-  });
-
-  it("renders a recent-activity feed with the trade", () => {
-    expect(html).toContain("Recent Activity");
-    expect(html).toContain(">BUY<");
-    // VWO fill from Eric's activity is present.
-    expect(html).toContain("VWO");
-  });
-
-  it("renders Eric's activity times in his timezone (Chicago), not UTC", () => {
-    // 14:05 UTC is 09:05 in America/Chicago (CDT). The Chicago label must appear.
-    expect(html).toContain("CDT");
-    expect(html).toContain("09:05");
-  });
-
-  it("escapes HTML in participant names", () => {
-    const data: DashboardData = {
-      generatedAt: "2026-07-24T15:30:00.000Z",
-      participants: [
-        { id: "x", displayName: "<script>", kind: "human", cash: 0, equity: 0, positions: [] },
-      ],
-      collisions: [],
-    };
-    expect(renderDashboardBody(data)).not.toContain("<script>");
-  });
-});
-
-describe("renderCompareBody — two cities", () => {
-  const data: DashboardData = {
-    generatedAt: "2026-07-24T15:30:00.000Z",
-    participants: [
-      {
-        id: "tech-bot",
-        displayName: "Tech Titan",
-        kind: "bot",
-        personaId: "futurist",
-        cash: 10_000,
-        equity: 120_000,
-        positions: [
-          { symbol: "NVDA", quantity: 100, avgPrice: 900, marketValue: 100_000 },
-          { symbol: "META", quantity: 20, avgPrice: 500, marketValue: 10_000 },
-        ],
-      },
-      {
-        id: "index-human",
-        displayName: "Index Ivy",
-        kind: "human",
-        cash: 25_000,
-        equity: 90_000,
-        positions: [{ symbol: "EEM", quantity: 1_000, avgPrice: 42, marketValue: 65_000 }],
-      },
-    ],
-    collisions: [],
-  };
-
-  const html = renderCompareBody(data, { aId: "tech-bot", bId: "index-human" });
-
-  it("renders one empire skyline per participant (two cities)", () => {
-    const skylines = html.match(/class="empire-skyline"/g) ?? [];
-    expect(skylines).toHaveLength(2);
-    expect(html).toContain("empire-cities");
-  });
-
-  it("labels each city with its participant's displayName", () => {
-    expect(html).toContain('class="empire-city-name">Tech Titan<');
-    expect(html).toContain('class="empire-city-name">Index Ivy<');
-  });
-});
-
-describe("observer mode (funnel front door)", () => {
-  const nav = {
-    active: "board" as const,
-    canAdd: true,
-    authed: true,
-  };
-
-  it("shows the observer hero when signed in with no linked account", () => {
-    const html = renderDashboardBody(sampleDashboardData(), { nav });
-    expect(html).toContain("OBSERVER MODE");
-    expect(html).toContain('href="/welcome"');
-    expect(html).toContain('href="/add"');
-  });
-
-  it("hides the observer hero once the viewer has a linked account", () => {
-    const html = renderDashboardBody(sampleDashboardData(), {
-      nav: { ...nav, currentId: "human-eric" },
-    });
-    expect(html).not.toContain("OBSERVER MODE");
-  });
-
-  it("does not show the observer hero on the bare embed (no nav)", () => {
-    const html = renderDashboardBody(sampleDashboardData());
-    expect(html).not.toContain("OBSERVER MODE");
-  });
-});
 
 describe("renderAcademyBody — the gamified journey", () => {
   const nav = { active: "learn" as const, canAdd: true, authed: true };
@@ -159,13 +18,15 @@ describe("renderAcademyBody — the gamified journey", () => {
     expect(html).toContain("The Wheel");
     expect(html).toContain("Buy the stock");
     expect(html).toContain("Buy your first stock");
-    expect(html).toContain("Sell your first cash-covered put");
+    expect(html).toContain("Sell your first cash-secured put");
   });
 
-  it("opens course 100 and locks course 200 until it's complete", () => {
+  it("opens course 100 and locks the higher courses until each level below is complete", () => {
     expect(html).toContain('data-course="100" open');
     expect(html).toContain('data-course="200"');
     expect(html).not.toContain('data-course="200" open');
+    expect(html).toContain('data-course="300"');
+    expect(html).not.toContain('data-course="300" open');
     expect(html).toContain("Finish the level below");
   });
 
@@ -177,106 +38,37 @@ describe("renderAcademyBody — the gamified journey", () => {
     expect(html).not.toContain("Short Straddle");
   });
 
-  it("awards points on milestones", () => {
-    expect(html).toContain("data-ms-check");
+  it("offers no self-marking — milestones are earned by fills, never checked off", () => {
+    expect(html).not.toContain("data-ms-check");
+    expect(html).not.toContain("checkbox");
+    expect(html).not.toContain("skynet.academy.done");
     expect(html).toMatch(/\+\d+/); // a points value like +25
-  });
-});
-
-describe("renderLeaderboardBody — realized P/L ranking", () => {
-  const data: DashboardData = {
-    generatedAt: "2026-07-24T15:30:00.000Z",
-    participants: [
-      {
-        id: "a",
-        displayName: "Ann",
-        kind: "human",
-        cash: 0,
-        equity: 100_000,
-        positions: [],
-        realizedPl: 500,
-      },
-      {
-        id: "b",
-        displayName: "Bo",
-        kind: "bot",
-        personaId: "day-trader",
-        cash: 0,
-        equity: 100_000,
-        positions: [],
-        realizedPl: 9_000,
-      },
-    ],
-    collisions: [],
-  };
-
-  it("offers Realized P/L as a rankable metric", () => {
-    expect(renderLeaderboardBody(data)).toContain("/leaderboard?by=realized");
+    expect(html).toContain("nothing here is self-marked");
   });
 
-  it("ranks by booked realized P/L when selected, best first", () => {
-    const html = renderLeaderboardBody(data, { metric: "realized" });
-    // Bo (+$9,000) outranks Ann (+$500): Bo's name appears before Ann's in the ordered list.
-    expect(html.indexOf(">Bo ")).toBeLessThan(html.indexOf(">Ann "));
-    expect(html).toContain("+$9,000");
-    expect(html).toContain("+$500");
-  });
-});
-
-describe("renderCohortsBody — the live match scoreboard", () => {
-  const data: DashboardData = {
-    generatedAt: "2026-07-24T15:30:00.000Z",
-    participants: [
-      { id: "h1", displayName: "Ann", kind: "human", cash: 0, equity: 120_000, positions: [] },
-      {
-        id: "b1",
-        displayName: "Bot A",
-        kind: "bot",
-        personaId: "day-trader",
-        cash: 0,
-        equity: 80_000,
-        positions: [],
+  it("renders an earned milestone with its fill date and order id as the proof", () => {
+    const withProgress = renderAcademyBody({
+      nav,
+      progress: {
+        earned: [
+          {
+            milestoneId: "first-buy",
+            code: "101",
+            orderId: "order-9f3c",
+            at: "2026-08-25T14:30:00.000Z",
+          },
+        ],
+        points: 25,
+        rank: { title: "Apprentice", atPoints: 25 },
+        unlockedLevels: new Set([100 as const]),
       },
-      {
-        id: "b2",
-        displayName: "Bot B",
-        kind: "bot",
-        personaId: "futurist",
-        cash: 0,
-        equity: 80_000,
-        positions: [],
-      },
-    ],
-    collisions: [],
-  };
-
-  it("splits the match bar by AVERAGE equity, not headcount", () => {
-    const html = renderCohortsBody(data);
-    // Humans avg 120k vs bots avg 80k → 60% / 40% (two bots must NOT win the bar on count).
-    expect(html).toContain("THE MATCH · LIVE");
-    expect(html).toContain("Humans 60%");
-    expect(html).toContain("40% Bots");
-    expect(html).toContain("lead the match");
-  });
-
-  it("reads dead even when the cohort averages match", () => {
-    const even: DashboardData = {
-      generatedAt: data.generatedAt,
-      participants: [
-        { id: "h", displayName: "H", kind: "human", cash: 0, equity: 100_000, positions: [] },
-        {
-          id: "b",
-          displayName: "B",
-          kind: "bot",
-          personaId: "x",
-          cash: 0,
-          equity: 100_000,
-          positions: [],
-        },
-      ],
-      collisions: [],
-    };
-    expect(renderCohortsBody(even)).toContain("Dead even");
+    });
+    expect(withProgress).toContain('class="ms done"');
+    expect(withProgress).toContain("filled 2026-08-25 · order order-9f3c");
+    expect(withProgress).toContain(">Apprentice<");
+    expect(withProgress).toContain("data-points>25<");
+    // an earned milestone no longer needs its "open the ticket" nudge
+    expect(withProgress.split('data-ms="first-buy"')[1]?.split("</div>")[0]).not.toContain("ms-go");
   });
 });
 
@@ -370,13 +162,92 @@ describe("renderIndividualBody — autonomous decisions panel", () => {
     expect(html).not.toContain("Begin the Wheel"); // CTA copy is markup-only (the class lives in CSS always)
   });
 
-  it("offers a rotate-credentials link on your own unreachable account page", () => {
-    const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { isSelf: true });
-    expect(html).toContain('<a href="/rotate">');
+  // 2026-08-25: gated on rotate being enabled, not isSelf — an unreachable account that's
+  // actually YOURS never resolves isSelf true (that's the whole "not connected" gap), so the
+  // old gate hid the fix from exactly the person who needed it. The id rides in the link so
+  // nobody has to know or type an opaque account id.
+  it("offers a rotate-credentials link, with the id embedded, on any unreachable account page when rotate is enabled", () => {
+    const nav = { active: "you" as const, canAdd: true, authed: true };
+    const html = renderIndividualBody(
+      { ...human, id: "human-uncle_joe", error: "AlpacaApiError 401" },
+      { isSelf: false, nav },
+    );
+    expect(html).toContain('<a href="/rotate?id=human-uncle_joe">');
   });
 
-  it("omits the rotate link on someone else's unreachable account page", () => {
-    const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { isSelf: false });
+  it("omits the rotate link when self-service is disabled", () => {
+    const nav = { active: "you" as const, canAdd: false, authed: true };
+    const html = renderIndividualBody({ ...human, error: "AlpacaApiError 401" }, { nav });
     expect(html).not.toContain("/rotate");
+  });
+});
+
+describe("renderPortfolioIndexBody — the member's accounts index (/u)", () => {
+  const nav = { active: "you" as const, canAdd: true, authed: true, currentId: "human-eric" };
+  const account = (overrides: Record<string, unknown> = {}) => ({
+    id: "human-eric",
+    displayName: "Eric",
+    kind: "human" as const,
+    cash: 40_000,
+    equity: 100_000,
+    positions: [{ symbol: "NVDA", quantity: 100, avgPrice: 500, marketValue: 60_000 }],
+    ...overrides,
+  });
+
+  it("opens with the Portfolio eyebrow, an honest count line, and a combined-equity hero", () => {
+    const html = renderPortfolioIndexBody([account()], { nav });
+
+    expect(html).toContain("Portfolio");
+    expect(html).toContain("Your accounts");
+    expect(html).toContain("1 Alpaca paper account — 1 human");
+    expect(html).toContain("Combined equity");
+    expect(html).toContain("$100,000");
+  });
+
+  it("sums equity, cash, invested, and unrealized across every readable account", () => {
+    const bot = account({
+      id: "news-fader",
+      displayName: "News Fader",
+      kind: "bot",
+      personaId: "news-fader",
+      cash: 10_000,
+      equity: 50_000,
+      positions: [{ symbol: "TSM", quantity: 10, avgPrice: 100, marketValue: 2_000 }],
+    });
+    const html = renderPortfolioIndexBody([account(), bot], { nav });
+
+    expect(html).toContain("$150,000"); // combined equity
+    expect(html).toContain("$50,000"); // combined cash
+    expect(html).toContain("$62,000"); // combined invested
+    expect(html).toContain("2 Alpaca paper accounts — 1 human, 1 bot");
+  });
+
+  it("links each row to that account's desk with a YOU mark", () => {
+    const html = renderPortfolioIndexBody([account()], { nav });
+
+    expect(html).toContain('href="/u/human-eric"');
+    expect(html).toContain("you-mark");
+  });
+
+  it("lists an unreachable account but excludes it from the combined figures", () => {
+    const dead = account({ id: "b", displayName: "Broken", error: "AlpacaApiError 401" });
+    const html = renderPortfolioIndexBody([account(), dead], { nav });
+
+    expect(html).toContain("unreachable");
+    expect(html).toContain("$100,000"); // only the readable account's equity
+    expect(html).toContain("1 account unreachable — excluded from the combined figures above.");
+  });
+
+  it("renders the honest empty state with a connect CTA when nothing is owned", () => {
+    const html = renderPortfolioIndexBody([], { nav });
+
+    expect(html).toContain("No accounts linked yet");
+    expect(html).toContain('href="/add"');
+  });
+
+  it("omits the connect CTA when the viewer cannot add an account", () => {
+    const html = renderPortfolioIndexBody([], { nav: { ...nav, canAdd: false } });
+
+    expect(html).not.toContain('href="/add"');
   });
 });

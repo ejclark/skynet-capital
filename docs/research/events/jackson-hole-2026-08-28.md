@@ -1,7 +1,7 @@
 # Jackson Hole — Fed chair Warsh's first keynote (symposium Aug 27–29) — jackson-hole-2026-08-28
 
 **Kind:** macro-print · **Date:** 2026-08-28 (estimate, NEWS: kansascityfed.org symposium Aug 27–29; Fri-keynote timing press-reported, checked 2026-08-17) · **Impact:** high
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-24
 
 ## At a glance
 
@@ -15,12 +15,12 @@ policy signal — but Jackson Hole's own history is fat-tailed (flat on average,
 corridor with NVDA's (8/26) and MRVL's (8/27) confirmed earnings on either side — the exact adjacency the
 research was asked to flag. Nothing here licenses a trade; it sharpens what to guard against.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (D-9) | Stand aside | Nothing actionable at 9 days out; normal pre-earnings-week positioning. |
-| This week (through ~8/23) | Watch | NVDA earnings-week setup building into 8/26; monitor VIX/skew ahead of the compound window rather than react yet. |
-| This month (8/26–9/16 window) | Flat the print / defined-risk only | NVDA (8/26) → MRVL (8/27) → Warsh keynote (8/28), stacked on PCE/GDP (8/26) and Treasury supply (8/26–27), flows straight into the Sep 16 FOMC — treat 8/26–8/28 as one corridor, not three separate events. |
-| This quarter | Avoid new directional bets on Fed communication | Warsh's stated playbook (framework, not guidance) argues against extrapolating any single speech; the historical base rate for JH itself is flat/mixed (median 0% over the 2-day window) — the tail (2022-style) is what defined risk guards against, not what a directional bet should chase. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (D-9) | Stand aside | High | Nothing actionable at 9 days out; normal pre-earnings-week positioning. | kansascityfed.org publishing a full agenda that moves or drops the keynote |
+| This week (through ~8/23) | Watch | Medium | NVDA earnings-week setup building into 8/26; monitor VIX/skew ahead of the compound window rather than react yet. | NVDA (**2026-08-26**) or MRVL (**2026-08-27**) producing outsized moves that reprice the window before the keynote |
+| This month (8/26–9/16 window) | Flat the print / defined-risk only | High | NVDA (8/26) → MRVL (8/27) → Warsh keynote (8/28), stacked on PCE/GDP (8/26) and Treasury supply (8/26–27), flows straight into the Sep 16 FOMC — treat 8/26–8/28 as one corridor, not three separate events. | Any credible signal Warsh intends near-term rate-path guidance, contradicting his framework-not-guidance stance |
+| This quarter | Avoid new directional bets on Fed communication | Medium | Warsh's stated playbook (framework, not guidance) argues against extrapolating any single speech; the historical base rate for JH itself is flat/mixed (median 0% over the 2-day window) — the tail (2022-style) is what defined risk guards against, not what a directional bet should chase. | A widening or narrowing of the hike-favoring FOMC dissent count before **2026-09-16** |
 
 **Signals & conditions.**
 - Any explicit near-term rate-path signal in the keynote text (contradicting Warsh's own July 29
@@ -181,6 +181,7 @@ scored directional call.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D-9 | Initial research banked (above). Primary-source check: kansascityfed.org confirms symposium dates Aug 27–29 directly (theme "Financial Innovation: Implications for Payments and Policy"); the specific Friday-keynote timing is **not** on the primary site — still press-reported only, status correctly stays `estimate`. Warsh framework: July 29 presser (Fed transcript) — "big picture questions," "not constrained by market prices," consistent with the shortened-statement/no-dot pattern since taking the chair 2026-05-22. Historical reaction function pulled: JH 2-day S&P average −0.4%/median 0% (10yr study) but fat-tailed (Powell 2022 hawkish: S&P −3.37%, **NVDA −9.23%** same day; Powell 2025 dovish: S&P +1.5%, Russell 2000 +3.92%) — semiconductors are the most JH-reactive sector across an 11-year dataset. **Adjacency (the compounding finding):** this keynote (8/28) lands D+2 of NVDA's confirmed print (8/26, after close) and D+1 of MRVL's confirmed print (8/27, after close) — a three-trading-day corridor stacking the year's most information-dense Fed speech directly onto the two AI-semis names most exposed to a hawkish-JH-style shock, on top of PCE/GDP (8/26) and 5Y/7Y Treasury supply (8/26–27) already tracked in market-events-data.ts. VIX ~14.6 (8/17) → ~15.8 (8/19), still a low/complacent regime heading into the corridor. No macro surprises, no peer prints, no geopolitical shifts since seeding (weekend + this week). No new dated adjacencies found beyond what's already in market-events-data.ts (PCE, GDP, consumer confidence, 5Y/7Y auctions all already entered for this window) — nothing new to propose this pulse. | — (stance set) | 2026-08-22 (high, 8–20d band: every 3d) |
+| 2026-08-24 | D-4 | Adjacency sweep. Event tape: keynote timing now more consistently press-reported as **10am ET Friday 8/28** (techtimes, investinglive, intellectia, cross-checked 2026-08-24) — still not on kansascityfed.org's primary page, stays `estimate` per house policy; one new substantive detail — Warsh has convened **15 external experts** for a monetary-policy-framework review with recommendations due **end of 2026**, raising press speculation he could revisit the Fed's inflation-targeting approach at this keynote (not confirmed as this-speech content, flagged as color). Press framing unchanged: "big picture questions," not near-term guidance (same Jul-29 presser quote as the D-9 row); one outlet frames the speech as a potential "tiebreaker" for the ~1-in-3 September hike odds, consistent with the FOMC sibling doc's 30-40% hike-live figure — no new number, same figure restated. Peers: NVDA implied move fell to ~5.3% (from ~7.0%) and MRVL's jumped to ~18.4% (from ~14%, Google-deal-driven) since D-9 — both already logged in their own docs; raises MRVL's relative weight in the D+1 reaction-corridor read. Macro: no CPI/jobs/FOMC surprise since 8/19. Volatility regime: VIX 15.13, calm, no shift (down from the 15.8 cited at D-9). Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new dated adjacency found. | — (no change; compounding-corridor framing reinforced by MRVL's now-larger implied move) | 2026-08-27 (high, 8-20d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

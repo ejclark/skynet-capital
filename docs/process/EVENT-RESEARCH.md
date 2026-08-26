@@ -70,6 +70,37 @@ tape**. Score any forward tests this event carried in
 [`forward-tests.md`](../research/forward-tests.md) (a scored kill moves to the sweep doc's kill
 list). Once `## Outcome` exists the scanner goes silent on the event forever.
 
+## The decision header is gated (`npm run research:lint`)
+
+A ledger without a usable call sheet fails the gate. `docs/ISSUES.md` measured why this is needed:
+*"the PR surface got a template, a guide and a gate; the issue surface got none of the three, and
+the numbers track that difference and nothing else."* Ledgers had the template and this guide, and
+15 of 52 still carried no decision header — so the `/research` page had nothing to promote and a
+reader landed on the method wall. The gate is the third thing.
+
+What it checks, and what it deliberately does not:
+
+| Gated (fails) | Advisory (a note) |
+|---|---|
+| the `# `/`**Kind:**`/`**Last assessed:**` header lines | a decision header past ~2,400 chars |
+| an `## At a glance` (or study `## The call`) section exists | a signal bullet past 160 chars |
+| a **TL;DR.** paragraph and a **Signals & conditions** list | a falsifier naming no date or number |
+| a table with `Call` · `Confidence` · `Proves it wrong` columns | an assessment row past ~1,200 chars |
+| all four horizons present, each with a graded, non-empty call | |
+
+Structure fails; prose length only informs. That split is on purpose — `docs/IDEAS.md` banks the
+caution to *measure whether long entries actually hurt before gating a capture surface, and never
+tax the habit*. The habit here is assessment; what gets taxed is a missing decision, not a long one.
+
+`node scripts/research-lint.mjs --candidate` names the single highest-leverage ledger to fix, the
+same way the other fitness eyes name their own targets. The budget in `research-budget.json` only
+ratchets down.
+
+**Reading is the renderer's job, not the author's.** `/research` folds `## Initial research`, the
+`## Assessment ledger` and `## Outcome` into `<details>`, leaving the decision header and the live
+stance open. So a document nobody has rewritten still opens on its call — and nothing is hidden from
+the next assessment session, which reads the raw markdown where a fold costs it nothing.
+
 ## Cache discipline (the stale-data trap)
 
 `earnings-cycle.mjs` and `intraday-edges.mjs` cache **permanently** under `node_modules/.cache/`.

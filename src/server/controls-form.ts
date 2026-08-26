@@ -9,7 +9,7 @@ import {
 } from "../observatory/settings-view.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { BotControlsStore } from "./bot-controls-store.js";
-import { brandedShell, shellDocument } from "./page-shell.js";
+import { brandedShell, railedShell, shellDocument } from "./page-shell.js";
 import { handleSelfServiceForm, requireOwner } from "./self-service-forms.js";
 
 /**
@@ -58,11 +58,17 @@ export async function handleDeskSettings(
   deps: ControlsDeps,
   view: DeskSettingsView,
 ): Promise<void> {
-  const owner = requireOwner(res, viewerEmail, deps.isOwner, brandedShell);
+  // This tab is always reached through the desk route, which always populates nav (dashboard-
+  // server.ts) — the fallback to the bare shell is defensive, not an expected path.
+  const nav = view.options.nav;
+  const shell = nav
+    ? (title: string, inner: string) => railedShell(title, nav, inner)
+    : brandedShell;
+  const owner = requireOwner(res, viewerEmail, deps.isOwner, shell);
   if (!owner) return;
   if (method === "POST" && !sameOrigin(req)) {
     res.writeHead(403, { "content-type": "text/html; charset=utf-8" });
-    res.end(brandedShell("Refused", `<p class="err">Cross-site request refused.</p>`));
+    res.end(shell("Refused", `<p class="err">Cross-site request refused.</p>`));
     return;
   }
 

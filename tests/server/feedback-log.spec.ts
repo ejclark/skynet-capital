@@ -5,9 +5,9 @@ import { join } from "node:path";
 import {
   type FeedbackLogEntry,
   feedbackLogEntry,
-  InMemoryFeedbackLogStore,
   JsonlFeedbackLogStore,
 } from "../../src/server/feedback-log.js";
+import { InMemoryFeedbackLogStore } from "../../src/server/feedback-log-memory-store.js";
 
 const entry = (overrides: Partial<FeedbackLogEntry> = {}): FeedbackLogEntry => ({
   uuid: "u-1",

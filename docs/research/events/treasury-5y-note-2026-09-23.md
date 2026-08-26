@@ -16,12 +16,12 @@ The honest read: any rates signal here is a second-order input, useful as a dura
 on long-duration AI names elsewhere, not a market-mover on its own. Auction **date confirmed**; every
 size/when-issued/demand figure below is **estimate/press-sourced**. Watch-only, no standalone play.
 
-| Horizon | Call | Why |
-|---|---|---|
-| Today (8/19) | Stand aside | 35 days out; medium-impact symbol-less belly event — nothing here licenses action. |
-| This week | Stand aside | The Aug-26 5Y (this month's belly print) is next week and is the nearer data point; Sep-23 is a month out. |
-| This month | Watch | The Aug-26 5Y result (a same-day stack with NVDA/PCE/GDP) is the fresher tailing-streak read that carries into this Sep-23 auction. |
-| This quarter | Watch | Belly supply recurs monthly; the tailing trend (foreign demand) — not any one auction — is the duration-sensitivity input worth tracking for long-duration AI names. |
+| Horizon | Call | Confidence | Why | Proves it wrong |
+|---|---|---|---|---|
+| Today (8/19) | Stand aside | High | 35 days out; medium-impact symbol-less belly event — nothing here licenses action. | Nothing at 35 days out; a symbol-less belly event licenses no action |
+| This week | Stand aside | High | The Aug-26 5Y (this month's belly print) is next week and is the nearer data point; Sep-23 is a month out. | The **2026-08-26** 5Y result, which precedes this one and is the fresher read |
+| This month | Watch | Medium | The Aug-26 5Y result (a same-day stack with NVDA/PCE/GDP) is the fresher tailing-streak read that carries into this Sep-23 auction. | The **2026-09-16** FOMC resolving the path question this auction only reflects |
+| This quarter | Watch | Medium | Belly supply recurs monthly; the tailing trend (foreign demand) — not any one auction — is the duration-sensitivity input worth tracking for long-duration AI names. | The **2026-09-23** result stopping through or tailing unusually far in either direction |
 
 **Signals & conditions.**
 - **Bearish-for-duration tell:** another tail (stop-out > when-issued) with indirect bidders again

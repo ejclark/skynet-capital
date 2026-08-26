@@ -1,10 +1,12 @@
 import type { MarketEvent } from "../domain/market-events.js";
 
 /**
- * The MONTH-GRID widget for `/calendar` — the at-a-glance visual and jump-navigator that fills the
- * desktop right column (Eric, 2026-08-16: "a nice visual as well as a possible control to navigate
- * through calendar events"). The TradeZella-style month grid docs/research/trading-desk-ux.md
- * called the most-copied piece of delight in the category; v1 deferred it, this is it.
+ * The MONTH-GRID widget for `/research`'s event horizon — the at-a-glance visual and jump-navigator
+ * that fills the desktop right column (Eric, 2026-08-16: "a nice visual as well as a possible
+ * control to navigate through calendar events"). The TradeZella-style month grid
+ * docs/research/trading-desk-ux.md called the most-copied piece of delight in the category; v1
+ * deferred it, this is it. (Originally `/calendar`'s widget; folded into the research shelf
+ * 2026-08-25 — this module is reused as-is, only its own nav href moved.)
  *
  * A NAVIGATOR, NEVER A FILTER: the agenda always renders every upcoming event, so each event-day
  * cell is a plain `#day-YYYY-MM-DD` jump link whose anchor always exists. `?month=` moves only the
@@ -68,7 +70,7 @@ function monthTitle(month: string): string {
 
 function navLink(target: string, label: string, enabled: boolean): string {
   return enabled
-    ? `<a class="mg-nav" href="/calendar?month=${target}" aria-label="${label}">${label === "Previous month" ? "‹" : "›"}</a>`
+    ? `<a class="mg-nav" href="/research?month=${target}" aria-label="${label}">${label === "Previous month" ? "‹" : "›"}</a>`
     : `<span class="mg-nav mg-off" aria-hidden="true">${label === "Previous month" ? "‹" : "›"}</span>`;
 }
 
@@ -133,7 +135,32 @@ export function monthGrid(month: string, asOfIso: string, events: readonly Marke
     </header>
     <div class="mg-grid">${weekdays}${cells.join("")}</div>
     <p class="mg-legend">● event day · brighter = critical · click a day to jump</p>
-  </div>`;
+  </div>${selectedDayRules([...byDate.keys()].filter((d) => d.startsWith(month)))}`;
+}
+
+/**
+ * The CALENDAR half of the day-selection correlation (Eric, 2026-08-25: "when clicking on the
+ * calendar, more visual indication should be presented to correlate the date-related events with
+ * the date(s) selected"). The agenda half is `.cal-day:target` in event-agenda.ts.
+ *
+ * CSS cannot walk from a `:target` in one column to the link that points at it in another, so the
+ * server — which already knows the month's event dates — emits one `:has()` rule per event day.
+ * `.cal-layout` contains both columns (research-view.ts), so the relationship resolves there.
+ * Bounded by construction: at most one rule per event day in the visible month.
+ *
+ * Still a navigator, never a filter — this only paints the cell; nothing is hidden or reordered.
+ */
+function selectedDayRules(dates: readonly string[]): string {
+  if (dates.length === 0) return "";
+  const rules = dates
+    .map(
+      (d) =>
+        `.cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"]{ background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700; }
+      .cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"]::after{ background:var(--bg); }
+      .cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"] .mg-count{ color:var(--bg); }`,
+    )
+    .join("\n      ");
+  return `<style>${rules}</style>`;
 }
 
 /**
