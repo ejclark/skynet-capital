@@ -292,7 +292,7 @@ describe("day-selection correlation", () => {
       prints: [],
     });
     expect(html).toContain(
-      '.cal-layout:has(#day-2026-08-18:target) a.mg-cell[href="#day-2026-08-18"]',
+      '.research:has(#day-2026-08-18:target) a.mg-cell[href="#day-2026-08-18"]',
     );
     expect(html).toContain(".cal-day:target");
   });
@@ -306,5 +306,40 @@ describe("day-selection correlation", () => {
       prints: [],
     });
     expect(html).toContain("Far macro");
+  });
+});
+
+describe("the calendar survives every width", () => {
+  // The 2026-08-26 regression, asserted so it cannot come back: the grid used to live in a sticky
+  // <aside> that `@container stage (max-width:860px)` hid outright, on the reasoning that at that
+  // width the agenda IS the navigation. On a phone in desktop mode the drawer leaves the stage near
+  // 660px, so the component Eric navigates by silently vanished.
+  const shelf = () =>
+    renderResearchShelfBody({
+      asOfIso: AS_OF,
+      shelf: emptyShelf,
+      symbols: [],
+      events: [event({ id: "near", date: "2026-08-18" })],
+      prints: [],
+    });
+
+  it("renders the month grid inside the shelf body, never in a removable rail", () => {
+    const html = shelf();
+    expect(html).toContain('<div class="rs-head">');
+    expect(html).toContain('<div class="mg">');
+    expect(html).not.toContain("cal-aside");
+  });
+
+  it("never hides the grid at any width", () => {
+    const html = shelf();
+    expect(html).not.toContain("max-width:860px");
+    // No rule anywhere may take the calendar out of the document.
+    expect(html).not.toMatch(/\.mg[^{]*\{[^}]*display:\s*none/);
+  });
+
+  it("keeps the header a single column once it would get cramped, grid first", () => {
+    const html = shelf();
+    expect(html).toContain("@container stage (max-width:700px)");
+    expect(html).toContain(".rs-head{ grid-template-columns:minmax(0,1fr); }");
   });
 });

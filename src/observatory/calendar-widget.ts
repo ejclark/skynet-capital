@@ -12,7 +12,7 @@ import type { MarketEvent } from "../domain/market-events.js";
  * cell is a plain `#day-YYYY-MM-DD` jump link whose anchor always exists. `?month=` moves only the
  * widget. Zero client JS — links and CSS; smooth scrolling is a reduced-motion-guarded CSS rule in
  * the view. Markers are accent-weight only (docs/BRAND.md: green/red carry market meaning), and
- * every class is `mg-`/`cal-layout`-prefixed so widget markup can never collide with the agenda's
+ * every class is `mg-`-prefixed so widget markup can never collide with the agenda's
  * `cal-*` marker strings that specs count.
  *
  * Weeks start MONDAY: this is a trading calendar — the five trading days stay contiguous and the
@@ -143,10 +143,10 @@ export function monthGrid(month: string, asOfIso: string, events: readonly Marke
  * calendar, more visual indication should be presented to correlate the date-related events with
  * the date(s) selected"). The agenda half is `.cal-day:target` in event-agenda.ts.
  *
- * CSS cannot walk from a `:target` in one column to the link that points at it in another, so the
- * server — which already knows the month's event dates — emits one `:has()` rule per event day.
- * `.cal-layout` contains both columns (research-view.ts), so the relationship resolves there.
- * Bounded by construction: at most one rule per event day in the visible month.
+ * CSS cannot walk from a `:target` back to the link that points at it, so the server — which
+ * already knows the month's event dates — emits one `:has()` rule per event day. `.research` wraps
+ * both the grid and the agenda's `#day-*` anchors (research-view.ts), so the relationship resolves
+ * there. Bounded by construction: at most one rule per event day in the visible month.
  *
  * Still a navigator, never a filter — this only paints the cell; nothing is hidden or reordered.
  */
@@ -155,23 +155,24 @@ function selectedDayRules(dates: readonly string[]): string {
   const rules = dates
     .map(
       (d) =>
-        `.cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"]{ background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700; }
-      .cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"]::after{ background:var(--bg); }
-      .cal-layout:has(#day-${d}:target) a.mg-cell[href="#day-${d}"] .mg-count{ color:var(--bg); }`,
+        `.research:has(#day-${d}:target) a.mg-cell[href="#day-${d}"]{ background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:700; }
+      .research:has(#day-${d}:target) a.mg-cell[href="#day-${d}"]::after{ background:var(--bg); }
+      .research:has(#day-${d}:target) a.mg-cell[href="#day-${d}"] .mg-count{ color:var(--bg); }`,
     )
     .join("\n      ");
   return `<style>${rules}</style>`;
 }
 
 /**
- * Widget + two-column layout styles. Sticky works because the observatory's scrollport is `.stage`
- * (dashboard-shell.ts), not the window. The agenda column is fluid and the calendar rail is a
- * viewport-scaled clamp; once the CONTENT box (not the window — see fluid-layout.ts) drops under
- * 860px the rail hides, because at that width the agenda IS the navigation.
+ * Widget styles. The grid lives in the shelf HEADER, in the main column — not in a side rail.
+ *
+ * It used to be a sticky `<aside>` that `@container stage (max-width:860px)` hid outright, on the
+ * reasoning that "at that width the agenda IS the navigation". Eric found the hole in that on a
+ * phone in desktop mode (2026-08-26): the drawer leaves the stage near 660px, so the calendar — the
+ * component he actually navigates by — silently vanished. There is now NO width at which the grid
+ * is hidden; the header stacks instead. Never re-introduce a display:none here.
  */
 export const MG_STYLE = `<style>
-  .cal-layout{ display:grid; grid-template-columns:minmax(0,1fr) clamp(240px,20vw,320px); gap:24px; align-items:start; }
-  .cal-aside{ position:sticky; top:16px; }
   .mg{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 16px 12px; }
   .mg-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
   .mg-title{ font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.08em; }
@@ -197,5 +198,4 @@ export const MG_STYLE = `<style>
   a.mg-evt:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
   .mg-count{ position:absolute; top:2px; right:3px; font-style:normal; font-size:8px; font-weight:700; color:var(--accent); }
   .mg-legend{ margin:10px 0 0; font-family:var(--mono); font-size:9.5px; letter-spacing:.03em; color:var(--muted); }
-  @container stage (max-width:860px){ .cal-layout{ grid-template-columns:1fr; } .cal-aside{ display:none; } }
 </style>`;
