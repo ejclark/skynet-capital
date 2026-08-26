@@ -98,27 +98,28 @@ jobs:
           FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
 
       - name: Bootstrap the bots app — create skynet-capital-bots on the default org network
-        # The one infra action that no app-scoped token can do (app creation is org-level), which
-        # is why it needs FLY_ORG_TOKEN specifically — the single laptop-minted secret
-        # (`fly tokens create deploy -o personal`) that makes every other step here phone-clickable.
-        # Idempotent: an app that already exists is reported, not an error. Never passes --network:
-        # a custom network would silently sever the bots↔dashboard controls bridge (fly.bots.toml).
+        # App creation is org-level, so this prefers FLY_ORG_TOKEN — but it FALLS BACK to the
+        # long-standing FLY_API_TOKEN so "maybe my existing token is org-capable" is a free,
+        # phone-clickable experiment (Eric, 2026-08-26): an app-scoped token fails the very first
+        # call loudly with nothing created, and the error names the laptop fix. Idempotent: an app
+        # that already exists is reported, not an error. Never passes --network: a custom network
+        # would silently sever the bots↔dashboard controls bridge (fly.bots.toml).
         if: ${{ inputs.action == 'bootstrap-bots-app' }}
         run: |
           if [ -z "$FLY_API_TOKEN" ]; then
-            echo "::error::Repository secret FLY_ORG_TOKEN is not set. Mint it once from a terminal — fly tokens create deploy -o personal — and add it under Settings -> Secrets and variables -> Actions. This is the ONE step that needs a laptop; everything after is buttons."
+            echo "::error::No Fly token available (FLY_ORG_TOKEN or FLY_API_TOKEN). Mint one from a terminal — fly tokens create deploy -o personal — and add it as FLY_ORG_TOKEN under Settings -> Secrets and variables -> Actions."
             exit 1
           fi
           if flyctl status -a skynet-capital-bots >/dev/null 2>&1; then
             echo "skynet-capital-bots already exists — nothing to create."
-          else
-            flyctl apps create skynet-capital-bots --org personal
+          elif flyctl apps create skynet-capital-bots --org personal; then
             echo "Created. Next buttons: set-sauron-credentials (writes Alpaca creds + roster), set-hardcore if wanted, then Pipeline -> force_bots_deploy to stand the machine up in observe."
+          else
+            echo "::error::App creation was refused — the available token is app-scoped, not org-capable. The laptop fix (once): fly tokens create deploy -o personal, then add the output as repo secret FLY_ORG_TOKEN and re-run this button. Nothing was created or changed."
+            exit 1
           fi
         env:
-          # Deliberately ONLY the org token — running this under an app-scoped token would fail
-          # confusingly halfway; better to fail at the guard with the exact fix.
-          FLY_API_TOKEN: ${{ secrets.FLY_ORG_TOKEN }}
+          FLY_API_TOKEN: ${{ secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
 
       - name: Set Day Trader bot credentials
         if: ${{ inputs.action == 'set-day-trader-credentials' }}
