@@ -975,3 +975,44 @@ it. Prevention ranks, best first:
   firing; (b) the `build` job (handoff builds) shares the identical exposure whenever a handoff is
   claimed on a `push`-triggered run rather than a `workflow_dispatch` — unconfirmed whether it has
   ever actually hit this in practice, worth the same re-dispatch treatment if it does.
+
+### A markdown screenshot embed — and `<details>`/`<summary>` — vanished through `ship.sh` too: the 2026-08-25 attribution to the GitHub MCP tools was incomplete
+- **SHA:** 5eb6b8a   **DATE:** 2026-08-26   **STATUS:** closed (worked around; the constraint itself
+  is outside repo control)
+- **SIGNAL:** PR #661's fridge picture — `![alt](<SHA-pinned raw.githubusercontent.com URL>)`, opened
+  via `scripts/ship.sh open` (REST, not the GitHub MCP write tools) — came back from
+  `pull_request_read` with the `!` dropped and the URL wrapped in stray backticks/quotes,
+  non-identically across two otherwise-identical attempts. Separately, the SAME PR body's
+  `<details><summary>...</summary>...</details>` fold — the exact shape CLAUDE.md and the
+  2026-08-25 entry above say is safe over REST — also came back stripped, twice, over a plain
+  `curl` PATCH.
+- **ROOT CAUSE:** isolated with direct REST probes (payload built and diffed locally first —
+  confirmed byte-identical up to the `curl` call each time, so not a `ship.sh` bug, and not the
+  GitHub MCP SDK either): a bare-text mention of a `raw.githubusercontent.com`/`github.com/.../blob/...`
+  URL survives untouched; wrapping the *identical* URL in `[text](url)`/`![alt](url)` markdown link
+  syntax gets it neutralized. `<details>` survived in a short, isolated single-line test body but
+  was stripped in the full-size real PR body, both times, over REST — so the trigger is not
+  "REST vs MCP" as previously recorded, and is not fully characterized (content size/shape
+  dependent, not deterministically reproduced in a minimal repro). This is a session-side outbound
+  content-safety layer (not documented in `/root/.ccr/README.md`, which only covers
+  TLS/connectivity failures) — plausibly anti-exfiltration/anti-auto-fetch for links, and
+  anti-hidden-content for the fold, applied even to legitimate same-repo content. **Correction to
+  the 2026-08-25 entry and to CLAUDE.md/`docs/PICTURES.md`'s current framing: "ship through REST
+  and the fold survives" is not reliably true in this session** — REST is necessary (still avoids
+  the MCP tool's own separate stripping) but not sufficient. Not a bug to work around by disguising
+  content — that would be evading a deliberate safety boundary.
+- **PREVENTION:** doc-only (no code fix exists for a constraint outside repo control) —
+  `docs/PICTURES.md` → *Screenshots* now names the link-mangling finding and the fallback: waive
+  the picture section honestly (`Picture: waived — <reason>`), name the committed `docs/shots/...`
+  path in prose (GitHub's own Files-changed tab renders it inline, unaffected by this), and send
+  the image directly to the user in-session (`SendUserFile`). For `<details>`: until the trigger is
+  characterized, treat *any* automated PR-body write in this session as unreliable for the fold —
+  after writing one, always re-fetch and check for the literal `<details>` tag, not just for
+  `<img>`/tables (the 2026-08-25 mitigation), and flatten to plain sections if it's gone rather than
+  retrying the same call.
+- **SIDE QUESTS:** → docs/IDEAS.md — (a) worth a follow-up probe (not done here, to stay bounded)
+  whether an image uploaded through GitHub's own attachment flow (`user-attachments/assets/...`)
+  survives where a repo-file URL doesn't; (b) characterize the actual `<details>` stripping
+  trigger (body size? specific preceding content? something else?) instead of the current
+  "sometimes it survives, sometimes it doesn't" — a minimal bisection would settle it in a few
+  more probes, deliberately not spent here to stay on the shipping task.
