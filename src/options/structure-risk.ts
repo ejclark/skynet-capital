@@ -128,8 +128,15 @@ function riskBandPrices(legs: readonly StructureLeg[], horizon: RiskHorizon): nu
   return [...new Set(prices)].filter((price) => price > 0).sort((a, b) => a - b);
 }
 
-/** Where the marked curve crosses zero, by straight-line interpolation between two samples. */
+/**
+ * Where the marked curve crosses break-even, by straight-line interpolation between the two
+ * samples that straddle it. "Above water" is `profit ≥ 0`, matching `probability.ts`'s own
+ * convention — which is what makes a sample landing exactly on zero fall out correctly instead of
+ * needing a special case: it belongs to the profitable side, so the crossing is found at the edge
+ * of the interval next to it, once, wherever in the series it sits.
+ */
 function crossingPrices(prices: readonly number[], profits: readonly number[]): number[] {
+  const aboveWater = (profit: number): boolean => profit >= 0;
   const crossings: number[] = [];
   for (let index = 0; index + 1 < prices.length; index += 1) {
     const low = prices[index];
@@ -138,12 +145,7 @@ function crossingPrices(prices: readonly number[], profits: readonly number[]): 
     const after = profits[index + 1];
     if (low === undefined || high === undefined) continue;
     if (before === undefined || after === undefined) continue;
-    if (before === 0) {
-      crossings.push(low);
-      continue;
-    }
-    // A sample landing exactly on zero is picked up on the next pass, as that pass's `before`.
-    if (after === 0 || before > 0 === after > 0) continue;
+    if (aboveWater(before) === aboveWater(after)) continue;
     crossings.push(low + ((high - low) * -before) / (after - before));
   }
   return crossings;

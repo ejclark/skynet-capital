@@ -130,8 +130,9 @@ export function outlookTarget(outlook: Outlook, context: UnderlyingContext): num
   if (outlook.direction === "neutral") return context.spot;
   const sigmas = MAGNITUDE_SIGMAS[outlook.magnitude];
   const signed = outlook.direction === "bullish" ? sigmas * move : -sigmas * move;
-  // A price cannot go below zero; a 3σ-down view on a low-vol name would otherwise anchor a strike
-  // at a negative number and quietly snap to the chain's lowest strike as though that were the ask.
+  // A price cannot go below zero, so a violently bearish view is floored rather than reported as a
+  // negative price. The floor is NOT a claim that the chain can express a target down here —
+  // `structure-candidates.ts` decides that, and reports `strike-out-of-reach` when it cannot.
   return Math.max(context.spot * MIN_TARGET_FRACTION, context.spot + signed);
 }
 

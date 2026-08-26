@@ -89,15 +89,22 @@ describe("scoreCandidate — how well a structure expresses the stated view", ()
   });
 
   it("reads a long-options structure as long vega and rewards cheap premium", () => {
-    const stance: VolStance = score(LONG_CALL, CHEAP).volFit.stance;
+    const stance: VolStance | undefined = score(LONG_CALL, CHEAP).volFit.stance;
     expect(stance).toBe("long-vega");
     expect(score(LONG_CALL, CHEAP).volFit.alignment).toBe(1);
     expect(score(LONG_CALL, RICH).volFit.alignment).toBe(0);
   });
 
-  it("reads a net-short-options structure as short vega, and the mirror image applies", () => {
+  it("reads a short-premium structure as short vega, and the mirror image applies", () => {
     expect(score(STRANGLE, RICH).volFit).toMatchObject({ stance: "short-vega", alignment: 1 });
     expect(score(STRANGLE, CHEAP).volFit.alignment).toBe(0);
+  });
+
+  it("reads a VERTICAL's real vega, which net lots would have called neutral", () => {
+    // +1 and −1 nets to zero lots; the near strike carries the larger vega, so it is long premium.
+    expect(VERTICAL.reduce((lots, leg) => lots + leg.quantity, 0)).toBe(0);
+    expect(score(VERTICAL, CHEAP).volFit.stance).toBe("long-vega");
+    expect(score(VERTICAL, CHEAP).volFit.alignment).toBe(1);
   });
 
   it("DROPS the vol term when no regime can be read, instead of defaulting it to the middle", () => {
@@ -117,6 +124,21 @@ describe("scoreCandidate — how well a structure expresses the stated view", ()
     const total = terms.reduce((sum, [weight]) => sum + weight, 0);
     const expected = terms.reduce((sum, [weight, value]) => sum + weight * value, 0) / total;
     expect(measured.composite).toBeCloseTo(expected, 12);
+  });
+
+  it("SCORES an uncapped structure at the bottom of both capital terms — never drops them", () => {
+    const uncapped = score(STRANGLE, RICH);
+    // Renormalising the two capital terms away would leave the strangle ranked on its probability
+    // of profit alone, which is how a 72%-POP naked short ends up looking like the safest choice.
+    const popOnly = SCORE_WEIGHTS.probabilityOfProfit + SCORE_WEIGHTS.volFit;
+    const ifDropped =
+      (SCORE_WEIGHTS.probabilityOfProfit * uncapped.probabilityOfProfit + SCORE_WEIGHTS.volFit) /
+      popOnly;
+    expect(uncapped.composite).toBeLessThan(ifDropped);
+    expect(uncapped.composite).toBeCloseTo(
+      SCORE_WEIGHTS.probabilityOfProfit * uncapped.probabilityOfProfit + SCORE_WEIGHTS.volFit,
+      12,
+    );
   });
 
   it("leaves a return on capital ABSENT when the risk it would divide by is uncapped", () => {

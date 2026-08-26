@@ -1,7 +1,7 @@
 import { describeMechanics, type MechanicsContext } from "../../src/options/candidate-mechanics.js";
 import type { OptionLeg } from "../../src/options/payoff-surface.js";
-import type { StructureKind } from "../../src/options/structure-candidates.js";
 import { type RiskHorizon, structureRisk } from "../../src/options/structure-risk.js";
+import type { StructureKind } from "../../src/options/structure-templates.js";
 
 /**
  * The explanation is the one place this engine could quietly turn into advice, so it is tested as a

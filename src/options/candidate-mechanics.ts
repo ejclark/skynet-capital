@@ -1,11 +1,11 @@
 import type { OptionLeg } from "./payoff-surface.js";
-import type { StructureKind } from "./structure-candidates.js";
 import {
   type RiskBound,
   type RiskHorizon,
   type StructureRisk,
   structureProfitAt,
 } from "./structure-risk.js";
+import type { StructureKind } from "./structure-templates.js";
 
 /**
  * MECHANICS, NOT ADVICE — the sentence that explains a ranked candidate.

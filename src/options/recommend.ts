@@ -8,12 +8,9 @@ import {
   volatilityRegime,
 } from "./outlook.js";
 import type { OptionLeg } from "./payoff-surface.js";
-import {
-  type AbsentCandidate,
-  candidateStructures,
-  type StructureKind,
-} from "./structure-candidates.js";
+import { type AbsentCandidate, candidateStructures } from "./structure-candidates.js";
 import type { RiskHorizon, StructureRisk } from "./structure-risk.js";
+import type { StructureKind } from "./structure-templates.js";
 
 /**
  * THE OUTLOOK-FIRST RECOMMENDER — state a view, get a RANKED LIST of ways the chain can express

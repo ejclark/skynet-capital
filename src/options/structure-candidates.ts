@@ -7,6 +7,13 @@ import {
   type UnderlyingContext,
 } from "./outlook.js";
 import type { OptionLeg } from "./payoff-surface.js";
+import {
+  type AnchorFrame,
+  anchorsFor,
+  type LegAnchor,
+  type StructureKind,
+  structuresFor,
+} from "./structure-templates.js";
 
 /**
  * CANDIDATE GENERATION — the small, named set of structures a stated view can be expressed with.
@@ -15,16 +22,16 @@ import type { OptionLeg } from "./payoff-surface.js";
  * fits best. Keeping them apart matters: a generator that quietly filtered on its own guess of
  * "good" would hide the comparison the whole feature exists to show.
  *
- * The nine structures below are the textbook expressions of the three views — a debit play, a
- * defined-risk debit spread and a defined-risk credit spread per direction, plus the three ways a
- * chain expresses "nothing much happens". They are deliberately ONE-LOT: sizing is not this
- * module's business, and portfolio-Greeks-aware sizing (#580) is not built yet.
+ * The shapes themselves live in `structure-templates.ts`; this file is what happens when they meet
+ * a real chain. Every candidate is ONE LOT per leg — sizing is not this module's business, and
+ * portfolio-Greeks-aware sizing (#580) is not built yet.
  *
  * How strikes are chosen, stated so nobody mistakes it for optimisation:
  *
  * - Anchors are prices, in expected moves off spot (`outlook.ts` owns that translation). Each
  *   anchor then SNAPS to the nearest listed strike of the right kind at the chosen expiry, so
- *   every candidate is made of contracts that actually exist.
+ *   every candidate is made of contracts that actually exist — and only when a listed strike is
+ *   actually NEAR it; a chain that stops short of where the view points says so by name.
  * - The expiry is the NEAREST ONE AT OR AFTER the horizon. An expiry inside the horizon would be
  *   marked past its own expiration by the payoff engine — a sketch, not a settlement — so the
  *   whole candidate set is reported ABSENT instead.
@@ -33,18 +40,6 @@ import type { OptionLeg } from "./payoff-surface.js";
  *
  * PURE: no I/O, no clock. `chain` is the caller's snapshot; nothing here fetches or filters it.
  */
-
-/** The named structures this engine can propose. Nothing here has been ordered or filled. */
-export type StructureKind =
-  | "long-call"
-  | "bull-call-spread"
-  | "short-put-spread"
-  | "long-put"
-  | "bear-put-spread"
-  | "short-call-spread"
-  | "iron-condor"
-  | "short-strangle"
-  | "long-call-butterfly";
 
 /** Why a candidate has no honest ranking. Named, so a renderer says WHICH — never just a blank. */
 export type CandidateAbsence =
@@ -56,6 +51,8 @@ export type CandidateAbsence =
   | "missing-strike"
   /** Two legs snapped to the same listed strike; the structure has no width left. */
   | "strikes-collapsed"
+  /** The nearest listed strike is nowhere near the price the view anchors that leg at. */
+  | "strike-out-of-reach"
   /** A chosen contract has no honest premium to open it at. */
   | "missing-quote"
   /** A chosen contract has no solved implied volatility, so it cannot be marked forward. */
@@ -79,82 +76,8 @@ export interface BuiltCandidate {
   readonly expiration?: string;
 }
 
-/** One leg before it has met the chain: a kind, a signed lot count, and the price it aims at. */
-interface LegAnchor {
-  readonly kind: "call" | "put";
-  readonly quantity: number;
-  readonly price: number;
-}
-
-/** The prices every template draws its anchors from. */
-interface AnchorFrame {
-  readonly spot: number;
-  /** Where the view says price is going — spot itself for a neutral view. */
-  readonly target: number;
-  /** How far out a boundary the view expects to HOLD sits, in dollars. */
-  readonly hold: number;
-  /** The width of a spread's wing, in dollars, before snapping. */
-  readonly wing: number;
-}
-
 /** A spread's default wing, in expected moves — half a move, floored at the listed strike step. */
 const HALF_MOVE_WING = 0.5;
-
-/** Which structures belong to which stated direction. */
-const BY_DIRECTION: Readonly<Record<Outlook["direction"], readonly StructureKind[]>> = {
-  bullish: ["long-call", "bull-call-spread", "short-put-spread"],
-  bearish: ["long-put", "bear-put-spread", "short-call-spread"],
-  neutral: ["iron-condor", "short-strangle", "long-call-butterfly"],
-};
-
-/** Each structure's legs, as anchors off the frame. One lot per leg, by design. */
-function anchorsFor(kind: StructureKind, frame: AnchorFrame): readonly LegAnchor[] {
-  const { spot, target, hold, wing } = frame;
-  switch (kind) {
-    case "long-call":
-      return [{ kind: "call", quantity: 1, price: spot }];
-    case "bull-call-spread":
-      return [
-        { kind: "call", quantity: 1, price: spot },
-        { kind: "call", quantity: -1, price: Math.max(target, spot + wing) },
-      ];
-    case "short-put-spread":
-      return [
-        { kind: "put", quantity: -1, price: spot - hold },
-        { kind: "put", quantity: 1, price: spot - hold - wing },
-      ];
-    case "long-put":
-      return [{ kind: "put", quantity: 1, price: spot }];
-    case "bear-put-spread":
-      return [
-        { kind: "put", quantity: 1, price: spot },
-        { kind: "put", quantity: -1, price: Math.min(target, spot - wing) },
-      ];
-    case "short-call-spread":
-      return [
-        { kind: "call", quantity: -1, price: spot + hold },
-        { kind: "call", quantity: 1, price: spot + hold + wing },
-      ];
-    case "iron-condor":
-      return [
-        { kind: "put", quantity: -1, price: spot - hold },
-        { kind: "put", quantity: 1, price: spot - hold - wing },
-        { kind: "call", quantity: -1, price: spot + hold },
-        { kind: "call", quantity: 1, price: spot + hold + wing },
-      ];
-    case "short-strangle":
-      return [
-        { kind: "put", quantity: -1, price: spot - hold },
-        { kind: "call", quantity: -1, price: spot + hold },
-      ];
-    case "long-call-butterfly":
-      return [
-        { kind: "call", quantity: 1, price: spot - hold },
-        { kind: "call", quantity: -2, price: spot },
-        { kind: "call", quantity: 1, price: spot + hold },
-      ];
-  }
-}
 
 /** The nearest expiry at or after the horizon, in calendar days. `undefined` when none reaches it. */
 function expiryAtOrAfter(chain: readonly ChainContract[], horizonDays: number): number | undefined {
@@ -200,6 +123,23 @@ function nearestListed(
   return best;
 }
 
+/**
+ * Whether the chain can honestly REPRESENT this anchor, rather than merely offer something nearer
+ * to it than anything else. `nearestListed` always answers; on a chain that stops at 100 it will
+ * happily answer "100" for an anchor at 5, which would emit a naked long put dressed as a spread
+ * on a $9,500 width. An anchor counts as representable when a listed strike brackets it, or sits
+ * within one strike step of the end of the listed range.
+ */
+function isWithinReach(
+  contracts: readonly ChainContract[],
+  anchor: LegAnchor,
+  step: number,
+): boolean {
+  const strikes = contracts.filter((c) => c.kind === anchor.kind).map((c) => c.strike);
+  if (strikes.length === 0) return false;
+  return anchor.price >= Math.min(...strikes) - step && anchor.price <= Math.max(...strikes) + step;
+}
+
 /** Turn one structure's anchors into real legs, or name the reason the chain cannot carry it. */
 function buildCandidate(
   kind: StructureKind,
@@ -208,13 +148,18 @@ function buildCandidate(
   daysToExpiry: number,
 ): BuiltCandidate | AbsentCandidate {
   const legs: OptionLeg[] = [];
-  const claimed = new Set<string>();
+  const claimed = new Set<number>();
   for (const anchor of anchorsFor(kind, frame)) {
     const contract = nearestListed(contracts, anchor);
     if (!contract) return { kind, reason: "missing-strike" };
-    const seat = `${anchor.kind}@${contract.strike}`;
-    if (claimed.has(seat)) return { kind, reason: "strikes-collapsed" };
-    claimed.add(seat);
+    if (!isWithinReach(contracts, anchor, frame.step)) {
+      return { kind, reason: "strike-out-of-reach" };
+    }
+    // Keyed on the STRIKE alone, not the strike and the kind: none of the nine structures ever
+    // wants two legs on one strike, so a put and a call landing together is a short straddle
+    // wearing a strangle's name — the exact mislabelling this guard exists to stop.
+    if (claimed.has(contract.strike)) return { kind, reason: "strikes-collapsed" };
+    claimed.add(contract.strike);
     if (contract.price === undefined || !Number.isFinite(contract.price)) {
       return { kind, reason: "missing-quote" };
     }
@@ -254,7 +199,7 @@ export function candidateStructures(
   context: UnderlyingContext,
   chain: readonly ChainContract[],
 ): CandidateSet {
-  const kinds = BY_DIRECTION[outlook.direction];
+  const kinds = structuresFor(outlook.direction);
   const move = expectedMove(context, outlook.horizonDays);
   const target = outlookTarget(outlook, context);
   if (move === undefined || target === undefined) {
@@ -277,6 +222,7 @@ export function candidateStructures(
     target,
     hold: BOUNDARY_SIGMAS[outlook.magnitude] * move,
     wing: Math.max(step, HALF_MOVE_WING * move),
+    step,
   };
   const built: BuiltCandidate[] = [];
   const absent: AbsentCandidate[] = [];

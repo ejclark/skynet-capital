@@ -6,8 +6,8 @@ import {
   type CandidateAbsence,
   type CandidateSet,
   candidateStructures,
-  type StructureKind,
 } from "../../src/options/structure-candidates.js";
+import type { StructureKind } from "../../src/options/structure-templates.js";
 
 /**
  * Candidate generation is checked on the three promises it makes: every structure of the stated
@@ -145,11 +145,24 @@ describe("candidateStructures — what the chain can carry for a stated view", (
     expect(reasons(set)).toEqual(["missing-strike"]);
   });
 
-  it("calls a spread whose legs snap to one strike COLLAPSED, not narrow", () => {
-    const single = chainAt(35).filter((c) => c.strike === 180);
-    const set = candidateStructures(view("bullish"), CONTEXT, single);
-    expect(kinds(set)).toEqual(["long-call"]);
-    expect(reasons(set)).toEqual(["strikes-collapsed", "strikes-collapsed"]);
+  it("calls a PUT and a CALL that snap together COLLAPSED — that is a straddle, not a strangle", () => {
+    // A 10-wide grid on a 10-vol name: a strong neutral view's two short strikes both land on 180.
+    // Keying the collapse guard on kind as well as strike would have let this through, and the
+    // explanation would have called a short straddle a "short strangle".
+    const quiet = { spot: SPOT, volatility: 0.1, rate: 0.04 };
+    const grid = chainAt(35).filter((c) => c.strike % 10 === 0);
+    const set = candidateStructures(view("neutral", "strong"), quiet, grid);
+    expect(set.built).toEqual([]);
+    expect(reasons(set)).toEqual(["strikes-collapsed", "strikes-collapsed", "strikes-collapsed"]);
+  });
+
+  it("names strike-out-of-reach rather than snapping a leg to a strike nowhere near the anchor", () => {
+    // A violently bearish view on a 250-vol name points below every listed strike. Snapping to the
+    // nearest one anyway would emit a naked long put dressed as a defined-risk spread.
+    const wild = { spot: SPOT, volatility: 2.5, rate: 0.04 };
+    const set = candidateStructures(view("bearish", "strong"), wild, chainAt(35));
+    expect(kinds(set)).toEqual(["long-put"]);
+    expect(reasons(set)).toEqual(["strike-out-of-reach", "strike-out-of-reach"]);
   });
 
   it("sells CLOSER strikes as a neutral view strengthens, matching what magnitude means there", () => {

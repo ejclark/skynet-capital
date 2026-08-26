@@ -146,9 +146,16 @@ describe("rankStructures — a stated view in, a ranked list of structures out",
   it("keeps an uncapped-loss candidate honest instead of hiding it behind a high probability", () => {
     const result = rankStructures(view("neutral"), CONTEXT, chain());
     const strangle = result.ranked.find((candidate) => candidate.kind === "short-strangle");
+    const condor = result.ranked.find((candidate) => candidate.kind === "iron-condor");
     expect(strangle?.risk.maxLoss).toEqual({ kind: "unbounded" });
     expect(strangle?.risk.capitalAtRisk).toBeUndefined();
-    expect(strangle?.score.probabilityOfProfit ?? 0).toBeGreaterThan(0.6);
     expect(strangle?.mechanics).toContain("the most it can lose is not capped");
+
+    // The strangle wins on probability and still ranks BELOW the defined-risk condor: the two
+    // capital-based terms it cannot answer are scored at the bottom, not renormalised away.
+    expect(strangle?.score.probabilityOfProfit ?? 0).toBeGreaterThan(
+      condor?.score.probabilityOfProfit ?? 1,
+    );
+    expect(strangle?.score.composite ?? 1).toBeLessThan(condor?.score.composite ?? 0);
   });
 });
