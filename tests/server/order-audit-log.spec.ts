@@ -1,11 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  InMemoryOrderAuditLog,
-  JsonlOrderAuditLog,
-  type OrderAuditRecord,
-} from "../../src/server/order-audit-log.js";
+import { JsonlOrderAuditLog, type OrderAuditRecord } from "../../src/server/order-audit-log.js";
+import { InMemoryOrderAuditLog } from "../../src/server/order-audit-memory-log.js";
 
 const rec = (participantId: string, orderId: string): OrderAuditRecord => ({
   participantId,

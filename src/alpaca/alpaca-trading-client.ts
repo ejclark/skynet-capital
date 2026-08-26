@@ -1,5 +1,8 @@
 import type { Side } from "../domain/types.js";
+import { AlpacaApiError } from "./alpaca-api-error.js";
 import type { AlpacaTradingTransport } from "./trading-transport.js";
+
+export { AlpacaApiError };
 
 /** Alpaca account payload (subset). Numeric fields arrive as strings over the wire. */
 export interface AlpacaAccount {
@@ -36,19 +39,6 @@ export interface PlaceOrderParams {
   readonly symbol: string;
   readonly qty: number;
   readonly side: Side;
-}
-
-/** Thrown when the Trading API returns a non-2xx status. */
-export class AlpacaApiError extends Error {
-  readonly status: number;
-  readonly body: unknown;
-
-  constructor(status: number, body: unknown) {
-    super(`Alpaca API error ${status}: ${JSON.stringify(body)}`);
-    this.name = "AlpacaApiError";
-    this.status = status;
-    this.body = body;
-  }
 }
 
 /** Shared by every Alpaca client wrapper: non-2xx becomes a typed AlpacaApiError. */
