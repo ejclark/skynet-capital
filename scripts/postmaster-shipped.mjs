@@ -1,6 +1,6 @@
 // THE LAST MILE — closing feedback issues whose work has already merged. Split out of
 // postmaster.mjs (2026-08-26, the noExcessiveLinesPerFile split).
-import { sh } from "./postmaster-gh.mjs";
+import { ghRest } from "./postmaster-gh.mjs";
 import { FOOTER } from "./postmaster-labels.mjs";
 
 /**
@@ -106,16 +106,30 @@ export function prIsMerged(ref) {
   const target = ref?.url ?? String(ref?.number ?? "");
   if (!target) return false;
   if (!prMergedCache.has(target)) {
-    let state = "";
+    let merged = false;
     try {
-      state = JSON.parse(sh("gh", ["pr", "view", target, "--json", "state"])).state;
+      // REST, not `gh pr view --json` (2026-08-26). This runs once PER REFERENCED PR on every
+      // push, and `gh … --json` compiles to GraphQL — the scarce bucket. `merged` is a plain
+      // boolean here, where GraphQL returned a "MERGED" state string.
+      merged = Boolean(ghRest(prPath(ref)).merged);
     } catch (err) {
       const detail = String(err.stderr || err.message)
         .trim()
         .slice(0, 200);
       console.log(`::warning::shipped sweep — could not read the state of ${target}: ${detail}`);
     }
-    prMergedCache.set(target, String(state).toUpperCase() === "MERGED");
+    prMergedCache.set(target, merged);
   }
   return prMergedCache.get(target);
+}
+
+/** A reference is either a bare number in THIS repo, or a full API/HTML url in any repo — the
+ *  cross-repo case `prIsMerged`'s own doc warns about. Both reduce to one REST pulls path. */
+function prPath(ref) {
+  const url = String(ref?.url ?? "");
+  const cross =
+    url.match(/repos\/([^/]+)\/([^/]+)\/pulls?\/(\d+)/) ??
+    url.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
+  if (cross) return `https://api.github.com/repos/${cross[1]}/${cross[2]}/pulls/${cross[3]}`;
+  return `pulls/${Number(ref?.number)}`;
 }

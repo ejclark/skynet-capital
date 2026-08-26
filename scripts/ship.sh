@@ -313,7 +313,22 @@ cmd_automerge() {
   gql="$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "User-Agent: skynet-ship" -d "$payload" "https://api.github.com/graphql")"
   if grep -q '"errors"' <<<"$gql"; then  # here-string: same SIGPIPE-under-pipefail trap as checkbody
-    echo "ship automerge: GraphQL errors (PR already clean → merge directly; else Eric web-merges):" >&2
+    # ALREADY CLEAN IS NOT A FAILURE — it is a race we lose, and losing it silently stalled 16
+    # research PRs on 2026-08-26. GitHub refuses `enablePullRequestAutoMerge` once every check has
+    # passed ("Pull request is in clean status"), and `verify` on a docs-only PR finishes in ~45s.
+    # Any session slower than that between opening and arming — an agent mid-turn, a lane shipping
+    # a batch — arms too late, gets this error, and leaves a green PR with nothing to merge it.
+    # Auto-merge means "merge it when it goes green"; already-green is that condition, met early.
+    #
+    # SAFE BY CONSTRUCTION: `cmd_checkarm` ran above, so a PR touching the never-auto-merge
+    # carve-out has already exited 6 and never reaches this line. The fall-through can only ever
+    # merge something arming was permitted for.
+    if grep -qi 'clean status' <<<"$gql"; then
+      echo "ship automerge: #$num is already green — auto-merge only takes while checks are pending, so merging directly." >&2
+      cmd_merge "$num"
+      return
+    fi
+    echo "ship automerge: GraphQL errors (Eric web-merges):" >&2
     printf '%s\n' "$gql" | head -3 >&2
     exit 3
   fi

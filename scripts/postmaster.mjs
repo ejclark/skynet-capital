@@ -49,7 +49,7 @@ import {
   claimStamp,
 } from "./postmaster-claim-lease.mjs";
 import { dueForResearch, routeSweep } from "./postmaster-events.mjs";
-import { sh } from "./postmaster-gh.mjs";
+import { ghRest, sh } from "./postmaster-gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./postmaster-labels.mjs";
 import { modelTier } from "./postmaster-model-tier.mjs";
 import {
@@ -253,10 +253,20 @@ function gatherDeps(ctx) {
     }
   };
   const needsScan = ctx.eventName === "push" || ctx.inputs?.command === "scan";
+  // Is there any open feedback issue at all? A REST question, on the plentiful core bucket, asked
+  // BEFORE the expensive one (2026-08-26). The sweep below rides every push and its list query is
+  // GraphQL — 100 issues each with their nested closing-PR references, which the API scores by
+  // COST, not by call count. On a busy day that is the single largest draw on a 10,000/hr ceiling,
+  // and on 2026-08-26 it exhausted it outright: `route` started dying on "API rate limit already
+  // exceeded" before it could dispatch the research or feedback jobs, so the tick driving the whole
+  // lane stopped. Most pushes have nothing to sweep, and those now pay nothing.
+  const openFeedback = needsScan
+    ? ghRest("issues?state=open&labels=feedback&per_page=100").filter((i) => !i.pull_request)
+    : [];
   // Feedback issues whose work has merged but which are still open — the last mile GitHub's own
   // `Closes #` link keeps missing on bot-opened, bot-merged PRs. Joined here (impure) so
   // `routeShipped` stays pure and fixture-drivable.
-  const shippedFeedback = needsScan
+  const shippedFeedback = openFeedback.length
     ? resolveShipped(
         json("gh issue list (shipped)", "gh", [
           "issue",
@@ -293,17 +303,12 @@ function gatherDeps(ctx) {
     dueEvents: needsScan
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],
+    // REST, not `gh issue list --json title` (2026-08-26): a second 100-issue GraphQL query, on
+    // every push, to read one scalar field REST hands over on the core bucket.
     openIssueTitles: needsScan
-      ? json("gh issue list", "gh", [
-          "issue",
-          "list",
-          "--state",
-          "open",
-          "--limit",
-          "100",
-          "--json",
-          "title",
-        ]).map((i) => i.title)
+      ? ghRest("issues?state=open&per_page=100")
+          .filter((i) => !i.pull_request)
+          .map((i) => i.title)
       : [],
   };
 }

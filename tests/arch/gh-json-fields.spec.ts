@@ -83,3 +83,57 @@ describe("gh --json fields", () => {
     expect(unknown).toEqual(["closedByPullRequests"]);
   });
 });
+
+/**
+ * THE BUCKET RULE (2026-08-26). `gh <thing> list --json` and `gh <thing> view --json` do not hit
+ * REST — they compile to GraphQL, whose 10,000/hr ceiling is scored by query COST, not call count,
+ * and which the GitHub MCP also spends. The postmaster rides EVERY push to main, so a hundred-issue
+ * nested query there is the largest single draw in the repo. On 2026-08-26 it exhausted the bucket:
+ * `route` began dying on "API rate limit already exceeded for user ID 3472134" before it could
+ * dispatch the research or feedback jobs, and the tick driving the whole lane stopped — visible
+ * nowhere except the run list.
+ *
+ * These cases hold the line that fix drew. They do not ban GraphQL — two queries legitimately
+ * remain, both reading `closedByPullRequestsReferences`, which exists ONLY in GraphQL: the shipped
+ * sweep's list, and the per-issue re-check behind it. That re-check is not an oversight; it is the
+ * whole lesson of #475 (an under-reporting list query and a genuinely empty queue printed the same
+ * sentence), and the REST stand-in for it — the timeline API — reports mentions rather than closing
+ * links, so adopting it would risk auto-closing a member's issue that a PR merely referenced. A
+ * bounded fallback is worth its cost; silently closing someone's feedback is not.
+ *
+ * So the rule is not "zero GraphQL". It is: no THIRD one appears without someone deciding to add
+ * it, the unbounded per-PR read stays on REST, and the survivors stay behind the cheap REST
+ * existence check that keeps a quiet push free.
+ */
+const GH_JSON_CALLS = /"(?:issue|pr)",\s*"(?:list|view)"/g;
+
+describe("the GraphQL bucket the postmaster rides on", () => {
+  it("keeps only the two queries whose field has no REST equivalent", () => {
+    const source = codeOnly(readFileSync("scripts/postmaster.mjs", "utf8"));
+
+    // The shipped sweep's list, and its per-issue re-check. Both read
+    // `closedByPullRequestsReferences`. A third hit means a per-push GraphQL query was added
+    // where REST would have done — move it to `ghRest`.
+    expect(source.match(GH_JSON_CALLS) ?? []).toHaveLength(2);
+  });
+
+  it("asks the cheap REST question before the expensive one", () => {
+    const source = codeOnly(readFileSync("scripts/postmaster.mjs", "utf8"));
+    const restProbe = source.indexOf("issues?state=open&labels=feedback");
+    const graphqlSweep = source.search(GH_JSON_CALLS);
+
+    expect(restProbe).toBeGreaterThan(-1);
+    expect(graphqlSweep).toBeGreaterThan(-1);
+    // Ordering IS the saving: most pushes have no open feedback issue and must pay nothing.
+    expect(restProbe).toBeLessThan(graphqlSweep);
+  });
+
+  it("reads a pull request's merged state over REST, once per referenced PR", () => {
+    const source = codeOnly(readFileSync("scripts/postmaster-shipped.mjs", "utf8"));
+
+    // This one runs per REFERENCED PR across every open feedback issue — unbounded, and the
+    // reason a busy day drained the bucket fastest.
+    expect(source).not.toMatch(/"pr",\s*"view"/);
+    expect(source).toMatch(/ghRest\(/);
+  });
+});
