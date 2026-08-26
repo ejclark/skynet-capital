@@ -1,0 +1,15 @@
+{
+  "scripts/issue-lint.mjs": "drifted over cap via #598 (postmaster label/step-isolation work); not yet decomposed",
+  "scripts/postmaster.mjs": "pinned by tests/arch/lease-namespace.spec.ts + tests/arch/gh-json-fields.spec.ts, which assert literal source text",
+  "src/domain/market-events-data.ts": "scripts/event-scan.mjs parses MARKET_EVENTS as raw text; the literal must stay physically in this file",
+  "src/observatory/feedback-view.ts": "dominated by an inline HTML template literal — see docs/LESSONS.md if decomposed",
+  "src/observatory/render-dashboard.ts": "dominated by an inline HTML template literal",
+  "src/observatory/shell-style.ts": "a single CSS template literal — no natural split without duplicating the stylesheet",
+  "src/observatory/standings-view.ts": "dominated by an inline HTML template literal",
+  "src/observatory/ticket-view.ts": "dominated by an inline HTML template literal",
+  "src/server/auth/authenticator.ts": "dominated by one ~2600-line inline HTML template literal (the cinematic /login page)",
+  "src/server/feedback-coach.ts": "dominated by an inline HTML template literal",
+  "src/server/participant-service.ts": "not yet decomposed",
+  "src/server/research-service.ts": "not yet decomposed",
+  "src/three/pieces/eye-shader.ts": "GLSL shader source as template literals — deliberately kept together, see docs/art/EYE.md"
+}
