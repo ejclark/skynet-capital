@@ -21,6 +21,7 @@ import {
 } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
 import { deskFrame, deskHref } from "./desk-tabs.js";
+import { dayTrophyTiles, renderStatTiles, type StatTile } from "./desk-tiles.js";
 import { equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
 import { doubledAt, seedBaseline } from "./history-metrics.js";
 import type { EquitySample } from "./history-store.js";
@@ -53,18 +54,11 @@ export interface PerformanceViewOptions extends DeskViewOptions {
   readonly history?: readonly EquitySample[];
 }
 
-interface StatTile {
-  readonly label: string;
-  readonly value: string;
-  readonly note: string;
-  readonly cls?: string;
-  readonly lead?: boolean;
-}
-
 function statTiles(
   stats: TradeStats,
   snapshot: ParticipantSnapshot,
   drawdown: ReturnType<typeof equityDrawdown>,
+  samples: readonly EquitySample[],
 ): StatTile[] {
   return [
     {
@@ -112,19 +106,8 @@ function statTiles(
         : "needs two equity samples",
       ...(drawdown ? { cls: drawdown.ddPct > 0 ? "neg" : "flat" } : {}),
     },
+    ...dayTrophyTiles(samples, snapshot.timezone),
   ];
-}
-
-function renderStatTiles(tiles: StatTile[]): string {
-  return `<div class="desk-tiles">${tiles
-    .map(
-      (tile) => `<div class="desk-tile${tile.lead ? " lead" : ""}">
-        <span class="desk-k">${escapeHtml(tile.label)}</span>
-        <span class="desk-v${tile.cls ? ` ${tile.cls}` : ""}">${escapeHtml(tile.value)}</span>
-        <span class="desk-note">${escapeHtml(tile.note)}</span>
-      </div>`,
-    )
-    .join("")}</div>`;
 }
 
 /** The friendly race, nested inside the curve panel rather than a sibling section (design brief). */
@@ -272,7 +255,7 @@ export function renderPerformanceBody(
     options.nav,
     `${DESK_STYLE}<section class="desk">
     ${header}
-    ${renderStatTiles(statTiles(stats, snapshot, drawdown))}
+    ${renderStatTiles(statTiles(stats, snapshot, drawdown, samples))}
     <div class="perf-top">
       ${curvePanel(samples, snapshot.equity)}
       ${splitPanel(stats)}
