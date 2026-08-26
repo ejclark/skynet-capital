@@ -1,48 +1,12 @@
 import { join } from "node:path";
 import { JsonlKeyedStore } from "../storage/jsonl-store.js";
+import type { EquitySample, HistoryStore } from "./history-record.js";
+import { InMemoryHistoryStore } from "./in-memory-history-store.js";
 
-/**
- * One durable point in a participant's history — an equity + realized-P/L sample at a moment in time.
- * The append-only unit the observatory replays to draw performance-over-time and win rate, and the
- * signal the sim-city event ceremonies read (a jump in realizedPl = a win booked → a building tops out).
- * Deliberately tiny (a few numbers) so a long history costs almost nothing on disk.
- */
-export interface EquitySample {
-  /** ISO-8601 wall-clock time the sample was taken. */
-  readonly at: string;
-  readonly participantId: string;
-  readonly equity: number;
-  readonly cash: number;
-  /** Cumulative realized P/L at this instant (see ParticipantSnapshot.realizedPl); 0 when unknown. */
-  readonly realizedPl: number;
-}
-
-/**
- * Where equity/realized history is kept. Behind an interface (like `CycleReportStore`) so the runtime
- * can sample into a file-backed store while tests use an in-memory one — same contract, no I/O in tests.
- */
-export interface HistoryStore {
-  save(sample: EquitySample): Promise<void>;
-  /** All samples (order not guaranteed); filtered to one participant when given. */
-  list(participantId?: string): Promise<EquitySample[]>;
-}
+export type { EquitySample, HistoryStore };
 
 /** In-memory store: the reference implementation, used by tests and in-process runs. */
-export class InMemoryHistoryStore implements HistoryStore {
-  private readonly samples: EquitySample[] = [];
-
-  save(sample: EquitySample): Promise<void> {
-    this.samples.push(sample);
-    return Promise.resolve();
-  }
-
-  list(participantId?: string): Promise<EquitySample[]> {
-    const all = [...this.samples];
-    return Promise.resolve(
-      participantId ? all.filter((s) => s.participantId === participantId) : all,
-    );
-  }
-}
+export { InMemoryHistoryStore };
 
 /**
  * File-backed store: one append-only JSONL file per participant under `dir` (mirrors
