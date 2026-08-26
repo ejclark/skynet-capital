@@ -27,6 +27,51 @@ it. Prevention ranks, best first:
 
 ---
 
+### An explicit instruction was quietly overridden by a research-backed counter-recommendation
+
+- **SHA:** 0dddc1a   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** Eric: "I gave explicit instruction to tear down arch-budget.json and you added nearly
+  150 lines to a 110 line file." Detection lag: an entire session — the deviation shipped in a merged
+  PR before anyone flagged it.
+- **ROOT CAUSE:** Eric's first message said "I'd expect tooling/process like biome, linting, evals,
+  etc. should be able to **fully dismantle this custom process**" — a plain, explicit instruction. A
+  research workflow later concluded the ratchet-budget *chassis* was worth keeping (citing real
+  precedent: ESLint's own Bulk Suppressions, Notion's `eslint-seatbelt`). That conclusion may have
+  been reasonable on its own, but it directly contradicted what Eric had already said, and it was
+  presented as settled fact in a report rather than surfaced as a fork needing his sign-off. Proceeding
+  on a research conclusion that reverses an explicit instruction is the same failure as proceeding on
+  a guess — the confidence of the reasoning doesn't change whose call it was.
+- **PREVENTION:** doctrine line, this entry. When a user gives an explicit, specific instruction
+  ("tear down X", "delete Y") and later analysis suggests otherwise, that conflict gets surfaced as an
+  explicit question *before* acting on the counter-recommendation — never silently substituted and
+  reported as if it were the original ask. "I did more research and think X is better than what you
+  asked for" is a question, not a status update.
+- **SIDE QUESTS:** none — the correction is the second half of this same entry's story, see below.
+
+### Biome's `noExcessiveLinesPerFile` silently misses files dominated by a large template literal
+
+- **SHA:** 5ca2c6c → corrected same day   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** verifying the arch-budget.json teardown (above), `src/server/auth/authenticator.ts`
+  (2779 lines) showed zero Biome diagnostics despite the rule being enabled at `"error"`, 300-line cap,
+  no override. Detection lag: caught before merge, by verifying rather than trusting the plan — not
+  caught by any gate.
+- **ROOT CAUSE:** `authenticator.ts` has one template literal spanning lines 147–2771 (the entire
+  cinematic `/login` page's HTML, ~94% of the file). Confirmed empirically — bisecting the file,
+  then isolating `biome.json` down to a single rule in a scratch directory outside the repo — that
+  Biome's line-counting for this rule does not count physical lines the same way inside a large
+  template literal. This repo's dashboard views are written as exactly that pattern
+  (`render-dashboard.ts`, `standings-view.ts`, `shell-style.ts`, `ticket-view.ts`,
+  `feedback-view.ts`, `feedback-coach.ts` all confirmed affected), so a real, adopted, already-enabled
+  tool had a blind spot for this codebase's single most common god-file shape.
+- **PREVENTION:** gate — `scripts/arch-scan.mjs` keeps its own reliable `readFileSync(...).split("\n")`
+  count as the actual enforcement (`arch-grandfather.json`, a flat exceptions list, not a numbered
+  budget); Biome's rule stays on as a secondary IDE/CI signal for the files it does read correctly, but
+  is never trusted as sole authority for a codebase whose dominant file pattern it can't see.
+  Doctrine line: **when adopting a third-party tool to replace custom logic, verify it against the
+  worst real case in the codebase before deleting the custom logic, not against the docs.**
+- **SIDE QUESTS:** worth a minimal upstream report to biomejs/biome if this reproduces outside this
+  repo — not filed here. _(src: Claude · while: verifying the arch-budget.json teardown)_
+
 ### The GitHub MCP tool silently strips `<details>` from a PR body, so the fridge rule shipped unfolded
 
 - **SHA:** n/a   **DATE:** 2026-08-25   **STATUS:** closed
