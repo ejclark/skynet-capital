@@ -291,3 +291,117 @@ describe("the stall audit sees outcomes, not chatter", () => {
     expect(intents[0]?.issueNumber).toBe(475);
   });
 });
+
+// THE DEFECT THIS FIXES: `execute()` was a bare `for` loop, so the first throwing intent unwound
+// the whole process — every later intent skipped and the step-summary receipt never written. One
+// un-permitted `gh issue comment` took the router's own accounting offline across seven
+// consecutive pushes and left no record of which intent had failed.
+//
+// Driven the same way every other branch here is: a real subprocess running the real module, with
+// a throwing fake in place of the executor. `runIntents` is pure given that injection, so no
+// network and no fixture file are needed.
+type Probe = { seen: string[]; errors: string[]; receipt: string[]; failed: number };
+
+const probe = (intents: unknown[], throwOn: string, message: string): Probe =>
+  JSON.parse(
+    execFileSync(
+      "node",
+      [
+        "-e",
+        `import("./scripts/postmaster.mjs").then((m) => {
+           const intents = JSON.parse(process.argv[1]);
+           const seen = [];
+           const errors = [];
+           const run = (i) => {
+             seen.push(i.kind);
+             if (i.kind === process.argv[2]) throw new Error(process.argv[3]);
+             return "did " + i.kind;
+           };
+           const r = m.runIntents(intents, run, (msg) => errors.push(msg));
+           console.log(JSON.stringify({ seen, errors, ...r }));
+         });`,
+        JSON.stringify(intents),
+        throwOn,
+        message,
+      ],
+      { cwd: process.cwd(), encoding: "utf8" },
+    ),
+  );
+
+describe("intent isolation", () => {
+  const threeIntents = [
+    { kind: "close-shipped", issueNumber: 546 },
+    { kind: "comment", issueNumber: 546 },
+    { kind: "flag-stall", issueNumber: 475 },
+  ];
+
+  it("carries on past a throwing intent instead of unwinding the run", () => {
+    const { seen, receipt, failed } = probe(threeIntents, "comment", "403 (addComment)");
+
+    // The intent AFTER the failure ran — that is the whole point.
+    expect(seen).toEqual(["close-shipped", "comment", "flag-stall"]);
+    expect(failed).toBe(1);
+    expect(receipt).toHaveLength(3);
+    expect(receipt[2]).toBe("did flag-stall");
+  });
+
+  it("names the failed intent and its reason in the receipt, so the run leaves evidence", () => {
+    const { receipt, errors } = probe(
+      [{ kind: "comment", issueNumber: 546 }],
+      "comment",
+      "Resource not accessible by personal access token (addComment)\nsecond line",
+    );
+
+    expect(receipt[0]).toContain("comment #546");
+    expect(receipt[0]).toContain("Resource not accessible by personal access token");
+    // First line only — a receipt is scannable or it is not read.
+    expect(receipt[0]).not.toContain("second line");
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("comment #546");
+  });
+
+  it("still fails the run — isolating the blast radius never launders the result", () => {
+    // A write we could not make is a real fault; a green run would be a lie about work that did
+    // not happen. Isolation shrinks the blast radius, it never changes the verdict.
+    const { failed } = probe(
+      [{ kind: "comment", issueNumber: 1 }, { kind: "noop" }],
+      "comment",
+      "403",
+    );
+    expect(failed).toBe(1);
+  });
+
+  it("reports every intent's result and fails nothing when nothing throws", () => {
+    const { receipt, failed } = probe([{ kind: "noop" }, { kind: "noop" }], "never", "unused");
+    expect(failed).toBe(0);
+    expect(receipt).toEqual(["did noop", "did noop"]);
+  });
+
+  it("labels an intent by whatever identifies its target", () => {
+    const labels = JSON.parse(
+      execFileSync(
+        "node",
+        [
+          "-e",
+          `import("./scripts/postmaster.mjs").then((m) => {
+             console.log(JSON.stringify(JSON.parse(process.argv[1]).map(m.intentLabel)));
+           });`,
+          JSON.stringify([
+            { kind: "comment", issueNumber: 546 },
+            { kind: "open-issue", title: "[event-research] x" },
+            { kind: "release-claim", slug: "feedback-1" },
+            { kind: "noop" },
+          ]),
+        ],
+        { cwd: process.cwd(), encoding: "utf8" },
+      ),
+    ) as string[];
+
+    expect(labels).toEqual([
+      "comment #546",
+      "open-issue `[event-research] x`",
+      "release-claim `claim/feedback-1`",
+      "noop",
+    ]);
+  });
+});
