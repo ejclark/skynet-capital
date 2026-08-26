@@ -92,8 +92,11 @@ image the dashboard deploy just built. It needs its own token — Fly deploy tok
 so `FLY_API_TOKEN` (scoped to `skynet-capital`) cannot deploy the sibling:
 
 ```sh
+fly tokens create deploy -o personal
+# → add as repo secret FLY_ORG_TOKEN (the phone-operable path — see docs/AUTONOMY-DEPLOY.md);
+#   or, to run least-privilege instead:
 fly tokens create deploy --app skynet-capital-bots
-# → add as repo secret FLY_API_TOKEN_BOTS
+# → add as repo secret FLY_API_TOKEN_BOTS (takes precedence over FLY_ORG_TOKEN wherever both exist)
 ```
 
 **Token-scoping note.** The two deploy tokens are the crown jewels here, not the `autonomy-ops`
