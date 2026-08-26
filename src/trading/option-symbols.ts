@@ -20,6 +20,29 @@ export interface OptionContractParts {
 
 const OCC_PATTERN = /^([A-Z]{1,6})(\d{6})([CP])(\d{8})$/;
 
+/**
+ * The shape of a contract's PARTS, before they are assembled into a wire symbol — what a ticket
+ * checks a member's typed input against.
+ *
+ * These live here, beside `OCC_PATTERN`, because "what an option contract's parts look like" is
+ * one question with one answer. They were defined twice (`option-ticket.ts` and, briefly,
+ * `draft-order.ts`), which is exactly the drift the duplication gate exists to catch: two copies
+ * of a validation rule are two rules the moment either is edited.
+ */
+export const UNDERLYING_PATTERN = /^[A-Z]{1,5}(\.[A-Z]{1,2})?$/;
+export const EXPIRATION_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * What `buildOccSymbol` can actually ENCODE, which is narrower than what a member may legitimately
+ * type. The root group of `OCC_PATTERN` has no room for a dot, so a dotted class share (`BRK.A`)
+ * passes `UNDERLYING_PATTERN` and then assembles into a string `isOccSymbol` rejects. And the
+ * strike rides an 8-digit thousandths field, so anything at or above $100,000 cannot be written
+ * down at all. Callers that BUILD a symbol should check against these; callers that merely
+ * validate a member's typed underlying want `UNDERLYING_PATTERN`.
+ */
+export const OCC_ROOT_PATTERN = /^[A-Z]{1,6}$/;
+export const MAX_OCC_STRIKE = 99_999.999;
+
 /** True when a broker symbol names an option contract rather than a share of stock. */
 export function isOccSymbol(symbol: string): boolean {
   return OCC_PATTERN.test(symbol.trim().toUpperCase());

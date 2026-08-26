@@ -7,7 +7,12 @@ import {
   SHARES_PER_CONTRACT,
   validateAffordability,
 } from "./option-economics.js";
-import { buildOccSymbol, parseOccSymbol } from "./option-symbols.js";
+import {
+  buildOccSymbol,
+  EXPIRATION_PATTERN,
+  parseOccSymbol,
+  UNDERLYING_PATTERN,
+} from "./option-symbols.js";
 import type { TicketHolding } from "./order-ticket.js";
 import { normalizeSymbol } from "./order-ticket.js";
 
@@ -36,9 +41,6 @@ export type {
  * The shared request/context/preview shapes and the payoff/affordability math live in
  * `option-economics.ts` — re-exported above so this stays the one import path for the ticket.
  */
-
-const UNDERLYING_PATTERN = /^[A-Z]{1,5}(\.[A-Z]{1,2})?$/;
-const EXPIRATION_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function validateShape(request: OptionTicketRequest, refusals: string[]): void {
   if (!UNDERLYING_PATTERN.test(normalizeSymbol(request.underlying))) {
