@@ -390,6 +390,27 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** a real-browser CI smoke of the critical funnels (/feedback click-through) —
   parked in docs/IDEAS.md.
 
+### PR-body image embeds are defanged in flight — the fridge rule's picture never rendered
+- **SHA:** n/a   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** a build session shipping #575 wrote a fridge-rule screenshot into its PR body the
+  documented way — a committed `docs/shots/` PNG, SHA-pinned, `checkbody` green. Reading back what
+  GitHub had actually **stored** showed the markdown defanged: the leading `!` stripped and the URL
+  wrapped in backticks, so the image rendered as a literal code span, not a picture. Detection lag:
+  minutes, and only because that session re-read the stored body instead of trusting `checkbody`.
+- **ROOT CAUSE:** distinct from #446's link rot, which this file already records. There the URL
+  died after merge; here the *syntax* never survives the outbound path for this session type, so
+  the picture is already broken at open. `ship.sh checkbody` lints the local FILE, never what the
+  API stored — the same blind spot that let MCP-stripped `<details>` folds pass (2026-08-25). A
+  gate that checks the input while the transport mutates it will report success forever.
+- **PREVENTION:** doctrine, pending a gate. For UI work from a session type that defangs embeds,
+  lead with a **mermaid** picture (which does survive) and point the reader at the committed PNG
+  under Files changed — the file still belongs in `docs/shots/`, it just cannot be the above-the-fold
+  render. **Always read the PR back after opening and confirm the picture and the fold survived**;
+  never conclude from `checkbody` alone. The durable fix is for `checkbody` to verify the STORED
+  body rather than the file, which is the shape of the fix both this and the `<details>` case want.
+- **SIDE QUESTS:** teach `ship.sh` a `--verify-stored <pr>` pass that re-reads the opened PR and
+  fails on a defanged embed or a missing fold — one check closing two recorded incidents.
+
 ### The fridge rule's own instruction embedded link rot — #446's screenshots died a day after merge
 - **SHA:** 29a0113   **DATE:** 2026-08-20   **STATUS:** closed
 - **SIGNAL:** the hat-team communication research (white-hat rendering probe) found PR #446's
