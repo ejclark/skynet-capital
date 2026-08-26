@@ -1,3 +1,4 @@
+import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 import { STARTER_PLAYS } from "../../src/domain/starter-plays.js";
 import { defaultTradeType, tradeTypeByCode } from "../../src/domain/trade-types.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
@@ -47,6 +48,11 @@ const chain = [
     openInterest: 812,
   },
   { occSymbol: "MSFT260918P00430000", strike: 430, closePrice: 14.1 },
+];
+
+/** An injected calendar, so the earnings badge's assertions don't drift with the real table. */
+const prints: readonly EarningsPrint[] = [
+  { symbol: "MSFT", date: "2026-09-03", status: "confirmed", source: "IR: test call notice" },
 ];
 
 describe("the trade ticket view", () => {
@@ -162,6 +168,37 @@ describe("the trade ticket view", () => {
     expect(html).toContain("Δ delta");
     expect(html).toContain("◂ yours");
     expect(html).toContain("812");
+  });
+
+  it("badges the chain with earnings proximity, and marks the expirations that hold the print", () => {
+    const html = renderTicketBody({
+      state: cspState(),
+      snapshot: ann,
+      tradingEnabled: true,
+      expirations: ["2026-09-02", "2026-09-18"],
+      chain,
+      prints,
+      generatedAt: "2026-09-01T14:00:00.000Z",
+    });
+    expect(html).toContain("Earnings in 2 days"); // the badge, on the chain itself
+    expect(html).toContain('data-nearness="flat-zone"');
+    // The ⚡ rides only the expiration that outlives the print — 2026-09-18, not 2026-09-02.
+    expect(html).toContain("lives through the print");
+    expect(html.match(/lives through the earnings print/g)).toHaveLength(1);
+  });
+
+  it("shows NO badge when no print is near — absence, never a cleared-looking zero-state", () => {
+    const html = renderTicketBody({
+      state: cspState(),
+      snapshot: ann,
+      tradingEnabled: true,
+      expirations: ["2026-09-18"],
+      chain,
+      prints,
+      generatedAt: "2026-06-01T14:00:00.000Z",
+    });
+    expect(html).not.toContain("ec-badge");
+    expect(html).not.toContain("data-nearness");
   });
 
   it("renders the chain note instead of a dead chain when data can't load", () => {
