@@ -20,8 +20,8 @@
 //
 // Dependency-free (node built-ins). Loud-failure doctrine: an unreadable input is an error.
 import { readFileSync } from "node:fs";
-import { LABEL_NAMES } from "./postmaster.mjs";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
+import { LABEL_NAMES } from "./postmaster-labels.mjs";
 
 // Re-exported so callers of issue-lint.mjs keep the same public surface — the live-corpus audit
 // itself (AUTOMATION_TAG, `audit`, `auditReport`) now lives in issue-lint-audit.mjs.
@@ -194,7 +194,7 @@ function collectNotes(text, notes) {
 }
 
 /** The vocabulary an issue's labels are checked against — one registry, shared with the lanes that
- *  apply them (scripts/postmaster.mjs `LABELS`). */
+ *  apply them (scripts/postmaster-labels.mjs `LABELS`). */
 const KNOWN_LABELS = new Set(LABEL_NAMES);
 
 /**
@@ -213,7 +213,7 @@ function checkLabels(labels, notes) {
   if (!unknown.length) return;
   notes.push(
     `unregistered label${unknown.length === 1 ? "" : "s"} ${unknown.map((n) => `\`${n}\``).join(", ")} — ` +
-      "no lane reads a label it does not know; register it in scripts/postmaster.mjs LABELS or fix the name",
+      "no lane reads a label it does not know; register it in scripts/postmaster-labels.mjs LABELS or fix the name",
   );
 }
 
