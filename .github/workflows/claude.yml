@@ -44,6 +44,22 @@ name: Claude
 # member of the repo IS the authorization. An unauthorized mention is silently ignored — no reply,
 # so it never rewards a stranger's mention with visible bot attention.
 #
+# SELF-TRIGGER ON A BORROWED IDENTITY (#625). `sender.login != 'claude[bot]'` only catches a bot
+# comment posted under the GitHub App's own identity. With `vars.APP_CLIENT_ID` unset, every lane
+# in this repo posts its comments via `secrets.HANDOFF_PR_TOKEN`, a PAT scoped to `ejclark`'s
+# account — so `sender.login` reads `ejclark`, `author_association` reads `OWNER`, and a close-out
+# comment that RESOLVED an issue re-triggers a fresh session that finds nothing to do. There is no
+# API-level signal separating "Eric typed this" from "a script posted this with Eric's PAT": a PAT
+# is not a GitHub App, so `performed_via_github_app` is null either way. The only reliable tell is
+# content — every comment this repo's Claude sessions post carries a markdown link opening
+# `[Claude Code](https://claude` (interactive.md's footer instruction, and postmaster's shared
+# `FOOTER` in `scripts/postmaster-labels.mjs`; the two differ after that, one linking
+# `claude.ai/code` and the other `claude.com/claude-code`), so `gate` excludes any comment carrying
+# that shared prefix. Deliberately the literal link opener, NOT a bare mention of "Claude Code" — a
+# member's comment can discuss Claude Code in prose without tripping the guard. Once
+# `APP_CLIENT_ID` is set (#611) these comments post under the App's own bot identity and the marker
+# check becomes redundant rather than wrong, so it is safe to leave in place.
+#
 # That gate gets the SESSION started, but doesn't police what the session reads once it's running:
 # a session that started because a member wrote "@claude take a look" then reads the WHOLE thread
 # for context — including any earlier comment from an unverified stranger. Verifying who triggered
@@ -96,7 +112,9 @@ jobs:
     #      steering (2026-08-20) means any comment from a recognized member counts, not just one
     #      saying @claude. Opening a brand NEW issue is a different, broader trigger and still
     #      requires an explicit @claude in the body (see the header for why).
-    #   2. Claude's own comments must never retrigger it.
+    #   2. Claude's own comments must never retrigger it — whether posted under the App's bot
+    #      identity or, when APP_CLIENT_ID is unset, under a borrowed human identity via
+    #      HANDOFF_PR_TOKEN (see the header's "SELF-TRIGGER ON A BORROWED IDENTITY", #625).
     #   3. The sender must be a recognized repo member — see the header for why this is separate
     #      from detection. `github.event.sender` is present on every event type here, uniformly.
     if: >-
@@ -106,6 +124,7 @@ jobs:
             (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
           ) &&
           github.event.sender.login != 'claude[bot]' &&
+          !contains(github.event.comment.body || github.event.issue.body, '[Claude Code](https://claude') &&
           contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association || github.event.issue.author_association) }}
     runs-on: ubuntu-latest
     outputs:
