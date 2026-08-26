@@ -19,7 +19,10 @@ export function auditReport(issues, { repo = "", limit = AUDIT_LIST_LIMIT } = {}
   const count = (f) => issues.filter((i) => f(i.body ?? "")).length;
   const human = issues.filter((i) => !AUTOMATION_TAG.test(i.title ?? ""));
   const failing = human
-    .map((i) => ({ issue: i, ...lintIssue({ title: i.title ?? "", body: i.body ?? "" }) }))
+    .map((i) => ({
+      issue: i,
+      ...lintIssue({ title: i.title ?? "", body: i.body ?? "", labels: i.labels }),
+    }))
     .filter((r) => r.problems.length);
 
   const lines = [
