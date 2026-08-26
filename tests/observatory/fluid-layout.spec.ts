@@ -73,8 +73,8 @@ describe("the page columns", () => {
 
     expect(html).toContain("max-width:var(--col-wide)");
     expect(html).not.toContain("max-width:980px");
-    // The agenda takes the room that's left; the rail is a clamp, so both breathe together.
-    expect(html).toContain("grid-template-columns:minmax(0,1fr) clamp(240px,20vw,320px)");
+    // The calendar lives in the header now, not a rail — a clamped column beside the tiles.
+    expect(html).toContain("grid-template-columns:clamp(260px,26vw,320px)");
   });
 
   it("sizes the standalone research doc/symbol pages from the narrower reading cap", () => {
