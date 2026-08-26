@@ -54,7 +54,15 @@
           }
         },
         "useCollapsedElseIf": "error",
-        "useShorthandAssign": "error"
+        "useShorthandAssign": "error",
+        "noExcessiveLinesPerFile": {
+          "level": "warn",
+          "options": {
+            "maxLines": 300,
+            "skipBlankLines": false
+          }
+        },
+        "noExcessiveClassesPerFile": "warn"
       },
       "performance": {
         "noBarrelFile": "error"
