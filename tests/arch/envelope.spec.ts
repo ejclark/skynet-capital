@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // Autonomous-lane envelope gate — the mechanical replacement for a paragraph. Before this, the only
 // thing stopping an unattended session from editing auth, credentials, or its own workflow was
@@ -14,18 +15,6 @@ const scan = (...args: string[]): string =>
     cwd: process.cwd(),
     encoding: "utf8",
   });
-
-// Git exports GIT_DIR (and friends) into every hook's environment, so when this suite runs from
-// .husky/pre-push, a `git` call made with cwd=<temp repo> silently targets the REAL repo instead —
-// which both fails the end-to-end case below AND stages a wholesale deletion into the developer's
-// index. Scrub every GIT_* var: the temp repo is the only repo this spec is allowed to touch.
-function hermeticGitEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, ...extra };
-  for (const key of Object.keys(env)) {
-    if (key.startsWith("GIT_")) delete env[key];
-  }
-  return env;
-}
 
 type Check = { path: string; protected: boolean; pattern?: string; why?: string };
 const check = (...paths: string[]): Check[] => JSON.parse(scan("--check", ...paths)) as Check[];
