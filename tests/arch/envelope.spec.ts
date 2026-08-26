@@ -15,6 +15,18 @@ const scan = (...args: string[]): string =>
     encoding: "utf8",
   });
 
+// Git exports GIT_DIR (and friends) into every hook's environment, so when this suite runs from
+// .husky/pre-push, a `git` call made with cwd=<temp repo> silently targets the REAL repo instead —
+// which both fails the end-to-end case below AND stages a wholesale deletion into the developer's
+// index. Scrub every GIT_* var: the temp repo is the only repo this spec is allowed to touch.
+function hermeticGitEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env, ...extra };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("GIT_")) delete env[key];
+  }
+  return env;
+}
+
 type Check = { path: string; protected: boolean; pattern?: string; why?: string };
 const check = (...paths: string[]): Check[] => JSON.parse(scan("--check", ...paths)) as Check[];
 
@@ -102,12 +114,13 @@ describe("autonomous-lane envelope", () => {
       execFileSync("node", ["scripts/envelope-scan.mjs", "--lane", "feedback/1", ...args], {
         cwd: dir,
         encoding: "utf8",
-        env: { ...process.env, GITHUB_HEAD_REF: "" },
+        env: hermeticGitEnv({ GITHUB_HEAD_REF: "" }),
       });
     const run = (...args: string[]): string =>
       execFileSync("git", ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args], {
         cwd: dir,
         encoding: "utf8",
+        env: hermeticGitEnv(),
       });
     try {
       run("init", "-b", "main");
