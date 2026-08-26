@@ -21,7 +21,7 @@ PR is still open, and it is what puts the branch inside the envelope gate. Never
 Verify by exit status and never by tailed output (`npm run typecheck`, `npm run lint`, `npm test`),
 push, open the PR with `gh pr create`, then arm auto-merge with `gh pr merge --auto --squash` —
 research-ledger docs auto-merge per the governor's merge policy. Conventional-Commit subjects,
-lowercase-led. The PR body follows `.github/pull_request_template.md`: open with `## The picture` —
+lowercase-led and **≤100 characters** (commitlint's `header-max-length`, which fails `verify`). The PR body follows `.github/pull_request_template.md`: open with `## The picture` —
 for a ledger row the honest picture is usually the line `Picture: waived — automated research
 ledger` (never a decorative diagram); Summary bullets ≤120 chars (`docs/PICTURES.md`).
 
