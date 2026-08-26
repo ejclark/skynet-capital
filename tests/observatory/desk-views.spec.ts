@@ -450,6 +450,26 @@ describe("performance view — closed round trips, trade behavior, and account p
     expect(html).not.toContain('<svg class="equity-spark"');
   });
 
+  it("banks the best day and the green streak as tiles, in dollars and trading days", () => {
+    const html = renderPerformanceBody(snapshot(), {
+      isSelf: true,
+      history: samples,
+      generatedAt: "2026-08-02T14:00:00.000Z",
+    });
+    expect(html).toContain("Best day");
+    expect(html).toContain("+$1,000"); // 10,000 → 11,000 between the two recorded days
+    expect(html).toContain("2026-08-01 · +10.00%");
+    expect(html).toContain("Green streak");
+    expect(html).toContain("1 trading day");
+  });
+
+  it("renders the day trophies ABSENT, never as a false zero, without two recorded days", () => {
+    const html = renderPerformanceBody(snapshot(), { isSelf: true, history: [] });
+    expect(html).toContain("Best day");
+    expect(html).toContain("needs two days of history");
+    expect(html).not.toContain("trading day"); // no streak claimed, not a zero-length one
+  });
+
   it("measures the doubling race against the founding baseline", () => {
     const html = renderPerformanceBody(snapshot(), {
       isSelf: true,

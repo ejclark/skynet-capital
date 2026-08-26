@@ -10,7 +10,7 @@ Where its contents went:
 |---|---|
 | the gamify spec — trophies, measurements, derived state | **built**: [`src/observatory/history-metrics.ts`](../src/observatory/history-metrics.ts) — `firstAccountToDouble`, `aggregateDoubling`, `seedBaseline`, `doubledAt`, `changeOver` |
 | the seed baseline recorded at onboarding | **built**: `ParticipantService.recordSeedSample` ([`src/server/participant-service.ts`](../src/server/participant-service.ts)) |
-| the "room to grow" trophies — first to +50%, biggest single-day gain, longest green streak | **open**: issue [#503](https://github.com/ejclark/skynet-capital/issues/503) |
+| the "room to grow" trophies — first to +50%, biggest single-day gain, longest green streak | **built**: [`src/observatory/history-metrics.ts`](../src/observatory/history-metrics.ts) — `firstAccountToFiftyPercent`, `biggestSingleDayGain`, `longestGreenStreak` / `greenStreakBoard` (trading days keyed by [`src/domain/market-day.ts`](../src/domain/market-day.ts)) |
 | anything new | file an issue — `/issue` shapes the capsule ([`ISSUES.md`](ISSUES.md)) |
 
 The spec this file carried is not lost: it is the header commentary on the functions that implement

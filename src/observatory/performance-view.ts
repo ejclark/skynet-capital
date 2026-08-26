@@ -26,7 +26,12 @@ import {
 import { DESK_STYLE } from "./desk-style.js";
 import { deskFrame, deskHref } from "./desk-tabs.js";
 import { equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
-import { doubledAt, seedBaseline } from "./history-metrics.js";
+import {
+  biggestSingleDayGain,
+  doubledAt,
+  longestGreenStreak,
+  seedBaseline,
+} from "./history-metrics.js";
 import type { EquitySample } from "./history-store.js";
 import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.js";
 import type { DeskViewOptions } from "./positions-view.js";
@@ -68,10 +73,38 @@ interface StatTile {
   readonly lead?: boolean;
 }
 
+/**
+ * The two day-shaped trophies (issue #503). A *trading day* is a day the board actually sampled,
+ * so both read ABSENT (—) rather than 0 until two recorded days exist: a zeroed streak would claim
+ * a day that never happened, and a "best day" of $0 would dress a flat record as a win.
+ */
+function dayTrophyTiles(
+  samples: readonly EquitySample[],
+  timezone: string | undefined,
+): StatTile[] {
+  const bestDay = biggestSingleDayGain(samples, timezone);
+  const streak = longestGreenStreak(samples, timezone);
+  return [
+    {
+      label: "Best day",
+      value: bestDay ? formatSigned(bestDay.abs) : "—",
+      note: bestDay ? `${bestDay.day} · ${pct(bestDay.pct)}` : "needs two days of history",
+      ...(bestDay ? { cls: "pos" } : {}),
+    },
+    {
+      label: "Green streak",
+      value: streak ? `${streak.length} trading day${streak.length === 1 ? "" : "s"}` : "—",
+      note: streak ? `${streak.from} → ${streak.to}` : "needs two days of history",
+      ...(streak ? { cls: "pos" } : {}),
+    },
+  ];
+}
+
 function statTiles(
   stats: TradeStats,
   snapshot: ParticipantSnapshot,
   drawdown: ReturnType<typeof equityDrawdown>,
+  samples: readonly EquitySample[],
 ): StatTile[] {
   return [
     {
@@ -119,6 +152,7 @@ function statTiles(
         : "needs two equity samples",
       ...(drawdown ? { cls: drawdown.ddPct > 0 ? "neg" : "flat" } : {}),
     },
+    ...dayTrophyTiles(samples, snapshot.timezone),
   ];
 }
 
@@ -436,7 +470,7 @@ export function renderPerformanceBody(
     options.nav,
     `${DESK_STYLE}<section class="desk">
     ${header}
-    ${renderStatTiles(statTiles(stats, snapshot, drawdown))}
+    ${renderStatTiles(statTiles(stats, snapshot, drawdown, samples))}
     <div class="perf-top">
       ${curvePanel(samples, snapshot.equity)}
       ${splitPanel(stats)}
