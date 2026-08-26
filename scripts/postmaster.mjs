@@ -50,7 +50,7 @@ import {
 } from "./postmaster-claim-lease.mjs";
 import { dueForResearch, routeSweep } from "./postmaster-events.mjs";
 import { sh } from "./postmaster-gh.mjs";
-import { ensureLabel, ensureVocabulary, LABELS } from "./postmaster-labels.mjs";
+import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./postmaster-labels.mjs";
 import { modelTier } from "./postmaster-model-tier.mjs";
 import {
   mergedReference,
@@ -69,6 +69,7 @@ export {
   dueForResearch,
   ensureVocabulary,
   LABELS,
+  MANAGED_LABELS,
   mergedReference,
   modelTier,
   resolveShipped,
@@ -315,10 +316,10 @@ function execute(intents) {
   } catch (err) {
     console.log(`::warning::could not upsert labels: ${String(err.message).slice(0, 200)}`);
   }
-  const receipt = [];
-  for (const i of intents) {
-    receipt.push(executeOne(i));
-  }
+  const { receipt, failed } = runIntents(intents, executeOne);
+  // A write we could not make IS a real fault — isolating the blast radius must not turn a failed
+  // run green. The receipt now says which intent failed and why, instead of the run just stopping.
+  if (failed) process.exitCode = 1;
   // The durable per-run receipt (research gap #2: the scan path left no trace beyond the run log).
   // $GITHUB_STEP_SUMMARY renders on the run's summary page; locally it just skips.
   if (process.env.GITHUB_STEP_SUMMARY && receipt.length) {
@@ -329,6 +330,58 @@ function execute(intents) {
     );
   }
   if (receipt.length === 0) console.log("· nothing to do");
+}
+
+/** How the receipt names an intent that failed: its kind plus whatever identifies the target. */
+export function intentLabel(i) {
+  const target = i.issueNumber
+    ? ` #${i.issueNumber}`
+    : i.title
+      ? ` \`${i.title}\``
+      : i.slug
+        ? ` \`claim/${i.slug}\``
+        : "";
+  return `${i.kind ?? "unknown"}${target}`;
+}
+
+/**
+ * Run every intent, each in its own blast radius.
+ *
+ * WHY THIS IS NOT A BARE `for` LOOP ANY MORE (2026-08-26). It was one, and on 2026-08-24 a single
+ * un-permitted `gh issue comment` threw out of `executeOne` and unwound the whole process: every
+ * later intent skipped, and — worse — the `$GITHUB_STEP_SUMMARY` receipt never written, so the run
+ * that failed left no record of WHICH intent failed or what it had already done. One 403 took the
+ * router's own accounting offline across seven consecutive pushes, and the log was the only
+ * evidence anything had happened at all.
+ *
+ * So: one intent's failure costs exactly that intent. It lands in the receipt by name, emits an
+ * `::error::` annotation, and the run still fails — a write we could not make is a fault, and a
+ * green run would be a lie about work that did not happen. Isolation shrinks the blast radius; it
+ * never launders the result.
+ *
+ * Pure given the injected `run`, so a spec drives it with a throwing fake and no network.
+ *
+ * @returns {{ receipt: string[], failed: number }}
+ */
+export function runIntents(intents, run, onError = (msg) => console.error(`::error::${msg}`)) {
+  const receipt = [];
+  let failed = 0;
+  for (const i of intents) {
+    try {
+      receipt.push(run(i));
+    } catch (err) {
+      failed += 1;
+      // execFileSync puts the useful half on stderr; first line only, so the receipt stays scannable.
+      const reason =
+        String(err?.stderr || err?.message || err)
+          .trim()
+          .split("\n")[0]
+          .slice(0, 300) || "no reason given";
+      onError(`${intentLabel(i)} failed — ${reason}`);
+      receipt.push(`❌ ${intentLabel(i)} failed — ${reason}`);
+    }
+  }
+  return { receipt, failed };
 }
 
 function executeOne(i) {
