@@ -994,7 +994,7 @@ it. Prevention ranks, best first:
   was stripped in the full-size real PR body, both times, over REST — so the trigger is not
   "REST vs MCP" as previously recorded, and is not fully characterized (content size/shape
   dependent, not deterministically reproduced in a minimal repro). This is a session-side outbound
-  content-safety layer (not documented in `/root/.ccr/README.md`, which only covers
+  content-safety layer (not documented in the local agent-proxy README, which only covers
   TLS/connectivity failures) — plausibly anti-exfiltration/anti-auto-fetch for links, and
   anti-hidden-content for the fold, applied even to legitimate same-repo content. **Correction to
   the 2026-08-25 entry and to CLAUDE.md/`docs/PICTURES.md`'s current framing: "ship through REST
