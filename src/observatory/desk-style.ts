@@ -9,6 +9,8 @@
  * live at the end of the row, not in a hidden menu), and every destructive-ish action is a form
  * button that lands on a review screen rather than firing on click.
  */
+import { STAT_TILE_CSS } from "./desk-tiles.js";
+
 export const DESK_STYLE = `<style>
   .desk{ display:flex; flex-direction:column; gap:22px; }
   .desk-head{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; }
@@ -40,12 +42,7 @@ export const DESK_STYLE = `<style>
   .weight-bar{ display:block; height:3px; margin-top:5px; border-radius:2px; background:color-mix(in srgb,var(--muted) 22%,transparent); overflow:hidden; max-width:120px; }
   .weight-bar i{ display:block; height:100%; border-radius:2px; background:var(--accent); }
 
-  .desk-tiles{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
-  .desk-tile{ background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:14px 16px; display:flex; flex-direction:column; gap:5px; }
-  .desk-tile.lead{ border-color:color-mix(in srgb,var(--accent) 40%,var(--border)); }
-  .desk-k{ font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
-  .desk-v{ font-size:21px; font-weight:700; letter-spacing:-.01em; font-family:var(--mono); font-variant-numeric:tabular-nums; }
-  .desk-note{ font-size:11px; color:var(--muted); line-height:1.45; }
+  ${STAT_TILE_CSS}
 
   .panel{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 20px; }
   .panel-title{ font-size:14px; font-weight:700; margin-bottom:4px; }

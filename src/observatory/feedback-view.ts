@@ -7,6 +7,7 @@ import type { FeedbackResult } from "../server/feedback-service.js";
 import { FEEDBACK_STATUS_LABEL, type FeedbackStatus } from "../server/feedback-status.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { type NavContext, renderShell } from "./dashboard-shell.js";
+import { renderStatTiles, STAT_TILE_CSS, type StatTile } from "./desk-tiles.js";
 import { IMAGE_SCRIPT } from "./feedback-image-script.js";
 
 // Mirrors feedback-issue.ts's private FEEDBACK_KIND_LABEL — kept separate rather than exported
@@ -101,6 +102,64 @@ function isClosed(
   return statuses?.get(e.issueNumber) === "shipped";
 }
 
+/**
+ * THE CONTRIBUTION TALLY (#567 slice 1) — a member's own filing record, said out loud.
+ *
+ * The count was already durable in `feedback-log.ts`; nothing surfaced it, so a member who had
+ * filed nine things saw nine rows and no acknowledgement. This is the acknowledgement, and it
+ * deliberately reuses the desk's stat-tile row rather than inventing a second stat language.
+ *
+ * `recent` is the member's WHOLE log (feedback-routes.ts passes it unsliced), so "Filed" is the
+ * real count and not a page size — there is no second counter here that could drift from the
+ * ledger.
+ *
+ * HONESTY: "Shipped" is only stated when EVERY filing's status is known. GitHub is the source of
+ * truth and it can be unreachable or unwired, and a partial fetch would render a lower bound as a
+ * fact — a member whose issue shipped would read "1 shipped" out of three and reasonably conclude
+ * the other two were rejected. Unknown reads ABSENT (—) and names what it is waiting on, the same
+ * rule the day trophies follow.
+ */
+function feedbackTally(
+  recent: readonly FeedbackLogEntry[],
+  statuses: ReadonlyMap<number, FeedbackStatus> | undefined,
+): StatTile[] {
+  const unknown = recent.filter((e) => !statuses?.has(e.issueNumber)).length;
+  const shipped = recent.filter((e) => statuses?.get(e.issueNumber) === "shipped").length;
+  const filedTile: StatTile = {
+    label: "Filed",
+    value: String(recent.length),
+    note: recent.length === 1 ? "your first one — thank you" : "bugs, ideas and asks you've sent",
+    lead: true,
+  };
+  if (unknown > 0) {
+    return [
+      filedTile,
+      {
+        label: "Shipped",
+        value: "—",
+        note:
+          unknown === recent.length
+            ? "we can't reach GitHub for statuses right now"
+            : `waiting on ${unknown} status${unknown === 1 ? "" : "es"} from GitHub`,
+      },
+    ];
+  }
+  return [
+    filedTile,
+    {
+      label: "Shipped",
+      value: String(shipped),
+      // Celebration pairs with explanation (docs/BRAND.md): say what the number MEANS, so a good
+      // number reads as earned rather than as decoration.
+      note:
+        shipped === 0
+          ? "none built yet — the rest are still in the queue"
+          : "built and live in the app because you asked",
+      ...(shipped > 0 ? { cls: "pos" } : {}),
+    },
+  ];
+}
+
 function renderRecentFeedback(
   recent: readonly FeedbackLogEntry[],
   statuses: ReadonlyMap<number, FeedbackStatus> | undefined,
@@ -114,6 +173,7 @@ function renderRecentFeedback(
     `<ul class="fdbk-recent-list">${rows.map((e) => recentRow(e, statuses, followupEnabled)).join("\n")}</ul>`;
   return `<div class="fdbk-recent">
     <h2 class="fdbk-recent-h">Your recent feedback</h2>
+    ${renderStatTiles(feedbackTally(recent, statuses))}
     ${list(open)}
     ${closed.length ? `<h3 class="fdbk-recent-h fdbk-recent-h-closed">Closed</h3>${list(closed)}` : ""}
   </div>`;
@@ -241,6 +301,7 @@ export function renderFeedbackResultBody(options: FeedbackResultViewOptions): st
  * draft to review, or the member skipping ahead).
  */
 const FDBK_STYLE = `<style>
+  ${STAT_TILE_CSS}
   .fdbk-flow{ display:flex; flex-direction:column; gap:22px; max-width:var(--col-form); margin-top:6px; }
   .fdbk-form, .fdbk-intro{ display:flex; flex-direction:column; gap:20px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:26px 28px; }
   .fdbk-field{ display:flex; flex-direction:column; gap:8px; }
