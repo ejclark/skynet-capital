@@ -1,7 +1,7 @@
 # 10-Year TIPS auction (reopening) — treasury-10y-tips-2026-09-17
 
 **Kind:** rates · **Date:** 2026-09-17 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-08-19
+**Last assessed:** 2026-08-26
 
 ## At a glance
 
@@ -144,6 +144,7 @@ high-duration exposure (CRWV highest, then NVDA/AVGO/MRVL) sized for both tails.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-19 | D29 | Initial research banked (doc above). Adjacency — peers: no tracked-name prints since 8/17 (NVDA 8/26, MRVL 8/27, AVGO 9/2 ahead); live peer signal macro-driven — CRWV −12.1%, NVDA −2.4%, SOX −5% on 8/18 real-rate/financing fear. Macro: long-end selloff is **real-rate/term-premium driven with breakevens roughly flat** (per the 30Y TIPS sibling doc); this reopening reopens the July 10Y TIPS (real yield 2.438%, highest since Oct 2008, B/C 2.30, tailed ~2.8bp — soft demand). Sep-16 FOMC odds ~60–70% hold / ~30–40% hike / 0% cut per the FOMC sibling — **this reopening is D+1 to that meeting**, the first supply-side read after the Fed's signal. VIX ~15.2–15.9 on 8/18 (sources disagree), up from the 14.56 2026-low — mild vol pickup. Geopolitical: US–Iran deadline expired, oil spike — the one leg that *could* lift breakevens and flip the real-rate read. Event tape (date **confirmed**; size/yield figures **estimate**/press-sourced): reopening size ~$19B (Aug–Oct refunding), WI real yield not yet set (~9/11). No new dated adjacencies beyond what the calendar already tracks (30Y TIPS 8/20, FOMC 9/16, OpEx 9/18, 5Y 9/23, 7Y 9/24). | — (stance set) | 2026-08-26 (medium, ≥8d band: every 7d) |
+| 2026-08-26 | D-22 | Adjacency sweep. Event tape: the reopening's own WI real yield still not set this far out (~9/11, unchanged from D-29); a same-window nominal-10Y auction (8/12) posted bid-to-cover 2.53x with strong 76.7% indirect demand — a nominal-side data point, not directly transferable to the real-yield/TIPS market, but a reminder the belly's nominal demand has been firmer than the long-end's (per the 20Y sibling doc's weak 8/19 predecessor) — the real-rate-vs-term-premium disentangling this doc's stance depends on stays unresolved. Peers: NVDA reported tonight, MRVL tomorrow — both own docs show de-stressed implied moves; no CRWV-specific move found this pass. Macro: Sep 15–16 FOMC odds firmed to ~73% hold/26% hike/1% cut (Kalshi, checked today) from the ~60-70%/30-40%/0% split carried since D29 — hold conviction building, still zero cut priced; this reopening remains D+1 to that meeting. Volatility regime: VIX ~15.8, calm, no shift. Geopolitical: Strait of Hormuz escalated further overnight (tanker hit off Oman 8/25) — still the one leg that could lift breakevens and flip the real-rate framing; no breakeven-specific data found this pass. No new dated adjacency to propose. | — (no change; watch-only stance holds, real-rate-vs-inflation framing unresolved) | 2026-09-02 (medium, ≥8d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
