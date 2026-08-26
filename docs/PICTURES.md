@@ -88,12 +88,28 @@ breaks in the other — that exact drift already shipped once).
 - The shoot scripts (`npm run shoot:login`, `scripts/shoot-*.mjs`) carry the JPEG quality ceiling —
   fix size problems there, not by hand-recompressing.
 
-**The fold survives the tool you ship with, or it doesn't survive at all.** `scripts/ship.sh open`
-writes the body over REST and preserves it; the GitHub **MCP** write tools strip `<details>` and
-`<summary>` outright while leaving `<img>` and tables intact, and still report success — so the brief
-lands above the fold and nothing errors (`LESSONS.md`, 2026-08-25). `ship.sh checkbody` cannot catch
-it: it lints the body *file*, not what GitHub stored. Ship through `/ship`; if you must not, re-read
-the PR and count the tags.
+**The fold is not guaranteed to survive even through `ship.sh`/REST — always re-fetch and check.**
+The GitHub **MCP** write tools strip `<details>`/`<summary>` outright while leaving `<img>` and
+tables intact, and still report success (`LESSONS.md`, 2026-08-25) — ship through `/ship`, not
+those, as the first line of defense. But `LESSONS.md` (2026-08-26) found the fold ALSO stripped
+twice through `ship.sh`'s own plain REST path, on a real full-size PR body — the trigger isn't
+characterized (a short isolated test body kept its fold; the real PR body didn't, both times), so
+"REST preserves it" is necessary but not proven sufficient. `ship.sh checkbody` cannot catch either
+case: it lints the body *file*, not what GitHub stored. After ANY automated body write, re-fetch and
+check for the literal `<details>` tag; if it's gone, flatten to plain sections rather than retrying
+the same call.
+
+**A screenshot embed can vanish even through `ship.sh` — a session-side content-safety layer, not a
+repo bug.** Confirmed 2026-08-26: `![alt](url)` and even a plain `[text](url)` pointing at anything
+that reads as a media file gets neutralized in flight — the `!` sometimes dropped, the URL wrapped in
+backticks — for BOTH `raw.githubusercontent.com` and `github.com/.../blob/...` hosts, verified via
+direct REST probes (a bare-text mention of the same URL, no markdown link syntax, survives
+untouched). This is outside repo control — don't try to out-clever it (URL tricks, alternate syntax).
+When an embed comes back mangled after a re-fetch: use the waiver line instead
+(`Picture: waived — <reason>`), name the committed `docs/shots/...` path in prose so a reader can
+open it from the PR's own Files-changed tab (a native diff render, unaffected by this), and send the
+image directly to the user in-session (`SendUserFile`) so the fridge rule is still met live, even
+though the PR body itself can't carry it.
 
 ## Alerts — the caution budget
 

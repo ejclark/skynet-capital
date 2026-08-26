@@ -39,6 +39,9 @@ export interface UpdateProfileInput {
   readonly timezone?: string;
   /** Who the caller's session resolves to (undefined = unresolved or no OAuth). */
   readonly requesterId?: string;
+  /** The caller's session email — only used to personalize the host-configured refusal when the
+   *  caller is themselves an owner (see `hostConfiguredMessage`). Never an authorization input. */
+  readonly requesterEmail?: string;
   /**
    * The caller's candidate identity strings (session name + email local-part, lowercased) —
    * the exact values `resolveCurrentId` matches display names against. A human rename must
@@ -51,19 +54,21 @@ export interface UpdateProfileInput {
 
 export type UpdateProfileResult =
   | { readonly ok: true; readonly id: string; readonly displayName: string }
-  | { readonly ok: false; readonly error: string };
+  | { readonly ok: false; readonly error: string; readonly rotateId?: string };
 
 export interface RemoveAccountInput {
   readonly id: string;
   /** The account's display name, typed back — the destructive-action confirmation. */
   readonly confirmName: string;
   readonly requesterId?: string;
+  /** See `UpdateProfileInput.requesterEmail` — same purpose, same non-authorization caveat. */
+  readonly requesterEmail?: string;
   readonly authConfigured: boolean;
 }
 
 export type RemoveAccountResult =
   | { readonly ok: true; readonly id: string; readonly displayName: string }
-  | { readonly ok: false; readonly error: string };
+  | { readonly ok: false; readonly error: string; readonly rotateId?: string };
 
 export interface AccountServiceDeps {
   readonly hub: ObservatoryHub;
@@ -81,11 +86,33 @@ export interface AccountServiceDeps {
    * re-bricking the account on next boot. Checked by id provenance, not store presence.
    */
   readonly findRosterParticipant?: (id: string) => Participant | undefined;
+  /** True when this email is on the env owner allowlist — used only to personalize the
+   *  host-configured refusal below, never to widen what's editable here. */
+  readonly isOwnerEmail?: (email: string) => boolean;
   readonly now?: () => Date;
 }
 
-const NOT_IN_STORE =
-  "That account is configured on the host, not self-service — it can only be changed by the operator (ask Eric).";
+const NOT_FOUND = "No self-service account with that id is on the board.";
+
+/**
+ * The host-configured refusal — same wall for everyone, worded differently for the one viewer it
+ * can genuinely mislead. The generic wording ("ask Eric") makes sense for a member, who really
+ * should ask the operator; it reads as absurd when Eric HITS this wall on his own account (2026-
+ * 08-26: he did, on his own roster row, and the message told him to go ask himself). An owner
+ * gets the honest answer instead: this wall isn't for members only, it's structural — a roster
+ * row is rebuilt from the host environment on every boot, so self-service edit/remove would be
+ * silently undone at the next restart regardless of who's asking. The fix for "my key is dead" is
+ * `/rotate`, never delete-and-recreate.
+ */
+function hostConfiguredMessage(
+  requesterEmail: string | undefined,
+  isOwnerEmail: ((email: string) => boolean) | undefined,
+): string {
+  if (requesterEmail !== undefined && isOwnerEmail?.(requesterEmail)) {
+    return "That account is configured on the host — self-service edit/remove isn't available even to you, the operator, because it's rebuilt from the environment on every restart and any change here would just be undone. A dead or regenerated Alpaca key is fixed with /rotate, not by removing the account; a permanent change means editing or unsetting it in the host environment.";
+  }
+  return "That account is configured on the host, not self-service — it can only be changed by the operator (ask Eric).";
+}
 
 /**
  * The preamble both write paths share: the store can be rewritten safely, the id names a
@@ -95,10 +122,11 @@ const NOT_IN_STORE =
  */
 function requireEditable(
   store: ParticipantStore,
-  input: { id: string; requesterId?: string; authConfigured: boolean },
+  input: { id: string; requesterId?: string; requesterEmail?: string; authConfigured: boolean },
   verb: string,
   findRosterParticipant?: (id: string) => Participant | undefined,
-): { existing: Participant } | { error: string } {
+  isOwnerEmail?: (email: string) => boolean,
+): { existing: Participant } | { error: string; rotateId?: string } {
   if (!store.canStoreSecurely()) {
     return {
       error: `Account ${verb} is disabled: this server has no credential encryption key configured. Ask the host to set SKYNET_STORE_SECRET.`,
@@ -110,12 +138,16 @@ function requireEditable(
   }
   // Host-managed first, before the store lookup: a roster id is off-limits here even once a
   // rotation has written a store row under it, so the tier can never downgrade to store rules.
+  // rotateId: whoever legitimately reaches this refusal (self-linked, or an owner on their own
+  // roster row) is exactly who /rotate would accept — so the actionable next step is always safe
+  // to hand back, not just the honest explanation (Eric, 2026-08-26: "there needs to be a clear
+  // path to regenerate API secrets... part of the current process for managing accounts").
   if (findRosterParticipant?.(id)) {
-    return { error: NOT_IN_STORE };
+    return { error: hostConfiguredMessage(input.requesterEmail, isOwnerEmail), rotateId: id };
   }
   const existing = store.load().find((p) => p.id === id);
   if (!existing) {
-    return { error: NOT_IN_STORE };
+    return { error: NOT_FOUND };
   }
   if (input.authConfigured && input.requesterId !== id) {
     return {
@@ -128,6 +160,19 @@ function requireEditable(
   return { existing };
 }
 
+/** Shared shape of both result types' failure branch — carries `rotateId` through untouched. */
+function editFailure(target: { error: string; rotateId?: string }): {
+  ok: false;
+  error: string;
+  rotateId?: string;
+} {
+  return {
+    ok: false,
+    error: target.error,
+    ...(target.rotateId ? { rotateId: target.rotateId } : {}),
+  };
+}
+
 export function createAccountService(deps: AccountServiceDeps): {
   updateProfile: (input: UpdateProfileInput) => Promise<UpdateProfileResult>;
   removeAccount: (input: RemoveAccountInput) => Promise<RemoveAccountResult>;
@@ -135,9 +180,15 @@ export function createAccountService(deps: AccountServiceDeps): {
   const at = (): string => (deps.now ?? (() => new Date()))().toISOString();
 
   async function updateProfile(input: UpdateProfileInput): Promise<UpdateProfileResult> {
-    const target = requireEditable(deps.store, input, "editing", deps.findRosterParticipant);
+    const target = requireEditable(
+      deps.store,
+      input,
+      "editing",
+      deps.findRosterParticipant,
+      deps.isOwnerEmail,
+    );
     if ("error" in target) {
-      return { ok: false, error: target.error };
+      return editFailure(target);
     }
     const { existing } = target;
     const id = existing.id;
@@ -175,9 +226,15 @@ export function createAccountService(deps: AccountServiceDeps): {
   }
 
   function removeAccountSync(input: RemoveAccountInput): RemoveAccountResult {
-    const target = requireEditable(deps.store, input, "removal", deps.findRosterParticipant);
+    const target = requireEditable(
+      deps.store,
+      input,
+      "removal",
+      deps.findRosterParticipant,
+      deps.isOwnerEmail,
+    );
     if ("error" in target) {
-      return { ok: false, error: target.error };
+      return editFailure(target);
     }
     const { existing } = target;
     const id = existing.id;
