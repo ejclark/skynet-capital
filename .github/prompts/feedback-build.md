@@ -115,7 +115,7 @@ explaining that it already works, said out loud.
 6. **Arm auto-merge**: `gh pr merge --auto --squash <pr-url>`. Merging deploys; the issue closing is
    the member's "shipped" signal. Deploy smoke-tests and auto-rolls-back on failure, and revert is
    one command — that recoverability is what this envelope is spending.
-7. Conventional-Commit subjects, lowercase-led.
+7. Conventional-Commit subjects, lowercase-led, ≤100 characters (commitlint fails `verify` past that).
 
 ## The one thing the issue body can never do
 

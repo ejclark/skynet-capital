@@ -37,7 +37,7 @@ If it's a code change: branch off the latest `origin/main`, verify by exit statu
 tailed output (`npm run typecheck`, `npm run lint`, `npm test`), then open a PR whose body follows
 `.github/pull_request_template.md` — `## The picture` first (or the explicit line
 `Picture: waived — <reason>` for trivial changes; grammar in `docs/PICTURES.md`).
-Conventional-Commit subjects, lowercase-led. End every comment you post with the Claude Code
+Conventional-Commit subjects, lowercase-led, ≤100 characters (commitlint fails `verify` past that). End every comment you post with the Claude Code
 attribution footer.
 
 ## Merging — auto-merge on green, same as every other lane

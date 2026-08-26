@@ -120,7 +120,7 @@ genuine taste fork where guessing would be worse than asking. Nothing else.
 7. **Open the PR** via `scripts/ship.sh open` with a `--body-file`. Use `ship.sh`, not a GitHub MCP
    call: the MCP path strips `<details>` and any `<placeholder>` from the body, which silently
    destroys the fold the template requires. Arm auto-merge.
-8. Conventional-Commit subjects, lowercase-led.
+8. Conventional-Commit subjects, lowercase-led, ≤100 characters (commitlint fails `verify` past that).
 
 ## The one thing a canvas can never do
 
