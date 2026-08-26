@@ -94,7 +94,10 @@ export async function trySelfServiceRoute(
   if (await tryOwnerPage(req, res, path, config, session, nav)) {
     return true;
   }
-  if ((path === "/account" || path === "/account/remove") && config.accountAdmin) {
+  if (
+    (path === "/account" || path === "/account/remove" || path === "/account/bot-control") &&
+    config.accountAdmin
+  ) {
     await handleAccountSelfServiceRoute(
       req,
       res,
@@ -154,6 +157,7 @@ async function handleAccountSelfServiceRoute(
     authConfigured: Boolean(config.auth),
     key: keyOf(url),
     nav,
+    ...(config.controls ? { controls: config.controls } : {}),
   });
 }
 

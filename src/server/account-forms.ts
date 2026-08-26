@@ -1,8 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { NavContext } from "../observatory/dashboard-shell.js";
-import { profileHref } from "../observatory/render-atoms.js";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import { botControlsBlock, handleBotControl } from "./account-bot-controls.js";
+import { type AccountFormContext, suffix } from "./account-form-context.js";
 import type {
   RemoveAccountInput,
   RemoveAccountResult,
@@ -10,6 +11,7 @@ import type {
   UpdateProfileResult,
 } from "./account-service.js";
 import type { Session } from "./auth/session.js";
+import type { ControlsDeps } from "./controls-form.js";
 import { railedShell } from "./page-shell.js";
 import {
   handleSelfServiceForm,
@@ -24,32 +26,8 @@ import {
  * parses, and shows back whatever the service decided.
  */
 
-/** What the route layer knows about the caller and the account being edited. */
-interface AccountFormContext {
-  /**
-   * The account this page-view is managing — whichever of the caller's owned accounts `?id=`
-   * named (validated against `ownedAccounts` by the route wiring), or the first when none did.
-   * Both forms on the page (edit, remove) act on this SAME id, so switching accounts is a real
-   * page navigation, never two forms silently disagreeing about which account is "current".
-   */
-  readonly requesterId?: string;
-  /** Current profile of the resolved account, for prefill. */
-  readonly profile?: { readonly displayName: string; readonly timezone?: string };
-  /**
-   * Every account the caller's sign-in owns, for the account switcher — rendered only when
-   * there's more than one (Eric, 2026-08-25: "this should be a dropdown of the accounts tied to
-   * the email address").
-   */
-  readonly ownedAccounts: readonly OwnedAccountOption[];
-  /** Legacy `?key=` password, propagated into form actions and links. */
-  readonly key: string;
-  readonly nav: NavContext;
-}
-
-/**
- * What the forms submit. The caller's identity (requesterId, session names, auth mode) is
- * filled in by the route wiring — the browser never supplies it.
- */
+/** What the forms submit. Caller identity (requesterId, session names, auth mode) is filled in
+ *  by the route wiring — the browser never supplies it. */
 interface AccountRouteDeps {
   readonly updateProfile: (input: {
     id: string;
@@ -72,11 +50,8 @@ export interface AccountAdmin {
   ) => { readonly displayName: string; readonly timezone?: string } | undefined;
 }
 
-/**
- * The identity strings `resolveCurrentId` matches display names against — the session's name
- * and email local-part, lowercased. A human rename must land on one of these (see
- * account-service.ts for why).
- */
+/** The identity strings `resolveCurrentId` matches display names against — session name and
+ *  email local-part, lowercased. A human rename must land on one of these (account-service.ts). */
 export function sessionNameCandidates(session: Session | undefined): string[] {
   if (!session) return [];
   const name = session.name?.toLowerCase().trim();
@@ -84,7 +59,8 @@ export function sessionNameCandidates(session: Session | undefined): string[] {
   return [...(name ? [name] : []), ...(local ? [local] : [])];
 }
 
-/** Dispatch `/account` and `/account/remove`. One call site in dashboard-server.ts. */
+/** Dispatch `/account`, `/account/remove`, and `/account/bot-control`. One call site in
+ *  dashboard-server.ts. */
 export async function handleAccountRoute(
   req: IncomingMessage,
   res: ServerResponse,
@@ -98,16 +74,22 @@ export async function handleAccountRoute(
     readonly authConfigured: boolean;
     readonly key: string;
     readonly nav: NavContext;
+    /** Bot-controls store, when Mission Control is wired — powers the folded-in suspend toggle. */
+    readonly controls?: ControlsDeps;
   },
 ): Promise<void> {
-  const { admin, requesterId, ownedAccounts, authConfigured, key, nav } = options;
+  const { admin, requesterId, ownedAccounts, authConfigured, key, nav, controls } = options;
   const identity = {
     ...(requesterId ? { requesterId } : {}),
     authConfigured,
   };
+  const owned = ownedAccounts.find((a) => a.id === requesterId);
   const ctx: AccountFormContext = {
     ...(requesterId ? { requesterId, profile: admin.profileFor(requesterId) } : {}),
     ownedAccounts,
+    ...(owned?.kind === "bot" && controls && requesterId
+      ? { bot: { suspended: controls.store.load().bots[requesterId]?.suspended === true } }
+      : {}),
     key,
     nav,
   };
@@ -120,6 +102,10 @@ export async function handleAccountRoute(
       }),
     removeAccount: (input) => admin.removeAccount({ ...input, ...identity }),
   };
+  if (path === "/account/bot-control") {
+    await handleBotControl(req, res, method, ctx, controls, options.session);
+    return;
+  }
   if (path === "/account/remove") {
     await handleAccountRemove(req, res, method, ctx, deps);
     return;
@@ -185,10 +171,6 @@ async function handleAccountRemove(
   );
 }
 
-function suffix(key: string): string {
-  return key ? `?key=${encodeURIComponent(key)}` : "";
-}
-
 function timezoneOptions(current: string | undefined): string {
   const zones = ALLOWED_TIMEZONES.map(
     (t) =>
@@ -213,17 +195,6 @@ function accountSwitcher(ctx: AccountFormContext): string {
     )
     .join(" · ");
   return `<p class="note" style="margin:0 0 18px">Managing: ${pills}</p>`;
-}
-
-/** A link to the bot's own desk Settings tab (suspend/resume) — the OTHER "manage this account"
- *  surface (Eric, 2026-08-25: "all the account related actions should live under one roof"). They
- *  stay two pages — Mission Control is the OWNER's fleet-wide switchboard, a different tier than
- *  this page's session-linked self-service — but nothing should hide the way between them. */
-function botControlsLink(ctx: AccountFormContext): string {
-  const account = ctx.ownedAccounts.find((a) => a.id === ctx.requesterId);
-  if (account?.kind !== "bot") return "";
-  return `<p class="note">This is a bot account — its autonomous-trading suspend/resume switch lives on
-  <a href="${profileHref(account.id)}?tab=settings">its Settings tab</a>, not here.</p>`;
 }
 
 function settingsFormHtml(ctx: AccountFormContext): string {
@@ -254,7 +225,7 @@ anything on this page; this only changes what Skynet Capital stores and shows.</
 <p class="note">Renames stay linked to your sign-in: the name must match your sign-in name or your
 email's local part, so the board keeps recognizing you. Bots can't be renamed — remove and re-add.</p>
 <p class="note">Regenerated your Alpaca key? <a href="/rotate${suffix(key)}">Rotate your credentials</a> — that swaps the key and changes nothing else on this page.</p>
-${botControlsLink(ctx)}
+${botControlsBlock(ctx)}
 <div style="margin-top:34px;padding:18px;border:1px solid color-mix(in srgb,var(--neg) 55%,var(--border));border-radius:11px">
   <h1 style="font-size:16px;color:var(--neg)">Remove this account</h1>
   <p class="lede" style="margin-bottom:8px;font-size:13px">Takes the account off the board and deletes its stored
