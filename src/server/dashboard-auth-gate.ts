@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Session } from "./auth/session.js";
 import { keyOf } from "./dashboard-identity.js";
-import type { DashboardServerConfig } from "./dashboard-server.js";
+import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
 /**
  * The auth gate — either per-user OAuth (`config.auth`) or the legacy shared password. Exact

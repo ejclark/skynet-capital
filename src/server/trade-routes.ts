@@ -2,12 +2,12 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { ladderNeighbor } from "../domain/progression.js";
 import { type TradeTypeCode, tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
-import { deskHref } from "../observatory/desk-tabs.js";
 import { renderTradeReviewBody } from "../observatory/trade-review-view.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import { previewOrder, type TicketAction } from "../trading/order-ticket.js";
 import { handleOptionPost, OPTION_CODES, optionPreviewFromForm } from "./option-order-review.js";
 import { readBody } from "./page-shell.js";
+import { refusalPage, resultRedirect } from "./trade-response-pages.js";
 import type { DeskTradeResult } from "./trade-service.js";
 import {
   html,
@@ -38,37 +38,6 @@ export type { TradeRouteDeps } from "./trade-ticket-route.js";
 
 function parseAction(raw: string | null): TicketAction {
   return raw === "sell" ? "sell" : "buy";
-}
-
-/**
- * A refusal with no account to render it against — kept plain rather than half-rendering a desk.
- * Exported for option-order-review.ts, which shares this shell for its own refusals.
- */
-export function refusalPage(
-  deps: TradeRouteDeps,
-  res: ServerResponse,
-  status: number,
-  why: string,
-): void {
-  html(
-    res,
-    status,
-    deps.document(
-      "Order refused — Skynet Capital",
-      `<section style="max-width:560px;margin:0 auto;padding:48px 20px;font-family:system-ui,sans-serif;color:#E6EDF3">
-      <h1 style="font-size:20px;margin-bottom:12px">Order refused</h1>
-      <p style="color:#8B9AAB;line-height:1.6">${why}</p>
-      <p style="margin-top:20px"><a style="color:#35D0BA" href="/">← Back to the board</a></p>
-    </section>`,
-    ),
-  );
-}
-
-/** Exported for option-order-review.ts, which shares this shell after a successful submit. */
-export function resultRedirect(res: ServerResponse, snapshotId: string, ok: boolean): void {
-  const target = `${deskHref(snapshotId, "positions")}&n=${ok ? "submitted" : "refused"}`;
-  res.writeHead(303, { location: target });
-  res.end();
 }
 
 // --- GET: the ticket view ---------------------------------------------------

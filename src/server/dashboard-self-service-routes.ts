@@ -5,7 +5,7 @@ import { handleAccountRoute } from "./account-forms.js";
 import type { Session } from "./auth/session.js";
 import { handleClaim } from "./claim-form.js";
 import { idOf, keyOf, resolveCurrentId } from "./dashboard-identity.js";
-import type { DashboardServerConfig } from "./dashboard-server.js";
+import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { handleInvite } from "./invite-form.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 

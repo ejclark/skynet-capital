@@ -15,7 +15,7 @@ import {
   previewOptionOrder,
 } from "../trading/option-ticket.js";
 import type { DeskOptionRequest } from "./option-trade-service.js";
-import { refusalPage, resultRedirect } from "./trade-routes.js";
+import { refusalPage, resultRedirect } from "./trade-response-pages.js";
 import { html, posNumber, type TradeRouteDeps } from "./trade-ticket-route.js";
 
 /**

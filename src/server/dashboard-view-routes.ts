@@ -6,7 +6,7 @@ import {
 } from "../observatory/render-dashboard.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
-import type { DashboardServerConfig } from "./dashboard-server.js";
+import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { shellDocument } from "./page-shell.js";
 import { serveResearchRoute } from "./research-routes.js";
 import { handleTrade } from "./trade-routes.js";

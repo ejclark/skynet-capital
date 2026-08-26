@@ -1,5 +1,5 @@
 import type { Session } from "./auth/session.js";
-import type { DashboardServerConfig } from "./dashboard-server.js";
+import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
 /**
  * Resolve the signed-in viewer to the participant they own (#466) — undefined when no

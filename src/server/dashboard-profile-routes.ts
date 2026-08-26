@@ -16,7 +16,7 @@ import { botLandmarkProminence } from "../observatory/standings.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import type { Session } from "./auth/session.js";
 import { handleDeskSettings } from "./controls-form.js";
-import type { DashboardServerConfig } from "./dashboard-server.js";
+import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { shellDocument } from "./page-shell.js";
 
 /** Notices are looked up by CODE, never echoed from the URL — a reflected message is an attack. */
