@@ -1,7 +1,11 @@
 import { join } from "node:path";
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
 import { JsonlKeyedStore } from "../storage/jsonl-store.js";
+import type { ActivitySource, ActivityStore, TradeActivityRecord } from "./activity-record.js";
+import { InMemoryActivityStore } from "./in-memory-activity-store.js";
 import type { ActivityView } from "./participant-snapshot.js";
+
+export type { ActivitySource, ActivityStore, TradeActivityRecord };
 
 /**
  * THE DURABLE TRADE-ACTIVITY LEDGER — every order the desk or a bot ever placed, kept for good.
@@ -23,41 +27,8 @@ import type { ActivityView } from "./participant-snapshot.js";
  * when we actually recovered it later.
  */
 
-export type ActivitySource = "stream" | "backfill" | "broker";
-
-/** One order's state at a moment in time — a line in the journal. Extends the view shape so the
- *  round-trip matcher and the blotter consume records and broker rows interchangeably. */
-export interface TradeActivityRecord extends ActivityView {
-  /** The broker's order id — the identity `collapseActivity` folds on. */
-  readonly orderId: string;
-  readonly participantId: string;
-  readonly side: "buy" | "sell";
-  readonly source: ActivitySource;
-}
-
-/** Where trade activity is kept. Interface-first (like `HistoryStore`) so tests stay I/O-free. */
-export interface ActivityStore {
-  record(entry: TradeActivityRecord): Promise<void>;
-  /** All journal lines (order not guaranteed); one participant's when given. Callers collapse. */
-  list(participantId?: string): Promise<TradeActivityRecord[]>;
-}
-
 /** In-memory store: the reference implementation, used by tests and offline runs. */
-export class InMemoryActivityStore implements ActivityStore {
-  private readonly entries: TradeActivityRecord[] = [];
-
-  record(entry: TradeActivityRecord): Promise<void> {
-    this.entries.push(entry);
-    return Promise.resolve();
-  }
-
-  list(participantId?: string): Promise<TradeActivityRecord[]> {
-    const all = [...this.entries];
-    return Promise.resolve(
-      participantId ? all.filter((e) => e.participantId === participantId) : all,
-    );
-  }
-}
+export { InMemoryActivityStore };
 
 /** File-backed store: one append-only JSONL file per participant under `dir` (on the mounted
  *  volume in prod — set `SKYNET_ACTIVITY_DIR=/data/activity` — so the ledger survives redeploys). */

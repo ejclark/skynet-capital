@@ -102,6 +102,16 @@ describe("renderShell", () => {
       expect(html).toContain("/u/a%20b?tab=settings");
     });
 
+    // 2026-08-25: /claim existed with no way in from the app — an owner had to know the URL.
+    it("links Account links (/claim) for an owner, and hides it otherwise", () => {
+      const shown = renderShell(baseNav({ canClaim: true }), "<p>x</p>", GENERATED_AT);
+      expect(shown).toContain('href="/claim"');
+      expect(shown).toContain("Account links");
+
+      const hidden = renderShell(baseNav({ canClaim: false }), "<p>x</p>", GENERATED_AT);
+      expect(hidden).not.toContain('href="/claim"');
+    });
+
     it("omits the account CTA when the viewer cannot add an account", () => {
       const html = renderShell(baseNav({ canAdd: false }), "<p>x</p>", GENERATED_AT);
 

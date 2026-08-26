@@ -30,6 +30,13 @@ export interface NavContext {
   readonly canControl?: boolean;
   /** Owner-only: link the guest list (`/invite`). Members see neither the link nor the page. */
   readonly canInvite?: boolean;
+  /**
+   * Owner-only: link `/claim` — pick an unowned board account by name and attach it to a
+   * member's email, no keys and no account id typed. Without this link the page existed but
+   * nobody could find it (Eric, 2026-08-25: pointed at an env-var workaround instead, because
+   * this — the actual zero-typing fix — had no way in from the app).
+   */
+  readonly canClaim?: boolean;
 }
 
 export interface DashboardViewOptions {
@@ -100,6 +107,11 @@ function renderDrawer(nav: NavContext): string {
   if (nav.canInvite) {
     foot.push(
       `<a class="dnav-link dnav-muted" href="/invite"><span class="dnav-ico" aria-hidden="true">✉</span><span class="dnav-label">Guest list</span></a>`,
+    );
+  }
+  if (nav.canClaim) {
+    foot.push(
+      `<a class="dnav-link dnav-muted" href="/claim"><span class="dnav-ico" aria-hidden="true">⛓</span><span class="dnav-label">Account links</span></a>`,
     );
   }
   foot.push(drawerLink(FEEDBACK_URL, "Feedback", "feedback", nav.active === "feedback"));

@@ -36,22 +36,8 @@ export interface OrderAuditLog {
   list(participantId?: string): Promise<OrderAuditRecord[]>;
 }
 
-/** In-memory log: the reference implementation, used by tests and offline runs. */
-export class InMemoryOrderAuditLog implements OrderAuditLog {
-  private readonly entries: OrderAuditRecord[] = [];
-
-  record(entry: OrderAuditRecord): Promise<void> {
-    this.entries.push(entry);
-    return Promise.resolve();
-  }
-
-  list(participantId?: string): Promise<OrderAuditRecord[]> {
-    const all = [...this.entries];
-    return Promise.resolve(
-      participantId ? all.filter((e) => e.participantId === participantId) : all,
-    );
-  }
-}
+/** The in-memory reference implementation (`InMemoryOrderAuditLog`) lives in its own file,
+ *  `order-audit-memory-log.ts` (Biome `noExcessiveClassesPerFile` — one class per module). */
 
 /** File-backed log: one append-only JSONL file per participant under `dir` (mount it in prod). */
 export class JsonlOrderAuditLog implements OrderAuditLog {
