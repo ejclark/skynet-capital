@@ -15,6 +15,25 @@ const scan = (...args: string[]): string =>
     encoding: "utf8",
   });
 
+// Git exports GIT_DIR / GIT_INDEX_FILE / GIT_WORK_TREE to any hook it runs. Inherited into the
+// temp repo below, they outrank `cwd` — so `git add -A` there stages THIS repo instead, and the
+// suite silently wrecks the developer's index the moment it runs under pre-push. Scrub them: the
+// temp repo must be reached only through `cwd`.
+const GIT_ENV_KEYS = [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_COMMON_DIR",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_PREFIX",
+];
+const withoutGitEnv = (extra: Record<string, string> = {}): NodeJS.ProcessEnv => {
+  const env = { ...process.env, ...extra };
+  for (const key of GIT_ENV_KEYS) delete env[key];
+  return env;
+};
+
 type Check = { path: string; protected: boolean; pattern?: string; why?: string };
 const check = (...paths: string[]): Check[] => JSON.parse(scan("--check", ...paths)) as Check[];
 
@@ -102,12 +121,13 @@ describe("autonomous-lane envelope", () => {
       execFileSync("node", ["scripts/envelope-scan.mjs", "--lane", "feedback/1", ...args], {
         cwd: dir,
         encoding: "utf8",
-        env: { ...process.env, GITHUB_HEAD_REF: "" },
+        env: withoutGitEnv({ GITHUB_HEAD_REF: "" }),
       });
     const run = (...args: string[]): string =>
       execFileSync("git", ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args], {
         cwd: dir,
         encoding: "utf8",
+        env: withoutGitEnv(),
       });
     try {
       run("init", "-b", "main");
