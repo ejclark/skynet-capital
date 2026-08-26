@@ -312,7 +312,14 @@ cmd_automerge() {
   payload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$q" "$node")"
   gql="$(curl -sS -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
     -H "User-Agent: skynet-ship" -d "$payload" "https://api.github.com/graphql")"
-  if grep -q '"errors"' <<<"$gql"; then  # here-string: same SIGPIPE-under-pipefail trap as checkbody
+  # TWO FAILURE SHAPES, NOT ONE (2026-08-26). A GraphQL-level failure comes back as an `errors`
+  # array; an HTTP-level one — a rate limit, a bad token, an abuse block — comes back as a bare
+  # `{"message": ...}` with no `errors` key at all. Checking only for `errors` passed the second
+  # shape straight through, so this printed "armed" over a PR that was never armed. That is the
+  # same defect class as the rest of today: a check that validates the wrong artefact reports
+  # success forever. Confirmed live on #659, which read `auto_merge: null` right after this said
+  # it had armed it.
+  if grep -q '"errors"' <<<"$gql" || grep -q '"message"' <<<"$gql"; then  # here-string: same SIGPIPE-under-pipefail trap as checkbody
     # ALREADY CLEAN IS NOT A FAILURE — it is a race we lose, and losing it silently stalled 16
     # research PRs on 2026-08-26. GitHub refuses `enablePullRequestAutoMerge` once every check has
     # passed ("Pull request is in clean status"), and `verify` on a docs-only PR finishes in ~45s.
@@ -323,13 +330,36 @@ cmd_automerge() {
     # SAFE BY CONSTRUCTION: `cmd_checkarm` ran above, so a PR touching the never-auto-merge
     # carve-out has already exited 6 and never reaches this line. The fall-through can only ever
     # merge something arming was permitted for.
-    if grep -qi 'clean status' <<<"$gql"; then
+    if grep -qiE 'clean status|already in clean' <<<"$gql"; then
       echo "ship automerge: #$num is already green — auto-merge only takes while checks are pending, so merging directly." >&2
       cmd_merge "$num"
       return
     fi
-    echo "ship automerge: GraphQL errors (Eric web-merges):" >&2
+    # THE PROXY CASE, and the reason this whole check existed to be wrong (2026-08-26). Some
+    # Claude Code session types serve only a pinned set of PR-review GraphQL operations;
+    # `enablePullRequestAutoMerge` is not among them, so arming from here has NEVER worked in
+    # those sessions — it just said it had. Name it, so the next session reaches for the MCP tool
+    # or a direct merge instead of believing this one.
+    if grep -qi 'not enabled for this session\|pinned set of PR-review' <<<"$gql"; then
+      echo "ship automerge: this session's GraphQL proxy does not serve enablePullRequestAutoMerge." >&2
+      echo "ship automerge: #$num is NOT armed. Use the enable_pr_auto_merge MCP tool, or merge it when green (scripts/ship.sh merge $num)." >&2
+      exit 3
+    fi
+    if grep -qi 'rate limit' <<<"$gql"; then
+      echo "ship automerge: the GraphQL budget is exhausted — arming is impossible until it resets." >&2
+      echo "ship automerge: #$num is NOT armed. Merge it when green (scripts/ship.sh merge $num)." >&2
+      exit 3
+    fi
+    echo "ship automerge: arm refused (Eric web-merges):" >&2
     printf '%s\n' "$gql" | head -3 >&2
+    exit 3
+  fi
+  # Trust the state, not the absence of an error: read the PR back and confirm GitHub actually
+  # queued it. An arm that silently did nothing is how a green PR ends up with nobody to merge it.
+  local check; check="$(body_of "$(api GET "/pulls/$num")" | python3 -c 'import json,sys; print("yes" if json.load(sys.stdin).get("auto_merge") else "no")')"
+  if [ "$check" != "yes" ]; then
+    echo "ship automerge: GitHub accepted the mutation but #$num reads back unarmed — not claiming otherwise." >&2
+    echo "ship automerge: merge it when green (scripts/ship.sh merge $num)." >&2
     exit 3
   fi
   echo "ship: auto-merge (SQUASH) armed on #$num."

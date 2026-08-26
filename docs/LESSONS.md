@@ -27,6 +27,31 @@ it. Prevention ranks, best first:
 
 ---
 
+### `ship.sh automerge` reported success for months of sessions where arming was never possible
+
+- **SHA:** 294b81d   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** Eric asked why a batch of research PRs had not auto-merged. Tracing it, `ship.sh
+  automerge 659` printed `auto-merge (SQUASH) armed on #659` and the PR read back
+  `auto_merge: null` seconds later. Detection lag: unknown but long — every session using this
+  path in a proxied environment got the same false success, and the only symptom was PRs quietly
+  accumulating.
+- **ROOT CAUSE:** Two layers, and the second is the one that hid the first. (1) This session type
+  serves only a pinned set of PR-review GraphQL operations through its proxy;
+  `enablePullRequestAutoMerge` is not among them, so the mutation was never executed. (2)
+  `cmd_automerge` decided success by the ABSENCE of an `"errors"` array — but GitHub (and the
+  proxy) return HTTP-level failures as a bare `{"message": ...}` with no `errors` key at all. The
+  refusal therefore parsed as success. A check that validates the wrong artefact reports success
+  forever; this is the fourth instance of that class banked here, after `checkbody` linting the
+  local file rather than the shipped body, `/security-review` grading an empty diff, and the
+  arming race that let an already-green PR fall through the cracks.
+- **PREVENTION:** gate + script. `cmd_automerge` now detects both response shapes, names the proxy
+  and rate-limit cases explicitly, and — shape-independently — READS THE PR BACK and refuses to
+  claim an arm unless `auto_merge` is actually set. `tests/arch/ship.spec.ts` executes the real
+  predicate against all three response bodies, so the spec cannot drift into testing a paraphrase.
+- **SIDE QUESTS:** The GitHub MCP tooling reports its GraphQL budget exhausted for the same user
+  while a plain REST token reads fresh — two buckets, one identity. Worth measuring before drawing
+  conclusions; not acted on.
+
 ### Auto-merge was armed on an envelope-protected diff, past a check that had already said no
 
 - **SHA:** ffd76db   **DATE:** 2026-08-26   **STATUS:** closed
