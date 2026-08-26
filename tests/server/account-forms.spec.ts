@@ -1,5 +1,8 @@
+import { mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import {
   type AccountAdmin,
@@ -8,6 +11,8 @@ import {
 } from "../../src/server/account-forms.js";
 import type { UpdateProfileInput } from "../../src/server/account-service.js";
 import type { Session } from "../../src/server/auth/session.js";
+import { BotControlsStore } from "../../src/server/bot-controls-store.js";
+import type { ControlsDeps } from "../../src/server/controls-form.js";
 
 const nav: NavContext = { active: "add", canAdd: true, authed: true };
 
@@ -84,6 +89,60 @@ describe("GET /account", () => {
       expect(html).toContain('placeholder="human-uncle_joe"');
       expect(html).not.toContain('type="hidden" name="id"');
     });
+  });
+
+  // Eric, 2026-08-26: "fold mission control into account" — a claimed bot's suspend/resume
+  // toggle lives here now, not behind a link to Mission Control's separate page.
+  it("shows the suspend/resume toggle for a claimed bot when bot controls are wired", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "skynet-account-forms-"));
+    try {
+      const store = new BotControlsStore(join(dir, "bot-controls.json"));
+      const controls: ControlsDeps = { store, isOwner: () => false, bots: () => [] };
+      const calls = { updates: [], removals: [] };
+      await withRoute(
+        {
+          admin: okAdmin(calls),
+          requesterId: "sauron",
+          ownedAccounts: [{ id: "sauron", displayName: "Sauron", kind: "bot" }],
+          session,
+          authConfigured: true,
+          controls,
+        },
+        async (base) => {
+          const html = await (await fetch(`${base}/account`)).text();
+          expect(html).toContain("currently <b>active</b>");
+          expect(html).toContain('action="/account/bot-control"');
+          expect(html).not.toContain("Settings tab");
+        },
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("shows nothing bot-related for a human account, even with controls wired", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "skynet-account-forms-"));
+    try {
+      const store = new BotControlsStore(join(dir, "bot-controls.json"));
+      const controls: ControlsDeps = { store, isOwner: () => false, bots: () => [] };
+      const calls = { updates: [], removals: [] };
+      await withRoute(
+        {
+          admin: okAdmin(calls),
+          requesterId: "human-ann",
+          session,
+          authConfigured: true,
+          controls,
+        },
+        async (base) => {
+          const html = await (await fetch(`${base}/account`)).text();
+          expect(html).not.toContain("Suspend trading");
+          expect(html).not.toContain("/account/bot-control");
+        },
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
 
