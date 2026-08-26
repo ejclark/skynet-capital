@@ -109,6 +109,16 @@
       }
     },
     {
+      "includes": ["scripts/issue-lint.mjs"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["scripts/postmaster.mjs"],
       "linter": {
         "rules": {
