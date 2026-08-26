@@ -1,9 +1,10 @@
-# Fly.io config for the live observatory server + the always-on autonomous bot runner.
-# Two processes share one image:
-#   app  — the SSE dashboard + Alpaca streams (must stay running to hold connections)
-#   bots — the autonomous trader loop, so bots trade without Eric's laptop (the 24/7 problem)
-# The bots process is SAFE BY DEFAULT: it runs in observe mode (decides + logs, places nothing)
-# until Eric explicitly sets SKYNET_AUTONOMOUS_MODE=live. See docs/AUTONOMY-DEPLOY.md.
+# Fly.io config for the live observatory server (the DASHBOARD half of the deploy split).
+# The autonomous trader loop lives in its own sibling app — fly.bots.toml / skynet-capital-bots —
+# so the dashboard's every-merge deploys stop restarting the stateful bots machine (this app
+# deploys on every push; the bots app only when scripts/bot-relevant.mjs says the push touched
+# the bots runtime). See docs/AUTONOMY-DEPLOY.md for the split runbook and cutover procedure.
+# The `app` process-group NAME below is load-bearing: it is the 6PN hostname
+# app.process.skynet-capital.internal the bots app dials for the controls/insight bridge.
 app = "skynet-capital"
 primary_region = "ord"  # Chicago — closest to Iowa
 
@@ -33,20 +34,17 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned
   # milestones are NOT here — they re-derive from the activity + order-audit ledgers on read.
   SKYNET_PROGRESSION_FILE = "/data/progression.json"
-  # Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — the bots process has no
-  # volume of its own (see [mounts] below), so it relays insight records to the app process's
-  # internal-only listener (src/server/insights-listener.ts) on port 8788 — deliberately NOT in
-  # [http_service] below, so it's reachable only over Fly's private 6PN network, never publicly.
-  # SKYNET_INSIGHTS_DIR is where `app` appends them on the mounted volume. Both vars are read by
-  # both processes but only act on the one that uses them; harmless until a caller emits records.
+  # Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — the bots app has no
+  # volume of its own, so it relays insight records to this app's internal-only listener
+  # (src/server/insights-listener.ts) on port 8788 — deliberately NOT in [http_service] below, so
+  # it's reachable only over Fly's private 6PN network (org-wide — the sibling bots app is inside
+  # that boundary), never publicly. SKYNET_INSIGHTS_DIR is where `app` appends them on the mounted
+  # volume. The dialing side's SKYNET_INSIGHTS_BRIDGE_URL lives in fly.bots.toml — this app is the
+  # listener and never dials it. SKYNET_AUTONOMOUS_MODE likewise moved to the bots app.
   SKYNET_INSIGHTS_DIR = "/data/insights"
-  SKYNET_INSIGHTS_BRIDGE_URL = "http://app.process.skynet-capital.internal:8788"
-  # Autonomy is OFF by default — the bots process runs but places nothing until this flips to "live".
-  SKYNET_AUTONOMOUS_MODE = "observe"
 
 [processes]
   app = "npm run serve:dashboard"
-  bots = "npm run run:autonomous"
 
 [http_service]
   internal_port = 8787
@@ -54,13 +52,15 @@ primary_region = "ord"  # Chicago — closest to Iowa
   auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
-  processes = ["app"]  # only the dashboard serves HTTP; the bots process has no web port
-  # Note: the app process ALSO listens on 8788 for the internal-only insight bridge (see
-  # SKYNET_INSIGHTS_BRIDGE_URL above). It is intentionally absent from this block — only ports
-  # declared here are forwarded by Fly's public proxy, so 8788 is unreachable from the internet.
+  processes = ["app"]  # the dashboard is this app's only process; scoping kept as documentation
+  # Note: the app process ALSO listens on 8788 for the internal-only insight bridge (dialed by
+  # the bots app via fly.bots.toml's SKYNET_INSIGHTS_BRIDGE_URL). It is intentionally absent from
+  # this block — only ports declared here are forwarded by Fly's public proxy, so 8788 is
+  # unreachable from the internet.
 
-# Persistent volume for the self-service participant store (dashboard process only — a Fly volume
-# attaches to a single machine, so the bots process runs without it). Create once with:
+# Persistent volume for the self-service participant store (a Fly volume attaches to a single
+# machine; the sibling bots app deliberately has none — its durable writes relay over the bridge).
+# Create once with:
 #   fly volumes create skynet_data --region ord --size 1
 [mounts]
   source = "skynet_data"
