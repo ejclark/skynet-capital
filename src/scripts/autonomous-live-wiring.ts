@@ -31,19 +31,32 @@ import { logResult } from "./autonomous-sinks.js";
 const HARDCORE_COOLDOWN_MS = 90_000;
 
 /** Mission Control boot (Eric, 2026-08-21): one bounded fetch for the boot-applied overrides
- *  (mode/hardcore); the dynamic suspend toggles ride the background poll started in runLive. */
+ *  (mode/hardcore); the dynamic suspend toggles ride the background poll started in runLive.
+ *
+ *  The three boot lines are load-bearing OBSERVABILITY, not flavor: "armed — controls fetched"
+ *  prints only when the fetch actually RETURNED a parsed state, because scripts/smoke-bots.sh
+ *  greps for it as proof the cross-app bridge is reachable. The earlier single "armed" line fired
+ *  whenever the env var was merely SET — which made the one silent failure mode this deployment
+ *  has (bridge unreachable → fail-open to env-only controls → Eric's suspend toggles quietly stop
+ *  arriving) indistinguishable from health. */
 export async function bootMissionControl(): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
 }> {
   const controls = resolveBotControls(process.env);
-  const bootControls = (await controls.fetchOnce()) ?? EMPTY_CONTROLS;
-  console.log(
-    controls.enabled
-      ? "[controls] bridge armed — Mission Control suspend toggles apply within ~30s"
-      : "[controls] bridge unset (SKYNET_INSIGHTS_BRIDGE_URL) — env-only controls",
-  );
-  return { controls, bootControls };
+  const fetched = await controls.fetchOnce();
+  if (!controls.enabled) {
+    console.log("[controls] bridge unset (SKYNET_INSIGHTS_BRIDGE_URL) — env-only controls");
+  } else if (fetched) {
+    console.log(
+      "[controls] bridge armed — controls fetched; Mission Control suspend toggles apply within ~30s",
+    );
+  } else {
+    console.warn(
+      "[controls] bridge configured but UNREACHABLE — env-only controls until the 30s poll succeeds",
+    );
+  }
+  return { controls, bootControls: fetched ?? EMPTY_CONTROLS };
 }
 
 /** The enabled personas with hardcore builds applied and announced — shared by both runners. */

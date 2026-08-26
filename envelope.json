@@ -80,8 +80,16 @@
       "why": "playbook definitions — the strategies bots trade"
     },
     {
-      "pattern": "fly.toml",
-      "why": "hosting config — spend and deploy topology"
+      "pattern": "fly*.toml",
+      "why": "hosting config — spend and deploy topology (fly.toml is the dashboard app, fly.bots.toml the bots app)"
+    },
+    {
+      "pattern": "scripts/bot-relevant.mjs",
+      "why": "deploy topology — decides which pushes redeploy the bots app; widening its skip list silently strands bots on stale code"
+    },
+    {
+      "pattern": "scripts/smoke-bots.sh",
+      "why": "deploy topology — gates the bots rollback path; weakening it ships unverified bots releases"
     },
     {
       "pattern": "Dockerfile",

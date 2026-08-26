@@ -38,6 +38,9 @@ describe("autonomous-lane envelope", () => {
       "src/bots/account-guard.ts",
       "src/playbooks/registry.ts",
       "fly.toml",
+      "fly.bots.toml",
+      "scripts/bot-relevant.mjs",
+      "scripts/smoke-bots.sh",
       "Dockerfile",
       ".env.local",
     ];

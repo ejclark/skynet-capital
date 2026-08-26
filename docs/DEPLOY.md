@@ -82,6 +82,35 @@ That's it. From now on: open a PR → CI runs → merge when green → the Deplo
 runs `flyctl deploy`. Watch it under the repo's **Actions** tab. The first manual `fly deploy`
 above is still needed once (to create the app, volume, and secrets); CD handles every deploy after.
 
+### The bots app (the deploy split)
+
+The autonomous trader runs in its own sibling app, **`skynet-capital-bots`**, so frontend/docs
+merges stop restarting it and wiping its in-memory signal state (see `docs/AUTONOMY-DEPLOY.md` for
+the full runbook and Eric's provisioning steps). Pipeline's `release · deploy bots` job redeploys
+it **only** when `scripts/bot-relevant.mjs` says the push touched the bots runtime, reusing the
+image the dashboard deploy just built. It needs its own token — Fly deploy tokens are app-scoped,
+so `FLY_API_TOKEN` (scoped to `skynet-capital`) cannot deploy the sibling:
+
+```sh
+fly tokens create deploy --app skynet-capital-bots
+# → add as repo secret FLY_API_TOKEN_BOTS
+```
+
+**Token-scoping note.** The two deploy tokens are the crown jewels here, not the `autonomy-ops`
+Environment: that Environment's required-reviewer gate governs the ops *workflow* only, while the
+tokens are plain repo secrets usable by any workflow that names them — and a Fly deploy token can
+set secrets, which is mode-flip-equivalent power. Any future workflow edit that touches these
+secrets deserves the same scrutiny as a `fly.toml` change (both are envelope-protected). One
+pre-verification before trusting CI with it: an app-scoped token must be able to deploy the
+*other* app's registry image (`flyctl deploy --config fly.bots.toml --image
+registry.fly.io/skynet-capital@<digest>`). If Fly refuses cross-app registry pulls under an
+app-scoped token, mint an org-scoped deploy token for `FLY_API_TOKEN_BOTS` instead — the runbook's
+provisioning step includes this check.
+
+If the bots app was wrongly skipped or its deploy failed, the recovery lever is
+**Actions → Pipeline → Run workflow → `force_bots_deploy`**; `node scripts/deploy-lag.mjs` now
+reports both apps' lag separately.
+
 ## Self-service onboarding (`/add`)
 
 Once deployed, anyone with the dashboard link can add their own Alpaca **paper** account —

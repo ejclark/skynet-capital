@@ -1,9 +1,11 @@
 name: Autonomy ops
 
-# Manually-triggered ops for the always-on bots process — no terminal, no local flyctl. Reuses the
-# same FLY_API_TOKEN the release pipeline already deploys with; adds nothing to the automatic
-# push-to-main path. Gated by the `autonomy-ops` GitHub Environment's required reviewers (configured
-# once in the repo's Settings, not expressible in this file — see docs/AUTONOMY-DEPLOY.md).
+# Manually-triggered ops for the always-on bots process — no terminal, no local flyctl. Operates
+# on the app the `target_app` input names (post-deploy-split default: skynet-capital-bots), using
+# the matching app-scoped token the release pipeline already deploys with; adds nothing to the
+# automatic push-to-main path. Gated by the `autonomy-ops` GitHub Environment's required reviewers
+# (configured once in the repo's Settings, not expressible in this file — see
+# docs/AUTONOMY-DEPLOY.md).
 #
 # Adding a second persona: copy the "Set <Persona> bot credentials" step, swap the secret and env-var
 # names, add its action name to the `action` input's options below. Static secret references only —
@@ -25,6 +27,17 @@ on:
           - flip-mode
           - set-playbooks
           - set-beta-forcing
+      target_app:
+        description: >-
+          Which Fly app to operate on. After the deploy split the bots fleet lives in
+          skynet-capital-bots (the default); skynet-capital remains selectable for the transition
+          window while the old shared-app bots group still exists.
+        required: true
+        type: choice
+        options:
+          - skynet-capital-bots
+          - skynet-capital
+        default: skynet-capital-bots
       mode:
         description: "observe or live — only read by flip-mode"
         required: false
@@ -55,22 +68,25 @@ permissions:
 
 jobs:
   autonomy-ops:
-    name: autonomy ops · ${{ inputs.action }}
+    name: autonomy ops · ${{ inputs.action }} · ${{ inputs.target_app }}
     runs-on: ubuntu-latest
     # The actual allowlist: the `autonomy-ops` GitHub Environment (Settings -> Environments), with
     # required reviewers + "protected branches only" deployment restriction. Verified live — a
     # workflow_dispatch run sits in "Waiting" until an allowlisted reviewer approves it. Note:
     # required-reviewer environment protection needs a public repo or a paid plan on a private one.
     environment: autonomy-ops
+    env:
+      # Fly deploy tokens are APP-scoped, so the token must follow the target: FLY_API_TOKEN is
+      # scoped to skynet-capital (docs/DEPLOY.md), FLY_API_TOKEN_BOTS to skynet-capital-bots.
+      TARGET_APP: ${{ inputs.target_app }}
+      FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_API_TOKEN }}
     steps:
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Status — secret NAMES only, values are never shown or settable this way
         if: ${{ inputs.action == 'status' }}
-        run: flyctl secrets list -a skynet-capital
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl secrets list -a "$TARGET_APP"
 
       - name: Set Day Trader bot credentials
         if: ${{ inputs.action == 'set-day-trader-credentials' }}
@@ -83,10 +99,9 @@ jobs:
             "SKYNET_BOT_DAY_TRADER_KEY=$BOT_KEY" \
             "SKYNET_BOT_DAY_TRADER_SECRET=$BOT_SECRET" \
             "SKYNET_AUTONOMOUS_BOTS=day-trader" \
-            -a skynet-capital
-          echo "Set. The bots process restarts on the next deploy or Fly's own secret-apply restart — check with the 'status' action, or 'fly logs -a skynet-capital' for the [gate] line."
+            -a "$TARGET_APP"
+          echo "Set. The bots process restarts on the next deploy or Fly's own secret-apply restart — check with the 'status' action, or fly logs -a $TARGET_APP for the [gate] line."
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           BOT_KEY: ${{ secrets.BOT_DAY_TRADER_ALPACA_KEY }}
           BOT_SECRET: ${{ secrets.BOT_DAY_TRADER_ALPACA_SECRET }}
 
@@ -101,10 +116,9 @@ jobs:
             "SKYNET_BOT_PROSPECTOR_KEY=$BOT_KEY" \
             "SKYNET_BOT_PROSPECTOR_SECRET=$BOT_SECRET" \
             "SKYNET_AUTONOMOUS_BOTS=prospector" \
-            -a skynet-capital
-          echo "Set. NOTE: like the day-trader action, this makes the Prospector the ONLY autonomous bot. Check with 'status', or 'fly logs -a skynet-capital' for the [gate] line."
+            -a "$TARGET_APP"
+          echo "Set. NOTE: like the day-trader action, this makes the Prospector the ONLY autonomous bot. Check with 'status', or fly logs -a $TARGET_APP for the [gate] line."
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           BOT_KEY: ${{ secrets.BOT_PROSPECTOR_ALPACA_KEY }}
           BOT_SECRET: ${{ secrets.BOT_PROSPECTOR_ALPACA_SECRET }}
 
@@ -119,10 +133,9 @@ jobs:
             "SKYNET_BOT_SAURON_KEY=$BOT_KEY" \
             "SKYNET_BOT_SAURON_SECRET=$BOT_SECRET" \
             "SKYNET_AUTONOMOUS_BOTS=sauron" \
-            -a skynet-capital
-          echo "Set. NOTE: like the other credential actions, this makes Sauron the ONLY autonomous bot. Check with 'status', or 'fly logs -a skynet-capital' for the [gate] line."
+            -a "$TARGET_APP"
+          echo "Set. NOTE: like the other credential actions, this makes Sauron the ONLY autonomous bot. Check with 'status', or fly logs -a $TARGET_APP for the [gate] line."
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           BOT_KEY: ${{ secrets.BOT_SAURON_ALPACA_KEY }}
           BOT_SECRET: ${{ secrets.BOT_SAURON_ALPACA_SECRET }}
 
@@ -138,14 +151,13 @@ jobs:
         run: |
           echo "Setting SKYNET_PLAYBOOKS=$PLAYBOOKS"
           if [ -z "$PLAYBOOKS" ]; then
-            flyctl secrets unset SKYNET_PLAYBOOKS -a skynet-capital || true
+            flyctl secrets unset SKYNET_PLAYBOOKS -a "$TARGET_APP" || true
             echo "Roster cleared — all playbooks dark."
           else
-            flyctl secrets set "SKYNET_PLAYBOOKS=$PLAYBOOKS" -a skynet-capital
-            echo "::warning::Playbooks armed. They still only ENTER on a confirmed IR print date (estimates stay dark) and only in live mode past the readiness gate. Watch 'fly logs -a skynet-capital' for the [playbooks] armed line."
+            flyctl secrets set "SKYNET_PLAYBOOKS=$PLAYBOOKS" -a "$TARGET_APP"
+            echo "::warning::Playbooks armed. They still only ENTER on a confirmed IR print date (estimates stay dark) and only in live mode past the readiness gate. Watch fly logs -a $TARGET_APP for the [playbooks] armed line."
           fi
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           PLAYBOOKS: ${{ inputs.playbooks }}
 
       - name: Set beta-phase forcing
@@ -156,23 +168,39 @@ jobs:
         run: |
           echo "Setting SKYNET_BETA_FORCING=$BETA_FORCING"
           if [ -z "$BETA_FORCING" ] || [ "$BETA_FORCING" = "0" ]; then
-            flyctl secrets unset SKYNET_BETA_FORCING -a skynet-capital || true
+            flyctl secrets unset SKYNET_BETA_FORCING -a "$TARGET_APP" || true
             echo "Cleared — beta-phase forced trading stays dark."
           else
-            flyctl secrets set "SKYNET_BETA_FORCING=$BETA_FORCING" -a skynet-capital
-            echo "::warning::Beta-phase forcing armed at $BETA_FORCING pick(s)/day. Fires ONLY when nothing organic trades that day, sized well below every playbook's softest mode, and every pick's reason states plainly that it's a forced non-conviction fill. Watch 'fly logs -a skynet-capital' for the [beta-scout] armed line."
+            flyctl secrets set "SKYNET_BETA_FORCING=$BETA_FORCING" -a "$TARGET_APP"
+            echo "::warning::Beta-phase forcing armed at $BETA_FORCING pick(s)/day. Fires ONLY when nothing organic trades that day, sized well below every playbook's softest mode, and every pick's reason states plainly that it's a forced non-conviction fill. Watch fly logs -a $TARGET_APP for the [beta-scout] armed line."
           fi
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           BETA_FORCING: ${{ inputs.beta_forcing }}
+
+      - name: Preflight — refuse live on the bots app while the old shared-app bots group survives
+        # The mechanical anti-double-trade gate for the deploy-split cutover. The boot-time
+        # account-collision guard CANNOT catch this case (it only compares bots within one
+        # process), so this is the only check standing between "flip the new fleet live" and two
+        # processes trading the same Alpaca paper accounts. Uses the dashboard app's token
+        # explicitly — this step inspects skynet-capital, whatever the target is.
+        if: ${{ inputs.action == 'flip-mode' && inputs.mode == 'live' && inputs.target_app == 'skynet-capital-bots' }}
+        run: |
+          COUNT=$(flyctl machine list -a skynet-capital --json \
+            | jq '[.[] | select(.config.metadata.fly_process_group == "bots")] | length')
+          if [ "$COUNT" != "0" ]; then
+            echo "::error::skynet-capital still runs $COUNT machine(s) in its bots process group — going live on skynet-capital-bots now could double-trade the same Alpaca accounts. Merge the cutover PR (it removes the group from fly.toml), destroy any survivors (fly machine destroy), then re-run."
+            exit 1
+          fi
+          echo "old bots group is gone — safe to flip live."
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Flip autonomous mode
         if: ${{ inputs.action == 'flip-mode' }}
         run: |
           echo "Setting SKYNET_AUTONOMOUS_MODE=${{ inputs.mode }}"
-          flyctl secrets set "SKYNET_AUTONOMOUS_MODE=${{ inputs.mode }}" -a skynet-capital
+          flyctl secrets set "SKYNET_AUTONOMOUS_MODE=${{ inputs.mode }}" -a "$TARGET_APP"
           if [ "${{ inputs.mode }}" = "live" ]; then
-            echo "::warning::LIVE — bots will begin placing PAPER orders once the market is open and their readiness gate passes. Watch 'fly logs -a skynet-capital' for the [gate]/[order] lines."
+            echo "::warning::LIVE — bots will begin placing PAPER orders once the market is open and their readiness gate passes. Watch fly logs -a $TARGET_APP for the [gate]/[order] lines."
           fi
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+

@@ -34,9 +34,12 @@ export interface InsightRecord {
  * The shared-secret header the bridge client and listener both use. Defense-in-depth only — the
  * listener's port is never declared in `fly.toml`'s `[http_service]`, so it isn't reachable from
  * the public internet at all (verified against Fly's private-networking docs; see
- * `insights-listener.ts`). This is basic input hygiene for a network listener parsing JSON, not a
- * real credential, so a fixed constant shared between the two in-repo call sites is enough — it
- * never crosses a trust boundary a secret would need to guard.
+ * `insights-listener.ts`). The real boundary is the org's private 6PN network — which every app
+ * in the org sits inside, `skynet-capital-bots` included after the deploy split — and this
+ * constant is repo-public. That's fine: it is basic input hygiene for a network listener parsing
+ * JSON, not a credential. Because the two apps can run different commits after the split, treat
+ * the header name, routes, and port as a frozen cross-app contract: evolve the wire
+ * expand/contract (listener-first), never rename any of the three in a single commit.
  */
 export const INSIGHTS_BRIDGE_SECRET_HEADER = "x-skynet-insights-secret";
 export const INSIGHTS_BRIDGE_SHARED_SECRET = "skynet-insights-bridge-v1";
