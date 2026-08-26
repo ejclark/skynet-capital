@@ -15,6 +15,7 @@ export type NavView =
   | "wire"
   | "trade"
   | "research"
+  | "collections"
   | "you"
   | "add"
   | "learn"
@@ -52,6 +53,7 @@ const NAV_ICON: Record<string, string> = {
   wire: "▤",
   trade: "⇅",
   research: "◷",
+  collections: "⬡",
   you: "◉",
   add: "＋",
   learn: "◈",
@@ -84,6 +86,11 @@ function renderDrawer(nav: NavContext): string {
   // renders honestly in every state, so the link never needs gating.
   links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
   links.push(drawerLink("/research", "Research", "research", nav.active === "research"));
+  // Collections (2026-08-26, #588): the browse surface for the bot and play catalogs — narrative
+  // shelves rather than an alphabetical roster. Sits beside Research: both are "go and read" views.
+  links.push(
+    drawerLink("/collections", "Collections", "collections", nav.active === "collections"),
+  );
   // "Milestones", not "Learn" (Eric, 2026-08-25): they're captured achievements, not homework.
   links.push(drawerLink("/learn", "Milestones", "learn", nav.active === "learn"));
   const foot: string[] = [];
