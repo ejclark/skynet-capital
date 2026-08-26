@@ -25,7 +25,8 @@ set -euo pipefail
 # Carve-outs — NEVER auto-land (open a PR and hand to Eric): workflow files
 # (.github/workflows/**), and the credentials/spend/outward-facing-AND-HARD-TO-REVERSE class.
 # The authoritative list is envelope.json; `node scripts/envelope-scan.mjs --check <paths>` answers
-# it mechanically rather than from a prose copy, several of which had drifted.
+# it mechanically rather than from a prose copy, several of which had drifted. `ship automerge`
+# now ENFORCES that answer rather than trusting the reader to act on it — see `checkarm` below.
 
 TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
 [ -n "$TOKEN" ] || { echo "ship: no GH_TOKEN/GITHUB_TOKEN in env" >&2; exit 1; }
@@ -209,7 +210,7 @@ EOF_SHOTS
   local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':sys.argv[5]=='1'}))" \
     "$title" "$branch" "$base" "$body" "$draft")"
   echo "ship: opening PR over REST (core bucket)…"
-  local resp http body; resp="$(api POST "/pulls" "$payload")"
+  local resp http body opened_hits=""; resp="$(api POST "/pulls" "$payload")"
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
   if [ "$http" = 201 ]; then
     local num url; num="$(printf '%s' "$body" | json_field number)"; url="$(printf '%s' "$body" | json_field html_url)"
@@ -217,6 +218,20 @@ EOF_SHOTS
     echo "$num"
     if [ "$draft" = 1 ]; then
       echo "ship: draft PR — hold for Eric; do NOT arm auto-merge. STOP. No polling."
+    # The arming usually happens through the MCP tool, which never runs this script — so the
+    # instruction printed here is the last place the envelope answer can reach the session that
+    # arms. Print the REFUSAL as the next step when the diff is in the irreversible class.
+    elif ! opened_hits="$(git diff --name-only "origin/$base...HEAD" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check | python3 -c '
+import sys, json
+rows = json.load(sys.stdin)
+hits = [r for r in rows if r.get("protected")]
+for r in hits:
+    print("  " + r["path"] + " — " + r.get("why", "protected"))
+sys.exit(1 if hits else 0)
+')"; then
+      echo "ship: this diff touches the irreversible class — do NOT arm auto-merge, by ANY route."
+      printf '%s\n' "$opened_hits"
+      echo "ship: NEXT — say on the PR what the protected touch is, and hand #$num to Eric. STOP."
     else
       echo "ship: NEXT (per .claude/skills/ship) — one enable_pr_auto_merge MCP call (or \`scripts/ship.sh automerge $num\` when the MCP tool is unavailable), then STOP. No polling."
     fi
@@ -226,6 +241,40 @@ EOF_SHOTS
     echo "ship: FALL BACK to the MCP create_pull_request tool for this one call (still ~1 call, not thousands)." >&2
     exit 2
   fi
+}
+
+# checkarm — MAY auto-merge be armed on a diff touching these paths?
+#
+# The carve-out at the top of this file was already correct and already pointed here, and a session
+# on 2026-08-26 read it, ran `envelope-scan --check`, saw `option-ticket.ts` come back protected,
+# and armed anyway by reasoning from the prose class names instead of the answer it had just been
+# given (docs/LESSONS.md). A rule you have to remember at the moment of arming is a rule that gets
+# talked past; this is the same rule as an exit code.
+# Prints one indented line per protected path; returns 1 when any was found. Never exits, so a
+# caller can ASK the question without being killed by the answer.
+envelope_hits() {
+  node "$(dirname "$0")/envelope-scan.mjs" --check "$@" | python3 -c '
+import sys, json
+rows = json.load(sys.stdin)
+hits = [r for r in rows if r.get("protected")]
+for r in hits:
+    print("  " + r["path"] + " — " + r.get("why", "protected"))
+sys.exit(1 if hits else 0)
+'
+}
+
+cmd_checkarm() {
+  [ $# -gt 0 ] || { echo "ship checkarm: at least one changed path is required" >&2; exit 1; }
+  local hits status=0
+  hits="$(envelope_hits "$@")" || status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "ship checkarm: REFUSED — this diff touches the irreversible class, which never auto-merges" >&2
+    echo "  (.claude/skills/governor → merge-policy table; the list is envelope.json):" >&2
+    printf '%s\n' "$hits" >&2
+    echo "Open the PR, say on it what the protected touch is, and hand it to Eric." >&2
+    exit 5
+  fi
+  echo "ship checkarm: ✓ nothing in the irreversible class — auto-merge may arm."
 }
 
 cmd_automerge() {
@@ -239,6 +288,25 @@ cmd_automerge() {
   [ "$http" = 200 ] || { echo "ship automerge: GET pull returned HTTP $http" >&2; exit 2; }
   node="$(printf '%s' "$body" | json_field node_id)"
   [ -n "$node" ] || { echo "ship automerge: no node_id on PR #$num" >&2; exit 2; }
+
+  # Guard on the PR's OWN file list, not the local tree: this is the thing being armed, and a
+  # session can be on a different branch by the time it arms.
+  local fresp fhttp fbody
+  fresp="$(api GET "/pulls/$num/files?per_page=100")"
+  fhttp="$(http_of "$fresp")"; fbody="$(body_of "$fresp")"
+  [ "$fhttp" = 200 ] || { echo "ship automerge: GET files returned HTTP $fhttp" >&2; exit 2; }
+  local -a paths=()
+  while IFS= read -r f; do [ -n "$f" ] && paths+=("$f"); done <<<"$(
+    printf '%s' "$fbody" | python3 -c 'import sys, json; [print(f["filename"]) for f in json.load(sys.stdin)]'
+  )"
+  # 100 is the page size: a longer diff was truncated, so "nothing protected" would be unproven.
+  # Refusing an unprovable arm is the honest failure, not a silent pass.
+  if [ "${#paths[@]}" -ge 100 ]; then
+    echo "ship automerge: PR #$num changes 100+ files — the envelope check cannot see them all." >&2
+    echo "Split the PR, or arm it by hand after checking envelope-scan yourself." >&2
+    exit 5
+  fi
+  cmd_checkarm "${paths[@]}"
   local q payload gql
   q='mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }'
   payload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$q" "$node")"
@@ -275,5 +343,6 @@ case "${1:-}" in
   merge) shift; cmd_merge "$@" ;;
   automerge) shift; cmd_automerge "$@" ;;
   checkbody) shift; cmd_checkbody "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file>}" >&2; exit 1 ;;
+  checkarm) shift; cmd_checkarm "$@" ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | checkarm <path...>}" >&2; exit 1 ;;
 esac

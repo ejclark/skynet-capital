@@ -9,15 +9,19 @@ import { join } from "node:path";
 // side effects. If someone re-introduces a silent body default, this goes red the same day.
 const run = (args: string[], env: NodeJS.ProcessEnv = {}) => {
   try {
-    execFileSync("bash", ["scripts/ship.sh", ...args], {
+    const out = execFileSync("bash", ["scripts/ship.sh", ...args], {
       cwd: process.cwd(),
       stdio: "pipe",
       env: { ...process.env, GH_TOKEN: "test-token-never-used", ...env },
     });
-    return { code: 0, stderr: "" };
+    return { code: 0, stderr: "", stdout: out.toString() };
   } catch (error) {
-    const e = error as { status?: number; stderr?: Buffer };
-    return { code: e.status ?? -1, stderr: e.stderr?.toString() ?? "" };
+    const e = error as { status?: number; stderr?: Buffer; stdout?: Buffer };
+    return {
+      code: e.status ?? -1,
+      stderr: e.stderr?.toString() ?? "",
+      stdout: e.stdout?.toString() ?? "",
+    };
   }
 };
 
@@ -190,5 +194,54 @@ describe("ship checkbody — the picture/format contract", () => {
     ]);
     expect(code).toBe(1);
     expect(stderr).toContain("120");
+  });
+});
+
+/**
+ * `checkarm` — the merge-policy carve-out as an exit code rather than as a thing to remember.
+ *
+ * On 2026-08-26 a session read ship.sh's own carve-out header, ran `envelope-scan --check`, saw
+ * `option-ticket.ts` come back protected, and armed auto-merge anyway by reasoning from the prose
+ * class names ("workflow files, credentials, spend, outward-facing") instead of the answer it had
+ * just been handed. Every ingredient of the correct decision was present and the decision was
+ * still wrong, which is what makes a prose rule the wrong instrument here.
+ */
+describe("ship checkarm — the irreversible class never auto-merges", () => {
+  it("refuses a diff touching a protected path, and names the path and the reason", () => {
+    const { code, stderr } = run(["checkarm", "src/trading/option-ticket.ts"]);
+
+    expect(code).toBe(5);
+    expect(stderr).toContain("REFUSED");
+    expect(stderr).toContain("src/trading/option-ticket.ts");
+    expect(stderr).toContain("money-moving");
+  });
+
+  it("still refuses when the protected path is buried among unprotected ones", () => {
+    // The realistic shape: one line moved in a protected file, inside a large clean diff.
+    const { code } = run([
+      "checkarm",
+      "src/trading/draft-order.ts",
+      "tests/trading/draft-order.spec.ts",
+      "src/trading/option-ticket.ts",
+      "docs/LESSONS.md",
+    ]);
+
+    expect(code).toBe(5);
+  });
+
+  it("clears a diff with nothing protected in it", () => {
+    const { code, stdout } = run([
+      "checkarm",
+      "src/trading/draft-order.ts",
+      "tests/trading/draft-order.spec.ts",
+    ]);
+
+    expect(code).toBe(0);
+    expect(stdout).toContain("auto-merge may arm");
+  });
+
+  it("refuses to answer at all with no paths, rather than clearing an empty question", () => {
+    // An empty argument list must never read as "nothing protected".
+    expect(run(["checkarm"]).code).toBe(1);
   });
 });
