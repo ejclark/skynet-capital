@@ -50,7 +50,7 @@ async function tryOwnerPage(
     return true;
   }
   if (path === "/claim" && config.claim) {
-    await handleClaim(req, res, req.method ?? "GET", session?.email, config.claim);
+    await handleClaim(req, res, req.method ?? "GET", session?.email, config.claim, nav);
     return true;
   }
   return false;
