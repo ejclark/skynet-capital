@@ -7,8 +7,9 @@ import { JsonFileStore } from "../storage/json-file-store.js";
  *
  * Deliberately SMALL: earned milestones are never stored here — they re-derive from the fill +
  * audit ledgers on every read (`progression-service.ts`), so this file holds only what cannot be
- * derived: each member's wheels preference, which celebrations they have seen, and when their
- * record began (`since` — earns that predate it are seeded history, never fanfare).
+ * derived: each member's wheels preference, which celebrations they have seen, which comprehension
+ * checks they have passed, and when their record began (`since` — earns that predate it are seeded
+ * history, never fanfare).
  *
  * Plain JSON, deliberately NOT encrypted: no credentials, no personal data — the same argument
  * as `bot-controls-store.ts`, and the same `JsonFileStore` primitive underneath (atomic
@@ -20,6 +21,12 @@ export interface ProgressionRecord {
   readonly trainingWheels: boolean;
   /** Milestone ids whose unlock celebration has been shown and claimed. */
   readonly acknowledged: readonly string[];
+  /**
+   * Milestone ids whose comprehension check has been PASSED (`domain/comprehension.ts`). Graded
+   * server-side and written here — the browser posts answer indices, never a verdict. Absent from
+   * an older file: reads as an empty list, so nobody's history breaks, they just meet the gate.
+   */
+  readonly comprehension: readonly string[];
   /** When this record was first written — earns dated before it never celebrate. */
   readonly since: string;
   readonly updatedAt: string;
@@ -40,10 +47,13 @@ function parseProgressionState(raw: unknown): ProgressionState | undefined {
   for (const [id, value] of Object.entries(participants)) {
     if (typeof value !== "object" || value === null) return undefined;
     const r = value as Partial<ProgressionRecord>;
+    const passed = r.comprehension ?? [];
     if (
       typeof r.trainingWheels !== "boolean" ||
       !Array.isArray(r.acknowledged) ||
       !r.acknowledged.every((m) => typeof m === "string") ||
+      !Array.isArray(passed) ||
+      !passed.every((m) => typeof m === "string") ||
       typeof r.since !== "string" ||
       typeof r.updatedAt !== "string"
     ) {
@@ -52,6 +62,7 @@ function parseProgressionState(raw: unknown): ProgressionState | undefined {
     out[id] = {
       trainingWheels: r.trainingWheels,
       acknowledged: r.acknowledged,
+      comprehension: passed,
       since: r.since,
       updatedAt: r.updatedAt,
     };
@@ -87,6 +98,7 @@ export class ProgressionStore {
     const record: ProgressionRecord = {
       trainingWheels: true,
       acknowledged: [],
+      comprehension: [],
       since: at.toISOString(),
       ...held,
       ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)),

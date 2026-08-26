@@ -1,3 +1,5 @@
+import { type CheckResult, gradeCheck } from "../domain/comprehension.js";
+import { checkFor } from "../domain/comprehension-checks.js";
 import {
   COURSES,
   type CourseLevel,
@@ -29,6 +31,12 @@ import type { ProgressionStore } from "./progression-store.js";
  * gets wheels OFF and their past earns pre-acknowledged — the redesign never locks out someone
  * already trading, and never greets them with a wall of day-one fanfare. A brand-new member
  * (zero qualifying fills) gets wheels ON: the guided ladder is the default for new users.
+ *
+ * THE COMPREHENSION GATE (#577) sits on top of that, never in place of it: a fill still earns the
+ * milestone, but where `domain/comprehension-checks.ts` has a check for it, the celebration waits
+ * on that check passing. Grading happens HERE, server-side, and only the pass is written — the
+ * browser posts answer indices and is never asked, or believed, about the verdict. A milestone
+ * with no check is untouched: it flows straight to `celebrating` exactly as it did before.
  */
 
 export interface ParticipantProgression {
@@ -44,12 +52,27 @@ export interface ParticipantProgression {
   readonly unlockedLevels: ReadonlySet<CourseLevel>;
   /** Earned but not yet celebrated — drives the one-time unlock banner. */
   readonly celebrating: readonly EarnedMilestone[];
+  /**
+   * Earned, gated by a comprehension check, and that check not yet passed. These are held back
+   * from `celebrating` until the member shows they understood the play they just made.
+   */
+  readonly pendingChecks: readonly EarnedMilestone[];
 }
 
 export interface ProgressionService {
   view(participantId: string): Promise<ParticipantProgression>;
   setWheels(participantId: string, on: boolean): Promise<void>;
   acknowledge(participantId: string, milestoneIds: readonly string[]): Promise<void>;
+  /**
+   * Grade one comprehension check and bank a pass. `answers` maps question id → the posted option
+   * index; nothing about the verdict is taken from the caller. Undefined = no such gated
+   * milestone, so there was nothing to grade.
+   */
+  submitCheck(
+    participantId: string,
+    milestoneId: string,
+    answers: ReadonlyMap<string, string>,
+  ): Promise<CheckResult | undefined>;
 }
 
 export interface ProgressionServiceDeps {
@@ -101,9 +124,15 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         ).participants[participantId];
       }
       const acknowledged = new Set(record?.acknowledged ?? []);
-      const celebrating = record
+      const fresh = record
         ? earned.filter((m) => !acknowledged.has(m.milestoneId) && m.at >= record.since)
         : [];
+      // Gated = a check exists for it AND this member hasn't passed that check yet.
+      const passed = new Set(record?.comprehension ?? []);
+      const gated = (m: EarnedMilestone) =>
+        Boolean(checkFor(m.milestoneId)) && !passed.has(m.milestoneId);
+      const pendingChecks = fresh.filter(gated);
+      const celebrating = fresh.filter((m) => !gated(m));
 
       return {
         wheels: record?.trainingWheels ?? false,
@@ -115,6 +144,7 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         rank: rankFor(points),
         unlockedLevels: levels,
         celebrating,
+        pendingChecks,
       };
     },
     setWheels(participantId, on) {
@@ -130,6 +160,22 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         deps.store.set(participantId, { acknowledged: [...new Set([...held, ...ids])] }, now());
       }
       return Promise.resolve();
+    },
+    submitCheck(participantId, milestoneId, answers) {
+      const check = checkFor(milestoneId);
+      if (!check) return Promise.resolve(undefined);
+      const result = gradeCheck(check, answers);
+      // Only a PASS is durable. A miss leaves no trace beyond the page it renders — retries are
+      // unlimited on purpose, because a permanent block on an educational desk teaches nothing.
+      if (result.passed && deps.store) {
+        const held = deps.store.get(participantId)?.comprehension ?? [];
+        deps.store.set(
+          participantId,
+          { comprehension: [...new Set([...held, check.milestoneId])] },
+          now(),
+        );
+      }
+      return Promise.resolve(result);
     },
   };
 }

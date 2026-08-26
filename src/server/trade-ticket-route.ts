@@ -172,6 +172,7 @@ export async function serveTicket(
                 earned: progression.earnedByCode,
                 ...(progression.nextUp ? { nextUp: progression.nextUp } : {}),
                 celebrating: progression.celebrating,
+                pendingChecks: progression.pendingChecks,
               },
             }
           : {}),

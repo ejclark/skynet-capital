@@ -1,5 +1,7 @@
 import type { AddressInfo } from "node:net";
 import type { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
+import { gradeCheck } from "../../src/domain/comprehension.js";
+import { checkFor } from "../../src/domain/comprehension-checks.js";
 import type { TradeTypeCode } from "../../src/domain/trade-types.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
@@ -92,6 +94,7 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
         rank: { title: "Observer", atPoints: 0 },
         unlockedLevels: new Set<100 | 200 | 300>([100]),
         celebrating: [],
+        pendingChecks: [],
         ...over,
       }),
     setWheels: (id, on) => {
@@ -101,6 +104,10 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
     acknowledge: (id, ids) => {
       ackLog.push(`${id}:${ids.join("+")}`);
       return Promise.resolve();
+    },
+    submitCheck: (_id, milestoneId, answers) => {
+      const check = checkFor(milestoneId);
+      return Promise.resolve(check ? gradeCheck(check, answers) : undefined);
     },
   });
 

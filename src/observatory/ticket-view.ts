@@ -7,6 +7,7 @@ import {
   previewOptionOrder,
 } from "../trading/option-ticket.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import { renderComprehensionCheck } from "./comprehension-check-view.js";
 import { type DashboardViewOptions, renderShell } from "./dashboard-shell.js";
 import { formatPrice, reviewNotices, ticketContext } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
@@ -343,6 +344,7 @@ export function renderTicketBody(model: TicketViewModel): string {
       <div style="display:flex;gap:6px;align-items:flex-start">${wheelsToggle(state, progression)}${modeToggle(state)}</div>
     </header>
     ${gate}
+    ${renderComprehensionCheck(progression?.pendingChecks ?? [], { back: ticketHref(state) })}
     ${renderMilestoneBanner(progression?.celebrating ?? [], { back: ticketHref(state) })}
     ${starterBar(state, progression)}
     ${playPicker(state, progression)}
