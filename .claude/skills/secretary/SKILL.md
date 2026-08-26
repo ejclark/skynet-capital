@@ -39,6 +39,14 @@ PRs and issues; `docs/ROUTINES.md` states; new/changed `docs/research/events/*` 
 3. **Noise absorbed** — counts only ("6 structural PRs auto-merged, 2 gate catches
    self-corrected"). The tier that proves the machine is eating its own noise.
 
+**Measure the digest's own channel** (#456): `node scripts/comms-scan.mjs --table` emits one row
+per PR merged since the last digest — which picture form it used (or waived, with the reason),
+which lane authored it, how long it took to merge, how many comments Eric left and how many
+reactions it drew. Fold the table into "Noise absorbed". It is DETECT-ONLY: read the numbers for
+a few digests before acting on any of them, and never ratchet a gate on them. Without
+`GITHUB_TOKEN` the merge-latency, comment and reaction columns read ABSENT rather than zero —
+that is the honest state, not a broken run.
+
 **Deliver:** write `docs/digests/<YYYY-MM-DD>.md`, ship via `/ship` (docs auto-merge), and
 push-notify with the Needs-you count + top headline only.
 
