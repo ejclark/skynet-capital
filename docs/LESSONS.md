@@ -390,6 +390,32 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** a real-browser CI smoke of the critical funnels (/feedback click-through) —
   parked in docs/IDEAS.md.
 
+### `/security-review` reported clean over an EMPTY diff, on an envelope-protected file
+- **SHA:** n/a   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** the session building #579 ran `/security-review` on `src/alpaca/alpaca-options-client.ts`
+  — the brokerage client that can place option orders, and one of the narrowest files in
+  `envelope.json`. The skill first failed to load (`origin/HEAD` is unset in a fresh worktree); after
+  `git remote set-head`, it loaded and harvested **nothing**, because its command targets
+  `origin/HEAD...` and the changes were still uncommitted. It was on course to return a clean verdict
+  over a zero-line diff. Caught only because that session noticed the harvest was empty and reviewed
+  the real diff by hand instead — no net would have caught it.
+- **ROOT CAUSE:** two stacked, and the second is the dangerous one. (1) A git worktree does not
+  inherit `origin/HEAD`, so the skill cannot resolve its base. (2) The harvest is `origin/HEAD...`,
+  which by definition excludes uncommitted work — and **CLAUDE.md's own ship-loop instruction said to
+  run it "before opening the PR"**, i.e. exactly when the changes are uncommitted. The documented
+  workflow led directly into the silent case. A review that examines nothing and says "clean" is
+  worse than one that errors, because it reads as assurance precisely where assurance is load-bearing.
+- **PREVENTION:** the ship-loop bullet now says **commit first**, and in a worktree run
+  `git remote set-head origin -a` first, with the reason attached so the instruction cannot decay back
+  into the trap. The skill itself is a Claude Code built-in and cannot be fixed from this repo.
+- **THE PATTERN, third sighting tonight:** a check that validates the wrong artefact reports success
+  forever. `ship.sh checkbody` lints the local file while the transport rewrites the payload (the
+  stripped `<details>` folds, 2026-08-25, and the defanged image embeds recorded directly below).
+  Now a review skill grading an empty harvest. **When a gate passes, confirm it examined the thing you
+  meant** — an empty input is not a pass.
+- **SIDE QUESTS:** a `ship.sh` preflight that refuses to open a PR when a review skill's harvest came
+  back empty would close all three; banked rather than built, since it wants its own specs.
+
 ### PR-body image embeds are defanged in flight — the fridge rule's picture never rendered
 - **SHA:** n/a   **DATE:** 2026-08-26   **STATUS:** closed
 - **SIGNAL:** a build session shipping #575 wrote a fridge-rule screenshot into its PR body the
