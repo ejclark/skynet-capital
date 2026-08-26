@@ -1,12 +1,13 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { deskHref } from "../observatory/desk-tabs.js";
 import type { NavContext } from "../observatory/render-dashboard.js";
-import { handleAccountRoute } from "./account-forms.js";
+import { type AccountAdmin, handleAccountRoute } from "./account-forms.js";
 import type { Session } from "./auth/session.js";
 import { handleClaim } from "./claim-form.js";
-import { idOf, keyOf, resolveCurrentId } from "./dashboard-identity.js";
+import { idOf, keyOf, ownedAccountOptions, resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { handleInvite } from "./invite-form.js";
+import type { RotateCredentialsInput, RotateResult } from "./participant-service.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 
 /**
@@ -88,39 +89,102 @@ export async function trySelfServiceRoute(
     return true;
   }
   if ((path === "/account" || path === "/account/remove") && config.accountAdmin) {
-    // Same identity resolution /rotate and /trade use; account-service enforces the rules.
-    await handleAccountRoute(req, res, path, req.method ?? "GET", {
-      admin: config.accountAdmin,
-      requesterId: config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined,
+    await handleAccountSelfServiceRoute(
+      req,
+      res,
+      path,
+      url,
+      config.accountAdmin,
+      config,
       session,
-      authConfigured: Boolean(config.auth),
-      key: keyOf(url),
-    });
+      nav,
+    );
     return true;
   }
   if (path === "/rotate" && config.rotateCredentials) {
-    const requester = rotateRequester(config, session);
-    // Eric, 2026-08-25: "ensure the email is used as the unique identifier — they know email,
-    // they don't know their account ID." A link that names an id (an error card, a profile page)
-    // still wins — it's the most specific signal — but absent one, a viewer whose SIGN-IN already
-    // resolves to an account (linked via ownerEmail, however that link was made) gets that account
-    // prefilled automatically. Email, via the session, becomes the identifier for the return
-    // visit — nobody re-derives or types an id once they're linked. An unlinked viewer is the one
-    // case this can't solve (there's nothing yet to resolve the email against); the form still
-    // falls back to free text there, same as before.
-    const prefillId = idOf(url) || requester.id || "";
-    await handleRotate(
+    await handleRotateSelfServiceRoute(
       req,
       res,
-      req.method ?? "GET",
-      keyOf(url),
-      prefillId,
-      requester,
+      url,
       config.rotateCredentials,
+      config,
+      session,
+      nav,
     );
     return true;
   }
   return false;
+}
+
+/**
+ * Same identity resolution /rotate and /trade use; account-service enforces the rules regardless
+ * of what this layer picks. `ownedAccounts` powers the picker (Eric, 2026-08-25: "this should be
+ * a dropdown of the accounts tied to the email address" — the same ask that applies to /rotate now
+ * applies here); which one is "current" is a real page switch via ?id=, validated against the
+ * caller's own owned ids, never trusted blind — both forms on the page (edit, remove) then agree
+ * on the same account instead of drifting independently. Split out of `trySelfServiceRoute` to
+ * keep that dispatcher inside its complexity budget.
+ */
+async function handleAccountSelfServiceRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  url: string,
+  admin: AccountAdmin,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+  nav: NavContext,
+): Promise<void> {
+  const ownedAccounts = config.auth ? ownedAccountOptions(session, config) : [];
+  const requestedId = idOf(url);
+  const requesterId =
+    (requestedId && ownedAccounts.some((a) => a.id === requestedId) ? requestedId : undefined) ??
+    ownedAccounts[0]?.id;
+  await handleAccountRoute(req, res, path, req.method ?? "GET", {
+    admin,
+    requesterId,
+    ownedAccounts,
+    session,
+    authConfigured: Boolean(config.auth),
+    key: keyOf(url),
+    nav,
+  });
+}
+
+/**
+ * Eric, 2026-08-25: "ensure the email is used as the unique identifier — they know email, they
+ * don't know their account ID." A link that names an id (an error card, a profile page) still
+ * wins — it's the most specific signal. Absent one, a viewer whose sign-in resolves to EXACTLY ONE
+ * account gets it prefilled automatically — email, via the session, becomes the identifier for the
+ * return visit. Resolves to SEVERAL (a normal state now that /claim can link more than one) →
+ * leave prefillId empty so the form falls through to the picker, rather than silently guessing
+ * which one they meant ("this should be a dropdown of the accounts tied to the email address").
+ * Resolves to none → free text, same as before. Split out of `trySelfServiceRoute` to keep that
+ * dispatcher inside its complexity budget.
+ */
+async function handleRotateSelfServiceRoute(
+  req: IncomingMessage,
+  res: ServerResponse,
+  url: string,
+  rotateCredentials: (input: RotateCredentialsInput) => Promise<RotateResult>,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+  nav: NavContext,
+): Promise<void> {
+  const requester = rotateRequester(config, session);
+  const ownedAccounts = config.auth ? ownedAccountOptions(session, config) : [];
+  const prefillId = idOf(url) || (ownedAccounts.length === 1 ? (ownedAccounts[0]?.id ?? "") : "");
+  await handleRotate(
+    req,
+    res,
+    req.method ?? "GET",
+    keyOf(url),
+    prefillId,
+    ownedAccounts,
+    requester,
+    rotateCredentials,
+    nav,
+  );
 }
 
 /**

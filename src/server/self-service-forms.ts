@@ -19,10 +19,6 @@ import { personaClasses } from "./persona-classes.js";
  */
 
 /**
- * Shared by /add and /rotate: both are "GET serves a form, POST parses it and submits" —
- * only the form fields and the submit/render callbacks differ.
- */
-/**
  * The owner gate the admin forms share: resolves the viewer to a lowercased owner email, or
  * writes the 403 and returns null. Deliberately identical for "not signed in" and "signed in but
  * not an owner" — a member probing an owner page learns nothing about whether it exists.
@@ -40,6 +36,8 @@ export function requireOwner(
   return null;
 }
 
+/** Shared by /add and /rotate: "GET serves a form, POST parses it and submits" — only the form
+ *  fields and the submit/render callbacks differ. */
 export async function handleSelfServiceForm<TResult extends { ok: boolean }>(
   req: IncomingMessage,
   res: ServerResponse,
@@ -114,12 +112,10 @@ export async function handleRotate(
   method: string,
   key: string,
   /**
-   * The id nobody remembers (Eric, 2026-08-25): a link that ALREADY names the account — from its
-   * own error card, or the observer hero once one is picked — carries it here instead of asking
-   * the member to type an opaque slug from memory. Locked, not just pre-filled: the link is the
-   * one honest source for "which account", so a stray edit shouldn't silently retarget it. Empty
-   * when no link named one — including when the viewer owns MORE than one account, so the form
-   * falls through to the picker below rather than guessing which one they meant.
+   * The id nobody remembers (Eric, 2026-08-25): a link that ALREADY names the account carries it
+   * here instead of asking the member to type an opaque slug from memory — locked, not just
+   * pre-filled, since a stray edit shouldn't silently retarget it. Empty when no link named one,
+   * including when the viewer owns MORE than one account, so the form falls to the picker below.
    */
   prefillId: string,
   /**

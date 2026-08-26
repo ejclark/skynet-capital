@@ -11,9 +11,11 @@ import type {
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { ParticipantService } from "../../src/server/participant-service.js";
 
-// Sibling of participant-service.spec.ts (split 2026-08-26 to stay under the per-file line
-// cap) — this half covers ParticipantService.rotateCredentials in full. addParticipant lives in
-// participant-service.spec.ts, which also holds the shared fixtures duplicated below.
+// Sibling of participant-service.spec.ts and participant-service-rotate-roster.spec.ts (split
+// 2026-08-26 to stay under the per-file line cap) — this file covers
+// ParticipantService.rotateCredentials for store/direct targets; env-roster targets live in the
+// roster sibling. addParticipant lives in participant-service.spec.ts. All three hold their own
+// copy of the fixtures below.
 
 class MemStore implements ParticipantStore {
   items: StoredParticipant[] = [];
@@ -252,9 +254,9 @@ describe("ParticipantService.rotateCredentials", () => {
       expect(result.ok).toBe(true);
     });
 
-    it("does not enforce the check against a bot target — bots have no session identity", async () => {
+    it("does not enforce the check against an UNCLAIMED bot — nothing to match against yet", async () => {
       const store = new MemStore();
-      store.items = [existing]; // kind: "bot"
+      store.items = [existing]; // kind: "bot", no ownerEmail
       const { service } = makeService({ store });
 
       const result = await service.rotateCredentials({
@@ -262,6 +264,50 @@ describe("ParticipantService.rotateCredentials", () => {
         apiKey: "new-key",
         apiSecret: "new-secret",
         requesterId: "human-someone_else",
+      });
+
+      expect(result.ok).toBe(true);
+    });
+
+    // 2026-08-26: a bot could never carry ownerEmail before /claim (#546) learned to link any
+    // kind, so this check read `kind === "human"` and exempted bots outright — stale once a bot
+    // can be claimed. A claimed bot exempted from this is rotatable, credentials swapped, by any
+    // signed-in member with no check at all.
+    const claimedBot: StoredParticipant = {
+      id: "day-trader",
+      displayName: "JARVIS",
+      kind: "bot",
+      personaId: "day-trader",
+      credentials: { apiKey: "old-key", apiSecret: "old-secret" },
+      ownerEmail: "handler@example.com",
+    };
+
+    it("refuses a CLAIMED bot target when the requester resolves to a DIFFERENT id", async () => {
+      const store = new MemStore();
+      store.items = [claimedBot];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "day-trader",
+        apiKey: "attacker-key",
+        apiSecret: "attacker-secret",
+        requesterId: "human-someone_else",
+      });
+
+      expect(result.ok).toBe(false);
+      expect(store.items[0]?.credentials).toEqual(claimedBot.credentials);
+    });
+
+    it("allows a CLAIMED bot target when the requester resolves to THAT SAME id", async () => {
+      const store = new MemStore();
+      store.items = [claimedBot];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "day-trader",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+        requesterId: "day-trader",
       });
 
       expect(result.ok).toBe(true);
@@ -377,113 +423,7 @@ describe("ParticipantService.rotateCredentials", () => {
       expect(store.items[0]?.ownerEmail).toBeUndefined();
     });
   });
-
-  // 2026-08-25: regenerating a key in Alpaca REVOKES the old pair instantly, so an env-declared
-  // account's credential dies with no self-service fix — /rotate previously refused anything not
-  // in the store, leaving "update the host env and redeploy" as the only path back to syncing.
-  describe("env-roster targets (the 2026-08-25 dead-key trap)", () => {
-    const ericEnv: Participant = {
-      id: "human-eric",
-      displayName: "Eric",
-      kind: "human",
-      credentials: { apiKey: "revoked-key", apiSecret: "revoked-secret" },
-      ownerEmail: "eric@example.com",
-    };
-    const sauronEnv: Participant = {
-      id: "sauron",
-      displayName: "Sauron",
-      kind: "bot",
-      personaId: "sauron",
-      credentials: { apiKey: "revoked-key", apiSecret: "revoked-secret" },
-    };
-
-    it("rotates a roster account into the store — the merge layer then overrides the dead env pair", async () => {
-      const { service, store, started } = makeService({
-        roster: [ericEnv],
-        owners: ["eric@example.com"],
-      });
-
-      const result = await service.rotateCredentials({
-        id: "human-eric",
-        apiKey: "fresh-key",
-        apiSecret: "fresh-secret",
-        requesterId: "human-eric",
-        requesterEmail: "eric@example.com",
-      });
-
-      expect(result).toEqual({ ok: true, id: "human-eric", displayName: "Eric" });
-      expect(store.items.find((p) => p.id === "human-eric")?.credentials.apiKey).toBe("fresh-key");
-      expect(started[0]?.credentials.apiKey).toBe("fresh-key");
-    });
-
-    it("lets an owner rotate a roster BOT'S key — env bots are the owner's own accounts", async () => {
-      const { service } = makeService({ roster: [sauronEnv], owners: ["eric@example.com"] });
-
-      const result = await service.rotateCredentials({
-        id: "sauron",
-        apiKey: "fresh-key",
-        apiSecret: "fresh-secret",
-        requesterEmail: "eric@example.com",
-      });
-
-      expect(result.ok).toBe(true);
-    });
-
-    it("lets the linked member rotate their own roster account without being an owner", async () => {
-      const { service } = makeService({ roster: [ericEnv], owners: ["someone@else.com"] });
-
-      const result = await service.rotateCredentials({
-        id: "human-eric",
-        apiKey: "fresh-key",
-        apiSecret: "fresh-secret",
-        requesterId: "human-eric",
-        requesterEmail: "eric@example.com",
-      });
-
-      expect(result.ok).toBe(true);
-    });
-
-    it("refuses a signed-in NON-owner whose session doesn't resolve to the target", async () => {
-      const { service, store } = makeService({ roster: [ericEnv], owners: ["eric@example.com"] });
-
-      const result = await service.rotateCredentials({
-        id: "human-eric",
-        apiKey: "attacker-key",
-        apiSecret: "attacker-secret",
-        requesterEmail: "member@example.com",
-      });
-
-      expect(result.ok).toBe(false);
-      expect(store.items).toHaveLength(0);
-    });
-
-    it("keeps the stricter gate after a FIRST rotation left a store row under the roster id", async () => {
-      // The id's tier must never downgrade to store rules just because a rotation happened —
-      // otherwise the hijack window reopens one rotation later.
-      const store = new MemStore();
-      store.items = [{ ...ericEnv, credentials: { apiKey: "rotated", apiSecret: "rotated" } }];
-      const { service } = makeService({ store, roster: [ericEnv], owners: ["eric@example.com"] });
-
-      const result = await service.rotateCredentials({
-        id: "human-eric",
-        apiKey: "attacker-key",
-        apiSecret: "attacker-secret",
-        requesterEmail: "member@example.com",
-      });
-
-      expect(result.ok).toBe(false);
-    });
-
-    it("allows roster rotation in password mode — no emails exist, the password gate is the boundary", async () => {
-      const { service } = makeService({ roster: [sauronEnv] });
-
-      const result = await service.rotateCredentials({
-        id: "sauron",
-        apiKey: "fresh-key",
-        apiSecret: "fresh-secret",
-      });
-
-      expect(result.ok).toBe(true);
-    });
-  });
 });
+
+// Env-roster rotation targets (the 2026-08-25 dead-key trap, plus their own ownership/claim
+// coverage) live in participant-service-rotate-roster.spec.ts.
