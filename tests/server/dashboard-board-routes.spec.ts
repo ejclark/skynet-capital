@@ -1,10 +1,6 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { ServerResponse } from "node:http";
 import type { NavContext } from "../../src/observatory/render-dashboard.js";
-import {
-  pageHtml,
-  servePublicRoute,
-  streamEvents,
-} from "../../src/server/dashboard-board-routes.js";
+import { pageHtml, servePublicRoute } from "../../src/server/dashboard-board-routes.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 
 function fakeResponse(): {
@@ -76,43 +72,20 @@ describe("servePublicRoute", () => {
   });
 });
 
-describe("streamEvents", () => {
-  it("opens an SSE stream and pushes the current standings frame immediately", () => {
-    const { res, out } = fakeResponse();
-    const req = { on: () => undefined } as unknown as IncomingMessage;
-    const hub = fakeHub([]);
-
-    streamEvents(req, res, hub, nav, "equity", {});
-
-    expect(out.headers).toMatchObject({ "content-type": "text/event-stream" });
-    expect(out.chunks.length).toBeGreaterThan(0);
-  });
-
-  it("unsubscribes from the hub when the connection closes", () => {
-    const { res } = fakeResponse();
-    let unsubscribed = false;
-    const req = {
-      on: (event: string, cb: () => void) => {
-        if (event === "close") cb();
-      },
-    } as unknown as IncomingMessage;
-    const hub = {
-      getState: () => ({ participants: [], generatedAt: "now" }),
-      subscribe: () => () => {
-        unsubscribed = true;
-      },
-    } as unknown as ObservatoryHub;
-
-    streamEvents(req, res, hub, nav, "equity", {});
-
-    expect(unsubscribed).toBe(true);
-  });
-});
-
 describe("pageHtml", () => {
   it("renders the observatory shell with the current standings body embedded", () => {
     const html = pageHtml(fakeHub([]), nav, "equity", {});
     expect(html).toContain("Skynet Capital — Observatory (Live)");
     expect(html).toContain("/events");
+  });
+
+  it("never re-renders itself from the stream: no innerHTML swap of the whole board", () => {
+    // The 2026-08-26 regression this replaced: `root.innerHTML = JSON.parse(e.data)` on every hub
+    // tick, which destroyed all client state ~4 times a second. The only innerHTML left is the
+    // deliberate /board/frame fallback, and it is never fed by the event stream.
+    const html = pageHtml(fakeHub([]), nav, "equity", {});
+    expect(html).not.toContain("root.innerHTML = JSON.parse(e.data)");
+    expect(html).toContain("/board/frame");
+    expect(html).toContain("addEventListener('patch'");
   });
 });

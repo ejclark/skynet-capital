@@ -1,7 +1,7 @@
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import { sampleDashboardData } from "../../src/observatory/sample-dashboard-data.js";
+import { parseLeaderMetric } from "../../src/observatory/standings-metric.js";
 import {
-  parseLeaderMetric,
   renderStandingsBody,
   renderStandingsContent,
 } from "../../src/observatory/standings-view.js";
@@ -54,8 +54,8 @@ describe("the field — default equity ranking", () => {
   });
 
   it("numbers the ranks starting at 1 and marks the top three", () => {
-    expect(html).toContain('<span class="rank">1</span>');
-    expect(html).toContain('<span class="rank">2</span>');
+    expect(html).toContain('<span class="rank" data-field="rank">1</span>');
+    expect(html).toContain('<span class="rank" data-field="rank">2</span>');
     expect(html).toContain("rank-top rank-1");
   });
 });
@@ -219,7 +219,7 @@ describe("the field — ties and edge cases", () => {
     const html = renderStandingsBody(
       data([{ id: "solo", displayName: "Solo", kind: "human", cash: 0, equity: 0, positions: [] }]),
     );
-    expect(html).toContain('<span class="rank">1</span>');
+    expect(html).toContain('<span class="rank" data-field="rank">1</span>');
     expect(html).not.toContain("NaN");
   });
 
@@ -339,10 +339,10 @@ describe("a realistic mixed board (bots, a human, gains and losses)", () => {
 
   it("rolls the two bots and the one human into the match's cohort cards", () => {
     expect(html).toContain(
-      '<span class="cohort-count num">2<span class="unit"> accounts</span></span>',
+      '<span data-field="count">2</span><span class="unit" data-field="countUnit"> accounts</span>',
     );
     expect(html).toContain(
-      '<span class="cohort-count num">1<span class="unit"> account</span></span>',
+      '<span data-field="count">1</span><span class="unit" data-field="countUnit"> account</span>',
     );
   });
 

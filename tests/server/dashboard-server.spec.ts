@@ -13,6 +13,39 @@ import type { AddParticipantInput, AddResult } from "../../src/server/participan
 
 const board = (): DashboardData => ({ generatedAt: "t", participants: [], collisions: [] });
 
+const holder = (id: string, displayName: string): DashboardData["participants"][number] => ({
+  id,
+  displayName,
+  kind: "human",
+  cash: 1_000,
+  equity: 61_000,
+  positions: [{ symbol: "NVDA", quantity: 100, avgPrice: 500, marketValue: 60_000 }],
+});
+
+/** A board whose figures actually move when a price tick folds through the reducer. */
+const livingBoard = (): DashboardData => ({
+  generatedAt: "t",
+  collisions: [],
+  participants: [holder("p1", "Alice")],
+});
+
+const comparableBoard = (): DashboardData => ({
+  generatedAt: "t",
+  collisions: [],
+  participants: [holder("p1", "Alice"), holder("p2", "Bob")],
+});
+
+interface WirePatch {
+  readonly seq: number;
+  readonly ops: readonly Record<string, unknown>[];
+}
+
+/** The `value` text a patch carries for row `p1` — i.e. what that viewer's ladder will show. */
+function rowValue(patch: WirePatch | undefined): string | undefined {
+  const row = patch?.ops.find((op) => op.kind === "field" && op.key === "p1");
+  return (row?.text as Record<string, string> | undefined)?.value;
+}
+
 async function withServer(
   config: Parameters<typeof createDashboardServer>[0],
   run: (base: string) => Promise<void>,
@@ -28,12 +61,12 @@ async function withServer(
 }
 
 /** Reads `count` SSE `data:` frames off a streaming `/events` response, JSON-decoded. */
-async function readSseFrames(res: Response, count: number): Promise<string[]> {
+async function readSsePatches(res: Response, count: number): Promise<WirePatch[]> {
   const reader = res.body?.getReader();
   if (!reader) throw new Error("no readable body");
   const decoder = new TextDecoder();
   let buf = "";
-  const frames: string[] = [];
+  const frames: WirePatch[] = [];
   while (frames.length < count) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -43,7 +76,7 @@ async function readSseFrames(res: Response, count: number): Promise<string[]> {
       const raw = buf.slice(0, idx);
       buf = buf.slice(idx + 2);
       const line = raw.split("\n").find((l) => l.startsWith("data: "));
-      if (line) frames.push(JSON.parse(line.slice("data: ".length)));
+      if (line) frames.push(JSON.parse(line.slice("data: ".length)) as WirePatch);
       idx = buf.indexOf("\n\n");
     }
   }
@@ -204,30 +237,29 @@ describe("dashboard-server — Standings fold (2026-08-25)", () => {
     });
   });
 
-  it("threads the connecting request's ?by= into every live SSE push, not just the first frame", async () => {
-    // The SSE-threading decision the plan called for explicitly: `nav` (and now `metric`) are
-    // fixed at connect time, so the client forwards the WHOLE query string to /events — a viewer
-    // who picked Return % must keep seeing it on every live push, never silently reset to Equity.
-    const hub = new ObservatoryHub(board());
+  it("threads each connection's own ?by= into the patches IT receives", async () => {
+    // Same decision as before the patch channel, one layer down: `metric` is fixed at connect time
+    // and now shapes the ops that connection is sent, so two viewers share one seq run and each
+    // still sees their own metric. A viewer who picked Return % is never silently reset to Equity.
+    const hub = new ObservatoryHub(livingBoard());
     await withServer({ hub }, async (base) => {
-      const res = await fetch(`${base}/events?by=return`);
-      expect(res.status).toBe(200);
-      const framesPromise = readSseFrames(res, 2);
-      hub.apply({
-        type: "participant_added",
-        at: "2026-08-25T00:00:00.000Z",
-        participant: {
-          id: "p1",
-          displayName: "Push Test",
-          kind: "human",
-          cash: 0,
-          equity: 1,
-          positions: [],
-        },
-      });
-      const [initial, pushed] = await framesPromise;
-      expect(initial).toContain('class="msel active" href="/?by=return"');
-      expect(pushed).toContain('class="msel active" href="/?by=return"');
+      const returnStream = await fetch(`${base}/events?by=return`);
+      const equityStream = await fetch(`${base}/events`);
+      const returnFrames = readSsePatches(returnStream, 2);
+      const equityFrames = readSsePatches(equityStream, 2);
+      hub.apply({ type: "price", symbol: "NVDA", price: 700, at: "2026-08-25T00:00:00.000Z" });
+      const [, onReturn] = await returnFrames;
+      const [, onEquity] = await equityFrames;
+      expect(rowValue(onReturn)).toMatch(/%$/);
+      expect(rowValue(onEquity)).toMatch(/^\$/);
+    });
+  });
+
+  it("serves the patch fallback frame with the connection's own ?by= applied", async () => {
+    await withServer({ hub: new ObservatoryHub(livingBoard()) }, async (base) => {
+      const frame = await fetch(`${base}/board/frame?by=return`);
+      expect(frame.status).toBe(200);
+      expect(await frame.text()).toContain('class="msel active" href="/?by=return"');
     });
   });
 
@@ -243,48 +275,23 @@ describe("dashboard-server — Standings fold (2026-08-25)", () => {
     });
   });
 
-  it("threads the connecting request's ?a=&b= into every live SSE push, not just the first frame", async () => {
-    const hub = new ObservatoryHub({
-      generatedAt: "t",
-      collisions: [],
-      participants: [
-        {
-          id: "p1",
-          displayName: "Alice",
-          kind: "human",
-          cash: 0,
-          equity: 1,
-          positions: [],
-        },
-        {
-          id: "p2",
-          displayName: "Bob",
-          kind: "human",
-          cash: 0,
-          equity: 1,
-          positions: [],
-        },
-      ],
-    });
+  it("keeps a head-to-head compare on the full-render path rather than half-patching it", async () => {
+    // `?a=&b=` is the analytical view folded into Standings. Its grid cannot be expressed as field
+    // patches, so the stream says `reframe` and the client takes one whole frame — which must carry
+    // the SAME pair the connection asked for, never a silently reset comparison.
+    const hub = new ObservatoryHub(comparableBoard());
     await withServer({ hub }, async (base) => {
-      const res = await fetch(`${base}/events?a=p1&b=p2`);
-      expect(res.status).toBe(200);
-      const framesPromise = readSseFrames(res, 2);
-      hub.apply({
-        type: "participant_added",
-        at: "2026-08-25T00:00:00.000Z",
-        participant: {
-          id: "p3",
-          displayName: "Push Test",
-          kind: "human",
-          cash: 0,
-          equity: 1,
-          positions: [],
-        },
+      const stream = await fetch(`${base}/events?a=p1&b=p2`);
+      const framesPromise = readSsePatches(stream, 2);
+      hub.apply({ type: "price", symbol: "NVDA", price: 700, at: "2026-08-25T00:00:00.000Z" });
+      const [, pushed] = await framesPromise;
+      expect(pushed?.ops).toContainEqual({
+        kind: "reframe",
+        reason: "head-to-head compare keeps the full-render path",
       });
-      const [initial, pushed] = await framesPromise;
-      expect(initial).toContain('Alice <span class="cmp-vs">vs</span> Bob');
-      expect(pushed).toContain('Alice <span class="cmp-vs">vs</span> Bob');
+
+      const frame = await fetch(`${base}/board/frame?a=p1&b=p2`);
+      expect(await frame.text()).toContain('Alice <span class="cmp-vs">vs</span> Bob');
     });
   });
 });

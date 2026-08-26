@@ -1,6 +1,7 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
+import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
@@ -28,6 +29,12 @@ import type { WireRouteDeps } from "./wire-routes.js";
  */
 export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps {
   readonly hub: ObservatoryHub;
+  /**
+   * Derived ceremony transitions (`ceremony-channel.ts`). When wired, each one rides the board's
+   * seq-numbered patch stream as a fire-once cue, so a celebration can never be delivered twice —
+   * not on a reconnect, not on a replay. Omit (offline/tests) and the board simply carries no cues.
+   */
+  readonly ceremonies?: CeremonyChannel;
   /**
    * Legacy shared-password gate. Used only when `auth` is not configured (localhost/offline).
    * When set, every request must carry ?key=<password>.

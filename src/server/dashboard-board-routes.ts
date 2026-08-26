@@ -1,15 +1,11 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { ServerResponse } from "node:http";
 import type { NavContext } from "../observatory/render-dashboard.js";
-import {
-  type LeaderMetric,
-  renderStandingsBody,
-  renderStandingsContent,
-  type StandingsOptions,
-} from "../observatory/standings-view.js";
+import type { LeaderMetric } from "../observatory/standings-metric.js";
+import { renderStandingsBody, type StandingsOptions } from "../observatory/standings-view.js";
 import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
+import { BOARD_PATCH_SCRIPT, BOARD_PATCH_STYLE } from "./board-patch-client.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import { PAGE_STYLE } from "./page-shell.js";
-import { sseFrame } from "./sse.js";
 import { welcomeHtml } from "./welcome-page.js";
 
 /**
@@ -82,32 +78,11 @@ function servePulse(res: ServerResponse, hub: ObservatoryHub): void {
 }
 
 /**
- * The SSE stream backing Standings' live refresh. `metric`/`compare` are read ONCE, from the
- * `/events` connection's own URL, at connect time — the inline script in `pageHtml` forwards the
- * page's full query string (not just `key`) so a viewer who picked `?by=return` or is mid-compare
- * (`?a=&b=`) keeps seeing the same state on every live push instead of being silently reset.
+ * The board page. The live half is `board-patch-client.ts`: it opens `/events`, applies seq-numbered
+ * patches to the keyed nodes rendered below, and falls back to one `/board/frame` fetch for the
+ * changes a patch cannot honestly express. It forwards the whole query string (not just `key`) so
+ * `?by=`/`?a=`/`?b=` survive a live push instead of reverting on the next update.
  */
-export function streamEvents(
-  req: IncomingMessage,
-  res: ServerResponse,
-  hub: ObservatoryHub,
-  nav: NavContext,
-  metric: LeaderMetric,
-  compare: Pick<StandingsOptions, "aId" | "bId">,
-): void {
-  res.writeHead(200, {
-    "content-type": "text/event-stream",
-    "cache-control": "no-cache",
-    connection: "keep-alive",
-  });
-  const opts = { nav, metric, ...compare };
-  res.write(sseFrame(JSON.stringify(renderStandingsContent(hub.getState(), opts))));
-  const unsubscribe = hub.subscribe((state) => {
-    res.write(sseFrame(JSON.stringify(renderStandingsContent(state, opts))));
-  });
-  req.on("close", unsubscribe);
-}
-
 export function pageHtml(
   hub: ObservatoryHub,
   nav: NavContext,
@@ -121,22 +96,11 @@ export function pageHtml(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Skynet Capital — Observatory (Live)</title>
 <style>${PAGE_STYLE}</style>
+${BOARD_PATCH_STYLE}
 </head>
 <body>
 ${renderStandingsBody(hub.getState(), { nav, metric, ...compare })}
-<script>
-  (function () {
-    // Forward the whole query string (not just "key") so /events sees ?by=/?a=/?b= too — the
-    // metric picker's selection and any in-progress compare survive a live push instead of
-    // reverting on the next update.
-    var url = "/events" + location.search;
-    var source = new EventSource(url);
-    source.onmessage = function (e) {
-      var root = document.getElementById("root");
-      if (root) root.innerHTML = JSON.parse(e.data);
-    };
-  })();
-</script>
+<script>${BOARD_PATCH_SCRIPT}</script>
 </body>
 </html>`;
 }

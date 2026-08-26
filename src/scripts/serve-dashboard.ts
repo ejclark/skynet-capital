@@ -192,6 +192,8 @@ async function main(): Promise<void> {
 
   createDashboardServer({
     hub,
+    // Ceremonies ride the board's seq-numbered patch stream as fire-once cues (#573).
+    ceremonies,
     password,
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
