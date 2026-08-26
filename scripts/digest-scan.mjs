@@ -40,7 +40,7 @@ const daysBetween = (fromDate, toDate) =>
   );
 
 /** Committed digests, newest first — filename IS the date (YYYY-MM-DD.md). */
-function digestFiles() {
+export function digestFiles() {
   if (!existsSync(DIGEST_DIR)) return [];
   return readdirSync(DIGEST_DIR)
     .filter((f) => f.endsWith(".md") && f !== "TEMPLATE.md" && f !== "README.md")
@@ -57,6 +57,14 @@ function commitsSince(date) {
     { cwd: ROOT, encoding: "utf8" },
   );
   return Number.parseInt(out.trim(), 10);
+}
+
+/** The newest committed digest's date, or `null` when none exists yet. Exported because it is the
+ *  window boundary every other since-the-last-digest report shares (comms-scan.mjs) — a second copy
+ *  of this rule is a second answer to "since when". */
+export function latestDigestDate() {
+  const [latest] = digestFiles();
+  return latest ? latest.slice(0, 10) : null;
 }
 
 function status(today) {
@@ -127,4 +135,5 @@ function main() {
   );
 }
 
-main();
+// CLI only — comms-scan.mjs imports `latestDigestDate` and must not trigger a report.
+if (import.meta.url === `file://${process.argv[1]}`) main();

@@ -1,0 +1,58 @@
+[
+  {
+    "sha": "aaa1111",
+    "author": "claude[bot]",
+    "mergedAt": "2026-08-25T10:00:00Z",
+    "subject": "feat(desk): show a position's greeks inline (#601)",
+    "body": "## The picture\n\n![the desk row](https://raw.githubusercontent.com/x/y/0000000000000000000000000000000000000000/docs/shots/pr-601/row.jpg)\n\n_Caption — the desk row, from shoot-portfolio._\n\n## Summary\n\n- Adds greeks."
+  },
+  {
+    "sha": "bbb2222",
+    "author": "Eric",
+    "mergedAt": "2026-08-25T12:00:00Z",
+    "subject": "refactor(engine): split the guard pipeline (#602)",
+    "body": "## The picture\n\n```mermaid\nflowchart LR\n  A --> B\n```\n\n_Caption — the pipeline._\n\n## Summary\n\n- Splits it."
+  },
+  {
+    "sha": "ccc3333",
+    "author": "Eric",
+    "mergedAt": "2026-08-25T13:00:00Z",
+    "subject": "chore(deps): bump the lockfile (#603)",
+    "body": "## The picture\n\nPicture: waived — lockfile bump, nothing to look at.\n\n## Summary\n\n- Bumps."
+  },
+  {
+    "sha": "ddd4444",
+    "author": "claude[bot]",
+    "mergedAt": "2026-08-25T14:00:00Z",
+    "subject": "fix(login): honour reduced motion (#604)",
+    "body": "## Summary\n\n- No picture section at all."
+  },
+  {
+    "sha": "eee5555",
+    "author": "Eric",
+    "mergedAt": "2026-08-25T15:00:00Z",
+    "subject": "chore(config): retune the budgets (#605)",
+    "body": "## The picture\n\n| key | before | after |\n|---|---|---|\n| cap | 320 | 300 |\n\n_Caption — the budget change._\n\n## Summary\n\n- Retunes."
+  },
+  {
+    "sha": "fff6666",
+    "author": "dependabot[bot]",
+    "mergedAt": "2026-08-25T16:00:00Z",
+    "subject": "chore(deps): bump vitest from 4.1.10 to 4.1.11 (#606)",
+    "body": "## The picture\n\nPicture: waived — dependency bump.\n\n## Summary\n\n- Bumps vitest."
+  },
+  {
+    "sha": "999aaaa",
+    "author": "claude[bot]",
+    "mergedAt": "2026-08-25T17:00:00Z",
+    "subject": "docs: a body whose prose contains | pipes | and fences (#607)",
+    "body": "## The picture\n\nPicture: waived — pure docs.\n\n## Summary\n\n- A body with | pipes | in it, and a fenced block:\n\n```\n| not | a | table |\n```"
+  },
+  {
+    "sha": "000bbbb",
+    "author": "claude[bot]",
+    "mergedAt": "2026-08-25T18:00:00Z",
+    "subject": "chore: a squash with no PR number",
+    "body": "## The picture\n\nPicture: waived — direct push."
+  }
+]

@@ -28,6 +28,7 @@
     "graph:refresh": "bash scripts/refresh-graph.sh",
     "event:scan": "node scripts/event-scan.mjs",
     "digest:scan": "node scripts/digest-scan.mjs",
+    "comms:scan": "node scripts/comms-scan.mjs",
     "prepare": "test -n \"$CI\" || husky",
     "arch:scan": "node scripts/arch-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
