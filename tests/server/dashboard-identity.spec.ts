@@ -4,6 +4,7 @@ import {
   keyOf,
   resolveCurrentId,
   resolveOwnedIds,
+  rotatableAccountOptions,
 } from "../../src/server/dashboard-identity.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 
@@ -55,6 +56,65 @@ describe("resolveOwnedIds", () => {
 
   it("is empty when neither hook is wired", () => {
     expect(resolveOwnedIds(session("ann@example.com"), baseConfig)).toEqual([]);
+  });
+});
+
+describe("rotatableAccountOptions", () => {
+  const board = [
+    { id: "human-eric", displayName: "Eric", kind: "human" as const },
+    { id: "sauron", displayName: "Sauron", kind: "bot" as const },
+    { id: "human-ann", displayName: "Ann", kind: "human" as const },
+  ];
+  const hub = { getState: () => ({ participants: board }) };
+
+  // 2026-08-27: the reported bug — an owner's OWN roster account had no ownerEmail link, so
+  // ownedAccountOptions resolved to just an unrelated owned bot, and /rotate locked onto it.
+  it("adds every roster account for an owner, even ones their email doesn't own", () => {
+    const config = {
+      hub,
+      isOwnerEmail: (email: string) => email === "eric@example.com",
+      resolveOwnerIds: () => ["sauron"],
+      rosterIds: () => new Set(["human-eric", "sauron"]),
+    } as unknown as DashboardServerConfig;
+    const options = rotatableAccountOptions(session("eric@example.com"), config);
+    expect(options.map((o) => o.id).sort()).toEqual(["human-eric", "sauron"]);
+  });
+
+  it("does not widen for a non-owner — same as ownedAccountOptions", () => {
+    const config = {
+      hub,
+      isOwnerEmail: () => false,
+      resolveOwnerIds: () => ["human-ann"],
+      rosterIds: () => new Set(["human-eric", "sauron"]),
+    } as unknown as DashboardServerConfig;
+    const options = rotatableAccountOptions(session("ann@example.com"), config);
+    expect(options.map((o) => o.id)).toEqual(["human-ann"]);
+  });
+
+  it("never duplicates an account the owner already owns directly", () => {
+    const config = {
+      hub,
+      isOwnerEmail: () => true,
+      resolveOwnerIds: () => ["human-eric"],
+      rosterIds: () => new Set(["human-eric"]),
+    } as unknown as DashboardServerConfig;
+    const options = rotatableAccountOptions(session("eric@example.com"), config);
+    expect(options.map((o) => o.id)).toEqual(["human-eric"]);
+  });
+
+  it("is empty with no session", () => {
+    const config = { hub, isOwnerEmail: () => true } as unknown as DashboardServerConfig;
+    expect(rotatableAccountOptions(undefined, config)).toEqual([]);
+  });
+
+  it("falls back to owned accounts alone when rosterIds isn't wired", () => {
+    const config = {
+      hub,
+      isOwnerEmail: () => true,
+      resolveOwnerIds: () => ["sauron"],
+    } as unknown as DashboardServerConfig;
+    const options = rotatableAccountOptions(session("eric@example.com"), config);
+    expect(options.map((o) => o.id)).toEqual(["sauron"]);
   });
 });
 

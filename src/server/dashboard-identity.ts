@@ -46,6 +46,33 @@ export function ownedAccountOptions(
 }
 
 /**
+ * The account picker for `/rotate` specifically — unlike `ownedAccountOptions`, widened for an
+ * OWNER to every roster (host-configured) account, matching `refuseRotation`'s actual
+ * authorization boundary (it already lets an owner rotate any of those regardless of
+ * `ownerEmail`). Reported live, 2026-08-27: an owner whose own roster account had no working
+ * `ownerEmail` link resolved to a DIFFERENT owned account instead (a bot), and the field locked
+ * on it with no way to pick another — `resolveOwnedIds` alone can't see an unlinked roster
+ * account no matter whose email it belongs to. Never applies to `/account`'s edit/remove picker,
+ * whose authorization has no owner bypass — offering an account there that then gets refused
+ * would be worse than today's narrower (but honest) list.
+ */
+export function rotatableAccountOptions(
+  session: Session | undefined,
+  config: DashboardServerConfig,
+): readonly OwnedAccountOption[] {
+  const owned = ownedAccountOptions(session, config);
+  if (!(session && config.isOwnerEmail?.(session.email))) return owned;
+  const rosterIds = config.rosterIds?.() ?? new Set<string>();
+  if (rosterIds.size === 0) return owned;
+  const seen = new Set(owned.map((a) => a.id));
+  const board = config.hub.getState().participants;
+  const rosterOptions = board
+    .filter((p) => rosterIds.has(p.id) && !seen.has(p.id))
+    .map((p) => ({ id: p.id, displayName: p.displayName, kind: p.kind }));
+  return [...owned, ...rosterOptions];
+}
+
+/**
  * A board display name for ANY id, not just ones the caller owns — for showing a locked `/rotate`
  * target by name instead of its internal slug (Eric, 2026-08-26: "account id is made up by you..
  * why do you even bother showing it?"). Falls back to the id itself only when the account genuinely

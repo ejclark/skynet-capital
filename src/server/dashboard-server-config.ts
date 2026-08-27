@@ -131,4 +131,20 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Same ownership link as `resolveOwnerId`, plural; omit to fall back to that single id.
    */
   readonly resolveOwnerIds?: (email: string) => readonly string[];
+  /**
+   * True when this email is on the env owner allowlist. Widens the `/rotate` account picker
+   * (`dashboard-identity.ts`'s `rotatableAccountOptions`) to every roster account for an owner —
+   * matching `participant-service.ts`'s `refuseRotation`, which already lets an owner rotate any
+   * host-configured account regardless of `ownerEmail`. Never widens `/account`'s edit/remove
+   * picker, whose authorization has no such bypass. Omit when OAuth isn't configured.
+   */
+  readonly isOwnerEmail?: (email: string) => boolean;
+  /**
+   * Every host-configured (env-roster) participant id, for the same picker. An owner's OWN
+   * account is a roster row too — without this, an owner whose `SKYNET_HUMAN_<ID>_EMAIL` was
+   * never set (or points elsewhere) resolves to zero or the wrong owned accounts and the picker
+   * never shows the one account they most need (2026-08-27: reported live — the field resolved to
+   * an owned bot instead of the reporter's own account, and locked, with no way to pick another).
+   */
+  readonly rosterIds?: () => ReadonlySet<string>;
 }

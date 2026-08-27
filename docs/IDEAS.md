@@ -999,7 +999,6 @@ check is automatic rather than remembered. _(src: Claude · while: research-lab 
   re-issue `HANDOFF_PR_TOKEN` with `Contents: Read and write`. Either is a credential action, so it
   is Eric's call, not an autonomous one.
   _(src: Claude · while: closing out #655, 2026-08-26)_
-
 ### Probe whether a GitHub-hosted attachment survives the markdown-link content filter, where a repo-file URL doesn't
 LESSONS.md (2026-08-26): a session-side outbound content-safety layer neutralizes `[text](url)`/
 `![alt](url)` markdown links pointing at anything that reads as a media file — confirmed for both
