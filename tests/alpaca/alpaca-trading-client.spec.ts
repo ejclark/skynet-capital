@@ -65,5 +65,53 @@ describe("AlpacaTradingClient", () => {
         time_in_force: "day",
       });
     });
+
+    it("POSTs a limit order GTC, with the limit price", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders": {
+          status: 200,
+          body: { id: "o2", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.placeOrder({
+        symbol: "EEM",
+        qty: 100,
+        side: "buy",
+        type: "limit",
+        limit_price: 42.5,
+      });
+
+      expect(transport.posts[0]?.body).toMatchObject({
+        type: "limit",
+        time_in_force: "gtc",
+        limit_price: 42.5,
+      });
+    });
+
+    it("POSTs a stop order GTC, with the stop price", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders": {
+          status: 200,
+          body: { id: "o3", symbol: "EEM", qty: "100", side: "sell", status: "accepted" },
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.placeOrder({
+        symbol: "EEM",
+        qty: 100,
+        side: "sell",
+        type: "stop",
+        stop_price: 30,
+      });
+
+      expect(transport.posts[0]?.body).toMatchObject({
+        type: "stop",
+        time_in_force: "gtc",
+        stop_price: 30,
+      });
+    });
   });
 });

@@ -6,6 +6,7 @@ import {
   normalizeSymbol,
   previewOrder,
   type TicketAction,
+  type TicketOrderType,
   type TicketPreview,
 } from "../trading/order-ticket.js";
 import { marketOpen, openDesk, readReview, submitAndAudit } from "./desk-gate.js";
@@ -41,6 +42,9 @@ interface DeskTradeRequest {
   readonly symbol: string;
   readonly quantity: number;
   readonly action: TicketAction;
+  readonly orderType?: TicketOrderType;
+  readonly limitPrice?: number;
+  readonly stopPrice?: number;
 }
 
 export type DeskTradeResult =
@@ -80,7 +84,14 @@ async function reviewLive(
     marketOpen(client),
   ]);
   return previewOrder(
-    { symbol: request.symbol, quantity: request.quantity, action: request.action },
+    {
+      symbol: request.symbol,
+      quantity: request.quantity,
+      action: request.action,
+      ...(request.orderType ? { orderType: request.orderType } : {}),
+      ...(request.limitPrice !== undefined ? { limitPrice: request.limitPrice } : {}),
+      ...(request.stopPrice !== undefined ? { stopPrice: request.stopPrice } : {}),
+    },
     {
       cash: Number(account.cash),
       positions: positionsFrom(positions),
@@ -150,6 +161,9 @@ export function createTradeService(deps: TradeServiceDeps): SubmitDeskTrade {
           symbol: normalizeSymbol(request.symbol),
           qty: request.quantity,
           side: request.action,
+          ...(preview.orderType !== "market" ? { type: preview.orderType } : {}),
+          ...(preview.limitPrice !== undefined ? { limit_price: preview.limitPrice } : {}),
+          ...(preview.stopPrice !== undefined ? { stop_price: preview.stopPrice } : {}),
         }),
       desk.participant,
       deps,

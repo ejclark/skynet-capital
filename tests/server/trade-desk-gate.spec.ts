@@ -400,4 +400,67 @@ describe("trade service — the server-side gate", () => {
     const noClock = client({ isMarketOpen: () => Promise.reject(new Error("clock down")) });
     expect(await service({ client: noClock })(request, "ann")).toMatchObject({ ok: true });
   });
+
+  it("passes a limit order's type and price through to the broker", async () => {
+    const placed: unknown[] = [];
+    const spy = client({
+      placeOrder: (params) => {
+        placed.push(params);
+        return Promise.resolve({
+          id: "o2",
+          symbol: "AAPL",
+          qty: "4",
+          side: "sell",
+          status: "accepted",
+        });
+      },
+    });
+    const result = await service({ client: spy })(
+      { ...request, orderType: "limit", limitPrice: 130 },
+      "ann",
+    );
+    expect(result).toMatchObject({ ok: true });
+    expect(placed[0]).toMatchObject({ type: "limit", limit_price: 130 });
+  });
+
+  it("passes a stop order's type and price through to the broker", async () => {
+    const placed: unknown[] = [];
+    const spy = client({
+      placeOrder: (params) => {
+        placed.push(params);
+        return Promise.resolve({
+          id: "o3",
+          symbol: "AAPL",
+          qty: "4",
+          side: "sell",
+          status: "accepted",
+        });
+      },
+    });
+    const result = await service({ client: spy })(
+      { ...request, orderType: "stop", stopPrice: 90 },
+      "ann",
+    );
+    expect(result).toMatchObject({ ok: true });
+    expect(placed[0]).toMatchObject({ type: "stop", stop_price: 90 });
+  });
+
+  it("refuses a limit order with no price before ever reaching the broker", async () => {
+    const placed: unknown[] = [];
+    const spy = client({
+      placeOrder: (params) => {
+        placed.push(params);
+        return Promise.resolve({
+          id: "o4",
+          symbol: "AAPL",
+          qty: "4",
+          side: "sell",
+          status: "accepted",
+        });
+      },
+    });
+    const result = await service({ client: spy })({ ...request, orderType: "limit" }, "ann");
+    expect(result).toMatchObject({ ok: false });
+    expect(placed).toEqual([]);
+  });
 });
