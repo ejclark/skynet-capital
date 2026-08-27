@@ -23,15 +23,40 @@ import { payoffSvg } from "./ticket-charts.js";
  * plainly why an order can't go is part of the education this app exists for.
  */
 
+/** The order line's trailing clause and the confirm form's price — one number, one meaning,
+ *  read off whichever field the order type actually uses. */
+function orderTypeLabel(preview: TicketPreview): string {
+  if (preview.orderType === "limit" && preview.limitPrice !== undefined) {
+    return `limit ${formatPrice(preview.limitPrice)}/sh`;
+  }
+  if (preview.orderType === "stop" && preview.stopPrice !== undefined) {
+    return `stop ${formatPrice(preview.stopPrice)}/sh`;
+  }
+  return "market";
+}
+
+function orderTypeExplainer(preview: TicketPreview): string {
+  if (preview.orderType === "limit") {
+    return "This holds until the market reaches your limit price or better, then fills — the figures below are estimates.";
+  }
+  if (preview.orderType === "stop") {
+    return "This holds until the market reaches your stop price, then sends a market order — the stop price triggers the order, it doesn't guarantee the fill price.";
+  }
+  return "A market order fills at whatever the market says when it lands, so the figures below are estimates.";
+}
+
 function confirmForm(preview: TicketPreview, backHref: string): string {
   const verb = preview.action === "buy" ? "Buy" : "Sell";
   if (!preview.ok) {
     return `<div class="review-actions"><a class="btn" href="${backHref}">← Back to your positions</a></div>`;
   }
+  const price = preview.limitPrice ?? preview.stopPrice;
   return `<form class="review-actions" method="post" action="/trade">
       <input type="hidden" name="symbol" value="${escapeHtml(preview.symbol)}">
       <input type="hidden" name="quantity" value="${preview.quantity}">
       <input type="hidden" name="action" value="${escapeHtml(preview.action)}">
+      <input type="hidden" name="ordertype" value="${escapeHtml(preview.orderType)}">
+      ${price !== undefined ? `<input type="hidden" name="price" value="${price}">` : ""}
       <input type="hidden" name="confirm" value="1">
       <button class="btn btn-primary" type="submit">Confirm — ${verb.toLowerCase()} ${preview.quantity} ${escapeHtml(preview.symbol)}</button>
       <a class="btn" href="${backHref}">Cancel</a>
@@ -60,14 +85,14 @@ export function renderTradeReviewBody(
         <h1 class="desk-title">${escapeHtml(verb)} ${preview.quantity.toLocaleString("en-US")} ${escapeHtml(preview.symbol)}</h1>
         <p class="desk-sub">${
           preview.ok
-            ? "Nothing has been sent yet. Check the numbers, then confirm — a market order fills at whatever the market says when it lands, so the figures below are estimates."
+            ? `Nothing has been sent yet. Check the numbers, then confirm — ${orderTypeExplainer(preview)}`
             : "This order can't be sent. Here's exactly why."
         }</p>
       </div>
     </header>
     <section class="panel review">
       ${line("Account", snapshot.displayName)}
-      ${line("Order", `${verb.toUpperCase()} ${preview.quantity.toLocaleString("en-US")} ${preview.symbol} · market`)}
+      ${line("Order", `${verb.toUpperCase()} ${preview.quantity.toLocaleString("en-US")} ${preview.symbol} · ${orderTypeLabel(preview)}`)}
       ${preview.estPrice !== undefined ? line("Last known price", formatPrice(preview.estPrice)) : ""}
       ${line(preview.action === "buy" ? "Estimated cost" : "Estimated proceeds", notional)}
       ${line("Cash now", formatCurrency(snapshot.cash))}
