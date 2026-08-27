@@ -4,7 +4,12 @@ import { type TradeTypeCode, tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
 import { renderTradeReviewBody } from "../observatory/trade-review-view.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
-import { previewOrder, type TicketAction } from "../trading/order-ticket.js";
+import {
+  previewOrder,
+  type TicketAction,
+  type TicketOrderType,
+  type TicketPreview,
+} from "../trading/order-ticket.js";
 import { handleCheckPost } from "./comprehension-routes.js";
 import { handleOptionPost, OPTION_CODES, optionPreviewFromForm } from "./option-order-review.js";
 import { readBody } from "./page-shell.js";
@@ -39,6 +44,39 @@ export type { TradeRouteDeps } from "./trade-ticket-route.js";
 
 function parseAction(raw: string | null): TicketAction {
   return raw === "sell" ? "sell" : "buy";
+}
+
+function parseOrderType(raw: string | null): TicketOrderType {
+  return raw === "limit" || raw === "stop" ? raw : "market";
+}
+
+/** Blank, missing, or non-numeric all mean "no price entered" — `previewOrder` refuses a
+ *  limit/stop order with an undefined price rather than treating it as valid input. */
+function parsePrice(raw: string | null): number | undefined {
+  if (raw === null || raw.trim() === "") return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/** The one priced field a request needs, keyed by which order type is selected — split out to
+ *  keep `handleTrade`'s own complexity in budget. */
+function priceFieldFromForm(
+  orderType: TicketOrderType,
+  price: number | undefined,
+): { limitPrice: number | undefined } | { stopPrice: number | undefined } | Record<string, never> {
+  if (orderType === "limit") return { limitPrice: price };
+  if (orderType === "stop") return { stopPrice: price };
+  return {};
+}
+
+/** Same idea for the submit call, but reading the already-reviewed preview's price rather than
+ *  raw form input — the service re-checks fresh numbers, never the browser's own claim. */
+function priceFieldFromPreview(
+  preview: TicketPreview,
+): { limitPrice: number } | { stopPrice: number } | Record<string, never> {
+  if (preview.limitPrice !== undefined) return { limitPrice: preview.limitPrice };
+  if (preview.stopPrice !== undefined) return { stopPrice: preview.stopPrice };
+  return {};
 }
 
 // --- GET: the ticket view ---------------------------------------------------
@@ -174,11 +212,15 @@ export async function handleTrade(
     return;
   }
 
+  const orderType = parseOrderType(form.get("ordertype"));
+  const price = parsePrice(form.get("price"));
   const preview = previewOrder(
     {
       symbol: form.get("symbol") ?? "",
       quantity: Number(form.get("quantity") ?? Number.NaN),
       action,
+      orderType,
+      ...priceFieldFromForm(orderType, price),
     },
     ticketContext(snapshot, { tradingEnabled: deps.tradingEnabled, isSelf: true }),
   );
@@ -206,6 +248,8 @@ export async function handleTrade(
       symbol: preview.symbol,
       quantity: preview.quantity,
       action: preview.action,
+      orderType: preview.orderType,
+      ...priceFieldFromPreview(preview),
     },
     deps.requesterId,
   );

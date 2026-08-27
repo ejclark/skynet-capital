@@ -138,8 +138,92 @@ describe("POST /trade — the review step", () => {
         expect(res.status).toBe(303);
         expect(res.headers.get("location")).toBe("/u/ann?tab=positions&n=submitted");
         expect(calls).toEqual([
-          { participantId: "ann", symbol: "AAPL", quantity: 4, action: "sell" },
+          {
+            participantId: "ann",
+            symbol: "AAPL",
+            quantity: 4,
+            action: "sell",
+            orderType: "market",
+          },
         ]);
+      },
+    );
+  });
+
+  it("threads a limit order's type and price through review and confirm", async () => {
+    const calls: unknown[] = [];
+    await withServer(
+      {
+        ...config(),
+        submitTrade: (request) => {
+          calls.push(request);
+          return Promise.resolve({
+            ok: true as const,
+            orderId: "o1",
+            status: "accepted",
+            symbol: "AAPL",
+          });
+        },
+      },
+      async (base) => {
+        const review = await post(
+          base,
+          { symbol: "AAPL", quantity: "4", action: "sell", ordertype: "limit", price: "118" },
+          { cookie: cookie() },
+        );
+        expect(await review.text()).toContain("limit $118.00/sh");
+
+        const res = await post(
+          base,
+          {
+            symbol: "AAPL",
+            quantity: "4",
+            action: "sell",
+            ordertype: "limit",
+            price: "118",
+            confirm: "1",
+          },
+          { cookie: cookie() },
+        );
+        expect(res.status).toBe(303);
+        expect(calls).toEqual([
+          {
+            participantId: "ann",
+            symbol: "AAPL",
+            quantity: 4,
+            action: "sell",
+            orderType: "limit",
+            limitPrice: 118,
+          },
+        ]);
+      },
+    );
+  });
+
+  it("refuses a limit order with no price before ever reaching submitTrade", async () => {
+    let submitted = 0;
+    await withServer(
+      {
+        ...config(),
+        submitTrade: () => {
+          submitted += 1;
+          return Promise.resolve({
+            ok: true as const,
+            orderId: "o1",
+            status: "accepted",
+            symbol: "AAPL",
+          });
+        },
+      },
+      async (base) => {
+        const res = await post(
+          base,
+          { symbol: "AAPL", quantity: "4", action: "sell", ordertype: "limit", confirm: "1" },
+          { cookie: cookie() },
+        );
+        expect(res.status).toBe(200);
+        expect(await res.text()).toContain("limit price");
+        expect(submitted).toBe(0);
       },
     );
   });

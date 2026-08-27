@@ -266,9 +266,13 @@ function stockTicket(model: TicketViewModel): string {
         <input name="symbol" value="${escapeHtml(state.symbol ?? "")}" placeholder="AAPL" maxlength="8" autocomplete="off" spellcheck="false"></div>
       <div class="field"><label>${glossLabel("Shares", "whole shares only")}</label>
         <input name="quantity" type="number" min="1" step="1" inputmode="numeric" value="${state.qty}"></div>
+      <div class="field"><label>${glossLabel("Order", "market fills now · limit/stop hold until your price")}</label>
+        <select name="ordertype"><option value="market">MARKET</option><option value="limit">LIMIT</option><option value="stop">STOP</option></select></div>
+      <div class="field"><label>${glossLabel("Price", "limit or stop price — ignored for Market")}</label>
+        <input name="price" type="number" step="0.01" min="0" placeholder="market"></div>
       <div class="field"><button class="btn btn-primary" type="submit"${disabled}>Review order →</button></div>
     </form>
-    <p class="desk-note" style="margin-top:10px">${escapeHtml(state.play.gloss)} Market order, day — you'll see the estimated ${state.play.side === "buy" ? "cost" : "proceeds"} on the review screen before anything is sent.</p>
+    <p class="desk-note" style="margin-top:10px">${escapeHtml(state.play.gloss)} Market fills now; limit holds for your price or better; stop holds until triggered, then fills like a market order. You'll see the estimated ${state.play.side === "buy" ? "cost" : "proceeds"} on the review screen before anything is sent.</p>
   </section>`;
 }
 
