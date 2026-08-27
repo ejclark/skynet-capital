@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { classifyDiff } from "../../scripts/envelope-scan.mjs";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // Autonomous-lane envelope gate — the mechanical replacement for a paragraph. Before this, the only
@@ -16,8 +17,76 @@ const scan = (...args: string[]): string =>
     encoding: "utf8",
   });
 
-type Check = { path: string; protected: boolean; pattern?: string; why?: string };
+type Check = {
+  path: string;
+  protected: boolean;
+  blocking: boolean;
+  additiveSafe?: boolean;
+  pattern?: string;
+  why?: string;
+};
 const check = (...paths: string[]): Check[] => JSON.parse(scan("--check", ...paths)) as Check[];
+
+// classifyDiff — the diffAware exemption's actual rule, calibrated against #679-#696's real diffs
+// (see envelope.json's $diffAwareComment): a pure-insertion diff that adds no new mutating broker
+// call is additive-safe; anything else, including a pure insertion that DOES add one, is not.
+describe("classifyDiff — the diffAware exemption rule", () => {
+  const insertOnly = [
+    "diff --git a/f.ts b/f.ts",
+    "--- a/f.ts",
+    "+++ b/f.ts",
+    "@@ -1,2 +1,4 @@",
+    " export const a = 1;",
+    "+export const b = 2;",
+    "+export const c = 3;",
+  ].join("\n");
+
+  const removesALine = [
+    "diff --git a/f.ts b/f.ts",
+    "--- a/f.ts",
+    "+++ b/f.ts",
+    "@@ -1,2 +1,1 @@",
+    "-export const a = 1;",
+    "+export const a = 2;",
+  ].join("\n");
+
+  const insertsANewMutatingCall = [
+    "diff --git a/f.ts b/f.ts",
+    "--- a/f.ts",
+    "+++ b/f.ts",
+    "@@ -1,1 +1,3 @@",
+    " export const a = 1;",
+    "+export async function cancelOrder(id) {",
+    "+  return this.transport.delete(`/v2/orders/${id}`);",
+    "+}",
+  ].join("\n");
+
+  it("is additive-safe for a pure insertion that adds no new mutating call — the Slice 4 shape", () => {
+    expect(classifyDiff(insertOnly)).toEqual({
+      pureInsertion: true,
+      addsNewMutatingCall: false,
+      additiveSafe: true,
+    });
+  });
+
+  it("is not additive-safe once an existing line is removed or modified — the Slice 1 shape", () => {
+    expect(classifyDiff(removesALine)?.pureInsertion).toBe(false);
+    expect(classifyDiff(removesALine)?.additiveSafe).toBe(false);
+  });
+
+  it("is not additive-safe for a pure insertion that adds a new mutating call — the Slice 2 shape", () => {
+    const result = classifyDiff(insertsANewMutatingCall);
+    expect(result?.pureInsertion).toBe(true);
+    expect(result?.addsNewMutatingCall).toBe(true);
+    expect(result?.additiveSafe).toBe(false);
+  });
+
+  it("treats no change at all as null, never as safe — 'no change' and 'unsafe' must not look alike", () => {
+    expect(classifyDiff("")).toBeNull();
+    expect(classifyDiff(null)).toBeNull();
+    expect(classifyDiff(undefined)).toBeNull();
+  });
+});
 
 describe("autonomous-lane envelope", () => {
   it("protects the irreversible class — auth, credentials, money-moving logic, guards, workflows", () => {
@@ -135,6 +204,84 @@ describe("autonomous-lane envelope", () => {
       run("add", "-A");
       run("commit", "-m", "protected path");
       expect(() => scanTemp("--base", "main")).toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // The diffAware exemption end to end, through real git — src/alpaca/alpaca-trading-client.ts is
+  // a real diffAware rule in the shipped envelope.json (cpSync'd into this temp repo below), so this
+  // exercises the actual production configuration, not a synthetic stand-in.
+  it("exempts a diffAware protected path only when the real diff is a pure, non-mutating insertion", () => {
+    const dir = mkdtempSync(join(tmpdir(), "envelope-diffaware-"));
+    const run = (...args: string[]): string =>
+      execFileSync("git", ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args], {
+        cwd: dir,
+        encoding: "utf8",
+        env: hermeticGitEnv(),
+      });
+    const clientPath = join(dir, "src/alpaca/alpaca-trading-client.ts");
+    const checkTemp = (...args: string[]): Check[] =>
+      JSON.parse(
+        execFileSync(
+          "node",
+          [join(process.cwd(), "scripts/envelope-scan.mjs"), "--check", ...args],
+          {
+            cwd: dir,
+            encoding: "utf8",
+          },
+        ),
+      ) as Check[];
+    const scanTemp = (...args: string[]): string =>
+      execFileSync(
+        "node",
+        [join(process.cwd(), "scripts/envelope-scan.mjs"), "--lane", "feedback/1", ...args],
+        { cwd: dir, encoding: "utf8", env: hermeticGitEnv({ GITHUB_HEAD_REF: "" }) },
+      );
+    try {
+      run("init", "-b", "main");
+      mkdirSync(join(dir, "src/alpaca"), { recursive: true });
+      cpSync("envelope.json", join(dir, "envelope.json"));
+      writeFileSync(clientPath, "export const existing = 1;\n");
+      run("add", "-A");
+      run("commit", "-m", "base");
+
+      // Pure insertion, no new mutating call — exempt.
+      run("checkout", "-b", "feedback/1");
+      writeFileSync(clientPath, "export const existing = 1;\nexport const addedField = 2;\n");
+      run("add", "-A");
+      run("commit", "-m", "additive field");
+      const additive = checkTemp("src/alpaca/alpaca-trading-client.ts", "--base", "main");
+      expect(additive[0]).toMatchObject({ protected: true, additiveSafe: true, blocking: false });
+      const additiveScan = scanTemp("--base", "main");
+      expect(additiveScan).toContain("diffAware exemption");
+      expect(additiveScan).toContain("nothing in the protected envelope was touched");
+
+      // Same file, but an existing line changes — not a pure insertion, stays gated.
+      run("checkout", "main");
+      run("checkout", "-b", "feedback/2");
+      writeFileSync(clientPath, "export const existing = 2;\n");
+      run("add", "-A");
+      run("commit", "-m", "modifies existing line");
+      const modified = checkTemp("src/alpaca/alpaca-trading-client.ts", "--base", "main");
+      expect(modified[0]).toMatchObject({ protected: true, additiveSafe: false, blocking: true });
+      expect(() => scanTemp("--base", "main")).toThrow();
+
+      // Pure insertion, but it adds a brand-new mutating broker call — stays gated even though
+      // nothing existing was touched (the Slice 2 shape: new capability, not a safe extension).
+      run("checkout", "main");
+      run("checkout", "-b", "feedback/3");
+      writeFileSync(
+        clientPath,
+        "export const existing = 1;\n" +
+          "export async function cancelOrder(id) {\n" +
+          "  return this.transport.delete(`/v2/orders/${id}`);\n" +
+          "}\n",
+      );
+      run("add", "-A");
+      run("commit", "-m", "new mutating call, purely additive");
+      const newCall = checkTemp("src/alpaca/alpaca-trading-client.ts", "--base", "main");
+      expect(newCall[0]).toMatchObject({ protected: true, additiveSafe: false, blocking: true });
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
