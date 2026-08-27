@@ -8,7 +8,6 @@ import {
   displayNameFor,
   idOf,
   keyOf,
-  ownedAccountOptions,
   resolveCurrentId,
   rotatableAccountOptions,
 } from "./dashboard-identity.js";
@@ -96,7 +95,10 @@ export async function trySelfServiceRoute(
     return true;
   }
   if (
-    (path === "/account" || path === "/account/remove" || path === "/account/bot-control") &&
+    (path === "/account" ||
+      path === "/account/remove" ||
+      path === "/account/bot-control" ||
+      path === "/account/rotate") &&
     config.accountAdmin
   ) {
     await handleAccountSelfServiceRoute(
@@ -130,10 +132,12 @@ export async function trySelfServiceRoute(
  * Same identity resolution /rotate and /trade use; account-service enforces the rules regardless
  * of what this layer picks. `ownedAccounts` powers the picker (Eric, 2026-08-25: "this should be
  * a dropdown of the accounts tied to the email address" — the same ask that applies to /rotate now
- * applies here); which one is "current" is a real page switch via ?id=, validated against the
- * caller's own owned ids, never trusted blind — both forms on the page (edit, remove) then agree
- * on the same account instead of drifting independently. Split out of `trySelfServiceRoute` to
- * keep that dispatcher inside its complexity budget.
+ * applies here) — via `rotatableAccountOptions`, so an owner's switcher also includes every roster
+ * account, the same widening /rotate got (2026-08-27), now that rotate lives here too. Which one
+ * is "current" is a real page switch via ?id=, validated against that same list, never trusted
+ * blind — every form on the page (edit, remove, rotate) then agrees on the same account instead of
+ * drifting independently. Split out of `trySelfServiceRoute` to keep that dispatcher inside its
+ * complexity budget.
  */
 async function handleAccountSelfServiceRoute(
   req: IncomingMessage,
@@ -145,7 +149,7 @@ async function handleAccountSelfServiceRoute(
   session: Session | undefined,
   nav: NavContext,
 ): Promise<void> {
-  const ownedAccounts = config.auth ? ownedAccountOptions(session, config) : [];
+  const ownedAccounts = config.auth ? rotatableAccountOptions(session, config) : [];
   const requestedId = idOf(url);
   const requesterId =
     (requestedId && ownedAccounts.some((a) => a.id === requestedId) ? requestedId : undefined) ??
@@ -158,6 +162,7 @@ async function handleAccountSelfServiceRoute(
     authConfigured: Boolean(config.auth),
     key: keyOf(url),
     nav,
+    ...(config.rotateCredentials ? { rotateCredentials: config.rotateCredentials } : {}),
     ...(config.controls ? { controls: config.controls } : {}),
   });
 }

@@ -30,9 +30,10 @@ export function resolveOwnedIds(
  * `resolveOwnedIds`, with display names attached — for a picker, not just a resolved default.
  * Eric, 2026-08-25: "this should be a dropdown of the accounts tied to the email address" — a
  * signed-in email can own more than one account now that `/claim` links any kind, so a single
- * resolved id is no longer enough to render a form field from.
+ * resolved id is no longer enough to render a form field from. Not exported: every call site now
+ * goes through `rotatableAccountOptions`, which composes this with the owner-only roster widening.
  */
-export function ownedAccountOptions(
+function ownedAccountOptions(
   session: Session | undefined,
   config: DashboardServerConfig,
 ): readonly OwnedAccountOption[] {

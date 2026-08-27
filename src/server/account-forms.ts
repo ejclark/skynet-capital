@@ -4,6 +4,7 @@ import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { botControlsBlock, handleBotControl } from "./account-bot-controls.js";
 import { type AccountFormContext, suffix } from "./account-form-context.js";
+import { handleAccountRotate, rotateBlock } from "./account-rotate-block.js";
 import type {
   RemoveAccountInput,
   RemoveAccountResult,
@@ -13,6 +14,7 @@ import type {
 import type { Session } from "./auth/session.js";
 import type { ControlsDeps } from "./controls-form.js";
 import { railedShell } from "./page-shell.js";
+import type { RotateCredentialsInput, RotateResult } from "./participant-service.js";
 import {
   handleSelfServiceForm,
   type OwnedAccountOption,
@@ -76,6 +78,8 @@ export async function handleAccountRoute(
     readonly nav: NavContext;
     /** Bot-controls store, when Mission Control is wired — powers the folded-in suspend toggle. */
     readonly controls?: ControlsDeps;
+    /** Credential rotation, when wired — powers the folded-in rotate block. */
+    readonly rotateCredentials?: (input: RotateCredentialsInput) => Promise<RotateResult>;
   },
 ): Promise<void> {
   const { admin, requesterId, ownedAccounts, authConfigured, key, nav, controls } = options;
@@ -105,6 +109,10 @@ export async function handleAccountRoute(
   };
   if (path === "/account/bot-control") {
     await handleBotControl(req, res, method, ctx, controls, options.session);
+    return;
+  }
+  if (path === "/account/rotate") {
+    await handleAccountRotate(req, res, method, ctx, options.rotateCredentials, options.session);
     return;
   }
   if (path === "/account/remove") {
@@ -225,7 +233,7 @@ anything on this page; this only changes what Skynet Capital stores and shows.</
 </form>
 <p class="note">Renames stay linked to your sign-in: the name must match your sign-in name or your
 email's local part, so the board keeps recognizing you. Bots can't be renamed — remove and re-add.</p>
-<p class="note">Regenerated your Alpaca key? <a href="${ctx.requesterId ? rotateHref(ctx.requesterId, key) : `/rotate${suffix(key)}`}">Rotate your credentials</a> — that swaps the key and changes nothing else on this page.</p>
+${ctx.requesterId ? rotateBlock(ctx) : `<p class="note">Regenerated your Alpaca key? <a href="/rotate${suffix(key)}">Rotate your credentials</a>.</p>`}
 ${botControlsBlock(ctx)}
 <div style="margin-top:34px;padding:18px;border:1px solid color-mix(in srgb,var(--neg) 55%,var(--border));border-radius:11px">
   <h1 style="font-size:16px;color:var(--neg)">Remove this account</h1>

@@ -174,4 +174,59 @@ describe("trySelfServiceRoute", () => {
     // A picker, not a locked single field — both names appear as <option>s in a <select>.
     expect(out.body).toContain("<select");
   });
+
+  // Eric, 2026-08-27, live: every real entry point to /rotate carries an explicit ?id=, which
+  // locks the field — the widened picker from the test above was never actually reachable.
+  // /account's own switcher must carry the same widening now that rotate lives there too.
+  it("widens /account's switcher to every roster account for an owner, same as /rotate", async () => {
+    const out: { body?: string } = {};
+    const res = {
+      writeHead: () => undefined,
+      end: (body?: string) => {
+        out.body = body;
+      },
+    } as unknown as ServerResponse;
+    const board = [
+      { id: "human-eric", displayName: "Eric", kind: "human" as const },
+      { id: "sauron", displayName: "Sauron", kind: "bot" as const },
+    ];
+    const config = {
+      auth: {},
+      accountAdmin: {
+        updateProfile: async () => ({ ok: true, id: "human-eric", displayName: "Eric" }),
+        removeAccount: async () => ({ ok: true, id: "human-eric", displayName: "Eric" }),
+        profileFor: () => ({ displayName: "Eric" }),
+      },
+      rotateCredentials: async () => ({ ok: true, id: "human-eric", displayName: "Eric" }),
+      hub: { getState: () => ({ participants: board }) },
+      resolveOwnerId: () => "sauron",
+      resolveOwnerIds: () => ["sauron"],
+      isOwnerEmail: (email: string) => email === "eric@example.com",
+      rosterIds: () => new Set(["human-eric", "sauron"]),
+    } as unknown as DashboardServerConfig;
+    const session: Session = {
+      email: "eric@example.com",
+      provider: "google",
+      exp: Date.now() + 1000,
+    };
+
+    const handled = await trySelfServiceRoute(
+      fakeReq(),
+      res,
+      "/account",
+      "/account",
+      config,
+      session,
+      nav,
+    );
+
+    expect(handled).toBe(true);
+    // The account switcher (accountSwitcher in account-forms.ts) lists both, not just the one
+    // account the session's email happens to own via a claim link.
+    expect(out.body).toContain("Managing:");
+    expect(out.body).toContain("Sauron");
+    expect(out.body).toContain('href="/account?id=human-eric"');
+    // And the rotate block is right there for the currently-selected account.
+    expect(out.body).toContain('action="/account/rotate"');
+  });
 });
