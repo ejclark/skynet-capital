@@ -18,7 +18,13 @@ set -euo pipefail
 
 APP="${1:?usage: smoke-bots.sh <app-name> <expected-git-sha>}"
 WANT_SHA="${2:?usage: smoke-bots.sh <app-name> <expected-git-sha>}"
-ATTEMPTS="${SMOKE_ATTEMPTS:-8}"   # a machine swap + boot + first bridge fetch can take ~30s
+ATTEMPTS="${SMOKE_ATTEMPTS:-30}"   # widened 2026-08-27: 8x5s=40s failed 3/3 live runs even though
+                                    # the app's own boot logs "armed" within ~2-9s of container
+                                    # start (confirmed against real timestamps) — `flyctl logs -n`
+                                    # (no-tail, one-shot) appears to lag Fly's log-shipping pipeline
+                                    # well past that, not a boot-speed problem. 30x5s=150s is the
+                                    # mitigation; root Fly-side delivery lag is not otherwise
+                                    # confirmed, so this stays a generous budget, not a fixed claim.
 SLEEP="${SMOKE_SLEEP:-5}"
 ARMED_MARKER="[controls] bridge armed — controls fetched"
 
