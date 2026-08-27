@@ -2,7 +2,7 @@
 
 **Kind:** rates · **Date:** 2026-08-26 (confirmed, TSY: treasurydirect.gov upcoming auctions —
 1:00pm ET, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-08-26
+**Last assessed:** 2026-08-27
 
 ## At a glance
 
@@ -175,3 +175,55 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-08-27**, from the primary source: the U.S. Treasury's own Fiscal Data API
+(`api.fiscaldata.treasury.gov`, `v1/accounting/od/auctions_query`, CUSIP `91282CRK9`, queried
+2026-08-27) — the machine-readable counterpart of the treasurydirect.gov result release — plus one
+independent press write-up (swingfish.trade, 2026-08-26/27) for the when-issued yield and averages
+used to characterize the print.
+
+**The print (confirmed, primary source).** $70B 5-year note, high yield **4.393%** vs a **4.391%**
+when-issued yield → a **+0.2bp tail** — tighter than July's +0.9bp tail and well inside the
+~0.6–0.7bp recent average (near "stop through," not a widening of the tailing streak). Bid-to-cover
+**2.37x**, up from July's 2.28x and above the ~2.32–2.33x recent average (computed here as
+`comp_accepted` $69.7975B ÷ `total_tendered` $174.9965B, matching the API's own
+`bid_to_cover_ratio` field). Bidder mix computed against `comp_accepted`: **indirect 61.5%**
+($42.935B) — up from July's weak 59.2% but still ~4pp below the ~65.6–65.7% historical average;
+**direct 28.4%** ($19.849B) — well above the ~21.4% average, domestic buyers doing more of the
+work; **primary dealer 10.0%** ($7.014B) — below the ~12.9% average, i.e. dealers absorbed *less*
+of the issue than usual. Offering size confirmed at $70B, matching the carried-forward pattern the
+initial doc flagged as unconfirmed pre-auction.
+
+**Correction to a secondhand figure.** A different agent's PCE-event research (same day) reported
+this auction's bid-to-cover as "2.39 vs ~2.46 avg." The primary-source figure pulled directly here
+is **2.37x vs a ~2.32–2.33x average** — neither number matches the secondhand claim (both the
+level and the average were off, and the secondhand framing read as a soft/below-average result
+when the primary data shows a *stronger-than-average* print). This doc's numbers come straight
+from the Treasury API record, not from that secondhand report.
+
+**Same-day macro (context, not this doc's subject).** July PCE (08:30 ET, same morning): headline
++3.7% y/y (above forecast — hot), core +3.3% y/y (in line with forecast) — CNBC/Invezz, both
+2026-08-26. Q2 GDP second estimate (08:30 ET, same morning): revised down to **+1.5%** annualized
+(BEA release 26-38, bea.gov, 2026-08-26) — softer growth, not hotter. NVDA reported after the
+close (scored in its own doc, `nvda-2026-08-26-print.md`). Net: the morning's inflation read was
+mixed (hot headline, in-line core), not a clean "hot PCE" print.
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"Unusually extreme result (either direction) + hot PCE" →** did not fire. The auction was
+  *solid*, not extreme — a near-flat tail and above-average bid-to-cover, with indirect demand
+  improved-but-still-soft. It reads as a partial reversal of the tailing-streak narrative (leg a),
+  not confirmation or a dramatic breach in either direction. PCE was mixed (hot headline, in-line
+  core), not the clean "hot PCE" the switch was written for.
+- **"Size/CUSIP materially different from the $70B pattern" →** did not fire. Confirmed $70B,
+  matching the carried-forward assumption exactly.
+
+**Verdict vs. the stance.** The watch-only, no-standalone-play stance held: this was not the
+fourth-consecutive-tail confirmation the initial doc flagged as the bearish-duration tell, nor an
+extreme benign surprise — it landed as a moderate improvement (tighter tail, stronger
+bid-to-cover, dealers absorbing less) with one lingering soft spot (indirect demand still below
+trend, though better than July). Nothing here licensed sizing or timing any NVDA-adjacent position
+off the auction result, consistent with the stance from day one. No forward test in
+`forward-tests.md` is keyed to this event id, so nothing scores there. This doc goes quiet after
+this entry per the close-out rule.
