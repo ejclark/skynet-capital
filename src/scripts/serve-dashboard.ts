@@ -226,6 +226,8 @@ async function main(): Promise<void> {
           },
           resolveOwnerId,
           resolveOwnerIds,
+          isOwnerEmail: (email: string) => owners.has(email.toLowerCase()),
+          rosterIds: () => new Set(envRoster.map((p) => p.id)),
         }
       : {}),
     // Mission Control (Eric, 2026-08-21): the owner's switchboard for the autonomous fleet.

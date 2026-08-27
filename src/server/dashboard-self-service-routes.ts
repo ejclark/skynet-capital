@@ -10,6 +10,7 @@ import {
   keyOf,
   ownedAccountOptions,
   resolveCurrentId,
+  rotatableAccountOptions,
 } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { handleInvite } from "./invite-form.js";
@@ -169,7 +170,10 @@ async function handleAccountSelfServiceRoute(
  * return visit. Resolves to SEVERAL (a normal state now that /claim can link more than one) →
  * leave prefillId empty so the form falls through to the picker, rather than silently guessing
  * which one they meant ("this should be a dropdown of the accounts tied to the email address").
- * Resolves to none → free text, same as before. Split out of `trySelfServiceRoute` to keep that
+ * Resolves to none → free text, same as before. Uses `rotatableAccountOptions`, not
+ * `ownedAccountOptions` — an OWNER's candidate list also includes every roster account (2026-08-27:
+ * an owner's own roster account resolved to nobody and the field locked on an unrelated owned bot
+ * instead, with no way to pick another). Split out of `trySelfServiceRoute` to keep that
  * dispatcher inside its complexity budget.
  */
 async function handleRotateSelfServiceRoute(
@@ -182,7 +186,7 @@ async function handleRotateSelfServiceRoute(
   nav: NavContext,
 ): Promise<void> {
   const requester = rotateRequester(config, session);
-  const ownedAccounts = config.auth ? ownedAccountOptions(session, config) : [];
+  const ownedAccounts = config.auth ? rotatableAccountOptions(session, config) : [];
   const prefillId = idOf(url) || (ownedAccounts.length === 1 ? (ownedAccounts[0]?.id ?? "") : "");
   const prefillName = prefillId ? displayNameFor(config, prefillId) : "";
   await handleRotate(

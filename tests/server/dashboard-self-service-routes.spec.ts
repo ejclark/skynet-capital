@@ -127,4 +127,51 @@ describe("trySelfServiceRoute", () => {
     );
     expect(handled).toBe(false);
   });
+
+  // 2026-08-27, reported live: an owner's own roster account had no `ownerEmail` link, so the
+  // page resolved to a DIFFERENT owned account (a bot) and locked the field on it — no way to
+  // pick the account they actually needed. /rotate must offer every roster account for an owner.
+  it("offers a picker with the owner's own roster account, not just the bot they own by email", async () => {
+    const out: { body?: string } = {};
+    const res = {
+      writeHead: () => undefined,
+      end: (body?: string) => {
+        out.body = body;
+      },
+    } as unknown as ServerResponse;
+    const board = [
+      { id: "human-eric", displayName: "Eric", kind: "human" as const },
+      { id: "sauron", displayName: "Sauron", kind: "bot" as const },
+    ];
+    const config = {
+      auth: {},
+      rotateCredentials: async () => ({ ok: true }) as never,
+      hub: { getState: () => ({ participants: board }) },
+      resolveOwnerId: () => "sauron",
+      resolveOwnerIds: () => ["sauron"],
+      isOwnerEmail: (email: string) => email === "eric@example.com",
+      rosterIds: () => new Set(["human-eric", "sauron"]),
+    } as unknown as DashboardServerConfig;
+    const session: Session = {
+      email: "eric@example.com",
+      provider: "google",
+      exp: Date.now() + 1000,
+    };
+
+    const handled = await trySelfServiceRoute(
+      fakeReq(),
+      res,
+      "/rotate",
+      "/rotate",
+      config,
+      session,
+      nav,
+    );
+
+    expect(handled).toBe(true);
+    expect(out.body).toContain("Eric");
+    expect(out.body).toContain("Sauron");
+    // A picker, not a locked single field — both names appear as <option>s in a <select>.
+    expect(out.body).toContain("<select");
+  });
 });
