@@ -261,11 +261,22 @@ jobs:
       - name: Deploy bots
         # deploy-lag.mjs reads THIS step's conclusion (by name) to find the last real bots deploy —
         # a preflight skip leaves it `skipped`, so a no-op run can never poison the lag baseline.
+        #
+        # GIT_SHA is stamped via a TEMP COPY of fly.bots.toml's [env] block, never `flyctl deploy
+        # --env` — verified live on 2026-08-27 that the flag does not reliably persist into
+        # `flyctl machine list --json`'s `config.env` (three deploys in a row stamped the flag,
+        # every one read back null; matches a known community-reported flyctl gap). A [env] line
+        # in the config file is what fly.bots.toml's own SKYNET_AUTONOMOUS_MODE already proves
+        # persists correctly — same mechanism, so GIT_SHA rides it instead of the unreliable flag.
         if: ${{ steps.preflight.outputs.deploy == 'true' }}
-        run: >-
-          flyctl deploy --config fly.bots.toml
-          --image "${{ steps.image.outputs.image }}"
-          --env "GIT_SHA=${{ github.sha }}"
+        run: |
+          # Insert as the FIRST line under [env] — TOML is order-sensitive, so appending at
+          # end-of-file would land the key under [[vm]] instead. sed inserts right after the
+          # `[env]` header line, ahead of the block's own keys/comments.
+          sed "/^\[env\]/a\\
+            GIT_SHA = \"${{ github.sha }}\"" fly.bots.toml > /tmp/fly.bots.deploy.toml
+          grep -A2 '^\[env\]' /tmp/fly.bots.deploy.toml
+          flyctl deploy --config /tmp/fly.bots.deploy.toml --image "${{ steps.image.outputs.image }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
 
