@@ -17,9 +17,12 @@ export interface AccountFormContext {
   /** Current profile of the resolved account, for prefill. */
   readonly profile?: { readonly displayName: string; readonly timezone?: string };
   /**
-   * Every account the caller's sign-in owns, for the account switcher — rendered only when
+   * Every account the caller can act on here, for the account switcher — rendered only when
    * there's more than one (Eric, 2026-08-25: "this should be a dropdown of the accounts tied to
-   * the email address").
+   * the email address"). For an owner this is wider than "owns": every roster account too
+   * (`rotatableAccountOptions`, 2026-08-27) — profile edit/remove still only work on a
+   * self-owned one (account-service.ts has no owner bypass there), but rotate does, for any of
+   * them (participant-service.ts's `refuseRotation` already grants that).
    */
   readonly ownedAccounts: readonly OwnedAccountOption[];
   /** The resolved account's autonomous-trading suspend state, when it's a bot AND bot controls

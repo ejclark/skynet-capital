@@ -75,9 +75,10 @@ describe("GET /account", () => {
         expect(html).toContain('type="hidden" name="id" value="human-ann"');
         expect(html).not.toContain('value="human-ann" required readonly');
         expect(html).toContain("Remove this account");
-        // Locked to this exact account, not left to /rotate's own session-resolution guesswork —
-        // load-bearing when the session owns more than one account.
-        expect(html).toContain('href="/rotate?id=human-ann"');
+        // Eric, 2026-08-27: rotate lives inline now, acting on whichever account the switcher
+        // points to — not a link out to a separate page that locks the field again.
+        expect(html).toContain('action="/account/rotate"');
+        expect(html).toContain('type="hidden" name="id" value="human-ann"');
       },
     );
   });
@@ -257,6 +258,79 @@ describe("POST /account/remove", () => {
     const calls = { updates: [], removals: [] };
     await withRoute({ admin: okAdmin(calls) }, async (base) => {
       const res = await fetch(`${base}/account/remove`, { method: "DELETE" });
+      expect(res.status).toBe(405);
+    });
+  });
+});
+
+// Eric, 2026-08-27, live: every real entry point to /rotate carries an explicit ?id=, which locks
+// the field by design — the picker widened on #676 was never actually reachable. Rotate now lives
+// inline on /account, acting on whichever account the switcher already points to.
+describe("POST /account/rotate", () => {
+  it("rotates the account the page is showing", async () => {
+    const calls = { updates: [], removals: [] };
+    const rotated: unknown[] = [];
+    await withRoute(
+      {
+        admin: okAdmin(calls),
+        requesterId: "human-ann",
+        session,
+        authConfigured: true,
+        rotateCredentials: (input) => {
+          rotated.push(input);
+          return Promise.resolve({ ok: true, id: input.id, displayName: "Ann" });
+        },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/account/rotate`, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: "id=human-ann&apiKey=PKnew&apiSecret=shh",
+        });
+        expect(res.status).toBe(200);
+        expect(await res.text()).toContain("Credentials rotated");
+        expect(rotated[0]).toMatchObject({
+          id: "human-ann",
+          apiKey: "PKnew",
+          apiSecret: "shh",
+          requesterId: "human-ann",
+          requesterEmail: "ann@gmail.com",
+        });
+      },
+    );
+  });
+
+  it("refuses an id that doesn't match the account the page is showing", async () => {
+    const calls = { updates: [], removals: [] };
+    const rotated: unknown[] = [];
+    await withRoute(
+      {
+        admin: okAdmin(calls),
+        requesterId: "human-ann",
+        session,
+        authConfigured: true,
+        rotateCredentials: (input) => {
+          rotated.push(input);
+          return Promise.resolve({ ok: true, id: input.id, displayName: "Ann" });
+        },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/account/rotate`, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: "id=human-victim&apiKey=PKnew&apiSecret=shh",
+        });
+        expect(res.status).toBe(400);
+        expect(await res.text()).toContain("isn't the account this page is showing");
+        expect(rotated).toHaveLength(0);
+      },
+    );
+  });
+
+  it("refuses other methods with 405", async () => {
+    const calls = { updates: [], removals: [] };
+    await withRoute({ admin: okAdmin(calls) }, async (base) => {
+      const res = await fetch(`${base}/account/rotate`, { method: "GET" });
       expect(res.status).toBe(405);
     });
   });
