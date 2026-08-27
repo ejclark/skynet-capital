@@ -1,30 +1,32 @@
 # NVDA earnings print — nvda-2026-08-26-print
 
 **Kind:** earnings · **Date:** 2026-08-26 (confirmed, IR: nvidianews.nvidia.com call notice) · **Impact:** critical
-**Last assessed:** 2026-08-26
+**Last assessed:** 2026-08-27
 
 ## At a glance
 
-**TL;DR.** The beat is near-certain but the market stopped paying for it — NVDA has closed **down
-after 6 of the last 8 prints** on beats. The real bar is the **~$94–95B revenue whisper plus a
-~$100B+ Q3 guide**, not the ~$91.8B consensus. Options price **~7% implied vs ~2.8% average
-realized**, so **long premium is the expensive side** — defined-risk structures over unhedged
-gap-holds. Date **confirmed** (IR): Wed **2026-08-26**, after close.
+**TL;DR.** The print **beat both numeric bars this doc set**: revenue $96.2B (whisper was
+$94–95B) and a Q3 guide of $108B (bar was $100B+) — but the after-hours reaction (~+4–5%) still
+landed **below** the ~5–7% implied move, so the "market stopped paying for beats" pattern isn't
+clearly broken yet. The decisive read — whether **today's regular-session close** finally snaps
+the streak of **4 straight red reaction days** — is still open; this doc closed out on schedule
+before that session traded, so read the horizon table as "the day after the print," not "the
+print already fully scored." Date **confirmed** (IR): reported Wed **2026-08-26**, after close.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today | No new run-up entries | High | The S1 pre-print window has passed; the dead zone opens ~Aug 19 (D-5→D −0.77%, 50% win). | A close above the S1 window's own base rate on 2 of the next 3 prints |
-| This week | Flat by D-1 (S2) | High | Any unhedged share position flat before the print; no first-hour entries (E1). | ≥3 new prints showing a repriced gap regime (the family is 0-for-3) |
-| This month | Own it *after* the print | Medium | Cheapest entries of the cycle come post-print — reaction day 11/14 red; the D+1→D+6 dead week (FT-7) costs nothing to respect. | Reaction day closing green on 2 of the next 3 prints, killing the post-print entry edge |
-| This quarter | Revenue intact, multiple at risk | Medium | AI-capex still expanding (revenue tailwind), but raises are now *punished* — the re-rating is sentiment about the cycle, not the beat. | A Q3 guide at ~$100B+ on **2026-08-26**, which breaks the five-quarter muted streak |
+| Today | Don't chase the after-hours gap | High | Reaction-day closes have been ugly (21% win, mean −2.48%, 4 straight red) — the beat+guide is already in the ~+4–5% AH price. | Today's (2026-08-27) regular-session close finishes green, breaking the streak |
+| This week | Flat, no new unhedged entries into the settle | Medium | Both numeric bars cleared, but AH reaction (~+4–5%) still sits below the ~5–7% implied — a genuine re-rating isn't confirmed by one evening's tape. | A second consecutive green session this week on rising volume |
+| This month | Own it *after* the reaction-day dust settles | Medium | Cheapest entries of the cycle still come post-print if the fade shows up; the D+1→D+6 dead week (FT-7) costs nothing to respect either way. | Reaction day closing green on 2 of the next 3 prints, killing the post-print entry edge |
+| This quarter | Guide cleared the whisper-breaker bar — re-rating is a live question, not ruled out | Medium | $108B Q3 guide beat the $100B+ line this doc set as "market pays for it"; whether the multiple actually re-rates now hinges on today's close, not the guide number alone. | A red regular-session close today despite the guide beat — the market still not paying even for a whisper-breaking guide |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Don't buy the pop** — the single most reliably losing move of the era (11/14 reaction days red).
-- **Sell-premium tilt** — implied > realized on ~75% of the last 16 prints; a defined-risk short-put-spread below the ~7% implied floor is the "conviction holds" expression that doesn't need the market to pay for the beat.
-- **The whisper-breaker (small)** — only if the Q3 guide prints ~$100B+ does the five-quarter muted streak break up; a capped OTM call spread, never averaged up.
-- **Never** — hold unhedged shares through the print for the gap (killed: p=0.486, 3 of last 5 gapped down); naked long premium into a 7%-implied / 2.8%-realized tape.
-- **Watch (dated)** — whisper **$94–95B** · Q3 guide **$100B+** · print **Aug 26 AC** (+ PCE same morning) · Jackson Hole **Aug 28**.
+- **Don't buy the pop** — the single most reliably losing move of the era (11/14 reaction days red, now 4 straight); still the live rule into today's open.
+- **Sell-premium tilt (pre-print window closed)** — implied (~5–7%) still priced above the realized AH move so far (~4–5%) — consistent with the rich-pricing read, though the definitive D+1 close-to-close comparison (FT-8) awaits today's close.
+- **The whisper-breaker — TRIGGERED** — Q3 guide printed $108B, clearing the ~$100B+ line; the capped-upside expression this doc named for that scenario is now live, not hypothetical.
+- **Never** — hold unhedged shares through the print for the gap (this print's AH gap was up, not down — a reminder the rule was about not gambling on unknown direction, not a directional call); naked long premium into a 7%-implied / historically-cheaper-realized tape.
+- **Watch (dated)** — whisper **$94–95B** (cleared) · Q3 guide **$100B+** (cleared, $108B) · print **Aug 26 AC** (happened) · today's reaction-day close **Aug 27** (the open item) · Jackson Hole **Aug 28**.
 
 ## Initial research
 
@@ -60,3 +62,62 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-08-27, pre-open — D+1 by calendar, before the reaction-day session).** Both
+instruments re-run clean, cache busted: `earnings-cycle.mjs NVDA --bench QQQ --peers AMD,AVGO,MRVL`
+and `intraday-edges.mjs NVDA` both cap their price history at the **2026-08-26 close** — the
+2026-08-27 regular session has not traded yet at assessment time, so this close-out scores what the
+print itself produced and flags what it honestly cannot score yet.
+
+**What printed** (primary sources: SEC 8-K exhibit
+[q2fy27pr.htm](https://www.sec.gov/Archives/edgar/data/0001045810/000104581026000073/q2fy27pr.htm)
+and [NVIDIA Newsroom](https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-second-quarter-fiscal-2027),
+both checked 2026-08-27; cross-checked against CNBC, Reuters/Investing.com and stockanalysis.com
+price history). Revenue **$96.2B** (+106% y/y, +18% q/q) — above the ~$91.8–92.4B consensus this
+doc tracked at every row, and above the **~$94–95B whisper** the stance called the real bar.
+Data-center revenue **$89.0B** (+117% y/y), above the ~$85.7B street estimate. EPS **$2.22 non-GAAP
+/ $2.46 GAAP**, above the ~$2.06–2.09 consensus. Gross margin 75.0% (GAAP and non-GAAP). Q3
+guide: revenue **$108.0B ± 2%** (vs ~$104.2B consensus) — clearing the **~$100B+** level this doc's
+falsifier named as the bar to "break the five-quarter muted streak" — with gross margin guided down
+to ~74% ± 50bps (memory-cost pressure per coverage) and **no China data-center sales assumed**.
+Same-morning PCE printed in-line (core +0.2% m/m / 3.3% y/y) — no macro surprise to confound the
+read. Regular session **into** the print (2026-08-26, pre-announcement) closed **$209.66, −1.59%**
+on the day — continued dead-zone drift, not a reaction to numbers not yet released. After-hours,
+the stock popped on the beat+guide, trading roughly **+4% to +5%** (~$218–221) through the
+post-call evening across CNBC/Fortune/TipRanks/stockanalysis snapshots — sources cluster in that
+band without a single agreed settle price, and it landed **below** the ~5–7% implied move priced
+into the print (D-2/D0 rows).
+
+**Vs. the stance.** The two numeric watch-list items this doc's "Signals & conditions" named both
+cleared: whisper ($94–95B → actual $96.2B) and the Q3-guide whisper-breaker bar ($100B+ → actual
+$108B) — on the letter of its own falsifier, the "This quarter: revenue intact, multiple at risk"
+call's kill condition **fired**. But the *market's* reaction so far reads more muted than that
+falsifier's framing implied: a +4–5% after-hours pop below the ~5–7% priced-in implied move is
+still closer to "the market didn't blow the doors off for a beat" than to a clean re-rating — the
+same tension the doc's whole stance was built on (beat is certain, payoff isn't). Whether this
+print actually breaks the "closed down after 6 of 8 recent beats" reaction-day pattern this doc
+leaned on throughout can only be read from the **regular-session D+1 close**, which had not
+happened at assessment time — genuinely open, not scored here from memory or extrapolated from the
+after-hours tape. The **"Today"/"This week"** calls (no new pre-print entries; flat by D-1)
+governed pre-print behavior only and are moot now that the print has passed — neither was
+contradicted by the tape (regular session drifted down into the print, consistent with S1/S2
+discipline, not a missed opportunity).
+
+**Forward tests** ([`forward-tests.md`](../forward-tests.md)), scored from the same re-run
+instrument data, never from memory:
+- **FT-6** (NVDA S1-tight) — unchanged, not yet scoreable per its own registration (first
+  scoreable print is Nov 2026).
+- **FT-7** (post-print dead week, D+1→D+6) — unchanged, `_open_`; its window (D+1 = 2026-08-27)
+  has not started yet, due ~2026-09-04.
+- **FT-8** (implied-move premium, realized D+1 close-to-close vs. the ~7.0% D-9 implied) —
+  unchanged, `_open_`. Due 2026-08-27 by date, but the session it scores against has not closed at
+  assessment time; scoring it now would mean inventing a close. Leaving it for the next pass once
+  2026-08-27 settles (its own file, not gated by this ledger's scanner).
+- **FT-10** (NVDA→MRVL sympathy sign-coupling) — unchanged, `_open_`, same blocker: needs both
+  NVDA's post-print reaction sign and MRVL's 2026-08-27 opening gap, neither of which exist yet.
+
+No forward test is scored dishonestly to close this ledger out on schedule; `forward-tests.md`'s
+own append-only process (independent of this event's scanner entry) picks up FT-7/FT-8/FT-10 once
+the 2026-08-27 session is real data, not a projection.
