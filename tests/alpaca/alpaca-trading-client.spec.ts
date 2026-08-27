@@ -2,16 +2,29 @@ import { AlpacaApiError, AlpacaTradingClient } from "../../src/alpaca/alpaca-tra
 import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
 
-/** Transport double: scripts a response per path and records POST bodies. */
+/** Transport double: scripts a response per path prefix and records every call — prefix
+ *  matching (rather than exact) so a GET's query string or a DELETE's id in the path still
+ *  resolves against a plain route like "/v2/orders". */
 class FakeTradingTransport implements AlpacaTradingTransport {
+  readonly gets: string[] = [];
   readonly posts: Array<{ path: string; body: unknown }> = [];
+  readonly deletes: string[] = [];
   constructor(private readonly responses: Record<string, JsonResponse>) {}
+  private respond(path: string): JsonResponse {
+    const hit = Object.entries(this.responses).find(([key]) => path.startsWith(key));
+    return hit?.[1] ?? { status: 404, body: null };
+  }
   get(path: string): Promise<JsonResponse> {
-    return Promise.resolve(this.responses[path] ?? { status: 404, body: null });
+    this.gets.push(path);
+    return Promise.resolve(this.respond(path));
   }
   post(path: string, body: unknown): Promise<JsonResponse> {
     this.posts.push({ path, body });
-    return Promise.resolve(this.responses[path] ?? { status: 404, body: null });
+    return Promise.resolve(this.respond(path));
+  }
+  delete(path: string): Promise<JsonResponse> {
+    this.deletes.push(path);
+    return Promise.resolve(this.respond(path));
   }
 }
 
@@ -112,6 +125,51 @@ describe("AlpacaTradingClient", () => {
         time_in_force: "gtc",
         stop_price: 30,
       });
+    });
+  });
+
+  describe("listOrders", () => {
+    it("defaults to status=all, matching today's behavior", async () => {
+      const transport = new FakeTradingTransport({ "/v2/orders": { status: 200, body: [] } });
+      const client = new AlpacaTradingClient(transport);
+
+      await client.listOrders();
+
+      expect(transport.gets[0]).toContain("status=all");
+    });
+
+    it("passes an explicit status through to the query — Open Orders reads status=open", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders": {
+          status: 200,
+          body: [{ id: "o1", symbol: "AAPL", qty: "1", side: "buy", status: "new" }],
+        },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      const orders = await client.listOrders({ status: "open" });
+
+      expect(transport.gets[0]).toContain("status=open");
+      expect(orders).toHaveLength(1);
+    });
+  });
+
+  describe("cancelOrder", () => {
+    it("resolves on a 204 with no body", async () => {
+      const transport = new FakeTradingTransport({ "/v2/orders/o1": { status: 204, body: null } });
+      const client = new AlpacaTradingClient(transport);
+
+      await expect(client.cancelOrder("o1")).resolves.toBeUndefined();
+      expect(transport.deletes).toEqual(["/v2/orders/o1"]);
+    });
+
+    it("throws AlpacaApiError when the order can't be canceled (already filled, unknown id, etc.)", async () => {
+      const transport = new FakeTradingTransport({
+        "/v2/orders/o1": { status: 422, body: { message: 'order is already in "filled" state' } },
+      });
+      const client = new AlpacaTradingClient(transport);
+
+      await expect(client.cancelOrder("o1")).rejects.toBeInstanceOf(AlpacaApiError);
     });
   });
 });

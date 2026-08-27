@@ -82,6 +82,9 @@ class CountingTransport implements AlpacaTradingTransport {
   post(path: string): Promise<JsonResponse> {
     return Promise.resolve(this.responses[path] ?? { status: 404, body: null });
   }
+  delete(path: string): Promise<JsonResponse> {
+    return Promise.resolve(this.responses[path] ?? { status: 404, body: null });
+  }
 }
 
 const participant: Participant = {

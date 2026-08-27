@@ -13,6 +13,9 @@ class FakeTransport implements AlpacaTradingTransport {
   post(_path: string, _body: unknown): Promise<JsonResponse> {
     return Promise.resolve({ status: 404, body: null });
   }
+  delete(_path: string): Promise<JsonResponse> {
+    return Promise.resolve({ status: 404, body: null });
+  }
 }
 
 describe("AlpacaNewsClient.getNews", () => {

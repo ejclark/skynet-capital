@@ -83,16 +83,29 @@ export class AlpacaTradingClient {
    * One page of order history, newest first. `until` (an ISO timestamp, exclusive, matched on
    * submission time) is the pagination cursor: pass the previous page's oldest `submitted_at` to
    * walk arbitrarily far back — Alpaca caps `limit` at 500 per request but keeps the full record.
+   * `status` defaults to "all" (today's behavior); pass "open" for the Open Orders panel — Alpaca
+   * is the store of record for a pending order, so there is nothing else to maintain here.
    */
-  async listOrders(params: { limit?: number; until?: string } = {}): Promise<AlpacaOrder[]> {
+  async listOrders(
+    params: { limit?: number; until?: string; status?: "open" | "closed" | "all" } = {},
+  ): Promise<AlpacaOrder[]> {
     const query = new URLSearchParams({
-      status: "all",
+      status: params.status ?? "all",
       limit: String(params.limit ?? 15),
       direction: "desc",
       nested: "false",
       ...(params.until ? { until: params.until } : {}),
     });
     return ensureOk<AlpacaOrder[]>(await this.transport.get(`/v2/orders?${query.toString()}`));
+  }
+
+  /** Cancels a still-open order. Alpaca returns 204 on success; a filled/already-canceled order
+   *  (or an unknown id) throws `AlpacaApiError`, same as any other non-2xx response. */
+  async cancelOrder(id: string): Promise<void> {
+    const response = await this.transport.delete(`/v2/orders/${id}`);
+    if (response.status < 200 || response.status >= 300) {
+      throw new AlpacaApiError(response.status, response.body);
+    }
   }
 
   /** Market clock — whether the market is currently open. */

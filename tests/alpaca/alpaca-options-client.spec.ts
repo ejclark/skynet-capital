@@ -20,6 +20,10 @@ function fakeTransport(
       log.push({ path, body });
       return respond(path);
     },
+    delete: (path) => {
+      log.push({ path });
+      return respond(path);
+    },
   };
 }
 

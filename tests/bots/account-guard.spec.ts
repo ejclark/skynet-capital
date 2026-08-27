@@ -12,6 +12,9 @@ class FakeTransport implements AlpacaTradingTransport {
   post(): Promise<JsonResponse> {
     return Promise.resolve(this.response);
   }
+  delete(): Promise<JsonResponse> {
+    return Promise.resolve(this.response);
+  }
 }
 
 function botFor(id: string): Bot {
