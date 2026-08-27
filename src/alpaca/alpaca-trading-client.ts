@@ -39,6 +39,12 @@ export interface PlaceOrderParams {
   readonly symbol: string;
   readonly qty: number;
   readonly side: Side;
+  /** Defaults to "market" — every existing caller that omits this keeps today's behavior. */
+  readonly type?: "market" | "limit" | "stop";
+  /** Required when `type` is "limit". */
+  readonly limit_price?: number;
+  /** Required when `type` is "stop". */
+  readonly stop_price?: number;
 }
 
 /** Shared by every Alpaca client wrapper: non-2xx becomes a typed AlpacaApiError. */
@@ -96,12 +102,18 @@ export class AlpacaTradingClient {
   }
 
   async placeOrder(params: PlaceOrderParams): Promise<AlpacaOrder> {
+    const type = params.type ?? "market";
     const response = await this.transport.post("/v2/orders", {
       symbol: params.symbol,
       qty: params.qty,
       side: params.side,
-      type: "market",
-      time_in_force: "day",
+      type,
+      // A held (limit/stop) order must outlive the trading day it was placed on — a stop-loss
+      // that silently expired overnight wouldn't be protecting anything. Market orders keep the
+      // existing "day" behavior unchanged.
+      time_in_force: type === "market" ? "day" : "gtc",
+      ...(params.limit_price !== undefined ? { limit_price: params.limit_price } : {}),
+      ...(params.stop_price !== undefined ? { stop_price: params.stop_price } : {}),
     });
     return ensureOk<AlpacaOrder>(response);
   }

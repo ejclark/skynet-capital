@@ -128,6 +128,86 @@ describe("previewOrder — warnings inform without blocking", () => {
   });
 });
 
+describe("previewOrder — limit and stop orders", () => {
+  it("defaults to a market order when no orderType is given", () => {
+    const preview = previewOrder({ symbol: "AAPL", quantity: 1, action: "buy" }, context());
+    expect(preview.orderType).toBe("market");
+    expect(preview.limitPrice).toBeUndefined();
+    expect(preview.stopPrice).toBeUndefined();
+  });
+
+  it("accepts a limit order at a reasonable price with no warning", () => {
+    const preview = previewOrder(
+      { symbol: "AAPL", quantity: 1, action: "buy", orderType: "limit", limitPrice: 118 },
+      context(),
+    );
+    expect(preview.ok).toBe(true);
+    expect(preview.orderType).toBe("limit");
+    expect(preview.limitPrice).toBe(118);
+    expect(preview.warnings.join(" ")).not.toContain("away from the current market price");
+  });
+
+  it("accepts a stop order at a reasonable price with no warning", () => {
+    const preview = previewOrder(
+      { symbol: "AAPL", quantity: 1, action: "sell", orderType: "stop", stopPrice: 112 },
+      context(),
+    );
+    expect(preview.ok).toBe(true);
+    expect(preview.orderType).toBe("stop");
+    expect(preview.stopPrice).toBe(112);
+    expect(preview.warnings.join(" ")).not.toContain("away from the current market price");
+  });
+
+  it("refuses a limit order with no price, or a non-positive one", () => {
+    expect(
+      previewOrder({ symbol: "AAPL", quantity: 1, action: "buy", orderType: "limit" }, context())
+        .ok,
+    ).toBe(false);
+    expect(
+      previewOrder(
+        { symbol: "AAPL", quantity: 1, action: "buy", orderType: "limit", limitPrice: 0 },
+        context(),
+      ).refusals.join(" "),
+    ).toContain("limit price");
+  });
+
+  it("refuses a stop order with no price, or a non-positive one", () => {
+    expect(
+      previewOrder(
+        { symbol: "AAPL", quantity: 1, action: "sell", orderType: "stop" },
+        context(),
+      ).refusals.join(" "),
+    ).toContain("stop price");
+  });
+
+  it("warns — but still allows — a limit price unusually far from the market", () => {
+    const preview = previewOrder(
+      { symbol: "AAPL", quantity: 1, action: "buy", orderType: "limit", limitPrice: 200 },
+      context(),
+    );
+    expect(preview.ok).toBe(true);
+    expect(preview.warnings.join(" ")).toContain("away from the current market price");
+  });
+
+  it("warns on a stop price far from market in either direction", () => {
+    const below = previewOrder(
+      { symbol: "AAPL", quantity: 1, action: "sell", orderType: "stop", stopPrice: 50 },
+      context(),
+    );
+    expect(below.ok).toBe(true);
+    expect(below.warnings.join(" ")).toContain("away from the current market price");
+  });
+
+  it("skips the distance warning when no market price is known for the symbol", () => {
+    const preview = previewOrder(
+      { symbol: "MSFT", quantity: 1, action: "buy", orderType: "limit", limitPrice: 999 },
+      context(),
+    );
+    expect(preview.ok).toBe(true);
+    expect(preview.warnings.join(" ")).not.toContain("away from the current market price");
+  });
+});
+
 describe("previewClose", () => {
   it("defaults to the entire held quantity", () => {
     const preview = previewClose("AAPL", context());
