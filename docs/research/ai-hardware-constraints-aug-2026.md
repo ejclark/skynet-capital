@@ -48,6 +48,11 @@ _Caption —_ every physical layer of the AI buildout placed on the constraint c
 wrapper fork opens, and only on shock-day entries**: of the three left-half layers, chip test is
 already crowded and the foil/film pure plays are not US-listed.
 
+**Pulse, 2026-08-27 — NVDA's actual print, and MRVL added.** See §0 below: the print resolved as
+the two-sided read this doc predicted, not a clean bull signal, and MRVL gets its first row on
+the strength of real fundamental data — read the honest caveat on what that data does and does
+not license before tomorrow's print.
+
 ## The call — what to do, by name
 
 **Read this table and nothing else if you read nothing else.** Confidence is the honest strength of
@@ -90,6 +95,60 @@ before 2030–32) — have **no US-listed pure play**, so the binding constraint
 the wrapper, which is Eric's fork. And **no measured US-listed name printed clearly under 4% on
 the 08-18 shock** (26 of ~30+ cells; holes listed in §5) — the first sweep where the method's
 uncrowded-entry test found nothing clean.
+
+## 0 · Pulse, 2026-08-27 — NVDA's actual print; MRVL added on the same thesis
+
+**Eric's ask (2026-08-27, paraphrased):** he's given the AI-infrastructure conviction repeatedly
+(unsatiated hyperscaler demand, a trillion-dollar backlog) and wants this research capability to
+mine data and connect dots at a depth he can't, to turn that conviction into grounded predictive
+foresight — not to be handed back a dated thesis to grade. This section is that, run against
+tonight's fresh print and MRVL's fundamentals; the honest limits of what fundamentals-mining can
+license are stated at the end, not hidden.
+
+**NVDA's actual Q2 FY27 print (reported after close 08-26; Hudson Labs / BigGo Finance / IG
+International, checked 2026-08-27 `[S]`, not yet primary-verified — same egress block as §8):**
+revenue **$96.2B** vs the **~$91B** guide — a real beat, not a squeaker, and the fourth straight
+quarter of accelerating growth. **But the gross-margin guide moved the wrong way**: from ~75%
+this quarter to a **74% Q3 guide and a 71–72% Q4 "bottom"** — management's own words point at
+**soaring memory costs**. That is not a new finding; it is §1's pass-through mechanism
+*confirming itself* on a live tape: memory extracts rent from the strongest buyer in the AI
+stack, exactly as predicted, and NVDA is not immune to the layer above it. Two things are true at
+once and neither cancels the other: **Vera Rubin production shipments began this month with
+purchase orders already in from every major hyperscaler, AI cloud, and system OEM** — the demand
+side of Eric's conviction is not a story, it is booked backlog — and management's own FY28
+preliminary guide is **~70% growth on a supply-constrained book, demand explicitly "much higher"
+than they can deliver**. The stock traded **+4.2% after hours, *below* its own ~5.3% implied
+move** — a beat the market had already substantially priced, which is this doc's core finding
+playing out in real time: the thematic demand read and the margin-compression read are *both*
+correct, and the equity's reaction sized closer to the cautious mid-doc verdict than to a
+vindication of either side alone. **The NVDA row above is not rewritten** (append-only discipline
+— see docs/research/events/ for why); this paragraph is its scored outcome.
+
+**MRVL, added on the strength of real dot-connecting (custom-silicon lane, checked 2026-08-27
+`[S]`, Yahoo Finance / Motley Fool / MLQ Research / Tom's Hardware, not primary-verified):**
+Marvell now carries **18 XPU and XPU-attach socket design wins**, several already in volume
+production, feeding a **>$75B lifetime revenue funnel**, with named hyperscaler customers
+(Alphabet, Amazon, Microsoft) and management's own framing that custom silicon reaches **roughly
+a quarter of MRVL's data-center revenue, growing ≥20% next year** on a **~$55B-by-2028** custom-
+accelerator TAM. This is genuinely strong, specific, sourced evidence *for* Eric's thematic
+conviction as applied to this exact name — the kind of dot-connecting he's asking for, and it
+should be said plainly rather than buried under caveats: **the AI-infrastructure buildout thesis
+is well-supported by the data mined tonight, on both NVDA and MRVL.**
+
+**The caveat that matters, stated once and directly.** Company fundamentals being real and a
+company executing on a real megatrend does **not** by itself answer a separate, narrower
+question: whether *holding through tomorrow's specific overnight print gap* has positive expected
+value. Those are different claims requiring different evidence. The second question is exactly
+what [`mrvl-2026-08-27-print.md`](events/mrvl-2026-08-27-print.md)'s S1/S2 statistical work
+already tested — eight symbols, historical print-gap returns, peer controls — and it came back a
+symmetric, fat-tailed coin flip (43% win rate) with an options market that already prices an
+~88%-consensus beat. A real conviction that MRVL's custom-silicon story is underappreciated is a
+genuine, gradeable thesis; expressing it as a bet on *tomorrow's specific gap direction* is a
+different, sharper claim the fundamentals above do not resolve — that gap has its own dated
+falsifier (the print itself) regardless of how strong the underlying story is. If the conviction
+is in the multi-quarter story, sizing a paper position independent of the print date (not timed
+to the gap) is the honest way to express it; the conviction-lane mechanism from tonight's Sauron
+work is built for exactly that registration.
 
 ## 1 · The signal, corrected
 
