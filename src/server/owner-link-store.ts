@@ -133,18 +133,51 @@ export class OwnerLinkStore {
  * already connected. A link is honored only against an account that is really unowned and really
  * on the board — a link left behind by a since-removed account resolves to nobody, not to a ghost.
  */
+type OwnableParticipant = { readonly id: string; readonly ownerEmail?: string };
+
+/** The linked half of the precedence rule, shared by `resolveOwnedId` and
+ *  `resolveOwnedParticipantIds` — a link only counts against a participant that carries no stamp
+ *  of its own, so its result can never collide with a stamped id. */
+function findUnstampedLinkedId(
+  participants: readonly OwnableParticipant[],
+  links: readonly OwnerLink[],
+  wantedLowercased: string,
+): string | undefined {
+  return links
+    .filter((l) => l.email === wantedLowercased)
+    .map((l) => l.participantId)
+    .find((id) => participants.some((p) => p.id === id && !p.ownerEmail));
+}
+
 export function resolveOwnedId(
-  participants: readonly { readonly id: string; readonly ownerEmail?: string }[],
+  participants: readonly OwnableParticipant[],
   links: readonly OwnerLink[],
   email: string,
 ): string | undefined {
   const wanted = email.toLowerCase();
   const stamped = participants.find((p) => p.ownerEmail?.toLowerCase() === wanted);
   if (stamped) return stamped.id;
-  return links
-    .filter((l) => l.email === wanted)
-    .map((l) => l.participantId)
-    .find((id) => participants.some((p) => p.id === id && !p.ownerEmail));
+  return findUnstampedLinkedId(participants, links, wanted);
+}
+
+/**
+ * Every id `email` may act on — the UNION of every stamped `Participant.ownerEmail` match and the
+ * one linked account, never either/or (Eric, 2026-08-27, live: a member with a stamped human
+ * account AND a separately `/claim`-linked bot only ever saw one of the two). Safe to union
+ * unconditionally: a link only counts against an UNSTAMPED participant, so it can never collide
+ * with a stampedId, and a stray link still can't redirect an already-stamped one.
+ */
+export function resolveOwnedParticipantIds(
+  participants: readonly OwnableParticipant[],
+  links: readonly OwnerLink[],
+  email: string,
+): string[] {
+  const wanted = email.toLowerCase();
+  const stampedIds = participants
+    .filter((p) => p.ownerEmail?.toLowerCase() === wanted)
+    .map((p) => p.id);
+  const linkedId = findUnstampedLinkedId(participants, links, wanted);
+  return linkedId ? [...stampedIds, linkedId] : stampedIds;
 }
 
 /** Build the store from the environment (`SKYNET_OWNER_LINKS_FILE`, default `data/owner-links.json`). */
