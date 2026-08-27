@@ -47,6 +47,7 @@ import {
   buildLiveBot,
   buildScoutDeps,
   resolveRoster,
+  seedDailyLossBaseline,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
 import { auditStore, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
@@ -181,6 +182,7 @@ async function runLive(): Promise<void> {
   console.log(
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
+  await seedDailyLossBaseline(bots, safety);
   const traders: LiveBot[] = bots.map((bot) =>
     buildLiveBot(bot, {
       mode,
