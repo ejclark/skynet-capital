@@ -38,10 +38,13 @@ export function resolveInsightsBridgePort(env: NodeJS.ProcessEnv): number {
  * The internal-only insight bridge (`docs/plans/trade-insights-loop.md`, slice 2) — the `app`
  * process's side of the `bots` → `app` insight relay. Bind this to a port deliberately NOT
  * declared in `fly.toml`'s `[http_service]`: Fly's public Anycast proxy only forwards traffic to
- * the port(s) named there, so an undeclared port is unreachable from the public internet — only
- * from other machines in the *same Fly app* over the private 6PN network (verified against
- * fly.io/docs/networking/private-networking/; see the PR description for what was checked). The
- * shared-secret header below is defense-in-depth on top of that, never a substitute for it.
+ * the port(s) named there, so an undeclared port is unreachable from the public internet. The
+ * private boundary is the ORG-WIDE 6PN network, not the app: every Fly app in this org (the
+ * dashboard, `skynet-capital-bots` after the deploy split, anything created later) can reach this
+ * port (verified against fly.io/docs/networking/private-networking/). The shared-secret header
+ * below is defense-in-depth on top of that, never a substitute for it — and after the split this
+ * wire is a CROSS-APP protocol: the two apps can run different commits, so evolve it
+ * expand/contract (new field/route lands listener-first; see fly.bots.toml's contract comments).
  *
  * Every branch here is wrapped so a malformed/oversized/hostile payload can only ever produce an
  * HTTP error response — never an uncaught exception. This process ALSO serves the public

@@ -175,12 +175,14 @@ describe("the research shelf's event horizon", () => {
       prints: [print({ symbol: "NVDA", date: "2026-08-26" })],
     });
 
-    expect(html).toContain("Next event");
-    expect(html).toContain(">in 10d<");
     expect(html).toContain('0 <span class="unit">events</span>');
     expect(html).toContain('NVDA <span class="unit">Aug 26</span>');
-    expect(html).toContain('<span class="tile-label">Researched symbols</span>');
-    expect(html).toContain('<span class="tile-num num">2</span>');
+    // "Next event → today" is gone: the grid rings today and the agenda labels it, so the tile
+    // was a third copy of one fact.
+    expect(html).not.toContain("Next event");
+    // The researched-symbol count moved onto the heading it describes.
+    expect(html).not.toContain('<span class="tile-label">Researched symbols</span>');
+    expect(html).toContain('<span class="rs-headcount">2</span>');
   });
 
   it("shows an honest clear-runway state when nothing is inside a week", () => {
@@ -220,8 +222,14 @@ describe("the research shelf's event horizon", () => {
       prints: [],
     });
 
-    expect(html).toContain('<aside class="cal-aside">');
+    // The grid renders inside the shelf body, not a side rail — a rail is what a container query
+    // could hide, and did (Eric, 2026-08-26: a phone in desktop mode).
+    expect(html).not.toContain("cal-aside");
+    expect(html).toContain('<div class="rs-head">');
     expect(html).toContain("August 2026");
+    // NO width may hide the calendar. This is the regression, asserted directly.
+    expect(html).not.toMatch(/\.cal-aside\{[^}]*display:none/);
+    expect(html).not.toContain("max-width:860px");
   });
 
   it("scopes ?month= to the widget only — the agenda keeps every upcoming event", () => {

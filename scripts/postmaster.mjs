@@ -238,6 +238,46 @@ export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_
  * harness-engineering research called this the top gap). A dependency that cannot be read is a
  * hard stop, not an empty list.
  */
+/**
+ * Is this failure the GraphQL budget running out, rather than a wrong answer?
+ *
+ * `RATE_LIMIT_EXHAUSTED` in the extensions, or the message GitHub prints for it. Matched on the
+ * message too because `gh` surfaces the latter and swallows the former.
+ */
+export function isRateLimited(err) {
+  return /rate limit|RATE_LIMITED|RATE_LIMIT_EXCEEDED/i.test(String(err?.message ?? ""));
+}
+
+/**
+ * The shipped sweep, degrading on an exhausted budget ONLY.
+ *
+ * `gatherDeps` is fail-closed on purpose: an unreadable dependency must never look like an empty
+ * one, which is the class of bug #475 was. But a rate limit is not a wrong answer — it is a
+ * TRANSIENT one, and treating it as fatal is disproportionate in a way that showed up on
+ * 2026-08-26: `route` threw here, and because the research and feedback jobs both need its
+ * outputs, the entire lane went dark for the rest of the hour over one optional sweep. The sweep
+ * is a convenience (it closes feedback issues GitHub's own `Closes #` link missed); the tick is
+ * not.
+ *
+ * So: a budget error skips the sweep and says so loudly, and the tick keeps running. EVERY other
+ * failure still throws, because those are the ones that could be silently under-reporting. The
+ * next push re-reads state from scratch — the whole design is level-based — so a skipped sweep
+ * costs nothing beyond a delay.
+ */
+export function sweepShipped(readIssues, deps) {
+  try {
+    // LAZY on purpose: the list query is the call most likely to hit the budget, and evaluating
+    // it as an argument would throw before this `try` was ever entered.
+    return resolveShipped(readIssues(), deps);
+  } catch (err) {
+    if (!isRateLimited(err)) throw err;
+    console.log(
+      `::warning::shipped sweep skipped — the GraphQL budget is exhausted (${String(err.message).slice(0, 160)}). The tick continues; the sweep retries on the next push.`,
+    );
+    return [];
+  }
+}
+
 function gatherDeps(ctx) {
   const json = (label, cmd, args) => {
     let out;
@@ -267,22 +307,23 @@ function gatherDeps(ctx) {
   // `Closes #` link keeps missing on bot-opened, bot-merged PRs. Joined here (impure) so
   // `routeShipped` stays pure and fixture-drivable.
   const shippedFeedback = openFeedback.length
-    ? resolveShipped(
-        json("gh issue list (shipped)", "gh", [
-          "issue",
-          "list",
-          "--state",
-          "open",
-          "--label",
-          "feedback",
-          "--limit",
-          "100",
-          "--json",
-          // `closedByPullRequestsReferences`, NOT `closedByPullRequests` — the latter is not a
-          // field `gh issue list` knows, and asking for it exits 1 with the allow-list, which took
-          // every push run of this router down on 2026-08-22 (docs/LESSONS.md).
-          "number,title,closedByPullRequestsReferences",
-        ]),
+    ? sweepShipped(
+        () =>
+          json("gh issue list (shipped)", "gh", [
+            "issue",
+            "list",
+            "--state",
+            "open",
+            "--label",
+            "feedback",
+            "--limit",
+            "100",
+            "--json",
+            // `closedByPullRequestsReferences`, NOT `closedByPullRequests` — the latter is not a
+            // field `gh issue list` knows, and asking for it exits 1 with the allow-list, which took
+            // every push run of this router down on 2026-08-22 (docs/LESSONS.md).
+            "number,title,closedByPullRequestsReferences",
+          ]),
         {
           isMerged: prIsMerged,
           // The fallback second look, for an issue the list showed nothing merged for.

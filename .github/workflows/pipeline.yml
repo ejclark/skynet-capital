@@ -26,6 +26,19 @@ on:
     types: [ opened, synchronize, reopened, ready_for_review ]
   push:
     branches: [ main ]
+    # NEVER add `paths:` filters here: a non-matching push would produce NO run at all, so
+    # semantic-release would silently stop cutting releases for those commits and deploy-lag would
+    # cry wolf with no visible cause (its own header documents exactly this failure from its first
+    # cut). Selectivity lives INSIDE the run — the deploy-bots preflight — never on the trigger.
+  workflow_dispatch:
+    inputs:
+      force_bots_deploy:
+        description: >-
+          Recovery lever for the bots app: redeploy skynet-capital-bots from the dashboard's
+          current image regardless of what the path classifier says. Use when a bots deploy was
+          wrongly skipped or failed and the fix is "just deploy it".
+        type: boolean
+        default: false
 
 concurrency:
   group: pipeline-${{ github.ref }}
@@ -82,9 +95,16 @@ jobs:
   deploy:
     name: release · deploy
     # Merged commits are already verified (branch protection required `verify`), so this path
-    # never re-runs the suite — it only ships.
+    # never re-runs the suite — it only ships. This job deploys the DASHBOARD app on EVERY push
+    # on purpose: its durable state is volume-backed (restarts are harmless) and docs/research
+    # merges need it (the /research shelf is read from the image at request time). The stateful
+    # half — the bots app — deploys selectively in `deploy-bots` below.
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
+    outputs:
+      # The image this push built and verified, for deploy-bots to reuse — one build per push,
+      # the two apps provably on the same bits whenever both roll.
+      image: ${{ steps.released.outputs.image }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -130,6 +150,18 @@ jobs:
         id: smoke
         run: bash scripts/smoke.sh https://skynet-capital.fly.dev
 
+      - name: Capture released image (for deploy-bots)
+        id: released
+        run: |
+          IMG=$(flyctl image show -a skynet-capital --json \
+            | jq -r 'if type=="array" then .[0] else . end
+                     | if .Digest and .Digest != "" then "\(.Registry)/\(.Repository)@\(.Digest)"
+                       else "\(.Registry)/\(.Repository):\(.Tag)" end' 2>/dev/null || true)
+          echo "image=$IMG" >> "$GITHUB_OUTPUT"
+          echo "released image: ${IMG:-<none>}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Roll back to previous image
         if: ${{ failure() && steps.smoke.conclusion == 'failure' && steps.prev.outputs.image != '' }}
         run: |
@@ -138,3 +170,118 @@ jobs:
           bash scripts/smoke.sh https://skynet-capital.fly.dev
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-bots:
+    name: release · deploy bots
+    # The STATEFUL half of the deploy split: skynet-capital-bots redeploys ONLY when the push
+    # touched the bots runtime (scripts/bot-relevant.mjs — the single source of truth, biased to
+    # over-deploy), so docs/frontend merges stop wiping the trader's in-memory signal windows
+    # (2026-08-26: 41 merges restarted it ~every 15 minutes and Sauron never traded once).
+    #
+    # The diff baseline is GROUND TRUTH, not workflow archaeology: each deploy stamps the machine
+    # with --env GIT_SHA, and the preflight diffs from what the machine actually runs. A
+    # concurrency-superseded or failed run can therefore never strand a bot-relevant commit —
+    # the next run's diff still spans it. Every ambiguity fails OPEN to deploying.
+    #
+    # `needs: deploy` gives listener-first ordering for free (the dashboard — the bridge listener —
+    # is already on the new code before bots roll) and reuses its verified image: one build per
+    # push, no second remote build, both apps provably on the same bits.
+    needs: deploy
+    if: >-
+      ${{ always() && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.deploy.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.force_bots_deploy)
+      ) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0            # the preflight diffs from the machine's stamped GIT_SHA
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Preflight — should the bots app deploy?
+        id: preflight
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_bots_deploy && 'true' || 'false' }}
+        run: |
+          skip() { echo "deploy=false" >> "$GITHUB_OUTPUT"; echo "skip: $1"; exit 0; }
+          go()   { echo "deploy=true"  >> "$GITHUB_OUTPUT"; echo "deploy: $1"; exit 0; }
+          # Not provisioned yet → this job is a safe no-op until Eric creates the app + token.
+          [ -n "$FLY_API_TOKEN" ] || skip "no bots-app Fly token (FLY_API_TOKEN_BOTS or FLY_ORG_TOKEN) — see docs/AUTONOMY-DEPLOY.md"
+          # Pre-cutover guard: while fly.toml still declares the bots group, the OLD world is
+          # authoritative — standing the sibling app up beside it would contend for Alpaca's
+          # one-data-connection-per-account limit and starve the live fleet. The tiny cutover PR
+          # (remove the group from fly.toml) is what flips this gate.
+          grep -qE '^\s*bots\s*=' fly.toml && skip "pre-cutover: fly.toml still owns the bots process group"
+          [ "$FORCE" != "true" ] || go "force_bots_deploy dispatch"
+          DEPLOYED=$(flyctl machine list -a skynet-capital-bots --json 2>/dev/null \
+            | jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].config.env.GIT_SHA // empty' || true)
+          [ -n "$DEPLOYED" ] || go "no GIT_SHA baseline on the bots machine (first deploy, or a manual one)"
+          VERDICT=$(node scripts/bot-relevant.mjs "$DEPLOYED" "$GITHUB_SHA")
+          echo "$VERDICT"
+          [ "$(head -n1 <<<"$VERDICT")" = "deploy" ] && go "$(tail -n1 <<<"$VERDICT") (since $DEPLOYED)"
+          skip "$(tail -n1 <<<"$VERDICT") (since $DEPLOYED)"
+
+      - name: Resolve image
+        if: ${{ steps.preflight.outputs.deploy == 'true' }}
+        id: image
+        run: |
+          IMG="${{ needs.deploy.outputs.image }}"
+          if [ -z "$IMG" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Dispatch recovery path: no fresh build this run — reuse whatever the dashboard runs.
+            IMG=$(flyctl image show -a skynet-capital --json \
+              | jq -r 'if type=="array" then .[0] else . end
+                       | if .Digest and .Digest != "" then "\(.Registry)/\(.Repository)@\(.Digest)"
+                         else "\(.Registry)/\(.Repository):\(.Tag)" end')
+          fi
+          # On the push path an empty image is a hard FAIL, never a silent rebuild: a second build
+          # could diverge from what smoke verified, and ci-medic files the capsule on a red run.
+          [ -n "$IMG" ] || { echo "::error::no dashboard image to reuse — refusing to rebuild"; exit 1; }
+          echo "image=$IMG" >> "$GITHUB_OUTPUT"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Capture previous bots image
+        if: ${{ steps.preflight.outputs.deploy == 'true' }}
+        id: prev-bots
+        continue-on-error: true
+        run: |
+          IMG=$(flyctl image show -a skynet-capital-bots --json \
+            | jq -r 'if type=="array" then .[0] else . end
+                     | if .Digest and .Digest != "" then "\(.Registry)/\(.Repository)@\(.Digest)"
+                       else "\(.Registry)/\(.Repository):\(.Tag)" end' 2>/dev/null || true)
+          echo "image=$IMG" >> "$GITHUB_OUTPUT"
+          echo "previous bots image: ${IMG:-<none — rollback unavailable this run>}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+
+      - name: Deploy bots
+        # deploy-lag.mjs reads THIS step's conclusion (by name) to find the last real bots deploy —
+        # a preflight skip leaves it `skipped`, so a no-op run can never poison the lag baseline.
+        if: ${{ steps.preflight.outputs.deploy == 'true' }}
+        run: >-
+          flyctl deploy --config fly.bots.toml
+          --image "${{ steps.image.outputs.image }}"
+          --env "GIT_SHA=${{ github.sha }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+
+      - name: Smoke test the bots release
+        if: ${{ steps.preflight.outputs.deploy == 'true' }}
+        id: smoke-bots
+        run: bash scripts/smoke-bots.sh skynet-capital-bots "${{ github.sha }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
+
+      - name: Roll back bots to previous image
+        # A rollback drops the GIT_SHA stamp (fly.toml env only), so the NEXT push's preflight
+        # finds no baseline and fails open to deploying — the safe direction after a bad release.
+        if: ${{ failure() && steps.smoke-bots.conclusion == 'failure' && steps.prev-bots.outputs.image != '' }}
+        run: |
+          echo "bots smoke failed — rolling back to ${{ steps.prev-bots.outputs.image }}"
+          flyctl deploy --config fly.bots.toml --image "${{ steps.prev-bots.outputs.image }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
