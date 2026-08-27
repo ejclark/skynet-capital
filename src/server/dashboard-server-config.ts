@@ -1,4 +1,5 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
+import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
@@ -119,6 +120,8 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly submitOptionTrade?: SubmitOptionTrade;
   /** Options data (chains/spot) via a participant's own credentials, for the /trade ticket. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** Stock order data (Open Orders panel, order cancel) via a participant's own credentials. */
+  readonly tradingClientFor?: (participantId: string) => AlpacaTradingClient | undefined;
   /**
    * Resolve the signed-in session's email to the participant it owns (`Participant.ownerEmail`)
    * — the ONLY link a session may trade or self-manage through (#466). Reads the roster + store

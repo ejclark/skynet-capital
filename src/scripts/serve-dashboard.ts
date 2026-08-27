@@ -274,6 +274,10 @@ async function main(): Promise<void> {
       const participant = findParticipant(id);
       return participant ? dataSource.optionsClientFactory(participant) : undefined;
     },
+    tradingClientFor: (id) => {
+      const participant = findParticipant(id);
+      return participant ? dataSource.clientFactory(participant) : undefined;
+    },
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(
