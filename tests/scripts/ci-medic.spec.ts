@@ -134,7 +134,7 @@ describe("ci medic — fetching the evidence", () => {
   });
 
   it("strips the escapes, the BOM and the timestamps so the fold reads as text", () => {
-    const raw = "\uFEFF2026-08-26T23:03:39.9335057Z \^[[31mError: unauthorized\^[[0m";
+    const raw = "\uFEFF2026-08-26T23:03:39.9335057Z \x1b[31mError: unauthorized\x1b[0m";
 
     expect(sanitizeLog(raw)).toBe("Error: unauthorized");
   });
