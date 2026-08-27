@@ -29,10 +29,15 @@ export interface AlpacaOrder {
   readonly qty: string;
   readonly side: Side;
   readonly status: string;
+  /** "market" | "limit" | "stop" | ... — echoed back by the broker as submitted. */
+  readonly type?: string;
+  readonly limit_price?: string | null;
+  readonly stop_price?: string | null;
   readonly filled_qty?: string;
   readonly filled_avg_price?: string | null;
   readonly submitted_at?: string;
   readonly filled_at?: string | null;
+  readonly canceled_at?: string | null;
 }
 
 export interface PlaceOrderParams {

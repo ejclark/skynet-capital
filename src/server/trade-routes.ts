@@ -142,6 +142,29 @@ async function handleAckPost(
   return true;
 }
 
+/**
+ * The Open Orders panel's Cancel button — handled with the wheels toggle and the ack claim,
+ * before anything order-shaped, for the same reason: a cancel is not itself an order. A
+ * cancel that the broker refuses (already filled, unknown id) is swallowed — the order's real
+ * current status is whatever the next render's live `listOrders` call says, never a claim this
+ * route makes on its own. True = handled.
+ */
+async function handleCancelOrderPost(
+  res: ServerResponse,
+  form: URLSearchParams,
+  deps: TradeRouteDeps,
+  requesterId: string,
+): Promise<boolean> {
+  const orderId = form.get("cancelOrder");
+  if (orderId === null) return false;
+  const client = deps.tradingClientFor?.(requesterId);
+  if (client) {
+    await client.cancelOrder(orderId).catch(() => undefined);
+  }
+  redirectBack(res, form);
+  return true;
+}
+
 /** Handle `/trade` — GET renders the ticket, POST reviews/executes. */
 export async function handleTrade(
   req: IncomingMessage,
@@ -178,6 +201,7 @@ export async function handleTrade(
   if (
     (await handleWheelsPost(res, form, deps, deps.requesterId)) ||
     (await handleAckPost(res, form, deps, deps.requesterId)) ||
+    (await handleCancelOrderPost(res, form, deps, deps.requesterId)) ||
     (await handleCheckPost(res, form, deps, deps.requesterId))
   ) {
     return;

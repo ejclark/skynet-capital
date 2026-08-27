@@ -8,10 +8,11 @@ import { createDashboardServer } from "../../src/server/dashboard-server.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 import { handleTrade } from "../../src/server/trade-routes.js";
 
-// Sibling: trade-desk-gate.spec.ts (split 2026-08-26 to stay under the per-file line cap) —
-// that half covers the training-wheels ladder gate and the trade service's server-side checks,
-// with its own copy of the shared HTTP fixtures below. This file keeps the review-step routing,
-// the isolated handleTrade contract, and the desk tabs.
+// Siblings, each split off to stay under the per-file line cap, each with its own copy of the
+// shared HTTP fixtures below: trade-desk-gate.spec.ts (2026-08-26 — training-wheels ladder gate,
+// trade service server-side checks) and trade-desk-open-orders.spec.ts (2026-08-27 — the Open
+// Orders panel and its Cancel button). This file keeps the review-step routing, the isolated
+// handleTrade contract, and the desk tabs.
 
 const SECRET = "sess";
 const auth = resolveAuth({

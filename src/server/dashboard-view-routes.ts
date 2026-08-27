@@ -89,6 +89,7 @@ export async function serveTradeRoute(
     ...(config.submitTrade ? { submitTrade: config.submitTrade } : {}),
     ...(config.submitOptionTrade ? { submitOptionTrade: config.submitOptionTrade } : {}),
     ...(config.optionsClientFor ? { optionsClientFor: config.optionsClientFor } : {}),
+    ...(config.tradingClientFor ? { tradingClientFor: config.tradingClientFor } : {}),
     nav: navFor("trade"),
     document: shellDocument,
   });

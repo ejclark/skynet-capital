@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
+import type { AlpacaOrder, AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { lockedOnLadder } from "../domain/progression.js";
 import { starterPlayById } from "../domain/starter-plays.js";
 import {
@@ -38,6 +39,8 @@ export interface TradeRouteDeps {
   readonly submitOptionTrade?: SubmitOptionTrade;
   /** Options data (chains/expirations/spot) for a participant's own credentials. */
   readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
+  /** Stock order data (Open Orders panel, order cancel) for a participant's own credentials. */
+  readonly tradingClientFor?: (participantId: string) => AlpacaTradingClient | undefined;
   readonly nav: NavContext;
   readonly document: (title: string, body: string) => string;
 }
@@ -137,6 +140,21 @@ export function playLocked(
   return lockedOnLadder(code, progression);
 }
 
+/** Recent orders for the Open Orders panel. Undefined (not empty) when there's no client to ask —
+ *  the panel tells those two states apart rather than claiming "no open orders" when it never
+ *  actually checked. A wide-enough page (Alpaca's own limit, not this app's) covers anything that
+ *  could still be inside the fill/cancel transient window alongside genuinely open orders. */
+async function recentOrdersFor(
+  client: AlpacaTradingClient | undefined,
+): Promise<readonly AlpacaOrder[] | undefined> {
+  if (!client) return undefined;
+  try {
+    return await client.listOrders({ status: "all", limit: 50 });
+  } catch {
+    return undefined;
+  }
+}
+
 export async function serveTicket(
   res: ServerResponse,
   url: string,
@@ -148,8 +166,11 @@ export async function serveTicket(
   const progression = await viewerProgression(deps);
   const client =
     deps.requesterId && deps.optionsClientFor ? deps.optionsClientFor(deps.requesterId) : undefined;
+  const tradingClient =
+    deps.requesterId && deps.tradingClientFor ? deps.tradingClientFor(deps.requesterId) : undefined;
   // A locked play renders its locked panel — no point fetching a chain it won't show.
   const data = playLocked(parsed.play.code, progression) ? {} : await ticketData(parsed, client);
+  const openOrders = await recentOrdersFor(tradingClient);
   const state: TicketState = {
     ...parsed,
     ...(data.expiration ? { expiration: data.expiration } : {}),
@@ -180,6 +201,7 @@ export async function serveTicket(
         ...(data.chain ? { chain: data.chain } : {}),
         ...(data.spot !== undefined ? { spot: data.spot } : {}),
         ...(data.chainNote ? { chainNote: data.chainNote } : {}),
+        ...(openOrders !== undefined ? { openOrders } : {}),
       }),
     ),
   );
