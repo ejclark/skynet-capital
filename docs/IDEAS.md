@@ -987,6 +987,19 @@ check is automatic rather than remembered. _(src: Claude · while: research-lab 
   class, so it wants Eric's eyes rather than an autonomous PR.
   _(src: Claude · while: badging the options chain with earnings proximity, #575, 2026-08-26)_
 
+- **The `ci-medic` repair lane still has no token that can push, generally, not just for #655.**
+  `ci-medic.yml` runs with `contents: read` and mints its own push token from
+  `vars.APP_CLIENT_ID`/`secrets.APP_PRIVATE_KEY` (unset) or `secrets.HANDOFF_PR_TOKEN`, which has
+  no `contents: write` on this repo — confirmed on #655, where a fully root-caused, locally-verified
+  fix could not be pushed and had to be handed over as a `git am`-able patch instead. That specific
+  bug is moot now (fixed independently by #658/#659, unrelated to this gap), but the credential hole
+  is not — the next ci-medic repair that needs to push hits the same wall. Fix is either of the two
+  options that comment already named: set `vars.APP_CLIENT_ID` + `secrets.APP_PRIVATE_KEY` for the
+  GitHub App (the option both `ci-medic.yml` and `postmaster.yml` are already written for), or
+  re-issue `HANDOFF_PR_TOKEN` with `Contents: Read and write`. Either is a credential action, so it
+  is Eric's call, not an autonomous one.
+  _(src: Claude · while: closing out #655, 2026-08-26)_
+
 ### Probe whether a GitHub-hosted attachment survives the markdown-link content filter, where a repo-file URL doesn't
 LESSONS.md (2026-08-26): a session-side outbound content-safety layer neutralizes `[text](url)`/
 `![alt](url)` markdown links pointing at anything that reads as a media file — confirmed for both
