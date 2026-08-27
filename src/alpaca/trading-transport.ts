@@ -7,6 +7,7 @@ import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 export interface AlpacaTradingTransport {
   get(path: string): Promise<JsonResponse>;
   post(path: string, body: unknown): Promise<JsonResponse>;
+  delete(path: string): Promise<JsonResponse>;
 }
 
 export interface AlpacaTradingConfig {
@@ -45,5 +46,9 @@ export class FetchAlpacaTradingTransport implements AlpacaTradingTransport {
 
   post(path: string, body: unknown): Promise<JsonResponse> {
     return fetchJson("POST", `${this.config.baseUrl}${path}`, this.headers(), body);
+  }
+
+  delete(path: string): Promise<JsonResponse> {
+    return fetchJson("DELETE", `${this.config.baseUrl}${path}`, this.headers());
   }
 }

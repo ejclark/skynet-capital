@@ -27,6 +27,10 @@ class StubDataTransport implements AlpacaTradingTransport {
   post(): Promise<JsonResponse> {
     throw new Error("the flow source must never POST");
   }
+
+  delete(): Promise<JsonResponse> {
+    throw new Error("the flow source must never DELETE");
+  }
 }
 
 const okBody = (body: unknown): JsonResponse => ({ status: 200, body });
@@ -86,6 +90,7 @@ describe("AlpacaOptionsFlowSource", () => {
     const data: AlpacaTradingTransport = {
       get: () => Promise.reject(new Error("network down")),
       post: () => Promise.reject(new Error("no")),
+      delete: () => Promise.reject(new Error("no")),
     };
     const flows = await new AlpacaOptionsFlowSource(bothSides, data).flows("NVDA", "2026-09-18");
     expect(flows.map((f) => f.volume)).toEqual([undefined, undefined]);

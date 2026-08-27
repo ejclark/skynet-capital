@@ -12,6 +12,9 @@ class FakeTransport implements AlpacaTradingTransport {
   post(path: string, _body: unknown): Promise<JsonResponse> {
     return Promise.resolve(this.responses[path] ?? { status: 404, body: null });
   }
+  delete(path: string): Promise<JsonResponse> {
+    return Promise.resolve(this.responses[path] ?? { status: 404, body: null });
+  }
 }
 
 const healthy = (cash: string, equity: string, accountId = "a"): Record<string, JsonResponse> => ({
