@@ -83,9 +83,8 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
   {
     symbol: "AVGO",
     date: "2026-09-02",
-    status: "confirmed",
-    source:
-      "IR: broadcom.com/company/news/financial-releases/64621 — Wed Sep 2 AMC, call 2pm PT; directly fetched 2026-08-27",
+    status: "estimate",
+    source: "NEWS: Broadcom PR 2026-08-03 — Wed Sep 2 AMC; IR fetch blocked 2026-08-17",
   },
   { symbol: "MSFT", date: "2026-10-27", status: "estimate", source: "8-K cadence" },
   { symbol: "GOOG", date: "2026-10-28", status: "estimate", source: "8-K cadence" },
