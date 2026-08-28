@@ -91,12 +91,21 @@ export function matchesFilter(position: DeskPosition, filter: DeskFilter): boole
   return filter.terms.every((term) => haystack.includes(term));
 }
 
+/** Qualifiers that contradict each other — turning one on turns its siblings off, the way
+ *  GitHub's is:open/is:closed replace rather than stack (a book can't be both in profit and
+ *  under water; both armed guaranteed an empty ladder — Eric's live-review screenshot). */
+const EXCLUSIVE_GROUPS: readonly (readonly string[])[] = [
+  ["is:option", "is:share"],
+  ["pl:>0", "pl:<0"],
+];
+
 /** Toggle one qualifier in the query string — the chip side of the bidirectional model. */
 export function toggleQualifier(query: string, qualifier: string): string {
   const parts = query.split(/\s+/).filter(Boolean);
   const without = parts.filter((p) => p.toLowerCase() !== qualifier);
   if (without.length !== parts.length) return without.join(" ");
-  return [...parts, qualifier].join(" ");
+  const siblings = EXCLUSIVE_GROUPS.find((g) => g.includes(qualifier)) ?? [];
+  return [...without.filter((p) => !siblings.includes(p.toLowerCase())), qualifier].join(" ");
 }
 
 export interface DeskActivityEvent {

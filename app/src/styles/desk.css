@@ -228,3 +228,60 @@ table.blotter {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* the desk's route to trading — a link to the workflow, not an inline ticket (live review) */
+.trade-link-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  text-decoration: none;
+  color: var(--text);
+  max-width: 560px;
+  transition: box-shadow 0.15s;
+}
+.trade-link-card:hover {
+  box-shadow: var(--elev-raised);
+  border-color: var(--accent);
+}
+.trade-link-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.trade-link-arrow {
+  color: var(--accent);
+  font-size: 18px;
+}
+.trade-desk-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+}
+.trade-desk-list a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.trade-desk-list a:hover {
+  border-color: var(--accent);
+}

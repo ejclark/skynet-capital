@@ -1,15 +1,14 @@
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useConnection } from "../live/connection";
 import { type Density, type Theme, usePrefs } from "../shell/prefs";
 
 /**
- * The shell frame (#738 phase 1): topbar (brand, theme + density toggles, live status), the left
- * nav rail, and the stage. Rail entries the React app doesn't own yet are plain links to the
- * server-rendered views — the shell grows route by route, it never pretends.
+ * The shell (#738, live-review round): the topbar carries the APP-LEVEL navigation — the views —
+ * as the top dimension; each route brings its own left-rail sub-navigation through `PageFrame`
+ * (or none). Views the shell doesn't own yet are plain links to the server-rendered pages.
  */
 
-/** The server-rendered views the rail links across to until the shell absorbs them. */
 const SERVER_VIEWS = [
   ["/wire", "The Wire"],
   ["/research", "Research"],
@@ -70,7 +69,22 @@ function RootShell(): ReactElement {
           </span>
           Skynet Capital
         </span>
-        <span className="env-pill">SIM</span>
+        <nav className="topnav" aria-label="Views">
+          <Link
+            to="/"
+            search={{ by: "equity" }}
+            className="topnav-link"
+            activeProps={{ "aria-current": "page" }}
+            activeOptions={{ includeSearch: false }}
+          >
+            Standings
+          </Link>
+          {SERVER_VIEWS.map(([href, label]) => (
+            <a key={href} href={href} className="topnav-link">
+              {label}
+            </a>
+          ))}
+        </nav>
         <div className="topbar-actions">
           <Toggle<Density>
             label="Density"
@@ -90,25 +104,11 @@ function RootShell(): ReactElement {
             ]}
             onPick={setTheme}
           />
+          <span className="env-pill">SIM</span>
           <StatusPill />
         </div>
       </header>
-      <div className="frame">
-        <nav className="rail" aria-label="Views">
-          <p className="rail-label">Observatory</p>
-          <a aria-current="page" href="/app">
-            Standings
-          </a>
-          {SERVER_VIEWS.map(([href, label]) => (
-            <a key={href} href={href}>
-              {label}
-            </a>
-          ))}
-        </nav>
-        <main id="main" className="stage">
-          <Outlet />
-        </main>
-      </div>
+      <Outlet />
     </div>
   );
 }
