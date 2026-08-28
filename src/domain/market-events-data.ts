@@ -121,6 +121,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "The benchmark. A weak 10Y lifts the whole curve and pressures long-duration tech.",
   },
   {
+    id: "treasury-buyback-increase-2026-09-09",
+    kind: "rates",
+    title: "Treasury long-end buyback size increase takes effect ($4B/op, 10-30Y)",
+    date: "2026-09-09",
+    status: "estimate",
+    source:
+      "NEWS: CNBC 2026-08-19 ('Treasury doubles debt buybacks as Bessent moves to steady bond market'), treasury.gov press release sb0607 — checked 2026-08-27",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Bessent's 2026-08-19 announcement doubles nominal long-end liquidity-support buyback operations (10-20Y and 20-30Y sectors) from a $2B to a $4B/operation minimum, effective this date through the refunding quarter's close (2026-11-04) — a fiscal-liquidity support for long-end demand technicals landing the day before the 30Y reopening (09-10). Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep; not previously a dated calendar entry.",
+  },
+  {
     id: "treasury-30y-bond-2026-09-10",
     kind: "rates",
     title: "30-Year Treasury Bond auction (reopening)",
