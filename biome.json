@@ -78,7 +78,8 @@
         "**/scripts/**",
         "**/src/scripts/**",
         "**/commitlint.config.js",
-        "**/rstest.config.ts"
+        "**/rstest.config.ts",
+        "**/app/rsbuild.config.ts"
       ],
       "linter": {
         "rules": {
@@ -136,6 +137,18 @@
             "noExcessiveLinesPerFile": "off"
           }
         }
+      }
+    },
+    {
+      "includes": ["**/routeTree.gen.ts"],
+      "linter": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
       }
     }
   ],

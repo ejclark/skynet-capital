@@ -120,8 +120,14 @@ The question of whether a tool like **Redux Toolkit** helps is really a question
 to read, extend, and reason about (for humans and for agents) than mutations scattered across
 modules. We buy that principle in full. Where we apply it differs by layer:
 
-- **The eventual dashboard (React): yes, Redux Toolkit is the likely choice.** Normalized store,
-  typed slices, one source of truth for what the UI is showing.
+- **The dashboard (React, `app/` — #738): TanStack Query + Zustand, superseding the earlier
+  "Redux Toolkit is the likely choice" note (2026-08-28).** The principle stands unchanged; what
+  changed is that server state and client state are different problems and each now has a
+  purpose-built home: Query holds the server's copy (the board snapshot, patched in place by the
+  SSE stream via `setQueryData` — see `app/src/live/channel.ts`), Zustand holds what only the
+  client knows (connection status, seq position — `app/src/live/connection.ts`). Both are
+  explicit, typed, serializable, and inspectable; the server/client boundary is visible in the
+  code instead of by convention inside one store.
 - **The headless engine: adopt the *pattern*, not the dependency.** Engine and account state is
   already an explicit, typed, serializable shape (`Portfolio`, `CycleReport`) with transitions
   modeled as data (`OrderIntent` → `OrderResult`). That is a reducer in spirit. Pulling a

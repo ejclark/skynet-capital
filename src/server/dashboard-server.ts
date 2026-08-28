@@ -5,6 +5,7 @@ import {
   renderPortfolioIndexBody,
 } from "../observatory/render-dashboard.js";
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
+import { standingsBoardView } from "../observatory/standings-patch.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
 import type { Session } from "./auth/session.js";
 import {
@@ -75,6 +76,46 @@ function parseCompareParams(params: URLSearchParams): Pick<StandingsOptions, "aI
   };
 }
 
+/** JSON twin of `/board/frame` for the React shell (#738 phase 0): the same board, as data. The
+ *  client renders this once, then applies `/events` ops verbatim from `seq` — on a gap it comes
+ *  back here instead of patching around a hole. Same formatted values, same keys, same auth gate. */
+function serveBoardJson(
+  res: ServerResponse,
+  url: string,
+  config: DashboardServerConfig,
+  channel: BoardPatchChannel,
+): void {
+  const metric = parseLeaderMetric(new URL(url, "http://localhost").searchParams.get("by"));
+  const state = config.hub.getState();
+  res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+  res.end(
+    JSON.stringify({
+      seq: channel.head,
+      generatedAt: state.generatedAt,
+      metric,
+      view: standingsBoardView(state, metric),
+    }),
+  );
+}
+
+/** The 2026-08-25 fold's legacy bookmarks — each old standalone view 302s into Standings so an
+ *  old link still lands somewhere real rather than 404ing. `/leaderboard`'s metric param maps onto
+ *  Standings' identically-shaped `?by=`; `/compare`'s `?a=&b=` carries over unchanged. */
+function serveFoldedRedirect(res: ServerResponse, path: string, url: string): boolean {
+  if (path === "/leaderboard") {
+    const by = new URL(url, "http://localhost").searchParams.get("by");
+    res.writeHead(302, { location: by ? `/?by=${by}` : "/" });
+  } else if (path === "/bots-vs-humans") {
+    res.writeHead(302, { location: "/" });
+  } else if (path === "/compare") {
+    res.writeHead(302, { location: `/${new URL(url, "http://localhost").search}` });
+  } else {
+    return false;
+  }
+  res.end();
+  return true;
+}
+
 /** Routes behind the auth gate — same set and order as before the split. */
 async function serveAuthorizedRoute(
   req: IncomingMessage,
@@ -116,26 +157,11 @@ async function serveAuthorizedRoute(
     serveBoardFrame(res, config.hub, navFor("board"), metric, parseCompareParams(params));
     return;
   }
-  if (path === "/leaderboard") {
-    // Leaderboard folded into Standings (/) 2026-08-25 — an old bookmark still lands somewhere
-    // real rather than 404ing. Its own metric param maps onto Standings' identically-shaped one.
-    const by = new URL(url, "http://localhost").searchParams.get("by");
-    res.writeHead(302, { location: by ? `/?by=${by}` : "/" });
-    res.end();
+  if (path === "/api/board") {
+    serveBoardJson(res, url, config, channel);
     return;
   }
-  if (path === "/bots-vs-humans") {
-    // Bots vs Humans folded into Standings (/) 2026-08-25 — same reasoning as /leaderboard above.
-    res.writeHead(302, { location: "/" });
-    res.end();
-    return;
-  }
-  if (path === "/compare") {
-    // Compare folded into Standings (/) as ?a=&b= 2026-08-25 — same params, same shapes, so the
-    // query string carries over unchanged rather than 404ing an old bookmark.
-    const qs = new URL(url, "http://localhost").search;
-    res.writeHead(302, { location: `/${qs}` });
-    res.end();
+  if (serveFoldedRedirect(res, path, url)) {
     return;
   }
   if (await trySelfServiceRoute(req, res, path, url, config, session, navFor("add"))) {
