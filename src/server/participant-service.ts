@@ -242,11 +242,19 @@ export class ParticipantService {
    * bot's — to credentials of a member's choosing.
    *
    * STORE ids: an ALREADY-CLAIMED account — human OR bot, one with an `ownerEmail` on file —
-   * may only be rotated by that same resolved identity. This used to read `kind === "human"`
-   * because a bot could never carry `ownerEmail` before `/claim` (#546) learned to link any
-   * account kind; that necessity is gone, and a claimed bot exempted from this check is
-   * rotatable — its credentials silently swapped — by any signed-in member, no check at all
-   * (2026-08-26, same gap as `requireEditable` in account-service.ts, closed alongside it). An
+   * may only be rotated by that same identity: the requester's session resolves to the target
+   * id, or their session email matches the stored `ownerEmail` (case-insensitive, like every
+   * email comparison here — owner-link-store.ts). The email leg matters twice over
+   * (2026-08-28): a signed-in member whose email resolves to NO participant presents
+   * `requesterId: undefined` — a real, documented state — and the old id-only check
+   * (`requesterId !== undefined && requesterId !== id`) let exactly that member sail past and
+   * silently swap a claimed account's credentials; and conversely the stamped owner of SEVERAL
+   * accounts can resolve to a different owned id than the target, which the id-only check
+   * wrongly refused. This check used to also read `kind === "human"` because a bot could never
+   * carry `ownerEmail` before `/claim` (#546) learned to link any account kind; that necessity
+   * is gone, and a claimed bot exempted from this check is rotatable — its credentials silently
+   * swapped — by any signed-in member, no check at all (2026-08-26, same gap as
+   * `requireEditable` in account-service.ts, closed alongside it). An
    * UNCLAIMED one (2026-08-25 — legacy rows added before OAuth, or before `/add` had a session
    * to stamp) has nobody to check against, so any signed-in member may rotate it —
    * `rotateCredentials` then stamps THE HUMAN case as its owner on success ("signed in + a
@@ -269,12 +277,14 @@ export class ParticipantService {
       }
       return undefined;
     }
-    if (
-      existing.ownerEmail !== undefined &&
-      input.requesterId !== undefined &&
-      input.requesterId !== existing.id
-    ) {
-      return "You can only rotate your own account's credentials.";
+    if (existing.ownerEmail !== undefined) {
+      const self =
+        input.requesterId === existing.id ||
+        (input.requesterEmail !== undefined &&
+          input.requesterEmail.toLowerCase() === existing.ownerEmail.toLowerCase());
+      if ((input.requesterId !== undefined || input.requesterEmail !== undefined) && !self) {
+        return "You can only rotate your own account's credentials.";
+      }
     }
     return undefined;
   }
