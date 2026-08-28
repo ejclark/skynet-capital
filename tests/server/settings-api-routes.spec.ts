@@ -138,6 +138,36 @@ describe("serveSettingsApi", () => {
     expect(captured.requesterId).toBe("human-eric");
   });
 
+  it("feeds rotation the /rotate route's requester assembly and drops the body's claims", async () => {
+    const { res, out } = fakeRes();
+    await serveSettingsApi(
+      post({ id: "human-eric", apiKey: "AK-new", apiSecret: "SK-new", requesterId: "attacker" }),
+      res,
+      "/api/settings/rotate",
+      configWith({
+        resolveOwnerId: () => "human-eric",
+        rotateCredentials: async (input: unknown) => ({ ok: true, captured: input }),
+      }),
+      session,
+    );
+    const captured = (answered(out) as { captured: Record<string, unknown> }).captured;
+    expect(captured.requesterId).toBe("human-eric"); // session-resolved, body's claim dropped
+    expect(captured.requesterEmail).toBe("eric@example.com");
+    expect(captured.apiKey).toBe("AK-new"); // the pasted key reaches the service untouched
+  });
+
+  it("says when rotation isn't wired — an honest sentence, not an error", async () => {
+    const { res, out } = fakeRes();
+    await serveSettingsApi(
+      post({ id: "x", apiKey: "a", apiSecret: "b" }),
+      res,
+      "/api/settings/rotate",
+      configWith(),
+      session,
+    );
+    expect(answered(out)).toMatchObject({ ok: false });
+  });
+
   it("says when account management isn't wired — an honest sentence, not an error", async () => {
     const { res, out } = fakeRes();
     await serveSettingsApi(

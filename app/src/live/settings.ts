@@ -59,3 +59,11 @@ export const removeAccountRequest = (input: {
   readonly id: string;
   readonly confirmName: string;
 }): Promise<SettingsWriteResult> => postSettings("/api/settings/remove", input);
+
+/** Replace, never reveal: keys are pasted and sent once; existing secrets are never fetched,
+ *  displayed, or echoed — the server verifies the NEW key against Alpaca before storing. */
+export const rotateCredentialsRequest = (input: {
+  readonly id: string;
+  readonly apiKey: string;
+  readonly apiSecret: string;
+}): Promise<SettingsWriteResult> => postSettings("/api/settings/rotate", input);
