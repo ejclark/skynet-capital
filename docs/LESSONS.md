@@ -1082,3 +1082,11 @@ it. Prevention ranks, best first:
   trigger (body size? specific preceding content? something else?) instead of the current
   "sometimes it survives, sometimes it doesn't" — a minimal bisection would settle it in a few
   more probes, deliberately not spent here to stay on the shipping task.
+
+## 2026-08-28 — a spec that follows a redirect into /app passes only where dist exists
+
+`fetch` follows 302s by default, so a server spec asserting on a legacy page that now redirects
+into `/app/*` silently lands on the shell's `index.html` — which exists locally (we build
+`app/dist` for live checks) and does NOT exist in CI's verify job. Green locally, 404-red in CI
+(#779). Rule: server specs pin the redirect itself (`redirect: "manual"`, assert 302 + location),
+never what lies beyond it; the shell's own behavior is the app's concern, not the server suite's.
