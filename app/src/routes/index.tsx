@@ -275,21 +275,24 @@ function FieldLadder({
   );
 }
 
-function MetricPicker({ active }: { readonly active: BoardMetric }): ReactElement {
+/** The rail control (dimensional precedence: the 2nd dimension drives the 3rd) — one metric
+ *  ranks the whole field, so it lives beside the view, not buried above the ladder. */
+function RankRail({ active }: { readonly active: BoardMetric }): ReactElement {
   return (
-    <nav className="metric-picker" aria-label="Rank the field by">
-      {BOARD_METRICS.map((m) => (
-        <Link
-          key={m.key}
-          from={Route.fullPath}
-          search={{ by: m.key }}
-          className={m.key === active ? "active" : ""}
-          aria-current={m.key === active ? "page" : undefined}
-        >
-          {m.label}
-        </Link>
-      ))}
-    </nav>
+    <>
+      <p className="rail-label">Rank the field by</p>
+      {BOARD_METRICS.map((m) =>
+        m.key === active ? (
+          <span key={m.key} className="rail-current" aria-current="page">
+            {m.label}
+          </span>
+        ) : (
+          <Link key={m.key} from={Route.fullPath} search={{ by: m.key }}>
+            {m.label}
+          </Link>
+        ),
+      )}
+    </>
   );
 }
 
@@ -332,7 +335,7 @@ function Standings(): ReactElement {
   const { rows, blocks, generatedAt } = board.data;
   const armed = a && !board.data.compare ? rows.find((r) => r.key === a) : undefined;
   return (
-    <PageFrame>
+    <PageFrame rail={<RankRail active={by} />}>
       <header className="page-header">
         <h1>Standings</h1>
         <p>How every desk is performing — bots and humans, same board. Figures, not placings.</p>
@@ -359,7 +362,6 @@ function Standings(): ReactElement {
       ) : null}
       <div className="section-head">
         <span className="section-title">The Field</span>
-        <MetricPicker active={by} />
       </div>
       <FieldLadder rows={rows} a={a} b={b} />
       <footer className="obs-foot num">

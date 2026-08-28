@@ -20,12 +20,47 @@ import { PageFrame } from "../shell/frame";
  * onramp folds behind a disclosure — reference, not front matter.
  */
 
-const CHIPS = [
+const SIDE_CHIPS = [
   ["is:buy", "Buys"],
   ["is:sell", "Sells"],
+] as const;
+const KIND_CHIPS = [
   ["is:bot", "Bots"],
   ["is:human", "Humans"],
 ] as const;
+
+/** The rail control groups — the same one-model qualifiers the bar accepts as text. */
+function WireRail({
+  query,
+  onChange,
+}: {
+  readonly query: string;
+  readonly onChange: (next: string) => void;
+}): ReactElement {
+  const tokens = query.toLowerCase().split(/\s+/);
+  const group = (label: string, chips: readonly (readonly [string, string])[]) => (
+    <>
+      <p className="rail-label">{label}</p>
+      {chips.map(([qualifier, text]) => (
+        <button
+          key={qualifier}
+          type="button"
+          className="railctl"
+          aria-pressed={tokens.includes(qualifier)}
+          onClick={() => onChange(toggleWireQualifier(query, qualifier as never))}
+        >
+          {text}
+        </button>
+      ))}
+    </>
+  );
+  return (
+    <>
+      {group("Side", SIDE_CHIPS)}
+      {group("Desks", KIND_CHIPS)}
+    </>
+  );
+}
 
 function WireFilterBar({
   query,
@@ -50,17 +85,6 @@ function WireFilterBar({
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
-      {CHIPS.map(([qualifier, label]) => (
-        <button
-          key={qualifier}
-          type="button"
-          className="filter-chip"
-          aria-pressed={query.toLowerCase().split(/\s+/).includes(qualifier)}
-          onClick={() => onChange(toggleWireQualifier(query, qualifier))}
-        >
-          {label}
-        </button>
-      ))}
     </div>
   );
 }
@@ -193,7 +217,7 @@ function WirePage(): ReactElement {
   const shown = wire.data.trades.filter((trade) => matchesWire(trade, filter));
 
   return (
-    <PageFrame>
+    <PageFrame rail={<WireRail query={query} onChange={setFilter} />}>
       <header className="page-header">
         <h1>The Wire</h1>
         <p>Every trade, every P&L, every open idea — the live pulse of the whole league.</p>

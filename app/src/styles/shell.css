@@ -181,54 +181,6 @@ a {
   gap: 32px;
   align-items: start;
 }
-/* .frame-full retired (constant geometry): every view keeps the same two-column grid so
-   content never shifts when navigating — an empty rail column reserves the space. */
-.rail-empty {
-  min-height: 1px;
-}
-.rail {
-  position: sticky;
-  top: 64px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.rail-label {
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--muted);
-  margin: 0 0 6px 12px;
-}
-.rail a {
-  padding: 7px 12px;
-  border-radius: 6px;
-  font-size: 13.5px;
-  color: var(--muted);
-  font-weight: 500;
-  text-decoration: none;
-}
-.rail a:hover {
-  background: var(--surface-2);
-  color: var(--text);
-}
-.rail a[aria-current="page"],
-.rail-current {
-  display: block;
-  padding: 7px 12px;
-  border-radius: 6px;
-  font-size: 13.5px;
-  background: var(--surface);
-  color: var(--accent);
-  font-weight: 600;
-  box-shadow: var(--elev-base);
-}
-.rail hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 6px 12px;
-  align-self: stretch;
-}
 .stage {
   min-width: 0;
   max-width: 880px;
@@ -242,26 +194,6 @@ a {
   .frame {
     grid-template-columns: 1fr;
     gap: 14px;
-  }
-  .rail {
-    position: static;
-    flex-direction: row;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-  .rail-empty {
-    display: none;
-  }
-  .rail-label {
-    display: none;
-  }
-  .rail a {
-    white-space: nowrap;
-    background: var(--surface);
-    border: 1px solid var(--border);
-  }
-  .rail a[aria-current="page"] {
-    border-color: var(--accent);
   }
   .toggle-group .toggle-text {
     display: none;
