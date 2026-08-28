@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
+import { Readable } from "node:stream";
+import type { AlpacaOptionsClient } from "../../src/alpaca/alpaca-options-client.js";
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import { resolveAuth } from "../../src/server/auth/resolve-auth.js";
@@ -355,6 +357,40 @@ describe("handleTrade — the route contract in isolation", () => {
     });
     expect(sent.status).toBe(403);
     expect(sent.body).toContain("Order refused");
+  });
+
+  // The review step's whole job is telling you what the trade is worth BEFORE you confirm, and
+  // an unheld symbol has no position mark to read — so the route fetches the latest price once,
+  // on the member's own connected account, and the screen prices the order off it.
+  const orderForm = (over: Record<string, string> = {}): IncomingMessage => {
+    const body = new URLSearchParams({
+      symbol: "MSFT",
+      quantity: "100",
+      action: "buy",
+      ...over,
+    }).toString();
+    const req = Readable.from([body]) as IncomingMessage;
+    req.method = "POST";
+    return req;
+  };
+
+  it("quotes an unheld symbol so the review screen can size the trade in dollars", async () => {
+    const { sent, res } = capture();
+    await handleTrade(orderForm(), res, "/trade", {
+      ...deps,
+      optionsClientFor: () =>
+        ({ getUnderlyingPrice: async () => 512.5 }) as unknown as AlpacaOptionsClient,
+    });
+    expect(sent.status).toBe(200);
+    expect(sent.body).toContain("≈ $51,250");
+    expect(sent.body).toContain("at the latest market price of $512.50");
+  });
+
+  it("still says the cost is unknown when no quote can be had — never invents one", async () => {
+    const { sent, res } = capture();
+    await handleTrade(orderForm(), res, "/trade", deps);
+    expect(sent.status).toBe(200);
+    expect(sent.body).toContain("unknown until it fills");
   });
 
   // Starter plays live on their own ?starter= param — never ?play=, whose codes are the desk's
