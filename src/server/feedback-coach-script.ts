@@ -132,6 +132,9 @@ export const COACH_SCRIPT = `
   }
 
   start.addEventListener('click', function () {
+    // The kind select no longer carries a default (#645), so the coach has to ask for it rather
+    // than inherit a guess — same reason the server stopped coercing an unknown kind to 'feature'.
+    if (!coachKindEl.value) { line('ai', 'Pick what kind this is first — bug, feature, or side quest.'); return; }
     var raw = noteEl.value.trim();
     if (!raw) { line('ai', 'Jot a rough note above first — even one messy sentence — then I can help shape it.'); return; }
     start.disabled = true;
