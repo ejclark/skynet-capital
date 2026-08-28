@@ -1,44 +1,72 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { applyPatch, type BoardPatch, type BoardSnapshot, fetchBoard } from "./board";
+import {
+  applyPatch,
+  type BoardMetric,
+  type BoardPatch,
+  type BoardSnapshot,
+  fetchBoard,
+} from "./board";
 import { useConnection } from "./connection";
 
 /**
- * The SSE → Query seam this phase exists to prove (#738 phase 0, EARS P0).
+ * The SSE → Query seam (#738 phase 0; per-metric since phase 2).
  *
- * ONE EventSource per app, wired outside React's render cycle. Each `/events` patch lands in the
- * Query cache through `setQueryData` — no refetch, no render-cycle subscription churn. The three
- * server events map exactly onto the recovery ladder:
- *   hello  → the channel's head; the snapshot fetch anchors at or past it.
- *   patch  → applied when it is exactly `seq + 1`; anything else is a gap and the cache is
- *            invalidated so the JSON snapshot (`/api/board`, the frame's JSON twin) re-anchors.
+ * ONE EventSource per visible metric, wired outside React's render cycle: the server formats every
+ * op for the connection's `?by=`, so the stream and the snapshot always speak the same metric and
+ * the cache key carries it (`["board", metric]`). Switching metric closes one channel and opens
+ * the next — the old metric's cache stays warm and re-anchors through the hello handshake when
+ * revisited. The three server events map onto the recovery ladder:
+ *   hello  → the channel's head; a cache that is behind it re-anchors with a fresh snapshot.
+ *   patch  → applied when it is exactly `seq + 1`; anything else is a gap → resnapshot.
  *   resync → the server's own admission that replay fell out of its buffer; same recovery.
- * The browser's native reconnect carries `Last-Event-ID` (the server stamps each patch's seq as
- * the SSE id), so a dropped socket replays exactly what was missed — or resyncs, honestly.
+ * The browser's native reconnect carries `Last-Event-ID` (each patch's seq is its SSE id), so a
+ * dropped socket replays exactly what was missed — or resyncs, honestly.
  */
 
-export const BOARD_QUERY_KEY = ["board"] as const;
+export const boardQueryKey = (metric: BoardMetric) => ["board", metric] as const;
 
-export function startBoardChannel(queryClient: QueryClient): () => void {
-  const source = new EventSource("/events", { withCredentials: true });
+export function boardQueryOptions(metric: BoardMetric) {
+  return {
+    queryKey: boardQueryKey(metric),
+    queryFn: async (): Promise<BoardSnapshot> => {
+      const snapshot = await fetchBoard(metric);
+      useConnection.getState().setSeq(snapshot.seq);
+      return snapshot;
+    },
+    // The patch channel owns freshness; polling would be a re-render wearing a fetch's clothes.
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnWindowFocus: false,
+  } as const;
+}
+
+/** Open the live channel for one metric. Returns the disposer the caller owns (React effect). */
+export function connectBoardChannel(queryClient: QueryClient, metric: BoardMetric): () => void {
+  const key = boardQueryKey(metric);
+  const source = new EventSource(`/events?by=${metric}`, { withCredentials: true });
   const connection = useConnection.getState();
+  connection.setStatus("connecting");
 
   const recover = () => {
-    connection.setStatus("resyncing");
+    useConnection.getState().setStatus("resyncing");
     void queryClient
-      .invalidateQueries({ queryKey: BOARD_QUERY_KEY })
-      .then(() => connection.setStatus("live"));
+      .invalidateQueries({ queryKey: key })
+      .then(() => useConnection.getState().setStatus("live"));
   };
 
-  source.addEventListener("hello", () => {
-    // A fresh (or replay-safe) connect: the page's snapshot fetch anchors the seq run.
-    connection.setStatus("live");
+  source.addEventListener("hello", (event) => {
+    const head = (JSON.parse((event as MessageEvent<string>).data) as { seq: number }).seq;
+    const cached = queryClient.getQueryData<BoardSnapshot>(key);
+    // A warm cache from an earlier visit may be behind the channel's head — re-anchor it rather
+    // than letting the first patch read as a gap.
+    if (cached && cached.seq < head) recover();
+    else useConnection.getState().setStatus("live");
   });
 
   source.addEventListener("resync", recover);
 
   source.addEventListener("patch", (event) => {
     const patch = JSON.parse((event as MessageEvent<string>).data) as BoardPatch;
-    const current = queryClient.getQueryData<BoardSnapshot>(BOARD_QUERY_KEY);
+    const current = queryClient.getQueryData<BoardSnapshot>(key);
     if (!current) return; // first snapshot still in flight; it will land at or past this seq
     const next = applyPatch(current, patch);
     if (next === null) {
@@ -46,7 +74,7 @@ export function startBoardChannel(queryClient: QueryClient): () => void {
       return;
     }
     if (next !== current) {
-      queryClient.setQueryData(BOARD_QUERY_KEY, next);
+      queryClient.setQueryData(key, next);
       useConnection.getState().setSeq(next.seq);
     }
   });
@@ -58,15 +86,3 @@ export function startBoardChannel(queryClient: QueryClient): () => void {
 
   return () => source.close();
 }
-
-export const boardQueryOptions = {
-  queryKey: BOARD_QUERY_KEY,
-  queryFn: async (): Promise<BoardSnapshot> => {
-    const snapshot = await fetchBoard();
-    useConnection.getState().setSeq(snapshot.seq);
-    return snapshot;
-  },
-  // The patch channel owns freshness; polling would be a re-render wearing a fetch's clothes.
-  staleTime: Number.POSITIVE_INFINITY,
-  refetchOnWindowFocus: false,
-} as const;

@@ -1,14 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { CSSProperties, ReactElement } from "react";
-import type { BoardBlock, BoardRow } from "../live/board";
-import { boardQueryOptions } from "../live/channel";
+import { useEffect } from "react";
+import {
+  BOARD_METRICS,
+  type BoardBlock,
+  type BoardMetric,
+  type BoardRow,
+  parseBoardMetric,
+} from "../live/board";
+import { boardQueryOptions, connectBoardChannel } from "../live/channel";
 
 /**
- * Standings, phase-0 cut: the match read, the two cohort figures, and the field ladder — rendered
- * once from `/api/board`, then moved only by `/events` ops through the Query cache. Every number
- * on this page was formatted by the server; the green intensity ramp (Eric, round 3) is the one
- * purely presentational thing this file adds.
+ * Standings (#738 phase 2a): the metric picker is a TYPED search param — `?by=` validates through
+ * the router, drives the snapshot fetch AND the live channel (the server formats every op for the
+ * connection's metric), and stays a shareable URL. Every number on this page was formatted by the
+ * server; the green intensity ramp (Eric, round 3) is the one presentational thing this file adds.
  */
 
 function MatchRead({ block }: { readonly block: BoardBlock | undefined }): ReactElement | null {
@@ -36,6 +43,14 @@ function MatchRead({ block }: { readonly block: BoardBlock | undefined }): React
   );
 }
 
+const COHORT_METRICS = [
+  ["avgEquity", "Avg equity"],
+  ["unrealized", "Unrealized"],
+  ["return", "Return"],
+  ["breadth", "In profit"],
+  ["spread", "Spread"],
+] as const;
+
 function CohortFigure({
   label,
   block,
@@ -55,22 +70,39 @@ function CohortFigure({
       </header>
       <div className="cohort-equity num">{block.text.totalEquity}</div>
       <dl>
+        {COHORT_METRICS.map(([key, title]) => (
+          <div key={key}>
+            <dt>{title}</dt>
+            <dd className={`num tone-${block.tone?.[key] ?? "flat"}`}>{block.text[key]}</dd>
+          </div>
+        ))}
         <div>
-          <dt>Avg equity</dt>
-          <dd className="num">{block.text.avgEquity}</dd>
-        </div>
-        <div>
-          <dt>Unrealized</dt>
-          <dd className={`num tone-${block.tone?.unrealized ?? "flat"}`}>
-            {block.text.unrealized}
+          <dt>Best</dt>
+          <dd>
+            {block.text.bestName}{" "}
+            <span className={`num tone-${block.tone?.bestPct ?? "flat"}`}>
+              {block.text.bestPct}
+            </span>
           </dd>
-        </div>
-        <div>
-          <dt>Return</dt>
-          <dd className={`num tone-${block.tone?.return ?? "flat"}`}>{block.text.return}</dd>
         </div>
       </dl>
     </article>
+  );
+}
+
+function VersusRead({ block }: { readonly block: BoardBlock | undefined }): ReactElement | null {
+  if (!block) return null;
+  return (
+    <p className="versus-read">
+      <span>
+        <strong>{block.text.totalLeader}</strong> lead on total equity by{" "}
+        <span className="num">{block.text.totalGap}</span>
+      </span>
+      <span>
+        <strong>{block.text.avgLeader}</strong> lead on average equity by{" "}
+        <span className="num">{block.text.avgGap}</span>
+      </span>
+    </p>
   );
 }
 
@@ -101,8 +133,31 @@ function FieldLadder({ rows }: { readonly rows: readonly BoardRow[] }): ReactEle
   );
 }
 
+function MetricPicker({ active }: { readonly active: BoardMetric }): ReactElement {
+  return (
+    <nav className="metric-picker" aria-label="Rank the field by">
+      {BOARD_METRICS.map((m) => (
+        <Link
+          key={m.key}
+          from={Route.fullPath}
+          search={{ by: m.key }}
+          className={m.key === active ? "active" : ""}
+          aria-current={m.key === active ? "page" : undefined}
+        >
+          {m.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 function Standings(): ReactElement {
-  const board = useQuery(boardQueryOptions);
+  const { by } = Route.useSearch();
+  const queryClient = useQueryClient();
+  // The live channel follows the visible metric — one EventSource at a time, disposed on switch.
+  useEffect(() => connectBoardChannel(queryClient, by), [queryClient, by]);
+  const board = useQuery(boardQueryOptions(by));
+
   if (board.isPending) return <p className="note">Reading the board…</p>;
   if (board.isError)
     return <p className="note">The board is unreachable — {String(board.error)}</p>;
@@ -110,7 +165,10 @@ function Standings(): ReactElement {
   return (
     <>
       <header className="page-header">
-        <h1>Standings</h1>
+        <div className="page-header-row">
+          <h1>Standings</h1>
+          <MetricPicker active={by} />
+        </div>
         <p>How every desk is performing — bots and humans, same board. Figures, not placings.</p>
       </header>
       <MatchRead block={blocks.match} />
@@ -118,13 +176,17 @@ function Standings(): ReactElement {
         <CohortFigure label="Humans" block={blocks["cohort:human"]} />
         <CohortFigure label="Bots" block={blocks["cohort:bot"]} />
       </div>
+      <VersusRead block={blocks.versus} />
       <FieldLadder rows={rows} />
       <footer className="obs-foot num">
-        as of {generatedAt} · {opsApplied} live op{opsApplied === 1 ? "" : "s"} applied without a
-        refetch
+        as of {generatedAt} · ranked by {by} · {opsApplied} live op{opsApplied === 1 ? "" : "s"}{" "}
+        applied without a refetch
       </footer>
     </>
   );
 }
 
-export const Route = createFileRoute("/")({ component: Standings });
+export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>) => ({ by: parseBoardMetric(search.by) }),
+  component: Standings,
+});

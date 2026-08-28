@@ -11,6 +11,19 @@
 
 export type FieldTone = "pos" | "neg" | "flat";
 
+/** Mirrors the server's `LeaderMetric` — the four snapshot-derived rankings Standings offers. */
+export type BoardMetric = "equity" | "pl" | "return" | "realized";
+
+export const BOARD_METRICS: ReadonlyArray<{ key: BoardMetric; label: string }> = [
+  { key: "equity", label: "Equity" },
+  { key: "pl", label: "Unrealized P/L" },
+  { key: "return", label: "Return %" },
+  { key: "realized", label: "Realized P/L" },
+];
+
+export const parseBoardMetric = (raw: unknown): BoardMetric =>
+  raw === "pl" || raw === "return" || raw === "realized" ? raw : "equity";
+
 export interface BoardRow {
   readonly key: string;
   readonly name: string;
@@ -69,8 +82,8 @@ interface ApiBoard {
   };
 }
 
-export async function fetchBoard(): Promise<BoardSnapshot> {
-  const res = await fetch("/api/board", { credentials: "same-origin" });
+export async function fetchBoard(metric: BoardMetric): Promise<BoardSnapshot> {
+  const res = await fetch(`/api/board?by=${metric}`, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`GET /api/board → ${res.status}`);
   const body = (await res.json()) as ApiBoard;
   return {
