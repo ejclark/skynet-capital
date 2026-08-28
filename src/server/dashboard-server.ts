@@ -27,6 +27,7 @@ import { trySelfServiceRoute } from "./dashboard-self-service-routes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveInfoRoute, serveLearnRoute, serveTradeRoute } from "./dashboard-view-routes.js";
 import { serveDeskJson } from "./desk-json-routes.js";
+import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
@@ -184,6 +185,7 @@ async function serveWriteApis(
   if (await serveSettingsApi(req, res, path, config, session)) return true;
   if (await serveLearnApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
+  if (await serveFeedbackApi(req, res, path, config, session)) return true;
   return serveJoinApi(req, res, path, config, session);
 }
 

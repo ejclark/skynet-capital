@@ -9,8 +9,10 @@ import type { ServerResponse } from "node:http";
  *  - GET only. The legacy POST handlers (account forms, the trade ticket, the desk settings tab)
  *    keep answering so nothing breaks mid-flight — they just have no UI reaching them anymore.
  *  - Only routes with a REAL shell twin redirect. `/trade` stays: the options ticket exists only
- *    on the HTML page until the shell gate learns options plays. `/feedback`, `/invite`,
- *    `/claim`, `/ops-status` stay until their phase-9 ports land (`/add` joined the twins in 9c). `/research/<slug>` documents
+ *    on the HTML page until the shell gate learns options plays. `/invite`,
+ *    `/claim`, `/ops-status` stay until their phase-9 ports land (`/add` and `/feedback`
+ *    joined the twins in 9c/9d; `/feedback/coach` and `/feedback/preview` are shared JSON
+ *    endpoints, not pages, and keep serving). `/research/<slug>` documents
  *    are server-rendered by design, and `/classic` is the deliberate escape hatch.
  *  - Queries carry over where the twin speaks them (`?by=` on the board, `?q=` filters ride the
  *    path unchanged); the desk's `?tab=` maps to the shell's routes instead.
@@ -30,6 +32,7 @@ function deskTarget(path: string, url: string): string {
 /** The straight renames — one shell page, same meaning, query preserved. */
 const TWINS: ReadonlyMap<string, string> = new Map([
   ["/add", "/app/join"],
+  ["/feedback", "/app/feedback"],
   ["/learn", "/app/learn"],
   ["/wire", "/app/wire"],
   ["/research", "/app/research"],

@@ -223,3 +223,8 @@ export async function readJsonPost(
     return undefined;
   }
 }
+
+/** A non-empty string within `max`, or undefined — the strict-shape gates' shared bound. */
+export function boundedString(raw: unknown, max: number): string | undefined {
+  return typeof raw === "string" && raw.length > 0 && raw.length <= max ? raw : undefined;
+}

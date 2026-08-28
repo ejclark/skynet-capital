@@ -9,6 +9,7 @@ import "./styles/compare.css";
 import "./styles/decisions.css";
 import "./styles/desk.css";
 import "./styles/drawer.css";
+import "./styles/feedback.css";
 import "./styles/gate.css";
 import "./styles/hero.css";
 import "./styles/hovercard.css";

@@ -86,3 +86,19 @@ export function feedbackLogEntry(
     filedAt,
   };
 }
+
+/** Record a successful filing without ever failing the submit — a store hiccup can't cost the
+ *  member their filed issue. Shared by the form route and the JSON API (one door, one discipline). */
+export async function recordFilingSafely(
+  record: ((entry: FeedbackLogEntry) => Promise<void>) | undefined,
+  input: { readonly kind: FeedbackKind; readonly title: string },
+  memberId: string | undefined,
+  filed: { readonly url: string; readonly number: number },
+): Promise<void> {
+  if (!(record && memberId)) return;
+  try {
+    await record(feedbackLogEntry(input, memberId, filed, new Date().toISOString()));
+  } catch (error) {
+    process.emitWarning(`[feedback-log] record failed: ${String(error)}`);
+  }
+}

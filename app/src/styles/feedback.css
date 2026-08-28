@@ -1,0 +1,166 @@
+/* feedback (#738 phase 9d) — coach-first filing, the form, recent filings. Tokens only. */
+
+.coach,
+.fb-form,
+.fb-done,
+.fb-recent {
+  max-width: 640px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: var(--panel-p);
+  margin-bottom: 16px;
+}
+.coach {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
+.coach-h {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.coach-lede {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.coach-start,
+.coach-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.coach textarea,
+.fb-form textarea,
+.fb-followup-body textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--sans);
+}
+.coach-q {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-left: 2px solid var(--accent);
+  padding-left: 10px;
+}
+.coach-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fb-draft-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--accent);
+}
+.fb-kinds {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fb-kind {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  background: var(--surface-2);
+}
+.fb-kind.sel {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.fb-kind input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.fb-images {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.fb-img-x {
+  background: none;
+  border: none;
+  color: var(--neg);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+.fb-done {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-color: color-mix(in oklab, var(--accent) 50%, var(--border));
+}
+.fb-done h2,
+.fb-done p {
+  margin: 0;
+}
+.fb-h {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.fb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fb-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.fb-row:last-child {
+  border-bottom: none;
+}
+.fb-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+.fb-status {
+  align-self: flex-start;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.fb-shipped {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, var(--surface-2));
+}
+.fb-needs-info {
+  color: var(--neg);
+  background: color-mix(in oklab, var(--neg) 10%, var(--surface-2));
+}
+.fb-followup-toggle {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.fb-followup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}

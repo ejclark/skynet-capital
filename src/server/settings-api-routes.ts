@@ -4,7 +4,7 @@ import { sessionNameCandidates } from "./account-forms.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
+import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
  * THE SETTINGS API (#738 phase 5c) — the React shell's account settings, as three endpoints.
@@ -41,10 +41,6 @@ interface RotateBody {
   readonly id: string;
   readonly apiKey: string;
   readonly apiSecret: string;
-}
-
-function boundedString(raw: unknown, max: number): string | undefined {
-  return typeof raw === "string" && raw.length > 0 && raw.length <= max ? raw : undefined;
 }
 
 /** Strict shape gate: exactly the fields a profile edit needs, everything else dropped. */
