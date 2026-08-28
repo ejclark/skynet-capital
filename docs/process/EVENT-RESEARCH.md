@@ -62,6 +62,8 @@ Any adjacent event with a **date** discovered during the sweep is PROPOSED as a 
 `market-events.ts` entry **in the same PR**, always `status: "estimate"` (`EST:`/`NEWS:` source)
 — never `confirmed` without a primary source. That proposal is how the calendar feeds itself.
 
+**Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
+
 ### `event-passed-unscored` → close-out
 
 Fill the ledger's `## Outcome` section within the close-out window (`closeOutWithinDays`): what
@@ -69,6 +71,52 @@ actually happened vs the stance, scored **from re-run instrument data, never fro
 tape**. Score any forward tests this event carried in
 [`forward-tests.md`](../research/forward-tests.md) (a scored kill moves to the sweep doc's kill
 list). Once `## Outcome` exists the scanner goes silent on the event forever.
+
+## Deterministic screening (issue #724) — not every due pulse spends a session
+
+`scripts/event-scan.mjs` decides **when** a pulse is due; `scripts/event-material-scan.mjs`
+decides **whether it needs a Claude session at all**, for `interval-elapsed` pulses only (a
+`never-assessed` initial research and an `event-passed-unscored` close-out are never screened —
+both always dispatch, same as before this existed). It runs between the two in
+`.github/workflows/postmaster.yml`'s `route` job: a screen writes its own ledger row and commits
+it directly, without spending a session; anything else falls through to the full pulse-check
+protocol above, unchanged.
+
+**The reference block.** Every ledger's header carries a machine-readable line right after
+`**Last assessed:**`:
+
+```
+<!-- probe-ref: {"symbols":{"NVDA":182.43},"vix":15.2,"daysBand":"critical:8+","adjacentIds":[],"screenStreak":0} -->
+```
+
+This is the probe's one source of truth for "what did we see last time" — embedded in the ledger
+itself (not a sidecar file), because the ledger is already this system's single source of truth
+per event. It is **replaced in place** on every pulse (screen or full session), never appended —
+distinct from the assessment ledger table, which stays strictly append-only. `TEMPLATE.md` shows
+where it goes; **initial research must populate it with real readings**, or the event's first
+`interval-elapsed` pulse has nothing to diff against and is automatically material (the safe
+default — see below) rather than a wasted "establish the baseline" session.
+
+**What counts as material** (the defaults `scripts/event-material-decide.mjs` ships with, chosen
+because Eric approved "use the proposed defaults" before a concrete one existed — full reasoning
+in that file's header):
+
+| Check | Default | Why this number |
+|---|---|---|
+| Underlying price move | ≥ 5% since the last recorded price, per tracked symbol | past ordinary daily noise for this calendar's names; peers are NOT probed (v1 simplification — a full session's adjacency sweep still checks them by hand) |
+| VIX regime | ≥ 3 points absolute since the last recorded reading | this calendar's own ledgers already treat a few-point VIX move as regime-relevant |
+| Cadence band transition | any change in the matched `assessment-cadence.json` band | a tightening/loosening interval is itself information worth a real look |
+| New adjacent event | any calendar entry within 5 days of this event's date not seen on the last pulse | the same "corridor" framing the adjacency sweep already uses by hand |
+| Staleness ceiling | every 3rd consecutive screen is forced material regardless of readings | an event can never coast on screens forever; a real session re-establishes the baseline at least that often |
+| No reference block | always material (`no-reference-baseline`) | nothing to diff against — the safe default, never a guess |
+| Probe fetch failure | always material (loud failure) | "broken ≠ quiet" — the same doctrine `event-scan.mjs` already enforces |
+
+**The honesty invariant.** A screened row is a mechanical check, never a verdict — it is worded
+`**Deterministic screen (no Claude session).**` followed by the raw readings and "nothing tracked
+crossed its threshold," and its Stance-change column reads `— (screen; no assessment made)`. It
+must never be worded to imply "no change" or any other conclusion an actual assessment would
+draw — see CLAUDE.md's domain-accuracy-and-honesty principle. `scripts/event-material-scan.mjs`'s
+own header and `tests/scripts/event-material-scan.spec.ts` enforce this wording mechanically.
 
 ## The decision header is gated (`npm run research:lint`)
 
