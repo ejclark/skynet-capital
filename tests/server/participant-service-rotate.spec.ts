@@ -243,6 +243,44 @@ describe("ParticipantService.rotateCredentials", () => {
       expect(result.ok).toBe(true);
     });
 
+    // 2026-08-28: the old check keyed on requesterId alone, so a signed-in member whose email
+    // resolves to NO board participant (requesterId undefined — a real, documented state) sailed
+    // past it and could silently swap a claimed account's credentials for attacker-supplied keys
+    // (the claims stamp stays false on a claimed target, so ownership never visibly changed).
+    it("refuses a claimed target when the session's email resolves to NO participant", async () => {
+      const store = new MemStore();
+      store.items = [humanExisting];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "human-uncle_joe",
+        apiKey: "attacker-key",
+        apiSecret: "attacker-secret",
+        // OAuth is configured — a session email is present — but it maps to no account.
+        requesterEmail: "drifter@example.com",
+      });
+
+      expect(result.ok).toBe(false);
+      expect(store.items[0]?.credentials).toEqual(humanExisting.credentials);
+      expect(store.items[0]?.ownerEmail).toBe("uncle_joe@example.com");
+    });
+
+    it("allows the stamped owner by email match — case-insensitive, even when their session resolves to a different owned id", async () => {
+      const store = new MemStore();
+      store.items = [humanExisting];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "human-uncle_joe",
+        apiKey: "new-key",
+        apiSecret: "new-secret",
+        requesterId: "human-uncle_joes_other_account",
+        requesterEmail: "Uncle_Joe@Example.COM",
+      });
+
+      expect(result.ok).toBe(true);
+    });
+
     it("does not enforce the check when requesterId is absent — no OAuth configured", async () => {
       const store = new MemStore();
       store.items = [humanExisting];
@@ -295,6 +333,22 @@ describe("ParticipantService.rotateCredentials", () => {
         apiKey: "attacker-key",
         apiSecret: "attacker-secret",
         requesterId: "human-someone_else",
+      });
+
+      expect(result.ok).toBe(false);
+      expect(store.items[0]?.credentials).toEqual(claimedBot.credentials);
+    });
+
+    it("refuses a CLAIMED bot target when the session's email resolves to NO participant", async () => {
+      const store = new MemStore();
+      store.items = [claimedBot];
+      const { service } = makeService({ store });
+
+      const result = await service.rotateCredentials({
+        id: "day-trader",
+        apiKey: "attacker-key",
+        apiSecret: "attacker-secret",
+        requesterEmail: "drifter@example.com",
       });
 
       expect(result.ok).toBe(false);
