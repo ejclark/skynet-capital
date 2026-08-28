@@ -21,13 +21,13 @@ never floor-lowering.
 | 1 | **Gate event-research pulses on material change** | free win | largest — the lane is ~41% of all commits and ~9 of 30 recent pulse rows were "no change" full sessions | A deterministic pre-filter (like `digest-scan --due`) that no-ops a pulse when nothing tracked moved. Critical before the **late-October cliff** (~6 critical prints + FOMC/CPI hit daily cadence at once ≈ 20+ sessions/day on current design) |
 | 2 | **Protect the prompt cache in every session** | free win | 2.5–3.7× on agent-loop cost at 81–90% hit rates (Anthropic's measurement) | Pick model + effort at the top of a session and don't touch them mid-task; `/clear` between unrelated tasks; `/rewind` over `/compact` when abandoning a path. Invalidator catalogue below |
 | 3 | **Compress CLAUDE.md (26.3KB → ~14–16KB)** | free win | ~2,500–3,000 tokens × *every* session and *every* CI lane run, zero information loss | Every trimmed item already has an on-demand home (skills, `docs/`). Details below; CLAUDE.md is Eric's file, so this ships as a reviewed proposal |
-| 4 | **Debounce / de-duplicate the `claude.yml` comment lane** | free win | one full session start per member comment — *edited* comments retrigger, and cancel-in-progress discards paid partial work | Debounce rapid-fire comments; drop the `edited` trigger unless the edit changes the ask |
+| 4 | ~~Debounce the `claude.yml` comment lane~~ **withdrawn 2026-08-28** | — | comment-per-session cost is real, but the retrigger-on-new/edited-comment + cancel-in-progress IS Eric's steering directive (2026-08-20, in the workflow's own header) — the discarded partial work is the designed price of "any comment steers" | No change without Eric; the open question (should steering debounce rapid-fire edits?) is his, banked here |
 | 5 | **Pin model + turn caps on CI lanes** | hygiene | bounded worst case, deliberate routing | `build-events` and `claude.yml` set no `--model` today (action default decides — the only unrouted compute in the repo); add `--max-turns` per the GHA cost guidance |
 | 6 | **Route structure questions to Graphify, not file reads** | free win | file reads dominate context (docs' own finding); one query replaces a grep + N candidate reads | `graphify explain/affected/query` before reading; snapshot refresh now verified working (this PR) |
 | 7 | **Effort-tier the fan-outs we already run** | tradeoff | research-type effort curves are nearly flat: `medium` matched default accuracy at 70–85% of its cost in Anthropic's runs | Keep verify/judge stages at `xhigh`; run mechanical read/extract stages at `high` or below. Never silently — floors still apply |
 
-Ranked by ceiling; apply free wins first (2 and 6 are pure habit and start today; 1, 3, 4, 5 are each
-one PR, listed under **Follow-up slices**).
+Ranked by ceiling; apply free wins first (2 and 6 are pure habit and start today; 1, 3, 5 are each
+one PR, listed under **Follow-up slices**; 4 is withdrawn as written — see its row).
 
 ## Where the tokens actually go
 
@@ -135,9 +135,12 @@ entirely out of the startup index; subagent description budget warns at 15k toke
    `digest-scan --due` pattern, which already made the digest no-op free. Also: batch adjacent macro
    events sharing one adjacency sweep (today the same CPI/FOMC/VIX facts are re-researched once per
    event per day), and cap events per session before the October cadence cliff.
-2. **`claude.yml` comment lane**: fires on every member comment *created or edited*;
-   `cancel-in-progress` restarts a fresh session per message, discarding paid work. Fix: debounce,
-   and require an explicit signal for `edited`.
+2. **`claude.yml` comment lane** — *cost confirmed, "fix" withdrawn (2026-08-28)*: it fires on
+   every member comment created or edited, and cancel-in-progress restarts a fresh session per
+   message. But that is the **deliberate steering primitive** Eric directed on 2026-08-20 ("listen
+   for new/edited comments … to steer any inflight processes") — the workflow header documents it.
+   The audit's debounce recommendation would reverse a directive; the only open lever here is a
+   question for Eric (debounce rapid-fire edits?), plus the model pin + turn cap below.
 3. **Model pinning**: `build-events` and `claude.yml` run the action default — the one place the
    repo's route-by-who-pays discipline is silent (feedback and ci-medic pin Opus deliberately).
    Decide and pin; add `--max-turns` per the
@@ -180,7 +183,8 @@ entirely out of the startup index; subagent description budget warns at 15k toke
 1. **Event-lane material-change gate** — the single largest ceiling; must land before late October.
    (Workflow-file changes: Eric's carve-out, no auto-merge.)
 2. **CLAUDE.md compression** — proposal PR against the map above; Eric reviews (his file).
-3. **`claude.yml` debounce + model pinning + `--max-turns`** — same carve-out review.
+3. **Model pinning + `--max-turns` on `build-events` and `claude.yml`** — same carve-out review
+   (steering behavior untouched — see the withdrawal above).
 4. **Dashboard deploy preflight** — skip deploy when the diff is docs-only.
 5. **Verify-output filter hook** — grep-to-failures on test output.
 6. **Repetition miner → `/charter` pipeline** — periodically mine `data/duel-log.jsonl`, digests,

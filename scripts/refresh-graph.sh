@@ -3,8 +3,10 @@
 #
 # Graphify's live outputs live in graphify-out/ (git-ignored); this script regenerates them from the
 # AST (free, no LLM / no API key) and copies the report into the committed docs/STRUCTURE-graph.md with
-# a stable header. Run manually via `npm run graph:refresh`, or automatically on push to main via
-# .github/workflows/graph-refresh.yml — so the map stops drifting from the code.
+# a stable header. Refresh is MANUAL (`npm run graph:refresh`) — no auto-refresh workflow exists:
+# CI cannot push to protected `main` (GH006, see docs/ENGINEERING.md → Releases), so the header's
+# old claim of a graph-refresh.yml was aspirational and false (caught 2026-08-28 when the map had
+# silently drifted 149→193 communities). The doc-rot gate watches the snapshot's age instead.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -22,8 +24,9 @@ OUT="docs/STRUCTURE-graph.md"
 {
   cat <<'HEADER'
 <!-- AUTO-GENERATED — do not hand-edit below the marker.
-     Regenerate: `npm run graph:refresh` (free, no API). Kept fresh automatically on push to main
-     by .github/workflows/graph-refresh.yml. The live graph lives in graphify-out/ (git-ignored). -->
+     Regenerate: `npm run graph:refresh` (free, no API). Refresh is MANUAL — run it after material
+     code changes; the doc-rot gate watches this snapshot's age. The live graph lives in
+     graphify-out/ (git-ignored). -->
 
 # Structural map (Graphify)
 
