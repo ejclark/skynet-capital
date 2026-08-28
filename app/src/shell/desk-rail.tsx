@@ -3,8 +3,9 @@ import type { ReactElement } from "react";
 
 /**
  * The desk's rail sub-navigation (second nav dimension) — shared by every desk-scoped route so
- * the section reads identically everywhere. In-shell destinations are router links; views the
- * shell doesn't own yet cross to the server-rendered desk, honestly. Decisions is a bot's page.
+ * the section reads identically everywhere. Every destination is in-shell (#738 phase 9a: the
+ * old cross-links to the server-rendered desk were how members fell out of the redesign — the
+ * legacy tabs' twins are Active, Pulse, and app Settings). Decisions is a bot's page.
  */
 export function DeskRail({
   id,
@@ -49,9 +50,7 @@ export function DeskRail({
           Pulse
         </Link>
       )}
-      <a href={`/u/${id}`}>Overview</a>
-      <a href={`/u/${id}?tab=performance`}>Performance</a>
-      <a href={`/u/${id}?tab=settings`}>Settings</a>
+      <Link to="/settings">Settings</Link>
       <hr />
       <Link to="/" search={{ by: "equity" }}>
         ← Standings

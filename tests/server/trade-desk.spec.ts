@@ -429,26 +429,21 @@ describe("handleTrade — the route contract in isolation", () => {
 });
 
 describe("desk tabs are served off the profile route", () => {
-  it("serves the active-trades blotter at ?tab=positions", async () => {
+  it("redirects the tabs into the shell desk — active and unknown alike (phase 9a)", async () => {
     await withServer(
       { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}), tradingEnabled: false },
       async (base) => {
-        const res = await fetch(`${base}/u/ann?tab=positions`, { headers: { cookie: cookie() } });
-        expect(res.status).toBe(200);
-        const html = await res.text();
-        expect(html).toContain("Active trades");
-        expect(html).toContain(">AAPL<");
-      },
-    );
-  });
-
-  it("falls back to the overview for an unknown tab", async () => {
-    await withServer(
-      { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}) },
-      async (base) => {
-        const res = await fetch(`${base}/u/ann?tab=wat`, { headers: { cookie: cookie() } });
-        expect(await res.text()).toContain("desk");
-        expect(res.status).toBe(200);
+        const positions = await fetch(`${base}/u/ann?tab=positions`, {
+          headers: { cookie: cookie() },
+          redirect: "manual",
+        });
+        expect(positions.status).toBe(302);
+        expect(positions.headers.get("location")).toBe("/app/u/ann");
+        const typo = await fetch(`${base}/u/ann?tab=wat`, {
+          headers: { cookie: cookie() },
+          redirect: "manual",
+        });
+        expect(typo.headers.get("location")).toBe("/app/u/ann");
       },
     );
   });

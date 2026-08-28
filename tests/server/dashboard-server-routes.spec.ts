@@ -143,59 +143,14 @@ describe("dashboard-server /feedback", () => {
   });
 });
 
-describe("dashboard-server /u/:id performance history", () => {
-  const withBot = (): DashboardData => ({
-    generatedAt: "t",
-    participants: [
-      {
-        id: "day-trader",
-        displayName: "JARVIS",
-        kind: "bot",
-        personaId: "day-trader",
-        cash: 900,
-        equity: 1100,
-        realizedPl: 240,
-        positions: [],
-      },
-    ],
-    collisions: [],
-  });
-
-  it("lights up the sparkline when readHistory returns samples", async () => {
-    await withServer(
-      {
-        hub: new ObservatoryHub(withBot()),
-        readHistory: () =>
-          Promise.resolve([
-            {
-              at: "2026-07-26T14:00:00Z",
-              participantId: "day-trader",
-              equity: 1000,
-              cash: 900,
-              realizedPl: 0,
-            },
-            {
-              at: "2026-07-26T15:00:00Z",
-              participantId: "day-trader",
-              equity: 1100,
-              cash: 900,
-              realizedPl: 240,
-            },
-          ]),
-      },
-      async (base) => {
-        const html = await (await fetch(`${base}/u/day-trader`)).text();
-        expect(html).toContain('<svg class="equity-spark"');
-        expect(html).toContain("Realized P/L");
-      },
-    );
-  });
-
-  it("keeps the honest accruing seam when no history is wired", async () => {
-    await withServer({ hub: new ObservatoryHub(withBot()) }, async (base) => {
-      const html = await (await fetch(`${base}/u/day-trader`)).text();
-      expect(html).not.toContain('<svg class="equity-spark"');
-      expect(html).toContain("once we've recorded your history");
+describe("dashboard-server /u/:id (phase 9a)", () => {
+  it("redirects the legacy desk into the shell — history renders on Pulse now", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const desk = await fetch(`${base}/u/day-trader`, { redirect: "manual" });
+      expect(desk.status).toBe(302);
+      expect(desk.headers.get("location")).toBe("/app/u/day-trader");
+      const perf = await fetch(`${base}/u/day-trader?tab=performance`, { redirect: "manual" });
+      expect(perf.headers.get("location")).toBe("/app/u/day-trader/pulse");
     });
   });
 });
@@ -249,35 +204,26 @@ describe("dashboard-server desk settings (#475)", () => {
     },
   });
 
-  it("serves Mission Control on the owner's desk, inside the app shell", async () => {
+  it("redirects the desk settings tab to app Settings — Mission Control's shell home", async () => {
     await withServer(config(), async (base) => {
       const res = await fetch(`${base}/u/sauron?tab=settings`, {
         headers: { cookie: cookieFor("eric@gmail.com") },
+        redirect: "manual",
       });
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).toContain("Mission Control");
-      expect(html).toContain('<aside class="drawer"');
-      expect(html).toContain('href="/u/sauron?tab=settings"');
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe("/app/settings");
     });
   });
 
-  it("answers a member's ?tab=settings with the plain overview — no owner-shaped tell", async () => {
+  it("answers a member's ?tab=settings with the same redirect — no owner-shaped tell", async () => {
     await withServer(config(), async (base) => {
       const res = await fetch(`${base}/u/sauron?tab=settings`, {
         headers: { cookie: cookieFor("member@gmail.com") },
+        redirect: "manual",
       });
-      expect(res.status).toBe(200);
-      const html = await res.text();
-      expect(html).not.toContain("Mission Control");
-      expect(html).not.toContain("Suspend ALL autonomous trading");
-      // Identical to any unrecognized tab: the overview, with no Settings entry in the strip.
-      const typo = await (
-        await fetch(`${base}/u/sauron?tab=nonsense`, {
-          headers: { cookie: cookieFor("member@gmail.com") },
-        })
-      ).text();
-      expect(html).toBe(typo);
+      expect(res.status).toBe(302);
+      // Identical to the owner's answer; whether the card exists is decided by /api/controls.
+      expect(res.headers.get("location")).toBe("/app/settings");
     });
   });
 
@@ -361,39 +307,14 @@ describe("dashboard-server /rotate identity resolution (2026-08-25)", () => {
     rotateCredentials: () => Promise.reject(new Error("unused")),
   });
 
-  it("prefills and locks the viewer's own account when their sign-in already resolves to one", async () => {
-    await withServer(config(), async (base) => {
-      const res = await fetch(`${base}/rotate`, {
-        headers: { cookie: cookieFor("eric@gmail.com") },
-      });
-      const body = await res.text();
-      expect(body).toContain('value="human-eric" readonly');
-      expect(body).toContain("resolved from your sign-in");
-      expect(body).not.toContain('name="id" required');
-    });
-  });
-
-  it("still asks for an id when the viewer's sign-in resolves to nothing", async () => {
-    await withServer(config(), async (base) => {
-      // Nobody in this fixture resolves to someone-unlinked@gmail.com — the exact unlinked
-      // state this whole area is about.
-      const res = await fetch(`${base}/rotate`, {
-        headers: { cookie: cookieFor("someone-unlinked@gmail.com") },
-      });
-      const body = await res.text();
-      expect(body).toContain('name="id" required');
-      expect(body).not.toContain("readonly");
-    });
-  });
-
-  it("a link's explicit ?id= still wins over the session's own resolved account", async () => {
+  it("redirects into app Settings, where rotation lives on the account card", async () => {
     await withServer(config(), async (base) => {
       const res = await fetch(`${base}/rotate?id=sauron`, {
         headers: { cookie: cookieFor("eric@gmail.com") },
+        redirect: "manual",
       });
-      const body = await res.text();
-      expect(body).toContain('value="sauron" readonly');
-      expect(body).not.toContain("resolved from your sign-in");
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe("/app/settings?id=sauron");
     });
   });
 });
