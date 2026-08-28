@@ -146,3 +146,125 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* the event horizon — the rail as the view's control column (2nd dimension drives the 3rd). */
+.eh {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.eh-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+.eh-month {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+.eh-nav {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.eh-nav:not([disabled]):hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.eh-nav[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+.eh-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.eh-wd {
+  text-align: center;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.eh-day {
+  position: relative;
+  aspect-ratio: 1;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 10.5px;
+  font-family: var(--mono);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.eh-day[disabled] {
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: default;
+}
+.eh-day:not([disabled]):hover {
+  background: var(--surface-2);
+}
+.eh-day[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+}
+.eh-dot {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  background: transparent;
+  display: inline-block;
+}
+.eh-dot.eh-hot {
+  background: var(--accent);
+}
+.eh-day[aria-pressed="true"] .eh-dot {
+  border-color: var(--accent-contrast);
+  background: var(--accent-contrast);
+}
+.eh-legend {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 9.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.eh-legend .eh-dot {
+  position: static;
+  transform: none;
+}
+.eh-clear {
+  margin: 2px 4px 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 10.5px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.eh-clear:hover {
+  color: var(--neg);
+}
