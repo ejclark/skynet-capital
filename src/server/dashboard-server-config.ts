@@ -11,6 +11,7 @@ import type { ControlsDeps } from "./controls-form.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
+import type { OpsStatusDeps } from "./ops-status-routes.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
 import type {
   AddParticipantInput,
@@ -81,6 +82,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * Owner-gated inside the handler itself. The old `/controls` URL redirects here.
    */
   readonly controls?: ControlsDeps;
+  /**
+   * `GET /ops-status` — the owner's read-only bots/deploy health panel (#666 slice 1). Omit to
+   * disable (offline mode, or no auth) — no separate URL then exists, same as `/invite`/`/claim`.
+   * Owner-gated inside the handler itself, exactly like every other owner-only page.
+   */
+  readonly opsStatus?: OpsStatusDeps;
   /**
    * Reads a participant's recorded equity/realized history for the individual view's performance panel.
    * Omit to leave the panel showing the honest "still accruing" seam (e.g. offline with no store).

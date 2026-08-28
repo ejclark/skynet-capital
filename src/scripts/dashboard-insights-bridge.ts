@@ -11,18 +11,30 @@ import { createInsightStore } from "../autonomous/jsonl-insight-store.js";
 import type { createBotControlsStore } from "../server/bot-controls-store.js";
 import { createInsightsListener, resolveInsightsBridgePort } from "../server/insights-listener.js";
 
+export interface InsightsBridgeHandle {
+  /** ISO time of the last authenticated `GET /controls` poll this app run, or `undefined` before
+   *  the first one lands — the ops-status panel's credential-free "is the bots process alive"
+   *  proxy (#666). */
+  readonly lastControlsPollAt: () => string | undefined;
+}
+
 /** Start the internal insights listener; logs the port it bound once it's up. */
 export function startInsightsBridge(
   env: NodeJS.ProcessEnv,
   botControls: ReturnType<typeof createBotControlsStore>,
-): void {
+): InsightsBridgeHandle {
   const insights = createInsightStore(env);
   const insightsPort = resolveInsightsBridgePort(env);
+  let lastControlsPollAt: string | undefined;
   createInsightsListener({
     record: (entry) => insights.record(entry),
     // The bots process polls Mission Control state over the same private-net bridge.
     controls: () => botControls.load(),
+    onControlsPoll: () => {
+      lastControlsPollAt = new Date().toISOString();
+    },
   }).listen(insightsPort, () => {
     console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
   });
+  return { lastControlsPollAt: () => lastControlsPollAt };
 }

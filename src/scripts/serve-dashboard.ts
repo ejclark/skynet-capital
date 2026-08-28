@@ -45,7 +45,7 @@ import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
 import { setupAccess } from "./dashboard-access.js";
 import { setupFeedback } from "./dashboard-feedback.js";
-import { startInsightsBridge } from "./dashboard-insights-bridge.js";
+import { wireOpsStatus } from "./dashboard-ops-status.js";
 
 const PORT = resolvePort(process.env);
 
@@ -167,6 +167,11 @@ async function main(): Promise<void> {
     resolveOwnerIds,
     resolveOwnerId,
   } = setupAccess(process.env, liveRoster);
+  const opsStatus = wireOpsStatus(process.env, botControls, {
+    hub,
+    activity,
+    authConfigured: Boolean(auth),
+  });
   // The broker's last word (#591): the fill stream is the fast path, this is the authoritative slow
   // one that repairs whatever it missed — a socket gap, a restart, an order placed outside this app.
   // Reads the LIVE roster, so a runtime-added or rotated account is covered too.
@@ -249,6 +254,7 @@ async function main(): Promise<void> {
           },
         }
       : {}),
+    ...(opsStatus ? { opsStatus } : {}), // #666 — dashboard-ops-status.ts owns the wiring + gate
     ...(feedback ? { submitFeedback: feedback } : {}),
     ...(feedbackCoach ? { coachFeedback: feedbackCoach } : {}),
     recordFeedback: (entry) => feedbackLog.record(entry),
@@ -285,10 +291,6 @@ async function main(): Promise<void> {
     );
     console.log(`Participants: ${roster.map((p) => p.displayName).join(", ")}`);
   });
-
-  // Interim insight bridge (dashboard-insights-bridge.ts) — internal-only, private-net port for
-  // the `bots` process to persist retrospectives and poll Mission Control through this process.
-  startInsightsBridge(process.env, botControls);
 }
 
 main().catch((error) => {

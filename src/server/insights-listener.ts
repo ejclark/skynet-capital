@@ -21,6 +21,13 @@ export interface InsightsListenerConfig {
    * deployment with no controls store).
    */
   readonly controls?: () => ControlsState;
+  /**
+   * Fires on every AUTHENTICATED `GET /controls` poll, regardless of whether `controls` above is
+   * configured — the poll itself, not its payload, is the ops-status panel's credential-free
+   * proxy for "is the bots process alive and reaching this one" (#666). Best-effort: never
+   * awaited, never allowed to fail the response it rides along with.
+   */
+  readonly onControlsPoll?: () => void;
 }
 
 /**
@@ -155,6 +162,13 @@ function handleControlsGet(
   if (req.headers[INSIGHTS_BRIDGE_SECRET_HEADER] !== INSIGHTS_BRIDGE_SHARED_SECRET) {
     respond(res, 401, { error: "unauthorized" });
     return;
+  }
+  // A genuine, authenticated poll — record it before the 404 branch below, since "the bridge is
+  // configured but has nothing to say" is still proof the bots process reached this one.
+  try {
+    config.onControlsPoll?.();
+  } catch {
+    /* never let an observability hook fail the poll it's observing */
   }
   if (!config.controls) {
     respond(res, 404, { error: "controls not configured" });
