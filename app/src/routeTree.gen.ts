@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TradeRouteImport } from './routes/trade'
+import { Route as WireRouteImport } from './routes/wire'
 import { Route as UIdRouteImport } from './routes/u.$id'
 import { Route as UIdIndexRouteImport } from './routes/u.$id.index'
 import { Route as UIdDecisionsRouteImport } from './routes/u.$id.decisions'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const TradeRoute = TradeRouteImport.update({
   id: '/trade',
   path: '/trade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WireRoute = WireRouteImport.update({
+  id: '/wire',
+  path: '/wire',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UIdRoute = UIdRouteImport.update({
@@ -50,6 +56,7 @@ const UIdPulseRoute = UIdPulseRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/trade': typeof TradeRoute
+  '/wire': typeof WireRoute
   '/u/$id': typeof UIdRouteWithChildren
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/pulse': typeof UIdPulseRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/trade': typeof TradeRoute
+  '/wire': typeof WireRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/pulse': typeof UIdPulseRoute
   '/u/$id': typeof UIdIndexRoute
@@ -66,6 +74,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/trade': typeof TradeRoute
+  '/wire': typeof WireRoute
   '/u/$id': typeof UIdRouteWithChildren
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/pulse': typeof UIdPulseRoute
@@ -74,13 +83,20 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/trade' | '/u/$id' | '/u/$id/decisions' | '/u/$id/pulse' | '/u/$id/'
+    | '/'
+    | '/trade'
+    | '/wire'
+    | '/u/$id'
+    | '/u/$id/decisions'
+    | '/u/$id/pulse'
+    | '/u/$id/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/trade' | '/u/$id/decisions' | '/u/$id/pulse' | '/u/$id'
+  to: '/' | '/trade' | '/wire' | '/u/$id/decisions' | '/u/$id/pulse' | '/u/$id'
   id:
     | '__root__'
     | '/'
     | '/trade'
+    | '/wire'
     | '/u/$id'
     | '/u/$id/decisions'
     | '/u/$id/pulse'
@@ -90,6 +106,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TradeRoute: typeof TradeRoute
+  WireRoute: typeof WireRoute
   UIdRoute: typeof UIdRouteWithChildren
 }
 
@@ -107,6 +124,13 @@ declare module '@tanstack/react-router' {
       path: '/trade'
       fullPath: '/trade'
       preLoaderRoute: typeof TradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wire': {
+      id: '/wire'
+      path: '/wire'
+      fullPath: '/wire'
+      preLoaderRoute: typeof WireRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/u/$id': {
@@ -157,6 +181,7 @@ const UIdRouteWithChildren = UIdRoute._addFileChildren(UIdRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TradeRoute: TradeRoute,
+  WireRoute: WireRoute,
   UIdRoute: UIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport

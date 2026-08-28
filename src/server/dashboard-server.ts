@@ -27,7 +27,7 @@ import { serveInfoRoute, serveLearnRoute, serveTradeRoute } from "./dashboard-vi
 import { serveDeskJson } from "./desk-json-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
-import { serveWireRoute } from "./wire-routes.js";
+import { serveWireJson, serveWireRoute } from "./wire-routes.js";
 
 export type { DashboardServerConfig };
 
@@ -127,6 +127,29 @@ function serveFoldedRedirect(res: ServerResponse, path: string, url: string): bo
   return true;
 }
 
+/** The shell's read-only JSON family (#738) — wire, board, and the desk sub-routes. */
+async function serveJsonApi(
+  res: ServerResponse,
+  path: string,
+  url: string,
+  config: DashboardServerConfig,
+  channel: BoardPatchChannel,
+): Promise<boolean> {
+  if (path === "/api/wire") {
+    await serveWireJson(res, config, Boolean(config.submitFeedback));
+    return true;
+  }
+  if (path === "/api/board") {
+    serveBoardJson(res, url, config, channel);
+    return true;
+  }
+  if (path.startsWith("/api/desk/")) {
+    await serveDeskJson(res, path, config);
+    return true;
+  }
+  return false;
+}
+
 /** Routes behind the auth gate — same set and order as before the split. */
 async function serveAuthorizedRoute(
   req: IncomingMessage,
@@ -168,12 +191,7 @@ async function serveAuthorizedRoute(
     serveBoardFrame(res, config.hub, navFor("board"), metric, parseCompareParams(params));
     return;
   }
-  if (path === "/api/board") {
-    serveBoardJson(res, url, config, channel);
-    return;
-  }
-  if (path.startsWith("/api/desk/")) {
-    await serveDeskJson(res, path, config);
+  if (await serveJsonApi(res, path, url, config, channel)) {
     return;
   }
   if (await serveTradeApi(req, res, path, config, session)) {

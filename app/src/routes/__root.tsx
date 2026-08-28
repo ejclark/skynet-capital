@@ -11,7 +11,6 @@ import { type Density, type Theme, usePrefs } from "../shell/prefs";
  */
 
 const SERVER_VIEWS = [
-  ["/wire", "The Wire"],
   ["/research", "Research"],
   ["/collections", "Collections"],
   ["/learn", "Milestones"],
@@ -80,9 +79,17 @@ function RootShell(): ReactElement {
             search={{ by: "equity" }}
             className="topnav-link"
             activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false }}
+            activeOptions={{ includeSearch: false, exact: true }}
           >
             Standings
+          </Link>
+          <Link
+            to="/wire"
+            className="topnav-link"
+            activeProps={{ "aria-current": "page" }}
+            activeOptions={{ includeSearch: false }}
+          >
+            The Wire
           </Link>
           {SERVER_VIEWS.map(([href, label]) => (
             <a key={href} href={href} className="topnav-link">

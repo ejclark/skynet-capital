@@ -1,0 +1,159 @@
+/* the wire (#738 phase 5a) — the Issues-list template on the league's pulse. Tokens only. */
+
+.wire-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  align-items: start;
+}
+.wire-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.wire-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: 14px 16px;
+  min-width: 0;
+}
+.wire-h {
+  margin: 0 0 10px;
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.wire-trades,
+.wire-pnl,
+.wire-fdbk {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wire-trade {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.wire-side {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+.wire-sym {
+  font-weight: 600;
+}
+.wire-qty,
+.wire-price {
+  color: var(--muted);
+}
+.wire-who {
+  font-weight: 500;
+}
+.wire-who:hover {
+  color: var(--accent);
+}
+.wire-recon {
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+.wire-when {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.wire-pnl li,
+.wire-fdbk li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  padding: 6px 8px;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--border);
+}
+.wire-pnl li:last-child,
+.wire-fdbk li:last-child {
+  border-bottom: none;
+}
+.wire-pnl a,
+.wire-fdbk a {
+  font-weight: 600;
+}
+.wire-pnl a:hover,
+.wire-fdbk a:hover {
+  color: var(--accent);
+}
+.wire-pnl .num {
+  margin-left: auto;
+  font-weight: 600;
+}
+.wire-status {
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.wire-status-needs-info {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+.wire-status-needs-eric {
+  color: var(--neg);
+  background: color-mix(in oklab, var(--neg) 16%, transparent);
+}
+.wire-status-next-slice,
+.wire-status-shipped {
+  color: var(--pos);
+  background: color-mix(in oklab, var(--pos) 16%, transparent);
+}
+.wire-fdbk-meta {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.wire-onramp {
+  margin-top: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+  font-size: 12px;
+}
+.wire-onramp summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+}
+.wire-onramp ol {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  line-height: 1.5;
+}
+@media (max-width: 900px) {
+  .wire-grid {
+    grid-template-columns: 1fr;
+  }
+}
