@@ -15,7 +15,7 @@ export function DeskRail({
   readonly id: string;
   readonly name: string;
   readonly kind: "human" | "bot";
-  readonly current: "active" | "decisions";
+  readonly current: "active" | "decisions" | "pulse";
 }): ReactElement {
   return (
     <>
@@ -25,7 +25,7 @@ export function DeskRail({
           Active
         </span>
       ) : (
-        <Link to="/u/$id" params={{ id }}>
+        <Link to="/u/$id" params={{ id }} activeOptions={{ exact: true }}>
           Active
         </Link>
       )}
@@ -40,6 +40,15 @@ export function DeskRail({
           </Link>
         )
       ) : null}
+      {current === "pulse" ? (
+        <span className="rail-current" aria-current="page">
+          Pulse
+        </span>
+      ) : (
+        <Link to="/u/$id/pulse" params={{ id }}>
+          Pulse
+        </Link>
+      )}
       <a href={`/u/${id}`}>Overview</a>
       <a href={`/u/${id}?tab=performance`}>Performance</a>
       <a href={`/u/${id}?tab=settings`}>Settings</a>

@@ -14,6 +14,7 @@ import { Route as TradeRouteImport } from './routes/trade'
 import { Route as UIdRouteImport } from './routes/u.$id'
 import { Route as UIdIndexRouteImport } from './routes/u.$id.index'
 import { Route as UIdDecisionsRouteImport } from './routes/u.$id.decisions'
+import { Route as UIdPulseRouteImport } from './routes/u.$id.pulse'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,18 +41,25 @@ const UIdDecisionsRoute = UIdDecisionsRouteImport.update({
   path: '/decisions',
   getParentRoute: () => UIdRoute,
 } as any)
+const UIdPulseRoute = UIdPulseRouteImport.update({
+  id: '/pulse',
+  path: '/pulse',
+  getParentRoute: () => UIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/trade': typeof TradeRoute
   '/u/$id': typeof UIdRouteWithChildren
   '/u/$id/decisions': typeof UIdDecisionsRoute
+  '/u/$id/pulse': typeof UIdPulseRoute
   '/u/$id/': typeof UIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/trade': typeof TradeRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
+  '/u/$id/pulse': typeof UIdPulseRoute
   '/u/$id': typeof UIdIndexRoute
 }
 export interface FileRoutesById {
@@ -60,14 +68,23 @@ export interface FileRoutesById {
   '/trade': typeof TradeRoute
   '/u/$id': typeof UIdRouteWithChildren
   '/u/$id/decisions': typeof UIdDecisionsRoute
+  '/u/$id/pulse': typeof UIdPulseRoute
   '/u/$id/': typeof UIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/trade' | '/u/$id' | '/u/$id/decisions' | '/u/$id/'
+  fullPaths:
+    '/' | '/trade' | '/u/$id' | '/u/$id/decisions' | '/u/$id/pulse' | '/u/$id/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/trade' | '/u/$id/decisions' | '/u/$id'
-  id: '__root__' | '/' | '/trade' | '/u/$id' | '/u/$id/decisions' | '/u/$id/'
+  to: '/' | '/trade' | '/u/$id/decisions' | '/u/$id/pulse' | '/u/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/trade'
+    | '/u/$id'
+    | '/u/$id/decisions'
+    | '/u/$id/pulse'
+    | '/u/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -113,16 +130,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UIdDecisionsRouteImport
       parentRoute: typeof UIdRoute
     }
+    '/u/$id/pulse': {
+      id: '/u/$id/pulse'
+      path: '/pulse'
+      fullPath: '/u/$id/pulse'
+      preLoaderRoute: typeof UIdPulseRouteImport
+      parentRoute: typeof UIdRoute
+    }
   }
 }
 
 interface UIdRouteChildren {
   UIdDecisionsRoute: typeof UIdDecisionsRoute
+  UIdPulseRoute: typeof UIdPulseRoute
   UIdIndexRoute: typeof UIdIndexRoute
 }
 
 const UIdRouteChildren: UIdRouteChildren = {
   UIdDecisionsRoute: UIdDecisionsRoute,
+  UIdPulseRoute: UIdPulseRoute,
   UIdIndexRoute: UIdIndexRoute,
 }
 

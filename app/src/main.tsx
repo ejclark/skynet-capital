@@ -9,6 +9,7 @@ import "./styles/decisions.css";
 import "./styles/desk.css";
 import "./styles/drawer.css";
 import "./styles/gate.css";
+import "./styles/pulse.css";
 import "./styles/shell.css";
 import "./styles/theme.css";
 import "./styles/views.css";

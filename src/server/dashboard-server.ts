@@ -1,6 +1,4 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { decisionCyclesView } from "../observatory/decision-json-view.js";
-import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import {
   type NavContext,
   type NavView,
@@ -26,6 +24,7 @@ import { serveIndividualProfile } from "./dashboard-profile-routes.js";
 import { trySelfServiceRoute } from "./dashboard-self-service-routes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveInfoRoute, serveLearnRoute, serveTradeRoute } from "./dashboard-view-routes.js";
+import { serveDeskJson } from "./desk-json-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 import { serveWireRoute } from "./wire-routes.js";
@@ -126,59 +125,6 @@ function serveFoldedRedirect(res: ServerResponse, path: string, url: string): bo
   }
   res.end();
   return true;
-}
-
-/** The desk as data (#738 phases 2c–3a) — same gate, same formatters as /u/:id's own views.
- *  `/api/desk/:id` is the blotter; `/activity` the fill timeline; `/decisions` the bot's mind. */
-async function serveDeskJson(
-  res: ServerResponse,
-  path: string,
-  config: DashboardServerConfig,
-): Promise<void> {
-  const rest = decodeURIComponent(path.slice("/api/desk/".length));
-  const sub = rest.endsWith("/activity")
-    ? "activity"
-    : rest.endsWith("/decisions")
-      ? "decisions"
-      : undefined;
-  const id = sub ? rest.slice(0, -(sub.length + 1)) : rest;
-  const state = config.hub.getState();
-  const found = state.participants.find((p) => p.id === id);
-  if (!found) {
-    res.writeHead(404, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: "no such desk" }));
-    return;
-  }
-  res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-  if (sub === "activity") {
-    // No ledger wired (offline runs without SKYNET_ACTIVITY_DIR) says so — never an empty lie.
-    const records = await config.readTradeActivity?.(id);
-    res.end(
-      JSON.stringify(
-        records
-          ? { available: true, activity: deskActivityView(records) }
-          : { available: false, activity: [] },
-      ),
-    );
-    return;
-  }
-  if (sub === "decisions") {
-    // Bots only, and only when an audit trail is wired — both absences say so plainly.
-    if (found.kind !== "bot") {
-      res.end(JSON.stringify({ available: false, kind: found.kind, cycles: [] }));
-      return;
-    }
-    const records = await config.readDecisions?.(id);
-    res.end(
-      JSON.stringify(
-        records
-          ? { available: true, kind: "bot", cycles: decisionCyclesView(records) }
-          : { available: false, kind: "bot", cycles: [] },
-      ),
-    );
-    return;
-  }
-  res.end(JSON.stringify({ generatedAt: state.generatedAt, desk: deskView(found) }));
 }
 
 /** Routes behind the auth gate — same set and order as before the split. */
