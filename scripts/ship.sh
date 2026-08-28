@@ -221,10 +221,10 @@ EOF_SHOTS
     # The arming usually happens through the MCP tool, which never runs this script — so the
     # instruction printed here is the last place the envelope answer can reach the session that
     # arms. Print the REFUSAL as the next step when the diff is in the irreversible class.
-    elif ! opened_hits="$(git diff --name-only "origin/$base...HEAD" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check | python3 -c '
+    elif ! opened_hits="$(git diff --name-only "origin/$base...HEAD" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check --base "origin/$base" | python3 -c '
 import sys, json
 rows = json.load(sys.stdin)
-hits = [r for r in rows if r.get("protected")]
+hits = [r for r in rows if r.get("blocking")]
 for r in hits:
     print("  " + r["path"] + " — " + r.get("why", "protected"))
 sys.exit(1 if hits else 0)
@@ -252,11 +252,17 @@ sys.exit(1 if hits else 0)
 # talked past; this is the same rule as an exit code.
 # Prints one indented line per protected path; returns 1 when any was found. Never exits, so a
 # caller can ASK the question without being killed by the answer.
+#
+# Filters on `blocking`, not `protected`: a diffAware rule (envelope.json $diffAwareComment) whose
+# real diff is a provably safe pure insertion comes back protected=true but blocking=false, and
+# should arm. Pass --base <ref> (paths before it) to get that real-diff answer; without --base,
+# `blocking` just mirrors `protected` (today's behavior — used by the bare `checkarm <paths>` CLI
+# form, which has no base to diff against).
 envelope_hits() {
   node "$(dirname "$0")/envelope-scan.mjs" --check "$@" | python3 -c '
 import sys, json
 rows = json.load(sys.stdin)
-hits = [r for r in rows if r.get("protected")]
+hits = [r for r in rows if r.get("blocking")]
 for r in hits:
     print("  " + r["path"] + " — " + r.get("why", "protected"))
 sys.exit(1 if hits else 0)
@@ -288,6 +294,8 @@ cmd_automerge() {
   [ "$http" = 200 ] || { echo "ship automerge: GET pull returned HTTP $http" >&2; exit 2; }
   node="$(printf '%s' "$body" | json_field node_id)"
   [ -n "$node" ] || { echo "ship automerge: no node_id on PR #$num" >&2; exit 2; }
+  local base_ref; base_ref="$(printf '%s' "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin)["base"]["ref"])')"
+  git fetch origin "$base_ref" >/dev/null 2>&1 || true
 
   # Guard on the PR's OWN file list, not the local tree: this is the thing being armed, and a
   # session can be on a different branch by the time it arms.
@@ -306,7 +314,7 @@ cmd_automerge() {
     echo "Split the PR, or arm it by hand after checking envelope-scan yourself." >&2
     exit 5
   fi
-  cmd_checkarm "${paths[@]}"
+  cmd_checkarm "${paths[@]}" --base "origin/$base_ref"
   local q payload gql
   q='mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) { pullRequest { number } } }'
   payload="$(python3 -c "import json,sys; print(json.dumps({'query': sys.argv[1], 'variables': {'id': sys.argv[2]}}))" "$q" "$node")"
