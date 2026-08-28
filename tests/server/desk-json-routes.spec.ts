@@ -63,6 +63,25 @@ describe("serveDeskJson", () => {
     expect(answered(out).desk).toMatchObject({ id: "sauron", kind: "bot" });
   });
 
+  it("sends landmark dials only for desks the world projection gives a landmark", async () => {
+    const { res, out } = fakeRes();
+    const landmarked = { ...bot, personaId: "sauron" };
+    await serveDeskJson(
+      res,
+      "/api/desk/sauron",
+      configWith({
+        hub: { getState: () => ({ generatedAt: "t", participants: [landmarked], collisions: [] }) },
+      } as never),
+    );
+    const dials = answered(out).landmark as { power: number; health: number };
+    expect(dials.power).toBe(1); // the only bot ranks first
+    expect(dials.health).toBeCloseTo(260 / 1500); // (1760 − 1500) / 1500, the R2 rule
+
+    const plain = fakeRes();
+    await serveDeskJson(plain.res, "/api/desk/human-eric", configWith());
+    expect(answered(plain.out).landmark).toBeUndefined();
+  });
+
   it("says when no activity ledger is wired — never an empty lie", async () => {
     const { res, out } = fakeRes();
     await serveDeskJson(res, "/api/desk/sauron/activity", configWith());

@@ -92,6 +92,22 @@ export interface ProjectOptions {
   readonly personaProminence?: number;
 }
 
+/**
+ * The whole desk's −1..1 signed health — the SAME R2 rule the per-structure health uses (unrealized
+ * over cost basis, clamped), aggregated across every position. This is the dial the Barad-dûr
+ * scene's forge burns by (src/three/kit/params.ts), so it lives beside R2 rather than being
+ * re-derived by a view: health comes only from real P/L, everywhere, or nowhere.
+ */
+export function empireHealth(snapshot: ParticipantSnapshot): number {
+  const basis = snapshot.positions.reduce(
+    (sum, p) => sum + Math.abs(fin(p.quantity) * fin(p.avgPrice)),
+    0,
+  );
+  if (basis <= 0) return 0;
+  const u = snapshot.positions.reduce((sum, p) => sum + unrealizedPl(p), 0);
+  return clampFinite(u / basis, -1, 1);
+}
+
 /** Project one participant's snapshot into their empire. Pure; see module doc for the rules. */
 export function projectEmpire(
   snapshot: ParticipantSnapshot,

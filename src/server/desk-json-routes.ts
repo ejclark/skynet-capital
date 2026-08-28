@@ -2,6 +2,8 @@ import type { ServerResponse } from "node:http";
 import { decisionCyclesView } from "../observatory/decision-json-view.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
+import { botLandmarkProminence } from "../observatory/standings.js";
+import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
 /** The desk as data (#738 phases 2c–3a) — same gate, same formatters as /u/:id's own views.
@@ -66,5 +68,18 @@ export async function serveDeskJson(
     );
     return;
   }
-  res.end(JSON.stringify({ generatedAt: state.generatedAt, desk: deskView(found) }));
+  // The landmark dials ride the blotter payload for desks that HAVE a landmark (the world
+  // projection decides — persona-mapped bots only). Same producers as every other renderer:
+  // prominence from real relative standing, health from real P/L, or the field stays absent.
+  const power = botLandmarkProminence(state.participants).get(id);
+  const empire = projectEmpire(found, power === undefined ? {} : { personaProminence: power });
+  res.end(
+    JSON.stringify({
+      generatedAt: state.generatedAt,
+      desk: deskView(found),
+      ...(empire.landmark
+        ? { landmark: { power: empire.landmark.prominence, health: empireHealth(found) } }
+        : {}),
+    }),
+  );
 }
