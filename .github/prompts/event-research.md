@@ -9,10 +9,24 @@ due event, follow the matching mode in `docs/process/EVENT-RESEARCH.md`:
 - `interval-elapsed` → pulse check appending ONE ledger row, including the mandatory adjacency sweep
   (peer prints, CPI/FOMC surprises, VIX regime moves, geopolitics touching the event's symbols) —
   any dated adjacent event you discover is PROPOSED as an `estimate` entry in
-  `src/domain/market-events.ts` in the same PR, never `confirmed`.
+  `src/domain/market-events.ts` in the same PR, never `confirmed`. (Most `interval-elapsed` pulses
+  never reach you — `postmaster.yml`'s deterministic screen already handled the quiet ones before
+  this session started; you only see one because the probe found it material, or its own reference
+  block was missing/stale, or the fetch failed. Research it exactly as any other pulse.)
 - `event-passed-unscored` → closing outcome assessment, scoring registered forward tests from re-run
   instrument data (bust the instrument cache first:
   `rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
+
+**Refresh the probe-ref block on every ledger you touch.** Every ledger header carries a
+`<!-- probe-ref: {...} -->` line right after `**Last assessed:**` (docs/process/EVENT-RESEARCH.md
+→ "Deterministic screening") — the deterministic screen's reference state for this event. Whenever
+you update `**Last assessed:**`, replace that line too with today's real readings: the current
+price for each symbol in the event's table row, the current VIX, the cadence band
+(`<impact>:<minDaysOut>+`, from `assessment-cadence.json`), the ids of other tracked events within 5
+days of this one's date, and `"screenStreak": 0` (a full session always resets the streak — it is
+never itself a screen). This is what lets the event's *next* pulse be screened instead of
+automatically material; skipping it doesn't break anything today, it just spends one more session
+than necessary next time.
 
 Ship ONE PR per event, on a branch named EXACTLY `research/<event-id>` off `origin/main` — the
 branch name is the dedupe key that stops the next push-triggered run re-researching an event whose
