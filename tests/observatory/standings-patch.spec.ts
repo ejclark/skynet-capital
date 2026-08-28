@@ -1,8 +1,12 @@
 import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+import {
+  standingsBoardView,
+  standingsCompareView,
+} from "../../src/observatory/standings-board-view.js";
 import { cohortStats } from "../../src/observatory/standings-cohort.js";
 import { formatMetric, metricLabel, metricValue } from "../../src/observatory/standings-metric.js";
-import { standingsBoardView, standingsFieldOps } from "../../src/observatory/standings-patch.js";
+import { standingsFieldOps } from "../../src/observatory/standings-patch.js";
 import { renderStandingsContent } from "../../src/observatory/standings-view.js";
 
 /**
@@ -202,5 +206,34 @@ describe("standingsBoardView", () => {
       const target = view.rows.some((r) => r.key === op.key) || view.blocks[op.key] !== undefined;
       expect(target).toBe(true);
     }
+  });
+});
+
+describe("standingsCompareView", () => {
+  it("formats both sides with the page's own helpers and names who leads each delta", () => {
+    const a = snap({ id: "h1", displayName: "Eric", equity: 150_000 });
+    const b = snap({
+      id: "bot-sauron",
+      displayName: "Sauron",
+      kind: "bot",
+      equity: 120_000,
+      positions: [pos("NVDA", 50, 400, 30_000), pos("GLD", 10, 180, 2_000)],
+    });
+    const view = standingsCompareView(a, b);
+    expect(view.a).toMatchObject({ name: "Eric", kind: "human", equity: "$150,000" });
+    expect(view.deltas[0]).toMatchObject({ label: "Equity", lead: "a", amount: "$30,000" });
+    // Holdings union sorts by combined weight; the shared symbol carries both values.
+    const nvda = view.holdings.find((h) => h.symbol === "NVDA");
+    expect(nvda).toMatchObject({ shared: true, heavier: "a" });
+    expect(view.holdings.find((h) => h.symbol === "GLD")).toMatchObject({
+      shared: false,
+      heavier: "b",
+    });
+  });
+
+  it("calls a dead-even metric a tie, never a lead", () => {
+    const a = snap({ id: "h1", equity: 100_000 });
+    const b = snap({ id: "h2", equity: 100_000 });
+    expect(standingsCompareView(a, b).deltas[0]?.lead).toBe("tie");
   });
 });

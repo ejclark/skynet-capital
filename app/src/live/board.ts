@@ -40,12 +40,48 @@ export interface BoardBlock {
   readonly bar?: Record<string, number>;
 }
 
+/** One side of a head-to-head — every figure server-formatted. Mirrors `standingsCompareView`. */
+export interface CompareSide {
+  readonly key: string;
+  readonly name: string;
+  readonly kind: "human" | "bot";
+  readonly equity: string;
+  readonly cash: string;
+  readonly invested: string;
+  readonly unrealized: string;
+  readonly unrealizedTone: FieldTone;
+  readonly returnPct: string;
+  readonly returnTone: FieldTone;
+}
+
+export interface CompareDelta {
+  readonly label: string;
+  readonly lead: "a" | "b" | "tie";
+  readonly amount: string;
+}
+
+export interface CompareHolding {
+  readonly symbol: string;
+  readonly aValue?: string;
+  readonly bValue?: string;
+  readonly shared: boolean;
+  readonly heavier: "a" | "b" | "even";
+}
+
+export interface BoardCompare {
+  readonly a: CompareSide;
+  readonly b: CompareSide;
+  readonly deltas: readonly CompareDelta[];
+  readonly holdings: readonly CompareHolding[];
+}
+
 export interface BoardSnapshot {
   readonly seq: number;
   readonly generatedAt: string;
   readonly metric: string;
   readonly rows: readonly BoardRow[];
   readonly blocks: Readonly<Record<string, BoardBlock>>;
+  readonly compare?: BoardCompare;
   /** How many live ops this snapshot has absorbed since it was fetched — the seam's heartbeat. */
   readonly opsApplied: number;
 }
@@ -80,10 +116,22 @@ interface ApiBoard {
     readonly rows: readonly BoardRow[];
     readonly blocks: Readonly<Record<string, BoardBlock>>;
   };
+  readonly compare?: BoardCompare;
 }
 
-export async function fetchBoard(metric: BoardMetric): Promise<BoardSnapshot> {
-  const res = await fetch(`/api/board?by=${metric}`, { credentials: "same-origin" });
+export interface ComparePick {
+  readonly a?: string;
+  readonly b?: string;
+}
+
+export async function fetchBoard(
+  metric: BoardMetric,
+  pick: ComparePick = {},
+): Promise<BoardSnapshot> {
+  const params = new URLSearchParams({ by: metric });
+  if (pick.a) params.set("a", pick.a);
+  if (pick.b) params.set("b", pick.b);
+  const res = await fetch(`/api/board?${params}`, { credentials: "same-origin" });
   if (!res.ok) throw new Error(`GET /api/board → ${res.status}`);
   const body = (await res.json()) as ApiBoard;
   return {
@@ -92,6 +140,7 @@ export async function fetchBoard(metric: BoardMetric): Promise<BoardSnapshot> {
     metric: body.metric,
     rows: body.view.rows,
     blocks: body.view.blocks,
+    ...(body.compare ? { compare: body.compare } : {}),
     opsApplied: 0,
   };
 }

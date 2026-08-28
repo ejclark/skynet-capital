@@ -8,6 +8,7 @@ import {
 } from "./participant-card.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { chip, formatCurrency, formatSigned, pct, plClass, profileHref } from "./render-atoms.js";
+import { holdingsUnion } from "./standings-board-view.js";
 import { type CohortStats, cohortStats } from "./standings-cohort.js";
 import {
   formatMetric,
@@ -251,16 +252,10 @@ function deltaRow(label: string, aVal: number, bVal: number, fmt: (n: number) =>
 
 /** Union of both sides' holdings — shared symbols first (heavier side marked), then the singles. */
 function holdingsCompare(a: ParticipantSnapshot, b: ParticipantSnapshot): string {
-  const byA = new Map(a.positions.map((p) => [p.symbol, p.marketValue]));
-  const byB = new Map(b.positions.map((p) => [p.symbol, p.marketValue]));
-  const symbols = [...new Set([...byA.keys(), ...byB.keys()])].sort(
-    (x, y) => (byA.get(y) ?? 0) + (byB.get(y) ?? 0) - ((byA.get(x) ?? 0) + (byB.get(x) ?? 0)),
-  );
-  if (symbols.length === 0) return `<p class="empty">Neither holds an open position yet.</p>`;
-  const rows = symbols
-    .map((s) => {
-      const av = byA.get(s);
-      const bv = byB.get(s);
+  const union = holdingsUnion(a, b);
+  if (union.length === 0) return `<p class="empty">Neither holds an open position yet.</p>`;
+  const rows = union
+    .map(({ symbol: s, aValue: av, bValue: bv }) => {
       const shared = av !== undefined && bv !== undefined;
       const heavier = (av ?? 0) === (bv ?? 0) ? "" : (av ?? 0) > (bv ?? 0) ? "aheavy" : "bheavy";
       return `<tr class="${shared ? "cmp-shared" : ""} ${heavier}">

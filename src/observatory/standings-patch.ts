@@ -28,7 +28,7 @@ export interface StandingsPatchOptions {
   readonly bId?: string;
 }
 
-interface RowView {
+export interface RowView {
   readonly key: string;
   readonly value: string;
   readonly tone: FieldTone;
@@ -38,7 +38,7 @@ interface RowView {
 
 /** Mirrors `fieldLadder` in standings-view.ts — same sort, same widths, same tone rule. No
  *  ordinal: the view stopped rendering one (#576), so there is no rank text to patch. */
-function rowViews(data: DashboardData, metric: LeaderMetric): RowView[] {
+export function rowViews(data: DashboardData, metric: LeaderMetric): RowView[] {
   const live = data.participants.filter((p) => !p.error);
   const ranked = [...live].sort((a, b) => metricValue(b, metric) - metricValue(a, metric));
   const maxAbs = ranked.reduce((m, p) => Math.max(m, Math.abs(metricValue(p, metric))), 0) || 1;
@@ -54,11 +54,11 @@ function rowViews(data: DashboardData, metric: LeaderMetric): RowView[] {
   });
 }
 
-type TextMap = Record<string, string>;
-type ToneMap = Record<string, FieldTone>;
+export type TextMap = Record<string, string>;
+export type ToneMap = Record<string, FieldTone>;
 
 /** Mirrors `cohortCard` — the ten numbers one card shows, already formatted. */
-function cohortView(stats: CohortStats): { text: TextMap; tone: ToneMap } {
+export function cohortView(stats: CohortStats): { text: TextMap; tone: ToneMap } {
   return {
     text: {
       count: String(stats.count),
@@ -82,7 +82,7 @@ function cohortView(stats: CohortStats): { text: TextMap; tone: ToneMap } {
 }
 
 /** Mirrors `matchBar` — the tug-of-war split by AVERAGE equity per account. */
-function matchView(
+export function matchView(
   humans: CohortStats,
   bots: CohortStats,
 ): { text: TextMap; bar: Record<string, number> } {
@@ -105,7 +105,7 @@ function matchView(
 }
 
 /** Mirrors the `versus-read` line beneath the cards. */
-function versusView(humans: CohortStats, bots: CohortStats): TextMap {
+export function versusView(humans: CohortStats, bots: CohortStats): TextMap {
   return {
     totalLeader: humans.totalEquity >= bots.totalEquity ? "Humans" : "Bots",
     totalGap: formatCurrency(Math.abs(humans.totalEquity - bots.totalEquity)),
@@ -139,55 +139,6 @@ function blockOp(
       ...(after.bar ? { bar: after.bar } : {}),
     },
   ];
-}
-
-/** One field-ladder row as the JSON API serves it — the same formatted value/tone/bar the patch
- *  ops carry, plus the identity fields a client needs to render a row from scratch. */
-interface BoardViewRow {
-  readonly key: string;
-  readonly name: string;
-  readonly kind: "human" | "bot";
-  readonly value: string;
-  readonly tone: FieldTone;
-  readonly bar: number;
-  readonly sortValue: number;
-}
-
-/** One keyed display block (cohort card / match bar / versus line), same shape as a `field` op. */
-interface BoardViewBlock {
-  readonly text: TextMap;
-  readonly tone?: ToneMap;
-  readonly bar?: Record<string, number>;
-}
-
-export interface StandingsBoardView {
-  readonly rows: readonly BoardViewRow[];
-  readonly blocks: Readonly<Record<string, BoardViewBlock>>;
-}
-
-/**
- * The initial JSON snapshot for a patch-consuming client (`/api/board`). Every value is formatted
- * by the SAME helpers `standingsFieldOps` uses, and the blocks carry the SAME keys the `field` ops
- * address — so a client renders this once and then applies ops verbatim, never re-deriving a
- * number (the doctrine at the top of this file, extended over JSON).
- */
-export function standingsBoardView(data: DashboardData, metric: LeaderMetric): StandingsBoardView {
-  const byId = new Map(data.participants.map((p) => [p.id, p]));
-  const humans = cohortStats(data.participants, "human", "Humans");
-  const bots = cohortStats(data.participants, "bot", "Bots");
-  return {
-    rows: rowViews(data, metric).map((row) => ({
-      ...row,
-      name: byId.get(row.key)?.displayName ?? row.key,
-      kind: byId.get(row.key)?.kind === "bot" ? "bot" : "human",
-    })),
-    blocks: {
-      "cohort:human": cohortView(humans),
-      "cohort:bot": cohortView(bots),
-      match: matchView(humans, bots),
-      versus: { text: versusView(humans, bots) },
-    },
-  };
 }
 
 /**
