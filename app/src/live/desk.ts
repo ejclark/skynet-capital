@@ -133,3 +133,39 @@ export async function fetchDeskActivity(id: string): Promise<DeskActivity> {
   if (!res.ok) throw new Error(`GET /api/desk/${id}/activity → ${res.status}`);
   return (await res.json()) as DeskActivity;
 }
+
+export interface DecisionOutcome {
+  readonly symbol: string;
+  readonly side: string;
+  readonly quantity: number;
+  readonly playbook?: string;
+  readonly reason: string;
+  readonly action: "placed" | "rejected" | "observed" | "cooldown-skipped";
+  readonly resultStatus?: string;
+  readonly fill?: string;
+}
+
+export interface DecisionCycle {
+  readonly at: string;
+  readonly mode: "observe" | "live";
+  readonly status: "halted" | "placed" | "rejected" | "observed" | "quiet";
+  readonly headline: string;
+  readonly rawCount: number;
+  readonly guardedCount: number;
+  readonly outcomes: readonly DecisionOutcome[];
+  readonly halted?: string;
+}
+
+export interface DeskDecisions {
+  readonly available: boolean;
+  readonly kind: "human" | "bot";
+  readonly cycles: readonly DecisionCycle[];
+}
+
+export async function fetchDeskDecisions(id: string): Promise<DeskDecisions> {
+  const res = await fetch(`/api/desk/${encodeURIComponent(id)}/decisions`, {
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`GET /api/desk/${id}/decisions → ${res.status}`);
+  return (await res.json()) as DeskDecisions;
+}
