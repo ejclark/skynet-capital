@@ -171,17 +171,20 @@ a {
 }
 
 .frame {
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: var(--stage-gap) 20px 80px;
   display: grid;
-  grid-template-columns: 200px 1fr;
+  /* the rail is a control column now (dimensional precedence), not just a link list —
+     sized for a month calendar and control groups with room to breathe */
+  grid-template-columns: 248px 1fr;
   gap: 32px;
   align-items: start;
 }
-.frame-full {
-  grid-template-columns: 1fr;
-  max-width: 1000px;
+/* .frame-full retired (constant geometry): every view keeps the same two-column grid so
+   content never shifts when navigating — an empty rail column reserves the space. */
+.rail-empty {
+  min-height: 1px;
 }
 .rail {
   position: sticky;
@@ -246,6 +249,9 @@ a {
     overflow-x: auto;
     padding-bottom: 4px;
   }
+  .rail-empty {
+    display: none;
+  }
   .rail-label {
     display: none;
   }
@@ -267,5 +273,21 @@ a {
   .status {
     font-size: 0;
     gap: 0;
+  }
+  /* the topbar wraps: brand + actions hold the first row, the view nav becomes a
+     full-width scrollable second row — six views no longer shove the actions off-screen */
+  .topbar {
+    flex-wrap: wrap;
+    padding: 6px 12px;
+    row-gap: 2px;
+  }
+  .topnav {
+    order: 3;
+    flex-basis: 100%;
+    margin-left: 0;
+    min-height: 38px;
+  }
+  .topbar-actions {
+    gap: 8px;
   }
 }

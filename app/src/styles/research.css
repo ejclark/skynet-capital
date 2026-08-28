@@ -187,16 +187,16 @@
 .eh-month {
   flex: 1;
   text-align: center;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
 }
 .eh-nav {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--muted);
   border-radius: 6px;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   cursor: pointer;
   font-size: 13px;
   line-height: 1;
@@ -212,11 +212,11 @@
 .eh-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 3px;
 }
 .eh-wd {
   text-align: center;
-  font-size: 9px;
+  font-size: 10px;
   color: var(--muted);
   font-family: var(--mono);
 }
@@ -225,9 +225,9 @@
   aspect-ratio: 1;
   border: none;
   background: none;
-  border-radius: 6px;
+  border-radius: 7px;
   color: var(--text);
-  font-size: 10.5px;
+  font-size: 12px;
   font-family: var(--mono);
   cursor: pointer;
   display: flex;
@@ -249,7 +249,7 @@
 }
 .eh-dot {
   position: absolute;
-  bottom: 2px;
+  bottom: 3px;
   left: 50%;
   transform: translateX(-50%);
   width: 4px;
@@ -269,7 +269,7 @@
 .eh-legend {
   margin: 0;
   padding: 0 4px;
-  font-size: 9.5px;
+  font-size: 10.5px;
   color: var(--muted);
   display: flex;
   align-items: center;
@@ -280,13 +280,13 @@
   transform: none;
 }
 .eh-clear {
-  margin: 2px 4px 0;
+  margin: 4px 4px 0;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--muted);
   border-radius: 6px;
-  padding: 5px 8px;
-  font-size: 10.5px;
+  padding: 6px 10px;
+  font-size: 11px;
   font-family: var(--mono);
   cursor: pointer;
 }
