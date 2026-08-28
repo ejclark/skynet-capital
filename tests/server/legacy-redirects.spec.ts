@@ -44,6 +44,10 @@ describe("serveLegacyRedirect", () => {
     expect(target("/account")).toBe("/app/settings");
     expect(target("/add", "/add?key=abc")).toBe("/app/join?key=abc");
     expect(target("/feedback")).toBe("/app/feedback");
+    // The owner pages' cards live on app Settings (9e).
+    expect(target("/invite")).toBe("/app/settings");
+    expect(target("/claim")).toBe("/app/settings");
+    expect(target("/ops-status")).toBe("/app/settings");
     // The coach and preview are shared JSON endpoints, not pages — they keep serving.
     expect(target("/feedback/coach")).toBeUndefined();
     expect(target("/feedback/preview")).toBeUndefined();
@@ -65,10 +69,6 @@ describe("serveLegacyRedirect", () => {
   it("leaves everything without a twin alone", () => {
     // The options ticket lives only on the HTML page until the shell gate learns options plays.
     expect(target("/trade", "/trade?play=201")).toBeUndefined();
-    // Unported pages must keep serving until their phase-9 ports land.
-    for (const path of ["/invite", "/claim", "/ops-status"]) {
-      expect(target(path)).toBeUndefined();
-    }
     // Research documents are server-rendered by design; /classic is the escape hatch.
     expect(target("/research/nvda-aug-2026-print")).toBeUndefined();
     expect(target("/classic")).toBeUndefined();

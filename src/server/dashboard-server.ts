@@ -7,6 +7,7 @@ import {
 import { standingsBoardView, standingsCompareView } from "../observatory/standings-board-view.js";
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
+import { serveAdminApi } from "./admin-api-routes.js";
 import { isAppShellPath, serveAppShell } from "./app-shell-routes.js";
 import type { Session } from "./auth/session.js";
 import {
@@ -186,6 +187,7 @@ async function serveWriteApis(
   if (await serveLearnApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
+  if (await serveAdminApi(req, res, path, config, session)) return true;
   return serveJoinApi(req, res, path, config, session);
 }
 
