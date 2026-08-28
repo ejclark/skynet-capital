@@ -445,6 +445,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "trump-xi-summit-2026-09-24",
+    kind: "geopolitical",
+    title: "Trump–Xi summit (Washington) — trade, export-control, AI-governance agenda",
+    date: "2026-09-24",
+    status: "estimate",
+    source:
+      "NEWS: Atlantic Council/CSIS Trump-Xi 2026 Summit coverage + techtimes semiconductor-tariff reporting, checked 2026-08-28",
+    impact: "high",
+    symbols: [],
+    notes:
+      "Second in-person Trump-Xi meeting of 2026 (after the May Beijing visit); reported agenda includes AI governance, export controls, and the trade architecture after the Kuala Lumpur truce's Nov-10 tariff-suspension deadline. China semiconductor Section 301 tariffs already run near 70% combined exposure, with a further ~7.5% overcapacity layer reportedly being prepared ahead of the summit — surfaced via AVGO's 2026-08-28 pulse-check adjacency sweep (export-control/supply-chain exposure); most sensitive semis names (AVGO, NVDA, MRVL, AMD) carry it as sector risk, not an AVGO-only event.",
+  },
+  {
     id: "jobs-2026-10-02",
     kind: "macro-print",
     title: "Employment Situation (Sep 2026 data)",
