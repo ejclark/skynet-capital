@@ -79,7 +79,12 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin: 2px 0 14px;
+}
+.rx-symbol-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .rx-symbol {
   display: flex;
@@ -90,9 +95,29 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: var(--elev-base);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   transition:
     transform var(--dur-quick) var(--ease-spatial),
     box-shadow var(--dur-quick) var(--ease-spatial);
+}
+.rx-symbol[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    var(--elev-base);
+}
+.rx-symbol[aria-pressed="true"] .rx-symbol-name {
+  color: var(--accent);
+}
+.rx-symbol-full {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+  animation: dot-in var(--dur-quick) var(--ease-spatial) both;
 }
 .rx-symbol:hover {
   transform: translateY(-1px);
