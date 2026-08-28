@@ -18,6 +18,7 @@ import {
 } from "./board-patch-routes.js";
 import { deskIndex } from "./collections-routes.js";
 import { serveContentApi } from "./content-api-routes.js";
+import { serveControlsApi } from "./controls-api-routes.js";
 import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
 import { pageHtml, servePublicRoute } from "./dashboard-board-routes.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
@@ -235,6 +236,9 @@ async function serveAuthorizedRoute(
     return;
   }
   if (await serveLearnApi(req, res, path, config, session)) {
+    return;
+  }
+  if (await serveControlsApi(req, res, path, config, session)) {
     return;
   }
   // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.

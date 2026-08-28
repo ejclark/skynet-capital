@@ -12,6 +12,7 @@ import {
   saveProfile,
 } from "../live/settings";
 import { PageFrame } from "../shell/frame";
+import { MissionControl } from "../shell/mission-control";
 
 /**
  * SETTINGS (#738 phase 5c) — the catalog's Settings patterns on the member's own accounts:
@@ -287,7 +288,7 @@ function AccountCard({
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
           {account.kind === "bot" ? (
             <div className="set-links">
-              <a href={`/u/${encodeURIComponent(account.id)}?tab=settings`}>Mission Control →</a>
+              <a href="#mission-control">Mission Control ↓</a>
             </div>
           ) : null}
           <RotateSection account={account} />
@@ -336,8 +337,8 @@ function SettingsPage(): ReactElement {
       <header className="page-header">
         <h1>Settings</h1>
         <p>
-          Your accounts, your rules: profile, timezone, and the door out. Credentials rotate on
-          their own page; bots keep their switchboard in Mission Control.
+          Your accounts, your rules: profile, timezone, credential rotation, and the door out.
+          Owners find the fleet's switchboard — Mission Control — at the bottom.
         </p>
       </header>
       {!authConfigured ? (
@@ -362,6 +363,9 @@ function SettingsPage(): ReactElement {
           />
         ))
       )}
+      <div id="mission-control">
+        <MissionControl />
+      </div>
     </PageFrame>
   );
 }
