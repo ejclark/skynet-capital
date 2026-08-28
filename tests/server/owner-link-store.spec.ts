@@ -136,6 +136,16 @@ describe("resolveOwnedId", () => {
       resolveOwnedId([APALA], [link("removed", "member@example.com")], "member@example.com"),
     ).toBeUndefined();
   });
+
+  // 2026-08-28: /add stamps the adder onto BOTS too (participant-service), so one email can
+  // carry a stamped human AND a stamped bot. This single id becomes the desk's requesterId, so
+  // it must land on the human regardless of roster order — a bot added before the member's own
+  // account must not shadow it (the wrong-owned-account class reported live 2026-08-27).
+  it("resolves to the stamped HUMAN when the same email also stamps a bot listed first", () => {
+    const human = { id: "human-eric", kind: "human" as const, ownerEmail: "eric@example.com" };
+    const bot = { id: "day-trader", kind: "bot" as const, ownerEmail: "eric@example.com" };
+    expect(resolveOwnedId([bot, human], [], "eric@example.com")).toBe("human-eric");
+  });
 });
 
 // 2026-08-27, live: a member with a stamped human account (SKYNET_HUMAN_<ID>_EMAIL) AND a
@@ -192,6 +202,16 @@ describe("resolveOwnedParticipantIds", () => {
     expect(resolveOwnedParticipantIds([ERIC, secondBot], [], "eric@example.com").sort()).toEqual([
       "human-eric",
       "jarvis",
+    ]);
+  });
+
+  it("puts a stamped HUMAN ahead of a stamped bot regardless of roster order", () => {
+    // The [0] of this list is the desk's requesterId — see resolveOwnedId's sibling spec.
+    const human = { id: "human-eric", kind: "human" as const, ownerEmail: "eric@example.com" };
+    const bot = { id: "day-trader", kind: "bot" as const, ownerEmail: "eric@example.com" };
+    expect(resolveOwnedParticipantIds([bot, human], [], "eric@example.com")).toEqual([
+      "human-eric",
+      "day-trader",
     ]);
   });
 

@@ -230,4 +230,89 @@ describe("ParticipantService.addParticipant", () => {
     });
     expect(result.ok).toBe(true);
   });
+
+  // The forms only offer registry classes, but the submitted personaId BECOMES the participant
+  // id — a raw POST bypassing the radios could otherwise mint an account under an arbitrary
+  // slug no persona will ever drive (found by the phase-9c security review, 2026-08-28).
+  it("refuses a personaId outside the persona registry — a raw POST bypassing the class picker", async () => {
+    const { service, store } = makeService({});
+    const result = await service.addParticipant({
+      displayName: "A Bot",
+      apiKey: "k",
+      apiSecret: "s",
+      kind: "bot",
+      personaId: "not-a-class",
+    });
+    expect(result.ok).toBe(false);
+    expect(store.items).toHaveLength(0);
+  });
+
+  it("accepts a registry personaId — the class becomes the participant id", async () => {
+    const { service, store } = makeService({});
+    const result = await service.addParticipant({
+      displayName: "JARVIS",
+      apiKey: "k",
+      apiSecret: "s",
+      kind: "bot",
+      personaId: "day-trader",
+    });
+    expect(result).toEqual({ ok: true, id: "day-trader", displayName: "JARVIS" });
+    expect(store.items[0]?.personaId).toBe("day-trader");
+  });
+
+  // Without the stamp a member-added bot is unclaimed, and refuseRotation's store tier lets ANY
+  // signed-in member rotate an unclaimed account — a silent credential swap of somebody else's
+  // bot (same review, 2026-08-28). The adder owns their bot, exactly as they own their human row.
+  it("stamps the adder as owner on a bot account, same as a human", async () => {
+    const { service, store } = makeService({});
+    await service.addParticipant({
+      displayName: "JARVIS",
+      apiKey: "k",
+      apiSecret: "s",
+      kind: "bot",
+      personaId: "day-trader",
+      ownerEmail: "adder@example.com",
+    });
+    expect(store.items[0]?.ownerEmail).toBe("adder@example.com");
+  });
+
+  it("refuses a SECOND member's rotation of a member-added bot — the adder owns it", async () => {
+    const { service, store } = makeService({});
+    await service.addParticipant({
+      displayName: "JARVIS",
+      apiKey: "k",
+      apiSecret: "s",
+      kind: "bot",
+      personaId: "day-trader",
+      ownerEmail: "adder@example.com",
+    });
+    const result = await service.rotateCredentials({
+      id: "day-trader",
+      apiKey: "stolen-key",
+      apiSecret: "stolen-secret",
+      requesterEmail: "second-member@example.com",
+    });
+    expect(result.ok).toBe(false);
+    expect(store.items[0]?.credentials.apiKey).toBe("k");
+  });
+
+  // A raw exception can carry internals — hostnames, proxy banners — that don't belong in
+  // member-facing copy. The unreachable arm answers with a fixed sentence instead.
+  it("keeps exception internals out of the Alpaca-unreachable error", async () => {
+    const { service } = makeService({
+      factory: () => {
+        throw new Error("connect ECONNREFUSED internal-proxy.corp:8080");
+      },
+    });
+    const result = await service.addParticipant({
+      displayName: "Uncle Joe",
+      apiKey: "k",
+      apiSecret: "s",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).not.toContain("internal-proxy");
+      expect(result.error).toContain("Could not reach Alpaca");
+    }
+  });
 });

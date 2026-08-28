@@ -133,7 +133,29 @@ export class OwnerLinkStore {
  * already connected. A link is honored only against an account that is really unowned and really
  * on the board — a link left behind by a since-removed account resolves to nobody, not to a ghost.
  */
-type OwnableParticipant = { readonly id: string; readonly ownerEmail?: string };
+type OwnableParticipant = {
+  readonly id: string;
+  readonly kind?: "bot" | "human";
+  readonly ownerEmail?: string;
+};
+
+/**
+ * Every stamped match for `email`, HUMANS FIRST (stable within a kind). Since `/add` stamps the
+ * adder onto bots too (2026-08-28), one email can carry both a stamped human and a stamped bot —
+ * and the single-id consumers (`resolveOwnerIds(email)[0]` becomes the desk's `requesterId`)
+ * must land on the human, not on whichever row happens to come first in roster order, or a bot
+ * added before the member's own account would shadow it and lock the trade desk (the same
+ * wrong-owned-account class reported live 2026-08-27).
+ */
+function stampedIdsFor(
+  participants: readonly OwnableParticipant[],
+  wantedLowercased: string,
+): string[] {
+  return participants
+    .filter((p) => p.ownerEmail?.toLowerCase() === wantedLowercased)
+    .sort((a, b) => Number(a.kind === "bot") - Number(b.kind === "bot"))
+    .map((p) => p.id);
+}
 
 /** The linked half of the precedence rule, shared by `resolveOwnedId` and
  *  `resolveOwnedParticipantIds` — a link only counts against a participant that carries no stamp
@@ -159,9 +181,9 @@ export function resolveOwnedId(
   email: string,
 ): string | undefined {
   const wanted = email.toLowerCase();
-  const stamped = participants.find((p) => p.ownerEmail?.toLowerCase() === wanted);
-  if (stamped) return stamped.id;
-  return findUnstampedLinkedIds(participants, links, wanted)[0];
+  return (
+    stampedIdsFor(participants, wanted)[0] ?? findUnstampedLinkedIds(participants, links, wanted)[0]
+  );
 }
 
 /**
@@ -179,10 +201,10 @@ export function resolveOwnedParticipantIds(
   email: string,
 ): string[] {
   const wanted = email.toLowerCase();
-  const stampedIds = participants
-    .filter((p) => p.ownerEmail?.toLowerCase() === wanted)
-    .map((p) => p.id);
-  return [...stampedIds, ...findUnstampedLinkedIds(participants, links, wanted)];
+  return [
+    ...stampedIdsFor(participants, wanted),
+    ...findUnstampedLinkedIds(participants, links, wanted),
+  ];
 }
 
 /** Build the store from the environment (`SKYNET_OWNER_LINKS_FILE`, default `data/owner-links.json`). */

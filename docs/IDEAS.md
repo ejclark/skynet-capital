@@ -1016,3 +1016,13 @@ conduit/interface to a chatbot right rail"). Materially larger than a fold-in: n
 conduit, an auth story, and a UI seam (the redesign's PageLayout pane slot is the natural home).
 Revisit once the React shell (issue #738, phase 1) gives it a place to mount.
 _(src: Eric · while: GitHub IA mockup review, 2026-08-28)_
+### More orchestration so kicked-out tasks run in parallel
+This security-fix task ran as a manually kicked-out worktree session, and Eric's read is that a
+proper orchestration layer would let several such tasks run concurrently and lift throughput. The
+substrate mostly exists — the postmaster lane builds `feedback`-labelled issues in fresh sessions
+(docs/plans/issue-centric-orchestration.md), `/governor` dispatches athletes into isolated
+worktrees in parallel — so the gap is likely a dispatcher for *ad-hoc* tasks: something that takes
+a queue of filed issues (or a review's finding list) and fans each out as its own worktree session
+with the ship loop attached, instead of Eric kicking sessions off by hand. Worth a /charter-style
+pass over what exists before building anything new.
+_(src: Eric · while: mid-flight in the phase-9c security-gap fixes, 2026-08-28)_
