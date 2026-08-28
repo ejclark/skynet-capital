@@ -10,6 +10,7 @@ import {
   toggleQualifier,
 } from "../live/desk";
 import { TimelineDrawer } from "../shell/timeline-drawer";
+import { TradeGate } from "../shell/trade-gate";
 
 /**
  * THE DESK (#738 phase 2c) — `/u/:id` in the shell: identity header, tabs, tiles, and the blotter
@@ -250,6 +251,7 @@ function DeskPage(): ReactElement {
           )}
         </>
       )}
+      {d.error ? null : <TradeGate deskId={d.id} />}
       {timelineFor ? (
         <TimelineDrawer
           deskId={d.id}
@@ -259,8 +261,7 @@ function DeskPage(): ReactElement {
         />
       ) : null}
       <footer className="obs-foot num">
-        as of {generatedAt} · click a symbol for its fill timeline · read-only — trading stays on
-        the server desk for now
+        as of {generatedAt} · click a symbol for its fill timeline
       </footer>
     </>
   );

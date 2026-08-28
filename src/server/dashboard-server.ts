@@ -26,6 +26,7 @@ import { trySelfServiceRoute } from "./dashboard-self-service-routes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveInfoRoute, serveLearnRoute, serveTradeRoute } from "./dashboard-view-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
+import { serveTradeApi } from "./trade-api-routes.js";
 import { serveWireRoute } from "./wire-routes.js";
 
 export type { DashboardServerConfig };
@@ -206,6 +207,9 @@ async function serveAuthorizedRoute(
   }
   if (path.startsWith("/api/desk/")) {
     await serveDeskJson(res, path, config);
+    return;
+  }
+  if (await serveTradeApi(req, res, path, config, session)) {
     return;
   }
   // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.
