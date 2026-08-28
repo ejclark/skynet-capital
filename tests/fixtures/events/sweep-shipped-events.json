@@ -1,0 +1,13 @@
+{
+  "eventName": "push",
+  "actor": "ejclark",
+  "event": {},
+  "deps": {
+    "dueEvents": [],
+    "openIssueTitles": [],
+    "shippedEvents": [
+      { "number": 510, "title": "[event-research] mu-2026-09-29-print", "pr": 695 },
+      { "number": 706, "title": "[event-research] adp-employment-2026-09-02", "pr": 712 }
+    ]
+  }
+}

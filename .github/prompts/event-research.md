@@ -18,6 +18,14 @@ Ship ONE PR per event, on a branch named EXACTLY `research/<event-id>` off `orig
 branch name is the dedupe key that stops the next push-triggered run re-researching an event whose
 PR is still open, and it is what puts the branch inside the envelope gate. Never improvise it.
 
+Before opening the PR, find its tracking issue: `gh issue list --label event-research --state open
+--json number,title --jq '.[] | select(.title == "[event-research] <event-id>") | .number'`. If one
+matches, add a Summary bullet containing `Closes #<issue-number>` — GitHub links it from anywhere,
+so it is never line 1 (same convention as the feedback lane, `.github/prompts/feedback-build.md`).
+If none matches (already closed, or none was ever opened), skip the bullet — do not fail the build
+over it. This is belt only: the postmaster's push-driven sweep is the suspenders, since `Closes #`
+does not reliably auto-close a PR a bot both opens and merges (docs/LESSONS.md, 2026-08-22).
+
 Verify by exit status and never by tailed output (`npm run typecheck`, `npm run lint`, `npm test`),
 push, open the PR with `gh pr create`, then arm auto-merge with `gh pr merge --auto --squash` —
 research-ledger docs auto-merge per the governor's merge policy. If that arm is refused with **"Pull request is in clean status"**, the PR simply went green before you got to it (`verify` on a small PR takes ~45s) — auto-merge only takes while checks are still pending. That is not a failure and never a reason to leave it: **merge it directly** (`gh pr merge --squash`), which is the condition auto-merge was waiting for, met early. Leaving it stalled 16 research PRs on 2026-08-26. Conventional-Commit subjects,

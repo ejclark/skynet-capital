@@ -221,6 +221,10 @@ describe("autonomous-lane envelope", () => {
         env: hermeticGitEnv(),
       });
     const clientPath = join(dir, "src/alpaca/alpaca-trading-client.ts");
+    // `env: hermeticGitEnv()` here too — this shells out to `envelope-scan.mjs`, which itself calls
+    // `git diff`, so it inherits `GIT_DIR`/`GIT_INDEX_FILE` from a real git hook exactly like a bare
+    // `git` spawn does. Missing here under `npm test` (no ambient `GIT_*`) and only surfaced under
+    // `.husky/pre-push`, which diffed the real repo instead of this temp fixture.
     const checkTemp = (...args: string[]): Check[] =>
       JSON.parse(
         execFileSync(

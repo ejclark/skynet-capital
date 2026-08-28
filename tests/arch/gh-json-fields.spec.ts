@@ -119,12 +119,14 @@ describe("the GraphQL bucket the postmaster rides on", () => {
 
   it("asks the cheap REST question before the expensive one", () => {
     const source = codeOnly(readFileSync("scripts/postmaster.mjs", "utf8"));
-    const restProbe = source.indexOf("issues?state=open&labels=feedback");
+    // Parameterized by label (2026-08-28: `feedback` and `event-research` share this one sweep) —
+    // `labels=${label}`, not a literal label name.
+    const restProbe = source.indexOf("issues?state=open&labels=");
     const graphqlSweep = source.search(GH_JSON_CALLS);
 
     expect(restProbe).toBeGreaterThan(-1);
     expect(graphqlSweep).toBeGreaterThan(-1);
-    // Ordering IS the saving: most pushes have no open feedback issue and must pay nothing.
+    // Ordering IS the saving: most pushes have no open issue in the label and must pay nothing.
     expect(restProbe).toBeLessThan(graphqlSweep);
   });
 
