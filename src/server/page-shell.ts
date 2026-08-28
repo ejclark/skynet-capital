@@ -184,3 +184,42 @@ export function shellDocument(title: string, body: string): string {
 <body>${body}</body>
 </html>`;
 }
+
+/** Parse a JSON body into a plain object record — undefined for anything else (arrays, scalars,
+ *  bad JSON). The shared first half of every strict API shape gate. */
+export function parseJsonRecord(raw: string): Record<string, unknown> | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return undefined;
+  return parsed as Record<string, unknown>;
+}
+
+/** The JSON-POST preamble every API write shares: POST-only (405), application/json-only (415 —
+ *  closes cookie-carried cross-site form posts), size-capped (413). Returns the raw body, or
+ *  undefined after answering the response itself. */
+export async function readJsonPost(
+  req: IncomingMessage,
+  res: ServerResponse,
+  capBytes: number,
+): Promise<string | undefined> {
+  if (req.method !== "POST") {
+    res.writeHead(405, { allow: "POST", "content-type": "text/plain" });
+    res.end("POST only");
+    return undefined;
+  }
+  const contentType = String(req.headers["content-type"] ?? "");
+  if (!contentType.toLowerCase().includes("application/json")) {
+    sendJson(res, 415, { error: "send application/json" });
+    return undefined;
+  }
+  try {
+    return await readBody(req, capBytes);
+  } catch {
+    sendJson(res, 413, { error: "body too large" });
+    return undefined;
+  }
+}

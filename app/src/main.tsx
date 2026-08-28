@@ -14,6 +14,7 @@ import "./styles/hovercard.css";
 import "./styles/kbd.css";
 import "./styles/motion.css";
 import "./styles/pulse.css";
+import "./styles/settings.css";
 import "./styles/shell.css";
 import "./styles/theme.css";
 import "./styles/views.css";

@@ -3,7 +3,7 @@ import { previewOrder, type TicketOrderType } from "../trading/order-ticket.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import { readBody, sendJson } from "./page-shell.js";
+import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
  * THE TRADE API (#738 phase 2e) — the React shell's pre-trade gate, as two POST endpoints.
@@ -43,14 +43,8 @@ function parsePositivePrice(raw: unknown): number | undefined {
 
 /** Strict shape gate: exactly the fields an order needs, verified, everything else dropped. */
 function parseTradeBody(raw: string): TradeApiBody | undefined {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return undefined;
-  const body = parsed as Record<string, unknown>;
+  const body = parseJsonRecord(raw);
+  if (!body) return undefined;
   const participantId = body.participantId;
   const symbol = body.symbol;
   const quantity = body.quantity;
@@ -82,23 +76,8 @@ async function readTradeBody(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<TradeApiBody | undefined> {
-  if (req.method !== "POST") {
-    res.writeHead(405, { allow: "POST", "content-type": "text/plain" });
-    res.end("POST only");
-    return undefined;
-  }
-  const contentType = String(req.headers["content-type"] ?? "");
-  if (!contentType.toLowerCase().includes("application/json")) {
-    sendJson(res, 415, { error: "send application/json" });
-    return undefined;
-  }
-  let raw: string;
-  try {
-    raw = await readBody(req, TRADE_BODY_CAP_BYTES);
-  } catch {
-    sendJson(res, 413, { error: "body too large" });
-    return undefined;
-  }
+  const raw = await readJsonPost(req, res, TRADE_BODY_CAP_BYTES);
+  if (raw === undefined) return undefined;
   const body = parseTradeBody(raw);
   if (!body) {
     sendJson(res, 400, { error: "malformed order body" });
