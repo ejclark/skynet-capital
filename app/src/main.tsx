@@ -13,6 +13,7 @@ import "./styles/gate.css";
 import "./styles/hero.css";
 import "./styles/hovercard.css";
 import "./styles/kbd.css";
+import "./styles/learn.css";
 import "./styles/motion.css";
 import "./styles/pulse.css";
 import "./styles/settings.css";
