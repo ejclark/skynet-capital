@@ -40,11 +40,30 @@ export interface PulseRaceData {
   readonly doubled: boolean;
 }
 
+export interface PulseStreakRowData {
+  readonly label: string;
+  readonly value: string;
+  readonly note: string;
+  readonly tone: "pos" | "neg" | "flat";
+}
+
+/**
+ * One family of run. The caption is not decoration — trading-day runs and trade runs count
+ * different things over different inputs, and the page must never let a reader merge them.
+ */
+export interface PulseStreakGroupData {
+  readonly title: string;
+  readonly caption: string;
+  readonly rows: readonly PulseStreakRowData[];
+  readonly empty: string;
+}
+
 export interface DeskPulse {
   readonly curve: PulseCurveData | null;
   readonly weeks: readonly PulseWeekData[];
   readonly tiles: readonly PulseTileData[];
   readonly race: PulseRaceData | null;
+  readonly streaks: readonly PulseStreakGroupData[];
 }
 
 export async function fetchDeskPulse(id: string): Promise<DeskPulse> {

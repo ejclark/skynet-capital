@@ -1,8 +1,8 @@
 import {
   biggestSingleDayGain,
   dailyChanges,
-  greenStreakBoard,
-  longestGreenStreak,
+  dayStreakBoard,
+  longestDayStreak,
 } from "../../src/observatory/day-trophies.js";
 import {
   aggregateDoubling,
@@ -280,57 +280,94 @@ describe("biggestSingleDayGain", () => {
   });
 });
 
-describe("longestGreenStreak", () => {
+describe("longestDayStreak (green)", () => {
   it("counts a run across a weekend as consecutive trading days", () => {
     // Thu 13 → Fri 14 → Mon 17 → Tue 18, all up: three green days after the first recorded one.
-    expect(longestGreenStreak([close(13, 100), close(14, 110), close(17, 120), close(18, 130)])) //
-      .toEqual({ length: 3, from: "2026-08-14", to: "2026-08-18" });
+    expect(
+      longestDayStreak([close(13, 100), close(14, 110), close(17, 120), close(18, 130)], "green"),
+    ) //
+      .toEqual({
+        direction: "green",
+        length: 3,
+        from: "2026-08-14",
+        to: "2026-08-18",
+        abs: 30,
+        pct: 30,
+      });
   });
 
   it("breaks a run on a flat day, not just a losing one", () => {
-    const streak = longestGreenStreak([
-      close(10, 100),
-      close(11, 110), // green
-      close(12, 110), // flat — breaks it
-      close(13, 120), // green
-      close(14, 130), // green
-    ]);
-    expect(streak).toEqual({ length: 2, from: "2026-08-13", to: "2026-08-14" });
+    const streak = longestDayStreak(
+      [
+        close(10, 100),
+        close(11, 110), // green
+        close(12, 110), // flat — breaks it
+        close(13, 120), // green
+        close(14, 130), // green
+      ],
+      "green",
+    );
+    expect(streak).toMatchObject({ length: 2, from: "2026-08-13", to: "2026-08-14", abs: 20 });
+    // Measured from the close BEFORE the run (110), not from the run's own first close.
+    expect(streak?.pct).toBeCloseTo(18.18, 2);
   });
 
   it("never counts the first recorded day as green — it beat nothing", () => {
-    expect(longestGreenStreak([close(10, 100)])).toBeNull();
-    expect(longestGreenStreak([close(10, 100), close(11, 150)])).toEqual({
+    expect(longestDayStreak([close(10, 100)], "green")).toBeNull();
+    expect(longestDayStreak([close(10, 100), close(11, 150)], "green")).toEqual({
+      direction: "green",
       length: 1,
       from: "2026-08-11",
       to: "2026-08-11",
+      abs: 50,
+      pct: 50,
     });
   });
 
   it("is null with no history and when no day was green", () => {
-    expect(longestGreenStreak([])).toBeNull();
-    expect(longestGreenStreak([close(10, 100), close(11, 90)])).toBeNull();
+    expect(longestDayStreak([], "green")).toBeNull();
+    expect(longestDayStreak([close(10, 100), close(11, 90)], "green")).toBeNull();
   });
 });
 
-describe("greenStreakBoard", () => {
+describe("dayStreakBoard", () => {
   it("ranks longest first and omits accounts with no streak rather than zeroing them", () => {
-    const board = greenStreakBoard([
-      close(10, 100, "alice"),
-      close(11, 110, "alice"),
-      close(12, 120, "alice"), // alice: 2 green
-      close(10, 100, "bob"),
-      close(11, 110, "bob"), // bob: 1 green
-      close(10, 100, "carol"),
-      close(11, 90, "carol"), // carol: never green — absent, not 0
-    ]);
+    const board = dayStreakBoard(
+      [
+        close(10, 100, "alice"),
+        close(11, 110, "alice"),
+        close(12, 120, "alice"), // alice: 2 green
+        close(10, 100, "bob"),
+        close(11, 110, "bob"), // bob: 1 green
+        close(10, 100, "carol"),
+        close(11, 90, "carol"), // carol: never green — absent, not 0
+      ],
+      "green",
+    );
     expect(board).toEqual([
-      { participantId: "alice", length: 2, from: "2026-08-11", to: "2026-08-12" },
-      { participantId: "bob", length: 1, from: "2026-08-11", to: "2026-08-11" },
+      {
+        participantId: "alice",
+        direction: "green",
+        length: 2,
+        from: "2026-08-11",
+        to: "2026-08-12",
+        abs: 20,
+        pct: 20,
+      },
+      {
+        participantId: "bob",
+        direction: "green",
+        length: 1,
+        from: "2026-08-11",
+        to: "2026-08-11",
+        abs: 10,
+        pct: 10,
+      },
     ]);
   });
 
   it("is empty with no history", () => {
-    expect(greenStreakBoard([])).toEqual([]);
+    expect(dayStreakBoard([], "green")).toEqual([]);
+    expect(dayStreakBoard([], "red")).toEqual([]);
   });
 });

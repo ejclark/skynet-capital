@@ -6,6 +6,7 @@ import {
   type DeskPulse,
   fetchDeskPulse,
   type PulseCurveData,
+  type PulseStreakGroupData,
   type PulseWeekData,
 } from "../live/pulse";
 import { DeskRail } from "../shell/desk-rail";
@@ -90,6 +91,41 @@ function WeeklyBars({ weeks }: { readonly weeks: readonly PulseWeekData[] }): Re
   );
 }
 
+/**
+ * The two run families (#780), side by side and never merged. Each group keeps its caption even
+ * when it has rows: "4 trading days" and "4 trades" are different facts, and the caption is the
+ * only thing on the page that says which one a reader is looking at.
+ */
+function StreakGroups({
+  groups,
+}: {
+  readonly groups: readonly PulseStreakGroupData[];
+}): ReactElement {
+  return (
+    <div className="pulse-streaks">
+      {groups.map((group) => (
+        <div key={group.title} className="pulse-streak-group">
+          <h3 className="pulse-streak-h">{group.title}</h3>
+          <p className="pulse-streak-cap">{group.caption}</p>
+          {group.rows.length > 0 ? (
+            <dl className="pulse-streak-rows">
+              {group.rows.map((row) => (
+                <div key={row.label} className="pulse-streak-row">
+                  <dt className="pulse-streak-k">{row.label}</dt>
+                  <dd className={`pulse-streak-v num tone-${row.tone}`}>{row.value}</dd>
+                  <dd className="pulse-streak-note num">{row.note}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="note">{group.empty}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PulseBody({ pulse }: { readonly pulse: DeskPulse }): ReactElement {
   return (
     <>
@@ -130,6 +166,11 @@ function PulseBody({ pulse }: { readonly pulse: DeskPulse }): ReactElement {
             </div>
           </div>
         ) : null}
+      </section>
+
+      <section className="pulse-panel">
+        <h2 className="pulse-title">Streaks</h2>
+        <StreakGroups groups={pulse.streaks} />
       </section>
 
       <section className="pulse-panel">
@@ -174,8 +215,10 @@ function PulsePage(): ReactElement {
       <header className="page-header">
         <h1>{d.name} — pulse</h1>
         <p>
-          How the account breathes over time: the recorded equity curve, realized P/L week by week,
-          and the friendly race to 2×. Booked numbers only — open positions stay on Active.
+          How the account breathes over time: the recorded equity curve, the runs it strung
+          together, realized P/L week by week, and the friendly race to 2×. Nothing here is
+          estimated — every figure comes from a recorded equity sample or a closed trade, and each
+          section says which.
         </p>
       </header>
       <PulseBody pulse={pulse.data} />
