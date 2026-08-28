@@ -1,6 +1,7 @@
 <!-- AUTO-GENERATED — do not hand-edit below the marker.
-     Regenerate: `npm run graph:refresh` (free, no API). Kept fresh automatically on push to main
-     by .github/workflows/graph-refresh.yml. The live graph lives in graphify-out/ (git-ignored). -->
+     Regenerate: `npm run graph:refresh` (free, no API). Refresh is MANUAL — run it after material
+     code changes; the doc-rot gate watches this snapshot's age. The live graph lives in
+     graphify-out/ (git-ignored). -->
 
 # Structural map (Graphify)
 
@@ -22,7 +23,7 @@ the *product/systems* lens ("what exists, how mature, where to aim"). To navigat
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `97e5c3a7`
+- Built from commit: `f0bdc1f4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
