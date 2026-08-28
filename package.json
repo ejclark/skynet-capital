@@ -55,7 +55,8 @@
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
     "scan:flow": "tsx src/scripts/scan-unusual-flow.ts",
     "backfill:activity": "tsx src/scripts/backfill-trade-activity.ts",
-    "feedback:scan": "node scripts/feedback-scan.mjs"
+    "feedback:scan": "node scripts/feedback-scan.mjs",
+    "design:cards": "node scripts/design-cards.mjs"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",
