@@ -15,12 +15,12 @@ const SHELL_CHORDS: readonly (readonly [string, string, string])[] = [
   ["t", "/trade", "Trade ticket"],
   ["w", "/wire", "The Wire"],
   ["c", "/collections", "Collections"],
+  ["m", "/learn", "Milestones"],
 ];
 
 /** Server-rendered chord targets (full navigation, honestly cross-linked like the topbar). */
 const SERVER_CHORDS: readonly (readonly [string, string, string])[] = [
   ["r", "/research", "Research"],
-  ["m", "/learn", "Milestones"],
 ];
 
 const CHORD_WINDOW_MS = 1000;

@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { browseCollections, unshelved } from "../discovery/collections.js";
 import { collectionsJsonView } from "../observatory/collections-json-view.js";
+import { learnJsonView } from "../observatory/learn-json-view.js";
 import {
   type NavContext,
   type NavView,
@@ -137,9 +138,18 @@ async function serveJsonApi(
   url: string,
   config: DashboardServerConfig,
   channel: BoardPatchChannel,
+  session: Session | undefined,
 ): Promise<boolean> {
   if (path === "/api/wire") {
     await serveWireJson(res, config, Boolean(config.submitFeedback));
+    return true;
+  }
+  if (path === "/api/learn") {
+    // The viewer's own journey — same resolution as /learn's HTML route.
+    const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+    const progress = id && config.progression ? await config.progression.view(id) : undefined;
+    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+    res.end(JSON.stringify(learnJsonView(progress)));
     return true;
   }
   if (path === "/api/collections") {
@@ -208,7 +218,7 @@ async function serveAuthorizedRoute(
     serveBoardFrame(res, config.hub, navFor("board"), metric, parseCompareParams(params));
     return;
   }
-  if (await serveJsonApi(res, path, url, config, channel)) {
+  if (await serveJsonApi(res, path, url, config, channel, session)) {
     return;
   }
   if (await serveTradeApi(req, res, path, config, session)) {

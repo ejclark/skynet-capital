@@ -10,10 +10,7 @@ import { type Density, type Theme, usePrefs } from "../shell/prefs";
  * (or none). Views the shell doesn't own yet are plain links to the server-rendered pages.
  */
 
-const SERVER_VIEWS = [
-  ["/research", "Research"],
-  ["/learn", "Milestones"],
-] as const;
+const SERVER_VIEWS = [["/research", "Research"]] as const;
 
 function StatusPill(): ReactElement {
   const status = useConnection((s) => s.status);
@@ -97,6 +94,9 @@ function RootShell(): ReactElement {
             activeOptions={{ includeSearch: false }}
           >
             Collections
+          </Link>
+          <Link to="/learn" className="topnav-link" activeProps={{ "aria-current": "page" }}>
+            Milestones
           </Link>
           {SERVER_VIEWS.map(([href, label]) => (
             <a key={href} href={href} className="topnav-link">
