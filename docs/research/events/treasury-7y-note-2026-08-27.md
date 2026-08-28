@@ -2,7 +2,7 @@
 
 **Kind:** rates · **Date:** 2026-08-27 (confirmed, TSY: treasurydirect.gov upcoming auctions — announced,
 1:00pm ET, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-08-26
+**Last assessed:** 2026-08-28
 
 ## At a glance
 
@@ -180,3 +180,70 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-08-28**, from the primary source: the U.S. Treasury's own Fiscal Data API
+(`api.fiscaldata.treasury.gov`, `v1/accounting/od/auctions_query`, CUSIP `91282CRJ2`, queried
+2026-08-28) plus one independent press write-up (investinglive.com, 2026-08-27) for the
+when-issued level and recent-average context Treasury's own release doesn't carry. This event
+carries no `symbols`, so there is no earnings-cycle/intraday-edges instrument to re-run — the
+instrument-cache-bust step in `EVENT-RESEARCH.md` doesn't apply to a rates auction.
+
+**The print (confirmed, primary source).** $44B 7-year note, high yield **4.512%** vs a **4.512%**
+when-issued level → a **0.0bp tail** (investinglive.com's own six-month tail average: 0.2bp) — no
+tail at all, tighter than the recent norm. Bid-to-cover **2.50x** (computed here as `total_tendered`
+$115.876B ÷ `total_accepted` $49.657B — Treasury's own headline ratio; investinglive's independently
+computed **2.50x vs a 2.49x six-month average** matches exactly). Bidder mix computed against
+`comp_accepted` ($43.894B): **indirect 60.8%** ($26.677B) — below investinglive's cited ~65.1%
+six-month average by ~4.3pp, but well clear of this doc's own 55% weak-demand threshold; **direct
+27.0%** ($11.833B) — above the ~23.1% average, domestic buyers doing more of the work again, the
+same pattern the Jun-25 print showed; **primary dealer 12.3%** ($5.383B) — slightly above the
+~11.8% average. Offering size confirmed at $44B. investinglive.com's own auction grade: **C** ("No
+tail. Bid to cover near the average. The domestic buyers were more aggressive vs the international
+buyers.") — an unremarkable, solidly middle-of-the-road print, not the belly-of-curve weak-demand
+break either leg (a) or the kill switches were watching for.
+
+**Market reaction, auction day (Aug 27).** The auction landed inside a session the tape had already
+decided to spend on NVDA: S&P 500 **+0.72%** to 7,730.99, Nasdaq **+1.57%** to 26,541.35, Dow
+**+0.2%** to 53,569.44 — the best day for tech, the S&P, and the Nasdaq since Aug 4, driven by
+NVDA's beat-and-raise (shares **+8.7%** on the regular-session reaction day; FY28 revenue growth
+now projected at ~70% vs. the ~44% analysts expected) plus Salesforce (+23%) and CrowdStrike (+21%)
+on their own prints (Yahoo Finance / Motley Fool / CNBC, all 2026-08-27). VIX closed **~15.2**
+(tradingeconomics.com, checked 2026-08-28) — calm, essentially flat from the ~15.8 the D-1 pulse
+cited, no regime shift. The 5-year auction the day before (Aug 26, this event's own sibling doc)
+closed out as a **solid, not weak** print of its own (2.37x BC, +0.2bp tail, indirect 61.5% —
+"a moderate improvement" per that doc's close-out) — so the belly of the curve produced two
+unremarkable-to-solid prints back to back, not the deteriorating streak leg (a) flagged as a live
+risk going in.
+
+**Correction — leg (a)'s "weakest tenor" framing, closed out.** The initial doc's own finding was
+that the 5-year, not the 7-year, carried 2026's sharpest belly-of-curve softness (Jul-27 5Y: BC
+2.28x, indirect 59.2%, "one of the ugliest 5-year auctions in years"). That divergence did not
+persist into this week's pair: the Aug-26 5Y and Aug-27 7Y both printed at or above their own
+recent averages on bid-to-cover, with only indirect demand running mildly soft on both — a
+converging, not diverging, belly-of-curve read this cycle.
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"Markedly weak 7Y print (BC well under ~2.40, tail beyond ~1.5bp, indirect materially below the
+  55–58% band) landing alongside a disappointing NVDA reaction" →** did not fire, on either half.
+  The print was not weak (BC 2.50, no tail, indirect 60.8%), and NVDA's reaction was the opposite
+  of disappointing (+8.7%, best tech day in three weeks).
+- **"Clean 7Y print (BC back near/above the ~2.50–2.64 recent-average band, tail near zero)" →**
+  fired, at the low end of the band. BC landed exactly at 2.50 (the floor of that range, not deep
+  into it) with a 0.0bp tail — clean enough to remove this cycle's belly-of-curve concern, as the
+  kill switch anticipated, without being a standout strong print.
+- **No forward test is registered in `forward-tests.md` against this event id** (confirmed by
+  search) — nothing to score there, consistent with the initial doc's own note that a symbol-less
+  rates auction isn't the kind of directional prediction that ledger tracks.
+
+**Verdict vs. the stance.** The stand-aside stance held, and held for the right reason: this was
+never a doc that licensed a trade, and nothing in the outcome would have justified one if it had.
+Leg (c)'s forecast — that the 7Y's own result would get comparatively little tape attention because
+NVDA's reaction dominated the session — reads as correct: same-day coverage of Aug 27 centers on
+NVDA/Salesforce/CrowdStrike, with the auction registering as a routine, unremarkable line item (a
+"C" grade, no tail) rather than a story of its own. Leg (a)'s "7-year as weakest tenor" framing
+does not get vindicated this cycle either — both the 5Y and 7Y printed at-or-above their own
+recent-average bid-to-cover, continuing the "soft-but-not-disastrous" read the initial doc already
+carried rather than escalating into the "worst on record" pattern the historical citations warned
+about. This doc goes quiet after this entry per the close-out rule.
