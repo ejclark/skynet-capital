@@ -35,3 +35,6 @@ public/tower.html
 # as a bundle file by scripts/handoff-scan.mjs, and shown to a building session in the watcher's
 # issue body as though it were design input.
 .DS_Store
+
+# generated design-system bundle (scripts/design-cards.mjs) — regenerable, never committed
+.tmp-design-cards/
