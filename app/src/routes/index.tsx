@@ -11,6 +11,7 @@ import {
   parseBoardMetric,
 } from "../live/board";
 import { boardQueryOptions, connectBoardChannel } from "../live/channel";
+import { DeskHoverName } from "../shell/desk-hovercard";
 import { PageFrame } from "../shell/frame";
 
 /**
@@ -262,10 +263,7 @@ function FieldLadder({
           className="rank-row"
           style={{ "--g": rampFor(index, rows.length) } as CSSProperties}
         >
-          <Link to="/u/$id" params={{ id: row.key }} className="rank-name">
-            {row.name}
-            <span className={`chip chip-${row.kind}`}>{row.kind === "bot" ? "BOT" : "HUMAN"}</span>
-          </Link>
+          <DeskHoverName id={row.key} name={row.name} kind={row.kind} />
           <span className="rank-bar">
             <i style={{ width: `${row.bar}%` }} />
           </span>
