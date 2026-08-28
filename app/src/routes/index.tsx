@@ -261,10 +261,10 @@ function FieldLadder({
           className="rank-row"
           style={{ "--g": rampFor(index, rows.length) } as CSSProperties}
         >
-          <span className="rank-name">
+          <Link to="/u/$id" params={{ id: row.key }} className="rank-name">
             {row.name}
             <span className={`chip chip-${row.kind}`}>{row.kind === "bot" ? "BOT" : "HUMAN"}</span>
-          </span>
+          </Link>
           <span className="rank-bar">
             <i style={{ width: `${row.bar}%` }} />
           </span>

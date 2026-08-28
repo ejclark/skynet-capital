@@ -150,6 +150,16 @@
       "assist": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["**/app/src/routes/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off"
+          }
+        }
+      }
     }
   ],
   "formatter": {

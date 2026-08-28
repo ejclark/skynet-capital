@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { deskView } from "../observatory/desk-json-view.js";
 import {
   type NavContext,
   type NavView,
@@ -125,6 +126,20 @@ function serveFoldedRedirect(res: ServerResponse, path: string, url: string): bo
   return true;
 }
 
+/** The desk as data (#738 phase 2c) — same gate, same formatters as /u/:id's blotter. */
+function serveDeskJson(res: ServerResponse, path: string, config: DashboardServerConfig): void {
+  const id = decodeURIComponent(path.slice("/api/desk/".length));
+  const state = config.hub.getState();
+  const found = state.participants.find((p) => p.id === id);
+  if (!found) {
+    res.writeHead(404, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: "no such desk" }));
+    return;
+  }
+  res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+  res.end(JSON.stringify({ generatedAt: state.generatedAt, desk: deskView(found) }));
+}
+
 /** Routes behind the auth gate — same set and order as before the split. */
 async function serveAuthorizedRoute(
   req: IncomingMessage,
@@ -168,6 +183,10 @@ async function serveAuthorizedRoute(
   }
   if (path === "/api/board") {
     serveBoardJson(res, url, config, channel);
+    return;
+  }
+  if (path.startsWith("/api/desk/")) {
+    serveDeskJson(res, path, config);
     return;
   }
   // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.
