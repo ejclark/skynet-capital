@@ -43,6 +43,10 @@ describe("serveLegacyRedirect", () => {
     expect(target("/collections/wheel-desks")).toBe("/app/collections/wheel-desks");
     expect(target("/account")).toBe("/app/settings");
     expect(target("/add", "/add?key=abc")).toBe("/app/join?key=abc");
+    expect(target("/feedback")).toBe("/app/feedback");
+    // The coach and preview are shared JSON endpoints, not pages — they keep serving.
+    expect(target("/feedback/coach")).toBeUndefined();
+    expect(target("/feedback/preview")).toBeUndefined();
     expect(target("/rotate", "/rotate?id=bot-sauron")).toBe("/app/settings?id=bot-sauron");
     expect(target("/u")).toBe("/app/settings");
   });
@@ -62,7 +66,7 @@ describe("serveLegacyRedirect", () => {
     // The options ticket lives only on the HTML page until the shell gate learns options plays.
     expect(target("/trade", "/trade?play=201")).toBeUndefined();
     // Unported pages must keep serving until their phase-9 ports land.
-    for (const path of ["/feedback", "/invite", "/claim", "/ops-status"]) {
+    for (const path of ["/invite", "/claim", "/ops-status"]) {
       expect(target(path)).toBeUndefined();
     }
     // Research documents are server-rendered by design; /classic is the escape hatch.

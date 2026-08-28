@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
+import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { personaClasses } from "./persona-classes.js";
 
 /**
@@ -31,23 +31,19 @@ interface JoinBody {
   readonly timezone?: string;
 }
 
-function bounded(raw: unknown, max: number): string | undefined {
-  return typeof raw === "string" && raw.length > 0 && raw.length <= max ? raw : undefined;
-}
-
 /** Strict shape gate — exactly the join form's fields, everything else dropped. */
 function parseJoinBody(raw: string): JoinBody | undefined {
   const body = parseJsonRecord(raw);
   if (!body) return undefined;
-  const displayName = bounded(body.displayName, 60);
-  const apiKey = bounded(body.apiKey, 200);
-  const apiSecret = bounded(body.apiSecret, 200);
+  const displayName = boundedString(body.displayName, 60);
+  const apiKey = boundedString(body.apiKey, 200);
+  const apiSecret = boundedString(body.apiSecret, 200);
   if (!(displayName && apiKey && apiSecret)) return undefined;
   const kind = body.kind === "bot" ? "bot" : body.kind === "human" ? "human" : undefined;
   if (!kind) return undefined;
-  const personaId = body.personaId === undefined ? undefined : bounded(body.personaId, 60);
+  const personaId = body.personaId === undefined ? undefined : boundedString(body.personaId, 60);
   if (body.personaId !== undefined && personaId === undefined) return undefined;
-  const timezone = body.timezone === undefined ? undefined : bounded(body.timezone, 40);
+  const timezone = body.timezone === undefined ? undefined : boundedString(body.timezone, 40);
   if (body.timezone !== undefined && timezone === undefined) return undefined;
   return {
     displayName,

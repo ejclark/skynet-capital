@@ -36,9 +36,10 @@ describe("dashboard-server /feedback", () => {
       return Promise.resolve({ ok: true, url: "https://github.com/x/y/issues/7", number: 7 });
     };
     await withServer({ hub: new ObservatoryHub(board()), submitFeedback }, async (base) => {
-      const form = await fetch(`${base}/feedback`);
-      expect(form.status).toBe(200);
-      expect(await form.text()).toContain("Share feedback");
+      // Phase 9d: the page lives in the shell now — GET redirects, POST keeps filing.
+      const form = await fetch(`${base}/feedback`, { redirect: "manual" });
+      expect(form.status).toBe(302);
+      expect(form.headers.get("location")).toBe("/app/feedback");
 
       const post = await fetch(`${base}/feedback`, {
         method: "POST",
@@ -62,8 +63,8 @@ describe("dashboard-server /feedback", () => {
     const coach = () =>
       Promise.resolve({ ok: true as const, done: false as const, question: "Where?" });
     await withServer({ hub: new ObservatoryHub(board()), coachFeedback: coach }, async (base) => {
-      // The form offers the coach only when it's wired — plain form otherwise.
-      expect(await (await fetch(`${base}/feedback`)).text()).toContain("coach-box");
+      // Both doors share the coach; the API reports it wired for the shell page.
+      expect((await (await fetch(`${base}/api/feedback`)).json()).coachEnabled).toBe(true);
 
       const post = await fetch(`${base}/feedback/coach`, {
         method: "POST",
@@ -135,9 +136,12 @@ describe("dashboard-server /feedback", () => {
         expect(anon.status).toBe(302);
         expect(anon.headers.get("location")).toBe("/login");
 
-        const authed = await fetch(`${base}/feedback`, { headers: { cookie } });
-        expect(authed.status).toBe(200);
-        expect(await authed.text()).toContain("Share feedback");
+        const authed = await fetch(`${base}/feedback`, {
+          headers: { cookie },
+          redirect: "manual",
+        });
+        expect(authed.status).toBe(302);
+        expect(authed.headers.get("location")).toBe("/app/feedback");
       },
     );
   });

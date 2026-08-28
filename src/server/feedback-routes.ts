@@ -23,7 +23,7 @@ import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
 import type { FollowupResult, SubmitFollowup } from "./feedback-followup.js";
 import { feedbackInputFromForm, kindFromForm } from "./feedback-form-input.js";
 import { opaqueMemberId } from "./feedback-issue.js";
-import { type FeedbackLogEntry, feedbackLogEntry } from "./feedback-log.js";
+import { type FeedbackLogEntry, recordFilingSafely } from "./feedback-log.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
 import type { FeedbackInput, FeedbackResult } from "./feedback-service.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
@@ -76,7 +76,13 @@ export async function serveFeedbackRoute(
 // Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
 // repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine (single process).
 const feedbackHits = new Map<string, number[]>();
-function throttled(key: string, now = Date.now(), windowMs = 600_000, max = 5): boolean {
+/** Shared with the shell's /api/feedback (#738 phase 9d) — one budget per member, both doors. */
+export function feedbackThrottled(
+  key: string,
+  now = Date.now(),
+  windowMs = 600_000,
+  max = 5,
+): boolean {
   const recent = (feedbackHits.get(key) ?? []).filter((t) => now - t < windowMs);
   if (recent.length >= max) {
     feedbackHits.set(key, recent);
@@ -142,7 +148,7 @@ async function handleFeedback(
     );
     return;
   }
-  if (session && throttled(session.email)) {
+  if (session && feedbackThrottled(session.email)) {
     res.writeHead(429, { "content-type": "text/html; charset=utf-8" });
     res.end(
       shellDocument(
@@ -182,19 +188,13 @@ async function handleFeedback(
   }
   const input = feedbackInputFromForm(form, session, kind);
   const result = await submitFeedback(input);
-  if (result.ok && recordFeedback && session?.email) {
-    try {
-      await recordFeedback(
-        feedbackLogEntry(
-          { kind: input.kind, title: input.title },
-          opaqueMemberId(session.email),
-          result,
-          new Date().toISOString(),
-        ),
-      );
-    } catch (error) {
-      process.emitWarning(`[feedback-log] record failed: ${String(error)}`);
-    }
+  if (result.ok) {
+    await recordFilingSafely(
+      recordFeedback,
+      input,
+      session?.email ? opaqueMemberId(session.email) : undefined,
+      result,
+    );
   }
   res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
   res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));
@@ -227,7 +227,7 @@ async function handleFollowup(
     respond(200, { ok: false, error: "Following up isn't switched on yet." });
     return;
   }
-  if (throttled(session.email)) {
+  if (feedbackThrottled(session.email)) {
     respond(429, {
       ok: false,
       error: "You've sent a bunch just now — give it a few minutes and try again.",

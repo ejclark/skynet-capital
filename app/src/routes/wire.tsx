@@ -141,7 +141,7 @@ function SideColumns({ wire }: { readonly wire: WireFeed }): ReactElement {
           <p className="note">Feedback isn't switched on yet, so there's nothing to show here.</p>
         ) : wire.feedback.length === 0 ? (
           <p className="note">
-            No feedback filed yet — be the first from <a href="/feedback">the feedback form</a>.
+            No feedback filed yet — be the first from <a href="/app/feedback">the feedback form</a>.
           </p>
         ) : (
           <ul className="wire-fdbk">
