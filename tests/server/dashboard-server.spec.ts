@@ -129,9 +129,15 @@ describe("dashboard-server OAuth gate", () => {
     await withServer(
       { hub: new ObservatoryHub(board()), ...(auth ? { auth } : {}) },
       async (base) => {
-        const home = await fetch(`${base}/`, { headers: { cookie: validCookie() } });
-        expect(home.status).toBe(200);
-        expect(await home.text()).toContain("Sign out");
+        const home = await fetch(`${base}/`, {
+          headers: { cookie: validCookie() },
+          redirect: "manual",
+        });
+        expect(home.status).toBe(302); // the shell is the front door (#738 phase 7a)
+        expect(home.headers.get("location")).toBe("/app/");
+        const classic = await fetch(`${base}/classic`, { headers: { cookie: validCookie() } });
+        expect(classic.status).toBe(200);
+        expect(await classic.text()).toContain("Sign out");
       },
     );
   });
@@ -157,8 +163,8 @@ describe("dashboard-server OAuth gate", () => {
         invite: { store, isOwner: () => false },
       },
       async (base) => {
-        await fetch(`${base}/`, { headers: { cookie: validCookie() } });
-        expect(joined).toEqual(["eric@gmail.com"]);
+        await fetch(`${base}/`, { headers: { cookie: validCookie() }, redirect: "manual" });
+        expect(joined).toEqual(["eric@gmail.com"]); // the stamp survives the front-door redirect
       },
     );
   });

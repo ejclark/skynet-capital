@@ -124,6 +124,9 @@ function RootShell(): ReactElement {
           />
           <span className="env-pill">SIM</span>
           <StatusPill />
+          <a className="topnav-link" href="/logout">
+            Sign out
+          </a>
         </div>
       </header>
       <Outlet />
