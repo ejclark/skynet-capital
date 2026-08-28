@@ -152,6 +152,37 @@ async function serveJsonApi(
   return false;
 }
 
+/** The front door and its escape hatch (#738 phase 7a): `/` stamps joined and 302s into the
+ *  shell; `/classic` keeps the pre-redesign board reachable. Returns true when handled. */
+function serveHomePages(
+  res: ServerResponse,
+  path: string,
+  url: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+  navFor: (active: NavView) => NavContext,
+): boolean {
+  if (path === "/" || path === "/index.html") {
+    // The front door is the SHELL (#738 phase 7a — the redesign becomes what members see).
+    // Sign-in still lands here first (OAuth's callback redirects to /), so the "joined" stamp
+    // stays on this hop — idempotent, fails silently, never blocking the redirect it rides.
+    if (session) config.invite?.store.markJoined(session.email, new Date().toISOString());
+    // ?by= and the compare params carry over verbatim — the shell's Standings speaks them.
+    res.writeHead(302, { location: `/app/${new URL(url, "http://localhost").search}` });
+    res.end();
+    return true;
+  }
+  // The pre-redesign board keeps a home — an escape hatch, not a hidden fork.
+  if (path === "/classic") {
+    const params = new URL(url, "http://localhost").searchParams;
+    const metric = parseLeaderMetric(params.get("by"));
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(pageHtml(config.hub, navFor("board"), metric, parseCompareParams(params)));
+    return true;
+  }
+  return false;
+}
+
 /** Routes behind the auth gate — same set and order as before the split. */
 async function serveAuthorizedRoute(
   req: IncomingMessage,
@@ -250,15 +281,7 @@ async function serveAuthorizedRoute(
     await serveIndividualProfile(req, res, path, url, config, navFor, session);
     return;
   }
-  if (path === "/" || path === "/index.html") {
-    // The board is where every sign-in lands (OAuth's callback redirects here), so it's the
-    // cheapest reliable place to stamp "joined" for the /invite observability view — idempotent
-    // and fails silently, never blocking the render it rides along with.
-    if (session) config.invite?.store.markJoined(session.email, new Date().toISOString());
-    const params = new URL(url, "http://localhost").searchParams;
-    const metric = parseLeaderMetric(params.get("by"));
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(pageHtml(config.hub, navFor("board"), metric, parseCompareParams(params)));
+  if (serveHomePages(res, path, url, config, session, navFor)) {
     return;
   }
   res.writeHead(404, { "content-type": "text/plain" });
