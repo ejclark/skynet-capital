@@ -41,6 +41,17 @@ export async function fetchSettings(): Promise<SettingsIndex> {
   return (await res.json()) as SettingsIndex;
 }
 
+/**
+ * Does the session own this account? The index only ever lists the session's OWN accounts, so
+ * membership in it IS the ownership answer — the server's, not a client guess. Desk-scoped chrome
+ * asks before offering an owner-only destination; an unloaded (or unauthed) index answers `false`,
+ * because hiding a link costs a click and showing a wrong one moves you somewhere you didn't ask
+ * for (#785).
+ */
+export function ownsAccount(settings: SettingsIndex | undefined, id: string): boolean {
+  return settings?.accounts.some((account) => account.id === id) === true;
+}
+
 export const saveProfile = (input: {
   readonly id: string;
   readonly displayName?: string;
