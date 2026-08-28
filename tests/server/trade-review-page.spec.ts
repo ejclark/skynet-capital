@@ -70,7 +70,13 @@ describe("the review page's price fallback", () => {
     const d = deps(async () => 512.5);
     const preview = previewOrder({ symbol: "MSFT", quantity: 100, action: "buy" }, context);
 
-    await reviewPage(res, "Review order", ann, preview, d, "ann");
+    await reviewPage(res, {
+      title: "Review order",
+      snapshot: ann,
+      preview,
+      deps: d,
+      requesterId: "ann",
+    });
     expect(d.calls).toEqual(["MSFT"]);
     expect(sent.status).toBe(200);
     expect(sent.body).toContain("≈ $51,250");
@@ -82,7 +88,13 @@ describe("the review page's price fallback", () => {
     const d = deps(async () => 999);
     const preview = previewOrder({ symbol: "AAPL", quantity: 10, action: "sell" }, context);
 
-    await reviewPage(res, "Review order", ann, preview, d, "ann");
+    await reviewPage(res, {
+      title: "Review order",
+      snapshot: ann,
+      preview,
+      deps: d,
+      requesterId: "ann",
+    });
     expect(d.calls).toEqual([]);
     expect(sent.body).toContain("at the latest market price of $120.00");
   });
@@ -95,7 +107,13 @@ describe("the review page's price fallback", () => {
       context,
     );
 
-    await reviewPage(res, "Review order", ann, preview, d, "ann");
+    await reviewPage(res, {
+      title: "Review order",
+      snapshot: ann,
+      preview,
+      deps: d,
+      requesterId: "ann",
+    });
     expect(d.calls).toEqual([]);
   });
 
@@ -105,9 +123,36 @@ describe("the review page's price fallback", () => {
     const preview = previewOrder({ symbol: "MSFT", quantity: 5, action: "sell" }, context);
     expect(preview.ok).toBe(false);
 
-    await reviewPage(res, "Order refused", ann, preview, d, "ann");
+    await reviewPage(res, {
+      title: "Order refused",
+      snapshot: ann,
+      preview,
+      deps: d,
+      requesterId: "ann",
+    });
     expect(d.calls).toEqual([]);
     expect(sent.body).toContain("don't hold this symbol");
+  });
+
+  // The post-submit refusal screen renders the SAME order with the service's reasons. Quoting it
+  // is what stops the member being shown "≈ $51,250" and then, one click later, told the desk has
+  // no idea what the order is worth.
+  it("still prices the order when the broker's own numbers refuse it after confirm", async () => {
+    const { sent, res } = capture();
+    const d = deps(async () => 512.5);
+    const preview = previewOrder({ symbol: "MSFT", quantity: 100, action: "buy" }, context);
+
+    await reviewPage(res, {
+      title: "Order refused",
+      snapshot: ann,
+      preview: { ...preview, ok: false, refusals: ["The market is closed for this symbol."] },
+      deps: d,
+      requesterId: "ann",
+      quotable: true,
+    });
+    expect(d.calls).toEqual(["MSFT"]);
+    expect(sent.body).toContain("≈ $51,250");
+    expect(sent.body).toContain("The market is closed for this symbol.");
   });
 
   it("keeps saying the cost is unknown when the quote lookup fails", async () => {
@@ -115,7 +160,13 @@ describe("the review page's price fallback", () => {
     const d = deps(() => Promise.reject(new Error("broker unreachable")));
     const preview = previewOrder({ symbol: "MSFT", quantity: 100, action: "buy" }, context);
 
-    await reviewPage(res, "Review order", ann, preview, d, "ann");
+    await reviewPage(res, {
+      title: "Review order",
+      snapshot: ann,
+      preview,
+      deps: d,
+      requesterId: "ann",
+    });
     expect(sent.status).toBe(200);
     expect(sent.body).toContain("unknown until it fills");
   });
@@ -124,7 +175,13 @@ describe("the review page's price fallback", () => {
     const { sent, res } = capture();
     const preview = previewOrder({ symbol: "MSFT", quantity: 100, action: "buy" }, context);
 
-    await reviewPage(res, "Review order", ann, preview, deps(), "ann");
+    await reviewPage(res, {
+      title: "Review order",
+      snapshot: ann,
+      preview,
+      deps: deps(),
+      requesterId: "ann",
+    });
     expect(sent.body).toContain("unknown until it fills");
   });
 });

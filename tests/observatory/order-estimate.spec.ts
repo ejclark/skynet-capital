@@ -112,6 +112,41 @@ describe("order estimate — what the trade is worth before it is confirmed", ()
     expect(liveWarnings(preview, estimate)).toEqual(preview.warnings);
   });
 
+  // The ticket layer only refuses "costs more than your cash" when it had a mark to price from,
+  // so an unheld-symbol buy can reach the screen confirmable and unaffordable. A negative
+  // "cash after" must never render in silence — the screen doesn't block it (that's the
+  // money-moving layer's call) but it says what it is.
+  it("warns when the estimate drains the account past zero", () => {
+    const preview = previewOrder({ symbol: "MSFT", quantity: 10_000, action: "buy" }, context());
+    expect(preview.refusals).toEqual([]); // the ticket layer had no price to refuse on
+
+    const estimate = estimateOrder(preview, CASH, 512.5);
+    expect(estimate?.cashAfter).toBeLessThan(0);
+    const warnings = liveWarnings(preview, estimate);
+    expect(warnings.some((w) => w.startsWith("Estimated cost is about"))).toBe(true);
+    expect(warnings.some((w) => w.includes("more than your available cash"))).toBe(true);
+  });
+
+  // 6,000 AAPL is affordable at the $120 mark the ticket layer prices off ($720,000 of $748,645),
+  // so it is NOT refused — but at the $130 limit the order actually references it costs $780,000.
+  // That gap between the two bases is exactly where a silent negative balance could appear.
+  it("warns the same way when a limit above the mark is what overspends", () => {
+    const preview = previewOrder(
+      { symbol: "AAPL", quantity: 6_000, action: "buy", orderType: "limit", limitPrice: 130 },
+      context(),
+    );
+    expect(preview.refusals).toEqual([]);
+
+    const warnings = liveWarnings(preview, estimateOrder(preview, CASH));
+    expect(warnings.some((w) => w.includes("more than your available cash"))).toBe(true);
+  });
+
+  it("stays quiet about overspending on an order that is already refused", () => {
+    const preview = previewOrder({ symbol: "AAPL", quantity: 99, action: "sell" }, context());
+    expect(preview.ok).toBe(false);
+    expect(liveWarnings(preview, estimateOrder(preview, CASH))).toEqual(preview.warnings);
+  });
+
   it("refuses to price a quantity that isn't a real number of shares", () => {
     const preview = previewOrder(
       { symbol: "AAPL", quantity: Number.NaN, action: "buy" },

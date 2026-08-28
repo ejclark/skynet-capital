@@ -250,14 +250,13 @@ export async function handleTrade(
 
   const confirmed = form.get("confirm") === "1";
   if (!(confirmed && preview.ok)) {
-    await reviewPage(
-      res,
-      "Review order — Skynet Capital",
+    await reviewPage(res, {
+      title: "Review order — Skynet Capital",
       snapshot,
       preview,
       deps,
-      deps.requesterId,
-    );
+      requesterId: deps.requesterId,
+    });
     return;
   }
 
@@ -278,14 +277,16 @@ export async function handleTrade(
   );
   if (!result.ok) {
     // The service refused on fresh numbers the browser never saw — show its reasons, not ours.
-    await reviewPage(
-      res,
-      "Order refused — Skynet Capital",
+    await reviewPage(res, {
+      title: "Order refused — Skynet Capital",
       snapshot,
-      { ...preview, ok: false, refusals: result.refusals },
+      preview: { ...preview, ok: false, refusals: result.refusals },
       deps,
-      deps.requesterId,
-    );
+      requesterId: deps.requesterId,
+      // The ticket rules passed this order a moment ago — only the broker's fresh numbers said
+      // no, so it still deserves the same priced figures the member just confirmed against.
+      quotable: true,
+    });
     return;
   }
   resultRedirect(res, snapshot.id, true);

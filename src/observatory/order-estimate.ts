@@ -119,13 +119,35 @@ function estimateHeadline(preview: TicketPreview, estimate: OrderEstimate): stri
  */
 const NO_PRICE_WARNING = "No recent price for this symbol";
 
-/** The preview's warnings, minus any the live quote has already answered. */
+/**
+ * The mirror duty: an estimate can also make a warning NECESSARY that the ticket layer never
+ * raised. `previewOrder` only refuses "costs more than your cash" when it had a mark to price
+ * from, so a buy of an unheld symbol — or one struck at a limit above the mark — can reach the
+ * screen as a confirmable order that plainly drains the account past zero. Nothing here refuses
+ * it (that is the money-moving layer's call, and this module is presentation), but the screen
+ * must never render a negative "cash after" in silence. Skipped when the order is already
+ * refused: a blocked order does not need a second voice telling it so.
+ */
+function overspendWarning(preview: TicketPreview, estimate: OrderEstimate): string | undefined {
+  if (preview.action !== "buy" || preview.refusals.length > 0 || estimate.cashAfter >= 0) {
+    return undefined;
+  }
+  return `Estimated cost is about ${formatCurrency(-estimate.cashAfter)} more than your available cash. Nothing here refuses it, but the broker won't fill an order the account can't fund.`;
+}
+
+/** The preview's warnings, minus any the live quote has already answered, plus any the estimate
+ *  itself makes necessary. What the screen says about a number must match the number. */
 export function liveWarnings(
   preview: TicketPreview,
   estimate: OrderEstimate | undefined,
 ): readonly string[] {
-  if (estimate?.basis !== "quote") return preview.warnings;
-  return preview.warnings.filter((warning) => !warning.startsWith(NO_PRICE_WARNING));
+  if (!estimate) return preview.warnings;
+  const kept =
+    estimate.basis === "quote"
+      ? preview.warnings.filter((warning) => !warning.startsWith(NO_PRICE_WARNING))
+      : preview.warnings;
+  const overspend = overspendWarning(preview, estimate);
+  return overspend === undefined ? kept : [...kept, overspend];
 }
 
 /**
