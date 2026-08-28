@@ -229,6 +229,7 @@ describe("autonomous-lane envelope", () => {
           {
             cwd: dir,
             encoding: "utf8",
+            env: hermeticGitEnv(),
           },
         ),
       ) as Check[];
