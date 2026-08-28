@@ -7,6 +7,7 @@ import "./styles/board.css";
 import "./styles/compare.css";
 import "./styles/desk.css";
 import "./styles/drawer.css";
+import "./styles/gate.css";
 import "./styles/shell.css";
 import "./styles/theme.css";
 
