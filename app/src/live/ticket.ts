@@ -4,6 +4,8 @@
  * is a courtesy and the SERVICE is the gate, so nothing here decides anything.
  */
 
+import { postJson } from "./post";
+
 export interface TicketDraft {
   readonly participantId: string;
   readonly symbol: string;
@@ -33,20 +35,6 @@ export type TicketResult =
       readonly symbol: string;
     }
   | { readonly ok: false; readonly refusals: readonly string[] };
-
-async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const detail = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(detail.error ?? `POST ${url} → ${res.status}`);
-  }
-  return (await res.json()) as T;
-}
 
 export const reviewTicket = (draft: TicketDraft): Promise<{ preview: TicketPreview }> =>
   postJson("/api/trade/review", draft);

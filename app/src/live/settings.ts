@@ -5,6 +5,8 @@
  * verified by the service — the client's arming of the button is a courtesy, never the gate.
  */
 
+import { postJson } from "./post";
+
 export interface OwnedAccount {
   readonly id: string;
   readonly name: string;
@@ -35,30 +37,16 @@ export async function fetchSettings(): Promise<SettingsIndex> {
   return (await res.json()) as SettingsIndex;
 }
 
-async function postSettings<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const detail = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(detail.error ?? `POST ${url} → ${res.status}`);
-  }
-  return (await res.json()) as T;
-}
-
 export const saveProfile = (input: {
   readonly id: string;
   readonly displayName?: string;
   readonly timezone?: string;
-}): Promise<SettingsWriteResult> => postSettings("/api/settings/profile", input);
+}): Promise<SettingsWriteResult> => postJson("/api/settings/profile", input);
 
 export const removeAccountRequest = (input: {
   readonly id: string;
   readonly confirmName: string;
-}): Promise<SettingsWriteResult> => postSettings("/api/settings/remove", input);
+}): Promise<SettingsWriteResult> => postJson("/api/settings/remove", input);
 
 /** Replace, never reveal: keys are pasted and sent once; existing secrets are never fetched,
  *  displayed, or echoed — the server verifies the NEW key against Alpaca before storing. */
@@ -66,4 +54,4 @@ export const rotateCredentialsRequest = (input: {
   readonly id: string;
   readonly apiKey: string;
   readonly apiSecret: string;
-}): Promise<SettingsWriteResult> => postSettings("/api/settings/rotate", input);
+}): Promise<SettingsWriteResult> => postJson("/api/settings/rotate", input);

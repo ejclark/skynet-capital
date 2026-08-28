@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
@@ -9,12 +9,15 @@ import {
   type JourneyMilestone,
 } from "../live/learn";
 import { PageFrame } from "../shell/frame";
+import { CheckGateCard, UnlockBanner } from "../shell/unlock-gate";
 
 /**
- * MILESTONES (#738 phase 6b) — the gamified journey in the shell. The honesty rule is the whole
- * design (Eric, 2026-08-25): a milestone is earned only by a real filled order, and every earned
- * row shows its proof. Courses unlock bottom-up; a fresh unlock's one-time celebration and any
- * comprehension check stay on the server page, which the banner below points at when they exist.
+ * MILESTONES (#738 phases 6b + 8b) — the gamified journey in the shell. The honesty rule is the
+ * whole design (Eric, 2026-08-25): a milestone is earned only by a real filled order, and every
+ * earned row shows its proof. Courses unlock bottom-up. A fresh unlock's one-time celebration and
+ * its comprehension check render right here (`shell/unlock-gate.tsx`); passing or claiming
+ * refetches, so the banner takes the gate's place the moment the check clears — grading and the
+ * durable record stay server-side throughout.
  */
 
 function MilestoneRow({ milestone }: { readonly milestone: JourneyMilestone }): ReactElement {
@@ -104,11 +107,13 @@ function Hud({ journey }: { readonly journey: Journey }): ReactElement {
 }
 
 function LearnPage(): ReactElement {
+  const queryClient = useQueryClient();
   const journey = useQuery({
     queryKey: ["learn"],
     queryFn: fetchJourney,
     refetchOnWindowFocus: true,
   });
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: ["learn"] });
 
   if (journey.isPending)
     return (
@@ -124,7 +129,6 @@ function LearnPage(): ReactElement {
     );
 
   const data = journey.data;
-  const waiting = data.celebrating + data.pendingChecks;
   return (
     <PageFrame>
       <header className="page-header">
@@ -140,18 +144,17 @@ function LearnPage(): ReactElement {
           an account yet, so the journey shows from the start.
         </p>
       ) : null}
-      {waiting > 0 ? (
-        <a className="ms-waiting" href="/learn">
-          <strong>
-            {waiting} fresh unlock{waiting === 1 ? "" : "s"} waiting
-          </strong>{" "}
-          <span>
-            {data.pendingChecks > 0
-              ? "— a quick comprehension check stands between you and the fanfare. "
-              : "— the celebration is ready. "}
-            Open the full page →
-          </span>
-        </a>
+      {data.celebrating.length > 0 ? (
+        <UnlockBanner celebrations={data.celebrating} onClaimed={refresh} />
+      ) : null}
+      {data.check ? (
+        <CheckGateCard key={data.check.milestoneId} gate={data.check} onPassed={refresh} />
+      ) : null}
+      {data.pendingChecks > 1 ? (
+        <p className="note">
+          {data.pendingChecks - 1} more unlock{data.pendingChecks === 2 ? "" : "s"} wait behind this
+          check — each brings its own.
+        </p>
       ) : null}
       <Hud journey={data} />
       {data.courses.map((course) => (

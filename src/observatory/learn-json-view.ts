@@ -1,13 +1,21 @@
+import { passingCount } from "../domain/comprehension.js";
+import { checkFor } from "../domain/comprehension-checks.js";
 import { COURSES, totalPoints } from "../domain/curriculum.js";
+import { type EarnedMilestone, ladderNeighbor, milestoneForCode } from "../domain/progression.js";
 import type { AcademyProgress } from "./render-dashboard.js";
 
 /**
- * MILESTONES AS DATA (#738 phase 6b) — `/api/learn`, the JSON twin behind the shell's journey.
- * The honesty rule is inherited whole (Eric, 2026-08-25: progress a user can claim with zero
- * proof is worthless): a milestone is EARNED only by a real filled order, and the proof — fill
- * date + order id — rides every earned row. Level 100 opens from the start; each higher course
- * unlocks when the one below completes. Celebrations and comprehension checks keep their
- * server-side flows; this view only COUNTS them so the shell can point at the full page.
+ * MILESTONES AS DATA (#738 phases 6b + 8b) — `/api/learn`, the JSON twin behind the shell's
+ * journey. The honesty rule is inherited whole (Eric, 2026-08-25: progress a user can claim with
+ * zero proof is worthless): a milestone is EARNED only by a real filled order, and the proof —
+ * fill date + order id — rides every earned row. Level 100 opens from the start; each higher
+ * course unlocks when the one below completes.
+ *
+ * Since 8b the celebration and the comprehension gate render IN the shell, so this view carries
+ * them whole — with one hard rule: the check ships its questions and options only. The answer
+ * key and the per-question reasons NEVER serialize here; grading lives in
+ * `server/progression-service.ts`, and the browser is asked, never trusted
+ * (`/api/learn/check` returns the graded result with the reasons attached).
  */
 
 interface MilestoneView {
@@ -31,6 +39,36 @@ interface CourseView {
   readonly milestones: readonly MilestoneView[];
 }
 
+/** One unclaimed earn, ready for its one-time fanfare. */
+interface CelebrationView {
+  readonly milestoneId: string;
+  readonly code: string;
+  readonly name: string;
+  /** The next rung this earn opened — absent when it was the top of the ladder. */
+  readonly opened?: { readonly code: string; readonly name: string };
+}
+
+/** One question, options only — the answer index and the reason stay server-side. */
+interface CheckQuestionView {
+  readonly id: string;
+  readonly prompt: string;
+  readonly options: readonly string[];
+}
+
+/** The first gated earn's check — one gate at a time, exactly like the server page. */
+interface CheckGateView {
+  readonly milestoneId: string;
+  readonly code: string;
+  readonly title: string;
+  readonly concept: string;
+  /** What the member DID to earn this — the fill itself is never in question. */
+  readonly did: string;
+  /** Right answers needed of `total` — stated, so the bar is never a mystery. */
+  readonly needed: number;
+  readonly total: number;
+  readonly questions: readonly CheckQuestionView[];
+}
+
 export interface LearnView {
   /** False when the session resolves to no account — the journey shows from the start. */
   readonly linked: boolean;
@@ -38,15 +76,47 @@ export interface LearnView {
   readonly totalPoints: number;
   readonly rank: string;
   readonly courses: readonly CourseView[];
-  /** Fresh earns awaiting their one-time celebration — the full page owns that moment. */
-  readonly celebrating: number;
-  /** Earns gated on a comprehension check — the full page owns the check. */
+  /** Fresh earns awaiting their one-time celebration — the shell renders the fanfare. */
+  readonly celebrating: readonly CelebrationView[];
+  /** How many earns still wait behind a comprehension check (the gate below included). */
   readonly pendingChecks: number;
+  /** The first gated earn's check, when one is waiting — questions only, never the key. */
+  readonly check?: CheckGateView;
+}
+
+function celebrationView(m: EarnedMilestone): CelebrationView {
+  const next = ladderNeighbor(m.code, 1);
+  return {
+    milestoneId: m.milestoneId,
+    code: m.code,
+    name: milestoneForCode(m.code)?.title ?? `course ${m.code}`,
+    ...(next ? { opened: { code: next.code, name: next.name } } : {}),
+  };
+}
+
+/** The first pending earn an actual check gates. Strips grading fields on the way out. */
+function gateView(pending: readonly EarnedMilestone[]): CheckGateView | undefined {
+  for (const earn of pending) {
+    const check = checkFor(earn.milestoneId);
+    if (!check) continue;
+    return {
+      milestoneId: check.milestoneId,
+      code: earn.code,
+      title: check.title,
+      concept: check.concept,
+      did: milestoneForCode(earn.code)?.title ?? `Course ${earn.code}`,
+      needed: passingCount(check.questions.length),
+      total: check.questions.length,
+      questions: check.questions.map((q) => ({ id: q.id, prompt: q.prompt, options: q.options })),
+    };
+  }
+  return undefined;
 }
 
 export function learnJsonView(progress?: AcademyProgress): LearnView {
   const earnedById = new Map((progress?.earned ?? []).map((m) => [m.milestoneId, m]));
   const levels = progress?.unlockedLevels ?? new Set([COURSES[0]?.level ?? 100]);
+  const gate = gateView(progress?.pendingChecks ?? []);
   return {
     linked: progress !== undefined,
     points: progress?.points ?? 0,
@@ -75,7 +145,8 @@ export function learnJsonView(progress?: AcademyProgress): LearnView {
         milestones,
       };
     }),
-    celebrating: progress?.celebrating?.length ?? 0,
+    celebrating: (progress?.celebrating ?? []).map(celebrationView),
     pendingChecks: progress?.pendingChecks?.length ?? 0,
+    ...(gate ? { check: gate } : {}),
   };
 }
