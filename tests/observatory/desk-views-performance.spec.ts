@@ -321,7 +321,7 @@ describe("review screen", () => {
     const html = renderTradeReviewBody(snapshot(), preview);
     expect(html).toContain("SELL 10 AAPL · market");
     expect(html).toContain("Estimated proceeds");
-    expect(html).toContain("Cash after (est.)");
+    expect(html).toContain("Estimated cash after order*");
     expect(html).toContain('name="confirm" value="1"');
     expect(html).toContain("Cancel");
   });

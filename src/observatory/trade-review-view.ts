@@ -6,6 +6,7 @@ import { renderShell } from "./dashboard-shell.js";
 import { formatPrice, reviewLine as line, reviewNotices } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
 import { deskHref } from "./desk-tabs.js";
+import { estimateOrder, liveWarnings, renderOrderEstimate } from "./order-estimate.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import type { DeskViewOptions } from "./positions-view.js";
 import { formatCurrency } from "./render-atoms.js";
@@ -66,15 +67,13 @@ function confirmForm(preview: TicketPreview, backHref: string): string {
 export function renderTradeReviewBody(
   snapshot: ParticipantSnapshot,
   preview: TicketPreview,
-  options: DeskViewOptions = {},
+  options: DeskViewOptions & { quotePrice?: number } = {},
 ): string {
   const asOf = options.generatedAt ?? new Date().toISOString();
   const backHref = deskHref(snapshot.id, "positions");
   const verb = preview.action === "buy" ? "Buy" : "Sell";
-  const notional =
-    preview.estNotional === undefined
-      ? "unknown until it fills"
-      : formatCurrency(preview.estNotional);
+  // Struck once: the money block and the warning list must agree about whether a price is known.
+  const estimate = estimateOrder(preview, snapshot.cash, options.quotePrice);
 
   return renderShell(
     options.nav,
@@ -94,9 +93,6 @@ export function renderTradeReviewBody(
       ${line("Account", snapshot.displayName)}
       ${line("Order", `${verb.toUpperCase()} ${preview.quantity.toLocaleString("en-US")} ${preview.symbol} · ${orderTypeLabel(preview)}`)}
       ${preview.estPrice !== undefined ? line("Last known price", formatPrice(preview.estPrice)) : ""}
-      ${line(preview.action === "buy" ? "Estimated cost" : "Estimated proceeds", notional)}
-      ${line("Cash now", formatCurrency(snapshot.cash))}
-      ${preview.estCashAfter !== undefined ? line("Cash after (est.)", formatCurrency(preview.estCashAfter)) : ""}
       ${
         preview.positionAfter !== undefined
           ? line(
@@ -105,7 +101,8 @@ export function renderTradeReviewBody(
             )
           : ""
       }
-      ${reviewNotices(preview.warnings, preview.refusals)}
+      ${renderOrderEstimate(preview, snapshot.cash, estimate)}
+      ${reviewNotices(liveWarnings(preview, estimate), preview.refusals)}
       ${confirmForm(preview, backHref)}
     </section>
     <p class="caveat"><b>Paper account.</b> This is simulated capital on a paper brokerage — real prices, real mechanics, no real money. ${

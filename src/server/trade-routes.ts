@@ -2,7 +2,6 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { ladderNeighbor } from "../domain/progression.js";
 import { type TradeTypeCode, tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
-import { renderTradeReviewBody } from "../observatory/trade-review-view.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import {
   previewOrder,
@@ -14,9 +13,9 @@ import { handleCheckPost } from "./comprehension-routes.js";
 import { handleOptionPost, OPTION_CODES, optionPreviewFromForm } from "./option-order-review.js";
 import { readBody } from "./page-shell.js";
 import { redirectBack, refusalPage, resultRedirect } from "./trade-response-pages.js";
+import { reviewPage } from "./trade-review-page.js";
 import type { DeskTradeResult } from "./trade-service.js";
 import {
-  html,
   playLocked,
   serveTicket,
   type TradeRouteDeps,
@@ -251,13 +250,13 @@ export async function handleTrade(
 
   const confirmed = form.get("confirm") === "1";
   if (!(confirmed && preview.ok)) {
-    html(
+    await reviewPage(
       res,
-      200,
-      deps.document(
-        "Review order — Skynet Capital",
-        renderTradeReviewBody(snapshot, preview, { nav: deps.nav, isSelf: true }),
-      ),
+      "Review order — Skynet Capital",
+      snapshot,
+      preview,
+      deps,
+      deps.requesterId,
     );
     return;
   }
@@ -279,17 +278,13 @@ export async function handleTrade(
   );
   if (!result.ok) {
     // The service refused on fresh numbers the browser never saw — show its reasons, not ours.
-    html(
+    await reviewPage(
       res,
-      200,
-      deps.document(
-        "Order refused — Skynet Capital",
-        renderTradeReviewBody(
-          snapshot,
-          { ...preview, ok: false, refusals: result.refusals },
-          { nav: deps.nav, isSelf: true },
-        ),
-      ),
+      "Order refused — Skynet Capital",
+      snapshot,
+      { ...preview, ok: false, refusals: result.refusals },
+      deps,
+      deps.requesterId,
     );
     return;
   }
