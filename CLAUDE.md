@@ -114,23 +114,17 @@ not a general escalation default: once an ask is a filed, labelled issue, doubt 
 member or to the narrowest honest build — never back to Eric. See
 [`.github/prompts/feedback-build.md`](.github/prompts/feedback-build.md).)*
 
-**Plans — PM-mode's unit of alignment — live in GitHub issues, never in the repo** (Eric, 2026-08-21:
-_"plans belong in github issues, not in source code"_ — a correction he has had to repeat; #433 moved
-the committed ones). A plan is an issue in the house format (intent & end-state · EARS criteria ·
-constraints · settled forks · open questions · Eric's steps · slicing sketch — see #429, #466), labelled
-`enhancement` + `plan`; Eric's label/comment on the issue is the `ready` flip, and Claude executes
-it unattended, banking mid-flight questions as comments instead of guessing. The body follows the
-**capsule** shape every issue uses ([`docs/ISSUES.md`](docs/ISSUES.md)): a one-line ask, a metadata
-table, 2–4 talking points and a picture above the fold; the whole brief inside one `<details>` — a
-fold is invisible to a human and fully present for the session reading raw markdown. The richer the issue, the
-fewer interventions — that ratio is the experiment's measure. [`docs/plans/`](docs/plans/README.md) holds
-only the legacy in-flight plans; **do not add files there.**
-
-_`plan`, not `needs-eric` (2026-08-22)._ The two meanings shared one label — "awaiting a ready-flip"
-and "blocked on a decision only Eric can make" — so his queue read as far more blocked than it was
-(two of the five open `needs-eric` issues were simply plans). **`needs-eric` now means exactly one
-thing: a decision only he can make.** Everything else that isn't shippable yet has its own marker
-that waits on somebody else — `needs-info` (the member), `next-slice` (nobody), `plan` (a ready-flip).
+**Plans live in GitHub issues, never in the repo** (Eric, 2026-08-21: _"plans belong in github
+issues, not in source code"_ — a correction he has had to repeat; #433 moved the committed ones). A
+plan is an issue in the house format (intent & end-state · EARS criteria · constraints · settled
+forks · open questions · Eric's steps · slicing sketch — see #429, #466), labelled `enhancement` +
+`plan`, in the capsule shape every issue uses ([`docs/ISSUES.md`](docs/ISSUES.md) — one-line ask,
+metadata table, 2–4 talking points and a picture above the fold, the whole brief in one `<details>`).
+Eric's label/comment is the `ready` flip; Claude executes unattended, banking mid-flight questions as
+issue comments instead of guessing — the richer the issue, the fewer interventions. Label semantics
+(2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
+not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
+ready-flip). [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
 
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
 log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the
@@ -159,42 +153,23 @@ condition attached to this compression — altitude never means silence.
 
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
-with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map
-(GitHub renders it natively) for everything else — then at most 3 short bullets; ALL remaining
-text lives below the fold. This is the scaling answer to the review lane he *wants* to grow
-(more user feedback → more PRs → more of his glances, never more of his reading): a wall of text
-above the fold is a defect, not a style choice. The PR template carries the format; screenshots
-commit small (≤~100KB) under `docs/shots/pr-<n>/`.
+with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map for
+everything else — then at most 3 short bullets; ALL remaining text below the fold. A wall of text
+above the fold is a defect, not a style choice. The PR template carries the format; grammar guide
+[`docs/PICTURES.md`](docs/PICTURES.md); screenshots commit small (≤~100KB) under `docs/shots/pr-<n>/`.
 
-**Research leads with the CALL, not the taxonomy** (Eric, 2026-08-23: _"shouldn't tldr provide
-more direct indication of trends — 'expect pull back, bad time to buy, consider exiting positions
-| all signals point to stock price increasing, consider buying before this date' type of
-comments"_). This app exists to make money on the market; a research doc that describes a
-situation without saying **what to do about it** has done half the job. So every research
-deliverable opens with a **call sheet** — one row per name: **the call** (buy / don't initiate /
-exit / stand aside / hold), **confidence**, the one-line why, and **the dated event that proves
-it wrong**. The provenance is `docs/research/nvda-aug-2026-print.md` (verdict in one line, then
-ranked P0–P4 plays including an explicit "not recommended, on the record"); the current example
-is `docs/research/ai-hardware-constraints-aug-2026.md`.
-
-**The call sheet is one grammar, and it is gated** (2026-08-25). Five columns — **the call ·
-confidence · the one-line why · the dated observation that proves it wrong** — keyed by *horizon*
-(Today / This week / This month / This quarter) in a single-event ledger, and by *name* in a
-multi-name study. `npm run research:lint` fails a research document that states a call without a
-confidence grade or a dated falsifier, because a call missing either is not the thing this section
-asks for. Reading is the renderer's job, not the author's: `/research` folds the method and the
-append-only ledger behind the decision header automatically, so a document nobody rewrote still
-opens on its call — and the fold costs the next assessment session nothing, since it reads the raw
-markdown. Contract: [`docs/process/EVENT-RESEARCH.md`](docs/process/EVENT-RESEARCH.md).
-
-Three rules keep the calls honest rather than merely confident. **Confidence is stated and drives
-size** — a low-confidence call is a stand-aside, never a small version of a high-confidence one.
-**Every call carries its falsifier with a date**, so the tape adjudicates instead of the
-narrative. And **"don't" is a first-class call**: the kill list records that no directional alpha
-playbook has survived on the semis while both no-alpha guards survived everywhere, so an honest
-sheet is often mostly refusals — avoiding one −8% gap night beats a marginal edge, and in a
-compounding book refusals are P&L. Method caveats never gate the call; they live below the fold
-and inform *size*. Paper-only, educational — the deploy decision on real capital stays Eric's.
+**Research leads with the call** (Eric, 2026-08-23). This app exists to make money on the market; a
+research doc that describes a situation without saying **what to do about it** has done half the job.
+Every research deliverable opens with a **call sheet** — one row per horizon (single event) or name
+(multi-name study): **the call · confidence · the one-line why · the dated observation that proves it
+wrong**. Three rules keep it honest: **confidence is stated and drives size** (a low-confidence call
+is a stand-aside, never a small bet); **every call carries its dated falsifier** (the tape
+adjudicates, not the narrative); **"don't" is a first-class call** (an honest sheet is often mostly
+refusals — in a compounding book, refusals are P&L). `npm run research:lint` fails a doc missing
+either grade or falsifier; `/research` folds method and ledger behind the decision header. Contract:
+[`docs/process/EVENT-RESEARCH.md`](docs/process/EVENT-RESEARCH.md); provenance
+`docs/research/nvda-aug-2026-print.md`. Paper-only, educational — the deploy decision on real capital
+stays Eric's.
 
 **When Eric's action IS needed — procedural, pre-verified, near-zero** (Eric, 2026-08-15):
 hand him a TLDR-format **numbered procedure**, never prose; perform due diligence against the
@@ -202,11 +177,9 @@ instructions first (commands run, links checked, states confirmed — his steps 
 first try); and before handing anything over, ask whether the step can be **automated away
 entirely** — the default is action-required-from-Eric ≈ zero, and a step survives to his list
 only when it is genuinely his (the irreversible class) or carries a key value-unlock/trade-off
-worth his judgment, stated as such. **Step anatomy** (Eric's refinement, same day): each step is
-`N. <the do> — <the why, trailing, read only if wanted>` — imperative-first so the list is
-executable by scanning the left edge alone; the why never precedes or interrupts the do. The
-procedure closes with a one-or-two-line **gist** (what these steps accomplish together / the
-state after).
+worth his judgment, stated as such. **Step anatomy:** `N. <the do> — <the why, trailing, read only
+if wanted>` — imperative-first so the list is executable by scanning the left edge alone. Close
+with a one-or-two-line **gist** (what the steps accomplish together / the state after).
 
 **…but the bar is not silence** (Eric's correction). Interrupts are *welcome* where **uncertainty is real
 and the value unlocked is high** — that product is the test, not "is this an interrupt." Under-asking is
@@ -224,89 +197,74 @@ _This "how we work" is Eric's to edit; it sharpens as he corrects it — treat c
 
 ## Operations — plain intent routes to machinery (Eric never needs the names)
 
-A quality system runs this repo (docs/COACHES.md): fitness gates in CI (size/cohesion, duplication,
-dead code) with ratchet-down budgets, corrective skills (`/decompose`, `/dedupe`), background agents
-(`decomposer`, `ui-librarian`, `mortician`), and a dispatch policy (`/governor`). **Route plain intent
-to it**: "clean up the code" / "burn down debt" → run a governor cycle; "why did CI fail" → a gate
-probably caught real drift, fix the finding not the gate; big planned burn-downs → feast mode (see the
-governor skill); **"file this as an issue"**, or an issue that reads as a wall → **`/issue`**, which shapes the capsule
-and lints it before it is filed (`npm run issue:lint`); **any reaction to a rendered frame** — "this looks terrible", "that's a 30/100",
-"make it more dramatic" — → `/telestrator`, which names the cause before anything gets changed (the
-inverse of `/vision`: eyes in, engineering out); **"we need an agent for X"** → `/charter` before writing
-a single `.claude/agents/*.md` file — it checks for an existing owner first and a REJECT verdict is a
-normal, expected output, not a shortfall; **"make a shareable page — a field guide, dashboard, or report"**
-→ the `artifact-smith` agent, which builds it from `docs/BRAND.md` tokens; **a finished Claude Design
-session** → file it as a `[handoff]` GitHub issue carrying the contract + the bundle (zip attached, or
-files at a pinned SHA) — issues are the home for ephemeral queue state, never the source tree
-([`docs/HANDOFFS.md`](docs/HANDOFFS.md)); filing triggers nothing, and Eric's comment or label is the
-go signal, exactly as `ready` was for a plan.
-These routes are examples, not the whole set — every skill/agent
-states its own `Use when`, and the **Orient** output style (`.claude/output-styles/orient.md`) consults
-the full roster + the technique spine (`docs/TECHNIQUES.md`) at the top of a task. Structural PRs land
-batched; auto-merge per the governor's merge-policy table — **features and visual work auto-merge too**
-(Eric, 2026-08-20: with Claude authoring ~100% of PRs, a standing pre-merge taste gate makes him the
-constraint on everything; severely softened). His taste review happens **live, post-merge** — hand him
-the deployed route and adapt from reactions; hold a PR pre-merge only when he asks for that one, or when
-Claude has a specific taste fork worth his eyes before shipping (say so on the PR, as the exception).
-The irreversible carve-outs (workflow files, credentials/spend/outward-facing) still never auto-merge.
-Eric will not remember these names — that is expected and fine; the docs are the memory.
+A quality system runs this repo ([`docs/COACHES.md`](docs/COACHES.md)): fitness gates in CI with
+ratchet-down budgets, corrective skills, background agents, and a dispatch policy. **Route plain
+intent to it** — every skill/agent states its own `Use when`, and the **Orient** output style
+(`.claude/output-styles/orient.md`) consults the full roster + [`docs/TECHNIQUES.md`](docs/TECHNIQUES.md)
+at the top of a task. The common routes:
+
+- "clean up the code" / "burn down debt" → a `/governor` cycle (athletes `decomposer`,
+  `ui-librarian`, `mortician`, `test-backfiller`; drills `/decompose`, `/dedupe`; big burn-downs →
+  feast mode, see the governor skill). "Why did CI fail" → a gate probably caught real drift — fix
+  the finding, not the gate.
+- **"file this as an issue"**, or an issue that reads as a wall → **`/issue`** (shapes the capsule,
+  lints via `npm run issue:lint`).
+- **Any reaction to a rendered frame** ("this looks terrible", "a 30/100", "more dramatic") →
+  `/telestrator` — names the cause before anything gets changed (the inverse of `/vision`).
+- **"we need an agent for X"** → `/charter` before writing any `.claude/agents/*.md` — REJECT is a
+  normal, expected verdict, not a shortfall.
+- **"make a shareable page"** (field guide, dashboard, report) → the `artifact-smith` agent (builds
+  from `docs/BRAND.md` tokens).
+- **A finished Claude Design session** → a `[handoff]` GitHub issue carrying contract + bundle
+  ([`docs/HANDOFFS.md`](docs/HANDOFFS.md)); filing triggers nothing — Eric's comment or label is the
+  go signal, exactly as `ready` is for a plan.
+- Report-outs and digests → `/secretary` · caught drift → `/retro` · rising token burn →
+  [`docs/process/TOKEN-EFFICIENCY.md`](docs/process/TOKEN-EFFICIENCY.md).
+
+**Merge posture** (Eric, 2026-08-20: with Claude authoring ~100% of PRs, a standing pre-merge taste
+gate makes him the constraint on everything — severely softened). Structural, feature, and visual PRs
+all auto-merge; his taste review happens **live, post-merge** — hand him the deployed route and adapt
+from reactions. Hold a PR pre-merge only when he asks, or when Claude has a specific taste fork worth
+his eyes before shipping (say so on the PR). The irreversible carve-outs (workflow files,
+credentials/spend/outward-facing) still never auto-merge. Full merge policy:
+`.claude/skills/governor/SKILL.md`. Eric will not remember these names — that is expected and fine;
+the docs are the memory.
 
 ## Ship loop
 
-- Branch off latest `origin/main` per change **before editing** (`git checkout -B <branch> origin/main`);
-  small focused PRs; squash-merge on green. Branch-first avoids needing `git stash` — **don't use
-  `git stash` in this environment** (it has silently dropped stashed edits on pop). Subjects are
-  lowercase-led (commitlint rejects a capitalized first word — even "PRs"/"Barad-dûr"). Open the PR the
-  resource-cheap way with **`/ship`** (local verify → push → REST open → one auto-merge call; wraps
-  `scripts/ship.sh`).
-- **Auto-merge is the default.** Enable native GitHub auto-merge (SQUASH) on every Claude-authored PR
-  at open, so it merges itself the moment CI goes green — opt-*out*, not opt-in. Hold a PR for Eric only
-  when he asks, or for the carve-outs (workflow files, and the credentials/spend/outward-facing
-  irreversible class). Native auto-merge, never an in-CI REST merge: a `GITHUB_TOKEN` merge wouldn't
-  trigger the `push`→`main` deploy. **The axis is whose token *arms* the merge, not REST-vs-native**
-  (2026-08-22): auto-merge lands as the identity that armed it, so arming it with `GITHUB_TOKEN` is
-  the same hole — it took out the deploy, the receipt scan and the stall audit at once, silently.
-  `node scripts/deploy-lag.mjs` answers "is `main` actually deployed?". Full merge policy:
-  `.claude/skills/governor/SKILL.md`.
-- **Open and edit PR bodies over REST (`/ship`), never through the GitHub MCP write tools** — they
-  silently strip `<details>`/`<summary>`, so the whole brief lands above the fold and the tool still
-  reports success (`docs/LESSONS.md`, 2026-08-25). `ship.sh checkbody` lints the *file*, not what
-  GitHub stored, so it passes while the shipped body is broken. If a body must go through those
-  tools, re-read the PR and count the `<details>` before calling it done.
-- **Draft is a harness artifact, not a judgment — promote it immediately** (Eric's correction). Some
-  Claude Code environments force every PR open as a draft. That is a property of the tool, never a
-  statement that the change isn't ready, and leaving it there is a **throughput bug**: a draft can't
-  auto-merge, so every trivial PR silently becomes a request for Eric's attention — the exact ToC
-  violation this whole model exists to avoid. Its second bite is worse: drafts also skip `verify`
-  (see `docs/LESSONS.md`, 2026-08-14), so draft-by-default once merged code with no CI at all. So the
-  moment a PR is open: **mark it ready for review and arm auto-merge in the same breath**, unless a
-  carve-out above genuinely applies. Draft should last seconds, and only ever when Claude has a
-  specific reason to hold — never by inheritance.
-- **Commits & PRs are documents** (see `docs/ENGINEERING.md` → _Change communication_): Conventional-
-  Commit subjects (lowercase-led, imperative); PRs lead with a plain-language **Summary** + **Why**, and
-  bury the weeds **below the fold** (`<details>`), written so an analytical-but-non-technical reader gets
-  the gist. Mirror `.github/pull_request_template.md`; keep it proportional (no ceremony on a typo fix).
-- Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, + a screenshot for visual work
-  (`npm run shoot:login` or an offline render). **Verify by exit status, not tailed output** — piping a
-  check to `tail` masks its exit code (a pipeline exits with `tail`'s status), so `cmd | tail && …` will
-  not halt on failure. A pre-commit hook auto-formats staged files as a backstop.
-- **Solo-dev review substitute:** with no second engineer, the gates are the reviewer. For substantive
-  PRs, run `/code-review` (and `/security-review` when the diff touches auth, tokens, input parsing, or
-  anything outward-facing) before opening the PR — but **commit first, and in a worktree set
-  `origin/HEAD` first**. Both review skills harvest `origin/HEAD...`, so on uncommitted changes they
-  review an EMPTY diff and report clean; a fresh worktree has no `origin/HEAD` at all
-  (`git remote set-head origin -a`). A clean verdict over nothing is worse than an error, because it
-  reads as assurance — it produced exactly that on #612, an envelope-protected file
-  (`docs/LESSONS.md`, 2026-08-26). The Coach gates (`arch:scan`, `dupe:scan`) run in the
-  test suite automatically — see [`docs/COACHES.md`](docs/COACHES.md) for the detect-and-correct roster
-  (`/decompose`, `/dedupe`, agents).
-- **Blameless retro on detected drift.** When a net catches a slip, do a quick retro: root cause → a
-  full-stop prevention if pragmatic, else a Boy-Scout improvement (leave it better, or no worse). Don't
-  over-engineer process — forcing ceremony that taxes flow at scale is a net negative.
-- **Inline login canvas JS is a TS template literal — no backticks or `${}` inside it** (recurring TS1005
-  trap). Honor `prefers-reduced-motion` for anything animated.
+- Branch off latest `origin/main` per change **before editing** (`git checkout -B <branch>
+  origin/main`) — branch-first means never needing `git stash`, which is **banned here** (it has
+  silently dropped edits). Small focused PRs; squash-merge on green; Conventional-Commit subjects,
+  **lowercase-led** (commitlint rejects a capitalized first word — even "PRs"/"Barad-dûr").
+- Open PRs with **`/ship`** (local verify → push → REST open → one auto-merge arm → stop; wraps
+  `scripts/ship.sh`). The ship skill also owns the landing mechanics and traps: PR bodies over REST
+  (the GitHub MCP write tools silently strip `<details>`), draft promotion, whose-token-arms-the-merge,
+  and `deploy-lag.mjs`.
+- **Auto-merge (SQUASH by native GitHub auto-merge) is the default at open** — opt-*out*, not opt-in;
+  hold only for Eric's ask or the carve-outs. **Draft is a harness artifact, never a judgment:
+  promote and arm in the same breath.** A lingering draft is a throughput bug — drafts can't
+  auto-merge AND skip `verify` (`docs/LESSONS.md`, 2026-08-14).
+- **Commits & PRs are documents** ([`docs/ENGINEERING.md`](docs/ENGINEERING.md) → _Change
+  communication_): plain-language **Summary** + **Why**, weeds below the fold, mirroring
+  `.github/pull_request_template.md`; proportional — no ceremony on a typo fix.
+- Verify before merge: `npm run typecheck`, `npm run lint`, `npm test`, + a screenshot for visual
+  work (`npm run shoot:login` or an offline render). **Verify by exit status, not tailed output** —
+  a pipeline exits with the last command's status, so `cmd | tail && …` will not halt on failure.
+  Code gotchas (the inline login-canvas template-literal trap, `prefers-reduced-motion`):
+  `docs/ENGINEERING.md` → _House gotchas_.
+- **Solo-dev review substitute:** with no second engineer, the gates are the reviewer. For
+  substantive PRs run `/code-review` (and `/security-review`
+  when the diff touches auth, tokens, input parsing, or anything outward-facing) before opening —
+  but **commit first, and in a fresh worktree set `origin/HEAD` first** (`git remote set-head
+  origin -a`). Both skills harvest `origin/HEAD...`, so on uncommitted changes they review an EMPTY
+  diff and report clean — assurance over nothing (`docs/LESSONS.md`, 2026-08-26, #612). The Coach
+  gates (`arch:scan`, `dupe:scan`) run inside the test suite ([`docs/COACHES.md`](docs/COACHES.md)).
+- **Blameless retro on detected drift** → `/retro`: root cause → a full-stop prevention if
+  pragmatic, else a Boy-Scout improvement. Don't over-engineer process — ceremony that taxes flow at
+  scale is a net negative.
 - **Structural map:** [`docs/STRUCTURE-graph.md`](docs/STRUCTURE-graph.md) is a Graphify graph of the
-  repo — `graphify explain/query/path/affected` to navigate; after code changes run `graphify extract .
-  --code-only` (free; plain `update` sweeps in docs). Playbook: [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md).
-- Background work runs via subagents under [`docs/DELEGATION.md`](docs/DELEGATION.md) (isolated worktrees, verify-before-merge). Conventional Commits (lowercase-led subject). In burn-down mode, opening + squash-merging small green
-  PRs is the expected loop.
+  repo — `graphify explain/query/path/affected` to navigate; after code changes run `graphify
+  extract . --code-only` (free). Playbook: [`docs/GRAPHIFY.md`](docs/GRAPHIFY.md).
+- Background work runs via subagents under [`docs/DELEGATION.md`](docs/DELEGATION.md) (isolated
+  worktrees, verify-before-merge). In burn-down mode, opening + squash-merging small green PRs is
+  the expected loop.
