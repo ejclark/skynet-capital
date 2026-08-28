@@ -221,6 +221,12 @@ describe("autonomous-lane envelope", () => {
         env: hermeticGitEnv(),
       });
     const clientPath = join(dir, "src/alpaca/alpaca-trading-client.ts");
+    // Missing `env: hermeticGitEnv()` here reproduced the exact 2026-08-26 bug this module's own
+    // header warns about: under a bare `npm test` this passes every time (no inherited GIT_DIR to
+    // outrank `cwd`), then flakes under `.husky/pre-push` (`npm run verify`, a real git hook) —
+    // the diff read the OUTER repo's `main` instead of this temp repo's, so `additiveSafe` came
+    // back false. Found running this exact PR's pre-push gate; the fix pattern already existed
+    // right below in `scanTemp`, just not applied here yet.
     const checkTemp = (...args: string[]): Check[] =>
       JSON.parse(
         execFileSync(
@@ -229,6 +235,7 @@ describe("autonomous-lane envelope", () => {
           {
             cwd: dir,
             encoding: "utf8",
+            env: hermeticGitEnv(),
           },
         ),
       ) as Check[];
