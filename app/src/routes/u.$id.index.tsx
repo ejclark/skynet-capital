@@ -9,13 +9,16 @@ import {
   parseDeskQuery,
   toggleQualifier,
 } from "../live/desk";
+import { BlotterRow } from "../shell/blotter-row";
 import { DeskRail } from "../shell/desk-rail";
 import { PageFrame } from "../shell/frame";
 import { TimelineDrawer } from "../shell/timeline-drawer";
+import { ViewTabs } from "../shell/view-tabs";
 
 /**
  * THE DESK (#738 phase 2c) — `/u/:id` in the shell: identity header, tabs, tiles, and the blotter
- * behind an Issues-style filter bar (chips ⇄ query text, one model). Tabs the shell doesn't own
+ * behind saved-view tabs (#738 phase 3b, the Projects pattern) and an Issues-style filter bar
+ * (chips ⇄ query text, one model). Tabs the shell doesn't own
  * yet link across to the server-rendered desk, honestly. Responsive disclosure per the round-1
  * verdict: detail columns visible on wide viewports, folded behind chevrons only when narrow.
  */
@@ -61,75 +64,6 @@ function FilterBar({
         </button>
       ))}
     </div>
-  );
-}
-
-function BlotterRow({
-  position,
-  onTimeline,
-}: {
-  readonly position: DeskPosition;
-  readonly onTimeline: (position: DeskPosition) => void;
-}): ReactElement {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <tr>
-        <td className="fold-col">
-          <button
-            type="button"
-            className="expand-btn"
-            aria-expanded={open}
-            aria-label={`Detail for ${position.display}`}
-            onClick={() => setOpen(!open)}
-          >
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-              <path d="M6 4l4 4-4 4" />
-            </svg>
-          </button>
-        </td>
-        <td>
-          <button type="button" className="sym sym-link" onClick={() => onTimeline(position)}>
-            {position.display}
-          </button>
-          <span className="sym-sub">{position.detail}</span>
-        </td>
-        <td className="num">{position.quantity}</td>
-        <td className="num col-detail">{position.costPerShare}</td>
-        <td className="num">{position.price}</td>
-        <td className="num col-detail">{position.costBasis}</td>
-        <td className="num">{position.value}</td>
-        <td className={`num col-detail tone-${position.dayTone}`}>{position.dayPl}</td>
-        <td className={`num tone-${position.totalTone}`}>{position.totalPl}</td>
-        <td className={`num col-detail tone-${position.totalTone}`}>{position.returnPct}</td>
-      </tr>
-      {open ? (
-        <tr className="row-more">
-          <td colSpan={10}>
-            <dl className="more-grid">
-              <div>
-                <dt>Cost / share</dt>
-                <dd>{position.costPerShare}</dd>
-              </div>
-              <div>
-                <dt>Cost basis</dt>
-                <dd>{position.costBasis}</dd>
-              </div>
-              <div>
-                <dt>Day P/L</dt>
-                <dd className={`tone-${position.dayTone}`}>
-                  {position.dayPl} ({position.dayPct})
-                </dd>
-              </div>
-              <div>
-                <dt>Return</dt>
-                <dd className={`tone-${position.totalTone}`}>{position.returnPct}</dd>
-              </div>
-            </dl>
-          </td>
-        </tr>
-      ) : null}
-    </>
   );
 }
 
@@ -221,6 +155,7 @@ function DeskPage(): ReactElement {
             </div>
           </div>
 
+          <ViewTabs deskId={d.id} query={query} onPick={setFilter} />
           <FilterBar query={query} onChange={setFilter} />
 
           {shown.length === 0 ? (

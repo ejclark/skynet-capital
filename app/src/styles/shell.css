@@ -220,6 +220,12 @@ a {
   font-weight: 600;
   box-shadow: var(--elev-base);
 }
+.rail hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 6px 12px;
+  align-self: stretch;
+}
 .stage {
   min-width: 0;
   max-width: 880px;

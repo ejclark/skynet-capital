@@ -11,6 +11,7 @@ import "./styles/drawer.css";
 import "./styles/gate.css";
 import "./styles/shell.css";
 import "./styles/theme.css";
+import "./styles/views.css";
 
 const queryClient = new QueryClient();
 const router = createRouter({ routeTree, basepath: "/app" });
