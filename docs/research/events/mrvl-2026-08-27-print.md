@@ -1,7 +1,7 @@
 # MRVL earnings print — mrvl-2026-08-27-print
 
 **Kind:** earnings · **Date:** 2026-08-27 (confirmed, IR: investor.marvell.com PR 2026-08-03 — Thu Aug 27 1:45pm PT call (post-close)) · **Impact:** critical
-**Last assessed:** 2026-08-27
+**Last assessed:** 2026-08-28
 
 ## At a glance
 
@@ -165,3 +165,64 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-08-28, pre-open — D+1 by calendar, before the reaction-day session).** Both
+instruments re-run clean, cache busted: `earnings-cycle.mjs MRVL --bench QQQ --peers
+NVDA,AVGO,AMD` and `intraday-edges.mjs MRVL` both cap their price history at the **2026-08-27
+close** — the 2026-08-28 regular session has not traded yet at assessment time (00:13 ET), so
+this close-out scores what the print itself produced and honestly flags what it cannot score yet.
+Every conviction-leg figure reproduces the D-1 row near-exactly (S1 11/14 positive p=0.088 still
+not significant; D-5→D +4.87%/79%; reaction-day +0.67%/57%; peer control NVDA +10.66%/AVGO
++6.38%/AMD +8.63% over MRVL's own windows) — no instrument-level change from the print itself.
+
+**What printed** (primary source: [investor.marvell.com Q2 FY2027 release](https://investor.marvell.com/news-events/press-releases/detail/1031/marvell-technology-inc-reports-second-quarter-of-fiscal-year-2027-financial-results),
+checked 2026-08-28; cross-checked against BusinessWire, GuruFocus, TradingKey and ts2.tech).
+Revenue **$2.739B** (+37% y/y, a record quarter) — a beat vs the ~$2.71B consensus this doc
+tracked at every row. Data-center segment **$2,171.5M** (+46% y/y, 79% of total revenue). GAAP
+EPS **$0.33**; **non-GAAP EPS $0.94** — above the ~$0.93 consensus tracked since D-10, a beat by
+~1 cent. Non-GAAP gross margin 58.9%. Q3 FY2027 guide: revenue **$3.150B ±5%** (~4% above
+consensus per TradingKey), non-GAAP EPS **$1.10 ±$0.05**, but non-GAAP gross margin guided down
+~90bps q/q to ~58.0% — a double beat with a margin-compression wrinkle in the guide.
+
+**The reaction: a beat that sold off.** MRVL fell **~7.6% in after-hours trading** despite the
+record revenue (ts2.tech, TradingKey, TipRanks — "Marvell sinks despite topping estimates" — all
+converge on this figure; one Yahoo/aggregator quote implying a smaller ~4.3% AH move from an
+internally-inconsistent price level is disregarded as stale, same pattern as the D-1 row's
+MarketBeat disregard). Coverage attributes the drop to elevated expectations after the ~+29%
+August re-rating (this doc's own leg-7 finding), the ~90bps margin-compression tucked into the Q3
+guide, and timing uncertainty around when the Google warrant deal's revenue actually lands — not
+to any miss in the numbers themselves.
+
+**Vs. the stance.** This doc's every call was a refusal, and every refusal held: no pre-print
+entry (S1 stayed killed — the run-up never became significant, and the sell-the-beat reaction is
+exactly the "bar already elevated" leg-7 read, not a surprise), no options structure (the
+uninstrumented-both-sides honesty stance is vindicated by a move that broke *against* the
+beat-implies-up prior direction retail sentiment would have assumed), and S2's flat-by-the-close
+discipline is what "protected" against carrying an unhedged position into a 7.6% adverse gap —
+the ~14%→~10.6% implied move this doc tracked through the week priced a two-sided move of
+roughly this magnitude, so the realized gap did not exceed what was priced (bears on FT-9 below).
+
+**Forward tests** ([`forward-tests.md`](../forward-tests.md)), scored from the same re-run
+instrument data, never from memory:
+- **FT-1** (MRVL late-week bid, close D-5→close D) — **unchanged, not yet scoreable.** The
+  D-5→D window (~Aug 21→27) is now complete in the price series (close D-5 $237.04 (8/21) →
+  close D $241.45 (8/27), +1.86%), but per the doc's own registration this is observation #1 of
+  the required 2-of-3-prints test, not a standalone score, and the sympathy-decontamination
+  clause needs the D+1 sign too (below). Left `_open_` — scoring one print in isolation would
+  misuse the registration.
+- **FT-9** (implied move vs realized gap) — **not yet scoreable.** Needs the D→D+1 overnight gap
+  (close 8/27 → open 8/28), and the 8/28 session has not opened at assessment time. The ~7.6%
+  after-hours move is a proxy, not the instrumented open-print gap this test scores against.
+- **FT-10** (NVDA→MRVL sympathy sign-coupling) — **not yet scoreable**, same blocker: needs
+  MRVL's actual 8/28 opening-gap sign, which does not exist yet. Directionally worth flagging for
+  the next pass: NVDA's 8/26 print was a **positive** surprise (D-1 row) while MRVL's own
+  after-hours reaction to its *own* print was negative — if that divergence holds into the 8/28
+  open, it would be a second sign-decoupling data point (the D-1 row already flagged the 8/27
+  regular session as sympathy-defying), worth weighing at whatever session scores this.
+
+No forward test is scored dishonestly to close this ledger out on schedule; `forward-tests.md`'s
+own append-only process (independent of this event's scanner entry) picks up FT-1/FT-9/FT-10 once
+the 2026-08-28 session is real data, not a projection. This ledger itself goes quiet as of this
+`## Outcome` section per the scanner's contract — the event has now been assessed one final time.
