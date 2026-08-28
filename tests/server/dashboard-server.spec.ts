@@ -359,9 +359,10 @@ describe("dashboard-server /add", () => {
       return Promise.resolve({ ok: true, id: "human-joe", displayName: "Joe" });
     };
     await withServer({ hub: new ObservatoryHub(board()), addParticipant }, async (base) => {
-      const form = await fetch(`${base}/add`);
-      expect(form.status).toBe(200);
-      expect(await form.text()).toContain("Connect your Alpaca account");
+      // Phase 9c: the form lives in the shell now — GET redirects, POST keeps registering.
+      const form = await fetch(`${base}/add`, { redirect: "manual" });
+      expect(form.status).toBe(302);
+      expect(form.headers.get("location")).toBe("/app/join");
 
       const post = await fetch(`${base}/add`, {
         method: "POST",
@@ -374,20 +375,19 @@ describe("dashboard-server /add", () => {
     });
   });
 
-  it("offers a persona class picker instead of a free-text persona id", async () => {
+  it("serves the persona classes as data for the shell's picker", async () => {
     await withServer(
       {
         hub: new ObservatoryHub(board()),
         addParticipant: () => Promise.resolve({ ok: true, id: "a", displayName: "a" }),
       },
       async (base) => {
-        const html = await (await fetch(`${base}/add`)).text();
-        // radio-cards driven by the registry, not a bare text input
-        expect(html).toContain('class="classpick"');
-        expect(html).toContain('type="radio" name="personaId" value="day-trader"');
-        expect(html).toContain('value="banker"');
-        expect(html).toContain("The Duelist"); // a persona legend surfaces on its card
-        expect(html).not.toContain('name="personaId" placeholder');
+        const body = await (await fetch(`${base}/api/join`)).json();
+        const ids = body.classes.map((c: { id: string }) => c.id);
+        expect(ids).toContain("day-trader");
+        expect(ids).toContain("banker");
+        // a persona legend surfaces on its card
+        expect(JSON.stringify(body.classes)).toContain("The Duelist");
       },
     );
   });
@@ -413,13 +413,19 @@ describe("dashboard-server /add", () => {
         addParticipant: () => Promise.resolve({ ok: true, id: "a", displayName: "a" }),
       },
       async (base) => {
-        expect((await fetch(`${base}/add`)).status).toBe(401);
-        expect((await fetch(`${base}/add?key=pw`)).status).toBe(200);
+        expect((await fetch(`${base}/add`, { redirect: "manual" })).status).toBe(401);
+        // The key rides the redirect so a password-mode link still lands signed in.
+        const keyed = await fetch(`${base}/add?key=pw`, { redirect: "manual" });
+        expect(keyed.status).toBe(302);
+        expect(keyed.headers.get("location")).toBe("/app/join?key=pw");
       },
     );
-    // No handler wired → /add is not a route.
+    // Unwired → the shell page answers honestly instead of a bare 404 (phase 9c).
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
-      expect((await fetch(`${base}/add`)).status).toBe(404);
+      const res = await fetch(`${base}/add`, { redirect: "manual" });
+      expect(res.status).toBe(302);
+      const api = await (await fetch(`${base}/api/join`)).json();
+      expect(api.wired).toBe(false);
     });
   });
 });

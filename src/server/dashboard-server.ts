@@ -28,6 +28,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveInfoRoute, serveLearnRoute, serveTradeRoute } from "./dashboard-view-routes.js";
 import { serveDeskJson } from "./desk-json-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
+import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
@@ -171,6 +172,21 @@ function serveHomePages(
   return false;
 }
 
+/** The shell's write-API families, one dispatcher — trade, settings, learn, controls, join. */
+async function serveWriteApis(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<boolean> {
+  if (await serveTradeApi(req, res, path, config, session)) return true;
+  if (await serveSettingsApi(req, res, path, config, session)) return true;
+  if (await serveLearnApi(req, res, path, config, session)) return true;
+  if (await serveControlsApi(req, res, path, config, session)) return true;
+  return serveJoinApi(req, res, path, config, session);
+}
+
 /** Routes behind the auth gate — same set and order as before the split. */
 async function serveAuthorizedRoute(
   req: IncomingMessage,
@@ -215,16 +231,7 @@ async function serveAuthorizedRoute(
   if (await serveJsonApi(res, path, url, config, channel, session)) {
     return;
   }
-  if (await serveTradeApi(req, res, path, config, session)) {
-    return;
-  }
-  if (await serveSettingsApi(req, res, path, config, session)) {
-    return;
-  }
-  if (await serveLearnApi(req, res, path, config, session)) {
-    return;
-  }
-  if (await serveControlsApi(req, res, path, config, session)) {
+  if (await serveWriteApis(req, res, path, config, session)) {
     return;
   }
   // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.
