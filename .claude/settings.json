@@ -46,5 +46,35 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(npm test)",
+      "Bash(npm run verify)",
+      "Bash(npx tsc *)",
+      "Bash(npx knip *)",
+      "Bash(npx biome check .)",
+      "Bash(node scripts/issue-lint.mjs *)",
+      "Bash(node scripts/envelope-scan.mjs *)",
+      "Bash(node scripts/arch-scan.mjs)",
+      "Bash(node scripts/dupe-scan.mjs)",
+      "Bash(node scripts/clone-scan.mjs)",
+      "Bash(node scripts/dead-scan.mjs)",
+      "Bash(node scripts/spec-gap-scan.mjs)",
+      "Bash(node scripts/doc-rot-scan.mjs)",
+      "Bash(node scripts/incident-scan.mjs)",
+      "Bash(node scripts/digest-scan.mjs *)",
+      "mcp__github__enable_pr_auto_merge",
+      "mcp__github__update_pull_request",
+      "mcp__github__subscribe_pr_activity",
+      "mcp__github__unsubscribe_pr_activity",
+      "mcp__claude-code-remote__subscribe_pr_activity",
+      "mcp__claude-code-remote__unsubscribe_pr_activity",
+      "mcp__claude-code-remote__send_later",
+      "mcp__claude-code-remote__delete_trigger"
+    ]
   }
 }
