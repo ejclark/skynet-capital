@@ -180,3 +180,52 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Assessed 2026-08-28**, from the primary source (TreasuryDirect result PDF, CUSIP 91282CRJ2,
+fetched directly this session — `R_20260827_3.pdf`, the machine-readable data this doc's initial
+research explicitly could not recover for the prior two prints) cross-checked against wire
+coverage (investinglive.com, dated 2026-08-27).
+
+**The print (confirmed via TSY primary PDF + wire).** $44B 7-year note, high yield **4.512%**
+(up from Jul 28's 4.473%, continuing the month-over-month rise flagged in Leg (b)) exactly matching
+a **4.512% when-issued** level → **0.0bp tail** (better than the ~0.2bp average — no tail at all).
+Bid-to-cover **2.50x** (in line with the ~2.49x six-month average, and at the very floor of this
+doc's own "clean" band of ~2.50–2.64). Bidder mix: **indirect 60.8%** (below the ~65.1% six-month
+average, but *above* the 55.6–57.6% band this doc flagged as the two-print pullback pattern —
+a partial recovery, not a second consecutive miss), **direct 27.0%** (above the ~23.1% average,
+continuing Jun 25's elevated direct share), **dealer (primary) 12.3%** (roughly flat vs the
+~11.8% average). Wire grade: **"C"** — "no tail, bid-to-cover near the average," domestic buyers
+more aggressive than international ones.
+
+**Market reaction, auction day (Aug 27).** NVDA's confirmed AC 8/26 print landed strong (guidance
+reassured on AI demand; stock **+5.95%** premarket 8/27) — the benign outcome, not the disappoint-
+and-compound-risk-off scenario this doc's kill switches were watching for. The 10-year yield rose
+for a second straight session to **~4.66–4.67%**, but the driver was the **prior day's PCE print**
+(core PCE +0.2% m/m vs +0.1% expected, headline annual 3.7% vs 3.6% expected — a hawkish surprise
+that firmed Fed hike odds into the Sep 15–16 FOMC) rather than this auction. No wire coverage
+found ties the day's yield or equity move to the 7Y result itself; the print cleared without
+incident and, per this doc's own Leg (c) forecast, was overshadowed by the NVDA/PCE tape rather
+than driving it.
+
+**Kill-switch scoring (against the pre-registered stance).**
+- **"Markedly weak print"** (BTC well under ~2.40, tail beyond ~1.5bp, indirect materially below
+  the 55–58% band) — **did not fire.** BTC (2.50) held at the six-month average, the tail was
+  zero, not wide, and indirect (60.8%) sat *above* the recent two-print band rather than below it.
+- **"Clean print"** (BTC near/above the ~2.50–2.64 band, tail near zero) — **partially fired.**
+  The tail condition was met exactly (0.0bp); BTC landed at the floor of the band (2.50x) rather
+  than clearly inside or above it — a marginal, not a decisive, clean read.
+- **Compounding risk-off via a disappointing NVDA reaction** — **did not fire.** NVDA's print was
+  read as strong, not weak; risk appetite was up, not down, into and through the auction.
+
+**Verdict vs. the stance.** The stand-aside, no-new-position call held up as the right read: no
+trade was licensed by this event and none should have been. The auction itself printed as an
+unremarkable, in-line result — a "C," not a rout and not a standout — continuing this doc's Leg
+(b) finding that 2026's belly-of-curve softness has not concentrated at the 7-year specifically;
+if anything, indirect demand recovered somewhat from the two-print pullback this doc flagged for a
+future pulse check, so that specific watch item is now stood down rather than escalated. Leg (c)'s
+forecast (the auction would get less tape attention than usual, buried under the NVDA/PCE stack)
+resolved as stated: no news coverage found treats the 7Y result as market-moving on its own. No
+forward test in `forward-tests.md` is keyed to this event, so nothing scores there. This doc goes
+quiet after this entry per the close-out rule.
