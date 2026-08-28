@@ -44,21 +44,23 @@ name: Claude
 # member of the repo IS the authorization. An unauthorized mention is silently ignored — no reply,
 # so it never rewards a stranger's mention with visible bot attention.
 #
-# SELF-TRIGGER ON A BORROWED IDENTITY (#625). `sender.login != 'claude[bot]'` only catches a bot
-# comment posted under the GitHub App's own identity. With `vars.APP_CLIENT_ID` unset, every lane
-# in this repo posts its comments via `secrets.HANDOFF_PR_TOKEN`, a PAT scoped to `ejclark`'s
-# account — so `sender.login` reads `ejclark`, `author_association` reads `OWNER`, and a close-out
-# comment that RESOLVED an issue re-triggers a fresh session that finds nothing to do. There is no
-# API-level signal separating "Eric typed this" from "a script posted this with Eric's PAT": a PAT
-# is not a GitHub App, so `performed_via_github_app` is null either way. The only reliable tell is
-# content — every comment this repo's Claude sessions post carries a markdown link opening
-# `[Claude Code](https://claude` (interactive.md's footer instruction, and postmaster's shared
-# `FOOTER` in `scripts/postmaster-labels.mjs`; the two differ after that, one linking
-# `claude.ai/code` and the other `claude.com/claude-code`), so `gate` excludes any comment carrying
-# that shared prefix. Deliberately the literal link opener, NOT a bare mention of "Claude Code" — a
-# member's comment can discuss Claude Code in prose without tripping the guard. Once
-# `APP_CLIENT_ID` is set (#611) these comments post under the App's own bot identity and the marker
-# check becomes redundant rather than wrong, so it is safe to leave in place.
+# SELF-TRIGGER ON A BORROWED IDENTITY (#625, historical — kept as a second layer). `sender.login
+# != 'claude[bot]'` only catches a bot comment posted under the GitHub App's own identity. Before
+# `vars.APP_CLIENT_ID` was set (#611), every lane in this repo posted its comments via a PAT scoped
+# to `ejclark`'s account instead — so `sender.login` read `ejclark`, `author_association` read
+# `OWNER`, and a close-out comment that RESOLVED an issue re-triggered a fresh session that found
+# nothing to do. There was no API-level signal separating "Eric typed this" from "a script posted
+# this with Eric's PAT": a PAT is not a GitHub App, so `performed_via_github_app` is null either
+# way. The only reliable tell was content — every comment this repo's Claude sessions post carries
+# a markdown link opening `[Claude Code](https://claude` (interactive.md's footer instruction, and
+# postmaster's shared `FOOTER` in `scripts/postmaster-labels.mjs`; the two differ after that, one
+# linking `claude.ai/code` and the other `claude.com/claude-code`), so `gate` excludes any comment
+# carrying that shared prefix. Deliberately the literal link opener, NOT a bare mention of "Claude
+# Code" — a member's comment can discuss Claude Code in prose without tripping the guard. Now that
+# every lane's `github_token` is the App's own token with no PAT fallback (2026-08-28), comments
+# post under the App's own bot identity and this specific scenario can't recur — but the check is
+# free and catches other borrowed-identity paths too (a manually-run PAT, a future integration), so
+# it stays as a second layer behind `sender.login`, not the load-bearing one.
 #
 # That gate gets the SESSION started, but doesn't police what the session reads once it's running:
 # a session that started because a member wrote "@claude take a look" then reads the WHOLE thread
@@ -154,7 +156,9 @@ jobs:
       # Same App-token pattern as postmaster.yml's build jobs (docs/HANDOFFS.md) — a GITHUB_TOKEN-
       # authored PR never emits pull_request.opened, so the required `verify` check never runs and
       # the PR sits permanently unmergeable (docs/LESSONS.md 2026-08-17). Minted fresh in this job,
-      # never passed between jobs — the action revokes its token at job end regardless.
+      # never passed between jobs — the action revokes its token at job end regardless. No fallback
+      # tier (Eric, 2026-08-28 — the App is assumed reliable): if it isn't configured or loses
+      # access, this job fails loudly rather than quietly opening a PR under a weaker identity.
       - id: app-token
         if: vars.APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@v3
@@ -165,8 +169,8 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # The strongest identity available, so a PR this session opens actually triggers `verify`.
-          github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          # The App token, no fallback tier — so a PR this session opens actually triggers `verify`.
+          github_token: ${{ steps.app-token.outputs.token }}
           # WITHOUT THIS THE SESSION CAN TALK BUT NEVER BUILD (2026-08-17, docs/LESSONS.md) — only
           # GitHub's own tools are granted by default. Never trim this to "clean up" the workflow.
           claude_args: |

@@ -22,7 +22,7 @@ name: Postmaster
 # `claude.yml` stays for what it is actually good at: a human typing @claude on an issue or PR.
 # That path works, because a human's token is not GITHUB_TOKEN.
 #
-# ═══ WHY EVERY PR-OPENING STEP MINTS A GITHUB APP TOKEN ═══
+# ═══ WHY EVERY PR-OPENING STEP USES THE GITHUB APP'S TOKEN ═══
 #
 # The severance has a second mouth, found the same night one hop past the first fix: the build's
 # final act is opening a PR, also with GITHUB_TOKEN, so `pull_request.opened` is never emitted and
@@ -30,18 +30,17 @@ name: Postmaster
 # **zero check runs** — not a red check, no checks, and `mergeable_state: blocked` forever.
 #
 # GitHub documents exactly two identities whose events are NOT suppressed: a GitHub App
-# installation token, and a PAT. So the PR-facing steps prefer, in order:
+# installation token, and a PAT. Every PR-facing step here mints a GITHUB APP INSTALLATION TOKEN,
+# per job, via actions/create-github-app-token — the App acts as its own bot identity, never
+# expires, and is the strongest tier available (Eric, 2026-08-17: "a probot app seems like a
+# superior later abstraction as the postmaster role").
 #
-#   1. a GITHUB APP INSTALLATION TOKEN, minted per-job by actions/create-github-app-token.
-#      (Eric, 2026-08-17: "a probot app seems like a superior later abstraction as the postmaster
-#      role.") He is right about the half that carries the value — the App IDENTITY is the fix, and
-#      unlike a PAT it never expires and acts as its own bot rather than as him. The hosted Probot
-#      SERVICE is a separate, later question (docs/IDEAS.md); nothing here needs a server.
-#   2. `secrets.HANDOFF_PR_TOKEN`, the repo-scoped fine-grained PAT from #386 — kept as a tier so a
-#      repo that already minted one is never silently downgraded by this change.
-#   3. GITHUB_TOKEN — the honest degrade. The PR still opens (work is never stranded) and the run
-#      warns, naming the close/reopen workaround, because a PR nobody can merge is worse than a
-#      loud notice.
+# NO FALLBACK TIER (Eric, 2026-08-28 — the App is assumed reliable, no backup plan needed). Earlier
+# revisions degraded through a fine-grained PAT (`HANDOFF_PR_TOKEN`) and then bare GITHUB_TOKEN if
+# the App wasn't configured; that ladder is gone. If `vars.APP_CLIENT_ID` / `secrets.APP_PRIVATE_KEY`
+# are ever unset or the App loses repo access, these jobs fail loudly on an auth error instead of
+# quietly opening a PR nobody can merge — a loud failure here is cheaper than a silent one (see
+# docs/LESSONS.md, 2026-08-17: a PR with zero checks and `mergeable_state: blocked` sat unnoticed).
 #
 # The App token is minted in EACH job that needs it, never passed between them: the action revokes
 # its token when the job ends (`skip-token-revoke` defaults false), and an installation token
@@ -126,10 +125,10 @@ jobs:
       # the release-claim dispatch. One entry point, one set of specs (tests/scripts/postmaster).
       # (The handoff lanes — ready-sweep, inbox zip import, flip button — were retired 2026-08-21:
       # design handoffs are `[handoff]` issues now, docs/HANDOFFS.md.)
-      # The `||` chain is the honest identity degrade, not an oversight — see the header.
+      # The App token, no fallback tier — see the header.
       - name: Run the postmaster
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/postmaster.mjs
 
       # The loop's eyes, event-driven: the stall audit rides every push instead of a clock — it
@@ -237,8 +236,9 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # The strongest identity available, so each PR this session opens actually triggers `verify`.
-          github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          # The App token, no fallback tier — see the header. So each PR this session opens
+          # actually triggers `verify`.
+          github_token: ${{ steps.app-token.outputs.token }}
           # This job only ever runs on the `route` job's own re-dispatch (`gh workflow run`, see
           # above) — no human ever triggers it directly — so the run's actor is `github-actions`,
           # a bot. claude-code-action refuses to act for a non-human actor by default (2026-08-20:
@@ -309,7 +309,8 @@ jobs:
           # stops the action throwing away a run they could already authorize. NEVER `*`.
           allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          # The App token, no fallback tier — see the header.
+          github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.feedback_model }}
           # The triage rules and the build envelope live in .github/prompts/feedback-build.md,

@@ -90,6 +90,8 @@ jobs:
 
       # The App identity, so the repair PR emits `pull_request.opened` and `verify` actually runs.
       # Same reasoning as postmaster.yml's header — a PR with zero checks is worse than a red one.
+      # No fallback tier (Eric, 2026-08-28 — the App is assumed reliable): unconfigured or
+      # access-lost fails this job loudly instead of opening a repair PR under a weaker identity.
       - id: app-token
         if: vars.APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@v3
@@ -117,7 +119,8 @@ jobs:
           # triage job's guards already restrict this to failures on the default branch.
           allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ steps.app-token.outputs.token || secrets.HANDOFF_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          # The App token, no fallback tier — see above.
+          github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5
           # The repair envelope lives in .github/prompts/ci-medic-repair.md, not here. Those hard
