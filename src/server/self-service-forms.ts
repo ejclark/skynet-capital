@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { NavContext } from "../observatory/dashboard-shell.js";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { escapeHtml } from "../ui/escape-html.js";
+import type { OwnedAccountOption } from "./account-form-context.js";
 import { railedShell, readBody } from "./page-shell.js";
 import type {
   AddParticipantInput,
@@ -98,12 +99,6 @@ export async function handleAdd(
       }),
     (result) => addResultHtml(result, key, nav),
   );
-}
-
-export interface OwnedAccountOption {
-  readonly id: string;
-  readonly displayName: string;
-  readonly kind: "bot" | "human";
 }
 
 export async function handleRotate(

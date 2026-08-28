@@ -147,6 +147,80 @@ describe("GET /account", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  // #732: "that will help confirm which account belongs to the name". The board name alone can't
+  // answer which BROKER account it is — the Alpaca account number is the value the member also
+  // sees in Alpaca's own dashboard, so it's the one that matches by eye.
+  it("shows the managed account's Alpaca account number beside its name", async () => {
+    const calls = { updates: [], removals: [] };
+    await withRoute(
+      {
+        admin: okAdmin(calls),
+        requesterId: "human-ann",
+        ownedAccounts: [
+          { id: "human-ann", displayName: "Ann", kind: "human", accountNumber: "PA3ABCDEF" },
+        ],
+        session,
+        authConfigured: true,
+      },
+      async (base) => {
+        const html = await (await fetch(`${base}/account`)).text();
+        expect(html).toContain("<b>Ann</b> · Alpaca account <code");
+        expect(html).toContain(">PA3ABCDEF</code>");
+      },
+    );
+  });
+
+  it("shows the number for whichever account the switcher selected, not the first owned one", async () => {
+    const calls = { updates: [], removals: [] };
+    await withRoute(
+      {
+        admin: okAdmin(calls),
+        requesterId: "sauron",
+        ownedAccounts: [
+          { id: "human-ann", displayName: "Ann", kind: "human", accountNumber: "PA3ABCDEF" },
+          { id: "sauron", displayName: "Sauron", kind: "bot", accountNumber: "PA9ZZZZZZ" },
+        ],
+        session,
+        authConfigured: true,
+      },
+      async (base) => {
+        const html = await (await fetch(`${base}/account`)).text();
+        expect(html).toContain("<b>Sauron</b> · Alpaca account <code");
+        expect(html).toContain(">PA9ZZZZZZ</code>");
+        expect(html).not.toContain("PA3ABCDEF");
+      },
+    );
+  });
+
+  // A missing number means the last board read didn't carry one — never "this account has none".
+  // Silence would let the member draw the wrong conclusion, so the page says which it is.
+  it("says the number hasn't been read rather than rendering nothing", async () => {
+    const calls = { updates: [], removals: [] };
+    await withRoute(
+      {
+        admin: okAdmin(calls),
+        requesterId: "human-ann",
+        ownedAccounts: [{ id: "human-ann", displayName: "Ann", kind: "human" }],
+        session,
+        authConfigured: true,
+      },
+      async (base) => {
+        const html = await (await fetch(`${base}/account`)).text();
+        expect(html).toContain("Alpaca account number not read yet");
+        expect(html).not.toContain("Alpaca account <code");
+      },
+    );
+  });
+
+  it("renders no identity line when the caller owns nothing to manage", async () => {
+    const calls = { updates: [], removals: [] };
+    await withRoute({ admin: okAdmin(calls) }, async (base) => {
+      const html = await (await fetch(`${base}/account`)).text();
+      expect(html).not.toContain("Alpaca account <code");
+      expect(html).not.toContain("Alpaca account number not read yet");
+    });
+  });
 });
 
 describe("POST /account", () => {

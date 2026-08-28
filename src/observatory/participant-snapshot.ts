@@ -64,6 +64,13 @@ export interface ParticipantSnapshot {
    * which credential pair each believes it holds; see `account-collisions.ts`.
    */
   readonly accountId?: string;
+  /**
+   * Alpaca's human-readable account number (`PA…` on paper) — present only on a successful read.
+   * Distinct from `accountId` on purpose: the UUID identifies the account to the API, this one
+   * identifies it to the *member*, because it's what Alpaca's own dashboard shows them. That makes
+   * it the only value that answers "which of my broker accounts is this board name?" (#732).
+   */
+  readonly accountNumber?: string;
   readonly cash: number;
   readonly equity: number;
   /**
@@ -101,6 +108,7 @@ export async function buildParticipantSnapshot(
     return {
       ...base,
       accountId: account.id,
+      ...(account.account_number ? { accountNumber: account.account_number } : {}),
       cash: Number(account.cash),
       equity: Number(account.portfolio_value),
       positions: positionsFrom(positions),

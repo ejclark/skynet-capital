@@ -107,6 +107,41 @@ describe("rotatableAccountOptions", () => {
     expect(rotatableAccountOptions(undefined, config)).toEqual([]);
   });
 
+  // #732 — /account renders the broker account number from these options, so the board's
+  // accountNumber has to survive the trip through BOTH branches: the owned one, and the
+  // owner-only roster widening (which builds its rows from a different code path).
+  it("carries each account's Alpaca account number through the owned branch", () => {
+    const config = {
+      hub: {
+        getState: () => ({
+          participants: [{ ...board[1], accountNumber: "PA9ZZZZZZ" }],
+        }),
+      },
+      isOwnerEmail: () => false,
+      resolveOwnerIds: () => ["sauron"],
+    } as unknown as DashboardServerConfig;
+    expect(rotatableAccountOptions(session("ann@example.com"), config)[0]?.accountNumber).toBe(
+      "PA9ZZZZZZ",
+    );
+  });
+
+  it("carries it through the owner-only roster widening too", () => {
+    const config = {
+      hub: {
+        getState: () => ({
+          participants: [{ ...board[0], accountNumber: "PA3ABCDEF" }, board[1]],
+        }),
+      },
+      isOwnerEmail: () => true,
+      resolveOwnerIds: () => ["sauron"],
+      rosterIds: () => new Set(["human-eric"]),
+    } as unknown as DashboardServerConfig;
+    const widened = rotatableAccountOptions(session("eric@example.com"), config);
+    expect(widened.find((o) => o.id === "human-eric")?.accountNumber).toBe("PA3ABCDEF");
+    // An account the board has no number for stays absent rather than carrying an empty string.
+    expect(widened.find((o) => o.id === "sauron")).not.toHaveProperty("accountNumber");
+  });
+
   it("falls back to owned accounts alone when rosterIds isn't wired", () => {
     const config = {
       hub,
