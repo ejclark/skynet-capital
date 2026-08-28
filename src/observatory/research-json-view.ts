@@ -28,6 +28,15 @@ interface CallView {
   readonly href: string;
 }
 
+interface EventView {
+  readonly id: string;
+  readonly title: string;
+  readonly date: string;
+  readonly symbols: readonly string[];
+  /** Whether a ledger exists for this event — a dot the calendar can trust. */
+  readonly researched: boolean;
+}
+
 interface SymbolView {
   readonly symbol: string;
   readonly href: string;
@@ -35,6 +44,7 @@ interface SymbolView {
 }
 
 export interface ResearchShelfJson {
+  readonly events: readonly EventView[];
   readonly calls: readonly CallView[];
   readonly symbols: readonly SymbolView[];
   readonly studies: readonly DocView[];
@@ -52,8 +62,17 @@ export function researchShelfJson(
   shelf: ResearchShelf,
   symbols: readonly { readonly symbol: string; readonly next?: MarketEvent }[],
   calls: ReadonlyMap<string, EventCall>,
+  events: readonly MarketEvent[] = [],
 ): ResearchShelfJson {
+  const researched = new Set(shelf.ledgers.map((doc) => doc.slug));
   return {
+    events: events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      symbols: event.symbols,
+      researched: researched.has(`events/${event.id}`),
+    })),
     calls: [...calls.entries()].map(([eventId, call]) => ({
       eventId,
       call: call.call,

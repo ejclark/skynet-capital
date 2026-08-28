@@ -2,30 +2,40 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import { fetchResearch, type ResearchDocLink, type ResearchShelfData } from "../live/research";
+import {
+  fetchResearch,
+  parseResearchQuery,
+  type ResearchDocLink,
+  type ResearchShelfData,
+  toggleOnDate,
+} from "../live/research";
+import { EventHorizon } from "../shell/event-horizon";
 import { PageFrame } from "../shell/frame";
 
 /**
- * RESEARCH (#738 phase 6c; filters-first per Eric's live review) — the shelf in the shell, led
- * by the FILTERS, then the call board. The symbol chips are real filters now, not links: chips
- * and query text are ONE model (the house filter-bar discipline), the URL keeps the query, and
- * one filter narrows everything below it — calls, ledgers, and studies alike. The deep symbol
- * page keeps its value as the "full page" link on the active chip; documents stay
- * server-rendered and every row crosses to one honestly.
+ * RESEARCH (#738 phase 6c; filters-first + rail-controls per Eric's live reviews) — the shelf in
+ * the shell. The LEFT RAIL is this view's control column (the topbar owns app navigation, so the
+ * rail drives content): the event-horizon calendar pins a day into the page's ONE query model.
+ * Up top, the text bar and the symbol chips write the same string; one filter narrows everything
+ * below — calls, ledgers, studies. Documents stay server-rendered; every row crosses honestly.
  */
 
 function CallBoard({
   data,
-  term,
+  terms,
+  dayIds,
 }: {
   readonly data: ResearchShelfData;
-  readonly term: string;
+  readonly terms: readonly string[];
+  readonly dayIds: ReadonlySet<string> | null;
 }): ReactElement | null {
   const calls = data.calls.filter(
     (call) =>
-      term === "" ||
-      call.eventId.toLowerCase().includes(term) ||
-      call.call.toLowerCase().includes(term),
+      (dayIds === null || dayIds.has(call.eventId)) &&
+      terms.every(
+        (term) =>
+          call.eventId.toLowerCase().includes(term) || call.call.toLowerCase().includes(term),
+      ),
   );
   if (data.calls.length === 0) return null;
   return (
@@ -93,7 +103,8 @@ function DocList({
   );
 }
 
-/** The filters, FIRST — the text query and the symbol chips write the same model. */
+/** The top filters — the text query and the symbol chips write the same model (`on:` rides along
+ *  from the rail's calendar untouched). */
 function ResearchFilters({
   data,
   query,
@@ -104,7 +115,11 @@ function ResearchFilters({
   readonly onChange: (next: string) => void;
 }): ReactElement {
   const inputId = useId();
-  const active = query.trim().toUpperCase();
+  const terms = parseResearchQuery(query).terms.map((t) => t.toUpperCase());
+  const toggleSymbol = (symbol: string) => {
+    const kept = query.split(/\s+/).filter((t) => t && t.toUpperCase() !== symbol);
+    onChange((terms.includes(symbol) ? kept : [...kept, symbol]).join(" "));
+  };
   return (
     <>
       <div className="filter-bar">
@@ -117,7 +132,7 @@ function ResearchFilters({
             type="text"
             value={query}
             spellCheck={false}
-            placeholder="filter everything below — a symbol, a title, a slug"
+            placeholder="filter everything below — a symbol, a title, on:2026-09-02"
             onChange={(e) => onChange(e.target.value)}
           />
         </div>
@@ -125,14 +140,14 @@ function ResearchFilters({
       {data.symbols.length > 0 ? (
         <div className="rx-symbols">
           {data.symbols.map((entry) => {
-            const selected = active === entry.symbol;
+            const selected = terms.includes(entry.symbol);
             return (
               <span key={entry.symbol} className="rx-symbol-wrap">
                 <button
                   type="button"
                   className="rx-symbol"
                   aria-pressed={selected}
-                  onClick={() => onChange(selected ? "" : entry.symbol)}
+                  onClick={() => toggleSymbol(entry.symbol)}
                 >
                   <span className="rx-symbol-name">{entry.symbol}</span>
                   {entry.next ? (
@@ -185,33 +200,49 @@ function ResearchPage(): ReactElement {
     );
 
   const data = research.data;
-  const term = query.trim().toLowerCase();
+  const filter = parseResearchQuery(query);
+  const anyFilter = filter.terms.length > 0 || filter.on !== undefined;
+  // The pinned day resolves through the served events — precise ids, never date-string guessing.
+  const dayIds = filter.on
+    ? new Set(data.events.filter((e) => e.date === filter.on).map((e) => e.id))
+    : null;
   const matches = (doc: ResearchDocLink) =>
-    term === "" || doc.title.toLowerCase().includes(term) || doc.slug.toLowerCase().includes(term);
+    (dayIds === null || [...dayIds].some((id) => doc.slug.endsWith(id))) &&
+    filter.terms.every(
+      (term) => doc.title.toLowerCase().includes(term) || doc.slug.toLowerCase().includes(term),
+    );
   const studies = data.studies.filter(matches);
   const ledgers = data.ledgers.filter(matches);
 
   return (
-    <PageFrame>
+    <PageFrame
+      rail={
+        <EventHorizon
+          events={data.events}
+          {...(filter.on ? { selected: filter.on } : {})}
+          onPick={(date) => setFilter(toggleOnDate(query, date))}
+        />
+      }
+    >
       <header className="page-header">
         <h1>Research</h1>
         <p>
-          The living shelf: pick a name or type a filter, and everything below follows — the calls,
-          the ledgers, the studies. Documents open on their own pages.
+          The living shelf: pick a day on the horizon, a name, or type a filter — everything below
+          follows. Documents open on their own pages.
         </p>
       </header>
       <ResearchFilters data={data} query={query} onChange={setFilter} />
-      <CallBoard data={data} term={term} />
+      <CallBoard data={data} terms={filter.terms} dayIds={dayIds} />
       <div className="rx-grid">
         <DocList
           title="Event ledgers"
           docs={ledgers}
-          empty={term ? "No ledger matches this filter." : "No event ledgers yet."}
+          empty={anyFilter ? "No ledger matches this filter." : "No event ledgers yet."}
         />
         <DocList
           title="Studies"
           docs={studies}
-          empty={term ? "No study matches this filter." : "No studies yet."}
+          empty={anyFilter ? "No study matches this filter." : "No studies yet."}
         />
       </div>
     </PageFrame>

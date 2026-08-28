@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import { browseCollections, unshelved } from "../discovery/collections.js";
+import { allEvents } from "../domain/market-events.js";
 import { collectionsJsonView } from "../observatory/collections-json-view.js";
 import { learnJsonView } from "../observatory/learn-json-view.js";
 import { researchShelfJson } from "../observatory/research-json-view.js";
@@ -29,8 +30,9 @@ export async function serveContentApi(
     return true;
   }
   if (path === "/api/research") {
+    const asOf = new Date().toISOString();
     return json(
-      researchShelfJson(listResearch(), shelfSymbols(new Date().toISOString()), eventCalls()),
+      researchShelfJson(listResearch(), shelfSymbols(asOf), eventCalls(), allEvents(asOf)),
     );
   }
   if (path === "/api/learn") {
