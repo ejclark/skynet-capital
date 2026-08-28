@@ -11,6 +11,7 @@ import {
   type SettingsWriteResult,
   saveProfile,
 } from "../live/settings";
+import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl } from "../shell/mission-control";
 
@@ -263,10 +264,12 @@ function DangerZone({
 function AccountCard({
   account,
   timezones,
+  fleetSuspended,
   onChanged,
 }: {
   readonly account: OwnedAccount;
   readonly timezones: SettingsIndex["timezones"];
+  readonly fleetSuspended: boolean;
   readonly onChanged: () => void;
 }): ReactElement {
   return (
@@ -284,11 +287,13 @@ function AccountCard({
             profile edits and removal aren't available here. A dead or regenerated Alpaca key is its
             one self-service fix, below.
           </p>
+          <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
           <RotateSection account={account} />
         </>
       ) : (
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
+          <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
           {account.kind === "bot" ? (
             <div className="set-links">
               <a href="#mission-control">Mission Control ↓</a>
@@ -361,6 +366,7 @@ function SettingsPage(): ReactElement {
             key={account.id}
             account={account}
             timezones={timezones}
+            fleetSuspended={settings.data.fleetSuspended}
             onChanged={refresh}
           />
         ))

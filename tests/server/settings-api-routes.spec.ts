@@ -180,3 +180,60 @@ describe("serveSettingsApi", () => {
     expect(answered(out)).toMatchObject({ ok: false });
   });
 });
+describe("serveSettingsApi bot-control (#738 phase 9b)", () => {
+  const controlsWith = (calls: { id: string; editor: string; suspended: boolean }[]) =>
+    ({
+      store: {
+        load: () => ({ allSuspended: false, bots: { "bot-mine": { suspended: true } } }),
+        setBot: (id: string, patch: { suspended: boolean }, editor: string) =>
+          calls.push({ id, editor, suspended: patch.suspended }),
+        setAllSuspended: () => undefined,
+      },
+      isOwner: () => false,
+      bots: () => [],
+    }) as never;
+
+  it("flips only a bot the SESSION owns, stamping the session as editor", async () => {
+    const calls: { id: string; editor: string; suspended: boolean }[] = [];
+    const config = configWith({
+      controls: controlsWith(calls),
+      resolveOwnerIds: () => ["bot-mine"],
+    });
+    const { res, out } = fakeRes();
+    const body = { id: "bot-mine", action: "suspend", editor: "attacker" };
+    await serveSettingsApi(post(body), res, "/api/settings/bot-control", config, session);
+    expect(calls).toEqual([{ id: "bot-mine", editor: "eric@example.com", suspended: true }]);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true, suspended: true });
+  });
+
+  it("refuses someone else's bot before touching the store — ownership, not allowlist", async () => {
+    const calls: { id: string; editor: string; suspended: boolean }[] = [];
+    const config = configWith({
+      controls: controlsWith(calls),
+      resolveOwnerIds: () => ["bot-mine"],
+    });
+    const { res, out } = fakeRes();
+    const body = { id: "bot-theirs", action: "suspend" };
+    await serveSettingsApi(post(body), res, "/api/settings/bot-control", config, session);
+    expect(calls).toEqual([]);
+    expect(JSON.parse(out.body ?? "{}").error).toContain("your own bot");
+  });
+
+  it("carries the switch state and the fleet hold on the settings index", async () => {
+    const calls: { id: string; editor: string; suspended: boolean }[] = [];
+    const config = configWith({
+      controls: controlsWith(calls),
+      resolveOwnerIds: () => ["bot-mine"],
+      hub: {
+        getState: () => ({
+          participants: [{ id: "bot-mine", displayName: "Mine", kind: "bot" }],
+        }),
+      } as never,
+    });
+    const { res, out } = fakeRes();
+    await serveSettingsApi(get(), res, "/api/settings", config, session);
+    const parsed = JSON.parse(out.body ?? "{}");
+    expect(parsed.accounts[0].suspended).toBe(true);
+    expect(parsed.fleetSuspended).toBe(false);
+  });
+});
