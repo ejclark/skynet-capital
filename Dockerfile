@@ -14,6 +14,11 @@ COPY . .
 # image build for exactly that reason.)
 RUN npm run build:scene
 
+# Build the React shell (#738) — its own dependency tree, then rsbuild → app/dist, which the
+# server serves behind the gate at /app (src/server/app-shell-routes.ts). The node_modules used
+# only for this build are pruned so the image carries the static dist and nothing else.
+RUN cd app && npm ci && npm run build && rm -rf node_modules
+
 # Default port; hosting platforms that inject PORT override it via resolvePort().
 EXPOSE 8787
 
