@@ -1,5 +1,5 @@
 import { escapeHtml } from "../ui/escape-html.js";
-import { biggestSingleDayGain, longestGreenStreak } from "./day-trophies.js";
+import { biggestSingleDayGain, longestDayStreak } from "./day-trophies.js";
 import { formatPctOrDash } from "./desk-data.js";
 import type { EquitySample } from "./history-store.js";
 import { formatSigned } from "./render-atoms.js";
@@ -31,7 +31,7 @@ export function dayTrophyTiles(
   timezone: string | undefined,
 ): StatTile[] {
   const bestDay = biggestSingleDayGain(samples, timezone);
-  const streak = longestGreenStreak(samples, timezone);
+  const streak = longestDayStreak(samples, "green", timezone);
   return [
     {
       label: "Best day",
@@ -44,7 +44,10 @@ export function dayTrophyTiles(
     {
       label: "Green streak",
       value: streak ? `${streak.length} trading day${streak.length === 1 ? "" : "s"}` : "—",
-      note: streak ? `${streak.from} → ${streak.to}` : "needs two days of history",
+      // The run's total, not just its span (#780) — "4 trading days" alone never says what it paid.
+      note: streak
+        ? `${streak.from} → ${streak.to} · ${formatSigned(streak.abs)}`
+        : "needs two days of history",
       ...(streak ? { cls: "pos" } : {}),
     },
   ];

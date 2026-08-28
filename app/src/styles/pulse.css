@@ -89,6 +89,62 @@
   background: var(--pos);
 }
 
+/* streak groups (#780) — the two run families side by side, each labelled by what it counted. */
+.pulse-streaks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.pulse-streak-group {
+  min-width: 0;
+}
+.pulse-streak-h {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.pulse-streak-cap {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 0 0 10px;
+}
+.pulse-streak-rows {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.pulse-streak-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+.pulse-streak-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.pulse-streak-k {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  align-self: center;
+}
+.pulse-streak-v {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+.pulse-streak-note {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
 .pulse-weeks {
   display: flex;
   align-items: stretch;

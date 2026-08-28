@@ -6,6 +6,7 @@ import { equityDrawdown } from "./equity-sparkline.js";
 import { doubledAt, seedBaseline } from "./history-metrics.js";
 import type { EquitySample } from "./history-store.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
+import { type PulseStreakGroup, pulseStreaks } from "./pulse-streaks.js";
 import { formatCurrency, formatSigned, formatTimestamp, plClass } from "./render-atoms.js";
 
 /**
@@ -65,6 +66,8 @@ export interface DeskPulseView {
   readonly weeks: readonly PulseWeek[];
   readonly tiles: readonly PulseTile[];
   readonly race: PulseRace | null;
+  /** Both run families (#780) — day-over-day equity and closed round trips, kept separate. */
+  readonly streaks: readonly PulseStreakGroup[];
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -191,5 +194,6 @@ export function deskPulseView(
     weeks: pulseWeeks(trips),
     tiles,
     race: pulseRace(samples, snapshot.equity),
+    streaks: pulseStreaks(samples, stats),
   };
 }
