@@ -27,7 +27,11 @@ export default defineConfig({
   html: {
     title: "Skynet Capital — Observatory",
   },
+  output: {
+    assetPrefix: "/app/",
+  },
   server: {
+    base: "/app",
     port: 5174,
     proxy: {
       "/api": SERVER,
@@ -37,6 +41,12 @@ export default defineConfig({
       "/auth": SERVER,
       "/logout": SERVER,
       "/pulse": SERVER,
+      "/wire": SERVER,
+      "/research": SERVER,
+      "/collections": SERVER,
+      "/learn": SERVER,
+      "/u": SERVER,
+      "/trade": SERVER,
     },
   },
 });

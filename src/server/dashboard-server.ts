@@ -7,6 +7,7 @@ import {
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import { standingsBoardView } from "../observatory/standings-patch.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
+import { isAppShellPath, serveAppShell } from "./app-shell-routes.js";
 import type { Session } from "./auth/session.js";
 import {
   type BoardPatchChannel,
@@ -159,6 +160,11 @@ async function serveAuthorizedRoute(
   }
   if (path === "/api/board") {
     serveBoardJson(res, url, config, channel);
+    return;
+  }
+  // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.
+  if (isAppShellPath(path)) {
+    serveAppShell(res, path);
     return;
   }
   if (serveFoldedRedirect(res, path, url)) {
