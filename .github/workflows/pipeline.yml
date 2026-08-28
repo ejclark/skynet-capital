@@ -129,13 +129,14 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Capture previous image
+        # A shim: scripts/fly-image-ref.mjs owns the decision and is specced. It prints NOTHING when
+        # there is no real image, so the rollback guards below can trust `!= ''` — the inline jq this
+        # replaced answered `null/null:null` on a null record and defeated exactly that guard (#671).
         id: prev
         continue-on-error: true
         run: |
-          IMG=$(flyctl image show -a skynet-capital --json \
-            | jq -r 'if type=="array" then .[0] else . end
-                     | if .Digest and .Digest != "" then "\(.Registry)/\(.Repository)@\(.Digest)"
-                       else "\(.Registry)/\(.Repository):\(.Tag)" end' 2>/dev/null || true)
+          IMG=$(flyctl image show -a skynet-capital --json 2>/dev/null \
+            | node scripts/fly-image-ref.mjs || true)
           echo "image=$IMG" >> "$GITHUB_OUTPUT"
           echo "previous image: ${IMG:-<none — rollback unavailable this run>}"
         env:
@@ -153,10 +154,8 @@ jobs:
       - name: Capture released image (for deploy-bots)
         id: released
         run: |
-          IMG=$(flyctl image show -a skynet-capital --json \
-            | jq -r 'if type=="array" then .[0] else . end
-                     | if .Digest and .Digest != "" then "\(.Registry)/\(.Repository)@\(.Digest)"
-                       else "\(.Registry)/\(.Repository):\(.Tag)" end' 2>/dev/null || true)
+          IMG=$(flyctl image show -a skynet-capital --json 2>/dev/null \
+            | node scripts/fly-image-ref.mjs || true)
           echo "image=$IMG" >> "$GITHUB_OUTPUT"
           echo "released image: ${IMG:-<none>}"
         env:
@@ -232,10 +231,8 @@ jobs:
           IMG="${{ needs.deploy.outputs.image }}"
           if [ -z "$IMG" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             # Dispatch recovery path: no fresh build this run — reuse whatever the dashboard runs.
-            IMG=$(flyctl image show -a skynet-capital --json \
-              | jq -r 'if type=="array" then .[0] else . end
-                       | if .Digest and .Digest != "" then "\(.Registry)/\(.Repository)@\(.Digest)"
-                         else "\(.Registry)/\(.Repository):\(.Tag)" end')
+            IMG=$(flyctl image show -a skynet-capital --json 2>/dev/null \
+              | node scripts/fly-image-ref.mjs || true)
           fi
           # On the push path an empty image is a hard FAIL, never a silent rebuild: a second build
           # could diverge from what smoke verified, and ci-medic files the capsule on a red run.
@@ -245,14 +242,15 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Capture previous bots image
+        # Same shim as the dashboard's `prev` step. On the bots app's FIRST deploy there is no
+        # previous image at all, and silence is the correct rendering of that — see #671, where the
+        # old jq named a nonexistent one and the rollback died trying to deploy it.
         if: ${{ steps.preflight.outputs.deploy == 'true' }}
         id: prev-bots
         continue-on-error: true
         run: |
-          IMG=$(flyctl image show -a skynet-capital-bots --json \
-            | jq -r 'if type=="array" then .[0] else . end
-                     | if .Digest and .Digest != "" then "\(.Registry)/\(.Repository)@\(.Digest)"
-                       else "\(.Registry)/\(.Repository):\(.Tag)" end' 2>/dev/null || true)
+          IMG=$(flyctl image show -a skynet-capital-bots --json 2>/dev/null \
+            | node scripts/fly-image-ref.mjs || true)
           echo "image=$IMG" >> "$GITHUB_OUTPUT"
           echo "previous bots image: ${IMG:-<none — rollback unavailable this run>}"
         env:

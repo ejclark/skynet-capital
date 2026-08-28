@@ -27,6 +27,47 @@ it. Prevention ranks, best first:
 
 ---
 
+### The bots rollback deployed `null/null:null`, because "not empty" was mistaken for "real"
+
+- **SHA:** 947a4f4   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** `ci-medic` filed #671 for a red `release · deploy bots` job on run 33024006048,
+  naming the smoke test as the failing step. The *second* failure in the same job was the louder
+  one and went unnamed: `Roll back bots to previous image` died on `Could not find image
+  "docker.io/null/null:null"`. Detection was immediate (the medic fires on the red run), but the
+  capsule's log tail came back empty — its own fetch choked on the terminal escape sequences in
+  the log — so the evidence had to be pulled by hand before anything could be diagnosed.
+- **ROOT CAUSE:** This was the bots app's first-ever deploy, so `flyctl image show
+  -a skynet-capital-bots --json` answered with every field null — the correct answer to "what was
+  running before?" when nothing was. The jq expression that lived inline in `pipeline.yml`
+  interpolated those nulls straight into its format string and produced the literal
+  `null/null:null`. The rollback step's guard was `steps.prev-bots.outputs.image != ''`, and
+  `null/null:null` is emphatically not empty — so the guard designed to skip a rollback that
+  cannot happen instead *authorised* one, and handed flyctl an image reference that can never
+  exist. One failing step became two, and the path that exists to rescue a bad release became the
+  thing that failed. This is the fifth instance of the class already banked here — **a check that
+  validates the wrong artefact reports success forever** (`ship.sh automerge` parsing for an
+  `errors` key, `checkbody` linting the local file rather than the shipped body,
+  `/security-review` grading an empty diff): here the artefact checked was *string emptiness*
+  when the question was *image existence*. The multiplier was copy-paste — the same expression
+  was pasted in **four** places, including the DASHBOARD's rollback, where the same null answer
+  would have broken recovery of the live public app.
+- **PREVENTION:** gate + script. `scripts/fly-image-ref.mjs` is now the single place that turns a
+  `flyctl image show --json` payload into a reference, and it emits one only when every component
+  is a real non-empty string — a null record, a partial record, an empty array and malformed JSON
+  all render as silence, which is what the `!= ''` guards were always written to read. All four
+  inline copies in `pipeline.yml` are now shims calling it. `tests/scripts/fly-image-ref.spec.ts`
+  drives the real entrypoint and pins the null record explicitly, so the exact string that broke
+  this run cannot be emitted again. Standing rule reinforced: a decision in a workflow `run:`
+  block is untested by construction — move it into a specced script and leave the workflow a shim.
+- **SIDE QUESTS:** Two, neither acted on. (1) `scripts/smoke-bots.sh` fails with a disjunction —
+  "machine not started on <sha>, **or** the controls bridge never armed" — and never says which,
+  so the run that motivated this entry cannot be root-caused from its own logs; it is
+  envelope-protected, so the fix is Eric's call (raised on #671). (2) `ci-medic`'s log fetch
+  drops the entire tail when the log contains escape sequences, which is always — the capsule
+  that is supposed to carry the evidence carried none.
+
+---
+
 ### `ship.sh automerge` reported success for months of sessions where arming was never possible
 
 - **SHA:** 294b81d   **DATE:** 2026-08-26   **STATUS:** closed
