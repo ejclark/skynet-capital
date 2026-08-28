@@ -2,10 +2,26 @@
 
 **Kind:** <kind> · **Date:** <YYYY-MM-DD> (<confirmed|estimate>, <source>) · **Impact:** <tier>
 **Last assessed:** <YYYY-MM-DD>
+<!-- probe-ref: {"symbols":{"<SYM>":<price>},"vix":<vix>,"daysBand":"<tier>:<minDaysOut>+","adjacentIds":[],"screenStreak":0} -->
 
 <!-- The `**Last assessed:**` line is scripts/event-scan.mjs's machine contract — update it with
      every assessment, or the scanner will keep marking this event due. Process:
-     docs/process/EVENT-RESEARCH.md. Delete the comments when instantiating. -->
+     docs/process/EVENT-RESEARCH.md.
+
+     The `<!-- probe-ref: {...} -->` line right after it is scripts/event-material-scan.mjs's
+     contract (issue #724) — the deterministic screen's reference state for THIS event: the last
+     recorded price for each symbol in the table row, the last VIX reading, the cadence band label,
+     the adjacent-event ids known at the time, and how many consecutive pulses have been screened
+     (not researched) in a row. Populate it with today's real readings when writing THIS initial
+     research (it is what lets the event's very next `interval-elapsed` pulse be screenable instead
+     of automatically material) — never hand-invent numbers, pull today's actual price/VIX the same
+     way the adjacency sweep already does. Every later pulse (screened or full-session) REPLACES
+     this line in place with fresh readings; it is free-standing current state, not an append-only
+     row like the ledger table below. A screen writes it mechanically; a full session should refresh
+     it too when appending its own row, so the streak resets and the baseline stays current. See
+     docs/process/EVENT-RESEARCH.md's "Deterministic screening" section for the full contract.
+
+     Delete the intro comments (not the probe-ref line) when instantiating. -->
 
 ## At a glance
 

@@ -172,6 +172,21 @@ describe("closing the last mile", () => {
     expect(intents[0]?.kind).toBe("close-shipped");
     expect(intents[0]?.body).toContain("Shipped");
   });
+
+  // 2026-08-28 triage: #510/#706/#707/#720 all had their research docs merged (PRs
+  // #695/#727, #721, #715, #712) but stayed open — the sweep only ever swept `feedback`, so
+  // `event-research` issues had no last-mile net at all. This is that net.
+  it("closes an event-research issue whose PR has merged, same as the feedback lane", () => {
+    const intents = dryRun("sweep-shipped-events.json") as (Intent & { pr?: number })[];
+
+    expect(intents).toHaveLength(2);
+    expect(intents.map((i) => [i.issueNumber, i.pr])).toEqual([
+      [510, 695],
+      [706, 712],
+    ]);
+    expect(intents[0]?.kind).toBe("close-shipped");
+    expect(intents[0]?.body).toContain("Shipped");
+  });
 });
 
 // ── the sweep that could never fire (2026-08-22, #494) ────────────────────────

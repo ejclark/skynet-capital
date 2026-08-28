@@ -99,7 +99,7 @@ jobs:
     name: route
     runs-on: ubuntu-latest
     outputs:
-      due_events: ${{ steps.events.outputs.due }}
+      due_events: ${{ steps.screen.outputs.due }}
       feedback_issue: ${{ steps.feedback.outputs.number }}
       feedback_model: ${{ steps.feedback.outputs.model }}
     steps:
@@ -164,13 +164,58 @@ jobs:
           echo "due=$FILTERED" >> "$GITHUB_OUTPUT"
           echo "::notice::due for research: $FILTERED"
 
+      # THE DETERMINISTIC MATERIAL-CHANGE PROBE (issue #724) — the free no-op path, same doctrine
+      # as digest-scan.mjs. `event-scan.mjs --due` only answers WHEN a pulse is owed; this answers
+      # WHETHER anything the probe can measure actually moved. Only `interval-elapsed` items are
+      # ever screened (event-material-scan.mjs itself passes never-assessed/event-passed-unscored
+      # straight through) — a screen writes its own ledger row and this step commits it directly to
+      # `main`, so it never spends a session. That commit MUST land before the re-dispatch step
+      # below, or the Claude session's own `event-scan.mjs --due` (it re-runs that check itself, per
+      # .github/prompts/event-research.md) would still see the screened event as due and research it
+      # anyway — hence a direct push here rather than a second PR-and-merge round trip. Requires the
+      # App token (same "no fallback tier" doctrine as the rest of this file, see the header) — with
+      # no App configured, or if the push is ever rejected (branch protection, a race with a human
+      # push), this fails soft to the ORIGINAL due list: every event in question still gets a real
+      # session, never silently dropped (broken != quiet, the loud-failure doctrine).
+      - name: Screen interval-elapsed pulses deterministically (issue #724)
+        id: screen
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.command == 'scan')
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::no App token configured — skipping the deterministic screen this run; every due pulse dispatches a session (safe default)."
+            echo "due=${{ steps.events.outputs.due }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          RESULT=$(echo '${{ steps.events.outputs.due }}' | node scripts/event-material-scan.mjs --screen-due)
+          SCREENED_COUNT=$(echo "$RESULT" | jq '.screened | length')
+          STILL_DUE=$(echo "$RESULT" | jq -c '.stillDue')
+          echo "::notice::deterministic screen: $SCREENED_COUNT screened (no session), $(echo "$STILL_DUE" | jq 'length') still due for research"
+          if [ "$SCREENED_COUNT" -eq 0 ]; then
+            echo "due=$STILL_DUE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/research/events/*.md
+          git commit -m "docs(research): deterministic screen — $SCREENED_COUNT pulse(s), no session needed"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          if git push origin HEAD:main; then
+            echo "due=$STILL_DUE" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::screen commit failed to push (branch protection, or a race with another push) — falling back to a full session for every due event this pulse."
+            echo "due=${{ steps.events.outputs.due }}" >> "$GITHUB_OUTPUT"
+          fi
+
       # `claude-code-action@v1` rejects `push` as an event type outright (docs/LESSONS.md
       # 2026-08-20: "Unsupported event type: push" — the event-research lane's first live firings
       # all failed this way). It DOES support `workflow_dispatch`, so on a push with due events we
       # re-fire ourselves as a dispatch instead of letting `build-events` invoke the action directly
       # under `push`. `build-events` below only runs on that re-dispatched pass (see its `if:`).
       - name: Re-dispatch for event research (claude-code-action can't see `push`)
-        if: github.event_name == 'push' && steps.events.outputs.due != '' && steps.events.outputs.due != '[]'
+        if: github.event_name == 'push' && steps.screen.outputs.due != '' && steps.screen.outputs.due != '[]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run postmaster.yml --ref "$GITHUB_REF_NAME" -f command=scan
