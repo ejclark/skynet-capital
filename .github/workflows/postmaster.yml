@@ -248,8 +248,13 @@ jobs:
           allowed_bots: "github-actions"
           # WebSearch/WebFetch on top of the build lane's list: a pulse check without the adjacency
           # sweep (peer prints, CPI/FOMC surprises, VIX regime) is the protocol minus its point.
+          # --model pins the lane deliberately instead of riding the action default — same
+          # route-by-who-pays rule as build-feedback (flat-rate lane, research-to-brief floor is
+          # opus per docs/COMPUTE.md). --max-turns is a runaway backstop only: sized ~2x a busy
+          # multi-event run so it never truncates real work (a too-tight cap would spend more via
+          # a ci-medic repair than it saves). docs/process/TOKEN-EFFICIENCY.md, 2026-08-28.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch"
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 100
           # Same shim: the protocol lives in .github/prompts/event-research.md.
           prompt: |
             Read `.github/prompts/event-research.md` in this repo and follow it exactly. It is your
