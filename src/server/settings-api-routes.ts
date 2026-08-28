@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { sessionNameCandidates } from "./account-forms.js";
 import type { Session } from "./auth/session.js";
-import { resolveOwnedIds } from "./dashboard-identity.js";
+import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
@@ -35,6 +35,12 @@ interface RemoveBody {
   readonly confirmName: string;
 }
 
+interface RotateBody {
+  readonly id: string;
+  readonly apiKey: string;
+  readonly apiSecret: string;
+}
+
 function boundedString(raw: unknown, max: number): string | undefined {
   return typeof raw === "string" && raw.length > 0 && raw.length <= max ? raw : undefined;
 }
@@ -59,6 +65,17 @@ function parseProfileBody(raw: string): ProfileBody | undefined {
     ...(displayName !== undefined ? { displayName } : {}),
     ...(timezone !== undefined ? { timezone } : {}),
   };
+}
+
+/** Keys are pasted, never displayed back: the shape gate bounds them and nothing here logs
+ *  or echoes a secret — the service verifies against Alpaca before anything is stored. */
+function parseRotateBody(raw: string): RotateBody | undefined {
+  const body = parseJsonRecord(raw);
+  if (!body) return undefined;
+  const id = boundedString(body.id, 100);
+  const apiKey = boundedString(body.apiKey, 200);
+  const apiSecret = boundedString(body.apiSecret, 200);
+  return id && apiKey && apiSecret ? { id, apiKey, apiSecret } : undefined;
 }
 
 function parseRemoveBody(raw: string): RemoveBody | undefined {
@@ -114,6 +131,38 @@ function serveSettingsIndex(
   });
 }
 
+/** The rotate write, split out for the complexity gate — the /rotate route's exact requester
+ *  assembly: the session's resolved id and email, both absent exactly when OAuth isn't
+ *  configured. The browser supplies neither, and no secret is ever logged or echoed. */
+async function serveRotate(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const raw = await readJsonPost(req, res, SETTINGS_BODY_CAP_BYTES);
+  if (raw === undefined) return;
+  if (!config.rotateCredentials) {
+    sendJson(res, 200, { ok: false, error: "Credential rotation isn't wired in this deployment." });
+    return;
+  }
+  const body = parseRotateBody(raw);
+  if (!body) {
+    sendJson(res, 400, { error: "malformed rotate body" });
+    return;
+  }
+  const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  sendJson(
+    res,
+    200,
+    await config.rotateCredentials({
+      ...body,
+      ...(requesterId !== undefined ? { requesterId } : {}),
+      ...(config.auth && session ? { requesterEmail: session.email } : {}),
+    }),
+  );
+}
+
 /** Handle `/api/settings*`. Returns true when the request was answered. */
 export async function serveSettingsApi(
   req: IncomingMessage,
@@ -124,6 +173,10 @@ export async function serveSettingsApi(
 ): Promise<boolean> {
   if (path === "/api/settings") {
     serveSettingsIndex(res, config, session);
+    return true;
+  }
+  if (path === "/api/settings/rotate") {
+    await serveRotate(req, res, config, session);
     return true;
   }
   if (path !== "/api/settings/profile" && path !== "/api/settings/remove") return false;

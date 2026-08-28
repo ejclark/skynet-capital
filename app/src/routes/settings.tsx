@@ -6,6 +6,7 @@ import {
   fetchSettings,
   type OwnedAccount,
   removeAccountRequest,
+  rotateCredentialsRequest,
   type SettingsIndex,
   type SettingsWriteResult,
   saveProfile,
@@ -115,6 +116,96 @@ function ProfileForm({
   );
 }
 
+/** The catalog's token UX: replace, never reveal — existing keys are never shown; the pasted
+ *  pair verifies against Alpaca before anything is stored, and the old key streams until then. */
+function RotateSection({ account }: { readonly account: OwnedAccount }): ReactElement {
+  const [open, setOpen] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [apiSecret, setApiSecret] = useState("");
+  const [result, setResult] = useState<SettingsWriteResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const keyId = useId();
+  const secretId = useId();
+
+  const rotate = async () => {
+    setBusy(true);
+    try {
+      const outcome = await rotateCredentialsRequest({ id: account.id, apiKey, apiSecret });
+      setResult(outcome);
+      if (outcome.ok) {
+        setApiKey("");
+        setApiSecret("");
+      }
+    } catch (error) {
+      setResult({ ok: false, error: String(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="set-rotate">
+      <button
+        type="button"
+        className="set-rotate-head"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        Rotate Alpaca credentials
+        <span className="set-rotate-chev" aria-hidden="true">
+          {open ? "▾" : "▸"}
+        </span>
+      </button>
+      {open ? (
+        <div className="set-rotate-body">
+          <p className="set-hint">
+            Paste the regenerated key pair from the Alpaca dashboard. The new key is verified
+            against Alpaca before anything is stored — your existing key keeps streaming until it
+            passes, and is never displayed here.
+          </p>
+          <div className="field">
+            <label htmlFor={keyId}>New API key ID</label>
+            <input
+              id={keyId}
+              type="password"
+              value={apiKey}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(e) => setApiKey(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor={secretId}>New API secret</label>
+            <input
+              id={secretId}
+              type="password"
+              value={apiSecret}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(e) => setApiSecret(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary set-save"
+            disabled={busy || apiKey.trim() === "" || apiSecret.trim() === ""}
+            onClick={rotate}
+          >
+            {busy ? "Verifying against Alpaca…" : "Verify & replace key"}
+          </button>
+          {result?.ok ? (
+            <p className="set-ok">
+              Key replaced — {result.displayName} streams on the new credential.
+            </p>
+          ) : (
+            <ResultLine result={result} />
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function DangerZone({
   account,
   onRemoved,
@@ -194,12 +285,12 @@ function AccountCard({
       ) : (
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
-          <div className="set-links">
-            <a href={`/rotate?id=${encodeURIComponent(account.id)}`}>Rotate Alpaca credentials →</a>
-            {account.kind === "bot" ? (
+          {account.kind === "bot" ? (
+            <div className="set-links">
               <a href={`/u/${encodeURIComponent(account.id)}?tab=settings`}>Mission Control →</a>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
+          <RotateSection account={account} />
           <DangerZone account={account} onRemoved={onChanged} />
         </>
       )}

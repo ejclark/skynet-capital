@@ -92,3 +92,38 @@
 .set-remove:not([disabled]):hover {
   background: color-mix(in oklab, var(--neg) 14%, var(--surface-2));
 }
+
+.set-rotate {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.set-rotate-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.set-rotate-head:hover {
+  background: var(--surface-2);
+}
+.set-rotate-chev {
+  color: var(--muted);
+}
+.set-rotate-body {
+  border-top: 1px solid var(--border);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fold-open var(--dur-quick) var(--ease-spatial) both;
+}
