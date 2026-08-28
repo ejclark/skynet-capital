@@ -2,7 +2,7 @@ import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import { cohortStats } from "../../src/observatory/standings-cohort.js";
 import { formatMetric, metricLabel, metricValue } from "../../src/observatory/standings-metric.js";
-import { standingsFieldOps } from "../../src/observatory/standings-patch.js";
+import { standingsBoardView, standingsFieldOps } from "../../src/observatory/standings-patch.js";
 import { renderStandingsContent } from "../../src/observatory/standings-view.js";
 
 /**
@@ -177,5 +177,30 @@ describe("cohortStats", () => {
     const bots = cohortStats(many.participants, "bot", "Bots");
     expect(humans.totalEquity).toBeGreaterThan(bots.totalEquity);
     expect(bots.avgEquity).toBeGreaterThan(humans.avgEquity);
+  });
+});
+
+describe("standingsBoardView", () => {
+  it("serves the same formatted values and keys the field ops address, plus row identity", () => {
+    const view = standingsBoardView(board(), "equity");
+    expect(view.rows.map((r) => r.key)).toEqual(["human-eric", "bot-sauron"]);
+    expect(view.rows[0]).toMatchObject({ name: "Eric", kind: "human", value: "$150,000" });
+    expect(Object.keys(view.blocks).sort()).toEqual([
+      "cohort:bot",
+      "cohort:human",
+      "match",
+      "versus",
+    ]);
+    expect(view.blocks["cohort:human"]?.text.totalEquity).toBe("$150,000");
+  });
+
+  it("renders a snapshot a later field op patches coherently — op values land on view keys", () => {
+    const view = standingsBoardView(board(), "equity");
+    const ops = standingsFieldOps(board(), board(160_000), { metric: "equity" });
+    for (const op of ops) {
+      if (op.kind !== "field") continue;
+      const target = view.rows.some((r) => r.key === op.key) || view.blocks[op.key] !== undefined;
+      expect(target).toBe(true);
+    }
   });
 });

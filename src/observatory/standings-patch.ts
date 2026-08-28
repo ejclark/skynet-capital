@@ -141,6 +141,55 @@ function blockOp(
   ];
 }
 
+/** One field-ladder row as the JSON API serves it — the same formatted value/tone/bar the patch
+ *  ops carry, plus the identity fields a client needs to render a row from scratch. */
+interface BoardViewRow {
+  readonly key: string;
+  readonly name: string;
+  readonly kind: "human" | "bot";
+  readonly value: string;
+  readonly tone: FieldTone;
+  readonly bar: number;
+  readonly sortValue: number;
+}
+
+/** One keyed display block (cohort card / match bar / versus line), same shape as a `field` op. */
+interface BoardViewBlock {
+  readonly text: TextMap;
+  readonly tone?: ToneMap;
+  readonly bar?: Record<string, number>;
+}
+
+export interface StandingsBoardView {
+  readonly rows: readonly BoardViewRow[];
+  readonly blocks: Readonly<Record<string, BoardViewBlock>>;
+}
+
+/**
+ * The initial JSON snapshot for a patch-consuming client (`/api/board`). Every value is formatted
+ * by the SAME helpers `standingsFieldOps` uses, and the blocks carry the SAME keys the `field` ops
+ * address — so a client renders this once and then applies ops verbatim, never re-deriving a
+ * number (the doctrine at the top of this file, extended over JSON).
+ */
+export function standingsBoardView(data: DashboardData, metric: LeaderMetric): StandingsBoardView {
+  const byId = new Map(data.participants.map((p) => [p.id, p]));
+  const humans = cohortStats(data.participants, "human", "Humans");
+  const bots = cohortStats(data.participants, "bot", "Bots");
+  return {
+    rows: rowViews(data, metric).map((row) => ({
+      ...row,
+      name: byId.get(row.key)?.displayName ?? row.key,
+      kind: byId.get(row.key)?.kind === "bot" ? "bot" : "human",
+    })),
+    blocks: {
+      "cohort:human": cohortView(humans),
+      "cohort:bot": cohortView(bots),
+      match: matchView(humans, bots),
+      versus: { text: versusView(humans, bots) },
+    },
+  };
+}
+
 /**
  * The producer. Pure — no clock, no DOM, no server — so the whole live board is specifiable from a
  * pair of dashboard snapshots.
