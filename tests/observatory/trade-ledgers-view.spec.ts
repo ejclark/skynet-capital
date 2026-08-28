@@ -1,3 +1,4 @@
+import { orderOriginIndex } from "../../src/observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import type { ActivityRow } from "../../src/observatory/trade-ledgers-view.js";
 import {
@@ -110,5 +111,30 @@ describe("foldedLedger", () => {
     expect(html).toContain("Order activity — 2 orders");
     expect(html).toContain("src-badge");
     expect(html).not.toContain("<th>Context</th>");
+  });
+
+  it("marks an unaudited order inside the covered window, and keys the glyph with a footnote", () => {
+    const origins = orderOriginIndex(
+      [{ participantId: "eric", orderId: "o-1", at: "2026-08-18T14:00:00.000Z" }],
+      "human",
+    );
+    const html = foldedLedger(
+      [
+        { ...row, orderId: "o-1" },
+        { ...row, orderId: "o-outside" },
+      ],
+      snapshot(),
+      [],
+      origins,
+    );
+    expect(html.match(/direct-mark/g)?.length).toBe(2); // one row glyph + the footnote's key
+    expect(html).toContain("Placed directly in Alpaca");
+    expect(html).toContain("none of the desk's pre-trade checks");
+  });
+
+  it("marks nothing — and prints no footnote — when no audit evidence was handed in", () => {
+    const html = foldedLedger([{ ...row, orderId: "o-outside" }], snapshot(), []);
+    expect(html).not.toContain("direct-mark");
+    expect(html).not.toContain("Placed directly in Alpaca");
   });
 });

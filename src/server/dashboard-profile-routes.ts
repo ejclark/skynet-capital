@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { parseActivityType, parseActivityWindow } from "../observatory/activity-store.js";
 import { type DeskNotice, type DeskTab, parseDeskTab } from "../observatory/desk-tabs.js";
+import { orderOriginIndex } from "../observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
 import {
   type PerformanceViewOptions,
@@ -61,6 +62,12 @@ async function deskTabBody(
     config.readDecisions && tab === "performance" && snapshot.kind === "bot"
       ? await config.readDecisions(snapshot.id)
       : undefined;
+  // The desk's own submit receipts, for the Alpaca-direct mark (#782). Read for humans only — a
+  // bot's autonomous orders bypass the audited path, so its log can prove nothing either way.
+  const audit =
+    config.readOrderAudit && tab === "performance" && snapshot.kind === "human"
+      ? await config.readOrderAudit(snapshot.id)
+      : undefined;
   return renderDeskTab(tab, snapshot, {
     ...base,
     tradingEnabled: Boolean(config.tradingEnabled && config.submitTrade),
@@ -68,6 +75,7 @@ async function deskTabBody(
     activityType: parseActivityType(params.get("type")),
     ...(tradeActivity ? { tradeActivity } : {}),
     ...(decisions ? { decisions } : {}),
+    orderOrigins: orderOriginIndex(audit, snapshot.kind),
   });
 }
 

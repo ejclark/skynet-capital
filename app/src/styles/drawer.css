@@ -105,3 +105,17 @@
   color: var(--muted);
   font-size: 11px;
 }
+/* Placed straight in Alpaca, not through our ticket. Eric's own sizing note: "a smaller
+   footprint, similar to `*`" — a glyph, not a badge, keyed by the footnote below the list. */
+.tl-direct {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-weight: 700;
+  cursor: help;
+}
+.tl-legend {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}

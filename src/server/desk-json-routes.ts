@@ -1,6 +1,7 @@
 import type { ServerResponse } from "node:http";
 import { decisionCyclesView } from "../observatory/decision-json-view.js";
 import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
+import { orderOriginIndex } from "../observatory/order-origin.js";
 import { deskPulseView } from "../observatory/pulse-json-view.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
@@ -27,11 +28,17 @@ export async function serveDeskJson(
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
   if (sub === "activity") {
     // No ledger wired (offline runs without SKYNET_ACTIVITY_DIR) says so — never an empty lie.
-    const records = await config.readTradeActivity?.(id);
+    // The audit lines ride alongside so each row can say who PLACED it (#782); with no audit log
+    // wired the index is empty and every row classifies `unknown`, i.e. unmarked.
+    const [records, audit] = await Promise.all([
+      config.readTradeActivity?.(id),
+      config.readOrderAudit?.(id),
+    ]);
+    const origins = orderOriginIndex(audit, found.kind === "bot" ? "bot" : "human");
     res.end(
       JSON.stringify(
         records
-          ? { available: true, activity: deskActivityView(records) }
+          ? { available: true, activity: deskActivityView(records, origins) }
           : { available: false, activity: [] },
       ),
     );

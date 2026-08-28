@@ -7,7 +7,10 @@ import { type DeskActivityEvent, fetchDeskActivity } from "../live/desk";
  * The position timeline drawer (#738 phase 2d) — a right side sheet (elevation: sheet) opened
  * from a blotter row, showing that symbol's fill history from the durable activity ledger.
  * Esc or the scrim closes it and focus returns to the opener (the Dialog contract from the
- * pattern research). Backfilled rows are badged — provenance is recorded, not laundered.
+ * pattern research). Two provenance seams ride the rows, and they answer different questions:
+ * `backfilled` says the ledger recovered the row rather than watching it land; the `*` says the
+ * order was placed straight in Alpaca and never touched our ticket (#782). Provenance is
+ * recorded, not laundered — and where the evidence doesn't reach, nothing is marked.
  */
 
 function EventLine({ event }: { readonly event: DeskActivityEvent }): ReactElement {
@@ -31,6 +34,15 @@ function EventLine({ event }: { readonly event: DeskActivityEvent }): ReactEleme
       </span>
       <span className="tl-status">{event.status}</span>
       {event.backfilled ? <span className="tl-backfill">backfilled</span> : null}
+      {event.origin === "alpaca-direct" ? (
+        <span
+          className="tl-direct"
+          title="Placed directly in Alpaca — this order never went through the app's ticket"
+        >
+          <span aria-hidden="true">*</span>
+          <span className="visually-hidden">Placed directly in Alpaca</span>
+        </span>
+      ) : null}
       <span className="tl-when num">{stamp}</span>
     </li>
   );
@@ -97,6 +109,16 @@ export function TimelineDrawer({
                 <EventLine key={`${event.orderId}-${event.at}`} event={event} />
               ))}
             </ul>
+          ) : null}
+          {/* A bare glyph is a mystery; the key appears only when something carries it. */}
+          {events.some((e) => e.origin === "alpaca-direct") ? (
+            <p className="tl-legend">
+              <span className="tl-direct" aria-hidden="true">
+                *
+              </span>{" "}
+              Placed directly in Alpaca — this order skipped the app's ticket, so none of the desk's
+              pre-trade checks saw it.
+            </p>
           ) : null}
         </div>
       </aside>

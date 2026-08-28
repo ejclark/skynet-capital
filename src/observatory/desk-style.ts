@@ -120,6 +120,10 @@ export const DESK_STYLE = `<style>
   .fchip:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .src-badge{ font-family:var(--mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
     border:1px solid var(--border); border-radius:5px; padding:1.5px 5px; margin-left:6px; vertical-align:middle; white-space:nowrap; }
+  /* Alpaca-direct tell (#782) — a glyph, not a badge: Eric asked for "a smaller footprint,
+     similar to '*'", so it sits at the symbol's shoulder and leans on the footnote for meaning. */
+  .direct-mark{ font-family:var(--mono); font-weight:700; color:var(--muted); cursor:help;
+    margin-left:3px; vertical-align:super; font-size:11px; line-height:0; }
   .why summary{ cursor:pointer; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); }
   .why summary:hover{ text-decoration:underline; }
   .why-body{ display:flex; flex-direction:column; gap:6px; margin-top:8px; max-width:44ch; font-size:12px; line-height:1.5; white-space:normal; }

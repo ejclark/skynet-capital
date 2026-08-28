@@ -28,7 +28,7 @@ import {
 } from "../observatory/history-boot.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
-import { mergeRoster } from "../participants/participant.js";
+import { mergeRoster, type Participant } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
 import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
@@ -155,6 +155,11 @@ async function main(): Promise<void> {
   // runtime takes effect on the next order, not the next restart.
   const liveRoster = () => mergeRoster(envRoster, store.load());
   const findParticipant = (id: string) => liveRoster().find((p) => p.id === id);
+  /** A per-account broker client, or undefined for an id that isn't on the live roster. */
+  const clientFor = <T>(id: string, make: (p: Participant) => T): T | undefined => {
+    const participant = findParticipant(id);
+    return participant ? make(participant) : undefined;
+  };
 
   // Guest list, Mission Control store, authenticator, and owner-link lookup (dashboard-access.ts).
   const {
@@ -264,6 +269,7 @@ async function main(): Promise<void> {
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
+    readOrderAudit: (id) => orderAudit.list(id),
     // `/wire`'s cross-participant feed: the same stores, called with no id.
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
@@ -276,14 +282,8 @@ async function main(): Promise<void> {
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
-    optionsClientFor: (id) => {
-      const participant = findParticipant(id);
-      return participant ? dataSource.optionsClientFactory(participant) : undefined;
-    },
-    tradingClientFor: (id) => {
-      const participant = findParticipant(id);
-      return participant ? dataSource.clientFactory(participant) : undefined;
-    },
+    optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
+    tradingClientFor: (id) => clientFor(id, dataSource.clientFactory),
   }).listen(PORT, () => {
     const gate = auth ? `OAuth (${auth.providerIds.join("+")})` : password ? "password" : "OPEN";
     console.log(

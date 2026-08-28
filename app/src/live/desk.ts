@@ -110,6 +110,10 @@ export function toggleQualifier(query: string, qualifier: string): string {
   return [...without.filter((p) => !siblings.includes(p.toLowerCase())), qualifier].join(" ");
 }
 
+/** Who placed an order, as far as the audit log honestly reaches (`src/observatory/order-origin.ts`).
+ *  `unknown` is the honest default — a bot desk, or an order outside the log's coverage. */
+export type OrderOrigin = "desk" | "alpaca-direct" | "unknown";
+
 export interface DeskActivityEvent {
   readonly orderId: string;
   readonly symbol: string;
@@ -121,6 +125,7 @@ export interface DeskActivityEvent {
   readonly status: string;
   readonly at: string;
   readonly backfilled: boolean;
+  readonly origin: OrderOrigin;
 }
 
 export interface DeskActivity {
