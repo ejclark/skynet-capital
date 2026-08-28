@@ -1,4 +1,6 @@
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
+import type { TradeActivityRecord } from "./activity-record.js";
+import { collapseActivity } from "./activity-store.js";
 import { formatPrice } from "./desk-data.js";
 import { participantInvested, participantUnrealized } from "./participant-card.js";
 import {
@@ -110,4 +112,41 @@ export function deskView(snapshot: ParticipantSnapshot): DeskView {
     },
     positions,
   };
+}
+
+/** One fill/order event on a desk's timeline, formatted. `backfilled` keeps provenance honest —
+ *  the record never implies we watched a trade land when we actually recovered it later. */
+export interface DeskActivityEvent {
+  readonly orderId: string;
+  readonly symbol: string;
+  readonly display: string;
+  readonly side: "buy" | "sell";
+  readonly quantity: number;
+  readonly filled: number;
+  readonly price: string;
+  readonly status: string;
+  readonly at: string;
+  readonly backfilled: boolean;
+}
+
+const ACTIVITY_CAP = 80;
+
+/** The desk's recent activity as data (`/api/desk/:id/activity`): journal lines collapsed to the
+ *  latest state per order (the store's own fold), newest first, capped. */
+export function deskActivityView(records: readonly TradeActivityRecord[]): DeskActivityEvent[] {
+  return collapseActivity(records)
+    .sort((a, b) => (a.at < b.at ? 1 : -1))
+    .slice(0, ACTIVITY_CAP)
+    .map((record) => ({
+      orderId: record.orderId,
+      symbol: record.symbol,
+      display: humanizeOptionSymbol(record.symbol),
+      side: record.side,
+      quantity: record.quantity,
+      filled: record.filledQuantity,
+      price: record.price === undefined ? "—" : formatPrice(record.price),
+      status: record.status,
+      at: record.at,
+      backfilled: record.source === "backfill",
+    }));
 }

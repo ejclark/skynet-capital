@@ -9,6 +9,7 @@ import {
   parseDeskQuery,
   toggleQualifier,
 } from "../live/desk";
+import { TimelineDrawer } from "../shell/timeline-drawer";
 
 /**
  * THE DESK (#738 phase 2c) — `/u/:id` in the shell: identity header, tabs, tiles, and the blotter
@@ -61,7 +62,13 @@ function FilterBar({
   );
 }
 
-function BlotterRow({ position }: { readonly position: DeskPosition }): ReactElement {
+function BlotterRow({
+  position,
+  onTimeline,
+}: {
+  readonly position: DeskPosition;
+  readonly onTimeline: (position: DeskPosition) => void;
+}): ReactElement {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -80,7 +87,9 @@ function BlotterRow({ position }: { readonly position: DeskPosition }): ReactEle
           </button>
         </td>
         <td>
-          <span className="sym">{position.display}</span>
+          <button type="button" className="sym sym-link" onClick={() => onTimeline(position)}>
+            {position.display}
+          </button>
           <span className="sym-sub">{position.detail}</span>
         </td>
         <td className="num">{position.quantity}</td>
@@ -130,6 +139,7 @@ function DeskPage(): ReactElement {
     refetchOnWindowFocus: true,
   });
   const [query, setQuery] = useState("");
+  const [timelineFor, setTimelineFor] = useState<DeskPosition | null>(null);
 
   if (desk.isPending) return <p className="note">Reading the desk…</p>;
   if (desk.isError) return <p className="note">This desk is unreachable — {String(desk.error)}</p>;
@@ -227,7 +237,11 @@ function DeskPage(): ReactElement {
                   </thead>
                   <tbody>
                     {shown.map((position) => (
-                      <BlotterRow key={position.symbol} position={position} />
+                      <BlotterRow
+                        key={position.symbol}
+                        position={position}
+                        onTimeline={setTimelineFor}
+                      />
                     ))}
                   </tbody>
                 </table>
@@ -236,8 +250,17 @@ function DeskPage(): ReactElement {
           )}
         </>
       )}
+      {timelineFor ? (
+        <TimelineDrawer
+          deskId={d.id}
+          symbol={timelineFor.symbol}
+          display={timelineFor.display}
+          onClose={() => setTimelineFor(null)}
+        />
+      ) : null}
       <footer className="obs-foot num">
-        as of {generatedAt} · read-only — trading stays on the server desk for now
+        as of {generatedAt} · click a symbol for its fill timeline · read-only — trading stays on
+        the server desk for now
       </footer>
     </>
   );
