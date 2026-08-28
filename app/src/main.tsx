@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { routeTree } from "./routeTree.gen";
 import "./styles/board.css";
+import "./styles/collections.css";
 import "./styles/compare.css";
 import "./styles/decisions.css";
 import "./styles/desk.css";

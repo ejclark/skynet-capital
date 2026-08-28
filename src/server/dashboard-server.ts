@@ -1,4 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { browseCollections, unshelved } from "../discovery/collections.js";
+import { collectionsJsonView } from "../observatory/collections-json-view.js";
 import {
   type NavContext,
   type NavView,
@@ -138,6 +140,20 @@ async function serveJsonApi(
 ): Promise<boolean> {
   if (path === "/api/wire") {
     await serveWireJson(res, config, Boolean(config.submitFeedback));
+    return true;
+  }
+  if (path === "/api/collections") {
+    const collections = browseCollections();
+    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+    res.end(
+      JSON.stringify(
+        collectionsJsonView(
+          collections,
+          unshelved(collections),
+          deskIndex(config.hub.getState().participants),
+        ),
+      ),
+    );
     return true;
   }
   if (path === "/api/board") {
