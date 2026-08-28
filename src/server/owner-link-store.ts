@@ -137,16 +137,20 @@ type OwnableParticipant = { readonly id: string; readonly ownerEmail?: string };
 
 /** The linked half of the precedence rule, shared by `resolveOwnedId` and
  *  `resolveOwnedParticipantIds` — a link only counts against a participant that carries no stamp
- *  of its own, so its result can never collide with a stamped id. */
-function findUnstampedLinkedId(
+ *  of its own, so its result can never collide with a stamped id. Every such link counts, not just
+ *  the first: the Account-links admin page can link several unstamped accounts (bots included) to
+ *  one email, and all of them are meant to be manageable, not just whichever was linked earliest
+ *  (2026-08-28, live: three accounts linked to one email collapsed to one because this only ever
+ *  returned its first match). */
+function findUnstampedLinkedIds(
   participants: readonly OwnableParticipant[],
   links: readonly OwnerLink[],
   wantedLowercased: string,
-): string | undefined {
+): string[] {
   return links
     .filter((l) => l.email === wantedLowercased)
     .map((l) => l.participantId)
-    .find((id) => participants.some((p) => p.id === id && !p.ownerEmail));
+    .filter((id) => participants.some((p) => p.id === id && !p.ownerEmail));
 }
 
 export function resolveOwnedId(
@@ -157,15 +161,17 @@ export function resolveOwnedId(
   const wanted = email.toLowerCase();
   const stamped = participants.find((p) => p.ownerEmail?.toLowerCase() === wanted);
   if (stamped) return stamped.id;
-  return findUnstampedLinkedId(participants, links, wanted);
+  return findUnstampedLinkedIds(participants, links, wanted)[0];
 }
 
 /**
- * Every id `email` may act on — the UNION of every stamped `Participant.ownerEmail` match and the
- * one linked account, never either/or (Eric, 2026-08-27, live: a member with a stamped human
- * account AND a separately `/claim`-linked bot only ever saw one of the two). Safe to union
- * unconditionally: a link only counts against an UNSTAMPED participant, so it can never collide
- * with a stampedId, and a stray link still can't redirect an already-stamped one.
+ * Every id `email` may act on — the UNION of every stamped `Participant.ownerEmail` match and
+ * every linked account, never either/or (Eric, 2026-08-27, live: a member with a stamped human
+ * account AND a separately `/claim`-linked bot only ever saw one of the two) and never just the
+ * first link (2026-08-28, live: three accounts linked to one email via the Account-links admin
+ * page collapsed to whichever was linked earliest). Safe to union unconditionally: a link only
+ * counts against an UNSTAMPED participant, so it can never collide with a stampedId, and a stray
+ * link still can't redirect an already-stamped one.
  */
 export function resolveOwnedParticipantIds(
   participants: readonly OwnableParticipant[],
@@ -176,8 +182,7 @@ export function resolveOwnedParticipantIds(
   const stampedIds = participants
     .filter((p) => p.ownerEmail?.toLowerCase() === wanted)
     .map((p) => p.id);
-  const linkedId = findUnstampedLinkedId(participants, links, wanted);
-  return linkedId ? [...stampedIds, linkedId] : stampedIds;
+  return [...stampedIds, ...findUnstampedLinkedIds(participants, links, wanted)];
 }
 
 /** Build the store from the environment (`SKYNET_OWNER_LINKS_FILE`, default `data/owner-links.json`). */
