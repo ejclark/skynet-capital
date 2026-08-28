@@ -222,3 +222,11 @@ committed `package.json`, so the repo's `package.json` version will lag; that is
 
 To restore the committed bump, the release identity needs a branch-protection bypass on `main` (an
 Eric-only governance change) — then `@semantic-release/git` can be added back.
+
+## House gotchas (recurring traps, moved from CLAUDE.md 2026-08-28)
+
+- **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever
+  (the recurring TS1005 trap: the embedded script lives inside a template string, so those tokens
+  terminate or interpolate the host literal).
+- **Honor `prefers-reduced-motion` for anything animated** — every animated surface needs the
+  reduced-motion path, not just the cinematic ones.

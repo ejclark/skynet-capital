@@ -58,3 +58,27 @@ For these: `scripts/ship.sh open` to create the PR, but do **not** arm auto-merg
 
 Prefer one platter PR over many (fewer pushes, fewer opens, fewer merges = less of every finite
 resource). Assemble athlete branches locally with `git`, verify once, `ship open` once.
+
+## Mechanics & traps (moved here from CLAUDE.md, 2026-08-28 — this skill owns the landing detail)
+
+- **No `git stash`, ever.** It has silently dropped stashed edits in this environment (the incident
+  is banked in `docs/LESSONS.md`). Branch-first (`git checkout -B <branch> origin/main` *before
+  editing*) makes stash unnecessary.
+- **Commit subjects are lowercase-led** — commitlint rejects a capitalized first word, including
+  proper nouns ("PRs", "Barad-dûr"). Conventional-Commit types; imperative mood.
+- **PR bodies go over REST (`ship.sh`), never through the GitHub MCP write tools** — those silently
+  strip `<details>`/`<summary>`, so the whole brief lands above the fold while the tool reports
+  success (`docs/LESSONS.md`, 2026-08-25). `ship.sh checkbody` lints the *file*, not what GitHub
+  stored. If a body must go through the MCP tools anyway, keep the below-fold content short, then
+  re-read the PR and count the `<details>` before calling it done.
+- **Promote drafts immediately.** Some Claude Code environments force every PR open as a draft —
+  that is a property of the tool, never a readiness judgment. A lingering draft is a throughput bug
+  twice over: drafts can't auto-merge (silently converting a trivial PR into a request for Eric's
+  attention), and drafts skip `verify` (`docs/LESSONS.md`, 2026-08-14 — draft-by-default once merged
+  code with no CI at all). The moment a PR opens: mark ready + arm auto-merge in the same breath,
+  unless a carve-out genuinely applies.
+- **The merge-arming axis is whose token arms it, not REST-vs-native** (2026-08-22). Native
+  auto-merge lands as the identity that ARMED it; arming with `GITHUB_TOKEN` produces a push that
+  triggers no workflows (GitHub's loop guard) — it took out the deploy, the receipt scan, and the
+  stall audit at once, silently. Arm with a real identity. `node scripts/deploy-lag.mjs` answers
+  "is `main` actually deployed?"; the full story lives in that script's header.
