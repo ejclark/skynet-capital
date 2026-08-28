@@ -47,6 +47,10 @@ function Toggle<T extends string>({
       {options.map(([key, text]) => (
         <button key={key} type="button" aria-pressed={key === value} onClick={() => onPick(key)}>
           <span className="toggle-text">{text}</span>
+          {/* narrow viewports swap in the initial so the pill never renders empty */}
+          <span className="toggle-abbr" aria-hidden="true">
+            {text.slice(0, 1)}
+          </span>
         </button>
       ))}
     </fieldset>

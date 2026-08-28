@@ -231,6 +231,10 @@ a {
   max-width: 880px;
 }
 
+.toggle-abbr {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .frame {
     grid-template-columns: 1fr;
@@ -255,5 +259,13 @@ a {
   }
   .toggle-group .toggle-text {
     display: none;
+  }
+  .toggle-abbr {
+    display: inline;
+  }
+  /* the dot alone carries the connection state — the seq text has no room here */
+  .status {
+    font-size: 0;
+    gap: 0;
   }
 }
