@@ -100,8 +100,9 @@ function sameOrigin(req: IncomingMessage): boolean {
   return site === undefined || site === "same-origin" || site === "none";
 }
 
-/** Flatten the store's state and the live roster into what the view renders. */
-function fleetControls(deps: ControlsDeps): FleetControls {
+/** Flatten the store's state and the live roster into what the view renders. Shared with the
+ *  shell's `/api/controls` (#738 phase 8c) so both surfaces read the same truth. */
+export function fleetControls(deps: ControlsDeps): FleetControls {
   const state: ControlsState = deps.store.load();
   return {
     allSuspended: state.allSuspended === true,
@@ -115,12 +116,27 @@ function fleetControls(deps: ControlsDeps): FleetControls {
   };
 }
 
-type ActionResult = { ok: boolean; notice: DeskNotice };
+export type ControlsActionResult = { ok: boolean; notice: DeskNotice };
 
-/** One POST = one switch flipped. The action surface is exactly what the page renders — a control
- *  plane accepts nothing it doesn't show. Unknown actions/bots refuse loudly, never guess. */
-function applyAction(form: URLSearchParams, editor: string, deps: ControlsDeps): ActionResult {
-  const action = form.get("action") ?? "";
+/** The HTML form's adapter over the shared action authority below. */
+function applyAction(
+  form: URLSearchParams,
+  editor: string,
+  deps: ControlsDeps,
+): ControlsActionResult {
+  return applyControlsAction(form.get("action") ?? "", form.get("bot") ?? undefined, editor, deps);
+}
+
+/** One call = one switch flipped — THE action authority, shared by this form and the shell's
+ *  `/api/controls` (#738 phase 8c). The action surface is exactly what the page renders — a
+ *  control plane accepts nothing it doesn't show. Unknown actions/bots refuse loudly, never
+ *  guess. */
+export function applyControlsAction(
+  action: string,
+  botId: string | undefined,
+  editor: string,
+  deps: ControlsDeps,
+): ControlsActionResult {
   const at = deps.now?.() ?? new Date();
   try {
     if (action === "suspend-all" || action === "resume-all") {
@@ -135,8 +151,7 @@ function applyAction(form: URLSearchParams, editor: string, deps: ControlsDeps):
       return { ok: false, notice: { kind: "error", message: "Unknown action." } };
     }
 
-    const botId = form.get("bot") ?? "";
-    if (!deps.bots().some((b) => b.id === botId)) {
+    if (botId === undefined || !deps.bots().some((b) => b.id === botId)) {
       return { ok: false, notice: { kind: "error", message: "Unknown bot." } };
     }
     const suspended = action === "suspend";
@@ -151,6 +166,6 @@ function applyAction(form: URLSearchParams, editor: string, deps: ControlsDeps):
   }
 }
 
-function okNote(message: string): ActionResult {
+function okNote(message: string): ControlsActionResult {
   return { ok: true, notice: { kind: "ok", message } };
 }
