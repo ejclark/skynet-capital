@@ -45,7 +45,9 @@ function ownerEmail(
   controls: ControlsDeps | undefined,
   session: Session | undefined,
 ): string | undefined {
-  const email = session?.email;
+  // Lowercased to match requireOwner's check exactly — sessions arrive pre-lowercased today,
+  // but the two surfaces must never be able to disagree about who an owner is.
+  const email = session?.email.toLowerCase();
   return controls && email && controls.isOwner(email) ? email : undefined;
 }
 
