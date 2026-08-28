@@ -8,6 +8,7 @@ import { isAllowedTimezone } from "../participants/allowed-timezones.js";
 import type { Participant, ParticipantKind } from "../participants/participant.js";
 import type { ParticipantStore } from "../participants/participant-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
+import { personaClasses } from "./persona-classes.js";
 
 /** What the `/add` form submits. Credentials must be a working Alpaca **paper** key. */
 export interface AddParticipantInput {
@@ -105,8 +106,15 @@ export class ParticipantService {
       return { ok: false, error: "Both an Alpaca key and secret are required." };
     }
     const kind: ParticipantKind = input.kind ?? "human";
-    if (kind === "bot" && !input.personaId?.trim()) {
+    const personaId = kind === "bot" ? input.personaId?.trim() : undefined;
+    if (kind === "bot" && !personaId) {
       return { ok: false, error: "A bot account needs a personaId." };
+    }
+    // The forms only ever offer registry classes (radio inputs / the shell's class picker), but
+    // this value BECOMES the participant id — a raw POST could otherwise mint an account under an
+    // arbitrary slug no persona will ever drive. Same server-side re-check as the timezone below.
+    if (personaId && !personaClasses().some((c) => c.id === personaId)) {
+      return { ok: false, error: `"${personaId}" isn't one of the offered bot classes.` };
     }
     const timezone = input.timezone?.trim();
     // The /add form only ever submits a value from the controlled list (or none) — this rejects
@@ -117,7 +125,7 @@ export class ParticipantService {
       return { ok: false, error: `"${timezone}" isn't one of the offered time zones.` };
     }
 
-    const id = kind === "bot" ? (input.personaId as string) : `human-${slugify(displayName)}`;
+    const id = kind === "bot" ? (personaId as string) : `human-${slugify(displayName)}`;
     if (this.deps.store.has(id) || this.deps.findRosterParticipant?.(id)) {
       // Says what to do next, not just "no" (#546/#558): a member whose account predates the
       // connect form lands here, and re-adding is the wrong remedy for either a dead key
@@ -133,9 +141,13 @@ export class ParticipantService {
       displayName,
       kind,
       credentials: this.credentialsFrom(input.apiKey, input.apiSecret),
-      ...(kind === "bot" && input.personaId ? { personaId: input.personaId.trim() } : {}),
+      ...(personaId ? { personaId } : {}),
       ...(timezone ? { timezone } : {}),
-      ...(kind === "human" && input.ownerEmail ? { ownerEmail: input.ownerEmail } : {}),
+      // Humans AND bots adopt the adder as owner. An unclaimed bot has nobody for
+      // `refuseRotation`'s store tier to check against, so ANY signed-in member could silently
+      // swap a member-added bot's credentials (2026-08-28) — the stamp closes that the same way
+      // it always has for humans.
+      ...(input.ownerEmail ? { ownerEmail: input.ownerEmail } : {}),
     };
 
     const verified = await this.verify(participant);
@@ -318,8 +330,10 @@ export class ParticipantService {
         };
       }
       return { ok: true, snapshot };
-    } catch (error) {
-      return { ok: false, error: `Could not reach Alpaca: ${String(error)}` };
+    } catch {
+      // A fixed sentence, never the exception text: a raw error can carry internals (hostnames,
+      // proxy banners) that don't belong in member-facing copy.
+      return { ok: false, error: "Could not reach Alpaca to verify that key. Try again shortly." };
     }
   }
 }
