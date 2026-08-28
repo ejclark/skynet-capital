@@ -3,7 +3,12 @@ import type { NavContext } from "../observatory/dashboard-shell.js";
 import { ALLOWED_TIMEZONES } from "../participants/allowed-timezones.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import { botControlsBlock, handleBotControl } from "./account-bot-controls.js";
-import { type AccountFormContext, suffix } from "./account-form-context.js";
+import {
+  type AccountFormContext,
+  type OwnedAccountOption,
+  suffix,
+} from "./account-form-context.js";
+import { accountIdentity, accountSwitcher } from "./account-page-header.js";
 import { handleAccountRotate, rotateBlock } from "./account-rotate-block.js";
 import type {
   RemoveAccountInput,
@@ -15,11 +20,7 @@ import type { Session } from "./auth/session.js";
 import type { ControlsDeps } from "./controls-form.js";
 import { railedShell } from "./page-shell.js";
 import type { RotateCredentialsInput, RotateResult } from "./participant-service.js";
-import {
-  handleSelfServiceForm,
-  type OwnedAccountOption,
-  submitSelfServiceForm,
-} from "./self-service-forms.js";
+import { handleSelfServiceForm, submitSelfServiceForm } from "./self-service-forms.js";
 
 /**
  * DAY-2 ACCOUNT FORMS — `/account` (edit your profile) and `/account/remove` (leave the board).
@@ -188,24 +189,6 @@ function timezoneOptions(current: string | undefined): string {
   return `<option value="${KEEP}">— keep current setting —</option><option value="">No preference — show UTC-relative</option>${zones}`;
 }
 
-/**
- * The switcher between the caller's own accounts — rendered only when there's more than one to
- * pick from. A real navigation (links to `/account?id=<id>`), never an inline form field, so the
- * profile-edit form and the remove form below always agree on the same account: switching is a
- * page load, not a value the two forms could silently drift apart on.
- */
-function accountSwitcher(ctx: AccountFormContext): string {
-  if (ctx.ownedAccounts.length <= 1) return "";
-  const pills = ctx.ownedAccounts
-    .map((a) =>
-      a.id === ctx.requesterId
-        ? `<b>${escapeHtml(a.displayName)}</b>`
-        : `<a href="/account?id=${encodeURIComponent(a.id)}${ctx.key ? `&key=${encodeURIComponent(ctx.key)}` : ""}">${escapeHtml(a.displayName)}</a>`,
-    )
-    .join(" · ");
-  return `<p class="note" style="margin:0 0 18px">Managing: ${pills}</p>`;
-}
-
 function settingsFormHtml(ctx: AccountFormContext): string {
   const key = ctx.key;
   const id = ctx.requesterId ?? "";
@@ -220,6 +203,7 @@ function settingsFormHtml(ctx: AccountFormContext): string {
     ctx.nav,
     `<h1>Manage your account</h1>
 ${accountSwitcher(ctx)}
+${accountIdentity(ctx)}
 <p class="lede">Change how this account appears on the board — its display name and time zone — or
 remove it from the board entirely. Your Alpaca <b>paper</b> account itself is never touched by
 anything on this page; this only changes what Skynet Capital stores and shows.</p>

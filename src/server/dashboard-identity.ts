@@ -1,6 +1,6 @@
+import type { OwnedAccountOption } from "./account-form-context.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
-import type { OwnedAccountOption } from "./self-service-forms.js";
 
 /**
  * Resolve the signed-in viewer to the participant they own (#466) — undefined when no
@@ -42,7 +42,12 @@ function ownedAccountOptions(
   const board = config.hub.getState().participants;
   return ids.map((id) => {
     const found = board.find((p) => p.id === id);
-    return { id, displayName: found?.displayName ?? id, kind: found?.kind ?? "human" };
+    return {
+      id,
+      displayName: found?.displayName ?? id,
+      kind: found?.kind ?? "human",
+      ...(found?.accountNumber ? { accountNumber: found.accountNumber } : {}),
+    };
   });
 }
 
@@ -69,7 +74,12 @@ export function rotatableAccountOptions(
   const board = config.hub.getState().participants;
   const rosterOptions = board
     .filter((p) => rosterIds.has(p.id) && !seen.has(p.id))
-    .map((p) => ({ id: p.id, displayName: p.displayName, kind: p.kind }));
+    .map((p) => ({
+      id: p.id,
+      displayName: p.displayName,
+      kind: p.kind,
+      ...(p.accountNumber ? { accountNumber: p.accountNumber } : {}),
+    }));
   return [...owned, ...rosterOptions];
 }
 

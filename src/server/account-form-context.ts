@@ -1,5 +1,20 @@
 import type { NavContext } from "../observatory/dashboard-shell.js";
-import type { OwnedAccountOption } from "./self-service-forms.js";
+
+/**
+ * One account a caller may act on from the account pages — the switcher's row, and the `/rotate`
+ * picker's option. Lives here rather than in self-service-forms.ts (where it was defined until
+ * #732) because three modules in this cluster consume it and only one of them is that file;
+ * self-service-forms.ts was also sitting exactly on its 300-line arch cap.
+ */
+export interface OwnedAccountOption {
+  readonly id: string;
+  readonly displayName: string;
+  readonly kind: "bot" | "human";
+  /** Alpaca's own account number for this account, when the last board read carried one — what
+   *  `/account` shows beside the name so a member can tell which broker account it is (#732).
+   *  Absent whenever the account read failed or the board is running offline. */
+  readonly accountNumber?: string;
+}
 
 /**
  * What the route layer knows about the caller and the account being edited — shared by

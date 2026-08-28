@@ -13,6 +13,11 @@ export interface AlpacaAccount {
   /** Equity as of the previous trading day's close — the daily-loss breaker's seed source
    *  (`day-open-equity.ts`), independent of any restart during today's session. */
   readonly last_equity?: string;
+  /** The human-readable broker account number (`PA…` on paper) — the identifier Alpaca's own
+   *  dashboard shows, and the only one a member can match their accounts against by eye. `id`
+   *  above is the API's UUID, which appears nowhere they'd recognize. Same payload, no extra
+   *  call. Optional because it's a subset type and older recorded fixtures predate it. */
+  readonly account_number?: string;
 }
 
 /** Alpaca position payload (subset). */
