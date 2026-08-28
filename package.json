@@ -50,6 +50,7 @@
     "shoot:portfolio": "tsx scripts/shoot-portfolio.mjs",
     "shoot:feedback": "tsx scripts/shoot-feedback.mjs",
     "shoot:collections": "tsx scripts/shoot-collections.mjs",
+    "shoot:ops-status": "tsx scripts/shoot-ops-status.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
     "scan:flow": "tsx src/scripts/scan-unusual-flow.ts",

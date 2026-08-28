@@ -38,6 +38,9 @@ export interface NavContext {
    * this — the actual zero-typing fix — had no way in from the app).
    */
   readonly canClaim?: boolean;
+  /** Owner-only: link `/ops-status` — the read-only bots/deploy health panel (#666). Members
+   *  see neither the link nor the page. */
+  readonly canOpsStatus?: boolean;
 }
 
 export interface DashboardViewOptions {
@@ -119,6 +122,11 @@ function renderDrawer(nav: NavContext): string {
   if (nav.canClaim) {
     foot.push(
       `<a class="dnav-link dnav-muted" href="/claim"><span class="dnav-ico" aria-hidden="true">⛓</span><span class="dnav-label">Account links</span></a>`,
+    );
+  }
+  if (nav.canOpsStatus) {
+    foot.push(
+      `<a class="dnav-link dnav-muted" href="/ops-status"><span class="dnav-ico" aria-hidden="true">⚑</span><span class="dnav-label">Ops status</span></a>`,
     );
   }
   foot.push(drawerLink(FEEDBACK_URL, "Feedback", "feedback", nav.active === "feedback"));

@@ -13,6 +13,7 @@ import {
 } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { handleInvite } from "./invite-form.js";
+import { handleOpsStatus } from "./ops-status-routes.js";
 import type { RotateCredentialsInput, RotateResult } from "./participant-service.js";
 import { handleAdd, handleRotate } from "./self-service-forms.js";
 
@@ -39,10 +40,11 @@ function redirectToDeskSettings(
 }
 
 /**
- * The owner-only admin pages — `/invite` (who may sign in) and `/claim` (which account each
- * sign-in owns). Grouped because they share one property: identity comes from the signed session
- * and nowhere else — there is no id in the URL to spoof — and each handler re-checks owner status
- * itself rather than trusting this call site. True when handled.
+ * The owner-only admin/read pages — `/invite` (who may sign in), `/claim` (which account each
+ * sign-in owns), and `/ops-status` (bots/deploy health, read-only). Grouped because they share
+ * one property: identity comes from the signed session and nowhere else — there is no id in the
+ * URL to spoof — and each handler re-checks owner status itself rather than trusting this call
+ * site. True when handled.
  */
 async function tryOwnerPage(
   req: IncomingMessage,
@@ -58,6 +60,10 @@ async function tryOwnerPage(
   }
   if (path === "/claim" && config.claim) {
     await handleClaim(req, res, req.method ?? "GET", session?.email, config.claim, nav);
+    return true;
+  }
+  if (path === "/ops-status" && config.opsStatus) {
+    await handleOpsStatus(res, session?.email, config.opsStatus, nav);
     return true;
   }
   return false;

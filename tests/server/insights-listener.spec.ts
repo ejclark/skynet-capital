@@ -153,6 +153,78 @@ describe("insights listener", () => {
   });
 });
 
+describe("GET /controls — onControlsPoll", () => {
+  /** Same server, no `record`-only helper: this block needs `controls`/`onControlsPoll` too. */
+  async function withControlsListener(
+    config: Parameters<typeof createInsightsListener>[0],
+    run: (base: string) => Promise<void>,
+  ): Promise<void> {
+    const server = createInsightsListener(config);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await run(`http://127.0.0.1:${port}`);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }
+
+  const get = (base: string, auth = true) =>
+    fetch(`${base}/controls`, {
+      headers: auth ? { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET } : {},
+    });
+
+  it("fires on every authenticated poll, controls configured or not", async () => {
+    let polls = 0;
+    await withControlsListener(
+      { record: capturingRecorder().record, onControlsPoll: () => polls++ },
+      async (base) => {
+        expect((await get(base)).status).toBe(404); // controls not configured — still a real poll
+        expect(polls).toBe(1);
+      },
+    );
+
+    polls = 0;
+    await withControlsListener(
+      {
+        record: capturingRecorder().record,
+        controls: () => ({ bots: {} }),
+        onControlsPoll: () => polls++,
+      },
+      async (base) => {
+        expect((await get(base)).status).toBe(200);
+        expect(polls).toBe(1);
+      },
+    );
+  });
+
+  it("never fires on an unauthenticated poll", async () => {
+    let polls = 0;
+    await withControlsListener(
+      { record: capturingRecorder().record, onControlsPoll: () => polls++ },
+      async (base) => {
+        expect((await get(base, false)).status).toBe(401);
+        expect(polls).toBe(0);
+      },
+    );
+  });
+
+  it("a throwing onControlsPoll never fails the response it observes", async () => {
+    await withControlsListener(
+      {
+        record: capturingRecorder().record,
+        controls: () => ({ bots: {} }),
+        onControlsPoll: () => {
+          throw new Error("observability hook exploded");
+        },
+      },
+      async (base) => {
+        expect((await get(base)).status).toBe(200);
+      },
+    );
+  });
+});
+
 describe("resolveInsightsBridgePort", () => {
   it("defaults to 8788", () => {
     expect(resolveInsightsBridgePort({})).toBe(8788);
