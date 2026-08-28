@@ -53,6 +53,18 @@
   --row-py: 11px;
   --tile-py: 14px;
   --stage-gap: 22px;
+
+  /* spatial motion (#738 phase 4b) — two speeds, one easing; reduced-motion zeroes both */
+  --dur-quick: 140ms;
+  --dur-spatial: 260ms;
+  --ease-spatial: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-quick: 0ms;
+    --dur-spatial: 0ms;
+  }
 }
 
 @media (prefers-color-scheme: light) {

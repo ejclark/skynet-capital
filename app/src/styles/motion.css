@@ -1,0 +1,92 @@
+/* SPATIAL MOTION (#738 phase 4b) — dimensional tier 3, restrained. Everything runs on the two
+ * duration tokens in theme.css, which prefers-reduced-motion collapses to 0ms — so this file
+ * needs no media queries of its own and can never move for a viewer who asked it not to.
+ * The grammar: navigation rises INTO place (z toward the eye), sheets slide from their edge,
+ * hover lifts one elevation step. Nothing loops, nothing moves unprompted. */
+
+@keyframes stage-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.stage {
+  animation: stage-enter var(--dur-spatial) var(--ease-spatial) both;
+}
+
+@keyframes sheet-enter {
+  from {
+    transform: translateX(24px);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.drawer {
+  animation: sheet-enter var(--dur-spatial) var(--ease-spatial) both;
+}
+@keyframes scrim-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.drawer-scrim {
+  animation: scrim-enter var(--dur-spatial) ease-out both;
+}
+
+/* hover lift — one elevation step toward the eye, and settle back */
+.desk-tile,
+.trade-link-card,
+.blotter-card,
+.pulse-panel,
+.gate-panel {
+  transition:
+    transform var(--dur-quick) var(--ease-spatial),
+    box-shadow var(--dur-quick) var(--ease-spatial);
+}
+.desk-tile:hover,
+.trade-link-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elev-raised);
+}
+
+/* disclosure — run rows and blotter folds arrive, never pop */
+@keyframes fold-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.cycle-body,
+.row-more td,
+.gate-body {
+  animation: fold-open var(--dur-quick) var(--ease-spatial) both;
+}
+
+/* the view-tab dirty dot breathes in when it appears */
+@keyframes dot-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.view-dirty {
+  animation: dot-in var(--dur-quick) var(--ease-spatial) both;
+}
