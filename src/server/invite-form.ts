@@ -24,7 +24,7 @@ export interface InviteDeps {
   readonly now?: () => Date;
 }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function handleInvite(
   req: IncomingMessage,

@@ -11,6 +11,7 @@ import {
   type SettingsWriteResult,
   saveProfile,
 } from "../live/settings";
+import { AccountLinksCard, GuestListCard, OpsStatusCard } from "../shell/admin-cards";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl } from "../shell/mission-control";
@@ -374,6 +375,9 @@ function SettingsPage(): ReactElement {
       <div id="mission-control">
         <MissionControl />
       </div>
+      <GuestListCard />
+      <AccountLinksCard />
+      <OpsStatusCard />
     </PageFrame>
   );
 }
