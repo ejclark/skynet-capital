@@ -278,11 +278,14 @@ function AccountCard({
         </span>
       </h2>
       {account.hostConfigured ? (
-        <p className="note">
-          This account is configured on the host and rebuilt from the environment every restart —
-          profile edits and removal aren't available here. A dead or regenerated Alpaca key is fixed
-          on <a href={`/rotate?id=${encodeURIComponent(account.id)}`}>the rotate page</a>.
-        </p>
+        <>
+          <p className="note">
+            This account is configured on the host and rebuilt from the environment every restart —
+            profile edits and removal aren't available here. A dead or regenerated Alpaca key is its
+            one self-service fix, below.
+          </p>
+          <RotateSection account={account} />
+        </>
       ) : (
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
@@ -327,7 +330,6 @@ function SettingsPage(): ReactElement {
         </a>
       ))}
       <hr />
-      <a href="/rotate">Rotate credentials</a>
       <a href="/add">Add an account</a>
     </>
   );

@@ -29,6 +29,7 @@ import { serveInfoRoute, serveLearnRoute, serveTradeRoute } from "./dashboard-vi
 import { serveDeskJson } from "./desk-json-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
+import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 import { serveWireRoute } from "./wire-routes.js";
@@ -116,21 +117,6 @@ function serveBoardJson(
 /** The 2026-08-25 fold's legacy bookmarks — each old standalone view 302s into Standings so an
  *  old link still lands somewhere real rather than 404ing. `/leaderboard`'s metric param maps onto
  *  Standings' identically-shaped `?by=`; `/compare`'s `?a=&b=` carries over unchanged. */
-function serveFoldedRedirect(res: ServerResponse, path: string, url: string): boolean {
-  if (path === "/leaderboard") {
-    const by = new URL(url, "http://localhost").searchParams.get("by");
-    res.writeHead(302, { location: by ? `/?by=${by}` : "/" });
-  } else if (path === "/bots-vs-humans") {
-    res.writeHead(302, { location: "/" });
-  } else if (path === "/compare") {
-    res.writeHead(302, { location: `/${new URL(url, "http://localhost").search}` });
-  } else {
-    return false;
-  }
-  res.end();
-  return true;
-}
-
 /** The shell's read-only JSON family (#738) — wire, board, and the desk sub-routes. */
 async function serveJsonApi(
   res: ServerResponse,
@@ -246,7 +232,7 @@ async function serveAuthorizedRoute(
     serveAppShell(res, path);
     return;
   }
-  if (serveFoldedRedirect(res, path, url)) {
+  if (serveLegacyRedirect(res, path, url, req.method ?? "GET")) {
     return;
   }
   if (await trySelfServiceRoute(req, res, path, url, config, session, navFor("add"))) {

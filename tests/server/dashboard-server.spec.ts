@@ -169,7 +169,7 @@ describe("dashboard-server OAuth gate", () => {
     );
   });
 
-  it("serves the Portfolio index at /u listing every account the session owns", async () => {
+  it("redirects the /u portfolio index into app Settings (phase 9a)", async () => {
     const hub = new ObservatoryHub({
       generatedAt: "t",
       collisions: [],
@@ -199,13 +199,13 @@ describe("dashboard-server OAuth gate", () => {
         resolveOwnerIds: (email: string) => (email === "eric@gmail.com" ? ["human-eric"] : []),
       },
       async (base) => {
-        const res = await fetch(`${base}/u`, { headers: { cookie: validCookie() } });
-        expect(res.status).toBe(200);
-        const html = await res.text();
-        expect(html).toContain("Your accounts");
-        expect(html).toContain('href="/u/human-eric"');
-        // The bot isn't owned by this session, so the index never lists it.
-        expect(html).not.toContain('href="/u/news-fader"');
+        // Phase 9a: the owned-accounts list lives on app Settings now.
+        const res = await fetch(`${base}/u`, {
+          headers: { cookie: validCookie() },
+          redirect: "manual",
+        });
+        expect(res.status).toBe(302);
+        expect(res.headers.get("location")).toBe("/app/settings");
       },
     );
   });
