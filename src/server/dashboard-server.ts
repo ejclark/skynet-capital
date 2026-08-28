@@ -26,6 +26,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveInfoRoute, serveLearnRoute, serveTradeRoute } from "./dashboard-view-routes.js";
 import { serveDeskJson } from "./desk-json-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
+import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 import { serveWireJson, serveWireRoute } from "./wire-routes.js";
 
@@ -195,6 +196,9 @@ async function serveAuthorizedRoute(
     return;
   }
   if (await serveTradeApi(req, res, path, config, session)) {
+    return;
+  }
+  if (await serveSettingsApi(req, res, path, config, session)) {
     return;
   }
   // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.

@@ -98,6 +98,9 @@ function RootShell(): ReactElement {
           ))}
         </nav>
         <div className="topbar-actions">
+          <Link to="/settings" className="topnav-link" activeProps={{ "aria-current": "page" }}>
+            Settings
+          </Link>
           <Toggle<Density>
             label="Density"
             value={density}
