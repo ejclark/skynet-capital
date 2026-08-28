@@ -10,6 +10,9 @@ export interface AlpacaAccount {
   readonly cash: string;
   readonly portfolio_value: string;
   readonly status: string;
+  /** Equity as of the previous trading day's close — the daily-loss breaker's seed source
+   *  (`day-open-equity.ts`), independent of any restart during today's session. */
+  readonly last_equity?: string;
 }
 
 /** Alpaca position payload (subset). */

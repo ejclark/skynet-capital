@@ -83,6 +83,53 @@ describe("SafetyController", () => {
     ok.checkContext(ctx({ NVDA: { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" } }));
     expect(ok.blockedReason()).toBeNull();
   });
+
+  describe("seedBaseline — the day-open-equity fix", () => {
+    it("sets the baseline before any recordEquity call, same as a first recordEquity would", () => {
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.seedBaseline(1_000_000);
+      s.recordEquity(940_000); // -6% off the SEEDED baseline, not a fresh one
+      expect(s.blockedReason()).toBe("daily-loss");
+    });
+
+    it("is the whole point: a restart mid-drawdown must not forgive it", () => {
+      // The exact bug this exists to close: equity has already fallen 6% today, then the process
+      // restarts (a new SafetyController). Without seeding, the next recordEquity call would set
+      // a FRESH baseline at the already-dropped level and the breaker would read 0% off it.
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.seedBaseline(1_000_000); // the real day-open number, from Alpaca — survives the restart
+      s.recordEquity(940_000); // the equity the freshly-booted process actually observes first
+      expect(s.blockedReason()).toBe("daily-loss");
+    });
+
+    it("never overwrites an existing baseline — first number in wins, from either source", () => {
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.recordEquity(1_000_000); // recordEquity got there first
+      s.seedBaseline(2_000_000); // must not silently re-anchor
+      s.recordEquity(940_000); // -6% off the ORIGINAL 1,000,000 baseline
+      expect(s.blockedReason()).toBe("daily-loss");
+    });
+
+    it("ignores a non-finite seed rather than poisoning the baseline", () => {
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.seedBaseline(Number.NaN);
+      s.recordEquity(1_000_000); // still open to a real first reading
+      expect(s.riskReading()?.tier).toBe("clear");
+      s.recordEquity(940_000); // -6% off the real 1,000,000 baseline
+      expect(s.blockedReason()).toBe("daily-loss");
+    });
+
+    it("is a no-op after reset clears the baseline, until seeded again", () => {
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.seedBaseline(1_000_000);
+      s.recordEquity(940_000);
+      expect(s.blockedReason()).toBe("daily-loss");
+      s.reset();
+      expect(s.blockedReason()).toBeNull();
+      s.recordEquity(940_000); // no seed this time — 940,000 becomes the fresh baseline
+      expect(s.blockedReason()).toBeNull();
+    });
+  });
 });
 
 /**
@@ -267,6 +314,53 @@ describe("SafetyController — the graduated risk ladder", () => {
       s.recordEquity(at(0.04));
       s.recordEquity(Number.NaN);
       expect(s.riskReading()?.tier).toBe("watch"); // the last good reading stands
+    });
+  });
+
+  describe("seedBaseline — the day-open-equity fix", () => {
+    it("sets the baseline before any recordEquity call, same as a first recordEquity would", () => {
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.seedBaseline(1_000_000);
+      s.recordEquity(940_000); // -6% off the SEEDED baseline, not a fresh one
+      expect(s.blockedReason()).toBe("daily-loss");
+    });
+
+    it("is the whole point: a restart mid-drawdown must not forgive it", () => {
+      // The exact bug this exists to close: equity has already fallen 6% today, then the process
+      // restarts (a new SafetyController). Without seeding, the next recordEquity call would set
+      // a FRESH baseline at the already-dropped level and the breaker would read 0% off it.
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.seedBaseline(1_000_000); // the real day-open number, from Alpaca — survives the restart
+      s.recordEquity(940_000); // the equity the freshly-booted process actually observes first
+      expect(s.blockedReason()).toBe("daily-loss");
+    });
+
+    it("never overwrites an existing baseline — first number in wins, from either source", () => {
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.recordEquity(1_000_000); // recordEquity got there first
+      s.seedBaseline(2_000_000); // must not silently re-anchor
+      s.recordEquity(940_000); // -6% off the ORIGINAL 1,000,000 baseline
+      expect(s.blockedReason()).toBe("daily-loss");
+    });
+
+    it("ignores a non-finite seed rather than poisoning the baseline", () => {
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.seedBaseline(Number.NaN);
+      s.recordEquity(1_000_000); // still open to a real first reading
+      expect(s.riskReading()?.tier).toBe("clear");
+      s.recordEquity(940_000); // -6% off the real 1,000,000 baseline
+      expect(s.blockedReason()).toBe("daily-loss");
+    });
+
+    it("is a no-op after reset clears the baseline, until seeded again", () => {
+      const s = new SafetyController({ maxDailyLossPct: 0.05 });
+      s.seedBaseline(1_000_000);
+      s.recordEquity(940_000);
+      expect(s.blockedReason()).toBe("daily-loss");
+      s.reset();
+      expect(s.blockedReason()).toBeNull();
+      s.recordEquity(940_000); // no seed this time — 940,000 becomes the fresh baseline
+      expect(s.blockedReason()).toBeNull();
     });
   });
 });
