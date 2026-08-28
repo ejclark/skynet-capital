@@ -1,0 +1,134 @@
+/* join the board (#738 phase 9c) — the five steps, the form, the class picker. Tokens only. */
+
+.join-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+  max-width: 640px;
+}
+.join-step {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.join-step summary {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.join-step summary:hover {
+  background: var(--surface-2);
+}
+.join-step-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface-2));
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+.join-step-body {
+  padding: 0 14px 12px 46px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.join-form {
+  max-width: 640px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: var(--panel-p);
+}
+.join-classes {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 0;
+}
+.join-classes legend {
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 0 4px;
+}
+.join-classes legend small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.join-class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.join-class {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: var(--surface-2);
+}
+.join-class:hover {
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+.join-class.sel {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.join-class input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.join-class-name {
+  font-weight: 700;
+  font-size: 13px;
+}
+.join-class-id {
+  font-size: 10px;
+  color: var(--muted);
+}
+.join-class-thesis {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.join-class-legend {
+  font-size: 10.5px;
+  color: var(--accent);
+  font-style: italic;
+}
+.join-done {
+  max-width: 640px;
+  background: var(--surface);
+  border: 1px solid color-mix(in oklab, var(--accent) 50%, var(--border));
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.join-done-icon {
+  font-size: 28px;
+}
+.join-done h2 {
+  margin: 0;
+}
+.join-done p {
+  margin: 0;
+}
