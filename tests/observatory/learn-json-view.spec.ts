@@ -37,16 +37,44 @@ describe("learnJsonView", () => {
     expect(view.courses.find((c) => c.level === 200)?.locked).toBe(false);
   });
 
-  it("counts celebrations and pending checks without consuming them", () => {
+  it("carries the celebration whole — name, code, and the rung it opened", () => {
     const view = learnJsonView({
       earned: [],
       points: 0,
       rank: { title: "Observer" } as never,
       unlockedLevels: new Set([100]),
-      celebrating: [{ milestoneId: "x" } as never],
-      pendingChecks: [{ milestoneId: "y" } as never, { milestoneId: "z" } as never],
+      celebrating: [{ milestoneId: "first-buy", code: "101", orderId: "o1", at: "2026-08-20" }],
+      pendingChecks: [],
     });
-    expect(view.celebrating).toBe(1);
-    expect(view.pendingChecks).toBe(2);
+    const fanfare = view.celebrating[0];
+    expect(fanfare?.milestoneId).toBe("first-buy");
+    expect(fanfare?.code).toBe("101");
+    expect(fanfare?.name.length).toBeGreaterThan(0); // the curriculum title, never a bare code
+    expect(fanfare?.opened?.code).toBe("102"); // the next rung on the ladder
+    expect(view.check).toBeUndefined();
+  });
+
+  it("ships the gate's questions WITHOUT the answer key or the reasons", () => {
+    const view = learnJsonView({
+      earned: [],
+      points: 0,
+      rank: { title: "Observer" } as never,
+      unlockedLevels: new Set([100]),
+      celebrating: [],
+      // first-buy is a real gated milestone in the comprehension bank.
+      pendingChecks: [{ milestoneId: "first-buy", code: "101", orderId: "o1", at: "2026-08-20" }],
+    });
+    expect(view.pendingChecks).toBe(1);
+    const gate = view.check;
+    expect(gate?.milestoneId).toBe("first-buy");
+    expect(gate?.questions.length).toBeGreaterThan(0);
+    expect(gate?.needed).toBe((gate?.total ?? 0) - 1); // one miss still passes
+    for (const q of gate?.questions ?? []) {
+      expect(q.options.length).toBeGreaterThan(1);
+    }
+    // The browser is asked, never trusted: grading fields must not serialize.
+    const wire = JSON.stringify(view);
+    expect(wire.includes("answerIndex")).toBe(false);
+    expect(wire.includes('"why"')).toBe(false);
   });
 });

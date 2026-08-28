@@ -35,20 +35,6 @@
   display: block;
   height: 8px;
 }
-
-.ms-waiting {
-  display: block;
-  background: color-mix(in oklab, var(--accent) 12%, var(--surface));
-  border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--border));
-  border-radius: 10px;
-  padding: 12px 14px;
-  font-size: 12.5px;
-  margin-bottom: 14px;
-}
-.ms-waiting strong {
-  color: var(--accent);
-}
-
 .course {
   background: var(--surface);
   border: 1px solid var(--border);

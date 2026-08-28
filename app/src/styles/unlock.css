@@ -1,0 +1,121 @@
+/* the unlock moment (#738 phase 8b) — celebration banner + comprehension gate. Tokens only.
+   Accent, never the P/L green: an unlock is an achievement, not a market outcome. */
+
+.unlock-banner,
+.check-gate,
+.check-result {
+  border: 1px solid color-mix(in oklab, var(--accent) 50%, var(--border));
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--accent) 11%, var(--surface)),
+    var(--surface)
+  );
+  box-shadow: var(--elev-raised);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  animation: fold-open var(--dur-quick) var(--ease-spatial) both;
+}
+.unlock-banner {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.unlock-rows {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.unlock-eyebrow,
+.check-eyebrow {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.unlock-line {
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.unlock-line b {
+  color: var(--accent);
+}
+.unlock-err {
+  font-size: 12px;
+  color: var(--neg);
+  margin: 0;
+}
+.check-title {
+  font-size: 16px;
+  margin: 6px 0 4px;
+}
+.check-lede,
+.check-verdict {
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+.check-verdict {
+  font-weight: 600;
+}
+.check-qs,
+.check-review {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.check-qs fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.check-qs legend {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.check-opt {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.ans {
+  border-left: 2px solid var(--border);
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.ans.ok {
+  border-left-color: var(--accent);
+}
+.ans-q {
+  font-weight: 600;
+}
+.ans-you.absent {
+  color: var(--muted);
+  font-style: italic;
+}
+.ans-why {
+  color: var(--muted);
+}
+.unlock-banner .btn,
+.check-gate .btn,
+.check-result .btn {
+  width: auto;
+  align-self: flex-start;
+  padding: 8px 16px;
+}

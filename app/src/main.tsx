@@ -21,6 +21,7 @@ import "./styles/research.css";
 import "./styles/settings.css";
 import "./styles/shell.css";
 import "./styles/theme.css";
+import "./styles/unlock.css";
 import "./styles/views.css";
 import "./styles/wire.css";
 
