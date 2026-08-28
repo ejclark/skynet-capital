@@ -1008,3 +1008,11 @@ hits the same wall. Untested: whether a URL from GitHub's own attachment upload 
 (`github.com/user-attachments/assets/...`) is treated differently — if it survives, that is a real
 fix for the mechanism (a shoot script that uploads instead of committing to `docs/shots/`), not just
 a per-PR waiver. _(src: Claude · while: shipping the /account rotate-path fix, PR #661, 2026-08-26)_
+### Chatbot conduit as a right rail in the observatory
+Reviewing the GitHub-IA mockups, Eric flagged the "jump to anything" command palette as redundant
+with the nav rail — but floated the bigger version: a chatbot interface as a persistent right rail,
+which would subsume both palette and search ("becomes unnecessary if we add a chatbot.. perhaps a
+conduit/interface to a chatbot right rail"). Materially larger than a fold-in: needs a model
+conduit, an auth story, and a UI seam (the redesign's PageLayout pane slot is the natural home).
+Revisit once the React shell (issue #738, phase 1) gives it a place to mount.
+_(src: Eric · while: GitHub IA mockup review, 2026-08-28)_
