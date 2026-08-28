@@ -1,6 +1,7 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useConnection } from "../live/connection";
+import { KeyboardChords } from "../shell/keyboard";
 import { type Density, type Theme, usePrefs } from "../shell/prefs";
 
 /**
@@ -109,6 +110,7 @@ function RootShell(): ReactElement {
         </div>
       </header>
       <Outlet />
+      <KeyboardChords />
     </div>
   );
 }

@@ -1,0 +1,76 @@
+/* the keyboard map (#738 phase 4d) — `?` opens it; elevation: overlay. Tokens only. */
+
+.kbd-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+  z-index: 50;
+  display: grid;
+  place-items: center;
+}
+.kbd-help {
+  position: static;
+  width: min(520px, 92vw);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-overlay);
+  padding: 18px 20px;
+  animation: fold-open var(--dur-spatial) var(--ease-spatial) both;
+}
+.kbd-help h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.kbd-help h3 {
+  margin: 0 0 8px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+.kbd-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.kbd-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  padding: 3px 0;
+}
+.kbd-keys {
+  display: inline-flex;
+  gap: 3px;
+  min-width: 52px;
+}
+.kbd-help kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-2);
+}
+.kbd-close {
+  margin-top: 14px;
+  width: 100%;
+  padding: 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 12px;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+@media (max-width: 560px) {
+  .kbd-cols {
+    grid-template-columns: 1fr;
+  }
+}
