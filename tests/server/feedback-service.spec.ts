@@ -1,4 +1,5 @@
 import { issueBody, labelsFor, opaqueMemberId } from "../../src/server/feedback-issue.js";
+import { createFeedbackIssue } from "../../src/server/feedback-service.js";
 
 // The repo is public, so a filed issue's body is public. These specs are the privacy net for
 // Eric's attribution ruling (2026-08-19, amended 2026-08-25): the email must never appear in an
@@ -167,5 +168,58 @@ describe("feedback provenance", () => {
     expect(issueBody({ kind: "idea", title: "t", details: "just a thought" })).not.toContain(
       "skynet-spec",
     );
+  });
+});
+
+// The postmaster feedback lane triggers only on the `issues.labeled` webhook event — GitHub never
+// emits that event for labels present at creation time, only `issues.opened`. #674 shipped with
+// `feedback` baked into the creating POST and was never claimed as a result. The fix: create bare,
+// then label in a second call, so the event the workflow actually listens for fires.
+describe("feedback-service — issue creation never bundles labels into the create call", () => {
+  it("POSTs the issue with no `labels` key, then labels it in a separate call", async () => {
+    const calls: { method: string; url: string; body?: unknown }[] = [];
+    const doFetch = (method: string, url: string, _headers: unknown, body?: unknown) => {
+      calls.push({ method, url, body });
+      if (method === "POST" && url.endsWith("/issues")) {
+        return Promise.resolve({
+          status: 201,
+          body: { html_url: "https://github.com/x/y/issues/1", number: 1 },
+        });
+      }
+      return Promise.resolve({ status: 200, body: {} });
+    };
+    const submit = createFeedbackIssue(
+      { token: "t", repo: "x/y" },
+      doFetch as unknown as typeof import("../../src/http/fetch-json.js").fetchJson,
+    );
+
+    await submit({ kind: "feature", title: "t", details: "d" });
+
+    const createCall = calls.find((c) => c.method === "POST" && c.url.endsWith("/issues"));
+    expect(createCall?.body).not.toHaveProperty("labels");
+
+    const labelCall = calls.find((c) => c.url.endsWith("/issues/1/labels"));
+    expect(labelCall?.method).toBe("POST");
+    expect(labelCall?.body).toEqual({ labels: ["enhancement", "feedback"] });
+  });
+
+  it("still returns ok when labeling fails — a filed-but-unlabeled issue beats a lost report", async () => {
+    const doFetch = (method: string, url: string) => {
+      if (method === "POST" && url.endsWith("/issues")) {
+        return Promise.resolve({
+          status: 201,
+          body: { html_url: "https://github.com/x/y/issues/2", number: 2 },
+        });
+      }
+      return Promise.resolve({ status: 500, body: {} });
+    };
+    const submit = createFeedbackIssue(
+      { token: "t", repo: "x/y" },
+      doFetch as unknown as typeof import("../../src/http/fetch-json.js").fetchJson,
+    );
+
+    const result = await submit({ kind: "bug", title: "t", details: "d" });
+
+    expect(result).toEqual({ ok: true, url: "https://github.com/x/y/issues/2", number: 2 });
   });
 });

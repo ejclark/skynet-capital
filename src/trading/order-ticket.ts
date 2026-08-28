@@ -19,6 +19,9 @@
 
 export type TicketAction = "buy" | "sell";
 
+/** Defaults to "market" everywhere it's optional — every existing caller keeps today's behavior. */
+export type TicketOrderType = "market" | "limit" | "stop";
+
 export interface TicketHolding {
   readonly symbol: string;
   readonly quantity: number;
@@ -30,6 +33,12 @@ export interface TicketRequest {
   readonly symbol: string;
   readonly quantity: number;
   readonly action: TicketAction;
+  readonly orderType?: TicketOrderType;
+  /** Required (and validated) when `orderType` is "limit". */
+  readonly limitPrice?: number;
+  /** Required (and validated) when `orderType` is "stop" — a trigger price only, never a
+   *  guaranteed fill price: once through, the order executes with plain market-order behavior. */
+  readonly stopPrice?: number;
 }
 
 export interface TicketContext {
@@ -52,6 +61,9 @@ export interface TicketPreview {
   readonly action: TicketAction;
   readonly symbol: string;
   readonly quantity: number;
+  readonly orderType: TicketOrderType;
+  readonly limitPrice?: number;
+  readonly stopPrice?: number;
   /** True when the order may be submitted — no refusals. */
   readonly ok: boolean;
   /** Last known price per share, from the held position's mark. Undefined when unheld. */
@@ -71,6 +83,10 @@ const SYMBOL_PATTERN = /^[A-Z]{1,5}(\.[A-Z]{1,2})?$/;
 
 /** A buy that would leave under this share of cash gets a heads-up, not a refusal. */
 const CASH_WARNING_SHARE = 0.9;
+
+/** How far a limit/stop price can sit from the last mark before it's flagged as unusual — a
+ *  heads-up, never a refusal (the member's own requirement: warn, then still allow it). */
+const FAR_FROM_MARKET_SHARE = 0.1;
 
 export function normalizeSymbol(raw: string): string {
   return raw.trim().toUpperCase();
@@ -115,6 +131,63 @@ function validateSell(
   }
 }
 
+/** A limit/stop price must be a real, positive number — anything else refuses outright. */
+function validateOrderPrice(
+  label: "limit" | "stop",
+  price: number | undefined,
+  refusals: string[],
+): price is number {
+  if (price === undefined || !Number.isFinite(price) || price <= 0) {
+    refusals.push(`Enter a ${label} price greater than zero.`);
+    return false;
+  }
+  return true;
+}
+
+/** Unusually far from the last known price gets a heads-up, not a refusal — the order still
+ *  goes through on confirm either way. */
+function warnIfFarFromMarket(
+  price: number,
+  estPrice: number | undefined,
+  warnings: string[],
+): void {
+  if (estPrice === undefined || estPrice <= 0) return;
+  if (Math.abs(price - estPrice) / estPrice > FAR_FROM_MARKET_SHARE) {
+    warnings.push(
+      `This price is more than ${Math.round(FAR_FROM_MARKET_SHARE * 100)}% away from the current market price (~$${estPrice.toFixed(2)}) — it will still be placed if you confirm.`,
+    );
+  }
+}
+
+/** Validates and warns on a priced order type's price; split out to keep `previewOrder` in budget. */
+function validatePricedOrder(
+  orderType: TicketOrderType,
+  request: Pick<TicketRequest, "limitPrice" | "stopPrice">,
+  estPrice: number | undefined,
+  refusals: string[],
+  warnings: string[],
+): void {
+  if (orderType === "limit" && validateOrderPrice("limit", request.limitPrice, refusals)) {
+    warnIfFarFromMarket(request.limitPrice as number, estPrice, warnings);
+  } else if (orderType === "stop" && validateOrderPrice("stop", request.stopPrice, refusals)) {
+    warnIfFarFromMarket(request.stopPrice as number, estPrice, warnings);
+  }
+}
+
+/** The priced field a preview echoes back — only the one matching the order type, when given. */
+function pricedFields(
+  orderType: TicketOrderType,
+  request: Pick<TicketRequest, "limitPrice" | "stopPrice">,
+): Pick<TicketPreview, "limitPrice" | "stopPrice"> {
+  if (orderType === "limit" && request.limitPrice !== undefined) {
+    return { limitPrice: request.limitPrice };
+  }
+  if (orderType === "stop" && request.stopPrice !== undefined) {
+    return { stopPrice: request.stopPrice };
+  }
+  return {};
+}
+
 function validateBuy(
   notional: number | undefined,
   cash: number,
@@ -157,12 +230,15 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
   }
   validateQuantity(quantity, refusals);
 
+  const orderType = request.orderType ?? "market";
   const held = context.positions.find((p) => p.symbol === symbol);
   const estPrice = markPrice(held);
   const estNotional =
     estPrice !== undefined && Number.isFinite(quantity) && quantity > 0
       ? estPrice * quantity
       : undefined;
+
+  validatePricedOrder(orderType, request, estPrice, refusals, warnings);
 
   if (request.action === "sell") {
     validateSell(quantity, held, refusals, warnings);
@@ -187,6 +263,8 @@ export function previewOrder(request: TicketRequest, context: TicketContext): Ti
     action: request.action,
     symbol,
     quantity,
+    orderType,
+    ...pricedFields(orderType, request),
     ok: refusals.length === 0,
     ...(estPrice !== undefined ? { estPrice } : {}),
     ...(estNotional !== undefined ? { estNotional } : {}),

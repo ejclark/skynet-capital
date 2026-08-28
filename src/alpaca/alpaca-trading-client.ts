@@ -10,6 +10,9 @@ export interface AlpacaAccount {
   readonly cash: string;
   readonly portfolio_value: string;
   readonly status: string;
+  /** Equity as of the previous trading day's close — the daily-loss breaker's seed source
+   *  (`day-open-equity.ts`), independent of any restart during today's session. */
+  readonly last_equity?: string;
 }
 
 /** Alpaca position payload (subset). */
@@ -29,16 +32,27 @@ export interface AlpacaOrder {
   readonly qty: string;
   readonly side: Side;
   readonly status: string;
+  /** "market" | "limit" | "stop" | ... — echoed back by the broker as submitted. */
+  readonly type?: string;
+  readonly limit_price?: string | null;
+  readonly stop_price?: string | null;
   readonly filled_qty?: string;
   readonly filled_avg_price?: string | null;
   readonly submitted_at?: string;
   readonly filled_at?: string | null;
+  readonly canceled_at?: string | null;
 }
 
 export interface PlaceOrderParams {
   readonly symbol: string;
   readonly qty: number;
   readonly side: Side;
+  /** Defaults to "market" — every existing caller that omits this keeps today's behavior. */
+  readonly type?: "market" | "limit" | "stop";
+  /** Required when `type` is "limit". */
+  readonly limit_price?: number;
+  /** Required when `type` is "stop". */
+  readonly stop_price?: number;
 }
 
 /** Shared by every Alpaca client wrapper: non-2xx becomes a typed AlpacaApiError. */
@@ -77,16 +91,29 @@ export class AlpacaTradingClient {
    * One page of order history, newest first. `until` (an ISO timestamp, exclusive, matched on
    * submission time) is the pagination cursor: pass the previous page's oldest `submitted_at` to
    * walk arbitrarily far back — Alpaca caps `limit` at 500 per request but keeps the full record.
+   * `status` defaults to "all" (today's behavior); pass "open" for the Open Orders panel — Alpaca
+   * is the store of record for a pending order, so there is nothing else to maintain here.
    */
-  async listOrders(params: { limit?: number; until?: string } = {}): Promise<AlpacaOrder[]> {
+  async listOrders(
+    params: { limit?: number; until?: string; status?: "open" | "closed" | "all" } = {},
+  ): Promise<AlpacaOrder[]> {
     const query = new URLSearchParams({
-      status: "all",
+      status: params.status ?? "all",
       limit: String(params.limit ?? 15),
       direction: "desc",
       nested: "false",
       ...(params.until ? { until: params.until } : {}),
     });
     return ensureOk<AlpacaOrder[]>(await this.transport.get(`/v2/orders?${query.toString()}`));
+  }
+
+  /** Cancels a still-open order. Alpaca returns 204 on success; a filled/already-canceled order
+   *  (or an unknown id) throws `AlpacaApiError`, same as any other non-2xx response. */
+  async cancelOrder(id: string): Promise<void> {
+    const response = await this.transport.delete(`/v2/orders/${id}`);
+    if (response.status < 200 || response.status >= 300) {
+      throw new AlpacaApiError(response.status, response.body);
+    }
   }
 
   /** Market clock — whether the market is currently open. */
@@ -96,12 +123,18 @@ export class AlpacaTradingClient {
   }
 
   async placeOrder(params: PlaceOrderParams): Promise<AlpacaOrder> {
+    const type = params.type ?? "market";
     const response = await this.transport.post("/v2/orders", {
       symbol: params.symbol,
       qty: params.qty,
       side: params.side,
-      type: "market",
-      time_in_force: "day",
+      type,
+      // A held (limit/stop) order must outlive the trading day it was placed on — a stop-loss
+      // that silently expired overnight wouldn't be protecting anything. Market orders keep the
+      // existing "day" behavior unchanged.
+      time_in_force: type === "market" ? "day" : "gtc",
+      ...(params.limit_price !== undefined ? { limit_price: params.limit_price } : {}),
+      ...(params.stop_price !== undefined ? { stop_price: params.stop_price } : {}),
     });
     return ensureOk<AlpacaOrder>(response);
   }

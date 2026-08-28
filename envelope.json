@@ -1,5 +1,6 @@
 {
   "$comment": "The autonomous-lane build envelope — the SINGLE source of truth for what an unattended Claude session may not change. Prose copies (CLAUDE.md, governor/SKILL.md, ship/SKILL.md, orient.md) cite this file rather than restating the list; restating it is how the wording drifted before (several copies dropped 'and hard to reverse' from CLAUDE.md's original). Enforced by scripts/envelope-scan.mjs via tests/arch/envelope.spec.ts.",
+  "$diffAwareComment": "Eric, 2026-08-27 — a protected file marked 'diffAware': true is exempt from the hold ONLY when the actual diff is provably safe: every hunk in that file is a pure insertion (git diff-scan.mjs checks git diff line-by-line — no existing line removed or changed) AND no added line introduces a new mutating broker call (.post(/.put(/.delete(/fetch(). Either condition failing means it gates exactly as before. This is diff-shape, not file-content — a rewrite of the same function, even one that reads identically after formatting, is not a pure insertion and stays gated. Marked diffAware only on the order-construction/execution cluster (calibrated against #679-#696's real diffs: 3 of 4 stayed correctly gated — one modified an existing function body, one added a brand-new cancelOrder network call; the fourth, a pure type-shape addition, would have shipped unattended). Auth, credentials, the invite gate, risk guards, playbooks, and workflow/deploy files are deliberately NOT diffAware — those stay hard-gated regardless of diff shape.",
   "lanes": ["feedback/", "research/", "design/"],
   "allowNewRuntimeDeps": false,
   "protected": [
@@ -45,27 +46,33 @@
     },
     {
       "pattern": "src/alpaca/alpaca-trading-client.ts",
-      "why": "the brokerage client that can place orders"
+      "why": "the brokerage client that can place orders",
+      "diffAware": true
     },
     {
       "pattern": "src/alpaca/alpaca-options-client.ts",
-      "why": "the brokerage client that can place option orders"
+      "why": "the brokerage client that can place option orders",
+      "diffAware": true
     },
     {
       "pattern": "src/server/trade-service.ts",
-      "why": "money-moving logic — order submission"
+      "why": "money-moving logic — order submission",
+      "diffAware": true
     },
     {
       "pattern": "src/server/option-trade-service.ts",
-      "why": "money-moving logic — option order submission"
+      "why": "money-moving logic — option order submission",
+      "diffAware": true
     },
     {
       "pattern": "src/trading/order-ticket.ts",
-      "why": "money-moving logic — order construction and sizing"
+      "why": "money-moving logic — order construction and sizing",
+      "diffAware": true
     },
     {
       "pattern": "src/trading/option-ticket.ts",
-      "why": "money-moving logic — option order construction and sizing"
+      "why": "money-moving logic — option order construction and sizing",
+      "diffAware": true
     },
     {
       "pattern": "src/engine/guards.ts",

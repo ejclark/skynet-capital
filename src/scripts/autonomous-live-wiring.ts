@@ -5,6 +5,9 @@
  * `AutonomousTrader`. Pulled out to keep that file's own complexity budget
  * (`scripts/arch-scan.mjs`'s sibling lint gate) — everything here is wiring, no state of its own.
  */
+
+import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
+import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { AutonomousTrader, type TraderMode } from "../autonomous/autonomous-trader.js";
 import {
   type ControlsState,
@@ -12,11 +15,12 @@ import {
   EMPTY_CONTROLS,
 } from "../autonomous/bot-controls.js";
 import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-controls-client.js";
+import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
 import { assessReadiness } from "../autonomous/readiness.js";
 import type { SafetyController } from "../autonomous/safety.js";
-import type { Bot } from "../bots/bot.js";
+import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { RiskConfig } from "../engine/guards.js";
@@ -57,6 +61,46 @@ export async function bootMissionControl(): Promise<{
     );
   }
   return { controls, bootControls: fetched ?? EMPTY_CONTROLS };
+}
+
+/**
+ * Seed the daily-loss breaker from Alpaca's own day-open equity (`last_equity`) — best-effort,
+ * never fatal to boot. The gap this closes: `SafetyController` is constructed fresh on every
+ * process boot, so without this a mid-day restart (this app's whole reason to exist, see
+ * `fly.bots.toml`) quietly re-anchors the breaker to whatever equity it happens to read first,
+ * forgiving the day's drawdown so far. A read failure here simply leaves the baseline unset — the
+ * pre-existing first-`recordEquity` fallback in `safety.ts` takes over exactly as it always has;
+ * this can only make the correct case (a real day-open number) possible, never the fallback worse.
+ */
+export async function seedDailyLossBaseline(
+  bots: readonly Bot[],
+  safety: SafetyController,
+): Promise<void> {
+  try {
+    const perBotEquity = await Promise.all(
+      bots.map(async (bot) => {
+        const client = new AlpacaTradingClient(
+          new FetchAlpacaTradingTransport({
+            baseUrl: bot.credentials.baseUrl ?? ALPACA_PAPER_BASE_URL,
+            apiKey: bot.credentials.apiKey,
+            apiSecret: bot.credentials.apiSecret,
+          }),
+        );
+        return parseDayOpenEquity(await client.getAccount());
+      }),
+    );
+    const seed = fleetDayOpenEquity(perBotEquity);
+    if (seed === null) {
+      console.warn(
+        "[safety] day-open equity unavailable — daily-loss baseline falls back to the first equity reading this process sees",
+      );
+      return;
+    }
+    safety.seedBaseline(seed);
+    console.log(`[safety] daily-loss baseline seeded from day-open equity: $${seed.toFixed(2)}`);
+  } catch (error) {
+    console.warn("[safety] day-open equity seed failed (non-fatal):", error);
+  }
 }
 
 /** The enabled personas with hardcore builds applied and announced — shared by both runners. */

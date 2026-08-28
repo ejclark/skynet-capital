@@ -140,6 +140,15 @@ describe("the trade ticket view", () => {
     expect(html).toContain('name="quantity"');
   });
 
+  it("the share ticket offers Market/Limit/Stop and a price field for it", () => {
+    const html = renderTicketBody({ state: state(), snapshot: ann, tradingEnabled: true });
+    expect(html).toContain('name="ordertype"');
+    expect(html).toContain(">MARKET<");
+    expect(html).toContain(">LIMIT<");
+    expect(html).toContain(">STOP<");
+    expect(html).toContain('name="price"');
+  });
+
   it("option plays render the chain with the chosen strike selected and honest numbers", () => {
     const html = renderTicketBody({
       state: cspState(),

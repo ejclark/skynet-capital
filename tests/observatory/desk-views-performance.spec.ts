@@ -321,7 +321,7 @@ describe("review screen", () => {
     const html = renderTradeReviewBody(snapshot(), preview);
     expect(html).toContain("SELL 10 AAPL · market");
     expect(html).toContain("Estimated proceeds");
-    expect(html).toContain("Cash after (est.)");
+    expect(html).toContain("Estimated cash after order*");
     expect(html).toContain('name="confirm" value="1"');
     expect(html).toContain("Cancel");
   });
@@ -344,5 +344,29 @@ describe("review screen", () => {
 
   it("labels the account as paper, every time", () => {
     expect(renderTradeReviewBody(snapshot(), preview)).toContain("Paper account.");
+  });
+
+  it("shows a limit order's price in the order line and carries it through the confirm form", () => {
+    const limitPreview = previewOrder(
+      { symbol: "AAPL", quantity: 5, action: "buy", orderType: "limit", limitPrice: 118 },
+      { cash: 5_000, positions: snapshot().positions, tradingEnabled: true, isSelf: true },
+    );
+    const html = renderTradeReviewBody(snapshot(), limitPreview);
+    expect(html).toContain("BUY 5 AAPL · limit $118.00/sh");
+    expect(html).toContain('name="ordertype" value="limit"');
+    expect(html).toContain('name="price" value="118"');
+    expect(html).toContain("reaches your limit price or better");
+  });
+
+  it("shows a stop order's price in the order line and carries it through the confirm form", () => {
+    const stopPreview = previewOrder(
+      { symbol: "AAPL", quantity: 5, action: "sell", orderType: "stop", stopPrice: 90 },
+      { cash: 5_000, positions: snapshot().positions, tradingEnabled: true, isSelf: true },
+    );
+    const html = renderTradeReviewBody(snapshot(), stopPreview);
+    expect(html).toContain("SELL 5 AAPL · stop $90.00/sh");
+    expect(html).toContain('name="ordertype" value="stop"');
+    expect(html).toContain('name="price" value="90"');
+    expect(html).toContain("doesn't guarantee the fill price");
   });
 });

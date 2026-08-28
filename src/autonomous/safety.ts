@@ -110,6 +110,23 @@ export class SafetyController {
   }
 
   /**
+   * Seed the day's baseline from a trusted external source (`day-open-equity.ts` — Alpaca's own
+   * `last_equity`) BEFORE the first `recordEquity` call, so a mid-day process restart re-anchors
+   * to the actual day-open number instead of forgiving the drawdown so far. A no-op once a
+   * baseline already exists — from an earlier seed or a `recordEquity` call that beat it here —
+   * because the first number in is the one the breaker must keep faith with; a later "more
+   * accurate" seed silently overwriting it would be exactly the quiet re-anchoring this guards
+   * against, just moved one caller up. Never call after `reset()` without re-seeding: `reset()`
+   * clears the baseline on purpose, the same explicit-human-action boundary as always.
+   */
+  seedBaseline(equity: number): void {
+    if (this.baselineEquity !== null || !Number.isFinite(equity)) return;
+    this.baselineEquity = equity;
+    this.reading = readRiskLadder(equity, equity, this.ladder); // flat by definition
+    this.announce();
+  }
+
+  /**
    * Feed the current account equity. The first value sets the day's baseline; later drops can trip.
    *
    * ORDER IS LOAD-BEARING: every breaker decision is banked BEFORE `announce()` hands control to a

@@ -84,6 +84,12 @@ export const DESK_STYLE = `<style>
   .review-line span:first-child{ color:var(--muted); }
   .review-line span:last-child{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
   .review-actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .review-estimate{ background:var(--surface-2); border:1px solid var(--border); border-radius:11px; padding:14px 16px; margin:4px 0; }
+  .review-estimate-k{ font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  .review-estimate-k sup{ color:var(--accent); }
+  .review-estimate-v{ font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:30px; font-weight:700; line-height:1.15; margin-top:5px; }
+  .review-estimate-basis{ font-size:12px; color:var(--muted); line-height:1.5; margin-top:6px; max-width:56ch; }
+  .review-fineprint{ font-size:11.5px; color:var(--muted); line-height:1.5; margin:-4px 0 0; max-width:64ch; }
   .note-warn{ font-size:12.5px; line-height:1.5; color:var(--text); background:color-mix(in srgb,var(--accent) 8%,var(--surface-2));
     border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border)); border-radius:9px; padding:10px 13px; }
   .note-stop{ font-size:12.5px; line-height:1.5; color:var(--text); background:color-mix(in srgb,var(--neg) 8%,var(--surface-2));

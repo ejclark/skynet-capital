@@ -42,6 +42,10 @@ export class FixtureTradingTransport implements AlpacaTradingTransport {
   post(_path: string, _body: unknown): Promise<JsonResponse> {
     return Promise.resolve({ status: 200, body: {} });
   }
+
+  delete(_path: string): Promise<JsonResponse> {
+    return Promise.resolve({ status: 204, body: null });
+  }
 }
 
 function ok(body: unknown): Promise<JsonResponse> {

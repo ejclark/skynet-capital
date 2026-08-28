@@ -1,5 +1,6 @@
 import type { OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
+import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import {
   type OptionPlayCode,
@@ -13,6 +14,7 @@ import { formatPrice, reviewNotices, ticketContext } from "./desk-data.js";
 import { DESK_STYLE } from "./desk-style.js";
 import { earningsBadge, expirationPrintMark } from "./earnings-chain-badge.js";
 import { renderMilestoneBanner } from "./milestone-banner.js";
+import { openOrdersPanel } from "./open-orders-view.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import { formatCurrency } from "./render-atoms.js";
 import { premiumByStrikeSvg, windowChain } from "./ticket-charts.js";
@@ -55,6 +57,9 @@ export interface TicketViewModel extends DashboardViewOptions {
   /** Earnings calendar behind the chain's proximity badge; defaults to the checked-in table. */
   readonly prints?: readonly EarningsPrint[];
   readonly generatedAt?: string;
+  /** Recent orders (any status) for the Open Orders panel — undefined when no trading client
+   *  is wired for this viewer, distinct from an empty (genuinely no pending orders) array. */
+  readonly openOrders?: readonly AlpacaOrder[];
 }
 
 /** The clock every date-relative render on this page reads — one value, one page. */
@@ -266,9 +271,13 @@ function stockTicket(model: TicketViewModel): string {
         <input name="symbol" value="${escapeHtml(state.symbol ?? "")}" placeholder="AAPL" maxlength="8" autocomplete="off" spellcheck="false"></div>
       <div class="field"><label>${glossLabel("Shares", "whole shares only")}</label>
         <input name="quantity" type="number" min="1" step="1" inputmode="numeric" value="${state.qty}"></div>
+      <div class="field"><label>${glossLabel("Order", "market fills now · limit/stop hold until your price")}</label>
+        <select name="ordertype"><option value="market">MARKET</option><option value="limit">LIMIT</option><option value="stop">STOP</option></select></div>
+      <div class="field"><label>${glossLabel("Price", "limit or stop price — ignored for Market")}</label>
+        <input name="price" type="number" step="0.01" min="0" placeholder="market"></div>
       <div class="field"><button class="btn btn-primary" type="submit"${disabled}>Review order →</button></div>
     </form>
-    <p class="desk-note" style="margin-top:10px">${escapeHtml(state.play.gloss)} Market order, day — you'll see the estimated ${state.play.side === "buy" ? "cost" : "proceeds"} on the review screen before anything is sent.</p>
+    <p class="desk-note" style="margin-top:10px">${escapeHtml(state.play.gloss)} Market fills now; limit holds for your price or better; stop holds until triggered, then fills like a market order. You'll see the estimated ${state.play.side === "buy" ? "cost" : "proceeds"} on the review screen before anything is sent.</p>
   </section>`;
 }
 
@@ -349,6 +358,7 @@ export function renderTicketBody(model: TicketViewModel): string {
     ${starterBar(state, progression)}
     ${playPicker(state, progression)}
     ${ticket}
+    ${openOrdersPanel(model.openOrders)}
     <p class="caveat"><b>Paper account.</b> Real prices, real mechanics, simulated money. Options premiums shown are indicative (bid/ask mid, or last close) — fills settle at the market. Options orders on Alpaca are day-only.</p>
   </section>`;
 

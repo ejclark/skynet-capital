@@ -42,6 +42,7 @@ function transport(
         body: { id: "order-1", symbol: "MSFT260918P00420000", status: "accepted" },
       });
     },
+    delete: (path): Promise<JsonResponse> => inner.delete(path),
   };
 }
 

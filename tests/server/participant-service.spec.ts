@@ -44,6 +44,9 @@ class RejectingTransport implements AlpacaTradingTransport {
   post(): Promise<JsonResponse> {
     return Promise.resolve({ status: 403, body: null });
   }
+  delete(): Promise<JsonResponse> {
+    return Promise.resolve({ status: 403, body: null });
+  }
 }
 
 const emptyBoard = (): DashboardData => ({ generatedAt: "t0", participants: [], collisions: [] });

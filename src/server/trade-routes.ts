@@ -2,16 +2,20 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { ladderNeighbor } from "../domain/progression.js";
 import { type TradeTypeCode, tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
-import { renderTradeReviewBody } from "../observatory/trade-review-view.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
-import { previewOrder, type TicketAction } from "../trading/order-ticket.js";
+import {
+  previewOrder,
+  type TicketAction,
+  type TicketOrderType,
+  type TicketPreview,
+} from "../trading/order-ticket.js";
 import { handleCheckPost } from "./comprehension-routes.js";
 import { handleOptionPost, OPTION_CODES, optionPreviewFromForm } from "./option-order-review.js";
 import { readBody } from "./page-shell.js";
 import { redirectBack, refusalPage, resultRedirect } from "./trade-response-pages.js";
+import { reviewPage } from "./trade-review-page.js";
 import type { DeskTradeResult } from "./trade-service.js";
 import {
-  html,
   playLocked,
   serveTicket,
   type TradeRouteDeps,
@@ -39,6 +43,39 @@ export type { TradeRouteDeps } from "./trade-ticket-route.js";
 
 function parseAction(raw: string | null): TicketAction {
   return raw === "sell" ? "sell" : "buy";
+}
+
+function parseOrderType(raw: string | null): TicketOrderType {
+  return raw === "limit" || raw === "stop" ? raw : "market";
+}
+
+/** Blank, missing, or non-numeric all mean "no price entered" — `previewOrder` refuses a
+ *  limit/stop order with an undefined price rather than treating it as valid input. */
+function parsePrice(raw: string | null): number | undefined {
+  if (raw === null || raw.trim() === "") return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/** The one priced field a request needs, keyed by which order type is selected — split out to
+ *  keep `handleTrade`'s own complexity in budget. */
+function priceFieldFromForm(
+  orderType: TicketOrderType,
+  price: number | undefined,
+): { limitPrice: number | undefined } | { stopPrice: number | undefined } | Record<string, never> {
+  if (orderType === "limit") return { limitPrice: price };
+  if (orderType === "stop") return { stopPrice: price };
+  return {};
+}
+
+/** Same idea for the submit call, but reading the already-reviewed preview's price rather than
+ *  raw form input — the service re-checks fresh numbers, never the browser's own claim. */
+function priceFieldFromPreview(
+  preview: TicketPreview,
+): { limitPrice: number } | { stopPrice: number } | Record<string, never> {
+  if (preview.limitPrice !== undefined) return { limitPrice: preview.limitPrice };
+  if (preview.stopPrice !== undefined) return { stopPrice: preview.stopPrice };
+  return {};
 }
 
 // --- GET: the ticket view ---------------------------------------------------
@@ -104,6 +141,29 @@ async function handleAckPost(
   return true;
 }
 
+/**
+ * The Open Orders panel's Cancel button — handled with the wheels toggle and the ack claim,
+ * before anything order-shaped, for the same reason: a cancel is not itself an order. A
+ * cancel that the broker refuses (already filled, unknown id) is swallowed — the order's real
+ * current status is whatever the next render's live `listOrders` call says, never a claim this
+ * route makes on its own. True = handled.
+ */
+async function handleCancelOrderPost(
+  res: ServerResponse,
+  form: URLSearchParams,
+  deps: TradeRouteDeps,
+  requesterId: string,
+): Promise<boolean> {
+  const orderId = form.get("cancelOrder");
+  if (orderId === null) return false;
+  const client = deps.tradingClientFor?.(requesterId);
+  if (client) {
+    await client.cancelOrder(orderId).catch(() => undefined);
+  }
+  redirectBack(res, form);
+  return true;
+}
+
 /** Handle `/trade` — GET renders the ticket, POST reviews/executes. */
 export async function handleTrade(
   req: IncomingMessage,
@@ -140,6 +200,7 @@ export async function handleTrade(
   if (
     (await handleWheelsPost(res, form, deps, deps.requesterId)) ||
     (await handleAckPost(res, form, deps, deps.requesterId)) ||
+    (await handleCancelOrderPost(res, form, deps, deps.requesterId)) ||
     (await handleCheckPost(res, form, deps, deps.requesterId))
   ) {
     return;
@@ -174,25 +235,28 @@ export async function handleTrade(
     return;
   }
 
+  const orderType = parseOrderType(form.get("ordertype"));
+  const price = parsePrice(form.get("price"));
   const preview = previewOrder(
     {
       symbol: form.get("symbol") ?? "",
       quantity: Number(form.get("quantity") ?? Number.NaN),
       action,
+      orderType,
+      ...priceFieldFromForm(orderType, price),
     },
     ticketContext(snapshot, { tradingEnabled: deps.tradingEnabled, isSelf: true }),
   );
 
   const confirmed = form.get("confirm") === "1";
   if (!(confirmed && preview.ok)) {
-    html(
-      res,
-      200,
-      deps.document(
-        "Review order — Skynet Capital",
-        renderTradeReviewBody(snapshot, preview, { nav: deps.nav, isSelf: true }),
-      ),
-    );
+    await reviewPage(res, {
+      title: "Review order — Skynet Capital",
+      snapshot,
+      preview,
+      deps,
+      requesterId: deps.requesterId,
+    });
     return;
   }
 
@@ -206,23 +270,23 @@ export async function handleTrade(
       symbol: preview.symbol,
       quantity: preview.quantity,
       action: preview.action,
+      orderType: preview.orderType,
+      ...priceFieldFromPreview(preview),
     },
     deps.requesterId,
   );
   if (!result.ok) {
     // The service refused on fresh numbers the browser never saw — show its reasons, not ours.
-    html(
-      res,
-      200,
-      deps.document(
-        "Order refused — Skynet Capital",
-        renderTradeReviewBody(
-          snapshot,
-          { ...preview, ok: false, refusals: result.refusals },
-          { nav: deps.nav, isSelf: true },
-        ),
-      ),
-    );
+    await reviewPage(res, {
+      title: "Order refused — Skynet Capital",
+      snapshot,
+      preview: { ...preview, ok: false, refusals: result.refusals },
+      deps,
+      requesterId: deps.requesterId,
+      // The ticket rules passed this order a moment ago — only the broker's fresh numbers said
+      // no, so it still deserves the same priced figures the member just confirmed against.
+      quotable: true,
+    });
     return;
   }
   resultRedirect(res, snapshot.id, true);

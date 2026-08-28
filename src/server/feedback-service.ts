@@ -20,6 +20,8 @@ import {
 } from "./feedback-issue.js";
 import { githubErrorMessage, githubHeaders } from "./github-api.js";
 
+type DoFetch = typeof fetchJson;
+
 // Re-exported so every existing consumer keeps one import site. The shapes live with the module
 // that decides what an issue SAYS, which is also what breaks the import cycle between the two.
 export type { FeedbackInput, FeedbackKind };
@@ -48,29 +50,58 @@ function resolveImageUrls(
   return uploadFeedbackImages(input.images, config, memberId);
 }
 
-/** Build the bound submit function that POSTs a GitHub issue. Live path (uses global fetch). */
-function createFeedbackIssue(config: FeedbackConfig): SubmitFeedback {
+/**
+ * Labels are applied in a SEPARATE call after the issue exists, never inline on the creating POST.
+ * `postmaster.yml`'s feedback lane triggers only on the `issues.labeled` webhook event — GitHub
+ * never emits that event for labels present at creation time, only `issues.opened`. An issue filed
+ * with `labels` baked into the create call is claimed by nothing: it sits open, looking triaged,
+ * while the build lane that's supposed to pick it up never even sees it fire (found on #674, which
+ * carried `feedback` from the moment it was opened and was never claimed). Splitting the calls
+ * restores the event the workflow is actually listening for.
+ */
+async function attachLabels(
+  number: number,
+  labels: readonly string[],
+  config: FeedbackConfig,
+  doFetch: DoFetch,
+): Promise<void> {
+  if (labels.length === 0) return;
+  await doFetch(
+    "POST",
+    `https://api.github.com/repos/${config.repo}/issues/${number}/labels`,
+    githubHeaders(config.token),
+    { labels },
+  ).catch(() => undefined);
+}
+
+/** Build the bound submit function that POSTs a GitHub issue. Live path (uses global fetch);
+ *  `doFetch` is overridable so specs can assert the create-then-label call sequence directly. */
+export function createFeedbackIssue(
+  config: FeedbackConfig,
+  doFetch: DoFetch = fetchJson,
+): SubmitFeedback {
   return async (input) => {
     const title = input.title.trim();
     if (!title) return { ok: false, error: "Please add a short title so we know what it's about." };
     try {
       const imageUrls = await resolveImageUrls(input, config);
-      const res = await fetchJson(
+      const res = await doFetch(
         "POST",
         `https://api.github.com/repos/${config.repo}/issues`,
         githubHeaders(config.token),
         {
           title: titleFor({ ...input, title }),
           body: issueBody(input, imageUrls),
-          labels: labelsFor(input),
         },
       );
       if (res.status === 201 && res.body && typeof res.body === "object") {
         const body = res.body as { html_url?: string; number?: number };
+        const number = body.number ?? 0;
+        if (number) await attachLabels(number, labelsFor(input), config, doFetch);
         return {
           ok: true,
           url: body.html_url ?? `https://github.com/${config.repo}/issues`,
-          number: body.number ?? 0,
+          number,
         };
       }
       return { ok: false, error: githubErrorMessage(res) };
