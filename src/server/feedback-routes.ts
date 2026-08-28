@@ -19,18 +19,13 @@ import {
 } from "../observatory/feedback-view.js";
 import type { NavContext } from "../observatory/render-dashboard.js";
 import type { Session } from "./auth/session.js";
-import {
-  type CoachTurn,
-  type FeedbackSpec,
-  handleFeedbackCoach,
-  toSpec,
-} from "./feedback-coach.js";
+import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
 import type { FollowupResult, SubmitFollowup } from "./feedback-followup.js";
-import { type FeedbackImageInput, parseImages } from "./feedback-images.js";
+import { feedbackInputFromForm, kindFromForm } from "./feedback-form-input.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { type FeedbackLogEntry, feedbackLogEntry } from "./feedback-log.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
-import type { FeedbackInput, FeedbackKind, FeedbackResult } from "./feedback-service.js";
+import type { FeedbackInput, FeedbackResult } from "./feedback-service.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
 import { readBody, shellDocument } from "./page-shell.js";
 
@@ -90,47 +85,6 @@ function throttled(key: string, now = Date.now(), windowMs = 600_000, max = 5): 
   recent.push(now);
   feedbackHits.set(key, recent);
   return false;
-}
-
-/**
- * The build spec as it comes back off the form. It rides a hidden field, so it is member-editable
- * like every other field — `toSpec` re-normalizes it server-side (bounded strings, no backticks,
- * and `spec-complete` re-earned rather than asserted), so a hand-crafted POST cannot inject
- * markdown into a public issue body. What a forged spec CAN do is claim curation; that is bounded
- * by `scripts/envelope-scan.mjs`, which no prompt or payload can argue past.
- */
-function specFromForm(raw: string | null): { spec: FeedbackSpec } | undefined {
-  if (!raw?.trim()) return undefined;
-  try {
-    return { spec: toSpec(JSON.parse(raw.slice(0, 8000)) as unknown) };
-  } catch {
-    return undefined;
-  }
-}
-
-/** Attached screenshots off the hidden `images` field — bounded/sanitized by `parseImages`
- *  (feedback-images.ts). Wrapped the same way as `specFromForm` so the spread below never
- *  branches on its own. */
-function imagesFromForm(raw: string | null): { images: readonly FeedbackImageInput[] } | undefined {
-  const images = parseImages(raw);
-  return images.length ? { images } : undefined;
-}
-
-/** Assembles the submission from the posted form — pulled out of `handleFeedback` so its four
- *  optional fields (area, submitter, spec, images) don't inflate that function's own complexity. */
-function feedbackInputFromForm(form: URLSearchParams, session: Session | undefined): FeedbackInput {
-  const kindRaw = form.get("kind");
-  const kind: FeedbackKind = kindRaw === "bug" || kindRaw === "idea" ? kindRaw : "feature";
-  return {
-    kind,
-    title: form.get("title") ?? "",
-    details: form.get("details") ?? "",
-    ...(form.get("area") ? { area: form.get("area") as string } : {}),
-    ...(session?.email ? { submitterEmail: session.email } : {}),
-    ...(session?.name ? { submitterName: session.name } : {}),
-    ...(specFromForm(form.get("spec")) ?? {}),
-    ...(imagesFromForm(form.get("images")) ?? {}),
-  };
 }
 
 async function handleFeedback(
@@ -208,7 +162,25 @@ async function handleFeedback(
   // Raised past the shared 1MB default: up to 3 attached screenshots ride this same POST as
   // base64 in the `images` hidden field (feedback-view.ts) — plain text submissions stay tiny.
   const form = new URLSearchParams(await readBody(req, 8_000_000));
-  const input = feedbackInputFromForm(form, session);
+  const kind = kindFromForm(form.get("kind"));
+  if (!kind) {
+    res.writeHead(400, { "content-type": "text/html; charset=utf-8" });
+    res.end(
+      shellDocument(
+        "Feedback — Skynet Capital",
+        renderFeedbackResultBody({
+          nav,
+          result: {
+            ok: false,
+            error:
+              "Pick what kind of feedback this is — bug, feature, or side quest — and send it again.",
+          },
+        }),
+      ),
+    );
+    return;
+  }
+  const input = feedbackInputFromForm(form, session, kind);
   const result = await submitFeedback(input);
   if (result.ok && recordFeedback && session?.email) {
     try {

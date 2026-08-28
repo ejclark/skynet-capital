@@ -38,6 +38,15 @@ export const FEEDBACK_KIND_ICON: Record<FeedbackLogEntry["kind"], string> = {
  * a `<details>` fold are exactly what the house issue shape asks for (docs/ISSUES.md). The tabs
  * render `hidden` and are unhidden by script, so a no-JS member gets a plain textarea, never dead
  * tabs.
+ *
+ * NEITHER KIND SELECT HAS A DEFAULT (#645, 2026-08-26), and that is a finding rather than a taste
+ * call. All ten issues members had filed through this form were labelled `enhancement` — zero bugs,
+ * zero ideas — while at least one of them (#546, "can't execute trades on accounts added before the
+ * connection workflow existed") is plainly a broken capability, and another says the layout "breaks
+ * user workflow". `feature` was pre-selected, and members were accepting it. A pre-selected answer
+ * to a question nobody was forced to read is not an answer; it is our guess wearing their name, and
+ * it mislabels the queue the build lane triages from. The placeholder is `disabled` so it cannot be
+ * submitted, and `required` makes the browser enforce the choice with no script.
  */
 
 export interface FeedbackFormViewOptions {
@@ -184,9 +193,10 @@ function renderCoachIntro(): string {
     <h2 class="coach-h">✨ Let's shape your feedback</h2>
     <p class="coach-lede">Tell me what's on your mind — a rough note is plenty — and I'll ask a couple of quick questions before you write anything formal. You always review the draft before sending.</p>
     ${formField(`<label for="coach-kind">What kind?</label>
-    <select id="coach-kind">
+    <select id="coach-kind" required>
+      <option value="" selected disabled>— pick one —</option>
       <option value="bug">🐞 Bug — something's broken or wrong</option>
-      <option value="feature" selected>✨ Feature — make something better</option>
+      <option value="feature">✨ Feature — make something better</option>
       <option value="idea">🗺️ Side quest — an idea worth exploring</option>
     </select>`)}
     ${formField(`<label for="coach-note">What's on your mind?</label>
@@ -214,9 +224,10 @@ export function renderFeedbackFormBody(options: FeedbackFormViewOptions): string
       ${options.coachEnabled ? renderCoachIntro() : ""}
       <form class="fdbk-form" id="fdbk-form" method="post" action="/feedback"${options.coachEnabled ? ' style="display:none"' : ""}>
         ${formField(`<label for="fdbk-kind">What kind?</label>
-        <select name="kind" id="fdbk-kind">
+        <select name="kind" id="fdbk-kind" required>
+          <option value="" selected disabled>— pick one —</option>
           <option value="bug">🐞 Bug — something's broken or wrong</option>
-          <option value="feature" selected>✨ Feature — make something better</option>
+          <option value="feature">✨ Feature — make something better</option>
           <option value="idea">🗺️ Side quest — an idea worth exploring</option>
         </select>`)}
         ${formField(`<label for="fdbk-title">Title</label>
