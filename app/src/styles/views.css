@@ -1,0 +1,105 @@
+/* saved-view tabs (#738 phase 3b) — the Projects view row above the blotter. Tokens only. */
+
+.view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.view-tab-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+.view-tab {
+  border: none;
+  background: none;
+  padding: 7px 11px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: var(--sans);
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.view-tab:hover {
+  color: var(--text);
+  border-bottom-color: var(--border);
+}
+.view-tab[aria-current="true"] {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+.view-dirty {
+  color: var(--accent);
+  font-size: 8px;
+  line-height: 1;
+}
+.view-del {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 5px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.view-del:hover {
+  color: var(--neg);
+  background: var(--surface-2);
+}
+.view-add {
+  color: var(--muted);
+  font-weight: 400;
+}
+.view-add[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.view-new-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.view-new-form input {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--sans);
+  width: 150px;
+}
+.view-save-btn {
+  margin-left: auto;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: var(--sans);
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: var(--elev-base);
+  white-space: nowrap;
+}
+.view-save-btn:hover {
+  background: var(--surface-2);
+}
+.view-save-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.view-new-form .view-save-btn {
+  margin-left: 0;
+}
