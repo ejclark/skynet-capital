@@ -53,6 +53,11 @@ mechanical that thoroughness can't change the result; anything that reads code, 
 anything defaults to `high` or above. (Should headroom ever disappear, that's a signal to raise it back,
 not a reason to quietly lower these floors.)
 
+**When burn pressures the budget, the lever is waste, not floors** (Eric, 2026-08-28). Rising token
+burn routes to the waste-elimination playbook — [`docs/process/TOKEN-EFFICIENCY.md`](process/TOKEN-EFFICIENCY.md)
+(cache discipline, fixed-context compression, no-op lane gates) — so the savings fund *higher*-tier
+compute, never justify quietly lowering these floors.
+
 **Tie-break — round up (Eric's call).** When a task sits between two tiers, take the higher one. Hitting
 an API rate limit is an **accepted, adjustable cost**, not something to dodge by pre-emptively routing
 lower — we round up and adjust per the data as it arrives. If limit-hits start costing flow, the lever is
