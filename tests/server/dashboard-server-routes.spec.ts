@@ -102,9 +102,13 @@ describe("dashboard-server /feedback", () => {
     });
   });
 
-  it("renders the form but reports 'not switched on' when no token is wired", async () => {
+  it("redirects the page and reports 'not switched on' when no token is wired", async () => {
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
-      expect((await fetch(`${base}/feedback`)).status).toBe(200); // form still renders
+      // Phase 9d: the page lives in the shell (the shell page states the unwired truth via the
+      // API); the legacy POST still answers with the honest sentence.
+      const form = await fetch(`${base}/feedback`, { redirect: "manual" });
+      expect(form.status).toBe(302);
+      expect(form.headers.get("location")).toBe("/app/feedback");
       const post = await fetch(`${base}/feedback`, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
