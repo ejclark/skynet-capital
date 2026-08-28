@@ -6,6 +6,12 @@ import { escapeHtml } from "../ui/escape-html.js";
 import type { ActivitySource } from "./activity-store.js";
 import { type DecisionContext, decisionContextFor } from "./decision-context.js";
 import { formatHold, formatPrice } from "./desk-data.js";
+import {
+  NO_ORIGIN_EVIDENCE,
+  type OrderOrigin,
+  type OrderOriginIndex,
+  orderOrigin,
+} from "./order-origin.js";
 import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.js";
 import { formatActivityTime, formatSigned, pct, plClass, tzAbbrev } from "./render-atoms.js";
 
@@ -127,16 +133,25 @@ function whyCell(context: DecisionContext | undefined): string {
     </div></details></td>`;
 }
 
+/** Eric's own sizing note for the Alpaca-direct tell: "a smaller footprint, similar to `*`". A
+ *  glyph beside the symbol, keyed by the footnote under the table — never a second badge. */
+function directMark(origin: OrderOrigin): string {
+  return origin === "alpaca-direct"
+    ? ` <span class="direct-mark" role="img" title="Placed directly in Alpaca — this order never went through the app's ticket" aria-label="Placed directly in Alpaca">*</span>`
+    : "";
+}
+
 function ledgerRow(
   row: ActivityRow,
   timezone: string | undefined,
   context: DecisionContext | undefined,
   showWhy: boolean,
+  origin: OrderOrigin,
 ): string {
   const badge = row.source === "backfill" ? ` <span class="src-badge">backfilled</span>` : "";
   return `<tr>
       <td class="tcell">${escapeHtml(formatActivityTime(row.at, timezone))}</td>
-      <td><span class="${row.side === "buy" ? "pos" : "neg"}">${escapeHtml(row.side.toUpperCase())}</span> <span class="sym" title="${escapeHtml(row.symbol)}">${escapeHtml(humanizeOptionSymbol(row.symbol))}</span></td>
+      <td><span class="${row.side === "buy" ? "pos" : "neg"}">${escapeHtml(row.side.toUpperCase())}</span> <span class="sym" title="${escapeHtml(row.symbol)}">${escapeHtml(humanizeOptionSymbol(row.symbol))}</span>${directMark(origin)}</td>
       <td class="num">${row.filledQuantity.toLocaleString("en-US")}/${row.quantity.toLocaleString("en-US")}</td>
       <td class="num">${row.price !== undefined ? formatPrice(row.price) : "—"}</td>
       <td>${escapeHtml(row.status)}${badge}</td>
@@ -149,28 +164,36 @@ export function foldedLedger(
   rows: readonly ActivityRow[],
   snapshot: ParticipantSnapshot,
   decisions: readonly DecisionRecord[],
+  origins: OrderOriginIndex = NO_ORIGIN_EVIDENCE,
 ): string {
   const showWhy = snapshot.kind === "bot" && decisions.length > 0;
+  const marked = rows.map((row) => ({ row, origin: orderOrigin(row, origins) }));
   const body =
     rows.length === 0
       ? `<p class="desk-empty">No orders match this window and type. Try widening the filters above.</p>`
       : `<div class="blotter-inline">
       <table class="blotter">
         <thead><tr><th class="tcell">Time ${escapeHtml(tzAbbrev(snapshot.timezone))}</th><th>Order</th><th class="num">Filled</th><th class="num">Price</th><th>Status</th>${showWhy ? "<th>Context</th>" : ""}</tr></thead>
-        <tbody>${rows
-          .map((row) =>
+        <tbody>${marked
+          .map(({ row, origin }) =>
             ledgerRow(
               row,
               snapshot.timezone,
               showWhy ? decisionContextFor(row, decisions) : undefined,
               showWhy,
+              origin,
             ),
           )
           .join("")}</tbody>
       </table>
     </div>`;
+  // A bare glyph is a mystery: the key appears only when a row actually carries one, and it says
+  // the process gap out loud rather than leaving the member to infer it (#782).
+  const legend = marked.some(({ origin }) => origin === "alpaca-direct")
+    ? `<p class="caveat"><span class="direct-mark" aria-hidden="true">*</span> <b>Placed directly in Alpaca.</b> These orders skipped this app's ticket, so none of the desk's pre-trade checks — buying-power, trade-type gate, the review screen — ever saw them, and no play tag was recorded for them.</p>`
+    : "";
   return `<details class="fills">
       <summary>Order activity — ${rows.length} order${rows.length === 1 ? "" : "s"} · the raw ledger behind the trips, folded as receipts</summary>
-      ${body}
+      ${body}${legend}
     </details>`;
 }

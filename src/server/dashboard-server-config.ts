@@ -13,6 +13,7 @@ import type { InviteDeps } from "./invite-form.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
 import type { OpsStatusDeps } from "./ops-status-routes.js";
 import type { SubmitOptionTrade } from "./option-trade-service.js";
+import type { OrderAuditRecord } from "./order-audit-log.js";
 import type {
   AddParticipantInput,
   AddResult,
@@ -109,6 +110,12 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * stay honest about it via the backfill caveat.
    */
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
+  /**
+   * Reads a participant's per-order audit lines (`order-audit-log.ts`) so the record views can say
+   * WHO placed each order, not just how the ledger learned about it (`order-origin.ts`, #782).
+   * Omit and every row classifies `unknown` — no marker, exactly today's rendering.
+   */
+  readonly readOrderAudit?: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
   /**
    * Per-participant progression derived from the fill + audit ledgers — drives the Milestones
    * page and (with training wheels on) the desk's trade-type gate. Omit and `/learn` renders

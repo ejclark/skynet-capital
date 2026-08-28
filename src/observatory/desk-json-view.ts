@@ -2,6 +2,12 @@ import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js"
 import type { TradeActivityRecord } from "./activity-record.js";
 import { collapseActivity } from "./activity-store.js";
 import { formatPrice } from "./desk-data.js";
+import {
+  NO_ORIGIN_EVIDENCE,
+  type OrderOrigin,
+  type OrderOriginIndex,
+  orderOrigin,
+} from "./order-origin.js";
 import { participantInvested, participantUnrealized } from "./participant-card.js";
 import {
   costBasis,
@@ -114,8 +120,9 @@ export function deskView(snapshot: ParticipantSnapshot): DeskView {
   };
 }
 
-/** One fill/order event on a desk's timeline, formatted. `backfilled` keeps provenance honest —
- *  the record never implies we watched a trade land when we actually recovered it later. */
+/** One fill/order event on a desk's timeline, formatted. Two independent honesty fields ride
+ *  along: `backfilled` says the row was recovered rather than watched landing, and `origin` says
+ *  who placed it (`order-origin.ts`) — knowledge and authorship are different questions. */
 export interface DeskActivityEvent {
   readonly orderId: string;
   readonly symbol: string;
@@ -127,13 +134,18 @@ export interface DeskActivityEvent {
   readonly status: string;
   readonly at: string;
   readonly backfilled: boolean;
+  readonly origin: OrderOrigin;
 }
 
 const ACTIVITY_CAP = 80;
 
 /** The desk's recent activity as data (`/api/desk/:id/activity`): journal lines collapsed to the
- *  latest state per order (the store's own fold), newest first, capped. */
-export function deskActivityView(records: readonly TradeActivityRecord[]): DeskActivityEvent[] {
+ *  latest state per order (the store's own fold), newest first, capped. Without an origin index
+ *  every row reads `unknown` — the honest default when no audit evidence was handed in. */
+export function deskActivityView(
+  records: readonly TradeActivityRecord[],
+  origins: OrderOriginIndex = NO_ORIGIN_EVIDENCE,
+): DeskActivityEvent[] {
   return collapseActivity(records)
     .sort((a, b) => (a.at < b.at ? 1 : -1))
     .slice(0, ACTIVITY_CAP)
@@ -148,5 +160,6 @@ export function deskActivityView(records: readonly TradeActivityRecord[]): DeskA
       status: record.status,
       at: record.at,
       backfilled: record.source === "backfill",
+      origin: orderOrigin(record, origins),
     }));
 }

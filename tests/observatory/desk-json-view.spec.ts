@@ -1,4 +1,5 @@
 import { deskActivityView, deskView } from "../../src/observatory/desk-json-view.js";
+import { orderOriginIndex } from "../../src/observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 
 /** The desk's JSON twin: same figures as the blotter, formatted once, filterable raws alongside. */
@@ -79,5 +80,23 @@ describe("deskActivityView", () => {
 
   it("renders a missing price as an em dash, never a fabricated number", () => {
     expect(deskActivityView([line({})])[0]?.price).toBe("—");
+  });
+
+  it("says who placed each order once audit evidence is handed in", () => {
+    const origins = orderOriginIndex(
+      [{ participantId: "sauron", orderId: "ord-1", at: "2026-08-28T13:00:00Z" }],
+      "human",
+    );
+    const view = deskActivityView(
+      [line({}), line({ orderId: "ord-2", at: "2026-08-28T15:00:00Z" })],
+      origins,
+    );
+    expect(view.find((e) => e.orderId === "ord-1")?.origin).toBe("desk");
+    expect(view.find((e) => e.orderId === "ord-2")?.origin).toBe("alpaca-direct");
+  });
+
+  it("defaults every row to unknown with no evidence — knowledge and authorship stay separate", () => {
+    // `source: "broker"` says the reconcile learned the row; it says nothing about who placed it.
+    expect(deskActivityView([line({ source: "broker" })])[0]?.origin).toBe("unknown");
   });
 });

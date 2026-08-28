@@ -25,6 +25,7 @@ import { dayTrophyTiles, renderStatTiles, type StatTile } from "./desk-tiles.js"
 import { equityDrawdown, renderEquitySparkline } from "./equity-sparkline.js";
 import { doubledAt, seedBaseline } from "./history-metrics.js";
 import type { EquitySample } from "./history-store.js";
+import type { OrderOriginIndex } from "./order-origin.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
 import type { DeskViewOptions } from "./positions-view.js";
 import { formatCurrency, formatSigned, formatTimestamp, plClass } from "./render-atoms.js";
@@ -52,6 +53,9 @@ export interface PerformanceViewOptions extends DeskViewOptions {
   /** A bot's autonomous decision audit trail, for the per-order "why" fold. */
   readonly decisions?: readonly DecisionRecord[];
   readonly history?: readonly EquitySample[];
+  /** The desk seam's own submit receipts, indexed — what marks an Alpaca-direct order (#782).
+   *  Absent leaves every row unclassified, i.e. unmarked. */
+  readonly orderOrigins?: OrderOriginIndex;
 }
 
 function statTiles(
@@ -265,7 +269,7 @@ export function renderPerformanceBody(
     ${filterBar(snapshot.id, window, type)}
     ${dayStrip(trips, snapshot.timezone)}
     ${tripsTable(trips, snapshot.timezone)}
-    ${foldedLedger(orders, snapshot, options.decisions ?? [])}
+    ${foldedLedger(orders, snapshot, options.decisions ?? [], options.orderOrigins)}
   </section>`,
     asOf,
   );
