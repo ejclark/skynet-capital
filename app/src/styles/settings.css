@@ -219,3 +219,19 @@
 .mc-row .mc-btn {
   margin-left: auto;
 }
+
+/* The own-bot switch (9b) — account-tier, market colors carry the state. */
+.bot-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.bot-switch-line {
+  font-size: 13px;
+  line-height: 1.5;
+}

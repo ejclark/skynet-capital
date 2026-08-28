@@ -16,6 +16,8 @@ import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
  *                                 candidates, auth mode) — the browser supplies none of it.
  *   POST /api/settings/remove   → accountAdmin.removeAccount; the typed display-name confirmation
  *                                 is verified by the SERVICE, never trusted from the client.
+ *   POST /api/settings/rotate   → rotateCredentials (8a): replace, never reveal.
+ *   POST /api/settings/bot-control → the own-bot switch (9b): ownership-tier, see serveBotControl.
  *
  * Same posture as trade-api-routes.ts: bodies must be application/json (closes cookie-carried
  * cross-site form posts), strict shape gate (400, never coerce), size-capped (413), identity from
@@ -112,23 +114,60 @@ function serveSettingsIndex(
   const ownedIds = authConfigured ? resolveOwnedIds(session, config) : [];
   const board = config.hub.getState().participants;
   const roster = config.rosterIds?.() ?? new Set<string>();
+  // The own-bot switch state (#738 phase 9b) — present exactly when this is a bot the session
+  // owns AND bot controls are wired; the fleet-wide hold is stated so a halted bot never reads
+  // as trading (docs/BRAND.md: never let a flourish imply something false).
+  const fleet = config.controls?.store.load();
   const accounts = ownedIds.map((id) => {
     const found = board.find((p) => p.id === id);
     const profile = config.accountAdmin?.profileFor(id);
+    const kind = found?.kind ?? "human";
     return {
       id,
       name: found?.displayName ?? id,
-      kind: found?.kind ?? "human",
+      kind,
       hostConfigured: roster.has(id),
       profile: profile ?? null,
+      ...(kind === "bot" && fleet ? { suspended: fleet.bots[id]?.suspended === true } : {}),
     };
   });
   sendJson(res, 200, {
     authConfigured,
     adminWired,
     accounts,
+    // Disclosed only when the session owns a bot the hold would actually halt — the fleet's
+    // state stays owner-tier for everyone else (/api/controls answers them {owner:false}).
+    fleetSuspended: accounts.some((a) => a.kind === "bot") && fleet?.allSuspended === true,
     timezones: ALLOWED_TIMEZONES,
   });
+}
+
+/** POST /api/settings/bot-control — flip the session's OWN bot (#738 phase 9b). The rule is
+ *  `/account/bot-control`'s exactly: the session must resolve to this bot — ownership, NOT the
+ *  env-allowlist (that fleet-wide authority is Mission Control's, `/api/controls`). */
+async function serveBotControl(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const raw = await readJsonPost(req, res, SETTINGS_BODY_CAP_BYTES);
+  if (raw === undefined) return;
+  const body = parseJsonRecord(raw);
+  const id = body ? boundedString(body.id, 100) : undefined;
+  const action = body ? boundedString(body.action, 20) : undefined;
+  if (!id || (action !== "suspend" && action !== "resume")) {
+    sendJson(res, 400, { error: "malformed bot-control body" });
+    return;
+  }
+  const ownedIds = config.auth ? resolveOwnedIds(session, config) : [];
+  if (!(config.controls && ownedIds.includes(id))) {
+    sendJson(res, 200, { ok: false, error: "You can only control your own bot." });
+    return;
+  }
+  const suspended = action === "suspend";
+  config.controls.store.setBot(id, { suspended }, session?.email ?? "unknown", new Date());
+  sendJson(res, 200, { ok: true, suspended });
 }
 
 /** The rotate write, split out for the complexity gate — the /rotate route's exact requester
@@ -177,6 +216,10 @@ export async function serveSettingsApi(
   }
   if (path === "/api/settings/rotate") {
     await serveRotate(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/settings/bot-control") {
+    await serveBotControl(req, res, config, session);
     return true;
   }
   if (path !== "/api/settings/profile" && path !== "/api/settings/remove") return false;

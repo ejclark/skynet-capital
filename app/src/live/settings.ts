@@ -13,6 +13,8 @@ export interface OwnedAccount {
   readonly kind: "human" | "bot";
   readonly hostConfigured: boolean;
   readonly profile: { readonly displayName: string; readonly timezone?: string } | null;
+  /** The own-bot switch's state — present exactly when this is your bot and controls are wired. */
+  readonly suspended?: boolean;
 }
 
 export interface TimezoneChoice {
@@ -24,6 +26,8 @@ export interface SettingsIndex {
   readonly authConfigured: boolean;
   readonly adminWired: boolean;
   readonly accounts: readonly OwnedAccount[];
+  /** True while the fleet-wide stand-down holds — every bot is halted regardless of its switch. */
+  readonly fleetSuspended: boolean;
   readonly timezones: readonly TimezoneChoice[];
 }
 
@@ -55,3 +59,10 @@ export const rotateCredentialsRequest = (input: {
   readonly apiKey: string;
   readonly apiSecret: string;
 }): Promise<SettingsWriteResult> => postJson("/api/settings/rotate", input);
+
+/** Flip your OWN bot's switch — ownership is the server's check, same tier as renaming it. */
+export const botControlRequest = (input: {
+  readonly id: string;
+  readonly action: "suspend" | "resume";
+}): Promise<{ readonly ok: true; readonly suspended: boolean } | { ok: false; error: string }> =>
+  postJson("/api/settings/bot-control", input);
