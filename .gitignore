@@ -15,10 +15,6 @@ graphify-out/
 # Scratchpad / throwaway preview + shoot scripts (never committed)
 scratchpad/
 .claude/worktrees/
-
-# Mirrored Claude Code docs — a cache, never a source (refresh: node scripts/fetch-claude-docs.mjs)
-.cache/claude-docs/
-
 # Claude's SSH commit-signing key material (scripts/setup-commit-signing.sh writes it
 # to ~/.ssh at session start, never here). Ignored belt-and-braces: a signing key is
 # the irreversible class, and a stray copy must not be trackable by accident.

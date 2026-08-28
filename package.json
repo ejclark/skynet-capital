@@ -26,6 +26,7 @@
     "brief:morning": "tsx src/scripts/morning-brief.ts",
     "shoot:login": "tsx scripts/shoot-login.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
+    "docs:claude": "node scripts/fetch-claude-docs.mjs",
     "event:scan": "node scripts/event-scan.mjs",
     "digest:scan": "node scripts/digest-scan.mjs",
     "comms:scan": "node scripts/comms-scan.mjs",

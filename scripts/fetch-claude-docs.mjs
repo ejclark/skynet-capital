@@ -13,14 +13,16 @@
 // code.claude.com publishes a machine-readable index (llms.txt) and serves every page as raw
 // markdown at its canonical URL + `.md`. No key, no third-party relay, no HTML scraping.
 //
-// The mirror is a cache, never a source: it is gitignored, and anything citing it should cite
-// the code.claude.com URL, not the local path.
+// The mirror is COMMITTED (Eric's call, 2026-08-28): future sessions reference it without
+// re-fetching, and a refresh makes upstream doc changes reviewable as an ordinary git diff —
+// `node scripts/fetch-claude-docs.mjs && git diff docs/vendor/claude-code` is a "what changed
+// in Claude Code?" report for free. Cite the code.claude.com URL in prose; read the local file.
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const INDEX_URL = "https://code.claude.com/docs/llms.txt";
-const DEFAULT_DIR = ".cache/claude-docs";
+const DEFAULT_DIR = "docs/vendor/claude-code";
 const CONCURRENCY = 8;
 
 const dirFlag = process.argv.indexOf("--dir");
