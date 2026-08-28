@@ -1,5 +1,10 @@
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
-import { empireTheme, projectEmpire, projectWorld } from "../../src/universe/project.js";
+import {
+  empireHealth,
+  empireTheme,
+  projectEmpire,
+  projectWorld,
+} from "../../src/universe/project.js";
 
 /**
  * The World Projection's mapping rules, pinned as behavior. These are the honesty invariants the
@@ -113,5 +118,19 @@ describe("projectWorld", () => {
     );
     expect(w.empires.map((e) => e.id)).toEqual(["a", "b"]);
     expect(w.empires[0]?.landmark?.prominence).toBeCloseTo(0.62);
+  });
+});
+
+describe("empireHealth", () => {
+  it("aggregates the R2 rule across the whole desk — unrealized over basis, clamped", () => {
+    // NVDA: basis 1000, value 1500 (+500) · GLD: basis 1000, value 700 (−300) → +200 / 2000
+    const s = snap({ positions: [pos("NVDA", 10, 100, 1500), pos("GLD", 5, 200, 700)] });
+    expect(empireHealth(s)).toBeCloseTo(0.1);
+  });
+
+  it("is 0 for an empty desk and clamps a runaway winner to 1 — never fabricated, never unbounded", () => {
+    expect(empireHealth(snap())).toBe(0);
+    const moon = snap({ positions: [pos("NVDA", 10, 100, 5000)] });
+    expect(empireHealth(moon)).toBe(1);
   });
 });

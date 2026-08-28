@@ -12,6 +12,7 @@ import {
 import { BlotterRow } from "../shell/blotter-row";
 import { DeskRail } from "../shell/desk-rail";
 import { PageFrame } from "../shell/frame";
+import { LandmarkHero } from "../shell/landmark-hero";
 import { TimelineDrawer } from "../shell/timeline-drawer";
 import { ViewTabs } from "../shell/view-tabs";
 
@@ -105,7 +106,7 @@ function DeskPage(): ReactElement {
         <p className="note">This desk is unreachable — {String(desk.error)}</p>
       </PageFrame>
     );
-  const { desk: d, generatedAt } = desk.data;
+  const { desk: d, generatedAt, landmark } = desk.data;
   const filter = parseDeskQuery(query);
   const shown = d.positions.filter((p) => matchesFilter(p, filter));
 
@@ -123,6 +124,9 @@ function DeskPage(): ReactElement {
         </div>
       </header>
 
+      {landmark && !d.error ? (
+        <LandmarkHero name={d.name} power={landmark.power} health={landmark.health} />
+      ) : null}
       {d.error ? (
         <p className="note-stop">Account unreachable — this desk can't read positions right now.</p>
       ) : (

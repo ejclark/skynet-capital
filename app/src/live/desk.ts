@@ -50,6 +50,8 @@ export interface Desk {
 export interface DeskSnapshot {
   readonly generatedAt: string;
   readonly desk: Desk;
+  /** Present only for desks the world projection gives a landmark (persona-mapped bots). */
+  readonly landmark?: { readonly power: number; readonly health: number };
 }
 
 export async function fetchDesk(id: string): Promise<DeskSnapshot> {
