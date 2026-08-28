@@ -16,10 +16,6 @@ const SHELL_CHORDS: readonly (readonly [string, string, string])[] = [
   ["w", "/wire", "The Wire"],
   ["c", "/collections", "Collections"],
   ["m", "/learn", "Milestones"],
-];
-
-/** Server-rendered chord targets (full navigation, honestly cross-linked like the topbar). */
-const SERVER_CHORDS: readonly (readonly [string, string, string])[] = [
   ["r", "/research", "Research"],
 ];
 
@@ -60,11 +56,6 @@ function jumpTo(key: string, navigate: (opts: { to: string }) => unknown): boole
   const shell = SHELL_CHORDS.find(([k]) => k === key);
   if (shell) {
     void navigate({ to: shell[1] });
-    return true;
-  }
-  const server = SERVER_CHORDS.find(([k]) => k === key);
-  if (server) {
-    window.location.assign(server[1]);
     return true;
   }
   return false;
@@ -112,7 +103,7 @@ export function KeyboardChords(): ReactElement | null {
         <div className="kbd-cols">
           <div>
             <h3>Go to</h3>
-            {[...SHELL_CHORDS, ...SERVER_CHORDS].map(([k, , label]) => (
+            {SHELL_CHORDS.map(([k, , label]) => (
               <ShortcutRow key={k} keys={`g ${k}`} label={label} />
             ))}
           </div>

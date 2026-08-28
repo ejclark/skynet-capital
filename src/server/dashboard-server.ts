@@ -1,7 +1,4 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { browseCollections, unshelved } from "../discovery/collections.js";
-import { collectionsJsonView } from "../observatory/collections-json-view.js";
-import { learnJsonView } from "../observatory/learn-json-view.js";
 import {
   type NavContext,
   type NavView,
@@ -20,6 +17,7 @@ import {
   streamBoardPatches,
 } from "./board-patch-routes.js";
 import { deskIndex } from "./collections-routes.js";
+import { serveContentApi } from "./content-api-routes.js";
 import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
 import { pageHtml, servePublicRoute } from "./dashboard-board-routes.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
@@ -31,7 +29,7 @@ import { serveDeskJson } from "./desk-json-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
-import { serveWireJson, serveWireRoute } from "./wire-routes.js";
+import { serveWireRoute } from "./wire-routes.js";
 
 export type { DashboardServerConfig };
 
@@ -140,30 +138,7 @@ async function serveJsonApi(
   channel: BoardPatchChannel,
   session: Session | undefined,
 ): Promise<boolean> {
-  if (path === "/api/wire") {
-    await serveWireJson(res, config, Boolean(config.submitFeedback));
-    return true;
-  }
-  if (path === "/api/learn") {
-    // The viewer's own journey — same resolution as /learn's HTML route.
-    const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
-    const progress = id && config.progression ? await config.progression.view(id) : undefined;
-    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-    res.end(JSON.stringify(learnJsonView(progress)));
-    return true;
-  }
-  if (path === "/api/collections") {
-    const collections = browseCollections();
-    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-    res.end(
-      JSON.stringify(
-        collectionsJsonView(
-          collections,
-          unshelved(collections),
-          deskIndex(config.hub.getState().participants),
-        ),
-      ),
-    );
+  if (await serveContentApi(res, path, config, session)) {
     return true;
   }
   if (path === "/api/board") {
