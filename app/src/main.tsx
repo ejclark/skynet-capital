@@ -17,6 +17,7 @@ import "./styles/pulse.css";
 import "./styles/shell.css";
 import "./styles/theme.css";
 import "./styles/views.css";
+import "./styles/wire.css";
 
 const queryClient = new QueryClient();
 const router = createRouter({ routeTree, basepath: "/app" });

@@ -2,6 +2,7 @@ import type { ServerResponse } from "node:http";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { NavContext, NavView } from "../observatory/dashboard-shell.js";
 import { buildWirePnlRows, buildWireTradeRows } from "../observatory/wire-data.js";
+import { wireJsonView } from "../observatory/wire-json-view.js";
 import { renderWireBody } from "../observatory/wire-view.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
@@ -30,12 +31,12 @@ export interface WireRouteDeps {
  * research-routes.ts): every dependency above is optional, so a deployment with feedback or the
  * activity ledger unwired still renders an honest empty state rather than an error.
  */
-export async function serveWireRoute(
-  res: ServerResponse,
-  config: WireRouteDeps,
-  feedbackEnabled: boolean,
-  navFor: (active: NavView) => NavContext,
-): Promise<void> {
+async function assembleWire(config: WireRouteDeps): Promise<{
+  trades: ReturnType<typeof buildWireTradeRows>;
+  pnl: ReturnType<typeof buildWirePnlRows>;
+  feedback: FeedbackLogEntry[];
+  feedbackStatuses?: Awaited<ReturnType<NonNullable<WireRouteDeps["fetchFeedbackStatus"]>>>;
+}> {
   const { participants } = config.hub.getState();
   const records = config.readAllTradeActivity ? await config.readAllTradeActivity() : [];
   const feedback = config.readAllFeedback ? await config.readAllFeedback() : [];
@@ -48,15 +49,50 @@ export async function serveWireRoute(
     config.fetchFeedbackStatus && feedbackForStatus.length
       ? await config.fetchFeedbackStatus(feedbackForStatus.map((e) => e.issueNumber))
       : undefined;
-
-  const body = renderWireBody({
-    nav: navFor("wire"),
+  return {
     trades: buildWireTradeRows(records, participants, 60),
     pnl: buildWirePnlRows(participants),
     feedback: feedbackForStatus,
-    feedbackEnabled,
     ...(feedbackStatuses ? { feedbackStatuses } : {}),
+  };
+}
+
+export async function serveWireRoute(
+  res: ServerResponse,
+  config: WireRouteDeps,
+  feedbackEnabled: boolean,
+  navFor: (active: NavView) => NavContext,
+): Promise<void> {
+  const assembled = await assembleWire(config);
+  const body = renderWireBody({
+    nav: navFor("wire"),
+    trades: assembled.trades,
+    pnl: assembled.pnl,
+    feedback: assembled.feedback,
+    feedbackEnabled,
+    ...(assembled.feedbackStatuses ? { feedbackStatuses: assembled.feedbackStatuses } : {}),
   });
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   res.end(shellDocument("The Wire — Skynet Capital", body));
+}
+
+/** The same feeds as JSON for the shell's Wire (#738 phase 5a) — one assembly, two skins. */
+export async function serveWireJson(
+  res: ServerResponse,
+  config: WireRouteDeps,
+  feedbackEnabled: boolean,
+): Promise<void> {
+  const assembled = await assembleWire(config);
+  res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+  res.end(
+    JSON.stringify({
+      wire: wireJsonView(
+        assembled.trades,
+        assembled.pnl,
+        assembled.feedback,
+        feedbackEnabled,
+        assembled.feedbackStatuses,
+      ),
+    }),
+  );
 }

@@ -13,11 +13,11 @@ import { useEffect, useRef, useState } from "react";
 const SHELL_CHORDS: readonly (readonly [string, string, string])[] = [
   ["s", "/", "Standings"],
   ["t", "/trade", "Trade ticket"],
+  ["w", "/wire", "The Wire"],
 ];
 
 /** Server-rendered chord targets (full navigation, honestly cross-linked like the topbar). */
 const SERVER_CHORDS: readonly (readonly [string, string, string])[] = [
-  ["w", "/wire", "The Wire"],
   ["r", "/research", "Research"],
   ["c", "/collections", "Collections"],
   ["m", "/learn", "Milestones"],
