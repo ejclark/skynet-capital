@@ -5,6 +5,7 @@ import {
   type OwnerLink,
   OwnerLinkStore,
   resolveOwnedId,
+  resolveOwnedParticipantIds,
 } from "../../src/server/owner-link-store.js";
 
 const AT = new Date("2026-08-24T12:00:00.000Z");
@@ -134,5 +135,63 @@ describe("resolveOwnedId", () => {
     expect(
       resolveOwnedId([APALA], [link("removed", "member@example.com")], "member@example.com"),
     ).toBeUndefined();
+  });
+});
+
+// 2026-08-27, live: a member with a stamped human account (SKYNET_HUMAN_<ID>_EMAIL) AND a
+// separately /claim-linked bot only ever saw the linked one -- resolveOwnedId's own single-id
+// "stamp beats link" precedence had been over-applied ACROSS participants (any stamp anywhere
+// hides every link), when it was only ever meant to protect one ALREADY-stamped participant from
+// a stray link redirecting it.
+describe("resolveOwnedParticipantIds", () => {
+  const APALA = { id: "human-apala" };
+  const ERIC = { id: "human-eric", ownerEmail: "eric@example.com" };
+  const SAURON = { id: "sauron" };
+
+  it("is empty when nothing is stamped or linked", () => {
+    expect(resolveOwnedParticipantIds([APALA], [], "member@example.com")).toEqual([]);
+  });
+
+  it("returns the stamped account alone when there is no link", () => {
+    expect(resolveOwnedParticipantIds([ERIC], [], "eric@example.com")).toEqual(["human-eric"]);
+  });
+
+  it("returns the linked account alone when nothing is stamped", () => {
+    expect(
+      resolveOwnedParticipantIds(
+        [SAURON],
+        [link("sauron", "eric@example.com")],
+        "eric@example.com",
+      ),
+    ).toEqual(["sauron"]);
+  });
+
+  it("unions a stamped account AND a separately linked one -- the reported bug", () => {
+    expect(
+      resolveOwnedParticipantIds(
+        [ERIC, SAURON],
+        [link("sauron", "eric@example.com")],
+        "eric@example.com",
+      ),
+    ).toEqual(["human-eric", "sauron"]);
+  });
+
+  it("still ignores a link pointed at an account somebody else already connected", () => {
+    const joe = { id: "human-uncle_joe", ownerEmail: "joe@example.com" };
+    expect(
+      resolveOwnedParticipantIds(
+        [ERIC, joe],
+        [link("human-uncle_joe", "eric@example.com")],
+        "eric@example.com",
+      ),
+    ).toEqual(["human-eric"]);
+  });
+
+  it("returns every stamped id when the host stamps more than one account to the same email", () => {
+    const secondBot = { id: "jarvis", ownerEmail: "eric@example.com" };
+    expect(resolveOwnedParticipantIds([ERIC, secondBot], [], "eric@example.com").sort()).toEqual([
+      "human-eric",
+      "jarvis",
+    ]);
   });
 });

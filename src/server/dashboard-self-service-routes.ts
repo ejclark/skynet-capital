@@ -136,8 +136,12 @@ export async function trySelfServiceRoute(
  * account, the same widening /rotate got (2026-08-27), now that rotate lives here too. Which one
  * is "current" is a real page switch via ?id=, validated against that same list, never trusted
  * blind — every form on the page (edit, remove, rotate) then agrees on the same account instead of
- * drifting independently. Split out of `trySelfServiceRoute` to keep that dispatcher inside its
- * complexity budget.
+ * drifting independently. With NO ?id= at all, default to a HUMAN-kind account when the caller
+ * has one, not just the first entry in the (now owner-widened) list — `resolveOwnerId` is exactly
+ * `resolveOwnerIds(email)[0]`, so it can't break this tie on its own. "Manage your account" should
+ * show yourself first, never an arbitrary bot you happen to also own (2026-08-27: reported live,
+ * defaulted to a bot — "sauron" was simply first in the claimed-accounts list). Split out of
+ * `trySelfServiceRoute` to keep that dispatcher inside its complexity budget.
  */
 async function handleAccountSelfServiceRoute(
   req: IncomingMessage,
@@ -153,6 +157,7 @@ async function handleAccountSelfServiceRoute(
   const requestedId = idOf(url);
   const requesterId =
     (requestedId && ownedAccounts.some((a) => a.id === requestedId) ? requestedId : undefined) ??
+    ownedAccounts.find((a) => a.kind === "human")?.id ??
     ownedAccounts[0]?.id;
   await handleAccountRoute(req, res, path, req.method ?? "GET", {
     admin,

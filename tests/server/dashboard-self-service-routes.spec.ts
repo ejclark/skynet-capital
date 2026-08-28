@@ -224,8 +224,10 @@ describe("trySelfServiceRoute", () => {
     // The account switcher (accountSwitcher in account-forms.ts) lists both, not just the one
     // account the session's email happens to own via a claim link.
     expect(out.body).toContain("Managing:");
-    expect(out.body).toContain("Sauron");
-    expect(out.body).toContain('href="/account?id=human-eric"');
+    // No ?id= at all defaults to the human account, not the bot that happened to be first in the
+    // owned list ("sauron" — 2026-08-27: reported live, "Manage your account" showed a bot).
+    expect(out.body).toContain('type="hidden" name="id" value="human-eric"');
+    expect(out.body).toContain('href="/account?id=sauron"');
     // And the rotate block is right there for the currently-selected account.
     expect(out.body).toContain('action="/account/rotate"');
   });

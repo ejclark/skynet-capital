@@ -12,7 +12,7 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
-import { createOwnerLinkStore, resolveOwnedId } from "../server/owner-link-store.js";
+import { createOwnerLinkStore, resolveOwnedParticipantIds } from "../server/owner-link-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
@@ -67,19 +67,11 @@ export function setupAccess(
   // the volume beside bot-controls.json: an id and an already-admitted email, no credentials.
   const ownerLinks = createOwnerLinkStore(env, (m) => console.error(m));
   // The owner link: session email -> the account(s) it owns. Never exposed on ParticipantSnapshot.
-  // Every stamped `ownerEmail` match wins outright (multiple, when the host stamps more than one
-  // env id to the same address); only when NONE is stamped does a volume link fill the gap — the
-  // same "a stamp always beats a link" precedence `resolveOwnedId` specifies, generalized to a
-  // roster that can hand back more than one id.
-  const resolveOwnerIds = (email: string): string[] => {
-    const participants = liveRoster();
-    const stampedIds = participants
-      .filter((p) => p.ownerEmail?.toLowerCase() === email.toLowerCase())
-      .map((p) => p.id);
-    if (stampedIds.length > 0) return stampedIds;
-    const linkedId = resolveOwnedId(participants, ownerLinks.load().links, email);
-    return linkedId ? [linkedId] : [];
-  };
+  // The precedence rule (stamps and links unioned, a stray link can't redirect an already-stamped
+  // account) lives in `resolveOwnedParticipantIds` — see that function's doc for the 2026-08-27
+  // fix (a member with both a stamped account and a separately linked one used to see only one).
+  const resolveOwnerIds = (email: string): string[] =>
+    resolveOwnedParticipantIds(liveRoster(), ownerLinks.load().links, email);
   const resolveOwnerId = (email: string): string | undefined => resolveOwnerIds(email)[0];
 
   return {
