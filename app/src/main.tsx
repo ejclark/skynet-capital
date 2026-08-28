@@ -6,9 +6,10 @@ import { startBoardChannel } from "./live/channel";
 import { routeTree } from "./routeTree.gen";
 import "./styles/board.css";
 import "./styles/shell.css";
+import "./styles/theme.css";
 
 const queryClient = new QueryClient();
-const router = createRouter({ routeTree });
+const router = createRouter({ routeTree, basepath: "/app" });
 
 declare module "@tanstack/react-router" {
   interface Register {

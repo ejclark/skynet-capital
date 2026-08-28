@@ -1,12 +1,21 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useConnection } from "../live/connection";
+import { type Density, type Theme, usePrefs } from "../shell/prefs";
 
 /**
- * The shell frame (phase 0): brand, live-channel status, and the stage. The full nav rail,
- * themes, and density toggle land in phase 1 — this frame only proves the chrome/stage split
- * and gives the seam's status a visible, honest home.
+ * The shell frame (#738 phase 1): topbar (brand, theme + density toggles, live status), the left
+ * nav rail, and the stage. Rail entries the React app doesn't own yet are plain links to the
+ * server-rendered views — the shell grows route by route, it never pretends.
  */
+
+/** The server-rendered views the rail links across to until the shell absorbs them. */
+const SERVER_VIEWS = [
+  ["/wire", "The Wire"],
+  ["/research", "Research"],
+  ["/collections", "Collections"],
+  ["/learn", "Milestones"],
+] as const;
 
 function StatusPill(): ReactElement {
   const status = useConnection((s) => s.status);
@@ -21,7 +30,34 @@ function StatusPill(): ReactElement {
   );
 }
 
+function Toggle<T extends string>({
+  label,
+  value,
+  options,
+  onPick,
+}: {
+  readonly label: string;
+  readonly value: T;
+  readonly options: readonly (readonly [T, string])[];
+  readonly onPick: (next: T) => void;
+}): ReactElement {
+  return (
+    <fieldset className="toggle-group">
+      <legend className="visually-hidden">{label}</legend>
+      {options.map(([key, text]) => (
+        <button key={key} type="button" aria-pressed={key === value} onClick={() => onPick(key)}>
+          <span className="toggle-text">{text}</span>
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
 function RootShell(): ReactElement {
+  const theme = usePrefs((s) => s.theme);
+  const density = usePrefs((s) => s.density);
+  const setTheme = usePrefs((s) => s.setTheme);
+  const setDensity = usePrefs((s) => s.setDensity);
   return (
     <div className="shell">
       <a className="skip-link" href="#main">
@@ -35,11 +71,44 @@ function RootShell(): ReactElement {
           Skynet Capital
         </span>
         <span className="env-pill">SIM</span>
-        <StatusPill />
+        <div className="topbar-actions">
+          <Toggle<Density>
+            label="Density"
+            value={density}
+            options={[
+              ["comfortable", "Comfortable"],
+              ["compact", "Compact"],
+            ]}
+            onPick={setDensity}
+          />
+          <Toggle<Theme>
+            label="Theme"
+            value={theme}
+            options={[
+              ["dark", "Dark"],
+              ["light", "Light"],
+            ]}
+            onPick={setTheme}
+          />
+          <StatusPill />
+        </div>
       </header>
-      <main id="main" className="stage">
-        <Outlet />
-      </main>
+      <div className="frame">
+        <nav className="rail" aria-label="Views">
+          <p className="rail-label">Observatory</p>
+          <a aria-current="page" href="/app">
+            Standings
+          </a>
+          {SERVER_VIEWS.map(([href, label]) => (
+            <a key={href} href={href}>
+              {label}
+            </a>
+          ))}
+        </nav>
+        <main id="main" className="stage">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
