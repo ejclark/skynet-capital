@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { deskView } from "../observatory/desk-json-view.js";
+import { deskActivityView, deskView } from "../observatory/desk-json-view.js";
 import {
   type NavContext,
   type NavView,
@@ -126,9 +126,16 @@ function serveFoldedRedirect(res: ServerResponse, path: string, url: string): bo
   return true;
 }
 
-/** The desk as data (#738 phase 2c) — same gate, same formatters as /u/:id's blotter. */
-function serveDeskJson(res: ServerResponse, path: string, config: DashboardServerConfig): void {
-  const id = decodeURIComponent(path.slice("/api/desk/".length));
+/** The desk as data (#738 phases 2c–2d) — same gate, same formatters as /u/:id's own views.
+ *  `/api/desk/:id` is the blotter; `/api/desk/:id/activity` is the fill timeline. */
+async function serveDeskJson(
+  res: ServerResponse,
+  path: string,
+  config: DashboardServerConfig,
+): Promise<void> {
+  const rest = decodeURIComponent(path.slice("/api/desk/".length));
+  const wantsActivity = rest.endsWith("/activity");
+  const id = wantsActivity ? rest.slice(0, -"/activity".length) : rest;
   const state = config.hub.getState();
   const found = state.participants.find((p) => p.id === id);
   if (!found) {
@@ -137,6 +144,18 @@ function serveDeskJson(res: ServerResponse, path: string, config: DashboardServe
     return;
   }
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+  if (wantsActivity) {
+    // No ledger wired (offline runs without SKYNET_ACTIVITY_DIR) says so — never an empty lie.
+    const records = await config.readTradeActivity?.(id);
+    res.end(
+      JSON.stringify(
+        records
+          ? { available: true, activity: deskActivityView(records) }
+          : { available: false, activity: [] },
+      ),
+    );
+    return;
+  }
   res.end(JSON.stringify({ generatedAt: state.generatedAt, desk: deskView(found) }));
 }
 
@@ -186,7 +205,7 @@ async function serveAuthorizedRoute(
     return;
   }
   if (path.startsWith("/api/desk/")) {
-    serveDeskJson(res, path, config);
+    await serveDeskJson(res, path, config);
     return;
   }
   // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.

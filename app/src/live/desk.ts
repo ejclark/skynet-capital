@@ -98,3 +98,29 @@ export function toggleQualifier(query: string, qualifier: string): string {
   if (without.length !== parts.length) return without.join(" ");
   return [...parts, qualifier].join(" ");
 }
+
+export interface DeskActivityEvent {
+  readonly orderId: string;
+  readonly symbol: string;
+  readonly display: string;
+  readonly side: "buy" | "sell";
+  readonly quantity: number;
+  readonly filled: number;
+  readonly price: string;
+  readonly status: string;
+  readonly at: string;
+  readonly backfilled: boolean;
+}
+
+export interface DeskActivity {
+  readonly available: boolean;
+  readonly activity: readonly DeskActivityEvent[];
+}
+
+export async function fetchDeskActivity(id: string): Promise<DeskActivity> {
+  const res = await fetch(`/api/desk/${encodeURIComponent(id)}/activity`, {
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`GET /api/desk/${id}/activity → ${res.status}`);
+  return (await res.json()) as DeskActivity;
+}

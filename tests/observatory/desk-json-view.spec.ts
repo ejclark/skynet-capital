@@ -1,4 +1,4 @@
-import { deskView } from "../../src/observatory/desk-json-view.js";
+import { deskActivityView, deskView } from "../../src/observatory/desk-json-view.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 
 /** The desk's JSON twin: same figures as the blotter, formatted once, filterable raws alongside. */
@@ -40,5 +40,44 @@ describe("deskView", () => {
     const view = deskView(snapshot({ positions: [], error: "account unreachable" }));
     expect(view.error).toBe("account unreachable");
     expect(view.positions).toEqual([]);
+  });
+});
+
+describe("deskActivityView", () => {
+  const line = (over: Record<string, unknown>) => ({
+    orderId: "ord-1",
+    participantId: "sauron",
+    symbol: "NVDA",
+    side: "buy" as const,
+    quantity: 100,
+    filledQuantity: 0,
+    status: "new",
+    at: "2026-08-28T14:00:00Z",
+    source: "stream" as const,
+    ...over,
+  });
+
+  it("collapses journal lines to the latest state per order, newest first, provenance kept", () => {
+    const view = deskActivityView([
+      line({}),
+      line({ filledQuantity: 100, status: "filled", price: 176.1, at: "2026-08-28T14:00:05Z" }),
+      line({
+        orderId: "ord-0",
+        symbol: "AAPL",
+        side: "sell",
+        at: "2026-08-27T10:00:00Z",
+        source: "backfill",
+        filledQuantity: 40,
+        status: "filled",
+        price: 145.2,
+      }),
+    ]);
+    expect(view).toHaveLength(2);
+    expect(view[0]).toMatchObject({ orderId: "ord-1", status: "filled", price: "$176.10" });
+    expect(view[1]).toMatchObject({ orderId: "ord-0", backfilled: true });
+  });
+
+  it("renders a missing price as an em dash, never a fabricated number", () => {
+    expect(deskActivityView([line({})])[0]?.price).toBe("—");
   });
 });
