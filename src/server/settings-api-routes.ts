@@ -135,7 +135,9 @@ function serveSettingsIndex(
     authConfigured,
     adminWired,
     accounts,
-    fleetSuspended: fleet?.allSuspended === true,
+    // Disclosed only when the session owns a bot the hold would actually halt — the fleet's
+    // state stays owner-tier for everyone else (/api/controls answers them {owner:false}).
+    fleetSuspended: accounts.some((a) => a.kind === "bot") && fleet?.allSuspended === true,
     timezones: ALLOWED_TIMEZONES,
   });
 }

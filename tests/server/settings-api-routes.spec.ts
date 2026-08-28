@@ -236,4 +236,25 @@ describe("serveSettingsApi bot-control (#738 phase 9b)", () => {
     expect(parsed.accounts[0].suspended).toBe(true);
     expect(parsed.fleetSuspended).toBe(false);
   });
+
+  it("keeps the fleet hold owner-tier when the session owns no bot", async () => {
+    const config = configWith({
+      controls: {
+        store: {
+          load: () => ({ allSuspended: true, bots: {} }),
+          setBot: () => undefined,
+          setAllSuspended: () => undefined,
+        },
+        isOwner: () => false,
+        bots: () => [],
+      } as never,
+      resolveOwnerIds: () => ["human-eric"],
+    });
+    const { res, out } = fakeRes();
+    await serveSettingsApi(get(), res, "/api/settings", config, session);
+    const parsed = JSON.parse(out.body ?? "{}");
+    // The hold is real, but this member owns nothing it halts — /api/controls stays the
+    // only door to fleet state, and it answers non-owners {owner:false}.
+    expect(parsed.fleetSuspended).toBe(false);
+  });
 });
