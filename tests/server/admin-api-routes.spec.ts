@@ -147,6 +147,19 @@ describe("serveAdminApi claim", () => {
     expect(body.message).toContain("No keys changed");
   });
 
+  it("never re-assigns a stamped owner — linking fills in a MISSING owner only", async () => {
+    const { res, out } = fakeRes();
+    await serveAdminApi(
+      post({ id: "bot-sauron", email: "ann@x.com" }),
+      res,
+      "/api/admin/claim",
+      config(),
+      owner,
+    );
+    expect(linked.filter((l) => l.id === "bot-sauron")).toEqual([]);
+    expect(JSON.parse(out.body ?? "{}").error).toContain("already belongs to");
+  });
+
   it("shows a member {owner:false} — the roster leaks nothing", async () => {
     const { res, out } = fakeRes();
     await serveAdminApi(get(), res, "/api/admin/claim", config(), member);

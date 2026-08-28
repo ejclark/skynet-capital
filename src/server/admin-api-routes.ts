@@ -126,6 +126,14 @@ function applyClaim(
       ? { ok: true, message: `Unlinked ${account.displayName}.` }
       : { ok: false, error: `${account.displayName} wasn't linked.` };
   }
+  // The legacy page's invariant, restored by its security review: linking fills in a MISSING
+  // owner — it never re-assigns an account that already carries a stamp.
+  if (account.ownerEmail) {
+    return {
+      ok: false,
+      error: `${account.displayName} already belongs to ${account.ownerEmail} — this fills in a missing owner, it doesn't reassign one.`,
+    };
+  }
   const email = boundedString(body.email, 120)?.trim().toLowerCase();
   if (!(email && EMAIL.test(email))) {
     return { ok: false, error: "That doesn't look like an email address." };
