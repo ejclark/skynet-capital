@@ -194,4 +194,23 @@ describe("resolveOwnedParticipantIds", () => {
       "jarvis",
     ]);
   });
+
+  // 2026-08-28, live: the Account-links admin page linked Sauron, Eric, and JARVIS all to the
+  // same email with no ownerEmail stamp on any of them, and only Sauron (linked first) ever came
+  // back -- findUnstampedLinkedId used .find() instead of collecting every match.
+  it("returns every unstamped linked id to the same email, not just the first one linked", () => {
+    const unstampedEric = { id: "human-eric" };
+    const jarvis = { id: "jarvis" };
+    expect(
+      resolveOwnedParticipantIds(
+        [SAURON, unstampedEric, jarvis],
+        [
+          link("sauron", "eric@example.com"),
+          link("human-eric", "eric@example.com"),
+          link("jarvis", "eric@example.com"),
+        ],
+        "eric@example.com",
+      ),
+    ).toEqual(["sauron", "human-eric", "jarvis"]);
+  });
 });
