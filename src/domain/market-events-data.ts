@@ -363,6 +363,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "First extended policy framing from the new chair; lands D+1 of MRVL's print, D+2 of NVDA's.",
   },
   {
+    id: "adp-employment-2026-09-02",
+    kind: "macro-print",
+    title: "ADP National Employment Report (Aug 2026 data)",
+    date: "2026-09-02",
+    status: "estimate",
+    source:
+      "NEWS: fred.stlouisfed.org/releases/calendar?rid=194 + mediacenter.adp.com release cadence — 08:15 ET, checked 2026-08-27",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Two sessions ahead of BLS payrolls (9/4); private-sector proxy the market leans on pre-NFP, though the ADP-to-NFP correlation runs loose (July ADP printed +44k vs BLS's -23k the same cycle).",
+  },
+  {
     id: "jobs-2026-09-04",
     kind: "macro-print",
     title: "Employment Situation (Aug 2026 data)",
