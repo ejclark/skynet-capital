@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import {
   BOARD_METRICS,
   type BoardBlock,
+  type BoardCompare,
   type BoardMetric,
   type BoardRow,
   parseBoardMetric,
@@ -106,11 +107,152 @@ function VersusRead({ block }: { readonly block: BoardBlock | undefined }): Reac
   );
 }
 
+function CompareSection({
+  compare,
+  onClear,
+}: {
+  readonly compare: BoardCompare;
+  readonly onClear: () => void;
+}): ReactElement {
+  const lead = (delta: (typeof compare.deltas)[number]) =>
+    delta.lead === "tie" ? "—" : delta.lead === "a" ? "◀" : "▶";
+  return (
+    <section className="cmp" aria-label={`${compare.a.name} versus ${compare.b.name}`}>
+      <header className="cmp-head">
+        <h2>
+          {compare.a.name} <span className="cmp-vs">vs</span> {compare.b.name}
+        </h2>
+        <button type="button" className="cmp-clear" onClick={onClear}>
+          × clear
+        </button>
+      </header>
+      <div className="cmp-grid">
+        {([compare.a, compare.b] as const).map((side, i) => (
+          <article className={`cmp-col ${i === 0 ? "cmp-a" : "cmp-b"}`} key={side.key}>
+            <div className="cmp-who">
+              {side.name}
+              <span className={`chip chip-${side.kind}`}>
+                {side.kind === "bot" ? "BOT" : "HUMAN"}
+              </span>
+            </div>
+            <div className="cmp-equity num">{side.equity}</div>
+            <dl>
+              <div>
+                <dt>Cash</dt>
+                <dd className="num">{side.cash}</dd>
+              </div>
+              <div>
+                <dt>Invested</dt>
+                <dd className="num">{side.invested}</dd>
+              </div>
+              <div>
+                <dt>Unrealized</dt>
+                <dd className={`num tone-${side.unrealizedTone}`}>{side.unrealized}</dd>
+              </div>
+              <div>
+                <dt>Return</dt>
+                <dd className={`num tone-${side.returnTone}`}>{side.returnPct}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+        <div className="cmp-mid">
+          {compare.deltas.map((delta) => (
+            <div className="cmp-delta" key={delta.label}>
+              <span className="cmp-dlabel">{delta.label}</span>
+              <span className="cmp-dval num">
+                {lead(delta)} {delta.amount}
+              </span>
+            </div>
+          ))}
+          <p className="cmp-legend">
+            ◀ {compare.a.name} · ▶ {compare.b.name}
+          </p>
+        </div>
+      </div>
+      <h3 className="cmp-holdhead">Holdings overlap</h3>
+      {compare.holdings.length === 0 ? (
+        <p className="note">Neither holds an open position yet.</p>
+      ) : (
+        <table className="cmp-holdings">
+          <tbody>
+            {compare.holdings.map((h) => (
+              <tr key={h.symbol} className={h.shared ? "cmp-shared" : ""}>
+                <td className="num cmp-aval">{h.aValue ?? "·"}</td>
+                <td className="cmp-sym">
+                  {h.symbol}
+                  {h.shared ? <span className="cmp-tag">SHARED</span> : null}
+                </td>
+                <td className="num cmp-bval">{h.bValue ?? "·"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
 /** The ramp: everyone is green, intensity carries the standing (never red on a friendly board). */
 const rampFor = (index: number, count: number): string =>
   count <= 1 ? "100%" : `${Math.round(100 - (index / (count - 1)) * 70)}%`;
 
-function FieldLadder({ rows }: { readonly rows: readonly BoardRow[] }): ReactElement {
+function ComparePill({
+  rowKey,
+  a,
+  b,
+}: {
+  readonly rowKey: string;
+  readonly a?: string;
+  readonly b?: string;
+}): ReactElement {
+  // Three shapes, straight from the server view's rule: part of the armed/showing pair → cancel;
+  // something else armed and incomplete → complete the pair; otherwise → arm this row.
+  if (a && (rowKey === a || rowKey === b)) {
+    return (
+      <Link
+        from={Route.fullPath}
+        search={(prev) => ({ by: prev.by })}
+        className="cmp-toggle cmp-armed"
+        aria-label="Cancel compare"
+      >
+        ×
+      </Link>
+    );
+  }
+  if (a && !b) {
+    return (
+      <Link
+        from={Route.fullPath}
+        search={(prev) => ({ ...prev, b: rowKey })}
+        className="cmp-toggle"
+        aria-label="Complete the pair with this row"
+      >
+        ⇄
+      </Link>
+    );
+  }
+  return (
+    <Link
+      from={Route.fullPath}
+      search={(prev) => ({ by: prev.by, a: rowKey })}
+      className="cmp-toggle"
+      aria-label="Compare this account"
+    >
+      ⇄
+    </Link>
+  );
+}
+
+function FieldLadder({
+  rows,
+  a,
+  b,
+}: {
+  readonly rows: readonly BoardRow[];
+  readonly a?: string;
+  readonly b?: string;
+}): ReactElement {
   return (
     <ul className="ladder">
       {rows.map((row, index) => (
@@ -127,6 +269,7 @@ function FieldLadder({ rows }: { readonly rows: readonly BoardRow[] }): ReactEle
             <i style={{ width: `${row.bar}%` }} />
           </span>
           <span className="rank-val num">{row.value}</span>
+          <ComparePill rowKey={row.key} a={a} b={b} />
         </li>
       ))}
     </ul>
@@ -152,16 +295,34 @@ function MetricPicker({ active }: { readonly active: BoardMetric }): ReactElemen
 }
 
 function Standings(): ReactElement {
-  const { by } = Route.useSearch();
+  const { by, a, b } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
+  const pick = { ...(a ? { a } : {}), ...(b ? { b } : {}) };
   // The live channel follows the visible metric — one EventSource at a time, disposed on switch.
-  useEffect(() => connectBoardChannel(queryClient, by), [queryClient, by]);
-  const board = useQuery(boardQueryOptions(by));
+  useEffect(
+    () => connectBoardChannel(queryClient, by, { ...(a ? { a } : {}), ...(b ? { b } : {}) }),
+    [queryClient, by, a, b],
+  );
+  const board = useQuery(boardQueryOptions(by, pick));
+
+  // The compare figures ride the snapshot, so they go live the precise way: whenever a live op
+  // moves either compared row, refetch — never on unrelated ticks. Refetch resets opsApplied,
+  // so this cannot loop.
+  const aValue = board.data?.rows.find((r) => r.key === a)?.value;
+  const bValue = board.data?.rows.find((r) => r.key === b)?.value;
+  const compareShown = Boolean(board.data?.compare);
+  const opsApplied = board.data?.opsApplied ?? 0;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fires only when a compared row's VALUE moved — including opsApplied/refetch would refetch on every unrelated tick
+  useEffect(() => {
+    if (compareShown && opsApplied > 0) void board.refetch();
+  }, [aValue, bValue]);
 
   if (board.isPending) return <p className="note">Reading the board…</p>;
   if (board.isError)
     return <p className="note">The board is unreachable — {String(board.error)}</p>;
-  const { rows, blocks, generatedAt, opsApplied } = board.data;
+  const { rows, blocks, generatedAt } = board.data;
+  const armed = a && !board.data.compare ? rows.find((r) => r.key === a) : undefined;
   return (
     <>
       <header className="page-header">
@@ -177,7 +338,21 @@ function Standings(): ReactElement {
         <CohortFigure label="Bots" block={blocks["cohort:bot"]} />
       </div>
       <VersusRead block={blocks.versus} />
-      <FieldLadder rows={rows} />
+      {armed ? (
+        <p className="cmp-hint">
+          Comparing <strong>{armed.name}</strong> — pick a second desk on any row below.{" "}
+          <Link from={Route.fullPath} search={(prev) => ({ by: prev.by })} className="cmp-clear">
+            × cancel
+          </Link>
+        </p>
+      ) : null}
+      {board.data.compare ? (
+        <CompareSection
+          compare={board.data.compare}
+          onClear={() => void navigate({ search: { by } })}
+        />
+      ) : null}
+      <FieldLadder rows={rows} a={a} b={b} />
       <footer className="obs-foot num">
         as of {generatedAt} · ranked by {by} · {opsApplied} live op{opsApplied === 1 ? "" : "s"}{" "}
         applied without a refetch
@@ -186,7 +361,14 @@ function Standings(): ReactElement {
   );
 }
 
+const asId = (raw: unknown): string | undefined =>
+  typeof raw === "string" && raw.length > 0 && raw.length <= 100 ? raw : undefined;
+
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>) => ({ by: parseBoardMetric(search.by) }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    by: parseBoardMetric(search.by),
+    ...(asId(search.a) ? { a: asId(search.a) } : {}),
+    ...(asId(search.b) ? { b: asId(search.b) } : {}),
+  }),
   component: Standings,
 });

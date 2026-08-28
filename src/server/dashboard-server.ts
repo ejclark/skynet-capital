@@ -4,8 +4,8 @@ import {
   type NavView,
   renderPortfolioIndexBody,
 } from "../observatory/render-dashboard.js";
+import { standingsBoardView, standingsCompareView } from "../observatory/standings-board-view.js";
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
-import { standingsBoardView } from "../observatory/standings-patch.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
 import { isAppShellPath, serveAppShell } from "./app-shell-routes.js";
 import type { Session } from "./auth/session.js";
@@ -86,8 +86,15 @@ function serveBoardJson(
   config: DashboardServerConfig,
   channel: BoardPatchChannel,
 ): void {
-  const metric = parseLeaderMetric(new URL(url, "http://localhost").searchParams.get("by"));
+  const params = new URL(url, "http://localhost").searchParams;
+  const metric = parseLeaderMetric(params.get("by"));
   const state = config.hub.getState();
+  // Exactly the page's compare resolution: an id must exist, match, and carry no error —
+  // missing/unknown/errored falls through to no compare, never a crash.
+  const find = (id: string | null) =>
+    id ? state.participants.find((p) => p.id === id && !p.error) : undefined;
+  const a = find(params.get("a"));
+  const b = find(params.get("b"));
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
   res.end(
     JSON.stringify({
@@ -95,6 +102,7 @@ function serveBoardJson(
       generatedAt: state.generatedAt,
       metric,
       view: standingsBoardView(state, metric),
+      ...(a && b ? { compare: standingsCompareView(a, b) } : {}),
     }),
   );
 }

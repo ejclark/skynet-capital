@@ -4,6 +4,7 @@ import {
   type BoardMetric,
   type BoardPatch,
   type BoardSnapshot,
+  type ComparePick,
   fetchBoard,
 } from "./board";
 import { useConnection } from "./connection";
@@ -23,13 +24,14 @@ import { useConnection } from "./connection";
  * dropped socket replays exactly what was missed — or resyncs, honestly.
  */
 
-export const boardQueryKey = (metric: BoardMetric) => ["board", metric] as const;
+export const boardQueryKey = (metric: BoardMetric, pick: ComparePick = {}) =>
+  ["board", metric, pick.a ?? null, pick.b ?? null] as const;
 
-export function boardQueryOptions(metric: BoardMetric) {
+export function boardQueryOptions(metric: BoardMetric, pick: ComparePick = {}) {
   return {
-    queryKey: boardQueryKey(metric),
+    queryKey: boardQueryKey(metric, pick),
     queryFn: async (): Promise<BoardSnapshot> => {
-      const snapshot = await fetchBoard(metric);
+      const snapshot = await fetchBoard(metric, pick);
       useConnection.getState().setSeq(snapshot.seq);
       return snapshot;
     },
@@ -40,8 +42,12 @@ export function boardQueryOptions(metric: BoardMetric) {
 }
 
 /** Open the live channel for one metric. Returns the disposer the caller owns (React effect). */
-export function connectBoardChannel(queryClient: QueryClient, metric: BoardMetric): () => void {
-  const key = boardQueryKey(metric);
+export function connectBoardChannel(
+  queryClient: QueryClient,
+  metric: BoardMetric,
+  pick: ComparePick = {},
+): () => void {
+  const key = boardQueryKey(metric, pick);
   const source = new EventSource(`/events?by=${metric}`, { withCredentials: true });
   const connection = useConnection.getState();
   connection.setStatus("connecting");
