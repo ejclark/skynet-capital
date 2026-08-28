@@ -11,6 +11,7 @@ import {
   parseBoardMetric,
 } from "../live/board";
 import { boardQueryOptions, connectBoardChannel } from "../live/channel";
+import { PageFrame } from "../shell/frame";
 
 /**
  * Standings (#738 phase 2a): the metric picker is a TYPED search param — `?by=` validates through
@@ -318,18 +319,24 @@ function Standings(): ReactElement {
     if (compareShown && opsApplied > 0) void board.refetch();
   }, [aValue, bValue]);
 
-  if (board.isPending) return <p className="note">Reading the board…</p>;
+  if (board.isPending)
+    return (
+      <PageFrame>
+        <p className="note">Reading the board…</p>
+      </PageFrame>
+    );
   if (board.isError)
-    return <p className="note">The board is unreachable — {String(board.error)}</p>;
+    return (
+      <PageFrame>
+        <p className="note">The board is unreachable — {String(board.error)}</p>
+      </PageFrame>
+    );
   const { rows, blocks, generatedAt } = board.data;
   const armed = a && !board.data.compare ? rows.find((r) => r.key === a) : undefined;
   return (
-    <>
+    <PageFrame>
       <header className="page-header">
-        <div className="page-header-row">
-          <h1>Standings</h1>
-          <MetricPicker active={by} />
-        </div>
+        <h1>Standings</h1>
         <p>How every desk is performing — bots and humans, same board. Figures, not placings.</p>
       </header>
       <MatchRead block={blocks.match} />
@@ -352,12 +359,16 @@ function Standings(): ReactElement {
           onClear={() => void navigate({ search: { by } })}
         />
       ) : null}
+      <div className="section-head">
+        <span className="section-title">The Field</span>
+        <MetricPicker active={by} />
+      </div>
       <FieldLadder rows={rows} a={a} b={b} />
       <footer className="obs-foot num">
         as of {generatedAt} · ranked by {by} · {opsApplied} live op{opsApplied === 1 ? "" : "s"}{" "}
         applied without a refetch
       </footer>
-    </>
+    </PageFrame>
   );
 }
 

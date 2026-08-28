@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   type DeskPosition,
   fetchDesk,
@@ -9,8 +9,8 @@ import {
   parseDeskQuery,
   toggleQualifier,
 } from "../live/desk";
+import { PageFrame } from "../shell/frame";
 import { TimelineDrawer } from "../shell/timeline-drawer";
-import { TradeGate } from "../shell/trade-gate";
 
 /**
  * THE DESK (#738 phase 2c) — `/u/:id` in the shell: identity header, tabs, tiles, and the blotter
@@ -134,22 +134,64 @@ function BlotterRow({
 
 function DeskPage(): ReactElement {
   const { id } = Route.useParams();
+  const { q } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const desk = useQuery({
     queryKey: ["desk", id],
     queryFn: () => fetchDesk(id),
     refetchOnWindowFocus: true,
   });
-  const [query, setQuery] = useState("");
+  // The filter is URL state (Eric, live review): typing stays immediate locally, the URL follows
+  // a beat behind (replace, no history spam) — so a refresh or a shared link keeps the filter.
+  const [query, setQuery] = useState(q ?? "");
+  const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(urlTimer.current), []);
+  const setFilter = (next: string) => {
+    setQuery(next);
+    clearTimeout(urlTimer.current);
+    urlTimer.current = setTimeout(() => {
+      void navigate({
+        search: next.trim() === "" ? {} : { q: next },
+        replace: true,
+      });
+    }, 300);
+  };
   const [timelineFor, setTimelineFor] = useState<DeskPosition | null>(null);
 
-  if (desk.isPending) return <p className="note">Reading the desk…</p>;
-  if (desk.isError) return <p className="note">This desk is unreachable — {String(desk.error)}</p>;
+  if (desk.isPending)
+    return (
+      <PageFrame>
+        <p className="note">Reading the desk…</p>
+      </PageFrame>
+    );
+  if (desk.isError)
+    return (
+      <PageFrame>
+        <p className="note">This desk is unreachable — {String(desk.error)}</p>
+      </PageFrame>
+    );
   const { desk: d, generatedAt } = desk.data;
   const filter = parseDeskQuery(query);
   const shown = d.positions.filter((p) => matchesFilter(p, filter));
 
-  return (
+  const rail = (
     <>
+      <p className="rail-label">{d.name}'s desk</p>
+      <span className="rail-current" aria-current="page">
+        Active
+      </span>
+      <a href={`/u/${d.id}`}>Overview</a>
+      <a href={`/u/${d.id}?tab=performance`}>Performance</a>
+      <a href={`/u/${d.id}?tab=settings`}>Settings</a>
+      <hr />
+      <Link to="/" search={{ by: "equity" }}>
+        ← Standings
+      </Link>
+    </>
+  );
+
+  return (
+    <PageFrame rail={rail}>
       <header className="desk-header">
         <div>
           <h1>{d.name}</h1>
@@ -158,25 +200,7 @@ function DeskPage(): ReactElement {
             <span className="env-pill">SIM</span>
           </p>
         </div>
-        <Link to="/" search={{ by: "equity" }} className="desk-back">
-          ← Standings
-        </Link>
       </header>
-
-      <nav className="desk-tabs" aria-label="Desk views">
-        <span className="desk-tab" aria-current="page">
-          Active
-        </span>
-        <a className="desk-tab" href={`/u/${d.id}`}>
-          Overview
-        </a>
-        <a className="desk-tab" href={`/u/${d.id}?tab=performance`}>
-          Performance
-        </a>
-        <a className="desk-tab" href={`/u/${d.id}?tab=settings`}>
-          Settings
-        </a>
-      </nav>
 
       {d.error ? (
         <p className="note-stop">Account unreachable — this desk can't read positions right now.</p>
@@ -210,7 +234,7 @@ function DeskPage(): ReactElement {
             </div>
           </div>
 
-          <FilterBar query={query} onChange={setQuery} />
+          <FilterBar query={query} onChange={setFilter} />
 
           {shown.length === 0 ? (
             <p className="note">
@@ -251,7 +275,19 @@ function DeskPage(): ReactElement {
           )}
         </>
       )}
-      {d.error ? null : <TradeGate deskId={d.id} />}
+      {d.error ? null : (
+        <Link to="/trade" search={{ desk: d.id }} className="trade-link-card">
+          <span>
+            <strong>New trade</strong>
+            <span className="trade-link-sub">
+              Open the trade ticket — the gate reviews before anything is sent
+            </span>
+          </span>
+          <span className="trade-link-arrow" aria-hidden="true">
+            →
+          </span>
+        </Link>
+      )}
       {timelineFor ? (
         <TimelineDrawer
           deskId={d.id}
@@ -263,8 +299,15 @@ function DeskPage(): ReactElement {
       <footer className="obs-foot num">
         as of {generatedAt} · click a symbol for its fill timeline
       </footer>
-    </>
+    </PageFrame>
   );
 }
 
-export const Route = createFileRoute("/u/$id")({ component: DeskPage });
+export const Route = createFileRoute("/u/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 200
+      ? { q: search.q }
+      : {}),
+  }),
+  component: DeskPage,
+});
