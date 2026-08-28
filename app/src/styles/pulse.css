@@ -5,7 +5,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--elev-base);
-  padding: 16px;
+  padding: var(--panel-p);
   margin-top: 16px;
 }
 .pulse-title {

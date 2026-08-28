@@ -53,6 +53,7 @@
   --row-py: 11px;
   --tile-py: 14px;
   --stage-gap: 22px;
+  --panel-p: 16px;
 
   /* spatial motion (#738 phase 4b) — two speeds, one easing; reduced-motion zeroes both */
   --dur-quick: 140ms;
@@ -118,4 +119,5 @@
   --row-py: 6px;
   --tile-py: 9px;
   --stage-gap: 14px;
+  --panel-p: 11px;
 }
