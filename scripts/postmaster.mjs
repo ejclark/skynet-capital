@@ -293,54 +293,59 @@ function gatherDeps(ctx) {
     }
   };
   const needsScan = ctx.eventName === "push" || ctx.inputs?.command === "scan";
-  // Is there any open feedback issue at all? A REST question, on the plentiful core bucket, asked
-  // BEFORE the expensive one (2026-08-26). The sweep below rides every push and its list query is
-  // GraphQL — 100 issues each with their nested closing-PR references, which the API scores by
-  // COST, not by call count. On a busy day that is the single largest draw on a 10,000/hr ceiling,
-  // and on 2026-08-26 it exhausted it outright: `route` started dying on "API rate limit already
-  // exceeded" before it could dispatch the research or feedback jobs, so the tick driving the whole
-  // lane stopped. Most pushes have nothing to sweep, and those now pay nothing.
-  const openFeedback = needsScan
-    ? ghRest("issues?state=open&labels=feedback&per_page=100").filter((i) => !i.pull_request)
-    : [];
-  // Feedback issues whose work has merged but which are still open — the last mile GitHub's own
-  // `Closes #` link keeps missing on bot-opened, bot-merged PRs. Joined here (impure) so
-  // `routeShipped` stays pure and fixture-drivable.
-  const shippedFeedback = openFeedback.length
-    ? sweepShipped(
-        () =>
-          json("gh issue list (shipped)", "gh", [
+  // Issues whose work has merged but which are still open — the last mile GitHub's own `Closes #`
+  // link keeps missing on bot-opened, bot-merged PRs. Joined here (impure) so `routeShipped` stays
+  // pure and fixture-drivable. Run per label: `feedback` (2026-08-22) and `event-research`
+  // (2026-08-28 — four research-labelled issues, #510/#706/#707/#720, stayed open after their
+  // research docs merged because nothing ever swept this label; only `feedback` was wired).
+  const shippedSweep = (label) => {
+    // Is there any open issue with this label at all? A REST question, on the plentiful core
+    // bucket, asked BEFORE the expensive one (2026-08-26). The sweep below rides every push and its
+    // list query is GraphQL — 100 issues each with their nested closing-PR references, which the
+    // API scores by COST, not by call count. On a busy day that is the single largest draw on a
+    // 10,000/hr ceiling, and on 2026-08-26 it exhausted it outright: `route` started dying on "API
+    // rate limit already exceeded" before it could dispatch the research or feedback jobs, so the
+    // tick driving the whole lane stopped. Most pushes have nothing to sweep, and those now pay
+    // nothing.
+    const open = needsScan
+      ? ghRest(`issues?state=open&labels=${label}&per_page=100`).filter((i) => !i.pull_request)
+      : [];
+    if (!open.length) return [];
+    return sweepShipped(
+      () =>
+        json(`gh issue list (shipped, ${label})`, "gh", [
+          "issue",
+          "list",
+          "--state",
+          "open",
+          "--label",
+          label,
+          "--limit",
+          "100",
+          "--json",
+          // `closedByPullRequestsReferences`, NOT `closedByPullRequests` — the latter is not a
+          // field `gh issue list` knows, and asking for it exits 1 with the allow-list, which took
+          // every push run of this router down on 2026-08-22 (docs/LESSONS.md).
+          "number,title,closedByPullRequestsReferences",
+        ]),
+      {
+        isMerged: prIsMerged,
+        // The fallback second look, for an issue the list showed nothing merged for.
+        recheckRefs: (n) =>
+          json("gh issue view (re-check)", "gh", [
             "issue",
-            "list",
-            "--state",
-            "open",
-            "--label",
-            "feedback",
-            "--limit",
-            "100",
+            "view",
+            String(n),
             "--json",
-            // `closedByPullRequestsReferences`, NOT `closedByPullRequests` — the latter is not a
-            // field `gh issue list` knows, and asking for it exits 1 with the allow-list, which took
-            // every push run of this router down on 2026-08-22 (docs/LESSONS.md).
-            "number,title,closedByPullRequestsReferences",
-          ]),
-        {
-          isMerged: prIsMerged,
-          // The fallback second look, for an issue the list showed nothing merged for.
-          recheckRefs: (n) =>
-            json("gh issue view (re-check)", "gh", [
-              "issue",
-              "view",
-              String(n),
-              "--json",
-              "closedByPullRequestsReferences",
-            ]).closedByPullRequestsReferences ?? [],
-          warn: (msg) => console.log(`::warning::shipped sweep — ${msg}`),
-        },
-      )
-    : [];
+            "closedByPullRequestsReferences",
+          ]).closedByPullRequestsReferences ?? [],
+        warn: (msg) => console.log(`::warning::shipped sweep (${label}) — ${msg}`),
+      },
+    );
+  };
   return {
-    shippedFeedback,
+    shippedFeedback: needsScan ? shippedSweep("feedback") : [],
+    shippedEvents: needsScan ? shippedSweep("event-research") : [],
     dueEvents: needsScan
       ? json("event-scan --due", "node", ["scripts/event-scan.mjs", "--due"])
       : [],

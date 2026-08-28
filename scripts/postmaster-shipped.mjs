@@ -1,10 +1,10 @@
-// THE LAST MILE — closing feedback issues whose work has already merged. Split out of
-// postmaster.mjs (2026-08-26, the noExcessiveLinesPerFile split).
+// THE LAST MILE — closing feedback and event-research issues whose work has already merged. Split
+// out of postmaster.mjs (2026-08-26, the noExcessiveLinesPerFile split).
 import { ghRest } from "./postmaster-gh.mjs";
 import { FOOTER } from "./postmaster-labels.mjs";
 
 /**
- * THE LAST MILE. A feedback issue whose work has MERGED but which is still open.
+ * THE LAST MILE. An issue whose work has MERGED but which is still open.
  *
  * GitHub is supposed to close it: PR #448 carried `Closes #447` on line 1 and merged to the default
  * branch. #447 is still open, and so is #449 (via #452). Both of those PRs were authored AND merged
@@ -13,12 +13,13 @@ import { FOOTER } from "./postmaster-labels.mjs";
  * doctrine from it is: never depend on an event firing.
  *
  * So this does not depend on one. Every push to main is the postmaster's tick, so the sweep can
- * simply look at which feedback issues have a merged PR and no longer being open, and close them
- * itself. Pure: the caller supplies the joined list.
+ * simply look at which labelled issues have a merged PR and are no longer open, and close them
+ * itself. Pure: the caller supplies the joined lists — originally `feedback` only; `event-research`
+ * joined 2026-08-28 once the same silent-miss class turned up there too (#510/#706/#707/#720).
  */
 export function routeShipped(deps = {}) {
-  const { shippedFeedback = [] } = deps;
-  return shippedFeedback.map((f) => ({
+  const { shippedFeedback = [], shippedEvents = [] } = deps;
+  return [...shippedFeedback, ...shippedEvents].map((f) => ({
     kind: "close-shipped",
     issueNumber: f.number,
     title: f.title,
