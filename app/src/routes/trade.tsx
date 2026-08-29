@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { boardQueryOptions } from "../live/channel";
+import { useId } from "react";
 import { fetchDesk } from "../live/desk";
 import { fetchPlays, type PlayInfo } from "../live/options";
+import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { PageFrame } from "../shell/frame";
 import { OptionGate } from "../shell/option-gate";
 import { OptionPositionsCard } from "../shell/option-positions";
@@ -15,30 +16,37 @@ import { TradeGate } from "../shell/trade-gate";
  * workflow surface. `?desk=` picks the account; `?play=` picks the rung from the six-play
  * catalog (101/102 side the share gate, 201+ open the options gate) — both typed, shareable
  * search params, which is also what the learn milestones' "open the ticket" links carry.
+ *
+ * Account choice is a FIELD of the ticket (`AccountField`), not a gatekeeper screen the ticket
+ * waits behind — the form is always on-screen, defaulting to the session's own first account.
+ * The options list is `/api/settings`'s `accounts`, which only ever names accounts the session
+ * owns (`ownsAccount`'s doc comment) — the same server-side identity the desk gate re-checks at
+ * submit, so nothing here can offer, let alone place, a ticket against someone else's desk.
  */
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302"]);
 
-function DeskPicker(): ReactElement {
-  const board = useQuery(boardQueryOptions("equity"));
+function AccountField({
+  accounts,
+  deskId,
+  onChange,
+}: {
+  readonly accounts: readonly OwnedAccount[];
+  readonly deskId: string;
+  readonly onChange: (id: string) => void;
+}): ReactElement {
+  const id = useId();
   return (
-    <>
-      <p className="note">Pick the desk to trade — the ticket reviews against that account.</p>
-      {board.data ? (
-        <ul className="trade-desk-list">
-          {board.data.rows.map((row) => (
-            <li key={row.key}>
-              <Link to="/trade" search={{ desk: row.key }}>
-                {row.name}
-                <span className={`chip chip-${row.kind}`}>
-                  {row.kind === "bot" ? "BOT" : "HUMAN"}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </>
+    <div className="field">
+      <label htmlFor={id}>Account</label>
+      <select id={id} value={deskId} onChange={(e) => onChange(e.target.value)}>
+        {accounts.map((account) => (
+          <option key={account.id} value={account.id}>
+            {account.name}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 
@@ -73,6 +81,14 @@ function DeskTicket({ desk, code }: { readonly desk: string; readonly code: stri
 
 function TradePage(): ReactElement {
   const { desk, play } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const accounts = settings.data?.accounts ?? [];
+  // A bookmarked or shared `?desk=` only sticks if it's still an account the session owns —
+  // otherwise fall back to the first owned account, same as having no `?desk=` at all.
+  const activeDesk = (desk && accounts.some((a) => a.id === desk) ? desk : accounts[0]?.id) as
+    | string
+    | undefined;
   const rail = (
     <>
       <p className="rail-label">Trading</p>
@@ -81,8 +97,8 @@ function TradePage(): ReactElement {
       </span>
       <Link to="/outpost">Trading Outpost</Link>
       <hr />
-      {desk ? (
-        <Link to="/u/$id" params={{ id: desk }}>
+      {activeDesk ? (
+        <Link to="/u/$id" params={{ id: activeDesk }}>
           ← Back to the desk
         </Link>
       ) : (
@@ -101,7 +117,20 @@ function TradePage(): ReactElement {
           re-checks the live account at submit.
         </p>
       </header>
-      {desk ? <DeskTicket desk={desk} code={play ?? "101"} /> : <DeskPicker />}
+      {settings.isLoading ? null : accounts.length === 0 ? (
+        <p className="note">No accounts are linked to your session yet.</p>
+      ) : activeDesk ? (
+        <>
+          {accounts.length > 1 ? (
+            <AccountField
+              accounts={accounts}
+              deskId={activeDesk}
+              onChange={(id) => navigate({ search: (prev) => ({ ...prev, desk: id }) })}
+            />
+          ) : null}
+          <DeskTicket desk={activeDesk} code={play ?? "101"} />
+        </>
+      ) : null}
     </PageFrame>
   );
 }
