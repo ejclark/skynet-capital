@@ -338,13 +338,11 @@ function AccountCard({
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
           <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
-          <div className="set-links">
-            {account.kind === "bot" ? (
+          {account.kind === "bot" ? (
+            <div className="set-links">
               <a href="#mission-control">Mission Control ↓</a>
-            ) : (
-              <a href="/learn">Milestones →</a>
-            )}
-          </div>
+            </div>
+          ) : null}
           <RotateSection account={account} />
           <DangerZone account={account} onRemoved={onChanged} />
         </>
@@ -376,6 +374,7 @@ function SettingsPage(): ReactElement {
     <>
       <p className="rail-label">Settings</p>
       <a href="#preferences">Preferences</a>
+      <a href="/learn">Milestones</a>
       {accounts.map((a) => (
         <a key={a.id} href={`#account-${a.id}`}>
           {a.name}
