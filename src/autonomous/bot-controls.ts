@@ -16,6 +16,8 @@
  * never do worse than pre-GUI behavior.
  */
 
+import { isRecord } from "../storage/parse-guards.js";
+
 /** Per-bot overrides. Every field optional: absent = fall back to the env default. */
 export interface BotControls {
   /** True = the owner suspended this bot's trading (dynamic — applies within one poll). */
@@ -40,10 +42,6 @@ export const EMPTY_CONTROLS: ControlsState = { bots: {} };
 
 /** The internal bridge path the `bots` process polls (same listener as the insight relay). */
 export const CONTROLS_BRIDGE_PATH = "/controls";
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
 
 function parseBot(raw: unknown): BotControls | null {
   if (!isRecord(raw)) return null;

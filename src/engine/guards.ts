@@ -1,6 +1,11 @@
 import { type EarningsPrint, etTimeOf, printWithin } from "../domain/earnings-calendar.js";
 import { computeEquity, heldQuantity } from "../domain/portfolio.js";
-import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
+import type {
+  MarketContext,
+  OrderIntent,
+  PlaybookSubscription,
+  Portfolio,
+} from "../domain/types.js";
 import { blocksRiskIncrease, type RiskTier } from "../risk/risk-ladder.js";
 
 /**
@@ -51,6 +56,13 @@ export interface RiskConfig {
    * `clear`, which would assert a safety this file cannot see.
    */
   readonly accountTier?: RiskTier;
+  /**
+   * This account's active playbook subscriptions (issue #885). Scoped to one account already —
+   * `RiskConfig` is built per-bot — so a buy's `playbookId` looks itself up here rather than the
+   * guard taking an `accountId`. Absent or no match = no sub-allocation clamp, unchanged from
+   * pre-subscription behavior.
+   */
+  readonly subscriptions?: readonly PlaybookSubscription[];
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -101,7 +113,20 @@ function clampBuy(
 
   const affordable = Math.floor(portfolio.cash / quote.ask);
   const withinPosition = Math.floor(positionBudget / quote.ask);
-  const quantity = Math.min(intent.quantity, affordable, withinPosition);
+  const bounds = [intent.quantity, affordable, withinPosition];
+
+  // Subscription capital sub-allocation (issue #885): a playbook trades exactly one symbol, so
+  // the value already held in that symbol IS what's deployed under the subscription — no
+  // separate ledger to keep in sync with fills. `existingValue` is reused unchanged.
+  const subscription = intent.playbookId
+    ? config.subscriptions?.find((s) => s.playbookId === intent.playbookId && s.enabled)
+    : undefined;
+  if (subscription) {
+    const subscriptionBudget = Math.max(0, subscription.capitalAllocated - existingValue);
+    bounds.push(Math.floor(subscriptionBudget / quote.ask));
+  }
+
+  const quantity = Math.min(...bounds);
 
   return quantity > 0 ? { ...intent, quantity } : null;
 }
