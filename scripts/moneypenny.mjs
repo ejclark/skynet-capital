@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MONEYPENNY — EVENTS. One router for every issue-driven automation in this repo. Formerly
-// "the postmaster" (renamed #912, slice 3 — see docs/MONEYPENNY.md); its sibling scripts below
-// keep the `postmaster-*.mjs` name until #912's next slice renames them too.
+// "the postmaster" (renamed #912, slice 3 — see docs/MONEYPENNY.md); its sibling scripts were
+// renamed to `moneypenny-*.mjs` in #912's slice 4.
 //
 //   node scripts/moneypenny.mjs                          # read $GITHUB_EVENT_PATH, act
 //   node scripts/moneypenny.mjs --dry-run --event f.json # print the intents, touch nothing

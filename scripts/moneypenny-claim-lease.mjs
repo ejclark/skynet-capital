@@ -100,7 +100,7 @@ export function claimStamp(slug, sha, nowMs) {
       "-f",
       "type=commit",
       "-f",
-      `tagger[name]=postmaster`,
+      `tagger[name]=moneypenny`,
       "-f",
       `tagger[email]=noreply@anthropic.com`,
       "-f",

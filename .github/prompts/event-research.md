@@ -48,7 +48,7 @@ Before opening the PR, find its tracking issue: `gh issue list --label event-res
 matches, add a Summary bullet containing `Closes #<issue-number>` — GitHub links it from anywhere,
 so it is never line 1 (same convention as the feedback lane, `.github/prompts/feedback-build.md`).
 If none matches (already closed, or none was ever opened), skip the bullet — do not fail the build
-over it. This is belt only: the postmaster's push-driven sweep is the suspenders, since `Closes #`
+over it. This is belt only: Moneypenny's push-driven sweep is the suspenders, since `Closes #`
 does not reliably auto-close a PR a bot both opens and merges (docs/LESSONS.md, 2026-08-22).
 
 Verify by exit status and never by tailed output (`npm run typecheck`, `npm run lint`, `npm test`),

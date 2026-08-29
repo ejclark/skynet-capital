@@ -56,7 +56,7 @@ HARD LIMITS — the irreversible class, unchanged by the fact that a conflict is
 - NEVER resolve a conflict by discarding either side's change wholesale ("delete mine, keep
   theirs" or vice versa) unless one side is genuinely a strict subset of the other. If you cannot
   articulate in one sentence why both sides survive intact, that is state (b).
-- Do not remove the `conflict-flagged` label — it is postmaster's memory that this PR was already
+- Do not remove the `conflict-flagged` label — it is Moneypenny's memory that this PR was already
   handled once; removing it would let the next push re-dispatch a session that just finished.
 
 The protected-path half of those limits is mechanical, not a memory test — see

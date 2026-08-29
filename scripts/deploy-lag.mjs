@@ -23,8 +23,8 @@
 // REST-vs-native, it is WHOSE TOKEN arms the merge. Native auto-merge armed by GITHUB_TOKEN lands
 // in exactly the same hole.
 //
-// WHY THIS IS NOT WIRED INTO THE PUSH-DRIVEN SCAN. The obvious home for this check is the
-// postmaster's sweep — but that sweep only runs on `push` → `main`, and the whole condition here
+// WHY THIS IS NOT WIRED INTO THE PUSH-DRIVEN SCAN. The obvious home for this check is
+// Moneypenny's sweep — but that sweep only runs on `push` → `main`, and the whole condition here
 // is "no push happened". By the time a push arrives to run the check, that same push has already
 // deployed everything and cleared the lag: the detector would only ever report a state it had just
 // missed. So it lives on the on-demand paths that are not themselves the cure — a human or agent

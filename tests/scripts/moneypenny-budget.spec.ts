@@ -1,7 +1,7 @@
 import { isRateLimited, sweepShipped } from "../../scripts/moneypenny.mjs";
 
 /**
- * What the postmaster does when the GraphQL budget runs out.
+ * What Moneypenny does when the GraphQL budget runs out.
  *
  * `gatherDeps` is fail-closed by design and must stay that way: an unreadable dependency that
  * returned `[]` would be indistinguishable from an empty queue, which is exactly the class of bug

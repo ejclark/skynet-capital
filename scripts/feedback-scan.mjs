@@ -15,7 +15,7 @@
 // merged PR, a shipped slice, AND a question back; the number that matters is time-to-first-answer
 // and the count that got none.
 //
-// Read-only, no network writes. Uses `gh`, which is present wherever the postmaster runs.
+// Read-only, no network writes. Uses `gh`, which is present wherever Moneypenny runs.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { LABELS } from "./moneypenny.mjs";
@@ -221,7 +221,7 @@ function main(argv) {
     } catch (err) {
       console.error(
         `feedback-scan: could not reach gh — ${String(err.message).split("\n")[0]}\n` +
-          "This runs where the postmaster runs; locally, pass --fixture to score a saved list.",
+          "This runs where Moneypenny runs; locally, pass --fixture to score a saved list.",
       );
       process.exit(2);
     }

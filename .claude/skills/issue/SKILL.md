@@ -51,7 +51,7 @@ that gets a well-shaped issue filed without a second pass.
      https://api.github.com/repos/ejclark/skynet-capital/issues \
      -d @issue.json   # {"title":…,"body":…,"labels":[…]}
    ```
-9. **Label deliberately.** `feedback` starts a postmaster build session on triage; `needs-eric`
+9. **Label deliberately.** `feedback` starts a Moneypenny build session on triage; `needs-eric`
    parks it for his flip. Filing alone never authorizes work — that invariant is load-bearing on a
    public repo and this skill never widens it.
 

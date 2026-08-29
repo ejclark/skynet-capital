@@ -1,4 +1,4 @@
-// THE SHELL WRAPPER — every postmaster module that shells out to `gh`/`git`/`curl` goes through
+// THE SHELL WRAPPER — every Moneypenny module that shells out to `gh`/`git`/`curl` goes through
 // this one call, so every caller gets the same encoding/stdio behaviour and there's one place to
 // change it. Split out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { execFileSync } from "node:child_process";
@@ -11,7 +11,7 @@ export const sh = (cmd, args, opts = {}) =>
  *
  * WHY THIS EXISTS (2026-08-26). `gh <thing> list --json` and `gh <thing> view --json` do not hit
  * REST — they compile to GraphQL, which has a 10,000/hr ceiling against REST's 15,000, and is the
- * bucket the GitHub MCP also spends. The postmaster rides EVERY push to main, and its dependency
+ * bucket the GitHub MCP also spends. Moneypenny rides EVERY push to main, and its dependency
  * gather made one GraphQL call per open issue and one per referenced PR on top of two list calls.
  * During a burn-down that is thousands an hour, and on 2026-08-26 it exhausted the bucket outright:
  * `route` began dying on `API rate limit already exceeded for user ID 3472134` before it could
@@ -20,7 +20,7 @@ export const sh = (cmd, args, opts = {}) =>
  *
  * REST is the plentiful bucket and `ship.sh` already says so in its own header ("never the scarce
  * GraphQL bucket that the GitHub MCP spends by the thousands"). This is that rule, available to
- * the postmaster.
+ * Moneypenny.
  *
  * CURL, NOT `fetch`. `gatherDeps` is synchronous, so a `fetch` would push async through its whole
  * call chain for no gain; and Node's global fetch ignores `HTTPS_PROXY`, which breaks local runs
@@ -44,7 +44,7 @@ export function ghRest(path, { token = process.env.GH_TOKEN ?? process.env.GITHU
     "-H",
     "Accept: application/vnd.github+json",
     "-H",
-    "User-Agent: skynet-postmaster",
+    "User-Agent: skynet-moneypenny",
     url,
   ]);
   return JSON.parse(out || "null");

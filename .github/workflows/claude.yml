@@ -39,7 +39,7 @@ name: Claude
 # not authorizing the action: granting a session real Bash/Write/Edit tools on a stranger's say-so
 # would be a straightforward escalation. So `gate` checks WHO spoke, not just WHAT they said —
 # `github.event.sender.login`'s `author_association` must be OWNER, MEMBER, or COLLABORATOR. This
-# is the comment-driven analogue of the postmaster's own rule for labels (#430): applying a label
+# is the comment-driven analogue of Moneypenny's own rule for labels (#430): applying a label
 # requires triage/write permission, so the label IS the authorization; here, being a recognized
 # member of the repo IS the authorization. An unauthorized mention is silently ignored — no reply,
 # so it never rewards a stranger's mention with visible bot attention.

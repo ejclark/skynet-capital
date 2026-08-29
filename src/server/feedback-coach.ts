@@ -1,7 +1,7 @@
 /**
  * The feedback coach — the AI-assisted half of the in-app feedback loop (#429 slice 2, #435,
  * #449). A short Claude dialogue interrogates a member's raw note into a specific,
- * postmaster-digestible report — shaped as the house CAPSULE (docs/ISSUES.md, 2026-08-22): talking
+ * Moneypenny-digestible report — shaped as the house CAPSULE (docs/ISSUES.md, 2026-08-22): talking
  * points above the fold, the whole brief inside one <details>. This is the half of the issue
  * channel that scales: Zimmermann et al. found the information a builder needs most (repro steps,
  * expected-vs-actual) is the information a reporter finds hardest to give, so the coach asks for

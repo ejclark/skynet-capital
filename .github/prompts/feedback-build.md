@@ -104,7 +104,7 @@ explaining that it already works, said out loud.
    happened on the lane's first live run, 2026-08-19). If the issue already carries `needs-eric`
    from intake, do not repeat the verdict — confirm and stop.
 1. **Receipt.** One friendly line: a build session has started, and the issue closes when the change
-   merges. (The postmaster closes it on the next push to main — GitHub's own `Closes #` link is not
+   merges. (Moneypenny closes it on the next push to main — GitHub's own `Closes #` link is not
    reliable for a PR a bot both opens and merges; it silently missed #447 and #449.)
 2. **Branch `feedback/<issue-number>`** off `origin/main`. The name is load-bearing — the envelope
    gate keys on it.
