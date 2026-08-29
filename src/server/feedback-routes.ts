@@ -1,33 +1,22 @@
 /**
- * The `/feedback` routes — the form, the submission, the coach turn, and the markdown preview.
+ * `/feedback/coach` and `/feedback/preview` — the two feedback endpoints that stay bare paths
+ * rather than `/api/*`: the shell's own coach box (`app/src/live/feedback.ts`) posts to them
+ * directly, so they're load-bearing for BOTH the retired classic form and the current shell, not
+ * classic-only residue. `/feedback` and `/feedback/followup` themselves are superseded by the
+ * shell's own `/api/feedback` and `/api/feedback/followup` (`feedback-api-routes.ts`).
  *
- * Split out of dashboard-server.ts when the preview route landed (2026-08-22): the router file was
- * one line under its architecture budget, and the feedback surface had grown its own dependencies
- * (a GitHub filer, an AI coach, a markdown renderer). Same shape as trade-routes.ts and
- * research-routes.ts — the router dispatches, the surface owns its own handlers.
- *
- * Behaviour is unchanged by the move: GET renders the form, POST files the issue behind a
- * per-member throttle, and neither the coach nor the preview ever posts anything anywhere — only
- * the member's explicit Send does.
+ * Neither the coach nor the preview ever posts anything anywhere — only the member's explicit
+ * Send does.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import {
-  renderFeedbackFollowupResultBody,
-  renderFeedbackFormBody,
-  renderFeedbackResultBody,
-} from "../observatory/feedback-view.js";
-import type { NavContext } from "../observatory/render-dashboard.js";
 import type { Session } from "./auth/session.js";
 import { type CoachTurn, handleFeedbackCoach } from "./feedback-coach.js";
-import type { FollowupResult, SubmitFollowup } from "./feedback-followup.js";
-import { feedbackInputFromForm, kindFromForm } from "./feedback-form-input.js";
-import { opaqueMemberId } from "./feedback-issue.js";
-import { type FeedbackLogEntry, recordFilingSafely } from "./feedback-log.js";
+import type { SubmitFollowup } from "./feedback-followup.js";
+import type { FeedbackLogEntry } from "./feedback-log.js";
 import { handleFeedbackPreview } from "./feedback-preview.js";
 import type { FeedbackInput, FeedbackResult } from "./feedback-service.js";
 import type { FetchFeedbackStatuses } from "./feedback-status.js";
-import { readBody, shellDocument } from "./page-shell.js";
 
 /** What the feedback surface needs from the server config — never the whole config object. */
 export interface FeedbackRouteDeps {
@@ -48,35 +37,26 @@ export interface FeedbackRouteDeps {
   readonly submitFollowup?: SubmitFollowup;
 }
 
-/** The feedback paths, dispatched together so the main router stays one branch. */
+/** Handle `/feedback/coach` and `/feedback/preview`. */
 export async function serveFeedbackRoute(
   req: IncomingMessage,
   res: ServerResponse,
   path: string,
   session: Session | undefined,
   config: FeedbackRouteDeps,
-  nav: NavContext,
 ): Promise<void> {
   const method = req.method ?? "GET";
   if (path === "/feedback/coach") {
     await handleFeedbackCoach(req, res, method, session?.email, config.coachFeedback);
     return;
   }
-  if (path === "/feedback/preview") {
-    await handleFeedbackPreview(req, res, method);
-    return;
-  }
-  if (path === "/feedback/followup") {
-    await handleFollowup(req, res, method, session, nav, config);
-    return;
-  }
-  await handleFeedback(req, res, method, session, nav, config);
+  await handleFeedbackPreview(req, res, method);
 }
 
-// Light per-submitter throttle — the codebase has no rate-limiting, and this route writes to the
-// repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine (single process).
+// Light per-submitter throttle — the codebase has no rate-limiting, and feedback submission
+// writes to the repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine
+// (single process). Shared with the shell's /api/feedback (#738 phase 9d) — one budget, one door.
 const feedbackHits = new Map<string, number[]>();
-/** Shared with the shell's /api/feedback (#738 phase 9d) — one budget per member, both doors. */
 export function feedbackThrottled(
   key: string,
   now = Date.now(),
@@ -91,162 +71,4 @@ export function feedbackThrottled(
   recent.push(now);
   feedbackHits.set(key, recent);
   return false;
-}
-
-async function handleFeedback(
-  req: IncomingMessage,
-  res: ServerResponse,
-  method: string,
-  session: Session | undefined,
-  nav: NavContext,
-  config: FeedbackRouteDeps,
-): Promise<void> {
-  const { submitFeedback, recordFeedback, readFeedback, fetchFeedbackStatus, submitFollowup } =
-    config;
-  if (method === "GET") {
-    const recent =
-      readFeedback && session?.email ? await readFeedback(opaqueMemberId(session.email)) : [];
-    const statuses =
-      fetchFeedbackStatus && recent.length
-        ? await fetchFeedbackStatus(recent.map((e) => e.issueNumber))
-        : undefined;
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(
-      shellDocument(
-        "Feedback — Skynet Capital",
-        renderFeedbackFormBody({
-          nav,
-          enabled: Boolean(submitFeedback),
-          coachEnabled: Boolean(config.coachFeedback),
-          recent,
-          followupEnabled: Boolean(submitFollowup && readFeedback),
-          ...(statuses ? { statuses } : {}),
-        }),
-      ),
-    );
-    return;
-  }
-  if (method !== "POST") {
-    res.writeHead(405, { "content-type": "text/plain" });
-    res.end("method not allowed");
-    return;
-  }
-  if (!submitFeedback) {
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(
-      shellDocument(
-        "Feedback — Skynet Capital",
-        renderFeedbackResultBody({
-          nav,
-          result: {
-            ok: false,
-            error:
-              "Feedback isn't switched on yet — ask Eric to set the feedback token. Your note wasn't sent.",
-          },
-        }),
-      ),
-    );
-    return;
-  }
-  if (session && feedbackThrottled(session.email)) {
-    res.writeHead(429, { "content-type": "text/html; charset=utf-8" });
-    res.end(
-      shellDocument(
-        "Feedback — Skynet Capital",
-        renderFeedbackResultBody({
-          nav,
-          result: {
-            ok: false,
-            error: "You've sent a bunch just now — give it a few minutes and try again.",
-          },
-        }),
-      ),
-    );
-    return;
-  }
-
-  // Raised past the shared 1MB default: up to 3 attached screenshots ride this same POST as
-  // base64 in the `images` hidden field (feedback-view.ts) — plain text submissions stay tiny.
-  const form = new URLSearchParams(await readBody(req, 8_000_000));
-  const kind = kindFromForm(form.get("kind"));
-  if (!kind) {
-    res.writeHead(400, { "content-type": "text/html; charset=utf-8" });
-    res.end(
-      shellDocument(
-        "Feedback — Skynet Capital",
-        renderFeedbackResultBody({
-          nav,
-          result: {
-            ok: false,
-            error:
-              "Pick what kind of feedback this is — bug, feature, or side quest — and send it again.",
-          },
-        }),
-      ),
-    );
-    return;
-  }
-  const input = feedbackInputFromForm(form, session, kind);
-  const result = await submitFeedback(input);
-  if (result.ok) {
-    await recordFilingSafely(
-      recordFeedback,
-      input,
-      session?.email ? opaqueMemberId(session.email) : undefined,
-      result,
-    );
-  }
-  res.writeHead(result.ok ? 200 : 502, { "content-type": "text/html; charset=utf-8" });
-  res.end(shellDocument("Feedback — Skynet Capital", renderFeedbackResultBody({ nav, result })));
-}
-
-/** A follow-up comment on a filed issue, and the retrigger that comes with it (feedback-followup.ts).
- *  Ownership is checked against the member's own logged filings — never trusted from the posted
- *  `issueNumber` — so a member can only ever follow up on their own feedback. */
-async function handleFollowup(
-  req: IncomingMessage,
-  res: ServerResponse,
-  method: string,
-  session: Session | undefined,
-  nav: NavContext,
-  config: FeedbackRouteDeps,
-): Promise<void> {
-  const respond = (status: number, result: FollowupResult) => {
-    res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
-    res.end(
-      shellDocument("Feedback — Skynet Capital", renderFeedbackFollowupResultBody({ nav, result })),
-    );
-  };
-  if (method !== "POST") {
-    res.writeHead(405, { "content-type": "text/plain" });
-    res.end("method not allowed");
-    return;
-  }
-  const { submitFollowup, readFeedback } = config;
-  if (!(submitFollowup && readFeedback && session)) {
-    respond(200, { ok: false, error: "Following up isn't switched on yet." });
-    return;
-  }
-  if (feedbackThrottled(session.email)) {
-    respond(429, {
-      ok: false,
-      error: "You've sent a bunch just now — give it a few minutes and try again.",
-    });
-    return;
-  }
-  const form = new URLSearchParams(await readBody(req, 8_000));
-  const issueNumber = Number(form.get("issueNumber"));
-  const details = form.get("details") ?? "";
-  const owned = await readFeedback(opaqueMemberId(session.email));
-  if (!(Number.isInteger(issueNumber) && owned.some((e) => e.issueNumber === issueNumber))) {
-    respond(200, { ok: false, error: "That doesn't look like one of your own filings." });
-    return;
-  }
-  const result = await submitFollowup({
-    issueNumber,
-    body: details,
-    submitterEmail: session.email,
-    ...(session.name ? { submitterName: session.name } : {}),
-  });
-  respond(result.ok ? 200 : 502, result);
 }

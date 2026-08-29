@@ -1,5 +1,5 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
-import { enabledPlaybooks, G1_GOOG, S1_NVDA } from "../../src/playbooks/registry.js";
+import { enabledPlaybooks, G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
 
 const cal = (symbol: string, date: string, status: EarningsPrint["status"]): EarningsPrint[] => [
   { symbol, date, status, source: "test" },
@@ -87,5 +87,12 @@ describe("enabledPlaybooks env parsing", () => {
     });
     expect(enabled).toEqual([]);
     expect(rejected).toEqual(["S9-FAKE:standard", "S1-NVDA:reckless"]);
+  });
+
+  it("recognises TACO-DJT — registered, but still dark unless named", () => {
+    expect(enabledPlaybooks({})).toEqual({ enabled: [], rejected: [] });
+    const { enabled, rejected } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "TACO-DJT:conservative" });
+    expect(rejected).toEqual([]);
+    expect(enabled).toEqual([{ playbook: TACO_DJT, mode: "conservative" }]);
   });
 });

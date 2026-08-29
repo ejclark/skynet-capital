@@ -7,7 +7,9 @@ import type { ActivityView } from "./participant-snapshot.js";
  * anything else from this module.
  */
 
-export type ActivitySource = "stream" | "backfill" | "broker";
+/** "lifecycle" (#468 criterion 6): a line synthesized from an option's OPEXP/OPASN/OPEXC/OPTRD
+ *  account activity rather than captured from an order fill — see `../trading/option-lifecycle.ts`. */
+export type ActivitySource = "stream" | "backfill" | "broker" | "lifecycle";
 
 /** One order's state at a moment in time — a line in the journal. Extends the view shape so the
  *  round-trip matcher and the blotter consume records and broker rows interchangeably. */

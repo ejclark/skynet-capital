@@ -95,11 +95,10 @@ match an order to, so orders are refused; once a member's account carries an own
 Rolling renders as a disabled control with its real reason: this account path trades shares, so there
 is no options leg to roll (see the plan for what enabling it would take).
 
-Eyeball the whole desk without a server or a broker:
-
-```sh
-node scripts/shoot-desk.mjs [outdir]   # renders the desk's surfaces + screenshots them
-```
+The desk itself now renders as a shell React route (`/app/u/:id`) rather than server-rendered
+HTML — eyeball it by starting the dev server and opening the route in a browser (the shoot-script
+harness this section used to point to was retired whole with the classic desk views in #738 phase
+9f-2).
 
 ## Design
 

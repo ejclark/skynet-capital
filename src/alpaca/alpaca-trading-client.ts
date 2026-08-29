@@ -18,6 +18,10 @@ export interface AlpacaAccount {
    *  above is the API's UUID, which appears nowhere they'd recognize. Same payload, no extra
    *  call. Optional because it's a subset type and older recorded fixtures predate it. */
   readonly account_number?: string;
+  /** Alpaca's own options approval tier (0 = none, 1 = covered calls/CSPs, 2 = long calls/puts,
+   *  3 = spreads). #468 criterion 7 reads this to refuse a play the account isn't approved for —
+   *  optional because older recorded fixtures predate options entirely. */
+  readonly options_trading_level?: string | number;
 }
 
 /** Alpaca position payload (subset). */

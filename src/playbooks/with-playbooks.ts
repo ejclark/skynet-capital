@@ -11,12 +11,15 @@
 import type { EarningsPrint } from "../domain/earnings-calendar.js";
 import type { MarketContext, OrderIntent, Portfolio } from "../domain/types.js";
 import type { Persona } from "../personas/persona.js";
-import { type EnabledPlaybook, playbookIntents } from "./playbook.js";
+import { type EnabledPlaybook, type PlaybookEvent, playbookIntents } from "./playbook.js";
 
 export function withPlaybooks(
   base: Persona,
   enabled: readonly EnabledPlaybook[],
   calendar: readonly EarningsPrint[],
+  /** Recent external events (e.g. TACO signals) for any event-driven play in the roster.
+   *  Optional and additive — every existing call site keeps working unchanged. */
+  events: readonly PlaybookEvent[] = [],
 ): Persona {
   if (enabled.length === 0) {
     return base;
@@ -27,7 +30,7 @@ export function withPlaybooks(
     name: base.name,
     thesis: base.thesis,
     decide(context: MarketContext, portfolio: Portfolio): OrderIntent[] {
-      const plays = playbookIntents(enabled, context, portfolio, calendar);
+      const plays = playbookIntents(enabled, context, portfolio, calendar, events);
       const reflexes = base.decide(context, portfolio).filter((i) => !managed.has(i.symbol));
       return [...plays, ...reflexes];
     },

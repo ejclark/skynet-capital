@@ -93,11 +93,27 @@ function RootShell(): ReactElement {
           >
             Collections
           </Link>
+          <Link
+            to="/outpost"
+            className="topnav-link"
+            activeProps={{ "aria-current": "page" }}
+            activeOptions={{ includeSearch: false }}
+          >
+            The Outpost
+          </Link>
           <Link to="/learn" className="topnav-link" activeProps={{ "aria-current": "page" }}>
             Milestones
           </Link>
           <Link to="/research" className="topnav-link" activeProps={{ "aria-current": "page" }}>
             Research
+          </Link>
+          <Link
+            to="/trade"
+            className="topnav-link"
+            activeProps={{ "aria-current": "page" }}
+            activeOptions={{ includeSearch: false }}
+          >
+            Trade
           </Link>
         </nav>
         <div className="topbar-actions">

@@ -1,0 +1,221 @@
+/* the Trading Outpost (#809 slice 1) — plays as trading cards. Tokens only.
+   The card reads as a collectible: a banded header carrying the mark, a body, and a receipt
+   along the bottom edge. Accent teal is the machine voice (docs/BRAND.md) — it marks the
+   house's own authorship and nothing else here. */
+
+.op-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.op-chips-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.op-chip {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.op-chip:hover {
+  color: var(--text);
+}
+
+.op-chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.op-count {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.op-deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.op-note {
+  margin: 20px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+/* --- the card ------------------------------------------------------------ */
+
+.pc {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  overflow: hidden;
+  transition:
+    transform var(--dur-quick) var(--ease-spatial),
+    box-shadow var(--dur-quick) var(--ease-spatial);
+}
+
+.pc:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elev-raised);
+}
+
+.pc-band {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px var(--panel-p);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-mark {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.pc-sym {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.pc-author {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 8px var(--panel-p) 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.pc-author:hover {
+  color: var(--accent);
+}
+
+.pc-author-by,
+.pc-author-kind {
+  font-weight: 400;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.pc-author-house .pc-author-kind {
+  color: var(--accent);
+}
+
+.pc-thesis {
+  margin: 6px 0 0;
+  padding: 0 var(--panel-p);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+/* A fixed two-column grid, not a wrapping flex row: a long window string must never reflow one
+   card's stats into a different shape from the card beside it — a deck reads by comparison. */
+.pc-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 4px 14px;
+  margin: 12px 0 0;
+  padding: 0 var(--panel-p);
+}
+
+.pc-stats dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.pc-stats dd {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.pc-modes {
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+.pc-traits {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0 var(--panel-p);
+}
+
+.pc-trait {
+  padding: 4px 9px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.pc-trait:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pc-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding: 12px var(--panel-p) var(--panel-p);
+}
+
+.pc-evidence {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+  border-top: 1px dashed var(--border);
+  padding-top: 9px;
+}
+
+.pc-study {
+  font-size: 11.5px;
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}

@@ -10,7 +10,10 @@
  *   set -a && source .env && set +a
  *   npm run backfill:activity
  */
-import { backfillParticipantActivity } from "../observatory/activity-backfill.js";
+import {
+  backfillParticipantActivity,
+  backfillParticipantOptionLifecycle,
+} from "../observatory/activity-backfill.js";
 import { createActivityStore } from "../observatory/activity-store.js";
 import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
@@ -54,6 +57,24 @@ async function main(): Promise<void> {
     } catch (error) {
       failures += 1;
       console.error(`[${participant.id}] backfill failed: ${error}`);
+      continue;
+    }
+
+    // #468 criterion 6 — option lifecycle events (OPEXP/OPASN/OPEXC/OPTRD) never arrive as order
+    // fills, so they need their own sweep of the same durable ledger.
+    try {
+      const options = dataSource.optionsClientFactory(participant);
+      const lifecycle = await backfillParticipantOptionLifecycle({
+        participantId: participant.id,
+        store,
+        listLifecycleActivities: (after) => options.getOptionLifecycleActivities(after),
+      });
+      console.log(
+        `[${participant.id}] ${lifecycle.fetched} option lifecycle activit${lifecycle.fetched === 1 ? "y" : "ies"} read over ${lifecycle.pages} page(s) — ${lifecycle.appended} new ledger line(s), ${lifecycle.fetched - lifecycle.appended} already held.`,
+      );
+    } catch (error) {
+      failures += 1;
+      console.error(`[${participant.id}] option lifecycle backfill failed: ${error}`);
     }
   }
 

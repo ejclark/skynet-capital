@@ -4,7 +4,6 @@ import { resolveAuth } from "../../src/server/auth/resolve-auth.js";
 import { signSession } from "../../src/server/auth/session.js";
 import type { BotControlsStore } from "../../src/server/bot-controls-store.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
-import type { FeedbackInput, FeedbackResult } from "../../src/server/feedback-service.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
 
 // Sibling of dashboard-server.spec.ts (split 2026-08-26 to stay under the per-file line cap) —
@@ -29,36 +28,6 @@ async function withServer(
 }
 
 describe("dashboard-server /feedback", () => {
-  it("serves the form and files an issue on POST", async () => {
-    const calls: FeedbackInput[] = [];
-    const submitFeedback = (input: FeedbackInput): Promise<FeedbackResult> => {
-      calls.push(input);
-      return Promise.resolve({ ok: true, url: "https://github.com/x/y/issues/7", number: 7 });
-    };
-    await withServer({ hub: new ObservatoryHub(board()), submitFeedback }, async (base) => {
-      // Phase 9d: the page lives in the shell now — GET redirects, POST keeps filing.
-      const form = await fetch(`${base}/feedback`, { redirect: "manual" });
-      expect(form.status).toBe(302);
-      expect(form.headers.get("location")).toBe("/app/feedback");
-
-      const post = await fetch(`${base}/feedback`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          kind: "bug",
-          title: "It broke",
-          details: "here's how",
-        }).toString(),
-      });
-      expect(post.status).toBe(200);
-      const success = await post.text();
-      expect(success).toContain("#7");
-      // The filed issue must be linkable so the member can follow its progress (#436).
-      expect(success).toContain("https://github.com/x/y/issues/7");
-      expect(calls[0]).toMatchObject({ kind: "bug", title: "It broke", details: "here's how" });
-    });
-  });
-
   it("serves coach turns as JSON, and reports 'not switched on' without a coach", async () => {
     const coach = () =>
       Promise.resolve({ ok: true as const, done: false as const, question: "Where?" });
@@ -78,7 +47,6 @@ describe("dashboard-server /feedback", () => {
       expect(bad.status).toBe(400);
     });
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
-      expect(await (await fetch(`${base}/feedback`)).text()).not.toContain("coach-box");
       const off = await fetch(`${base}/feedback/coach`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -88,34 +56,13 @@ describe("dashboard-server /feedback", () => {
     });
   });
 
-  it("shows a friendly error when filing fails", async () => {
-    const submitFeedback = (): Promise<FeedbackResult> =>
-      Promise.resolve({ ok: false, error: "GitHub said no" });
-    await withServer({ hub: new ObservatoryHub(board()), submitFeedback }, async (base) => {
-      const post = await fetch(`${base}/feedback`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ kind: "idea", title: "hi" }).toString(),
-      });
-      expect(post.status).toBe(502);
-      expect(await post.text()).toContain("GitHub said no");
-    });
-  });
-
-  it("redirects the page and reports 'not switched on' when no token is wired", async () => {
+  it("redirects the bare page into the shell even with no token wired", async () => {
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
       // Phase 9d: the page lives in the shell (the shell page states the unwired truth via the
-      // API); the legacy POST still answers with the honest sentence.
+      // API, tested in feedback-api-routes.spec.ts).
       const form = await fetch(`${base}/feedback`, { redirect: "manual" });
       expect(form.status).toBe(302);
       expect(form.headers.get("location")).toBe("/app/feedback");
-      const post = await fetch(`${base}/feedback`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ kind: "bug", title: "x" }).toString(),
-      });
-      expect(post.status).toBe(200);
-      expect(await post.text()).toContain("isn't switched on");
     });
   });
 
@@ -148,30 +95,6 @@ describe("dashboard-server /feedback", () => {
         expect(authed.headers.get("location")).toBe("/app/feedback");
       },
     );
-  });
-});
-
-describe("dashboard-server /classic quarantine (phase 9f-1)", () => {
-  it("serves every legacy page one prefix deep while the bare url redirects", async () => {
-    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
-      // The bare URL keeps sending members into the shell…
-      const bare = await fetch(`${base}/learn`, { redirect: "manual" });
-      expect(bare.status).toBe(302);
-      // …while the quarantine door serves the legacy page itself, no redirect.
-      const doored = await fetch(`${base}/classic/learn`, { redirect: "manual" });
-      expect(doored.status).toBe(200);
-      expect(await doored.text()).toContain("Skynet Capital");
-      const wire = await fetch(`${base}/classic/wire`, { redirect: "manual" });
-      expect(wire.status).toBe(200);
-    });
-  });
-
-  it("stamps the classic board with the legacy banner", async () => {
-    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
-      const html = await (await fetch(`${base}/classic`)).text();
-      expect(html).toContain("legacy view");
-      expect(html).toContain("/classic/&lt;page&gt;");
-    });
   });
 });
 
@@ -259,57 +182,17 @@ describe("dashboard-server desk settings (#475)", () => {
     });
   });
 
-  it("redirects the retired /controls bookmark to the viewer's own desk settings", async () => {
+  // The old per-viewer "whose desk" resolution retired with the fleet switchboard landing on app
+  // Settings for every viewer — /controls is now a flat redirect (legacy-redirects.spec.ts covers
+  // the mapping itself); this just proves the auth-gated dispatcher actually reaches it.
+  it("redirects the retired /controls bookmark into app Settings", async () => {
     await withServer(config(), async (base) => {
       const res = await fetch(`${base}/controls`, {
         headers: { cookie: cookieFor("eric@gmail.com") },
         redirect: "manual",
       });
       expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/u/sauron?tab=settings");
-    });
-  });
-
-  // 2026-08-25: an owner with no linked desk of their own is a real, expected state (exactly the
-  // bug that motivated this fallback) — Mission Control controls the whole fleet, not one
-  // account, so it must stay reachable even then. Falling back to ANY bot's desk is safe for
-  // ANY viewer, owner or not: the destination re-checks ownership independently on arrival
-  // (see the two tests above), so a non-owner just lands on that desk's plain overview.
-  it("falls back to any bot's desk when the viewer has no linked account of their own", async () => {
-    const noOwnAccount = {
-      ...config(),
-      resolveOwnerId: () => undefined,
-    };
-    await withServer(noOwnAccount, async (base) => {
-      const owner = await fetch(`${base}/controls`, {
-        headers: { cookie: cookieFor("eric@gmail.com") },
-        redirect: "manual",
-      });
-      expect(owner.status).toBe(302);
-      expect(owner.headers.get("location")).toBe("/u/sauron?tab=settings");
-
-      const member = await fetch(`${base}/controls`, {
-        headers: { cookie: cookieFor("member@gmail.com") },
-        redirect: "manual",
-      });
-      expect(member.status).toBe(302);
-      expect(member.headers.get("location")).toBe("/u/sauron?tab=settings");
-    });
-  });
-
-  it("sends a viewer to the board when no fallback desk exists either (no bots on the fleet)", async () => {
-    const noFallback = {
-      ...config(),
-      resolveOwnerId: () => undefined,
-      controls: { ...config().controls, bots: () => [] },
-    };
-    await withServer(noFallback, async (base) => {
-      const res = await fetch(`${base}/controls`, {
-        headers: { cookie: cookieFor("member@gmail.com") },
-        redirect: "manual",
-      });
-      expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/");
+      expect(res.headers.get("location")).toBe("/app/settings");
     });
   });
 });
