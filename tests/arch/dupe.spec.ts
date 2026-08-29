@@ -1,13 +1,9 @@
-import { execFileSync } from "node:child_process";
+import { advisoryScan } from "../support/advisory-scan.js";
 
-// Duplication fitness gate — runs the real scanner (scripts/dupe-scan.mjs) so pasted helpers/token
-// blocks can't multiply (audit finding C2: escapeHtml ×3, copied design-token blocks). Enforced on
-// every PR through the existing test job. To consolidate a copy run /dedupe; the budget only ever
-// ratchets DOWN (`npm run dupe:scan -- --update` after consolidating).
-describe("duplication budget", () => {
-  it("duplicate top-level definitions stay within the committed budget", () => {
-    expect(() =>
-      execFileSync("node", ["scripts/dupe-scan.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
-    ).not.toThrow();
+// Duplication fitness gate — runs the real scanner (scripts/dupe-scan.mjs). To consolidate a copy
+// run /dedupe. Advisory since 2026-08-29 (Eric) — see tests/support/advisory-scan.ts.
+describe("duplication budget (advisory)", () => {
+  it("reports duplicate top-level definitions without blocking CI", () => {
+    advisoryScan("scripts/dupe-scan.mjs");
   });
 });

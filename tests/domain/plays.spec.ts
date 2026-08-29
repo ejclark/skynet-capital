@@ -6,6 +6,7 @@ import {
   playsAtLevel,
   unlockedPlays,
 } from "../../src/domain/plays.js";
+import { TRADE_TYPES } from "../../src/domain/trade-types.js";
 
 describe("plays catalog", () => {
   it("starts the ladder at the cash-covered put (the safest rung)", () => {
@@ -48,6 +49,32 @@ describe("plays catalog", () => {
       expect(p.maxLoss.length).toBeGreaterThan(0);
       expect(p.whenToUse.length).toBeGreaterThan(0);
       expect(p.teaches.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("cites ruling 16's own code for the strategies it defines — never a re-numbered one", () => {
+    const csp = PLAYS.find((p) => p.id === "cash-covered-put");
+    const cc = PLAYS.find((p) => p.id === "covered-call");
+    expect(csp?.code).toBe(TRADE_TYPES.find((t) => t.id === "sell-secured-put")?.code);
+    expect(cc?.code).toBe(TRADE_TYPES.find((t) => t.id === "sell-covered-call")?.code);
+    // every code cited here, when present, is one ruling 16 actually issued
+    const knownCodes = new Set(TRADE_TYPES.map((t) => t.code));
+    for (const p of PLAYS) {
+      if (p.code !== undefined) expect(knownCodes.has(p.code)).toBe(true);
+    }
+  });
+
+  it("leaves `code` undefined for strategies beyond ruling 16's current six", () => {
+    const beyondRuling16 = [
+      "bull-call-spread",
+      "iron-condor",
+      "butterfly",
+      "long-strangle",
+      "short-straddle",
+      "call-ladder",
+    ];
+    for (const id of beyondRuling16) {
+      expect(PLAYS.find((p) => p.id === id)?.code).toBeUndefined();
     }
   });
 });

@@ -51,6 +51,16 @@ name: Postmaster
 # that visibly did not run. See docs/LESSONS.md 2026-08-17.
 
 on:
+  # THE PLAN LANE'S READY-FLIP TRIGGER (#823, Eric: "There's a lot of issues that seem to
+  # arbitrarily wait on my guidance... move forward"). A `feedback`-labeled issue gets built the
+  # instant the label lands (the `issues: labeled` trigger below); a `plan`-labeled issue had no
+  # equivalent — "say ready and the lane picks it up" is written into dozens of plan issues, but
+  # nothing read a ready comment and acted on it, so a human had to notice by hand. Measured on
+  # #823 itself: #467/#468/#469 sat 7.3 days fully scoped and defaulted, waiting only on the flip.
+  # `types: [created]` only — an EDITED comment is not a fresh ready-flip, and re-editing an old
+  # comment must never retroactively fire a build.
+  issue_comment:
+    types: [created]
   # EVERY MERGE TO MAIN IS THE TICK — no cron, by directive (Eric, 2026-08-19: "cron jobs are
   # generally terrible … focus on event driven architecture"; codified in docs/ROUTINES.md).
   # This works because every check here is LEVEL-BASED: the sweep, the stall audit, and
@@ -113,6 +123,8 @@ jobs:
       due_events: ${{ steps.screen.outputs.due }}
       feedback_issue: ${{ steps.feedback.outputs.number }}
       feedback_model: ${{ steps.feedback.outputs.model }}
+      plan_issue: ${{ steps.plan.outputs.number }}
+      plan_model: ${{ steps.plan.outputs.model }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -247,6 +259,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/postmaster.mjs --claim-feedback
+
+      # THE PLAN LANE'S GATE (#823) — mirrors the feedback gate immediately above, one authorization
+      # boundary down. A plan issue's `ready` is a COMMENT, not a label, so the boundary is WHO
+      # commented rather than who applied a label: `author_association` must be OWNER, MEMBER, or
+      # COLLABORATOR — the exact same check `claude.yml`'s `gate` job already uses for "is this
+      # person a recognized repo member" (a stranger cannot say ready on someone else's public repo
+      # and start a build). The `plan` label check and the ready-PATTERN match both happen inside
+      # `claimPlan` (scripts/postmaster-plan-claim.mjs) — pure, fixture-specced — so this `if:` only
+      # carries the cheap, github-context-only filters, same division as the feedback gate.
+      - name: Claim a plan issue, if the owner said ready
+        id: plan
+        if: >-
+          github.event_name == 'issue_comment' && github.event.action == 'created' &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/postmaster.mjs --claim-plan
 
   # ═══ THE EVENT-RESEARCH LANE (2026-08-19) ═══
   # Replaces the daily claude.ai event-scan Routine, which fired for three days into fresh sessions
@@ -419,4 +448,61 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/postmaster.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
+
+  # ═══ THE PLAN LANE (#823) ═══
+  # Eric (or another authorized identity — see the `route` job's `plan` step) commented a ready-flip
+  # on a `plan`-labeled issue. Structurally identical to `build-feedback` above — same claim lease,
+  # same App-token PR path, same never-silent exit — because the design intent (#823's own
+  # constraint) is to reuse that lane's shape rather than invent a second mechanism.
+  build-plan:
+    name: build plan issue
+    needs: route
+    if: needs.route.outputs.plan_issue != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: app-token
+        if: vars.APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - id: gate
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "armed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for plan-${{ needs.route.outputs.plan_issue }} and comment ready again."
+          fi
+
+      - if: steps.gate.outputs.armed == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The App token, no fallback tier — see the header. So this build's own PR triggers `verify`.
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model ${{ needs.route.outputs.plan_model }}
+          # The triage rules and the build envelope live in .github/prompts/plan-build.md, not
+          # here — same reasoning as feedback-build.md (see its file for the full rationale):
+          # workflow files never auto-merge, so an envelope living here could only be tuned by
+          # spending Eric's attention, while `.github/prompts/**` is ordinary auto-merging content
+          # protected from self-modification by envelope.json.
+          prompt: |
+            Read `.github/prompts/plan-build.md` in this repo and follow it exactly. It is your
+            complete instruction set for this run.
+
+            The plan issue is #${{ needs.route.outputs.plan_issue }} in this repo.
+      # Same terminal-state promise as the feedback lane: a build that dies must not leave the issue
+      # claimed for the full 2h TTL while looking "in progress" with nothing running.
+      - if: failure() && needs.route.outputs.plan_issue != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/postmaster.mjs --release plan-${{ needs.route.outputs.plan_issue }}
 

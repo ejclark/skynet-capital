@@ -1353,3 +1353,61 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   a local retry-wrapper would treat a symptom this repo cannot diagnose. If it recurs, that upgrades
   the priority — one instance in 14 days does not.
 - **SIDE QUESTS:** none — watch for a repeat rather than building around a single data point.
+
+---
+
+### A union-type widening was denied the diffAware exemption because a line-diff can't tell "safely widened" from "silently mutated"
+
+- **SHA:** n/a   **DATE:** 2026-08-29   **STATUS:** closed
+- **SIGNAL:** #716's stop-limit order type (`TicketOrderType` gaining `"stop_limit"`) touched two
+  `diffAware: true` protected files with a textbook safe change — an existing union type gaining one
+  literal member, nothing else in either file altered — yet the production feedback-build session
+  correctly re-applied `needs-eric`. Correctly, because `classifyDiff`'s pure-insertion rule reads a
+  diff as TEXT: `"market" | "limit" | "stop"` → `"market" | "limit" | "stop" | "stop_limit"` is one
+  line, old text, new text — indistinguishable from a line that silently mutated an existing member
+  (`"a"` → `"x"`) to that same line-based rule. Eric: *"the feedback suggestion is a standard feature
+  for stock trading software... adding a bunch of conditionals feels like a deeper code/architecture
+  smell, but applying smarter logic to automate more leads to better results"* — asking for one
+  generalized mechanism, not a growing pile of type-shape-specific text patterns.
+- **ROOT CAUSE:** `classifyDiff` operates on unified-diff TEXT at line granularity, which cannot see
+  inside a rewritten line to tell "every old character is still there, plus new ones" from "the old
+  content is gone, replaced by different content" — both look identical (`-old line` / `+new line`).
+  A structural (AST/token) comparison is required to make that distinction. The first implementation
+  attempt used the classic TypeScript Compiler API (`ts.createSourceFile`, full AST) — but this
+  repo's already-pinned `typescript@7.0.2` dropped that API from its public npm exports entirely
+  (only `./lib/version.cjs` is exported from `.`; the real API moved to `typescript/unstable/*`,
+  scanner and syntax-kind enums only, no parser) — a breaking package restructure with no
+  compile-time signal, since nothing in this repo previously imported `typescript` programmatically
+  (only via the `tsc` CLI). The eventual design also turned out to be a cleaner generalization than
+  the AST-node-pairing approach first attempted: lex both file versions with the real TypeScript
+  scanner and check that every token in OLD is present, in the same order, in NEW (a subsequence
+  match) — one rule with no type-shape-specific case at all, since a widened union, a new optional
+  field, and a new overload are all just "old tokens, plus new tokens spliced in" to a token stream.
+  Two further bugs surfaced only against real files during verification, not the synthetic test
+  cases written first: (1) a bare scanner can't tell a template literal's substitution-closing `}`
+  from an ordinary object-literal close brace without parser-driven `reScanTemplateToken()`
+  cooperation, so it misread the apostrophes in `order-ticket.ts`'s own refusal-message contractions
+  ("doesn't") as new string literals starting mid-file and reported the whole file unparseable; (2)
+  the git-backed wrapper's `contentAt` reused a shared `git()` helper that `.trim()`s its output (correct
+  for `rev-parse`/`merge-base`, wrong for full file content) while the working-tree read via
+  `readFileSync` does not trim, so an UNCHANGED file's old/new content never compared byte-equal and
+  silently fell through to "safe" instead of being held — inverting the invariant `classifyDiff`
+  itself already enforces, that "no change" must never look like "safe".
+- **PREVENTION:** gate/script — `scripts/envelope-widening.mjs` (new; split out of
+  `scripts/envelope-scan.mjs` to stay under `noExcessiveLinesPerFile`) exports
+  `classifyStructuralWidening` and `structurallySafe`, wired into `runCheck`/`runLaneScan` as an
+  additional path to `additiveSafe` alongside (never replacing) `classifyDiff`'s line-based rule.
+  Covered by `tests/arch/envelope.spec.ts`: 12 unit cases (safe union widening at top level and
+  nested in an interface field; unsafe removal/rename/reorder of a union member; a wholly new
+  declaration with and without a new mutating call; a rewritten function body; a comment-only edit;
+  a parse-invalid old source; an unterminated string; the template-literal re-scan case) plus two
+  end-to-end real-git cases: the actual `order-ticket.ts` stop-limit widening through the real
+  `--check`/`--lane` CLI, and a regression guard that an UNCHANGED diffAware file against base
+  reports `blocking: true`, not a free pass.
+- **SIDE QUESTS:** → docs/IDEAS.md — (a) a subsequence match is ORDER-preserving, so a formatter
+  re-sorting existing statements (e.g. alphabetizing imports) around an unrelated addition still
+  fails this check even though the change is otherwise safe — accepted as a known limitation since
+  it fails toward held-for-review, not toward wrongly-exempted, but worth a follow-up if it starts
+  costing real feedback-lane throughput; (b) audit whether anything else in this repo assumes
+  `typescript`'s classic `createSourceFile`/full-AST API is available before reaching for it, now
+  that `typescript@7` has dropped it from the public surface with no compile-time signal.

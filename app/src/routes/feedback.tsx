@@ -211,6 +211,11 @@ function FeedbackPage(): ReactElement {
           Bugs, features, side quests — filed straight onto the build queue as GitHub issues. The
           coach shapes a rough note into something buildable; nothing sends until you hit Send.
         </p>
+        {data.feedbackCount > 0 ? (
+          <p className="fb-count num">
+            You've filed {data.feedbackCount} {data.feedbackCount === 1 ? "time" : "times"}.
+          </p>
+        ) : null}
       </header>
       {!data.enabled ? (
         <p className="note">Feedback isn't switched on yet — ask Eric to set the feedback token.</p>

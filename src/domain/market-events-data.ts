@@ -407,19 +407,6 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The closest-timed regional analog to ISM Manufacturing, released the last business day of the month — two business days ahead of the national print. Added because its Aug-data reading (2026-08-28) collapsed to 47.1 against a ~58 consensus and a 57.6 prior, the biggest single macro surprise of that week and one this calendar could not see coming because the series was untracked. Discovered during the ism-manufacturing-2026-09-01 pulse-check adjacency sweep. Filed as `estimate`/`NEWS:` rather than confirmed: MNI is the series' own publisher, but this lane proposes adjacencies as estimates and never self-promotes them to confirmed.",
   },
   {
-    id: "pce-2026-09-30",
-    kind: "macro-print",
-    title: "PCE / Personal Income & Outlays (Aug 2026 data)",
-    date: "2026-09-30",
-    status: "estimate",
-    source:
-      'EST: bea.gov/news/schedule names "September 30, 8:30 AM — Personal Income and Outlays, August 2026" verbatim (fetched 2026-08-29) — a PRIMARY schedule line, filed `estimate` only because this lane proposes adjacencies as estimates and never self-promotes them to confirmed (same reasoning as chicago-pmi-2026-09-30); promotable to `confirmed`/`BEA:` in one line by a non-lane change, checked 2026-08-29',
-    impact: "high",
-    symbols: [],
-    notes:
-      "The PCE print between the 09-16 FOMC and the 10-28 one, and the last clean read on the gap Warsh flagged at Jackson Hole: 12-month PCE 3.7% against a 6-month run rate of 4.1%, so the m/m and 6-month annualized are the informative lines, not the y/y. Lands on the FY2027 funding deadline itself and in the same 08:30 slot as the Q2 third GDP estimate (found on the same fetch, deliberately not tracked as low-impact). Federal, so it is the last PCE that publishes before any 10-01 lapse could touch the series. Discovered during the pce-2026-10-29 initial research.",
-  },
-  {
     id: "jackson-hole-2026-08-28",
     kind: "macro-print",
     title: "Jackson Hole — Fed chair Warsh's first keynote (symposium Aug 27–29)",
@@ -528,6 +515,18 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Not a print — a dated policy checkpoint that gates whether the federal prints around it exist. ISM (10-01) is a private survey and publishes through a lapse; BLS does not — in the 2025 lapse it skipped the October Employment Situation and cancelled the October CPI outright. So an un-averted lapse removes the 10-02 payrolls and leaves the 10-01 ISM as the corridor's only hard macro read into an Oct 27-28 FOMC with no SEP. Kind `geopolitical` is the closest fit the enum offers for a domestic policy checkpoint (it is scoped to dated checkpoints like a summit or a tariff deadline); the imperfect fit is named, not fixed from this lane. Discovered during the ism-manufacturing-2026-10-01 initial research.",
   },
   {
+    id: "gdp-q2-2026-third-2026-09-30",
+    kind: "macro-print",
+    title: "GDP — 3rd estimate, Q2 2026 (+ corporate profits, industries, state GDP)",
+    date: "2026-09-30",
+    status: "confirmed",
+    source: "BEA: bea.gov/news/schedule — 08:30 ET, checked 2026-08-29",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The last revision to the +1.5% Q2 base that the 10-29 Q3 advance estimate gets measured against — which is the whole reason it is tracked; a revision here shifts the acceleration story before any Q3 number exists. Lands ON the FY2027 funding deadline, so in the lapse branch it is the last federal GDP release published before the blackout (BEA cancelled the Q3 advance estimate outright in the 2025 lapse). Marked `confirmed` on BEA's own schedule page fetched 2026-08-29 — the same primary and check date as the 10-29 and PCE entries, not an inferred cadence. Discovered during the gdp-q3-2026-advance-2026-10-29 initial research.",
+  },
+  {
     id: "ism-manufacturing-2026-10-01",
     kind: "macro-print",
     title: "ISM Manufacturing PMI (Sep 2026 data)",
@@ -575,6 +574,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "pce-2026-09-30",
+    kind: "macro-print",
+    title: "PCE / Personal Income & Outlays (Aug 2026 data) + BEA annual update",
+    date: "2026-09-30",
+    status: "confirmed",
+    source:
+      'BEA: bea.gov/news/schedule — 08:30 ET, lists verbatim "September 30, 8:30 AM (News): Personal Income and Outlays, August 2026", and bea.gov/news/2026/personal-income-and-outlays-july-2026 carries "Next release: September 30, 2026, at 8:30 a.m. EDT", both fetched 2026-08-29',
+    impact: "high",
+    symbols: [],
+    notes:
+      "Three things land on one morning: the August PCE data, the BEA's 2026 annual update of the National Economic Accounts (new deflators for portfolio management, legal services and computer software, restating 2021Q1–2026Q1 — sourced range -10 to -30bp on core y/y: JPMorgan ~-10bp, Goldman ~-20bp, UBS decomposition -20 to -30bp), and the FY2027 funding deadline. Because the restatement spans the y/y's own year-ago base, the core figure printed here is NOT comparable to July's published 3.3%. It is also the LAST PCE the 10-28 FOMC sees (pce-2026-10-29 publishes the morning after that statement) and it publishes 08:30 ET BEFORE any 10-01 lapse, so it survives a shutdown that would delete jobs-2026-10-02 and cpi-2026-10-14. It is likewise the last clean read on the gap Warsh flagged at Jackson Hole on 2026-08-28 — 12-month PCE 3.7% against a 6-month run rate of 4.1% — so the m/m and the 6-month annualized are the informative lines here, not the y/y (which the restatement has broken anyway). Discovered during the pce-2026-10-29 initial research; status flipped estimate -> confirmed during its own initial research (2026-08-29) on the primary fetched that day.",
+  },
+  {
     id: "consumer-confidence-2026-10-27",
     kind: "macro-print",
     title: "Conference Board Consumer Confidence Index (Oct 2026)",
@@ -616,24 +628,12 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     title: "PCE / Personal Income & Outlays (Sep 2026 data)",
     date: "2026-10-29",
     status: "confirmed",
-    source: "BEA: bea.gov/news/schedule — 08:30 ET, checked 2026-08-29",
+    source:
+      'BEA: bea.gov/news/schedule — "Personal Income and Outlays, September 2026", 08:30 ET, re-verified 2026-08-29',
     impact: "high",
     symbols: [],
     notes:
       "The Fed's own inflation gauge, landing the morning AFTER the 10-28 statement rather than before it — the committee decides without it. Federal, so it is exposed to a 10-01 funding lapse; the pce-2026-10-29 initial research corrected what that exposure actually is (2025 precedent: a September-reference PCE was DELAYED five weeks, 10-31 to 12-05, not deleted, while the advance GDP estimate sharing its slot was cancelled outright). Discovered during the consumer-confidence-2026-10-27 initial research.",
-  },
-  {
-    id: "pce-2026-11-25",
-    kind: "macro-print",
-    title: "PCE / Personal Income & Outlays (Oct 2026 data)",
-    date: "2026-11-25",
-    status: "estimate",
-    source:
-      'EST: bea.gov/news/schedule names "November 25, 8:30 AM — Personal Income and Outlays, October 2026" verbatim (fetched 2026-08-29) — a PRIMARY schedule line, filed `estimate` only because this lane proposes adjacencies as estimates and never self-promotes them to confirmed (same reasoning as chicago-pmi-2026-09-30); promotable to `confirmed`/`BEA:` in one line by a non-lane change, checked 2026-08-29',
-    impact: "high",
-    symbols: [],
-    notes:
-      "The OCTOBER reference month — the release the pce-2026-10-29 research identifies as the genuinely compromised one in a funding-lapse branch, one month later than this calendar's inherited framing assumes. 2025 precedent is exact: because BLS never produced the full October CPI, BEA published October PCE with the price index INTERPOLATED — 'an average of BLS' September and November CPI data' — folded into a combined Oct+Nov release on 2026-01-22, nine weeks late. A number that exists but is partly synthetic, feeding the gauge Warsh reaffirmed as the 2% target on 2026-08-28. Tracked so that exposure is visible rather than discovered in January. Discovered during the pce-2026-10-29 initial research.",
   },
   {
     id: "midterm-elections-2026-11-03",
@@ -647,6 +647,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "Not a print — a dated policy checkpoint, and the causal driver behind the FY2027 funding timeline: the Senate CR runs to Dec 11 precisely so the full-year fight lands in a lame-duck session shaped by this result. Filed `estimate` per the event-research lane's no-self-confirm limit even though the date is statutory — the honest reading is date-certain, outcome-unknown. Discovered during the government-funding-deadline-2026-09-30 initial research; the CR's own expiry (Dec 4 or Dec 11) is a second dated checkpoint left un-proposed until the chambers reconcile which.",
+  },
+  {
+    id: "pce-2026-11-25",
+    kind: "macro-print",
+    title: "PCE / Personal Income & Outlays (Oct 2026 data)",
+    date: "2026-11-25",
+    status: "confirmed",
+    source:
+      "BEA: bea.gov/news/schedule lists verbatim \"November 25, 8:30 AM — Personal Income and Outlays, October 2026\" (re-fetched 2026-08-29) — PROMOTED estimate→confirmed by the pce-2026-11-25 initial research: the `estimate` label came from this lane's ADJACENCY rule (a *discovered* event is proposed as an estimate, never confirmed), which governs discovery during a pulse, not an event's own never-assessed research; precedent aws-reinvent-2026, promoted by the same lane on a primary. checked 2026-08-29",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The last PCE the 12-09 FOMC sees — BEA's own schedule puts the next release on 12-23, fourteen days after the meeting — and the ONLY Q4 month the year's final SEP will observe (SEP inflation is Q4/Q4). Lands three days before the 11-28 blackout, in a week where 11-26 is closed and 11-27 is a 1:00pm ET half session, so it is priced with no official interpretation until the 12-09 presser. Third reading on the post-annual-update series (the methodology change lands 09-30). Shares its 08:30 ET slot with the Q3 GDP second estimate. It is also the OCTOBER reference month, which the pce-2026-10-29 research identifies as the genuinely compromised release in a funding-lapse branch — one month later than this calendar's inherited framing assumed. 2025 precedent is exact: because BLS never produced the full October CPI, BEA published October PCE with the price index INTERPOLATED — 'an average of BLS' September and November CPI data' — folded into a combined Oct+Nov release on 2026-01-22, nine weeks late. A number that exists but is partly synthetic, feeding the gauge Warsh reaffirmed as the 2% target on 2026-08-28. Discovered during the pce-2026-10-29 initial research; assessed 2026-08-29.",
   },
   {
     id: "georgia-senate-runoff-2026-12-01",
@@ -743,11 +756,11 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     date: "2026-12-31",
     status: "estimate",
     source:
-      "NEWS: Rough Draft Atlanta (2026-07-08) and GovTech (2026-07-10) both report the Georgia PSC voting unanimously on 2026-07-08 to investigate Georgia Power Real-Time-Pricing cost allocation, with findings due 2026-12-31; no PSC docket number was captured and the PSC's own filings were not fetched, checked 2026-08-29",
+      "NEWS: the proceeding is PSC Docket 57171, 'RTP Revenue Credit and Allocation Methodology' (psc.ga.gov docket + commission-calendar pages, fetched 2026-08-29): status Open, opened 2026-06-02, hearings 2026-09-01 / 10-15 / 11-12. The DATE tracked here — findings due 2026-12-31 — is press-reported only (WABE; The Current 2026-07-08; GovTech 2026-07-10), never seen in a fetched PSC scheduling order, and no filings were listed on the docket page; the unanimous vote to investigate is reported 2026-07-07 by most outlets (Rough Draft Atlanta's 'Tuesday, July 8' is internally inconsistent — July 7 is the Tuesday and the PSC's administrative-session day). Stays estimate: the date is press-sourced AND this calendar has no confirmed prefix for a state utility commission, checked 2026-08-29",
     impact: "medium",
     symbols: [],
     notes:
-      "Georgia's instance of the AI data-center backlash the midterm-elections-2026-11-03 research named as the real political channel to this book's AI-infra sleeve — and unlike a campaign theme it has a regulator, a proceeding and a deadline. PSC staff put the potential shift at up to 11% per month on the average residential bill by 2028; Commissioner Hubbard cites ~$1B in fuel costs data centers pay nothing toward and ~$118M of firm gas transportation at issue in 2027. Context: the PSC certified 9,985 MW of new generation on 2025-12-19 (~80% expected to serve data centers) and base rates are frozen through 2028. Same shape as the tracked texas-puct-audit-2026-08-20 entry — a state regulator's dated proceeding as an AI-energy watch item. Discovered during the georgia-senate-runoff-2026-12-01 initial research.",
+      "Georgia's instance of the AI data-center backlash the midterm-elections-2026-11-03 research named as the real political channel to this book's AI-infra sleeve — and unlike a campaign theme it has a regulator, a proceeding and a deadline. PSC staff put the potential shift at up to 11% per month on the average residential bill by 2028; Commissioner Hubbard cites ~$1B in fuel costs data centers pay nothing toward and ~$118M of firm gas transportation at issue in 2027. Context: the PSC certified 9,985 MW of new generation on 2025-12-19 (~80% expected to serve data centers) and base rates are frozen through 2028. Same shape as the tracked texas-puct-audit-2026-08-20 entry — a state regulator's dated proceeding as an AI-energy watch item. Discovered during the georgia-senate-runoff-2026-12-01 initial research. Initial research 2026-08-29 (docs/research/events/) found the dollar figures are a rate-CLASS reallocation, revenue-neutral to Georgia Power/Southern (base rates frozen through 2028; the freeze excludes pass-through fuel, the bucket in dispute) and far too small to reach hyperscaler capex — no earnings channel, a precedent channel. The structural catalyst is that 12-31 findings reach the current 3R-2D commission while remedies fall to the one seated January 2027, decided by the 2026-11-03 PSC elections in Districts 3 and 5.",
   },
   {
     id: "pjm-capacity-auction-2027-05",
