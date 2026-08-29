@@ -20,6 +20,7 @@
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
+import { anthropicApiError } from "../http/anthropic-reply.js";
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 import { AREA_PROMPT_CLAUSE } from "./feedback-areas.js";
 // The cost dials live in their own module because they are gated by envelope.json — see its header
@@ -105,13 +106,8 @@ function boundsError(messages: readonly CoachMessage[]): string | null {
 
 /** The model's text out of a Messages API response, or the honest error. */
 function replyText(res: JsonResponse): { text?: string; error?: string } {
-  if (res.status !== 200 || !res.body || typeof res.body !== "object") {
-    const message =
-      res.body && typeof res.body === "object"
-        ? ((res.body as { error?: { message?: string } }).error?.message ?? "")
-        : "";
-    return { error: `coach responded ${res.status}${message ? `: ${message}` : ""}` };
-  }
+  const apiError = anthropicApiError(res, "coach");
+  if (apiError) return { error: apiError };
   const content = (res.body as { content?: readonly { type?: string; text?: string }[] }).content;
   const text = (content ?? []).find((b) => b.type === "text")?.text ?? "";
   return text ? { text } : { error: "coach returned no text" };
