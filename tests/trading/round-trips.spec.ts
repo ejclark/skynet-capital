@@ -143,12 +143,41 @@ describe("matchRoundTrips — option round trips in real dollars", () => {
     expect(trips[0]?.returnPct).toBeCloseTo(23.81, 2);
   });
 
-  it("flags a written option's opening sell rather than silently dropping it", () => {
-    // 201/202 open with a sell. There is no short lot to match, so the premium is counted as
-    // truncated — under-reported and visible, never invented. Short-lot matching is #468's job.
+  it("opens a short lot for a written option's opening sell, rather than flagging it truncated (#838)", () => {
+    // 201/202 open with a sell. There is no long lot to match, but the symbol is option-shaped —
+    // this app's only path to a bare option short is a 201/202 sell-to-open — so the premium is
+    // tracked as an open short lot, not dropped and flagged.
     const ledger = matchRoundTrips([fill("sell", 420, "t1")]);
     expect(ledger.trips).toHaveLength(0);
+    expect(ledger.truncated).toBe(false);
+    expect(ledger.unmatchedSellQuantity).toBe(0);
+    expect(ledger.open).toEqual([
+      { symbol: "MSFT260918P00420000", quantity: 1, price: 420, at: "t1", direction: "short" },
+    ]);
+  });
+
+  it("closes a short lot when the written option is later bought back (buy-to-close)", () => {
+    const ledger = matchRoundTrips([
+      fill("sell", 420, "t1"), // sell-to-open: collects $420/share premium
+      fill("buy", 150, "t2"), // buy-to-close: pays $150/share to buy it back
+    ]);
+    expect(ledger.trips).toHaveLength(1);
+    expect(ledger.trips[0]?.direction).toBe("short");
+    expect(ledger.trips[0]?.entryPrice).toBe(420);
+    expect(ledger.trips[0]?.exitPrice).toBe(150);
+    // Short-side math: premium collected minus price paid to close, not exit minus entry.
+    expect(ledger.trips[0]?.realized).toBe(270);
+    expect(ledger.open).toHaveLength(0);
+    expect(ledger.truncated).toBe(false);
+  });
+
+  it("still flags a genuinely unmatched STOCK sell as truncated — the option gate never fires for equities", () => {
+    const ledger = matchRoundTrips([
+      { symbol: "AAPL", side: "sell", quantity: 4, price: 110, at: "2026-08-02T14:00:00.000Z" },
+    ]);
+    expect(ledger.trips).toHaveLength(0);
     expect(ledger.truncated).toBe(true);
-    expect(totalRealized(ledger.trips)).toBe(0);
+    expect(ledger.unmatchedSellQuantity).toBe(4);
+    expect(ledger.open).toHaveLength(0);
   });
 });

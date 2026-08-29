@@ -109,10 +109,10 @@ describe("lifecycleClosingFill — closes a leg without a fill, honestly", () =>
     expect(ledger.truncated).toBe(false);
   });
 
-  it("a written option's own expiration is a safe no-op — never an extra unmatched sell", () => {
-    // The opening SELL (writing the option) already lands in unmatchedSellQuantity today —
-    // that's the documented, deliberately-deferred short-lot gap in round-trips.ts. This test
-    // pins that the lifecycle close does NOT make it worse.
+  it("a written option's own expiration now closes it — the premium collected is a realized gain (#838)", () => {
+    // The opening SELL (writing the option) opens a short lot (round-trips.ts, #838) rather than
+    // landing in unmatchedSellQuantity, and the OPEXP synthetic close matches against it: the
+    // $3.50/share premium collected, closed at $0, is a real, honest $3.50/share gain.
     const wrote = {
       symbol: "AAPL261218C00150000",
       side: "sell" as const,
@@ -131,8 +131,76 @@ describe("lifecycleClosingFill — closes a leg without a fill, honestly", () =>
       ReturnType<typeof lifecycleClosingFill>
     >;
     const withoutLifecycle = matchRoundTrips([wrote]);
+    // The bare opening sell alone is now a tracked open short lot, not an unmatched sell.
+    expect(withoutLifecycle.trips).toHaveLength(0);
+    expect(withoutLifecycle.unmatchedSellQuantity).toBe(0);
+    expect(withoutLifecycle.open).toEqual([
+      {
+        symbol: "AAPL261218C00150000",
+        quantity: 1,
+        price: 3.5,
+        at: "2026-08-01T14:00:00.000Z",
+        direction: "short",
+      },
+    ]);
+
     const withLifecycle = matchRoundTrips([wrote, close]);
-    expect(withLifecycle.unmatchedSellQuantity).toBe(withoutLifecycle.unmatchedSellQuantity);
-    expect(withLifecycle.trips).toHaveLength(0);
+    expect(withLifecycle.trips).toHaveLength(1);
+    expect(withLifecycle.trips[0]?.direction).toBe("short");
+    expect(withLifecycle.trips[0]?.realized).toBe(3.5);
+    expect(withLifecycle.open).toHaveLength(0);
+    expect(withLifecycle.unmatchedSellQuantity).toBe(0);
+    expect(withLifecycle.truncated).toBe(false);
+  });
+
+  it("a written option that gets ASSIGNED closes the same way as expiry — the premium is the gain (#838)", () => {
+    // OPASN carries the same $0 close as OPEXP (the module doc: assignment closes the option LEG
+    // the same way expiry does; the strike-price share trade is the separate, still-deferred
+    // OPTRD activity). A cash-secured put (201) written for $2.10/share, assigned, realizes the
+    // full $2.10/share premium as a gain — never a loss just because the position was assigned.
+    const wrote = {
+      symbol: "MSFT260918P00420000",
+      side: "sell" as const,
+      quantity: 3,
+      price: 2.1,
+      at: "2026-08-01T14:00:00.000Z",
+    };
+    const parsed = parseLifecycleActivity({
+      id: "act-5",
+      activity_type: "OPASN",
+      symbol: "MSFT260918P00420000",
+      qty: "3",
+      date: "2026-09-19T00:00:00Z",
+    }) as NonNullable<ReturnType<typeof parseLifecycleActivity>>;
+    const close = lifecycleClosingFill(parsed) as NonNullable<
+      ReturnType<typeof lifecycleClosingFill>
+    >;
+    const ledger = matchRoundTrips([wrote, close]);
+    expect(ledger.trips).toHaveLength(1);
+    expect(ledger.trips[0]?.direction).toBe("short");
+    expect(ledger.trips[0]?.quantity).toBe(3);
+    expect(ledger.trips[0]?.entryPrice).toBe(2.1);
+    expect(ledger.trips[0]?.exitPrice).toBe(0);
+    expect(ledger.trips[0]?.realized).toBeCloseTo(6.3, 6);
+    expect(ledger.open).toHaveLength(0);
+  });
+
+  it("a lifecycle close with NEITHER a long nor a short lot open is still a safe no-op", () => {
+    // The write itself fell outside this fill window — there is nothing honest to close, exactly
+    // like today's long-lot no-op, just for the case where nothing was ever seen at all.
+    const parsed = parseLifecycleActivity({
+      id: "act-6",
+      activity_type: "OPEXP",
+      symbol: "AAPL261218C00150000",
+      qty: "1",
+      date: "2026-12-19T00:00:00Z",
+    }) as NonNullable<ReturnType<typeof parseLifecycleActivity>>;
+    const close = lifecycleClosingFill(parsed) as NonNullable<
+      ReturnType<typeof lifecycleClosingFill>
+    >;
+    const ledger = matchRoundTrips([close]);
+    expect(ledger.trips).toHaveLength(0);
+    expect(ledger.unmatchedSellQuantity).toBe(0);
+    expect(ledger.truncated).toBe(false);
   });
 });

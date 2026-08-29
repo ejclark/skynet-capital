@@ -43,9 +43,10 @@ const LIFECYCLE_INFO_ONLY: ReadonlySet<string> = new Set([
 
 /**
  * Lifecycle statuses that DO close a leg (#468 criterion 6): `OPEXP` (expired worthless) and
- * `OPASN` (assigned) both synthesize an honest $0 close. Marked `synthetic` so a close that finds
- * no open lot (a written option's expiration/assignment — short-lot matching is a separate,
- * documented gap in `round-trips.ts`) is a safe no-op rather than a double-counted unmatched sell.
+ * `OPASN` (assigned) both synthesize an honest $0 close. `round-trips.ts` matches it against
+ * whichever lot is actually open — long (a bought option, a total loss) or short (a written
+ * option, the full premium collected as a gain — #838). Marked `synthetic` so a close that finds
+ * NEITHER kind of lot open is a safe no-op rather than a double-counted unmatched sell.
  */
 const LIFECYCLE_SYNTHETIC_CLOSE: ReadonlySet<string> = new Set([
   LIFECYCLE_STATUS.OPEXP,
