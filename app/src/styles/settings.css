@@ -127,3 +127,11 @@
   gap: 12px;
   animation: fold-open var(--dur-quick) var(--ease-spatial) both;
 }
+
+.set-pref-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--muted);
+}

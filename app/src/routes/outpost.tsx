@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import {
   cardMatches,
@@ -14,9 +14,12 @@ import { OutpostRail } from "../shell/outpost-rail";
 import { PlayCard } from "../shell/play-card";
 
 /**
- * THE TRADING OUTPOST (#809 slice 1) — every play in the house as a browsable, filterable trading
- * card. The rail carries author and trigger; the chips above the deck carry symbol and trait; the
- * whole filter rides the URL, so a narrowed deck is a link you can send someone.
+ * THE TRADING OUTPOST (#809 slice 1; nested under Trade in the nav reorg) — every play in the
+ * house as a browsable, filterable trading card. It is reached from Trade's left rail, not the
+ * topbar — the Outpost is a sub-view of trading, not its own top-level dimension. The rail leads
+ * with that sub-nav, then carries author and trigger filters below; the chips above the deck
+ * carry symbol and trait; the whole filter rides the URL, so a narrowed deck is a link you can
+ * send someone.
  *
  * What this slice deliberately does NOT do: authoring. `src/playbooks/**` is envelope-protected —
  * a play that can actually trade is code-reviewed before it runs — so the bounded authoring model
@@ -107,12 +110,20 @@ function OutpostPage(): ReactElement {
   return (
     <PageFrame
       rail={
-        <OutpostRail
-          catalog={catalog}
-          filter={filter}
-          onToggle={onToggle}
-          onClear={() => setFilter({})}
-        />
+        <>
+          <p className="rail-label">Trading</p>
+          <Link to="/trade">The ticket</Link>
+          <span className="rail-current" aria-current="page">
+            Trading Outpost
+          </span>
+          <hr />
+          <OutpostRail
+            catalog={catalog}
+            filter={filter}
+            onToggle={onToggle}
+            onClear={() => setFilter({})}
+          />
+        </>
       }
     >
       <header className="page-header">

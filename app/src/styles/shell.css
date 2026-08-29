@@ -116,6 +116,23 @@ a {
   align-items: center;
   gap: 10px;
 }
+.icon-action {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.icon-action:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.icon-action[aria-current="page"] {
+  color: var(--text);
+  background: var(--surface-2);
+}
 .visually-hidden {
   position: absolute;
   width: 1px;
