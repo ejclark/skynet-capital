@@ -578,13 +578,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "PCE / Personal Income & Outlays (Aug 2026 data) + BEA annual update",
     date: "2026-09-30",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: bea.gov/news/schedule lists verbatim "September 30, 8:30 AM — Personal Income and Outlays, August 2026" (fetched 2026-08-29, the same primary fetch that confirms pce-2026-10-29) — filed `estimate` per the event-research lane\'s adjacency rule (.github/prompts/event-research.md: a discovered adjacent event is proposed as an estimate, never confirmed), NOT for want of a primary source; a one-line flip to `BEA:`/`confirmed` is available whenever that rule is reconciled against the consumer-confidence-2026-10-27 precedent, checked 2026-08-29',
+      'BEA: bea.gov/news/schedule — 08:30 ET, lists verbatim "September 30, 8:30 AM (News): Personal Income and Outlays, August 2026", and bea.gov/news/2026/personal-income-and-outlays-july-2026 carries "Next release: September 30, 2026, at 8:30 a.m. EDT", both fetched 2026-08-29',
     impact: "high",
     symbols: [],
     notes:
-      "Three things land on one morning: the August PCE data, the BEA's 2026 annual update of the National Economic Accounts (new deflators for portfolio management, legal services and computer software, restating 2021Q1–2026Q1 — Goldman/JPMorgan size it at ~-20bp on core y/y), and the FY2027 funding deadline. It is also the LAST PCE the 10-28 FOMC sees; pce-2026-10-29 publishes the morning after that statement. Discovered during the pce-2026-10-29 initial research.",
+      "Three things land on one morning: the August PCE data, the BEA's 2026 annual update of the National Economic Accounts (new deflators for portfolio management, legal services and computer software, restating 2021Q1–2026Q1 — sourced range -10 to -30bp on core y/y: JPMorgan ~-10bp, Goldman ~-20bp, UBS decomposition -20 to -30bp), and the FY2027 funding deadline. Because the restatement spans the y/y's own year-ago base, the core figure printed here is NOT comparable to July's published 3.3%. It is also the LAST PCE the 10-28 FOMC sees (pce-2026-10-29 publishes the morning after that statement) and it publishes 08:30 ET BEFORE any 10-01 lapse, so it survives a shutdown that would delete jobs-2026-10-02 and cpi-2026-10-14. Discovered during the pce-2026-10-29 initial research; status flipped estimate -> confirmed during its own initial research (2026-08-29) on the primary fetched that day.",
   },
   {
     id: "consumer-confidence-2026-10-27",
