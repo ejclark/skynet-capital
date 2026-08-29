@@ -99,6 +99,14 @@ function RootShell(): ReactElement {
           <Link to="/research" className="topnav-link" activeProps={{ "aria-current": "page" }}>
             Research
           </Link>
+          <Link
+            to="/trade"
+            className="topnav-link"
+            activeProps={{ "aria-current": "page" }}
+            activeOptions={{ includeSearch: false }}
+          >
+            Trade
+          </Link>
         </nav>
         <div className="topbar-actions">
           <Link to="/settings" className="topnav-link" activeProps={{ "aria-current": "page" }}>
