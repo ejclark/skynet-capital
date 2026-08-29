@@ -755,7 +755,13 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   **static and structural**; `eval:persona` / `eval:safety` are behavioral but example-based. Deep on
   shape, thin on behavior. Mutation testing is diagnostic rather than additive — delete a condition on
   purpose and see whether anything screams; if nothing does, the suite is decorative and we'd never
-  have known. _(src: Claude · while: journey on voice-profiles)_
+  have known. **Advanced (2026-08-29):** Eric named the sharper version — `envelope.json`'s file-level
+  gate protects the noun when the actual goal is protecting the verb, and stronger tests/fitness
+  functions are the mechanism to earn the file back. PoC in #850 (property tests, `option-ticket.ts`);
+  the policy fork (does proven behavior ever let a diff skip the hold) is #852, filed for Eric.
+  Mutation testing itself is #852's slice 5 — it answers whether a NEW invariant suite is load-bearing,
+  which property tests alone can't. _(src: Eric | Claude · while: journey on voice-profiles → today's
+  diffAware near-miss)_
 - **Metamorphic properties on `eval:persona`** — there is no oracle for what trade a persona *should*
   make, but relations hold regardless: *a bearish persona must not increase exposure when sentiment
   drops.* Asserting relations instead of outputs tests behavior we never enumerated, which is exactly
