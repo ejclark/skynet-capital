@@ -71,6 +71,16 @@ export const LABELS = {
     description: "A plan issue awaiting Eric's ready-flip — not blocked on a decision",
     managed: true,
   },
+  // The pipeline's `arm-auto-merge` job (added #889) can only mechanically detect one of the
+  // three hold reasons `.github/prompts/interactive.md` documents — a protected path. This label
+  // is the escape hatch for the other two (an explicit ask on the thread, or a taste fork worth
+  // Eric's eyes): a session or Eric applies it, and the job skips arming that PR.
+  holdMerge: {
+    name: "hold-merge",
+    color: "e99695",
+    description: "Green but held — a taste call or explicit hold; arm-auto-merge skips this PR",
+    managed: true,
+  },
 
   // ── registered, not owned ───────────────────────────────────────────────────
   // Real labels this repo runs on that no lane here applies. They are named so `feedback-scan`,

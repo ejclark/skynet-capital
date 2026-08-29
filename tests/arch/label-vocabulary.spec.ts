@@ -136,12 +136,13 @@ describe("the label registry", () => {
   it("upserts only what it applies — registering a label never makes this script its owner", () => {
     const managed = [...declared()].sort();
 
-    // Exactly the seven this file applies. `bug`/`enhancement` are GitHub's own defaults and
+    // Exactly the eight this file applies. `bug`/`enhancement` are GitHub's own defaults and
     // `idea`/`feedback` are the intake form's: upserting those would silently revert a recolor
     // made in the UI on the next push to main, with nothing anywhere saying why it changed back.
     expect(managed).toEqual([
       "curated",
       "event-research",
+      "hold-merge",
       "needs-eric",
       "needs-info",
       "next-slice",
