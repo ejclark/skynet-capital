@@ -29,10 +29,11 @@ import { normalizeSymbol } from "./order-ticket.js";
  * pass because the review screen would render it as current. There is no transition that carries a
  * verdict across an edit, so no caller can construct one by accident.
  *
- * WHAT IS DELIBERATELY NOT HERE. Margin and collateral validation (slice 2) needs the account, so
- * this exposes `validate()` as a seam that TAKES a verdict rather than computing one. Payoff and
- * review rendering (slice 3) need premiums. Wiring the chain UI in (slice 4) needs a route. Each
- * is its own PR against envelope-protected files; this module touches none of them.
+ * WHAT IS DELIBERATELY NOT HERE. `validate()` TAKES a verdict rather than computing one — that
+ * needs the account, which belongs to whatever server layer calls this. Slice 2 lives in two
+ * siblings that import from here instead: `draft-order-requirements.ts` (what a leg set demands,
+ * still pure — moved out once it pushed this file over the 300-line cap) and
+ * `draft-order-account.ts` (does the account have it). Slice 3 needs premiums; slice 4, a route.
  */
 
 /** Alpaca's `mleg` order class carries two to four legs. A fifth is refused, not silently dropped. */
@@ -242,11 +243,36 @@ export function submitDraft(draft: DraftOrder): DraftOrder {
 }
 
 /**
- * Short calls this draft does not cap on its own — the legs behind an unlimited-loss warning.
+ * The long leg that caps a short leg's risk, or `undefined` if none does — shared by
+ * `undefinedRiskLegs` (which only needs to know THAT one exists) and `draftRequirements` (which
+ * needs the leg itself, to size the capped width). Same criteria either direction: a call is
+ * capped by a higher-or-equal strike above it; a put is capped by a lower-or-equal strike below
+ * it — both need an expiration at or after the short's (a long that expires first leaves the
+ * short bare for the remaining days) and at least as many contracts.
  *
- * A short call's loss has no ceiling unless a long call caps it: same underlying, a strike at or
- * above the short's (so the cap engages), an expiration at or after it (a long that expires first
- * leaves the short bare for the remaining days), and at least as many contracts.
+ * NOT A MATCHING/ASSIGNMENT ALGORITHM: one long leg can be found as the cap for more than one
+ * short leg (two short calls under a single higher long call, say). That double-counts the same
+ * protection instead of splitting it — always toward MORE of the structure reading as capped,
+ * which is the safe direction both here (fewer warnings would be unsafe) and in
+ * `draft-order-requirements.ts` (double-use over-charges collateral, never under). A real
+ * one-to-one assignment is later work if a leg set ever needs it.
+ *
+ * Exported only for `draft-order-requirements.ts`; everything else here keeps it private.
+ */
+export function cappingLeg(legs: readonly DraftLeg[], leg: DraftLeg): DraftLeg | undefined {
+  return legs.find(
+    (cap) =>
+      cap.action === "buy" &&
+      cap.optionType === leg.optionType &&
+      cap.underlying === leg.underlying &&
+      (leg.optionType === "call" ? cap.strike >= leg.strike : cap.strike <= leg.strike) &&
+      cap.expiration >= leg.expiration &&
+      cap.contracts >= leg.contracts,
+  );
+}
+
+/**
+ * Short calls this draft does not cap on its own — the legs behind an unlimited-loss warning.
  *
  * JUDGES THE DRAFT ALONE. A covered call is covered by SHARES, which live in the account, not in
  * this leg set — so a legitimately covered call appears here and the validation layer (slice 2,
@@ -255,18 +281,9 @@ export function submitDraft(draft: DraftOrder): DraftOrder {
  * "max loss $420" on a position that has none.
  */
 export function undefinedRiskLegs(draft: DraftOrder): readonly DraftLeg[] {
-  return draft.legs.filter((leg) => {
-    if (leg.action !== "sell" || leg.optionType !== "call") return false;
-    return !draft.legs.some(
-      (cap) =>
-        cap.action === "buy" &&
-        cap.optionType === "call" &&
-        cap.underlying === leg.underlying &&
-        cap.strike >= leg.strike &&
-        cap.expiration >= leg.expiration &&
-        cap.contracts >= leg.contracts,
-    );
-  });
+  return draft.legs.filter(
+    (leg) => leg.action === "sell" && leg.optionType === "call" && !cappingLeg(draft.legs, leg),
+  );
 }
 
 /** The OCC symbols this draft would send, in leg order — the handoff shape slice 4 needs. */
