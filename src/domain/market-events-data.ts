@@ -471,6 +471,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Second in-person Trump-Xi meeting of 2026 (after the May Beijing visit); reported agenda includes AI governance, export controls, and the trade architecture after the Kuala Lumpur truce's Nov-10 tariff-suspension deadline. China semiconductor Section 301 tariffs already run near 70% combined exposure, with a further ~7.5% overcapacity layer reportedly being prepared ahead of the summit — surfaced via AVGO's 2026-08-28 pulse-check adjacency sweep (export-control/supply-chain exposure); most sensitive semis names (AVGO, NVDA, MRVL, AMD) carry it as sector risk, not an AVGO-only event.",
   },
   {
+    id: "government-funding-deadline-2026-09-30",
+    kind: "geopolitical",
+    title: "FY2027 federal funding deadline — shutdown begins 2026-10-01 absent a CR",
+    date: "2026-09-30",
+    status: "estimate",
+    source:
+      "NEWS: Conference Board policy backgrounder + CRFB FY2027 appropriations tracker (both 2026-08-12) — FY2026 funds lapse end of 09-30; Senate CR to Dec 11 passed 08-08 (90-6), House CR to Dec 4 passed 07-21 (220-205), neither enacted, checked 2026-08-29",
+    impact: "high",
+    symbols: [],
+    notes:
+      "Not a print — a dated policy checkpoint that gates whether the federal prints around it exist. ISM (10-01) is a private survey and publishes through a lapse; BLS does not — in the 2025 lapse it skipped the October Employment Situation and cancelled the October CPI outright. So an un-averted lapse removes the 10-02 payrolls and leaves the 10-01 ISM as the corridor's only hard macro read into an Oct 27-28 FOMC with no SEP. Kind `geopolitical` is the closest fit the enum offers for a domestic policy checkpoint (it is scoped to dated checkpoints like a summit or a tariff deadline); the imperfect fit is named, not fixed from this lane. Discovered during the ism-manufacturing-2026-10-01 initial research.",
+  },
+  {
     id: "ism-manufacturing-2026-10-01",
     kind: "macro-print",
     title: "ISM Manufacturing PMI (Sep 2026 data)",
