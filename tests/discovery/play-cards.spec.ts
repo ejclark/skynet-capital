@@ -5,7 +5,7 @@ import {
   type PlayFacet,
   type PlayTrait,
 } from "../../src/discovery/play-cards.js";
-import { G1_GOOG, S1_NVDA } from "../../src/playbooks/registry.js";
+import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
 
 /** The Outpost's catalog: one card per exported play, every attribute derived by walking the play
  *  itself, and `author` real from day one so "filter by author" is not a placeholder. */
@@ -15,7 +15,7 @@ const card = (id: string): PlayCard | undefined => catalog.cards.find((c) => c.i
 
 describe("outpostCatalog", () => {
   it("cards every play the registry exports — a new play is browsable with no edit here", () => {
-    expect(catalog.cards.map((c) => c.id)).toEqual([G1_GOOG.id, S1_NVDA.id].sort());
+    expect(catalog.cards.map((c) => c.id)).toEqual([G1_GOOG.id, S1_NVDA.id, TACO_DJT.id].sort());
   });
 
   it("attributes every house play to the house, marked as the house's own roster", () => {
@@ -34,8 +34,10 @@ describe("outpostCatalog", () => {
     expect(card("G1-GOOG")?.window).toBe("D-20 to the close of day D");
   });
 
-  it("labels a date-keyed play as an earnings window", () => {
-    expect(catalog.cards.every((c) => c.trigger === "earnings-window")).toBe(true);
+  it("labels a date-keyed play as an earnings window, and an event-driven play distinctly", () => {
+    expect(card("S1-NVDA")?.trigger).toBe("earnings-window");
+    expect(card("G1-GOOG")?.trigger).toBe("earnings-window");
+    expect(card("TACO-DJT")?.trigger).toBe("event-driven");
   });
 
   it("carries the play's citation verbatim, and its study as a research route", () => {
@@ -71,7 +73,7 @@ describe("the browse facets", () => {
   });
 
   it("offers one symbol facet per symbol on the board", () => {
-    expect(catalog.symbols.map((f) => f.id).sort()).toEqual(["GOOG", "NVDA"]);
+    expect(catalog.symbols.map((f) => f.id).sort()).toEqual(["DJT", "GOOG", "NVDA"]);
   });
 
   it("never offers a facet no card carries — an empty filter cannot be reached", () => {
