@@ -70,6 +70,17 @@ export type SubmitOptionTrade = (
   requesterId: string | undefined,
 ) => Promise<DeskOptionResult>;
 
+/** Alpaca's own approval tier for the account, parsed defensively. Absent or unparseable means
+ *  "unknown here" (never fabricated as 0) — `previewOptionOrder`'s level check treats that the
+ *  same way it treats a missing premium: skip the check rather than assert a refusal nobody can
+ *  back up. A real, present value is what actually gates a play (#468 criterion 7). */
+function optionsTradingLevel(account: {
+  options_trading_level?: string | number;
+}): number | undefined {
+  const level = Number(account.options_trading_level);
+  return Number.isFinite(level) ? level : undefined;
+}
+
 /** Fresh account context for the pure ticket rules — same read the share desk re-runs. */
 async function liveContext(
   client: AlpacaTradingClient,
@@ -80,6 +91,7 @@ async function liveContext(
     client.getPositions(),
     marketOpen(client),
   ]);
+  const level = optionsTradingLevel(account);
   return {
     cash: Number(account.cash),
     positions: positionsFrom(positions),
@@ -88,6 +100,7 @@ async function liveContext(
     ...(open !== undefined ? { marketOpen: open } : {}),
     ...(extras.premium !== undefined ? { premium: extras.premium } : {}),
     ...(extras.underlyingPrice !== undefined ? { underlyingPrice: extras.underlyingPrice } : {}),
+    ...(level !== undefined ? { optionsTradingLevel: level } : {}),
   };
 }
 

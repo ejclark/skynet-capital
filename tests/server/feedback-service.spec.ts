@@ -186,6 +186,9 @@ describe("feedback-service — issue creation never bundles labels into the crea
           body: { html_url: "https://github.com/x/y/issues/1", number: 1 },
         });
       }
+      if (method === "GET" && url.endsWith("/issues/1/labels")) {
+        return Promise.resolve({ status: 200, body: [] });
+      }
       return Promise.resolve({ status: 200, body: {} });
     };
     const submit = createFeedbackIssue(
@@ -198,9 +201,8 @@ describe("feedback-service — issue creation never bundles labels into the crea
     const createCall = calls.find((c) => c.method === "POST" && c.url.endsWith("/issues"));
     expect(createCall?.body).not.toHaveProperty("labels");
 
-    const labelCall = calls.find((c) => c.url.endsWith("/issues/1/labels"));
-    expect(labelCall?.method).toBe("POST");
-    expect(labelCall?.body).toEqual({ labels: ["enhancement", "feedback"] });
+    const labelPost = calls.find((c) => c.method === "POST" && c.url.endsWith("/issues/1/labels"));
+    expect(labelPost?.body).toEqual({ labels: ["enhancement", "feedback"] });
   });
 
   it("still returns ok when labeling fails — a filed-but-unlabeled issue beats a lost report", async () => {
@@ -221,5 +223,73 @@ describe("feedback-service — issue creation never bundles labels into the crea
     const result = await submit({ kind: "bug", title: "t", details: "d" });
 
     expect(result).toEqual({ ok: true, url: "https://github.com/x/y/issues/2", number: 2 });
+  });
+});
+
+// #716's stall: GitHub recorded two real `POST .../labels` calls for one filing, a second apart —
+// six distinct label-event ids, ruled out as a double form submit (that would file a second
+// issue; only one existed). Nothing here names an idempotency key, so nothing stops a transport-
+// level duplicate send from reaching GitHub as a second write. These specs pin the fix: a
+// duplicate call must never re-fire `labeled` events for labels the issue already carries.
+describe("feedback-service — label application is idempotent (#716's stall)", () => {
+  const doFetch =
+    (calls: { method: string; url: string; body?: unknown }[], currentLabels: string[]) =>
+    (method: string, url: string, _headers: unknown, body?: unknown) => {
+      calls.push({ method, url, body });
+      if (method === "POST" && url.endsWith("/issues")) {
+        return Promise.resolve({
+          status: 201,
+          body: { html_url: "https://github.com/x/y/issues/1", number: 1 },
+        });
+      }
+      if (method === "GET" && url.endsWith("/issues/1/labels")) {
+        return Promise.resolve({ status: 200, body: currentLabels.map((name) => ({ name })) });
+      }
+      return Promise.resolve({ status: 200, body: {} });
+    };
+
+  it("skips the write entirely when every label is already on the issue — a duplicate call is a no-op", async () => {
+    const calls: { method: string; url: string; body?: unknown }[] = [];
+    const submit = createFeedbackIssue(
+      { token: "t", repo: "x/y" },
+      doFetch(calls, [
+        "enhancement",
+        "feedback",
+      ]) as unknown as typeof import("../../src/http/fetch-json.js").fetchJson,
+    );
+
+    await submit({ kind: "feature", title: "t", details: "d" });
+
+    expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/issues/1/labels"))).toBe(
+      false,
+    );
+  });
+
+  it("posts only the labels genuinely missing, when the issue already carries some", async () => {
+    const calls: { method: string; url: string; body?: unknown }[] = [];
+    const submit = createFeedbackIssue(
+      { token: "t", repo: "x/y" },
+      doFetch(calls, [
+        "enhancement",
+      ]) as unknown as typeof import("../../src/http/fetch-json.js").fetchJson,
+    );
+
+    await submit({ kind: "feature", title: "t", details: "d" });
+
+    const labelPost = calls.find((c) => c.method === "POST" && c.url.endsWith("/issues/1/labels"));
+    expect(labelPost?.body).toEqual({ labels: ["feedback"] });
+  });
+
+  it("reads current labels before writing — GET precedes any POST to the labels endpoint", async () => {
+    const calls: { method: string; url: string; body?: unknown }[] = [];
+    const submit = createFeedbackIssue(
+      { token: "t", repo: "x/y" },
+      doFetch(calls, []) as unknown as typeof import("../../src/http/fetch-json.js").fetchJson,
+    );
+
+    await submit({ kind: "feature", title: "t", details: "d" });
+
+    const labelCalls = calls.filter((c) => c.url.endsWith("/issues/1/labels"));
+    expect(labelCalls.map((c) => c.method)).toEqual(["GET", "POST"]);
   });
 });

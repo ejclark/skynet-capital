@@ -27,6 +27,49 @@ it. Prevention ranks, best first:
 
 ---
 
+### A burst of labeled events collapsed to the wrong survivors, and the feedback lane never claimed the issue
+
+- **SHA:** 021bf0d   **DATE:** 2026-08-29   **STATUS:** closed
+- **SIGNAL:** Two independent occurrences, back to back. #716 stalled with six `labeled` webhook
+  events fired (a duplicate label-apply doubled the usual three) and no claim; #732 stalled the
+  next submission with the usual four labels. Neither failed loudly — the Actions tab showed a
+  pile of runs, most reporting `cancelled` with zero jobs, and the one thing anyone would check
+  (`postmaster.yml`'s own job status) read "success" on the runs that did execute, because the
+  `if:` condition they evaluated was simply false. Detection was manual both times: someone asked
+  "why isn't this being worked" and had to trace it from workflow-run history, not from any signal
+  the system raised on its own.
+- **ROOT CAUSE:** `src/server/feedback-service.ts` attaches every label a submission earns
+  (kind + `feedback` + `curated` + `member-<id>`) in ONE API call, deliberately separate from issue
+  creation (see that file's own header comment, which already documents the *first* half of this
+  bug class — labels baked into the create call never fire `labeled` at all). GitHub answers a
+  multi-label POST by firing one `labeled` webhook PER label, all in the same instant. All of them
+  shared postmaster.yml's one concurrency group per issue, and GitHub's queue keeps only the
+  LATEST pending run per group when several arrive at once — it does not queue everything
+  (`cancel-in-progress: false` only protects a run already RUNNING from being cancelled; it says
+  nothing about how many can be PENDING, which is capped at one). A same-second burst of N events
+  therefore collapses to at most two survivors — whichever happened to be running plus whichever
+  was queued last — and which N-2 events get dropped is an artifact of webhook delivery order, not
+  anything the workflow's own logic controls. The one step that actually claims the issue
+  (`node scripts/postmaster.mjs --claim-feedback`) was gated on `github.event.label.name ==
+  'feedback'` specifically, so the bug only manifests as a *miss* when the `feedback` event is the
+  one that loses the race — which is exactly what happened both times.
+- **PREVENTION:** gate. `postmaster.yml`'s concurrency `group:` now includes
+  `${{ github.event.label.name || '' }}`, so each label on an issue gets its own lane and sibling
+  labels can never cancel each other's run — the claim step's own `if:` is unchanged and correct
+  once the run it depends on is guaranteed to happen. A repeat of the *same* label still collides
+  in its own lane, which is the intended dedupe: `claimFeedback`'s lease already makes a same-label
+  retry a safe no-op rather than a second build. A same-session investigation of #732 independently
+  proposed loosening the claim step's `if:` to read the issue's current label set instead of the
+  triggering event's single label — functionally equivalent once the concurrency fix landed first,
+  so it was dropped rather than stacked: the narrower, already-shipped fix fully closes the gap
+  without widening the claim step's trigger surface for no remaining reason.
+- **SIDE QUESTS:** Feedback-to-shipped latency (issue creation → merged & deployed) is not
+  currently tracked as a metric anywhere in this repo — raised by Eric directly (2026-08-29:
+  "performance is a first class metric... it feels like the total time to think on feedback to
+  build features has been increasing") in the same conversation that surfaced this incident. Worth
+  its own measurement pass rather than folding into this entry — see the follow-up research this
+  incident prompted.
+
 ### The bots rollback deployed `null/null:null`, because "not empty" was mistaken for "real"
 
 - **SHA:** 947a4f4   **DATE:** 2026-08-26   **STATUS:** closed
@@ -330,6 +373,8 @@ it. Prevention ranks, best first:
 ### One wrong `gh --json` field name took every push run of the postmaster down
 
 - **SHA:** 1eb7c3c   **DATE:** 2026-08-22   **STATUS:** closed
+- **SHA:** 0e98233 — the triggering failure itself, ~7 minutes before this fix landed; the incident
+  burn-down (#781) found it separately and confirms it against the field name below.
 - **SIGNAL:** noticed while retriggering issue #475 — a red `Postmaster` push run sitting beside the
   merge that had just landed. No alert; the CI Medic's own run for it was cancelled by the next
   push before it could file. Minutes, and only because someone was already reading the run list.
@@ -428,6 +473,11 @@ it. Prevention ranks, best first:
 ### A feedback build died in bash before Claude was ever invoked, and nothing was watching
 
 - **SHA:** 2d5921f   **DATE:** 2026-08-22   **STATUS:** closed
+- **SHA:** 7e00543 — an earlier hit of the identical `set -euo pipefail` short-circuit, 2026-08-20
+  05:29, found retroactively by the incident burn-down (#781); same step, same trap, pre-dates this
+  entry's own occurrence by two days.
+- **SHA:** 378be45 — a second hit an hour later the same morning (06:26), same trap; also found by
+  #781, also closed by the fix below.
 - **SIGNAL:** Eric, reading the Actions tab by hand — "a feedback submission job failed … blocking
   automatic pr generation." Zero automated signal: run 32545818804 failed at 02:17, the issue kept
   its `feedback` label and its claim lease, and the only eye on red runs (`incident-scan`) reports
@@ -479,9 +529,11 @@ it. Prevention ranks, best first:
   shape it", dead "Skip →", hidden form: the entire member feedback funnel down, invisibly — every
   click path was designed to fail loudly except the wiring itself.
 - **PREVENTION:** by-construction fix + gate. The script now attaches on `DOMContentLoaded`
-  (markup order can never break it again) AND renders below the form; the spec pins both nets
+  (markup order can never break it again) AND renders below the form; the spec pinned both nets
   (readiness guard present; script rendered after every id it queries) in
-  `tests/server/feedback-coach-script.spec.ts`.
+  tests/server/feedback-coach-script.spec.ts. Both the classic inline script and its spec were
+  deleted whole in #738 phase 9f-2 — the shell's React feedback UI has no inline-script-ordering
+  hazard to guard, so the failure class this pinned can no longer occur.
 - **SIDE QUESTS:** a real-browser CI smoke of the critical funnels (/feedback click-through) —
   parked in docs/IDEAS.md.
 
@@ -1090,3 +1142,174 @@ into `/app/*` silently lands on the shell's `index.html` — which exists locall
 `app/dist` for live checks) and does NOT exist in CI's verify job. Green locally, 404-red in CI
 (#779). Rule: server specs pin the redirect itself (`redirect: "manual"`, assert 302 + location),
 never what lies beyond it; the shell's own behavior is the app's concern, not the server suite's.
+
+---
+
+### A burst of pushes drained the postmaster's own GraphQL rate limit, and every push failed until it recovered
+
+- **SHA:** 9aeae1d   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** 3103b31   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** 94e49d4   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** 793b33f   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** 2f1c96d   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** defa735   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** 871a7c9   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** 2a19dc4   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** ee741ea   **DATE:** 2026-08-26   **STATUS:** closed
+- **SHA:** fafbbf1   **DATE:** 2026-08-26   **STATUS:** closed
+- **SIGNAL:** ten consecutive `Postmaster` push runs failed inside 45 minutes (12:31–13:13), all the
+  identical one-liner: `Error: gh issue list (shipped) failed: GraphQL: API rate limit already
+  exceeded for user ID 3472134`, thrown from `gatherDeps` in `scripts/postmaster.mjs`. Detection lag
+  was effectively zero — each run failed loudly on its own — but nobody connected the ten reds into
+  one incident and banked the retro until this burn-down (#781) found them.
+- **ROOT CAUSE:** `gatherDeps`'s `shippedSweep` ran a GraphQL `gh issue list` with each issue's
+  nested closing-PR references on **every push**, whether or not there was anything to sweep — and
+  the API prices that query by cost, not by call count. A burst of merges during the 2026-08-26
+  research/account-fix session (12 pushes in under an hour) burned through Eric's personal
+  10,000/hr GraphQL ceiling outright, and every push after that failed the same way until the window
+  rolled over — including `ee741ea` itself, the fix commit, which landed mid-burst and still hit the
+  exhausted budget on its own push (a code fix cannot un-spend an already-drained hourly quota).
+- **PREVENTION:** already landed, found already fixed rather than built here. `ee741ea` (2026-08-26)
+  cut the query in two ways, both now in `scripts/postmaster.mjs`'s `gatherDeps`: (1) a cheap REST
+  existence check (`ghRest`, the plentiful core bucket) gates whether the expensive GraphQL sweep
+  runs at all — most pushes have nothing labeled `feedback`/`event-research` open and now pay
+  nothing; (2) the open-issue-titles read moved off a second GraphQL query onto REST entirely. The
+  code comment at `scripts/postmaster.mjs:301-309` narrates this exact incident inline. No further
+  code change needed; this entry exists to close the paper trail the fix never got.
+- **SIDE QUESTS:** a burst this size can still exhaust the budget again on a busier day — the fix
+  lowers the cost per push, not the ceiling itself. Worth a follow-up: does GitHub expose remaining
+  GraphQL quota cheaply enough to skip the sweep pre-emptively rather than fail into it? (→
+  docs/IDEAS.md, not built here).
+
+---
+
+### One un-permitted `gh issue comment` used to take the whole postmaster router down with it — isolation already shipped, never retro'd
+
+- **SHA:** 763ac89   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** 0b60b29   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** c5eea18   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** 971e91c   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** fbfa281   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** 745237b   **DATE:** 2026-08-25   **STATUS:** closed
+- **SHA:** 1d889f8   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** seven `Postmaster` push runs on 2026-08-25 all died the same way:
+  `GraphQL: Resource not accessible by personal access token (addComment)`, thrown out of
+  `executeOne`'s `sh()` call and unwinding the entire `route` job — every other intent that push
+  (feedback claims, event research, the stall audit) skipped, and no receipt written recording any
+  of it. Detection was immediate per-run (each failed loudly) but the pattern — one token-scope gap
+  repeatedly taking down unrelated work — was never banked as its own incident until now (#781).
+- **ROOT CAUSE:** the same identity-severance class `e122ee8` already diagnosed (the router runs on
+  a bare `GITHUB_TOKEN`/PAT with no `addComment` GraphQL mutation scope — the App/PAT install is
+  still Eric's pending step), but a *new* failure mode of it: `runIntents` used to be a bare `for`
+  loop, so one un-permitted comment threw past every later intent in the same push, including intents
+  that had nothing to do with commenting.
+- **PREVENTION:** already landed, found already fixed rather than built here. `runIntents` in
+  `scripts/postmaster.mjs` (see its docstring, dated 2026-08-26) now wraps each intent in its own
+  try/catch: a failed intent lands in the receipt by name with an `::error::` annotation, the run
+  still fails honestly, but every other intent that push still executes. A comment permission gap is
+  still a real failure — closing it needs the App/PAT install `e122ee8` already named as Eric's step
+  — but it can no longer take unrelated work down with it. This entry exists to close the paper
+  trail the isolation fix never got.
+- **SIDE QUESTS:** none new — the durable fix (real GitHub identity) is already tracked under
+  `e122ee8`'s side quest.
+
+---
+
+### `claude-code-action` refused every bot-triggered postmaster run — allowlist already shipped, never retro'd
+
+- **SHA:** 442bad8   **DATE:** 2026-08-20   **STATUS:** closed
+- **SHA:** a5fc5d8   **DATE:** 2026-08-20   **STATUS:** closed
+- **SHA:** 2cb88fd   **DATE:** 2026-08-20   **STATUS:** closed
+- **SHA:** 850f0d3   **DATE:** 2026-08-22   **STATUS:** closed
+- **SIGNAL:** four failed runs across `build feedback issue` (triggered by `claude[bot]` labeling an
+  issue) and `research due events` (triggered by the `route` job's own re-dispatch, run as
+  `github-actions[bot]`), all `Action failed with error: Workflow initiated by non-human actor:
+  <actor> (type: Bot). Add bot to allowed_bots list or use '*' to allow all bots.` Two of the four
+  (`a5fc5d8`, `2cb88fd`) are a direct side effect of the `e854590`/`76f6215`/`5de1b7f` fix for
+  "Unsupported event type: push" two days earlier — that fix made `route` re-dispatch
+  `research due events` via `gh workflow run`, which runs as a bot identity `claude-code-action`
+  refuses by default. Fixing one incident class introduced this one.
+- **ROOT CAUSE:** `claude-code-action@v1` refuses to act for any actor GitHub reports as a Bot,
+  unless explicitly allowlisted — a safety default with no exception carved for this repo's own
+  legitimate bot-to-bot lanes (`claude[bot]` building a feedback issue it was assigned, or
+  `github-actions[bot]` re-dispatching the router's own tick).
+- **PREVENTION:** already landed, found already fixed rather than built here. `.github/workflows/
+  postmaster.yml` now sets `allowed_bots: "github-actions"` on the research-due-events step and
+  `allowed_bots: "github-actions,claude"` on the build-feedback step (2026-08-28, commit `5ba651e`),
+  each named explicitly rather than `'*'` per its own inline comment. This entry exists to close the
+  paper trail the fix never got; issue #820 (filed during this burn-down before the fix was found in
+  current `main`) is being closed as already-resolved rather than left open.
+- **SIDE QUESTS:** none — `claude.yml`'s own trigger was checked and does not go through this same
+  re-dispatch path, so it was not exposed.
+
+---
+
+### A `claude-code-action` research run twice burned its entire turn budget without finishing — cause not established
+
+- **SHA:** 189a4df   **DATE:** 2026-08-28   **STATUS:** closed
+- **SHA:** ba26084   **DATE:** 2026-08-29   **STATUS:** closed
+- **SHA:** 9f9178c   **DATE:** 2026-08-29   **STATUS:** closed
+- **SIGNAL:** three `claude-code-action` runs hit `error_max_turns` — two `research due events` runs
+  back-to-back on 2026-08-29 (100 turns, $11.50 and 100 turns respectively) and one PR-comment
+  review run on 2026-08-28 (50 turns). All three ran the full budget and were killed by the action's
+  own cap, not by an error mid-run.
+- **ROOT CAUSE:** not established. The logs show the agent consuming its full turn allowance and
+  stopping there — genuinely ambiguous from the log alone whether it was making slow real progress on
+  a legitimately large task (the due-events prompt covers multi-event research with a mandated
+  adjacency sweep per event), stuck in an unproductive loop, or something else. Naming a specific
+  cause here without reading the full transcript would be inventing a plausible-sounding story this
+  evidence doesn't support — per this repo's own retro standard, that is worse than no lesson.
+- **PREVENTION:** ledger-only, deliberately not mechanized here. The mechanical lever (raising
+  `--max-turns` in `.github/workflows/postmaster.yml`) is a workflow-file edit — envelope-protected,
+  Eric's call — and would be the wrong reflex regardless: a run already burning $11.50 and 100 turns
+  without finishing may be a prompt/scope problem a bigger cap only makes more expensive to observe.
+- **SIDE QUESTS:** worth reading a full transcript of one of these runs to see whether it was
+  looping or genuinely working, before deciding whether the fix is a bigger cap, a narrower prompt,
+  or a due-events queue that's grown too large for one run to clear (→ docs/IDEAS.md, not done here
+  to stay bounded).
+
+---
+
+### The bots deploy smoke check's own message still can't say which of two things failed — recurred 6× in one day
+
+- **SHA:** c955ff4   **DATE:** 2026-08-27   **STATUS:** closed
+- **SHA:** de393e3   **DATE:** 2026-08-27   **STATUS:** closed
+- **SHA:** bbaa18e   **DATE:** 2026-08-27   **STATUS:** closed
+- **SHA:** 8365fbb   **DATE:** 2026-08-27   **STATUS:** closed
+- **SHA:** 251d6ba   **DATE:** 2026-08-27   **STATUS:** closed
+- **SHA:** 518d8ad   **DATE:** 2026-08-27   **STATUS:** closed
+- **SIGNAL:** six `release · deploy bots` runs on 2026-08-27, all the identical
+  `[smoke-bots] FAIL — machine not started on <sha>, or the controls bridge never armed` after 8
+  retries, each followed by an automatic, successful rollback to the previous known-good image — so
+  the fleet was never actually down, only undiagnosable from its own log.
+- **ROOT CAUSE:** `scripts/smoke-bots.sh`'s health check ORs two independent conditions (the machine
+  reaching a started state; the controls-bridge heartbeat arming) into one message, exactly the gap
+  the `947a4f4` entry already flagged as an unresolved side quest on 2026-08-26 and raised as #671 —
+  but #671 closed on a different, adjacent fix (the `null/null:null` rollback-image bug, PR #729),
+  leaving this specific ambiguity untouched. It then recurred 6 more times the very next day.
+- **PREVENTION:** ledger-only + escalated. `scripts/smoke-bots.sh` is in `envelope.json`'s protected
+  list ("deploy topology — gates the bots rollback path; weakening it ships unverified bots
+  releases"), so splitting the message into two distinct failure paths is Eric's call, not mine.
+  Filed as issue #821 with the fix already sketched, rather than guessed at here.
+- **SIDE QUESTS:** none new — this *is* the `947a4f4` side quest, now with 6 more data points and
+  its own issue instead of a buried bullet.
+
+---
+
+### `claude-code-action`'s own SDK failed to find its installed binary — one-off runner flake, not a repo bug
+
+- **SHA:** 90666c6   **DATE:** 2026-08-25   **STATUS:** closed
+- **SIGNAL:** one `research due events` run failed before any prompt ran:
+  `ReferenceError: Claude Code native binary not found at /home/runner/.local/bin/claude … Please
+  ensure Claude Code is installed via native installer`, `errorClass: "executable_not_found"`,
+  `code: "ENOENT"`.
+- **ROOT CAUSE:** not established, and deliberately not guessed at. The error is inside
+  `anthropics/claude-code-action`'s own SDK, invoked before this repo's workflow code runs at all —
+  a race or flake between the action's Bun-based install step and its own binary invocation, on a
+  GitHub-hosted runner this repo does not control. No other run in the 14-day window shows this
+  signature (checked: none of the other 33 incidents in this burn-down match it), so it reads as a
+  one-off environment flake rather than a recurring class worth a local workaround.
+- **PREVENTION:** ledger-only. There is no repo-side fix for a third-party action's own install race;
+  a local retry-wrapper would treat a symptom this repo cannot diagnose. If it recurs, that upgrades
+  the priority — one instance in 14 days does not.
+- **SIDE QUESTS:** none — watch for a repeat rather than building around a single data point.

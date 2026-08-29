@@ -35,6 +35,18 @@ export interface TradeFill {
   readonly price?: number;
   /** ISO-8601 execution time. */
   readonly at: string;
+  /**
+   * True for a "close" synthesized from a lifecycle event (an option expiring or being
+   * assigned — #468 criterion 6) rather than a real order fill. The $0 price on one of these is
+   * honest (no cash changed hands to close the leg), and it still closes a genuine open lot
+   * exactly like a real fill would. But a written option's OPENING sell already lands in
+   * `unmatchedSellQuantity` today (short-lot matching is a separate, documented gap — see the
+   * module doc above), so a synthetic close that finds nothing open must NOT count a second time
+   * against that same gap — it would double the "history begins mid-trade" caveat for every
+   * written option that later expires or gets assigned, which is worse than the gap itself.
+   * Ordinary fills never set this and are unaffected.
+   */
+  readonly synthetic?: boolean;
 }
 
 /** A matched, closed trade: shares bought and later sold. */
@@ -132,7 +144,10 @@ function matchSymbol(
       remaining -= matched;
       if (lot.quantity <= 0) lots.shift();
     }
-    unmatchedSells += remaining;
+    // A synthetic close (see `TradeFill.synthetic`) that found no open lot is a safe no-op, not an
+    // unmatched sell — the contract it's closing was never opened by a buy in this window (it was
+    // WRITTEN), and that gap is already counted once, at the opening sell.
+    if (!fill.synthetic) unmatchedSells += remaining;
   }
 
   for (const lot of lots) {

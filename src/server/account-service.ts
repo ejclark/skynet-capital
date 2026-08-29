@@ -217,10 +217,14 @@ export function createAccountService(deps: AccountServiceDeps): {
       deps.store.add(updated);
       deps.hub.apply({ type: "participant_updated", participant: snapshot, at: at() });
       return { ok: true, id, displayName: updated.displayName };
-    } catch (error) {
+    } catch {
+      // A fixed sentence, never the exception text (#810's `brokerRefusal` shape, and the same
+      // treatment `ParticipantService.verify` gives its unreachable arm): a raw error can carry
+      // internals — hostnames, proxy banners — that don't belong in member-facing copy.
       return {
         ok: false,
-        error: `Could not reach Alpaca to refresh the account row — nothing was changed. (${String(error)})`,
+        error:
+          "Could not reach Alpaca to refresh the account row — nothing was changed. Try again shortly.",
       };
     }
   }

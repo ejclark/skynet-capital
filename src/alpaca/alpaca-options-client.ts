@@ -52,6 +52,27 @@ export interface AlpacaOptionContract {
   readonly close_price?: string | null;
 }
 
+/**
+ * One row of the Account Activities feed (`/v2/account/activities`), narrowed to the fields an
+ * option lifecycle event might carry. Alpaca reports expiration/assignment/exercise as non-trade
+ * activities (`OPEXP`/`OPASN`/`OPEXC`) and the paired underlying-share trade that settles an
+ * assignment or exercise as `OPTRD`. Every field beyond `id`/`activity_type` is optional on
+ * purpose: the non-trade types are not documented as carrying `side`, and normalization
+ * (`../trading/option-lifecycle.ts`) never assumes a field this type doesn't guarantee.
+ */
+export interface AlpacaAccountActivity {
+  readonly id: string;
+  readonly activity_type: string;
+  /** Non-trade activities key on `date`; trade activities (`OPTRD`) on `transaction_time`. */
+  readonly date?: string;
+  readonly transaction_time?: string;
+  readonly symbol?: string;
+  readonly qty?: string | number;
+  readonly price?: string | number;
+  readonly side?: string;
+  readonly net_amount?: string | number;
+}
+
 export interface PlaceOptionOrderParams {
   readonly occSymbol: string;
   readonly contracts: number;
@@ -164,6 +185,30 @@ export class AlpacaOptionsClient {
       return num(body?.trade?.p);
     } catch {
       return undefined;
+    }
+  }
+
+  /**
+   * The four option lifecycle activity types (#468 criterion 6): `OPEXP` (expired worthless),
+   * `OPASN` (assigned), `OPEXC` (exercised), `OPTRD` (the paired underlying-share settlement
+   * trade). Read-only and never on the execution path, so this fails SOFT like `mergeQuotes` —
+   * an empty array on any error, rather than breaking history rendering over a broker hiccup.
+   * `after` is the activity `id` cursor (Alpaca's own pagination token for this endpoint).
+   */
+  async getOptionLifecycleActivities(after?: string): Promise<AlpacaAccountActivity[]> {
+    try {
+      const query = new URLSearchParams({
+        activity_types: "OPEXP,OPASN,OPEXC,OPTRD",
+        direction: "desc",
+        page_size: "100",
+        ...(after ? { page_token: after } : {}),
+      });
+      const response = await this.trading.get(`/v2/account/activities?${query.toString()}`);
+      if (response.status < 200 || response.status >= 300) return [];
+      const body = response.body;
+      return Array.isArray(body) ? (body as AlpacaAccountActivity[]) : [];
+    } catch {
+      return [];
     }
   }
 

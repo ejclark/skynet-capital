@@ -36,7 +36,26 @@ export interface OptionTicketContext {
   readonly premium?: number;
   /** The underlying's last known price, when known. */
   readonly underlyingPrice?: number;
+  /** Alpaca's `options_trading_level` for the account, when it's been read live (#468 criterion
+   *  7). Absent means "not checked here" — a browser-side preview built off a cached snapshot
+   *  can't know this without a fresh account fetch, so it skips the check rather than asserting a
+   *  refusal (or an approval) it can't back up. The one place this must be populated is the
+   *  execution-time re-check (`option-trade-service.ts`'s `liveContext`), which reads the live
+   *  account on every submit — same treatment as cash and held-shares affordability. */
+  readonly optionsTradingLevel?: number;
 }
+
+/**
+ * The Alpaca options level each play needs, straight from the issue's own audit: "Alpaca's own
+ * levels map 1:1 onto the desk-v2 ladder: Level 1 = covered call + cash-secured put (201/202),
+ * Level 2 = long calls/puts (301/302)." Level 3 (spreads, `mleg`) is out of scope for this desk.
+ */
+export const OPTION_PLAY_LEVEL: Record<OptionPlayCode, number> = {
+  "201": 1,
+  "202": 1,
+  "301": 2,
+  "302": 2,
+};
 
 export interface OptionTicketPreview {
   readonly code: OptionPlayCode | "close";

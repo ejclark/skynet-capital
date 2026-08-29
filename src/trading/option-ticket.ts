@@ -1,5 +1,7 @@
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import {
+  OPTION_PLAY_LEVEL,
+  type OptionPlayCode,
   type OptionTicketContext,
   type OptionTicketPreview,
   type OptionTicketRequest,
@@ -71,6 +73,46 @@ function gateNotes(context: OptionTicketContext, refusals: string[], warnings: s
   }
 }
 
+/** Human name for a play code, for the level-refusal message. */
+const PLAY_LABEL: Record<keyof typeof OPTION_PLAY_LEVEL, string> = {
+  "201": "a cash-secured put",
+  "202": "a covered call",
+  "301": "a long put",
+  "302": "a long call",
+};
+
+/**
+ * IF the account's `options_trading_level` is below the play's required level, THEN refuse with
+ * the account's actual level and the level the play needs (#468 criterion 7). `optionsTradingLevel`
+ * is only ever populated once it's been read live (see the field's own doc in
+ * `option-economics.ts`) — undefined means "not checked here", so this never asserts a refusal
+ * (or an approval) the caller can't back up. The live execution-time re-check is what always
+ * carries a real value, exactly like the cash and held-shares checks above it.
+ */
+function levelRefusal(code: OptionPlayCode, context: OptionTicketContext): string | undefined {
+  if (context.optionsTradingLevel === undefined) return undefined;
+  const required = OPTION_PLAY_LEVEL[code];
+  if (context.optionsTradingLevel >= required) return undefined;
+  return `Your account's options trading level (${context.optionsTradingLevel}) doesn't cover ${PLAY_LABEL[code]} — that needs level ${required}. Ask Alpaca to raise your options approval, or trade a play your level allows.`;
+}
+
+/** The play itself must be a real option play the desk offers; once it is, the account's level
+ *  gets its own check (#468 criterion 7). Split out of `previewOptionOrder` to keep that
+ *  function's branching count under the house complexity budget. */
+function validatePlay(
+  request: OptionTicketRequest,
+  play: ReturnType<typeof tradeTypeByCode>,
+  context: OptionTicketContext,
+  refusals: string[],
+): void {
+  if (play?.kind !== "option" || !play.optionType) {
+    refusals.push("Pick one of the option plays the desk offers.");
+    return;
+  }
+  const levelNote = levelRefusal(request.code, context);
+  if (levelNote) refusals.push(levelNote);
+}
+
 /** Review an option OPEN against the account. Total: refused orders render, never throw. */
 export function previewOptionOrder(
   request: OptionTicketRequest,
@@ -82,9 +124,7 @@ export function previewOptionOrder(
   const warnings: string[] = [];
 
   gateNotes(context, refusals, warnings);
-  if (play?.kind !== "option" || !play.optionType) {
-    refusals.push("Pick one of the option plays the desk offers.");
-  }
+  validatePlay(request, play, context, refusals);
   validateShape(request, refusals);
 
   const optionType = play?.optionType ?? "call";

@@ -1,3 +1,4 @@
+import { LIFECYCLE_STATUS } from "../trading/option-lifecycle.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import type { TicketContext } from "../trading/order-ticket.js";
 import { matchRoundTrips, type RoundTripLedger, type TradeFill } from "../trading/round-trips.js";
@@ -27,9 +28,38 @@ import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.j
  * Without it a closed option trade reported 1/100th of its true P/L, and the positions tab and the
  * history tab contradicted each other about the same trade.
  */
+/**
+ * Lifecycle statuses (#468 criterion 6) that must never enter the FIFO round-trip matcher at all,
+ * regardless of side/quantity: `OPEXC` (exercise converts a long option's value into stock — a
+ * $0 close would misreport a value transfer as a wipeout) and `OPTRD` (a real settlement trade,
+ * but this app hasn't confirmed its wire shape against a live account — see
+ * `option-lifecycle.ts`'s module doc). Both still show up in the raw order-activity ledger with
+ * their plain-language status; they simply carry no round-trip P/L.
+ */
+const LIFECYCLE_INFO_ONLY: ReadonlySet<string> = new Set([
+  LIFECYCLE_STATUS.OPEXC,
+  LIFECYCLE_STATUS.OPTRD,
+]);
+
+/**
+ * Lifecycle statuses that DO close a leg (#468 criterion 6): `OPEXP` (expired worthless) and
+ * `OPASN` (assigned) both synthesize an honest $0 close. Marked `synthetic` so a close that finds
+ * no open lot (a written option's expiration/assignment — short-lot matching is a separate,
+ * documented gap in `round-trips.ts`) is a safe no-op rather than a double-counted unmatched sell.
+ */
+const LIFECYCLE_SYNTHETIC_CLOSE: ReadonlySet<string> = new Set([
+  LIFECYCLE_STATUS.OPEXP,
+  LIFECYCLE_STATUS.OPASN,
+]);
+
 export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeFill[] {
   return (activity ?? [])
-    .filter((row) => row.filledQuantity > 0 && (row.side === "buy" || row.side === "sell"))
+    .filter(
+      (row) =>
+        row.filledQuantity > 0 &&
+        (row.side === "buy" || row.side === "sell") &&
+        !LIFECYCLE_INFO_ONLY.has(row.status),
+    )
     .map((row) => {
       const scale = isOccSymbol(row.symbol) ? OPTION_MULTIPLIER : 1;
       return {
@@ -38,6 +68,7 @@ export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeF
         quantity: row.filledQuantity,
         ...(row.price !== undefined ? { price: row.price * scale } : {}),
         at: row.at,
+        ...(LIFECYCLE_SYNTHETIC_CLOSE.has(row.status) ? { synthetic: true } : {}),
       };
     });
 }
@@ -48,7 +79,7 @@ export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeF
  * passes through untouched (exactly the pre-ledger behavior), so a deployment without the
  * activity store loses nothing — it just stays bounded by the broker's window.
  */
-export function mergedDeskActivity(
+function mergedDeskActivity(
   snapshot: ParticipantSnapshot,
   durable?: readonly TradeActivityRecord[],
 ): readonly ActivityView[] {
@@ -77,25 +108,6 @@ export function ticketContext(
     isSelf: options.isSelf,
     ...(options.marketOpen !== undefined ? { marketOpen: options.marketOpen } : {}),
   };
-}
-
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
-/** Hold time in the coarsest unit that stays truthful — "3d 4h", "45m", "under a minute". */
-export function formatHold(ms: number): string {
-  if (!Number.isFinite(ms) || ms < 0) return "—";
-  if (ms < MINUTE) return "<1m";
-  if (ms < HOUR) return `${Math.round(ms / MINUTE)}m`;
-  if (ms < DAY) {
-    const hours = Math.floor(ms / HOUR);
-    const minutes = Math.round((ms % HOUR) / MINUTE);
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
-  const days = Math.floor(ms / DAY);
-  const hours = Math.round((ms % DAY) / HOUR);
-  return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
 }
 
 /**
@@ -131,12 +143,4 @@ export function reviewLine(label: string, value: string, cls?: string): string {
   return `<div class="review-line"><span>${escapeHtml(label)}</span><span${
     cls ? ` class="${cls}"` : ""
   }>${escapeHtml(value)}</span></div>`;
-}
-
-/** A ticket's warnings then refusals, in the house notice styles. */
-export function reviewNotices(warnings: readonly string[], refusals: readonly string[]): string {
-  return [
-    ...warnings.map((warning) => `<p class="note-warn">${escapeHtml(warning)}</p>`),
-    ...refusals.map((refusal) => `<p class="note-stop">${escapeHtml(refusal)}</p>`),
-  ].join("");
 }

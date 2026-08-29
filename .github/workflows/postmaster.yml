@@ -90,8 +90,19 @@ permissions:
   actions: write        # gh workflow run — the push→workflow_dispatch re-fire for event research
 
 concurrency:
-  # Keyed by event so a feedback claim and a push sweep never queue behind each other.
-  group: postmaster-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}
+  # Keyed by event so a feedback claim and a push sweep never queue behind each other. ALSO keyed
+  # by label name (2026-08-29, #716's stall): filing an issue can add several labels in a burst —
+  # each `labeled` add is its OWN `issues` event, and without the label in the key they all shared
+  # one group. GitHub's queue then collapses a same-second burst down to the first-running run plus
+  # only the LAST queued one, silently dropping everything in between — and on #716, six labeled
+  # events (a duplicate label-apply doubled the usual three) collapsed exactly onto `enhancement`
+  # and `member-<id>`, both times dropping the `feedback` event, which is the ONLY trigger for
+  # `build-feedback`. The issue was never claimed; nothing failed loudly. Splitting the group per
+  # label means sibling labels on the same issue can no longer cancel each other's run — a second
+  # `feedback` event on the SAME issue (e.g. a genuine re-label retry) still collides with the
+  # first, which is the intended dedupe, since `claimFeedback`'s lease already makes that safe.
+  # Empty for push/workflow_dispatch (no `label` on those payloads), so their grouping is unchanged.
+  group: postmaster-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}-${{ github.event.label.name || '' }}
   cancel-in-progress: false
 
 jobs:

@@ -1,6 +1,8 @@
+import type { AlpacaAccountActivity } from "../../src/alpaca/alpaca-options-client.js";
 import type { AlpacaOrder } from "../../src/alpaca/alpaca-trading-client.js";
 import {
   backfillParticipantActivity,
+  backfillParticipantOptionLifecycle,
   reconcileBrokerActivity,
 } from "../../src/observatory/activity-backfill.js";
 import { collapseActivity, InMemoryActivityStore } from "../../src/observatory/activity-store.js";
@@ -83,6 +85,77 @@ describe("backfillParticipantActivity", () => {
       filledQuantity: 10,
       status: "filled",
     });
+  });
+});
+
+describe("backfillParticipantOptionLifecycle (#468 criterion 6)", () => {
+  const activity = (
+    id: string,
+    type: string,
+    overrides: Partial<AlpacaAccountActivity> = {},
+  ): AlpacaAccountActivity => ({
+    id,
+    activity_type: type,
+    symbol: "MSFT260918P00420000",
+    qty: "2",
+    date: "2026-09-19T00:00:00Z",
+    ...overrides,
+  });
+
+  it("journals a well-formed OPEXP with its plain-language status, and pages by activity id", async () => {
+    const store = new InMemoryActivityStore();
+    const calls: Array<string | undefined> = [];
+    const pageOne = [activity("act-2", "OPEXP"), activity("act-1", "OPASN")];
+
+    const result = await backfillParticipantOptionLifecycle({
+      participantId: "sauron",
+      store,
+      pageSize: 2,
+      listLifecycleActivities: (after) => {
+        calls.push(after);
+        return Promise.resolve(after === undefined ? pageOne : []);
+      },
+    });
+
+    expect(calls).toEqual([undefined, "act-1"]);
+    expect(result).toMatchObject({ fetched: 2, appended: 2, pages: 1 });
+    const held = collapseActivity(await store.list("sauron"));
+    expect(held.every((r) => r.source === "lifecycle")).toBe(true);
+    expect(held.find((r) => r.orderId === "lifecycle:act-2")).toMatchObject({
+      status: "expired worthless",
+      price: 0,
+    });
+  });
+
+  it("skips a row that doesn't parse as one of the four lifecycle types, without failing the sweep", async () => {
+    const store = new InMemoryActivityStore();
+    const result = await backfillParticipantOptionLifecycle({
+      participantId: "sauron",
+      store,
+      listLifecycleActivities: () =>
+        Promise.resolve([activity("act-1", "FILL"), activity("act-2", "OPEXP")]),
+    });
+    expect(result).toMatchObject({ fetched: 2, appended: 1 });
+  });
+
+  it("is idempotent — a re-run appends nothing already held", async () => {
+    const store = new InMemoryActivityStore();
+    const listLifecycleActivities = () => Promise.resolve([activity("act-1", "OPEXP")]);
+
+    const first = await backfillParticipantOptionLifecycle({
+      participantId: "sauron",
+      store,
+      listLifecycleActivities,
+    });
+    const again = await backfillParticipantOptionLifecycle({
+      participantId: "sauron",
+      store,
+      listLifecycleActivities,
+    });
+
+    expect(first.appended).toBe(1);
+    expect(again).toMatchObject({ fetched: 1, appended: 0 });
+    expect(await store.list("sauron")).toHaveLength(1);
   });
 });
 

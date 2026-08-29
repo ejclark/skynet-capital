@@ -2,6 +2,6 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["src/scripts/*.ts", "scripts/*.mjs", "tests/**/*.spec.ts"],
   "project": ["src/**/*.ts", "scripts/*.mjs"],
-  "ignore": ["scripts/duel-log.mjs"],
+  "ignore": ["scripts/duel-log.mjs", "src/server/trade-service.ts"],
   "ignoreDependencies": ["@commitlint/config-conventional", "husky", "playwright-core"]
 }

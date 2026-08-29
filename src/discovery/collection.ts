@@ -9,7 +9,7 @@
  */
 
 /** Which catalog a member came from — personas (`src/personas`) or playbooks (`src/playbooks`). */
-export type CatalogKind = "persona" | "playbook";
+type CatalogKind = "persona" | "playbook";
 
 export interface CollectionMember {
   readonly kind: CatalogKind;

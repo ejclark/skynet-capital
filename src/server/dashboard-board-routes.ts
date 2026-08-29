@@ -1,11 +1,6 @@
 import type { ServerResponse } from "node:http";
-import type { NavContext } from "../observatory/render-dashboard.js";
-import type { LeaderMetric } from "../observatory/standings-metric.js";
-import { renderStandingsBody, type StandingsOptions } from "../observatory/standings-view.js";
 import { readSceneAsset, threeScenePage } from "../three/serve-scene.js";
-import { BOARD_PATCH_SCRIPT, BOARD_PATCH_STYLE } from "./board-patch-client.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
-import { PAGE_STYLE } from "./page-shell.js";
 import { welcomeHtml } from "./welcome-page.js";
 
 /**
@@ -75,32 +70,4 @@ function servePulse(res: ServerResponse, hub: ObservatoryHub): void {
     "cache-control": "no-store",
   });
   res.end(body);
-}
-
-/**
- * The board page. The live half is `board-patch-client.ts`: it opens `/events`, applies seq-numbered
- * patches to the keyed nodes rendered below, and falls back to one `/board/frame` fetch for the
- * changes a patch cannot honestly express. It forwards the whole query string (not just `key`) so
- * `?by=`/`?a=`/`?b=` survive a live push instead of reverting on the next update.
- */
-export function pageHtml(
-  hub: ObservatoryHub,
-  nav: NavContext,
-  metric: LeaderMetric,
-  compare: Pick<StandingsOptions, "aId" | "bId">,
-): string {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Skynet Capital — Observatory (Live)</title>
-<style>${PAGE_STYLE}</style>
-${BOARD_PATCH_STYLE}
-</head>
-<body>
-${renderStandingsBody(hub.getState(), { nav, metric, ...compare })}
-<script>${BOARD_PATCH_SCRIPT}</script>
-</body>
-</html>`;
 }

@@ -7,6 +7,7 @@
  */
 import { etTimeOf, recentPrint } from "../domain/earnings-calendar.js";
 import type { PlaybookMode } from "../domain/types.js";
+import { TACO_TIMING, tacoWindow } from "../news/taco-signal.js";
 import { type EnabledPlaybook, type Playbook, printWindow } from "./playbook.js";
 
 /** Post-print hygiene shared by every date-keyed play: a position that somehow survived its
@@ -70,7 +71,68 @@ export const G1_GOOG: Playbook = {
   },
 };
 
-const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG];
+const TACO_SYMBOL = "DJT";
+
+/**
+ * TACO-DJT — the event-driven counterpart to the two date-keyed plays above (#778, "TACO
+ * Trades," Eric's 2026-08-28 UX research note, verbatim in the issue). Where S1-NVDA and
+ * G1-GOOG ask "how many days to the print," this play asks "did a qualifying Trump-linked pump
+ * story just fire" — a question the calendar can't answer. `src/news/taco-signal.ts` (PR #786,
+ * phase 1 of #778) already ships that detector, pure and unregistered; this is phase 2 — the
+ * playbook that actually reads it, via `playbook.ts`'s new optional `events` input.
+ *
+ * TIMING, PER ERIC'S 0DTE NOTE ("immediate action to enter position, and quick to exit before
+ * the collapse... waiting too long to enter risks entering at the peak"): `TACO_TIMING` encodes
+ * a 15-minute entry window and a 90-minute total hold before the play converges to flat — the
+ * same "flatten before the reversion" shape S1/S2 already use for a print date, applied here to
+ * an event instead. Those two numbers are UNVALIDATED — see `evidence` below.
+ *
+ * HONESTY GAP — READ BEFORE ENABLING. `desiredState` only reacts to whatever `events` the caller
+ * hands it; nothing in this repository yet polls Alpaca's news feed, runs `detectTacoSignals`,
+ * and threads the result through `withPlaybooks`/`playbookIntents`'s `events` parameter into the
+ * live runner (`src/scripts/run-autonomous.ts` / `autonomous-live-wiring.ts`). That live wiring
+ * is deliberately deferred to a follow-up slice (see the PR that added this play). Until it
+ * lands, naming "TACO-DJT" in `SKYNET_PLAYBOOKS` arms a playbook that will never see an event
+ * and therefore never trade — dark by construction, not a silent "always long."
+ *
+ * WATCHLIST, V1 — DJT ONLY. Trump Media & Technology Group is the one name whose majority
+ * ownership is public SEC record; `src/news/taco-signal.ts`'s own doc explains why "Trump-
+ * adjacent" is a maintained list, never inferred from article text. This is a STARTING POINT,
+ * not an exhaustive list of Trump-linked tickers — widening it means registering another
+ * `TACO-<SYMBOL>` playbook (one symbol per playbook, per `playbook.ts`'s own contract), not
+ * editing this constant.
+ */
+export const TACO_DJT: Playbook = {
+  id: "TACO-DJT",
+  symbol: TACO_SYMBOL,
+  thesis:
+    `decisive entry within ${TACO_TIMING.entryMinutes}m of a Trump-linked pump story, decisive ` +
+    `exit by ${TACO_TIMING.holdMinutes}m before the "no substance" reversion`,
+  evidence:
+    "Eric, 2026-08-28 UX research note (verbatim in issue #778) — a stated hypothesis, not yet " +
+    "a research doc. No docs/research/ citation exists for this play; TACO_TIMING's 15m entry / " +
+    "90m hold are unvalidated defaults chosen to encode the shape of the note, not a measured " +
+    "edge. A backtest against recorded events is what would earn this an evidence line.",
+  // Below S1-NVDA (0.01-0.03) and G1-GOOG (0.01-0.02): an unvalidated, event-driven play sized
+  // more cautiously than the evidence-backed date-keyed ones until a backtest earns it more.
+  size: { conservative: 0.005, standard: 0.01, aggressive: 0.015 },
+  desiredState(asOfIso, _calendar, events = []) {
+    const own = events.filter((event) => event.symbol === TACO_SYMBOL);
+    if (own.length === 0) {
+      // Never signaled: correctly dark, exactly like a date-keyed play with no upcoming print.
+      return "no-window";
+    }
+    const stillLive = own.some((event) => {
+      const window = tacoWindow(event, asOfIso);
+      return window === "enter" || window === "hold";
+    });
+    // At least one event exists but none is still live: converge to flat — the same post-event
+    // hygiene S1/G1 apply after a print, so a position never silently rides past its window.
+    return stillLive ? "long" : "flat";
+  },
+};
+
+const ROSTER: readonly Playbook[] = [S1_NVDA, G1_GOOG, TACO_DJT];
 const MODES = new Set<string>(["conservative", "standard", "aggressive"]);
 
 /**
