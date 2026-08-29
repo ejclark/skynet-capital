@@ -338,11 +338,13 @@ function AccountCard({
         <>
           <ProfileForm account={account} timezones={timezones} onSaved={onChanged} />
           <BotSwitch account={account} fleetSuspended={fleetSuspended} onChanged={onChanged} />
-          {account.kind === "bot" ? (
-            <div className="set-links">
+          <div className="set-links">
+            {account.kind === "bot" ? (
               <a href="#mission-control">Mission Control ↓</a>
-            </div>
-          ) : null}
+            ) : (
+              <a href="/learn">Milestones →</a>
+            )}
+          </div>
           <RotateSection account={account} />
           <DangerZone account={account} onRemoved={onChanged} />
         </>

@@ -96,9 +96,6 @@ function RootShell(): ReactElement {
           >
             The Wire
           </Link>
-          <Link to="/learn" className="topnav-link" activeProps={{ "aria-current": "page" }}>
-            Milestones
-          </Link>
           <Link to="/research" className="topnav-link" activeProps={{ "aria-current": "page" }}>
             Research
           </Link>
