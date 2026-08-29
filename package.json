@@ -65,6 +65,7 @@
     "@types/node": "26.2.0",
     "dependency-cruiser": "18.2.0",
     "esbuild": "0.28.2",
+    "fast-check": "4.9.0",
     "husky": "9.1.7",
     "jscpd": "5.0.16",
     "knip": "6.32.2",
