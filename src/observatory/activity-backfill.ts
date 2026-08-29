@@ -120,12 +120,14 @@ export async function backfillParticipantActivity(opts: {
   return { participantId: opts.participantId, fetched, appended, pages };
 }
 
-/** A page cap for the lifecycle sweep too — same defensive reasoning as `MAX_PAGES` above. */
-const LIFECYCLE_MAX_PAGES = 40;
+/** A page cap for the lifecycle sweep too — same defensive reasoning as `MAX_PAGES` above.
+ *  Exported so the read-only shape capture (`src/scripts/capture-option-lifecycle.ts`) walks the
+ *  same activity feed under the same bounds instead of keeping a second copy of them. */
+export const LIFECYCLE_MAX_PAGES = 40;
 /** Matches `AlpacaOptionsClient.getOptionLifecycleActivities`'s own `page_size` — a page shorter
  *  than this is the broker saying "that's everything", same signal `backfillParticipantActivity`
  *  reads off `orders.length < pageSize` above. */
-const LIFECYCLE_PAGE_SIZE = 100;
+export const LIFECYCLE_PAGE_SIZE = 100;
 
 /**
  * Page one participant's option lifecycle activities (`OPEXP`/`OPASN`/`OPEXC`/`OPTRD` — #468
