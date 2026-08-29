@@ -51,10 +51,20 @@ const jsonFieldLists = (source: string): string[][] =>
     (m[1] ?? "").split(",").map((f) => f.trim()),
   );
 
+/**
+ * EVERY script that asks `gh` for JSON, not just the postmaster (#813, 2026-08-29).
+ *
+ * This gate was written for the 2026-08-22 outage and pointed at `scripts/postmaster.mjs` alone.
+ * `scripts/feedback-scan.mjs` asked for the same renamed field, was never covered, and had been
+ * exiting non-zero on every run since — the lane's own scoreboard, blind, while
+ * `feedback-build.md` told each build session to read it. A gate that checks one caller of a
+ * repo-wide API is a gate with a hole the exact size of the next caller.
+ */
+const GH_JSON_SCRIPTS = ["scripts/postmaster.mjs", "scripts/feedback-scan.mjs"];
+
 describe("gh --json fields", () => {
-  it("asks postmaster's issue queries only for fields gh knows", () => {
-    const source = readFileSync("scripts/postmaster.mjs", "utf8");
-    const lists = jsonFieldLists(source);
+  it.each(GH_JSON_SCRIPTS)("asks %s's issue queries only for fields gh knows", (file) => {
+    const lists = jsonFieldLists(readFileSync(file, "utf8"));
 
     expect(lists.length).toBeGreaterThan(0);
     const unknown = lists.flat().filter((f) => f && !ISSUE_FIELDS.has(f));
