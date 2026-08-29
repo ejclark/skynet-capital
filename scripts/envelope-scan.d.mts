@@ -1,5 +1,5 @@
 // Type surface for the parts of envelope-scan.mjs that carry logic worth testing directly — the
-// same arrangement postmaster.d.mts and ci-medic-logs.d.mts make, and for the same reason: the
+// same arrangement postmaster.d.mts and moneypenny-repair-logs.d.mts make, and for the same reason: the
 // scripts/ tree is plain ESM with `allowJs` off, so a spec that imports from it needs this rather
 // than a repo-wide loosening.
 /** How diffAware's exemption test reads one file's unified diff — null on "no change at all",

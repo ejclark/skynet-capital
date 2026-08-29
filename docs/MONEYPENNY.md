@@ -33,14 +33,17 @@ of friction — Moneypenny drives the new architecture, and all other orchestrat
 enter her domain answer to her."* Concretely, for anything that is GitHub issue/PR orchestration:
 
 - **`docs/COACHES.md`'s head-coach/governor dispatch policy**, **`scripts/postmaster*.mjs`'s
-  mechanical routing**, **`.github/workflows/ci-medic.yml` + `scripts/ci-medic.mjs`'s repair
-  dispatch**, and **`/secretary`'s digest/verification cadence** all now operate *under her
-  mandate*, not as four peer systems Eric has to address by separate name. He talks to Moneypenny;
-  she directs the mechanism. CI Medic named explicitly here (2026-08-29, #909) rather than left
-  implicit: it is GitHub issue/PR orchestration by the same definition as the other three, and
-  #909 folded a second entry point into its existing dispatch job (`workflow_dispatch`, alongside
-  its original `workflow_run`) rather than earning its own workflow file — the first real instance
-  of two responsibilities consolidating into one lane instead of staying peers.
+  mechanical routing**, **`.github/workflows/moneypenny-repair.yml` +
+  `scripts/moneypenny-repair.mjs`'s repair dispatch**, and **`/secretary`'s digest/verification
+  cadence** all now operate *under her mandate*, not as four peer systems Eric has to address by
+  separate name. He talks to Moneypenny; she directs the mechanism. The repair lane (built
+  2026-08-22 as "CI Medic", named explicitly here 2026-08-29 #909, renamed off that name entirely
+  #912) is GitHub issue/PR orchestration by the same definition as the other three: #909 folded a
+  second entry point into its existing dispatch job (`workflow_dispatch`, alongside its original
+  `workflow_run`) rather than earning its own workflow file — the first real instance of two
+  responsibilities consolidating into one lane instead of staying peers; #912 then removed the old
+  name from every live file, keeping the two workflows deliberately separate (different trigger
+  shapes) while both answer to Moneypenny alone.
 - This is a **frame and an authority relationship, not a rewrite** of what those mechanisms do —
   `docs/COACHES.md` and `docs/DELEGATION.md` keep their existing content and carry a pointer to this
   file. A full restructuring of their text around her is real work and is explicitly **not** done in
@@ -78,7 +81,7 @@ ran." Concretely:
 
 Everything above changes what gets *written*. It does not change the account the App posts *as* —
 today that's `claude[bot]`, minted per job via `actions/create-github-app-token` in
-`postmaster.yml`/`claude.yml`/`pipeline.yml`/`ci-medic.yml`. Renaming that account-level identity
+`postmaster.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`. Renaming that account-level identity
 lives in GitHub App settings (the App's registered display name under Eric's GitHub org), which no
 amount of repo code can reach — governance of credentials and App identity is his call, per
 CLAUDE.md's hard boundaries.

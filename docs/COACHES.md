@@ -100,10 +100,11 @@ was. Lag of seconds (a spec goes red) means the nets are working. Lag of days me
 of failure is currently invisible, and *that* is the finding — always bigger than the bug that
 revealed it.
 
-**The correct half of that coach is the CI Medic** (added 2026-08-22, after a feedback build died in
-a bash step and stayed silent until Eric read the Actions tab by hand — docs/LESSONS.md). A failed
-run on `main` wakes `.github/workflows/ci-medic.yml`, which files ONE capsule issue carrying the
-failing job, step and log tail, then dispatches a repair session whose terminal state is a PR or a
+**The correct half of that coach is Moneypenny's repair lane** (added 2026-08-22 as "CI Medic",
+renamed #912, after a feedback build died in a bash step and stayed silent until Eric read the
+Actions tab by hand — docs/LESSONS.md). A failed run on `main` wakes
+`.github/workflows/moneypenny-repair.yml`, which files ONE capsule issue carrying the failing job,
+step and log tail, then dispatches a repair session whose terminal state is a PR or a
 `needs-eric` comment. Four loop guards keep a self-healing lane from feeding itself: it ignores its
 own failures, acts only on default-branch runs, files once per failure signature (recurrences
 comment), and goes silent on any signature already escalated. Workflow-file repairs may be opened
@@ -161,10 +162,10 @@ supply-chain decision: read them fully before adopting.
 | **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` | judge: un-export / delete / justify-ignore | `mortician` (recruited on recurrence #3, per the rule of three) | ✅ live |
 | **Dep-graph** (cycles/orphans/layering) | `scripts/dep-graph-scan.mjs` (dependency-cruiser, adopted) + `.dependency-cruiser.cjs` + `dep-graph-budget.json` + `tests/arch/dep-graph.spec.ts` | judge: break cycle / wire-or-delete orphan / restore layer direction (`/decompose` when a cycle wants a split) | none yet (recruit on recurrence #3) | ✅ live |
 | **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | write BDD specs per ENGINEERING.md | `test-backfiller` | ✅ live |
-| **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | **CI Medic** — `.github/workflows/ci-medic.yml` + `scripts/ci-medic.mjs` (event-driven, not dispatched by the governor) | ✅ live |
+| **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | **Moneypenny (repair)** — `.github/workflows/moneypenny-repair.yml` + `scripts/moneypenny-repair.mjs` (event-driven, not dispatched by the governor; formerly "CI Medic") | ✅ live |
 | **Doc rot** (docs that no longer describe reality: dead file refs, missing npm scripts, stale structural map) | `scripts/doc-rot-scan.mjs` + `doc-rot-budget.json` + `tests/arch/doc-rot.spec.ts` (semantic-claim rot stays with the config-audit — honestly out of a deterministic eye's reach) | fix doc to match reality, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
-| **Workflow structure** (duplicate keys, dangling step/needs refs) | `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` | fix the file, diff it against the last-good version | CI Medic files it when a run reports zero jobs | ✅ live |
-| **PR merge conflicts** (a PR goes `CONFLICTING` against `main` with no CI signal at all) | `postmaster.mjs`'s push-driven audit (#909) — `gh pr list`'s `mergeable` field, one-ping-per-PR via `conflict-flagged` | judge disjoint-vs-same-logic; merge `main` in and push a resolved merge commit, or `needs-eric` | Postmaster detects + dispatches; **CI Medic**'s `workflow_dispatch` entry point repairs it (`.github/prompts/conflict-repair.md`) | ✅ live |
+| **Workflow structure** (duplicate keys, dangling step/needs refs) | `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` | fix the file, diff it against the last-good version | Moneypenny's repair lane files it when a run reports zero jobs | ✅ live |
+| **PR merge conflicts** (a PR goes `CONFLICTING` against `main` with no CI signal at all) | `postmaster.mjs`'s push-driven audit (#909) — `gh pr list`'s `mergeable` field, one-ping-per-PR via `conflict-flagged` | judge disjoint-vs-same-logic; merge `main` in and push a resolved merge commit, or `needs-eric` | Postmaster detects + dispatches; Moneypenny's repair lane `workflow_dispatch` entry point repairs it (`.github/prompts/moneypenny-conflict-repair.md`) | ✅ live |
 | **Inline-JS defects** (`<script>` syntax) | extract + `node --check` per page — *not built* | — | — | ⬜ queued |
 | Code review | *(adopted)* | `/code-review` | — | ✅ bundled |
 | Security review | *(adopted)* | `/security-review` | — | ✅ bundled |

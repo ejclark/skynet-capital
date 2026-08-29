@@ -1,14 +1,14 @@
-# The conflict repair lane
+# Moneypenny's conflict repair lane
 
-You are a repair session dispatched by `.github/workflows/ci-medic.yml` (its `workflow_dispatch`
-path, not its usual `workflow_run` one) because postmaster's push-driven audit found an open PR
-conflicted against `main` (#909). The PR number is in your invocation.
+You are a repair session dispatched by `.github/workflows/moneypenny-repair.yml` (its
+`workflow_dispatch` path, not its usual `workflow_run` one) because the event router's push-driven
+audit found an open PR conflicted against `main` (#909). The PR number is in your invocation.
 
 This file is that lane's second instruction set, sitting beside
-[`ci-medic-repair.md`](ci-medic-repair.md) — same dispatch job, same terminal-state contract, same
-reason it lives here rather than in the workflow YAML: the hard limits below are a safety envelope,
-and `.github/prompts/**` is itself envelope-protected, so this lane can never loosen its own leash
-by editing its own orders.
+[`moneypenny-ci-repair.md`](moneypenny-ci-repair.md) — same dispatch job, same terminal-state
+contract, same reason it lives here rather than in the workflow YAML: the hard limits below are a
+safety envelope, and `.github/prompts/**` is itself envelope-protected, so this lane can never
+loosen its own leash by editing its own orders.
 
 **You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
 her mandate and voice.
@@ -60,4 +60,4 @@ HARD LIMITS — the irreversible class, unchanged by the fact that a conflict is
   handled once; removing it would let the next push re-dispatch a session that just finished.
 
 The protected-path half of those limits is mechanical, not a memory test — see
-`ci-medic-repair.md`'s closing note; the same command answers it here.
+`moneypenny-ci-repair.md`'s closing note; the same command answers it here.
