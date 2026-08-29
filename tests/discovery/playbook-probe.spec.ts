@@ -5,7 +5,7 @@ import {
   spanOf,
 } from "../../src/discovery/playbook-probe.js";
 import type { Playbook } from "../../src/playbooks/playbook.js";
-import { G1_GOOG, S1_NVDA } from "../../src/playbooks/registry.js";
+import { G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
 
 /** The shared probe: it ASKS a play what it wants, day by day, rather than reading a declared
  *  window — so a play that changes its rule changes its description with no edit here. */
@@ -22,7 +22,7 @@ const stub = (over: Partial<Playbook> = {}): Playbook => ({
 
 describe("housePlaybooks", () => {
   it("reads the roster off what the registry exports, id-sorted", () => {
-    expect(housePlaybooks().map((p) => p.id)).toEqual([G1_GOOG.id, S1_NVDA.id].sort());
+    expect(housePlaybooks().map((p) => p.id)).toEqual([G1_GOOG.id, S1_NVDA.id, TACO_DJT.id].sort());
   });
 
   it("is a pure derivation — two calls agree", () => {
