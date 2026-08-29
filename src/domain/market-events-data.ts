@@ -515,6 +515,18 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Not a print — a dated policy checkpoint that gates whether the federal prints around it exist. ISM (10-01) is a private survey and publishes through a lapse; BLS does not — in the 2025 lapse it skipped the October Employment Situation and cancelled the October CPI outright. So an un-averted lapse removes the 10-02 payrolls and leaves the 10-01 ISM as the corridor's only hard macro read into an Oct 27-28 FOMC with no SEP. Kind `geopolitical` is the closest fit the enum offers for a domestic policy checkpoint (it is scoped to dated checkpoints like a summit or a tariff deadline); the imperfect fit is named, not fixed from this lane. Discovered during the ism-manufacturing-2026-10-01 initial research.",
   },
   {
+    id: "gdp-q2-2026-third-2026-09-30",
+    kind: "macro-print",
+    title: "GDP — 3rd estimate, Q2 2026 (+ corporate profits, industries, state GDP)",
+    date: "2026-09-30",
+    status: "confirmed",
+    source: "BEA: bea.gov/news/schedule — 08:30 ET, checked 2026-08-29",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The last revision to the +1.5% Q2 base that the 10-29 Q3 advance estimate gets measured against — which is the whole reason it is tracked; a revision here shifts the acceleration story before any Q3 number exists. Lands ON the FY2027 funding deadline, so in the lapse branch it is the last federal GDP release published before the blackout (BEA cancelled the Q3 advance estimate outright in the 2025 lapse). Marked `confirmed` on BEA's own schedule page fetched 2026-08-29 — the same primary and check date as the 10-29 and PCE entries, not an inferred cadence. Discovered during the gdp-q3-2026-advance-2026-10-29 initial research.",
+  },
+  {
     id: "ism-manufacturing-2026-10-01",
     kind: "macro-print",
     title: "ISM Manufacturing PMI (Sep 2026 data)",
