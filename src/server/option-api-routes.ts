@@ -131,7 +131,15 @@ async function reviewOption(
   const isSelf = requesterId !== undefined && requesterId === request.participantId;
   const base = ticketContext(snapshot, { tradingEnabled: Boolean(config.tradingEnabled), isSelf });
   if (request.kind === "close") {
-    sendJson(res, 200, { preview: previewOptionClose(request.occSymbol, base, request.contracts) });
+    // The 10a security review's one finding: a close preview has no legitimate use on a desk
+    // that isn't yours, so off your own desk it runs against an empty book — the refusal still
+    // explains itself, but the desk's held count, direction, and mark are never echoed. The OPEN
+    // branch below deliberately keeps the stock API's shared-universe posture: the same
+    // cash/position figures already sit on every desk's positions tab behind the invite gate.
+    const closeContext = isSelf ? base : { ...base, positions: [] };
+    sendJson(res, 200, {
+      preview: previewOptionClose(request.occSymbol, closeContext, request.contracts),
+    });
     return;
   }
   if (playLocked(request.code, progression)) {

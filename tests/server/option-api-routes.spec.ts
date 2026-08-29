@@ -112,6 +112,30 @@ describe("serveOptionApi review", () => {
     expect(text).not.toContain("Training wheels");
   });
 
+  it("previews a close off your own desk against an empty book — holds never echo", async () => {
+    const cfg = config({
+      hub: {
+        getState: () => ({
+          participants: [
+            {
+              id: "human-bob",
+              cash: 1_000,
+              positions: [{ symbol: "NVDA260918P00100000", quantity: -3, marketValue: -600 }],
+            },
+          ],
+        }),
+      },
+    });
+    const { parsed } = await review(
+      { kind: "close", participantId: "human-bob", occSymbol: "NVDA260918P00100000" },
+      cfg,
+    );
+    expect(parsed.preview.refusals).toContain("You can only trade your own account.");
+    expect(parsed.preview.refusals.join(" ")).toContain("You don't hold this contract");
+    expect(parsed.preview.contracts).toBe(0); // bob's 3 held contracts never reach the answer
+    expect(parsed.preview.estPremium).toBeUndefined();
+  });
+
   it("refuses a desk the session doesn't own through the pure rules", async () => {
     const { parsed } = await review(openPut(), config(), stranger);
     expect(parsed.preview.refusals).toContain("You can only trade your own account.");
