@@ -58,6 +58,21 @@ function resolveImageUrls(
  * while the build lane that's supposed to pick it up never even sees it fire (found on #674, which
  * carried `feedback` from the moment it was opened and was never claimed). Splitting the calls
  * restores the event the workflow is actually listening for.
+ *
+ * IDEMPOTENT BY CONSTRUCTION (2026-08-29, #716's stall). This function is called exactly once per
+ * submission in this codebase — but #716 shows GitHub receiving two `POST .../labels` calls, one
+ * second apart, for a single filing (six distinct label-event ids, ruled out as a double form
+ * submit — that would have created a second issue, and only one exists). Nothing in this call
+ * chain names an idempotency key, so nothing stops a duplicate send at the transport layer
+ * (client retry, proxy retry, a connection-reuse race in the HTTP client) from reaching GitHub as
+ * a second real request. GitHub fires one `labeled` event per label named in the POST body
+ * REGARDLESS of whether it was already applied, so an unguarded duplicate call doubles every
+ * `issues.labeled` listener downstream sees — which is exactly what silently dropped #716 out of
+ * the build lane. The fix belongs here, not in the sender: read the issue's current labels first
+ * and post only what's actually missing, so a duplicate call becomes a same-state no-op instead of
+ * a second real write. (This narrows a genuinely concurrent duplicate to a race on the read rather
+ * than eliminating it outright — `postmaster.yml`'s concurrency group, keyed per label since
+ * #716, is the second layer that makes even that surviving case safe.)
  */
 async function attachLabels(
   number: number,
@@ -66,12 +81,19 @@ async function attachLabels(
   doFetch: DoFetch,
 ): Promise<void> {
   if (labels.length === 0) return;
-  await doFetch(
-    "POST",
-    `https://api.github.com/repos/${config.repo}/issues/${number}/labels`,
-    githubHeaders(config.token),
-    { labels },
-  ).catch(() => undefined);
+  const url = `https://api.github.com/repos/${config.repo}/issues/${number}/labels`;
+  const headers = githubHeaders(config.token);
+  const existing = await doFetch("GET", url, headers).catch(() => undefined);
+  const already = new Set(
+    Array.isArray(existing?.body)
+      ? (existing.body as readonly { name?: string }[])
+          .map((l) => l.name)
+          .filter((name): name is string => typeof name === "string")
+      : [],
+  );
+  const missing = labels.filter((label) => !already.has(label));
+  if (missing.length === 0) return;
+  await doFetch("POST", url, headers, { labels: missing }).catch(() => undefined);
 }
 
 /** Build the bound submit function that POSTs a GitHub issue. Live path (uses global fetch);
