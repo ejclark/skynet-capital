@@ -4,7 +4,6 @@ import { resolveAuth } from "../../src/server/auth/resolve-auth.js";
 import { type Session, signSession } from "../../src/server/auth/session.js";
 import { createDashboardServer } from "../../src/server/dashboard-server.js";
 import { ObservatoryHub } from "../../src/server/observatory-hub.js";
-import type { AddParticipantInput, AddResult } from "../../src/server/participant-service.js";
 
 // Sibling: dashboard-server-routes.spec.ts (split 2026-08-26 to stay under the per-file line
 // cap) — that half covers /feedback, /u/:id performance history, desk settings (#475), and
@@ -135,9 +134,6 @@ describe("dashboard-server OAuth gate", () => {
         });
         expect(home.status).toBe(302); // the shell is the front door (#738 phase 7a)
         expect(home.headers.get("location")).toBe("/app/");
-        const classic = await fetch(`${base}/classic`, { headers: { cookie: validCookie() } });
-        expect(classic.status).toBe(200);
-        expect(await classic.text()).toContain("Sign out");
       },
     );
   });
@@ -352,29 +348,6 @@ describe("dashboard-server /pulse", () => {
 });
 
 describe("dashboard-server /add", () => {
-  it("serves the form on GET and registers on POST", async () => {
-    const calls: AddParticipantInput[] = [];
-    const addParticipant = (input: AddParticipantInput): Promise<AddResult> => {
-      calls.push(input);
-      return Promise.resolve({ ok: true, id: "human-joe", displayName: "Joe" });
-    };
-    await withServer({ hub: new ObservatoryHub(board()), addParticipant }, async (base) => {
-      // Phase 9c: the form lives in the shell now — GET redirects, POST keeps registering.
-      const form = await fetch(`${base}/add`, { redirect: "manual" });
-      expect(form.status).toBe(302);
-      expect(form.headers.get("location")).toBe("/app/join");
-
-      const post = await fetch(`${base}/add`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ displayName: "Joe", apiKey: "k", apiSecret: "s" }).toString(),
-      });
-      expect(post.status).toBe(200);
-      expect(await post.text()).toContain("on the board");
-      expect(calls[0]).toMatchObject({ displayName: "Joe", apiKey: "k", kind: "human" });
-    });
-  });
-
   it("serves the persona classes as data for the shell's picker", async () => {
     await withServer(
       {
@@ -390,19 +363,6 @@ describe("dashboard-server /add", () => {
         expect(JSON.stringify(body.classes)).toContain("The Duelist");
       },
     );
-  });
-
-  it("returns 400 with the error when the handler rejects", async () => {
-    const addParticipant = (): Promise<AddResult> => Promise.resolve({ ok: false, error: "nope" });
-    await withServer({ hub: new ObservatoryHub(board()), addParticipant }, async (base) => {
-      const post = await fetch(`${base}/add`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ displayName: "x", apiKey: "k", apiSecret: "s" }).toString(),
-      });
-      expect(post.status).toBe(400);
-      expect(await post.text()).toContain("nope");
-    });
   });
 
   it("gates /add behind the password and 404s when the feature is off", async () => {

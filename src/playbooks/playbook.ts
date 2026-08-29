@@ -13,6 +13,17 @@
  * Date policy (docs/plans/trade-playbooks.md → decision log): `desiredState` may only open a
  * window on a `confirmed` print date. An estimate never keys an entry — but an already-open
  * position still exits normally when the window closes (safety is never date-gated).
+ *
+ * EVENT-DRIVEN PLAYS (added for #778, "TACO Trades"): a calendar answers "how many days to the
+ * print"; some plays instead need "did a qualifying external event just fire" — a news hit, not
+ * a date. Rather than give TACO its own parallel runner (a second copy of the ownership rule,
+ * the sizing math, the flatten-on-close discipline), `desiredState` gained one OPTIONAL third
+ * argument: a generic external-event feed. It's optional and additive — S1-NVDA and G1-GOOG
+ * ignore it entirely (their `desiredState` keeps its original two-argument shape; JS/TS callers
+ * may always pass more arguments than an implementation declares), so their behavior is
+ * byte-for-byte unchanged. `PlaybookEvent` is deliberately minimal (symbol + a detection
+ * timestamp) so playbook.ts never has to import a specific signal source's module — an
+ * event-driven play's own file narrows/consumes it however that source's richer type needs to.
  */
 import { daysUntil, type EarningsPrint, nextPrint } from "../domain/earnings-calendar.js";
 import { heldQuantity } from "../domain/portfolio.js";
@@ -20,6 +31,19 @@ import type { MarketContext, OrderIntent, PlaybookMode, Portfolio } from "../dom
 
 /** What a playbook wants its book to look like at a moment in time. */
 type DesiredState = "long" | "flat" | "no-window";
+
+/**
+ * The event-driven counterpart to a calendar entry: some external source (today, a news hit;
+ * a maintained watchlist decides which symbols are even worth listening for — see
+ * `src/news/taco-signal.ts`) observed something worth reacting to, at a point in time. Kept
+ * minimal on purpose — a richer signal type (e.g. `TacoSignal`, which also carries strength and
+ * a headline for attribution) is always assignable here, since it's a structural superset.
+ */
+export interface PlaybookEvent {
+  readonly symbol: string;
+  /** ISO-8601 — the event's own timestamp, the clock any entry/hold window runs against. */
+  readonly detectedAt: string;
+}
 
 export interface Playbook {
   /** e.g. "S1-NVDA" — the id that flows through the attribution seam into every record. */
@@ -31,8 +55,16 @@ export interface Playbook {
   readonly evidence: string;
   /** Target exposure as a fraction of equity, per mode. Risk guards still clamp on top. */
   readonly size: Readonly<Record<PlaybookMode, number>>;
-  /** The condition: given now + the calendar, what should the book be? */
-  desiredState(asOfIso: string, calendar: readonly EarningsPrint[]): DesiredState;
+  /**
+   * The condition: given now, the calendar, and (for an event-driven play) recent external
+   * events, what should the book be? `events` is optional so date-keyed plays need not declare
+   * it at all — see the module doc above.
+   */
+  desiredState(
+    asOfIso: string,
+    calendar: readonly EarningsPrint[],
+    events?: readonly PlaybookEvent[],
+  ): DesiredState;
 }
 
 /** A playbook enabled in a specific mode — the unit the runner iterates. */
@@ -66,10 +98,11 @@ export function playbookIntents(
   context: MarketContext,
   portfolio: Portfolio,
   calendar: readonly EarningsPrint[],
+  events: readonly PlaybookEvent[] = [],
 ): OrderIntent[] {
   const intents: OrderIntent[] = [];
   for (const { playbook, mode } of enabled) {
-    const state = playbook.desiredState(context.asOf, calendar);
+    const state = playbook.desiredState(context.asOf, calendar, events);
     const held = heldQuantity(portfolio, playbook.symbol);
     const quote = context.quotes[playbook.symbol];
 

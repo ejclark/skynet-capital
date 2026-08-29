@@ -1,4 +1,6 @@
+import type { AlpacaAccountActivity } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaOrder } from "../alpaca/alpaca-trading-client.js";
+import { parseLifecycleActivity } from "../trading/option-lifecycle.js";
 import {
   type ActivityStore,
   advancesLedger,
@@ -7,6 +9,7 @@ import {
   recordsFromActivity,
   type TradeActivityRecord,
 } from "./activity-store.js";
+import { lifecycleLedgerRecord } from "./option-lifecycle-activity.js";
 import type { ActivityView } from "./participant-snapshot.js";
 
 /**
@@ -112,6 +115,53 @@ export async function backfillParticipantActivity(opts: {
     const oldest = orders[orders.length - 1]?.submitted_at;
     if (orders.length < pageSize || !oldest || oldest === until) break;
     until = oldest;
+  }
+
+  return { participantId: opts.participantId, fetched, appended, pages };
+}
+
+/** A page cap for the lifecycle sweep too — same defensive reasoning as `MAX_PAGES` above. */
+const LIFECYCLE_MAX_PAGES = 40;
+/** Matches `AlpacaOptionsClient.getOptionLifecycleActivities`'s own `page_size` — a page shorter
+ *  than this is the broker saying "that's everything", same signal `backfillParticipantActivity`
+ *  reads off `orders.length < pageSize` above. */
+const LIFECYCLE_PAGE_SIZE = 100;
+
+/**
+ * Page one participant's option lifecycle activities (`OPEXP`/`OPASN`/`OPEXC`/`OPTRD` — #468
+ * criterion 6) into the same durable ledger `backfillParticipantActivity` fills from order
+ * history. Idempotent by the same `advancesLedger` predicate: each activity's own id is namespaced
+ * into its `orderId` (`lifecycleOrderId`), so re-running appends nothing already held.
+ */
+export async function backfillParticipantOptionLifecycle(opts: {
+  readonly participantId: string;
+  readonly store: ActivityStore;
+  readonly listLifecycleActivities: (after?: string) => Promise<AlpacaAccountActivity[]>;
+  readonly pageSize?: number;
+}): Promise<BackfillResult> {
+  const pageSize = opts.pageSize ?? LIFECYCLE_PAGE_SIZE;
+  const known = await knownOrders(opts.store, opts.participantId);
+  let fetched = 0;
+  let appended = 0;
+  let pages = 0;
+  let after: string | undefined;
+
+  while (pages < LIFECYCLE_MAX_PAGES) {
+    const raw = await opts.listLifecycleActivities(after);
+    if (raw.length === 0) break;
+    pages += 1;
+    fetched += raw.length;
+
+    const rows: TradeActivityRecord[] = [];
+    for (const activity of raw) {
+      const parsed = parseLifecycleActivity(activity);
+      if (parsed) rows.push(lifecycleLedgerRecord(parsed, opts.participantId));
+    }
+    appended += await appendAdvancing(opts.store, rows, known);
+
+    const oldest = raw[raw.length - 1]?.id;
+    if (raw.length < pageSize || !oldest || oldest === after) break;
+    after = oldest;
   }
 
   return { participantId: opts.participantId, fetched, appended, pages };

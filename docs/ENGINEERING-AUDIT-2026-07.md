@@ -28,7 +28,7 @@ Good spine — but it deploys to prod with these holes:
 
 | # | Finding (evidence) | Fix |
 |---|---|---|
-| C1 | **God-files.** `authenticator.ts` 2,893 lines (auth + a whole game engine in one TS template literal — untypecheckable, untestable, unlintable inner JS). `render-dashboard.ts` 1,566. `dashboard-server.ts` 713 (routing + HTML + services). | Decompose: extract the login canvas into real `.ts` modules with a build step that bundles → inline string. Routing table out of dashboard-server. Ratchet: no file may *grow* past its current size (architecture eval, ADR-0008 C). |
+| C1 | **God-files.** `authenticator.ts` 2,893 lines (auth + a whole game engine in one TS template literal — untypecheckable, untestable, unlintable inner JS). `render-dashboard.ts` 1,566 (deleted whole in #738 phase 9f-2, along with the rest of the pre-redesign server-rendered surface it anchored). `dashboard-server.ts` 713 (routing + HTML + services). | Decompose: extract the login canvas into real `.ts` modules with a build step that bundles → inline string. Routing table out of dashboard-server. Ratchet: no file may *grow* past its current size (architecture eval, ADR-0008 C). |
 | C2 | **Triplicated design system.** `escapeHtml` defined 3×; the full CSS token block (`#0B0F14`, `--mono`, …) pasted in 3 files; 7 inline `<style>` blocks; 64 `var(--mono)` repetitions. Every new page re-pastes and drifts. | One `src/ui/` module: `tokens.css.ts`, `escapeHtml`, shared shell/chip/tile partials. This **is** the component-library seed (finding S1). |
 | C3 | **No runtime input validation library.** OAuth callbacks, `/add`, `/feedback`, Alpaca responses all hand-parsed; `strict` TS stops at the process boundary. | Adopt zod at the boundaries only (env, HTTP bodies, broker responses). Fail loud with typed errors. |
 | C4 | **Inline-JS-in-string is a recurring defect class.** TS1005/backtick/`\n` escapes have bitten ≥3 times; caught only by manual `node --check` runs this week. | CI step: extract every `<script>` from rendered pages, `node --check` each (5-line script — cheap, permanent). |
@@ -54,8 +54,9 @@ decision point where a doc waits to be remembered. The ledger, per proposal:
 - **Inline-UI rules** — shipped as the CLAUDE.md ship-loop rule (no backticks/`${}` in inline canvas
   JS — the recurring TS1005 trap); the per-page `node --check` gate is still queued in
   `docs/COACHES.md` (⬜ Inline-JS defects row).
-- **New-view playbook** — not built as a doc; conventions live by example in
-  `src/observatory/render-dashboard.ts`. Revisit if view-adding recurs enough to earn a skill.
+- **New-view playbook** — moot: the file it pointed to (`render-dashboard.ts`) and the whole
+  server-rendered view system it exemplified are gone (#738 phase 9f-2). Every view is now a shell
+  React route; that ecosystem's own conventions (app/src/routes/, app/src/shell/) are the playbook.
 - **New-system playbook** — not built; superseded in spirit by the Graphify structural map + `/charter`
   (which gates new capability creation).
 - **Decompose playbook** — shipped as the `/decompose` skill + the `decomposer` athlete, gate-triggered

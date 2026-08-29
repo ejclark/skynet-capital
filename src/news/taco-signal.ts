@@ -110,8 +110,13 @@ export function detectTacoSignals(
  * peak" rule is enforced here rather than left to a caller's discretion — then `hold` until the
  * time-boxed life is over, then `expired`. A signal timestamped in the future is treated as
  * `expired` rather than granting an entry window that never closes.
+ *
+ * Typed against the minimal `{ detectedAt }` shape (not the full `TacoSignal`) so the TACO
+ * playbook (`src/playbooks/taco-djt.ts`) can window the generic `PlaybookEvent`s it receives
+ * from the engine without needing this module's richer type — a real `TacoSignal` still
+ * satisfies it, so every existing caller is unaffected.
  */
-export function tacoWindow(signal: TacoSignal, asOfIso: string): TacoWindow {
+export function tacoWindow(signal: { readonly detectedAt: string }, asOfIso: string): TacoWindow {
   const age = ageMinutes(signal.detectedAt, asOfIso);
   if (age === undefined || age < 0) {
     return "expired";

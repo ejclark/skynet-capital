@@ -1,6 +1,7 @@
 import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
+import type { CompanionTurn } from "../companion/companion-chat.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
@@ -164,4 +165,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * an owned bot instead of the reporter's own account, and locked, with no way to pick another).
    */
   readonly rosterIds?: () => ReadonlySet<string>;
+  /**
+   * The companion chat turn (#467) — `undefined` (inert) until `ANTHROPIC_API_KEY` is set, the
+   * exact same env var and gate `coachFeedback` uses. `/api/companion*` answers "not switched on
+   * yet" honestly when this is absent, same doctrine as every other optional AI-backed lane.
+   */
+  readonly companion?: CompanionTurn;
 }

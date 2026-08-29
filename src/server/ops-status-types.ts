@@ -6,7 +6,7 @@
  * first time this shipped. This module imports nothing of its own; it only ever gets imported.
  */
 
-export type SignalVerdict = "ok" | "attention" | "unknown";
+type SignalVerdict = "ok" | "attention" | "unknown";
 
 export interface OpsSignalLink {
   readonly href: string;
