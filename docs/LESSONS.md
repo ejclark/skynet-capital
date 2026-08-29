@@ -27,6 +27,49 @@ it. Prevention ranks, best first:
 
 ---
 
+### A burst of labeled events collapsed to the wrong survivors, and the feedback lane never claimed the issue
+
+- **SHA:** 021bf0d   **DATE:** 2026-08-29   **STATUS:** closed
+- **SIGNAL:** Two independent occurrences, back to back. #716 stalled with six `labeled` webhook
+  events fired (a duplicate label-apply doubled the usual three) and no claim; #732 stalled the
+  next submission with the usual four labels. Neither failed loudly — the Actions tab showed a
+  pile of runs, most reporting `cancelled` with zero jobs, and the one thing anyone would check
+  (`postmaster.yml`'s own job status) read "success" on the runs that did execute, because the
+  `if:` condition they evaluated was simply false. Detection was manual both times: someone asked
+  "why isn't this being worked" and had to trace it from workflow-run history, not from any signal
+  the system raised on its own.
+- **ROOT CAUSE:** `src/server/feedback-service.ts` attaches every label a submission earns
+  (kind + `feedback` + `curated` + `member-<id>`) in ONE API call, deliberately separate from issue
+  creation (see that file's own header comment, which already documents the *first* half of this
+  bug class — labels baked into the create call never fire `labeled` at all). GitHub answers a
+  multi-label POST by firing one `labeled` webhook PER label, all in the same instant. All of them
+  shared postmaster.yml's one concurrency group per issue, and GitHub's queue keeps only the
+  LATEST pending run per group when several arrive at once — it does not queue everything
+  (`cancel-in-progress: false` only protects a run already RUNNING from being cancelled; it says
+  nothing about how many can be PENDING, which is capped at one). A same-second burst of N events
+  therefore collapses to at most two survivors — whichever happened to be running plus whichever
+  was queued last — and which N-2 events get dropped is an artifact of webhook delivery order, not
+  anything the workflow's own logic controls. The one step that actually claims the issue
+  (`node scripts/postmaster.mjs --claim-feedback`) was gated on `github.event.label.name ==
+  'feedback'` specifically, so the bug only manifests as a *miss* when the `feedback` event is the
+  one that loses the race — which is exactly what happened both times.
+- **PREVENTION:** gate. `postmaster.yml`'s concurrency `group:` now includes
+  `${{ github.event.label.name || '' }}`, so each label on an issue gets its own lane and sibling
+  labels can never cancel each other's run — the claim step's own `if:` is unchanged and correct
+  once the run it depends on is guaranteed to happen. A repeat of the *same* label still collides
+  in its own lane, which is the intended dedupe: `claimFeedback`'s lease already makes a same-label
+  retry a safe no-op rather than a second build. A same-session investigation of #732 independently
+  proposed loosening the claim step's `if:` to read the issue's current label set instead of the
+  triggering event's single label — functionally equivalent once the concurrency fix landed first,
+  so it was dropped rather than stacked: the narrower, already-shipped fix fully closes the gap
+  without widening the claim step's trigger surface for no remaining reason.
+- **SIDE QUESTS:** Feedback-to-shipped latency (issue creation → merged & deployed) is not
+  currently tracked as a metric anywhere in this repo — raised by Eric directly (2026-08-29:
+  "performance is a first class metric... it feels like the total time to think on feedback to
+  build features has been increasing") in the same conversation that surfaced this incident. Worth
+  its own measurement pass rather than folding into this entry — see the follow-up research this
+  incident prompted.
+
 ### The bots rollback deployed `null/null:null`, because "not empty" was mistaken for "real"
 
 - **SHA:** 947a4f4   **DATE:** 2026-08-26   **STATUS:** closed
