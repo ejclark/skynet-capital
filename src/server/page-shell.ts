@@ -228,3 +228,11 @@ export async function readJsonPost(
 export function boundedString(raw: unknown, max: number): string | undefined {
   return typeof raw === "string" && raw.length > 0 && raw.length <= max ? raw : undefined;
 }
+
+/** `readJsonPost`'s read-only twin: true when the method is GET, else answers the 405 itself. */
+export function requireGet(req: IncomingMessage, res: ServerResponse): boolean {
+  if ((req.method ?? "GET") === "GET") return true;
+  res.writeHead(405, { allow: "GET", "content-type": "text/plain" });
+  res.end("GET only");
+  return false;
+}
