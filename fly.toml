@@ -34,6 +34,13 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned
   # milestones are NOT here — they re-derive from the activity + order-audit ledgers on read.
   SKYNET_PROGRESSION_FILE = "/data/progression.json"
+  # Ladder-progress log (#469 slice 2, ladder-progress-log.ts) — durable per-participant record of
+  # a graduated-ladder milestone completing (an OTM expiry, a first realized profit) once a
+  # detector proves it. Unlike SKYNET_PROGRESSION_FILE above, a row here IS the earned truth, not a
+  # claim re-derivable from another ledger — losing it on deploy would silently un-graduate a
+  # member, so this is pinned rather than left EPHEMERAL the way the community track's claim-state
+  # file is.
+  SKYNET_LADDER_PROGRESS_DIR = "/data/ladder-progress"
   # Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — the bots app has no
   # volume of its own, so it relays insight records to this app's internal-only listener
   # (src/server/insights-listener.ts) on port 8788 — deliberately NOT in [http_service] below, so
