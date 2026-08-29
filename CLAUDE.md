@@ -215,7 +215,10 @@ A quality system runs this repo ([`docs/COACHES.md`](docs/COACHES.md)): fitness 
 ratchet-down budgets, corrective skills, background agents, and a dispatch policy. **Route plain
 intent to it** — every skill/agent states its own `Use when`, and the **Orient** output style
 (`.claude/output-styles/orient.md`) consults the full roster + [`docs/TECHNIQUES.md`](docs/TECHNIQUES.md)
-at the top of a task. The common routes:
+at the top of a task. **The GitHub App itself is Moneypenny** — her domain is orchestration through
+GitHub issues/PRs, sequencing work and hunting friction proactively; see
+[`docs/MONEYPENNY.md`](docs/MONEYPENNY.md) for her mandate before extending anything she owns. The
+common routes:
 
 - "clean up the code" / "burn down debt" → a `/governor` cycle (athletes `decomposer`,
   `ui-librarian`, `mortician`, `test-backfiller`; drills `/decompose`, `/dedupe`; big burn-downs →

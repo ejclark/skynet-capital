@@ -1,5 +1,10 @@
 # The coaching staff — detect-and-correct loops against slop
 
+> Anything below that touches GitHub issue/PR orchestration now operates under **Moneypenny's**
+> mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md). The dispatch policy and roles below are
+> unchanged; she is the address Eric directs orchestration asks to, and she routes to these
+> mechanisms rather than replacing them.
+
 AI builds fast; unregulated speed compounds into slop. We run quality like a football staff — three
 seats with distinct jobs:
 

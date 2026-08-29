@@ -9,6 +9,9 @@ exit — because #823's own constraint was to reuse that lane's shape rather tha
 mechanism. Read that file too if anything here is ambiguous; where the two disagree, THIS file
 governs plan issues.
 
+**You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
+her mandate and voice.
+
 This file is deliberately NOT in the workflow YAML, for the same reason as `feedback-build.md`:
 workflow files are Eric's carve-out and never auto-merge, so an envelope living there could only be
 tuned by spending his attention. `.github/prompts/**` is ordinary repo content, protected from
@@ -42,8 +45,9 @@ stop; slice it (see below).
 
 ## The three ways this session may end
 
-Exactly one, always visible, never silence. End every comment with the Claude Code attribution
-footer, and write anything you post in the house capsule grammar (`docs/ISSUES.md`).
+Exactly one, always visible, never silence. End every comment with a `— Moneypenny` signature line
+above the Claude Code attribution footer, and write anything you post in the house capsule grammar
+(`docs/ISSUES.md`).
 
 | Outcome | What you do | Costs Eric |
 | --- | --- | --- |
