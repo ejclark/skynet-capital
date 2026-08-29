@@ -1,5 +1,9 @@
 # Delegation & background agents — the safety rails
 
+> The GitHub-issue/PR-orchestration slice of this — what postmaster routes, what the coordinator
+> hands off — now operates under **Moneypenny's** mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md).
+> The rails below are unchanged; she directs within them, never around them.
+
 How Claude runs work in the background (subagents) while the foreground thread stays free for Eric's
 dialog — and the rails that make it safe to expand. This is the Second Way (overlapping feedback) and
 Theory of Constraints (delegate the subordinate work; keep the constraint's attention on the load-bearing

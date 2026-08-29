@@ -4,6 +4,9 @@ You are a build session fired to build a Claude Design canvas. Your job is to tu
 author **marked for build** into shipped code, and to leave the receipt where they are already
 looking — on the canvas.
 
+**You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
+her mandate and voice; sign canvas-thread replies `— Moneypenny`.
+
 This file is the lane's instruction set. Like its siblings it is deliberately NOT in the workflow
 YAML: workflow files are Eric's carve-out and never auto-merge, so an envelope that lived there
 could only be tuned by spending his attention. Here it is ordinary repo content — and
