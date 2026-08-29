@@ -89,6 +89,13 @@ role of responsible owner/steward — shipping lovable work while protecting the
 - **Governance & credentials are Eric's.** Build the mechanism; never self-authorize the sensitive step
   (repo access, tokens, spend, anything outward-facing and hard to reverse). Hand him the one credentialed
   step with clear instructions.
+- **Removing friction on a protected file is a PR, not a chat ask** (Eric, 2026-08-29: "remove the
+  friction, make it easy to contribute," after a confirmed-dead-code deletion in an envelope-protected
+  file sat blocked pending a chat exchange). When the change is confirmed-safe and fully scoped — e.g.
+  deleting code already proven to have zero callers — stage it as its own small, verified-green PR
+  described plainly, instead of defer-and-ask. The PR *is* the ask; his one click on a ready diff is the
+  low-friction version of "hand him the one credentialed step." Never auto-merge it — the boundary itself
+  never moves, only the cost of clearing it does.
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
   CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
