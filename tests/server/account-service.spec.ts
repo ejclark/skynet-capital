@@ -63,7 +63,12 @@ const okFactory = () =>
   );
 
 function makeService(
-  overrides: { store?: MemStore; roster?: StoredParticipant[]; owners?: string[] } = {},
+  overrides: {
+    store?: MemStore;
+    roster?: StoredParticipant[];
+    owners?: string[];
+    clientFactory?: typeof okFactory;
+  } = {},
 ) {
   const store = overrides.store ?? new MemStore();
   if (!overrides.store) store.items = [ann, bot];
@@ -74,7 +79,7 @@ function makeService(
   const service = createAccountService({
     hub,
     store,
-    clientFactory: okFactory,
+    clientFactory: overrides.clientFactory ?? okFactory,
     stopStream: (id) => stopped.push(id),
     now: () => new Date("2026-08-19T00:00:00.000Z"),
     ...(roster ? { findRosterParticipant: (id) => roster.find((p) => p.id === id) } : {}),
@@ -274,6 +279,26 @@ describe("account service — updateProfile", () => {
       apiKey: "k",
       apiSecret: "s",
     });
+  });
+
+  // A raw exception can carry internals — hostnames, proxy banners — that don't belong in
+  // member-facing copy. The unreachable arm answers with a fixed sentence instead (#816, the
+  // sibling of the same treatment in participant-service and desk-gate).
+  it("keeps exception internals out of the Alpaca-unreachable refresh error", async () => {
+    const { service, store } = makeService({
+      clientFactory: (() => {
+        throw new Error("connect ECONNREFUSED internal-proxy.corp:8080");
+      }) as unknown as typeof okFactory,
+    });
+    const result = await service.updateProfile({ id: "human-ann", timezone: "UTC", ...selfInput });
+    expect(result).toMatchObject({ ok: false });
+    if (!result.ok) {
+      expect(result.error).not.toContain("internal-proxy");
+      expect(result.error).not.toContain("ECONNREFUSED");
+      expect(result.error).toContain("Could not reach Alpaca");
+    }
+    // "nothing was changed" has to be literally true, not just reassuring copy.
+    expect(store.items.find((p) => p.id === "human-ann")?.timezone).toBe("America/New_York");
   });
 });
 
