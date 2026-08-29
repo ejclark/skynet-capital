@@ -1,37 +1,39 @@
 # Jackson Hole — Fed chair Warsh's first keynote (symposium Aug 27–29) — jackson-hole-2026-08-28
 
-**Kind:** macro-print · **Date:** 2026-08-28 (estimate, NEWS: kansascityfed.org symposium Aug 27–29; Fri-keynote timing press-reported, checked 2026-08-17) · **Impact:** high
-**Last assessed:** 2026-08-28
+**Kind:** macro-print · **Date:** 2026-08-28 (confirmed, FED: federalreserve.gov/newsevents/speech/warsh20260828a.htm — "In Our Time", Jackson Hole, 2026-08-28, checked 2026-08-29) · **Impact:** high
+**Last assessed:** 2026-08-29
 
 ## At a glance
 
-**TL;DR.** This is Fed Chair Kevin Warsh's first Jackson Hole keynote — a genuinely high-information,
-high-uncertainty macro event. The symposium's Aug 27–29 window is now confirmed directly against the
-Kansas City Fed's own site, but the exact keynote day/time is still press-reported, not primary-published
-— **status stays `estimate`**. Substantively: Warsh has told reporters the speech will frame "big
-picture" structural questions rather than give near-term rate guidance, which argues against a scripted
-policy signal — but Jackson Hole's own history is fat-tailed (flat on average, violent in the tail: S&P
-−3.37%/NVDA −9.23% on Powell's hawkish 2022 speech), and this keynote lands in the middle of a three-day
-corridor with NVDA's (8/26) and MRVL's (8/27) confirmed earnings on either side — the exact adjacency the
-research was asked to flag. Nothing here licenses a trade; it sharpens what to guard against.
+**TL;DR.** **The event has happened and this doc is closed out** (scored below; the pre-event call is
+preserved verbatim in the ledger rows, which are append-only). Warsh delivered *"In Our Time"* at
+10:00 ET Friday **2026-08-28** — now **primary-published** on federalreserve.gov, so the date flips
+`estimate` → **`confirmed`** in the same PR. He did exactly what this doc's legs 3–4 said he would
+and the market did exactly what leg 4 warned it might anyway: he **formally abandoned forward
+guidance** ("a discipline, not a decision"; a "hall-of-mirrors problem") while stating inflation is
+still too high and the Fed has **"more work to do"** — and the market read the *absence* of guidance
+plus the hawkish framing as a hike signal. **September hike odds went 35% → 57–59% in a session.**
+The load-bearing miss is where that repriced: **equities barely moved** (S&P −0.13% to −0.25%,
+essentially the flat 10-year median this doc dismissed as "not the realistic outcome"), while the
+**front end of the curve took the whole shock** (2y +8bp). This doc's fat-tail case (legs 5–6)
+pointed at the wrong asset class.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-9) | Stand aside | High | Nothing actionable at 9 days out; normal pre-earnings-week positioning. | kansascityfed.org publishing a full agenda that moves or drops the keynote |
-| This week (through ~8/23) | Watch | Medium | NVDA earnings-week setup building into 8/26; monitor VIX/skew ahead of the compound window rather than react yet. | NVDA (**2026-08-26**) or MRVL (**2026-08-27**) producing outsized moves that reprice the window before the keynote |
-| This month (8/26–9/16 window) | Flat the print / defined-risk only | High | NVDA (8/26) → MRVL (8/27) → Warsh keynote (8/28), stacked on PCE/GDP (8/26) and Treasury supply (8/26–27), flows straight into the Sep 16 FOMC — treat 8/26–8/28 as one corridor, not three separate events. | Any credible signal Warsh intends near-term rate-path guidance, contradicting his framework-not-guidance stance |
-| This quarter | Avoid new directional bets on Fed communication | Medium | Warsh's stated playbook (framework, not guidance) argues against extrapolating any single speech; the historical base rate for JH itself is flat/mixed (median 0% over the 2-day window) — the tail (2022-style) is what defined risk guards against, not what a directional bet should chase. | A widening or narrowing of the hike-favoring FOMC dissent count before **2026-09-16** |
+| Today (D+1, 8/29 — event closed) | Stand aside; nothing to trade off a closed event | High | The keynote is scored; the corridor guard expired with it. No position was ever keyed to this event, so there is no exit to manage. | n/a — the event has passed; this doc goes quiet after this close-out |
+| This week (into 9/1–9/4 macro block) | Treat the *data* as the live risk, not the speech | High | Warsh committed to data-dependence with no reaction function published — which makes **ISM Mfg 9/1**, **ISM Svcs 9/3** and **jobs 9/4** the next things that actually move September odds. | A Fed speaker between now and 9/16 publishing an explicit reaction function, restoring guidance and de-risking the prints |
+| This month (into FOMC **2026-09-16**) | Hedge September in **rates**, not in equity vol — and only defined-risk | Medium | The single measured lesson of 8/28: a hawkish Fed shock now expresses in the front end (2y +8bp) while equity vol *fell* (VIX closed **14.43**, intraday **14.1**, a YTD low). Equity-vol hedges bought for Fed risk paid nothing. | The **2026-09-16** FOMC producing an S&P move ≥1.5% while the 2y moves <5bp — the reverse of 8/28, which would kill the migration read |
+| This quarter | Do not extrapolate a rate path from Warsh's rhetoric | Medium | He explicitly refused to publish one, twice, on the record — "we should not indulge a regime in which market participants are looking primarily to the Fed for their next trade." Any doc that tells you what he will do in December is inventing it. | Warsh reintroducing dot-plot-style guidance at the **2026-09-16** SEP, contradicting the speech's own framework section |
 
 **Signals & conditions.**
-- Any explicit near-term rate-path signal in the keynote text (contradicting Warsh's own July 29
-  framing) → treat as a de facto rate-path event and reassess Sep FOMC odds immediately.
-- Outsized semiconductor reaction around NVDA/MRVL into or out of the speech → the 2022 pattern
-  (hawkish JH shock hit chips hardest) is the template to watch for.
-- VIX breaking meaningfully above its current ~15–16 level into the week → confirms the market is
-  pricing this corridor as two-sided, not benign.
-- Kansas City Fed publishing the full symposium agenda with an exact keynote day/time → would tighten
-  the date's source class (still doesn't authorize action; the date range itself is already primary-
-  confirmed).
+- **September odds are now the live tape, not the speech** — 57–59% futures / 48% Kalshi as of
+  **2026-08-28**. Track the drift into 9/16 off the 9/1–9/4 data block, not off further Fed rhetoric.
+- **The migration test (dated, falsifiable)** — if the **2026-09-16** FOMC again moves the 2y hard
+  and equities little, "Fed risk lives in rates" is confirmed and equity-vol Fed hedges stay off.
+- **VIX at a YTD low into a live hike debate is the anomaly to respect** — 14.43 close / 14.1
+  intraday on the day hike odds nearly doubled. Cheap equity vol is not the same as absent risk.
+- **Never** — buying equity-index vol as a hedge for a *rate-path* event on this chair's record;
+  8/28 is the one clean measurement we have, and it says that hedge does not pay.
 
 ## Initial research
 
@@ -184,7 +186,6 @@ scored directional call.
 | 2026-08-24 | D-4 | Adjacency sweep. Event tape: keynote timing now more consistently press-reported as **10am ET Friday 8/28** (techtimes, investinglive, intellectia, cross-checked 2026-08-24) — still not on kansascityfed.org's primary page, stays `estimate` per house policy; one new substantive detail — Warsh has convened **15 external experts** for a monetary-policy-framework review with recommendations due **end of 2026**, raising press speculation he could revisit the Fed's inflation-targeting approach at this keynote (not confirmed as this-speech content, flagged as color). Press framing unchanged: "big picture questions," not near-term guidance (same Jul-29 presser quote as the D-9 row); one outlet frames the speech as a potential "tiebreaker" for the ~1-in-3 September hike odds, consistent with the FOMC sibling doc's 30-40% hike-live figure — no new number, same figure restated. Peers: NVDA implied move fell to ~5.3% (from ~7.0%) and MRVL's jumped to ~18.4% (from ~14%, Google-deal-driven) since D-9 — both already logged in their own docs; raises MRVL's relative weight in the D+1 reaction-corridor read. Macro: no CPI/jobs/FOMC surprise since 8/19. Volatility regime: VIX 15.13, calm, no shift (down from the 15.8 cited at D-9). Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new dated adjacency found. | — (no change; compounding-corridor framing reinforced by MRVL's now-larger implied move) | 2026-08-27 (high, 8-20d band: every 3d) |
 | 2026-08-26 | D-2 | Adjacency sweep. Event tape: keynote timing further corroborates 10:00am ET Friday 8/28 (MNI Markets wire, moomoo, OutSmarting Markets — cross-checked today) with the symposium theme confirmed "Financial Innovation: Implications for Payments and Policy"; still no kansascityfed.org primary-page posting found, stays `estimate` per house policy. Peers: both same-week names have de-stressed into the corridor since D-4 — NVDA reports tonight (after this pulse ran) with implied move down to ~5.3%; MRVL (D-1) has its own implied move deflate sharply back to ~8.5% from the 18.4% Google-deal spike, stock +4.49% on 8/25 — the compounding-corridor risk is now reading calmer on both flanks than at D-4, not worse. Macro: Sep 15–16 FOMC odds firmed to ~73% hold / 26% hike / 1% cut (Kalshi, checked today) from the ~60-70%/30-40%/~0% split carried since D-9 — hold conviction building ahead of the keynote, consistent with (not yet resolving) leg 4's tiebreaker framing. Volatility regime: VIX ~15.8 (Bespoke/Fed data, checked 8/25) — still the same calm/complacent regime flagged since D-9, no break; SKEW last confirmed 142.93 (8/19), no fresher print found. Geopolitical: Strait of Hormuz escalated further overnight (tanker hit off Oman 8/25, engine disabled, crew safe) despite Trump's "demined" declaration — a fresh risk input for the corridor, distinct from the Fed-policy content of the keynote itself. No new dated adjacency to propose — GDP/PCE/5Y (8/26), 7Y (8/27), NVDA/MRVL prints all already on the calendar. | — (no change; compounding-corridor framing holds, though both flanking earnings names have de-stressed rather than escalated) | 2026-08-28 (event day; next assessment is this event's own outcome) |
 | 2026-08-27 | D-1 | Adjacency sweep. Peer prints: not directly applicable (macro event, no symbols) — but the corridor's first flank has now resolved: NVDA's 8/26 AC beat (rev $96.2B, EPS $2.22, Q3 guide $108B±2%, all above consensus/whisper per its own close-out) produced only a **muted +4–5% after-hours pop, below its own ~5–7% priced implied move** — one data point toward "calm, not escalating" into the keynote, not the reaction-function kill's "already-elevated" branch. MRVL reports tonight (8/27 AC, after this pulse runs); implied move ~10.6% (TipRanks, checked today) vs. ~8.5% in MRVL's own D-1 row (Barchart) — small cross-source divergence, not reconciled here, lives in MRVL's own doc. Macro surprises: GDP 2nd estimate held at **+1.5%** (unrevised) and core PCE printed **+0.2% m/m/3.3% y/y** (in line), headline PCE **+3.7% y/y** (0.1pt hot vs. street consensus, flat vs. trend) — both 2026-08-26, already closed out with their own re-sourced outcome sections in open PRs [#683](https://github.com/ejclark/skynet-capital/pull/683) (GDP) and [#684](https://github.com/ejclark/skynet-capital/pull/684) (PCE); neither produced a distinguishable market reaction (S&P ~flat, 7,675.70) — cited here as prior context, not re-derived. Volatility regime: VIX closed **15.21** on 8/26 (CNBC), down slightly from the ~15.8 carried since D-2 — still the same calm 14–16 regime, no break heading into the corridor's final two legs. Geopolitical/policy — **new, load-bearing for the Fed-independence leg:** Treasury Secretary Bessent doubled long-term debt buybacks (min. ~$4B/issue, announced 8/19–20) explicitly to curb the 30-year yield's climb to its highest since 2007, a direct move onto ground the Fed has historically treated as its own — clashing with Warsh's stated "not constrained by market prices" independence posture (CNBC 8/19, 8/20; Motley Fool 8/22; congress.net, checked today). Press now frames Friday's keynote explicitly as a test of whether Warsh addresses or pointedly avoids the Treasury-Fed tension — sharpens leg 3/4's framework-vs-guidance read without changing it. Event tape: keynote timing further corroborated at **10:00am ET Friday 8/28** (techtimes, moomoo, MNI Markets wire, regardsofwallstreet — cross-checked today), but kansascityfed.org's own symposium page, fetched directly today, still shows only the Aug 27–29 date range and theme, no agenda — press (techtimes) notes the KC Fed customarily doesn't post the full agenda until ~8pm ET the evening before (Thu 8/27), so primary confirmation of the exact time is structurally not yet possible at this pulse's timestamp; status correctly stays `estimate`. No new dated adjacency found. | — (no change; NVDA's muted reaction and the calm VIX read support "corridor still de-stressed," but MRVL and the keynote itself — the corridor's decisive legs — are still ahead; no position keyed to this event) | 2026-08-28 (event day; next assessment is this event's own outcome) |
-
 | 2026-08-28 | D-0 | Final pre-keynote pulse (00:13 ET; the 10am ET keynote has not happened at assessment time — this is not a close-out, the event's own outcome assessment follows once the speech is in hand). Event tape: keynote timing continues to converge on **10:00am ET Friday 8/28** (moomoo, XTB, techtimes — cross-checked today) — still not itself posted on kansascityfed.org's primary page, so `status` stays `estimate` per house policy; the symposium date range remains primary-confirmed. **The corridor's two flanking prints have both now resolved, and the picture is mixed, not clean-positive:** NVDA's beat extended through Thursday's regular session (S&P +0.63%, Nasdaq +1.30% on 8/27; NVDA itself reported **+7% premarket** on top of Wednesday's AH pop — Yahoo Finance market wrap, checked today) — the corridor's first leg de-stressed further, not just held. But MRVL's own confirmed 8/27 print — a beat on revenue ($2.739B) and non-GAAP EPS ($0.94) — sold off **~7.6% after-hours** on Q3 margin-compression and elevated-expectations concerns (own ledger's close-out, this PR) — the second leg re-stressed. Semis are walking into Warsh's speech on a genuinely mixed tape, not a wave of unambiguous good news, which if anything raises (not lowers) the stakes of a hawkish surprise landing on already-divided sentiment. Macro: no CPI/jobs/FOMC surprise since 8/26; Sep 15–16 hold odds firmed further to **~74–75%** (Polymarket/Kalshi/Myriad convergence, checked today) from ~73% at D-2 — incremental hold-conviction building, consistent with the tiebreaker framing (leg 4) not yet resolving either way. Volatility regime: VIX closed **14.56** on 8/27 (Yahoo Finance market wrap, checked today), down from 15.21 the prior session — back near the cycle low first flagged at D-9, still the same calm/complacent regime, no term-structure break found despite the mixed earnings tape. Geopolitical: Strait of Hormuz remains effectively closed to commercial shipping (UKMTO: a second tanker struck near Oman this week, ~3 ships/day transiting vs. the ~85/day norm) even as Iran and Oman reportedly struck a joint-management deal (IRGC, Wednesday) — a de-escalation signal on the diplomatic track that has not yet stopped the attacks on the water; Brent eased to **$87.65** on 8/27 (from ~$93.09 at D-4), continuing the price/physical-disruption decoupling the D-4 row first flagged. No new dated adjacency to propose — nothing on the calendar changes; the keynote itself is tomorrow's assessment. | — (no change; the corridor's mixed earnings outcome and the still-calm VIX are banked as context for reading tomorrow's keynote reaction, not a pre-judgment of it — defined-risk-only discipline across NVDA/MRVL/semis stands into the speech) | 2026-08-29 (event-passed-unscored once the keynote text is in hand; this is the final scheduled pulse before that) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
@@ -192,3 +193,101 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-08-29, D+1 — the keynote was delivered 10:00 ET Friday 2026-08-28 and the full
+regular session traded after it, so this scores the complete reaction day, not a partial one.)**
+
+**Sourcing note — why there is no instrument re-run here.** This is a `macro-print` with an empty
+`symbols` list; `earnings-cycle.mjs`/`intraday-edges.mjs` are symbol-keyed and were never run for
+this event (the initial research said so explicitly). The cache-busting rule has no target. Its
+analog — *re-source, don't recall* — was honoured instead: every figure below was fetched or
+searched fresh on **2026-08-29**, and the speech itself was read from the **Fed's own posting**, not
+from press summaries of it. The one machine reading available for this kind, VIX, comes from
+`event-material-scan.mjs`'s live probe (**14.43**, 2026-08-28 close).
+
+**What happened — the speech.** Chair Warsh delivered **"In Our Time"** at the Kansas City Fed's
+symposium, Jackson Hole, **2026-08-28**, now primary-published at
+[federalreserve.gov/newsevents/speech/warsh20260828a.htm](https://www.federalreserve.gov/newsevents/speech/warsh20260828a.htm)
+(fetched directly 2026-08-29). Substance:
+
+- **Inflation** — "Inflation is running above our 2 percent target," PCE **3.7%** (12-month) and
+  **4.1%** (6-month); "We must be confident that underlying inflation is moving to our objective,
+  clearly and at sufficient speed." Press framing of the takeaway: the Fed has **"more work to do."**
+- **Labor** — "labor markets are quite stable," unemployment **4.1%**, consistent with full
+  employment; "people who want to work, by and large, are holding or finding jobs."
+- **Financial conditions** — accommodative, not restrictive: "credit and loan markets are showing
+  few signs of policy restraint," with strong corporate investment, high margins, tight spreads.
+- **Forward guidance — formally abandoned.** He argued guidance "risks creating ambiguity in the
+  name of clarity" and creates a "hall-of-mirrors problem" between markets and the Fed, committing
+  instead "to a discipline, not to a decision." Also, on the record: "We should not indulge a regime
+  in which market participants are looking primarily to the Fed for their next trade."
+- **Framework** — six stated principles (data relevance, supply-side uncertainty, a firm 2% target,
+  dual-mandate compatibility, interest-rate primacy, monetary-aggregate monitoring). No rate path.
+
+**What happened — the tape (2026-08-28).** Rate-hike expectations repriced violently; equities did
+not. September FOMC hike odds went **~35% → 57–59%** on futures in one session, with Kalshi at
+**48% hike** against **~70% hold** pre-speech (Benzinga, CNBC "September Fed decision is now a coin
+flip", both 2026-08-28). Curve: **2y +~8bp**, **10y +4bp to 4.72%**, **30y +2bp to 5.21%** per the
+Yahoo Finance wrap — *note a genuine source conflict*, since Barron's/press framing described the
+long end as "edging lower" while the short end spiked; the direction of the 2y is agreed across all
+sources and is the load-bearing figure, the 30y's sign is not, and this doc does not resolve it.
+Equities finished **near flat and slightly lower**: Dow **−0.02%**, S&P 500 **−0.13%** (Motley Fool)
+to **−0.25%** (Yahoo), Nasdaq **−0.30%** to **−0.52%** — the market opened *higher* on the speech
+and pared through the afternoon. **VIX closed 14.43**, touching **14.1** intraday — its **lowest
+reading of 2026** (CNBC, "Stock traders warm up to Warsh as volatility index touches year-to-date
+low"). Semis gave back part of Thursday's earnings pop: **NVDA −3.40% to $220.24**, **AVGO −1.56%
+to ~$365.73** (probe close **$368.79**; small source divergence, not reconciled) — underperforming
+the index by ~3pp, but this is also the second session of digesting MRVL's margin miss, so the
+keynote is not cleanly separable as the cause.
+
+**Conviction legs, scored:**
+
+| Leg | Pre-event verdict | Scored | What settled it |
+|---|---|---|---|
+| 1 — symposium dates Aug 27–29 | SUPPORTED | **CORRECT** | Speech delivered inside the window, Fed-published. |
+| 2 — Friday-morning keynote timing | MIXED (press-only) | **CORRECT, now primary** | Fed posting confirms 2026-08-28; `status` flips to `confirmed` in this PR. |
+| 3 — "framework, not near-term guidance" | SUPPORTED | **CORRECT, and stronger than claimed** | He didn't merely decline guidance, he abolished it as a tool on the record. |
+| 4 — the market may overread it anyway | MIXED | **SUPPORTED — the decisive leg** | Hike odds 35%→57–59% in one session off a speech that published no rate path. The information-vacuum dynamic this leg named is exactly what traded. |
+| 5 — weight the fat tail, not the flat median | SUPPORTED | **REFUTED for equities** | S&P −0.13%/−0.25% *is* the flat median (10yr median 0%) this doc told itself not to expect. No tail. |
+| 6 — semis are the most JH-reactive sector | SUPPORTED | **MIXED / unproven** | NVDA −3.4% did underperform, but that is ~1/3 of the 2022 analog's −9.23% and is confounded by MRVL's own print. Directionally alive, magnitude badly overstated. |
+
+**Was the stance right?** The stance was *"no position keyed to this event; treat 8/26–8/28 as one
+compounding-risk corridor; defined-risk only across NVDA/MRVL/semis."* Honest scoring: **the stance
+cost nothing and earned nothing, and it was guarding the wrong exposure.** No equity tail arrived —
+the corridor's largest single move was MRVL's own earnings reaction (−7.6% AH on 8/27), an idiosyncratic
+print, not a Fed shock. A book that had bought equity-index vol as a *Fed* hedge would have lost on it
+twice over: the event landed hawkish **and** VIX still closed at a YTD low.
+
+**The one durable finding (and it is dated and falsifiable).** On this chair, a hawkish surprise
+prices into the **front end of the curve**, not into equity volatility. 8/28 is a clean natural
+experiment: near-doubled hike odds, +8bp on the 2y, and equity vol *down* to a YTD low on the same
+tape. **Falsifier:** the **2026-09-16** FOMC producing an S&P 500 move ≥1.5% while the 2y moves
+<5bp would kill this read outright. Carried forward into
+[`fomc-2026-09-16.md`](fomc-2026-09-16.md) as context, not as a position.
+
+**Kill switches, scored.** *Date-confirmation* — **triggered and actioned**: the Fed published the
+speech, so the calendar entry flips to `confirmed` with a `FED:` source in this PR (a mechanical
+audit-trail correction on a passed event; it licenses nothing). *Framework-break* — **not triggered
+in form, triggered in effect**: he gave no rate-path guidance, but the market extracted one anyway,
+which is leg 4's outcome, not leg 3's failure. *Reaction-function* — **not triggered**: the corridor
+stayed calm start to finish (VIX 15.8 → 15.21 → 14.56 → 14.43), so the "already-elevated risk"
+branch never opened. *Committee-dissent* — **no change found**; no fresh dissent count surfaced
+between 8/27 and the speech.
+
+**Honest limits.**
+- Index closes and the 30-year's direction differ between sources (see above). The 2y's move and the
+  hike-odds repricing are corroborated across three independent sources and carry the conclusion; the
+  rest is context.
+- Attribution on 8/28 is **not clean**: NVDA's post-earnings unwind and MRVL's margin miss were live
+  in the same session. "Semis underperformed on the keynote" is a plausible reading, not a measured one.
+- No forward test was registered in [`forward-tests.md`](forward-tests.md) for this event (the stance
+  was guard-shaped, deliberately unscored), so **nothing moves to the sweep doc's kill list**. The
+  migration finding above is registered here as a dated falsifier only, not as a scored test.
+- One reaction day is one observation. The migration claim rests on a single event and is stated at
+  Medium confidence for that reason.
+
+This event is now scored. The scanner goes quiet on it permanently; no probe-ref block is written,
+because a passed event is never screened again (`EVENT-RESEARCH.md` → "Deterministic screening":
+close-outs are never screened) and a reference block here would be dead state.
