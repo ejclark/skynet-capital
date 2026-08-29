@@ -87,7 +87,13 @@ export interface OptionTicketPreview {
 
 export const SHARES_PER_CONTRACT = 100;
 
-export function heldShares(context: OptionTicketContext, underlying: string): number {
+/** Takes only `positions`, not the full ticket context — `draft-order-account.ts` (multi-leg,
+ *  #582) has no single-leg request to build an `OptionTicketContext` around, and this is the one
+ *  piece of it that check needs. */
+export function heldShares(
+  context: { readonly positions: OptionTicketContext["positions"] },
+  underlying: string,
+): number {
   const held = context.positions.find((p) => p.symbol === underlying);
   return held ? Math.max(0, held.quantity) : 0;
 }
