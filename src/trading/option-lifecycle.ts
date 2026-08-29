@@ -33,8 +33,10 @@ import type { TradeFill } from "./round-trips.js";
  *    render (CLAUDE.md: "never let a flourish distort honesty"). So this stays informational only.
  *  - OPTRD: a real trade with a real price, but this module cannot yet confirm which field carries
  *    its side from Alpaca's own docs (network access was unavailable while building this). Rather
- *    than guess and risk a wrong number in the equity round-trip ledger, it stays informational —
- *    see the PR that introduced this file for the explicit call to verify against a live account.
+ *    than guess and risk a wrong number in the equity round-trip ledger, it stays informational.
+ *    The unblocking step is a capture, not a re-read of the docs: `npm run capture:lifecycle`
+ *    against a live paper account prints a publishable field-shape report (see
+ *    `option-lifecycle-shape.ts`), and #837 is where that report lands.
  */
 
 export type OptionLifecycleType = "OPEXP" | "OPASN" | "OPEXC" | "OPTRD";
