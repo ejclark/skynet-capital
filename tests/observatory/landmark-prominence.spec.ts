@@ -1,5 +1,4 @@
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
-import { renderIndividualBody } from "../../src/observatory/render-dashboard.js";
 import { botLandmarkProminence } from "../../src/observatory/standings.js";
 
 const bot = (id: string, ret: number): ParticipantSnapshot => ({
@@ -41,16 +40,5 @@ describe("botLandmarkProminence", () => {
   });
 });
 
-// The landmark is the scoreboard only if every view renders the SAME dial — this pins the
-// threading, so /u/:id can't silently fall back to a full-power Eye again. (The old /compare half
-// of this pin is gone: Standings' folded-in head-to-head renders no nation skyline at all — design
-// brief, 2026-08-25 — so there's nothing left to thread a dial through on that surface.)
-describe("prominence threading", () => {
-  const sauron = (ret: number): ParticipantSnapshot => ({ ...bot("sauron", ret), id: "sauron" });
-
-  it("/u/:id renders the Eye at the passed rank, not full power", () => {
-    const low = renderIndividualBody(sauron(-5), { prominence: 0.55 });
-    const high = renderIndividualBody(sauron(-5), { prominence: 1 });
-    expect(low).not.toBe(high); // the dial visibly reaches the skyline
-  });
-});
+// The threading pin — every view renders the SAME dial, never defaulting to full power for a
+// trailing bot — now lives on the shell's own path: tests/server/desk-json-routes.spec.ts.

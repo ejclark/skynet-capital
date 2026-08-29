@@ -104,8 +104,3 @@ export const TRADE_TYPES: readonly TradeType[] = [
 export function tradeTypeByCode(code: string | null | undefined): TradeType | undefined {
   return TRADE_TYPES.find((t) => t.code === code);
 }
-
-/** The default selection — the safest rung, matching the academy's teaching order. */
-export function defaultTradeType(): TradeType {
-  return TRADE_TYPES[0] as TradeType;
-}

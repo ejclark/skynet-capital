@@ -5,7 +5,7 @@ import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shell.js";
-import { playLocked } from "./trade-ticket-route.js";
+import { playLocked } from "./progression-service.js";
 
 /**
  * THE TICKET'S CATALOG AND LADDER (#738 phase 10a) — what the shell's trade page needs to know

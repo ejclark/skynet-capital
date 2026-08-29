@@ -1,18 +1,17 @@
 import type { ServerResponse } from "node:http";
 
 /**
- * NO DEAD EXITS (#738 phase 9a) — every legacy URL with a shell twin 302s into `/app/*`, so a
- * bookmark, an old link, or a stray anchor can never strand a member in the pre-redesign HTML
- * (Eric's live review, 2026-08-28: reachable legacy pieces read as an unfinished port).
+ * NO DEAD EXITS (#738 phase 9a) — every legacy URL 302s into `/app/*`, so a bookmark, an old
+ * link, or a stray anchor can never strand a member outside the shell (Eric's live review,
+ * 2026-08-28: reachable legacy pieces read as an unfinished port). The pre-redesign HTML pages
+ * this map used to twin against are gone entirely as of #738 phase 9f-2 — this map is now the
+ * permanent bookmark-protection layer, not a bridge to a parallel app.
  *
- * Three rules bound the map:
- *  - GET only. The legacy POST handlers (account forms, the trade ticket, the desk settings tab)
- *    keep answering so nothing breaks mid-flight — they just have no UI reaching them anymore.
- *  - Only routes with a REAL shell twin redirect — and since 10b every page has one (`/trade`
- *    joined once the shell gate learned the options plays; `?play=`/`?desk=` carry over).
- *    `/feedback/coach` and `/feedback/preview` are shared JSON endpoints, not pages, and keep
- *    serving. `/research/<slug>` documents are server-rendered by design, and `/classic` is the
- *    deliberate escape hatch.
+ * Rules that bound the map:
+ *  - GET only. There is no legacy write handler left to fall through to on a POST.
+ *  - `/feedback/coach` and `/feedback/preview` are shared JSON endpoints the shell's own coach
+ *    box posts to directly — never redirected. `/research/<slug>` documents are server-rendered
+ *    by design.
  *  - Queries carry over where the twin speaks them (`?by=` on the board, `?q=` filters ride the
  *    path unchanged); the desk's `?tab=` maps to the shell's routes instead.
  */
@@ -32,13 +31,13 @@ function deskTarget(path: string, url: string): string {
 const TWINS: ReadonlyMap<string, string> = new Map([
   ["/add", "/app/join"],
   ["/feedback", "/app/feedback"],
-  // The owner pages' cards live on app Settings (9e) — GETs land there, POSTs keep serving.
+  // The owner pages' cards live on app Settings (9e).
   ["/invite", "/app/settings"],
   ["/claim", "/app/settings"],
   ["/ops-status", "/app/settings"],
   ["/learn", "/app/learn"],
   // The ticket (10b): the shell speaks ?play= and ?desk=; other legacy params drop harmlessly
-  // in the shell route's validateSearch. POSTed orders still reach the old handler, per rule 1.
+  // in the shell route's validateSearch.
   ["/trade", "/app/trade"],
   ["/wire", "/app/wire"],
   ["/research", "/app/research"],
@@ -46,13 +45,16 @@ const TWINS: ReadonlyMap<string, string> = new Map([
   // The account pages' shell home is Settings — profile, removal, rotation all live there now.
   ["/account", "/app/settings"],
   ["/rotate", "/app/settings"],
+  // The retired Mission Control bookmark — the fleet switchboard lives on app Settings for every
+  // viewer now, so there's no "whose desk" to resolve first.
+  ["/controls", "/app/settings"],
   // The bare portfolio index listed the session's own accounts — Settings is that list now.
   ["/u", "/app/settings"],
 ]);
 
 /**
  * Redirect a legacy URL to its shell twin. Returns true when the response was written. Non-GET
- * requests never redirect — the old write handlers stay reachable for anything still posting.
+ * requests never redirect — nothing serves a legacy POST anymore, so one falls through to a 404.
  */
 export function serveLegacyRedirect(
   res: ServerResponse,
@@ -82,15 +84,4 @@ export function serveLegacyRedirect(
   }
   res.end();
   return true;
-}
-
-/** The quarantine banner (9f-1) — one honest line atop the classic board, injected rather than
- *  threaded through the view layer: this whole surface is scheduled for the delete PR, so no
- *  seam is worth adding. Retires with the quarantine door. */
-export function withClassicBanner(html: string): string {
-  return html.replace(
-    /<body[^>]*>/,
-    (tag) =>
-      `${tag}<div style="background:#0b2b28;color:#35d0ba;font:12px/1.4 monospace;padding:8px 16px;text-align:center">legacy view — the app lives at <a href="/app/" style="color:#35d0ba;font-weight:700">/app</a>; every old page remains at /classic/&lt;page&gt; while the new design proves out</div>`,
-  );
 }

@@ -1,6 +1,5 @@
 import type { ServerResponse } from "node:http";
-import type { NavContext } from "../../src/observatory/render-dashboard.js";
-import { pageHtml, servePublicRoute } from "../../src/server/dashboard-board-routes.js";
+import { servePublicRoute } from "../../src/server/dashboard-board-routes.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
 
 function fakeResponse(): {
@@ -33,8 +32,6 @@ function fakeHub(participants: unknown[]): ObservatoryHub {
     subscribe: () => () => undefined,
   } as unknown as ObservatoryHub;
 }
-
-const nav: NavContext = { active: "board", canAdd: false, authed: true };
 
 describe("servePublicRoute", () => {
   it("serves the aggregate cohort pulse without exposing individual accounts", () => {
@@ -69,23 +66,5 @@ describe("servePublicRoute", () => {
   it("leaves an unrecognized path unhandled", () => {
     const { res } = fakeResponse();
     expect(servePublicRoute("/nope", res, fakeHub([]))).toBe(false);
-  });
-});
-
-describe("pageHtml", () => {
-  it("renders the observatory shell with the current standings body embedded", () => {
-    const html = pageHtml(fakeHub([]), nav, "equity", {});
-    expect(html).toContain("Skynet Capital — Observatory (Live)");
-    expect(html).toContain("/events");
-  });
-
-  it("never re-renders itself from the stream: no innerHTML swap of the whole board", () => {
-    // The 2026-08-26 regression this replaced: `root.innerHTML = JSON.parse(e.data)` on every hub
-    // tick, which destroyed all client state ~4 times a second. The only innerHTML left is the
-    // deliberate /board/frame fallback, and it is never fed by the event stream.
-    const html = pageHtml(fakeHub([]), nav, "equity", {});
-    expect(html).not.toContain("root.innerHTML = JSON.parse(e.data)");
-    expect(html).toContain("/board/frame");
-    expect(html).toContain("addEventListener('patch'");
   });
 });

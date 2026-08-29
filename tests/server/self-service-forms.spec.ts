@@ -1,16 +1,18 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { NavContext } from "../../src/observatory/dashboard-shell.js";
-import { handleAdd, handleRotate } from "../../src/server/self-service-forms.js";
+import { handleSelfServiceForm, requireOwner } from "../../src/server/self-service-forms.js";
 
 /**
- * `handleAdd`/`handleRotate` take real `IncomingMessage`/`ServerResponse` — a raw HTTP server
- * exercising them over the wire is the honest way to test their behavior (status codes, body
- * content) without peeking at their internals.
+ * The owner gate and GET/POST form dispatch `invite-form.ts`'s `handleInvite` stands on — real
+ * `IncomingMessage`/`ServerResponse` traffic over the wire, since that's the honest way to test
+ * status codes and body content without peeking at internals.
  */
-const nav: NavContext = { active: "add", canAdd: true, authed: true };
+
 async function withRoute(
-  handler: (req: Parameters<typeof handleAdd>[0], res: Parameters<typeof handleAdd>[1]) => void,
+  handler: (
+    req: Parameters<typeof handleSelfServiceForm>[0],
+    res: Parameters<typeof handleSelfServiceForm>[1],
+  ) => void,
   run: (base: string) => Promise<void>,
 ): Promise<void> {
   const server: Server = createServer((req, res) => handler(req, res));
@@ -23,122 +25,105 @@ async function withRoute(
   }
 }
 
-describe("handleAdd", () => {
-  it("GET serves the onboarding form", async () => {
+describe("requireOwner", () => {
+  const page = (title: string, inner: string) => `<h1>${title}</h1>${inner}`;
+
+  it("returns the lowercased email when the viewer is an owner", async () => {
+    await withRoute(
+      (_req, res) => {
+        const email = requireOwner(res, "Ann@Example.com", (e) => e === "ann@example.com", page);
+        res.end(String(email));
+      },
+      async (base) => {
+        expect(await (await fetch(base)).text()).toBe("ann@example.com");
+      },
+    );
+  });
+
+  it("403s identically for signed-out and signed-in-but-not-owner — no shape tell", async () => {
+    let anonBody = "";
+    await withRoute(
+      (_req, res) => {
+        requireOwner(res, undefined, () => false, page);
+      },
+      async (base) => {
+        const anon = await fetch(base);
+        expect(anon.status).toBe(403);
+        anonBody = await anon.text();
+      },
+    );
+    await withRoute(
+      (_req, res) => {
+        requireOwner(res, "member@example.com", () => false, page);
+      },
+      async (base) => {
+        const notOwner = await fetch(base);
+        expect(notOwner.status).toBe(403);
+        expect(await notOwner.text()).toBe(anonBody);
+      },
+    );
+    expect(anonBody).toContain("isn't available on your account");
+  });
+});
+
+describe("handleSelfServiceForm", () => {
+  it("GET renders the form", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(
+        void handleSelfServiceForm(
           req,
           res,
           "GET",
-          "",
-          undefined,
+          () => "<form></form>",
           () => Promise.reject(new Error("unused")),
-          nav,
+          () => "unused",
         ),
       async (base) => {
         const res = await fetch(base);
         expect(res.status).toBe(200);
-        const body = await res.text();
-        expect(body).toContain("Connect your Alpaca account");
-        expect(body).toContain('name="displayName"');
+        expect(await res.text()).toBe("<form></form>");
       },
     );
   });
 
-  // 2026-08-25 (Eric: "/add ... continue[s] to ignore page templates and remove the rails"):
-  // /add renders inside the real app shell now, not the bare one-card page.
-  it("renders inside the app shell — the drawer rail, not a bare card", async () => {
+  it("POST parses the body, submits, and renders success at 200", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(
-          req,
-          res,
-          "GET",
-          "",
-          undefined,
-          () => Promise.reject(new Error("unused")),
-          nav,
-        ),
-      async (base) => {
-        const body = await (await fetch(base)).text();
-        expect(body).toContain('<aside class="drawer"');
-        expect(body).toContain("Standings");
-      },
-    );
-  });
-
-  it("POST submits the parsed form and renders success", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleAdd(
+        void handleSelfServiceForm(
           req,
           res,
           "POST",
-          "",
-          undefined,
-          (input) => {
-            expect(input.displayName).toBe("Uncle Joe");
-            expect(input.apiKey).toBe("PK123");
-            return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
-          },
-          nav,
+          () => "unused",
+          (form) => Promise.resolve({ ok: true, value: form.get("name") }),
+          (result) => `hi ${result.value}`,
         ),
       async (base) => {
         const res = await fetch(base, {
           method: "POST",
           headers: { "content-type": "application/x-www-form-urlencoded" },
-          body: "displayName=Uncle+Joe&apiKey=PK123&apiSecret=s",
+          body: "name=Ann",
         });
         expect(res.status).toBe(200);
-        expect(await res.text()).toContain("You're on the board");
+        expect(await res.text()).toBe("hi Ann");
       },
     );
   });
 
-  it("stamps the signed-in session's email as the owner — never a form field", async () => {
+  it("POST renders a refusal at 400 when the submit result says so", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(
+        void handleSelfServiceForm(
           req,
           res,
           "POST",
-          "",
-          "uncle_joe@example.com",
-          (input) => {
-            expect(input.ownerEmail).toBe("uncle_joe@example.com");
-            return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
-          },
-          nav,
-        ),
-      async (base) => {
-        const res = await fetch(base, {
-          method: "POST",
-          headers: { "content-type": "application/x-www-form-urlencoded" },
-          // The form carries no identity field at all — ownership can only come from the session.
-          body: "displayName=Uncle+Joe&apiKey=PK123&apiSecret=s",
-        });
-        expect(res.status).toBe(200);
-      },
-    );
-  });
-
-  it("POST renders the error page with a 400 when the service refuses", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleAdd(
-          req,
-          res,
-          "POST",
-          "",
-          undefined,
-          () => Promise.resolve({ ok: false, error: "That key was rejected." }),
-          nav,
+          () => "unused",
+          () => Promise.resolve({ ok: false, error: "nope" }),
+          (result) => result.error,
         ),
       async (base) => {
         const res = await fetch(base, { method: "POST", body: "" });
         expect(res.status).toBe(400);
-        expect(await res.text()).toContain("That key was rejected.");
+        expect(await res.text()).toBe("nope");
       },
     );
   });
@@ -146,232 +131,17 @@ describe("handleAdd", () => {
   it("refuses any method besides GET/POST", async () => {
     await withRoute(
       (req, res) =>
-        void handleAdd(
+        void handleSelfServiceForm(
           req,
           res,
           "DELETE",
-          "",
-          undefined,
+          () => "unused",
           () => Promise.reject(new Error("unused")),
-          nav,
+          () => "unused",
         ),
       async (base) => {
         const res = await fetch(base, { method: "DELETE" });
         expect(res.status).toBe(405);
-      },
-    );
-  });
-});
-
-describe("handleRotate", () => {
-  it("GET serves the rotation form", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleRotate(
-          req,
-          res,
-          "GET",
-          "",
-          "",
-          "",
-          [],
-          {},
-          () => Promise.reject(new Error("unused")),
-          nav,
-        ),
-      async (base) => {
-        const res = await fetch(base);
-        expect(res.status).toBe(200);
-        const body = await res.text();
-        expect(body).toContain("Rotate an account's Alpaca key");
-        expect(body).toContain('name="id"');
-      },
-    );
-  });
-
-  it("POST submits id + new credentials and renders success", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleRotate(
-          req,
-          res,
-          "POST",
-          "",
-          "",
-          "",
-          [],
-          {},
-          (input) => {
-            expect(input.id).toBe("day-trader");
-            expect(input.apiKey).toBe("new-key");
-            return Promise.resolve({ ok: true, id: "day-trader", displayName: "JARVIS" });
-          },
-          nav,
-        ),
-      async (base) => {
-        const res = await fetch(base, {
-          method: "POST",
-          headers: { "content-type": "application/x-www-form-urlencoded" },
-          body: "id=day-trader&apiKey=new-key&apiSecret=new-secret",
-        });
-        expect(res.status).toBe(200);
-        expect(await res.text()).toContain("Credentials rotated");
-      },
-    );
-  });
-
-  it("forwards the session's resolved id AND email — the roster owner-gate needs both", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleRotate(
-          req,
-          res,
-          "POST",
-          "",
-          "",
-          "",
-          [],
-          { id: "human-eric", email: "eric@example.com" },
-          (input) => {
-            expect(input.requesterId).toBe("human-eric");
-            expect(input.requesterEmail).toBe("eric@example.com");
-            return Promise.resolve({ ok: true, id: "human-eric", displayName: "Eric" });
-          },
-          nav,
-        ),
-      async (base) => {
-        const res = await fetch(base, {
-          method: "POST",
-          headers: { "content-type": "application/x-www-form-urlencoded" },
-          body: "id=human-eric&apiKey=new-key&apiSecret=new-secret",
-        });
-        expect(res.status).toBe(200);
-      },
-    );
-  });
-
-  it("POST renders the error page with a 400 when rotation is refused", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleRotate(
-          req,
-          res,
-          "POST",
-          "",
-          "",
-          "",
-          [],
-          {},
-          () => Promise.resolve({ ok: false, error: "No existing self-service account." }),
-          nav,
-        ),
-      async (base) => {
-        const res = await fetch(base, { method: "POST", body: "" });
-        expect(res.status).toBe(400);
-        expect(await res.text()).toContain("No existing self-service account.");
-      },
-    );
-  });
-
-  it("carries the ?key= password through both the form action and result links", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleRotate(
-          req,
-          res,
-          "GET",
-          "secret123",
-          "",
-          "",
-          [],
-          {},
-          () => Promise.reject(new Error("unused")),
-          nav,
-        ),
-      async (base) => {
-        const res = await fetch(base);
-        expect(await res.text()).toContain("key=secret123");
-      },
-    );
-  });
-
-  // 2026-08-25: the id nobody remembers. A link that already names the account (the error card,
-  // a profile page) locks it in rather than making the member retype an opaque slug.
-  // 2026-08-26: the locked field shows the board NAME, never the raw id — the id travels only in
-  // the hidden field (Eric: "account id is made up by you.. why do you even bother showing it?").
-  it("pre-fills and locks the account by NAME when the link already names an id", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleRotate(
-          req,
-          res,
-          "GET",
-          "",
-          "human-uncle_joe",
-          "Uncle Joe",
-          [],
-          {},
-          () => Promise.reject(new Error("unused")),
-          nav,
-        ),
-      async (base) => {
-        const body = await (await fetch(base)).text();
-        expect(body).toContain('value="Uncle Joe" readonly');
-        expect(body).not.toContain('value="human-uncle_joe" readonly');
-        expect(body).toContain('type="hidden" name="id" value="human-uncle_joe"');
-        expect(body).not.toContain('name="id" required');
-      },
-    );
-  });
-
-  it("submits the locked id even though the visible field is readonly, not name=id", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleRotate(
-          req,
-          res,
-          "POST",
-          "",
-          "human-uncle_joe",
-          "Uncle Joe",
-          [],
-          {},
-          (input) => {
-            expect(input.id).toBe("human-uncle_joe");
-            return Promise.resolve({ ok: true, id: "human-uncle_joe", displayName: "Uncle Joe" });
-          },
-          nav,
-        ),
-      async (base) => {
-        const res = await fetch(base, {
-          method: "POST",
-          headers: { "content-type": "application/x-www-form-urlencoded" },
-          body: "id=human-uncle_joe&apiKey=new-key&apiSecret=new-secret",
-        });
-        expect(res.status).toBe(200);
-      },
-    );
-  });
-
-  it("falls back to the free-text field when no id rides in the link", async () => {
-    await withRoute(
-      (req, res) =>
-        void handleRotate(
-          req,
-          res,
-          "GET",
-          "",
-          "",
-          "",
-          [],
-          {},
-          () => Promise.reject(new Error("unused")),
-          nav,
-        ),
-      async (base) => {
-        const body = await (await fetch(base)).text();
-        expect(body).toContain('name="id" required');
-        expect(body).not.toContain("readonly");
       },
     );
   });

@@ -2,9 +2,9 @@ import type { ServerResponse } from "node:http";
 import { serveLegacyRedirect } from "../../src/server/legacy-redirects.js";
 
 /**
- * No dead exits: every twinned legacy URL 302s into the shell, POSTs still reach the old
- * handlers, and everything WITHOUT a twin — research documents, the escape hatch — passes
- * through untouched.
+ * No dead exits: every legacy URL 302s into the shell (GET-only — there's no legacy POST handler
+ * left to fall through to), and everything WITHOUT a twin — research documents — passes through
+ * untouched.
  */
 
 function fakeRes() {
@@ -48,6 +48,8 @@ describe("serveLegacyRedirect", () => {
     expect(target("/invite")).toBe("/app/settings");
     expect(target("/claim")).toBe("/app/settings");
     expect(target("/ops-status")).toBe("/app/settings");
+    // The retired Mission Control bookmark — the fleet switchboard for every viewer now.
+    expect(target("/controls")).toBe("/app/settings");
     // The coach and preview are shared JSON endpoints, not pages — they keep serving.
     expect(target("/feedback/coach")).toBeUndefined();
     expect(target("/feedback/preview")).toBeUndefined();
@@ -63,15 +65,14 @@ describe("serveLegacyRedirect", () => {
     expect(target("/compare", "/compare?a=x&b=y")).toBe("/?a=x&b=y");
   });
 
-  it("never redirects a POST — the legacy write handlers stay reachable", () => {
+  it("never redirects a POST — GET/HEAD only", () => {
     expect(target("/account", "/account", "POST")).toBeUndefined();
     expect(target("/u/sauron", "/u/sauron?tab=settings", "POST")).toBeUndefined();
     expect(target("/trade", "/trade", "POST")).toBeUndefined();
   });
 
   it("leaves everything without a twin alone", () => {
-    // Research documents are server-rendered by design; /classic is the escape hatch.
+    // Research documents are server-rendered by design.
     expect(target("/research/nvda-aug-2026-print")).toBeUndefined();
-    expect(target("/classic")).toBeUndefined();
   });
 });
