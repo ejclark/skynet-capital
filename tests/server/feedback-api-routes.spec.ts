@@ -154,6 +154,28 @@ describe("serveFeedbackApi", () => {
     ]);
   });
 
+  it("relays a filing failure with a 502, verbatim, and never records a log entry", async () => {
+    const recorded: unknown[] = [];
+    const config = configWith({
+      submitFeedback: () => Promise.resolve({ ok: false, error: "GitHub said no" }),
+      recordFeedback: (e: unknown) => {
+        recorded.push(e);
+        return Promise.resolve();
+      },
+    });
+    const { res, out } = fakeRes();
+    await serveFeedbackApi(
+      post({ kind: "bug", title: "x", details: "y" }),
+      res,
+      "/api/feedback",
+      config,
+      session,
+    );
+    expect(out.status).toBe(502);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: false, error: "GitHub said no" });
+    expect(recorded).toEqual([]);
+  });
+
   it("answers an unwired deployment honestly, without touching anything", async () => {
     const { res, out } = fakeRes();
     await serveFeedbackApi(
