@@ -8,7 +8,7 @@ the north star for time-indexed work is wake-ups derived from the domain calenda
 
 Automation runs on two substrates, and the default flipped on 2026-08-19:
 
-1. **Repo-resident, event-driven (the default).** The postmaster workflow, triggered by pushes,
+1. **Repo-resident, event-driven (the default).** The event-router workflow, triggered by pushes,
    issue labels, and dispatch buttons. Trigger, prompt, and permissions are version-controlled and
    PR-reviewed, and the substrate is physically incapable of the failure that killed the first
    generation of Routines (firing into a session with no repo checkout — see *Retired*, below):

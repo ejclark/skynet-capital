@@ -43,7 +43,7 @@ Copy-paste starters (all field-verified shapes):
 ```mermaid
 flowchart LR
     form[/feedback form/] --> issue[labeled issue]
-    issue --> pm{postmaster} --> session[fresh build session] --> pr[PR]
+    issue --> pm{moneypenny} --> session[fresh build session] --> pr[PR]
 ```
 ````
 
