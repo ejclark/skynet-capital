@@ -1,5 +1,4 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { type NavContext, renderShell } from "../observatory/dashboard-shell.js";
 import { TOKEN_DECLS } from "../ui/tokens.js";
 
 /** The base reset every server-rendered page starts from. */
@@ -117,29 +116,6 @@ export function addShell(title: string, inner: string, wide = false): string {
 ${inner}
 </div></body>
 </html>`;
-}
-
-/**
- * The RAILED self-service page: `CONTENT_STYLE` rendered inside the real app shell — drawer, nav,
- * the `PAPER · SANDBOX` timestamp bar. `nav` is always defined here (every caller reaches this
- * route through the auth gate, which always has a session to build one from) — `renderShell`
- * itself stays fine with `undefined` for the one caller outside this module that renders a bare
- * embeddable body.
- *
- * Its only remaining caller is the envelope-protected `invite-form.ts` (`src/server/invite-form.ts`
- * — "the invite gate", never auto-authorized) — kept live here rather than deleted alongside the
- * rest of the classic self-service surface (#738 phase 9f-2) because that file is frozen pending
- * Eric's own sign-off.
- */
-export function railedShell(title: string, nav: NavContext, inner: string, wide = false): string {
-  return shellDocument(
-    title,
-    renderShell(
-      nav,
-      `<style>${CONTENT_STYLE}</style><div class="wrap${wide ? " wide" : ""}">${inner}</div>`,
-      new Date().toISOString(),
-    ),
-  );
 }
 
 /** Reads a request body as text, capped at 1MB by default — every POST form on this server is
