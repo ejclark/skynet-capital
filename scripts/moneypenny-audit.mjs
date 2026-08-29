@@ -251,18 +251,14 @@ export function gatherAuditDeps(nowMs) {
 }
 
 /**
- * Is `claim/plan-<n>` currently held, in either namespace the lease has ever lived in? Read-only
- * mirror of `claimHandoff`'s own `readRef`/namespace-fallback shape (scripts/moneypenny.mjs) — a
- * 404 in both namespaces means unclaimed, which is the common and expected case.
+ * Is `claim/plan-<n>` currently held? Read-only mirror of `claimHandoff`'s own `readRef` shape
+ * (scripts/moneypenny.mjs) — a 404 means unclaimed, which is the common and expected case.
  */
 function hasPlanClaim(number) {
-  for (const ns of ["tags", "heads"]) {
-    try {
-      sh("gh", ["api", `repos/{owner}/{repo}/git/ref/${ns}/claim/plan-${number}`]);
-      return true;
-    } catch {
-      /* not held in this namespace */
-    }
+  try {
+    sh("gh", ["api", `repos/{owner}/{repo}/git/ref/tags/claim/plan-${number}`]);
+    return true;
+  } catch {
+    return false;
   }
-  return false;
 }

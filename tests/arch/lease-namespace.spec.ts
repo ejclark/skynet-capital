@@ -10,6 +10,10 @@ import { readFileSync } from "node:fs";
 //
 // This is the offline stand-in — it reads the ref the claim actually writes and refuses the
 // combination that cannot work.
+//
+// The `heads/` read/delete fallback that briefly existed for pre-migration leases was itself
+// removed on 2026-08-29 (#916) once every such lease had long since aged past its 2h TTL — see
+// git blame on this file for the version that pinned it.
 const source = () => readFileSync("scripts/moneypenny.mjs", "utf8");
 
 describe("claim lease ref namespace", () => {
@@ -20,11 +24,13 @@ describe("claim lease ref namespace", () => {
     expect(created).not.toContain("heads");
   });
 
-  it("still reads and releases the legacy heads/ leases", () => {
+  it("reads and releases the lease under refs/tags only", () => {
     const text = source();
 
-    expect(text).toContain('readRef("tags") ?? readRef("heads")');
-    expect(text).toMatch(/for \(const ns of \["tags", "heads"\]\)/);
+    expect(text).toContain('readRef("tags")');
+    expect(text).toContain("refs/tags/claim/${slug}");
+    expect(text).not.toMatch(/readRef\("heads"\)/);
+    expect(text).not.toMatch(/\["tags", "heads"\]/);
   });
 
   it("keeps pointing the lease at a stamped tag object, so it carries its own age", () => {
