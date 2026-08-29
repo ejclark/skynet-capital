@@ -208,11 +208,11 @@ describe("ship checkbody — the picture/format contract", () => {
  */
 describe("ship checkarm — the irreversible class never auto-merges", () => {
   it("refuses a diff touching a protected path, and names the path and the reason", () => {
-    const { code, stderr } = run(["checkarm", "src/trading/option-ticket.ts"]);
+    const { code, stderr } = run(["checkarm", "src/server/trade-service.ts"]);
 
     expect(code).toBe(5);
     expect(stderr).toContain("REFUSED");
-    expect(stderr).toContain("src/trading/option-ticket.ts");
+    expect(stderr).toContain("src/server/trade-service.ts");
     expect(stderr).toContain("money-moving");
   });
 
@@ -222,7 +222,7 @@ describe("ship checkarm — the irreversible class never auto-merges", () => {
       "checkarm",
       "src/trading/draft-order.ts",
       "tests/trading/draft-order.spec.ts",
-      "src/trading/option-ticket.ts",
+      "src/server/trade-service.ts",
       "docs/LESSONS.md",
     ]);
 

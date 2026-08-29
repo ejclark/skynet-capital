@@ -202,11 +202,7 @@ describe("autonomous-lane envelope", () => {
       "src/alpaca/credentials.ts",
       "src/alpaca/alpaca-trading-client.ts",
       "src/server/trade-service.ts",
-      "src/trading/order-ticket.ts",
       "src/server/feedback-coach-limits.ts",
-      "src/engine/guards.ts",
-      "src/bots/account-guard.ts",
-      "src/playbooks/registry.ts",
       "fly.toml",
       "fly.bots.toml",
       "scripts/bot-relevant.mjs",
@@ -247,6 +243,23 @@ describe("autonomous-lane envelope", () => {
       "src/server/page-shell.ts",
       "docs/FEEDBACK.md",
       "tests/arch/envelope.spec.ts",
+    ];
+    for (const entry of check(...openPaths)) {
+      expect(entry.protected, `${entry.path} must stay buildable`).toBe(false);
+    }
+  });
+
+  // #928 — the envelope gates cross-account data access, not trading-domain shape. None of these
+  // carry an account-identity check (confirmed by reading each one, not by filename): risk sizing,
+  // discipline rules, bot-account collision hygiene, and playbook authorship are ordinary open
+  // trading-feature work a member or bot should be free to extend unattended.
+  it("leaves risk guards, bot-account hygiene, and playbook authorship open (#928)", () => {
+    const openPaths = [
+      "src/engine/guards.ts",
+      "src/bots/account-guard.ts",
+      "src/playbooks/registry.ts",
+      "src/trading/order-ticket.ts",
+      "src/trading/option-ticket.ts",
     ];
     for (const entry of check(...openPaths)) {
       expect(entry.protected, `${entry.path} must stay buildable`).toBe(false);
@@ -396,8 +409,11 @@ describe("autonomous-lane envelope", () => {
 
   // #716 end to end: a union type gaining a member rewrites an existing line rather than purely
   // appending to it, so classifyDiff alone holds it — this is the case classifyStructuralWidening
-  // exists for. Exercises the real order-ticket.ts diffAware rule through the actual CLI, the same
-  // shape that #716's stop-limit order type was incorrectly held on before this.
+  // exists for. Exercises the diffAware rule through the actual CLI against a FIXTURE protected
+  // path (not a real business file — #928 opened order-ticket.ts, the file this test used to
+  // target, since it carries no account-identity check; this mechanism test shouldn't be coupled
+  // to which real files happen to be protected today), the same union-widening shape that #716's
+  // stop-limit order type was incorrectly held on before this.
   it("exempts a diffAware protected path when the real diff is a safe union-type widening", () => {
     const dir = mkdtempSync(join(tmpdir(), "envelope-widening-"));
     const run = (...args: string[]): string =>
@@ -406,7 +422,7 @@ describe("autonomous-lane envelope", () => {
         encoding: "utf8",
         env: hermeticGitEnv(),
       });
-    const ticketPath = join(dir, "src/trading/order-ticket.ts");
+    const ticketPath = join(dir, "src/trading/fixture-ticket.ts");
     // `env: hermeticGitEnv()` here too (same fix as the diffAware block above) — this shells out
     // to `envelope-scan.mjs`, which itself calls `git diff`, so it inherits `GIT_DIR`/
     // `GIT_INDEX_FILE` from a real git hook exactly like a bare `git` spawn does. Missing here
@@ -429,7 +445,19 @@ describe("autonomous-lane envelope", () => {
     try {
       run("init", "-b", "main");
       mkdirSync(join(dir, "src/trading"), { recursive: true });
-      cpSync("envelope.json", join(dir, "envelope.json"));
+      writeFileSync(
+        join(dir, "envelope.json"),
+        JSON.stringify({
+          lanes: ["feedback/", "research/", "design/"],
+          protected: [
+            {
+              pattern: "src/trading/fixture-ticket.ts",
+              why: "fixture — diffAware widening mechanism test only",
+              diffAware: true,
+            },
+          ],
+        }),
+      );
       writeFileSync(ticketPath, 'export type TicketOrderType = "market" | "limit" | "stop";\n');
       run("add", "-A");
       run("commit", "-m", "base");
@@ -439,7 +467,7 @@ describe("autonomous-lane envelope", () => {
       // "no change" (null) distinct from "unsafe". (Caught in review: contentAt's git-show read was
       // trimmed while the working-tree read via readFileSync was not, so an unchanged file's content
       // never compared equal and silently fell through to "safe" instead of being held.)
-      const unchanged = checkTemp("src/trading/order-ticket.ts", "--base", "main");
+      const unchanged = checkTemp("src/trading/fixture-ticket.ts", "--base", "main");
       expect(unchanged[0]).toMatchObject({ protected: true, additiveSafe: false, blocking: true });
 
       run("checkout", "-b", "feedback/1");
@@ -449,7 +477,7 @@ describe("autonomous-lane envelope", () => {
       );
       run("add", "-A");
       run("commit", "-m", "widen order type union — the #716 shape");
-      const widened = checkTemp("src/trading/order-ticket.ts", "--base", "main");
+      const widened = checkTemp("src/trading/fixture-ticket.ts", "--base", "main");
       expect(widened[0]).toMatchObject({ protected: true, additiveSafe: true, blocking: false });
       const widenedScan = scanTemp("--base", "main");
       expect(widenedScan).toContain("safe structural widening");

@@ -66,11 +66,24 @@ describe("behaviorVerifiedFacts — the pure gate", () => {
 });
 
 describe("behaviorVerified end to end, through the real CLI and the real envelope.json", () => {
-  // option-ticket.ts is the one diffAware rule shipped with a real `invariantSuite` registered
-  // (#850's property-test PoC). ENVELOPE_SUITE_RUNNER swaps the real `npx rstest run` for a
-  // trivial always-pass/always-fail command, so these stay hermetic and fast — no real test
-  // environment needed inside the temp fixture.
-  const suitePath = "tests/trading/option-ticket-invariants.property.spec.ts";
+  // A FIXTURE diffAware+invariantSuite rule, not a real business file (#928 opened
+  // option-ticket.ts, this suite's original target, since it carries no account-identity check —
+  // this mechanism test shouldn't be coupled to which real files happen to be protected today).
+  // ENVELOPE_SUITE_RUNNER swaps the real `npx rstest run` for a trivial always-pass/always-fail
+  // command, so these stay hermetic and fast — no real test environment needed inside the temp
+  // fixture, and the suite file's actual content never runs for real.
+  const suitePath = "tests/trading/fixture-ticket-invariants.property.spec.ts";
+  const fixtureEnvelope = {
+    lanes: ["feedback/", "research/", "design/"],
+    protected: [
+      {
+        pattern: "src/trading/fixture-ticket.ts",
+        why: "fixture — behaviorVerified mechanism test only",
+        diffAware: true,
+        invariantSuite: suitePath,
+      },
+    ],
+  };
 
   const setup = () => {
     const dir = mkdtempSync(join(tmpdir(), "envelope-behavior-verified-"));
@@ -80,7 +93,9 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
         encoding: "utf8",
         env: hermeticGitEnv(),
       });
-    const ticketPath = join(dir, "src/trading/option-ticket.ts");
+    const ticketPath = join(dir, "src/trading/fixture-ticket.ts");
+    const writeFixtureEnvelope = () =>
+      writeFileSync(join(dir, "envelope.json"), JSON.stringify(fixtureEnvelope));
     const checkTemp = (runnerCmd: string | undefined, ...args: string[]): Check[] =>
       JSON.parse(
         execFileSync(
@@ -95,7 +110,7 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
           },
         ),
       ) as Check[];
-    return { dir, run, ticketPath, checkTemp };
+    return { dir, run, ticketPath, checkTemp, writeFixtureEnvelope };
   };
 
   // A change to an EXISTING line — not a pure insertion, and not a union-widening shape either —
@@ -104,11 +119,11 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
     writeFileSync(ticketPath, "export const existing = 2; // modified, not a pure insertion\n");
 
   it("reports additiveSafe:true with reason 'behavior-verified' when the suite is untouched and passes", () => {
-    const { dir, run, ticketPath, checkTemp } = setup();
+    const { dir, run, ticketPath, checkTemp, writeFixtureEnvelope } = setup();
     try {
       run("init", "-b", "main");
       mkdirSync(join(dir, "src/trading"), { recursive: true });
-      cpSync("envelope.json", join(dir, "envelope.json"));
+      writeFixtureEnvelope();
       writeFileSync(ticketPath, "export const existing = 1;\n");
       run("add", "-A");
       run("commit", "-m", "base");
@@ -121,7 +136,7 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
       // A trivial always-succeeds command stands in for a real `npx rstest run`.
       const result = checkTemp(
         "node -e process.exit(0) --",
-        "src/trading/option-ticket.ts",
+        "src/trading/fixture-ticket.ts",
         "--base",
         "main",
       );
@@ -137,11 +152,11 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
   });
 
   it("stays gated when the suite is untouched but the runner fails", () => {
-    const { dir, run, ticketPath, checkTemp } = setup();
+    const { dir, run, ticketPath, checkTemp, writeFixtureEnvelope } = setup();
     try {
       run("init", "-b", "main");
       mkdirSync(join(dir, "src/trading"), { recursive: true });
-      cpSync("envelope.json", join(dir, "envelope.json"));
+      writeFixtureEnvelope();
       writeFileSync(ticketPath, "export const existing = 1;\n");
       run("add", "-A");
       run("commit", "-m", "base");
@@ -153,7 +168,7 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
 
       const result = checkTemp(
         "node -e process.exit(1) --",
-        "src/trading/option-ticket.ts",
+        "src/trading/fixture-ticket.ts",
         "--base",
         "main",
       );
@@ -165,12 +180,12 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
   });
 
   it("stays gated when the SAME diff also touches the invariant suite — a diff cannot loosen its own proof", () => {
-    const { dir, run, ticketPath, checkTemp } = setup();
+    const { dir, run, ticketPath, checkTemp, writeFixtureEnvelope } = setup();
     try {
       run("init", "-b", "main");
       mkdirSync(join(dir, "src/trading"), { recursive: true });
       mkdirSync(join(dir, "tests/trading"), { recursive: true });
-      cpSync("envelope.json", join(dir, "envelope.json"));
+      writeFixtureEnvelope();
       writeFileSync(ticketPath, "export const existing = 1;\n");
       writeFileSync(join(dir, suitePath), "describe('placeholder', () => {});\n");
       run("add", "-A");
@@ -186,7 +201,7 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
       // Even a runner that would always pass must not matter here — suiteUnchanged is false.
       const result = checkTemp(
         "node -e process.exit(0) --",
-        "src/trading/option-ticket.ts",
+        "src/trading/fixture-ticket.ts",
         "--base",
         "main",
       );
