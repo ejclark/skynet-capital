@@ -58,4 +58,29 @@ describe("withPlaybooks", () => {
     expect(composed.id).toBe("base");
     expect(composed.name).toBe("Base");
   });
+
+  it("threads an events feed through to an event-driven play in the roster", () => {
+    let seenEvents: unknown;
+    const eventPlay: Playbook = {
+      id: "TEST-EVT",
+      symbol: "MSFT",
+      thesis: "test",
+      evidence: "test",
+      size: { conservative: 0.01, standard: 0.02, aggressive: 0.03 },
+      desiredState: (_asOf, _cal, events) => {
+        seenEvents = events;
+        return "no-window";
+      },
+    };
+    const events = [{ symbol: "MSFT", detectedAt: "2026-08-16T14:50:00Z" }];
+    const composed = withPlaybooks(
+      base,
+      [{ playbook: eventPlay, mode: "standard" }],
+      calendar,
+      events,
+    );
+
+    composed.decide(ctx, flat);
+    expect(seenEvents).toBe(events);
+  });
 });

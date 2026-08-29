@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import { browseCollections, unshelved } from "../discovery/collections.js";
+import { outpostCatalog } from "../discovery/play-cards.js";
 import { allEvents } from "../domain/market-events.js";
 import { collectionsJsonView } from "../observatory/collections-json-view.js";
 import { learnJsonView } from "../observatory/learn-json-view.js";
@@ -44,6 +45,11 @@ export async function serveContentApi(
     const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
     const progress = id && config.progression ? await config.progression.view(id) : undefined;
     return json(learnJsonView(progress));
+  }
+  if (path === "/api/outpost") {
+    // The Outpost's card catalog (#809 slice 1) — derived from the registry on every call, so a
+    // new exported play is browsable the moment it lands with nothing here to update.
+    return json(outpostCatalog());
   }
   if (path === "/api/collections") {
     const collections = browseCollections();
