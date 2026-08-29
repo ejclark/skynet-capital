@@ -140,6 +140,7 @@ describe("the label registry", () => {
     // `idea`/`feedback` are the intake form's: upserting those would silently revert a recolor
     // made in the UI on the next push to main, with nothing anywhere saying why it changed back.
     expect(managed).toEqual([
+      "conflict-flagged",
       "curated",
       "event-research",
       "hold-merge",

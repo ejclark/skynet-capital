@@ -1,0 +1,12 @@
+{
+  "eventName": "workflow_dispatch",
+  "actor": "ejclark",
+  "event": { "inputs": { "command": "audit" } },
+  "deps": {
+    "conflictedPRs": [
+      { "title": "feat(server): durable per-participant ladder progress log", "number": 880 },
+      { "title": "docs: unrelated PR, also conflicted but already pinged", "number": 881 }
+    ],
+    "alreadyFlaggedPRs": [881]
+  }
+}
