@@ -1,0 +1,31 @@
+name: CLAUDE_CODE_OAUTH_TOKEN gate
+description: >-
+  Set armed=true/false depending on whether CLAUDE_CODE_OAUTH_TOKEN is present, warning with the
+  caller-supplied message when it's not (#914; the armed=/::warning:: shape was copy-pasted 3x in
+  postmaster.yml alone, again in moneypenny-repair.yml — one source of truth for the "no fallback
+  tier" doctrine).
+inputs:
+  token:
+    description: The token to check (caller passes secrets.CLAUDE_CODE_OAUTH_TOKEN)
+    required: true
+  blocked-message:
+    description: "The warning text emitted when the token is missing — names what's blocked"
+    required: true
+outputs:
+  armed:
+    description: "'true' when the token is present, 'false' otherwise"
+    value: ${{ steps.check.outputs.armed }}
+runs:
+  using: composite
+  steps:
+    - id: check
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        MSG: ${{ inputs.blocked-message }}
+      run: |
+        if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "armed=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::$MSG"
+        fi

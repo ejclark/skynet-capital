@@ -122,22 +122,19 @@ jobs:
       # No fallback tier (Eric, 2026-08-28 — the App is assumed reliable): unconfigured or
       # access-lost fails this job loudly instead of opening a repair PR under a weaker identity.
       - id: app-token
-        if: vars.APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@v3
+        uses: ./.github/actions/app-token
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - id: gate
-        env:
-          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          TARGET: ${{ needs.triage.outputs.issue != '' && format('issue #{0}', needs.triage.outputs.issue) || format('PR #{0}', github.event.inputs.pr_number) }}
-        run: |
-          if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "armed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — $TARGET carries the evidence but nothing will repair it."
-          fi
+        uses: ./.github/actions/oauth-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: >-
+            CLAUDE_CODE_OAUTH_TOKEN missing — ${{ needs.triage.outputs.issue != '' &&
+            format('issue #{0}', needs.triage.outputs.issue) || format('PR #{0}',
+            github.event.inputs.pr_number) }} carries the evidence but nothing will repair it.
 
       - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
         uses: anthropics/claude-code-action@v1

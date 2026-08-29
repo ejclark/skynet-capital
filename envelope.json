@@ -10,6 +10,10 @@
       "why": "workflow files — high blast radius, and a lane that can edit its own trigger has no envelope at all"
     },
     {
+      "pattern": ".github/actions/**",
+      "why": "composite actions the workflow files call into — same blast-radius reasoning as .github/workflows/** (#914)"
+    },
+    {
       "pattern": ".github/prompts/**",
       "why": "the lanes' own instructions — self-modification is the one thing an envelope must never permit"
     },

@@ -1,0 +1,25 @@
+name: App token
+description: >-
+  Mint a GitHub App installation token, skipping cleanly (empty token output) when no App is
+  configured — the one place `actions/create-github-app-token@v3` is called from (#914; was
+  copy-pasted 7x across 4 workflow files).
+inputs:
+  client-id:
+    description: The GitHub App client ID (caller passes vars.APP_CLIENT_ID)
+    required: true
+  private-key:
+    description: The GitHub App private key (caller passes secrets.APP_PRIVATE_KEY)
+    required: true
+outputs:
+  token:
+    description: The minted installation token, or empty when client-id is unset
+    value: ${{ steps.mint.outputs.token }}
+runs:
+  using: composite
+  steps:
+    - id: mint
+      if: inputs.client-id != ''
+      uses: actions/create-github-app-token@v3
+      with:
+        client-id: ${{ inputs.client-id }}
+        private-key: ${{ inputs.private-key }}

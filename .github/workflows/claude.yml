@@ -160,8 +160,7 @@ jobs:
       # tier (Eric, 2026-08-28 — the App is assumed reliable): if it isn't configured or loses
       # access, this job fails loudly rather than quietly opening a PR under a weaker identity.
       - id: app-token
-        if: vars.APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@v3
+        uses: ./.github/actions/app-token
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}

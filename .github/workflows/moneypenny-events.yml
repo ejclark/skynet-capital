@@ -138,8 +138,7 @@ jobs:
       # a client id is not sensitive, and `if:` cannot read secrets) so an unconfigured repo skips
       # this step instead of failing the run on a missing private key.
       - id: app-token
-        if: vars.APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@v3
+        uses: ./.github/actions/app-token
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -323,21 +322,18 @@ jobs:
       # Minted per-job (per matrix leg, here), same as `build` — the action revokes its token at
       # job end.
       - id: app-token
-        if: vars.APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@v3
+        uses: ./.github/actions/app-token
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - id: gate
-        env:
-          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "armed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — event ${{ matrix.event.id }} is due but nothing will research it."
-          fi
+        uses: ./.github/actions/oauth-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: >-
+            CLAUDE_CODE_OAUTH_TOKEN missing — event ${{ matrix.event.id }} is due but nothing will
+            research it.
 
       - if: steps.gate.outputs.armed == 'true'
         id: build
@@ -403,21 +399,19 @@ jobs:
           fetch-depth: 0
 
       - id: app-token
-        if: vars.APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@v3
+        uses: ./.github/actions/app-token
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - id: gate
-        env:
-          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "armed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label."
-          fi
+        uses: ./.github/actions/oauth-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: >-
+            CLAUDE_CODE_OAUTH_TOKEN missing — feedback issue #${{ needs.route.outputs.feedback_issue }}
+            is claimed but nothing will build it. Add the secret, then run release-claim for
+            feedback-${{ needs.route.outputs.feedback_issue }} and re-apply the label.
 
       - if: steps.gate.outputs.armed == 'true'
         uses: anthropics/claude-code-action@v1
@@ -472,21 +466,19 @@ jobs:
           fetch-depth: 0
 
       - id: app-token
-        if: vars.APP_CLIENT_ID != ''
-        uses: actions/create-github-app-token@v3
+        uses: ./.github/actions/app-token
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - id: gate
-        env:
-          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "armed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is claimed but nothing will build it. Add the secret, then run release-claim for plan-${{ needs.route.outputs.plan_issue }} and comment ready again."
-          fi
+        uses: ./.github/actions/oauth-gate
+        with:
+          token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          blocked-message: >-
+            CLAUDE_CODE_OAUTH_TOKEN missing — plan issue #${{ needs.route.outputs.plan_issue }} is
+            claimed but nothing will build it. Add the secret, then run release-claim for
+            plan-${{ needs.route.outputs.plan_issue }} and comment ready again.
 
       - if: steps.gate.outputs.armed == 'true'
         uses: anthropics/claude-code-action@v1
