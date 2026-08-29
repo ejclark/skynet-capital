@@ -210,6 +210,7 @@ async function main(): Promise<void> {
     hub,
     readFills: (id) => activity.list(id),
     readTags: (id) => orderAudit.list(id),
+    readFeedback: (id) => feedbackLog.list(id),
   });
 
   createDashboardServer({

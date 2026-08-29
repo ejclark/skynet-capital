@@ -1,9 +1,10 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useState } from "react";
 import {
   type CheckGate,
   type CheckVerdict,
   claimMilestones,
+  type EngagementCelebration,
   type GradedAnswer,
   type JourneyCelebration,
   submitCheckAnswers,
@@ -19,21 +20,17 @@ import {
  * market outcome, and green carries market meaning everywhere else on the desk.
  */
 
-/** One celebratory panel for every unclaimed earn, with a single Claim. */
-export function UnlockBanner({
-  celebrations,
-  onClaimed,
-}: {
-  readonly celebrations: readonly JourneyCelebration[];
-  readonly onClaimed: () => void;
-}): ReactElement {
+/** The claim mechanics every unlock banner shares: bank the ids, refuse silently to swallow an
+ *  error, refetch on success. One hook so `UnlockBanner` and `EngagementUnlockBanner` (#567)
+ *  don't each carry their own copy of the same busy/error dance. */
+function useClaim(ids: readonly string[], onClaimed: () => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const claim = async () => {
     setBusy(true);
     setError(undefined);
     try {
-      const answer = await claimMilestones(celebrations.map((c) => c.milestoneId));
+      const answer = await claimMilestones(ids);
       if (answer.ok) onClaimed();
       else setError(answer.error);
     } catch (err) {
@@ -42,26 +39,33 @@ export function UnlockBanner({
       setBusy(false);
     }
   };
+  return { busy, error, claim };
+}
+
+/** The shared shell every unlock banner renders into — the eyebrow, the lines, the one Claim.
+ *  Both trade and engagement earns style on the ACCENT teal, never the P/L green: an unlock is
+ *  an achievement, not a market outcome. */
+function UnlockBannerShell({
+  eyebrow,
+  lines,
+  ids,
+  onClaimed,
+}: {
+  readonly eyebrow: string;
+  readonly lines: readonly ReactNode[];
+  readonly ids: readonly string[];
+  readonly onClaimed: () => void;
+}): ReactElement {
+  const { busy, error, claim } = useClaim(ids, onClaimed);
   return (
     <section className="unlock-banner" aria-live="polite">
       <div className="unlock-rows">
-        <span className="unlock-eyebrow">🎉 Milestone unlocked</span>
-        {celebrations.map((c) => (
-          <span key={c.milestoneId} className="unlock-line">
-            Course <b>{c.code}</b> complete — {c.name}, filled ✓ ·{" "}
-            {c.opened ? (
-              <>
-                Course{" "}
-                <b>
-                  {c.opened.code} — {c.opened.name}
-                </b>{" "}
-                is now open.
-              </>
-            ) : (
-              <>
-                That was the top rung — <b>the whole ladder is yours</b>.
-              </>
-            )}
+        <span className="unlock-eyebrow">{eyebrow}</span>
+        {lines.map((line, i) => (
+          // Order is stable and unchanging for the life of one banner — index keys are safe here.
+          // biome-ignore lint/suspicious/noArrayIndexKey: stable list, no reorder/insert mid-life
+          <span key={i} className="unlock-line">
+            {line}
           </span>
         ))}
         {error ? <span className="unlock-err">{error}</span> : null}
@@ -75,6 +79,64 @@ export function UnlockBanner({
         {busy ? "Claiming…" : "Claim 🎉"}
       </button>
     </section>
+  );
+}
+
+/** One celebratory panel for every unclaimed trade-ladder earn, with a single Claim. */
+export function UnlockBanner({
+  celebrations,
+  onClaimed,
+}: {
+  readonly celebrations: readonly JourneyCelebration[];
+  readonly onClaimed: () => void;
+}): ReactElement {
+  return (
+    <UnlockBannerShell
+      eyebrow="🎉 Milestone unlocked"
+      ids={celebrations.map((c) => c.milestoneId)}
+      onClaimed={onClaimed}
+      lines={celebrations.map((c) => (
+        <>
+          Course <b>{c.code}</b> complete — {c.name}, filled ✓ ·{" "}
+          {c.opened ? (
+            <>
+              Course{" "}
+              <b>
+                {c.opened.code} — {c.opened.name}
+              </b>{" "}
+              is now open.
+            </>
+          ) : (
+            <>
+              That was the top rung — <b>the whole ladder is yours</b>.
+            </>
+          )}
+        </>
+      ))}
+    />
+  );
+}
+
+/** One celebratory panel for every unclaimed engagement earn (#567) — same fanfare treatment as
+ *  a trade unlock, no ladder code or "next rung" framing since it isn't a trade. */
+export function EngagementUnlockBanner({
+  celebrations,
+  onClaimed,
+}: {
+  readonly celebrations: readonly EngagementCelebration[];
+  readonly onClaimed: () => void;
+}): ReactElement {
+  return (
+    <UnlockBannerShell
+      eyebrow="🎉 Feedback milestone"
+      ids={celebrations.map((c) => c.milestoneId)}
+      onClaimed={onClaimed}
+      lines={celebrations.map((c) => (
+        <>
+          <b>{c.title}</b> ✓ · <b>+{c.points} pts</b>
+        </>
+      ))}
+    />
   );
 }
 

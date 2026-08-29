@@ -54,6 +54,8 @@ const progressionView: ParticipantProgression = {
   unlockedLevels: new Set(),
   celebrating: [],
   pendingChecks: [],
+  engagementEarned: [],
+  engagementCelebrating: [],
 };
 
 function fakeProgression(view = progressionView): ProgressionService {

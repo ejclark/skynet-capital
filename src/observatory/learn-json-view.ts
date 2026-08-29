@@ -1,6 +1,7 @@
 import { passingCount } from "../domain/comprehension.js";
 import { checkFor } from "../domain/comprehension-checks.js";
 import { COURSES, totalPoints } from "../domain/curriculum.js";
+import { type EarnedEngagement, engagementMilestone } from "../domain/engagement.js";
 import { type EarnedMilestone, ladderNeighbor, milestoneForCode } from "../domain/progression.js";
 import type { AcademyProgress } from "../server/progression-service.js";
 
@@ -69,6 +70,13 @@ interface CheckGateView {
   readonly questions: readonly CheckQuestionView[];
 }
 
+/** One unclaimed engagement earn (#567) — no ladder code, no next rung: it isn't a trade. */
+interface EngagementCelebrationView {
+  readonly milestoneId: string;
+  readonly title: string;
+  readonly points: number;
+}
+
 export interface LearnView {
   /** False when the session resolves to no account — the journey shows from the start. */
   readonly linked: boolean;
@@ -78,10 +86,22 @@ export interface LearnView {
   readonly courses: readonly CourseView[];
   /** Fresh earns awaiting their one-time celebration — the shell renders the fanfare. */
   readonly celebrating: readonly CelebrationView[];
+  /** Fresh engagement earns (#567) awaiting their one-time celebration — same fanfare
+   *  treatment, a separate track from the trade ladder. */
+  readonly engagementCelebrating: readonly EngagementCelebrationView[];
   /** How many earns still wait behind a comprehension check (the gate below included). */
   readonly pendingChecks: number;
   /** The first gated earn's check, when one is waiting — questions only, never the key. */
   readonly check?: CheckGateView;
+}
+
+function engagementCelebrationView(m: EarnedEngagement): EngagementCelebrationView {
+  const milestone = engagementMilestone(m.milestoneId);
+  return {
+    milestoneId: m.milestoneId,
+    title: milestone?.title ?? "Milestone",
+    points: milestone?.points ?? 0,
+  };
 }
 
 function celebrationView(m: EarnedMilestone): CelebrationView {
@@ -147,6 +167,7 @@ export function learnJsonView(progress?: AcademyProgress): LearnView {
       };
     }),
     celebrating: (progress?.celebrating ?? []).map(celebrationView),
+    engagementCelebrating: (progress?.engagementCelebrating ?? []).map(engagementCelebrationView),
     pendingChecks: progress?.pendingChecks?.length ?? 0,
     ...(gate ? { check: gate } : {}),
   };
