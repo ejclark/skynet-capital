@@ -47,7 +47,7 @@ it. Prevention ranks, best first:
   ("six critical prints + FOMC/CPI hit daily cadence at once… ~20+ owed sessions/day") without
   anyone connecting it to the turn-budget-is-shared design until it actually happened.
 - **PREVENTION:** gate. `build-events` is now a `strategy: matrix` job, one leg per due event
-  (`.github/workflows/postmaster.yml`), each with its own `--max-turns 60` sized for a single
+  (`.github/workflows/moneypenny-events.yml`), each with its own `--max-turns 60` sized for a single
   event's work instead of a whole batch's. This makes the guard *tighter*, not looser — a genuinely
   stuck session on one event is now caught inside a smaller window — while removing the failure
   mode entirely: no batch is ever large enough to share a budget several events race against.
@@ -74,7 +74,7 @@ it. Prevention ranks, best first:
   events fired (a duplicate label-apply doubled the usual three) and no claim; #732 stalled the
   next submission with the usual four labels. Neither failed loudly — the Actions tab showed a
   pile of runs, most reporting `cancelled` with zero jobs, and the one thing anyone would check
-  (`postmaster.yml`'s own job status) read "success" on the runs that did execute, because the
+  (`moneypenny-events.yml`'s own job status) read "success" on the runs that did execute, because the
   `if:` condition they evaluated was simply false. Detection was manual both times: someone asked
   "why isn't this being worked" and had to trace it from workflow-run history, not from any signal
   the system raised on its own.
@@ -83,17 +83,17 @@ it. Prevention ranks, best first:
   creation (see that file's own header comment, which already documents the *first* half of this
   bug class — labels baked into the create call never fire `labeled` at all). GitHub answers a
   multi-label POST by firing one `labeled` webhook PER label, all in the same instant. All of them
-  shared postmaster.yml's one concurrency group per issue, and GitHub's queue keeps only the
+  shared moneypenny-events.yml's one concurrency group per issue, and GitHub's queue keeps only the
   LATEST pending run per group when several arrive at once — it does not queue everything
   (`cancel-in-progress: false` only protects a run already RUNNING from being cancelled; it says
   nothing about how many can be PENDING, which is capped at one). A same-second burst of N events
   therefore collapses to at most two survivors — whichever happened to be running plus whichever
   was queued last — and which N-2 events get dropped is an artifact of webhook delivery order, not
   anything the workflow's own logic controls. The one step that actually claims the issue
-  (`node scripts/postmaster.mjs --claim-feedback`) was gated on `github.event.label.name ==
+  (`node scripts/moneypenny.mjs --claim-feedback`) was gated on `github.event.label.name ==
   'feedback'` specifically, so the bug only manifests as a *miss* when the `feedback` event is the
   one that loses the race — which is exactly what happened both times.
-- **PREVENTION:** gate. `postmaster.yml`'s concurrency `group:` now includes
+- **PREVENTION:** gate. `moneypenny-events.yml`'s concurrency `group:` now includes
   `${{ github.event.label.name || '' }}`, so each label on an issue gets its own lane and sibling
   labels can never cancel each other's run — the claim step's own `if:` is unchanged and correct
   once the run it depends on is guaranteed to happen. A repeat of the *same* label still collides
@@ -425,7 +425,7 @@ it. Prevention ranks, best first:
   event research and stall audit with it. The call is only exercised on a runner with a token, so
   no local check and no spec touched it; `npm test` was green on the branch that shipped it.
 - **PREVENTION:** gate. `tests/arch/gh-json-fields.spec.ts` reads every `--json` field list out of
-  `scripts/postmaster.mjs` and checks it against the allow-list `gh` itself printed in the failure,
+  `scripts/moneypenny.mjs` and checks it against the allow-list `gh` itself printed in the failure,
   offline and with no token. Verified in both directions: it passes on the corrected source and
   names `closedByPullRequests` when handed the broken form.
 - **SIDE QUESTS:** the medic could not report this one — its run was cancelled by the next push,
@@ -458,7 +458,7 @@ it. Prevention ranks, best first:
   open; anything changing consumption per use or run frequency is Eric's, however small the diff.
 - **SIDE QUESTS:** the inverse error, found by applying the same rule — the postmaster's model tier
   was economizing on a FLAT-RATE lane, sending short asks to Haiku where thrift buys nothing and
-  costs build quality. Retired in the same change; `ci-medic.yml` likewise.
+  costs build quality. Retired in the same change; `moneypenny-repair.yml` likewise.
 ### The same zero-job outage, on the medic itself, one commit after its gate shipped
 
 - **SHA:** e40638b   **DATE:** 2026-08-22   **STATUS:** closed
@@ -466,7 +466,7 @@ it. Prevention ranks, best first:
   landed in the window before the fix. One incident, two run shas; the ledger names both so the
   incident scan can close them together.
 - **SIGNAL:** the merge of #477 produced a healthy `Postmaster` run **and** a red run named
-  `.github/workflows/ci-medic.yml` — GitHub's tell for a file it cannot parse, spotted in the same
+  `.github/workflows/moneypenny-repair.yml` — GitHub's tell for a file it cannot parse, spotted in the same
   post-merge check that confirmed the postmaster had recovered. ~1 minute, only because someone was
   already looking at that list.
 - **ROOT CAUSE:** a pre-merge amendment removed the medic's `workflows:` filter, on the sound
@@ -486,11 +486,11 @@ it. Prevention ranks, best first:
 - **SIDE QUESTS:** none new — this is the third face of the 2026-08-22 workflow-fragility theme
   already banked above.
 
-### A duplicated job key made postmaster.yml unparseable, and the run reported zero jobs
+### A duplicated job key made moneypenny-events.yml unparseable, and the run reported zero jobs
 
 - **SHA:** 4235123   **DATE:** 2026-08-22   **STATUS:** closed
 - **SIGNAL:** a re-label of issue #475 produced no Postmaster run at all. Working backwards from
-  that silence found two red runs on `main` whose *name* was `.github/workflows/postmaster.yml`
+  that silence found two red runs on `main` whose *name* was `.github/workflows/moneypenny-events.yml`
   rather than `Postmaster` — GitHub's tell for a file it could not parse. ~7 minutes, and only
   because someone was already looking; no notification fires for a workflow that never starts.
 - **ROOT CAUSE:** a scripted edit computed its deletion range as `s[:start] + s[end:]` where `end`
@@ -522,7 +522,7 @@ it. Prevention ranks, best first:
   automatic pr generation." Zero automated signal: run 32545818804 failed at 02:17, the issue kept
   its `feedback` label and its claim lease, and the only eye on red runs (`incident-scan`) reports
   at the *next* test run and asks for a lesson, never a repair. Detection was a human, hours later.
-- **ROOT CAUSE:** the model-tier heuristic in `postmaster.yml` built its reason string as
+- **ROOT CAUSE:** the model-tier heuristic in `moneypenny-events.yml` built its reason string as
   `"…$(printf '%s' "$BODY" | grep -q '```' && echo ", includes a code block")"`. Under
   `set -euo pipefail` a command substitution whose `&&` short-circuits exits 1, and an assignment
   taking that status aborts the step. So every feedback issue **over 600 chars with no code fence**
@@ -531,10 +531,10 @@ it. Prevention ranks, best first:
   chars, no fence). Worse than a loud failure: the claim lease was already taken, so the issue read
   as claimed-and-building while nothing built it.
 - **PREVENTION:** gate + script + doctrine. (1) The decision moved out of the workflow into
-  `modelTier()` in `scripts/postmaster.mjs` — pure, and specced across all three branches including
+  `modelTier()` in `scripts/moneypenny.mjs` — pure, and specced across all three branches including
   the exact 1,410-char body (`tests/scripts/model-tier.spec.ts`). (2) The claim step is now one
   specced call (`--claim-feedback`), deleting the last inline `node -e` + `jq` bash in that lane.
-  (3) The **CI Medic** lane (`.github/workflows/ci-medic.yml`, `scripts/ci-medic.mjs`) turns a red
+  (3) The **CI Medic** lane (`.github/workflows/moneypenny-repair.yml`, `scripts/moneypenny-repair.mjs`) turns a red
   run on `main` into a capsule issue plus a dispatched repair session, so the *next* silent failure
   is noticed by the system rather than by Eric.
 - **SIDE QUESTS:** the claim lease has no release-on-failure path — a job that dies after claiming
@@ -926,10 +926,10 @@ it. Prevention ranks, best first:
   masking it**: the poller was assumed to be the belt to the event path's braces, so its silence
   read as "nothing due" rather than "the only path is dead". A backup that quietly carries the
   load hides the failure of the thing it backs up.
-- **PREVENTION:** structural, not a note — the hop is **deleted**. `postmaster.yml` scans and
+- **PREVENTION:** structural, not a note — the hop is **deleted**. `moneypenny-events.yml` scans and
   builds in the same run, so no critical-path step depends on one workflow's write emitting an
   event another workflow hears. The issue still opens, but it is now explicitly a **receipt, never
-  a trigger**, and both `.github/workflows/postmaster.yml` and `docs/HANDOFFS.md` say so at the
+  a trigger**, and both `.github/workflows/moneypenny-events.yml` and `docs/HANDOFFS.md` say so at the
   top, in the place a future session editing the trigger block will read. Claiming moved to an
   atomic `POST /git/refs` lease visible in `git ls-remote` within seconds, so "did anything pick
   this up?" is now answerable in one command instead of inferred from silence. Measured after:
@@ -1085,7 +1085,7 @@ it. Prevention ranks, best first:
   silently never created. The comment directly above the code ("GitHub auto-creates a label the
   first time it is applied") describes the *intended* self-healing behavior; the missing flag is
   exactly why it didn't happen.
-- **PREVENTION:** gate/script — `scripts/postmaster.mjs`'s `ensureLabel` now passes `--fail` on
+- **PREVENTION:** gate/script — `scripts/moneypenny.mjs`'s `ensureLabel` now passes `--fail` on
   both the PATCH and the POST, so a real HTTP failure (including "doesn't exist yet") throws and
   reaches the fallback, while the intentionally-swallowed "already exists" 422 on the POST still
   degrades silently exactly as designed. Fixed in this PR, not deferred.
@@ -1119,8 +1119,8 @@ it. Prevention ranks, best first:
   `push` among its supported GitHub event types and aborts before doing any research. This is a
   genuinely new defect (not a recurrence of the identity-severance class above) — the lane simply
   had never fired on a real push before this window.
-- **PREVENTION:** gate/script — `.github/workflows/postmaster.yml`'s `route` job now re-fires
-  itself via `gh workflow run postmaster.yml -f command=scan` when a push turns up due events,
+- **PREVENTION:** gate/script — `.github/workflows/moneypenny-events.yml`'s `route` job now re-fires
+  itself via `gh workflow run moneypenny-events.yml -f command=scan` when a push turns up due events,
   instead of letting `build-events` invoke the action directly under `push`; `build-events`'s `if:`
   now requires `github.event_name == 'workflow_dispatch'`, so it only ever runs on that
   re-dispatched pass, which `claude-code-action@v1` does support. **This one WAS self-authorized to
@@ -1199,7 +1199,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SHA:** fafbbf1   **DATE:** 2026-08-26   **STATUS:** closed
 - **SIGNAL:** ten consecutive `Postmaster` push runs failed inside 45 minutes (12:31–13:13), all the
   identical one-liner: `Error: gh issue list (shipped) failed: GraphQL: API rate limit already
-  exceeded for user ID 3472134`, thrown from `gatherDeps` in `scripts/postmaster.mjs`. Detection lag
+  exceeded for user ID 3472134`, thrown from `gatherDeps` in `scripts/moneypenny.mjs`. Detection lag
   was effectively zero — each run failed loudly on its own — but nobody connected the ten reds into
   one incident and banked the retro until this burn-down (#781) found them.
 - **ROOT CAUSE:** `gatherDeps`'s `shippedSweep` ran a GraphQL `gh issue list` with each issue's
@@ -1210,11 +1210,11 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   rolled over — including `ee741ea` itself, the fix commit, which landed mid-burst and still hit the
   exhausted budget on its own push (a code fix cannot un-spend an already-drained hourly quota).
 - **PREVENTION:** already landed, found already fixed rather than built here. `ee741ea` (2026-08-26)
-  cut the query in two ways, both now in `scripts/postmaster.mjs`'s `gatherDeps`: (1) a cheap REST
+  cut the query in two ways, both now in `scripts/moneypenny.mjs`'s `gatherDeps`: (1) a cheap REST
   existence check (`ghRest`, the plentiful core bucket) gates whether the expensive GraphQL sweep
   runs at all — most pushes have nothing labeled `feedback`/`event-research` open and now pay
   nothing; (2) the open-issue-titles read moved off a second GraphQL query onto REST entirely. The
-  code comment at `scripts/postmaster.mjs:301-309` narrates this exact incident inline. No further
+  code comment at `scripts/moneypenny.mjs:301-309` narrates this exact incident inline. No further
   code change needed; this entry exists to close the paper trail the fix never got.
 - **SIDE QUESTS:** a burst this size can still exhaust the budget again on a busier day — the fix
   lowers the cost per push, not the ceiling itself. Worth a follow-up: does GitHub expose remaining
@@ -1244,7 +1244,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   loop, so one un-permitted comment threw past every later intent in the same push, including intents
   that had nothing to do with commenting.
 - **PREVENTION:** already landed, found already fixed rather than built here. `runIntents` in
-  `scripts/postmaster.mjs` (see its docstring, dated 2026-08-26) now wraps each intent in its own
+  `scripts/moneypenny.mjs` (see its docstring, dated 2026-08-26) now wraps each intent in its own
   try/catch: a failed intent lands in the receipt by name with an `::error::` annotation, the run
   still fails honestly, but every other intent that push still executes. A comment permission gap is
   still a real failure — closing it needs the App/PAT install `e122ee8` already named as Eric's step
@@ -1274,7 +1274,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   legitimate bot-to-bot lanes (`claude[bot]` building a feedback issue it was assigned, or
   `github-actions[bot]` re-dispatching the router's own tick).
 - **PREVENTION:** already landed, found already fixed rather than built here. `.github/workflows/
-  postmaster.yml` now sets `allowed_bots: "github-actions"` on the research-due-events step and
+  moneypenny-events.yml` now sets `allowed_bots: "github-actions"` on the research-due-events step and
   `allowed_bots: "github-actions,claude"` on the build-feedback step (2026-08-28, commit `5ba651e`),
   each named explicitly rather than `'*'` per its own inline comment. This entry exists to close the
   paper trail the fix never got; issue #820 (filed during this burn-down before the fix was found in
@@ -1300,7 +1300,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   cause here without reading the full transcript would be inventing a plausible-sounding story this
   evidence doesn't support — per this repo's own retro standard, that is worse than no lesson.
 - **PREVENTION:** ledger-only, deliberately not mechanized here. The mechanical lever (raising
-  `--max-turns` in `.github/workflows/postmaster.yml`) is a workflow-file edit — envelope-protected,
+  `--max-turns` in `.github/workflows/moneypenny-events.yml`) is a workflow-file edit — envelope-protected,
   Eric's call — and would be the wrong reflex regardless: a run already burning $11.50 and 100 turns
   without finishing may be a prompt/scope problem a bigger cap only makes more expensive to observe.
 - **SIDE QUESTS:** worth reading a full transcript of one of these runs to see whether it was
@@ -1423,7 +1423,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SHA:** c27600e   **DATE:** 2026-08-29   **STATUS:** closed
 - **SIGNAL:** 5 failed runs on `main` in one afternoon, surfaced by `incident-scan.mjs` as two
   apparently-separate classes — 2 labeled `Claude` (`.github/workflows/claude.yml`, PR-comment
-  review sessions on #869 and #724) and 3 labeled `Postmaster` (`.github/workflows/postmaster.yml`'s
+  review sessions on #869 and #724) and 3 labeled `Postmaster` (`.github/workflows/moneypenny-events.yml`'s
   per-event research matrix, one leg failing in each of 3 consecutive dispatches). Pulling the
   actual job logs (not just the run titles `incident-scan.mjs` prints, which are a display-title
   echo of the triggering issue/PR and say nothing about *why* the run failed) showed all 5 are one
@@ -1446,7 +1446,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   is_error: false` — real work, correctly done — 3 to 7 turns past the cap.
 - **ROOT CAUSE:** two independent things stacked. (1) Both lanes' turn caps were *already* tuned
   down recently on the stated belief they had comfortable headroom — `claude.yml`'s 50-turn cap
-  (2026-08-28: "generous enough that a real build never hits it") and `postmaster.yml`'s per-event
+  (2026-08-28: "generous enough that a real build never hits it") and `moneypenny-events.yml`'s per-event
   60-turn cap (2026-08-28, after matrixing split the old batch-of-4 100-turn budget: "60 is ~2x that
   ceiling, real headroom"). Both estimates were wrong by a comfortable-looking margin that turned
   out not to hold on the very next day's real traffic. (2) `claude-code-action@v1` checks final
