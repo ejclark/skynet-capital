@@ -34,6 +34,13 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned
   # milestones are NOT here — they re-derive from the activity + order-audit ledgers on read.
   SKYNET_PROGRESSION_FILE = "/data/progression.json"
+  # Ladder-progress log (#469 slice 2, ladder-progress-log.ts) — durable per-participant record of
+  # a graduated-ladder milestone completing (an OTM expiry, a first realized profit) once a
+  # detector proves it. Unlike SKYNET_PROGRESSION_FILE above, a row here IS the earned truth, not a
+  # claim re-derivable from another ledger — losing it on deploy would silently un-graduate a
+  # member, so this is pinned rather than left EPHEMERAL the way the community track's claim-state
+  # file is.
+  SKYNET_LADDER_PROGRESS_DIR = "/data/ladder-progress"
   # Account playbook subscriptions (issue #885, subscription-store.ts) — which playbooks an
   # account subscribed to and the capital reserved per subscription.
   SKYNET_SUBSCRIPTIONS_FILE = "/data/playbook-subscriptions.json"
