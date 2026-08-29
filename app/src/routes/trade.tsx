@@ -5,6 +5,7 @@ import { useId } from "react";
 import { fetchDesk } from "../live/desk";
 import { fetchPlays, type PlayInfo } from "../live/options";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { OptionGate } from "../shell/option-gate";
 import { OptionPositionsCard } from "../shell/option-positions";
@@ -75,6 +76,7 @@ function DeskTicket({ desk, code }: { readonly desk: string; readonly code: stri
       {deskData.data ? (
         <OptionPositionsCard deskId={desk} positions={deskData.data.desk.positions} />
       ) : null}
+      <DraftOrderBuilder deskId={desk} />
     </>
   );
 }
