@@ -258,4 +258,50 @@ describe("AlpacaOptionsClient", () => {
     );
     expect(await priced.getUnderlyingPrice("MSFT")).toBe(428.6);
   });
+
+  describe("getOptionLifecycleActivities (#468 criterion 6)", () => {
+    it("reads the four lifecycle activity types, newest first, from the trading transport", async () => {
+      const log: Array<{ path: string; body?: unknown }> = [];
+      const rows = [
+        {
+          id: "a1",
+          activity_type: "OPEXP",
+          symbol: "MSFT260918P00420000",
+          qty: "2",
+          date: "2026-09-19",
+        },
+      ];
+      const client = new AlpacaOptionsClient(
+        fakeTransport({ "/v2/account/activities": rows }, log),
+      );
+      expect(await client.getOptionLifecycleActivities()).toEqual(rows);
+      expect(log[0]?.path).toContain("activity_types=OPEXP%2COPASN%2COPEXC%2COPTRD");
+    });
+
+    it("passes a cursor as page_token when given one", async () => {
+      const log: Array<{ path: string; body?: unknown }> = [];
+      const client = new AlpacaOptionsClient(fakeTransport({ "/v2/account/activities": [] }, log));
+      await client.getOptionLifecycleActivities("act-1");
+      expect(log[0]?.path).toContain("page_token=act-1");
+    });
+
+    it("fails soft to an empty array on a non-2xx response or a malformed body", async () => {
+      const errClient = new AlpacaOptionsClient(fakeTransport({}));
+      expect(await errClient.getOptionLifecycleActivities()).toEqual([]);
+      const badShapeClient = new AlpacaOptionsClient(
+        fakeTransport({ "/v2/account/activities": { not: "an array" } }),
+      );
+      expect(await badShapeClient.getOptionLifecycleActivities()).toEqual([]);
+    });
+
+    it("fails soft when the transport itself throws", async () => {
+      const throwing: AlpacaTradingTransport = {
+        get: () => Promise.reject(new Error("network down")),
+        post: () => Promise.reject(new Error("unused")),
+        delete: () => Promise.reject(new Error("unused")),
+      };
+      const client = new AlpacaOptionsClient(throwing);
+      expect(await client.getOptionLifecycleActivities()).toEqual([]);
+    });
+  });
 });

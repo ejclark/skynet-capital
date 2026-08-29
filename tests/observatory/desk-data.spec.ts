@@ -1,6 +1,7 @@
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import {
   deskLedger,
+  fillsFrom,
   formatPctOrDash,
   formatPrice,
   formatRatio,
@@ -166,5 +167,75 @@ describe("reviewLine", () => {
 
   it("carries an optional class onto the value span", () => {
     expect(reviewLine("Side", "sell", "neg")).toContain('<span class="neg">sell</span>');
+  });
+});
+
+describe("fillsFrom (lifecycle events, #468 criterion 6)", () => {
+  it("marks an 'expired worthless' or 'assigned' lifecycle row synthetic", () => {
+    const fills = fillsFrom([
+      {
+        symbol: "MSFT260918P00420000",
+        side: "sell",
+        quantity: 1,
+        filledQuantity: 1,
+        price: 0,
+        status: "expired worthless",
+        at: "t1",
+      },
+      {
+        symbol: "AAPL261218C00150000",
+        side: "sell",
+        quantity: 1,
+        filledQuantity: 1,
+        price: 0,
+        status: "assigned",
+        at: "t2",
+      },
+    ]);
+    expect(fills).toEqual([
+      {
+        symbol: "MSFT260918P00420000",
+        side: "sell",
+        quantity: 1,
+        price: 0,
+        at: "t1",
+        synthetic: true,
+      },
+      {
+        symbol: "AAPL261218C00150000",
+        side: "sell",
+        quantity: 1,
+        price: 0,
+        at: "t2",
+        synthetic: true,
+      },
+    ]);
+  });
+
+  it("excludes 'exercised' and 'option settlement' rows from round-trip math entirely", () => {
+    // Exercise converts a long option's value into stock — a $0 close would read as a wipeout
+    // rather than the value transfer it actually is. OPTRD's wire shape isn't confirmed yet.
+    // Both stay OUT of fillsFrom regardless of side/price, never just synthetic.
+    const fills = fillsFrom([
+      {
+        symbol: "AAPL261218C00150000",
+        side: "sell",
+        quantity: 1,
+        filledQuantity: 1,
+        price: 0,
+        status: "exercised",
+        at: "t1",
+      },
+      {
+        symbol: "AAPL",
+        side: "buy",
+        quantity: 100,
+        filledQuantity: 100,
+        price: 150,
+        status: "option settlement",
+        at: "t2",
+      },
+    ]);
+    expect(fills).toEqual([]);
   });
 });

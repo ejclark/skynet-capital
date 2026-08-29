@@ -101,6 +101,36 @@ describe("previewOptionOrder — the discipline rules", () => {
     expect(preview.warnings.join(" ")).toContain("Market orders on options");
   });
 
+  it("refuses a play the account's options level doesn't cover (#468 criterion 7)", () => {
+    // 301/302 need level 2; the account here is only approved to level 1.
+    const preview = previewOptionOrder(
+      { ...csp, code: "302", contracts: 1, strike: 430, limitPrice: 8 },
+      context({ optionsTradingLevel: 1 }),
+    );
+    expect(preview.ok).toBe(false);
+    expect(preview.refusals.join(" ")).toContain("options trading level (1)");
+    expect(preview.refusals.join(" ")).toContain("needs level 2");
+  });
+
+  it("allows a play the account's level covers, and a higher level than required", () => {
+    const atLevel = previewOptionOrder(csp, context({ optionsTradingLevel: 1 }));
+    expect(atLevel.ok).toBe(true);
+    const aboveLevel = previewOptionOrder(
+      { ...csp, code: "302", contracts: 1, strike: 430, limitPrice: 8 },
+      context({ optionsTradingLevel: 3 }),
+    );
+    expect(aboveLevel.ok).toBe(true);
+  });
+
+  it("skips the level check entirely when the level hasn't been read — never a false refusal", () => {
+    // No `optionsTradingLevel` set at all (the browser-side preview before a live re-fetch).
+    const preview = previewOptionOrder(
+      { ...csp, code: "302", contracts: 1, strike: 430, limitPrice: 8 },
+      context(),
+    );
+    expect(preview.ok).toBe(true);
+  });
+
   it("refuses when trading is off, when not self, and on malformed shape", () => {
     expect(previewOptionOrder(csp, context({ tradingEnabled: false })).ok).toBe(false);
     expect(previewOptionOrder(csp, context({ isSelf: false })).ok).toBe(false);

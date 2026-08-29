@@ -1,3 +1,4 @@
+import { LIFECYCLE_STATUS } from "../trading/option-lifecycle.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import type { TicketContext } from "../trading/order-ticket.js";
 import { matchRoundTrips, type RoundTripLedger, type TradeFill } from "../trading/round-trips.js";
@@ -27,9 +28,38 @@ import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.j
  * Without it a closed option trade reported 1/100th of its true P/L, and the positions tab and the
  * history tab contradicted each other about the same trade.
  */
-function fillsFrom(activity: readonly ActivityView[] | undefined): TradeFill[] {
+/**
+ * Lifecycle statuses (#468 criterion 6) that must never enter the FIFO round-trip matcher at all,
+ * regardless of side/quantity: `OPEXC` (exercise converts a long option's value into stock — a
+ * $0 close would misreport a value transfer as a wipeout) and `OPTRD` (a real settlement trade,
+ * but this app hasn't confirmed its wire shape against a live account — see
+ * `option-lifecycle.ts`'s module doc). Both still show up in the raw order-activity ledger with
+ * their plain-language status; they simply carry no round-trip P/L.
+ */
+const LIFECYCLE_INFO_ONLY: ReadonlySet<string> = new Set([
+  LIFECYCLE_STATUS.OPEXC,
+  LIFECYCLE_STATUS.OPTRD,
+]);
+
+/**
+ * Lifecycle statuses that DO close a leg (#468 criterion 6): `OPEXP` (expired worthless) and
+ * `OPASN` (assigned) both synthesize an honest $0 close. Marked `synthetic` so a close that finds
+ * no open lot (a written option's expiration/assignment — short-lot matching is a separate,
+ * documented gap in `round-trips.ts`) is a safe no-op rather than a double-counted unmatched sell.
+ */
+const LIFECYCLE_SYNTHETIC_CLOSE: ReadonlySet<string> = new Set([
+  LIFECYCLE_STATUS.OPEXP,
+  LIFECYCLE_STATUS.OPASN,
+]);
+
+export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeFill[] {
   return (activity ?? [])
-    .filter((row) => row.filledQuantity > 0 && (row.side === "buy" || row.side === "sell"))
+    .filter(
+      (row) =>
+        row.filledQuantity > 0 &&
+        (row.side === "buy" || row.side === "sell") &&
+        !LIFECYCLE_INFO_ONLY.has(row.status),
+    )
     .map((row) => {
       const scale = isOccSymbol(row.symbol) ? OPTION_MULTIPLIER : 1;
       return {
@@ -38,6 +68,7 @@ function fillsFrom(activity: readonly ActivityView[] | undefined): TradeFill[] {
         quantity: row.filledQuantity,
         ...(row.price !== undefined ? { price: row.price * scale } : {}),
         at: row.at,
+        ...(LIFECYCLE_SYNTHETIC_CLOSE.has(row.status) ? { synthetic: true } : {}),
       };
     });
 }
