@@ -1,0 +1,11 @@
+{
+  "eventName": "workflow_dispatch",
+  "actor": "ejclark",
+  "event": { "inputs": { "command": "audit" } },
+  "deps": {
+    "readyPlans": [
+      { "title": "[plan] a stalled plan", "number": 466, "hoursSinceReady": 50 },
+      { "title": "[plan] a fresh ready-flip", "number": 467, "hoursSinceReady": 3 }
+    ]
+  }
+}
