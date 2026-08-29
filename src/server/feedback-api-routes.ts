@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { communityMilestone } from "../domain/community.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { toSpec } from "./feedback-coach.js";
@@ -13,7 +14,7 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
 /** Community-track milestone celebration ids, mirroring `/api/learn/claim`'s bounded shape. */
 function parseCommunityAckIds(raw: string): readonly string[] | undefined {
   const body = parseJsonRecord(raw);
-  if (!body || !Array.isArray(body.ack)) return undefined;
+  if (!(body && Array.isArray(body.ack))) return undefined;
   const ids = body.ack;
   const bounded = (v: unknown): v is string =>
     typeof v === "string" && v.length > 0 && v.length <= 100;
@@ -71,6 +72,7 @@ async function serveIndex(
     feedbackCount: community?.feedbackCount ?? recent.length,
     celebrating: (community?.celebrating ?? []).map((m) => ({
       milestoneId: m.milestoneId,
+      title: communityMilestone(m.milestoneId)?.title ?? m.milestoneId,
       issueNumber: m.issueNumber,
     })),
     recent: recent.map((e) => ({
@@ -190,6 +192,29 @@ async function serveFollowup(
   sendJson(res, result.ok ? 200 : 502, result);
 }
 
+/** POST /api/feedback/claim → the community track's `acknowledge` (#567), the exact twin of
+ *  `/api/learn/claim`: banks the one-time celebration, filtered against the real track. */
+async function serveCommunityClaim(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const raw = await readJsonPost(req, res, 1_024);
+  if (raw === undefined) return;
+  if (!(config.communityProgression && session?.email)) {
+    sendJson(res, 200, { ok: false, error: "The community track isn't wired in this deployment." });
+    return;
+  }
+  const ids = parseCommunityAckIds(raw);
+  if (!ids) {
+    sendJson(res, 400, { error: "malformed claim body" });
+    return;
+  }
+  await config.communityProgression.acknowledge(opaqueMemberId(session.email), ids);
+  sendJson(res, 200, { ok: true });
+}
+
 /** Handle `/api/feedback*`. Returns true when the request was answered. */
 export async function serveFeedbackApi(
   req: IncomingMessage,
@@ -208,6 +233,10 @@ export async function serveFeedbackApi(
   }
   if (path === "/api/feedback/followup") {
     await serveFollowup(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/feedback/claim") {
+    await serveCommunityClaim(req, res, config, session);
     return true;
   }
   return false;

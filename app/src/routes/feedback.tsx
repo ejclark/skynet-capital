@@ -11,6 +11,7 @@ import {
   submitFeedbackRequest,
 } from "../live/feedback";
 import { CoachBox, type CoachDraft } from "../shell/coach-box";
+import { CommunityUnlockBanner } from "../shell/community-banner";
 import { RecentFeedback } from "../shell/feedback-recent";
 import { PageFrame } from "../shell/frame";
 
@@ -221,6 +222,9 @@ function FeedbackPage(): ReactElement {
         <p className="note">Feedback isn't switched on yet — ask Eric to set the feedback token.</p>
       ) : (
         <>
+          {data.celebrating.length > 0 ? (
+            <CommunityUnlockBanner celebrations={data.celebrating} onClaimed={refresh} />
+          ) : null}
           {!showForm ? (
             <CoachBox onDraft={setDraft} onSkip={() => setSkipped(true)} />
           ) : (

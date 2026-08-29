@@ -40,8 +40,7 @@ function parseCommunityProgressionState(raw: unknown): CommunityProgressionState
     if (typeof value !== "object" || value === null) return undefined;
     const r = value as Partial<CommunityProgressionRecord>;
     if (
-      !Array.isArray(r.acknowledged) ||
-      !r.acknowledged.every((m) => typeof m === "string") ||
+      !(Array.isArray(r.acknowledged) && r.acknowledged.every((m) => typeof m === "string")) ||
       typeof r.since !== "string" ||
       typeof r.updatedAt !== "string"
     ) {

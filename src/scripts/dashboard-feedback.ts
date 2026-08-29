@@ -6,6 +6,8 @@
  * complexity budget (`scripts/arch-scan.mjs`'s sibling lint gate) — env-only wiring, no state of
  * its own beyond the stores it constructs.
  */
+import { createCommunityProgressionService } from "../server/community-progression-service.js";
+import { createCommunityProgressionStore } from "../server/community-progression-store.js";
 import { resolveFeedbackCoach } from "../server/feedback-coach.js";
 import { resolveFeedbackFollowup } from "../server/feedback-followup.js";
 import { createFeedbackLogStore } from "../server/feedback-log.js";
@@ -18,6 +20,8 @@ export interface FeedbackSetup {
   feedbackLog: ReturnType<typeof createFeedbackLogStore>;
   feedbackStatus: ReturnType<typeof resolveFeedbackStatus>;
   feedbackFollowup: ReturnType<typeof resolveFeedbackFollowup>;
+  /** The community milestone track (#567) — filing feedback earns it, never a trade code. */
+  communityProgression: ReturnType<typeof createCommunityProgressionService>;
 }
 
 /** Resolve every feedback-pipeline dependency for one boot, warning on anything left dark. */
@@ -40,6 +44,18 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
   const feedbackStatus = resolveFeedbackStatus(env);
   // A member adding more to a filing they already own, and the re-trigger that comes with it.
   const feedbackFollowup = resolveFeedbackFollowup(env);
+  // The community milestone track (#567) — own store, own derivation; never the trade ladder's.
+  const communityProgression = createCommunityProgressionService({
+    readFeedback: (id) => feedbackLog.list(id),
+    store: createCommunityProgressionStore(env, (m) => console.error(m)),
+  });
 
-  return { feedback, feedbackCoach, feedbackLog, feedbackStatus, feedbackFollowup };
+  return {
+    feedback,
+    feedbackCoach,
+    feedbackLog,
+    feedbackStatus,
+    feedbackFollowup,
+    communityProgression,
+  };
 }

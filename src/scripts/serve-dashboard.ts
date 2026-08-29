@@ -197,9 +197,14 @@ async function main(): Promise<void> {
     recordAudit: (entry) => orderAudit.record(entry),
   });
 
-  const { feedback, feedbackCoach, feedbackLog, feedbackStatus, feedbackFollowup } = setupFeedback(
-    process.env,
-  );
+  const {
+    feedback,
+    feedbackCoach,
+    feedbackLog,
+    feedbackStatus,
+    feedbackFollowup,
+    communityProgression,
+  } = setupFeedback(process.env);
   // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance.
   const { companion, progression: progressionService } = setupCompanion(process.env, {
     hub,
@@ -260,6 +265,7 @@ async function main(): Promise<void> {
     readFeedback: (id) => feedbackLog.list(id),
     ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
+    communityProgression,
     ...(companion ? { companion } : {}),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
