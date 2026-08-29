@@ -33,9 +33,14 @@ of friction — Moneypenny drives the new architecture, and all other orchestrat
 enter her domain answer to her."* Concretely, for anything that is GitHub issue/PR orchestration:
 
 - **`docs/COACHES.md`'s head-coach/governor dispatch policy**, **`scripts/postmaster*.mjs`'s
-  mechanical routing**, and **`/secretary`'s digest/verification cadence** all now operate *under
-  her mandate*, not as three peer systems Eric has to address by separate name. He talks to
-  Moneypenny; she directs the mechanism.
+  mechanical routing**, **`.github/workflows/ci-medic.yml` + `scripts/ci-medic.mjs`'s repair
+  dispatch**, and **`/secretary`'s digest/verification cadence** all now operate *under her
+  mandate*, not as four peer systems Eric has to address by separate name. He talks to Moneypenny;
+  she directs the mechanism. CI Medic named explicitly here (2026-08-29, #909) rather than left
+  implicit: it is GitHub issue/PR orchestration by the same definition as the other three, and
+  #909 folded a second entry point into its existing dispatch job (`workflow_dispatch`, alongside
+  its original `workflow_run`) rather than earning its own workflow file — the first real instance
+  of two responsibilities consolidating into one lane instead of staying peers.
 - This is a **frame and an authority relationship, not a rewrite** of what those mechanisms do —
   `docs/COACHES.md` and `docs/DELEGATION.md` keep their existing content and carry a pointer to this
   file. A full restructuring of their text around her is real work and is explicitly **not** done in

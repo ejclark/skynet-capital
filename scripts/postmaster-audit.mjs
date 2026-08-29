@@ -95,16 +95,17 @@ export function audit(deps = {}) {
   // #909 — the one class nothing was watching: a PR that went `CONFLICTING` against `main` on some
   // push has no CI signal, no failed run, nothing red. `main`'s own tick is exactly what makes this
   // detectable — `conflictedPRs` arrives pre-filtered to open, unflagged, actually-conflicting PRs
-  // by `gatherAuditDeps`; this loop only applies the one-ping memory. Detection only: this comments
-  // and labels, it never pushes a merge commit — repair is a separate, later slice (#909's own
-  // slicing sketch), the same judgment split the rest of this file already draws.
+  // by `gatherAuditDeps`; this loop only applies the one-ping memory. `executeOne`'s
+  // `commentAndFlagConflict` dispatches CI Medic's conflict-repair session right after this intent
+  // runs — that session judges disjoint-vs-same-logic and either pushes a resolved merge commit or
+  // escalates to `needs-eric`; this comment is the receipt that a repair was dispatched, not an ask.
   for (const c of conflictedPRs) {
     if (flaggedPRs.has(c.number)) continue;
     intents.push({
       kind: "flag-conflict",
       prNumber: c.number,
       title: c.title,
-      body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nMerge \`main\` into this branch and resolve it (never rebase or force-push — this may not be your branch). Once resolved, this PR's own \`verify\` run will confirm it.\n\n${FOOTER}`,
+      body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nA repair session has been dispatched — it merges \`main\` in and resolves it if the conflict is safely disjoint, or applies \`needs-eric\` with an explanation if it isn't.\n\n${FOOTER}`,
     });
   }
   return intents;

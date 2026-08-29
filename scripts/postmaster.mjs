@@ -483,13 +483,24 @@ function commentAndFlagStall(i) {
 /**
  * The PR-side twin of `commentAndFlagStall` (#909) — a PR is a different object than an issue as
  * far as `gh` is concerned (`gh issue comment`/`gh issue edit` 404 on a PR number), so this uses
- * `gh pr comment`/`gh pr edit` rather than sharing the helper above.
+ * `gh pr comment`/`gh pr edit` rather than sharing the helper above. Also dispatches CI Medic's
+ * `workflow_dispatch` conflict-repair entry point (its own `conflict-repair.md` envelope judges
+ * whether the conflict is actually safe to auto-resolve) — `conflict-flagged` is the one memory
+ * that prevents a re-dispatch on the next push, applied here regardless of whether the dispatch
+ * call itself succeeds, so a transient `gh workflow run` failure never turns into a comment storm.
  */
 function commentAndFlagConflict(i) {
   if (!i.prNumber) return;
   sh("gh", ["pr", "comment", String(i.prNumber), "--body", i.body]);
   ensureLabel(LABELS.conflictFlagged);
   sh("gh", ["pr", "edit", String(i.prNumber), "--add-label", LABELS.conflictFlagged.name]);
+  try {
+    sh("gh", ["workflow", "run", "ci-medic.yml", "--ref", "main", "-f", `pr_number=${i.prNumber}`]);
+  } catch (err) {
+    console.log(
+      `::warning::could not dispatch conflict repair for #${i.prNumber}: ${String(err.message).slice(0, 200)}`,
+    );
+  }
 }
 
 function executeOne(i) {
