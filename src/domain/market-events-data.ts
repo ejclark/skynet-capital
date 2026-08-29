@@ -385,9 +385,9 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Conference Board Consumer Confidence Index (Sep 2026)",
     date: "2026-09-29",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "NEWS: the Conference Board publishes at 10:00 ET on the last Tuesday of each month (press-reported cadence, matching the 2026-08-25 predecessor); 09-29 is that Tuesday — not primary-verified against conference-board.org's own schedule, checked 2026-08-29",
+      'CB: conference-board.org/topics/consumer-confidence — the page states verbatim "The next release is Tuesday, September 29th at 10 AM ET", fetched 2026-08-29 (the explicit primary line the 2026-08-25 predecessor recorded as unfetchable behind Data Central)',
     impact: "medium",
     symbols: [],
     notes:
@@ -560,6 +560,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     source: "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
     impact: "high",
     symbols: [],
+  },
+  {
+    id: "consumer-confidence-2026-10-27",
+    kind: "macro-print",
+    title: "Conference Board Consumer Confidence Index (Oct 2026)",
+    date: "2026-10-27",
+    status: "estimate",
+    source:
+      "EST: the Conference Board's own page states it publishes at 10:00 ET on the last Tuesday of every month (fetched 2026-08-29, where it names 09-29 explicitly but not October); 2026-10-27 is that Tuesday — cadence-derived, not a fetched primary line for this date, checked 2026-08-29",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Matters disproportionately in one branch: the Conference Board is a PRIVATE publisher and survives a lapse in federal appropriations, where BLS does not. If FY2027 funding lapses on 2026-09-30, the 10-02 payrolls and 10-14 CPI are deleted permanently (2025 precedent) and this print lands inside that blackout, the day before an FOMC carrying no SEP — one of the few forward-looking consumer reads still being published. In the averted branch it is an ordinary second-tier print. Discovered during the consumer-confidence-2026-09-29 initial research.",
   },
   {
     id: "fomc-2026-10-28",
