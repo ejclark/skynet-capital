@@ -14,12 +14,6 @@ import {
  * credentials, no personal data. Backed by the same `JsonFileStore` primitive: atomic
  * tmp+rename writes, total reads (a missing or malformed file is just `EMPTY_SUBSCRIPTIONS`,
  * reported once).
- *
- * No env-backed `createSubscriptionStore(env)` factory yet, unlike `bot-controls-store.ts` —
- * this slice has no caller to resolve a deployed path for (that's the bot-fleet-wiring and
- * server-route follow-up slices). Add one, alongside the matching `fly.toml [env]` /
- * `src/runtime/volume-guard.ts` registrations (`tests/arch/volume-persistence.spec.ts`), once a
- * real caller needs a default path.
  */
 export class SubscriptionStore {
   private readonly file: JsonFileStore<SubscriptionsState>;
@@ -95,4 +89,15 @@ export class SubscriptionStore {
     this.file.write(nextState);
     return nextState;
   }
+}
+
+/** Build the store from the environment (`SKYNET_SUBSCRIPTIONS_FILE`, default `data/playbook-subscriptions.json`). */
+export function createSubscriptionStore(
+  env: NodeJS.ProcessEnv,
+  onReadError?: (message: string) => void,
+): SubscriptionStore {
+  return new SubscriptionStore(
+    env.SKYNET_SUBSCRIPTIONS_FILE ?? "data/playbook-subscriptions.json",
+    onReadError,
+  );
 }

@@ -23,13 +23,17 @@ import type { SafetyController } from "../autonomous/safety.js";
 import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
 import { createBotBroker } from "../bots/bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
+import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { hardcoreScenarioPacks, scenarioPacks } from "../evals/scenarios/index.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
+import type { EnabledPlaybook } from "../playbooks/playbook.js";
 import type { enabledPlaybooks } from "../playbooks/registry.js";
 import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
+import { createSubscriptionStore } from "../server/subscription-store.js";
+import { mergeRosters, subscriptionRoster } from "../subscriptions/subscription-roster.js";
 import { logResult } from "./autonomous-sinks.js";
 
 const HARDCORE_COOLDOWN_MS = 90_000;
@@ -146,6 +150,48 @@ export function buildScoutDeps(
     return undefined;
   }
   return { maxPicks: betaForcingMaxPicks, broker: scoutBroker, ...opts };
+}
+
+/** One bot's resolved roster: the house roster plus its own subscriptions layered on top. */
+export interface BotRoster {
+  readonly bot: Bot;
+  readonly subscriptions: readonly PlaybookSubscription[];
+  readonly enabled: readonly EnabledPlaybook[];
+}
+
+/**
+ * Per-account playbook subscriptions (issue #885): each bot runs the house roster PLUS whatever
+ * it has personally subscribed to, with its own capital sub-allocation — a subscription
+ * overrides the house roster's entry for the same playbook id (its own mode/capital wins), never
+ * a second conflicting entry for the same symbol. A bot with no subscriptions is byte-identical
+ * to the pre-subscription roster. Pulled out for the same reason as `buildLiveBot` — keeps
+ * `runLive`'s own complexity budget.
+ */
+export function buildBotRosters(
+  bots: readonly Bot[],
+  playbookRoster: { readonly enabled: readonly EnabledPlaybook[] },
+  env: NodeJS.ProcessEnv,
+): BotRoster[] {
+  const subscriptionsByAccount = createSubscriptionStore(env).load();
+  return bots.map((bot) => {
+    const subscriptions = subscriptionsByAccount[bot.persona.id] ?? [];
+    const acctRoster = subscriptionRoster(subscriptions);
+    for (const bad of acctRoster.rejected) {
+      console.error(
+        `[playbooks] ${bot.persona.id} is subscribed to unknown playbook "${bad}" — refused`,
+      );
+    }
+    if (acctRoster.enabled.length > 0) {
+      console.log(
+        `[playbooks] ${bot.persona.id} subscribed: ${acctRoster.enabled.map((e) => `${e.playbook.id}:${e.mode}`).join(", ")}`,
+      );
+    }
+    return {
+      bot,
+      subscriptions,
+      enabled: mergeRosters(playbookRoster.enabled, acctRoster.enabled),
+    };
+  });
 }
 
 /** READINESS GATE + wiring for one live bot: a not-ready persona is pinned to `observe` (watched,
