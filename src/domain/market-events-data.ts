@@ -407,6 +407,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The closest-timed regional analog to ISM Manufacturing, released the last business day of the month — two business days ahead of the national print. Added because its Aug-data reading (2026-08-28) collapsed to 47.1 against a ~58 consensus and a 57.6 prior, the biggest single macro surprise of that week and one this calendar could not see coming because the series was untracked. Discovered during the ism-manufacturing-2026-09-01 pulse-check adjacency sweep. Filed as `estimate`/`NEWS:` rather than confirmed: MNI is the series' own publisher, but this lane proposes adjacencies as estimates and never self-promotes them to confirmed.",
   },
   {
+    id: "pce-2026-09-30",
+    kind: "macro-print",
+    title: "PCE / Personal Income & Outlays (Aug 2026 data)",
+    date: "2026-09-30",
+    status: "estimate",
+    source:
+      'EST: bea.gov/news/schedule names "September 30, 8:30 AM — Personal Income and Outlays, August 2026" verbatim (fetched 2026-08-29) — a PRIMARY schedule line, filed `estimate` only because this lane proposes adjacencies as estimates and never self-promotes them to confirmed (same reasoning as chicago-pmi-2026-09-30); promotable to `confirmed`/`BEA:` in one line by a non-lane change, checked 2026-08-29',
+    impact: "high",
+    symbols: [],
+    notes:
+      "The PCE print between the 09-16 FOMC and the 10-28 one, and the last clean read on the gap Warsh flagged at Jackson Hole: 12-month PCE 3.7% against a 6-month run rate of 4.1%, so the m/m and 6-month annualized are the informative lines, not the y/y. Lands on the FY2027 funding deadline itself and in the same 08:30 slot as the Q2 third GDP estimate (found on the same fetch, deliberately not tracked as low-impact). Federal, so it is the last PCE that publishes before any 10-01 lapse could touch the series. Discovered during the pce-2026-10-29 initial research.",
+  },
+  {
     id: "jackson-hole-2026-08-28",
     kind: "macro-print",
     title: "Jackson Hole — Fed chair Warsh's first keynote (symposium Aug 27–29)",
@@ -607,7 +620,20 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "high",
     symbols: [],
     notes:
-      "The Fed's own inflation gauge, landing the morning AFTER the 10-28 statement rather than before it — the committee decides without it. Federal, so it dies in the funding-lapse branch alongside the 10-02 payrolls and 10-14 CPI. Discovered during the consumer-confidence-2026-10-27 initial research.",
+      "The Fed's own inflation gauge, landing the morning AFTER the 10-28 statement rather than before it — the committee decides without it. Federal, so it is exposed to a 10-01 funding lapse; the pce-2026-10-29 initial research corrected what that exposure actually is (2025 precedent: a September-reference PCE was DELAYED five weeks, 10-31 to 12-05, not deleted, while the advance GDP estimate sharing its slot was cancelled outright). Discovered during the consumer-confidence-2026-10-27 initial research.",
+  },
+  {
+    id: "pce-2026-11-25",
+    kind: "macro-print",
+    title: "PCE / Personal Income & Outlays (Oct 2026 data)",
+    date: "2026-11-25",
+    status: "estimate",
+    source:
+      'EST: bea.gov/news/schedule names "November 25, 8:30 AM — Personal Income and Outlays, October 2026" verbatim (fetched 2026-08-29) — a PRIMARY schedule line, filed `estimate` only because this lane proposes adjacencies as estimates and never self-promotes them to confirmed (same reasoning as chicago-pmi-2026-09-30); promotable to `confirmed`/`BEA:` in one line by a non-lane change, checked 2026-08-29',
+    impact: "high",
+    symbols: [],
+    notes:
+      "The OCTOBER reference month — the release the pce-2026-10-29 research identifies as the genuinely compromised one in a funding-lapse branch, one month later than this calendar's inherited framing assumes. 2025 precedent is exact: because BLS never produced the full October CPI, BEA published October PCE with the price index INTERPOLATED — 'an average of BLS' September and November CPI data' — folded into a combined Oct+Nov release on 2026-01-22, nine weeks late. A number that exists but is partly synthetic, feeding the gauge Warsh reaffirmed as the 2% target on 2026-08-28. Tracked so that exposure is visible rather than discovered in January. Discovered during the pce-2026-10-29 initial research.",
   },
   {
     id: "midterm-elections-2026-11-03",
