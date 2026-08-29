@@ -77,6 +77,24 @@ describe("playbookIntents", () => {
     });
   });
 
+  it("threads the optional events feed to a playbook that declares it, defaulting to empty", () => {
+    const context = aContext({ NVDA: { last: 100 } }, "2026-08-16T15:00:00Z");
+    let seen: unknown;
+    const eventAware = play({
+      desiredState: (_asOf, _cal, events) => {
+        seen = events;
+        return "no-window";
+      },
+    });
+
+    playbookIntents(enabled(eventAware), context, aPortfolio(), calendar);
+    expect(seen).toEqual([]);
+
+    const passed = [{ symbol: "NVDA", detectedAt: "2026-08-16T14:50:00Z" }];
+    playbookIntents(enabled(eventAware), context, aPortfolio(), calendar, passed);
+    expect(seen).toBe(passed);
+  });
+
   it("is silent in no-window, positioned or not", () => {
     const context = aContext({ NVDA: { last: 100 } }, "2026-08-16T15:00:00Z");
     const dark = play({ desiredState: () => "no-window" });

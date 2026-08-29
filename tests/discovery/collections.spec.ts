@@ -53,9 +53,13 @@ describe("findCollection", () => {
 });
 
 describe("unshelved", () => {
-  it("is empty while every registered bot and play lands on a shelf", () => {
-    expect(unshelved(collections)).toEqual([]);
-  });
+  it(
+    "is empty for personas; TACO-DJT is the one honest playbook exception — event-driven, so " +
+      "the calendar-window shelf probe can never find it a window to shelve",
+    () => {
+      expect(unshelved(collections).map((m) => m.id)).toEqual(["TACO-DJT"]);
+    },
+  );
 
   it("reports both catalogs' entries when nothing is shelved", () => {
     const kinds = new Set(unshelved([]).map((m) => m.kind));
