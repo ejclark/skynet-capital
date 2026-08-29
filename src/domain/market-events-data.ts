@@ -586,6 +586,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Not a print — a dated policy checkpoint, and the causal driver behind the FY2027 funding timeline: the Senate CR runs to Dec 11 precisely so the full-year fight lands in a lame-duck session shaped by this result. Filed `estimate` per the event-research lane's no-self-confirm limit even though the date is statutory — the honest reading is date-certain, outcome-unknown. Discovered during the government-funding-deadline-2026-09-30 initial research; the CR's own expiry (Dec 4 or Dec 11) is a second dated checkpoint left un-proposed until the chambers reconcile which.",
   },
   {
+    id: "georgia-senate-runoff-2026-12-01",
+    kind: "geopolitical",
+    title: "Georgia (and Mississippi) US Senate general runoff — conditional on no 50% winner",
+    date: "2026-12-01",
+    status: "estimate",
+    source:
+      "NEWS: congresscountdown.com's Senate-runoff explainer — Georgia and Mississippi both require an outright majority in Senate general elections, with the runoff four weeks after Election Day (2026-12-01); corroborated by a Ballotpedia-sourced search summary, but Ballotpedia's own page returned empty on fetch and no Georgia Secretary of State page was fetched, checked 2026-08-29",
+    impact: "high",
+    symbols: [],
+    notes:
+      "CONDITIONAL — this fires only if no Senate candidate clears 50% on 2026-11-03; Georgia (Ossoff (D) vs Collins (R)) is reported a dead heat and has decided Senate control twice recently (Jan 2021, Dec 2022). Louisiana no longer applies: it moved to closed party primaries in 2026 and its general is plurality. Filed `estimate` for two reasons at once — the date is secondary-sourced AND the event is conditional. Why it is `high` impact despite being conditional: it is the mechanism by which control of the Senate stays unknown for four weeks past the midterms, landing 3 days before jobs 12-04 (which is also the House CR's own expiry date), 8 before FOMC 12-09, 9 before CPI 12-10 and 14 before the est. PJM auction 12-15 — the runoff can push the midterms' answer into the funding fight the CR was explicitly built to defer past them. Discovered during the midterm-elections-2026-11-03 initial research.",
+  },
+  {
     id: "jobs-2026-11-06",
     kind: "macro-print",
     title: "Employment Situation (Oct 2026 data)",
