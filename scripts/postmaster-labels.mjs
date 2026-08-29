@@ -34,6 +34,14 @@ export const LABELS = {
     description: "The stall audit pinged this once — dispatched work nothing has claimed",
     managed: true,
   },
+  // #909 — a PR the audit found conflicted with `main` on some push. Applied to the PR itself
+  // (`gh pr edit`, not `gh issue edit`); same one-ping-per-stall memory as `stall`.
+  conflictFlagged: {
+    name: "conflict-flagged",
+    color: "d93f0b",
+    description: "The conflict sweep pinged this once — a merge conflict on an open PR",
+    managed: true,
+  },
   // The feedback lane's terminal-state vocabulary. These were applied only by a build session's
   // prompt compliance, with nothing guaranteeing they existed — `gh issue edit --add-label` on a
   // missing label fails, which would silently void the lane's "never end in silence" rule.

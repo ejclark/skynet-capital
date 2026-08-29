@@ -417,11 +417,13 @@ function execute(intents) {
 export function intentLabel(i) {
   const target = i.issueNumber
     ? ` #${i.issueNumber}`
-    : i.title
-      ? ` \`${i.title}\``
-      : i.slug
-        ? ` \`claim/${i.slug}\``
-        : "";
+    : i.prNumber
+      ? ` #${i.prNumber}`
+      : i.title
+        ? ` \`${i.title}\``
+        : i.slug
+          ? ` \`claim/${i.slug}\``
+          : "";
   return `${i.kind ?? "unknown"}${target}`;
 }
 
@@ -476,6 +478,18 @@ function commentAndFlagStall(i) {
   sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
   ensureLabel(LABELS.stall);
   sh("gh", ["issue", "edit", String(i.issueNumber), "--add-label", LABELS.stall.name]);
+}
+
+/**
+ * The PR-side twin of `commentAndFlagStall` (#909) — a PR is a different object than an issue as
+ * far as `gh` is concerned (`gh issue comment`/`gh issue edit` 404 on a PR number), so this uses
+ * `gh pr comment`/`gh pr edit` rather than sharing the helper above.
+ */
+function commentAndFlagConflict(i) {
+  if (!i.prNumber) return;
+  sh("gh", ["pr", "comment", String(i.prNumber), "--body", i.body]);
+  ensureLabel(LABELS.conflictFlagged);
+  sh("gh", ["pr", "edit", String(i.prNumber), "--add-label", LABELS.conflictFlagged.name]);
 }
 
 function executeOne(i) {
@@ -541,6 +555,11 @@ function executeOne(i) {
       `::warning::plan stall — #${i.issueNumber} ready ${i.hoursSinceReady}h ago, never claimed`,
     );
     return `⏳ plan stall — \`${i.title}\` ready ${i.hoursSinceReady}h ago, never claimed (commented on #${i.issueNumber})`;
+  }
+  if (i.kind === "flag-conflict") {
+    commentAndFlagConflict(i);
+    console.log(`::warning::merge conflict — #${i.prNumber} \`${i.title}\``);
+    return `⚠️ conflict flagged — \`${i.title}\` (commented on #${i.prNumber})`;
   }
   return `❓ unknown intent kind ${i.kind}`;
 }

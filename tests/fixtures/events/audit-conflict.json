@@ -1,0 +1,10 @@
+{
+  "eventName": "workflow_dispatch",
+  "actor": "ejclark",
+  "event": { "inputs": { "command": "audit" } },
+  "deps": {
+    "conflictedPRs": [
+      { "title": "feat(server): durable per-participant ladder progress log", "number": 880 }
+    ]
+  }
+}

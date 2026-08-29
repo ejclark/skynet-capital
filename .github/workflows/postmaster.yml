@@ -158,7 +158,13 @@ jobs:
       # ran only on manual dispatch before, a watchdog nobody winds. Comment-and-warn only
       # (audit() is ceiling-capped by design), and it dedupes nothing itself: quietDays only
       # crosses the threshold once per day, so repeat comments stay rare.
-      - name: Audit for stalls
+      #
+      # Also the merge-conflict sweep (#909): a PR going `CONFLICTING` against `main` produces no
+      # CI signal at all — nothing runs, nothing goes red, so nothing else here would ever notice.
+      # `main`'s own tick, which this step already rides, is exactly the moment a conflict like
+      # that becomes checkable. Detection + a one-ping comment only, same as the rest of this
+      # step — repair (merging main in and resolving it) is a later slice, not this one.
+      - name: Audit for stalls & conflicts
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -33,6 +33,7 @@ export function audit(deps = {}) {
     unclaimedIssues = [],
     silentFeedback = [],
     readyPlans = [],
+    conflictedPRs = [],
     staleAfterDays = 2,
     silentAfterHours = 6,
     planStallAfterHours = 48,
@@ -42,6 +43,10 @@ export function audit(deps = {}) {
   // `stall-flagged` label: executeOne applies it with the comment, and a labelled issue is never
   // re-flagged. One ping per stall, however many pushes go by.
   const flagged = new Set(deps.alreadyFlagged ?? []);
+  // `conflict-flagged` is its own label on a different object (PRs, not issues) — a separate
+  // memory set rather than overloading `flagged`, which `gatherAuditDeps` only ever populates from
+  // issue labels.
+  const flaggedPRs = new Set(deps.alreadyFlaggedPRs ?? []);
   const intents = [];
   for (const i of unclaimedIssues) {
     if (i.quietDays < staleAfterDays) continue;
@@ -85,6 +90,21 @@ export function audit(deps = {}) {
       title: p.title,
       hoursSinceReady: p.hoursSinceReady,
       body: `⏳ **Plan never claimed** — a ready-flip comment landed **${p.hoursSinceReady}h** ago but nothing has claimed or built this plan issue since (no \`claim/plan-${p.number}\` lease, no linked PR). The trigger may have missed, hit a label mismatch, or lost a claim race.\n\nRe-post a ready comment (e.g. \`ready\`) to retry — the claim lease makes a re-trigger a safe retry, not a second build. If it is intentionally on hold, say so here so it stops looking dropped.\n\n${FOOTER}`,
+    });
+  }
+  // #909 — the one class nothing was watching: a PR that went `CONFLICTING` against `main` on some
+  // push has no CI signal, no failed run, nothing red. `main`'s own tick is exactly what makes this
+  // detectable — `conflictedPRs` arrives pre-filtered to open, unflagged, actually-conflicting PRs
+  // by `gatherAuditDeps`; this loop only applies the one-ping memory. Detection only: this comments
+  // and labels, it never pushes a merge commit — repair is a separate, later slice (#909's own
+  // slicing sketch), the same judgment split the rest of this file already draws.
+  for (const c of conflictedPRs) {
+    if (flaggedPRs.has(c.number)) continue;
+    intents.push({
+      kind: "flag-conflict",
+      prNumber: c.number,
+      title: c.title,
+      body: `⚠️ **Merge conflict** — this PR is now conflicted with \`main\` (no push to this branch caused it; \`main\` moved out from under it). Nothing else here watches for this — CI stays silent because no check ever ran against the conflict.\n\nMerge \`main\` into this branch and resolve it (never rebase or force-push — this may not be your branch). Once resolved, this PR's own \`verify\` run will confirm it.\n\n${FOOTER}`,
     });
   }
   return intents;
@@ -197,7 +217,36 @@ export function gatherAuditDeps(nowMs) {
     if (candidate) readyPlans.push(candidate);
   }
 
-  return { unclaimedIssues, silentFeedback, readyPlans, alreadyFlagged };
+  // #909 — one call for every open PR's mergeability, same REST/GraphQL-cost discipline as the
+  // rest of this file (one list call, not one lookup per PR). `mergeable` is GitHub's own
+  // async-computed field: `CONFLICTING` is the only value this cares about — `UNKNOWN` means
+  // GitHub hasn't finished computing it yet and is deliberately left alone rather than treated as
+  // a false positive; the next push re-checks it, same level-based design as everything else here.
+  const prs = json("gh pr list", [
+    "pr",
+    "list",
+    "--state",
+    "open",
+    "--limit",
+    "100",
+    "--json",
+    "number,title,mergeable,labels",
+  ]);
+  const alreadyFlaggedPRs = prs
+    .filter((p) => (p.labels ?? []).some((l) => l.name === LABELS.conflictFlagged.name))
+    .map((p) => p.number);
+  const conflictedPRs = prs
+    .filter((p) => p.mergeable === "CONFLICTING")
+    .map((p) => ({ title: p.title, number: p.number }));
+
+  return {
+    unclaimedIssues,
+    silentFeedback,
+    readyPlans,
+    conflictedPRs,
+    alreadyFlagged,
+    alreadyFlaggedPRs,
+  };
 }
 
 /**

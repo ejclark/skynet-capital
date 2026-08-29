@@ -157,6 +157,27 @@ describe("postmaster routing", () => {
     expect(intents.some((i) => i.issueNumber === 467)).toBe(false);
   });
 
+  // #909 — nothing else here has ever watched for a PR going CONFLICTING against `main`: no CI
+  // run fails, nothing goes red, so no other lane would notice. The push-driven audit is the tick
+  // that makes it checkable.
+  it("the audit flags a PR that conflicts with main", () => {
+    const intents = dryRun("audit-conflict.json") as (Intent & { prNumber?: number })[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("flag-conflict");
+    expect(intents[0]?.prNumber).toBe(880);
+    expect(intents[0]?.body).toContain("Merge conflict");
+  });
+
+  it("the audit never re-flags a PR conflict it already labelled — one ping, not per push", () => {
+    const intents = dryRun("audit-conflict-already-flagged.json") as (Intent & {
+      prNumber?: number;
+    })[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.prNumber).toBe(880);
+  });
+
   it("issue bodies carry the Claude attribution footer", () => {
     const intents = dryRun("push-one-due.json") as Intent[];
 
