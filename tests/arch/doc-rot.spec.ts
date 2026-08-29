@@ -2,11 +2,13 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { advisoryScan } from "../support/advisory-scan.js";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // Doc-rot fitness gate — runs the real scanner (scripts/doc-rot-scan.mjs) so docs that no longer
-// describe reality can't accumulate silently. Contract: docs/plans/doc-rot-gate.md. To adjust the
-// budget, fix the doc (or its target) and run `node scripts/doc-rot-scan.mjs --update`.
+// describe reality can't accumulate silently. Contract: docs/plans/doc-rot-gate.md. The budget
+// check below is advisory since 2026-08-29 (Eric) — see tests/support/advisory-scan.ts. The
+// scanner-behavior specs further down are ordinary unit tests of the tool itself and stay blocking.
 const SCRIPT = join(process.cwd(), "scripts/doc-rot-scan.mjs");
 
 /** Run the scanner in a seeded fixture repo; return {status, stdout+stderr}. */
@@ -28,11 +30,9 @@ function scanFixture(seed: (root: string) => void): { status: number; out: strin
   }
 }
 
-describe("doc-rot budget", () => {
-  it("the repo's docs stay within the committed doc-rot budget", () => {
-    expect(() =>
-      execFileSync("node", [SCRIPT], { cwd: process.cwd(), stdio: "pipe" }),
-    ).not.toThrow();
+describe("doc-rot budget (advisory)", () => {
+  it("reports doc-rot findings without blocking CI", () => {
+    advisoryScan(SCRIPT);
   });
 });
 

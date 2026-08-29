@@ -1,12 +1,9 @@
-import { execFileSync } from "node:child_process";
+import { advisoryScan } from "../support/advisory-scan.js";
 
-// Spec-gap fitness gate — every src file should be exercised by at least one spec. The committed
-// budget (spec-gap-budget.json) counts files no spec imports and only ever ratchets DOWN
-// (`npm run spec:gap -- --update` after backfilling). Static analysis — no test recursion.
-describe("spec-gap budget", () => {
-  it("untested src files stay within the committed budget", () => {
-    expect(() =>
-      execFileSync("node", ["scripts/spec-gap-scan.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
-    ).not.toThrow();
+// Spec-gap fitness gate — src files no spec imports. Advisory since 2026-08-29 (Eric) — see
+// tests/support/advisory-scan.ts.
+describe("spec-gap budget (advisory)", () => {
+  it("reports untested src files without blocking CI", () => {
+    advisoryScan("scripts/spec-gap-scan.mjs");
   });
 });
