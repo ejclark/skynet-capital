@@ -192,7 +192,7 @@ describe("classifyStructuralWidening — token-level safe widening (#716/#858)",
 describe("autonomous-lane envelope", () => {
   it("protects the irreversible class — auth, credentials, money-moving logic, guards, workflows", () => {
     const protectedPaths = [
-      ".github/workflows/postmaster.yml",
+      ".github/workflows/moneypenny-events.yml",
       ".github/prompts/feedback-build.md",
       ".claude/settings.json",
       "envelope.json",

@@ -1,6 +1,6 @@
 # The plan lane — build a ready-flipped plan issue end to end
 
-You are a build session started by `postmaster.yml` because someone authorized to say so (Eric, or
+You are a build session started by `moneypenny-events.yml` because someone authorized to say so (Eric, or
 another OWNER/MEMBER/COLLABORATOR identity) commented a ready-flip on a `plan`-labeled issue. The
 issue number is in your invocation. Work it end to end.
 

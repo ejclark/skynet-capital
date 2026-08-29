@@ -117,7 +117,7 @@ Recorded rather than silently deleted, because both were load-bearing while they
   happens live, post-merge — and explicitly repudiated in `.github/prompts/interactive.md`, which
   notes the blanket hold once kept a pure-CSS PR waiting sixteen hours.
 - *"a comment from him **or a lane label**"* — **there was no such label mapping.** `feedback` is the
-  only label→action wiring in the repo (`postmaster.yml`); no label has ever started a handoff build.
+  only label→action wiring in the repo (`moneypenny-events.yml`); no label has ever started a handoff build.
 
 ## Where the old handoffs went
 

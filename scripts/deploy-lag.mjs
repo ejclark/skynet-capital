@@ -15,7 +15,7 @@
 // `push` → `main` event that this repo hangs everything on was never emitted:
 //
 //   1. `pipeline.yml`'s deploy job — never ran. `main` is ahead of the live site.
-//   2. `postmaster.yml`'s shipped-scan — never ran. The issue keeps no receipt and stays open.
+//   2. `moneypenny-events.yml`'s shipped-scan — never ran. The issue keeps no receipt and stays open.
 //   3. The stall audit — never ran. The eye that watches for stalls is blinded by the same cause.
 //
 // CLAUDE.md's ship loop already warned that "a GITHUB_TOKEN merge wouldn't trigger the push→main

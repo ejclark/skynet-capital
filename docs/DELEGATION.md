@@ -1,6 +1,6 @@
 # Delegation & background agents — the safety rails
 
-> The GitHub-issue/PR-orchestration slice of this — what postmaster routes, what the coordinator
+> The GitHub-issue/PR-orchestration slice of this — what the event router routes, what the coordinator
 > hands off — now operates under **Moneypenny's** mandate — see [`docs/MONEYPENNY.md`](MONEYPENNY.md).
 > The rails below are unchanged; she directs within them, never around them.
 

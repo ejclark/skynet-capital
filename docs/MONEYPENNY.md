@@ -32,8 +32,8 @@ Eric's own framing: *"the other roles/structures that pre-dated the GitHub App h
 of friction — Moneypenny drives the new architecture, and all other orchestration processes that
 enter her domain answer to her."* Concretely, for anything that is GitHub issue/PR orchestration:
 
-- **`docs/COACHES.md`'s head-coach/governor dispatch policy**, **`scripts/moneypenny.mjs` + `scripts/postmaster-*.mjs`'s
-  mechanical routing**, **`.github/workflows/moneypenny-repair.yml` +
+- **`docs/COACHES.md`'s head-coach/governor dispatch policy**, **`.github/workflows/moneypenny-events.yml` +
+  `scripts/moneypenny*.mjs`'s mechanical routing**, **`.github/workflows/moneypenny-repair.yml` +
   `scripts/moneypenny-repair.mjs`'s repair dispatch**, and **`/secretary`'s digest/verification
   cadence** all now operate *under her mandate*, not as four peer systems Eric has to address by
   separate name. He talks to Moneypenny; she directs the mechanism. The repair lane (built
@@ -81,7 +81,7 @@ ran." Concretely:
 
 Everything above changes what gets *written*. It does not change the account the App posts *as* —
 today that's `claude[bot]`, minted per job via `actions/create-github-app-token` in
-`postmaster.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`. Renaming that account-level identity
+`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`. Renaming that account-level identity
 lives in GitHub App settings (the App's registered display name under Eric's GitHub org), which no
 amount of repo code can reach — governance of credentials and App identity is his call, per
 CLAUDE.md's hard boundaries.

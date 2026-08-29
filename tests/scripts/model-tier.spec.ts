@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 // The feedback lane's model-tier decision, run exactly as production runs it.
 //
-// WHY THIS SPEC EXISTS: the heuristic lived in postmaster.yml as bash until 2026-08-22, where
+// WHY THIS SPEC EXISTS: the heuristic lived in moneypenny-events.yml (then postmaster.yml) as bash until 2026-08-22, where
 // `REASON="…$(printf '%s' "$BODY" | grep -q '```' && echo ", includes a code block")"` exited 1
 // under `set -euo pipefail` whenever the `&&` short-circuited. Every feedback issue over 600 chars
 // with no code fence therefore killed its own build step — after the claim lease was taken, so the

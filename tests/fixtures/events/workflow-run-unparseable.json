@@ -2,7 +2,7 @@
   "repository": { "default_branch": "main" },
   "workflow_run": {
     "id": 32546877401,
-    "name": ".github/workflows/postmaster.yml",
+    "name": ".github/workflows/moneypenny-events.yml",
     "conclusion": "failure",
     "event": "push",
     "head_branch": "main",

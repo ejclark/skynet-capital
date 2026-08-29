@@ -8,7 +8,7 @@
 Move the front door of development from ephemeral chat sessions to the **issue channel**. Every raw
 idea — whether it arrives through the app's `/feedback` form, a GitHub issue form, or a rapid-fire
 line in a Claude chat — becomes **its own labeled issue**: a self-contained context capsule that the
-postmaster's feedback lane (shipped, `postmaster.yml` → `build-feedback`) builds in a **fresh
+the event router's feedback lane (shipped, `moneypenny-events.yml` → `build-feedback`) builds in a **fresh
 session with clean context**. GitHub **Projects** becomes the flight board that tracks everything
 in-flight, so no work dies on the vine inside a chat session nobody reopens.
 
@@ -33,7 +33,7 @@ glance — the same picture-first, ten-second-review contract the PR template ca
 ## Why this leans on shipped machinery (not new invention)
 
 - **The isolation mechanism already exists.** `feedback`-labeled issues are claimed and built in
-  fresh CI sessions (`postmaster.yml`, feedback lane, 2026-08-19), model-tiered by ask complexity
+  fresh CI sessions (`moneypenny-events.yml`, feedback lane, 2026-08-19), model-tiered by ask complexity
   (2026-08-20). This plan adds *routes into* that lane and *visibility over* it — it does not
   rebuild it.
 - **The label is the authorization** (issue creation alone never starts AI work). That invariant is

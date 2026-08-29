@@ -236,7 +236,7 @@ export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_
  * The plan lane's one step (#823) — mirrors `claimFeedback` exactly, one line down: decide whether
  * this `issue_comment` is a ready-flip on a plan issue (the pure `planReadyIntent`), and if so claim
  * the SAME lease mechanism (`claim/plan-<n>`) so a duplicate or retried ready-comment is a safe
- * no-op, never a second build. WHO may say ready is the workflow's job (`postmaster.yml`'s `if:`,
+ * no-op, never a second build. WHO may say ready is the workflow's job (`moneypenny-events.yml`'s `if:`,
  * mirroring `claude.yml`'s `author_association` gate) — this function only ever sees comments that
  * already cleared it, same division of labor as the feedback lane's label-is-the-authorization rule.
  */

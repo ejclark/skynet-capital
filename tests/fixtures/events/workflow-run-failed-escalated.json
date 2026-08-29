@@ -2,7 +2,7 @@
   "repository": { "default_branch": "main" },
   "workflow_run": {
     "id": 32546000001,
-    "name": "Postmaster",
+    "name": "Moneypenny Events",
     "conclusion": "failure",
     "event": "issues",
     "head_branch": "main",
@@ -11,7 +11,11 @@
   "failures": [{ "job": "build feedback issue", "step": "Run set -euo pipefail" }],
   "deps": {
     "openIssues": [
-      { "number": 480, "title": "[ci] Postmaster — build feedback issue", "labels": ["needs-eric"] }
+      {
+        "number": 480,
+        "title": "[ci] Moneypenny Events — build feedback issue",
+        "labels": ["needs-eric"]
+      }
     ]
   }
 }

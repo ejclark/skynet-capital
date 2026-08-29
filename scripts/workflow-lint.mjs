@@ -4,7 +4,7 @@
 //   node scripts/workflow-lint.mjs            # check .github/workflows (exit 1 on a problem)
 //   node scripts/workflow-lint.mjs <dir>      # check another directory (specs)
 //
-// WHAT HAPPENED: an edit to postmaster.yml left the `build-feedback:` job key defined TWICE. YAML
+// WHAT HAPPENED: an edit to moneypenny-events.yml (then postmaster.yml) left the `build-feedback:` job key defined TWICE. YAML
 // loaders that follow the spec loosely — including `yaml.safe_load` in the check that was run —
 // silently keep the last duplicate, so the file looked fine locally. GitHub's parser rejects it,
 // and a rejected workflow does not fail one job: it produces a run with ZERO jobs, named after the
