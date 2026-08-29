@@ -18,7 +18,7 @@ import type { FeedbackLogEntry } from "./feedback-log.js";
  * feature); a member earning it fresh sees the celebration once, until claimed.
  */
 
-export interface CommunityProgression {
+interface CommunityProgression {
   /** How many times this member has filed feedback — the feedback log's own length. */
   readonly feedbackCount: number;
   readonly earned: readonly EarnedCommunityMilestone[];
