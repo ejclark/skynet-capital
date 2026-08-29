@@ -70,6 +70,14 @@ role of responsible owner/steward — shipping lovable work while protecting the
   redesigned, decide the IA first — what the thing actually is, how it relates to everything else — and
   let routes, file names, and URL structure follow from that, including renaming or restructuring routes
   that already exist. A route being there already is never a reason to keep its shape.
+  **Write the IA decision down before implementing it** (issue #895, after #881→#886→#888 re-litigated
+  the same nav-placement question three times in ~2.5 hours on 2026-08-29 — settings-vs-top-nav for
+  prefs, then profile-vs-top-nav for milestones, then per-account-vs-user-level for milestones again).
+  When a surface redesign will change nav, route structure, or IA, put the decision in a short issue or
+  a note in the relevant surface doc *before* an implementation PR opens — the PR then executes an
+  already-settled call instead of re-litigating it live. This is a process step, not a gate: a trivial
+  single-link move with no structural ambiguity doesn't need its own decision doc, and this doesn't
+  retroactively judge #881/#886/#888, which are the motivating example, not a target for rework.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
   trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
 - **Positive reinforcement over negative.** Celebrate wins loudly; render losses honestly but without
