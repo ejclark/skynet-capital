@@ -1,8 +1,11 @@
 // THE LOOP'S EYES — the stall/silent-feedback audit lane. Split out of postmaster.mjs (2026-08-26,
-// the noExcessiveLinesPerFile split).
+// the noExcessiveLinesPerFile split). The plan-ready stall check (#897, closing #877's deferred
+// slice 3) joined 2026-08-29: a plan issue whose ready-flip comment never got claimed or built is
+// the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
 import { sh } from "./postmaster-gh.mjs";
 import { FOOTER, LABELS } from "./postmaster-labels.mjs";
+import { hasPlanLabel, isReadySignal } from "./postmaster-plan-claim.mjs";
 
 /**
  * Did this issue get an ANSWER? A linked PR (open or merged) is an answer; a closed issue is an
@@ -29,8 +32,10 @@ export function audit(deps = {}) {
   const {
     unclaimedIssues = [],
     silentFeedback = [],
+    readyPlans = [],
     staleAfterDays = 2,
     silentAfterHours = 6,
+    planStallAfterHours = 48,
   } = deps;
   // FLAG ONCE, NOT PER RUN. The audit rides every push (2026-08-19), so without memory a stall
   // would draw a fresh comment on every merge to main — comment spam, not eyes. The memory is the
@@ -65,7 +70,50 @@ export function audit(deps = {}) {
       body: `🔇 **No answer yet** — this was filed **${f.hoursSinceFiled}h** ago and has not reached a PR or a verdict. Every session must end somewhere a member can see: a PR, \`next-slice\`, \`needs-info\`, or \`needs-eric\`.\n\nRe-apply the \`feedback\` label to retry the build — the claim lease makes a re-label a safe retry, not a second build. If it is waiting on something, say so here so it stops looking dropped.\n\n${FOOTER}`,
     });
   }
+  // #897 (closing #877's deferred slice 3): a `ready` comment on a plan issue that never got
+  // claimed or built looks IDENTICAL to "nothing needed" from Eric's side — the trigger may have
+  // missed, hit a label mismatch, or lost a claim race, and none of those leave a trace anywhere he
+  // looks. `readyPlans` arrives pre-filtered by `gatherAuditDeps` (via the pure `readyPlanCandidate`
+  // below) to issues that are plan-labeled, carry a ready-signal comment, have no live claim lease,
+  // and have no linked PR — this loop only applies the time threshold and the one-ping memory.
+  for (const p of readyPlans) {
+    if (p.hoursSinceReady < planStallAfterHours) continue;
+    if (flagged.has(p.number)) continue;
+    intents.push({
+      kind: "flag-plan-stall",
+      issueNumber: p.number,
+      title: p.title,
+      hoursSinceReady: p.hoursSinceReady,
+      body: `⏳ **Plan never claimed** — a ready-flip comment landed **${p.hoursSinceReady}h** ago but nothing has claimed or built this plan issue since (no \`claim/plan-${p.number}\` lease, no linked PR). The trigger may have missed, hit a label mismatch, or lost a claim race.\n\nRe-post a ready comment (e.g. \`ready\`) to retry — the claim lease makes a re-trigger a safe retry, not a second build. If it is intentionally on hold, say so here so it stops looking dropped.\n\n${FOOTER}`,
+    });
+  }
   return intents;
+}
+
+/**
+ * THE PLAN-STALL DECISION — pure, mirroring `isReadySignal`'s own fixture-drivable shape: given
+ * one issue, its comments, and whether a claim lease is currently held, decide whether it belongs
+ * in the stalled-plan candidate list, and if so how old its ready-flip is. No network, no clock
+ * beyond the injected `nowMs` — the actual `gh` calls (comments, claim-ref lookup) stay in
+ * `gatherAuditDeps`, same division of labor as `planReadyIntent` vs. `claimPlan`.
+ *
+ * Returns `null` for anything that is not a live candidate: not plan-labeled, already answered
+ * (closed or has a linked PR), currently claimed, or carrying no ready-signal comment at all. The
+ * TIME threshold is NOT applied here — that is `audit()`'s job, same split as `unclaimedIssues`
+ * (quietDays) and `silentFeedback` (hoursSinceFiled).
+ *
+ * @returns {{ title: string, number: number, hoursSinceReady: number } | null}
+ */
+export function readyPlanCandidate(issue, comments = [], hasClaim = false, nowMs = Date.now()) {
+  if (!hasPlanLabel(issue)) return null;
+  if (answered(issue)) return null;
+  if (hasClaim) return null;
+  // `gh issue view --json comments` lists comments oldest-first, so the first match here is the
+  // EARLIEST ready-flip — the age that matters, since that is how long the trigger has had to fire.
+  const readyComment = (comments ?? []).find((c) => isReadySignal(c?.body));
+  if (!readyComment) return null;
+  const hoursSinceReady = Math.floor((nowMs - Date.parse(readyComment.createdAt)) / 3_600_000);
+  return { title: issue.title, number: issue.number, hoursSinceReady };
 }
 
 /** Audit-mode dependencies: unclaimed dispatch issues. Loud on failure, same doctrine as
@@ -128,5 +176,43 @@ export function gatherAuditDeps(nowMs) {
       hoursSinceFiled: hoursSince(i.createdAt ?? i.updatedAt),
     }));
 
-  return { unclaimedIssues, silentFeedback, alreadyFlagged };
+  // #897: plan issues whose ready-flip may never have been claimed. Skip the (expensive-ish,
+  // per-issue) comment fetch entirely for anything the cheap in-memory checks already rule out —
+  // answered or already flagged — same "don't pay for what you don't need" discipline as the
+  // shipped sweep's REST-before-GraphQL check above.
+  const readyPlans = [];
+  for (const i of issues) {
+    if (!hasPlanLabel(i)) continue;
+    if (answered(i)) continue;
+    if (alreadyFlagged.includes(i.number)) continue;
+    if (hasPlanClaim(i.number)) continue;
+    const view = json(`gh issue view (comments, #${i.number})`, [
+      "issue",
+      "view",
+      String(i.number),
+      "--json",
+      "comments",
+    ]);
+    const candidate = readyPlanCandidate(i, view.comments, false, nowMs);
+    if (candidate) readyPlans.push(candidate);
+  }
+
+  return { unclaimedIssues, silentFeedback, readyPlans, alreadyFlagged };
+}
+
+/**
+ * Is `claim/plan-<n>` currently held, in either namespace the lease has ever lived in? Read-only
+ * mirror of `claimHandoff`'s own `readRef`/namespace-fallback shape (scripts/postmaster.mjs) — a
+ * 404 in both namespaces means unclaimed, which is the common and expected case.
+ */
+function hasPlanClaim(number) {
+  for (const ns of ["tags", "heads"]) {
+    try {
+      sh("gh", ["api", `repos/{owner}/{repo}/git/ref/${ns}/claim/plan-${number}`]);
+      return true;
+    } catch {
+      /* not held in this namespace */
+    }
+  }
+  return false;
 }

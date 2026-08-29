@@ -143,6 +143,20 @@ describe("postmaster routing", () => {
     expect(intents.some((i) => i.issueNumber === 456)).toBe(false);
   });
 
+  // #897 (closing #877's deferred slice 3): a ready-flip comment on a plan issue that never got
+  // claimed or built is invisible from Eric's side — this is the audit lane that surfaces it.
+  it("the audit flags a plan issue whose ready-flip was never claimed, never a fresh one", () => {
+    const intents = dryRun("audit-plan-stall.json") as (Intent & { hoursSinceReady?: number })[];
+
+    expect(intents).toHaveLength(1);
+    expect(intents[0]?.kind).toBe("flag-plan-stall");
+    expect(intents[0]?.issueNumber).toBe(466);
+    expect(intents[0]?.hoursSinceReady).toBe(50);
+    expect(intents[0]?.body).toContain("claim/plan-466");
+    // ready 3h ago — the trigger may still be running
+    expect(intents.some((i) => i.issueNumber === 467)).toBe(false);
+  });
+
   it("issue bodies carry the Claude attribution footer", () => {
     const intents = dryRun("push-one-due.json") as Intent[];
 

@@ -465,6 +465,19 @@ export function runIntents(intents, run, onError = (msg) => console.error(`::err
   return { receipt, failed };
 }
 
+/**
+ * The shared body of every `flag-*` audit intent: comment, then apply the `stall-flagged` label
+ * as the memory that stops the next push re-flagging the same issue. Split out so the three flag
+ * kinds in `executeOne` (stall, silent-feedback, plan-stall) stay one line each rather than three
+ * copies of this, which is what pushed the function's cognitive complexity over budget (#897).
+ */
+function commentAndFlagStall(i) {
+  if (!i.issueNumber) return;
+  sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
+  ensureLabel(LABELS.stall);
+  sh("gh", ["issue", "edit", String(i.issueNumber), "--add-label", LABELS.stall.name]);
+}
+
 function executeOne(i) {
   if (i.kind === "noop") {
     console.log(`· nothing to do (${i.reason})`);
@@ -505,12 +518,7 @@ function executeOne(i) {
       : `· no \`claim/${i.slug}\` to release — nothing was holding it`;
   }
   if (i.kind === "flag-stall") {
-    if (i.issueNumber) {
-      sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
-      // The label is the audit's memory — it stops the next run re-flagging the same stall.
-      ensureLabel(LABELS.stall);
-      sh("gh", ["issue", "edit", String(i.issueNumber), "--add-label", LABELS.stall.name]);
-    }
+    commentAndFlagStall(i);
     console.log(`::warning::stall — ${i.title} quiet ${i.quietDays}d`);
     return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber})` : ""}`;
   }
@@ -521,16 +529,18 @@ function executeOne(i) {
     return `🚀 closed #${i.issueNumber} — \`${i.title}\` shipped in #${i.pr}`;
   }
   if (i.kind === "flag-silent-feedback") {
-    if (i.issueNumber) {
-      sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
-      // Same memory as the stall check: the label is what stops the next push re-flagging it.
-      ensureLabel(LABELS.stall);
-      sh("gh", ["issue", "edit", String(i.issueNumber), "--add-label", LABELS.stall.name]);
-    }
+    commentAndFlagStall(i);
     console.log(
       `::warning::silent feedback — #${i.issueNumber} no receipt after ${i.hoursSinceFiled}h`,
     );
     return `🔇 silent feedback — \`${i.title}\` no receipt after ${i.hoursSinceFiled}h (commented on #${i.issueNumber})`;
+  }
+  if (i.kind === "flag-plan-stall") {
+    commentAndFlagStall(i);
+    console.log(
+      `::warning::plan stall — #${i.issueNumber} ready ${i.hoursSinceReady}h ago, never claimed`,
+    );
+    return `⏳ plan stall — \`${i.title}\` ready ${i.hoursSinceReady}h ago, never claimed (commented on #${i.issueNumber})`;
   }
   return `❓ unknown intent kind ${i.kind}`;
 }
