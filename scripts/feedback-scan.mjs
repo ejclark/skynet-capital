@@ -19,6 +19,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { LABELS } from "./postmaster.mjs";
+import { ghRest } from "./postmaster-gh.mjs";
 
 // One vocabulary, not a set of string literals that can drift from it (#500). This scan is the
 // concrete consequence that issue names: it classifies by label, so a label it spells differently
@@ -27,10 +28,46 @@ const TERMINAL = [LABELS.needsInfo.name, LABELS.nextSlice.name, LABELS.needsEric
 
 const gh = (args) => execFileSync("gh", args, { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
 
-/** Every `feedback` issue with the fields an outcome needs. */
+/**
+ * `gh` with its most common failure translated. An unknown `--json` field exits non-zero with the
+ * field name and the allow-list on stderr; the raw error is `Command failed: gh issue list …`,
+ * which says nothing about the cause. #813 was exactly this, and it read as "gh is unreachable".
+ */
+function ghJson(args) {
+  try {
+    return gh(args);
+  } catch (err) {
+    const detail = String(err.stderr || err.message);
+    const unknown = detail.match(/Unknown JSON field: "?([^"\s]+)"?/);
+    if (unknown) {
+      throw new Error(
+        `feedback-scan: gh does not know the JSON field "${unknown[1]}" — it was renamed. ` +
+          `Fix the field list in fetchIssues(), and check tests/arch/gh-json-fields.spec.ts.`,
+      );
+    }
+    throw err;
+  }
+}
+
+/**
+ * Every `feedback` issue with the fields an outcome needs, with the closing PRs hydrated.
+ *
+ * TWO NAMES, TWO SHAPES (#813). `gh` renamed `closedByPullRequests` to
+ * `closedByPullRequestsReferences` and, in doing so, dropped `state` and `createdAt` from each
+ * element — the two fields this scoreboard is built on. `outcomeOf` needs `state` to tell a
+ * shipped issue from a labelled one, and `firstAnswerAt` uses `createdAt` as a candidate for
+ * time-to-first-answer. So the rename alone is not the fix; the missing fields have to come back
+ * from somewhere.
+ *
+ * They come from REST, one read per referenced PR, on the plentiful core bucket — never a second
+ * `gh --json` call, which compiles to GraphQL and is the scarce one the postmaster already
+ * exhausted once (docs/LESSONS.md, 2026-08-26). The scorers keep reading `closedByPullRequests`
+ * in its original `{state, createdAt}` shape, so every pure function and fixture below is
+ * untouched: the rename is absorbed here, at the I/O edge, where it belongs.
+ */
 function fetchIssues() {
-  return JSON.parse(
-    gh([
+  const issues = JSON.parse(
+    ghJson([
       "issue",
       "list",
       "--state",
@@ -40,9 +77,44 @@ function fetchIssues() {
       "--limit",
       "200",
       "--json",
-      "number,title,state,createdAt,closedAt,labels,comments,closedByPullRequests,body",
+      "number,title,state,createdAt,closedAt,labels,comments,closedByPullRequestsReferences,body",
     ]) || "[]",
   );
+  return issues.map((issue) => ({
+    ...issue,
+    closedByPullRequests: hydrateClosingPrs(issue.closedByPullRequestsReferences ?? []),
+  }));
+}
+
+/**
+ * `{number}` → `{state, createdAt}` for each closing reference, read over REST.
+ *
+ * Memoised per run: several issues can close on the same PR. A reference we cannot read degrades
+ * to `undefined` and is dropped rather than counted as merged — the conservative direction, since
+ * a wrongly-merged reading would inflate the lane's own success rate, which is the one number this
+ * scoreboard exists to keep honest.
+ *
+ * Same-repo only. A closing PR in another repository would need its own path; none exist here, and
+ * inventing one unused would be a second code path nothing exercises.
+ */
+const prCache = new Map();
+function hydrateClosingPrs(refs) {
+  const out = [];
+  for (const ref of refs) {
+    const number = Number(ref?.number);
+    if (!Number.isInteger(number)) continue;
+    if (!prCache.has(number)) {
+      try {
+        const pr = ghRest(`pulls/${number}`);
+        prCache.set(number, { state: pr.merged ? "MERGED" : "UNMERGED", createdAt: pr.created_at });
+      } catch {
+        prCache.set(number, undefined);
+      }
+    }
+    const hydrated = prCache.get(number);
+    if (hydrated) out.push(hydrated);
+  }
+  return out;
 }
 
 /**

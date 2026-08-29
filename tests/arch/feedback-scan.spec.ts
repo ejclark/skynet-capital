@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 // The feedback lane's scoreboard. Until 2026-08-22 the only number describing this lane was a
 // sentence someone hand-counted by reading GitHub, and it was optimistic — it said "exactly one
@@ -68,5 +69,59 @@ describe("feedback scoreboard", () => {
         stdio: "pipe",
       }),
     ).toThrow();
+  });
+});
+
+/**
+ * THE RENAME, AND WHAT IT TOOK WITH IT (#813, 2026-08-29).
+ *
+ * `gh` renamed `closedByPullRequests` to `closedByPullRequestsReferences` and dropped `state` and
+ * `createdAt` from each element — the two fields this scoreboard is built on. The scan asked for
+ * the old name, `gh` refused the whole query, and the lane's own record went blind while
+ * `feedback-build.md` kept telling every build session to read it.
+ *
+ * The fix absorbs the rename at the I/O edge: the fetch hydrates each reference back into the
+ * `{state, createdAt}` shape, so the scoring functions below never learned the field moved. These
+ * cases pin that seam — the scorers must keep reading the internal shape, and the query must ask
+ * for the name `gh` actually knows.
+ */
+const SOURCE = readFileSync("scripts/feedback-scan.mjs", "utf8");
+
+describe("the closing-PR rename", () => {
+  it("queries the field gh knows, not the one it dropped", () => {
+    expect(SOURCE).toContain("closedByPullRequestsReferences,body");
+    expect(SOURCE).not.toMatch(
+      /"number,title,state,createdAt,closedAt,labels,comments,closedByPullRequests,/,
+    );
+  });
+
+  it("hydrates the two fields the new field no longer carries", () => {
+    // Without these the scoreboard misreports: every shipped issue loses its MERGED state, and
+    // time-to-first-answer loses one of its candidates.
+    expect(SOURCE).toMatch(/state: pr\.merged \? "MERGED"/);
+    expect(SOURCE).toMatch(/createdAt: pr\.created_at/);
+  });
+
+  it("hydrates over REST, not a second gh --json call", () => {
+    // A second `gh --json` would compile to GraphQL — the scarce bucket the postmaster exhausted
+    // on 2026-08-26 (docs/LESSONS.md). One REST read per referenced PR is the core bucket.
+    expect(SOURCE).toMatch(/ghRest\(`pulls\/\$\{number\}`\)/);
+  });
+
+  it("drops a reference it could not read rather than counting it as merged", () => {
+    // The conservative direction: a wrongly-merged reading would inflate the lane's own success
+    // rate, which is the single number this scoreboard exists to keep honest.
+    expect(SOURCE).toMatch(/prCache\.set\(number, undefined\)/);
+    expect(SOURCE).toMatch(/if \(hydrated\) out\.push\(hydrated\)/);
+  });
+
+  it("names the field when gh rejects one, instead of dumping 'Command failed'", () => {
+    expect(SOURCE).toMatch(/Unknown JSON field/);
+    expect(SOURCE).toMatch(/does not know the JSON field/);
+  });
+
+  it("leaves the pure scorers reading the internal shape, so fixtures stay valid", () => {
+    // The rename is absorbed at the edge; `outcomeOf` and `firstAnswerAt` are untouched.
+    expect(SOURCE).toMatch(/issue\.closedByPullRequests \?\? \[\]/);
   });
 });
