@@ -20,6 +20,7 @@ export const PERSISTED_STORES: Readonly<Record<string, string>> = {
   SKYNET_PROGRESSION_FILE: "data/progression.json",
   SKYNET_COMMUNITY_PROGRESSION_FILE: "data/community-progression.json",
   SKYNET_OWNER_LINKS_FILE: "data/owner-links.json",
+  SKYNET_SUBSCRIPTIONS_FILE: "data/playbook-subscriptions.json",
 };
 
 /**

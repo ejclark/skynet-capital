@@ -34,6 +34,9 @@ primary_region = "ord"  # Chicago — closest to Iowa
   # Training-wheels preference + claimed unlock celebrations (progression-store.ts). Earned
   # milestones are NOT here — they re-derive from the activity + order-audit ledgers on read.
   SKYNET_PROGRESSION_FILE = "/data/progression.json"
+  # Account playbook subscriptions (issue #885, subscription-store.ts) — which playbooks an
+  # account subscribed to and the capital reserved per subscription.
+  SKYNET_SUBSCRIPTIONS_FILE = "/data/playbook-subscriptions.json"
   # Interim insight bridge (docs/plans/trade-insights-loop.md, slice 2) — the bots app has no
   # volume of its own, so it relays insight records to this app's internal-only listener
   # (src/server/insights-listener.ts) on port 8788 — deliberately NOT in [http_service] below, so

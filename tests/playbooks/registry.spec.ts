@@ -1,5 +1,11 @@
 import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
-import { enabledPlaybooks, G1_GOOG, S1_NVDA, TACO_DJT } from "../../src/playbooks/registry.js";
+import {
+  enabledPlaybooks,
+  findPlaybook,
+  G1_GOOG,
+  S1_NVDA,
+  TACO_DJT,
+} from "../../src/playbooks/registry.js";
 
 const cal = (symbol: string, date: string, status: EarningsPrint["status"]): EarningsPrint[] => [
   { symbol, date, status, source: "test" },
@@ -94,5 +100,17 @@ describe("enabledPlaybooks env parsing", () => {
     const { enabled, rejected } = enabledPlaybooks({ SKYNET_PLAYBOOKS: "TACO-DJT:conservative" });
     expect(rejected).toEqual([]);
     expect(enabled).toEqual([{ playbook: TACO_DJT, mode: "conservative" }]);
+  });
+});
+
+describe("findPlaybook", () => {
+  it("resolves each known house playbook by id", () => {
+    expect(findPlaybook("S1-NVDA")).toBe(S1_NVDA);
+    expect(findPlaybook("G1-GOOG")).toBe(G1_GOOG);
+    expect(findPlaybook("TACO-DJT")).toBe(TACO_DJT);
+  });
+
+  it("returns undefined for an unknown id", () => {
+    expect(findPlaybook("NOT-A-PLAYBOOK")).toBeUndefined();
   });
 });
