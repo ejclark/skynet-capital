@@ -406,12 +406,17 @@ describe("autonomous-lane envelope", () => {
         env: hermeticGitEnv(),
       });
     const ticketPath = join(dir, "src/trading/order-ticket.ts");
+    // `env: hermeticGitEnv()` here too (same fix as the diffAware block above) — this shells out
+    // to `envelope-scan.mjs`, which itself calls `git diff`, so it inherits `GIT_DIR`/
+    // `GIT_INDEX_FILE` from a real git hook exactly like a bare `git` spawn does. Missing here
+    // under `npm test` (no ambient `GIT_*`) and only surfaced under `.husky/pre-push`, which
+    // diffed the real repo instead of this temp fixture.
     const checkTemp = (...args: string[]): Check[] =>
       JSON.parse(
         execFileSync(
           "node",
           [join(process.cwd(), "scripts/envelope-scan.mjs"), "--check", ...args],
-          { cwd: dir, encoding: "utf8" },
+          { cwd: dir, encoding: "utf8", env: hermeticGitEnv() },
         ),
       ) as Check[];
     const scanTemp = (...args: string[]): string =>
