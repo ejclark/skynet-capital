@@ -1,4 +1,5 @@
 import { JsonFileStore } from "../storage/json-file-store.js";
+import { emptyParticipantKeyedState } from "../storage/participant-state.js";
 
 /**
  * The progression-preferences file on the mounted volume (`SKYNET_PROGRESSION_FILE`, prod
@@ -35,8 +36,6 @@ export interface ProgressionRecord {
 export interface ProgressionState {
   readonly participants: Readonly<Record<string, ProgressionRecord>>;
 }
-
-const EMPTY: ProgressionState = { participants: {} };
 
 /** Total parse: the exact shape or nothing — a hand-edited file degrades to empty, loudly. */
 function parseProgressionState(raw: unknown): ProgressionState | undefined {
@@ -77,7 +76,7 @@ export class ProgressionStore {
     this.file = new JsonFileStore({
       path,
       parse: parseProgressionState,
-      empty: EMPTY,
+      empty: emptyParticipantKeyedState(),
       label: "progression",
       ...(onReadError ? { onReadError } : {}),
     });
