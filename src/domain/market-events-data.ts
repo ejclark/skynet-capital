@@ -363,6 +363,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "Second JOLTS in the window; fast turnaround per BLS's own schedule.",
   },
   {
+    id: "consumer-confidence-2026-09-29",
+    kind: "macro-print",
+    title: "Conference Board Consumer Confidence Index (Sep 2026)",
+    date: "2026-09-29",
+    status: "estimate",
+    source:
+      "NEWS: the Conference Board publishes at 10:00 ET on the last Tuesday of each month (press-reported cadence, matching the 2026-08-25 predecessor); 09-29 is that Tuesday — not primary-verified against conference-board.org's own schedule, checked 2026-08-29",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The leading consumer read feeding retail sales and the goods side of PCE. The calendar carried no consumer-confidence entry beyond the passed 08-25 print, despite August's deterioration (the CB index printed below consensus; UMich fell to 51 from 55.2) being the freshest consumer signal in the window. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep.",
+  },
+  {
     id: "chicago-pmi-2026-09-30",
     kind: "macro-print",
     title: "Chicago PMI / Chicago Business Barometer (Sep 2026 data)",
