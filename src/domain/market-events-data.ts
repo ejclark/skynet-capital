@@ -363,6 +363,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "Second JOLTS in the window; fast turnaround per BLS's own schedule.",
   },
   {
+    id: "chicago-pmi-2026-09-30",
+    kind: "macro-print",
+    title: "Chicago PMI / Chicago Business Barometer (Sep 2026 data)",
+    date: "2026-09-30",
+    status: "estimate",
+    source:
+      "NEWS: mnimarkets.com Chicago Business Barometer publication calendar — 09:45 ET, checked 2026-08-29",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The closest-timed regional analog to ISM Manufacturing, released the last business day of the month — two business days ahead of the national print. Added because its Aug-data reading (2026-08-28) collapsed to 47.1 against a ~58 consensus and a 57.6 prior, the biggest single macro surprise of that week and one this calendar could not see coming because the series was untracked. Discovered during the ism-manufacturing-2026-09-01 pulse-check adjacency sweep. Filed as `estimate`/`NEWS:` rather than confirmed: MNI is the series' own publisher, but this lane proposes adjacencies as estimates and never self-promotes them to confirmed.",
+  },
+  {
     id: "jackson-hole-2026-08-28",
     kind: "macro-print",
     title: "Jackson Hole — Fed chair Warsh's first keynote (symposium Aug 27–29)",
