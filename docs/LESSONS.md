@@ -27,6 +27,46 @@ it. Prevention ranks, best first:
 
 ---
 
+### A batched research run hit `--max-turns` mid-wrap-up and orphaned three PRs with no CI
+
+- **SHA:** n/a (workflow-only fix, held for merge)   **DATE:** 2026-08-29   **STATUS:** closed
+- **SIGNAL:** Eric asked why #801 (and, on inspection, #799/#800 too) hadn't auto-merged — each
+  showed zero CI check-runs at all (confirmed via both the Checks API and the legacy commit-status
+  API: `total_count: 0`), so branch protection was waiting on a `verify` check that would never
+  appear. Detection was manual, ~10 hours after the PRs were opened — nothing in the repo's own
+  automation flagged them as stuck (the stall audit watches issues, not orphaned research PRs).
+- **ROOT CAUSE:** `build-events` was one Claude session looping over the *entire* due-events list
+  in a single `--max-turns 100` budget. That number measured "how much legitimate research is
+  owed this week," never "is this session stuck" — the two got conflated because batching put them
+  in the same variable. On this run, four due events (ism-services, treasury-20y-bond,
+  retail-sales, opex) shared that one budget; the session finished ism-services cleanly, opened
+  PRs for the other three, then hit turn 101 mid-wrap-up (`error_max_turns`, 25 min, $11.50) before
+  finishing whatever step normally leaves a PR in a state GitHub reliably fires `verify` for. The
+  three orphaned PRs still had real, correct research content and had even gotten auto-merge
+  armed — only their CI never ran. #724's own risk callout named this exact shape in advance
+  ("six critical prints + FOMC/CPI hit daily cadence at once… ~20+ owed sessions/day") without
+  anyone connecting it to the turn-budget-is-shared design until it actually happened.
+- **PREVENTION:** gate. `build-events` is now a `strategy: matrix` job, one leg per due event
+  (`.github/workflows/postmaster.yml`), each with its own `--max-turns 60` sized for a single
+  event's work instead of a whole batch's. This makes the guard *tighter*, not looser — a genuinely
+  stuck session on one event is now caught inside a smaller window — while removing the failure
+  mode entirely: no batch is ever large enough to share a budget several events race against.
+  `.github/prompts/event-research.md` now tells each session it owns exactly one pre-assigned
+  event id and to stop cleanly (not guess a substitute) if that id is no longer due. Immediate
+  unblock for #799/#800/#801 themselves: merged `main` into each stuck branch (a real synchronize
+  event, not the banned empty-commit-to-kick-CI move) — CI fired fresh and all three auto-merged.
+- **SIDE QUESTS:** The exact GitHub-side mechanism that suppressed these three PRs' `verify` check
+  was never fully pinned down — the App token was confirmed correctly used for git auth throughout
+  (per the action's own logs), so this isn't the classic GITHUB_TOKEN-suppression class already
+  banked above; something about the run being killed mid-turn correlates with the webhook never
+  firing, but the causal link is inferred from timing, not proven from GitHub's side. Worth a
+  deeper look if the matrix fix doesn't fully eliminate recurrences. Also flagged, not built here:
+  no automation currently notices an orphaned, checkless PR on its own — the postmaster's stall
+  audit covers issues, not PRs; a PR-side stall check would have caught this in minutes instead of
+  hours.
+
+---
+
 ### A burst of labeled events collapsed to the wrong survivors, and the feedback lane never claimed the issue
 
 - **SHA:** 021bf0d   **DATE:** 2026-08-29   **STATUS:** closed
