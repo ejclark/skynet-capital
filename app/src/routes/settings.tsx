@@ -15,6 +15,8 @@ import { AccountLinksCard, GuestListCard, OpsStatusCard } from "../shell/admin-c
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl } from "../shell/mission-control";
+import { type Density, type Theme, usePrefs } from "../shell/prefs";
+import { Toggle } from "../shell/toggle";
 
 /**
  * SETTINGS (#738 phase 5c) — the catalog's Settings patterns on the member's own accounts:
@@ -262,6 +264,47 @@ function DangerZone({
   );
 }
 
+function PreferencesCard(): ReactElement {
+  const theme = usePrefs((s) => s.theme);
+  const density = usePrefs((s) => s.density);
+  const setTheme = usePrefs((s) => s.setTheme);
+  const setDensity = usePrefs((s) => s.setDensity);
+  return (
+    <section className="set-card" id="preferences">
+      <h2 className="set-card-h">Preferences</h2>
+      <p className="set-hint">
+        Display settings for this browser — they apply immediately and aren't tied to any account.
+      </p>
+      <div className="set-fields">
+        <div className="field">
+          <span className="set-pref-label">Density</span>
+          <Toggle<Density>
+            label="Density"
+            value={density}
+            options={[
+              ["comfortable", "Comfortable"],
+              ["compact", "Compact"],
+            ]}
+            onPick={setDensity}
+          />
+        </div>
+        <div className="field">
+          <span className="set-pref-label">Theme</span>
+          <Toggle<Theme>
+            label="Theme"
+            value={theme}
+            options={[
+              ["dark", "Dark"],
+              ["light", "Light"],
+            ]}
+            onPick={setTheme}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function AccountCard({
   account,
   timezones,
@@ -330,6 +373,7 @@ function SettingsPage(): ReactElement {
   const rail = (
     <>
       <p className="rail-label">Settings</p>
+      <a href="#preferences">Preferences</a>
       {accounts.map((a) => (
         <a key={a.id} href={`#account-${a.id}`}>
           {a.name}
@@ -341,14 +385,15 @@ function SettingsPage(): ReactElement {
   );
 
   return (
-    <PageFrame rail={accounts.length > 0 ? rail : undefined}>
+    <PageFrame rail={rail}>
       <header className="page-header">
         <h1>Settings</h1>
         <p>
-          Your accounts, your rules: profile, timezone, credential rotation, and the door out.
-          Owners find the fleet's switchboard — Mission Control — at the bottom.
+          Preferences, your accounts, your rules: profile, timezone, credential rotation, and the
+          door out. Owners find the fleet's switchboard — Mission Control — at the bottom.
         </p>
       </header>
+      <PreferencesCard />
       {!authConfigured ? (
         <p className="note">
           Settings need a signed-in session to know which accounts are yours — this deployment runs

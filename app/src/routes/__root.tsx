@@ -2,12 +2,16 @@ import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useConnection } from "../live/connection";
 import { KeyboardChords } from "../shell/keyboard";
-import { type Density, type Theme, usePrefs } from "../shell/prefs";
 
 /**
- * The shell (#738, live-review round): the topbar carries the APP-LEVEL navigation — the views —
- * as the top dimension; each route brings its own left-rail sub-navigation through `PageFrame`
- * (or none). Views the shell doesn't own yet are plain links to the server-rendered pages.
+ * The shell (#738, live-review round; nav reorg follow-up): the topbar carries the APP-LEVEL
+ * navigation — the views — as the top dimension; each route brings its own left-rail
+ * sub-navigation through `PageFrame` (or none). Views the shell doesn't own yet are plain links
+ * to the server-rendered pages.
+ *
+ * Preferences (theme, density) live on /settings, not here — they're per-viewer display state,
+ * not a destination. Settings and Sign out are actions, not views, so they render as icon-only
+ * buttons rather than competing with the view list for topnav space.
  */
 
 function StatusPill(): ReactElement {
@@ -23,38 +27,45 @@ function StatusPill(): ReactElement {
   );
 }
 
-function Toggle<T extends string>({
-  label,
-  value,
-  options,
-  onPick,
-}: {
-  readonly label: string;
-  readonly value: T;
-  readonly options: readonly (readonly [T, string])[];
-  readonly onPick: (next: T) => void;
-}): ReactElement {
+function GearIcon(): ReactElement {
   return (
-    <fieldset className="toggle-group">
-      <legend className="visually-hidden">{label}</legend>
-      {options.map(([key, text]) => (
-        <button key={key} type="button" aria-pressed={key === value} onClick={() => onPick(key)}>
-          <span className="toggle-text">{text}</span>
-          {/* narrow viewports swap in the initial so the pill never renders empty */}
-          <span className="toggle-abbr" aria-hidden="true">
-            {text.slice(0, 1)}
-          </span>
-        </button>
-      ))}
-    </fieldset>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M19.4 13.5c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.02-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.38.96a7.6 7.6 0 0 0-1.73-1l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.63.24-1.22.58-1.73 1l-2.38-.96a.5.5 0 0 0-.6.22L2.7 9.28a.5.5 0 0 0 .12.64L4.84 11.5c-.04.33-.06.66-.06 1s.02.67.06 1L2.82 15.08a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.38-.96c.51.42 1.1.76 1.73 1l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.63-.24 1.22-.58 1.73-1l2.38.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64L19.4 13.5Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ExitIcon(): ReactElement {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10 8l-4 4 4 4M6 12h11"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
 function RootShell(): ReactElement {
-  const theme = usePrefs((s) => s.theme);
-  const density = usePrefs((s) => s.density);
-  const setTheme = usePrefs((s) => s.setTheme);
-  const setDensity = usePrefs((s) => s.setDensity);
   return (
     <div className="shell">
       <a className="skip-link" href="#main">
@@ -85,22 +96,6 @@ function RootShell(): ReactElement {
           >
             The Wire
           </Link>
-          <Link
-            to="/collections"
-            className="topnav-link"
-            activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false }}
-          >
-            Collections
-          </Link>
-          <Link
-            to="/outpost"
-            className="topnav-link"
-            activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false }}
-          >
-            The Outpost
-          </Link>
           <Link to="/learn" className="topnav-link" activeProps={{ "aria-current": "page" }}>
             Milestones
           </Link>
@@ -117,31 +112,18 @@ function RootShell(): ReactElement {
           </Link>
         </nav>
         <div className="topbar-actions">
-          <Link to="/settings" className="topnav-link" activeProps={{ "aria-current": "page" }}>
-            Settings
-          </Link>
-          <Toggle<Density>
-            label="Density"
-            value={density}
-            options={[
-              ["comfortable", "Comfortable"],
-              ["compact", "Compact"],
-            ]}
-            onPick={setDensity}
-          />
-          <Toggle<Theme>
-            label="Theme"
-            value={theme}
-            options={[
-              ["dark", "Dark"],
-              ["light", "Light"],
-            ]}
-            onPick={setTheme}
-          />
-          <span className="env-pill">SIM</span>
           <StatusPill />
-          <a className="topnav-link" href="/logout">
-            Sign out
+          <Link
+            to="/settings"
+            className="icon-action"
+            activeProps={{ "aria-current": "page" }}
+            aria-label="Settings"
+            title="Settings"
+          >
+            <GearIcon />
+          </Link>
+          <a className="icon-action" href="/logout" aria-label="Sign out" title="Sign out">
+            <ExitIcon />
           </a>
         </div>
       </header>
