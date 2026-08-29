@@ -1,11 +1,24 @@
+import type { TradeTypeCode } from "./trade-types.js";
+
 /**
- * The PLAYS CATALOG — the single source of truth for the option strategies the league teaches, and
- * the RISK LADDER that gates them. New traders start at the bottom (the cash-covered put) and earn
- * their way up; the complex/undefined-risk plays stay locked until the earlier levels are learned.
+ * The PLAYS CATALOG — the extended options-strategy curriculum: the six ruling-16 trade types plus
+ * the multi-leg strategies beyond them (spreads, condors, butterflies, strangles, straddles, a call
+ * ladder). New traders start at the bottom (the cash-covered put) and earn their way up; the
+ * complex/undefined-risk plays stay locked until the earlier levels are learned.
+ *
+ * **Ruling 16 (`trade-types.ts`) is the one numbering source** — the desk's course codes
+ * (101/102/201/202/301/302) are never re-derived here. `code` cites that code verbatim for the two
+ * strategies ruling 16 already defines (cash-secured put = 201, covered call = 202); it is
+ * `undefined` for everything beyond ruling 16's current six, because those don't have a desk code
+ * yet (no order path — see the options order-path issue). `level`/`order` are this catalog's OWN
+ * teaching-difficulty ladder, spanning strategies ruling 16 doesn't reach; they are never a second
+ * numbering scheme for what ruling 16 already codes.
  *
  * This is pure teaching data, deliberately decoupled from the trading engine (`src/personas/*`) and
- * the login animation's `STRATS`. It drives the `/learn` academy today and is the catalog a future
- * in-app play picker will gate against, so "know your audience" is enforced in one place.
+ * the login animation's `STRATS` (which has its own, unrelated legacy numbers — never read `code`
+ * from there or vice versa). Currently unused by `/learn` (`curriculum.ts` + `progression.ts` drive
+ * that today) and by the ticket (`plays-api-routes.ts` reads `trade-types.ts` directly) — this is
+ * the catalog a future in-app play picker for the multi-leg strategies will gate against.
  */
 
 /** Risk tier — ascending. Level 1 is the safest entry point; level 4 is advanced / undefined-risk. */
@@ -49,8 +62,11 @@ export interface Play {
   readonly level: PlayLevel;
   /** Ordering WITHIN a level — lower is taught first (the cash-covered put leads level 1). */
   readonly order: number;
-  /** Login-animation complexity class (101–401) — kept for continuity with the intro. */
-  readonly tier: number;
+  /**
+   * Ruling 16's own course code (`trade-types.ts`), cited verbatim — never re-numbered here.
+   * `undefined` for strategies ruling 16 doesn't yet define a code for.
+   */
+  readonly code?: TradeTypeCode;
   /** Whether the maximum loss is capped ("defined") or open-ended ("undefined"). */
   readonly risk: "defined" | "undefined";
   /** One-line gist. */
@@ -76,7 +92,7 @@ export const PLAYS: readonly Play[] = [
     name: "Cash-Covered Put",
     level: 1,
     order: 0,
-    tier: 102,
+    code: "201",
     risk: "defined",
     summary: "Sell a put and get paid to set the price you'd happily buy the stock at.",
     whenToUse:
@@ -92,7 +108,7 @@ export const PLAYS: readonly Play[] = [
     name: "Covered Call",
     level: 1,
     order: 1,
-    tier: 101,
+    code: "202",
     risk: "defined",
     summary: "Own 100 shares and sell a call against them to harvest income.",
     whenToUse:
@@ -108,7 +124,6 @@ export const PLAYS: readonly Play[] = [
     name: "Bull Call Spread",
     level: 2,
     order: 0,
-    tier: 201,
     risk: "defined",
     summary: "Bet on a measured move up, with the cost and the risk both capped.",
     whenToUse:
@@ -124,7 +139,6 @@ export const PLAYS: readonly Play[] = [
     name: "Iron Condor",
     level: 3,
     order: 0,
-    tier: 301,
     risk: "defined",
     summary: "Profit when a stock stays range-bound — collect the credit if it goes nowhere.",
     whenToUse:
@@ -140,7 +154,6 @@ export const PLAYS: readonly Play[] = [
     name: "Butterfly",
     level: 3,
     order: 1,
-    tier: 301,
     risk: "defined",
     summary: "A precise bet that a stock pins a specific price at expiration.",
     whenToUse:
@@ -155,7 +168,6 @@ export const PLAYS: readonly Play[] = [
     name: "Long Strangle",
     level: 3,
     order: 2,
-    tier: 301,
     risk: "defined",
     summary: "Win on a big move in either direction — you don't need to pick the way.",
     whenToUse:
@@ -171,7 +183,6 @@ export const PLAYS: readonly Play[] = [
     name: "Short Straddle",
     level: 4,
     order: 0,
-    tier: 401,
     risk: "undefined",
     summary: "Sell premium betting a stock barely moves — high income, uncapped risk.",
     whenToUse:
@@ -187,7 +198,6 @@ export const PLAYS: readonly Play[] = [
     name: "Call Ladder",
     level: 4,
     order: 1,
-    tier: 401,
     risk: "undefined",
     summary: "A layered call structure with room to run — and a tail risk to respect.",
     whenToUse:
