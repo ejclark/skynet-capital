@@ -263,13 +263,30 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       needs.route.outputs.due_events != '' && needs.route.outputs.due_events != '[]'
+    # ONE MATRIX LEG PER DUE EVENT (2026-08-29, #799/#800/#801's stall). This job used to be a
+    # single session looping over the whole due list — a batch of 4 events (a normal Tuesday, let
+    # alone "six critical prints + FOMC/CPI in one week", #724's own worst-case) shares one
+    # `--max-turns` budget sized for the WHOLE batch, so turn count was measuring "how much
+    # legitimate work is there this week," never "is this session stuck." The observed failure: a
+    # 4-event run hit turn 101 mid-wrap-up (`error_max_turns`, 25 min, $11.50) after already
+    # opening PRs for 3 of them — orphaned with no way to tell whether their checks would ever
+    # fire. Matrixing gives every event its OWN session and its OWN turn budget: a stuck/runaway
+    # session on ONE event still gets caught fast (the guard is now TIGHTER — 60 turns for one
+    # event's work is a smaller window than 100 for a whole batch used to be), and a busy week is
+    # more parallel jobs, never a shared budget several events race against. `fail-fast: false` so
+    # one event's session dying never cancels its siblings' already-in-flight work.
+    strategy:
+      fail-fast: false
+      matrix:
+        event: ${{ fromJSON(needs.route.outputs.due_events) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      # Minted per-job, same as `build` — the action revokes its token at job end.
+      # Minted per-job (per matrix leg, here), same as `build` — the action revokes its token at
+      # job end.
       - id: app-token
         if: vars.APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@v3
@@ -284,7 +301,7 @@ jobs:
           if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
           else
             echo "armed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — events are due but nothing will research them: ${{ needs.route.outputs.due_events }}"
+            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — event ${{ matrix.event.id }} is due but nothing will research it."
           fi
 
       - if: steps.gate.outputs.armed == 'true'
@@ -306,15 +323,25 @@ jobs:
           # sweep (peer prints, CPI/FOMC surprises, VIX regime) is the protocol minus its point.
           # --model pins the lane deliberately instead of riding the action default — same
           # route-by-who-pays rule as build-feedback (flat-rate lane, research-to-brief floor is
-          # opus per docs/COMPUTE.md). --max-turns is a runaway backstop only: sized ~2x a busy
-          # multi-event run so it never truncates real work (a too-tight cap would spend more via
-          # a ci-medic repair than it saves). docs/process/TOKEN-EFFICIENCY.md, 2026-08-28.
+          # opus per docs/COMPUTE.md). --max-turns is a runaway backstop only, now scoped to ONE
+          # event's work (a `never-assessed` initial write-up — TEMPLATE + stance + kill switches
+          # + first ledger row — is the heaviest single-event case, typically 20-30 turns): 60 is
+          # ~2x that ceiling, real headroom without weakening the runaway guard the batch-sized 100
+          # used to give away for free. docs/process/TOKEN-EFFICIENCY.md, 2026-08-28.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 100
-          # Same shim: the protocol lives in .github/prompts/event-research.md.
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 60
+          # Same shim: the protocol lives in .github/prompts/event-research.md. This run is
+          # pre-assigned exactly one event (this matrix leg's) — the prompt tells it not to touch
+          # any other due event even though `event-scan.mjs --due` will still list every one of
+          # them (sibling matrix legs own those, running in parallel right now).
           prompt: |
             Read `.github/prompts/event-research.md` in this repo and follow it exactly. It is your
-            complete instruction set for this run.
+            complete instruction set for this run. You are assigned exactly ONE event this run:
+            id `${{ matrix.event.id }}` (reason: `${{ matrix.event.reason }}`). Research only this
+            event, even though `event-scan.mjs --due` lists others too — every other due event has
+            its own sibling matrix job running in parallel right now, each responsible for its own
+            id only. If `${{ matrix.event.id }}` is no longer due when you check (another run
+            already handled it), say so and stop rather than picking a different one.
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue

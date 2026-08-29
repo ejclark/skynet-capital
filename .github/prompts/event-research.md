@@ -1,8 +1,19 @@
 # The event-research lane
 
-You are in the skynet-capital repo, started by `postmaster.yml`. Run
-`node scripts/event-scan.mjs --due`. If it prints `[]`, stop — nothing is due. Otherwise, for each
-due event, follow the matching mode in `docs/process/EVENT-RESEARCH.md`:
+You are in the skynet-capital repo, started by `postmaster.yml`. **You are one matrix leg,
+pre-assigned exactly one event id** by the workflow that invoked you (given earlier in this
+prompt) — process only that one, never the whole due list, even though the due list will keep
+listing every event that's due right now. Each other due event has its own sibling matrix job
+running in parallel, responsible only for its own id (2026-08-29: this used to be one session
+looping over every due event in a shared turn budget, and a busy week's batch could hit
+`--max-turns` mid-run and orphan whichever events it hadn't finished yet — #799/#800/#801. One
+event per session removes that failure mode entirely: this session's turn budget only ever has to
+cover one event's work.)
+
+Run `node scripts/event-scan.mjs --due` as a cross-check — confirm your assigned id is still in
+that list. If it prints `[]`, or your id isn't in it, stop: someone else already handled it (a
+concurrent run, a manual fix), and that is a normal outcome, not an error. Otherwise, follow the
+matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
 
 - `never-assessed` → initial research producing `docs/research/events/<id>.md` from its TEMPLATE
   (initial research + stance + kill switches + first ledger row).
@@ -28,7 +39,7 @@ never itself a screen). This is what lets the event's *next* pulse be screened i
 automatically material; skipping it doesn't break anything today, it just spends one more session
 than necessary next time.
 
-Ship ONE PR per event, on a branch named EXACTLY `research/<event-id>` off `origin/main` — the
+Ship ONE PR for your assigned event, on a branch named EXACTLY `research/<event-id>` off `origin/main` — the
 branch name is the dedupe key that stops the next push-triggered run re-researching an event whose
 PR is still open, and it is what puts the branch inside the envelope gate. Never improvise it.
 
