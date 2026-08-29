@@ -82,6 +82,29 @@ describe("serveDeskJson", () => {
     expect(answered(plain.out).landmark).toBeUndefined();
   });
 
+  // The landmark is the scoreboard only if every view renders the SAME dial — a bot ranked below
+  // another must NOT silently render at full power (2026-08-25's regression, ported from the
+  // retired /u/:id HTML pin).
+  it("dials a trailing bot below full power, never defaulting to 1", async () => {
+    // "sauron" is the only persona with a landmark mapped today (universe/project.ts) — both
+    // desks need it for the landmark to render at all; what's under test is the RANKING, not
+    // which persona owns the tower.
+    const leader = { ...bot, id: "leader", personaId: "sauron", equity: 20_000 };
+    const trailer = { ...bot, id: "trailer", personaId: "sauron", equity: 10_500 };
+    const { res, out } = fakeRes();
+    await serveDeskJson(
+      res,
+      "/api/desk/trailer",
+      configWith({
+        hub: {
+          getState: () => ({ generatedAt: "t", participants: [leader, trailer], collisions: [] }),
+        },
+      } as never),
+    );
+    const dials = answered(out).landmark as { power: number };
+    expect(dials.power).toBeLessThan(1);
+  });
+
   it("says when no activity ledger is wired — never an empty lie", async () => {
     const { res, out } = fakeRes();
     await serveDeskJson(res, "/api/desk/sauron/activity", configWith());

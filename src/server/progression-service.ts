@@ -12,6 +12,7 @@ import {
   deriveEarned,
   type EarnedMilestone,
   earnedCodes,
+  lockedOnLadder,
   nextUp,
   unlockedCodes,
 } from "../domain/progression.js";
@@ -57,6 +58,30 @@ export interface ParticipantProgression {
    * from `celebrating` until the member shows they understood the play they just made.
    */
   readonly pendingChecks: readonly EarnedMilestone[];
+}
+
+/** Locked = training wheels on and the ladder hasn't opened this code yet. */
+export function playLocked(
+  code: TradeTypeCode,
+  progression: ParticipantProgression | undefined,
+): boolean {
+  return lockedOnLadder(code, progression);
+}
+
+/**
+ * The shape `learn-json-view.ts` builds its JSON journey from — mirrors `ParticipantProgression`
+ * but keeps the view's dependency to domain types only (no server-layer coupling from the JSON
+ * producer back into this file's service plumbing).
+ */
+export interface AcademyProgress {
+  readonly earned: readonly EarnedMilestone[];
+  readonly points: number;
+  readonly rank: Rank;
+  readonly unlockedLevels: ReadonlySet<CourseLevel>;
+  /** Fresh earns awaiting their one-time celebration. */
+  readonly celebrating?: readonly EarnedMilestone[];
+  /** Fresh earns still gated on a comprehension check. */
+  readonly pendingChecks?: readonly EarnedMilestone[];
 }
 
 export interface ProgressionService {
