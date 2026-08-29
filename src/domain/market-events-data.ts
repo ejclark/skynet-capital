@@ -653,13 +653,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "PCE / Personal Income & Outlays (Oct 2026 data)",
     date: "2026-11-25",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: bea.gov/news/schedule lists verbatim "November 25, 8:30 AM — Personal Income and Outlays, October 2026" (fetched 2026-08-29, the same primary fetch that confirms pce-2026-10-29) — filed `estimate` per the event-research lane\'s adjacency rule (.github/prompts/event-research.md: a discovered adjacent event is proposed as an estimate, never confirmed), NOT for want of a primary source, checked 2026-08-29',
+      "BEA: bea.gov/news/schedule lists verbatim \"November 25, 8:30 AM — Personal Income and Outlays, October 2026\" (re-fetched 2026-08-29) — PROMOTED estimate→confirmed by the pce-2026-11-25 initial research: the `estimate` label came from this lane's ADJACENCY rule (a *discovered* event is proposed as an estimate, never confirmed), which governs discovery during a pulse, not an event's own never-assessed research; precedent aws-reinvent-2026, promoted by the same lane on a primary. checked 2026-08-29",
     impact: "high",
     symbols: [],
     notes:
-      "The last PCE before the 12-09 FOMC, and the second reading on the post-annual-update series (the methodology change lands 09-30). Shares its 08:30 ET slot with the Q3 GDP second estimate. Discovered during the pce-2026-10-29 initial research.",
+      "The last PCE the 12-09 FOMC sees — BEA's own schedule puts the next release on 12-23, fourteen days after the meeting — and the ONLY Q4 month the year's final SEP will observe (SEP inflation is Q4/Q4). Lands three days before the 11-28 blackout, in a week where 11-26 is closed and 11-27 is a 1:00pm ET half session, so it is priced with no official interpretation until the 12-09 presser. Third reading on the post-annual-update series (the methodology change lands 09-30). Shares its 08:30 ET slot with the Q3 GDP second estimate. Discovered during the pce-2026-10-29 initial research; assessed 2026-08-29.",
   },
   {
     id: "georgia-senate-runoff-2026-12-01",
