@@ -23,7 +23,17 @@ const SRC = "src";
 const FLY = "fly.toml";
 
 /** Stores deliberately left off the volume, each with the reason it is safe to lose on deploy. */
-const EPHEMERAL: Readonly<Record<string, string>> = {};
+const EPHEMERAL: Readonly<Record<string, string>> = {
+  // Holds only which community-track celebrations were already claimed (#567) — never the earned
+  // truth itself, which re-derives from SKYNET_FEEDBACK_LOG_DIR (on the volume) on every read.
+  // Losing this on a deploy means, at worst, a member who earned it moments before sees the
+  // celebration banner once more — self-correcting, never a false or missing earn. `fly.toml` is
+  // envelope-protected (spend/deploy topology, envelope.json), so pinning this to the volume is
+  // Eric's one-line call to make (`SKYNET_COMMUNITY_PROGRESSION_FILE = "/data/community-progression.json"`
+  // alongside the other stores in `[env]`), not this lane's to self-authorize.
+  SKYNET_COMMUNITY_PROGRESSION_FILE:
+    "claim-state only, not earned truth; loses at most a repeat celebration on deploy",
+};
 
 function tsFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {

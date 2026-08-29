@@ -176,6 +176,82 @@ describe("serveFeedbackApi", () => {
     expect(recorded).toEqual([]);
   });
 
+  it("surfaces the community track's feedbackCount and celebrating from communityProgression (#567)", async () => {
+    const asked: string[] = [];
+    const config = configWith({
+      readFeedback: () => Promise.resolve([entry(7, "It broke")]),
+      communityProgression: {
+        view: (id: string) => {
+          asked.push(id);
+          return Promise.resolve({
+            feedbackCount: 3,
+            earned: [],
+            celebrating: [{ milestoneId: "first-feedback", issueNumber: 7 }],
+          });
+        },
+        acknowledge: () => Promise.resolve(),
+      },
+    });
+    const { res, out } = fakeRes();
+    await serveFeedbackApi(get(), res, "/api/feedback", config, session);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(asked).toEqual([opaqueMemberId(email)]);
+    expect(body.feedbackCount).toBe(3); // the community service's count wins over the raw log length
+    expect(body.celebrating).toEqual([
+      { milestoneId: "first-feedback", title: "File your first feedback", issueNumber: 7 },
+    ]);
+  });
+
+  it("claims a community milestone through the session's own opaque id, filtered by the service", async () => {
+    const acked: { id: string; ids: readonly string[] }[] = [];
+    const config = configWith({
+      communityProgression: {
+        view: () => Promise.resolve({ feedbackCount: 1, earned: [], celebrating: [] }),
+        acknowledge: (id: string, ids: readonly string[]) => {
+          acked.push({ id, ids });
+          return Promise.resolve();
+        },
+      },
+    });
+    const { res, out } = fakeRes();
+    await serveFeedbackApi(
+      post({ ack: ["first-feedback"] }),
+      res,
+      "/api/feedback/claim",
+      config,
+      session,
+    );
+    expect(acked).toEqual([{ id: opaqueMemberId(email), ids: ["first-feedback"] }]);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+  });
+
+  it("refuses a malformed claim body", async () => {
+    const config = configWith({
+      communityProgression: {
+        view: () => Promise.resolve({ feedbackCount: 0, earned: [], celebrating: [] }),
+        acknowledge: () => Promise.resolve(),
+      },
+    });
+    const { res, out } = fakeRes();
+    await serveFeedbackApi(post({ ack: [] }), res, "/api/feedback/claim", config, session);
+    expect(out.status).toBe(400);
+  });
+
+  it("answers a claim honestly when the community track isn't wired", async () => {
+    const { res, out } = fakeRes();
+    await serveFeedbackApi(
+      post({ ack: ["first-feedback"] }),
+      res,
+      "/api/feedback/claim",
+      configWith(),
+      session,
+    );
+    expect(JSON.parse(out.body ?? "{}")).toEqual({
+      ok: false,
+      error: "The community track isn't wired in this deployment.",
+    });
+  });
+
   it("answers an unwired deployment honestly, without touching anything", async () => {
     const { res, out } = fakeRes();
     await serveFeedbackApi(

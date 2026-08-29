@@ -19,12 +19,22 @@ export interface RecentFiling {
   readonly status?: "open" | "needs-info" | "needs-eric" | "next-slice" | "shipped";
 }
 
+/** One unclaimed community-track earn (#567), ready for its one-time fanfare — the fill-earned
+ *  ladder's exact pattern, one level over: the filed issue IS the proof. */
+export interface CommunityCelebration {
+  readonly milestoneId: string;
+  readonly title: string;
+  readonly issueNumber: number;
+}
+
 export interface FeedbackIndex {
   readonly enabled: boolean;
   readonly coachEnabled: boolean;
   readonly followupEnabled: boolean;
   /** How many times this member has filed feedback — the already-durable log's own length. */
   readonly feedbackCount: number;
+  /** Fresh community-track earns awaiting their one-time celebration. */
+  readonly celebrating: readonly CommunityCelebration[];
   readonly recent: readonly RecentFiling[];
 }
 
@@ -33,6 +43,13 @@ export async function fetchFeedbackIndex(): Promise<FeedbackIndex> {
   if (!res.ok) throw new Error(`feedback ${res.status}`);
   return (await res.json()) as FeedbackIndex;
 }
+
+type ClaimAnswer = { readonly ok: true } | { readonly ok: false; readonly error: string };
+
+/** Bank the one-time celebration for the community track — the service filters ids against the
+ *  real track, mirroring `/api/learn/claim`. */
+export const claimCommunityMilestones = (ack: readonly string[]): Promise<ClaimAnswer> =>
+  postJson("/api/feedback/claim", { ack });
 
 export type SubmitAnswer =
   | { readonly ok: true; readonly url: string; readonly number: number }

@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { communityMilestone } from "../domain/community.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { toSpec } from "./feedback-coach.js";
@@ -9,6 +10,16 @@ import { recordFilingSafely } from "./feedback-log.js";
 import { feedbackThrottled } from "./feedback-routes.js";
 import type { FeedbackInput } from "./feedback-service.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
+
+/** Community-track milestone celebration ids, mirroring `/api/learn/claim`'s bounded shape. */
+function parseCommunityAckIds(raw: string): readonly string[] | undefined {
+  const body = parseJsonRecord(raw);
+  if (!(body && Array.isArray(body.ack))) return undefined;
+  const ids = body.ack;
+  const bounded = (v: unknown): v is string =>
+    typeof v === "string" && v.length > 0 && v.length <= 100;
+  return ids.length > 0 && ids.length <= 20 && ids.every(bounded) ? ids : undefined;
+}
 
 /**
  * THE FEEDBACK API (#738 phase 9d) — `/feedback`'s JSON twin, three endpoints:
@@ -46,13 +57,24 @@ async function serveIndex(
     config.fetchFeedbackStatus && recent.length
       ? await config.fetchFeedbackStatus(recent.map((e) => e.issueNumber))
       : undefined;
+  // The community milestone track (#567) — same identity, same "never trust the client" posture
+  // as everything else on this route: the view is derived server-side from the same log.
+  const community =
+    config.communityProgression && session?.email
+      ? await config.communityProgression.view(opaqueMemberId(session.email))
+      : undefined;
   sendJson(res, 200, {
     enabled: Boolean(config.submitFeedback),
     coachEnabled: Boolean(config.coachFeedback),
     followupEnabled: Boolean(config.submitFollowup && config.readFeedback),
     // Already-durable — `feedback-log.ts` (#429) records every filing; this is just its length,
     // never a separate counter that could drift from that record (#567).
-    feedbackCount: recent.length,
+    feedbackCount: community?.feedbackCount ?? recent.length,
+    celebrating: (community?.celebrating ?? []).map((m) => ({
+      milestoneId: m.milestoneId,
+      title: communityMilestone(m.milestoneId)?.title ?? m.milestoneId,
+      issueNumber: m.issueNumber,
+    })),
     recent: recent.map((e) => ({
       issueNumber: e.issueNumber,
       title: e.title,
@@ -170,6 +192,29 @@ async function serveFollowup(
   sendJson(res, result.ok ? 200 : 502, result);
 }
 
+/** POST /api/feedback/claim → the community track's `acknowledge` (#567), the exact twin of
+ *  `/api/learn/claim`: banks the one-time celebration, filtered against the real track. */
+async function serveCommunityClaim(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<void> {
+  const raw = await readJsonPost(req, res, 1_024);
+  if (raw === undefined) return;
+  if (!(config.communityProgression && session?.email)) {
+    sendJson(res, 200, { ok: false, error: "The community track isn't wired in this deployment." });
+    return;
+  }
+  const ids = parseCommunityAckIds(raw);
+  if (!ids) {
+    sendJson(res, 400, { error: "malformed claim body" });
+    return;
+  }
+  await config.communityProgression.acknowledge(opaqueMemberId(session.email), ids);
+  sendJson(res, 200, { ok: true });
+}
+
 /** Handle `/api/feedback*`. Returns true when the request was answered. */
 export async function serveFeedbackApi(
   req: IncomingMessage,
@@ -188,6 +233,10 @@ export async function serveFeedbackApi(
   }
   if (path === "/api/feedback/followup") {
     await serveFollowup(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/feedback/claim") {
+    await serveCommunityClaim(req, res, config, session);
     return true;
   }
   return false;
