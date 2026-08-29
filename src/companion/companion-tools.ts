@@ -112,6 +112,9 @@ async function roundTripsResult(
       })),
       openLots: ledger.open.length,
       truncated: ledger.truncated,
+      // `truncated` only ever speaks for shares. The options half of "is this record complete?" is
+      // this count — contracts read as written rather than as a leg opened before the window.
+      writtenContracts: ledger.writtenQuantity,
     },
   };
 }

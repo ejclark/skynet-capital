@@ -119,6 +119,7 @@ describe("matchRoundTrips — honesty invariants", () => {
       open: [],
       unpricedFills: 0,
       unmatchedSellQuantity: 0,
+      writtenQuantity: 0,
       truncated: false,
     });
   });
@@ -279,6 +280,28 @@ describe("matchRoundTrips — written (short) options, #838", () => {
     expect(ledger.trips).toHaveLength(0);
     expect(ledger.open).toHaveLength(0);
     expect(ledger.truncated).toBe(false);
+  });
+
+  it("counts every contract taken as written, so a caller can bound what rests on that reading", () => {
+    // `truncated` cannot speak for options any more (a sell there is an opening, not a caveat), so
+    // this is the replacement disclosure — and it still counts a lot that has since closed.
+    const ledger = matchRoundTrips([
+      write(420, "2026-08-01T14:00:00.000Z", 2),
+      write(300, "2026-08-02T14:00:00.000Z", 1),
+      lifecycleClose("2026-09-18T20:00:00.000Z", 2),
+    ]);
+    expect(ledger.writtenQuantity).toBe(3);
+    expect(ledger.truncated).toBe(false);
+    expect(ledger.open).toHaveLength(1);
+  });
+
+  it("leaves writtenQuantity at zero when a buy opened the position", () => {
+    const ledger = matchRoundTrips([
+      { symbol: WRITTEN, side: "buy", quantity: 1, price: 500, at: "2026-08-01T14:00:00.000Z" },
+      { symbol: WRITTEN, side: "sell", quantity: 1, price: 700, at: "2026-08-02T14:00:00.000Z" },
+    ]);
+    expect(ledger.writtenQuantity).toBe(0);
+    expect(ledger.trips[0]?.realized).toBe(200);
   });
 
   it("never opens a short lot for STOCK — an unmatched share sell is still a truncated window", () => {

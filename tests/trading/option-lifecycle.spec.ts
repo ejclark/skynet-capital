@@ -22,8 +22,35 @@ describe("parseLifecycleActivity — never assume a field the wire format doesn'
       type: "OPEXP",
       symbol: "MSFT260918P00420000",
       quantity: 2,
-      at: "2026-09-19T00:00:00.000Z",
+      // A date-only stamp is the END of the expiration day, not its first instant — see
+      // `endOfDayIfTimeless`. Midnight sorted a contract's expiry ahead of the fill that opened it.
+      at: "2026-09-19T23:59:59.999Z",
     });
+  });
+
+  it("keeps a real execution stamp exactly as reported, and prefers it over the date", () => {
+    const parsed = parseLifecycleActivity({
+      ...expired,
+      transaction_time: "2026-09-19T14:30:00Z",
+    });
+    expect(parsed?.at).toBe("2026-09-19T14:30:00.000Z");
+  });
+
+  it("scores a contract WRITTEN and expired the same day — the 0DTE case", () => {
+    const wrote = {
+      symbol: "MSFT260918P00420000",
+      side: "sell" as const,
+      quantity: 2,
+      price: 420,
+      at: "2026-09-19T14:00:00.000Z",
+    };
+    const close = lifecycleClosingFill(
+      parseLifecycleActivity(expired) as NonNullable<ReturnType<typeof parseLifecycleActivity>>,
+    ) as NonNullable<ReturnType<typeof lifecycleClosingFill>>;
+    const ledger = matchRoundTrips([wrote, close]);
+    expect(ledger.trips).toHaveLength(1);
+    expect(ledger.trips[0]?.realized).toBe(840);
+    expect(ledger.open).toHaveLength(0);
   });
 
   it("carries price and side only when both are present and valid (OPTRD)", () => {
@@ -78,7 +105,7 @@ describe("lifecycleClosingFill — closes a leg without a fill, honestly", () =>
       side: "sell",
       quantity: 2,
       price: 0,
-      at: "2026-09-19T00:00:00.000Z",
+      at: "2026-09-19T23:59:59.999Z",
       synthetic: true,
     });
     expect(lifecycleClosingFill({ ...parsed, type: "OPASN" })?.synthetic).toBe(true);

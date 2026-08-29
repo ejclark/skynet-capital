@@ -20,13 +20,17 @@
  *  - **options are the exception, because there the sell is genuinely an opening** — a written put
  *    or covered call (course 201/202) starts with a sell-to-open. So on an OCC symbol an unmatched
  *    sell opens a **short lot**, which later closes on a buy-to-close or on an expiry/assignment
- *    (#838). Its `realized` is premium received − cost to close, and `returnPct` is measured
- *    against the premium, so a contract written for $420 and expiring worthless reads +$420 / +100%.
- *    The cost of that choice, stated plainly: a LONG option opened before the window and sold to
- *    close inside it now shows as a written lot in `open` instead of setting `truncated`. That is
- *    the narrower error — this app journals its own fills durably (`observatory/activity-store.ts`)
- *    and merges them with the broker window, so a leg it opened is in the record; whereas a written
- *    option that can never score is a permanent hole in every stat downstream.
+ *    (#838). Its `realized` is premium received − cost to close and `returnPct` is measured against
+ *    the premium, so a contract written for $420 and expiring worthless reads +$420 / +100%.
+ *    The cost, stated in full: a LONG option opened before the window and sold to close inside it is
+ *    indistinguishable from a write, so it becomes a short lot — and if the member later re-buys
+ *    that contract, the matcher scores a trip that never happened at dollars that are wrong. So
+ *    `truncated` no longer carries that caveat for options and **`writtenQuantity` replaces it**,
+ *    counting every contract taken as written: exactly the quantity resting on that reading, and the
+ *    number a caller must show before calling an options P/L complete. Worth it anyway, because this
+ *    app journals its own fills durably (`observatory/activity-store.ts`) and merges them with the
+ *    broker window — so a leg it opened is in the record and the pre-window case is narrow, whereas
+ *    a written option that can NEVER score is a permanent hole in every stat downstream.
  *  - what's still open is returned (`open`), so a caller can reconcile matched lots against the
  *    broker's live positions instead of assuming the window covered everything.
  */
@@ -47,15 +51,12 @@ export interface TradeFill {
    * True for a "close" synthesized from a lifecycle event (an option expiring or being
    * assigned — #468 criterion 6) rather than a real order fill. The $0 price on one of these is
    * honest: no cash changes hands to close the leg either way, so it wipes out a long option's
-   * premium and lets a written one's premium be kept in full.
-   *
-   * A synthetic fill is a **directionless close**: it ends whichever leg is open — a long lot
-   * (bought, so it closes like a sell) or a short one (written, so it closes like a buy) — and it
-   * never OPENS a lot, because an expiry or assignment can only end a position. Its nominal `side`
-   * is therefore ignored by the matcher, which also means the broker's own `side` field on a
-   * lifecycle activity cannot mis-steer the math. With nothing open it stays a no-op rather than
-   * inflating `unmatchedSellQuantity` with a "history begins mid-trade" caveat it didn't earn.
-   * Ordinary fills never set this and are unaffected.
+   * premium and lets a written one's premium be kept in full. It is a **directionless close** — it
+   * ends whichever leg is open (a bought lot, closing like a sell; a written one, closing like a
+   * buy) and never OPENS a lot, since an expiry or assignment can only end a position. Its nominal
+   * `side` is therefore ignored by the matcher, so the broker's own `side` on a lifecycle activity
+   * cannot mis-steer the math. With nothing open it stays a no-op rather than inflating
+   * `unmatchedSellQuantity` with a caveat it didn't earn. Ordinary fills never set this.
    */
   readonly synthetic?: boolean;
 }
@@ -106,7 +107,16 @@ export interface RoundTripLedger {
    *  Stock only — an option sell with nothing open is a written contract, so it opens a short lot
    *  instead of landing here (see the module doc). */
   readonly unmatchedSellQuantity: number;
-  /** True when any sell went unmatched — the record is a window, not the whole story. */
+  /**
+   * Contracts opened by a sell with nothing to close — read as WRITTEN (201/202). The options-side
+   * counterpart to `unmatchedSellQuantity`, and the honest bound on it: nearly always a real write,
+   * but a long leg opened before this window and sold to close lands here too. Counted when the lot
+   * opens, whether or not it later closed, so it stays the full measure of how much of the options
+   * P/L rests on that reading. A view claiming a complete options record must say this number.
+   */
+  readonly writtenQuantity: number;
+  /** True when any sell went unmatched — the record is a window, not the whole story. Stock only;
+   *  `writtenQuantity` carries the equivalent caveat for options. */
   readonly truncated: boolean;
 }
 
@@ -188,19 +198,25 @@ function closeAgainst(
   return remaining;
 }
 
-/**
- * FIFO-match one symbol's fills, in either direction. Returns the quantity sold with nothing open
- * to match it — which, per the module doc, can only happen on a symbol that cannot be sold to open.
- */
+/** What one symbol's pass contributes to the ledger's two "how complete is this?" counters. */
+interface MatchTally {
+  /** Sold with nothing open to match it — only possible where a sell cannot open a position. */
+  readonly unmatchedSells: number;
+  /** Opened by a sell with nothing to close, i.e. taken as written. */
+  readonly written: number;
+}
+
+/** FIFO-match one symbol's fills, in either direction. */
 function matchSymbol(
   symbol: string,
   fills: readonly TradeFill[],
   trips: RoundTrip[],
   open: OpenLot[],
-): number {
+): MatchTally {
   const lots: Lot[] = [];
   let direction: LotDirection = "long";
   let unmatchedSells = 0;
+  let written = 0;
   // Only an option can be sold to open here (201/202). A stock sell is clamped to the held
   // quantity upstream (`engine/guards.ts`), so an unmatched one is a truncated window, not a short.
   const canWrite = isOccSymbol(symbol);
@@ -221,6 +237,7 @@ function matchSymbol(
     }
     // Flat, so this fill sets the direction; otherwise it is adding to the leg already open.
     if (lots.length === 0) direction = fill.side === "buy" ? "long" : "short";
+    if (fill.side === "sell") written += remaining;
     lots.push({ quantity: remaining, price, at: fill.at });
   }
 
@@ -233,7 +250,7 @@ function matchSymbol(
       ...(direction === "short" ? { short: true } : {}),
     });
   }
-  return unmatchedSells;
+  return { unmatchedSells, written };
 }
 
 /**
@@ -257,8 +274,11 @@ export function matchRoundTrips(fills: readonly TradeFill[]): RoundTripLedger {
   const trips: RoundTrip[] = [];
   const open: OpenLot[] = [];
   let unmatchedSellQuantity = 0;
+  let writtenQuantity = 0;
   for (const [symbol, symbolFills] of bySymbol) {
-    unmatchedSellQuantity += matchSymbol(symbol, symbolFills, trips, open);
+    const tally = matchSymbol(symbol, symbolFills, trips, open);
+    unmatchedSellQuantity += tally.unmatchedSells;
+    writtenQuantity += tally.written;
   }
   trips.sort((a, b) => a.closedAt.localeCompare(b.closedAt));
   return {
@@ -266,6 +286,7 @@ export function matchRoundTrips(fills: readonly TradeFill[]): RoundTripLedger {
     open,
     unpricedFills,
     unmatchedSellQuantity,
+    writtenQuantity,
     truncated: unmatchedSellQuantity > 0,
   };
 }

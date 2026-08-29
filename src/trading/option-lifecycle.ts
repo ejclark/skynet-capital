@@ -100,6 +100,20 @@ function isoTimestamp(value: unknown): string | undefined {
 }
 
 /**
+ * A lifecycle activity's `date` carries no time of day, so it parses to midnight UTC — which sorts
+ * a contract's own expiry BEFORE the fill that opened it. On a same-day write (a 0DTE
+ * cash-secured put, say) that made the close a no-op against an empty lot queue and the premium
+ * never scored: the exact hole #838 exists to fill. A contract ceases to exist at the END of its
+ * expiration date, so a timeless stamp is normalized to the last instant of that day — later than
+ * any fill on it, and closer to the truth than midnight was.
+ */
+function endOfDayIfTimeless(iso: string): string {
+  const day = 24 * 60 * 60 * 1000;
+  const ms = new Date(iso).getTime();
+  return ms % day === 0 ? new Date(ms + day - 1).toISOString() : iso;
+}
+
+/**
  * Parse one raw account-activity row into a lifecycle event, or `null` when it isn't one of the
  * four option lifecycle types or is missing a field this module needs to act on honestly. Never
  * throws — a malformed or unrecognized row is silently excluded, exactly like an unpriced fill is
@@ -112,7 +126,11 @@ export function parseLifecycleActivity(
   const type = str(raw.activity_type);
   const symbol = str(raw.symbol);
   const quantity = positiveQuantity(raw.qty);
-  const at = isoTimestamp(raw.date) ?? isoTimestamp(raw.transaction_time);
+  // The precise execution stamp wins when the activity carries one. `date` is the date-only field
+  // non-trade activities report, so it goes through `endOfDayIfTimeless` and sorts after the fills
+  // it closes rather than before them.
+  const dated = isoTimestamp(raw.date);
+  const at = isoTimestamp(raw.transaction_time) ?? (dated ? endOfDayIfTimeless(dated) : undefined);
   if (!(id && type && LIFECYCLE_TYPES.has(type) && symbol) || quantity === undefined || !at) {
     return null;
   }
