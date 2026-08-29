@@ -31,7 +31,11 @@
     },
     {
       "pattern": "scripts/envelope-widening.mjs",
-      "why": "the gate's structural/behavior-verification helpers — same reason as envelope-scan.mjs"
+      "why": "the gate's structural-widening helper — same reason as envelope-scan.mjs"
+    },
+    {
+      "pattern": "scripts/envelope-behavior.mjs",
+      "why": "the gate's behavior-verification helper (#852) — same reason as envelope-scan.mjs"
     },
     {
       "pattern": "src/server/auth/**",

@@ -10,24 +10,19 @@
 //   node scripts/envelope-scan.mjs --list      # print the protected list (no git, always exit 0)
 //   node scripts/envelope-scan.mjs --check <paths...>   # is this path protected? JSON, exit 0
 //   node scripts/envelope-scan.mjs --check <paths...> --base origin/main   # + real diff-aware
-//       `blocking` is the field to act on — false on a diffAware rule whose actual diff is safe
-//       (envelope.json's $diffAwareComment). Omit --base and `blocking` mirrors `protected`. A
-//       cleared diffAware entry also carries `reason`: "pure-insertion", "structural-widening",
-//       or "behavior-verified" (#852) — which of the three proofs justified it, never just that one did.
+//       `blocking` is what to act on — false on a diffAware rule whose diff is safe (envelope.json's
+//       $diffAwareComment); a cleared entry also carries WHICH proof cleared it as `reason`.
 //   node scripts/envelope-scan.mjs --lane feedback/9 --base origin/main   # explicit, for specs
+// suiteRunnerArgv, behaviorVerifiedFacts, and exemptionReason (#852) live in envelope-behavior.mjs;
+// classifyStructuralWidening (#716/#858, a safe token-level widening) lives in envelope-widening.mjs.
+// Both split out to stay under the line budget, re-exported here so importers keep working.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-// classifyStructuralWidening (#716/#858 — is a diffAware diff a safe token-level widening, e.g. a
-// union type gaining a member?) and structurallySafe live in envelope-widening.mjs, split out to
-// stay under the line budget; re-exported so existing importers keep working.
-import {
-  classifyStructuralWidening,
-  MUTATING_CALL_PATTERNS,
-  structurallySafe,
-} from "./envelope-widening.mjs";
+import { behaviorVerifiedFacts, exemptionReason, suiteRunnerArgv } from "./envelope-behavior.mjs";
+import { classifyStructuralWidening, MUTATING_CALL_PATTERNS } from "./envelope-widening.mjs";
 
-export { classifyStructuralWidening };
+export { behaviorVerifiedFacts, classifyStructuralWidening, suiteRunnerArgv };
 
 const ROOT = process.cwd();
 const MANIFEST = join(ROOT, "envelope.json");
@@ -134,67 +129,8 @@ function diffFor(path, base) {
   }
 }
 
-// #852's BROAD slice (Eric, 2026-08-29 — "the intent is behavioral tests and CI quality gates are
-// to prevent the need for human review/intervention", not just speed it up): a third path to
-// additiveSafe:true, alongside pure insertion and safe structural widening. A diffAware rule may
-// name `invariantSuite`, a spec file; a passing run of that suite is trusted as proof THIS diff
-// preserved the behavior it covers — PROVIDED the diff didn't also touch the suite itself (see
-// $behaviorEvidenceNote in envelope.json).
-
-/** The command that runs one spec file, as [cmd, args] — overridable via ENVELOPE_SUITE_RUNNER
- *  (space-separated) so a hermetic fixture can substitute a trivial always-pass/always-fail
- *  command instead of a real test run. Exported for the specs to assert the default directly. */
-export function suiteRunnerArgv(specPath) {
-  const override = process.env.ENVELOPE_SUITE_RUNNER;
-  const [cmd, ...args] = override ? override.split(" ") : ["npx", "rstest", "run"];
-  return [cmd, [...args, specPath]];
-}
-
-/** Runs `specPath` for real, right now. True only on a clean exit — a failing case, a crash, or a
- *  missing file all read as "not proven", never as "proof unavailable, assume fine". */
-function suitePasses(specPath) {
-  const [cmd, args] = suiteRunnerArgv(specPath);
-  try {
-    execFileSync(cmd, args, { cwd: ROOT, stdio: "pipe" });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Pure — the specs drive this directly. All three or nothing: a registered suite, one this diff
- *  didn't touch, actually passing right now. */
-export function behaviorVerifiedFacts({ hasSuite, suiteUnchanged, suitePassed }) {
-  return Boolean(hasSuite && suiteUnchanged && suitePassed);
-}
-
-/**
- * Is `rule`'s diff behavior-verified against `base`? "Untouched" is checked the same way every
- * other fact this gate reports is — a real `git diff` against base, never a claim taken on faith
- * — so a diff that edits its own proof gets no credit from it (a diff cannot both loosen what it's
- * judged by and be trusted by it). `main`'s own `verify` gate already guarantees an unchanged
- * suite was passing AT base; there is nothing to re-check there, only that it still passes at HEAD.
- */
-function behaviorVerified(rule, base) {
-  if (!rule.invariantSuite) return false;
-  const suiteUnchanged = classifyDiff(diffFor(rule.invariantSuite, base)) === null;
-  return behaviorVerifiedFacts({
-    hasSuite: true,
-    suiteUnchanged,
-    suitePassed: suiteUnchanged && suitePasses(rule.invariantSuite),
-  });
-}
-
-/** Which of the three diffAware paths (if any) clears `path`'s diff, cheapest first — so a caller
- *  can name WHICH proof justified skipping the hold (#852's honesty rule: say so explicitly),
- *  not just that one did. `behaviorVerified` is checked last since it's the only one that spawns
- *  a process. */
-function exemptionReason(path, base, rule, diff) {
-  if (diff?.additiveSafe) return "pure-insertion";
-  if (structurallySafe(path, base)) return "structural-widening";
-  if (behaviorVerified(rule, base)) return "behavior-verified";
-  return undefined;
-}
+// exemptionReason (imported above, #852) adds a third additiveSafe:true path — a passing invariant
+// suite untouched by the diff — alongside pure insertion and safe structural widening below.
 
 // --check: is this path (or these paths) protected? JSON out, always exit 0 — the build session
 // asks this BEFORE editing, learning the answer from the gate rather than guessing at a prose list.
