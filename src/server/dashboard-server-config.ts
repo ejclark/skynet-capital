@@ -8,6 +8,7 @@ import type { EquitySample } from "../observatory/history-store.js";
 import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { ClaimDeps } from "./claim-form.js";
+import type { CommunityProgressionService } from "./community-progression-service.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { InviteDeps } from "./invite-form.js";
@@ -123,6 +124,11 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * a browsable journey at zero while the desk behaves as wheels-off.
    */
   readonly progression?: ProgressionService;
+  /**
+   * The community track's progression (#567) — the feedback-given milestone, derived from the
+   * feedback log, never the trade ladder. Omit and `/feedback` shows the count with no fanfare.
+   */
+  readonly communityProgression?: CommunityProgressionService;
   /**
    * Member-initiated trading from the desk (`/trade`). On whenever OAuth is configured (Eric's
    * ruling, 2026-08-21, #466: no separate switch) — with it off, the desk still renders its

@@ -10,6 +10,16 @@ import { feedbackThrottled } from "./feedback-routes.js";
 import type { FeedbackInput } from "./feedback-service.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
+/** Community-track milestone celebration ids, mirroring `/api/learn/claim`'s bounded shape. */
+function parseCommunityAckIds(raw: string): readonly string[] | undefined {
+  const body = parseJsonRecord(raw);
+  if (!body || !Array.isArray(body.ack)) return undefined;
+  const ids = body.ack;
+  const bounded = (v: unknown): v is string =>
+    typeof v === "string" && v.length > 0 && v.length <= 100;
+  return ids.length > 0 && ids.length <= 20 && ids.every(bounded) ? ids : undefined;
+}
+
 /**
  * THE FEEDBACK API (#738 phase 9d) — `/feedback`'s JSON twin, three endpoints:
  *
@@ -46,13 +56,23 @@ async function serveIndex(
     config.fetchFeedbackStatus && recent.length
       ? await config.fetchFeedbackStatus(recent.map((e) => e.issueNumber))
       : undefined;
+  // The community milestone track (#567) — same identity, same "never trust the client" posture
+  // as everything else on this route: the view is derived server-side from the same log.
+  const community =
+    config.communityProgression && session?.email
+      ? await config.communityProgression.view(opaqueMemberId(session.email))
+      : undefined;
   sendJson(res, 200, {
     enabled: Boolean(config.submitFeedback),
     coachEnabled: Boolean(config.coachFeedback),
     followupEnabled: Boolean(config.submitFollowup && config.readFeedback),
     // Already-durable — `feedback-log.ts` (#429) records every filing; this is just its length,
     // never a separate counter that could drift from that record (#567).
-    feedbackCount: recent.length,
+    feedbackCount: community?.feedbackCount ?? recent.length,
+    celebrating: (community?.celebrating ?? []).map((m) => ({
+      milestoneId: m.milestoneId,
+      issueNumber: m.issueNumber,
+    })),
     recent: recent.map((e) => ({
       issueNumber: e.issueNumber,
       title: e.title,
