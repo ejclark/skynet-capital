@@ -26,6 +26,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { latestDigestDate } from "./digest-scan.mjs";
+import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 const ROOT = process.cwd();
 const REPO = process.env.SKYNET_COMMS_REPO ?? "ejclark/skynet-capital";
@@ -217,6 +218,7 @@ export function summarize(rows) {
 }
 
 async function main() {
+  reexecWithProxy();
   const fixture = arg("fixture");
   const since = arg("since") ?? latestDigestDate();
   if (!fixture) {

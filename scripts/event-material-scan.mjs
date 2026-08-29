@@ -39,6 +39,7 @@ import {
   decide,
   parseLedgerHeader,
 } from "./event-material-decide.mjs";
+import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 const ROOT = process.cwd();
 const arg = (name) => {
@@ -216,6 +217,7 @@ async function runScreenDue() {
 }
 
 async function main() {
+  reexecWithProxy();
   if (has("explain")) {
     runExplain();
     return;
