@@ -1,4 +1,5 @@
 import { JsonFileStore } from "../storage/json-file-store.js";
+import { emptyParticipantKeyedState } from "../storage/participant-state.js";
 
 /**
  * The community-progression file on the mounted volume (`SKYNET_COMMUNITY_PROGRESSION_FILE`, prod
@@ -28,8 +29,6 @@ export interface CommunityProgressionState {
   readonly participants: Readonly<Record<string, CommunityProgressionRecord>>;
 }
 
-const EMPTY: CommunityProgressionState = { participants: {} };
-
 /** Total parse: the exact shape or nothing — a hand-edited file degrades to empty, loudly. */
 function parseCommunityProgressionState(raw: unknown): CommunityProgressionState | undefined {
   if (typeof raw !== "object" || raw === null) return undefined;
@@ -58,7 +57,7 @@ export class CommunityProgressionStore {
     this.file = new JsonFileStore({
       path,
       parse: parseCommunityProgressionState,
-      empty: EMPTY,
+      empty: emptyParticipantKeyedState(),
       label: "community-progression",
       ...(onReadError ? { onReadError } : {}),
     });
