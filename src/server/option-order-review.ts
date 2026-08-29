@@ -29,8 +29,9 @@ import { html, posNumber, type TradeRouteDeps } from "./trade-ticket-route.js";
 /** Trade-type codes that ride the OPTION preview/review pipeline rather than the share desk. */
 export const OPTION_CODES = new Set(["201", "202", "301", "302"]);
 
-/** Best-effort premium/spot for the option REVIEW screen (the service refetches on confirm). */
-async function reviewEstimates(
+/** Best-effort premium/spot for the option REVIEW screen (the service refetches on confirm).
+ *  Exported for the shell's JSON review (`option-api-routes.ts`), which shares the estimate. */
+export async function reviewEstimates(
   client: AlpacaOptionsClient | undefined,
   underlying: string,
   expiration: string,

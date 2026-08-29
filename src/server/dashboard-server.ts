@@ -31,6 +31,8 @@ import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect, withClassicBanner } from "./legacy-redirects.js";
+import { serveOptionApi } from "./option-api-routes.js";
+import { servePlaysApi } from "./plays-api-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 import { serveWireRoute } from "./wire-routes.js";
@@ -121,7 +123,8 @@ function serveHomePages(
   return false;
 }
 
-/** The shell's write-API families, one dispatcher — trade, settings, learn, controls, join. */
+/** The shell's write-API families, one dispatcher — trade (shares, options, the plays catalog),
+ *  settings, learn, controls, join. */
 async function serveWriteApis(
   req: IncomingMessage,
   res: ServerResponse,
@@ -130,6 +133,8 @@ async function serveWriteApis(
   session: Session | undefined,
 ): Promise<boolean> {
   if (await serveTradeApi(req, res, path, config, session)) return true;
+  if (await serveOptionApi(req, res, path, config, session)) return true;
+  if (await servePlaysApi(req, res, path, config, session)) return true;
   if (await serveSettingsApi(req, res, path, config, session)) return true;
   if (await serveLearnApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
