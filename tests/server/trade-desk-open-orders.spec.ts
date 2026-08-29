@@ -94,7 +94,7 @@ describe("the Open Orders panel on GET /trade, and its Cancel button", () => {
         tradingClientFor: () => fakeClient(),
       },
       async (base) => {
-        const res = await fetch(`${base}/trade`, { headers: { cookie: cookie() } });
+        const res = await fetch(`${base}/classic/trade`, { headers: { cookie: cookie() } });
         const html = await res.text();
         expect(html).toContain("Open orders");
         expect(html).toContain("limit $118.00");
@@ -112,7 +112,7 @@ describe("the Open Orders panel on GET /trade, and its Cancel button", () => {
         tradingEnabled: true,
       },
       async (base) => {
-        const res = await fetch(`${base}/trade`, { headers: { cookie: cookie() } });
+        const res = await fetch(`${base}/classic/trade`, { headers: { cookie: cookie() } });
         expect(await res.text()).not.toContain("Open orders");
       },
     );

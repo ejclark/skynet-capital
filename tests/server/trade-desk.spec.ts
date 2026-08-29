@@ -261,7 +261,14 @@ describe("POST /trade — the review step", () => {
 
   it("serves the ticket VIEW on GET — a read, never an order (those move only by POST)", async () => {
     await withServer(config(), async (base) => {
-      const res = await fetch(`${base}/trade`, {
+      // Since 10b the bare URL's GET belongs to the shell; the legacy view keeps its classic home.
+      const bare = await fetch(`${base}/trade?play=201`, {
+        headers: { cookie: cookie() },
+        redirect: "manual",
+      });
+      expect(bare.status).toBe(302);
+      expect(bare.headers.get("location")).toBe("/app/trade?play=201");
+      const res = await fetch(`${base}/classic/trade`, {
         headers: { cookie: cookie() },
         redirect: "manual",
       });
