@@ -39,14 +39,24 @@ const WHOLE_COMMENT_PATTERNS = [
 // which still catches "aligned, DON'T execute" et al before either list runs.
 const CONTAINS_PATTERNS = [/\bship it\b/, /\baligned\b.*\b(execute|build it|ship it)\b/];
 
+// A ready-flip with a trailing qualifier ("ready — use the proposed defaults", "ready, go with
+// option A") — Eric's own real phrasing on #724, verified live: the 0-for-8 production run of
+// this trigger's first day showed the whole-comment-only patterns above have a 0% real-world hit
+// rate, because a genuine sign-off almost always names a direction alongside the word "ready".
+// Matched as a LEADING word only ("ready" immediately followed by a separator), never a bare
+// substring — "already ready to go" or "I'm not ready — need more time" must not match this, and
+// don't: `^` anchors it to the start, and the negation guard above still runs first.
+const LEADING_QUALIFIER_PATTERN = /^ready\s*[-–—:,]\s*\S/;
+
 /**
  * Does this comment read as a ready-flip ("ready", "go", "aligned, execute", or similar)?
  *
  * A plan issue's own body routinely uses the word "ready" in prose ("waiting on Eric's
- * ready-flip"), so this matches the SIGNAL SHAPE — a short, direct go-ahead — not any appearance
- * of the word anywhere in a longer comment. Deliberately does NOT match: "not ready yet",
- * "already scoped this", "go over this again please", "let's not ship it yet", or an ordinary
- * question or compliment that happens to share a word. A negation anywhere in the comment
+ * ready-flip"), so this matches the SIGNAL SHAPE — a short, direct go-ahead, or "ready" leading a
+ * qualifier ("ready — use the proposed defaults") — not any appearance of the word anywhere in a
+ * longer comment. Deliberately does NOT match: "not ready yet", "already scoped this", "go over
+ * this again please", "let's not ship it yet", "ready to discuss more", or an ordinary question or
+ * compliment that happens to share a word. A negation anywhere in the comment
  * (`not`/`no`/`don't`/`never`) disqualifies it outright, checked before either pattern list runs.
  */
 export function isReadySignal(text) {
@@ -58,7 +68,8 @@ export function isReadySignal(text) {
 
   return (
     WHOLE_COMMENT_PATTERNS.some((p) => p.test(trimmed)) ||
-    CONTAINS_PATTERNS.some((p) => p.test(trimmed))
+    CONTAINS_PATTERNS.some((p) => p.test(trimmed)) ||
+    LEADING_QUALIFIER_PATTERN.test(trimmed)
   );
 }
 

@@ -23,6 +23,9 @@ describe("isReadySignal — the ready-flip pattern match", () => {
     "ship it",
     "approve",
     "approved",
+    "ready — use the proposed defaults", // Eric's actual phrasing on #724 — verified live, 0/8
+    "ready, go with option A",
+    "Ready: build it",
   ])("matches %j", (text) => {
     expect(isReadySignal(text)).toBe(true);
   });
@@ -36,6 +39,10 @@ describe("isReadySignal — the ready-flip pattern match", () => {
     "let's not ship it yet",
     "this looks great, thanks for the detail",
     "can you clarify the second bullet?",
+    "ready to discuss more",
+    "ready when you have time",
+    "I'm not ready — need more time",
+    "already ready to go",
   ])("does not match %j", (text) => {
     expect(isReadySignal(text)).toBe(false);
   });
