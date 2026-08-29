@@ -605,11 +605,11 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     date: "2026-12-01",
     status: "estimate",
     source:
-      "NEWS: congresscountdown.com's Senate-runoff explainer — Georgia and Mississippi both require an outright majority in Senate general elections, with the runoff four weeks after Election Day (2026-12-01); corroborated by a Ballotpedia-sourced search summary, but Ballotpedia's own page returned empty on fetch and no Georgia Secretary of State page was fetched, checked 2026-08-29",
+      "NEWS: georgia.gov's own election-calendar event page names 'Election Day - General Election Runoff' on Tuesday 2026-12-01 and states the 50%+1 rule (fetched 2026-08-29); O.C.G.A. § 21-2-501 sets the runoff on the 28th day after the general and reaches federal offices (2026-11-03 + 28 = 2026-12-01), read via Justia/FindLaw search summaries since Justia 403'd on fetch. Mississippi's coincident 12-01 runoff rests on secondary summaries (Ballotpedia/Wikipedia) plus SB2144 (2024), which moved MS runoffs from three weeks to four — the legislature's own server failed TLS verification on fetch, checked 2026-08-29",
     impact: "high",
     symbols: [],
     notes:
-      "CONDITIONAL — this fires only if no Senate candidate clears 50% on 2026-11-03; Georgia (Ossoff (D) vs Collins (R)) is reported a dead heat and has decided Senate control twice recently (Jan 2021, Dec 2022). Louisiana no longer applies: it moved to closed party primaries in 2026 and its general is plurality. Filed `estimate` for two reasons at once — the date is secondary-sourced AND the event is conditional. Why it is `high` impact despite being conditional: it is the mechanism by which control of the Senate stays unknown for four weeks past the midterms, landing 3 days before jobs 12-04 (which is also the House CR's own expiry date), 8 before FOMC 12-09, 9 before CPI 12-10 and 14 before the est. PJM auction 12-15 — the runoff can push the midterms' answer into the funding fight the CR was explicitly built to defer past them. Discovered during the midterm-elections-2026-11-03 initial research.",
+      "CONDITIONAL — this fires only if no Senate candidate clears 50% on 2026-11-03. The date is now PRIMARY-sourced (georgia.gov), so `estimate` here means conditionality, not date doubt; it also cannot be promoted because this calendar has no confirmed source prefix for a state election authority (a schema change, not this lane's call). PROBABILITY COLLAPSED, TIER UNCHANGED (georgia-senate-runoff-2026-12-01 initial research, 2026-08-29): Georgia runoffs are produced by a third name on the ballot (Libertarians took 2.3% in 2020, 2.1% in 2022), and the Libertarian Party of Georgia lost automatic ballot access on its 2024 vote share then submitted a few hundred of ~72,000 required signatures by the 2026-07-07 deadline — the November ballot is Ossoff (D) vs Collins (R), two names, so somebody clears 50% by arithmetic (polling agrees independently: 56-43 Fox, 50-43 InsiderAdvantage 08-18). The surviving branch is MISSISSIPPI, not Georgia — three names (Hyde-Smith (R) / Colom (D) / Pinkins (I)) with the leader at 44% — but it is Solid R / Safe R at all three handicappers, so a runoff there delays a near-foregone seat rather than holding Senate control open. `impact: high` is kept deliberately because the tier measures consequence-if-fired, never likelihood. Remaining Georgia tail: a certified write-in (notice of intent due 2026-09-08, O.C.G.A. § 21-2-133) plus a razor margin. Louisiana no longer applies: closed party primaries from 2026, plurality general. Discovered during the midterm-elections-2026-11-03 initial research.",
   },
   {
     id: "jobs-2026-11-06",
@@ -685,6 +685,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes: "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator).",
+  },
+  {
+    id: "georgia-psc-data-center-cost-shift-2026-12-31",
+    kind: "sector",
+    title: "Georgia PSC data-center cost-shift investigation — findings due",
+    date: "2026-12-31",
+    status: "estimate",
+    source:
+      "NEWS: Rough Draft Atlanta (2026-07-08) and GovTech (2026-07-10) both report the Georgia PSC voting unanimously on 2026-07-08 to investigate Georgia Power Real-Time-Pricing cost allocation, with findings due 2026-12-31; no PSC docket number was captured and the PSC's own filings were not fetched, checked 2026-08-29",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Georgia's instance of the AI data-center backlash the midterm-elections-2026-11-03 research named as the real political channel to this book's AI-infra sleeve — and unlike a campaign theme it has a regulator, a proceeding and a deadline. PSC staff put the potential shift at up to 11% per month on the average residential bill by 2028; Commissioner Hubbard cites ~$1B in fuel costs data centers pay nothing toward and ~$118M of firm gas transportation at issue in 2027. Context: the PSC certified 9,985 MW of new generation on 2025-12-19 (~80% expected to serve data centers) and base rates are frozen through 2028. Same shape as the tracked texas-puct-audit-2026-08-20 entry — a state regulator's dated proceeding as an AI-energy watch item. Discovered during the georgia-senate-runoff-2026-12-01 initial research.",
   },
   {
     id: "pjm-capacity-auction-2027-05",
