@@ -50,6 +50,7 @@ import {
   resolveRoster,
   seedDailyLossBaseline,
 } from "./autonomous-live-wiring.js";
+import { startMarketClock } from "./autonomous-market-clock.js";
 import { runOffline } from "./autonomous-offline-runner.js";
 import { auditStore, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
@@ -245,29 +246,13 @@ async function runLive(): Promise<void> {
   });
 
   // Gate trading on market hours (refreshed periodically).
-  const clock = new AlpacaTradingClient(
-    new FetchAlpacaTradingTransport({
-      baseUrl: dataCreds.baseUrl ?? ALPACA_PAPER_BASE_URL,
-      apiKey: dataCreds.apiKey,
-      apiSecret: dataCreds.apiSecret,
-    }),
-  );
-  let marketOpen = false;
-  const refreshOpen = async () => {
-    try {
-      marketOpen = await clock.isMarketOpen();
-    } catch (error) {
-      console.error("[clock] failed:", error);
-    }
-  };
-  await refreshOpen();
-  setInterval(() => void refreshOpen(), 60_000);
+  const marketClock = await startMarketClock(dataCreds);
 
   let lastEval = 0;
   let evaluating = false;
   const maybeEvaluate = async () => {
     const now = Date.now();
-    if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketOpen) {
+    if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketClock.isOpen()) {
       return;
     }
     lastEval = now;
@@ -291,7 +276,7 @@ async function runLive(): Promise<void> {
   }).start();
 
   console.log(
-    `Autonomous trading started [live] — bots: ${bots.map((b) => b.persona.name).join(", ")}; universe: ${UNIVERSE.join(", ")}; maxPosition ${(risk.maxPositionPct * 100).toFixed(1)}%; market ${marketOpen ? "OPEN" : "closed"}.`,
+    `Autonomous trading started [live] — bots: ${bots.map((b) => b.persona.name).join(", ")}; universe: ${UNIVERSE.join(", ")}; maxPosition ${(risk.maxPositionPct * 100).toFixed(1)}%; market ${marketClock.isOpen() ? "OPEN" : "closed"}.`,
   );
 }
 
