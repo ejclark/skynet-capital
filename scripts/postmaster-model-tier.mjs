@@ -1,4 +1,4 @@
-// THE FEEDBACK LANE'S MODEL-TIER DECISION — split out of postmaster.mjs (2026-08-26, the
+// THE FEEDBACK LANE'S MODEL-TIER DECISION — split out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the
 // noExcessiveLinesPerFile split). Standalone on purpose: `claimFeedback` and the `--model-tier` CLI
 // flag both call this, and neither needs anything else in this file.
 

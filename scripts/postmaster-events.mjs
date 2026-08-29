@@ -1,6 +1,6 @@
 // THE EVENT-RESEARCH DISPATCH LANE — opening one issue per never-assessed calendar event, plus the
 // per-push dedupe that keeps back-to-back merges from double-researching one. Split out of
-// postmaster.mjs (2026-08-26, the noExcessiveLinesPerFile split).
+// moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { FOOTER, LABELS } from "./postmaster-labels.mjs";
 import { routeShipped } from "./postmaster-shipped.mjs";
 

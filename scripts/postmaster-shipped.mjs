@@ -1,5 +1,5 @@
 // THE LAST MILE — closing feedback and event-research issues whose work has already merged. Split
-// out of postmaster.mjs (2026-08-26, the noExcessiveLinesPerFile split).
+// out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the noExcessiveLinesPerFile split).
 import { ghRest } from "./postmaster-gh.mjs";
 import { FOOTER } from "./postmaster-labels.mjs";
 

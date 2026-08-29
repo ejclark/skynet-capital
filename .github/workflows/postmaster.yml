@@ -2,7 +2,7 @@ name: Postmaster
 
 # ONE ROUTER FOR EVERY ISSUE-DRIVEN AUTOMATION (docs/HANDOFFS.md), replacing four workflows that
 # had grown to 482 lines carrying 202 lines of untestable bash. The logic lives in
-# scripts/postmaster.mjs, which is pure where it decides and specced against fixture payloads —
+# scripts/moneypenny.mjs (formerly postmaster.mjs), which is pure where it decides and specced against fixture payloads —
 # this file is a trigger shim and nothing else.
 #
 # ═══ WHY THE BUILD RUNS HERE INSTEAD OF VIA AN @claude ISSUE ═══
@@ -152,7 +152,7 @@ jobs:
       - name: Run the postmaster
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: node scripts/postmaster.mjs
+        run: node scripts/moneypenny.mjs
 
       # The loop's eyes, event-driven: the stall audit rides every push instead of a clock — it
       # ran only on manual dispatch before, a watchdog nobody winds. Comment-and-warn only
@@ -168,7 +168,7 @@ jobs:
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/postmaster.mjs --audit
+        run: node scripts/moneypenny.mjs --audit
 
       # Which events owe research right now. Filtered against open research/<id> PR heads
       # (dueForResearch, specced) so back-to-back pushes can't double-research an event whose PR
@@ -183,7 +183,7 @@ jobs:
           DUE=$(node scripts/event-scan.mjs --due)
           HEADS=$(gh pr list --state open --limit 100 --json headRefName | jq -c '[.[].headRefName]')
           FILTERED=$(node -e '
-            import("./scripts/postmaster.mjs").then((m) => {
+            import("./scripts/moneypenny.mjs").then((m) => {
               const due = JSON.parse(process.argv[1]);
               const heads = JSON.parse(process.argv[2]);
               const out = m.dueForResearch(due, heads).map((e) => ({ id: e.id, reason: e.reason }));
@@ -264,7 +264,7 @@ jobs:
         if: github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'feedback'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/postmaster.mjs --claim-feedback
+        run: node scripts/moneypenny.mjs --claim-feedback
 
       # THE PLAN LANE'S GATE (#823) — mirrors the feedback gate immediately above, one authorization
       # boundary down. A plan issue's `ready` is a COMMENT, not a label, so the boundary is WHO
@@ -281,7 +281,7 @@ jobs:
           contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/postmaster.mjs --claim-plan
+        run: node scripts/moneypenny.mjs --claim-plan
 
   # ═══ THE EVENT-RESEARCH LANE (2026-08-19) ═══
   # Replaces the daily claude.ai event-scan Routine, which fired for three days into fresh sessions
@@ -454,7 +454,7 @@ jobs:
       - if: failure() && needs.route.outputs.feedback_issue != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/postmaster.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
+        run: node scripts/moneypenny.mjs --release feedback-${{ needs.route.outputs.feedback_issue }}
 
   # ═══ THE PLAN LANE (#823) ═══
   # Eric (or another authorized identity — see the `route` job's `plan` step) commented a ready-flip
@@ -511,5 +511,5 @@ jobs:
       - if: failure() && needs.route.outputs.plan_issue != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/postmaster.mjs --release plan-${{ needs.route.outputs.plan_issue }}
+        run: node scripts/moneypenny.mjs --release plan-${{ needs.route.outputs.plan_issue }}
 

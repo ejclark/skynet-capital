@@ -11,7 +11,7 @@ import { execFileSync } from "node:child_process";
 const FENCE = "`".repeat(3);
 
 const tier = (body: string): Record<string, string> => {
-  const out = execFileSync("node", ["scripts/postmaster.mjs", "--model-tier"], {
+  const out = execFileSync("node", ["scripts/moneypenny.mjs", "--model-tier"], {
     input: body,
     encoding: "utf8",
   });

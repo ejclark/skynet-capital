@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 //
 // This is the offline stand-in — it reads the ref the claim actually writes and refuses the
 // combination that cannot work.
-const source = () => readFileSync("scripts/postmaster.mjs", "utf8");
+const source = () => readFileSync("scripts/moneypenny.mjs", "utf8");
 
 describe("claim lease ref namespace", () => {
   it("creates the lease under refs/tags, never refs/heads", () => {

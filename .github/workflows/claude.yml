@@ -1,7 +1,7 @@
 name: Claude
 
 # THE HUMAN-DIRECTED LANE. Every other AI trigger in this repo is deterministic and structured —
-# a label, a push, a schedule — routed through scripts/postmaster.mjs (.github/workflows/postmaster.yml).
+# a label, a push, a schedule — routed through scripts/moneypenny.mjs (.github/workflows/postmaster.yml).
 # This workflow is the other half: a repo member commenting on an issue, issue comment thread, or
 # PR review thread starts (or STEERS — see below) a real Claude Code session in seconds, for
 # whatever the structured lanes don't cover — a question, a review request, an ad hoc fix.

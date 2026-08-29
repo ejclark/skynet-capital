@@ -1,4 +1,4 @@
-// THE VOCABULARY POSTMASTER.MJS SPEAKS — split out of postmaster.mjs (2026-08-26, the
+// THE VOCABULARY MONEYPENNY.MJS SPEAKS (formerly POSTMASTER.MJS) — split out of moneypenny.mjs (2026-08-26, the
 // noExcessiveLinesPerFile split) so the label/comment vocabulary has one home shared by every lane
 // (the router itself, the event lane, the shipped-issue closer, the stall auditor) — and, since a
 // label is only real once GitHub has it, the code that provisions it too.

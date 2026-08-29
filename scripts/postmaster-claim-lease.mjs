@@ -1,8 +1,8 @@
-// SUPPORT FOR THE CLAIM LEASE — split out of postmaster.mjs (2026-08-26, the
+// SUPPORT FOR THE CLAIM LEASE — split out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the
 // noExcessiveLinesPerFile split), but only the parts that aren't pinned by source text elsewhere.
 //
-// `claimHandoff` and `releaseClaim` THEMSELVES STAY IN postmaster.mjs, deliberately: they are the
-// two regression tests in `tests/arch/lease-namespace.spec.ts` that read `scripts/postmaster.mjs`'s
+// `claimHandoff` and `releaseClaim` THEMSELVES STAY IN moneypenny.mjs, deliberately: they are the
+// two regression tests in `tests/arch/lease-namespace.spec.ts` that read `scripts/moneypenny.mjs`'s
 // literal source (the `ref=refs/tags/${ref}` template, `readRef("tags") ?? readRef("heads")`, the
 // `for (const ns of ["tags", "heads"])` loop) — a static stand-in for the 2026-08-22 outage that a
 // live `gh` call can only fail on a runner. Moving those two functions here would make that check

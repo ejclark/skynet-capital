@@ -6,7 +6,7 @@ import { join } from "node:path";
 //
 // Shipped defect, 2026-08-22: `.github/prompts/feedback-build.md` told every build session it must
 // end in "a PR, `next-slice`, `needs-info`, or `needs-eric`" — and `needs-info`, `next-slice` and
-// `curated` did not exist on the repo. They were declared in postmaster.mjs's LABELS and never
+// `curated` did not exist on the repo. They were declared in moneypenny.mjs's (then postmaster.mjs's) LABELS and never
 // passed to `ensureLabel`, which was only ever called for `event-research` and `stall-flagged`.
 // `gh issue edit --add-label needs-info` therefore failed, and the lane fell back to the two exits
 // that did exist: a PR, or `needs-eric`. The four-state design was two-thirds fictional, and the
@@ -29,7 +29,7 @@ const declared = (): string[] =>
       "node",
       [
         "-e",
-        'import("./scripts/postmaster.mjs").then((m) => console.log(JSON.stringify(m.MANAGED_LABELS.map((l) => l.name))))',
+        'import("./scripts/moneypenny.mjs").then((m) => console.log(JSON.stringify(m.MANAGED_LABELS.map((l) => l.name))))',
       ],
       {
         cwd: process.cwd(),
@@ -44,7 +44,7 @@ const registry = (): Record<string, { name: string; color: string; description: 
       "node",
       [
         "-e",
-        'import("./scripts/postmaster.mjs").then((m) => console.log(JSON.stringify(m.LABELS)))',
+        'import("./scripts/moneypenny.mjs").then((m) => console.log(JSON.stringify(m.LABELS)))',
       ],
       { cwd: process.cwd(), encoding: "utf8" },
     ),
@@ -85,7 +85,7 @@ describe("label vocabulary", () => {
       "node",
       [
         "-e",
-        'import("./scripts/postmaster.mjs").then((m) => console.log(typeof m.ensureVocabulary))',
+        'import("./scripts/moneypenny.mjs").then((m) => console.log(typeof m.ensureVocabulary))',
       ],
       { cwd: process.cwd(), encoding: "utf8" },
     ).trim();
@@ -172,7 +172,7 @@ describe("the label registry", () => {
       "node",
       [
         "-e",
-        `Promise.all([import("./scripts/postmaster.mjs"), import("./scripts/moneypenny-repair.mjs")]).then(
+        `Promise.all([import("./scripts/moneypenny.mjs"), import("./scripts/moneypenny-repair.mjs")]).then(
            ([p, repair]) => console.log(String(repair.LABEL === p.LABELS.ciFailure)),
          );`,
       ],

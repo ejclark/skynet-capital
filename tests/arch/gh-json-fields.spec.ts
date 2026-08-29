@@ -52,15 +52,16 @@ const jsonFieldLists = (source: string): string[][] =>
   );
 
 /**
- * EVERY script that asks `gh` for JSON, not just the postmaster (#813, 2026-08-29).
+ * EVERY script that asks `gh` for JSON, not just the event router (#813, 2026-08-29).
  *
- * This gate was written for the 2026-08-22 outage and pointed at `scripts/postmaster.mjs` alone.
+ * This gate was written for the 2026-08-22 outage and pointed at `scripts/moneypenny.mjs` (then
+ * `scripts/postmaster.mjs`) alone.
  * `scripts/feedback-scan.mjs` asked for the same renamed field, was never covered, and had been
  * exiting non-zero on every run since — the lane's own scoreboard, blind, while
  * `feedback-build.md` told each build session to read it. A gate that checks one caller of a
  * repo-wide API is a gate with a hole the exact size of the next caller.
  */
-const GH_JSON_SCRIPTS = ["scripts/postmaster.mjs", "scripts/feedback-scan.mjs"];
+const GH_JSON_SCRIPTS = ["scripts/moneypenny.mjs", "scripts/feedback-scan.mjs"];
 
 describe("gh --json fields", () => {
   it.each(GH_JSON_SCRIPTS)("asks %s's issue queries only for fields gh knows", (file) => {
@@ -78,7 +79,7 @@ describe("gh --json fields", () => {
   // `undefined === "MERGED"` every time, and so could never close anything. A wrong field NAME
   // fails loudly on the first call; a wrong field READ is silent forever, which is worse.
   it("never reads a state off a closing reference — gh does not return one", () => {
-    const source = codeOnly(readFileSync("scripts/postmaster.mjs", "utf8"));
+    const source = codeOnly(readFileSync("scripts/moneypenny.mjs", "utf8"));
 
     // The literal shape of the dead filter, and any near-relative of it. Prose is stripped first,
     // so the comments explaining the bug do not themselves fail the rule.
@@ -119,7 +120,7 @@ const GH_JSON_CALLS = /"(?:issue|pr)",\s*"(?:list|view)"/g;
 
 describe("the GraphQL bucket the postmaster rides on", () => {
   it("keeps only the two queries whose field has no REST equivalent", () => {
-    const source = codeOnly(readFileSync("scripts/postmaster.mjs", "utf8"));
+    const source = codeOnly(readFileSync("scripts/moneypenny.mjs", "utf8"));
 
     // The shipped sweep's list, and its per-issue re-check. Both read
     // `closedByPullRequestsReferences`. A third hit means a per-push GraphQL query was added
@@ -128,7 +129,7 @@ describe("the GraphQL bucket the postmaster rides on", () => {
   });
 
   it("asks the cheap REST question before the expensive one", () => {
-    const source = codeOnly(readFileSync("scripts/postmaster.mjs", "utf8"));
+    const source = codeOnly(readFileSync("scripts/moneypenny.mjs", "utf8"));
     // Parameterized by label (2026-08-28: `feedback` and `event-research` share this one sweep) —
     // `labels=${label}`, not a literal label name.
     const restProbe = source.indexOf("issues?state=open&labels=");

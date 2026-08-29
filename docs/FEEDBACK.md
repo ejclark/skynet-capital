@@ -69,7 +69,8 @@ in code — only as a host secret, exactly like the Alpaca keys.
 6. Each row also offers a **Follow up** disclosure — a member can add more detail to something
    they already filed without leaving the app. It posts a GitHub comment (never edits the original
    issue body, which the build lane parses) and re-triggers a build by cycling the `feedback`
-   label, the same retry path already documented in `scripts/postmaster.mjs`. Deliberately routed
+   label, the same retry path already documented in `scripts/moneypenny.mjs` (formerly
+   `postmaster.mjs`). Deliberately routed
    through this structured, envelope-bound lane rather than the free-form `claude.yml`
    comment-steering lane — see `src/server/feedback-followup.ts` for why. Ownership is checked
    against the member's own logged filings before anything posts.
