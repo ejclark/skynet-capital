@@ -41,7 +41,7 @@ flowchart LR
     subgraph LANES["Recurring CI lanes"]
         D["Event-research<br/>~41% of all commits<br/>pulse checks incl. no-ops"]
         E["claude.yml<br/>1 session per member comment,<br/>edits retrigger"]
-        F["Feedback + CI-medic<br/>Opus, deliberate, bounded"]
+        F["Feedback + Moneypenny repair<br/>Opus, deliberate, bounded"]
     end
     subgraph SESSION["Session behavior"]
         G["File reads dominate"]
@@ -142,7 +142,7 @@ entirely out of the startup index; subagent description budget warns at 15k toke
    The audit's debounce recommendation would reverse a directive; the only open lever here is a
    question for Eric (debounce rapid-fire edits?), plus the model pin + turn cap below.
 3. **Model pinning**: `build-events` and `claude.yml` run the action default — the one place the
-   repo's route-by-who-pays discipline is silent (feedback and ci-medic pin Opus deliberately).
+   repo's route-by-who-pays discipline is silent (feedback and moneypenny-repair.yml pin Opus deliberately).
    Decide and pin; add `--max-turns` per the
    [GitHub Actions cost guidance](../vendor/claude-code/github-actions.md).
 4. **Deploy churn**: every docs-only research row ships a full dashboard deploy (the bots app got a

@@ -19,7 +19,7 @@
 //      the file was in for several minutes while the tier step was being removed.
 //   3. A `needs:` naming a job that does not exist.
 //   4. A `workflow_run` trigger with no `workflows:` list — added after the same outage recurred on
-//      ci-medic.yml itself when that list was removed.
+//      moneypenny-repair.yml (then ci-medic.yml) itself when that list was removed.
 //   5. A prompt shim naming a `.github/prompts/*.md` that does not exist. Since 2026-08-22 the AI
 //      lanes read their instructions from files rather than inline YAML; a wrong path is silent
 //      here and only shows up as a live session running with no orders.
@@ -133,7 +133,7 @@ export function danglingStepRefs(text) {
 /**
  * A `workflow_run` trigger must name its workflows. HOUSE RULE FROM AN INCIDENT, not from the
  * schema: SchemaStore marks `workflows` optional, and on 2026-08-22 removing it (to catch
- * unparseable files, whose runs are named by path) got ci-medic.yml rejected by GitHub outright —
+ * unparseable files, whose runs are named by path) got ci-medic.yml (renamed moneypenny-repair.yml, #912) rejected by GitHub outright —
  * a zero-job run named by its own path. Whatever the validator's exact objection, a listed trigger
  * is the shape that provably works here, and the path forms cover the unparseable case.
  */

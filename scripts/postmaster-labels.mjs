@@ -92,7 +92,7 @@ export const LABELS = {
 
   // ── registered, not owned ───────────────────────────────────────────────────
   // Real labels this repo runs on that no lane here applies. They are named so `feedback-scan`,
-  // `ci-medic` and the issue-lint advisory can key off one registry instead of five bare string
+  // `moneypenny-repair` (formerly `ci-medic`) and the issue-lint advisory can key off one registry instead of five bare string
   // literals (#500's first EARS criterion), and so a typo'd label name is a resolvable miss rather
   // than a silent no-match. None of these is ever written back to GitHub.
   handoff: {
@@ -109,7 +109,7 @@ export const LABELS = {
   // no business rewriting labels it did not create.
   bug: { name: "bug", color: "d73a4a", description: "Something isn't working" },
   enhancement: { name: "enhancement", color: "a2eeef", description: "New feature or request" },
-  // Owned by the CI medic's own lane (scripts/ci-medic.mjs), which applies it and therefore
+  // Owned by moneypenny-repair.mjs's own lane (formerly ci-medic.mjs), which applies it and therefore
   // guarantees it. Registered here so there is ONE vocabulary, not two that can drift.
   ciFailure: { name: "ci-failure", color: "b60205", description: "A run failed on main" },
 };

@@ -99,7 +99,7 @@ jobs:
     # on whichever session opened it to remember the call. Interactive/remote sessions authenticate
     # their GitHub tools as Eric personally, so arming auto-merge by hand there spends HIS personal
     # GraphQL quota, not the App's — this job arms with the App's own token and rate-limit bucket
-    # instead (already provisioned: vars.APP_CLIENT_ID, same as claude.yml/postmaster.yml/ci-medic.yml).
+    # instead (already provisioned: vars.APP_CLIENT_ID, same as claude.yml/postmaster.yml/moneypenny-repair.yml).
     # A session (or Eric) that wants a specific PR held despite being green applies the `hold-merge`
     # label — that's the one signal this job can't derive from the diff itself.
     needs: verify
@@ -303,7 +303,7 @@ jobs:
               | node scripts/fly-image-ref.mjs || true)
           fi
           # On the push path an empty image is a hard FAIL, never a silent rebuild: a second build
-          # could diverge from what smoke verified, and ci-medic files the capsule on a red run.
+          # could diverge from what smoke verified, and moneypenny-repair.yml files the capsule on a red run.
           [ -n "$IMG" ] || { echo "::error::no dashboard image to reuse — refusing to rebuild"; exit 1; }
           echo "image=$IMG" >> "$GITHUB_OUTPUT"
         env:

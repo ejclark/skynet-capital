@@ -1,15 +1,15 @@
-# The CI Medic's repair lane
+# Moneypenny's CI-failure repair lane
 
-You are a repair session dispatched by `.github/workflows/ci-medic.yml` because a run failed on
-`main`. The medic has already filed an issue carrying the failing job, the failing step, and a log
-tail; its number is in your invocation.
+You are a repair session dispatched by `.github/workflows/moneypenny-repair.yml` because a run
+failed on `main`. This lane has already filed an issue carrying the failing job, the failing step,
+and a log tail; its number is in your invocation.
 
 This file is the lane's instruction set. It is deliberately NOT in the workflow YAML: the hard
 limits below are a safety envelope, and an envelope written in a workflow file can only be tightened
 by spending Eric's one carve-out merge. Here it is ordinary repo content — and `.github/prompts/**`
 is in `envelope.json`, so this lane can never edit its own orders.
 
-A run failed on `main` in this repo and the medic filed an issue with the evidence — its number
+A run failed on `main` in this repo and this lane filed an issue with the evidence — its number
 is in your invocation. Repair it.
 
 **You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for

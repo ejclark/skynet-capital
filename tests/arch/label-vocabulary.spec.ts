@@ -113,7 +113,7 @@ describe("the label registry", () => {
   it("registers every label the repo actually runs on", () => {
     const registered = names();
     // The five #500 named as missing, plus `ci-failure` — which lived in a SECOND registry over in
-    // ci-medic.mjs, the exact duplication the issue is about.
+    // moneypenny-repair.mjs (then `ci-medic.mjs`, renamed #912), the exact duplication the issue is about.
     for (const name of [
       "handoff",
       "idea",
@@ -167,13 +167,13 @@ describe("the label registry", () => {
     expect(labels.feedback).toEqual({ name: "feedback", color: "ededed", description: "" });
   });
 
-  it("keeps ci-medic on this vocabulary instead of a second copy of it", () => {
+  it("keeps moneypenny-repair on this vocabulary instead of a second copy of it", () => {
     const same = execFileSync(
       "node",
       [
         "-e",
-        `Promise.all([import("./scripts/postmaster.mjs"), import("./scripts/ci-medic.mjs")]).then(
-           ([p, medic]) => console.log(String(medic.LABEL === p.LABELS.ciFailure)),
+        `Promise.all([import("./scripts/postmaster.mjs"), import("./scripts/moneypenny-repair.mjs")]).then(
+           ([p, repair]) => console.log(String(repair.LABEL === p.LABELS.ciFailure)),
          );`,
       ],
       { cwd: process.cwd(), encoding: "utf8" },

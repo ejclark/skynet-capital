@@ -1,5 +1,5 @@
 // THE MEDIC'S EVIDENCE — fetching a failed job's log and making it readable in a markdown fold.
-// Split out of ci-medic.mjs the way postmaster-gh.mjs was split out of postmaster.mjs: the router
+// Split out of moneypenny-repair.mjs the way postmaster-gh.mjs was split out of postmaster.mjs: the router
 // decides, this fetches, and neither file has to grow past the size gate to hold both jobs.
 import { sh } from "./postmaster-gh.mjs";
 
@@ -7,10 +7,10 @@ import { sh } from "./postmaster-gh.mjs";
  * How to ask for a job's log, best attempt first.
  *
  * Actions logs are COLOURIZED, and `gh api` refuses any response carrying terminal escape
- * sequences unless it is told to allow them. That refusal is the whole of #670: the medic filed
+ * sequences unless it is told to allow them. That refusal is the whole of #670: this lane filed
  * an issue whose evidence fold read `(log fetch failed: the response contains terminal escape
  * sequences; pass --allow-escape-sequences to output it anyway)`, so the repair session it
- * dispatched started with no evidence at all. #489 made the medic report the real error instead
+ * dispatched started with no evidence at all. #489 made this lane report the real error instead
  * of guessing at one; this is that error, fixed.
  *
  * The bare second variant is a compatibility fallback for a `gh` too old to know the flag — it is

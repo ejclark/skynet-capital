@@ -1,26 +1,29 @@
-name: CI Medic
+name: Moneypenny Repair
 
 # THE LANE THAT WATCHES THE LANES. A run fails on `main`, this files one capsule issue with the
 # evidence and dispatches a session to fix it — instead of the failure sitting red until someone
-# happens to look at the Actions tab.
+# happens to look at the Actions tab. Formerly "CI Medic" — renamed #912 as part of folding both
+# postmaster's and this lane's responsibilities into one identity (docs/MONEYPENNY.md), the way
+# #909 already folded their dispatch mechanisms together.
 #
 # WHY (Eric, 2026-08-22): run 32545818804 died in a bash step of the feedback lane AFTER taking the
 # issue's claim lease, so issue #475 looked claimed and nothing built it. Silent, and it would have
 # stayed silent. "We should have a job kicked off that automatically resolves these types of
 # failures."
 #
-# This file is a trigger shim, exactly like postmaster.yml: every decision lives in
-# scripts/ci-medic.mjs, which is pure where it decides and specced against fixture payloads
-# (tests/scripts/ci-medic.spec.ts). Logic in `run:` blocks is what caused the failure this lane
-# exists to catch — see docs/LESSONS.md.
+# This file is a trigger shim, exactly like postmaster.yml (the event router — #912's own plan
+# renames that one too, in a later slice): every decision lives in scripts/moneypenny-repair.mjs,
+# which is pure where it decides and specced against fixture payloads
+# (tests/scripts/moneypenny-repair.spec.ts). Logic in `run:` blocks is what caused the failure this
+# lane exists to catch — see docs/LESSONS.md.
 #
 # THE LOOP GUARDS (a self-healing lane that can trigger itself is a bill, not a net). All four live
 # in the router, where they are specced against fixture payloads:
-#   1. `CI Medic`'s own failures are ignored.
+#   1. This workflow's own failures are ignored.
 #   2. Only default-branch runs are acted on — a red PR belongs to that PR's author and its
 #      watching session, and repair PRs opened here would otherwise feed the lane its own output.
 #   3. One open issue per failure signature; a recurrence comments instead of filing again.
-#   4. A signature carrying `needs-eric` silences the medic for that signature entirely.
+#   4. A signature carrying `needs-eric` silences this lane for that signature entirely.
 #
 # The triage job's `if:` also screens out healthy runs before a runner starts; the router's copies
 # of the guards are the specced ones, and the job condition is an optimisation, not the contract.
@@ -37,9 +40,9 @@ name: CI Medic
 on:
   # THE LIST IS REQUIRED IN PRACTICE. Dropping it (to catch unparseable files, whose runs are named
   # by path rather than by workflow name) made GitHub reject THIS file — a run named
-  # `.github/workflows/ci-medic.yml` with zero jobs, the same shape the lane exists to catch, on the
-  # lane itself. SchemaStore marks `workflows` optional; GitHub's own validator evidently does not.
-  # Empirical beats documented: the list stays.
+  # `.github/workflows/ci-medic.yml` (this file's name before #912) with zero jobs, the same shape
+  # the lane exists to catch, on the lane itself. SchemaStore marks `workflows` optional; GitHub's
+  # own validator evidently does not. Empirical beats documented: the list stays.
   #
   # The path forms are here for the unparseable case: when GitHub cannot parse a file it names the
   # run after the path, so the path is what a name filter has to match. NEVER add this workflow's
@@ -67,11 +70,11 @@ permissions:
   pull-requests: write  # the repair session opens the PR
 
 concurrency:
-  # Per signature-ish: one medic run per watched workflow at a time, never cancelling a triage
+  # Per signature-ish: one repair-lane run per watched workflow at a time, never cancelling a triage
   # mid-file (a half-filed issue is worse than a queued one). A `workflow_dispatch` conflict-repair
   # carries no `workflow_run` object at all, so it keys on the PR number instead — two different
   # PRs' repairs must never serialize behind each other, but the same PR dispatched twice should.
-  group: ci-medic-${{ github.event.workflow_run.name || format('pr-{0}', github.event.inputs.pr_number) }}
+  group: moneypenny-repair-${{ github.event.workflow_run.name || format('pr-{0}', github.event.inputs.pr_number) }}
   cancel-in-progress: false
 
 jobs:
@@ -85,7 +88,7 @@ jobs:
     if: github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
     outputs:
-      issue: ${{ steps.medic.outputs.issue }}
+      issue: ${{ steps.router.outputs.issue }}
     steps:
       - uses: actions/checkout@v7
 
@@ -94,10 +97,10 @@ jobs:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
 
       # One line, on purpose. Evidence gathering, dedupe and the decision are all in the router.
-      - id: medic
+      - id: router
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/ci-medic.mjs
+        run: node scripts/moneypenny-repair.mjs
 
   repair:
     name: repair the failure or a flagged conflict
@@ -139,7 +142,7 @@ jobs:
       - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
         uses: anthropics/claude-code-action@v1
         with:
-          # Without this the lane can DETECT but never REPAIR. A medic run is woken by
+          # Without this the lane can DETECT but never REPAIR. A run of this lane is woken by
           # `workflow_run` and inherits the failed run's actor, so a failure that a bot triggered
           # produced a capsule issue and then died here — verified on the lane's first live outing
           # (2026-08-22, issue #487). Same two names as the feedback lane, same reasoning; the
@@ -150,17 +153,17 @@ jobs:
           github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5
-          # The repair envelope lives in .github/prompts/ci-medic-repair.md, not here. Those hard
+          # The repair envelope lives in .github/prompts/moneypenny-ci-repair.md, not here. Those hard
           # limits are exactly the kind of rule that must stay tunable without a carve-out merge —
           # and `.github/prompts/**` is protected by envelope.json, so this lane cannot loosen its
           # own leash.
           prompt: |
-            Read `.github/prompts/ci-medic-repair.md` in this repo and follow it exactly. It is your
+            Read `.github/prompts/moneypenny-ci-repair.md` in this repo and follow it exactly. It is your
             complete instruction set for this run.
 
-            The medic's issue is #${{ needs.triage.outputs.issue }} in this repo.
+            This lane's issue is #${{ needs.triage.outputs.issue }} in this repo.
 
-      # #909's second entry point — a `workflow_dispatch` conflict-repair carries no medic issue at
+      # #909's second entry point — a `workflow_dispatch` conflict-repair carries no repair issue at
       # all, just a PR number. Same job, same gate, a different instruction set: mutually exclusive
       # with the step above by construction (one needs `needs.triage.outputs.issue`, this needs
       # `workflow_dispatch`), so exactly one of the two ever runs per invocation of this job.
@@ -172,10 +175,10 @@ jobs:
           github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5
-          # The repair envelope lives in .github/prompts/conflict-repair.md, same reasoning as
-          # ci-medic-repair.md above — never in this workflow file.
+          # The repair envelope lives in .github/prompts/moneypenny-conflict-repair.md, same reasoning as
+          # moneypenny-ci-repair.md above — never in this workflow file.
           prompt: |
-            Read `.github/prompts/conflict-repair.md` in this repo and follow it exactly. It is
+            Read `.github/prompts/moneypenny-conflict-repair.md` in this repo and follow it exactly. It is
             your complete instruction set for this run.
 
             The PR to repair is #${{ github.event.inputs.pr_number }} in this repo.

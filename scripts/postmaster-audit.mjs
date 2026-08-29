@@ -96,7 +96,7 @@ export function audit(deps = {}) {
   // push has no CI signal, no failed run, nothing red. `main`'s own tick is exactly what makes this
   // detectable — `conflictedPRs` arrives pre-filtered to open, unflagged, actually-conflicting PRs
   // by `gatherAuditDeps`; this loop only applies the one-ping memory. `executeOne`'s
-  // `commentAndFlagConflict` dispatches CI Medic's conflict-repair session right after this intent
+  // `commentAndFlagConflict` dispatches moneypenny-repair.yml's conflict-repair session right after this intent
   // runs — that session judges disjoint-vs-same-logic and either pushes a resolved merge commit or
   // escalates to `needs-eric`; this comment is the receipt that a repair was dispatched, not an ask.
   for (const c of conflictedPRs) {

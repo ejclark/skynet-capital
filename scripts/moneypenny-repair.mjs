@@ -1,36 +1,39 @@
 #!/usr/bin/env node
-// THE CI MEDIC — the lane that notices a failed run on `main` and gets it worked, instead of it
-// sitting red until someone happens to look.
+// MONEYPENNY — REPAIR. The lane that notices a failed run on `main`, or a PR conflicted against
+// it, and gets it worked — instead of it sitting red (or silently conflicted) until someone
+// happens to look. Formerly "CI Medic" (renamed #912 — see docs/MONEYPENNY.md).
 //
-//   node scripts/ci-medic.mjs                            # read $GITHUB_EVENT_PATH, act
-//   node scripts/ci-medic.mjs --dry-run --event f.json   # print the intents, touch nothing
+//   node scripts/moneypenny-repair.mjs                            # read $GITHUB_EVENT_PATH, act
+//   node scripts/moneypenny-repair.mjs --dry-run --event f.json   # print the intents, touch nothing
 //
 // WHY IT EXISTS (Eric, 2026-08-22, after run 32545818804 blocked a feedback build): "we should
 // have a job kicked off that automatically resolves these types of failures." The failure that
 // prompted it was silent in the worst way — the feedback lane took the issue's claim lease, then
 // died in a bash step, so the issue looked claimed and nothing built it. Nothing was watching.
 //
-// SHAPE — decide, then do, the same doctrine as postmaster.mjs: `routeFailure()` is pure (an event
-// plus its dependencies in, a list of intents out) and `execute()` is the only part that touches
-// GitHub. Every branch is therefore testable from a fixture payload.
+// SHAPE — decide, then do, the same doctrine as moneypenny.mjs (the event router): `routeFailure()`
+// is pure (an event plus its dependencies in, a list of intents out) and `execute()` is the only
+// part that touches GitHub. Every branch is therefore testable from a fixture payload.
 //
-// WHY IT IS A SEPARATE ROUTER FROM THE POSTMASTER: the postmaster is issue-driven and its own
-// header says so. This one is driven by `workflow_run`, and giving the postmaster that trigger
-// would arm it to fire on its own failures. Separate files, separate blast radius.
+// WHY IT IS A SEPARATE ROUTER FROM THE EVENT LANE: the event router is issue/push-driven and its
+// own header says so. This one is driven by `workflow_run` (CI failures) and `workflow_dispatch`
+// (PR conflicts, #909) — giving the event router either trigger would arm it to fire on its own
+// output. Separate files, separate blast radius — the two are siblings under one identity
+// (Moneypenny), not one merged file; see #912's own reasoning for keeping them apart.
 //
 // THE LOOP GUARDS, ALL FOUR (a self-healing lane that can trigger itself is a bill, not a net):
 //   1. It ignores its own workflow's failures.
 //   2. It only acts on runs against the default branch — a red PR belongs to that PR's author and
 //      its watching session, and repair PRs opened here would otherwise feed themselves.
 //   3. One open issue per failure signature: a recurrence comments, it never files again.
-//   4. Once a signature carries `needs-eric`, the medic goes quiet on it entirely.
+//   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import { jobLog } from "./ci-medic-logs.mjs";
+import { jobLog } from "./moneypenny-repair-logs.mjs";
 import { LABELS } from "./postmaster.mjs";
 
-/** This workflow's own `name:`. Guard 1 — never treat the medic's failure as work for the medic. */
-export const MEDIC_WORKFLOW = "CI Medic";
+/** This workflow's own `name:`. Guard 1 — never treat this lane's own failure as work for itself. */
+export const REPAIR_WORKFLOW = "Moneypenny Repair";
 /**
  * `ci-failure` used to be declared right here, a SECOND label registry beside the postmaster's —
  * the exact split #500 is about. One vocabulary now (scripts/postmaster.mjs `LABELS`); this stays
@@ -90,7 +93,7 @@ export function issueBody(run, failure) {
 export function routeFailure(ctx, deps = {}) {
   const run = ctx.run ?? {};
   if (run.conclusion !== "failure") return [];
-  if (run.name === MEDIC_WORKFLOW) return [];
+  if (run.name === REPAIR_WORKFLOW) return [];
   if (run.event === "pull_request") return [];
   if (run.head_branch !== (ctx.defaultBranch || "main")) return [];
 
@@ -142,7 +145,7 @@ function json(label, args) {
 /**
  * A run that failed with NO failing job — GitHub rejected the workflow file itself (a duplicate
  * key, bad syntax), so nothing ever started. Learned the hard way on 2026-08-22, when exactly this
- * shape would have slipped past the medic silently: the run is named after the file path, carries
+ * shape would have slipped past this lane silently: the run is named after the file path, carries
  * zero jobs, and is the most urgent failure there is, because the whole lane is dead.
  */
 export function parseFailure(run) {
@@ -203,7 +206,7 @@ function execute(intents) {
   const dispatch = [];
   for (const intent of intents) {
     if (intent.type === "skip") {
-      console.log(`::notice::medic quiet on #${intent.issue} — ${intent.reason}`);
+      console.log(`::notice::moneypenny-repair quiet on #${intent.issue} — ${intent.reason}`);
       continue;
     }
     if (intent.type === "comment") {
@@ -257,7 +260,7 @@ function main(argv) {
   execute(intents);
 }
 
-/** Open medic issues, by signature. Only this label — the medic never reads the wider backlog. */
+/** Open this lane's own issues, by signature. Only this label — it never reads the wider backlog. */
 function openIssues() {
   return json("gh issue list", [
     "issue",

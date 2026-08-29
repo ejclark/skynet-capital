@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { logArgVariants, sanitizeLog } from "../../scripts/ci-medic-logs.mjs";
+import { logArgVariants, sanitizeLog } from "../../scripts/moneypenny-repair-logs.mjs";
 
 // The self-healing lane's router, exercised the way postmaster.spec.ts exercises its own: feed a
 // fixture `workflow_run` payload through `--dry-run` and assert the INTENTS. The dry run never
@@ -16,12 +16,12 @@ const dryRun = (fixture: string): Intent[] =>
   JSON.parse(
     execFileSync(
       "node",
-      ["scripts/ci-medic.mjs", "--dry-run", "--event", `tests/fixtures/events/${fixture}`],
+      ["scripts/moneypenny-repair.mjs", "--dry-run", "--event", `tests/fixtures/events/${fixture}`],
       { cwd: process.cwd(), encoding: "utf8" },
     ),
   );
 
-describe("ci medic — routing a failed run", () => {
+describe("moneypenny repair — routing a failed run", () => {
   it("files one capsule issue for a fresh failure on main, and asks for a repair session", () => {
     const [intent, ...rest] = dryRun("workflow-run-failed.json");
 
@@ -61,11 +61,11 @@ describe("ci medic — routing a failed run", () => {
   });
 
   it("ignores its own failure — the guard that stops the lane feeding itself", () => {
-    expect(dryRun("workflow-run-medic-self.json")).toEqual([]);
+    expect(dryRun("workflow-run-repair-self.json")).toEqual([]);
   });
 
   it("does nothing at all for a run that succeeded", () => {
-    const dir = mkdtempSync(join(tmpdir(), "medic-"));
+    const dir = mkdtempSync(join(tmpdir(), "repair-"));
     const file = join(dir, "ok.json");
     writeFileSync(
       file,
@@ -76,19 +76,23 @@ describe("ci medic — routing a failed run", () => {
         deps: { openIssues: [] },
       }),
     );
-    const out = execFileSync("node", ["scripts/ci-medic.mjs", "--dry-run", "--event", file], {
-      encoding: "utf8",
-    });
+    const out = execFileSync(
+      "node",
+      ["scripts/moneypenny-repair.mjs", "--dry-run", "--event", file],
+      {
+        encoding: "utf8",
+      },
+    );
     rmSync(dir, { recursive: true, force: true });
 
     expect(JSON.parse(out)).toEqual([]);
   });
 });
 
-describe("ci medic — the issue it writes", () => {
+describe("moneypenny repair — the issue it writes", () => {
   it("satisfies the capsule contract it asks humans to follow (docs/ISSUES.md)", () => {
     const [intent] = dryRun("workflow-run-failed.json");
-    const dir = mkdtempSync(join(tmpdir(), "medic-body-"));
+    const dir = mkdtempSync(join(tmpdir(), "repair-body-"));
     const file = join(dir, "body.md");
     writeFileSync(file, intent?.body ?? "");
 
@@ -114,11 +118,11 @@ describe("ci medic — the issue it writes", () => {
   });
 });
 
-// 2026-08-26, run 33021825722: the medic filed #670 with an empty evidence fold reading "(log
+// 2026-08-26, run 33021825722: this lane filed #670 with an empty evidence fold reading "(log
 // fetch failed: the response contains terminal escape sequences; pass --allow-escape-sequences to
 // output it anyway)". Actions logs are colourized and `gh api` refuses to print them by default,
 // so the repair session it dispatched opened with no evidence at all. That failure, specced.
-describe("ci medic — fetching the evidence", () => {
+describe("moneypenny repair — fetching the evidence", () => {
   it("asks gh for a colourized log, which it refuses to print unless asked", () => {
     const [best] = logArgVariants(98353791650);
 
