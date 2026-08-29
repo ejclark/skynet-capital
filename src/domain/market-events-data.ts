@@ -85,7 +85,12 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
   },
   // Forward Treasury coupon supply (treasurydirect.gov upcoming + treasury.gov tentative schedule,
   // checked 2026-08-18). Long-end reopenings (10/20/30Y, TIPS) move rates hardest; the short-end
-  // 2/3Y + FRN auctions are omitted as low-impact (the schedule-automation follow-up ingests those).
+  // 2/3Y + FRN auctions are omitted as low-impact (the schedule-automation follow-up ingests those)
+  // — with ONE deliberate exception since 2026-08-29, `treasury-3y-note-2026-09-08` below. Warsh's
+  // 2026-08-28 keynote pushed the hawkish repricing almost entirely into the FRONT end (2Y +6-9bp,
+  // Sep hike odds ~35%->56-59%) while the long end held, so for this one cycle the 3Y is the first
+  // coupon auction to price the live hike question. The blanket exclusion still stands for every
+  // other 2/3Y date; adding one back needs a dated reason like this, not a habit.
   {
     id: "treasury-5y-note-2026-08-26",
     kind: "rates",
@@ -107,6 +112,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes: "End-of-August belly supply; the 7Y is the historically wobbliest of the coupon block.",
+  },
+  {
+    id: "treasury-3y-note-2026-09-08",
+    kind: "rates",
+    title: "3-Year Treasury Note auction",
+    date: "2026-09-08",
+    status: "estimate",
+    source:
+      "EST: treasury.gov upcoming-auctions API (fiscaldata.treasury.gov) lists announce 2026-09-03, auction 2026-09-08, issue 2026-09-15 — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-29",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Front-end supply opening the September coupon block (3Y 09-08 → 10Y 09-09 → 30Y 09-10). Newly relevant because Warsh's 2026-08-28 keynote pushed the hawkish repricing almost entirely into the front end (2Y +6-9bp, Sep hike odds ~35%->56-59%) while the long end held — this is the first coupon auction to price that risk. Discovered during the treasury-20y-bond-2026-09-15 pulse-check adjacency sweep.",
   },
   {
     id: "treasury-10y-note-2026-09-09",
