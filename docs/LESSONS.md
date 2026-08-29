@@ -1411,3 +1411,63 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   costing real feedback-lane throughput; (b) audit whether anything else in this repo assumes
   `typescript`'s classic `createSourceFile`/full-AST API is available before reaching for it, now
   that `typescript@7` has dropped it from the public surface with no compile-time signal.
+
+---
+
+### `claude-code-action`'s turn caps are chronically too tight — and it fails runs that already succeeded (cause now established)
+
+- **SHA:** fb4d5c6   **DATE:** 2026-08-29   **STATUS:** closed
+- **SHA:** e5b0963   **DATE:** 2026-08-29   **STATUS:** closed
+- **SHA:** f681944   **DATE:** 2026-08-29   **STATUS:** closed
+- **SHA:** 65da6c3   **DATE:** 2026-08-29   **STATUS:** closed
+- **SHA:** c27600e   **DATE:** 2026-08-29   **STATUS:** closed
+- **SIGNAL:** 5 failed runs on `main` in one afternoon, surfaced by `incident-scan.mjs` as two
+  apparently-separate classes — 2 labeled `Claude` (`.github/workflows/claude.yml`, PR-comment
+  review sessions on #869 and #724) and 3 labeled `Postmaster` (`.github/workflows/postmaster.yml`'s
+  per-event research matrix, one leg failing in each of 3 consecutive dispatches). Pulling the
+  actual job logs (not just the run titles `incident-scan.mjs` prints, which are a display-title
+  echo of the triggering issue/PR and say nothing about *why* the run failed) showed all 5 are one
+  root cause, not two:
+
+  | Run | Workflow / job | cap | num_turns | SDK subtype | Verdict |
+  |---|---|---|---|---|---|
+  | 33258081012 | `claude.yml`, PR #869 | 50 | 51 | `error_max_turns` | genuinely hit the cap |
+  | 33256204226 | `claude.yml`, PR #724 | 50 | 51 | `error_max_turns` | genuinely hit the cap |
+  | 33254083250 | postmaster, `pce-2026-10-29` leg | 60 | 61 | `error_max_turns` | genuinely hit the cap |
+  | 33253716860 | postmaster, `gdp-q3-2026-advance-2026-10-29` leg | 60 | 63 | **`success`** | **failed anyway** |
+  | 33252268497 | postmaster, `midterm-elections-2026-11-03` + `consumer-confidence-2026-09-29` legs | 60 | 67 / 65 | **`success`** (both) | **failed anyway** (both) |
+
+  This entry supersedes the "not established" verdict in the `189a4df`/`ba26084`/`9f9178c` entry
+  above (2026-08-28) — that entry declined to guess whether those two runs were "making slow real
+  progress… stuck in an unproductive loop, or something else," which was the honest call with the
+  evidence available then. With 5 more data points and the actual SDK results in hand, the pattern
+  is unambiguous: **none of the 5 looks like a runaway loop.** The 3 genuine `error_max_turns` cases
+  missed their cap by 1 turn (51/50, 61/60); the other 2 finished with `subtype: "success",
+  is_error: false` — real work, correctly done — 3 to 7 turns past the cap.
+- **ROOT CAUSE:** two independent things stacked. (1) Both lanes' turn caps were *already* tuned
+  down recently on the stated belief they had comfortable headroom — `claude.yml`'s 50-turn cap
+  (2026-08-28: "generous enough that a real build never hits it") and `postmaster.yml`'s per-event
+  60-turn cap (2026-08-28, after matrixing split the old batch-of-4 100-turn budget: "60 is ~2x that
+  ceiling, real headroom"). Both estimates were wrong by a comfortable-looking margin that turned
+  out not to hold on the very next day's real traffic. (2) `claude-code-action@v1` checks final
+  `num_turns` against `--max-turns` *after* the SDK result comes back, not just as a live circuit
+  breaker — so a session that finishes and reports genuine `success` one turn past a tight cap is
+  still reported as a failed Action run (`"Claude reported a successful result after 63 turns,
+  exceeding the configured maximum of 60"`). A cap sized as a pure runaway backstop is instead
+  actively canceling correctly-finished work, at real API cost (each of these 5 runs burned $3–$11
+  and 10–25 minutes before being thrown away) and real detection-lag cost (every one of these is a
+  false-positive `incident-scan.mjs` entry that has to be triaged like a real drift).
+- **PREVENTION:** ledger + issue, not mechanized here. Both workflow files are
+  `.github/workflows/**` — envelope-protected (`envelope.json`), never auto-merge, Eric's manual
+  merge regardless of diff size — so the fix (raise both caps with real margin: `claude.yml` 50→~80,
+  postmaster's per-event lane 60→~90) is filed as issue #904 with the fix already sketched, rather
+  than guessed at or self-merged here. The action's own success-after-cap check is out of this
+  repo's control; #904 notes it as a candidate upstream report if the pattern recurs after the bump.
+- **SIDE QUESTS:** → docs/IDEAS.md — `incident-scan.mjs`'s run title comes from `display_title`,
+  which for a `claude.yml`/postmaster run is the triggering issue/PR's own title, not a summary of
+  the failure. That cost real time here (the two `Claude`-labeled incidents read, at a glance, like
+  content bugs in specific research docs — "the shutdown read is off by one month" — and were only
+  confirmed as the same turn-budget class after pulling job logs). Worth considering whether
+  `incident-scan.mjs`'s printed line should include the failed step name (`error_max_turns` /
+  `error_max_turns` / job name) alongside the display title, so the next unlearned-incident list is
+  triageable without a log fetch.
