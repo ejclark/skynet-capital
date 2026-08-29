@@ -367,9 +367,9 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Jackson Hole — Fed chair Warsh's first keynote (symposium Aug 27–29)",
     date: "2026-08-28",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "NEWS: kansascityfed.org symposium Aug 27–29; Fri-keynote timing press-reported, checked 2026-08-17",
+      'FED: federalreserve.gov/newsevents/speech/warsh20260828a.htm — "In Our Time", Jackson Hole, 2026-08-28, checked 2026-08-29',
     impact: "high",
     symbols: [],
     notes:
