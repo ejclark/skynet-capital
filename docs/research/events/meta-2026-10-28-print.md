@@ -1,28 +1,31 @@
 # META earnings print — meta-2026-10-28-print
 
 **Kind:** earnings · **Date:** 2026-10-28 (estimate, 8-K cadence) · **Impact:** critical
-**Last assessed:** 2026-08-24
+**Last assessed:** 2026-08-29
+<!-- probe-ref: {"symbols":{"META":578.02},"vix":14.43,"daysBand":"critical:21+","adjacentIds":["aapl-2026-10-29-print","amzn-2026-10-29-print","fomc-2026-10-28","goog-2026-10-28-print","msft-2026-10-27-print"],"screenStreak":0} -->
 
 ## At a glance
 
 **TL;DR.** Stand aside directionally and let the guards do the work. META's print is a known-date
 variance bomb — 2026 tails run ±10% in a single night — and no META-specific edge survived the
 sweep's red team. The one genuinely new fact, the market's punish-capex-then-forgive reaction to Q2,
-*raises* event risk without licensing a trade. Date is an **estimate** (D-64), and an estimate only
-ever widens caution.
+*raises* event risk without licensing a trade. Date is an **estimate** (D-60), and an estimate only
+ever widens caution. **One thing this doc was waiting on did not arrive:** FT-4's ~2026-08-27 score
+date passed with the register still `_open_`, and a cache-busted re-run today confirms *why* — the
+instrument's event list still ends 2026-04-29, so it cannot see the 07-29 print FT-4 measures.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
 | Today | **Stand aside** | High | No META-specific edge survived the red team, and nothing since 2026-08-12 resurrects one | ≥3 new prints showing a repriced gap regime — the only stated bar |
 | This week | **Nothing to do** | High | The date is unconfirmed and no catalyst sits between here and the IR announcement | IR confirms a date ≠ **2026-10-28**, re-keying the S2 flat-by date |
-| This month | **Watch FT-4's score, not the tape** | Medium | The July stand-aside window scores ~**2026-08-27**; a real signal either way rewrites the post-print leg | FT-4 scoring on 2026-08-27 with signal in either direction |
+| This month | **Treat the post-print leg as unresolved, not as tested** | Medium | FT-4's score date passed unscored and the instrument is blind to the print it measures — absence of a score is not evidence of no signal | FT-4 actually scored — by a repaired instrument or an owner that isn't a close-out — with signal in either direction |
 | This quarter | **S2 and E1 only — flat across the print** | High | ±10% single-night tails with no edge to pay for them; the capex reaction raises risk, not opportunity | Nothing kills a no-alpha guard; shorting unblocking activates S3 on MSFT first, META only as a lean |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Never** — take a directional META position into the print; the tails are ±10% and nothing pays for them.
 - **Never** — treat the punish-capex-then-forgive pattern as a signal; it is a risk observation, not an edge.
-- **Watch (dated)** — FT-4 scores ~**2026-08-27** · IR date announcement, expected ~**2026-10-07** · estimated print **2026-10-28**, the same day as the confirmed FOMC statement.
+- **Watch (dated)** — FT-4 **overdue since ~2026-08-27**, blocked on instrument coverage · IR date announcement, expected ~**2026-10-07** · estimated print **2026-10-28**, the same day as the confirmed FOMC statement.
 - **If shorting unblocks** — the S3 mega-cap fade activates on MSFT first; META is a direction-only lean, never at MSFT sizing.
 - **Re-opens the gap-capture kill only on** — ≥3 new prints showing a repriced gap regime.
 
@@ -118,6 +121,17 @@ licensing a trade (estimates only widen caution, never license action).
   lean it is (direction-only, never at MSFT sizing).
 - **FT-4 scores ~2026-08-27** → if the July stand-aside window shows real signal either way, the
   post-print leg of this stance gets rewritten with that receipt.
+  **Status 2026-08-29: the date passed and the switch did not fire, because nothing scored it.**
+  [`forward-tests.md`](../forward-tests.md) still shows FT-4 `_open_`. A cache-busted re-run today
+  verified the blocker rather than assuming it: `earnings-cycle.mjs META` reports **56 prints,
+  2012-07-26 .. 2026-04-29** with price history through **2026-08-28** — fresh prices, stale event
+  list. The instrument is still blind to the **2026-07-29** print FT-4 measures (the sweep's known
+  forward-window-guard debt, "Pipeline integrity" item 5), so the test cannot be scored from
+  instrument data, and no close-out will reach it either: FT-4 is keyed to a *past* print that has
+  no ledger of its own, so no `event-passed-unscored` pass owns it. **The honest consequence for
+  this stance: the post-print leg stays MIXED/unresolved and must not be read as "tested and
+  found flat."** Absence of a score is not evidence of no signal. This doc does not improvise a
+  scoring method inside a pulse row; it records the orphan and leaves the register untouched.
 
 ## Assessment ledger
 
@@ -125,6 +139,7 @@ licensing a trade (estimates only widen caution, never license action).
 |---|---|---|---|---|
 | 2026-08-17 | D-72 | Initial research banked; both instruments fresh (event list ends 2026-04-29 — the 2026-07-29 print is missing per the sweep's known forward-window blindness; caveated, not repaired). Date hunt: Meta IR lists no upcoming events (checked 2026-08-17); aggregators converge Wed 10-28 AMC — stays **estimate**. Adjacency: no peer prints since 08-15 (weekend); NVDA 08-26 confirmed / MRVL 08-27 confirmed / AVGO 09-02 announced — all already proposed via the NVDA doc's 08-17 row; no macro prints since 08-15; VIX 14.56 Fri 08-15 (2026 low) with SKEW +6.6% m/m and Brent +6.0%/wk — calm index, rising tail-hedge demand; no new export-control/policy action touching META. Event tape (**estimate**): Q3 consensus ~$63.1–63.3B rev / ~$6.95 EPS vs company guide $61–64B; stock has round-tripped the July −9.6% AH selloff back toward highs (~25% off the low); implied move not quotable at D-72. FT-4 (META post-print stand-aside) scores ~08-27, before this doc's next check. | — (stance set) | 2026-08-24 (critical, 61+d band: every 7d) |
 | 2026-08-24 | D-65 | Adjacency sweep. Event tape: date convergence on 10/28 holds (TipRanks/Investing.com "confirmed," one Wall Street Horizon page still flags "unconfirmed") — no Meta IR primary posted, stays **estimate**. Consensus drifted slightly: EPS ~$6.75 (from ~$6.95 at D-72), revenue ~$63.26B (essentially unchanged from ~$63.1-63.3B) — normal estimate-revision noise, not material. Peers: NVDA/MRVL both report this week (own docs); AVGO's XPV overhang deepened (own doc). Macro: no CPI/jobs surprise since 8/17; Sep-16 FOMC read is 68.4% hold/31.6% hike as of 8/20 (FOMC sibling doc). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new dated adjacency found. | — (no change; too far out for a substantive stance shift) | 2026-08-31 (critical, 61+d band: every 7d) |
+| 2026-08-29 | D-60 | Adjacency sweep; band shortened as days-until crossed into the 21–60d/3d cadence. **The headline this pass is a registered falsifier that came due and could not fire.** This doc's decision header named "FT-4 scoring on 2026-08-27 with signal in either direction" as its *This month* falsifier. The date passed; [`forward-tests.md`](../forward-tests.md) still shows FT-4 `_open_`. Rather than assume the reason, both instruments were **re-run with the cache busted** today: `earnings-cycle.mjs META --bench QQQ --peers GOOG,MSFT,AMZN` reports **56 prints, 2012-07-26 .. 2026-04-29**, price history **2012-05-18 .. 2026-08-28** (3,590 sessions) — **fresh prices, stale event list**. The forward-window-guard debt is therefore *unrepaired*, and the instrument remains blind to the **2026-07-29** print FT-4 measures, so the test is unscoreable from instrument data. Compounding it, FT-4 is keyed to a past print with **no ledger of its own**, so no `event-passed-unscored` close-out will ever pick it up — it is an orphan, named here and left untouched in the register (a pulse row does not improvise a scoring method, and editing the register is not this row's job). Honest consequence recorded in the stance: the post-print leg stays **unresolved**, and must not be read as "tested and found flat." **No instrument-level change otherwise** — every modern-era cell reproduces the initial research exactly (D-20 run-up 2023–26 n=14 **+4.91%/win 71%**, excess +2.01%; ALL-era gap win **59%**, p10 **−7.48%**), so the S1 refutation and the gap-capture kill both stand unchanged on fresh data. **Event tape:** date convergence on **2026-10-28** holds (TipRanks / Investing.com / Nasdaq, checked today); **no Meta IR primary posting found**, so the status stays **estimate**. Consensus is **flat this pass** — EPS ~**$6.75**, revenue ~**$63.26B** against the company's own $61–64B guide — i.e. no drift at all since the 8/24 row, which is itself worth stating after that row logged a $6.95 → $6.75 move. **Price:** META closed **$575.99** on 8/28 (day range $571.08–$589.19; `event-material-scan` probe reads **$578.02** — small source divergence, unreconciled). **Macro:** Warsh's 2026-08-28 Jackson Hole keynote repriced September hike odds **35.5% → 59.5%** (CME FedWatch; CNBC "coin flip") with a first ~50% October read from a single aggregator — detail in the sibling [`fomc-2026-10-28`](fomc-2026-10-28.md) row filed today. Read-through here is narrow and *reduces* one risk: 8/28 showed this chair's hawkish surprises price into the front end (2y +~8bp), not equity vol (S&P −0.13%/−0.25%, VIX at a 2026 low), which trims the Fed's share of the est.-10/28 collision — while changing nothing about S2, since the ±10% single-night tail is the print's own. Chicago PMI collapsed to **47.1** (Aug data, 8/28) vs ~58 consensus and was ignored by the tape. **Peers:** NVDA beat 8/26 (rev $96.2B, EPS $2.22, +106% y/y) on only ~+4–5% AH; MRVL beat 8/27 and fell **~7.6% AH** on Q3 margin compression; semis gave back on 8/28. No mega-cap peer print since 8/24; MSFT est. 10/27, GOOG est. 10/28, AMZN/AAPL est. 10/29 all still **estimate**, cluster intact. **Volatility regime:** VIX **14.43** (8/28 close, probe) vs 15.13 at the 8/24 row — calm, drifting into the year's low; no term-structure break found. **Geopolitical:** Brent below **$87** on a fourth straight down session after an Iran–Oman Hormuz agreement Tehran says does not reopen the strait; no new policy action touching META. **No new dated adjacency to propose.** Probe-ref block added (this doc had none, which is why the pulse could not be screened). | — (no change to the call — stand aside, S2/E1 only. But the post-print leg is explicitly re-labelled **unresolved rather than tested**: its scoring test is overdue, orphaned, and blocked on unrepaired instrument coverage, and absence of a score is not evidence of no signal.) | 2026-09-01 (critical, 21–60d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
