@@ -121,15 +121,26 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      - name: Set up Node (version from .nvmrc)
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
+          cache: npm
+
+      - name: Install dependencies
+        # envelope-scan.mjs's diffAware path imports envelope-widening.mjs, which imports the
+        # `typescript` devDependency — without this, --check crashes with ERR_MODULE_NOT_FOUND
+        # before printing anything, which then fed an empty pipe into the JSON parse below and
+        # failed this job outright instead of correctly finding this very PR's own diff protected.
+        run: npm ci
+
       - name: Is the diff protected?
         id: envelope
         run: |
           FILES=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
           echo "changed files:"; echo "$FILES"
           BLOCKING=$(node scripts/envelope-scan.mjs --check $FILES --base "${{ github.event.pull_request.base.sha }}" \
-            | node -e 'let d="";process.stdin.on("data",c=>d+=c);
-                       process.stdin.on("end",()=>{const rows=JSON.parse(d);
-                       console.log(rows.some(r=>r.blocking)?"true":"false")})')
+            | jq '[.[] | select(.blocking)] | length > 0')
           echo "blocking=$BLOCKING" >> "$GITHUB_OUTPUT"
 
       - name: Arm auto-merge (or merge directly if already green)
