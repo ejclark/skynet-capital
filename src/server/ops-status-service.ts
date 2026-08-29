@@ -5,7 +5,7 @@ import type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js"
 // `dashboard-ops-status.ts`) keeps one import site — this module is still the composition root
 // for the shape, even though the shape itself lives in `ops-status-types.ts` (a dependency-free
 // leaf, so it can't reintroduce the import cycle `scripts/dep-graph-scan.mjs` caught here once).
-export type { OpsSignal, OpsSignalLink, OpsStatus, SignalVerdict } from "./ops-status-types.js";
+export type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js";
 
 /**
  * THE OPS-STATUS SERVICE (#666 slice 1) — "bots up? on what commit? deploy lag?" answered from

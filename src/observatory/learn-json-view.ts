@@ -2,7 +2,7 @@ import { passingCount } from "../domain/comprehension.js";
 import { checkFor } from "../domain/comprehension-checks.js";
 import { COURSES, totalPoints } from "../domain/curriculum.js";
 import { type EarnedMilestone, ladderNeighbor, milestoneForCode } from "../domain/progression.js";
-import type { AcademyProgress } from "./render-dashboard.js";
+import type { AcademyProgress } from "../server/progression-service.js";
 
 /**
  * MILESTONES AS DATA (#738 phases 6b + 8b) — `/api/learn`, the JSON twin behind the shell's

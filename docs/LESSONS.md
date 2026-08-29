@@ -479,9 +479,11 @@ it. Prevention ranks, best first:
   shape it", dead "Skip →", hidden form: the entire member feedback funnel down, invisibly — every
   click path was designed to fail loudly except the wiring itself.
 - **PREVENTION:** by-construction fix + gate. The script now attaches on `DOMContentLoaded`
-  (markup order can never break it again) AND renders below the form; the spec pins both nets
+  (markup order can never break it again) AND renders below the form; the spec pinned both nets
   (readiness guard present; script rendered after every id it queries) in
-  `tests/server/feedback-coach-script.spec.ts`.
+  tests/server/feedback-coach-script.spec.ts. Both the classic inline script and its spec were
+  deleted whole in #738 phase 9f-2 — the shell's React feedback UI has no inline-script-ordering
+  hazard to guard, so the failure class this pinned can no longer occur.
 - **SIDE QUESTS:** a real-browser CI smoke of the critical funnels (/feedback click-through) —
   parked in docs/IDEAS.md.
 

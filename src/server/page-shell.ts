@@ -3,16 +3,15 @@ import { type NavContext, renderShell } from "../observatory/dashboard-shell.js"
 import { TOKEN_DECLS } from "../ui/tokens.js";
 
 /** The base reset every server-rendered page starts from. */
-export const PAGE_STYLE =
+const PAGE_STYLE =
   "*{margin:0;padding:0;box-sizing:border-box}html{color-scheme:dark}body{margin:0}";
 
 /**
  * The FORM/CONTENT rules shared by every self-service page — fields, buttons, admin tables, the
  * onboarding hero/stepper, the persona class-picker. Split out from the page-CHROME rules
  * (`:root`, `body`, `.wrap`, `.brand`) so a page can take just the content rules and supply its
- * own chrome — the app shell's drawer, in `railedShell` below — instead of the bare one-card
- * page every self-service route used to be stuck with (Eric, 2026-08-25: "/add and /invite
- * continue to ignore page templates and remove the rails").
+ * own chrome, instead of the bare one-card page every self-service route used to be stuck with
+ * (Eric, 2026-08-25: "/add and /invite continue to ignore page templates and remove the rails").
  */
 const CONTENT_STYLE = `
   .wrap{ max-width:520px; margin:0 auto; }
@@ -95,21 +94,14 @@ const CONTENT_STYLE = `
   .cp-legend{ display:block; font-size:11.5px; color:color-mix(in srgb,var(--muted) 85%,transparent); line-height:1.5; margin-top:7px; font-style:italic; }`;
 
 /** The bare page chrome (`:root`, `body`, the standalone brand mark) plus `CONTENT_STYLE` — for
- *  the pages that still render with no nav rail: `/welcome` (pre-commitment, no session identity
- *  yet to build a drawer for) and a `requireOwner` refusal (a one-line "not available" page has
- *  nothing for a rail to navigate to). Everything ELSE self-service now renders through
- *  `railedShell` below, inside the same app shell as the rest of the observatory. */
+ *  `/welcome`, the one page left that renders with no nav rail (pre-commitment, no session
+ *  identity yet to build a drawer for). */
 const ADD_STYLE = `${PAGE_STYLE}
   :root{ ${TOKEN_DECLS} }
   body{ background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; padding:40px clamp(16px,5vw,20px); }
   .brand{ font-weight:700; font-size:15px; letter-spacing:.14em; margin-bottom:26px; }
   .brand b{ color:var(--accent); }
   ${CONTENT_STYLE}`;
-
-/** The shared page chrome for `/welcome` and a `requireOwner` refusal — see `ADD_STYLE`. */
-export function brandedShell(title: string, inner: string): string {
-  return addShell(`${title} · Skynet Capital`, inner);
-}
 
 export function addShell(title: string, inner: string, wide = false): string {
   return `<!doctype html>
@@ -128,13 +120,16 @@ ${inner}
 }
 
 /**
- * The RAILED self-service page: `CONTENT_STYLE` (the same form/table/onboarding rules `addShell`
- * uses) rendered inside the real app shell — drawer, nav, the `PAPER · SANDBOX` timestamp bar —
- * instead of a lone card with no way back to the rest of the observatory (Eric, 2026-08-25:
- * "/add and /invite continue to ignore page templates and remove the rails"). `nav` is always
- * defined here (every caller reaches this route through the auth gate, which always has a
- * session to build one from) — `renderShell` itself stays fine with `undefined` for the one
- * caller outside this module that renders a bare embeddable body.
+ * The RAILED self-service page: `CONTENT_STYLE` rendered inside the real app shell — drawer, nav,
+ * the `PAPER · SANDBOX` timestamp bar. `nav` is always defined here (every caller reaches this
+ * route through the auth gate, which always has a session to build one from) — `renderShell`
+ * itself stays fine with `undefined` for the one caller outside this module that renders a bare
+ * embeddable body.
+ *
+ * Its only remaining caller is the envelope-protected `invite-form.ts` (`src/server/invite-form.ts`
+ * — "the invite gate", never auto-authorized) — kept live here rather than deleted alongside the
+ * rest of the classic self-service surface (#738 phase 9f-2) because that file is frozen pending
+ * Eric's own sign-off.
  */
 export function railedShell(title: string, nav: NavContext, inner: string, wide = false): string {
   return shellDocument(

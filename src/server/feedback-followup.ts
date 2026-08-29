@@ -33,7 +33,7 @@ interface FeedbackFollowupInput {
   readonly submitterName?: string;
 }
 
-export type FollowupResult =
+type FollowupResult =
   | { readonly ok: true; readonly url: string }
   | { readonly ok: false; readonly error: string };
 
