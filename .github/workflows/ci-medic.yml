@@ -24,6 +24,15 @@ name: CI Medic
 #
 # The triage job's `if:` also screens out healthy runs before a runner starts; the router's copies
 # of the guards are the specced ones, and the job condition is an optimisation, not the contract.
+#
+# A SECOND ENTRY POINT (#909, folding postmaster's conflict detection into this same dispatcher —
+# Eric, 2026-08-29: "keep chipping away at postmaster and ci-medic responsibilities to fold them
+# into Moneypenny's [mandate] for her to manage"). `workflow_dispatch` below lets postmaster's audit
+# step (`scripts/postmaster.mjs`'s `flag-conflict` intent) hand this lane a PR number instead of a
+# failed run — the `repair` job below already IS a generic "dispatch a Claude session against a
+# named target" job, so a conflicted PR reuses it rather than earning a second workflow file. Its
+# own memory (postmaster's `conflict-flagged` label) is the dedupe; this lane adds none of its own
+# for that path, deliberately — one label owner, not two.
 
 on:
   # THE LIST IS REQUIRED IN PRACTICE. Dropping it (to catch unparseable files, whose runs are named
@@ -40,6 +49,16 @@ on:
       ["Postmaster", "Pipeline", "Autonomy ops", ".github/workflows/postmaster.yml",
        ".github/workflows/pipeline.yml", ".github/workflows/autonomy-ops.yml"]
     types: [completed]
+  # #909's conflict-repair entry point. `pr_number` alone, never a fixture-style event payload — a
+  # `workflow_dispatch` call carries no `workflow_run` object at all, so the `triage` job below is
+  # skipped outright (its `if:` only matches a `workflow_run` completion) and `repair` runs on this
+  # trigger directly.
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number to attempt a conflict repair on
+        required: true
+        type: string
 
 permissions:
   contents: read        # the repair session mints its own token for pushes
@@ -49,8 +68,10 @@ permissions:
 
 concurrency:
   # Per signature-ish: one medic run per watched workflow at a time, never cancelling a triage
-  # mid-file (a half-filed issue is worse than a queued one).
-  group: ci-medic-${{ github.event.workflow_run.name }}
+  # mid-file (a half-filed issue is worse than a queued one). A `workflow_dispatch` conflict-repair
+  # carries no `workflow_run` object at all, so it keys on the PR number instead — two different
+  # PRs' repairs must never serialize behind each other, but the same PR dispatched twice should.
+  group: ci-medic-${{ github.event.workflow_run.name || format('pr-{0}', github.event.inputs.pr_number) }}
   cancel-in-progress: false
 
 jobs:
@@ -79,9 +100,14 @@ jobs:
         run: node scripts/ci-medic.mjs
 
   repair:
-    name: repair the failure
+    name: repair the failure or a flagged conflict
     needs: triage
-    if: needs.triage.outputs.issue != ''
+    # `always()` because `triage` is legitimately SKIPPED (not failed) on a `workflow_dispatch`
+    # conflict trigger — its own `if:` only matches a `workflow_run` completion, and a skipped
+    # dependency still lets a downstream job run under `always()`. The two conditions are mutually
+    # exclusive by construction (one event carries `workflow_run`, the other `inputs.pr_number`),
+    # so this never double-fires on one event.
+    if: always() && (needs.triage.outputs.issue != '' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -102,14 +128,15 @@ jobs:
       - id: gate
         env:
           TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          TARGET: ${{ needs.triage.outputs.issue != '' && format('issue #{0}', needs.triage.outputs.issue) || format('PR #{0}', github.event.inputs.pr_number) }}
         run: |
           if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
           else
             echo "armed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — issue #${{ needs.triage.outputs.issue }} carries the evidence but nothing will repair it."
+            echo "::warning::CLAUDE_CODE_OAUTH_TOKEN missing — $TARGET carries the evidence but nothing will repair it."
           fi
 
-      - if: steps.gate.outputs.armed == 'true'
+      - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
         uses: anthropics/claude-code-action@v1
         with:
           # Without this the lane can DETECT but never REPAIR. A medic run is woken by
@@ -132,3 +159,23 @@ jobs:
             complete instruction set for this run.
 
             The medic's issue is #${{ needs.triage.outputs.issue }} in this repo.
+
+      # #909's second entry point — a `workflow_dispatch` conflict-repair carries no medic issue at
+      # all, just a PR number. Same job, same gate, a different instruction set: mutually exclusive
+      # with the step above by construction (one needs `needs.triage.outputs.issue`, this needs
+      # `workflow_dispatch`), so exactly one of the two ever runs per invocation of this job.
+      - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch'
+        uses: anthropics/claude-code-action@v1
+        with:
+          allowed_bots: "github-actions,claude"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --model claude-opus-5
+          # The repair envelope lives in .github/prompts/conflict-repair.md, same reasoning as
+          # ci-medic-repair.md above — never in this workflow file.
+          prompt: |
+            Read `.github/prompts/conflict-repair.md` in this repo and follow it exactly. It is
+            your complete instruction set for this run.
+
+            The PR to repair is #${{ github.event.inputs.pr_number }} in this repo.
