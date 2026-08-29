@@ -4,7 +4,6 @@ import {
   type NavView,
   renderPortfolioIndexBody,
 } from "../observatory/render-dashboard.js";
-import { standingsBoardView, standingsCompareView } from "../observatory/standings-board-view.js";
 import { parseLeaderMetric } from "../observatory/standings-metric.js";
 import type { StandingsOptions } from "../observatory/standings-view.js";
 import { serveAdminApi } from "./admin-api-routes.js";
@@ -18,7 +17,7 @@ import {
   streamBoardPatches,
 } from "./board-patch-routes.js";
 import { deskIndex } from "./collections-routes.js";
-import { serveContentApi } from "./content-api-routes.js";
+import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
 import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
 import { pageHtml, servePublicRoute } from "./dashboard-board-routes.js";
@@ -27,12 +26,11 @@ import { serveIndividualProfile } from "./dashboard-profile-routes.js";
 import { trySelfServiceRoute } from "./dashboard-self-service-routes.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveInfoRoute, serveLearnRoute, serveTradeRoute } from "./dashboard-view-routes.js";
-import { serveDeskJson } from "./desk-json-routes.js";
 import { serveFeedbackApi } from "./feedback-api-routes.js";
 import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
-import { serveLegacyRedirect } from "./legacy-redirects.js";
+import { serveLegacyRedirect, withClassicBanner } from "./legacy-redirects.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 import { serveWireRoute } from "./wire-routes.js";
@@ -87,62 +85,9 @@ function parseCompareParams(params: URLSearchParams): Pick<StandingsOptions, "aI
   };
 }
 
-/** JSON twin of `/board/frame` for the React shell (#738 phase 0): the same board, as data. The
- *  client renders this once, then applies `/events` ops verbatim from `seq` — on a gap it comes
- *  back here instead of patching around a hole. Same formatted values, same keys, same auth gate. */
-function serveBoardJson(
-  res: ServerResponse,
-  url: string,
-  config: DashboardServerConfig,
-  channel: BoardPatchChannel,
-): void {
-  const params = new URL(url, "http://localhost").searchParams;
-  const metric = parseLeaderMetric(params.get("by"));
-  const state = config.hub.getState();
-  // Exactly the page's compare resolution: an id must exist, match, and carry no error —
-  // missing/unknown/errored falls through to no compare, never a crash.
-  const find = (id: string | null) =>
-    id ? state.participants.find((p) => p.id === id && !p.error) : undefined;
-  const a = find(params.get("a"));
-  const b = find(params.get("b"));
-  res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-  res.end(
-    JSON.stringify({
-      seq: channel.head,
-      generatedAt: state.generatedAt,
-      metric,
-      view: standingsBoardView(state, metric),
-      ...(a && b ? { compare: standingsCompareView(a, b) } : {}),
-    }),
-  );
-}
-
 /** The 2026-08-25 fold's legacy bookmarks — each old standalone view 302s into Standings so an
  *  old link still lands somewhere real rather than 404ing. `/leaderboard`'s metric param maps onto
  *  Standings' identically-shaped `?by=`; `/compare`'s `?a=&b=` carries over unchanged. */
-/** The shell's read-only JSON family (#738) — wire, board, and the desk sub-routes. */
-async function serveJsonApi(
-  res: ServerResponse,
-  path: string,
-  url: string,
-  config: DashboardServerConfig,
-  channel: BoardPatchChannel,
-  session: Session | undefined,
-): Promise<boolean> {
-  if (await serveContentApi(res, path, config, session)) {
-    return true;
-  }
-  if (path === "/api/board") {
-    serveBoardJson(res, url, config, channel);
-    return true;
-  }
-  if (path.startsWith("/api/desk/")) {
-    await serveDeskJson(res, path, config);
-    return true;
-  }
-  return false;
-}
-
 /** The front door and its escape hatch (#738 phase 7a): `/` stamps joined and 302s into the
  *  shell; `/classic` keeps the pre-redesign board reachable. Returns true when handled. */
 function serveHomePages(
@@ -168,7 +113,9 @@ function serveHomePages(
     const params = new URL(url, "http://localhost").searchParams;
     const metric = parseLeaderMetric(params.get("by"));
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-    res.end(pageHtml(config.hub, navFor("board"), metric, parseCompareParams(params)));
+    res.end(
+      withClassicBanner(pageHtml(config.hub, navFor("board"), metric, parseCompareParams(params))),
+    );
     return true;
   }
   return false;
@@ -246,30 +193,42 @@ async function serveAuthorizedRoute(
   if (serveLegacyRedirect(res, path, url, req.method ?? "GET")) {
     return;
   }
-  if (await trySelfServiceRoute(req, res, path, url, config, session, navFor("add"))) {
+  // THE QUARANTINE DOOR (#738 phase 9f-1, Eric's go 2026-08-29): every legacy page stays
+  // reachable at /classic/<path> while the shell proves out — placed AFTER the redirect layer
+  // (a prefixed path can't bounce back into /app), before the legacy handlers, which serve
+  // unchanged (the auth gate already ran; owner pages re-check their own). A fallback door,
+  // not a parallel app; the delete PR retires this line.
+  const pagePath = path.startsWith("/classic/") ? path.slice("/classic".length) : path;
+  if (await trySelfServiceRoute(req, res, pagePath, url, config, session, navFor("add"))) {
     return;
   }
-  if (path === "/feedback" || path === "/feedback/coach" || path === "/feedback/preview") {
-    await serveFeedbackRoute(req, res, path, session, config, navFor("feedback"));
+  if (
+    pagePath === "/feedback" ||
+    pagePath === "/feedback/coach" ||
+    pagePath === "/feedback/preview"
+  ) {
+    await serveFeedbackRoute(req, res, pagePath, session, config, navFor("feedback"));
     return;
   }
-  if (path === "/wire") {
+  if (pagePath === "/wire") {
     await serveWireRoute(res, config, Boolean(config.submitFeedback), navFor);
     return;
   }
-  if (path === "/learn") {
+  if (pagePath === "/learn") {
     await serveLearnRoute(res, config, session, navFor);
     return;
   }
-  if (serveInfoRoute(res, path, url, navFor, () => deskIndex(config.hub.getState().participants))) {
+  if (
+    serveInfoRoute(res, pagePath, url, navFor, () => deskIndex(config.hub.getState().participants))
+  ) {
     return;
   }
-  if (path === "/trade") {
+  if (pagePath === "/trade") {
     await serveTradeRoute(req, res, url, config, session, navFor);
     return;
   }
   // Portfolio index — /u bare: every account the session's email owns, one level above the desks.
-  if (path === "/u") {
+  if (pagePath === "/u") {
     const ownedIds = resolveOwnedIds(session, config);
     const state = config.hub.getState();
     const accounts = state.participants.filter((p) => ownedIds.includes(p.id));
@@ -282,11 +241,11 @@ async function serveAuthorizedRoute(
     return;
   }
   // Individual profile — /u/:id. Ids are already URL-safe; match by prefix (no path-param parser).
-  if (path.startsWith("/u/")) {
-    await serveIndividualProfile(req, res, path, url, config, navFor, session);
+  if (pagePath.startsWith("/u/")) {
+    await serveIndividualProfile(req, res, pagePath, url, config, navFor, session);
     return;
   }
-  if (serveHomePages(res, path, url, config, session, navFor)) {
+  if (serveHomePages(res, pagePath, url, config, session, navFor)) {
     return;
   }
   res.writeHead(404, { "content-type": "text/plain" });

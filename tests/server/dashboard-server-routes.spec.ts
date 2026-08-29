@@ -151,6 +151,30 @@ describe("dashboard-server /feedback", () => {
   });
 });
 
+describe("dashboard-server /classic quarantine (phase 9f-1)", () => {
+  it("serves every legacy page one prefix deep while the bare url redirects", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      // The bare URL keeps sending members into the shell…
+      const bare = await fetch(`${base}/learn`, { redirect: "manual" });
+      expect(bare.status).toBe(302);
+      // …while the quarantine door serves the legacy page itself, no redirect.
+      const doored = await fetch(`${base}/classic/learn`, { redirect: "manual" });
+      expect(doored.status).toBe(200);
+      expect(await doored.text()).toContain("Skynet Capital");
+      const wire = await fetch(`${base}/classic/wire`, { redirect: "manual" });
+      expect(wire.status).toBe(200);
+    });
+  });
+
+  it("stamps the classic board with the legacy banner", async () => {
+    await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
+      const html = await (await fetch(`${base}/classic`)).text();
+      expect(html).toContain("legacy view");
+      expect(html).toContain("/classic/&lt;page&gt;");
+    });
+  });
+});
+
 describe("dashboard-server /u/:id (phase 9a)", () => {
   it("redirects the legacy desk into the shell — history renders on Pulse now", async () => {
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
