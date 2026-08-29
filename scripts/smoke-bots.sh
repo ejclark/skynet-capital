@@ -41,15 +41,32 @@ bridge_armed() {
   flyctl logs -a "$APP" -n 2>/dev/null | grep -qF "$ARMED_MARKER"
 }
 
+machine_status=1
+bridge_status=1
 for ((i=1; i<=ATTEMPTS; i++)); do
   echo "[smoke-bots] attempt $i/$ATTEMPTS against $APP (want GIT_SHA=$WANT_SHA)"
-  if machine_ok && bridge_armed; then
+  # Evaluated separately (not short-circuited by &&) so a final-attempt failure can name which
+  # check actually failed — the ORed message this replaces cost 6 unreadable CI failures in one
+  # day (#821). `cmd || var=$?` is the set -e-safe idiom: the || makes the failure non-fatal.
+  machine_status=0; machine_ok || machine_status=$?
+  bridge_status=0; bridge_armed || bridge_status=$?
+  if [[ $machine_status -eq 0 && $bridge_status -eq 0 ]]; then
     echo "[smoke-bots] PASS — machine started on the expected commit, controls bridge reachable."
     exit 0
   fi
   ((i < ATTEMPTS)) && sleep "$SLEEP"
 done
 
-echo "[smoke-bots] FAIL — machine not started on $WANT_SHA, or the controls bridge never armed" >&2
-echo "[smoke-bots] (bridge silence = env-only controls: Mission Control toggles are NOT reaching the fleet)" >&2
+if [[ $machine_status -ne 0 && $bridge_status -ne 0 ]]; then
+  echo "[smoke-bots] FAIL — machine never reached started on $WANT_SHA, AND the controls bridge never armed" >&2
+elif [[ $machine_status -ne 0 ]]; then
+  echo "[smoke-bots] FAIL — machine never reached started on $WANT_SHA (controls bridge WAS armed)" >&2
+else
+  echo "[smoke-bots] FAIL — controls bridge never armed (machine IS started on $WANT_SHA)" >&2
+fi
+# Only relevant when the bridge itself is the failing check — printing it for a machine-only
+# failure would misleadingly imply env-only controls when the bridge was actually reachable.
+if [[ $bridge_status -ne 0 ]]; then
+  echo "[smoke-bots] (bridge silence = env-only controls: Mission Control toggles are NOT reaching the fleet)" >&2
+fi
 exit 1
