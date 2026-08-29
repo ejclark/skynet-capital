@@ -31,7 +31,7 @@ name: Moneypenny Repair
 # A SECOND ENTRY POINT (#909, folding postmaster's conflict detection into this same dispatcher —
 # Eric, 2026-08-29: "keep chipping away at postmaster and ci-medic responsibilities to fold them
 # into Moneypenny's [mandate] for her to manage"). `workflow_dispatch` below lets postmaster's audit
-# step (`scripts/postmaster.mjs`'s `flag-conflict` intent) hand this lane a PR number instead of a
+# step (`scripts/moneypenny.mjs`'s `flag-conflict` intent) hand this lane a PR number instead of a
 # failed run — the `repair` job below already IS a generic "dispatch a Claude session against a
 # named target" job, so a conflicted PR reuses it rather than earning a second workflow file. Its
 # own memory (postmaster's `conflict-flagged` label) is the dedupe; this lane adds none of its own

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// THE POSTMASTER — one router for every issue-driven automation in this repo.
+// MONEYPENNY — EVENTS. One router for every issue-driven automation in this repo. Formerly
+// "the postmaster" (renamed #912, slice 3 — see docs/MONEYPENNY.md); its sibling scripts below
+// keep the `postmaster-*.mjs` name until #912's next slice renames them too.
 //
-//   node scripts/postmaster.mjs                          # read $GITHUB_EVENT_PATH, act
-//   node scripts/postmaster.mjs --dry-run --event f.json # print the intents, touch nothing
-//   node scripts/postmaster.mjs --claim-feedback         # claim the labelled issue + pick its model
-//   node scripts/postmaster.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
-//   node scripts/postmaster.mjs --model-tier < body.md   # just the tier decision
+//   node scripts/moneypenny.mjs                          # read $GITHUB_EVENT_PATH, act
+//   node scripts/moneypenny.mjs --dry-run --event f.json # print the intents, touch nothing
+//   node scripts/moneypenny.mjs --claim-feedback         # claim the labelled issue + pick its model
+//   node scripts/moneypenny.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
+//   node scripts/moneypenny.mjs --model-tier < body.md   # just the tier decision
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -406,7 +408,7 @@ function execute(intents) {
   if (process.env.GITHUB_STEP_SUMMARY && receipt.length) {
     writeFileSync(
       process.env.GITHUB_STEP_SUMMARY,
-      `## Postmaster receipt\n\n${receipt.map((r) => `- ${r}`).join("\n")}\n`,
+      `## Moneypenny receipt\n\n${receipt.map((r) => `- ${r}`).join("\n")}\n`,
       { flag: "a" },
     );
   }

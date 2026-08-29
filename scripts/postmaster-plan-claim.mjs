@@ -5,7 +5,7 @@
 // ready comment and acted on it. Measured on #823 itself: #467/#468/#469 sat 7.3 days fully scoped,
 // with every open question already given a recommended default, waiting only on the one-word flip.
 //
-// SPLIT OUT ON PURPOSE, not inlined into `postmaster.mjs`. `claimPlan` (postmaster.mjs) is the
+// SPLIT OUT ON PURPOSE, not inlined into `moneypenny.mjs`. `claimPlan` (moneypenny.mjs) is the
 // impure half — it claims the lease and touches `$GITHUB_OUTPUT`. This file is the PURE half: given
 // an `issue_comment` payload, decide whether it is a ready-flip on a plan issue, with no network and
 // no clock. That split is what makes the decision fixture-drivable (tests/fixtures/events/plan-*),

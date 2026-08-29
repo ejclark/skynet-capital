@@ -1,6 +1,6 @@
 {
   "scripts/issue-lint.mjs": "drifted over cap via #598 (postmaster label/step-isolation work); not yet decomposed",
-  "scripts/postmaster.mjs": "pinned by tests/arch/lease-namespace.spec.ts + tests/arch/gh-json-fields.spec.ts, which assert literal source text",
+  "scripts/moneypenny.mjs": "pinned by tests/arch/lease-namespace.spec.ts + tests/arch/gh-json-fields.spec.ts, which assert literal source text",
   "src/domain/market-events-data.ts": "scripts/event-scan.mjs parses MARKET_EVENTS as raw text; the literal must stay physically in this file",
   "src/observatory/shell-style.ts": "a single CSS template literal — no natural split without duplicating the stylesheet",
   "src/observatory/standings-view.ts": "dominated by an inline HTML template literal",

@@ -3,7 +3,8 @@ import { createFollowup, resolveFeedbackFollowup } from "../../src/server/feedba
 
 // A follow-up is a COMMENT on the existing issue, never an edit to its body (which the build lane
 // parses) — and it re-triggers a build by cycling the `feedback` label, the same retry path
-// postmaster.mjs already documents ("re-apply the feedback label to retry the build"). These specs
+// moneypenny.mjs (formerly postmaster.mjs) already documents ("re-apply the feedback label to
+// retry the build"). These specs
 // cover the wire-level behavior with a fake fetch, same discipline as feedback-status.spec.ts.
 describe("feedback-followup", () => {
   const config = { token: "t", repo: "x/y" };

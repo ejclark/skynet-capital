@@ -120,7 +120,7 @@
       }
     },
     {
-      "includes": ["scripts/postmaster.mjs"],
+      "includes": ["scripts/moneypenny.mjs"],
       "linter": {
         "rules": {
           "style": {

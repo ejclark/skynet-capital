@@ -18,7 +18,7 @@
 // Read-only, no network writes. Uses `gh`, which is present wherever the postmaster runs.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { LABELS } from "./postmaster.mjs";
+import { LABELS } from "./moneypenny.mjs";
 import { ghRest } from "./postmaster-gh.mjs";
 
 // One vocabulary, not a set of string literals that can drift from it (#500). This scan is the

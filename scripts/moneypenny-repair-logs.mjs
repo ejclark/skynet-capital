@@ -1,5 +1,5 @@
 // THE MEDIC'S EVIDENCE — fetching a failed job's log and making it readable in a markdown fold.
-// Split out of moneypenny-repair.mjs the way postmaster-gh.mjs was split out of postmaster.mjs: the router
+// Split out of moneypenny-repair.mjs the way postmaster-gh.mjs was split out of moneypenny.mjs (formerly postmaster.mjs): the router
 // decides, this fetches, and neither file has to grow past the size gate to hold both jobs.
 import { sh } from "./postmaster-gh.mjs";
 

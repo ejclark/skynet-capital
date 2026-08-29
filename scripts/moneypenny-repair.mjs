@@ -29,14 +29,14 @@
 //   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { LABELS } from "./moneypenny.mjs";
 import { jobLog } from "./moneypenny-repair-logs.mjs";
-import { LABELS } from "./postmaster.mjs";
 
 /** This workflow's own `name:`. Guard 1 — never treat this lane's own failure as work for itself. */
 export const REPAIR_WORKFLOW = "Moneypenny Repair";
 /**
  * `ci-failure` used to be declared right here, a SECOND label registry beside the postmaster's —
- * the exact split #500 is about. One vocabulary now (scripts/postmaster.mjs `LABELS`); this stays
+ * the exact split #500 is about. One vocabulary now (scripts/moneypenny.mjs `LABELS`); this stays
  * exported under its old name so existing call sites and specs keep working.
  */
 export const LABEL = LABELS.ciFailure;

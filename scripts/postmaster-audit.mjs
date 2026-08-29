@@ -1,4 +1,4 @@
-// THE LOOP'S EYES — the stall/silent-feedback audit lane. Split out of postmaster.mjs (2026-08-26,
+// THE LOOP'S EYES — the stall/silent-feedback audit lane. Split out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26,
 // the noExcessiveLinesPerFile split). The plan-ready stall check (#897, closing #877's deferred
 // slice 3) joined 2026-08-29: a plan issue whose ready-flip comment never got claimed or built is
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
@@ -252,7 +252,7 @@ export function gatherAuditDeps(nowMs) {
 
 /**
  * Is `claim/plan-<n>` currently held, in either namespace the lease has ever lived in? Read-only
- * mirror of `claimHandoff`'s own `readRef`/namespace-fallback shape (scripts/postmaster.mjs) — a
+ * mirror of `claimHandoff`'s own `readRef`/namespace-fallback shape (scripts/moneypenny.mjs) — a
  * 404 in both namespaces means unclaimed, which is the common and expected case.
  */
 function hasPlanClaim(number) {

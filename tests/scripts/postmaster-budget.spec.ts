@@ -1,4 +1,4 @@
-import { isRateLimited, sweepShipped } from "../../scripts/postmaster.mjs";
+import { isRateLimited, sweepShipped } from "../../scripts/moneypenny.mjs";
 
 /**
  * What the postmaster does when the GraphQL budget runs out.
