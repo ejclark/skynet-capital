@@ -1,7 +1,7 @@
 {
   "$comment": "The autonomous-lane build envelope — the SINGLE source of truth for what an unattended Claude session may not change. Prose copies (CLAUDE.md, governor/SKILL.md, ship/SKILL.md, orient.md) cite this file rather than restating the list; restating it is how the wording drifted before (several copies dropped 'and hard to reverse' from CLAUDE.md's original). Enforced by scripts/envelope-scan.mjs via tests/arch/envelope.spec.ts.",
-  "$diffAwareComment": "Eric, 2026-08-27 — a protected file marked 'diffAware': true is exempt from the hold ONLY when the actual diff is provably safe: every hunk in that file is a pure insertion (git diff-scan.mjs checks git diff line-by-line — no existing line removed or changed) AND no added line introduces a new mutating broker call (.post(/.put(/.delete(/fetch(). Either condition failing means it gates exactly as before. This is diff-shape, not file-content — a rewrite of the same function, even one that reads identically after formatting, is not a pure insertion and stays gated. Marked diffAware only on the order-construction/execution cluster (calibrated against #679-#696's real diffs: 3 of 4 stayed correctly gated — one modified an existing function body, one added a brand-new cancelOrder network call; the fourth, a pure type-shape addition, would have shipped unattended). Auth, credentials, the invite gate, risk guards, playbooks, and workflow/deploy files are deliberately NOT diffAware — those stay hard-gated regardless of diff shape.",
-  "$behaviorEvidenceNote": "#852's NARROW slice (from Eric's 2026-08-29 directive to 'protect the behavior, not the file'): a diffAware file's PR body should cite a passing property/invariant suite covering the changed behavior (which suite, how many generated cases) as supporting evidence when the diff fails pure-insertion, per #850's PoC on option-ticket.ts. This changes NOTHING about additiveSafe or auto-merge — it only makes the manual-hold review faster and better-informed, so it needed no explicit flip to build. The BROAD slice — letting a proven suite skip the hold entirely, the same way a pure-insertion diff does — is a real widening of what bypasses the hold and stays Eric's call alone; #852 tracks it, unresolved.",
+  "$diffAwareComment": "Eric, 2026-08-27 — a protected file marked 'diffAware': true is exempt from the hold ONLY when the actual diff is provably safe, one of THREE ways (scripts/envelope-scan.mjs's classifyDiff/structurallySafe/behaviorVerified, cheapest first): (1) pure insertion — every hunk adds lines only, no existing line removed or changed, AND no added line introduces a new mutating broker call (.post(/.put(/.delete(/fetch(); (2) a safe token-level structural widening (e.g. a union type gaining a member — #716/#858); (3) behavior-verified (#852, broad slice, below) — the file's registered `invariantSuite` is untouched by the diff and passes right now. Any one path clearing it is enough; all three failing means it gates exactly as before. Marked diffAware only on the order-construction/execution cluster (calibrated against #679-#696's real diffs: 3 of 4 stayed correctly gated — one modified an existing function body, one added a brand-new cancelOrder network call; the fourth, a pure type-shape addition, would have shipped unattended). Auth, credentials, the invite gate, risk guards, playbooks, and workflow/deploy files are deliberately NOT diffAware — those stay hard-gated regardless of diff shape.",
+  "$behaviorEvidenceNote": "#852, settled (Eric, 2026-08-29: 'the intent is behavioral tests and CI quality gates are to prevent the need for human review/intervention' — the BROAD reading, not narrow). A diffAware rule may carry `invariantSuite`, a spec file path; scripts/envelope-scan.mjs's behaviorVerified() treats a passing run of that suite, PROVIDED THE SUITE ITSELF IS UNTOUCHED BY THE DIFF, as sufficient proof to report additiveSafe:true and skip the hold — same as a pure-insertion diff does today. A diff that edits its own proof gets no credit from it (the suite must be identical to what's on `main`, where `verify` already guarantees it was passing — nothing to re-check at the base commit itself). WHERE this exemption fires, the PR body must say so explicitly (which suite, how it's unaffected) — the honesty rule this repo holds everywhere else applies to its own safety mechanism. `invariantSuite` is opt-in per rule; a diffAware file with none behaves exactly as before (#850's PoC → tests/trading/option-ticket-invariants.property.spec.ts is the first one registered, on option-ticket.ts). The narrow slice (#884, merged) — citing a suite as evidence for a human, without changing the gate — is superseded by this: the whole point named was removing the need for the human, not speeding them up.",
   "lanes": ["feedback/", "research/", "design/"],
   "allowNewRuntimeDeps": false,
   "protected": [
@@ -24,6 +24,18 @@
     {
       "pattern": "envelope.json",
       "why": "this file — a lane may not widen its own envelope"
+    },
+    {
+      "pattern": "scripts/envelope-scan.mjs",
+      "why": "the gate itself — a lane that can edit its own gate's logic has no envelope at all"
+    },
+    {
+      "pattern": "scripts/envelope-widening.mjs",
+      "why": "the gate's structural-widening helper — same reason as envelope-scan.mjs"
+    },
+    {
+      "pattern": "scripts/envelope-behavior.mjs",
+      "why": "the gate's behavior-verification helper (#852) — same reason as envelope-scan.mjs"
     },
     {
       "pattern": "src/server/auth/**",
@@ -73,7 +85,8 @@
     {
       "pattern": "src/trading/option-ticket.ts",
       "why": "money-moving logic — option order construction and sizing",
-      "diffAware": true
+      "diffAware": true,
+      "invariantSuite": "tests/trading/option-ticket-invariants.property.spec.ts"
     },
     {
       "pattern": "src/engine/guards.ts",

@@ -20,3 +20,13 @@ export function addedRuntimeDeps(basePkgJson: string, headPkgJson: string): stri
  *  in the same order, in `newSource`, with the spliced-in tokens introducing no new mutating broker
  *  call? Fails closed (false) on an unterminated lexical construct or any unmatched old token. */
 export function classifyStructuralWidening(oldSource: string, newSource: string): boolean;
+/** The command that runs one spec file, as [cmd, args] — overridable via ENVELOPE_SUITE_RUNNER so a
+ *  hermetic fixture can substitute a trivial always-pass/always-fail command instead of a real run. */
+export function suiteRunnerArgv(specPath: string): [string, string[]];
+/** Pure — #852's behavior-verified gate. All three or nothing: a registered suite, one this diff
+ *  didn't touch, actually passing right now. */
+export function behaviorVerifiedFacts(facts: {
+  hasSuite: boolean;
+  suiteUnchanged: boolean;
+  suitePassed: boolean;
+}): boolean;
