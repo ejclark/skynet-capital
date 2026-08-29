@@ -1,3 +1,4 @@
+import { AlpacaApiError } from "../alpaca/alpaca-api-error.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import type { Participant } from "../participants/participant.js";
@@ -61,9 +62,28 @@ export async function readReview<T>(
 ): Promise<{ preview: T } | { refusals: string[] }> {
   try {
     return { preview: await read() };
-  } catch (error) {
-    return { refusals: [`Couldn't read the account to check this order: ${error}`] };
+  } catch {
+    // A fixed sentence, never the exception text: a raw error can carry internals (hostnames,
+    // proxy banners) that don't belong in member-facing copy.
+    return { refusals: ["Couldn't read the account to check this order. Try again shortly."] };
   }
+}
+
+/**
+ * Only Alpaca's own rejection reason — the `message` in its JSON error body, e.g. "insufficient
+ * buying power" — is the member's to act on, so it's the one piece of an exception that gets
+ * relayed. Anything else (transport throws, proxy banners, parse failures) can carry internals
+ * such as hostnames, so it collapses to a fixed sentence.
+ */
+function brokerRefusal(error: unknown): string {
+  if (error instanceof AlpacaApiError) {
+    const reason = (error.body as { message?: unknown } | null)?.message;
+    if (typeof reason === "string" && reason.length > 0) {
+      return `The broker rejected the order: ${reason}`;
+    }
+    return "The broker rejected the order.";
+  }
+  return "Couldn't reach the broker to place this order. Try again shortly.";
 }
 
 /** Shared submit wrapper: a broker throw becomes a refusal string, never an exception. */
@@ -74,7 +94,7 @@ async function submitToBroker(
     const order = await place();
     return { ok: true, orderId: order.id, status: order.status, symbol: order.symbol };
   } catch (error) {
-    return { ok: false, refusals: [`The broker rejected the order: ${error}`] };
+    return { ok: false, refusals: [brokerRefusal(error)] };
   }
 }
 

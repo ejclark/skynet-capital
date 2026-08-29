@@ -1,4 +1,5 @@
 import type { AddressInfo } from "node:net";
+import { AlpacaApiError } from "../../src/alpaca/alpaca-api-error.js";
 import type { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
 import { gradeCheck } from "../../src/domain/comprehension.js";
 import { checkFor } from "../../src/domain/comprehension-checks.js";
@@ -388,13 +389,20 @@ describe("trade service — the server-side gate", () => {
     expect((result as { refusals: string[] }).refusals.join(" ")).toContain("short");
   });
 
+  // The refusal-string sanitization matrix (what a member sees when the broker throws) lives in
+  // desk-gate.spec.ts, at the helper seam; this is the one service-level pin of the same wiring.
   it("reports a broker rejection as a refusal rather than throwing", async () => {
     const angry = client({
-      placeOrder: () => Promise.reject(new Error("insufficient buying power")),
+      placeOrder: () =>
+        Promise.reject(
+          new AlpacaApiError(403, { code: 40310000, message: "insufficient buying power" }),
+        ),
     });
     const result = await service({ client: angry })(request, "ann");
-    expect(result).toMatchObject({ ok: false });
-    expect((result as { refusals: string[] }).refusals.join(" ")).toContain("rejected the order");
+    expect(result).toEqual({
+      ok: false,
+      refusals: ["The broker rejected the order: insufficient buying power"],
+    });
   });
 
   it("still reviews the order when the market clock can't be read", async () => {
