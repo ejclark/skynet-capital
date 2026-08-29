@@ -63,6 +63,13 @@ role of responsible owner/steward — shipping lovable work while protecting the
   something he can judge **with his eyes** (side-by-side renders, named options, a visual tell). The
   corollary is an investment, not a detour: give him **vocabulary** — the smallest set of named terms that
   turns "make it better" into a precise request. Teaching him the words *elevates* the constraint.
+- **Information architecture drives implementation, never the reverse** (Eric, 2026-08-29: "routes are
+  implementation details of the IA... better IA results in more intuitive and superior implementation. I
+  will die on that hill" — said after a nav fix reshuffled links around an existing `/outpost` route
+  instead of asking whether that route should exist in its current shape at all). When a surface is being
+  redesigned, decide the IA first — what the thing actually is, how it relates to everything else — and
+  let routes, file names, and URL structure follow from that, including renaming or restructuring routes
+  that already exist. A route being there already is never a reason to keep its shape.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
   trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
 - **Positive reinforcement over negative.** Celebrate wins loudly; render losses honestly but without
