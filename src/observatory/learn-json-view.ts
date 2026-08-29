@@ -130,7 +130,8 @@ export function learnJsonView(progress?: AcademyProgress): LearnView {
           title: m.title,
           detail: m.detail,
           points: m.points,
-          ...(m.tradeType ? { ticket: `/trade?play=${m.tradeType}` } : {}),
+          // In-shell since 10b: the shell ticket speaks ?play=, so the milestone lands there.
+          ...(m.tradeType ? { ticket: `/app/trade?play=${m.tradeType}` } : {}),
           ...(earned ? { earned: { on: earned.at.slice(0, 10), orderId: earned.orderId } } : {}),
         };
       });

@@ -139,7 +139,8 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
 
   it("GET of a locked play renders the honest locked panel, never an actionable ticket", async () => {
     await withServer(gateConfig(progressionStub(), counters()), async (base) => {
-      const res = await fetch(`${base}/trade?play=201`, { headers: { cookie: cookie() } });
+      // Bare /trade 302s into the shell since 10b; the legacy ticket serves at /classic/trade.
+      const res = await fetch(`${base}/classic/trade?play=201`, { headers: { cookie: cookie() } });
       expect(res.status).toBe(200);
       const html = await res.text();
       expect(html).toContain("is still locked");
@@ -259,7 +260,7 @@ describe("the training-wheels gate — the ladder is enforced server-side, not b
     await withServer(
       gateConfig(progressionStub({ celebrating }, [], acks), counters()),
       async (base) => {
-        const page = await fetch(`${base}/trade`, { headers: { cookie: cookie() } });
+        const page = await fetch(`${base}/classic/trade`, { headers: { cookie: cookie() } });
         const html = await page.text();
         expect(html).toContain("Milestone unlocked");
         expect(html).toContain("102 — Sell stock</b> is now open");

@@ -3,8 +3,8 @@ import { serveLegacyRedirect } from "../../src/server/legacy-redirects.js";
 
 /**
  * No dead exits: every twinned legacy URL 302s into the shell, POSTs still reach the old
- * handlers, and everything WITHOUT a twin — the options ticket, the unported pages, research
- * documents, the escape hatch — passes through untouched.
+ * handlers, and everything WITHOUT a twin — research documents, the escape hatch — passes
+ * through untouched.
  */
 
 function fakeRes() {
@@ -53,6 +53,8 @@ describe("serveLegacyRedirect", () => {
     expect(target("/feedback/preview")).toBeUndefined();
     expect(target("/rotate", "/rotate?id=bot-sauron")).toBe("/app/settings?id=bot-sauron");
     expect(target("/u")).toBe("/app/settings");
+    // The ticket joined in 10b — the shell gate speaks ?play=, so the learn links land preset.
+    expect(target("/trade", "/trade?play=201")).toBe("/app/trade?play=201");
   });
 
   it("keeps the pre-shell board folds working", () => {
@@ -64,11 +66,10 @@ describe("serveLegacyRedirect", () => {
   it("never redirects a POST — the legacy write handlers stay reachable", () => {
     expect(target("/account", "/account", "POST")).toBeUndefined();
     expect(target("/u/sauron", "/u/sauron?tab=settings", "POST")).toBeUndefined();
+    expect(target("/trade", "/trade", "POST")).toBeUndefined();
   });
 
   it("leaves everything without a twin alone", () => {
-    // The options ticket lives only on the HTML page until the shell gate learns options plays.
-    expect(target("/trade", "/trade?play=201")).toBeUndefined();
     // Research documents are server-rendered by design; /classic is the escape hatch.
     expect(target("/research/nvda-aug-2026-print")).toBeUndefined();
     expect(target("/classic")).toBeUndefined();

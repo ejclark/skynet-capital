@@ -8,11 +8,11 @@ import type { ServerResponse } from "node:http";
  * Three rules bound the map:
  *  - GET only. The legacy POST handlers (account forms, the trade ticket, the desk settings tab)
  *    keep answering so nothing breaks mid-flight — they just have no UI reaching them anymore.
- *  - Only routes with a REAL shell twin redirect. `/trade` stays: the options ticket exists only
- *    on the HTML page until the shell gate learns options plays. every page now has a twin
- *    (9c–9e); `/feedback/coach` and `/feedback/preview` are shared JSON endpoints, not
- *    pages, and keep serving. `/research/<slug>` documents
- *    are server-rendered by design, and `/classic` is the deliberate escape hatch.
+ *  - Only routes with a REAL shell twin redirect — and since 10b every page has one (`/trade`
+ *    joined once the shell gate learned the options plays; `?play=`/`?desk=` carry over).
+ *    `/feedback/coach` and `/feedback/preview` are shared JSON endpoints, not pages, and keep
+ *    serving. `/research/<slug>` documents are server-rendered by design, and `/classic` is the
+ *    deliberate escape hatch.
  *  - Queries carry over where the twin speaks them (`?by=` on the board, `?q=` filters ride the
  *    path unchanged); the desk's `?tab=` maps to the shell's routes instead.
  */
@@ -37,6 +37,9 @@ const TWINS: ReadonlyMap<string, string> = new Map([
   ["/claim", "/app/settings"],
   ["/ops-status", "/app/settings"],
   ["/learn", "/app/learn"],
+  // The ticket (10b): the shell speaks ?play= and ?desk=; other legacy params drop harmlessly
+  // in the shell route's validateSearch. POSTed orders still reach the old handler, per rule 1.
+  ["/trade", "/app/trade"],
   ["/wire", "/app/wire"],
   ["/research", "/app/research"],
   ["/collections", "/app/collections"],

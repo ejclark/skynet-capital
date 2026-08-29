@@ -8,6 +8,7 @@ import {
   type TicketPreview,
   type TicketResult,
 } from "../live/ticket";
+import { DisarmNote, GateHead } from "./gate-frame";
 
 /**
  * THE PRE-TRADE GATE (#738 phase 2e) — the merge-box state machine on a real ticket.
@@ -27,15 +28,6 @@ type GateState =
   | { readonly step: "submitting"; readonly preview: TicketPreview }
   | { readonly step: "done"; readonly result: TicketResult }
   | { readonly step: "error"; readonly message: string };
-
-function GateHead({ tone, children }: { readonly tone: string; readonly children: string }) {
-  return (
-    <div className={`gate-head gate-${tone}`}>
-      <span className="gate-icon" aria-hidden="true" />
-      {children}
-    </div>
-  );
-}
 
 function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactElement {
   return (
@@ -72,10 +64,7 @@ function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactEle
           ) : null}
         </dl>
       ) : null}
-      <p className="gate-note">
-        Editing the ticket re-arms this gate, and the desk re-checks the live account at submit —
-        approval never outlives the thing it approved.
-      </p>
+      <DisarmNote />
     </div>
   );
 }
@@ -124,10 +113,17 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
   );
 }
 
-export function TradeGate({ deskId }: { readonly deskId: string }): ReactElement {
+export function TradeGate({
+  deskId,
+  initialAction = "buy",
+}: {
+  readonly deskId: string;
+  /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
+  readonly initialAction?: "buy" | "sell";
+}): ReactElement {
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [action, setAction] = useState<"buy" | "sell">("buy");
+  const [action, setAction] = useState<"buy" | "sell">(initialAction);
   const [state, setState] = useState<GateState>({ step: "draft" });
   const symId = useId();
   const qtyId = useId();
