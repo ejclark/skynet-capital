@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { classifyDiff } from "../../scripts/envelope-scan.mjs";
+import { classifyDiff, classifyStructuralWidening } from "../../scripts/envelope-scan.mjs";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // Autonomous-lane envelope gate — the mechanical replacement for a paragraph. Before this, the only
@@ -85,6 +85,106 @@ describe("classifyDiff — the diffAware exemption rule", () => {
     expect(classifyDiff("")).toBeNull();
     expect(classifyDiff(null)).toBeNull();
     expect(classifyDiff(undefined)).toBeNull();
+  });
+});
+
+// classifyStructuralWidening — the AST/token-level second opinion (2026-08-29, #716/#858).
+// classifyDiff reads a diff as TEXT, so a changed source line looks identical whether it safely
+// widened a union type (`"a" | "b"` → `"a" | "b" | "c"`) or silently mutated one (`"a"` → `"x"`) —
+// this is the rule that tells those apart, by lexing both file versions with the real TypeScript
+// scanner and checking that every old token still appears, in order, in the new file.
+describe("classifyStructuralWidening — token-level safe widening (#716/#858)", () => {
+  it("is safe for a union type gaining a member at the end", () => {
+    expect(
+      classifyStructuralWidening(
+        'export type TicketOrderType = "market" | "limit" | "stop";\n',
+        'export type TicketOrderType = "market" | "limit" | "stop" | "stop_limit";\n',
+      ),
+    ).toBe(true);
+  });
+
+  it("is safe for a union widening nested inside an interface field, not just at the top level", () => {
+    expect(
+      classifyStructuralWidening(
+        'export interface P { readonly type?: "market" | "limit" | "stop"; }\n',
+        'export interface P { readonly type?: "market" | "limit" | "stop" | "stop_limit"; }\n',
+      ),
+    ).toBe(true);
+  });
+
+  it("is not safe when an existing union member is removed", () => {
+    expect(
+      classifyStructuralWidening(
+        'export type X = "a" | "b" | "c";\n',
+        'export type X = "a" | "c";\n',
+      ),
+    ).toBe(false);
+  });
+
+  it("is not safe when an existing union member is renamed", () => {
+    expect(
+      classifyStructuralWidening('export type X = "a" | "b";\n', 'export type X = "a" | "z";\n'),
+    ).toBe(false);
+  });
+
+  it("is not safe when union members are reordered — position can be behaviorally significant", () => {
+    expect(
+      classifyStructuralWidening('export type X = "a" | "b";\n', 'export type X = "b" | "a";\n'),
+    ).toBe(false);
+  });
+
+  it("is safe for a wholly new declaration that adds no mutating call", () => {
+    expect(
+      classifyStructuralWidening(
+        "export const a = 1;\n",
+        "export const a = 1;\nexport const b = 2;\n",
+      ),
+    ).toBe(true);
+  });
+
+  it("is not safe for a wholly new declaration that adds a new mutating broker call", () => {
+    expect(
+      classifyStructuralWidening(
+        "export const a = 1;\n",
+        "export const a = 1;\n" +
+          "export async function cancelOrder(id) {\n" +
+          "  return this.transport.delete(`/v2/orders/${id}`);\n" +
+          "}\n",
+      ),
+    ).toBe(false);
+  });
+
+  it("is not safe when an existing function body is rewritten, even though the diff is one line", () => {
+    expect(
+      classifyStructuralWidening(
+        "export function f() { return 1; }\n",
+        "export function f() { return 2; }\n",
+      ),
+    ).toBe(false);
+  });
+
+  it("is safe for a comment-only edit — comments are trivia, invisible to a token-level compare", () => {
+    expect(
+      classifyStructuralWidening("export const a = 1;\n", "// a comment\nexport const a = 1;\n"),
+    ).toBe(true);
+  });
+
+  it("fails closed on old source that doesn't lex as valid — never safe on 'couldn't tell'", () => {
+    expect(classifyStructuralWidening("export const a = ((;", "export const a = 1;\n")).toBe(false);
+  });
+
+  it("fails closed on an unterminated string or template literal", () => {
+    expect(classifyStructuralWidening('let x = "ok";\n', 'let x = "unterminated\n')).toBe(false);
+  });
+
+  it("correctly re-lexes a template literal's substitution close-brace as template text, not a plain '}' — a bare TypeScript scanner without parser-driven reScanTemplateToken() cooperation misreads the apostrophes in contractions past that point as new string literals", () => {
+    const withPunctuation =
+      "export function refuse(qty: number): string {\n" +
+      "  return `selling ${qty} would open a short, which this desk doesn\\'t do.`;\n" +
+      "}\n";
+    expect(
+      classifyStructuralWidening(withPunctuation, `${withPunctuation}export const a = 1;\n`),
+    ).toBe(true);
   });
 });
 
@@ -171,12 +271,15 @@ describe("autonomous-lane envelope", () => {
     // OWN branch and outranks the checked-out one (correct in production — CI checks out a detached
     // merge ref, so `rev-parse --abbrev-ref HEAD` says "HEAD"). Inside this temp repo it made the
     // scan skip, and the assertion below passed for the wrong reason on a green local run.
+    // Invoked by its real absolute path (not a copy) so the script's own `import "typescript"`
+    // resolves against the real repo's node_modules — a bare copy into an isolated temp dir has no
+    // node_modules tree of its own to resolve a bare specifier against (#716/#858 added the import).
     const scanTemp = (...args: string[]): string =>
-      execFileSync("node", ["scripts/envelope-scan.mjs", "--lane", "feedback/1", ...args], {
-        cwd: dir,
-        encoding: "utf8",
-        env: hermeticGitEnv({ GITHUB_HEAD_REF: "" }),
-      });
+      execFileSync(
+        "node",
+        [join(process.cwd(), "scripts/envelope-scan.mjs"), "--lane", "feedback/1", ...args],
+        { cwd: dir, encoding: "utf8", env: hermeticGitEnv({ GITHUB_HEAD_REF: "" }) },
+      );
     const run = (...args: string[]): string =>
       execFileSync("git", ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args], {
         cwd: dir,
@@ -185,9 +288,7 @@ describe("autonomous-lane envelope", () => {
       });
     try {
       run("init", "-b", "main");
-      mkdirSync(join(dir, "scripts"), { recursive: true });
       cpSync("envelope.json", join(dir, "envelope.json"));
-      cpSync("scripts/envelope-scan.mjs", join(dir, "scripts/envelope-scan.mjs"));
       writeFileSync(join(dir, "README.md"), "base\n");
       run("add", "-A");
       run("commit", "-m", "base");
@@ -287,6 +388,66 @@ describe("autonomous-lane envelope", () => {
       run("commit", "-m", "new mutating call, purely additive");
       const newCall = checkTemp("src/alpaca/alpaca-trading-client.ts", "--base", "main");
       expect(newCall[0]).toMatchObject({ protected: true, additiveSafe: false, blocking: true });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // #716 end to end: a union type gaining a member rewrites an existing line rather than purely
+  // appending to it, so classifyDiff alone holds it — this is the case classifyStructuralWidening
+  // exists for. Exercises the real order-ticket.ts diffAware rule through the actual CLI, the same
+  // shape that #716's stop-limit order type was incorrectly held on before this.
+  it("exempts a diffAware protected path when the real diff is a safe union-type widening", () => {
+    const dir = mkdtempSync(join(tmpdir(), "envelope-widening-"));
+    const run = (...args: string[]): string =>
+      execFileSync("git", ["-c", "user.email=spec@example.com", "-c", "user.name=spec", ...args], {
+        cwd: dir,
+        encoding: "utf8",
+        env: hermeticGitEnv(),
+      });
+    const ticketPath = join(dir, "src/trading/order-ticket.ts");
+    const checkTemp = (...args: string[]): Check[] =>
+      JSON.parse(
+        execFileSync(
+          "node",
+          [join(process.cwd(), "scripts/envelope-scan.mjs"), "--check", ...args],
+          { cwd: dir, encoding: "utf8" },
+        ),
+      ) as Check[];
+    const scanTemp = (...args: string[]): string =>
+      execFileSync(
+        "node",
+        [join(process.cwd(), "scripts/envelope-scan.mjs"), "--lane", "feedback/1", ...args],
+        { cwd: dir, encoding: "utf8", env: hermeticGitEnv({ GITHUB_HEAD_REF: "" }) },
+      );
+    try {
+      run("init", "-b", "main");
+      mkdirSync(join(dir, "src/trading"), { recursive: true });
+      cpSync("envelope.json", join(dir, "envelope.json"));
+      writeFileSync(ticketPath, 'export type TicketOrderType = "market" | "limit" | "stop";\n');
+      run("add", "-A");
+      run("commit", "-m", "base");
+
+      // A regression guard: a diffAware path with NO actual diff against base must never read as
+      // additiveSafe — "no change" and "safe" must stay as distinct as classifyDiff already keeps
+      // "no change" (null) distinct from "unsafe". (Caught in review: contentAt's git-show read was
+      // trimmed while the working-tree read via readFileSync was not, so an unchanged file's content
+      // never compared equal and silently fell through to "safe" instead of being held.)
+      const unchanged = checkTemp("src/trading/order-ticket.ts", "--base", "main");
+      expect(unchanged[0]).toMatchObject({ protected: true, additiveSafe: false, blocking: true });
+
+      run("checkout", "-b", "feedback/1");
+      writeFileSync(
+        ticketPath,
+        'export type TicketOrderType = "market" | "limit" | "stop" | "stop_limit";\n',
+      );
+      run("add", "-A");
+      run("commit", "-m", "widen order type union — the #716 shape");
+      const widened = checkTemp("src/trading/order-ticket.ts", "--base", "main");
+      expect(widened[0]).toMatchObject({ protected: true, additiveSafe: true, blocking: false });
+      const widenedScan = scanTemp("--base", "main");
+      expect(widenedScan).toContain("safe structural widening");
+      expect(widenedScan).toContain("nothing in the protected envelope was touched");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -16,3 +16,7 @@ export function breachOf(
 ): { pattern: string; why: string; diffAware?: boolean } | null;
 /** Runtime dependencies added relative to the base's package.json. */
 export function addedRuntimeDeps(basePkgJson: string, headPkgJson: string): string[];
+/** Token-level safe widening (#716/#858): is every token that existed in `oldSource` still present,
+ *  in the same order, in `newSource`, with the spliced-in tokens introducing no new mutating broker
+ *  call? Fails closed (false) on an unterminated lexical construct or any unmatched old token. */
+export function classifyStructuralWidening(oldSource: string, newSource: string): boolean;

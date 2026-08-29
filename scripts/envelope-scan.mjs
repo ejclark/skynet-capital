@@ -10,13 +10,22 @@
 //   node scripts/envelope-scan.mjs --list      # print the protected list (no git, always exit 0)
 //   node scripts/envelope-scan.mjs --check <paths...>   # is this path protected? JSON, exit 0
 //   node scripts/envelope-scan.mjs --check <paths...> --base origin/main   # + real diff-aware
-//       `blocking` (per entry) is the field to act on — false on a diffAware rule whose actual
-//       diff is a pure insertion adding no new mutating broker call (envelope.json's
-//       $diffAwareComment). Omit --base and `blocking` just mirrors `protected` (today's behavior).
+//       `blocking` is the field to act on — false on a diffAware rule whose actual diff is safe
+//       (envelope.json's $diffAwareComment). Omit --base and `blocking` mirrors `protected`.
 //   node scripts/envelope-scan.mjs --lane feedback/9 --base origin/main   # explicit, for specs
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+// classifyStructuralWidening (#716/#858 — is a diffAware diff a safe token-level widening, e.g. a
+// union type gaining a member?) and structurallySafe live in envelope-widening.mjs, split out to
+// stay under the line budget; re-exported so existing importers keep working.
+import {
+  classifyStructuralWidening,
+  MUTATING_CALL_PATTERNS,
+  structurallySafe,
+} from "./envelope-widening.mjs";
+
+export { classifyStructuralWidening };
 
 const ROOT = process.cwd();
 const MANIFEST = join(ROOT, "envelope.json");
@@ -27,9 +36,8 @@ const argOf = (flag) => {
 };
 const git = (...args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
 
-// Manifest load is lazy (readManifest(), called from main()) rather than at module scope, so this
-// file can be `import`ed for its pure functions (classifyDiff, breachOf, ...) by specs without
-// running CLI side effects — see the import.meta.url guard at the bottom.
+// Manifest load is lazy (readManifest(), called from main()), so this file can be `import`ed for
+// its pure functions (classifyDiff, breachOf, ...) by specs without running CLI side effects.
 function readManifest() {
   // Fail CLOSED and loudly on a missing manifest: an unreadable envelope must never degrade to "no
   // protected paths", which is exactly how a gate silently disarms itself (docs/LESSONS.md).
@@ -43,9 +51,8 @@ function readManifest() {
 }
 
 // Module-level so breachOf's default param and --list/--check keep working without threading the
-// manifest through every call; populated by main() before use. A test importing this module for
-// its pure functions (classifyDiff, breachOf with an explicit protectedRules arg) never touches
-// these, so it never needs a real envelope.json on disk.
+// manifest through every call; populated by main() before use. A spec importing this module for its
+// pure functions (classifyDiff, breachOf with an explicit protectedRules arg) never touches these.
 let manifest = {};
 let rules = [];
 
@@ -92,19 +99,9 @@ export function addedRuntimeDeps(basePkgJson, headPkgJson) {
   return head.filter((d) => !base.includes(d));
 }
 
-// A diffAware protected file is exempt ONLY when both hold (see $diffAwareComment in envelope.json
-// for the calibration): (1) pure insertion — no existing line removed/changed in ANY hunk, a `-`
-// line (other than the `--- a/path` header) disqualifies it, including comment/whitespace-only
-// removals; (2) no newly added line introduces a new mutating broker call — a brand-new capability
-// to place/cancel/mutate a real order stays gated even as a pure addition (see cancelOrder, #680).
-const MUTATING_CALL_PATTERNS = [
-  /\.post\(/,
-  /\.put\(/,
-  /\.delete\(/,
-  /\bfetch\(/,
-  /execFileSync\(/,
-  /execSync\(/,
-];
+// A diffAware protected file is exempt ONLY when both hold (see $diffAwareComment in envelope.json):
+// (1) pure insertion — no existing line removed/changed; (2) no newly added line adds a new
+// mutating broker call (MUTATING_CALL_PATTERNS, above) — a new order-mutating capability stays gated.
 
 /** Pure — the specs drive this directly. `diffText` is `git diff`'s unified-diff output for one
  *  file (any base..head form); returns null (not "false") when there is no diff at all, since "no
@@ -135,14 +132,11 @@ function diffFor(path, base) {
   }
 }
 
-// --check: is this path (or these paths) protected? JSON out, always exit 0. The build session
-// asks this BEFORE editing, so it learns the answer from the gate itself rather than guessing at
-// a prose list — and the specs drive the real rule logic through it.
-//
+// --check: is this path (or these paths) protected? JSON out, always exit 0 — the build session
+// asks this BEFORE editing, learning the answer from the gate rather than guessing at a prose list.
 // --check --base <ref>: additionally answers whether a real diff against that ref EXEMPTS a
-// diffAware rule — `blocking` is what a caller should actually act on (arm/hold), `protected`
-// stays the raw file-membership answer so existing callers that ignore `blocking` keep today's
-// behavior (protected == blocking, since a rule with no diffAware never gets an exemption).
+// diffAware rule — `blocking` is what a caller should act on; `protected` stays the raw membership
+// answer (protected == blocking when a rule has no diffAware, so old callers keep today's behavior).
 function runCheck() {
   const checkBase = argOf("--base");
   const paths = process.argv
@@ -155,8 +149,11 @@ function runCheck() {
     if (checkBase && rule.diffAware) {
       const diff = classifyDiff(diffFor(path, checkBase));
       // diff === null: no actual change to this path (or an unreadable diff) — never exempt on
-      // "couldn't tell", only on a diff we positively classified as safe.
-      entry = { ...entry, additiveSafe: diff?.additiveSafe ?? false };
+      // "couldn't tell", only on a diff we positively classified as safe. A pure-insertion pass is
+      // sufficient on its own; the AST-structural check only runs as a second opinion when the
+      // line-based one didn't already clear it (a safe union widening, e.g.).
+      const additiveSafe = diff?.additiveSafe || structurallySafe(path, checkBase);
+      entry = { ...entry, additiveSafe };
       entry.blocking = !entry.additiveSafe;
     }
     return entry;
@@ -218,7 +215,8 @@ function reportAndExit(lane, branch, changed, breaches, exempted) {
   );
   if (exempted.length) {
     console.log(
-      `\nℹ diffAware exemption (pure insertion, no new mutating call) on:\n` +
+      `\nℹ diffAware exemption (pure insertion, or a safe structural widening — e.g. a union\n` +
+        `  gaining a member — either way no new mutating call) on:\n` +
         exempted.map((p) => `  ${p}`).join("\n"),
     );
   }
@@ -263,9 +261,11 @@ function runLaneScan(branch, lane) {
     if (!rule) continue;
     if (rule.diffAware) {
       const diff = classifyDiff(diffFor(path, mergeBase));
-      if (diff?.additiveSafe) {
+      // A pure-insertion pass is sufficient on its own; the AST-structural check only runs as a
+      // second opinion when the line-based one didn't already clear it.
+      if (diff?.additiveSafe || structurallySafe(path, mergeBase)) {
         exempted.push(path);
-        continue; // pure insertion, no new mutating call — exempt
+        continue;
       }
     }
     breaches.push({ path, why: rule.why, pattern: rule.pattern });
