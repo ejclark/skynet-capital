@@ -99,6 +99,110 @@ describe("applyGuards", () => {
     });
   });
 
+  // Playbook subscription capital sub-allocation (issue #885) — a hard budget reserved out of
+  // the account for one subscribed playbook, clamped alongside the existing account-wide bounds.
+  describe("a playbook subscription's capital sub-allocation", () => {
+    const subscription = {
+      accountId: "acct-1",
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      capitalAllocated: 5_000,
+      enabled: true,
+      createdAt: "2026-08-29T00:00:00.000Z",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    };
+
+    it("clamps a subscribed buy to the subscription's budget, even with ample cash and position room", () => {
+      const context = aContext({ EEM: { last: 100 } }); // ask ~100.05
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+
+      const [approved] = applyGuards(
+        [{ ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        portfolio,
+        context,
+        { maxPositionPct: 0.2, subscriptions: [subscription] },
+      );
+
+      expect(approved?.quantity).toBeGreaterThan(0);
+      // $5,000 budget at ~$100.05/share caps it well under what cash/position room would allow.
+      expect(approved?.quantity).toBeLessThan(60);
+      const eemAsk = context.quotes.EEM?.ask ?? 0;
+      expect((approved?.quantity ?? 0) * eemAsk).toBeLessThanOrEqual(5_000);
+    });
+
+    it("accounts for capital already deployed in the playbook's symbol", () => {
+      const context = aContext({ EEM: { last: 100 } });
+      // Already holding ~$4,000 worth of EEM — only ~$1,000 of the $5,000 budget remains.
+      const portfolio = aPortfolio({
+        cash: 1_000_000,
+        positions: [aPosition({ symbol: "EEM", quantity: 40 })],
+      });
+
+      const [approved] = applyGuards(
+        [{ ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        portfolio,
+        context,
+        { maxPositionPct: 1, subscriptions: [subscription] },
+      );
+
+      const eemAsk = context.quotes.EEM?.ask ?? 0;
+      const heldValue = 40 * eemAsk;
+      expect((approved?.quantity ?? 0) * eemAsk).toBeLessThanOrEqual(5_000 - heldValue + 0.01);
+    });
+
+    it("drops a subscribed buy entirely once the subscription's budget is exhausted", () => {
+      const context = aContext({ EEM: { last: 100 } });
+      const portfolio = aPortfolio({
+        cash: 1_000_000,
+        positions: [aPosition({ symbol: "EEM", quantity: 60 })], // ~$6,000 held > $5,000 budget
+      });
+
+      const approved = applyGuards(
+        [{ ...buy("EEM", 10), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        portfolio,
+        context,
+        { maxPositionPct: 1, subscriptions: [subscription] },
+      );
+
+      expect(approved).toEqual([]);
+    });
+
+    it("ignores a disabled subscription — treated as no subscription at all", () => {
+      const context = aContext({ EEM: { last: 100 } });
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+
+      const [approved] = applyGuards(
+        [{ ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        portfolio,
+        context,
+        { maxPositionPct: 0.2, subscriptions: [{ ...subscription, enabled: false }] },
+      );
+
+      // Falls back to the ordinary 20%-of-equity cap, same as the un-subscribed case.
+      const eemAsk = context.quotes.EEM?.ask ?? 0;
+      expect((approved?.quantity ?? 0) * eemAsk).toBeGreaterThan(5_000);
+      expect((approved?.quantity ?? 0) * eemAsk).toBeLessThanOrEqual(200_000);
+    });
+
+    it("leaves an intent with no playbookId, or a playbookId with no matching subscription, unaffected", () => {
+      const context = aContext({ EEM: { last: 100 } });
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+      const config = { maxPositionPct: 0.2, subscriptions: [subscription] };
+
+      const [bare] = applyGuards([buy("EEM", 10_000)], portfolio, context, config);
+      const [unmatched] = applyGuards(
+        [{ ...buy("EEM", 10_000), playbookId: "G1-GOOG", playbookMode: "standard" }],
+        portfolio,
+        context,
+        config,
+      );
+
+      const eemAsk = context.quotes.EEM?.ask ?? 0;
+      expect((bare?.quantity ?? 0) * eemAsk).toBeGreaterThan(5_000);
+      expect((unmatched?.quantity ?? 0) * eemAsk).toBeGreaterThan(5_000);
+    });
+  });
+
   // The graduated risk ladder (src/risk/risk-ladder.ts), block rung. Like the discipline config
   // it is OPT-IN by absence: with no tier supplied the guards behave exactly as they did before
   // the ladder existed, which is what keeps evals and the readiness gate untouched.
