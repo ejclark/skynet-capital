@@ -23,6 +23,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 const ROOT = process.cwd();
 const BUDGET_FILE = join(ROOT, "incident-budget.json");
@@ -95,6 +96,7 @@ function auditLedger() {
 }
 
 async function main() {
+  reexecWithProxy();
   const problems = auditLedger();
   if (problems.length > 0) {
     console.error("incident-scan: docs/LESSONS.md is not well-formed:");

@@ -2,6 +2,7 @@
 // GitHub's actual issue corpus against the capsule contract) from linting one body in isolation.
 // See issue-lint.mjs for the contract itself (`lintIssue`) and docs/ISSUES.md for the grammar.
 import { lintIssue } from "./issue-lint.mjs";
+import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 /** Issues this contract does not judge: machine-filed, machine-read (the event-research lane). */
 const AUTOMATION_TAG = /^\[(event-research)\]/i;
@@ -54,16 +55,7 @@ export function auditReport(issues, { repo = "", limit = AUDIT_LIST_LIMIT } = {}
 }
 
 export async function audit(repo, { limit = AUDIT_LIST_LIMIT } = {}) {
-  // Node does not honour HTTPS_PROXY for global fetch; re-exec once with the env flag rather than
-  // failing with a bare 401 behind a corporate/agent proxy.
-  if (process.env.HTTPS_PROXY && !process.env.NODE_USE_ENV_PROXY) {
-    const { spawnSync } = await import("node:child_process");
-    const r = spawnSync(process.execPath, process.argv.slice(1), {
-      env: { ...process.env, NODE_USE_ENV_PROXY: "1", NODE_NO_WARNINGS: "1" },
-      stdio: "inherit",
-    });
-    process.exit(r.status ?? 1);
-  }
+  reexecWithProxy();
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   if (!token) {
     console.error(

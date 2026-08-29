@@ -21,6 +21,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { reexecWithProxy } from "./proxy-reexec.mjs";
+
+// Top-level await runs at import, so the proxy re-exec has to happen before the first fetch below
+// rather than inside a main() this script does not have.
+reexecWithProxy();
+
 const INDEX_URL = "https://code.claude.com/docs/llms.txt";
 const DEFAULT_DIR = "docs/vendor/claude-code";
 const CONCURRENCY = 8;
