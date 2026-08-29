@@ -77,4 +77,24 @@ describe("learnJsonView", () => {
     expect(wire.includes("answerIndex")).toBe(false);
     expect(wire.includes('"why"')).toBe(false);
   });
+
+  it("carries the engagement celebration — title and points, no ladder code", () => {
+    const view = learnJsonView({
+      earned: [],
+      points: 0,
+      rank: { title: "Observer" } as never,
+      unlockedLevels: new Set([100]),
+      celebrating: [],
+      pendingChecks: [],
+      engagementCelebrating: [{ milestoneId: "first-feedback", at: "2026-08-26" }],
+    });
+    expect(view.engagementCelebrating).toEqual([
+      { milestoneId: "first-feedback", title: "File your first feedback", points: 20 },
+    ]);
+  });
+
+  it("has nothing to celebrate on the engagement track by default", () => {
+    const view = learnJsonView(undefined);
+    expect(view.engagementCelebrating).toEqual([]);
+  });
 });

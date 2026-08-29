@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkFor } from "../../src/domain/comprehension-checks.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
+import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import {
   createProgressionService,
@@ -210,5 +211,116 @@ describe("progression service + store — seeding, the toggle, and one-time cele
       store: new ProgressionStore(join(dir, "progression.json")),
     });
     expect((await again.view("ann")).wheels).toBe(false);
+  });
+});
+
+describe("progression service — the engagement track (#567)", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "progression-svc-engagement-"));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const feedbackEntry = (filedAt: string): FeedbackLogEntry => ({
+    uuid: filedAt,
+    opaqueMemberId: "ann",
+    issueNumber: 1,
+    url: "https://github.com/x/y/issues/1",
+    kind: "bug",
+    title: "a bug",
+    filedAt,
+  });
+
+  it("earns nothing when readFeedback isn't wired — offline builds stay untouched", async () => {
+    const view = await service([]).view("ann");
+    expect(view.engagementEarned).toEqual([]);
+    expect(view.engagementCelebrating).toEqual([]);
+  });
+
+  it("earns nothing from a fill history alone — filing feedback is the only way in", async () => {
+    const view = await service([journalLine({})]).view("ann");
+    expect(view.engagementEarned).toEqual([]);
+  });
+
+  it("pre-acknowledges a pre-existing filing on first view — never a surprise fanfare", async () => {
+    const store = new ProgressionStore(join(dir, "progression.json"));
+    const svc = createProgressionService({
+      readFills: () => Promise.resolve([]),
+      readTags: () => Promise.resolve([]),
+      readFeedback: () => Promise.resolve([feedbackEntry("2026-08-01T00:00:00.000Z")]),
+      store,
+      now: () => new Date("2026-08-26T00:00:00.000Z"),
+    });
+    const view = await svc.view("ann");
+    expect(view.engagementEarned.map((m) => m.milestoneId)).toEqual(["first-feedback"]);
+    expect(view.engagementCelebrating).toEqual([]);
+    expect(store.get("ann")?.acknowledged).toEqual(["first-feedback"]);
+  });
+
+  it("celebrates a filing made AFTER the participant record already exists", async () => {
+    const store = new ProgressionStore(join(dir, "progression.json"));
+    const before = createProgressionService({
+      readFills: () => Promise.resolve([]),
+      readTags: () => Promise.resolve([]),
+      readFeedback: () => Promise.resolve([]),
+      store,
+      now: () => new Date("2026-08-25T16:00:00.000Z"),
+    });
+    await before.view("ann"); // seeds the record with nothing earned yet
+
+    const after = createProgressionService({
+      readFills: () => Promise.resolve([]),
+      readTags: () => Promise.resolve([]),
+      readFeedback: () => Promise.resolve([feedbackEntry("2026-08-26T09:00:00.000Z")]),
+      store,
+      now: () => new Date("2026-08-26T09:00:01.000Z"),
+    });
+    const view = await after.view("ann");
+    expect(view.engagementCelebrating.map((m) => m.milestoneId)).toEqual(["first-feedback"]);
+
+    await after.acknowledge("ann", ["first-feedback"]);
+    expect((await after.view("ann")).engagementCelebrating).toEqual([]);
+  });
+
+  it("acknowledging a trade milestone doesn't bank the engagement one, and vice versa", async () => {
+    const store = new ProgressionStore(join(dir, "progression.json"));
+    const svc = createProgressionService({
+      readFills: () => Promise.resolve([]),
+      readTags: () => Promise.resolve([]),
+      readFeedback: () => Promise.resolve([]),
+      store,
+      now: () => new Date("2026-08-25T16:00:00.000Z"),
+    });
+    await svc.view("ann"); // seeds, nothing earned yet on either track
+
+    const withFeedback = createProgressionService({
+      readFills: () => Promise.resolve([journalLine({ at: "2026-08-25T16:30:00.000Z" })]),
+      readTags: () => Promise.resolve([]),
+      readFeedback: () => Promise.resolve([feedbackEntry("2026-08-25T16:31:00.000Z")]),
+      store,
+      now: () => new Date("2026-08-25T16:32:00.000Z"),
+    });
+    // first-buy is comprehension-gated: pass its check so it reaches `celebrating`, same
+    // mechanics the existing "celebrates a gated earn once the check passes" case relies on.
+    const check = checkFor("first-buy");
+    if (!check) throw new Error("first-buy is gated in the bank this spec relies on");
+    await withFeedback.submitCheck(
+      "ann",
+      "first-buy",
+      new Map(check.questions.map((q) => [q.id, String(q.answerIndex)])),
+    );
+    const view = await withFeedback.view("ann");
+    expect(view.celebrating.map((m) => m.milestoneId)).toEqual(["first-buy"]);
+    expect(view.engagementCelebrating.map((m) => m.milestoneId)).toEqual(["first-feedback"]);
+
+    await withFeedback.acknowledge("ann", ["first-buy"]);
+    const afterTradeAck = await withFeedback.view("ann");
+    expect(afterTradeAck.celebrating).toEqual([]);
+    expect(afterTradeAck.engagementCelebrating.map((m) => m.milestoneId)).toEqual([
+      "first-feedback",
+    ]);
   });
 });

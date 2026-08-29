@@ -9,6 +9,11 @@ import {
   unlockedLevels,
 } from "../domain/curriculum.js";
 import {
+  deriveEngagementEarned,
+  type EarnedEngagement,
+  ENGAGEMENT_MILESTONES,
+} from "../domain/engagement.js";
+import {
   deriveEarned,
   type EarnedMilestone,
   earnedCodes,
@@ -18,6 +23,7 @@ import {
 } from "../domain/progression.js";
 import type { TradeTypeCode } from "../domain/trade-types.js";
 import { collapseActivity, type TradeActivityRecord } from "../observatory/activity-store.js";
+import type { FeedbackLogEntry } from "./feedback-log.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 import type { ProgressionStore } from "./progression-store.js";
 
@@ -58,6 +64,12 @@ export interface ParticipantProgression {
    * from `celebrating` until the member shows they understood the play they just made.
    */
   readonly pendingChecks: readonly EarnedMilestone[];
+  /** The engagement track (#567) — earned by an action, not a fill. Empty when `readFeedback`
+   *  isn't wired (offline builds), same absence-means-absence convention as `store`. */
+  readonly engagementEarned: readonly EarnedEngagement[];
+  /** Fresh engagement earns awaiting their one-time celebration — no comprehension gate exists
+   *  for this track, so every fresh earn is celebrating immediately. */
+  readonly engagementCelebrating: readonly EarnedEngagement[];
 }
 
 /** Locked = training wheels on and the ladder hasn't opened this code yet. */
@@ -82,6 +94,8 @@ export interface AcademyProgress {
   readonly celebrating?: readonly EarnedMilestone[];
   /** Fresh earns still gated on a comprehension check. */
   readonly pendingChecks?: readonly EarnedMilestone[];
+  /** Fresh engagement earns (#567) awaiting their one-time celebration. */
+  readonly engagementCelebrating?: readonly EarnedEngagement[];
 }
 
 export interface ProgressionService {
@@ -105,6 +119,9 @@ export interface ProgressionServiceDeps {
   readonly readFills: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   /** The tagged per-order audit lines for one participant. */
   readonly readTags: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
+  /** This participant's filed feedback (#567's engagement track). Absent: the track reads as
+   *  earned nothing, same as an absent `store` reads as no wheels/no celebration. */
+  readonly readFeedback?: (participantId: string) => Promise<readonly FeedbackLogEntry[]>;
   /**
    * The preference store. Absent (offline/test wiring): wheels reads as OFF and nothing
    * celebrates — the desk simply doesn't restrict.
@@ -117,12 +134,14 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
   const now = deps.now ?? (() => new Date());
   return {
     async view(participantId) {
-      const [journal, tags] = await Promise.all([
+      const [journal, tags, feedback] = await Promise.all([
         deps.readFills(participantId),
         deps.readTags(participantId),
+        deps.readFeedback?.(participantId) ?? Promise.resolve([]),
       ]);
       const fills = collapseActivity([...journal]);
       const earned = deriveEarned(fills, tags);
+      const engagementEarned = deriveEngagementEarned(feedback.map((f) => f.filedAt));
       const codes = earnedCodes(earned);
       const unlocked = unlockedCodes(codes);
       const milestoneIds = new Set(earned.map((m) => m.milestoneId));
@@ -142,7 +161,10 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
           participantId,
           {
             trainingWheels: !hasHistory,
-            acknowledged: earned.map((m) => m.milestoneId),
+            // Pre-acknowledge whatever is ALREADY true on first view, trade and engagement
+            // alike — a member who filed feedback before this track existed gets the count, not
+            // a day-one fanfare wall (same rule the trade ladder's own seeding already follows).
+            acknowledged: [...earned, ...engagementEarned].map((m) => m.milestoneId),
             since: now().toISOString(),
           },
           now(),
@@ -158,6 +180,11 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         Boolean(checkFor(m.milestoneId)) && !passed.has(m.milestoneId);
       const pendingChecks = fresh.filter(gated);
       const celebrating = fresh.filter((m) => !gated(m));
+      // No comprehension gate exists for this track (it isn't a trade play to be quizzed on) —
+      // every fresh engagement earn goes straight to celebrating.
+      const engagementCelebrating = record
+        ? engagementEarned.filter((m) => !acknowledged.has(m.milestoneId) && m.at >= record.since)
+        : [];
 
       return {
         wheels: record?.trainingWheels ?? false,
@@ -170,6 +197,8 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         unlockedLevels: levels,
         celebrating,
         pendingChecks,
+        engagementEarned,
+        engagementCelebrating,
       };
     },
     setWheels(participantId, on) {
@@ -177,8 +206,12 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       return Promise.resolve();
     },
     acknowledge(participantId, milestoneIds) {
-      // Only real curriculum ids are banked — the form field is ours, but never trusted.
-      const known = new Set(COURSES.flatMap((c) => c.milestones.map((m) => m.id)));
+      // Only real curriculum + engagement ids are banked — the form field is ours, but never
+      // trusted.
+      const known = new Set([
+        ...COURSES.flatMap((c) => c.milestones.map((m) => m.id)),
+        ...ENGAGEMENT_MILESTONES.map((m) => m.id),
+      ]);
       const ids = milestoneIds.filter((id) => known.has(id));
       if (deps.store && ids.length > 0) {
         const held = deps.store.get(participantId)?.acknowledged ?? [];

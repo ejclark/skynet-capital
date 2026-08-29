@@ -35,6 +35,13 @@ export interface JourneyCelebration {
   readonly opened?: { readonly code: string; readonly name: string };
 }
 
+/** An engagement earn (#567) — no ladder code, no rung to open: it isn't a trade. */
+export interface EngagementCelebration {
+  readonly milestoneId: string;
+  readonly title: string;
+  readonly points: number;
+}
+
 export interface CheckQuestion {
   readonly id: string;
   readonly prompt: string;
@@ -80,6 +87,7 @@ export interface Journey {
   readonly rank: string;
   readonly courses: readonly JourneyCourse[];
   readonly celebrating: readonly JourneyCelebration[];
+  readonly engagementCelebrating: readonly EngagementCelebration[];
   readonly pendingChecks: number;
   readonly check?: CheckGate;
 }
