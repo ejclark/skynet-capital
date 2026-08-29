@@ -50,6 +50,9 @@ async function serveIndex(
     enabled: Boolean(config.submitFeedback),
     coachEnabled: Boolean(config.coachFeedback),
     followupEnabled: Boolean(config.submitFollowup && config.readFeedback),
+    // Already-durable — `feedback-log.ts` (#429) records every filing; this is just its length,
+    // never a separate counter that could drift from that record (#567).
+    feedbackCount: recent.length,
     recent: recent.map((e) => ({
       issueNumber: e.issueNumber,
       title: e.title,

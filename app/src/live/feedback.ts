@@ -23,6 +23,8 @@ export interface FeedbackIndex {
   readonly enabled: boolean;
   readonly coachEnabled: boolean;
   readonly followupEnabled: boolean;
+  /** How many times this member has filed feedback — the already-durable log's own length. */
+  readonly feedbackCount: number;
   readonly recent: readonly RecentFiling[];
 }
 
