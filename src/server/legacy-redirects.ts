@@ -80,3 +80,14 @@ export function serveLegacyRedirect(
   res.end();
   return true;
 }
+
+/** The quarantine banner (9f-1) — one honest line atop the classic board, injected rather than
+ *  threaded through the view layer: this whole surface is scheduled for the delete PR, so no
+ *  seam is worth adding. Retires with the quarantine door. */
+export function withClassicBanner(html: string): string {
+  return html.replace(
+    /<body[^>]*>/,
+    (tag) =>
+      `${tag}<div style="background:#0b2b28;color:#35d0ba;font:12px/1.4 monospace;padding:8px 16px;text-align:center">legacy view — the app lives at <a href="/app/" style="color:#35d0ba;font-weight:700">/app</a>; every old page remains at /classic/&lt;page&gt; while the new design proves out</div>`,
+  );
+}
