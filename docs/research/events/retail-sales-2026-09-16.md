@@ -1,16 +1,20 @@
 # Retail Sales — advance monthly (Aug 2026 data) — retail-sales-2026-09-16
 
 **Kind:** macro-print · **Date:** 2026-09-16 (confirmed, CENSUS: census.gov/retail/release_schedule.html — 08:30 ET, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-08-26
+**Last assessed:** 2026-08-29
+<!-- probe-ref: {"symbols":{},"vix":14.43,"daysBand":"high:8+","adjacentIds":["cpi-2026-09-11","fomc-2026-09-16","opex-2026-09-18","treasury-10y-tips-2026-09-17","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
 
 ## At a glance
 
 **TL;DR.** The August advance retail sales report lands Wednesday 2026-09-16 at 08:30 ET — **the
 morning of the FOMC decision** (statement 14:00 ET the same day). That timing is the whole story:
 this is the last major data print before the Fed decides, and among macro releases retail sales
-draws the second-largest trader reaction after the jobs report. It is the consumer-strength read —
-**hot means yields up and duration pressure; soft is supportive** — landing hours before a live
-hold-vs-*hike* decision. The July print (released 2026-08-14) was a surprise **−0.6% m/m** (first
+draws the second-largest trader reaction after the jobs report. It is the consumer-strength read
+landing hours before a live hold-vs-*hike* decision — and since **2026-08-28** that decision is a
+coin flip (~56–59% hike) rather than the ~73%-hold of a week ago, so the session's variance rose.
+The reaction function has also gone lopsided: **hot still means yields up and duration pressure;
+soft is now merely muted, not supportive**, because Warsh pinned the hawkish case to inflation and
+the tape ignored the year's sharpest growth miss (Chicago PMI 47.1) two days later. The July print (released 2026-08-14) was a surprise **−0.6% m/m** (first
 decline since October 2025, a miss vs a +0.1% consensus), but heavily distorted: Amazon moved Prime
 Day to June, so July nonstore sales fell 2.2% on a pulled-forward base — meaning the August print
 carries a likely mechanical bounce-back that should not be read as fresh strength. Tellingly, that
@@ -21,18 +25,23 @@ names, **AAPL and AMZN** carry direct consumer exposure on top of the rate-path 
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-28) | Stand aside | High | Four weeks out; no firm August consensus, no name-keyed setup. | Nothing at 28 days out; no firm August consensus and no name-keyed setup |
-| This week | Stand aside | High | Nothing actionable pre-print; a high-impact read but four weeks away. | A high-impact read four weeks away licenses nothing today |
-| This month | Watch | Medium | Confirmed 9/16 08:30 ET on FOMC morning — the last major data print before the decision; watch the control-group and the Prime-Day bounce-back, size nothing into it. | The **2026-09-04** jobs print — retail's higher-reaction sibling — collapsing hike odds toward zero |
-| This quarter | Watch (FOMC-day compound risk) | Medium | Because it lands *on* the 9/16 FOMC day, any retail-driven yield move feeds directly into a live hold-vs-hike decision hours later — treat the whole 9/16 session as a known-date variance day governed by the FOMC stance doc, not this one. | A hot August control group, the consumer re-accelerating beyond the Prime-Day bounce-back |
+| Today (D-18) | Stand aside | High | Weekend; no August street consensus exists, no name-keyed setup, and the print is nearly three weeks out. | Nothing dated today; no August-specific consensus has surfaced in three consecutive pulses |
+| This week | Watch the labor corridor, not the consumer | High | JOLTS/ISM **9/1**, ADP **9/2**, ISM Svcs **9/3**, jobs **9/4** re-rate the same 9/16 decision this print feeds into; nothing consumer-keyed lands before then. | The **2026-09-04** payroll print resolving the September FOMC decisively, which would drain the 9/16 session of the variance this call is guarding |
+| This month | Flat the 9/16 session | Medium | Confirmed 9/16 08:30 ET, hours before a decision that is now a **coin flip** (~56–59% hike, 2026-08-28) rather than the ~73% hold of the last pulse — the session's variance went up, not down. | A hot August control group is the tail that matters; alternatively the FOMC repricing back toward a settled hold before 9/16 |
+| This quarter | Watch — but the asymmetry is now one-sided | Medium | Warsh anchored the hawkish case on **inflation**, and the tape ignored Chicago PMI's −10.5pt collapse: hot retail still lifts yields, soft retail no longer buys much relief. | Growth data visibly repricing the Fed again — e.g. a soft **2026-09-04** payroll print pulling hike odds down hard, which would restore the two-sided reaction function |
 
 **Signals & conditions.**
 - A hot August print (strong control group, consumer re-accelerating) → yields up into the 14:00 ET
   FOMC decision, the hawkish combination for a live hike debate; watch, don't act — tightens caution
   on the highest-duration names (CRWV, then semis) *and* directly on AAPL/AMZN's consumer read.
-- A soft print → supportive on the rate-path channel, but flagged as *not cleanly bought* — the July
-  precedent showed a weak-consumer read offset by sticky inflation / fiscal-deficit pressure (a
-  stagflation tinge), so soft retail is a muddier dovish signal than soft inflation.
+- A soft print → **downgraded from "supportive" to "muted"** (2026-08-29). The July precedent already
+  showed weak-consumer offset by sticky inflation; since 8/28 the market has an explicitly
+  inflation-anchored Fed and demonstrably ignored the year's sharpest growth miss. Soft retail is now
+  the weaker half of the reaction function, not the mirror image of hot.
+- **Leading consumer reads have deteriorated, and they disagree with each other.** UMich sentiment
+  fell to **51** in early August (from 55.2, vs a 54.5 expectation); the Conference Board's August
+  index also came in below consensus; real (inflation-adjusted) PCE spending was **flat** in July.
+  Against that, Deloitte's August survey shows spending *intentions* rising. Dispersion, not a signal.
 - The Prime-Day base effect (July nonstore −2.2% on Amazon's move to June) → expect a mechanical
   August nonstore bounce-back; read the underlying trend through the control group and ex-autos/gas,
   not the headline distortion — most relevant to AMZN's e-commerce read specifically.
@@ -154,6 +163,19 @@ not be mistaken for fresh consumer strength. The asymmetric risk is a genuinely 
 print lifting yields into a live hike decision, hitting CRWV and the high-multiple semis hardest and
 adding a direct consumer overlay on AAPL/AMZN.
 
+**Stance sharpening (2026-08-29, D-18; receipt: the 2026-08-29 ledger row below).** The guard is
+unchanged — the 9/16 session stays a no-new-risk day governed by the FOMC doc — but two things
+moved and the doc should carry both rather than let the D-28 framing stand. **First, the
+reaction function went one-sided.** The original stance treated hot and soft as mirror images
+("hot → yield lift; soft → supportive, stagflation-tinged"). Warsh's 2026-08-28 keynote pinned the
+hawkish case explicitly to inflation (PCE 3.7% 12-mo, 4.1% 6-mo, financial conditions judged
+accommodative) and abolished forward guidance; the very next data point, Chicago PMI's −10.5pt
+collapse to **47.1**, moved the tape not at all. On the current evidence a growth/demand miss does
+not buy this Fed's relief — so soft retail is downgraded to *muted*, while hot retail keeps its
+full hawkish weight. **Second, the same-day decision got more dangerous, not less:** ~73% hold
+(Kalshi, 8/26) → roughly a coin flip (~56–59% hike on CME/FedWatch, 8/28). Both statements are
+`confirmed`-date-keyed for 9/16 and neither licenses an entry.
+
 **Kill switches:**
 
 - **A hot August control group** (consumer re-accelerating beyond the Prime-Day bounce-back) lifts
@@ -176,6 +198,7 @@ adding a direct consumer overlay on AAPL/AMZN.
 |---|---|---|---|---|
 | 2026-08-19 | D-28 | Initial research banked (above). Date re-verified vs Census primary (fetched today; "August 2026 → Sep. 16, 2026, 08:30 ET"). **Load-bearing finding:** lands *on* the Sep-16 FOMC decision day (statement 14:00 ET, SEP + dots) — the last major data print before a live hold-vs-hike decision, so the 9/16 session is governed by the FOMC stance doc, retail sales as its morning input. July print (rel 8/14): −0.6% m/m to $763.6B (first decline since Oct 2025, miss vs +0.1% consensus), ex-autos −0.3%, ex-autos&gas −0.2%; distorted by Amazon's Prime-Day move to June (nonstore −2.2%), autos −1.8%, gas −0.9%; YoY +5.0%. Reaction: yields little changed — soft consumer offset by sticky inflation / fiscal-deficit pressure (stagflation tinge), *not* cleanly bought. Retail = 2nd-highest trader-reaction print after jobs (CME research, per the consumer-confidence doc). Adjacency — peers: no tracked-name prints since 8/18; AAPL/AMZN carry direct consumer exposure to this print (AAPL device demand + rumored Sep 9 iPhone 18 event; AMZN e-commerce/nonstore, the Prime-Day distortion channel). Macro: standing regime per the sibling CPI/FOMC/GDP ledgers (Jul CPI in-line 3.4% 8/12; Jul jobs miss 8/7; Aug 13 PPI flat → Sep hike odds <40%; energy shock/Hormuz still hot). VIX 15.84 close 8/18 (up 4.28% on day), ticked up from the 14.56 2026-low noted 8/17 — calm regime, no shift. Geopolitical: Hormuz tanker attacks / failed ceasefire continuing — the sticky-inflation backdrop that muddies a soft retail read. Event tape: no August consensus/whisper found at D-28 (flagged); July prior distorted by Prime-Day base effect. No new dated adjacencies — the existing calendar covers the full corridor incl. jobs 9/4, CPI 9/11, FOMC 9/16 (same-day), PCE 9/25; nothing to propose. | — (stance set) | 2026-08-26 (high, 21–60d band: every 7d) |
 | 2026-08-26 | D-21 | Adjacency sweep. Event tape: no firm August street consensus found yet (checked census.gov, claritx.ai, coresight.com), still matching the D-28 row's own flagged limit; one forward-looking industry outlook (Coresight, checked today) forecasts retail sales growth **above 4%** y/y through year-end — a general trend read, not an August-specific number, so it doesn't resolve the doc's stated limit. July's y/y figure was independently reconfirmed at **+5.0%** ($763.6B) even as the m/m print fell −0.6% — consistent with, not contradicting, the D-28 row's read (a Prime-Day-distorted monthly dip inside a still-positive annual trend). Peers: NVDA reported tonight, MRVL tomorrow — both own docs show de-stressed implied moves; AAPL's iPhone 18 launch (9/9) still sits inside this print's window as the consumer-demand read this doc already flags. Macro: Sep 15–16 FOMC odds firmed to ~73% hold/26% hike/1% cut (Kalshi, checked today) from the standing hawkish-hold regime — hold conviction building; this print still lands same-day as that FOMC decision. Volatility regime: VIX ~15.8, calm, no shift. Geopolitical: Strait of Hormuz escalated further overnight (tanker hit off Oman 8/25) — the same sticky-inflation backdrop flagged at D-28, unresolved. No new dated adjacency to propose. | — (no change; base case still rests on the Prime-Day-distorted July read, unrefreshed for August) | 2026-09-02 (high, 21-60d band: every 7d) |
+| 2026-08-29 | D-18 | Adjacency sweep. **Peers:** n/a — `symbols: []`; the consumer-adjacent names this doc tracks (AAPL, AMZN) had no print. AAPL's iPhone 18 launch **9/9** still sits inside the window. **Macro surprises — two on 2026-08-28, and together they change how this print will be *read*, not what it will *say*.** (a) Warsh's Jackson Hole keynote landed hawkish and pinned the case to **inflation**: PCE 3.7% 12-mo / **4.1% 6-mo**, labor "quite stable" at 4.1% unemployment, financial conditions judged accommodative, forward guidance formally abandoned. September hike odds went **~35% → 59%** on CME futures (a second CNBC cite says ~56% on FedWatch; unreconciled), Kalshi **48% hike** vs ~70% hold pre-speech — **reversing the D-21 row's ~73% hold / 26% hike (Kalshi, 8/26)**. This print lands 08:30 ET on the morning of that now-coin-flip decision. Scoring in the sibling [`jackson-hole`](jackson-hole-2026-08-28.md) close-out. (b) **Chicago PMI collapsed to 47.1** (Aug data, 8/28) vs a ~58 consensus and 57.6 prior — the sharpest regional growth miss of the year — **and the tape ignored it**. Taken together that is the read-through for this doc: growth/demand misses are not currently repricing this Fed, inflation prints are, so the soft-retail branch loses its dovish payoff while the hot branch keeps its hawkish one. The same conclusion the sibling [`ism-services`](ism-services-2026-09-03.md) row reached from the other direction. **Consumer-specific tape — the first genuinely fresh reads since the Prime-Day-distorted July retail print, and they disagree.** July personal income/outlays (BEA, released 8/26): **real** PCE spending **flat** m/m, a sharp slowdown from +0.4% in June, while *nominal* personal spending rose **+0.2%** (above a +0.1% expectation) on services strength offsetting a decline across most goods; personal income **+0.4%**, DPI **+0.5%**; PCE prices +0.2% m/m, **3.7% y/y**. Sentiment deteriorated: **UMich fell to 51** in the early-August reading (from 55.2 in July, below a 54.5 expectation), both components weakening (current conditions 51.8, expectations 50.6); the Conference Board's own August index also **came in below consensus** (its 8/25 print, owned by the sibling [`consumer-confidence-2026-08-25`](consumer-confidence-2026-08-25.md) doc — the two series are distinct and are not merged here). Against that, Deloitte's August consumer survey reports spending **intentions rising** in both discretionary and nondiscretionary categories, Coresight still forecasts >4% growth through year-end, NRF 4.4% for 2026, while Goldman's Hatzius expects real consumer spending to slow to **1–1.5%** in H2. **Discarded as unreliable:** one aggregator summary described July retail sales as "+0.32% m/m, a tenth consecutive monthly gain," which contradicts Census's own advance −0.6% — not used. **Still no August-specific street consensus**, this doc's standing limit for the third consecutive pulse. **Volatility regime:** VIX **14.43** at the 8/28 close (`event-material-scan` probe), intraday **14.1**, the lowest of 2026, from ~15.8 at the D-21 row — a ~1.4pt drop, inside the screen threshold; notable only as equity vol at a year low on the day hike odds nearly doubled. **Geopolitical:** Brent below **$87** in a fourth straight down session on the Iran–Oman Hormuz waters/revenue-share agreement — cheaper fuel is a direct tailwind to discretionary retail *and* eases the sticky-inflation backdrop that made a soft July print un-buyable, the one input that could restore the two-sided reaction function. **New dated adjacency found → proposed in this PR:** the calendar carries **no consumer-confidence entry at all** beyond the passed 8/25 print, despite it being this doc's own leading indicator; `consumer-confidence-2026-09-29` is added as `status: estimate` (`NEWS:` — the Conference Board publishes at 10:00 ET on the last Tuesday of each month; 9/29 is that Tuesday). | See Stance sharpening above — soft-retail downgraded from supportive to muted; same-day FOMC variance up | 2026-09-01 (high, 8–20d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
