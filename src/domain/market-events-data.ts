@@ -586,6 +586,30 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "Lands ON the GOOG/META print date and a day before AMZN/AAPL — a compound-risk day.",
   },
   {
+    id: "gdp-q3-2026-advance-2026-10-29",
+    kind: "macro-print",
+    title: "GDP — advance estimate, Q3 2026",
+    date: "2026-10-29",
+    status: "confirmed",
+    source: "BEA: bea.gov/news/schedule — 08:30 ET, checked 2026-08-29",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The first read on Q3 growth, and the third federal release stacked into the Oct 27–29 compound-risk window (this + PCE the same morning, on top of the 10-28 FOMC and the five estimated mega-cap prints). BEA is a federal agency: in the funding-lapse branch this release dies with the 10-02 payrolls and 10-14 CPI, which is exactly why the surviving PRIVATE reads that week — the Conference Board print on 10-27, ISM, ADP, UMich — get promoted. Discovered during the consumer-confidence-2026-10-27 initial research.",
+  },
+  {
+    id: "pce-2026-10-29",
+    kind: "macro-print",
+    title: "PCE / Personal Income & Outlays (Sep 2026 data)",
+    date: "2026-10-29",
+    status: "confirmed",
+    source: "BEA: bea.gov/news/schedule — 08:30 ET, checked 2026-08-29",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The Fed's own inflation gauge, landing the morning AFTER the 10-28 statement rather than before it — the committee decides without it. Federal, so it dies in the funding-lapse branch alongside the 10-02 payrolls and 10-14 CPI. Discovered during the consumer-confidence-2026-10-27 initial research.",
+  },
+  {
     id: "midterm-elections-2026-11-03",
     kind: "geopolitical",
     title: "US midterm elections — House, one third of the Senate, 36 governorships",
