@@ -471,6 +471,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Second in-person Trump-Xi meeting of 2026 (after the May Beijing visit); reported agenda includes AI governance, export controls, and the trade architecture after the Kuala Lumpur truce's Nov-10 tariff-suspension deadline. China semiconductor Section 301 tariffs already run near 70% combined exposure, with a further ~7.5% overcapacity layer reportedly being prepared ahead of the summit — surfaced via AVGO's 2026-08-28 pulse-check adjacency sweep (export-control/supply-chain exposure); most sensitive semis names (AVGO, NVDA, MRVL, AMD) carry it as sector risk, not an AVGO-only event.",
   },
   {
+    id: "ism-manufacturing-2026-10-01",
+    kind: "macro-print",
+    title: "ISM Manufacturing PMI (Sep 2026 data)",
+    date: "2026-10-01",
+    status: "estimate",
+    source:
+      "EST: ISM publishes the Manufacturing PMI at 10:00 ET on the first business day of the month (the cadence the confirmed 2026-09-01 entry follows); 2026-10-01 is a Thursday — not re-verified against ismworld.org's own calendar, checked 2026-08-29",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The national print the Chicago Business Barometer leads by two business days, and the first manufacturing read of Q4. The calendar tracked the 09-01 release and then nothing until CPI 10-14, so the follow-through the 09-30 Chicago print exists to probe was untracked. Discovered during the chicago-pmi-2026-09-30 initial research.",
+  },
+  {
     id: "jobs-2026-10-02",
     kind: "macro-print",
     title: "Employment Situation (Sep 2026 data)",
