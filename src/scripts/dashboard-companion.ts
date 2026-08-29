@@ -10,6 +10,7 @@
 import { resolveCompanionChat } from "../companion/companion-chat.js";
 import type { CompanionDeskDeps } from "../companion/companion-tools.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
+import type { FeedbackLogEntry } from "../server/feedback-log.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import type { OrderAuditRecord } from "../server/order-audit-log.js";
 import {
@@ -22,6 +23,9 @@ export interface CompanionSetupDeps {
   readonly hub: ObservatoryHub;
   readonly readFills: (id: string) => Promise<readonly TradeActivityRecord[]>;
   readonly readTags: (id: string) => Promise<readonly OrderAuditRecord[]>;
+  /** #567's engagement track — optional so a caller with no feedback log wired (tests) is
+   *  untouched, same as the rest of this service's optional deps. */
+  readonly readFeedback?: (id: string) => Promise<readonly FeedbackLogEntry[]>;
 }
 
 export interface CompanionSetup {
@@ -35,6 +39,7 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
   const progression = createProgressionService({
     readFills: deps.readFills,
     readTags: deps.readTags,
+    readFeedback: deps.readFeedback,
     store: createProgressionStore(env, (m) => console.error(m)),
   });
   const tools: CompanionDeskDeps = {

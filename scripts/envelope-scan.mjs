@@ -10,22 +10,19 @@
 //   node scripts/envelope-scan.mjs --list      # print the protected list (no git, always exit 0)
 //   node scripts/envelope-scan.mjs --check <paths...>   # is this path protected? JSON, exit 0
 //   node scripts/envelope-scan.mjs --check <paths...> --base origin/main   # + real diff-aware
-//       `blocking` is the field to act on — false on a diffAware rule whose actual diff is safe
-//       (envelope.json's $diffAwareComment). Omit --base and `blocking` mirrors `protected`.
+//       `blocking` is what to act on — false on a diffAware rule whose diff is safe (envelope.json's
+//       $diffAwareComment); a cleared entry also carries WHICH proof cleared it as `reason`.
 //   node scripts/envelope-scan.mjs --lane feedback/9 --base origin/main   # explicit, for specs
+// suiteRunnerArgv, behaviorVerifiedFacts, and exemptionReason (#852) live in envelope-behavior.mjs;
+// classifyStructuralWidening (#716/#858, a safe token-level widening) lives in envelope-widening.mjs.
+// Both split out to stay under the line budget, re-exported here so importers keep working.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-// classifyStructuralWidening (#716/#858 — is a diffAware diff a safe token-level widening, e.g. a
-// union type gaining a member?) and structurallySafe live in envelope-widening.mjs, split out to
-// stay under the line budget; re-exported so existing importers keep working.
-import {
-  classifyStructuralWidening,
-  MUTATING_CALL_PATTERNS,
-  structurallySafe,
-} from "./envelope-widening.mjs";
+import { behaviorVerifiedFacts, exemptionReason, suiteRunnerArgv } from "./envelope-behavior.mjs";
+import { classifyStructuralWidening, MUTATING_CALL_PATTERNS } from "./envelope-widening.mjs";
 
-export { classifyStructuralWidening };
+export { behaviorVerifiedFacts, classifyStructuralWidening, suiteRunnerArgv };
 
 const ROOT = process.cwd();
 const MANIFEST = join(ROOT, "envelope.json");
@@ -132,6 +129,9 @@ function diffFor(path, base) {
   }
 }
 
+// exemptionReason (imported above, #852) adds a third additiveSafe:true path — a passing invariant
+// suite untouched by the diff — alongside pure insertion and safe structural widening below.
+
 // --check: is this path (or these paths) protected? JSON out, always exit 0 — the build session
 // asks this BEFORE editing, learning the answer from the gate rather than guessing at a prose list.
 // --check --base <ref>: additionally answers whether a real diff against that ref EXEMPTS a
@@ -149,11 +149,10 @@ function runCheck() {
     if (checkBase && rule.diffAware) {
       const diff = classifyDiff(diffFor(path, checkBase));
       // diff === null: no actual change to this path (or an unreadable diff) — never exempt on
-      // "couldn't tell", only on a diff we positively classified as safe. A pure-insertion pass is
-      // sufficient on its own; the AST-structural check only runs as a second opinion when the
-      // line-based one didn't already clear it (a safe union widening, e.g.).
-      const additiveSafe = diff?.additiveSafe || structurallySafe(path, checkBase);
-      entry = { ...entry, additiveSafe };
+      // "couldn't tell", only on a diff we positively classified as safe. Cheapest check first;
+      // exemptionReason only reaches behaviorVerified (a process spawn) when the first two miss.
+      const reason = exemptionReason(path, checkBase, rule, diff);
+      entry = { ...entry, additiveSafe: reason !== undefined, ...(reason ? { reason } : {}) };
       entry.blocking = !entry.additiveSafe;
     }
     return entry;
@@ -166,7 +165,8 @@ function runList() {
   console.log("🛡 Autonomous-lane envelope — protected paths (envelope.json)\n");
   for (const r of rules) {
     const mark = r.diffAware ? " [diffAware]" : "";
-    console.log(`  ${r.pattern.padEnd(42)} ${r.why}${mark}`);
+    const suite = r.invariantSuite ? ` [suite: ${r.invariantSuite}]` : "";
+    console.log(`  ${r.pattern.padEnd(42)} ${r.why}${mark}${suite}`);
   }
   console.log(
     `\n  new runtime dependencies: ${manifest.allowNewRuntimeDeps ? "allowed" : "PROTECTED (devDependencies stay open)"}`,
@@ -215,9 +215,9 @@ function reportAndExit(lane, branch, changed, breaches, exempted) {
   );
   if (exempted.length) {
     console.log(
-      `\nℹ diffAware exemption (pure insertion, or a safe structural widening — e.g. a union\n` +
-        `  gaining a member — either way no new mutating call) on:\n` +
-        exempted.map((p) => `  ${p}`).join("\n"),
+      `\nℹ diffAware exemption (pure insertion, a safe structural widening — e.g. a union\n` +
+        `  gaining a member — or a passing invariant suite untouched by the diff) on:\n` +
+        exempted.map((e) => `  ${e.path} — ${e.reason}`).join("\n"),
     );
   }
   if (!breaches.length) {
@@ -261,10 +261,9 @@ function runLaneScan(branch, lane) {
     if (!rule) continue;
     if (rule.diffAware) {
       const diff = classifyDiff(diffFor(path, mergeBase));
-      // A pure-insertion pass is sufficient on its own; the AST-structural check only runs as a
-      // second opinion when the line-based one didn't already clear it.
-      if (diff?.additiveSafe || structurallySafe(path, mergeBase)) {
-        exempted.push(path);
+      const reason = exemptionReason(path, mergeBase, rule, diff);
+      if (reason) {
+        exempted.push({ path, reason });
         continue;
       }
     }

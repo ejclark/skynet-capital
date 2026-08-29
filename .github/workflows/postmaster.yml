@@ -352,13 +352,14 @@ jobs:
           # sweep (peer prints, CPI/FOMC surprises, VIX regime) is the protocol minus its point.
           # --model pins the lane deliberately instead of riding the action default — same
           # route-by-who-pays rule as build-feedback (flat-rate lane, research-to-brief floor is
-          # opus per docs/COMPUTE.md). --max-turns is a runaway backstop only, now scoped to ONE
+          # opus per docs/COMPUTE.md). --max-turns is a runaway backstop only, scoped to ONE
           # event's work (a `never-assessed` initial write-up — TEMPLATE + stance + kill switches
-          # + first ledger row — is the heaviest single-event case, typically 20-30 turns): 60 is
-          # ~2x that ceiling, real headroom without weakening the runaway guard the batch-sized 100
-          # used to give away for free. docs/process/TOKEN-EFFICIENCY.md, 2026-08-28.
+          # + first ledger row — is the heaviest single-event case, typically 20-30 turns). The 60
+          # set here 2026-08-28 turned out too tight within a day — two runs finished normal work
+          # at turns 63 and 65-67, over cap (issue #904); 90 gives real headroom over the worst
+          # observed overrun. docs/process/TOKEN-EFFICIENCY.md, 2026-08-28; issue #904, 2026-08-29.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 60
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 90
           # Same shim: the protocol lives in .github/prompts/event-research.md. This run is
           # pre-assigned exactly one event (this matrix leg's) — the prompt tells it not to touch
           # any other due event even though `event-scan.mjs --due` will still list every one of

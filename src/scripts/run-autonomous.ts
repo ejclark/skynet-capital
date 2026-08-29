@@ -44,6 +44,7 @@ import type { BrokerPort } from "../ports/broker.js";
 import { ALPACA_DATA_BASE_URL } from "../runtime/data-source.js";
 import {
   bootMissionControl,
+  buildBotRosters,
   buildLiveBot,
   buildScoutDeps,
   resolveRoster,
@@ -183,11 +184,12 @@ async function runLive(): Promise<void> {
     `[autonomous] mode=${mode}${mode === "observe" ? " (dry run — no orders placed; set SKYNET_AUTONOMOUS_MODE=live to trade)" : " — PLACING PAPER ORDERS"}${haltFile ? `; kill switch: touch ${haltFile}` : ""}`,
   );
   await seedDailyLossBaseline(bots, safety);
-  const traders: LiveBot[] = bots.map((bot) =>
+  const botRosters = buildBotRosters(bots, playbookRoster, process.env); // issue #885
+  const traders: LiveBot[] = botRosters.map(({ bot, subscriptions, enabled }) =>
     buildLiveBot(bot, {
       mode,
-      playbookRoster,
-      risk,
+      playbookRoster: { enabled: [...enabled], rejected: playbookRoster.rejected },
+      risk: { ...risk, subscriptions },
       blockedReason,
       safety,
       onDecision,
@@ -215,7 +217,7 @@ async function runLive(): Promise<void> {
       "[beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.",
     );
   }
-  const managedSymbols = new Set(playbookRoster.enabled.map((e) => e.playbook.symbol));
+  const managedSymbols = new Set((botRosters[0]?.enabled ?? []).map((e) => e.playbook.symbol)); // traders[0]'s account
 
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
   // fully spec'd in tests/autonomous/live-cycle.spec.ts. Everything below is wiring: real

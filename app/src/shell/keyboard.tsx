@@ -15,7 +15,6 @@ const SHELL_CHORDS: readonly (readonly [string, string, string])[] = [
   ["t", "/trade", "Trade ticket"],
   ["w", "/wire", "The Wire"],
   ["c", "/collections", "Collections"],
-  ["m", "/learn", "Milestones"],
   ["r", "/research", "Research"],
 ];
 

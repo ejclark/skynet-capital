@@ -53,6 +53,8 @@
       "Bash(npm run typecheck)",
       "Bash(npm run lint)",
       "Bash(npm test)",
+      "Bash(npm test*)",
+      "Bash(npx rstest run *)",
       "Bash(npm run verify)",
       "Bash(npx tsc *)",
       "Bash(npx knip *)",
@@ -74,7 +76,11 @@
       "mcp__claude-code-remote__subscribe_pr_activity",
       "mcp__claude-code-remote__unsubscribe_pr_activity",
       "mcp__claude-code-remote__send_later",
-      "mcp__claude-code-remote__delete_trigger"
+      "mcp__claude-code-remote__delete_trigger",
+      "mcp__Claude_Code_Remote__subscribe_pr_activity",
+      "mcp__Claude_Code_Remote__unsubscribe_pr_activity",
+      "mcp__Claude_Code_Remote__send_later",
+      "mcp__Claude_Code_Remote__delete_trigger"
     ]
   }
 }

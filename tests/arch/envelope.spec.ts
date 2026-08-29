@@ -24,6 +24,7 @@ type Check = {
   additiveSafe?: boolean;
   pattern?: string;
   why?: string;
+  reason?: string;
 };
 const check = (...paths: string[]): Check[] => JSON.parse(scan("--check", ...paths)) as Check[];
 

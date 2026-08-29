@@ -9,7 +9,7 @@ import {
   type JourneyMilestone,
 } from "../live/learn";
 import { PageFrame } from "../shell/frame";
-import { CheckGateCard, UnlockBanner } from "../shell/unlock-gate";
+import { CheckGateCard, EngagementUnlockBanner, UnlockBanner } from "../shell/unlock-gate";
 
 /**
  * MILESTONES (#738 phases 6b + 8b) — the gamified journey in the shell. The honesty rule is the
@@ -146,6 +146,9 @@ function LearnPage(): ReactElement {
       ) : null}
       {data.celebrating.length > 0 ? (
         <UnlockBanner celebrations={data.celebrating} onClaimed={refresh} />
+      ) : null}
+      {data.engagementCelebrating.length > 0 ? (
+        <EngagementUnlockBanner celebrations={data.engagementCelebrating} onClaimed={refresh} />
       ) : null}
       {data.check ? (
         <CheckGateCard key={data.check.milestoneId} gate={data.check} onPassed={refresh} />

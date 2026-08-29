@@ -23,13 +23,21 @@
 //   5. A prompt shim naming a `.github/prompts/*.md` that does not exist. Since 2026-08-22 the AI
 //      lanes read their instructions from files rather than inline YAML; a wrong path is silent
 //      here and only shows up as a live session running with no orders.
+//   6. A job step running `node scripts/<x>.mjs`, where that script's own import graph reaches a
+//      package needing `node_modules`, with no earlier step in the same job installing dependencies
+//      (`npm ci`/`npm install`). Added 2026-08-29 (#894) after #889/#890: `arm-auto-merge` ran
+//      `envelope-scan.mjs` — which imports the `typescript` devDependency via `envelope-widening.mjs`
+//      — with no install step ahead of it, crashed silently, and the job failed instead of correctly
+//      reporting "this diff touches a protected path, skip." #889 itself still merged, because this
+//      check is the one that would have caught it and did not yet exist.
 //
 // Dependency-free on purpose (same doctrine as arch-scan/dupe-scan): a gate that guards CI must not
 // itself depend on a package resolving. It parses only the block-style, 2-space-indented subset
 // this repo's workflows are written in, and skips block scalars (`run: |`) wholesale, which is
 // where arbitrary shell text lives.
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { needsInstalledDeps } from "./script-deps.mjs";
 
 const KEY = /^(\s*)(-\s+)?([A-Za-z_][\w.-]*):(\s|$)/;
 const BLOCK_SCALAR = /:\s*[|>][-+\d]*\s*$/;
@@ -166,7 +174,42 @@ export function danglingPrompts(text, available = []) {
   return [...new Set(referenced)].filter((f) => !have.has(f));
 }
 
-export function lintWorkflow(name, text, prompts = []) {
+const INSTALLS_DEPS = /\bnpm ci\b|\bnpm install\b/;
+const SCRIPT_INVOCATION = /\bnode\s+(scripts\/[\w.-]+\.mjs)\b/;
+
+/** A job's steps, in source order, as raw text blocks — each one starts at a `      - ` item under
+ *  that job's `steps:` list (this repo's fixed 6-space step-item indent; same convention the rest
+ *  of this file already hardcodes for `needs:`/`id:`). */
+function stepsOf(jobText) {
+  const lines = jobText.split("\n");
+  const starts = [];
+  lines.forEach((l, i) => {
+    if (/^ {6}- /.test(l)) starts.push(i);
+  });
+  return starts.map((s, k) => lines.slice(s, starts[k + 1] ?? lines.length).join("\n"));
+}
+
+/**
+ * A job step that runs `node scripts/<x>.mjs`, where that script's own import graph reaches a
+ * package needing `node_modules`, with no earlier step in the SAME job installing dependencies.
+ * `hasDeps(scriptRelPath) => boolean` is injectable so specs can stub a fixture answer instead of
+ * resolving real files; `main()` below wires it to `needsInstalledDeps` against the real repo.
+ */
+export function missingDepsInstall(text, hasDeps) {
+  const problems = [];
+  for (const job of jobs(text)) {
+    let installed = false;
+    for (const step of stepsOf(job.text)) {
+      if (INSTALLS_DEPS.test(step)) installed = true;
+      if (installed) continue;
+      const m = SCRIPT_INVOCATION.exec(step);
+      if (m && hasDeps(m[1])) problems.push({ job: job.name, script: m[1] });
+    }
+  }
+  return problems;
+}
+
+export function lintWorkflow(name, text, prompts = [], hasScriptDeps = () => false) {
   return [
     ...duplicateKeys(text).map(
       (d) =>
@@ -187,11 +230,21 @@ export function lintWorkflow(name, text, prompts = []) {
       (f) =>
         `${name} points a prompt shim at \`.github/prompts/${f}\`, which does not exist — that lane would run with no instructions`,
     ),
+    ...missingDepsInstall(text, hasScriptDeps).map(
+      (d) =>
+        `${name} job \`${d.job}\` runs \`node ${d.script}\`, which imports a package needing ` +
+        `\`node_modules\`, with no earlier \`npm ci\`/\`npm install\` step in that job — see #890`,
+    ),
   ];
 }
 
 function main(argv) {
   const dir = argv.find((a) => !a.startsWith("--")) ?? ".github/workflows";
+  // Scripts referenced in a workflow's `run:` blocks are always written as `scripts/<x>.mjs`
+  // relative to the REPO root, regardless of which directory is being linted (the real
+  // `.github/workflows`, or a spec's fixture directory elsewhere) — so resolve against cwd, not
+  // against `dir`'s own position on disk.
+  const repoRoot = process.cwd();
   const files = readdirSync(dir).filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"));
   let prompts = [];
   try {
@@ -199,8 +252,24 @@ function main(argv) {
   } catch {
     /* a repo with no prompt files simply has no shims to check */
   }
+  // Real-filesystem answer for rule 6: does `scripts/<x>.mjs`'s import graph reach node_modules?
+  // Memoized — the same script is invoked from several workflow files/jobs.
+  const cache = new Map();
+  const hasScriptDeps = (scriptRelPath) => {
+    if (!cache.has(scriptRelPath)) {
+      cache.set(
+        scriptRelPath,
+        needsInstalledDeps(
+          join(repoRoot, scriptRelPath),
+          (p) => readFileSync(p, "utf8"),
+          (from, spec) => resolve(dirname(from), spec),
+        ),
+      );
+    }
+    return cache.get(scriptRelPath);
+  };
   const problems = files.flatMap((f) =>
-    lintWorkflow(f, readFileSync(join(dir, f), "utf8"), prompts),
+    lintWorkflow(f, readFileSync(join(dir, f), "utf8"), prompts, hasScriptDeps),
   );
   for (const p of problems) console.error(`✗ ${p}`);
   if (problems.length) {

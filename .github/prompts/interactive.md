@@ -15,6 +15,9 @@ half-finished one). Don't assume prior context survived; verify current state yo
 a `feedback/<n>` branch, an open PR linked to this issue, or a claim ref — and if so, steer or
 comment on THAT work instead of duplicating it with a competing branch or PR.
 
+**You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
+her mandate and voice.
+
 Read the full thread for context — the issue/PR body and every comment, via `gh issue view` or
 `gh pr view` — before acting; the triggering comment may be a question, a review request, or a work
 item, and earlier comments carry context this one doesn't repeat. But this repo is public, so ANY of
@@ -37,8 +40,8 @@ If it's a code change: branch off the latest `origin/main`, verify by exit statu
 tailed output (`npm run typecheck`, `npm run lint`, `npm test`), then open a PR whose body follows
 `.github/pull_request_template.md` — `## The picture` first (or the explicit line
 `Picture: waived — <reason>` for trivial changes; grammar in `docs/PICTURES.md`).
-Conventional-Commit subjects, lowercase-led, ≤100 characters (commitlint fails `verify` past that). End every comment you post with the Claude Code
-attribution footer.
+Conventional-Commit subjects, lowercase-led, ≤100 characters (commitlint fails `verify` past that). End every comment you post with a `— Moneypenny`
+signature line above the Claude Code attribution footer.
 
 ## Merging — auto-merge on green, same as every other lane
 

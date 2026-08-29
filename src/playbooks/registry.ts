@@ -165,3 +165,9 @@ export function enabledPlaybooks(env: Readonly<Record<string, string | undefined
   }
   return { enabled, rejected };
 }
+
+/** Look up a house playbook by id (issue #885 — resolving a `PlaybookSubscription` into an
+ *  `EnabledPlaybook` needs the full `Playbook`, not just the id it was subscribed by). */
+export function findPlaybook(id: string): Playbook | undefined {
+  return ROSTER.find((p) => p.id === id);
+}
