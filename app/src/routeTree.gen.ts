@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LearnRouteImport } from './routes/learn'
+import { Route as OutpostRouteImport } from './routes/outpost'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TradeRouteImport } from './routes/trade'
@@ -42,6 +43,11 @@ const JoinRoute = JoinRouteImport.update({
 const LearnRoute = LearnRouteImport.update({
   id: '/learn',
   path: '/learn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OutpostRoute = OutpostRouteImport.update({
+  id: '/outpost',
+  path: '/outpost',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResearchRoute = ResearchRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
+  '/outpost': typeof OutpostRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
+  '/outpost': typeof OutpostRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
+  '/outpost': typeof OutpostRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/join'
     | '/learn'
+    | '/outpost'
     | '/research'
     | '/settings'
     | '/trade'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/join'
     | '/learn'
+    | '/outpost'
     | '/research'
     | '/settings'
     | '/trade'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/join'
     | '/learn'
+    | '/outpost'
     | '/research'
     | '/settings'
     | '/trade'
@@ -198,6 +210,7 @@ export interface RootRouteChildren {
   FeedbackRoute: typeof FeedbackRoute
   JoinRoute: typeof JoinRoute
   LearnRoute: typeof LearnRoute
+  OutpostRoute: typeof OutpostRoute
   ResearchRoute: typeof ResearchRoute
   SettingsRoute: typeof SettingsRoute
   TradeRoute: typeof TradeRoute
@@ -235,6 +248,13 @@ declare module '@tanstack/react-router' {
       path: '/learn'
       fullPath: '/learn'
       preLoaderRoute: typeof LearnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/outpost': {
+      id: '/outpost'
+      path: '/outpost'
+      fullPath: '/outpost'
+      preLoaderRoute: typeof OutpostRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/research': {
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedbackRoute: FeedbackRoute,
   JoinRoute: JoinRoute,
   LearnRoute: LearnRoute,
+  OutpostRoute: OutpostRoute,
   ResearchRoute: ResearchRoute,
   SettingsRoute: SettingsRoute,
   TradeRoute: TradeRoute,
