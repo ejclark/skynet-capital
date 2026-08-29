@@ -1,10 +1,16 @@
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import {
+  buildDraft,
   money,
+  ORDER_TYPE_LABELS,
+  orderTypeLabel,
+  orderTypeNote,
+  priceFieldFor,
   reviewTicket,
   submitTicket,
-  type TicketDraft,
+  type TicketFields,
+  type TicketOrderType,
   type TicketPreview,
   type TicketResult,
 } from "../live/ticket";
@@ -29,9 +35,25 @@ type GateState =
   | { readonly step: "done"; readonly result: TicketResult }
   | { readonly step: "error"; readonly message: string };
 
+/** What the member asked for, echoed back in the review — the order class by its unambiguous name
+ *  and every price it carries, so "Stop-Market at $40" is never confused with a limit at $40. */
+function OrderLine({ preview }: { readonly preview: TicketPreview }): ReactElement {
+  const prices = [
+    preview.stopPrice !== undefined ? `stop ${money(preview.stopPrice)}` : "",
+    preview.limitPrice !== undefined ? `limit ${money(preview.limitPrice)}` : "",
+  ].filter(Boolean);
+  return (
+    <p className="gate-row">
+      {orderTypeLabel(preview.orderType)}
+      {prices.length ? ` · ${prices.join(" · ")}` : ""}
+    </p>
+  );
+}
+
 function PreviewBody({ preview }: { readonly preview: TicketPreview }): ReactElement {
   return (
     <div className="gate-body">
+      <OrderLine preview={preview} />
       {preview.refusals.map((refusal) => (
         <p key={refusal} className="gate-row gate-refusal">
           ✕ {refusal}
@@ -121,28 +143,33 @@ export function TradeGate({
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
   readonly initialAction?: "buy" | "sell";
 }): ReactElement {
-  const [symbol, setSymbol] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [action, setAction] = useState<"buy" | "sell">(initialAction);
+  const [fields, setFields] = useState<TicketFields>({
+    symbol: "",
+    quantity: "",
+    action: initialAction,
+    orderType: "market",
+    limitPrice: "",
+    stopPrice: "",
+  });
   const [state, setState] = useState<GateState>({ step: "draft" });
   const symId = useId();
   const qtyId = useId();
   const sideId = useId();
+  const typeId = useId();
+  const priceId = useId();
 
-  const draft = (): TicketDraft => ({
-    participantId: deskId,
-    symbol: symbol.trim().toUpperCase(),
-    quantity: Number(quantity),
-    action,
-  });
+  const draft = () => buildDraft(deskId, fields);
 
-  /** Any edit disarms a standing review — straight back to draft. */
-  const edit = <T,>(set: (v: T) => void) => {
-    return (value: T) => {
-      set(value);
+  /** Any edit disarms a standing review — straight back to draft. Changing the order type counts:
+   *  a review of a market order says nothing about the stop order that replaced it. */
+  const edit =
+    <K extends keyof TicketFields>(key: K) =>
+    (value: TicketFields[K]) => {
+      setFields((f) => ({ ...f, [key]: value }));
       setState((s) => (s.step === "reviewed" || s.step === "done" ? { step: "draft" } : s));
     };
-  };
+
+  const priceField = priceFieldFor(fields.orderType);
 
   const review = async () => {
     setState({ step: "reviewing" });
@@ -168,18 +195,18 @@ export function TradeGate({
     <section className="panel gate-panel" aria-label="New trade">
       <h2 className="panel-title">New trade</h2>
       <p className="panel-sub">
-        Paper account · market order · the gate reviews before anything is sent
+        Paper account · market, limit or stop · the gate reviews before anything is sent
       </p>
       <div className="gate-fields">
         <div className="field">
           <label htmlFor={symId}>Symbol</label>
           <input
             id={symId}
-            value={symbol}
+            value={fields.symbol}
             placeholder="AAPL"
             maxLength={8}
             spellCheck={false}
-            onChange={(e) => edit(setSymbol)(e.target.value)}
+            onChange={(e) => edit("symbol")(e.target.value)}
           />
         </div>
         <div className="field">
@@ -190,23 +217,55 @@ export function TradeGate({
             min={1}
             step={1}
             inputMode="numeric"
-            value={quantity}
+            value={fields.quantity}
             placeholder="10"
-            onChange={(e) => edit(setQuantity)(e.target.value)}
+            onChange={(e) => edit("quantity")(e.target.value)}
           />
         </div>
         <div className="field">
           <label htmlFor={sideId}>Side</label>
           <select
             id={sideId}
-            value={action}
-            onChange={(e) => edit(setAction)(e.target.value as "buy" | "sell")}
+            value={fields.action}
+            onChange={(e) => edit("action")(e.target.value as "buy" | "sell")}
           >
             <option value="buy">Buy</option>
             <option value="sell">Sell</option>
           </select>
         </div>
+        <div className="field">
+          <label htmlFor={typeId}>Order type</label>
+          <select
+            id={typeId}
+            value={fields.orderType}
+            onChange={(e) => edit("orderType")(e.target.value as TicketOrderType)}
+          >
+            {(Object.keys(ORDER_TYPE_LABELS) as TicketOrderType[]).map((type) => (
+              <option key={type} value={type}>
+                {ORDER_TYPE_LABELS[type]}
+              </option>
+            ))}
+          </select>
+        </div>
+        {priceField !== undefined ? (
+          <div className="field">
+            <label htmlFor={priceId}>
+              {priceField === "stopPrice" ? "Stop price" : "Limit price"}
+            </label>
+            <input
+              id={priceId}
+              type="number"
+              min={0}
+              step={0.01}
+              inputMode="decimal"
+              value={fields[priceField]}
+              placeholder="40.00"
+              onChange={(e) => edit(priceField)(e.target.value)}
+            />
+          </div>
+        ) : null}
       </div>
+      <p className="gate-note">{orderTypeNote(fields.orderType)}</p>
 
       <div className="gate" aria-live="polite">
         <GateStatus state={state} />
@@ -229,7 +288,7 @@ export function TradeGate({
         <button
           type="button"
           className="btn btn-primary"
-          disabled={busy || symbol.trim() === "" || quantity === ""}
+          disabled={busy || fields.symbol.trim() === "" || fields.quantity === ""}
           onClick={review}
         >
           {state.step === "reviewing" ? "Reviewing…" : "Review order"}
