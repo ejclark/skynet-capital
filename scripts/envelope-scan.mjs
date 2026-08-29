@@ -11,7 +11,9 @@
 //   node scripts/envelope-scan.mjs --check <paths...>   # is this path protected? JSON, exit 0
 //   node scripts/envelope-scan.mjs --check <paths...> --base origin/main   # + real diff-aware
 //       `blocking` is the field to act on — false on a diffAware rule whose actual diff is safe
-//       (envelope.json's $diffAwareComment). Omit --base and `blocking` mirrors `protected`.
+//       (envelope.json's $diffAwareComment). Omit --base and `blocking` mirrors `protected`. A
+//       cleared diffAware entry also carries `reason`: "pure-insertion", "structural-widening",
+//       or "behavior-verified" (#852) — which of the three proofs justified it, never just that one did.
 //   node scripts/envelope-scan.mjs --lane feedback/9 --base origin/main   # explicit, for specs
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -132,6 +134,68 @@ function diffFor(path, base) {
   }
 }
 
+// #852's BROAD slice (Eric, 2026-08-29 — "the intent is behavioral tests and CI quality gates are
+// to prevent the need for human review/intervention", not just speed it up): a third path to
+// additiveSafe:true, alongside pure insertion and safe structural widening. A diffAware rule may
+// name `invariantSuite`, a spec file; a passing run of that suite is trusted as proof THIS diff
+// preserved the behavior it covers — PROVIDED the diff didn't also touch the suite itself (see
+// $behaviorEvidenceNote in envelope.json).
+
+/** The command that runs one spec file, as [cmd, args] — overridable via ENVELOPE_SUITE_RUNNER
+ *  (space-separated) so a hermetic fixture can substitute a trivial always-pass/always-fail
+ *  command instead of a real test run. Exported for the specs to assert the default directly. */
+export function suiteRunnerArgv(specPath) {
+  const override = process.env.ENVELOPE_SUITE_RUNNER;
+  const [cmd, ...args] = override ? override.split(" ") : ["npx", "rstest", "run"];
+  return [cmd, [...args, specPath]];
+}
+
+/** Runs `specPath` for real, right now. True only on a clean exit — a failing case, a crash, or a
+ *  missing file all read as "not proven", never as "proof unavailable, assume fine". */
+function suitePasses(specPath) {
+  const [cmd, args] = suiteRunnerArgv(specPath);
+  try {
+    execFileSync(cmd, args, { cwd: ROOT, stdio: "pipe" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Pure — the specs drive this directly. All three or nothing: a registered suite, one this diff
+ *  didn't touch, actually passing right now. */
+export function behaviorVerifiedFacts({ hasSuite, suiteUnchanged, suitePassed }) {
+  return Boolean(hasSuite && suiteUnchanged && suitePassed);
+}
+
+/**
+ * Is `rule`'s diff behavior-verified against `base`? "Untouched" is checked the same way every
+ * other fact this gate reports is — a real `git diff` against base, never a claim taken on faith
+ * — so a diff that edits its own proof gets no credit from it (a diff cannot both loosen what it's
+ * judged by and be trusted by it). `main`'s own `verify` gate already guarantees an unchanged
+ * suite was passing AT base; there is nothing to re-check there, only that it still passes at HEAD.
+ */
+function behaviorVerified(rule, base) {
+  if (!rule.invariantSuite) return false;
+  const suiteUnchanged = classifyDiff(diffFor(rule.invariantSuite, base)) === null;
+  return behaviorVerifiedFacts({
+    hasSuite: true,
+    suiteUnchanged,
+    suitePassed: suiteUnchanged && suitePasses(rule.invariantSuite),
+  });
+}
+
+/** Which of the three diffAware paths (if any) clears `path`'s diff, cheapest first — so a caller
+ *  can name WHICH proof justified skipping the hold (#852's honesty rule: say so explicitly),
+ *  not just that one did. `behaviorVerified` is checked last since it's the only one that spawns
+ *  a process. */
+function exemptionReason(path, base, rule, diff) {
+  if (diff?.additiveSafe) return "pure-insertion";
+  if (structurallySafe(path, base)) return "structural-widening";
+  if (behaviorVerified(rule, base)) return "behavior-verified";
+  return undefined;
+}
+
 // --check: is this path (or these paths) protected? JSON out, always exit 0 — the build session
 // asks this BEFORE editing, learning the answer from the gate rather than guessing at a prose list.
 // --check --base <ref>: additionally answers whether a real diff against that ref EXEMPTS a
@@ -149,11 +213,10 @@ function runCheck() {
     if (checkBase && rule.diffAware) {
       const diff = classifyDiff(diffFor(path, checkBase));
       // diff === null: no actual change to this path (or an unreadable diff) — never exempt on
-      // "couldn't tell", only on a diff we positively classified as safe. A pure-insertion pass is
-      // sufficient on its own; the AST-structural check only runs as a second opinion when the
-      // line-based one didn't already clear it (a safe union widening, e.g.).
-      const additiveSafe = diff?.additiveSafe || structurallySafe(path, checkBase);
-      entry = { ...entry, additiveSafe };
+      // "couldn't tell", only on a diff we positively classified as safe. Cheapest check first;
+      // exemptionReason only reaches behaviorVerified (a process spawn) when the first two miss.
+      const reason = exemptionReason(path, checkBase, rule, diff);
+      entry = { ...entry, additiveSafe: reason !== undefined, ...(reason ? { reason } : {}) };
       entry.blocking = !entry.additiveSafe;
     }
     return entry;
@@ -166,7 +229,8 @@ function runList() {
   console.log("🛡 Autonomous-lane envelope — protected paths (envelope.json)\n");
   for (const r of rules) {
     const mark = r.diffAware ? " [diffAware]" : "";
-    console.log(`  ${r.pattern.padEnd(42)} ${r.why}${mark}`);
+    const suite = r.invariantSuite ? ` [suite: ${r.invariantSuite}]` : "";
+    console.log(`  ${r.pattern.padEnd(42)} ${r.why}${mark}${suite}`);
   }
   console.log(
     `\n  new runtime dependencies: ${manifest.allowNewRuntimeDeps ? "allowed" : "PROTECTED (devDependencies stay open)"}`,
@@ -215,9 +279,9 @@ function reportAndExit(lane, branch, changed, breaches, exempted) {
   );
   if (exempted.length) {
     console.log(
-      `\nℹ diffAware exemption (pure insertion, or a safe structural widening — e.g. a union\n` +
-        `  gaining a member — either way no new mutating call) on:\n` +
-        exempted.map((p) => `  ${p}`).join("\n"),
+      `\nℹ diffAware exemption (pure insertion, a safe structural widening — e.g. a union\n` +
+        `  gaining a member — or a passing invariant suite untouched by the diff) on:\n` +
+        exempted.map((e) => `  ${e.path} — ${e.reason}`).join("\n"),
     );
   }
   if (!breaches.length) {
@@ -261,10 +325,9 @@ function runLaneScan(branch, lane) {
     if (!rule) continue;
     if (rule.diffAware) {
       const diff = classifyDiff(diffFor(path, mergeBase));
-      // A pure-insertion pass is sufficient on its own; the AST-structural check only runs as a
-      // second opinion when the line-based one didn't already clear it.
-      if (diff?.additiveSafe || structurallySafe(path, mergeBase)) {
-        exempted.push(path);
+      const reason = exemptionReason(path, mergeBase, rule, diff);
+      if (reason) {
+        exempted.push({ path, reason });
         continue;
       }
     }
