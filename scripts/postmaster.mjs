@@ -4,6 +4,7 @@
 //   node scripts/postmaster.mjs                          # read $GITHUB_EVENT_PATH, act
 //   node scripts/postmaster.mjs --dry-run --event f.json # print the intents, touch nothing
 //   node scripts/postmaster.mjs --claim-feedback         # claim the labelled issue + pick its model
+//   node scripts/postmaster.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
 //   node scripts/postmaster.mjs --model-tier < body.md   # just the tier decision
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
@@ -52,6 +53,7 @@ import { dueForResearch, routeSweep } from "./postmaster-events.mjs";
 import { ghRest, sh } from "./postmaster-gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./postmaster-labels.mjs";
 import { modelTier } from "./postmaster-model-tier.mjs";
+import { planReadyIntent } from "./postmaster-plan-claim.mjs";
 import {
   mergedReference,
   prIsMerged,
@@ -224,6 +226,34 @@ export function claimFeedback(ctx, nowMs = Date.now(), sha = process.env.GITHUB_
   if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
   console.log(`::notice::claimed feedback issue #${issue.number} — building in this run`);
   console.log(`::notice::feedback #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
+  return { ...result, number: issue.number, model: tier.model };
+}
+
+/**
+ * The plan lane's one step (#823) — mirrors `claimFeedback` exactly, one line down: decide whether
+ * this `issue_comment` is a ready-flip on a plan issue (the pure `planReadyIntent`), and if so claim
+ * the SAME lease mechanism (`claim/plan-<n>`) so a duplicate or retried ready-comment is a safe
+ * no-op, never a second build. WHO may say ready is the workflow's job (`postmaster.yml`'s `if:`,
+ * mirroring `claude.yml`'s `author_association` gate) — this function only ever sees comments that
+ * already cleared it, same division of labor as the feedback lane's label-is-the-authorization rule.
+ */
+export function claimPlan(ctx, nowMs = Date.now(), sha = process.env.GITHUB_SHA ?? "") {
+  const intent = planReadyIntent(ctx);
+  if (!intent.ready) {
+    console.log(`::notice::not building a plan issue — ${intent.reason}`);
+    return { claimed: false, reason: intent.reason };
+  }
+  const issue = intent.issue;
+  const result = claimHandoff(`plan-${issue.number}`, sha, nowMs);
+  if (!result.claimed) {
+    console.log(`::notice::not building plan #${issue.number} — ${result.reason}`);
+    return result;
+  }
+  const tier = modelTier(issue.body ?? "");
+  const out = process.env.GITHUB_OUTPUT;
+  if (out) appendFileSync(out, `number=${issue.number}\nmodel=${tier.model}\n`);
+  console.log(`::notice::claimed plan issue #${issue.number} — building in this run`);
+  console.log(`::notice::plan #${issue.number} — model tier: ${tier.model} — ${tier.reason}`);
   return { ...result, number: issue.number, model: tier.model };
 }
 
@@ -505,6 +535,47 @@ function executeOne(i) {
   return `❓ unknown intent kind ${i.kind}`;
 }
 
+// The narrow, single-purpose CLI flags — each one does its own thing and exits, never reaching
+// `route()`. Split out of `main` (2026-08-29, #823's `--claim-plan` pushed it over the cognitive
+// complexity budget) purely to keep that dispatch table's branches out of `main`'s own count; no
+// behavior change. @returns true if a flag was handled (the caller should return without routing).
+function runCliFlag(argv, ctx) {
+  // The tier heuristic, runnable on its own: `… --model-tier < body.md`. Exists so the decision
+  // that once broke the lane has a spec that runs it exactly as production does.
+  if (argv.includes("--model-tier")) {
+    const { model, reason } = modelTier(readFileSync(0, "utf8"));
+    console.log(`model=${model}`);
+    console.log(`reason=${reason}`);
+    return true;
+  }
+
+  // `--release <slug>`: hand the lease back. Exists so a job that failed can free the issue in its
+  // own `if: failure()` step, rather than leaving it claimed-and-silent for the full TTL — the
+  // shape that made the 2026-08-22 feedback failures look like builds in progress (docs/LESSONS.md).
+  const relIdx = argv.indexOf("--release");
+  if (relIdx >= 0 && argv[relIdx + 1]) {
+    const slug = slugify(argv[relIdx + 1]);
+    console.log(
+      releaseClaim(slug)
+        ? `::notice::released the lease for ${slug}`
+        : `::notice::no lease held for ${slug} — nothing to release`,
+    );
+    return true;
+  }
+
+  // The two claim-lease lanes: `feedback` (label event) and `plan` (#823's ready-comment event).
+  // Both delegate to their own specced claim function; this table is just dispatch.
+  const claimers = { "--claim-feedback": claimFeedback, "--claim-plan": claimPlan };
+  for (const [flag, claim] of Object.entries(claimers)) {
+    if (argv.includes(flag)) {
+      claim(ctx);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // ── entry point ───────────────────────────────────────────────────────────────
 function main(argv) {
   const dry = argv.includes("--dry-run");
@@ -525,33 +596,7 @@ function main(argv) {
     actor: raw.actor ?? process.env.GITHUB_ACTOR ?? "unknown",
   };
 
-  // The tier heuristic, runnable on its own: `… --model-tier < body.md`. Exists so the decision
-  // that once broke the lane has a spec that runs it exactly as production does.
-  if (argv.includes("--model-tier")) {
-    const { model, reason } = modelTier(readFileSync(0, "utf8"));
-    console.log(`model=${model}`);
-    console.log(`reason=${reason}`);
-    return;
-  }
-
-  // `--release <slug>`: hand the lease back. Exists so a job that failed can free the issue in its
-  // own `if: failure()` step, rather than leaving it claimed-and-silent for the full TTL — the
-  // shape that made the 2026-08-22 feedback failures look like builds in progress (docs/LESSONS.md).
-  const relIdx = argv.indexOf("--release");
-  if (relIdx >= 0 && argv[relIdx + 1]) {
-    const slug = slugify(argv[relIdx + 1]);
-    console.log(
-      releaseClaim(slug)
-        ? `::notice::released the lease for ${slug}`
-        : `::notice::no lease held for ${slug} — nothing to release`,
-    );
-    return;
-  }
-
-  if (argv.includes("--claim-feedback")) {
-    claimFeedback(ctx);
-    return;
-  }
+  if (runCliFlag(argv, ctx)) return;
 
   const deps = fixtureDeps ?? (dry ? {} : gatherDeps(ctx));
   const auditMode = argv.includes("--audit") || ctx.inputs?.command === "audit";
