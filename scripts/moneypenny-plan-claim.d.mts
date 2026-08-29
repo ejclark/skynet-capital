@@ -1,4 +1,4 @@
-// Type surface for postmaster-plan-claim.mjs — the scripts/ tree is plain ESM with `allowJs` off,
+// Type surface for moneypenny-plan-claim.mjs (formerly postmaster-plan-claim.mjs) — the scripts/ tree is plain ESM with `allowJs` off,
 // so a spec that imports from it needs this rather than a repo-wide tsconfig loosening for one file
 // (see scripts/moneypenny.d.mts (formerly postmaster.d.mts), the pattern this mirrors).
 export interface PlanIssue {

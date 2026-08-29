@@ -53,7 +53,7 @@ name: Claude
 # this with Eric's PAT": a PAT is not a GitHub App, so `performed_via_github_app` is null either
 # way. The only reliable tell was content — every comment this repo's Claude sessions post carries
 # a markdown link opening `[Claude Code](https://claude` (interactive.md's footer instruction, and
-# postmaster's shared `FOOTER` in `scripts/postmaster-labels.mjs`; the two differ after that, one
+# the event router's shared `FOOTER` in `scripts/moneypenny-labels.mjs` (formerly `postmaster-labels.mjs`); the two differ after that, one
 # linking `claude.ai/code` and the other `claude.com/claude-code`), so `gate` excludes any comment
 # carrying that shared prefix. Deliberately the literal link opener, NOT a bare mention of "Claude
 # Code" — a member's comment can discuss Claude Code in prose without tripping the guard. Now that

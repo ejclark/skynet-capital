@@ -75,7 +75,7 @@ ran." Concretely:
   ```
 - **Where this applies today:** the five `.github/prompts/*.md` lane instructions now open with a
   short shared framing naming her domain, and their comment-closing instructions carry her signature
-  line. `scripts/postmaster-labels.mjs`'s `FOOTER` constant is unchanged — the signature is additive.
+  line. `scripts/moneypenny-labels.mjs`'s (formerly `postmaster-labels.mjs`) `FOOTER` constant is unchanged — the signature is additive.
 
 ### The GitHub-visible identity itself — Eric's one step
 

@@ -15,7 +15,7 @@
 //
 // TWO TIMELINES (#896's acceptance criteria):
 //   plan issue     — open → first `ready`-flip comment → closed (the `plan` label; readiness
-//                    detection reuses `isReadySignal` from postmaster-plan-claim.mjs verbatim, so
+//                    detection reuses `isReadySignal` from moneypenny-plan-claim.mjs verbatim, so
 //                    "what counts as ready" never drifts into a second definition)
 //   feedback issue — open → closed (the `feedback` label; no ready-gate in that lane)
 //
@@ -36,8 +36,8 @@
 //
 // Loud-failure doctrine: an unreadable GitHub response is an error, never a silent zero.
 import { readFileSync } from "node:fs";
-import { ghRest } from "./postmaster-gh.mjs";
-import { isReadySignal } from "./postmaster-plan-claim.mjs";
+import { ghRest } from "./moneypenny-gh.mjs";
+import { isReadySignal } from "./moneypenny-plan-claim.mjs";
 
 const DEFAULT_WINDOW_DAYS = 45;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -59,7 +59,7 @@ export function daysBetween(fromIso, toIso) {
 }
 
 /** The earliest comment on or after `afterIso` that reads as a ready-flip, or null. Reuses the
- *  exact signal `postmaster-plan-claim.mjs` dispatches a build on — this is not a second, looser
+ *  exact signal `moneypenny-plan-claim.mjs` dispatches a build on — this is not a second, looser
  *  definition of "ready", it is the same one read after the fact. */
 export function firstReadyCommentAt(comments = [], afterIso) {
   const after = afterIso ? Date.parse(afterIso) : -Infinity;
@@ -184,7 +184,7 @@ function defaultSince(today) {
 }
 
 /** Impure: page a labeled-issue list from the CORE REST bucket (never GraphQL — see
- *  postmaster-gh.mjs's own header on why). Filters out pull requests (the issues endpoint returns
+ *  moneypenny-gh.mjs's own header on why). Filters out pull requests (the issues endpoint returns
  *  both) and anything opened before `sinceDate`. */
 function listLabeledIssues(label, sinceDate) {
   const items = [];

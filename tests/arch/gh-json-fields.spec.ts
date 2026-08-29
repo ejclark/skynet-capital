@@ -142,7 +142,7 @@ describe("the GraphQL bucket the postmaster rides on", () => {
   });
 
   it("reads a pull request's merged state over REST, once per referenced PR", () => {
-    const source = codeOnly(readFileSync("scripts/postmaster-shipped.mjs", "utf8"));
+    const source = codeOnly(readFileSync("scripts/moneypenny-shipped.mjs", "utf8"));
 
     // This one runs per REFERENCED PR across every open feedback issue — unbounded, and the
     // reason a busy day drained the bucket fastest.

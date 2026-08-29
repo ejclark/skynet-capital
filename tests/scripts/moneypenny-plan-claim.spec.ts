@@ -2,7 +2,7 @@ import {
   hasPlanLabel,
   isReadySignal,
   planReadyIntent,
-} from "../../scripts/postmaster-plan-claim.mjs";
+} from "../../scripts/moneypenny-plan-claim.mjs";
 
 // The plan lane's pure decision (#823) — a ready-flip comment on a `plan`-labeled issue should
 // dispatch a build, same as a `feedback` label does today. Fixture-shaped payloads, no network, no

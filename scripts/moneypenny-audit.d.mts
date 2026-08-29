@@ -1,4 +1,4 @@
-// Type surface for postmaster-audit.mjs — the scripts/ tree is plain ESM with `allowJs` off, so a
+// Type surface for moneypenny-audit.mjs (formerly postmaster-audit.mjs) — the scripts/ tree is plain ESM with `allowJs` off, so a
 // spec that imports from it needs this rather than a repo-wide tsconfig loosening for one file
 // (see scripts/moneypenny.d.mts (formerly postmaster.d.mts), the pattern this mirrors).
 export interface AuditIssue {
