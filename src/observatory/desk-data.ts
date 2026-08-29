@@ -79,7 +79,7 @@ export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeF
  * passes through untouched (exactly the pre-ledger behavior), so a deployment without the
  * activity store loses nothing — it just stays bounded by the broker's window.
  */
-export function mergedDeskActivity(
+function mergedDeskActivity(
   snapshot: ParticipantSnapshot,
   durable?: readonly TradeActivityRecord[],
 ): readonly ActivityView[] {
@@ -108,25 +108,6 @@ export function ticketContext(
     isSelf: options.isSelf,
     ...(options.marketOpen !== undefined ? { marketOpen: options.marketOpen } : {}),
   };
-}
-
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
-/** Hold time in the coarsest unit that stays truthful — "3d 4h", "45m", "under a minute". */
-export function formatHold(ms: number): string {
-  if (!Number.isFinite(ms) || ms < 0) return "—";
-  if (ms < MINUTE) return "<1m";
-  if (ms < HOUR) return `${Math.round(ms / MINUTE)}m`;
-  if (ms < DAY) {
-    const hours = Math.floor(ms / HOUR);
-    const minutes = Math.round((ms % HOUR) / MINUTE);
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
-  const days = Math.floor(ms / DAY);
-  const hours = Math.round((ms % DAY) / HOUR);
-  return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
 }
 
 /**
@@ -162,12 +143,4 @@ export function reviewLine(label: string, value: string, cls?: string): string {
   return `<div class="review-line"><span>${escapeHtml(label)}</span><span${
     cls ? ` class="${cls}"` : ""
   }>${escapeHtml(value)}</span></div>`;
-}
-
-/** A ticket's warnings then refusals, in the house notice styles. */
-export function reviewNotices(warnings: readonly string[], refusals: readonly string[]): string {
-  return [
-    ...warnings.map((warning) => `<p class="note-warn">${escapeHtml(warning)}</p>`),
-    ...refusals.map((refusal) => `<p class="note-stop">${escapeHtml(refusal)}</p>`),
-  ].join("");
 }

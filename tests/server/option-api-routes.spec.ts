@@ -199,21 +199,10 @@ describe("serveOptionApi submit", () => {
 });
 
 describe("serveOptionApi chain", () => {
-  const chainConfig = (client: unknown) => config({ optionsClientFor: () => client });
-
-  it("400s parameters that aren't a symbol and a side", async () => {
-    const { res, out } = fakeRes();
-    await serveOptionApi(
-      get("/api/trade/chain?symbol=!!&type=put"),
-      res,
-      "/api/trade/chain",
-      config(),
-      ann,
-    );
-    expect(out.status).toBe(400);
-  });
-
-  it("tells an unlinked session the honest note instead of erroring", async () => {
+  // The chain's own degrade paths (bad params, no client, broker failure) are
+  // option-chain-route.spec.ts's job now that serveChain lives in its own module — this is just the
+  // wiring: GET /api/trade/chain actually reaches it.
+  it("routes GET /api/trade/chain to the chain handler", async () => {
     const { res, out } = fakeRes();
     await serveOptionApi(
       get("/api/trade/chain?symbol=NVDA&type=put"),
@@ -223,39 +212,5 @@ describe("serveOptionApi chain", () => {
       ann,
     );
     expect(JSON.parse(out.body ?? "{}").chainNote).toContain("isn't linked to one yet");
-  });
-
-  it("serves expirations, the requested expiration's rows, and the premium precomputed", async () => {
-    const client = {
-      getExpirations: () => Promise.resolve(["2026-09-18", "2026-10-16"]),
-      getChain: () =>
-        Promise.resolve([{ occSymbol: "NVDA261016P00100000", strike: 100, bid: 2, ask: 3 }]),
-      getUnderlyingPrice: () => Promise.resolve(105),
-    };
-    const { res, out } = fakeRes();
-    await serveOptionApi(
-      get("/api/trade/chain?symbol=NVDA&type=put&exp=2026-10-16"),
-      res,
-      "/api/trade/chain",
-      chainConfig(client),
-      ann,
-    );
-    const body = JSON.parse(out.body ?? "{}");
-    expect(body.expiration).toBe("2026-10-16");
-    expect(body.spot).toBe(105);
-    expect(body.rows[0].premium).toBe(2.5); // the bid/ask mid, computed server-side
-  });
-
-  it("degrades a chain failure to the honest can't-estimate note", async () => {
-    const client = { getExpirations: () => Promise.reject(new Error("feed down")) };
-    const { res, out } = fakeRes();
-    await serveOptionApi(
-      get("/api/trade/chain?symbol=NVDA&type=call"),
-      res,
-      "/api/trade/chain",
-      chainConfig(client),
-      ann,
-    );
-    expect(JSON.parse(out.body ?? "{}").chainNote).toContain("premiums just can't be estimated");
   });
 });

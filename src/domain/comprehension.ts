@@ -45,7 +45,7 @@ export interface ComprehensionCheck {
 }
 
 /** One graded question. `chosen` ABSENT means left blank — never a false zero, never a fake pick. */
-export interface GradedAnswer {
+interface GradedAnswer {
   readonly questionId: string;
   readonly prompt: string;
   /** What they picked. Absent = unanswered, which renders as ABSENT rather than as a wrong pick. */

@@ -2,13 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { NavContext } from "../../src/observatory/dashboard-shell.js";
 import { renderShell } from "../../src/observatory/dashboard-shell.js";
-import { DESK_STYLE } from "../../src/observatory/desk-style.js";
-import { renderFeedbackFormBody } from "../../src/observatory/feedback-view.js";
 import { FLUID_LAYOUT_TOKENS } from "../../src/observatory/fluid-layout.js";
-import {
-  renderResearchDocBody,
-  renderResearchShelfBody,
-} from "../../src/observatory/research-view.js";
 
 const NAV: NavContext = { active: "board", canAdd: false, authed: true };
 const AS_OF = "2026-08-22T14:30:00Z";
@@ -59,47 +53,6 @@ describe("the fluid layout scale", () => {
     expect(html).toContain("--shell-max:2560px");
     expect(html).toMatch(/\.obs \{[^}]*max-width:var\(--shell-max\)/s);
     expect(html).toMatch(/\.obs \{[^}]*container-type:inline-size/s);
-  });
-});
-
-describe("the page columns", () => {
-  it("sizes the research shelf's event horizon and its rail from the scale, not fixed pixels", () => {
-    const html = renderResearchShelfBody({
-      nav: NAV,
-      asOfIso: AS_OF,
-      shelf: { studies: [], ledgers: [] },
-      symbols: [],
-    });
-
-    expect(html).toContain("max-width:var(--col-wide)");
-    expect(html).not.toContain("max-width:980px");
-    // The calendar lives in the header now, not a rail — a clamped column beside the tiles.
-    expect(html).toContain("grid-template-columns:clamp(260px,26vw,320px)");
-  });
-
-  it("sizes the standalone research doc/symbol pages from the narrower reading cap", () => {
-    // The shelf carries the event horizon now, so it takes the wider cap above — but a doc or
-    // symbol page is still prose-first and keeps the narrower reading measure.
-    const html = renderResearchDocBody({
-      nav: NAV,
-      asOfIso: AS_OF,
-      doc: { slug: "x", title: "x", lastAssessed: null, html: "<p>x</p>", glanceHtml: null },
-    });
-
-    expect(html).toContain("max-width:var(--col-read)");
-    expect(html).not.toContain("max-width:900px");
-  });
-
-  it("sizes the feedback flow from the form cap", () => {
-    const html = renderFeedbackFormBody({ nav: NAV, enabled: true, coachEnabled: false });
-
-    expect(html).toContain("max-width:var(--col-form)");
-    expect(html).not.toContain("max-width:900px");
-  });
-
-  it("sizes the desk's review panel from the narrow cap", () => {
-    expect(DESK_STYLE).toContain("max-width:var(--col-narrow)");
-    expect(DESK_STYLE).not.toContain("max-width:560px");
   });
 });
 

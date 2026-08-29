@@ -5,10 +5,11 @@ import type { DashboardData } from "../../src/observatory/dashboard-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { ObservatoryHub } from "../../src/server/observatory-hub.js";
-import { serveWireRoute, type WireRouteDeps } from "../../src/server/wire-routes.js";
+import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.js";
 
-// /wire's dispatch: every dep is optional, so the honest empty state renders with nothing wired,
-// and each wired dep's data actually reaches the page. Rendering detail lives in wire-view.spec.ts.
+// /wire's shared assembly: every dep is optional, so the honest empty state renders with nothing
+// wired, and each wired dep's data actually reaches the shell's JSON. Rendering detail lives in
+// wire-json-view.spec.ts.
 
 const capture = (): { res: ServerResponse; out: { status: number; body: string } } => {
   const out = { status: 0, body: "" };
@@ -43,8 +44,6 @@ const hubWith = (participants: ParticipantSnapshot[]): ObservatoryHub =>
     }),
   }) as unknown as ObservatoryHub;
 
-const navFor = (active: string) => ({ active: active as never, canAdd: false, authed: true });
-
 const record = (overrides: Partial<TradeActivityRecord> = {}): TradeActivityRecord => ({
   orderId: "ord-1",
   participantId: "sauron",
@@ -70,16 +69,17 @@ const entry = (overrides: Partial<FeedbackLogEntry> = {}): FeedbackLogEntry => (
   ...overrides,
 });
 
-describe("serveWireRoute", () => {
+describe("serveWireJson", () => {
   it("renders the honest empty state when no deps are wired", async () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = { hub: hubWith([snapshot()]) };
 
-    await serveWireRoute(res, deps, false, navFor);
+    await serveWireJson(res, deps, false);
 
     expect(out.status).toBe(200);
-    expect(out.body).toContain("No trades on the wire yet");
-    expect(out.body).toContain("isn't switched on yet");
+    const wire = JSON.parse(out.body).wire;
+    expect(wire.trades).toEqual([]);
+    expect(wire.feedbackEnabled).toBe(false);
   });
 
   it("renders trades read from the wired activity store, joined to the hub's participants", async () => {
@@ -89,10 +89,11 @@ describe("serveWireRoute", () => {
       readAllTradeActivity: () => Promise.resolve([record()]),
     };
 
-    await serveWireRoute(res, deps, true, navFor);
+    await serveWireJson(res, deps, true);
 
-    expect(out.body).toContain("NVDA");
-    expect(out.body).toContain("Sauron");
+    const [trade] = JSON.parse(out.body).wire.trades;
+    expect(trade.symbol).toBe("NVDA");
+    expect(trade.who).toBe("Sauron");
   });
 
   it("renders every member's filed feedback, not just one member's own", async () => {
@@ -102,9 +103,10 @@ describe("serveWireRoute", () => {
       readAllFeedback: () => Promise.resolve([entry({ title: "Shared idea" })]),
     };
 
-    await serveWireRoute(res, deps, true, navFor);
+    await serveWireJson(res, deps, true);
 
-    expect(out.body).toContain("Shared idea");
+    const [feedback] = JSON.parse(out.body).wire.feedback;
+    expect(feedback.title).toBe("Shared idea");
   });
 
   it("fetches live status only for the feedback it actually renders", async () => {
@@ -119,7 +121,7 @@ describe("serveWireRoute", () => {
       },
     };
 
-    await serveWireRoute(res, deps, true, navFor);
+    await serveWireJson(res, deps, true);
 
     expect(requested).toEqual([[7]]);
   });
@@ -136,7 +138,7 @@ describe("serveWireRoute", () => {
       },
     };
 
-    await serveWireRoute(res, deps, true, navFor);
+    await serveWireJson(res, deps, true);
 
     expect(called).toBe(false);
   });

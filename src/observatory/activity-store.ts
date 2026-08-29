@@ -93,7 +93,7 @@ export type ActivityWindow = "7d" | "30d" | "90d" | "all";
 /** The trade-type filter: an order is a buy or a sell; "all" shows both. */
 export type ActivityTypeFilter = "all" | "buy" | "sell";
 
-export const ACTIVITY_WINDOWS: ReadonlyArray<{
+const ACTIVITY_WINDOWS: ReadonlyArray<{
   key: ActivityWindow;
   label: string;
   days?: number;
@@ -106,7 +106,7 @@ export const ACTIVITY_WINDOWS: ReadonlyArray<{
   { key: "all", label: "All history" },
 ];
 
-export const ACTIVITY_TYPES: ReadonlyArray<{ key: ActivityTypeFilter; label: string }> = [
+const ACTIVITY_TYPES: ReadonlyArray<{ key: ActivityTypeFilter; label: string }> = [
   { key: "all", label: "All types" },
   { key: "buy", label: "Buys" },
   { key: "sell", label: "Sells" },
