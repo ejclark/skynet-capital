@@ -1,0 +1,28 @@
+name: 'Mint App installation token'
+description: >-
+  Mints a GitHub App installation token via actions/create-github-app-token when a client-id is
+  configured; produces no output otherwise. Guarded on the client-id INPUT (not a secret — a
+  client id is not sensitive, and `if:` cannot read secrets) so an unconfigured repo skips the
+  mint instead of failing the run on a missing private key. No fallback tier (Eric, 2026-08-28 —
+  the App is assumed reliable): callers that need the token should fail loudly when it's absent,
+  not degrade to a weaker identity.
+inputs:
+  client-id:
+    description: 'GitHub App client ID (pass vars.APP_CLIENT_ID)'
+    required: true
+  private-key:
+    description: 'GitHub App private key (pass secrets.APP_PRIVATE_KEY)'
+    required: true
+outputs:
+  token:
+    description: 'The minted installation token, or empty if client-id was blank'
+    value: ${{ steps.app-token.outputs.token }}
+runs:
+  using: composite
+  steps:
+    - id: app-token
+      if: inputs.client-id != ''
+      uses: actions/create-github-app-token@v3
+      with:
+        client-id: ${{ inputs.client-id }}
+        private-key: ${{ inputs.private-key }}
