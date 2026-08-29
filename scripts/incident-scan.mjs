@@ -44,6 +44,28 @@ function repoSlug() {
   return url.replace(/^[a-z]+:\/\/[^/]+\//, "").replace(/^git@[^:]+:/, "");
 }
 
+/**
+ * True if a workflow run recorded zero jobs — GitHub's phantom "push" artifact for a commit that
+ * touches a `workflow_run`-/`workflow_dispatch`-only-triggered file with no `push:` trigger of its
+ * own. GitHub records a run to represent the file-touch even though nothing fired, and labels its
+ * conclusion "failure" instead of "skipped" — a scan-tool false positive, not a real CI break
+ * (docs/LESSONS.md, #914 triage, 2026-08-29). Unknown on a fetch error, so the run counts as real —
+ * a missed phantom just means one more thing to retro, safer than hiding a genuine failure.
+ */
+async function hasZeroJobs(runId) {
+  const url = `https://api.github.com/repos/${repoSlug()}/actions/runs/${runId}/jobs?per_page=1`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "skynet-capital",
+    },
+  });
+  if (!res.ok) return false;
+  const body = await res.json();
+  return (body.total_count ?? 1) === 0;
+}
+
 /** Failed workflow runs on `main` within the lookback window. */
 async function failedMainRuns() {
   const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
@@ -124,7 +146,13 @@ async function main() {
   // One incident per commit: a re-run of the same sha is the same gap, not a new one.
   const bySha = new Map();
   for (const run of runs) if (run.sha && !bySha.has(run.sha)) bySha.set(run.sha, run);
-  const unlearned = [...bySha.values()].filter((r) => !isLearned(r.sha));
+
+  // Drop zero-job phantom runs (see hasZeroJobs above) before anything downstream sees them.
+  const candidates = [...bySha.values()];
+  const zeroJob = await Promise.all(candidates.map((r) => hasZeroJobs(r.id)));
+  const realRuns = candidates.filter((_, i) => !zeroJob[i]);
+  const phantomCount = candidates.length - realRuns.length;
+  const unlearned = realRuns.filter((r) => !isLearned(r.sha));
 
   if (flag("--candidate")) {
     const oldest = unlearned.sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -132,7 +160,12 @@ async function main() {
     return 0;
   }
 
-  console.log(`incident-scan: ${bySha.size} failed run(s) on main in the last ${days}d`);
+  console.log(`incident-scan: ${realRuns.length} failed run(s) on main in the last ${days}d`);
+  if (phantomCount > 0) {
+    console.log(
+      `  (${phantomCount} zero-job phantom "push" run(s) on workflow-file touches skipped)`,
+    );
+  }
   for (const r of unlearned) console.log(`  UNLEARNED  ${r.sha}  ${r.date}  ${r.name}  ${r.title}`);
 
   if (flag("--update")) {
