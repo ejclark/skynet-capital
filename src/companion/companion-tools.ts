@@ -105,6 +105,10 @@ async function roundTripsResult(
         realized: t.realized,
         returnPct: t.returnPct,
         closedAt: t.closedAt,
+        // Without this the companion reads a written contract's "$4.20 in, $0 out" as a wipeout
+        // when it was the writer keeping the whole premium — `realized` says so, the price pair
+        // does not.
+        ...(t.short ? { soldToOpen: true } : {}),
       })),
       openLots: ledger.open.length,
       truncated: ledger.truncated,

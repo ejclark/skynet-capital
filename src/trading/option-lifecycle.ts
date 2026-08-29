@@ -22,11 +22,15 @@ import type { TradeFill } from "./round-trips.js";
  *  - OPEXP: a contract expiring worthless is an unambiguous $0 close. For a long option (301/302,
  *    opened by a buy) that's the whole story — a real, honest total loss of the premium paid, and
  *    `matchRoundTrips` already knows how to score it once handed a $0 "sell" fill.
- *  - OPASN: assignment only ever happens to a WRITTEN contract (201/202, opened by a sell), which
- *    `round-trips.ts` documents as a lot its FIFO matcher cannot open in the first place (short-lot
- *    matching is a separate, deliberately-deferred gap — see that file's module doc). Treating it
- *    the same way as OPEXP is still safe here: with no open lot to match, `synthetic: true` makes
- *    it a no-op rather than an inflated "unmatched sell" count (see `round-trips.ts`).
+ *  - OPASN: assignment only ever happens to a WRITTEN contract (201/202, opened by a sell). Since
+ *    #838 the FIFO matcher opens a short lot for that sell, so this $0 close now scores the leg:
+ *    the writer keeps the whole premium, which is the true realized P/L **of the option**. The
+ *    stock that changes hands at the strike is a separate leg with its own basis — it arrives as
+ *    OPTRD, which this module still declines to score (below), so the option's number is honest on
+ *    its own terms and the share leg is under-reported rather than invented. That asymmetry with
+ *    OPEXC is real and deliberate: exercising a LONG option spends premium that is still WORTH
+ *    something (it became stock), while assignment ends an obligation whose premium was already
+ *    earned outright.
  *  - OPEXC: exercise converts a LONG option into stock at the strike — the option's value
  *    transfers into the new stock position, it does not vanish. Reporting a $0 close would show a
  *    profitable exercise as a full loss, which is a false-negative framing this desk refuses to
@@ -136,11 +140,12 @@ export const LIFECYCLE_STATUS: Record<OptionLifecycleType, string> = {
 };
 
 /**
- * A synthetic $0 closing fill for the one case that can be closed honestly (see the module doc):
- * `OPEXP` against a long lot, and — safely, as a no-op elsewhere — `OPASN`. Both mark `synthetic`
- * so a lifecycle event with nothing open to match never inflates `unmatchedSellQuantity`.
- * `OPEXC`/`OPTRD` return `undefined`: never a fabricated number for a value transfer or an
- * unconfirmed trade.
+ * A synthetic $0 closing fill for the two cases that can be closed honestly (see the module doc):
+ * `OPEXP` (expired worthless) and `OPASN` (assigned). Both mark `synthetic`, which makes the fill a
+ * DIRECTIONLESS close in `round-trips.ts` — it ends a long lot or a written one, and is a no-op
+ * with nothing open. The `side` below is therefore nominal, so the broker's own inconsistent `side`
+ * on a lifecycle activity cannot steer the P/L. `OPEXC`/`OPTRD` return `undefined`: never a
+ * fabricated number for a value transfer or an unconfirmed trade.
  */
 export function lifecycleClosingFill(activity: NormalizedLifecycleActivity): TradeFill | undefined {
   if (activity.type !== "OPEXP" && activity.type !== "OPASN") return undefined;

@@ -109,10 +109,10 @@ describe("lifecycleClosingFill — closes a leg without a fill, honestly", () =>
     expect(ledger.truncated).toBe(false);
   });
 
-  it("a written option's own expiration is a safe no-op — never an extra unmatched sell", () => {
-    // The opening SELL (writing the option) already lands in unmatchedSellQuantity today —
-    // that's the documented, deliberately-deferred short-lot gap in round-trips.ts. This test
-    // pins that the lifecycle close does NOT make it worse.
+  it("a written option's own expiration closes the short lot for the full premium (#838)", () => {
+    // The opening SELL writes the contract, so the matcher opens a SHORT lot for it; this
+    // lifecycle close is what finally scores it. End-to-end through the real parser, because the
+    // arithmetic downstream of `lifecycleClosingFill` is the whole point of that function.
     const wrote = {
       symbol: "AAPL261218C00150000",
       side: "sell" as const,
@@ -130,9 +130,17 @@ describe("lifecycleClosingFill — closes a leg without a fill, honestly", () =>
     const close = lifecycleClosingFill(parsed) as NonNullable<
       ReturnType<typeof lifecycleClosingFill>
     >;
-    const withoutLifecycle = matchRoundTrips([wrote]);
+    // Written but not yet expired: an open short lot, and never a truncated window.
+    const stillOpen = matchRoundTrips([wrote]);
+    expect(stillOpen.trips).toHaveLength(0);
+    expect(stillOpen.unmatchedSellQuantity).toBe(0);
+    expect(stillOpen.open).toHaveLength(1);
+
     const withLifecycle = matchRoundTrips([wrote, close]);
-    expect(withLifecycle.unmatchedSellQuantity).toBe(withoutLifecycle.unmatchedSellQuantity);
-    expect(withLifecycle.trips).toHaveLength(0);
+    expect(withLifecycle.unmatchedSellQuantity).toBe(0);
+    expect(withLifecycle.trips).toHaveLength(1);
+    expect(withLifecycle.trips[0]?.realized).toBe(3.5);
+    expect(withLifecycle.trips[0]?.short).toBe(true);
+    expect(withLifecycle.open).toHaveLength(0);
   });
 });
