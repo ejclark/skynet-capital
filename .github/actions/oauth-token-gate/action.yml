@@ -1,0 +1,30 @@
+name: 'Gate on CLAUDE_CODE_OAUTH_TOKEN'
+description: >-
+  Sets armed=true/false based on whether the given token is present, emitting a ::warning:: naming
+  what's blocked when it's absent. Used to skip a build step gracefully instead of failing the run
+  when CLAUDE_CODE_OAUTH_TOKEN isn't configured.
+inputs:
+  token:
+    description: 'The token to check for presence (pass secrets.CLAUDE_CODE_OAUTH_TOKEN)'
+    required: true
+  blocked-message:
+    description: 'Warning text naming what will not happen because the token is missing'
+    required: true
+outputs:
+  armed:
+    description: '"true" if the token was present, "false" otherwise'
+    value: ${{ steps.gate.outputs.armed }}
+runs:
+  using: composite
+  steps:
+    - id: gate
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        MESSAGE: ${{ inputs.blocked-message }}
+      run: |
+        if [ -n "$TOKEN" ]; then echo "armed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "armed=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::$MESSAGE"
+        fi
