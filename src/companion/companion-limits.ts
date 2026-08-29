@@ -1,0 +1,62 @@
+/**
+ * THE COMPANION'S COST DIALS — every knob that decides how much the metered Anthropic API bill
+ * is, mirroring `feedback-coach-limits.ts`'s seam exactly: what costs money lives in its own file
+ * so it can be gated without freezing the conversation quality we want to keep improving.
+ *
+ * REUSE, NOT A NEW SPEND SURFACE (#467, 2026-08-29). The companion shares the coach's existing
+ * `ANTHROPIC_API_KEY` and its existing Console spend cap — no new credential, no new Fly secret,
+ * no raised ceiling. It runs on the SAME model the coach already pays for
+ * (`feedback-coach-limits.ts`'s `MODEL`), so this file introduces no new per-token price point,
+ * only a companion-shaped set of round/size caps around that one shared rate.
+ *
+ * NOT YET PROTECTED IN `envelope.json` (a follow-up for Eric, not this lane — `envelope.json` is
+ * itself on the protected list, so an autonomous session cannot add its own entry there). Until
+ * that follow-up lands, raising `MAX_TURNS` or `MAX_TOKENS_PER_REPLY` here would multiply the
+ * companion's share of the shared bill with no gate catching it — exactly the gap
+ * `feedback-coach-limits.ts`'s own header describes. Treat this file as if it already carried
+ * `protected: true`.
+ *
+ * FILING GOES THROUGH THE EXISTING COACH, NOT A SECOND MODEL LANE. The plan (#467) floated Sonnet
+ * for issue-drafting; on inspection the shipped #429 coach already drafts on Haiku
+ * (`feedback-coach-limits.ts`), so the companion's file-an-issue lane hands the conversation
+ * straight to that existing `CoachTurn` rather than standing up a second, unprotected cost dial
+ * for a Sonnet-drafting mode. One shared ceiling, one shared gate.
+ */
+
+/** Same model the coach already pays for — see the header above for why this isn't a new dial. */
+export const COMPANION_MODEL = "claude-haiku-4-5";
+
+/** Small replies keep pennies pennies; a long explanation still fits comfortably. */
+export const MAX_TOKENS_PER_REPLY = 700;
+
+/**
+ * A conversation ends gracefully here rather than growing without bound — the client resends the
+ * (trimmed) transcript on every turn since v1 persists nothing server-side, so this doubles as
+ * the per-request payload bound. Chosen to match the acceptance criterion's stated ceiling
+ * ("ends gracefully at 20 turns") — 20 user+assistant round trips is 40 messages.
+ */
+export const MAX_TURNS = 40;
+
+/** Only the last N turns ride in the request — older context ages out rather than compounding
+ *  every request's token count as a conversation runs long. */
+export const MAX_HISTORY_MESSAGES = 10;
+
+/** Server-enforced, never model-trusted — same bound class as the coach's `MAX_MESSAGE_CHARS`. */
+export const COMPANION_MAX_MESSAGE_CHARS = 4000;
+
+/** At most this many read-tool round trips per turn before the companion answers with whatever
+ *  it already has — a model that keeps calling tools never turns into an unbounded loop of paid
+ *  requests. */
+export const MAX_TOOL_ROUNDS = 3;
+
+/** Burst throttle, same shape as the coach's — a conversation is several turns, looser than a
+ *  one-shot submission cap. */
+export const COMPANION_THROTTLE_MAX = 40;
+export const COMPANION_THROTTLE_WINDOW_MS = 600_000;
+
+/**
+ * The graceful close-out at the turn ceiling — no model call is made once this fires, so it costs
+ * nothing and cannot be gamed into one more paid round.
+ */
+export const TURN_LIMIT_MESSAGE =
+  "We've covered a lot of ground this session — let's pick it back up fresh next time. If something's still off or you'd like it built, send it through /feedback.";

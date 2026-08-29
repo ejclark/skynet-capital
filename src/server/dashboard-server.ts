@@ -12,6 +12,7 @@ import {
   serveBoardFrame,
   streamBoardPatches,
 } from "./board-patch-routes.js";
+import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
 import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
@@ -111,6 +112,7 @@ async function serveWriteApis(
   if (await serveLearnApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
+  if (await serveCompanionApi(req, res, path, config, session)) return true;
   if (await serveAdminApi(req, res, path, config, session)) return true;
   return serveJoinApi(req, res, path, config, session);
 }

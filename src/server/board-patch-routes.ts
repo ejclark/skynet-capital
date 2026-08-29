@@ -10,7 +10,7 @@ import { type WorldPatch, WorldPatchChannel } from "../universe/patch-channel.js
 import { projectWorld } from "../universe/project.js";
 import { diffWorld, type WorldCue } from "../universe/world-patch.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
-import { sseFrame } from "./sse.js";
+import { openSseStream, sseFrame } from "./sse.js";
 
 /**
  * THE LIVE BOARD'S TRANSPORT — `/events` as a seq-numbered patch channel, and `/board/frame` as the
@@ -122,11 +122,7 @@ export function streamBoardPatches(
   metric: LeaderMetric,
   compare: Pick<StandingsOptions, "aId" | "bId">,
 ): void {
-  res.writeHead(200, {
-    "content-type": "text/event-stream",
-    "cache-control": "no-cache",
-    connection: "keep-alive",
-  });
+  openSseStream(res);
   const opts: StandingsPatchOptions = { metric, ...compare };
   const resumeAt = lastEventId(req);
 

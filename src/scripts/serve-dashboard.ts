@@ -39,11 +39,11 @@ import { createDashboardServer } from "../server/dashboard-server.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
 import { ParticipantService } from "../server/participant-service.js";
-import { createProgressionService } from "../server/progression-service.js";
-import { createProgressionStore } from "../server/progression-store.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { resolveDeskTrading } from "../server/trade-service.js";
 import { setupAccess } from "./dashboard-access.js";
+import { buildAccountAdmin } from "./dashboard-account-admin.js";
+import { setupCompanion } from "./dashboard-companion.js";
 import { setupFeedback } from "./dashboard-feedback.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
 
@@ -200,6 +200,12 @@ async function main(): Promise<void> {
   const { feedback, feedbackCoach, feedbackLog, feedbackStatus, feedbackFollowup } = setupFeedback(
     process.env,
   );
+  // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance.
+  const { companion, progression: progressionService } = setupCompanion(process.env, {
+    hub,
+    readFills: (id) => activity.list(id),
+    readTags: (id) => orderAudit.list(id),
+  });
 
   createDashboardServer({
     hub,
@@ -209,19 +215,7 @@ async function main(): Promise<void> {
     ...(auth ? { auth } : {}),
     addParticipant: (input) => service.addParticipant(input),
     rotateCredentials: (input) => service.rotateCredentials(input),
-    accountAdmin: {
-      updateProfile: accounts.updateProfile,
-      removeAccount: accounts.removeAccount,
-      profileFor: (id) => {
-        const stored = store.load().find((p) => p.id === id);
-        return stored
-          ? {
-              displayName: stored.displayName,
-              ...(stored.timezone ? { timezone: stored.timezone } : {}),
-            }
-          : undefined;
-      },
-    },
+    accountAdmin: buildAccountAdmin(accounts, store),
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
@@ -266,6 +260,7 @@ async function main(): Promise<void> {
     readFeedback: (id) => feedbackLog.list(id),
     ...(feedbackStatus ? { fetchFeedbackStatus: feedbackStatus } : {}),
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
+    ...(companion ? { companion } : {}),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),
@@ -273,11 +268,7 @@ async function main(): Promise<void> {
     // `/wire`'s cross-participant feed: the same stores, called with no id.
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
-    progression: createProgressionService({
-      readFills: (id) => activity.list(id),
-      readTags: (id) => orderAudit.list(id),
-      store: createProgressionStore(process.env, (m) => console.error(m)),
-    }),
+    progression: progressionService,
     ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
