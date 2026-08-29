@@ -385,13 +385,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Conference Board Consumer Confidence Index (Sep 2026)",
     date: "2026-09-29",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "NEWS: the Conference Board publishes at 10:00 ET on the last Tuesday of each month (press-reported cadence, matching the 2026-08-25 predecessor); 09-29 is that Tuesday — not primary-verified against conference-board.org's own schedule, checked 2026-08-29",
+      'CB: conference-board.org/topics/consumer-confidence — "The next release is Tuesday, September 29th at 10 AM ET", the publisher\'s own forward-dated line, fetched 2026-08-29 (the same page carries the standing rule that the index publishes at 10 a.m. ET on the last Tuesday of every month; 09-29 is that Tuesday)',
     impact: "medium",
     symbols: [],
     notes:
-      "The leading consumer read feeding retail sales and the goods side of PCE. The calendar carried no consumer-confidence entry beyond the passed 08-25 print, despite August's deterioration (the CB index printed below consensus; UMich fell to 51 from 55.2) being the freshest consumer signal in the window. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep.",
+      "The leading consumer read feeding retail sales and the goods side of PCE. The calendar carried no consumer-confidence entry beyond the passed 08-25 print, despite August's deterioration (the CB index printed below consensus; UMich fell to 51 from 55.2) being the freshest consumer signal in the window. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep; promoted from `estimate` during this event's own initial research once the Conference Board's next-release line was fetched. Collides with JOLTS at the identical 10:00 ET minute, so same-morning tape cannot be attributed to either print alone.",
   },
   {
     id: "chicago-pmi-2026-09-30",
