@@ -22,11 +22,15 @@ import type { TradeFill } from "./round-trips.js";
  *  - OPEXP: a contract expiring worthless is an unambiguous $0 close. For a long option (301/302,
  *    opened by a buy) that's the whole story — a real, honest total loss of the premium paid, and
  *    `matchRoundTrips` already knows how to score it once handed a $0 "sell" fill.
- *  - OPASN: assignment only ever happens to a WRITTEN contract (201/202, opened by a sell), which
- *    `round-trips.ts` documents as a lot its FIFO matcher cannot open in the first place (short-lot
- *    matching is a separate, deliberately-deferred gap — see that file's module doc). Treating it
- *    the same way as OPEXP is still safe here: with no open lot to match, `synthetic: true` makes
- *    it a no-op rather than an inflated "unmatched sell" count (see `round-trips.ts`).
+ *  - OPASN: assignment only ever happens to a WRITTEN contract (201/202, opened by a sell). Since
+ *    #838 the FIFO matcher opens a short lot for that sell, so this $0 close now scores the leg:
+ *    the writer keeps the whole premium, which is the true realized P/L **of the option**. The
+ *    stock that changes hands at the strike is a separate leg with its own basis — it arrives as
+ *    OPTRD, which this module still declines to score (below), so the option's number is honest on
+ *    its own terms and the share leg is under-reported rather than invented. That asymmetry with
+ *    OPEXC is real and deliberate: exercising a LONG option spends premium that is still WORTH
+ *    something (it became stock), while assignment ends an obligation whose premium was already
+ *    earned outright.
  *  - OPEXC: exercise converts a LONG option into stock at the strike — the option's value
  *    transfers into the new stock position, it does not vanish. Reporting a $0 close would show a
  *    profitable exercise as a full loss, which is a false-negative framing this desk refuses to
@@ -98,6 +102,20 @@ function isoTimestamp(value: unknown): string | undefined {
 }
 
 /**
+ * A lifecycle activity's `date` carries no time of day, so it parses to midnight UTC — which sorts
+ * a contract's own expiry BEFORE the fill that opened it. On a same-day write (a 0DTE
+ * cash-secured put, say) that made the close a no-op against an empty lot queue and the premium
+ * never scored: the exact hole #838 exists to fill. A contract ceases to exist at the END of its
+ * expiration date, so a timeless stamp is normalized to the last instant of that day — later than
+ * any fill on it, and closer to the truth than midnight was.
+ */
+function endOfDayIfTimeless(iso: string): string {
+  const day = 24 * 60 * 60 * 1000;
+  const ms = new Date(iso).getTime();
+  return ms % day === 0 ? new Date(ms + day - 1).toISOString() : iso;
+}
+
+/**
  * Parse one raw account-activity row into a lifecycle event, or `null` when it isn't one of the
  * four option lifecycle types or is missing a field this module needs to act on honestly. Never
  * throws — a malformed or unrecognized row is silently excluded, exactly like an unpriced fill is
@@ -110,7 +128,11 @@ export function parseLifecycleActivity(
   const type = str(raw.activity_type);
   const symbol = str(raw.symbol);
   const quantity = positiveQuantity(raw.qty);
-  const at = isoTimestamp(raw.date) ?? isoTimestamp(raw.transaction_time);
+  // The precise execution stamp wins when the activity carries one. `date` is the date-only field
+  // non-trade activities report, so it goes through `endOfDayIfTimeless` and sorts after the fills
+  // it closes rather than before them.
+  const dated = isoTimestamp(raw.date);
+  const at = isoTimestamp(raw.transaction_time) ?? (dated ? endOfDayIfTimeless(dated) : undefined);
   if (!(id && type && LIFECYCLE_TYPES.has(type) && symbol) || quantity === undefined || !at) {
     return null;
   }
@@ -138,11 +160,12 @@ export const LIFECYCLE_STATUS: Record<OptionLifecycleType, string> = {
 };
 
 /**
- * A synthetic $0 closing fill for the one case that can be closed honestly (see the module doc):
- * `OPEXP` against a long lot, and — safely, as a no-op elsewhere — `OPASN`. Both mark `synthetic`
- * so a lifecycle event with nothing open to match never inflates `unmatchedSellQuantity`.
- * `OPEXC`/`OPTRD` return `undefined`: never a fabricated number for a value transfer or an
- * unconfirmed trade.
+ * A synthetic $0 closing fill for the two cases that can be closed honestly (see the module doc):
+ * `OPEXP` (expired worthless) and `OPASN` (assigned). Both mark `synthetic`, which makes the fill a
+ * DIRECTIONLESS close in `round-trips.ts` — it ends a long lot or a written one, and is a no-op
+ * with nothing open. The `side` below is therefore nominal, so the broker's own inconsistent `side`
+ * on a lifecycle activity cannot steer the P/L. `OPEXC`/`OPTRD` return `undefined`: never a
+ * fabricated number for a value transfer or an unconfirmed trade.
  */
 export function lifecycleClosingFill(activity: NormalizedLifecycleActivity): TradeFill | undefined {
   if (activity.type !== "OPEXP" && activity.type !== "OPASN") return undefined;

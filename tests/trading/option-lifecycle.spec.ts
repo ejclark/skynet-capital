@@ -22,8 +22,35 @@ describe("parseLifecycleActivity — never assume a field the wire format doesn'
       type: "OPEXP",
       symbol: "MSFT260918P00420000",
       quantity: 2,
-      at: "2026-09-19T00:00:00.000Z",
+      // A date-only stamp is the END of the expiration day, not its first instant — see
+      // `endOfDayIfTimeless`. Midnight sorted a contract's expiry ahead of the fill that opened it.
+      at: "2026-09-19T23:59:59.999Z",
     });
+  });
+
+  it("keeps a real execution stamp exactly as reported, and prefers it over the date", () => {
+    const parsed = parseLifecycleActivity({
+      ...expired,
+      transaction_time: "2026-09-19T14:30:00Z",
+    });
+    expect(parsed?.at).toBe("2026-09-19T14:30:00.000Z");
+  });
+
+  it("scores a contract WRITTEN and expired the same day — the 0DTE case", () => {
+    const wrote = {
+      symbol: "MSFT260918P00420000",
+      side: "sell" as const,
+      quantity: 2,
+      price: 420,
+      at: "2026-09-19T14:00:00.000Z",
+    };
+    const close = lifecycleClosingFill(
+      parseLifecycleActivity(expired) as NonNullable<ReturnType<typeof parseLifecycleActivity>>,
+    ) as NonNullable<ReturnType<typeof lifecycleClosingFill>>;
+    const ledger = matchRoundTrips([wrote, close]);
+    expect(ledger.trips).toHaveLength(1);
+    expect(ledger.trips[0]?.realized).toBe(840);
+    expect(ledger.open).toHaveLength(0);
   });
 
   it("carries price and side only when both are present and valid (OPTRD)", () => {
@@ -78,7 +105,7 @@ describe("lifecycleClosingFill — closes a leg without a fill, honestly", () =>
       side: "sell",
       quantity: 2,
       price: 0,
-      at: "2026-09-19T00:00:00.000Z",
+      at: "2026-09-19T23:59:59.999Z",
       synthetic: true,
     });
     expect(lifecycleClosingFill({ ...parsed, type: "OPASN" })?.synthetic).toBe(true);
@@ -109,10 +136,10 @@ describe("lifecycleClosingFill — closes a leg without a fill, honestly", () =>
     expect(ledger.truncated).toBe(false);
   });
 
-  it("a written option's own expiration is a safe no-op — never an extra unmatched sell", () => {
-    // The opening SELL (writing the option) already lands in unmatchedSellQuantity today —
-    // that's the documented, deliberately-deferred short-lot gap in round-trips.ts. This test
-    // pins that the lifecycle close does NOT make it worse.
+  it("a written option's own expiration closes the short lot for the full premium (#838)", () => {
+    // The opening SELL writes the contract, so the matcher opens a SHORT lot for it; this
+    // lifecycle close is what finally scores it. End-to-end through the real parser, because the
+    // arithmetic downstream of `lifecycleClosingFill` is the whole point of that function.
     const wrote = {
       symbol: "AAPL261218C00150000",
       side: "sell" as const,
@@ -130,9 +157,17 @@ describe("lifecycleClosingFill — closes a leg without a fill, honestly", () =>
     const close = lifecycleClosingFill(parsed) as NonNullable<
       ReturnType<typeof lifecycleClosingFill>
     >;
-    const withoutLifecycle = matchRoundTrips([wrote]);
+    // Written but not yet expired: an open short lot, and never a truncated window.
+    const stillOpen = matchRoundTrips([wrote]);
+    expect(stillOpen.trips).toHaveLength(0);
+    expect(stillOpen.unmatchedSellQuantity).toBe(0);
+    expect(stillOpen.open).toHaveLength(1);
+
     const withLifecycle = matchRoundTrips([wrote, close]);
-    expect(withLifecycle.unmatchedSellQuantity).toBe(withoutLifecycle.unmatchedSellQuantity);
-    expect(withLifecycle.trips).toHaveLength(0);
+    expect(withLifecycle.unmatchedSellQuantity).toBe(0);
+    expect(withLifecycle.trips).toHaveLength(1);
+    expect(withLifecycle.trips[0]?.realized).toBe(3.5);
+    expect(withLifecycle.trips[0]?.short).toBe(true);
+    expect(withLifecycle.open).toHaveLength(0);
   });
 });
