@@ -171,7 +171,7 @@ describe("feedback provenance", () => {
   });
 });
 
-// The postmaster feedback lane triggers only on the `issues.labeled` webhook event — GitHub never
+// Moneypenny's feedback lane triggers only on the `issues.labeled` webhook event — GitHub never
 // emits that event for labels present at creation time, only `issues.opened`. #674 shipped with
 // `feedback` baked into the creating POST and was never claimed as a result. The fix: create bare,
 // then label in a second call, so the event the workflow actually listens for fires.

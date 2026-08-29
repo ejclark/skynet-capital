@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { logArgVariants, sanitizeLog } from "../../scripts/moneypenny-repair-logs.mjs";
 
-// The self-healing lane's router, exercised the way postmaster.spec.ts exercises its own: feed a
+// The self-healing lane's router, exercised the way moneypenny.spec.ts exercises its own: feed a
 // fixture `workflow_run` payload through `--dry-run` and assert the INTENTS. The dry run never
 // executes one, so no spec here can touch GitHub.
 //

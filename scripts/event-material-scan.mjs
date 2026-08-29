@@ -11,7 +11,7 @@
 //       # exit 0 = screen, 1 = material, 2 = probe error (fetch/table/ledger failure).
 //
 //   node scripts/event-material-scan.mjs --screen-due [--today=YYYY-MM-DD]
-//       # batch mode for the postmaster workflow: reads the due-events JSON array on stdin (the
+//       # batch mode for Moneypenny's event workflow: reads the due-events JSON array on stdin (the
 //       # SAME shape `event-scan.mjs --due` emits, already filtered through dueForResearch), and
 //       # for every `interval-elapsed` item either screens it (writing its ledger in place) or
 //       # leaves it in the list. `never-assessed`/`event-passed-unscored` items pass through

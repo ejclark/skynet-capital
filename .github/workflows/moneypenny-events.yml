@@ -112,7 +112,7 @@ concurrency:
   # `feedback` event on the SAME issue (e.g. a genuine re-label retry) still collides with the
   # first, which is the intended dedupe, since `claimFeedback`'s lease already makes that safe.
   # Empty for push/workflow_dispatch (no `label` on those payloads), so their grouping is unchanged.
-  group: postmaster-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}-${{ github.event.label.name || '' }}
+  group: moneypenny-events-${{ github.event_name }}-${{ github.event.issue.number || github.ref }}-${{ github.event.label.name || '' }}
   cancel-in-progress: false
 
 jobs:
@@ -145,11 +145,11 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       # The sweep: one receipt issue per never-assessed event, deduped by open-issue title, plus
-      # the release-claim dispatch. One entry point, one set of specs (tests/scripts/postmaster).
+      # the release-claim dispatch. One entry point, one set of specs (tests/scripts/moneypenny).
       # (The handoff lanes — ready-sweep, inbox zip import, flip button — were retired 2026-08-21:
       # design handoffs are `[handoff]` issues now, docs/HANDOFFS.md.)
       # The App token, no fallback tier — see the header.
-      - name: Run the postmaster
+      - name: Run Moneypenny
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: node scripts/moneypenny.mjs
@@ -425,7 +425,7 @@ jobs:
           # WHO MAY START A BUILD (Eric's call, 2026-08-22). The action discards a bot-initiated run
           # unless the bot is named, and that refusal is load-bearing on a public repo: the LABEL is
           # the authorization, so whoever can label can spend a session. Two bots legitimately land
-          # here — `github-actions` (the postmaster's own re-dispatch, already trusted by the
+          # here — `github-actions` (Moneypenny's own re-dispatch, already trusted by the
           # event-research lane for the same reason) and `claude` (a session retrying a build that
           # died; without it no retry is possible at all, which is why four retriggers of #475 could
           # not get past this even after the three real bugs behind them were fixed). Both already

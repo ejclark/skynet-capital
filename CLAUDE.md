@@ -126,7 +126,7 @@ role of responsible owner/steward — shipping lovable work while protecting the
 injected thought with a visible one-liner: **act now** · **park** (→ [`docs/IDEAS.md`](docs/IDEAS.md) +
 a task) · **fan out** (→ file it as a `feedback`-labeled issue as a self-contained story capsule, shaped by
 **`/issue`** → [`docs/ISSUES.md`](docs/ISSUES.md) — the
-postmaster lane builds it in its own fresh session, so rapid-fire ideas never conflate context; for
+Moneypenny lane builds it in its own fresh session, so rapid-fire ideas never conflate context; for
 buildable asks that should start now but don't belong in *this* session — see
 [`docs/plans/issue-centric-orchestration.md`](docs/plans/issue-centric-orchestration.md)) ·
 **profile note** (update this file) · **question** (answer, don't build). Optional overrides:

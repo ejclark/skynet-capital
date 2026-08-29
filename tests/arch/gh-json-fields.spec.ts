@@ -98,7 +98,7 @@ describe("gh --json fields", () => {
 /**
  * THE BUCKET RULE (2026-08-26). `gh <thing> list --json` and `gh <thing> view --json` do not hit
  * REST — they compile to GraphQL, whose 10,000/hr ceiling is scored by query COST, not call count,
- * and which the GitHub MCP also spends. The postmaster rides EVERY push to main, so a hundred-issue
+ * and which the GitHub MCP also spends. Moneypenny rides EVERY push to main, so a hundred-issue
  * nested query there is the largest single draw in the repo. On 2026-08-26 it exhausted the bucket:
  * `route` began dying on "API rate limit already exceeded for user ID 3472134" before it could
  * dispatch the research or feedback jobs, and the tick driving the whole lane stopped — visible
@@ -118,7 +118,7 @@ describe("gh --json fields", () => {
  */
 const GH_JSON_CALLS = /"(?:issue|pr)",\s*"(?:list|view)"/g;
 
-describe("the GraphQL bucket the postmaster rides on", () => {
+describe("the GraphQL bucket Moneypenny rides on", () => {
   it("keeps only the two queries whose field has no REST equivalent", () => {
     const source = codeOnly(readFileSync("scripts/moneypenny.mjs", "utf8"));
 

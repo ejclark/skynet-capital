@@ -35,7 +35,7 @@ import { jobLog } from "./moneypenny-repair-logs.mjs";
 /** This workflow's own `name:`. Guard 1 — never treat this lane's own failure as work for itself. */
 export const REPAIR_WORKFLOW = "Moneypenny Repair";
 /**
- * `ci-failure` used to be declared right here, a SECOND label registry beside the postmaster's —
+ * `ci-failure` used to be declared right here, a SECOND label registry beside the router's —
  * the exact split #500 is about. One vocabulary now (scripts/moneypenny.mjs `LABELS`); this stays
  * exported under its old name so existing call sites and specs keep working.
  */
@@ -127,7 +127,7 @@ export function routeFailure(ctx, deps = {}) {
 
 // ── the impure half ───────────────────────────────────────────────────────────
 
-/** Loud on failure, same doctrine as postmaster's gatherDeps: unreadable ≠ empty. */
+/** Loud on failure, same doctrine as the router's gatherDeps: unreadable ≠ empty. */
 function json(label, args) {
   let out;
   try {

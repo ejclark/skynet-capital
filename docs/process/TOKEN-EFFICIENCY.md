@@ -148,7 +148,7 @@ entirely out of the startup index; subagent description budget warns at 15k toke
 4. **Deploy churn**: every docs-only research row ships a full dashboard deploy (the bots app got a
    diff-based preflight after the 08-26 restart storm; the dashboard has none).
 5. **Banked, don't re-litigate**: GraphQL-bucket burn → `/ship` REST; empty Routine firings (~130)
-   → event-driven postmaster; the $0.88 tool-less session → `--allowedTools`; metered-spend
+   → event-driven Moneypenny; the $0.88 tool-less session → `--allowedTools`; metered-spend
    self-escalation → `envelope.json` on feedback-coach limits; Haiku-on-flat-rate false economy →
    always-Opus on the feedback lane.
 

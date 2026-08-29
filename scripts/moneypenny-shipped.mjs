@@ -12,7 +12,7 @@ import { FOOTER } from "./moneypenny-labels.mjs";
  * GITHUB_TOKEN-actor suppression class this file's header documents twice already, and the standing
  * doctrine from it is: never depend on an event firing.
  *
- * So this does not depend on one. Every push to main is the postmaster's tick, so the sweep can
+ * So this does not depend on one. Every push to main is Moneypenny's tick, so the sweep can
  * simply look at which labelled issues have a merged PR and are no longer open, and close them
  * itself. Pure: the caller supplies the joined lists — originally `feedback` only; `event-research`
  * joined 2026-08-28 once the same silent-miss class turned up there too (#510/#706/#707/#720).
@@ -24,7 +24,7 @@ export function routeShipped(deps = {}) {
     issueNumber: f.number,
     title: f.title,
     pr: f.pr,
-    body: `🚀 **Shipped** — this landed in #${f.pr} and is live.\n\nClosing the loop explicitly: GitHub's own \`Closes #\` link does not fire reliably for PRs a bot both opens and merges (it silently missed #447 and #449), so the postmaster closes these itself rather than depending on an event.\n\n${FOOTER}`,
+    body: `🚀 **Shipped** — this landed in #${f.pr} and is live.\n\nClosing the loop explicitly: GitHub's own \`Closes #\` link does not fire reliably for PRs a bot both opens and merges (it silently missed #447 and #449), so Moneypenny closes these itself rather than depending on an event.\n\n${FOOTER}`,
   }));
 }
 

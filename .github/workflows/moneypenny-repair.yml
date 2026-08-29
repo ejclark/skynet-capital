@@ -28,13 +28,13 @@ name: Moneypenny Repair
 # The triage job's `if:` also screens out healthy runs before a runner starts; the router's copies
 # of the guards are the specced ones, and the job condition is an optimisation, not the contract.
 #
-# A SECOND ENTRY POINT (#909, folding postmaster's conflict detection into this same dispatcher —
+# A SECOND ENTRY POINT (#909, folding the event router's conflict detection into this same dispatcher —
 # Eric, 2026-08-29: "keep chipping away at postmaster and ci-medic responsibilities to fold them
-# into Moneypenny's [mandate] for her to manage"). `workflow_dispatch` below lets postmaster's audit
+# into Moneypenny's [mandate] for her to manage"). `workflow_dispatch` below lets the router's audit
 # step (`scripts/moneypenny.mjs`'s `flag-conflict` intent) hand this lane a PR number instead of a
 # failed run — the `repair` job below already IS a generic "dispatch a Claude session against a
 # named target" job, so a conflicted PR reuses it rather than earning a second workflow file. Its
-# own memory (postmaster's `conflict-flagged` label) is the dedupe; this lane adds none of its own
+# own memory (the router's `conflict-flagged` label) is the dedupe; this lane adds none of its own
 # for that path, deliberately — one label owner, not two.
 
 on:

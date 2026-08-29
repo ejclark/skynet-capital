@@ -24,7 +24,7 @@ export function routeSweep(deps) {
  * Which due events actually get researched this run. Pure, and the reason the event lane can ride
  * EVERY push without double-working: the research session's branch name is mandated as
  * `research/<event-id>`, so an event whose research PR is still open (merged PRs leave the list)
- * is filtered out here. Concurrency serializes postmaster runs, so each run sees the last one's
+ * is filtered out here. Concurrency serializes Moneypenny's runs, so each run sees the last one's
  * open PRs — the pair is the dedupe.
  */
 export function dueForResearch(dueEvents = [], openPrHeads = []) {
@@ -38,7 +38,7 @@ function eventIssueBody(e) {
     "",
     "Run the `never-assessed` mode of [`docs/process/EVENT-RESEARCH.md`](../blob/main/docs/process/EVENT-RESEARCH.md):",
     `produce \`${e.ledger}\` from its TEMPLATE (initial research + stance + kill switches + first`,
-    "ledger row), and ship it via `/ship`. The postmaster's push-driven sweep takes the pulse",
+    "ledger row), and ship it via `/ship`. Moneypenny's push-driven sweep takes the pulse",
     "checks from there.",
     "",
     FOOTER,
