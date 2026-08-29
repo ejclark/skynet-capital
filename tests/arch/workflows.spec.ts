@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { lintWorkflow } from "../../scripts/workflow-lint.mjs";
 
 // The workflow structure gate. Provenance: on 2026-08-22 an edit left `build-feedback:` defined
 // twice in postmaster.yml. Loose YAML loaders keep the last duplicate silently — the local check
@@ -107,6 +108,53 @@ describe("workflow structure gate", () => {
 
     expect(code).toBe(1);
     expect(stderr).toContain("needs `routte`");
+  });
+});
+
+// Rule 6, added 2026-08-29 (#894, following #889/#890 — a same-day, three-PR pipeline patch chain).
+// `arm-auto-merge` ran `node scripts/envelope-scan.mjs`, which imports the `typescript`
+// devDependency transitively, with no `npm ci` step ahead of it in the job — the script crashed
+// before printing anything, and the JSON parse downstream failed the job outright instead of
+// correctly reporting "this diff is protected, skip." This is the class of bug workflow-lint exists
+// to catch mechanically, since a workflow file cannot be run to find out before it merges.
+describe("workflow lint — missing dependency install before a repo script", () => {
+  const MISSING_INSTALL = `name: Sample
+on:
+  push:
+    branches: [main]
+jobs:
+  arm-auto-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: node scripts/needs-deps.mjs
+`;
+
+  const WITH_INSTALL = MISSING_INSTALL.replace(
+    "      - run: node scripts/needs-deps.mjs\n",
+    "      - run: npm ci\n      - run: node scripts/needs-deps.mjs\n",
+  );
+
+  const NO_DEPS_SCRIPT = MISSING_INSTALL.replace("scripts/needs-deps.mjs", "scripts/no-deps.mjs");
+
+  it("fails a job that runs a deps-needing script with no earlier npm ci — the #890 shape", () => {
+    const problems = lintWorkflow("sample.yml", MISSING_INSTALL, [], () => true);
+
+    expect(problems.some((p) => p.includes("node_modules") && p.includes("see #890"))).toBe(true);
+  });
+
+  it("passes once npm ci runs earlier in the same job", () => {
+    expect(lintWorkflow("sample.yml", WITH_INSTALL, [], () => true)).toEqual([]);
+  });
+
+  it("passes a script whose import graph needs nothing installed", () => {
+    expect(lintWorkflow("sample.yml", NO_DEPS_SCRIPT, [], () => false)).toEqual([]);
+  });
+
+  it("holds for the real workflows in this repo (real script import graphs)", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/workflow-lint.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
+    ).not.toThrow();
   });
 });
 
