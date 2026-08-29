@@ -39,10 +39,10 @@
 // moneypenny-model-tier.mjs (the feedback claim's supporting pieces), moneypenny-labels.mjs (the
 // shared label/footer vocabulary) and moneypenny-gh.mjs (the `gh` shell wrapper). `claimHandoff`
 // and `releaseClaim` stay HERE, not in the lease file, because
-// tests/arch/lease-namespace.spec.ts pins their literal source text (the `refs/tags` ref template,
-// the `["tags", "heads"]` fallback loop) as a static stand-in for a 2026-08-22 outage a live `gh`
-// call can only fail on a runner — moving them would make that check pass on empty text instead of
-// the real lease. Every export below keeps its original name and signature; anything that moved
+// tests/arch/lease-namespace.spec.ts pins their literal source text (the `refs/tags` ref template)
+// as a static stand-in for a 2026-08-22 outage a live `gh` call can only fail on a runner — moving
+// them would make that check pass on empty text instead of the real lease. Every export below keeps
+// its original name and signature; anything that moved
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { answered, audit, gatherAuditDeps } from "./moneypenny-audit.mjs";
@@ -139,9 +139,6 @@ function routeRelease(ctx) {
  * not claim anything from that merge onward: four retriggers of #475, no lease ever written.
  * A tag ref accepts a tag object, so the timestamp survives and the create is legal.
  *
- * Leases written under `heads/` before the move are still read and still expire, so nothing that
- * was holding an issue silently loses its lock.
- *
  * @returns {{ claimed: boolean, reason: string }}
  */
 export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
@@ -150,10 +147,10 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
     try {
       return { ns, ...JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/${ns}/${ref}`])) };
     } catch {
-      return null; // 404 — unclaimed in this namespace
+      return null; // 404 — unclaimed
     }
   };
-  const existing = readRef("tags") ?? readRef("heads");
+  const existing = readRef("tags");
 
   if (existing) {
     const age = nowMs - Date.parse(claimAgeOf(existing.object.sha));
@@ -196,18 +193,13 @@ export function claimHandoff(slug, sha, nowMs, staleAfterMs = CLAIM_TTL_MS) {
 
 /** Release a lease once its work is no longer being built. */
 export function releaseClaim(slug) {
-  // Both namespaces: `tags/` is where leases live now, `heads/` is where the pre-2026-08-22 ones
-  // still sit. Releasing one that was never taken is a 404 and a no-op, which is the desired shape.
-  let released = false;
-  for (const ns of ["tags", "heads"]) {
-    try {
-      sh("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/${ns}/claim/${slug}`]);
-      released = true;
-    } catch {
-      /* not held in this namespace */
-    }
+  // Releasing a lease that was never taken is a 404 and a no-op, which is the desired shape.
+  try {
+    sh("gh", ["api", "-X", "DELETE", `repos/{owner}/{repo}/git/refs/tags/claim/${slug}`]);
+    return true;
+  } catch {
+    return false;
   }
-  return released;
 }
 
 /**
