@@ -3,9 +3,9 @@
 // slice 3) joined 2026-08-29: a plan issue whose ready-flip comment never got claimed or built is
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
-import { sh } from "./postmaster-gh.mjs";
-import { FOOTER, LABELS } from "./postmaster-labels.mjs";
-import { hasPlanLabel, isReadySignal } from "./postmaster-plan-claim.mjs";
+import { sh } from "./moneypenny-gh.mjs";
+import { FOOTER, LABELS } from "./moneypenny-labels.mjs";
+import { hasPlanLabel, isReadySignal } from "./moneypenny-plan-claim.mjs";
 
 /**
  * Did this issue get an ANSWER? A linked PR (open or merged) is an answer; a closed issue is an

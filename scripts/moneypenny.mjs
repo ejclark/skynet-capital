@@ -32,36 +32,37 @@
 // no flip button, no handoff build job. Design handoffs are now `[handoff]` issues (docs/HANDOFFS.md)
 // built by comment-triggered sessions. The claim LEASE survives — the feedback lane runs on it.
 //
-// THE FILE SPLIT (2026-08-26, noExcessiveLinesPerFile). This router now dispatches to sibling
-// modules named for the lane they carry — postmaster-events.mjs (event-research), postmaster-
-// shipped.mjs (closing the last mile), postmaster-audit.mjs (the stall/silent-feedback audit),
-// postmaster-claim-lease.mjs + postmaster-model-tier.mjs (the feedback claim's supporting pieces),
-// postmaster-labels.mjs (the shared label/footer vocabulary) and postmaster-gh.mjs (the `gh` shell
-// wrapper). `claimHandoff` and `releaseClaim` stay HERE, not in the lease file, because
+// THE FILE SPLIT (2026-08-26, noExcessiveLinesPerFile; siblings renamed off `postmaster-*` #912).
+// This router now dispatches to sibling modules named for the lane they carry —
+// moneypenny-events.mjs (event-research), moneypenny-shipped.mjs (closing the last mile),
+// moneypenny-audit.mjs (the stall/silent-feedback audit), moneypenny-claim-lease.mjs +
+// moneypenny-model-tier.mjs (the feedback claim's supporting pieces), moneypenny-labels.mjs (the
+// shared label/footer vocabulary) and moneypenny-gh.mjs (the `gh` shell wrapper). `claimHandoff`
+// and `releaseClaim` stay HERE, not in the lease file, because
 // tests/arch/lease-namespace.spec.ts pins their literal source text (the `refs/tags` ref template,
 // the `["tags", "heads"]` fallback loop) as a static stand-in for a 2026-08-22 outage a live `gh`
 // call can only fail on a runner — moving them would make that check pass on empty text instead of
 // the real lease. Every export below keeps its original name and signature; anything that moved
 // lives on as a re-export.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { answered, audit, gatherAuditDeps } from "./postmaster-audit.mjs";
+import { answered, audit, gatherAuditDeps } from "./moneypenny-audit.mjs";
 import {
   CLAIM_TTL_MS,
   claimAgeOf,
   claimFailureReason,
   claimStamp,
-} from "./postmaster-claim-lease.mjs";
-import { dueForResearch, routeSweep } from "./postmaster-events.mjs";
-import { ghRest, sh } from "./postmaster-gh.mjs";
-import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./postmaster-labels.mjs";
-import { modelTier } from "./postmaster-model-tier.mjs";
-import { planReadyIntent } from "./postmaster-plan-claim.mjs";
+} from "./moneypenny-claim-lease.mjs";
+import { dueForResearch, routeSweep } from "./moneypenny-events.mjs";
+import { ghRest, sh } from "./moneypenny-gh.mjs";
+import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./moneypenny-labels.mjs";
+import { modelTier } from "./moneypenny-model-tier.mjs";
+import { planReadyIntent } from "./moneypenny-plan-claim.mjs";
 import {
   mergedReference,
   prIsMerged,
   resolveShipped,
   routeShipped,
-} from "./postmaster-shipped.mjs";
+} from "./moneypenny-shipped.mjs";
 
 // Named re-exports, not `export … from` — this router keeps substantial logic of its own (the
 // noBarrelFile rule is right to ban a file that's pure re-exports; this one just isn't that).

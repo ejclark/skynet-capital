@@ -2,7 +2,7 @@
 // noExcessiveLinesPerFile split) so the label/comment vocabulary has one home shared by every lane
 // (the router itself, the event lane, the shipped-issue closer, the stall auditor) — and, since a
 // label is only real once GitHub has it, the code that provisions it too.
-import { sh } from "./postmaster-gh.mjs";
+import { sh } from "./moneypenny-gh.mjs";
 
 // ── labels this repo speaks ───────────────────────────────────────────────────
 //

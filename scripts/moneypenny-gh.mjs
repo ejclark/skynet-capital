@@ -24,7 +24,7 @@ export const sh = (cmd, args, opts = {}) =>
  *
  * CURL, NOT `fetch`. `gatherDeps` is synchronous, so a `fetch` would push async through its whole
  * call chain for no gain; and Node's global fetch ignores `HTTPS_PROXY`, which breaks local runs
- * behind an agent proxy. `sh("curl", …)` is what `postmaster-labels.mjs` already uses.
+ * behind an agent proxy. `sh("curl", …)` is what `moneypenny-labels.mjs` already uses.
  *
  * `--fail` IS LOAD-BEARING. Without it curl exits 0 on a 404 and hands back an error body that
  * `JSON.parse` turns into an object with none of the fields the caller wanted — a silent empty

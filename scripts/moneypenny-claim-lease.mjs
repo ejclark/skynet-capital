@@ -9,7 +9,7 @@
 // pass on an empty string instead of the real lease, silently. This file holds everything the lease
 // calls that carries no such pin: the TTL, the age computation, the tag stamp, and the failure
 // classifier.
-import { sh } from "./postmaster-gh.mjs";
+import { sh } from "./moneypenny-gh.mjs";
 
 /**
  * ATOMIC CLAIM (Eric, 2026-08-17: "waiting for commits to a doc file — seems flimsy af"). He was

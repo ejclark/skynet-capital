@@ -272,7 +272,7 @@ jobs:
       # COLLABORATOR — the exact same check `claude.yml`'s `gate` job already uses for "is this
       # person a recognized repo member" (a stranger cannot say ready on someone else's public repo
       # and start a build). The `plan` label check and the ready-PATTERN match both happen inside
-      # `claimPlan` (scripts/postmaster-plan-claim.mjs) — pure, fixture-specced — so this `if:` only
+      # `claimPlan` (scripts/moneypenny-plan-claim.mjs) — pure, fixture-specced — so this `if:` only
       # carries the cheap, github-context-only filters, same division as the feedback gate.
       - name: Claim a plan issue, if the owner said ready
         id: plan
