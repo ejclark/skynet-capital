@@ -20,12 +20,20 @@ const ann: Participant = {
 
 /** Trading transport: account/positions/clock from a fixture, orders + contracts routed here. */
 function transport(
-  fixture: { cash: string; positions?: unknown },
+  fixture: { cash: string; positions?: unknown; optionsTradingLevel?: number },
   contracts: unknown[],
   orders: Array<{ path: string; body: unknown }>,
 ): AlpacaTradingTransport {
   const inner = new FixtureTradingTransport({
-    account: { id: "acct", cash: fixture.cash, portfolio_value: fixture.cash, status: "ACTIVE" },
+    account: {
+      id: "acct",
+      cash: fixture.cash,
+      portfolio_value: fixture.cash,
+      status: "ACTIVE",
+      ...(fixture.optionsTradingLevel !== undefined
+        ? { options_trading_level: fixture.optionsTradingLevel }
+        : {}),
+    },
     positions: fixture.positions ?? [],
   });
   return {
@@ -71,6 +79,7 @@ function makeService(options: {
   positions?: unknown;
   contracts?: unknown[];
   enabled?: boolean;
+  optionsTradingLevel?: number;
 }) {
   const orders: Array<{ path: string; body: unknown }> = [];
   const audited: OrderAuditRecord[] = [];
@@ -78,6 +87,9 @@ function makeService(options: {
     {
       cash: options.cash ?? "100000",
       ...(options.positions ? { positions: options.positions } : {}),
+      ...(options.optionsTradingLevel !== undefined
+        ? { optionsTradingLevel: options.optionsTradingLevel }
+        : {}),
     },
     options.contracts ?? [putContract],
     orders,
@@ -146,6 +158,21 @@ describe("option trade service — the gate", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.refusals.join(" ")).toContain("Cash-secured");
     expect(orders).toHaveLength(0);
+  });
+
+  it("refuses on a live re-check when the account's options level doesn't cover the play (#468 criterion 7)", async () => {
+    const { submit, orders } = makeService({ optionsTradingLevel: 0 });
+    const result = await submit(openRequest, "ann"); // code 201 needs level 1
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.refusals.join(" ")).toContain("needs level 1");
+    expect(orders).toHaveLength(0);
+  });
+
+  it("submits when the live account's level covers the play", async () => {
+    const { submit, orders } = makeService({ optionsTradingLevel: 1 });
+    const result = await submit(openRequest, "ann");
+    expect(result.ok).toBe(true);
+    expect(orders).toHaveLength(1);
   });
 
   it("submits a verified cash-secured put with the exchange's own symbol, day-only", async () => {
