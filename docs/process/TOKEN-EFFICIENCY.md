@@ -128,7 +128,7 @@ entirely out of the startup index; subagent description budget warns at 15k toke
 <details>
 <summary><b>Recurring lanes — ranked burners and their fixes</b></summary>
 
-1. **Event-research lane** (`postmaster.yml → build-events`): ~41% of commits over the audited
+1. **Event-research lane** (`moneypenny-events.yml → build-events`): ~41% of commits over the audited
    window; ~11–12 pulse checks/day owed by the 44-event calendar; 9 of ~30 recent pulse commits are
    "no change" rows, each a full session + PR + verify + deploy + re-scan. Fix: a deterministic
    material-change gate (adjacent event/date/price thresholds) before any session spawns — the

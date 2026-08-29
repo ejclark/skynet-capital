@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { lintWorkflow } from "../../scripts/workflow-lint.mjs";
 
 // The workflow structure gate. Provenance: on 2026-08-22 an edit left `build-feedback:` defined
-// twice in postmaster.yml. Loose YAML loaders keep the last duplicate silently — the local check
+// twice in moneypenny-events.yml (formerly postmaster.yml). Loose YAML loaders keep the last duplicate silently — the local check
 // passed — while GitHub rejects the file outright, producing a run with ZERO jobs and a red `main`
 // with the postmaster (feedback lane, event research, stall audit) dead until a human noticed.
 //

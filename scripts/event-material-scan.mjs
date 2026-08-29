@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Event material-scan — the deterministic gate between "a pulse is due" (event-scan.mjs --due) and
-// "spend a Claude research session on it" (.github/workflows/postmaster.yml build-events).
+// "spend a Claude research session on it" (.github/workflows/moneypenny-events.yml build-events).
 // docs/process/EVENT-RESEARCH.md documents the protocol; scripts/event-material-decide.mjs holds
 // the pure decision logic this CLI/fetch shell drives. Issue: #724.
 //

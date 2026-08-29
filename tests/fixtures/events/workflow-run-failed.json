@@ -2,7 +2,7 @@
   "repository": { "default_branch": "main" },
   "workflow_run": {
     "id": 32545818804,
-    "name": "Postmaster",
+    "name": "Moneypenny Events",
     "conclusion": "failure",
     "event": "issues",
     "head_branch": "main",

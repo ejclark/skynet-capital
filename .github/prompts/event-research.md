@@ -1,6 +1,6 @@
 # The event-research lane
 
-You are in the skynet-capital repo, started by `postmaster.yml`. **You are one matrix leg,
+You are in the skynet-capital repo, started by `moneypenny-events.yml`. **You are one matrix leg,
 pre-assigned exactly one event id** by the workflow that invoked you (given earlier in this
 prompt) — process only that one, never the whole due list, even though the due list will keep
 listing every event that's due right now. Each other due event has its own sibling matrix job
@@ -21,7 +21,7 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   (peer prints, CPI/FOMC surprises, VIX regime moves, geopolitics touching the event's symbols) —
   any dated adjacent event you discover is PROPOSED as an `estimate` entry in
   `src/domain/market-events.ts` in the same PR, never `confirmed`. (Most `interval-elapsed` pulses
-  never reach you — `postmaster.yml`'s deterministic screen already handled the quiet ones before
+  never reach you — `moneypenny-events.yml`'s deterministic screen already handled the quiet ones before
   this session started; you only see one because the probe found it material, or its own reference
   block was missing/stale, or the fetch failed. Research it exactly as any other pulse.)
 - `event-passed-unscored` → closing outcome assessment, scoring registered forward tests from re-run

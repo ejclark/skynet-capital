@@ -5,12 +5,12 @@ The foresight loop: an event lands in the calendar (`src/domain/market-events.ts
 the market react* → periodic reassessments hunt new information and adjust the stance — at a
 frequency that ramps with impact × time-to-event (`assessment-cadence.json`) — until the
 event passes and gets one closing outcome assessment. `scripts/event-scan.mjs` decides *when*;
-this doc defines *what* each assessment does. The postmaster's event-research lane
-(`.github/workflows/postmaster.yml`, ticked by every merge to main — registered in docs/ROUTINES.md)
+this doc defines *what* each assessment does. The event router's event-research lane
+(`.github/workflows/moneypenny-events.yml`, ticked by every merge to main — registered in docs/ROUTINES.md)
 executes it; a human session following this doc by hand is equally valid.
 
 **Adding an event is the trigger.** Ship it as an ordinary PR; the scanner's `never-assessed`
-rule makes it due on the next cycle (and `.github/workflows/postmaster.yml` opens an
+rule makes it due on the next cycle (and `.github/workflows/moneypenny-events.yml` opens an
 `[event-research] <id>` issue within seconds of the merge). No other ceremony.
 
 ## The three assessment modes (keyed to the scanner's `reason` field)
@@ -78,7 +78,7 @@ list). Once `## Outcome` exists the scanner goes silent on the event forever.
 decides **whether it needs a Claude session at all**, for `interval-elapsed` pulses only (a
 `never-assessed` initial research and an `event-passed-unscored` close-out are never screened —
 both always dispatch, same as before this existed). It runs between the two in
-`.github/workflows/postmaster.yml`'s `route` job: a screen writes its own ledger row and commits
+`.github/workflows/moneypenny-events.yml`'s `route` job: a screen writes its own ledger row and commits
 it directly, without spending a session; anything else falls through to the full pulse-check
 protocol above, unchanged.
 

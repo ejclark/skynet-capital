@@ -77,7 +77,7 @@ in code — only as a host secret, exactly like the Alpaca keys.
 
 ## What the lane will build
 
-A `feedback`-labelled issue is picked up by `postmaster.yml` and built end to end in a fresh Claude
+A `feedback`-labelled issue is picked up by `moneypenny-events.yml` and built end to end in a fresh Claude
 session. **The default is build.** The triage rules live in `.github/prompts/feedback-build.md`;
 what the lane may not touch lives in [`envelope.json`](../envelope.json) and is enforced as a red CI
 check (`scripts/envelope-scan.mjs`) on every `feedback/*` branch — not as prompt text a session can

@@ -1,7 +1,7 @@
 name: Claude
 
 # THE HUMAN-DIRECTED LANE. Every other AI trigger in this repo is deterministic and structured —
-# a label, a push, a schedule — routed through scripts/moneypenny.mjs (.github/workflows/postmaster.yml).
+# a label, a push, a schedule — routed through scripts/moneypenny.mjs (.github/workflows/moneypenny-events.yml).
 # This workflow is the other half: a repo member commenting on an issue, issue comment thread, or
 # PR review thread starts (or STEERS — see below) a real Claude Code session in seconds, for
 # whatever the structured lanes don't cover — a question, a review request, an ad hoc fix.
@@ -29,9 +29,9 @@ name: Claude
 # change, this workflow correctly DETECTED an @claude mention but the session it started could
 # not act on it: no tools were granted (claude-code-action grants only GitHub's own tools by
 # default — the same silent-no-op trap from docs/LESSONS.md 2026-08-17 that also bit
-# postmaster.yml's first build job), and it opened PRs under bare GITHUB_TOKEN, whose events are
+# moneypenny-events.yml's first build job), and it opened PRs under bare GITHUB_TOKEN, whose events are
 # suppressed (no `pull_request.opened`, so `verify` never runs and the PR is permanently stuck —
-# same lesson, second mouth). Both are fixed below, matching postmaster.yml's build jobs exactly.
+# same lesson, second mouth). Both are fixed below, matching moneypenny-events.yml's build jobs exactly.
 #
 # ═══ WHY AUTHORIZATION IS A SEPARATE CHECK FROM DETECTION ═══
 #
@@ -68,7 +68,7 @@ name: Claude
 # the session is not the same as verifying who wrote everything the session subsequently reads
 # (an adversarial-review finding, 2026-08-19, confirmed on verification) — so the prompt itself
 # draws that line explicitly: only the triggering comment's author is authorized; the rest of the
-# thread is data to evaluate, never instructions to obey. Same doctrine as postmaster.yml's
+# thread is data to evaluate, never instructions to obey. Same doctrine as moneypenny-events.yml's
 # build-feedback job for member-submitted issue bodies — never relax this to "trust the thread."
 #
 # INERT UNTIL ERIC ARMS IT. This needs two things only he can do (the irreversible class —
@@ -153,7 +153,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Same App-token pattern as postmaster.yml's build jobs (docs/HANDOFFS.md) — a GITHUB_TOKEN-
+      # Same App-token pattern as moneypenny-events.yml's build jobs (docs/HANDOFFS.md) — a GITHUB_TOKEN-
       # authored PR never emits pull_request.opened, so the required `verify` check never runs and
       # the PR sits permanently unmergeable (docs/LESSONS.md 2026-08-17). Minted fresh in this job,
       # never passed between jobs — the action revokes its token at job end regardless. No fallback

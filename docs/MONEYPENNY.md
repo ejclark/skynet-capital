@@ -81,7 +81,7 @@ ran." Concretely:
 
 Everything above changes what gets *written*. It does not change the account the App posts *as* —
 today that's `claude[bot]`, minted per job via `actions/create-github-app-token` in
-`postmaster.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`. Renaming that account-level identity
+`moneypenny-events.yml`/`claude.yml`/`pipeline.yml`/`moneypenny-repair.yml`. Renaming that account-level identity
 lives in GitHub App settings (the App's registered display name under Eric's GitHub org), which no
 amount of repo code can reach — governance of credentials and App identity is his call, per
 CLAUDE.md's hard boundaries.

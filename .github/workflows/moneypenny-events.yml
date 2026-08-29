@@ -1,4 +1,4 @@
-name: Postmaster
+name: Moneypenny Events
 
 # ONE ROUTER FOR EVERY ISSUE-DRIVEN AUTOMATION (docs/HANDOFFS.md), replacing four workflows that
 # had grown to 482 lines carrying 202 lines of untestable bash. The logic lives in
@@ -247,7 +247,7 @@ jobs:
         if: github.event_name == 'push' && steps.screen.outputs.due != '' && steps.screen.outputs.due != '[]'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run postmaster.yml --ref "$GITHUB_REF_NAME" -f command=scan
+        run: gh workflow run moneypenny-events.yml --ref "$GITHUB_REF_NAME" -f command=scan
 
       # THE FEEDBACK LANE'S GATE (2026-08-19, Eric: "I expected the issues to get received and
       # assigned to a claude session"). A `feedback` label was applied — applying labels requires

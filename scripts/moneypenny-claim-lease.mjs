@@ -26,7 +26,7 @@ import { sh } from "./moneypenny-gh.mjs";
  * this whole exercise exists to remove.
  *
  * (Named for its handoff-lane origin; since 2026-08-21 its only production caller is the feedback
- * lane — `claim/feedback-<n>` in postmaster.yml. The name stays to keep the yml call sites stable.)
+ * lane — `claim/feedback-<n>` in moneypenny-events.yml (formerly postmaster.yml). The name stays to keep the yml call sites stable.)
  */
 export const CLAIM_TTL_MS = 2 * 60 * 60 * 1000; // 2h — well past any honest build
 

@@ -27,7 +27,7 @@ describe("moneypenny repair — routing a failed run", () => {
 
     expect(rest).toEqual([]);
     expect(intent?.type).toBe("open-issue");
-    expect(intent?.title).toBe("[ci] Postmaster — build feedback issue");
+    expect(intent?.title).toBe("[ci] Moneypenny Events — build feedback issue");
     expect(intent?.body).toContain("Run set -euo pipefail");
   });
 
@@ -47,7 +47,7 @@ describe("moneypenny repair — routing a failed run", () => {
   });
 
   it("files for a run that failed with no jobs — the workflow file itself was rejected", () => {
-    // 2026-08-22: a duplicate job key made postmaster.yml unparseable. GitHub names the run after
+    // 2026-08-22: a duplicate job key made moneypenny-events.yml (then postmaster.yml) unparseable. GitHub names the run after
     // the file path and creates zero jobs, so "no failing job" is the loudest failure there is.
     const [intent] = dryRun("workflow-run-unparseable.json");
 

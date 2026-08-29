@@ -11,7 +11,7 @@ name: Moneypenny Repair
 # stayed silent. "We should have a job kicked off that automatically resolves these types of
 # failures."
 #
-# This file is a trigger shim, exactly like postmaster.yml (the event router — #912's own plan
+# This file is a trigger shim, exactly like moneypenny-events.yml (the event router — #912's own plan
 # renames that one too, in a later slice): every decision lives in scripts/moneypenny-repair.mjs,
 # which is pure where it decides and specced against fixture payloads
 # (tests/scripts/moneypenny-repair.spec.ts). Logic in `run:` blocks is what caused the failure this
@@ -49,7 +49,7 @@ on:
   # own name or path — that is loop guard 1.
   workflow_run:
     workflows:
-      ["Postmaster", "Pipeline", "Autonomy ops", ".github/workflows/postmaster.yml",
+      ["Moneypenny Events", "Pipeline", "Autonomy ops", ".github/workflows/moneypenny-events.yml",
        ".github/workflows/pipeline.yml", ".github/workflows/autonomy-ops.yml"]
     types: [completed]
   # #909's conflict-repair entry point. `pr_number` alone, never a fixture-style event payload — a
@@ -118,7 +118,7 @@ jobs:
           fetch-depth: 0
 
       # The App identity, so the repair PR emits `pull_request.opened` and `verify` actually runs.
-      # Same reasoning as postmaster.yml's header — a PR with zero checks is worse than a red one.
+      # Same reasoning as moneypenny-events.yml's header — a PR with zero checks is worse than a red one.
       # No fallback tier (Eric, 2026-08-28 — the App is assumed reliable): unconfigured or
       # access-lost fails this job loudly instead of opening a repair PR under a weaker identity.
       - id: app-token

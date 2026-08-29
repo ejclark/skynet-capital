@@ -11,7 +11,7 @@
 // no clock. That split is what makes the decision fixture-drivable (tests/fixtures/events/plan-*),
 // same doctrine as the router's own `route()`.
 //
-// WHO MAY SAY READY is enforced by the WORKFLOW, not here (`postmaster.yml`'s `if:`, mirroring
+// WHO MAY SAY READY is enforced by the WORKFLOW, not here (`moneypenny-events.yml`'s `if:`, mirroring
 // `claude.yml`'s own `author_association` gate) — same reason `claimFeedback` never re-checks who
 // applied the label: GitHub's own permission model (only a member with triage/write can label an
 // issue or comment as OWNER/MEMBER/COLLABORATOR) IS the authorization, and re-deciding it in script

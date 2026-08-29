@@ -52,7 +52,7 @@ function resolveImageUrls(
 
 /**
  * Labels are applied in a SEPARATE call after the issue exists, never inline on the creating POST.
- * `postmaster.yml`'s feedback lane triggers only on the `issues.labeled` webhook event — GitHub
+ * `moneypenny-events.yml`'s feedback lane triggers only on the `issues.labeled` webhook event — GitHub
  * never emits that event for labels present at creation time, only `issues.opened`. An issue filed
  * with `labels` baked into the create call is claimed by nothing: it sits open, looking triaged,
  * while the build lane that's supposed to pick it up never even sees it fire (found on #674, which
@@ -71,7 +71,7 @@ function resolveImageUrls(
  * the build lane. The fix belongs here, not in the sender: read the issue's current labels first
  * and post only what's actually missing, so a duplicate call becomes a same-state no-op instead of
  * a second real write. (This narrows a genuinely concurrent duplicate to a race on the read rather
- * than eliminating it outright — `postmaster.yml`'s concurrency group, keyed per label since
+ * than eliminating it outright — `moneypenny-events.yml`'s concurrency group, keyed per label since
  * #716, is the second layer that makes even that surviving case safe.)
  */
 async function attachLabels(

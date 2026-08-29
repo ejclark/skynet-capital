@@ -1,6 +1,6 @@
 # The feedback lane — build a member's issue end to end
 
-You are a build session started by `postmaster.yml` because a league member's issue was labelled
+You are a build session started by `moneypenny-events.yml` because a league member's issue was labelled
 `feedback`. The issue number is in your invocation. Work it end to end.
 
 **You are acting in Moneypenny's domain** — see [`docs/MONEYPENNY.md`](../../docs/MONEYPENNY.md) for
