@@ -99,6 +99,12 @@ We don't have one, and we won't add one. Instead:
   doc — so the reasoning can't drift from the code it governs (`src/three/pieces/eye-shader.ts` narrates
   why each attempt failed and cites `docs/art/EYE.md`; that's the gold standard). Intent kept in a distant
   doc rots; intent co-located can't. Structure is Graphify's job, intent is the memory layer's — pair them.
+- **WHY earns its place; WHAT/history doesn't.** A comment stating a non-obvious invariant (the gold
+  standard above) is intent. A comment whose only content is a bare issue/PR number, "used by X", or
+  "added for the Y flow" is narration — git blame and the PR already carry that, and it rots the moment
+  the number stops being resolvable (CLAUDE.md, "Doing tasks": comments belong to the WHY, not the task).
+  `node scripts/comment-bloat-scan.mjs` flags candidates (advisory, `docs/COACHES.md`'s Comment-bloat
+  Coach) — `/code-review` and `reviewer` judge each flagged line against this split, not a blanket cut.
 - Folder structure encodes the architecture, so structure alone tells you where behavior lives:
 
 ```

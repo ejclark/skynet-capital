@@ -39,6 +39,9 @@ plainly whether it's ready.
    - Does it introduce or leave behind dead code, an unused export, or a duplicate of something that
      already exists elsewhere in the repo? Flag it; don't fix it — that's `mortician`/`ui-librarian`'s
      job via the fitness gates, and re-litigating it here duplicates their function.
+   - Any new comment that narrates history instead of stating a non-obvious WHY — a bare issue/PR
+     number, "used by X", "added for the Y flow" (docs/ENGINEERING.md's WHY-vs-narration split)? Flag
+     it for deletion; git blame and the PR already carry that history.
 4. **Judge scope discipline** per `CLAUDE.md`: does the diff do what the task required, or has it grown
    a refactor, an abstraction, or a "while I'm here" change the task didn't ask for? Flag scope creep
    even when the added code is good — a bug fix that also refactors an unrelated file is two changes

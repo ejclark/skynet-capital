@@ -18,6 +18,17 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### `comment-bloat-scan.mjs` can't yet tell WHY from narration, only "cites a ticket"
+
+Found while running the scanner's first real pass (docs/LESSONS.md, 2026-08-30 comment-bloat entry):
+most of the 195 flagged lines were legitimate JSDoc field docs with a harmless `(#N)` citation riding
+along, not narration worth deleting — the correct fix was almost always "strip the citation, keep the
+doc," never a blanket delete. A future drill (and any athlete recruited on the rule-of-three) needs
+that distinction built in — e.g. treat a citation embedded mid-sentence as probably load-bearing prose
+and a citation that's the *entire* justification ("// Collections (2026-08-26, #588): ...") as the
+real narration case — rather than routing every flagged line through the same judgment call by hand.
+_(src: Claude · while: comment-bloat DX audit, 2026-08-30)_
+
 ### `repair-watchlist-scan.mjs`'s path fallback can mask a real name-drift
 
 Found while renaming the Moneypenny-branded workflows (#968): the scanner treats a workflow as

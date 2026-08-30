@@ -37,7 +37,7 @@ export interface RowView {
 }
 
 /** Mirrors `fieldLadder` in standings-view.ts — same sort, same widths, same tone rule. No
- *  ordinal: the view stopped rendering one (#576), so there is no rank text to patch. */
+ *  ordinal: the view no longer renders one, so there is no rank text to patch. */
 export function rowViews(data: DashboardData, metric: LeaderMetric): RowView[] {
   const live = data.participants.filter((p) => !p.error);
   const ranked = [...live].sort((a, b) => metricValue(b, metric) - metricValue(a, metric));

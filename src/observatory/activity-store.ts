@@ -101,8 +101,8 @@ const ACTIVITY_WINDOWS: ReadonlyArray<{
   { key: "7d", label: "7 days", days: 7 },
   { key: "30d", label: "30 days", days: 30 },
   { key: "90d", label: "90 days", days: 90 },
-  // "All history", not "All": this chip used to sit beside the type filter's identical "All" and
-  // read as one ambiguous pair (Eric, PR #459) — each chip now says what it actually selects.
+  // "All history", not "All": this chip sits beside the type filter's identical "All" — naming it
+  // distinctly keeps the pair from reading as one ambiguous choice; each chip says what it selects.
   { key: "all", label: "All history" },
 ];
 
