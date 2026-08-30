@@ -1,4 +1,4 @@
-import { isRateLimited, sweepShipped } from "../../scripts/moneypenny.mjs";
+import { isRateLimited, sweepShipped } from "../../../scripts/moneypenny/index.mjs";
 
 /**
  * What Moneypenny does when the GraphQL budget runs out.

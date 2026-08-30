@@ -295,5 +295,5 @@ function main() {
 
 // Only run the CLI when this file is executed directly (node scripts/envelope-scan.mjs ...), never
 // when imported as an ES module (tests/arch/envelope.spec.ts imports classifyDiff directly) —
-// matches the established pattern in digest-scan.mjs, moneypenny-repair.mjs, comms-scan.mjs, etc.
+// matches the established pattern in digest-scan.mjs, moneypenny/repair.mjs, comms-scan.mjs, etc.
 if (import.meta.url === `file://${process.argv[1]}`) main();
