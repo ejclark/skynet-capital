@@ -40,6 +40,12 @@ and the numbers track that difference and nothing else.
   those items so the member does not have to know they matter.
 - **Structured comment labels remove ambiguity** (Conventional Comments): a `nitpick:` and an
   `issue:` read identically as prose and completely differently as decisions.
+- **Plain language wins even for expert readers, above the fold — jargon in parens, not bare**
+  (NN/g: plain language isn't "dumbing down," specialists read it faster too; when the audience is
+  mixed, lead with the plain term and gloss the jargon in parentheses). **Plain English is the
+  default even for a specialist audience, with unavoidable jargon explained inline** (GOV.UK content
+  design — the largest production deployment of this practice). → above the fold, a label or symbol
+  name never stands alone: `waiting on a decision (needs-eric)`, not a bare `needs-eric`.
 
 **The synthesis that makes it free:** `<details>` collapses for humans while staying fully present in
 the raw markdown an AI session reads. The fold costs the machine audience *nothing* and saves the
@@ -54,13 +60,17 @@ Copy-paste skeleton. Everything above the fold fits one phone screen; everything
 
 | | |
 |---|---|
-| **Type** | enhancement · needs-eric |
+| **Status** | proposed · waiting on a decision (needs-eric) |
 | **Surface** | `/feedback` |
 | **Size** | ~2 PRs |
 
 - Talking point — the change, in outcome terms (≤120 chars).
 - Talking point — why it matters / what is better after.
-- Talking point — what Eric must decide, or "nothing needed".
+
+> [!IMPORTANT]
+> **Needs from you** — present only when the `needs-eric` label applies; every other issue omits
+> this block entirely.
+> 1. The decision, as a closed question or a named choice — the one-clause why, trailing.
 
 <details><summary><strong>The brief</strong> — current state, criteria, constraints, forks</summary>
 
@@ -80,13 +90,26 @@ Rules that make it work, in priority order:
    below-the-fold sentence. The first line is what changes.
 2. **Talking points, not paragraphs.** 2–4 bullets, ≤120 chars each. If a bullet needs a comma-spliced
    second clause, it belongs below the fold.
-3. **Tabulate any repeated key→value data.** Type/surface/size, symbol→verdict, option→trade-off,
+3. **Tabulate any repeated key→value data.** Status/surface/size, symbol→verdict, option→trade-off,
    step→owner. A table is scanned; the same content as prose is skipped.
-4. **One fold, not five.** Nested or scattered `<details>` reads as a filing cabinet. One brief.
-5. **The picture is ideal wherever one exists** — see below.
-6. **Never hide a blocker below the fold.** `needs-eric`, an irreversible touch, or "this is blocked"
-   goes above it, always.
-7. **A multi-slice plan's Slicing sketch names which slice closes it.** #928 and #885 both shipped
+4. **Plain word first, jargon glossed in parens, never bare, above the fold.** A member reading
+   this repo's own labels has no reason to know what `needs-eric` means; `waiting on a decision
+   (needs-eric)` costs four words and loses nothing a script parses. This applies to the metadata
+   table and talking points only — everything inside the fold is written for Eric and a build
+   session and can use house vocabulary freely (NN/g + GOV.UK content design; see above).
+5. **One fold, not five.** Nested or scattered `<details>` reads as a filing cabinet. One brief.
+6. **The picture is ideal wherever one exists** — see below.
+7. **A `needs-eric` decision lives in exactly one place: the `Needs from you` callout, above the
+   fold, never inside "Open questions."** That section (below the fold) is for `needs-info` asks to
+   a member or open build forks — questions nobody is blocked on. Mixing the two is how a decision
+   Eric alone can make ends up 3/4 of the way down an accordion, which is the defect this rule
+   exists to prevent (Eric, 2026-08-30: issues bury the action-required item behind a fold instead
+   of surfacing it below the context).
+8. **One decision, one line, no paragraph.** Each `Needs from you` item is numbered, phrased as a
+   closed question or a named choice ("A or B?", "approve deleting `X`?"), with the reason trailing
+   after an em dash — same anatomy as the procedure steps CLAUDE.md's secretary section already
+   uses (`<the do> — <the why>`). A reader should get the ask from the first four words alone.
+9. **A multi-slice plan's Slicing sketch names which slice closes it.** #928 and #885 both shipped
    their final slice without a `Closes #N`, so GitHub never auto-closed them and the issue sat open
    describing already-superseded state (found in the 2026-08-30 `/work-issues` pass). Mark the
    closing slice in the sketch (`"slice 3 closes this"`), and that slice's PR body carries `Closes
@@ -133,6 +156,7 @@ decayed to 4/126 PR bodies, every gated one held).
 | bullets | ≤120 chars each | matches `ship.sh checkbody` |
 | duplicate blocks | no paragraph repeated verbatim | #455 shipped its whole body twice |
 | mermaid | stable types only | a syntax error renders as the opening frame |
+| `needs-eric` decision | labelled `needs-eric` ⇒ a `Needs from you` callout above the fold, ≥1 numbered item | the label promises a decision; the callout is where it has to live |
 | raw URLs | SHA-pinned | branch URLs 404 at squash-merge |
 | title | imperative, ≤80 chars, not `Fix bug`-class | Google's rule, their anti-patterns |
 
@@ -140,6 +164,22 @@ decayed to 4/126 PR bodies, every gated one held).
 `issue-lint` before it is filed. **Who it never binds: members.** A human's raw note is never
 rejected for shape; the coach and the templates do that work on their behalf. Taxing the reporter is
 the one move Zimmermann's finding rules out.
+
+**Rule 4 (plain word first) is taste, not gated — sentence quality can't be machine-checked.** The
+`linguist` agent is the tool for it: before filing a `needs-eric` issue, or opening a PR carrying a
+`Needs from you` callout, it can review the above-the-fold text as a first-time reader would and flag
+anything that requires already knowing this repo to parse. Occasional, requested work — not a standing
+gate, and never run on a member's own words.
+
+**One cheap, free, always-on signal does run automatically, and it's an advisory note, not a
+gate: an approximate Flesch-Kincaid grade level on the above-the-fold text** (`scripts/
+readability.mjs`; Eric, 2026-08-30, on integrating NLP research into the process). It fires only
+past a generous floor (college-graduate level) specifically so this repo's necessarily precise
+vocabulary — EARS criteria, financial terms, a label name — doesn't trip it on an ordinary capsule.
+The research behind that caution: no readability formula is universally valid, one calibrated on
+general prose scores worse on technical text, which is exactly this repo's content. Treat a hit as
+"maybe worth a `linguist` pass," never as a defect — same non-blocking doctrine as every other note
+in this section.
 
 ## Comments — the surface that outnumbers issues 10:1
 

@@ -165,6 +165,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Long-end supply the day after the 10Y and the day before CPI (09-11) — a compound rate week.",
   },
   {
+    id: "treasury-buyback-10y20y-2026-09-10",
+    kind: "rates",
+    title: "Treasury liquidity-support buyback operation (10-20Y nominal, 1:40pm ET)",
+    date: "2026-09-10",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (Q3 2026 refunding, published 2026-08-05) — announce 09-09, operation 09-10 1:40pm ET, settle 09-11; tentative and its $2B cap predates press release sb0607, checked 2026-08-30",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Lands 40 minutes after the 30Y reopening closes on the SAME day (auction 1:00pm ET, buyback 1:40pm ET) and is the first long-end liquidity-support operation on or after sb0607's 09-09 effective date — so its cap should step from the scheduled $2B to the announced $4B/operation minimum, though Treasury has not yet published the updated schedule. Note the sector is 10-20Y, NOT the 20-30Y bucket the reopened bond sits in; the next 20-30Y operation is 2026-09-24. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep.",
+  },
+  {
     id: "treasury-20y-bond-2026-09-15",
     kind: "rates",
     title: "20-Year Treasury Bond auction (reopening)",
@@ -435,15 +448,15 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
   {
     id: "beige-book-2026-09-02",
     kind: "macro-print",
-    title: "Fed Beige Book (Sep 2026 edition)",
+    title: "Fed Beige Book (pre-FOMC edition)",
     date: "2026-09-02",
     status: "estimate",
     source:
-      "EST: federalreserve.gov/monetarypolicy/publications/beige-book-default.htm lists 2026-09-02 in its published eight-date schedule (no release time given; Fed cadence is 14:00 ET) — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-30",
+      "EST: federalreserve.gov Beige Book schedule lists 2026-09-02 (14:00 ET) as the next of the eight 2026 editions — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-30",
     impact: "medium",
     symbols: [],
     notes:
-      "The Fed's own qualitative read on regional price pressures, landing the day before ISM Services (9/3) and two before payrolls (9/4). Promoted from background to corridor input by Warsh's 2026-08-28 abolition of forward guidance: with the hawkish case pinned to inflation rather than growth, the districts' pricing anecdotes are one of the few pre-FOMC inputs the Fed publishes about itself. Discovered during the ism-services-2026-09-03 adjacency sweep.",
+      "The last qualitative labor/inflation read the FOMC publishes before the Sep-16 decision, landing two days ahead of BLS payrolls (9/4). Matters more than usual this cycle: Warsh's 2026-08-28 keynote characterised labor as 'quite stable' at full employment with the last payroll print at −23k, so district-level hiring anecdotes are one of the few things that can corroborate or contradict that framing before the blackout. Discovered during the jobs-2026-09-04 pulse-check adjacency sweep, independently rediscovered during the ism-services-2026-09-03 sweep (2026-08-30) — same event, one entry.",
   },
   {
     id: "jobs-2026-09-04",
@@ -458,15 +471,30 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The July −23k print moved Sep hike odds harder than any 2026 CPI; opens the pre-FOMC corridor.",
   },
   {
+    id: "fomc-blackout-start-2026-09-05",
+    kind: "macro-print",
+    title: "FOMC communications blackout begins (through 2026-09-17)",
+    date: "2026-09-05",
+    status: "confirmed",
+    source:
+      "FED: federalreserve.gov '2025-2027 FOMC Trading and External Communications Blackout Calendar' PDF, text layer parsed directly 2026-08-30 — its footnote states the policy verbatim ('begin at 12:00 a.m. Eastern Time the second Saturday before a meeting and end at 11:59 p.m. Eastern Time the day after a meeting', with a worked example for a Tuesday-start/Wednesday-end meeting), which applied to the confirmed Sep 15-16 meeting gives start 2026-09-05, end 2026-09-17",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Not a print — a gate on who may speak. Once it starts, no FOMC participant can move September hike odds, so the 09-10 PPI and 09-11 CPI prints (and the 09-09 10Y / 09-10 30Y auctions) land with no official interpretation behind them; 09-04 jobs day is the LAST legal Fed-speak day, since the gate falls at midnight ET entering Saturday 09-05. Ordinarily a minor technical; load-bearing this cycle because a single Fed speech (Warsh at Jackson Hole, 2026-08-28) moved Sep hike odds ~35% -> ~57% in one session, making 'when does Fed-speak stop' a real input. Discovered during the fomc-2026-09-16 pulse-check adjacency sweep and filed `estimate` because the Fed's own blackout-calendar PDF did not parse on that fetch; promoted to `confirmed` on 2026-08-30 when the initial-research session decompressed that PDF's text layer and read the rule from the primary source.",
+  },
+  {
     id: "aapl-iphone-18-launch-2026-09-09",
     kind: "product-launch",
-    title: "Apple September event — iPhone 18 line (rumored)",
+    title: "Apple September event — iPhone 18 line",
     date: "2026-09-09",
-    status: "estimate",
-    source: "NEWS: MacRumors/Forbes/9to5Mac Aug 2026 rumor — official announcement expected ~08-26",
+    status: "confirmed",
+    source:
+      'IR: apple.com/apple-events/ — "Watch a special Apple Event on 9/9 at 10 a.m. PT"; Apple sent press invitations 2026-08-26, primary fetched 2026-08-30',
     impact: "medium",
     symbols: ["AAPL"],
-    notes: "Rumored $100–200 price increases + a ~$2,000 foldable; FQ1 guide is the pricing event.",
+    notes:
+      "Rumored $100–200 price increases + a ~$2,000 foldable; FQ1 guide is the pricing event. Date flipped estimate -> confirmed on Apple's own events page during the aapl-2026-10-29-print pulse of 2026-08-30 — the prior NEWS: source was Gurman-via-MacRumors/9to5Mac/Forbes, which the invitation has now superseded; the product claims above remain rumor and are NOT confirmed by the date flip.",
   },
   {
     id: "ppi-2026-09-10",
@@ -774,6 +802,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "Georgia's instance of the AI data-center backlash the midterm-elections-2026-11-03 research named as the real political channel to this book's AI-infra sleeve — and unlike a campaign theme it has a regulator, a proceeding and a deadline. PSC staff put the potential shift at up to 11% per month on the average residential bill by 2028; Commissioner Hubbard cites ~$1B in fuel costs data centers pay nothing toward and ~$118M of firm gas transportation at issue in 2027. Context: the PSC certified 9,985 MW of new generation on 2025-12-19 (~80% expected to serve data centers) and base rates are frozen through 2028. Same shape as the tracked texas-puct-audit-2026-08-20 entry — a state regulator's dated proceeding as an AI-energy watch item. Discovered during the georgia-senate-runoff-2026-12-01 initial research. Initial research 2026-08-29 (docs/research/events/) found the dollar figures are a rate-CLASS reallocation, revenue-neutral to Georgia Power/Southern (base rates frozen through 2028; the freeze excludes pass-through fuel, the bucket in dispute) and far too small to reach hyperscaler capex — no earnings channel, a precedent channel. The structural catalyst is that 12-31 findings reach the current 3R-2D commission while remedies fall to the one seated January 2027, decided by the 2026-11-03 PSC elections in Districts 3 and 5.",
+  },
+  {
+    id: "ftc-v-amazon-antitrust-trial-2027-03-29",
+    kind: "sector",
+    title: "FTC v. Amazon monopolization bench trial begins (W.D. Wash.)",
+    date: "2027-03-29",
+    status: "estimate",
+    source:
+      "NEWS: MLex, 'US FTC-Amazon antitrust trial pushed back to March 2027' (article published 2025-12-15, fetched 2026-08-30) reports a scheduling order signed by US District Judge John Chun setting the bench trial for 2027-03-29, trial briefs 2027-03-22, pretrial conference 2027-03-15. The underlying order is a docket entry in FTC et al v. Amazon.com Inc, No. 2:23-cv-01495 (W.D. Wash.), seen only as a Justia docket listing and never fetched — court-ordered but press-relayed here, checked 2026-08-30",
+    impact: "medium",
+    symbols: ["AMZN"],
+    notes:
+      "AMZN's largest structural legal overhang, and the first dated checkpoint this calendar carries for it. The date has already reset twice (October 2026 -> 2027-02-09 -> 2027-03-29, the last slip attributed to the late-2025 government shutdown's effect on case schedules), which is itself why it stays `estimate`: a trial date this case has moved twice is a soft date, not a hard one. Tiered `medium` deliberately — the trial START is a process checkpoint, not a decision point (bench trial, no jury, any remedy years further out), so the repricing channel is a slow burn rather than a one-day gap. Discovered during the amzn-2026-10-29-print pulse check (adjacency sweep item 4, policy/legal); it sits ~5 months past that print and carries no read on it. Initial research 2026-08-30 (docs/research/events/ftc-v-amazon-antitrust-trial-2027-03-29.md) confirmed the `medium` tier structurally: Judge Chun BIFURCATED liability from remedies on 2024-09-30, so this proceeding decides liability only and can produce no relief — applying Google's own ~16-month liability->remedy clock puts an AMZN remedy in 2028-2029. It also measured the comparable: the US v. Google search trial OPENING (2023-09-12) moved GOOGL -1.15% against QQQ -1.11%, an excess of -0.04%. Promotion to `confirmed` is additionally blocked by a schema gap — the prefix table above defines no `confirmed` prefix for a federal court docket (third instance of this gap, after a state utility commission and a state election authority).",
   },
   {
     id: "pjm-capacity-auction-2027-05",

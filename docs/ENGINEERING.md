@@ -30,6 +30,15 @@ compiler is the first line of defense, so we keep it maximally paranoid.
   fields or call counts. This is what lets us refactor internals freely.
   - See `tests/personas/news-fader.spec.ts`: it feeds a market and asserts "sells the position",
     with no knowledge of *how* the decision is reached.
+- **Test doubles — the vocabulary that keeps this rule enforceable, not just aspirational**
+  (Fowler, "Mocks Aren't Stubs"): a **stub** answers a canned call, a **fake** is a working
+  shortcut implementation (fine, both classic style), a **mock** asserts on *how* it was called
+  (call count, call arguments) — that's the coupling this rule forbids. "Mock" the noun (a test
+  double) is fine; "mock" the verb, as in *asserting on the mock's call history*, is the anti-
+  pattern. `scripts/test-quality-scan.mjs` flags `toHaveBeenCalledTimes`/`toHaveBeenCalledWith`/
+  `.mock.calls`/`spyOn` in a new spec as an advisory note (never gated — a real system boundary
+  can be a legitimate exception a script can't judge, docs/ISSUES.md's same taste-is-never-gated
+  doctrine).
 - Spec structure mirrors behavior: `describe("when <situation>") → it("<expected behavior>")`.
 
 ### Requirements in EARS (the upstream half of BDD)
@@ -180,7 +189,11 @@ picture grammar: [`PICTURES.md`](PICTURES.md); structure machine-checked by `scr
    line: the honest skip *is* the proportional form, and it stays visible for audit.
 2. **Summary** — 1–3 bullets, ≤120 chars each, plain language: what ships. A changed route earns a
    "Review live after deploy: /route" bullet — the live page is Eric's fastest review format.
-3. **Everything else below the fold** (`<details>`): Why, EARS acceptance criteria, the file-level
+3. **`Needs from you` — only when a human decision gates this merge.** A `> [!IMPORTANT]` callout,
+   still above the fold, one numbered line per decision (closed question or named choice, reason
+   trailing). Omitted entirely on the ordinary PR; present ⇒ open as a draft, never auto-merge
+   (same rule as issues — [`ISSUES.md`](ISSUES.md) rule 6, Eric 2026-08-30).
+4. **Everything else below the fold** (`<details>`): Why, EARS acceptance criteria, the file-level
    walkthrough, trade-offs (link an ADR for hard-to-reverse calls), verification, risk/rollback,
    follow-ups. The weeds are one click away; the top stays a ten-second read.
 

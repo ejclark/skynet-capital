@@ -18,6 +18,30 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### `repair-watchlist-scan.mjs`'s path fallback can mask a real name-drift
+
+Found while renaming the Moneypenny-branded workflows (#968): the scanner treats a workflow as
+"in the watch list" if EITHER its name OR its file path appears in `moneypenny-repair.yml`'s
+`workflow_run.workflows` array. The path form exists only for the genuinely-unparseable case (a
+broken workflow file that GitHub names after its path instead) — but for a file that parses fine,
+listing its path is a coincidental safety net the scanner never meant to rely on, and it silently
+hid the fact that the *name* entry was stale during this exact rename. Not fixed here (this PR's
+own rename corrected the name strings directly, so nothing depends on the gap right now) — worth a
+narrower check that only accepts the path form as a fallback, never as an alternate to a fresh name.
+_(src: Claude · while: renaming Moneypenny Events/Repair for GitHub's own UI, 2026-08-30)_
+
+### `mcp__github__issue_read` silently sanitizes markup it displays back
+
+While retrofitting the `Needs from you` callout onto issues #915/#894/#666, the tool's own read-back
+showed `<details>`/`<summary>` and the `> [!IMPORTANT]` callout as if they'd been stripped — but a
+raw REST `GET` on the same issue proved they were stored correctly. The MCP tool sanitizes its own
+display output; it never touched GitHub's data. Cheap trap for a future session: don't judge an
+issue's fold/callout by this tool's read-back — verify with a raw REST call (or the web UI) when it
+matters, same discipline as the already-documented "GitHub MCP write tools strip `<details>`" trap
+for PR bodies (`docs/LESSONS.md`, 2026-08-25) — this is the read-side sibling of that bug, worth a
+`/retro` pass to confirm scope and pick a permanent fix.
+_(src: Claude · while: retrofitting the Needs-from-you callout onto #915/#894/#666, 2026-08-30)_
+
 ### The CI medic can be cancelled before it files
 
 The 2026-08-22 `gh --json` failure produced a medic run that was **cancelled** by the next push's
@@ -1046,3 +1070,15 @@ raw-line regex for `"[^"]*\$\{\{\s*(steps|needs|inputs)\.[^}]*\}\}[^"]*"`, so it
 without violating that file's stated design. Didn't build it in the same pass as the fix — one
 incident, one prevention.
 _(src: Claude · while: /retro on the "Moneypenny Events" UNLEARNED incidents, 2026-08-30)_
+
+### `EventKind` has no slot for a dated corporate-governance change
+Apple's CEO handover takes effect 2026-09-01 (Ternus in, Cook to executive chairman; apple.com
+newsroom 2026-04-20) — a dated, symbol-keyed checkpoint that makes the estimated 2026-10-29 AAPL
+print the first under a new CEO, i.e. exactly the kind of thing the calendar exists to carry. It
+could not be filed: `market-events-types.ts`'s `EventKind` union runs earnings / macro-print /
+product-launch / sector / rates / opex / geopolitical, and none of them honestly describes a
+leadership change. Carried as a ledger thread instead, which means the assessment cadence never
+sees it. Worth deciding whether a `corporate` kind (CEO/CFO transitions, spin-offs, index adds,
+lockup expiries, shareholder votes) earns its place, or whether these belong outside the calendar
+by design — a research PR is the wrong place to widen a shared type either way.
+_(src: Claude · while: the aapl-2026-10-29-print interval-elapsed pulse, 2026-08-30)_

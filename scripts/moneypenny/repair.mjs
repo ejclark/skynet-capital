@@ -33,7 +33,7 @@ import { LABELS } from "./index.mjs";
 import { jobLog } from "./repair-logs.mjs";
 
 /** This workflow's own `name:`. Guard 1 — never treat this lane's own failure as work for itself. */
-export const REPAIR_WORKFLOW = "Moneypenny Repair";
+export const REPAIR_WORKFLOW = "Moneypenny Repair (CI self-healing)";
 /**
  * `ci-failure` used to be declared right here, a SECOND label registry beside the router's —
  * the exact split #500 is about. One vocabulary now (scripts/moneypenny/index.mjs `LABELS`); this stays

@@ -2,7 +2,7 @@
   "repository": { "default_branch": "main" },
   "workflow_run": {
     "id": 32546000003,
-    "name": "Moneypenny Repair",
+    "name": "Moneypenny Repair (CI self-healing)",
     "conclusion": "failure",
     "event": "workflow_run",
     "head_branch": "main",

@@ -92,8 +92,20 @@ async function failedMainRuns() {
 }
 
 const ledger = readFileSync(LEDGER_FILE, "utf8");
-/** An incident is learned-from once the ledger names its sha on a `**SHA:**` line. */
-const isLearned = (sha) => new RegExp(`\\*\\*SHA:\\*\\*\\s*\`?${sha}`).test(ledger);
+/**
+ * An incident is learned-from once the ledger names its sha on a `**SHA:**` line (the fix commit)
+ * or a `**COVERS:**` line (other failing runs the same fix retroactively closes). A burst of
+ * pushes made during a bug's lifetime each gets its own failing run and its own sha, but they are
+ * ONE root cause — without `COVERS`, every duplicate stays UNLEARNED forever, because the ledger
+ * entry's own `SHA:` names the commit that fixed it, not any of the commits that failed under it
+ * (docs/LESSONS.md, 2026-08-30 — 10 "Moneypenny Events" runs re-flagged after their shared root
+ * cause was already diagnosed and fixed).
+ */
+const isLearned = (sha) => {
+  // Non-greedy through to the next bullet or blank line — a `COVERS:` list commonly wraps.
+  const fields = ledger.match(/\*\*(?:SHA|COVERS):\*\*[\s\S]*?(?=\n- \*\*|\n\n|$)/g) ?? [];
+  return fields.some((field) => new RegExp(`\\b${sha}\\b`).test(field));
+};
 
 const budget = JSON.parse(readFileSync(BUDGET_FILE, "utf8"));
 

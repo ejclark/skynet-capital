@@ -22,6 +22,12 @@
 import { readFileSync } from "node:fs";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
+import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
+
+/** Above this, an advisory note fires — chosen generous (college-graduate level) so the necessarily
+ *  precise vocabulary above the fold (a label, a symbol, a metadata value) doesn't trip it on
+ *  ordinary capsules. See scripts/readability.mjs's header for why this is a note, never a gate. */
+const READABILITY_GRADE_NOTE_FLOOR = 16;
 
 // Re-exported so callers of issue-lint.mjs keep the same public surface — the live-corpus audit
 // itself (AUTOMATION_TAG, `audit`, `auditReport`) now lives in issue-lint-audit.mjs.
@@ -185,11 +191,56 @@ function collectNotes(text, notes) {
   }
   const bullets = (top.match(/^\s*[-*] /gm) ?? []).length;
   if (bullets > 4) notes.push(`${bullets} talking points above the fold — 2–4 is the scan budget`);
+  const grade = fleschKincaidGrade(stripMarkdown(top));
+  if (grade !== null && grade >= READABILITY_GRADE_NOTE_FLOOR) {
+    notes.push(
+      `reads at an approximate grade ${grade} above the fold (Flesch-Kincaid) — a rough, cheap ` +
+        "signal, not a verdict; ignore it if the vocabulary is genuinely necessary, or run " +
+        "`linguist` for an actual reader-comprehension check",
+    );
+  }
   if (
     text.includes("<details") &&
     /needs-eric|blocked on|waiting on eric/i.test(text.slice(top.length))
   ) {
     notes.push("a blocker is mentioned only below the fold — blockers go above it, always");
+  }
+  if (!/^>\s*\[!IMPORTANT\]/m.test(top) && /needs from you/i.test(top)) {
+    // caught by checkNeedsFromYou's own problem when the label is present; this only covers the
+    // case of a lookalike callout that never used the `[!IMPORTANT]` GitHub-alert syntax.
+    notes.push(
+      '"Needs from you" text found but not as a `> [!IMPORTANT]` callout — the alert syntax is what makes it read pre-attentively',
+    );
+  }
+}
+
+/** `needs-eric` promises Eric a decision; this is where the decision is required to live —
+ *  above the fold, in its own callout, never folded in with build-only "Open questions"
+ *  (docs/ISSUES.md rule 6, Eric 2026-08-30: issues buried the action-required item behind a fold). */
+function checkNeedsFromYou(text, labels, problems, notes) {
+  const top = aboveFold(text);
+  const hasCallout = /^>\s*\[!IMPORTANT\]/m.test(top) && /needs from you/i.test(top);
+
+  if (Array.isArray(labels) && labels.includes("needs-eric") && !hasCallout) {
+    problems.push(
+      "labelled `needs-eric` but no `Needs from you` callout above the fold — the label promises a decision only Eric can make; put it where he'll see it (docs/ISSUES.md)",
+    );
+    return;
+  }
+  if (Array.isArray(labels) && !labels.includes("needs-eric") && hasCallout) {
+    notes.push(
+      "`Needs from you` callout present without the `needs-eric` label — add the label so digests and queues route the decision",
+    );
+  }
+  if (!hasCallout) return;
+
+  for (const line of top.split("\n")) {
+    const item = /^>\s*\d+\.\s+(.+)$/.exec(line);
+    if (item && item[1].length > MAX_BULLET) {
+      problems.push(
+        `"Needs from you" item over ${MAX_BULLET} chars — one line, why trailing after an em dash: "${item[1].slice(0, 60)}…"`,
+      );
+    }
   }
 }
 
@@ -239,6 +290,7 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   checkTitle(title, problems, notes);
   collectNotes(text, notes);
   if (Array.isArray(labels)) checkLabels(labels, notes);
+  checkNeedsFromYou(text, labels, problems, notes);
 
   return { problems, notes };
 }
