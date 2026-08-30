@@ -4,13 +4,13 @@ import { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
 import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
 import type { Participant } from "../../src/participants/participant.js";
-import { resolveDeskTrading } from "../../src/server/trade-service.js";
+import { resolveDeskTrading } from "../../src/server/account-identity-gate.js";
 
 /**
  * THE SHARE DESK'S EXECUTION SEAM — the review screen is a courtesy, this re-check is the gate:
  * it re-reads the live account and re-runs the SAME pure ticket rules before ever calling the
- * broker (desk-gate.ts's `openDesk`/`readReview`/`submitAndAudit` are the shared machinery this
- * and the options desk both stand on).
+ * broker (`account-identity-gate.ts`'s `verifyOwnAccount` and `desk-gate.ts`'s
+ * `readReview`/`submitAndAudit` are the shared machinery this and the options desk both stand on).
  */
 
 const ann: Participant = {

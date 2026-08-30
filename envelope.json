@@ -1,6 +1,6 @@
 {
   "$comment": "The autonomous-lane build envelope — the SINGLE source of truth for what an unattended Claude session may not change. Prose copies (CLAUDE.md, governor/SKILL.md, ship/SKILL.md, orient.md) cite this file rather than restating the list; restating it is how the wording drifted before (several copies dropped 'and hard to reverse' from CLAUDE.md's original). Enforced by scripts/envelope-scan.mjs via tests/arch/envelope.spec.ts.",
-  "$diffAwareComment": "Eric, 2026-08-27 — a protected file marked 'diffAware': true is exempt from the hold ONLY when the actual diff is provably safe, one of THREE ways (scripts/envelope-scan.mjs's classifyDiff/structurallySafe/behaviorVerified, cheapest first): (1) pure insertion — every hunk adds lines only, no existing line removed or changed, AND no added line introduces a new mutating broker call (.post(/.put(/.delete(/fetch(); (2) a safe token-level structural widening (e.g. a union type gaining a member — #716/#858); (3) behavior-verified (#852, broad slice, below) — the file's registered `invariantSuite` is untouched by the diff and passes right now. Any one path clearing it is enough; all three failing means it gates exactly as before. Marked diffAware only on the order-construction/execution cluster (calibrated against #679-#696's real diffs: 3 of 4 stayed correctly gated — one modified an existing function body, one added a brand-new cancelOrder network call; the fourth, a pure type-shape addition, would have shipped unattended). Auth, credentials, the invite gate, and workflow/deploy files are deliberately NOT diffAware — those stay hard-gated regardless of diff shape. Risk guards and playbooks (src/engine/guards.ts, src/bots/account-guard.ts, src/playbooks/**) left the protected list entirely on #928 — they carry no account-identity check, so they're ordinary open trading-feature surface, not this file's concern at all.",
+  "$diffAwareComment": "Eric, 2026-08-27 — a protected file marked 'diffAware': true is exempt from the hold ONLY when the actual diff is provably safe, one of THREE ways (scripts/envelope-scan.mjs's classifyDiff/structurallySafe/behaviorVerified, cheapest first): (1) pure insertion — every hunk adds lines only, no existing line removed or changed, AND no added line introduces a new mutating broker call (.post(/.put(/.delete(/fetch(); (2) a safe token-level structural widening (e.g. a union type gaining a member — #716/#858); (3) behavior-verified (#852, broad slice, below) — the file's registered `invariantSuite` is untouched by the diff and passes right now. Any one path clearing it is enough; all three failing means it gates exactly as before. Auth, credentials, the invite gate, and workflow/deploy files are deliberately NOT diffAware — those stay hard-gated regardless of diff shape. SUPERSEDED ON #928 SLICE 3 for the trading-desk cluster: rather than mark trade-service.ts/option-trade-service.ts diffAware and lean on a diff-shape or behavior-verified proxy, the sensitive capability itself (turning a raw credential factory into a usable client) was extracted into its own small file, account-identity-gate.ts, which is the only thing still hard-gated in that cluster — no diffAware needed because there is no non-sensitive diff shape left in it to exempt. Eric, 2026-08-30: 'dancing around protected areas is the wrong behavior... the solution is to remove the shit, not spray febreze to mask the smell.' Risk guards, playbooks, the Alpaca clients, and the credential-shape type (src/engine/guards.ts, src/bots/account-guard.ts, src/playbooks/**, src/alpaca/alpaca-trading-client.ts, src/alpaca/alpaca-options-client.ts, src/alpaca/credentials.ts) left the protected list entirely on #928 — none of them carry an account-identity check, so they're ordinary open trading-feature surface, not this file's concern at all.",
   "$behaviorEvidenceNote": "#852, settled (Eric, 2026-08-29: 'the intent is behavioral tests and CI quality gates are to prevent the need for human review/intervention' — the BROAD reading, not narrow). A diffAware rule may carry `invariantSuite`, a spec file path; scripts/envelope-scan.mjs's behaviorVerified() treats a passing run of that suite, PROVIDED THE SUITE ITSELF IS UNTOUCHED BY THE DIFF, as sufficient proof to report additiveSafe:true and skip the hold — same as a pure-insertion diff does today. A diff that edits its own proof gets no credit from it (the suite must be identical to what's on `main`, where `verify` already guarantees it was passing — nothing to re-check at the base commit itself). WHERE this exemption fires, the PR body must say so explicitly (which suite, how it's unaffected) — the honesty rule this repo holds everywhere else applies to its own safety mechanism. `invariantSuite` is opt-in per rule; a diffAware file with none behaves exactly as before (#850's PoC → tests/trading/option-ticket-invariants.property.spec.ts is the first one registered, on option-ticket.ts). The narrow slice (#884, merged) — citing a suite as evidence for a human, without changing the gate — is superseded by this: the whole point named was removing the need for the human, not speeding them up.",
   "lanes": ["feedback/", "research/", "design/"],
   "allowNewRuntimeDeps": false,
@@ -46,8 +46,8 @@
       "why": "auth — sessions, providers, the allowlist"
     },
     {
-      "pattern": "src/server/desk-gate.ts",
-      "why": "the trading-desk authorization gate"
+      "pattern": "src/server/account-identity-gate.ts",
+      "why": "the ONLY code allowed to turn a raw broker credential factory into a usable client (#928 slice 3) — trade-service.ts, option-trade-service.ts, and desk-gate.ts hold no raw factory and open up alongside this split"
     },
     {
       "pattern": "src/server/invite-form.ts",
@@ -56,30 +56,6 @@
     {
       "pattern": "src/server/feedback-coach-limits.ts",
       "why": "the coach's metered-API cost dials (model, round cap, token cap, throttle) — raising one multiplies a real per-token bill; the coach's PROMPT stays open, because improving the curator is the point"
-    },
-    {
-      "pattern": "src/alpaca/credentials.ts",
-      "why": "brokerage credentials"
-    },
-    {
-      "pattern": "src/alpaca/alpaca-trading-client.ts",
-      "why": "the brokerage client that can place orders",
-      "diffAware": true
-    },
-    {
-      "pattern": "src/alpaca/alpaca-options-client.ts",
-      "why": "the brokerage client that can place option orders",
-      "diffAware": true
-    },
-    {
-      "pattern": "src/server/trade-service.ts",
-      "why": "money-moving logic — order submission",
-      "diffAware": true
-    },
-    {
-      "pattern": "src/server/option-trade-service.ts",
-      "why": "money-moving logic — option order submission",
-      "diffAware": true
     },
     {
       "pattern": "fly*.toml",
@@ -102,5 +78,5 @@
       "why": "environment/credential files"
     }
   ],
-  "$openOnPurpose": "Deliberately NOT protected (Eric, 2026-08-22 — 'gate money-moving logic only'; sharpened 2026-08-29, #928 — 'the intent is to prevent people from changing things that explicitly belong to others... building features that everyone can use is community owned'): src/observatory/**, src/ui/**, src/three/**, everything that merely RENDERS trades, P/L, leaderboards or bot cards, AND, as of #928, src/engine/guards.ts, src/bots/account-guard.ts, src/trading/order-ticket.ts, src/trading/option-ticket.ts, and src/playbooks/** — risk sizing, discipline rules, bot-account coordination, and playbook authorship, none of which can reach another member's account or data. The honesty invariants (real tickers, truthful SIM/LIVE labels, paper-only) are a judgment stop stated in .github/prompts/feedback-build.md, not a path — no file list can enforce 'this flourish implies something false'. What stays protected in the trading cluster (desk-gate.ts, trade-service.ts, option-trade-service.ts, the Alpaca clients, credentials.ts) does so because it carries — or executes against — the actual cross-account identity check, not because it is trading-shaped; #928's remaining slices split that check out where it's currently entangled with open-able logic."
+  "$openOnPurpose": "Deliberately NOT protected (Eric, 2026-08-22 — 'gate money-moving logic only'; sharpened 2026-08-29–30, #928 — 'the intent is to prevent people from changing things that explicitly belong to others... building features that everyone can use is community owned'; 'the correct idea [is] to abstract sensitive logic out so it can be fenced'; 'dancing around protected areas is the wrong behavior... the solution is to remove the shit, not spray febreze to mask the smell'): src/observatory/**, src/ui/**, src/three/**, everything that merely RENDERS trades, P/L, leaderboards or bot cards, AND, as of #928, src/engine/guards.ts, src/bots/account-guard.ts, src/trading/order-ticket.ts, src/trading/option-ticket.ts, src/playbooks/**, src/server/desk-gate.ts, src/server/trade-service.ts, src/server/option-trade-service.ts, src/alpaca/alpaca-trading-client.ts, src/alpaca/alpaca-options-client.ts, and src/alpaca/credentials.ts — risk sizing, discipline rules, bot-account coordination, playbook authorship, and now the ENTIRE desk-execution seam and the broker clients, none of which can reach another member's account or data. The honesty invariants (real tickers, truthful SIM/LIVE labels, paper-only) are a judgment stop stated in .github/prompts/feedback-build.md, not a path — no file list can enforce 'this flourish implies something false'. What stays protected in the trading cluster is exactly one file, src/server/account-identity-gate.ts — the sensitive capability extracted whole (#928 slice 3) rather than left entangled and diff-shape-exempted; every other file in the cluster holds no raw broker-client factory at all and cannot reach one except by calling that gate."
 }

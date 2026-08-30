@@ -1,14 +1,16 @@
 import { AlpacaApiError } from "../alpaca/alpaca-api-error.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
-import type { TradingClientFactory } from "../observatory/dashboard-data.js";
 import type { Participant } from "../participants/participant.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 
 /**
  * THE SHARED DESK MACHINERY — what the share desk (`trade-service.ts`) and the options desk
  * (`option-trade-service.ts`) both stand on, in its own module so neither imports the other.
- * Everything here encodes one principle: the browser's review screen is a courtesy, the
- * service re-check is the gate — and both desks must run the SAME gate, or they drift.
+ * Open (#928): the one structural check that used to live here — "your own account only" — moved
+ * to `account-identity-gate.ts` (protected), since it's the part that can't be community-owned.
+ * Everything left is a re-check of something the browser already showed: the review screen is a
+ * courtesy, the service re-check is the gate, and both desks must run the SAME machinery here or
+ * they drift.
  */
 
 export type DeskSubmitResult =
@@ -27,33 +29,6 @@ export async function marketOpen(client: AlpacaTradingClient): Promise<boolean |
   } catch {
     return undefined;
   }
-}
-
-/**
- * The structural gate every desk order passes first, shares and options alike: trading is
- * switched on, the requester IS the target account, and the account exists — answered with
- * that account's live client.
- */
-export function openDesk(
-  deps: {
-    tradingEnabled: boolean;
-    findParticipant: (id: string) => Participant | undefined;
-    clientFactory: TradingClientFactory;
-  },
-  participantId: string,
-  requesterId: string | undefined,
-): { participant: Participant; client: AlpacaTradingClient } | { ok: false; refusals: string[] } {
-  if (!deps.tradingEnabled) {
-    return { ok: false, refusals: ["Trading from the desk is switched off for this deployment."] };
-  }
-  if (!requesterId || requesterId !== participantId) {
-    return { ok: false, refusals: ["You can only trade your own account."] };
-  }
-  const participant = deps.findParticipant(participantId);
-  if (!participant) {
-    return { ok: false, refusals: ["That account isn't on the board."] };
-  }
-  return { participant, client: deps.clientFactory(participant) };
 }
 
 /** Wrap the live re-read: an unreachable account is a refusal, never an exception. */

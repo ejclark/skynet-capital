@@ -2,8 +2,6 @@ import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { positionsFrom } from "../observatory/broker-positions.js";
-import type { TradingClientFactory } from "../observatory/dashboard-data.js";
-import type { Participant } from "../participants/participant.js";
 import {
   type OptionPlayCode,
   type OptionTicketContext,
@@ -11,26 +9,22 @@ import {
   previewOptionClose,
   previewOptionOrder,
 } from "../trading/option-ticket.js";
-import {
-  type DeskSubmitResult,
-  marketOpen,
-  openDesk,
-  readReview,
-  submitAndAudit,
-} from "./desk-gate.js";
+import type { VerifyAccess } from "./account-identity-gate.js";
+import { type DeskSubmitResult, marketOpen, readReview, submitAndAudit } from "./desk-gate.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 
 /**
  * THE OPTIONS EXECUTION SEAM — the desk's option orders reach the broker only through here,
- * exactly as `trade-service.ts` does for shares: the browser's review screen is a courtesy,
- * this re-check is the gate. A form post can claim any contract, any count, any account, so
- * this layer re-reads the live account and positions, re-fetches the CONTRACT itself (it must
+ * exactly as `trade-service.ts` does for shares. Open (#928), for the same reason: this file
+ * never holds a raw broker-client factory, only a `VerifyAccess` closure bound in
+ * `account-identity-gate.ts` (protected).
+ *
+ * This layer re-reads the live account and positions, re-fetches the CONTRACT itself (it must
  * exist and be tradable — a hand-edited strike dies here, not at the broker), re-runs the same
  * pure `previewOptionOrder`/`previewOptionClose` rules on fresh numbers, and only then submits.
- *
- * Inherits the share desk's structural refusals unchanged: your own (owner-linked) account
- * only, sign-in required, and the discipline rules from `option-ticket.ts` (cash-secured means
- * secured, covered means covered, no naked premium).
+ * The discipline rules from `option-ticket.ts` (cash-secured means secured, covered means
+ * covered, no naked premium) are the one non-tunable rule left in this file — "your own account
+ * only" lives one file over now.
  */
 
 export type DeskOptionRequest =
@@ -55,10 +49,8 @@ export type DeskOptionRequest =
 type DeskOptionResult = DeskSubmitResult;
 
 export interface OptionTradeServiceDeps {
-  readonly findParticipant: (id: string) => Participant | undefined;
-  readonly clientFactory: TradingClientFactory;
-  readonly optionsClientFactory: (participant: Participant) => AlpacaOptionsClient;
-  readonly tradingEnabled: boolean;
+  /** The bound identity gate — the only way this service can reach a broker client. */
+  readonly verifyAccess: VerifyAccess;
   /** Appends the per-order audit line (#466) after a successful broker submit. Optional so
    *  offline/test wiring can omit it. */
   readonly recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
@@ -148,16 +140,16 @@ async function reviewClose(
 
 export function createOptionTradeService(deps: OptionTradeServiceDeps): SubmitOptionTrade {
   return async (request, requesterId) => {
-    const desk = openDesk(deps, request.participantId, requesterId);
-    if ("refusals" in desk) {
-      return desk;
+    const access = deps.verifyAccess(request.participantId, requesterId);
+    if (!("participant" in access)) {
+      return access;
     }
-    const options = deps.optionsClientFactory(desk.participant);
+    const options = access.optionsClient;
 
     const attempt = await readReview(() =>
       request.kind === "open"
-        ? reviewOpen(request, desk.client, options)
-        : reviewClose(request, desk.client),
+        ? reviewOpen(request, access.client, options)
+        : reviewClose(request, access.client),
     );
     const outcome = "refusals" in attempt ? attempt : attempt.preview;
     if ("refusals" in outcome) {
@@ -175,7 +167,7 @@ export function createOptionTradeService(deps: OptionTradeServiceDeps): SubmitOp
           ...(preview.orderType === "limit" ? { limitPrice: preview.limitPrice } : {}),
           positionIntent: preview.positionIntent,
         }),
-      desk.participant,
+      access.participant,
       deps,
       {
         ...(request.kind === "open" ? { code: request.code } : {}),

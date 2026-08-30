@@ -208,12 +208,12 @@ describe("ship checkbody — the picture/format contract", () => {
  */
 describe("ship checkarm — the irreversible class never auto-merges", () => {
   it("refuses a diff touching a protected path, and names the path and the reason", () => {
-    const { code, stderr } = run(["checkarm", "src/server/trade-service.ts"]);
+    const { code, stderr } = run(["checkarm", "src/server/account-identity-gate.ts"]);
 
     expect(code).toBe(5);
     expect(stderr).toContain("REFUSED");
-    expect(stderr).toContain("src/server/trade-service.ts");
-    expect(stderr).toContain("money-moving");
+    expect(stderr).toContain("src/server/account-identity-gate.ts");
+    expect(stderr).toContain("usable client");
   });
 
   it("still refuses when the protected path is buried among unprotected ones", () => {
@@ -222,7 +222,7 @@ describe("ship checkarm — the irreversible class never auto-merges", () => {
       "checkarm",
       "src/trading/draft-order.ts",
       "tests/trading/draft-order.spec.ts",
-      "src/server/trade-service.ts",
+      "src/server/account-identity-gate.ts",
       "docs/LESSONS.md",
     ]);
 
