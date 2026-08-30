@@ -471,6 +471,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The July −23k print moved Sep hike odds harder than any 2026 CPI; opens the pre-FOMC corridor.",
   },
   {
+    id: "fomc-blackout-start-2026-09-05",
+    kind: "macro-print",
+    title: "FOMC communications blackout begins (through 2026-09-17)",
+    date: "2026-09-05",
+    status: "estimate",
+    source:
+      "EST: derived from the published FOMC external-communications rule (blackout runs from the second Saturday preceding a meeting to the Thursday after it) applied to the confirmed Sep 15-16 meeting; federalreserve.gov's own blackout-calendar PDF would confirm it but did not parse on fetch, checked 2026-08-30",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Not a print — a gate on who may speak. Once it starts, no FOMC participant can move September hike odds, so the 09-04 jobs and 09-11 CPI prints land with no official interpretation behind them. Ordinarily a minor technical; load-bearing this cycle because a single Fed speech (Warsh at Jackson Hole, 2026-08-28) moved Sep hike odds ~35% -> ~57% in one session, making 'when does Fed-speak stop' a real input. Discovered during the fomc-2026-09-16 pulse-check adjacency sweep. Filed `estimate`/`EST:` rather than confirmed: the date is derived from a published rule, and this lane proposes adjacencies as estimates and never self-promotes them to confirmed.",
+  },
+  {
     id: "aapl-iphone-18-launch-2026-09-09",
     kind: "product-launch",
     title: "Apple September event — iPhone 18 line",
