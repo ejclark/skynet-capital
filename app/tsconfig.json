@@ -16,7 +16,8 @@
     "noEmit": true,
     "useDefineForClassFields": true,
     "incremental": true,
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo-app"
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo-app",
+    "types": ["@rstest/core/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src", "rsbuild.config.ts"]
+  "include": ["src", "tests", "rsbuild.config.ts", "rstest.config.ts", "rstest.setup.ts"]
 }
