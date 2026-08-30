@@ -3,21 +3,18 @@
  * offline runs. Split out of `order-audit-log.ts` (Biome `noExcessiveClassesPerFile`) so the
  * file-backed log stays the one class the main module defines.
  */
+import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 import type { OrderAuditLog, OrderAuditRecord } from "./order-audit-log.js";
 
 /** In-memory log: the reference implementation, used by tests and offline runs. */
 export class InMemoryOrderAuditLog implements OrderAuditLog {
-  private readonly entries: OrderAuditRecord[] = [];
+  private readonly store = new InMemoryKeyedStore<OrderAuditRecord>((e) => e.participantId);
 
   record(entry: OrderAuditRecord): Promise<void> {
-    this.entries.push(entry);
-    return Promise.resolve();
+    return this.store.append(entry);
   }
 
   list(participantId?: string): Promise<OrderAuditRecord[]> {
-    const all = [...this.entries];
-    return Promise.resolve(
-      participantId ? all.filter((e) => e.participantId === participantId) : all,
-    );
+    return this.store.list(participantId);
   }
 }

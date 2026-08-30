@@ -1,3 +1,4 @@
+import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 import type { UnusualFlowStore } from "../ports/options-flow.js";
 import type { UnusualFlowScan } from "./unusual-flow.js";
 
@@ -7,18 +8,13 @@ import type { UnusualFlowScan } from "./unusual-flow.js";
  * because "the same strike flagged again today" is only readable against what was already there.
  */
 export class InMemoryUnusualFlowStore implements UnusualFlowStore {
-  private readonly scans: UnusualFlowScan[] = [];
+  private readonly store = new InMemoryKeyedStore<UnusualFlowScan>((s) => s.underlying);
 
   save(scan: UnusualFlowScan): Promise<void> {
-    this.scans.push(scan);
-    return Promise.resolve();
+    return this.store.append(scan);
   }
 
   list(underlying?: string): Promise<UnusualFlowScan[]> {
-    return Promise.resolve(
-      underlying === undefined
-        ? [...this.scans]
-        : this.scans.filter((s) => s.underlying === underlying),
-    );
+    return this.store.list(underlying);
   }
 }
