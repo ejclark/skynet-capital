@@ -8,11 +8,11 @@ import {
   type DoStreamFetch,
 } from "../../src/companion/companion-chat.js";
 import {
-  COMPANION_MODEL,
   MAX_HISTORY_MESSAGES,
   MAX_TURNS,
   TURN_LIMIT_MESSAGE,
 } from "../../src/companion/companion-limits.js";
+import { COMPANION_MODEL } from "../../src/companion/companion-model.js";
 import { COMPANION_SYSTEM_PROMPT } from "../../src/companion/companion-system-prompt.js";
 import type { CompanionDeskDeps } from "../../src/companion/companion-tools.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";

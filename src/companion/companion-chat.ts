@@ -8,13 +8,13 @@ import {
 } from "./companion-anthropic-stream.js";
 import {
   COMPANION_MAX_MESSAGE_CHARS,
-  COMPANION_MODEL,
   MAX_HISTORY_MESSAGES,
   MAX_TOKENS_PER_REPLY,
   MAX_TOOL_ROUNDS,
   MAX_TURNS,
   TURN_LIMIT_MESSAGE,
 } from "./companion-limits.js";
+import { COMPANION_MODEL } from "./companion-model.js";
 import { COMPANION_SYSTEM_PROMPT } from "./companion-system-prompt.js";
 import {
   COMPANION_TOOL_DEFS,

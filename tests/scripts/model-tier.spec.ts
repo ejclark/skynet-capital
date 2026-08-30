@@ -27,7 +27,7 @@ describe("feedback model tier", () => {
   // THE HEURISTIC IS RETIRED, AND THAT IS THE ASSERTION (2026-08-22). It sent short asks to Haiku
   // and long ones to Sonnet — economizing on a lane billed to a FLAT-RATE subscription, where
   // economizing saves nothing and costs build quality on exactly the detailed asks that deserve the
-  // most. Cheap belongs on the METERED side (src/server/feedback-coach-limits.ts), not here.
+  // most. Cheap belongs on the METERED side (src/server/feedback-coach-model.ts), not here.
   it("gives every ask the strong model — this lane is flat-rate, so thrift buys nothing", () => {
     for (const body of [
       "the leaderboard shows 0.00%",

@@ -54,8 +54,12 @@
       "why": "the invite gate — who gets into the shared universe"
     },
     {
-      "pattern": "src/server/feedback-coach-limits.ts",
-      "why": "the coach's metered-API cost dials (model, round cap, token cap, throttle) — raising one multiplies a real per-token bill; the coach's PROMPT stays open, because improving the curator is the point"
+      "pattern": "src/server/feedback-coach-model.ts",
+      "why": "the coach's model dial (#928) — the one knob that changes the real per-token bill; round/token/throttle caps and the PROMPT stay open in feedback-coach-limits.ts and feedback-coach.ts"
+    },
+    {
+      "pattern": "src/companion/companion-model.ts",
+      "why": "the companion's model dial (#928), mirroring feedback-coach-model.ts — same shared rate, same reasoning"
     },
     {
       "pattern": "src/alpaca/credentials.ts",
@@ -102,5 +106,5 @@
       "why": "environment/credential files"
     }
   ],
-  "$openOnPurpose": "Deliberately NOT protected (Eric, 2026-08-22 — 'gate money-moving logic only'; sharpened 2026-08-29, #928 — 'the intent is to prevent people from changing things that explicitly belong to others... building features that everyone can use is community owned'): src/observatory/**, src/ui/**, src/three/**, everything that merely RENDERS trades, P/L, leaderboards or bot cards, AND, as of #928, src/engine/guards.ts, src/bots/account-guard.ts, src/trading/order-ticket.ts, src/trading/option-ticket.ts, and src/playbooks/** — risk sizing, discipline rules, bot-account coordination, and playbook authorship, none of which can reach another member's account or data. The honesty invariants (real tickers, truthful SIM/LIVE labels, paper-only) are a judgment stop stated in .github/prompts/feedback-build.md, not a path — no file list can enforce 'this flourish implies something false'. What stays protected in the trading cluster (desk-gate.ts, trade-service.ts, option-trade-service.ts, the Alpaca clients, credentials.ts) does so because it carries — or executes against — the actual cross-account identity check, not because it is trading-shaped; #928's remaining slices split that check out where it's currently entangled with open-able logic."
+  "$openOnPurpose": "Deliberately NOT protected (Eric, 2026-08-22 — 'gate money-moving logic only'; sharpened 2026-08-29, #928 — 'the intent is to prevent people from changing things that explicitly belong to others... building features that everyone can use is community owned'; 2026-08-30, #928 — 'the correct idea [is] to abstract sensitive logic out so it can be fenced, this enables users to improve more parts of our application'): src/observatory/**, src/ui/**, src/three/**, everything that merely RENDERS trades, P/L, leaderboards or bot cards, AND, as of #928, src/engine/guards.ts, src/bots/account-guard.ts, src/trading/order-ticket.ts, src/trading/option-ticket.ts, src/playbooks/**, src/server/feedback-coach-limits.ts, and src/companion/companion-limits.ts — risk sizing, discipline rules, bot-account coordination, playbook authorship, and the coach/companion's round·message·token·throttle caps, none of which can reach another member's account or data, or change what model bills the real per-token rate. The honesty invariants (real tickers, truthful SIM/LIVE labels, paper-only) are a judgment stop stated in .github/prompts/feedback-build.md, not a path — no file list can enforce 'this flourish implies something false'. What stays protected in the trading cluster (desk-gate.ts, trade-service.ts, option-trade-service.ts, the Alpaca clients, credentials.ts) does so because it carries — or executes against — the actual cross-account identity check, not because it is trading-shaped; feedback-coach-model.ts and companion-model.ts stay protected for the same abstract-and-fence reason, on the money dial rather than an identity check. #928's remaining slice splits the desk-gate family's identity check out where it's currently entangled with open-able logic."
 }
