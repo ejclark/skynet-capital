@@ -6,7 +6,9 @@ description: >-
   engineer. Use before opening a substantive PR, when asked to "review this" or "check this over", or
   as the standing second pass CLAUDE.md calls for on anything beyond a typo fix. Correctness and taste
   only — for adversarial security attack, use red-team; for structural debt (size/cohesion/duplication),
-  the fitness gates already own that and this agent defers to them rather than re-litigating.
+  the fitness gates already own that and this agent defers to them rather than re-litigating; for
+  whether a first-time reader can actually parse a PR/issue's copy (not its code), use linguist —
+  this agent's "house style" pass is about the diff, not prose comprehension.
 tools: Read, Grep, Glob, Bash
 model: fable
 effort: xhigh
