@@ -81,15 +81,21 @@ if (process.argv.includes("--update")) {
   const prev = Number.isFinite(budget.narrationComments) ? budget.narrationComments : debt;
   const next = { narrationComments: Math.min(prev, debt) }; // ratchet down only
   writeFileSync(BUDGET_FILE, `${JSON.stringify(next, null, 2)}\n`);
-  console.log(`comment-bloat-budget.json updated — narrationComments=${next.narrationComments} (only lowers).`);
+  console.log(
+    `comment-bloat-budget.json updated — narrationComments=${next.narrationComments} (only lowers).`,
+  );
   process.exit(0);
 }
 
-console.log("💬 Comment-bloat scan — comments narrating history instead of stating a non-obvious WHY");
+console.log(
+  "💬 Comment-bloat scan — comments narrating history instead of stating a non-obvious WHY",
+);
 for (const [file, count] of worst.slice(0, 10)) {
   console.log(`  ${String(count).padStart(2)}×  ${file}`);
 }
-console.log(`\n  candidates flagged: ${debt} (review each — some are legitimate WHY, per the header note)`);
+console.log(
+  `\n  candidates flagged: ${debt} (review each — some are legitimate WHY, per the header note)`,
+);
 
 const cap = budget.narrationComments;
 if (debt > cap) {
