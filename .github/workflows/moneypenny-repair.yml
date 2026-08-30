@@ -1,4 +1,4 @@
-name: Moneypenny Repair
+name: Moneypenny Repair (CI self-healing)
 
 # THE LANE THAT WATCHES THE LANES. A run fails on `main`, this files one capsule issue with the
 # evidence and dispatches a session to fix it — instead of the failure sitting red until someone
@@ -49,8 +49,9 @@ on:
   # own name or path — that is loop guard 1.
   workflow_run:
     workflows:
-      ["Moneypenny Events", "Pipeline", "Autonomy ops", ".github/workflows/moneypenny-events.yml",
-       ".github/workflows/pipeline.yml", ".github/workflows/autonomy-ops.yml"]
+      ["Moneypenny Events (event-research automation)", "Pipeline", "Autonomy ops",
+       ".github/workflows/moneypenny-events.yml", ".github/workflows/pipeline.yml",
+       ".github/workflows/autonomy-ops.yml"]
     types: [completed]
   # #909's conflict-repair entry point. `pr_number` alone, never a fixture-style event payload — a
   # `workflow_dispatch` call carries no `workflow_run` object at all, so the `triage` job below is

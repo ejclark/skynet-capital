@@ -2,7 +2,7 @@
   "repository": { "default_branch": "main" },
   "workflow_run": {
     "id": 32545818804,
-    "name": "Moneypenny Events",
+    "name": "Moneypenny Events (event-research automation)",
     "conclusion": "failure",
     "event": "issues",
     "head_branch": "main",
