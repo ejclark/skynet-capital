@@ -30,6 +30,14 @@ it. Prevention ranks, best first:
 ### A `${{ }}`-in-`echo` interpolation stripped every quote from a JSON output, and a matrix job vanished with no failing job to blame
 
 - **SHA:** 69ed0b5   **DATE:** 2026-08-30   **STATUS:** closed
+- **COVERS:** 02b026b, f570d05, 25749d6, 492d164, 030640c, 587f219, 7b727b5, cecb4b1, f1fcb2b,
+  b9abd25 — every "Moneypenny Events" run that failed on `main` between b9abd25 (#930, 2026-08-29
+  19:17 UTC) and the fix landing in f3bef77 (2026-08-30 05:16 UTC); each push in that window built
+  the pre-fix workflow file and hit the identical quote-stripping bug below. `incident-scan.mjs`
+  matches by exact run sha, and this entry's own `SHA:` names the FIX commit rather than any
+  failing run's — so without this field, every one of these kept re-appearing as a fresh UNLEARNED
+  incident indefinitely, even though the root cause was already diagnosed and shipped. See
+  `scripts/incident-scan.mjs`'s `isLearned()` for the matching fix (checks `COVERS:` lines too).
 - **SIGNAL:** `incident-scan.mjs` listed 9 "Moneypenny Events" runs UNLEARNED on `main`. The
   candidate run's jobs (`route`, `build-feedback`, `build-plan`) all showed `success`/`skipped` —
   no failing job anywhere — yet the run's own `conclusion` was `failure`, and the `build-events`
