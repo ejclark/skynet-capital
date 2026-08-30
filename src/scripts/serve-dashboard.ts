@@ -14,10 +14,7 @@
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
-import {
-  createBootActivityStore,
-  type TradeActivityRecord,
-} from "../observatory/activity-store.js";
+import { createBootActivityStore } from "../observatory/activity-store.js";
 import { createBrokerSync } from "../observatory/broker-sync.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
@@ -45,6 +42,7 @@ import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
 import { setupCompanion } from "./dashboard-companion.js";
 import { setupFeedback } from "./dashboard-feedback.js";
+import { wireLadderProgress } from "./dashboard-ladder-progress.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
 
 const PORT = resolvePort(process.env);
@@ -91,12 +89,12 @@ async function main(): Promise<void> {
   // update from every account's trade_updates stream is journaled, so trade history survives the
   // broker's recent-order window. Boot banks that window first — the restart-gap net.
   const activity = createBootActivityStore(process.env, dataSource.mode);
-  const onActivity = (record: TradeActivityRecord) => {
-    void activity.record(record).catch((e) => console.error("[activity] write failed:", e));
-  };
+  // Ladder milestone auto-completion (#469 slice 3) — never a client claim; see the wiring module.
+  const { onActivity, sweep: sweepLadderProgress } = wireLadderProgress(process.env, activity);
   void reconcileBrokerActivity(activity, initial.participants)
     .then((n) => {
       if (n > 0) console.log(`[activity] banked ${n} order update(s) from the broker window`);
+      sweepLadderProgress(initial.participants);
     })
     .catch((e) => console.error("[activity] boot reconcile failed:", e));
 
