@@ -165,6 +165,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Long-end supply the day after the 10Y and the day before CPI (09-11) — a compound rate week.",
   },
   {
+    id: "treasury-buyback-10y20y-2026-09-10",
+    kind: "rates",
+    title: "Treasury liquidity-support buyback operation (10-20Y nominal, 1:40pm ET)",
+    date: "2026-09-10",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (Q3 2026 refunding, published 2026-08-05) — announce 09-09, operation 09-10 1:40pm ET, settle 09-11; tentative and its $2B cap predates press release sb0607, checked 2026-08-30",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Lands 40 minutes after the 30Y reopening closes on the SAME day (auction 1:00pm ET, buyback 1:40pm ET) and is the first long-end liquidity-support operation on or after sb0607's 09-09 effective date — so its cap should step from the scheduled $2B to the announced $4B/operation minimum, though Treasury has not yet published the updated schedule. Note the sector is 10-20Y, NOT the 20-30Y bucket the reopened bond sits in; the next 20-30Y operation is 2026-09-24. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep.",
+  },
+  {
     id: "treasury-20y-bond-2026-09-15",
     kind: "rates",
     title: "20-Year Treasury Bond auction (reopening)",
