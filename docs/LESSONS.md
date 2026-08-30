@@ -27,6 +27,32 @@ it. Prevention ranks, best first:
 
 ---
 
+### A stale worktree's incident-scan re-flagged a false positive a newer commit had already fixed
+
+- **SHA:** 8b86f83   **DATE:** 2026-08-30   **STATUS:** closed
+- **SIGNAL:** `ship.sh open`'s incident-scan advisory reported 21 UNLEARNED incidents on `main`,
+  including the exact commit (#925, `8b86f83`) that had shipped a fix for GitHub's zero-job
+  "phantom push" false positive one session earlier. Caught during `/retro` triage, ~5 hours after
+  #925 merged — not by any gate, but by noticing `grep phantom scripts/incident-scan.mjs` came back
+  empty in a worktree whose candidate incident *was* the phantom-fix commit itself.
+- **ROOT CAUSE:** this session's worktree was branched 57 commits behind `origin/main` (never
+  fetched fresh), so its local `scripts/incident-scan.mjs` predated #925's `hasZeroJobs` filter.
+  `incident-scan.mjs`, `digest-scan.mjs`, and `plan-closure-scan.mjs` all read LIVE GitHub state
+  (workflow runs, issues) through LOCAL script code — correct only when the local code is at least
+  as new as the last detection fix. A stale worktree silently re-runs the old, less-accurate logic
+  against current data with no signal that anything is out of date. **What else crosses this
+  system?** every `ship.sh open` advisory that hits the GitHub API, in every worktree spun up from
+  whatever `main` looked like when it was created — this is a class, not a one-off.
+- **PREVENTION:** gate — `scripts/ship.sh` `cmd_open` now fetches `origin/main`'s current tip sha
+  over REST (one call, same bucket already spent on the other advisories, no `git fetch`/SSH
+  needed) and prints a worktree-staleness warning when the local object database doesn't have that
+  commit, right before the incident/digest/plan-closure advisories that depend on fresh code.
+  Advisory only, degrades silently on any API error — never a flaky gate.
+- **SIDE QUESTS:** none — the fix here already covers every current live-state advisory; a same-shape
+  script added later inherits the warning automatically since it fires once, ahead of the block.
+
+---
+
 ### A batched research run hit `--max-turns` mid-wrap-up and orphaned three PRs with no CI
 
 - **SHA:** n/a (workflow-only fix, held for merge)   **DATE:** 2026-08-29   **STATUS:** closed

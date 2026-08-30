@@ -188,6 +188,26 @@ EOF_SHOTS
     echo "ship: verify green."
   fi
 
+  # Worktree-freshness advisory (docs/LESSONS.md, 2026-08-30): the scans below read LIVE GitHub
+  # state through LOCAL code — a worktree branched from a stale main can re-flag a false positive a
+  # newer commit already fixed (found live: this session's incident-scan.mjs was missing #925's
+  # phantom-run filter because the worktree's base predated it, and re-reported the fixed run as
+  # UNLEARNED). One REST call, no `git fetch` — SSH is broken on Eric's machine (docs/LESSONS.md /
+  # the git-push-https-workaround memory), so this checks whether the LOCAL object database already
+  # has origin/main's current tip, which needs no network write and degrades silently on any error.
+  local head_resp head_http head_body remote_sha
+  head_resp="$(api GET "/commits/main" 2>/dev/null)" && {
+    head_http="$(http_of "$head_resp")"; head_body="$(body_of "$head_resp")"
+    if [ "$head_http" = 200 ]; then
+      remote_sha="$(printf '%s' "$head_body" | json_field sha)"
+      if [ -n "$remote_sha" ] && ! git cat-file -e "$remote_sha" 2>/dev/null; then
+        echo "ship: this worktree doesn't have origin/main's current tip ($remote_sha) — it's stale."
+        echo "  the advisories below run LOCAL script code against LIVE GitHub data; a detection fix"
+        echo "  merged since this worktree's base won't apply here and can re-surface old false positives."
+      fi
+    fi
+  }
+
   # Learning-Coach preflight (docs/COACHES.md → detection lag). The incident eye rides the path we
   # already traverse — every change ships through here — so a red `main` surfaces without a cron, a
   # scheduled workflow, or a single polled request. One REST call on the core bucket, at the exact
