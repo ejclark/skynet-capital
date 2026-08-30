@@ -50,6 +50,13 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+/* the mode switch (#981) — same slot in both modes, so manual is never a one-way trip */
+.fb-mode {
+  max-width: 640px;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
 .fb-draft-note {
   margin: 0;
   font-size: 12.5px;

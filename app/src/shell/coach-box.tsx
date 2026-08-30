@@ -15,15 +15,16 @@ export interface CoachDraft {
  * THE COACH BOX (#738 phase 9d) — the AI-first front door to feedback, ported from the legacy
  * page's inline script. A rough note starts a short dialogue (one question per turn); the coach
  * only DRAFTS — its product fills the form below for review, and the member's explicit Send
- * stays the only path that files anything. Skip (or any coach failure) reveals the plain form
- * immediately, so the coach can never stand between a member and filing.
+ * stays the only path that files anything. Any coach failure drops the member into manual mode
+ * (`onUnavailable`), so the coach can never stand between a member and filing; choosing manual
+ * deliberately is the door's own mode toggle (#981), not a button in here.
  */
 export function CoachBox({
   onDraft,
-  onSkip,
+  onUnavailable,
 }: {
   readonly onDraft: (draft: CoachDraft) => void;
-  readonly onSkip: () => void;
+  readonly onUnavailable: () => void;
 }): ReactElement {
   const [kind, setKind] = useState<FeedbackKind>("bug");
   const [note, setNote] = useState("");
@@ -40,7 +41,7 @@ export function CoachBox({
       const reply = await coachTurn({ kind, messages: next });
       if (!reply.ok) {
         setError(reply.error);
-        onSkip(); // any coach failure reveals the plain form — never a dead end
+        onUnavailable(); // any coach failure reveals the plain form — never a dead end
         return;
       }
       setMessages(next);
@@ -58,7 +59,7 @@ export function CoachBox({
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-      onSkip();
+      onUnavailable();
     } finally {
       setBusy(false);
     }
@@ -105,9 +106,6 @@ export function CoachBox({
               onClick={() => void turn([{ role: "user", content: note.trim() }])}
             >
               {busy ? "Thinking…" : "Shape it with me"}
-            </button>
-            <button type="button" className="btn mc-btn" onClick={onSkip}>
-              Skip — I'll write it myself →
             </button>
           </div>
         </div>
