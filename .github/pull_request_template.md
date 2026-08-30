@@ -37,6 +37,17 @@ If a live route changed, add a bullet: "Review live after deploy: /route". -->
 
 -
 
+<!-- DELETE THIS BLOCK when nothing gates merge on a human call — most PRs. Add it, right here
+above the fold, only when a decision only Eric can make blocks or should precede merging (a taste
+fork, an ask the diff can't settle itself). One numbered line per decision, phrased as a closed
+question or a named choice, reason trailing after an em dash — never a paragraph, never buried in
+"Design notes" below the fold. If this block is present, open the PR as a draft
+(`ship open --draft`) instead of auto-merge.
+
+> [!IMPORTANT]
+> **Needs from you**
+> 1. The decision, as a closed question or a named choice — the one-clause why, trailing. -->
+
 <details>
 <summary><strong>Why, acceptance &amp; the weeds</strong></summary>
 
