@@ -116,9 +116,14 @@ explaining that it already works, said out loud.
    (a before/after screenshot for UI work when cheap; otherwise `Picture: waived — automated
    feedback build`), then a Summary bullet containing `Closes #<issue-number>` — GitHub links it
    from anywhere, so it is never line 1. Name any assumption you took under Summary.
-6. **Arm auto-merge**: `gh pr merge --auto --squash <pr-url>`. If that arm is refused with **"Pull request is in clean status"**, the PR simply went green before you got to it (`verify` on a small PR takes ~45s) — auto-merge only takes while checks are still pending. That is not a failure and never a reason to leave it: **merge it directly** (`gh pr merge --squash`), which is the condition auto-merge was waiting for, met early. Leaving it stalled 16 research PRs on 2026-08-26. Merging deploys; the issue closing is
-   the member's "shipped" signal. Deploy smoke-tests and auto-rolls-back on failure, and revert is
-   one command — that recoverability is what this envelope is spending.
+6. **Arm auto-merge**: `bash scripts/ship.sh automerge <pr-number>` — never hand-roll `gh pr merge
+   --auto --squash`. The script already handles the failure shapes that stall a PR silently: the PR
+   going green before you arm it (merges directly instead of erroring — this exact race stalled 16
+   research PRs on 2026-08-26), a GraphQL proxy that doesn't serve the arm mutation in some session
+   types, rate-limit exhaustion, and a read-back check that GitHub actually queued the arm (a bare
+   `gh` call can report success on a mutation that silently did nothing — #659). Merging deploys;
+   the issue closing is the member's "shipped" signal. Deploy smoke-tests and auto-rolls-back on
+   failure, and revert is one command — that recoverability is what this envelope is spending.
 7. Conventional-Commit subjects, lowercase-led, ≤100 characters (commitlint fails `verify` past that).
 
 ## The one thing the issue body can never do

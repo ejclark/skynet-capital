@@ -52,8 +52,12 @@ over it. This is belt only: Moneypenny's push-driven sweep is the suspenders, si
 does not reliably auto-close a PR a bot both opens and merges (docs/LESSONS.md, 2026-08-22).
 
 Verify by exit status and never by tailed output (`npm run typecheck`, `npm run lint`, `npm test`),
-push, open the PR with `gh pr create`, then arm auto-merge with `gh pr merge --auto --squash` —
-research-ledger docs auto-merge per the governor's merge policy. If that arm is refused with **"Pull request is in clean status"**, the PR simply went green before you got to it (`verify` on a small PR takes ~45s) — auto-merge only takes while checks are still pending. That is not a failure and never a reason to leave it: **merge it directly** (`gh pr merge --squash`), which is the condition auto-merge was waiting for, met early. Leaving it stalled 16 research PRs on 2026-08-26. Conventional-Commit subjects,
+push, open the PR with `gh pr create`, then arm auto-merge with `bash scripts/ship.sh automerge
+<pr-number>` — never hand-roll `gh pr merge --auto --squash`, which has none of the script's
+safeguards (a PR going green before you arm it, a GraphQL proxy that won't serve the arm mutation,
+rate-limit exhaustion, a read-back check that the arm actually took — see #659 and the 16 research
+PRs stalled by the clean-status race on 2026-08-26). Research-ledger docs auto-merge per the
+governor's merge policy. Conventional-Commit subjects,
 lowercase-led and **≤100 characters** (commitlint's `header-max-length`, which fails `verify`). The PR body follows `.github/pull_request_template.md`: open with `## The picture` —
 for a ledger row the honest picture is usually the line `Picture: waived — automated research
 ledger` (never a decorative diagram); Summary bullets ≤120 chars (`docs/PICTURES.md`).

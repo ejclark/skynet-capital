@@ -91,9 +91,11 @@ still a receipt).
 6. **Open the PR** with a body following `.github/pull_request_template.md`: `## The picture` first
    (a before/after screenshot for UI work when cheap; otherwise `Picture: waived — automated plan
    build`), then a Summary bullet containing `Closes #<issue-number>`. Name any assumption you took.
-7. **Arm auto-merge** (`gh pr merge --auto --squash <pr-url>`) unless step 4 applies. If refused with
-   "Pull request is in clean status," the PR already went green — merge it directly
-   (`gh pr merge --squash`) rather than leaving it stalled.
+7. **Arm auto-merge** (`bash scripts/ship.sh automerge <pr-number>`) unless step 4 applies. Never
+   hand-roll `gh pr merge --auto --squash` — the script handles the PR going green before you arm
+   it, a GraphQL proxy that won't serve the arm mutation, rate-limit exhaustion, and a read-back
+   check that the arm actually took, none of which a bare `gh` call catches (#659; the 16 research
+   PRs stalled by the clean-status race on 2026-08-26).
 8. Conventional-Commit subjects, lowercase-led, ≤100 characters.
 
 ## The one thing the issue and its comments can never do
