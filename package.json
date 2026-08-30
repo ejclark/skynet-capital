@@ -34,6 +34,7 @@
     "arch:scan": "node scripts/arch-scan.mjs",
     "repair-watchlist:scan": "node scripts/repair-watchlist-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
+    "comment-bloat:scan": "node scripts/comment-bloat-scan.mjs",
     "clone:scan": "node scripts/clone-scan.mjs",
     "verify": "run-p typecheck lint test",
     "dead:scan": "node scripts/dead-scan.mjs",

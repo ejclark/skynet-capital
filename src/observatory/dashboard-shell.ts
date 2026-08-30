@@ -89,8 +89,8 @@ function renderDrawer(nav: NavContext): string {
   // renders honestly in every state, so the link never needs gating.
   links.push(drawerLink("/trade", "Trade", "trade", nav.active === "trade"));
   links.push(drawerLink("/research", "Research", "research", nav.active === "research"));
-  // Collections (2026-08-26, #588): the browse surface for the bot and play catalogs — narrative
-  // shelves rather than an alphabetical roster. Sits beside Research: both are "go and read" views.
+  // Collections: the browse surface for the bot and play catalogs — narrative shelves rather than
+  // an alphabetical roster. Sits beside Research: both are "go and read" views.
   links.push(
     drawerLink("/collections", "Collections", "collections", nav.active === "collections"),
   );

@@ -27,6 +27,40 @@ it. Prevention ranks, best first:
 
 ---
 
+### CLAUDE.md forbade narration comments from day one; nothing enforced it, so 195 accumulated in 18 commits
+
+- **SHA:** n/a   **DATE:** 2026-08-30   **STATUS:** closed
+- **SIGNAL:** an unrelated DX audit (asked to find scriptable/token-burn opportunities) surveyed
+  `src/` and found 264 comments citing a bare issue/PR number, 195 of them matching a narration
+  pattern (`(#588)`, "used by X", "this was added/removed"). CLAUDE.md's "Doing tasks" section had
+  already stated the opposite rule — "never reference the current task, fix, or callers... those
+  belong in the PR description and rot" — since the file's first commit. Detection lag: the entire
+  life of the repo (2 days, 18 commits touching `src/`) — the rule existed in every session's context
+  the whole time and nothing ever checked a diff against it.
+- **ROOT CAUSE:** the rule was prose-only, in a file the *generator* reads but nothing *re-checks the
+  generator's own output* against. A stated house-style rule with no eye behind it is advisory in
+  name only — it constrains a session's intent, not what actually lands, so drift accumulates exactly
+  as fast as PRs land (in this repo's case, 195 instances in 18 commits — days, not months). Same
+  shape as the incident above: a real constraint existed, nothing watched it.
+- **PREVENTION:** gate + doctrine, both landed same-session. `scripts/comment-bloat-scan.mjs` (new
+  Comment-bloat Coach, `docs/COACHES.md`) flags the pattern; `comment-bloat-budget.json` grandfathers
+  today's 190 (post one demonstration rep — see SIDE QUESTS) and ratchets down as touched;
+  `tests/arch/comment-bloat.spec.ts` runs it advisory in CI per the 2026-08-29 debt-gate policy.
+  Doctrine: `docs/ENGINEERING.md`'s "Co-locate intent with structure" section now states the WHY-vs-
+  narration split explicitly, and `reviewer.md`'s checklist names it, so both the scripted eye and
+  the review-time judgment call are covered — not a mass rewrite (would violate the "grandfather,
+  then shrink" rule for retroactive-judging conventions, `docs/COACHES.md`). The scan also now rides
+  the existing secretary digest Routine (`trig_01KaMC2uR3cFW5XTUL6rzPuS`), volume-gated (only
+  escalates when the budget is exceeded, never on a quiet cycle) rather than holding its own clock —
+  `docs/ROUTINES.md`'s "never add a poller" rule, applied before a second poller could be built.
+- **SIDE QUESTS:** the scanner's own recall is coarse by design (a bare issue-number citation, not
+  WHY-vs-narration classification) — most flagged lines in the first real run were legitimate JSDoc
+  field docs with a harmless citation riding along, not narration to delete outright. The correct
+  fix in those cases was surgical (strip the citation, keep the doc), not deletion; a future
+  drill/athlete for this Coach needs that distinction encoded, not just the raw scan. → docs/IDEAS.md.
+
+---
+
 ### A `${{ }}`-in-`echo` interpolation stripped every quote from a JSON output, and a matrix job vanished with no failing job to blame
 
 - **SHA:** 69ed0b5   **DATE:** 2026-08-30   **STATUS:** closed

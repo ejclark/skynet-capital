@@ -74,21 +74,21 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly invite?: InviteDeps;
   /**
-   * `GET/POST /claim` — the owner's account-link table (#546): attach an account that is already
-   * on the board, but carries no owner, to a member's sign-in. Omit to disable (offline mode, or
-   * no auth). Owner-gated inside the handler itself, exactly like `/invite`.
+   * `GET/POST /claim` — the owner's account-link table: attach an account that is already on the
+   * board, but carries no owner, to a member's sign-in. Omit to disable (offline mode, or no
+   * auth). Owner-gated inside the handler itself, exactly like `/invite`.
    */
   readonly claim?: ClaimDeps;
   /**
    * `GET/POST /u/:id?tab=settings` — Mission Control, the owner's switchboard for the autonomous
-   * fleet, served as an account's Settings tab (#475). Omit to disable (offline mode, or no auth).
+   * fleet, served as an account's Settings tab. Omit to disable (offline mode, or no auth).
    * Owner-gated inside the handler itself. The old `/controls` URL redirects here.
    */
   readonly controls?: ControlsDeps;
   /**
-   * `GET /ops-status` — the owner's read-only bots/deploy health panel (#666 slice 1). Omit to
-   * disable (offline mode, or no auth) — no separate URL then exists, same as `/invite`/`/claim`.
-   * Owner-gated inside the handler itself, exactly like every other owner-only page.
+   * `GET /ops-status` — the owner's read-only bots/deploy health panel. Omit to disable (offline
+   * mode, or no auth) — no separate URL then exists, same as `/invite`/`/claim`. Owner-gated
+   * inside the handler itself, exactly like every other owner-only page.
    */
   readonly opsStatus?: OpsStatusDeps;
   /**
