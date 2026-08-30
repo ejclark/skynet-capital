@@ -88,9 +88,15 @@ jobs:
       - name: Commit lint
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-      # Typecheck/lint/test are three independent checks over the same unchanged tree — nothing
+      # app/ is a separate package (its own package.json, own node_modules — not an npm
+      # workspace), so it needs its own install. Root's `npm ci` above doesn't touch it.
+      - name: Install app dependencies
+        if: steps.changes.outputs.code == 'true'
+        run: npm ci --prefix app
+
+      # Typecheck/lint/test are independent checks over the same unchanged tree — nothing
       # downstream of `npm ci` depends on another's output. Backgrounding them on the shared runner
-      # instead of running as three sequential steps overlaps the ~10s typecheck+lint pair with the
+      # instead of running as sequential steps overlaps the ~10s typecheck+lint pair with the
       # test suite (the long pole, ~30s locally) instead of paying for both back to back: same
       # billed job, shorter wall clock, no extra runner-minutes. Logs go to files so a failure's
       # full output still surfaces (backgrounded output would otherwise interleave illegibly), and
@@ -101,9 +107,11 @@ jobs:
           npm run typecheck > typecheck.log 2>&1 & tc=$!
           npm run lint       > lint.log      2>&1 & ln=$!
           npm test           > test.log      2>&1 & ts=$!
+          npm run typecheck --prefix app > app-typecheck.log 2>&1 & atc=$!
+          npm test           --prefix app > app-test.log      2>&1 & ats=$!
 
           status=0
-          for pair in "$tc:typecheck" "$ln:lint" "$ts:test"; do
+          for pair in "$tc:typecheck" "$ln:lint" "$ts:test" "$atc:app-typecheck" "$ats:app-test"; do
             pid="${pair%%:*}"; name="${pair##*:}"
             if wait "$pid"; then
               echo "✓ $name passed"
