@@ -1,7 +1,8 @@
 # 10-Year Treasury Note auction (reopening) — treasury-10y-note-2026-09-09
 
 **Kind:** rates · **Date:** 2026-09-09 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-08-27
+**Last assessed:** 2026-08-30
+<!-- probe-ref: {"symbols":{},"vix":14.35,"daysBand":"high:8+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","cpi-2026-09-11","jobs-2026-09-04","ppi-2026-09-10","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-increase-2026-09-09"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -13,16 +14,19 @@ high** (~5.33% intraday on 8/18) is a **term-premium/fiscal story**, but foreign
 10Y has held up remarkably — the Aug-12 new issue drew **near-record indirect (76.7%) demand and
 stopped on the screws** (tail +0.1bp, bid-to-cover 2.53 vs a 2.47 six-month average). So the base
 case here is a well-bid reopening; the *tail risk* is contagion — the long-end weakness migrating
-into the belly, or a hot 9/11 CPI forcing a concession the day after. Auction **date is confirmed**;
+into the belly, or a hot 9/11 CPI forcing a concession the day after. **Updated 8/30:** Warsh's
+8/28 Jackson Hole keynote made a September **hike** a coin flip (~56–60%, from ~35%), bear-flattening
+the curve (2Y +12bp, 30Y +2bp) — the dominant risk channel rotates from long-end contagion to the
+Fed path, and the auction now sits one week before a live-hike FOMC. Auction **date is confirmed**;
 every size/when-issued/demand figure below is **estimate/press-sourced** and drifts. No symbol-keyed
 action — guard-shaped, no-new-duration-risk window.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (8/19) | Stand aside | High | 21 days out; today's own 20Y auction result isn't even posted yet — pure information-gathering. | Nothing at 21 days out; the prior 20Y result is not even posted |
-| This week | Watch | Medium | The long-end selloff (30Y 19-yr high) is the live tape; the 10Y's own demand read is 3 weeks out, but the trend into it starts now. | The long-end selloff reversing, which removes the demand question this auction tests |
-| This month | Flat the print for high-duration names | High | 9/9→9/10→9/11 (10Y · 30Y · CPI) is a genuine three-day compound-risk corridor; CRWV/NVDA/AVGO/MRVL sized as if both tails are live through it. | A weak print — bid-to-cover materially below ~2.47, a positive tail, or indirects below trend — on **2026-09-09** |
-| This quarter | Two live channels, not one | Medium | Term premium (this auction + 30Y) and the Fed path (Sep-16 FOMC, hike live ~30–40%) are separate risks that can compound; neither resolves the other. | A strong print (bid-to-cover ≥2.53, negative tail, indirects near/above 76%) confirming demand is intact |
+| Today (8/30) | Stand aside | High | 10 days out, size/WI unannounced until ~9/3; nothing actionable — the auction remains a no-new-duration window, not a trade. | Nothing at 10 days out; the reopening size and when-issued yield do not exist yet |
+| This week | Watch the Fed repricing, not the auction | Medium | Warsh (8/28) put a Sep hike at ~56–60%; jobs (9/4) is the week's swing factor for whether that holds into the 9/9 auction. | A soft August jobs print (9/4) knocking hike odds back under ~35%, restoring the term-premium-only framing |
+| This month | Flat the print for high-duration names | High | 9/8→9/9→9/10→9/11 (3Y · 10Y+buyback start · 30Y · CPI) is a four-day compound-risk corridor into a live-hike FOMC; CRWV/NVDA/AVGO/MRVL sized as if both tails are live through it. | A weak print — bid-to-cover materially below ~2.47, a positive tail, or indirects below trend — on **2026-09-09** |
+| This quarter | Two live channels, and the Fed one is now the louder | Medium | Term premium (this auction + 30Y) and the Fed path (Sep-16 FOMC, hike **~56–60%** post-Warsh, up from ~30–40%) compound; neither resolves the other. | A strong print (bid-to-cover ≥2.53, negative tail, indirects near/above 76%) confirming demand is intact |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
@@ -36,7 +40,11 @@ action — guard-shaped, no-new-duration-risk window.
   long-end/fiscal story or the Fed-path risk.
 - **Never** — no directional bet on the auction outcome; no new unhedged duration exposure opened
   into the 1:00pm ET release, and none carried naked through the 9/9→9/11 stack.
-- **Watch (dated)** — 30Y reopening **Sep 10** · **CPI Sep 11** · jobs **Sep 4** (before) · 20Y
+- **Belly indirect trend** (added 8/30) — two consecutive belly auctions came in ~4pp light on
+  indirects (5Y 8/26: 61.5% vs ~65%; 7Y 8/27: 60.8% vs 65.1%), domestics filling the gap. A third
+  light read *at the 10Y* would be the demand tell; the 10Y's own last print (76.7%) still says otherwise.
+- **Watch (dated)** — jobs **Sep 4** (before) · 3Y note **Sep 8** · buyback increase effective
+  **Sep 9** (auction day, ≥$4B/op, 10–30Y) · 30Y reopening **Sep 10** · **CPI Sep 11** · 20Y
   reopening + **FOMC Sep 15–16** · 10Y TIPS **Sep 17** · quarterly OpEx **Sep 18**.
 
 ## Initial research
@@ -147,6 +155,17 @@ concession. Existing exposure in high-duration names — **CRWV** (highest beta,
 alone), then **NVDA/AVGO/MRVL** — held only sized for both tails. No directional rates bet; a
 no-new-risk window, not a trade.
 
+**Refinement (2026-08-30, receipt: the D10 ledger row) — the stance holds, the risk mix rotates.**
+Warsh's 8/28 Jackson Hole keynote (primary: federalreserve.gov) put a September **hike** at ~56–60%
+from ~35%, bear-flattening the curve (2Y +12bp, 10Y +4–6bp to ~4.72–4.73%, 30Y +2bp). The
+load-bearing risk into 9/9 is no longer principally long-end contagion but **Fed-path repricing**,
+with the auction one week ahead of a coin-flip FOMC — which cuts both ways for the reopening: more
+yield concession than the Aug-12 sale (4.683%), but more policy uncertainty for a buyer to hold
+through. Two offsetting new facts: Treasury's ≥$4B/op buyback increase covers the **10–20Y** bucket
+and takes effect **on auction day** (a same-day technical bid in the sector being reopened), while
+two consecutive belly auctions (5Y 8/26, 7Y 8/27) printed indirects ~4pp below trend. Nothing here
+licenses an entry — this remains guard-shaped.
+
 **Kill switches:**
 
 - **Weak benchmark print** (bid-to-cover materially below ~2.47, a positive tail, or indirect share
@@ -161,6 +180,13 @@ no-new-risk window, not a trade.
   weather, CPI is the climate that week.
 - **A repeat >5% single-session move in CRWV or another high-duration name** on or around auction
   day confirms leg 5's reaction-function read live in the current cycle.
+- **Added 2026-08-30 — a third consecutive light indirect print, this time at the 10Y** (below the
+  ~71% six-month average, well off Aug-12's 76.7%) would turn the 5Y/7Y pattern into a genuine
+  foreign-demand deterioration at the benchmark, which leg 3 currently rates SUPPORTED against.
+- **Added 2026-08-30 — the Fed-path leg is now the louder channel, so it kills in both directions**:
+  September hike odds falling back under ~35% (a soft 9/4 jobs print would do it) restores the
+  term-premium-only framing; odds pushing above ~75% makes the auction a policy-uncertainty event
+  rather than a supply event, and widens caution on the whole duration book into 9/16.
 
 ## Assessment ledger
 
@@ -169,6 +195,7 @@ no-new-risk window, not a trade.
 | 2026-08-19 | D21 | Initial research banked (doc above). Adjacency — peers: no tracked-name prints since 8/17 (NVDA 8/26, MRVL 8/27, AVGO 9/2 still ahead); live peer signal is macro-driven — CRWV −12.1%, NVDA −2.4%, SOX −5% on 8/18 long-end rate fear. Macro: 30Y at 19-yr high (~5.33% intraday 8/18, +40bp since June) on term-premium/fiscal drivers ($432B July deficit, ~$1.7T corp issuance, oil); Sep-16 FOMC odds ~60–70% hold / ~30–40% hike / 0% cut per the FOMC sibling doc — unchanged. VIX ~15.2–15.9 on 8/18 (sources disagree on exact print), up from the 14.56 2026-low — mild vol pickup tracking the selloff. Geopolitical: US–Iran deadline expired, WTI/oil spike — live inflation-uncertainty leg of the term-premium story. Event tape (date **confirmed**; size/yield figures **estimate**/press-sourced): this is a **reopening of the well-bid Aug-12 10Y** (that new issue: $42B, 4.683% highest-since-2007, tail +0.1bp, B/C 2.53 vs 2.47 avg, indirect 76.7% near-record); the 10Y is the *strong* tenor vs the tailing 20Y/30Y — the risk is contagion, not a standalone weak 10Y. Reopening size/WI for 9/9 not yet announced (~9/3). No new dated adjacencies beyond what the calendar already tracks (30Y 9/10, CPI 9/11, jobs 9/4, 20Y+FOMC 9/15–16, TIPS 9/17, OpEx 9/18). Conflicting Aug-12 aggregator figure ($32B/4.402%) flagged as un-corroborated error. | — (stance set) | 2026-08-26 (high, ≥21d band: every 7d) |
 | 2026-08-24 | D16 | Adjacency sweep (band now 8-20d, cadence shortens to every 3d per the scanner's own recompute). Event tape: reopening size/WI for 9/9 still not announced (~9/3 expected) — no update. 10Y cash yield **4.71-4.72%** as of 8/24, up modestly from the 4.683% Aug-12 new-issue print cited at D21 — continued, gradual climb, consistent with the broader long-end selloff already logged across the sibling 20Y/30Y-TIPS docs, not a sharp break. Peers: AVGO's XPV overhang deepened (-4.61% on 8/19, own doc); MRVL's implied move jumped to ~18.4% (own doc) — sector context, not 10Y-specific. Macro: no CPI/jobs/FOMC surprise since 8/19; Sep-16 read unchanged (hawkish-hold ~60-70%/hike ~30-40%/cut ~0%, per FOMC sibling doc). Volatility regime: VIX 15.13, calm, no shift. Geopolitical: Brent -1.38% to $93.09 on 8/24, first pause in the two-week escalation (new Iran sanctions pending) — same finding as sibling docs. No new dated adjacency found. | — (no change; 10Y stays the relatively strong tenor, contagion-from-20Y/30Y still the risk to watch, not standalone weakness) | 2026-08-27 (high, 8-20d band: every 3d) |
 | 2026-08-27 | D13 | Adjacency sweep (8-20d band holds, every 3d). Peers: not directly applicable (no symbols on this event); tracked-name earnings continue on schedule (NVDA beat 8/26, MRVL 8/27, AVGO 9/2 ahead) — sensitivity tier unchanged. Macro: GDP Q2 2nd estimate held **+1.5%** annualized, <0.1pp revision, no surprise (BEA 26-38, 8/26; closed out in open PR #683). PCE (8/26): core **+0.2% m/m / 3.3% y/y** in-line; headline **+3.7% y/y**, 0.1pt hot vs the 3.6% street consensus but flat vs June — a mild upside surprise on headline only, core (the load-bearing gauge) unmoved (closed out in open PR #684). Session reaction flat/mixed (S&P flat, Dow -0.21%, Nasdaq -0.08%), no distinguishable GDP/PCE-specific move. 10Y cash yield eased to **~4.66%** on 8/26 (down from 4.71-4.72% at D16) despite the hot headline print — consistent with core landing in-line. Prior context: the same-day 5Y note auction (8/26) drew primary-sourced **2.37x bid-to-cover** (above its ~2.32-2.33x average) and **+0.2bp tail** — a moderate improvement, not the fourth-consecutive-tail confirmation feared, though indirect demand (61.5%) stayed ~4pp below trend (closed out in open PR #685; corrects an earlier secondhand 2.39x/2.46avg figure). Volatility regime: MOVE index reversed its two-week decline to **73 (54th percentile)** as of the week of 8/24 (Cboe), cross-asset rates vol ticking up on Treasury-market stress even as VIX stayed calm at **15.21** on 8/26 (down slightly from 15.13) — a bond/equity vol divergence worth tracking, not yet a regime break. Geopolitical/policy: Treasury Secretary Bessent's late-week (~8/19-21) move to **double long-end buyback operations** (10-30Y, to $4B/operation, per the sibling `treasury-20y-bond-2026-08-19.md` finding) is a direct fiscal lever supporting long-end demand technicals into the Sep coupon block; that doc's own follow-through found the relief faded within a day, so it tempers but doesn't remove the contagion watch. No new Iran/oil escalation since 8/24. Event-specific tape: reopening size/WI for 9/9 still unannounced (~9/3 expected); external 2026 auction-trend sourcing corroborates the Aug-12 76.7% indirect print as resilient, not deteriorating — the "10Y is the strong tenor" read holds. Jackson Hole (8/28), ISM Mfg/Services (9/1, 9/3) and the jobs report (9/4) are all still ahead of this row's run date — nothing to score from them yet. No new dated adjacency found (all already tracked in the calendar). | — (no change; base case still a well-bid reopening, contagion from the long end / a hot 9/11 CPI remains the risk to watch — the 5Y's cleaner print and eased 10Y yield are mild positives for the read, not a resolution) | 2026-08-30 (high, 8-20d band: every 3d) |
+| 2026-08-30 | D10 | Adjacency sweep (8-20d band holds, every 3d). **Macro — the material change.** Warsh's Jackson Hole keynote (8/28, primary: federalreserve.gov/newsevents/speech/warsh20260828a.htm, "In Our Time") repriced the Fed path: this summer's PCE/CPI prints "do not tell me that underlying trends have meaningfully improved," and the Fed may "have work to do." September **hike** odds jumped to **~56-60%** from ~35% the prior day (CME FedWatch via CNBC/Benzinga/TheStreet, 8/28) — the ~30-40% hike read this doc has carried since D21 is now the *minority* case. Curve reaction was a bear flattener: 2Y **+12bp to ~4.356%**, 10Y **+4-6bp to ~4.72-4.73%**, 30Y **+2bp to ~5.21%** (CNBC 8/28, against the H.15 8/27 baseline of 2Y 4.20 / 10Y 4.67 / 20Y 5.18 / 30Y 5.19) — the impulse is now Fed-path at the front, not term-premium at the back, a genuine rotation of the driver mix. Equities: S&P -0.25%, Nasdaq -0.52%, Dow -0.02%. **Prior auctions (the belly-demand leg, the one most at risk):** the 8/27 7Y note drew B/C **2.50 vs a 2.49 six-month average** with a **0.0bp tail** (stopped on the screws) but indirects **60.8% vs a 65.1% average** — the second consecutive belly auction with indirects ~4pp light (5Y 8/26: 61.5%, also ~4pp light), domestics filling the gap both times. This tempers rather than refutes leg 3: 5Y/7Y indirect averages sit structurally below the 10Y's ~71%, and Aug-12's 76.7% remains the only direct evidence for *this* tenor. **Event tape:** reopening size and WI for 9/9 still unannounced (formal announce ~9/3). Directly on-point and new to this doc: Treasury's buyback increase — **at least $4B/operation, up from $2B, in the 10-20Y and 20-30Y nominal sectors** — takes effect **2026-09-09, auction day**, through the refunding quarter's close 2026-11-04 (treasury.gov press release sb0607; title and terms verified via a home.treasury.gov-restricted search after two direct page fetches timed out). Prior rows framed this as 30Y/long-end support; the **10-20Y** bucket makes it a same-day technical bid in the sector being reopened. Volatility regime: VIX **14.35** on 8/28, a YTD low (Cboe/CNBC), *down* from 15.21 at D13 despite the hawkish repricing — the equity-vol / rates-vol divergence logged at D13 (MOVE 73, 54th pctile) widened rather than resolved. Geopolitical: Brent **~$88.3-89.4** on 8/28, down **>5% on the week**, as the Iran confrontation read as sanctions rather than supply (Hormuz flows improving; Gulf exports ~15-16 mb/d vs 22-24 pre-conflict, per Goldman) — removes part of the oil/inflation-uncertainty leg of the term-premium story. Corridor now runs **four days**: 3Y (9/8) → **10Y + buyback start (9/9)** → 30Y (9/10) → CPI (9/11), one week ahead of a live-hike FOMC (9/15-16). No new dated adjacency found — the 3Y (9/8) and the buyback (9/9) are already tracked calendar entries. Bookkeeping (not acted on here): `treasury-buyback-increase-2026-09-09` is still `status: "estimate"` with a `NEWS:` prefix though its source line already cites the primary treasury.gov release; left for that event's own 9/4 pulse, since this session verified the release by search summary rather than a direct read. | **Refined, not reversed** — base case is still a well-bid reopening, but the dominant risk channel rotates from long-end contagion to Fed-path repricing into a coin-flip September hike; two kill switches added (a third light indirect print at the 10Y; hike odds breaking ~35% or ~75%) | 2026-09-02 (high, 8-20d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
