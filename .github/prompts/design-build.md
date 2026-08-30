@@ -122,7 +122,12 @@ genuine taste fork where guessing would be worse than asking. Nothing else.
    same code shot twice differs in every frame; compare emitted HTML there instead.
 7. **Open the PR** via `scripts/ship.sh open` with a `--body-file`. Use `ship.sh`, not a GitHub MCP
    call: the MCP path strips `<details>` and any `<placeholder>` from the body, which silently
-   destroys the fold the template requires. Arm auto-merge.
+   destroys the fold the template requires. **Arm auto-merge with `bash scripts/ship.sh automerge
+   <pr-number>`** — never hand-roll `gh pr merge --auto --squash` or the MCP auto-merge tool
+   without it; the script is the only path that handles the PR going green before you arm it, a
+   GraphQL proxy that won't serve the arm mutation, rate-limit exhaustion, and a read-back check
+   that the arm actually took (#659; the 16 research PRs stalled by the clean-status race on
+   2026-08-26).
 8. Conventional-Commit subjects, lowercase-led, ≤100 characters (commitlint fails `verify` past that).
 
 ## The one thing a canvas can never do
