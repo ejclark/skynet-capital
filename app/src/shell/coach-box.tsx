@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type CoachMessage, coachTurn, type FeedbackKind, KIND_LABELS } from "../live/feedback";
 
 /** What a finished coach conversation hands the form: the draft, ready for review. */
@@ -16,15 +16,19 @@ export interface CoachDraft {
  * page's inline script. A rough note starts a short dialogue (one question per turn); the coach
  * only DRAFTS — its product fills the form below for review, and the member's explicit Send
  * stays the only path that files anything. Any coach failure drops the member into manual mode
- * (`onUnavailable`), so the coach can never stand between a member and filing; choosing manual
- * deliberately is the door's own mode toggle (#981), not a button in here.
+ * with the reason (`onUnavailable`), so the coach can never stand between a member and filing;
+ * choosing manual deliberately is the door's own mode toggle (#981), not a button in here.
+ *
+ * A dismissed coach stays quiet: a turn still in flight when the member switches to manual
+ * resolves into a component nobody is looking at, and a late draft would overwrite what they
+ * have since typed by hand.
  */
 export function CoachBox({
   onDraft,
   onUnavailable,
 }: {
   readonly onDraft: (draft: CoachDraft) => void;
-  readonly onUnavailable: () => void;
+  readonly onUnavailable: (reason: string) => void;
 }): ReactElement {
   const [kind, setKind] = useState<FeedbackKind>("bug");
   const [note, setNote] = useState("");
@@ -32,16 +36,21 @@ export function CoachBox({
   const [question, setQuestion] = useState<string | undefined>();
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | undefined>();
+  const live = useRef(true);
+  useEffect(
+    () => () => {
+      live.current = false;
+    },
+    [],
+  );
 
   const turn = async (next: readonly CoachMessage[]) => {
     setBusy(true);
-    setError(undefined);
     try {
       const reply = await coachTurn({ kind, messages: next });
+      if (!live.current) return;
       if (!reply.ok) {
-        setError(reply.error);
-        onUnavailable(); // any coach failure reveals the plain form — never a dead end
+        onUnavailable(reply.error); // any coach failure reveals the plain form — never a dead end
         return;
       }
       setMessages(next);
@@ -58,8 +67,7 @@ export function CoachBox({
         setAnswer("");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      onUnavailable();
+      if (live.current) onUnavailable(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
@@ -150,7 +158,6 @@ export function CoachBox({
           </div>
         </div>
       )}
-      {error ? <p className="set-err">{error}</p> : null}
     </section>
   );
 }

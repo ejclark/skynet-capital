@@ -9,11 +9,18 @@ import { FeedbackForm } from "./feedback-form";
  * the same place in both modes, so manual mode is no longer a one-way trip out of the coach.
  *
  * The form stays MOUNTED behind the coach (`hidden`, not unmounted): a member who types a few
- * lines by hand, ducks back to the coach and returns finds their words still there. The coach's
- * own draft still remounts it (the `key`), because a draft replaces the form's fields.
+ * lines by hand, ducks back to the coach and returns finds their words still there. Each coach
+ * draft still remounts it — a draft replaces the fields — which is why the key counts drafts
+ * rather than naming one: two drafts can share a title, and the second must still land.
  */
 
 type Mode = "coach" | "manual";
+
+/** A draft and which one it is — the counter is the form's remount key. */
+interface DraftSlot {
+  readonly seq: number;
+  readonly draft: CoachDraft;
+}
 
 const SWITCH_LABEL: Record<Mode, string> = {
   coach: "Switch to manual feedback →",
@@ -27,8 +34,9 @@ export function FeedbackDoor({
   readonly coachEnabled: boolean;
   readonly onFiled: () => void;
 }): ReactElement {
-  const [draft, setDraft] = useState<CoachDraft | undefined>();
+  const [slot, setSlot] = useState<DraftSlot | undefined>();
   const [mode, setMode] = useState<Mode>("coach");
+  const [coachError, setCoachError] = useState<string | undefined>();
   const [filed, setFiled] = useState(false);
   const active: Mode = coachEnabled ? mode : "manual";
 
@@ -39,7 +47,10 @@ export function FeedbackDoor({
           <button
             type="button"
             className="btn mc-btn"
-            onClick={() => setMode(active === "coach" ? "manual" : "coach")}
+            onClick={() => {
+              setCoachError(undefined);
+              setMode(active === "coach" ? "manual" : "coach");
+            }}
           >
             {SWITCH_LABEL[active]}
           </button>
@@ -47,17 +58,26 @@ export function FeedbackDoor({
       ) : null}
       {active === "coach" ? (
         <CoachBox
-          onDraft={(next) => {
-            setDraft(next);
+          onDraft={(draft) => {
+            setSlot((prev) => ({ seq: (prev?.seq ?? 0) + 1, draft }));
             setMode("manual");
           }}
-          onUnavailable={() => setMode("manual")}
+          onUnavailable={(reason) => {
+            setCoachError(reason);
+            setMode("manual");
+          }}
         />
+      ) : null}
+      {coachError !== undefined && active === "manual" ? (
+        <p className="set-err fb-coach-down">
+          The coach couldn't help just now ({coachError}) — write it yourself below and it files
+          exactly the same.
+        </p>
       ) : null}
       <div className="fb-pane" hidden={active === "coach"}>
         <FeedbackForm
-          key={draft?.title ?? "plain"}
-          draft={draft}
+          key={slot ? `draft-${slot.seq}` : "plain"}
+          draft={slot?.draft}
           onFiled={() => {
             setFiled(true);
             onFiled();

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { FeedbackDoor } from "../../src/shell/feedback-door";
 
 // The bug this locks down (#981): manual mode used to be a one-way trip — the "skip" button
@@ -73,5 +73,61 @@ describe("FeedbackDoor", () => {
     fireEvent.click(switchButton());
 
     expect(screen.getByText("🧪 Enhancement — extend current functionality")).toBeInTheDocument();
+  });
+
+  // The coach talks to the server, so these two hold its reply open and decide when it lands.
+  describe("when a coach turn is in flight", () => {
+    const jsonResponse = (body: unknown) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+
+    let land: ((reply: Response) => void) | undefined;
+    let realFetch: typeof globalThis.fetch;
+
+    beforeEach(() => {
+      realFetch = globalThis.fetch;
+      globalThis.fetch = (() =>
+        new Promise<Response>((resolve) => {
+          land = resolve;
+        })) as typeof globalThis.fetch;
+    });
+
+    afterEach(() => {
+      globalThis.fetch = realFetch;
+      land = undefined;
+    });
+
+    const startATurn = () => {
+      open();
+      fireEvent.change(screen.getByLabelText("What's on your mind?"), {
+        target: { value: "the board looks wrong" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Shape it with me" }));
+    };
+
+    it("says why the coach bowed out and leaves the member in manual mode", async () => {
+      startATurn();
+
+      await act(async () => land?.(jsonResponse({ ok: false, error: "coach is offline" })));
+
+      expect(screen.getByText(/coach is offline/)).toBeInTheDocument();
+      expect(screen.getByLabelText("Title")).toBeVisible();
+    });
+
+    it("ignores a draft that lands after the member already switched to manual", async () => {
+      startATurn();
+      fireEvent.click(switchButton());
+      fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Mine, by hand" } });
+
+      await act(async () =>
+        land?.(
+          jsonResponse({ ok: true, done: true, title: "The coach's title", details: "", spec: {} }),
+        ),
+      );
+
+      expect(screen.getByLabelText("Title")).toHaveValue("Mine, by hand");
+    });
   });
 });
