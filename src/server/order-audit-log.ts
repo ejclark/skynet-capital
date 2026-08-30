@@ -4,7 +4,7 @@ import { JsonlKeyedStore } from "../storage/jsonl-store.js";
 
 /**
  * THE PER-ORDER AUDIT TRAIL — one append-only line every time a member-initiated order actually
- * reaches the broker (#466 slice 1). Distinct from `activity-store.ts`'s fill-stream ledger: that
+ * reaches the broker. Distinct from `activity-store.ts`'s fill-stream ledger: that
  * one is fed asynchronously from each account's `trade_updates` stream and exists to render the
  * blotter; this one is written synchronously by the desk seam itself at the moment of submission,
  * and its whole point is to answer "who submitted this order" — the account AND the signed-in

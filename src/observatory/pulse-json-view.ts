@@ -10,7 +10,7 @@ import { type PulseStreakGroup, pulseStreaks } from "./pulse-streaks.js";
 import { formatCurrency, formatSigned, formatTimestamp, plClass } from "./render-atoms.js";
 
 /**
- * DESK PULSE AS DATA (#738 phase 4a) — `/api/desk/:id/pulse`, the JSON view behind the shell's
+ * DESK PULSE AS DATA — `/api/desk/:id/pulse`, the JSON view behind the shell's
  * Insights-style Pulse page. Same doctrine as `performance-view.ts`: three honestly-separate
  * inputs (recorded equity samples, closed round trips, the live snapshot), and each section
  * carries its own empty state — a desk with fills but no history still gets its weeks, one with
@@ -66,7 +66,7 @@ export interface DeskPulseView {
   readonly weeks: readonly PulseWeek[];
   readonly tiles: readonly PulseTile[];
   readonly race: PulseRace | null;
-  /** Both run families (#780) — day-over-day equity and closed round trips, kept separate. */
+  /** Both run families — day-over-day equity and closed round trips, kept separate. */
   readonly streaks: readonly PulseStreakGroup[];
 }
 

@@ -11,7 +11,7 @@ import type { AlertBus, AlertListener } from "./alert-bus.js";
  * live (`watch`) and on mount (`visible`) alike.
  *
  * It is a substrate, NOT a display: no HTML, no styling, no notion of a panel. The intended
- * delivery surfaces are the trading companion (#467) and the push bridge (#432); both consume
+ * delivery surfaces are the trading companion and the push bridge; both consume
  * this, and neither is built here.
  *
  * Construction is `AlertCenter.open`, which is async because loading the dismissed set is the one

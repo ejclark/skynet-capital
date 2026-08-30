@@ -1,8 +1,8 @@
 import type { OwnerLinkStore } from "./owner-link-store.js";
 
 /**
- * `/claim`'s shape — attach an account that is ALREADY on the board to a member's sign-in (#546);
- * served as data at `/api/admin/claim` since #738 phase 9e (`admin-api-routes.ts` reads
+ * `/claim`'s shape — attach an account that is ALREADY on the board to a member's sign-in;
+ * served as data at `/api/admin/claim` (`admin-api-routes.ts` reads
  * `store`/`isOwner`/`accounts`/`canSignIn` directly).
  *
  * **The gap this closes.** The desk resolves a session to exactly one account, through

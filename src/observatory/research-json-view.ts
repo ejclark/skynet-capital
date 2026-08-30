@@ -3,7 +3,7 @@ import type { EventCall } from "../server/research-event-calls.js";
 import type { ResearchDoc, ResearchShelf } from "../server/research-service.js";
 
 /**
- * RESEARCH AS DATA (#738 phase 6c) — `/api/research`, the JSON twin behind the shell's shelf.
+ * RESEARCH AS DATA — `/api/research`, the JSON twin behind the shell's shelf.
  * The house doctrine leads the payload the way it leads every research doc (CLAUDE.md,
  * 2026-08-23: "research leads with the call"): the call board comes first — one row per
  * researched event with the authored call, its horizon, and its stated confidence — then the

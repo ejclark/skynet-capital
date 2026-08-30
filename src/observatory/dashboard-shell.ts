@@ -38,7 +38,7 @@ export interface NavContext {
    * this — the actual zero-typing fix — had no way in from the app).
    */
   readonly canClaim?: boolean;
-  /** Owner-only: link `/ops-status` — the read-only bots/deploy health panel (#666). Members
+  /** Owner-only: link `/ops-status` — the read-only bots/deploy health panel. Members
    *  see neither the link nor the page. */
   readonly canOpsStatus?: boolean;
 }

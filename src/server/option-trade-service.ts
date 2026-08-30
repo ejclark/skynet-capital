@@ -15,7 +15,7 @@ import type { OrderAuditRecord } from "./order-audit-log.js";
 
 /**
  * THE OPTIONS EXECUTION SEAM — the desk's option orders reach the broker only through here,
- * exactly as `trade-service.ts` does for shares. Open (#928), for the same reason: this file
+ * exactly as `trade-service.ts` does for shares. Open, for the same reason: this file
  * never holds a raw broker-client factory, only a `VerifyAccess` closure bound in
  * `account-identity-gate.ts` (protected).
  *
@@ -51,7 +51,7 @@ type DeskOptionResult = DeskSubmitResult;
 export interface OptionTradeServiceDeps {
   /** The bound identity gate — the only way this service can reach a broker client. */
   readonly verifyAccess: VerifyAccess;
-  /** Appends the per-order audit line (#466) after a successful broker submit. Optional so
+  /** Appends the per-order audit line after a successful broker submit. Optional so
    *  offline/test wiring can omit it. */
   readonly recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
   readonly now?: () => Date;
@@ -65,7 +65,7 @@ export type SubmitOptionTrade = (
 /** Alpaca's own approval tier for the account, parsed defensively. Absent or unparseable means
  *  "unknown here" (never fabricated as 0) — `previewOptionOrder`'s level check treats that the
  *  same way it treats a missing premium: skip the check rather than assert a refusal nobody can
- *  back up. A real, present value is what actually gates a play (#468 criterion 7). */
+ *  back up. A real, present value is what actually gates a play. */
 function optionsTradingLevel(account: {
   options_trading_level?: string | number;
 }): number | undefined {

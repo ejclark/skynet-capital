@@ -17,7 +17,7 @@
  *
  * This file owns the CONVERSATION (prompt, rails, HTTP). What a raw model reply MEANS — including
  * how a truncated or repeated one is recovered so a member never faces a loop of structured output
- * (#702) — lives in `feedback-coach-reply.ts`.
+ * — lives in `feedback-coach-reply.ts`.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 
@@ -32,10 +32,10 @@ import {
   THROTTLE_MAX,
   THROTTLE_WINDOW_MS,
 } from "./feedback-coach-limits.js";
-// The model dial lives in its own gated module (#928) — see its header for the route-by-who-pays
+// The model dial lives in its own gated module — see its header for the route-by-who-pays
 // rule. The rest of the interview's shape is open, ordinary feature work.
 import { MODEL } from "./feedback-coach-model.js";
-// Reading a reply — including recovering a truncated or repeated one — is its own concern (#702).
+// Reading a reply — including recovering a truncated or repeated one — is its own concern.
 // Re-exported so every existing consumer keeps one import site.
 import {
   type CoachMessage,
@@ -148,7 +148,7 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
     if (!reply.text) return { ok: false, error: reply.error ?? "" };
     const result = parseCoachReply(reply.text, userRounds);
     // A model that re-asks the question it just asked is stalled, not conversing — end the loop
-    // with the member's own words in the form rather than sending them round again (#702). No
+    // with the member's own words in the form rather than sending them round again. No
     // retry call: another API round-trip per stall would be a per-use spend change, not a bug fix.
     return result.ok && !result.done && repeatsLastQuestion(input.messages, result.question)
       ? stalledDraft(input.messages, userRounds)
@@ -185,7 +185,7 @@ function coachThrottled(
 }
 
 /**
- * One coach turn over HTTP (#429 slice 2). JSON in, JSON out; the coach enforces round/size
+ * One coach turn over HTTP. JSON in, JSON out; the coach enforces round/size
  * caps, this handler owns HTTP shape and the burst throttle. Auth is upstream, same as every
  * page route — `email` is the signed-in member's throttle key.
  */

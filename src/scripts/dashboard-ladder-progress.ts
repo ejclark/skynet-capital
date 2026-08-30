@@ -3,7 +3,7 @@ import { detectAndRecordLadderProgress } from "../server/ladder-activity-detecto
 import { createLadderProgressLogStore } from "../server/ladder-progress-log.js";
 
 /**
- * Boot-time wiring for ladder milestone auto-completion (#469 slice 3): OTM expiry / first
+ * Boot-time wiring for ladder milestone auto-completion: OTM expiry / first
  * realized profit, detected from the durable activity ledger as it arrives — never a client claim.
  * Pulled out of `serve-dashboard.ts` to keep that file's own complexity budget
  * (`scripts/arch-scan.mjs`'s line-count gate), mirroring `setupFeedback` in `dashboard-feedback.ts`

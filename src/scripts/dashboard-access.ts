@@ -63,7 +63,7 @@ export function setupAccess(
   }
 
   // Owner links for accounts that carry no `ownerEmail` of their own — every env-declared roster
-  // row without a stamp, and anything added before the connect form existed (#546). Plain JSON on
+  // row without a stamp, and anything added before the connect form existed. Plain JSON on
   // the volume beside bot-controls.json: an id and an already-admitted email, no credentials.
   const ownerLinks = createOwnerLinkStore(env, (m) => console.error(m));
   // The owner link: session email -> the account(s) it owns. Never exposed on ParticipantSnapshot.

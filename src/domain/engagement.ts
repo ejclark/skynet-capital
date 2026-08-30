@@ -1,5 +1,5 @@
 /**
- * THE ENGAGEMENT TRACK — a milestone earned by an ACTION, not a trade fill (#567). Deliberately a
+ * THE ENGAGEMENT TRACK — a milestone earned by an ACTION, not a trade fill. Deliberately a
  * separate track from `curriculum.ts`/`progression.ts`'s trade ladder rather than a new
  * `TradeTypeCode`: `progression.ts`'s own header states the ruling this desk holds elsewhere too
  * — "proof is a FILL, never a submission and never a checkbox" — and filing feedback has no fill

@@ -1,7 +1,7 @@
 /**
  * CLI: confirm forward-looking earnings-print dates against a live calendar source, and rewrite
  * `UPCOMING_PRINTS` in earnings-calendar.ts in place. This is the automated half of the manual
- * step done by hand for NVDA (PR #309, 2026-08-12) — closing docs/plans/trade-playbooks.md's
+ * step done by hand for NVDA — closing docs/plans/trade-playbooks.md's
  * "how does research get applied automatically" gap without crossing the irreversible-class
  * boundary: this script only ever flips `estimate` → `confirmed` in a checked-in, reviewed table.
  * It never touches credentials, never places an order, and its output ships as an ordinary

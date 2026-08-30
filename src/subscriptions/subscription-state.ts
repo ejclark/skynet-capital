@@ -2,7 +2,7 @@ import type { PlaybookMode, PlaybookSubscription } from "../domain/types.js";
 import { isRecord } from "../storage/parse-guards.js";
 
 /**
- * PLAYBOOK SUBSCRIPTIONS — the durable state behind an account's Playbook Store (issue #885).
+ * PLAYBOOK SUBSCRIPTIONS — the durable state behind an account's Playbook Store.
  *
  * Keyed by `accountId`, one array of subscriptions per account — subscribing is always against
  * your OWN account's capital (bot or human, same mechanism), so there is no cross-account

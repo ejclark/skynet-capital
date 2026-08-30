@@ -24,7 +24,7 @@ import {
  *
  * The shapes themselves live in `structure-templates.ts`; this file is what happens when they meet
  * a real chain. Every candidate is ONE LOT per leg — sizing is not this module's business, and
- * portfolio-Greeks-aware sizing (#580) is not built yet.
+ * portfolio-Greeks-aware sizing is not built yet.
  *
  * How strikes are chosen, stated so nobody mistakes it for optimisation:
  *

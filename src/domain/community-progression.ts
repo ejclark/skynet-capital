@@ -1,7 +1,7 @@
 import { COMMUNITY_MILESTONES } from "./community.js";
 
 /**
- * COMMUNITY MILESTONE DERIVATION (#567) — the pure function that turns the feedback log's
+ * COMMUNITY MILESTONE DERIVATION — the pure function that turns the feedback log's
  * append-only filings into earned community milestones, mirroring `progression.ts`'s
  * `deriveEarned` one level over: there the order id IS the evidence for a trade milestone; here
  * the filed issue number IS the evidence for a community one. Same discipline — re-derived from

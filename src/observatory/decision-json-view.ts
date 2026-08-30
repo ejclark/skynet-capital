@@ -2,7 +2,7 @@ import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { formatPrice } from "./desk-data.js";
 
 /**
- * THE BOT'S MIND AS DATA (#738 phase 3a) — `/api/desk/:id/decisions`, the JSON view behind the
+ * THE BOT'S MIND AS DATA — `/api/desk/:id/decisions`, the JSON view behind the
  * shell's decision-cycle viewer. The viewer is built on the Actions-run template (the pattern
  * research's strongest mapping): every cycle is a run row whose status is derivable at a glance,
  * expanding into what the persona wanted, what the guards left standing, and what happened.

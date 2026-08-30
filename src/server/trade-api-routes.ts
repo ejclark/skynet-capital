@@ -6,7 +6,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
- * THE TRADE API (#738 phase 2e) — the React shell's pre-trade gate, as two POST endpoints.
+ * THE TRADE API — the React shell's pre-trade gate, as two POST endpoints.
  *
  *   POST /api/trade/review  → the pure ticket rules against the hub snapshot (same inputs the
  *                             server-rendered `/trade` review uses). A refused order is a rendered

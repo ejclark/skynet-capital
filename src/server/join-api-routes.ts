@@ -6,7 +6,7 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
 import { personaClasses } from "./persona-classes.js";
 
 /**
- * JOIN THE BOARD (#738 phase 9c) — `/add`'s twin for the shell, as one endpoint:
+ * JOIN THE BOARD — `/add`'s twin for the shell, as one endpoint:
  *
  *   GET  /api/join → whether joining is wired, the persona classes for the picker, and the
  *                    timezone choices — everything the page renders, nothing it decides.
@@ -85,7 +85,7 @@ export async function serveJoinApi(
     sendJson(res, 400, { error: "malformed join body" });
     return true;
   }
-  // The owner link: whoever's signed in is who this account belongs to, full stop (#466) —
+  // The owner link: whoever's signed in is who this account belongs to, full stop —
   // assembled here from the session, never read from the body.
   sendJson(
     res,

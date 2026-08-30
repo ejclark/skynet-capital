@@ -6,7 +6,7 @@ import { formatActivityTime, formatSigned, plClass } from "./render-atoms.js";
 import type { WirePnlRow, WireTradeRow } from "./wire-data.js";
 
 /**
- * THE WIRE AS DATA (#738 phase 5a) — `/api/wire`, the JSON twin behind the shell's Wire. Same
+ * THE WIRE AS DATA — `/api/wire`, the JSON twin behind the shell's Wire. Same
  * three feeds wire-view.ts renders (trading activity, booked P&L, the feedback pulse), same
  * honesty seams (reconstructed provenance, feedback-unwired banner, pseudonymous filings), with
  * every displayed figure formatted here. The filterable raws (side, kind, symbol, name) ride

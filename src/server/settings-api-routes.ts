@@ -7,7 +7,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
- * THE SETTINGS API (#738 phase 5c) — the React shell's account settings, as three endpoints.
+ * THE SETTINGS API — the React shell's account settings, as three endpoints.
  *
  *   GET  /api/settings          → the accounts the SESSION owns (never anyone else's), each with
  *                                 its stored profile or the honest host-configured marker.
@@ -110,7 +110,7 @@ function serveSettingsIndex(
   const ownedIds = authConfigured ? resolveOwnedIds(session, config) : [];
   const board = config.hub.getState().participants;
   const roster = config.rosterIds?.() ?? new Set<string>();
-  // The own-bot switch state (#738 phase 9b) — present exactly when this is a bot the session
+  // The own-bot switch state — present exactly when this is a bot the session
   // owns AND bot controls are wired; the fleet-wide hold is stated so a halted bot never reads
   // as trading (docs/BRAND.md: never let a flourish imply something false).
   const fleet = config.controls?.store.load();
@@ -138,7 +138,7 @@ function serveSettingsIndex(
   });
 }
 
-/** POST /api/settings/bot-control — flip the session's OWN bot (#738 phase 9b). The rule is
+/** POST /api/settings/bot-control — flip the session's OWN bot. The rule is
  *  `/account/bot-control`'s exactly: the session must resolve to this bot — ownership, NOT the
  *  env-allowlist (that fleet-wide authority is Mission Control's, `/api/controls`). */
 async function serveBotControl(

@@ -12,7 +12,7 @@ import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
 /**
- * THE COMPANION'S HTTP SURFACE (#467) — two endpoints, both gated on the SAME `Session` every
+ * THE COMPANION'S HTTP SURFACE — two endpoints, both gated on the SAME `Session` every
  * other member-only route checks upstream (`gateRequest` in `dashboard-auth-gate.ts`, wired by
  * the caller before this file ever runs):
  *

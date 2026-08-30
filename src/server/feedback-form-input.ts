@@ -34,7 +34,7 @@ function specFromForm(raw: string | null): { spec: FeedbackSpec } | undefined {
 /**
  * The posted kind, or `undefined` when it is not one of the three we offer.
  *
- * STRICT, WHERE IT USED TO GUESS (#645, 2026-08-26). This read
+ * STRICT, WHERE IT USED TO GUESS. This read
  * `kindRaw === "bug" || kindRaw === "idea" ? kindRaw : "feature"` — so a missing, empty or
  * unrecognised kind became `feature` silently. Combined with `feature` being pre-selected in the
  * form, that produced a corpus where all ten member-filed issues were labelled `enhancement`,

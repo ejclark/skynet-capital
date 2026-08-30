@@ -1,11 +1,11 @@
 /**
- * THE COMMUNITY TRACK (#567) — a small milestone track for engagement that isn't a trade, kept
+ * THE COMMUNITY TRACK — a small milestone track for engagement that isn't a trade, kept
  * deliberately SEPARATE from the trading curriculum (`curriculum.ts`). Filing feedback has no
  * fill behind it, so folding it into the 100-level trade ladder would either fabricate a fake
  * `TradeTypeCode` or weaken `progression.ts`'s fill-only honesty rule (Eric, 2026-08-25: "progress
  * a user can claim with zero proof is worthless") for a milestone that was never a trade at all.
  * This track earns from its own durable record instead — a real filed GitHub issue
- * (`feedback-log.ts`, #429) — never a client-side claim (`community-progression.ts` does the
+ * (`feedback-log.ts`) — never a client-side claim (`community-progression.ts` does the
  * deriving, same pattern as `progression.ts`'s `deriveEarned`).
  *
  * Pure data, same shape discipline as `curriculum.ts`: extend this list for future community

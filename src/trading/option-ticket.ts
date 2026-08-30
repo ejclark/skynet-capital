@@ -83,7 +83,7 @@ const PLAY_LABEL: Record<keyof typeof OPTION_PLAY_LEVEL, string> = {
 
 /**
  * IF the account's `options_trading_level` is below the play's required level, THEN refuse with
- * the account's actual level and the level the play needs (#468 criterion 7). `optionsTradingLevel`
+ * the account's actual level and the level the play needs. `optionsTradingLevel`
  * is only ever populated once it's been read live (see the field's own doc in
  * `option-economics.ts`) — undefined means "not checked here", so this never asserts a refusal
  * (or an approval) the caller can't back up. The live execution-time re-check is what always
@@ -97,7 +97,7 @@ function levelRefusal(code: OptionPlayCode, context: OptionTicketContext): strin
 }
 
 /** The play itself must be a real option play the desk offers; once it is, the account's level
- *  gets its own check (#468 criterion 7). Split out of `previewOptionOrder` to keep that
+ *  gets its own check. Split out of `previewOptionOrder` to keep that
  *  function's branching count under the house complexity budget. */
 function validatePlay(
   request: OptionTicketRequest,

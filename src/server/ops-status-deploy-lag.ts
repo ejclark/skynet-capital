@@ -11,7 +11,7 @@ import {
 import type { OpsSignal, OpsSignalLink } from "./ops-status-types.js";
 
 /**
- * THE IMPURE HALF OF THE DEPLOY-LAG SIGNAL (#666 slice 1) — "is `main` actually deployed?", read
+ * THE IMPURE HALF OF THE DEPLOY-LAG SIGNAL — "is `main` actually deployed?", read
  * live through the GitHub REST API the app already reaches for feedback filing
  * (`SKYNET_FEEDBACK_GITHUB_TOKEN`, see `feedback-service.ts`/`feedback-status.ts`). No new
  * credential: the panel's constraint ("read-only credentials only... an honest smaller panel beats

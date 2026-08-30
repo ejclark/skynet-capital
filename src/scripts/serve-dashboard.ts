@@ -89,7 +89,7 @@ async function main(): Promise<void> {
   // update from every account's trade_updates stream is journaled, so trade history survives the
   // broker's recent-order window. Boot banks that window first — the restart-gap net.
   const activity = createBootActivityStore(process.env, dataSource.mode);
-  // Ladder milestone auto-completion (#469 slice 3) — never a client claim; see the wiring module.
+  // Ladder milestone auto-completion — never a client claim; see the wiring module.
   const { onActivity, sweep: sweepLadderProgress } = wireLadderProgress(process.env, activity);
   void reconcileBrokerActivity(activity, initial.participants)
     .then((n) => {
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
     isOwnerEmail: (email) => owners.has(email.toLowerCase()),
   });
 
-  // Desk trading is on whenever OAuth is configured — no separate kill switch (#466).
+  // Desk trading is on whenever OAuth is configured — no separate kill switch.
   // Resolved through the LIVE merge (not the boot-time `roster`) so a credential rotated at
   // runtime takes effect on the next order, not the next restart.
   const liveRoster = () => mergeRoster(envRoster, store.load());
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
     activity,
     authConfigured: Boolean(auth),
   });
-  // The broker's last word (#591): the fill stream is the fast path, this is the authoritative slow
+  // The broker's last word: the fill stream is the fast path, this is the authoritative slow
   // one that repairs whatever it missed — a socket gap, a restart, an order placed outside this app.
   // Reads the LIVE roster, so a runtime-added or rotated account is covered too.
   const brokerSync = createBrokerSync({
@@ -213,7 +213,7 @@ async function main(): Promise<void> {
 
   createDashboardServer({
     hub,
-    // Ceremonies ride the board's seq-numbered patch stream as fire-once cues (#573).
+    // Ceremonies ride the board's seq-numbered patch stream as fire-once cues.
     ceremonies,
     password,
     ...(auth ? { auth } : {}),
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
-          // The account-link table (#546). Reads the live board so a just-added account is
+          // The account-link table. Reads the live board so a just-added account is
           // linkable immediately, and refuses any address that can't sign in — a link to
           // somebody outside the gate is a link nobody could ever use.
           claim: {

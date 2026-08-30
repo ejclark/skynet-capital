@@ -7,7 +7,7 @@ import { findResearchDoc } from "./research-service.js";
  *
  * This is the classic-surface route legacy-redirects.ts's header comment already promises
  * ("`/research/<slug>` documents are server-rendered by design") but which got deleted alongside
- * the rest of the pre-#738 HTML views during the classic-surface removal (#738 phase 9f-2) with
+ * the rest of the pre-shell HTML views during the classic-surface removal with
  * no replacement wired — `research-service.ts`'s `findResearchDoc` kept rendering correctly the
  * whole time, it just had zero callers. `/research` itself stays a 302 to `/app/research` (the
  * shelf listing lives in the React shell); only the per-document page is server-rendered, per the

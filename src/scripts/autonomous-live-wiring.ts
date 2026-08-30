@@ -160,7 +160,7 @@ export interface BotRoster {
 }
 
 /**
- * Per-account playbook subscriptions (issue #885): each bot runs the house roster PLUS whatever
+ * Per-account playbook subscriptions: each bot runs the house roster PLUS whatever
  * it has personally subscribed to, with its own capital sub-allocation — a subscription
  * overrides the house roster's entry for the same playbook id (its own mode/capital wins), never
  * a second conflicting entry for the same symbol. A bot with no subscriptions is byte-identical

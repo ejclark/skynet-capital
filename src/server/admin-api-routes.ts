@@ -6,7 +6,7 @@ import { EMAIL } from "./invite-form.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
- * THE OWNER PAGES AS DATA (#738 phase 9e) — `/invite`, `/claim`, and `/ops-status` for the
+ * THE OWNER PAGES AS DATA — `/invite`, `/claim`, and `/ops-status` for the
  * shell, one owner-gated family:
  *
  *   GET/POST /api/admin/invite     → the guest list: who may sign in, with the joined column;

@@ -127,7 +127,7 @@ export class ParticipantService {
 
     const id = kind === "bot" ? (personaId as string) : `human-${slugify(displayName)}`;
     if (this.deps.store.has(id) || this.deps.findRosterParticipant?.(id)) {
-      // Says what to do next, not just "no" (#546/#558): a member whose account predates the
+      // Says what to do next, not just "no": a member whose account predates the
       // connect form lands here, and re-adding is the wrong remedy for either a dead key
       // (/rotate) or a missing sign-in link (/claim, owner-gated).
       return {
@@ -263,7 +263,7 @@ export class ParticipantService {
    * silently swap a claimed account's credentials; and conversely the stamped owner of SEVERAL
    * accounts can resolve to a different owned id than the target, which the id-only check
    * wrongly refused. This check used to also read `kind === "human"` because a bot could never
-   * carry `ownerEmail` before `/claim` (#546) learned to link any account kind; that necessity
+   * carry `ownerEmail` before `/claim` learned to link any account kind; that necessity
    * is gone, and a claimed bot exempted from this check is rotatable — its credentials silently
    * swapped — by any signed-in member, no check at all (2026-08-26, same gap as
    * `requireEditable` in account-service.ts, closed alongside it). An

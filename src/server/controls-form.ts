@@ -10,7 +10,7 @@ import type { BotControlsStore } from "./bot-controls-store.js";
  * ~30 s with no restart.
  *
  * `applyControlsAction`/`fleetControls` are the shared truth behind the shell's `/api/controls`
- * (#738 phase 8c, `controls-api-routes.ts`) — one action surface, one read of the same state.
+ * (`controls-api-routes.ts`) — one action surface, one read of the same state.
  */
 export interface ControlsDeps {
   readonly store: BotControlsStore;

@@ -18,7 +18,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
- * THE MULTI-LEG DRAFT AS A ROUTE (#582, slices 3-4) — one endpoint, `POST /api/trade/draft`, that
+ * THE MULTI-LEG DRAFT AS A ROUTE — one endpoint, `POST /api/trade/draft`, that
  * lets a leg-add on the chain and a leg-add from a future "strategy lab" both mutate the SAME
  * draft: every call re-imports the actual functions from `draft-order.ts` and applies exactly one
  * of them, then hands the resulting draft (plus its payoff preview) straight back. That is the

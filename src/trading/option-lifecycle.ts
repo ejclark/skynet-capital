@@ -2,7 +2,7 @@ import type { TradeFill } from "./round-trips.js";
 
 /**
  * OPTION LIFECYCLE EVENTS — the four activity types Alpaca reports outside the normal order-fill
- * flow (#468 criterion 6, confirmed zero hits repo-wide before this file): `OPEXP` (a contract
+ * flow (confirmed zero hits repo-wide before this file): `OPEXP` (a contract
  * expired worthless), `OPASN` (a written contract was assigned), `OPEXC` (a held contract was
  * exercised), `OPTRD` (the paired underlying-share trade that settles an assignment or exercise).
  *
@@ -150,7 +150,7 @@ export function parseLifecycleActivity(
 }
 
 /** Plain-language explanation of what happened — the raw ledger's `status` column IS this text
- *  (#468 criterion 6: "the desk shall explain what happened in plain language"), so no separate
+ *  ("the desk shall explain what happened in plain language"), so no separate
  *  rendering path is needed to satisfy it. */
 export const LIFECYCLE_STATUS: Record<OptionLifecycleType, string> = {
   OPEXP: "expired worthless",

@@ -20,7 +20,7 @@ import type { EquitySample } from "./history-store.js";
  *    result is null, never the least-bad losing day dressed up as a win.
  *  - the first recorded day is never a green day; it has no prior close to have beaten.
  *  - a flat day is neither green nor red — it ends a run of either kind and starts neither.
- *  - **a run's percentage is compounded, never summed** (#780). Each day's percent is measured
+ *  - **a run's percentage is compounded, never summed.** Each day's percent is measured
  *    against a different base, so adding five daily percentages overstates the five-day run.
  */
 

@@ -1,5 +1,5 @@
 /**
- * PLAY CARDS — the Trading Outpost's catalog (#809 slice 1). One card per play, in the same
+ * PLAY CARDS — the Trading Outpost's catalog. One card per play, in the same
  * "collectible" family as the persona `ClassPicker`: a name, a thesis, and the attributes you
  * browse by.
  *

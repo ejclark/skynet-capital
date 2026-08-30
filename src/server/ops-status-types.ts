@@ -1,5 +1,5 @@
 /**
- * THE OPS-STATUS SHAPE (#666 slice 1) — pulled out as its own leaf module so the three files that
+ * THE OPS-STATUS SHAPE — pulled out as its own leaf module so the three files that
  * all need it (`ops-status-service.ts`, `ops-status-deploy-verdict.ts`, `ops-status-deploy-lag.ts`)
  * can depend on it without depending on EACH OTHER through it — a shared-types-through-the-service-
  * module import cycle is exactly what tripped `scripts/dep-graph-scan.mjs`'s `no-circular` rule the

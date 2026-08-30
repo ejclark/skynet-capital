@@ -107,7 +107,7 @@ export interface OrderIntent {
 /**
  * An account's subscription to a playbook: a hard capital sub-allocation reserved out of the
  * account, delegated to that playbook's execution. Same shape for a bot account or a human
- * account (docs: issue #885) — subscribing is always against your OWN capital, never another
+ * account — subscribing is always against your OWN capital, never another
  * account's. `capitalAllocated` is a currency amount, not a fraction of equity (unlike
  * `Playbook.size`) — the engine derives how much of it is currently deployed live from the
  * portfolio rather than tracking a separate running ledger (a playbook trades exactly one

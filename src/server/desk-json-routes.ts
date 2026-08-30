@@ -7,7 +7,7 @@ import { botLandmarkProminence } from "../observatory/standings.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
-/** The desk as data (#738 phases 2c–3a) — same gate, same formatters as /u/:id's own views.
+/** The desk as data — same gate, same formatters as /u/:id's own views.
  *  `/api/desk/:id` is the blotter; `/activity` the fill timeline; `/decisions` the bot's mind;
  *  `/pulse` the Insights-style recap (equity curve, weekly realized, the doubling race). */
 export async function serveDeskJson(
@@ -28,7 +28,7 @@ export async function serveDeskJson(
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
   if (sub === "activity") {
     // No ledger wired (offline runs without SKYNET_ACTIVITY_DIR) says so — never an empty lie.
-    // The audit lines ride alongside so each row can say who PLACED it (#782); with no audit log
+    // The audit lines ride alongside so each row can say who PLACED it; with no audit log
     // wired the index is empty and every row classifies `unknown`, i.e. unmarked.
     const [records, audit] = await Promise.all([
       config.readTradeActivity?.(id),

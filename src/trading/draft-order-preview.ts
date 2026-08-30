@@ -2,11 +2,11 @@ import { type DraftLeg, type DraftOrder, undefinedRiskLegs } from "./draft-order
 import { SHARES_PER_CONTRACT } from "./option-economics.js";
 
 /**
- * SLICE 3's pure half (#582): the payoff arithmetic behind the review screen for an ARBITRARY leg
+ * The pure half: the payoff arithmetic behind the review screen for an ARBITRARY leg
  * set — net debit/credit and max gain/loss, computed the same way for two legs or four. Still no
  * I/O, no account, no broker: it reads only the numbers already sitting on the draft (each leg's
  * `limitPrice`, seeded from the chain the same way the single-leg ticket seeds its own estimate).
- * V1 SIMPLIFICATION per the issue: no shared pricing core (#578) — chain premiums direct.
+ * V1 SIMPLIFICATION: no shared pricing core — chain premiums direct.
  *
  * THE UNLIMITED-LOSS CRITERION, stated once: a naked short call (`undefinedRiskLegs`) makes max
  * loss a fact about the sky, not a number — `maxLoss` becomes the literal string `"unlimited"`

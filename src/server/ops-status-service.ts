@@ -8,7 +8,7 @@ import type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js"
 export type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js";
 
 /**
- * THE OPS-STATUS SERVICE (#666 slice 1) — "bots up? on what commit? deploy lag?" answered from
+ * THE OPS-STATUS SERVICE — "bots up? on what commit? deploy lag?" answered from
  * what this process can already see, with no new credential. Eric was on his phone while the bots
  * were dark with no surface that said so; this is that surface's read side.
  *

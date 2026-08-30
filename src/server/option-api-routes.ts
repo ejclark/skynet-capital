@@ -53,7 +53,7 @@ async function reviewEstimates(
 }
 
 /**
- * THE OPTIONS TICKET AS DATA (#738 phase 10a) — the shell's twin of the legacy `/trade` option
+ * THE OPTIONS TICKET AS DATA — the shell's twin of the legacy `/trade` option
  * pipeline (`option-order-review.ts`), three endpoints:
  *
  *   GET  /api/trade/chain          → expirations + one expiration's chain + spot, through the

@@ -4,7 +4,7 @@ import { isOccSymbol, parseOccSymbol } from "../trading/option-symbols.js";
 /**
  * PORTFOLIO GREEKS — one book's total exposure, beta-weighted to a single benchmark.
  *
- * WHY THIS EXISTS (#580). Per-leg greeks answer "what is this contract doing"; nothing answered
+ * WHY THIS EXISTS. Per-leg greeks answer "what is this contract doing"; nothing answered
  * "what is this ACCOUNT doing", which is the number a member needs before adding risk and the one
  * an autonomous bot needs before sizing. thinkorswim's beta-weighting is the portable idea: a delta
  * on NVDA and a delta on KO are not the same dollar of directional risk, so re-express every one
