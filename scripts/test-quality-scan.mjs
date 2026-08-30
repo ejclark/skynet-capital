@@ -57,7 +57,7 @@ function changedSpecFiles(branch, base) {
     })
       .trim()
       .split("\n")
-      .filter((f) => f.startsWith("tests/") && f.endsWith(".spec.ts"));
+      .filter((f) => /(^|\/)tests\/.*\.spec\.tsx?$/.test(f));
   } catch {
     return [];
   }
