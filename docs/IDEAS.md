@@ -1082,3 +1082,13 @@ sees it. Worth deciding whether a `corporate` kind (CEO/CFO transitions, spin-of
 lockup expiries, shareholder votes) earns its place, or whether these belong outside the calendar
 by design — a research PR is the wrong place to widen a shared type either way.
 _(src: Claude · while: the aapl-2026-10-29-print interval-elapsed pulse, 2026-08-30)_
+
+### General-purpose "escape hatches" to drive process from a phone
+While settling #666 (owner ops-status panel), Eric declined the credential-free degraded-mode
+option outright ("degrading quality — no thanks") but named a broader want: read-only status is
+one instance of a wider need — lightweight, phone-reachable controls/views for driving process
+remotely, in scenarios beyond just bots/deploy health. #666 itself stays scoped to its own EARS
+criteria; this is the generalization worth a separate look — what other repo processes would
+benefit from a phone-reachable read (or narrowly-scoped write) surface, and whether that's a
+pattern worth naming once rather than re-deriving per-feature.
+_(src: Eric · while: #666 ops-status panel decision, 2026-08-30)_
