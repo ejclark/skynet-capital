@@ -1,42 +1,15 @@
 /**
- * THE COACH'S COST DIALS — every knob that decides how much the metered Anthropic API bill is,
- * separated from the coach itself so it can be gated without freezing the part we want to keep
- * improving.
+ * THE COACH'S FEEL DIALS — round/message/token/throttle caps that shape the interview, split from
+ * the money dial (#928, Eric: "the only controls for feedback is limited [to] the auth, llm model
+ * and effort level... if people desire to add/extend to the feedback process, I want to enable
+ * them"). These caps affect cost only indirectly (more rounds costs more tokens on a fixed cheap
+ * model) — Eric's call is that community extension of the interview shape is worth that, same
+ * reasoning that already kept the coach's PROMPT open in `feedback-coach.ts`.
  *
- * WHY ITS OWN FILE. `.github/prompts/feedback-build.md` told autonomous build sessions that "spend
- * means provisioning a credential or raising a cap — nothing else", and `feedback-coach.ts` was not
- * in `envelope.json`. A member could therefore file "have the coach ask more questions", and the
- * lane would raise MAX_USER_ROUNDS, pass every gate, auto-merge, and multiply Eric's bill with no
- * human in the loop. Protecting the whole coach would have been the blunt fix — but the system
- * prompt is exactly the lever Eric named for improving quality ("the solution for this path is to
- * improve the AI that curates the plan"), so freezing it would block the work he asked for.
- *
- * The seam: **what costs money lives here and is in `envelope.json`; what improves quality stays in
- * `feedback-coach.ts` and stays open.**
- *
- * ROUTE THE MODEL BY WHO PAYS (Eric, 2026-08-22): "metered, per token conversations should favor
- * haiku 4.5 or whatever the inexpensive models available are… the plan gets handed off to a gha job
- * connected to my personal account which has headroom to leverage me powerful llms to research and
- * build out solutions."
- *
- *   - Metered per-token (this file — ANTHROPIC_API_KEY → api.anthropic.com): the CHEAPEST model that
- *     clears the completeness bar. This is a checklist-driven interview, not open-ended reasoning.
- *   - Flat-rate subscription (the postmaster build session, the CI medic — CLAUDE_CODE_OAUTH_TOKEN):
- *     the STRONGEST model available. Economizing there saves nothing and costs build quality.
- *
- * That reverses #449's Sonnet-for-the-coach call on better information: the token trade-off is only
- * real on the metered side, and the ideation it was buying now happens downstream, where it is free.
+ * THE MODEL DIAL LIVES SEPARATELY, PROTECTED. `MODEL` moved to `feedback-coach-model.ts` — the one
+ * knob that actually changes the coach's real per-token bill, and per Eric's #928 framing, the one
+ * still worth Eric's manual click. See that file's header for the route-by-who-pays rule.
  */
-
-/**
- * Claude Haiku 4.5 — $1/1M in, $5/1M out, versus Sonnet 5's $3/$15 ($2/$10 through 2026-08-31).
- * The coach's job is to ask one short question at a time against a fixed checklist and then emit
- * structured JSON; a small model is well suited to it. The safety property that makes this sound is
- * in `toSpec`: an unbacked `spec-complete` claim is downgraded to `partial`, and an unparseable
- * reply degrades to a question — so a weaker model's slip becomes `needs-info` routed to the
- * MEMBER, never a bad build.
- */
-export const MODEL = "claude-haiku-4-5";
 
 /**
  * A CEILING, NOT A TARGET. The coach drafts the moment the per-kind completeness bar is met, so

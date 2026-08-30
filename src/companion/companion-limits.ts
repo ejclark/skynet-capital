@@ -1,30 +1,24 @@
 /**
- * THE COMPANION'S COST DIALS — every knob that decides how much the metered Anthropic API bill
- * is, mirroring `feedback-coach-limits.ts`'s seam exactly: what costs money lives in its own file
- * so it can be gated without freezing the conversation quality we want to keep improving.
+ * THE COMPANION'S FEEL DIALS — round/size/throttle caps that shape the conversation, open per
+ * #928 (Eric: community extension of the interview shape is fine; the model choice is the one
+ * dial worth gating). `COMPANION_MODEL` moved to `companion-model.ts`, now protected in
+ * `envelope.json` alongside `feedback-coach-model.ts` — the gap this file used to flag ("NOT YET
+ * PROTECTED... treat this file as if it already carried protected: true") is closed by that move,
+ * not by protecting this file too.
  *
  * REUSE, NOT A NEW SPEND SURFACE (#467, 2026-08-29). The companion shares the coach's existing
  * `ANTHROPIC_API_KEY` and its existing Console spend cap — no new credential, no new Fly secret,
  * no raised ceiling. It runs on the SAME model the coach already pays for
- * (`feedback-coach-limits.ts`'s `MODEL`), so this file introduces no new per-token price point,
- * only a companion-shaped set of round/size caps around that one shared rate.
- *
- * NOT YET PROTECTED IN `envelope.json` (a follow-up for Eric, not this lane — `envelope.json` is
- * itself on the protected list, so an autonomous session cannot add its own entry there). Until
- * that follow-up lands, raising `MAX_TURNS` or `MAX_TOKENS_PER_REPLY` here would multiply the
- * companion's share of the shared bill with no gate catching it — exactly the gap
- * `feedback-coach-limits.ts`'s own header describes. Treat this file as if it already carried
- * `protected: true`.
+ * (`feedback-coach-model.ts`'s `MODEL`, mirrored here as `COMPANION_MODEL`), so this file
+ * introduces no new per-token price point, only a companion-shaped set of round/size caps around
+ * that one shared rate.
  *
  * FILING GOES THROUGH THE EXISTING COACH, NOT A SECOND MODEL LANE. The plan (#467) floated Sonnet
- * for issue-drafting; on inspection the shipped #429 coach already drafts on Haiku
- * (`feedback-coach-limits.ts`), so the companion's file-an-issue lane hands the conversation
- * straight to that existing `CoachTurn` rather than standing up a second, unprotected cost dial
- * for a Sonnet-drafting mode. One shared ceiling, one shared gate.
+ * for issue-drafting; on inspection the shipped #429 coach already drafts on Haiku, so the
+ * companion's file-an-issue lane hands the conversation straight to that existing `CoachTurn`
+ * rather than standing up a second cost dial for a Sonnet-drafting mode. One shared ceiling, one
+ * shared gate.
  */
-
-/** Same model the coach already pays for — see the header above for why this isn't a new dial. */
-export const COMPANION_MODEL = "claude-haiku-4-5";
 
 /** Small replies keep pennies pennies; a long explanation still fits comfortably. */
 export const MAX_TOKENS_PER_REPLY = 700;
