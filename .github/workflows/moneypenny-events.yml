@@ -1,4 +1,4 @@
-name: Moneypenny Events
+name: Moneypenny Events (event-research automation)
 
 # ONE ROUTER FOR EVERY ISSUE-DRIVEN AUTOMATION (docs/HANDOFFS.md), replacing four workflows that
 # had grown to 482 lines carrying 202 lines of untestable bash. The logic lives in

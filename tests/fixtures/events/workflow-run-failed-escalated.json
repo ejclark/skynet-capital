@@ -2,7 +2,7 @@
   "repository": { "default_branch": "main" },
   "workflow_run": {
     "id": 32546000001,
-    "name": "Moneypenny Events",
+    "name": "Moneypenny Events (event-research automation)",
     "conclusion": "failure",
     "event": "issues",
     "head_branch": "main",
@@ -13,7 +13,7 @@
     "openIssues": [
       {
         "number": 480,
-        "title": "[ci] Moneypenny Events — build feedback issue",
+        "title": "[ci] Moneypenny Events (event-research automation) — build feedback issue",
         "labels": ["needs-eric"]
       }
     ]

@@ -27,7 +27,9 @@ describe("moneypenny repair — routing a failed run", () => {
 
     expect(rest).toEqual([]);
     expect(intent?.type).toBe("open-issue");
-    expect(intent?.title).toBe("[ci] Moneypenny Events — build feedback issue");
+    expect(intent?.title).toBe(
+      "[ci] Moneypenny Events (event-research automation) — build feedback issue",
+    );
     expect(intent?.body).toContain("Run set -euo pipefail");
   });
 

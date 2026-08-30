@@ -23,7 +23,7 @@ const WORKFLOWS_DIR = join(ROOT, ".github/workflows");
 const REPAIR_FILE = join(WORKFLOWS_DIR, "moneypenny-repair.yml");
 
 const WATCHLIST_EXEMPT = {
-  "Moneypenny Repair": "loop guard 1 — this lane never watches its own failures",
+  "Moneypenny Repair (CI self-healing)": "loop guard 1 — this lane never watches its own failures",
   Claude: "human-interactive lane; a failure surfaces directly in the thread that triggered it",
 };
 
