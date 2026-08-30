@@ -226,6 +226,12 @@ EOF_SHOTS
   # slices of a multi-slice plan should NOT close the issue yet.
   node scripts/plan-closure-scan.mjs "$branch" "$bodyfile" 2>/dev/null || true
 
+  # Test-quality advisory (Eric, 2026-08-30: tests as acceptance criteria): flags a new spec
+  # asserting on call counts or spying on internals — docs/ENGINEERING.md's BDD rule already
+  # forbids it, this just makes drift back into it visible. Advisory only — a real system boundary
+  # can be a legitimate exception a script can't judge.
+  node scripts/test-quality-scan.mjs "$branch" --base "$base" 2>/dev/null || true
+
   echo "ship: pushing $branch…"
   local n=0; until git push -u origin "$branch" 2>/dev/null; do
     n=$((n+1)); [ "$n" -le 4 ] || { echo "ship: push failed after retries" >&2; exit 1; }
