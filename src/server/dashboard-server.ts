@@ -27,6 +27,7 @@ import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
 import { serveOptionApi } from "./option-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
+import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
 import { serveSettingsApi } from "./settings-api-routes.js";
 import { serveTradeApi } from "./trade-api-routes.js";
 
@@ -170,6 +171,12 @@ async function serveAuthorizedRoute(
   // legacy-compat shim (`feedback-routes.ts`).
   if (path === "/feedback/coach" || path === "/feedback/preview") {
     await serveFeedbackRoute(req, res, path, session, config);
+    return;
+  }
+  // The individual research document — server-rendered markdown, per research-service.ts's
+  // module doc; `/research` itself (the shelf listing) stays the legacy redirect below.
+  if (isResearchDocPath(path)) {
+    serveResearchDoc(res, path);
     return;
   }
   // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.
