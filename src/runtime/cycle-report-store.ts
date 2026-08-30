@@ -1,5 +1,5 @@
-import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 import type { CycleReport } from "../engine/trading-engine.js";
+import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 
 /** A cycle report plus the wall-clock time it was recorded. The unit the dashboard reads. */
 export interface PersistedCycleReport {
@@ -20,9 +20,7 @@ export interface CycleReportStore {
 
 /** In-memory store: the reference implementation, used by tests and in-process runs. */
 export class InMemoryCycleReportStore implements CycleReportStore {
-  private readonly store = new InMemoryKeyedStore<PersistedCycleReport>(
-    (e) => e.report.personaId,
-  );
+  private readonly store = new InMemoryKeyedStore<PersistedCycleReport>((e) => e.report.personaId);
 
   save(entry: PersistedCycleReport): Promise<void> {
     return this.store.append(entry);

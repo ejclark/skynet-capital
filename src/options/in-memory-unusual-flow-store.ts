@@ -1,5 +1,5 @@
-import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 import type { UnusualFlowStore } from "../ports/options-flow.js";
+import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 import type { UnusualFlowScan } from "./unusual-flow.js";
 
 /**
