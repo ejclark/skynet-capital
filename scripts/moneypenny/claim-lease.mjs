@@ -1,15 +1,15 @@
 // SUPPORT FOR THE CLAIM LEASE — split out of moneypenny.mjs (formerly postmaster.mjs; 2026-08-26, the
 // noExcessiveLinesPerFile split), but only the parts that aren't pinned by source text elsewhere.
 //
-// `claimHandoff` and `releaseClaim` THEMSELVES STAY IN moneypenny.mjs, deliberately: they are the
-// two regression tests in `tests/arch/lease-namespace.spec.ts` that read `scripts/moneypenny.mjs`'s
+// `claimHandoff` and `releaseClaim` THEMSELVES STAY IN index.mjs, deliberately: they are the
+// two regression tests in `tests/arch/lease-namespace.spec.ts` that read `scripts/moneypenny/index.mjs`'s
 // literal source (the `ref=refs/tags/${ref}` template, `readRef("tags") ?? readRef("heads")`, the
 // `for (const ns of ["tags", "heads"])` loop) — a static stand-in for the 2026-08-22 outage that a
 // live `gh` call can only fail on a runner. Moving those two functions here would make that check
 // pass on an empty string instead of the real lease, silently. This file holds everything the lease
 // calls that carries no such pin: the TTL, the age computation, the tag stamp, and the failure
 // classifier.
-import { sh } from "./moneypenny-gh.mjs";
+import { sh } from "./gh.mjs";
 
 /**
  * ATOMIC CLAIM (Eric, 2026-08-17: "waiting for commits to a doc file — seems flimsy af"). He was

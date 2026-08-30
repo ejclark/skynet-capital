@@ -199,7 +199,8 @@ describe("autonomous-lane envelope", () => {
       "src/server/auth/session.ts",
       "src/server/account-identity-gate.ts",
       "src/server/invite-form.ts",
-      "src/server/feedback-coach-limits.ts",
+      "src/server/feedback-coach-model.ts",
+      "src/companion/companion-model.ts",
       "fly.toml",
       "fly.bots.toml",
       "scripts/bot-relevant.mjs",
@@ -215,21 +216,6 @@ describe("autonomous-lane envelope", () => {
 
   // Eric, 2026-08-22 — "gate money-moving logic only". Rendering trades is ordinary buildable work;
   // a lane that can't restyle a trade card sends its member to Eric for a CSS change.
-  // THE SEAM (2026-08-22). Protecting all of feedback-coach.ts would have been the blunt fix for the
-  // spend loophole, but the system prompt is exactly the lever Eric named for improving the curator.
-  // What costs money is gated; what improves quality stays open. Assert both halves, or the seam
-  // silently collapses into "the whole file is frozen" the next time someone tidies it.
-  it("gates the coach's cost dials while leaving its prompt open to improvement", () => {
-    const [dials, prompt] = check(
-      "src/server/feedback-coach-limits.ts",
-      "src/server/feedback-coach.ts",
-    );
-
-    expect(dials?.protected).toBe(true);
-    expect(dials?.why).toContain("bill");
-    expect(prompt?.protected).toBe(false);
-  });
-
   it("leaves presentation, UI, and the 3D scene open to the lanes", () => {
     const openPaths = [
       "src/observatory/feedback-view.ts",

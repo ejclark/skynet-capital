@@ -1,7 +1,7 @@
 name: Claude
 
 # THE HUMAN-DIRECTED LANE. Every other AI trigger in this repo is deterministic and structured —
-# a label, a push, a schedule — routed through scripts/moneypenny.mjs (.github/workflows/moneypenny-events.yml).
+# a label, a push, a schedule — routed through scripts/moneypenny/index.mjs (.github/workflows/moneypenny-events.yml).
 # This workflow is the other half: a repo member commenting on an issue, issue comment thread, or
 # PR review thread starts (or STEERS — see below) a real Claude Code session in seconds, for
 # whatever the structured lanes don't cover — a question, a review request, an ad hoc fix.
@@ -53,7 +53,7 @@ name: Claude
 # this with Eric's PAT": a PAT is not a GitHub App, so `performed_via_github_app` is null either
 # way. The only reliable tell was content — every comment this repo's Claude sessions post carries
 # a markdown link opening `[Claude Code](https://claude` (interactive.md's footer instruction, and
-# the event router's shared `FOOTER` in `scripts/moneypenny-labels.mjs` (formerly `postmaster-labels.mjs`); the two differ after that, one
+# the event router's shared `FOOTER` in `scripts/moneypenny/labels.mjs` (formerly `postmaster-labels.mjs`); the two differ after that, one
 # linking `claude.ai/code` and the other `claude.com/claude-code`), so `gate` excludes any comment
 # carrying that shared prefix. Deliberately the literal link opener, NOT a bare mention of "Claude
 # Code" — a member's comment can discuss Claude Code in prose without tripping the guard. Now that

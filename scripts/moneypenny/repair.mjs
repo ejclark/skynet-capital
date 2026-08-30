@@ -3,8 +3,8 @@
 // it, and gets it worked — instead of it sitting red (or silently conflicted) until someone
 // happens to look. Formerly "CI Medic" (renamed #912 — see docs/MONEYPENNY.md).
 //
-//   node scripts/moneypenny-repair.mjs                            # read $GITHUB_EVENT_PATH, act
-//   node scripts/moneypenny-repair.mjs --dry-run --event f.json   # print the intents, touch nothing
+//   node scripts/moneypenny/repair.mjs                            # read $GITHUB_EVENT_PATH, act
+//   node scripts/moneypenny/repair.mjs --dry-run --event f.json   # print the intents, touch nothing
 //
 // WHY IT EXISTS (Eric, 2026-08-22, after run 32545818804 blocked a feedback build): "we should
 // have a job kicked off that automatically resolves these types of failures." The failure that
@@ -29,14 +29,14 @@
 //   4. Once a signature carries `needs-eric`, this lane goes quiet on it entirely.
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import { LABELS } from "./moneypenny.mjs";
-import { jobLog } from "./moneypenny-repair-logs.mjs";
+import { LABELS } from "./index.mjs";
+import { jobLog } from "./repair-logs.mjs";
 
 /** This workflow's own `name:`. Guard 1 — never treat this lane's own failure as work for itself. */
 export const REPAIR_WORKFLOW = "Moneypenny Repair";
 /**
  * `ci-failure` used to be declared right here, a SECOND label registry beside the router's —
- * the exact split #500 is about. One vocabulary now (scripts/moneypenny.mjs `LABELS`); this stays
+ * the exact split #500 is about. One vocabulary now (scripts/moneypenny/index.mjs `LABELS`); this stays
  * exported under its old name so existing call sites and specs keep working.
  */
 export const LABEL = LABELS.ciFailure;

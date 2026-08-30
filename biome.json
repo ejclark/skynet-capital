@@ -120,7 +120,7 @@
       }
     },
     {
-      "includes": ["scripts/moneypenny.mjs"],
+      "includes": ["scripts/moneypenny/index.mjs"],
       "linter": {
         "rules": {
           "style": {

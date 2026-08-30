@@ -29,7 +29,7 @@ const declared = (): string[] =>
       "node",
       [
         "-e",
-        'import("./scripts/moneypenny.mjs").then((m) => console.log(JSON.stringify(m.MANAGED_LABELS.map((l) => l.name))))',
+        'import("./scripts/moneypenny/index.mjs").then((m) => console.log(JSON.stringify(m.MANAGED_LABELS.map((l) => l.name))))',
       ],
       {
         cwd: process.cwd(),
@@ -44,7 +44,7 @@ const registry = (): Record<string, { name: string; color: string; description: 
       "node",
       [
         "-e",
-        'import("./scripts/moneypenny.mjs").then((m) => console.log(JSON.stringify(m.LABELS)))',
+        'import("./scripts/moneypenny/index.mjs").then((m) => console.log(JSON.stringify(m.LABELS)))',
       ],
       { cwd: process.cwd(), encoding: "utf8" },
     ),
@@ -85,7 +85,7 @@ describe("label vocabulary", () => {
       "node",
       [
         "-e",
-        'import("./scripts/moneypenny.mjs").then((m) => console.log(typeof m.ensureVocabulary))',
+        'import("./scripts/moneypenny/index.mjs").then((m) => console.log(typeof m.ensureVocabulary))',
       ],
       { cwd: process.cwd(), encoding: "utf8" },
     ).trim();
@@ -113,7 +113,7 @@ describe("the label registry", () => {
   it("registers every label the repo actually runs on", () => {
     const registered = names();
     // The five #500 named as missing, plus `ci-failure` — which lived in a SECOND registry over in
-    // moneypenny-repair.mjs (then `ci-medic.mjs`, renamed #912), the exact duplication the issue is about.
+    // moneypenny/repair.mjs (then `ci-medic.mjs`, renamed #912), the exact duplication the issue is about.
     for (const name of [
       "handoff",
       "idea",
@@ -172,7 +172,7 @@ describe("the label registry", () => {
       "node",
       [
         "-e",
-        `Promise.all([import("./scripts/moneypenny.mjs"), import("./scripts/moneypenny-repair.mjs")]).then(
+        `Promise.all([import("./scripts/moneypenny/index.mjs"), import("./scripts/moneypenny/repair.mjs")]).then(
            ([p, repair]) => console.log(String(repair.LABEL === p.LABELS.ciFailure)),
          );`,
       ],

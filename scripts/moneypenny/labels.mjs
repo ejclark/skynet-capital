@@ -2,7 +2,7 @@
 // noExcessiveLinesPerFile split) so the label/comment vocabulary has one home shared by every lane
 // (the router itself, the event lane, the shipped-issue closer, the stall auditor) — and, since a
 // label is only real once GitHub has it, the code that provisions it too.
-import { sh } from "./moneypenny-gh.mjs";
+import { sh } from "./gh.mjs";
 
 // ── labels this repo speaks ───────────────────────────────────────────────────
 //
@@ -109,7 +109,7 @@ export const LABELS = {
   // no business rewriting labels it did not create.
   bug: { name: "bug", color: "d73a4a", description: "Something isn't working" },
   enhancement: { name: "enhancement", color: "a2eeef", description: "New feature or request" },
-  // Owned by moneypenny-repair.mjs's own lane (formerly ci-medic.mjs), which applies it and therefore
+  // Owned by repair.mjs's own lane (formerly ci-medic.mjs), which applies it and therefore
   // guarantees it. Registered here so there is ONE vocabulary, not two that can drift.
   ciFailure: { name: "ci-failure", color: "b60205", description: "A run failed on main" },
 };

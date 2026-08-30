@@ -22,8 +22,9 @@
  *      asking them to answer the same thing again.
  *
  * The prevention for (1) lives in the system prompt (size discipline) — this is the net under it.
- * Note what is NOT here: raising the token cap. That is a metered per-use cost dial, gated in
- * `feedback-coach-limits.ts`, and it is Eric's call, not the fix for a parser that lost its nerve.
+ * Note what is NOT here: raising the token cap. `MAX_TOKENS` lives in `feedback-coach-limits.ts`
+ * (open, #928) — a deliberate size/quality trade-off to make there, not the fix for a parser that
+ * lost its nerve.
  */
 
 import { areaFrom, type FeedbackArea } from "./feedback-areas.js";

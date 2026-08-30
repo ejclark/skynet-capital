@@ -10,7 +10,7 @@
  * it keeps the audit trail (what was said, when) instead of overwriting it.
  *
  * The follow-up ALSO re-triggers a build, by removing then re-adding the `feedback` label — the
- * same retry path moneypenny.mjs (formerly postmaster.mjs) already documents ("Re-apply the `feedback` label to retry the
+ * same retry path scripts/moneypenny/index.mjs (formerly postmaster.mjs) already documents ("Re-apply the `feedback` label to retry the
  * build — the claim lease makes a re-label a safe retry, not a second build"). This deliberately
  * reuses the EXISTING, curated, envelope-bound build-feedback lane (.github/workflows/moneypenny-events.yml)
  * rather than the separate, higher-trust claude.yml comment-steering lane: that lane grants an

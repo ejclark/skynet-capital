@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 
-// The event router's routing gate — every branch of scripts/moneypenny.mjs (formerly postmaster.mjs) `route()` exercised by
+// The event router's routing gate — every branch of scripts/moneypenny/index.mjs (formerly postmaster.mjs) `route()` exercised by
 // feeding fixture event payloads through `--dry-run --event <fixture>` and asserting the INTENTS
 // it prints. This is the coverage the retired workflows never had: their logic lived in `run:`
 // blocks where no spec could reach it. Static, no network — the dry run never executes an intent.
@@ -11,7 +11,7 @@ import { execFileSync } from "node:child_process";
 const dryRun = (fixture: string): unknown[] => {
   const out = execFileSync(
     "node",
-    ["scripts/moneypenny.mjs", "--dry-run", "--event", `tests/fixtures/events/${fixture}`],
+    ["scripts/moneypenny/index.mjs", "--dry-run", "--event", `tests/fixtures/events/${fixture}`],
     { cwd: process.cwd(), encoding: "utf8" },
   );
   return JSON.parse(out);
@@ -53,7 +53,7 @@ describe("moneypenny routing", () => {
       "node",
       [
         "-e",
-        `import("./scripts/moneypenny.mjs").then((m) => {
+        `import("./scripts/moneypenny/index.mjs").then((m) => {
            const intents = m.route({ eventName: "issues", action: "labeled",
              payload: { label: { name: "feedback" }, issue: { number: 1, title: "x" } } }, {});
            console.log(JSON.stringify(intents));
@@ -72,7 +72,7 @@ describe("moneypenny routing", () => {
       "node",
       [
         "-e",
-        `import("./scripts/moneypenny.mjs").then((m) => {
+        `import("./scripts/moneypenny/index.mjs").then((m) => {
            const due = [{ id: "cpi-2026-09-11", reason: "interval-elapsed" },
                         { id: "fomc-2026-12-09", reason: "never-assessed" }];
            const heads = ["research/cpi-2026-09-11", "feedback/42"];
@@ -236,7 +236,7 @@ const resolve = (issues: unknown, merged: number[], recheck: unknown = {}): unkn
     "node",
     [
       "-e",
-      `import("./scripts/moneypenny.mjs").then((m) => {
+      `import("./scripts/moneypenny/index.mjs").then((m) => {
          const merged = new Set(${JSON.stringify(merged)});
          const recheck = ${JSON.stringify(recheck)};
          const warnings = [];
@@ -358,7 +358,7 @@ const probe = (intents: unknown[], throwOn: string, message: string): Probe =>
       "node",
       [
         "-e",
-        `import("./scripts/moneypenny.mjs").then((m) => {
+        `import("./scripts/moneypenny/index.mjs").then((m) => {
            const intents = JSON.parse(process.argv[1]);
            const seen = [];
            const errors = [];
@@ -433,7 +433,7 @@ describe("intent isolation", () => {
         "node",
         [
           "-e",
-          `import("./scripts/moneypenny.mjs").then((m) => {
+          `import("./scripts/moneypenny/index.mjs").then((m) => {
              console.log(JSON.stringify(JSON.parse(process.argv[1]).map(m.intentLabel)));
            });`,
           JSON.stringify([

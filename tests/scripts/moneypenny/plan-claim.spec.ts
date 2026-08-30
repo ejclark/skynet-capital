@@ -2,11 +2,11 @@ import {
   hasPlanLabel,
   isReadySignal,
   planReadyIntent,
-} from "../../scripts/moneypenny-plan-claim.mjs";
+} from "../../../scripts/moneypenny/plan-claim.mjs";
 
 // The plan lane's pure decision (#823) — a ready-flip comment on a `plan`-labeled issue should
 // dispatch a build, same as a `feedback` label does today. Fixture-shaped payloads, no network, no
-// clock — this is the seam `claimPlan` (scripts/moneypenny.mjs, formerly postmaster.mjs) calls before ever touching the lease.
+// clock — this is the seam `claimPlan` (scripts/moneypenny/index.mjs, formerly postmaster.mjs) calls before ever touching the lease.
 
 describe("isReadySignal — the ready-flip pattern match", () => {
   it.each([

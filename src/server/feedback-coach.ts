@@ -10,9 +10,10 @@
  *
  * Token-gated exactly like the GitHub half (feedback-service.ts): `resolveFeedbackCoach(env)` is
  * undefined until ANTHROPIC_API_KEY is set, so the app runs inert without it. Which model it runs
- * is not this file's call — `MODEL` and every other cost dial live in `feedback-coach-limits.ts`,
- * whose header carries the route-by-who-pays rule that sets them. The hard rails below (short
- * rounds, small replies, bounded input) keep a conversation's cost bounded regardless of model.
+ * is not this file's call — `MODEL` lives in `feedback-coach-model.ts` (the one dial still gated,
+ * #928), the round/message/token/throttle caps in `feedback-coach-limits.ts` (open, #928). The hard
+ * rails below (short rounds, small replies, bounded input) keep a conversation's cost bounded
+ * regardless of model.
  *
  * This file owns the CONVERSATION (prompt, rails, HTTP). What a raw model reply MEANS — including
  * how a truncated or repeated one is recovered so a member never faces a loop of structured output
@@ -23,17 +24,17 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { anthropicApiError } from "../http/anthropic-reply.js";
 import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
 import { AREA_PROMPT_CLAUSE } from "./feedback-areas.js";
-// The cost dials live in their own module because they are gated by envelope.json — see its header
-// for the seam (what costs money vs. what improves quality) and the route-by-who-pays rule.
 import {
   MAX_MESSAGE_CHARS,
   MAX_MESSAGES,
   MAX_TOKENS,
   MAX_USER_ROUNDS,
-  MODEL,
   THROTTLE_MAX,
   THROTTLE_WINDOW_MS,
 } from "./feedback-coach-limits.js";
+// The model dial lives in its own gated module (#928) — see its header for the route-by-who-pays
+// rule. The rest of the interview's shape is open, ordinary feature work.
+import { MODEL } from "./feedback-coach-model.js";
 // Reading a reply — including recovering a truncated or repeated one — is its own concern (#702).
 // Re-exported so every existing consumer keeps one import site.
 import {

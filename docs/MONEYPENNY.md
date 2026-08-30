@@ -33,8 +33,8 @@ of friction — Moneypenny drives the new architecture, and all other orchestrat
 enter her domain answer to her."* Concretely, for anything that is GitHub issue/PR orchestration:
 
 - **`docs/COACHES.md`'s head-coach/governor dispatch policy**, **`.github/workflows/moneypenny-events.yml` +
-  `scripts/moneypenny*.mjs`'s mechanical routing**, **`.github/workflows/moneypenny-repair.yml` +
-  `scripts/moneypenny-repair.mjs`'s repair dispatch**, and **`/secretary`'s digest/verification
+  `scripts/moneypenny/*.mjs`'s mechanical routing**, **`.github/workflows/moneypenny-repair.yml` +
+  `scripts/moneypenny/repair.mjs`'s repair dispatch**, and **`/secretary`'s digest/verification
   cadence** all now operate *under her mandate*, not as four peer systems Eric has to address by
   separate name. He talks to Moneypenny; she directs the mechanism. The repair lane (built
   2026-08-22 as "CI Medic", named explicitly here 2026-08-29 #909, renamed off that name entirely
@@ -75,7 +75,7 @@ ran." Concretely:
   ```
 - **Where this applies today:** the five `.github/prompts/*.md` lane instructions now open with a
   short shared framing naming her domain, and their comment-closing instructions carry her signature
-  line. `scripts/moneypenny-labels.mjs`'s (formerly `postmaster-labels.mjs`) `FOOTER` constant is unchanged — the signature is additive.
+  line. `scripts/moneypenny/labels.mjs`'s (formerly `postmaster-labels.mjs`) `FOOTER` constant is unchanged — the signature is additive.
 
 ### The GitHub-visible identity itself — Eric's one step
 
