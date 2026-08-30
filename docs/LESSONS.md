@@ -27,6 +27,40 @@ it. Prevention ranks, best first:
 
 ---
 
+### A `${{ }}`-in-`echo` interpolation stripped every quote from a JSON output, and a matrix job vanished with no failing job to blame
+
+- **SHA:** 69ed0b5   **DATE:** 2026-08-30   **STATUS:** closed
+- **SIGNAL:** `incident-scan.mjs` listed 9 "Moneypenny Events" runs UNLEARNED on `main`. The
+  candidate run's jobs (`route`, `build-feedback`, `build-plan`) all showed `success`/`skipped` —
+  no failing job anywhere — yet the run's own `conclusion` was `failure`, and the `build-events`
+  matrix job that should have appeared (the run's own `due for research` annotation listed 14
+  events) was entirely absent from the jobs list, not even `skipped`. Detection lag: this incident
+  had recurred 9 times over 14 days before anyone traced one to a cause, because nothing about it
+  looked like a failure from the jobs UI.
+- **ROOT CAUSE:** `moneypenny-events.yml`'s screen step falls back, on a git-push race, to
+  `echo "due=${{ steps.events.outputs.due }}" >> "$GITHUB_OUTPUT"`. GitHub substitutes `${{ }}`
+  expressions into the run script's TEXT before bash ever parses it — so a JSON-array value full of
+  `"` characters breaks the surrounding double-quoted `echo` string apart. Reproduced directly:
+  `echo "due=[{"id":"x","reason":"y"}]"` prints `due=[{id:x,reason:y}]`, valid-looking shell output
+  but invalid JSON. `build-events`' matrix (`fromJSON(needs.route.outputs.due_events)`) then fails
+  to evaluate on that corrupted string — and a job whose matrix strategy fails to evaluate never
+  gets a job record at all, so the failure has NO visible job, NO visible step, only the run's own
+  `conclusion` field. **What else crosses this system?** any `${{ steps.*.outputs.* }}` value
+  interpolated the same way — found two more instances in `pipeline.yml` (image tags; currently
+  harmless since tags never contain `"`, same anti-pattern though).
+- **PREVENTION:** gate (partial) + doctrine + idea. The one live site (`moneypenny-events.yml`'s
+  screen step, both the no-token and push-race fallback lines) now passes the value through `env:`
+  (`EVENTS_DUE`) instead of inlining `${{ }}` into the script text — bash variable expansion
+  preserves embedded quotes literally, so no combination of characters in the value can break it.
+  Doctrine: the fix is commented in place, naming the mechanism, so the next edit to that step
+  doesn't reintroduce it. A general `workflow-lint.mjs` rule (raw-line regex, no block-scalar
+  parsing needed) is filed as an idea (`docs/IDEAS.md`) rather than built in this pass — one
+  incident, one prevention; the class-wide gate is a separate, larger piece of work.
+- **SIDE QUESTS:** the workflow-lint rule above (→ docs/IDEAS.md); the two `pipeline.yml`
+  instances are noted there too, not fixed here since they're not currently triggering anything.
+
+---
+
 ### A stale worktree's incident-scan re-flagged a false positive a newer commit had already fixed
 
 - **SHA:** 8b86f83   **DATE:** 2026-08-30   **STATUS:** closed

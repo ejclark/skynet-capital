@@ -1032,3 +1032,17 @@ a queue of filed issues (or a review's finding list) and fans each out as its ow
 with the ship loop attached, instead of Eric kicking sessions off by hand. Worth a /charter-style
 pass over what exists before building anything new.
 _(src: Eric · while: mid-flight in the phase-9c security-gap fixes, 2026-08-28)_
+
+### workflow-lint rule: no `${{ steps.*.outputs.* }}`/`${{ needs.*.outputs.* }}` inside a double-quoted `run:` string
+Retro'd a live incident: `moneypenny-events.yml` interpolated a JSON-array output directly into
+`echo "due=${{ steps.events.outputs.due }}"` — GitHub substitutes the raw text before bash ever
+parses it, so every embedded `"` breaks the quoting and corrupts the value, which then failed
+`fromJSON()` in a downstream matrix and silently produced a run with a "failure" conclusion and no
+failing job (docs/LESSONS.md, 2026-08-30). Fixed at that one site by routing through `env:`
+instead. Two more instances exist in `pipeline.yml` (image-tag values, currently safe since tags
+never contain `"`, but the same anti-pattern). `scripts/workflow-lint.mjs` deliberately skips
+block scalars (`run: |`) today — this check wouldn't need scope-tracking like the others, just a
+raw-line regex for `"[^"]*\$\{\{\s*(steps|needs|inputs)\.[^}]*\}\}[^"]*"`, so it's cheap to bolt on
+without violating that file's stated design. Didn't build it in the same pass as the fix — one
+incident, one prevention.
+_(src: Claude · while: /retro on the "Moneypenny Events" UNLEARNED incidents, 2026-08-30)_
