@@ -18,6 +18,18 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### `mcp__github__issue_read` silently sanitizes markup it displays back
+
+While retrofitting the `Needs from you` callout onto issues #915/#894/#666, the tool's own read-back
+showed `<details>`/`<summary>` and the `> [!IMPORTANT]` callout as if they'd been stripped — but a
+raw REST `GET` on the same issue proved they were stored correctly. The MCP tool sanitizes its own
+display output; it never touched GitHub's data. Cheap trap for a future session: don't judge an
+issue's fold/callout by this tool's read-back — verify with a raw REST call (or the web UI) when it
+matters, same discipline as the already-documented "GitHub MCP write tools strip `<details>`" trap
+for PR bodies (`docs/LESSONS.md`, 2026-08-25) — this is the read-side sibling of that bug, worth a
+`/retro` pass to confirm scope and pick a permanent fix.
+_(src: Claude · while: retrofitting the Needs-from-you callout onto #915/#894/#666, 2026-08-30)_
+
 ### The CI medic can be cancelled before it files
 
 The 2026-08-22 `gh --json` failure produced a medic run that was **cancelled** by the next push's
