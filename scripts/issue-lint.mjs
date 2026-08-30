@@ -191,6 +191,43 @@ function collectNotes(text, notes) {
   ) {
     notes.push("a blocker is mentioned only below the fold — blockers go above it, always");
   }
+  if (!/^>\s*\[!IMPORTANT\]/m.test(top) && /needs from you/i.test(top)) {
+    // caught by checkNeedsFromYou's own problem when the label is present; this only covers the
+    // case of a lookalike callout that never used the `[!IMPORTANT]` GitHub-alert syntax.
+    notes.push(
+      '"Needs from you" text found but not as a `> [!IMPORTANT]` callout — the alert syntax is what makes it read pre-attentively',
+    );
+  }
+}
+
+/** `needs-eric` promises Eric a decision; this is where the decision is required to live —
+ *  above the fold, in its own callout, never folded in with build-only "Open questions"
+ *  (docs/ISSUES.md rule 6, Eric 2026-08-30: issues buried the action-required item behind a fold). */
+function checkNeedsFromYou(text, labels, problems, notes) {
+  const top = aboveFold(text);
+  const hasCallout = /^>\s*\[!IMPORTANT\]/m.test(top) && /needs from you/i.test(top);
+
+  if (Array.isArray(labels) && labels.includes("needs-eric") && !hasCallout) {
+    problems.push(
+      "labelled `needs-eric` but no `Needs from you` callout above the fold — the label promises a decision only Eric can make; put it where he'll see it (docs/ISSUES.md)",
+    );
+    return;
+  }
+  if (Array.isArray(labels) && !labels.includes("needs-eric") && hasCallout) {
+    notes.push(
+      "`Needs from you` callout present without the `needs-eric` label — add the label so digests and queues route the decision",
+    );
+  }
+  if (!hasCallout) return;
+
+  for (const line of top.split("\n")) {
+    const item = /^>\s*\d+\.\s+(.+)$/.exec(line);
+    if (item && item[1].length > MAX_BULLET) {
+      problems.push(
+        `"Needs from you" item over ${MAX_BULLET} chars — one line, why trailing after an em dash: "${item[1].slice(0, 60)}…"`,
+      );
+    }
+  }
 }
 
 /** The vocabulary an issue's labels are checked against — one registry, shared with the lanes that
@@ -239,6 +276,7 @@ export function lintIssue({ title = "", body = "", labels } = {}) {
   checkTitle(title, problems, notes);
   collectNotes(text, notes);
   if (Array.isArray(labels)) checkLabels(labels, notes);
+  checkNeedsFromYou(text, labels, problems, notes);
 
   return { problems, notes };
 }

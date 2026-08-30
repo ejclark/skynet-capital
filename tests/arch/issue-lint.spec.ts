@@ -204,3 +204,85 @@ describe("issue lint — the label advisory", () => {
     expect(notes.join("\n")).not.toContain("unregistered label");
   });
 });
+
+// The decision-callout gate (docs/ISSUES.md rule 6 — Eric, 2026-08-30: a `needs-eric` decision was
+// landing 3/4 of the way down an accordion instead of above the fold, next to the context).
+describe("issue lint — the 'Needs from you' decision callout", () => {
+  const lintWithLabels = (
+    body: string,
+    labels: string,
+  ): { code: number; problems: string[]; notes: string[] } => {
+    const args = ["scripts/issue-lint.mjs", "--stdin", "--json", "--labels", labels];
+    try {
+      const out = execFileSync("node", args, { input: body, encoding: "utf8" });
+      return { code: 0, ...JSON.parse(out) };
+    } catch (error) {
+      const e = error as { status?: number; stdout?: Buffer };
+      return {
+        code: e.status ?? -1,
+        ...JSON.parse(e.stdout?.toString() || '{"problems":[],"notes":[]}'),
+      };
+    }
+  };
+
+  const withoutCallout = [
+    "**Decide the account-linking retry limit.**",
+    "",
+    "- A talking point.",
+    "",
+    "Picture: waived — a decision, nothing to draw.",
+  ].join("\n");
+
+  const withCallout = [
+    "**Decide the account-linking retry limit.**",
+    "",
+    "- A talking point.",
+    "",
+    "> [!IMPORTANT]",
+    "> **Needs from you**",
+    "> 1. 3 retries or 5 — 5 costs one extra support ping per week, 3 costs one extra failed link.",
+    "",
+    "Picture: waived — a decision, nothing to draw.",
+  ].join("\n");
+
+  it("fails a needs-eric issue with no callout above the fold", () => {
+    const { code, problems } = lintWithLabels(withoutCallout, "needs-eric");
+    expect(code).toBe(1);
+    expect(problems.join("\n")).toContain("Needs from you");
+  });
+
+  it("passes a needs-eric issue that carries the callout", () => {
+    const { code, problems } = lintWithLabels(withCallout, "needs-eric");
+    expect(problems).toEqual([]);
+    expect(code).toBe(0);
+  });
+
+  it("does not require the callout on issues without the needs-eric label", () => {
+    const { code, problems } = lintWithLabels(withoutCallout, "bug,feedback");
+    expect(problems).toEqual([]);
+    expect(code).toBe(0);
+  });
+
+  it("notes a callout present without the needs-eric label — a routing miss, not a defect", () => {
+    const { problems, notes } = lintWithLabels(withCallout, "bug,feedback");
+    expect(problems).toEqual([]);
+    expect(notes.join("\n")).toContain("needs-eric");
+  });
+
+  it("fails a decision item that runs past one short line", () => {
+    const wordy = [
+      "**Decide the account-linking retry limit.**",
+      "",
+      "- A talking point.",
+      "",
+      "> [!IMPORTANT]",
+      "> **Needs from you**",
+      "> 1. Whether we should retry account-linking three times or five times before giving up entirely, and why that matters for support load.",
+      "",
+      "Picture: waived — a decision, nothing to draw.",
+    ].join("\n");
+    const { code, problems } = lintWithLabels(wordy, "needs-eric");
+    expect(code).toBe(1);
+    expect(problems.join("\n")).toContain('"Needs from you" item over');
+  });
+});
