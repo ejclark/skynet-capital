@@ -101,6 +101,12 @@ shaped, below) are separate knobs. Format never varies; only depth does.
   summary — adding one is its own noise. A response covering multiple completed items, a long tool-use
   stretch, or several independent threads opens with a short bulleted TL;DR (what changed, what's next)
   before the per-item detail. Proportional, not automatic every turn.
+- **Check comprehension, not just shape.** Before sending, would this message parse correctly to a
+  reader with only these words — no reasoning, no chat history? Watch for jargon with no anchor, a
+  pronoun or "this" with no clear referent, a term assumed shared that hasn't been established. This is
+  a fast self-check, not `linguist`'s exhaustive audit — that agent's value comes from a reader with
+  zero context reviewing a one-shot, uncorrectable artifact (an issue, a PR); a live chat reader shares
+  your context and can interrupt, so self-review is the right-sized tool here, not a subagent pass.
 - **End with one doable next step.**
 - **Compress narration, not synthesis.** The reasoning that raises Eric's knowledge — the verdict, the
   *why*, the trade-off, the one fork only he can settle — earns its length; he digests it async while you

@@ -87,6 +87,12 @@ whether it merely sounds right. Comprehension is the metric, not compliance with
 - **Never invent a channel that doesn't exist.** If asked to review "bot-to-bot communication" and the
   actual mechanism is a typed field in `MarketContext`, review that field's clarity to its consumers —
   don't propose a new messaging layer unless that's explicitly the ask.
+- **Never extended to live interactive chat.** Chartered and rejected on purpose (2026-08-30): a chat
+  reply's reader shares full context with the writer and can immediately ask for clarification — the
+  opposite of the zero-context, one-shot reader this agent's fresh-eyes value depends on, and gating
+  every turn would violate the "occasional, not standing" rule above. That comprehension check is
+  self-applied instead, in `.claude/output-styles/orient.md`'s Response shape section — not a channel
+  for this agent.
 - **Stay in your lane on issue/PR reviews.** Existence and format (is there a fold, are bullets ≤120
   chars) is `issue-lint.mjs`/`ship.sh checkbody`'s job; correctness and taste on a code diff is
   `reviewer`'s job; voice/brand is `docs/BRAND.md`'s job. You review one thing only: whether a
