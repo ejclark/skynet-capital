@@ -54,6 +54,12 @@ jobs:
     name: verify
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
+    # Least privilege: this job only checks out a PR's own head and runs commitlint/typecheck/
+    # lint/test against it — no step calls the GitHub API with the default token. A job-level
+    # `permissions:` block REPLACES the workflow-level one for this job (never merges with it), so
+    # this is the actual cap regardless of what other jobs below need.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -82,15 +88,32 @@ jobs:
       - name: Commit lint
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-      - name: Typecheck
+      # Typecheck/lint/test are three independent checks over the same unchanged tree — nothing
+      # downstream of `npm ci` depends on another's output. Backgrounding them on the shared runner
+      # instead of running as three sequential steps overlaps the ~10s typecheck+lint pair with the
+      # test suite (the long pole, ~30s locally) instead of paying for both back to back: same
+      # billed job, shorter wall clock, no extra runner-minutes. Logs go to files so a failure's
+      # full output still surfaces (backgrounded output would otherwise interleave illegibly), and
+      # each PID's exit code is checked individually so one failure never masks another's.
+      - name: Typecheck + lint + test (parallel)
         if: steps.changes.outputs.code == 'true'
-        run: npm run typecheck
-      - name: Lint (Biome)
-        if: steps.changes.outputs.code == 'true'
-        run: npm run lint
-      - name: Test (Rstest)
-        if: steps.changes.outputs.code == 'true'
-        run: npm test
+        run: |
+          npm run typecheck > typecheck.log 2>&1 & tc=$!
+          npm run lint       > lint.log      2>&1 & ln=$!
+          npm test           > test.log      2>&1 & ts=$!
+
+          status=0
+          for pair in "$tc:typecheck" "$ln:lint" "$ts:test"; do
+            pid="${pair%%:*}"; name="${pair##*:}"
+            if wait "$pid"; then
+              echo "✓ $name passed"
+            else
+              echo "✗ $name failed — output:"
+              cat "$name.log"
+              status=1
+            fi
+          done
+          exit $status
 
   arm-auto-merge:
     name: arm auto-merge
@@ -268,28 +291,23 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Preflight — should the bots app deploy?
+        # The decision tree (token/cutover/force/baseline/classify) lives in
+        # scripts/bots-deploy-preflight.mjs, spec-tested (tests/scripts/bots-deploy-preflight.spec.ts)
+        # — this step now does only the two genuinely environmental lookups (the flyctl API call,
+        # GITHUB_SHA) and translates the script's two-line verdict into $GITHUB_OUTPUT.
         id: preflight
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_bots_deploy && 'true' || 'false' }}
         run: |
-          skip() { echo "deploy=false" >> "$GITHUB_OUTPUT"; echo "skip: $1"; exit 0; }
-          go()   { echo "deploy=true"  >> "$GITHUB_OUTPUT"; echo "deploy: $1"; exit 0; }
-          # Not provisioned yet → this job is a safe no-op until Eric creates the app + token.
-          [ -n "$FLY_API_TOKEN" ] || skip "no bots-app Fly token (FLY_API_TOKEN_BOTS or FLY_ORG_TOKEN) — see docs/AUTONOMY-DEPLOY.md"
-          # Pre-cutover guard: while fly.toml still declares the bots group, the OLD world is
-          # authoritative — standing the sibling app up beside it would contend for Alpaca's
-          # one-data-connection-per-account limit and starve the live fleet. The tiny cutover PR
-          # (remove the group from fly.toml) is what flips this gate.
-          grep -qE '^\s*bots\s*=' fly.toml && skip "pre-cutover: fly.toml still owns the bots process group"
-          [ "$FORCE" != "true" ] || go "force_bots_deploy dispatch"
-          DEPLOYED=$(flyctl machine list -a skynet-capital-bots --json 2>/dev/null \
+          DEPLOYED_SHA=$(flyctl machine list -a skynet-capital-bots --json 2>/dev/null \
             | jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].config.env.GIT_SHA // empty' || true)
-          [ -n "$DEPLOYED" ] || go "no GIT_SHA baseline on the bots machine (first deploy, or a manual one)"
-          VERDICT=$(node scripts/bot-relevant.mjs "$DEPLOYED" "$GITHUB_SHA")
+          VERDICT=$(DEPLOYED_SHA="$DEPLOYED_SHA" HEAD_SHA="$GITHUB_SHA" node scripts/bots-deploy-preflight.mjs)
           echo "$VERDICT"
-          [ "$(head -n1 <<<"$VERDICT")" = "deploy" ] && go "$(tail -n1 <<<"$VERDICT") (since $DEPLOYED)"
-          skip "$(tail -n1 <<<"$VERDICT") (since $DEPLOYED)"
+          DECISION=$(head -n1 <<<"$VERDICT")
+          REASON=$(tail -n1 <<<"$VERDICT")
+          echo "deploy=$([ "$DECISION" = deploy ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "$DECISION: $REASON"
 
       - name: Resolve image
         if: ${{ steps.preflight.outputs.deploy == 'true' }}
