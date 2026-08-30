@@ -32,6 +32,7 @@
     "comms:scan": "node scripts/comms-scan.mjs",
     "prepare": "test -n \"$CI\" || husky",
     "arch:scan": "node scripts/arch-scan.mjs",
+    "repair-watchlist:scan": "node scripts/repair-watchlist-scan.mjs",
     "dupe:scan": "node scripts/dupe-scan.mjs",
     "clone:scan": "node scripts/clone-scan.mjs",
     "verify": "run-p typecheck lint test",
