@@ -107,6 +107,14 @@ function RootShell(): ReactElement {
           >
             Trade
           </Link>
+          <Link
+            to="/feedback"
+            className="topnav-link"
+            activeProps={{ "aria-current": "page" }}
+            activeOptions={{ includeSearch: false }}
+          >
+            Feedback
+          </Link>
         </nav>
         <div className="topbar-actions">
           <StatusPill />
