@@ -22,6 +22,12 @@
 import { readFileSync } from "node:fs";
 import { AUDIT_LIST_LIMIT, audit, auditReport } from "./issue-lint-audit.mjs";
 import { LABEL_NAMES } from "./moneypenny/labels.mjs";
+import { fleschKincaidGrade, stripMarkdown } from "./readability.mjs";
+
+/** Above this, an advisory note fires — chosen generous (college-graduate level) so the necessarily
+ *  precise vocabulary above the fold (a label, a symbol, a metadata value) doesn't trip it on
+ *  ordinary capsules. See scripts/readability.mjs's header for why this is a note, never a gate. */
+const READABILITY_GRADE_NOTE_FLOOR = 16;
 
 // Re-exported so callers of issue-lint.mjs keep the same public surface — the live-corpus audit
 // itself (AUTOMATION_TAG, `audit`, `auditReport`) now lives in issue-lint-audit.mjs.
@@ -185,6 +191,14 @@ function collectNotes(text, notes) {
   }
   const bullets = (top.match(/^\s*[-*] /gm) ?? []).length;
   if (bullets > 4) notes.push(`${bullets} talking points above the fold — 2–4 is the scan budget`);
+  const grade = fleschKincaidGrade(stripMarkdown(top));
+  if (grade !== null && grade >= READABILITY_GRADE_NOTE_FLOOR) {
+    notes.push(
+      `reads at an approximate grade ${grade} above the fold (Flesch-Kincaid) — a rough, cheap ` +
+        "signal, not a verdict; ignore it if the vocabulary is genuinely necessary, or run " +
+        "`linguist` for an actual reader-comprehension check",
+    );
+  }
   if (
     text.includes("<details") &&
     /needs-eric|blocked on|waiting on eric/i.test(text.slice(top.length))
