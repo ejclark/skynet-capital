@@ -5,7 +5,7 @@ import { JsonFileStore } from "../storage/json-file-store.js";
  * `/data/owner-links.json`) — the durable answer to "which sign-in owns this account?" for
  * accounts that were never stamped with one.
  *
- * **Why it exists (#546).** A session may only trade the account it *owns*, and ownership lives
+ * **Why it exists.** A session may only trade the account it *owns*, and ownership lives
  * on `Participant.ownerEmail`, stamped from the session at `/add`. Two kinds of account can
  * never carry that stamp: env-declared roster rows (`SKYNET_HUMAN_<ID>_KEY`, and every bot),
  * which are rebuilt from the host's environment on every boot, and store rows added before the

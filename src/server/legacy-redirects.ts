@@ -1,10 +1,10 @@
 import type { ServerResponse } from "node:http";
 
 /**
- * NO DEAD EXITS (#738 phase 9a) — every legacy URL 302s into `/app/*`, so a bookmark, an old
+ * NO DEAD EXITS — every legacy URL 302s into `/app/*`, so a bookmark, an old
  * link, or a stray anchor can never strand a member outside the shell (Eric's live review,
  * 2026-08-28: reachable legacy pieces read as an unfinished port). The pre-redesign HTML pages
- * this map used to twin against are gone entirely as of #738 phase 9f-2 — this map is now the
+ * this map used to twin against are gone entirely — this map is now the
  * permanent bookmark-protection layer, not a bridge to a parallel app.
  *
  * Rules that bound the map:

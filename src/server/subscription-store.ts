@@ -7,7 +7,7 @@ import {
 } from "../subscriptions/subscription-state.js";
 
 /**
- * The durable state behind an account's Playbook Store (issue #885) — which playbooks an
+ * The durable state behind an account's Playbook Store — which playbooks an
  * account subscribed to and how much capital it reserved per subscription.
  *
  * Plain JSON, deliberately NOT encrypted, same reasoning as `bot-controls-store.ts`: no

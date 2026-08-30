@@ -7,7 +7,7 @@ import type { OrderAuditRecord } from "../server/order-audit-log.js";
  * trade-updates socket, `backfill`/`broker` recovered afterwards. That is provenance of knowledge,
  * not of authorship — an order the app's own ticket submitted still lands as `broker` when the
  * socket missed it and the reconcile picked it up. So `source === "broker"` is a plausible but
- * wrong-sometimes proxy for "placed directly in Alpaca" (#782).
+ * wrong-sometimes proxy for "placed directly in Alpaca".
  *
  * The exact signal is the per-order audit log (`server/order-audit-log.ts`), written SYNCHRONOUSLY
  * by the desk seam (`desk-gate.ts`'s `submitAndAudit`) the moment the broker accepts, keyed on the

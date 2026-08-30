@@ -11,10 +11,9 @@ import {
 } from "./ladder-progress-log.js";
 
 /**
- * THE LADDER AUTO-COMPLETION DETECTOR (#469 slice 3) — the writer the ladder progress log
- * (slice 2, `ladder-progress-log.ts`) was built ahead of. Turns real account activity into the two
- * milestones nothing else in this repo can prove from a fill alone (per the log's own module doc
- * and PR #880's design notes):
+ * THE LADDER AUTO-COMPLETION DETECTOR — the writer the ladder progress log
+ * (`ladder-progress-log.ts`) was built ahead of. Turns real account activity into the two
+ * milestones nothing else in this repo can prove from a fill alone (per the log's own module doc):
  *
  *  - an OTM expiry (`OPEXP` on the durable activity ledger) — a contract expired worthless, a fact
  *    Alpaca reports outside the normal fill flow (`option-lifecycle.ts`);
@@ -24,7 +23,7 @@ import {
  * **Deliberately does NOT touch the four trade-ladder milestones (first buy/sell/CSP/CC).** Those
  * are the 101/102/201/202 `TradeTypeCode` milestones `domain/progression.ts` already derives fresh
  * from the fill + audit ledgers on every read — "never stored" is the honesty invariant Eric ruled
- * on 2026-08-25, and slice 2's own PR (#880) documents this store as the sibling structure for the
+ * on 2026-08-25, and `ladder-progress-log.ts`'s own module doc documents this store as the sibling structure for the
  * milestones that invariant doesn't (and shouldn't) cover. Logging them here too would give the
  * ticket gate two sources of truth for the same fact, which is exactly the drift that invariant
  * exists to prevent. Nothing here reads or writes `progression.ts`/`curriculum.ts`.

@@ -2,7 +2,7 @@ import type { Collection, CollectionMember } from "../discovery/collection.js";
 import type { DeskIndex } from "./collections-view.js";
 
 /**
- * COLLECTIONS AS DATA (#738 phase 6a) — `/api/collections`, the JSON twin behind the shell's
+ * COLLECTIONS AS DATA — `/api/collections`, the JSON twin behind the shell's
  * discovery surface. Same honesty guards as collections-view.ts: the `claim` (what membership
  * MEANS, mechanically) rides every shelf so an evocative name can never oversell; `evidence` is
  * each member's receipt; a persona nobody is running renders as an explicit absence, never a

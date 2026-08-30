@@ -5,7 +5,7 @@ import type { EquitySample } from "./history-store.js";
 import { formatSigned } from "./render-atoms.js";
 
 /**
- * THE STREAKS SECTION of the desk pulse (#780) — two families of run, rendered side by side and
+ * THE STREAKS SECTION of the desk pulse — two families of run, rendered side by side and
  * never blended, because they answer different questions over different inputs:
  *
  *  - **Trading-day runs** (`day-trophies.ts`) walk the recorded equity curve. A day the market was

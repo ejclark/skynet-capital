@@ -2,7 +2,7 @@ import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 
 /**
- * Resolve the signed-in viewer to the participant they own (#466) — undefined when no
+ * Resolve the signed-in viewer to the participant they own — undefined when no
  * `resolveOwnerId` is wired, or the session's email owns no account (an account with no owner
  * link resolves to nobody until an owner attaches one from `/claim`).
  */

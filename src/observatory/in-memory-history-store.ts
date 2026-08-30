@@ -1,18 +1,15 @@
+import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 import type { EquitySample, HistoryStore } from "./history-record.js";
 
 /** In-memory store: the reference implementation, used by tests and in-process runs. */
 export class InMemoryHistoryStore implements HistoryStore {
-  private readonly samples: EquitySample[] = [];
+  private readonly store = new InMemoryKeyedStore<EquitySample>((s) => s.participantId);
 
   save(sample: EquitySample): Promise<void> {
-    this.samples.push(sample);
-    return Promise.resolve();
+    return this.store.append(sample);
   }
 
   list(participantId?: string): Promise<EquitySample[]> {
-    const all = [...this.samples];
-    return Promise.resolve(
-      participantId ? all.filter((s) => s.participantId === participantId) : all,
-    );
+    return this.store.list(participantId);
   }
 }

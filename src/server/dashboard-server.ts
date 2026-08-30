@@ -80,7 +80,7 @@ function parseCompareParams(params: URLSearchParams): Pick<StandingsOptions, "aI
   };
 }
 
-/** The front door (#738 phase 7a): every sign-in and every bare visit lands in the shell. */
+/** The front door: every sign-in and every bare visit lands in the shell. */
 function serveHomePage(
   res: ServerResponse,
   path: string,
@@ -179,7 +179,7 @@ async function serveAuthorizedRoute(
     serveResearchDoc(res, path);
     return;
   }
-  // The React shell (#738 phase 1) — static app/dist behind the same gate as the board.
+  // The React shell — static app/dist behind the same gate as the board.
   if (isAppShellPath(path)) {
     serveAppShell(res, path);
     return;

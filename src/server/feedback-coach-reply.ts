@@ -1,11 +1,11 @@
 /**
  * READING THE COACH'S REPLY — and recovering when it arrives broken.
  *
- * Split out of `feedback-coach.ts` (#702), which owns the conversation and the HTTP shape. What a
+ * Split out of `feedback-coach.ts`, which owns the conversation and the HTTP shape. What a
  * raw model reply MEANS is a separate job, and it grew one the moment a member hit the failure this
  * module exists to prevent.
  *
- * The bug (#702, reported by a member): the coach's final draft is the one large reply it ever
+ * The bug (reported by a member): the coach's final draft is the one large reply it ever
  * writes, and it can run past `MAX_TOKENS` mid-`details`. The JSON then arrives unterminated,
  * `JSON.parse` throws, and the old degrade path showed the member the raw text as if it were the
  * next question. Answering it fed that blob back as the coach's last turn, so the model re-drafted,

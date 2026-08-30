@@ -1,16 +1,15 @@
+import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 import type { IvHistoryPort, IvSample } from "./iv-record.js";
 
 /** In-memory IV history: the reference implementation, used by specs and in-process runs. */
 export class InMemoryIvHistory implements IvHistoryPort {
-  private readonly samples: IvSample[] = [];
+  private readonly store = new InMemoryKeyedStore<IvSample>((s) => s.symbol);
 
   save(sample: IvSample): Promise<void> {
-    this.samples.push(sample);
-    return Promise.resolve();
+    return this.store.append(sample);
   }
 
   list(symbol?: string): Promise<IvSample[]> {
-    const all = [...this.samples];
-    return Promise.resolve(symbol ? all.filter((s) => s.symbol === symbol) : all);
+    return this.store.list(symbol);
   }
 }

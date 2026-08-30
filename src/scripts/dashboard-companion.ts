@@ -1,5 +1,5 @@
 /**
- * Boot-time wiring for the trading companion (#467) — shares `ANTHROPIC_API_KEY` and its
+ * Boot-time wiring for the trading companion — shares `ANTHROPIC_API_KEY` and its
  * envelope-protected round/size caps with the feedback coach; no new credential, no new Fly
  * secret. Also owns constructing the shared `ProgressionService` (the companion's curriculum
  * tool and the dashboard's own `/learn`/`/trade` gate read the exact same instance) so

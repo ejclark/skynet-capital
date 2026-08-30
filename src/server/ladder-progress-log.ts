@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { JsonlKeyedStore } from "../storage/jsonl-store.js";
 
 /**
- * THE LADDER PROGRESS LOG (#469 slice 2) — the durable, per-participant record of a graduated-
+ * THE LADDER PROGRESS LOG — the durable, per-participant record of a graduated-
  * ladder milestone being completed. Same shape as `JsonlFeedbackLogStore` (`feedback-log.ts`): one
  * append-only JSONL file per key under `dir`, backed by the shared `JsonlKeyedStore` primitives —
  * a write is cheap and crash-safe, and the log is immutable.

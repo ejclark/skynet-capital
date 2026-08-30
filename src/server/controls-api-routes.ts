@@ -5,7 +5,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
- * MISSION CONTROL AS DATA (#738 phase 8c) — the shell's twin of the desk's owner-only Settings
+ * MISSION CONTROL AS DATA — the shell's twin of the desk's owner-only Settings
  * tab (`controls-form.ts`), as one endpoint:
  *
  *   GET  /api/controls → `{owner:false}` for everyone but env-allowlisted owners (the switchboard

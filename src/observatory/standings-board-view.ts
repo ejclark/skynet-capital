@@ -19,7 +19,7 @@ import {
 } from "./standings-patch.js";
 
 /**
- * THE BOARD AS DATA — the JSON views `/api/board` serves the React shell (#738 phases 0–2).
+ * THE BOARD AS DATA — the JSON views `/api/board` serves the React shell.
  *
  * Split from standings-patch.ts when the compare view pushed that file past the size cap: the
  * patch module owns "what changed between two snapshots", this one owns "the whole board, as a

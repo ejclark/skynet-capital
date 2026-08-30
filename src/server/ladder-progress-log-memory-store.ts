@@ -3,21 +3,18 @@
  * used by tests. Split out of `ladder-progress-log.ts` (Biome `noExcessiveClassesPerFile`) so the
  * file-backed store stays the one class the main module defines.
  */
+import { InMemoryKeyedStore } from "../storage/in-memory-keyed-store.js";
 import type { LadderProgressEntry, LadderProgressLogStore } from "./ladder-progress-log.js";
 
 /** In-memory store: the reference implementation, used by tests. */
 export class InMemoryLadderProgressLogStore implements LadderProgressLogStore {
-  private readonly entries: LadderProgressEntry[] = [];
+  private readonly store = new InMemoryKeyedStore<LadderProgressEntry>((e) => e.participantId);
 
   record(entry: LadderProgressEntry): Promise<void> {
-    this.entries.push(entry);
-    return Promise.resolve();
+    return this.store.append(entry);
   }
 
   list(participantId?: string): Promise<readonly LadderProgressEntry[]> {
-    const all = [...this.entries];
-    return Promise.resolve(
-      participantId ? all.filter((e) => e.participantId === participantId) : all,
-    );
+    return this.store.list(participantId);
   }
 }

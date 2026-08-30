@@ -1,5 +1,5 @@
 /**
- * The TACO signal — the event detector the "TACO Trades" playbook (#778) needs before it can
+ * The TACO signal — the event detector the "TACO Trades" playbook needs before it can
  * exist. Every playbook in `src/playbooks/registry.ts` is DATE-keyed: `desiredState` answers
  * from an earnings calendar. TACO is EVENT-keyed — it reacts to a Trump-linked pump story, which
  * the calendar cannot express. This module supplies the missing half: given the newswire this

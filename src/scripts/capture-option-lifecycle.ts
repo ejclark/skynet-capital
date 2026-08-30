@@ -1,5 +1,5 @@
 /**
- * CLI: capture the WIRE SHAPE of option lifecycle activities from a live paper account (#837).
+ * CLI: capture the WIRE SHAPE of option lifecycle activities from a live paper account.
  *
  * This exists to answer exactly one open question, and then get out of the way: which field on an
  * `OPTRD` activity carries its side. `src/trading/option-lifecycle.ts` keeps `OPTRD` out of the

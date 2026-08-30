@@ -11,7 +11,7 @@ import type { TradeTypeCode } from "./trade-types.js";
  * Pure data. Every milestone names the trade-type code whose first FILLED order earns it
  * (`tradeType`), so progression derives from real executed trades — never self-marked
  * (`src/domain/progression.ts` does the deriving). Outcome milestones (an OTM expiry, a first
- * realized profit) return once short-lot matching lands (#468); they will be bonus points, never
+ * realized profit) return once short-lot matching lands; they will be bonus points, never
  * ladder gates.
  */
 

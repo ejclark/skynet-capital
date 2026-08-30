@@ -7,7 +7,7 @@ import type { ActivityView } from "./participant-snapshot.js";
  * anything else from this module.
  */
 
-/** "lifecycle" (#468 criterion 6): a line synthesized from an option's OPEXP/OPASN/OPEXC/OPTRD
+/** "lifecycle": a line synthesized from an option's OPEXP/OPASN/OPEXC/OPTRD
  *  account activity rather than captured from an order fill — see `../trading/option-lifecycle.ts`. */
 export type ActivitySource = "stream" | "backfill" | "broker" | "lifecycle";
 

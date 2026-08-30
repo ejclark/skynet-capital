@@ -5,7 +5,7 @@ import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
- * THE JOURNEY'S WRITE HALF (#738 phase 8b) — the shell's twin of the `/trade`-riding academy
+ * THE JOURNEY'S WRITE HALF — the shell's twin of the `/trade`-riding academy
  * posts (`comprehension-routes.ts`), as two endpoints:
  *
  *   POST /api/learn/claim  → progression.acknowledge: bank the one-time celebration. The service

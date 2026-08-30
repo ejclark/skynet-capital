@@ -14,7 +14,7 @@
  * window on a `confirmed` print date. An estimate never keys an entry — but an already-open
  * position still exits normally when the window closes (safety is never date-gated).
  *
- * EVENT-DRIVEN PLAYS (added for #778, "TACO Trades"): a calendar answers "how many days to the
+ * EVENT-DRIVEN PLAYS ("TACO Trades"): a calendar answers "how many days to the
  * print"; some plays instead need "did a qualifying external event just fire" — a news hit, not
  * a date. Rather than give TACO its own parallel runner (a second copy of the ownership rule,
  * the sizing math, the flatten-on-close discipline), `desiredState` gained one OPTIONAL third

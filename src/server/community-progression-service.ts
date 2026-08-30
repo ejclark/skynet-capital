@@ -7,7 +7,7 @@ import type { CommunityProgressionStore } from "./community-progression-store.js
 import type { FeedbackLogEntry } from "./feedback-log.js";
 
 /**
- * THE COMMUNITY PROGRESSION SERVICE (#567) — composes the feedback log into the community track's
+ * THE COMMUNITY PROGRESSION SERVICE — composes the feedback log into the community track's
  * view, the same shape `progression-service.ts` uses for the trade ladder: everything earnable is
  * computed at read time from the durable log, so there is no progress state to migrate or drift —
  * the filings ARE the progress. The store holds only what cannot be derived: which celebrations

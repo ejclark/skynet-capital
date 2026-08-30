@@ -9,7 +9,7 @@ import { normalizeSymbol } from "./order-ticket.js";
 
 /**
  * THE MULTI-LEG DRAFT ORDER — a state machine for an order being built, decoupled from any one
- * screen (#582, slice 1).
+ * screen.
  *
  * WHY THIS EXISTS. The desk's ticket (`option-ticket.ts`) is fixed to six named plays: you pick
  * a play and it asks for that play's numbers. There is no concept anywhere of "add a leg" — so a

@@ -18,7 +18,7 @@ import {
 import { formatCurrency, formatSigned, pct, plClass } from "./render-atoms.js";
 
 /**
- * THE DESK AS DATA — the JSON view `/api/desk/:id` serves the React shell (#738 phase 2c).
+ * THE DESK AS DATA — the JSON view `/api/desk/:id` serves the React shell.
  *
  * The same numbers the server-rendered blotter shows (`positions-view.ts`), formatted by the same
  * helpers, so the two renderers can never disagree about a figure. Raw numerics ride alongside the

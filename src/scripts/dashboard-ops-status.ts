@@ -8,7 +8,7 @@ import { buildOpsStatus, resolveOpsStatusRepo } from "../server/ops-status-servi
 import { type InsightsBridgeHandle, startInsightsBridge } from "./dashboard-insights-bridge.js";
 
 /**
- * Boot-time wiring for the ops-status panel (#666 slice 1): folds the live hub, the durable
+ * Boot-time wiring for the ops-status panel: folds the live hub, the durable
  * activity ledger, and the bridge-poll tracker into `OpsStatusDeps`, resolving the optional
  * GitHub deploy-lag fetcher from the environment. Pulled out of `serve-dashboard.ts` to keep that
  * file's own complexity budget (`scripts/arch-scan.mjs`'s sibling lint gate), mirroring

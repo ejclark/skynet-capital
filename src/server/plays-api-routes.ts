@@ -8,7 +8,7 @@ import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shel
 import { playLocked } from "./progression-service.js";
 
 /**
- * THE TICKET'S CATALOG AND LADDER (#738 phase 10a) — what the shell's trade page needs to know
+ * THE TICKET'S CATALOG AND LADDER — what the shell's trade page needs to know
  * before any order is drafted:
  *
  *   GET  /api/trade/plays  → the six trade types (`trade-types.ts`, verbatim: real broker term,

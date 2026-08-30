@@ -7,18 +7,18 @@ import type { OrderAuditRecord } from "./order-audit-log.js";
 import { createTradeService, type SubmitDeskTrade } from "./trade-service.js";
 
 /**
- * THE ACCOUNT-IDENTITY GATE (#928 slice 3) — the ONLY code in this repo allowed to turn a raw
+ * THE ACCOUNT-IDENTITY GATE — the ONLY code in this repo allowed to turn a raw
  * broker credential factory into a usable client for a member-initiated trade. This is not a test
  * proving the check currently holds; it is the only place the capability to construct a client
  * exists at all for the desk path. `trade-service.ts` and `option-trade-service.ts` are open
- * (#928 — ordinary trading-feature work, community-owned), and neither one HOLDS a raw
+ * (ordinary trading-feature work, community-owned), and neither one HOLDS a raw
  * `clientFactory`/`optionsClientFactory`/`findParticipant` — they receive only a bound
  * `VerifyAccess` closure and can never reach the broker except by calling it. An edit to either
  * open file that wants an unverified client has nowhere to get one; it would have to reintroduce
  * a raw factory field to their deps shape first, which is a visible, deliberate widening of this
  * file's own boundary, not an accidental one-line deletion.
  *
- * Eric, 2026-08-30 (#928): "dancing around protected areas is the wrong behavior... if those
+ * Eric, 2026-08-30: "dancing around protected areas is the wrong behavior... if those
  * areas need to change, we change them... the solution is to remove the shit, not spray febreze
  * to mask the smell." This file is that removal: the sensitive capability lives in one place,
  * small enough to review in full on every change, and everything downstream of a successful
@@ -92,7 +92,7 @@ export interface ResolveDeskTradingDeps {
    *  (Eric's ruling, 2026-08-21, #466): the moment a member's account carries an owner link,
    *  they may trade it, so there is deliberately no separate kill switch. */
   readonly authConfigured: boolean;
-  /** Appends the per-order audit line (#466) after a successful broker submit. Optional so
+  /** Appends the per-order audit line after a successful broker submit. Optional so
    *  offline/test wiring can omit it. */
   readonly recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
   readonly now?: () => Date;

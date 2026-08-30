@@ -6,7 +6,7 @@ import type { OrderAuditRecord } from "./order-audit-log.js";
 /**
  * THE SHARED DESK MACHINERY — what the share desk (`trade-service.ts`) and the options desk
  * (`option-trade-service.ts`) both stand on, in its own module so neither imports the other.
- * Open (#928): the one structural check that used to live here — "your own account only" — moved
+ * Open: the one structural check that used to live here — "your own account only" — moved
  * to `account-identity-gate.ts` (protected), since it's the part that can't be community-owned.
  * Everything left is a re-check of something the browser already showed: the review screen is a
  * courtesy, the service re-check is the gate, and both desks must run the SAME machinery here or
@@ -74,7 +74,7 @@ async function submitToBroker(
 }
 
 /**
- * Submit through the broker, then append the per-order audit line (#466) on success only — the
+ * Submit through the broker, then append the per-order audit line on success only — the
  * one step both desks must do identically, so it lives here rather than copied into each. The
  * caller's `tag` (play code / intent / side) rides the line so milestone derivation can classify
  * the fill later; the symbol comes from the broker's own echo, never the form.

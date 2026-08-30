@@ -97,7 +97,7 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly readHistory?: (participantId: string) => Promise<readonly EquitySample[]>;
   /** Re-reads this account from the broker before its desk renders, so the screen shows what Alpaca
-   *  holds rather than only what the fill stream delivered (#591). Rate-limited and failure-swallowing
+   *  holds rather than only what the fill stream delivered. Rate-limited and failure-swallowing
    *  in `createBrokerSync`; omit (offline/tests) and the desk renders live memory as before. */
   readonly refreshParticipant?: (participantId: string) => Promise<void>;
   /**
@@ -125,7 +125,7 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly progression?: ProgressionService;
   /**
-   * The community track's progression (#567) — the feedback-given milestone, derived from the
+   * The community track's progression — the feedback-given milestone, derived from the
    * feedback log, never the trade ladder. Omit and `/feedback` shows the count with no fanfare.
    */
   readonly communityProgression?: CommunityProgressionService;
@@ -145,7 +145,7 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   readonly tradingClientFor?: (participantId: string) => AlpacaTradingClient | undefined;
   /**
    * Resolve the signed-in session's email to the participant it owns (`Participant.ownerEmail`)
-   * — the ONLY link a session may trade or self-manage through (#466). Reads the roster + store
+   * — the ONLY link a session may trade or self-manage through. Reads the roster + store
    * directly; `ParticipantSnapshot` deliberately omits `ownerEmail` so it's never handed to a
    * browser. Omit when OAuth isn't configured.
    */
@@ -172,7 +172,7 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    */
   readonly rosterIds?: () => ReadonlySet<string>;
   /**
-   * The companion chat turn (#467) — `undefined` (inert) until `ANTHROPIC_API_KEY` is set, the
+   * The companion chat turn — `undefined` (inert) until `ANTHROPIC_API_KEY` is set, the
    * exact same env var and gate `coachFeedback` uses. `/api/companion*` answers "not switched on
    * yet" honestly when this is absent, same doctrine as every other optional AI-backed lane.
    */

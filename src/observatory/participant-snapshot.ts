@@ -68,7 +68,7 @@ export interface ParticipantSnapshot {
    * Alpaca's human-readable account number (`PA…` on paper) — present only on a successful read.
    * Distinct from `accountId` on purpose: the UUID identifies the account to the API, this one
    * identifies it to the *member*, because it's what Alpaca's own dashboard shows them. That makes
-   * it the only value that answers "which of my broker accounts is this board name?" (#732).
+   * it the only value that answers "which of my broker accounts is this board name?"
    */
   readonly accountNumber?: string;
   readonly cash: number;

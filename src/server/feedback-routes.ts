@@ -22,7 +22,7 @@ import type { FetchFeedbackStatuses } from "./feedback-status.js";
 export interface FeedbackRouteDeps {
   readonly submitFeedback?: (input: FeedbackInput) => Promise<FeedbackResult>;
   readonly coachFeedback?: CoachTurn;
-  /** Records a successful filing (#429 slice: the feedback log). Failure never fails the submit —
+  /** Records a successful filing (the feedback log). Failure never fails the submit —
    *  it's recorded in a try/catch so a store hiccup can't cost the member their filed issue. */
   readonly recordFeedback?: (entry: FeedbackLogEntry) => Promise<void>;
   /** Reads a member's own filing history, for the "Your recent feedback" list under the form. */
@@ -55,7 +55,7 @@ export async function serveFeedbackRoute(
 
 // Light per-submitter throttle — the codebase has no rate-limiting, and feedback submission
 // writes to the repo, so cap bursts (5 / 10 min) keyed by the signed-in email. In-memory is fine
-// (single process). Shared with the shell's /api/feedback (#738 phase 9d) — one budget, one door.
+// (single process). Shared with the shell's /api/feedback — one budget, one door.
 const feedbackHits = new Map<string, number[]>();
 export function feedbackThrottled(
   key: string,

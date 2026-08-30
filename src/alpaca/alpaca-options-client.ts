@@ -189,7 +189,7 @@ export class AlpacaOptionsClient {
   }
 
   /**
-   * The four option lifecycle activity types (#468 criterion 6): `OPEXP` (expired worthless),
+   * The four option lifecycle activity types: `OPEXP` (expired worthless),
    * `OPASN` (assigned), `OPEXC` (exercised), `OPTRD` (the paired underlying-share settlement
    * trade). Read-only and never on the execution path, so this fails SOFT like `mergeQuotes` —
    * an empty array on any error, rather than breaking history rendering over a broker hiccup.

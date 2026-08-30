@@ -1,7 +1,7 @@
 import type { OpsSignal, OpsSignalLink } from "./ops-status-types.js";
 
 /**
- * THE PURE HALF OF THE DEPLOY-LAG SIGNAL (#666 slice 1) — verdict logic and the bot-relevance
+ * THE PURE HALF OF THE DEPLOY-LAG SIGNAL — verdict logic and the bot-relevance
  * classifier, PORTED from `scripts/deploy-lag.mjs` and `scripts/bot-relevant.mjs` rather than
  * imported (see `ops-status-deploy-lag.ts`'s header for why: `src/` type-checks under strict tsc
  * and those two files are plain `.mjs` outside `tsconfig.json`'s `include`). Split out of

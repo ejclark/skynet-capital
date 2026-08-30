@@ -20,7 +20,7 @@ export interface FeedbackSetup {
   feedbackLog: ReturnType<typeof createFeedbackLogStore>;
   feedbackStatus: ReturnType<typeof resolveFeedbackStatus>;
   feedbackFollowup: ReturnType<typeof resolveFeedbackFollowup>;
-  /** The community milestone track (#567) — filing feedback earns it, never a trade code. */
+  /** The community milestone track — filing feedback earns it, never a trade code. */
   communityProgression: ReturnType<typeof createCommunityProgressionService>;
 }
 
@@ -38,13 +38,13 @@ export function setupFeedback(env: NodeJS.ProcessEnv): FeedbackSetup {
       "ℹ️  The feedback coach is off (no ANTHROPIC_API_KEY) — the plain /feedback form still works.",
     );
   }
-  // What a member filed, correlated to the issue it became (#429).
+  // What a member filed, correlated to the issue it became.
   const feedbackLog = createFeedbackLogStore(env);
-  // Live status for those filings — GitHub itself, never a local store (#429 follow-up).
+  // Live status for those filings — GitHub itself, never a local store.
   const feedbackStatus = resolveFeedbackStatus(env);
   // A member adding more to a filing they already own, and the re-trigger that comes with it.
   const feedbackFollowup = resolveFeedbackFollowup(env);
-  // The community milestone track (#567) — own store, own derivation; never the trade ladder's.
+  // The community milestone track — own store, own derivation; never the trade ladder's.
   const communityProgression = createCommunityProgressionService({
     readFeedback: (id) => feedbackLog.list(id),
     store: createCommunityProgressionStore(env, (m) => console.error(m)),

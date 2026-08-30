@@ -24,7 +24,7 @@ export interface InsightsListenerConfig {
   /**
    * Fires on every AUTHENTICATED `GET /controls` poll, regardless of whether `controls` above is
    * configured — the poll itself, not its payload, is the ops-status panel's credential-free
-   * proxy for "is the bots process alive and reaching this one" (#666). Best-effort: never
+   * proxy for "is the bots process alive and reaching this one". Best-effort: never
    * awaited, never allowed to fail the response it rides along with.
    */
   readonly onControlsPoll?: () => void;

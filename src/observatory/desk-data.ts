@@ -29,7 +29,7 @@ import type { ActivityView, ParticipantSnapshot } from "./participant-snapshot.j
  * history tab contradicted each other about the same trade.
  */
 /**
- * Lifecycle statuses (#468 criterion 6) that must never enter the FIFO round-trip matcher at all,
+ * Lifecycle statuses that must never enter the FIFO round-trip matcher at all,
  * regardless of side/quantity: `OPEXC` (exercise converts a long option's value into stock — a
  * $0 close would misreport a value transfer as a wipeout) and `OPTRD` (a real settlement trade,
  * but this app hasn't confirmed its wire shape against a live account — see
@@ -42,9 +42,9 @@ const LIFECYCLE_INFO_ONLY: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Lifecycle statuses that DO close a leg (#468 criterion 6): `OPEXP` (expired worthless) and
+ * Lifecycle statuses that DO close a leg: `OPEXP` (expired worthless) and
  * `OPASN` (assigned) both synthesize an honest $0 close. Marked `synthetic`, which makes them
- * directionless in the matcher — they close a bought lot or a WRITTEN one (#838) — and a safe
+ * directionless in the matcher — they close a bought lot or a WRITTEN one — and a safe
  * no-op when nothing is open, rather than a double-counted unmatched sell.
  */
 const LIFECYCLE_SYNTHETIC_CLOSE: ReadonlySet<string> = new Set([

@@ -1,7 +1,7 @@
 /**
  * THE FEEDBACK LOG — what a member filed, and where it landed.
  *
- * Closes the last correlation gap in the feedback funnel (#429): `feedback-service.ts` files a
+ * Closes the last correlation gap in the feedback funnel: `feedback-service.ts` files a
  * GitHub issue and returns its number, but nothing kept the pairing — `feedback-routes.ts` used
  * to render the number once and throw it away, so nothing could later say "here is your
  * feedback, here is its state." This is that record: one entry per successful filing, keyed by

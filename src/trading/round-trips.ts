@@ -19,8 +19,8 @@
  *    sell to the held quantity, so the stock path cannot short.
  *  - **options are the exception, because there the sell is genuinely an opening** — a written put
  *    or covered call (course 201/202) starts with a sell-to-open. So on an OCC symbol an unmatched
- *    sell opens a **short lot**, which later closes on a buy-to-close or on an expiry/assignment
- *    (#838). Its `realized` is premium received − cost to close and `returnPct` is measured against
+ *    sell opens a **short lot**, which later closes on a buy-to-close or on an expiry/assignment.
+ *    Its `realized` is premium received − cost to close and `returnPct` is measured against
  *    the premium, so a contract written for $420 and expiring worthless reads +$420 / +100%.
  *    The cost, stated in full: a LONG option opened before the window and sold to close inside it is
  *    indistinguishable from a write, so it becomes a short lot — and if the member later re-buys

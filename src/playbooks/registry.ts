@@ -74,11 +74,11 @@ export const G1_GOOG: Playbook = {
 const TACO_SYMBOL = "DJT";
 
 /**
- * TACO-DJT — the event-driven counterpart to the two date-keyed plays above (#778, "TACO
+ * TACO-DJT — the event-driven counterpart to the two date-keyed plays above ("TACO
  * Trades," Eric's 2026-08-28 UX research note, verbatim in the issue). Where S1-NVDA and
  * G1-GOOG ask "how many days to the print," this play asks "did a qualifying Trump-linked pump
- * story just fire" — a question the calendar can't answer. `src/news/taco-signal.ts` (PR #786,
- * phase 1 of #778) already ships that detector, pure and unregistered; this is phase 2 — the
+ * story just fire" — a question the calendar can't answer. `src/news/taco-signal.ts`
+ * already ships that detector, pure and unregistered; this is phase 2 — the
  * playbook that actually reads it, via `playbook.ts`'s new optional `events` input.
  *
  * TIMING, PER ERIC'S 0DTE NOTE ("immediate action to enter position, and quick to exit before
@@ -91,7 +91,7 @@ const TACO_SYMBOL = "DJT";
  * hands it; nothing in this repository yet polls Alpaca's news feed, runs `detectTacoSignals`,
  * and threads the result through `withPlaybooks`/`playbookIntents`'s `events` parameter into the
  * live runner (`src/scripts/run-autonomous.ts` / `autonomous-live-wiring.ts`). That live wiring
- * is deliberately deferred to a follow-up slice (see the PR that added this play). Until it
+ * is deliberately deferred to a follow-up slice. Until it
  * lands, naming "TACO-DJT" in `SKYNET_PLAYBOOKS` arms a playbook that will never see an event
  * and therefore never trade — dark by construction, not a silent "always long."
  *
@@ -166,7 +166,7 @@ export function enabledPlaybooks(env: Readonly<Record<string, string | undefined
   return { enabled, rejected };
 }
 
-/** Look up a house playbook by id (issue #885 — resolving a `PlaybookSubscription` into an
+/** Look up a house playbook by id (resolving a `PlaybookSubscription` into an
  *  `EnabledPlaybook` needs the full `Playbook`, not just the id it was subscribed by). */
 export function findPlaybook(id: string): Playbook | undefined {
   return ROSTER.find((p) => p.id === id);

@@ -6,7 +6,7 @@ import { type EarnedMilestone, ladderNeighbor, milestoneForCode } from "../domai
 import type { AcademyProgress } from "../server/progression-service.js";
 
 /**
- * MILESTONES AS DATA (#738 phases 6b + 8b) — `/api/learn`, the JSON twin behind the shell's
+ * MILESTONES AS DATA — `/api/learn`, the JSON twin behind the shell's
  * journey. The honesty rule is inherited whole (Eric, 2026-08-25: progress a user can claim with
  * zero proof is worthless): a milestone is EARNED only by a real filled order, and the proof —
  * fill date + order id — rides every earned row. Level 100 opens from the start; each higher
@@ -70,7 +70,7 @@ interface CheckGateView {
   readonly questions: readonly CheckQuestionView[];
 }
 
-/** One unclaimed engagement earn (#567) — no ladder code, no next rung: it isn't a trade. */
+/** One unclaimed engagement earn — no ladder code, no next rung: it isn't a trade. */
 interface EngagementCelebrationView {
   readonly milestoneId: string;
   readonly title: string;
@@ -86,7 +86,7 @@ export interface LearnView {
   readonly courses: readonly CourseView[];
   /** Fresh earns awaiting their one-time celebration — the shell renders the fanfare. */
   readonly celebrating: readonly CelebrationView[];
-  /** Fresh engagement earns (#567) awaiting their one-time celebration — same fanfare
+  /** Fresh engagement earns awaiting their one-time celebration — same fanfare
    *  treatment, a separate track from the trade ladder. */
   readonly engagementCelebrating: readonly EngagementCelebrationView[];
   /** How many earns still wait behind a comprehension check (the gate below included). */

@@ -3,7 +3,7 @@ import type { ServerResponse } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
 
 /**
- * `/app` — the React observatory shell (#738 phase 1), served as static files from `app/dist`
+ * `/app` — the React observatory shell, served as static files from `app/dist`
  * BEHIND the same auth gate as every board view (the caller wires this after `gateRequest`).
  *
  * Two honesty rules:

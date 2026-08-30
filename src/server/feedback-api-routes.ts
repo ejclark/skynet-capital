@@ -22,7 +22,7 @@ function parseCommunityAckIds(raw: string): readonly string[] | undefined {
 }
 
 /**
- * THE FEEDBACK API (#738 phase 9d) — `/feedback`'s JSON twin, three endpoints:
+ * THE FEEDBACK API — `/feedback`'s JSON twin, three endpoints:
  *
  *   GET  /api/feedback          → what's wired (submit/coach/followup) and the member's own
  *                                 filing history with live status badges — resolved through
@@ -57,7 +57,7 @@ async function serveIndex(
     config.fetchFeedbackStatus && recent.length
       ? await config.fetchFeedbackStatus(recent.map((e) => e.issueNumber))
       : undefined;
-  // The community milestone track (#567) — same identity, same "never trust the client" posture
+  // The community milestone track — same identity, same "never trust the client" posture
   // as everything else on this route: the view is derived server-side from the same log.
   const community =
     config.communityProgression && session?.email
@@ -67,8 +67,8 @@ async function serveIndex(
     enabled: Boolean(config.submitFeedback),
     coachEnabled: Boolean(config.coachFeedback),
     followupEnabled: Boolean(config.submitFollowup && config.readFeedback),
-    // Already-durable — `feedback-log.ts` (#429) records every filing; this is just its length,
-    // never a separate counter that could drift from that record (#567).
+    // Already-durable — `feedback-log.ts` records every filing; this is just its length,
+    // never a separate counter that could drift from that record.
     feedbackCount: community?.feedbackCount ?? recent.length,
     celebrating: (community?.celebrating ?? []).map((m) => ({
       milestoneId: m.milestoneId,
@@ -192,7 +192,7 @@ async function serveFollowup(
   sendJson(res, result.ok ? 200 : 502, result);
 }
 
-/** POST /api/feedback/claim → the community track's `acknowledge` (#567), the exact twin of
+/** POST /api/feedback/claim → the community track's `acknowledge`, the exact twin of
  *  `/api/learn/claim`: banks the one-time celebration, filtered against the real track. */
 async function serveCommunityClaim(
   req: IncomingMessage,

@@ -14,7 +14,7 @@ import { createInsightsListener, resolveInsightsBridgePort } from "../server/ins
 export interface InsightsBridgeHandle {
   /** ISO time of the last authenticated `GET /controls` poll this app run, or `undefined` before
    *  the first one lands — the ops-status panel's credential-free "is the bots process alive"
-   *  proxy (#666). */
+   *  proxy. */
   readonly lastControlsPollAt: () => string | undefined;
 }
 

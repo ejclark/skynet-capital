@@ -1,5 +1,5 @@
 /**
- * THE COMPANION'S MODEL DIAL — split out of `companion-limits.ts` (#928), mirroring
+ * THE COMPANION'S MODEL DIAL — split out of `companion-limits.ts`, mirroring
  * `feedback-coach-model.ts`'s seam exactly. Same model the coach already pays for, so this
  * introduces no new per-token price point — see `companion-limits.ts`'s header for why.
  */

@@ -12,8 +12,8 @@ import { marketOpen, readReview, submitAndAudit } from "./desk-gate.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
 
 /**
- * THE DESK EXECUTION SEAM — where a member-initiated order actually reaches the broker. Open
- * (#928): this file never holds a raw broker-client factory, only a `VerifyAccess` closure bound
+ * THE DESK EXECUTION SEAM — where a member-initiated order actually reaches the broker. Open:
+ * this file never holds a raw broker-client factory, only a `VerifyAccess` closure bound
  * in `account-identity-gate.ts` (protected) — the identity check that closure enforces is not
  * this file's concern to get right, only to call.
  *
@@ -51,7 +51,7 @@ export type DeskTradeResult =
 export interface TradeServiceDeps {
   /** The bound identity gate — the only way this service can reach a broker client. */
   readonly verifyAccess: VerifyAccess;
-  /** Appends the per-order audit line (#466) after a successful broker submit. Optional so
+  /** Appends the per-order audit line after a successful broker submit. Optional so
    *  offline/test wiring can omit it. */
   readonly recordAudit?: (entry: OrderAuditRecord) => Promise<void>;
   readonly now?: () => Date;

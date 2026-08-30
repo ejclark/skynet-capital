@@ -6,15 +6,15 @@
  * PROTECTED... treat this file as if it already carried protected: true") is closed by that move,
  * not by protecting this file too.
  *
- * REUSE, NOT A NEW SPEND SURFACE (#467, 2026-08-29). The companion shares the coach's existing
+ * REUSE, NOT A NEW SPEND SURFACE. The companion shares the coach's existing
  * `ANTHROPIC_API_KEY` and its existing Console spend cap — no new credential, no new Fly secret,
  * no raised ceiling. It runs on the SAME model the coach already pays for
  * (`feedback-coach-model.ts`'s `MODEL`, mirrored here as `COMPANION_MODEL`), so this file
  * introduces no new per-token price point, only a companion-shaped set of round/size caps around
  * that one shared rate.
  *
- * FILING GOES THROUGH THE EXISTING COACH, NOT A SECOND MODEL LANE. The plan (#467) floated Sonnet
- * for issue-drafting; on inspection the shipped #429 coach already drafts on Haiku, so the
+ * FILING GOES THROUGH THE EXISTING COACH, NOT A SECOND MODEL LANE. The plan floated Sonnet
+ * for issue-drafting; on inspection the shipped coach already drafts on Haiku, so the
  * companion's file-an-issue lane hands the conversation straight to that existing `CoachTurn`
  * rather than standing up a second cost dial for a Sonnet-drafting mode. One shared ceiling, one
  * shared gate.

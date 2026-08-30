@@ -16,7 +16,7 @@ import { serveDeskJson } from "./desk-json-routes.js";
 import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
 
-/** The shell's content JSON family (#738 phases 5a–6c): the wire, the research shelf, the
+/** The shell's content JSON family: the wire, the research shelf, the
  *  journey, and the discovery shelves — read-only twins of their server-rendered views, one
  *  producer each. Returns true when the request was answered. */
 export async function serveContentApi(
@@ -47,7 +47,7 @@ export async function serveContentApi(
     return json(learnJsonView(progress));
   }
   if (path === "/api/outpost") {
-    // The Outpost's card catalog (#809 slice 1) — derived from the registry on every call, so a
+    // The Outpost's card catalog — derived from the registry on every call, so a
     // new exported play is browsable the moment it lands with nothing here to update.
     return json(outpostCatalog());
   }
@@ -64,7 +64,7 @@ export async function serveContentApi(
   return false;
 }
 
-/** JSON twin of `/board/frame` for the React shell (#738 phase 0): the same board, as data. The
+/** JSON twin of `/board/frame` for the React shell: the same board, as data. The
  *  client renders this once, then applies `/events` ops verbatim from `seq` — on a gap it comes
  *  back here instead of patching around a hole. Same formatted values, same keys, same auth gate. */
 function serveBoardJson(
@@ -94,7 +94,7 @@ function serveBoardJson(
   );
 }
 
-/** The shell's read-only JSON family, aggregated (#738) — content, board, desk. Moved here from
+/** The shell's read-only JSON family, aggregated — content, board, desk. Moved here from
  *  dashboard-server.ts when the quarantine door (9f-1) pressed that file's line cap. */
 export async function serveJsonApi(
   res: ServerResponse,

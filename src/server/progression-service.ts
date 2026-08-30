@@ -39,7 +39,7 @@ import type { ProgressionStore } from "./progression-store.js";
  * already trading, and never greets them with a wall of day-one fanfare. A brand-new member
  * (zero qualifying fills) gets wheels ON: the guided ladder is the default for new users.
  *
- * THE COMPREHENSION GATE (#577) sits on top of that, never in place of it: a fill still earns the
+ * THE COMPREHENSION GATE sits on top of that, never in place of it: a fill still earns the
  * milestone, but where `domain/comprehension-checks.ts` has a check for it, the celebration waits
  * on that check passing. Grading happens HERE, server-side, and only the pass is written — the
  * browser posts answer indices and is never asked, or believed, about the verdict. A milestone
@@ -64,7 +64,7 @@ export interface ParticipantProgression {
    * from `celebrating` until the member shows they understood the play they just made.
    */
   readonly pendingChecks: readonly EarnedMilestone[];
-  /** The engagement track (#567) — earned by an action, not a fill. Empty when `readFeedback`
+  /** The engagement track — earned by an action, not a fill. Empty when `readFeedback`
    *  isn't wired (offline builds), same absence-means-absence convention as `store`. */
   readonly engagementEarned: readonly EarnedEngagement[];
   /** Fresh engagement earns awaiting their one-time celebration — no comprehension gate exists
@@ -94,7 +94,7 @@ export interface AcademyProgress {
   readonly celebrating?: readonly EarnedMilestone[];
   /** Fresh earns still gated on a comprehension check. */
   readonly pendingChecks?: readonly EarnedMilestone[];
-  /** Fresh engagement earns (#567) awaiting their one-time celebration. */
+  /** Fresh engagement earns awaiting their one-time celebration. */
   readonly engagementCelebrating?: readonly EarnedEngagement[];
 }
 
@@ -119,7 +119,7 @@ export interface ProgressionServiceDeps {
   readonly readFills: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   /** The tagged per-order audit lines for one participant. */
   readonly readTags: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
-  /** This participant's filed feedback (#567's engagement track). Absent: the track reads as
+  /** This participant's filed feedback (the engagement track). Absent: the track reads as
    *  earned nothing, same as an absent `store` reads as no wheels/no celebration. */
   readonly readFeedback?: (participantId: string) => Promise<readonly FeedbackLogEntry[]>;
   /**

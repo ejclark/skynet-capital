@@ -1,7 +1,7 @@
 import { isOccSymbol } from "./option-symbols.js";
 
 /**
- * WIRE-SHAPE REPORTING for option lifecycle activities (#837, the unblocking half).
+ * WIRE-SHAPE REPORTING for option lifecycle activities (the unblocking half).
  *
  * `option-lifecycle.ts` deliberately refuses to score `OPTRD` — the paired underlying-share trade
  * an exercise or assignment settles — because nobody has confirmed *which field carries its side*
@@ -151,7 +151,7 @@ export function describeLifecycleShapes(rows: readonly RawRow[]): LifecycleTypeS
 }
 
 /**
- * Render the report as plain text meant to be pasted verbatim into issue #837. Deliberately not
+ * Render the report as plain text meant to be pasted verbatim into the tracking issue. Deliberately not
  * JSON: the reader is a person answering "which field carries side", and the answer should be
  * legible without a parser.
  */
