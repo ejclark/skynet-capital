@@ -171,6 +171,16 @@ the one move Zimmermann's finding rules out.
 anything that requires already knowing this repo to parse. Occasional, requested work — not a standing
 gate, and never run on a member's own words.
 
+**One cheap, free, always-on signal does run automatically, and it's an advisory note, not a
+gate: an approximate Flesch-Kincaid grade level on the above-the-fold text** (`scripts/
+readability.mjs`; Eric, 2026-08-30, on integrating NLP research into the process). It fires only
+past a generous floor (college-graduate level) specifically so this repo's necessarily precise
+vocabulary — EARS criteria, financial terms, a label name — doesn't trip it on an ordinary capsule.
+The research behind that caution: no readability formula is universally valid, one calibrated on
+general prose scores worse on technical text, which is exactly this repo's content. Treat a hit as
+"maybe worth a `linguist` pass," never as a defect — same non-blocking doctrine as every other note
+in this section.
+
 ## Comments — the surface that outnumbers issues 10:1
 
 An issue's body is written once; its comments accumulate forever, and they are what a human actually
