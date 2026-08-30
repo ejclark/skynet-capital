@@ -197,11 +197,8 @@ describe("autonomous-lane envelope", () => {
       ".claude/settings.json",
       "envelope.json",
       "src/server/auth/session.ts",
-      "src/server/desk-gate.ts",
+      "src/server/account-identity-gate.ts",
       "src/server/invite-form.ts",
-      "src/alpaca/credentials.ts",
-      "src/alpaca/alpaca-trading-client.ts",
-      "src/server/trade-service.ts",
       "src/server/feedback-coach-model.ts",
       "src/companion/companion-model.ts",
       "fly.toml",
@@ -310,9 +307,10 @@ describe("autonomous-lane envelope", () => {
     }
   });
 
-  // The diffAware exemption end to end, through real git — src/alpaca/alpaca-trading-client.ts is
-  // a real diffAware rule in the shipped envelope.json (cpSync'd into this temp repo below), so this
-  // exercises the actual production configuration, not a synthetic stand-in.
+  // The diffAware exemption end to end, through real git, against a FIXTURE protected path — not
+  // a real business file (#928 slice 3 opened alpaca-trading-client.ts, this test's original
+  // target; the one thing still worth gating, account-identity-gate.ts, is hard-gated with no
+  // diffAware exemption at all — "no non-sensitive diff shape left in it to exempt").
   it("exempts a diffAware protected path only when the real diff is a pure, non-mutating insertion", () => {
     const dir = mkdtempSync(join(tmpdir(), "envelope-diffaware-"));
     const run = (...args: string[]): string =>
@@ -321,7 +319,7 @@ describe("autonomous-lane envelope", () => {
         encoding: "utf8",
         env: hermeticGitEnv(),
       });
-    const clientPath = join(dir, "src/alpaca/alpaca-trading-client.ts");
+    const clientPath = join(dir, "src/alpaca/fixture-client.ts");
     // `env: hermeticGitEnv()` here too — this shells out to `envelope-scan.mjs`, which itself calls
     // `git diff`, so it inherits `GIT_DIR`/`GIT_INDEX_FILE` from a real git hook exactly like a bare
     // `git` spawn does. Missing here under `npm test` (no ambient `GIT_*`) and only surfaced under
@@ -347,7 +345,19 @@ describe("autonomous-lane envelope", () => {
     try {
       run("init", "-b", "main");
       mkdirSync(join(dir, "src/alpaca"), { recursive: true });
-      cpSync("envelope.json", join(dir, "envelope.json"));
+      writeFileSync(
+        join(dir, "envelope.json"),
+        JSON.stringify({
+          lanes: ["feedback/", "research/", "design/"],
+          protected: [
+            {
+              pattern: "src/alpaca/fixture-client.ts",
+              why: "fixture — diffAware pure-insertion mechanism test only",
+              diffAware: true,
+            },
+          ],
+        }),
+      );
       writeFileSync(clientPath, "export const existing = 1;\n");
       run("add", "-A");
       run("commit", "-m", "base");
@@ -357,7 +367,7 @@ describe("autonomous-lane envelope", () => {
       writeFileSync(clientPath, "export const existing = 1;\nexport const addedField = 2;\n");
       run("add", "-A");
       run("commit", "-m", "additive field");
-      const additive = checkTemp("src/alpaca/alpaca-trading-client.ts", "--base", "main");
+      const additive = checkTemp("src/alpaca/fixture-client.ts", "--base", "main");
       expect(additive[0]).toMatchObject({ protected: true, additiveSafe: true, blocking: false });
       const additiveScan = scanTemp("--base", "main");
       expect(additiveScan).toContain("diffAware exemption");
@@ -369,7 +379,7 @@ describe("autonomous-lane envelope", () => {
       writeFileSync(clientPath, "export const existing = 2;\n");
       run("add", "-A");
       run("commit", "-m", "modifies existing line");
-      const modified = checkTemp("src/alpaca/alpaca-trading-client.ts", "--base", "main");
+      const modified = checkTemp("src/alpaca/fixture-client.ts", "--base", "main");
       expect(modified[0]).toMatchObject({ protected: true, additiveSafe: false, blocking: true });
       expect(() => scanTemp("--base", "main")).toThrow();
 
@@ -386,7 +396,7 @@ describe("autonomous-lane envelope", () => {
       );
       run("add", "-A");
       run("commit", "-m", "new mutating call, purely additive");
-      const newCall = checkTemp("src/alpaca/alpaca-trading-client.ts", "--base", "main");
+      const newCall = checkTemp("src/alpaca/fixture-client.ts", "--base", "main");
       expect(newCall[0]).toMatchObject({ protected: true, additiveSafe: false, blocking: true });
     } finally {
       rmSync(dir, { recursive: true, force: true });

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { behaviorVerifiedFacts, suiteRunnerArgv } from "../../scripts/envelope-scan.mjs";
@@ -81,6 +81,11 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
         why: "fixture — behaviorVerified mechanism test only",
         diffAware: true,
         invariantSuite: suitePath,
+      },
+      {
+        pattern: "src/alpaca/fixture-client.ts",
+        why: "fixture — diffAware with no invariantSuite registered, mechanism test only",
+        diffAware: true,
       },
     ],
   };
@@ -212,12 +217,12 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
   });
 
   it("stays gated (no crash) when no invariant suite is registered for the rule at all", () => {
-    const { dir, run, checkTemp } = setup();
-    const clientPath = join(dir, "src/alpaca/alpaca-trading-client.ts");
+    const { dir, run, checkTemp, writeFixtureEnvelope } = setup();
+    const clientPath = join(dir, "src/alpaca/fixture-client.ts");
     try {
       run("init", "-b", "main");
       mkdirSync(join(dir, "src/alpaca"), { recursive: true });
-      cpSync("envelope.json", join(dir, "envelope.json"));
+      writeFixtureEnvelope();
       writeFileSync(clientPath, "export const existing = 1;\n");
       run("add", "-A");
       run("commit", "-m", "base");
@@ -230,7 +235,7 @@ describe("behaviorVerified end to end, through the real CLI and the real envelop
       // Even a runner that would always pass must not matter — this rule names no suite at all.
       const result = checkTemp(
         "node -e process.exit(0) --",
-        "src/alpaca/alpaca-trading-client.ts",
+        "src/alpaca/fixture-client.ts",
         "--base",
         "main",
       );

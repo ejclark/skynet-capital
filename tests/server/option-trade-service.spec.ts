@@ -4,7 +4,7 @@ import { AlpacaTradingClient } from "../../src/alpaca/alpaca-trading-client.js";
 import type { AlpacaTradingTransport } from "../../src/alpaca/trading-transport.js";
 import type { JsonResponse } from "../../src/http/fetch-json.js";
 import type { Participant } from "../../src/participants/participant.js";
-import { openDesk } from "../../src/server/desk-gate.js";
+import { bindAccountIdentityGate } from "../../src/server/account-identity-gate.js";
 import {
   createOptionTradeService,
   type DeskOptionRequest,
@@ -94,40 +94,18 @@ function makeService(options: {
     options.contracts ?? [putContract],
     orders,
   );
-  const submit = createOptionTradeService({
+  const verifyAccess = bindAccountIdentityGate({
     findParticipant: (id) => (id === "ann" ? ann : undefined),
     clientFactory: () => new AlpacaTradingClient(t),
     optionsClientFactory: () => new AlpacaOptionsClient(t),
     tradingEnabled: options.enabled ?? true,
+  });
+  const submit = createOptionTradeService({
+    verifyAccess,
     recordAudit: (entry) => Promise.resolve(void audited.push(entry)),
   });
   return { submit, orders, audited };
 }
-
-describe("openDesk — the structural gate both desks share", () => {
-  const deps = {
-    tradingEnabled: true,
-    findParticipant: (id: string) => (id === "ann" ? ann : undefined),
-    clientFactory: () => ({}) as never,
-  };
-
-  it("refuses, in order: switched off · wrong identity · unknown account", () => {
-    expect(openDesk({ ...deps, tradingEnabled: false }, "ann", "ann")).toMatchObject({
-      refusals: [expect.stringContaining("switched off")],
-    });
-    expect(openDesk(deps, "ann", "joe")).toMatchObject({
-      refusals: ["You can only trade your own account."],
-    });
-    expect(openDesk(deps, "ghost", "ghost")).toMatchObject({
-      refusals: ["That account isn't on the board."],
-    });
-  });
-
-  it("answers the participant with a live client when the gate passes", () => {
-    const desk = openDesk(deps, "ann", "ann");
-    expect("participant" in desk && desk.participant.id).toBe("ann");
-  });
-});
 
 describe("option trade service — the gate", () => {
   it("refuses when trading is switched off, before touching anything", async () => {
