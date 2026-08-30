@@ -433,6 +433,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Two sessions ahead of BLS payrolls (9/4); private-sector proxy the market leans on pre-NFP, though the ADP-to-NFP correlation runs loose (July ADP printed +44k vs BLS's -23k the same cycle).",
   },
   {
+    id: "beige-book-2026-09-02",
+    kind: "macro-print",
+    title: "Fed Beige Book (Sep 2026 edition)",
+    date: "2026-09-02",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/monetarypolicy/publications/beige-book-default.htm lists 2026-09-02 in its published eight-date schedule (no release time given; Fed cadence is 14:00 ET) — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-30",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The Fed's own qualitative read on regional price pressures, landing the day before ISM Services (9/3) and two before payrolls (9/4). Promoted from background to corridor input by Warsh's 2026-08-28 abolition of forward guidance: with the hawkish case pinned to inflation rather than growth, the districts' pricing anecdotes are one of the few pre-FOMC inputs the Fed publishes about itself. Discovered during the ism-services-2026-09-03 adjacency sweep.",
+  },
+  {
     id: "jobs-2026-09-04",
     kind: "macro-print",
     title: "Employment Situation (Aug 2026 data)",
