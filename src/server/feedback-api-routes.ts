@@ -138,7 +138,7 @@ async function serveSubmit(
     sendJson(res, 400, {
       ok: false,
       error:
-        "Pick what kind of feedback this is — bug, feature, or side quest — and send it again.",
+        "Pick what kind of feedback this is — bug, feature, or enhancement — and send it again.",
     });
     return;
   }

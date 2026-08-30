@@ -106,5 +106,5 @@ export const coachTurn = (input: {
 export const KIND_LABELS: readonly { readonly kind: FeedbackKind; readonly label: string }[] = [
   { kind: "bug", label: "🐛 Bug — something's broken" },
   { kind: "feature", label: "✨ Feature — make it do more" },
-  { kind: "idea", label: "🧪 Side quest — a wild idea" },
+  { kind: "idea", label: "🧪 Enhancement — extend current functionality" },
 ];

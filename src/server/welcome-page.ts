@@ -28,7 +28,7 @@ doing. It's for learning the plays and having fun — <b>no real money, ever</b>
 <a class="cta" href="/login">Get started → Sign in</a>
 <p class="fineprint">New to options? Once you're in, the <a href="/learn">Learn</a> section starts you on the safest play and unlocks more as you're ready.<br>
 Already set up? Head straight to the <a href="/login">observatory</a>. Not on the guest list yet? Ask Eric to add your email.<br>
-Found a bug or spotted a side quest? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
+Found a bug or an enhancement worth building? <a href="/feedback">Share feedback</a> — we build this together.</p>`,
     true,
   );
 }

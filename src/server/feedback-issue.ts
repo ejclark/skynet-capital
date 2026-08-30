@@ -102,7 +102,7 @@ const LABELS: Record<FeedbackKind, readonly string[]> = {
 const FEEDBACK_KIND_LABEL: Record<FeedbackKind, string> = {
   bug: "🐞 Bug",
   feature: "✨ Feature",
-  idea: "🗺️ Side quest",
+  idea: "🗺️ Enhancement",
 };
 const TITLE_TAG: Record<FeedbackKind, string> = {
   bug: "[bug]",
