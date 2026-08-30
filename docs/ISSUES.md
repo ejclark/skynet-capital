@@ -86,6 +86,11 @@ Rules that make it work, in priority order:
 5. **The picture is ideal wherever one exists** — see below.
 6. **Never hide a blocker below the fold.** `needs-eric`, an irreversible touch, or "this is blocked"
    goes above it, always.
+7. **A multi-slice plan's Slicing sketch names which slice closes it.** #928 and #885 both shipped
+   their final slice without a `Closes #N`, so GitHub never auto-closed them and the issue sat open
+   describing already-superseded state (found in the 2026-08-30 `/work-issues` pass). Mark the
+   closing slice in the sketch (`"slice 3 closes this"`), and that slice's PR body carries `Closes
+   #N` — `scripts/plan-closure-scan.mjs` flags a merged branch that referenced the issue without one.
 
 ## Pictures in issues (Eric, 2026-08-21: *"pictures are also ideal"*)
 

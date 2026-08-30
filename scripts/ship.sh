@@ -201,6 +201,11 @@ EOF_SHOTS
   # nobody sees — surface DUE-ness at the moment every change already passes through. Advisory only.
   node scripts/digest-scan.mjs 2>/dev/null || true
 
+  # Plan-closure advisory (docs/LESSONS.md, 2026-08-30): catches a final slice shipping without
+  # `Closes #N`, which left #928 and #885 open long after they were done. Advisory only — most
+  # slices of a multi-slice plan should NOT close the issue yet.
+  node scripts/plan-closure-scan.mjs "$branch" "$bodyfile" 2>/dev/null || true
+
   echo "ship: pushing $branch…"
   local n=0; until git push -u origin "$branch" 2>/dev/null; do
     n=$((n+1)); [ "$n" -le 4 ] || { echo "ship: push failed after retries" >&2; exit 1; }
