@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+// The bots-app deploy preflight decision — extracted out of pipeline.yml's `run:` block (#933
+// follow-up). moneypenny-repair.yml's own header names exactly this failure mode: "Logic in `run:`
+// blocks is what caused the failure this lane exists to catch." This was the last piece of
+// meaningful go/skip decision-making still living inline and untested; the git-diff classification
+// half was already extracted (scripts/bot-relevant.mjs) — this covers the token/cutover/force/
+// baseline checks that used to gate it.
+//
+// Pure decision tree in `decide()`; the CLI entrypoint below does the two genuinely environmental
+// lookups (fly.toml's cutover flag, git diff against the deployed SHA) and nothing else.
+//
+// CLI contract (shell-friendly, ALWAYS exit 0 — a preflight crash must never break the pipeline):
+//   node scripts/bots-deploy-preflight.mjs
+// reads env FLY_API_TOKEN, FORCE ('true'/'false'), DEPLOYED_SHA (may be empty), HEAD_SHA, and
+// fly.toml from the cwd; prints exactly two lines (`deploy`/`skip`, then the one-line reason) —
+// same shape as scripts/bot-relevant.mjs, so the workflow step's skip()/go() wiring is unchanged.
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { classify } from "./bot-relevant.mjs";
+
+/**
+ * Pure. The token/cutover/force/baseline gates, in priority order. Returns a verdict once one
+ * gate decides the outcome, or `null` when none of them do and the caller must fall through to
+ * classifying the actual diff against `deployedSha`.
+ */
+export function decide({ hasToken, cutoverPending, force, deployedSha }) {
+  if (!hasToken) {
+    return {
+      deploy: false,
+      reason:
+        "no bots-app Fly token (FLY_API_TOKEN_BOTS or FLY_ORG_TOKEN) — see docs/AUTONOMY-DEPLOY.md",
+    };
+  }
+  if (cutoverPending) {
+    return { deploy: false, reason: "pre-cutover: fly.toml still owns the bots process group" };
+  }
+  if (force) {
+    return { deploy: true, reason: "force_bots_deploy dispatch" };
+  }
+  if (!deployedSha) {
+    return {
+      deploy: true,
+      reason: "no GIT_SHA baseline on the bots machine (first deploy, or a manual one)",
+    };
+  }
+  return null;
+}
+
+/** Pure. True when fly.toml still declares the `bots` process group (pre-cutover). */
+export function cutoverPendingFromToml(tomlText) {
+  return /^\s*bots\s*=/m.test(tomlText);
+}
+
+if (process.argv[1]?.endsWith("bots-deploy-preflight.mjs")) {
+  const hasToken = Boolean(process.env.FLY_API_TOKEN);
+  const force = process.env.FORCE === "true";
+  const deployedSha = process.env.DEPLOYED_SHA || "";
+  const headSha = process.env.HEAD_SHA || "";
+  // FLY_TOML_PATH override exists for the spec (a temp fixture, never the real fly.toml) — the
+  // real caller never sets it and gets the actual file.
+  const tomlPath = process.env.FLY_TOML_PATH || "fly.toml";
+  const tomlText = existsSync(tomlPath) ? readFileSync(tomlPath, "utf8") : "";
+  const cutoverPending = cutoverPendingFromToml(tomlText);
+
+  let verdict = decide({ hasToken, cutoverPending, force, deployedSha });
+  if (!verdict) {
+    const since = `since ${deployedSha}`;
+    try {
+      const out = execFileSync("git", ["diff", "--name-only", `${deployedSha}..${headSha}`], {
+        encoding: "utf8",
+      });
+      const c = classify(out.split("\n").filter(Boolean));
+      verdict = { deploy: c.deploy, reason: `${c.reason} (${since})` };
+    } catch (err) {
+      verdict = {
+        deploy: true,
+        reason: `classify failed, failing open: ${err.message} (${since})`,
+      };
+    }
+  }
+
+  console.log(verdict.deploy ? "deploy" : "skip");
+  console.log(verdict.reason);
+}
