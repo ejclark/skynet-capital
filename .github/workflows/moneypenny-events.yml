@@ -210,14 +210,23 @@ jobs:
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.command == 'scan')
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          # Passed through env, never inlined into the script below (docs/LESSONS.md, 2026-08-30):
+          # `due` is a compact JSON array, and every embedded `"` in a `${{ }}`-in-`run:` string
+          # breaks bash's own quoting BEFORE the shell ever sees it — GitHub substitutes the raw
+          # text first, so `echo "due=${{ steps.events.outputs.due }}"` silently strips every quote
+          # in the value. The corrupted string then fails `fromJSON()` in build-events' matrix,
+          # which produces a job that never gets created at all — no failing job, no readable error,
+          # just the whole run's conclusion reading "failure" (found live: 9 "Moneypenny Events"
+          # runs on `main` in 14 days, all recurrences of the same fallback path).
+          EVENTS_DUE: ${{ steps.events.outputs.due }}
         run: |
           set -euo pipefail
           if [ -z "$GH_TOKEN" ]; then
             echo "::warning::no App token configured — skipping the deterministic screen this run; every due pulse dispatches a session (safe default)."
-            echo "due=${{ steps.events.outputs.due }}" >> "$GITHUB_OUTPUT"
+            echo "due=$EVENTS_DUE" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          RESULT=$(echo '${{ steps.events.outputs.due }}' | node scripts/event-material-scan.mjs --screen-due)
+          RESULT=$(echo "$EVENTS_DUE" | node scripts/event-material-scan.mjs --screen-due)
           SCREENED_COUNT=$(echo "$RESULT" | jq '.screened | length')
           STILL_DUE=$(echo "$RESULT" | jq -c '.stillDue')
           echo "::notice::deterministic screen: $SCREENED_COUNT screened (no session), $(echo "$STILL_DUE" | jq 'length') still due for research"
@@ -234,7 +243,7 @@ jobs:
             echo "due=$STILL_DUE" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::screen commit failed to push (branch protection, or a race with another push) — falling back to a full session for every due event this pulse."
-            echo "due=${{ steps.events.outputs.due }}" >> "$GITHUB_OUTPUT"
+            echo "due=$EVENTS_DUE" >> "$GITHUB_OUTPUT"
           fi
 
       # `claude-code-action@v1` rejects `push` as an event type outright (docs/LESSONS.md
