@@ -1046,3 +1046,15 @@ raw-line regex for `"[^"]*\$\{\{\s*(steps|needs|inputs)\.[^}]*\}\}[^"]*"`, so it
 without violating that file's stated design. Didn't build it in the same pass as the fix — one
 incident, one prevention.
 _(src: Claude · while: /retro on the "Moneypenny Events" UNLEARNED incidents, 2026-08-30)_
+
+### `EventKind` has no slot for a dated corporate-governance change
+Apple's CEO handover takes effect 2026-09-01 (Ternus in, Cook to executive chairman; apple.com
+newsroom 2026-04-20) — a dated, symbol-keyed checkpoint that makes the estimated 2026-10-29 AAPL
+print the first under a new CEO, i.e. exactly the kind of thing the calendar exists to carry. It
+could not be filed: `market-events-types.ts`'s `EventKind` union runs earnings / macro-print /
+product-launch / sector / rates / opex / geopolitical, and none of them honestly describes a
+leadership change. Carried as a ledger thread instead, which means the assessment cadence never
+sees it. Worth deciding whether a `corporate` kind (CEO/CFO transitions, spin-offs, index adds,
+lockup expiries, shareholder votes) earns its place, or whether these belong outside the calendar
+by design — a research PR is the wrong place to widen a shared type either way.
+_(src: Claude · while: the aapl-2026-10-29-print interval-elapsed pulse, 2026-08-30)_

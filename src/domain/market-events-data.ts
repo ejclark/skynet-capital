@@ -473,13 +473,15 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
   {
     id: "aapl-iphone-18-launch-2026-09-09",
     kind: "product-launch",
-    title: "Apple September event — iPhone 18 line (rumored)",
+    title: "Apple September event — iPhone 18 line",
     date: "2026-09-09",
-    status: "estimate",
-    source: "NEWS: MacRumors/Forbes/9to5Mac Aug 2026 rumor — official announcement expected ~08-26",
+    status: "confirmed",
+    source:
+      'IR: apple.com/apple-events/ — "Watch a special Apple Event on 9/9 at 10 a.m. PT"; Apple sent press invitations 2026-08-26, primary fetched 2026-08-30',
     impact: "medium",
     symbols: ["AAPL"],
-    notes: "Rumored $100–200 price increases + a ~$2,000 foldable; FQ1 guide is the pricing event.",
+    notes:
+      "Rumored $100–200 price increases + a ~$2,000 foldable; FQ1 guide is the pricing event. Date flipped estimate -> confirmed on Apple's own events page during the aapl-2026-10-29-print pulse of 2026-08-30 — the prior NEWS: source was Gurman-via-MacRumors/9to5Mac/Forbes, which the invitation has now superseded; the product claims above remain rumor and are NOT confirmed by the date flip.",
   },
   {
     id: "ppi-2026-09-10",
