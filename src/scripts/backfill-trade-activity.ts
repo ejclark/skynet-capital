@@ -18,6 +18,8 @@ import { createActivityStore } from "../observatory/activity-store.js";
 import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
+import { detectAndRecordLadderProgress } from "../server/ladder-activity-detector.js";
+import { createLadderProgressLogStore } from "../server/ladder-progress-log.js";
 
 async function main(): Promise<void> {
   const dataSource = resolveDataSource(process.env);
@@ -38,6 +40,7 @@ async function main(): Promise<void> {
   }
 
   const store = createActivityStore(process.env);
+  const ladderProgress = createLadderProgressLogStore(process.env);
   console.log(
     `Backfilling order history for ${roster.length} participant(s) into ${process.env.SKYNET_ACTIVITY_DIR ?? "data/activity"}…`,
   );
@@ -75,6 +78,21 @@ async function main(): Promise<void> {
     } catch (error) {
       failures += 1;
       console.error(`[${participant.id}] option lifecycle backfill failed: ${error}`);
+    }
+
+    // #469 slice 3 — sweep the ladder milestones this retroactive activity can now prove (an OTM
+    // expiry, a first realized profit) so a long-running account doesn't wait on its next live
+    // fill to have history it already has get logged.
+    try {
+      const progress = await detectAndRecordLadderProgress(ladderProgress, store, participant.id);
+      if (progress.length > 0) {
+        console.log(
+          `[${participant.id}] ladder progress: ${progress.map((p) => p.milestoneId).join(", ")}`,
+        );
+      }
+    } catch (error) {
+      failures += 1;
+      console.error(`[${participant.id}] ladder progress detection failed: ${error}`);
     }
   }
 
