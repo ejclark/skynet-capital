@@ -10,7 +10,7 @@ const reason = (err: { stderr?: string; message?: string }): string =>
       "node",
       [
         "-e",
-        `import("./scripts/moneypenny.mjs").then((m) =>
+        `import("./scripts/moneypenny/index.mjs").then((m) =>
            console.log(JSON.stringify(m.claimFailureReason(JSON.parse(process.argv[1])))))`,
         JSON.stringify(err),
       ],

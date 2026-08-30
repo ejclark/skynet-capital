@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 // The `heads/` read/delete fallback that briefly existed for pre-migration leases was itself
 // removed on 2026-08-29 (#916) once every such lease had long since aged past its 2h TTL — see
 // git blame on this file for the version that pinned it.
-const source = () => readFileSync("scripts/moneypenny.mjs", "utf8");
+const source = () => readFileSync("scripts/moneypenny/index.mjs", "utf8");
 
 describe("claim lease ref namespace", () => {
   it("creates the lease under refs/tags, never refs/heads", () => {

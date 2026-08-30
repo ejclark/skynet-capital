@@ -29,7 +29,8 @@
 //
 //   node scripts/arch-scan.mjs             # report + enforce (exit 1 on any new over-cap file)
 //   node scripts/arch-scan.mjs --candidate # emit the next decompose target as JSON
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+//   node scripts/arch-scan.mjs --update    # rewrite scripts-grouping-budget.json (ratchet: only lower)
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = process.cwd();
@@ -100,3 +101,64 @@ if (violations.length) {
   process.exit(1);
 }
 console.log(`\n✓ all ${files.length} source files within the cap or grandfathered.`);
+
+// ---- ungrouped scripts/ smell: a flat root that should be a subfolder ----------------------------
+//
+// scripts/ has one established subfolder (scripts/research/) but had, until #931's move, 14 files
+// (moneypenny.mjs + 13 moneypenny-*.mjs siblings) dumped flat at its root sharing one prefix — the
+// exact shape src/ never allows (30+ domain subfolders, nothing loose). Same smell as a god file:
+// nobody decided it, it just accreted one sibling script at a time. Flags root-level scripts/ files
+// (not already grouped into a subfolder) that share a filename prefix before the first hyphen with
+// 2+ siblings — 3 or more total is the signal a subfolder is overdue.
+const PREFIX_MIN_SIBLINGS = 3;
+const GROUPING_BUDGET_FILE = join(ROOT, "scripts-grouping-budget.json");
+
+function rootScriptGroups() {
+  const scriptsDir = join(ROOT, "scripts");
+  const names = readdirSync(scriptsDir, { withFileTypes: true })
+    .filter((e) => e.isFile())
+    .map((e) => e.name);
+  const byPrefix = new Map();
+  for (const name of names) {
+    const hyphen = name.indexOf("-");
+    if (hyphen <= 0) continue; // no prefix to share (dupe-scan.mjs alone doesn't smell)
+    const prefix = name.slice(0, hyphen);
+    byPrefix.set(prefix, [...(byPrefix.get(prefix) ?? []), name]);
+  }
+  return [...byPrefix.entries()]
+    .filter(([, siblings]) => siblings.length >= PREFIX_MIN_SIBLINGS)
+    .map(([prefix, siblings]) => ({ prefix, siblings: siblings.sort() }));
+}
+
+const groups = rootScriptGroups();
+const groupingDebt = groups.length;
+
+const groupingBudget = existsSync(GROUPING_BUDGET_FILE)
+  ? JSON.parse(readFileSync(GROUPING_BUDGET_FILE, "utf8"))
+  : { groups: Number.POSITIVE_INFINITY };
+
+if (process.argv.includes("--update")) {
+  const prev = Number.isFinite(groupingBudget.groups) ? groupingBudget.groups : groupingDebt;
+  const next = { groups: Math.min(prev, groupingDebt) }; // ratchet down only
+  writeFileSync(GROUPING_BUDGET_FILE, `${JSON.stringify(next, null, 2)}\n`);
+  console.log(`scripts-grouping-budget.json updated — groups=${next.groups} (only lowers).`);
+  process.exit(0);
+}
+
+if (groupingDebt) {
+  console.log(`\n📂 scripts/ root grouping smell — ${groupingDebt} prefix group(s):`);
+  for (const g of groups)
+    console.log(`  ${g.prefix}-* (${g.siblings.length}): ${g.siblings.join(", ")}`);
+}
+const groupingCap = groupingBudget.groups;
+if (groupingDebt > groupingCap) {
+  console.error(`\n✗ scripts/ root grouping smell grew: ${groupingDebt} > budget ${groupingCap}.`);
+  console.error(
+    "Fix: move the shared-prefix siblings into scripts/<prefix>/ (dropping the prefix from each\n" +
+      "filename, matching src/'s subfolder convention), then\n" +
+      "`node scripts/arch-scan.mjs --update`. This is advisory (docs/COACHES.md) — it will not\n" +
+      "block CI, but it is the signal a subfolder is overdue.",
+  );
+  process.exit(1);
+}
+console.log(`✓ scripts/ root grouping within budget (${groupingDebt} ≤ ${groupingCap}).`);

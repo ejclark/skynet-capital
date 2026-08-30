@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { logArgVariants, sanitizeLog } from "../../scripts/moneypenny-repair-logs.mjs";
+import { logArgVariants, sanitizeLog } from "../../../scripts/moneypenny/repair-logs.mjs";
 
 // The self-healing lane's router, exercised the way moneypenny.spec.ts exercises its own: feed a
 // fixture `workflow_run` payload through `--dry-run` and assert the INTENTS. The dry run never
@@ -16,7 +16,7 @@ const dryRun = (fixture: string): Intent[] =>
   JSON.parse(
     execFileSync(
       "node",
-      ["scripts/moneypenny-repair.mjs", "--dry-run", "--event", `tests/fixtures/events/${fixture}`],
+      ["scripts/moneypenny/repair.mjs", "--dry-run", "--event", `tests/fixtures/events/${fixture}`],
       { cwd: process.cwd(), encoding: "utf8" },
     ),
   );
@@ -78,7 +78,7 @@ describe("moneypenny repair — routing a failed run", () => {
     );
     const out = execFileSync(
       "node",
-      ["scripts/moneypenny-repair.mjs", "--dry-run", "--event", file],
+      ["scripts/moneypenny/repair.mjs", "--dry-run", "--event", file],
       {
         encoding: "utf8",
       },

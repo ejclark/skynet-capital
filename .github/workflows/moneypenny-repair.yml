@@ -12,9 +12,9 @@ name: Moneypenny Repair
 # failures."
 #
 # This file is a trigger shim, exactly like moneypenny-events.yml (the event router — #912's own plan
-# renames that one too, in a later slice): every decision lives in scripts/moneypenny-repair.mjs,
+# renames that one too, in a later slice): every decision lives in scripts/moneypenny/repair.mjs,
 # which is pure where it decides and specced against fixture payloads
-# (tests/scripts/moneypenny-repair.spec.ts). Logic in `run:` blocks is what caused the failure this
+# (tests/scripts/moneypenny/repair.spec.ts). Logic in `run:` blocks is what caused the failure this
 # lane exists to catch — see docs/LESSONS.md.
 #
 # THE LOOP GUARDS (a self-healing lane that can trigger itself is a bill, not a net). All four live
@@ -31,7 +31,7 @@ name: Moneypenny Repair
 # A SECOND ENTRY POINT (#909, folding the event router's conflict detection into this same dispatcher —
 # Eric, 2026-08-29: "keep chipping away at postmaster and ci-medic responsibilities to fold them
 # into Moneypenny's [mandate] for her to manage"). `workflow_dispatch` below lets the router's audit
-# step (`scripts/moneypenny.mjs`'s `flag-conflict` intent) hand this lane a PR number instead of a
+# step (`scripts/moneypenny/index.mjs`'s `flag-conflict` intent) hand this lane a PR number instead of a
 # failed run — the `repair` job below already IS a generic "dispatch a Claude session against a
 # named target" job, so a conflicted PR reuses it rather than earning a second workflow file. Its
 # own memory (the router's `conflict-flagged` label) is the dedupe; this lane adds none of its own
@@ -100,7 +100,7 @@ jobs:
       - id: router
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/moneypenny-repair.mjs
+        run: node scripts/moneypenny/repair.mjs
 
   repair:
     name: repair the failure or a flagged conflict

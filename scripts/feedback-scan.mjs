@@ -18,8 +18,8 @@
 // Read-only, no network writes. Uses `gh`, which is present wherever Moneypenny runs.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { LABELS } from "./moneypenny.mjs";
-import { ghRest } from "./moneypenny-gh.mjs";
+import { ghRest } from "./moneypenny/gh.mjs";
+import { LABELS } from "./moneypenny/index.mjs";
 
 // One vocabulary, not a set of string literals that can drift from it (#500). This scan is the
 // concrete consequence that issue names: it classifies by label, so a label it spells differently

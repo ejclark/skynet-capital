@@ -1,4 +1,4 @@
-import { audit, readyPlanCandidate } from "../../scripts/moneypenny-audit.mjs";
+import { audit, readyPlanCandidate } from "../../../scripts/moneypenny/audit.mjs";
 
 // The plan-stall check (#897, closing #877's deferred slice 3) — a ready-flip comment on a
 // `plan`-labeled issue that never got claimed or built looks IDENTICAL to "nothing needed" from

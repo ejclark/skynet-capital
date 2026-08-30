@@ -3,9 +3,9 @@
 // slice 3) joined 2026-08-29: a plan issue whose ready-flip comment never got claimed or built is
 // the same "silence looks like nothing happened" failure mode as the other two lanes here.
 import { existsSync } from "node:fs";
-import { sh } from "./moneypenny-gh.mjs";
-import { FOOTER, LABELS } from "./moneypenny-labels.mjs";
-import { hasPlanLabel, isReadySignal } from "./moneypenny-plan-claim.mjs";
+import { sh } from "./gh.mjs";
+import { FOOTER, LABELS } from "./labels.mjs";
+import { hasPlanLabel, isReadySignal } from "./plan-claim.mjs";
 
 /**
  * Did this issue get an ANSWER? A linked PR (open or merged) is an answer; a closed issue is an
@@ -252,7 +252,7 @@ export function gatherAuditDeps(nowMs) {
 
 /**
  * Is `claim/plan-<n>` currently held? Read-only mirror of `claimHandoff`'s own `readRef` shape
- * (scripts/moneypenny.mjs) — a 404 means unclaimed, which is the common and expected case.
+ * (scripts/moneypenny/index.mjs) — a 404 means unclaimed, which is the common and expected case.
  */
 function hasPlanClaim(number) {
   try {

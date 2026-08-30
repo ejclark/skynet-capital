@@ -28,10 +28,10 @@ function fixtureFs(files: Record<string, string>) {
 describe("bareImportsOf / needsInstalledDeps", () => {
   it("finds nothing for a script that only imports node: builtins", () => {
     const { read, resolvePath } = fixtureFs({
-      "/scripts/moneypenny-repair.mjs": `import { readFileSync } from "node:fs";\nimport { execFileSync } from "node:child_process";\n`,
+      "/scripts/moneypenny/repair.mjs": `import { readFileSync } from "node:fs";\nimport { execFileSync } from "node:child_process";\n`,
     });
-    expect(bareImportsOf("/scripts/moneypenny-repair.mjs", read, resolvePath)).toEqual(new Set());
-    expect(needsInstalledDeps("/scripts/moneypenny-repair.mjs", read, resolvePath)).toBe(false);
+    expect(bareImportsOf("/scripts/moneypenny/repair.mjs", read, resolvePath)).toEqual(new Set());
+    expect(needsInstalledDeps("/scripts/moneypenny/repair.mjs", read, resolvePath)).toBe(false);
   });
 
   it("finds a bare import declared directly on the entry script", () => {
