@@ -18,6 +18,18 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### `repair-watchlist-scan.mjs`'s path fallback can mask a real name-drift
+
+Found while renaming the Moneypenny-branded workflows (#968): the scanner treats a workflow as
+"in the watch list" if EITHER its name OR its file path appears in `moneypenny-repair.yml`'s
+`workflow_run.workflows` array. The path form exists only for the genuinely-unparseable case (a
+broken workflow file that GitHub names after its path instead) — but for a file that parses fine,
+listing its path is a coincidental safety net the scanner never meant to rely on, and it silently
+hid the fact that the *name* entry was stale during this exact rename. Not fixed here (this PR's
+own rename corrected the name strings directly, so nothing depends on the gap right now) — worth a
+narrower check that only accepts the path form as a fallback, never as an alternate to a fresh name.
+_(src: Claude · while: renaming Moneypenny Events/Repair for GitHub's own UI, 2026-08-30)_
+
 ### `mcp__github__issue_read` silently sanitizes markup it displays back
 
 While retrofitting the `Needs from you` callout onto issues #915/#894/#666, the tool's own read-back
