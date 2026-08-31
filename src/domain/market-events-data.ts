@@ -709,17 +709,30 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "READ IT, DO NOT TRADE IT — and that refusal is now MEASURED, not asserted (see the ledger): both minutes releases under this chair moved the tape under a third of a percent (S&P -0.28% on 2026-07-08, +0.21% on 2026-08-19 despite explicitly hawkish content, that session driven by Treasury's buyback doubling), while Warsh's single 08-28 speech moved September hike odds ~35-36% -> ~58-60%. What earns it a calendar slot is SCARCITY, NOT POWER: it is the last Committee-authored document before the 12-08/09 SEP meeting, and federalreserve.gov's November calendar lists NO speeches at all with the blackout starting 11-28, so the record between it and the December dots is this, the Beige Book, and silence. Unusually stale even for minutes — the three-week gap contains the 11-03 midterms, cpi-2026-11-10 and ppi-2026-11-13. Read it for exactly three things: the October vote split, the dissent count, and whether the dissent language hardens from July's 9-3 (most dissents against a new chair since 1970). The window's positioning date is opex-2026-11-20, not this. Discovered during the beige-book-2026-11-25 initial research, off the November calendar page that dated that edition.",
   },
   {
+    id: "ism-manufacturing-2026-11-02",
+    kind: "macro-print",
+    title: "ISM Manufacturing PMI (Oct 2026 data)",
+    date: "2026-11-02",
+    status: "estimate",
+    source:
+      "EST: ISM publishes the Manufacturing PMI at 10:00 ET on the first business day of the month (the cadence the confirmed 2026-09-01 entry follows); 2026-11-02 is a Monday — ismworld.org's own ROB calendar is login-gated (302 to ecommerce.ismworld.org/SSO), so this is derived exactly as the 2026-10-01 sibling was and not re-verified against it, checked 2026-08-31",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The first manufacturing read after the 10-28 FOMC and the last hard macro print before the 11-03 midterms (est) — and it beats sloos-2026-11-02 to the same day's tape by four hours, which is part of why that survey has no window to be the story. Prices-paid + new-orders reprice the Fed-cut path and 10Y real yields, the discount rate on long-duration tech. Discovered during the sloos-2026-11-02 initial research: the corridor sweep found the 09-01 and 10-01 entries tracked and the 11-02 slot empty.",
+  },
+  {
     id: "sloos-2026-11-02",
     kind: "macro-print",
     title: "Senior Loan Officer Opinion Survey on Bank Lending Practices (SLOOS)",
     date: "2026-11-02",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: federalreserve.gov/newsevents/2026-november.htm lists 'Senior Loan Officer Opinion Survey on Bank Lending Practices (SLOOS)' at 2:00 p.m. on November 2 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+      "FED: two federalreserve.gov primaries fetched direct 2026-08-31 — newsevents/2026-november.htm lists 'Senior Loan Officer Opinion Survey on Bank Lending Practices (SLOOS)' at 2:00 p.m. on November 2, and data/sloos.htm states the convention verbatim, 'The Federal Reserve generally conducts the survey quarterly, timing it so that results are available for the January/February, April/May, August, and October/November meetings of the Federal Open Market Committee' — all three 2026 editions obeyed it (02-02, 05-04, 08-03, each the Monday after an FOMC), checked 2026-08-31",
     impact: "low",
     symbols: [],
     notes:
-      "The quarterly read on how tight bank credit actually is — the transmission channel a hiking Committee is watching, and the first Fed publication of November. Filed `low` deliberately: it is a survey of standards and demand, not a price, and it has no measured reaction function in this book. It earns a row because the corridor it opens is the one this calendar cares about most (midterms 11-03, jobs 11-06, cpi-2026-11-10, ppi-2026-11-13, fomc-minutes-2026-11-18, beige-book-2026-11-25, blackout 11-28, then the 12-09 dots) and because, like the Beige Book, it is Fed-published and therefore survives a funding lapse where BLS data does not. Discovered during the fomc-minutes-2026-11-18 initial research, off the same November calendar page.",
+      "READ IT, DO NOT TRADE IT — and the refusal is now MEASURED on the instrument that should carry it (see the ledger): KRE's close-to-close excess vs SPY on all three 2026 releases was +1.29% / -0.82% / -0.11%, the 73rd / 55th / 9th percentile of KRE's own 2026 |excess| distribution (median 0.75%, p90 2.09%, n=164), no sign consistency, and no session wrap names SLOOS as a driver. What earns it a calendar row is TIMING, NOT POWER: the survey's response window closes ~2026-10-02 (derived from the July edition's published sent 06-17 / due 07-02 / released 08-03 dates), so this edition is the first structured read on how a 09-16 hike transmits into bank credit standards — and is already ~4 weeks stale relative to the 10-28 meeting whose Monday it follows. Read it for exactly two things: the C&I standards-and-demand line, and the special questions' level-vs-history read (July 2026: standards at the TIGHTER end of their post-2005 range for every category except C&I). Its signal is buried by construction — ism-manufacturing-2026-11-02 (est) leads it by four hours the same morning and midterm-elections-2026-11-03 (est) owns the next day; that election, not this, is the window's positioning date. Like the Beige Book it is Fed-funded and publishes through an appropriations lapse where BLS data does not. Discovered during the fomc-minutes-2026-11-18 initial research; date flipped estimate -> confirmed by its own initial research 2026-08-31.",
   },
   {
     id: "fomc-blackout-start-2026-11-28",
