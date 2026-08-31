@@ -709,13 +709,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "U.S. Import and Export Price Indexes (Aug 2026 data)",
     date: "2026-09-16",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: bls.gov/schedule/news_release/ximpim.htm lists "August 2026 | Sep. 16, 2026 | 08:30 AM" (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+      'BLS: bls.gov/schedule/news_release/ximpim.htm ("August 2026 | Sep. 16, 2026 | 08:30 AM") + bls.gov/schedule/2026/09_sched.htm ("U.S. Import and Export Price Indexes / August 2026 / 08:30 AM", Wednesday the 16th), both fetched direct 2026-08-31',
     impact: "low",
     symbols: [],
     notes:
-      "The print that most likely delivers the 'highest since 2022' import-inflation headline — a month BEFORE import-export-prices-2026-10-16, which is the event whose research discovered it. Arithmetic from the BLS public API: nonfuel (EIUIREXFUELS) sits at 135.8 in Jul 2026 against an Aug-2025 base of 129.8, so the trailing three-month pace (+0.371%/mo) alone gives +5.01% y/y — the first reading at or above 5.0% since May 2022 (5.95%). It is therefore the first real test of the 10-16 ledger's central base-effect claim, and the earlier of that ledger's two check dates. Lands 08:30 ET on FOMC decision morning (fomc-2026-09-16) alongside retail-sales-2026-09-16, so its own signal will be buried — which is a reason to read it, not to trade it. Low tier: these indexes deflate GDP net trade, not PCE. Discovered during the import-export-prices-2026-10-16 initial research.",
+      "The print the 10-16 sibling nominated as the likely 'highest since 2022' import-inflation headline — downgraded by this event's own research to a COIN FLIP on a single index tick. Crossing 5.0% nonfuel y/y needs level 136.29 (+0.361% m/m) against a trailing three-month pace of +0.371%; published 136.3 prints 5.01% and 136.2 prints 4.93%, and the m/m path is decelerating inside that average. Central read +4.9% to +5.2%. Two other reasons to read it: the June–July fuel drag is modelled to end here (fuel m/m ~ +1.0% from a -0.1% prior-month Brent average, R^2 0.71), so all-imports y/y likely re-accelerates to ~6.2-6.6% rather than converging with nonfuel; and this is the LAST release in the series the FY2027 funding branch cannot touch, publishing two weeks before the 09-30 deadline. Lands 08:30 ET on FOMC decision morning (fomc-2026-09-16) alongside retail-sales-2026-09-16, so any move is unattributable — which is why the tier test defers to 10-16. Low tier: these indexes deflate GDP net trade, not PCE. Discovered during the import-export-prices-2026-10-16 initial research; date flipped estimate -> confirmed by its own session 2026-08-31.",
   },
   {
     id: "fomc-blackout-start-2026-10-17",
