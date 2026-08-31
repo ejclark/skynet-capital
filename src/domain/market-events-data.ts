@@ -748,6 +748,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Closes a structural gap: this calendar tracks 13 Treasury auctions and buybacks but not the announcement that SETS their sizes and schedules. It lands 08:30 ET on 2026-11-04, 90 minutes ahead of ism-services-2026-11-04 (est), and it is the reason no bond move that morning can be attributed to the ISM print — the ISM services release is the third business day and the refunding is the first Wednesday, so in 2026 they collide on 02-04, 08-05 and 11-04. That matters retroactively: the 08-05 session whose yield move the ism-services-2026-09-03 ledger attributed to ISM's 70.3 Prices reading had this announcement 90 minutes earlier (and the 10Y actually closed DOWN that day). This edition is the first refunding after the 11-03 midterms, setting coupon sizes and buyback schedules into a post-election fiscal picture, with the borrowing estimates two days earlier on 11-02. Filed medium: refunding announcements move the long end through supply rather than through the policy path, and no house playbook is macro-keyed. Discovered during the ism-services-2026-11-04 initial research (2026-08-31).",
   },
   {
+    id: "treasury-borrowing-estimates-2026-11-02",
+    kind: "macro-print",
+    title: "Treasury Marketable Borrowing Estimates (Q4 2026 / Q1 2027)",
+    date: "2026-11-02",
+    status: "estimate",
+    source:
+      "EST: Treasury publishes its quarterly marketable borrowing estimates at ~3:00 p.m. ET on the Monday of refunding week, two days ahead of the 08:30 refunding statement (the August 2026 pair ran 08-03 estimates / 08-05 statement); home.treasury.gov's most-recent-refunding-documents page names 2026-11-02 and 2026-11-04 as the November pair. Reached via search — home.treasury.gov timed out on four direct fetches this session — so this is filed estimate and nothing more, checked 2026-08-31",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The QUANTITY half of the refunding pair: this Monday release carries the aggregate dollar borrowing number, and treasury-refunding-2026-11-04 (est) allocates it across the curve 48 hours later. Tracking both separates a quantity surprise from a composition/guidance surprise — the calendar previously had neither. Filed LOW on this session's own measurement: on the 8 refunding announcements since 2023 that were NOT also FOMC decision days, TLT closed 4/8 up at a mean -0.037% (permutation p=0.905) and SPY 4/8 at -0.025% (p=0.938), both indistinguishable from an ordinary session — and the Monday estimate has historically moved the tape less than the Wednesday statement it precedes. READ IT, DO NOT TRADE IT. Its signal is buried by construction: sloos-2026-11-02 (confirmed) and ism-manufacturing-2026-11-02 (est) share the day, midterm-elections-2026-11-03 (est) owns the next, and the estimates are locked before the vote so no post-election fiscal change can be in them. Discovered during the treasury-refunding-2026-11-04 initial research (2026-08-31).",
+  },
+  {
     id: "sloos-2026-11-02",
     kind: "macro-print",
     title: "Senior Loan Officer Opinion Survey on Bank Lending Practices (SLOOS)",
