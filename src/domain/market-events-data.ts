@@ -645,6 +645,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The successor checkpoint to opec-plus-meeting-2026-09-06, and deliberately filed `low`: the JMMC monitors DoC conformity and compensation and RECOMMENDS — it does not set quotas, which is the seven/eight-country group's job. What makes it worth tracking anyway is the 2027 baseline fight: third-party Maximum-Sustainable-Capacity audits commissioned across Jan-Sep 2026 set the 2027 baselines from which every quota derives, Iraq is pushing for a higher individual number, and Kazakhstan carries the alliance's largest cumulative compensation burden — the JMMC is where conformity and compensation get aired in public before the group decides. Discovered during the opec-plus-meeting-2026-09-06 initial research (2026-08-31).",
   },
   {
+    id: "ism-services-2026-10-05",
+    kind: "macro-print",
+    title: "ISM Services PMI (Sep 2026 data)",
+    date: "2026-10-05",
+    status: "estimate",
+    source:
+      "EST: ISM publishes the Services PMI at 10:00 ET on the third business day of the month (the cadence the confirmed 2026-09-03 entry follows); October's first three business days are the 1st, 2nd and Monday the 5th — ismworld.org's own ROB calendar is behind a member login and could not be re-verified, checked 2026-08-31",
+    impact: "high",
+    symbols: [],
+    notes:
+      "A real gap rather than a new discovery: the calendar tracks ISM Manufacturing for the October cycle (10-01) but not Services, which it rates HIGH because services is ~70% of the economy and its prices component is the single biggest non-CPI rate-path mover in this set. It also matters in the lapse branch — ISM is a private survey and publishes through a shutdown where BLS does not, so a 10-01 lapse leaves 10-01 and this print as the corridor's only hard macro reads into an Oct 27-28 FOMC with no SEP. Discovered during the fomc-minutes-2026-10-07 initial research (2026-08-31), two days ahead of that event in the same corridor.",
+  },
+  {
     id: "mrvl-investor-day-2026-10-06",
     kind: "product-launch",
     title: "MRVL Investor Day (NYC)",
@@ -661,13 +674,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "FOMC minutes (Sep 15–16 meeting)",
     date: "2026-10-07",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: federalreserve.gov/newsevents/2026-october.htm lists 'FOMC Minutes' at 2:00 p.m. on October 7 for the September 15-16 meeting (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+      "FED: federalreserve.gov/newsevents/2026-october.htm lists 'FOMC Minutes / Meeting of September 15-16' at 2:00 p.m. on October 7, corroborated by the FOMC calendars page's stated rule ('The minutes of regularly scheduled meetings are released three weeks after the date of the policy decision' — 09-16 + 21d = 10-07); both primaries re-fetched direct 2026-08-31",
     impact: "medium",
     symbols: [],
     notes:
-      "The richest read on this Committee's reaction function available before the 10-28 decision, and the ONLY one that arrives outside the 10-17 blackout. Matters more than an ordinary minutes release because Warsh has withdrawn the usual substitute: his 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and said forward guidance has overstayed its welcome, so the vote split and the dissent language here are close to the only structured evidence on how a coin-flip September resolved. Read it, do not trade it — minutes are three weeks stale by publication. Discovered during the fomc-blackout-start-2026-10-17 initial research.",
+      "The richest read on this Committee's reaction function available before the 10-28 decision, and the only one that arrives outside the 10-17 blackout — with seven sessions to spare, so unlike the 10-14 Beige Book officials may still publicly interpret it afterwards. Matters more than an ordinary minutes release because Warsh has withdrawn the usual substitute: his 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and said forward guidance has overstayed its welcome, so the vote split and the dissent language here are close to the only structured evidence on how a coin-flip September resolved. Read it, do not trade it — minutes are three weeks stale by publication, and the Warsh-era base rate is 2-for-2 non-driver (07-08, 08-19). Discovered during the fomc-blackout-start-2026-10-17 initial research; date flipped estimate -> confirmed by its own initial research 2026-08-31.",
   },
   {
     id: "beige-book-2026-10-14",
@@ -890,6 +903,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "The tariff pass-through gauge for the October data cycle. Filed estimate on 2026-08-31 by the ppi-2026-11-13 sweep that discovered it; promoted to confirmed the same day by its own initial-research session with both BLS primaries in hand. THE HEADLINE 12-MONTH NUMBER LIKELY CANNOT PRINT: BLS permanently suppressed 864 of 1,625 indexes for the October 2025 reference month after the 2025 lapse, including the all-goods import and export indexes (MXP shutdown notice; verified in the public API - EIUIR runs 2025-M09 140.8 -> 2025-M11 141.2 with no M10), and this is the release whose 12-month comparison needs that month. Its neighbours 10-16 and 12-17 are unaffected. Impact stays LOW on purpose and was checked, not assumed: these indexes deflate GDP net trade, NOT PCE, so there is no channel into the 12-09 FOMC - the ppi-2026-11-13 'understated tier' flag does not transfer here. What it does carry is the cleanest duty-exclusive pass-through read the calendar has: BLS excludes tariffs from these prices, so the +4.5% nonfuel y/y (Jul 2026, highest since Jun 2022) says exporters are NOT absorbing.",
+  },
+  {
+    id: "fomc-minutes-2026-11-18",
+    kind: "macro-print",
+    title: "FOMC minutes (Oct 27–28 meeting)",
+    date: "2026-11-18",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-november.htm lists 'FOMC Minutes / Meeting of October 27-28' at 2:00 p.m. on November 18, and the FOMC calendars page's rule ('released three weeks after the date of the policy decision') gives the same date from the confirmed 10-28 meeting (both fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The next edition of the series fomc-minutes-2026-10-07 opens, and the venue for that ledger's base-rate kill switch: Warsh-era minutes days are 2-for-2 non-drivers (07-08 'markets reacted little'; 08-19's hawkish 9-3 text landed inside a +0.2% S&P session driven by Treasury's buyback doubling), and a minutes release becoming the named driver of a >1% session would break that read. Carries the Oct 27-28 meeting, which has NO SEP, so the minutes are the only structured account of it before the 12-09 decision. Deliberately proposed from outside the 5-day adjacency corridor of the 10-07 event during that event's initial research (2026-08-31) — the series matters more than the corridor here.",
   },
   {
     id: "aws-reinvent-2026",
