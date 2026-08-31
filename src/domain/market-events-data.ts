@@ -484,6 +484,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Not a print — a gate on who may speak. Once it starts, no FOMC participant can move September hike odds, so the 09-10 PPI and 09-11 CPI prints (and the 09-09 10Y / 09-10 30Y auctions) land with no official interpretation behind them; 09-04 jobs day is the LAST legal Fed-speak day, since the gate falls at midnight ET entering Saturday 09-05. Ordinarily a minor technical; load-bearing this cycle because a single Fed speech (Warsh at Jackson Hole, 2026-08-28) moved Sep hike odds ~35% -> ~57% in one session, making 'when does Fed-speak stop' a real input. Discovered during the fomc-2026-09-16 pulse-check adjacency sweep and filed `estimate` because the Fed's own blackout-calendar PDF did not parse on that fetch; promoted to `confirmed` on 2026-08-30 when the initial-research session decompressed that PDF's text layer and read the rule from the primary source.",
   },
   {
+    id: "opec-plus-meeting-2026-09-06",
+    kind: "geopolitical",
+    title: "OPEC+ ministerial meeting (October quotas)",
+    date: "2026-09-06",
+    status: "estimate",
+    source:
+      "EST: opec.org press release 2026-08-02 states verbatim 'The next meeting will be held on 6 September 2026' — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The calendar's first energy-supply entry, and it closes a real gap: three ledgers (cpi-2026-09-11, ism-services-2026-09-03, ism-manufacturing-2026-09-01) name crude as the transmission channel into their inflation subcomponents, yet no dated event on the supply side of that channel was tracked. The 2026-08-02 meeting completed the rollback of ~3.5 mb/d of 2023 voluntary cuts with a final +188 kb/d for September, and the group signalled quotas held steady for the rest of 2026 — so the base case is a non-event and `medium` reflects that, not the consequence if the signal breaks. What makes this instance live: it is the first ministerial since the 2026-08-30 US strike on Larak Island re-escalated the Strait of Hormuz, and it lands inside the Sep 1 -> Sep 16 pre-FOMC corridor, three days after ISM Services and two days after payrolls. Discovered during the ism-services-2026-09-03 pulse-check adjacency sweep (2026-08-31).",
+  },
+  {
     id: "aapl-iphone-18-launch-2026-09-09",
     kind: "product-launch",
     title: "Apple September event — iPhone 18 line",
