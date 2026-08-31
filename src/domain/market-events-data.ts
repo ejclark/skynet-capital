@@ -469,7 +469,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "low",
     symbols: [],
     notes:
-      "Announced-layoffs proxy, the session before BLS payrolls (9/4) and a sibling of the tracked ADP print (9/2) — it supplies the industry and geographic layoff detail weekly claims do not. Filed `low`, not `medium` like ADP, to respect this file's standing note that second-order labor surveys are noisier than the prints tracked here; weekly jobless claims stay deliberately omitted. Matters this cycle only because Warsh's 2026-08-28 keynote pinned the hawkish case on a 'low fire, low hire' labor market being stable — announced job cuts are one of the few reads that can contradict the 'low fire' half before the 9/5 blackout. Discovered during the jobs-2026-09-04 pulse-check adjacency sweep.",
+      "Announced-layoffs proxy, the session before BLS payrolls (9/4) and a sibling of the tracked ADP print (9/2) — it supplies the industry and geographic layoff detail weekly claims do not. Filed `low`, not `medium` like ADP, to respect this file's standing note that second-order labor surveys are noisier than the prints tracked here; weekly jobless claims stay deliberately omitted. Matters this cycle only because Warsh's 2026-08-28 keynote characterised the labor market as stable at full employment and pinned the hawkish case on inflation — announced job cuts are one of the few reads that can contradict the low-firing half of that framing before the 9/5 blackout. (The quoted 'low fire, low hire' phrasing this note previously carried is Powell-era 2025 language, not in the 8/28 remarks; corrected 2026-08-31 during this event's initial research.) Discovered during the jobs-2026-09-04 pulse-check adjacency sweep.",
   },
   {
     id: "jobs-2026-09-04",
@@ -598,13 +598,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "product-launch",
     title: "CoreWeave Fully Connected 2026 (Moscone South, SF) — Sep 29–Oct 1",
     date: "2026-09-29",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "NEWS: coreweave.com/fully-connected-2026 states Sep 29–Oct 1 2026, Moscone South, keynotes Intrator/Salanki/Goldberg + NVIDIA's Ian Buck; CoreWeave's own X post (#FullyConnected26) repeats the dates — company-primary but filed estimate per this lane's adjacency rule (a discovered event is proposed, never self-confirmed), checked 2026-08-31",
+      "IR: coreweave.com/fully-connected-2026 states Sep 29–Oct 1 2026, Moscone South (747 Howard St, SF), keynotes Intrator/Salanki/Goldberg + NVIDIA's Ian Buck + Fei-Fei Li; independently corroborated by the venue operator's own calendar, moscone.com/events/coreweave-fully-connected-2026 — both fetched 2026-08-31",
     impact: "medium",
     symbols: ["CRWV"],
     notes:
-      "CoreWeave's own customer/product conference, ~6 weeks before the est. 2026-11-10 Q3 print — the one company-controlled news venue inside the pre-print window, and the venue where product/capacity announcements would land ahead of that print. Two prior crwv-2026-11-10-print pulses (08-17, 08-24) recorded the conference as 'reported for September, no exact date discoverable' and could not propose it; the dates are now on CoreWeave's own site. Day 1 sits on the 09-29 MU print and the 09-30 funding deadline / Chicago PMI / GDP cluster, so the corridor is crowded. Discovered during the crwv-2026-11-10-print pulse-check adjacency sweep.",
+      "CoreWeave's own customer/product conference, ~6 weeks before the est. 2026-11-10 Q3 print — the one company-controlled news venue inside the pre-print window. Discovered during the crwv-2026-11-10-print pulse-check adjacency sweep and filed `estimate` there (this lane never self-confirms an event in the PR that discovers it); flipped to `confirmed` by the initial research 2026-08-31 on the company primary plus the venue-operator corroboration. The date is the first day of the Sep 29–Oct 1 window per house convention, but the published agenda puts the OPENING KEYNOTE on day 2, Wed 2026-09-30 10:00-11:30 ET — any window measurement centers there, not on 09-29 (day 1 is expo/BattleBots). That keynote day is the corridor's most macro-loaded session (PCE + GDP 3rd estimate + the FY27 funding deadline + Chicago PMI), with the MU print and JOLTS/consumer confidence on 09-29 and ISM Manufacturing 10-01 / jobs 10-02 after, so no CRWV move in the window is attributable to the conference. Confirmed status licenses nothing on its own: no CRWV playbook survives (S1 killed). See docs/research/events/crwv-fully-connected-2026-09-29.md.",
   },
   {
     id: "ism-manufacturing-2026-10-01",
@@ -665,6 +665,18 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     source: "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
     impact: "high",
     symbols: [],
+  },
+  {
+    id: "ppi-2026-10-15",
+    kind: "macro-print",
+    title: "PPI release (Sep 2026 data)",
+    date: "2026-10-15",
+    status: "confirmed",
+    source: "BLS: bls.gov/schedule/news_release/ppi.htm — 08:30 ET, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The CPI/PPI whipsaw pair the calendar already tracks for 09-10/09-11, but REVERSED — here PPI lands the morning AFTER CPI, so it scores the CPI reaction rather than setting up for it, and both land inside the two-week run-up to the 10-28 FOMC. Discovered during the cpi-2026-10-14 pulse-check adjacency sweep, read off the BLS PPI schedule page directly. Filed `confirmed` rather than the adjacency sweep's usual `estimate` because the date came from the BLS primary schedule, which is exactly what the `BLS:` prefix means and what `--validate` requires of it (the same page seeded ppi-2026-09-10).",
   },
   {
     id: "pce-2026-09-30",
@@ -830,6 +842,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     source: "FED: federalreserve.gov FOMC calendar — statement 14:00 ET, checked 2026-08-15",
     impact: "high",
     symbols: [],
+  },
+  {
+    id: "ppi-2026-12-15",
+    kind: "macro-print",
+    title: "PPI release (Nov 2026 data)",
+    date: "2026-12-15",
+    status: "estimate",
+    source:
+      "EST: the Executive Office of the President's Schedule of Release Dates for Principal Federal Economic Indicators, CY2026 (whitehouse.gov PFEI PDF, fetched 2026-08-31) — its Producer Price Indexes row reads 14 12 12 14 13 11 15 13 10 15 13 15 across Jan–Dec, so December = the 15th, 08:30 ET; corroborated by a search extraction of bls.gov/schedule/news_release/ppi.htm, which 403'd on direct fetch. Filed estimate per the event-research lane's no-self-confirm limit despite the primary source, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The first inflation print AFTER cpi-2026-12-10, and — with BEA's next Personal Income and Outlays not until 12-23 (same PFEI matrix) — the only other inflation read the market gets between the 12-09 FOMC and year-end. Same whipsaw-setup role as ppi-2026-09-10 but inverted: here PPI follows CPI rather than leading it, so it scores the Dec 4→9→10 corridor's verdict instead of setting up positioning for it. Discovered during the cpi-2026-12-10 pulse-check adjacency sweep; the same PFEI fetch independently re-verified the CPI 12-10, Employment Situation 12-04 and PCE 12-23 dates this calendar already carries.",
   },
   {
     id: "pjm-capacity-auction-2026-12",
