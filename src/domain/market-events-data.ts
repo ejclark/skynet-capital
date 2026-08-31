@@ -780,6 +780,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "ppi-2026-12-15",
+    kind: "macro-print",
+    title: "PPI release (Nov 2026 data)",
+    date: "2026-12-15",
+    status: "estimate",
+    source:
+      "EST: the Executive Office of the President's Schedule of Release Dates for Principal Federal Economic Indicators, CY2026 (whitehouse.gov PFEI PDF, fetched 2026-08-31) — its Producer Price Indexes row reads 14 12 12 14 13 11 15 13 10 15 13 15 across Jan–Dec, so December = the 15th, 08:30 ET; corroborated by a search extraction of bls.gov/schedule/news_release/ppi.htm, which 403'd on direct fetch. Filed estimate per the event-research lane's no-self-confirm limit despite the primary source, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The first inflation print AFTER cpi-2026-12-10, and — with BEA's next Personal Income and Outlays not until 12-23 (same PFEI matrix) — the only other inflation read the market gets between the 12-09 FOMC and year-end. Same whipsaw-setup role as ppi-2026-09-10 but inverted: here PPI follows CPI rather than leading it, so it scores the Dec 4→9→10 corridor's verdict instead of setting up positioning for it. Discovered during the cpi-2026-12-10 pulse-check adjacency sweep; the same PFEI fetch independently re-verified the CPI 12-10, Employment Situation 12-04 and PCE 12-23 dates this calendar already carries.",
+  },
+  {
     id: "pjm-capacity-auction-2026-12",
     kind: "sector",
     title: "PJM capacity auction window closes",
