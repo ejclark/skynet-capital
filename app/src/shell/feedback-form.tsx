@@ -8,28 +8,15 @@ import {
   submitFeedbackRequest,
 } from "../live/feedback";
 import type { CoachDraft } from "./coach-box";
+import { MAX_IMAGES, readImage } from "./feedback-image-utils";
 
 /**
  * THE FEEDBACK FORM (#738 phase 9d) — the one thing that ever files. It is the same template
  * whether the member wrote it by hand or the coach drafted it (#981): the coach fills the fields,
  * it never swaps them. Screenshots attach as jpeg/png ≤1.5MB, at most three — the server's
- * `parseImages` is the real gate; these checks are the courtesy copy of it.
+ * `parseImages` is the real gate; `feedback-image-utils.ts` is the courtesy copy of it, shared with
+ * the coach's own opening-note upload (#1020).
  */
-
-const MAX_IMAGES = 3;
-const MAX_IMAGE_BYTES = 1_500_000;
-
-function readImage(file: File): Promise<AttachedImage | undefined> {
-  if (!(file.type === "image/jpeg" || file.type === "image/png")) return Promise.resolve(undefined);
-  if (file.size > MAX_IMAGE_BYTES) return Promise.resolve(undefined);
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () =>
-      resolve({ name: file.name, type: file.type, dataUrl: String(reader.result) });
-    reader.onerror = () => resolve(undefined);
-    reader.readAsDataURL(file);
-  });
-}
 
 export function FeedbackForm({
   draft,
@@ -41,7 +28,7 @@ export function FeedbackForm({
   const [kind, setKind] = useState<FeedbackKind>(draft?.kind ?? "bug");
   const [title, setTitle] = useState(draft?.title ?? "");
   const [details, setDetails] = useState(draft?.details ?? "");
-  const [images, setImages] = useState<readonly AttachedImage[]>([]);
+  const [images, setImages] = useState<readonly AttachedImage[]>(draft?.images ?? []);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<SubmitAnswer | undefined>();
   const [dropped, setDropped] = useState(false);

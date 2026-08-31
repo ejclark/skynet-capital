@@ -83,6 +83,9 @@ export const followupRequest = (input: {
 export interface CoachMessage {
   readonly role: "user" | "assistant";
   readonly content: string;
+  /** Screenshots on the opening note only (#1020) — serialized exactly like a plain submission's
+   *  images, so the server's `sanitizeImages` stays the one authority on shape. */
+  readonly images?: readonly AttachedImage[];
 }
 
 export type CoachAnswer =

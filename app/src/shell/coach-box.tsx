@@ -1,6 +1,13 @@
 import type { ReactElement } from "react";
-import { useEffect, useRef, useState } from "react";
-import { type CoachMessage, coachTurn, type FeedbackKind, KIND_LABELS } from "../live/feedback";
+import { useEffect, useId, useRef, useState } from "react";
+import {
+  type AttachedImage,
+  type CoachMessage,
+  coachTurn,
+  type FeedbackKind,
+  KIND_LABELS,
+} from "../live/feedback";
+import { MAX_IMAGES, readImage } from "./feedback-image-utils";
 
 /** What a finished coach conversation hands the form: the draft, ready for review. */
 export interface CoachDraft {
@@ -9,6 +16,34 @@ export interface CoachDraft {
   readonly details: string;
   readonly area?: string;
   readonly spec: unknown;
+  /** Screenshots attached to the opening note (#1020) — carried straight into the review form so
+   *  the member never has to re-attach what they already gave the coach. */
+  readonly images?: readonly AttachedImage[];
+}
+
+/** Assembles the finished draft — pulled out of `turn` so the title-override and optional-field
+ *  logic don't inflate that function's own complexity (mirrors `feedbackInputFromForm`'s reason for
+ *  existing, one file over). A title the member typed up front wins over the coach's generated
+ *  one — "custom title" was the whole point of #1020, not a second guess at what the coach produced. */
+function draftFrom(
+  kind: FeedbackKind,
+  customTitle: string,
+  images: readonly AttachedImage[],
+  reply: {
+    readonly title: string;
+    readonly details: string;
+    readonly area?: string;
+    readonly spec: unknown;
+  },
+): CoachDraft {
+  return {
+    kind,
+    title: customTitle.trim() || reply.title,
+    details: reply.details,
+    ...(reply.area ? { area: reply.area } : {}),
+    spec: reply.spec,
+    ...(images.length ? { images } : {}),
+  };
 }
 
 /**
@@ -32,17 +67,29 @@ export function CoachBox({
 }): ReactElement {
   const [kind, setKind] = useState<FeedbackKind>("bug");
   const [note, setNote] = useState("");
+  const [title, setTitle] = useState("");
+  const [images, setImages] = useState<readonly AttachedImage[]>([]);
+  const [dropped, setDropped] = useState(false);
   const [messages, setMessages] = useState<readonly CoachMessage[]>([]);
   const [question, setQuestion] = useState<string | undefined>();
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
   const live = useRef(true);
+  const filesId = useId();
   useEffect(
     () => () => {
       live.current = false;
     },
     [],
   );
+
+  const attach = async (files: FileList | null) => {
+    if (!files) return;
+    const read = await Promise.all([...files].map(readImage));
+    const kept = read.filter((i): i is AttachedImage => i !== undefined);
+    setDropped(kept.length < files.length);
+    setImages([...images, ...kept].slice(0, MAX_IMAGES));
+  };
 
   const turn = async (next: readonly CoachMessage[]) => {
     setBusy(true);
@@ -55,13 +102,7 @@ export function CoachBox({
       }
       setMessages(next);
       if (reply.done) {
-        onDraft({
-          kind,
-          title: reply.title,
-          details: reply.details,
-          ...(reply.area ? { area: reply.area } : {}),
-          spec: reply.spec,
-        });
+        onDraft(draftFrom(kind, title, images, reply));
       } else {
         setQuestion(reply.question);
         setAnswer("");
@@ -97,6 +138,16 @@ export function CoachBox({
             </select>
           </div>
           <div className="field">
+            <label htmlFor="coach-title">Custom title</label>
+            <input
+              id="coach-title"
+              value={title}
+              maxLength={200}
+              placeholder="Optional — leave it and the coach will draft one"
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+          <div className="field">
             <label htmlFor="coach-note">What's on your mind?</label>
             <textarea
               id="coach-note"
@@ -106,12 +157,47 @@ export function CoachBox({
               onChange={(e) => setNote(e.target.value)}
             />
           </div>
+          <div className="field">
+            <label htmlFor={filesId}>
+              Add screenshots <small>(optional — up to 3, jpeg/png, ≤1.5MB each)</small>
+            </label>
+            <input
+              id={filesId}
+              type="file"
+              accept="image/jpeg,image/png"
+              multiple
+              onChange={(e) => void attach(e.target.files)}
+            />
+            {images.length ? (
+              <ul className="fb-images">
+                {images.map((img) => (
+                  <li key={img.name}>
+                    {img.name}{" "}
+                    <button
+                      type="button"
+                      className="fb-img-x"
+                      onClick={() => setImages(images.filter((i) => i !== img))}
+                    >
+                      remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {dropped ? (
+              <p className="set-err">Some files were skipped — jpeg/png up to 1.5MB only.</p>
+            ) : null}
+          </div>
           <div className="coach-row">
             <button
               type="button"
               className="btn btn-primary mc-btn"
               disabled={busy || note.trim() === ""}
-              onClick={() => void turn([{ role: "user", content: note.trim() }])}
+              onClick={() =>
+                void turn([
+                  { role: "user", content: note.trim(), ...(images.length ? { images } : {}) },
+                ])
+              }
             >
               {busy ? "Thinking…" : "Shape it with me"}
             </button>
