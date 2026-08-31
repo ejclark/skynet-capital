@@ -40,9 +40,13 @@
      other shade. Hue and saturation are held (H145 S63) and only lightness moves, which is what
      keeps it forest green rather than a different colour. L27.5% is a floor, not a preference:
      the leader's VALUE is painted in this same token against --surface-2, and one step darker
-     puts that number under the 3:1 contrast line. Deeper forest is legible on light only. */
+     puts that number under the 3:1 contrast line. Deeper forest is legible on light only.
+     --ramp-lo is the tail (#1049 — most rows sit closer to this end than to the leader, so it,
+     not --ramp-hi, is what reads as "still light" on the whole board). Same hue family, lightness
+     only moved down; it still clears 5:1 against --surface-2 where .rank-val paints it as text,
+     well clear of --ramp-hi's 3:1 floor, so there was room this token's sibling didn't have. */
   --ramp-hi: #1a723f;
-  --ramp-lo: #9ed3b2;
+  --ramp-lo: #489e69;
 
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
@@ -89,9 +93,10 @@
     --accent-contrast: #ffffff;
     --pos-contrast: #ffffff;
     /* on white the ramp has room the dark column doesn't: deepening it RAISES the leader's
-       contrast (11:1) instead of spending it, so the light forest green goes further (#1043). */
+       contrast (11:1) instead of spending it, so the light forest green goes further (#1043).
+       --ramp-lo deepened too (#1049), same reasoning as the dark column's tail. */
     --ramp-hi: #0b4621;
-    --ramp-lo: #7dbd95;
+    --ramp-lo: #41815a;
     --elev-recessed: inset 0 1px 3px rgba(11, 15, 20, 0.06);
     --elev-base: 0 1px 2px rgba(11, 15, 20, 0.05);
     --elev-raised: 0 2px 6px rgba(11, 15, 20, 0.08), 0 8px 24px rgba(11, 15, 20, 0.06);
@@ -116,7 +121,7 @@
   /* the light ramp, twice over — this block and the prefers-color-scheme copy above must move
      together; nothing computes one from the other. */
   --ramp-hi: #0b4621;
-  --ramp-lo: #7dbd95;
+  --ramp-lo: #41815a;
   --elev-recessed: inset 0 1px 3px rgba(11, 15, 20, 0.06);
   --elev-base: 0 1px 2px rgba(11, 15, 20, 0.05);
   --elev-raised: 0 2px 6px rgba(11, 15, 20, 0.08), 0 8px 24px rgba(11, 15, 20, 0.06);
