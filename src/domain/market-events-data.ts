@@ -749,6 +749,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "AWS is the whole AMZN thesis right now ($496B backlog); natural catalyst window ~4wks post-print.",
   },
   {
+    id: "fomc-blackout-start-2026-11-28",
+    kind: "macro-print",
+    title: "FOMC communications blackout begins (through 2026-12-10)",
+    date: "2026-11-28",
+    status: "estimate",
+    source:
+      "EST: derived, not read — the Fed's own blackout rule ('begin at 12:00 a.m. Eastern Time the second Saturday before a meeting and end at 11:59 p.m. Eastern Time the day after a meeting'), already parsed from the federalreserve.gov blackout-calendar PDF for this calendar's fomc-blackout-start-2026-09-05 entry on 2026-08-30, applied to the confirmed Dec 8-9 meeting: start 2026-11-28, end 2026-12-10. This session re-fetched that PDF (federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf, 2026-08-31) and its text layer yielded only an unshaded date grid — no footnote, no readable period marks — so the date stays estimate until a fetch reads it at the primary. Rule independently corroborated by stlouisfed.org's blackout-periods page via search summary (its own fetch 403'd), which also reports the last 2026 blackout ending 2026-12-10",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Not a print — a gate on who may speak, and this one is load-bearing: it swallows BOTH ends of the December compound window. The 12-04 jobs print and the 12-10 CPI print land inside it, so neither gets any official Fed interpretation, and the 12-09 statement + presser are the only Fed voice inside a five-session stretch carrying three high-impact releases. Matters this cycle because a single speech (Warsh at Jackson Hole, 2026-08-28) moved September hike odds 35% -> 57% — when Fed-speak stops is a real input. Discovered during the fomc-2026-12-09 pulse-check adjacency sweep, 2026-08-31.",
+  },
+  {
     id: "jobs-2026-12-04",
     kind: "macro-print",
     title: "Employment Situation (Nov 2026 data)",
