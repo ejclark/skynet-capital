@@ -805,13 +805,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "PPI release (Oct 2026 data)",
     date: "2026-11-13",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: bls.gov/schedule/news_release/ppi.htm — its schedule table reads "October 2026 | Nov. 13, 2026 | 08:30 AM" ET (fetched direct 2026-08-31; the page 403s to plain fetchers and needs a UA header). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+      'BLS: bls.gov/schedule/news_release/ppi.htm ("October 2026 | Nov. 13, 2026 | 08:30 AM") + bls.gov/schedule/2026/11_sched.htm (Producer Price Index / October 2026 / 08:30 AM on Friday the 13th) — two independent primary views, both fetched direct 2026-08-31 (the pages 403 to plain fetchers and need a full browser header set)',
     impact: "medium",
     symbols: [],
     notes:
-      "Fills the gap in the tracked PPI series (09-10, 10-15, [this], 12-15) — discovered during the ppi-2026-12-15 initial research, where it is the LAST wholesale print before that one and so the base its trend read extrapolates from. Three days after cpi-2026-11-10.",
+      "Fills the gap in the tracked PPI series (09-10, 10-15, [this], 12-15) — discovered during the ppi-2026-12-15 initial research, where it is the LAST wholesale print before that one and so the base its trend read extrapolates from. Filed estimate then per the no-self-confirm limit; promoted to confirmed by its own initial-research session on 2026-08-31 with both BLS primaries in hand. EXISTENCE RISK IS THE HEADLINE: this is the OCTOBER reference month, and BLS's own lapse page shows the October-2025 PPI news release (scheduled Fri 2025-11-14) was CANCELED outright — its data folded into the November release, which itself slipped Dec 11 -> 2026-01-14. Of the four PPI prints tracked here, this is the only slot whose 2025 analogue was deleted rather than delayed. Also the LAST PPI the 12-09 FOMC sees, and it feeds pce-2026-11-25 (Oct data) before that vote.",
+  },
+  {
+    id: "import-export-prices-2026-11-17",
+    kind: "macro-print",
+    title: "U.S. Import and Export Price Indexes (Oct 2026 data)",
+    date: "2026-11-17",
+    status: "estimate",
+    source:
+      'EST: bls.gov/schedule/2026/11_sched.htm lists "U.S. Import and Export Price Indexes / October 2026 / 08:30 AM" on Tuesday the 17th (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+    impact: "low",
+    symbols: [],
+    notes:
+      "The tariff pass-through gauge for the October data cycle, and the sibling of import-export-prices-2026-12-17 one month earlier — four days after ppi-2026-11-13 and three sessions before opex-2026-11-20. Low impact alone; tracked because it closes the CPI 11-10 -> PPI 11-13 -> import/export 11-17 inflation corridor that runs into the 11-25 PCE and the 12-09 FOMC. Carries the same October-collection existence risk as its neighbours: the October-2025 import/export release was CANCELED in the 2025 lapse (BLS lapse page). Discovered during the ppi-2026-11-13 initial research.",
   },
   {
     id: "aws-reinvent-2026",
