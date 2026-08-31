@@ -752,13 +752,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Treasury Marketable Borrowing Estimates (Q4 2026 / Q1 2027)",
     date: "2026-11-02",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: Treasury publishes its quarterly marketable borrowing estimates at ~3:00 p.m. ET on the Monday of refunding week, two days ahead of the 08:30 refunding statement (the August 2026 pair ran 08-03 estimates / 08-05 statement); home.treasury.gov's most-recent-refunding-documents page names 2026-11-02 and 2026-11-04 as the November pair. Reached via search — home.treasury.gov timed out on four direct fetches this session — so this is filed estimate and nothing more, checked 2026-08-31",
+      "TSY: home.treasury.gov most-recent-quarterly-refunding-documents names the 15:00 ET Monday Financing Estimates slot and states '(The next release is scheduled for November 2, 2026)', with the 08:30 Wednesday slot separately naming November 4 — fetched direct 2026-08-31. Promoted from estimate on that primary: WebFetch times out on home.treasury.gov but plain curl returns 200, so the sibling ledger's 'gated primary' was a tool artifact, not a network fact, checked 2026-08-31",
     impact: "low",
     symbols: [],
     notes:
-      "The QUANTITY half of the refunding pair: this Monday release carries the aggregate dollar borrowing number, and treasury-refunding-2026-11-04 (est) allocates it across the curve 48 hours later. Tracking both separates a quantity surprise from a composition/guidance surprise — the calendar previously had neither. Filed LOW on this session's own measurement: on the 8 refunding announcements since 2023 that were NOT also FOMC decision days, TLT closed 4/8 up at a mean -0.037% (permutation p=0.905) and SPY 4/8 at -0.025% (p=0.938), both indistinguishable from an ordinary session — and the Monday estimate has historically moved the tape less than the Wednesday statement it precedes. READ IT, DO NOT TRADE IT. Its signal is buried by construction: sloos-2026-11-02 (confirmed) and ism-manufacturing-2026-11-02 (est) share the day, midterm-elections-2026-11-03 (est) owns the next, and the estimates are locked before the vote so no post-election fiscal change can be in them. Discovered during the treasury-refunding-2026-11-04 initial research (2026-08-31).",
+      "The QUANTITY half of the refunding pair: this Monday release carries the aggregate dollar borrowing number plus the FIRST estimate for the following quarter, and treasury-refunding-2026-11-04 (est) allocates it across the curve 48 hours later. Filed LOW on this event's own measurement (all 15 releases since 2023, every date read off the Treasury press release): release day is NIL — on the 8 releases not sitting on an FOMC meeting-eve, TLT closed 4/8 up at +0.056% (permutation p=0.860), SPY 6/8 at +0.201% (p=0.704), ^TNX 4/8 at +0.041% (p=0.989). Both episodes market memory attributes to this release fail on the tape: 2023-07-31 ($1.007T) closed TLT +0.24%, 21st percentile; 2023-10-30 (-$76B) closed TLT -0.45%, the wrong direction. The headline revision is a cash-balance variable, not a deficit variable — all 5 editions past +/-$250B sit inside a debt-limit cycle. READ IT, DO NOT TRADE IT, and read it for the Jan-Mar 2027 estimate: debt outstanding was $40.078T on 2026-08-27 against the $41.1T limit. Attribution is impossible anyway — 13 tracked events sit within +/-5 days. Discovered during the treasury-refunding-2026-11-04 initial research (2026-08-31); measured and promoted by its own initial research the same day.",
+  },
+  {
+    id: "treasury-primary-dealer-agenda-2026-10-16",
+    kind: "macro-print",
+    title: "Treasury Primary Dealer Meeting Agenda (Q4 2026 refunding)",
+    date: "2026-10-16",
+    status: "estimate",
+    source:
+      "EST: home.treasury.gov most-recent-quarterly-refunding-documents shows the Primary Dealer Meeting Agenda released at 12:00 PM Friday, July 17, 2026 and states '(The next release is scheduled for October 16, 2026)' — fetched direct 2026-08-31. Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep; its own initial research can promote it on the same primary, checked 2026-08-31",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The earliest public tell on issuance policy: the agenda lists the questions Treasury puts to primary dealers ahead of refunding week, roughly two weeks before treasury-borrowing-estimates-2026-11-02 (confirmed) and treasury-refunding-2026-11-04 (est). A new question about coupon sizes or the forward-guidance language shows up here before it shows up in either release, which makes this the leading indicator for both — including for FT-39 (whether 'at least the next several quarters' survives) and FT-42 (whether debt-limit language attaches to the Jan-Mar 2027 cash-balance assumption). No reaction function has been measured for this release; it is filed as an information date, not a price event. Discovered during the treasury-borrowing-estimates-2026-11-02 initial research (2026-08-31).",
   },
   {
     id: "sloos-2026-11-02",
