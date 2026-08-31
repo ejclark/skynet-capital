@@ -26,13 +26,24 @@
 // is the costly failure mode; over-resourcing a simple one only costs a few extra minutes. A `plan`
 // issue (no `skynet-spec` shape at all — see docs/plans/) always falls through to "no spec block"
 // and stays on Opus, unchanged from before.
+//
+// 2026-08-31 (Eric, same day — completing the tiering he'd just described): Sonnet is a default, not
+// a floor either — a request can be simple enough for Haiku. Issue #981 (3 criteria, spec-complete)
+// was Eric's own "very simple, Sonnet is enough" case, so the Haiku band sits strictly BELOW it, not
+// at it: exactly 1 criterion and zero open assumptions — the single-fact, zero-ambiguity ask (a typo,
+// one label rename, one color swap). 2 or 3 criteria, or any open assumption, stays on Sonnet.
 
 const DEFAULT_MODEL = "claude-sonnet-5";
 const STRONG_MODEL = "claude-opus-5";
+const LIGHT_MODEL = "claude-haiku-4-5-20251001";
 
 // Matches issue #981 exactly (3 criteria, spec-complete) — the case Eric named as "very simple/easy,
 // Sonnet 5 is more than capable." The floor is deliberately at, not above, that observed case.
 const MAX_SIMPLE_CRITERIA = 3;
+
+// The Haiku band sits strictly below the Sonnet floor above: a single criterion with no open
+// assumptions is the only case simple enough to hand to the lightest model.
+const MAX_TRIVIAL_CRITERIA = 1;
 
 /** The issue's `skynet-spec` fenced block, parsed — same shape/regex as feedback-scan.mjs's roundsOf.
  *  Null on anything missing or malformed; this function must never throw. */
@@ -71,6 +82,13 @@ export function modelTier(body = "") {
     return {
       model: STRONG_MODEL,
       reason: `${criteria.length} acceptance criteria (over the ${MAX_SIMPLE_CRITERIA}-criterion simple-ask floor) — escalate`,
+    };
+  }
+  const assumptions = Array.isArray(spec.assumptions) ? spec.assumptions : [];
+  if (criteria.length <= MAX_TRIVIAL_CRITERIA && assumptions.length === 0) {
+    return {
+      model: LIGHT_MODEL,
+      reason: `spec-complete, ${criteria.length} criterion, no open assumptions — trivial, downgrade`,
     };
   }
   return {
