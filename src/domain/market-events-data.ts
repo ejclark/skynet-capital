@@ -579,7 +579,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "high",
     symbols: [],
     notes:
-      "Not a print — a dated policy checkpoint that gates whether the federal prints around it exist. ISM (10-01) is a private survey and publishes through a lapse; BLS does not — in the 2025 lapse it skipped the October Employment Situation and cancelled the October CPI outright. So an un-averted lapse removes the 10-02 payrolls and leaves the 10-01 ISM as the corridor's only hard macro read into an Oct 27-28 FOMC with no SEP. Kind `geopolitical` is the closest fit the enum offers for a domestic policy checkpoint (it is scoped to dated checkpoints like a summit or a tariff deadline); the imperfect fit is named, not fixed from this lane. Discovered during the ism-manufacturing-2026-10-01 initial research.",
+      "Not a print — a dated policy checkpoint that gates whether the federal prints around it exist. ISM (10-01) is a private survey and publishes through a lapse; BLS does not — in the 2025 lapse it skipped the October Employment Situation and cancelled the October CPI outright. So an un-averted lapse removes the 10-02 payrolls and leaves the 10-01 ISM as the corridor's only hard macro read into an Oct 27-28 FOMC with no SEP. Kind `geopolitical` is the closest fit the enum offers for a domestic policy checkpoint (it is scoped to dated checkpoints like a summit or a tariff deadline); the imperfect fit is named, not fixed from this lane. THE CLIFF THIS SETS UP LANDS IN THE DECEMBER BLACKOUT (fomc-blackout-start-2026-11-28 initial research, 2026-08-31): the House CR expires 12-04 and the Senate's 12-11, so whichever is enacted expires INSIDE that gate (12-04 is jobs day) or on the day it lifts, and on this same 2025 precedent a 12-04 lapse plausibly deletes both jobs-2026-12-04 and cpi-2026-12-10 — the only two checks on a dot plot the Fed cannot speak about. No follow-on cliff entry is filed here because the date is conditional on which CR is enacted; file one once that is known. Discovered during the ism-manufacturing-2026-10-01 initial research.",
   },
   {
     id: "gdp-q2-2026-third-2026-09-30",
@@ -722,17 +722,30 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The quarterly read on how tight bank credit actually is — the transmission channel a hiking Committee is watching, and the first Fed publication of November. Filed `low` deliberately: it is a survey of standards and demand, not a price, and it has no measured reaction function in this book. It earns a row because the corridor it opens is the one this calendar cares about most (midterms 11-03, jobs 11-06, cpi-2026-11-10, ppi-2026-11-13, fomc-minutes-2026-11-18, beige-book-2026-11-25, blackout 11-28, then the 12-09 dots) and because, like the Beige Book, it is Fed-published and therefore survives a funding lapse where BLS data does not. Discovered during the fomc-minutes-2026-11-18 initial research, off the same November calendar page.",
   },
   {
+    id: "fomc-minutes-2026-12-30",
+    kind: "macro-print",
+    title: "FOMC minutes (Dec 8-9 meeting)",
+    date: "2026-12-30",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-december.htm lists 'FOMC Minutes — Meeting of December 8-9' at 2:00 p.m. on December 30 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep; the page's own last-update stamp is 2025-06-24, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The minutes of the year's final SEP meeting, and the only structured account of a vote taken WITHOUT the November CPI — cpi-2026-12-10 printed the morning after the decision (see fomc-blackout-start-2026-11-28). That makes the dissent language and any discussion of the missing inflation read worth more than a usual set of minutes, and it lands in the 43-day policy vacuum before the 2027-01-26/27 FOMC that ppi-2026-12-15's research named. Read it, do not trade it — minutes are three weeks stale by publication. Same series as fomc-minutes-2026-10-07 and fomc-minutes-2026-11-18; one entry per meeting. Discovered during the fomc-blackout-start-2026-11-28 initial research, off the December Board calendar fetched that session.",
+  },
+  {
     id: "fomc-blackout-start-2026-11-28",
     kind: "macro-print",
     title: "FOMC communications blackout begins (through 2026-12-10)",
     date: "2026-11-28",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: derived, not read off a dated calendar row — the Board's blackout rule (blackout begins 12:00 a.m. ET the second Saturday before a meeting and ends 11:59 p.m. ET the day after it, i.e. the Saturday ten days before a Tuesday-start meeting) applied to the confirmed Dec 8-9 FOMC gives Saturday 2026-11-28 through Thursday 2026-12-10. Rule text checked against federalreserve.gov's blackout-period calendar listing 2026-08-31; filed estimate because the date is arithmetic rather than a published row, checked 2026-08-31",
+      "FED: federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf — PDF re-fetched and its content streams inflated 2026-08-31; its footnote states the policy verbatim ('the blackout period will begin at 12:00 a.m. Eastern Time the second Saturday before a meeting and end at 11:59 p.m. Eastern Time the day after a meeting... if the Committee meeting starts on a Tuesday, the blackout period will begin at the start of the Saturday that falls ten days earlier, and if the meeting ends on a Wednesday, the blackout period will end at the end of Thursday'). The FOMC calendar re-fetched the same session lists 'December 8-9*' (asterisk = SEP meeting); Dec 8 2026 is a Tuesday and Dec 9 a Wednesday, so the source's own worked example gives Saturday 2026-11-28 through Thursday 2026-12-10 with no inference of ours. PROMOTED estimate->confirmed by the fomc-blackout-start-2026-11-28 initial research, checked 2026-08-31",
     impact: "medium",
     symbols: [],
     notes:
-      "THE GATE THAT SHUTS THREE DAYS AFTER THE LAST TWO INPUTS THE DECEMBER SEP SEES. pce-2026-11-25 (08:30, confirmed, high) and beige-book-2026-11-25 (14:00, confirmed) both land 11-25, then the market is closed 11-26 and closes at 1:00 p.m. 11-27 (nyse.com), so there is one full session and one half session before no FOMC participant may speak again until 12-10. The November Board calendar lists no governor or president speeches at all, so nothing official interprets those prints and the 12-09 presser is the first authoritative read. Structurally the inverse of fomc-blackout-start-2026-10-17, which had a four-print corridor in its 72-hour run-up; this one has a holiday half-week. Discovered during the beige-book-2026-11-25 initial research.",
+      "THE GATE THAT OUTLIVES THE DECISION BY A FULL SESSION — the finding its own research banked, and the reason it is not a duplicate of fomc-2026-12-09. The Fed decides 12-09 (14:00 statement, 14:30 presser) but the gate runs to 23:59 on 12-10, and cpi-2026-12-10 prints at 08:30 that morning, so the November CPI the dot plot never saw arrives ~18.5 hours after the presser with no participant permitted to respond until Friday 12-11. Verified against BLS release archives, this is unusual: 2021 (CPI 12-10 / FOMC 12-14-15), 2022 (12-13 / 12-13-14), 2023 (12-12 / 12-12-13) and 2024 (12-11 / 12-17-18) all had the print before the vote, and 2025 missed it only because the shutdown pushed it to 12-18 — 2026 is the first UNFORCED miss in six years. jobs-2026-12-04 also lands inside the gate, but that is ordinary (2023 did the same). Front edge: pce-2026-11-25 (08:30, confirmed, high) and beige-book-2026-11-25 (14:00, confirmed) both land 11-25 with NO Fed speech scheduled in November at all, then 11-26 closed and a 1:00 p.m. close 11-27 (nyse.com), so the practical deadline for a Fed voice is the 11-25 close. Watch the CR cliff: the House CR expires 12-04 and the Senate's 12-11 (neither enacted), so whichever passes expires inside or on the edge of this gate — see government-funding-deadline-2026-09-30. Discovered during the beige-book-2026-11-25 initial research.",
   },
   {
     id: "cpi-2026-10-14",
