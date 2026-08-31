@@ -687,13 +687,39 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Fed Beige Book (pre-FOMC edition)",
     date: "2026-11-25",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: federalreserve.gov/monetarypolicy/publications/beige-book-default.htm lists Nov 25 as the eighth and last of the 2026 editions (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's rule that an event discovered in-sweep is proposed, never self-confirmed, checked 2026-08-31",
+      "FED: two independent federalreserve.gov primaries fetched direct 2026-08-31 — newsevents/2026-november.htm lists 'Beige Book' at 2:00 p.m. on November 25, and the Board's Beige Book schedule page (monetarypolicy/publications/beige-book-default.htm) lists Nov 25 as the eighth and last of the 2026 editions (Jan 14, Mar 4, Apr 15, Jun 3, Jul 15, Sep 2, Oct 14, Nov 25). Promoted estimate -> confirmed 2026-08-31 by its own initial-research session, which held both primaries itself; the no-self-confirm limit binds the proposing sweep, not the researching session, checked 2026-08-31",
     impact: "medium",
     symbols: [],
     notes:
-      "The pre-FOMC edition against the confirmed fomc-2026-12-09 (which carries an SEP and dot plot, unlike the 10-28 meeting), and the last Beige Book of 2026. Same series and same reading protocol as beige-book-2026-10-14 — District reports over the national summary, ~9-day collection cutoff (so ~11-16, which is AFTER cpi-2026-11-10 and ppi-2026-11-13 and after the 11-03 midterms, unlike the October edition's cutoff). Discovered during the beige-book-2026-10-14 initial research, off the same Board schedule page that dated it.",
+      "THE LAST BEIGE BOOK OF 2026 AND THE LAST ONE THE YEAR'S FINAL DOT PLOT SEES — the Board's FOMC calendar asterisks Dec 8-9 as SEP-associated while Oct 27-28 carries none. ITS CUTOFF INVERTS THE OCTOBER READ: the ~9-day collection convention now has a third data point in the exact analogue slot (Nov-2025 edition, Dallas-prepared 'on information collected on or before November 17, 2025', published 11-26), so this one closes books ~11-16 — AFTER the 11-03 midterms, AFTER cpi-2026-11-10 and ppi-2026-11-13, where the October edition's ~10-05 cutoff preceded everything that mattered. It is therefore the first federal district-level read that can carry post-election anecdote. READ THE DISTRICT REPORTS, NOT THE NATIONAL SUMMARY, and read them for AI-capex/data-center/power-cost language specifically: Nov-2025 already had Cleveland reporting 'a boost from AI data centers' and St. Louis on AI curbing entry-level hiring, and Jul-2026 names data centers as a manufacturing/construction growth driver. STILL NOT TRADABLE: it is second billing on its own morning to pce-2026-11-25 (08:30 ET, confirmed, high, the last PCE the December FOMC ever sees), and the corridor behind it is airtight — market closed 11-26, 1:00 p.m. early close 11-27, blackout from 11-28 through 12-10, and the November Board calendar lists no speeches at all, so the first authoritative interpretation is the 12-09 presser. Same series as beige-book-2026-09-02 and beige-book-2026-10-14; one entry per edition. Discovered during the beige-book-2026-10-14 initial research, off the same Board schedule page that dated it.",
+  },
+  {
+    id: "fomc-minutes-2026-11-18",
+    kind: "macro-print",
+    title: "FOMC minutes (Oct 27-28 meeting)",
+    date: "2026-11-18",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-november.htm lists 'FOMC Minutes (October 27-28 meeting)' at 2:00 p.m. on November 18 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The last structured read on the Committee's reaction function before the 12-08/09 SEP meeting, and the only one that arrives before the 11-28 blackout with a full week of sessions behind it. Matters for the same reason fomc-minutes-2026-10-07 did: Warsh's 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and that forward guidance has overstayed its welcome, so the vote split and dissent language are close to the only structured evidence available between meetings. Read it, do not trade it — minutes are three weeks stale by publication. Discovered during the beige-book-2026-11-25 initial research, off the November calendar page that dated that edition.",
+  },
+  {
+    id: "fomc-blackout-start-2026-11-28",
+    kind: "macro-print",
+    title: "FOMC communications blackout begins (through 2026-12-10)",
+    date: "2026-11-28",
+    status: "estimate",
+    source:
+      "EST: derived, not read off a dated calendar row — the Board's blackout rule (blackout begins 12:00 a.m. ET the second Saturday before a meeting and ends 11:59 p.m. ET the day after it, i.e. the Saturday ten days before a Tuesday-start meeting) applied to the confirmed Dec 8-9 FOMC gives Saturday 2026-11-28 through Thursday 2026-12-10. Rule text checked against federalreserve.gov's blackout-period calendar listing 2026-08-31; filed estimate because the date is arithmetic rather than a published row, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "THE GATE THAT SHUTS THREE DAYS AFTER THE LAST TWO INPUTS THE DECEMBER SEP SEES. pce-2026-11-25 (08:30, confirmed, high) and beige-book-2026-11-25 (14:00, confirmed) both land 11-25, then the market is closed 11-26 and closes at 1:00 p.m. 11-27 (nyse.com), so there is one full session and one half session before no FOMC participant may speak again until 12-10. The November Board calendar lists no governor or president speeches at all, so nothing official interprets those prints and the 12-09 presser is the first authoritative read. Structurally the inverse of fomc-blackout-start-2026-10-17, which had a four-print corridor in its 72-hour run-up; this one has a holiday half-week. Discovered during the beige-book-2026-11-25 initial research.",
   },
   {
     id: "cpi-2026-10-14",
