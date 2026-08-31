@@ -735,6 +735,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The minutes of the year's final SEP meeting, and the only structured account of a vote taken WITHOUT the November CPI — cpi-2026-12-10 printed the morning after the decision (see fomc-blackout-start-2026-11-28). That makes the dissent language and any discussion of the missing inflation read worth more than a usual set of minutes, and it lands in the 43-day policy vacuum before the 2027-01-26/27 FOMC that ppi-2026-12-15's research named. Read it, do not trade it — minutes are three weeks stale by publication. Same series as fomc-minutes-2026-10-07 and fomc-minutes-2026-11-18; one entry per meeting. Discovered during the fomc-blackout-start-2026-11-28 initial research, off the December Board calendar fetched that session.",
   },
   {
+    id: "fomc-minutes-2026-12-30",
+    kind: "macro-print",
+    title: "FOMC minutes (Dec 8-9 meeting)",
+    date: "2026-12-30",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-december.htm lists 'FOMC Minutes — Meeting of December 8-9' at 2:00 p.m. on December 30 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep; the page's own last-update stamp is 2025-06-24, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The minutes of the year's final SEP meeting, and the only structured account of a vote taken WITHOUT the November CPI — cpi-2026-12-10 printed the morning after the decision (see fomc-blackout-start-2026-11-28). That makes the dissent language and any discussion of the missing inflation read worth more than a usual set of minutes, and it lands in the 43-day policy vacuum before the 2027-01-26/27 FOMC that ppi-2026-12-15's research named. Read it, do not trade it — minutes are three weeks stale by publication. Same series as fomc-minutes-2026-10-07 and fomc-minutes-2026-11-18; one entry per meeting. Discovered during the fomc-blackout-start-2026-11-28 initial research, off the December Board calendar fetched that session.",
+  },
+  {
     id: "fomc-blackout-start-2026-11-28",
     kind: "macro-print",
     title: "FOMC communications blackout begins (through 2026-12-10)",
