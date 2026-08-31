@@ -657,6 +657,32 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Company-set; MRVL investor days have filed Item-2.02 8-Ks — the filing class that corrupted the instrument's event list.",
   },
   {
+    id: "fomc-minutes-2026-10-07",
+    kind: "macro-print",
+    title: "FOMC minutes (Sep 15–16 meeting)",
+    date: "2026-10-07",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-october.htm lists 'FOMC Minutes' at 2:00 p.m. on October 7 for the September 15-16 meeting (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The richest read on this Committee's reaction function available before the 10-28 decision, and the ONLY one that arrives outside the 10-17 blackout. Matters more than an ordinary minutes release because Warsh has withdrawn the usual substitute: his 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and said forward guidance has overstayed its welcome, so the vote split and the dissent language here are close to the only structured evidence on how a coin-flip September resolved. Read it, do not trade it — minutes are three weeks stale by publication. Discovered during the fomc-blackout-start-2026-10-17 initial research.",
+  },
+  {
+    id: "beige-book-2026-10-14",
+    kind: "macro-print",
+    title: "Fed Beige Book (pre-FOMC edition)",
+    date: "2026-10-14",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-october.htm lists 'Beige Book' at 2:00 p.m. on October 14 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "THE LAST THING THE FED ITSELF PUBLISHES BEFORE THE 10-17 BLACKOUT, and it lands 14:00 ET on CPI day (cpi-2026-10-14, 08:30 ET) — one session where the quantitative and the qualitative inflation reads arrive together and Fed officials are still permitted to react to both. It is also a Fed publication rather than Fed speech, so unlike a governor speech it is unaffected by Warsh's move to a quieter Fed. In the lapse branch it gains weight rather than losing it: the Fed is self-funded and publishes through a shutdown, while BLS does not (the 2025 lapse cancelled the October CPI outright), so a 10-01 lapse could leave this district-anecdote read as the ONLY fresh inflation evidence the 10-28 FOMC sees. Same series as beige-book-2026-09-02; one entry per edition. Discovered during the fomc-blackout-start-2026-10-17 initial research.",
+  },
+  {
     id: "cpi-2026-10-14",
     kind: "macro-print",
     title: "CPI release (Sep 2026 data)",
@@ -696,13 +722,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "FOMC communications blackout begins (through 2026-10-29)",
     date: "2026-10-17",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: derived from the Fed's own blackout rule — federalreserve.gov '2025-2027 FOMC Trading and External Communications Blackout Calendar' PDF states blackouts 'begin at 12:00 a.m. Eastern Time the second Saturday before a meeting and end at 11:59 p.m. Eastern Time the day after a meeting' (text layer parsed 2026-08-30 for fomc-blackout-start-2026-09-05). Applied to the confirmed Oct 27–28 meeting that gives start 2026-10-17, end 2026-10-29. Filed estimate because the blackout PDF was not re-fetched this session, checked 2026-08-31",
+      "FED: federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf ('2025-2027 FOMC Trading and External Communications Blackout Calendar') re-fetched and its text layer decompressed direct 2026-08-31 — the footnote states the rule verbatim: blackouts 'begin at 12:00 a.m. Eastern Time the second Saturday before a meeting and end at 11:59 p.m. Eastern Time the day after a meeting', with a worked example for a Tuesday-start/Wednesday-end meeting. The Oct 27-28 meeting is exactly that shape and is confirmed on the FOMC calendar (re-fetched 2026-08-31), so the source's own example gives start 2026-10-17 and end 2026-10-29, checked 2026-08-31",
     impact: "medium",
     symbols: [],
     notes:
-      "Not a print — a gate on who may speak. The gate falls at midnight ET entering Saturday 10-17, which makes Friday 10-16 the last morning on which official interpretation and new price data can meet: CPI 10-14, PPI 10-15 and import-export-prices-2026-10-16 all land in the final 72 hours before it, and monthly opex is the same session. After that the 10-28 decision is approached with no Fed voice available, exactly the configuration that made fomc-blackout-start-2026-09-05 load-bearing when a single Warsh speech moved September hike odds ~35% -> ~57% in one session. Discovered during the import-export-prices-2026-10-16 initial research; needs the Fed blackout PDF re-fetched to promote to confirmed.",
+      "Not a print — a gate on who may speak. The gate falls at midnight ET entering Saturday 10-17, which makes Friday 10-16 the last morning on which official interpretation and new price data can meet: CPI 10-14, PPI 10-15 and import-export-prices-2026-10-16 all land in the final 72 hours before it, and monthly opex is the same session. INVERSE OF THE SEPTEMBER WINDOW: fomc-blackout-start-2026-09-05 trapped PPI and CPI INSIDE the gate; here every top-tier print lands BEFORE it, so the corridor 10-19 -> 10-26 carries no tracked event at all and the risk sits at the two edges. Promoted estimate -> confirmed 2026-08-31 by its own initial-research session, which re-fetched the blackout PDF the proposing sweep could not. Discovered during the import-export-prices-2026-10-16 initial research.",
   },
   {
     id: "import-export-prices-2026-10-16",
