@@ -788,6 +788,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "ppi-2026-11-13",
+    kind: "macro-print",
+    title: "PPI release (Oct 2026 data)",
+    date: "2026-11-13",
+    status: "estimate",
+    source:
+      'EST: bls.gov/schedule/news_release/ppi.htm — its schedule table reads "October 2026 | Nov. 13, 2026 | 08:30 AM" ET (fetched direct 2026-08-31; the page 403s to plain fetchers and needs a UA header). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Fills the gap in the tracked PPI series (09-10, 10-15, [this], 12-15) — discovered during the ppi-2026-12-15 initial research, where it is the LAST wholesale print before that one and so the base its trend read extrapolates from. Three days after cpi-2026-11-10.",
+  },
+  {
     id: "aws-reinvent-2026",
     kind: "sector",
     title: "AWS re:Invent 2026 (Las Vegas)",
@@ -835,13 +848,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "PPI release (Nov 2026 data)",
     date: "2026-12-15",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: the Executive Office of the President's Schedule of Release Dates for Principal Federal Economic Indicators, CY2026 (whitehouse.gov PFEI PDF, fetched 2026-08-31) — its Producer Price Indexes row reads 14 12 12 14 13 11 15 13 10 15 13 15 across Jan–Dec, so December = the 15th, 08:30 ET; corroborated by a search extraction of bls.gov/schedule/news_release/ppi.htm, which 403'd on direct fetch. Filed estimate per the event-research lane's no-self-confirm limit despite the primary source, checked 2026-08-31",
+      'BLS: bls.gov/schedule/news_release/ppi.htm ("November 2026 | Dec. 15, 2026 | 08:30 AM") and bls.gov/schedule/2026/12_sched.htm ("Producer Price Index / November 2026 / 08:30 AM" on the 15th) — two independent BLS schedule views, both fetched direct 2026-08-31 with a UA header (both 403 to plain fetchers). Flipped from estimate by the ppi-2026-12-15 initial research, checked 2026-08-31',
     impact: "medium",
     symbols: [],
     notes:
-      "The first inflation print AFTER cpi-2026-12-10, and — with BEA's next Personal Income and Outlays not until 12-23 (same PFEI matrix) — the only other inflation read the market gets between the 12-09 FOMC and year-end. Same whipsaw-setup role as ppi-2026-09-10 but inverted: here PPI follows CPI rather than leading it, so it scores the Dec 4→9→10 corridor's verdict instead of setting up positioning for it. Discovered during the cpi-2026-12-10 pulse-check adjacency sweep; the same PFEI fetch independently re-verified the CPI 12-10, Employment Situation 12-04 and PCE 12-23 dates this calendar already carries.",
+      "The first inflation print AFTER cpi-2026-12-10, and — with BEA's next Personal Income and Outlays not until 12-23 — the only other inflation read the market gets between the 12-09 FOMC and year-end. Its real job is as a PCE nowcast, not a CPI tell: PPI's portfolio-management, health-care and airfare lines feed the 12-23 core PCE directly, and the next FOMC after 12-09 is not until 2027-01-26/27 (FED calendar), so this print lands in a 43-day policy vacuum. Discovered during the cpi-2026-12-10 pulse-check adjacency sweep and filed estimate then; its own research session re-fetched the BLS primary and confirmed it.",
+  },
+  {
+    id: "import-export-prices-2026-12-17",
+    kind: "macro-print",
+    title: "U.S. Import and Export Price Indexes (Nov 2026 data)",
+    date: "2026-12-17",
+    status: "estimate",
+    source:
+      'EST: bls.gov/schedule/2026/12_sched.htm lists "U.S. Import and Export Price Indexes / November 2026 / 08:30 AM" on Thursday the 17th (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+    impact: "low",
+    symbols: [],
+    notes:
+      "The tariff pass-through gauge, and the third inflation read of the same corridor — two days after ppi-2026-12-15 and the morning before December triple witching (opex-2026-12-18). Low impact on its own; tracked because it closes the Dec 15→18 inflation-into-expiry corridor. Discovered during the ppi-2026-12-15 initial research.",
   },
   {
     id: "pjm-capacity-auction-2026-12",
