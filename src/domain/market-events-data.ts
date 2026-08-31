@@ -679,6 +679,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The CPI/PPI whipsaw pair the calendar already tracks for 09-10/09-11, but REVERSED — here PPI lands the morning AFTER CPI, so it scores the CPI reaction rather than setting up for it, and both land inside the two-week run-up to the 10-28 FOMC. Discovered during the cpi-2026-10-14 pulse-check adjacency sweep, read off the BLS PPI schedule page directly. Filed `confirmed` rather than the adjacency sweep's usual `estimate` because the date came from the BLS primary schedule, which is exactly what the `BLS:` prefix means and what `--validate` requires of it (the same page seeded ppi-2026-09-10).",
   },
   {
+    id: "import-export-prices-2026-10-16",
+    kind: "macro-print",
+    title: "U.S. Import and Export Price Indexes (Sep 2026 data)",
+    date: "2026-10-16",
+    status: "estimate",
+    source:
+      'EST: bls.gov/schedule/news_release/ximpim.htm lists "September 2026 | Oct. 16, 2026 | 08:30 AM" (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane\'s never-confirmed limit on an event discovered in-sweep, checked 2026-08-31',
+    impact: "low",
+    symbols: [],
+    notes:
+      "THE LAST CLEAN 12-MONTH READ in this series before the base-month hole. BLS permanently suppressed 864 of 1,625 import/export price indexes for the October 2025 reference month after the 2025 lapse, including the all-goods import and export indexes (BLS MXP shutdown notice; verified in the public API - EIUIR runs 2025-M09 140.8 -> 2025-M11 141.2 with no M10). This print's base month (Sep 2025) exists; import-export-prices-2026-11-17's (Oct 2025) does not. It is therefore the check date for two of that ledger's kill switches - the nonfuel-acceleration read (+4.5% y/y in Jul 2026, highest since Jun 2022, after six straight months of acceleration) and the tier read. Lands the morning after ppi-2026-10-15 and the same day as opex-2026-10-16. Discovered during the import-export-prices-2026-11-17 initial research.",
+  },
+  {
     id: "pce-2026-09-30",
     kind: "macro-print",
     title: "PCE / Personal Income & Outlays (Aug 2026 data) + BEA annual update",
@@ -818,13 +831,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "U.S. Import and Export Price Indexes (Oct 2026 data)",
     date: "2026-11-17",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: bls.gov/schedule/2026/11_sched.htm lists "U.S. Import and Export Price Indexes / October 2026 / 08:30 AM" on Tuesday the 17th (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+      'BLS: bls.gov/schedule/news_release/ximpim.htm ("October 2026 | Nov. 17, 2026 | 08:30 AM") + bls.gov/schedule/2026/11_sched.htm (U.S. Import and Export Price Indexes / October 2026 / 08:30 AM on Tuesday the 17th) — two independent primary views, both fetched direct 2026-08-31 (the pages 403 to plain fetchers and need a full browser header set)',
     impact: "low",
     symbols: [],
     notes:
-      "The tariff pass-through gauge for the October data cycle, and the sibling of import-export-prices-2026-12-17 one month earlier — four days after ppi-2026-11-13 and three sessions before opex-2026-11-20. Low impact alone; tracked because it closes the CPI 11-10 -> PPI 11-13 -> import/export 11-17 inflation corridor that runs into the 11-25 PCE and the 12-09 FOMC. Carries the same October-collection existence risk as its neighbours: the October-2025 import/export release was CANCELED in the 2025 lapse (BLS lapse page). Discovered during the ppi-2026-11-13 initial research.",
+      "The tariff pass-through gauge for the October data cycle. Filed estimate on 2026-08-31 by the ppi-2026-11-13 sweep that discovered it; promoted to confirmed the same day by its own initial-research session with both BLS primaries in hand. THE HEADLINE 12-MONTH NUMBER LIKELY CANNOT PRINT: BLS permanently suppressed 864 of 1,625 indexes for the October 2025 reference month after the 2025 lapse, including the all-goods import and export indexes (MXP shutdown notice; verified in the public API - EIUIR runs 2025-M09 140.8 -> 2025-M11 141.2 with no M10), and this is the release whose 12-month comparison needs that month. Its neighbours 10-16 and 12-17 are unaffected. Impact stays LOW on purpose and was checked, not assumed: these indexes deflate GDP net trade, NOT PCE, so there is no channel into the 12-09 FOMC - the ppi-2026-11-13 'understated tier' flag does not transfer here. What it does carry is the cleanest duty-exclusive pass-through read the calendar has: BLS excludes tariffs from these prices, so the +4.5% nonfuel y/y (Jul 2026, highest since Jun 2022) says exporters are NOT absorbing.",
   },
   {
     id: "aws-reinvent-2026",
