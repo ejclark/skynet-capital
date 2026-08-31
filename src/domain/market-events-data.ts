@@ -654,6 +654,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "ssa-cola-2027-2026-10-14",
+    kind: "macro-print",
+    title: "SSA announces the 2027 Social Security COLA (from Q3 CPI-W)",
+    date: "2026-10-14",
+    status: "estimate",
+    source:
+      'NEWS: Yahoo Finance 2026-08-04 states verbatim "the SSA will announce the 2027 Social Security COLA on Oct. 14, based on third-quarter CPI-W inflation data"; The Senior Citizens League 2026-08-12 independently repeats "October 14th, 2026" alongside its 3.6% projection — press-reported, ssa.gov not primary-verified, and this lane proposes a discovered adjacency as estimate rather than self-confirming it; checked 2026-08-31',
+    impact: "low",
+    symbols: [],
+    notes:
+      "Not an independent release: the COLA is arithmetic on the Q3 CPI-W average (Jul/Aug/Sep vs the year-ago quarter), so it is computed FROM cpi-2026-10-14's own data and lands the same morning. Filed low impact for that reason — it moves no rate expectation (the Fed keys on core CPI/PCE, not CPI-W) and adds no surprise the CPI print does not already carry. It is registered because it gives that print a property no other CPI on this calendar has: a STATUTORY tether. In the 2025 lapse BLS recalled furloughed staff to publish the September CPI on 2025-10-24 (delayed from 10-15) precisely so SSA could meet its benefit-payment deadline — BLS's own statement, 'This release allows the Social Security Administration to meet statutory deadlines.' That is why a FY2027 funding lapse (government-funding-deadline-2026-09-30) would DELAY the 10-14 CPI rather than delete it, unlike jobs-2026-10-02. Discovered during the cpi-2026-10-14 D-44 pulse; TSCL projected 3.6% on 2026-08-12 off a July CPI-W of 3.4%.",
+  },
+  {
     id: "pce-2026-09-30",
     kind: "macro-print",
     title: "PCE / Personal Income & Outlays (Aug 2026 data) + BEA annual update",
