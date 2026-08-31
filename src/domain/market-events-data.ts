@@ -874,13 +874,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "U.S. Import and Export Price Indexes (Nov 2026 data)",
     date: "2026-12-17",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: bls.gov/schedule/2026/12_sched.htm lists "U.S. Import and Export Price Indexes / November 2026 / 08:30 AM" on Thursday the 17th (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+      'BLS: bls.gov/schedule/news_release/ximpim.htm ("November 2026 | Dec. 17, 2026 | 08:30 AM") and bls.gov/schedule/2026/12_sched.htm ("U.S. Import and Export Price Indexes / November 2026 / 08:30 AM" on Thursday the 17th) — two independent BLS schedule views, both fetched direct 2026-08-31 (bls.gov 403s to plain fetchers AND to a bare UA header; a full browser header set is required). Flipped from estimate by the import-export-prices-2026-12-17 initial research, checked 2026-08-31',
     impact: "low",
     symbols: [],
     notes:
-      "The tariff pass-through gauge, and the third inflation read of the same corridor — two days after ppi-2026-12-15 and the morning before December triple witching (opex-2026-12-18). Low impact on its own; tracked because it closes the Dec 15→18 inflation-into-expiry corridor. Discovered during the ppi-2026-12-15 initial research.",
+      "The calendar's only official measurement of tariff INCIDENCE: BLS prices imports excluding duties (bls.gov/mxp Q&A, verbatim), so the index reports what the foreign seller charges — i.e. who bears the tariff — rather than the tariff itself. The Nov 2026 reference month is the fourth full month under the Section 301 structure (10-12.5% on 60 jurisdictions) that took effect 2026-07-24 12:01 ET when the Section 122 10% global surcharge expired at its 150-day statutory cap. Low impact and no measurable same-day reaction on this calendar; tracked because it closes the Dec 15→18 inflation-into-expiry corridor and because its production risk is the worst here — in the 2025 lapse this exact release slipped Oct 17 → Dec 3 (47 days) and October 2025's all-goods indexes were permanently suppressed. Discovered during the ppi-2026-12-15 initial research.",
+  },
+  {
+    id: "import-export-prices-2026-11-17",
+    kind: "macro-print",
+    title: "U.S. Import and Export Price Indexes (Oct 2026 data)",
+    date: "2026-11-17",
+    status: "estimate",
+    source:
+      'EST: bls.gov/schedule/news_release/ximpim.htm lists "October 2026 | Nov. 17, 2026 | 08:30 AM" (fetched direct 2026-08-31 with a full browser header set). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+    impact: "low",
+    symbols: [],
+    notes:
+      "The last import/export price observation before import-export-prices-2026-12-17, and the date that ledger's falsifiers lean on — the third full reference month under the 2026-07-24 Section 301 tariff structure. Discovered during the import-export-prices-2026-12-17 initial research; the Sep 16 and Oct 16 prints of the same series are cited there as dated observations without their own entries, since a tier-3 monthly series does not earn four.",
   },
   {
     id: "pjm-capacity-auction-2026-12",
