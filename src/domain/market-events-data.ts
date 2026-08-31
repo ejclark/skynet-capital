@@ -679,17 +679,43 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The CPI/PPI whipsaw pair the calendar already tracks for 09-10/09-11, but REVERSED — here PPI lands the morning AFTER CPI, so it scores the CPI reaction rather than setting up for it, and both land inside the two-week run-up to the 10-28 FOMC. Discovered during the cpi-2026-10-14 pulse-check adjacency sweep, read off the BLS PPI schedule page directly. Filed `confirmed` rather than the adjacency sweep's usual `estimate` because the date came from the BLS primary schedule, which is exactly what the `BLS:` prefix means and what `--validate` requires of it (the same page seeded ppi-2026-09-10).",
   },
   {
+    id: "import-export-prices-2026-09-16",
+    kind: "macro-print",
+    title: "U.S. Import and Export Price Indexes (Aug 2026 data)",
+    date: "2026-09-16",
+    status: "estimate",
+    source:
+      'EST: bls.gov/schedule/news_release/ximpim.htm lists "August 2026 | Sep. 16, 2026 | 08:30 AM" (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31',
+    impact: "low",
+    symbols: [],
+    notes:
+      "The print that most likely delivers the 'highest since 2022' import-inflation headline — a month BEFORE import-export-prices-2026-10-16, which is the event whose research discovered it. Arithmetic from the BLS public API: nonfuel (EIUIREXFUELS) sits at 135.8 in Jul 2026 against an Aug-2025 base of 129.8, so the trailing three-month pace (+0.371%/mo) alone gives +5.01% y/y — the first reading at or above 5.0% since May 2022 (5.95%). It is therefore the first real test of the 10-16 ledger's central base-effect claim, and the earlier of that ledger's two check dates. Lands 08:30 ET on FOMC decision morning (fomc-2026-09-16) alongside retail-sales-2026-09-16, so its own signal will be buried — which is a reason to read it, not to trade it. Low tier: these indexes deflate GDP net trade, not PCE. Discovered during the import-export-prices-2026-10-16 initial research.",
+  },
+  {
+    id: "fomc-blackout-start-2026-10-17",
+    kind: "macro-print",
+    title: "FOMC communications blackout begins (through 2026-10-29)",
+    date: "2026-10-17",
+    status: "estimate",
+    source:
+      "EST: derived from the Fed's own blackout rule — federalreserve.gov '2025-2027 FOMC Trading and External Communications Blackout Calendar' PDF states blackouts 'begin at 12:00 a.m. Eastern Time the second Saturday before a meeting and end at 11:59 p.m. Eastern Time the day after a meeting' (text layer parsed 2026-08-30 for fomc-blackout-start-2026-09-05). Applied to the confirmed Oct 27–28 meeting that gives start 2026-10-17, end 2026-10-29. Filed estimate because the blackout PDF was not re-fetched this session, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Not a print — a gate on who may speak. The gate falls at midnight ET entering Saturday 10-17, which makes Friday 10-16 the last morning on which official interpretation and new price data can meet: CPI 10-14, PPI 10-15 and import-export-prices-2026-10-16 all land in the final 72 hours before it, and monthly opex is the same session. After that the 10-28 decision is approached with no Fed voice available, exactly the configuration that made fomc-blackout-start-2026-09-05 load-bearing when a single Warsh speech moved September hike odds ~35% -> ~57% in one session. Discovered during the import-export-prices-2026-10-16 initial research; needs the Fed blackout PDF re-fetched to promote to confirmed.",
+  },
+  {
     id: "import-export-prices-2026-10-16",
     kind: "macro-print",
     title: "U.S. Import and Export Price Indexes (Sep 2026 data)",
     date: "2026-10-16",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: bls.gov/schedule/news_release/ximpim.htm lists "September 2026 | Oct. 16, 2026 | 08:30 AM" (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane\'s never-confirmed limit on an event discovered in-sweep, checked 2026-08-31',
+      'BLS: bls.gov/schedule/news_release/ximpim.htm ("September 2026 | Oct. 16, 2026 | 08:30 AM") + bls.gov/schedule/2026/10_sched.htm (U.S. Import and Export Price Indexes / September 2026 / 08:30 AM on Friday the 16th) — two independent primary views, both fetched direct 2026-08-31 (the pages 403 to browser headers alone and need Referer: bls.gov/ with Sec-Fetch-Site: same-origin)',
     impact: "low",
     symbols: [],
     notes:
-      "THE LAST CLEAN 12-MONTH READ in this series before the base-month hole. BLS permanently suppressed 864 of 1,625 import/export price indexes for the October 2025 reference month after the 2025 lapse, including the all-goods import and export indexes (BLS MXP shutdown notice; verified in the public API - EIUIR runs 2025-M09 140.8 -> 2025-M11 141.2 with no M10). This print's base month (Sep 2025) exists; import-export-prices-2026-11-17's (Oct 2025) does not. It is therefore the check date for two of that ledger's kill switches - the nonfuel-acceleration read (+4.5% y/y in Jul 2026, highest since Jun 2022, after six straight months of acceleration) and the tier read. Lands the morning after ppi-2026-10-15 and the same day as opex-2026-10-16. Discovered during the import-export-prices-2026-11-17 initial research.",
+      "THE LAST CLEAN 12-MONTH READ in this series before the base-month hole (BLS permanently suppressed 864 of 1,625 indexes for the October 2025 reference month; this print's Sep-2025 base exists, import-export-prices-2026-11-17's does not). Filed estimate on 2026-08-31 by the sibling sweep that discovered it; promoted to confirmed the same day by its own initial-research session with both BLS primaries in hand. THE Y/Y RISES EVEN IF PASS-THROUGH STOPS: the nonfuel base declines across the comparison (EIUIREXFUELS Jul-2025 130.0 -> Aug 129.8 -> Sep 129.8), so a flat Aug-Sep 2026 still prints +4.62% against July's published +4.46%. The m/m is the evidence; the y/y is partly artifact. A 10-01 LAPSE DELAYS THIS PRINT, IT DOES NOT DELETE IT - the collection window sets destroy-vs-delay, and BLS's MXP notice says September 2025 data was collected on schedule and merely delayed 47 days (Oct 17 -> Dec 3), unlike the October reference month which was cancelled. Lands 08:30 ET on monthly opex (opex-2026-10-16), the morning after ppi-2026-10-15, and is the last BLS price release the 10-28 FOMC sees (pce-2026-10-29 publishes after the statement) and the last before the blackout begins 10-17 - none of which is a transmission channel, so the low tier is correct and was re-checked, not assumed: these indexes deflate GDP net trade, not PCE.",
   },
   {
     id: "pce-2026-09-30",
