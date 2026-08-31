@@ -459,6 +459,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The last qualitative labor/inflation read the FOMC publishes before the Sep-16 decision, landing two days ahead of BLS payrolls (9/4). Matters more than usual this cycle: Warsh's 2026-08-28 keynote characterised labor as 'quite stable' at full employment with the last payroll print at −23k, so district-level hiring anecdotes are one of the few things that can corroborate or contradict that framing before the blackout. Discovered during the jobs-2026-09-04 pulse-check adjacency sweep, independently rediscovered during the ism-services-2026-09-03 sweep (2026-08-30) — same event, one entry.",
   },
   {
+    id: "challenger-job-cuts-2026-09-03",
+    kind: "macro-print",
+    title: "Challenger Job-Cut Report (Aug 2026)",
+    date: "2026-09-03",
+    status: "estimate",
+    source:
+      "EST: challengergray.com 2026 release calendar lists 2026-09-03 (05:30 ET) for August data — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, and the publisher's own calendar carries a 'subject to change' note, checked 2026-08-31",
+    impact: "low",
+    symbols: [],
+    notes:
+      "Announced-layoffs proxy, the session before BLS payrolls (9/4) and a sibling of the tracked ADP print (9/2) — it supplies the industry and geographic layoff detail weekly claims do not. Filed `low`, not `medium` like ADP, to respect this file's standing note that second-order labor surveys are noisier than the prints tracked here; weekly jobless claims stay deliberately omitted. Matters this cycle only because Warsh's 2026-08-28 keynote pinned the hawkish case on a 'low fire, low hire' labor market being stable — announced job cuts are one of the few reads that can contradict the 'low fire' half before the 9/5 blackout. Discovered during the jobs-2026-09-04 pulse-check adjacency sweep.",
+  },
+  {
     id: "jobs-2026-09-04",
     kind: "macro-print",
     title: "Employment Situation (Aug 2026 data)",
