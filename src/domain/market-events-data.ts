@@ -722,6 +722,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The first manufacturing read after the 10-28 FOMC and the last hard macro print before the 11-03 midterms (est) — and it beats sloos-2026-11-02 to the same day's tape by four hours, which is part of why that survey has no window to be the story. Prices-paid + new-orders reprice the Fed-cut path and 10Y real yields, the discount rate on long-duration tech. Discovered during the sloos-2026-11-02 initial research: the corridor sweep found the 09-01 and 10-01 entries tracked and the 11-02 slot empty.",
   },
   {
+    id: "ism-services-2026-11-04",
+    kind: "macro-print",
+    title: "ISM Services PMI (Oct 2026 data)",
+    date: "2026-11-04",
+    status: "estimate",
+    source:
+      "EST: ISM publishes the Services PMI at 10:00 ET on the third business day of the month (the cadence the confirmed 2026-09-03 entry follows); November 2026's first three business days are Mon 11-02, Tue 11-03, Wed 11-04 — Election Day is not a market or federal holiday. ismworld.org's ROB calendar was re-fetched direct 2026-08-31 and still 302s to ecommerce.ismworld.org/SSO/Login.aspx, and no aggregator convergence was obtained for this specific date, so this is a rule-derived date and nothing more, checked 2026-08-31",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The first services read after the 11-03 midterms and the first national activity data published AFTER the vote — the mirror of ism-manufacturing-2026-11-02 (est), which is the last one published before it. Services is ~70% of the economy and its prices component is the single biggest non-CPI rate-path mover in this set. Read it, do not trade it: the manufacturing sibling's release-day reaction function was MEASURED this session across 8 releases and showed no equity reaction at all (SPY at the 19th-89th percentile of its own 2026 |move| distribution, 7 of 8 at or below the 68th), with the only loud leg — TLT down 8/8 — contaminated by a month-turn effect and rank-ordered AGAINST print strength. Nothing licenses treating this sibling as more powerful than that. Discovered during the ism-manufacturing-2026-11-02 initial research (2026-08-31): the corridor sweep found the manufacturing slot tracked for 11-02 and the services slot two days later empty.",
+  },
+  {
     id: "sloos-2026-11-02",
     kind: "macro-print",
     title: "Senior Loan Officer Opinion Survey on Bank Lending Practices (SLOOS)",
