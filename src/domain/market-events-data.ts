@@ -632,6 +632,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Last major payroll input between the Sep dots and the Oct 27–28 vote (no SEP at that meeting).",
   },
   {
+    id: "opec-jmmc-68th-2026-10-04",
+    kind: "geopolitical",
+    title: "68th OPEC+ Joint Ministerial Monitoring Committee (JMMC)",
+    date: "2026-10-04",
+    status: "estimate",
+    source:
+      "EST: opec.org press release 2026-08-02 (67th JMMC) states verbatim 'The next meeting of the JMMC (68th) is scheduled for 4 October 2026' — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-31",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The successor checkpoint to opec-plus-meeting-2026-09-06, and deliberately filed `low`: the JMMC monitors DoC conformity and compensation and RECOMMENDS — it does not set quotas, which is the seven/eight-country group's job. What makes it worth tracking anyway is the 2027 baseline fight: third-party Maximum-Sustainable-Capacity audits commissioned across Jan-Sep 2026 set the 2027 baselines from which every quota derives, Iraq is pushing for a higher individual number, and Kazakhstan carries the alliance's largest cumulative compensation burden — the JMMC is where conformity and compensation get aired in public before the group decides. Discovered during the opec-plus-meeting-2026-09-06 initial research (2026-08-31).",
+  },
+  {
     id: "mrvl-investor-day-2026-10-06",
     kind: "product-launch",
     title: "MRVL Investor Day (NYC)",
