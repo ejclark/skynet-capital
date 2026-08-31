@@ -34,8 +34,14 @@
 
   /* the field ladder's green ramp (Eric, live review): leaders wear the DEEP green, the tail a
      soft light green — intensity carries the standing without neon at the top or grey at the
-     bottom. Rows mix --ramp-hi → --ramp-lo by their standing. */
-  --ramp-hi: #1e8348;
+     bottom. Rows mix --ramp-hi → --ramp-lo by their standing.
+     --ramp-hi is the ONE dial for the whole spectrum (#1043): every row is an interpolation
+     anchored on it, so deepening it widens the top-to-bottom spread without touching a single
+     other shade. Hue and saturation are held (H145 S63) and only lightness moves, which is what
+     keeps it forest green rather than a different colour. L27.5% is a floor, not a preference:
+     the leader's VALUE is painted in this same token against --surface-2, and one step darker
+     puts that number under the 3:1 contrast line. Deeper forest is legible on light only. */
+  --ramp-hi: #1a723f;
   --ramp-lo: #9ed3b2;
 
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -82,7 +88,9 @@
     --neg: #cf222e;
     --accent-contrast: #ffffff;
     --pos-contrast: #ffffff;
-    --ramp-hi: #0f5e2c;
+    /* on white the ramp has room the dark column doesn't: deepening it RAISES the leader's
+       contrast (11:1) instead of spending it, so the light forest green goes further (#1043). */
+    --ramp-hi: #0b4621;
     --ramp-lo: #7dbd95;
     --elev-recessed: inset 0 1px 3px rgba(11, 15, 20, 0.06);
     --elev-base: 0 1px 2px rgba(11, 15, 20, 0.05);
@@ -105,7 +113,9 @@
   --neg: #cf222e;
   --accent-contrast: #ffffff;
   --pos-contrast: #ffffff;
-  --ramp-hi: #0f5e2c;
+  /* the light ramp, twice over — this block and the prefers-color-scheme copy above must move
+     together; nothing computes one from the other. */
+  --ramp-hi: #0b4621;
   --ramp-lo: #7dbd95;
   --elev-recessed: inset 0 1px 3px rgba(11, 15, 20, 0.06);
   --elev-base: 0 1px 2px rgba(11, 15, 20, 0.05);
