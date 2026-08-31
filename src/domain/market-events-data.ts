@@ -700,13 +700,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "FOMC minutes (Oct 27-28 meeting)",
     date: "2026-11-18",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: federalreserve.gov/newsevents/2026-november.htm lists 'FOMC Minutes (October 27-28 meeting)' at 2:00 p.m. on November 18 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+      "FED: two federalreserve.gov primaries fetched direct 2026-08-31 by the fomc-minutes-2026-11-18 initial research (an independent session from the sweep that proposed it, so no self-confirm) — newsevents/2026-november.htm lists 'FOMC Minutes Meeting of October 27-28' at 2:00 p.m. on November 18, and monetarypolicy/fomccalendars.htm states the convention verbatim, 'The minutes of regularly scheduled meetings are released three weeks after the date of the policy decision', which all five published 2026 meetings obey (Jul 28-29 -> Aug 19). Oct 28 + 21 days = Wednesday Nov 18: the published row and the published rule agree, checked 2026-08-31",
     impact: "medium",
     symbols: [],
     notes:
-      "The last structured read on the Committee's reaction function before the 12-08/09 SEP meeting, and the only one that arrives before the 11-28 blackout with a full week of sessions behind it. Matters for the same reason fomc-minutes-2026-10-07 did: Warsh's 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and that forward guidance has overstayed its welcome, so the vote split and dissent language are close to the only structured evidence available between meetings. Read it, do not trade it — minutes are three weeks stale by publication. Discovered during the beige-book-2026-11-25 initial research, off the November calendar page that dated that edition.",
+      "READ IT, DO NOT TRADE IT — and that refusal is now MEASURED, not asserted (see the ledger): both minutes releases under this chair moved the tape under a third of a percent (S&P -0.28% on 2026-07-08, +0.21% on 2026-08-19 despite explicitly hawkish content, that session driven by Treasury's buyback doubling), while Warsh's single 08-28 speech moved September hike odds ~35-36% -> ~58-60%. What earns it a calendar slot is SCARCITY, NOT POWER: it is the last Committee-authored document before the 12-08/09 SEP meeting, and federalreserve.gov's November calendar lists NO speeches at all with the blackout starting 11-28, so the record between it and the December dots is this, the Beige Book, and silence. Unusually stale even for minutes — the three-week gap contains the 11-03 midterms, cpi-2026-11-10 and ppi-2026-11-13. Read it for exactly three things: the October vote split, the dissent count, and whether the dissent language hardens from July's 9-3 (most dissents against a new chair since 1970). The window's positioning date is opex-2026-11-20, not this. Discovered during the beige-book-2026-11-25 initial research, off the November calendar page that dated that edition.",
+  },
+  {
+    id: "sloos-2026-11-02",
+    kind: "macro-print",
+    title: "Senior Loan Officer Opinion Survey on Bank Lending Practices (SLOOS)",
+    date: "2026-11-02",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-november.htm lists 'Senior Loan Officer Opinion Survey on Bank Lending Practices (SLOOS)' at 2:00 p.m. on November 2 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The quarterly read on how tight bank credit actually is — the transmission channel a hiking Committee is watching, and the first Fed publication of November. Filed `low` deliberately: it is a survey of standards and demand, not a price, and it has no measured reaction function in this book. It earns a row because the corridor it opens is the one this calendar cares about most (midterms 11-03, jobs 11-06, cpi-2026-11-10, ppi-2026-11-13, fomc-minutes-2026-11-18, beige-book-2026-11-25, blackout 11-28, then the 12-09 dots) and because, like the Beige Book, it is Fed-published and therefore survives a funding lapse where BLS data does not. Discovered during the fomc-minutes-2026-11-18 initial research, off the same November calendar page.",
   },
   {
     id: "fomc-blackout-start-2026-11-28",
