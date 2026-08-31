@@ -726,9 +726,9 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "FOMC minutes (Dec 8-9 meeting)",
     date: "2026-12-30",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: federalreserve.gov/newsevents/2026-december.htm lists 'FOMC Minutes — Meeting of December 8-9' at 2:00 p.m. on December 30 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep; the page's own last-update stamp is 2025-06-24, checked 2026-08-31",
+      "FED: two federalreserve.gov primaries re-fetched direct 2026-08-31 — newsevents/2026-december.htm lists 'FOMC Minutes' at 2:00 p.m. on December 30, and monetarypolicy/fomccalendars.htm states the convention verbatim ('The minutes of regularly scheduled meetings are released three weeks after the date of the policy decision'), with Dec 9 + 21 days = Wednesday 2026-12-30 and all five published 2026 meetings obeying the rule (Jul 28-29 -> Aug 19). The prior estimate note's caveat — the December page's 2025-06-24 last-update stamp — was tested and DISPROVED this session: the August 2026 page carries the same June-2025 stamp while naming 'Chairman Kevin Warsh', a title he did not hold on that date, so the stamp tracks the page skeleton and not its contents. PROMOTED estimate->confirmed by the fomc-minutes-2026-12-30 initial research, checked 2026-08-31",
     impact: "medium",
     symbols: [],
     notes:
@@ -1035,6 +1035,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes: "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator).",
+  },
+  {
+    id: "pce-2026-12-23",
+    kind: "macro-print",
+    title: "PCE / Personal Income & Outlays (Nov 2026 data)",
+    date: "2026-12-23",
+    status: "estimate",
+    source:
+      'EST: bea.gov/news/schedule fetched direct 2026-08-31 lists an 8:30 AM release on December 23, but this session\'s parse returned that line TRUNCATED ("GDP (Third Estimate), Industries, Corporate Profits, State GDP, and State") with no visible Personal Income and Outlays entry. The 12-23 PCE date is corroborated two other ways: this repo\'s own pce-2026-11-25 entry records a 2026-08-29 read of the same BEA page saying "the next release on 12-23", and an aggregator (financecalendar.com) gives 2026-12-23 08:30 ET for November 2026 data. Filed estimate deliberately — no clean primary line was fetched today, and this calendar\'s seeding already caught an aggregator publishing a wrong date. Discovered during the fomc-minutes-2026-12-30 initial research, checked 2026-08-31',
+    impact: "high",
+    symbols: [],
+    notes:
+      "The gap in an already-tracked series — PCE runs 08-26 -> 09-30 -> 10-29 -> 11-25 and then stopped. It matters here because it is the LAST inflation read of 2026 and the fourth to land after the 12-09 vote: the Dec 8-9 Committee set both its decision and its dots without cpi-2026-12-10 (which printed the next morning), and by the time fomc-minutes-2026-12-30 publishes, the tape has also absorbed ppi-2026-12-15, import-export-prices-2026-12-17, opex-2026-12-18 and this print. Next FOMC after 12-09 is not until 2027-01-26/27 (FED calendar), so this is the last inflation data point of a 48-day policy vacuum. Confirm against a clean bea.gov/news/schedule line before any date-keyed use; estimate widens caution only.",
   },
   {
     id: "georgia-psc-data-center-cost-shift-2026-12-31",
