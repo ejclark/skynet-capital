@@ -1041,13 +1041,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "PCE / Personal Income & Outlays (Nov 2026 data)",
     date: "2026-12-23",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: bea.gov/news/schedule fetched direct 2026-08-31 lists an 8:30 AM release on December 23, but this session\'s parse returned that line TRUNCATED ("GDP (Third Estimate), Industries, Corporate Profits, State GDP, and State") with no visible Personal Income and Outlays entry. The 12-23 PCE date is corroborated two other ways: this repo\'s own pce-2026-11-25 entry records a 2026-08-29 read of the same BEA page saying "the next release on 12-23", and an aggregator (financecalendar.com) gives 2026-12-23 08:30 ET for November 2026 data. Filed estimate deliberately — no clean primary line was fetched today, and this calendar\'s seeding already caught an aggregator publishing a wrong date. Discovered during the fomc-minutes-2026-12-30 initial research, checked 2026-08-31',
+      'BEA: bea.gov/news/schedule re-fetched direct 2026-08-31 as RAW HTML and tag-stripped in-session, which yields the line the previous pass could not see — "December 23 | 8:30 AM | Personal Income and Outlays, November 2026" verbatim, alongside "GDP (Third Estimate), Industries, Corporate Profits, State GDP, and State Personal Income, 3rd Quarter 2026" in the same 8:30 slot. The earlier EST: label came from a TRUNCATED parse of this same page, not from a missing source; this entry\'s own note set the bar ("confirm against a clean bea.gov/news/schedule line") and that bar is now met. Flipped from estimate by the pce-2026-12-23 initial research, checked 2026-08-31',
     impact: "high",
     symbols: [],
     notes:
-      "The gap in an already-tracked series — PCE runs 08-26 -> 09-30 -> 10-29 -> 11-25 and then stopped. It matters here because it is the LAST inflation read of 2026 and the fourth to land after the 12-09 vote: the Dec 8-9 Committee set both its decision and its dots without cpi-2026-12-10 (which printed the next morning), and by the time fomc-minutes-2026-12-30 publishes, the tape has also absorbed ppi-2026-12-15, import-export-prices-2026-12-17, opex-2026-12-18 and this print. Next FOMC after 12-09 is not until 2027-01-26/27 (FED calendar), so this is the last inflation data point of a 48-day policy vacuum. Confirm against a clean bea.gov/news/schedule line before any date-keyed use; estimate widens caution only.",
+      "The gap in an already-tracked series — PCE runs 08-26 -> 09-30 -> 10-29 -> 11-25 and then stopped. It matters here because it is the LAST inflation read of 2026 and the fourth to land after the 12-09 vote: the Dec 8-9 Committee set both its decision and its dots without cpi-2026-12-10 (which printed the next morning), and by the time fomc-minutes-2026-12-30 publishes, the tape has also absorbed ppi-2026-12-15, import-export-prices-2026-12-17, opex-2026-12-18 and this print. Next FOMC after 12-09 is not until 2027-01-26/27 (FED calendar), so this is the last inflation data point of a 48-day policy vacuum. EXISTENCE RISK IS THE HEADLINE (pce-2026-12-23 initial research, 2026-08-31): the 2025 analogue of this exact release was CANCELED — BEA's own release page states the Oct+Nov 2025 report 'replaces releases originally scheduled for November 26 and December 19, 2025' — and published combined on 2026-01-22, 34 days late. And unlike pce-2026-11-25, this print sits OUTSIDE the funded corridor: the House CR expires 12-04 and the Senate's 12-11, both before this date. Second structural note: 12-23 is the last full session before a 1:00pm ET close 12-24 and a closed 12-25 (nyse.com), the same holiday trap as 11-25 — and the measured Christmas-week PCE slot (+0.59% / +0.17% / +1.09% close-to-close) is matched by +0.88% in 2025 when there was no print at all, so a green session here is the null, not a signal.",
   },
   {
     id: "georgia-psc-data-center-cost-shift-2026-12-31",
@@ -1061,6 +1061,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "Georgia's instance of the AI data-center backlash the midterm-elections-2026-11-03 research named as the real political channel to this book's AI-infra sleeve — and unlike a campaign theme it has a regulator, a proceeding and a deadline. PSC staff put the potential shift at up to 11% per month on the average residential bill by 2028; Commissioner Hubbard cites ~$1B in fuel costs data centers pay nothing toward and ~$118M of firm gas transportation at issue in 2027. Context: the PSC certified 9,985 MW of new generation on 2025-12-19 (~80% expected to serve data centers) and base rates are frozen through 2028. Same shape as the tracked texas-puct-audit-2026-08-20 entry — a state regulator's dated proceeding as an AI-energy watch item. Discovered during the georgia-senate-runoff-2026-12-01 initial research. Initial research 2026-08-29 (docs/research/events/) found the dollar figures are a rate-CLASS reallocation, revenue-neutral to Georgia Power/Southern (base rates frozen through 2028; the freeze excludes pass-through fuel, the bucket in dispute) and far too small to reach hyperscaler capex — no earnings channel, a precedent channel. The structural catalyst is that 12-31 findings reach the current 3R-2D commission while remedies fall to the one seated January 2027, decided by the 2026-11-03 PSC elections in Districts 3 and 5.",
+  },
+  {
+    id: "fomc-2027-01-27",
+    kind: "macro-print",
+    title: "FOMC decision (meeting Jan 26–27, no SEP)",
+    date: "2027-01-27",
+    status: "estimate",
+    source:
+      'EST: federalreserve.gov/monetarypolicy/fomccalendars.htm fetched direct 2026-08-31 lists "January 26-27" as the first 2027 meeting with no projections asterisk (March 16-17 carries the first 2027 SEP). Filed estimate NOT for want of a primary but because the Fed\'s own page states every 2027 date is "tentative until confirmed at the meeting immediately preceding it" — i.e. the 2026-12-09 meeting confirms this one. Statement time assumed 14:00 ET per the standing convention, not separately sourced. Discovered during the pce-2026-12-23 initial research, checked 2026-08-31',
+    impact: "high",
+    symbols: [],
+    notes:
+      "The terminus of the 48-day policy vacuum that opens at fomc-2026-12-09 — a gap three December ledgers (ppi-2026-12-15, fomc-minutes-2026-12-30, pce-2026-12-23) already reason about by hand with no calendar entry to anchor it. Nothing between 12-09 and this date can produce a policy response, which is exactly why the December prints get read as information rather than as catalysts. Two open questions this entry exists to track: whether the Committee sees the December PCE before it votes (BEA's schedule as published 2026-08-31 ends at pce-2026-12-23, and the two most recent analogues split — Dec-2023 data released 2024-01-26 BEFORE that year's Jan 30-31 meeting, Dec-2024 data released 2025-01-31 AFTER the Jan 28-29 one), and whether the blackout arithmetic holds (second Saturday before a Tuesday start = 2027-01-16). No SEP, so this meeting cannot revise the December dots — it can only act on them. Estimate widens caution only; promote once the 12-09 meeting confirms the 2027 calendar.",
   },
   {
     id: "ftc-v-amazon-antitrust-trial-2027-03-29",
