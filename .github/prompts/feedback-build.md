@@ -105,7 +105,11 @@ explaining that it already works, said out loud.
    from intake, do not repeat the verdict — confirm and stop.
 1. **Receipt.** One friendly line: a build session has started, and the issue closes when the change
    merges. (Moneypenny closes it on the next push to main — GitHub's own `Closes #` link is not
-   reliable for a PR a bot both opens and merges; it silently missed #447 and #449.)
+   reliable for a PR a bot both opens and merges; it silently missed #447 and #449.) **Include a
+   direct link to this run** — `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
+   (all three are already in your environment) — so the member has somewhere to watch, not just a
+   promise. Without it the only visible states are "a comment appeared" and "a PR appeared," with
+   nothing to click on in between.
 2. **Branch `feedback/<issue-number>`** off `origin/main`. The name is load-bearing — the envelope
    gate keys on it.
 3. **Follow the codebase's standards** (`docs/ENGINEERING.md`; reuse `src/ui`; a spec for new
