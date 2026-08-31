@@ -75,6 +75,91 @@ describe("FeedbackDoor", () => {
     expect(screen.getByText("🧪 Enhancement — extend current functionality")).toBeInTheDocument();
   });
 
+  // #1020 — the AI-assisted path lacked a way to set a custom title or attach a screenshot before
+  // the coach drafts. Both now live on the coach's opening screen and carry into the review form.
+  describe("the coach's opening note (#1020)", () => {
+    const jsonResponse = (body: unknown) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+
+    let realFetch: typeof globalThis.fetch;
+    let lastRequestBody: unknown;
+
+    beforeEach(() => {
+      realFetch = globalThis.fetch;
+      globalThis.fetch = ((_url: string, init?: RequestInit) => {
+        lastRequestBody = init?.body ? JSON.parse(String(init.body)) : undefined;
+        return Promise.resolve(
+          jsonResponse({
+            ok: true,
+            done: true,
+            title: "The coach's own title",
+            details: "d",
+            spec: {},
+          }),
+        );
+      }) as typeof globalThis.fetch;
+    });
+
+    afterEach(() => {
+      globalThis.fetch = realFetch;
+    });
+
+    it("shows a custom-title field distinct from the review form's own Title field", () => {
+      open();
+
+      expect(screen.getByLabelText("Custom title")).toBeInTheDocument();
+      // Two "Title"-ish fields exist at once (coach + hidden review form) — they must not collide.
+      expect(screen.getAllByLabelText(/title/i)).toHaveLength(2);
+    });
+
+    it("a member-typed title wins over the coach's own generated title in the review form", async () => {
+      open();
+
+      fireEvent.change(screen.getByLabelText("Custom title"), {
+        target: { value: "My own title" },
+      });
+      fireEvent.change(screen.getByLabelText("What's on your mind?"), {
+        target: { value: "the board looks wrong" },
+      });
+      await act(async () =>
+        fireEvent.click(screen.getByRole("button", { name: "Shape it with me" })),
+      );
+
+      expect(screen.getByLabelText("Title")).toHaveValue("My own title");
+    });
+
+    it("leaves the coach's own title in place when the member left the custom field blank", async () => {
+      open();
+
+      fireEvent.change(screen.getByLabelText("What's on your mind?"), {
+        target: { value: "the board looks wrong" },
+      });
+      await act(async () =>
+        fireEvent.click(screen.getByRole("button", { name: "Shape it with me" })),
+      );
+
+      expect(screen.getByLabelText("Title")).toHaveValue("The coach's own title");
+    });
+
+    it("sends no images field on a turn with nothing attached", async () => {
+      open();
+
+      fireEvent.change(screen.getByLabelText("What's on your mind?"), {
+        target: { value: "the board looks wrong" },
+      });
+      await act(async () =>
+        fireEvent.click(screen.getByRole("button", { name: "Shape it with me" })),
+      );
+
+      const sentMessages = (lastRequestBody as { messages: readonly { images?: unknown }[] })
+        .messages;
+      expect(sentMessages[0]?.images).toBeUndefined();
+    });
+  });
+
   // The coach talks to the server, so these two hold its reply open and decide when it lands.
   describe("when a coach turn is in flight", () => {
     const jsonResponse = (body: unknown) =>
