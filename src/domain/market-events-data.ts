@@ -615,6 +615,18 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "ppi-2026-10-15",
+    kind: "macro-print",
+    title: "PPI release (Sep 2026 data)",
+    date: "2026-10-15",
+    status: "confirmed",
+    source: "BLS: bls.gov/schedule/news_release/ppi.htm — 08:30 ET, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The CPI/PPI whipsaw pair the calendar already tracks for 09-10/09-11, but REVERSED — here PPI lands the morning AFTER CPI, so it scores the CPI reaction rather than setting up for it, and both land inside the two-week run-up to the 10-28 FOMC. Discovered during the cpi-2026-10-14 pulse-check adjacency sweep, read off the BLS PPI schedule page directly. Filed `confirmed` rather than the adjacency sweep's usual `estimate` because the date came from the BLS primary schedule, which is exactly what the `BLS:` prefix means and what `--validate` requires of it (the same page seeded ppi-2026-09-10).",
+  },
+  {
     id: "pce-2026-09-30",
     kind: "macro-print",
     title: "PCE / Personal Income & Outlays (Aug 2026 data) + BEA annual update",
