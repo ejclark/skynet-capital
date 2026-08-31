@@ -674,13 +674,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Fed Beige Book (pre-FOMC edition)",
     date: "2026-10-14",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: federalreserve.gov/newsevents/2026-october.htm lists 'Beige Book' at 2:00 p.m. on October 14 (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+      "FED: two independent federalreserve.gov primaries fetched direct 2026-08-31 — newsevents/2026-october.htm lists 'Beige Book' at 2:00 p.m. on October 14, and the Board's Beige Book schedule page (monetarypolicy/publications/beige-book-default.htm) lists Oct 14 as the seventh of eight 2026 editions (Jan 14, Mar 4, Apr 15, Jun 3, Jul 15, Sep 2, Oct 14, Nov 25). Promoted estimate -> confirmed 2026-08-31 by its own initial-research session, which held both primaries itself; the no-self-confirm limit binds the proposing sweep, not the researching session, checked 2026-08-31",
     impact: "medium",
     symbols: [],
     notes:
-      "THE LAST THING THE FED ITSELF PUBLISHES BEFORE THE 10-17 BLACKOUT, and it lands 14:00 ET on CPI day (cpi-2026-10-14, 08:30 ET) — one session where the quantitative and the qualitative inflation reads arrive together and Fed officials are still permitted to react to both. It is also a Fed publication rather than Fed speech, so unlike a governor speech it is unaffected by Warsh's move to a quieter Fed. In the lapse branch it gains weight rather than losing it: the Fed is self-funded and publishes through a shutdown, while BLS does not (the 2025 lapse cancelled the October CPI outright), so a 10-01 lapse could leave this district-anecdote read as the ONLY fresh inflation evidence the 10-28 FOMC sees. Same series as beige-book-2026-09-02; one entry per edition. Discovered during the fomc-blackout-start-2026-10-17 initial research.",
+      "THE LAST THING THE FED ITSELF PUBLISHES BEFORE THE 10-17 BLACKOUT, and it lands 14:00 ET on CPI day (cpi-2026-10-14, 08:30 ET) — but its own initial research found the session ranking is NOT a tie: CPI is confirmed/high at 08:30 and this is a qualitative 14:00 report with no consensus number, so 10-14 is a CPI session with a Beige Book in it. THE CUTOFF IS THE OTHER HALF: every edition states a collection cutoff ~9 days before release (July 2026 edition collected on or before Jul 6; Oct 2025 edition on or before Oct 6), so this one closes its books ~10-05 and cannot contain one word about the CPI printing that same morning. It is a Fed publication rather than Fed speech, so unlike a governor speech it is unaffected by Warsh's move to a quieter Fed. In the lapse branch it gains weight rather than losing it: the Fed is self-funded and PUBLISHED THE OCT-2025 BEIGE BOOK ON SCHEDULE 2025-10-15 DURING the Oct 1-Nov 12 2025 shutdown, while BLS deleted the October 2025 CPI outright — so a 10-01 lapse could leave this district-anecdote read as the only fresh federal evidence the 10-28 FOMC sees (calibrated down: the 2025 edition yielded exactly one shutdown line). Read the twelve District reports, not the national summary — Boston Fed CPP 2025-11-06 and Cleveland Fed EC 2024-08 both locate the forecasting content in District dispersion. Same series as beige-book-2026-09-02; one entry per edition. Discovered during the fomc-blackout-start-2026-10-17 initial research.",
+  },
+  {
+    id: "beige-book-2026-11-25",
+    kind: "macro-print",
+    title: "Fed Beige Book (pre-FOMC edition)",
+    date: "2026-11-25",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/monetarypolicy/publications/beige-book-default.htm lists Nov 25 as the eighth and last of the 2026 editions (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's rule that an event discovered in-sweep is proposed, never self-confirmed, checked 2026-08-31",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The pre-FOMC edition against the confirmed fomc-2026-12-09 (which carries an SEP and dot plot, unlike the 10-28 meeting), and the last Beige Book of 2026. Same series and same reading protocol as beige-book-2026-10-14 — District reports over the national summary, ~9-day collection cutoff (so ~11-16, which is AFTER cpi-2026-11-10 and ppi-2026-11-13 and after the 11-03 midterms, unlike the October edition's cutoff). Discovered during the beige-book-2026-10-14 initial research, off the same Board schedule page that dated it.",
   },
   {
     id: "cpi-2026-10-14",
