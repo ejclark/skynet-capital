@@ -568,6 +568,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The last revision to the +1.5% Q2 base that the 10-29 Q3 advance estimate gets measured against — which is the whole reason it is tracked; a revision here shifts the acceleration story before any Q3 number exists. Lands ON the FY2027 funding deadline, so in the lapse branch it is the last federal GDP release published before the blackout (BEA cancelled the Q3 advance estimate outright in the 2025 lapse). Marked `confirmed` on BEA's own schedule page fetched 2026-08-29 — the same primary and check date as the 10-29 and PCE entries, not an inferred cadence. Discovered during the gdp-q3-2026-advance-2026-10-29 initial research.",
   },
   {
+    id: "crwv-fully-connected-2026-09-29",
+    kind: "product-launch",
+    title: "CoreWeave Fully Connected 2026 (Moscone South, SF) — Sep 29–Oct 1",
+    date: "2026-09-29",
+    status: "estimate",
+    source:
+      "NEWS: coreweave.com/fully-connected-2026 states Sep 29–Oct 1 2026, Moscone South, keynotes Intrator/Salanki/Goldberg + NVIDIA's Ian Buck; CoreWeave's own X post (#FullyConnected26) repeats the dates — company-primary but filed estimate per this lane's adjacency rule (a discovered event is proposed, never self-confirmed), checked 2026-08-31",
+    impact: "medium",
+    symbols: ["CRWV"],
+    notes:
+      "CoreWeave's own customer/product conference, ~6 weeks before the est. 2026-11-10 Q3 print — the one company-controlled news venue inside the pre-print window, and the venue where product/capacity announcements would land ahead of that print. Two prior crwv-2026-11-10-print pulses (08-17, 08-24) recorded the conference as 'reported for September, no exact date discoverable' and could not propose it; the dates are now on CoreWeave's own site. Day 1 sits on the 09-29 MU print and the 09-30 funding deadline / Chicago PMI / GDP cluster, so the corridor is crowded. Discovered during the crwv-2026-11-10-print pulse-check adjacency sweep.",
+  },
+  {
     id: "ism-manufacturing-2026-10-01",
     kind: "macro-print",
     title: "ISM Manufacturing PMI (Sep 2026 data)",
