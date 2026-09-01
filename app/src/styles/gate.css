@@ -32,8 +32,11 @@
   margin-bottom: 5px;
   color: var(--muted);
 }
+/* `textarea` belongs here, not just input/select: a .field textarea that opts out of this rule
+   falls back to the UA's own white box on a dark ground (the feedback form's Details box did). */
 .field input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border);

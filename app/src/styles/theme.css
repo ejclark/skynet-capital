@@ -17,6 +17,11 @@
  */
 
 :root {
+  /* Form controls, scrollbars and the canvas follow the palette. The server-rendered
+     surfaces set this in `src/server/page-shell.ts`; without it here the React shell's
+     inputs and textareas render UA-light on a dark ground. */
+  color-scheme: dark;
+
   /* docs/BRAND.md — dark column */
   --bg: #0b0f14;
   --surface: #131a22;
@@ -80,6 +85,8 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
     /* docs/BRAND.md — light column */
     --bg: #f7f9fb;
     --surface: #ffffff;
@@ -107,6 +114,8 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
+
   --bg: #f7f9fb;
   --surface: #ffffff;
   --surface-2: #f0f4f8;

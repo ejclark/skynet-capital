@@ -60,6 +60,7 @@ function jumpTo(key: string, navigate: (opts: { to: string }) => unknown): boole
   return false;
 }
 
+/** @category navigation */
 export function KeyboardChords(): ReactElement | null {
   const navigate = useNavigate();
   const [helpOpen, setHelpOpen] = useState(false);

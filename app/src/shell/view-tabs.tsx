@@ -51,6 +51,7 @@ function NewViewForm({
   );
 }
 
+/** @category navigation */
 export function ViewTabs({
   deskId,
   query,

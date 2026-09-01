@@ -7,6 +7,7 @@ import type { PlayInfo } from "../live/options";
  * the ladder's risk order. Locked rungs render dimmed with the lock; picking one still routes
  * to the gate, whose locked panel names the path (the server refuses regardless). The catalog
  * text is the server's verbatim (`trade-types.ts`).
+ * @category plays
  */
 export function PlayPicker({
   deskId,

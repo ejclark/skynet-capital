@@ -11,6 +11,7 @@ import { type CommunityCelebration, claimCommunityMilestones } from "../live/fee
  * different evidence (a fill vs. a filing) and reusing the CSS classes (`unlock-banner` et al.,
  * `app/src/styles/unlock.css`, loaded globally) is enough to look like one system without forcing
  * one component to speak both domains.
+ * @category gates
  */
 export function CommunityUnlockBanner({
   celebrations,

@@ -1,0 +1,36 @@
+/* The observatory shell's single stylesheet entry — every sheet the app loads, in cascade order.
+ *
+ * Why it exists: `main.tsx` used to carry 27 individual `import "./styles/*.css"` lines, which made
+ * the cascade order an accident of an import list nobody reads, and gave anything outside the app
+ * (the /design-sync export, an offline render) no single file to point at. The order below is the
+ * order `main.tsx` had — alphabetical, with `theme.css` landing between `shell` and `ticket` —
+ * preserved verbatim so no rule changes which declaration wins. Add a new sheet in alphabetical
+ * position unless it deliberately needs to override a later one.
+ */
+@import "./admin.css";
+@import "./board.css";
+@import "./collections.css";
+@import "./compare.css";
+@import "./decisions.css";
+@import "./desk.css";
+@import "./draft-builder.css";
+@import "./drawer.css";
+@import "./feedback.css";
+@import "./gate.css";
+@import "./hero.css";
+@import "./hovercard.css";
+@import "./join.css";
+@import "./kbd.css";
+@import "./learn.css";
+@import "./motion.css";
+@import "./outpost.css";
+@import "./pulse.css";
+@import "./rail.css";
+@import "./research.css";
+@import "./settings.css";
+@import "./shell.css";
+@import "./theme.css";
+@import "./ticket.css";
+@import "./unlock.css";
+@import "./views.css";
+@import "./wire.css";

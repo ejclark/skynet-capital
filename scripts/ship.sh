@@ -232,7 +232,10 @@ EOF_SHOTS
   # can be a legitimate exception a script can't judge.
   node scripts/test-quality-scan.mjs "$branch" --base "$base" 2>/dev/null || true
 
-  echo "ship: pushing $branch…"
+  # Braces are load-bearing: stock macOS bash (3.2) reads the ellipsis bytes as identifier
+  # characters, so a bare $branch… is the undefined variable "branch…" and set -u kills the run
+  # right before the push. Brace any variable followed by a non-ASCII character in this file.
+  echo "ship: pushing ${branch}…"
   local n=0; until git push -u origin "$branch" 2>/dev/null; do
     n=$((n+1)); [ "$n" -le 4 ] || { echo "ship: push failed after retries" >&2; exit 1; }
     sleep $((2**n)); done

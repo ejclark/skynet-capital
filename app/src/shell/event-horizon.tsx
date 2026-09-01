@@ -39,6 +39,7 @@ function monthDays(key: string): (string | null)[] {
   return days;
 }
 
+/** @category hero */
 export function EventHorizon({
   events,
   selected,

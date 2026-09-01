@@ -56,6 +56,7 @@ function LockedPanel({ play }: { readonly play: PlayInfo }): ReactElement {
   );
 }
 
+/** @category trading */
 export function OptionGate({
   deskId,
   play,

@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
  * The pre-trade gate's shared frame (#738 phase 10b) — the merge-box status head and the
  * disarm doctrine note, extracted from `trade-gate.tsx` so the share ticket and the options
  * ticket render the SAME gate anatomy: approval never outlives the thing it approved.
+ * @category gates
  */
 
 export function GateHead({
@@ -21,6 +22,7 @@ export function GateHead({
   );
 }
 
+/** @category gates */
 export function DisarmNote(): ReactElement {
   return (
     <p className="gate-note">
