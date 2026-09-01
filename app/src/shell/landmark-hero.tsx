@@ -17,6 +17,7 @@ const prefersStill = (): boolean => {
   }
 };
 
+/** @category hero */
 export function LandmarkHero({
   name,
   power,

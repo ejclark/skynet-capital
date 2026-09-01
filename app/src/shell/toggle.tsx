@@ -1,7 +1,10 @@
 import type { ReactElement } from "react";
 
 /** A small pill-style single-select control (theme, density, …) — narrow viewports swap in
- *  the option's initial so the pill never renders empty (see `.toggle-abbr` in shell.css). */
+ *  the option's initial so the pill never renders empty (see `.toggle-abbr` in shell.css).
+ *
+ *  @category desk
+ */
 export function Toggle<T extends string>({
   label,
   value,

@@ -6,6 +6,7 @@ import { money } from "../live/ticket";
  * The options ticket's chain-driven fields (#738 phase 10b): expiration and strike render as
  * selects fed by the member's own chain when it loaded, and fall back to manual entry when it
  * couldn't — the legacy raw mode's posture, so the ticket always works.
+ * @category trading
  */
 
 export function ExpirationField({
@@ -33,6 +34,7 @@ export function ExpirationField({
   );
 }
 
+/** @category trading */
 export function StrikeField({
   id,
   chainData,

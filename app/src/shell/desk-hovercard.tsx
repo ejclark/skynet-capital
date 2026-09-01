@@ -48,6 +48,7 @@ function CardBody({ id }: { readonly id: string }): ReactElement {
   );
 }
 
+/** @category desk */
 export function DeskHoverName({
   id,
   name,

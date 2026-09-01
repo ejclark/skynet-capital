@@ -16,6 +16,7 @@ import { MAX_IMAGES, readImage } from "./feedback-image-utils";
  * it never swaps them. Screenshots attach as jpeg/png ≤1.5MB, at most three — the server's
  * `parseImages` is the real gate; `feedback-image-utils.ts` is the courtesy copy of it, shared with
  * the coach's own opening-note upload (#1020).
+ * @category feedback
  */
 
 export function FeedbackForm({

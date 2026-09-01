@@ -27,6 +27,7 @@ const SWITCH_LABEL: Record<Mode, string> = {
   manual: "← Return to AI-assisted mode",
 };
 
+/** @category feedback */
 export function FeedbackDoor({
   coachEnabled,
   onFiled,

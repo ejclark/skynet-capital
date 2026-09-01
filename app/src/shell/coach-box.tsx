@@ -57,6 +57,7 @@ function draftFrom(
  * A dismissed coach stays quiet: a turn still in flight when the member switches to manual
  * resolves into a component nobody is looking at, and a late draft would overwrite what they
  * have since typed by hand.
+ * @category desk
  */
 export function CoachBox({
   onDraft,

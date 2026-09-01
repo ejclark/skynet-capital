@@ -21,6 +21,7 @@ function StateChip({ suspended }: { readonly suspended: boolean }): ReactElement
   );
 }
 
+/** @category desk */
 export function MissionControl(): ReactElement | null {
   const queryClient = useQueryClient();
   const controls = useQuery({ queryKey: ["controls"], queryFn: fetchControls });

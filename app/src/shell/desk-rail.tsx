@@ -14,6 +14,7 @@ import { fetchSettings, ownsAccount } from "../live/settings";
  * session owns — ownership from the same `["settings"]` query the Settings page runs, so it is
  * one cached fetch and the server stays the only authority on identity. Off your own desk the
  * item is absent, not disabled; the topbar's app-level Settings is the viewer-scoped one.
+ * @category navigation
  */
 export function DeskRail({
   id,
