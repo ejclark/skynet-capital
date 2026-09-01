@@ -511,6 +511,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The last scheduled Board voice before the 9/5 communications blackout, and the direct falsifier of fomc-blackout-start-2026-09-05's 2026-08-30 reading that Warsh's 8/28 keynote might be the final Board-level Fed-speak of this cycle — that ledger's own 'this week' horizon named a governor speech appearing on the 9/1–9/4 calendar as what would prove it wrong. Load-bearing because it lands the morning before payrolls (9/4) with Sep hike odds at ~66% on CME FedWatch (Forbes, 11:40 ET 2026-08-31) and a fresh oil shock in the inflation channel, so it is the last scheduled chance for official interpretation of an outlook the market has repriced ~30 points in four sessions. Q&A format, not prepared remarks alone, which historically widens the range of what gets said. Discovered during the fomc-blackout-start-2026-09-05 pulse-check adjacency sweep (2026-09-01).",
   },
   {
+    id: "hammack-remarks-2026-09-03",
+    kind: "macro-print",
+    title: "Cleveland Fed's Hammack — remarks (July hike dissenter)",
+    date: "2026-09-03",
+    status: "estimate",
+    source:
+      "NEWS: zerohedge.com 'Key Events This Week' (week of 2026-08-31) lists Hammack among Thursday 9/3 Fed speakers, and neilsethi.substack.com's 2026-08-30 'Week Ahead' independently has her speaking this week without naming the day — the DATE IS AGGREGATOR-ONLY AND UNCORROBORATED AT THE PRIMARY: clevelandfed.org returned HTTP 403 on two direct fetch attempts 2026-09-01, and no clevelandfed.org press release or speech listing for 9/3 surfaced in search. Proposed as an estimate for exactly that reason; a session that can reach clevelandfed.org should confirm or drop it.",
+    impact: "low",
+    symbols: [],
+    notes:
+      "Filed `low` deliberately, and not because a voting regional president who dissented for a hike is unimportant. Her position is already fully known and priced: she dissented +25bp at the 7/29 FOMC alongside Kashkari and Logan, and told Yahoo Finance on 2026-08-10 that 'now is the time for us to start acting' and that 'one 25 basis point move probably doesn't do a whole lot,' i.e. more than one hike. Her marginal information content into a September hike already priced 62–66% (CME FedWatch, 8/31) is therefore near zero — the opposite of the same-day Waller slot, whose speaker has been silent 52 days with a published framework the current data leaves undetermined. That contrast is the tiering rule: a speaker's information content is a function of how uncertain their position is, not their seniority. Discovered during the waller-economic-outlook-2026-09-03 initial-research adjacency sweep (2026-09-01).",
+  },
+  {
     id: "jobs-2026-09-04",
     kind: "macro-print",
     title: "Employment Situation (Aug 2026 data)",
