@@ -184,11 +184,11 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     date: "2026-09-15",
     status: "confirmed",
     source:
-      "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18",
+      "TSY: treasury.gov tentative auction schedule PDF, text layer read directly 2026-09-01 — row reads verbatim '20-Year BOND R / Announcement Thursday, September 10, 2026 / Auction Tuesday, September 15, 2026 / Settlement Friday, September 18, 2026', 1:00pm ET",
     impact: "high",
     symbols: [],
     notes:
-      "Long-end supply the day before the Sep-16 FOMC — the auction that drew today's concession, reopened.",
+      "Long-end supply the day before the Sep-16 FOMC — the auction that drew today's concession, reopened. Formal size/when-issued announcement is 2026-09-10, the same day as the 30Y reopening auction and the 10-20Y buyback operation and one day before CPI, which compresses the concession window into 09-10/09-11. Settles 09-18, quarterly OpEx day. An aggregator dating this sale to 09-17 was logged unresolved on 2026-08-29 and is refuted by the primary schedule above: 09-17 is the 10Y TIPS auction date.",
   },
   {
     id: "treasury-10y-tips-2026-09-17",
