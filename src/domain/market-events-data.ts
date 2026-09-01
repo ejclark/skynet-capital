@@ -569,6 +569,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Second in-person Trump-Xi meeting of 2026 (after the May Beijing visit); reported agenda includes AI governance, export controls, and the trade architecture after the Kuala Lumpur truce's Nov-10 tariff-suspension deadline. China semiconductor Section 301 tariffs already run near 70% combined exposure, with a further ~7.5% overcapacity layer reportedly being prepared ahead of the summit — surfaced via AVGO's 2026-08-28 pulse-check adjacency sweep (export-control/supply-chain exposure); most sensitive semis names (AVGO, NVDA, MRVL, AMD) carry it as sector risk, not an AVGO-only event.",
   },
   {
+    id: "scoos-2026-09-24",
+    kind: "macro-print",
+    title: "Senior Credit Officer Opinion Survey on Dealer Financing Terms (SCOOS)",
+    date: "2026-09-24",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-september.htm lists 'SCOOS' at 2:00 p.m. on September 24, and data/scoos.htm describes it as 'a quarterly survey' collecting 'qualitative information on credit terms and conditions in securities financing and over-the-counter (OTC) derivatives markets' (both fetched direct 2026-09-01). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-09-01",
+    impact: "low",
+    symbols: [],
+    notes:
+      "READ IT, DO NOT TRADE IT — and it is filed `low` deliberately: a qualitative dealer survey has no consensus number, no whisper and no implied move, exactly like the Beige Book whose sweep found it. What earns it a row is that it is the Fed's own quarterly measurement of what Warsh's 2026-08-28 Jackson Hole keynote asserted from market prices — the survey covers the conduits for 'leverage in the financial system', and Warsh said he 'would be hard pressed to describe broad financial conditions as restrictive' while citing tight credit spreads and easy C&I standards. This edition lands 8 days AFTER the 09-16 decision, so it is a scorecard on that claim, not an input to it, and its response window closes before the meeting. The March 2026 edition found dealers' overall use of financial leverage and financing terms mostly unchanged, with dealers expecting to increase securities-financing capacity — that is the baseline to diff. Sibling of sloos-2026-11-02 (banks) as this is to dealers; both are Fed-funded and publish through an appropriations lapse where BLS data does not, which matters given government-funding-deadline-2026-09-30 six days later. Discovered during the beige-book-2026-09-02 pulse check (2026-09-01) off the Board's September calendar.",
+  },
+  {
     id: "government-funding-deadline-2026-09-30",
     kind: "geopolitical",
     title: "FY2027 federal funding deadline — shutdown begins 2026-10-01 absent a CR",
