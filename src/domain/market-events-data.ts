@@ -420,6 +420,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The closest-timed regional analog to ISM Manufacturing, released the last business day of the month — two business days ahead of the national print. Added because its Aug-data reading (2026-08-28) collapsed to 47.1 against a ~58 consensus and a 57.6 prior, the biggest single macro surprise of that week and one this calendar could not see coming because the series was untracked. Discovered during the ism-manufacturing-2026-09-01 pulse-check adjacency sweep. Filed as `estimate`/`NEWS:` rather than confirmed: MNI is the series' own publisher, but this lane proposes adjacencies as estimates and never self-promotes them to confirmed.",
   },
   {
+    id: "dallas-fed-mfg-2026-09-28",
+    kind: "macro-print",
+    title: "Dallas Fed Texas Manufacturing Outlook Survey (Sep 2026 data)",
+    date: "2026-09-28",
+    status: "estimate",
+    source:
+      "NEWS: fxstreet.com economic-calendar entry for the Dallas Fed Manufacturing Business Index lists the next release at 2026-09-28 14:30 UTC (10:30 ET); consistent with the series' observed last-Monday-of-month cadence (Apr 27, May 26, Jun 29, Jul 27, Aug 31 — all Mondays), checked 2026-09-01. The dallasfed.org primary returned HTTP 403 and was not fetchable",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The second regional manufacturing analog to the national ISM print, and it exists to remove a selection bias this calendar had just created. `chicago-pmi-2026-09-30` was added on 2026-08-29 because its Aug-data reading collapsed to 47.1 — the bearish regional surprise. Two days later the Dallas survey printed the opposite: general business activity 11.6 from 1.3 (highest since Jan 2025), production 16.1 from 10.1, new orders 22.0 from 6.4, with prices paid still rising. Tracking only the analog that missed low would leave the calendar structurally primed to see soft manufacturing signals and not firm ones. Filed `low`, not `medium` like Chicago: Dallas is a single-state survey that leads the national print by a full month rather than by two business days, so it is context, not a leading indicator of the next ISM. Filed `estimate`/`NEWS:` — the publisher's own page is 403-blocked and this lane never self-promotes an adjacency to confirmed. Discovered during the ism-manufacturing-2026-09-01 pulse-check adjacency sweep.",
+  },
+  {
     id: "jackson-hole-2026-08-28",
     kind: "macro-print",
     title: "Jackson Hole — Fed chair Warsh's first keynote (symposium Aug 27–29)",
