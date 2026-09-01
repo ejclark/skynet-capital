@@ -120,7 +120,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     date: "2026-09-08",
     status: "estimate",
     source:
-      "EST: treasury.gov upcoming-auctions API (fiscaldata.treasury.gov) lists announce 2026-09-03, auction 2026-09-08, issue 2026-09-15 — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-29",
+      "EST: two Treasury primaries agree — treasurydirect.gov TA_WS/securities/upcoming and fiscaldata.treasury.gov upcoming_auctions both list the 3-Year, CUSIP 91282CRL7, announce 2026-09-03, auction 2026-09-08, issue 2026-09-15 (offering amount still null on both); filed estimate per the event-research lane's no-self-confirm limit, re-checked 2026-09-01 after both endpoints were unreachable/stale on 2026-08-29",
     impact: "medium",
     symbols: [],
     notes:
