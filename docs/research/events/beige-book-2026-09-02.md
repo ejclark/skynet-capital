@@ -1,8 +1,8 @@
 # Fed Beige Book (pre-FOMC edition) — beige-book-2026-09-02
 
 **Kind:** macro-print · **Date:** 2026-09-02 (estimate, EST: federalreserve.gov Beige Book schedule lists 2026-09-02 14:00 ET — primary-sourced but filed estimate per this lane's no-self-confirm limit, checked 2026-08-30) · **Impact:** medium
-**Last assessed:** 2026-08-30
-<!-- probe-ref: {"symbols":{},"vix":14.43,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-02","avgo-2026-09-02-print","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01"],"screenStreak":0} -->
+**Last assessed:** 2026-09-01
+<!-- probe-ref: {"symbols":{},"vix":14.92,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-02","avgo-2026-09-02-print","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -17,13 +17,16 @@ actually trade. Read it as *evidence*, not an event: two counts diff cleanly aga
 edition — the **price count** (9 districts moderate / 2 robust / 1 slight) and the **labor split**
 (5 districts with gains / 7 little-to-no change). Those are the district-level test of Warsh's
 2026-08-28 claim that inflation is broad (PCE 3.7% 12-mo, 4.1% 6-mo) while labor is "quite stable
-… consistent with full employment" — the framing that made 9/16 a coin flip (CME 59% hike, from
-35%). Date is **estimate**-labelled (two Fed primary pages agree; this lane may not self-confirm),
+… consistent with full employment" — the framing that repriced 9/16 from ~35% to a **66% CME hike
+probability by 8/31**. But it can only corroborate, never answer: the July edition's collection
+cutoff is now **verified** at 9 days before release, which puts this edition's window at roughly
+**2026-08-24** — before Warsh spoke, and before the **8/30 Hormuz escalation** that took Brent over
+$90. Date is **estimate**-labelled (two Fed primary pages agree; this lane may not self-confirm),
 so it widens caution and licenses nothing.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-3) | **Stand aside** | High | A qualitative report with no consensus number cannot be "surprised" against; nothing to position into. | A published pre-Beige-Book whisper that moves Sep-16 hike odds on its own before **2026-09-02** |
+| Today (D-1) | **Stand aside** | High | A qualitative report with no consensus number cannot be "surprised" against; nothing to position into. | A published pre-Beige-Book whisper that moves Sep-16 hike odds on its own before **2026-09-02** |
 | This week | **Stand aside on this print; the week's payload is elsewhere** | High | AVGO prints **9/2 AMC** and payrolls land **9/4**; the 14:00 ET report sits between two bigger things. | The tape moving hard in the **9/2 14:00–15:00 ET** hour with the release as the named driver |
 | This month | **Watch two counts, don't act** | Medium | A firmer price count corroborates Warsh's inflation-breadth case into 9/16; a deteriorating labor split cuts against "quite stable". | Four or more districts describing **robust/strong** price growth on **2026-09-02**, versus July's two |
 | This quarter | **No macro playbook exists — guard-shaped only** | High | Exposure runs hike-odds → long-duration equity (NVDA AVGO CRWV MSFT GOOG META); this report is a second-order input to that channel. | A Beige Book edition demonstrably repricing the Sep-16 decision by itself, which would retire the 2005 finding for this regime |
@@ -32,7 +35,7 @@ so it widens caution and licenses nothing.
 
 - **Price count firmer than July's 9-moderate / 2-robust** — corroborates Warsh's breadth claim from the district side; hawkish, watch only.
 - **Labor split worse than July's 5-gains / 7-flat**, or explicit layoff language — contradicts "quite stable"; the relief branch, and the read jobs 9/4 then adjudicates.
-- **Tariff / Middle-East cost language** — July's edition tied input costs to "the conflict in the Middle East; others mentioned tariffs"; Brent ~$88 with Hormuz unresolved keeps this live.
+- **Tariff / Middle-East cost language** — July's edition tied input costs to "the conflict in the Middle East; others mentioned tariffs"; Brent **over $90** after the 8/30 Hormuz strikes keeps this live, though that escalation postdates this edition's ~8/24 cutoff and lands in the 10-14 book.
 - **Never** — size anything to a 14:00 ET qualitative release; the measured effect disappears under macro controls.
 - **Watch (dated):** Barr speech **9/1 09:05 ET** · Beige Book **9/2 14:00 ET** · Waller "Economic Outlook" **9/3 08:30 ET** · blackout opens **9/5** · jobs **9/4** · CPI **9/11** · FOMC **9/16**.
 
@@ -154,7 +157,10 @@ read in the same session as ADP and one day before Waller and two before payroll
 - **The collection-cutoff date is asserted from convention, not verified.** The July edition's
   "information collected on or before …" line could not be read: the Board's PDF would not parse and
   the Minneapolis Fed mirror returned **HTTP 403** (both 2026-08-30). Recorded as a failure, not
-  passed over.
+  passed over. **[CLOSED 2026-09-01 — see the ledger:** the Board's own July summary page
+  (`beigebook202607-summary.htm`) parsed on retry and states verbatim *"This report was prepared at
+  the Federal Reserve Bank of Chicago based on information collected on or before July 6, 2026"* —
+  a 9-day lag, putting the 9/2 edition's cutoff near **2026-08-24**.**]**
 - **The Warsh dot-plot detail is press-sourced,** not from a Board transcript — the June-2026
   press-conference characterisation in leg 3 is second-hand and labelled as such.
 - **Date is `estimate`.** Two Fed primary pages agree and the two-weeks-before-FOMC cadence checks
@@ -192,6 +198,7 @@ falsification, each with its date.
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-30 | D-3 | **Initial research.** Date/time verified against **two** federalreserve.gov primary pages (Beige Book schedule: Sep 2 is the sixth of eight 2026 editions; September calendar: "Beige Book — September 2 at 2:00 p.m."), both fetched today; entry stays `estimate` per this lane's no-self-confirm limit. **Reaction function measured, not assumed:** Zavodny & Ginther, *Southern Economic Journal* 2005, 72(1), 138–151 — positive Beige Book growth tone lifts intermediate/long rates, **but not after controlling for other macro indicators**; this window is full of them (ISM Mfg + JOLTS 9/1, ADP 9/2, ISM Services 9/3, jobs 9/4). **Baseline logged for diffing:** July 15 edition — activity slight-to-moderate in **11 of 12** districts; labor **5 gains / 7 little-to-no change**; prices **9 moderate / 2 robust / 1 slight**, costs tied by contacts to "the conflict in the Middle East; others mentioned tariffs". **Adjacency sweep:** *peers* n/a (`symbols: []`), but **AVGO prints 9/2 AMC** — the same session's real payload for semis. *Macro* — post-Warsh 8/28 repricing stands: CME **59%** hike (from 35%), FedWatch 55.7–57.5%, Kalshi 48%, Polymarket 69% for any 2026 hike (feeds unreconciled, logged as a spread). *Vol* — VIX **14.43** at the 8/28 close (`event-material-scan` probe today), the 2026 low; no regime shift, and no tape since (8/29–8/30 are Sat/Sun). *Geopolitical* — Brent ~$88, Hormuz unresolved, and July's Beige Book already names Middle-East conflict as a cost driver, so this is a live line in the report rather than background. *Event tape* — no consensus, whisper or implied move exists for a qualitative report; nothing to be surprised against. **Blackout framing established:** the window closes **12:00 a.m. ET Sat 2026-09-05**, leaving Barr 9/1 09:05, this report 9/2 14:00 and Waller 9/3 08:30 as the last Fed inputs — the two governor speeches are logged as dated watch items, **not** proposed as calendar entries (a governor speech is not this calendar's unit of event, and adding them would import a recurring stream). **No new dated calendar entry proposed this session.** | **New stance:** stand aside; read two counts, size nothing to the release. | 2026-09-01 (medium, 0+ band: every 2d) |
+| 2026-09-01 | D-1 | Material on **three new adjacent ids** (`challenger-job-cuts-2026-09-03`, `fomc-blackout-start-2026-09-05`, `opec-plus-meeting-2026-09-06`) — all three were filed by sibling sessions on 8/31 and are already in the calendar, so nothing to propose from them. **The D-3 row's recorded failure is now CLOSED:** the Board's July summary page (`beigebook202607-summary.htm`, fetched today) parsed on retry — *"This report was prepared at the Federal Reserve Bank of Chicago based on information collected on or before July 6, 2026"*, a **9-day** lag that puts the 9/2 edition's collection window near **2026-08-24**. That is *before* Warsh's 8/28 keynote and *before* the 8/30 Hormuz escalation, so the report is more backward-looking than leg 6 assumed — it can corroborate the Warsh framing but cannot contain it, and the newest oil shock lands in the **10-14** edition. Same page re-verified both diff baselines (labor **5 gains / 7 little-to-no change**; prices **9 moderate / 2 robust / 1 slight**). *Date* — Board September calendar re-fetched today, unchanged: "Beige Book — September 2 at 2:00 p.m."; Barr 9/1 09:05 and Waller 9/3 08:30 also unchanged; entry stays `estimate`. *Macro* — the post-Warsh repricing **extended, not faded**: CME FedWatch **66%** hike for 9/16 at ~11:40 ET Monday 8/31 (Forbes 8/31) vs the 55.7–59% spread at the 8/28 close; 10y **4.76%** (+4bp, highest since Jan 2025) and 30y **5.26%** (+5bp) on Monday's close. ISM Mfg and JOLTS had **not** printed at the time of this row (10:00 ET 9/1; written 23:19 ET 8/31). *Peers* n/a (`symbols: []`); AVGO still prints 9/2 AMC. *Vol* — VIX **14.92** (probe today) vs 14.43, **+0.49**, well inside the 3-point threshold; up ~4.6% on the session but still near the 2026 low, **no regime shift**. *Geopolitical* — US struck Iranian launchers preparing to mine Hormuz on Sunday 8/30, Iran retaliated against the UAE and Jordan; Brent (Nov) **above $90**, its biggest gain in three weeks. *Event tape* — still no consensus, whisper or implied move (structural, not a gap); no pre-release whisper moved 9/16 odds, so the Today-horizon falsifier is untripped. **One new dated entry PROPOSED this PR:** `scoos-2026-09-24` — Senior Credit Officer Opinion Survey on Dealer Financing Terms, **2026-09-24 14:00 ET**, `estimate`, impact `low`, off the Board's own September calendar fetched during this sweep. It earns a row because it is the Fed's quarterly measurement of *"leverage in the financial system"* — the direct evidentiary test of Warsh's "hard pressed to describe broad financial conditions as restrictive" — landing 8 days after the 9/16 decision; sibling of the tracked `sloos-2026-11-02`. **No kill switch tripped** (all four are keyed to 9/2 content or a schedule slip). | — (no change; the verified cutoff strengthens the stand-aside rather than altering it) | 2026-09-03 (event passes 9/2 → close-out) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
