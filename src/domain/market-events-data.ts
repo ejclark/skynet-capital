@@ -254,6 +254,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Index futures + index options + stock options expire together — the year's heaviest-volume, highest-pin sessions.",
   },
   {
+    id: "vix-expiration-2026-09-16",
+    kind: "opex",
+    title: "VIX futures & options September expiration (SOQ settlement)",
+    date: "2026-09-16",
+    status: "estimate",
+    source:
+      "NEWS: macroption.com/vix-expiration-calendar lists 2026-09-16; deterministic under the Cboe 30-day rule (30 days before the 2026-10-16 SPX expiration, landing Wed 09-16) — Cboe's own product page did not publish the calendar on a 2026-09-01 fetch, so this stays estimate until an OCC/Cboe primary confirms it",
+    impact: "low",
+    symbols: [],
+    notes:
+      "Proposed by the opex-2026-09-18 pulse (2026-09-01) as a same-corridor microstructure adjacency, NOT a standalone trade date. VIX contracts AM-settle off a Special Opening Quotation of SPX options, so the volatility complex's own expiration lands on the MORNING of the fomc-2026-09-16 decision day — alongside retail-sales-2026-09-16 and import-export-prices-2026-09-16 — and two sessions before the September triple witching. Why it belongs on the calendar at all: it means the week's vol-hedging unwind is staged (VIX 09-16 open, then SPX/index SET at the 09-18 open, then single-stock options + the S&P quarterly rebalance MOC at the 09-18 close), so 'the gamma rolls off Friday' understates how early the cushion starts leaving. Low impact and ESTIMATE status: it widens caution about the 09-16→09-18 corridor and licenses nothing.",
+  },
+  {
     id: "opex-2026-10-16",
     kind: "opex",
     title: "Monthly options expiration (October)",
@@ -285,6 +298,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "high",
     symbols: [],
     notes: "Year-end triple witching — expiries stack with index rebalancing and tax-loss flows.",
+  },
+  {
+    id: "sp-rebalance-proforma-2026-09-04",
+    kind: "sector",
+    title: "S&P DJI September quarterly rebalance — pro-forma files released",
+    date: "2026-09-04",
+    status: "estimate",
+    source:
+      "NEWS: spglobal.com S&P Equity Indices Policies & Practices methodology — float-adjusted pro-forma files release after the close on the first Friday, two weeks before the third-Friday effective date; press summaries put the September 2026 files at 09-04, checked 2026-09-01. Not fetched from a dated S&P DJI announcement page, so it stays estimate",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The watch item the opex-2026-09-18 ledger flagged on 2026-08-29 as unsourceable and deliberately did not add; sourced to the S&P DJI methodology on 2026-09-01 and filed as an estimate. This is the ANNOUNCEMENT, not the flow: the share/float rebalance itself is effective at the close of 2026-09-18 — the same closing auction as the triple witching's single-stock options — and this release is when passive managers first see what they must buy and sell there. So it is the earliest dated read on how large that 09-18 market-on-close imbalance will be. Low impact, market-structure only: it changes execution timing on high-open-interest names, never direction, and no house playbook (S1/S2/E1/S3/S4/G1) is opex- or rebalance-keyed.",
   },
   {
     id: "texas-puct-audit-2026-08-20",
