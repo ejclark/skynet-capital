@@ -556,6 +556,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "meta-connect-2026-09-23",
+    kind: "product-launch",
+    title: "Meta Connect 2026 (Menlo Park + livestream) — Sep 23–24, Zuckerberg keynote day 1",
+    date: "2026-09-23",
+    status: "estimate",
+    source:
+      "EST: meta.com/connect states September 23-24 with the Zuckerberg keynote on the opening day, and meta.com/blog/connect-2026-save-the-date corroborates — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-09-01",
+    impact: "medium",
+    symbols: ["META"],
+    notes:
+      "Meta's own developer/product conference, and the ONLY company-controlled news venue between now and the est. 2026-10-28 print — which is the whole reason it is tracked. Zuckerberg teased new smart glasses alongside the date announcement; agenda is VR/wearables/metaverse/AI. Tiered `medium` deliberately: this is a product venue, not a numbers venue — it sets no guidance and touches neither of the two things the 10-28 print will actually be judged on (capex discipline and the ~$10B Q3 legal accrual from the 2026-08-26 state-AG settlement). The date is the first day per house convention; the keynote is day 1, so window measurement centers on 09-23 itself. It lands the same day as treasury-5y-note-2026-09-23 and the day before trump-xi-summit-2026-09-24, so no META move in the window is cleanly attributable to the conference. Discovered during the meta-2026-10-28-print pulse-check adjacency sweep (item 5, event-specific tape). Estimate status licenses nothing on its own, and no META playbook survives anyway — S1 refuted, gap-capture killed. See docs/research/events/meta-2026-10-28-print.md.",
+  },
+  {
     id: "trump-xi-summit-2026-09-24",
     kind: "geopolitical",
     title: "Trump–Xi summit (Washington) — trade, export-control, AI-governance agenda",
