@@ -1,28 +1,32 @@
 # 3-Year Treasury Note auction — treasury-3y-note-2026-09-08
 
-**Kind:** rates · **Date:** 2026-09-08 (estimate, EST: monthly 3Y new-issue cadence — treasury.gov's tentative auction schedule PDF attempted 3× and timed out today; fiscaldata's `upcoming_auctions` endpoint returned 2024-dated rows on re-fetch, checked 2026-08-29) · **Impact:** medium
-**Last assessed:** 2026-08-29
-<!-- probe-ref: {"symbols":{},"vix":14.51,"daysBand":"medium:8+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","cpi-2026-09-11","ism-services-2026-09-03","jobs-2026-09-04","ppi-2026-09-10","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-buyback-increase-2026-09-09"],"screenStreak":0} -->
+**Kind:** rates · **Date:** 2026-09-08 (estimate, EST: now primary-verified — treasurydirect.gov's `TA_WS/securities/upcoming` feed and fiscaldata's `upcoming_auctions` endpoint BOTH return the 3-Year, CUSIP **91282CRL7**, announce 2026-09-03 · auction 2026-09-08 · issue 2026-09-15; filed `estimate` only because this lane may not self-confirm, checked 2026-09-01) · **Impact:** medium
+**Last assessed:** 2026-09-01
+<!-- probe-ref: {"symbols":{},"vix":14.92,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","challenger-job-cuts-2026-09-03","cpi-2026-09-11","fomc-blackout-start-2026-09-05","ism-services-2026-09-03","jobs-2026-09-04","opec-plus-meeting-2026-09-06","ppi-2026-09-10","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-buyback-10y20y-2026-09-10","treasury-buyback-increase-2026-09-09","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
 
 ## At a glance
 
 **TL;DR.** This is **the front-end auction, and the front end is where the Fed shock landed.** Every
 other Treasury doc on this calendar is about the *long end* — term premium, the fiscal story, the 30Y
 at a 19-year high. This one is not: the 3-year note is a **policy-path** instrument, and on
-2026-08-28 Warsh's Jackson Hole keynote drove the 2-year yield **+8bp to ~4.298%**, the largest 2Y
-move after a chair's Jackson Hole speech this century (JPM), taking September hike odds **35% →
-46–59%**. The measurable consequence: the front end has now repriced **through** where the last 3Y
-actually cleared — the 2026-08-11 auction stopped at **4.291%**. So Sep-8 is the **first supply test
-of the post-Warsh front end**, landing after the 9/4 jobs print and before the 9/11 CPI, eight days
-ahead of the FOMC. The base rate says it goes fine: eight 2026 3Y auctions, all $58B new issues,
-bid-to-cover **2.54–2.71** (mean 2.62, σ **0.055**) across a +68bp yield climb — a remarkably
-inelastic series, and August was its *best* print (2.71) at its *highest* yield. Date is
-**estimate**; the primary schedule could not be fetched today. Nothing here is a trade.
+2026-08-28 Warsh's Jackson Hole keynote drove the 2-year yield **+12bp to ~4.356%** (corrected at
+D-7 from the +8bp/4.298% first recorded here), the largest 2Y move after a chair's Jackson Hole
+speech this century (JPM). The measurable consequence: the front end has repriced **~6.5bp through**
+where the last 3Y actually cleared — the 2026-08-11 auction stopped at **4.291%** — and it has
+**held** there (2Y **~4.36%** on 09-01). Since then a *second* driver arrived: the 2026-08-30 US
+strike on Larak Island re-escalated the Strait of Hormuz, oil went back over **$88**, and September
+hike odds ran to **~60–66%** through the 08-31 session. So Sep-8 is the **first supply test of the post-Warsh front end**,
+now also carrying an oil-inflation shock, and it lands **inside the 09-05 FOMC blackout** — no Fed
+speaker can walk any of it back before the auction. The base rate still says it goes fine: eight
+2026 3Y auctions, all $58B new issues, bid-to-cover **2.54–2.71** (mean 2.62, σ **0.055**) across a
++68bp yield climb — a remarkably inelastic series, and August was its *best* print (2.71) at its
+*highest* yield. Date is **estimate** (lane may not self-confirm) but is now verified against two
+Treasury primaries. Nothing here is a trade.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-10) | Stand aside | High | `symbols: []`, an `estimate` date, and the size/when-issued do not exist until the ~09-03 announcement. There is nothing to be right or wrong about today. | Nothing dated today; no size, no WI yield, no consensus exists to be surprised against |
-| This week | Watch the **09-03 announcement** and the **09-04 jobs print**, not the auction | Medium | Both land before the auction and both change it: the announcement fixes supply (flat at $58B for eight straight months), and jobs is the next thing that moves the hike odds this tenor prices. | The **2026-09-03** announcement raising the 3Y above $58B — the first size change of 2026, which would make supply, not the policy path, this auction's story |
+| Today (D-7) | Stand aside | High | `symbols: []`, and the size/when-issued still do not exist until the 09-03 announcement — Treasury's own feeds return the auction with `offering_amt: null`. The date is now primary-verified; nothing else about the print is knowable. | Nothing dated today; no size, no WI yield, no consensus exists to be surprised against |
+| This week | Watch the **09-03 announcement**, the **09-04 jobs print** and the **09-06 OPEC+ meeting**, not the auction | Medium | All three land before the auction and all three change it: the announcement fixes supply (flat at $58B for eight straight months), jobs moves the hike odds this tenor prices, and OPEC+ is now the supply side of the oil-inflation shock that pushed those odds to ~60–62%. | The **2026-09-03** announcement raising the 3Y above $58B — the first size change of 2026, which would make supply, not the policy path, this auction's story |
 | This month | No new duration risk through the **9/8→9/11** block; read the 3Y as a **hike-odds** read | High | Four dated risks in four sessions (3Y 9/8 · 10Y 9/9 · 30Y + PPI 9/10 · CPI 9/11), into a two-sided 9/16 FOMC. The 3Y's own result is information about the policy leg, not a trade. | A **2026-09-08** bid-to-cover outside the entire 2026 range (below 2.54 or above 2.71), which breaks the inelasticity read this call rests on |
 | This quarter | Stand aside on the auction; treat the **front end** as where Fed risk now expresses | Medium | The one clean measurement we have (8/28) is that a hawkish Fed shock moves the 2y hard and equities barely at all — VIX *closed at a YTD low* the day hike odds nearly doubled. | The **2026-09-16** FOMC moving the S&P ≥1.5% while the 2y moves <5bp — the sibling [`jackson-hole`](jackson-hole-2026-08-28.md) migration test, inherited here |
 
@@ -38,9 +42,16 @@ inelastic series, and August was its *best* print (2.71) at its *highest* yield.
   new information about the front end's issuance path, not about this one auction.
 - **The buyback lever does not reach this tenor** — Bessent's doubled operations are **10–30Y**; the
   3Y gets no technical support from it.
-- **Watch (dated):** ISM Services **09-03** · jobs **09-04** · **this auction 09-08** (estimate) ·
-  10Y reopening + iPhone launch + buyback increase **09-09** · PPI + 30Y reopening **09-10** ·
-  **CPI 09-11** · 20Y **09-15** · **FOMC 09-16** · 10Y TIPS **09-17** · OpEx **09-18**.
+- **The auction sits inside the FOMC blackout** (starts **09-05**): between 09-05 and the 1:00pm ET
+  stop, no Fed official can soften or confirm the hawkish read the front end is pricing. The 3Y
+  clears into the calendar's quietest official-guidance window of the month — and **Waller on 09-03**
+  (8:30 ET, Reuters NEXT, Q&A) is the last scheduled Board voice before that silence starts.
+- **Oil is now a live input to this tenor** — a Hormuz supply shock feeds the inflation leg the
+  front end prices, which is the one channel through which a geopolitical event reaches a 3Y note.
+- **Watch (dated):** ISM Services + Challenger + **3Y announcement 09-03** · jobs **09-04** ·
+  **FOMC blackout starts 09-05** · **OPEC+ 09-06** · **this auction 09-08** (estimate) ·
+  10Y reopening + iPhone launch + buyback increase **09-09** · PPI + 30Y reopening + 10–20Y buyback
+  **09-10** · **CPI 09-11** · 20Y **09-15** · **FOMC 09-16** · 10Y TIPS **09-17** · OpEx **09-18**.
 
 ## Initial research
 
@@ -218,6 +229,20 @@ calendar's Treasury docs are about the long end.** A soft print here is evidence
 not about fiscal supply, and confusing the two is the specific error this event exists to prevent.
 Forward test **FT-20** registered in [`forward-tests.md`](../forward-tests.md), scoreable 2026-09-08.
 
+**Refined 2026-09-01 (D-7) — same stance, one added driver and one corrected number.** Nothing here
+turns; the base case, the stand-aside and FT-20 are unchanged. Two things moved. (1) The 08-28 2Y
+move is better measured at **+12bp to ~4.356%** against the H.15 08-27 baseline of 4.20% (CNBC
+08-28, as the [`10Y sibling`](treasury-10y-note-2026-09-09.md) recorded on 08-30) than the
++6–8bp/~4.298% this doc's D-10 row carried from a search summary — which *widens* leg 5's gap over
+the August 3Y stop from ~0.7bp to **~6.5bp**, and the 2Y has since held it (~4.36% on 09-01). The
+premise is stronger than it was written, not weaker. (2) The hawkish repricing now has a **second,
+independent driver**: the 2026-08-30 Larak Island strike put a Hormuz supply premium back into oil,
+and hike odds went to **~60–66%** through the 08-31 session on a channel — energy into inflation — that the
+09-06 OPEC+ meeting can move again two days before the auction. Leg 4's front-end/long-end separation is *not*
+broken by 08-31's both-ends selloff (10Y to a Jan-2025 high, 30Y +5bp): a common inflation shock
+lifting both tenors is exactly what leg 4 predicts, and the kill switch it carries is specifically
+about *fiscal* news reaching the front end, which has not happened. The receipt is the D-7 row.
+
 **Kill switches:**
 
 - **Bid-to-cover outside 2.54–2.71 on 2026-09-08** — either direction kills leg 3's inelasticity
@@ -234,12 +259,17 @@ Forward test **FT-20** registered in [`forward-tests.md`](../forward-tests.md), 
 - **A long-end-style move showing up in the front end** — a >10bp single-session 2Y/3Y move on fiscal
   rather than policy news would mean term premium has reached this tenor, merging leg 4's two stories
   back into one.
+- **An oil shock big enough to price a hike outright** (added 2026-09-01) — Brent holding above
+  **$95** on sustained Hormuz disruption, or hike odds through **~75%**, would move this auction from
+  "prices a coin-flip" to "prices a near-certain hike," and the base rate in leg 3 has no observation
+  of a 3Y clearing into a committed tightening. Its mirror is the existing sub-35% switch.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-29 | D-10 | Initial research banked (above). **Date:** stays `estimate` — the tentative-schedule PDF timed out on three separate fetches today, treasurydirect's upcoming page renders client-side and returned no rows, and fiscaldata's `upcoming_auctions` (the endpoint the calendar entry itself cites) returned **2024-dated rows**; the cadence carries the date instead — 2026's 3Y auctions ran Mon/Tue of the first-or-second week (01-12 Mon · 02-10 · 03-10 · 04-07 · 05-11 Mon · 06-09 · 07-07 · 08-11, all Tue but the two Mondays), 09-08 is a Tuesday and 09-07 is Labor Day. Flagged not fixed: the 9/9 10Y is filed `confirmed` off the same schedule document while this is `estimate`. **Base rates established (primary, `fiscaldata` auctions_query, bidder shares computed from raw accepted dollars):** all eight 2026 3Y auctions were **$58B new issues** (`reopening: "No"`, distinct CUSIPs — unlike the 9/9 10Y and 9/10 30Y reopenings in the same block); B/C 2.65 · 2.62 · 2.55 · 2.68 · **2.54** · 2.64 · 2.60 · **2.71** (mean **2.624**, σ **0.055**, range 0.17) across a **+68bp** climb in the clearing yield (3.609% → **4.291%**); indirect share mean **63.3%** (56.5–74.8%), dealer takedown mean **13.7%**. August is the year's best B/C at the year's highest yield with dealers 2pp under average — front-end demand is close to yield-inelastic *within this regime*. Tail not computable: the dataset carries no when-issued level. Adjacency sweep — **peers:** n/a, `symbols: []`; AVGO's 09-02 print is the only tracked print near the window and is not a rates channel. **Macro surprises:** Warsh's 08-28 keynote is the event of the sweep — 2y **+8bp to ~4.298%**, called the largest 2Y move after a chair's Jackson Hole speech this century (JPM), September hike odds **35.4% → 45.7–57.5%** (CME FedWatch via CNBC/Benzinga/Yahoo, 08-28; sibling close-out records 57–59% futures / 48% Kalshi — sources disagree, range quoted). 2Y was ~4.20–4.24% on 08-27, 2s10s ~47bp; a bear-flattening from the front. **The measurable consequence: the 2Y now yields more than the 4.291% at which the 3Y itself stopped 17 days earlier** — cross-tenor, a magnitude statement not a WI estimate. **Volatility regime:** VIX **14.51** (`event-material-scan` probe) — baseline set, nothing to diff against yet; noted that VIX *closed at a YTD low* on the session hike odds nearly doubled, and that the sibling records 14.43 for the same close (0.08 gap, unresolved, nothing rests on it). **Geopolitical/policy:** Bessent's doubled buybacks are **10–30Y** — explicitly no support for this tenor, and the tracked `treasury-buyback-increase-2026-09-09` lands the day *after* this auction; recorded as a way to get the event wrong, not as a positive. **Event tape:** size and when-issued do not exist until the ~**09-03** announcement, so no consensus can exist at D-10. **No new dated adjacency found** — the 09-03..09-13 corridor (ISM Svcs 09-03 · jobs 09-04 · 10Y + iPhone + buyback 09-09 · PPI + 30Y 09-10 · CPI 09-11) is already fully on the calendar. **Forward test FT-20 registered** (B/C inside 2.54–2.71 on 09-08; scoreable from primary data that day). | — (stance set) | 2026-09-05 (medium, 8–30d band: every 7d) |
+| 2026-09-01 | D-7 | Adjacency sweep; band tightened **medium:8+ → medium:0+** (every 2d now). **Date — leg 1's failure mode is gone.** Both primaries that were unreachable on 08-29 now resolve and agree: treasurydirect's `TA_WS/securities/upcoming` feed returns the 3-Year at CUSIP **91282CRL7**, announce **2026-09-03** · auction **2026-09-08** · issue **2026-09-15**, and fiscaldata's `upcoming_auctions` — which returned **2024-dated rows** at D-10 — now returns the 2026 September block (3Y + 13/26/6-week bills 09-08, **9-Year 11-Month** note 09-09, **29-Year 11-Month** bond 09-10, the two term labels independently re-confirming leg 2's reopening/new-issue split). `offering_amt` is **null** on both feeds, so the $58B question is untouched and the 09-03 announcement is still the supply tell. Status stays **`estimate`** — this lane may not self-confirm; the calendar entry's source line is refreshed with the CUSIP and both endpoints in the same PR, no status flip. **Macro — a corrected number that strengthens leg 5.** The 08-28 2Y move is better measured at **+12bp to ~4.356%** vs the H.15 08-27 baseline of **4.20%** (CNBC 08-28; the 10Y sibling's 08-30 row carries the same figures, 10Y +4–6bp to ~4.72–4.73%, 30Y +2bp to ~5.21%) than the +6–8bp/~4.298% this doc's D-10 row took from a search summary — the direct CNBC article 403'd both sessions, so this is the sibling's cross-read, not a new fetch. **Consequence: leg 5's gap over the 08-11 3Y stop of 4.291% widens from ~0.7bp to ~6.5bp, and the front end has HELD it** — 2Y **~4.36%** on 09-01, +0.6bp on the session (TradingEconomics, aggregator). Two sessions and a war escalation later, none of the post-Warsh repricing has faded. **Geopolitical — the material new driver.** The **2026-08-30** US strike on Larak Island hit Iranian rocket launchers preparing to mine the **Strait of Hormuz**; Iran struck Jordan in reply, and both sides read as far apart on a ceasefire (Yahoo Finance live blog, 08-31). Brent back **over $88** (same source; one aggregator says >$90 — range quoted, not a point). This matters to a 3Y specifically because energy feeds the **inflation** leg the front end prices: September hike odds ran to **60.4%** (CME FedWatch, 08-31 morning, TechTimes) → **62%** (Yahoo, 08-31, "up from ~40% a week prior") → **~66%** (CME FedWatch via Forbes, 11:40 ET 08-31, as the `waller-economic-outlook-2026-09-03` entry records) from the 45.7–59% spread at D-10 — the odds climbed *through* the session, they did not spike and fade. **The auction now has two independent hawkish drivers where it had one.** **Volatility regime:** VIX **14.92** (repo probe) — and Yahoo's 08-31 close reads **14.92, +3.40%**, an exact match, which is the same cross-check that showed an 0.08 gap at D-10; Δ **+0.41** from 14.51 is far under the 3-point threshold. VIX below 15 with a Hormuz escalation, a coin-flip hike and the 10Y at a Jan-2025 high is the same equity-vol/rates-vol divergence the siblings have logged since 08-18 — it is widening, not resolving. **Long end:** 10Y **4.76%** intraday 08-31, +4bp, its highest since **January 2025** (Yahoo) — aggregators disagree (TradingEconomics reads ~4.72%, another ~4.67%; the D-10 doc's own caution about press disagreement applies); 30Y **5.26%**, +5bp, still under the 5.32–5.33% 08-18 high. Both ends sold off together on an oil-inflation shock — **not** a counterexample to leg 4, whose kill switch is specifically about *fiscal* news reaching the front end. **Peers:** n/a, `symbols: []`. **Event tape:** no WI, no size, no dealer forecast — unchanged and unchangeable before 09-03. **Adjacency — four new tracked entries inside the 5-day corridor since the last probe-ref**, all already added to `market-events.ts` by sibling sweeps, so **nothing new to propose**: `challenger-job-cuts-2026-09-03`, `fomc-blackout-start-2026-09-05`, `opec-plus-meeting-2026-09-06`, `treasury-buyback-10y20y-2026-09-10`, and — landing on main mid-session, after this branch was cut — `waller-economic-outlook-2026-09-03`. Three change how this auction reads: **OPEC+ on 09-06** is the supply side of the oil shock, two days out; **blackout from 09-05** means no Fed official can walk the hawkishness back before the stop; and **Waller 09-03 8:30 ET** (Reuters NEXT, Q&A, per federalreserve.gov's September calendar) is the *only* scheduled Board voice left before that silence — my own pre-rebase search for pre-blackout Fed speakers missed it, and the `fomc-blackout-start-2026-09-05` sweep found it the same day. Nothing new to propose: every one of the five is already a tracked entry. Also searched scheduled US-Iran talks — none found with a date. **FT-20 unchanged and still scoreable 09-08.** | **Refined, not reversed** — base case, stand-aside and FT-20 all hold; leg 5 strengthens on the corrected 2Y measurement, and a second driver (oil→inflation→hike odds) is added, with a new kill switch at Brent >$95 / odds >~75% | 2026-09-03 (medium, 0–7d band: every 2d — the 3Y announcement lands that day) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

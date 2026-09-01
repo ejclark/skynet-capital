@@ -120,7 +120,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     date: "2026-09-08",
     status: "estimate",
     source:
-      "EST: treasury.gov upcoming-auctions API (fiscaldata.treasury.gov) lists announce 2026-09-03, auction 2026-09-08, issue 2026-09-15 — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-08-29",
+      "EST: two Treasury primaries agree — treasurydirect.gov TA_WS/securities/upcoming and fiscaldata.treasury.gov upcoming_auctions both list the 3-Year, CUSIP 91282CRL7, announce 2026-09-03, auction 2026-09-08, issue 2026-09-15 (offering amount still null on both); filed estimate per the event-research lane's no-self-confirm limit, re-checked 2026-09-01 after both endpoints were unreachable/stale on 2026-08-29",
     impact: "medium",
     symbols: [],
     notes:
@@ -184,11 +184,11 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     date: "2026-09-15",
     status: "confirmed",
     source:
-      "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18",
+      "TSY: treasury.gov tentative auction schedule PDF, text layer read directly 2026-09-01 — row reads verbatim '20-Year BOND R / Announcement Thursday, September 10, 2026 / Auction Tuesday, September 15, 2026 / Settlement Friday, September 18, 2026', 1:00pm ET",
     impact: "high",
     symbols: [],
     notes:
-      "Long-end supply the day before the Sep-16 FOMC — the auction that drew today's concession, reopened.",
+      "Long-end supply the day before the Sep-16 FOMC — the auction that drew today's concession, reopened. Formal size/when-issued announcement is 2026-09-10, the same day as the 30Y reopening auction and the 10-20Y buyback operation and one day before CPI, which compresses the concession window into 09-10/09-11. Settles 09-18, quarterly OpEx day. An aggregator dating this sale to 09-17 was logged unresolved on 2026-08-29 and is refuted by the primary schedule above: 09-17 is the 10Y TIPS auction date.",
   },
   {
     id: "treasury-10y-tips-2026-09-17",
@@ -509,6 +509,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "The last scheduled Board voice before the 9/5 communications blackout, and the direct falsifier of fomc-blackout-start-2026-09-05's 2026-08-30 reading that Warsh's 8/28 keynote might be the final Board-level Fed-speak of this cycle — that ledger's own 'this week' horizon named a governor speech appearing on the 9/1–9/4 calendar as what would prove it wrong. Load-bearing because it lands the morning before payrolls (9/4) with Sep hike odds at ~66% on CME FedWatch (Forbes, 11:40 ET 2026-08-31) and a fresh oil shock in the inflation channel, so it is the last scheduled chance for official interpretation of an outlook the market has repriced ~30 points in four sessions. Q&A format, not prepared remarks alone, which historically widens the range of what gets said. Discovered during the fomc-blackout-start-2026-09-05 pulse-check adjacency sweep (2026-09-01).",
+  },
+  {
+    id: "hammack-remarks-2026-09-03",
+    kind: "macro-print",
+    title: "Cleveland Fed's Hammack — remarks (July hike dissenter)",
+    date: "2026-09-03",
+    status: "estimate",
+    source:
+      "NEWS: zerohedge.com 'Key Events This Week' (week of 2026-08-31) lists Hammack among Thursday 9/3 Fed speakers, and neilsethi.substack.com's 2026-08-30 'Week Ahead' independently has her speaking this week without naming the day — the DATE IS AGGREGATOR-ONLY AND UNCORROBORATED AT THE PRIMARY: clevelandfed.org returned HTTP 403 on two direct fetch attempts 2026-09-01, and no clevelandfed.org press release or speech listing for 9/3 surfaced in search. Proposed as an estimate for exactly that reason; a session that can reach clevelandfed.org should confirm or drop it.",
+    impact: "low",
+    symbols: [],
+    notes:
+      "Filed `low` deliberately, and not because a voting regional president who dissented for a hike is unimportant. Her position is already fully known and priced: she dissented +25bp at the 7/29 FOMC alongside Kashkari and Logan, and told Yahoo Finance on 2026-08-10 that 'now is the time for us to start acting' and that 'one 25 basis point move probably doesn't do a whole lot,' i.e. more than one hike. Her marginal information content into a September hike already priced 62–66% (CME FedWatch, 8/31) is therefore near zero — the opposite of the same-day Waller slot, whose speaker has been silent 52 days with a published framework the current data leaves undetermined. That contrast is the tiering rule: a speaker's information content is a function of how uncertain their position is, not their seniority. Discovered during the waller-economic-outlook-2026-09-03 initial-research adjacency sweep (2026-09-01).",
   },
   {
     id: "jobs-2026-09-04",
@@ -911,6 +924,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "The successor print, and the one that publishes the REVISION to the 09-16 advance estimate — which retail-sales-2026-09-16's own honest-limits section says any 'surprise' framing must net against, and which the calendar could not point at because no retail-sales entry existed beyond 09-16. Also the first clean read after August's record pump prices (AAA: most expensive August on record, above $4/gal every day) wash out of the headline; the series is seasonally adjusted but explicitly NOT price-adjusted, per Census Table 1's own footnote. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep. Filed `confirmed` rather than the sweep's usual `estimate` because the date came from the Census primary release schedule — the same page and `CENSUS:` prefix that seeded the 09-16 entry (cf. the ppi-2026-10-15 precedent, 2026-08-31).",
+  },
+  {
+    id: "retail-sales-2026-11-17",
+    kind: "macro-print",
+    title: "Retail Sales — advance monthly (Oct 2026)",
+    date: "2026-11-17",
+    status: "confirmed",
+    source:
+      'CENSUS: census.gov/retail/release_schedule.html lists the Advance Monthly Retail Trade Report for October 2026 data on "November 17, 2026", 08:30 ET, fetched direct 2026-09-01',
+    impact: "high",
+    symbols: [],
+    notes:
+      "The print that publishes the REVISION to the 10-15 advance estimate, and the one whose own reference month carries Amazon's fall Prime event — the nonstore distortion that made July's -2.2% drop and August's bounce unreadable as demand. NO AMAZON PRIMARY ANNOUNCES 2026 FALL-EVENT DATES: aggregators name Oct 7-8, which is exactly the 2025 pair, so no separate event entry was filed and the distortion is tracked here instead (Prime Day 2026 itself ran June 23-26, per Amazon's press center). ALSO THE FIRST RETAIL PRINT AFTER THE 10-28 FOMC, and the one most exposed if a 2026-09-30 appropriations lapse occurs: Census DELAYS rather than deletes (Sep-2025 advance slipped 2025-10-16 -> 2025-11-25; Oct-2025 advance 2025-11-14 -> 2025-12-16, and the backlog cleared only at the 2026-05-14 release), so in that branch this slot is where the October reference month would land late rather than vanish. Discovered during the retail-sales-2026-10-15 initial research. Filed `confirmed` rather than the sweep's usual `estimate` because the date came from the Census primary release schedule fetched that session — the same page and `CENSUS:` prefix that seeded the 09-16 and 10-15 entries.",
   },
   {
     id: "import-export-prices-2026-09-16",
