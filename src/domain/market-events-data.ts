@@ -433,6 +433,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "First extended policy framing from the new chair; lands D+1 of MRVL's print, D+2 of NVDA's.",
   },
   {
+    id: "vmware-explore-2026-08-31",
+    kind: "product-launch",
+    title: "VMware Explore 2026 (Las Vegas) — Aug 31–Sep 3",
+    date: "2026-08-31",
+    status: "estimate",
+    source:
+      "EST: investors.broadcom.com news release + vmware.com/explore/us both state Aug 31–Sep 3 2026 at the Venetian, with Ram Velaga (president, Infrastructure Software Group) opening the Monday plenary — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-09-01",
+    impact: "medium",
+    symbols: ["AVGO"],
+    notes:
+      "Broadcom's own infrastructure-software conference, and it straddles the 2026-09-02 AVGO print — day 1 (2026-08-31) carried the announcement wave (VMware AI Factory, VMware Private AI Cloud, AgentMinder/vDefend/Avi for agentic AI, VCF-validated third-party models), day 4 lands D+1. That matters because infrastructure software is one of the four numbers the avgo-2026-09-02-print ledger watches: the segment missed in June ($7.18B vs StreetAccount $7.32B) and is where the actively-exploited vCenter CVE-2026-59310 sits. Product announcements cannot change a Q3 that already closed — they bear on the forward software narrative only, and AVGO closed +0.42% on the announcement day. Date is day 1 of the window per house convention (same as crwv-fully-connected-2026-09-29). Discovered during the avgo-2026-09-02-print pulse-check adjacency sweep (2026-09-01).",
+  },
+  {
     id: "adp-employment-2026-09-02",
     kind: "macro-print",
     title: "ADP National Employment Report (Aug 2026 data)",
