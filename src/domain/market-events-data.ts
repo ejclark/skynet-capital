@@ -1247,6 +1247,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "ercot-data-center-audit-filing-2026-12-10",
+    kind: "sector",
+    title: "ERCOT Batch Zero data-center audit filing (target) — Texas interconnection pause",
+    date: "2026-12-10",
+    status: "estimate",
+    source:
+      "NEWS: Utility Dive, 'ERCOT aims to complete Texas governor's data center audit by December' — ERCOT SVP of regulatory policy and general counsel Chad Seely at a PUCT open meeting on 2026-08-20, quoted verbatim: 'Our goal is to head toward a December 10 filing'. A stated internal goal, not a regulatory deadline: Governor Abbott's 2026-08-03 directive sets no completion date, and ERCOT itself calls the audit a multi-month effort. puctexas.gov and ercot.com were not fetched this session, so there is no primary docket behind the date, checked 2026-09-02",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The date that actually gates the Texas data-center pause, which is currently the only dated, quantified DOWNWARD revision to AI-driven load growth on this calendar. On 2026-08-03 Governor Abbott ordered PUCT and ERCOT to run a 'comprehensive verification and audit of all data centers advancing through ERCOT's interconnection process' before any additional data center may proceed, concluding that non-complying projects 'must be denied'; ERCOT holds ~474 GW of interconnection requests (~90% data centers, >5x its record peak demand), with ~300 projects of 75 MW or larger inside the Batch Zero process. The August-2026 EIA STEO priced the consequence immediately, cutting its Texas 2027 electricity-load-growth forecast from 14% to 6% in a single month. Why it matters to this book: docs/research/ai-energy-constraint.md names ERCOT and PJM as the only two deregulated markets where the AI-power windfall accrues, and its frontier map assumes load growth is the binding input — this filing is the checkpoint at which that queue either reopens or stays shut. Tiered `medium`, not `high`: it is a filing against a self-set goal with no statutory deadline, easily slipped, and it reprices no tracked name directly (`symbols: []` — the channel to CRWV is siting and narrative, not revenue). Sits two days after the December STEO (12-08) and on CPI day (12-10). Discovered during the eia-steo-2026-09-09 initial research (2026-09-02).",
+  },
+  {
     id: "cr-expiry-2026-12-11",
     kind: "geopolitical",
     title: "Continuing-resolution expiry — FY2027 funding lapses absent further action",
