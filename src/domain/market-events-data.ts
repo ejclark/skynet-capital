@@ -1169,6 +1169,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "government-funding-deadline-2026-12-11",
+    kind: "geopolitical",
+    title: "FY2027 continuing resolution expires (lame-duck funding cliff)",
+    date: "2026-12-11",
+    status: "estimate",
+    source:
+      "NEWS: the Dec-11 CR passed the Senate 90-6 in August and the House 370-48 on 2026-09-01, and was at the President's desk unsigned at check time — Defense Daily (\"House Sends Dec. 11 CR ... To Trump's Desk For Final Signature\"), Roll Call, UPI and NPR all 2026-09-01; the White House had already stated support. Filed estimate on two independent grounds: not yet enacted when checked, and the event-research lane's no-self-confirm limit on an event discovered in-sweep. Promote once signed, against a primary (congress.gov or a White House signing statement), checked 2026-09-02",
+    impact: "high",
+    symbols: [],
+    notes:
+      "THE ANSWER TO THE QUESTION government-funding-deadline-2026-09-30 LEFT OPEN — its note says verbatim 'No follow-on cliff entry is filed here because the date is conditional on which CR is enacted; file one once that is known.' It is now known: the Senate's Dec 11 won over the House's Dec 4, so the Sep-30 cliff is averted and the FY2027 fight lands in a post-midterm lame duck. Two consequences this calendar already reasons about by hand. First, the cliff clears the December FOMC blackout by one day — fomc-blackout-start-2026-11-28 runs through 12-10, so the first day any participant may speak is also the day funding lapses. Second, and the reason this is filed high rather than medium: every remaining 2026 macro print falls on the far side of it — ppi-2026-12-15, import-export-prices-2026-12-17 and pce-2026-12-23 — and on the 2025 lapse precedent this repo has already banked twice (see those two ledgers), BLS and BEA CANCELED rather than delayed their analogues. So a lapse here empties the data corridor running into opex-2026-12-18, the year's heaviest triple witching, and leaves the 12-09 dot plot with no confirming inflation read before the 2027-01-26/27 FOMC. Discovered during the opex-2026-12-18 pulse-check adjacency sweep (2026-09-02); estimate status widens caution only and licenses no entry.",
+  },
+  {
     id: "ppi-2026-12-15",
     kind: "macro-print",
     title: "PPI release (Nov 2026 data)",
@@ -1204,6 +1217,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes: "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator).",
+  },
+  {
+    id: "nasdaq-100-reconstitution-2026-12-21",
+    kind: "sector",
+    title: "Nasdaq-100 annual reconstitution takes effect",
+    date: "2026-12-21",
+    status: "estimate",
+    source:
+      "EST: projected from Nasdaq's own two most recent annual-reconstitution releases, which are dated and consistent — the 2024 changes were announced 2024-12-13 and became \"effective prior to market open on Monday, December 23, 2024\", the 2025 changes announced 2025-12-13 effective pre-open Monday 2025-12-22 (nasdaq.com press releases, read 2026-09-02). Both land the effective date on the Monday after that year's December triple witching, which projects to 2026-12-21 with an announcement ~Friday 2026-12-11. NO 2026 PRIMARY EXISTS YET — the release is not published until December, so this is a pattern projection, not a sourced date. Promote only against Nasdaq's own 2026 release, checked 2026-09-02",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Filed because it dates a mechanic opex-2026-12-18's initial research could only call 'directional color'. The reconstitution is NOT effective on the witching — it is effective the Monday after — but funds tracking a Monday-open effective date conventionally execute at the prior close, which is the 2026-12-18 witching close itself (conventional inference, NOT sourced; the dates above are the only sourced part). If that holds, the NDX trade stacks onto a close that already carries the S&P quarterly rebalance MOC and the year's largest single-stock option expiry — the amplifying detail, given every name this book tracks is a Nasdaq-100 mega-cap. Treat the whole chain as estimate: a different 2026 effective date moves the trade off the witching close and weakens the stacked-MOC read, which is why it is a named kill switch in that ledger. Discovered during the opex-2026-12-18 pulse-check adjacency sweep (2026-09-02).",
   },
   {
     id: "pce-2026-12-23",
