@@ -208,9 +208,9 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "rates",
     title: "2-Year Treasury Note auction",
     date: "2026-09-22",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: treasury.gov Tentative-Auction-Schedule.pdf lists "2-Year NOTE / Announcement Thursday, September 17, 2026 / Auction Tuesday, September 22, 2026 / Settlement Wednesday, September 30, 2026" (PDF fetched and text-extracted direct 2026-09-02, same table row-for-row as the 5Y/7Y entries already tracked). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-09-02',
+      "TSY: home.treasury.gov Tentative-Auction-Schedule.pdf lists \"2-Year NOTE / Announcement Thursday, September 17, 2026 / Auction Tuesday, September 22, 2026 / Settlement Wednesday, September 30, 2026\" — 1:00pm ET. Filed estimate on 2026-09-02 by the 5Y sibling's adjacency sweep on the lane's no-self-confirm rule (never on date doubt); upgraded to confirmed 2026-09-02 by this event's own initial-research session, which re-fetched and text-extracted the same primary PDF independently. TSY: is an authorized confirmed prefix above, already carried by every sibling auction on this identical schedule (3Y 9/8, 10Y 9/9, 30Y 9/10, 20Y 9/15, TIPS 9/17, 5Y 9/23, 7Y 9/24), checked 2026-09-02",
     impact: "medium",
     symbols: [],
     notes:
