@@ -1,0 +1,200 @@
+/* milestones table of contents + playbooks (#1119) — chapter cards and playbook rows. Tokens only. */
+
+.mc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.mc {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: 16px;
+  color: var(--text);
+  text-align: left;
+}
+.mc:hover {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
+.mc-complete {
+  border-color: color-mix(in oklab, var(--pos) 40%, var(--border));
+}
+.mc-progress {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
+.mc-locked,
+.mc-wip {
+  opacity: 0.72;
+}
+.mc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mc-chip-complete {
+  background: color-mix(in oklab, var(--pos) 16%, var(--surface));
+  color: var(--pos);
+}
+.mc-chip-progress {
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  color: var(--accent);
+}
+.mc-chip-locked,
+.mc-chip-wip {
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.mc-badge {
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+.mc-badge-complete {
+  color: var(--pos);
+}
+.mc-badge-progress {
+  color: var(--accent);
+}
+.mc-badge-locked,
+.mc-badge-wip {
+  color: var(--muted);
+}
+.mc-pts {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.mc-title {
+  font-weight: 700;
+  font-size: 15px;
+  margin-top: 10px;
+}
+.mc-desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.mc-prog {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.mc-bar {
+  flex: 1;
+  width: auto;
+  height: 8px;
+}
+.mc-gate {
+  margin-top: 8px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/* playbooks */
+.pbk-wip {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  max-width: 820px;
+}
+.pbk-wip .num {
+  color: var(--muted);
+  margin-left: 6px;
+}
+.pbk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 820px;
+}
+.pbk {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: 14px 16px;
+  opacity: 0.68;
+}
+.pbk-unlocked {
+  opacity: 1;
+  border-color: color-mix(in oklab, var(--pos) 40%, var(--border));
+}
+.pbk-glyph {
+  font-size: 14px;
+  padding: 4px 9px;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.pbk-glyph-on {
+  background: color-mix(in oklab, var(--pos) 16%, var(--surface));
+  color: var(--pos);
+  border-color: color-mix(in oklab, var(--pos) 40%, var(--border));
+}
+.pbk-body {
+  flex: 1;
+  min-width: 220px;
+}
+.pbk-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pbk-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+.pbk-kind {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pbk-detail {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 70ch;
+}
+.pbk-crit {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.pbk-crit-on {
+  color: var(--pos);
+}
+.pbk-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.pbk-side .btn {
+  width: auto;
+  padding-left: 14px;
+  padding-right: 14px;
+}

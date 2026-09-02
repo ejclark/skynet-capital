@@ -19,8 +19,8 @@ const ITEMS: readonly {
 }[] = [
   { id: "milestones", label: "Milestones", to: "/learn" },
   { id: "onboarding", label: "Onboarding", to: "/onboarding", sub: true },
-  // "Trading ladder" (/learn/trading) and "Playbooks" (/playbooks) join this list with slice 3 of
-  // #1119 — a rail link to a route that doesn't exist yet would be a dead end, not a map.
+  { id: "ladder", label: "Trading ladder", to: "/learn/trading", sub: true },
+  { id: "playbooks", label: "Playbooks", to: "/playbooks", sub: true },
 ];
 
 export function ProfileRail({ current }: { readonly current: ProfileChapter }): ReactElement {
