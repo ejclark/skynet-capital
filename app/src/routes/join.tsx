@@ -1,19 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useId, useState } from "react";
-import { fetchJoin, type JoinIndex, type JoinResult, joinRequest } from "../live/join";
+import { useState } from "react";
+import { fetchJoin } from "../live/join";
 import { PageFrame } from "../shell/frame";
+import { JoinForm, STARTING_LINE_LABEL } from "../shell/join-form";
 
 /**
- * JOIN THE BOARD (#738 phase 9c) — `/add` in the shell: the five-step Alpaca onboarding, the
- * form, and the class picker for bots. The honesty of the old page carries whole: paper keys
- * only, the league's $1,000,000 starting line stated, keys pasted once and never displayed, and
- * refusals rendered verbatim from the service (a duplicate add points at rotation instead).
- * Ownership is the session's server-side — the form carries no identity field at all.
+ * JOIN THE BOARD (#738 phase 9c → redesigned 2026-09-02 from the Claude Design canvas "Alpaca
+ * onboarding process streamline"): connecting an Alpaca paper account is STEP 1 OF 3 of
+ * onboarding — Moneypenny and the first trade are the other two, and this page says so and points
+ * at them, without claiming a state it cannot see (the desk verifies fills; feedback is its own
+ * ledger). The five guide steps are flat cards now, all visible at once: a member on this page is
+ * doing them in order, and an accordion hid the $1,000,000 reset — the one step Alpaca's defaults
+ * get wrong for them. The form itself is `shell/join-form.tsx`.
  */
 
-const STEPS: readonly { readonly title: string; readonly body: ReactElement | string }[] = [
+const GUIDE: readonly { readonly title: string; readonly body: ReactElement | string }[] = [
   {
     title: "Create a free Alpaca account",
     body: (
@@ -57,194 +60,76 @@ const STEPS: readonly { readonly title: string; readonly body: ReactElement | st
   },
   {
     title: "Paste them below",
-    body: "Drop the Key ID and Secret into the form and give yourself a display name. That's it — you'll land on the board.",
+    body: "Drop the Key ID and Secret into the form and give yourself a display name. We verify the keys and the $1,000,000 balance, and you land on the board.",
   },
 ];
 
-function Steps(): ReactElement {
+function Guide(): ReactElement {
   return (
-    <div className="join-steps">
-      {STEPS.map((step, i) => (
-        <details key={step.title} className="join-step" open={i === 0}>
-          <summary>
-            <span className="join-step-n num">{i + 1}</span> {step.title}
-          </summary>
-          <div className="join-step-body">{step.body}</div>
-        </details>
+    <ol className="join-guide" aria-label="Five steps to connect">
+      {GUIDE.map((step, i) => (
+        <li key={step.title} className="join-guide-step">
+          <span className="join-n num" aria-hidden="true">
+            {i + 1}
+          </span>
+          <div>
+            <div className="join-guide-title">{step.title}</div>
+            <div className="join-guide-body">{step.body}</div>
+          </div>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
-function ClassPicker({
-  data,
-  personaId,
-  onPick,
-}: {
-  readonly data: JoinIndex;
-  readonly personaId: string;
-  readonly onPick: (id: string) => void;
-}): ReactElement {
+/** Steps 2 and 3 of onboarding — named and linked, never marked done from here. */
+function WhatsNext(): ReactElement {
   return (
-    <fieldset className="join-classes">
-      <legend>
-        Choose a class <small>— the persona your bot runs</small>
-      </legend>
-      <div className="join-class-grid">
-        {data.classes.map((c) => (
-          <label key={c.id} className={`join-class${personaId === c.id ? " sel" : ""}`}>
-            <input
-              type="radio"
-              name="personaId"
-              checked={personaId === c.id}
-              onChange={() => onPick(c.id)}
-            />
-            <span className="join-class-name">{c.name}</span>
-            <span className="join-class-id num">{c.id}</span>
-            <span className="join-class-thesis">{c.thesis}</span>
-            {c.legend ? <span className="join-class-legend">{c.legend}</span> : null}
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <aside className="join-next" aria-label="After you connect">
+      <span className="join-next-k">Then</span>
+      <Link to="/feedback">
+        <span className="join-n num" aria-hidden="true">
+          2
+        </span>
+        Meet Moneypenny — file your first feedback
+      </Link>
+      <Link to="/trade">
+        <span className="join-n num" aria-hidden="true">
+          3
+        </span>
+        Make your first trade on the desk
+      </Link>
+    </aside>
   );
 }
 
-function JoinForm({ data }: { readonly data: JoinIndex }): ReactElement {
-  const [displayName, setDisplayName] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [apiSecret, setApiSecret] = useState("");
-  const [kind, setKind] = useState<"human" | "bot">("human");
-  const [personaId, setPersonaId] = useState("");
-  const [timezone, setTimezone] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<JoinResult | undefined>();
-  const nameId = useId();
-  const keyId = useId();
-  const secretId = useId();
-  const kindId = useId();
-  const tzId = useId();
-  const ready =
-    displayName.trim() !== "" &&
-    apiKey.trim() !== "" &&
-    apiSecret.trim() !== "" &&
-    (kind === "human" || personaId !== "");
-
-  const submit = async () => {
-    setBusy(true);
-    try {
-      setResult(
-        await joinRequest({
-          displayName: displayName.trim(),
-          apiKey,
-          apiSecret,
-          kind,
-          ...(kind === "bot" && personaId ? { personaId } : {}),
-          ...(timezone ? { timezone } : {}),
-        }),
-      );
-    } catch (error) {
-      setResult({ ok: false, error: String(error) });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (result?.ok)
-    return (
-      <div className="join-done">
-        <span className="join-done-icon" aria-hidden="true">
-          🎉
-        </span>
-        <h2>You're on the board</h2>
-        <p>
-          <b>{result.displayName}</b> is now live on the observatory.
-        </p>
-        <Link className="btn btn-primary set-save" to="/" search={{ by: "equity" }}>
-          ← To the standings
+function Done({ displayName }: { readonly displayName: string }): ReactElement {
+  return (
+    <div className="join-done">
+      <span className="status status-live">
+        <span className="status-dot" />
+        PAPER · LIVE
+      </span>
+      <h2>You're on the board</h2>
+      <p>
+        <b>{displayName}</b> is live on the observatory at {STARTING_LINE_LABEL}. Two steps of
+        onboarding remain.
+      </p>
+      <div className="join-done-actions">
+        <Link className="btn btn-primary set-save" to="/feedback">
+          Meet Moneypenny ›
+        </Link>
+        <Link className="btn set-save" to="/" search={{ by: "equity" }}>
+          To the standings
         </Link>
       </div>
-    );
-
-  return (
-    <div className="set-fields join-form">
-      <div className="field">
-        <label htmlFor={nameId}>Display name</label>
-        <input
-          id={nameId}
-          value={displayName}
-          maxLength={60}
-          placeholder="e.g. Uncle Joe"
-          onChange={(e) => setDisplayName(e.target.value)}
-        />
-      </div>
-      <div className="field">
-        <label htmlFor={keyId}>Alpaca paper API key</label>
-        <input
-          id={keyId}
-          type="password"
-          value={apiKey}
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="PK…"
-          onChange={(e) => setApiKey(e.target.value)}
-        />
-      </div>
-      <div className="field">
-        <label htmlFor={secretId}>Alpaca paper API secret</label>
-        <input
-          id={secretId}
-          type="password"
-          value={apiSecret}
-          autoComplete="off"
-          spellCheck={false}
-          onChange={(e) => setApiSecret(e.target.value)}
-        />
-      </div>
-      <div className="field">
-        <label htmlFor={kindId}>Account type</label>
-        <select id={kindId} value={kind} onChange={(e) => setKind(e.target.value as never)}>
-          <option value="human">Human — you trade it yourself</option>
-          <option value="bot">Bot — a persona trades it autonomously</option>
-        </select>
-      </div>
-      {kind === "bot" ? (
-        <ClassPicker data={data} personaId={personaId} onPick={setPersonaId} />
-      ) : null}
-      <div className="field">
-        <label htmlFor={tzId}>
-          Time zone <small>(optional)</small>
-        </label>
-        <select id={tzId} value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-          <option value="">No preference — show UTC-relative</option>
-          {data.timezones.map((tz) => (
-            <option key={tz.value} value={tz.value}>
-              {tz.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <button
-        type="button"
-        className="btn btn-primary set-save"
-        disabled={!ready || busy}
-        onClick={() => void submit()}
-      >
-        {busy ? "Verifying against Alpaca…" : "Add my account"}
-      </button>
-      {result && !result.ok ? <p className="set-err">{result.error}</p> : null}
-      <p className="note">
-        Paper keys only · balance set to $1,000,000 USD · alpaca.markets → Paper Trading → API Keys.
-        Already on the board and just regenerated your key?{" "}
-        <Link to="/settings">Rotate it in Settings</Link> instead — adding again is refused as a
-        duplicate.
-      </p>
     </div>
   );
 }
 
 function JoinPage(): ReactElement {
   const join = useQuery({ queryKey: ["join"], queryFn: fetchJoin });
+  const [joined, setJoined] = useState<{ readonly displayName: string } | undefined>();
   if (join.isPending)
     return (
       <PageFrame>
@@ -260,19 +145,33 @@ function JoinPage(): ReactElement {
   return (
     <PageFrame>
       <header className="page-header">
-        <h1>Connect your Alpaca account</h1>
+        <div className="join-eyebrow">Onboarding · step 1 of 3</div>
+        <h1>Connect your Alpaca paper account</h1>
         <p>
-          Your account trades on <b>Alpaca</b> paper money. Follow the steps to grab your keys, then
-          paste them below — we read them <b>only</b> to show your balance and trades. Nothing is
-          ever placed on your behalf.
+          Skynet Capital is a league for learning to trade — for real, without real losses. You
+          trade the live market through an Alpaca <b>paper</b> account, climb a ladder from stocks
+          to options one fill at a time, and earn your rank on the leaderboard. Five short steps get
+          you connected: create the account, switch to Paper, set the balance to $1,000,000,
+          generate keys, paste them here.
         </p>
       </header>
       {!join.data.wired ? (
         <p className="note">Joining isn't wired in this deployment.</p>
+      ) : joined ? (
+        <Done displayName={joined.displayName} />
       ) : (
         <>
-          <Steps />
-          <JoinForm data={join.data} />
+          <Guide />
+          <JoinForm data={join.data} onJoined={setJoined} />
+          <p className="join-caveat">
+            Paper keys only · balance verified at {STARTING_LINE_LABEL} USD · alpaca.markets → Paper
+            Trading → API Keys. Keys are checked with read-only calls, then stored encrypted; a
+            human account only ever places the orders you submit from the desk yourself. Already on
+            the board and just regenerated your key?{" "}
+            <Link to="/settings">Rotate it in Settings</Link> instead — adding again is refused as a
+            duplicate.
+          </p>
+          <WhatsNext />
         </>
       )}
     </PageFrame>

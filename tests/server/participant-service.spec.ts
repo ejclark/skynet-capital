@@ -54,7 +54,7 @@ const emptyBoard = (): DashboardData => ({ generatedAt: "t0", participants: [], 
 const okFactory = () =>
   new AlpacaTradingClient(
     new FixtureTradingTransport({
-      account: { id: "x", cash: "1000", portfolio_value: "1000", status: "ACTIVE" },
+      account: { id: "x", cash: "1000000", portfolio_value: "1000000", status: "ACTIVE" },
     }),
   );
 
@@ -99,7 +99,7 @@ describe("ParticipantService.addParticipant", () => {
 
     const result = await service.addParticipant({
       displayName: "Uncle Joe",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
     });
 
@@ -113,7 +113,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service, store, hub, started } = makeService({});
     const result = await service.addParticipant({
       displayName: "Uncle Joe",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
     });
 
@@ -125,10 +125,10 @@ describe("ParticipantService.addParticipant", () => {
 
   it("records the founding seed sample at onboarding — the doubling baseline", async () => {
     const { service, seeds } = makeService({});
-    await service.addParticipant({ displayName: "Uncle Joe", apiKey: "k", apiSecret: "s" });
+    await service.addParticipant({ displayName: "Uncle Joe", apiKey: "PK-k", apiSecret: "s" });
 
     expect(seeds).toEqual([
-      { id: "human-uncle_joe", equity: 1000, at: "2026-07-24T00:00:00.000Z" },
+      { id: "human-uncle_joe", equity: 1_000_000, at: "2026-07-24T00:00:00.000Z" },
     ]);
   });
 
@@ -138,7 +138,7 @@ describe("ParticipantService.addParticipant", () => {
     });
     const result = await service.addParticipant({
       displayName: "Bad",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
     });
 
@@ -151,7 +151,7 @@ describe("ParticipantService.addParticipant", () => {
   it("rejects blank fields", async () => {
     const { service } = makeService({});
     expect(
-      (await service.addParticipant({ displayName: "", apiKey: "k", apiSecret: "s" })).ok,
+      (await service.addParticipant({ displayName: "", apiKey: "PK-k", apiSecret: "s" })).ok,
     ).toBe(false);
     expect(
       (await service.addParticipant({ displayName: "A", apiKey: "", apiSecret: "s" })).ok,
@@ -169,7 +169,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service } = makeService({ store });
     const result = await service.addParticipant({
       displayName: "Uncle Joe",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
     });
     expect(result.ok).toBe(false);
@@ -191,7 +191,7 @@ describe("ParticipantService.addParticipant", () => {
     });
     const result = await service.addParticipant({
       displayName: "Eric Clark",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
     });
     expect(result.ok).toBe(false);
@@ -202,7 +202,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service } = makeService({});
     const result = await service.addParticipant({
       displayName: "A Bot",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
       kind: "bot",
     });
@@ -213,7 +213,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service } = makeService({});
     const result = await service.addParticipant({
       displayName: "Uncle Joe",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
       timezone: "Not/AZone",
     });
@@ -224,7 +224,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service } = makeService({});
     const result = await service.addParticipant({
       displayName: "Uncle Joe",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
       timezone: "America/Chicago",
     });
@@ -238,7 +238,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service, store } = makeService({});
     const result = await service.addParticipant({
       displayName: "A Bot",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
       kind: "bot",
       personaId: "not-a-class",
@@ -251,7 +251,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service, store } = makeService({});
     const result = await service.addParticipant({
       displayName: "JARVIS",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
       kind: "bot",
       personaId: "day-trader",
@@ -267,7 +267,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service, store } = makeService({});
     await service.addParticipant({
       displayName: "JARVIS",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
       kind: "bot",
       personaId: "day-trader",
@@ -280,7 +280,7 @@ describe("ParticipantService.addParticipant", () => {
     const { service, store } = makeService({});
     await service.addParticipant({
       displayName: "JARVIS",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
       kind: "bot",
       personaId: "day-trader",
@@ -293,7 +293,7 @@ describe("ParticipantService.addParticipant", () => {
       requesterEmail: "second-member@example.com",
     });
     expect(result.ok).toBe(false);
-    expect(store.items[0]?.credentials.apiKey).toBe("k");
+    expect(store.items[0]?.credentials.apiKey).toBe("PK-k");
   });
 
   // A raw exception can carry internals — hostnames, proxy banners — that don't belong in
@@ -306,7 +306,7 @@ describe("ParticipantService.addParticipant", () => {
     });
     const result = await service.addParticipant({
       displayName: "Uncle Joe",
-      apiKey: "k",
+      apiKey: "PK-k",
       apiSecret: "s",
     });
     expect(result.ok).toBe(false);
@@ -314,5 +314,79 @@ describe("ParticipantService.addParticipant", () => {
       expect(result.error).not.toContain("internal-proxy");
       expect(result.error).toContain("Could not reach Alpaca");
     }
+  });
+  // The two onboarding gates the design added (2026-09-02, "Alpaca onboarding process
+  // streamline"): a live key is named as such before Alpaca is ever called, and a valid key on a
+  // paper account that isn't at the league's $1,000,000 starting line is refused with the number
+  // the member has to fix — nothing stored, streamed, or seeded in either case.
+  it("refuses a live key (no PK prefix) before touching Alpaca", async () => {
+    let called = 0;
+    const { service, store, started } = makeService({
+      factory: () => {
+        called++;
+        return okFactory();
+      },
+    });
+    const result = await service.addParticipant({
+      displayName: "Live Larry",
+      apiKey: "AK-live",
+      apiSecret: "s",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.ok ? "" : result.error).toContain("start with PK");
+    expect(called).toBe(0);
+    expect(store.items).toHaveLength(0);
+    expect(started).toHaveLength(0);
+  });
+
+  it("refuses a paper account that isn't at the $1,000,000 starting line, naming the balance found", async () => {
+    const { service, store, started, seeds, hub } = makeService({
+      factory: () =>
+        new AlpacaTradingClient(
+          new FixtureTradingTransport({
+            account: { id: "x", cash: "100000", portfolio_value: "100000", status: "ACTIVE" },
+          }),
+        ),
+    });
+    const result = await service.addParticipant({
+      displayName: "Default Dan",
+      apiKey: "PK-k",
+      apiSecret: "s",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "balance",
+      found: 100_000,
+      error: expect.stringContaining("$100,000.00"),
+    });
+    expect(result.ok ? "" : result.error).toContain("$1,000,000.00");
+    expect(store.items).toHaveLength(0);
+    expect(started).toHaveLength(0);
+    expect(seeds).toEqual([]);
+    expect(hub.getState().participants).toHaveLength(0);
+  });
+
+  it("accepts the starting line to the cent — Alpaca's string balances round-trip exactly", async () => {
+    const { service } = makeService({
+      factory: () =>
+        new AlpacaTradingClient(
+          new FixtureTradingTransport({
+            account: {
+              id: "x",
+              cash: "1000000.00",
+              portfolio_value: "1000000.00",
+              status: "ACTIVE",
+            },
+          }),
+        ),
+    });
+    const result = await service.addParticipant({
+      displayName: "Exact Eve",
+      apiKey: "PK-k",
+      apiSecret: "s",
+    });
+    expect(result.ok).toBe(true);
   });
 });
