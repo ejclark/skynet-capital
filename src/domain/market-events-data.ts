@@ -114,6 +114,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "End-of-August belly supply; the 7Y is the historically wobbliest of the coupon block.",
   },
   {
+    id: "treasury-coupon-announcement-2026-09-03",
+    kind: "rates",
+    title: "Treasury September coupon-block announcement (3Y / 10Y / 30Y sizes)",
+    date: "2026-09-03",
+    status: "estimate",
+    source:
+      "EST: api.fiscaldata.treasury.gov upcoming_auctions, fetched direct 2026-09-02, carries announcemt_date 2026-09-03 for all three September coupons — 3-Year CUSIP 91282CRL7 (auction 09-08), 9-Year 11-Month reopening CUSIP 91282CRF0 (auction 09-09) and 29-Year 11-Month reopening CUSIP 912810UW6 (auction 09-10) — with offering_amt still null on each; the ~11:00 ET slot is Treasury's standing coupon-announcement convention and is NOT separately sourced. Primary-sourced on the date, filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The moment the September coupon block stops being an unknown quantity: this is when the reopening sizes are published, and the treasury-10y-note-2026-09-09 ledger has flagged the missing size in every row since 2026-08-19 without a dated event to attach it to. Load-bearing this cycle because the supply half and the demand half of the auction setup have diverged — the 10Y sits at 4.79% (H.15, 09-01), ~11bp above where the Aug-12 note it reopens actually stopped (4.683%, $42B, bid-to-cover 2.53, indirect 76.73%, primary-verified via fiscaldata auctions_query) — so a size above the $42B run-rate would turn a demand test into a supply test, and a size at or below it removes the supply leg entirely. Lands the morning before payrolls (09-04) and two days before the Fed blackout (09-05). Discovered during the treasury-10y-note-2026-09-09 pulse-check adjacency sweep (2026-09-02).",
+  },
+  {
     id: "treasury-3y-note-2026-09-08",
     kind: "rates",
     title: "3-Year Treasury Note auction",
