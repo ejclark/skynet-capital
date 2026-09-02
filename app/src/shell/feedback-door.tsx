@@ -31,9 +31,12 @@ const SWITCH_LABEL: Record<Mode, string> = {
 export function FeedbackDoor({
   coachEnabled,
   onFiled,
+  starter,
 }: {
   readonly coachEnabled: boolean;
   readonly onFiled: () => void;
+  /** Seeds the coach's note — onboarding's "meet Moneypenny" step arrives with one (#1119). */
+  readonly starter?: string;
 }): ReactElement {
   const [slot, setSlot] = useState<DraftSlot | undefined>();
   const [mode, setMode] = useState<Mode>("coach");
@@ -59,6 +62,7 @@ export function FeedbackDoor({
       ) : null}
       {active === "coach" ? (
         <CoachBox
+          initialNote={starter}
           onDraft={(draft) => {
             setSlot((prev) => ({ seq: (prev?.seq ?? 0) + 1, draft }));
             setMode("manual");

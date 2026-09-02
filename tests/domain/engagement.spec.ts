@@ -24,7 +24,9 @@ describe("the engagement track — earned by an action, not a fill", () => {
   });
 
   it("looks up a real milestone by id, and nothing for an unknown one", () => {
-    expect(engagementMilestone("first-feedback")?.title).toBe("File your first feedback");
+    expect(engagementMilestone("first-feedback")?.title).toBe(
+      "Meet Moneypenny — file your first feedback",
+    );
     expect(engagementMilestone("not-a-real-id")).toBeUndefined();
   });
 
