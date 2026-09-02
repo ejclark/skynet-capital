@@ -788,6 +788,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The successor checkpoint to opec-plus-meeting-2026-09-06, and deliberately filed `low`: the JMMC monitors DoC conformity and compensation and RECOMMENDS — it does not set quotas, which is the seven/eight-country group's job. What makes it worth tracking anyway is the 2027 baseline fight: third-party Maximum-Sustainable-Capacity audits commissioned across Jan-Sep 2026 set the 2027 baselines from which every quota derives, Iraq is pushing for a higher individual number, and Kazakhstan carries the alliance's largest cumulative compensation burden — the JMMC is where conformity and compensation get aired in public before the group decides. Discovered during the opec-plus-meeting-2026-09-06 initial research (2026-08-31).",
   },
   {
+    id: "ism-services-2026-10-05",
+    kind: "macro-print",
+    title: "ISM Services PMI (Sep 2026 data)",
+    date: "2026-10-05",
+    status: "estimate",
+    source:
+      "EST: ISM's own release text, re-fetched verbatim from the July-data PRNewswire primary 2026-09-02, states the rule and both its exceptions — \"posted on ISM's website at www.ismrob.org on the third business day of every month after 10:00 a.m. ET. The one exception is in January, the report is released on the fourth business day of the month. *Unless the New York Stock Exchange is closed.\" October 2026 opens on a Thursday, so the first three business days are Thu 10-01, Fri 10-02 and Mon 10-05, with no NYSE closure in the window. ismworld.org's ROB calendar was re-fetched direct 2026-09-02 and still 302s to ecommerce.ismworld.org/SSO/Login.aspx, so this is a rule-derived date and nothing more, checked 2026-09-02",
+    impact: "high",
+    symbols: [],
+    notes:
+      'FILLS A HOLE IN THE TRACKED SERIES: the calendar carried 09-03, 11-04 and 12-03 but not October, while its manufacturing sibling ism-manufacturing-2026-10-01 was tracked — so the one Q4 services read before the 10-28 FOMC was invisible. It also CORRECTS A DATE: the ism-services-2026-11-04 ledger names the October print as "10-06" in both its signal list and its kill switches, which is the fourth business day and would only be right under the January exception; that ledger is append-only and was not edited. READ IT, DO NOT TRADE IT, on the same measured grounds as its siblings — the 11-04 initial research found release-day moves in TLT/^TNX/SPY/QQQ/XLF/IWM statistically nil across all eight 2026 releases, and the 12-03 research added that the 10:00 ET release HOUR is quieter than an ordinary hour in four of five instruments. Cheap falsifier, dated: each report names its successor, so the 2026-09-03 release\'s own "next report" line adjudicates this date within 24 hours of filing (forward test FT-47) and is also what would promote it to confirmed. Discovered during the ism-services-2026-12-03 initial research (2026-09-02).',
+  },
+  {
     id: "mrvl-investor-day-2026-10-06",
     kind: "product-launch",
     title: "MRVL Investor Day (NYC)",
@@ -1226,7 +1239,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "high",
     symbols: [],
     notes:
-      "Lands 10:00 ET the day BEFORE jobs-2026-12-04 — the last activity read before the payroll that feeds the 12-09 dots, and it carries its own employment index. READ IT, DO NOT TRADE IT: the ism-services-2026-09-03 initial research measured all 8 of 2026's services releases and found release-day moves in TLT/^TNX/SPY/QQQ statistically nil, so this entry exists as corridor structure and a labor cross-check, not as a tradable print. Discovered during the jobs-2026-12-04 pulse (2026-09-02) alongside its manufacturing sibling.",
+      "Lands 10:00 ET the day BEFORE jobs-2026-12-04 — the last activity read before the payroll that feeds the 12-09 dots, and it carries its own employment index. READ IT, DO NOT TRADE IT: the ism-services-2026-11-04 initial research measured all 8 of 2026's services releases and found release-day moves in TLT/^TNX/SPY/QQQ/XLF/IWM statistically nil, and this event's own research added that the 10:00 ET release HOUR is quieter than an ordinary hour in four of five instruments (hourly bars, n=167 sessions). WHY IT STILL MATTERS, which is the finding its own ledger banked: every federal November-reference price print lands AFTER the 12-09 vote (CPI 12-10, PPI 12-15, import/export 12-17, PCE 12-23), and this is the only 2026 services print inside an FOMC blackout (11-28→12-10) — so ISM mfg Prices Paid 12-01, this print's Prices index, and average hourly earnings on 12-04 are the Committee's entire November-data price picture. Informational, never tradable. Discovered during the jobs-2026-12-04 pulse (2026-09-02) alongside its manufacturing sibling; the earlier attribution of the eight-release measurement to the 09-03 ledger was wrong and is corrected here.",
   },
   {
     id: "jobs-2026-12-04",
