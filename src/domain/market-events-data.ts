@@ -1138,6 +1138,32 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "AWS is the whole AMZN thesis right now ($496B backlog); natural catalyst window ~4wks post-print.",
   },
   {
+    id: "ism-manufacturing-2026-12-01",
+    kind: "macro-print",
+    title: "ISM Manufacturing PMI (Nov 2026 data)",
+    date: "2026-12-01",
+    status: "estimate",
+    source:
+      "EST: ISM publishes the Manufacturing PMI at 10:00 ET on the first business day of the month (the cadence the confirmed 2026-09-01 entry follows, and the same derivation the 2026-10-01 and 2026-11-02 siblings carry); December 2026's first business day is Tuesday 12-01, with no federal holiday in the window. ismworld.org's ROB calendar was re-fetched direct 2026-09-02 and still 302s to ecommerce.ismworld.org/SSO/Login.aspx, so this is a rule-derived date and nothing more, checked 2026-09-02",
+    impact: "high",
+    symbols: [],
+    notes:
+      "Opens the December compound corridor: the first hard activity read of the month, three days ahead of jobs-2026-12-04 and eight ahead of the fomc-2026-12-09 SEP/dot-plot meeting. Prices-paid is the leg that matters into a hawkish regime — the 2026-09-01 edition printed activity cooling (54.6 vs 55.2 est, employment 51.2 vs 53.0 est) with Prices stuck at 71.1, the stagflation-shaped mix that makes a soft labor print un-buyable. Discovered during the jobs-2026-12-04 pulse (2026-09-02): the corridor sweep found this print's entire pre-payroll lead-in untracked while the calendar carries the Sep/Oct/Nov ISM slots.",
+  },
+  {
+    id: "ism-services-2026-12-03",
+    kind: "macro-print",
+    title: "ISM Services PMI (Nov 2026 data)",
+    date: "2026-12-03",
+    status: "estimate",
+    source:
+      "EST: ISM publishes the Services PMI at 10:00 ET on the third business day of the month (the cadence the confirmed 2026-09-03 entry follows, and the same derivation the 2026-11-04 sibling carries); December 2026's first three business days are Tue 12-01, Wed 12-02 and Thu 12-03. ismworld.org's ROB calendar was re-fetched direct 2026-09-02 and still 302s to ecommerce.ismworld.org/SSO/Login.aspx, so this is a rule-derived date and nothing more, checked 2026-09-02",
+    impact: "high",
+    symbols: [],
+    notes:
+      "Lands 10:00 ET the day BEFORE jobs-2026-12-04 — the last activity read before the payroll that feeds the 12-09 dots, and it carries its own employment index. READ IT, DO NOT TRADE IT: the ism-services-2026-09-03 initial research measured all 8 of 2026's services releases and found release-day moves in TLT/^TNX/SPY/QQQ statistically nil, so this entry exists as corridor structure and a labor cross-check, not as a tradable print. Discovered during the jobs-2026-12-04 pulse (2026-09-02) alongside its manufacturing sibling.",
+  },
+  {
     id: "jobs-2026-12-04",
     kind: "macro-print",
     title: "Employment Situation (Nov 2026 data)",
