@@ -175,7 +175,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes:
-      "Lands 40 minutes after the 30Y reopening closes on the SAME day (auction 1:00pm ET, buyback 1:40pm ET) and is the first long-end liquidity-support operation on or after sb0607's 09-09 effective date — so its cap should step from the scheduled $2B to the announced $4B/operation minimum, though Treasury has not yet published the updated schedule. Note the sector is 10-20Y, NOT the 20-30Y bucket the reopened bond sits in; the next 20-30Y operation is 2026-09-24. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep.",
+      "Lands 40 minutes after the 30Y reopening closes on the SAME day (auction 1:00pm ET, buyback 1:40pm ET) and is the first long-end liquidity-support operation on or after sb0607's 09-09 effective date — so its cap should step from the scheduled $2B to the announced $4B/operation minimum, though Treasury has not yet published the updated schedule. Note the sector is 10-20Y, NOT the 20-30Y bucket the reopened bond sits in; the next 20-30Y operation is treasury-buyback-20y30y-2026-09-24. The schedule's own maturity range for this operation, read off the PDF text layer 2026-09-02, is 09/11/2036 - 09/10/2046, so the bond being auctioned that morning (CUSIP 912810UW6, maturing 2056) is NOT eligible for it — the same-day support is adjacent-sector in the literal sense, not a bid for this CUSIP. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep.",
   },
   {
     id: "treasury-20y-bond-2026-09-15",
@@ -226,6 +226,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes: "Closes the September coupon calendar.",
+  },
+  {
+    id: "treasury-buyback-20y30y-2026-09-24",
+    kind: "rates",
+    title: "Treasury liquidity-support buyback operation (20-30Y nominal, 1:40pm ET)",
+    date: "2026-09-24",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (Q3 2026 refunding, published 2026-08-05), PDF text layer read directly 2026-09-02 — row reads announce 9/23/2026, operation 9/24/2026 1:40 pm - 2:00 pm, settle 9/25/2026, Liquidity Support, Nominal Coupons 20Y to 30Y, maturity range 09/25/2046 - 09/24/2056, min $0, max $2 billion. Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, and because the $2B cap predates press release sb0607, checked 2026-09-02",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The first 20-30Y-sector buyback after sb0607's 09-09 step-up to a $4B/operation minimum, so the published $2B cap should roughly double — Treasury has not republished the schedule, and the actual cap is disclosed with the preliminary CUSIP list at 11:00am ET on the 09-23 announcement date. This is the operation whose maturity range (09/25/2046 - 09/24/2056) actually COVERS the bond sold at treasury-30y-bond-2026-09-10 (CUSIP 912810UW6, maturing 2056); the same-day 09-10 operation is 10-20Y and cannot buy it. So the nearest direct liquidity support for the reopened long bond is 14 days AFTER its auction and 8 days after the 09-16 FOMC, not the day of. Shares 09-24 with treasury-7y-note-2026-09-24 (1:00pm ET), the Trump-Xi summit (est) and scoos-2026-09-24 (14:00), so nothing that afternoon is cleanly attributable. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep (2026-09-02); flagged but not dated by that ledger's 2026-08-30 row.",
   },
   // Options expiration — 3rd-Friday standard (monthly); quarterly (Mar/Jun/Sep/Dec) is
   // triple/quad witching. Pin risk, dealer gamma, and volume spikes cluster here; kept market-wide.
