@@ -1,4 +1,4 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useConnection } from "../live/connection";
 import { KeyboardChords } from "../shell/keyboard";
@@ -65,6 +65,32 @@ function ExitIcon(): ReactElement {
   );
 }
 
+/** Every route under the Profile rail lights the Profile tab (Accounts is `/`, exactly). */
+export const PROFILE_PATHS = ["/learn", "/onboarding", "/playbooks", "/settings", "/join"] as const;
+
+export function isProfilePath(pathname: string): boolean {
+  const path = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
+  return path === "/" || PROFILE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
+/**
+ * THE PROFILE TAB (#1119, the canvas's top bar: Profile · Trade · Activity · Research · Feedback).
+ * Profile is a family of routes, not one, so its active state is computed from the location
+ * rather than a single route match; it opens on the milestones table of contents.
+ */
+function ProfileTab(): ReactElement {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return (
+    <Link
+      to="/learn"
+      className="topnav-link"
+      aria-current={isProfilePath(pathname) ? "page" : undefined}
+    >
+      Profile
+    </Link>
+  );
+}
+
 function RootShell(): ReactElement {
   return (
     <div className="shell">
@@ -79,26 +105,7 @@ function RootShell(): ReactElement {
           Skynet Capital
         </span>
         <nav className="topnav" aria-label="Views">
-          <Link
-            to="/"
-            search={{ by: "equity" }}
-            className="topnav-link"
-            activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false, exact: true }}
-          >
-            Standings
-          </Link>
-          <Link
-            to="/wire"
-            className="topnav-link"
-            activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false }}
-          >
-            The Wire
-          </Link>
-          <Link to="/research" className="topnav-link" activeProps={{ "aria-current": "page" }}>
-            Research
-          </Link>
+          <ProfileTab />
           <Link
             to="/trade"
             className="topnav-link"
@@ -106,6 +113,17 @@ function RootShell(): ReactElement {
             activeOptions={{ includeSearch: false }}
           >
             Trade
+          </Link>
+          <Link
+            to="/wire"
+            className="topnav-link"
+            activeProps={{ "aria-current": "page" }}
+            activeOptions={{ includeSearch: false }}
+          >
+            Activity
+          </Link>
+          <Link to="/research" className="topnav-link" activeProps={{ "aria-current": "page" }}>
+            Research
           </Link>
           <Link
             to="/feedback"
