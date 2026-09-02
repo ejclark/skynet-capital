@@ -1169,6 +1169,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "cr-expiry-2026-12-11",
+    kind: "geopolitical",
+    title: "Continuing-resolution expiry — FY2027 funding lapses absent further action",
+    date: "2026-12-11",
+    status: "estimate",
+    source:
+      "NEWS: the House adopted the Senate stopgap 370-48 on 2026-09-01, funding agencies through December 11 (Roll Call 2026-09-01 'The House easily cleared a stopgap spending bill Tuesday that would keep federal agencies funded through Dec. 11'; UPI, Breaking Defense, Washington Post concur on date and count; Senate passed 90-6 on 2026-08-08). congress.gov returned HTTP 403 on fetch, so there is no bill-level primary, and the bill was NOT yet signed at time of check — the president was reported 'expected to sign it in short order'. Estimate on both counts, checked 2026-09-02",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The second dated checkpoint the midterm-elections-2026-11-03 entry deliberately left un-proposed 'until the chambers reconcile which' of Dec 4 (House) or Dec 11 (Senate) — 2026-09-01 reconciled it to the Senate's Dec 11, so it is proposed now. Placement is the whole point: it lands TWO DAYS AFTER the 12-09 FOMC and ONE DAY AFTER cpi-2026-12-10, i.e. inside the blackout gate fomc-2026-12-09's notes already flag, so no FOMC participant may respond to a lapse in the session it would begin. It also sits 10 days after the conditional georgia-senate-runoff-2026-12-01, which can leave Senate control unresolved going into the vote that averts it, and 35 days after jobs-2026-11-06 — far enough that the October reference month this calendar's BLS prints measure is not exposed to it, which is the reason the jobs-2026-11-06 pulse that discovered it recorded the exposure as retired for November and live for December. The lapse itself remains conditional and un-forecast here; the government-funding-deadline-2026-09-30 ledger owns the base rates (S&P median 0.0% during 22 funding gaps since 1976; the durable cost is informational, not price). Discovered during the jobs-2026-11-06 pulse-check adjacency sweep (2026-09-02).",
+  },
+  {
     id: "ppi-2026-12-15",
     kind: "macro-print",
     title: "PPI release (Nov 2026 data)",
