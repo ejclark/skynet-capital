@@ -112,7 +112,7 @@ function TradePage(): ReactElement {
         </Link>
       ) : (
         <Link to="/" search={{ by: "equity" }}>
-          ← Standings
+          ← Accounts
         </Link>
       )}
     </>

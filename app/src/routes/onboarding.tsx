@@ -6,6 +6,7 @@ import { fetchJoin } from "../live/join";
 import { fetchOnboarding, type Onboarding, type OnboardingStep } from "../live/onboarding";
 import { PageFrame } from "../shell/frame";
 import { JoinForm } from "../shell/join-form";
+import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 
 /**
@@ -180,6 +181,7 @@ function OnboardingPage(): ReactElement {
   const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
   return (
     <PageFrame rail={<ProfileRail current="onboarding" />}>
+      <ProfileMeta />
       <header className="page-header">
         <div className="join-eyebrow">
           Milestone {data.milestone.code} · {data.milestone.title}

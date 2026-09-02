@@ -120,7 +120,7 @@ function Done({ displayName }: { readonly displayName: string }): ReactElement {
           Meet Moneypenny ›
         </Link>
         <Link className="btn set-save" to="/" search={{ by: "equity" }}>
-          To the standings
+          To the accounts board
         </Link>
       </div>
     </div>

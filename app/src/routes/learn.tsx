@@ -8,6 +8,7 @@ import { Hud, ladderProgress } from "../shell/course-cards";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
 import { type ChapterState, MilestoneCard } from "../shell/milestone-card";
+import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 import { CheckGateCard, EngagementUnlockBanner, UnlockBanner } from "../shell/unlock-gate";
 
@@ -104,6 +105,7 @@ function LearnPage(): ReactElement {
   const pb = playbooks.data;
   return (
     <PageFrame rail={rail}>
+      <ProfileMeta />
       <header className="page-header">
         <div className="join-eyebrow">Milestones · table of contents</div>
         <h1>Your account's milestones</h1>
