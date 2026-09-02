@@ -101,4 +101,16 @@ describe("learnJsonView", () => {
     const view = learnJsonView(undefined);
     expect(view.engagementCelebrating).toEqual([]);
   });
+
+  it("surfaces the feedback gate with its sentence when the progression holds it", () => {
+    const view = learnJsonView({
+      earned: [],
+      points: 0,
+      rank: { title: "Observer", atPoints: 0 },
+      unlockedLevels: new Set([100]),
+      ladderGate: "first-feedback",
+    });
+    expect(view.gate?.reason).toBe("first-feedback");
+    expect(view.gate?.note).toContain("first feedback filing");
+  });
 });

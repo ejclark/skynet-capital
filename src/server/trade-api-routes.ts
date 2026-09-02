@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { LADDER_GATE_NOTE } from "../domain/progression.js";
 import { previewOrder, type TicketOrderType } from "../trading/order-ticket.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
@@ -101,6 +102,17 @@ export async function serveTradeApi(
   // Identity: the session and nowhere else — exactly `/trade`'s resolution.
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
 
+  // The feedback gate (#1119): with training wheels on and no feedback filed, a BUY — the one
+  // share play that opens a position — is refused before any rule or broker read. A sell is an
+  // exit and is never gated: restricting how someone leaves a position would be a safety bug.
+  const progression =
+    body.action === "buy" && requesterId && config.progression
+      ? await config.progression.view(requesterId)
+      : undefined;
+  const gateRefusal = progression?.ladderGate
+    ? `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent.`
+    : undefined;
+
   if (path === "/api/trade/review") {
     const snapshot = config.hub.getState().participants.find((p) => p.id === body.participantId);
     if (!snapshot) {
@@ -113,10 +125,18 @@ export async function serveTradeApi(
       tradingEnabled: Boolean(config.tradingEnabled),
       isSelf: requesterId !== undefined && requesterId === body.participantId,
     });
-    sendJson(res, 200, { preview });
+    sendJson(res, 200, {
+      preview: gateRefusal
+        ? { ...preview, ok: false, refusals: [gateRefusal, ...preview.refusals] }
+        : preview,
+    });
     return true;
   }
 
+  if (gateRefusal) {
+    sendJson(res, 200, { ok: false, refusals: [gateRefusal] });
+    return true;
+  }
   if (!config.submitTrade) {
     sendJson(res, 200, {
       ok: false,

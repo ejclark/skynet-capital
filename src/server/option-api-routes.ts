@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
-import { ladderNeighbor } from "../domain/progression.js";
+import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js";
@@ -140,7 +140,14 @@ function parseOptionBody(raw: string): DeskOptionRequest | undefined {
 }
 
 /** The legacy `lockedRefusal` sentence, minus its HTML shell — names the rung to fill. */
-function lockedSentence(code: OptionPlayCode): string {
+function lockedSentence(
+  code: OptionPlayCode,
+  progression: ParticipantProgression | undefined,
+): string {
+  // The feedback gate (#1119) outranks the rung below: while it holds, that is the remedy.
+  if (progression?.ladderGate) {
+    return `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent. Turn the wheels off to open the full catalog.`;
+  }
   const prev = ladderNeighbor(code, -1);
   return `Training wheels are on, and course ${code} hasn't been unlocked yet${
     prev ? ` — it opens after your first filled ${prev.code} (${prev.name})` : ""
@@ -174,7 +181,11 @@ async function reviewOption(
     // the ladder refusal in front, exactly where the legacy review put it.
     const pure = previewOptionOrder(request, base);
     sendJson(res, 200, {
-      preview: { ...pure, ok: false, refusals: [lockedSentence(request.code), ...pure.refusals] },
+      preview: {
+        ...pure,
+        ok: false,
+        refusals: [lockedSentence(request.code, progression), ...pure.refusals],
+      },
     });
     return;
   }
@@ -205,7 +216,7 @@ async function submitOption(
   progression: ParticipantProgression | undefined,
 ): Promise<void> {
   if (request.kind === "open" && playLocked(request.code, progression)) {
-    sendJson(res, 200, { ok: false, refusals: [lockedSentence(request.code)] });
+    sendJson(res, 200, { ok: false, refusals: [lockedSentence(request.code, progression)] });
     return;
   }
   if (!config.submitOptionTrade) {

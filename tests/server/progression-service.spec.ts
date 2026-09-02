@@ -323,4 +323,62 @@ describe("progression service — the engagement track (#567)", () => {
       "first-feedback",
     ]);
   });
+
+  describe("the feedback gate on the ladder (#1119)", () => {
+    let dir = "";
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "prog-gate-"));
+    });
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const filing = (at: string): FeedbackLogEntry =>
+      ({
+        uuid: "u",
+        opaqueMemberId: "m",
+        issueNumber: 1,
+        url: "",
+        kind: "idea",
+        title: "",
+        filedAt: at,
+      }) as FeedbackLogEntry;
+    const gatedService = (feedback: FeedbackLogEntry[], journal: TradeActivityRecord[] = []) =>
+      createProgressionService({
+        readFills: () => Promise.resolve(journal),
+        readTags: () => Promise.resolve([]),
+        readFeedback: () => Promise.resolve(feedback),
+        store: new ProgressionStore(join(dir, "progression.json")),
+        now: () => new Date("2026-09-02T00:00:00.000Z"),
+      });
+
+    it("shuts every rung for a brand-new member (wheels on, nothing filed) and names why", async () => {
+      const view = await gatedService([]).view("ann");
+      expect(view.wheels).toBe(true);
+      expect(view.ladderGate).toBe("first-feedback");
+      expect([...view.unlocked]).toEqual([]);
+      expect(view.nextUp).toBeUndefined();
+    });
+
+    it("opens the ladder the moment a filing is on the log", async () => {
+      const view = await gatedService([filing("2026-09-01T00:00:00.000Z")]).view("ann");
+      expect(view.ladderGate).toBeUndefined();
+      expect([...view.unlocked]).toEqual(["101"]);
+      expect(view.nextUp).toBe("101");
+    });
+
+    it("never gates a member with fill history — seeded wheels off", async () => {
+      const view = await gatedService([], [journalLine({})]).view("ann");
+      expect(view.wheels).toBe(false);
+      expect(view.ladderGate).toBeUndefined();
+      expect(view.unlocked.has("102")).toBe(true);
+    });
+
+    it("never locks away a rung already earned, even while gated", async () => {
+      const svc = gatedService([], [journalLine({})]);
+      await svc.setWheels("ann", true);
+      const view = await svc.view("ann");
+      expect(view.ladderGate).toBe("first-feedback");
+      expect([...view.unlocked]).toEqual(["101"]);
+    });
+  });
 });

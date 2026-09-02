@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { fetchJourney } from "../live/learn";
 import { CourseCard, Hud } from "../shell/course-cards";
 import { PageFrame } from "../shell/frame";
+import { LadderGateCard } from "../shell/ladder-gate";
 import { ProfileRail } from "../shell/profile-rail";
 
 /**
@@ -49,6 +50,7 @@ function TradingLadderPage(): ReactElement {
           an account yet, so the ladder shows from the start.
         </p>
       ) : null}
+      {data.gate ? <LadderGateCard note={data.gate.note} /> : null}
       <Hud journey={data} />
       {data.courses.map((course) => (
         <CourseCard key={course.level} course={course} />
