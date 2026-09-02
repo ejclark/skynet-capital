@@ -698,6 +698,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The national print the Chicago Business Barometer leads by two business days, and the first manufacturing read of Q4. The calendar tracked the 09-01 release and then nothing until CPI 10-14, so the follow-through the 09-30 Chicago print exists to probe was untracked. Discovered during the chicago-pmi-2026-09-30 initial research.",
   },
   {
+    id: "apple-eu-dma-terms-2026-10-01",
+    kind: "sector",
+    title: "Apple EU DMA business terms take effect (Core Technology Commission)",
+    date: "2026-10-01",
+    status: "estimate",
+    source:
+      "EST: developer.apple.com/support/apps-in-the-eu/ states the updated Apple Developer Program License Agreement (revised 2026-08-18) takes effect October 1, 2026 (fetched direct 2026-09-02). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-09-02",
+    impact: "low",
+    symbols: ["AAPL"],
+    notes:
+      "The per-install Core Technology Fee becomes a flat 5% Core Technology Commission on digital transactions in apps distributed outside the App Store; the Initial Acquisition Fee and Store Services Fee are eliminated; alternative-marketplace and Web Distribution eligibility widen (developers no longer need an EU legal entity). A dated, AAPL-specific change to EU Services economics — the calendar tracked Apple's product and earnings dates but no regulatory one. `low` reflects that EU App Store commissions are a small slice of Services revenue and the terms were pre-announced 08-18, not that a re-cut of App Store economics is unimportant; it is a thesis input to the FQ1 guide (est. 10-29), never a date-keyed action, and as an `estimate` it only widens caution. Kind `sector` is the closest fit the enum offers for a regulatory effective-date (it is scoped to export-control deadlines and dockets); the imperfect fit is named, not fixed from this lane — the same call the FY2027-funding entry made with `geopolitical`. Note it lands the same day as government-funding-deadline-2026-09-30's cliff. Discovered during the aapl-iphone-18-launch-2026-09-09 pulse-check adjacency sweep (2026-09-02).",
+  },
+  {
     id: "jobs-2026-10-02",
     kind: "macro-print",
     title: "Employment Situation (Sep 2026 data)",
