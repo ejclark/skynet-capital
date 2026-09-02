@@ -204,6 +204,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Real-yield supply the day after the FOMC; the breakeven reaction reads inflation expectations.",
   },
   {
+    id: "treasury-2y-note-2026-09-22",
+    kind: "rates",
+    title: "2-Year Treasury Note auction",
+    date: "2026-09-22",
+    status: "estimate",
+    source:
+      'EST: treasury.gov Tentative-Auction-Schedule.pdf lists "2-Year NOTE / Announcement Thursday, September 17, 2026 / Auction Tuesday, September 22, 2026 / Settlement Wednesday, September 30, 2026" (PDF fetched and text-extracted direct 2026-09-02, same table row-for-row as the 5Y/7Y entries already tracked). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-09-02',
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Opens the end-of-month 2Y/5Y/7Y block, the day before the 5Y. Shortest and most Fed-path-sensitive coupon tenor — its stop is the first read on post-FOMC front-end demand that the 5Y then inherits.",
+  },
+  {
     id: "treasury-5y-note-2026-09-23",
     kind: "rates",
     title: "5-Year Treasury Note auction",
