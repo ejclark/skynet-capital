@@ -143,13 +143,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "rates",
     title: "Treasury long-end buyback size increase takes effect ($4B/op, 10-30Y)",
     date: "2026-09-09",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "NEWS: CNBC 2026-08-19 ('Treasury doubles debt buybacks as Bessent moves to steady bond market'), treasury.gov press release sb0607 — checked 2026-08-27",
+      "TSY: home.treasury.gov/news/press-releases/sb0607 (dated August 19, 2026) states verbatim that the current maximum size of $2 billion per operation 'will be at least $4 billion per operation', for 'the 10-year to 20-year sector and the 20-year to 30-year sector', and that the change 'is effective September 9, 2026 and will be in effect for the remainder of this refunding quarter (through November 4, 2026)' — fetched direct via plain curl (HTTP 200) 2026-09-02. Promoted from estimate on that primary: WebFetch times out on home.treasury.gov but curl returns 200, the same tool artifact already recorded on treasury-borrowing-estimates-2026-11-02, checked 2026-09-02",
     impact: "medium",
     symbols: [],
     notes:
-      "Bessent's 2026-08-19 announcement doubles nominal long-end liquidity-support buyback operations (10-20Y and 20-30Y sectors) from a $2B to a $4B/operation minimum, effective this date through the refunding quarter's close (2026-11-04) — a fiscal-liquidity support for long-end demand technicals landing the day before the 30Y reopening (09-10). Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep; not previously a dated calendar entry.",
+      "Bessent's 2026-08-19 announcement doubles nominal long-end liquidity-support buyback operations (10-20Y and 20-30Y sectors) from a $2B to a $4B/operation minimum, effective this date through the refunding quarter's close (2026-11-04) — a fiscal-liquidity support for long-end demand technicals landing the day before the 30Y reopening (09-10). Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep; not previously a dated calendar entry. Promoted estimate -> confirmed on the directly-fetched primary during this event's own 2026-09-02 pulse check, which is exactly the kill switch its ledger registered ('the treasury.gov primary becoming directly fetchable'). CONFIRMED HERE MEANS THE DATE AND SIZES, NOT AN EFFECT: the release's own next sentence, 'An updated tentative Treasury buyback schedule will be released at a later date', is still unfulfilled, which is why treasury-buyback-10y20y-2026-09-10 (est) still carries the superseded $2B cap; and the program's only market test to date faded inside a day (10Y -6bp on 08-19, fully round-tripped +5bp by 08-20, and ~4.77% by 09-01 — above where it sat pre-announcement). No house playbook is rates-keyed; this stays context for the Sep 1 -> Sep 16 corridor.",
   },
   {
     id: "treasury-30y-bond-2026-09-10",
