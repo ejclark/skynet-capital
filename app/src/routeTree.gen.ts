@@ -13,13 +13,16 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LearnRouteImport } from './routes/learn'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OutpostRouteImport } from './routes/outpost'
+import { Route as PlaybooksRouteImport } from './routes/playbooks'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TradeRouteImport } from './routes/trade'
 import { Route as WireRouteImport } from './routes/wire'
 import { Route as CollectionsIndexRouteImport } from './routes/collections.index'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
+import { Route as LearnTradingRouteImport } from './routes/learn_.trading'
 import { Route as UIdRouteImport } from './routes/u.$id'
 import { Route as UIdIndexRouteImport } from './routes/u.$id.index'
 import { Route as UIdDecisionsRouteImport } from './routes/u.$id.decisions'
@@ -45,9 +48,19 @@ const LearnRoute = LearnRouteImport.update({
   path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OutpostRoute = OutpostRouteImport.update({
   id: '/outpost',
   path: '/outpost',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaybooksRoute = PlaybooksRouteImport.update({
+  id: '/playbooks',
+  path: '/playbooks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResearchRoute = ResearchRouteImport.update({
@@ -80,6 +93,11 @@ const CollectionsIdRoute = CollectionsIdRouteImport.update({
   path: '/collections/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LearnTradingRoute = LearnTradingRouteImport.update({
+  id: '/learn_/trading',
+  path: '/learn/trading',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UIdRoute = UIdRouteImport.update({
   id: '/u/$id',
   path: '/u/$id',
@@ -106,12 +124,15 @@ export interface FileRoutesByFullPath {
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
+  '/onboarding': typeof OnboardingRoute
   '/outpost': typeof OutpostRoute
+  '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
   '/wire': typeof WireRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/learn/trading': typeof LearnTradingRoute
   '/u/$id': typeof UIdRouteWithChildren
   '/collections/': typeof CollectionsIndexRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
@@ -123,12 +144,15 @@ export interface FileRoutesByTo {
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
+  '/onboarding': typeof OnboardingRoute
   '/outpost': typeof OutpostRoute
+  '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
   '/wire': typeof WireRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/learn/trading': typeof LearnTradingRoute
   '/collections': typeof CollectionsIndexRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
   '/u/$id/pulse': typeof UIdPulseRoute
@@ -140,12 +164,15 @@ export interface FileRoutesById {
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
+  '/onboarding': typeof OnboardingRoute
   '/outpost': typeof OutpostRoute
+  '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
   '/wire': typeof WireRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/learn_/trading': typeof LearnTradingRoute
   '/u/$id': typeof UIdRouteWithChildren
   '/collections/': typeof CollectionsIndexRoute
   '/u/$id/decisions': typeof UIdDecisionsRoute
@@ -159,12 +186,15 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/join'
     | '/learn'
+    | '/onboarding'
     | '/outpost'
+    | '/playbooks'
     | '/research'
     | '/settings'
     | '/trade'
     | '/wire'
     | '/collections/$id'
+    | '/learn/trading'
     | '/u/$id'
     | '/collections/'
     | '/u/$id/decisions'
@@ -176,12 +206,15 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/join'
     | '/learn'
+    | '/onboarding'
     | '/outpost'
+    | '/playbooks'
     | '/research'
     | '/settings'
     | '/trade'
     | '/wire'
     | '/collections/$id'
+    | '/learn/trading'
     | '/collections'
     | '/u/$id/decisions'
     | '/u/$id/pulse'
@@ -192,12 +225,15 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/join'
     | '/learn'
+    | '/onboarding'
     | '/outpost'
+    | '/playbooks'
     | '/research'
     | '/settings'
     | '/trade'
     | '/wire'
     | '/collections/$id'
+    | '/learn_/trading'
     | '/u/$id'
     | '/collections/'
     | '/u/$id/decisions'
@@ -210,12 +246,15 @@ export interface RootRouteChildren {
   FeedbackRoute: typeof FeedbackRoute
   JoinRoute: typeof JoinRoute
   LearnRoute: typeof LearnRoute
+  OnboardingRoute: typeof OnboardingRoute
   OutpostRoute: typeof OutpostRoute
+  PlaybooksRoute: typeof PlaybooksRoute
   ResearchRoute: typeof ResearchRoute
   SettingsRoute: typeof SettingsRoute
   TradeRoute: typeof TradeRoute
   WireRoute: typeof WireRoute
   CollectionsIdRoute: typeof CollectionsIdRoute
+  LearnTradingRoute: typeof LearnTradingRoute
   UIdRoute: typeof UIdRouteWithChildren
   CollectionsIndexRoute: typeof CollectionsIndexRoute
 }
@@ -250,11 +289,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/outpost': {
       id: '/outpost'
       path: '/outpost'
       fullPath: '/outpost'
       preLoaderRoute: typeof OutpostRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/playbooks': {
+      id: '/playbooks'
+      path: '/playbooks'
+      fullPath: '/playbooks'
+      preLoaderRoute: typeof PlaybooksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/research': {
@@ -297,6 +350,13 @@ declare module '@tanstack/react-router' {
       path: '/collections/$id'
       fullPath: '/collections/$id'
       preLoaderRoute: typeof CollectionsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn_/trading': {
+      id: '/learn_/trading'
+      path: '/learn/trading'
+      fullPath: '/learn/trading'
+      preLoaderRoute: typeof LearnTradingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/u/$id': {
@@ -349,12 +409,15 @@ const rootRouteChildren: RootRouteChildren = {
   FeedbackRoute: FeedbackRoute,
   JoinRoute: JoinRoute,
   LearnRoute: LearnRoute,
+  OnboardingRoute: OnboardingRoute,
   OutpostRoute: OutpostRoute,
+  PlaybooksRoute: PlaybooksRoute,
   ResearchRoute: ResearchRoute,
   SettingsRoute: SettingsRoute,
   TradeRoute: TradeRoute,
   WireRoute: WireRoute,
   CollectionsIdRoute: CollectionsIdRoute,
+  LearnTradingRoute: LearnTradingRoute,
   UIdRoute: UIdRouteWithChildren,
   CollectionsIndexRoute: CollectionsIndexRoute,
 }
