@@ -660,6 +660,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Not a print — a dated policy checkpoint that gates whether the federal prints around it exist. ISM (10-01) is a private survey and publishes through a lapse; BLS does not — in the 2025 lapse it skipped the October Employment Situation and cancelled the October CPI outright. So an un-averted lapse removes the 10-02 payrolls and leaves the 10-01 ISM as the corridor's only hard macro read into an Oct 27-28 FOMC with no SEP. Kind `geopolitical` is the closest fit the enum offers for a domestic policy checkpoint (it is scoped to dated checkpoints like a summit or a tariff deadline); the imperfect fit is named, not fixed from this lane. THE CLIFF THIS SETS UP LANDS IN THE DECEMBER BLACKOUT (fomc-blackout-start-2026-11-28 initial research, 2026-08-31): the House CR expires 12-04 and the Senate's 12-11, so whichever is enacted expires INSIDE that gate (12-04 is jobs day) or on the day it lifts, and on this same 2025 precedent a 12-04 lapse plausibly deletes both jobs-2026-12-04 and cpi-2026-12-10 — the only two checks on a dot plot the Fed cannot speak about. No follow-on cliff entry is filed here because the date is conditional on which CR is enacted; file one once that is known. Discovered during the ism-manufacturing-2026-10-01 initial research.",
   },
   {
+    id: "government-funding-deadline-2026-12-11",
+    kind: "geopolitical",
+    title: "CR expiry — FY2027 funding lapses 2026-12-12 absent new appropriations",
+    date: "2026-12-11",
+    status: "estimate",
+    source:
+      "NEWS: the House adopted the Senate-passed CR 370-48 on 2026-09-01, funding the government through Dec 11 and sending it to the President (Roll Call / The Hill / Washington Post / ABC / Breaking Defense / Washington Times, all 2026-09-01; Senate leg passed 08-08, 90-6). Presidential signature NOT verified — checked 2026-09-02",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The follow-on cliff government-funding-deadline-2026-09-30 deliberately left unfiled: its note says verbatim that no entry was filed 'because the date is conditional on which CR is enacted; file one once that is known.' The House adopting the SENATE's Dec 11 version on 2026-09-01 is that resolution — so the Dec 4 branch is dead and jobs-2026-12-04 sits INSIDE the funded window, not on the cliff. Filed `estimate`, not `confirmed`, for two independent reasons: this lane never self-confirms an event in the PR that discovers it, and the presidential signature could not be verified this session (a search hit titled 'Trump signs continuing resolution' surfaced undated, described a signing 'just after midnight Thursday' when 09-01 was a Tuesday, and is most likely the 2025 analogue — discarded). Why it is tracked at `high`: on the same 2025 precedent that drives its 09-30 sibling, BLS DELETES rather than delays in a lapse. jobs-2026-12-04 and cpi-2026-12-10 both print BEFORE this date and are safe either way; the exposed tracked event is pce-2026-12-23, whose own research already notes it 'sits OUTSIDE the funded corridor' and whose 2025 analogue was cancelled outright, plus every January release. Discovered during the jobs-2026-10-02 pulse-check adjacency sweep (2026-09-02).",
+  },
+  {
     id: "gdp-q2-2026-third-2026-09-30",
     kind: "macro-print",
     title: "GDP — 3rd estimate, Q2 2026 (+ corporate profits, industries, state GDP)",
