@@ -204,6 +204,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Real-yield supply the day after the FOMC; the breakeven reaction reads inflation expectations.",
   },
   {
+    id: "treasury-2y-note-2026-09-22",
+    kind: "rates",
+    title: "2-Year Treasury Note auction",
+    date: "2026-09-22",
+    status: "estimate",
+    source:
+      "EST: treasury.gov's own Tentative-Auction-Schedule.xml ('Aug2026 Refunding Auction Calendar Official Ver 2', StartDate 2026-08-05 / EndDate 2027-01-30, fetched direct 2026-09-02) carries a 2-Year NOTE, ReOpeningIndicator=N, announce 2026-09-17 · auction 2026-09-22 · settle 2026-09-30 — 1:00pm ET per the standard coupon slot. Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-09-02",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The block's missing first leg. This calendar tracked the 5Y (09-23) and 7Y (09-24) and described both as part of the month-end '2Y/5Y/7Y block' without ever carrying the 2Y itself — discovered during the treasury-7y-note-2026-09-24 pulse check (2026-09-02) off Treasury's primary auction XML. It earns a row on its own merits now rather than as a set-completer: the 2Y is the most Fed-path-sensitive coupon on the curve, and it is the first of the three to clear after the 09-16 FOMC, so it prices the post-decision path before the belly does. The post-Warsh repricing landed hardest here — 2Y constant maturity 4.20% (08-27) to 4.39% (09-01), +19bp, vs +14bp at the 7Y — against September hike odds that went ~26% to ~65-68% over the same window. All three are announced together on 09-17 (one day after the FOMC, one before opex) and all three settle 09-30, the same day as government-funding-deadline-2026-09-30. NOT proposed alongside it: the 2-Year FRN reopening on 09-23 in the same XML, which carries almost no rate-path signal and would tax the assessment queue for nothing.",
+  },
+  {
     id: "treasury-5y-note-2026-09-23",
     kind: "rates",
     title: "5-Year Treasury Note auction",
