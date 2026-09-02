@@ -62,12 +62,15 @@ function draftFrom(
 export function CoachBox({
   onDraft,
   onUnavailable,
+  initialNote,
 }: {
   readonly onDraft: (draft: CoachDraft) => void;
   readonly onUnavailable: (reason: string) => void;
+  /** A seeded opening note (onboarding's starter) — the member edits it before anything is sent. */
+  readonly initialNote?: string;
 }): ReactElement {
-  const [kind, setKind] = useState<FeedbackKind>("bug");
-  const [note, setNote] = useState("");
+  const [kind, setKind] = useState<FeedbackKind>(initialNote ? "idea" : "bug");
+  const [note, setNote] = useState(initialNote ?? "");
   const [title, setTitle] = useState("");
   const [images, setImages] = useState<readonly AttachedImage[]>([]);
   const [dropped, setDropped] = useState(false);

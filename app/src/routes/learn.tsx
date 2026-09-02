@@ -1,111 +1,23 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useState } from "react";
-import {
-  fetchJourney,
-  type Journey,
-  type JourneyCourse,
-  type JourneyMilestone,
-} from "../live/learn";
+import { fetchJourney } from "../live/learn";
+import { fetchOnboarding } from "../live/onboarding";
+import { fetchPlaybooks } from "../live/playbooks";
+import { Hud, ladderProgress } from "../shell/course-cards";
 import { PageFrame } from "../shell/frame";
+import { MilestoneCard } from "../shell/milestone-card";
+import { ProfileRail } from "../shell/profile-rail";
 import { CheckGateCard, EngagementUnlockBanner, UnlockBanner } from "../shell/unlock-gate";
 
 /**
- * MILESTONES (#738 phases 6b + 8b) — the gamified journey in the shell. The honesty rule is the
- * whole design (Eric, 2026-08-25): a milestone is earned only by a real filled order, and every
- * earned row shows its proof. Courses unlock bottom-up. A fresh unlock's one-time celebration and
- * its comprehension check render right here (`shell/unlock-gate.tsx`); passing or claiming
- * refetches, so the banner takes the gate's place the moment the check clears — grading and the
- * durable record stay server-side throughout.
+ * MILESTONES — THE TABLE OF CONTENTS (#1119, from the Claude Design canvas "Alpaca onboarding
+ * process streamline"). Three chapters, each its own route: M·01 Onboarding, M·02 Trading
+ * progression (the course cards that used to render here, now `/learn/trading`), M·03 Playbooks
+ * (WIP). This page keeps what must be seen wherever a member lands — the rank/points HUD, a fresh
+ * unlock's one-time celebration, and the comprehension check gate — then lists the chapters with
+ * their progress. Every state is the server's: three reads, no arithmetic the ledgers didn't do.
  */
-
-function MilestoneRow({ milestone }: { readonly milestone: JourneyMilestone }): ReactElement {
-  return (
-    <li className={`ms-row${milestone.earned ? " ms-done" : ""}`}>
-      <span className="ms-mark" aria-hidden="true">
-        ✓
-      </span>
-      <span className="ms-body">
-        <span className="ms-title">{milestone.title}</span>
-        <span className="ms-detail">{milestone.detail}</span>
-        {milestone.earned ? (
-          <span className="ms-proof num">
-            filled {milestone.earned.on} · order {milestone.earned.orderId}
-          </span>
-        ) : null}
-      </span>
-      {!milestone.earned && milestone.ticket ? (
-        <a className="ms-go" href={milestone.ticket}>
-          open the ticket →
-        </a>
-      ) : null}
-      <span className="ms-pts num">+{milestone.points}</span>
-    </li>
-  );
-}
-
-function CourseCard({ course }: { readonly course: JourneyCourse }): ReactElement {
-  // Open by default exactly when it's the live frontier: unlocked with work remaining.
-  const [open, setOpen] = useState(!course.locked && course.done < course.total);
-  const pct = course.total ? Math.round((course.done / course.total) * 100) : 0;
-  return (
-    <section className={`course${course.locked ? " course-locked" : ""}`}>
-      <button
-        type="button"
-        className="course-head"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <span className="course-badge num">{course.level}</span>
-        <span className="course-names">
-          <span className="course-title">{course.title}</span>
-          <span className="course-sub">{course.subtitle}</span>
-        </span>
-        <span className="course-prog">
-          <span className="course-bar">
-            <i style={{ width: `${pct}%` }} />
-          </span>
-          <span className="num">
-            {course.done} / {course.total}
-          </span>
-        </span>
-        {course.locked ? <span className="course-lock">🔒 finish the level below</span> : null}
-      </button>
-      {open && !course.locked ? (
-        <ul className="ms-list">
-          {course.milestones.map((m) => (
-            <MilestoneRow key={m.id} milestone={m} />
-          ))}
-        </ul>
-      ) : null}
-    </section>
-  );
-}
-
-function Hud({ journey }: { readonly journey: Journey }): ReactElement {
-  const pct = journey.totalPoints ? Math.round((journey.points / journey.totalPoints) * 100) : 0;
-  return (
-    <div className="hud">
-      <div className="hud-stat">
-        <span className="hud-k">Rank</span>
-        <span className="hud-v">{journey.rank}</span>
-      </div>
-      <div className="hud-stat">
-        <span className="hud-k">Points</span>
-        <span className="hud-v num">
-          {journey.points} / {journey.totalPoints}
-        </span>
-      </div>
-      <div className="hud-track">
-        <span className="course-bar hud-bar">
-          <i style={{ width: `${pct}%` }} />
-        </span>
-      </div>
-    </div>
-  );
-}
-
 function LearnPage(): ReactElement {
   const queryClient = useQueryClient();
   const journey = useQuery({
@@ -113,29 +25,37 @@ function LearnPage(): ReactElement {
     queryFn: fetchJourney,
     refetchOnWindowFocus: true,
   });
+  const onboarding = useQuery({ queryKey: ["onboarding"], queryFn: fetchOnboarding });
+  const playbooks = useQuery({ queryKey: ["playbooks"], queryFn: fetchPlaybooks });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["learn"] });
+  const rail = <ProfileRail current="milestones" />;
 
   if (journey.isPending)
     return (
-      <PageFrame>
+      <PageFrame rail={rail}>
         <p className="note">Opening the journey…</p>
       </PageFrame>
     );
   if (journey.isError)
     return (
-      <PageFrame>
+      <PageFrame rail={rail}>
         <p className="note">The journey is unreachable.</p>
       </PageFrame>
     );
 
   const data = journey.data;
+  const ob = onboarding.data;
+  const pb = playbooks.data;
+  const ladder = ladderProgress(data);
   return (
-    <PageFrame>
+    <PageFrame rail={rail}>
       <header className="page-header">
-        <h1>Milestones</h1>
+        <div className="join-eyebrow">Milestones · table of contents</div>
+        <h1>Your account's milestones</h1>
         <p>
-          A trading journey earned the only way that counts — real filled orders, each with its
-          proof. Level 100 is open from the start; every course above unlocks the one below it.
+          The table of contents for your account — every concept worth knowing and every goal worth
+          chasing, with your progress tracked on each. Open a chapter to learn what it teaches, what
+          completes it, and where that action lives.
         </p>
       </header>
       {!data.linked ? (
@@ -159,10 +79,40 @@ function LearnPage(): ReactElement {
           check — each brings its own.
         </p>
       ) : null}
-      <Hud journey={data} />
-      {data.courses.map((course) => (
-        <CourseCard key={course.level} course={course} />
-      ))}
+      <Hud journey={data} extraPoints={ob?.points ?? 0} extraTotal={ob?.totalPoints ?? 30} />
+      <div className="mc-grid">
+        <MilestoneCard
+          code="M·01"
+          title="Onboarding"
+          desc="Get seated at the desk: connect Alpaca, file your first feedback, make your first trade."
+          state={ob?.complete ? "complete" : "progress"}
+          done={ob?.done ?? 0}
+          total={ob?.total ?? 3}
+          points={`+${ob?.totalPoints ?? 30} pts`}
+          to="/onboarding"
+        />
+        <MilestoneCard
+          code="M·02"
+          title="Trading progression"
+          desc="Climb the ladder one fill at a time — stocks, the Wheel, then directional longs."
+          state={ladder.total > 0 && ladder.done === ladder.total ? "complete" : "progress"}
+          done={ladder.done}
+          total={ladder.total}
+          points={`+${data.totalPoints} pts`}
+          to="/learn/trading"
+        />
+        <MilestoneCard
+          code="M·03"
+          title="Playbooks"
+          desc="Prove a play by hand, then arm it to draft tickets for you. WIP — Season 1."
+          state="wip"
+          done={pb?.unlocked ?? 0}
+          total={pb?.total ?? 4}
+          points="pts TBD"
+          to="/playbooks"
+          gateNote="WIP — Season 1 release"
+        />
+      </div>
     </PageFrame>
   );
 }

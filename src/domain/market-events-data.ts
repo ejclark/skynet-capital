@@ -175,7 +175,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes:
-      "Lands 40 minutes after the 30Y reopening closes on the SAME day (auction 1:00pm ET, buyback 1:40pm ET) and is the first long-end liquidity-support operation on or after sb0607's 09-09 effective date — so its cap should step from the scheduled $2B to the announced $4B/operation minimum, though Treasury has not yet published the updated schedule. Note the sector is 10-20Y, NOT the 20-30Y bucket the reopened bond sits in; the next 20-30Y operation is 2026-09-24. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep.",
+      "Lands 40 minutes after the 30Y reopening closes on the SAME day (auction 1:00pm ET, buyback 1:40pm ET) and is the first long-end liquidity-support operation on or after sb0607's 09-09 effective date — so its cap should step from the scheduled $2B to the announced $4B/operation minimum, though Treasury has not yet published the updated schedule. Note the sector is 10-20Y, NOT the 20-30Y bucket the reopened bond sits in; the next 20-30Y operation is treasury-buyback-20y30y-2026-09-24. The schedule's own maturity range for this operation, read off the PDF text layer 2026-09-02, is 09/11/2036 - 09/10/2046, so the bond being auctioned that morning (CUSIP 912810UW6, maturing 2056) is NOT eligible for it — the same-day support is adjacent-sector in the literal sense, not a bid for this CUSIP. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep.",
   },
   {
     id: "treasury-20y-bond-2026-09-15",
@@ -208,9 +208,9 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "rates",
     title: "2-Year Treasury Note auction",
     date: "2026-09-22",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: treasury.gov Tentative-Auction-Schedule.pdf lists "2-Year NOTE / Announcement Thursday, September 17, 2026 / Auction Tuesday, September 22, 2026 / Settlement Wednesday, September 30, 2026" (PDF fetched and text-extracted direct 2026-09-02, same table row-for-row as the 5Y/7Y entries already tracked). Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-09-02',
+      "TSY: home.treasury.gov Tentative-Auction-Schedule.pdf lists \"2-Year NOTE / Announcement Thursday, September 17, 2026 / Auction Tuesday, September 22, 2026 / Settlement Wednesday, September 30, 2026\" — 1:00pm ET. Filed estimate on 2026-09-02 by the 5Y sibling's adjacency sweep on the lane's no-self-confirm rule (never on date doubt); upgraded to confirmed 2026-09-02 by this event's own initial-research session, which re-fetched and text-extracted the same primary PDF independently. TSY: is an authorized confirmed prefix above, already carried by every sibling auction on this identical schedule (3Y 9/8, 10Y 9/9, 30Y 9/10, 20Y 9/15, TIPS 9/17, 5Y 9/23, 7Y 9/24), checked 2026-09-02",
     impact: "medium",
     symbols: [],
     notes:
@@ -239,6 +239,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes: "Closes the September coupon calendar.",
+  },
+  {
+    id: "treasury-buyback-20y30y-2026-09-24",
+    kind: "rates",
+    title: "Treasury liquidity-support buyback operation (20-30Y nominal, 1:40pm ET)",
+    date: "2026-09-24",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (Q3 2026 refunding, published 2026-08-05), PDF text layer read directly 2026-09-02 — row reads announce 9/23/2026, operation 9/24/2026 1:40 pm - 2:00 pm, settle 9/25/2026, Liquidity Support, Nominal Coupons 20Y to 30Y, maturity range 09/25/2046 - 09/24/2056, min $0, max $2 billion. Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, and because the $2B cap predates press release sb0607, checked 2026-09-02",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The first 20-30Y-sector buyback after sb0607's 09-09 step-up to a $4B/operation minimum, so the published $2B cap should roughly double — Treasury has not republished the schedule, and the actual cap is disclosed with the preliminary CUSIP list at 11:00am ET on the 09-23 announcement date. This is the operation whose maturity range (09/25/2046 - 09/24/2056) actually COVERS the bond sold at treasury-30y-bond-2026-09-10 (CUSIP 912810UW6, maturing 2056); the same-day 09-10 operation is 10-20Y and cannot buy it. So the nearest direct liquidity support for the reopened long bond is 14 days AFTER its auction and 8 days after the 09-16 FOMC, not the day of. Shares 09-24 with treasury-7y-note-2026-09-24 (1:00pm ET), the Trump-Xi summit (est) and scoos-2026-09-24 (14:00), so nothing that afternoon is cleanly attributable. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep (2026-09-02); flagged but not dated by that ledger's 2026-08-30 row.",
   },
   // Options expiration — 3rd-Friday standard (monthly); quarterly (Mar/Jun/Sep/Dec) is
   // triple/quad witching. Pin risk, dealer gamma, and volume spikes cluster here; kept market-wide.
@@ -741,13 +754,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "sector",
     title: "Apple EU DMA business terms take effect (Core Technology Commission)",
     date: "2026-10-01",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: developer.apple.com/support/apps-in-the-eu/ states the updated Apple Developer Program License Agreement (revised 2026-08-18) takes effect October 1, 2026 (fetched direct 2026-09-02). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-09-02",
+      "IR: apple.com/newsroom/2026/08/apple-announces-changes-for-apps-in-the-european-union/ states verbatim 'Developers can sign the new terms today, and changes will go into effect on October 1' (published 2026-08-18), and developer.apple.com/support/apps-in-the-eu/ states 'The primary updates, which go into effect on October 1, 2026, include:' against an Apple Developer Program License Agreement revised 2026-08-18 — both fetched direct 2026-09-02",
     impact: "low",
     symbols: ["AAPL"],
     notes:
-      "The per-install Core Technology Fee becomes a flat 5% Core Technology Commission on digital transactions in apps distributed outside the App Store; the Initial Acquisition Fee and Store Services Fee are eliminated; alternative-marketplace and Web Distribution eligibility widen (developers no longer need an EU legal entity). A dated, AAPL-specific change to EU Services economics — the calendar tracked Apple's product and earnings dates but no regulatory one. `low` reflects that EU App Store commissions are a small slice of Services revenue and the terms were pre-announced 08-18, not that a re-cut of App Store economics is unimportant; it is a thesis input to the FQ1 guide (est. 10-29), never a date-keyed action, and as an `estimate` it only widens caution. Kind `sector` is the closest fit the enum offers for a regulatory effective-date (it is scoped to export-control deadlines and dockets); the imperfect fit is named, not fixed from this lane — the same call the FY2027-funding entry made with `geopolitical`. Note it lands the same day as government-funding-deadline-2026-09-30's cliff. Discovered during the aapl-iphone-18-launch-2026-09-09 pulse-check adjacency sweep (2026-09-02).",
+      "PROMOTED estimate -> confirmed during this event's initial research (2026-09-02, docs/research/events/apple-eu-dma-terms-2026-10-01.md): two independent Apple primary pages were fetched that session, and `IR:` is exactly the 'company primary source' prefix the table above defines, so none of the four standing schema gaps (federal court / state utility commission / state election authority / EIA) applies here. It was filed estimate on discovery only because the sweep that found it may not self-confirm. Terms, from the primary: App Store IAP commission 30% -> 26% (15% for Small Business / Mini Apps / Video Partner programs and post-year-one auto-renewables); alternative in-app payment 20% (10%); a NEW 15% (10%) Store Services Commission on out-of-app link-outs within a 7-day window; the per-install Core Technology Fee becomes a flat 5% Core Technology Commission on alternative marketplaces, Web Distribution and that same link-out window; the Initial Acquisition Fee and Store Services Fee are eliminated; marketplace/Web Distribution eligibility widens (no EU legal entity required, seven alternative criteria). This is a NEGOTIATED SETTLEMENT Apple announced, not an imposition -- Apple's own wording is that the changes 'resolve Apple's disagreements with the Commission over business terms and alternative distribution'. The information event was therefore 2026-08-18, not this date: AAPL closed +1.45% vs QQQ -1.69% that session (+3.15% excess) with press attributing it to the CTF being scrapped. `low` is arithmetically correct, not a shrug -- the EU is ~7% of global App Store revenue (Apple to analysts, 2024) and the 30->26 cut is a 13.3% relative reduction on the standard-rate slice only, bounding the concession at <=0.93% of global App Store revenue before the CTC/Store-Services offsets, against Services revenue of $30.7B in FQ3-2026. It is a thesis input to the FQ1 guide (est. 10-29), never a date-keyed action; `confirmed` removes date doubt without creating a reason to act. The settlement does NOT retire Apple's EU overhang: the EUR 500M anti-steering fine is on appeal at the General Court (filed 2025-07-07) and interoperability specification proceedings DMA.100203/100204 remain live. Kind `sector` is the closest fit the enum offers for a regulatory effective-date (it is scoped to export-control deadlines and dockets); the imperfect fit is named, not fixed from this lane -- the same call the FY2027-funding entry made with `geopolitical`. Note it lands the same day as ism-manufacturing-2026-10-01 and one day after government-funding-deadline-2026-09-30's cliff, which is why the effective date is unmeasurable as well as uninformative. Discovered during the aapl-iphone-18-launch-2026-09-09 pulse-check adjacency sweep (2026-09-02).",
   },
   {
     id: "jobs-2026-10-02",

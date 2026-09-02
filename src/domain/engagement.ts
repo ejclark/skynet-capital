@@ -23,10 +23,12 @@ export interface EngagementMilestone {
 export const ENGAGEMENT_MILESTONES: readonly EngagementMilestone[] = [
   {
     id: "first-feedback",
-    title: "File your first feedback",
+    title: "Meet Moneypenny — file your first feedback",
     detail:
       "Report a bug or pitch an idea through /feedback — the desk gets better because you said something.",
-    points: 20,
+    // 10, not 20 (2026-09-02): this milestone doubles as onboarding's second step
+    // (`onboarding.ts`), and the canvas prices every onboarding step at 10. One source of truth.
+    points: 10,
   },
 ];
 
