@@ -198,3 +198,32 @@
   padding-left: 14px;
   padding-right: 14px;
 }
+
+/* the feedback gate (#1119) — the desk and the ladder while wheels are on and nothing is filed */
+.ladder-gate {
+  max-width: 820px;
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--border));
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin: 0 0 14px;
+}
+.ladder-gate-compact {
+  padding: 10px 12px;
+}
+.ladder-gate-h {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.ladder-gate-p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.ladder-gate-p a {
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}

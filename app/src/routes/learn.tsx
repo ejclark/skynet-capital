@@ -1,12 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { fetchJourney } from "../live/learn";
-import { fetchOnboarding } from "../live/onboarding";
-import { fetchPlaybooks } from "../live/playbooks";
+import { fetchJourney, type Journey } from "../live/learn";
+import { fetchOnboarding, type Onboarding } from "../live/onboarding";
+import { fetchPlaybooks, type Playbooks } from "../live/playbooks";
 import { Hud, ladderProgress } from "../shell/course-cards";
 import { PageFrame } from "../shell/frame";
-import { MilestoneCard } from "../shell/milestone-card";
+import { LadderGateCard } from "../shell/ladder-gate";
+import { type ChapterState, MilestoneCard } from "../shell/milestone-card";
 import { ProfileRail } from "../shell/profile-rail";
 import { CheckGateCard, EngagementUnlockBanner, UnlockBanner } from "../shell/unlock-gate";
 
@@ -18,6 +19,61 @@ import { CheckGateCard, EngagementUnlockBanner, UnlockBanner } from "../shell/un
  * unlock's one-time celebration, and the comprehension check gate — then lists the chapters with
  * their progress. Every state is the server's: three reads, no arithmetic the ledgers didn't do.
  */
+
+/** M·02's badge: the feedback gate outranks progress — while it holds, the chapter reads locked. */
+function ladderState(gated: boolean, done: number, total: number): ChapterState {
+  if (gated) return "locked";
+  return total > 0 && done === total ? "complete" : "progress";
+}
+
+function Chapters({
+  data,
+  ob,
+  pb,
+}: {
+  readonly data: Journey;
+  readonly ob: Onboarding | undefined;
+  readonly pb: Playbooks | undefined;
+}): ReactElement {
+  const ladder = ladderProgress(data);
+  return (
+    <div className="mc-grid">
+      <MilestoneCard
+        code="M·01"
+        title="Onboarding"
+        desc="Get seated at the desk: connect Alpaca, file your first feedback, make your first trade."
+        state={ob?.complete ? "complete" : "progress"}
+        done={ob?.done ?? 0}
+        total={ob?.total ?? 3}
+        points={`+${ob?.totalPoints ?? 30} pts`}
+        to="/onboarding"
+      />
+      <MilestoneCard
+        code="M·02"
+        title="Trading progression"
+        desc="Climb the ladder one fill at a time — stocks, the Wheel, then directional longs."
+        state={ladderState(data.gate !== undefined, ladder.done, ladder.total)}
+        done={ladder.done}
+        total={ladder.total}
+        points={`+${data.totalPoints} pts`}
+        to="/learn/trading"
+        gateNote={data.gate ? "unlocks after your first feedback filing" : undefined}
+      />
+      <MilestoneCard
+        code="M·03"
+        title="Playbooks"
+        desc="Prove a play by hand, then arm it to draft tickets for you. WIP — Season 1."
+        state="wip"
+        done={pb?.unlocked ?? 0}
+        total={pb?.total ?? 4}
+        points="pts TBD"
+        to="/playbooks"
+        gateNote="WIP — Season 1 release"
+      />
+    </div>
+  );
+}
+
 function LearnPage(): ReactElement {
   const queryClient = useQueryClient();
   const journey = useQuery({
@@ -46,7 +102,6 @@ function LearnPage(): ReactElement {
   const data = journey.data;
   const ob = onboarding.data;
   const pb = playbooks.data;
-  const ladder = ladderProgress(data);
   return (
     <PageFrame rail={rail}>
       <header className="page-header">
@@ -79,40 +134,9 @@ function LearnPage(): ReactElement {
           check — each brings its own.
         </p>
       ) : null}
+      {data.gate ? <LadderGateCard note={data.gate.note} compact /> : null}
       <Hud journey={data} extraPoints={ob?.points ?? 0} extraTotal={ob?.totalPoints ?? 30} />
-      <div className="mc-grid">
-        <MilestoneCard
-          code="M·01"
-          title="Onboarding"
-          desc="Get seated at the desk: connect Alpaca, file your first feedback, make your first trade."
-          state={ob?.complete ? "complete" : "progress"}
-          done={ob?.done ?? 0}
-          total={ob?.total ?? 3}
-          points={`+${ob?.totalPoints ?? 30} pts`}
-          to="/onboarding"
-        />
-        <MilestoneCard
-          code="M·02"
-          title="Trading progression"
-          desc="Climb the ladder one fill at a time — stocks, the Wheel, then directional longs."
-          state={ladder.total > 0 && ladder.done === ladder.total ? "complete" : "progress"}
-          done={ladder.done}
-          total={ladder.total}
-          points={`+${data.totalPoints} pts`}
-          to="/learn/trading"
-        />
-        <MilestoneCard
-          code="M·03"
-          title="Playbooks"
-          desc="Prove a play by hand, then arm it to draft tickets for you. WIP — Season 1."
-          state="wip"
-          done={pb?.unlocked ?? 0}
-          total={pb?.total ?? 4}
-          points="pts TBD"
-          to="/playbooks"
-          gateNote="WIP — Season 1 release"
-        />
-      </div>
+      <Chapters data={data} ob={ob} pb={pb} />
     </PageFrame>
   );
 }

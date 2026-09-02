@@ -121,6 +121,24 @@ export function ladderNeighbor(code: TradeTypeCode, offset: -1 | 1): TradeType |
   return i >= 0 ? TRADE_TYPES[i + offset] : undefined;
 }
 
+/**
+ * THE ONE NON-FILL GATE ON THE LADDER (#1119, the Claude Design canvas "Alpaca onboarding process
+ * streamline"): with training wheels on and no feedback filed yet, every rung not already earned
+ * stays shut — "the desk is built from filings." Wheels off is never gated (the seeding rule in
+ * `progression-service.ts` gives every member with fill history wheels off), and a rung already
+ * earned by a fill is never locked away. The evidence is the engagement track's `first-feedback`
+ * earn — a real feedback-log entry, never a client claim. Exits stay exempt wherever this is
+ * applied: restricting how someone leaves a position would be a safety bug, not a lesson.
+ */
+export const LADDER_FEEDBACK_GATE = "first-feedback";
+
+export const LADDER_GATE_NOTE =
+  "The ladder opens after your first feedback filing — the desk is built from them. File one note and trading opens.";
+
+export function ladderGated(wheels: boolean, engagementIds: ReadonlySet<string>): boolean {
+  return wheels && !engagementIds.has(LADDER_FEEDBACK_GATE);
+}
+
 /** With wheels on, a rung outside the unlocked set is locked; wheels off (or no view) locks nothing. */
 export function lockedOnLadder(
   code: TradeTypeCode,

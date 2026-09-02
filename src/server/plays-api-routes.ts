@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { ladderNeighbor } from "../domain/progression.js";
+import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
@@ -32,13 +32,17 @@ async function servePlays(
 ): Promise<void> {
   const progression =
     requesterId && config.progression ? await config.progression.view(requesterId) : undefined;
+  // The feedback gate (#1119): while it holds, every unearned rung is locked for ONE reason, so
+  // the per-rung "opens after the rung below" is withheld — it would name the wrong remedy.
+  const gate = progression?.ladderGate;
   sendJson(res, 200, {
     linked: requesterId !== undefined,
     wheels: progression?.wheels ?? false,
+    ...(gate ? { gate: { reason: gate, note: LADDER_GATE_NOTE } } : {}),
     ...(progression?.nextUp ? { nextUp: progression.nextUp } : {}),
     plays: TRADE_TYPES.map((t) => {
       const locked = playLocked(t.code, progression);
-      const prev = locked ? ladderNeighbor(t.code, -1) : undefined;
+      const prev = locked && !gate ? ladderNeighbor(t.code, -1) : undefined;
       return {
         code: t.code,
         id: t.id,

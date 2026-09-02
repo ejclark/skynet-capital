@@ -116,4 +116,25 @@ describe("servePlaysApi wheels", () => {
     await servePlaysApi(post({ wheels: "on" }), res, "/api/trade/wheels", config(), ann);
     expect(out.status).toBe(400);
   });
+
+  it("carries the feedback gate and withholds the per-rung 'opens after' while it holds", async () => {
+    const { res, out } = fakeRes();
+    await servePlaysApi(
+      get(),
+      res,
+      "/api/trade/plays",
+      config({
+        progression: {
+          view: () =>
+            Promise.resolve({ wheels: true, unlocked: new Set(), ladderGate: "first-feedback" }),
+        },
+      }),
+      ann,
+    );
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.gate.reason).toBe("first-feedback");
+    expect(body.gate.note).toContain("first feedback filing");
+    expect(body.plays.every((p: { locked: boolean }) => p.locked)).toBe(true);
+    expect(body.plays.some((p: { opensAfter?: unknown }) => p.opensAfter)).toBe(false);
+  });
 });

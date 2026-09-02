@@ -17,6 +17,8 @@ import {
   deriveEarned,
   type EarnedMilestone,
   earnedCodes,
+  LADDER_FEEDBACK_GATE,
+  ladderGated,
   lockedOnLadder,
   nextUp,
   unlockedCodes,
@@ -52,6 +54,12 @@ export interface ParticipantProgression {
   readonly earned: readonly EarnedMilestone[];
   readonly earnedByCode: ReadonlyMap<TradeTypeCode, EarnedMilestone>;
   readonly unlocked: ReadonlySet<TradeTypeCode>;
+  /**
+   * Present when the whole ladder is shut for a non-fill reason (#1119): training wheels on and no
+   * feedback filed yet. `unlocked` then holds only what is already earned, and the desks name
+   * this as the reason instead of "the rung below".
+   */
+  readonly ladderGate?: typeof LADDER_FEEDBACK_GATE;
   /** The rung to chase next — undefined once the whole ladder is earned. */
   readonly nextUp?: TradeTypeCode;
   readonly points: number;
@@ -87,6 +95,8 @@ export function playLocked(
  */
 export interface AcademyProgress {
   readonly earned: readonly EarnedMilestone[];
+  /** See `ParticipantProgression.ladderGate`. */
+  readonly ladderGate?: typeof LADDER_FEEDBACK_GATE;
   readonly points: number;
   readonly rank: Rank;
   readonly unlockedLevels: ReadonlySet<CourseLevel>;
@@ -130,6 +140,47 @@ export interface ProgressionServiceDeps {
   readonly now?: () => Date;
 }
 
+/**
+ * SEEDING, on first view (see the header): a member with fill history gets wheels OFF and every
+ * earn already true pre-acknowledged — trade and engagement alike, so a member who filed feedback
+ * before that track existed gets the count, not a day-one fanfare wall. A brand-new member gets
+ * wheels ON. No store (offline builds) → no record, and the view reports wheels off.
+ */
+function seedRecord(
+  deps: ProgressionServiceDeps,
+  participantId: string,
+  now: () => Date,
+  fills: readonly TradeActivityRecord[],
+  alreadyTrue: readonly { readonly milestoneId: string }[],
+) {
+  const held = deps.store?.get(participantId);
+  if (!deps.store || held) return held;
+  return deps.store.set(
+    participantId,
+    {
+      trainingWheels: !fills.some((f) => f.filledQuantity > 0),
+      acknowledged: alreadyTrue.map((m) => m.milestoneId),
+      since: now().toISOString(),
+    },
+    now(),
+  ).participants[participantId];
+}
+
+/**
+ * Which rungs are open, and what to chase. The feedback gate (#1119) sits in front of the ladder
+ * order: wheels on and nothing filed → only what is already earned is open, and nothing is "next
+ * up" until the filing lands. Wheels off is never gated.
+ */
+function openLadder(
+  wheels: boolean,
+  codes: ReadonlySet<TradeTypeCode>,
+  engagementEarned: readonly EarnedEngagement[],
+) {
+  const gated = ladderGated(wheels, new Set(engagementEarned.map((m) => m.milestoneId)));
+  const unlocked = gated ? codes : unlockedCodes(codes);
+  return { wheels, gated, unlocked, next: gated ? undefined : nextUp(unlocked, codes) };
+}
+
 export function createProgressionService(deps: ProgressionServiceDeps): ProgressionService {
   const now = deps.now ?? (() => new Date());
   return {
@@ -143,10 +194,8 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       const earned = deriveEarned(fills, tags);
       const engagementEarned = deriveEngagementEarned(feedback.map((f) => f.filedAt));
       const codes = earnedCodes(earned);
-      const unlocked = unlockedCodes(codes);
       const milestoneIds = new Set(earned.map((m) => m.milestoneId));
       const points = pointsFor(milestoneIds);
-      const next = nextUp(unlocked, codes);
       // Course locks follow completion order, UNIONED with any course already holding an earn —
       // seeded history with gaps must never render an earned milestone inside a "locked" course.
       const levels = unlockedLevels(milestoneIds);
@@ -154,22 +203,8 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         if (c.milestones.some((m) => milestoneIds.has(m.id))) levels.add(c.level);
       }
 
-      let record = deps.store?.get(participantId);
-      if (deps.store && !record) {
-        const hasHistory = fills.some((f) => f.filledQuantity > 0);
-        record = deps.store.set(
-          participantId,
-          {
-            trainingWheels: !hasHistory,
-            // Pre-acknowledge whatever is ALREADY true on first view, trade and engagement
-            // alike — a member who filed feedback before this track existed gets the count, not
-            // a day-one fanfare wall (same rule the trade ladder's own seeding already follows).
-            acknowledged: [...earned, ...engagementEarned].map((m) => m.milestoneId),
-            since: now().toISOString(),
-          },
-          now(),
-        ).participants[participantId];
-      }
+      const record = seedRecord(deps, participantId, now, fills, [...earned, ...engagementEarned]);
+      const ladder = openLadder(record?.trainingWheels ?? false, codes, engagementEarned);
       const acknowledged = new Set(record?.acknowledged ?? []);
       const fresh = record
         ? earned.filter((m) => !acknowledged.has(m.milestoneId) && m.at >= record.since)
@@ -187,11 +222,12 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         : [];
 
       return {
-        wheels: record?.trainingWheels ?? false,
+        wheels: ladder.wheels,
         earned,
         earnedByCode: new Map(earned.map((m) => [m.code, m])),
-        unlocked,
-        ...(next ? { nextUp: next } : {}),
+        unlocked: ladder.unlocked,
+        ...(ladder.gated ? { ladderGate: LADDER_FEEDBACK_GATE } : {}),
+        ...(ladder.next ? { nextUp: ladder.next } : {}),
         points,
         rank: rankFor(points),
         unlockedLevels: levels,
