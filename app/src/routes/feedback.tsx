@@ -13,7 +13,14 @@ import { PageFrame } from "../shell/frame";
  * coach/manual modes and the one form that files.
  */
 
+/** The one starter the shell knows: onboarding's "meet Moneypenny" step seeds the coach's note. */
+const STARTERS: Readonly<Record<string, string>> = {
+  onboarding:
+    "First filing from my onboarding: one thing that would make this desk better for me is …",
+};
+
 function FeedbackPage(): ReactElement {
+  const { starter } = Route.useSearch();
   const queryClient = useQueryClient();
   const index = useQuery({ queryKey: ["feedback"], queryFn: fetchFeedbackIndex });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["feedback"] });
@@ -53,7 +60,11 @@ function FeedbackPage(): ReactElement {
           {data.celebrating.length > 0 ? (
             <CommunityUnlockBanner celebrations={data.celebrating} onClaimed={refresh} />
           ) : null}
-          <FeedbackDoor coachEnabled={data.coachEnabled} onFiled={refresh} />
+          <FeedbackDoor
+            coachEnabled={data.coachEnabled}
+            onFiled={refresh}
+            starter={starter ? STARTERS[starter] : undefined}
+          />
           <RecentFeedback recent={data.recent} followupEnabled={data.followupEnabled} />
         </>
       )}
@@ -61,4 +72,11 @@ function FeedbackPage(): ReactElement {
   );
 }
 
-export const Route = createFileRoute("/feedback")({ component: FeedbackPage });
+export const Route = createFileRoute("/feedback")({
+  // `?starter=onboarding` seeds the coach's note (M·01's step 2); anything else is dropped.
+  validateSearch: (search: Record<string, unknown>) =>
+    typeof search.starter === "string" && search.starter in STARTERS
+      ? { starter: search.starter }
+      : {},
+  component: FeedbackPage,
+});

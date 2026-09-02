@@ -25,6 +25,7 @@ import { serveFeedbackRoute } from "./feedback-routes.js";
 import { serveJoinApi } from "./join-api-routes.js";
 import { serveLearnApi } from "./learn-api-routes.js";
 import { serveLegacyRedirect } from "./legacy-redirects.js";
+import { serveOnboardingApi } from "./onboarding-api-routes.js";
 import { serveOptionApi } from "./option-api-routes.js";
 import { servePlaysApi } from "./plays-api-routes.js";
 import { isResearchDocPath, serveResearchDoc } from "./research-page-routes.js";
@@ -113,6 +114,7 @@ async function serveWriteApis(
   if (await servePlaysApi(req, res, path, config, session)) return true;
   if (await serveSettingsApi(req, res, path, config, session)) return true;
   if (await serveLearnApi(req, res, path, config, session)) return true;
+  if (await serveOnboardingApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;

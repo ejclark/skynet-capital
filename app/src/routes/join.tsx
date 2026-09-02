@@ -145,7 +145,9 @@ function JoinPage(): ReactElement {
   return (
     <PageFrame>
       <header className="page-header">
-        <div className="join-eyebrow">Onboarding · step 1 of 3</div>
+        <div className="join-eyebrow">
+          <Link to="/onboarding">Onboarding</Link> · step 1 of 3
+        </div>
         <h1>Connect your Alpaca paper account</h1>
         <p>
           Skynet Capital is a league for learning to trade — for real, without real losses. You

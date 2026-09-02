@@ -89,7 +89,11 @@ describe("learnJsonView", () => {
       engagementCelebrating: [{ milestoneId: "first-feedback", at: "2026-08-26" }],
     });
     expect(view.engagementCelebrating).toEqual([
-      { milestoneId: "first-feedback", title: "File your first feedback", points: 20 },
+      {
+        milestoneId: "first-feedback",
+        title: "Meet Moneypenny — file your first feedback",
+        points: 10,
+      },
     ]);
   });
 
