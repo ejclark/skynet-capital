@@ -562,6 +562,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The calendar's first energy-supply entry, and it closes a real gap: three ledgers (cpi-2026-09-11, ism-services-2026-09-03, ism-manufacturing-2026-09-01) name crude as the transmission channel into their inflation subcomponents, yet no dated event on the supply side of that channel was tracked. The 2026-08-02 meeting completed the rollback of ~3.5 mb/d of 2023 voluntary cuts with a final +188 kb/d for September, and the group signalled quotas held steady for the rest of 2026 — so the base case is a non-event and `medium` reflects that, not the consequence if the signal breaks. What makes this instance live: it is the first ministerial since the 2026-08-30 US strike on Larak Island re-escalated the Strait of Hormuz, and it lands inside the Sep 1 -> Sep 16 pre-FOMC corridor, three days after ISM Services and two days after payrolls. Discovered during the ism-services-2026-09-03 pulse-check adjacency sweep (2026-08-31).",
   },
   {
+    id: "eia-steo-2026-09-09",
+    kind: "macro-print",
+    title: "EIA Short-Term Energy Outlook (September 2026)",
+    date: "2026-09-09",
+    status: "estimate",
+    source:
+      "EST: eia.gov/outlooks/steo/ states verbatim 'Next Release Date: September 9, 2026' on the August-2026 STEO landing page, fetched 2026-09-02 — primary-sourced, but this calendar defines no `confirmed` prefix for the EIA (fourth instance of that schema gap, after a state utility commission, a state election authority and a federal court docket), so it stays estimate on prefix grounds, not date doubt",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The monthly publication that puts an official number on the variable opec-plus-meeting-2026-09-06's stance now hinges on: not the quota, but how many Gulf barrels are physically stranded behind the Strait of Hormuz. The August-2026 STEO (released 2026-08-11) is the primary behind that ledger's magnitude leg — Hormuz crude+liquids transits averaged 4.9 mb/d in 2Q26 against 21.6 mb/d in 4Q25 pre-conflict, Mideast production shut-ins averaged 5.5 mb/d in July, and it assumed flows 'remain severely constrained through August, with flows slowly increasing in September'. This edition scores that September assumption and republishes the shut-in estimate, which is what makes it worth a calendar slot. Filed `low` deliberately, on the same reasoning as opec-jmmc-68th-2026-10-04: a forecast publication sets no policy and moves no equity tape, and this one lands on a crowded day (Apple's iPhone event, the 10Y auction, the buyback-size increase) that will drown it. Watch the level too: that same STEO forecast Brent averaging $87/b in 2026 and $78/b in 4Q26, and spot was already ~$95 on 2026-09-02 — secondary write-ups quoting a '$96' EIA forecast do not match the primary and were discarded. Discovered during the opec-plus-meeting-2026-09-06 pulse-check adjacency sweep (2026-09-02).",
+  },
+  {
     id: "aapl-iphone-18-launch-2026-09-09",
     kind: "product-launch",
     title: "Apple September event — iPhone 18 line",
