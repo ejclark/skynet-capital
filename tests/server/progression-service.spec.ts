@@ -245,6 +245,23 @@ describe("progression service — the engagement track (#567)", () => {
     expect(view.engagementEarned).toEqual([]);
   });
 
+  it("reads feedback by the opaque member id, not the account id (#1171)", async () => {
+    // The feedback log is keyed by `opaqueMemberId(session.email)` — a different id space than
+    // the account/participant id. A `view` call that only passes the account id must not see a
+    // filing recorded under the member's opaque id, and vice versa.
+    const svc = createProgressionService({
+      readFills: () => Promise.resolve([]),
+      readTags: () => Promise.resolve([]),
+      readFeedback: (id) =>
+        Promise.resolve(id === "opaque-abc" ? [feedbackEntry("2026-09-01T00:00:00.000Z")] : []),
+    });
+    const byAccountIdOnly = await svc.view("acct-1");
+    expect(byAccountIdOnly.engagementEarned).toEqual([]);
+
+    const byOpaqueId = await svc.view("acct-1", "opaque-abc");
+    expect(byOpaqueId.engagementEarned.map((m) => m.milestoneId)).toEqual(["first-feedback"]);
+  });
+
   it("pre-acknowledges a pre-existing filing on first view — never a surprise fanfare", async () => {
     const store = new ProgressionStore(join(dir, "progression.json"));
     const svc = createProgressionService({

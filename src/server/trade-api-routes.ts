@@ -4,6 +4,7 @@ import { previewOrder, type TicketOrderType } from "../trading/order-ticket.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
@@ -107,7 +108,10 @@ export async function serveTradeApi(
   // exit and is never gated: restricting how someone leaves a position would be a safety bug.
   const progression =
     body.action === "buy" && requesterId && config.progression
-      ? await config.progression.view(requesterId)
+      ? await config.progression.view(
+          requesterId,
+          session ? opaqueMemberId(session.email) : undefined,
+        )
       : undefined;
   const gateRefusal = progression?.ladderGate
     ? `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent.`

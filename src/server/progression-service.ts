@@ -109,7 +109,14 @@ export interface AcademyProgress {
 }
 
 export interface ProgressionService {
-  view(participantId: string): Promise<ParticipantProgression>;
+  /**
+   * `opaqueMemberId` is the feedback log's own key (`opaqueMemberId(session.email)`,
+   * `feedback-attribution.ts`) — a DIFFERENT id space from `participantId` (the account on the
+   * board). Every HTTP route passes it now; omitting it falls back to `participantId`, which is
+   * how #1171 shipped — every call site read the log with the account id, and no real member's
+   * filing ever lived under that key, so the engagement track always came back empty.
+   */
+  view(participantId: string, opaqueMemberId?: string): Promise<ParticipantProgression>;
   setWheels(participantId: string, on: boolean): Promise<void>;
   acknowledge(participantId: string, milestoneIds: readonly string[]): Promise<void>;
   /**
@@ -129,9 +136,10 @@ export interface ProgressionServiceDeps {
   readonly readFills: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   /** The tagged per-order audit lines for one participant. */
   readonly readTags: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
-  /** This participant's filed feedback (the engagement track). Absent: the track reads as
-   *  earned nothing, same as an absent `store` reads as no wheels/no celebration. */
-  readonly readFeedback?: (participantId: string) => Promise<readonly FeedbackLogEntry[]>;
+  /** Filed feedback for the engagement track, keyed by `view`'s `opaqueMemberId` (falls back to
+   *  `participantId` — see `view`'s doc). Absent: the track reads as earned nothing, same as an
+   *  absent `store` reads as no wheels/no celebration. */
+  readonly readFeedback?: (opaqueMemberId: string) => Promise<readonly FeedbackLogEntry[]>;
   /**
    * The preference store. Absent (offline/test wiring): wheels reads as OFF and nothing
    * celebrates — the desk simply doesn't restrict.
@@ -184,11 +192,11 @@ function openLadder(
 export function createProgressionService(deps: ProgressionServiceDeps): ProgressionService {
   const now = deps.now ?? (() => new Date());
   return {
-    async view(participantId) {
+    async view(participantId, opaqueMemberId) {
       const [journal, tags, feedback] = await Promise.all([
         deps.readFills(participantId),
         deps.readTags(participantId),
-        deps.readFeedback?.(participantId) ?? Promise.resolve([]),
+        deps.readFeedback?.(opaqueMemberId ?? participantId) ?? Promise.resolve([]),
       ]);
       const fills = collapseActivity([...journal]);
       const earned = deriveEarned(fills, tags);

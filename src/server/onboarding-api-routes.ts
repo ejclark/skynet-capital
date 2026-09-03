@@ -4,6 +4,7 @@ import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { requireGet, sendJson } from "./page-shell.js";
 
 /**
@@ -61,8 +62,14 @@ export async function onboardingView(
     .find((p) => p !== undefined && p.kind === "human");
   // The journey resolves exactly as /api/learn does — the session's own progression, nobody else's.
   const journeyId = linked ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  // The feedback log is keyed by the email hash, not the account id (#1171) — pass both.
   const progression =
-    journeyId && config.progression ? await config.progression.view(journeyId) : undefined;
+    journeyId && config.progression
+      ? await config.progression.view(
+          journeyId,
+          session ? opaqueMemberId(session.email) : undefined,
+        )
+      : undefined;
   const feedbackFiled = (progression?.engagementEarned ?? []).some(
     (m) => m.milestoneId === "first-feedback",
   );

@@ -4,6 +4,7 @@ import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shell.js";
 import { playLocked } from "./progression-service.js";
 
@@ -29,9 +30,12 @@ async function servePlays(
   res: ServerResponse,
   config: DashboardServerConfig,
   requesterId: string | undefined,
+  requesterOpaqueId: string | undefined,
 ): Promise<void> {
   const progression =
-    requesterId && config.progression ? await config.progression.view(requesterId) : undefined;
+    requesterId && config.progression
+      ? await config.progression.view(requesterId, requesterOpaqueId)
+      : undefined;
   // The feedback gate (#1119): while it holds, every unearned rung is locked for ONE reason, so
   // the per-rung "opens after the rung below" is withheld — it would name the wrong remedy.
   const gate = progression?.ladderGate;
@@ -99,7 +103,8 @@ export async function servePlaysApi(
   // The session's own journey — the same resolution every trade surface uses.
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
   if (path === "/api/trade/plays") {
-    if (requireGet(req, res)) await servePlays(res, config, requesterId);
+    const requesterOpaqueId = session ? opaqueMemberId(session.email) : undefined;
+    if (requireGet(req, res)) await servePlays(res, config, requesterId, requesterOpaqueId);
     return true;
   }
   await serveWheels(req, res, config, requesterId);
