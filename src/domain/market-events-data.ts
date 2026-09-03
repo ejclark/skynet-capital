@@ -489,13 +489,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "ADP National Employment Report (Aug 2026 data)",
     date: "2026-09-02",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "NEWS: fred.stlouisfed.org/releases/calendar?rid=194 + mediacenter.adp.com release cadence — 08:15 ET, checked 2026-08-27",
+      "IR: mediacenter.adp.com published 'ADP National Employment Report: Private-Sector Employment Increased by 38,000 Jobs in August' with a 2026-09-02 dateline at 08:15 ET (PRNewswire 302867661) — ADP does not pre-announce, so the release itself is the primary confirmation; flipped from estimate at close-out, fetched 2026-09-03",
     impact: "medium",
     symbols: [],
     notes:
-      "Two sessions ahead of BLS payrolls (9/4); private-sector proxy the market leans on pre-NFP, though the ADP-to-NFP correlation runs loose (July ADP printed +44k vs BLS's -23k the same cycle).",
+      "Two sessions ahead of BLS payrolls (9/4); private-sector proxy the market leans on pre-NFP, though the ADP-to-NFP correlation runs loose (July ADP printed +44k vs BLS's -23k the same cycle). PASSED and scored: +38,000 vs a 47-48k consensus, the slowest since January, with education/health (+45k) alone exceeding the whole print and large employers supplying +34k of it. The tape traded the soft read DOVISHLY -- Sep-16 hike odds 68.2% to 60.2-64.2%, a 20-month-high 10y round-tripped to unchanged, small caps led -- which refuted the beat-side asymmetry the ledger had installed after Jackson Hole. Close-out: docs/research/events/adp-employment-2026-09-02.md.",
   },
   {
     id: "beige-book-2026-09-02",
@@ -722,6 +722,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "The last revision to the +1.5% Q2 base that the 10-29 Q3 advance estimate gets measured against — which is the whole reason it is tracked; a revision here shifts the acceleration story before any Q3 number exists. Lands ON the FY2027 funding deadline, so in the lapse branch it is the last federal GDP release published before the blackout (BEA cancelled the Q3 advance estimate outright in the 2025 lapse). Marked `confirmed` on BEA's own schedule page fetched 2026-08-29 — the same primary and check date as the 10-29 and PCE entries, not an inferred cadence. Discovered during the gdp-q3-2026-advance-2026-10-29 initial research.",
+  },
+  {
+    id: "adp-employment-2026-09-30",
+    kind: "macro-print",
+    title: "ADP National Employment Report (Sep 2026 data)",
+    date: "2026-09-30",
+    status: "estimate",
+    source:
+      "EST: ADP's own August release (mediacenter.adp.com, 2026-09-02, PRNewswire 302867661) states verbatim that the next report publishes 'September 30, 2026 at 8:15 a.m. ET' — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, and ADP does not pre-announce (its August date only became confirmable at the release itself), checked 2026-09-03",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Two sessions ahead of BLS payrolls (10/2), the same pre-NFP slot the 09-02 edition held; the ADP-to-NFP correlation stays loose (Aug ADP +38k vs a 47-48k consensus, while the same cycle's July BLS print was -23k). Tracked at `medium` for a second reason this cycle: it is a PRIVATE labor read landing ON the FY2027 funding deadline, so in a lapse branch it survives where BLS deletes — the same promotion logic the consumer-confidence-2026-10-27 note records. Discovered in ADP's own release while closing out adp-employment-2026-09-02.",
   },
   {
     id: "crwv-fully-connected-2026-09-29",
