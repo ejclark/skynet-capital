@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   type OwnerLink,
   OwnerLinkStore,
+  ownerEmailFor,
   resolveOwnedId,
   resolveOwnedParticipantIds,
 } from "../../src/server/owner-link-store.js";
@@ -232,5 +233,32 @@ describe("resolveOwnedParticipantIds", () => {
         "eric@example.com",
       ),
     ).toEqual(["sauron", "human-eric", "jarvis"]);
+  });
+});
+
+// The reverse lookup (2026-09-03): a participant id → the email that owns it. What the engagement
+// track needs to read the feedback log, which is keyed by the opaque id of the email.
+describe("ownerEmailFor", () => {
+  const participants = [
+    { id: "stamped-1", ownerEmail: "Stamped@Example.com" },
+    { id: "linked-1" },
+    { id: "orphan" },
+  ];
+  const links = [
+    {
+      participantId: "linked-1",
+      email: "linked@example.com",
+      linkedBy: "eric@x",
+      at: "2026-09-01",
+    },
+  ];
+  it("prefers the stamped owner, lowercased", () => {
+    expect(ownerEmailFor(participants, links, "stamped-1")).toBe("stamped@example.com");
+  });
+  it("falls back to the claim link", () => {
+    expect(ownerEmailFor(participants, links, "linked-1")).toBe("linked@example.com");
+  });
+  it("is undefined for an unclaimed account", () => {
+    expect(ownerEmailFor(participants, links, "orphan")).toBeUndefined();
   });
 });

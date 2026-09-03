@@ -1,24 +1,9 @@
 import { create } from "zustand";
-import { fetchCompanionIndex, streamCompanionTurn } from "./companion";
-import {
-  type CoachMessage,
-  coachTurn,
-  type FeedbackKind,
-  fetchFeedbackIndex,
-  submitFeedbackRequest,
-} from "./feedback";
+import { type CompanionDraft, fetchCompanionIndex, streamCompanionTurn } from "./companion";
+import type { CoachMessage, FeedbackKind } from "./feedback";
 import { marketIsOpen } from "./market-hours";
-import {
-  FB_QUESTION,
-  FEEDBACK_OFF,
-  type Flow,
-  filedLine,
-  inferKind,
-  introLines,
-  opsLine,
-  routeNote,
-  scriptedDraft,
-} from "./moneypenny-script";
+import { createFilingLane } from "./moneypenny-filing";
+import { CHAT_DOWN, type Flow, introLines, routeNote } from "./moneypenny-script";
 import { fetchOnboarding } from "./onboarding";
 
 /**
@@ -62,6 +47,8 @@ interface Persisted {
   readonly note: string;
   readonly coach: readonly CoachMessage[];
   readonly kind: FeedbackKind;
+  /** A filing she drafted from the conversation, waiting on the member's reply to send it. */
+  readonly draft?: CompanionDraft;
 }
 
 const EMPTY: Persisted = {
@@ -97,6 +84,8 @@ const sleep = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
 export interface MoneypennyState extends Persisted {
   readonly open: boolean;
   readonly typing: boolean;
+  /** Whether the live chat is switched on — read once per session, on the first open. */
+  readonly companionEnabled?: boolean;
   /** Bumps on every successful filing — the rail invalidates the gate-bearing queries on it. */
   readonly filedSeq: number;
   /** Open the rail; with `intro`, play her intro script once per account (the `introDone` flag). */
@@ -120,7 +109,18 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       note: s.note,
       coach: s.coach,
       kind: s.kind,
+      ...(s.draft ? { draft: s.draft } : {}),
     });
+  };
+
+  /** The live chat's switch, read once per session. */
+  const companionOn = async (): Promise<boolean> => {
+    const known = get().companionEnabled;
+    if (known !== undefined) return known;
+    const index = await fetchCompanionIndex().catch(() => undefined);
+    const enabled = index?.enabled === true;
+    set({ companionEnabled: enabled });
+    return enabled;
   };
   const append = (role: MpRole, texts: readonly string[]) =>
     save({ messages: [...get().messages, ...texts.map((text) => ({ role, text }))] });
@@ -145,11 +145,11 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
           : { role: "assistant" as const, content: m.text.replace(/^Moneypenny · /, "") },
       );
 
-  /** A live answer, streamed into one growing line; the scripted fallback if the chat isn't on
-   *  or fails before a word arrives. */
-  const chat = async (fallback: readonly string[]) => {
-    const index = await fetchCompanionIndex().catch(() => undefined);
-    if (!index?.enabled) return say(fallback);
+  /** A live answer, streamed into one growing line. A draft she hands off parks in `draft` and
+   *  moves the flow to fb2 — the member's next reply sends it. A failure before any word arrived
+   *  says so honestly (the chat IS on; it just didn't answer) rather than pretending with a
+   *  scripted line. */
+  const chat = async () => {
     set({ typing: true });
     let text = "";
     let started = false;
@@ -160,66 +160,34 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       started = true;
     };
     try {
-      await streamCompanionTurn(transcript(), (delta) => {
-        text += delta;
-        if (!started) set({ typing: false });
-        show();
-      });
+      await streamCompanionTurn(
+        transcript(),
+        (delta) => {
+          text += delta;
+          if (!started) set({ typing: false });
+          show();
+        },
+        (draft) => save({ draft, kind: draft.kind, flow: "fb2", note: "", coach: [] }),
+      );
     } catch {
-      // a failure mid-answer keeps what arrived; one before any word falls back to the script
+      // a failure mid-answer keeps what arrived; one before any word is reported below
     }
     set({ typing: false });
     if (started) save({});
-    else await say(fallback);
+    else await say([CHAT_DOWN]);
   };
 
-  /** File the draft through the one door that files, then report the desk's state. */
-  const file = async (draft: {
-    readonly title: string;
-    readonly details: string;
-    readonly area?: string;
-    readonly spec?: unknown;
-  }) => {
-    const index = await fetchFeedbackIndex().catch(() => undefined);
-    if (index && !index.enabled) {
-      save({ flow: "idle", note: "", coach: [] });
-      await say([FEEDBACK_OFF]);
-      return;
-    }
-    const firstFiling = (index?.feedbackCount ?? 0) === 0;
-    const answer = await submitFeedbackRequest({ kind: get().kind, ...draft }).catch((err) => ({
-      ok: false as const,
-      error: err instanceof Error ? err.message : String(err),
-    }));
-    if (!answer.ok) {
-      await say([
-        `Moneypenny · i couldn't file that just now (${answer.error}) — say it again in a moment and i'll try again.`,
-      ]);
-      return;
-    }
-    save({ flow: "idle", note: "", coach: [] });
-    await say([filedLine(answer.number, draft.title)]);
-    set({ filedSeq: get().filedSeq + 1 });
-    await sleep(timing.opsMs);
-    append("sys", [opsLine(firstFiling)]);
-  };
-
-  /** One coach round: a question to relay, a draft to file, or the scripted fallback. */
-  const coachRound = async (messages: readonly CoachMessage[], fallback: () => Promise<void>) => {
-    const reply = await coachTurn({ kind: get().kind, messages }).catch(() => undefined);
-    if (!reply?.ok) return fallback();
-    if (reply.done) {
-      await file({
-        title: reply.title,
-        details: reply.details,
-        ...(reply.area ? { area: reply.area } : {}),
-        spec: reply.spec,
-      });
-      return;
-    }
-    save({ flow: "fb2", coach: [...messages, { role: "assistant", content: reply.question }] });
-    await say([`Moneypenny · ${reply.question}`]);
-  };
+  /** The filing lane — the only thing here that ever files (`moneypenny-filing.ts`). */
+  const lane = createFilingLane({
+    kind: () => get().kind,
+    coach: () => get().coach,
+    note: () => get().note,
+    save,
+    say,
+    system: (line) => append("sys", [line]),
+    filed: () => set({ filedSeq: get().filedSeq + 1 }),
+    beat: () => sleep(timing.opsMs),
+  });
 
   return {
     ...load(),
@@ -229,12 +197,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
 
     openRail: async (opts) => {
       set({ open: true });
+      void companionOn();
       if (!(opts?.intro && !get().introDone)) return;
       const ob = await fetchOnboarding().catch(() => undefined);
       const intro = introLines({
         connected: ob?.account !== undefined,
         firstTradeDone: ob?.steps.some((s) => s.id === "first-trade" && s.done) ?? false,
         marketOpen: marketIsOpen(),
+        returning: get().messages.length > 0,
       });
       save({ introDone: true, flow: intro.flow });
       await say(intro.lines);
@@ -249,36 +219,22 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       const note = text.trim();
       if (!note || get().typing) return;
       append("user", [note]);
-      const routed = routeNote(note, get().flow);
-      if (routed.kind === "say") {
-        save({ flow: routed.flow });
-        await say(routed.lines);
+      const { flow, draft } = get();
+      // A drafted filing waits on this reply — the member's word sends it.
+      if (flow === "fb2" && draft) {
+        set({ draft: undefined });
+        await lane.sendDraft(note, draft);
         return;
       }
-      if (routed.kind === "chat") {
+      // With the live chat on, everything that isn't a scripted beat (the setup yes/no, the
+      // answer to a filing question) goes to Moneypenny herself — she has the whole thread and
+      // drafts filings from it, so there is no separate door to send the member through.
+      if (flow !== "setup" && flow !== "fb2" && (await companionOn())) {
         save({ flow: "idle" });
-        await chat(routed.fallback);
+        await chat();
         return;
       }
-      if (routed.kind === "ask") {
-        const kind = inferKind(routed.note);
-        save({ flow: "fb2", note: routed.note, kind, coach: [] });
-        const index = await fetchFeedbackIndex().catch(() => undefined);
-        if (index?.coachEnabled) {
-          await coachRound([{ role: "user", content: routed.note }], () => say([FB_QUESTION]));
-        } else {
-          await say([FB_QUESTION]);
-        }
-        return;
-      }
-      // routed.kind === "file" — the answer to the one question
-      const { note: first, coach } = get();
-      const scripted = () => file(scriptedDraft(first, routed.answer));
-      if (coach.length) {
-        await coachRound([...coach, { role: "user", content: routed.answer }], scripted);
-      } else {
-        await scripted();
-      }
+      await lane.scripted(routeNote(note, flow));
     },
 
     reset: () => {
@@ -287,7 +243,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       } catch {
         // nothing stored
       }
-      set({ ...EMPTY, typing: false });
+      set({ ...EMPTY, draft: undefined, typing: false, companionEnabled: undefined });
     },
   };
 });

@@ -207,6 +207,23 @@ export function resolveOwnedParticipantIds(
   ];
 }
 
+/**
+ * The REVERSE lookup — the email that owns a participant id: its stamped `ownerEmail` first, else
+ * the claim link. This is what turns a desk id into the feedback log's key (`opaqueMemberId` of
+ * the email) for the engagement track; before it existed the progression service read the log
+ * with the participant id itself and found nothing, so the first-feedback milestone never earned
+ * in production (docs/LESSONS.md, 2026-09-03).
+ */
+export function ownerEmailFor(
+  participants: readonly OwnableParticipant[],
+  links: readonly OwnerLink[],
+  participantId: string,
+): string | undefined {
+  const stamped = participants.find((p) => p.id === participantId)?.ownerEmail;
+  if (stamped) return stamped.toLowerCase();
+  return links.find((l) => l.participantId === participantId)?.email;
+}
+
 /** Build the store from the environment (`SKYNET_OWNER_LINKS_FILE`, default `data/owner-links.json`). */
 export function createOwnerLinkStore(
   env: NodeJS.ProcessEnv,

@@ -91,6 +91,7 @@ async function memberContextFor(
       config.readFeedback ? config.readFeedback(opaqueMemberId(session.email)) : [],
     ]);
     return memberContext({
+      now: new Date(),
       onboarding,
       filings: [...filings]
         .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
@@ -148,6 +149,10 @@ async function serveChat(
       onError: (message) => {
         res.write(sseFrame(JSON.stringify({ error: message }), "error", seq++));
         res.end();
+      },
+      // A drafted filing for the rail to hold — the member's reply there is what files it.
+      onHandoff: (draft) => {
+        res.write(sseFrame(JSON.stringify(draft), "handoff", seq++));
       },
     },
   );

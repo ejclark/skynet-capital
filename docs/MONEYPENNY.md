@@ -20,8 +20,10 @@ Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`)
 same key the feedback coach uses, with four read-only tools over the member's own desk, their live
 onboarding/filing state injected every turn (`companion-context.ts`), and a cached help desk
 (`companion-help.ts`) so "how do I…" answers come from this app's facts. She cannot place an
-order (no such tool exists — `tests/companion/companion-no-order-path.spec.ts`), and filing still
-goes through the feedback coach and `/api/feedback`. The scripted lines in
+order (no such tool exists — `tests/companion/companion-no-order-path.spec.ts`). Filing is hers to
+draft: `draft_feedback` hands the rail a draft built from the whole thread and files nothing; the
+member's own reply ("send", or an answer to her one question) is what posts it through
+`/api/feedback`. The scripted lines in
 `app/src/live/moneypenny-script.ts` are the fallback when the key isn't set.
 
 ## Mandate

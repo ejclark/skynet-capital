@@ -19,6 +19,8 @@ export interface IntroContext {
   readonly connected: boolean;
   readonly firstTradeDone: boolean;
   readonly marketOpen: boolean;
+  /** The thread already has messages — she says hi again and steers, never re-introduces. */
+  readonly returning?: boolean;
 }
 
 const WHO =
@@ -56,12 +58,17 @@ export const CHIPS: readonly { readonly label: string; readonly msg: string }[] 
   { label: "File feedback", msg: "I want to file feedback" },
 ];
 
-/** The intro, three beats: who she is, the open question, and the onboarding steer that fits. */
+export const HI_AGAIN = "Moneypenny · hi again.";
+export const CHAT_DOWN =
+  "Moneypenny · i couldn't reach the desk just now — say that again in a moment and i'll pick it up.";
+
+/** The intro, three beats: who she is, the open question, and the onboarding steer that fits.
+ *  Mid-thread (`returning`) it is one beat: hi again, plus the steer. */
 export function introLines(ctx: IntroContext): {
   readonly lines: readonly string[];
   readonly flow: Flow;
 } {
-  const lines = [WHO, ASK];
+  const lines = ctx.returning ? [HI_AGAIN] : [WHO, ASK];
   if (!ctx.connected) {
     lines.push(STEER_SETUP);
     return { lines, flow: "setup" };

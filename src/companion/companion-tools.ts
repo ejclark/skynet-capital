@@ -6,8 +6,9 @@ import type { ParticipantSnapshot } from "../observatory/participant-snapshot.js
 import type { ParticipantProgression, ProgressionService } from "../server/progression-service.js";
 
 /**
- * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of four read-only lookups, and
- * nothing else. This is the structural half of the "never fires an order" invariant (the other
+ * THE COMPANION'S ENTIRE TOOL SURFACE — a CLOSED allow-list of four read-only lookups plus one
+ * hand-off (`draft_feedback`, which files nothing: it hands the rail a draft the member still has
+ * to send), and nothing else. This is the structural half of the "never fires an order" invariant (the other
  * half is the system prompt): `runCompanionTool` is a `switch` over four literal string cases
  * with no default fallthrough to anything callable, so there is no code path here — not a typo,
  * not a hallucinated tool name, not a crafted `tool_use` block — that reaches an order-placing
@@ -25,7 +26,28 @@ export const COMPANION_TOOL_NAMES = [
   "get_my_round_trips",
   "get_my_curriculum_progress",
   "get_play_catalog",
+  "draft_feedback",
 ] as const;
+
+/** What `draft_feedback` carries to the rail — a filing the MEMBER still has to send. */
+export interface FeedbackDraft {
+  readonly kind: "bug" | "feature" | "idea";
+  readonly title: string;
+  readonly details: string;
+}
+
+const KINDS = new Set(["bug", "feature", "idea"]);
+
+/** The model's draft, bounded and typed — anything else is refused as no draft at all. */
+export function parseFeedbackDraft(input: unknown): FeedbackDraft | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const raw = input as { kind?: unknown; title?: unknown; details?: unknown };
+  const kind = typeof raw.kind === "string" && KINDS.has(raw.kind) ? raw.kind : "idea";
+  const title = typeof raw.title === "string" ? raw.title.trim().slice(0, 80) : "";
+  const details = typeof raw.details === "string" ? raw.details.trim().slice(0, 4000) : "";
+  if (!(title && details)) return undefined;
+  return { kind: kind as FeedbackDraft["kind"], title, details };
+}
 
 export type CompanionToolName = (typeof COMPANION_TOOL_NAMES)[number];
 
@@ -55,12 +77,32 @@ export const COMPANION_TOOL_DEFS = [
       "Every trade type this desk offers (real broker term + plain-language gloss), each marked locked/unlocked for this member. Read-only, no member data beyond lock state.",
     input_schema: { type: "object", properties: {} },
   },
+  {
+    name: "draft_feedback",
+    description:
+      "Hand the member a DRAFT feedback filing (bug, feature, or idea) distilled from this whole conversation. Files NOTHING: the rail shows the draft and only the member's own reply sends it. Call it once the member has agreed to report something; then ask them exactly one clarifying question, or tell them to reply 'send' if nothing is missing.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["bug", "feature", "idea"] },
+        title: { type: "string", description: "Imperative summary of the ask, max 80 chars." },
+        details: {
+          type: "string",
+          description:
+            "What / where in the app / expected vs. actual (bug) or what 'done' looks like (feature, idea), in the member's own words where possible. Facts from this conversation only.",
+        },
+      },
+      required: ["kind", "title", "details"],
+    },
+  },
 ] as const;
 
 /** What the tool dispatcher needs to answer honestly — all read accessors, all optional so a
  *  deployment missing a piece degrades to "not available" rather than throwing. */
 export interface CompanionDeskDeps {
   readonly snapshotFor: (participantId: string) => ParticipantSnapshot | undefined;
+  /** Where a captured draft goes — the chat engine's own handoff hook, never a write. */
+  readonly onDraft?: (draft: FeedbackDraft) => void;
   readonly readTradeActivity?: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   readonly progression?: ProgressionService;
 }
@@ -154,26 +196,42 @@ function playCatalogResult(view: ParticipantProgression | undefined): CompanionT
  * confused model might invent, like `place_order` or `submit_trade` — falls through to the
  * refusal below and touches nothing. `participantId` is the SESSION's own linked desk, resolved
  * upstream (`resolveOwnerId`) — never a client-supplied id, so this can never be pointed at
- * another member's account.
+ * another member's account. `participantId` may be absent (no linked desk yet): the desk lanes
+ * then refuse honestly, and only `draft_feedback` — which reads nothing — still answers.
  */
 export async function runCompanionTool(
   name: string,
   deps: CompanionDeskDeps,
-  participantId: string,
+  participantId: string | undefined,
+  input?: unknown,
 ): Promise<CompanionToolResult> {
-  const snapshot = deps.snapshotFor(participantId);
+  const snapshot = participantId ? deps.snapshotFor(participantId) : undefined;
   switch (name as CompanionToolName) {
+    case "draft_feedback": {
+      const draft = parseFeedbackDraft(input);
+      if (!draft) return { ok: false, error: "a draft needs a kind, a title and details" };
+      deps.onDraft?.(draft);
+      return {
+        ok: true,
+        result: {
+          captured: true,
+          next: "The rail now holds this draft. Ask the member exactly one clarifying question if something material is missing; otherwise tell them to reply 'send'. Their reply files it — nothing is sent yet.",
+        },
+      };
+    }
     case "get_my_positions":
       return positionsResult(snapshot);
     case "get_my_round_trips":
-      return roundTripsResult(snapshot, deps.readTradeActivity, participantId);
+      return participantId
+        ? roundTripsResult(snapshot, deps.readTradeActivity, participantId)
+        : { ok: false, error: "no linked desk" };
     case "get_my_curriculum_progress":
       return progressionResult(
-        deps.progression ? await deps.progression.view(participantId) : undefined,
+        deps.progression && participantId ? await deps.progression.view(participantId) : undefined,
       );
     case "get_play_catalog":
       return playCatalogResult(
-        deps.progression ? await deps.progression.view(participantId) : undefined,
+        deps.progression && participantId ? await deps.progression.view(participantId) : undefined,
       );
     default:
       // Structural refusal — there is no branch above that reaches a write, so an unrecognized

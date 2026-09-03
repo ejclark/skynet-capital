@@ -32,6 +32,19 @@ describe("introLines", () => {
     expect(intro.lines.at(-1)).toMatch(/fills at market open/);
   });
 
+  it("mid-thread, says hi again and steers — never the whole introduction", () => {
+    const intro = introLines({
+      connected: false,
+      firstTradeDone: false,
+      marketOpen: true,
+      returning: true,
+    });
+    expect(intro.lines).toHaveLength(2);
+    expect(intro.lines[0]).toBe("Moneypenny · hi again.");
+    expect(intro.lines[1]).toMatch(/isn't connected yet/);
+    expect(intro.flow).toBe("setup");
+  });
+
   it("offers no steer once the first trade is in", () => {
     const intro = introLines({ connected: true, firstTradeDone: true, marketOpen: true });
     expect(intro.lines).toHaveLength(2);
