@@ -34,6 +34,7 @@ import { createAccountService } from "../server/account-service.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
+import { opaqueMemberId } from "../server/feedback-issue.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
 import { ParticipantService } from "../server/participant-service.js";
@@ -169,6 +170,7 @@ async function main(): Promise<void> {
     ownerLinks,
     resolveOwnerIds,
     resolveOwnerId,
+    ownerEmailFor,
   } = setupAccess(process.env, liveRoster);
   const opsStatus = wireOpsStatus(process.env, botControls, {
     hub,
@@ -208,7 +210,14 @@ async function main(): Promise<void> {
     hub,
     readFills: (id) => activity.list(id),
     readTags: (id) => orderAudit.list(id),
-    readFeedback: (id) => feedbackLog.list(id),
+    // The engagement track reads the FEEDBACK LOG, which is keyed by the opaque member id of the
+    // owner's email — never by the participant id the progression service is asked about. Binding
+    // the log by participant id read nothing, so the first-feedback milestone never earned
+    // (docs/LESSONS.md, 2026-09-03).
+    readFeedback: (id) => {
+      const email = ownerEmailFor(id);
+      return email ? feedbackLog.list(opaqueMemberId(email)) : Promise.resolve([]);
+    },
   });
 
   createDashboardServer({

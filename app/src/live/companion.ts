@@ -26,6 +26,13 @@ export interface CompanionTurnMessage {
   readonly content: string;
 }
 
+/** A filing she drafted from the conversation — the rail holds it; the member's reply sends it. */
+export interface CompanionDraft {
+  readonly kind: "bug" | "feature" | "idea";
+  readonly title: string;
+  readonly details: string;
+}
+
 /** One parsed SSE frame — the event name and its `data:` payload. */
 function parseFrame(frame: string): { readonly event: string; readonly data: string } {
   let event = "message";
@@ -38,12 +45,14 @@ function parseFrame(frame: string): { readonly event: string; readonly data: str
 }
 
 /**
- * Stream one turn: `onText` fires per delta; resolves on `done`, rejects on an `error` frame, a
- * non-stream answer (the "not switched on" / throttled JSON), or a transport failure.
+ * Stream one turn: `onText` fires per delta, `onHandoff` once if she drafted a filing; resolves on
+ * `done`, rejects on an `error` frame, a non-stream answer (the "not switched on" / throttled
+ * JSON), or a transport failure.
  */
 export async function streamCompanionTurn(
   messages: readonly CompanionTurnMessage[],
   onText: (delta: string) => void,
+  onHandoff?: (draft: CompanionDraft) => void,
 ): Promise<void> {
   const res = await fetch("/api/companion/chat", {
     method: "POST",
@@ -64,6 +73,8 @@ export async function streamCompanionTurn(
     if (event === "delta") {
       const text = (JSON.parse(data) as { text?: string }).text;
       if (text) onText(text);
+    } else if (event === "handoff") {
+      onHandoff?.(JSON.parse(data) as CompanionDraft);
     } else if (event === "error") {
       throw new Error((JSON.parse(data) as { error?: string }).error ?? "companion error");
     } else if (event === "done") return true;

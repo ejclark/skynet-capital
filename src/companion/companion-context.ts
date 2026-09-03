@@ -19,6 +19,8 @@ export interface FilingSummary {
 }
 
 export interface MemberContextInput {
+  /** When this turn is — so "what time is it" has an answer, in New York time and UTC. */
+  readonly now?: Date;
   readonly onboarding: OnboardingView;
   /** The member's own filings, newest first — the feedback log's entries. */
   readonly filings: readonly FilingSummary[];
@@ -54,8 +56,12 @@ export function memberContext(input: MemberContextInput): string {
       : `They have filed feedback ${filings.length} time${filings.length === 1 ? "" : "s"}: ${named}${
           filings.length > MAX_FILINGS_NAMED ? ", …" : ""
         }.`;
+  const clock = input.now
+    ? `Now: ${input.now.toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })} (${input.now.toISOString().slice(0, 16).replace("T", " ")} UTC).`
+    : undefined;
   return [
     `MEMBER CONTEXT (this turn): ${name ? `talking to ${name}.` : "the member has no display name yet."}`,
+    ...(clock ? [clock] : []),
     `Onboarding (M·01, ${onboarding.done} of ${onboarding.total} done) — ${steps}.`,
     account,
     feedback,

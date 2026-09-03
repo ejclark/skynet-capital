@@ -12,7 +12,11 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
-import { createOwnerLinkStore, resolveOwnedParticipantIds } from "../server/owner-link-store.js";
+import {
+  createOwnerLinkStore,
+  ownerEmailFor,
+  resolveOwnedParticipantIds,
+} from "../server/owner-link-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
@@ -23,6 +27,8 @@ export interface AccessSetup {
   ownerLinks: ReturnType<typeof createOwnerLinkStore>;
   resolveOwnerIds: (email: string) => string[];
   resolveOwnerId: (email: string) => string | undefined;
+  /** The reverse: the email that owns a participant id (stamp first, else the claim link). */
+  ownerEmailFor: (participantId: string) => string | undefined;
 }
 
 /**
@@ -73,6 +79,8 @@ export function setupAccess(
   const resolveOwnerIds = (email: string): string[] =>
     resolveOwnedParticipantIds(liveRoster(), ownerLinks.load().links, email);
   const resolveOwnerId = (email: string): string | undefined => resolveOwnerIds(email)[0];
+  const ownerEmailForId = (participantId: string): string | undefined =>
+    ownerEmailFor(liveRoster(), ownerLinks.load().links, participantId);
 
   return {
     allowlist,
@@ -83,5 +91,6 @@ export function setupAccess(
     ownerLinks,
     resolveOwnerIds,
     resolveOwnerId,
+    ownerEmailFor: ownerEmailForId,
   };
 }

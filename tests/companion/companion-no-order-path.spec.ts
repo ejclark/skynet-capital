@@ -89,14 +89,17 @@ describe("behavioral: the dispatcher refuses every order-shaped or adversarial a
     expect(result.ok).toBe(false);
   });
 
-  it("none of the four real tools accept a parameter that could carry order details", () => {
+  it("no real tool accepts a parameter that could carry order details", () => {
     for (const tool of COMPANION_TOOL_DEFS) {
-      expect(tool.input_schema.properties).toEqual({});
+      for (const prop of Object.keys(tool.input_schema.properties)) {
+        expect(prop).not.toMatch(/symbol|side|quantity|qty|price|limit|order|notional/i);
+      }
     }
   });
 
-  it("the real tool list is exactly the four read-only lookups — nothing else exists to call", () => {
+  it("the real tool list is the four read-only lookups plus the draft hand-off — nothing else exists to call", () => {
     expect(COMPANION_TOOL_DEFS.map((t) => t.name).sort()).toEqual([
+      "draft_feedback",
       "get_my_curriculum_progress",
       "get_my_positions",
       "get_my_round_trips",

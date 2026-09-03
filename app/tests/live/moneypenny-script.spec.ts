@@ -1,6 +1,7 @@
 import {
   FB_OPEN,
   FB_QUESTION,
+  filedLine,
   inferKind,
   introLines,
   NUDGE,
@@ -30,6 +31,19 @@ describe("introLines", () => {
     const intro = introLines({ connected: true, firstTradeDone: false, marketOpen: false });
     expect(intro.lines.at(-1)).toMatch(/closed right now \(9:30 am–4:00 pm et, weekdays\)/);
     expect(intro.lines.at(-1)).toMatch(/fills at market open/);
+  });
+
+  it("mid-thread, says hi again and steers — never the whole introduction", () => {
+    const intro = introLines({
+      connected: false,
+      firstTradeDone: false,
+      marketOpen: true,
+      returning: true,
+    });
+    expect(intro.lines).toHaveLength(2);
+    expect(intro.lines[0]).toBe("Moneypenny · hi again.");
+    expect(intro.lines[1]).toMatch(/isn't connected yet/);
+    expect(intro.flow).toBe("setup");
   });
 
   it("offers no steer once the first trade is in", () => {
@@ -116,6 +130,13 @@ describe("filing helpers", () => {
     const d = scriptedDraft(note, "on the board");
     expect(d.title).toHaveLength(80);
     expect(d.details).toContain("on the board");
+  });
+
+  it("the filed line carries the issue's link when there is one", () => {
+    expect(filedLine(1170, "Fix it", "https://github.com/x/y/issues/1170")).toContain(
+      "open it here: https://github.com/x/y/issues/1170",
+    );
+    expect(filedLine(7, "Fix it")).not.toContain("open it here");
   });
 
   it("the first filing's ops line names the M·02 unlock and never claims shipped", () => {

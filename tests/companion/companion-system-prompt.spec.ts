@@ -31,8 +31,10 @@ describe("the companion's system prompt", () => {
     expect(COMPANION_SYSTEM_PROMPT).toContain('Never answer "should I" with a recommendation');
   });
 
-  it("hands off feedback filing rather than drafting or filing it itself", () => {
-    expect(COMPANION_SYSTEM_PROMPT).toContain("do not try to draft or file it yourself");
+  it("drafts a filing from the conversation, and only the member's reply ever files it", () => {
+    expect(COMPANION_SYSTEM_PROMPT).toContain("call draft_feedback");
+    expect(COMPANION_SYSTEM_PROMPT).toContain("only the member's own reply sends it");
+    expect(COMPANION_SYSTEM_PROMPT).toContain("you never file");
   });
 });
 

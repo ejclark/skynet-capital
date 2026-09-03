@@ -135,41 +135,80 @@ describe("bounds — server-enforced, before any model call", () => {
   });
 });
 
-describe("tools-off (no desk linked) — Q&A over the catalogs only, streamed straight through", () => {
-  it("never calls the non-streaming leg at all — one streaming call answers the member", async () => {
-    const fetchCalls: unknown[] = [];
+describe("no desk linked — only the draft hand-off is on offer, never a desk lookup", () => {
+  it("offers draft_feedback alone, and a direct reply is emitted whole", async () => {
+    const fetchCalls: { tools?: { name: string }[] }[] = [];
     const streamCalls: unknown[] = [];
     const chat = createCompanionChat(
       { apiKey: "k" },
       (_m, _u, _h, b) => {
-        fetchCalls.push(b);
-        return Promise.resolve(textReply("x"));
+        fetchCalls.push(b as { tools?: { name: string }[] });
+        return Promise.resolve(textReply("Sure, here's how a covered call works."));
       },
-      fakeDoStream(["Sure, ", "here's how a covered call works."], streamCalls),
+      fakeDoStream(["unused"], streamCalls),
     );
     const { handlers, texts, done } = collect();
     await chat({ messages: [userMsg("what's a covered call?")] }, handlers);
-    expect(fetchCalls).toEqual([]);
+    expect(fetchCalls[0]?.tools?.map((t) => t.name)).toEqual(["draft_feedback"]);
+    expect(streamCalls).toEqual([]);
     expect(texts.join("")).toBe("Sure, here's how a covered call works.");
     expect(done()).toBe(true);
   });
 
-  it("stays tools-off even with a desk configured, if this turn names no participantId", async () => {
-    const fetchCalls: unknown[] = [];
-    const streamCalls: unknown[] = [];
+  it("withholds the desk lookups even with a desk configured, if this turn names no participantId", async () => {
+    const fetchCalls: { tools?: { name: string }[] }[] = [];
     const config: CompanionChatConfig = { apiKey: "k", tools: deskDeps };
     const chat = createCompanionChat(
       config,
       (_m, _u, _h, b) => {
-        fetchCalls.push(b);
-        return Promise.resolve(textReply("x"));
+        fetchCalls.push(b as { tools?: { name: string }[] });
+        return Promise.resolve(textReply("ok"));
       },
-      fakeDoStream(["ok"], streamCalls),
+      fakeDoStream(["ok"], []),
     );
     const input: CompanionTurnInput = { messages: [userMsg("hi")] }; // no participantId
     await chat(input, collect().handlers);
-    expect(fetchCalls).toEqual([]);
-    expect(streamCalls.length).toBe(1);
+    expect(fetchCalls[0]?.tools?.map((t) => t.name)).toEqual(["draft_feedback"]);
+  });
+
+  it("hands a drafted filing to onHandoff and files nothing — the member's reply does that", async () => {
+    const handoffs: unknown[] = [];
+    let round = 0;
+    const chat = createCompanionChat(
+      { apiKey: "k" },
+      () =>
+        Promise.resolve(
+          round++ === 0
+            ? ({
+                status: 200,
+                body: {
+                  content: [
+                    {
+                      type: "tool_use",
+                      id: "tu1",
+                      name: "draft_feedback",
+                      input: {
+                        kind: "bug",
+                        title: "Step 2 never completes",
+                        details: "Filed 5 times.",
+                      },
+                    },
+                  ],
+                },
+              } as JsonResponse)
+            : textReply("drafted — reply send to file it."),
+        ),
+      fakeDoStream(["unused"], []),
+    );
+    const c = collect();
+    await chat(
+      { messages: [userMsg("yes, report it")] },
+      { ...c.handlers, onHandoff: (d) => handoffs.push(d) },
+    );
+    expect(handoffs).toEqual([
+      { kind: "bug", title: "Step 2 never completes", details: "Filed 5 times." },
+    ]);
+    expect(c.texts.join("")).toBe("drafted — reply send to file it.");
   });
 });
 
@@ -244,14 +283,17 @@ describe("tools-on — a bounded non-streaming round trip, then the streamed rep
 
 describe("the prompt-cache breakpoint — the static prompt is byte-stable and comes first", () => {
   it("puts the whole static system prompt in its own cached block, ahead of anything volatile", async () => {
-    const streamCalls: unknown[] = [];
+    const fetchCalls: unknown[] = [];
     const chat = createCompanionChat(
       { apiKey: "k" },
-      () => Promise.resolve(textReply("")),
-      fakeDoStream(["hi"], streamCalls),
+      (_m, _u, _h, b) => {
+        fetchCalls.push(b);
+        return Promise.resolve(textReply("hi"));
+      },
+      fakeDoStream(["unused"], []),
     );
     await chat({ messages: [userMsg("hello")] }, collect().handlers);
-    const system = (streamCalls[0] as { system: readonly Record<string, unknown>[] }).system;
+    const system = (fetchCalls[0] as { system: readonly Record<string, unknown>[] }).system;
     expect(system[0]).toMatchObject({
       text: COMPANION_SYSTEM_PROMPT,
       cache_control: { type: "ephemeral" },
@@ -265,8 +307,11 @@ describe("the member's live context — volatile, so always after the cache brea
     const captured: unknown[] = [];
     const turn = createCompanionChat(
       { apiKey: "k" },
-      async () => textReply("unused"),
-      fakeDoStream(["hi"], captured),
+      (_m, _u, _h, body) => {
+        captured.push(body);
+        return Promise.resolve(textReply("hi"));
+      },
+      fakeDoStream(["unused"], []),
     );
     const c = collect();
     await turn(
@@ -300,18 +345,21 @@ describe("model routing — the shared, cheap model, on every leg", () => {
 
 describe("history — trimmed, and never opening on a stray assistant turn", () => {
   it("keeps only the last MAX_HISTORY_MESSAGES turns, starting on a user message", async () => {
-    const streamCalls: { messages: readonly { role: string }[] }[] = [];
+    const fetchCalls: { messages: readonly { role: string }[] }[] = [];
     const chat = createCompanionChat(
       { apiKey: "k" },
-      () => Promise.resolve(textReply("")),
-      fakeDoStream(["ok"], streamCalls) as never,
+      (_m, _u, _h, b) => {
+        fetchCalls.push(b as { messages: readonly { role: string }[] });
+        return Promise.resolve(textReply("ok"));
+      },
+      fakeDoStream(["ok"], []),
     );
     const messages: CompanionMessage[] = Array.from({ length: 20 }, (_, i) => ({
       role: i % 2 === 0 ? "user" : "assistant",
       content: `m${i}`,
     }));
     await chat({ messages }, collect().handlers);
-    const sent = streamCalls[0]?.messages ?? [];
+    const sent = fetchCalls[0]?.messages ?? [];
     expect(sent.length).toBeLessThanOrEqual(MAX_HISTORY_MESSAGES);
     expect(sent[0]?.role).toBe("user");
   });
@@ -330,9 +378,10 @@ describe("transport failures degrade to an honest error, never a crash", () => {
   });
 
   it("a streaming failure reports through onError rather than throwing out of the turn", async () => {
+    // Tool rounds exhaust (the model keeps looking things up), so the turn reaches the streamed leg.
     const chat = createCompanionChat(
       { apiKey: "k" },
-      () => Promise.resolve(textReply("")),
+      () => Promise.resolve(toolUseReply("get_play_catalog")),
       () => Promise.reject(new Error("stream reset")),
     );
     const { handlers, errors } = collect();

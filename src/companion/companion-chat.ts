@@ -19,6 +19,7 @@ import { COMPANION_SYSTEM_PROMPT } from "./companion-system-prompt.js";
 import {
   COMPANION_TOOL_DEFS,
   type CompanionDeskDeps,
+  type FeedbackDraft,
   runCompanionTool,
 } from "./companion-tools.js";
 
@@ -55,6 +56,9 @@ export interface CompanionHandlers {
   readonly onText: (chunk: string) => void;
   readonly onDone: () => void;
   readonly onError: (message: string) => void;
+  /** The model drafted a filing from the conversation (`draft_feedback`) — the rail holds it and
+   *  only the member's reply sends it. Optional: a caller with no rail just drops the draft. */
+  readonly onHandoff?: (draft: FeedbackDraft) => void;
 }
 
 export type CompanionTurn = (
@@ -128,6 +132,14 @@ type ToolRoundOutcome =
   | { readonly kind: "answered" | "error" }
   | { readonly kind: "continue"; readonly working: unknown[] };
 
+/** The tools this turn may call: the draft hand-off always (it reads nothing); the four desk
+ *  lookups only for a member with a linked desk. */
+function toolsFor(participantId: string | undefined): readonly unknown[] {
+  return participantId
+    ? COMPANION_TOOL_DEFS
+    : COMPANION_TOOL_DEFS.filter((t) => t.name === "draft_feedback");
+}
+
 /** Up to `MAX_TOOL_ROUNDS` non-streaming round trips letting the model call read-only tools.
  *  Ends early (`"answered"`) the moment a reply carries no tool call — nothing user-facing
  *  happens before that, so this leg never needs to stream. Ends `"error"` on any transport or
@@ -139,10 +151,13 @@ async function runToolRounds(
   volatile: string,
   initial: readonly unknown[],
   deskDeps: CompanionDeskDeps,
-  participantId: string,
+  participantId: string | undefined,
   handlers: CompanionHandlers,
 ): Promise<ToolRoundOutcome> {
   let working = [...initial];
+  const deps: CompanionDeskDeps = handlers.onHandoff
+    ? { ...deskDeps, onDraft: handlers.onHandoff }
+    : deskDeps;
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     let res: JsonResponse;
     try {
@@ -151,7 +166,7 @@ async function runToolRounds(
         max_tokens: MAX_TOKENS_PER_REPLY,
         system: systemBlocks(volatile),
         messages: working,
-        tools: COMPANION_TOOL_DEFS,
+        tools: toolsFor(participantId),
       });
     } catch (error) {
       handlers.onError(error instanceof Error ? error.message : "companion unreachable");
@@ -171,7 +186,7 @@ async function runToolRounds(
       return { kind: "answered" };
     }
     const results = await Promise.all(
-      toolUses.map((tu) => runCompanionTool(tu.name ?? "", deskDeps, participantId)),
+      toolUses.map((tu) => runCompanionTool(tu.name ?? "", deps, participantId, tu.input)),
     );
     working = [
       ...working,
@@ -245,25 +260,22 @@ export function createCompanionChat(
       return;
     }
 
-    const canUseTools = Boolean(config.tools && input.participantId);
-    const toolsNote = canUseTools
+    const canUseDesk = Boolean(config.tools && input.participantId);
+    const toolsNote = canUseDesk
       ? "This member has a linked desk — the read-only tools describe their own account."
-      : "This member has no linked desk yet — no tools are available; answer from general knowledge of the app only, and don't claim to see their positions.";
+      : "This member has no linked desk yet — the desk lookups are not available; answer from the help desk and the member context, and don't claim to see their positions. draft_feedback still works.";
     const volatile = input.context ? `${toolsNote}\n\n${input.context}` : toolsNote;
     const initial = trimHistory(input.messages).map((m) => ({ role: m.role, content: m.content }));
 
-    if (!canUseTools) {
-      await streamFinalReply(doStream, headers, volatile, false, initial, handlers);
-      return;
-    }
-    // `canUseTools` is exactly the guard that makes both of these defined.
+    // The draft hand-off is always on offer, so every turn runs the (non-streaming) tool leg;
+    // the desk lookups join it only for a linked desk.
     const outcome = await runToolRounds(
       doFetch,
       headers,
       volatile,
       initial,
-      config.tools as CompanionDeskDeps,
-      input.participantId as string,
+      config.tools ?? { snapshotFor: () => undefined },
+      canUseDesk ? input.participantId : undefined,
       handlers,
     );
     if (outcome.kind !== "continue") return; // already answered or errored via `handlers`

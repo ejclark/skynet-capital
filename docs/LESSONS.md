@@ -27,6 +27,13 @@ it. Prevention ranks, best first:
 
 ---
 
+### The first-feedback milestone never earned in production — the engagement track read the feedback log with the wrong key
+- **SHA:** 5813bc4   **DATE:** 2026-09-03   **STATUS:** closed
+- **SIGNAL:** Eric, live in Moneypenny's rail: "Why hasn't my onboarding … meet Moneypenny been completed?" — she could see five filings in his log (read by opaque member id) while onboarding step 2 and the ladder gate (read through the progression service) said none. Shipped in #1138 (2026-09-02); noticed ~1 day later, and only because a second reader of the same ledger disagreed with the first.
+- **ROOT CAUSE:** `feedback-log.ts` keys entries by `opaqueMemberId(email)`; `serve-dashboard.ts` bound the progression service's `readFeedback` as `(id) => feedbackLog.list(id)` with the PARTICIPANT id, so `deriveEngagementEarned` always saw an empty list. Every consumer of the engagement track (M·01 step 2, the M·02 gate, `/api/learn`'s celebration) was blind; `/api/feedback`'s own count, keyed correctly, was the one honest reader.
+- **PREVENTION:** script — `ownerEmailFor` (participant → owner email, `owner-link-store.ts`) is now the one seam that turns a desk id into the log's key, and the binding in `serve-dashboard.ts` goes through it; `tests/server/owner-link-store.spec.ts` pins the lookup. Ledger note: two ledgers keyed by different identities (participant id vs. opaque member id) is the trap — any new reader of the feedback log from a participant-id context must cross that seam.
+- **SIDE QUESTS:** none
+
 ### CLAUDE.md forbade narration comments from day one; nothing enforced it, so 195 accumulated in 18 commits
 
 - **SHA:** n/a   **DATE:** 2026-08-30   **STATUS:** closed
