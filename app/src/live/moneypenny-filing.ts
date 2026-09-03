@@ -135,11 +135,13 @@ export function createFilingLane(ctx: FilingContext) {
       ],
     }).catch(() => undefined);
     if (!(reply?.ok && reply.done)) return draft;
+    // No `spec`: a build spec earns the `curated` label downstream (feedback-issue.ts), which the
+    // build lane treats as license to build unattended — and this pass never interviewed anyone
+    // (red-team A5). The capsule and area ride; the interview-backed spec stays the coach path's.
     return {
       title: reply.title || draft.title,
       details: reply.details || draft.details,
       ...(reply.area ? { area: reply.area } : {}),
-      spec: reply.spec,
     };
   };
 

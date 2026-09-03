@@ -92,8 +92,9 @@ describe("MoneypennyRail — the drafted filing", () => {
       kind: "bug",
       title: "Mark onboarding step 2 done once feedback is filed",
       area: "onboarding",
-      spec: { readiness: "spec-complete" },
     });
+    // no build spec rides a rail filing — `curated` is the interview's to earn (red-team A5)
+    expect(filing?.body).not.toHaveProperty("spec");
   });
 
   it("files her draft as is when the coach isn't wired — never loses the filing to shaping", async () => {
