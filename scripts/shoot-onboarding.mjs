@@ -3,8 +3,10 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { extname, join, resolve } from "node:path";
 // Visual harness for /app/onboarding — milestone M·01 from the REAL built shell (app/dist) over a
-// stub API, two frames: a brand-new member (nothing done, the connect form embedded) and a
-// connected member (step 1 done, tiles live, steps 2–3 waiting). JPEG ≤100KB (docs/PICTURES.md).
+// stub API, four frames: a brand-new member (the five-step guide as accordions, step 1 open), the
+// same member with step 5 opened (the connect form inside it), Moneypenny's rail open with her
+// intro (the whole shell pushed left), and a connected member (step 1 done, tiles live, steps 2–3
+// waiting). JPEG ≤100KB (docs/PICTURES.md).
 // Usage: npm run build --prefix app && node scripts/shoot-onboarding.mjs [outdir]
 import { chromium } from "playwright-core";
 
@@ -40,19 +42,26 @@ const step = (id, title, detail, points, route, done) => ({
   done,
 });
 const steps = (connected) => [
-  step("connect", "Connect your Alpaca paper account", "", 10, "/app/join", connected),
+  step(
+    "connect",
+    "Connect your Alpaca paper account",
+    "Set up a free Alpaca paper account and link it here in five short steps, detailed below. We read keys only to verify and show your balance — no orders are ever placed on your behalf.",
+    10,
+    "/app/onboarding",
+    connected,
+  ),
   step(
     "first-feedback",
-    "Meet Moneypenny — file your first feedback",
-    "Moneypenny is our AI agent — she facilitates your learning and orchestrates much of the communication behind the scenes, including feedback. Tell her one thing that's on your mind and watch it get answered.",
+    "Meet Moneypenny, and file your first feedback",
+    "Moneypenny is our AI agent — your guide for learning the desk and filing feedback. Say hello and she'll take it from there.",
     10,
-    "/app/feedback?starter=onboarding",
+    "/app/onboarding?moneypenny=intro",
     false,
   ),
   step(
     "first-trade",
     "Make your first trade",
-    "Open the Trading Desk and buy a stock — rung 101. Orders fill while the market is open, 9:30 AM to 4:00 PM ET, Monday through Friday.",
+    "The desk unlocks one rung at a time — buy a stock first, and each real fill opens the next play. No skipping ahead. Orders fill only while the market is open — 9:30 AM to 4:00 PM ET, Monday through Friday.",
     10,
     "/app/trade?play=101",
     false,
@@ -61,6 +70,7 @@ const steps = (connected) => [
 const milestone = { id: "onboarding", code: "M·01", title: "Onboarding", desc: "" };
 const fresh = {
   linked: true,
+  viewerName: "Tony",
   milestone,
   steps: steps(false),
   done: 0,
@@ -92,6 +102,17 @@ const joinIndex = {
   timezones: [{ value: "America/New_York", label: "Eastern (New York)" }],
 };
 
+const feedbackIndex = {
+  enabled: true,
+  coachEnabled: false,
+  followupEnabled: false,
+  feedbackCount: 0,
+  celebrating: [],
+  recent: [],
+};
+const playbooks = { linked: true, unlocked: 0, total: 4 };
+const journey = { rank: "Observer", points: 0 };
+
 let state = fresh;
 const json = (res, body) => {
   res.writeHead(200, { "content-type": "application/json" });
@@ -101,6 +122,9 @@ const server = createServer((req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
   if (url.pathname === "/api/onboarding") return json(res, state);
   if (url.pathname === "/api/join") return json(res, joinIndex);
+  if (url.pathname === "/api/feedback") return json(res, feedbackIndex);
+  if (url.pathname === "/api/playbooks") return json(res, playbooks);
+  if (url.pathname === "/api/learn") return json(res, journey);
   if (url.pathname.startsWith("/api/")) return json(res, {});
   if (url.pathname === "/events") return;
   const rel = url.pathname.replace(/^\/app\/?/, "");
@@ -123,12 +147,29 @@ const page = await browser.newPage({
 });
 const shoot = async (name) => {
   const path = join(OUT, `${name}.jpg`);
-  await page.screenshot({ path, type: "jpeg", quality: 62, fullPage: false });
+  await page.screenshot({ path, type: "jpeg", quality: 55, fullPage: false });
   console.log(`shot ${path}`);
 };
 await page.goto(`${origin}/app/onboarding`);
-await page.getByLabel("Display name").waitFor();
+await page.getByRole("button", { name: "Create a free Alpaca account" }).waitFor();
 await shoot("onboarding-fresh");
+
+// step 5 opened — the connect form lives inside it; steps 1 and 5 stay open together
+await page.getByRole("button", { name: "Copy/paste account key and secret below" }).click();
+await page.getByLabel("Display name").waitFor();
+await page
+  .getByRole("button", { name: "Copy/paste account key and secret below" })
+  .scrollIntoViewIfNeeded();
+await shoot("onboarding-step5-form");
+
+// Moneypenny's rail — step 2's button opens it with her intro; the whole shell moves left
+await page.goto(`${origin}/app/onboarding`);
+await page.getByRole("button", { name: "Meet Moneypenny ›" }).click();
+await page.getByText(/isn't connected yet/).waitFor();
+await page.getByLabel("Message Moneypenny").fill("yes");
+await page.keyboard.press("Enter");
+await page.getByText(/the short path: create a free account/).waitFor();
+await shoot("onboarding-moneypenny-rail");
 
 state = connected;
 await page.goto(`${origin}/app/onboarding`);

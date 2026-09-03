@@ -38,6 +38,21 @@ a {
   left: 0;
 }
 
+/* the shell is a flex ROW (handoff 2026-09-03): the app column, then the Moneypenny rail as its
+   sibling — opening the rail pushes the whole column left, top bar included, instead of
+   overlaying the stage. The app column keeps the sticky top bar; the rail sticks on its own. */
+.shell {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+.shell-app {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .topbar {
   position: sticky;
   top: 0;

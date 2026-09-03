@@ -13,7 +13,8 @@ import { fetchOnboarding } from "../live/onboarding";
 export function ProfileMeta(): ReactElement | null {
   const onboarding = useQuery({ queryKey: ["onboarding"], queryFn: fetchOnboarding });
   const journey = useQuery({ queryKey: ["learn"], queryFn: fetchJourney });
-  const name = onboarding.data?.account?.displayName;
+  // the account's display name once one exists; the session's own name before that
+  const name = onboarding.data?.account?.displayName ?? onboarding.data?.viewerName;
   const points = (journey.data?.points ?? 0) + (onboarding.data?.points ?? 0);
   if (!(journey.data || onboarding.data)) return null;
   return (

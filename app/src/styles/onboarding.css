@@ -109,17 +109,8 @@
   flex-direction: column;
   gap: 12px;
 }
-.ob-guide-link {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-.ob-guide-link a {
+.ob-tile-link {
   color: var(--accent);
-}
-.ob-connect .join-form {
-  max-width: none;
-  background: var(--surface);
 }
 
 /* the account tiles — figures from the live board, labelled simulated */
