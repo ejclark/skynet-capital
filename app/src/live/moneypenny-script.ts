@@ -29,9 +29,9 @@ const ASK = "any immediate questions or support items? just ask.";
 const STEER_SETUP =
   "i see your alpaca paper account isn't connected yet — that's the first step of onboarding. want a hand setting it up?";
 const STEER_TRADE_OPEN =
-  "your account is connected — the last step is your first trade. open the trading desk and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the market is open right now.";
+  "your account is connected — the last step is your first trade. open the trading desk and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the regular session should be open right now — the desk confirms with alpaca before any fill.";
 const STEER_TRADE_CLOSED =
-  "your account is connected — the last step is your first trade. open the trading desk and buy a stock (rung 101). the market is closed right now (9:30 am–4:00 pm et, weekdays), but you can schedule the trade and it fills at market open.";
+  "your account is connected — the last step is your first trade. open the trading desk and buy a stock (rung 101). the regular session is closed right now (9:30 am–4:00 pm et, weekdays); an order placed now waits for the open.";
 
 export const SETUP_PATH = [
   "Moneypenny · the short path: create a free account at alpaca.markets → switch it to Paper Trading → increase the paper balance to $1,000,000 → generate api keys → paste the key and secret on the onboarding page. the step-by-step cards live there, with links.",
@@ -52,15 +52,55 @@ export const NUDGE =
 export const FEEDBACK_OFF =
   "Moneypenny · feedback isn't switched on in this deployment yet — ask Eric to set the feedback token. your note wasn't sent.";
 
-/** The suggestion chips — shown only while no flow is active. */
-export const CHIPS: readonly { readonly label: string; readonly msg: string }[] = [
-  { label: "Help me get set up", msg: "How do I get set up?" },
-  { label: "File feedback", msg: "I want to file feedback" },
-];
+export interface Chip {
+  readonly label: string;
+  readonly msg: string;
+}
+
+const FILE_CHIP: Chip = { label: "File feedback", msg: "I want to file feedback" };
+
+/** The suggestion chips, from where the member is (NN/g: a suggestion earns its place only when
+ *  it fits the moment) — a parked draft's two exits first, then the next onboarding step. */
+export function chipsFor(state: {
+  readonly draft: boolean;
+  readonly connected: boolean;
+  readonly firstTradeDone: boolean;
+}): readonly Chip[] {
+  if (state.draft)
+    return [
+      { label: "Send it", msg: "send" },
+      { label: "Never mind", msg: "never mind" },
+    ];
+  if (!state.connected)
+    return [{ label: "Help me get set up", msg: "How do I get set up?" }, FILE_CHIP];
+  if (!state.firstTradeDone)
+    return [
+      { label: "Walk me through my first trade", msg: "Walk me through my first trade" },
+      FILE_CHIP,
+    ];
+  return [{ label: "How am I doing?", msg: "How am I doing on the desk?" }, FILE_CHIP];
+}
 
 export const HI_AGAIN = "Moneypenny · hi again.";
 export const CHAT_DOWN =
   "Moneypenny · i couldn't reach the desk just now — say that again in a moment and i'll pick it up.";
+export const DRAFT_DROPPED = "Moneypenny · dropped — nothing was filed.";
+
+/** A failed live answer, in the failure's own words when it has any (the throttle's, the
+ *  server's) — never a scripted stand-in that pretends nothing happened. */
+export function answerFailed(reason: string | undefined): string {
+  const why = reason?.trim();
+  return why ? `Moneypenny · i couldn't answer that just now: ${why}` : CHAT_DOWN;
+}
+
+/** The draft as the member sees it before anything files — kind, title, details, the two exits. */
+export function draftCard(draft: {
+  readonly kind: string;
+  readonly title: string;
+  readonly details: string;
+}): string {
+  return `[${draft.kind}] ${draft.title}\n\n${draft.details}\n\n— reply "send" to file it, or "never mind" to drop it.`;
+}
 
 /** The intro, three beats: who she is, the open question, and the onboarding steer that fits.
  *  Mid-thread (`returning`) it is one beat: hi again, plus the steer. */
@@ -78,6 +118,13 @@ export function introLines(ctx: IntroContext): {
 }
 
 const YES = /^(y\b|yes|sure|ok|okay|please|help|yeah|yep)/i;
+const NO = /^(n\b|no\b|nah|nope|not now|later|no thanks|skip|pass)/i;
+
+/** A clear yes or no to the setup offer — anything else is a real message, not an answer. */
+export function isSetupAnswer(text: string): boolean {
+  const t = text.trim();
+  return t.length <= 40 && (YES.test(t) || NO.test(t));
+}
 const FEEDBACK =
   /feedback|bug|broken|wrong|doesn'?t work|error|crash|idea|feature|confus|missing|wish|issue|stuck|file (it|an issue|one)/i;
 const BARE_FEEDBACK = /^i (want|would like|'?d like) to (file|give|leave|send)/i;

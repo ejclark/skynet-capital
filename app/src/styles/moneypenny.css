@@ -63,17 +63,63 @@
   font-size: 11px;
   color: var(--muted);
 }
+/* the two header controls — 32px targets so a thumb can hit them on a phone */
+.mp-new,
 .mp-close {
-  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: 0;
+  border-radius: 8px;
   color: var(--muted);
   font-size: 16px;
   cursor: pointer;
-  padding: 0 2px;
+  padding: 0;
 }
+.mp-new {
+  margin-left: auto;
+  font-size: 15px;
+}
+.mp-new[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mp-new:hover,
 .mp-close:hover {
   color: var(--text);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+.mp-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mp-daybreak {
+  align-self: center;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 2px 10px;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 999px;
+}
+.mp-draft {
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--border));
+  border-radius: 11px;
+  background: color-mix(in oklab, var(--accent) 6%, var(--surface));
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.mp-disclosure {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--muted);
 }
 .mp-list {
   flex: 1;
@@ -86,7 +132,7 @@
 .mp-msg {
   white-space: pre-line;
 }
-.mp-user {
+.mp-entry .mp-user {
   align-self: flex-end;
   max-width: 85%;
   background: var(--surface);

@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { regularSessionOpen } from "../domain/market-session.js";
 import { deriveOnboarding, ONBOARDING_MILESTONE } from "../domain/onboarding.js";
 import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { Session } from "./auth/session.js";
@@ -28,6 +29,11 @@ export interface OnboardingView {
   /** The signed-in member's name from the session, for "Welcome to the league, <name>" before
    *  any account exists to carry a display name. Absent without auth or a nameless session. */
   readonly viewerName?: string;
+  /** The member's opaque id (the feedback log's own key) — what the rail keys its thread by, so
+   *  a shared device never shows one member another's conversation. Absent without a session. */
+  readonly viewerId?: string;
+  /** The server's regular-session clock, so the intro's steer and the model agree. */
+  readonly marketOpen: boolean;
   readonly milestone: typeof ONBOARDING_MILESTONE;
   readonly steps: ReturnType<typeof deriveOnboarding>["steps"];
   readonly done: number;
@@ -85,6 +91,8 @@ export async function onboardingView(
   return {
     linked,
     ...(session?.name ? { viewerName: session.name } : {}),
+    ...(session?.email ? { viewerId: opaqueMemberId(session.email) } : {}),
+    marketOpen: regularSessionOpen(),
     milestone: ONBOARDING_MILESTONE,
     ...progress,
     ...(human

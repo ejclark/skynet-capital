@@ -2,14 +2,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { KeyboardEvent, ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { type MpMessage, useMoneypenny } from "../live/moneypenny";
-import { CHIPS } from "../live/moneypenny-script";
+import { chipsFor } from "../live/moneypenny-script";
 
 /**
- * THE MONEYPENNY RAIL (design handoff 2026-09-03, §6) — the feedback modal's replacement: a
- * full-height right rail, sibling of the whole app column, so opening it pushes everything left,
- * navbar included, and its 54px header shares the top bar's ground and hairline. Thread anatomy is
- * the assistant-ui pattern: a scrolling message list that follows every append, suggestion chips
- * while no flow is active, and a composer — Enter sends, Shift+Enter breaks a line.
+ * THE MONEYPENNY RAIL (design handoff 2026-09-03, §6; P1/P2 of `docs/research/moneypenny-chat-ux.md`)
+ * — the feedback modal's replacement: a full-height right rail, sibling of the whole app column,
+ * so opening it pushes everything left, navbar included, and its header shares the top bar's
+ * ground and hairline. Thread anatomy is the assistant-ui pattern: a scrolling message list that
+ * follows every append (day breaks where the thread crosses midnight), suggestion chips that
+ * come from where the member is, and a composer — Enter sends, Shift+Enter breaks a line,
+ * Escape closes the rail. A ↺ control starts a new conversation. The standing disclosure the
+ * companion is told the UI carries is rendered here, under the composer.
  *
  * Rendering only. What she says and when anything files is `live/moneypenny.ts`; this component
  * has one side effect of its own — after a filing it invalidates the queries that carry the
@@ -18,18 +21,27 @@ import { CHIPS } from "../live/moneypenny-script";
  * @category feedback
  */
 
-const URL_RE = /(https?:\/\/[^\s”"'<>)]+)/g;
+const URL_RE =
+  /(https?:\/\/[^\s”"'<>)]+|(?<![\w/])\/(?:trade|learn|onboarding|playbooks|feedback|settings)(?:[/?#][^\s”"'<>)]*)?)/g;
 
-/** Her lines can carry a link (the issue she just filed) — http(s) URLs become anchors, opening
- *  in a new tab; everything else stays text. */
+/** Her lines can carry a link — the issue she just filed, a ticket's review screen — so http(s)
+ *  URLs and the app's own routes become anchors; everything else stays text. */
 function linkify(text: string): readonly ReactNode[] {
   const nodes: ReactNode[] = [];
   let offset = 0;
   for (const part of text.split(URL_RE)) {
+    if (part === undefined) continue;
+    const external = /^https?:\/\//.test(part);
+    const internal =
+      !external && /^\/(trade|learn|onboarding|playbooks|feedback|settings)/.test(part);
     // keyed by where the piece starts in the line — stable, and unique within one message
     nodes.push(
-      /^https?:\/\//.test(part) ? (
-        <a key={offset} href={part} target="_blank" rel="noopener noreferrer">
+      external || internal ? (
+        <a
+          key={offset}
+          href={part}
+          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        >
           {part}
         </a>
       ) : (
@@ -45,15 +57,23 @@ function Message({ m }: { readonly m: MpMessage }): ReactElement {
   return <div className={`mp-msg mp-${m.role}`}>{linkify(m.text)}</div>;
 }
 
+const dayOf = (at: number | undefined) => (at ? new Date(at).toDateString() : undefined);
+
 export function MoneypennyRail(): ReactElement | null {
   const open = useMoneypenny((s) => s.open);
   const messages = useMoneypenny((s) => s.messages);
   const typing = useMoneypenny((s) => s.typing);
+  const streaming = useMoneypenny((s) => s.streaming);
   const flow = useMoneypenny((s) => s.flow);
+  const draft = useMoneypenny((s) => s.draft);
+  const connected = useMoneypenny((s) => s.connected);
+  const firstTradeDone = useMoneypenny((s) => s.firstTradeDone);
+  const disclosure = useMoneypenny((s) => s.disclosure);
   const filedSeq = useMoneypenny((s) => s.filedSeq);
   const send = useMoneypenny((s) => s.send);
   const closeRail = useMoneypenny((s) => s.closeRail);
-  const [draft, setDraft] = useState("");
+  const newConversation = useMoneypenny((s) => s.newConversation);
+  const [text, setText] = useState("");
   const list = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -70,13 +90,25 @@ export function MoneypennyRail(): ReactElement | null {
       void queryClient.invalidateQueries({ queryKey: [key] });
   }, [filedSeq, queryClient]);
 
+  // Escape closes the rail — the one dismissal that works everywhere, mobile included.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") closeRail();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, closeRail]);
+
   if (!open) return null;
 
+  const busy = typing || streaming;
   const submit = () => {
-    const text = draft.trim();
-    if (!text) return;
-    setDraft("");
-    void send(text);
+    const note = text.trim();
+    if (!note || busy) return;
+    void send(note).then((accepted) => {
+      if (accepted) setText("");
+    });
   };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -84,6 +116,14 @@ export function MoneypennyRail(): ReactElement | null {
       submit();
     }
   };
+  const chips =
+    !busy && (flow === "idle" || draft)
+      ? chipsFor({
+          draft: draft !== undefined,
+          connected: connected === true,
+          firstTradeDone: firstTradeDone === true,
+        })
+      : [];
 
   return (
     <aside className="mp-rail" aria-label="Moneypenny">
@@ -95,23 +135,41 @@ export function MoneypennyRail(): ReactElement | null {
         <span className="mp-sub">learning · feedback</span>
         <button
           type="button"
+          className="mp-new"
+          aria-label="New conversation"
+          title="New conversation"
+          disabled={busy}
+          onClick={() => void newConversation()}
+        >
+          ↺
+        </button>
+        <button
+          type="button"
           className="mp-close"
           aria-label="Close Moneypenny"
+          title="Close (Esc)"
           onClick={closeRail}
         >
           ×
         </button>
       </div>
       <div className="mp-list" ref={list} aria-live="polite">
-        {messages.map((m, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: an append-only thread — position is identity
-          <Message key={i} m={m} />
-        ))}
-        {typing ? <div className="mp-typing num">moneypenny · typing ···</div> : null}
+        {messages.map((m, i) => {
+          const day = dayOf(m.at);
+          const prev = i > 0 ? dayOf(messages[i - 1]?.at) : undefined;
+          return (
+            // biome-ignore lint/suspicious/noArrayIndexKey: an append-only thread — position is identity
+            <div key={i} className="mp-entry">
+              {day && prev && day !== prev ? <div className="mp-daybreak num">{day}</div> : null}
+              <Message m={m} />
+            </div>
+          );
+        })}
+        {typing ? <div className="mp-typing num">Moneypenny · typing ···</div> : null}
       </div>
-      {!typing && flow === "idle" ? (
+      {chips.length ? (
         <div className="mp-chips">
-          {CHIPS.map((c) => (
+          {chips.map((c) => (
             <button key={c.label} type="button" className="fchip" onClick={() => void send(c.msg)}>
               {c.label}
             </button>
@@ -121,23 +179,24 @@ export function MoneypennyRail(): ReactElement | null {
       <div className="mp-composer">
         <textarea
           rows={2}
-          value={draft}
+          value={text}
           placeholder="Message Moneypenny…"
           aria-label="Message Moneypenny"
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => setText(e.target.value)}
           onKeyDown={onKey}
         />
         <div className="mp-composer-row">
           <button
             type="button"
             className="btn btn-primary mp-send"
-            disabled={draft.trim() === ""}
+            disabled={busy || text.trim() === ""}
             onClick={submit}
           >
             Send
           </button>
           <span className="mp-hint num">every filing gets a real answer</span>
         </div>
+        {disclosure ? <p className="mp-disclosure">{disclosure}</p> : null}
       </div>
     </aside>
   );

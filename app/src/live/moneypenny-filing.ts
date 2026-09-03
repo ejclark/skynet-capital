@@ -23,8 +23,7 @@ import {
  * log the retired form used):
  *
  *   - `sendDraft` — Moneypenny drafted the filing herself from the whole thread (the companion's
- *     `draft_feedback` hand-off); the member's reply sends it, "send" as is, anything else as the
- *     answer to her one question, appended to the details.
+ *     `draft_feedback` hand-off), the rail showed it, and the member said "send".
  *   - `scripted` — the no-companion path: keyword routing, the coach's questions (or the one
  *     scripted question without a coach), then the member's own words file.
  *
@@ -65,7 +64,11 @@ interface Filing {
   readonly spec?: unknown;
 }
 
-const SEND_AS_IS = /^(send|yes|ok|okay|go|file it|do it|sure|yep|y)\.?$/i;
+/** The member's word that files a parked draft — and the one that drops it. Short, whole-message
+ *  matches only: a sentence that happens to start with "yes" is a message, not consent. */
+export const SEND_AS_IS = /^(send|send it|yes|ok|okay|go|file it|do it|sure|yep|y)[.!]?$/i;
+export const NEVER_MIND =
+  /^(never ?mind|cancel|drop it|forget it|no|nope|don'?t( file it)?|scrap it)[.!]?$/i;
 
 export function createFilingLane(ctx: FilingContext) {
   /** File through the one door that files, then report the desk's state. */
@@ -82,8 +85,11 @@ export function createFilingLane(ctx: FilingContext) {
       error: err instanceof Error ? err.message : String(err),
     }));
     if (!answer.ok) {
+      // The scripted flow resets so the next message is a message again; a parked draft stays
+      // parked in the store, so "send" retries it.
+      ctx.save({ flow: "idle", note: "", coach: [] });
       await ctx.say([
-        `Moneypenny · i couldn't file that just now (${answer.error}) — say it again in a moment and i'll try again.`,
+        `Moneypenny · i couldn't file that just now (${answer.error}) — say "send" again in a moment and i'll retry.`,
       ]);
       return;
     }
@@ -137,14 +143,9 @@ export function createFilingLane(ctx: FilingContext) {
     };
   };
 
-  /** The member's reply to a drafted filing — send as is, or with their follow-up folded in —
-   *  shaped by the coach on the way out. */
-  const sendDraft = async (note: string, draft: CompanionDraft): Promise<void> => {
-    const answer = SEND_AS_IS.test(note) ? "" : note;
-    const raw: Filing = {
-      title: draft.title,
-      details: answer ? `${draft.details}\n\nMember's follow-up: ${answer}` : draft.details,
-    };
+  /** The member said send: the draft they saw, shaped by the coach on the way out. */
+  const sendDraft = async (draft: CompanionDraft): Promise<void> => {
+    const raw: Filing = { title: draft.title, details: draft.details };
     const index = await fetchFeedbackIndex().catch(() => undefined);
     await file(await shape(raw, index?.coachEnabled === true));
   };

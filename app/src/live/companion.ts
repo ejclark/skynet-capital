@@ -82,7 +82,7 @@ export async function streamCompanionTurn(
   };
   for (;;) {
     const { value, done } = await reader.read();
-    if (done) return;
+    if (done) throw new Error("the answer was cut off");
     buffer += decoder.decode(value, { stream: true });
     let cut = buffer.indexOf("\n\n");
     while (cut >= 0) {
