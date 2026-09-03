@@ -222,3 +222,77 @@ describe("MoneypennyRail", () => {
     expect(calls.filter((c) => c.url === "/api/feedback" && c.body)).toHaveLength(0);
   });
 });
+
+// Eric, 2026-09-03: "she can look up information on the fly and be a self service tool" — a
+// general question goes to the companion chat (Claude, on the coach's key) and streams into the
+// thread; the scripted line stands in only when the chat isn't switched on.
+describe("MoneypennyRail — live answers", () => {
+  let realFetch: typeof globalThis.fetch;
+  beforeEach(() => {
+    realFetch = globalThis.fetch;
+    timing.typingMs = 0;
+    timing.opsMs = 0;
+    localStorage.clear();
+    useMoneypenny.getState().reset();
+  });
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  const sse = (frames: readonly string[]) =>
+    new Response(frames.join(""), {
+      status: 200,
+      headers: { "content-type": "text/event-stream" },
+    });
+  const json = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  it("streams a general question through the companion, prefixed as her line", async () => {
+    const sent: { url: string; body: unknown }[] = [];
+    globalThis.fetch = ((url: string, init?: RequestInit) => {
+      sent.push({ url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      if (url === "/api/companion") return Promise.resolve(json({ enabled: true, disclosure: "" }));
+      if (url === "/api/companion/chat")
+        return Promise.resolve(
+          sse([
+            'event: delta\ndata: {"text":"a covered call is "}\n\n',
+            'event: delta\ndata: {"text":"a call you sell against shares you own."}\n\n',
+            "event: done\ndata: {}\n\n",
+          ]),
+        );
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    }) as typeof globalThis.fetch;
+    mount();
+    await act(() => useMoneypenny.getState().openRail());
+    const box = screen.getByLabelText("Message Moneypenny");
+    fireEvent.change(box, { target: { value: "what's a covered call?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(
+      await screen.findByText(
+        "Moneypenny · a covered call is a call you sell against shares you own.",
+      ),
+    ).toHaveClass("mp-mp");
+    const turn = sent.find((c) => c.url === "/api/companion/chat");
+    expect(turn?.body).toEqual({
+      messages: [{ role: "user", content: "what's a covered call?" }],
+    });
+  });
+
+  it("falls back to the scripted nudge when the chat isn't switched on", async () => {
+    globalThis.fetch = ((url: string) =>
+      Promise.resolve(
+        url === "/api/companion"
+          ? json({ enabled: false, disclosure: "" })
+          : new Response("{}", { status: 404 }),
+      )) as typeof globalThis.fetch;
+    mount();
+    await act(() => useMoneypenny.getState().openRail());
+    const box = screen.getByLabelText("Message Moneypenny");
+    fireEvent.change(box, { target: { value: "what's a covered call?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText(/i can help you get set up/)).toBeInTheDocument();
+  });
+});

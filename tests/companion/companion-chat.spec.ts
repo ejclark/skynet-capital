@@ -260,6 +260,27 @@ describe("the prompt-cache breakpoint — the static prompt is byte-stable and c
   });
 });
 
+describe("the member's live context — volatile, so always after the cache breakpoint", () => {
+  it("appends the turn's context to the volatile block, never to the cached static prompt", async () => {
+    const captured: unknown[] = [];
+    const turn = createCompanionChat(
+      { apiKey: "k" },
+      async () => textReply("unused"),
+      fakeDoStream(["hi"], captured),
+    );
+    const c = collect();
+    await turn(
+      { messages: [userMsg("how far along am I?")], context: "MEMBER CONTEXT: talking to Tony." },
+      c.handlers,
+    );
+    const system = (captured[0] as { system: { text: string; cache_control?: unknown }[] }).system;
+    expect(system[0]?.text).toBe(COMPANION_SYSTEM_PROMPT);
+    expect(system[0]?.cache_control).toEqual({ type: "ephemeral" });
+    expect(system[1]?.text).toContain("MEMBER CONTEXT: talking to Tony.");
+    expect(system[1]?.cache_control).toBeUndefined();
+  });
+});
+
 describe("model routing — the shared, cheap model, on every leg", () => {
   it("uses the same model for the tool-detection leg and the streamed reply", async () => {
     const fetchCalls: { model?: string }[] = [];
