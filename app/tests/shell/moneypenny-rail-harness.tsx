@@ -40,7 +40,7 @@ export const onboarding = (connected: boolean) => ({
   milestone: { id: "onboarding", code: "M·01", title: "Onboarding", desc: "" },
   steps: [
     { id: "connect", done: connected },
-    { id: "first-feedback", done: false },
+    { id: "first-message", done: false },
     { id: "first-trade", done: false },
   ],
   done: connected ? 1 : 0,

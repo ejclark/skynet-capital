@@ -21,6 +21,17 @@ export async function fetchCompanionIndex(): Promise<CompanionIndex> {
   return (await res.json()) as CompanionIndex;
 }
 
+/** Tell the server a real message reached the rail — the ladder gate's own evidence, independent
+ *  of whether the message routes to a live reply, a scripted one, or a feedback draft. Best
+ *  effort: a failed ack costs nothing but a delayed unlock, never the member's own message. */
+export async function ackMoneypennyMessage(): Promise<void> {
+  try {
+    await fetch("/api/companion/ack", { method: "POST", credentials: "same-origin" });
+  } catch {
+    // best-effort — the next message (or a filed issue) still opens the ladder
+  }
+}
+
 export interface CompanionTurnMessage {
   readonly role: "user" | "assistant";
   readonly content: string;

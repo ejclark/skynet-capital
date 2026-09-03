@@ -19,8 +19,8 @@ const base: OnboardingView = {
       done: false,
     },
     {
-      id: "first-feedback",
-      title: "Meet Moneypenny, and file your first feedback",
+      id: "first-message",
+      title: "Say hello to Moneypenny",
       detail: "",
       points: 10,
       route: "",

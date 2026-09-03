@@ -9,6 +9,7 @@ import {
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
+import { recordFirstMessageSafely } from "./companion-message-log.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
@@ -17,13 +18,17 @@ import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
 /**
- * THE COMPANION'S HTTP SURFACE — two endpoints, both gated on the SAME `Session` every
+ * THE COMPANION'S HTTP SURFACE — three endpoints, all gated on the SAME `Session` every
  * other member-only route checks upstream (`gateRequest` in `dashboard-auth-gate.ts`, wired by
  * the caller before this file ever runs):
  *
  *   GET  /api/companion       → { enabled } — whether `ANTHROPIC_API_KEY` is set, so the client
  *                                can render "not switched on yet" instead of a dead input box.
  *   POST /api/companion/chat  → the turn, streamed back over SSE (`delta`/`done`/`error` events).
+ *   POST /api/companion/ack   → records the ladder gate's own evidence: a real message reached
+ *                                the rail. Deliberately independent of `/chat` — a message can be
+ *                                routed to a scripted reply, or straight into a feedback draft,
+ *                                without ever calling the model, and it should still count.
  *
  * THE AUTH INVARIANT THIS FILE ENFORCES: `!session` returns `false` — the route doesn't exist —
  * for BOTH endpoints, before anything else runs. `dashboard-server.ts` reaches this file only
@@ -179,6 +184,18 @@ async function serveChat(
   );
 }
 
+/** Record that a real message reached the rail — independent of whether it triggered a live
+ *  reply, so a scripted-only conversation still opens the ladder. Never checks `config.companion`:
+ *  usage of the feature, not of the live model, is the bar. */
+async function serveMessageAck(
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session,
+): Promise<void> {
+  await recordFirstMessageSafely(config, opaqueMemberId(session.email));
+  sendJson(res, 200, { ok: true });
+}
+
 /** Handle `/api/companion*`. Returns `false` (route doesn't exist) for anyone without a signed-in
  *  `Session` — see the file header for why that's the bar, not merely "past the auth gate." */
 export async function serveCompanionApi(
@@ -188,7 +205,8 @@ export async function serveCompanionApi(
   config: DashboardServerConfig,
   session: Session | undefined,
 ): Promise<boolean> {
-  if (path !== "/api/companion" && path !== "/api/companion/chat") return false;
+  if (path !== "/api/companion" && path !== "/api/companion/chat" && path !== "/api/companion/ack")
+    return false;
   if (!session) return false;
   if (path === "/api/companion" && (req.method ?? "GET") === "GET") {
     serveCompanionIndex(res, config);
@@ -196,6 +214,10 @@ export async function serveCompanionApi(
   }
   if (path === "/api/companion/chat") {
     await serveChat(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/companion/ack" && (req.method ?? "GET") === "POST") {
+    await serveMessageAck(res, config, session);
     return true;
   }
   return false;

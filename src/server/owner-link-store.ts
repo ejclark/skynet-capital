@@ -224,6 +224,28 @@ export function ownerEmailFor(
   return links.find((l) => l.participantId === participantId)?.email;
 }
 
+/**
+ * Turn ANY id a per-member log's caller might pass — a real opaque member id (every HTTP route
+ * that already knows the session resolves and passes this straight through) or a participant id
+ * (a caller with no session on hand, like the companion tool's own bare `progression.view(id)`
+ * call) — into the log's own key. `resolveEmail` only resolves for the latter; when it can't, `id`
+ * is already the key, so it is used as-is rather than treated as a miss.
+ *
+ * This is the fix for a bug the first-feedback milestone shipped with (docs/LESSONS.md,
+ * 2026-09-03): the original binding assumed its argument was ALWAYS a participant id and read
+ * nothing when `resolveEmail` failed, so the log came back empty for every caller that had
+ * already resolved the real key — which, via `progression-service.ts`'s `opaqueMemberId ??
+ * participantId` fallback, is most HTTP routes.
+ */
+export function logKeyFor(
+  resolveEmail: (participantId: string) => string | undefined,
+  toOpaqueId: (email: string) => string,
+  id: string,
+): string {
+  const email = resolveEmail(id);
+  return email ? toOpaqueId(email) : id;
+}
+
 /** Build the store from the environment (`SKYNET_OWNER_LINKS_FILE`, default `data/owner-links.json`). */
 export function createOwnerLinkStore(
   env: NodeJS.ProcessEnv,

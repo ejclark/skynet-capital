@@ -56,7 +56,7 @@ describe("MoneypennyRail", () => {
     expect(await screen.findByRole("button", { name: "Help me get set up" })).toBeInTheDocument();
   });
 
-  it("files feedback through the coach: note → its one question → answer → issue → ops line", async () => {
+  it("files feedback through the coach: her first reply unlocks the ladder, filing gets its own ops line", async () => {
     stubFetch(
       {
         "/api/onboarding": () => onboarding(true),
@@ -84,6 +84,10 @@ describe("MoneypennyRail", () => {
     await act(() => useMoneypenny.getState().openRail());
     fireEvent.click(screen.getByRole("button", { name: "File feedback" }));
     await flush();
+    // the FIRST message to her lifts the ladder gate — independent of it becoming a filing
+    expect(await screen.findByText(/^sauron·ops · logged: trading milestone M·02/)).toHaveClass(
+      "mp-sys",
+    );
     expect(await screen.findByText(/what's confusing, broken, or missing/)).toBeInTheDocument();
 
     const box = screen.getByLabelText("Message Moneypenny");
@@ -102,9 +106,9 @@ describe("MoneypennyRail", () => {
     expect(
       await screen.findByText(/filed as issue #1042 — “Fix the equity column”/),
     ).toBeInTheDocument();
-    expect(
-      await screen.findByText(/^sauron·ops · filed → triaged: trading milestone M·02/),
-    ).toHaveClass("mp-sys");
+    expect(await screen.findByText(/^sauron·ops · triaged · on the build queue/)).toHaveClass(
+      "mp-sys",
+    );
     const submit = calls.find((c) => c.url === "/api/feedback" && c.body);
     expect(submit?.body).toMatchObject({ kind: "bug", title: "Fix the equity column" });
   });
@@ -174,6 +178,26 @@ describe("MoneypennyRail", () => {
     await flush();
     expect(await screen.findByText(/feedback isn't switched on/)).toBeInTheDocument();
     expect(calls.filter((c) => c.url === "/api/feedback" && c.body)).toHaveLength(0);
+  });
+
+  it("unlocks the ladder the moment she hears anything, and never repeats the line", async () => {
+    stubFetch({ "/api/onboarding": () => onboarding(true) }, calls);
+    mount();
+    await act(() => useMoneypenny.getState().openRail());
+    const box = screen.getByLabelText("Message Moneypenny");
+    fireEvent.change(box, { target: { value: "how am I doing?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await flush();
+    expect(
+      await screen.findByText(/^sauron·ops · logged: trading milestone M·02/),
+    ).toBeInTheDocument();
+
+    fireEvent.change(box, { target: { value: "another question" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await flush();
+    expect(screen.getAllByText(/^sauron·ops · logged: trading milestone M·02/)).toHaveLength(1);
+    // the ack always fires, independent of routing — the gate's evidence isn't tied to the coach
+    expect(calls.filter((c) => c.url === "/api/companion/ack")).toHaveLength(2);
   });
 });
 
