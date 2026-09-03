@@ -39,7 +39,8 @@ const onboarding = (connected: boolean) => ({
   ...(connected ? { account: { id: "human-joe", displayName: "Joe" } } : {}),
 });
 
-const flush = () => act(async () => new Promise((ok) => setTimeout(ok, 5)));
+/** Let the store's chained awaits (fetch → typing beat → append) settle before a negative check. */
+const flush = () => act(async () => new Promise((ok) => setTimeout(ok, 20)));
 
 function mount() {
   const client = new QueryClient();
@@ -75,8 +76,8 @@ describe("MoneypennyRail", () => {
     mount();
     await act(() => useMoneypenny.getState().openRail({ intro: true }));
     await flush();
-    expect(screen.getByText(/^Moneypenny · hi, I'm Moneypenny/)).toBeInTheDocument();
-    expect(screen.getByText(/isn't connected yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/^Moneypenny · hi, I'm Moneypenny/)).toBeInTheDocument();
+    expect(await screen.findByText(/isn't connected yet/)).toBeInTheDocument();
     // the setup offer is a flow — no chips while she waits on the yes/no
     expect(screen.queryByRole("button", { name: "File feedback" })).not.toBeInTheDocument();
 
@@ -97,8 +98,8 @@ describe("MoneypennyRail", () => {
     await flush();
     expect(box).toHaveValue("");
     expect(screen.getByText("yes")).toHaveClass("mp-user");
-    expect(screen.getByText(/the short path: create a free account/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Help me get set up" })).toBeInTheDocument();
+    expect(await screen.findByText(/the short path: create a free account/)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Help me get set up" })).toBeInTheDocument();
   });
 
   it("files feedback through the coach: note → its one question → answer → issue → ops line", async () => {
@@ -129,7 +130,7 @@ describe("MoneypennyRail", () => {
     await act(() => useMoneypenny.getState().openRail());
     fireEvent.click(screen.getByRole("button", { name: "File feedback" }));
     await flush();
-    expect(screen.getByText(/what's confusing, broken, or missing/)).toBeInTheDocument();
+    expect(await screen.findByText(/what's confusing, broken, or missing/)).toBeInTheDocument();
 
     const box = screen.getByLabelText("Message Moneypenny");
     fireEvent.change(box, {
@@ -137,15 +138,19 @@ describe("MoneypennyRail", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(screen.getByText("Moneypenny · on the board, or on a player page?")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Moneypenny · on the board, or on a player page?"),
+    ).toBeInTheDocument();
 
     fireEvent.change(box, { target: { value: "on the board" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(screen.getByText(/filed as issue #1042 — “Fix the equity column”/)).toBeInTheDocument();
-    expect(screen.getByText(/^sauron·ops · filed → triaged: trading milestone M·02/)).toHaveClass(
-      "mp-sys",
-    );
+    expect(
+      await screen.findByText(/filed as issue #1042 — “Fix the equity column”/),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(/^sauron·ops · filed → triaged: trading milestone M·02/),
+    ).toHaveClass("mp-sys");
     const submit = calls.find((c) => c.url === "/api/feedback" && c.body);
     expect(submit?.body).toMatchObject({ kind: "bug", title: "Fix the equity column" });
   });
@@ -174,12 +179,14 @@ describe("MoneypennyRail", () => {
     fireEvent.change(box, { target: { value: "idea: show my rank in the rail header please" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(screen.getByText(/where in the app does this bite you/)).toBeInTheDocument();
+    expect(await screen.findByText(/where in the app does this bite you/)).toBeInTheDocument();
     fireEvent.change(box, { target: { value: "the rail" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(screen.getByText(/filed as issue #7/)).toBeInTheDocument();
-    expect(screen.getByText(/^sauron·ops · triaged · on the build queue/)).toBeInTheDocument();
+    expect(await screen.findByText(/filed as issue #7/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/^sauron·ops · triaged · on the build queue/),
+    ).toBeInTheDocument();
     expect(calls.filter((c) => c.url === "/feedback/coach")).toHaveLength(0);
     const submit = calls.find((c) => c.url === "/api/feedback" && c.body);
     expect(submit?.body).toMatchObject({
@@ -211,7 +218,7 @@ describe("MoneypennyRail", () => {
     fireEvent.change(box, { target: { value: "the wire" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await flush();
-    expect(screen.getByText(/feedback isn't switched on/)).toBeInTheDocument();
+    expect(await screen.findByText(/feedback isn't switched on/)).toBeInTheDocument();
     expect(calls.filter((c) => c.url === "/api/feedback" && c.body)).toHaveLength(0);
   });
 });
