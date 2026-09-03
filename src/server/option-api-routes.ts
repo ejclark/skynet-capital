@@ -13,6 +13,7 @@ import {
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { serveChain } from "./option-chain-route.js";
 import type { DeskOptionRequest } from "./option-trade-service.js";
 import {
@@ -253,7 +254,12 @@ export async function serveOptionApi(
     return true;
   }
   const progression =
-    requesterId && config.progression ? await config.progression.view(requesterId) : undefined;
+    requesterId && config.progression
+      ? await config.progression.view(
+          requesterId,
+          session ? opaqueMemberId(session.email) : undefined,
+        )
+      : undefined;
   if (path === "/api/trade/option/review") {
     const snapshot = config.hub.getState().participants.find((p) => p.id === request.participantId);
     if (!snapshot) {
