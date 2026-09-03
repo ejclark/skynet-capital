@@ -120,7 +120,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     date: "2026-09-08",
     status: "estimate",
     source:
-      "EST: two Treasury primaries agree — treasurydirect.gov TA_WS/securities/upcoming and fiscaldata.treasury.gov upcoming_auctions both list the 3-Year, CUSIP 91282CRL7, announce 2026-09-03, auction 2026-09-08, issue 2026-09-15 (offering amount still null on both); filed estimate per the event-research lane's no-self-confirm limit, re-checked 2026-09-01 after both endpoints were unreachable/stale on 2026-08-29",
+      "EST: two Treasury primaries agree — treasurydirect.gov TA_WS/securities/upcoming and fiscaldata.treasury.gov upcoming_auctions both list the 3-Year, CUSIP 91282CRL7, announce 2026-09-03, auction 2026-09-08, issue 2026-09-15 (offering amount still null on both); filed estimate per the event-research lane's no-self-confirm limit, re-checked 2026-09-03 at 00:32 ET — i.e. BEFORE that day's ~11:00 ET formal announcement, which is when offering_amt first populates and treasurydirect's `announced` feed still ends at the 08-20 batch. Treasury's 2026-08-05 refunding statement (sb0590) guides to unchanged nominal coupon sizes 'for at least the next several quarters', so $58B is the strong prior. Previously re-checked 2026-09-01 after both endpoints were unreachable/stale on 2026-08-29",
     impact: "medium",
     symbols: [],
     notes:
