@@ -760,7 +760,20 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes:
-      "The successor edition, keeping the tracked ADP series continuous past 09-30. Ordinary by construction — the annual QCEW re-benchmark lands in the September print (and the full benchmark in the following February's), so this one should read as a plain private-payrolls measurement against a restated base. FRED also carries 12-02; that one is deliberately NOT filed here — one successor keeps the series continuous without importing a recurring stream, the same restraint applied to ADP's weekly NER Pulse. Discovered during the adp-employment-2026-09-30 initial research.",
+      "The successor edition, keeping the tracked ADP series continuous past 09-30. Ordinary by construction — the annual QCEW re-benchmark lands in the September print (and the full benchmark in the following February's), so this one should read as a plain private-payrolls measurement against a restated base; the adp-employment-2026-11-04 initial research MEASURED that claim on the one prior cycle rather than asserting it (the equivalent post-re-benchmark edition, 2025-11-05, carries no QCEW/benchmark language and revised its prior month by only 3k, -32k to -29k). WHAT ACTUALLY DISTINGUISHES THIS EDITION (2026-09-03): it prints at 08:15 ET the MORNING AFTER the 11-03 midterms, 15 minutes before the 11-04 Treasury refunding announcement and 105 minutes before ISM Services, two sessions before confirmed BLS payrolls on 11-06 — so no 11-04 tape move is attributable to it. The one same-structure precedent is exact and the same calendar date: on 2020-11-04, with the presidential result undetermined, ADP missed a 600k consensus by 39% (+365k) while futures were 'broadly unchanged following the data release' (CNBC) and the session closed S&P +2.20% / VIX -5.98 / 10y -11.4bp. Bounding it the other way, ADP's best-case day — 2025-11-05, sole labor read during the record shutdown, a beat — was S&P +0.37%. SECOND FINDING: FRED rid=194's full-year list runs Sep 2, Sep 30, Nov 4, Dec 2, so there is NO October release at all; this is the only ADP read on October that will exist, and its month-over-month delta spans a 35-day publication gap. FRED also carries 12-02, now filed as this event's own one-successor proposal. Discovered during the adp-employment-2026-09-30 initial research; assessed 2026-09-03.",
+  },
+  {
+    id: "adp-employment-2026-12-02",
+    kind: "macro-print",
+    title: "ADP National Employment Report (Nov 2026 data)",
+    date: "2026-12-02",
+    status: "estimate",
+    source:
+      "EST: FRED's release calendar rid=194 lists an ADP National Employment Report on 2026-12-02 at 07:15 CT (= 08:15 ET), re-fetched direct in full-year view 2026-09-03; the date satisfies both cadence rules the series follows — the first Wednesday of December, and two sessions before the BLS-confirmed 12-04 payrolls Friday. Filed estimate because a FRED forward calendar is a projection and ADP has not itself named the date; ADP's own naming arrives in the body of the 11-04 release, the same promotion path verified on two prior editions (the 2026-08 release named 09-30; the 2025-10 release named 2025-12-03), checked 2026-09-03",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The successor edition, keeping the tracked ADP series continuous past 11-04 — held to ONE successor, the same restraint the 09-02 and 09-30 editions applied, and ADP's weekly NER Pulse is again deliberately not tracked. Unlike 11-04 this one lands on a clean morning, but inside the year's densest policy corridor: one week before the 12-09 FOMC (the SEP + dot-plot meeting), nine days before the FY2027 CR expires on 12-11, and two sessions before the 12-04 payrolls print it previews. It also lands inside the 11-28→12-10 FOMC blackout that fomc-blackout-start-2026-11-28 tracks, so no participant may respond to it. It is the first ADP read whose reference month is fully post-midterm. Discovered during the adp-employment-2026-11-04 initial research.",
   },
   {
     id: "crwv-fully-connected-2026-09-29",
