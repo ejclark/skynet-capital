@@ -741,13 +741,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "ADP National Employment Report (Sep 2026 data)",
     date: "2026-09-30",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: ADP's own August release (mediacenter.adp.com, 2026-09-02, PRNewswire 302867661) states verbatim that the next report publishes 'September 30, 2026 at 8:15 a.m. ET' — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, and ADP does not pre-announce (its August date only became confirmable at the release itself), checked 2026-09-03",
+      "IR: ADP's own August release (mediacenter.adp.com / PRNewswire 302867661, dateline 2026-09-02) states verbatim \"The September 2026 ADP National Employment Report will be released on September 30, 2026 at 8:15 a.m. ET\", fetched direct 2026-09-03; independently corroborated by FRED's release calendar rid=194, which lists 2026-09-30 at 07:15 CT (= 08:15 ET). Promoted from estimate by the adp-employment-2026-09-30 initial research — the no-self-confirm limit binds the sweep that proposed the entry, not a later independent session",
     impact: "medium",
     symbols: [],
     notes:
-      "Two sessions ahead of BLS payrolls (10/2), the same pre-NFP slot the 09-02 edition held; the ADP-to-NFP correlation stays loose (Aug ADP +38k vs a 47-48k consensus, while the same cycle's July BLS print was -23k). Tracked at `medium` for a second reason this cycle: it is a PRIVATE labor read landing ON the FY2027 funding deadline, so in a lapse branch it survives where BLS deletes — the same promotion logic the consumer-confidence-2026-10-27 note records. Discovered in ADP's own release while closing out adp-employment-2026-09-02.",
+      "Two sessions ahead of BLS payrolls (10/2), the same pre-NFP slot the 09-02 edition held; the ADP-to-NFP correlation stays loose (Aug ADP +38k vs a 47-48k consensus, while the same cycle's July BLS print was -23k). WHY THIS EDITION IS DIFFERENT: September is ADP's annual preliminary QCEW re-benchmark print — the 2025-10-01 edition's own release states the rebenchmarking 'resulted in a reduction of 43,000 jobs' and revised the prior month from +54,000 to -3,000 — so its headline is a restatement, not a hiring signal. BLS published Q1-2026 QCEW + the preliminary CES benchmark on 08-28 (nonfarm -79k, private -178k) and ADP's 09-02 release carries no benchmark language, so the adjustment is pending. CORRECTION (2026-09-03): the original note's second tracking reason — a private labor read surviving a BLS blackout on the FY2027 funding deadline — is DEAD. The House adopted the Senate CR 370-48 on 09-01 and the president signed the Continuing Appropriations and Extensions Act, 2027 on 09-02, funding through 12-11; jobs 10-02 and CPI 10-14 print normally, and the live cliff moved to cr-expiry-2026-12-11. The medium tier now rests on the pre-NFP-private-read ground alone. Also corrected: ADP DOES pre-announce this edition, in the body of the prior release. Discovered in ADP's own release while closing out adp-employment-2026-09-02.",
+  },
+  {
+    id: "adp-employment-2026-11-04",
+    kind: "macro-print",
+    title: "ADP National Employment Report (Oct 2026 data)",
+    date: "2026-11-04",
+    status: "estimate",
+    source:
+      "EST: FRED's release calendar rid=194 lists an ADP National Employment Report on 2026-11-04 at 07:15 CT (= 08:15 ET), fetched direct 2026-09-03, and the date is the Wednesday two sessions before the BLS-confirmed 11-06 payrolls Friday — the slot this series always occupies. Filed estimate because a FRED forward calendar is a projection and ADP has not itself named the date; ADP's own confirmation arrives in the body of the 09-30 release, checked 2026-09-03",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The successor edition, keeping the tracked ADP series continuous past 09-30. Ordinary by construction — the annual QCEW re-benchmark lands in the September print (and the full benchmark in the following February's), so this one should read as a plain private-payrolls measurement against a restated base. FRED also carries 12-02; that one is deliberately NOT filed here — one successor keeps the series continuous without importing a recurring stream, the same restraint applied to ADP's weekly NER Pulse. Discovered during the adp-employment-2026-09-30 initial research.",
   },
   {
     id: "crwv-fully-connected-2026-09-29",
