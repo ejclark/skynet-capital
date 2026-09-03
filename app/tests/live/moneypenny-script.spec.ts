@@ -1,6 +1,7 @@
 import {
   FB_OPEN,
   FB_QUESTION,
+  filedLine,
   inferKind,
   introLines,
   NUDGE,
@@ -129,6 +130,13 @@ describe("filing helpers", () => {
     const d = scriptedDraft(note, "on the board");
     expect(d.title).toHaveLength(80);
     expect(d.details).toContain("on the board");
+  });
+
+  it("the filed line carries the issue's link when there is one", () => {
+    expect(filedLine(1170, "Fix it", "https://github.com/x/y/issues/1170")).toContain(
+      "open it here: https://github.com/x/y/issues/1170",
+    );
+    expect(filedLine(7, "Fix it")).not.toContain("open it here");
   });
 
   it("the first filing's ops line names the M·02 unlock and never claims shipped", () => {

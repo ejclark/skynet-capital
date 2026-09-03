@@ -28,6 +28,12 @@ import {
  *   - `scripted` — the no-companion path: keyword routing, the coach's questions (or the one
  *     scripted question without a coach), then the member's own words file.
  *
+ * THE COACH STILL SHAPES EVERY ISSUE (Eric, 2026-09-03: the first rail-filed issue "copied the
+ * literal response from the user… we've lost the AI transcription"). A draft — hers or the
+ * member's raw words — goes through `/feedback/coach` once, told to finish, so what lands on
+ * GitHub is the house capsule with its spec block, not a transcript. If the coach is off or
+ * fails, the draft files as is rather than not at all.
+ *
  * After a filing, the desk's own word lands as a system line: filed and logged, the gate lifted on
  * the first one — never a shipped claim.
  */
@@ -82,7 +88,7 @@ export function createFilingLane(ctx: FilingContext) {
       return;
     }
     ctx.save({ flow: "idle", note: "", coach: [] });
-    await ctx.say([filedLine(answer.number, draft.title)]);
+    await ctx.say([filedLine(answer.number, draft.title, answer.url)]);
     ctx.filed();
     await ctx.beat();
     ctx.system(opsLine(firstFiling));
@@ -108,13 +114,39 @@ export function createFilingLane(ctx: FilingContext) {
     await ctx.say([`Moneypenny · ${reply.question}`]);
   };
 
-  /** The member's reply to a drafted filing — send as is, or with their follow-up folded in. */
+  /** One coach pass over a draft, told to finish: the capsule and spec block the build lane
+   *  reads. Falls back to the draft itself when the coach is off, asks instead of drafting, or
+   *  fails — a filing is never lost to the shaping step. */
+  const shape = async (draft: Filing, coachEnabled: boolean): Promise<Filing> => {
+    if (!coachEnabled) return draft;
+    const reply = await coachTurn({
+      kind: ctx.kind(),
+      messages: [
+        {
+          role: "user",
+          content: `${draft.details}\n\nSuggested title: ${draft.title}\n\nPlease finish the draft with what you have.`,
+        },
+      ],
+    }).catch(() => undefined);
+    if (!(reply?.ok && reply.done)) return draft;
+    return {
+      title: reply.title || draft.title,
+      details: reply.details || draft.details,
+      ...(reply.area ? { area: reply.area } : {}),
+      spec: reply.spec,
+    };
+  };
+
+  /** The member's reply to a drafted filing — send as is, or with their follow-up folded in —
+   *  shaped by the coach on the way out. */
   const sendDraft = async (note: string, draft: CompanionDraft): Promise<void> => {
     const answer = SEND_AS_IS.test(note) ? "" : note;
-    await file({
+    const raw: Filing = {
       title: draft.title,
       details: answer ? `${draft.details}\n\nMember's follow-up: ${answer}` : draft.details,
-    });
+    };
+    const index = await fetchFeedbackIndex().catch(() => undefined);
+    await file(await shape(raw, index?.coachEnabled === true));
   };
 
   /** The no-companion path, from a routed note. */
@@ -141,7 +173,12 @@ export function createFilingLane(ctx: FilingContext) {
     }
     // routed.kind === "file" — the answer to the one question
     const coach = ctx.coach();
-    const own = () => file(scriptedDraft(ctx.note(), routed.answer));
+    const own = async () => {
+      const index = await fetchFeedbackIndex().catch(() => undefined);
+      await file(
+        await shape(scriptedDraft(ctx.note(), routed.answer), index?.coachEnabled === true),
+      );
+    };
     if (coach.length) await coachRound([...coach, { role: "user", content: routed.answer }], own);
     else await own();
   };

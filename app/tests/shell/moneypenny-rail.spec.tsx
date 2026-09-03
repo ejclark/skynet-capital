@@ -318,7 +318,7 @@ describe("MoneypennyRail — the drafted filing", () => {
       headers: { "content-type": "application/json" },
     });
 
-  it("holds her draft, and the member's 'send' files it through /api/feedback as she drafted", async () => {
+  it("holds her draft; 'send' runs it through the coach's capsule shaping and files that, with the link", async () => {
     const sent: { url: string; body: unknown }[] = [];
     globalThis.fetch = ((url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : undefined;
@@ -335,10 +335,21 @@ describe("MoneypennyRail — the drafted filing", () => {
             { status: 200, headers: { "content-type": "text/event-stream" } },
           ),
         );
+      if (url === "/feedback/coach")
+        return Promise.resolve(
+          json({
+            ok: true,
+            done: true,
+            title: "Mark onboarding step 2 done once feedback is filed",
+            details: "- M·01 step 2 stays open after filing\n\n<details>the brief</details>",
+            area: "onboarding",
+            spec: { readiness: "spec-complete" },
+          }),
+        );
       if (url === "/api/feedback")
         return Promise.resolve(
           body
-            ? json({ ok: true, url: "u", number: 1170 })
+            ? json({ ok: true, url: "https://github.com/x/y/issues/1170", number: 1170 })
             : json({
                 enabled: true,
                 coachEnabled: true,
@@ -361,16 +372,68 @@ describe("MoneypennyRail — the drafted filing", () => {
 
     fireEvent.change(box, { target: { value: "send" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
-    expect(
-      await screen.findByText(/filed as issue #1170 — “Onboarding step 2 never completes”/),
-    ).toBeInTheDocument();
+    const link = await screen.findByRole("link", { name: "https://github.com/x/y/issues/1170" });
+    expect(link).toHaveAttribute("href", "https://github.com/x/y/issues/1170");
+    expect(link.closest(".mp-msg")).toHaveTextContent(
+      /filed as issue #1170 — “Mark onboarding step 2 done once feedback is filed”/,
+    );
+    // the coach saw her draft, told to finish; the issue is the coach's capsule, not the transcript
+    const coach = sent.find((c) => c.url === "/feedback/coach");
+    expect(coach?.body).toMatchObject({ kind: "bug" });
+    expect(JSON.stringify(coach?.body)).toContain("Filed 5 times; step 2 still not done.");
+    expect(JSON.stringify(coach?.body)).toContain("Please finish the draft with what you have.");
     const filing = sent.find((c) => c.url === "/api/feedback" && c.body);
     expect(filing?.body).toMatchObject({
       kind: "bug",
-      title: "Onboarding step 2 never completes",
-      details: "Filed 5 times; step 2 still not done.",
+      title: "Mark onboarding step 2 done once feedback is filed",
+      area: "onboarding",
+      spec: { readiness: "spec-complete" },
     });
+  });
+
+  it("files her draft as is when the coach isn't wired — never loses the filing to shaping", async () => {
+    const sent: { url: string; body: unknown }[] = [];
+    globalThis.fetch = ((url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      sent.push({ url, body });
+      if (url === "/api/companion") return Promise.resolve(json({ enabled: true, disclosure: "" }));
+      if (url === "/api/companion/chat")
+        return Promise.resolve(
+          new Response(
+            'event: handoff\ndata: {"kind":"idea","title":"Show my rank in the rail","details":"The header could carry it."}\n\nevent: delta\ndata: {"text":"drafted."}\n\nevent: done\ndata: {}\n\n',
+            { status: 200, headers: { "content-type": "text/event-stream" } },
+          ),
+        );
+      if (url === "/api/feedback")
+        return Promise.resolve(
+          body
+            ? json({ ok: true, url: "u", number: 8 })
+            : json({
+                enabled: true,
+                coachEnabled: false,
+                followupEnabled: false,
+                feedbackCount: 1,
+                celebrating: [],
+                recent: [],
+              }),
+        );
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    }) as typeof globalThis.fetch;
+    mount();
+    await act(() => useMoneypenny.getState().openRail());
+    const box = screen.getByLabelText("Message Moneypenny");
+    fireEvent.change(box, { target: { value: "report it" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText("Moneypenny · drafted.")).toBeInTheDocument();
+    fireEvent.change(box, { target: { value: "also it should be mono" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText(/filed as issue #8/)).toBeInTheDocument();
     expect(sent.filter((c) => c.url === "/feedback/coach")).toHaveLength(0);
+    expect(sent.find((c) => c.url === "/api/feedback" && c.body)?.body).toMatchObject({
+      kind: "idea",
+      title: "Show my rank in the rail",
+      details: "The header could carry it.\n\nMember's follow-up: also it should be mono",
+    });
   });
 
   it("says plainly when the live chat didn't answer, instead of a scripted stand-in", async () => {

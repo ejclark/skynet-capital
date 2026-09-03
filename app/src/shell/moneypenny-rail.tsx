@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import type { KeyboardEvent, ReactElement } from "react";
+import type { KeyboardEvent, ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { CHIPS } from "../live/moneypenny-script";
@@ -18,8 +18,31 @@ import { CHIPS } from "../live/moneypenny-script";
  * @category feedback
  */
 
+const URL_RE = /(https?:\/\/[^\s”"'<>)]+)/g;
+
+/** Her lines can carry a link (the issue she just filed) — http(s) URLs become anchors, opening
+ *  in a new tab; everything else stays text. */
+function linkify(text: string): readonly ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let offset = 0;
+  for (const part of text.split(URL_RE)) {
+    // keyed by where the piece starts in the line — stable, and unique within one message
+    nodes.push(
+      /^https?:\/\//.test(part) ? (
+        <a key={offset} href={part} target="_blank" rel="noopener noreferrer">
+          {part}
+        </a>
+      ) : (
+        part
+      ),
+    );
+    offset += part.length;
+  }
+  return nodes;
+}
+
 function Message({ m }: { readonly m: MpMessage }): ReactElement {
-  return <div className={`mp-msg mp-${m.role}`}>{m.text}</div>;
+  return <div className={`mp-msg mp-${m.role}`}>{linkify(m.text)}</div>;
 }
 
 export function MoneypennyRail(): ReactElement | null {

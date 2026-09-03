@@ -127,9 +127,10 @@ export function scriptedDraft(note: string, answer: string): { title: string; de
   };
 }
 
-/** What she says once the issue exists. */
-export function filedLine(number: number, title: string): string {
-  return `Moneypenny · filed as issue #${number} — “${title}”. your context went into the filing. watch this thread for the answer.`;
+/** What she says once the issue exists — with the link, so the member can go watch it. */
+export function filedLine(number: number, title: string, url?: string): string {
+  const where = url ? ` open it here: ${url}` : "";
+  return `Moneypenny · filed as issue #${number} — “${title}”.${where} your context went into the filing. watch this thread for the answer.`;
 }
 
 /** The desk's own word after a filing, as a system line. The first filing lifts the feedback gate —
