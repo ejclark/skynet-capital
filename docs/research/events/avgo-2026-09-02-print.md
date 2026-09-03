@@ -1,63 +1,50 @@
 # AVGO earnings print — avgo-2026-09-02-print
 
 **Kind:** earnings · **Date:** 2026-09-02 (estimate, NEWS: Broadcom PR 2026-08-03 — Wed Sep 2 AMC; a direct fetch of broadcom.com/company/news/financial-releases/64621 on 2026-08-27 independently corroborates this date and time (call 2pm PT), but the event-research lane's hard limits forbid editing `earnings-calendar.ts` entries, so the table's own `status` stays estimate pending that edit through the proper channel) · **Impact:** critical
-**Last assessed:** 2026-09-02
-<!-- probe-ref: {"symbols":{"AVGO":369.68},"vix":16.34,"daysBand":"critical:0+","adjacentIds":["adp-employment-2026-09-02","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
+**Last assessed:** 2026-09-03
+<!-- probe-ref: {"symbols":{"AVGO":367.24},"vix":15.2,"daysBand":"critical:0+","adjacentIds":["adp-employment-2026-09-02","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
 
 ## At a glance
 
-**TL;DR.** D-0 — no position into AVGO's print, which lands **tonight after today's close**. S1 is dead
-on this symbol, so there is no positioning bid
-to take, and the late-week window is FT-2's **zero-size** observation — contaminated this cycle
-anyway, because NVDA's 2026-08-26 print sits at its open. Get flat by **today's close** and
-let it pass. The thing that makes this print unusual is not the beat: the XPV financing overhang plus
-the VMware exploit raise the odds it trades on **disclosure quality** instead of the number — which
-widens caution and licenses nothing. The date is **IR-confirmed** for Sep 2 (directly fetched
-2026-08-27); the freshest dated implied move is **±8.1%** (earnings-watcher, 2026-08-31, down from
-±8.7% on 8/29), inside a still-wide cross-source spread of **~7.3%–12.4%** (7.3% Bloomberg ·
-9.0% TipRanks · 12.4% Market Chameleon), against an ~**10.8%** 8-quarter average
-realized reaction and a **±7.4%** 10-year average (median ±5.8%): the recent regime runs ~1.5× the
-decade norm. **The macro backdrop kept moving against the setup through 9/1** — Brent **$91.28** on further
-Hormuz escalation (US strike on Larak Island; Kharg, Iran's main oil export terminal, now publicly
-threatened), the **10-year at 4.78%** (highest since Jan 2025) and **30-year at 5.28%**, September
-hike odds at **68%** (CME FedWatch) from ~40% two weeks ago, and VIX up to **16.34** — the first
-break of the sub-15 band held all month: a higher-for-longer front end is
-exactly what raises the carrying cost of the XPV structure this doc flags as the swing factor.
-**Both soft prints on 9/1 were ignored** — ISM Manufacturing **54.6** (vs ~55.2 expected, 55.6 prior)
-and JOLTS **7.271M** (vs ~7.30–7.36M) both missed, and hike odds rose anyway, because the tape priced
-oil and yields rather than growth: the stagflationary cross-current this doc flagged on 8/30 now has
-both legs printed. All three AI-semis sympathy inputs are now in and **all three are soft**: NVDA's muted AH
-pop then **−3.40%** on 8/28, MRVL's clean beat that sold off **~7.6% AH** on margin compression, and
-AVGO itself **−1.56% to $368.79** on 8/28. **The bar is a set of numbers, not a vibe** — corrected
-2026-08-30 against the primary record of the **2026-06-03** Q2 print, which fell **−12.59%** (to
-$418.91 on 6/4) on *three* things, not one: a **Q3 AI-semi guide of $16B against ~$17.2B expected**,
-the unraised **FY27 ">$100B"** target, and an **infrastructure-software miss** ($7.18B vs $7.32B).
-Revenue that quarter slightly *missed* ($22.19B vs LSEG $22.27B) — only non-GAAP EPS beat. Added
-2026-08-31: **gross margin is a fourth number** (Street looks for ~74% on a mix shift toward
-lower-margin custom-ASIC *systems*) — the exact line MRVL just sold off on. And the options market has
-a measured record of **under-pricing this name**: at the June print it priced ±8.7% and the stock closed
-**−12.6%**; it priced **±8.7% again** for Wednesday. Watch the Q4 AI guide, the FY27 figure, the
-software line and the margin — not the Q3 headline. On the software line specifically, Broadcom spent **2026-08-31**
-announcing into it at its own **VMware Explore** conference (AI Factory, Private AI Cloud, agentic-AI
-security) — forward narrative only; it cannot change a Q3 that already closed, and the tape did
-not react (**+0.42% to $370.34**).
+**TL;DR.** *(Close-out, 2026-09-03 pre-open — the print has happened.)* The print **beat revenue and EPS and the stock still fell**
+— exactly the failure mode this doc has argued since 8/14. Revenue **$29.591B** (+86% y/y) and non-GAAP
+EPS **$3.32** both cleared consensus (~$29.4B / $3.24); the stock dropped **−7.76% within an hour** of
+the release, then bought all of it back on the call and settled the after-hours session at **$364.23,
+−0.82%** from the $367.24 close. Of the **four watch numbers** this doc named, one missed
+(**infrastructure software $8.752B vs ~$8.82B** — the second consecutive miss on that line), one beat
+(**non-GAAP gross margin 75.0% vs the company's own ~74% guide**, but guided **down to ~73%** for Q4 on
+XPU memory content), the **Q4 revenue guide came in light** ($34.8B vs ~$35.03B) and the **FY27 AI
+target was raised** from ">$100B" to **~$115B** — landing inside the **$110–120B band this doc named
+twelve hours earlier** as "clears the stated target and still misses the positioned bar" (Morgan Stanley
+modelled $120B; buy-side was quietly above $150B). Management also introduced **FY28 AI ~$230B** and
+**FY26 ~$58B**, and that forward outlook is what reversed the plunge: the after-hours low **$338.73
+(17:05 ET)** and high **$379.69 (17:20 ET)** are fifteen minutes apart, straddling the opening remarks.
+**The stance was right and cost nothing:** stand aside, flat by the 9/2 close. **What this close-out
+cannot score:** the **2026-09-03 regular session had not traded** at assessment time — and that is the
+session June's **−12.59%** actually landed in, so the reaction-day verdict is genuinely open, not
+extrapolated from the evening tape. It is carried forward as **FT-49** in
+[`forward-tests.md`](../forward-tests.md) rather than lost when this ledger goes quiet. Forward tests
+scored here: **FT-11 PASS** (implied priced ±8.1% at D-2 against the ~5.6% bar), **FT-2 KILLED** — the
+D-5→D window returned **+3.28%**, but the single **NVDA-sympathy session of 8/27 supplied +4.49%**,
+i.e. **137%** of it, so the pre-registered sympathy clause fires and the "AVGO late-week bid" was never
+AVGO's.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today | **Stand aside, and be flat by tonight's close** — the print is today AMC | High | S1 is dead on AVGO; the only late-week interest is FT-2 at zero size, and NVDA's 08-26 print contaminates it this cycle; today is the S2 flat deadline itself | FT-2 clearing its base rate under the 2-of-3 rule, sympathy-decontaminated |
-| This week | **Flat by the 2026-09-02 close (S2)** | High | The print is IR-confirmed for the 2026-09-02 close; a ±8.1% freshest / 7.3–12.4% cross-source implied move is the live price of ignoring the flat rule, June's damage came in the D+1 *session* not just the gap, and a near-identical ±8.7% straddle was exceeded by June's −12.6% close | ≥3 new prints showing a repriced gap regime |
-| This month | **Nothing pre-committed post-print** | High | The D+1 fade is absent on AVGO and the gap-hold is kill-listed — there is no researched post-print play to pre-commit to | A registered post-print study clearing controls on this symbol |
-| This quarter | **Treat XPV as live event risk, not a thesis** | Medium | Residual-value guarantees plus the VMware exploit make disclosure quality the swing factor; that is risk, not an edge | Broadcom quantifying or capping the guarantees in a filing, or AVGO round-tripping the 8/14 drop above ~$417 |
+| Today (2026-09-03, the reaction session) | **Stand aside — do not chase either side of the after-hours round-trip** | High | The evening tape ran $338.73 → $379.69 → $364.23 in under three hours; AVGO's reaction-day fade is REFUTED (−0.67% / win 50% vs an ordinary session's +0.02% / 49%) and the gap-hold is kill-listed, so there is no researched play for this session in either direction | A registered post-print study on AVGO clearing its base-rate and peer controls — none exists today |
+| This week | **No AVGO position; the print is scored and the doc goes quiet** | High | The stance ("flat by the 2026-09-02 close") cost nothing and avoided a −7.76% after-hours air pocket; nothing in the print creates an entry the playbooks license | FT-49 finding the 09-03 reaction session repeated June's −12.59% template, which would make the flat-by-close rule an *understatement* rather than a false alarm |
+| This month | **Nothing pre-committed post-print** | High | The D+1 fade is absent on AVGO and the gap-hold is kill-listed; FT-2 is now KILLED, so the late-week bid is gone too — the symbol carries no live long hypothesis | A registered post-print study clearing controls on this symbol before 2026-10-03 |
+| This quarter | **XPV stays live event risk, not a thesis — and its kill switch did NOT fire** | Medium | Broadcom neither quantified nor capped the residual-value guarantees in the release or the call, and AVGO never round-tripped the 8/14 drop above ~$417; the honest counterweight is that *on-book* long-term debt fell to **$57.2B** (from $62.0B at FY25 year-end) with $24.0B cash — the balance sheet cannot adjudicate an off-balance-sheet vehicle either way | Broadcom quantifying or capping the guarantees in the Q3 10-Q, or AVGO closing above ~$417 |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Never** — hold unhedged AVGO through the print for the gap; the family is kill-listed.
-- **Flat deadline** — the **2026-09-02** close (IR-confirmed).
-- **FT-2 only, zero size** — and treat this cycle's observation as contaminated by NVDA's **2026-08-26** print at the open.
-- **The four numbers that decide the reaction** (three set 2026-08-30, the fourth added 2026-08-31) — the **Q4 AI-semi guide** (June's proximate trigger was a $16B Q3 guide vs ~$17.2B expected), the **FY27 AI target** (">$100B" since Q2; declining to raise it was the second leg), the **infrastructure-software line** ($7.18B missed $7.32B in June, and it is where the exploited VMware vCenter CVE lands), and **gross margin** (~74% is the company's *own* Q3 guide, pressured by the TPU/custom-ASIC systems mix — the line MRVL sold off on). **The FY27 bar is now a number, and it sits above the company's target** (added 2026-09-02): buy-side expectations are quietly at **>$150B** and Morgan Stanley models **$120B**, against management's standing ">$100B" — so a raise is not automatically enough, and a raise to $110–120B could still print as a disappointment. A big raise plus a clean software line is the bull case; a reiteration is the June setup repeating.
-- **The straddle has been the wrong side of this name** — Wednesday prices ±8.1% (8/31), within a whisker of the ±8.7% June carried before a −12.6% close; the actual peak exceeded the priced move in 10 of 16 reports (close-basis, 3 of the last 5). Cuts one way only: it never licenses a long, it prices the cost of not being flat.
-- **Watch (dated)** — ISM Manufacturing + JOLTS **2026-09-01** *(both printed soft — 54.6 and 7.271M — and hike odds rose anyway)* · ADP **2026-09-02 08:15 ET** (consensus ~48K vs 44K prior) · Beige Book **2026-09-02 14:00 ET** (same session as the print, three hours ahead of it) · Waller **08:30** + Challenger **07:30** + ISM Services **10:00** + Hammack **15:00**, all **2026-09-03** (D+1, the session June's damage landed in) · VMware Explore's closing day is D+1 too · jobs **2026-09-04** (D+2) · FOMC blackout opens **2026-09-05** (confirmed; no Fed walk-back of Warsh available after that) · OPEC+ **2026-09-06** (the supply side of the Hormuz oil bid) · Trump–Xi summit **2026-09-24** (proposed, export-control/AI-governance agenda) · any XPV disclosure in a filing or PR.
-- **Redo the cadence math immediately if** — Broadcom's IR revises the now-confirmed Sep 2 date.
+- **Never** — hold unhedged AVGO through a print for the gap; the family is kill-listed and this print's evening low was **−7.76%**.
+- **The flat deadline was the 2026-09-02 close, and it held** — the stance is scored, not live.
+- **FT-2 is KILLED, not shelved** — the D-5→D window returned **+3.28%** while the single NVDA-reaction session of **2026-08-27** returned **+4.49%** (137% of it); ex that session the window was **−1.16%**. Never re-propose an "AVGO late-week bid" without a window carrying no peer print inside it.
+- **The four watch numbers, scored** — **Q4 AI guide $21.7B** (+236% y/y, accelerating from $16.7B) *and* a **light Q4 total guide $34.8B vs ~$35.03B**; **FY27 AI raised >$100B → ~$115B**, inside the $110–120B "clears the target, misses the bar" band this doc named at D-0 (MS modelled $120B, buy-side >$150B); **infrastructure software $8.752B missed ~$8.82B** — the second consecutive miss on that line; **non-GAAP gross margin 75.0% beat the ~74% guide** but Q4 is guided to **~73%** on XPU memory content, so the MRVL margin-compression mechanism is confirmed forward, not retired.
+- **The straddle was NOT exceeded, on the only basis observable so far** — ±8.1% priced a $337.5–$396.9 band; the after-hours low **$338.73** sat just inside it and the session settled **−0.82%**. The close-basis test needs the 09-03 close and is carried as **FT-49**; this does not reverse the measured under-pricing record (3 of the last 5 on a close basis) on one unfinished observation.
+- **Watch (dated)** — the **2026-09-03** reaction session, in a four-item Fed/data corridor (Challenger 07:30 · Waller 08:30 · ISM Services 10:00 · Hammack 15:00) · jobs **2026-09-04** · FOMC blackout opens **2026-09-05** · OPEC+ **2026-09-06** · the Q3 **10-Q** for any XPV/residual-value disclosure · Trump–Xi summit **2026-09-24** (estimate; export-control/AI-governance agenda) · MU print **2026-09-29** (estimate) as the next AI-semis read.
+- **Redo the cadence math immediately if** — nothing; the event has passed and this ledger goes quiet after the close-out below.
 
 ## Initial research
 
@@ -245,6 +232,14 @@ is the same one BofA aimed at XPV, so any XPV disclosure tonight meets a sector-
 Third, the macro corridor hardened further: both 9/1 prints missed and hike odds rose to 68% anyway
 on oil and yields. None of it moves the call: stand aside, flat by today's close.
 
+**2026-09-03 close-out (the stance is scored; see [`## Outcome`](#outcome) below).** The print beat
+revenue and EPS and the stock still fell — the "trades on disclosure quality, not the number" thesis
+held for a second consecutive quarter. Stand-aside cost nothing and avoided a **−7.76%** after-hours
+air pocket for a **−0.82%** settle. Two kill switches resolved: **FT-2 is killed** (137% of its window
+came from NVDA's 08-27 sympathy session), and the **XPV switch did not fire in either direction** —
+no guarantee disclosure, no round-trip above ~$417. The **2026-09-03 reaction session** — the one
+June's damage landed in — had not traded at close-out and is carried as **FT-49**, not guessed at.
+
 **Kill switches.**
 
 - *"No pre-print position"* dies only via FT-2's pre-stated promotion path (clears its base rate
@@ -280,3 +275,136 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-03, pre-open — D+1 by calendar, before the reaction-day session).** Both
+instruments re-run on a busted cache: `earnings-cycle.mjs AVGO --bench QQQ --peers NVDA,MRVL,AMD`
+(price history through the **2026-09-02** close, 4,295 sessions) and `intraday-edges.mjs AVGO`
+(721 intraday sessions). Two scope limits, stated before anything is scored. First, the
+**2026-09-03 regular session has not traded** at assessment time (this run stamps 04:32 UTC =
+00:32 ET), and that is the session June's **−12.59%** actually landed in — so the reaction-day
+verdict is genuinely open, carried forward as **FT-49** rather than extrapolated from the evening
+tape. Second, the print's 8-K is filed
+([0001730168-26-000076](https://www.sec.gov/Archives/edgar/data/1730168/000173016826000076/avgo-08022026x8kxex99.htm),
+Item 2.02, 2026-09-02) but is **not yet in the instrument's event list** — it still reads 33 prints
+ending 2026-06-03 — so every instrument cell below is the pre-print run reproduced, not a
+recomputation that includes this print. Instruments, for the record: modern-era run-up 11/14,
+**p=0.2389** (vs 0.2407 on 9/2) — still NOT SIGNIFICANT; D-5→D +4.21%/71%; reaction-day fade
+−0.67%/50% against an ordinary session's +0.02%/49%; peer control unchanged (NVDA +10.35%/71%,
+MRVL +12.18%/79%, AMD +7.33%/50% over AVGO's own windows). E1: first hour 30.1% of volatility at
+−0.097% mean / 47% win, every intraday strategy negative at 5bps/side (best break-even 3.3bps).
+S4 overnight-only Sharpe **1.38 vs 1.28** buy-and-hold at 14.5bps — close-side execution preference
+only, unchanged verdict.
+
+**What printed** (primary source: the 8-K exhibit above, fetched direct from SEC EDGAR 2026-09-03;
+segment and consensus comparisons cross-checked against CNBC, tradingkey and Investing.com). Revenue
+**$29,591M**, +86% y/y, against the ~$29.4B this doc tracked at every row (Investing.com's tape put
+consensus at $29.25B — either way, a beat). GAAP diluted EPS **$2.68** (+215%); non-GAAP **$3.32**
+(+96%) against the ~$3.24 consensus this doc carried since 8/29. Segments: **Semiconductor solutions
+$20,839M** (+127%, 70% of revenue) and **Infrastructure software $8,752M** (+29%, 30%). AI
+semiconductor revenue **$16.7B**, +221% y/y and **+54% q/q** — above the company's own ~$16B Q3 guide.
+Gross margin **$20,456M GAAP (69.1% of revenue)** and **$22,191M non-GAAP (75.0%)**, down ~212bp
+sequentially from Q2's 77.1%. Free cash flow **$13,665M** (46% of revenue); dividend held at $0.65.
+Balance sheet: long-term debt **$57,167M** against $61,984M at FY25 year-end, cash **$23,975M**.
+**Q4 guidance** (release): revenue **~$34.8B**, +93% y/y, non-GAAP operating margin ~66%; Tan's
+quoted line puts **Q4 AI semiconductor revenue at $21.7B**, +236% y/y. On the call, management gave
+a multi-year AI outlook the release does not contain: **FY26 ~$58B**, **FY27 ~$115B**, **FY28
+~$230B** — the FY27 figure a raise from the ">$100B" standing since Q2, and FY28 a first disclosure.
+Q4 gross margin was guided to **~73%**, a further ~200bp of compression management attributed to
+"the increasing mix of XPUs and their greater memory content" (call coverage, aggregator-grade — the
+release itself guides only revenue and operating margin).
+
+**The four watch numbers, scored.** This doc named them on 2026-08-30 (three) and 2026-08-31 (the
+fourth), and they were the whole basis of the "trades on disclosure quality, not the number" thesis.
+
+| # | The number | Bar this doc set | Printed | Verdict |
+|---|---|---|---|---|
+| 1 | Q4 AI-semi guide | June's trigger was $16B vs ~$17.2B expected — a light guide is the failure mode | **$21.7B**, +236% y/y, accelerating from $16.7B | **Clean** on the AI line — but the **Q4 total** guide **$34.8B missed ~$35.03B**, so the guide still disappointed at the consolidated level |
+| 2 | FY27 AI target | ">$100B" since Q2; D-0 row named **$110–120B as "clears the target, still misses the positioned bar"** (MS modelled $120B, buy-side >$150B) | **~$115B** | **The named failure mode fired, precisely** — a genuine raise that lands inside the band this doc called insufficient twelve hours earlier |
+| 3 | Infrastructure software | $7.18B missed $7.32B in June; the line the VMware CVE would surface in | **$8,752M vs ~$8.82B consensus** | **Miss — second consecutive quarter**, on ~0.8%; +29% y/y and 84% segment operating margin is the counterweight |
+| 4 | Gross margin | ~74% is the company's own Q3 guide, pressured by the custom-ASIC systems mix — the line MRVL sold off on | **75.0% non-GAAP**, −212bp q/q; **Q4 guided ~73%** | **Beat on the quarter, confirmed forward** — the MRVL compression mechanism is now Broadcom's own guidance, not a sympathy read |
+
+**The reaction, measured** (Yahoo 5-minute bars including pre/post, fetched 2026-09-03; regular close
+**$367.24, −0.66%** on 9/2). The evening splits cleanly in two, and the split is the finding:
+
+- **16:15 ET, the release** — AVGO had drifted *up* to a $373.66 print in the 16:10 bar, then dropped
+  to a $346.66 close in the 16:15 bar and bottomed at **$338.73 (17:05 ET), −7.76%**. The numbers in
+  the release — a beat on revenue and EPS, a light Q4 total guide, a software miss — sold it.
+- **17:00 ET, the call** — the FY27 ~$115B / FY28 ~$230B outlook arrived in the opening remarks and
+  the stock traded **$379.69 (17:20 ET), +3.39%**, fifteen minutes after the low. A **12.1%
+  low-to-high swing in a quarter of an hour**, on forward guidance that is not in the 8-K.
+- **19:59 ET, the after-hours settle** — **$364.23, −0.82%**. Press snapshots taken mid-recovery
+  ("fell 6%", "−3.49% to $354.43") are all points on that path, not the settle.
+
+Against the **±8.1%** implied move (band $337.5–$396.9), the entire evening path stayed inside — the
+low cleared the lower bound by $1.23. That is one unfinished observation, not a reversal of the
+measured under-pricing record: the honest comparison is close-to-close, and the 09-03 close does not
+exist yet.
+
+**Vs. the stance.** The stance was **stand aside, flat by the 2026-09-02 close**, and it is scored a
+clear pass on its own terms — the position it forbade would have sat through a −7.76% air pocket for
+a −0.82% settle, i.e. it avoided the variance without giving up a return. More usefully, the *reason*
+the stance existed was tested and held: **revenue and EPS both beat and the stock still fell**, on
+the guide, the software line and the margin path — the "disclosure quality, not the number" thesis
+this doc has carried since 2026-08-14, now proven twice on this symbol in two consecutive quarters.
+The D-0 row's one genuine sharpening — that "did they raise FY27" was the wrong binary, and a raise
+to $110–120B would clear the stated target while missing the positioned bar — **fired exactly as
+written**, at $115B. The XPV kill switch did **not** fire in either direction: Broadcom neither
+quantified nor capped the residual-value guarantees, and the stock never round-tripped above ~$417.
+The honest counterweight belongs on the record too — *on-book* long-term debt fell $4.8B to $57.2B
+against $24.0B of cash, which says nothing about an off-balance-sheet vehicle but does mean the
+"leveraged into an AI-financing structure" framing cannot be read off the balance sheet.
+One thing this doc got wrong in emphasis: it treated the FY27 target as a *number to be raised or
+not*, and the tape's actual sequence shows the multi-year outlook was worth **+12% intraday** — the
+forward figures were the dominant input, not the reported quarter, and this doc under-weighted how
+much of the reaction would come from the *call* rather than the *release*.
+
+**Forward tests** ([`forward-tests.md`](../forward-tests.md)), scored from re-run instrument data and
+closed sessions, never from memory:
+
+- **FT-2 — AVGO late-week bid (long close D-5 → close D): SCORED — KILLED on the sympathy clause.**
+  The window is D-5 close **2026-08-26 $355.59** → D close **2026-09-02 $367.24** = **+3.276%**, against
+  QQQ **711.37 → 709.24 = −0.299%** (**+3.58pp excess**) and a non-earnings 5-day baseline of **+0.71%**
+  (**+2.57pp excess**). On the base-rate leg alone that is a **pass** — a win with positive excess.
+  It does not survive the sympathy clause. NVDA printed **2026-08-26 AMC**, i.e. at this window's
+  own open, and its reaction session returned **+8.74%** (209.66 → 227.98). AVGO's 08-27 session
+  returned **+4.485%** — **137% of the whole window's return**; ex that single session the window is
+  **−1.157%**. This is a worse version of the confound that gutted the MRVL original (~70% of window
+  return): here it is more than all of it. Registered terms: FT-1 states the clause as an outright
+  kill ("also killed if the window's gain coincides with an NVDA print gap inside it — sympathy, not
+  MRVL") and FT-2's prediction cell reads "Same test", while its kill cell abbreviates to "Same 2-of-3
+  rule". **The harder reading is taken deliberately**, for three reasons: the 2-of-3 leg alone would
+  score this a pass on a window whose gain provably was not AVGO's; this ledger has named the
+  contamination as a scoring condition in every row since **2026-08-17**, so the clause was live and
+  pre-registered on this symbol rather than retrofitted tonight; and the instrument's own peer control
+  has said the same thing all along (NVDA +10.35% / MRVL +12.18% over AVGO's *own* windows). Moves to
+  the [`multi-symbol-sweep.md`](../multi-symbol-sweep.md) kill list. **Process finding, recorded
+  because it nearly changed the score:** the register's "same" shorthand silently dropped a clause —
+  every forward test should restate its kill switch in full rather than cross-referencing a sibling.
+- **FT-11 — AVGO event-vol bid under the XPV overhang: SCORED — PASS.** Prediction: once
+  print-spanning weeklies listed, the implied print move prices **above** the 8-quarter median
+  realized ~5.6%. At **D-2 (2026-08-31)** the freshest dated figure was **±8.1%** (earnings-watcher,
+  page updated that day), corroborated 2026-09-02 by the $370 straddle at ~±8.1%; every cross-source
+  reading (7.3% Bloomberg · 9.0% TipRanks · 12.4% Market Chameleon) also sits above the bar. The kill
+  condition (implied ≤ 5.6% at D-2) is nowhere near met, and the **void** condition — Broadcom capping
+  or quantifying the XPV guarantees pre-print — did not occur. One observation, and it licenses
+  nothing: premium selling is not a house playbook, and the test only ever spoke to *pricing*, never
+  to realized.
+- **FT-49 — registered here, pre-open, to carry the one thing this close-out cannot score.** The
+  2026-09-03 reaction session. See `forward-tests.md` for the registered prediction, its anchors and
+  its void conditions; it is registered **before** that session opens, so it is a genuine
+  pre-registration and not a retrofit.
+
+**Adjacency at close-out.** No new dated adjacent event found — the thirteen ids within 5 days of
+2026-09-02 are unchanged from the 9/2 probe-ref (`jackson-hole-2026-08-28`,
+`vmware-explore-2026-08-31`, `ism-manufacturing-2026-09-01`, `jolts-2026-09-01`,
+`adp-employment-2026-09-02`, `beige-book-2026-09-02`, `challenger-job-cuts-2026-09-03`,
+`hammack-remarks-2026-09-03`, `ism-services-2026-09-03`, `waller-economic-outlook-2026-09-03`,
+`jobs-2026-09-04`, `fomc-blackout-start-2026-09-05`, `opec-plus-meeting-2026-09-06`), all already
+registered by sibling PRs. Nothing to propose. VIX closed **15.20** on 9/2, down 1.14 from the 16.34
+this doc recorded the previous session — the sub-15 break did not stick, and index vol is back inside
+the band held all month. Probe-ref refreshed to the 9/2 readings.
+
+**This ledger is now closed.** The scanner goes silent on `avgo-2026-09-02-print` permanently; the
+only live thread is FT-49, which lives in `forward-tests.md` and is not gated by this event's entry.
