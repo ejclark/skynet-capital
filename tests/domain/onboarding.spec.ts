@@ -59,9 +59,11 @@ describe("onboarding milestone (M·01)", () => {
   });
 
   it("points every step at the shell route that completes it", () => {
+    // Step 1's form lives inside the onboarding page's guide; step 2 opens Moneypenny's rail
+    // with her intro (the 2026-09-03 handoff) rather than a feedback page.
     expect(ONBOARDING_STEPS.map((s) => s.route)).toEqual([
-      "/app/join",
-      "/app/feedback?starter=onboarding",
+      "/app/onboarding",
+      "/app/onboarding?moneypenny=intro",
       "/app/trade?play=101",
     ]);
   });

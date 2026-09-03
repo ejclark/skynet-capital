@@ -27,6 +27,8 @@ export interface OnboardingAccount {
 
 export interface Onboarding {
   readonly linked: boolean;
+  /** The session's own name — greets a member before they have an account on the board. */
+  readonly viewerName?: string;
   readonly milestone: {
     readonly id: string;
     readonly code: string;

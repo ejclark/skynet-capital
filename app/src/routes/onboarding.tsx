@@ -1,26 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchJoin } from "../live/join";
+import { localSessionSuffix } from "../live/market-hours";
+import { meetMoneypenny } from "../live/moneypenny";
 import { fetchOnboarding, type Onboarding, type OnboardingStep } from "../live/onboarding";
+import { fetchPlaybooks } from "../live/playbooks";
+import { AlpacaGuide } from "../shell/alpaca-guide";
 import { PageFrame } from "../shell/frame";
-import { JoinForm } from "../shell/join-form";
 import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 
 /**
  * MILESTONE M·01 — ONBOARDING (#1119, from the Claude Design canvas "Alpaca onboarding process
- * streamline"). Three steps between a new member and their first trade, each marked done by the
+ * streamline"; revised by the 2026-09-03 handoff "Streamlined Onboarding, Milestones & Moneypenny
+ * Chat Rail"). Three steps between a new member and their first trade, each marked done by the
  * server's reading of a ledger (`/api/onboarding`) — never by anything this page decides:
  *
- *   1. connect Alpaca — the join form, embedded here while the viewer has no linked human account
- *   2. meet Moneypenny — file the first feedback (the engagement track's own milestone)
- *   3. make the first trade — rung 101 on the desk
+ *   1. connect Alpaca — the five-step guide as progressive-disclosure accordions, the connect
+ *      form inside step 5 (`shell/alpaca-guide.tsx`), while the viewer has no linked human account
+ *   2. meet Moneypenny — opens her rail with the intro; the first filing is the step (the
+ *      engagement track's own milestone)
+ *   3. make the first trade — rung 101 on the desk, with the session hours in the viewer's zone
  *
- * Once connected the account tiles ride the same read: equity, buying power, rungs earned. Honesty
- * rule as everywhere (docs/BRAND.md): the figures are the live board's, labelled simulated, and a
- * stale read says so rather than showing zeros.
+ * `?moneypenny=intro` opens the rail on arrival — the deep link every "Meet Moneypenny ›" outside
+ * this page uses. Once connected the account tiles ride the same read: equity, buying power,
+ * rungs earned, playbooks unlocked. Honesty rule as everywhere (docs/BRAND.md): the figures are
+ * the live board's, labelled simulated, and a stale read says so rather than showing zeros.
  */
 
 const money = (n: number) =>
@@ -37,14 +44,14 @@ function StepGlyph({ done, active }: { readonly done: boolean; readonly active: 
   );
 }
 
-/** The step's call to action — the shell route that completes it, or nothing once done. */
+/** The step's call to action — the rail or the desk, or nothing once done. */
 function StepAction({ step }: { readonly step: OnboardingStep }): ReactElement | null {
   if (step.done) return null;
   if (step.id === "first-feedback")
     return (
-      <Link className="btn" to="/feedback" search={{ starter: "onboarding" }}>
+      <button type="button" className="btn" onClick={() => void meetMoneypenny()}>
         Meet Moneypenny ›
-      </Link>
+      </button>
     );
   if (step.id === "first-trade")
     return (
@@ -53,6 +60,13 @@ function StepAction({ step }: { readonly step: OnboardingStep }): ReactElement |
       </Link>
     );
   return null;
+}
+
+/** Step 3's note carries the session window in the viewer's own zone after "4:00 PM ET". */
+function stepDetail(step: OnboardingStep): string {
+  return step.id === "first-trade"
+    ? step.detail.replace("4:00 PM ET", `4:00 PM ET${localSessionSuffix()}`)
+    : step.detail;
 }
 
 function ConnectStep({
@@ -64,42 +78,34 @@ function ConnectStep({
   readonly data: Onboarding;
   readonly onJoined: () => void;
 }): ReactElement {
-  const [open, setOpen] = useState(true);
-  const join = useQuery({ queryKey: ["join"], queryFn: fetchJoin, enabled: !step.done });
+  // Open by default while there's nothing connected; an admin can reopen it afterwards to add
+  // another account (a bot) — the form's one home is here (Eric, 2026-09-03), not a join page.
+  const [open, setOpen] = useState(!step.done);
+  const join = useQuery({ queryKey: ["join"], queryFn: fetchJoin });
+  const canReopen = step.done && join.data?.canAddBots === true;
   return (
     <li className={`ob-step${step.done ? " ob-step-done" : ""}`}>
       <div className="ob-step-head">
         <StepGlyph done={step.done} active={!step.done} />
         <div className="ob-step-body">
           <div className="ob-step-title">{step.title}</div>
-          <div className="ob-step-detail">
-            Five short steps: create the account, switch to Paper, set the balance to $1,000,000,
-            generate keys, paste them here. Keys are checked with read-only calls and stored
-            encrypted; a human account only ever places the orders you submit yourself.
-          </div>
+          <div className="ob-step-detail">{step.detail}</div>
         </div>
         {step.done && data.account ? (
           <span className="status status-live">
             <span className="status-dot" />
             PAPER · LIVE
           </span>
-        ) : (
+        ) : null}
+        {!step.done || canReopen ? (
           <button type="button" className="btn" onClick={() => setOpen(!open)}>
-            {open ? "Hide the form" : "Set up ›"}
+            {open ? "Hide steps" : step.done ? "Add another account ›" : "Set up ›"}
           </button>
-        )}
+        ) : null}
       </div>
-      {!step.done && open ? (
+      {open && (!step.done || canReopen) ? (
         <div className="ob-connect">
-          <p className="ob-guide-link">
-            New to Alpaca? <Link to="/join">The five-step guide</Link> walks through creating the
-            account and the $1,000,000 reset before you paste keys.
-          </p>
-          {join.data?.wired ? (
-            <JoinForm data={join.data} onJoined={onJoined} />
-          ) : join.data ? (
-            <p className="note">Joining isn't wired in this deployment.</p>
-          ) : null}
+          <AlpacaGuide join={join.data} onJoined={onJoined} />
         </div>
       ) : null}
     </li>
@@ -119,7 +125,7 @@ function Step({
         <StepGlyph done={step.done} active={active} />
         <div className="ob-step-body">
           <div className="ob-step-title">{step.title}</div>
-          <div className="ob-step-detail">{step.detail}</div>
+          <div className="ob-step-detail">{stepDetail(step)}</div>
         </div>
         <StepAction step={step} />
       </div>
@@ -129,6 +135,11 @@ function Step({
 
 function AccountTiles({ data }: { readonly data: Onboarding }): ReactElement | null {
   const a = data.account;
+  const playbooks = useQuery({
+    queryKey: ["playbooks"],
+    queryFn: fetchPlaybooks,
+    enabled: a !== undefined,
+  });
   if (!a) return null;
   return (
     <div className="ob-tiles">
@@ -154,16 +165,33 @@ function AccountTiles({ data }: { readonly data: Onboarding }): ReactElement | n
           {a.nextUp ? `next up · ${a.nextUp.title.toLowerCase()}` : "ladder complete"}
         </span>
       </div>
+      <div className="ob-tile">
+        <span className="ob-k">Playbooks</span>
+        <span className="ob-v num">
+          {playbooks.data?.unlocked ?? "—"}
+          <span className="ob-unit"> / {playbooks.data?.total ?? "—"} unlocked</span>
+        </span>
+        <span className="ob-note">
+          <Link className="ob-tile-link" to="/playbooks">
+            view playbooks ›
+          </Link>
+        </span>
+      </div>
     </div>
   );
 }
 
 function OnboardingPage(): ReactElement {
+  const { moneypenny } = Route.useSearch();
   const onboarding = useQuery({
     queryKey: ["onboarding"],
     queryFn: fetchOnboarding,
     refetchOnWindowFocus: true,
   });
+  // The deep link: arriving with `?moneypenny=intro` opens the rail with her intro (once).
+  useEffect(() => {
+    if (moneypenny === "intro") void meetMoneypenny();
+  }, [moneypenny]);
   if (onboarding.isPending)
     return (
       <PageFrame rail={<ProfileRail current="onboarding" />}>
@@ -177,6 +205,7 @@ function OnboardingPage(): ReactElement {
       </PageFrame>
     );
   const data = onboarding.data;
+  const name = data.account?.displayName ?? data.viewerName;
   const firstOpen = data.steps.findIndex((s) => !s.done);
   const pct = data.total ? Math.round((data.done / data.total) * 100) : 0;
   return (
@@ -186,7 +215,7 @@ function OnboardingPage(): ReactElement {
         <div className="join-eyebrow">
           Milestone {data.milestone.code} · {data.milestone.title}
         </div>
-        <h1>Welcome to the league</h1>
+        <h1>Welcome to the league{name ? `, ${name}` : ""}</h1>
         <p>
           Skynet Capital is a league for learning to trade — for real, without real losses. You
           trade the live market through an Alpaca <b>paper</b> account, climb a ladder from stocks
@@ -204,7 +233,7 @@ function OnboardingPage(): ReactElement {
         <div className="ob-panel-head">
           <h2 className="ob-panel-title">Onboarding</h2>
           <span className="ob-count num">
-            {data.done} / {data.total} complete · {data.points} / {data.totalPoints} pts
+            {data.done} / {data.total} complete
           </span>
         </div>
         <div className="course-bar ob-bar">
@@ -230,4 +259,9 @@ function OnboardingPage(): ReactElement {
   );
 }
 
-export const Route = createFileRoute("/onboarding")({ component: OnboardingPage });
+export const Route = createFileRoute("/onboarding")({
+  // `?moneypenny=intro` opens the rail with her intro (M·01's step 2); anything else is dropped.
+  validateSearch: (search: Record<string, unknown>) =>
+    search.moneypenny === "intro" ? { moneypenny: "intro" as const } : {},
+  component: OnboardingPage,
+});

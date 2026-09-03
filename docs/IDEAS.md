@@ -18,6 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Screenshots in Moneypenny's rail
+
+The 2026-09-03 handoff retired the feedback form and coach box (`app/src/shell/feedback-door.tsx`
+et al.) in favour of the Moneypenny right rail, which files through the same lane but has no
+attachment control — so the #1020 ability to hand the coach up to three screenshots with a filing
+went with the form. The server side (`parseImages`, `sanitizeImages`, the `images` field on both
+endpoints) is intact; the rail's composer needs a paste/drop affordance that rides the opening note.
+_(src: Claude · while: building the Moneypenny rail, 2026-09-03)_
+
+
 ### `comment-bloat-scan.mjs` can't yet tell WHY from narration, only "cites a ticket"
 
 Found while running the scanner's first real pass (docs/LESSONS.md, 2026-08-30 comment-bloat entry):

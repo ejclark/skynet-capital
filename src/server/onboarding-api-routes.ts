@@ -24,6 +24,9 @@ import { requireGet, sendJson } from "./page-shell.js";
 export interface OnboardingView {
   /** False when auth isn't configured — there is no member to onboard. */
   readonly linked: boolean;
+  /** The signed-in member's name from the session, for "Welcome to the league, <name>" before
+   *  any account exists to carry a display name. Absent without auth or a nameless session. */
+  readonly viewerName?: string;
   readonly milestone: typeof ONBOARDING_MILESTONE;
   readonly steps: ReturnType<typeof deriveOnboarding>["steps"];
   readonly done: number;
@@ -74,6 +77,7 @@ export async function onboardingView(
     : undefined;
   return {
     linked,
+    ...(session?.name ? { viewerName: session.name } : {}),
     milestone: ONBOARDING_MILESTONE,
     ...progress,
     ...(human

@@ -222,8 +222,14 @@
   line-height: 1.55;
   color: var(--text);
 }
-.ladder-gate-p a {
+.ladder-gate-p a,
+.ladder-gate-link {
+  font: inherit;
   color: var(--accent);
   font-weight: 600;
   white-space: nowrap;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }

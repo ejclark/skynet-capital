@@ -4,7 +4,9 @@ import { ENGAGEMENT_MILESTONES } from "./engagement.js";
  * MILESTONE M·01 — ONBOARDING. Three steps take a member from spectator to participant, and
  * every one of them is a fact the desk already records somewhere else — this module only reads
  * those facts back as one milestone (the Claude Design canvas "Alpaca onboarding process
- * streamline", 2026-09-02; IA settled in the plan issue that slice references):
+ * streamline", 2026-09-02; IA settled in the plan issue that slice references; copy revised by the
+ * 2026-09-03 handoff — the guide became accordions and Moneypenny became a rail, so step 2's
+ * route opens the rail rather than a feedback page):
  *
  *   connect       — the session resolves to a HUMAN account on the board (participant store)
  *   first-feedback — the engagement track's own milestone (`engagement.ts`, a feedback-log entry)
@@ -34,23 +36,24 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: "connect",
     title: "Connect your Alpaca paper account",
     detail:
-      "Create the account, switch to Paper, set the balance to $1,000,000, generate keys, paste them in. We verify the keys and the balance, and the desk goes live.",
+      "Set up a free Alpaca paper account and link it here in five short steps, detailed below. We read keys only to verify and show your balance — no orders are ever placed on your behalf.",
     points: ONBOARDING_STEP_POINTS,
-    route: "/app/join",
+    route: "/app/onboarding",
   },
   {
     id: "first-feedback",
-    title: "Meet Moneypenny — file your first feedback",
+    title: "Meet Moneypenny, and file your first feedback",
     detail:
-      "Moneypenny is our AI agent — she facilitates your learning and orchestrates much of the communication behind the scenes, including feedback. Tell her one thing that's on your mind and watch it get answered.",
+      "Moneypenny is our AI agent — your guide for learning the desk and filing feedback. Say hello and she'll take it from there.",
     points: ENGAGEMENT_MILESTONES.find((m) => m.id === "first-feedback")?.points ?? 0,
-    route: "/app/feedback?starter=onboarding",
+    // The rail, not a page: `?moneypenny=intro` opens the right rail with her intro script.
+    route: "/app/onboarding?moneypenny=intro",
   },
   {
     id: "first-trade",
     title: "Make your first trade",
     detail:
-      "Open the Trading Desk and buy a stock — rung 101. Orders fill while the market is open, 9:30 AM to 4:00 PM ET, Monday through Friday.",
+      "The desk unlocks one rung at a time — buy a stock first, and each real fill opens the next play. No skipping ahead. Orders fill only while the market is open — 9:30 AM to 4:00 PM ET, Monday through Friday.",
     points: ONBOARDING_STEP_POINTS,
     route: "/app/trade?play=101",
   },
