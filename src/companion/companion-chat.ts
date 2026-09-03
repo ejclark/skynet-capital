@@ -46,6 +46,9 @@ export interface CompanionTurnInput {
   /** The session's own linked desk. Undefined = this sign-in owns no account (yet) — the
    *  read-only tools are simply not offered, never pointed at anyone else's. */
   readonly participantId?: string;
+  /** The member's live context for this turn (`companion-context.ts`) — rides in the volatile
+   *  half of the system prompt, after the cache breakpoint, never in the cached half. */
+  readonly context?: string;
 }
 
 export interface CompanionHandlers {
@@ -243,9 +246,10 @@ export function createCompanionChat(
     }
 
     const canUseTools = Boolean(config.tools && input.participantId);
-    const volatile = canUseTools
+    const toolsNote = canUseTools
       ? "This member has a linked desk — the read-only tools describe their own account."
       : "This member has no linked desk yet — no tools are available; answer from general knowledge of the app only, and don't claim to see their positions.";
+    const volatile = input.context ? `${toolsNote}\n\n${input.context}` : toolsNote;
     const initial = trimHistory(input.messages).map((m) => ({ role: m.role, content: m.content }));
 
     if (!canUseTools) {

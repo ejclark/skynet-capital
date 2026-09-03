@@ -1,13 +1,17 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { CompanionMessage } from "../companion/companion-chat.js";
+import { memberContext } from "../companion/companion-context.js";
 import {
   COMPANION_THROTTLE_MAX,
   COMPANION_THROTTLE_WINDOW_MS,
 } from "../companion/companion-limits.js";
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
+import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
+import { onboardingView } from "./onboarding-api-routes.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
@@ -74,6 +78,30 @@ function serveCompanionIndex(res: ServerResponse, config: DashboardServerConfig)
   });
 }
 
+/** The member's live context for this turn — the same reads the Onboarding and Feedback pages
+ *  make, folded into a few lines for the volatile half of the prompt. Any read failing degrades
+ *  to "no context" rather than failing the turn: she answers from the cached help desk instead. */
+async function memberContextFor(
+  config: DashboardServerConfig,
+  session: Session,
+): Promise<string | undefined> {
+  try {
+    const [onboarding, filings] = await Promise.all([
+      onboardingView(config, session),
+      config.readFeedback ? config.readFeedback(opaqueMemberId(session.email)) : [],
+    ]);
+    return memberContext({
+      onboarding,
+      filings: [...filings]
+        .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
+        .map((f) => ({ issueNumber: f.issueNumber, title: f.title, filedAt: f.filedAt })),
+      marketOpen: regularSessionOpen(),
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 async function serveChat(
   req: IncomingMessage,
   res: ServerResponse,
@@ -99,11 +127,16 @@ async function serveChat(
   // (`plays-api-routes.ts`) — never a client-supplied id, so a tool call can never be pointed at
   // another member's account.
   const participantId = resolveCurrentId(session, config.resolveOwnerId);
+  const context = await memberContextFor(config, session);
 
   openSseStream(res);
   let seq = 0;
   await config.companion(
-    { messages, ...(participantId ? { participantId } : {}) },
+    {
+      messages,
+      ...(participantId ? { participantId } : {}),
+      ...(context ? { context } : {}),
+    },
     {
       onText: (chunk) => {
         res.write(sseFrame(JSON.stringify({ text: chunk }), "delta", seq++));

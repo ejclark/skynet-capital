@@ -78,6 +78,9 @@ const SETUP = /key|secret|alpaca|balance|connect|paper|onboard|set ?up|sign|acco
 
 export type Routed =
   | { readonly kind: "say"; readonly lines: readonly string[]; readonly flow: Flow }
+  /** A general question — Moneypenny answers it live (`/api/companion`), the scripted lines
+   *  standing in when the chat isn't switched on or fails. */
+  | { readonly kind: "chat"; readonly fallback: readonly string[] }
   /** A note worth filing — ask the one sharp question (the coach's, or the scripted one). */
   | { readonly kind: "ask"; readonly note: string }
   /** The answer to that question — file now. */
@@ -97,8 +100,8 @@ export function routeNote(note: string, flow: Flow): Routed {
       return { kind: "say", lines: [FB_OPEN], flow: "fb" };
     return { kind: "ask", note: text };
   }
-  if (SETUP.test(text)) return { kind: "say", lines: SETUP_PATH, flow: "idle" };
-  return { kind: "say", lines: [NUDGE], flow: "idle" };
+  if (SETUP.test(text)) return { kind: "chat", fallback: SETUP_PATH };
+  return { kind: "chat", fallback: [NUDGE] };
 }
 
 /** The filing's kind, read off the note — the coach and the issue labels both take one. */

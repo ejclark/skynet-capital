@@ -12,6 +12,18 @@ this: scope lived scattered across five near-identical `.github/prompts/*.md` fi
 "orchestrator" already meant something else in this repo (`docs/COACHES.md`'s in-session head
 coach). Nothing named who owns the whole board. This does.
 
+## In the app — the rail is her voice
+
+Since 2026-09-03 members meet her directly: the ✦ button in the shell's top bar opens a right
+rail (`app/src/shell/moneypenny-rail.tsx`) where she answers questions live and files feedback.
+Her voice there is the companion chat (`src/companion/*`, `/api/companion/chat`) — Claude on the
+same key the feedback coach uses, with four read-only tools over the member's own desk, their live
+onboarding/filing state injected every turn (`companion-context.ts`), and a cached help desk
+(`companion-help.ts`) so "how do I…" answers come from this app's facts. She cannot place an
+order (no such tool exists — `tests/companion/companion-no-order-path.spec.ts`), and filing still
+goes through the feedback coach and `/api/feedback`. The scripted lines in
+`app/src/live/moneypenny-script.ts` are the fallback when the key isn't set.
+
 ## Mandate
 
 Moneypenny **sequences work across GitHub issues and PRs so outcomes ship on the most efficient

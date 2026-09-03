@@ -83,19 +83,17 @@ describe("routeNote", () => {
     expect(r).toMatchObject({ kind: "say", flow: "idle" });
   });
 
-  it("an onboarding question outside any flow gets the short path", () => {
+  it("an onboarding question outside any flow is a live chat, the short path its fallback", () => {
     expect(routeNote("where do I find my alpaca key?", "idle")).toEqual({
-      kind: "say",
-      lines: SETUP_PATH,
-      flow: "idle",
+      kind: "chat",
+      fallback: SETUP_PATH,
     });
   });
 
-  it("anything else gets the capabilities nudge", () => {
+  it("anything else is a live chat, the capabilities nudge its fallback", () => {
     expect(routeNote("what's a covered call?", "idle")).toEqual({
-      kind: "say",
-      lines: [NUDGE],
-      flow: "idle",
+      kind: "chat",
+      fallback: [NUDGE],
     });
   });
 
