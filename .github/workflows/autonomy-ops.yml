@@ -21,6 +21,8 @@ on:
         type: choice
         options:
           - status
+          - machine-status
+          - logs
           - bootstrap-bots-app
           - set-day-trader-credentials
           - set-prospector-credentials
@@ -94,6 +96,25 @@ jobs:
       - name: Status — secret NAMES only, values are never shown or settable this way
         if: ${{ inputs.action == 'status' }}
         run: flyctl secrets list -a "$TARGET_APP"
+        env:
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+
+      - name: Machine status — is the process actually up, not just configured
+        if: ${{ inputs.action == 'machine-status' }}
+        run: |
+          flyctl status -a "$TARGET_APP"
+          echo "---"
+          flyctl machine list -a "$TARGET_APP" --json \
+            | jq '[.[] | {id, state, region, updated_at: .updated_at}]'
+        env:
+          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
+
+      - name: Logs — recent buffer, no streaming (this runner exits, it can't tail forever)
+        # Every mode/roster action above tells the operator to go check `fly logs` by hand from a
+        # terminal — this is that check, self-serve, without one. `--no-tail` dumps the recent
+        # buffer and exits instead of streaming (this job has no interactive session to Ctrl-C).
+        if: ${{ inputs.action == 'logs' }}
+        run: flyctl logs -a "$TARGET_APP" --no-tail | tail -300
         env:
           FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
 
