@@ -637,6 +637,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "Rate-path input; AI-infra names trade as long-duration assets on it.",
   },
   {
+    id: "mts-august-2026-09-11",
+    kind: "macro-print",
+    title: "Monthly Treasury Statement (Aug 2026 data) — the monthly deficit print",
+    date: "2026-09-11",
+    status: "estimate",
+    source:
+      "EST: the MTS is published by the Bureau of the Fiscal Service on the 8th workday of the month after the reference month; September 2026's 8th workday, with Labor Day on 09-07, is 09-11. Corroborated two ways rather than read off a schedule page: fiscaldata.treasury.gov's MTS API returns a latest record_date of 2026-07-31 (July data, so August is the next edition) and FRED release 363 shows the July MTS published 2026-08-13 — itself the 8th August workday. fiscal.treasury.gov and fiscaldata's release-calendar page served no parseable September schedule on fetch, so the date is rule-derived, not primary-read, and stays estimate on that ground. Checked 2026-09-03",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The primary monthly measurement of the one variable this calendar's long-end ledgers keep naming as the driver and never dating. treasury-30y-bond-2026-09-10's initial research attributes the Aug-13 predecessor auction's 25-year-high clearing yield to fiscal supply, citing a $432B July deficit; CRFB's framing of that auction is investors 'demand[ing] higher compensation to finance our growing national debt'. That number has a release date and this calendar did not carry it. Placement is why it earns a slot rather than a footnote: it lands the day AFTER the 30-year reopening and ON cpi-2026-09-11, so the term-premium story's fiscal leg and its inflation leg print into the same session, one day after the auction that prices both — and inside the fomc-blackout-start-2026-09-05 window, so no Fed participant can respond to either. Tiered `medium`, not `high`, deliberately: the MTS is a backward-looking accounting statement with a well-telegraphed CBO Monthly Budget Review preview usually out days earlier, so it rarely moves the tape by itself; what it does is confirm or break the deficit trajectory the long end is pricing. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep (2026-09-03).",
+  },
+  {
     id: "fomc-2026-09-16",
     kind: "macro-print",
     title: "FOMC decision (meeting Sep 15–16, SEP + dot plot)",
