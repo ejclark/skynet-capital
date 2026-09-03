@@ -1,5 +1,4 @@
-import { anthropicApiError } from "../http/anthropic-reply.js";
-import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
+import { fetchJson } from "../http/fetch-json.js";
 import {
   type AnthropicStreamEvent,
   type DoStreamFetch,
@@ -10,18 +9,23 @@ import {
   COMPANION_MAX_MESSAGE_CHARS,
   MAX_HISTORY_MESSAGES,
   MAX_TOKENS_PER_REPLY,
-  MAX_TOOL_ROUNDS,
   MAX_TURNS,
   TURN_LIMIT_MESSAGE,
 } from "./companion-limits.js";
 import { COMPANION_MODEL } from "./companion-model.js";
-import { COMPANION_SYSTEM_PROMPT } from "./companion-system-prompt.js";
 import {
-  COMPANION_TOOL_DEFS,
-  type CompanionDeskDeps,
-  type FeedbackDraft,
-  runCompanionTool,
-} from "./companion-tools.js";
+  ANTHROPIC_URL,
+  BUDGET_SPENT_MESSAGE,
+  type DoFetch,
+  type Headers,
+  runToolRounds,
+  systemBlocks,
+} from "./companion-tool-rounds.js";
+import type { CompanionDeskDeps, FeedbackDraft } from "./companion-tools.js";
+
+export { BUDGET_SPENT_MESSAGE };
+
+type DoStream = typeof streamAnthropicMessage;
 
 /**
  * THE COMPANION'S CONVERSATION ENGINE — bounds, tool round-trip, streamed reply. This file owns
@@ -34,8 +38,6 @@ import {
  * streaming call for the reply the member actually reads. Tool detection doesn't need to stream
  * — nothing user-facing happens until the model is done deciding what to look up.
  */
-
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
 export interface CompanionMessage {
   readonly role: "user" | "assistant";
@@ -59,20 +61,16 @@ export interface CompanionHandlers {
   /** The model drafted a filing from the conversation (`draft_feedback`) — the rail holds it and
    *  only the member's reply sends it. Optional: a caller with no rail just drops the draft. */
   readonly onHandoff?: (draft: FeedbackDraft) => void;
+  /** Asked before every billed model call; false means the member's budget for this window is
+   *  spent — the turn stops looking things up and answers with what it already has, or reports
+   *  the throttle honestly when it has nothing. Optional: no hook, no budget. */
+  readonly budget?: () => boolean;
 }
 
 export type CompanionTurn = (
   input: CompanionTurnInput,
   handlers: CompanionHandlers,
 ) => Promise<void>;
-
-interface AnthropicBlock {
-  readonly type: string;
-  readonly text?: string;
-  readonly id?: string;
-  readonly name?: string;
-  readonly input?: unknown;
-}
 
 /** Server-enforced bounds — never model-trusted, same doctrine as the coach's `boundsError`. */
 function companionBoundsError(messages: readonly CompanionMessage[]): string | null {
@@ -90,118 +88,10 @@ function trimHistory(messages: readonly CompanionMessage[]): CompanionMessage[] 
   return firstUser <= 0 ? trimmed : trimmed.slice(firstUser);
 }
 
-function systemBlocks(volatile: string): readonly unknown[] {
-  return [
-    // The byte-stable half, cached: brand rules, the never-an-order invariant, the tour script.
-    { type: "text", text: COMPANION_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-    // The volatile half AFTER the cache breakpoint — a timestamp or per-request note here must
-    // never sit ahead of the breakpoint, or every request invalidates the cache it's there for.
-    ...(volatile ? [{ type: "text", text: volatile }] : []),
-  ];
-}
-
-function replyContent(res: JsonResponse): { content?: readonly AnthropicBlock[]; error?: string } {
-  const apiError = anthropicApiError(res, "companion");
-  if (apiError) return { error: apiError };
-  const content = (res.body as { content?: readonly AnthropicBlock[] }).content;
-  return content ? { content } : { error: "companion returned no content" };
-}
-
-function textOf(content: readonly AnthropicBlock[]): string {
-  return content
-    .filter((b) => b.type === "text")
-    .map((b) => b.text ?? "")
-    .join("");
-}
-
-function toolUsesOf(content: readonly AnthropicBlock[]): readonly AnthropicBlock[] {
-  return content.filter((b) => b.type === "tool_use");
-}
-
 export interface CompanionChatConfig {
   readonly apiKey: string;
   /** Omit to run tools-off (the Q&A-over-catalogs-only slice — no desk to read from anyway). */
   readonly tools?: CompanionDeskDeps;
-}
-
-type DoFetch = typeof fetchJson;
-type DoStream = typeof streamAnthropicMessage;
-type Headers = Readonly<Record<string, string>>;
-
-type ToolRoundOutcome =
-  | { readonly kind: "answered" | "error" }
-  | { readonly kind: "continue"; readonly working: unknown[] };
-
-/** The tools this turn may call: the draft hand-off always (it reads nothing); the four desk
- *  lookups only for a member with a linked desk. */
-function toolsFor(participantId: string | undefined): readonly unknown[] {
-  return participantId
-    ? COMPANION_TOOL_DEFS
-    : COMPANION_TOOL_DEFS.filter((t) => t.name === "draft_feedback");
-}
-
-/** Up to `MAX_TOOL_ROUNDS` non-streaming round trips letting the model call read-only tools.
- *  Ends early (`"answered"`) the moment a reply carries no tool call — nothing user-facing
- *  happens before that, so this leg never needs to stream. Ends `"error"` on any transport or
- *  shape failure, already reported through `handlers`. Falling out of the loop (`"continue"`)
- *  means the rounds are exhausted; the caller takes `working` to the final streaming call. */
-async function runToolRounds(
-  doFetch: DoFetch,
-  headers: Headers,
-  volatile: string,
-  initial: readonly unknown[],
-  deskDeps: CompanionDeskDeps,
-  participantId: string | undefined,
-  handlers: CompanionHandlers,
-): Promise<ToolRoundOutcome> {
-  let working = [...initial];
-  const deps: CompanionDeskDeps = handlers.onHandoff
-    ? { ...deskDeps, onDraft: handlers.onHandoff }
-    : deskDeps;
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    let res: JsonResponse;
-    try {
-      res = await doFetch("POST", ANTHROPIC_URL, headers, {
-        model: COMPANION_MODEL,
-        max_tokens: MAX_TOKENS_PER_REPLY,
-        system: systemBlocks(volatile),
-        messages: working,
-        tools: toolsFor(participantId),
-      });
-    } catch (error) {
-      handlers.onError(error instanceof Error ? error.message : "companion unreachable");
-      return { kind: "error" };
-    }
-    const reply = replyContent(res);
-    if (!reply.content) {
-      handlers.onError(reply.error ?? "companion error");
-      return { kind: "error" };
-    }
-    const toolUses = toolUsesOf(reply.content);
-    if (toolUses.length === 0) {
-      // A direct reply with tools offered — no streaming leg needed, emit it whole.
-      const text = textOf(reply.content);
-      if (text) handlers.onText(text);
-      handlers.onDone();
-      return { kind: "answered" };
-    }
-    const results = await Promise.all(
-      toolUses.map((tu) => runCompanionTool(tu.name ?? "", deps, participantId, tu.input)),
-    );
-    working = [
-      ...working,
-      { role: "assistant", content: reply.content },
-      {
-        role: "user",
-        content: toolUses.map((tu, i) => ({
-          type: "tool_result",
-          tool_use_id: tu.id,
-          content: JSON.stringify(results[i]),
-        })),
-      },
-    ];
-  }
-  return { kind: "continue", working };
 }
 
 /** The one leg the member actually reads — streamed. `exhausted` only changes the volatile
@@ -213,12 +103,17 @@ async function streamFinalReply(
   exhausted: boolean,
   working: readonly unknown[],
   handlers: CompanionHandlers,
+  callsSoFar = 0,
 ): Promise<void> {
   const finalSystem = systemBlocks(
     exhausted
       ? `${volatile} Tool lookups are exhausted for this turn — answer with what you already have rather than looking anything up again.`
       : volatile,
   );
+  if (callsSoFar === 0 && handlers.budget && !handlers.budget()) {
+    handlers.onError(BUDGET_SPENT_MESSAGE);
+    return;
+  }
   try {
     await doStream(
       ANTHROPIC_URL,
@@ -279,7 +174,15 @@ export function createCompanionChat(
       handlers,
     );
     if (outcome.kind !== "continue") return; // already answered or errored via `handlers`
-    await streamFinalReply(doStream, headers, volatile, true, outcome.working, handlers);
+    await streamFinalReply(
+      doStream,
+      headers,
+      volatile,
+      true,
+      outcome.working,
+      handlers,
+      outcome.calls,
+    );
   };
 }
 

@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { CompanionMessage } from "../companion/companion-chat.js";
 import { memberContext } from "../companion/companion-context.js";
 import {
+  COMPANION_MODEL_CALLS_MAX,
   COMPANION_THROTTLE_MAX,
   COMPANION_THROTTLE_WINDOW_MS,
 } from "../companion/companion-limits.js";
@@ -52,6 +53,25 @@ function throttled(
   recent.push(now);
   hits.set(key, recent);
   return false;
+}
+
+// The model-call budget (red-team A6): every billed call — tool round or the streamed reply —
+// counts here, in the same window as the request throttle, so a turn's 4 calls cost 4.
+const modelCalls = new Map<string, number[]>();
+function modelCallAllowed(
+  key: string,
+  now = Date.now(),
+  windowMs = COMPANION_THROTTLE_WINDOW_MS,
+  max = COMPANION_MODEL_CALLS_MAX,
+): boolean {
+  const recent = (modelCalls.get(key) ?? []).filter((t) => now - t < windowMs);
+  if (recent.length >= max) {
+    modelCalls.set(key, recent);
+    return false;
+  }
+  recent.push(now);
+  modelCalls.set(key, recent);
+  return true;
 }
 
 /** Never model- or client-trusted beyond shape: role must be one of the two literals, content a
@@ -154,6 +174,7 @@ async function serveChat(
       onHandoff: (draft) => {
         res.write(sseFrame(JSON.stringify(draft), "handoff", seq++));
       },
+      budget: () => modelCallAllowed(session.email),
     },
   );
 }

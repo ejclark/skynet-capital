@@ -13,6 +13,8 @@ blue (correctness), tiger (member journeys), white (this doc's heuristic audit) 
 one ranked fix list. No prior UX research on the chat existed in this repo; `trading-desk-ux.md` is
 the nearest precedent.
 
+**Status (2026-09-03):** P0–P2 shipped in #1174; P3 (red A3–A6) in the follow-up PR the same day. The falsifiers below are what to check live.
+
 ## The call
 
 | # | The call | Confidence | The one-line why | Proves it wrong (dated) |

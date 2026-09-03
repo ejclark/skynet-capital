@@ -1,5 +1,6 @@
 import type { AnthropicStreamEvent } from "../../src/companion/companion-anthropic-stream.js";
 import {
+  BUDGET_SPENT_MESSAGE,
   type CompanionChatConfig,
   type CompanionHandlers,
   type CompanionMessage,
@@ -299,6 +300,46 @@ describe("the prompt-cache breakpoint — the static prompt is byte-stable and c
       cache_control: { type: "ephemeral" },
     });
     expect(system[1]).not.toHaveProperty("cache_control"); // volatile half rides AFTER, uncached
+  });
+});
+
+describe("the model-call budget — counted per billed call, honest when spent", () => {
+  it("makes no call and reports the throttle when the budget is spent before the turn", async () => {
+    let calls = 0;
+    const chat = createCompanionChat(
+      { apiKey: "k" },
+      () => {
+        calls++;
+        return Promise.resolve(textReply("x"));
+      },
+      fakeDoStream(["x"], []),
+    );
+    const c = collect();
+    await chat({ messages: [userMsg("hi")] }, { ...c.handlers, budget: () => false });
+    expect(calls).toBe(0);
+    expect(c.errors).toEqual([BUDGET_SPENT_MESSAGE]);
+  });
+
+  it("stops looking things up mid-turn once the budget runs out, and still answers", async () => {
+    let allowed = 1; // one tool round; the reply still streams — a turn that spent a call gets its answer
+    const streamCalls: unknown[] = [];
+    let fetches = 0;
+    const chat = createCompanionChat(
+      { apiKey: "k", tools: deskDeps },
+      () => {
+        fetches++;
+        return Promise.resolve(toolUseReply("get_play_catalog"));
+      },
+      fakeDoStream(["here's what I have."], streamCalls),
+    );
+    const c = collect();
+    await chat(
+      { messages: [userMsg("what can I trade?")], participantId: "acct-1" },
+      { ...c.handlers, budget: () => allowed-- > 0 },
+    );
+    expect(fetches).toBe(1);
+    expect(streamCalls).toHaveLength(1);
+    expect(c.texts.join("")).toBe("here's what I have.");
   });
 });
 

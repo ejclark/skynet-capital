@@ -48,6 +48,11 @@ export const MAX_TOOL_ROUNDS = 3;
 export const COMPANION_THROTTLE_MAX = 40;
 export const COMPANION_THROTTLE_WINDOW_MS = 600_000;
 
+/** The MODEL-CALL budget behind the request throttle (red-team A6): a turn is up to
+ *  `MAX_TOOL_ROUNDS + 1` billed calls, so counting requests alone under-counts by 4×. This is the
+ *  cap on calls per member per window; a turn that would exceed it answers with what it has. */
+export const COMPANION_MODEL_CALLS_MAX = 100;
+
 /**
  * The graceful close-out at the turn ceiling — no model call is made once this fires, so it costs
  * nothing and cannot be gamed into one more paid round.
