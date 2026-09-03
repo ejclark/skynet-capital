@@ -78,8 +78,11 @@ function ConnectStep({
   readonly data: Onboarding;
   readonly onJoined: () => void;
 }): ReactElement {
-  const [open, setOpen] = useState(true);
-  const join = useQuery({ queryKey: ["join"], queryFn: fetchJoin, enabled: !step.done });
+  // Open by default while there's nothing connected; an admin can reopen it afterwards to add
+  // another account (a bot) — the form's one home is here (Eric, 2026-09-03), not a join page.
+  const [open, setOpen] = useState(!step.done);
+  const join = useQuery({ queryKey: ["join"], queryFn: fetchJoin });
+  const canReopen = step.done && join.data?.canAddBots === true;
   return (
     <li className={`ob-step${step.done ? " ob-step-done" : ""}`}>
       <div className="ob-step-head">
@@ -93,13 +96,14 @@ function ConnectStep({
             <span className="status-dot" />
             PAPER · LIVE
           </span>
-        ) : (
+        ) : null}
+        {!step.done || canReopen ? (
           <button type="button" className="btn" onClick={() => setOpen(!open)}>
-            {open ? "Hide steps" : "Set up ›"}
+            {open ? "Hide steps" : step.done ? "Add another account ›" : "Set up ›"}
           </button>
-        )}
+        ) : null}
       </div>
-      {!step.done && open ? (
+      {open && (!step.done || canReopen) ? (
         <div className="ob-connect">
           <AlpacaGuide join={join.data} onJoined={onJoined} />
         </div>

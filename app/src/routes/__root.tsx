@@ -72,7 +72,14 @@ function ExitIcon(): ReactElement {
 }
 
 /** Every route under the Profile rail lights the Profile tab (Accounts is `/`, exactly). */
-export const PROFILE_PATHS = ["/learn", "/onboarding", "/playbooks", "/settings", "/join"] as const;
+export const PROFILE_PATHS = [
+  "/learn",
+  "/onboarding",
+  "/playbooks",
+  "/feedback",
+  "/settings",
+  "/join",
+] as const;
 
 export function isProfilePath(pathname: string): boolean {
   const path = pathname.replace(/^\/app(?=\/|$)/, "") || "/";

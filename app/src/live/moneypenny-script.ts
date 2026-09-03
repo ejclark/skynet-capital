@@ -72,7 +72,7 @@ export function introLines(ctx: IntroContext): {
 
 const YES = /^(y\b|yes|sure|ok|okay|please|help|yeah|yep)/i;
 const FEEDBACK =
-  /feedback|bug|broken|idea|feature|confus|missing|wish|issue|stuck|file (it|an issue|one)/i;
+  /feedback|bug|broken|wrong|doesn'?t work|error|crash|idea|feature|confus|missing|wish|issue|stuck|file (it|an issue|one)/i;
 const BARE_FEEDBACK = /^i (want|would like|'?d like) to (file|give|leave|send)/i;
 const SETUP = /key|secret|alpaca|balance|connect|paper|onboard|set ?up|sign|account/i;
 

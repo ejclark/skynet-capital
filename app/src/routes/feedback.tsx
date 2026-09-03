@@ -6,13 +6,16 @@ import { meetMoneypenny } from "../live/moneypenny";
 import { CommunityUnlockBanner } from "../shell/community-banner";
 import { RecentFeedback } from "../shell/feedback-recent";
 import { PageFrame } from "../shell/frame";
+import { ProfileRail } from "../shell/profile-rail";
 
 /**
  * YOUR FEEDBACK (#738 phase 9d; door retired by the 2026-09-03 handoff) — the member's own
- * filings ledger. Filing itself moved into Moneypenny's rail (`shell/moneypenny-rail.tsx`), which
- * is why there is no Feedback tab and no form here: this page keeps what the rail doesn't carry —
- * every filing with its live status, the follow-up fold, and a fresh community-track unlock's
- * one-time celebration. The one action is opening the rail.
+ * filings ledger, a Profile-rail item (Eric, 2026-09-03: "feedback can be a navigation item under
+ * profile, where the history of feedback that resulted in github issues … can be retained").
+ * Filing itself is Moneypenny's rail (`shell/moneypenny-rail.tsx`), which is why there is no
+ * Feedback tab and no form here: this page keeps what the rail doesn't carry — every filing with
+ * its live status, the follow-up fold, and a fresh community-track unlock's one-time celebration.
+ * The one action is opening the rail.
  */
 
 function FeedbackPage(): ReactElement {
@@ -22,20 +25,20 @@ function FeedbackPage(): ReactElement {
 
   if (index.isPending)
     return (
-      <PageFrame>
+      <PageFrame rail={<ProfileRail current="feedback" />}>
         <p className="note">Opening the mailbox…</p>
       </PageFrame>
     );
   if (index.isError || !index.data)
     return (
-      <PageFrame>
+      <PageFrame rail={<ProfileRail current="feedback" />}>
         <p className="note">Feedback is unreachable.</p>
       </PageFrame>
     );
 
   const data = index.data;
   return (
-    <PageFrame>
+    <PageFrame rail={<ProfileRail current="feedback" />}>
       <header className="page-header">
         <h1>Your feedback</h1>
         <p>
