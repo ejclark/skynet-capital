@@ -7,6 +7,7 @@ import type { OnboardingView } from "../../src/server/onboarding-api-routes.js";
 const base: OnboardingView = {
   linked: true,
   viewerName: "Tony",
+  marketOpen: false,
   milestone: ONBOARDING_MILESTONE,
   steps: [
     {

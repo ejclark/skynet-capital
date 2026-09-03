@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useState } from "react";
 import { fetchJoin } from "../live/join";
@@ -183,15 +183,19 @@ function AccountTiles({ data }: { readonly data: Onboarding }): ReactElement | n
 
 function OnboardingPage(): ReactElement {
   const { moneypenny } = Route.useSearch();
+  const navigate = useNavigate();
   const onboarding = useQuery({
     queryKey: ["onboarding"],
     queryFn: fetchOnboarding,
     refetchOnWindowFocus: true,
   });
-  // The deep link: arriving with `?moneypenny=intro` opens the rail with her intro (once).
+  // The deep link: arriving with `?moneypenny=intro` opens the rail with her intro, then drops
+  // the param so a later visit or a remount doesn't fire it again.
   useEffect(() => {
-    if (moneypenny === "intro") void meetMoneypenny();
-  }, [moneypenny]);
+    if (moneypenny !== "intro") return;
+    void meetMoneypenny();
+    void navigate({ to: "/onboarding", search: {}, replace: true });
+  }, [moneypenny, navigate]);
   if (onboarding.isPending)
     return (
       <PageFrame rail={<ProfileRail current="onboarding" />}>

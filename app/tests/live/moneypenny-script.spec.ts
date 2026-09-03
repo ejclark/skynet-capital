@@ -1,9 +1,14 @@
 import {
+  answerFailed,
+  CHAT_DOWN,
+  chipsFor,
+  draftCard,
   FB_OPEN,
   FB_QUESTION,
   filedLine,
   inferKind,
   introLines,
+  isSetupAnswer,
   NUDGE,
   opsLine,
   routeNote,
@@ -24,13 +29,14 @@ describe("introLines", () => {
   it("gives a connected member first-trade instructions that know the market is open", () => {
     const intro = introLines({ connected: true, firstTradeDone: false, marketOpen: true });
     expect(intro.flow).toBe("idle");
-    expect(intro.lines.at(-1)).toMatch(/the market is open right now/);
+    expect(intro.lines.at(-1)).toMatch(/should be open right now/);
+    expect(intro.lines.at(-1)).toMatch(/confirms with alpaca/);
   });
 
   it("…or that it's closed, with the hours and the schedule-it path", () => {
     const intro = introLines({ connected: true, firstTradeDone: false, marketOpen: false });
     expect(intro.lines.at(-1)).toMatch(/closed right now \(9:30 am–4:00 pm et, weekdays\)/);
-    expect(intro.lines.at(-1)).toMatch(/fills at market open/);
+    expect(intro.lines.at(-1)).toMatch(/waits for the open/);
   });
 
   it("mid-thread, says hi again and steers — never the whole introduction", () => {
@@ -115,6 +121,55 @@ describe("routeNote", () => {
     expect(FB_QUESTION).toBe(
       "Moneypenny · got it. one question — where in the app does this bite you, and what would a good outcome look like?",
     );
+  });
+});
+
+describe("the setup offer's answer", () => {
+  it("is a short yes or no — a real question is a message, not an answer", () => {
+    expect(isSetupAnswer("yes")).toBe(true);
+    expect(isSetupAnswer("not now")).toBe(true);
+    expect(isSetupAnswer("What time is it")).toBe(false);
+    expect(isSetupAnswer("yes but first, what's a covered call and how do I sell one?")).toBe(
+      false,
+    );
+  });
+});
+
+describe("chipsFor", () => {
+  it("offers a parked draft's two exits first", () => {
+    expect(
+      chipsFor({ draft: true, connected: true, firstTradeDone: true }).map((c) => c.msg),
+    ).toEqual(["send", "never mind"]);
+  });
+  it("follows the next onboarding step, with filing always one tap away", () => {
+    expect(chipsFor({ draft: false, connected: false, firstTradeDone: false })[0]?.label).toBe(
+      "Help me get set up",
+    );
+    expect(chipsFor({ draft: false, connected: true, firstTradeDone: false })[0]?.label).toBe(
+      "Walk me through my first trade",
+    );
+    expect(chipsFor({ draft: false, connected: true, firstTradeDone: true })[0]?.label).toBe(
+      "How am I doing?",
+    );
+    for (const s of [false, true])
+      expect(chipsFor({ draft: false, connected: s, firstTradeDone: s }).at(-1)?.label).toBe(
+        "File feedback",
+      );
+  });
+});
+
+describe("failure and draft lines", () => {
+  it("reports a failure in its own words, and falls back to the generic line without any", () => {
+    expect(answerFailed("Lots of chatting just now")).toBe(
+      "Moneypenny · i couldn't answer that just now: Lots of chatting just now",
+    );
+    expect(answerFailed(undefined)).toBe(CHAT_DOWN);
+  });
+  it("the draft card shows kind, title, details and both exits", () => {
+    const card = draftCard({ kind: "bug", title: "Fix it", details: "It breaks." });
+    expect(card).toContain("[bug] Fix it");
+    expect(card).toContain("It breaks.");
+    expect(card).toMatch(/"send".*"never mind"/);
   });
 });
 

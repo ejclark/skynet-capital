@@ -53,4 +53,4 @@ export const COMPANION_THROTTLE_WINDOW_MS = 600_000;
  * nothing and cannot be gamed into one more paid round.
  */
 export const TURN_LIMIT_MESSAGE =
-  "We've covered a lot of ground this session — let's pick it back up fresh next time. If something's still off or you'd like it built, send it through /feedback.";
+  "We've covered a lot of ground in this thread — start a new conversation (↺ in the rail) and let's pick it back up fresh. If something's still off or you'd like it built, tell me there and I'll draft the filing.";
