@@ -31,8 +31,8 @@ const TYPES = {
   ".woff2": "font/woff2",
 };
 const NOTE =
-  "The ladder opens after your first feedback filing — the desk is built from them. File one note and trading opens.";
-const gate = { reason: "first-feedback", note: NOTE };
+  "The ladder opens the moment you say hello to Moneypenny — trading starts with a conversation.";
+const gate = { reason: "first-message", note: NOTE };
 const play = (code, name, tldr, kind, side, optionType) => ({
   code,
   id: code,

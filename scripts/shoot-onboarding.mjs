@@ -51,9 +51,9 @@ const steps = (connected) => [
     connected,
   ),
   step(
-    "first-feedback",
-    "Meet Moneypenny, and file your first feedback",
-    "Moneypenny is our AI agent — your guide for learning the desk and filing feedback. Say hello and she'll take it from there.",
+    "first-message",
+    "Say hello to Moneypenny",
+    "Moneypenny is our AI agent — your guide for learning the desk and filing feedback. Send her a message and the trading ladder opens.",
     10,
     "/app/onboarding?moneypenny=intro",
     false,

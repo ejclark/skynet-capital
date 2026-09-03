@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  logKeyFor,
   type OwnerLink,
   OwnerLinkStore,
   ownerEmailFor,
@@ -260,5 +261,24 @@ describe("ownerEmailFor", () => {
   });
   it("is undefined for an unclaimed account", () => {
     expect(ownerEmailFor(participants, links, "orphan")).toBeUndefined();
+  });
+});
+
+describe("logKeyFor — the seam a per-member log's caller must cross (docs/LESSONS.md, 2026-09-03)", () => {
+  const resolveEmail = (id: string) => (id === "human-joe" ? "joe@example.com" : undefined);
+  const toOpaqueId = (email: string) => `opaque(${email})`;
+
+  it("bridges a real participant id through the owner's email", () => {
+    expect(logKeyFor(resolveEmail, toOpaqueId, "human-joe")).toBe("opaque(joe@example.com)");
+  });
+
+  it("uses the id as-is when it doesn't resolve — the caller already passed the real key", () => {
+    // This is the bug: every HTTP route resolves the opaque id itself and passes it straight
+    // through (`progression-service.ts`'s `opaqueMemberId ?? participantId`), so `resolveEmail`
+    // never matches it against a participant. The old binding read that as "no owner" and
+    // returned nothing; the fix is to trust the id it was given.
+    expect(logKeyFor(resolveEmail, toOpaqueId, "opaque(joe@example.com)")).toBe(
+      "opaque(joe@example.com)",
+    );
   });
 });

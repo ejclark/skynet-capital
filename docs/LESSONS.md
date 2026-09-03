@@ -27,6 +27,35 @@ it. Prevention ranks, best first:
 
 ---
 
+### The prior fix for the feedback-log seam only worked for the one call site it didn't need to fix
+
+- **SHA:** n/a   **DATE:** 2026-09-03   **STATUS:** closed
+- **SIGNAL:** found by code review while re-plumbing the ladder gate onto a new message log (a
+  member request to lower the gate from "filed an issue" to "said hello"), not by a report — the
+  binding below it never independently surfaced a symptom distinct from the incident it was meant
+  to fix. Re-reading `progression-service.ts`'s `deps.readFeedback?.(opaqueMemberId ??
+  participantId)` against the SAME-DAY fix in the entry below showed the two disagreed about which
+  id shape the wrapper receives.
+- **ROOT CAUSE:** the earlier fix's wrapper (`serve-dashboard.ts`) assumed its argument was ALWAYS
+  a raw participant id and called `ownerEmailFor(id)` unconditionally, returning an empty list the
+  moment that lookup failed. But `view()`'s own doc says "every HTTP route passes [the opaque id]
+  now" — and they do (`onboardingView`, `plays-api-routes.ts`, `option-api-routes.ts`,
+  `trade-api-routes.ts` all pass it as the second argument, which `?? ` prefers over the
+  participant id). So the wrapper's `ownerEmailFor` call was handed an opaque hash on every one of
+  those paths, never matched a participant, and read as "no owner" — silently re-breaking the
+  exact gate the earlier fix believed it had closed. Only the companion tool's bare
+  `view(participantId)` call (no session, no opaque id to pass) ever exercised the wrapper
+  correctly.
+- **PREVENTION:** script — `logKeyFor` (`owner-link-store.ts`) replaces the ad hoc wrapper: it
+  tries `resolveEmail(id)` and falls through to `id` unresolved instead of emptying, which is
+  correct for BOTH shapes (a real participant id resolves through the owner link; an
+  already-opaque id simply doesn't resolve and is used as-is). `tests/server/owner-link-store.spec.ts`
+  pins both directions. Ledger note: a fix that only proves itself against the failing report's
+  own repro, and never against every OTHER caller of the same seam, can silently reintroduce the
+  bug for whichever caller wasn't in the repro — the generalization step is part of closing the
+  incident, not optional follow-up.
+- **SIDE QUESTS:** none
+
 ### The first-feedback milestone never earned in production — the engagement track read the feedback log with the wrong key
 - **SHA:** 5813bc4   **DATE:** 2026-09-03   **STATUS:** closed
 - **SIGNAL:** Eric, live in Moneypenny's rail: "Why hasn't my onboarding … meet Moneypenny been completed?" — she could see five filings in his log (read by opaque member id) while onboarding step 2 and the ladder gate (read through the progression service) said none. Shipped in #1138 (2026-09-02); noticed ~1 day later, and only because a second reader of the same ledger disagreed with the first.

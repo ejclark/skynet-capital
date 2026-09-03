@@ -12,7 +12,7 @@ import {
   type Flow,
   filedLine,
   inferKind,
-  opsLine,
+  OPS_LINE,
   type Routed,
   scriptedDraft,
 } from "./moneypenny-script";
@@ -33,8 +33,9 @@ import {
  * GitHub is the house capsule with its spec block, not a transcript. If the coach is off or
  * fails, the draft files as is rather than not at all.
  *
- * After a filing, the desk's own word lands as a system line: filed and logged, the gate lifted on
- * the first one — never a shipped claim.
+ * After a filing, the desk's own word lands as a system line: filed and triaged, never a shipped
+ * claim. The ladder gate is no longer tied to filing at all — it lifts on her first reply
+ * (`moneypenny.ts`'s `MESSAGE_OPS_LINE`, Eric's 2026-09-03 ruling), independent of this lane.
  */
 
 export interface FilingPatch {
@@ -79,7 +80,6 @@ export function createFilingLane(ctx: FilingContext) {
       await ctx.say([FEEDBACK_OFF]);
       return;
     }
-    const firstFiling = (index?.feedbackCount ?? 0) === 0;
     const answer = await submitFeedbackRequest({ kind: ctx.kind(), ...draft }).catch((err) => ({
       ok: false as const,
       error: err instanceof Error ? err.message : String(err),
@@ -97,7 +97,7 @@ export function createFilingLane(ctx: FilingContext) {
     await ctx.say([filedLine(answer.number, draft.title, answer.url)]);
     ctx.filed();
     await ctx.beat();
-    ctx.system(opsLine(firstFiling));
+    ctx.system(OPS_LINE);
   };
 
   /** One coach round: a question to relay, a draft to file, or the scripted fallback. */

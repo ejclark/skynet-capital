@@ -131,16 +131,16 @@ describe("serveTradeApi", () => {
     expect(body.refusals.join(" ")).toContain("isn't wired");
   });
 
-  // The feedback gate (#1119): a BUY opens a position and is refused while the gate holds; a SELL
-  // is an exit and never is.
+  // The message gate (#1119, lowered 2026-09-03): a BUY opens a position and is refused while the
+  // gate holds; a SELL is an exit and never is.
   const gated = {
     progression: {
       view: () =>
-        Promise.resolve({ wheels: true, unlocked: new Set(), ladderGate: "first-feedback" }),
+        Promise.resolve({ wheels: true, unlocked: new Set(), ladderGate: "first-message" }),
     },
   } as unknown as Partial<DashboardServerConfig>;
 
-  it("prepends the feedback-gate refusal to a gated buy's review", async () => {
+  it("prepends the message-gate refusal to a gated buy's review", async () => {
     const { res, out } = fakeRes();
     await serveTradeApi(
       post({ ...ticket, action: "buy" }),
@@ -151,7 +151,7 @@ describe("serveTradeApi", () => {
     );
     const body = JSON.parse(out.body ?? "{}");
     expect(body.preview.ok).toBe(false);
-    expect(body.preview.refusals[0]).toContain("first feedback filing");
+    expect(body.preview.refusals[0]).toContain("hello to Moneypenny");
   });
 
   it("refuses a gated buy at submit before the seam sees it", async () => {
@@ -178,6 +178,6 @@ describe("serveTradeApi", () => {
     const { res, out } = fakeRes();
     await serveTradeApi(post(ticket), res, "/api/trade/review", configWith(gated), session);
     const body = JSON.parse(out.body ?? "{}");
-    expect(body.preview.refusals.some((r: string) => r.includes("feedback"))).toBe(false);
+    expect(body.preview.refusals.some((r: string) => r.includes("Moneypenny"))).toBe(false);
   });
 });

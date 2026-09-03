@@ -9,8 +9,9 @@ import {
   inferKind,
   introLines,
   isSetupAnswer,
+  MESSAGE_OPS_LINE,
   NUDGE,
-  opsLine,
+  OPS_LINE,
   routeNote,
   SETUP_PATH,
   scriptedDraft,
@@ -194,9 +195,13 @@ describe("filing helpers", () => {
     expect(filedLine(7, "Fix it")).not.toContain("open it here");
   });
 
-  it("the first filing's ops line names the M·02 unlock and never claims shipped", () => {
-    expect(opsLine(true)).toMatch(/M·02 is now unlocked/);
-    expect(opsLine(true)).not.toMatch(/shipped/);
-    expect(opsLine(false)).toMatch(/on the build queue/);
+  it("the filing ops line is the same every time and never claims shipped", () => {
+    expect(OPS_LINE).toMatch(/on the build queue/);
+    expect(OPS_LINE).not.toMatch(/shipped/);
+  });
+
+  it("the message ops line names the M·02 unlock and never claims shipped", () => {
+    expect(MESSAGE_OPS_LINE).toMatch(/M·02 is now unlocked/);
+    expect(MESSAGE_OPS_LINE).not.toMatch(/shipped/);
   });
 });

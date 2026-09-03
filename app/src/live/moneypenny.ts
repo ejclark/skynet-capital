@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { type CompanionDraft, fetchCompanionIndex, streamCompanionTurn } from "./companion";
+import {
+  ackMoneypennyMessage,
+  type CompanionDraft,
+  fetchCompanionIndex,
+  streamCompanionTurn,
+} from "./companion";
 import { marketIsOpen } from "./market-hours";
 import { createFilingLane, NEVER_MIND, SEND_AS_IS } from "./moneypenny-filing";
 import {
@@ -8,6 +13,7 @@ import {
   draftCard,
   introLines,
   isSetupAnswer,
+  MESSAGE_OPS_LINE,
   routeNote,
 } from "./moneypenny-script";
 import { EMPTY, forgetOthers, keyFor, load, type Persisted, persist } from "./moneypenny-storage";
@@ -55,6 +61,9 @@ export interface MoneypennyState extends Persisted {
   /** Facts the chips read: the member's onboarding state, refreshed on every open. */
   readonly connected?: boolean;
   readonly firstTradeDone?: boolean;
+  /** Whether the ladder gate is already lifted — refreshed on every open, never persisted (same
+   *  as `connected`/`firstTradeDone`), so a fresh device still shows the celebration once. */
+  readonly messaged?: boolean;
   /** A filing she drafted, parked until the member says send — in memory only, never persisted. */
   readonly draft?: CompanionDraft;
   /** Bumps on every successful filing — the rail invalidates the gate-bearing queries on it. */
@@ -114,6 +123,7 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
     set({
       connected: ob?.account !== undefined,
       firstTradeDone: ob?.steps.some((s) => s.id === "first-trade" && s.done) ?? false,
+      messaged: ob?.steps.some((s) => s.id === "first-message" && s.done) ?? false,
     });
     return ob;
   };
@@ -234,6 +244,14 @@ export const useMoneypenny = create<MoneypennyState>((set, get) => {
       const note = text.trim();
       if (!note || get().typing || get().streaming) return false;
       append("user", [note]);
+      // The ladder gate's whole bar: a real message, said once, regardless of how it routes —
+      // ack the server (it records the evidence) and celebrate locally the first time this
+      // member's own onboarding hasn't already marked it done.
+      void ackMoneypennyMessage();
+      if (!get().messaged) {
+        set({ messaged: true });
+        append("sys", [MESSAGE_OPS_LINE]);
+      }
       const { draft } = get();
       // A parked draft: "send" files it, "never mind" drops it, anything else leaves it parked
       // and is a normal message.

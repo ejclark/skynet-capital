@@ -10,12 +10,13 @@ import { requireGet, sendJson } from "./page-shell.js";
 
 /**
  * MILESTONE M·01 AS DATA — `GET /api/onboarding`, the shell's Onboarding page (the Claude Design
- * canvas "Alpaca onboarding process streamline", 2026-09-02; IA in #1119). Three steps, each read
- * from the ledger that already proves it, never from the browser:
+ * canvas "Alpaca onboarding process streamline", 2026-09-02; IA in #1119; step 2's bar lowered
+ * 2026-09-03 from a filed issue to a message). Three steps, each read from the ledger that
+ * already proves it, never from the browser:
  *
- *   connect        — the session owns a HUMAN account on the board (`resolveOwnedIds` + hub state)
- *   first-feedback — the progression service's engagement track (a real feedback-log entry)
- *   first-trade    — at least one ladder milestone earned (a real fill)
+ *   connect       — the session owns a HUMAN account on the board (`resolveOwnedIds` + hub state)
+ *   first-message — the progression service's engagement track (a real message-log entry)
+ *   first-trade   — at least one ladder milestone earned (a real fill)
  *
  * The account block rides along when connected — equity and cash from the live board snapshot,
  * rungs earned of the ladder — so the page's tiles and the milestone come from one read. Money is
@@ -76,13 +77,13 @@ export async function onboardingView(
           session ? opaqueMemberId(session.email) : undefined,
         )
       : undefined;
-  const feedbackFiled = (progression?.engagementEarned ?? []).some(
-    (m) => m.milestoneId === "first-feedback",
+  const messaged = (progression?.engagementEarned ?? []).some(
+    (m) => m.milestoneId === "first-message",
   );
   const rungsEarned = progression?.earned.length ?? 0;
   const progress = deriveOnboarding({
     connected: human !== undefined,
-    feedbackFiled,
+    messaged,
     firstFillEarned: rungsEarned > 0,
   });
   const next = progression?.nextUp

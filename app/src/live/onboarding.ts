@@ -3,7 +3,7 @@
  * done-state is the server's reading of a ledger; this module carries no progress of its own.
  */
 
-export type OnboardingStepId = "connect" | "first-feedback" | "first-trade";
+export type OnboardingStepId = "connect" | "first-message" | "first-trade";
 
 export interface OnboardingStep {
   readonly id: OnboardingStepId;
