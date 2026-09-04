@@ -16,6 +16,10 @@ set -euo pipefail
 #       `enable_pr_auto_merge` MCP call (the only GraphQL-only step — 1 call/PR, trivial)
 #       for walk-away merge-on-green, and STOP. Do not poll.
 #
+#   scripts/ship.sh platter {open|board|ledger} …
+#       batch every change that needs Eric's merge onto ONE held PR per cadence, one commit per
+#       item (#1343). Full doctrine at the section header near the bottom of this file.
+#
 #   scripts/ship.sh merge <pr-number> [--method squash|merge|rebase]
 #       squash-merge over REST (core bucket) — ONLY for an UNPROTECTED base branch. Merging into
 #       a protected branch (i.e. `main` here) is refused for this session type (403), so on `main`
@@ -290,6 +294,19 @@ EOF_SHOTS
     echo "ship: opened PR #$num  $url"
     echo "$num"
     if [ "$hold" = 1 ]; then
+      # A hold has to be ENUMERABLE, not merely true. `--hold` used to set a local flag and print a
+      # line, so nothing recorded WHICH PRs were waiting on Eric: on 2026-09-04 the `hold-merge`
+      # label sat on two closed diagnostic PRs and on none of the seven real held changes that
+      # landed that day (#1343). You cannot batch what you cannot list. The label is also the one
+      # hold signal pipeline.yml's arm job can act on, so applying it here closes both gaps at once.
+      local lresp lhttp
+      lresp="$(api POST "/issues/$num/labels" '{"labels":["hold-merge"]}')"
+      lhttp="$(http_of "$lresp")"
+      if [ "$lhttp" = 200 ]; then
+        echo "ship: labelled #$num hold-merge — it now enumerates as waiting on Eric."
+      else
+        echo "ship: could NOT label #$num hold-merge (HTTP $lhttp) — apply it by hand or the hold is invisible." >&2
+      fi
       echo "ship: held for Eric (ready for review, auto-merge unarmed) — do NOT arm. STOP. No polling."
     # The arming usually happens through the MCP tool, which never runs this script — so the
     # instruction printed here is the last place the envelope answer can reach the session that
@@ -464,11 +481,288 @@ cmd_merge() {
   esac
 }
 
+# ── the platter — one held PR per cadence, not one per protected change (#1343) ────────────────
+#
+# The irreversible class never auto-merges and that boundary does not move; what moves is the cost
+# of clearing it. On 2026-09-04 seven protected-path changes landed as seven separate hand-merges
+# in one day — a cost that scales with lane throughput, not with risk. The platter batches them:
+# one branch, one held PR, ONE COMMIT PER ITEM, merged with a merge commit so `git revert <item
+# sha>` still drops a single item alone. Eric reads the ledger, not N diffs (Eric, 2026-09-04:
+# "10 PRs consolidated into 1 or a few PRs result in fewer touch points... the items are details").
+#
+#   scripts/ship.sh platter open <item-branch> [--name platter/<date>] [--subject S] [--no-verify]
+#   scripts/ship.sh platter board <item-branch> [--subject S] [--no-verify]
+#   scripts/ship.sh platter ledger [--base <ref>] [--body]
+#
+# Four rules that are load-bearing, not preferences:
+#   - NOTHING RED BOARDS. `board` runs `npm run verify` on the POST-board tree — the union so far,
+#     which is strictly stronger than "green alone on its own branch", and is the only proof that
+#     can exist here: pipeline.yml's `verify` triggers on `pull_request: branches: [main]`, so a PR
+#     based on a platter branch runs no CI at all. The platter PR (base `main`) is the union's
+#     first CI run. A failed verify un-boards the item and leaves the platter exactly as it was.
+#   - THE PLATTER IS NEVER A PLACE TO DEVELOP. A conflicting item catches up to `main` on its OWN
+#     branch and re-boards; nothing is ever fixed here (Rust's rollup procedure, same reasoning).
+#   - IT IS NEVER ARMED. `--hold` applies `hold-merge` (which pipeline.yml's arm job skips) and the
+#     diff is protected by construction (which `checkarm` refuses) — unarmed by two mechanisms.
+#   - NO SAME-FILE FENCE. Feast mode's "two items must not touch the same file" comes from PARALLEL
+#     athletes; the platter boards sequentially onto one integration branch, so same-file items are
+#     fine in order — a conflict is just an item that needs to catch up first.
+
+# Protected paths among the file names on stdin, space-separated (empty when none). The path-level
+# answer on purpose: envelope-scan's --base mode diffs the CHECKED-OUT HEAD, and the ledger column
+# is describing the ITEM, not the platter it landed on.
+platter_protected() {
+  local names; names="$(cat)"
+  [ -n "$names" ] || return 0
+  printf '%s\n' "$names" | xargs -r node "$(dirname "$0")/envelope-scan.mjs" --check | python3 -c '
+import sys, json
+print(" ".join(r["path"] for r in json.load(sys.stdin) if r.get("protected")))
+'
+}
+
+# The ledger is a PURE FUNCTION of `git log <base>..HEAD` — never a file anyone edits, so it cannot
+# drift from what is actually boarded. Each item commit carries its own row as trailers.
+PLATTER_BASE="origin/main"
+
+cmd_platter_ledger() {
+  local body=0
+  while [ $# -gt 0 ]; do case "$1" in
+    --base) PLATTER_BASE="$2"; shift 2 ;;
+    # --body prints the whole PR body the platter posts, not just the table — so the format contract
+    # can be exercised end to end (`ship platter ledger --body … | ship checkbody -`) instead of a
+    # spec re-typing the template and drifting from it.
+    --body) body=1; shift ;;
+    *) echo "ship platter ledger: unknown arg $1" >&2; exit 1 ;;
+  esac; done
+  if [ "$body" = 1 ]; then platter_body; else platter_ledger_table; fi
+}
+
+platter_ledger_table() {
+  git log --reverse --format="%H%x00%s%x00%b%x1e" "$PLATTER_BASE..HEAD" | python3 -c '
+import sys
+
+def cell(text):
+    return text.replace("|", "\\|").strip()
+
+rows = []
+for record in sys.stdin.read().split("\x1e"):
+    if not record.strip():
+        continue
+    parts = (record.strip("\n").split("\x00") + ["", ""])[:3]
+    sha, subject, body = parts
+    trailers, paths = {}, []
+    for line in body.splitlines():
+        key, _, value = line.partition(":")
+        key, value = key.strip(), value.strip()
+        if key == "Platter-Paths":
+            paths.append(value)
+        elif key.startswith("Platter-"):
+            trailers[key] = value
+    touched = [p for p in paths if p and p != "none"]
+    evidence = trailers.get("Platter-Verify", "—")
+    if touched:
+        evidence += " · " + " ".join("`%s`" % p for p in touched)
+    rows.append("| %d | `%s` | %s | %s | `%s` |" % (
+        len(rows) + 1, cell(trailers.get("Platter-Item", "—")),
+        cell(subject), cell(evidence), sha[:7]))
+
+print("| # | item | why | verify evidence | revert |")
+print("|---|---|---|---|---|")
+print("\n".join(rows) if rows else "| — | _nothing boarded yet_ | — | — | — |")
+'
+}
+
+# The PR body: ledger as the picture (docs/PICTURES.md prescribes a table for exactly this shape),
+# then the three things Eric needs to know to land it. Regenerated from git on every board.
+platter_body() {
+  cat <<EOF
+## The picture
+
+$(platter_ledger_table)
+
+_Caption — the platter ledger, read from the boarded commits: each item, the evidence it was green, and the sha that reverts it alone._
+
+## Summary
+
+- One merge clears every protected-path change below; the boundary does not move, only its cost.
+- **Merge with "Create a merge commit", never squash** — one commit per item is what keeps revert granular.
+- Each item was verified green on the union as it boarded; this PR is that union's first CI run.
+
+<details>
+<summary><strong>How to land this, and how to drop one bad item</strong></summary>
+
+**Landing.** Use GitHub's **Create a merge commit** button. Squashing still lands the same tree, but
+it collapses the items into one commit and the per-item revert below is lost — the platter would
+then only revert as a whole. The repo's settings already put this PR's title and body (this ledger)
+on the merge commit, so \`main\`'s first-parent history reads as PRs and \`git log main\` reads as items.
+
+**Dropping one item after the merge.** \`git revert <revert sha>\` from the table — no \`-m\`, because
+each item is an ordinary single-parent commit. An item a later item builds on may conflict; that is
+the honest limit of any ordered batch, not a defect of this one.
+
+**Dropping one item before the merge.** Re-open the platter without it (\`ship platter open\` on a new
+name, then \`board\` the survivors in order). Nothing is ever fixed on the platter itself.
+
+**What boards.** Any change to an \`envelope.json\`-protected path that is already green. An item
+ships alone instead — today's one-held-PR-per-change path — only when it is *hot*: \`scripts/incident-scan.mjs\`
+names an unlearned incident it fixes, or a deploy is blocked on it. Otherwise it waits for the cadence.
+
+**Cadence.** The platter ships when \`node scripts/digest-scan.mjs --due\` says a digest is due (5
+landed commits or the 7-day heartbeat) — the count Eric cannot predict, the time he can.
+
+</details>
+EOF
+}
+
+# board one item onto the checked-out platter. Shared by `open` (the first item) and `board`.
+platter_board_item() {
+  local item="$1" subject="$2" verify="$3"
+  git diff --quiet && git diff --cached --quiet || {
+    echo "ship platter: uncommitted changes — commit or drop them before boarding" >&2; exit 1; }
+  git fetch --quiet origin "$item" || {
+    echo "ship platter: cannot fetch origin/$item — push the item branch first" >&2; exit 1; }
+
+  local before item_sha; before="$(git rev-parse HEAD)"; item_sha="$(git rev-parse FETCH_HEAD)"
+  # Default to the item's newest subject; --subject overrides, which is what a multi-commit item
+  # branch wants (a squash has no subject of its own, and the newest one can under-describe it).
+  [ -n "$subject" ] || subject="$(git log -1 --format=%s FETCH_HEAD)"
+  printf '%s\n' "$subject" | npx commitlint || {
+    echo "ship platter: the item subject above is not a valid Conventional Commit — pass --subject." >&2
+    exit 1; }
+
+  git merge --squash FETCH_HEAD || {
+    git merge --abort >/dev/null 2>&1 || git reset --hard --quiet "$before"
+    echo "ship platter: $item conflicts with the platter — the platter is unchanged." >&2
+    echo "  Catch the item up on ITS OWN branch (git merge origin/main --no-edit), then re-board." >&2
+    exit 1; }
+  git diff --cached --quiet && {
+    git reset --hard --quiet "$before"
+    echo "ship platter: $item adds nothing — already boarded, or already on main." >&2; exit 1; }
+
+  local evidence
+  if [ "$verify" = 1 ]; then
+    echo "ship platter: verifying the union with $item boarded…"
+    npm run verify >/tmp/ship-platter-verify.log 2>&1 || {
+      git reset --hard --quiet "$before"
+      echo "ship platter: VERIFY FAILED with $item boarded — un-boarded it; the platter is unchanged." >&2
+      tail -20 /tmp/ship-platter-verify.log >&2
+      exit 1; }
+    evidence="verify green $(date -u +%Y-%m-%dT%H:%MZ)"
+  else
+    evidence="verify skipped (--no-verify)"
+  fi
+
+  local touched msg p; touched="$(git diff --cached --name-only | platter_protected)"
+  msg="/tmp/ship-platter-msg.txt"
+  # One trailer line per path: commitlint's body/footer line cap is 100 chars, and a single joined
+  # list of touched paths blows through it on any real platter.
+  {
+    printf '%s\n\n' "$subject"
+    printf 'Platter-Item: %s\n' "$item"
+    printf 'Platter-Sha: %s\n' "$(printf '%s' "$item_sha" | cut -c1-12)"
+    printf 'Platter-Verify: %s\n' "$evidence"
+    if [ -n "$touched" ]; then
+      for p in $touched; do printf 'Platter-Paths: %s\n' "$p"; done
+    else
+      printf 'Platter-Paths: none\n'
+    fi
+  } > "$msg"
+  git commit --quiet -F "$msg"
+  echo "ship platter: boarded $item as $(git rev-parse --short HEAD) — $subject"
+}
+
+# Refresh the open platter PR's ledger. Best-effort by design: the commit is already made and
+# pushed, so a failed PATCH is a stale body to fix by hand, never a lost item.
+platter_sync_body() {
+  local branch="$1" owner resp http body num newbody payload
+  owner="$(repo)"; owner="${owner%%/*}"
+  resp="$(api GET "/pulls?state=open&head=$owner:$branch")"
+  http="$(http_of "$resp")"; body="$(body_of "$resp")"
+  if [ "$http" != 200 ]; then
+    echo "ship platter: GET pulls returned HTTP $http — refresh the ledger by hand." >&2; return 0
+  fi
+  num="$(printf '%s' "$body" | python3 -c 'import sys,json; r=json.load(sys.stdin); print(r[0]["number"] if r else "")')"
+  if [ -z "$num" ]; then
+    echo "ship platter: no open PR for $branch — open one with 'ship platter open'." >&2; return 0
+  fi
+  newbody="$(platter_body)"
+  payload="$(python3 -c "import json,sys; print(json.dumps({'body': sys.argv[1]}))" "$newbody")"
+  resp="$(api PATCH "/pulls/$num" "$payload")"; http="$(http_of "$resp")"
+  if [ "$http" = 200 ]; then
+    echo "ship platter: ledger refreshed on #$num."
+  else
+    echo "ship platter: PATCH body returned HTTP $http — refresh #$num's ledger by hand." >&2
+  fi
+}
+
+cmd_platter_open() {
+  local item="${1:-}"; shift || true
+  [ -n "$item" ] || {
+    echo "ship platter open: an item branch is required — a PR cannot open on an empty diff" >&2; exit 1; }
+  local name="" subject="" verify=1
+  while [ $# -gt 0 ]; do case "$1" in
+    --name) name="$2"; shift 2 ;;
+    --subject) subject="$2"; shift 2 ;;
+    --no-verify) verify=0; shift ;;
+    *) echo "ship platter open: unknown arg $1" >&2; exit 1 ;;
+  esac; done
+  [ -n "$name" ] || name="platter/$(date -u +%Y-%m-%d)"
+  case "$name" in platter/*) ;; *)
+    echo "ship platter open: --name must start with 'platter/' — the branch name is how the platter is found" >&2
+    exit 1 ;;
+  esac
+
+  git diff --quiet && git diff --cached --quiet || { echo "ship platter: uncommitted changes — commit first" >&2; exit 1; }
+  git fetch --quiet origin main
+  git checkout -q -B "$name" origin/main
+  platter_board_item "$item" "$subject" "$verify"
+
+  local bodyfile="/tmp/ship-platter-body.md"
+  platter_body > "$bodyfile"
+  # --no-verify here is not a skipped check: platter_board_item already ran the same `npm run
+  # verify` on this exact tree and linted the subject, and cmd_open's stale-base guard is satisfied
+  # by construction (this branch was cut from a freshly fetched origin/main seconds ago).
+  cmd_open "chore(platter): protected-path changes — ${name#platter/}" \
+    --body-file "$bodyfile" --hold --no-verify
+}
+
+cmd_platter_board() {
+  local item="${1:-}"; shift || true
+  [ -n "$item" ] || { echo "ship platter board: an item branch is required" >&2; exit 1; }
+  local subject="" verify=1
+  while [ $# -gt 0 ]; do case "$1" in
+    --subject) subject="$2"; shift 2 ;;
+    --no-verify) verify=0; shift ;;
+    *) echo "ship platter board: unknown arg $1" >&2; exit 1 ;;
+  esac; done
+
+  local branch; branch="$(git rev-parse --abbrev-ref HEAD)"
+  case "$branch" in platter/*) ;; *)
+    echo "ship platter board: HEAD is '$branch', not a platter branch — check out the open platter first." >&2
+    exit 1 ;;
+  esac
+  platter_board_item "$item" "$subject" "$verify"
+  echo "ship platter: pushing ${branch}…"
+  git push -u origin "$branch"
+  platter_sync_body "$branch"
+}
+
+cmd_platter() {
+  local sub="${1:-}"; shift || true
+  case "$sub" in
+    open) cmd_platter_open "$@" ;;
+    board) cmd_platter_board "$@" ;;
+    ledger) cmd_platter_ledger "$@" ;;
+    *) echo "usage: scripts/ship.sh platter {open <item-branch> [--name platter/<date>] [--subject S] [--no-verify] | board <item-branch> [--subject S] [--no-verify] | ledger [--base <ref>] [--body]}" >&2; exit 1 ;;
+  esac
+}
+
 case "${1:-}" in
   open) shift; cmd_open "$@" ;;
   merge) shift; cmd_merge "$@" ;;
   automerge) shift; cmd_automerge "$@" ;;
   checkbody) shift; cmd_checkbody "$@" ;;
   checkarm) shift; cmd_checkarm "$@" ;;
-  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | checkarm <path...>}" >&2; exit 1 ;;
+  platter) shift; cmd_platter "$@" ;;
+  *) echo "usage: scripts/ship.sh {open \"<title>\" [--body-file F] [--base B] [--no-verify] | merge <n> [--method squash] | automerge <n> | checkbody <body-file> | checkarm <path...> | platter {open|board|ledger} ...}" >&2; exit 1 ;;
 esac
