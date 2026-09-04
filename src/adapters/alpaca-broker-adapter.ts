@@ -42,10 +42,22 @@ export class AlpacaBrokerAdapter implements BrokerPort {
         side: order.side,
       });
       if (placed.status === "rejected" || placed.status === "canceled") {
-        return { intent: order, status: "rejected", reason: `order ${placed.status}` };
+        return {
+          intent: order,
+          status: "rejected",
+          reason: `order ${placed.status}`,
+          orderId: placed.id,
+        };
       }
-      return { intent: order, status: "filled", filledQuantity: order.quantity };
+      return {
+        intent: order,
+        status: "filled",
+        filledQuantity: order.quantity,
+        orderId: placed.id,
+      };
     } catch (error) {
+      // The broker never created an order here (the request itself failed), so there is no id to
+      // report — `orderId` stays absent, same as any submission that never reached the broker.
       return { intent: order, status: "rejected", reason: String(error) };
     }
   }
