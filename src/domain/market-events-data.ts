@@ -430,13 +430,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "University of Michigan consumer sentiment — final (Sep 2026)",
     date: "2026-09-25",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: the 2026 release-dates document of the Surveys of Consumers (data.sca.isr.umich.edu/fetchdoc.php?docid=79628) lists "September 25 September Final" in its PDF text layer, decompressed direct 2026-09-04; the customary time is 10:00 ET but the schedule document states none, and the next-release line on sca.isr.umich.edu currently names only the 09-11 preliminary. Filed estimate per the no-self-confirm limit in the event-research lane on an event discovered in-sweep',
+      'UMICH: the 2026 release-dates document of the Surveys of Consumers (data.sca.isr.umich.edu/fetchdoc.php?docid=79628) lists "September 25 September Final" in its PDF text layer, decompressed direct 2026-09-04 by this event\'s own initial research. NO CLOCK TIME is stated anywhere in that document and the apex host sca.isr.umich.edu did not resolve that day, so 10:00 ET remains customary rather than sourced — the date is primary-confirmed, the time is not',
     impact: "low",
     symbols: [],
     notes:
-      "Earns an entry rather than being a routine revision because of the collection rule in the same schedule document: final-release interviews run through the Monday before release (2026-09-21), making this the first UMich reading that can contain the 2026-09-16 FOMC decision — which the 09-11 preliminary structurally cannot (its interviews close 09-07). Discovered during umich-sentiment-prelim-2026-09-11 initial research.",
+      "Earns an entry rather than being a routine revision because of the collection rule in the same schedule document: final-release interviews run through the Monday before release (2026-09-21), making this the first UMich reading that can contain the 2026-09-16 FOMC decision — which the 09-11 preliminary structurally cannot (its interviews close 09-07). So the number that carries information is the prelim→final revision, not the level. Discovered during umich-sentiment-prelim-2026-09-11 initial research, which filed it estimate and deferred promotion here; promoted to confirmed by its own initial research off the publisher's schedule document (the crwv-fully-connected-2026-09-29 precedent).",
   },
   {
     id: "jolts-2026-09-29",
