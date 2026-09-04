@@ -30,6 +30,9 @@ items don't wait on each other's slowest step:
 }
 ```
 
+(`fix-type-error.instructions.md` above is illustrative — not a checked-in file. See "Real,
+checked-in chores" below for ones that actually exist.)
+
 Once a step reports `blocked` or `skipped` for an item, later steps pass it through unchanged
 rather than spending an agent on a target the chain already gave up on.
 
@@ -79,6 +82,57 @@ One or two sentences: what "done" looks like for one target.
 Substitution: the calling grind run supplies the target as the agent's `{item}` — reference it in
 prose ("the target below") rather than trying to template inside the instructions file itself;
 `grind.js` interpolates `{item}`/`{prev}` into the wrapper prompt, not into the file contents.
+
+## Real, checked-in chores
+
+- [`bury-dead-code.instructions.md`](bury-dead-code.instructions.md) — dispose of one
+  knip-flagged unused export/type/file (mirrors the `mortician` agent's loop).
+- [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one dead doc reference
+  flagged by `scripts/doc-rot-scan.mjs`.
+- [`triage-comment-bloat.instructions.md`](triage-comment-bloat.instructions.md) — triage one
+  file's worth of narration-only comments flagged by `scripts/comment-bloat-scan.mjs`.
+- [`test-backfill.instructions.md`](test-backfill.instructions.md) — backfill BDD specs for one
+  file flagged by `scripts/spec-gap-scan.mjs` (mirrors the `test-backfiller` agent's loop).
+
+Each of these was chosen and vetted through a research pass (red/blue/purple/tiger/yellow-teamed —
+see the PR that added them) against every gate this repo currently runs; several plausible-looking
+batch chores (fanning `/decompose` or `/dedupe`, renumbering forward-test IDs) were deliberately
+**not** codified here because they need cross-item context a fan-out can't safely give them — see
+each file's own header for why, when a reason applies.
+
+## Calling convention: effort, model, and the shared-budget-file race
+
+`grind.js` has no way to read an `*.instructions.md` file's contents before dispatching an agent to
+it (workflow scripts have no filesystem access) — so a chore that genuinely needs a higher
+effort/model tier than grind's cheap default has to say so in its own header, and the **caller**
+is responsible for actually passing `{effort: "high", ...}` (or whatever the file asks for) in the
+`steps` array. Read each instructions.md's "Calling convention" note before invoking it.
+
+The same applies to gates that rewrite one shared budget/ratchet file (`*-scan.mjs --update`):
+running `--update` inside each parallel item's own step risks two agents racing the same file.
+Every instructions.md above that touches a ratcheted gate says explicitly whether to run
+`--update` per item, once at the end (non-isolated), or not at all from within the chain.
+
+## Known limitations
+
+- **No built-in `envelope.json` enforcement.** An instructions.md file can tell its agent to
+  self-check and report `blocked` on a protected path, but nothing in `grind.js` itself filters the
+  `items` list before dispatch. When an item list comes from a live gate scan (knip, arch-scan,
+  etc.) rather than a fixed list you wrote by hand, filter out anything matching
+  `envelope.json`'s protected patterns yourself before calling grind — a protected-path edit still
+  gets caught at CI, but only after an agent already spent effort on a target that was never going
+  to land.
+- **`skill` steps reach `.claude/skills/*/SKILL.md` only, not `.claude/agents/*.md`.** Several
+  useful batch chores mirror an existing single-target *agent* (`mortician`, `test-backfiller`,
+  `decomposer`, `ui-librarian`) rather than a skill — for those, the `instructions` step kind is
+  the only current option, which means hand-duplicating the agent's loop into a `*.instructions.md`
+  file (as the four files above do) rather than reusing it directly. This is a deliberate,
+  documented trade rather than an oversight: those agents' own contracts say to always pick their
+  target from a fresh `--candidate` scan and never accept a hand-picked one, so pointing several
+  parallel grind items at the same agent type risks every one of them independently re-deriving
+  the *same* top-priority target instead of respecting the item list — a correctness risk, not just
+  a missing convenience. Revisit only after that "never hand-pick" contract has a way to accept an
+  explicit target.
 
 ## When to reach for this vs. `/governor` or a purpose-built workflow
 
