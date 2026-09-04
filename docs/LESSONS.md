@@ -27,6 +27,49 @@ it. Prevention ranks, best first:
 
 ---
 
+### Eight open PRs sat red on commitlint at once — nothing in the local path ever ran the same check CI does
+
+- **SHA:** n/a (fix on `scripts/ship.sh` and `.github/prompts/event-research.md`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric, scanning open PRs after two unrelated fixes: "there are many failing due to
+  commit lint failures. This should be caught before committing to prevent this error. I expect
+  automation to guard and never fail due to this error." A scan of the 20 open PRs found 8 with a
+  failing `verify` job; reading the actual commitlint output (not assuming) showed three distinct
+  rule violations, not one: `header-max-length` (a 102-char PR title), `body-max-line-length` (an
+  unwrapped analysis paragraph in a commit body), and `type-enum` (a commit typed `research(...)`,
+  which isn't a Conventional-Commit type — `docs(research): ...` is the one every other PR here
+  uses). All eight were `docs(research): ...` PRs from the event-research automation lane.
+- **ROOT CAUSE:** this repo's local guard against a bad commit message is `.husky/commit-msg`
+  (`npx --no-install commitlint --edit "$1"`), installed by the `prepare` npm script — except
+  `prepare` reads `test -n "$CI" || husky`, deliberately skipping install whenever `$CI` is set, on
+  the ordinary assumption that a CI runner never needs a human's local hooks. The event-research
+  lane breaks that assumption: `.github/workflows/moneypenny-events.yml`'s `research due events`
+  job runs a Claude session (`claude-code-action@v1`) that composes its own commit message and
+  calls `git commit` directly from inside a GitHub Actions job — and GitHub Actions sets `CI=true`
+  unconditionally, by platform design, for every job. So the one lane whose runner IS the place a
+  human would normally rely on the hook is exactly the lane where the hook can never exist. The
+  only thing that ever checked these messages was the separate `verify` job's own
+  `commitlint --from --to`, which runs after the PR is already open — too late to prevent it, only
+  able to report it.
+  What else crosses this system: `scripts/ship.sh`'s own local `open` verify (`npm run verify`)
+  has the identical gap for every OTHER lane, research or not — it runs typecheck/lint/test but
+  never commitlint, so an engineering PR opened via `/ship` (including three opened this session)
+  passed by luck, not by a check. `.github/prompts/event-research.md` already documented the
+  `header-max-length` rule in prose, correctly, but never instructed running commitlint locally,
+  and said nothing about the other two rules — a documented rule with no mechanical check behind
+  it caught one violation type and missed two.
+- **PREVENTION:** script, at both crossing points. `scripts/ship.sh`'s `cmd_open` now runs
+  `npx commitlint --from <merge-base with origin/$base> --to HEAD --verbose` as part of its local
+  verify, fetching `origin/$base` first (the day's other lesson, applied here too: a stale local
+  ref would compare against the wrong base) — this covers every lane that ships through `ship.sh
+  open`, mechanically, not by reminder. `.github/prompts/event-research.md` (a lane that composes
+  and pushes its own commits, never touching `ship.sh open`) now instructs writing the message to a
+  file and running `npx commitlint --edit <file>` before committing, and states all three rules
+  that have actually fired, not just the one that had prose already.
+- **SIDE QUESTS:** none — the two fixes above are the whole crossing; no other lane commits from a
+  path neither covers.
+
+---
+
 ### The CI `verify` job's `app/` install re-fetched from the network on almost every run — the cache key never saw its lockfile
 
 - **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
