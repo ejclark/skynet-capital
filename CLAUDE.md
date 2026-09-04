@@ -248,6 +248,18 @@ common routes:
   `ui-librarian`, `mortician`, `test-backfiller`; drills `/decompose`, `/dedupe`; big burn-downs →
   feast mode, see the governor skill). "Why did CI fail" → a gate probably caught real drift — fix
   the finding, not the gate.
+- "grind through a batch of near-identical, mechanical chores" (the same fix/skill/command applied
+  across many files/PRs/branches/tickers, low judgment per item) → **`/grind`**
+  (`.claude/workflows/grind.js`) — fans a chain of steps across items via `pipeline()`, cheap
+  model/effort by default. `steps: [{kind:"script"|"instructions"|"skill"|"prompt", ...}]` composes
+  a check → fix → re-check chain (`"script"` for an exact command, `"skill"` to fan an existing
+  `.claude/skills/<name>/SKILL.md` like `/decompose` across a batch, `"instructions"` to point at a
+  reusable `docs/grind/*.instructions.md` chore spec); `promptTemplate` alone covers a one-off. See
+  [`docs/grind/README.md`](docs/grind/README.md) for the step-kind grammar and the
+  `*.instructions.md` format. Not for cross-item synthesis or a design call, or for anything
+  touching `envelope.json`'s protected class — those want a purpose-built pass or Eric's gate, not
+  a cheap fan-out (a `/governor` athlete's own WIP=1 throttle is deliberate for the same reason —
+  check before fanning a skill/agent that already has one).
 - **"file this as an issue"**, or an issue that reads as a wall → **`/issue`** (shapes the capsule,
   lints via `npm run issue:lint`).
 - **Any reaction to a rendered frame** ("this looks terrible", "a 30/100", "more dramatic") →
