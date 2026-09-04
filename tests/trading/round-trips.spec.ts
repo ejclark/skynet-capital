@@ -67,6 +67,45 @@ describe("matchRoundTrips — FIFO matching", () => {
   });
 });
 
+describe("matchRoundTrips — playbook attribution (#885)", () => {
+  it("carries the OPENING fill's playbookId/playbookMode onto the closed trip", () => {
+    const ledger = matchRoundTrips([
+      fill({
+        side: "buy",
+        quantity: 10,
+        price: 100,
+        at: "2026-08-01T14:00:00.000Z",
+        playbookId: "S1-NVDA",
+        playbookMode: "standard",
+      }),
+      // The closing fill's own attribution (absent here) never overrides the opening lot's.
+      fill({ side: "sell", quantity: 10, price: 110, at: "2026-08-03T14:00:00.000Z" }),
+    ]);
+    expect(ledger.trips[0]).toMatchObject({ playbookId: "S1-NVDA", playbookMode: "standard" });
+  });
+
+  it("leaves an unattributed fill's trip with no playbookId at all", () => {
+    const ledger = matchRoundTrips([
+      fill({ side: "buy", quantity: 10, price: 100, at: "2026-08-01T14:00:00.000Z" }),
+      fill({ side: "sell", quantity: 10, price: 110, at: "2026-08-03T14:00:00.000Z" }),
+    ]);
+    expect(ledger.trips[0]).not.toHaveProperty("playbookId");
+  });
+
+  it("carries attribution onto a still-open lot too", () => {
+    const ledger = matchRoundTrips([
+      fill({
+        side: "buy",
+        quantity: 5,
+        price: 100,
+        at: "2026-08-01T14:00:00.000Z",
+        playbookId: "S2-AAPL",
+      }),
+    ]);
+    expect(ledger.open[0]).toMatchObject({ playbookId: "S2-AAPL" });
+  });
+});
+
 describe("matchRoundTrips — honesty invariants", () => {
   it("excludes and COUNTS fills with no recorded price rather than treating them as $0", () => {
     const ledger = matchRoundTrips([

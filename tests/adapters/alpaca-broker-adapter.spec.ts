@@ -54,10 +54,25 @@ describe("AlpacaBrokerAdapter", () => {
 
       const result = await adapter.submit(buy);
 
-      expect(result).toMatchObject({ status: "filled", filledQuantity: 100 });
+      expect(result).toMatchObject({ status: "filled", filledQuantity: 100, orderId: "o1" });
     });
 
-    it("reports a rejected result when the API errors", async () => {
+    it("carries the broker's order id even on a same-request rejection (#885)", async () => {
+      // A "rejected"/"canceled" status still means the broker CREATED an order object — its id is
+      // the join key `playbook-attribution.ts` needs, so it must survive here too.
+      const adapter = adapterWith({
+        "/v2/orders": {
+          status: 200,
+          body: { id: "o2", symbol: "EEM", qty: "100", side: "buy", status: "rejected" },
+        },
+      });
+
+      const result = await adapter.submit(buy);
+
+      expect(result).toMatchObject({ status: "rejected", orderId: "o2" });
+    });
+
+    it("reports a rejected result with no order id when the API errors before creating one", async () => {
       const adapter = adapterWith({
         "/v2/orders": { status: 403, body: { message: "insufficient buying power" } },
       });
@@ -66,6 +81,7 @@ describe("AlpacaBrokerAdapter", () => {
 
       expect(result.status).toBe("rejected");
       expect(result.reason).toContain("403");
+      expect(result.orderId).toBeUndefined();
     });
   });
 });

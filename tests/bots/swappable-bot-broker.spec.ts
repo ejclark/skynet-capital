@@ -103,7 +103,7 @@ describe("SwappableBotBroker", () => {
 
       const result = await broker.submit(intent);
 
-      expect(result).toEqual({ intent, status: "filled", filledQuantity: 1 });
+      expect(result).toEqual({ intent, status: "filled", filledQuantity: 1, orderId: "o1" });
     } finally {
       globalThis.fetch = original;
     }

@@ -35,6 +35,7 @@
  *    broker's live positions instead of assuming the window covered everything.
  */
 
+import type { PlaybookMode } from "../domain/types.js";
 import { isOccSymbol } from "./option-symbols.js";
 
 /** One executed fill — the narrow shape round-tripping needs, independent of any broker payload. */
@@ -59,6 +60,15 @@ export interface TradeFill {
    * `unmatchedSellQuantity` with a caveat it didn't earn. Ordinary fills never set this.
    */
   readonly synthetic?: boolean;
+  /**
+   * Structured playbook attribution (#885) — which house playbook's `OrderIntent` produced this
+   * fill, joined in by the caller (`desk-data.ts`'s `fillsFrom`) from `playbook-attribution.ts`
+   * BEFORE the fill reaches this matcher; the matcher itself performs no join, only carries the
+   * field through. Absent for a manual desk order or any fill with no known attribution.
+   */
+  readonly playbookId?: string;
+  /** The mode the playbook ran in. Meaningless without `playbookId`. */
+  readonly playbookMode?: PlaybookMode;
 }
 
 /** A matched, closed trade: shares bought and later sold. */
@@ -83,6 +93,11 @@ export interface RoundTrip {
    * "$420 → $0" is a full WIN, not a wipeout.
    */
   readonly short?: boolean;
+  /** Which playbook drove the trip — carried from the OPENING fill's `TradeFill.playbookId`
+   *  (#885), never the closing one: a partial close of an attributed lot still belongs to
+   *  whichever playbook opened it, not whatever later closed it. */
+  readonly playbookId?: string;
+  readonly playbookMode?: PlaybookMode;
 }
 
 /** An unmatched lot still open at the end of the fill window. */
@@ -94,6 +109,9 @@ interface OpenLot {
   /** True when the lot was sold to open (a written option): `price` is premium received and the
    *  lot closes with a buy. Absent on an ordinary long lot. */
   readonly short?: boolean;
+  /** Carried from the opening fill (#885) — see `RoundTrip.playbookId`. */
+  readonly playbookId?: string;
+  readonly playbookMode?: PlaybookMode;
 }
 
 export interface RoundTripLedger {
@@ -124,6 +142,9 @@ interface Lot {
   quantity: number;
   price: number;
   at: string;
+  /** Carried from the opening fill (#885) — see `RoundTrip.playbookId`. */
+  playbookId?: string;
+  playbookMode?: PlaybookMode;
 }
 
 function isUsable(fill: TradeFill): boolean {
@@ -140,6 +161,18 @@ function holdMs(openedAt: string, closedAt: string): number {
 /** Which way a symbol's open lots point. A netted FIFO position is never both at once, which is
  *  what lets one lot queue serve both directions instead of a parallel short-lot structure. */
 type LotDirection = "long" | "short";
+
+/** The playbook-attribution fields shared by `Lot`/`OpenLot`/`RoundTrip` (#885) — pulled out so
+ *  `matchSymbol` doesn't spend its own cognitive-complexity budget on optional-field spreads. */
+function attributionOf(source: {
+  readonly playbookId?: string;
+  readonly playbookMode?: PlaybookMode;
+}): Pick<Lot, "playbookId" | "playbookMode"> {
+  return {
+    ...(source.playbookId ? { playbookId: source.playbookId } : {}),
+    ...(source.playbookMode ? { playbookMode: source.playbookMode } : {}),
+  };
+}
 
 function tripFrom(
   lot: Lot,
@@ -165,6 +198,7 @@ function tripFrom(
     returnPct: basis > 0 ? (realized / basis) * 100 : 0,
     holdMs: holdMs(lot.at, fill.at),
     ...(short ? { short: true } : {}),
+    ...attributionOf(lot),
   };
 }
 
@@ -238,7 +272,7 @@ function matchSymbol(
     // Flat, so this fill sets the direction; otherwise it is adding to the leg already open.
     if (lots.length === 0) direction = fill.side === "buy" ? "long" : "short";
     if (fill.side === "sell") written += remaining;
-    lots.push({ quantity: remaining, price, at: fill.at });
+    lots.push({ quantity: remaining, price, at: fill.at, ...attributionOf(fill) });
   }
 
   for (const lot of lots) {
@@ -248,6 +282,7 @@ function matchSymbol(
       price: lot.price,
       at: lot.at,
       ...(direction === "short" ? { short: true } : {}),
+      ...attributionOf(lot),
     });
   }
   return { unmatchedSells, written };
