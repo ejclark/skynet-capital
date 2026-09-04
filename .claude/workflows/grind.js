@@ -3,17 +3,49 @@
 // They are not Node modules; the linter's parser rejects the dialect, not the code.
 export const meta = {
   name: 'grind',
-  description: 'Fan out one repetitive per-item task across many similar targets, cheap model/effort by default',
-  whenToUse: 'For a batch of near-identical, mechanical chores — the same fix applied across many files/PRs/branches/tickers — where doing them one at a time in the main thread burns turns without needing deep judgment per item. Not for anything requiring cross-item synthesis or a design call; that wants a purpose-built pipeline instead. Args: {items: [...], promptTemplate: "...{item}...", effort?, model?, isolation?}.',
+  description: 'Fan out a chain of steps across many similar targets, cheap model/effort by default',
+  whenToUse:
+    'For a batch of near-identical, mechanical chores — the same fix/skill/command applied across many files/PRs/branches/tickers — where doing them one at a time in the main thread burns turns without needing deep judgment per item. Not for anything requiring cross-item synthesis or a design call; that wants a purpose-built pipeline instead.\n\n' +
+    'Args: {items: [...], effort?, model?, isolation?, promptTemplate?, steps?}. Provide exactly one of promptTemplate or steps.\n\n' +
+    '- promptTemplate: "...{item}..." — single-stage mode: one agent call per item (unchanged from before).\n' +
+    '- steps: [{kind, ...}] — multi-stage mode: each item runs the SAME step chain in order via pipeline() (item A can be on step 3 while item B is still on step 1). Once a step reports status "blocked" or "skipped", later steps for that item pass through unchanged rather than running. Step kinds:\n' +
+    '  - {kind:"prompt", template} — free-text instruction, same {item} substitution as promptTemplate.\n' +
+    '  - {kind:"instructions", path, extra?} — points at a checked-in *.instructions.md file (see docs/grind/README.md); the agent reads it and carries it out against the item. Write the chore once, reuse the file across every grind run instead of re-pasting a template.\n' +
+    '  - {kind:"skill", name, args?} — the agent invokes an existing repo skill (its .claude/skills/<name>/SKILL.md), exactly as if a user typed "/<name>", targeted at the item.\n' +
+    '  - {kind:"script", command} — the agent runs the exact shell command (with {item}/{prev} substituted) and reports pass/fail only — no exploration, no judgment. The cheapest, fastest, most deterministic step kind; prefer it whenever the chore reduces to a command.\n' +
+    '  Every step after the first receives the prior step\'s structured {status, summary} as {prev} in its prompt, so steps compose (e.g. script check -> skill fix -> script re-check). Per-step overrides: effort/model.',
   phases: [{ title: 'Grind' }],
 }
 
 const items = args?.items
 if (!items?.length) throw new Error('grind requires args.items: a non-empty array')
-if (!args?.promptTemplate) throw new Error('grind requires args.promptTemplate: a string containing "{item}"')
+
+const steps = args?.steps?.length
+  ? args.steps
+  : args?.promptTemplate
+    ? [{ kind: 'prompt', template: args.promptTemplate }]
+    : null
+if (!steps) {
+  throw new Error(
+    'grind requires either args.promptTemplate (a string containing "{item}") or args.steps (a non-empty array of {kind, ...} step specs)',
+  )
+}
+
+const STEP_KINDS = ['prompt', 'instructions', 'skill', 'script']
+for (const step of steps) {
+  if (!step || typeof step !== 'object') throw new Error('grind: each step must be an object {kind, ...}')
+  if (!STEP_KINDS.includes(step.kind)) {
+    throw new Error(`grind: unknown step kind "${step.kind}" (expected one of ${STEP_KINDS.join(', ')})`)
+  }
+  if (step.kind === 'prompt' && !step.template) throw new Error('grind: a "prompt" step requires template (a string containing "{item}")')
+  if (step.kind === 'instructions' && !step.path) throw new Error('grind: an "instructions" step requires path (e.g. "docs/grind/foo.instructions.md")')
+  if (step.kind === 'skill' && !step.name) throw new Error('grind: a "skill" step requires name (e.g. "decompose")')
+  if (step.kind === 'script' && !step.command) throw new Error('grind: a "script" step requires command (a shell command string, "{item}"/"{prev}" substituted)')
+}
 
 // Defaults are deliberately cheap: this workflow exists to burn through repetitive, low-judgment
-// work fast, not to replicate Ultracode's xhigh bump. Override per call when a batch is subtler.
+// work fast, not to replicate Ultracode's xhigh bump. Override per call (or per step) when a batch
+// is subtler.
 const EFFORT = args.effort || 'low'
 const MODEL = args.model || 'sonnet'
 // Isolation costs ~200-500ms + disk per agent — only pay it when items mutate shared files/branches
@@ -34,21 +66,61 @@ function labelFor(item) {
   return item.label || item.id || item.sym || item.branch || JSON.stringify(item).slice(0, 40)
 }
 
-function promptFor(item) {
+function substitute(template, item, prev) {
   const value = typeof item === 'string' ? item : JSON.stringify(item)
-  return args.promptTemplate.split('{item}').join(value)
+  let out = template.split('{item}').join(value)
+  if (prev !== undefined) out = out.split('{prev}').join(JSON.stringify(prev))
+  return out
 }
 
-const results = await pipeline(items, (item) =>
-  agent(promptFor(item), {
+function promptFor(step, item, prev) {
+  const target = typeof item === 'string' ? item : JSON.stringify(item)
+  const prevNote = prev !== undefined ? `\n\nThe previous step in this chain returned:\n${JSON.stringify(prev)}` : ''
+  switch (step.kind) {
+    case 'prompt':
+      return substitute(step.template, item, prev)
+    case 'instructions': {
+      const extra = step.extra ? `\n\nAdditional guidance for this run:\n${step.extra}` : ''
+      return `Read the instructions file at ${step.path} and carry it out for the target below. Follow the file's own steps and guardrails exactly; do not improvise beyond what it specifies.\n\nTarget: ${target}${prevNote}${extra}`
+    }
+    case 'skill': {
+      const argsNote = step.args ? ` with args: ${step.args}` : ''
+      return `Invoke the "${step.name}" skill (as if a user typed /${step.name}${argsNote}) targeted at: ${target}.${prevNote}`
+    }
+    case 'script': {
+      const cmd = substitute(step.command, item, prev)
+      return `Run exactly this command and nothing else — no exploration, no fixing, just execute and report:\n\n${cmd}\n\nReport status "done" if it exits 0, "blocked" if it exits non-zero (include the failing output in your summary), "skipped" only if the command is genuinely inapplicable to this target (say why).`
+    }
+    default:
+      throw new Error(`grind: unknown step kind "${step.kind}"`)
+  }
+}
+
+function stageOpts(step, item) {
+  return {
     phase: 'Grind',
-    label: labelFor(item),
-    effort: EFFORT,
-    model: MODEL,
+    label: `${labelFor(item)}:${step.label || step.kind}`,
+    effort: step.effort || EFFORT,
+    model: step.model || MODEL,
     isolation: ISOLATION,
     schema: RESULT_SCHEMA,
-  })
+  }
+}
+
+// pipeline() gives stage 1 just (item) and every later stage (prevResult, item, index) — mirror
+// that here so the chain lines up with how pipeline actually invokes each callback.
+const stages = steps.map((step, i) =>
+  i === 0
+    ? (item) => agent(promptFor(step, item, undefined), stageOpts(step, item))
+    : (prev, item) => {
+        // A step already blocked/skipped stays that way — don't spend an agent running later
+        // steps against a target the chain has already given up on.
+        if (prev && prev.status !== 'done') return prev
+        return agent(promptFor(step, item, prev), stageOpts(step, item))
+      },
 )
+
+const results = await pipeline(items, ...stages)
 
 const combined = items.map((item, i) => ({ item, result: results[i] }))
 const done = combined.filter((c) => c.result?.status === 'done')
