@@ -85,14 +85,14 @@ prose ("the target below") rather than trying to template inside the instruction
 
 ## Real, checked-in chores
 
-- [`bury-dead-code.instructions.md`](bury-dead-code.instructions.md) — dispose of one
-  knip-flagged unused export/type/file (mirrors the `mortician` agent's loop).
+- **`/bury` and `/backfill`** (`.claude/skills/bury/SKILL.md`, `.claude/skills/backfill/SKILL.md`)
+  — the dead-code and spec-gap drills, fanned with `{kind: "skill"}`. They started life as two
+  hand-copied chore files here; #1326 hoisted them so the `mortician`/`test-backfiller` agents and
+  grind share one copy. Each skill's body carries its grind calling convention.
 - [`fix-doc-rot.instructions.md`](fix-doc-rot.instructions.md) — fix one dead doc reference
   flagged by `scripts/doc-rot-scan.mjs`.
 - [`triage-comment-bloat.instructions.md`](triage-comment-bloat.instructions.md) — triage one
   file's worth of narration-only comments flagged by `scripts/comment-bloat-scan.mjs`.
-- [`test-backfill.instructions.md`](test-backfill.instructions.md) — backfill BDD specs for one
-  file flagged by `scripts/spec-gap-scan.mjs` (mirrors the `test-backfiller` agent's loop).
 - [`research-bottleneck.instructions.md`](research-bottleneck.instructions.md) — for one
   `bottleneck`-labelled issue, find the superior *existing* solution, battle-test the candidates
   against primary sources and `envelope.json`, and leave a call sheet + routing label on the
@@ -117,9 +117,9 @@ graduates to a real subagent carries its header unchanged.
 
 ```yaml
 ---
-name: bury-dead-code
-description: dispose of one knip-flagged unused export, type, or file
-effort: high                 # low | medium | high | xhigh | max
+name: triage-comment-bloat
+description: triage one file's narration-only comments flagged by comment-bloat-scan
+effort: low                  # low | medium | high | xhigh | max
 isolation: worktree          # worktree | none — `none` is an explicit "this chore needs no checkout"
 model: fable                 # optional; alias only, never a pinned id. Omit to take grind's default.
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
@@ -130,14 +130,14 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 matter and prints the exact `args` object, tier filled in and the outcome-check step appended:
 
 ```bash
-node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' docs/grind/test-backfill.instructions.md
+node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' docs/grind/triage-comment-bloat.instructions.md
 ```
 
 ```json
 {
   "items": ["src/a.ts", "src/b.ts"],
   "steps": [
-    { "kind": "instructions", "path": "docs/grind/test-backfill.instructions.md", "effort": "high", "isolation": true },
+    { "kind": "instructions", "path": "docs/grind/triage-comment-bloat.instructions.md", "effort": "low", "isolation": true },
     { "kind": "script", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
   ]
 }
@@ -230,17 +230,21 @@ appeared). Two consequences:
   drops protected items is the natural home for this — but only for items that *are* paths; issue
   numbers and `{doc, refs}` objects need their own mapping first, which is why #1325 routed it to a
   follow-up rather than this slice.
-- **`skill` steps reach `.claude/skills/*/SKILL.md` only, not `.claude/agents/*.md`.** Several
-  useful batch chores mirror an existing single-target *agent* (`mortician`, `test-backfiller`,
-  `decomposer`, `ui-librarian`) rather than a skill — for those, the `instructions` step kind is
-  the only current option, which means hand-duplicating the agent's loop into a `*.instructions.md`
-  file (as the four files above do) rather than reusing it directly. This is a deliberate,
-  documented trade rather than an oversight: those agents' own contracts say to always pick their
-  target from a fresh `--candidate` scan and never accept a hand-picked one, so pointing several
-  parallel grind items at the same agent type risks every one of them independently re-deriving
-  the *same* top-priority target instead of respecting the item list — a correctness risk, not just
-  a missing convenience. Revisit only after that "never hand-pick" contract has a way to accept an
-  explicit target.
+- **An agent's loop is reachable only if it lives in a skill — and only an interactive session
+  can put it there.** `skill` steps reach `.claude/skills/*/SKILL.md`; the athletes that already
+  kept their procedure in a skill (`decomposer` → `/decompose`, `ui-librarian` → `/dedupe`) were
+  always fannable. `mortician` and `test-backfiller` weren't, so #1315 hand-copied their loops into
+  two chore files, which diverged within a day with nothing watching. #1326 fixed that the way the
+  ladder says: the loops moved into `/bury` and `/backfill`, the agents preload and follow them,
+  the copies are gone. The reason it took a human-driven session: `.claude/` is a Claude Code
+  **protected directory** — writes there are never auto-approved outside `bypassPermissions`, and
+  `permissions.allow` rules don't override that — so Moneypenny's unattended lane cannot create or
+  edit a skill or agent at all, and `envelope-scan --check` (which lists only `.claude/settings.json`)
+  will tell you the path is open. Any future issue whose build is a skill or agent contract
+  dead-ends the feedback lane the same way; route it to an interactive session. (The earlier
+  "never hand-pick" objection recorded here was wrong: a gate's item list *is* the gate picking.)
+  What is still missing: `scripts/grind-manifest.mjs` reads `*.instructions.md` front matter only,
+  so a skill's calling convention is hand-written in its body until #1325's remaining half.
 
 ## When to reach for this vs. `/governor` or a purpose-built workflow
 

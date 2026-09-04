@@ -90,7 +90,7 @@ function promptFor(step, item, prev) {
       return `Read the instructions file at ${step.path} and carry it out for the target below. Follow the file's own steps and guardrails exactly; do not improvise beyond what it specifies. If you push a branch, report its exact name in the "branch" field of your result.\n\nTarget: ${target}${prevNote}${extra}`
     }
     case 'skill': {
-      const argsNote = step.args ? ` with args: ${step.args}` : ''
+      const argsNote = step.args ? ` with args: ${substitute(step.args, item, prev)}` : ''
       return `Invoke the "${step.name}" skill (as if a user typed /${step.name}${argsNote}) targeted at: ${target}. If you push a branch, report its exact name in the "branch" field of your result.${prevNote}`
     }
     case 'script': {
