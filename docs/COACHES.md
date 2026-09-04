@@ -67,6 +67,20 @@ open over REST → one auto-merge call → **stop, trust the webhook, never poll
 grow the roster of scripts as recurring costs surface. When a finite resource starts binding, that's a
 *measured* constraint the offensive coordinator elevates — never optimize a resource speculatively.
 
+## Resource cost, mechanized (2026-09-04)
+
+The dimension above was named in doctrine for a while before it had an eye behind it — three
+incidents in one evening (docs/LESSONS.md: a stale-ref detour, a cache key fixed in the wrong job,
+then the fix for that) each needed Eric to read a live Actions log and say something, because
+nothing in the system watched CI wall-clock the way `incident-scan.mjs` watches unlearned
+incidents or `dead-scan.mjs` watches unused code. `scripts/ci-install-duration-scan.mjs` /
+`ci-install-duration-budget.json` (advisory, `tests/arch/ci-install-duration.spec.ts`) closes that
+gap the same shape as every other gate here: sample the `verify` job's install-step durations over
+recent runs, ratchet a budget down as real green data accumulates. The budget starts loose
+(600s) deliberately — the cache fix it's watching for is itself unverified as this is written; it
+tightens for real once a few post-fix runs prove the number, per the grandfather-then-shrink
+doctrine below, not by guessing at a target today.
+
 ## Adopting a convention creates conformance debt — grandfather, then shrink
 
 First separate the two kinds of convention, because they create very different debt:
@@ -163,6 +177,7 @@ supply-chain decision: read them fully before adopting.
 | **Dep-graph** (cycles/orphans/layering) | `scripts/dep-graph-scan.mjs` (dependency-cruiser, adopted) + `.dependency-cruiser.cjs` + `dep-graph-budget.json` + `tests/arch/dep-graph.spec.ts` | judge: break cycle / wire-or-delete orphan / restore layer direction (`/decompose` when a cycle wants a split) | none yet (recruit on recurrence #3) | ✅ live |
 | **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | write BDD specs per ENGINEERING.md | `test-backfiller` | ✅ live |
 | **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | **Moneypenny (repair)** — `.github/workflows/moneypenny-repair.yml` + `scripts/moneypenny/repair.mjs` (event-driven, not dispatched by the governor; formerly "CI Medic") | ✅ live |
+| **CI install duration** (verify job's dependency-install wall-clock) | `scripts/ci-install-duration-scan.mjs` + `ci-install-duration-budget.json` + `tests/arch/ci-install-duration.spec.ts` (median over recent successful runs, no-op offline) | check for a missing `Cache restored` line, fix the cache scope/key, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Doc rot** (docs that no longer describe reality: dead file refs, missing npm scripts, stale structural map) | `scripts/doc-rot-scan.mjs` + `doc-rot-budget.json` + `tests/arch/doc-rot.spec.ts` (semantic-claim rot stays with the config-audit — honestly out of a deterministic eye's reach) | fix doc to match reality, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Comment bloat** (narration comments — bare issue/PR refs, "used by X", "added for Y" — that CLAUDE.md's own house style forbids; git blame/the PR already carry that history) | `scripts/comment-bloat-scan.mjs` + `comment-bloat-budget.json` + `tests/arch/comment-bloat.spec.ts` (flags candidates only — WHY-vs-narration judgment stays with review, same honesty limit as doc-rot's semantic half) | `/code-review`/`/simplify` checklist: keep only if non-obvious WHY, else delete, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Workflow structure** (duplicate keys, dangling step/needs refs) | `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` | fix the file, diff it against the last-good version | Moneypenny's repair lane files it when a run reports zero jobs | ✅ live |
