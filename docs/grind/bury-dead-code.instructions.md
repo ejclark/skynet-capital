@@ -44,7 +44,10 @@ verify green, and ratchet the dead-code budget down.
 6. `node scripts/dead-scan.mjs --update` (the budget only ever moves down) — commit it in the same
    commit as the fix.
 7. Commit (conventional, lowercase-led, e.g. `refactor: bury unused export in <area>`), push with
-   retries. Report `status: "done"` with a one-line disposition and the budget delta.
+   retries. Report `status: "done"` with a one-line disposition, the budget delta, and the pushed
+   branch name in `branch` — chain `{kind: "script", command: "git ls-remote --exit-code --heads
+   origin {prev.branch}"}` after this step so the push is verified, not trusted
+   (`docs/grind/README.md`).
 
 ## Guardrails
 

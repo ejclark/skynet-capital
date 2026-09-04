@@ -134,10 +134,13 @@ in doc, which every future pass's prompts should be written from.
   from every step, but nothing verifies a `status:"done"` step actually pushed a branch or made the
   claimed change — the same failure class issue #1028 named and PR #1309 fixed for the feedback-
   triage lane (a session completing with zero visible outcome, because nothing checked GitHub's own
-  state). Not yet fixed in grind itself — flagged here rather than silently left as a gap, per
-  "no silent caps" in `workflow-authoring`. A future pass should either add a mechanical
-  outcome-check step (does the branch exist? does the PR exist?) to the calling convention, or
-  explicitly decide the risk is acceptable for grind's use cases and say why.
+  state). Fixed the same day, the same way #1309 did it — check the world, not the claim: a step
+  reports the branch it pushed in an optional `branch` field, `{prev.<field>}` substitution exposes
+  it to the next step, and every checked-in instructions.md chains
+  `git ls-remote --exit-code --heads origin {prev.branch}` after itself, so a `done` with no branch
+  on origin fails closed (`docs/grind/README.md` → "Verify the outcome mechanically"). The
+  transferable lesson: when one lane fixes a failure class, grep the other lanes for the same
+  shape before calling the fix done.
 - **2026-09-04 — differentiated-role fan-out (this playbook) is not the same failure mode
   `../TECHNIQUES.md` warns about, but say so explicitly or the caveat reads as a blanket objection.**
   Recorded above under "When multi-team fan-out earns its cost" so the next reader doesn't have to
