@@ -1,8 +1,8 @@
 # ISM Manufacturing PMI (Aug 2026 data) — ism-manufacturing-2026-09-01
 
 **Kind:** macro-print · **Date:** 2026-09-01 (confirmed, ISM: ismworld.org ROB calendar — 10:00 ET (1st business day), checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-09-01
-<!-- probe-ref: {"symbols":{},"vix":14.92,"daysBand":"high:0+","adjacentIds":["adp-employment-2026-09-02","avgo-2026-09-02-print","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","mrvl-2026-08-27-print","opec-plus-meeting-2026-09-06","treasury-7y-note-2026-08-27"],"screenStreak":0} -->
+**Last assessed:** 2026-09-02
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"high:0+","adjacentIds":["adp-employment-2026-09-02","avgo-2026-09-02-print","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","mrvl-2026-08-27-print","opec-plus-meeting-2026-09-06","treasury-7y-note-2026-08-27","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -255,3 +255,135 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-02, day after the print).** Macro-print mode carries no `earnings-cycle` /
+`intraday-edges` run — `symbols: []` by design — so the *report* is scored from freshly re-sourced
+primary/press data and the *tape* from Yahoo daily bars fetched today after the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
+Primary: ISM's own release, **"Manufacturing PMI® at 54.6%; August 2026 ISM® Manufacturing PMI®
+Report"** (PRNewswire 302865127, dateline 2026-09-01 10:00 ET, Susan Spence chair; ISM's authorized
+wire distribution — ismworld.org's own page stays SSO-gated per leg 1's standing limit),
+cross-checked against investinglive's post-print note and Textile World's reprint of the same
+release, both 2026-09-01.
+
+**What printed — a broad activity miss with prices dead flat.**
+
+| Index | Aug | Jul | Δ | Consensus |
+|---|---|---|---|---|
+| **Manufacturing PMI** | **54.6** | 55.6 | −1.0 | **55.2** (miss, −0.6) |
+| New Orders | 53.7 | 56.7 | −3.0 | none published |
+| Production | 58.3 | 58.5 | −0.2 | — |
+| **Employment** | **51.2** | 52.8 | −1.6 | **53.0** (miss, −1.8) |
+| Supplier Deliveries | 59.3 | 58.9 | +0.4 | — |
+| Inventories | 50.6 | 51.2 | −0.6 | — |
+| **Prices** | **71.1** | 71.1 | **0.0** | **71.2** / 70.5 (in-line vs either) |
+| Backlog of Orders | 51.8 | 55.0 | −3.2 | — |
+| New Export Orders | 53.2 | 53.0 | +0.2 | — |
+| Imports | 52.5 | 55.7 | −3.2 | — |
+
+Eighth consecutive month of manufacturing expansion, 22nd of overall-economy expansion; ISM maps
+54.6 to **+2.4% annualized real GDP**. Fifteen industries expanded, two contracted (Wood Products,
+Chemical Products). Panel tone: **42% positive / 58% negative** comments, with negatives citing
+pricing volatility (57%), increasing lead times (46%), the **Iran war (30%)** and tariffs (29%) — a
+chemical-products respondent: *"The economy is annoying; it is getting in the way of otherwise good
+business."*
+
+**Scoring the stance — stand-aside was right, and right for the stated reason.**
+
+- **The "two regional analogs cancel" call (D-0) is validated.** 54.6 landed one point under July and
+  0.6 under consensus — between the Chicago collapse (47.1, which implied sub-53) and the Dallas surge
+  (11.6 from 1.3, which implied ≥56), led by neither. The doc's decision to read the pair as *width*
+  rather than a lean is the call the print vindicates.
+- **The central leg resolved to no information.** This doc spent seven rows on prices-paid, and
+  prices-paid printed the single least informative number available: **71.1, unchanged**, a seventh
+  straight month above 70 — inside the D-0 framing's own dead zone, with neither the sub-65 dovish
+  break nor the mid-70s hawkish jump firing. Recording that plainly matters more than dressing it up:
+  the leg named as decisive produced nothing.
+- **The wager tape's modal bin was wrong, and it did not matter.** 54.6 sits in Polymarket's
+  **54.0–54.9** bin — the **D-1** modal bin (32%), *not* the D-0 modal bin (55s, 35%) that the D-0
+  row recorded as superseding it. The D-0 row reported the supersession accurately as a fact about the
+  tape and moved *away* from the bin that printed. The stand-aside call was unaffected either way,
+  which is precisely why it was the right call. The three-row sub-52 falsifier (~7% at D-0) correctly
+  never fired.
+
+**Kill switches — none fired.**
+
+1. **"Soft print: headline below ~52 *with* prices-paid under 65"** — **did not fire**, and missed on
+   both legs by a wide margin (54.6 / 71.1). The report was softer than July but nowhere near the
+   dovish-relief threshold this doc set.
+2. **"A weak JOLTS same-day collapsing hike odds toward zero"** — **did not fire; the tape moved the
+   other way.** JOLTS (same 10:00 ET slot) printed **7.271M** vs a 7.300M estimate, off a revised
+   7.18M prior, with the quits rate at **1.9%**, layoffs 1.7M (six-month low) and hires 5.1M from
+   5.3M — soft-ish, not collapsing. September hike odds **rose to ~66–68%** on the session (fed-funds
+   futures, 2026-09-01) from the ~57–66% venue-split carried at D-0. The 9/4 jobs leg of this switch
+   falls outside the close-out window and belongs to [`jobs-2026-09-04`](jobs-2026-09-04.md).
+3. **"A published consensus emerging"** — already **FIRED 2026-08-30**; scored in the stance amendment.
+4. **"Energy de-escalation"** — **did not fire; escalated further.** New US strikes on Iran on
+   **2026-09-01** sent crude up ~5% intraday, with **XLE +1.27%** to an all-time intraday high on the
+   session. The D-1/D-0 withdrawal of the prices-paid-easing argument holds, and the doc's own caveat
+   holds with it: this is a **September**-survey input, invisible in the August reading just scored.
+
+**Market reaction — and the honest finding is that none of it was ISM.** 2026-09-01 closes: S&P 500
+**7,633 (−0.71%)**, Nasdaq Composite **26,100 (−1.03%)**, Dow **52,767 (−0.79%)** (Motley Fool
+session wrap, 2026-09-01; press-sourced and rounded). Instrument bars fetched today: SPY **761.78
+(−0.687%)**, QQQ **707.64 (−1.272%)**, **VIX 16.34 (+9.52%)** from 14.92 — the first move of size off
+the month-long 14–16 range and past the probe's own 3-point materiality threshold measured from the
+14.43 year-low, ^TNX **4.796** from 4.758 (**+3.8bp**), a 20-month high. Every session wrap checked
+(Motley Fool AM and midday, Schwab's open note, the Yahoo/TheStreet live blogs) attributes the day to
+a **global bond selloff** — Japan's 10y touching **3.00%** for the first time since ~1996, its 2y at a
+31-year high, US 30y at its most sustained elevation since 2006 — stacked on the Iran strikes and
+crude. **Two of those wraps do not mention ISM at all**; the one ISM-specific post-print note found
+reported the beat/miss mechanically with no market attribution. So yields rose on a print that missed
+on headline, new orders, employment *and* backlogs — the wrong sign for leg 4's "hot activity lifts
+yields" mechanism, and the honest reading is that ISM was not the driver. That retires this
+calendar's remaining "ISM moves the rate desk" narration in favour of the measured non-finding its
+siblings already carry ([10-01 sibling](ism-manufacturing-2026-10-01.md); FT-37 on the services side).
+
+**Forward tests — two, both due today, both measured on this print's own session.**
+
+- **FT-36** (*ISM Manufacturing release day is a bond-calendar artifact*) — **PASS on both legs, with
+  the confound named.** TLT raw close **82.52 (08-31) → 81.87 (09-01), −0.788%**: the ninth
+  consecutive down release day (**9/9**, mean −0.544%). SPY close-to-close **−0.687%**, |move| at the
+  **63.5th percentile** of its 2026 distribution (n=167 sessions through 09-01; recomputed p68 =
+  **0.753%**, against the test's own stated ≤0.87% bar — it clears both, and the two bars are not
+  reconciled here). **The test's own framing does the work:** the session was a global bond selloff
+  plus an Iran escalation with ISM absent from the wraps, so this is evidence for a *calendar
+  artifact* and never a reaction function — exactly as registered. Void condition judged **not met**:
+  Barr's 09:05 ET remarks were scheduled, pre-print and noncommittal (*"if inflation appears not to be
+  moderating sufficiently, then I think we should act decisively to raise rates"*), and JOLTS is a
+  tracked scheduled release, not a shock. n=9, one rate regime, month-turn confound unseparated — one
+  observation, no promotion, and explicitly not a licence to trade the print.
+- **FT-38** (*the sibling's TLT result is the ETF's monthly dividend*) — **PASS.** Yahoo lists a TLT
+  distribution going **ex 2026-09-01 at $0.315**, inside the registered $0.28–$0.38 band, on
+  September's first business day — the eighth consecutive first-business-day ex-date of 2026 (02-02
+  0.332 · 03-02 0.301 · 04-01 0.345 · 05-01 0.315 · 06-01 0.336 · 07-01 0.318 · 08-03 0.330 · 09-01
+  0.315). The stated consequence holds to the basis point: 09-01 **raw −0.788%** vs **dividend-adjusted
+  −0.408%**, a **38bp wedge** = 0.315 / 82.52. The nuance worth carrying forward: TLT fell on 09-01 on
+  *both* bases, so FT-36's bond leg passes either way — but the raw **9/9** streak is only **3/9** on
+  adjusted closes (mean −0.209%), so the *streak* is the distribution schedule and the individual day
+  is not.
+
+**Adjacency.** No new dated event discovered at close-out; nothing proposed. Three entries filed by
+sibling docs since the D-0 row (`hammack-remarks-2026-09-03`, `waller-economic-outlook-2026-09-03`,
+`vmware-explore-2026-08-31`) are already on the calendar and are recorded in the refreshed probe-ref
+block above.
+
+**Honest limits at close-out.** ismworld.org's release page remains SSO-gated, so the figures rest on
+ISM's own wire release rather than a fetched ismworld.org line — the standing leg-1 limit, unchanged.
+**Two prices-paid consensus figures are on the record and are not reconciled**: **71.2** (investing.com,
+the single-sourced bar this doc carried at D-0) and **70.5** (post-print coverage); 71.1 is in-line
+against either, so the split does not change the scoring. Yahoo has **no 2026-08-28 bar** for TLT or
+^VIX, so the 08-28 closes carried in prior rows (TLT 82.88, VIX 14.43) could not be re-verified in
+this pass; all 09-01 returns are computed against 08-31 closes, which is the correct prior session
+regardless. Index closing levels are press-sourced and rounded; ETF/index figures are Yahoo daily
+bars. Fed-odds levels stay venue-split (~66% futures, ~68% per a same-day secondary) — the direction
+(up) is the reliable part, the level is not.
+
+**Verdict.** The base case held on activity and on prices, no kill switch fired, and the print's own
+session was decided by things that had nothing to do with it. Stand-aside cost nothing and protected
+against a day where the tape moved 1% on exogenous news in the *hawkish* direction while the data
+printed soft — the exact asymmetry a directional bet on this release would have been wrong about.
+Two forward tests scored, both passing weakly by construction, neither promoted. No trade was made
+or implied; none was warranted. This doc goes quiet.

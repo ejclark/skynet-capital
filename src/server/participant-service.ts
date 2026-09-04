@@ -8,6 +8,7 @@ import { isAllowedTimezone } from "../participants/allowed-timezones.js";
 import type { Participant, ParticipantKind } from "../participants/participant.js";
 import type { ParticipantStore } from "../participants/participant-store.js";
 import type { ObservatoryHub } from "./observatory-hub.js";
+import { type AddRefusal, refuseCredentials, refuseOffStartingLine } from "./onboarding-gates.js";
 import { personaClasses } from "./persona-classes.js";
 
 /** What the `/add` form submits. Credentials must be a working Alpaca **paper** key. */
@@ -25,7 +26,7 @@ export interface AddParticipantInput {
 
 export type AddResult =
   | { readonly ok: true; readonly id: string; readonly displayName: string }
-  | { readonly ok: false; readonly error: string };
+  | AddRefusal;
 
 /** What a credential-rotation submits — just the new key, against an account that already exists. */
 export interface RotateCredentialsInput {
@@ -102,19 +103,16 @@ export class ParticipantService {
     if (!displayName) {
       return { ok: false, error: "A display name is required." };
     }
-    if (!(input.apiKey?.trim() && input.apiSecret?.trim())) {
-      return { ok: false, error: "Both an Alpaca key and secret are required." };
+    // Missing halves and live keys are refused here, before any network call (onboarding-gates.ts).
+    const credentialRefusal = refuseCredentials(input.apiKey ?? "", input.apiSecret ?? "");
+    if (credentialRefusal) {
+      return credentialRefusal;
     }
     const kind: ParticipantKind = input.kind ?? "human";
     const personaId = kind === "bot" ? input.personaId?.trim() : undefined;
-    if (kind === "bot" && !personaId) {
-      return { ok: false, error: "A bot account needs a personaId." };
-    }
-    // The forms only ever offer registry classes (radio inputs / the shell's class picker), but
-    // this value BECOMES the participant id — a raw POST could otherwise mint an account under an
-    // arbitrary slug no persona will ever drive. Same server-side re-check as the timezone below.
-    if (personaId && !personaClasses().some((c) => c.id === personaId)) {
-      return { ok: false, error: `"${personaId}" isn't one of the offered bot classes.` };
+    const personaRefusal = refusePersona(kind, personaId);
+    if (personaRefusal) {
+      return { ok: false, error: personaRefusal };
     }
     const timezone = input.timezone?.trim();
     // The /add form only ever submits a value from the controlled list (or none) — this rejects
@@ -150,7 +148,7 @@ export class ParticipantService {
       ...(input.ownerEmail ? { ownerEmail: input.ownerEmail } : {}),
     };
 
-    const verified = await this.verify(participant);
+    const verified = await this.verify(participant, true);
     if (!verified.ok) {
       return verified;
     }
@@ -228,7 +226,6 @@ export class ParticipantService {
     if (!verified.ok) {
       return verified;
     }
-
     this.deps.store.add(participant);
     const at = (this.deps.now ?? (() => new Date()))().toISOString();
     this.deps.hub.apply({ type: "participant_updated", participant: verified.snapshot, at });
@@ -315,9 +312,15 @@ export class ParticipantService {
    * stores or shows anything. Both a network failure and an Alpaca-side rejection are honest
    * "no" — the caller returns whichever `{ ok: false, error }` it gets, unchanged.
    */
+  /**
+   * `requireStartingLine` is ADD's flag: a joining account must sit at the league's $1,000,000
+   * exactly (onboarding-gates.ts). A ROTATED key belongs to an account that has been trading,
+   * so its equity has every right to have moved — rotation verifies the key alone.
+   */
   private async verify(
     participant: Participant,
-  ): Promise<{ ok: true; snapshot: ParticipantSnapshot } | { ok: false; error: string }> {
+    requireStartingLine = false,
+  ): Promise<{ ok: true; snapshot: ParticipantSnapshot } | AddRefusal> {
     try {
       const snapshot = await buildParticipantSnapshot(
         participant,
@@ -329,13 +332,28 @@ export class ParticipantService {
           error: "That key was rejected by Alpaca. Double-check it's a valid paper key.",
         };
       }
-      return { ok: true, snapshot };
+      const offLine = requireStartingLine ? refuseOffStartingLine(snapshot.equity) : undefined;
+      return offLine ?? { ok: true, snapshot };
     } catch {
       // A fixed sentence, never the exception text: a raw error can carry internals (hostnames,
       // proxy banners) that don't belong in member-facing copy.
       return { ok: false, error: "Could not reach Alpaca to verify that key. Try again shortly." };
     }
   }
+}
+
+/**
+ * A bot needs a persona, and it must be a registry class: the forms only ever offer registry
+ * classes (radio inputs / the shell's class picker), but this value BECOMES the participant id —
+ * a raw POST could otherwise mint an account under an arbitrary slug no persona will ever drive.
+ * Same server-side re-check as the timezone gate in `addParticipant`.
+ */
+function refusePersona(kind: ParticipantKind, personaId: string | undefined): string | undefined {
+  if (kind === "bot" && !personaId) return "A bot account needs a personaId.";
+  if (personaId && !personaClasses().some((c) => c.id === personaId)) {
+    return `"${personaId}" isn't one of the offered bot classes.`;
+  }
+  return undefined;
 }
 
 /** "Uncle Joe" -> "uncle_joe" for a stable, readable participant id. */

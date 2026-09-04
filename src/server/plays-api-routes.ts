@@ -1,9 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { ladderNeighbor } from "../domain/progression.js";
+import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { parseJsonRecord, readJsonPost, requireGet, sendJson } from "./page-shell.js";
 import { playLocked } from "./progression-service.js";
 
@@ -29,16 +30,23 @@ async function servePlays(
   res: ServerResponse,
   config: DashboardServerConfig,
   requesterId: string | undefined,
+  requesterOpaqueId: string | undefined,
 ): Promise<void> {
   const progression =
-    requesterId && config.progression ? await config.progression.view(requesterId) : undefined;
+    requesterId && config.progression
+      ? await config.progression.view(requesterId, requesterOpaqueId)
+      : undefined;
+  // The feedback gate (#1119): while it holds, every unearned rung is locked for ONE reason, so
+  // the per-rung "opens after the rung below" is withheld — it would name the wrong remedy.
+  const gate = progression?.ladderGate;
   sendJson(res, 200, {
     linked: requesterId !== undefined,
     wheels: progression?.wheels ?? false,
+    ...(gate ? { gate: { reason: gate, note: LADDER_GATE_NOTE } } : {}),
     ...(progression?.nextUp ? { nextUp: progression.nextUp } : {}),
     plays: TRADE_TYPES.map((t) => {
       const locked = playLocked(t.code, progression);
-      const prev = locked ? ladderNeighbor(t.code, -1) : undefined;
+      const prev = locked && !gate ? ladderNeighbor(t.code, -1) : undefined;
       return {
         code: t.code,
         id: t.id,
@@ -95,7 +103,8 @@ export async function servePlaysApi(
   // The session's own journey — the same resolution every trade surface uses.
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
   if (path === "/api/trade/plays") {
-    if (requireGet(req, res)) await servePlays(res, config, requesterId);
+    const requesterOpaqueId = session ? opaqueMemberId(session.email) : undefined;
+    if (requireGet(req, res)) await servePlays(res, config, requesterId, requesterOpaqueId);
     return true;
   }
   await serveWheels(req, res, config, requesterId);
