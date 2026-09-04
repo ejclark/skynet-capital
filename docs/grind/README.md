@@ -120,6 +120,11 @@ running `--update` inside each parallel item's own step risks two agents racing 
 Every instructions.md above that touches a ratcheted gate says explicitly whether to run
 `--update` per item, once at the end (non-isolated), or not at all from within the chain.
 
+That race is also the reason a Coach's WIP limit is not a cap on how wide you may fan. The limit
+counts **open PRs, not dispatches** (`docs/COACHES.md` → "How the loop runs"), so N items may run
+concurrently as long as the wave lands as one PR with one trailing `--update`, and one file belongs
+to exactly one item. Cite that line rather than re-deriving the answer in a new chore file.
+
 ### Verify the outcome mechanically — never trust a `done`
 
 A step's `{status, summary}` is a self-report. Issue #1028 (fixed by #1309 for the feedback-triage

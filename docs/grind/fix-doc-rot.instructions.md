@@ -8,6 +8,9 @@ would share one working directory and stomp on each other's checkout. Chain the 
 this step — `{kind: "script", command: "git ls-remote --exit-code --heads origin {prev.branch}"}` —
 so a `done` is verified against origin, not trusted. The doc-rot budget already sits at 0, so the
 gate goes green on its own once every finding is fixed; there is no trailing `--update` to run.
+Fan as wide as the doc list goes: doc-rot has no Coach and touches no `src/**` seam, so the
+one-open-structural-PR-per-Coach WIP limit (`docs/COACHES.md`) does not apply — the per-doc
+grouping above is the only fence this chore needs.
 
 ## Goal
 

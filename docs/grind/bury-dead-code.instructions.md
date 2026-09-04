@@ -9,6 +9,11 @@ default is strictly weaker than the task this file asks for.
 worktree per item, concurrent items share one working directory and stomp on each other's
 checkout. Worktree isolation avoids that entirely.
 
+**Fanning several items at once is fine; landing them separately is not.** The mortician Coach's
+WIP limit counts *open PRs*, not dispatches (`docs/COACHES.md` → "How the loop runs"), so run N
+items concurrently, then assemble the wave into ONE landing PR and run `dead-scan --update` once
+after it — see step 6. Two items must never name a symbol in the same file.
+
 **Pre-filter, don't rely on this file alone:** before fanning items out, check each target against
 `envelope.json`'s protected patterns (`node scripts/envelope-scan.mjs --check <path>`) and drop any
 that match. A protected-path deletion still hard-gates at CI rather than silently merging, but by
@@ -42,7 +47,9 @@ verify green, and ratchet the dead-code budget down.
 5. `npm run verify && node scripts/dead-scan.mjs` — every check must exit 0, or stop and report
    `status: "blocked"` with the failing output.
 6. `node scripts/dead-scan.mjs --update` (the budget only ever moves down) — commit it in the same
-   commit as the fix.
+   commit as the fix **only when this is the batch's single item**. In a multi-item wave, do NOT run
+   it here: every item would rewrite the same shared budget file and the second to land loses the
+   first's ratchet. The caller runs it once, after the wave's PR merges (calling convention above).
 7. Commit (conventional, lowercase-led, e.g. `refactor: bury unused export in <area>`), push with
    retries. Report `status: "done"` with a one-line disposition, the budget delta, and the pushed
    branch name in `branch` — chain `{kind: "script", command: "git ls-remote --exit-code --heads

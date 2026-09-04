@@ -6,7 +6,9 @@ comments is one item, not three. Run with `isolation: true` — step 1 below doe
 directory and stomp on each other's checkout; worktree isolation, plus the per-file (not
 per-comment) grouping, keeps items from colliding. Run `node scripts/comment-bloat-scan.mjs
 --update` once, as a single trailing step after every item lands, not inside each item's own
-chain.
+chain. Fan as wide as the file list goes: comment-bloat has no Coach and changes no code, so the
+one-open-structural-PR-per-Coach WIP limit (`docs/COACHES.md`) does not apply — the per-file fence
+plus the once-per-batch `--update` are the whole discipline here.
 
 ## Goal
 

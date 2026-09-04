@@ -6,10 +6,10 @@ reason grind's cheap default is the wrong fit here: judging correct-vs-buggy beh
 writing a spec is real work. Run with `isolation: true` — step 1 below does its own
 `git checkout -B`, and without a fresh worktree per item, concurrent items share one working
 directory and stomp on each other's checkout. If the item list has more than ~3 files, stage it in
-waves rather than one fully-parallel run, and run `node scripts/spec-gap-scan.mjs --update` once
-per wave (not per item) — `/governor`'s "one open structural PR per Coach" WIP limit exists on
-purpose; landing every backfill PR at once defeats it for no real benefit, since this backlog
-clears to zero either way.
+waves rather than one fully-parallel run, assemble each wave into ONE landing PR, and run
+`node scripts/spec-gap-scan.mjs --update` once per wave (not per item). That is the test-backfiller
+Coach's WIP limit as written — one open PR per Coach, counted in *open PRs, not dispatches*
+(`docs/COACHES.md` → "How the loop runs"); this file follows that line rather than re-deriving it.
 
 ## Goal
 

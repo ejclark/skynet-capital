@@ -273,7 +273,16 @@ with the complexity moved into the wiring.
 - Every eye enforces in CI through the ordinary test job — a Coach's dimension cannot silently regress.
 - Budgets **only ratchet down** (`--update` after a correction lands), so every win is permanent.
 - `--candidate` makes each eye name its own highest-leverage target, machine-readable — no human picks.
-- **WIP limit: one open structural PR per Coach.** The athlete doesn't start pass N+1 until pass N merges;
-  the next target is recomputed from fresh `main`, which serializes work for free.
+- **WIP limit: one open structural PR per Coach.** The unit is an **open PR awaiting merge, not a
+  concurrent dispatch** — `/governor` already fans every coach's athlete out in parallel isolated
+  worktrees and lands them as one cycle PR (feast mode goes further: multiple fenced seams per
+  dispatch, one platter PR). The limit protects two things, and both of them are *landing*-time
+  hazards: (1) the next `--candidate` is recomputed from fresh `main`, so a target is never
+  re-derived against a stale tree; (2) each coach's `--update` rewrites one shared, ratchet-down
+  budget file, so it must run **once per landed wave** — two worktrees racing it silently lose a
+  ratchet. So a batch of N independent targets for the same Coach (e.g. `/grind` fanning
+  `/decompose` across two arch-scan hits) is in bounds when **one file belongs to exactly one item**
+  and the wave lands as **one PR** with **one** `--update` after it. Docs-only chores (`doc-rot`,
+  `comment-bloat`) have no Coach and touch no `src/**` seam — this rule was never scoped to them.
 - Adding a Coach = one eval + one budget + one CI spec + one skill (+ optionally one agent). Use
   `skill-creator` and mirror an existing pair so the roster stays uniform.
