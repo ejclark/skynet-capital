@@ -1189,3 +1189,18 @@ reduced to `stages.reduce(boot)` — after which the detector has nothing to det
 Candidate for a `/governor` cycle with the `decomposer` athlete; the scout/creds/health/state-db
 seams are already isolated modules, so the extraction is mostly moving the wiring, not the logic.
 _(src: Eric · while: reviewing #1301's cap dodge, 2026-09-04)_
+
+### Skill and agent frontmatter has the same silent-absence failure mode a workflow meta just had
+`/grind` vanished from the Workflow registry for ~55 minutes because its `export const meta`
+stopped being a pure literal, and the registry drops such a script silently rather than erroring
+(docs/LESSONS.md, 2026-09-04; gate: `scripts/workflow-meta-scan.mjs`). The identical shape exists
+one directory over: `.claude/skills/*/SKILL.md` and `.claude/agents/*.md` open with a YAML
+frontmatter block (`name:`, `description:`) that the harness parses statically to build the skill
+and agent rosters. A malformed block — an unclosed `---`, a `description: >-` fold with a bad
+indent, a missing `name:` — would drop that skill or agent from the roster with no error anywhere,
+and nothing in `tests/arch/` checks it: `scripts/config-audit.mjs` reads frontmatter *values* for
+its compute-routing check but never validates that the block parses or carries both required keys.
+Worth a sibling gate to `workflow-meta-scan.mjs` (parse the block with a strict YAML loader,
+require `name` = directory/file name and a non-empty `description`), blocking for the same reason:
+a roster entry that isn't there is a broken contract, not debt.
+_(src: Claude · while: retro on the un-invokable /grind workflow, 2026-09-04)_
