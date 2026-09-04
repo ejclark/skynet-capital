@@ -104,7 +104,6 @@ function TradePage(): ReactElement {
       <span className="rail-current" aria-current="page">
         The ticket
       </span>
-      <Link to="/outpost">Trading Outpost</Link>
       <hr />
       {activeDesk ? (
         <Link to="/u/$id" params={{ id: activeDesk }}>
