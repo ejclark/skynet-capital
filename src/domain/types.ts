@@ -55,6 +55,7 @@ export interface Portfolio {
  * evidence each live window yields (docs/plans/trade-playbooks.md → play modes).
  */
 export type PlaybookMode = "conservative" | "standard" | "aggressive";
+export const PLAYBOOK_MODES: readonly PlaybookMode[] = ["conservative", "standard", "aggressive"];
 
 /**
  * A persona's proposed trade. Personas express *direction and conviction*; the engine

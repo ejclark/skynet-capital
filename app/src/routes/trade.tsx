@@ -7,6 +7,7 @@ import { fetchPlays, type PlayInfo } from "../live/options";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
+import { LadderGateCard } from "../shell/ladder-gate";
 import { OptionGate } from "../shell/option-gate";
 import { OptionPositionsCard } from "../shell/option-positions";
 import { PlayPicker } from "../shell/play-picker";
@@ -58,6 +59,10 @@ function DeskTicket({ desk, code }: { readonly desk: string; readonly code: stri
     queryFn: () => fetchDesk(desk),
   });
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
+  // The feedback gate (#1119): while it holds, every rung that OPENS a position shows the gate card
+  // instead of a ticket. A sell (102) is an exit and stays open — the server holds the same line.
+  const gate = plays.data?.gate;
+  const gated = gate !== undefined && code !== "102";
   return (
     <>
       {plays.data ? (
@@ -68,7 +73,9 @@ function DeskTicket({ desk, code }: { readonly desk: string; readonly code: stri
           wheels={plays.data.wheels}
         />
       ) : null}
-      {info && info.kind === "option" ? (
+      {gated ? (
+        <LadderGateCard note={gate.note} />
+      ) : info && info.kind === "option" ? (
         <OptionGate key={info.code} deskId={desk} play={info} />
       ) : (
         <TradeGate key={code} deskId={desk} initialAction={code === "102" ? "sell" : "buy"} />
@@ -105,7 +112,7 @@ function TradePage(): ReactElement {
         </Link>
       ) : (
         <Link to="/" search={{ by: "equity" }}>
-          ← Standings
+          ← Accounts
         </Link>
       )}
     </>

@@ -17,14 +17,15 @@ import {
   deriveEarned,
   type EarnedMilestone,
   earnedCodes,
+  LADDER_GATE_MILESTONE,
   lockedOnLadder,
-  nextUp,
-  unlockedCodes,
 } from "../domain/progression.js";
 import type { TradeTypeCode } from "../domain/trade-types.js";
 import { collapseActivity, type TradeActivityRecord } from "../observatory/activity-store.js";
+import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { FeedbackLogEntry } from "./feedback-log.js";
 import type { OrderAuditRecord } from "./order-audit-log.js";
+import { gateSatisfiedIds, openLadder, seedRecord } from "./progression-service-support.js";
 import type { ProgressionStore } from "./progression-store.js";
 
 /**
@@ -52,6 +53,12 @@ export interface ParticipantProgression {
   readonly earned: readonly EarnedMilestone[];
   readonly earnedByCode: ReadonlyMap<TradeTypeCode, EarnedMilestone>;
   readonly unlocked: ReadonlySet<TradeTypeCode>;
+  /**
+   * Present when the whole ladder is shut for a non-fill reason (#1119): training wheels on and
+   * nothing said to Moneypenny yet. `unlocked` then holds only what is already earned, and the
+   * desks name this as the reason instead of "the rung below".
+   */
+  readonly ladderGate?: typeof LADDER_GATE_MILESTONE;
   /** The rung to chase next — undefined once the whole ladder is earned. */
   readonly nextUp?: TradeTypeCode;
   readonly points: number;
@@ -64,7 +71,7 @@ export interface ParticipantProgression {
    * from `celebrating` until the member shows they understood the play they just made.
    */
   readonly pendingChecks: readonly EarnedMilestone[];
-  /** The engagement track — earned by an action, not a fill. Empty when `readFeedback`
+  /** The engagement track — earned by an action, not a fill. Empty when `readMessages`
    *  isn't wired (offline builds), same absence-means-absence convention as `store`. */
   readonly engagementEarned: readonly EarnedEngagement[];
   /** Fresh engagement earns awaiting their one-time celebration — no comprehension gate exists
@@ -87,6 +94,8 @@ export function playLocked(
  */
 export interface AcademyProgress {
   readonly earned: readonly EarnedMilestone[];
+  /** See `ParticipantProgression.ladderGate`. */
+  readonly ladderGate?: typeof LADDER_GATE_MILESTONE;
   readonly points: number;
   readonly rank: Rank;
   readonly unlockedLevels: ReadonlySet<CourseLevel>;
@@ -99,7 +108,14 @@ export interface AcademyProgress {
 }
 
 export interface ProgressionService {
-  view(participantId: string): Promise<ParticipantProgression>;
+  /**
+   * `opaqueMemberId` is the feedback log's own key (`opaqueMemberId(session.email)`,
+   * `feedback-attribution.ts`) — a DIFFERENT id space from `participantId` (the account on the
+   * board). Every HTTP route passes it now; omitting it falls back to `participantId`, which is
+   * how #1171 shipped — every call site read the log with the account id, and no real member's
+   * filing ever lived under that key, so the engagement track always came back empty.
+   */
+  view(participantId: string, opaqueMemberId?: string): Promise<ParticipantProgression>;
   setWheels(participantId: string, on: boolean): Promise<void>;
   acknowledge(participantId: string, milestoneIds: readonly string[]): Promise<void>;
   /**
@@ -119,9 +135,21 @@ export interface ProgressionServiceDeps {
   readonly readFills: (participantId: string) => Promise<readonly TradeActivityRecord[]>;
   /** The tagged per-order audit lines for one participant. */
   readonly readTags: (participantId: string) => Promise<readonly OrderAuditRecord[]>;
-  /** This participant's filed feedback (the engagement track). Absent: the track reads as
-   *  earned nothing, same as an absent `store` reads as no wheels/no celebration. */
-  readonly readFeedback?: (participantId: string) => Promise<readonly FeedbackLogEntry[]>;
+  /**
+   * Messages logged for the engagement track (`companion-message-log.ts`), keyed by `view`'s
+   * `opaqueMemberId` (falls back to `participantId` — see `view`'s doc). This is the ladder
+   * gate's own evidence. Absent: the track reads as earned nothing, same as an absent `store`
+   * reads as no wheels/no celebration.
+   */
+  readonly readMessages?: (opaqueMemberId: string) => Promise<readonly CompanionMessageLogEntry[]>;
+  /**
+   * Filed feedback, same keying as `readMessages`. No longer the engagement track's own evidence
+   * (Eric's 2026-09-03 ruling moved that to a message) — read ONLY to grandfather a member who
+   * filed before the message log existed: filing already proves they talked to her first, so it
+   * still satisfies the (lower) gate (`domain/progression.ts`'s `ladderGated`). Absent: nobody is
+   * grandfathered, same as an absent `readMessages`.
+   */
+  readonly readFeedback?: (opaqueMemberId: string) => Promise<readonly FeedbackLogEntry[]>;
   /**
    * The preference store. Absent (offline/test wiring): wheels reads as OFF and nothing
    * celebrates — the desk simply doesn't restrict.
@@ -133,20 +161,20 @@ export interface ProgressionServiceDeps {
 export function createProgressionService(deps: ProgressionServiceDeps): ProgressionService {
   const now = deps.now ?? (() => new Date());
   return {
-    async view(participantId) {
-      const [journal, tags, feedback] = await Promise.all([
+    async view(participantId, opaqueMemberId) {
+      const [journal, tags, messages, feedback] = await Promise.all([
         deps.readFills(participantId),
         deps.readTags(participantId),
-        deps.readFeedback?.(participantId) ?? Promise.resolve([]),
+        deps.readMessages?.(opaqueMemberId ?? participantId) ?? Promise.resolve([]),
+        deps.readFeedback?.(opaqueMemberId ?? participantId) ?? Promise.resolve([]),
       ]);
       const fills = collapseActivity([...journal]);
       const earned = deriveEarned(fills, tags);
-      const engagementEarned = deriveEngagementEarned(feedback.map((f) => f.filedAt));
+      const engagementEarned = deriveEngagementEarned(messages.map((m) => m.at));
+      const gateSatisfied = gateSatisfiedIds(engagementEarned, feedback);
       const codes = earnedCodes(earned);
-      const unlocked = unlockedCodes(codes);
       const milestoneIds = new Set(earned.map((m) => m.milestoneId));
       const points = pointsFor(milestoneIds);
-      const next = nextUp(unlocked, codes);
       // Course locks follow completion order, UNIONED with any course already holding an earn —
       // seeded history with gaps must never render an earned milestone inside a "locked" course.
       const levels = unlockedLevels(milestoneIds);
@@ -154,22 +182,11 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         if (c.milestones.some((m) => milestoneIds.has(m.id))) levels.add(c.level);
       }
 
-      let record = deps.store?.get(participantId);
-      if (deps.store && !record) {
-        const hasHistory = fills.some((f) => f.filledQuantity > 0);
-        record = deps.store.set(
-          participantId,
-          {
-            trainingWheels: !hasHistory,
-            // Pre-acknowledge whatever is ALREADY true on first view, trade and engagement
-            // alike — a member who filed feedback before this track existed gets the count, not
-            // a day-one fanfare wall (same rule the trade ladder's own seeding already follows).
-            acknowledged: [...earned, ...engagementEarned].map((m) => m.milestoneId),
-            since: now().toISOString(),
-          },
-          now(),
-        ).participants[participantId];
-      }
+      const record = seedRecord(deps.store, participantId, now, fills, [
+        ...earned,
+        ...engagementEarned,
+      ]);
+      const ladder = openLadder(record?.trainingWheels ?? false, codes, gateSatisfied);
       const acknowledged = new Set(record?.acknowledged ?? []);
       const fresh = record
         ? earned.filter((m) => !acknowledged.has(m.milestoneId) && m.at >= record.since)
@@ -187,11 +204,12 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         : [];
 
       return {
-        wheels: record?.trainingWheels ?? false,
+        wheels: ladder.wheels,
         earned,
         earnedByCode: new Map(earned.map((m) => [m.code, m])),
-        unlocked,
-        ...(next ? { nextUp: next } : {}),
+        unlocked: ladder.unlocked,
+        ...(ladder.gated ? { ladderGate: LADDER_GATE_MILESTONE } : {}),
+        ...(ladder.next ? { nextUp: ladder.next } : {}),
         points,
         rank: rankFor(points),
         unlockedLevels: levels,
