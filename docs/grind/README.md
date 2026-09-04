@@ -323,8 +323,13 @@ appeared). Two consequences:
   `permissions.allow` rules don't override that — so Moneypenny's unattended lane cannot create or
   edit a skill or agent at all, and `envelope-scan --check` (which lists only `.claude/settings.json`)
   will tell you the path is open. Any future issue whose build is a skill or agent contract
-  dead-ends the feedback lane the same way; route it to an interactive session. (The earlier
-  "never hand-pick" objection recorded here was wrong: a gate's item list *is* the gate picking.)
+  dead-ends the feedback lane the same way; route it to an interactive session. **`grind.js`
+  itself is inside that protected directory** — measured 2026-09-04 on issue #1352, whose build
+  was an edit to `.claude/workflows/grind.js`: `envelope-scan --check` returned `protected: false`
+  and the write was refused anyway, one turn later. So a feedback-lane session can *call* grind but
+  can never *change* it; file the change as its own issue and let an interactive session apply it.
+  (The earlier "never hand-pick" objection recorded here was wrong: a gate's item list *is* the
+  gate picking.)
   What is still missing: `scripts/grind-manifest.mjs` reads `*.instructions.md` front matter only,
   so a skill's calling convention is hand-written in its body until #1325's remaining half.
 
