@@ -1300,6 +1300,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "SCOPE CORRECTED BY ITS OWN INITIAL RESEARCH (2026-09-04) — the id and the original title assert a retaliatory-tariff/countermeasure snapback on this date, and there is none. China's State Council Tariff Commission on 2025-11-05 REMOVED (not suspended) the 10-15% March-2025 retaliatory tariffs on ~740 US agricultural commodity lines effective 2025-11-10; a removal has no expiry clock. Every countermeasure that DOES carry a clock runs to 2026-11-10 — the 24% reciprocal countertariff, the April-4-2025 unreliable-entity listings (the March-4 listings were removed outright), and MOFCOM/GAC Announcement No. 70's suspension of the six 2025-10-09 export-control announcements — i.e. they belong to us-china-tariff-truce-expiry-2026-11-10, not here. So this is that cliff's 51-day TAIL on its narrowest leg, not a second cliff. What is genuinely on this clock is China's standing tariff-relief channel for US goods, expiring mid-way through the unfinished $30bn 'reciprocal tariff reduction' agreed in principle at the 2026-05-13/15 Trump state visit to China (USTR dockets 2026-0430/0431; Skadden reads the vehicle as a bilateral Trade Council, NOT this exclusion process — a timing collision, not an established mechanism). GEOMETRY INVERTS VS 11/10: all three venues Bessent named in May 2026 fall BEFORE this deadline — trump-xi-summit-2026-09-24, apec-leaders-shenzhen-2026-11-18, and g20-miami-2026-12-14 — so the after-the-deadline renewal problem the 11/10 entry flags does not apply here. No symbol this calendar tracks carries the exposure; it is agricultural, and that complex had already run 10-17% in the month to 2026-09-03 on at least three drivers (China buying, Black Sea port damage, NW Corn Belt drought), so the ag tape is not a read on this date. Lands in a holiday-thinned session alongside georgia-psc-data-center-cost-shift-2026-12-31 and one day after fomc-minutes-2026-12-30. Estimate widens caution only. Discovered during the us-china-tariff-truce-expiry-2026-11-10 initial research (2026-09-04); ledger: docs/research/events/china-retaliation-suspension-expiry-2026-12-31.md.",
   },
   {
+    id: "g20-summit-doral-2026-12-14",
+    kind: "geopolitical",
+    title: "G20 Leaders' Summit — Trump National Doral, Miami (US host year)",
+    date: "2026-12-14",
+    status: "estimate",
+    source:
+      "NEWS: en.wikipedia.org/wiki/2026_G20_Miami_summit states '14-15 December 2026' at Trump National Doral Miami with Trump as chair (fetched direct 2026-09-04); corroborated by CBS News coverage of the 2025 announcement and Digital Watch's G20 Leaders' Summit 2026 listing. g20.org's own events calendar and location pages returned HTTP 403 to a direct fetch this pass, so no host-primary was read — re-verify against g20.org before any promotion. Checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "THE THIRD OF BESSENT'S THREE NAMED VENUES, AND THE LATEST ONE. In May 2026 he said the administration was 'not in a hurry' to extend the Kuala Lumpur arrangement, with time to renew it 'in meetings later this year' — the September Washington summit, APEC Shenzhen 11/18-19, and this. Two of the three post-date the 2026-11-10 export-control expiry and this one post-dates it by 34 days. Also the reported quid pro quo for Trump's APEC attendance: SCMP (2026-09-02) ties his going to Shenzhen to whether Xi agrees to come to Doral. Attendance is contested on its own terms — Trump has said South Africa will not participate. Day 1 of the two-day window per house convention. Estimate widens caution only. Discovered during the apec-leaders-shenzhen-2026-11-18 initial research (2026-09-04).",
+  },
+  {
     id: "ppi-2026-11-13",
     kind: "macro-print",
     title: "PPI release (Oct 2026 data)",
