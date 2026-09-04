@@ -27,6 +27,42 @@ it. Prevention ranks, best first:
 
 ---
 
+### The CI `verify` job's `app/` install re-fetched from the network on almost every run — the cache key never saw its lockfile
+
+- **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric posted the Actions log for PR #1179's `verify` job: `Install dependencies` (root)
+  5m03s, `Install app dependencies` 2m35s — the two summed almost exactly to the "7.5 minutes" he'd
+  flagged the turn before, which is what revealed the earlier ledger entry had answered the wrong
+  install. He then asked directly: "why do we need 2 separate installs? that looks like a huge
+  process smell." Detection lag: one exchange — the screenshot made it visible immediately once
+  looked at; before that, nobody had read a `verify` job's own timing.
+- **ROOT CAUSE:** `app/` is a separate package (own `package.json`, own lockfile — not an npm
+  workspace), so it genuinely needs its own `npm ci`; two installs are not themselves the smell.
+  The smell is that `actions/setup-node`'s `cache: npm` step declared no `cache-dependency-path`,
+  so its cache key hashed ONLY the root `package-lock.json`. Reading the job's raw log settled it
+  mechanically rather than by inference: one `Cache restored successfully` line, for a key derived
+  from the root lockfile only, then `npm ci` (root, 442 packages) in 5m, then `npm ci --prefix app`
+  (128 packages) in 3m with no cache activity logged for it at all. Root's lockfile is rarely
+  touched by an `app/`-only PR, so that key HITS almost every run — and `actions/cache` only
+  re-uploads on a MISS, so every package `app/`'s install fetched fresh during that hit run was
+  discarded the moment the job ended. The next PR paid full network cost again, forever, because
+  the key that would have warmed on it was never the one being watched.
+  What else crosses this system: `moneypenny-events.yml` / `moneypenny-repair.yml` also call
+  `actions/setup-node` with `cache: npm` — neither installs `app/`, so neither needed this fix
+  (checked, not assumed).
+- **PREVENTION:** script — `.github/workflows/pipeline.yml`'s `verify` job now sets
+  `cache-dependency-path` to both `package-lock.json` and `app/package-lock.json`, so the cache key
+  changes exactly when either tree's dependencies do and both trees' fetches persist across runs.
+  Root's 5m is extraction time on an already-warm cache, not a caching gap, and stays open as a
+  separate, smaller question (below).
+- **SIDE QUESTS:** whether root's 442-package `npm ci` can be faster than 5 minutes even on a warm
+  npm cache (a bigger hosted runner? `npm ci`'s known link-step overhead on standard 2-vCPU
+  runners?) is unmeasured; unmerging root and `app/` into one npm workspace would remove the second
+  `npm ci` invocation entirely but is a real migration (build tooling, Docker, CI all touch the
+  split) — not a reactive fix (→ docs/IDEAS.md).
+
+---
+
 ### The prior fix for the feedback-log seam only worked for the one call site it didn't need to fix
 
 - **SHA:** n/a   **DATE:** 2026-09-03   **STATUS:** closed
