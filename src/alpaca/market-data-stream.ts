@@ -21,10 +21,19 @@ export interface MarketDataStreamConfig {
  */
 export class AlpacaMarketDataStream {
   private socket?: WebSocket;
-  private readonly config: MarketDataStreamConfig;
+  private config: MarketDataStreamConfig;
 
   constructor(config: MarketDataStreamConfig) {
     this.config = config;
+  }
+
+  /** Swap the credentials this stream authenticates with, in place — reconnects with the new
+   *  pair. A brief gap in ticks is harmless (momentum state persists independently); staying on
+   *  a rotated-away dead key is not. */
+  replaceCredentials(apiKey: string, apiSecret: string): void {
+    this.config = { ...this.config, apiKey, apiSecret };
+    this.stop();
+    this.start();
   }
 
   start(): void {
