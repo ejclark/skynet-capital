@@ -923,7 +923,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "high",
     symbols: [],
     notes:
-      "The print that publishes the REVISION to the 10-15 advance estimate, and the one whose own reference month carries Amazon's fall Prime event — the nonstore distortion that made July's -2.2% drop and August's bounce unreadable as demand. NO AMAZON PRIMARY ANNOUNCES 2026 FALL-EVENT DATES: aggregators name Oct 7-8, which is exactly the 2025 pair, so no separate event entry was filed and the distortion is tracked here instead (Prime Day 2026 itself ran June 23-26, per Amazon's press center). ALSO THE FIRST RETAIL PRINT AFTER THE 10-28 FOMC, and the one most exposed if a 2026-09-30 appropriations lapse occurs: Census DELAYS rather than deletes (Sep-2025 advance slipped 2025-10-16 -> 2025-11-25; Oct-2025 advance 2025-11-14 -> 2025-12-16, and the backlog cleared only at the 2026-05-14 release), so in that branch this slot is where the October reference month would land late rather than vanish. Discovered during the retail-sales-2026-10-15 initial research. Filed `confirmed` rather than the sweep's usual `estimate` because the date came from the Census primary release schedule fetched that session — the same page and `CENSUS:` prefix that seeded the 09-16 and 10-15 entries.",
+      "The print that publishes the REVISION to the 10-15 advance estimate, and the one whose own reference month carries Amazon's fall Prime event — the nonstore distortion that made July's -2.2% drop and August's bounce unreadable as demand. NO AMAZON PRIMARY ANNOUNCES 2026 FALL-EVENT DATES: aggregators name Oct 7-8, which is exactly the 2025 pair, so no separate event entry was filed and the distortion is tracked here instead (Prime Day 2026 itself ran June 23-26, per Amazon's press center). ALSO THE FIRST RETAIL PRINT AFTER THE 10-28 FOMC, and the one most exposed if a 2026-09-30 appropriations lapse occurs: Census DELAYS rather than deletes (Sep-2025 advance slipped 2025-10-16 -> 2025-11-25; Oct-2025 advance 2025-11-14 -> 2025-12-16, and the backlog cleared only at the 2026-05-14 release), so in that branch this slot is where the October reference month would land late rather than vanish. Discovered during the retail-sales-2026-10-15 initial research. Filed `confirmed` rather than the sweep's usual `estimate` because the date came from the Census primary release schedule fetched that session — the same page and `CENSUS:` prefix that seeded the 09-16 and 10-15 entries. CORRECTION (2026-09-01 initial research, docs/research/events/retail-sales-2026-11-17.md): the fall-Prime premise above is REFUTED at the data. Census Table 2 shows nonstore m/m +0.3% in Oct 2024 (PBDD Oct 8-9) and +1.8% in Oct 2025 (PBDD Oct 7-8) against a no-event Sep 2024 of +1.7%, and BOTH event Octobers decelerated at the headline vs their own September (+0.4% vs +0.8%; +0.0%* vs +0.1%*) — the event has run first-half-October every year since 2022, so the seasonal factors absorb it. Only a CHANGE in the event's dates or scale would distort. The appropriations read above is also narrower than stated: both live CR candidates (House Dec 4, Senate Dec 11) expire AFTER this print, so only a total funding failure by 2026-09-30 reaches it.",
   },
   {
     id: "import-export-prices-2026-09-16",
@@ -1269,6 +1269,32 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "FERC collar (accepted 2026-04-28) covers only 2028/29 + 2029/30 — this is the cap-sunset event VST's Tier-2 gate keys on.",
+  },
+  {
+    id: "vix-expiration-2026-09-16",
+    kind: "opex",
+    title: "VIX futures & options September expiration (SOQ settlement)",
+    date: "2026-09-16",
+    status: "confirmed",
+    source:
+      "OCC: cboe.com/tradable-products/vix/vix-futures/ market-data table lists contract VX/U6 expiring 09/16/2026, and cboe.com/us/futures/market_statistics/settlement carries that same VX/U6 expiration's daily settlements for 09-02 and 09-03 — both fetched direct 2026-09-04. Deterministic cross-check: Wed 09-16 is exactly 30 days before the 2026-10-16 SPX expiration (October's third Friday), and Cboe's next listing applies the rule unchanged (VX/V6 -> 2026-10-21, 30 days before 2026-11-20). Flipped from NEWS:/estimate (macroption, 2026-09-01) by this event's own initial research, which is the sanctioned place to confirm a date the discovering sweep correctly declined to self-confirm",
+    impact: "low",
+    symbols: [],
+    notes:
+      "Proposed by the opex-2026-09-18 pulse (2026-09-01) as a same-corridor microstructure adjacency, NOT a standalone trade date. VIX contracts AM-settle to a Special Opening Quotation (VRO) built from opening-auction trade prices of a SINGLE SPX/SPXW expiration exactly 30 days out — here the 2026-10-16 series — so the volatility complex's own expiration lands on the MORNING of the fomc-2026-09-16 decision day, alongside retail-sales-2026-09-16 and import-export-prices-2026-09-16, and two sessions before the September triple witching. Why it belongs on the calendar at all: it means the week's vol-hedging unwind is staged (VIX 09-16 open, then SPX/index SET at the 09-18 open, then single-stock options + the S&P quarterly rebalance MOC at the 09-18 close), so 'the gamma rolls off Friday' understates how early the cushion starts leaving. Two facts from the 2026-09-04 initial research: the expiring contract stops trading 09:00 ET, ~4.5 hours BEFORE the 14:00 ET decision, so FOMC-day vol exposure cannot live in it; and the corridor is already paid for in the term structure (VX/U6 16.1381 vs VIX cash 14.32 on 09-03). Impact stays LOW even now the date is confirmed: it widens caution about the 09-16→09-18 corridor, supports one execution guard (nothing trades the 09-16 opening auction), and licenses nothing.",
+  },
+  {
+    id: "sp-rebalance-proforma-2026-09-04",
+    kind: "sector",
+    title: "S&P DJI September quarterly rebalance — pro-forma files released",
+    date: "2026-09-04",
+    status: "estimate",
+    source:
+      "NEWS: spglobal.com S&P Equity Indices Policies & Practices methodology — float-adjusted pro-forma files release after the close on the first Friday, two weeks before the third-Friday effective date; press summaries put the September 2026 files at 09-04, checked 2026-09-01. Not fetched from a dated S&P DJI announcement page, so it stays estimate",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The watch item the opex-2026-09-18 ledger flagged on 2026-08-29 as unsourceable and deliberately did not add; sourced to the S&P DJI methodology on 2026-09-01 and filed as an estimate. This is the ANNOUNCEMENT, not the flow: the share/float rebalance itself is effective at the close of 2026-09-18 — the same closing auction as the triple witching's single-stock options — and this release is when passive managers first see what they must buy and sell there. So it is the earliest dated read on how large that 09-18 market-on-close imbalance will be. Low impact, market-structure only: it changes execution timing on high-open-interest names, never direction, and no house playbook (S1/S2/E1/S3/S4/G1) is opex- or rebalance-keyed.",
   },
   {
     id: "treasury-coupon-announcement-2026-09-03",
@@ -1743,6 +1769,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "PROPOSED AS THE ATTENTION CORRIDOR, NOT A CATALYST — discovered during the unsc-iran-panel-mandate-expiry-2026-09-26 initial research (2026-09-04), which needed the dates to establish that the 09-26 mandate expiry falls on a UN WORKING SATURDAY: a general-debate day with heads of state at UN HQ and US markets closed. Low impact and symbols: [] are the honest filing — leaders' week has no measured reaction function in this calendar and no price channel is claimed. What it IS good for: it dates the window in which Hormuz or Iran diplomacy would surface at principals level, and it explains why headlines in 09-22 to 09-28 reach the tape through gaps rather than through sessions. The measured version of that gap channel is in the expiry ledger: WTI's absolute weekend gap runs a 1.55% median over the last 14 weekends against a 0.53% two-year median (~2.9x), while SPY's 0.32% sits BELOW its own two-year 0.35% — the reopen risk is entirely in crude, none of it in the index. The date is the debate's OPENING; the window runs through 09-28.",
   },
   {
+    id: "retail-sales-2026-12-16",
+    kind: "macro-print",
+    title: "Retail Sales — advance monthly (Nov 2026)",
+    date: "2026-12-16",
+    status: "confirmed",
+    source:
+      'CENSUS: census.gov/retail/release_schedule.html lists the Advance Monthly Retail Trade Report for November 2026 data on "December 16, 2026", 08:30 ET, fetched direct 2026-09-01',
+    impact: "high",
+    symbols: [],
+    notes:
+      "The print that publishes the REVISION to the 11-17 advance estimate, and the FIRST AND ONLY Census read on the Thanksgiving/Black Friday/Cyber Monday weekend (2026-11-26/27/30) — which the 11-17 print does NOT contain, a misread its ledger flags explicitly. Also the first retail print that sits BEYOND BOTH LIVE CR EXPIRY CANDIDATES (House Dec 4, Senate Dec 11), so the appropriations risk the 09-16/10-15 ledgers made their dominant variable migrates to this slot rather than to 11-17. Lands one week after the 12-09 FOMC + SEP. Discovered during the retail-sales-2026-11-17 initial research, read off the next row of the same Census release schedule. Filed `confirmed` rather than the adjacency sweep's usual `estimate` because the date came from the Census primary release schedule — the same page and `CENSUS:` prefix that seeded the 09-16, 10-15 and 11-17 entries.",
+  },
+  {
     id: "durable-goods-2026-10-27",
     kind: "macro-print",
     title: "Advance Durable Goods Orders (Sep 2026 data)",
@@ -1754,32 +1793,6 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "The successor edition, and the one the funding branch actually threatens. It prints 08:30 on the FIRST MORNING of the Oct 27-28 FOMC meeting — the last capex read the committee sees before a decision that carries no SEP and no forward guidance — which is the whole reason it earns its own row rather than being tracked inside the 09-25 doc. In the lapse branch it may not exist on that date at all: on the 2025 precedent for this exact series, Census DELAYED rather than deleted, ~27-29 days (Oct-2025 advance 2025-11-26 -> 2025-12-23), which lands this edition in late November, after the vote. Same shape as retail-sales-2026-11-17's exposure and the opposite of BLS, which cancelled the October 2025 CPI outright. Deliberately filed `estimate` even though the date came off the Census primary: this lane never self-confirms an event in the PR that discovers it, and its own initial research is the place to flip it. Discovered during the durable-goods-2026-09-25 initial research (2026-09-01).",
-  },
-  {
-    id: "vix-expiration-2026-09-16",
-    kind: "opex",
-    title: "VIX futures & options September expiration (SOQ settlement)",
-    date: "2026-09-16",
-    status: "confirmed",
-    source:
-      "OCC: cboe.com/tradable-products/vix/vix-futures/ market-data table lists contract VX/U6 expiring 09/16/2026, and cboe.com/us/futures/market_statistics/settlement carries that same VX/U6 expiration's daily settlements for 09-02 and 09-03 — both fetched direct 2026-09-04. Deterministic cross-check: Wed 09-16 is exactly 30 days before the 2026-10-16 SPX expiration (October's third Friday), and Cboe's next listing applies the rule unchanged (VX/V6 -> 2026-10-21, 30 days before 2026-11-20). Flipped from NEWS:/estimate (macroption, 2026-09-01) by this event's own initial research, which is the sanctioned place to confirm a date the discovering sweep correctly declined to self-confirm",
-    impact: "low",
-    symbols: [],
-    notes:
-      "Proposed by the opex-2026-09-18 pulse (2026-09-01) as a same-corridor microstructure adjacency, NOT a standalone trade date. VIX contracts AM-settle to a Special Opening Quotation (VRO) built from opening-auction trade prices of a SINGLE SPX/SPXW expiration exactly 30 days out — here the 2026-10-16 series — so the volatility complex's own expiration lands on the MORNING of the fomc-2026-09-16 decision day, alongside retail-sales-2026-09-16 and import-export-prices-2026-09-16, and two sessions before the September triple witching. Why it belongs on the calendar at all: it means the week's vol-hedging unwind is staged (VIX 09-16 open, then SPX/index SET at the 09-18 open, then single-stock options + the S&P quarterly rebalance MOC at the 09-18 close), so 'the gamma rolls off Friday' understates how early the cushion starts leaving. Two facts from the 2026-09-04 initial research: the expiring contract stops trading 09:00 ET, ~4.5 hours BEFORE the 14:00 ET decision, so FOMC-day vol exposure cannot live in it; and the corridor is already paid for in the term structure (VX/U6 16.1381 vs VIX cash 14.32 on 09-03). Impact stays LOW even now the date is confirmed: it widens caution about the 09-16→09-18 corridor, supports one execution guard (nothing trades the 09-16 opening auction), and licenses nothing.",
-  },
-  {
-    id: "sp-rebalance-proforma-2026-09-04",
-    kind: "sector",
-    title: "S&P DJI September quarterly rebalance — pro-forma files released",
-    date: "2026-09-04",
-    status: "estimate",
-    source:
-      "NEWS: spglobal.com S&P Equity Indices Policies & Practices methodology — float-adjusted pro-forma files release after the close on the first Friday, two weeks before the third-Friday effective date; press summaries put the September 2026 files at 09-04, checked 2026-09-01. Not fetched from a dated S&P DJI announcement page, so it stays estimate",
-    impact: "low",
-    symbols: [],
-    notes:
-      "The watch item the opex-2026-09-18 ledger flagged on 2026-08-29 as unsourceable and deliberately did not add; sourced to the S&P DJI methodology on 2026-09-01 and filed as an estimate. This is the ANNOUNCEMENT, not the flow: the share/float rebalance itself is effective at the close of 2026-09-18 — the same closing auction as the triple witching's single-stock options — and this release is when passive managers first see what they must buy and sell there. So it is the earliest dated read on how large that 09-18 market-on-close imbalance will be. Low impact, market-structure only: it changes execution timing on high-open-interest names, never direction, and no house playbook (S1/S2/E1/S3/S4/G1) is opex- or rebalance-keyed.",
   },
   {
     id: "sp-rebalance-proforma-capped-2026-09-11",
