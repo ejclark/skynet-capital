@@ -171,11 +171,13 @@ async function main(): Promise<void> {
     resolveOwnerId,
     ownerEmailFor,
   } = setupAccess(process.env, liveRoster);
-  const opsStatus = wireOpsStatus(process.env, botControls, {
-    hub,
-    activity,
-    authConfigured: Boolean(auth),
-  });
+  const credentialsBridge = { knownPersonaIds: [...knownPersonaIds], findParticipant };
+  const opsStatus = wireOpsStatus(
+    process.env,
+    botControls,
+    { hub, activity, authConfigured: Boolean(auth) },
+    credentialsBridge,
+  );
   // The broker's last word: the fill stream is the fast path, this is the authoritative slow
   // one that repairs whatever it missed — a socket gap, a restart, an order placed outside this app.
   // Reads the LIVE roster, so a runtime-added or rotated account is covered too.

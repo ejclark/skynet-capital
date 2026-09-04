@@ -49,11 +49,11 @@ const HARDCORE_COOLDOWN_MS = 90_000;
  *  whenever the env var was merely SET — which made the one silent failure mode this deployment
  *  has (bridge unreachable → fail-open to env-only controls → Eric's suspend toggles quietly stop
  *  arriving) indistinguishable from health. */
-export async function bootMissionControl(): Promise<{
+export async function bootMissionControl(onFetched?: (state: ControlsState) => void): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
 }> {
-  const controls = resolveBotControls(process.env);
+  const controls = resolveBotControls(process.env, onFetched);
   const fetched = await controls.fetchOnce();
   if (!controls.enabled) {
     console.log("[controls] bridge unset (SKYNET_INSIGHTS_BRIDGE_URL) — env-only controls");
