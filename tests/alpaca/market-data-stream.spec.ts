@@ -227,4 +227,68 @@ describe("AlpacaMarketDataStream", () => {
       expect(statuses).toContain("error");
     });
   });
+
+  describe("replaceCredentials", () => {
+    it("before start(): only updates config — opens no socket of its own", () => {
+      // Confirmed live 2026-09-04: a credential rotated during the boot-time reconcile (which
+      // runs before the caller's own first start()) used to open a socket immediately here, and
+      // the caller's subsequent start() then opened a SECOND one on the same account — Alpaca
+      // killed one as a duplicate connection ~10s later, leaving zero ticks flowing.
+      const stream = new AlpacaMarketDataStream({
+        apiKey: "old-key",
+        apiSecret: "old-secret",
+        symbols: ["NVDA"],
+        onEvent: () => undefined,
+      });
+
+      stream.replaceCredentials("new-key", "new-secret");
+
+      expect(FakeSocket.instances).toHaveLength(0);
+
+      stream.start();
+
+      expect(FakeSocket.instances).toHaveLength(1);
+      const socket = FakeSocket.instances[0];
+      if (!socket) throw new Error("start() opened no socket");
+      socket.emit("open");
+      expect(JSON.parse(socket.sent[0] ?? "")).toEqual({
+        action: "auth",
+        key: "new-key",
+        secret: "new-secret",
+      });
+    });
+
+    it("closes the old socket and opens a new one authenticating with the new pair", () => {
+      const { stream, socket: firstSocket } = startStream();
+
+      stream.replaceCredentials("new-key", "new-secret");
+
+      expect(firstSocket.closeCalls).toBe(1);
+      expect(FakeSocket.instances).toHaveLength(2);
+      const secondSocket = FakeSocket.instances[1];
+      if (!secondSocket) throw new Error("replaceCredentials() opened no new socket");
+      secondSocket.emit("open");
+      expect(JSON.parse(secondSocket.sent[0] ?? "")).toEqual({
+        action: "auth",
+        key: "new-key",
+        secret: "new-secret",
+      });
+    });
+
+    it("keeps the original symbols and feed across the swap", () => {
+      const { stream } = startStream({ feed: "sip", symbols: ["NVDA"] });
+
+      stream.replaceCredentials("new-key", "new-secret");
+
+      const secondSocket = FakeSocket.instances[1];
+      if (!secondSocket) throw new Error("replaceCredentials() opened no new socket");
+      expect(secondSocket.url).toBe("wss://stream.data.alpaca.markets/v2/sip");
+      secondSocket.emit("open");
+      secondSocket.emit("message", frame(AUTHENTICATED));
+      expect(JSON.parse(secondSocket.sent[secondSocket.sent.length - 1] ?? "")).toEqual({
+        action: "subscribe",
+        trades: ["NVDA"],
+      });
+    });
+  });
 });

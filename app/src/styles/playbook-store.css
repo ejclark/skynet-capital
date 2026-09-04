@@ -1,0 +1,71 @@
+/* The Playbook Store (issue #885) — tokens only, same card/deck language as outpost.css's .pc/.op-deck. */
+
+.pb-deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.pb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--elev-base);
+  padding: var(--panel-p);
+}
+
+.pb-card-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+  margin: 0;
+}
+
+.pb-card-description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.pb-card-triggers {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  font-size: 12px;
+}
+
+.pb-card-triggers dt {
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pb-card-triggers dd {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pb-subscribe-form,
+.pb-subscription {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.pb-subscription-line {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.pb-subscription-actions {
+  display: flex;
+  gap: 8px;
+}

@@ -1,7 +1,9 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useConnection } from "../live/connection";
+import { useMoneypenny } from "../live/moneypenny";
 import { KeyboardChords } from "../shell/keyboard";
+import { MoneypennyRail } from "../shell/moneypenny-rail";
 
 /**
  * The shell (#738, live-review round; nav reorg follow-up): the topbar carries the APP-LEVEL
@@ -12,6 +14,10 @@ import { KeyboardChords } from "../shell/keyboard";
  * Preferences (theme, density) live on /settings, not here — they're per-viewer display state,
  * not a destination. Settings and Sign out are actions, not views, so they render as icon-only
  * buttons rather than competing with the view list for topnav space.
+ *
+ * There is no Feedback tab (handoff 2026-09-03): feedback goes through Moneypenny, the ✦ button
+ * at the far right of the bar, which toggles her rail — a sibling of the whole app column, so it
+ * pushes everything left rather than covering the stage (`shell.css`, `.shell` / `.shell-app`).
  */
 
 function StatusPill(): ReactElement {
@@ -65,75 +71,114 @@ function ExitIcon(): ReactElement {
   );
 }
 
+/** Every route under the Profile rail lights the Profile tab (Accounts is `/`, exactly). */
+export const PROFILE_PATHS = [
+  "/learn",
+  "/onboarding",
+  "/playbooks",
+  "/feedback",
+  "/settings",
+  "/join",
+] as const;
+
+export function isProfilePath(pathname: string): boolean {
+  const path = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
+  return path === "/" || PROFILE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
+/**
+ * THE PROFILE TAB (#1119, the canvas's top bar: Profile · Trade · Activity · Research · Feedback).
+ * Profile is a family of routes, not one, so its active state is computed from the location
+ * rather than a single route match; it opens on the milestones table of contents.
+ */
+function ProfileTab(): ReactElement {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return (
+    <Link
+      to="/learn"
+      className="topnav-link"
+      aria-current={isProfilePath(pathname) ? "page" : undefined}
+    >
+      Profile
+    </Link>
+  );
+}
+
+/** The ✦ toggle — accent-tinted while the rail is open. */
+function MoneypennyToggle(): ReactElement {
+  const open = useMoneypenny((s) => s.open);
+  const toggleRail = useMoneypenny((s) => s.toggleRail);
+  return (
+    <button
+      type="button"
+      className="mp-toggle"
+      aria-pressed={open}
+      aria-label="Moneypenny — learning & feedback"
+      title="Moneypenny — learning & feedback"
+      onClick={toggleRail}
+    >
+      ✦
+    </button>
+  );
+}
+
 function RootShell(): ReactElement {
   return (
     <div className="shell">
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <header className="topbar">
-        <span className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            SC
+      <div className="shell-app">
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+        <header className="topbar">
+          <span className="brand">
+            <span className="brand-mark" aria-hidden="true">
+              SC
+            </span>
+            Skynet Capital
           </span>
-          Skynet Capital
-        </span>
-        <nav className="topnav" aria-label="Views">
-          <Link
-            to="/"
-            search={{ by: "equity" }}
-            className="topnav-link"
-            activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false, exact: true }}
-          >
-            Standings
-          </Link>
-          <Link
-            to="/wire"
-            className="topnav-link"
-            activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false }}
-          >
-            The Wire
-          </Link>
-          <Link to="/research" className="topnav-link" activeProps={{ "aria-current": "page" }}>
-            Research
-          </Link>
-          <Link
-            to="/trade"
-            className="topnav-link"
-            activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false }}
-          >
-            Trade
-          </Link>
-          <Link
-            to="/feedback"
-            className="topnav-link"
-            activeProps={{ "aria-current": "page" }}
-            activeOptions={{ includeSearch: false }}
-          >
-            Feedback
-          </Link>
-        </nav>
-        <div className="topbar-actions">
-          <StatusPill />
-          <Link
-            to="/settings"
-            className="icon-action"
-            activeProps={{ "aria-current": "page" }}
-            aria-label="Settings"
-            title="Settings"
-          >
-            <GearIcon />
-          </Link>
-          <a className="icon-action" href="/logout" aria-label="Sign out" title="Sign out">
-            <ExitIcon />
-          </a>
-        </div>
-      </header>
-      <Outlet />
-      <KeyboardChords />
+          <nav className="topnav" aria-label="Views">
+            <ProfileTab />
+            <Link
+              to="/trade"
+              className="topnav-link"
+              activeProps={{ "aria-current": "page" }}
+              activeOptions={{ includeSearch: false }}
+            >
+              Trade
+            </Link>
+            <Link
+              to="/wire"
+              className="topnav-link"
+              activeProps={{ "aria-current": "page" }}
+              activeOptions={{ includeSearch: false }}
+            >
+              Activity
+            </Link>
+            <Link to="/research" className="topnav-link" activeProps={{ "aria-current": "page" }}>
+              Research
+            </Link>
+          </nav>
+          <div className="topbar-actions">
+            <StatusPill />
+            <Link
+              to="/settings"
+              className="icon-action"
+              activeProps={{ "aria-current": "page" }}
+              aria-label="Settings"
+              title="Settings"
+            >
+              <GearIcon />
+            </Link>
+            <a className="icon-action" href="/logout" aria-label="Sign out" title="Sign out">
+              <ExitIcon />
+            </a>
+            <MoneypennyToggle />
+          </div>
+        </header>
+        <Outlet />
+        <KeyboardChords />
+      </div>
+      <MoneypennyRail />
     </div>
   );
 }

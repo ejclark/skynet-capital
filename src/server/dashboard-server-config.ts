@@ -9,6 +9,7 @@ import type { AccountAdmin } from "./account-forms.js";
 import type { Authenticator } from "./auth/authenticator.js";
 import type { ClaimDeps } from "./claim-form.js";
 import type { CommunityProgressionService } from "./community-progression-service.js";
+import type { CompanionMessageLogEntry } from "./companion-message-log.js";
 import type { ControlsDeps } from "./controls-form.js";
 import type { FeedbackRouteDeps } from "./feedback-routes.js";
 import type { InviteDeps } from "./invite-form.js";
@@ -23,6 +24,7 @@ import type {
   RotateResult,
 } from "./participant-service.js";
 import type { ProgressionService } from "./progression-service.js";
+import type { SubscriptionStore } from "./subscription-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import type { WireRouteDeps } from "./wire-routes.js";
 
@@ -177,4 +179,19 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * yet" honestly when this is absent, same doctrine as every other optional AI-backed lane.
    */
   readonly companion?: CompanionTurn;
+  /**
+   * The ladder-gate's own evidence (`companion-message-log.ts`) — reads for the member's own
+   * opaque id. Used directly by `/api/companion/ack` to check "already recorded" before writing;
+   * the progression service reads the same store through its own (participant-id-aware) binding.
+   */
+  readonly readMessages?: (opaqueMemberId: string) => Promise<readonly CompanionMessageLogEntry[]>;
+  /** Record one real message as ladder-gate evidence — called once, on the first message a member
+   *  ever sends the rail (`/api/companion/ack`), regardless of how it's routed. */
+  readonly recordMessage?: (opaqueMemberId: string) => Promise<void>;
+  /**
+   * The Playbook Store (issue #885) — an account's own playbook subscriptions and capital
+   * sub-allocations. Omit to disable (offline mode) — the catalog still browses, just with no
+   * subscribe/unsubscribe action wired.
+   */
+  readonly subscriptions?: SubscriptionStore;
 }

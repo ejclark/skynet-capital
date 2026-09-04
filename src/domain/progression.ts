@@ -121,6 +121,41 @@ export function ladderNeighbor(code: TradeTypeCode, offset: -1 | 1): TradeType |
   return i >= 0 ? TRADE_TYPES[i + offset] : undefined;
 }
 
+/**
+ * THE ONE NON-FILL GATE ON THE LADDER (#1119, the Claude Design canvas "Alpaca onboarding process
+ * streamline"; lowered by Eric's 2026-09-03 ruling): with training wheels on and nothing said to
+ * Moneypenny yet, every rung not already earned stays shut — "the desk opens once you've shown
+ * up." Requiring a FILED issue was too high a bar to gate trading on (that stays its own, harder,
+ * separately-tracked achievement — `community.ts`'s `first-feedback`); this gate's bar is just a
+ * message. Wheels off is never gated (the seeding rule in `progression-service.ts` gives every
+ * member with fill history wheels off), and a rung already earned by a fill is never locked away.
+ * The evidence is the engagement track's `first-message` earn — a real
+ * `companion-message-log.ts` entry, never a client claim. Exits stay exempt wherever this is
+ * applied: restricting how someone leaves a position would be a safety bug, not a lesson.
+ */
+export const LADDER_GATE_MILESTONE = "first-message";
+
+/**
+ * A filed issue satisfies the gate too, even though it's no longer the gate's own milestone: the
+ * rail's only door to filing is the chat itself, so anyone who filed already said something to
+ * her first. Named directly rather than importing `community.ts` (the two tracks stay otherwise
+ * undependent) — this is a one-way "at least as hard" acknowledgment, not a coupling. Matters for
+ * a member who filed before this log existed: without it, someone who did MORE than the new bar
+ * asks would be re-gated by a ledger that only started recording today.
+ */
+const LADDER_GATE_ALSO_SATISFIED_BY = "first-feedback";
+
+export const LADDER_GATE_NOTE =
+  "The ladder opens the moment you say hello to Moneypenny — trading starts with a conversation.";
+
+export function ladderGated(wheels: boolean, satisfiedIds: ReadonlySet<string>): boolean {
+  return (
+    wheels &&
+    !satisfiedIds.has(LADDER_GATE_MILESTONE) &&
+    !satisfiedIds.has(LADDER_GATE_ALSO_SATISFIED_BY)
+  );
+}
+
 /** With wheels on, a rung outside the unlocked set is locked; wheels off (or no view) locks nothing. */
 export function lockedOnLadder(
   code: TradeTypeCode,

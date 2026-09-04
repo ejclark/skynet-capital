@@ -11,7 +11,7 @@
 // `tests/` and `.github/` never ship in the image (.dockerignore), and `docs/` + markdown are read
 // only by the dashboard's /research route, never by the bots process. Everything else — all of
 // src/ (shared modules like src/domain and src/alpaca included), package.json/package-lock.json,
-// Dockerfile, scripts/, fly*.toml, .nvmrc — deploys bots. A false positive costs one redundant
+// Dockerfile, scripts/, fly*.toml, mise.toml — deploys bots. A false positive costs one redundant
 // deploy; a false negative leaves the bots app running silently stale code against newer shared
 // contracts, indefinitely. Widen this list only with proof, never for tidiness.
 //

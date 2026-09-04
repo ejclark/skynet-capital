@@ -23,8 +23,18 @@ export async function fetchJson(
     ...(signal ? { signal } : {}),
   });
   const text = await response.text();
-  return {
-    status: response.status,
-    body: text.length > 0 ? JSON.parse(text) : null,
-  };
+  if (text.length === 0) {
+    return { status: response.status, body: null };
+  }
+  try {
+    return { status: response.status, body: JSON.parse(text) };
+  } catch {
+    // A non-JSON body (an HTML error/challenge page from a proxy or WAF in front of the real
+    // API, most often) throws a bare "Unexpected token '<'" with no way to tell an auth block
+    // from a gateway outage from the wrong host — the status and a body snippet turn that into
+    // an actionable log line instead of a callers' guessing game.
+    throw new Error(
+      `fetchJson: non-JSON response (status ${response.status}) from ${method} ${url}: ${text.slice(0, 200)}`,
+    );
+  }
 }

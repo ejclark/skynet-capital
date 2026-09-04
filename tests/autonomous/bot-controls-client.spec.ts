@@ -76,4 +76,35 @@ describe("bot-controls bridge client", () => {
       },
     );
   });
+
+  it("fires onFetched with the parsed state on every successful poll", async () => {
+    const state: ControlsState = { bots: { sauron: { credentialsVersion: "v1" } } };
+    await withBridge(
+      () => state,
+      async (base) => {
+        const seen: ControlsState[] = [];
+        const client = resolveBotControls(
+          { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
+          (s) => seen.push(s),
+        );
+        await client.fetchOnce();
+        expect(seen).toEqual([state]);
+      },
+    );
+  });
+
+  it("never lets a throwing onFetched hook fail the poll it rides on", async () => {
+    await withBridge(
+      () => ({ bots: {} }),
+      async (base) => {
+        const client = resolveBotControls(
+          { SKYNET_INSIGHTS_BRIDGE_URL: base } as NodeJS.ProcessEnv,
+          () => {
+            throw new Error("hook exploded");
+          },
+        );
+        await expect(client.fetchOnce()).resolves.toEqual({ bots: {} });
+      },
+    );
+  });
 });

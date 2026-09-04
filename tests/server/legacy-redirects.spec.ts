@@ -42,7 +42,7 @@ describe("serveLegacyRedirect", () => {
     expect(target("/collections")).toBe("/app/collections");
     expect(target("/collections/wheel-desks")).toBe("/app/collections/wheel-desks");
     expect(target("/account")).toBe("/app/settings");
-    expect(target("/add", "/add?key=abc")).toBe("/app/join?key=abc");
+    expect(target("/add", "/add?key=abc")).toBe("/app/onboarding?key=abc");
     expect(target("/feedback")).toBe("/app/feedback");
     // The owner pages' cards live on app Settings (9e).
     expect(target("/invite")).toBe("/app/settings");

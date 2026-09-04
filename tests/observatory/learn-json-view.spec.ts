@@ -86,15 +86,31 @@ describe("learnJsonView", () => {
       unlockedLevels: new Set([100]),
       celebrating: [],
       pendingChecks: [],
-      engagementCelebrating: [{ milestoneId: "first-feedback", at: "2026-08-26" }],
+      engagementCelebrating: [{ milestoneId: "first-message", at: "2026-08-26" }],
     });
     expect(view.engagementCelebrating).toEqual([
-      { milestoneId: "first-feedback", title: "File your first feedback", points: 20 },
+      {
+        milestoneId: "first-message",
+        title: "Say hello to Moneypenny",
+        points: 10,
+      },
     ]);
   });
 
   it("has nothing to celebrate on the engagement track by default", () => {
     const view = learnJsonView(undefined);
     expect(view.engagementCelebrating).toEqual([]);
+  });
+
+  it("surfaces the message gate with its sentence when the progression holds it", () => {
+    const view = learnJsonView({
+      earned: [],
+      points: 0,
+      rank: { title: "Observer", atPoints: 0 },
+      unlockedLevels: new Set([100]),
+      ladderGate: "first-message",
+    });
+    expect(view.gate?.reason).toBe("first-message");
+    expect(view.gate?.note).toContain("hello to Moneypenny");
   });
 });

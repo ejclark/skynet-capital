@@ -77,6 +77,32 @@
   box-shadow: var(--elev-base);
 }
 
+/* the Profile rail (#1119): a glyph per item, chapters indented under their table of contents */
+.rail .rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rail .rail-glyph {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.rail .rail-current .rail-glyph {
+  color: var(--accent);
+}
+.rail a.rail-sub,
+.rail .rail-current.rail-sub {
+  margin-left: 14px;
+}
+@media (max-width: 860px) {
+  .rail a.rail-sub,
+  .rail .rail-current.rail-sub {
+    margin-left: 0;
+  }
+}
+
 .rail hr {
   border: none;
   border-top: 1px solid var(--border);
