@@ -10,12 +10,28 @@ export const meta = {
   name: 'grind',
   description: 'Fan out a chain of steps across many similar targets; effort routed by step kind',
   whenToUse:
-    'For a batch of near-identical, mechanical chores — the same fix/skill/command applied across many files/PRs/branches/tickers — where doing them one at a time in the main thread burns turns without needing deep judgment per item. Not for anything requiring cross-item synthesis or a design call; that wants a purpose-built pipeline instead.\n\nArgs: {items: [...], effort?, model?, isolation?, promptTemplate?, steps?}. Provide exactly one of promptTemplate or steps. Generate the call from a chore file with `node scripts/grind-manifest.mjs --args --items <json> docs/grind/<chore>.instructions.md` rather than hand-writing it (docs/grind/README.md).\n\n- promptTemplate: "...{item}..." — single-stage mode: one agent call per item (unchanged from before).\n- steps: [{kind, ...}] — multi-stage mode: each item runs the SAME step chain in order via pipeline() (item A can be on step 3 while item B is still on step 1). Once a step reports status "blocked" or "skipped", later steps for that item pass through unchanged rather than running. Step kinds:\n  - {kind:"prompt", template} — free-text instruction, same {item} substitution as promptTemplate.\n  - {kind:"instructions", path, extra?} — points at a checked-in *.instructions.md file (see docs/grind/README.md); the agent reads it and carries it out against the item. Write the chore once, reuse the file across every grind run instead of re-pasting a template.\n  - {kind:"skill", name, args?} — the agent invokes an existing repo skill (its .claude/skills/<name>/SKILL.md), exactly as if a user typed "/<name>", targeted at the item.\n  - {kind:"script", command} — the agent runs the exact shell command (with {item}/{prev} substituted) and reports pass/fail only — no exploration, no judgment. The cheapest, fastest, most deterministic step kind; prefer it whenever the chore reduces to a command.\n  Every step after the first receives the prior step result, structured as {status, summary, branch?} — as {prev} (the whole JSON) or {prev.<field>} (one field) — in its prompt, so steps compose (e.g. script check -> skill fix -> script re-check). A step that pushes a branch should report it in branch, so a trailing {kind:"script", command:"git ls-remote --exit-code --heads origin {prev.branch}"} verifies the push actually happened instead of trusting the self-report — a "done" with no branch on origin fails closed (docs/grind/README.md).\n\nCompute (docs/COMPUTE.md): effort defaults by STEP KIND — "script" steps run at low (a command either exits 0 or it does not; thoroughness cannot change that), every other kind at high (it reads, writes, or judges). Model defaults to sonnet (the floor for mechanical-with-verification); a chore that needs more declares it in its front matter. Per-step effort/model override both; args.effort/args.model override the defaults for the whole run. None of these are chosen for economy — token conservation is an explicit signal from Eric, never a default.',
+    'For a batch of near-identical, mechanical chores — the same fix/skill/command applied across many files/PRs/branches/tickers — where doing them one at a time in the main thread burns turns without needing deep judgment per item. Not for anything requiring cross-item synthesis or a design call; that wants a purpose-built pipeline instead.\n\nBefore constructing args: args.itemSource is REQUIRED — a real description (12+ characters) of where items came from, never a placeholder like "items" or "n/a"; the call throws otherwise. Say whether it is a live scan/query or a hand-picked list, and why. This is the one part of a pre-flight this workflow can actually enforce — depth (effort/model, see Compute below) and the outcome check (verifyBranch, also below) are yours to set correctly, not validated for quality; width (scope beyond the automatic envelope check) is your judgment call with no matching arg at all.\n\nArgs: {items: [...], itemSource, effort?, model?, isolation?, verifyBranch?, skipEnvelopeCheck?, promptTemplate?, steps?}. Provide exactly one of promptTemplate or steps. Generate the call from a chore file with `node scripts/grind-manifest.mjs --args --items <json> --item-source <string> docs/grind/<chore>.instructions.md` rather than hand-writing it (docs/grind/README.md).\n\n- itemSource: required, 12+ characters, a real description of where items came from (a scan command, a query, or the explicit reason none applies) — not a rubber-stamp word. Logged at run start and included in the returned result.\n- verifyBranch: true appends a trailing {kind:"script"} step that runs "git ls-remote --exit-code --heads origin {prev.branch}" after your own steps, so a "done" with nothing pushed to origin fails closed instead of being trusted. Skipped automatically, with a log line, if your own steps already end in the identical command (a checked-in chore already covers this via its own outcomeCheck front matter).\n- skipEnvelopeCheck: a non-empty string naming why items are not file paths (issue numbers, tickers, PR branches) — skips the automatic envelope.json check normally prepended as step 0 (default on). A bare boolean is rejected; state the reason.\n- promptTemplate: "...{item}..." — single-stage mode: one agent call per item (unchanged from before).\n- steps: [{kind, ...}] — multi-stage mode: each item runs the SAME step chain in order via pipeline() (item A can be on step 3 while item B is still on step 1). Once a step reports status "blocked" or "skipped", later steps for that item pass through unchanged rather than running. A step 0 envelope check runs first automatically (see skipEnvelopeCheck above; it reports "done" rather than "skipped" for an item with no path, so it never stalls the rest of the chain), then your steps, then an optional verifyBranch check last. Any step that checks {prev.branch} against a prior result reporting no branch is blocked before dispatch rather than run — an empty-string branch argument would otherwise exit 0 and pass vacuously. Step kinds:\n  - {kind:"prompt", template} — free-text instruction, same {item} substitution as promptTemplate.\n  - {kind:"instructions", path, extra?} — points at a checked-in *.instructions.md file (see docs/grind/README.md); the agent reads it and carries it out against the item. Write the chore once, reuse the file across every grind run instead of re-pasting a template.\n  - {kind:"skill", name, args?} — the agent invokes an existing repo skill (its .claude/skills/<name>/SKILL.md), exactly as if a user typed "/<name>", targeted at the item.\n  - {kind:"script", command} — the agent runs the exact shell command (with {item}/{prev} substituted) and reports pass/fail only — no exploration, no judgment. The cheapest, fastest, most deterministic step kind; prefer it whenever the chore reduces to a command.\n  Every step after the first receives the prior step result, structured as {status, summary, branch?} — as {prev} (the whole JSON) or {prev.<field>} (one field) — in its prompt, so steps compose (e.g. script check -> skill fix -> script re-check).\n\nCompute (docs/COMPUTE.md): effort defaults by STEP KIND — "script" steps run at low (a command either exits 0 or it does not; thoroughness cannot change that), every other kind at high (it reads, writes, or judges). Model defaults to sonnet (the floor for mechanical-with-verification); a chore that needs more declares it in its front matter. Per-step effort/model override both; args.effort/args.model override the defaults for the whole run. None of these are chosen for economy — token conservation is an explicit signal from Eric, never a default.',
   phases: [{ title: 'Grind' }],
 }
 
 const items = args?.items
 if (!items?.length) throw new Error('grind requires args.items: a non-empty array')
+
+// The 12-char floor exists to reject rubber-stamp answers ("items", "n/a", "list") that satisfy a
+// bare non-empty check while carrying zero real information — a red-team pass on the first version
+// of this gate landed exactly that attack.
+const itemSource = args?.itemSource
+if (!itemSource || typeof itemSource !== 'string' || itemSource.trim().length < 12) {
+  throw new Error(
+    'grind requires args.itemSource: a real description of where items came from, not a placeholder — "items"/"n/a"/"list" do not count. Good: "doc-rot-scan.mjs output" or "hand-picked, no gate exists for this one-off". See meta.whenToUse.',
+  )
+}
+
+if (args?.skipEnvelopeCheck !== undefined && (typeof args.skipEnvelopeCheck !== 'string' || !args.skipEnvelopeCheck.trim())) {
+  throw new Error(
+    'grind: args.skipEnvelopeCheck must be a non-empty string naming why items are not file paths (or omit it entirely to run the default envelope check)',
+  )
+}
 
 const steps = args?.steps?.length
   ? args.steps
@@ -39,6 +55,54 @@ for (const step of steps) {
   if (step.kind === 'skill' && !step.name) throw new Error('grind: a "skill" step requires name (e.g. "decompose")')
   if (step.kind === 'script' && !step.command) throw new Error('grind: a "script" step requires command (a shell command string, "{item}"/"{prev}" substituted)')
 }
+
+// Envelope check runs as step 0 by default — the "Known limitations" gap docs/grind/README.md used
+// to document (nothing filtered items against envelope.json before dispatch). It is a "prompt" step,
+// not "script", because --check always exits 0 and returns descriptive JSON for the agent to read;
+// a plain exit-code step cannot express that. skipEnvelopeCheck opts out for non-path items.
+//
+// Two rules in the template exist because a red-team pass found real bypasses in the first version:
+// (1) the agent must extract a real path from an object item itself, never hand the raw JSON to the
+// shell — {"doc":"envelope.json","refs":["a"]} substituted straight into the command line and shell
+// word-split into harmless-looking fragments that matched nothing. (2) a non-applicable item must
+// report "done", never "skipped" — this pipeline treats any non-"done" status as "stop the chain for
+// this item", so "skipped" here silently no-ops every later step (the actual chore never runs) on
+// every non-path grind call, which defeats the whole point of a pre-flight check.
+const ENVELOPE_STEP = {
+  kind: 'prompt',
+  label: 'envelope-check',
+  template:
+    'This item is: {item}\n\nDetermine the file path(s) this item actually touches. If {item} is a plain path string, that is the path. If it is a JSON object, extract the path-like field yourself (for example "path", "file", or "doc") — never run the raw JSON text through a shell command or treat a field:value fragment as a path.\n\nFor each path found, run: node scripts/envelope-scan.mjs --check "<path>" --base origin/main — quoting each path. Parse the JSON output. If any entry has "blocking": true, report status "blocked" and put the matching rule/reason in your summary — do not proceed past this step.\n\nIf the item has no file-path-like field at all (for example a bare GitHub issue number, a PR branch name, or a ticker symbol), the envelope check does not apply to it — report status "done" (never "skipped" — a later step in this chain still needs to run) and say in one line why no path applies. Otherwise, once every path clears, report status "done". Do nothing else — no exploration, no fixing.',
+}
+
+// Mirrors docs/grind/README.md's "Verify the outcome mechanically" trailing step, opt-in via
+// verifyBranch so callers whose chain never pushes a branch are not forced to carry a step that
+// always fails.
+const VERIFY_BRANCH_STEP = {
+  kind: 'script',
+  label: 'verify-branch',
+  command: 'git ls-remote --exit-code --heads origin {prev.branch}',
+}
+
+// `git ls-remote --exit-code --heads origin ""` lists every head and exits 0 — a step that checks
+// {prev.branch} without a real branch to check passes vacuously. Guarded below at dispatch time
+// (referencesPrevBranch), not here, so it also protects a checked-in chore's own outcomeCheck.
+function referencesPrevBranch(step) {
+  return (step.template || step.command || '').includes('{prev.branch}')
+}
+
+// A checked-in chore's own outcomeCheck already runs this exact command (grind-manifest.mjs); do
+// not silently duplicate it just because the caller also passed verifyBranch.
+const alreadyVerifiesBranch = steps.some((s) => s.kind === 'script' && s.command === VERIFY_BRANCH_STEP.command)
+if (args?.verifyBranch && alreadyVerifiesBranch) {
+  log('verifyBranch: true, but the chain already ends in the same branch-verification command — not appending a duplicate')
+}
+
+const finalSteps = [
+  ...(args?.skipEnvelopeCheck ? [] : [ENVELOPE_STEP]),
+  ...steps,
+  ...(args?.verifyBranch && !alreadyVerifiesBranch ? [VERIFY_BRANCH_STEP] : []),
+]
 
 // Compute routing (docs/COMPUTE.md → "Eric does not set the dial"): the tier follows the task
 // class, never economy. A `script` step is the one genuinely mechanical kind — a command exits 0
@@ -135,17 +199,27 @@ phase(PHASE)
 
 // pipeline() gives stage 1 just (item) and every later stage (prevResult, item, index) — mirror
 // that here so the chain lines up with how pipeline actually invokes each callback.
-const stages = steps.map((step, i) =>
+const stages = finalSteps.map((step, i) =>
   i === 0
     ? (item) => agent(promptFor(step, item, undefined), stageOpts(step, item))
     : (prev, item) => {
         // A step already blocked/skipped stays that way — don't spend an agent running later
         // steps against a target the chain has already given up on.
         if (prev && prev.status !== 'done') return prev
+        // "git ls-remote ... origin ''" exits 0 (lists every head) — a step checking {prev.branch}
+        // against a prev result with no branch would otherwise pass vacuously instead of catching
+        // the "done" that pushed nothing docs/grind/README.md warns about.
+        if (referencesPrevBranch(step) && !prev?.branch) {
+          return {
+            status: 'blocked',
+            summary: 'this step checks {prev.branch}, but the previous step reported no branch — refusing to run a check that would otherwise pass vacuously',
+          }
+        }
         return agent(promptFor(step, item, prev), stageOpts(step, item))
       },
 )
 
+log(`items: ${items.length} · source: ${itemSource}`)
 const results = await pipeline(items, ...stages)
 
 const combined = items.map((item, i) => ({ item, result: results[i] }))
@@ -159,6 +233,7 @@ log(`${PHASE}: ${done.length}/${items.length} done · ${blocked.length} blocked 
 return {
   chore: PHASE,
   total: items.length,
+  itemSource,
   done: done.length,
   blocked: blocked.map((c) => ({ item: labelFor(c.item), summary: c.result.summary })),
   results: combined.map((c) => ({ item: labelFor(c.item), ...(c.result || { status: 'errored', summary: 'agent failed after retries' }) })),

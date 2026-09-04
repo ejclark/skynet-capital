@@ -17,6 +17,7 @@ export interface ChoreScan {
 /** The grind `args` object a caller pastes, with the chore's tier already filled in. */
 export interface ChoreArgs {
   items: unknown[];
+  itemSource: string;
   steps: Record<string, unknown>[];
 }
 
@@ -37,4 +38,4 @@ export function scanChoreFile(file: string): ChoreScan;
 export function choreFiles(): string[];
 
 /** Build the grind `args` object for one chore plus an item list. */
-export function argsFor(manifest: ChoreManifest, items: unknown[]): ChoreArgs;
+export function argsFor(manifest: ChoreManifest, items: unknown[], itemSource: string): ChoreArgs;

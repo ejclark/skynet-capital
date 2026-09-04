@@ -9,7 +9,7 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 # Fix one doc's doc-rot findings
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
-`node scripts/grind-manifest.mjs --args --items '<json>' docs/grind/fix-doc-rot.instructions.md`
+`node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/fix-doc-rot.instructions.md`
 rather than transcribing these values by hand. `effort: high` because a doc-rot fix is a judgment call three ways — renamed, deleted, or an idea the scanner misread as a citation (the `docs/IDEAS.md` case) — and `docs/COMPUTE.md` puts anything that judges at `high`; `low` was a cost-first default and the first real run had to be launched at a higher tier by hand (`isolation: worktree` because step 1 below does its own `git checkout -B`, and without a
 fresh worktree per item concurrent items share one working directory and stomp on each other's
 checkout; `outcomeCheck` so a `done` is verified against origin rather than trusted).
