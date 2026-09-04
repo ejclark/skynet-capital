@@ -15,6 +15,7 @@ import {
   EMPTY_CONTROLS,
 } from "../autonomous/bot-controls.js";
 import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-controls-client.js";
+import { type BotsHealthFile, resolveBotsHealthFile } from "../autonomous/bots-health-file.js";
 import type { BotsStateDb } from "../autonomous/bots-state-db.js";
 import { openBotsStateDb } from "../autonomous/bots-state-db.js";
 import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
@@ -49,12 +50,23 @@ const HARDCORE_COOLDOWN_MS = 90_000;
  *  whenever the env var was merely SET — which made the one silent failure mode this deployment
  *  has (bridge unreachable → fail-open to env-only controls → Eric's suspend toggles quietly stop
  *  arriving) indistinguishable from health. */
-export async function bootMissionControl(onFetched?: (state: ControlsState) => void): Promise<{
+export async function bootMissionControl(
+  onFetched?: (state: ControlsState) => void,
+  // The process's own health stamp on the volume (bots-health-file.ts): the same three verdicts
+  // as the log lines below, but readable the instant they're written — what scripts/smoke-bots.sh
+  // reads instead of lagging `flyctl logs`. Dark unless SKYNET_BOTS_HEALTH_PATH is set.
+  health: BotsHealthFile = resolveBotsHealthFile(process.env),
+): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
 }> {
-  const controls = resolveBotControls(process.env, onFetched);
+  const controls = resolveBotControls(process.env, (state) => {
+    health.controlsFetched();
+    onFetched?.(state);
+  });
   const fetched = await controls.fetchOnce();
+  health.boot(controls.enabled);
+  if (health.path) console.log(`[health] stamping ${health.path}`);
   if (!controls.enabled) {
     console.log("[controls] bridge unset (SKYNET_INSIGHTS_BRIDGE_URL) — env-only controls");
   } else if (fetched) {
