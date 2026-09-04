@@ -14,7 +14,6 @@ import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as OutpostRouteImport } from './routes/outpost'
 import { Route as PlaybooksRouteImport } from './routes/playbooks'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -52,11 +51,6 @@ const LearnRoute = LearnRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OutpostRoute = OutpostRouteImport.update({
-  id: '/outpost',
-  path: '/outpost',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlaybooksRoute = PlaybooksRouteImport.update({
@@ -131,7 +125,6 @@ export interface FileRoutesByFullPath {
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
-  '/outpost': typeof OutpostRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
@@ -152,7 +145,6 @@ export interface FileRoutesByTo {
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
-  '/outpost': typeof OutpostRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
@@ -173,7 +165,6 @@ export interface FileRoutesById {
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
-  '/outpost': typeof OutpostRoute
   '/playbooks': typeof PlaybooksRoute
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
@@ -196,7 +187,6 @@ export interface FileRouteTypes {
     | '/join'
     | '/learn'
     | '/onboarding'
-    | '/outpost'
     | '/playbooks'
     | '/research'
     | '/settings'
@@ -217,7 +207,6 @@ export interface FileRouteTypes {
     | '/join'
     | '/learn'
     | '/onboarding'
-    | '/outpost'
     | '/playbooks'
     | '/research'
     | '/settings'
@@ -237,7 +226,6 @@ export interface FileRouteTypes {
     | '/join'
     | '/learn'
     | '/onboarding'
-    | '/outpost'
     | '/playbooks'
     | '/research'
     | '/settings'
@@ -259,7 +247,6 @@ export interface RootRouteChildren {
   JoinRoute: typeof JoinRoute
   LearnRoute: typeof LearnRoute
   OnboardingRoute: typeof OnboardingRoute
-  OutpostRoute: typeof OutpostRoute
   PlaybooksRoute: typeof PlaybooksRoute
   ResearchRoute: typeof ResearchRoute
   SettingsRoute: typeof SettingsRoute
@@ -306,13 +293,6 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/outpost': {
-      id: '/outpost'
-      path: '/outpost'
-      fullPath: '/outpost'
-      preLoaderRoute: typeof OutpostRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/playbooks': {
@@ -431,7 +411,6 @@ const rootRouteChildren: RootRouteChildren = {
   JoinRoute: JoinRoute,
   LearnRoute: LearnRoute,
   OnboardingRoute: OnboardingRoute,
-  OutpostRoute: OutpostRoute,
   PlaybooksRoute: PlaybooksRoute,
   ResearchRoute: ResearchRoute,
   SettingsRoute: SettingsRoute,
