@@ -33,6 +33,15 @@ describe("serveContentApi", () => {
     expect(await serveContentApi(res, "/api/settings", configWith(), undefined)).toBe(false);
   });
 
+  it("serves the Outpost's card catalog with its browse facets", async () => {
+    const { res, out } = fakeRes();
+    expect(await serveContentApi(res, "/api/outpost", configWith(), undefined)).toBe(true);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.cards.length).toBeGreaterThan(0);
+    expect(body.authors.length).toBeGreaterThan(0);
+    expect(body.cards[0].author.kind).toBe("house");
+  });
+
   it("serves the collections shelves without auth context — discovery is for every member", async () => {
     const { res, out } = fakeRes();
     expect(await serveContentApi(res, "/api/collections", configWith(), undefined)).toBe(true);
