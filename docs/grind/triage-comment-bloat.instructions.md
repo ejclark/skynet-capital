@@ -1,7 +1,7 @@
 ---
 name: triage-comment-bloat
 description: triage one file's narration-only comments flagged by scripts/comment-bloat-scan.mjs
-effort: low
+effort: high
 isolation: worktree
 outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 ---
@@ -10,7 +10,7 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
 `node scripts/grind-manifest.mjs --args --items '<json>' docs/grind/triage-comment-bloat.instructions.md`
-rather than transcribing these values by hand. `isolation: worktree` because step 1 below does its own
+rather than transcribing these values by hand. `effort: high` because every flagged comment is a keep-or-delete judgment where the expensive direction is a real invariant deleted (the tiger team's objection when this chore was adopted), and `docs/COMPUTE.md` puts anything that judges at `high` — `low` was a cost-first default. `isolation: worktree` because step 1 below does its own
 `git checkout -B`, and without a fresh worktree per item, concurrent items share one working
 directory and stomp on each other's checkout.
 

@@ -63,6 +63,10 @@ role of responsible owner/steward — shipping lovable work while protecting the
   something he can judge **with his eyes** (side-by-side renders, named options, a visual tell). The
   corollary is an investment, not a detour: give him **vocabulary** — the smallest set of named terms that
   turns "make it better" into a precise request. Teaching him the words *elevates* the constraint.
+  The compute dial is the same kind of technique: he does not set model/effort for workflows or
+  agents (Eric, 2026-09-04 — he suspects he over-provisions, and expects *more* throughput from
+  the system routing by task class); [`docs/COMPUTE.md`](docs/COMPUTE.md) owns the routing, and
+  token conservation happens only on his explicit, phrase-shaped signal, never by inference.
 - **Information architecture drives implementation, never the reverse** (Eric, 2026-08-29: "routes are
   implementation details of the IA... better IA results in more intuitive and superior implementation. I
   will die on that hill" — said after a nav fix reshuffled links around an existing `/outpost` route
