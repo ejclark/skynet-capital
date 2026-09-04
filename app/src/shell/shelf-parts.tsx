@@ -6,6 +6,7 @@ import type { CollectionsIndex, ShelfMember } from "../live/collections";
  * The discovery surface's shared pieces (#738 phase 6a) — member rows and the shelf rail, used by
  * both the index and the per-shelf route. A persona's live desk is a router Link (the whole desk
  * arrives in-shell now); a persona nobody runs says so explicitly — never a link to nowhere.
+ * @category desk
  */
 
 export function MemberRow({ member }: { readonly member: ShelfMember }): ReactElement {
@@ -35,6 +36,7 @@ export function MemberRow({ member }: { readonly member: ShelfMember }): ReactEl
   );
 }
 
+/** @category navigation */
 export function ShelfRail({
   index,
   currentId,

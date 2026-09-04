@@ -40,6 +40,7 @@ function FacetGroup({
   );
 }
 
+/** @category navigation */
 export function OutpostRail({
   catalog,
   filter,

@@ -17,6 +17,7 @@ import type { PlayCard as PlayCardData } from "../live/outpost";
 
 const pct = (fraction: number): string => `${(fraction * 100).toFixed(1)}%`;
 
+/** @category plays */
 export function PlayCard({
   card,
   onPickAuthor,

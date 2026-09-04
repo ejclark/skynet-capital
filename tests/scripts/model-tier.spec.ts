@@ -7,8 +7,12 @@ import { execFileSync } from "node:child_process";
 // under `set -euo pipefail` whenever the `&&` short-circuited. Every feedback issue over 600 chars
 // with no code fence therefore killed its own build step — after the claim lease was taken, so the
 // issue looked claimed and silently built nothing (run 32545818804, issue #475, 1,410 chars).
-// The middle case below is that exact body shape.
+// The "never throws" tests at the bottom are the regression test for that incident, and hold
+// regardless of how the tiering logic above them changes.
 const FENCE = "`".repeat(3);
+
+const specBlock = (spec: Record<string, unknown>) =>
+  `\n${FENCE}skynet-spec\n${JSON.stringify(spec)}\n${FENCE}\n`;
 
 const tier = (body: string): Record<string, string> => {
   const out = execFileSync("node", ["scripts/moneypenny/index.mjs", "--model-tier"], {
@@ -24,36 +28,100 @@ const tier = (body: string): Record<string, string> => {
 };
 
 describe("feedback model tier", () => {
-  // THE HEURISTIC IS RETIRED, AND THAT IS THE ASSERTION (2026-08-22). It sent short asks to Haiku
-  // and long ones to Sonnet — economizing on a lane billed to a FLAT-RATE subscription, where
-  // economizing saves nothing and costs build quality on exactly the detailed asks that deserve the
-  // most. Cheap belongs on the METERED side (src/server/feedback-coach-model.ts), not here.
-  it("gives every ask the strong model — this lane is flat-rate, so thrift buys nothing", () => {
-    for (const body of [
-      "the leaderboard shows 0.00%",
-      "a".repeat(1410),
-      `x\n${FENCE}js\n1\n${FENCE}`,
-    ]) {
+  // 2026-08-31: Sonnet is the default; Opus is the conservative escalation, decided from the
+  // issue's own skynet-spec block (readiness + criteria count), never from body text or length —
+  // that text-length guessing is exactly what the pre-2026-08-22 heuristic got wrong.
+  it("defaults to Sonnet for a well-scoped, spec-complete ask (at or under the simple-ask floor)", () => {
+    // 2 and 3 criteria stay Sonnet regardless of assumptions; 1 criterion stays Sonnet only when
+    // an open assumption keeps it off the Haiku band below.
+    for (const [criteria, assumptions] of [
+      [["one thing"], ["an open question"]],
+      [["a", "b"], []],
+      [["a", "b", "c"], []],
+    ] as const) {
+      const body = specBlock({ rounds: 0, criteria, assumptions, readiness: "spec-complete" });
+      expect(tier(body).model).toBe("claude-sonnet-5");
+    }
+  });
+
+  // 2026-08-31 (same day, Eric's follow-up): a request can be simple enough for Haiku — strictly
+  // below the Sonnet floor above (issue #981's 3-criteria case was explicitly "Sonnet is enough").
+  it("downgrades to Haiku for a single, unambiguous criterion with no open assumptions", () => {
+    const body = specBlock({
+      rounds: 0,
+      criteria: ["rename the button label"],
+      assumptions: [],
+      readiness: "spec-complete",
+    });
+    expect(tier(body).model).toBe("claude-haiku-4-5-20251001");
+  });
+
+  it("keeps a single-criterion ask on Sonnet once it carries an open assumption", () => {
+    const body = specBlock({
+      rounds: 0,
+      criteria: ["rename the button label"],
+      assumptions: ["assuming the old label isn't referenced elsewhere"],
+      readiness: "spec-complete",
+    });
+    expect(tier(body).model).toBe("claude-sonnet-5");
+  });
+
+  it("escalates to Opus once criteria count exceeds the simple-ask floor", () => {
+    const body = specBlock({
+      rounds: 0,
+      criteria: ["a", "b", "c", "d"],
+      assumptions: [],
+      readiness: "spec-complete",
+    });
+    expect(tier(body).model).toBe("claude-opus-5");
+  });
+
+  it("escalates to Opus when readiness is not spec-complete", () => {
+    for (const readiness of ["partial", "draft", undefined]) {
+      const body = specBlock({ rounds: 0, criteria: ["a"], assumptions: [], readiness });
       expect(tier(body).model).toBe("claude-opus-5");
     }
   });
 
-  it("never downgrades to a cheap model, whatever the body", () => {
-    for (const body of ["", "a", "b".repeat(5000)]) {
-      expect(tier(body).model).not.toContain("haiku");
-      expect(tier(body).model).not.toContain("sonnet");
+  it("escalates to Opus when spec-complete but criteria is empty or missing", () => {
+    expect(tier(specBlock({ readiness: "spec-complete", criteria: [] })).model).toBe(
+      "claude-opus-5",
+    );
+    expect(tier(specBlock({ readiness: "spec-complete" })).model).toBe("claude-opus-5");
+  });
+
+  it("escalates to Opus when there is no skynet-spec block at all (a plan issue, or a bare paste)", () => {
+    for (const body of ["", "a plain member paste with no spec block", "x".repeat(1410)]) {
+      expect(tier(body).model).toBe("claude-opus-5");
     }
   });
 
-  it("still reports the body shape it saw, for the run log", () => {
-    expect(tier("a".repeat(1410)).reason).toBe("member ask (1410 chars)");
-    expect(tier(`short\n${FENCE}js\nx\n${FENCE}\n`).reason).toContain("includes a code block");
+  it("escalates to Opus on a malformed spec block rather than guessing", () => {
+    const malformed = `\n${FENCE}skynet-spec\n{not valid json\n${FENCE}\n`;
+    expect(tier(malformed).model).toBe("claude-opus-5");
+  });
+
+  it("still reports which structural signal drove the decision, for the run log", () => {
+    const simple = specBlock({ readiness: "spec-complete", criteria: ["a", "b", "c"] });
+    expect(tier(simple).reason).toContain("3 criteria");
+    const partial = specBlock({ readiness: "partial", criteria: ["a"] });
+    expect(tier(partial).reason).toContain("partial");
   });
 
   // The regression test for the incident that created this function: the decision lived in bash and
-  // exited 1 under `set -euo pipefail` on a body over 600 chars with no code fence.
+  // exited 1 under `set -euo pipefail` on a body over 600 chars with no code fence. Holds regardless
+  // of how the tiering logic above changes — the decision must never be able to take the lane down.
   it("never fails, whatever the body — the decision cannot take the lane down again", () => {
-    for (const body of ["", " ", "a".repeat(601), FENCE, `${"b".repeat(700)}\n${FENCE}\n`]) {
+    for (const body of [
+      "",
+      " ",
+      "a".repeat(601),
+      FENCE,
+      `${"b".repeat(700)}\n${FENCE}\n`,
+      `${FENCE}skynet-spec\n${FENCE}`,
+      `${FENCE}skynet-spec\nnull\n${FENCE}`,
+      `${FENCE}skynet-spec\n[1,2,3]\n${FENCE}`,
+    ]) {
       expect(() => tier(body)).not.toThrow();
     }
   });

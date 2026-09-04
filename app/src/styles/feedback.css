@@ -4,7 +4,7 @@
 .fb-form,
 .fb-done,
 .fb-recent {
-  max-width: 640px;
+  max-width: var(--col-read);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -52,13 +52,13 @@
 }
 /* the mode switch (#981) — same slot in both modes, so manual is never a one-way trip */
 .fb-mode {
-  max-width: 640px;
+  max-width: var(--col-read);
   display: flex;
   justify-content: flex-end;
   margin-bottom: 10px;
 }
 .fb-coach-down {
-  max-width: 640px;
+  max-width: var(--col-read);
   margin: 0 0 10px;
 }
 .fb-draft-note {

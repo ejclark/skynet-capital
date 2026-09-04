@@ -65,14 +65,47 @@ jobs:
         with:
           fetch-depth: 0            # commitlint needs the PR commit range
 
-      - name: Set up Node (version from .nvmrc)
+      - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
-          cache: npm
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
+
+      # actions/setup-node's own `cache: npm` has no restore-keys fallback (confirmed against
+      # actions/setup-node#627/#1120, not assumed) — ANY lockfile change anywhere invalidates the
+      # single exact-hash key completely, with no partial reuse of the other, unchanged tree's
+      # packages. That is a likely source of the wide swing measured 2026-09-04 (docs/LESSONS.md):
+      # the SAME ~570 combined packages took anywhere from 10s to over 300s across otherwise
+      # similar runs. actions/cache directly, with a prefix restore-keys, degrades a miss to
+      # "mostly warm, small delta" instead of "cold, every package" — this job is the only one that
+      # also installs app/, so it hashes both lockfiles.
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      # CORRECTED 2026-09-04 (docs/LESSONS.md): the theory below ("GH Actions' disk is slow") was
+      # wrong, and was corrected by getting npm's own --timing breakdown from a real run instead of
+      # continuing to infer from wall-clock deltas. Root's `npm ci` measured 114s total, of which
+      # 112s (98%) was `auditReport:getReport` — npm ci's default vulnerability-audit network call
+      # to the registry — and only 7.6s was the actual package extract/link. `--no-audit` on every
+      # `npm ci` below is the real fix for that dominant cost. This node_modules cache is a smaller,
+      # independent optimization stacked on top (skips even that 7.6s + resolve overhead when the
+      # lockfile hasn't changed) — real, but not the fix this comment originally claimed it was. No
+      # restore-keys on purpose: a partial/stale restore buys nothing since `npm ci` deletes
+      # whatever's present on any miss anyway, so only an exact hit is worth restoring.
+      - name: Restore node_modules cache
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
-        run: npm ci
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci --no-audit
 
       - name: Detect non-docs changes
         id: changes
@@ -88,11 +121,20 @@ jobs:
       - name: Commit lint
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
+      # Same node_modules-cache-skip pattern as root's, for app/'s own tree.
+      - name: Restore app/ node_modules cache
+        id: app-node-modules-cache
+        if: steps.changes.outputs.code == 'true'
+        uses: actions/cache@v4
+        with:
+          path: app/node_modules
+          key: node-modules-${{ runner.os }}-app-${{ hashFiles('app/package-lock.json') }}
+
       # app/ is a separate package (its own package.json, own node_modules — not an npm
       # workspace), so it needs its own install. Root's `npm ci` above doesn't touch it.
       - name: Install app dependencies
-        if: steps.changes.outputs.code == 'true'
-        run: npm ci --prefix app
+        if: steps.changes.outputs.code == 'true' && steps.app-node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefix app --no-audit
 
       # Typecheck/lint/test are independent checks over the same unchanged tree — nothing
       # downstream of `npm ci` depends on another's output. Backgrounding them on the shared runner
@@ -151,18 +193,38 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Set up Node (version from .nvmrc)
+      - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
-          cache: npm
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
+
+      # Same restore-keys fix as `verify` (docs/LESSONS.md, 2026-09-04) — root-only here, but the
+      # exact-key-only miss is the same failure mode regardless of which tree.
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      # Same node_modules-cache-skip pattern as `verify`'s (docs/LESSONS.md, 2026-09-04) — `npm ci`
+      # rebuilds node_modules from scratch every run regardless of the ~/.npm cache above, and an
+      # unchanged lockfile can skip that rebuild entirely.
+      - name: Restore node_modules cache
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
         # envelope-scan.mjs's diffAware path imports envelope-widening.mjs, which imports the
         # `typescript` devDependency — without this, --check crashes with ERR_MODULE_NOT_FOUND
         # before printing anything, which then fed an empty pipe into the JSON parse below and
         # failed this job outright instead of correctly finding this very PR's own diff protected.
-        run: npm ci
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci --no-audit
 
       - name: Is the diff protected?
         id: envelope
@@ -209,14 +271,57 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set up Node (version from .nvmrc)
+      - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
-          cache: npm
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
+
+      # Same restore-keys fix as `verify`'s, same key shape (both lockfiles) — see the cache-warm
+      # step below for why this job, not verify, is the one that has to carry the shared scope.
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      # Same node_modules-cache-skip pattern as `verify`'s (docs/LESSONS.md, 2026-09-04) — `npm ci`
+      # rebuilds node_modules from scratch every run regardless of the ~/.npm cache above. This job
+      # also being the one every PR's cache falls back to (see the cache-warm step below), a hit
+      # here saved by an exact key also becomes restorable by any PR whose lockfile matches.
+      - name: Restore node_modules cache
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
-        run: npm ci
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci --no-audit
+
+      # A cache saved by a `pull_request`-triggered run is scoped to that PR's own merge ref —
+      # GitHub's documented behavior, confirmed here after two PRs' `verify` runs (2026-09-04,
+      # docs/LESSONS.md) showed a cold "Install app dependencies" on every distinct branch, one
+      # after another, with no cross-PR hit ever occurring: "the cache will have a limited scope
+      # and can only be restored by re-runs of the pull request. It cannot be restored by the base
+      # branch or other pull requests" (GitHub Actions dependency-caching reference). `verify`
+      # never runs on `main` itself (pull_request only), so nothing was ever populating a cache on
+      # a scope any OTHER PR branch could actually fall back to. This job does run on every push to
+      # `main` — the one scope every future PR's `verify` run CAN restore from (a `pull_request`
+      # run may restore a cache created on its base branch) — so it pays app/'s install once per
+      # merge, purely to keep that shared cache warm for every PR opened after it.
+      - name: Restore app/ node_modules cache
+        id: app-node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: app/node_modules
+          key: node-modules-${{ runner.os }}-app-${{ hashFiles('app/package-lock.json') }}
+
+      - name: Warm the shared app/ dependency cache
+        if: steps.app-node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefix app --no-audit
 
       - name: Semantic Release
         env:

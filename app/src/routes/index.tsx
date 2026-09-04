@@ -13,6 +13,8 @@ import {
 import { boardQueryOptions, connectBoardChannel } from "../live/channel";
 import { DeskHoverName } from "../shell/desk-hovercard";
 import { PageFrame } from "../shell/frame";
+import { ProfileMeta } from "../shell/profile-meta";
+import { ProfileRail } from "../shell/profile-rail";
 
 /**
  * Standings (#738 phase 2a): the metric picker is a TYPED search param — `?by=` validates through
@@ -275,24 +277,24 @@ function FieldLadder({
   );
 }
 
-/** The rail control (dimensional precedence: the 2nd dimension drives the 3rd) — one metric
- *  ranks the whole field, so it lives beside the view, not buried above the ladder. */
-function RankRail({ active }: { readonly active: BoardMetric }): ReactElement {
+/** The metric chips (the canvas's Accounts page): one metric ranks the whole field, chosen right
+ *  above the ladder it re-ranks. The rail is the Profile map now (#1119), so this control moved
+ *  into the content it drives. */
+function RankChips({ active }: { readonly active: BoardMetric }): ReactElement {
   return (
-    <>
-      <p className="rail-label">Rank the field by</p>
+    <nav className="fchips" aria-label="Rank the field by">
       {BOARD_METRICS.map((m) =>
         m.key === active ? (
-          <span key={m.key} className="rail-current" aria-current="page">
+          <span key={m.key} className="fchip fchip-on" aria-current="page">
             {m.label}
           </span>
         ) : (
-          <Link key={m.key} from={Route.fullPath} search={{ by: m.key }}>
+          <Link key={m.key} from={Route.fullPath} search={{ by: m.key }} className="fchip">
             {m.label}
           </Link>
         ),
       )}
-    </>
+    </nav>
   );
 }
 
@@ -335,9 +337,11 @@ function Standings(): ReactElement {
   const { rows, blocks, generatedAt } = board.data;
   const armed = a && !board.data.compare ? rows.find((r) => r.key === a) : undefined;
   return (
-    <PageFrame rail={<RankRail active={by} />}>
+    <PageFrame rail={<ProfileRail current="accounts" />}>
+      <ProfileMeta />
       <header className="page-header">
-        <h1>Standings</h1>
+        <div className="join-eyebrow">Profile · Accounts</div>
+        <h1>Accounts</h1>
         <p>How every desk is performing — bots and humans, same board. Figures, not placings.</p>
       </header>
       <MatchRead block={blocks.match} />
@@ -362,6 +366,7 @@ function Standings(): ReactElement {
       ) : null}
       <div className="section-head">
         <span className="section-title">The Field</span>
+        <RankChips active={by} />
       </div>
       <FieldLadder rows={rows} a={a} b={b} />
       <footer className="obs-foot num">

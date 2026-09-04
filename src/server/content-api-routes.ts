@@ -13,6 +13,7 @@ import { deskIndex } from "./collections-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
 
@@ -43,7 +44,10 @@ export async function serveContentApi(
   if (path === "/api/learn") {
     // The viewer's own journey — same resolution as /learn's HTML route.
     const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
-    const progress = id && config.progression ? await config.progression.view(id) : undefined;
+    const progress =
+      id && config.progression
+        ? await config.progression.view(id, session ? opaqueMemberId(session.email) : undefined)
+        : undefined;
     return json(learnJsonView(progress));
   }
   if (path === "/api/outpost") {

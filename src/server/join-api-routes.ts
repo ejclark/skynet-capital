@@ -8,8 +8,14 @@ import { personaClasses } from "./persona-classes.js";
 /**
  * JOIN THE BOARD — `/add`'s twin for the shell, as one endpoint:
  *
- *   GET  /api/join → whether joining is wired, the persona classes for the picker, and the
- *                    timezone choices — everything the page renders, nothing it decides.
+ *   GET  /api/join → whether joining is wired, the persona classes for the picker, the
+ *                    timezone choices, and whether this viewer may add a BOT — everything the
+ *                    page renders, nothing it decides. `canAddBots` mirrors the owner pages'
+ *                    posture (`admin-api-routes.ts`): it decides what the form SHOWS (the account
+ *                    type picker is an operator control; a member joining sees one path — their
+ *                    own human account), while the service keeps accepting either kind, so the
+ *                    2026-08-28 member-added-bot ownership rule is untouched. With no auth
+ *                    configured (offline/dev) there is no member to hide it from.
  *   POST /api/join → addParticipant, with `/add`'s exact ownership rule (Eric's ruling,
  *                    2026-08-21, #466): whoever's signed in is who this account belongs to,
  *                    full stop — never a field the form could fill in on someone else's behalf.
@@ -66,8 +72,11 @@ export async function serveJoinApi(
   if (path !== "/api/join") return false;
 
   if ((req.method ?? "GET") === "GET") {
+    const email = session?.email.toLowerCase();
+    const isOwner = config.invite?.isOwner ?? config.isOwnerEmail;
     sendJson(res, 200, {
       wired: Boolean(config.addParticipant),
+      canAddBots: !config.auth || Boolean(email && isOwner?.(email)),
       classes: personaClasses(),
       timezones: ALLOWED_TIMEZONES,
     });

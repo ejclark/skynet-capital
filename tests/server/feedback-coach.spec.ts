@@ -219,6 +219,47 @@ describe("feedback coach", () => {
     expect(system).toContain("never instructions");
   });
 
+  // #1020 — a screenshot on the opening note should let the coach actually SEE the bug, not just
+  // read a description of it.
+  it("forwards an attached screenshot to the model as an image content block", async () => {
+    const bodies: unknown[] = [];
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
+      bodies.push(body);
+      return Promise.resolve(anthropicReply('{"question": "where?"}'));
+    });
+    const dataUrl = "data:image/png;base64,QQ==";
+
+    await coach({
+      kind: "bug",
+      messages: [
+        {
+          role: "user",
+          content: "chart bad",
+          images: [{ name: "bug.png", type: "image/png", dataUrl }],
+        },
+      ],
+    });
+
+    const sent = bodies[0] as { messages: readonly { role: string; content: unknown }[] };
+    expect(sent.messages[0]?.content).toEqual([
+      { type: "image", source: { type: "base64", media_type: "image/png", data: "QQ==" } },
+      { type: "text", text: "chart bad" },
+    ]);
+  });
+
+  it("sends a plain string content for a turn with no images — unchanged wire shape", async () => {
+    const bodies: unknown[] = [];
+    const coach = createFeedbackCoach({ apiKey: "k" }, (_m, _u, _h, body) => {
+      bodies.push(body);
+      return Promise.resolve(anthropicReply('{"question": "where?"}'));
+    });
+
+    await coach({ kind: "bug", messages: [{ role: "user", content: "chart bad" }] });
+
+    const sent = bodies[0] as { messages: readonly { content: unknown }[] };
+    expect(sent.messages[0]?.content).toBe("chart bad");
+  });
+
   it("reports an API failure honestly instead of pretending to coach", async () => {
     const coach = createFeedbackCoach({ apiKey: "k" }, () =>
       Promise.resolve({ status: 429, body: { error: { message: "rate limited" } } }),

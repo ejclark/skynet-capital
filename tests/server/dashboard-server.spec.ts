@@ -377,7 +377,7 @@ describe("dashboard-server /add", () => {
         // The key rides the redirect so a password-mode link still lands signed in.
         const keyed = await fetch(`${base}/add?key=pw`, { redirect: "manual" });
         expect(keyed.status).toBe(302);
-        expect(keyed.headers.get("location")).toBe("/app/join?key=pw");
+        expect(keyed.headers.get("location")).toBe("/app/onboarding?key=pw");
       },
     );
     // Unwired → the shell page answers honestly instead of a bare 404 (phase 9c).
