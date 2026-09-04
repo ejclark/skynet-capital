@@ -7,10 +7,12 @@ name: Autonomy ops
 # (configured once in the repo's Settings, not expressible in this file — see
 # docs/AUTONOMY-DEPLOY.md).
 #
-# Adding a second persona: copy the "Set <Persona> bot credentials" step, swap the secret and env-var
-# names, add its action name to the `action` input's options below. Static secret references only —
-# GitHub Actions does not support computing a secret's NAME from another input at expression-eval time
-# (`secrets[format(...)]` fails with "Unrecognized named-value"); each persona gets its own step.
+# Bot Alpaca credentials are NOT set here (removed 2026-09-04, #1180 slice F): a bot's key is added
+# and rotated in the app exactly like a human's — Settings → Account → <bot> → Rotate, owner-only —
+# and the bots process pulls it over the controls bridge within one 30s poll, no restart
+# (src/autonomous/bot-credentials-client.ts, proven live 2026-09-04). The roster lives in
+# fly.bots.toml's [env] (SKYNET_AUTONOMOUS_BOTS). The env-var credential path is break-glass only,
+# reachable from a terminal (`flyctl secrets set`), never from a button.
 
 on:
   workflow_dispatch:
@@ -24,9 +26,6 @@ on:
           - machine-status
           - logs
           - bootstrap-bots-app
-          - set-day-trader-credentials
-          - set-prospector-credentials
-          - set-sauron-credentials
           - flip-mode
           - set-playbooks
           - set-beta-forcing
@@ -134,73 +133,13 @@ jobs:
           if flyctl status -a skynet-capital-bots >/dev/null 2>&1; then
             echo "skynet-capital-bots already exists — nothing to create."
           elif flyctl apps create skynet-capital-bots --org personal; then
-            echo "Created. Next buttons: set-sauron-credentials (writes Alpaca creds + roster), set-hardcore if wanted, then Pipeline -> force_bots_deploy to stand the machine up in observe."
+            echo "Created. Next: add Sauron's Alpaca paper key in the app (Settings -> Account -> Sauron -> Rotate), set-hardcore if wanted, then Pipeline -> force_bots_deploy to stand the machine up in observe."
           else
             echo "::error::App creation was refused — the available token is app-scoped, not org-capable. The laptop fix (once): fly tokens create deploy -o personal, then add the output as repo secret FLY_ORG_TOKEN and re-run this button. Nothing was created or changed."
             exit 1
           fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
-
-      - name: Set Day Trader bot credentials
-        if: ${{ inputs.action == 'set-day-trader-credentials' }}
-        run: |
-          if [ -z "$BOT_KEY" ] || [ -z "$BOT_SECRET" ]; then
-            echo "::error::Repository secrets BOT_DAY_TRADER_ALPACA_KEY / BOT_DAY_TRADER_ALPACA_SECRET are not set. Add them under Settings -> Secrets and variables -> Actions, then re-run this workflow."
-            exit 1
-          fi
-          flyctl secrets set \
-            "SKYNET_BOT_DAY_TRADER_KEY=$BOT_KEY" \
-            "SKYNET_BOT_DAY_TRADER_SECRET=$BOT_SECRET" \
-            "SKYNET_AUTONOMOUS_BOTS=day-trader" \
-            -a "$TARGET_APP"
-          echo "Set. The bots process restarts on the next deploy or Fly's own secret-apply restart — check with the 'status' action, or fly logs -a $TARGET_APP for the [gate] line."
-        env:
-          # Step-scoped on purpose: job-level env would hand the token to the third-party
-          # setup-flyctl action too. Fly deploy tokens are APP-scoped, so it follows target_app.
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
-          BOT_KEY: ${{ secrets.BOT_DAY_TRADER_ALPACA_KEY }}
-          BOT_SECRET: ${{ secrets.BOT_DAY_TRADER_ALPACA_SECRET }}
-
-      - name: Set Prospector bot credentials
-        if: ${{ inputs.action == 'set-prospector-credentials' }}
-        run: |
-          if [ -z "$BOT_KEY" ] || [ -z "$BOT_SECRET" ]; then
-            echo "::error::Repository secrets BOT_PROSPECTOR_ALPACA_KEY / BOT_PROSPECTOR_ALPACA_SECRET are not set. Create a paper account for the Prospector, add its key/secret under Settings -> Secrets and variables -> Actions, then re-run this workflow."
-            exit 1
-          fi
-          flyctl secrets set \
-            "SKYNET_BOT_PROSPECTOR_KEY=$BOT_KEY" \
-            "SKYNET_BOT_PROSPECTOR_SECRET=$BOT_SECRET" \
-            "SKYNET_AUTONOMOUS_BOTS=prospector" \
-            -a "$TARGET_APP"
-          echo "Set. NOTE: like the day-trader action, this makes the Prospector the ONLY autonomous bot. Check with 'status', or fly logs -a $TARGET_APP for the [gate] line."
-        env:
-          # Step-scoped on purpose: job-level env would hand the token to the third-party
-          # setup-flyctl action too. Fly deploy tokens are APP-scoped, so it follows target_app.
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
-          BOT_KEY: ${{ secrets.BOT_PROSPECTOR_ALPACA_KEY }}
-          BOT_SECRET: ${{ secrets.BOT_PROSPECTOR_ALPACA_SECRET }}
-
-      - name: Set Sauron bot credentials
-        if: ${{ inputs.action == 'set-sauron-credentials' }}
-        run: |
-          if [ -z "$BOT_KEY" ] || [ -z "$BOT_SECRET" ]; then
-            echo "::error::Repository secrets BOT_SAURON_ALPACA_KEY / BOT_SAURON_ALPACA_SECRET are not set. Create a paper account for Sauron, add its key/secret under Settings -> Secrets and variables -> Actions, then re-run this workflow."
-            exit 1
-          fi
-          flyctl secrets set \
-            "SKYNET_BOT_SAURON_KEY=$BOT_KEY" \
-            "SKYNET_BOT_SAURON_SECRET=$BOT_SECRET" \
-            "SKYNET_AUTONOMOUS_BOTS=sauron" \
-            -a "$TARGET_APP"
-          echo "Set. NOTE: like the other credential actions, this makes Sauron the ONLY autonomous bot. Check with 'status', or fly logs -a $TARGET_APP for the [gate] line."
-        env:
-          # Step-scoped on purpose: job-level env would hand the token to the third-party
-          # setup-flyctl action too. Fly deploy tokens are APP-scoped, so it follows target_app.
-          FLY_API_TOKEN: ${{ inputs.target_app == 'skynet-capital-bots' && secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN || secrets.FLY_API_TOKEN }}
-          BOT_KEY: ${{ secrets.BOT_SAURON_ALPACA_KEY }}
-          BOT_SECRET: ${{ secrets.BOT_SAURON_ALPACA_SECRET }}
 
       - name: Set playbook roster
         if: ${{ inputs.action == 'set-playbooks' }}

@@ -46,6 +46,10 @@ primary_region = "ord"  # Chicago — same region as the dashboard, so the bridg
   # Safe by default, exactly like the shared app was: decides + logs, places nothing, until the
   # autonomy-ops flip-mode action (targeting THIS app) sets SKYNET_AUTONOMOUS_MODE=live.
   SKYNET_AUTONOMOUS_MODE = "observe"
+  # The roster, declared here since 2026-09-04 (#1180 slice F) — the autonomy-ops credential
+  # buttons that used to set it as a Fly secret are gone. A Fly secret of the same name still wins
+  # if one is set; this is the documented default, not a second source of truth.
+  SKYNET_AUTONOMOUS_BOTS = "sauron"
   # Still points at the DASHBOARD app — 6PN DNS resolves org-wide, so the hostname survives the
   # split verbatim. If this var is absent the runner silently runs env-only controls; see above.
   SKYNET_INSIGHTS_BRIDGE_URL = "http://app.process.skynet-capital.internal:8788"
