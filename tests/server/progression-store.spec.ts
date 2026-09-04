@@ -76,4 +76,53 @@ describe("progression store — durable wheels preference + claimed celebrations
     store.set("bob", { trainingWheels: true });
     expect(new ProgressionStore(path).get("bob")?.trainingWheels).toBe(true);
   });
+
+  it("round-trips which course-graduation ceremonies have already fired (#469 slice 4)", () => {
+    const store = new ProgressionStore(path);
+    store.set("ann", { trainingWheels: false, graduated: [200] }, new Date("2026-08-25T14:00:00Z"));
+    expect(new ProgressionStore(path).get("ann")).toMatchObject({ graduated: [200] });
+  });
+
+  it("defaults graduated to empty — new record and an older file written before it existed", () => {
+    const store = new ProgressionStore(path);
+    store.set("ann", { trainingWheels: true });
+    expect(store.get("ann")?.graduated).toEqual([]);
+
+    writeFileSync(
+      path,
+      JSON.stringify({
+        participants: {
+          bob: {
+            trainingWheels: false,
+            acknowledged: [],
+            comprehension: [],
+            since: "2026-08-25T14:00:00.000Z",
+            updatedAt: "2026-08-25T14:00:00.000Z",
+          },
+        },
+      }),
+      "utf8",
+    );
+    expect(new ProgressionStore(path).get("bob")?.graduated).toEqual([]);
+  });
+
+  it("rejects a graduated array holding anything but real course levels", () => {
+    writeFileSync(
+      path,
+      JSON.stringify({
+        participants: {
+          ann: {
+            trainingWheels: false,
+            acknowledged: [],
+            comprehension: [],
+            graduated: [200, 999],
+            since: "2026-08-25T14:00:00.000Z",
+            updatedAt: "2026-08-25T14:00:00.000Z",
+          },
+        },
+      }),
+      "utf8",
+    );
+    expect(new ProgressionStore(path).get("ann")).toBeUndefined();
+  });
 });

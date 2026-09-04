@@ -49,7 +49,9 @@ function toCue(transition: WorldTransition): WorldCue {
     detail:
       transition.type === "took_profit"
         ? { realized: transition.realized }
-        : { committed: transition.committed },
+        : transition.type === "deployed_capital"
+          ? { committed: transition.committed }
+          : { level: transition.level },
   };
 }
 

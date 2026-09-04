@@ -120,4 +120,33 @@ describe("memberContext", () => {
     expect(text).toContain("last account read failed");
     expect(text).not.toContain("equity $0.00");
   });
+
+  it("opens with congratulations when a fresh course graduation is waiting (#469 slice 4)", () => {
+    const text = memberContext({
+      onboarding: {
+        ...base,
+        account: {
+          id: "human-tony",
+          displayName: "Tony",
+          equity: 1_000_000,
+          cash: 999_000.5,
+          stale: false,
+          rungsEarned: 4,
+          rungsTotal: 6,
+          freshGraduation: { level: 200, title: "The Wheel — get paid to own good stocks" },
+        },
+      },
+      filings: [],
+      marketOpen: false,
+    });
+    expect(text).toContain(
+      "They just graduated course 200 — The Wheel — get paid to own good stocks",
+    );
+    expect(text).toContain("Open THIS reply with genuine, brief congratulations");
+  });
+
+  it("says nothing about graduating when there is no fresh, unclaimed one", () => {
+    const text = memberContext({ onboarding: base, filings: [], marketOpen: false });
+    expect(text).not.toContain("graduated course");
+  });
 });

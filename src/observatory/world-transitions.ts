@@ -1,3 +1,4 @@
+import type { CourseLevel } from "../domain/curriculum.js";
 import type { EquitySample } from "./history-store.js";
 
 /**
@@ -11,6 +12,12 @@ import type { EquitySample } from "./history-store.js";
  *  - deployed_capital — cash fell between samples: trades only move cash (market moves change
  *    equity, not cash), so a cash drop is capital committed. A buy+sell inside one sampling
  *    window nets out; the seam reports the net honestly rather than inventing detail.
+ *  - graduated — a member's ladder milestone completed a whole course (#469 slice 4). NOT derived
+ *    by `deriveTransitions` below (that stays equity-sample-pair-only): a graduation isn't visible
+ *    from an equity snapshot, so it is minted directly at the one place it is proven — the Claim
+ *    action on the milestone banner (`learn-api-routes.ts`, `progression-service.ts`'s
+ *    `acknowledge`) — and rides this same `WorldTransition` union so it shares the ceremony
+ *    channel's one delivery seam and `board-patch-routes.ts`'s one cue-flattening path.
  *
  * Doubling is deliberately NOT here — it needs the full history's seed baseline, and lives in
  * history-metrics.ts (`doubledAt`, `firstAccountToDouble`) where that context exists.
@@ -41,6 +48,11 @@ export type WorldTransition =
       readonly type: "deployed_capital";
       /** Net cash committed between the two samples (always > 0 here). */
       readonly committed: number;
+    })
+  | (TransitionBase & {
+      readonly type: "graduated";
+      /** The course level a milestone just completed (100/200/300's own next-up neighbor). */
+      readonly level: CourseLevel;
     });
 
 export interface TransitionThresholds {

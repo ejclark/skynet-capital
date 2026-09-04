@@ -3,6 +3,8 @@ import { checkFor } from "../domain/comprehension-checks.js";
 import {
   COURSES,
   type CourseLevel,
+  graduatingLevel,
+  MILESTONE_COURSE_LEVEL,
   pointsFor,
   type Rank,
   rankFor,
@@ -117,7 +119,16 @@ export interface ProgressionService {
    */
   view(participantId: string, opaqueMemberId?: string): Promise<ParticipantProgression>;
   setWheels(participantId: string, on: boolean): Promise<void>;
-  acknowledge(participantId: string, milestoneIds: readonly string[]): Promise<void>;
+  /**
+   * Bank the one-time celebration for each real id. Returns the course levels this call is the
+   * FIRST to acknowledge a graduation for (#469 slice 4) — empty for an ordinary milestone claim,
+   * or a repeat claim of one already banked. The caller (`learn-api-routes.ts`) fires the ceremony
+   * channel for each; a level appears at most once across every call, ever, for this participant.
+   */
+  acknowledge(
+    participantId: string,
+    milestoneIds: readonly string[],
+  ): Promise<readonly CourseLevel[]>;
   /**
    * Grade one comprehension check and bank a pass. `answers` maps question id → the posted option
    * index; nothing about the verdict is taken from the caller. Undefined = no such gated
@@ -223,7 +234,7 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       deps.store?.set(participantId, { trainingWheels: on }, now());
       return Promise.resolve();
     },
-    acknowledge(participantId, milestoneIds) {
+    async acknowledge(participantId, milestoneIds) {
       // Only real curriculum + engagement ids are banked — the form field is ours, but never
       // trusted.
       const known = new Set([
@@ -231,11 +242,48 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         ...ENGAGEMENT_MILESTONES.map((m) => m.id),
       ]);
       const ids = milestoneIds.filter((id) => known.has(id));
-      if (deps.store && ids.length > 0) {
-        const held = deps.store.get(participantId)?.acknowledged ?? [];
-        deps.store.set(participantId, { acknowledged: [...new Set([...held, ...ids])] }, now());
-      }
-      return Promise.resolve();
+      if (!deps.store || ids.length === 0) return [];
+      const record = deps.store.get(participantId);
+      const held = record?.acknowledged ?? [];
+      const alreadyGraduated = new Set(record?.graduated ?? []);
+      // The ledger re-read below is skipped for the common claim (an ordinary milestone, or a
+      // course level already banked) — only a course's LAST id, not yet graduated, can possibly
+      // change the answer, so nothing is lost by checking that first and cheaply.
+      const mightGraduate = ids.some((id) => {
+        const level = MILESTONE_COURSE_LEVEL.get(id);
+        return level !== undefined && !alreadyGraduated.has(level);
+      });
+      // A course level graduates the FIRST time one of its ids is acknowledged here, AND ONLY IF
+      // the REAL ledgers prove the whole course, not just this one id — an acked id is a client
+      // claim, never trusted alone (same posture as everything else this service reads back).
+      // Re-derived fresh rather than trusted from a stale `view()`: acknowledge can be the very
+      // first call this service sees for a participant.
+      const earnedIds = mightGraduate
+        ? new Set(
+            deriveEarned(
+              collapseActivity([...(await deps.readFills(participantId))]),
+              await deps.readTags(participantId),
+            ).map((m) => m.milestoneId),
+          )
+        : new Set<string>();
+      const fresh = [
+        ...new Set(
+          ids
+            .map((id) => graduatingLevel(id, earnedIds))
+            .filter(
+              (level): level is CourseLevel => level !== undefined && !alreadyGraduated.has(level),
+            ),
+        ),
+      ];
+      deps.store.set(
+        participantId,
+        {
+          acknowledged: [...new Set([...held, ...ids])],
+          ...(fresh.length > 0 ? { graduated: [...alreadyGraduated, ...fresh] } : {}),
+        },
+        now(),
+      );
+      return fresh;
     },
     submitCheck(participantId, milestoneId, answers) {
       const check = checkFor(milestoneId);
