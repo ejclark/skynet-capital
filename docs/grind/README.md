@@ -137,6 +137,24 @@ A `done` with no branch on origin makes that command fail, which reports `blocke
 A missing `branch` field substitutes to an empty string and fails the same way. Every checked-in
 chore above reports its branch and expects this trailing step; the four calling conventions say so.
 
+## If `Workflow({name: "grind"})` says "not found"
+
+The Workflow tool's name registry is built **once per session, lazily, at the first `Workflow`
+call**, and then frozen — it does not re-read `.claude/workflows/` afterward (verified 2026-09-04
+by dropping a fresh-named copy of a known-good script into the directory mid-session: it never
+appeared). Two consequences:
+
+- A script whose `export const meta` isn't a **pure literal** (no `+`, template strings,
+  identifiers, calls, or spreads — the harness's own contract) is dropped from the registry
+  silently, with no error anywhere. That is how `/grind` shipped documented, routed from CLAUDE.md,
+  and un-invokable by name between #1306 and the fix. `npm run workflow:meta`
+  (`scripts/workflow-meta-scan.mjs`, blocking in `tests/arch/workflow-meta.spec.ts`) now refuses
+  that shape at CI.
+- Within the session that first built the registry, fixing the file changes nothing. Invoke by
+  path instead — `Workflow({scriptPath: "/home/user/skynet-capital/.claude/workflows/grind.js",
+  args: {...}})` — which reads the file fresh and, if the script is malformed, reports the real
+  error instead of "not found". The name works again in the next session.
+
 ## Known limitations
 
 - **No built-in `envelope.json` enforcement.** An instructions.md file can tell its agent to

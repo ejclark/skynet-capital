@@ -47,6 +47,7 @@
     "issue:lint": "node scripts/issue-lint.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "workflow:lint": "node scripts/workflow-lint.mjs",
+    "workflow:meta": "node scripts/workflow-meta-scan.mjs",
     "build:scene": "esbuild src/three/scene-main.ts --bundle --minify --format=iife --target=es2020 --outfile=public/three/scene.js",
     "shoot:tower": "npm run build:scene && node scripts/shoot-tower.mjs",
     "shoot:standings": "tsx scripts/shoot-standings.mjs",
