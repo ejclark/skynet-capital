@@ -56,6 +56,30 @@ describe("serveFeedbackRoute", () => {
 
     expect(JSON.parse(out.body)).toMatchObject({ ok: false });
   });
+
+  // #645: a missing kind used to fall back to "feature" silently, which is how a corpus of ten
+  // member-filed issues came back all labelled `enhancement`. The coach path must refuse it the
+  // same way `kindFromForm` does, never guess.
+  it("refuses a coach turn with no kind, rather than defaulting it to feature", async () => {
+    const { res, out } = capture();
+    let calledWithKind: string | undefined;
+    const coachFeedback = (input: { kind: string }) => {
+      calledWithKind = input.kind;
+      return Promise.resolve({ ok: true as const, done: false as const, question: "where?" });
+    };
+
+    await serveFeedbackRoute(
+      request(JSON.stringify({ messages: [{ role: "user", content: "hi" }] }), "POST"),
+      res,
+      "/feedback/coach",
+      undefined,
+      { coachFeedback },
+    );
+
+    expect(out.status).toBe(400);
+    expect(JSON.parse(out.body)).toMatchObject({ ok: false });
+    expect(calledWithKind).toBeUndefined();
+  });
 });
 
 describe("feedbackThrottled", () => {

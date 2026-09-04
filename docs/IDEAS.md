@@ -1171,4 +1171,20 @@ Eric's approval taps to misread once already (docs/LESSONS.md, 2026-09-04). Wort
 reconciling credentials before the first outbound call, or explicitly labeling the pre-reconcile
 failures as expected (`[boot] pre-rotation credential — expected if a key was rotated`) so the log
 tells the truth to a skimmer.
-_(src: Claude · while: /retro on the sauron log-pull investigation, 2026-09-04)_
+_(src: Claude · while: /retro on the sauron log-pull investigation, 2026-09-04)_ — **resolved by #1300** (prime the store credential before anything is built on it).
+
+### The composition root grows with every feature — the god-file detector treats the symptom
+Eric, 2026-09-04: "god files are a strong smell that there's multiple points of failure. The
+need of a god file detector in itself is a smell but required because of all the other shit
+piling up by the design choices." Evidence the same day: `run-autonomous.ts` sits at exactly
+biome's 300-line cap, so the health-file wiring (#1301) was routed into `autonomous-live-wiring.ts`
+(299 lines) to dodge it — the cap moved the code sideways instead of fixing the shape. The shape:
+`runLive()` is a ~250-line composition root where every feature (credential bridge, state DB,
+health stamp, beta scout, hardcore roster) lands as inline wiring, so the file grows linearly with
+the feature count and every boot-order bug (the 401 burst, the scout re-arm) is a bug *in the
+ordering of that one function*. The design fix is a boot pipeline of small stages that register
+themselves (each owns its env knob, its boot step, its shutdown, its health verdict) with the root
+reduced to `stages.reduce(boot)` — after which the detector has nothing to detect in this cluster.
+Candidate for a `/governor` cycle with the `decomposer` athlete; the scout/creds/health/state-db
+seams are already isolated modules, so the extraction is mostly moving the wiring, not the logic.
+_(src: Eric · while: reviewing #1301's cap dodge, 2026-09-04)_
