@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0            # commitlint needs the PR commit range
+          fetch-depth: 0            # "Detect non-docs changes" below needs the PR's full commit range
 
       - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
@@ -118,8 +118,25 @@ jobs:
             echo "docs-only PR — skipping typecheck/lint/test; verify still reports green."
           fi
 
-      - name: Commit lint
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+      # Lints the PR TITLE, not the branch's individual commits (docs/PICTURES.md / the PR template:
+      # "TITLE = Conventional-Commit subject" — every merge here is a GitHub squash-merge, so the
+      # title IS the commit subject that lands on main; nothing about intermediate commit formatting
+      # ever does). Linting `--from base --to head` instead (the prior approach) lints every commit
+      # unique to the branch on every run — for a long-lived PR that includes commits made back at
+      # PR creation, before this check existed, which no later push can fix without rewriting another
+      # author's history (never done here; docs/LESSONS.md, 2026-09-04: blocked #1027 and #1212 on
+      # exactly this — the research-automation lane's bot writes unwrapped, single-line commit
+      # bodies that this rule's default 100-char line limit always rejects, on commits nobody could
+      # have satisfied in advance). Scoping to the title is both the structurally correct fix (lints
+      # the one thing that persists) and sidesteps the retroactive-failure class entirely, so the
+      # full rule set — line-length included — stays on rather than being weakened repo-wide.
+      # The title is passed via env, never interpolated into the script string, so a hostile PR
+      # title can't break out of the shell command (untrusted input into `run:` templating is a
+      # known GitHub Actions script-injection vector).
+      - name: Commit lint (PR title)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | npx commitlint --verbose
 
       # Same node_modules-cache-skip pattern as root's, for app/'s own tree.
       - name: Restore app/ node_modules cache
@@ -404,18 +421,22 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Preflight — should the bots app deploy?
-        # The decision tree (token/cutover/force/baseline/classify) lives in
+        # The decision tree (token/cutover/force/baseline/debounce/classify) lives in
         # scripts/bots-deploy-preflight.mjs, spec-tested (tests/scripts/bots-deploy-preflight.spec.ts)
         # — this step now does only the two genuinely environmental lookups (the flyctl API call,
-        # GITHUB_SHA) and translates the script's two-line verdict into $GITHUB_OUTPUT.
+        # GITHUB_SHA) and translates the script's two-line verdict into $GITHUB_OUTPUT. DEPLOYED_AT
+        # feeds the debounce gate (2026-08-26 incident class, reintroduced via the research lane's
+        # merge cadence — #1181): at most one bots redeploy per cooldown window, no matter how many
+        # bot-relevant merges land, with the next preflight past it always catching up in full.
         id: preflight
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_bots_deploy && 'true' || 'false' }}
         run: |
-          DEPLOYED_SHA=$(flyctl machine list -a skynet-capital-bots --json 2>/dev/null \
-            | jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].config.env.GIT_SHA // empty' || true)
-          VERDICT=$(DEPLOYED_SHA="$DEPLOYED_SHA" HEAD_SHA="$GITHUB_SHA" node scripts/bots-deploy-preflight.mjs)
+          MACHINE_JSON=$(flyctl machine list -a skynet-capital-bots --json 2>/dev/null || true)
+          DEPLOYED_SHA=$(jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].config.env.GIT_SHA // empty' <<<"$MACHINE_JSON" 2>/dev/null || true)
+          DEPLOYED_AT=$(jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].updated_at // empty' <<<"$MACHINE_JSON" 2>/dev/null || true)
+          VERDICT=$(DEPLOYED_SHA="$DEPLOYED_SHA" DEPLOYED_AT="$DEPLOYED_AT" HEAD_SHA="$GITHUB_SHA" node scripts/bots-deploy-preflight.mjs)
           echo "$VERDICT"
           DECISION=$(head -n1 <<<"$VERDICT")
           REASON=$(tail -n1 <<<"$VERDICT")
