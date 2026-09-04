@@ -33,6 +33,7 @@ import {
   armMomentumPersistence,
   persistSentiment,
   restoreBotsState,
+  scoutStateStore,
 } from "../autonomous/bots-state-db.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
@@ -64,7 +65,6 @@ import { auditStore, decisionSink, logResult, traderMode } from "./autonomous-si
 // adding a claim to the Prospector without adding it here is a silent no-op.
 const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
-const _EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 
 async function main(): Promise<void> {
@@ -278,6 +278,7 @@ async function runLive(): Promise<void> {
     traders,
     safety,
     blockedReason,
+    ...(botsStateDb ? { scoutState: scoutStateStore(botsStateDb) } : {}),
     scout: buildScoutDeps(betaForcingMaxPicks, scoutBroker, {
       universe: UNIVERSE,
       managedSymbols,

@@ -4,6 +4,7 @@ import { applyGuards } from "../engine/guards.js";
 import { betaScoutExitIntents, betaScoutIntents } from "../playbooks/beta-scout.js";
 import type { BrokerPort } from "../ports/broker.js";
 import type { AutonomousTrader, TraderMode } from "./autonomous-trader.js";
+import type { ScoutState } from "./bots-state-db.js";
 import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
 import { fleetEquity } from "./equity-watch.js";
 import type { SafetyController } from "./safety.js";
@@ -41,6 +42,15 @@ export interface LiveCycleDeps {
   readonly safety: SafetyController;
   readonly scout?: BetaScoutDeps;
   /**
+   * Durable home for the scout's day-state (`bots-state-db.ts`'s `scoutStateStore`). Absent =
+   * process memory only, today's cold-start behavior. Confirmed live 2026-09-04: without it every
+   * restart re-armed the scout for a fresh "day" and it placed another pair of forced picks.
+   */
+  readonly scoutState?: {
+    load(): ScoutState | undefined;
+    save(state: ScoutState): void;
+  };
+  /**
    * The kill-switch/breaker gate consulted before every scout submission. Kept as its own
    * injection point rather than reading `safety.blockedReason()` directly: the live script's
    * version also polls a halt file (filesystem I/O with no place in this pure core), and each
@@ -76,6 +86,23 @@ export class LiveCycleRunner {
 
   constructor(deps: LiveCycleDeps) {
     this.deps = deps;
+    const restored = deps.scoutState?.load();
+    if (restored) {
+      this.scoutDay = restored.day;
+      this.scoutRanToday = restored.ranToday;
+      this.scoutFiredOrganicallyToday = restored.firedOrganicallyToday;
+      for (const symbol of restored.ownedSymbols) this.scoutOwnedSymbols.add(symbol);
+    }
+  }
+
+  /** Persist the scout's day-state after every transition — best-effort, never on the hot path. */
+  private persistScoutState(): void {
+    this.deps.scoutState?.save({
+      day: this.scoutDay,
+      ranToday: this.scoutRanToday,
+      firedOrganicallyToday: this.scoutFiredOrganicallyToday,
+      ownedSymbols: [...this.scoutOwnedSymbols],
+    });
   }
 
   /**
@@ -147,9 +174,11 @@ export class LiveCycleRunner {
         }
         await this.submitScoutIntents(exits, scout);
       }
+      this.persistScoutState();
     }
-    if (firedOrganicallyThisCycle) {
+    if (firedOrganicallyThisCycle && !this.scoutFiredOrganicallyToday) {
       this.scoutFiredOrganicallyToday = true;
+      this.persistScoutState();
     }
     if (this.scoutRanToday || this.scoutFiredOrganicallyToday) {
       return;
@@ -177,6 +206,7 @@ export class LiveCycleRunner {
     for (const intent of guarded) {
       this.scoutOwnedSymbols.add(intent.symbol);
     }
+    this.persistScoutState(); // before the submit, for the same reason the latch is
     await this.submitScoutIntents(guarded, scout);
   }
 
