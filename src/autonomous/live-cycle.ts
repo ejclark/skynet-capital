@@ -154,7 +154,6 @@ export class LiveCycleRunner {
     if (this.scoutRanToday || this.scoutFiredOrganicallyToday) {
       return;
     }
-    this.scoutRanToday = true; // set BEFORE acting — a failed submit must not retry every cycle
     const portfolio = await scout.broker.getPortfolio();
     const guarded = applyGuards(
       betaScoutIntents(context, portfolio, scout.universe, scout.managedSymbols, false, {
@@ -164,6 +163,17 @@ export class LiveCycleRunner {
       context,
       scout.risk,
     );
+    // An EMPTY scan must not spend the day. Confirmed live 2026-09-04: the first cycle after a
+    // restart runs on the first price tick, when the sentiment window is still empty (the first
+    // news poll lands ≥60s later) and momentum has a single tick — every candidate reads "skip",
+    // and latching before the scan burned the scout's one daily shot before the trackers were
+    // warm. The latch below guards a FAILED SUBMIT (never retry that every cycle); a scan that
+    // found nothing simply looks again next cycle, which is what "if nothing organic fires by the
+    // scout's daily check" always meant.
+    if (guarded.length === 0) {
+      return;
+    }
+    this.scoutRanToday = true; // set BEFORE submitting — a failed submit must not retry every cycle
     for (const intent of guarded) {
       this.scoutOwnedSymbols.add(intent.symbol);
     }
