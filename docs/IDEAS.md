@@ -18,6 +18,23 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### The remote container runs Node 22 against `engines.node >=24`
+
+Every install warns `EBADENGINE` (package.json wants >=24, the web environment ships v22.22.2).
+Harmless today, but a Node-24-only API in a dependency would break a remote session silently. The
+fix is an environment setting in the Claude Code on the web environment config (Node version /
+setup), which is Eric's — not a repo change.
+_(src: Claude · while: retro on a remote session's dependency-install detour, 2026-09-04)_
+
+### Merge root and `app/` into one npm workspace
+
+Two npm trees means two `npm ci` calls in the `verify` CI job (root + `app/`) and, before today's
+cache fix, one of them silently re-fetching from the network on almost every run. An npm workspace
+(one lockfile, one install) would remove the second invocation entirely instead of just caching it
+correctly — but it's a real migration: build tooling, the Dockerfile, and every CI job that installs
+either tree would need re-checking, not a same-session fix.
+_(src: Claude · while: retro on the CI verify job's ~7.5-minute install, 2026-09-04)_
+
 ### A screenshot harness for the React shell (`shoot:app`)
 
 `shoot:standings` / `shoot:login` shoot the legacy server-rendered pages; nothing shoots `/app/*`.
@@ -1121,3 +1138,14 @@ criteria; this is the generalization worth a separate look — what other repo p
 benefit from a phone-reachable read (or narrowly-scoped write) surface, and whether that's a
 pattern worth naming once rather than re-deriving per-feature.
 _(src: Eric · while: #666 ops-status panel decision, 2026-08-30)_
+
+### `npm run verify` itself has no stale-upstream warning outside `ship open`
+The 2026-09-04 stale-base lesson (docs/LESSONS.md) fixed `scripts/ship.sh open` — the one path this
+repo's sessions use to land a PR — to refuse verifying against a branch that's behind
+`origin/main`. A session iterating without shipping yet (mid review-fix loop, several pushes into a
+CI-red triage) never calls `ship open` again until it's ready, so it gets no such warning in
+between, even though the same "green locally, red in CI because CI tests the merged state" risk
+applies the whole time. Worth deciding whether `npm run verify` should carry a cheap, advisory-only
+freshness check of its own (same `git merge-base --is-ancestor` shape, non-blocking) — or whether
+that's over-engineering a case `ship open`'s hard stop already catches at the point that matters.
+_(src: Claude · while: /retro on PR #1219's stale-base CI failure, 2026-09-04)_

@@ -21,13 +21,34 @@ export interface MarketDataStreamConfig {
  */
 export class AlpacaMarketDataStream {
   private socket?: WebSocket;
-  private readonly config: MarketDataStreamConfig;
+  private config: MarketDataStreamConfig;
+  // Confirmed live 2026-09-04: a credential rotated during the boot-time reconcile (before the
+  // caller's own first start() runs) made replaceCredentials open a socket immediately, and the
+  // caller's subsequent start() then opened a SECOND one on the same account — Alpaca killed one
+  // as a duplicate connection ~10s later ("[market-data] error"/"closed"), leaving zero ticks
+  // flowing and the eval loop stalled even with a perfectly valid credential. Tracking whether
+  // the caller has ever actually started this stream fixes it: before that, a credential swap
+  // only updates config (the caller's own start() opens the one real connection); after, it
+  // reconnects in place exactly as before.
+  private started = false;
 
   constructor(config: MarketDataStreamConfig) {
     this.config = config;
   }
 
+  /** Swap the credentials this stream authenticates with, in place — reconnects with the new
+   *  pair if already running. A brief gap in ticks is harmless (momentum state persists
+   *  independently); staying on a rotated-away dead key is not. */
+  replaceCredentials(apiKey: string, apiSecret: string): void {
+    this.config = { ...this.config, apiKey, apiSecret };
+    if (this.started) {
+      this.stop();
+      this.start();
+    }
+  }
+
   start(): void {
+    this.started = true;
     const feed = this.config.feed ?? "iex";
     const socket = new WebSocket(`wss://stream.data.alpaca.markets/v2/${feed}`);
     this.socket = socket;

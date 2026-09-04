@@ -17,10 +17,12 @@ import {
   ownerEmailFor,
   resolveOwnedParticipantIds,
 } from "../server/owner-link-store.js";
+import { createSubscriptionStore } from "../server/subscription-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
   botControls: ReturnType<typeof createBotControlsStore>;
+  subscriptions: ReturnType<typeof createSubscriptionStore>;
   knownPersonaIds: Set<string>;
   auth: ReturnType<typeof resolveAuth>;
   password: string | undefined;
@@ -48,6 +50,10 @@ export function setupAccess(
   // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
   // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
   const botControls = createBotControlsStore(env, (m) => console.error(m));
+  // Playbook Store subscriptions (issue #885), on the volume beside the other member data
+  // (SKYNET_SUBSCRIPTIONS_FILE → /data/playbook-subscriptions.json in prod). Plain JSON — an
+  // account's own playbook picks and capital sub-allocations, not a secret.
+  const subscriptions = createSubscriptionStore(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
   const auth = resolveAuth(env, undefined, allowlist);
   const password = env.SKYNET_DASHBOARD_PASSWORD;
@@ -85,6 +91,7 @@ export function setupAccess(
   return {
     allowlist,
     botControls,
+    subscriptions,
     knownPersonaIds,
     auth,
     password,

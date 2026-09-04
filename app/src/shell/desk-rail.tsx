@@ -25,7 +25,7 @@ export function DeskRail({
   readonly id: string;
   readonly name: string;
   readonly kind: "human" | "bot";
-  readonly current: "active" | "decisions" | "pulse";
+  readonly current: "active" | "decisions" | "pulse" | "playbooks";
 }): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const isOwnDesk = ownsAccount(settings.data, id);
@@ -59,6 +59,15 @@ export function DeskRail({
       ) : (
         <Link to="/u/$id/pulse" params={{ id }}>
           Pulse
+        </Link>
+      )}
+      {current === "playbooks" ? (
+        <span className="rail-current" aria-current="page">
+          Playbook Store
+        </span>
+      ) : (
+        <Link to="/u/$id/playbooks" params={{ id }}>
+          Playbook Store
         </Link>
       )}
       {isOwnDesk ? <Link to="/settings">Settings</Link> : null}
