@@ -1204,3 +1204,18 @@ Worth a sibling gate to `workflow-meta-scan.mjs` (parse the block with a strict 
 require `name` = directory/file name and a non-empty `description`), blocking for the same reason:
 a roster entry that isn't there is a broken contract, not debt.
 _(src: Claude · while: retro on the un-invokable /grind workflow, 2026-09-04)_
+
+### An eye on the `needs-eric` backlog — count and age, the cost research exists to drive down
+Eric, 2026-09-04: research capability should "prevent us from `needs-eric` state, as well as
+improve our ability to remove that state after the fact." Every other constraint here has an eye
+(`*-scan.mjs` + a ratchet budget); this one — the number of open issues waiting on a decision only
+he can make, and how long the oldest has waited — is measured by nobody. Baseline at the moment of
+writing: 6 open, oldest 9 days (#666), via one REST call
+(`GET /repos/ejclark/skynet-capital/issues?labels=needs-eric&state=open`). A `needs-eric-scan.mjs`
+in the house shape (REST core bucket only, advisory like the debt gates, `--candidate` naming the
+oldest) would make the thesis testable: after a `research-bottleneck` pass over the open set, does
+the count fall because the "decisions" turned out to be settled facts, and does it stop growing
+because sessions research before they file? The scan would also be the natural feed for the
+secretary digest's needs-you tier, so the ones that genuinely are his arrive pre-aged and
+pre-researched rather than as a pile.
+_(src: Eric · while: reflecting on the day's research/grind work, 2026-09-04)_
