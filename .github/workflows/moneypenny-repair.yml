@@ -95,7 +95,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version-file: mise.toml   # mise.toml is the single source of truth — never pin here
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here (mise.toml still drives local dev/session-hook provisioning, but actions/setup-node@v7 cannot reliably resolve it — see docs/LESSONS.md)
 
       # One line, on purpose. Evidence gathering, dedupe and the decision are all in the router.
       - id: router
