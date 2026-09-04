@@ -1950,3 +1950,40 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   exact command, so the two lessons close together: the guard catches the staleness, its remedy text
   prevents this exact commitlint trap from recurring on the fix.
 - **SIDE QUESTS:** none.
+
+### A shipped workflow was silently un-invokable by name for ~55 minutes — its own follow-up PR broke it
+
+- **SHA:** d43587c   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** `Workflow({name: "grind"})` answered `not found` (listing only `deep-research,
+  symbol-sweep`) on the first real attempt to run the chore it had just been built and documented
+  for, ~55 minutes after #1306 merged. No red run, no log line, no gate — `main` stayed green the
+  whole time, so `incident-scan.mjs`'s eye (a failed run on `main`) could not see it. Detected only
+  because a human-driven session tried to use the thing.
+- **ROOT CAUSE:** the Workflow tool's registry parses each `.claude/workflows/*.js` script's
+  `export const meta` STATICALLY, and its contract is strict — a pure literal, no `+`, template
+  strings, identifiers, calls, or spreads (`workflow-authoring`: "The `meta` object must be a PURE
+  LITERAL"). #1306 rewrote `whenToUse` as a `+`-concatenated string to keep lines short. A meta that
+  breaks the rule doesn't error; the script silently drops out of the registry. Two things made
+  the *diagnosis* expensive on top of the miss: the registry is built once per session, lazily at
+  the first `Workflow` call, and never re-reads (proved with a probe — a fresh-named copy of the
+  version that had registered at session start, dropped into the directory mid-session, never
+  appeared), so three successive plausible meta fixes were unobservable; and the name path only
+  says "not found", while `scriptPath` reads the file fresh and reports the real error. What else
+  crosses this system: the slash-command index also parses the same meta (and *did* list `/grind`
+  from the pre-#1306 file), the `/workflows` UI, and every other script in the directory —
+  `symbol-sweep.js` was one lazy edit away from the same fate.
+- **PREVENTION:** gate (#1331). `scripts/workflow-meta-scan.mjs` (acorn, parsing the harness's
+  top-level-`await`/`return` dialect) walks every workflow's meta initializer and refuses any
+  non-literal node, a meta that isn't the first statement, or a `name` ≠ filename;
+  `tests/arch/workflow-meta.spec.ts` runs it against the real directory, BLOCKING (a dropped
+  workflow is a broken contract, not debt to ratchet), and pins the scanner on seeded sources
+  (concatenation, template, identifier, call, spread, order, name). `npm run workflow:meta` for
+  hand use. Hardening: `acorn` had been reachable only as a transitive of `dependency-cruiser`;
+  it is now a declared devDependency so the gate can't lose its parser to an unrelated upgrade.
+  Doctrine: `docs/grind/README.md` → "If `Workflow({name})` says not found" records the
+  registry's real behavior and the `scriptPath` escape hatch; `docs/research-teams/PLAYBOOK.md`
+  banks the diagnostic lesson (before bisecting content, spend one probe establishing whether the
+  observer re-reads at all).
+- **SIDE QUESTS:** the same shape — a statically-parsed header whose failure mode is silent
+  absence, not an error — describes `.claude/skills/*/SKILL.md` and `.claude/agents/*.md`
+  frontmatter; logged to `docs/IDEAS.md` rather than built here.
