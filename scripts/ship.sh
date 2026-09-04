@@ -191,6 +191,26 @@ EOF_SHOTS
     git fetch --quiet origin "$base" 2>/dev/null || true
     local merge_base=""
     git rev-parse --verify -q "origin/$base" >/dev/null && merge_base="$(git merge-base "origin/$base" HEAD)"
+
+    # Stale-base hard stop (docs/LESSONS.md, 2026-09-04): the fetch above refreshes the REMOTE-
+    # TRACKING ref, but nothing merges it into the working tree — so `npm run verify` below still
+    # tests THIS branch in isolation. CI evaluates the actual PR-merge state (this branch + whatever
+    # landed on $base since it was cut), which can differ: PR #1219 verified green locally while
+    # main had independently grown a file the branch also touched past a line-count cap, and only
+    # the merged state broke it. Catch that here, for free, before spending a push or a runner —
+    # never after, in a red CI run.
+    if [ -n "$merge_base" ] && ! git merge-base --is-ancestor "origin/$base" HEAD 2>/dev/null; then
+      local behind; behind="$(git rev-list --count "$merge_base..origin/$base")"
+      echo "ship: this branch is $behind commit(s) behind origin/$base — local verify would test a" >&2
+      echo "  stale merge state that CI won't see. Merge it in first, THEN re-run ship open:" >&2
+      echo "    git merge origin/$base --no-edit" >&2
+      echo "  (--no-edit is load-bearing: commitlint requires Conventional-Commit format and only" >&2
+      echo "   exempts git's own auto-generated 'Merge branch' message — a hand-written one fails" >&2
+      echo "   the commit-msg hook. Never rebase onto \$base here; merge keeps a reviewer's existing" >&2
+      echo "   checkout of this branch valid.)" >&2
+      exit 1
+    fi
+
     if [ -n "$merge_base" ]; then
       npx commitlint --from "$merge_base" --to HEAD --verbose || {
         echo "ship: COMMIT MESSAGE LINT FAILED — not pushing. Fix with 'git commit --amend' (last commit) or 'git rebase -i' (earlier one), then retry." >&2
