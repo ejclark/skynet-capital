@@ -224,9 +224,28 @@ jobs:
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
           cache: npm
+          # Same key shape as `verify`'s (both lockfiles) — see the cache-warm step below for why
+          # this job, not verify, is the one that has to carry it.
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
+
+      # A cache saved by a `pull_request`-triggered run is scoped to that PR's own merge ref —
+      # GitHub's documented behavior, confirmed here after two PRs' `verify` runs (2026-09-04,
+      # docs/LESSONS.md) showed a cold "Install app dependencies" on every distinct branch, one
+      # after another, with no cross-PR hit ever occurring: "the cache will have a limited scope
+      # and can only be restored by re-runs of the pull request. It cannot be restored by the base
+      # branch or other pull requests" (GitHub Actions dependency-caching reference). `verify`
+      # never runs on `main` itself (pull_request only), so nothing was ever populating a cache on
+      # a scope any OTHER PR branch could actually fall back to. This job does run on every push to
+      # `main` — the one scope every future PR's `verify` run CAN restore from (a `pull_request`
+      # run may restore a cache created on its base branch) — so it pays app/'s install once per
+      # merge, purely to keep that shared cache warm for every PR opened after it.
+      - name: Warm the shared app/ dependency cache
+        run: npm ci --prefix app
 
       - name: Semantic Release
         env:
