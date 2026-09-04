@@ -54,6 +54,10 @@ primary_region = "ord"  # Chicago — same region as the dashboard, so the bridg
   # Decision-audit JSONL log — this app never had it wired (docs/IDEAS.md's logged gap); the volume
   # this PR mounts makes it durable, not just present.
   SKYNET_AUDIT_DIR = "/data/audit"
+  # The process's own health stamp (src/autonomous/bots-health-file.ts): running commit + bridge
+  # verdict + last controls poll. scripts/smoke-bots.sh reads it over `flyctl machine exec` instead
+  # of grepping `flyctl logs`, whose lag rolled back a healthy boot on 2026-09-04.
+  SKYNET_BOTS_HEALTH_PATH = "/data/health.json"
 
 [processes]
   bots = "npm run run:autonomous"

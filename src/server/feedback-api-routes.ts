@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { communityMilestone } from "../domain/community.js";
+import { APP_VERSION } from "./auth/app-version.js";
 import type { Session } from "./auth/session.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { toSpec } from "./feedback-coach.js";
@@ -67,6 +68,12 @@ async function serveIndex(
     enabled: Boolean(config.submitFeedback),
     coachEnabled: Boolean(config.coachFeedback),
     followupEnabled: Boolean(config.submitFollowup && config.readFeedback),
+    // The version a shipped filing is confirmed live in — read once, the same way the login
+    // page already shows it (`authenticator.ts`), not a per-issue lookup: this server IS a
+    // deployment of that version, so any filing marked `shipped` right now is confirmed live
+    // in it (#429's "stamped with the release version" — see feedback-recent.tsx for the
+    // celebratory treatment this feeds).
+    appVersion: APP_VERSION,
     // Already-durable — `feedback-log.ts` records every filing; this is just its length,
     // never a separate counter that could drift from that record.
     feedbackCount: community?.feedbackCount ?? recent.length,

@@ -13,14 +13,25 @@ export type SubscriptionsState = Readonly<Record<string, readonly PlaybookSubscr
 
 export const EMPTY_SUBSCRIPTIONS: SubscriptionsState = {};
 
+/** A malformed `symbols` (not an array, or one with a non-string/empty entry) drops the WHOLE
+ *  filter back to "unrestricted" rather than the subscription — the safe default, since an
+ *  accidentally-empty filter would silently block every buy under it. */
+function parseSymbols(raw: unknown): readonly string[] | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const symbols = raw.filter((s): s is string => typeof s === "string" && s.length > 0);
+  return symbols.length === raw.length ? symbols : undefined;
+}
+
 function parseSubscription(raw: unknown, accountId: string): PlaybookSubscription | null {
   if (!isRecord(raw)) return null;
-  const { playbookId, mode, capitalAllocated, enabled, createdAt, updatedAt } = raw;
+  const { playbookId, mode, capitalAllocated, enabled, createdAt, updatedAt, symbols } = raw;
   if (typeof playbookId !== "string" || playbookId.length === 0) return null;
   if (typeof mode !== "string" || !PLAYBOOK_MODES.includes(mode as PlaybookMode)) return null;
   if (typeof capitalAllocated !== "number" || !Number.isFinite(capitalAllocated)) return null;
   if (typeof enabled !== "boolean") return null;
   if (typeof createdAt !== "string" || typeof updatedAt !== "string") return null;
+  const parsedSymbols = parseSymbols(symbols);
   return {
     accountId,
     playbookId,
@@ -29,6 +40,7 @@ function parseSubscription(raw: unknown, accountId: string): PlaybookSubscriptio
     enabled,
     createdAt,
     updatedAt,
+    ...(parsedSymbols ? { symbols: parsedSymbols } : {}),
   };
 }
 

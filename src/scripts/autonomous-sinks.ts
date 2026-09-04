@@ -8,6 +8,8 @@
 import type { TraderMode } from "../autonomous/autonomous-trader.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
+import { createBotActivityEventBus } from "../observatory/activity-bus.js";
+import { type ActivityEventBus, activityEventFromBotOrder } from "../observatory/activity-event.js";
 
 /**
  * The trader's execution mode. **Defaults to `observe`** — safe by default: a persona must be
@@ -22,6 +24,34 @@ export function traderMode(env: NodeJS.ProcessEnv): TraderMode {
 /** Audit sink: append every decision to a JSONL store when SKYNET_AUDIT_DIR is set. */
 export function auditStore(env: NodeJS.ProcessEnv): JsonlAuditStore | undefined {
   return env.SKYNET_AUDIT_DIR ? new JsonlAuditStore(env.SKYNET_AUDIT_DIR) : undefined;
+}
+
+/** #1211 slice 2: a bot's own accepted orders publish `order.submitted` — dark unless a durable
+ *  dir is configured. See `createBotActivityEventBus` for why it nests where it does. */
+export function botBus(env: NodeJS.ProcessEnv): ActivityEventBus | undefined {
+  return createBotActivityEventBus(env);
+}
+
+/** Wraps a bus so a bot's own accepted orders publish `order.submitted` (#1211 slice 2) — a
+ *  publish failure logs via `process.emitWarning` and never propagates, same posture as
+ *  `activity-publishing.ts`'s `logBusFailure` for the human-desk path. */
+export function botOrderPublisher(
+  personaId: string,
+  bus: ActivityEventBus,
+): (info: {
+  orderId: string;
+  symbol: string;
+  side: "buy" | "sell";
+  quantity: number;
+  at: string;
+}) => void {
+  return (info) => {
+    bus.publish(activityEventFromBotOrder({ participantId: personaId, ...info })).catch((error) => {
+      process.emitWarning(
+        `[activity-bus] bot order ${info.orderId} (${personaId}) failed: ${error}`,
+      );
+    });
+  };
 }
 
 /** Console + audit-store sink for one decision cycle. Never throws on the audit write. */

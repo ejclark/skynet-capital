@@ -17,8 +17,11 @@ class FakeTradingTransport implements AlpacaTradingTransport {
   }
 }
 
-const adapterWith = (responses: Record<string, JsonResponse>): AlpacaBrokerAdapter =>
-  new AlpacaBrokerAdapter(new AlpacaTradingClient(new FakeTradingTransport(responses)));
+const adapterWith = (
+  responses: Record<string, JsonResponse>,
+  deps?: ConstructorParameters<typeof AlpacaBrokerAdapter>[1],
+): AlpacaBrokerAdapter =>
+  new AlpacaBrokerAdapter(new AlpacaTradingClient(new FakeTradingTransport(responses)), deps);
 
 const buy: OrderIntent = { symbol: "EEM", side: "buy", quantity: 100, type: "market", reason: "t" };
 
@@ -54,10 +57,25 @@ describe("AlpacaBrokerAdapter", () => {
 
       const result = await adapter.submit(buy);
 
-      expect(result).toMatchObject({ status: "filled", filledQuantity: 100 });
+      expect(result).toMatchObject({ status: "filled", filledQuantity: 100, orderId: "o1" });
     });
 
-    it("reports a rejected result when the API errors", async () => {
+    it("carries the broker's order id even on a same-request rejection (#885)", async () => {
+      // A "rejected"/"canceled" status still means the broker CREATED an order object — its id is
+      // the join key `playbook-attribution.ts` needs, so it must survive here too.
+      const adapter = adapterWith({
+        "/v2/orders": {
+          status: 200,
+          body: { id: "o2", symbol: "EEM", qty: "100", side: "buy", status: "rejected" },
+        },
+      });
+
+      const result = await adapter.submit(buy);
+
+      expect(result).toMatchObject({ status: "rejected", orderId: "o2" });
+    });
+
+    it("reports a rejected result with no order id when the API errors before creating one", async () => {
       const adapter = adapterWith({
         "/v2/orders": { status: 403, body: { message: "insufficient buying power" } },
       });
@@ -66,6 +84,73 @@ describe("AlpacaBrokerAdapter", () => {
 
       expect(result.status).toBe("rejected");
       expect(result.reason).toContain("403");
+      expect(result.orderId).toBeUndefined();
+    });
+
+    it("fires onSubmitted with the broker's own order id once an order is accepted (#1211 slice 2)", async () => {
+      const submitted: unknown[] = [];
+      const adapter = adapterWith(
+        {
+          "/v2/orders": {
+            status: 200,
+            body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+          },
+        },
+        {
+          onSubmitted: (info) => submitted.push(info),
+          now: () => new Date("2026-09-04T12:00:00.000Z"),
+        },
+      );
+
+      const result = await adapter.submit(buy);
+
+      expect(result.status).toBe("filled");
+      expect(submitted).toEqual([
+        {
+          orderId: "o1",
+          symbol: "EEM",
+          side: "buy",
+          quantity: 100,
+          at: "2026-09-04T12:00:00.000Z",
+        },
+      ]);
+    });
+
+    it("never fires onSubmitted for a rejected or canceled order", async () => {
+      const submitted: unknown[] = [];
+      const adapter = adapterWith(
+        {
+          "/v2/orders": {
+            status: 200,
+            body: { id: "o1", symbol: "EEM", side: "buy", status: "rejected" },
+          },
+        },
+        { onSubmitted: (info) => submitted.push(info) },
+      );
+
+      await adapter.submit(buy);
+
+      expect(submitted).toEqual([]);
+    });
+
+    it("a throwing onSubmitted never turns a real fill into a reported rejection", async () => {
+      const adapter = adapterWith(
+        {
+          "/v2/orders": {
+            status: 200,
+            body: { id: "o1", symbol: "EEM", qty: "100", side: "buy", status: "accepted" },
+          },
+        },
+        {
+          onSubmitted: () => {
+            throw new Error("listener boom");
+          },
+        },
+      );
+
+      const result = await adapter.submit(buy);
+
+      expect(result).toMatchObject({ status: "filled", filledQuantity: 100 });
     });
   });
 });

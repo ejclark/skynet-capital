@@ -1,8 +1,15 @@
+import type { BotOrderSubmission } from "../adapters/alpaca-broker-adapter.js";
 import type { AlpacaCredentials } from "../alpaca/credentials.js";
 import type { OrderIntent, OrderResult, Portfolio } from "../domain/types.js";
 import type { BrokerPort } from "../ports/broker.js";
 import type { Bot } from "./bot.js";
 import { createBotBroker } from "./bot-broker.js";
+
+/** Passed straight through to `createBotBroker` on every (re)build — see there and
+ *  `alpaca-broker-adapter.ts` for what fires and when (#1211 slice 2). */
+export interface SwappableBotBrokerDeps {
+  readonly onSubmitted?: (info: BotOrderSubmission) => void;
+}
 
 /**
  * A `BrokerPort` whose underlying Alpaca client can be rebuilt in place, so a credential
@@ -16,11 +23,13 @@ import { createBotBroker } from "./bot-broker.js";
  */
 export class SwappableBotBroker implements BrokerPort {
   private readonly bot: Bot;
+  private readonly deps?: SwappableBotBrokerDeps;
   private current: BrokerPort;
 
-  constructor(bot: Bot) {
+  constructor(bot: Bot, deps?: SwappableBotBrokerDeps) {
     this.bot = bot;
-    this.current = createBotBroker(bot);
+    this.deps = deps;
+    this.current = createBotBroker(bot, deps);
   }
 
   getPortfolio(): Promise<Portfolio> {
@@ -36,6 +45,6 @@ export class SwappableBotBroker implements BrokerPort {
    *  broker. Takes effect on the *next* call; a submit already in flight finishes on the
    *  broker it started on. */
   replaceCredentials(credentials: AlpacaCredentials): void {
-    this.current = createBotBroker({ ...this.bot, credentials });
+    this.current = createBotBroker({ ...this.bot, credentials }, this.deps);
   }
 }
