@@ -109,7 +109,6 @@ async function runLive(): Promise<void> {
   const hardcoreRoster = resolveRoster(enabled, bootControls);
   const roster = hardcoreRoster.personas;
   const { bots: fromEnv, sharedAccount } = loadBots(roster, process.env);
-  // Store credential first, env as the break-glass fallback — see autonomous-boot-credentials.ts.
   const loaded = await primeBotCredentials(credentials, bootControls, fromEnv);
   for (const id of sharedAccount) {
     console.warn(
