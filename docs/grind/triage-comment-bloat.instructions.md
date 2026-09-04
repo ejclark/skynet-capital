@@ -33,8 +33,11 @@ either delete the narration or leave it, one comment at a time, without changing
 5. `npm run verify` — must exit 0 (comment deletion can't break behavior, but confirm nothing else
    drifted).
 6. Commit (`chore: trim narration comments in <file>`), push with retries. Report how many
-   comments were deleted vs. kept, and why for anything borderline. Do NOT run `--update` yourself
-   — that happens once, after every item in this batch lands (see calling convention above).
+   comments were deleted vs. kept, why for anything borderline, and the pushed branch name in
+   `branch` — chain `{kind: "script", command: "git ls-remote --exit-code --heads origin
+   {prev.branch}"}` after this step so the push is verified, not trusted
+   (`docs/grind/README.md`). Do NOT run `--update` yourself — that happens once, after every item
+   in this batch lands (see calling convention above).
 
 ## Guardrails
 

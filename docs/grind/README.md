@@ -93,6 +93,13 @@ prose ("the target below") rather than trying to template inside the instruction
   file's worth of narration-only comments flagged by `scripts/comment-bloat-scan.mjs`.
 - [`test-backfill.instructions.md`](test-backfill.instructions.md) — backfill BDD specs for one
   file flagged by `scripts/spec-gap-scan.mjs` (mirrors the `test-backfiller` agent's loop).
+- [`research-bottleneck.instructions.md`](research-bottleneck.instructions.md) — for one
+  `bottleneck`-labelled issue, find the superior *existing* solution, battle-test the candidates
+  against primary sources and `envelope.json`, and leave a call sheet + routing label on the
+  issue. The pursuit half of the capture-and-pursue lane: any session that measures a new
+  constraint files it with `/issue` + `bottleneck`; a grind run over the open ones does the
+  research so no one's attention (least of all Eric's) is spent re-deriving it. Research, not
+  mechanics — call it with `effort: "high"` and the best model available.
 
 Each of these was chosen and vetted through a research pass (red/blue/purple/tiger/yellow-teamed —
 see the PR that added them) against every gate this repo currently runs; several plausible-looking
@@ -112,6 +119,23 @@ The same applies to gates that rewrite one shared budget/ratchet file (`*-scan.m
 running `--update` inside each parallel item's own step risks two agents racing the same file.
 Every instructions.md above that touches a ratcheted gate says explicitly whether to run
 `--update` per item, once at the end (non-isolated), or not at all from within the chain.
+
+### Verify the outcome mechanically — never trust a `done`
+
+A step's `{status, summary}` is a self-report. Issue #1028 (fixed by #1309 for the feedback-triage
+lane) is what that costs: a session that completes end to end and reports success while having
+done nothing visible, with nothing to catch it. Grind's answer is the same as #1309's — check the
+world, not the claim. A step that pushes a branch reports it in the optional `branch` field of its
+result; every step after the first can read it as `{prev.branch}` (`{prev.<field>}` substitutes one
+field, `{prev}` the whole JSON), so the chain ends with:
+
+```json
+{ "kind": "script", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
+```
+
+A `done` with no branch on origin makes that command fail, which reports `blocked` — fail-closed.
+A missing `branch` field substitutes to an empty string and fails the same way. Every checked-in
+chore above reports its branch and expects this trailing step; the four calling conventions say so.
 
 ## Known limitations
 
