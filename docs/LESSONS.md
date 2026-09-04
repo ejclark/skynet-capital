@@ -27,6 +27,35 @@ it. Prevention ranks, best first:
 
 ---
 
+### CI install times swung 10s to 300+s on the same ~570 packages — setup-node's cache has no restore-keys fallback
+
+- **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric: "3+ minutes to install node packages is highly suspicious; it shouldn't take
+  that long... I feel it should be less than a minute." Pulling real timing for `verify`'s two
+  install steps across 15 recent runs (via the new `ci-install-duration-scan.mjs`, itself shipped
+  this evening) showed the actual spread: root's step ranged 10s–304s, app's ranged 5s–255s, on the
+  same lockfiles the whole time. Sub-40s was already being hit repeatedly — the problem was never a
+  hard floor, it was that half the runs weren't getting anything close to it.
+- **ROOT CAUSE:** confirmed against a specific GitHub issue, not assumed: `actions/setup-node`'s
+  built-in `cache: npm` computes ONE exact-hash key and has no `restore-keys` fallback at all
+  (actions/setup-node#627, #1120). Any lockfile change anywhere — a dependency bump, or (as
+  happened three times this evening) the cache-key SHAPE itself changing — invalidates that single
+  key completely, with zero partial reuse of the rest of `~/.npm`. Every such change costs a full
+  cold install for every package, not just the ones that actually changed, and there is no middle
+  ground between "exact hit" and "total miss" the way there would be with a prefix fallback.
+- **PREVENTION:** script — `verify`, `arm-auto-merge`, and `deploy` all drop `setup-node`'s
+  implicit `cache: npm` for an explicit `actions/cache@v4` step with `restore-keys:
+  npm-${{ runner.os }}-` alongside the exact key. A future lockfile change now degrades to "mostly
+  warm, fetch the delta" instead of "cold, refetch everything" — the actual lever for consistency,
+  not a package-manager swap or a bigger runner, both of which were on the table and didn't survive
+  this root-causing.
+- **SIDE QUESTS:** this migration itself pays one more one-time full-cost run — the key FORMAT
+  changed (`npm-${{ runner.os }}-...` replacing setup-node's internal `node-cache-...` naming), so
+  nothing under the new key exists yet either. Consistent with the rest of tonight: a real, paid,
+  one-time cost in exchange for a category change in the steady state, not a repeat of the same gap.
+
+---
+
 ### Eight open PRs sat red on commitlint at once — nothing in the local path ever ran the same check CI does
 
 - **SHA:** n/a (fix on `scripts/ship.sh` and `.github/prompts/event-research.md`)   **DATE:** 2026-09-04   **STATUS:** closed

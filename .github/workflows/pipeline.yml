@@ -69,17 +69,22 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
-          cache: npm
-          # This job is the only one that also installs app/ (a separate package, its own
-          # lockfile — not an npm workspace). Without listing BOTH lockfiles here, the cache key
-          # only ever hashes the root one: a PR that doesn't touch root's package-lock.json gets a
-          # cache HIT on that key, and actions/cache only re-saves on a MISS — so every package
-          # `npm ci --prefix app` fetches during a hit run is silently discarded at job end. The
-          # symptom (docs/LESSONS.md, 2026-09-04): "Install app dependencies" paying a near-full
-          # network fetch for its ~130 packages on almost every run, run after run, never warming.
-          cache-dependency-path: |
-            package-lock.json
-            app/package-lock.json
+
+      # actions/setup-node's own `cache: npm` has no restore-keys fallback (confirmed against
+      # actions/setup-node#627/#1120, not assumed) — ANY lockfile change anywhere invalidates the
+      # single exact-hash key completely, with no partial reuse of the other, unchanged tree's
+      # packages. That is a likely source of the wide swing measured 2026-09-04 (docs/LESSONS.md):
+      # the SAME ~570 combined packages took anywhere from 10s to over 300s across otherwise
+      # similar runs. actions/cache directly, with a prefix restore-keys, degrades a miss to
+      # "mostly warm, small delta" instead of "cold, every package" — this job is the only one that
+      # also installs app/, so it hashes both lockfiles.
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
 
       - name: Install dependencies
         run: npm ci
@@ -165,7 +170,16 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
-          cache: npm
+
+      # Same restore-keys fix as `verify` (docs/LESSONS.md, 2026-09-04) — root-only here, but the
+      # exact-key-only miss is the same failure mode regardless of which tree.
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
 
       - name: Install dependencies
         # envelope-scan.mjs's diffAware path imports envelope-widening.mjs, which imports the
@@ -223,12 +237,16 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
-          cache: npm
-          # Same key shape as `verify`'s (both lockfiles) — see the cache-warm step below for why
-          # this job, not verify, is the one that has to carry it.
-          cache-dependency-path: |
-            package-lock.json
-            app/package-lock.json
+
+      # Same restore-keys fix as `verify`'s, same key shape (both lockfiles) — see the cache-warm
+      # step below for why this job, not verify, is the one that has to carry the shared scope.
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
 
       - name: Install dependencies
         run: npm ci
