@@ -123,4 +123,63 @@ describe("resolveBotCredentialsClient", () => {
       },
     );
   });
+
+  // Confirmed live 2026-09-04: every boot built the clock/news/safety-seed on the env credential,
+  // printed a screen of expected 401s, and only THEN swapped in the store credential. `prime`
+  // pulls before anything is built, and marks the version synced so the boot reconcile is a no-op.
+  it("prime() hands each bot's pair to the caller before any broker exists, and marks it synced", async () => {
+    let calls = 0;
+    await withListener(
+      () => {
+        calls++;
+        return { apiKey: "STORE-KEY", apiSecret: "store-secret" };
+      },
+      async (base) => {
+        const rotated: string[] = [];
+        const client = resolveBotCredentialsClient(
+          (id) => {
+            rotated.push(id);
+            return true;
+          },
+          {
+            SKYNET_INSIGHTS_BRIDGE_URL: base,
+            SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
+          } as NodeJS.ProcessEnv,
+        );
+        const primed: [string, AlpacaCredentials][] = [];
+        const boot = state({ sauron: { credentialsVersion: "v1" } });
+
+        await client.prime(boot, (id, creds) => primed.push([id, creds]));
+        expect(primed).toEqual([["sauron", { apiKey: "STORE-KEY", apiSecret: "store-secret" }]]);
+        expect(rotated).toEqual([]); // prime never routes through onRotated — no broker exists yet
+
+        // The boot-time reconcile that follows sees the version already synced: no second pull.
+        await client.reconcile(boot);
+        expect(calls).toBe(1);
+        expect(rotated).toEqual([]);
+
+        // A genuinely new version later still rotates through onRotated as before.
+        await client.reconcile(state({ sauron: { credentialsVersion: "v2" } }));
+        expect(calls).toBe(2);
+        expect(rotated).toEqual(["sauron"]);
+      },
+    );
+  });
+
+  it("prime() is a no-op for a bot the bridge refuses — it boots on env and self-heals later", async () => {
+    await withListener(
+      () => undefined, // 404: no such bot
+      async (base) => {
+        const client = resolveBotCredentialsClient(() => true, {
+          SKYNET_INSIGHTS_BRIDGE_URL: base,
+          SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET: SECRET,
+        } as NodeJS.ProcessEnv);
+        const primed: string[] = [];
+        await client.prime(state({ sauron: { credentialsVersion: "v1" } }), (id) =>
+          primed.push(id),
+        );
+        expect(primed).toEqual([]);
+      },
+    );
+  });
 });
