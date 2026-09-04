@@ -15,13 +15,15 @@ import {
   EMPTY_CONTROLS,
 } from "../autonomous/bot-controls.js";
 import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-controls-client.js";
+import type { BotsStateDb } from "../autonomous/bots-state-db.js";
+import { openBotsStateDb } from "../autonomous/bots-state-db.js";
 import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
 import { assessReadiness } from "../autonomous/readiness.js";
 import type { SafetyController } from "../autonomous/safety.js";
 import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
-import { createBotBroker } from "../bots/bot-broker.js";
+import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
@@ -47,11 +49,11 @@ const HARDCORE_COOLDOWN_MS = 90_000;
  *  whenever the env var was merely SET — which made the one silent failure mode this deployment
  *  has (bridge unreachable → fail-open to env-only controls → Eric's suspend toggles quietly stop
  *  arriving) indistinguishable from health. */
-export async function bootMissionControl(): Promise<{
+export async function bootMissionControl(onFetched?: (state: ControlsState) => void): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
 }> {
-  const controls = resolveBotControls(process.env);
+  const controls = resolveBotControls(process.env, onFetched);
   const fetched = await controls.fetchOnce();
   if (!controls.enabled) {
     console.log("[controls] bridge unset (SKYNET_INSIGHTS_BRIDGE_URL) — env-only controls");
@@ -104,6 +106,25 @@ export async function seedDailyLossBaseline(
     console.log(`[safety] daily-loss baseline seeded from day-open equity: $${seed.toFixed(2)}`);
   } catch (error) {
     console.warn("[safety] day-open equity seed failed (non-fatal):", error);
+  }
+}
+
+/**
+ * Opens the bots-state DB (momentum/sentiment/cooldown durability, `docs/plans/trade-insights-loop.md`
+ * slice 4) when `SKYNET_BOTS_DB_PATH` is set — dark by default, exactly like `SKYNET_AUDIT_DIR`.
+ * Best-effort, same posture as `seedDailyLossBaseline`: a missing/corrupt DB file must never fail
+ * boot, it just leaves durability off for this run (today's cold-start behavior, unchanged).
+ */
+export function seedBotsState(env: NodeJS.ProcessEnv): BotsStateDb | undefined {
+  const path = env.SKYNET_BOTS_DB_PATH;
+  if (!path) return undefined;
+  try {
+    const db = openBotsStateDb(path);
+    console.log(`[bots-state] durable momentum/sentiment/cooldown storage armed: ${path}`);
+    return db;
+  } catch (error) {
+    console.warn("[bots-state] open failed (non-fatal) — falling back to cold-start state:", error);
+    return undefined;
   }
 }
 
@@ -212,6 +233,8 @@ export function buildLiveBot(
     /** Mission Control: dynamic suspend checks (polled) + the boot snapshot for mode overrides. */
     controls: BotControlsClient;
     bootControls: ControlsState;
+    /** Durable cooldown storage (slice 4) — omit to run cold-start, exactly as before this existed. */
+    botsStateDb?: BotsStateDb;
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
@@ -233,7 +256,10 @@ export function buildLiveBot(
   } else {
     console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
   }
-  const broker = createBotBroker(bot);
+  // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
+  // client this bot trades with in place, without restarting the process (and therefore
+  // without losing any bot's in-memory momentum/sentiment/cooldown state).
+  const broker = new SwappableBotBroker(bot);
   return {
     personaName: bot.persona.name,
     broker,
@@ -248,6 +274,15 @@ export function buildLiveBot(
       // Hardcore research mode iterates fast: 90s between orders in a symbol instead of 5m.
       // Small tranches keep the order-rate breaker (20/min) and daily-loss breaker (5%) binding.
       ...(hardcore ? { cooldownMs: HARDCORE_COOLDOWN_MS } : {}),
+      // Durable cooldowns (slice 4): restored at construction, persisted on every order — dark
+      // (both no-ops) unless SKYNET_BOTS_DB_PATH is set.
+      ...(opts.botsStateDb
+        ? {
+            initialCooldowns: opts.botsStateDb.loadCooldowns(bot.persona.id),
+            onCooldownSet: (symbol: string, at: number) =>
+              opts.botsStateDb?.saveCooldown(bot.persona.id, symbol, at),
+          }
+        : {}),
       // Per-bot suspend (Mission Control, polled) composes with the kill switch/breakers: either
       // blocks the cycle, and the decision record carries the owner's reason verbatim.
       blockedReason: () => opts.controls.suspendedReason(bot.persona.id) ?? opts.blockedReason(),

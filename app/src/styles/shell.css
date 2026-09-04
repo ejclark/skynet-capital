@@ -38,6 +38,21 @@ a {
   left: 0;
 }
 
+/* the shell is a flex ROW (handoff 2026-09-03): the app column, then the Moneypenny rail as its
+   sibling — opening the rail pushes the whole column left, top bar included, instead of
+   overlaying the stage. The app column keeps the sticky top bar; the rail sticks on its own. */
+.shell {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+.shell-app {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -187,20 +202,28 @@ a {
   background: var(--neg);
 }
 
+/* FLUID (Eric, 2026-09-04): the frame fills the window — it used to centre in a 1320px column
+   with the stage capped at 880px, which left two-thirds of a wide monitor as empty margin. Now
+   the only ceiling is --shell-max (theme.css, the width scale); views cap their own panels by
+   shape with --col-read / --col-wide, never here. */
 .frame {
-  max-width: 1320px;
+  /* width:100% is load-bearing: the frame is a flex item (.shell-app is a column), and an
+     auto-margin flex item shrink-wraps to its content — without it the page centres at
+     whatever width the view happens to render, which is the exact bug this replaces */
+  width: 100%;
+  max-width: var(--shell-max);
   margin: 0 auto;
-  padding: var(--stage-gap) 20px 80px;
+  padding: var(--stage-gap) var(--gutter) 80px;
   display: grid;
   /* the rail is a control column now (dimensional precedence), not just a link list —
-     sized for a month calendar and control groups with room to breathe */
-  grid-template-columns: 248px 1fr;
+     sized for a month calendar and control groups with room to breathe; minmax(0, 1fr) so a
+     wide table in the stage scrolls inside its column instead of pushing the rail */
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
   gap: 32px;
   align-items: start;
 }
 .stage {
   min-width: 0;
-  max-width: 880px;
 }
 
 .toggle-abbr {

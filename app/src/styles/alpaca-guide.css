@@ -1,0 +1,112 @@
+/* the Alpaca setup guide (handoff 2026-09-03) — five progressive-disclosure accordions, the
+   connect form inside the last one. Tokens only; radii per the design (11 rows / 8 buttons). */
+
+.ag {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ag-step {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.ag-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--sans);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+.ag-head:hover {
+  background: color-mix(in oklab, var(--accent) 5%, transparent);
+}
+.ag-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 10.5px;
+  color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 50%, var(--border));
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+.ag-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ag-chev {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.ag-open .ag-chev {
+  transform: rotate(180deg);
+}
+.ag-body {
+  padding: 0 14px 12px;
+  margin-left: 38px;
+}
+.ag-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.ag-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, var(--border));
+  border-radius: 8px;
+  padding: 5px 10px;
+  transition: background 0.15s ease;
+}
+.ag-link:hover {
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+.ag-connect {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ag-connect .join-form {
+  max-width: none;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+.ag-caveat {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  .ag-body {
+    margin-left: 0;
+  }
+}

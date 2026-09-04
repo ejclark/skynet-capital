@@ -29,7 +29,8 @@ function deskTarget(path: string, url: string): string {
 
 /** The straight renames — one shell page, same meaning, query preserved. */
 const TWINS: ReadonlyMap<string, string> = new Map([
-  ["/add", "/app/join"],
+  // The connect form lives inside onboarding's guide (2026-09-03); /app/join redirects there too.
+  ["/add", "/app/onboarding"],
   ["/feedback", "/app/feedback"],
   // The owner pages' cards live on app Settings (9e).
   ["/invite", "/app/settings"],

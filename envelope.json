@@ -50,6 +50,10 @@
       "why": "the ONLY code allowed to turn a raw broker credential factory into a usable client (#928 slice 3) — trade-service.ts, option-trade-service.ts, and desk-gate.ts hold no raw factory and open up alongside this split"
     },
     {
+      "pattern": "src/server/bot-credentials-gate.ts",
+      "why": "the ONLY code allowed to resolve a bot's live Alpaca credential for the internal cross-app bridge (#1180) — the first place a real broker secret ever crosses that bridge, same one-narrow-file precedent as account-identity-gate.ts"
+    },
+    {
       "pattern": "src/server/invite-form.ts",
       "why": "the invite gate — who gets into the shared universe"
     },
