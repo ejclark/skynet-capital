@@ -117,6 +117,26 @@ describe("driveBoardChannel", () => {
     });
   });
 
+  it("flattens a graduated ceremony to a cue carrying the course level (#469 slice 4)", () => {
+    const hub = new ObservatoryHub(data(snap()));
+    const ceremonies = new CeremonyChannel();
+    const channel = createBoardChannel();
+    driveBoardChannel(hub, channel, ceremonies);
+    const transition = {
+      id: "graduated:human-eric:200",
+      type: "graduated",
+      participantId: "human-eric",
+      level: 200,
+      at: "2026-08-26T15:00:02.000Z",
+    } as const;
+    ceremonies.emit(transition);
+    const replay = channel.since(0);
+    expect(replay.ok && replay.patches[0]?.ops[0]).toMatchObject({
+      kind: "cue",
+      cue: { id: transition.id, type: "graduated", detail: { level: 200 } },
+    });
+  });
+
   it("stops folding once unsubscribed", () => {
     const hub = new ObservatoryHub(data(snap()));
     const channel = createBoardChannel();

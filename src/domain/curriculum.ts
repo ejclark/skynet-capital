@@ -146,6 +146,23 @@ export function courseComplete(course: Course, completed: ReadonlySet<string>): 
 }
 
 /**
+ * The course a milestone GRADUATES — undefined unless `milestoneId` is that course's LAST
+ * milestone. Every course's rungs fill in ladder order (`progression.ts`'s `unlockedCodes` opens a
+ * code only once the one before it is earned), so earning a course's last milestone always means
+ * every milestone before it in that same course is already earned too — there is no path to "302
+ * earned, 301 still open." That makes this the one, unambiguous graduation moment per course:
+ * #469 slice 4's ceremony + companion congratulation key off it (`progression-service.ts`'s
+ * `acknowledge`, `onboarding-api-routes.ts`'s `freshGraduation`).
+ */
+export function graduatingLevel(milestoneId: string): CourseLevel | undefined {
+  for (const course of COURSES) {
+    const last = course.milestones[course.milestones.length - 1];
+    if (last?.id === milestoneId) return course.level;
+  }
+  return undefined;
+}
+
+/**
  * Which course levels a learner has unlocked. Level 100 is always open; each higher course unlocks
  * only when the one before it is fully complete. Display truth for the Milestones page — the
  * progression service unions in any course that already holds an earned milestone, so seeded

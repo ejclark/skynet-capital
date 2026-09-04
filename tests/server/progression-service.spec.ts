@@ -202,6 +202,41 @@ describe("progression service + store — seeding, the toggle, and one-time cele
     expect(store.get("ann")?.acknowledged).toEqual(["first-buy"]);
   });
 
+  describe("graduation ceremonies (#469 slice 4)", () => {
+    it("reports a course level graduated exactly once, on the acknowledge that completes it", async () => {
+      const { svc } = stored([]);
+      // first-buy graduates nothing (it isn't course 100's LAST milestone); first-sell does.
+      expect(await svc.acknowledge("ann", ["first-buy"])).toEqual([]);
+      expect(await svc.acknowledge("ann", ["first-sell"])).toEqual([100]);
+
+      // Re-acknowledging the same id (a retry, a double-submit) never re-graduates it.
+      expect(await svc.acknowledge("ann", ["first-sell"])).toEqual([]);
+    });
+
+    it("persists which levels have already graduated, across service instances", async () => {
+      const { svc, store } = stored([]);
+      await svc.acknowledge("ann", ["first-buy", "first-sell"]);
+      expect(store.get("ann")?.graduated).toEqual([100]);
+
+      const again = createProgressionService({
+        readFills: () => Promise.resolve([]),
+        readTags: () => Promise.resolve([]),
+        store: new ProgressionStore(join(dir, "progression.json")),
+      });
+      expect(await again.acknowledge("ann", ["first-sell"])).toEqual([]); // already banked
+    });
+
+    it("names both graduated courses when a single acknowledge spans two at once", async () => {
+      const { svc, store } = stored([]);
+      const graduated = await svc.acknowledge("ann", [
+        "first-sell", // graduates 100
+        "first-covered-call", // graduates 200
+      ]);
+      expect([...graduated].sort()).toEqual([100, 200]);
+      expect([...(store.get("ann")?.graduated ?? [])].sort()).toEqual([100, 200]);
+    });
+  });
+
   it("persists the wheels toggle across service instances", async () => {
     const { svc } = stored([]);
     await svc.view("ann"); // seeds wheels on

@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { COURSES, type CourseLevel, graduatingLevel } from "../domain/curriculum.js";
 import { regularSessionOpen } from "../domain/market-session.js";
 import { deriveOnboarding, ONBOARDING_MILESTONE } from "../domain/onboarding.js";
 import { TRADE_TYPES } from "../domain/trade-types.js";
@@ -54,6 +55,13 @@ export interface OnboardingView {
     readonly rungsTotal: number;
     /** The next rung's code and title, when the ladder isn't finished. */
     readonly nextUp?: { readonly code: string; readonly title: string };
+    /**
+     * Present exactly when a freshly-earned, not-yet-claimed milestone just graduated a whole
+     * course (#469 slice 4) — the companion's cue to congratulate on next open
+     * (`companion-context.ts`). Clears the moment the member claims the banner
+     * (`progression-service.ts`'s `acknowledge`), same lifetime as the banner itself.
+     */
+    readonly freshGraduation?: { readonly level: CourseLevel; readonly title: string };
   };
 }
 
@@ -89,6 +97,12 @@ export async function onboardingView(
   const next = progression?.nextUp
     ? TRADE_TYPES.find((t) => t.code === progression.nextUp)
     : undefined;
+  // The first still-celebrating earn that graduated a course — same "fresh, unclaimed" window the
+  // milestone banner itself uses, so this clears the instant the member claims it.
+  const graduatedLevel = (progression?.celebrating ?? [])
+    .map((m) => graduatingLevel(m.milestoneId))
+    .find((level): level is CourseLevel => level !== undefined);
+  const graduatedCourse = graduatedLevel && COURSES.find((c) => c.level === graduatedLevel);
   return {
     linked,
     ...(session?.name ? { viewerName: session.name } : {}),
@@ -107,6 +121,9 @@ export async function onboardingView(
             rungsEarned,
             rungsTotal: TRADE_TYPES.length,
             ...(next ? { nextUp: { code: next.code, title: next.name } } : {}),
+            ...(graduatedCourse
+              ? { freshGraduation: { level: graduatedCourse.level, title: graduatedCourse.title } }
+              : {}),
           },
         }
       : {}),

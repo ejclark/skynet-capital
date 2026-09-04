@@ -1,6 +1,7 @@
 import {
   COURSES,
   courseComplete,
+  graduatingLevel,
   pointsFor,
   rankFor,
   totalPoints,
@@ -36,6 +37,16 @@ describe("curriculum", () => {
     expect(courseComplete(stocks, partial)).toBe(false);
     const all = new Set(stocks.milestones.map((m) => m.id));
     expect(courseComplete(stocks, all)).toBe(true);
+  });
+
+  it("names the course a milestone graduates only when it is that course's LAST milestone", () => {
+    expect(graduatingLevel("first-buy")).toBeUndefined(); // course 100's first milestone
+    expect(graduatingLevel("first-sell")).toBe(100); // course 100's last
+    expect(graduatingLevel("first-cash-secured-put")).toBeUndefined(); // course 200's first
+    expect(graduatingLevel("first-covered-call")).toBe(200); // course 200's last
+    expect(graduatingLevel("first-long-put")).toBeUndefined(); // course 300's first
+    expect(graduatingLevel("first-long-call")).toBe(300); // course 300's last, the top rung
+    expect(graduatingLevel("not-a-real-milestone")).toBeUndefined();
   });
 
   it("sums points and climbs ranks as milestones complete", () => {

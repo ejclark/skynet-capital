@@ -3,6 +3,7 @@ import { checkFor } from "../domain/comprehension-checks.js";
 import {
   COURSES,
   type CourseLevel,
+  graduatingLevel,
   pointsFor,
   type Rank,
   rankFor,
@@ -117,7 +118,16 @@ export interface ProgressionService {
    */
   view(participantId: string, opaqueMemberId?: string): Promise<ParticipantProgression>;
   setWheels(participantId: string, on: boolean): Promise<void>;
-  acknowledge(participantId: string, milestoneIds: readonly string[]): Promise<void>;
+  /**
+   * Bank the one-time celebration for each real id. Returns the course levels this call is the
+   * FIRST to acknowledge a graduation for (#469 slice 4) — empty for an ordinary milestone claim,
+   * or a repeat claim of one already banked. The caller (`learn-api-routes.ts`) fires the ceremony
+   * channel for each; a level appears at most once across every call, ever, for this participant.
+   */
+  acknowledge(
+    participantId: string,
+    milestoneIds: readonly string[],
+  ): Promise<readonly CourseLevel[]>;
   /**
    * Grade one comprehension check and bank a pass. `answers` maps question id → the posted option
    * index; nothing about the verdict is taken from the caller. Undefined = no such gated
@@ -231,11 +241,30 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
         ...ENGAGEMENT_MILESTONES.map((m) => m.id),
       ]);
       const ids = milestoneIds.filter((id) => known.has(id));
-      if (deps.store && ids.length > 0) {
-        const held = deps.store.get(participantId)?.acknowledged ?? [];
-        deps.store.set(participantId, { acknowledged: [...new Set([...held, ...ids])] }, now());
-      }
-      return Promise.resolve();
+      if (!deps.store || ids.length === 0) return Promise.resolve([]);
+      const record = deps.store.get(participantId);
+      const held = record?.acknowledged ?? [];
+      // A course level graduates the FIRST time one of its ids is acknowledged here — a repeat
+      // claim (or a claim that never touched a course's last milestone) graduates nothing new.
+      const alreadyGraduated = new Set(record?.graduated ?? []);
+      const fresh = [
+        ...new Set(
+          ids
+            .map((id) => graduatingLevel(id))
+            .filter(
+              (level): level is CourseLevel => level !== undefined && !alreadyGraduated.has(level),
+            ),
+        ),
+      ];
+      deps.store.set(
+        participantId,
+        {
+          acknowledged: [...new Set([...held, ...ids])],
+          ...(fresh.length > 0 ? { graduated: [...alreadyGraduated, ...fresh] } : {}),
+        },
+        now(),
+      );
+      return Promise.resolve(fresh);
     },
     submitCheck(participantId, milestoneId, answers) {
       const check = checkFor(milestoneId);
