@@ -4,7 +4,7 @@ description: interrogate one process/policy/design directive — steelman, red, 
 model: fable
 effort: high
 isolation: none
-outcomeCheck: 'curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/ejclark/skynet-capital/issues/{item}/comments?per_page=100" | grep -q interrogation'
+outcomeCheck: 'test "$(curl -sSf -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/ejclark/skynet-capital/issues/{item}/comments?per_page=100" | grep -c -- "!-- interrogation --")" -gt 0'
 ---
 
 # Interrogate one directive — is the mechanism right, and what is its best shape?

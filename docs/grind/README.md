@@ -273,6 +273,15 @@ chore above reports its branch and expects this trailing step; the four calling 
   cheaper fix is upstream. Every chore's step 1 says `origin/main`; a chore that says bare `main`
   anywhere is a bug in the chore.
 
+**A third, from the interrogate chore's first run (2026-09-04):** an `outcomeCheck` of the shape
+`curl … | grep -q <word>` fails closed for two wrong reasons. `grep -q` exits at its first match
+and closes the pipe, so `curl` dies with exit 23 ("failure writing output") under `pipefail` —
+the check reports "blocked" on a comment that exists. And a prose word as the marker (`grep -q
+interrogation`) matches any comment that mentions the chore. Both checked-in research chores now
+use `test "$(curl -sSf … | grep -c -- "!-- <marker> --")" -gt 0`: `grep -c` reads the whole
+stream, `-f` fails on an HTTP error instead of grepping an error page, and the marker is the
+comment's literal first line as the API returns it (`<` arrives as `\u003c`, so match from `!--`).
+
 ## If `Workflow({name: "grind"})` says "not found"
 
 The Workflow tool's name registry is built **once per session, lazily, at the first `Workflow`
