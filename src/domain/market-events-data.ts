@@ -1300,6 +1300,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "THE SECOND LEG OF THE SAME CLIFF, ON A DIFFERENT CLOCK. The Kuala Lumpur arrangement does not expire all at once: China's export-control suspension (MOFCOM/GAC Announcement No. 70) runs to 2026-11-10, while its retaliatory-tariff and countermeasure suspension — covering US chicken, wheat, corn, cotton, sorghum, soybeans, pork, beef, aquatic products, fruit, vegetables and dairy — plus the tariff-exclusion process run to 2026-12-31. Agricultural exposure, not the AI-semis channel the 11/10 date carries; the soybean purchase commitments (12 MMT in late 2025, 25 MMT annually 2026-2028) sit alongside it. Matters mostly as the tell for whether the arrangement is being renewed as a package or unbundled leg by leg. Estimate widens caution only. Discovered during the us-china-tariff-truce-expiry-2026-11-10 initial research (2026-09-04).",
   },
   {
+    id: "g20-summit-doral-2026-12-14",
+    kind: "geopolitical",
+    title: "G20 Leaders' Summit — Trump National Doral, Miami (US host year)",
+    date: "2026-12-14",
+    status: "estimate",
+    source:
+      "NEWS: en.wikipedia.org/wiki/2026_G20_Miami_summit states '14-15 December 2026' at Trump National Doral Miami with Trump as chair (fetched direct 2026-09-04); corroborated by CBS News coverage of the 2025 announcement and Digital Watch's G20 Leaders' Summit 2026 listing. g20.org's own events calendar and location pages returned HTTP 403 to a direct fetch this pass, so no host-primary was read — re-verify against g20.org before any promotion. Checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "THE THIRD OF BESSENT'S THREE NAMED VENUES, AND THE LATEST ONE. In May 2026 he said the administration was 'not in a hurry' to extend the Kuala Lumpur arrangement, with time to renew it 'in meetings later this year' — the September Washington summit, APEC Shenzhen 11/18-19, and this. Two of the three post-date the 2026-11-10 export-control expiry and this one post-dates it by 34 days. Also the reported quid pro quo for Trump's APEC attendance: SCMP (2026-09-02) ties his going to Shenzhen to whether Xi agrees to come to Doral. Attendance is contested on its own terms — Trump has said South Africa will not participate. Day 1 of the two-day window per house convention. Estimate widens caution only. Discovered during the apec-leaders-shenzhen-2026-11-18 initial research (2026-09-04).",
+  },
+  {
     id: "ppi-2026-11-13",
     kind: "macro-print",
     title: "PPI release (Oct 2026 data)",
