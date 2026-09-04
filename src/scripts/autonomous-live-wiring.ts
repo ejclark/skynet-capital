@@ -21,7 +21,7 @@ import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
 import { assessReadiness } from "../autonomous/readiness.js";
 import type { SafetyController } from "../autonomous/safety.js";
 import { ALPACA_PAPER_BASE_URL, type Bot } from "../bots/bot.js";
-import { createBotBroker } from "../bots/bot-broker.js";
+import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
@@ -233,7 +233,10 @@ export function buildLiveBot(
   } else {
     console.log(`[gate] ${bot.persona.name}: ${readiness.reason} → ${effectiveMode}`);
   }
-  const broker = createBotBroker(bot);
+  // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
+  // client this bot trades with in place, without restarting the process (and therefore
+  // without losing any bot's in-memory momentum/sentiment/cooldown state).
+  const broker = new SwappableBotBroker(bot);
   return {
     personaName: bot.persona.name,
     broker,
