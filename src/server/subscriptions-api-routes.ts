@@ -34,6 +34,22 @@ interface SubscribeBody {
   readonly playbookId: string;
   readonly mode: PlaybookMode;
   readonly capitalAllocated: number;
+  /** Symbol-targeting filter (#885) — optional, absent/empty means unrestricted. */
+  readonly symbols?: readonly string[];
+}
+
+const MAX_SYMBOLS = 20;
+
+/** An array of up to `MAX_SYMBOLS` non-empty tickers, uppercased; anything else (not an array, an
+ *  empty array, a non-string entry, an over-long one) drops the whole filter to "unrestricted"
+ *  rather than rejecting the request — the safe default (see `subscription-state.ts`'s parser). */
+function parseSymbols(raw: unknown): readonly string[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_SYMBOLS) return undefined;
+  const symbols = raw
+    .map((s) => boundedString(s, 12))
+    .filter((s): s is string => Boolean(s))
+    .map((s) => s.toUpperCase());
+  return symbols.length === raw.length ? symbols : undefined;
 }
 
 interface PlaybookRefBody {
@@ -60,8 +76,9 @@ function parseSubscribeBody(raw: string): SubscribeBody | undefined {
     body.capitalAllocated >= 0
       ? body.capitalAllocated
       : undefined;
+  const symbols = parseSymbols(body.symbols);
   return id && playbookId && mode && capitalAllocated !== undefined
-    ? { id, playbookId, mode, capitalAllocated }
+    ? { id, playbookId, mode, capitalAllocated, ...(symbols ? { symbols } : {}) }
     : undefined;
 }
 
@@ -138,6 +155,7 @@ export async function serveSubscriptionsApi(
       mode: body.mode,
       capitalAllocated: body.capitalAllocated,
       enabled: true,
+      ...(body.symbols ? { symbols: body.symbols } : {}),
     });
     sendJson(res, 200, { ok: true });
     return true;
