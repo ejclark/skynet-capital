@@ -24,6 +24,7 @@ import type {
   RotateResult,
 } from "./participant-service.js";
 import type { ProgressionService } from "./progression-service.js";
+import type { SubscriptionStore } from "./subscription-store.js";
 import type { SubmitDeskTrade } from "./trade-service.js";
 import type { WireRouteDeps } from "./wire-routes.js";
 
@@ -187,4 +188,10 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
   /** Record one real message as ladder-gate evidence — called once, on the first message a member
    *  ever sends the rail (`/api/companion/ack`), regardless of how it's routed. */
   readonly recordMessage?: (opaqueMemberId: string) => Promise<void>;
+  /**
+   * The Playbook Store (issue #885) — an account's own playbook subscriptions and capital
+   * sub-allocations. Omit to disable (offline mode) — the catalog still browses, just with no
+   * subscribe/unsubscribe action wired.
+   */
+  readonly subscriptions?: SubscriptionStore;
 }

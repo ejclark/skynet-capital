@@ -6,12 +6,16 @@ machine is awake. Streams are in-the-moment — if the laptop sleeps, you miss t
 
 ## Node version
 
-This project targets **Node 24 (LTS)**. With nvm:
+This project targets **Node 24 (LTS)**, pinned in `mise.toml` — the single source of truth CI,
+the remote session hook, and local dev all read. With [mise](https://mise.jdx.dev):
 
 ```sh
-nvm install 24 && nvm use    # .nvmrc pins 24
-node --version               # v24.x
+mise install    # reads mise.toml, installs + activates Node 24
+node --version  # v24.x
 ```
+
+No mise? `nvm install 24` also works — just keep `mise.toml` the version you bump, never a
+second file, if the target version ever changes.
 
 ## Start the server
 

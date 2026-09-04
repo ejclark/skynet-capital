@@ -3,8 +3,10 @@ import {
   effectiveHardcoreIds,
   effectiveMode,
   parseControlsState,
+  stampCredentialVersions,
   suspendedReason,
 } from "../../src/autonomous/bot-controls.js";
+import { credentialFingerprint } from "../../src/autonomous/bot-credential-fingerprint.js";
 
 describe("parseControlsState — total, defensive", () => {
   it("parses a full state and drops junk fields", () => {
@@ -31,6 +33,19 @@ describe("parseControlsState — total, defensive", () => {
     expect(parseControlsState("nope")).toBeNull();
     expect(parseControlsState([1, 2])).toBeNull();
     expect(parseControlsState({})).toEqual({ bots: {} });
+  });
+
+  it("parses a bot's credentialsVersion fingerprint, and drops an oversized one", () => {
+    const state = parseControlsState({
+      bots: {
+        sauron: { credentialsVersion: "abc123" },
+        banker: { credentialsVersion: "x".repeat(65) },
+        prospector: { credentialsVersion: "" },
+      },
+    });
+    expect(state).toEqual({
+      bots: { sauron: { credentialsVersion: "abc123" }, banker: {}, prospector: {} },
+    });
   });
 });
 
@@ -71,5 +86,41 @@ describe("effective overrides — store wins, env is the fallback", () => {
     expect(effectiveHardcoreIds(ids, new Set(), { bots: { banker: { hardcore: true } } })).toEqual(
       new Set(["banker"]),
     );
+  });
+});
+
+describe("stampCredentialVersions", () => {
+  const creds = { apiKey: "KID", apiSecret: "SECRET" };
+  const salt = "test-salt";
+
+  it("stamps a fingerprint for every persona a resolver can answer", () => {
+    const stamped = stampCredentialVersions(EMPTY_CONTROLS, ["sauron"], () => creds, salt);
+    expect(stamped.bots.sauron?.credentialsVersion).toBe(credentialFingerprint(creds, salt));
+  });
+
+  it("leaves a persona untouched when the resolver has nothing for it", () => {
+    const stamped = stampCredentialVersions(EMPTY_CONTROLS, ["sauron"], () => undefined, salt);
+    expect(stamped.bots.sauron).toBeUndefined();
+  });
+
+  it("never lets a resolver failure break the poll it rides on", () => {
+    const stamped = stampCredentialVersions(
+      EMPTY_CONTROLS,
+      ["sauron"],
+      () => {
+        throw new Error("store read failed");
+      },
+      salt,
+    );
+    expect(stamped.bots.sauron).toBeUndefined();
+  });
+
+  it("preserves the bot's existing controls (suspended/mode/hardcore) while adding the version", () => {
+    const state = { bots: { sauron: { suspended: true } } };
+    const stamped = stampCredentialVersions(state, ["sauron"], () => creds, salt);
+    expect(stamped.bots.sauron).toEqual({
+      suspended: true,
+      credentialsVersion: credentialFingerprint(creds, salt),
+    });
   });
 });
