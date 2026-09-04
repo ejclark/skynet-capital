@@ -1,5 +1,6 @@
 import { InMemoryBroker } from "../../src/adapters/in-memory-broker.js";
 import { AutonomousTrader } from "../../src/autonomous/autonomous-trader.js";
+import type { ScoutState } from "../../src/autonomous/bots-state-db.js";
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
 import { type LiveBot, LiveCycleRunner } from "../../src/autonomous/live-cycle.js";
 import { SafetyController } from "../../src/autonomous/safety.js";
@@ -187,6 +188,70 @@ describe("LiveCycleRunner", () => {
     // Cycle 3, same day, an even stronger candidate: latched — one real fire per day, unchanged.
     await runner.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.95 } }));
     expect(decisions).toHaveLength(1);
+  });
+
+  // Confirmed live 2026-09-04: the scout's day-state lived only in process memory, so every
+  // restart re-armed it for a fresh "day" and it placed another pair of forced picks. With a
+  // durable store, a restarted runner must (1) honor a same-day latch it never set itself, and
+  // (2) write every transition back, so the NEXT restart sees it too.
+  it("restores the scout's day-state on construction and persists every transition", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const today = aContext({ MSFT: { last: 100, sentiment: 0.9 } }).asOf.slice(0, 10);
+    const saved: ScoutState[] = [];
+    const store = {
+      load: () => ({
+        day: today,
+        ranToday: true,
+        firedOrganicallyToday: false,
+        ownedSymbols: ["AVGO"],
+      }),
+      save: (state: ScoutState) => {
+        saved.push(state);
+      },
+    };
+    const decisions: DecisionRecord[] = [];
+    const runner = new LiveCycleRunner({
+      traders: [aBot(new NeverBuys(), broker)],
+      safety: new SafetyController(),
+      blockedReason: () => null,
+      scout: {
+        maxPicks: 3,
+        broker,
+        universe: ["MSFT"],
+        managedSymbols: new Set(),
+        risk: RISK,
+        mode: "live",
+      },
+      scoutState: store,
+      onDecision: (r) => decisions.push(r),
+    });
+
+    // A strong candidate on the SAME day the restored state says the scout already fired:
+    // the restored latch holds — no second pair of picks after a restart.
+    await runner.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.9 } }));
+    expect(decisions).toHaveLength(0);
+    expect((await broker.getPortfolio()).positions).toHaveLength(0);
+
+    // A fresh store (nothing restored) latching for real must write the transition back.
+    const fresh: ScoutState[] = [];
+    const runner2 = new LiveCycleRunner({
+      traders: [aBot(new NeverBuys(), broker)],
+      safety: new SafetyController(),
+      blockedReason: () => null,
+      scout: {
+        maxPicks: 3,
+        broker,
+        universe: ["MSFT"],
+        managedSymbols: new Set(),
+        risk: RISK,
+        mode: "live",
+      },
+      scoutState: { load: () => undefined, save: (s) => fresh.push(s) },
+    });
+    await runner2.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.9 } }));
+    expect(fresh.at(-1)).toMatchObject({ day: today, ranToday: true, ownedSymbols: ["MSFT"] });
   });
 
   // Regression for the exact bug class caught and fixed before this extraction: applying
