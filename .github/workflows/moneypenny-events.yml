@@ -452,6 +452,31 @@ jobs:
             complete instruction set for this run.
 
             The feedback issue is #${{ needs.route.outputs.feedback_issue }} in this repo.
+
+      # THE MECHANICAL "DID ANYTHING VISIBLE HAPPEN?" GUARD (#1028). The session's own contract
+      # (feedback-build.md: "exactly one of four visible endings, always, never silence") is a
+      # prompt's promise — #1020's run 172 broke it silently (9 turns, $0.37, `is_error: false`,
+      # only the initial receipt posted) and nothing caught it; the claim lease alone self-healed
+      # on a later retry before anyone noticed. This step is the mechanical check that used to only
+      # be a prompt's word: given GitHub's own current state of the issue, did the run leave a
+      # trace a member could actually see — a PR on the `feedback/<n>` branch, one of the lane's
+      # terminal labels (`needs-info`/`next-slice`/`needs-eric`), or a comment beyond the receipt?
+      # If not, it posts `needs-eric` itself, exactly as if the session had reached that outcome on
+      # its own — the logic lives in scripts/moneypenny/feedback-guard.mjs (specced,
+      # fixture-drivable), same "this file is a trigger shim" doctrine as the rest of this workflow.
+      #
+      # Deliberately runs whenever this job got as far as claiming the issue — whether the build
+      # step above actually ran, or was skipped because `steps.gate.outputs.armed` came back false
+      # (a missing token is just as silent to a member as a session that ran and said nothing) —
+      # but NEVER when that step threw (`failure()`, handled by the release step right below): a
+      # thrown error already gets a louder signal (a red run, an immediate-retry lease release), and
+      # conflating the two would make this step's own `gh` calls race a job GitHub is already
+      # unwinding.
+      - if: needs.route.outputs.feedback_issue != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/moneypenny/index.mjs --guard-feedback-outcome ${{ needs.route.outputs.feedback_issue }}
+
       # THE LEASE IS PART OF THE TERMINAL-STATE PROMISE. A build that dies leaves the issue claimed
       # for the full 2h TTL, so a member's feedback reads as "in progress" while nothing is running
       # and a re-label is a no-op — the exact shape that hid three separate failures on 2026-08-22.
