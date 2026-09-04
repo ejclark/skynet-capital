@@ -1781,4 +1781,17 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes:
       "The watch item the opex-2026-09-18 ledger flagged on 2026-08-29 as unsourceable and deliberately did not add; sourced to the S&P DJI methodology on 2026-09-01 and filed as an estimate. This is the ANNOUNCEMENT, not the flow: the share/float rebalance itself is effective at the close of 2026-09-18 — the same closing auction as the triple witching's single-stock options — and this release is when passive managers first see what they must buy and sell there. So it is the earliest dated read on how large that 09-18 market-on-close imbalance will be. Low impact, market-structure only: it changes execution timing on high-open-interest names, never direction, and no house playbook (S1/S2/E1/S3/S4/G1) is opex- or rebalance-keyed.",
   },
+  {
+    id: "buyback-blackout-start-2026-09-12",
+    kind: "sector",
+    title: "Corporate buyback blackout window begins closing (pre-Q3-earnings)",
+    date: "2026-09-12",
+    status: "estimate",
+    source:
+      'NEWS: Citadel Securities Global Market Intelligence note by Scott Rubner, published 2026-08-31, states that more than $1.1 trillion of announced buyback authorizations entered an open window in August and that the window "begins closing around September 12" as companies enter pre-earnings blackout periods. Read via advisoranalyst.com 2026-09-04 — citadelsecurities.com returns HTTP 403 (Cloudflare interstitial) to both WebFetch and a browser-UA curl, so the desk primary was not directly fetchable; corroborated across two independent search paths. Filed estimate on two counts beyond the fetch: the source itself says "around", and issuer blackouts are per-company policy rather than a market-wide dated rule',
+    impact: "low",
+    symbols: [],
+    notes:
+      "Not a print — a gate on a FLOW, and the corporate sibling of fomc-blackout-start-2026-09-05's gate on speech. It matters only because of what it sits in front of: the opex-2026-09-18 ledger's corridor previously ran 09-16 (FOMC + VIX settlement) → 09-18 (the witching), and this entry opens it four sessions earlier, because the buyback bid is the FIRST of two mechanical stabilizers to fade. The second is dealer long gamma, and the same note is the source for its size — $6.2T of notional expiring 09-18 alone, ~23% of total US options exposure, ~$9.6T rolling off into it, September on pace to surpass June's record $7.7T triple-witching. Two bids fading into one window is a different configuration from one, which is the whole reason this gets a slot. THE DATE IS SOFT AND SHOULD STAY SOFT: there is no market-wide buyback-blackout date to confirm against — SEC Rule 10b-18 is a safe harbour, not a calendar — so no primary source can ever promote this to `confirmed` as written; a future pulse should either re-derive it from the tracked names' own reported blackout policies or retire the entry rather than pretend precision. `low` is deliberate: a fading bid changes the tape's shock absorption, not its direction, and no house playbook (S1/S2/E1/S3/S4/G1) is opex-, rebalance- or buyback-keyed. Kind `sector` is the closest fit the enum offers for a market-structure flow gate; the imperfect fit is named, not fixed from this lane — the same call apple-eu-dma-terms-2026-10-01 made. Discovered during the opex-2026-09-18 pulse-check adjacency sweep (2026-09-04).",
+  },
 ];
