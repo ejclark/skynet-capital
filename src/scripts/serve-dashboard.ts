@@ -14,11 +14,7 @@
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
-import {
-  bootPublishingActivityStore,
-  publishingOrderAuditLog,
-} from "../observatory/activity-publishing.js";
-import { createBrokerSync } from "../observatory/broker-sync.js";
+import { bootPublishingActivityStore } from "../observatory/activity-publishing.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
 import {
@@ -28,22 +24,20 @@ import {
 } from "../observatory/history-boot.js";
 import { startHistorySampler } from "../observatory/history-sampler.js";
 import { TransitionBaseline } from "../observatory/transition-baseline.js";
-import { mergeRoster, type Participant } from "../participants/participant.js";
+import { mergeRoster } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
-import { resolveDeskTrading } from "../server/account-identity-gate.js";
-import { createAccountService } from "../server/account-service.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
-import { createOrderAuditLog } from "../server/order-audit-log.js";
 import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
 import { warnAccountCollisions, warnUnpinnedVolumes } from "./dashboard-boot-warnings.js";
 import { setupCompanion } from "./dashboard-companion.js";
+import { wireAccountDeskAccess, wireDeskTrading } from "./dashboard-desk-wiring.js";
 import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
 import { wireOpsStatus } from "./dashboard-ops-status.js";
@@ -134,28 +128,15 @@ async function main(): Promise<void> {
     isOwnerEmail: (email) => owners.has(email.toLowerCase()),
   });
 
-  // Day-2 account management (/account): profile edits + removal for self-service accounts.
-  // Host-configured roster accounts are off-limits here — including a rotation's store row under
-  // a roster id — so the same tier /rotate enforces is enforced on edit/remove too.
-  const accounts = createAccountService({
+  // Account service + live-roster/findParticipant/clientFor helpers (dashboard-desk-wiring.ts).
+  const { accounts, liveRoster, findParticipant, clientFor } = wireAccountDeskAccess({
     hub,
     store,
+    envRoster,
+    owners,
     clientFactory: dataSource.clientFactory,
-    stopStream: (id) => dataSource.stopParticipantStream(id),
-    findRosterParticipant: (id) => envRoster.find((p) => p.id === id),
-    isOwnerEmail: (email) => owners.has(email.toLowerCase()),
+    stopParticipantStream: (id) => dataSource.stopParticipantStream(id),
   });
-
-  // Desk trading is on whenever OAuth is configured — no separate kill switch.
-  // Resolved through the LIVE merge (not the boot-time `roster`) so a credential rotated at
-  // runtime takes effect on the next order, not the next restart.
-  const liveRoster = () => mergeRoster(envRoster, store.load());
-  const findParticipant = (id: string) => liveRoster().find((p) => p.id === id);
-  /** A per-account broker client, or undefined for an id that isn't on the live roster. */
-  const clientFor = <T>(id: string, make: (p: Participant) => T): T | undefined => {
-    const participant = findParticipant(id);
-    return participant ? make(participant) : undefined;
-  };
 
   // Guest list, Mission Control store, authenticator, and owner-link lookup (dashboard-access.ts).
   const {
@@ -176,24 +157,16 @@ async function main(): Promise<void> {
     { hub, activity, authConfigured: Boolean(auth) },
     credentialsBridge,
   );
-  // The broker's last word: the fill stream is the fast path, this is the authoritative slow
-  // one that repairs whatever it missed — a socket gap, a restart, an order placed outside this app.
-  // Reads the LIVE roster, so a runtime-added or rotated account is covered too.
-  const brokerSync = createBrokerSync({
-    getState: () => hub.getState(),
+  // Broker slow-sync + per-order audit log + desk trading (dashboard-desk-wiring.ts).
+  const { brokerSync, orderAudit, desk } = wireDeskTrading({
+    env: process.env,
+    hub,
     apply: sink,
-    findParticipant,
-    clientFactory: dataSource.clientFactory,
-  });
-  brokerSync.start();
-
-  const orderAudit = publishingOrderAuditLog(createOrderAuditLog(process.env), activityEventBus);
-  const desk = resolveDeskTrading({
     findParticipant,
     clientFactory: dataSource.clientFactory,
     optionsClientFactory: dataSource.optionsClientFactory,
     authConfigured: Boolean(auth),
-    recordAudit: (entry) => orderAudit.record(entry),
+    activityEventBus,
   });
 
   const {
