@@ -65,7 +65,7 @@ it. Prevention ranks, best first:
   of each diagnostic path, exhaust the free ones (the code path, logs already in hand) first, state
   what the paid one would tell you that they cannot — a repeat pull returning identical output is a
   second tap for zero information — and never spend a state-destroying action as a probe.
-  `.claude/output-styles/orient.md` → step 2 (Route) gains the matching correction at the point the
+  `.claude/output-styles/orient.md` → step 3 (Route) gains the matching correction at the point the
   misroute happens: if the answer sits in code in this repo it is Complicated, not Complex, and a
   probe that costs the constraint is priced before it is chosen.
 - **SIDE QUESTS:** the boot log itself is a trap and stays one — a code follow-up this retro

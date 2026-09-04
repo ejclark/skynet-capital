@@ -163,6 +163,20 @@ not a general escalation default: once an ask is a filed, labelled issue, doubt 
 member or to the narrowest honest build — never back to Eric. See
 [`.github/prompts/feedback-build.md`](.github/prompts/feedback-build.md).)*
 
+**Interrogate before you comply — the mechanism, never the outcome** (Eric, 2026-09-04: "I feel
+like you inadequately interrogate my suggestions/commands. It feels like we need event triggers
+and/or listeners to trigger interrogation process which organically feeds into grinding fan-out
+process"). A directive that *compounds* — changes process, policy, design, or architecture — gets
+a three-line pass before act/park/fan: steelman (outcome vs. proposed mechanism), the strongest
+objection with the line it cites, what would settle it. The listener is the **Orient** output
+style's step 2 (it already fires on every prompt; only the step was missing); an objection that
+survives routes to `/grind` over
+[`docs/grind/interrogate.instructions.md`](docs/grind/interrogate.instructions.md) — red/blue/
+tiger/yellow, one call sheet on the issue, a routing label — and the *amended* shape gets built.
+The outcome is his; only the path is on trial. No objection surviving is the common result and
+costs seconds; "compliance by default" was the measured failure (2 of 4 process directives that day
+were built straight from the prompt).
+
 **Plans live in GitHub issues, never in the repo** (Eric, 2026-08-21: _"plans belong in github
 issues, not in source code"_ — a correction he has had to repeat; #433 moved the committed ones). A
 plan is an issue in the house format (intent & end-state · EARS criteria · constraints · settled
