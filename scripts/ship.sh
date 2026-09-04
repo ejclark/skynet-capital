@@ -183,6 +183,20 @@ EOF_SHOTS
   fi
 
   if [ "$verify" = 1 ]; then
+    # Commit-message lint, locally, before a push — not just in CI (docs/LESSONS.md, 2026-09-04:
+    # eight open PRs sat red on commitlint at once, none of them caught before push, because
+    # nothing in the local path ever runs the same check CI's `verify` job does). Fetch first
+    # (same lesson, same day: a stale local `origin/$base` makes this check compare against the
+    # wrong base and either miss a real violation or false-flag a fixed one).
+    git fetch --quiet origin "$base" 2>/dev/null || true
+    local merge_base=""
+    git rev-parse --verify -q "origin/$base" >/dev/null && merge_base="$(git merge-base "origin/$base" HEAD)"
+    if [ -n "$merge_base" ]; then
+      npx commitlint --from "$merge_base" --to HEAD --verbose || {
+        echo "ship: COMMIT MESSAGE LINT FAILED — not pushing. Fix with 'git commit --amend' (last commit) or 'git rebase -i' (earlier one), then retry." >&2
+        exit 1
+      }
+    fi
     echo "ship: local verify (parity with CI — fail fast before spending a runner)…"
     npm run verify >/tmp/ship-verify.log 2>&1 || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 /tmp/ship-verify.log; exit 1; }
     echo "ship: verify green."
