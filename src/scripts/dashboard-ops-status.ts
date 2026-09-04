@@ -5,7 +5,11 @@ import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { resolveDeployLagFetcher } from "../server/ops-status-deploy-lag.js";
 import type { OpsStatusDeps } from "../server/ops-status-routes.js";
 import { buildOpsStatus, resolveOpsStatusRepo } from "../server/ops-status-service.js";
-import { type InsightsBridgeHandle, startInsightsBridge } from "./dashboard-insights-bridge.js";
+import {
+  type CredentialsBridgeDeps,
+  type InsightsBridgeHandle,
+  startInsightsBridge,
+} from "./dashboard-insights-bridge.js";
 
 /**
  * Boot-time wiring for the ops-status panel: folds the live hub, the durable
@@ -53,8 +57,9 @@ export function wireOpsStatus(
   env: NodeJS.ProcessEnv,
   botControls: BotControlsStore,
   rest: Omit<OpsStatusSetupDeps, "env" | "insightsBridge">,
+  credentialsDeps?: CredentialsBridgeDeps,
 ): OpsStatusDeps | undefined {
-  const insightsBridge = startInsightsBridge(env, botControls);
+  const insightsBridge = startInsightsBridge(env, botControls, credentialsDeps);
   return setupOpsStatus({ env, insightsBridge, ...rest });
 }
 

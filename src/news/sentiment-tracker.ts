@@ -44,6 +44,19 @@ export class SentimentTracker {
     return series.reduce((sum, s) => sum + s, 0) / series.length;
   }
 
+  /** Every symbol's current rolling score window, for durable persistence. Read-only. */
+  snapshot(): Readonly<Record<string, readonly number[]>> {
+    return Object.fromEntries(this.scores);
+  }
+
+  /** Seed the tracker from a durable snapshot (e.g. at boot, after a restart) — additive, called
+   *  before any live articles are ingested. Each series is trimmed to the configured window. */
+  restore(entries: Readonly<Record<string, readonly number[]>>): void {
+    for (const [symbol, series] of Object.entries(entries)) {
+      this.scores.set(symbol, series.slice(-this.window));
+    }
+  }
+
   /** Return a copy of the context with `newsSentiment` filled for every tracked symbol. */
   overlay(context: MarketContext): MarketContext {
     const newsSentiment: Record<string, number> = { ...(context.newsSentiment ?? {}) };

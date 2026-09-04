@@ -1,0 +1,7 @@
+[tools]
+# The single source of truth for this repo's Node version — CI (actions/setup-node's native
+# mise.toml support), the remote session hook (.claude/hooks/session-start.sh), and local dev
+# (`mise install`) all read this one file. Replaces .nvmrc (2026-09-04): mise's own idiomatic
+# .nvmrc auto-detection is being deprecated upstream (warns in 2026.11.0, removed 2027.11.0), so a
+# real mise.toml pin is the forward-compatible choice, not a second file that could drift from it.
+node = "24"

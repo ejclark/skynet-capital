@@ -61,10 +61,40 @@ describe("serveJoinApi", () => {
     );
     const body = JSON.parse(out.body ?? "{}");
     expect(body.wired).toBe(true);
+    expect(body.canAddBots).toBe(false);
     expect(Array.isArray(body.classes)).toBe(true);
     expect(body.classes.length).toBeGreaterThan(0);
     expect(body.classes[0]).toHaveProperty("thesis");
     expect(Array.isArray(body.timezones)).toBe(true);
+  });
+
+  // The account-type picker is an operator control (design, 2026-09-02): owners see it, members
+  // don't. Rendering only — the service still accepts either kind from anyone.
+  it("lets an owner add bots", async () => {
+    const { res, out } = fakeRes();
+    await serveJoinApi(
+      get(),
+      res,
+      "/api/join",
+      configWith({
+        addParticipant: () => undefined,
+        invite: { isOwner: (email: string) => email === "eric@example.com" },
+      }),
+      session,
+    );
+    expect(JSON.parse(out.body ?? "{}").canAddBots).toBe(true);
+  });
+
+  it("lets everyone add bots when no auth is configured — there is no member to hide it from", async () => {
+    const { res, out } = fakeRes();
+    await serveJoinApi(
+      get(),
+      res,
+      "/api/join",
+      configWith({ addParticipant: () => undefined, auth: undefined }),
+      undefined,
+    );
+    expect(JSON.parse(out.body ?? "{}").canAddBots).toBe(true);
   });
 
   it("stamps the SESSION's email as owner — a body-supplied ownerEmail is dropped", async () => {

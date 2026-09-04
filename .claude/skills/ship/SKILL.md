@@ -82,3 +82,11 @@ resource). Assemble athlete branches locally with `git`, verify once, `ship open
   triggers no workflows (GitHub's loop guard) — it took out the deploy, the receipt scan, and the
   stall audit at once, silently. Arm with a real identity. `node scripts/deploy-lag.mjs` answers
   "is `main` actually deployed?"; the full story lives in that script's header.
+- **Catching a branch up to `main` (a merge conflict, or `ship open`'s stale-base guard below): use
+  `git merge origin/main --no-edit`, never a hand-written message.** commitlint requires
+  Conventional-Commit format and only exempts git's own auto-generated `Merge branch 'X' into Y`
+  text — a custom sentence fails the commit-msg hook (`docs/LESSONS.md`, 2026-09-04). `ship open`
+  now refuses to verify a branch that's behind `origin/$base` at all (same date's lesson): local
+  `npm run verify` tests the checked-out tree, not the actual PR-merge state, so a stale base can
+  pass locally and still fail CI on a check that only exists once `main`'s own newer commits are
+  folded in.
