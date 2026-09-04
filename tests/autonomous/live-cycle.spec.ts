@@ -150,6 +150,45 @@ describe("LiveCycleRunner", () => {
     expect(portfolio.positions.some((p) => p.symbol === "MSFT")).toBe(true);
   });
 
+  // Confirmed live 2026-09-04: the first cycle after a restart ran on the first price tick, before
+  // any news had been polled — every candidate read "skip", the scan came back empty, and the
+  // pre-scan latch burned the scout's one daily shot. An empty scan must retry; a real fire must
+  // still latch.
+  it("an empty scan does not spend the scout's day — it fires once a candidate appears, then latches", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const decisions: DecisionRecord[] = [];
+    const runner = new LiveCycleRunner({
+      traders: [aBot(new NeverBuys(), broker)],
+      safety: new SafetyController(),
+      blockedReason: () => null,
+      scout: {
+        maxPicks: 3,
+        broker,
+        universe: ["MSFT"],
+        managedSymbols: new Set(),
+        risk: RISK,
+        mode: "live",
+      },
+      onDecision: (r) => decisions.push(r),
+    });
+
+    // Cycle 1: a quote exists but no signal yet (sentiment and momentum both 0) — nothing to pick.
+    await runner.runCycle(aContext({ MSFT: { last: 100 } }));
+    expect(decisions).toHaveLength(0);
+    expect((await broker.getPortfolio()).positions).toHaveLength(0);
+
+    // Cycle 2, same day: the news poll has landed — the scout must still be able to fire.
+    await runner.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.9 } }));
+    expect(decisions).toHaveLength(1);
+    expect(decisions[0]).toMatchObject({ personaId: "beta-scout" });
+
+    // Cycle 3, same day, an even stronger candidate: latched — one real fire per day, unchanged.
+    await runner.runCycle(aContext({ MSFT: { last: 100, sentiment: 0.95 } }));
+    expect(decisions).toHaveLength(1);
+  });
+
   // Regression for the exact bug class caught and fixed before this extraction: applying
   // `firedOrganicallyThisCycle` BEFORE the day-rollover reset would let the reset wipe the flag
   // back to false, so an organic fire landing on the first cycle of a new day would NOT suppress
