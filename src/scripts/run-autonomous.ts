@@ -33,6 +33,7 @@ import {
   armMomentumPersistence,
   persistSentiment,
   restoreBotsState,
+  scoutStateStore,
 } from "../autonomous/bots-state-db.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
@@ -278,6 +279,7 @@ async function runLive(): Promise<void> {
     traders,
     safety,
     blockedReason,
+    ...(botsStateDb ? { scoutState: scoutStateStore(botsStateDb) } : {}),
     scout: buildScoutDeps(betaForcingMaxPicks, scoutBroker, {
       universe: UNIVERSE,
       managedSymbols,

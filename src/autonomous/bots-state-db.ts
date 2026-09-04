@@ -26,7 +26,25 @@ export interface BotsStateDb {
   /** One persona's persisted per-symbol cooldown clocks. */
   loadCooldowns(personaId: string): Map<string, number>;
   saveCooldown(personaId: string, symbol: string, at: number): void;
+  /** The beta scout's day-state (`live-cycle.ts`), or undefined before its first save. */
+  loadScoutState(): ScoutState | undefined;
+  saveScoutState(state: ScoutState): void;
   close(): void;
+}
+
+/**
+ * The beta scout's per-day memory. Confirmed live 2026-09-04: this lived only in process memory,
+ * so every restart (deploy, rotation, `flyctl secrets set`) re-armed the scout for a fresh "day"
+ * and it placed another pair of forced picks — once per restart, not once per day. Persisting it
+ * beside the momentum/sentiment windows makes "one scout fire per day" mean the calendar day.
+ */
+export interface ScoutState {
+  /** The `asOf` date (YYYY-MM-DD) this state belongs to. */
+  readonly day: string;
+  readonly ranToday: boolean;
+  readonly firedOrganicallyToday: boolean;
+  /** Symbols the scout opened and still owns — exited at the next day rollover. */
+  readonly ownedSymbols: readonly string[];
 }
 
 export function openBotsStateDb(path: string): BotsStateDb {
@@ -40,7 +58,17 @@ export function openBotsStateDb(path: string): BotsStateDb {
       at INTEGER NOT NULL,
       PRIMARY KEY (persona_id, symbol)
     );
+    CREATE TABLE IF NOT EXISTS scout_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      day TEXT NOT NULL,
+      ran_today INTEGER NOT NULL,
+      fired_organically_today INTEGER NOT NULL,
+      owned_json TEXT NOT NULL
+    );
   `);
+  const upsertScoutState = db.prepare(
+    "INSERT INTO scout_state (id, day, ran_today, fired_organically_today, owned_json) VALUES (1, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET day = excluded.day, ran_today = excluded.ran_today, fired_organically_today = excluded.fired_organically_today, owned_json = excluded.owned_json",
+  );
 
   const upsertMomentum = db.prepare(
     "INSERT INTO momentum (symbol, prices_json) VALUES (?, ?) ON CONFLICT(symbol) DO UPDATE SET prices_json = excluded.prices_json",
@@ -91,10 +119,43 @@ export function openBotsStateDb(path: string): BotsStateDb {
     saveCooldown(personaId, symbol, at) {
       upsertCooldown.run(personaId, symbol, at);
     },
+    loadScoutState(): ScoutState | undefined {
+      const row = db
+        .prepare(
+          "SELECT day, ran_today, fired_organically_today, owned_json FROM scout_state WHERE id = 1",
+        )
+        .get() as
+        | { day: string; ran_today: number; fired_organically_today: number; owned_json: string }
+        | undefined;
+      if (!row) return undefined;
+      return {
+        day: row.day,
+        ranToday: row.ran_today === 1,
+        firedOrganicallyToday: row.fired_organically_today === 1,
+        ownedSymbols: JSON.parse(row.owned_json),
+      };
+    },
+    saveScoutState(state) {
+      upsertScoutState.run(
+        state.day,
+        state.ranToday ? 1 : 0,
+        state.firedOrganicallyToday ? 1 : 0,
+        JSON.stringify(state.ownedSymbols),
+      );
+    },
     close() {
       db.close();
     },
   };
+}
+
+/** The `LiveCycleRunner` dep shape, bound to a DB — undefined when durability is dark, so the
+ *  runner's own optional-dep branch (not this file) decides what "no store" means. */
+export function scoutStateStore(
+  db: BotsStateDb | undefined,
+): { load(): ScoutState | undefined; save(state: ScoutState): void } | undefined {
+  if (!db) return undefined;
+  return { load: () => db.loadScoutState(), save: (state) => db.saveScoutState(state) };
 }
 
 // --- best-effort restore/persist glue for the two in-memory trackers, kept alongside the DB

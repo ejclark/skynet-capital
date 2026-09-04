@@ -13,7 +13,12 @@ import {
   saveProfile,
 } from "../live/settings";
 import { AccountSwitcher } from "../shell/account-switcher";
-import { AccountLinksCard, GuestListCard, OpsStatusCard } from "../shell/admin-cards";
+import {
+  AccountOwnershipLine,
+  GuestListCard,
+  OpsStatusCard,
+  UnclaimedAccountsCard,
+} from "../shell/admin-cards";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl } from "../shell/mission-control";
@@ -328,6 +333,7 @@ function AccountCard({
           {account.kind === "bot" ? "BOT" : "HUMAN"}
         </span>
       </h2>
+      <AccountOwnershipLine accountId={account.id} onChanged={onChanged} />
       {account.hostConfigured ? (
         <>
           <p className="note">
@@ -424,7 +430,7 @@ function SettingsPage(): ReactElement {
             <div id="mission-control">
               <MissionControl />
             </div>
-            <AccountLinksCard />
+            <UnclaimedAccountsCard />
             <OpsStatusCard />
           </>
         )

@@ -68,6 +68,35 @@ describe("BotsStateDb", () => {
     expect(db.loadMomentum()).toEqual({});
     expect(db.loadSentiment()).toEqual({});
     expect(db.loadCooldowns("sauron")).toEqual(new Map());
+    expect(db.loadScoutState()).toBeUndefined();
     db.close();
+  });
+
+  // Confirmed live 2026-09-04: the scout's day-state lived in process memory, so every restart
+  // re-armed it and it placed another pair of forced picks — once per restart, not once per day.
+  it("round-trips the scout's day-state across a restart, as one upserted row", () => {
+    const first = openBotsStateDb(dbPath);
+    first.saveScoutState({
+      day: "2026-09-04",
+      ranToday: false,
+      firedOrganicallyToday: false,
+      ownedSymbols: [],
+    });
+    first.saveScoutState({
+      day: "2026-09-04",
+      ranToday: true,
+      firedOrganicallyToday: false,
+      ownedSymbols: ["AVGO", "AAPL"],
+    });
+    first.close();
+
+    const second = openBotsStateDb(dbPath);
+    expect(second.loadScoutState()).toEqual({
+      day: "2026-09-04",
+      ranToday: true,
+      firedOrganicallyToday: false,
+      ownedSymbols: ["AVGO", "AAPL"],
+    });
+    second.close();
   });
 });
