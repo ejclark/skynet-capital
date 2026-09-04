@@ -328,8 +328,9 @@ shape as `/governor` feast mode, pointed at the irreversible class: every protec
 that is already green on its own branch boards the open platter as one commit; the platter is a
 held PR whose body is a ledger (item · why · verify evidence · revert sha); it merges with a
 **merge commit, one commit per item** (the one carve-out from squash, so a bad item reverts
-alone); nothing red ever boards, and two items never touch the same file. The boundary itself
-never moves — he still merges it; the cost of clearing it drops from N to 1. Mechanism: #1343.
+alone); nothing red ever boards. There is no same-file fence — items board *sequentially* onto
+one integration branch, so that rule stays with feast mode's parallel athletes (#1347). The
+boundary itself never moves — he still merges it; the cost of clearing it drops from N to 1. Mechanism: #1343.
 Full merge policy: `.claude/skills/governor/SKILL.md`. Eric will not remember these names — that
 is expected and fine; the docs are the memory.
 
