@@ -164,6 +164,11 @@ prose ("the target below") rather than trying to template inside the instruction
   constraint files it with `/issue` + `bottleneck`; a grind run over the open ones does the
   research so no one's attention (least of all Eric's) is spent re-deriving it. Research, not
   mechanics — its front matter declares `effort: high` on `model: fable` for exactly that reason.
+- [`interrogate.instructions.md`](interrogate.instructions.md) — for one issue carrying a
+  process/policy/design directive, steelman it, then red/blue/tiger/yellow the *mechanism* (never
+  the outcome) and leave a call sheet — verbatim · amended · reject · status quo — plus a routing
+  label. The fan-out half of "interrogate before you comply" (CLAUDE.md); the Orient output
+  style's step 2 is the in-session listener that routes here when an objection survives.
 
 Each of these was chosen and vetted through a research pass (red/blue/purple/tiger/yellow-teamed —
 see the PR that added them) against every gate this repo currently runs; several plausible-looking
