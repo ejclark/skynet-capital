@@ -44,6 +44,21 @@ export class MomentumTracker {
     return first > 0 ? (last - first) / first : 0;
   }
 
+  /** Every symbol's current price window, for durable persistence. Never mutated by the
+   *  caller — treat as a read-only snapshot. */
+  snapshot(): Readonly<Record<string, readonly number[]>> {
+    return Object.fromEntries(this.prices);
+  }
+
+  /** Seed the tracker from a durable snapshot (e.g. at boot, after a restart) — additive: only
+   *  called before any live ticks arrive, so there's nothing to merge. Each series is trimmed to
+   *  the configured window in case it was persisted under a different window size. */
+  restore(entries: Readonly<Record<string, readonly number[]>>): void {
+    for (const [symbol, series] of Object.entries(entries)) {
+      this.prices.set(symbol, series.slice(-this.window));
+    }
+  }
+
   /** Build the decision-ready context from everything tracked so far. */
   context(asOf: string): MarketContext {
     const quotes: Record<string, MarketContext["quotes"][string]> = {};

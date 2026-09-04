@@ -30,6 +30,11 @@ import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
+import {
+  armMomentumPersistence,
+  persistSentiment,
+  restoreBotsState,
+} from "../autonomous/bots-state-db.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
@@ -50,6 +55,7 @@ import {
   buildLiveBot,
   buildScoutDeps,
   resolveRoster,
+  seedBotsState,
   seedDailyLossBaseline,
 } from "./autonomous-live-wiring.js";
 import { startMarketClock } from "./autonomous-market-clock.js";
@@ -165,6 +171,11 @@ async function runLive(): Promise<void> {
   const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
   const universeSet = new Set(UNIVERSE);
 
+  // Durable momentum/sentiment (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set; restored
+  // before the market-data stream starts, persisted on every subsequent tick/article below.
+  const botsStateDb = seedBotsState(process.env);
+  restoreBotsState(botsStateDb, tracker, sentiment);
+
   // News → sentiment, polled for the universe (news is low-frequency; a short poll is plenty).
   const newsClient = new AlpacaNewsClient(
     new FetchAlpacaTradingTransport({
@@ -178,6 +189,7 @@ async function runLive(): Promise<void> {
       for (const article of await newsClient.getNews(UNIVERSE)) {
         sentiment.ingest(article, universeSet);
       }
+      persistSentiment(botsStateDb, sentiment);
     } catch (error) {
       console.error("[news] poll failed:", error);
     }
@@ -214,6 +226,7 @@ async function runLive(): Promise<void> {
       hardcore: hardcoreRoster.hardcore,
       controls,
       bootControls,
+      ...(botsStateDb ? { botsStateDb } : {}),
     }),
   );
   botRosters.forEach(({ bot }, i) => {
@@ -272,6 +285,8 @@ async function runLive(): Promise<void> {
 
   // Gate trading on market hours (refreshed periodically).
   const marketClock = await startMarketClock(dataCreds);
+
+  armMomentumPersistence(botsStateDb, tracker);
 
   let lastEval = 0;
   let evaluating = false;

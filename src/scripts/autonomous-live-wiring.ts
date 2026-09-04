@@ -15,6 +15,8 @@ import {
   EMPTY_CONTROLS,
 } from "../autonomous/bot-controls.js";
 import { type BotControlsClient, resolveBotControls } from "../autonomous/bot-controls-client.js";
+import type { BotsStateDb } from "../autonomous/bots-state-db.js";
+import { openBotsStateDb } from "../autonomous/bots-state-db.js";
 import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
@@ -104,6 +106,25 @@ export async function seedDailyLossBaseline(
     console.log(`[safety] daily-loss baseline seeded from day-open equity: $${seed.toFixed(2)}`);
   } catch (error) {
     console.warn("[safety] day-open equity seed failed (non-fatal):", error);
+  }
+}
+
+/**
+ * Opens the bots-state DB (momentum/sentiment/cooldown durability, `docs/plans/trade-insights-loop.md`
+ * slice 4) when `SKYNET_BOTS_DB_PATH` is set — dark by default, exactly like `SKYNET_AUDIT_DIR`.
+ * Best-effort, same posture as `seedDailyLossBaseline`: a missing/corrupt DB file must never fail
+ * boot, it just leaves durability off for this run (today's cold-start behavior, unchanged).
+ */
+export function seedBotsState(env: NodeJS.ProcessEnv): BotsStateDb | undefined {
+  const path = env.SKYNET_BOTS_DB_PATH;
+  if (!path) return undefined;
+  try {
+    const db = openBotsStateDb(path);
+    console.log(`[bots-state] durable momentum/sentiment/cooldown storage armed: ${path}`);
+    return db;
+  } catch (error) {
+    console.warn("[bots-state] open failed (non-fatal) — falling back to cold-start state:", error);
+    return undefined;
   }
 }
 
@@ -212,6 +233,8 @@ export function buildLiveBot(
     /** Mission Control: dynamic suspend checks (polled) + the boot snapshot for mode overrides. */
     controls: BotControlsClient;
     bootControls: ControlsState;
+    /** Durable cooldown storage (slice 4) — omit to run cold-start, exactly as before this existed. */
+    botsStateDb?: BotsStateDb;
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
@@ -251,6 +274,15 @@ export function buildLiveBot(
       // Hardcore research mode iterates fast: 90s between orders in a symbol instead of 5m.
       // Small tranches keep the order-rate breaker (20/min) and daily-loss breaker (5%) binding.
       ...(hardcore ? { cooldownMs: HARDCORE_COOLDOWN_MS } : {}),
+      // Durable cooldowns (slice 4): restored at construction, persisted on every order — dark
+      // (both no-ops) unless SKYNET_BOTS_DB_PATH is set.
+      ...(opts.botsStateDb
+        ? {
+            initialCooldowns: opts.botsStateDb.loadCooldowns(bot.persona.id),
+            onCooldownSet: (symbol: string, at: number) =>
+              opts.botsStateDb?.saveCooldown(bot.persona.id, symbol, at),
+          }
+        : {}),
       // Per-bot suspend (Mission Control, polled) composes with the kill switch/breakers: either
       // blocks the cycle, and the decision record carries the owner's reason verbatim.
       blockedReason: () => opts.controls.suspendedReason(bot.persona.id) ?? opts.blockedReason(),

@@ -35,7 +35,8 @@
  *               `OCC:` options-expiration calendar (theocc.com / Cboe; 3rd-Friday standard) ·
  *               `BEA:` bea.gov release schedule (GDP, PCE) · `CENSUS:` census.gov schedule
  *               (retail sales, durable goods) · `ISM:` ismworld.org PMI calendar ·
- *               `CB:` conference-board.org consumer-confidence schedule
+ *               `CB:` conference-board.org consumer-confidence schedule ·
+ *               `UMICH:` sca.isr.umich.edu Surveys of Consumers release schedule
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *
@@ -416,13 +417,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "University of Michigan consumer sentiment — preliminary (Sep 2026)",
     date: "2026-09-11",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: the University of Michigan Surveys of Consumers\' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628) lists verbatim "September 11 September Prelim" and "September 25 September Final"; the customary release time is 10:00 ET but the schedule document itself states no time. Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-09-04',
+      'UMICH: sca.isr.umich.edu states verbatim "Next data release: Friday, September 11, 2026 for Preliminary September data at 10am ET" (fetched direct 2026-09-04, read back verbatim-only on a second pass); corroborated by the Surveys of Consumers\' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628), whose PDF text layer lists "September 11 September Prelim" and "September 25 September Final"',
     impact: "low",
     symbols: [],
     notes:
-      "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Filed low, not medium, to respect the table's standing judgment that second-order surveys stay out — this is an admission for a named reason, not a reversal. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep.",
+      "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Filed low, not medium, to respect the table's standing judgment that second-order surveys stay out — this is an admission for a named reason, not a reversal. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep; promoted to confirmed by its own initial research, which fetched the publisher's next-release line (with a time) direct.",
+  },
+  {
+    id: "umich-sentiment-final-2026-09-25",
+    kind: "macro-print",
+    title: "University of Michigan consumer sentiment — final (Sep 2026)",
+    date: "2026-09-25",
+    status: "estimate",
+    source:
+      'EST: the 2026 release-dates document of the Surveys of Consumers (data.sca.isr.umich.edu/fetchdoc.php?docid=79628) lists "September 25 September Final" in its PDF text layer, decompressed direct 2026-09-04; the customary time is 10:00 ET but the schedule document states none, and the next-release line on sca.isr.umich.edu currently names only the 09-11 preliminary. Filed estimate per the no-self-confirm limit in the event-research lane on an event discovered in-sweep',
+    impact: "low",
+    symbols: [],
+    notes:
+      "Earns an entry rather than being a routine revision because of the collection rule in the same schedule document: final-release interviews run through the Monday before release (2026-09-21), making this the first UMich reading that can contain the 2026-09-16 FOMC decision — which the 09-11 preliminary structurally cannot (its interviews close 09-07). Discovered during umich-sentiment-prelim-2026-09-11 initial research.",
   },
   {
     id: "jolts-2026-09-29",
@@ -557,13 +571,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Cleveland Fed's Hammack — remarks (July hike dissenter)",
     date: "2026-09-03",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "NEWS: zerohedge.com 'Key Events This Week' (published 2026-08-29) is the only source naming a day AND a time — 3:00 PM ET Thursday 9/3, 'Cleveland Fed President Beth Hammack will give pre-recorded opening remarks'; neilsethi.substack.com's 2026-08-30 'Week Ahead' has her speaking that week without naming the day; Newsquawk's weekly calendar for 31 Aug–4 Sep names Waller as Thursday's ONLY Fed speaker. THE DATE IS UNCONFIRMABLE AT THE PRIMARY, NOT MERELY UNCONFIRMED: clevelandfed.org was reached at HTTP 200 on 2026-09-01 (the earlier 403s were a user-agent block, not an outage) and publishes NO forward speaking calendar — its 'President's upcoming events' box is a newsletter-subscribe promo, and its speeches collection is a post-hoc archive. Stays estimate permanently unless a venue or a Cleveland Fed release surfaces; do not spend another session trying to 'confirm' it at clevelandfed.org.",
+      "FED: clevelandfed.org/president-and-ceo -> 'Speaking engagements' -> 2026 lists 'President Beth Hammack Gives Opening Remarks at the Connecting Communities Webinar, \"When Every Dollar Counts: Worker Perspectives on the Economy\"' — September 3, 2026, 3:00 pm EDT — linking the fedcommunities.org registration page, which now reads 'This event has passed' (virtual, 3:00-4:00 pm EDT, hosted by the Atlanta/Chicago/Cleveland Feds, special remarks by Goolsbee and Hammack). Fetched direct with a browser User-Agent, HTTP 200, 2026-09-03. CONFIRMED AT CLOSE-OUT, CORRECTING THIS ENTRY'S PRIOR CLAIM that the date was 'unconfirmable at the primary': the Cleveland Fed DOES publish a forward speaking calendar. It lives on /president-and-ceo inside a collapsed accordion (expandedByDefault false) — NOT on /collections/speeches or /news-and-events, where the 'President's upcoming events' box really is only a subscribe promo. METHOD FOR FUTURE RESERVE BANK SPEAKER DATES: check /president-and-ceo and expand 'Speaking engagements'; the speeches collection is a post-hoc archive and will never carry a forward date. Originally filed NEWS: zerohedge.com 'Key Events This Week' (2026-08-29), whose day AND 3:00 PM time both proved exactly right (FT-46, PASS).",
     impact: "low",
     symbols: [],
     notes:
-      "Filed `low` deliberately, and not because a voting regional president who dissented for a hike is unimportant. Two independent reasons, the first mechanical: the remarks are reported PRE-RECORDED and slotted 15:00 ET, so they cannot react to Challenger (07:30), Waller (08:30), ISM Services (10:00) that morning or payrolls on 9/4 — information content is bounded near zero by FORMAT, not by a judgement about her views. Second, her position is on the record twice over: she dissented +25bp at the 7/29 FOMC alongside Kashkari and Logan, and said live on CNBC from Jackson Hole on 2026-08-27 'I believe now is the time to act' (correcting this note's earlier 2026-08-10 attribution, which was not her latest word — fixed 2026-09-01 during this event's initial research). Her marginal information content into a September hike already priced 62–66% (CME FedWatch, 8/31) is near zero — the opposite of the same-day 08:30 Waller slot, whose speaker had been silent 52 days with a published framework the current data leaves undetermined. That contrast is the tiering rule: a speaker's information content is a function of how uncertain their position is and whether the format lets them react, not their seniority. Cross-current worth knowing: her own bank's SoFIE release (2026-08-10) has CEO 12-month CPI expectations at 3.3%, DOWN from 3.7% in Q2 — evidence against the 'inflationary mindset' argument she rests her hawkish case on. Discovered during the waller-economic-outlook-2026-09-03 initial-research adjacency sweep (2026-09-01).",
+      "CLOSED OUT 2026-09-03: the `low` tier was right and the event passed inert — no wire reported a word she said, and the day's ~13pp of September-hike repricing (~67% -> 54.6% 'in minutes' -> ~50.3-50.4%) belongs entirely to Waller at 08:30, ~6.5 hours before her slot. The venue, unknown when this was filed, turned out to be a Federal Reserve community-development webinar (Connecting Communities), which is the format argument below confirmed on substance — though 'pre-recorded' itself stayed single-source and was never corroborated. Full scoring: docs/research/events/hammack-remarks-2026-09-03.md. Filed `low` deliberately, and not because a voting regional president who dissented for a hike is unimportant. Two independent reasons, the first mechanical: the remarks are reported PRE-RECORDED and slotted 15:00 ET, so they cannot react to Challenger (07:30), Waller (08:30), ISM Services (10:00) that morning or payrolls on 9/4 — information content is bounded near zero by FORMAT, not by a judgement about her views. Second, her position is on the record twice over: she dissented +25bp at the 7/29 FOMC alongside Kashkari and Logan, and said live on CNBC from Jackson Hole on 2026-08-27 'I believe now is the time to act' (correcting this note's earlier 2026-08-10 attribution, which was not her latest word — fixed 2026-09-01 during this event's initial research). Her marginal information content into a September hike already priced 62–66% (CME FedWatch, 8/31) is near zero — the opposite of the same-day 08:30 Waller slot, whose speaker had been silent 52 days with a published framework the current data leaves undetermined. That contrast is the tiering rule: a speaker's information content is a function of how uncertain their position is and whether the format lets them react, not their seniority. Cross-current worth knowing: her own bank's SoFIE release (2026-08-10) has CEO 12-month CPI expectations at 3.3%, DOWN from 3.7% in Q2 — evidence against the 'inflationary mindset' argument she rests her hawkish case on. Discovered during the waller-economic-outlook-2026-09-03 initial-research adjacency sweep (2026-09-01).",
   },
   {
     id: "jobs-2026-09-04",
@@ -1252,11 +1266,38 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     date: "2026-11-10",
     status: "estimate",
     source:
-      "NEWS: whitehouse.gov presidential action of 2025-11-04 (Executive Order 14358, 'Modifying Reciprocal Tariff Rates Consistent with the Economic and Trade Arrangement Between the United States and the People's Republic of China') suspends the heightened EO-14257 duties in favour of a flat additional 10% until, verbatim, '12:01 a.m. eastern standard time on November 10, 2026' — fetched direct 2026-09-04. Filed estimate, not confirmed, per this lane's no-self-confirm limit on an event discovered in-sweep; the primary quote is already in hand, so its own initial research can promote it in one step (the crwv-fully-connected-2026-09-29 precedent)",
+      "NEWS: whitehouse.gov presidential action of 2025-11-04 (Executive Order 14358, 'Modifying Reciprocal Tariff Rates Consistent with the Economic and Trade Arrangement Between the United States and the People's Republic of China') suspends the heightened EO-14257 duties in favour of a flat additional 10% until, verbatim, '12:01 a.m. eastern standard time on November 10, 2026' — fetched direct 2026-09-04. STAYS ESTIMATE FOR A SCHEMA REASON, NOT DATE DOUBT — do not spend another session trying to promote it: the expiry language is primary and verbatim, but event-scan-validation.mjs's CONFIRMED_PREFIX admits only IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB and has no slot for a White House presidential action or a Federal Register citation. Adding a WH:/FR: prefix is a schema change, not this lane's call (same reasoning georgia-senate-runoff-2026-12-01 records for a state election authority)",
     impact: "high",
     symbols: [],
     notes:
-      "The deadline the trump-xi-summit-2026-09-24 ledger already reasons about by hand but that the calendar could not point at — the two are one connected risk window, not two events, with the summit sitting ~6.5 weeks in front of it. What lapses is a SUSPENSION, so the null outcome is escalation, not continuity: absent renewal the additional 24% 'Liberation Day' retaliatory rate returns on top of the 10% floor, and the Kuala Lumpur arrangement's other legs (China's pause on rare-earth export controls, its commitments on retaliation against US semiconductor manufacturers) run on the same clock. Sector risk for the same AI-semis names the summit carries (AVGO, NVDA, MRVL, AMD), plus rare-earth/materials supply chains. Lands 08:30-adjacent to cpi-2026-11-10 and the est. CRWV print, so nothing that day is cleanly attributable. Estimate widens caution only — no date-keyed action. Discovered during the trump-xi-summit-2026-09-24 pulse-check adjacency sweep (2026-09-04).",
+      "THE HEADLINE MECHANISM IS DEAD AND THE RISK HAS INVERTED (initial research, 2026-09-04). This entry was filed hours earlier asserting that absent renewal the additional 24% 'Liberation Day' rate returns on top of the 10% floor. It cannot: the Supreme Court held on 2026-02-20 that IEEPA does not authorize tariffs (Learning Resources v. Trump, 24-1287, 6-3), the same-day 'Ending Certain Tariff Actions' order terminated the IEEPA duties including EO 14257 — the rate EO 14358 suspends — and CBP stopped collection 2026-02-24. The wall was rebuilt on other authorities with no Nov-10 hook (Sec. 122 10% from 02-24, expired by its 150-day cap 12:01 EDT 07-24; USTR Sec. 301 forced-labor duties 10-12.5% on ~60 economies effective the same minute, China at 12.5% stacking to ~37.5% aggregate 301). WHAT STILL EXPIRES 11/10 IS CHINA'S HALF: MOFCOM/GAC Announcement No. 70 of 2025-11-07 suspended the six 2025-10-09 export-control announcements — No. 61's 0.1% extraterritorial rule and the rare-earth FDPR, plus a delayed Ho/Er/Tm/Eu/Yb wave — until 2026-11-10, unaffected by a US court. So the exposure is rare-earth-dependent supply chains (semis, autos, robotics, aerospace, defense; ~69% of 2025 mine output, up to ~90% of processing), not tariff-sensitive importers. Structural wrinkle: the natural extension venue, APEC Shenzhen, is 2026-11-18/19 — eight days AFTER the deadline. Lands 08:30-adjacent to cpi-2026-11-10 and the est. CRWV print, so nothing that day is cleanly attributable. Estimate widens caution only — no date-keyed action. Discovered during the trump-xi-summit-2026-09-24 pulse-check adjacency sweep (2026-09-04); ledger: docs/research/events/us-china-tariff-truce-expiry-2026-11-10.md.",
+  },
+  {
+    id: "apec-leaders-shenzhen-2026-11-18",
+    kind: "geopolitical",
+    title: "APEC Economic Leaders' Meeting (33rd) — Shenzhen, China",
+    date: "2026-11-18",
+    status: "estimate",
+    source:
+      "NEWS: apec.org's own 2025 press release 'China Unveils APEC 2026 Theme and Priorities in Shenzhen' plus english.www.gov.cn and sz.gov.cn (both dated 2025-12) name Nov 18-19 2026 in Shenzhen, Guangdong for the 33rd Economic Leaders' Meeting; Treasury Sec. Bessent named it as a venue for China trade talks in May-2026 Reuters remarks. Filed estimate: the date is multiply and near-primary sourced, but this calendar has no confirmed prefix for a multilateral body's own schedule (same schema gap us-china-tariff-truce-expiry-2026-11-10 records), and leader attendance — Trump's especially — is not established. Checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "LOAD-BEARING BECAUSE OF WHERE IT SITS: eight days AFTER us-china-tariff-truce-expiry-2026-11-10, so the natural leader-level venue for extending the Kuala Lumpur arrangement lands past the clock it would extend. Of the three venues Bessent named in May 2026 while saying the administration was 'not in a hurry' to extend (the September Washington summit, this, and a December G20 in Florida), two post-date the deadline — which is why the trump-xi-summit-2026-09-24 meeting carries more weight than a routine state visit would. Day 1 of the two-day window per house convention. Estimate widens caution only. Discovered during the us-china-tariff-truce-expiry-2026-11-10 initial research (2026-09-04).",
+  },
+  {
+    id: "china-retaliation-suspension-expiry-2026-12-31",
+    kind: "geopolitical",
+    title:
+      "China's suspension of post-March-2025 retaliatory tariffs and non-tariff countermeasures expires",
+    date: "2026-12-31",
+    status: "estimate",
+    source:
+      "NEWS: whitehouse.gov fact sheet of 2025-11 ('President Donald J. Trump Strikes Deal on Economic and Trade Relations with China') states China will suspend retaliatory tariffs and non-tariff countermeasures enacted since March 2025, and extend its market-based tariff-exclusion process for US imports, until December 31, 2026; corroborated by USDA FAS trade alerts and contemporaneous trade-press coverage. Filed estimate: the commitment is US-side reporting of a Chinese action, and no MOFCOM/State Council primary was read this pass. Checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "THE SECOND LEG OF THE SAME CLIFF, ON A DIFFERENT CLOCK. The Kuala Lumpur arrangement does not expire all at once: China's export-control suspension (MOFCOM/GAC Announcement No. 70) runs to 2026-11-10, while its retaliatory-tariff and countermeasure suspension — covering US chicken, wheat, corn, cotton, sorghum, soybeans, pork, beef, aquatic products, fruit, vegetables and dairy — plus the tariff-exclusion process run to 2026-12-31. Agricultural exposure, not the AI-semis channel the 11/10 date carries; the soybean purchase commitments (12 MMT in late 2025, 25 MMT annually 2026-2028) sit alongside it. Matters mostly as the tell for whether the arrangement is being renewed as a package or unbundled leg by leg. Estimate widens caution only. Discovered during the us-china-tariff-truce-expiry-2026-11-10 initial research (2026-09-04).",
   },
   {
     id: "ppi-2026-11-13",
