@@ -364,7 +364,7 @@ it. Prevention ranks, best first:
   today's 190 (post one demonstration rep — see SIDE QUESTS) and ratchets down as touched;
   `tests/arch/comment-bloat.spec.ts` runs it advisory in CI per the 2026-08-29 debt-gate policy.
   Doctrine: `docs/ENGINEERING.md`'s "Co-locate intent with structure" section now states the WHY-vs-
-  narration split explicitly, and `reviewer.md`'s checklist names it, so both the scripted eye and
+  narration split explicitly, and `.claude/agents/reviewer.md`'s checklist names it, so both the scripted eye and
   the review-time judgment call are covered — not a mass rewrite (would violate the "grandfather,
   then shrink" rule for retroactive-judging conventions, `docs/COACHES.md`). The scan also now rides
   the existing secretary digest Routine (`trig_01KaMC2uR3cFW5XTUL6rzPuS`), volume-gated (only
@@ -509,7 +509,7 @@ it. Prevention ranks, best first:
   therefore collapses to at most two survivors — whichever happened to be running plus whichever
   was queued last — and which N-2 events get dropped is an artifact of webhook delivery order, not
   anything the workflow's own logic controls. The one step that actually claims the issue
-  (`node scripts/moneypenny.mjs --claim-feedback`) was gated on `github.event.label.name ==
+  (`node scripts/moneypenny/index.mjs --claim-feedback`) was gated on `github.event.label.name ==
   'feedback'` specifically, so the bug only manifests as a *miss* when the `feedback` event is the
   one that loses the race — which is exactly what happened both times.
 - **PREVENTION:** gate. `moneypenny-events.yml`'s concurrency `group:` now includes
@@ -844,7 +844,7 @@ it. Prevention ranks, best first:
   event research and stall audit with it. The call is only exercised on a runner with a token, so
   no local check and no spec touched it; `npm test` was green on the branch that shipped it.
 - **PREVENTION:** gate. `tests/arch/gh-json-fields.spec.ts` reads every `--json` field list out of
-  `scripts/moneypenny.mjs` and checks it against the allow-list `gh` itself printed in the failure,
+  `scripts/moneypenny/index.mjs` and checks it against the allow-list `gh` itself printed in the failure,
   offline and with no token. Verified in both directions: it passes on the corrected source and
   names `closedByPullRequests` when handed the broken form.
 - **SIDE QUESTS:** the medic could not report this one — its run was cancelled by the next push,
@@ -950,10 +950,10 @@ it. Prevention ranks, best first:
   chars, no fence). Worse than a loud failure: the claim lease was already taken, so the issue read
   as claimed-and-building while nothing built it.
 - **PREVENTION:** gate + script + doctrine. (1) The decision moved out of the workflow into
-  `modelTier()` in `scripts/moneypenny.mjs` — pure, and specced across all three branches including
+  `modelTier()` in `scripts/moneypenny/index.mjs` — pure, and specced across all three branches including
   the exact 1,410-char body (`tests/scripts/model-tier.spec.ts`). (2) The claim step is now one
   specced call (`--claim-feedback`), deleting the last inline `node -e` + `jq` bash in that lane.
-  (3) The **CI Medic** lane (`.github/workflows/moneypenny-repair.yml`, `scripts/moneypenny-repair.mjs`) turns a red
+  (3) The **CI Medic** lane (`.github/workflows/moneypenny-repair.yml`, `scripts/moneypenny/repair.mjs`) turns a red
   run on `main` into a capsule issue plus a dispatched repair session, so the *next* silent failure
   is noticed by the system rather than by Eric.
 - **SIDE QUESTS:** the claim lease has no release-on-failure path — a job that dies after claiming
@@ -1504,7 +1504,7 @@ it. Prevention ranks, best first:
   silently never created. The comment directly above the code ("GitHub auto-creates a label the
   first time it is applied") describes the *intended* self-healing behavior; the missing flag is
   exactly why it didn't happen.
-- **PREVENTION:** gate/script — `scripts/moneypenny.mjs`'s `ensureLabel` now passes `--fail` on
+- **PREVENTION:** gate/script — `scripts/moneypenny/index.mjs`'s `ensureLabel` now passes `--fail` on
   both the PATCH and the POST, so a real HTTP failure (including "doesn't exist yet") throws and
   reaches the fallback, while the intentionally-swallowed "already exists" 422 on the POST still
   degrades silently exactly as designed. Fixed in this PR, not deferred.
@@ -1618,7 +1618,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SHA:** fafbbf1   **DATE:** 2026-08-26   **STATUS:** closed
 - **SIGNAL:** ten consecutive `Postmaster` push runs failed inside 45 minutes (12:31–13:13), all the
   identical one-liner: `Error: gh issue list (shipped) failed: GraphQL: API rate limit already
-  exceeded for user ID 3472134`, thrown from `gatherDeps` in `scripts/moneypenny.mjs`. Detection lag
+  exceeded for user ID 3472134`, thrown from `gatherDeps` in `scripts/moneypenny/index.mjs`. Detection lag
   was effectively zero — each run failed loudly on its own — but nobody connected the ten reds into
   one incident and banked the retro until this burn-down (#781) found them.
 - **ROOT CAUSE:** `gatherDeps`'s `shippedSweep` ran a GraphQL `gh issue list` with each issue's
@@ -1629,11 +1629,11 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   rolled over — including `ee741ea` itself, the fix commit, which landed mid-burst and still hit the
   exhausted budget on its own push (a code fix cannot un-spend an already-drained hourly quota).
 - **PREVENTION:** already landed, found already fixed rather than built here. `ee741ea` (2026-08-26)
-  cut the query in two ways, both now in `scripts/moneypenny.mjs`'s `gatherDeps`: (1) a cheap REST
+  cut the query in two ways, both now in `scripts/moneypenny/index.mjs`'s `gatherDeps`: (1) a cheap REST
   existence check (`ghRest`, the plentiful core bucket) gates whether the expensive GraphQL sweep
   runs at all — most pushes have nothing labeled `feedback`/`event-research` open and now pay
   nothing; (2) the open-issue-titles read moved off a second GraphQL query onto REST entirely. The
-  code comment at `scripts/moneypenny.mjs:301-309` narrates this exact incident inline. No further
+  code comment at `scripts/moneypenny/index.mjs:301-309` narrates this exact incident inline. No further
   code change needed; this entry exists to close the paper trail the fix never got.
 - **SIDE QUESTS:** a burst this size can still exhaust the budget again on a busier day — the fix
   lowers the cost per push, not the ceiling itself. Worth a follow-up: does GitHub expose remaining
@@ -1663,7 +1663,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   loop, so one un-permitted comment threw past every later intent in the same push, including intents
   that had nothing to do with commenting.
 - **PREVENTION:** already landed, found already fixed rather than built here. `runIntents` in
-  `scripts/moneypenny.mjs` (see its docstring, dated 2026-08-26) now wraps each intent in its own
+  `scripts/moneypenny/index.mjs` (see its docstring, dated 2026-08-26) now wraps each intent in its own
   try/catch: a failed intent lands in the receipt by name with an `::error::` annotation, the run
   still fails honestly, but every other intent that push still executes. A comment permission gap is
   still a real failure — closing it needs the App/PAT install `e122ee8` already named as Eric's step
