@@ -17,6 +17,7 @@
  */
 
 import { isRecord } from "../storage/parse-guards.js";
+import { credentialFingerprint } from "./bot-credential-fingerprint.js";
 
 /** Per-bot overrides. Every field optional: absent = fall back to the env default. */
 export interface BotControls {
@@ -26,6 +27,10 @@ export interface BotControls {
   readonly mode?: "observe" | "live";
   /** Run the bot's hardcore research build (boot-applied; only bots with a hardcore build). */
   readonly hardcore?: boolean;
+  /** A fingerprint of the bot's CURRENT stored Alpaca credentials — never the credential itself.
+   *  The bots process compares this against its own boot-time credential's fingerprint and, on a
+   *  mismatch, pulls the real pair from the separate `/bot-credentials` endpoint. */
+  readonly credentialsVersion?: string;
 }
 
 export interface ControlsState {
@@ -43,13 +48,23 @@ export const EMPTY_CONTROLS: ControlsState = { bots: {} };
 /** The internal bridge path the `bots` process polls (same listener as the insight relay). */
 export const CONTROLS_BRIDGE_PATH = "/controls";
 
+/** Bounded — a fingerprint is 16 hex chars; generous headroom for a future longer digest. */
+const MAX_CREDENTIALS_VERSION_LENGTH = 64;
+
 function parseBot(raw: unknown): BotControls | null {
   if (!isRecord(raw)) return null;
   const mode = raw.mode === "observe" || raw.mode === "live" ? raw.mode : undefined;
+  const credentialsVersion =
+    typeof raw.credentialsVersion === "string" &&
+    raw.credentialsVersion.length > 0 &&
+    raw.credentialsVersion.length <= MAX_CREDENTIALS_VERSION_LENGTH
+      ? raw.credentialsVersion
+      : undefined;
   return {
     ...(typeof raw.suspended === "boolean" ? { suspended: raw.suspended } : {}),
     ...(mode ? { mode } : {}),
     ...(typeof raw.hardcore === "boolean" ? { hardcore: raw.hardcore } : {}),
+    ...(credentialsVersion ? { credentialsVersion } : {}),
   };
 }
 
@@ -109,4 +124,30 @@ export function effectiveHardcoreIds(
     if (override ?? envIds.has(id)) out.add(id);
   }
   return out;
+}
+
+/**
+ * Folds a `credentialsVersion` fingerprint into every bot id this process can resolve a
+ * participant's credentials for — called on every `/controls` GET, never persisted. A bot with no
+ * resolvable participant (not yet added as a store row, or `resolve` throwing) is left untouched:
+ * absent means "no credential-rotation signal available," never a false "nothing changed."
+ */
+export function stampCredentialVersions(
+  state: ControlsState,
+  personaIds: readonly string[],
+  resolve: (id: string) => { apiKey: string; apiSecret: string } | undefined,
+  salt: string,
+): ControlsState {
+  const bots: Record<string, BotControls> = { ...state.bots };
+  for (const id of personaIds) {
+    let credentials: { apiKey: string; apiSecret: string } | undefined;
+    try {
+      credentials = resolve(id);
+    } catch {
+      credentials = undefined; // a resolver failure must never break the poll it rides on
+    }
+    if (!credentials) continue;
+    bots[id] = { ...bots[id], credentialsVersion: credentialFingerprint(credentials, salt) };
+  }
+  return { ...state, bots };
 }

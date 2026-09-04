@@ -173,6 +173,13 @@ feedback formats into templates and may dispatch verification teams (red/blue/wh
 verify-and-report only) so decision items arrive pre-verified. The carve-outs below are the
 condition attached to this compression — altitude never means silence.
 
+**A PR-watch status reply is one line, plus an optional second for why** (Eric, 2026-09-04, after a
+wake reply re-narrated a PR body the notification had already carried, then confirmed the one-liner
+alone was right but welcomed a trailing why): `#<N> — <verdict/ask>. <what it unlocks, if not
+obvious>.` — e.g. `#1267 — waiting on you to R+M. Closes the deploy-churn side of "no adverse
+effects on deploy."` Never restate what the PR body, the CI run, or the notification's own payload
+already said; a wake with nothing new to report earns silence (re-arm the check-in), not a recap.
+
 **Pictures first — the fridge rule** (Eric, 2026-08-20: "dumb this shit down and draw more
 pictures... I want some god damn pictures to hang on the fridge"). Every PR and report-out opens
 with something he can judge **by eye in ~10 seconds** — screenshots for UI work, a mermaid map for
@@ -257,10 +264,12 @@ the docs are the memory.
 
 ## Ship loop
 
-- Branch off latest `origin/main` per change **before editing** (`git checkout -B <branch>
-  origin/main`) — branch-first means never needing `git stash`, which is **banned here** (it has
-  silently dropped edits). Small focused PRs; squash-merge on green; Conventional-Commit subjects,
-  **lowercase-led** (commitlint rejects a capitalized first word — even "PRs"/"Barad-dûr").
+- Branch off latest `origin/main` per change **before editing** (`git fetch origin main && git
+  checkout -B <branch> origin/main` — fetch first: a cached ref can be genuinely stale or diverged
+  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04) — branch-first
+  means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
+  focused PRs; squash-merge on green; Conventional-Commit subjects, **lowercase-led** (commitlint
+  rejects a capitalized first word — even "PRs"/"Barad-dûr").
 - Open PRs with **`/ship`** (local verify → push → REST open → one auto-merge arm → stop; wraps
   `scripts/ship.sh`). The ship skill also owns the landing mechanics and traps: PR bodies over REST
   (the GitHub MCP write tools silently strip `<details>`), draft promotion, whose-token-arms-the-merge,

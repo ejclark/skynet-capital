@@ -43,7 +43,13 @@ const DISABLED_CLIENT: BotControlsClient = {
   enabled: false,
 };
 
-export function resolveBotControls(env: NodeJS.ProcessEnv = process.env): BotControlsClient {
+export function resolveBotControls(
+  env: NodeJS.ProcessEnv = process.env,
+  /** Fires after every AUTHENTICATED poll that returns a parsed state — the credential-sync
+   *  client's hook (`bot-credentials-client.ts`), so a rotation reaches the running process within
+   *  one poll interval without this file needing to know that client exists. */
+  onFetched?: (state: ControlsState) => void,
+): BotControlsClient {
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}${CONTROLS_BRIDGE_PATH}`;
@@ -65,7 +71,14 @@ export function resolveBotControls(env: NodeJS.ProcessEnv = process.env): BotCon
         );
         if (response.status < 200 || response.status >= 300) return null;
         const parsed = parseControlsState(response.body);
-        if (parsed) snapshot = parsed;
+        if (parsed) {
+          snapshot = parsed;
+          try {
+            onFetched?.(parsed);
+          } catch {
+            /* never let a downstream hook fail the poll it rides on */
+          }
+        }
         return parsed;
       } finally {
         clearTimeout(abort);
