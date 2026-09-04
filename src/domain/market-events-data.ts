@@ -335,8 +335,14 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "The Fed's own inflation gauge — and it lands ON the NVDA print day. Compound-risk.",
   },
   // Scheduled macro releases beyond CPI/FOMC/jobs/PCE/PPI (agency schedules, checked 2026-08-18).
-  // The rate-path movers our long-duration names trade on; second-order surveys (Michigan
-  // sentiment, durable goods) and weekly jobless claims are deliberately omitted as low-impact.
+  // The rate-path movers our long-duration names trade on. This block originally added: "second-
+  // order surveys (Michigan sentiment, durable goods) and weekly jobless claims are deliberately
+  // omitted as low-impact." Both named surveys have since been admitted, each on a dated,
+  // event-specific reason rather than a blanket re-rating — durable goods on 2026-09-01
+  // (durable-goods-2026-09-25) and Michigan sentiment on 2026-09-04
+  // (umich-sentiment-prelim-2026-09-11, see its `notes`). Weekly jobless claims remain omitted:
+  // a weekly series has no single date worth an assessment ledger. Admit a survey only when a
+  // live ledger can name why its release date matters to a tracked event, not by default.
   {
     id: "consumer-confidence-2026-08-25",
     kind: "macro-print",
@@ -635,6 +641,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "high",
     symbols: [],
     notes: "Rate-path input; AI-infra names trade as long-duration assets on it.",
+  },
+  {
+    id: "umich-sentiment-prelim-2026-09-11",
+    kind: "macro-print",
+    title: "UMich consumer sentiment — preliminary (Sep 2026), incl. inflation expectations",
+    date: "2026-09-11",
+    status: "estimate",
+    source:
+      "EST: the University of Michigan Surveys of Consumers' own 'RELEASE DATES FOR 2026' PDF (data.sca.isr.umich.edu/fetchdoc.php?docid=79628, linked as '2026 Release Dates' from data.sca.isr.umich.edu/survey-info.php), text layer decompressed and read directly 2026-09-04 — the schedule reads verbatim 'September 11 September Prelim' and 'September 25 September Final'. Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep. The customary 10:00 ET release time is press/aggregator convention and is NOT stated in that PDF — the date is primary, the time is not, checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Admitted 2026-09-04 by the treasury-20y-bond-2026-09-15 pulse-check adjacency sweep, reversing this block's original 'Michigan sentiment deliberately omitted as low-impact' note — on an event-specific reason, not a blanket re-rating. The reason: the year-ahead INFLATION-EXPECTATIONS component, not the headline. Waller's 2026-09-03 speech made his September hold explicitly conditional ('if inflation comes in hot, I would consider a rate hike') in the same week Brent touched $99.38 intraday and the ISM Services Prices index printed 72.6, its highest since August 2022, with the report's own respondents naming Iran and fuel. Whether that energy shock is de-anchoring household expectations is the live question, and this survey is the cleanest same-day read on it. Placement is the other half: it lands ON cpi-2026-09-11 and mts-august-2026-09-11, two sessions before treasury-20y-bond-2026-09-15 and three before fomc-2026-09-16, inside the 2026-09-05 blackout — so the inflation-expectations read, the CPI print and the deficit print all hit one session that no Fed participant may respond to. Tiered medium, matching consumer-confidence-*, on the same rationale that file already carries (the expectations subcomponents are the parts rate desks react to) and deliberately NOT high: the headline index rarely moves the tape on its own, and unlike mts-august-2026-09-11 that claim is UNMEASURED here — a close-out or a future initial research should measure it rather than inherit it.",
   },
   {
     id: "mts-august-2026-09-11",
