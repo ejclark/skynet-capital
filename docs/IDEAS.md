@@ -1149,3 +1149,15 @@ applies the whole time. Worth deciding whether `npm run verify` should carry a c
 freshness check of its own (same `git merge-base --is-ancestor` shape, non-blocking) — or whether
 that's over-engineering a case `ship open`'s hard stop already catches at the point that matters.
 _(src: Claude · while: /retro on PR #1219's stale-base CI failure, 2026-09-04)_
+
+### The bots boot log makes a healthy process look broken
+`src/scripts/run-autonomous.ts` starts the shared clock/news/price connections (line 187), polls news
+(line 209) and seeds the daily-loss baseline (line 228) before `credentials.reconcile(bootControls)`
+(line 252) applies the bridge-delivered rotated credential — so every boot prints a burst of `401`s
+from the dead env credential that are expected noise, and then a healthy tick-driven eval with no
+trade signal prints nothing at all. Noise-at-boot plus silence-as-health cost ~2 hours and five of
+Eric's approval taps to misread once already (docs/LESSONS.md, 2026-09-04). Worth deciding between
+reconciling credentials before the first outbound call, or explicitly labeling the pre-reconcile
+failures as expected (`[boot] pre-rotation credential — expected if a key was rotated`) so the log
+tells the truth to a skimmer.
+_(src: Claude · while: /retro on the sauron log-pull investigation, 2026-09-04)_
