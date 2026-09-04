@@ -1782,6 +1782,20 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The watch item the opex-2026-09-18 ledger flagged on 2026-08-29 as unsourceable and deliberately did not add; sourced to the S&P DJI methodology on 2026-09-01 and filed as an estimate. This is the ANNOUNCEMENT, not the flow: the share/float rebalance itself is effective at the close of 2026-09-18 — the same closing auction as the triple witching's single-stock options — and this release is when passive managers first see what they must buy and sell there. So it is the earliest dated read on how large that 09-18 market-on-close imbalance will be. Low impact, market-structure only: it changes execution timing on high-open-interest names, never direction, and no house playbook (S1/S2/E1/S3/S4/G1) is opex- or rebalance-keyed.",
   },
   {
+    id: "sp-rebalance-proforma-capped-2026-09-11",
+    kind: "sector",
+    title:
+      "S&P DJI September quarterly rebalance — capped / alternatively weighted pro-forma files released",
+    date: "2026-09-11",
+    status: "estimate",
+    source:
+      "NEWS: spglobal.com S&P Equity Indices Policies & Practices (March 2026 version) — pro-forma files for capped and alternatively weighted indices release after the close on the second Friday, one week before the third-Friday effective date, putting the September 2026 files at 09-11; the direct PDF fetch returned HTTP 403 on 2026-09-04, so the rule was read from search-indexed text of that document rather than the document itself, and this stays estimate",
+    impact: "low",
+    symbols: [],
+    notes:
+      "Proposed by the sp-rebalance-proforma-2026-09-04 initial research (2026-09-04) as the completing half of the September pro-forma pair, NOT a standalone trade date. The full sequence: float-adjusted (FMC) files after the close 09-04, the share/IWF freeze period beginning after the close on Tue 09-08, capped/alternatively-weighted files after the close 09-11, and the whole rebalance effective at the 09-18 close (prior to the 09-21 open) in the same closing auction as the triple witching. So this is the FINAL dated read on the size of that market-on-close imbalance before it prints. Deliberately tiered BELOW its 09-04 sibling: capped and alternatively weighted indices carry a fraction of the tracking assets, and the day is dominated by CPI 09-11 and UMich prelim 09-11 either way. Estimate status and low impact: it widens caution about the 09-18 close and licenses nothing — market structure only, never direction, and no house playbook is rebalance-keyed. The 09-08 freeze is dated too but deliberately NOT filed: it is a data cut-off with no observable publication.",
+  },
+  {
     id: "buyback-blackout-start-2026-09-12",
     kind: "sector",
     title: "Corporate buyback blackout window begins closing (pre-Q3-earnings)",
