@@ -1,16 +1,23 @@
+---
+name: research-bottleneck
+description: research one bottleneck-labelled issue and leave a call sheet plus a routing label
+model: fable
+effort: high
+isolation: none
+outcomeCheck: 'curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/ejclark/skynet-capital/issues/{item}/comments?per_page=100" | grep -q bottleneck-research'
+---
+
 # Research one bottleneck — find the superior existing solution, then battle-test it
 
-**Calling convention:** invoke with `effort: "high"` and the strongest model the caller has — this
-is research, not a mechanical chore, and grind's cheap defaults are the wrong fit. Items are open
-issues carrying the `bottleneck` label, passed as plain issue numbers (`"1318"`), so `{item}`
-substitutes cleanly. Nothing is pushed; the deliverable is one comment on the issue plus a label,
-so the outcome check is the comment's marker line, not a branch:
+**Calling convention:** the front matter above is the calling convention — generate the call with
+`node scripts/grind-manifest.mjs --args --items '<json>' docs/grind/research-bottleneck.instructions.md`
+rather than transcribing these values by hand. `model: fable` + `effort: high` because this is research, not a mechanical chore, and
+grind's cheap defaults are the wrong fit. `isolation: none` is deliberate (no checkout, no file
+edits). Nothing is pushed; the deliverable is one comment on the issue plus a label, so the
+`outcomeCheck` greps the comment's marker line rather than looking for a branch.
 
-```json
-{ "kind": "script", "command": "curl -sS -H \"Authorization: Bearer $GITHUB_TOKEN\" -H \"Accept: application/vnd.github+json\" \"https://api.github.com/repos/ejclark/skynet-capital/issues/{item}/comments?per_page=100\" | grep -q bottleneck-research" }
-```
-
-`isolation` is unnecessary (no checkout, no file edits). Run several items concurrently — they are
+Items are open issues carrying the `bottleneck` label, passed as plain issue numbers (`"1318"`), so
+`{item}` substitutes cleanly. Run several items concurrently — they are
 independent by construction; a bottleneck whose answer depends on another's is two issues that
 should link each other, not one grind item.
 

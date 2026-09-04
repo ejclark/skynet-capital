@@ -1,13 +1,24 @@
+---
+name: fix-doc-rot
+description: fix one doc's dead references flagged by scripts/doc-rot-scan.mjs
+effort: low
+isolation: worktree
+outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
+---
+
 # Fix one doc's doc-rot findings
 
-**Calling convention:** group items **per doc**, not per finding — one item carries every flagged
-reference in that file (`{doc: "docs/LESSONS.md", refs: ["scripts/moneypenny.mjs", ...]}`), so
-overlapping fixes to the same file never need reconciling across PRs. Run with `isolation: true` —
-step 1 below does its own `git checkout -B`, and without a fresh worktree per item, concurrent items
-would share one working directory and stomp on each other's checkout. Chain the outcome check after
-this step — `{kind: "script", command: "git ls-remote --exit-code --heads origin {prev.branch}"}` —
-so a `done` is verified against origin, not trusted. The doc-rot budget already sits at 0, so the
-gate goes green on its own once every finding is fixed; there is no trailing `--update` to run.
+**Calling convention:** the front matter above is the calling convention — generate the call with
+`node scripts/grind-manifest.mjs --args --items '<json>' docs/grind/fix-doc-rot.instructions.md`
+rather than transcribing these values by hand (`isolation: worktree` because step 1 below does its own `git checkout -B`, and without a
+fresh worktree per item concurrent items share one working directory and stomp on each other's
+checkout; `outcomeCheck` so a `done` is verified against origin rather than trusted).
+
+What the front matter **cannot** carry, because `grind.js` cannot enforce it — group items **per
+doc**, not per finding. One item carries every flagged reference in that file
+(`{doc: "docs/LESSONS.md", refs: ["scripts/moneypenny.mjs", ...]}`), so overlapping fixes to the
+same file never need reconciling across PRs. The doc-rot budget already sits at 0, so the gate goes
+green on its own once every finding is fixed; there is no trailing `--update` to run.
 Fan as wide as the doc list goes: doc-rot has no Coach and touches no `src/**` seam, so the
 one-open-structural-PR-per-Coach WIP limit (`docs/COACHES.md`) does not apply — the per-doc
 grouping above is the only fence this chore needs.

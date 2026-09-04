@@ -1,11 +1,24 @@
+---
+name: test-backfill
+description: backfill BDD specs for one src file flagged by scripts/spec-gap-scan.mjs
+effort: high
+isolation: worktree
+outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
+---
+
 # Backfill one spec-gap finding
 
-**Calling convention:** invoke this step with `effort: "high"` — it duplicates the test-backfiller
+**Calling convention:** the front matter above is the calling convention — generate the call with
+`node scripts/grind-manifest.mjs --args --items '<json>' docs/grind/test-backfill.instructions.md`
+rather than transcribing these values by hand. `effort: high` because this duplicates the test-backfiller
 agent's own loop (`.claude/agents/test-backfiller.md`), which is pinned to high effort for the same
 reason grind's cheap default is the wrong fit here: judging correct-vs-buggy behavior before
-writing a spec is real work. Run with `isolation: true` — step 1 below does its own
+writing a spec is real work. `isolation: worktree` because step 1 below does its own
 `git checkout -B`, and without a fresh worktree per item, concurrent items share one working
-directory and stomp on each other's checkout. If the item list has more than ~3 files, stage it in
+directory and stomp on each other's checkout.
+
+What the front matter **cannot** carry, because `grind.js` cannot enforce it — if the item list has
+more than ~3 files, stage it in
 waves rather than one fully-parallel run, assemble each wave into ONE landing PR, and run
 `node scripts/spec-gap-scan.mjs --update` once per wave (not per item). That is the test-backfiller
 Coach's WIP limit as written — one open PR per Coach, counted in *open PRs, not dispatches*

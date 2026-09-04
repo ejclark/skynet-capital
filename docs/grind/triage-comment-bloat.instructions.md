@@ -1,10 +1,22 @@
+---
+name: triage-comment-bloat
+description: triage one file's narration-only comments flagged by scripts/comment-bloat-scan.mjs
+effort: low
+isolation: worktree
+outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
+---
+
 # Triage one comment-bloat finding
 
-**Calling convention:** fan items **per file**, not per flagged comment — a file with 3 flagged
-comments is one item, not three. Run with `isolation: true` — step 1 below does its own
+**Calling convention:** the front matter above is the calling convention — generate the call with
+`node scripts/grind-manifest.mjs --args --items '<json>' docs/grind/triage-comment-bloat.instructions.md`
+rather than transcribing these values by hand. `isolation: worktree` because step 1 below does its own
 `git checkout -B`, and without a fresh worktree per item, concurrent items share one working
-directory and stomp on each other's checkout; worktree isolation, plus the per-file (not
-per-comment) grouping, keeps items from colliding. Run `node scripts/comment-bloat-scan.mjs
+directory and stomp on each other's checkout.
+
+What the front matter **cannot** carry, because `grind.js` cannot enforce it — fan items **per
+file**, not per flagged comment: a file with 3 flagged comments is one item, not three. That
+grouping, plus worktree isolation, keeps items from colliding. Run `node scripts/comment-bloat-scan.mjs
 --update` once, as a single trailing step after every item lands, not inside each item's own
 chain. Fan as wide as the file list goes: comment-bloat has no Coach and changes no code, so the
 one-open-structural-PR-per-Coach WIP limit (`docs/COACHES.md`) does not apply — the per-file fence
