@@ -161,6 +161,7 @@ async function main(): Promise<void> {
   const {
     allowlist,
     botControls,
+    subscriptions,
     knownPersonaIds,
     auth,
     password,
@@ -227,6 +228,7 @@ async function main(): Promise<void> {
     addParticipant: (input) => service.addParticipant(input),
     rotateCredentials: (input) => service.rotateCredentials(input),
     accountAdmin: buildAccountAdmin(accounts, store),
+    subscriptions,
     ...(auth
       ? {
           invite: { store: allowlist, isOwner: (email: string) => owners.has(email) },
