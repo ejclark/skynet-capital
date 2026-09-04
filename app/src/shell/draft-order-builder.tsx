@@ -25,9 +25,10 @@ import { DisarmNote, GateHead } from "./gate-frame";
  * a phase transition itself, only renders the one the server just produced.
  */
 
-/** Exported alongside `ReviewBody` for `scripts/shoot-draft-builder.mjs` (docs/shots/pr-<n>) — the
- *  house's static-fixture screenshot convention (see `shoot-standings.mjs`) applied to a client
- *  React component instead of a server-rendered view. */
+/** Exported alongside `ReviewBody` for a `scripts/shoot/draft-builder.mjs` (docs/shots/pr-<n>) —
+ *  the house's static-fixture screenshot convention (`scripts/shoot/`, docs/PICTURES.md) applied to
+ *  a client React component instead of a server-rendered view. That script isn't written yet; the
+ *  harness it would sit on is, so it is now a copy of `scripts/shoot/feedback.mjs` away. */
 export function legLabel(leg: DraftLeg): string {
   const side = leg.action === "sell" ? "Sell" : "Buy";
   const type = leg.optionType === "call" ? "C" : "P";
