@@ -126,6 +126,34 @@ describe("createBotBroker", () => {
     }
   });
 
+  it("passes onSubmitted through to the wired adapter (#1211 slice 2)", async () => {
+    const { fetchFn } = fakeFetch({
+      "/v2/orders": {
+        status: 200,
+        body: { id: "o1", symbol: "AAPL", qty: "2", side: "buy", status: "accepted" },
+      },
+    });
+    const original = globalThis.fetch;
+    globalThis.fetch = fetchFn;
+    try {
+      const submitted: unknown[] = [];
+      const broker = createBotBroker(bot(), { onSubmitted: (info) => submitted.push(info) });
+      await broker.submit({
+        symbol: "AAPL",
+        quantity: 2,
+        side: "buy",
+        type: "market",
+        reason: "test",
+      });
+
+      expect(submitted).toEqual([
+        { orderId: "o1", symbol: "AAPL", side: "buy", quantity: 2, at: expect.any(String) },
+      ]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
   it("reports a rejected order when the wired broker's submit is rejected by the API", async () => {
     const { fetchFn } = fakeFetch({
       "/v2/orders": {

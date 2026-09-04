@@ -30,6 +30,7 @@ import type { PlaybookSubscription } from "../domain/types.js";
 import type { RiskConfig } from "../engine/guards.js";
 import { genericSafetyScenarios } from "../evals/scenarios/generic-safety.js";
 import { hardcoreScenarioPacks, scenarioPacks } from "../evals/scenarios/index.js";
+import type { ActivityEventBus } from "../observatory/activity-event.js";
 import { applyHardcore, createDefaultPersonas } from "../personas/registry.js";
 import type { EnabledPlaybook } from "../playbooks/playbook.js";
 import type { enabledPlaybooks } from "../playbooks/registry.js";
@@ -37,7 +38,7 @@ import { withPlaybooks } from "../playbooks/with-playbooks.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { createSubscriptionStore } from "../server/subscription-store.js";
 import { mergeRosters, subscriptionRoster } from "../subscriptions/subscription-roster.js";
-import { logResult } from "./autonomous-sinks.js";
+import { botOrderPublisher, logResult } from "./autonomous-sinks.js";
 
 const HARDCORE_COOLDOWN_MS = 90_000;
 
@@ -247,6 +248,9 @@ export function buildLiveBot(
     bootControls: ControlsState;
     /** Durable cooldown storage (slice 4) — omit to run cold-start, exactly as before this existed. */
     botsStateDb?: BotsStateDb;
+    /** The bots app's local event bus (#1211 slice 2) — omit (no durable dir configured) to run
+     *  exactly as before this existed: no publish attempted, nothing to fail. */
+    activityBus?: ActivityEventBus;
   },
 ): LiveBot {
   const hardcore = opts.hardcore.has(bot.persona.id);
@@ -271,7 +275,12 @@ export function buildLiveBot(
   // Swappable, not the plain factory: lets a future credential rotation swap the Alpaca
   // client this bot trades with in place, without restarting the process (and therefore
   // without losing any bot's in-memory momentum/sentiment/cooldown state).
-  const broker = new SwappableBotBroker(bot);
+  const broker = new SwappableBotBroker(
+    bot,
+    opts.activityBus
+      ? { onSubmitted: botOrderPublisher(bot.persona.id, opts.activityBus) }
+      : undefined,
+  );
   return {
     personaName: bot.persona.name,
     broker,

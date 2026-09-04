@@ -146,3 +146,40 @@ export function activityEventFromAuditRecord(record: OrderAuditRecord): Activity
     },
   };
 }
+
+/** One bot order the broker actually accepted. A structural (not imported) shape — mirrors
+ *  `AlpacaBrokerAdapter`'s `BotOrderSubmission` without this schema module depending on the
+ *  adapters layer; TypeScript's structural typing means the adapter's own shape satisfies
+ *  this one with no cast needed at the one real call site (`autonomous-live-wiring.ts`). */
+export interface BotOrderSubmissionInfo {
+  readonly participantId: string;
+  readonly orderId: string;
+  readonly symbol: string;
+  readonly side: "buy" | "sell";
+  readonly quantity: number;
+  readonly at: string;
+}
+
+/**
+ * One bot-autonomous order → one bus event — closes #1211 slice 2 (`AlpacaBrokerAdapter.submit`
+ * wrote no audit line at all for a bot's own orders, "a blind spot for reconstructing what a bot
+ * actually did"). `visibility: "owner-only"` matches `activityEventFromAuditRecord`'s tier for
+ * the same reason: who/what submitted an order is more sensitive than the public fill and has no
+ * current reader, so this can start at the correct tier from day one. `actor.kind: "bot"` is the
+ * one thing this translator knows that the human-desk one doesn't — the audit log's `ownerEmail`
+ * has no bot equivalent, so `actor.email` is simply never set here.
+ */
+export function activityEventFromBotOrder(info: BotOrderSubmissionInfo): ActivityEvent {
+  return {
+    id: `${info.orderId}:order.submitted:${info.at}`,
+    eventType: "order.submitted",
+    actor: { participantId: info.participantId, kind: "bot" },
+    target: { kind: "order", id: info.orderId },
+    at: info.at,
+    correlationId: info.orderId,
+    source: "bot",
+    outcome: "success",
+    visibility: "owner-only",
+    payload: { symbol: info.symbol, side: info.side, quantity: info.quantity },
+  };
+}
