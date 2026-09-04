@@ -35,7 +35,8 @@
  *               `OCC:` options-expiration calendar (theocc.com / Cboe; 3rd-Friday standard) ·
  *               `BEA:` bea.gov release schedule (GDP, PCE) · `CENSUS:` census.gov schedule
  *               (retail sales, durable goods) · `ISM:` ismworld.org PMI calendar ·
- *               `CB:` conference-board.org consumer-confidence schedule
+ *               `CB:` conference-board.org consumer-confidence schedule ·
+ *               `UMICH:` sca.isr.umich.edu Surveys of Consumers release schedule
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *
@@ -416,13 +417,26 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "University of Michigan consumer sentiment — preliminary (Sep 2026)",
     date: "2026-09-11",
-    status: "estimate",
+    status: "confirmed",
     source:
-      'EST: the University of Michigan Surveys of Consumers\' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628) lists verbatim "September 11 September Prelim" and "September 25 September Final"; the customary release time is 10:00 ET but the schedule document itself states no time. Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-09-04',
+      'UMICH: sca.isr.umich.edu states verbatim "Next data release: Friday, September 11, 2026 for Preliminary September data at 10am ET" (fetched direct 2026-09-04, read back verbatim-only on a second pass); corroborated by the Surveys of Consumers\' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628), whose PDF text layer lists "September 11 September Prelim" and "September 25 September Final"',
     impact: "low",
     symbols: [],
     notes:
-      "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Filed low, not medium, to respect the table's standing judgment that second-order surveys stay out — this is an admission for a named reason, not a reversal. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep.",
+      "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Filed low, not medium, to respect the table's standing judgment that second-order surveys stay out — this is an admission for a named reason, not a reversal. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep; promoted to confirmed by its own initial research, which fetched the publisher's next-release line (with a time) direct.",
+  },
+  {
+    id: "umich-sentiment-final-2026-09-25",
+    kind: "macro-print",
+    title: "University of Michigan consumer sentiment — final (Sep 2026)",
+    date: "2026-09-25",
+    status: "estimate",
+    source:
+      'EST: the 2026 release-dates document of the Surveys of Consumers (data.sca.isr.umich.edu/fetchdoc.php?docid=79628) lists "September 25 September Final" in its PDF text layer, decompressed direct 2026-09-04; the customary time is 10:00 ET but the schedule document states none, and the next-release line on sca.isr.umich.edu currently names only the 09-11 preliminary. Filed estimate per the no-self-confirm limit in the event-research lane on an event discovered in-sweep',
+    impact: "low",
+    symbols: [],
+    notes:
+      "Earns an entry rather than being a routine revision because of the collection rule in the same schedule document: final-release interviews run through the Monday before release (2026-09-21), making this the first UMich reading that can contain the 2026-09-16 FOMC decision — which the 09-11 preliminary structurally cannot (its interviews close 09-07). Discovered during umich-sentiment-prelim-2026-09-11 initial research.",
   },
   {
     id: "jolts-2026-09-29",
