@@ -197,7 +197,9 @@ picture grammar: [`PICTURES.md`](PICTURES.md); structure machine-checked by `scr
    "Review live after deploy: /route" bullet — the live page is Eric's fastest review format.
 3. **`Needs from you` — only when a human decision gates this merge.** A `> [!IMPORTANT]` callout,
    still above the fold, one numbered line per decision (closed question or named choice, reason
-   trailing). Omitted entirely on the ordinary PR; present ⇒ open as a draft, never auto-merge
+   trailing). Omitted entirely on the ordinary PR; present ⇒ open ready for review with
+   auto-merge unarmed (`ship open --hold`) — never a draft, which skips `verify` and reads as
+   unfinished work (Eric, 2026-09-04, #1304)
    (same rule as issues — [`ISSUES.md`](ISSUES.md) rule 6, Eric 2026-08-30).
 4. **Everything else below the fold** (`<details>`): Why, EARS acceptance criteria, the file-level
    walkthrough, trade-offs (link an ADR for hard-to-reverse calls), verification, risk/rollback,
