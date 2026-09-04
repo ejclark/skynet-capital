@@ -1,28 +1,34 @@
 # 10-Year TIPS auction (reopening) — treasury-10y-tips-2026-09-17
 
 **Kind:** rates · **Date:** 2026-09-17 (confirmed, TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18) · **Impact:** medium
-**Last assessed:** 2026-08-26
+**Last assessed:** 2026-09-02
+<!-- probe-ref: {"symbols":{},"vix":16.34,"daysBand":"medium:8+","adjacentIds":["fomc-2026-09-16","import-export-prices-2026-09-16","opex-2026-09-18","retail-sales-2026-09-16","treasury-20y-bond-2026-09-15"],"screenStreak":0} -->
 
 ## At a glance
 
 **TL;DR.** This is a **real-yield reopening (~$19B per the Aug refunding), the day after the Sep-16
 FOMC** — it reopens the July new-issue 10-year TIPS (CUSIP 91282CRE3) that drew a **real yield of
 2.438%, the highest since Oct 2008**, on lukewarm demand (bid-to-cover 2.30, tailed ~2.8bp above
-when-issued). The distinguishing signal here is not the nominal-supply story that drives the 10Y/30Y
-nominals — it is the **breakeven**: with the long-end selloff running on *real* rates / term premium
-while inflation breakevens have stayed roughly flat, this TIPS stop is the cleanest read on whether
-the market is repricing inflation expectations or just demanding real-rate compensation. Landing one
-day after a two-sided FOMC (hold vs. *hike*), the auction's real-yield stop and breakeven move
-double as an immediate post-Fed inflation-expectations gauge. Auction **date confirmed**; every
-size/when-issued/demand figure below is **estimate/press-sourced**. No symbol-keyed action —
-guard-shaped, watch-only.
+when-issued). The distinguishing signal is the **breakeven**, not the headline stop: the long-end
+selloff has run on *real* rates / term premium with breakevens flat, so this stop is the cleanest
+test of whether that decomposition still holds. **At D-15 the tape hardened on both axes.**
+Treasury's own daily real yield curve (primary, fetched 9/2) puts the **10-year real yield at 2.44%
+(9/1), up 10bp since the last pulse and at/above the 2.438% July stop that already drew soft
+demand** — the reopening is currently indicated to price at the level that produced a tail. And the
+FOMC it follows **flipped**: Kalshi **59% hike / 38% hold / 0% cut** (8/31), CME FedWatch 55.9%
+hike, reversing this doc's carried ~73% hold. The distinctive kill switch has **not** fired but has
+started moving: the 10-year breakeven is **2.35% (9/1), a 3-month high**, yet only **+3bp of the
++13bp nominal rise** since 8/26 — **~77% of the move is still real-rate**, so the framing survives.
+The driver is energy (Brent >$90 on renewed Hormuz strikes), partly offset by ISM prices-paid
+cooling a third month (71.1 in Aug). Auction **date confirmed**; every size/when-issued/demand
+figure is **estimate/press-sourced**. No symbol-keyed action — guard-shaped, watch-only.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (8/19) | Stand aside | High | 29 days out; medium-impact real-yield reopening — nothing here licenses action, and today's own 20Y result isn't posted yet. | Nothing at 29 days out; a medium-impact real-yield reopening licenses no action |
-| This week | Stand aside | High | The 30Y TIPS auction (8/20) is this week's real-yield read; this 10Y TIPS is a month out. | The **2026-08-20** 30Y TIPS auction giving the week's real-yield read |
-| This month | Watch the breakeven, not just the stop | Medium | Lands D+1 to the FOMC; a real-yield stop with a jump in breakevens flips the "real-rate not inflation" read the long end has run on. | 10-year breakevens jumping alongside the auction — the distinctive kill switch here |
-| This quarter | Watch | Medium | Feeds the real-rate/term-premium narrative through the Sep coupon block and into the Fed-path picture; context for long-duration names, not a standalone trade. | A weak-demand stop — real yield tailing well above when-issued, bid-to-cover below ~2.30 |
+| Today (9/2, D-15) | Stand aside | High | Written pre-open; the auction's own terms don't exist until the ~**9/11** announcement, and tonight's AVGO print (`estimate`) is not a rates input. | Nothing dated today for this event; its when-issued real yield is 9 days away |
+| This week | Watch the labor corridor, not the auction | High | ISM Svcs **9/3** and jobs **9/4** set the 9/16 decision this reopening is D+1 to; the auction itself has no terms yet. | The **2026-09-04** payroll print resolving the September FOMC decisively either way |
+| This month | Watch the breakeven, not just the stop | Medium | The stop lands D+1 to a meeting whose modal branch is now a **hike**, which lifts real yields directly into the 1:00pm release. | 10-year breakevens rising **materially** alongside the auction (≥ ~15bp from 2.35%), which flips the real-rate read |
+| This quarter | Real-rate story intact, but energy is testing it | Medium | Since 8/26 the 10Y move decomposes +10bp real / +3bp breakeven — still a term-premium story, with a live oil-led inflation leg. | Breakeven and real yield rising **together** at similar magnitude, i.e. the decomposition ceasing to be real-rate-dominant |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
@@ -35,9 +41,11 @@ guard-shaped, watch-only.
   FOMC.
 - **Benign tell:** a stop through/near when-issued with breakevens flat → no incremental real-rate or
   inflation headwind; the week's rate risk is then cleanly the FOMC reaction, not this auction.
-- **Never** — no directional bet; no new unhedged duration exposure into the 1:00pm ET release.
-- **Watch (dated)** — 30Y TIPS **Aug 20** (this week's real-yield read) · **FOMC Sep 15–16** (day
-  before) · quarterly OpEx **Sep 18** (day after) · 5Y **Sep 23** · 7Y **Sep 24**.
+- **Never** — no directional bet; no new unhedged duration exposure into the 1:00pm ET release, and
+  none carried naked across the 9/16→9/17 (FOMC → auction) pair.
+- **Watch (dated)** — jobs **Sep 4** · CPI **Sep 11** (same day as this auction's formal
+  announcement) · 20Y **Sep 15** · **FOMC Sep 15–16** (day before) · quarterly OpEx **Sep 18** (day
+  after) · 5Y **Sep 23** · 7Y **Sep 24**.
 
 ## Initial research
 
@@ -127,6 +135,15 @@ long-end selloff has been real-rate driven with breakevens flat, and this reopen
 after a two-sided FOMC. No new duration-sensitive positions into the 1:00pm ET release; existing
 high-duration exposure (CRWV highest, then NVDA/AVGO/MRVL) sized for both tails. No directional bet.
 
+**Sharpened at D-15 (2026-09-02; receipt: the row below) — the stance is unchanged, the tape is
+not.** Both of this doc's central uncertainties resolved toward the stress side inside one pulse:
+the 10-year real yield reached **2.44%** (Treasury's own daily real yield curve, 9/1), erasing the
+gap to the July predecessor's 2.438% stop, and the FOMC this auction follows flipped from a ~73%
+hold to a **hike as the modal branch** (~56–59%). The breakeven kill switch has **not** fired —
+2.35% is a 3-month high but only +3bp of a +13bp nominal move since 8/26, so the real-rate framing
+still carries ~77% of it — but it is no longer flat, and its driver (Brent >$90 on renewed Hormuz
+strikes) is live. Watch-only still: medium impact, no tracked symbols, no terms until ~9/11.
+
 **Kill switches:**
 
 - **Breakeven jump alongside the auction** — the distinctive kill switch: if 10-year breakevens rise
@@ -145,6 +162,7 @@ high-duration exposure (CRWV highest, then NVDA/AVGO/MRVL) sized for both tails.
 |---|---|---|---|---|
 | 2026-08-19 | D29 | Initial research banked (doc above). Adjacency — peers: no tracked-name prints since 8/17 (NVDA 8/26, MRVL 8/27, AVGO 9/2 ahead); live peer signal macro-driven — CRWV −12.1%, NVDA −2.4%, SOX −5% on 8/18 real-rate/financing fear. Macro: long-end selloff is **real-rate/term-premium driven with breakevens roughly flat** (per the 30Y TIPS sibling doc); this reopening reopens the July 10Y TIPS (real yield 2.438%, highest since Oct 2008, B/C 2.30, tailed ~2.8bp — soft demand). Sep-16 FOMC odds ~60–70% hold / ~30–40% hike / 0% cut per the FOMC sibling — **this reopening is D+1 to that meeting**, the first supply-side read after the Fed's signal. VIX ~15.2–15.9 on 8/18 (sources disagree), up from the 14.56 2026-low — mild vol pickup. Geopolitical: US–Iran deadline expired, oil spike — the one leg that *could* lift breakevens and flip the real-rate read. Event tape (date **confirmed**; size/yield figures **estimate**/press-sourced): reopening size ~$19B (Aug–Oct refunding), WI real yield not yet set (~9/11). No new dated adjacencies beyond what the calendar already tracks (30Y TIPS 8/20, FOMC 9/16, OpEx 9/18, 5Y 9/23, 7Y 9/24). | — (stance set) | 2026-08-26 (medium, ≥8d band: every 7d) |
 | 2026-08-26 | D-22 | Adjacency sweep. Event tape: the reopening's own WI real yield still not set this far out (~9/11, unchanged from D-29); a same-window nominal-10Y auction (8/12) posted bid-to-cover 2.53x with strong 76.7% indirect demand — a nominal-side data point, not directly transferable to the real-yield/TIPS market, but a reminder the belly's nominal demand has been firmer than the long-end's (per the 20Y sibling doc's weak 8/19 predecessor) — the real-rate-vs-term-premium disentangling this doc's stance depends on stays unresolved. Peers: NVDA reported tonight, MRVL tomorrow — both own docs show de-stressed implied moves; no CRWV-specific move found this pass. Macro: Sep 15–16 FOMC odds firmed to ~73% hold/26% hike/1% cut (Kalshi, checked today) from the ~60-70%/30-40%/0% split carried since D29 — hold conviction building, still zero cut priced; this reopening remains D+1 to that meeting. Volatility regime: VIX ~15.8, calm, no shift. Geopolitical: Strait of Hormuz escalated further overnight (tanker hit off Oman 8/25) — still the one leg that could lift breakevens and flip the real-rate framing; no breakeven-specific data found this pass. No new dated adjacency to propose. | — (no change; watch-only stance holds, real-rate-vs-inflation framing unresolved) | 2026-09-02 (medium, ≥8d band: every 7d) |
+| 2026-09-02 | D-15 | Adjacency sweep, written pre-open. **Event tape — the load-bearing finding, and it comes from the primary source this doc had been missing.** Treasury's own daily real yield curve (home.treasury.gov CSV, fetched today) puts the **10-year CMT real yield at 2.44% (9/1)**, from **2.34% (8/26)** at the last row — **+10bp**, back to 2026 high-water territory (year's max 2.47 on 7/31) and **at/above the July predecessor's 2.438% stop**, the 17-year-high real yield that itself drew a ~2.8bp tail on a 2.30 cover. Read plainly: the reopening is currently indicated to price at the level that already produced soft demand. Caveat kept honest — CMT is an interpolated constant-maturity series, not CUSIP 91282CRE3's own when-issued yield, which does not exist until the ~**9/11** formal announcement; this is direction, not a stop forecast. Size ~**$19B** re-confirmed unchanged for the Aug–Oct quarter (Treasury quarterly refunding statement sb0590) — still carried **estimate** per this lane's no-self-confirm limit. **Breakeven — the distinctive kill switch has NOT fired, but it stopped being flat.** Own computation from the two Treasury curves: 10-year breakeven **2.35% (9/1)** vs **2.32% (8/26)**, and 2.22% on 8/05 — **2.35% is the highest since 06/08/2026**. Decomposing the move since the last row: nominal 10Y +13bp (4.66→**4.79%**), of which **real +10bp and breakeven +3bp** — **~77% still real-rate**, so the stance's framing survives on its own terms; +3bp is not the "material rise" the kill switch names. The correct update is not "the read flipped" but "the inflation leg has begun to carry a visible minority of the move, on a driver that is live." **Geopolitical — that driver.** Brent above **$90** after US–Iran strikes resumed and Hormuz reopening hopes faded (Al Jazeera/Gulf News, late Aug–9/1); RBOB +82% YTD, +15% w/w. Partly offset by **ISM Manufacturing Prices Paid 71.1 in Aug** vs 72 expected and 73 prior — a third consecutive month of cooling goods-price pressure (ISM report, 9/1) — which is plausibly why the breakeven moved 3bp and not 30. **Macro surprise — the D+1 adjacency re-rated.** September FOMC odds flipped to **hike as the modal branch**: Kalshi **59% hike / 38% hold / 0% cut** (8/31), CME FedWatch **55.9% hike** — reversing the D-22 row's ~73% hold / 26% hike (Kalshi, 8/26); cause is Warsh's 8/28 Jackson Hole keynote, scored in the [FOMC sibling](fomc-2026-09-16.md). A hike lifts real yields directly into this stop, compounding the tape above rather than offsetting it. **Volatility regime:** VIX **16.34 (9/1)** from 15.21 (8/26) — **+1.13, under the 3-point threshold**; no regime shift, but the window's high. **Peers / high-duration reference tape** (own Yahoo daily-close probe, 8/26→9/1; this event carries `symbols: []`, so these are reference only): CRWV 88.01→**81.85** (−7.0%), MRVL 245.11→**210.39** (−14.2%, post-print digestion), NVDA 209.66→**217.44** (+3.7%), AVGO 355.59→**369.68** (+4.0%, prints tonight 9/2 AMC, **estimate**). **Kill switch 4 (>5% single-session move in a high-duration name) is NOT triggered on this event's terms** — CRWV's worst single session in the window is 8/31→9/1 at −3.6%, the −7% is cumulative, and none of it falls on or around auction day. **No new dated adjacency to propose** — everything found within 5 days is already tracked (20Y 9/15, FOMC 9/16, retail sales 9/16, import/export prices 9/16, OpEx 9/18), and the ~9/11 formal announcement shares its date with the already-tracked CPI. | — (watch-only holds; tape hardened both axes — real yield now at the July stop, FOMC modal branch flipped to hike, breakeven at a 3-month high but still only 3bp of a 13bp move) | 2026-09-09 (medium, ≥8d band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in

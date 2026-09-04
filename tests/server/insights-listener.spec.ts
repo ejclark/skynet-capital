@@ -225,6 +225,146 @@ describe("GET /controls — onControlsPoll", () => {
   });
 });
 
+describe("GET /bot-credentials", () => {
+  async function withCredentialsListener(
+    config: Parameters<typeof createInsightsListener>[0],
+    run: (base: string) => Promise<void>,
+  ): Promise<void> {
+    const server = createInsightsListener(config);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await run(`http://127.0.0.1:${port}`);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }
+
+  const SECRET = "test-bot-credentials-secret";
+  const BOT_CREDENTIALS_SECRET_HEADER = "x-skynet-bot-credentials-secret";
+
+  it("404s when no botCredentials config is wired at all", async () => {
+    await withCredentialsListener({ record: capturingRecorder().record }, async (base) => {
+      const res = await fetch(`${base}/bot-credentials?id=sauron`, {
+        headers: { [BOT_CREDENTIALS_SECRET_HEADER]: SECRET },
+      });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  it("refuses without the bot-credentials secret, even with the (public) insights one", async () => {
+    await withCredentialsListener(
+      {
+        record: capturingRecorder().record,
+        botCredentials: { secret: SECRET, resolve: () => ({ apiKey: "k", apiSecret: "s" }) },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/bot-credentials?id=sauron`, {
+          headers: { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
+        });
+        expect(res.status).toBe(401);
+      },
+    );
+  });
+
+  it("returns the resolved credential on a correctly-authenticated request", async () => {
+    await withCredentialsListener(
+      {
+        record: capturingRecorder().record,
+        botCredentials: {
+          secret: SECRET,
+          resolve: (id) => (id === "sauron" ? { apiKey: "k", apiSecret: "s" } : undefined),
+        },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/bot-credentials?id=sauron`, {
+          headers: { [BOT_CREDENTIALS_SECRET_HEADER]: SECRET },
+        });
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ apiKey: "k", apiSecret: "s" });
+      },
+    );
+  });
+
+  it("404s an id the resolver has nothing for", async () => {
+    await withCredentialsListener(
+      {
+        record: capturingRecorder().record,
+        botCredentials: { secret: SECRET, resolve: () => undefined },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/bot-credentials?id=ghost`, {
+          headers: { [BOT_CREDENTIALS_SECRET_HEADER]: SECRET },
+        });
+        expect(res.status).toBe(404);
+      },
+    );
+  });
+
+  it("400s a request with no id", async () => {
+    await withCredentialsListener(
+      {
+        record: capturingRecorder().record,
+        botCredentials: { secret: SECRET, resolve: () => ({ apiKey: "k", apiSecret: "s" }) },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/bot-credentials`, {
+          headers: { [BOT_CREDENTIALS_SECRET_HEADER]: SECRET },
+        });
+        expect(res.status).toBe(400);
+      },
+    );
+  });
+
+  it("502s (not a crash) when the resolver throws, and stays alive after", async () => {
+    await withCredentialsListener(
+      {
+        record: capturingRecorder().record,
+        botCredentials: {
+          secret: SECRET,
+          resolve: () => {
+            throw new Error("store read failed");
+          },
+        },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/bot-credentials?id=sauron`, {
+          headers: { [BOT_CREDENTIALS_SECRET_HEADER]: SECRET },
+        });
+        expect(res.status).toBe(502);
+      },
+    );
+    await withCredentialsListener(
+      {
+        record: capturingRecorder().record,
+        botCredentials: { secret: SECRET, resolve: () => ({ apiKey: "k", apiSecret: "s" }) },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/bot-credentials?id=sauron`, {
+          headers: { [BOT_CREDENTIALS_SECRET_HEADER]: SECRET },
+        });
+        expect(res.status).toBe(200);
+      },
+    );
+  });
+
+  it("405s a non-GET method", async () => {
+    await withCredentialsListener(
+      {
+        record: capturingRecorder().record,
+        botCredentials: { secret: SECRET, resolve: () => ({ apiKey: "k", apiSecret: "s" }) },
+      },
+      async (base) => {
+        const res = await fetch(`${base}/bot-credentials?id=sauron`, {
+          method: "POST",
+          headers: { [BOT_CREDENTIALS_SECRET_HEADER]: SECRET },
+        });
+        expect(res.status).toBe(405);
+      },
+    );
+  });
+});
+
 describe("resolveInsightsBridgePort", () => {
   it("defaults to 8788", () => {
     expect(resolveInsightsBridgePort({})).toBe(8788);

@@ -44,7 +44,7 @@ describe("bot-relevant classifier (deploy split)", () => {
   });
 
   it("deploys on dependency, image, and hosting-config changes", () => {
-    for (const path of ["package-lock.json", "Dockerfile", "fly.bots.toml", ".nvmrc"]) {
+    for (const path of ["package-lock.json", "Dockerfile", "fly.bots.toml", "mise.toml"]) {
       expect(classify([path]).deploy, `${path} must deploy bots`).toBe(true);
     }
   });
