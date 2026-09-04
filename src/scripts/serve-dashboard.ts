@@ -31,7 +31,6 @@ import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { mergeRoster, type Participant } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
-import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
 import { resolveDeskTrading } from "../server/account-identity-gate.js";
 import { createAccountService } from "../server/account-service.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
@@ -43,6 +42,7 @@ import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
+import { warnAccountCollisions, warnUnpinnedVolumes } from "./dashboard-boot-warnings.js";
 import { setupCompanion } from "./dashboard-companion.js";
 import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
@@ -51,8 +51,7 @@ import { wireOpsStatus } from "./dashboard-ops-status.js";
 const PORT = resolvePort(process.env);
 
 async function main(): Promise<void> {
-  // Boot-time backstop for drift the CI gate can't see (docs/LESSONS.md, "guest list … volume").
-  for (const warning of volumePersistenceWarnings(process.env)) console.warn(warning);
+  warnUnpinnedVolumes(process.env);
   const dataSource = resolveDataSource(process.env);
   const store = createParticipantStore(process.env);
   const envRoster = dataSource.loadParticipants();
@@ -72,15 +71,7 @@ async function main(): Promise<void> {
     history,
     await buildDashboardData(roster, { clientFactory: dataSource.clientFactory }),
   );
-  // Collision check — see docs/LESSONS.md (2026-08-11). Two participants that resolve to the
-  // SAME Alpaca account look completely healthy individually (both authenticate); nothing else
-  // would ever notice. This must be checked at boot, every boot, because it's exactly the shape
-  // of mistake a credential rotation can silently introduce.
-  for (const collision of initial.collisions) {
-    console.error(
-      `[collision] ${collision.ids.join(" and ")} are BOTH pointed at Alpaca account ${collision.accountId} — positions/P&L will merge and be unattributable. Fix the credentials before trusting either account's numbers.`,
-    );
-  }
+  warnAccountCollisions(initial.collisions);
 
   const hub = new ObservatoryHub(initial);
   const ceremonies = new CeremonyChannel();
