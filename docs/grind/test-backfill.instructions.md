@@ -32,8 +32,10 @@ behavioral BDD specs for it — never modify `src/**` or existing tests.
    error paths).
 5. `npm run verify` — must exit 0, or stop and report `status: "blocked"` with the failing output.
 6. Commit (`test: behavioral specs for <module>`), push with retries. Report the module, test
-   count, behaviors covered. Do NOT run `--update` yourself — that happens once per wave, after
-   every item in it lands (see calling convention above).
+   count, behaviors covered, and the pushed branch name in `branch` — chain `{kind: "script",
+   command: "git ls-remote --exit-code --heads origin {prev.branch}"}` after this step so the push
+   is verified, not trusted (`docs/grind/README.md`). Do NOT run `--update` yourself — that happens
+   once per wave, after every item in it lands (see calling convention above).
 
 ## Guardrails
 

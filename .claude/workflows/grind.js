@@ -13,7 +13,7 @@ export const meta = {
     '  - {kind:"instructions", path, extra?} — points at a checked-in *.instructions.md file (see docs/grind/README.md); the agent reads it and carries it out against the item. Write the chore once, reuse the file across every grind run instead of re-pasting a template.\n' +
     '  - {kind:"skill", name, args?} — the agent invokes an existing repo skill (its .claude/skills/<name>/SKILL.md), exactly as if a user typed "/<name>", targeted at the item.\n' +
     '  - {kind:"script", command} — the agent runs the exact shell command (with {item}/{prev} substituted) and reports pass/fail only — no exploration, no judgment. The cheapest, fastest, most deterministic step kind; prefer it whenever the chore reduces to a command.\n' +
-    '  Every step after the first receives the prior step\'s structured {status, summary} as {prev} in its prompt, so steps compose (e.g. script check -> skill fix -> script re-check). Per-step overrides: effort/model.',
+    '  Every step after the first receives the prior step\'s structured {status, summary, branch?} result — as {prev} (the whole JSON) or {prev.<field>} (one field) — in its prompt, so steps compose (e.g. script check -> skill fix -> script re-check). A step that pushes a branch should report it in branch, so a trailing {kind:"script", command:"git ls-remote --exit-code --heads origin {prev.branch}"} verifies the push actually happened instead of trusting the self-report — a "done" with no branch on origin fails closed (docs/grind/README.md). Per-step overrides: effort/model.',
   phases: [{ title: 'Grind' }],
 }
 
@@ -58,18 +58,27 @@ const RESULT_SCHEMA = {
   properties: {
     status: { type: 'string', enum: ['done', 'blocked', 'skipped'] },
     summary: { type: 'string' },
+    branch: {
+      type: 'string',
+      description: 'the git branch this step pushed to origin, if it pushed one — lets a later script step verify the push happened',
+    },
   },
 }
 
 function labelFor(item) {
   if (typeof item === 'string') return item
-  return item.label || item.id || item.sym || item.branch || JSON.stringify(item).slice(0, 40)
+  return item.label || item.id || item.sym || item.branch || item.file || item.doc || item.path || JSON.stringify(item).slice(0, 40)
 }
 
 function substitute(template, item, prev) {
   const value = typeof item === 'string' ? item : JSON.stringify(item)
   let out = template.split('{item}').join(value)
-  if (prev !== undefined) out = out.split('{prev}').join(JSON.stringify(prev))
+  if (prev !== undefined) {
+    // {prev.field} before {prev}: a missing field substitutes to '' so a command that needs it
+    // (e.g. git ls-remote ... {prev.branch}) fails closed instead of running against garbage.
+    out = out.replace(/\{prev\.([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, key) => (prev?.[key] == null ? '' : String(prev[key])))
+    out = out.split('{prev}').join(JSON.stringify(prev))
+  }
   return out
 }
 
@@ -81,15 +90,15 @@ function promptFor(step, item, prev) {
       return substitute(step.template, item, prev)
     case 'instructions': {
       const extra = step.extra ? `\n\nAdditional guidance for this run:\n${step.extra}` : ''
-      return `Read the instructions file at ${step.path} and carry it out for the target below. Follow the file's own steps and guardrails exactly; do not improvise beyond what it specifies.\n\nTarget: ${target}${prevNote}${extra}`
+      return `Read the instructions file at ${step.path} and carry it out for the target below. Follow the file's own steps and guardrails exactly; do not improvise beyond what it specifies. If you push a branch, report its exact name in the "branch" field of your result.\n\nTarget: ${target}${prevNote}${extra}`
     }
     case 'skill': {
       const argsNote = step.args ? ` with args: ${step.args}` : ''
-      return `Invoke the "${step.name}" skill (as if a user typed /${step.name}${argsNote}) targeted at: ${target}.${prevNote}`
+      return `Invoke the "${step.name}" skill (as if a user typed /${step.name}${argsNote}) targeted at: ${target}. If you push a branch, report its exact name in the "branch" field of your result.${prevNote}`
     }
     case 'script': {
       const cmd = substitute(step.command, item, prev)
-      return `Run exactly this command and nothing else — no exploration, no fixing, just execute and report:\n\n${cmd}\n\nReport status "done" if it exits 0, "blocked" if it exits non-zero (include the failing output in your summary), "skipped" only if the command is genuinely inapplicable to this target (say why).`
+      return `Run exactly this command and nothing else — no exploration, no fixing, just execute and report:\n\n${cmd}\n\nReport status "done" if it exits 0, "blocked" if it exits non-zero (include the failing output in your summary), "skipped" only if the command is genuinely inapplicable to this target (say why). If the previous step reported a branch, carry it forward unchanged in your own "branch" field.`
     }
     default:
       throw new Error(`grind: unknown step kind "${step.kind}"`)

@@ -275,6 +275,16 @@ common routes:
   touching `envelope.json`'s protected class — those want a purpose-built pass or Eric's gate, not
   a cheap fan-out (a `/governor` athlete's own WIP=1 throttle is deliberate for the same reason —
   check before fanning a skill/agent that already has one).
+- **A bottleneck surfaced by fan-out** (Eric, 2026-09-04: "given we are fanning out process, I
+  expect a number of new bottlenecks to surface... capture and delegate pursuit of opportunities to
+  integrate superior solutions") — ToC's own corollary: elevate one constraint and the next binds.
+  The moment a constraint is *measured* (a rate limit hit, a WIP throttle blocking a batch, a shared
+  file every lane races, a manual step every session repeats), file it with **`/issue`** + the
+  **`bottleneck`** label — a capsule with the evidence, not a hunch — and let
+  `docs/grind/research-bottleneck.instructions.md` pursue it: a grind run over the open
+  `bottleneck` issues finds the superior *existing* solution first (bespoke last), battle-tests it,
+  and leaves a call sheet + routing label (`feedback` / `needs-eric` / `next-slice`) on the issue.
+  Capture is every session's job the instant it's measured; pursuit is delegated, never Eric's.
 - **"file this as an issue"**, or an issue that reads as a wall → **`/issue`** (shapes the capsule,
   lints via `npm run issue:lint`).
 - **Any reaction to a rendered frame** ("this looks terrible", "a 30/100", "more dramatic") →
