@@ -3,9 +3,8 @@
  * catalog. A playbook answers one question per cycle ("what should my book look like right now?"),
  * so the honest way to describe its shape is to ASK it, day by day, around a synthetic print.
  *
- * The walk itself lives in `playbook-probe.ts`, shared with the Playbook Store's catalog
- * (`playbook-store.ts`) — one producer, so a play can never be described one way on a shelf and
- * another way on its card.
+ * The walk itself lives in `playbook-probe.ts`, shared with the Outpost's cards — one producer, so
+ * a play can never be described one way on a shelf and another way on its card.
  */
 import type { Playbook } from "../playbooks/playbook.js";
 import type { Collection, CollectionMember } from "./collection.js";
