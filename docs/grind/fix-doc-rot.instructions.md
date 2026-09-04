@@ -1,9 +1,13 @@
 # Fix one doc-rot finding
 
-**Calling convention:** run items sequentially (`isolation: false`) — doc-rot findings frequently
-collapse onto the same handful of files, and parallel worktree agents editing the same doc race
-each other. Run `node scripts/doc-rot-scan.mjs --update` once, as a single trailing step after
-every item lands, not inside each item's own chain (it rewrites one shared budget file).
+**Calling convention:** run with `isolation: true` — each item does its own `git checkout -B` in
+step 1, and without a fresh worktree per item, concurrent items would share one working directory
+and stomp on each other's checkout. Worktree isolation avoids that entirely (each item gets its
+own branch and working copy), even when several items land in the same doc — the only residual
+risk is an ordinary merge conflict when landing overlapping PRs afterward, which is ship.sh's/a
+human's job to resolve, not a grind execution-time race. Run
+`node scripts/doc-rot-scan.mjs --update` once, as a single trailing step after every item lands,
+not inside each item's own chain (it rewrites one shared budget file).
 
 ## Goal
 
