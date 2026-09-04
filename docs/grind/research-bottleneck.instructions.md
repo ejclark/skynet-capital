@@ -68,7 +68,12 @@ docs first").
    `needs-eric` when the recommended step is his call (a protected path, spend, a policy choice);
    `feedback` when it's buildable now, in-envelope, by the Moneypenny lane; `next-slice` when it
    depends on something else landing first. Never remove `bottleneck`, never close the issue —
-   the lane that acts on the call sheet does that.
+   the lane that acts on the call sheet does that. **If the issue carries `needs-eric` and your
+   call sheet establishes that no decision remains** — the policy is already written, the fact is
+   already settled, the fork was a false one — **remove it** (`DELETE .../issues/<n>/labels/needs-eric`)
+   and say in the comment exactly which evidence settled it. Eric, 2026-09-04, on the first time
+   this happened (#1318): "that is fantastic; ideal" — a stale `needs-eric` spends his attention on
+   nothing. Leave it on when any genuine choice remains, however small.
 7. Report `status: "done"` with the comment's `html_url` in `summary`.
 
 ## Guardrails
