@@ -18,6 +18,17 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Debug after-hours order staging without waiting for the market to open
+
+Tony reported staging a trade after hours that executed as soon as the market opened — that's
+observable behavior Sauron's autonomous trading logic could plausibly be driven through directly
+(replay/trigger the same code path deliberately), rather than waiting for a live after-hours →
+open window to reproduce. Couldn't find an existing tracked issue this maps to (searched issues for
+"after hours"/"market open"/"Tony" — no hits) — worth confirming with Eric which bug this is meant
+to help debug before building anything, since the technique is only useful attached to a real
+target.
+_(src: Eric · while: settings-nav session, 2026-09-04)_
+
 ### The remote container runs Node 22 against `engines.node >=24`
 
 Every install warns `EBADENGINE` (package.json wants >=24, the web environment ships v22.22.2).
