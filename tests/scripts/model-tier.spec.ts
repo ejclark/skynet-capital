@@ -32,10 +32,38 @@ describe("feedback model tier", () => {
   // issue's own skynet-spec block (readiness + criteria count), never from body text or length —
   // that text-length guessing is exactly what the pre-2026-08-22 heuristic got wrong.
   it("defaults to Sonnet for a well-scoped, spec-complete ask (at or under the simple-ask floor)", () => {
-    for (const criteria of [["one thing"], ["a", "b"], ["a", "b", "c"]]) {
-      const body = specBlock({ rounds: 0, criteria, assumptions: [], readiness: "spec-complete" });
+    // 2 and 3 criteria stay Sonnet regardless of assumptions; 1 criterion stays Sonnet only when
+    // an open assumption keeps it off the Haiku band below.
+    for (const [criteria, assumptions] of [
+      [["one thing"], ["an open question"]],
+      [["a", "b"], []],
+      [["a", "b", "c"], []],
+    ] as const) {
+      const body = specBlock({ rounds: 0, criteria, assumptions, readiness: "spec-complete" });
       expect(tier(body).model).toBe("claude-sonnet-5");
     }
+  });
+
+  // 2026-08-31 (same day, Eric's follow-up): a request can be simple enough for Haiku — strictly
+  // below the Sonnet floor above (issue #981's 3-criteria case was explicitly "Sonnet is enough").
+  it("downgrades to Haiku for a single, unambiguous criterion with no open assumptions", () => {
+    const body = specBlock({
+      rounds: 0,
+      criteria: ["rename the button label"],
+      assumptions: [],
+      readiness: "spec-complete",
+    });
+    expect(tier(body).model).toBe("claude-haiku-4-5-20251001");
+  });
+
+  it("keeps a single-criterion ask on Sonnet once it carries an open assumption", () => {
+    const body = specBlock({
+      rounds: 0,
+      criteria: ["rename the button label"],
+      assumptions: ["assuming the old label isn't referenced elsewhere"],
+      readiness: "spec-complete",
+    });
+    expect(tier(body).model).toBe("claude-sonnet-5");
   });
 
   it("escalates to Opus once criteria count exceeds the simple-ask floor", () => {

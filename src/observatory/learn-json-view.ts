@@ -2,7 +2,12 @@ import { passingCount } from "../domain/comprehension.js";
 import { checkFor } from "../domain/comprehension-checks.js";
 import { COURSES, totalPoints } from "../domain/curriculum.js";
 import { type EarnedEngagement, engagementMilestone } from "../domain/engagement.js";
-import { type EarnedMilestone, ladderNeighbor, milestoneForCode } from "../domain/progression.js";
+import {
+  type EarnedMilestone,
+  LADDER_GATE_NOTE,
+  ladderNeighbor,
+  milestoneForCode,
+} from "../domain/progression.js";
 import type { AcademyProgress } from "../server/progression-service.js";
 
 /**
@@ -83,6 +88,8 @@ export interface LearnView {
   readonly points: number;
   readonly totalPoints: number;
   readonly rank: string;
+  /** The feedback gate (#1119), when it holds: the reason and the sentence the pages show. */
+  readonly gate?: { readonly reason: string; readonly note: string };
   readonly courses: readonly CourseView[];
   /** Fresh earns awaiting their one-time celebration — the shell renders the fanfare. */
   readonly celebrating: readonly CelebrationView[];
@@ -142,6 +149,9 @@ export function learnJsonView(progress?: AcademyProgress): LearnView {
     points: progress?.points ?? 0,
     totalPoints: totalPoints(),
     rank: progress?.rank.title ?? "Observer",
+    ...(progress?.ladderGate
+      ? { gate: { reason: progress.ladderGate, note: LADDER_GATE_NOTE } }
+      : {}),
     courses: COURSES.map((course) => {
       const milestones = course.milestones.map((m) => {
         const earned = earnedById.get(m.id);

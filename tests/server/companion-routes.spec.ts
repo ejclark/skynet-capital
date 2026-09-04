@@ -254,3 +254,47 @@ describe("serveCompanionApi — POST /api/companion/chat", () => {
     expect(calls).toBeLessThan(41); // the burst cap (40) kicked in before the last one
   });
 });
+
+describe("serveCompanionApi — POST /api/companion/ack", () => {
+  it("the route doesn't exist for an unauthed visitor", async () => {
+    const { res, out } = fakeRes();
+    const handled = await serveCompanionApi(
+      post({}),
+      res,
+      "/api/companion/ack",
+      configWith(),
+      undefined,
+    );
+    expect(handled).toBe(false);
+    expect(out.status).toBeUndefined();
+  });
+
+  it("records the member's first message and answers ok — no companion required", async () => {
+    const recorded: string[] = [];
+    const config = configWith({
+      readMessages: () => Promise.resolve([]),
+      recordMessage: (id) => {
+        recorded.push(id);
+        return Promise.resolve();
+      },
+    });
+    const { res, out } = fakeRes();
+    await serveCompanionApi(post({}), res, "/api/companion/ack", config, sessionFor(email()));
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+    expect(recorded).toHaveLength(1);
+  });
+
+  it("never records twice for a member who already has an entry", async () => {
+    let calls = 0;
+    const config = configWith({
+      readMessages: () => Promise.resolve([{ opaqueMemberId: "x", at: "2026-09-01T00:00:00Z" }]),
+      recordMessage: () => {
+        calls++;
+        return Promise.resolve();
+      },
+    });
+    const { res } = fakeRes();
+    await serveCompanionApi(post({}), res, "/api/companion/ack", config, sessionFor(email()));
+    expect(calls).toBe(0);
+  });
+});

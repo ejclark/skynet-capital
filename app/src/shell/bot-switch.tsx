@@ -8,6 +8,7 @@ import { botControlRequest, type OwnedAccount } from "../live/settings";
  * Mission Control's fleet-wide authority (that card answers to the env allowlist). The server
  * re-checks ownership on every post; honesty rules carry over: latency stated, and a bot held by
  * the fleet-wide stand-down says so rather than pretending its own switch is what stopped it.
+ * @category desk
  */
 export function BotSwitch({
   account,

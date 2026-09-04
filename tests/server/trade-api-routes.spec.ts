@@ -130,4 +130,54 @@ describe("serveTradeApi", () => {
     expect(body.ok).toBe(false);
     expect(body.refusals.join(" ")).toContain("isn't wired");
   });
+
+  // The message gate (#1119, lowered 2026-09-03): a BUY opens a position and is refused while the
+  // gate holds; a SELL is an exit and never is.
+  const gated = {
+    progression: {
+      view: () =>
+        Promise.resolve({ wheels: true, unlocked: new Set(), ladderGate: "first-message" }),
+    },
+  } as unknown as Partial<DashboardServerConfig>;
+
+  it("prepends the message-gate refusal to a gated buy's review", async () => {
+    const { res, out } = fakeRes();
+    await serveTradeApi(
+      post({ ...ticket, action: "buy" }),
+      res,
+      "/api/trade/review",
+      configWith(gated),
+      session,
+    );
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.preview.ok).toBe(false);
+    expect(body.preview.refusals[0]).toContain("hello to Moneypenny");
+  });
+
+  it("refuses a gated buy at submit before the seam sees it", async () => {
+    const { res, out } = fakeRes();
+    let seen = 0;
+    await serveTradeApi(
+      post({ ...ticket, action: "buy" }),
+      res,
+      "/api/trade/submit",
+      configWith({
+        ...gated,
+        submitTrade: () => {
+          seen++;
+          return Promise.resolve({ ok: true, orderId: "x", status: "accepted", symbol: "AAPL" });
+        },
+      } as unknown as Partial<DashboardServerConfig>),
+      session,
+    );
+    expect(JSON.parse(out.body ?? "{}").ok).toBe(false);
+    expect(seen).toBe(0);
+  });
+
+  it("leaves a sell outside the gate — an exit is never locked", async () => {
+    const { res, out } = fakeRes();
+    await serveTradeApi(post(ticket), res, "/api/trade/review", configWith(gated), session);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.preview.refusals.some((r: string) => r.includes("Moneypenny"))).toBe(false);
+  });
 });

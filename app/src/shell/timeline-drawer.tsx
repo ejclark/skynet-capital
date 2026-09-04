@@ -48,6 +48,7 @@ function EventLine({ event }: { readonly event: DeskActivityEvent }): ReactEleme
   );
 }
 
+/** @category navigation */
 export function TimelineDrawer({
   deskId,
   symbol,

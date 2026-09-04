@@ -14,6 +14,7 @@ import { fetchSettings, ownsAccount } from "../live/settings";
  * session owns — ownership from the same `["settings"]` query the Settings page runs, so it is
  * one cached fetch and the server stays the only authority on identity. Off your own desk the
  * item is absent, not disabled; the topbar's app-level Settings is the viewer-scoped one.
+ * @category navigation
  */
 export function DeskRail({
   id,
@@ -24,7 +25,7 @@ export function DeskRail({
   readonly id: string;
   readonly name: string;
   readonly kind: "human" | "bot";
-  readonly current: "active" | "decisions" | "pulse";
+  readonly current: "active" | "decisions" | "pulse" | "playbooks";
 }): ReactElement {
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const isOwnDesk = ownsAccount(settings.data, id);
@@ -60,10 +61,19 @@ export function DeskRail({
           Pulse
         </Link>
       )}
+      {current === "playbooks" ? (
+        <span className="rail-current" aria-current="page">
+          Playbook Store
+        </span>
+      ) : (
+        <Link to="/u/$id/playbooks" params={{ id }}>
+          Playbook Store
+        </Link>
+      )}
       {isOwnDesk ? <Link to="/settings">Settings</Link> : null}
       <hr />
       <Link to="/" search={{ by: "equity" }}>
-        ← Standings
+        ← Accounts
       </Link>
     </>
   );

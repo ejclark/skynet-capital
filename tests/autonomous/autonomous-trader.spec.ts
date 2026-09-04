@@ -220,4 +220,57 @@ describe("AutonomousTrader", () => {
     const portfolio = await broker.getPortfolio();
     expect(portfolio.positions[0]?.symbol).toBe("NVDA");
   });
+
+  describe("initialCooldowns/onCooldownSet — durability across a process restart", () => {
+    it("a restored cooldown blocks an order exactly as a same-process one would", async () => {
+      const broker = new InMemoryBroker(1_000_000, [
+        { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+      ]);
+      const trader = new AutonomousTrader({
+        persona: new AlwaysBuys(),
+        broker,
+        cooldownMs: 60_000,
+        now: () => 1_030_000,
+        initialCooldowns: new Map([["NVDA", 1_000_000]]), // 30s ago, inside the 60s cooldown
+      });
+
+      const results = await trader.evaluate(context(100, 0.05));
+
+      expect(results).toHaveLength(0);
+    });
+
+    it("fires onCooldownSet with the symbol and timestamp on every placed order", async () => {
+      const broker = new InMemoryBroker(1_000_000, [
+        { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+      ]);
+      const seen: [string, number][] = [];
+      const trader = new AutonomousTrader({
+        persona: new AlwaysBuys(),
+        broker,
+        now: () => 42,
+        onCooldownSet: (symbol, at) => seen.push([symbol, at]),
+      });
+
+      await trader.evaluate(context(100, 0.05));
+
+      expect(seen).toEqual([["NVDA", 42]]);
+    });
+
+    it("never fires onCooldownSet for a cooldown-skipped or observe-mode intent", async () => {
+      const broker = new InMemoryBroker(1_000_000, [
+        { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+      ]);
+      const seen: [string, number][] = [];
+      const trader = new AutonomousTrader({
+        persona: new AlwaysBuys(),
+        broker,
+        mode: "observe",
+        onCooldownSet: (symbol, at) => seen.push([symbol, at]),
+      });
+
+      await trader.evaluate(context(100, 0.05));
+
+      expect(seen).toEqual([]);
+    });
+  });
 });

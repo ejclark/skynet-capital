@@ -11,6 +11,7 @@ import { money } from "../live/ticket";
  * `OptionGate` uses (`fetchChain`); picking a strike seeds the leg's limit price from the chain's
  * quoted premium exactly the way `OptionGate`'s `pickStrike` does. Emits a finished `NewLeg` to
  * the parent, which is the only thing that talks to the draft's state machine.
+ * @category trading
  */
 
 export function DraftLegForm({

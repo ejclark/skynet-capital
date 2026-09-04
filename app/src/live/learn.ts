@@ -85,6 +85,8 @@ export interface Journey {
   readonly points: number;
   readonly totalPoints: number;
   readonly rank: string;
+  /** The feedback gate (#1119), while it holds: the reason and the sentence the pages show. */
+  readonly gate?: { readonly reason: string; readonly note: string };
   readonly courses: readonly JourneyCourse[];
   readonly celebrating: readonly JourneyCelebration[];
   readonly engagementCelebrating: readonly EngagementCelebration[];

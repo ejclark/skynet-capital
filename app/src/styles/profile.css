@@ -1,0 +1,54 @@
+/* the Profile tab's furniture (#1119): the Accounts page's metric chips and the profile strip.
+   Tokens only. Split from board.css at the 300-line cap. */
+/* the Accounts page's metric chips (#1119) — the rank-by control, inline above the field */
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fchips {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.fchip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+.fchip:hover {
+  color: var(--text);
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
+.fchip-on {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 60%, var(--border));
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface));
+}
+
+/* the Profile strip — who you are on the board and where you stand */
+.pmeta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.pmeta-who {
+  padding: 4px 10px;
+}
+.pmeta-rank {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 3px 10px;
+}

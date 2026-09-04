@@ -65,6 +65,7 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
   );
 }
 
+/** @category feedback */
 export function RecentFeedback({
   recent,
   followupEnabled,

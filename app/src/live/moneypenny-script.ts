@@ -1,0 +1,191 @@
+/**
+ * MONEYPENNY'S SCRIPT — the pure half of the rail (design handoff 2026-09-03, §6). Everything
+ * she says that ISN'T the real coach's own words lives here as data and total functions: the
+ * intro that plays once per account, the onboarding steer, and the keyword routing that decides
+ * whether a note is feedback to file, a setup question, or something to nudge toward. Pure so the
+ * specs can pin every branch without a DOM or a network; the store (`moneypenny.ts`) is the only
+ * thing that acts on what this returns.
+ *
+ * Design principle carried whole: look for organic openings to steer the conversation toward
+ * completing onboarding. The name is always capitalized — "Moneypenny ·" opens her first line.
+ */
+
+import type { FeedbackKind } from "./feedback";
+
+/** Where the conversation is: waiting on a setup yes/no, a feedback note, or its one follow-up. */
+export type Flow = "idle" | "setup" | "fb" | "fb2";
+
+export interface IntroContext {
+  readonly connected: boolean;
+  readonly firstTradeDone: boolean;
+  readonly marketOpen: boolean;
+  /** The thread already has messages — she says hi again and steers, never re-introduces. */
+  readonly returning?: boolean;
+}
+
+const WHO =
+  "Moneypenny · hi, I'm Moneypenny — your assistant on the desk. ask me questions any time, report a bug and it gets fixed, suggest an enhancement or a new feature and it gets built.";
+const ASK = "any immediate questions or support items? just ask.";
+const STEER_SETUP =
+  "i see your alpaca paper account isn't connected yet — that's the first step of onboarding. want a hand setting it up?";
+const STEER_TRADE_OPEN =
+  "your account is connected — the last step is your first trade. open the trading desk and buy a stock (rung 101): review the order, confirm, and the fill unlocks the next play. the regular session should be open right now — the desk confirms with alpaca before any fill.";
+const STEER_TRADE_CLOSED =
+  "your account is connected — the last step is your first trade. open the trading desk and buy a stock (rung 101). the regular session is closed right now (9:30 am–4:00 pm et, weekdays); an order placed now waits for the open.";
+
+export const SETUP_PATH = [
+  "Moneypenny · the short path: create a free account at alpaca.markets → switch it to Paper Trading → increase the paper balance to $1,000,000 → generate api keys → paste the key and secret on the onboarding page. the step-by-step cards live there, with links.",
+  "stuck on a specific step? tell me which number and i'll walk you through it.",
+];
+const SETUP_PATH_PLANT = [
+  SETUP_PATH[0] as string,
+  "stuck on a specific step? tell me which number and i'll walk you through it. and if something on our side looks broken, say “file an issue” and i'll open one for the team to fix.",
+];
+const SETUP_DECLINED =
+  "Moneypenny · no problem — the step-by-step cards are on the onboarding page whenever you're ready. anything else on your mind?";
+export const FB_OPEN =
+  "Moneypenny · happy to file it. what's confusing, broken, or missing? a sentence or two is plenty.";
+export const FB_QUESTION =
+  "Moneypenny · got it. one question — where in the app does this bite you, and what would a good outcome look like?";
+export const NUDGE =
+  "Moneypenny · i can help you get set up, explain the desk, answer questions, or file your feedback. tell me what's on your mind — or tap a suggestion below.";
+export const FEEDBACK_OFF =
+  "Moneypenny · feedback isn't switched on in this deployment yet — ask Eric to set the feedback token. your note wasn't sent.";
+
+export interface Chip {
+  readonly label: string;
+  readonly msg: string;
+}
+
+const FILE_CHIP: Chip = { label: "File feedback", msg: "I want to file feedback" };
+
+/** The suggestion chips, from where the member is (NN/g: a suggestion earns its place only when
+ *  it fits the moment) — a parked draft's two exits first, then the next onboarding step. */
+export function chipsFor(state: {
+  readonly draft: boolean;
+  readonly connected: boolean;
+  readonly firstTradeDone: boolean;
+}): readonly Chip[] {
+  if (state.draft)
+    return [
+      { label: "Send it", msg: "send" },
+      { label: "Never mind", msg: "never mind" },
+    ];
+  if (!state.connected)
+    return [{ label: "Help me get set up", msg: "How do I get set up?" }, FILE_CHIP];
+  if (!state.firstTradeDone)
+    return [
+      { label: "Walk me through my first trade", msg: "Walk me through my first trade" },
+      FILE_CHIP,
+    ];
+  return [{ label: "How am I doing?", msg: "How am I doing on the desk?" }, FILE_CHIP];
+}
+
+export const HI_AGAIN = "Moneypenny · hi again.";
+export const CHAT_DOWN =
+  "Moneypenny · i couldn't reach the desk just now — say that again in a moment and i'll pick it up.";
+export const DRAFT_DROPPED = "Moneypenny · dropped — nothing was filed.";
+
+/** A failed live answer, in the failure's own words when it has any (the throttle's, the
+ *  server's) — never a scripted stand-in that pretends nothing happened. */
+export function answerFailed(reason: string | undefined): string {
+  const why = reason?.trim();
+  return why ? `Moneypenny · i couldn't answer that just now: ${why}` : CHAT_DOWN;
+}
+
+/** The draft as the member sees it before anything files — kind, title, details, the two exits. */
+export function draftCard(draft: {
+  readonly kind: string;
+  readonly title: string;
+  readonly details: string;
+}): string {
+  return `[${draft.kind}] ${draft.title}\n\n${draft.details}\n\n— reply "send" to file it, or "never mind" to drop it.`;
+}
+
+/** The intro, three beats: who she is, the open question, and the onboarding steer that fits.
+ *  Mid-thread (`returning`) it is one beat: hi again, plus the steer. */
+export function introLines(ctx: IntroContext): {
+  readonly lines: readonly string[];
+  readonly flow: Flow;
+} {
+  const lines = ctx.returning ? [HI_AGAIN] : [WHO, ASK];
+  if (!ctx.connected) {
+    lines.push(STEER_SETUP);
+    return { lines, flow: "setup" };
+  }
+  if (!ctx.firstTradeDone) lines.push(ctx.marketOpen ? STEER_TRADE_OPEN : STEER_TRADE_CLOSED);
+  return { lines, flow: "idle" };
+}
+
+const YES = /^(y\b|yes|sure|ok|okay|please|help|yeah|yep)/i;
+const NO = /^(n\b|no\b|nah|nope|not now|later|no thanks|skip|pass)/i;
+
+/** A clear yes or no to the setup offer — anything else is a real message, not an answer. */
+export function isSetupAnswer(text: string): boolean {
+  const t = text.trim();
+  return t.length <= 40 && (YES.test(t) || NO.test(t));
+}
+const FEEDBACK =
+  /feedback|bug|broken|wrong|doesn'?t work|error|crash|idea|feature|confus|missing|wish|issue|stuck|file (it|an issue|one)/i;
+const BARE_FEEDBACK = /^i (want|would like|'?d like) to (file|give|leave|send)/i;
+const SETUP = /key|secret|alpaca|balance|connect|paper|onboard|set ?up|sign|account/i;
+
+export type Routed =
+  | { readonly kind: "say"; readonly lines: readonly string[]; readonly flow: Flow }
+  /** A general question — Moneypenny answers it live (`/api/companion`), the scripted lines
+   *  standing in when the chat isn't switched on or fails. */
+  | { readonly kind: "chat"; readonly fallback: readonly string[] }
+  /** A note worth filing — ask the one sharp question (the coach's, or the scripted one). */
+  | { readonly kind: "ask"; readonly note: string }
+  /** The answer to that question — file now. */
+  | { readonly kind: "file"; readonly answer: string };
+
+/** Where a note goes, given where the conversation is. Total: every input routes somewhere. */
+export function routeNote(note: string, flow: Flow): Routed {
+  const text = note.trim();
+  if (flow === "fb2") return { kind: "file", answer: text };
+  if (flow === "setup") {
+    return YES.test(text)
+      ? { kind: "say", lines: SETUP_PATH_PLANT, flow: "idle" }
+      : { kind: "say", lines: [SETUP_DECLINED], flow: "idle" };
+  }
+  if (flow === "fb" || FEEDBACK.test(text)) {
+    if (flow !== "fb" && (BARE_FEEDBACK.test(text) || text.length < 25))
+      return { kind: "say", lines: [FB_OPEN], flow: "fb" };
+    return { kind: "ask", note: text };
+  }
+  if (SETUP.test(text)) return { kind: "chat", fallback: SETUP_PATH };
+  return { kind: "chat", fallback: [NUDGE] };
+}
+
+/** The filing's kind, read off the note — the coach and the issue labels both take one. */
+export function inferKind(note: string): FeedbackKind {
+  if (/bug|broken|error|crash|wrong|doesn'?t work|fails?\b/i.test(note)) return "bug";
+  if (/feature|add |new |could you|would be (nice|great)|wish/i.test(note)) return "feature";
+  return "idea";
+}
+
+/** The scripted filing when the coach isn't wired: title = the note's first line, ≤80 chars. */
+export function scriptedDraft(note: string, answer: string): { title: string; details: string } {
+  const first = (note.split("\n")[0] ?? "").trim();
+  return {
+    title: first.slice(0, 80),
+    details: `${note}\n\n---\n\nWhere it bites / a good outcome:\n${answer}`,
+  };
+}
+
+/** What she says once the issue exists — with the link, so the member can go watch it. */
+export function filedLine(number: number, title: string, url?: string): string {
+  const where = url ? ` open it here: ${url}` : "";
+  return `Moneypenny · filed as issue #${number} — “${title}”.${where} your context went into the filing. watch this thread for the answer.`;
+}
+
+/** The desk's own word after a filing, as a system line — filed and triaged, never a "shipped"
+ *  claim. Filing no longer lifts the ladder gate (that's `MESSAGE_OPS_LINE` now, on her first
+ *  reply), so every filing gets the same word regardless of whether it's the member's first. */
+export const OPS_LINE = "sauron·ops · triaged · on the build queue. watch the changelog.";
+
+/** The desk's own word the moment a member has said anything to her — the ladder gate's whole
+ *  bar (Eric's 2026-09-03 ruling): a message opens trading, no filing required. */
+export const MESSAGE_OPS_LINE =
+  "sauron·ops · logged: trading milestone M·02 is now unlocked on your desk. buy your first stock (rung 101) to get moving.";

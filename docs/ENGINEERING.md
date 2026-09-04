@@ -253,5 +253,11 @@ Eric-only governance change) — then `@semantic-release/git` can be added back.
 - **The inline login-canvas JS is a TS template literal** — no backticks or `${}` inside it, ever
   (the recurring TS1005 trap: the embedded script lives inside a template string, so those tokens
   terminate or interpolate the host literal).
+- **The React shell is fluid — never cap a view in bare pixels** (Eric, 2026-09-04: "the page
+  template should be fluid and take full screen real estate", every view, present and future). The
+  frame fills the window up to `--shell-max` and the stage takes the rest; a view sizes its panels by
+  shape with `var(--col-read)` (forms, prose) or `var(--col-wide)` (grids, lists) from
+  `app/src/styles/theme.css`. `tests/ui/fluid-shell-css.spec.ts` fails any `max-width: <n>px` in a
+  view stylesheet — a 640px card looks right on a laptop and leaves two-thirds of a monitor empty.
 - **Honor `prefers-reduced-motion` for anything animated** — every animated surface needs the
   reduced-motion path, not just the cinematic ones.

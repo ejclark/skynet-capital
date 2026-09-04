@@ -46,6 +46,7 @@ import {
   stalledDraft,
   toSpec,
 } from "./feedback-coach-reply.js";
+import { sanitizeImages } from "./feedback-images.js";
 import { readBody, sendJson } from "./page-shell.js";
 
 export { type FeedbackSpec, parseCoachReply, toSpec };
@@ -67,6 +68,10 @@ THE COMPLETENESS BAR — do not mark a draft spec-complete until you hold every 
 - bug: what happened · where in the app · what they expected instead · steps to reproduce (or an explicit "couldn't reproduce reliably")
 - feature: the problem in their own words · what "done" looks like to them · where in the app it lives
 - idea: the idea · what it would make better · what they would SEE if it existed
+
+The member may attach up to 3 screenshots to their opening note. When one is present, look at it: a
+screenshot of a bug often answers "where" and "what happened" outright, so don't ask for something the
+picture already shows.
 
 Rules:
 - Ask AT MOST ONE short, friendly question per turn — the single most valuable missing item from the bar above. Never re-ask something they already answered.
@@ -105,6 +110,32 @@ function boundsError(messages: readonly CoachMessage[]): string | null {
   return null;
 }
 
+interface AnthropicContentBlock {
+  readonly type: "text" | "image";
+  readonly text?: string;
+  readonly source?: { readonly type: "base64"; readonly media_type: string; readonly data: string };
+}
+
+/** One turn in the shape the Anthropic Messages API expects — plain text unless screenshots are
+ *  attached (#1020), in which case they ride alongside the text as content blocks so the coach can
+ *  actually see what the member is describing, not just read about it. */
+function toAnthropicMessage(m: CoachMessage): {
+  role: "user" | "assistant";
+  content: string | readonly AnthropicContentBlock[];
+} {
+  if (!m.images?.length) return { role: m.role, content: m.content };
+  const blocks: AnthropicContentBlock[] = m.images.map((img) => ({
+    type: "image",
+    source: {
+      type: "base64",
+      media_type: img.type,
+      data: img.dataUrl.slice(img.dataUrl.indexOf(",") + 1),
+    },
+  }));
+  blocks.push({ type: "text", text: m.content });
+  return { role: m.role, content: blocks };
+}
+
 /** The model's text out of a Messages API response, or the honest error. */
 function replyText(res: JsonResponse): { text?: string; error?: string } {
   const apiError = anthropicApiError(res, "coach");
@@ -138,7 +169,7 @@ export function createFeedbackCoach(config: CoachConfig, doFetch: DoFetch = fetc
           model: MODEL,
           max_tokens: MAX_TOKENS,
           system: `${SYSTEM_PROMPT}\n\nFeedback kind: ${input.kind}.${finishNudge}`,
-          messages: input.messages,
+          messages: input.messages.map(toAnthropicMessage),
         },
       );
     } catch (error) {
@@ -210,13 +241,18 @@ export async function handleFeedbackCoach(
   }
   const kind = typeof parsed.kind === "string" ? parsed.kind.slice(0, 20) : "feature";
   const messages = Array.isArray(parsed.messages)
-    ? parsed.messages.filter(
-        (m): m is CoachMessage =>
-          !!m &&
-          typeof m === "object" &&
-          ((m as CoachMessage).role === "user" || (m as CoachMessage).role === "assistant") &&
-          typeof (m as CoachMessage).content === "string",
-      )
+    ? parsed.messages
+        .filter(
+          (m): m is CoachMessage & { images?: unknown } =>
+            !!m &&
+            typeof m === "object" &&
+            ((m as CoachMessage).role === "user" || (m as CoachMessage).role === "assistant") &&
+            typeof (m as CoachMessage).content === "string",
+        )
+        .map((m) => {
+          const images = sanitizeImages((m as { images?: unknown }).images);
+          return images.length ? { ...m, images } : { role: m.role, content: m.content };
+        })
     : [];
   json(200, await coach({ kind, messages }));
 }

@@ -11,9 +11,10 @@ import { useEffect, useRef, useState } from "react";
 
 /** In-shell chord targets (router navigation). */
 const SHELL_CHORDS: readonly (readonly [string, string, string])[] = [
-  ["s", "/", "Standings"],
+  ["p", "/learn", "Profile"],
+  ["a", "/", "Accounts"],
   ["t", "/trade", "Trade ticket"],
-  ["w", "/wire", "The Wire"],
+  ["w", "/wire", "Activity (the Wire)"],
   ["c", "/collections", "Collections"],
   ["r", "/research", "Research"],
 ];
@@ -60,6 +61,7 @@ function jumpTo(key: string, navigate: (opts: { to: string }) => unknown): boole
   return false;
 }
 
+/** @category navigation */
 export function KeyboardChords(): ReactElement | null {
   const navigate = useNavigate();
   const [helpOpen, setHelpOpen] = useState(false);

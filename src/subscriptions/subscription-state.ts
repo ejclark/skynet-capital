@@ -1,4 +1,4 @@
-import type { PlaybookMode, PlaybookSubscription } from "../domain/types.js";
+import { PLAYBOOK_MODES, type PlaybookMode, type PlaybookSubscription } from "../domain/types.js";
 import { isRecord } from "../storage/parse-guards.js";
 
 /**
@@ -12,8 +12,6 @@ import { isRecord } from "../storage/parse-guards.js";
 export type SubscriptionsState = Readonly<Record<string, readonly PlaybookSubscription[]>>;
 
 export const EMPTY_SUBSCRIPTIONS: SubscriptionsState = {};
-
-const PLAYBOOK_MODES: readonly PlaybookMode[] = ["conservative", "standard", "aggressive"];
 
 function parseSubscription(raw: unknown, accountId: string): PlaybookSubscription | null {
   if (!isRecord(raw)) return null;

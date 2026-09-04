@@ -27,6 +27,7 @@ function useAnswer() {
   return { note, apply, fail };
 }
 
+/** @category admin */
 export function GuestListCard(): ReactElement | null {
   const queryClient = useQueryClient();
   const list = useQuery({ queryKey: ["admin-invite"], queryFn: fetchGuestList });
@@ -146,6 +147,7 @@ function LinkRow({
   );
 }
 
+/** @category admin */
 export function AccountLinksCard(): ReactElement | null {
   const queryClient = useQueryClient();
   const claims = useQuery({ queryKey: ["admin-claim"], queryFn: fetchClaims });
@@ -214,6 +216,7 @@ export function AccountLinksCard(): ReactElement | null {
   );
 }
 
+/** @category admin */
 export function OpsStatusCard(): ReactElement | null {
   const ops = useQuery({ queryKey: ["admin-ops"], queryFn: fetchOpsStatus });
   if (!ops.data?.owner) return null;

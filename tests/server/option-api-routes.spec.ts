@@ -213,4 +213,18 @@ describe("serveOptionApi chain", () => {
     );
     expect(JSON.parse(out.body ?? "{}").chainNote).toContain("isn't linked to one yet");
   });
+
+  it("names the message gate as the remedy when it holds, not the rung below", async () => {
+    const { parsed } = await review(
+      openPut(),
+      config({
+        progression: {
+          view: () =>
+            Promise.resolve({ wheels: true, unlocked: new Set(), ladderGate: "first-message" }),
+        },
+      }),
+    );
+    expect(parsed.preview.refusals[0]).toContain("hello to Moneypenny");
+    expect(parsed.preview.refusals[0]).not.toContain("first filled");
+  });
 });
