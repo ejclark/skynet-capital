@@ -5,6 +5,10 @@ mortician agent's own judgment loop (`.claude/agents/mortician.md`), which is pi
 effort because "read the code first, judge each item" is the actual hard part — grind's cheap
 default is strictly weaker than the task this file asks for.
 
+**Run with `isolation: true`:** step 1 below does its own `git checkout -B` — without a fresh
+worktree per item, concurrent items share one working directory and stomp on each other's
+checkout. Worktree isolation avoids that entirely.
+
 **Pre-filter, don't rely on this file alone:** before fanning items out, check each target against
 `envelope.json`'s protected patterns (`node scripts/envelope-scan.mjs --check <path>`) and drop any
 that match. A protected-path deletion still hard-gates at CI rather than silently merging, but by

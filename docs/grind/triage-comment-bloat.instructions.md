@@ -1,9 +1,12 @@
 # Triage one comment-bloat finding
 
 **Calling convention:** fan items **per file**, not per flagged comment — a file with 3 flagged
-comments is one item, not three. This keeps parallel agents from colliding inside the same file.
-Run `node scripts/comment-bloat-scan.mjs --update` once, as a single trailing step after every item
-lands, not inside each item's own chain.
+comments is one item, not three. Run with `isolation: true` — step 1 below does its own
+`git checkout -B`, and without a fresh worktree per item, concurrent items share one working
+directory and stomp on each other's checkout; worktree isolation, plus the per-file (not
+per-comment) grouping, keeps items from colliding. Run `node scripts/comment-bloat-scan.mjs
+--update` once, as a single trailing step after every item lands, not inside each item's own
+chain.
 
 ## Goal
 
