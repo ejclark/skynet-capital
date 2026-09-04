@@ -98,13 +98,18 @@ function TradePage(): ReactElement {
   const activeDesk = (desk && accounts.some((a) => a.id === desk) ? desk : accounts[0]?.id) as
     | string
     | undefined;
+  // #784 naming pass: no second rail item here yet. The Trading Outpost link that used to sit
+  // below "The ticket" pointed at content #885 superseded and renamed to the Playbook Store,
+  // which now lives on the per-desk rail (`desk-rail.tsx`), not here — keeping the old link would
+  // have sent people to a page marked for retirement under a name that no longer exists. Growing
+  // this rail to "critical mass" with real items (Portfolio, a Backtesting/Strategy Lab
+  // placeholder) is #784's own slice 7, not bundled into the naming pass.
   const rail = (
     <>
       <p className="rail-label">Trading</p>
       <span className="rail-current" aria-current="page">
         The ticket
       </span>
-      <Link to="/outpost">Trading Outpost</Link>
       <hr />
       {activeDesk ? (
         <Link to="/u/$id" params={{ id: activeDesk }}>
