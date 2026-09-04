@@ -89,3 +89,52 @@ describe("RecentFeedback — the completed filter", () => {
     expect(screen.queryByText(/Done deal/)).not.toBeInTheDocument();
   });
 });
+
+// #429's other still-open EARS box: "stamped with the release version, and celebrate it."
+describe("RecentFeedback — the shipped celebration", () => {
+  const filing = (over: Partial<RecentFiling>): RecentFiling => ({
+    issueNumber: 1,
+    title: "Untitled",
+    kind: "bug",
+    filedAt: "2026-08-01T00:00:00Z",
+    url: "https://github.com/x/y/issues/1",
+    ...over,
+  });
+
+  it("stamps a shipped filing with the running app version, once revealed", () => {
+    render(
+      <RecentFeedback
+        recent={[filing({ issueNumber: 1, title: "Shipped thing", status: "shipped" })]}
+        followupEnabled={false}
+        appVersion="1.129.0"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByText(/confirmed live in v1\.129\.0/)).toBeInTheDocument();
+    expect(screen.getByText("🚀 shipped")).toBeInTheDocument();
+  });
+
+  it("omits the version line rather than showing a blank one when appVersion is empty", () => {
+    render(
+      <RecentFeedback
+        recent={[filing({ issueNumber: 1, title: "Shipped thing", status: "shipped" })]}
+        followupEnabled={false}
+        appVersion=""
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByText("🚀 shipped")).toBeInTheDocument();
+    expect(screen.queryByText(/confirmed live in/)).not.toBeInTheDocument();
+  });
+
+  it("never stamps a version on a filing that hasn't shipped", () => {
+    render(
+      <RecentFeedback
+        recent={[filing({ issueNumber: 1, title: "Still cooking", status: "needs-info" })]}
+        followupEnabled={false}
+        appVersion="1.129.0"
+      />,
+    );
+    expect(screen.queryByText(/confirmed live in/)).not.toBeInTheDocument();
+  });
+});

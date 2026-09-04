@@ -14,6 +14,12 @@ import { Toggle } from "./toggle";
  * real work on the issue (docs/FEEDBACK.md's "four ways a build session ends" — sliced waits on
  * nobody, but isn't done), so it stays in the default view alongside `open`/`needs-info`/
  * `needs-eric`. The `Toggle` only appears once there's something it would reveal.
+ *
+ * A shipped filing also carries the last piece of #429's acceptance criteria: "stamped with the
+ * release version, and celebrate it." `appVersion` is this SERVER's own currently-running
+ * version (`APP_VERSION`, semantic-release-bumped) — a filing marked `shipped` right now is, by
+ * definition, confirmed live in it. `BRAND.md`'s "celebration pairs with explanation": the version
+ * line IS the explanation, so the fanfare stays a caption, not a takeover.
  */
 
 const RECENT_FILTERS = [
@@ -83,9 +89,13 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
 export function RecentFeedback({
   recent,
   followupEnabled,
+  appVersion,
 }: {
   readonly recent: readonly RecentFiling[];
   readonly followupEnabled: boolean;
+  /** This server's currently-running version — stamped on shipped filings. Empty string when
+   *  it couldn't be read; the celebration line is simply omitted in that case. */
+  readonly appVersion?: string;
 }): ReactElement | null {
   const [filter, setFilter] = useState<RecentFilter>("active");
   if (recent.length === 0) return null;
@@ -105,22 +115,30 @@ export function RecentFeedback({
         </p>
       ) : (
         <ul className="fb-list">
-          {visible.map((filing) => (
-            <li key={filing.issueNumber} className="fb-row">
-              <a href={filing.url} target="_blank" rel="noopener noreferrer">
-                #{filing.issueNumber} · {filing.title}
-              </a>
-              <span className="fb-meta num">
-                {filing.kind} · filed {filing.filedAt.slice(0, 10)}
-              </span>
-              {filing.status ? (
-                <span className={`fb-status fb-${filing.status}`}>
-                  {STATUS_LABELS[filing.status] ?? filing.status}
+          {visible.map((filing) => {
+            const shipped = filing.status === "shipped";
+            return (
+              <li key={filing.issueNumber} className={shipped ? "fb-row fb-row-shipped" : "fb-row"}>
+                <a href={filing.url} target="_blank" rel="noopener noreferrer">
+                  #{filing.issueNumber} · {filing.title}
+                </a>
+                <span className="fb-meta num">
+                  {filing.kind} · filed {filing.filedAt.slice(0, 10)}
                 </span>
-              ) : null}
-              {followupEnabled ? <FollowupFold filing={filing} /> : null}
-            </li>
-          ))}
+                {filing.status ? (
+                  <span className={`fb-status fb-${filing.status}`}>
+                    {shipped ? "🚀 shipped" : (STATUS_LABELS[filing.status] ?? filing.status)}
+                  </span>
+                ) : null}
+                {shipped && appVersion ? (
+                  <span className="fb-meta fb-shipped-version num">
+                    confirmed live in v{appVersion}
+                  </span>
+                ) : null}
+                {followupEnabled ? <FollowupFold filing={filing} /> : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
