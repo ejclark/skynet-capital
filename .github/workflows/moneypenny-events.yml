@@ -130,9 +130,17 @@ jobs:
         with:
           fetch-depth: 0   # scans read history (quiet-day math, ledger checks)
 
+      # actions/setup-node's node-version-file doesn't parse mise.toml's [tools] table — see
+      # pipeline.yml's own comment (docs/LESSONS.md, 2026-09-04) for the confirmed failure.
+      - name: Read Node version from mise.toml
+        id: node-version
+        run: |
+          v=$(grep -m1 '^node' mise.toml | sed -E 's/^node[[:space:]]*=[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-node@v7
         with:
-          node-version-file: mise.toml   # mise.toml is the single source of truth — never pin here
+          node-version: ${{ steps.node-version.outputs.version }}
 
       # The App identity, when one is configured. Guarded on the client-id VARIABLE (not a secret —
       # a client id is not sensitive, and `if:` cannot read secrets) so an unconfigured repo skips

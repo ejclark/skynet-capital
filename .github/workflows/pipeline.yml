@@ -65,10 +65,23 @@ jobs:
         with:
           fetch-depth: 0            # commitlint needs the PR commit range
 
+      # actions/setup-node's own `node-version-file: mise.toml` support does not understand the
+      # standard `[tools]` table format: it reads the file's first non-blank line verbatim as "the
+      # version" rather than parsing TOML, so it took our literal `[tools]` header as the version
+      # string and failed every run with "Unable to find Node version '[tools]'" (2026-09-04,
+      # docs/LESSONS.md) — confirmed live in a real job log, not inferred. Extracting the value
+      # ourselves with grep/sed and passing it via `node-version:` sidesteps that parser entirely;
+      # mise.toml is still the one file a human or `mise install` reads to know the pinned version.
+      - name: Read Node version from mise.toml
+        id: node-version
+        run: |
+          v=$(grep -m1 '^node' mise.toml | sed -E 's/^node[[:space:]]*=[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
       - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: mise.toml   # mise.toml is the single source of truth — never pin here
+          node-version: ${{ steps.node-version.outputs.version }}
 
       # actions/setup-node's own `cache: npm` has no restore-keys fallback (confirmed against
       # actions/setup-node#627/#1120, not assumed) — ANY lockfile change anywhere invalidates the
@@ -193,10 +206,23 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      # actions/setup-node's own `node-version-file: mise.toml` support does not understand the
+      # standard `[tools]` table format: it reads the file's first non-blank line verbatim as "the
+      # version" rather than parsing TOML, so it took our literal `[tools]` header as the version
+      # string and failed every run with "Unable to find Node version '[tools]'" (2026-09-04,
+      # docs/LESSONS.md) — confirmed live in a real job log, not inferred. Extracting the value
+      # ourselves with grep/sed and passing it via `node-version:` sidesteps that parser entirely;
+      # mise.toml is still the one file a human or `mise install` reads to know the pinned version.
+      - name: Read Node version from mise.toml
+        id: node-version
+        run: |
+          v=$(grep -m1 '^node' mise.toml | sed -E 's/^node[[:space:]]*=[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
       - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: mise.toml   # mise.toml is the single source of truth — never pin here
+          node-version: ${{ steps.node-version.outputs.version }}
 
       # Same restore-keys fix as `verify` (docs/LESSONS.md, 2026-09-04) — root-only here, but the
       # exact-key-only miss is the same failure mode regardless of which tree.
@@ -271,10 +297,23 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
+      # actions/setup-node's own `node-version-file: mise.toml` support does not understand the
+      # standard `[tools]` table format: it reads the file's first non-blank line verbatim as "the
+      # version" rather than parsing TOML, so it took our literal `[tools]` header as the version
+      # string and failed every run with "Unable to find Node version '[tools]'" (2026-09-04,
+      # docs/LESSONS.md) — confirmed live in a real job log, not inferred. Extracting the value
+      # ourselves with grep/sed and passing it via `node-version:` sidesteps that parser entirely;
+      # mise.toml is still the one file a human or `mise install` reads to know the pinned version.
+      - name: Read Node version from mise.toml
+        id: node-version
+        run: |
+          v=$(grep -m1 '^node' mise.toml | sed -E 's/^node[[:space:]]*=[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
       - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: mise.toml   # mise.toml is the single source of truth — never pin here
+          node-version: ${{ steps.node-version.outputs.version }}
 
       # Same restore-keys fix as `verify`'s, same key shape (both lockfiles) — see the cache-warm
       # step below for why this job, not verify, is the one that has to carry the shared scope.
