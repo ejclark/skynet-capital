@@ -1,10 +1,12 @@
 # src/domain/market-events-data.ts: 13+ concurrently open research PRs each append one entry to
-# this one shared array (docs/LESSONS.md, 2026-09-04) — merging any single one shifts surrounding
+# this one shared array (#1324, measured 2026-09-04) — merging any single one shifts surrounding
 # lines enough that every other open PR conflicts against the new base, even though their content
 # never actually disagrees. A plain `merge=union` was tested and rejected: it merges by LINE, not
 # by object, so two multi-line entries inserted at the same spot get interleaved into one malformed,
 # duplicate-keyed object — silent data loss. scripts/merge-market-events.mjs merges at the object
-# level instead (see its own header for the git-config step this driver needs — GitHub's own
-# "mergeable" check can't run it, so it only helps a local `git merge`, which is how these PRs
-# actually get resolved).
+# level instead. The line below only names the driver; its COMMAND lives in .git/config, which git
+# cannot read from a tracked file — scripts/register-merge-drivers.sh writes it, called from the
+# SessionStart hook and from worktree-setup.sh so every lane has it. GitHub's own "mergeable" check
+# can't run a custom driver, so this only helps a local `git merge` — which is how these PRs
+# actually get resolved.
 src/domain/market-events-data.ts merge=market-events

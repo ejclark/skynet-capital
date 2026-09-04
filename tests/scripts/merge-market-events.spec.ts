@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hermeticGitEnv } from "../support/hermetic-git.js";
 
-// The custom merge driver for src/domain/market-events-data.ts (docs/LESSONS.md, 2026-09-04):
+// The custom merge driver for src/domain/market-events-data.ts (#1324, measured 2026-09-04):
 // 13+ concurrent research PRs each append one entry to that one shared array, so merging any one
 // conflicts every other still-open PR against the new base. A plain git `merge=union` was tried
 // first and PROVEN WRONG by exactly this test's first case — it merges by line, so two entries
@@ -108,6 +108,17 @@ describe("merge-market-events driver", () => {
 
       const status = git(dir, ["status", "--short"]);
       expect(status).toContain("UU events.ts");
+
+      // A refusal has to LOOK like a conflict, not just be recorded as one. With a custom driver
+      // git does not run its own merge first, so without the driver's `git merge-file` fallback
+      // %A holds plain "ours" — and anything scanning for markers (this repo's conflict-repair
+      // lane reads them in step 2) would call the file clean and merge a silently-lost edit.
+      const conflicted = readFileSync(join(dir, "events.ts"), "utf8");
+      expect(conflicted).toContain("<<<<<<< ours");
+      expect(conflicted).toContain("=======");
+      expect(conflicted).toContain(">>>>>>> theirs");
+      expect(conflicted).toContain("2026-01-02"); // ours
+      expect(conflicted).toContain("2026-01-03"); // theirs
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

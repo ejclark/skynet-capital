@@ -1189,3 +1189,12 @@ reduced to `stages.reduce(boot)` — after which the detector has nothing to det
 Candidate for a `/governor` cycle with the `decomposer` athlete; the scout/creds/health/state-db
 seams are already isolated modules, so the extraction is mostly moving the wiring, not the logic.
 _(src: Eric · while: reviewing #1301's cap dodge, 2026-09-04)_
+
+### `setup-commit-signing.sh` no longer does only commit signing
+It now also registers the market-events merge driver (#1324), because it is the one script every
+lane runs at `SessionStart` and `.git/config` cannot be a tracked file. The honest name is
+`setup-session-git.sh`. Renaming it means editing `.claude/settings.json`, whose `SessionStart` hook
+names the path — an envelope-protected edit, so a cosmetic rename
+would cost Eric an approval on its own. Worth folding into the next protected-file change that
+already needs his click, not raising as its own ask.
+_(src: Claude · while: building #1324, the merge-driver wiring, 2026-09-04)_

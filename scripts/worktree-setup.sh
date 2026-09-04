@@ -21,6 +21,12 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
+# Belt for a lane whose SessionStart hook did not fire (#1324) — git shares one repository config
+# across every worktree, so this is usually a no-op re-write of what setup-commit-signing.sh
+# already registered. Above the early-exits below on purpose: a worktree that already has its
+# shims still needs the driver.
+bash ./scripts/register-merge-drivers.sh || true   # cwd is the worktree root, set just above
+
 PRIMARY="$(cd "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")" && pwd)"
 HERE="$PWD"
 
