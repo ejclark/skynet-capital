@@ -31,6 +31,12 @@ export interface AutonomousTraderConfig {
    * halts the cycle before the persona is even asked, and nothing is placed. See `SafetyController`.
    */
   readonly blockedReason?: () => string | null;
+  /** Seeds the cooldown clock at construction (e.g. restored after a process restart) — read
+   *  once, never mutated by this class after that. */
+  readonly initialCooldowns?: ReadonlyMap<string, number>;
+  /** Fires every time a cooldown clock is set (i.e. right after an order places), so a caller can
+   *  persist it durably without this class knowing anything about storage. */
+  readonly onCooldownSet?: (symbol: string, at: number) => void;
 }
 
 const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
@@ -52,6 +58,11 @@ export class AutonomousTrader {
 
   constructor(config: AutonomousTraderConfig) {
     this.config = config;
+    if (config.initialCooldowns) {
+      for (const [symbol, at] of config.initialCooldowns) {
+        this.lastOrderAt.set(symbol, at);
+      }
+    }
   }
 
   async evaluate(context: MarketContext): Promise<OrderResult[]> {
@@ -94,6 +105,7 @@ export class AutonomousTrader {
       }
       const result = await this.config.broker.submit(intent);
       this.lastOrderAt.set(intent.symbol, now);
+      this.config.onCooldownSet?.(intent.symbol, now);
       this.config.onResult?.(result);
       results.push(result);
       outcomes.push({ intent, action: result.status === "filled" ? "placed" : "rejected", result });
