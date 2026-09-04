@@ -77,7 +77,7 @@ function depsFor(overrides: Partial<CompanionDeskDeps> = {}): CompanionDeskDeps 
 }
 
 describe("the tool surface itself", () => {
-  it("defines exactly the four allow-listed tools, and no others", () => {
+  it("defines exactly the allow-listed tools, and no others", () => {
     expect(COMPANION_TOOL_DEFS.map((t) => t.name).sort()).toEqual([...COMPANION_TOOL_NAMES].sort());
   });
 
@@ -182,7 +182,31 @@ describe("runCompanionTool — the closed allow-list (the structural half of 'ne
     },
   );
 
-  it("the type export names exactly the four real tools, so an adversarial cast is visibly a lie", () => {
+  it("draft_feedback hands the draft to the hook and files nothing — a malformed one is refused", async () => {
+    const drafts: unknown[] = [];
+    const deps: CompanionDeskDeps = {
+      snapshotFor: () => undefined,
+      onDraft: (d) => drafts.push(d),
+    };
+    const ok = await runCompanionTool("draft_feedback", deps, undefined, {
+      kind: "bug",
+      title: "Onboarding step 2 never completes after filing feedback",
+      details: "Filed 5 times; M·01 step 2 still reads not done.",
+    });
+    expect(ok.ok).toBe(true);
+    expect(drafts).toEqual([
+      {
+        kind: "bug",
+        title: "Onboarding step 2 never completes after filing feedback",
+        details: "Filed 5 times; M·01 step 2 still reads not done.",
+      },
+    ]);
+    const bad = await runCompanionTool("draft_feedback", deps, undefined, { title: "" });
+    expect(bad.ok).toBe(false);
+    expect(drafts).toHaveLength(1);
+  });
+
+  it("the type export names exactly the real tools, so an adversarial cast is visibly a lie", () => {
     const real: readonly CompanionToolName[] = [...COMPANION_TOOL_NAMES];
     expect(real).not.toContain("place_order");
   });

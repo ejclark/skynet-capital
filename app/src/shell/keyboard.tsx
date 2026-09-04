@@ -11,9 +11,10 @@ import { useEffect, useRef, useState } from "react";
 
 /** In-shell chord targets (router navigation). */
 const SHELL_CHORDS: readonly (readonly [string, string, string])[] = [
-  ["s", "/", "Standings"],
+  ["p", "/learn", "Profile"],
+  ["a", "/", "Accounts"],
   ["t", "/trade", "Trade ticket"],
-  ["w", "/wire", "The Wire"],
+  ["w", "/wire", "Activity (the Wire)"],
   ["c", "/collections", "Collections"],
   ["r", "/research", "Research"],
 ];

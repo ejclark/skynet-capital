@@ -12,17 +12,25 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
-import { createOwnerLinkStore, resolveOwnedParticipantIds } from "../server/owner-link-store.js";
+import {
+  createOwnerLinkStore,
+  ownerEmailFor,
+  resolveOwnedParticipantIds,
+} from "../server/owner-link-store.js";
+import { createSubscriptionStore } from "../server/subscription-store.js";
 
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
   botControls: ReturnType<typeof createBotControlsStore>;
+  subscriptions: ReturnType<typeof createSubscriptionStore>;
   knownPersonaIds: Set<string>;
   auth: ReturnType<typeof resolveAuth>;
   password: string | undefined;
   ownerLinks: ReturnType<typeof createOwnerLinkStore>;
   resolveOwnerIds: (email: string) => string[];
   resolveOwnerId: (email: string) => string | undefined;
+  /** The reverse: the email that owns a participant id (stamp first, else the claim link). */
+  ownerEmailFor: (participantId: string) => string | undefined;
 }
 
 /**
@@ -42,6 +50,10 @@ export function setupAccess(
   // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
   // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
   const botControls = createBotControlsStore(env, (m) => console.error(m));
+  // Playbook Store subscriptions (issue #885), on the volume beside the other member data
+  // (SKYNET_SUBSCRIPTIONS_FILE → /data/playbook-subscriptions.json in prod). Plain JSON — an
+  // account's own playbook picks and capital sub-allocations, not a secret.
+  const subscriptions = createSubscriptionStore(env, (m) => console.error(m));
   const knownPersonaIds = new Set(createDefaultPersonas().map((p) => p.id));
   const auth = resolveAuth(env, undefined, allowlist);
   const password = env.SKYNET_DASHBOARD_PASSWORD;
@@ -73,15 +85,19 @@ export function setupAccess(
   const resolveOwnerIds = (email: string): string[] =>
     resolveOwnedParticipantIds(liveRoster(), ownerLinks.load().links, email);
   const resolveOwnerId = (email: string): string | undefined => resolveOwnerIds(email)[0];
+  const ownerEmailForId = (participantId: string): string | undefined =>
+    ownerEmailFor(liveRoster(), ownerLinks.load().links, participantId);
 
   return {
     allowlist,
     botControls,
+    subscriptions,
     knownPersonaIds,
     auth,
     password,
     ownerLinks,
     resolveOwnerIds,
     resolveOwnerId,
+    ownerEmailFor: ownerEmailForId,
   };
 }

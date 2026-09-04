@@ -1,8 +1,8 @@
 # ADP National Employment Report (Aug 2026 data) — adp-employment-2026-09-02
 
-**Kind:** macro-print · **Date:** 2026-09-02 (estimate, NEWS: fred.stlouisfed.org/releases/calendar?rid=194 + mediacenter.adp.com release cadence — 08:15 ET, checked 2026-08-27) · **Impact:** medium
-**Last assessed:** 2026-09-01
-<!-- probe-ref: {"symbols":{},"vix":14.92,"daysBand":"medium:0+","adjacentIds":["avgo-2026-09-02-print","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06"],"screenStreak":0} -->
+**Kind:** macro-print · **Date:** 2026-09-02 (confirmed, IR: mediacenter.adp.com published "ADP National Employment Report: Private-Sector Employment Increased by 38,000 Jobs in August" with a 2026-09-02 dateline at 08:15 ET — the release itself is the primary confirmation, fetched 2026-09-03) · **Impact:** medium
+**Last assessed:** 2026-09-03
+<!-- probe-ref: {"symbols":{},"vix":15.2,"daysBand":"medium:0+","adjacentIds":["avgo-2026-09-02-print","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -207,3 +207,157 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-03, day after the print).** Macro-print mode carries no `earnings-cycle` /
+`intraday-edges` run — `symbols: []` by design — so the *report* is scored from the primary release
+re-fetched today and the *tape* from Yahoo daily bars pulled today after the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
+Primary: **ADP's own release**, "ADP National Employment Report: Private-Sector Employment Increased
+by 38,000 Jobs in August" (mediacenter.adp.com, dateline 2026-09-02 08:15 ET; PRNewswire 302867661),
+cross-checked against CNBC, Fox Business and UPI, all 2026-09-02.
+
+**What printed — a thin headline miss wrapped around a much narrower composition.**
+
+| Measure | Aug | Jul (revised) | Consensus | Result |
+|---|---|---|---|---|
+| **Private payrolls** | **+38,000** | +46,000 (up from 44,000) | **47,000** (Dow Jones / Bloomberg; Fox cites 48,000) | **miss, −9k to −10k** |
+| Goods-producing | **−10,000** | — | none published | — |
+| — Manufacturing | **−17,000** | — | — | largest single drag |
+| — Construction | +12,000 | — | — | — |
+| — Natural resources/mining | −5,000 | — | — | — |
+| Service-providing | +48,000 | — | none published | — |
+| — Education/health | **+45,000** | — | — | exceeds the entire headline |
+| — Professional/business | **−16,000** | — | — | second-largest drag |
+| — Leisure/hospitality | +16,000 | — | — | — |
+| — Financial activities | +6,000 | — | — | — |
+| — Other services | +6,000 | — | — | — |
+| — Trade/transport/utilities | −5,000 | — | — | — |
+| — Information | −4,000 | — | — | — |
+| Large firms (500+) | **+34,000** | — | — | ~90% of the headline |
+| Medium firms (50–499) | **0** | — | — | — |
+| Small firms (1–49) | +3,000 | — | — | — |
+| Gross pay, job-stayers | 4.4% y/y | 4.4% | — | flat |
+| Gross pay, job-changers | **7.3% y/y** | 7.0% | — | accelerating |
+
+Regionally: Northeast **+38,000** — the entire national number — against Midwest +5k, South +3k and
+West **−8k**. Slowest month since January. ADP's Nela Richardson on the dispersion: *"Pay can tell us
+a lot about today's choppy hiring. To understand hiring patterns, you have to look deeply into where
+pay growth is accelerating, where it's slowing, and for whom."*
+
+**The tape — Yahoo daily bars, fetched 2026-09-03 after the cache bust.**
+
+| | 9/1 close | 9/2 close | Δ |
+|---|---|---|---|
+| S&P 500 | 7,631.47 | **7,666.60** | **+0.46%** |
+| Nasdaq Composite | 26,099.77 | **26,217.83** | +0.45% |
+| Dow | 52,766.88 | **53,061.95** | +0.56% |
+| VIX | 16.34 | **15.20** | **−1.14** |
+| 10y (^TNX) | 4.80 | 4.80 | ~0 |
+
+Russell 2000 **+1.13% to 2,953** — the rate-sensitive small-cap index led (investrade). The 10-year
+touched **4.818%** intraday, its highest since 2023-11-01 and a fifth straight up-day, then
+surrendered the entire advance to settle **4.780%–4.796%** (sources differ ~1.6bp). CME FedWatch odds
+of a 2026-09-16 hike fell to **60.2–64.2% from 68.2%** the prior day. Brent **+1.04% to $95.63**, WTI
+**+0.88% to $91.01** — the oil impulse the D-1 row installed kept running *through* the dovish move.
+
+**Scoring the calls — one was wrong, and its own registered falsifier is what says so.**
+
+- **Today (D-1) "Stand aside" — CORRECT.** Falsifier was "the 2026-09-02 08:15 ET print moving S&P 500
+  futures >1% on its own." Did not fire: the index closed **+0.46%**, and the session was co-driven by
+  Williams and oil. The print was a preview, exactly as called.
+- **This week "Watch — the beat side, not the miss" — REFUTED, verbatim by its own falsifier.** That
+  falsifier read: *"A soft print (≤ July's +44k) that the tape trades **dovishly** — that would restore
+  the pre-8/28 reaction function this row abandons."* Both halves fired. **38k ≤ 44k**, and below the
+  D-1 consensus band on every source. And the tape traded it dovishly on four independent channels the
+  same session: hike odds **−4 to −8pts**, a 20-month-high yield round-tripped to unchanged, equities
+  up with **small caps leading**, VIX **−1.14**. The beat-side asymmetry this doc installed at D-3
+  (Warsh's "quite stable" framing) and doubled at D-1 (the Larak strike → Brent $90.91) **did not
+  hold**: a soft labor read still read dovish, with a live oil-inflation impulse running against it.
+  Recording that plainly is the point — two rows of mechanism-reasoning were wrong about which side
+  the tape would take, while the *stance* built on top of them (flat the print, nothing sized) was
+  right and cost nothing. **The stance survived because it never depended on the asymmetry.**
+- **This month "Stand aside on this print specifically" — CORRECT, and resolves as stated.** The doc
+  said the 9/4 BLS print is what actually resolves the labor question; the ADP miss did not move that
+  consensus (**56,000** expected, unemployment **4.1%**, per the Labor Department preview cited
+  2026-09-02) — governed by [`jobs-2026-09-04.md`](jobs-2026-09-04.md), not here.
+- **This quarter "Stand aside" — NOT YET SCOREABLE.** Its falsifier is the **2026-09-16** FOMC, still
+  ahead. Carried by [`fomc-2026-09-16.md`](fomc-2026-09-16.md); nothing is claimed for it here.
+
+**Kill switches, scored.**
+
+1. **"A large ADP miss or a negative print"** — **fired in effect, unscoreable in form.** 38k is a
+   9–10k miss, positive, and the slowest since January; it did feed the weak-labor branch and did move
+   hike pricing 4–8pts. But "large" was never given a number, so no clean adjudication is possible.
+   That is the switch's own defect and it is worth naming: **an un-numbered kill switch cannot be
+   scored, only argued about.** The sibling switch below (re-anchored to "**70k+**" at D-1) shows the
+   fix already existed in this doc — it was applied to the beat side and not the miss side.
+2. **"A sharp ADP beat (roughly 70k+)"** — **did not fire**, by 32k.
+3. **"A direct ADP press release confirming (or moving) the 9/2 date"** — **FIRED, at 08:15 ET on the
+   date itself.** ADP does not pre-announce; the release *is* the confirmation, exactly as the D-1 row
+   predicted ("realistically the flip arrives with the release itself"). The calendar entry flips to
+   `confirmed` with an `IR:` source in this PR — a mechanical audit-trail correction on a passed
+   event; it licenses nothing.
+4. **"A published ADP-specific August consensus emerging before 9/2"** — fired 2026-09-01, scored
+   here. The D-1 aggregator band (**~42–51k**, TradingEconomics/tradingcharts) **bracketed** the real
+   published consensus (**47–48k**, Dow Jones and Bloomberg) but was ~5k wide on the low side and
+   carried no named house. Read for next time: an aggregator band is usable as a *bracket*, not as
+   *the bar*. The "sharp beat = 70k+" re-anchoring it produced was never tested and stays unvalidated.
+
+**The finding actually worth banking — the composition, not the headline.** A 9k miss is noise; the
+shape of it is not. **Education/health alone (+45k) exceeds the entire national print**, so every
+other sector nets **−7k**. The two largest drags are **manufacturing (−17k)** and **professional/
+business services (−16k)** — the cyclical, higher-wage half of the private economy. **Large employers
+supplied +34k of the +38k while medium firms (50–499) added exactly zero.** And one region, the
+Northeast, supplied the whole number. That is the narrowest ADP composition of this cycle, and it cuts
+against Warsh's 2026-08-28 "quite stable / consistent with full employment" characterisation
+considerably harder than the headline does. **Registered as a dated observation for the sibling docs
+([`jobs-2026-09-04.md`](jobs-2026-09-04.md), [`fomc-2026-09-16.md`](fomc-2026-09-16.md)) — not as a
+position**, and this event carries no `confirmed` mandate to act on: research is not action.
+
+**Tracked-name sensitivity — the doc's ranking failed to show.** The initial research ranked **CRWV**
+most exposed to any rate-path repricing, then **NVDA / AVGO / MRVL**, then **MSFT / GOOG / META**,
+least **AAPL / AMZN**. On the one session where that was cleanly testable — hike odds down 4–8pts,
+yields round-tripping — the ordering came out inverted at both ends (Yahoo daily bars, 9/1→9/2):
+
+| NVDA | META | GOOG | QQQ | AMZN | AAPL | AVGO | MSFT | CRWV | MRVL |
+|---|---|---|---|---|---|---|---|---|---|
+| **+3.21%** | **+2.47%** | +0.53% | +0.23% | +0.02% | −0.05% | −0.66% | −0.84% | **−1.12%** | **−1.86%** |
+
+The name called most rate-sensitive **fell** on the dovish session; the two leaders were the two with
+live idiosyncratic AI-capex flow (NVDA's 8/26 print and 70%-growth guidance still running; META on
+ad-market strength). This **fails to confirm** the ranking rather than refuting it — one session, with
+AVGO reporting AMC the same day distorting semis positioning — but it does say the rate-path channel
+was **not** the marginal driver for these names on the day it could be measured.
+
+**Forward tests.** None were registered in [`forward-tests.md`](../forward-tests.md) for this event —
+the stance was guard-shaped and deliberately unscored — so **nothing moves to the sweep doc's kill
+list**. The composition finding above is banked as a dated observation only.
+
+**Calendar fed.** The release names its own successor: **the September ADP report, 2026-09-30 at 08:15
+a.m. ET**. Proposed in this PR as `adp-employment-2026-09-30`, `status: "estimate"` with an `EST:`
+source — primary-sourced from ADP's own release but filed estimate per this lane's no-self-confirm
+limit. The **next NER Pulse (2026-09-08)** is again *not* proposed, holding the D-3 row's reasoning:
+a low-signal weekly proxy the calendar has never tracked.
+
+**Honest limits.**
+- **Attribution on 9/2 is not clean.** NY Fed President **Williams** gave a CNBC interview later the
+  same morning ("*the data recently has been encouraging*"; a wait-and-see stance on whether a hike is
+  needed), and investrade credits *him*, not ADP, for the yield pullback. ADP preceded him by ~4 hours,
+  and TradingEconomics attributes the hike-odds decline to the payrolls print. **AVGO reported AMC**
+  the same day. So "the tape traded the soft print dovishly" is corroborated across four channels and
+  carries the falsifier; the precise share owned by ADP alone is not measurable here.
+- **Post-print FedWatch reads disperse** (60.2–64.2%). The direction is unambiguous; the magnitude is not.
+- **Consensus differs by source** — 47,000 (Dow Jones, Bloomberg, investrade) vs 48,000 (Fox Business).
+  The miss is 9–10k either way, which does not change any conclusion above.
+- **Fox Business reports July's revision as downward.** ADP's own release states **44,000 → 46,000**,
+  an *upward* revision. The primary governs; the secondary is noted so the discrepancy isn't rediscovered.
+- No price instruments were run — macro-print mode carries none (`symbols: []`); index/name moves are
+  Yahoo daily bars, and reaction characterisations beyond them are press narration, each claim dated.
+- **One session is one observation.** Both the reaction-function refutation and the sensitivity-ranking
+  miss rest on a single day, and are stated at that weight.
+
+This event is now scored. The scanner goes quiet on it permanently; the `probe-ref` block in the
+header was refreshed with today's real readings per the lane contract, but it is dead state — a passed
+event is never screened again.

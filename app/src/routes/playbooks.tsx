@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { fetchPlaybooks, type HumanPlaybook } from "../live/playbooks";
 import { PageFrame } from "../shell/frame";
+import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 
 /**
@@ -66,6 +67,7 @@ function PlaybooksPage(): ReactElement {
   const data = playbooks.data;
   return (
     <PageFrame rail={rail}>
+      <ProfileMeta />
       <header className="page-header">
         <div className="join-eyebrow">Milestone M·03 · Playbooks · earned automation</div>
         <h1>Prove the play by hand, then arm it</h1>

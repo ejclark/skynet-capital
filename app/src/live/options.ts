@@ -26,6 +26,8 @@ export interface PlayInfo {
 export interface PlaysIndex {
   readonly linked: boolean;
   readonly wheels: boolean;
+  /** The feedback gate (#1119), while it holds: every rung locked for one reason, stated. */
+  readonly gate?: { readonly reason: string; readonly note: string };
   readonly nextUp?: string;
   readonly plays: readonly PlayInfo[];
 }

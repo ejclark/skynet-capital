@@ -14,6 +14,7 @@ export const PERSISTED_STORES: Readonly<Record<string, string>> = {
   SKYNET_CONTROLS_FILE: "data/bot-controls.json",
   SKYNET_ACTIVITY_DIR: "data/activity",
   SKYNET_FEEDBACK_LOG_DIR: "data/feedback-log",
+  SKYNET_COMPANION_MESSAGE_LOG_DIR: "data/companion-message-log",
   SKYNET_ORDER_AUDIT_DIR: "data/order-audit",
   SKYNET_HISTORY_DIR: "data/history",
   SKYNET_INSIGHTS_DIR: "data/insights",

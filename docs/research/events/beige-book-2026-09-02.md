@@ -1,8 +1,8 @@
 # Fed Beige Book (pre-FOMC edition) — beige-book-2026-09-02
 
 **Kind:** macro-print · **Date:** 2026-09-02 (estimate, EST: federalreserve.gov Beige Book schedule lists 2026-09-02 14:00 ET — primary-sourced but filed estimate per this lane's no-self-confirm limit, checked 2026-08-30) · **Impact:** medium
-**Last assessed:** 2026-09-01
-<!-- probe-ref: {"symbols":{},"vix":14.92,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-02","avgo-2026-09-02-print","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06"],"screenStreak":0} -->
+**Last assessed:** 2026-09-03
+<!-- probe-ref: {"symbols":{},"vix":15.2,"daysBand":"medium:0+","adjacentIds":["adp-employment-2026-09-02","avgo-2026-09-02-print","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jackson-hole-2026-08-28","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -207,3 +207,133 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-03, day after the release).** Macro-print mode carries no `earnings-cycle` /
+`intraday-edges` run — `symbols: []` by design — so the *report* is scored from the Board's own
+published edition and the *tape* from Yahoo daily and 5-minute bars fetched today after the mandated
+cache bust (`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never
+from memory. Primary: **`federalreserve.gov/monetarypolicy/files/BeigeBook_20260902.pdf`**, National
+Summary, fetched and text-extracted locally today — *"This report was prepared at the Federal Reserve
+Bank of Minneapolis based on information collected on or before August 24, 2026."* Cross-checked
+against the Boston Fed's First District page and the ABA Banking Journal's summary, both 2026-09-02.
+
+**The cutoff prediction was exactly right, and it is the frame for everything below.** The D-1 row
+inferred a collection window near **2026-08-24** from the verified 9-day July lag. The edition states
+**August 24, 2026** verbatim. So this report is *confirmed* blind to Warsh's 2026-08-28 keynote and to
+the 2026-08-30 Hormuz escalation — it is evidence gathered before the thing it was going to be read as
+a verdict on.
+
+**What printed — both diff counts moved, and the price count moved the *wrong way* for the hawkish read.**
+
+| Count | Sep 2 edition | Jul 15 baseline | Read |
+|---|---|---|---|
+| **Activity** | 10 of 12 slight-to-moderate; **2** no change | 11 of 12; 1 no change | marginally softer |
+| **Labor** | 3 modest gains + 4 slight gains = **7 with gains**; **5** no change | **5** gains / **7** little-to-no change | **improved** |
+| **Prices** | 8 moderate · 2 modest · 1 slight · **1 robust** | 9 moderate · **2 robust** · 1 slight | **robust 2 → 1** |
+| **Price pace vs prior period** | same in **8**, decreased in **3**, increased in **1** | (not stated as a count) | net cooling |
+
+Verbatim on prices: *"Input price pressures were notably elevated in manufacturing and construction
+across multiple Districts, with widespread reports of price increases for energy, transportation, and
+raw materials, particularly metals and petrochemicals. Retail and manufacturing contacts continued to
+note tariff-related impacts in multiple Districts."* And on the outlook: *"positive, but sentiment was
+mixed across sectors, with contacts reporting heightened uncertainty surrounding the effects of higher
+energy prices, policy, and international conflict."* St. Louis is the lone **robust** district and
+names the cause — *"high fuel costs from the Middle East conflict"* — so the July edition's
+energy-and-tariffs cost line survived intact, but narrower.
+
+**Scoring the stance — stand-aside was right, and the doc's own framing produced a reading it did not expect.**
+
+- **The two counts were the right two counts, and they split.** The labor split **improved** (5/7 →
+  7/5), corroborating Warsh's *"quite stable … consistent with full employment."* The price count
+  went **against** the breadth claim: robust districts halved, and the pace of price increases
+  *decreased* in three districts against increasing in one. This doc set the price count up as the
+  district-side corroboration test and the district side declined to corroborate. That is a real
+  finding, and it moved nothing — which is the point.
+- **The stand-aside cost nothing and would have been wrong to trade in either direction.** A hawkish
+  lean into the price count would have been contradicted by the report; a dovish lean off it would
+  have been contradicted by the tape, which closed **up** on a session driven by yields and oil.
+- **Leg 4 held exactly as written.** The report was *"the last word, not a new one"* — the last
+  institutional Fed publication before the blackout, and demonstrably not a new input.
+
+**Kill switches — none of the four fired, and one fired backwards.**
+
+1. **"Four or more districts describing robust or strong price growth"** — **did not fire, and the
+   count moved the other way**: **1** robust (St. Louis), down from July's 2. The switch was written
+   to catch hawkish corroboration; the report delivered mild disconfirmation instead.
+2. **"Nine or more districts reporting little-to-no change or declines in employment, or explicit
+   layoff language"** — **did not fire; the split improved.** Five districts at no change vs July's
+   seven. Named honestly: Boston's *district* report does say *"moderate layoffs occurred in higher
+   education"* — one sector in one district, nowhere near the national condition this switch set.
+3. **"A measurable tape move in the 2026-09-02 14:00–15:00 ET hour with the release as the named
+   driver"** — **did not fire, and this is the first own-instrument measurement this calendar has of
+   a Beige Book release hour** (the standing honest limit said none existed). Yahoo 5-minute bars,
+   fetched today:
+
+   | Instrument | 14:00 ET | 15:00 ET | Release-hour move |
+   |---|---|---|---|
+   | SPY | 765.29 | 764.885 | **−0.053%** |
+   | TLT | 81.875 | 81.855 | **−0.024%** |
+   | ^TNX | 4.792 | 4.792 | **0.0bp** (high 4.794) |
+
+   Against the session's other regular hours, SPY's 14:00 hour ranks **5th of 7 by absolute move**
+   (returns: 09:00 +0.090% · **10:00 +0.206%** · 11:00 +0.065% · 12:00 −0.115% · 13:00 −0.038% ·
+   **14:00 −0.063%** · 15:00 +0.035%). Its high-low range (0.196%) is second-largest, but **43% of the
+   10:00 hour's 0.456%** — the ADP-digestion hour. No session wrap checked names the Beige Book as a
+   driver; the Investrade review of 9/2 does not mention it at all. **Zavodny & Ginther's "not after
+   controlling for other macroeconomic indicators" survives its first out-of-sample test in this
+   regime**, on a day stuffed with exactly those controls.
+4. **"The 9/2 release slipping or the time changing"** — **did not fire**; published on schedule at
+   14:00 ET, which resolves the `estimate` date label correct.
+
+**Market reaction — and none of it was the Beige Book.** 2026-09-02 closes: S&P 500 **7,666.60
+(+0.46%)**, Nasdaq Composite **26,217.83 (+0.45%)**, Dow **53,061.95 (+0.56%)**, Russell 2000 **2,953
+(+1.13%)** (Investrade market review + press wraps, 2026-09-02; press-sourced and rounded).
+Instrument bars fetched today: SPY **765.16 (+0.444%)**, QQQ **709.24 (+0.226%)**, **VIX 15.20
+(−6.98%)** unwinding most of 9/1's spike from 14.92 → 16.34, ^TNX **4.796 (unchanged)**, TLT **81.95
+(+0.098%)**. The session's actual drivers, per every wrap checked: **ADP printed 38,000** vs a 47,000
+estimate off a 46,000 prior — the slowest month since January, with base pay +3.2% and gross pay +4.7%
+y/y (ADP Research release, 2026-09-02 08:15 ET) — and long yields **took a breather** after touching a
+multi-year high intraday (4.818% per CNBC / 4.814% per the Yahoo wrap, the two figures unreconciled;
+highest since November 2023), while crude rose on the Iran conflict (**WTI $91.01 +0.88%, Brent $95.63
++1.04%**). A stocks-up, vol-down, yields-flat session decided by a labor miss and an oil bid, with a
+qualitative Fed report landing in the middle of it and leaving no mark.
+
+**Forward tests — none registered, correctly.** The stance took no position sized to any branch, so
+[`forward-tests.md`](../forward-tests.md) carries nothing keyed to this event and nothing is scored
+here. The release-hour measurement above is **n=1 and is not promoted to a forward test**: one hour is
+not a distribution, and inventing a test at close-out on the one observation that produced it is
+exactly the overfit this calendar refuses. It is banked as a **baseline for the two tracked sibling
+editions** — [`beige-book-2026-10-14`](beige-book-2026-10-14.md) (CPI day) and
+[`beige-book-2026-11-25`](beige-book-2026-11-25.md) (PCE day) — both `confirmed`, both of which can
+measure their own release hour against SPY −0.053% / TLT −0.024% / ^TNX flat and build the sample
+honestly.
+
+**Adjacency at close-out.** No new dated event discovered; nothing proposed. The `scoos-2026-09-24`
+entry proposed by the D-1 row **landed** and now carries its own ledger. Two ids present in today's
+corridor that the D-1 probe-ref did not carry (`hammack-remarks-2026-09-03`,
+`vmware-explore-2026-08-31`) were filed by sibling sessions and are already on the calendar; both are
+recorded in the refreshed probe-ref block above.
+
+**Honest limits at close-out.** The Board's HTML summary URLs (`beigebook202609-summary.htm` and
+`beigebook202609.htm`) both returned **HTTP 404** today — recorded as a failure, not passed over; the
+figures rest on the Board's own **PDF** of the same edition, extracted locally, which is equally
+primary. The PDF's cover reads **"August 2026"** while press and the Board's schedule call this the
+September 2 edition — a Board naming convention, not a discrepancy in the data, but noted so a later
+reader searching by month finds it. Index closes are press-sourced and rounded; ETF/index/yield
+figures are Yahoo daily bars, and the release-hour figures are Yahoo **5-minute** bars, which cannot
+resolve a sub-minute reaction (a release with a real effect would persist past one bar, so this does
+not weaken the finding). **No clean 2026-09-02-close FedWatch reading was found**: the nearest
+sourced levels are **~65–68%** for a 9/16 hike on Tuesday 9/1 (press citing CME FedWatch) against the
+55.7–59% spread at the 8/28 close, and post-ADP commentary read the miss as a counterweight without
+publishing a revised number — the direction is unreliable at this resolution and is not scored. The
+entry is left **`estimate`**: its date resolved correct, but a passed event's status label is history
+rather than a gate, and this lane may not self-confirm regardless.
+
+**Verdict.** The report was informative and inert. It verified its own cutoff to the day, it moved
+both diff counts, and one of them pointed *against* the framing that had repriced 9/16 — and the tape
+did not so much as flinch in the release hour, on the most crowded macro week of the quarter. That is
+the stand-aside vindicated on its stated mechanism, not by luck: the 2005 finding this doc leaned on
+was applied twenty years out of sample and held. No trade was made or implied; none was warranted.
+The two counts and the release-hour baseline pass to the 10-14 edition. This doc goes quiet.
