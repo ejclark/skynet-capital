@@ -1,13 +1,23 @@
+---
+name: bury-dead-code
+description: dispose of one knip-flagged unused export, type, or file
+effort: high
+isolation: worktree
+outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
+---
+
 # Bury one dead-code finding
 
-**Calling convention:** invoke this step with `effort: "high"`. This chore duplicates the
-mortician agent's own judgment loop (`.claude/agents/mortician.md`), which is pinned to high
-effort because "read the code first, judge each item" is the actual hard part — grind's cheap
-default is strictly weaker than the task this file asks for.
+**Calling convention:** the front matter above is the calling convention — generate the call with
+`node scripts/grind-manifest.mjs --args --items '<json>' docs/grind/bury-dead-code.instructions.md`
+rather than transcribing these values by hand. Why they are what they are:
 
-**Run with `isolation: true`:** step 1 below does its own `git checkout -B` — without a fresh
-worktree per item, concurrent items share one working directory and stomp on each other's
-checkout. Worktree isolation avoids that entirely.
+- **`effort: high`** — this chore duplicates the mortician agent's own judgment loop
+  (`.claude/agents/mortician.md`), which is pinned to high effort because "read the code first,
+  judge each item" is the actual hard part. Grind's cheap default is strictly weaker than the task
+  this file asks for.
+- **`isolation: worktree`** — step 1 below does its own `git checkout -B`; without a fresh worktree
+  per item, concurrent items share one working directory and stomp on each other's checkout.
 
 **Fanning several items at once is fine; landing them separately is not.** The mortician Coach's
 WIP limit counts *open PRs*, not dispatches (`docs/COACHES.md` → "How the loop runs"), so run N

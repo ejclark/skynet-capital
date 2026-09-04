@@ -99,7 +99,7 @@ prose ("the target below") rather than trying to template inside the instruction
   issue. The pursuit half of the capture-and-pursue lane: any session that measures a new
   constraint files it with `/issue` + `bottleneck`; a grind run over the open ones does the
   research so no one's attention (least of all Eric's) is spent re-deriving it. Research, not
-  mechanics — call it with `effort: "high"` and the best model available.
+  mechanics — its front matter declares `effort: high` on `model: fable` for exactly that reason.
 
 Each of these was chosen and vetted through a research pass (red/blue/purple/tiger/yellow-teamed —
 see the PR that added them) against every gate this repo currently runs; several plausible-looking
@@ -107,13 +107,57 @@ batch chores (fanning `/decompose` or `/dedupe`, renumbering forward-test IDs) w
 **not** codified here because they need cross-item context a fan-out can't safely give them — see
 each file's own header for why, when a reason applies.
 
-## Calling convention: effort, model, and the shared-budget-file race
+## Calling convention: the chore declares its tier, you generate the call
 
-`grind.js` has no way to read an `*.instructions.md` file's contents before dispatching an agent to
-it (workflow scripts have no filesystem access) — so a chore that genuinely needs a higher
-effort/model tier than grind's cheap default has to say so in its own header, and the **caller**
-is responsible for actually passing `{effort: "high", ...}` (or whatever the file asks for) in the
-`steps` array. Read each instructions.md's "Calling convention" note before invoking it.
+`grind.js` still has no way to read an `*.instructions.md` file's contents before dispatching an
+agent to it — workflow scripts have no filesystem access, and that constraint is not going away.
+What changed (#1325) is who holds the tier: every checked-in chore declares it in YAML front
+matter, using the **same key names as `.claude/agents/*.md` frontmatter** so a chore that later
+graduates to a real subagent carries its header unchanged.
+
+```yaml
+---
+name: bury-dead-code
+description: dispose of one knip-flagged unused export, type, or file
+effort: high                 # low | medium | high | xhigh | max
+isolation: worktree          # worktree | none — `none` is an explicit "this chore needs no checkout"
+model: fable                 # optional; alias only, never a pinned id. Omit to take grind's default.
+outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
+---
+```
+
+**Generate the call instead of transcribing it.** `scripts/grind-manifest.mjs` reads the front
+matter and prints the exact `args` object, tier filled in and the outcome-check step appended:
+
+```bash
+node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' docs/grind/test-backfill.instructions.md
+```
+
+```json
+{
+  "items": ["src/a.ts", "src/b.ts"],
+  "steps": [
+    { "kind": "instructions", "path": "docs/grind/test-backfill.instructions.md", "effort": "high", "isolation": true },
+    { "kind": "script", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
+  ]
+}
+```
+
+`npm run grind:manifest` (no flags) prints what every chore declares and **exits 1** if any of them
+fails to declare `name`, `description`, `effort`, or `isolation` — blocking in CI via
+`tests/arch/grind-manifest.spec.ts`. So the tier can no longer go undeclared; what is still on the
+caller is running the preflight rather than hand-writing the args.
+
+**Not yet done — grind does not read the manifest at dispatch.** The next slice teaches `grind.js`
+to fetch each chore's manifest through one cheap subagent before the pipeline and resolve
+`explicit step field › explicit call arg › the file › the cheap default`, failing closed rather
+than falling back to cheap. Until that lands, a caller who skips the preflight and hand-writes args
+can still under-tier a run — the front matter and the gate remove the *ambiguity*, not the last of
+the manual step.
+
+**What front matter deliberately does NOT carry:** per-run grouping rules (per-doc, per-file,
+in waves), because `grind.js` could not enforce them anyway. Those stay prose in each chore's own
+"Calling convention" note — read it before invoking.
 
 The same applies to gates that rewrite one shared budget/ratchet file (`*-scan.mjs --update`):
 running `--update` inside each parallel item's own step risks two agents racing the same file.
@@ -182,7 +226,10 @@ appeared). Two consequences:
   etc.) rather than a fixed list you wrote by hand, filter out anything matching
   `envelope.json`'s protected patterns yourself before calling grind — a protected-path edit still
   gets caught at CI, but only after an agent already spent effort on a target that was never going
-  to land.
+  to land. `grind-manifest.mjs --args` already holds the item list, so a `--envelope` flag that
+  drops protected items is the natural home for this — but only for items that *are* paths; issue
+  numbers and `{doc, refs}` objects need their own mapping first, which is why #1325 routed it to a
+  follow-up rather than this slice.
 - **`skill` steps reach `.claude/skills/*/SKILL.md` only, not `.claude/agents/*.md`.** Several
   useful batch chores mirror an existing single-target *agent* (`mortician`, `test-backfiller`,
   `decomposer`, `ui-librarian`) rather than a skill — for those, the `instructions` step kind is
