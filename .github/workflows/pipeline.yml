@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0            # commitlint needs the PR commit range
+          fetch-depth: 0            # "Detect non-docs changes" below needs the PR's full commit range
 
       - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
@@ -118,8 +118,25 @@ jobs:
             echo "docs-only PR — skipping typecheck/lint/test; verify still reports green."
           fi
 
-      - name: Commit lint
-        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+      # Lints the PR TITLE, not the branch's individual commits (docs/PICTURES.md / the PR template:
+      # "TITLE = Conventional-Commit subject" — every merge here is a GitHub squash-merge, so the
+      # title IS the commit subject that lands on main; nothing about intermediate commit formatting
+      # ever does). Linting `--from base --to head` instead (the prior approach) lints every commit
+      # unique to the branch on every run — for a long-lived PR that includes commits made back at
+      # PR creation, before this check existed, which no later push can fix without rewriting another
+      # author's history (never done here; docs/LESSONS.md, 2026-09-04: blocked #1027 and #1212 on
+      # exactly this — the research-automation lane's bot writes unwrapped, single-line commit
+      # bodies that this rule's default 100-char line limit always rejects, on commits nobody could
+      # have satisfied in advance). Scoping to the title is both the structurally correct fix (lints
+      # the one thing that persists) and sidesteps the retroactive-failure class entirely, so the
+      # full rule set — line-length included — stays on rather than being weakened repo-wide.
+      # The title is passed via env, never interpolated into the script string, so a hostile PR
+      # title can't break out of the shell command (untrusted input into `run:` templating is a
+      # known GitHub Actions script-injection vector).
+      - name: Commit lint (PR title)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | npx commitlint --verbose
 
       # Same node_modules-cache-skip pattern as root's, for app/'s own tree.
       - name: Restore app/ node_modules cache
