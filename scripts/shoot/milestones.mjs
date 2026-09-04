@@ -1,34 +1,8 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { tmpdir } from "node:os";
-import { extname, join, resolve } from "node:path";
 // Visual harness for the milestones chapters (#1119) from the REAL built shell over stub APIs:
 // /app/learn (the table of contents) and /app/playbooks (M·03, WIP). JPEG ≤100KB.
-// Usage: npm run build --prefix app && node scripts/shoot-milestones.mjs [outdir]
-import { chromium } from "playwright-core";
+// Usage: npm run build --prefix app && npm run shoot:milestones [outdir]
+import { openShell } from "./shell.mjs";
 
-const OUT = process.argv[2] || join(tmpdir(), "skynet-milestones-shots");
-mkdirSync(OUT, { recursive: true });
-const DIST = resolve("app/dist");
-if (!existsSync(join(DIST, "index.html"))) {
-  console.error("shoot-milestones: app/dist missing — run `npm run build --prefix app` first");
-  process.exit(1);
-}
-const EXE = [
-  process.env.PW_CHROME,
-  "/opt/pw-browsers/chromium/chrome-linux/chrome",
-  "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
-]
-  .filter(Boolean)
-  .find((p) => existsSync(p));
-const TYPES = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".woff2": "font/woff2",
-};
 const ms = (id, title, points, earned) => ({
   id,
   title,
@@ -164,36 +138,12 @@ const playbooks = {
     ),
   ],
 };
-const json = (res, body) => {
-  res.writeHead(200, { "content-type": "application/json" });
-  res.end(JSON.stringify(body));
-};
-const server = createServer((req, res) => {
-  const url = new URL(req.url ?? "/", "http://localhost");
-  if (url.pathname === "/api/learn") return json(res, learn);
-  if (url.pathname === "/api/onboarding") return json(res, onboarding);
-  if (url.pathname === "/api/playbooks") return json(res, playbooks);
-  if (url.pathname.startsWith("/api/")) return json(res, {});
-  if (url.pathname === "/events") return;
-  const rel = url.pathname.replace(/^\/app\/?/, "");
-  const file = resolve(DIST, rel);
-  const type = TYPES[extname(file)];
-  if (rel && type && file.startsWith(DIST) && existsSync(file)) {
-    res.writeHead(200, { "content-type": type });
-    return res.end(readFileSync(file));
-  }
-  res.writeHead(200, { "content-type": TYPES[".html"] });
-  res.end(readFileSync(join(DIST, "index.html")));
+
+const { page, origin, shoot, close } = await openShell({
+  name: "milestones",
+  stubs: { "/api/learn": learn, "/api/onboarding": onboarding, "/api/playbooks": playbooks },
 });
-await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
-const origin = `http://127.0.0.1:${server.address().port}`;
-const browser = await chromium.launch(EXE ? { executablePath: EXE } : {});
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: "dark" });
-const shoot = async (name) => {
-  const path = join(OUT, `${name}.jpg`);
-  await page.screenshot({ path, type: "jpeg", quality: 62, fullPage: false });
-  console.log(`shot ${path}`);
-};
+
 await page.goto(`${origin}/app/learn`);
 await page.getByText("Your account's milestones").waitFor();
 await shoot("milestones-toc");
@@ -203,5 +153,4 @@ await shoot("playbooks");
 await page.goto(`${origin}/app/learn/trading`);
 await page.getByText("One fill unlocks the next rung").waitFor();
 await shoot("trading-ladder");
-await browser.close();
-server.close();
+await close();

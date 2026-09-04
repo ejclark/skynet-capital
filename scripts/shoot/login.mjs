@@ -1,21 +1,18 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 // Visual harness: render the real loginPage() and screenshot its states with Chromium — so the
 // animation (idle hero, a live play, the revealed form) can be reviewed without spinning up the
 // full server. Usage: npm run shoot:login [outdir]
 // Needs a Chromium: either set PW_CHROME to a binary, or run `npx playwright install chromium`.
+//
+// This one keeps its own page loop rather than using `shootHtml`: its frames are a TIMED SEQUENCE
+// through one document (plays fire on a cooldown, the reveal is a three-stage animation), not a
+// list of independent pages. That is a real difference, unlike the Chromium resolver and output
+// directory it used to hand-roll.
+import { writeFileSync } from "node:fs";
 import { chromium } from "playwright-core";
-import { resolveAuth } from "../src/server/auth/resolve-auth.ts";
+import { resolveAuth } from "../../src/server/auth/resolve-auth.ts";
+import { outputDir, resolveChromium } from "./lib.mjs";
 
-const OUT = process.argv[2] || join(tmpdir(), "skynet-login-shots");
-mkdirSync(OUT, { recursive: true });
-// Prefer an explicit binary (this repo's cloud env pre-installs one); else let Playwright resolve.
-const CANDIDATES = [
-  process.env.PW_CHROME,
-  "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
-].filter(Boolean);
-const EXE = CANDIDATES.find((p) => existsSync(p));
+const OUT = outputDir("login");
 
 const auth = resolveAuth({
   SKYNET_SESSION_SECRET: "dev",
@@ -24,8 +21,7 @@ const auth = resolveAuth({
   SKYNET_GITHUB_CLIENT_ID: "a",
   SKYNET_GITHUB_CLIENT_SECRET: "b",
 });
-const idle = auth.loginPage();
-writeFileSync(`${OUT}/idle.html`, idle);
+writeFileSync(`${OUT}/idle.html`, auth.loginPage());
 writeFileSync(
   `${OUT}/error.html`,
   auth.loginPage("stranger@gmail.com isn't on the guest list. Ask Eric to add you."),
@@ -57,7 +53,8 @@ async function shootAt(page, w, h, tag) {
   await page.screenshot({ path: `${OUT}/${tag}-reveal.png` });
 }
 
-const browser = await chromium.launch(EXE ? { executablePath: EXE } : {});
+const exe = resolveChromium();
+const browser = await chromium.launch(exe ? { executablePath: exe } : {});
 const page = await browser.newPage({ deviceScaleFactor: 1, colorScheme: "dark" });
 await shootAt(page, 1440, 900, "desktop");
 await shootAt(page, 900, 620, "short"); // short viewport: does the toggle clear the form?

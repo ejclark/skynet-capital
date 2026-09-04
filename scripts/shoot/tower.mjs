@@ -3,17 +3,19 @@
 //
 // A continuously-rendering canvas never goes "network idle" or "stable", so generic screenshot
 // tooling times out on it. We instead wait on the scene's own `window.__ready` flag, let a few
-// frames settle, and capture deterministically. Mirrors scripts/shoot-login.mjs.
+// frames settle, and capture deterministically.
 //
-//   node scripts/shoot-tower.mjs [--out DIR] [--power 0.62] [--health 0.15]
+//   npm run shoot:tower -- [--out DIR] [--power 0.62] [--health 0.15]
 //
-// Serves ./public statically itself, so it needs no running app server.
+// Serves ./public statically itself (WebGL needs its own Chromium flags and writes PNGs), so it
+// takes only the shared Chromium resolver from scripts/shoot/lib.mjs, not `openShell`.
 
 import { spawn } from "node:child_process";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
+import { resolveChromium } from "./lib.mjs";
 
 const arg = (flag, fallback) => {
   const i = process.argv.indexOf(flag);
@@ -32,7 +34,7 @@ const ONLY = arg("--poses", "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const CHROME = process.env.PW_CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+const CHROME = resolveChromium();
 
 /** Camera angles worth reviewing: the hero, the silhouette, and a close read of the masonry. */
 /** The instant every shot is captured at. Fixed so two runs produce comparable frames. Chosen near
@@ -120,7 +122,7 @@ async function main() {
   await new Promise((r) => setTimeout(r, 1200));
 
   const browser = await chromium.launch({
-    executablePath: CHROME,
+    ...(CHROME ? { executablePath: CHROME } : {}),
     headless: true,
     args: ["--no-sandbox", "--use-gl=swiftshader", "--enable-unsafe-swiftshader"],
   });

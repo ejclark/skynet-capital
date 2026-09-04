@@ -85,8 +85,14 @@ breaks in the other — that exact drift already shipped once).
   (empirical: PR #446's screenshots, the flagship fridge PR, were dead by 2026-08-20).
 - **One representative frame per changed surface**; prefer a before/after composite (one file)
   over a gallery. Side-by-side via a 2-column GFM table of `<img width="49%">`.
-- The shoot scripts (`npm run shoot:login`, `scripts/shoot-*.mjs`) carry the JPEG quality ceiling —
-  fix size problems there, not by hand-recompressing.
+- The shoot scripts live in [`scripts/shoot/`](../scripts/shoot/) — one per surface (`npm run
+  shoot:login`, `shoot:feedback`, `shoot:onboarding`, …), each just fixtures and frames over the
+  shared harness in `scripts/shoot/lib.mjs` + `shell.mjs`. The harness carries the JPEG quality
+  ceiling, so fix size problems there, not by hand-recompressing.
+- **A new `/app/*` surface needs a script, not a waiver.** Copy the shortest existing one
+  (`scripts/shoot/feedback.mjs`, ~50 lines), swap the stubs and the frames, add its `shoot:<name>`
+  npm script. #1308 and #1312 both shipped with "Picture: waived" because no script existed for the
+  surface they changed — that is the cost this harness was built to remove (#1327).
 
 **The fold is not guaranteed to survive even through `ship.sh`/REST — always re-fetch and check.**
 The GitHub **MCP** write tools strip `<details>`/`<summary>` outright while leaving `<img>` and

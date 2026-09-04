@@ -1,38 +1,12 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { tmpdir } from "node:os";
-import { extname, join, resolve } from "node:path";
 // Visual harness for /app/onboarding — milestone M·01 from the REAL built shell (app/dist) over a
 // stub API, four frames: a brand-new member (the five-step guide as accordions, step 1 open), the
 // same member with step 5 opened (the connect form inside it), Moneypenny's rail open with her
 // intro (the whole shell pushed left), and a connected member (step 1 done, tiles live, steps 2–3
-// waiting). JPEG ≤100KB (docs/PICTURES.md).
-// Usage: npm run build --prefix app && node scripts/shoot-onboarding.mjs [outdir]
-import { chromium } from "playwright-core";
+// waiting). JPEG ≤100KB (docs/PICTURES.md) — quality 55, not the harness default, because these
+// frames are 1100px tall and need it to clear the cap.
+// Usage: npm run build --prefix app && npm run shoot:onboarding [outdir]
+import { openShell } from "./shell.mjs";
 
-const OUT = process.argv[2] || join(tmpdir(), "skynet-onboarding-shots");
-mkdirSync(OUT, { recursive: true });
-const DIST = resolve("app/dist");
-if (!existsSync(join(DIST, "index.html"))) {
-  console.error("shoot-onboarding: app/dist missing — run `npm run build --prefix app` first");
-  process.exit(1);
-}
-const EXE = [
-  process.env.PW_CHROME,
-  "/opt/pw-browsers/chromium/chrome-linux/chrome",
-  "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
-]
-  .filter(Boolean)
-  .find((p) => existsSync(p));
-
-const TYPES = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".woff2": "font/woff2",
-};
 const step = (id, title, detail, points, route, done) => ({
   id,
   title,
@@ -101,7 +75,6 @@ const joinIndex = {
   classes: [],
   timezones: [{ value: "America/New_York", label: "Eastern (New York)" }],
 };
-
 const feedbackIndex = {
   enabled: true,
   coachEnabled: false,
@@ -113,43 +86,23 @@ const feedbackIndex = {
 const playbooks = { linked: true, unlocked: 0, total: 4 };
 const journey = { rank: "Observer", points: 0 };
 
+// The one endpoint whose answer changes mid-run: the last frame is the SAME member after connecting,
+// so `/api/onboarding` is a function of the current state rather than a fixed body.
 let state = fresh;
-const json = (res, body) => {
-  res.writeHead(200, { "content-type": "application/json" });
-  res.end(JSON.stringify(body));
-};
-const server = createServer((req, res) => {
-  const url = new URL(req.url ?? "/", "http://localhost");
-  if (url.pathname === "/api/onboarding") return json(res, state);
-  if (url.pathname === "/api/join") return json(res, joinIndex);
-  if (url.pathname === "/api/feedback") return json(res, feedbackIndex);
-  if (url.pathname === "/api/playbooks") return json(res, playbooks);
-  if (url.pathname === "/api/learn") return json(res, journey);
-  if (url.pathname.startsWith("/api/")) return json(res, {});
-  if (url.pathname === "/events") return;
-  const rel = url.pathname.replace(/^\/app\/?/, "");
-  const file = resolve(DIST, rel);
-  const type = TYPES[extname(file)];
-  if (rel && type && file.startsWith(DIST) && existsSync(file)) {
-    res.writeHead(200, { "content-type": type });
-    return res.end(readFileSync(file));
-  }
-  res.writeHead(200, { "content-type": TYPES[".html"] });
-  res.end(readFileSync(join(DIST, "index.html")));
-});
-await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
-const origin = `http://127.0.0.1:${server.address().port}`;
 
-const browser = await chromium.launch(EXE ? { executablePath: EXE } : {});
-const page = await browser.newPage({
+const { page, origin, shoot, close } = await openShell({
+  name: "onboarding",
   viewport: { width: 1280, height: 1100 },
-  colorScheme: "dark",
+  quality: 55,
+  stubs: {
+    "/api/onboarding": () => state,
+    "/api/join": joinIndex,
+    "/api/feedback": feedbackIndex,
+    "/api/playbooks": playbooks,
+    "/api/learn": journey,
+  },
 });
-const shoot = async (name) => {
-  const path = join(OUT, `${name}.jpg`);
-  await page.screenshot({ path, type: "jpeg", quality: 55, fullPage: false });
-  console.log(`shot ${path}`);
-};
+
 await page.goto(`${origin}/app/onboarding`);
 await page.getByRole("button", { name: "Create a free Alpaca account" }).waitFor();
 await shoot("onboarding-fresh");
@@ -176,5 +129,4 @@ await page.goto(`${origin}/app/onboarding`);
 await page.getByText("PAPER · LIVE").waitFor();
 await shoot("onboarding-connected");
 
-await browser.close();
-server.close();
+await close();
