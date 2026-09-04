@@ -116,4 +116,25 @@ describe("servePlaysApi wheels", () => {
     await servePlaysApi(post({ wheels: "on" }), res, "/api/trade/wheels", config(), ann);
     expect(out.status).toBe(400);
   });
+
+  it("carries the message gate and withholds the per-rung 'opens after' while it holds", async () => {
+    const { res, out } = fakeRes();
+    await servePlaysApi(
+      get(),
+      res,
+      "/api/trade/plays",
+      config({
+        progression: {
+          view: () =>
+            Promise.resolve({ wheels: true, unlocked: new Set(), ladderGate: "first-message" }),
+        },
+      }),
+      ann,
+    );
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.gate.reason).toBe("first-message");
+    expect(body.gate.note).toContain("hello to Moneypenny");
+    expect(body.plays.every((p: { locked: boolean }) => p.locked)).toBe(true);
+    expect(body.plays.some((p: { opensAfter?: unknown }) => p.opensAfter)).toBe(false);
+  });
 });

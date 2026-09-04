@@ -28,6 +28,22 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   instrument data (bust the instrument cache first:
   `rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
 
+**Registering a new forward test never reads the ledger's tip for "the next number."** Any
+prediction you register in `docs/research/forward-tests.md` — the first ledger row on
+`never-assessed` initial research, or a stance change registered mid-run
+(`docs/research/events/TEMPLATE.md`'s "predictions with a score-by date also register" rule) —
+gets an id namespaced to **your own assigned event**, never a shared, globally-incrementing bare
+number: `FT-<event-id>-<n>`, where `<event-id>` is the exact slug of your assigned
+`docs/research/events/<event-id>.md` file and `<n>` starts at 1 and increments only within that
+event's own prior forward-test rows (`grep 'FT-<event-id>-' docs/research/forward-tests.md` finds
+the next `<n>`; none yet found means start at 1). Two sibling sessions researching two different
+events can never collide on this id, because each derives it from the one thing it already owns
+exclusively — its own assigned event — never from a live read of a file every concurrent sibling
+is also reading and appending to (2026-09-04: this is exactly how two unrelated sessions both
+registered a bare `FT-25`, resolved by hand — docs/LESSONS.md). The ~50 legacy bare-number `FT-N`
+rows already in the ledger are grandfathered as-is; this scheme governs new registrations only,
+from here forward.
+
 **Refresh the probe-ref block on every ledger you touch.** Every ledger header carries a
 `<!-- probe-ref: {...} -->` line right after `**Last assessed:**` (docs/process/EVENT-RESEARCH.md
 → "Deterministic screening") — the deterministic screen's reference state for this event. Whenever
@@ -51,16 +67,30 @@ If none matches (already closed, or none was ever opened), skip the bullet — d
 over it. This is belt only: Moneypenny's push-driven sweep is the suspenders, since `Closes #`
 does not reliably auto-close a PR a bot both opens and merges (docs/LESSONS.md, 2026-08-22).
 
-Verify by exit status and never by tailed output (`npm run typecheck`, `npm run lint`, `npm test`),
-push, open the PR with `gh pr create`, then arm auto-merge with `bash scripts/ship.sh automerge
+Verify by exit status and never by tailed output (`npm run typecheck`, `npm run lint`, `npm test`).
+
+Before you commit, lint the message you are ABOUT to make — not after `verify` catches it in CI
+(docs/LESSONS.md, 2026-09-04: eight research PRs sat red on commitlint at once, none caught before
+push, because this lane commits from inside a GitHub Actions job where `npm ci`'s `prepare` script
+never installs the local git hook — `test -n "$CI" || husky` treats every CI runner as "skip", and
+this lane's runner IS the one place that also runs `git commit`). Write the message to a file and
+run `npx commitlint --edit <file>` before `git commit -F <file>`; fix and re-check on any failure.
+The three rules that have actually fired here:
+- **type** must be `docs` — never invent a `research(...)` type; the scope is `(research)`, e.g.
+  `docs(research): fomc 2026-12-09 — base case flips`.
+- **header** (the first line) lowercase-led, Conventional-Commit, **≤100 characters** total.
+- **body** lines ≤100 characters each — wrap your prose; a paragraph copy-pasted from your own
+  analysis will usually run long.
+
+Push, open the PR with `gh pr create`, then arm auto-merge with `bash scripts/ship.sh automerge
 <pr-number>` — never hand-roll `gh pr merge --auto --squash`, which has none of the script's
 safeguards (a PR going green before you arm it, a GraphQL proxy that won't serve the arm mutation,
 rate-limit exhaustion, a read-back check that the arm actually took — see #659 and the 16 research
 PRs stalled by the clean-status race on 2026-08-26). Research-ledger docs auto-merge per the
-governor's merge policy. Conventional-Commit subjects,
-lowercase-led and **≤100 characters** (commitlint's `header-max-length`, which fails `verify`). The PR body follows `.github/pull_request_template.md`: open with `## The picture` —
-for a ledger row the honest picture is usually the line `Picture: waived — automated research
-ledger` (never a decorative diagram); Summary bullets ≤120 chars (`docs/PICTURES.md`).
+governor's merge policy. The PR body follows `.github/pull_request_template.md`: open with
+`## The picture` — for a ledger row the honest picture is usually the line `Picture: waived —
+automated research ledger` (never a decorative diagram); Summary bullets ≤120 chars
+(`docs/PICTURES.md`).
 
 ## Hard limits
 

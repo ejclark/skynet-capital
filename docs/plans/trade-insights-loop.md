@@ -74,6 +74,11 @@ insight layer's own track record and throttles it automatically if it underperfo
   `bots` are separate machines). Verified: $0.15/GB/month, no LiteFS needed for this single-machine
   topology (LiteFS is for multi-region HA, which this app doesn't do). This is the one step that
   needs Eric — `fly volumes create` is real spend + infra, even if trivial cost.
+  **Scope extended (2026-09-04, issue #1181):** the same DB/volume also carries momentum,
+  sentiment, and per-persona cooldown tables — restoring trading-signal state across a deploy
+  restart, not just the retrospective insight stream this plan originally scoped. One volume, one
+  `openBotsStateDb` handle (`src/autonomous/bots-state-db.ts`), still gated on the same
+  `fly volumes create` step below.
 
 ## Autonomy envelope
 
@@ -103,3 +108,8 @@ insight layer's own track record and throttles it automatically if it underperfo
   Rationale: the `bots` process has zero persistent storage today (`fly.toml` mounts scope to `app`
   only); routing through `app`'s existing volume needs no new Fly resources, so it ships tonight
   without waiting on slice 4.
+- **2026-09-04 — slice 4 scope extended, code shipped dark (issue #1181, PR #1203).** Diagnosing
+  Sauron's trading inactivity surfaced the same structural gap this plan's slice 4 already targets:
+  a deploy restart wipes bot memory. `bots-state-db.ts` adds momentum/sentiment/cooldown tables to
+  the same planned volume rather than opening a second one — still fully held on Eric's
+  `fly volumes create`; nothing here changes that gate.

@@ -135,6 +135,7 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
   );
 }
 
+/** @category trading */
 export function TradeGate({
   deskId,
   initialAction = "buy",

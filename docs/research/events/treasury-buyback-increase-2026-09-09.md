@@ -1,7 +1,8 @@
 # Treasury long-end buyback size increase takes effect ($4B/op, 10-30Y) — treasury-buyback-increase-2026-09-09
 
-**Kind:** rates · **Date:** 2026-09-09 (estimate, NEWS: CNBC 2026-08-19 ("Treasury doubles debt buybacks as Bessent moves to steady bond market"), treasury.gov press release sb0607 — checked 2026-08-27) · **Impact:** medium
-**Last assessed:** 2026-08-28
+**Kind:** rates · **Date:** 2026-09-09 (confirmed, TSY: home.treasury.gov/news/press-releases/sb0607, dated 2026-08-19 — sizes/sectors/dates read verbatim off the primary, fetched direct via plain curl (HTTP 200) 2026-09-02) · **Impact:** medium
+**Last assessed:** 2026-09-04
+<!-- probe-ref: {"symbols":{},"vix":15.2,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","cpi-2026-09-11","eia-steo-2026-09-09","fomc-blackout-start-2026-09-05","jobs-2026-09-04","mts-august-2026-09-11","opec-plus-meeting-2026-09-06","ppi-2026-09-10","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -14,13 +15,25 @@ much it actually helps: the 10-year yield fell as much as ~6bps on announcement 
 reversed** within 24 hours as traders digested the deeper structural supply/collateral problems the
 buyback doesn't fix. Nothing here is a trade; it's a mildly supportive, largely symbolic input to the
 same rate-duration channel every macro print in the Sep 1→16 corridor also feeds — read it as
-context for that corridor, not as its own catalyst.
+context for that corridor, not as its own catalyst. **Updated 9/2:** the date and sizes are now
+**confirmed** off the directly-fetched treasury.gov primary (sb0607, plain curl HTTP 200) — a label
+change about how the date is KNOWN, not about what it does, and one that only removes
+estimate-widened caution rather than licensing anything. Meanwhile the base case got a receipt: the
+10Y sits ~**4.77%** (9/1), *above* its pre-announcement 8/19 level, and the 30Y ~**5.27%** after a
+19-year-high 5.34% print, with Bloomberg calling this the 30-year's worst stretch since 2006 —
+the announcement's relief is not merely faded but reversed, a week before operations even begin.
+**Updated 9/4:** two date facts sharpen the read. Treasury's promised updated buyback schedule is
+**still unpublished** 16 days on (the posted PDF's masthead still reads "For Publication August 5,
+2026"), so no published number yet confirms the step-up — the 9/9 operation announcement is the
+first hard one. And the schedule lists **no long-end operation on 9/9 itself**: the first test of
+the $4B floor is the 10-20Y operation on **9/10**, making 9/9 an eligibility date rather than an
+event. Yields did ease into 9/3 (10Y ~4.75%, 30Y ~5.25%) — but on Waller, not on this.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-12) | Stand aside | High | Twelve days out; the announcement (8/19) already happened and faded within a day — nothing new to react to before 9/9. | A fresh Treasury statement materially expanding the program (size, sectors, or funding) before **2026-09-09** |
-| This week | Stand aside | High | Nothing this week keys off this specific date; the Sep 1→4 macro-print cluster (ISM/JOLTS/jobs) dominates the near tape. | Any of those prints resetting the long-end yield level this operation is meant to steady |
-| This month | Watch | Medium | Operations begin 9/9, inside the same window as PPI (9/10), CPI (9/11), and FOMC (9/16) — a genuine but secondary input to the same duration channel; size nothing into it alone given the fast-faded first reaction. | Long-end yields making a fresh high despite the larger buybacks running, confirming analysts' "limited relief" read |
+| Today (D-5) | Stand aside | High | Five days out; the announcement (8/19) already happened and its yield relief has fully reversed, and the first operation at the larger size is 9/10, not 9/9. | A fresh Treasury statement materially expanding the program (size, sectors, or funding) before **2026-09-09** |
+| This week | Stand aside | High | Nothing this week keys off this specific date; the corridor's own calendar (jobs 9/4, Fed blackout from 9/5, OPEC+ 9/6) dominates the near tape — Waller's 9/3 hold signal alone moved Sep hike odds 63%→50%, which is the size of driver this program is not. | Any of those resetting the long-end yield level this operation is meant to steady |
+| This month | Watch | Medium | Operations begin 9/9, inside the same window as the 10Y (9/9), 30Y (9/10), PPI (9/10), CPI (9/11) and FOMC (9/16) — a genuine but secondary input to the same duration channel; size nothing into it alone given the fast-faded first reaction. | Long-end yields making a fresh high despite the larger buybacks running, confirming analysts' "limited relief" read |
 | This quarter | Stand aside on this program specifically | Medium | Analysts already frame it as unlikely to change the long-end yield trajectory on its own — deficit concerns, above-target inflation, and heavy corporate issuance are the structural drivers, not something a buyback fixes. | Bessent expanding the program beyond $4B/op or tapping the ~$1T TGA at scale, which would be a materially bigger fiscal lever than what's dated here |
 
 **Signals & conditions:**
@@ -33,8 +46,13 @@ context for that corridor, not as its own catalyst.
 - Bessent expanding the program beyond the dated $4B/op ceiling, or a confirmed TGA drawdown at
   scale to fund it → a genuinely bigger fiscal lever than what's dated here; would need its own
   reassessment, not a footnote to this one.
-- **Watch (dated):** ISM Mfg + JOLTS **9/1** · ADP **9/2** · AVGO print **9/2** · ISM Services **9/3**
-  · jobs **9/4** · buyback operations begin **9/9** · PPI **9/10** · CPI **9/11** · FOMC **9/16**.
+- The updated tentative buyback schedule sb0607 promised is **still unpublished** (checked at the
+  primary 9/4) → until it posts, the 9/9 operation announcement (preliminary eligible-CUSIP list
+  11:00am ET) is the only place a hard $4B-or-more number can appear.
+- **Watch (dated):** jobs **9/4** · Fed blackout begins **9/5** · OPEC+ **9/6** · 3Y **9/8** · 10Y
+  auction + buyback increase effective (eligibility only; no long-end op that day) **9/9** · 30Y +
+  **first 10-20Y op at the new size** + PPI **9/10** · CPI **9/11** · FOMC **9/16** · 20-30Y op
+  **9/24** · program window closes at the Quarterly Refunding **11/4**.
 
 ## Initial research
 
@@ -144,15 +162,21 @@ this doc's central open question for the first pulse check after operations star
 
 ## Stance & kill switches
 
-**Stance (mechanism and size confirmed via convergent press citing the primary; date estimate-
-labeled — the treasury.gov primary itself was not directly fetchable this session).** Treat
+**Stance (as of 2026-09-02: mechanism, sizes, sectors and dates now read verbatim off the
+treasury.gov primary, sb0607, fetched direct via plain curl — the event is `confirmed`, and leg 1's
+gated-primary caveat is retired).** Treat
 2026-09-09 as a secondary, context-only input to the Sep 1→16 rate-path corridor: no directional
 rate-sensitive position keyed to this program alone, given its own first market test (the 8/19
 announcement) fully faded within a day. Base case (**estimate-labeled**: analyst consensus already
 in the coverage, not this doc's own forecast): the larger buyback operations mute near-term long-end
 yield pressure modestly but do not reverse the underlying deficit/issuance/inflation-driven selloff
 trend — the structural story, not the liquidity tool, remains the dominant driver of long-end yields
-through this window.
+through this window. **The `confirmed` flip changes nothing directional** — it removes
+estimate-widened caution about the *date*, and no house playbook is rates-keyed, so the answer stays
+guard-shaped. **2026-09-02 update, and it cuts the base case's way:** with the 10Y at ~4.77% (9/1)
+*above* its pre-announcement 8/19 level and the 30Y at ~5.27% after a 19-year high, the program's own
+relief has reversed a full week before the larger operations run — the "structural supply problem,
+not a liquidity problem" read is now the tape's read too, not just the analysts'.
 
 **Kill switches:**
 
@@ -166,14 +190,24 @@ through this window.
 - **Long-end yields making a fresh cycle high despite the larger operations running** — confirms the
   structural-supply read over the liquidity-tool read; tightens caution on CRWV and the high-
   multiple semis into the CPI/FOMC leg of the corridor.
-- **The treasury.gov primary becoming directly fetchable** — resolves this doc's gated-primary limit
-  (leg 1); re-verify the exact operation sizes/sectors/dates against it directly at the next pulse.
+- ~~**The treasury.gov primary becoming directly fetchable**~~ — **FIRED and resolved 2026-09-02.**
+  Plain curl returns HTTP 200 where WebFetch times out (the same tool artifact recorded on
+  `treasury-borrowing-estimates-2026-11-02`, 2026-08-31). Sizes, both sectors, and both dates match
+  the convergent press exactly; leg 1's caveat is retired and the calendar entry is now `confirmed`.
+  The one thing the primary shows that the press did not: "An updated tentative Treasury buyback
+  schedule will be released at a later date" — **still unpublished as of 2026-09-04** (16 days on;
+  the posted PDF's masthead still reads "For Publication August 5, 2026" and both long-end rows
+  still cap at $2B), which is why `treasury-buyback-10y20y-2026-09-10` (est) still carries the
+  superseded cap. Its publication is the replacement watch item — and until it posts, the 9/9
+  operation announcement is the first place a hard number can appear.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-28 | D-12 | Initial research banked (above). Mechanism/size/dates corroborated via convergent press (CNBC, Bloomberg, Axios, Quartz, all 2026-08-19) citing treasury.gov sb0607 directly; direct primary fetch timed out this session (flagged). Announcement-day reaction (8/19): 10Y fell ~6bps to ~4.647%, fully reversed by 8/20 (+5bps to ~4.704%) — "analysts see limited relief" (CNBC 8/20). Escalation risk flagged but undated: Bessent floated exceeding $4B/op and tapping the ~$1T TGA (CNBC 8/20, 8/24). Adjacency — peers: n/a, `symbols: []`. Macro: standing regime per the sibling ISM/jobs/FOMC ledgers — Sep 1→16 corridor (ISM-mfg+JOLTS 9/1, ADP 9/2, AVGO print 9/2, ISM-svcs 9/3, jobs 9/4, PPI 9/10, CPI 9/11, FOMC 9/16) all already on the calendar; Jackson Hole (Warsh's first keynote, today 8/28) and Chicago PMI (today) had not posted outcomes as of this check. VIX ~15.2 (8/27 close) — calm 14-16 range held all month, no shift. Geopolitical: Iran-Oman waters/revenue-split agreement (8/27) stands as the clearest Hormuz de-escalation yet, easing (not resolving) the energy-inflation pass-through that's part of the same deficit/inflation backdrop cited as the long-end selloff's driver. No new dated adjacency found beyond what's already on the calendar — the escalation risk (leg 5) has no firm date to propose. | — (stance set) | 2026-09-04 (medium, 8-30d band: every 7d) |
+| 2026-09-02 | D-7 | **Primary resolved — kill switch 4 fired.** sb0607 fetched direct, plain curl HTTP 200 (WebFetch still times out — the tool artifact already recorded on treasury-borrowing-estimates-2026-11-02). Verbatim: $2B/op max → "at least $4 billion per operation", 10-20Y + 20-30Y, "effective September 9, 2026 … through November 4, 2026". Leg-1 caveat retired; calendar entry flipped estimate → confirmed (`TSY:`) in this PR. One line the press never carried: "An updated tentative Treasury buyback schedule will be released at a later date" — still unpublished, so treasury-buyback-10y20y-2026-09-10 (est) keeps its superseded $2B cap. **Tape: the relief is reversed, not merely faded** — 10Y ~4.77% (9/1), highest since Jan-2025, vs ~4.68% pre-announcement 8/19; 30Y 5.27% after a 19-year-high 5.34%; Bloomberg 9/1 calls it the 30-year's worst stretch since 2006. Adjacency — peers: n/a (`symbols: []`). Macro: Warsh's 8/28 keynote hawkish (2Y +12bp to 4.356%, 10Y 4.726%, 30Y 5.211%; Sep hike odds ~35% → ~57%); ISM Mfg 54.6 vs 55.2 cons. and JOLTS openings 7.271M / quits 1.9% (both 9/1) — yields rose anyway, supply over data. VIX 16.44 (9/1) from ~15.2, +1.2pt, under the 3pt bar but off a sub-15 8/31 close. Geopolitics reverses the last row's de-escalation read: Larak Island strike (8/30), Iranian attacks on two US bases in Jordan, Kharg Island threatened, Brent ~$91-94. Cadence band stepped medium:8+ → medium:0+. No new dated adjacency: sb0607's own "next Quarterly Refunding, scheduled for November 4, 2026" is already tracked as treasury-refunding-2026-11-04 (est); the escalation paths (TGA ~$950B, >$4B/op, Bessent's "Treasury Twist") stay undated. | Stance survives and strengthens; estimate → confirmed is a date/size label change only, not directional | 2026-09-04 (medium, 0-7d band: every 2d) |
+| 2026-09-04 | D-5 | **Replacement watch item re-checked at the primary — still open.** Tentative Buyback Schedule re-fetched direct (home.treasury.gov/system/files/221/Tentative-Buyback-Schedule.pdf, HTTP 200, text layer read): masthead still "For Publication August 5, 2026" — the pre-announcement edition, 16 days after sb0607 — with the 09-10 10-20Y row and the 09-24 20-30Y row both still capped at $2B. No published number confirms the step-up yet; the 09-09 operation announcement (preliminary CUSIPs 11:00am ET) remains the first place one can appear. **Date nuance the schedule settles:** there is NO long-end operation on 09-09 itself — that day's only op is a $12.5B cash-management buyback in 1Mo-2Y (announced 09-08) — so 09-09 is an eligibility date and the $4B floor's first real test is the 09-10 10-20Y op. Adjacency — peers: n/a (`symbols: []`). Macro: Waller 09-03 said he'd be inclined to hold absent inflation surprises → Sep hike odds 63.2%→50.4% (CME FedWatch), 10Y ~4.78%→~4.75%, 30Y ~5.25%, 2Y 4.317%, S&P +1.06% to 7,747.71 — a Fed-path move, not a buyback move. **Jobs (09-04, 08:30 ET, cons. +53k / U-3 4.1%) had not printed when this row was written (22:40 ET 09-03); unscored here, first item for the next row.** VIX 15.20 (09-03) from 16.44, −1.24, under the 3pt bar. Geopolitics escalated again: Iran missiles at Kuwait, Brent >$96 (09-03), crude +7% on the week, Hormuz transit a wartime-record 17mb/d under US escort — inflation-side pressure against durable long-end relief. Adjacency set gained two already-tracked ids (eia-steo-2026-09-09, mts-august-2026-09-11); no new dated event found — every row on the re-fetched schedule is either tracked or outside the corridor. | None — stance unchanged | 2026-09-06 (medium, 0-7d band: every 2d) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance

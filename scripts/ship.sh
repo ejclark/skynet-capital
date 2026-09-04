@@ -183,6 +183,40 @@ EOF_SHOTS
   fi
 
   if [ "$verify" = 1 ]; then
+    # Commit-message lint, locally, before a push — not just in CI (docs/LESSONS.md, 2026-09-04:
+    # eight open PRs sat red on commitlint at once, none of them caught before push, because
+    # nothing in the local path ever runs the same check CI's `verify` job does). Fetch first
+    # (same lesson, same day: a stale local `origin/$base` makes this check compare against the
+    # wrong base and either miss a real violation or false-flag a fixed one).
+    git fetch --quiet origin "$base" 2>/dev/null || true
+    local merge_base=""
+    git rev-parse --verify -q "origin/$base" >/dev/null && merge_base="$(git merge-base "origin/$base" HEAD)"
+
+    # Stale-base hard stop (docs/LESSONS.md, 2026-09-04): the fetch above refreshes the REMOTE-
+    # TRACKING ref, but nothing merges it into the working tree — so `npm run verify` below still
+    # tests THIS branch in isolation. CI evaluates the actual PR-merge state (this branch + whatever
+    # landed on $base since it was cut), which can differ: PR #1219 verified green locally while
+    # main had independently grown a file the branch also touched past a line-count cap, and only
+    # the merged state broke it. Catch that here, for free, before spending a push or a runner —
+    # never after, in a red CI run.
+    if [ -n "$merge_base" ] && ! git merge-base --is-ancestor "origin/$base" HEAD 2>/dev/null; then
+      local behind; behind="$(git rev-list --count "$merge_base..origin/$base")"
+      echo "ship: this branch is $behind commit(s) behind origin/$base — local verify would test a" >&2
+      echo "  stale merge state that CI won't see. Merge it in first, THEN re-run ship open:" >&2
+      echo "    git merge origin/$base --no-edit" >&2
+      echo "  (--no-edit is load-bearing: commitlint requires Conventional-Commit format and only" >&2
+      echo "   exempts git's own auto-generated 'Merge branch' message — a hand-written one fails" >&2
+      echo "   the commit-msg hook. Never rebase onto \$base here; merge keeps a reviewer's existing" >&2
+      echo "   checkout of this branch valid.)" >&2
+      exit 1
+    fi
+
+    if [ -n "$merge_base" ]; then
+      npx commitlint --from "$merge_base" --to HEAD --verbose || {
+        echo "ship: COMMIT MESSAGE LINT FAILED — not pushing. Fix with 'git commit --amend' (last commit) or 'git rebase -i' (earlier one), then retry." >&2
+        exit 1
+      }
+    fi
     echo "ship: local verify (parity with CI — fail fast before spending a runner)…"
     npm run verify >/tmp/ship-verify.log 2>&1 || { echo "ship: LOCAL VERIFY FAILED — not pushing."; tail -20 /tmp/ship-verify.log; exit 1; }
     echo "ship: verify green."
@@ -232,7 +266,10 @@ EOF_SHOTS
   # can be a legitimate exception a script can't judge.
   node scripts/test-quality-scan.mjs "$branch" --base "$base" 2>/dev/null || true
 
-  echo "ship: pushing $branch…"
+  # Braces are load-bearing: stock macOS bash (3.2) reads the ellipsis bytes as identifier
+  # characters, so a bare $branch… is the undefined variable "branch…" and set -u kills the run
+  # right before the push. Brace any variable followed by a non-ASCII character in this file.
+  echo "ship: pushing ${branch}…"
   local n=0; until git push -u origin "$branch" 2>/dev/null; do
     n=$((n+1)); [ "$n" -le 4 ] || { echo "ship: push failed after retries" >&2; exit 1; }
     sleep $((2**n)); done

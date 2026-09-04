@@ -28,10 +28,15 @@
  */
 
 import { areaFrom, type FeedbackArea } from "./feedback-areas.js";
+import type { FeedbackImageInput } from "./feedback-images.js";
 
 export interface CoachMessage {
   readonly role: "user" | "assistant";
   readonly content: string;
+  /** Screenshots attached to this turn — only ever present on the opening user message (#1020):
+   *  the member's note, not a mid-conversation answer, is where a picture helps the coach ask a
+   *  sharper first question. Sanitized the same way as a plain submission's images. */
+  readonly images?: readonly FeedbackImageInput[];
 }
 
 /**

@@ -34,6 +34,10 @@ export function legLabel(leg: DraftLeg): string {
   return `${side} ${leg.contracts} ${leg.underlying} $${leg.strike}${type} ${leg.expiration}`;
 }
 
+/** One leg of a multi-leg draft: its plain-language label plus the control that removes it.
+ *
+ *  @category trading
+ */
 export function LegRow({
   leg,
   busy,
@@ -97,7 +101,10 @@ function PayoffGrid({ preview }: { readonly preview: DraftPreview }): ReactEleme
 }
 
 /** The review body: refusals, warnings, the unlimited-loss banner, and the payoff grid — the same
- *  anatomy `OptionPreviewBody` renders for the single-leg ticket, extended to a leg array. */
+ *  anatomy `OptionPreviewBody` renders for the single-leg ticket, extended to a leg array.
+ *
+ *  @category trading
+ */
 export function ReviewBody({
   draft,
   preview,
@@ -161,7 +168,10 @@ export function gateStatus(draft: DraftOrder): { tone: string; headline: string 
   }
   return { tone: "draft", headline: "Building — add at least two legs" };
 }
-
+/** The multi-leg draft ticket end to end — leg entry, validation, review, submit.
+ *
+ *  @category trading
+ */
 export function DraftOrderBuilder({ deskId }: { readonly deskId: string }): ReactElement {
   const [draft, setDraft] = useState<DraftOrder>(emptyDraft());
   const [preview, setPreview] = useState<DraftPreview | undefined>(undefined);

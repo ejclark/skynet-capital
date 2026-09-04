@@ -38,3 +38,10 @@ public/tower.html
 
 # generated design-system bundle (scripts/design-cards.mjs) — regenerable, never committed
 .tmp-design-cards/
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+app/.ds-styles.css
+app/dist/
