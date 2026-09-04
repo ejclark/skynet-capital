@@ -1,19 +1,22 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { regularSessionOpen } from "../domain/market-session.js";
 import { deriveOnboarding, ONBOARDING_MILESTONE } from "../domain/onboarding.js";
 import { TRADE_TYPES } from "../domain/trade-types.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId, resolveOwnedIds } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { requireGet, sendJson } from "./page-shell.js";
 
 /**
  * MILESTONE M·01 AS DATA — `GET /api/onboarding`, the shell's Onboarding page (the Claude Design
- * canvas "Alpaca onboarding process streamline", 2026-09-02; IA in #1119). Three steps, each read
- * from the ledger that already proves it, never from the browser:
+ * canvas "Alpaca onboarding process streamline", 2026-09-02; IA in #1119; step 2's bar lowered
+ * 2026-09-03 from a filed issue to a message). Three steps, each read from the ledger that
+ * already proves it, never from the browser:
  *
- *   connect        — the session owns a HUMAN account on the board (`resolveOwnedIds` + hub state)
- *   first-feedback — the progression service's engagement track (a real feedback-log entry)
- *   first-trade    — at least one ladder milestone earned (a real fill)
+ *   connect       — the session owns a HUMAN account on the board (`resolveOwnedIds` + hub state)
+ *   first-message — the progression service's engagement track (a real message-log entry)
+ *   first-trade   — at least one ladder milestone earned (a real fill)
  *
  * The account block rides along when connected — equity and cash from the live board snapshot,
  * rungs earned of the ladder — so the page's tiles and the milestone come from one read. Money is
@@ -24,6 +27,14 @@ import { requireGet, sendJson } from "./page-shell.js";
 export interface OnboardingView {
   /** False when auth isn't configured — there is no member to onboard. */
   readonly linked: boolean;
+  /** The signed-in member's name from the session, for "Welcome to the league, <name>" before
+   *  any account exists to carry a display name. Absent without auth or a nameless session. */
+  readonly viewerName?: string;
+  /** The member's opaque id (the feedback log's own key) — what the rail keys its thread by, so
+   *  a shared device never shows one member another's conversation. Absent without a session. */
+  readonly viewerId?: string;
+  /** The server's regular-session clock, so the intro's steer and the model agree. */
+  readonly marketOpen: boolean;
   readonly milestone: typeof ONBOARDING_MILESTONE;
   readonly steps: ReturnType<typeof deriveOnboarding>["steps"];
   readonly done: number;
@@ -58,15 +69,21 @@ export async function onboardingView(
     .find((p) => p !== undefined && p.kind === "human");
   // The journey resolves exactly as /api/learn does — the session's own progression, nobody else's.
   const journeyId = linked ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
+  // The feedback log is keyed by the email hash, not the account id (#1171) — pass both.
   const progression =
-    journeyId && config.progression ? await config.progression.view(journeyId) : undefined;
-  const feedbackFiled = (progression?.engagementEarned ?? []).some(
-    (m) => m.milestoneId === "first-feedback",
+    journeyId && config.progression
+      ? await config.progression.view(
+          journeyId,
+          session ? opaqueMemberId(session.email) : undefined,
+        )
+      : undefined;
+  const messaged = (progression?.engagementEarned ?? []).some(
+    (m) => m.milestoneId === "first-message",
   );
   const rungsEarned = progression?.earned.length ?? 0;
   const progress = deriveOnboarding({
     connected: human !== undefined,
-    feedbackFiled,
+    messaged,
     firstFillEarned: rungsEarned > 0,
   });
   const next = progression?.nextUp
@@ -74,6 +91,9 @@ export async function onboardingView(
     : undefined;
   return {
     linked,
+    ...(session?.name ? { viewerName: session.name } : {}),
+    ...(session?.email ? { viewerId: opaqueMemberId(session.email) } : {}),
+    marketOpen: regularSessionOpen(),
     milestone: ONBOARDING_MILESTONE,
     ...progress,
     ...(human

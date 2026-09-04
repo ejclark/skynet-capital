@@ -4,6 +4,7 @@ import { earnedCodes } from "../domain/progression.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { requireGet, sendJson } from "./page-shell.js";
 
 /**
@@ -23,7 +24,10 @@ export async function servePlaybooksApi(
   if (path !== "/api/playbooks") return false;
   if (!requireGet(req, res)) return true;
   const id = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
-  const progression = id && config.progression ? await config.progression.view(id) : undefined;
+  const progression =
+    id && config.progression
+      ? await config.progression.view(id, session ? opaqueMemberId(session.email) : undefined)
+      : undefined;
   const view = derivePlaybooks(earnedCodes(progression?.earned ?? []));
   sendJson(res, 200, {
     linked: id !== undefined,

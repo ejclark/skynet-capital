@@ -5,28 +5,26 @@ import {
 } from "../../src/domain/engagement.js";
 
 describe("the engagement track — earned by an action, not a fill", () => {
-  it("earns nothing from an empty filing history", () => {
+  it("earns nothing from an empty message history", () => {
     expect(deriveEngagementEarned([])).toEqual([]);
   });
 
-  it("earns first-feedback dated to the EARLIEST filing, not the latest or the call order", () => {
+  it("earns first-message dated to the EARLIEST message, not the latest or the call order", () => {
     const earned = deriveEngagementEarned([
       "2026-08-20T10:00:00Z",
       "2026-08-15T09:00:00Z",
       "2026-08-25T11:00:00Z",
     ]);
-    expect(earned).toEqual([{ milestoneId: "first-feedback", at: "2026-08-15T09:00:00Z" }]);
+    expect(earned).toEqual([{ milestoneId: "first-message", at: "2026-08-15T09:00:00Z" }]);
   });
 
-  it("earns exactly once no matter how many filings exist", () => {
+  it("earns exactly once no matter how many messages exist", () => {
     const earned = deriveEngagementEarned(["2026-08-01T00:00:00Z", "2026-08-02T00:00:00Z"]);
     expect(earned).toHaveLength(1);
   });
 
   it("looks up a real milestone by id, and nothing for an unknown one", () => {
-    expect(engagementMilestone("first-feedback")?.title).toBe(
-      "Meet Moneypenny — file your first feedback",
-    );
+    expect(engagementMilestone("first-message")?.title).toBe("Say hello to Moneypenny");
     expect(engagementMilestone("not-a-real-id")).toBeUndefined();
   });
 

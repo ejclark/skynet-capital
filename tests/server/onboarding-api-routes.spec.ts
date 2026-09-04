@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
+import { opaqueMemberId } from "../../src/server/feedback-issue.js";
 import { serveOnboardingApi } from "../../src/server/onboarding-api-routes.js";
 
 /**
@@ -89,14 +90,14 @@ describe("serveOnboardingApi", () => {
     expect(view.account).toBeUndefined();
   });
 
-  it("reads connect, first feedback and first trade from the ledgers, with the account block", async () => {
+  it("reads connect, first message and first trade from the ledgers, with the account block", async () => {
     const view = await body(
       configWith({
         resolveOwnerIds: () => ["sauron", "human-joe"],
         resolveOwnerId: () => "human-joe",
         progression: progressionWith({
           earned: [{ milestoneId: "first-buy", code: "101", orderId: "o1", at: "2026-09-01" }],
-          engagementEarned: [{ milestoneId: "first-feedback", at: "2026-09-01" }],
+          engagementEarned: [{ milestoneId: "first-message", at: "2026-09-01" }],
           nextUp: "102",
         }),
       }),
@@ -120,5 +121,25 @@ describe("serveOnboardingApi", () => {
     const view = await body(configWith({ auth: undefined }), undefined);
     expect(view.linked).toBe(false);
     expect(view.done).toBe(0);
+  });
+
+  it("reads progression with the member's OPAQUE id, not the account id (#1171)", async () => {
+    // The feedback log is keyed by `opaqueMemberId(session.email)` — a different id space than
+    // the account id `resolveOwnerId` returns. Passing the account id into that slot is exactly
+    // how #1171 shipped: every filing looked unfiled forever.
+    const calls: unknown[][] = [];
+    await body(
+      configWith({
+        resolveOwnerIds: () => ["human-joe"],
+        resolveOwnerId: () => "human-joe",
+        progression: {
+          view: (...args: unknown[]) => {
+            calls.push(args);
+            return Promise.resolve({ wheels: true, earned: [], engagementEarned: [] });
+          },
+        },
+      }),
+    );
+    expect(calls).toEqual([["human-joe", opaqueMemberId("joe@example.com")]]);
   });
 });

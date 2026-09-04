@@ -1,0 +1,63 @@
+name: Fly logs
+
+# Self-serve log pull for support/debugging (e.g. "can't log in" reports) — no terminal, no local
+# flyctl, no new secret. Reuses the deploy-scoped tokens the release pipeline already has
+# (FLY_API_TOKEN for skynet-capital, FLY_API_TOKEN_BOTS/FLY_ORG_TOKEN for skynet-capital-bots), the
+# same pattern autonomy-ops.yml uses for the bots app. Read-only: this job never deploys, never
+# touches secrets, never mutates the app — it only prints recent log lines to this run's own job
+# log, which `get_job_logs` (GitHub MCP) can then read back. `flyctl logs --no-tail` returns Fly's
+# own recent buffer (short retention, not a historical archive), so this answers "what just
+# happened" — it is not a substitute for a real log-shipping setup.
+#
+# Filters to a pattern by default rather than dumping everything, since app logs can carry member
+# emails (OAuth callback errors, allowlist rejections) — keep the filter as narrow as the question
+# actually needs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Which Fly app to read logs from"
+        required: true
+        type: choice
+        options:
+          - skynet-capital
+          - skynet-capital-bots
+        default: skynet-capital
+      filter:
+        description: "Case-insensitive grep -E pattern to keep (e.g. an email, 'auth|allowlist|403')"
+        required: true
+        type: string
+        default: "auth|allowlist|oauth|login|403"
+      lines:
+        description: "Max matching lines to print"
+        required: true
+        type: string
+        default: "300"
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-logs:
+    name: fetch · ${{ inputs.app }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Pull and filter recent logs
+        env:
+          FLY_API_TOKEN: >-
+            ${{ inputs.app == 'skynet-capital-bots'
+              && (secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN)
+              || secrets.FLY_API_TOKEN }}
+          FILTER: ${{ inputs.filter }}
+          LINES: ${{ inputs.lines }}
+        run: |
+          echo "## flyctl logs -a ${{ inputs.app }} (filter: $FILTER)" | tee -a "$GITHUB_STEP_SUMMARY"
+          flyctl logs -a "${{ inputs.app }}" --no-tail 2>&1 \
+            | grep -iE "$FILTER" \
+            | tail -n "$LINES" \
+            | tee -a "$GITHUB_STEP_SUMMARY" \
+            || echo "no log lines matched \"$FILTER\"" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1,5 +1,4 @@
-import { anthropicApiError } from "../http/anthropic-reply.js";
-import { fetchJson, type JsonResponse } from "../http/fetch-json.js";
+import { fetchJson } from "../http/fetch-json.js";
 import {
   type AnthropicStreamEvent,
   type DoStreamFetch,
@@ -10,17 +9,23 @@ import {
   COMPANION_MAX_MESSAGE_CHARS,
   MAX_HISTORY_MESSAGES,
   MAX_TOKENS_PER_REPLY,
-  MAX_TOOL_ROUNDS,
   MAX_TURNS,
   TURN_LIMIT_MESSAGE,
 } from "./companion-limits.js";
 import { COMPANION_MODEL } from "./companion-model.js";
-import { COMPANION_SYSTEM_PROMPT } from "./companion-system-prompt.js";
 import {
-  COMPANION_TOOL_DEFS,
-  type CompanionDeskDeps,
-  runCompanionTool,
-} from "./companion-tools.js";
+  ANTHROPIC_URL,
+  BUDGET_SPENT_MESSAGE,
+  type DoFetch,
+  type Headers,
+  runToolRounds,
+  systemBlocks,
+} from "./companion-tool-rounds.js";
+import type { CompanionDeskDeps, FeedbackDraft } from "./companion-tools.js";
+
+export { BUDGET_SPENT_MESSAGE };
+
+type DoStream = typeof streamAnthropicMessage;
 
 /**
  * THE COMPANION'S CONVERSATION ENGINE — bounds, tool round-trip, streamed reply. This file owns
@@ -34,8 +39,6 @@ import {
  * — nothing user-facing happens until the model is done deciding what to look up.
  */
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-
 export interface CompanionMessage {
   readonly role: "user" | "assistant";
   readonly content: string;
@@ -46,26 +49,28 @@ export interface CompanionTurnInput {
   /** The session's own linked desk. Undefined = this sign-in owns no account (yet) — the
    *  read-only tools are simply not offered, never pointed at anyone else's. */
   readonly participantId?: string;
+  /** The member's live context for this turn (`companion-context.ts`) — rides in the volatile
+   *  half of the system prompt, after the cache breakpoint, never in the cached half. */
+  readonly context?: string;
 }
 
 export interface CompanionHandlers {
   readonly onText: (chunk: string) => void;
   readonly onDone: () => void;
   readonly onError: (message: string) => void;
+  /** The model drafted a filing from the conversation (`draft_feedback`) — the rail holds it and
+   *  only the member's reply sends it. Optional: a caller with no rail just drops the draft. */
+  readonly onHandoff?: (draft: FeedbackDraft) => void;
+  /** Asked before every billed model call; false means the member's budget for this window is
+   *  spent — the turn stops looking things up and answers with what it already has, or reports
+   *  the throttle honestly when it has nothing. Optional: no hook, no budget. */
+  readonly budget?: () => boolean;
 }
 
 export type CompanionTurn = (
   input: CompanionTurnInput,
   handlers: CompanionHandlers,
 ) => Promise<void>;
-
-interface AnthropicBlock {
-  readonly type: string;
-  readonly text?: string;
-  readonly id?: string;
-  readonly name?: string;
-  readonly input?: unknown;
-}
 
 /** Server-enforced bounds — never model-trusted, same doctrine as the coach's `boundsError`. */
 function companionBoundsError(messages: readonly CompanionMessage[]): string | null {
@@ -83,107 +88,10 @@ function trimHistory(messages: readonly CompanionMessage[]): CompanionMessage[] 
   return firstUser <= 0 ? trimmed : trimmed.slice(firstUser);
 }
 
-function systemBlocks(volatile: string): readonly unknown[] {
-  return [
-    // The byte-stable half, cached: brand rules, the never-an-order invariant, the tour script.
-    { type: "text", text: COMPANION_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-    // The volatile half AFTER the cache breakpoint — a timestamp or per-request note here must
-    // never sit ahead of the breakpoint, or every request invalidates the cache it's there for.
-    ...(volatile ? [{ type: "text", text: volatile }] : []),
-  ];
-}
-
-function replyContent(res: JsonResponse): { content?: readonly AnthropicBlock[]; error?: string } {
-  const apiError = anthropicApiError(res, "companion");
-  if (apiError) return { error: apiError };
-  const content = (res.body as { content?: readonly AnthropicBlock[] }).content;
-  return content ? { content } : { error: "companion returned no content" };
-}
-
-function textOf(content: readonly AnthropicBlock[]): string {
-  return content
-    .filter((b) => b.type === "text")
-    .map((b) => b.text ?? "")
-    .join("");
-}
-
-function toolUsesOf(content: readonly AnthropicBlock[]): readonly AnthropicBlock[] {
-  return content.filter((b) => b.type === "tool_use");
-}
-
 export interface CompanionChatConfig {
   readonly apiKey: string;
   /** Omit to run tools-off (the Q&A-over-catalogs-only slice — no desk to read from anyway). */
   readonly tools?: CompanionDeskDeps;
-}
-
-type DoFetch = typeof fetchJson;
-type DoStream = typeof streamAnthropicMessage;
-type Headers = Readonly<Record<string, string>>;
-
-type ToolRoundOutcome =
-  | { readonly kind: "answered" | "error" }
-  | { readonly kind: "continue"; readonly working: unknown[] };
-
-/** Up to `MAX_TOOL_ROUNDS` non-streaming round trips letting the model call read-only tools.
- *  Ends early (`"answered"`) the moment a reply carries no tool call — nothing user-facing
- *  happens before that, so this leg never needs to stream. Ends `"error"` on any transport or
- *  shape failure, already reported through `handlers`. Falling out of the loop (`"continue"`)
- *  means the rounds are exhausted; the caller takes `working` to the final streaming call. */
-async function runToolRounds(
-  doFetch: DoFetch,
-  headers: Headers,
-  volatile: string,
-  initial: readonly unknown[],
-  deskDeps: CompanionDeskDeps,
-  participantId: string,
-  handlers: CompanionHandlers,
-): Promise<ToolRoundOutcome> {
-  let working = [...initial];
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    let res: JsonResponse;
-    try {
-      res = await doFetch("POST", ANTHROPIC_URL, headers, {
-        model: COMPANION_MODEL,
-        max_tokens: MAX_TOKENS_PER_REPLY,
-        system: systemBlocks(volatile),
-        messages: working,
-        tools: COMPANION_TOOL_DEFS,
-      });
-    } catch (error) {
-      handlers.onError(error instanceof Error ? error.message : "companion unreachable");
-      return { kind: "error" };
-    }
-    const reply = replyContent(res);
-    if (!reply.content) {
-      handlers.onError(reply.error ?? "companion error");
-      return { kind: "error" };
-    }
-    const toolUses = toolUsesOf(reply.content);
-    if (toolUses.length === 0) {
-      // A direct reply with tools offered — no streaming leg needed, emit it whole.
-      const text = textOf(reply.content);
-      if (text) handlers.onText(text);
-      handlers.onDone();
-      return { kind: "answered" };
-    }
-    const results = await Promise.all(
-      toolUses.map((tu) => runCompanionTool(tu.name ?? "", deskDeps, participantId)),
-    );
-    working = [
-      ...working,
-      { role: "assistant", content: reply.content },
-      {
-        role: "user",
-        content: toolUses.map((tu, i) => ({
-          type: "tool_result",
-          tool_use_id: tu.id,
-          content: JSON.stringify(results[i]),
-        })),
-      },
-    ];
-  }
-  return { kind: "continue", working };
 }
 
 /** The one leg the member actually reads — streamed. `exhausted` only changes the volatile
@@ -195,12 +103,17 @@ async function streamFinalReply(
   exhausted: boolean,
   working: readonly unknown[],
   handlers: CompanionHandlers,
+  callsSoFar = 0,
 ): Promise<void> {
   const finalSystem = systemBlocks(
     exhausted
       ? `${volatile} Tool lookups are exhausted for this turn — answer with what you already have rather than looking anything up again.`
       : volatile,
   );
+  if (callsSoFar === 0 && handlers.budget && !handlers.budget()) {
+    handlers.onError(BUDGET_SPENT_MESSAGE);
+    return;
+  }
   try {
     await doStream(
       ANTHROPIC_URL,
@@ -242,28 +155,34 @@ export function createCompanionChat(
       return;
     }
 
-    const canUseTools = Boolean(config.tools && input.participantId);
-    const volatile = canUseTools
+    const canUseDesk = Boolean(config.tools && input.participantId);
+    const toolsNote = canUseDesk
       ? "This member has a linked desk — the read-only tools describe their own account."
-      : "This member has no linked desk yet — no tools are available; answer from general knowledge of the app only, and don't claim to see their positions.";
+      : "This member has no linked desk yet — the desk lookups are not available; answer from the help desk and the member context, and don't claim to see their positions. draft_feedback still works.";
+    const volatile = input.context ? `${toolsNote}\n\n${input.context}` : toolsNote;
     const initial = trimHistory(input.messages).map((m) => ({ role: m.role, content: m.content }));
 
-    if (!canUseTools) {
-      await streamFinalReply(doStream, headers, volatile, false, initial, handlers);
-      return;
-    }
-    // `canUseTools` is exactly the guard that makes both of these defined.
+    // The draft hand-off is always on offer, so every turn runs the (non-streaming) tool leg;
+    // the desk lookups join it only for a linked desk.
     const outcome = await runToolRounds(
       doFetch,
       headers,
       volatile,
       initial,
-      config.tools as CompanionDeskDeps,
-      input.participantId as string,
+      config.tools ?? { snapshotFor: () => undefined },
+      canUseDesk ? input.participantId : undefined,
       handlers,
     );
     if (outcome.kind !== "continue") return; // already answered or errored via `handlers`
-    await streamFinalReply(doStream, headers, volatile, true, outcome.working, handlers);
+    await streamFinalReply(
+      doStream,
+      headers,
+      volatile,
+      true,
+      outcome.working,
+      handlers,
+      outcome.calls,
+    );
   };
 }
 

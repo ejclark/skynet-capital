@@ -8,14 +8,14 @@ import {
 
 describe("onboarding milestone (M·01)", () => {
   it("has three steps, in the order a member meets them, 30 points in all", () => {
-    expect(ONBOARDING_STEPS.map((s) => s.id)).toEqual(["connect", "first-feedback", "first-trade"]);
+    expect(ONBOARDING_STEPS.map((s) => s.id)).toEqual(["connect", "first-message", "first-trade"]);
     expect(onboardingTotalPoints()).toBe(30);
     expect(ONBOARDING_MILESTONE.code).toBe("M·01");
   });
 
-  it("prices the feedback step from the engagement track — one source of truth", () => {
-    const engagement = ENGAGEMENT_MILESTONES.find((m) => m.id === "first-feedback");
-    const step = ONBOARDING_STEPS.find((s) => s.id === "first-feedback");
+  it("prices the message step from the engagement track — one source of truth", () => {
+    const engagement = ENGAGEMENT_MILESTONES.find((m) => m.id === "first-message");
+    const step = ONBOARDING_STEPS.find((s) => s.id === "first-message");
     expect(step?.points).toBe(engagement?.points);
     expect(step?.points).toBe(10);
   });
@@ -23,7 +23,7 @@ describe("onboarding milestone (M·01)", () => {
   it("derives nothing done from no evidence", () => {
     const progress = deriveOnboarding({
       connected: false,
-      feedbackFiled: false,
+      messaged: false,
       firstFillEarned: false,
     });
     expect(progress.done).toBe(0);
@@ -35,7 +35,7 @@ describe("onboarding milestone (M·01)", () => {
   it("marks each step from its own ledger, independent of the others", () => {
     const progress = deriveOnboarding({
       connected: false,
-      feedbackFiled: true,
+      messaged: true,
       firstFillEarned: false,
     });
     expect(progress.steps.map((s) => s.done)).toEqual([false, true, false]);
@@ -46,7 +46,7 @@ describe("onboarding milestone (M·01)", () => {
   it("completes at three of three with the full 30", () => {
     const progress = deriveOnboarding({
       connected: true,
-      feedbackFiled: true,
+      messaged: true,
       firstFillEarned: true,
     });
     expect(progress).toMatchObject({
@@ -59,9 +59,11 @@ describe("onboarding milestone (M·01)", () => {
   });
 
   it("points every step at the shell route that completes it", () => {
+    // Step 1's form lives inside the onboarding page's guide; step 2 opens Moneypenny's rail
+    // with her intro (the 2026-09-03 handoff) rather than a feedback page.
     expect(ONBOARDING_STEPS.map((s) => s.route)).toEqual([
-      "/app/join",
-      "/app/feedback?starter=onboarding",
+      "/app/onboarding",
+      "/app/onboarding?moneypenny=intro",
       "/app/trade?play=101",
     ]);
   });

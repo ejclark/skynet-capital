@@ -70,6 +70,20 @@
   --stage-gap: 22px;
   --panel-p: 16px;
 
+  /* the fluid width scale (Eric, 2026-09-04: "the page template should be fluid and take full
+     screen real estate") — the React shell's copy of the doctrine in src/observatory/fluid-layout.ts.
+     The frame tracks the window up to --shell-max (2560px, the widest glass we design for) and the
+     stage takes everything the rail doesn't; NOTHING in shell.css caps the page narrower than that.
+     A view then picks a cap by the SHAPE of what it holds, as a percentage bounded by min(100%, …):
+     grids and lists read fine very wide (--col-wide), a single-column form or a prose panel does not
+     (--col-read) — an input stretched across 1600px is a worse page, not a fuller one. A view never
+     writes a bare pixel width of its own; a cap not on this scale is drift. */
+  --shell-max: 2560px;
+  --rail-w: 248px;
+  --gutter: clamp(16px, 2.5vw, 48px);
+  --col-wide: min(100%, 1800px);
+  --col-read: min(100%, 1180px);
+
   /* spatial motion (#738 phase 4b) — two speeds, one easing; reduced-motion zeroes both */
   --dur-quick: 140ms;
   --dur-spatial: 260ms;

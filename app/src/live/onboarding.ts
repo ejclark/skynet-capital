@@ -3,7 +3,7 @@
  * done-state is the server's reading of a ledger; this module carries no progress of its own.
  */
 
-export type OnboardingStepId = "connect" | "first-feedback" | "first-trade";
+export type OnboardingStepId = "connect" | "first-message" | "first-trade";
 
 export interface OnboardingStep {
   readonly id: OnboardingStepId;
@@ -27,6 +27,12 @@ export interface OnboardingAccount {
 
 export interface Onboarding {
   readonly linked: boolean;
+  /** The session's own name — greets a member before they have an account on the board. */
+  readonly viewerName?: string;
+  /** The member's opaque id — the rail keys its thread by it. */
+  readonly viewerId?: string;
+  /** The server's regular-session clock. */
+  readonly marketOpen?: boolean;
   readonly milestone: {
     readonly id: string;
     readonly code: string;

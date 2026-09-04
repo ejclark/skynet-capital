@@ -11,9 +11,32 @@ import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 
 const REFRESH_INTERVAL_MS = 60_000;
 
+export interface ClockCredentials {
+  readonly baseUrl?: string;
+  readonly apiKey: string;
+  readonly apiSecret: string;
+}
+
 export interface MarketClock {
   /** Whether the market was open as of the most recent refresh. */
   isOpen(): boolean;
+  /**
+   * Swap the credentials this clock polls with, in place — for the bot supplying them (the
+   * shared market-data account) getting rotated. Rebuilds the client and triggers an immediate
+   * refresh rather than waiting up to REFRESH_INTERVAL_MS, so a rotation that fixed a dead key
+   * doesn't leave the market gated closed for up to another minute.
+   */
+  replaceCredentials(creds: ClockCredentials): void;
+}
+
+function buildClient(creds: ClockCredentials): AlpacaTradingClient {
+  return new AlpacaTradingClient(
+    new FetchAlpacaTradingTransport({
+      baseUrl: creds.baseUrl ?? ALPACA_PAPER_BASE_URL,
+      apiKey: creds.apiKey,
+      apiSecret: creds.apiSecret,
+    }),
+  );
 }
 
 /**
@@ -21,18 +44,8 @@ export interface MarketClock {
  * Performs one synchronous-to-the-caller refresh before returning, so `isOpen()` reflects a real
  * reading immediately rather than the `false` default.
  */
-export async function startMarketClock(creds: {
-  baseUrl?: string;
-  apiKey: string;
-  apiSecret: string;
-}): Promise<MarketClock> {
-  const clock = new AlpacaTradingClient(
-    new FetchAlpacaTradingTransport({
-      baseUrl: creds.baseUrl ?? ALPACA_PAPER_BASE_URL,
-      apiKey: creds.apiKey,
-      apiSecret: creds.apiSecret,
-    }),
-  );
+export async function startMarketClock(creds: ClockCredentials): Promise<MarketClock> {
+  let clock = buildClient(creds);
   let marketOpen = false;
   const refreshOpen = async () => {
     try {
@@ -43,5 +56,11 @@ export async function startMarketClock(creds: {
   };
   await refreshOpen();
   setInterval(() => void refreshOpen(), REFRESH_INTERVAL_MS);
-  return { isOpen: () => marketOpen };
+  return {
+    isOpen: () => marketOpen,
+    replaceCredentials: (next) => {
+      clock = buildClient(next);
+      void refreshOpen();
+    },
+  };
 }
