@@ -27,7 +27,6 @@
  */
 import { existsSync } from "node:fs";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
-import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
 import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
 import {
@@ -44,11 +43,10 @@ import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
-import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
-import { ALPACA_DATA_BASE_URL } from "../runtime/data-source.js";
+import { startSharedDataConnections } from "./autonomous-data-connections.js";
 import {
   bootMissionControl,
   buildBotRosters,
@@ -58,7 +56,6 @@ import {
   seedBotsState,
   seedDailyLossBaseline,
 } from "./autonomous-live-wiring.js";
-import { startMarketClock } from "./autonomous-market-clock.js";
 import { runOffline } from "./autonomous-offline-runner.js";
 import { auditStore, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
@@ -88,11 +85,18 @@ async function runLive(): Promise<void> {
   // in BEFORE the map is populated is still a documented no-op (nothing to look up yet), never a
   // crash, and every poll after boot finds the map fully populated.
   const brokerHolders = new Map<string, SwappableBotBroker>();
+  // The bot supplying the shared data connections below — its rotation refreshes them too.
+  let dataCredsPersonaId: string | undefined;
+  let shared: Awaited<ReturnType<typeof startSharedDataConnections>> | undefined;
   const credentials = resolveBotCredentialsClient((personaId, next) => {
     const broker = brokerHolders.get(personaId);
     if (!broker) return false;
     broker.replaceCredentials(next);
     console.log(`[creds] ${personaId}: broker swapped in place (rotated) — no restart`);
+    if (personaId === dataCredsPersonaId) {
+      shared?.replaceCredentials(next);
+      console.log(`[creds] ${personaId}: also refreshed the shared clock/news/price-stream`);
+    }
     return true;
   });
   const { controls, bootControls } = await bootMissionControl(
@@ -150,6 +154,7 @@ async function runLive(): Promise<void> {
   if (!dataCreds) {
     process.exit(1);
   }
+  dataCredsPersonaId = bots[0]?.persona.id;
   // The live path (and ONLY the live path) runs the S2/E1 trade discipline: flat through every
   // print, defer non-urgent entries past the open. Deliberately absent from the offline replay
   // and from every eval — see TradeDiscipline in engine/guards.ts for why leaking it into the
@@ -176,17 +181,24 @@ async function runLive(): Promise<void> {
   const botsStateDb = seedBotsState(process.env);
   restoreBotsState(botsStateDb, tracker, sentiment);
 
-  // News → sentiment, polled for the universe (news is low-frequency; a short poll is plenty).
-  const newsClient = new AlpacaNewsClient(
-    new FetchAlpacaTradingTransport({
-      baseUrl: ALPACA_DATA_BASE_URL,
-      apiKey: dataCreds.apiKey,
-      apiSecret: dataCreds.apiSecret,
-    }),
+  // Constructed before the boot-time reconcile() below, so a credential rotated while this
+  // process was down reaches these too. `onEvent` safely closes over `maybeEvaluate` (defined
+  // further down) — no tick arrives until `.start()`, called near the bottom of this function.
+  shared = await startSharedDataConnections(
+    dataCreds,
+    (event) => {
+      if (event.type === "price") {
+        tracker.record(event.symbol, event.price);
+        void maybeEvaluate();
+      }
+    },
+    UNIVERSE,
   );
+  const { marketClock, marketDataStream, getNews } = shared;
+
   const pollNews = async () => {
     try {
-      for (const article of await newsClient.getNews(UNIVERSE)) {
+      for (const article of await getNews(UNIVERSE)) {
         sentiment.ingest(article, universeSet);
       }
       persistSentiment(botsStateDb, sentiment);
@@ -236,6 +248,7 @@ async function runLive(): Promise<void> {
   // Boot-time correction (mirrors mergeRoster's "store overrides stale env" precedent): a
   // rotation that landed while this process was down is caught here, using the snapshot
   // bootMissionControl already fetched, rather than waiting up to 30s for the next live poll.
+  // The shared data connections above are already wired, so this catches them too.
   await credentials.reconcile(bootControls);
 
   // --- beta scout: Eric's beta-phase directive (2026-08-13) — "deploying playbooks to observe
@@ -283,9 +296,6 @@ async function runLive(): Promise<void> {
       ),
   });
 
-  // Gate trading on market hours (refreshed periodically).
-  const marketClock = await startMarketClock(dataCreds);
-
   armMomentumPersistence(botsStateDb, tracker);
 
   let lastEval = 0;
@@ -302,18 +312,7 @@ async function runLive(): Promise<void> {
     evaluating = false;
   };
 
-  new AlpacaMarketDataStream({
-    apiKey: dataCreds.apiKey,
-    apiSecret: dataCreds.apiSecret,
-    symbols: UNIVERSE,
-    onEvent: (event) => {
-      if (event.type === "price") {
-        tracker.record(event.symbol, event.price);
-        void maybeEvaluate();
-      }
-    },
-    onStatus: (status) => console.log(`[market-data] ${status}`),
-  }).start();
+  marketDataStream.start();
 
   console.log(
     `Autonomous trading started [live] — bots: ${bots.map((b) => b.persona.name).join(", ")}; universe: ${UNIVERSE.join(", ")}; maxPosition ${(risk.maxPositionPct * 100).toFixed(1)}%; market ${marketClock.isOpen() ? "OPEN" : "closed"}.`,
