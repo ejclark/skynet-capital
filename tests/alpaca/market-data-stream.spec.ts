@@ -229,6 +229,35 @@ describe("AlpacaMarketDataStream", () => {
   });
 
   describe("replaceCredentials", () => {
+    it("before start(): only updates config — opens no socket of its own", () => {
+      // Confirmed live 2026-09-04: a credential rotated during the boot-time reconcile (which
+      // runs before the caller's own first start()) used to open a socket immediately here, and
+      // the caller's subsequent start() then opened a SECOND one on the same account — Alpaca
+      // killed one as a duplicate connection ~10s later, leaving zero ticks flowing.
+      const stream = new AlpacaMarketDataStream({
+        apiKey: "old-key",
+        apiSecret: "old-secret",
+        symbols: ["NVDA"],
+        onEvent: () => undefined,
+      });
+
+      stream.replaceCredentials("new-key", "new-secret");
+
+      expect(FakeSocket.instances).toHaveLength(0);
+
+      stream.start();
+
+      expect(FakeSocket.instances).toHaveLength(1);
+      const socket = FakeSocket.instances[0];
+      if (!socket) throw new Error("start() opened no socket");
+      socket.emit("open");
+      expect(JSON.parse(socket.sent[0] ?? "")).toEqual({
+        action: "auth",
+        key: "new-key",
+        secret: "new-secret",
+      });
+    });
+
     it("closes the old socket and opens a new one authenticating with the new pair", () => {
       const { stream, socket: firstSocket } = startStream();
 
