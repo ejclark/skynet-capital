@@ -16,6 +16,7 @@ import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl } from "../shell/mission-control";
 import { type Density, type Theme, usePrefs } from "../shell/prefs";
+import { ProfileRail } from "../shell/profile-rail";
 import { Toggle } from "../shell/toggle";
 
 /**
@@ -358,13 +359,13 @@ function SettingsPage(): ReactElement {
 
   if (settings.isPending)
     return (
-      <PageFrame>
+      <PageFrame rail={<ProfileRail current="settings" />}>
         <p className="note">Reading your accounts…</p>
       </PageFrame>
     );
   if (settings.isError)
     return (
-      <PageFrame>
+      <PageFrame rail={<ProfileRail current="settings" />}>
         <p className="note">Settings are unreachable.</p>
       </PageFrame>
     );
@@ -372,9 +373,10 @@ function SettingsPage(): ReactElement {
   const { authConfigured, adminWired, accounts, timezones } = settings.data;
   const rail = (
     <>
-      <p className="rail-label">Settings</p>
+      <ProfileRail current="settings" />
+      <hr />
+      <p className="rail-label">On this page</p>
       <a href="#preferences">Preferences</a>
-      <a href="/learn">Milestones</a>
       {accounts.map((a) => (
         <a key={a.id} href={`#account-${a.id}`}>
           {a.name}

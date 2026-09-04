@@ -4,10 +4,13 @@ import type { ReactElement } from "react";
 /**
  * THE PROFILE RAIL (#1119, the canvas's left rail under the Profile tab): Accounts (the standings
  * board — every desk, bots and humans), Milestones (the table of contents), its three chapters —
- * Onboarding · Trading Desk · Playbooks — and Feedback (Eric, 2026-09-03: the ledger of filings
- * that became GitHub issues lives under Profile now that filing itself is Moneypenny's rail). One
- * component so every profile page shows the same map; `current` marks the page you're on. Every link here is a profile sub-view of the
- * Profile tab (dimensional precedence, `frame.tsx`).
+ * Onboarding · Trading Desk · Playbooks — Feedback (Eric, 2026-09-03: the ledger of filings that
+ * became GitHub issues lives under Profile now that filing itself is Moneypenny's rail), and
+ * Settings (Eric, 2026-09-04: it's a user-geared page, so it belongs in the Profile rail like its
+ * siblings rather than reachable only through the topbar's icon-only gear shortcut, which stays
+ * as a global fast path). One component so every profile page shows the same map; `current` marks
+ * the page you're on. Every link here is a profile sub-view of the Profile tab (dimensional
+ * precedence, `frame.tsx`).
  * @category navigation
  */
 export type ProfileChapter =
@@ -16,13 +19,21 @@ export type ProfileChapter =
   | "onboarding"
   | "ladder"
   | "playbooks"
-  | "feedback";
+  | "feedback"
+  | "settings";
 
 const ITEMS: readonly {
   readonly id: ProfileChapter;
   readonly glyph: string;
   readonly label: string;
-  readonly to: "/" | "/learn" | "/onboarding" | "/learn/trading" | "/playbooks" | "/feedback";
+  readonly to:
+    | "/"
+    | "/learn"
+    | "/onboarding"
+    | "/learn/trading"
+    | "/playbooks"
+    | "/feedback"
+    | "/settings";
   readonly sub?: true;
 }[] = [
   { id: "accounts", glyph: "≣", label: "Accounts", to: "/" },
@@ -31,6 +42,7 @@ const ITEMS: readonly {
   { id: "ladder", glyph: "⇄", label: "Trading Desk", to: "/learn/trading", sub: true },
   { id: "playbooks", glyph: "⛁", label: "Playbooks", to: "/playbooks", sub: true },
   { id: "feedback", glyph: "✎", label: "Feedback", to: "/feedback" },
+  { id: "settings", glyph: "⚙", label: "Settings", to: "/settings" },
 ];
 
 export function ProfileRail({ current }: { readonly current: ProfileChapter }): ReactElement {
