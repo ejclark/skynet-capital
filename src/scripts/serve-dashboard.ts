@@ -14,7 +14,10 @@
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
-import { createBootActivityStore } from "../observatory/activity-store.js";
+import {
+  bootPublishingActivityStore,
+  publishingOrderAuditLog,
+} from "../observatory/activity-publishing.js";
 import { createBrokerSync } from "../observatory/broker-sync.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
@@ -88,8 +91,12 @@ async function main(): Promise<void> {
 
   // Durable trade-activity ledger (SKYNET_ACTIVITY_DIR → /data/activity in prod): every order
   // update from every account's trade_updates stream is journaled, so trade history survives the
-  // broker's recent-order window. Boot banks that window first — the restart-gap net.
-  const activity = createBootActivityStore(process.env, dataSource.mode);
+  // broker's recent-order window. Boot banks that window first — the restart-gap net. `bus` also
+  // gets every write, translated, for a future triage view / Moneypenny subscription (#1211).
+  const { activity, bus: activityEventBus } = bootPublishingActivityStore(
+    process.env,
+    dataSource.mode,
+  );
   // Ladder milestone auto-completion — never a client claim; see the wiring module.
   const { onActivity, sweep: sweepLadderProgress } = wireLadderProgress(process.env, activity);
   void reconcileBrokerActivity(activity, initial.participants)
@@ -188,7 +195,7 @@ async function main(): Promise<void> {
   });
   brokerSync.start();
 
-  const orderAudit = createOrderAuditLog(process.env);
+  const orderAudit = publishingOrderAuditLog(createOrderAuditLog(process.env), activityEventBus);
   const desk = resolveDeskTrading({
     findParticipant,
     clientFactory: dataSource.clientFactory,
