@@ -65,7 +65,11 @@ function FeedbackPage(): ReactElement {
           {data.celebrating.length > 0 ? (
             <CommunityUnlockBanner celebrations={data.celebrating} onClaimed={refresh} />
           ) : null}
-          <RecentFeedback recent={data.recent} followupEnabled={data.followupEnabled} />
+          <RecentFeedback
+            recent={data.recent}
+            followupEnabled={data.followupEnabled}
+            appVersion={data.appVersion}
+          />
         </>
       )}
     </PageFrame>
