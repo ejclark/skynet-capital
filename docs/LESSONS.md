@@ -1836,3 +1836,63 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   `incident-scan.mjs`'s printed line should include the failed step name (`error_max_turns` /
   `error_max_turns` / job name) alongside the display title, so the next unlearned-incident list is
   triageable without a log fetch.
+
+---
+
+### `ship open` verified green against a stale base; CI failed on the actual PR-merge state
+
+- **SHA:** a386dd0   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** PR #1219's `verify` check failed in CI on `noExcessiveLinesPerFile`
+  (`src/scripts/serve-dashboard.ts`, "302 lines, maximum 300") — a check `scripts/ship.sh open` had
+  just run clean, locally, before the push. Detection lag: minutes (the CI webhook fired promptly),
+  but the failure itself was avoidable at zero cost, which is the actual finding.
+- **ROOT CAUSE:** the branch's merge-base with `main` was several commits stale (fetched once at
+  session start, never refreshed before shipping). `main` had independently grown the same file
+  close to its line cap while the branch was in flight; the branch's own small addition to that file
+  tipped the ACTUAL PR-merge state over 300 lines, but the branch alone, on its stale base, stayed
+  under. `ship open`'s existing `git fetch origin "$base"` (added the same day, for the commitlint
+  check just above it) refreshes the remote-tracking ref, but nothing consumes that freshness for
+  `npm run verify` itself — the verify step still runs against whatever files are checked out
+  locally, not the merged-with-main state CI actually evaluates. "Verified locally" and "what CI
+  checks" can silently diverge any time `main` moves during a session, on ANY check whose result
+  depends on file content main also touched (a line cap, a duplicate export, a type that now
+  conflicts) — not just this one instance.
+- **PREVENTION:** gate, in `scripts/ship.sh`'s `cmd_open` — right where `merge_base` is already
+  computed for the commitlint check, a new hard stop: if `origin/$base` is not an ancestor of HEAD
+  (i.e. the branch is missing commits `main` already has), `ship open` refuses to verify or push at
+  all, and prints the exact remedy (`git merge origin/$base --no-edit`, with the `--no-edit` reason
+  spelled out — see the next lesson). This turns the whole class of "green locally, red in CI
+  because CI tests the merged state" failures into a check caught in seconds, before a push, for
+  zero LLM reasoning cost on every future PR. Doctrine line added alongside it in
+  `.claude/skills/ship/SKILL.md` → *Mechanics & traps*, so a session that catches a branch up
+  manually (mid CI-red triage, before ever calling `ship open`) reads the same rule.
+- **SIDE QUESTS:** → docs/IDEAS.md — the same staleness class can silently corrupt other
+  local-vs-CI-parity assumptions (dependency-graph/spec-gap/dead-code budget deltas, which this
+  session also diffed by hand against a throwaway worktree to separate its own drift from
+  pre-existing debt). Worth asking whether `npm run verify` itself, not just `ship open`, should
+  warn when HEAD is behind its upstream tracking branch — `ship open` is the one path this repo's
+  own sessions use to land a PR, but a session iterating without shipping yet (e.g. mid-review-fix
+  loop) gets no such warning today.
+
+---
+
+### A hand-written merge-commit message fails commitlint's Conventional-Commit check
+
+- **SHA:** aa47106   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** `git merge origin/main -m "merge origin/main into <branch>: ..."` (catching a PR
+  branch up to `main` mid CI-red triage, the standard "Merge conflict" playbook step) was rejected
+  by the commit-msg hook: `subject may not be empty`, `type may not be empty`. Immediate — caught
+  before the commit landed, not after.
+- **ROOT CAUSE:** commitlint enforces Conventional-Commit format (`type(scope): subject`) on every
+  commit message by default, and only exempts messages matching its built-in ignore pattern for an
+  actual git-generated merge commit (`^Merge branch|^Merge pull request…`, the text `git merge`
+  writes itself when given no `-m`). A hand-written sentence describing the merge — plain English,
+  no `type:` prefix — parses as neither a Conventional-Commit subject nor a recognized merge-commit
+  shape, so it fails both checks at once. Nothing in `CLAUDE.md`, `docs/ENGINEERING.md`, or the ship
+  skill said to use `--no-edit` here; the trap is only obvious in hindsight.
+- **PREVENTION:** doctrine line, `.claude/skills/ship/SKILL.md` → *Mechanics & traps*: catching a
+  branch up to `main` always uses `git merge origin/main --no-edit`, never a custom message. Folded
+  into the same fix as the lesson above — the new stale-base guard's own error message prints this
+  exact command, so the two lessons close together: the guard catches the staleness, its remedy text
+  prevents this exact commitlint trap from recurring on the fix.
+- **SIDE QUESTS:** none.
