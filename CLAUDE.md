@@ -257,10 +257,12 @@ the docs are the memory.
 
 ## Ship loop
 
-- Branch off latest `origin/main` per change **before editing** (`git checkout -B <branch>
-  origin/main`) — branch-first means never needing `git stash`, which is **banned here** (it has
-  silently dropped edits). Small focused PRs; squash-merge on green; Conventional-Commit subjects,
-  **lowercase-led** (commitlint rejects a capitalized first word — even "PRs"/"Barad-dûr").
+- Branch off latest `origin/main` per change **before editing** (`git fetch origin main && git
+  checkout -B <branch> origin/main` — fetch first: a cached ref can be genuinely stale or diverged
+  from the real tip, not just a few commits behind, docs/LESSONS.md 2026-09-04) — branch-first
+  means never needing `git stash`, which is **banned here** (it has silently dropped edits). Small
+  focused PRs; squash-merge on green; Conventional-Commit subjects, **lowercase-led** (commitlint
+  rejects a capitalized first word — even "PRs"/"Barad-dûr").
 - Open PRs with **`/ship`** (local verify → push → REST open → one auto-merge arm → stop; wraps
   `scripts/ship.sh`). The ship skill also owns the landing mechanics and traps: PR bodies over REST
   (the GitHub MCP write tools silently strip `<details>`), draft promotion, whose-token-arms-the-merge,

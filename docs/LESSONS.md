@@ -27,6 +27,45 @@ it. Prevention ranks, best first:
 
 ---
 
+### A remote session's `origin/main` had genuinely diverged from the real tip, not just aged — and the first ledger entry for this got the number wrong too
+
+- **SHA:** n/a (fix on `.claude/hooks/session-start.sh`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric flagged "7.5 minutes were spent on installing dependencies" while watching a
+  session; that number turned out to belong to a *different* install (a CI `verify` job's — its own
+  ledger entry above), but the session had a real, separate problem: an install against a stale
+  `origin/main` produced three red checks (`fast-check`, `@testing-library/jest-dom`, `happy-dom`
+  all missing) several minutes after an install that should have provided them.
+  A second, worse signal followed the first fix: the ledger entry written for it claimed the ref
+  was "~390 commits behind the real tip" — a number that was never actually measured, just written
+  because it sounded plausible. Eric caught it by asking directly whether there was something to
+  learn from "the 390 overlooked commits." There wasn't a 390 to learn from; there was a fabricated
+  number in the permanent record, which is the more serious finding.
+- **ROOT CAUSE:** two, at two different levels.
+  Mechanism: the container's `origin/main` ref did not simply lag — `git merge-base --is-ancestor`
+  showed it was NOT an ancestor of the real tip at all. Measured (not estimated): 66 commits
+  reachable from the real tip and not from the old ref, 55 reachable from the old ref and not from
+  the real tip, six days apart. The old commit is still reachable from a dozen other open branches
+  and from tags on `origin` — nothing was deleted — which points to some point-in-time reordering
+  or replay of `main`'s recent history rather than data loss, but the exact mechanism was not
+  further diagnosed; that is an open question for Eric, not this entry's to answer.
+  Process: the first fix shipped a specific, confident-sounding number with no command run to back
+  it — `git rev-list --count` was never called. A plausible number in a ledger entry reads the same
+  as a verified one to the next reader; nothing distinguished them until asked.
+- **PREVENTION:** script — `.claude/hooks/session-start.sh` (wired in `.claude/settings.json`,
+  remote-only) fetches `origin/main` and installs both dependency trees against the lockfiles at
+  that refreshed tip before the first turn; the CLAUDE.md ship-loop line now reads `git fetch
+  origin main && git checkout -B … origin/main` as the same fix at the point of branching, for a
+  session that branches more than once. No custom caching layer: `npm install` (not `npm ci`) is
+  already a fast no-op when nothing changed, so there is nothing to reinvent there — an earlier
+  draft of this fix added a hand-rolled sha256 stamp file to skip a call that was already
+  sub-second, which was itself a smaller instance of the same over-fitting this entry is about.
+  Doctrine, for the process failure: a number in a ledger entry needs the command that produced it
+  in the same breath, or it doesn't go in.
+- **SIDE QUESTS:** whether `main`'s history was intentionally rewritten between 2026-08-28 and
+  2026-09-03, and if so why and whether it recurs — asked of Eric directly rather than filed, since
+  only he or GitHub's audit log can answer it, and a wrong guess here would be the same mistake
+  this entry is about.
+
 ### The prior fix for the feedback-log seam only worked for the one call site it didn't need to fix
 
 - **SHA:** n/a   **DATE:** 2026-09-03   **STATUS:** closed
