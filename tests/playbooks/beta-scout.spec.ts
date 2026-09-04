@@ -2,6 +2,7 @@ import {
   BETA_SCOUT_ID,
   betaScoutExitIntents,
   betaScoutIntents,
+  parseBetaForcing,
 } from "../../src/playbooks/beta-scout.js";
 import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
@@ -132,5 +133,20 @@ describe("betaScoutExitIntents", () => {
     const portfolio = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 10 })] });
     const intents = betaScoutExitIntents(portfolio, new Set());
     expect(intents).toEqual([]);
+  });
+});
+
+describe("parseBetaForcing", () => {
+  it("reads the plain pick count as in-hours only", () => {
+    expect(parseBetaForcing("2")).toEqual({ maxPicks: 2, stageAfterClose: false });
+  });
+  it("reads +stage as after-close staging, whitespace and case tolerant", () => {
+    expect(parseBetaForcing("2+stage")).toEqual({ maxPicks: 2, stageAfterClose: true });
+    expect(parseBetaForcing(" 3 + STAGE ")).toEqual({ maxPicks: 3, stageAfterClose: true });
+  });
+  it("is dark on unset, zero, or anything it does not recognise — never a guess", () => {
+    for (const raw of [undefined, "", "0", "0+stage", "stage", "two", "2,stage", "2+later"]) {
+      expect(parseBetaForcing(raw)).toEqual({ maxPicks: 0, stageAfterClose: false });
+    }
   });
 });
