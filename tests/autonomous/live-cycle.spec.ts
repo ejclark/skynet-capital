@@ -358,4 +358,115 @@ describe("LiveCycleRunner", () => {
     // The cycle still evaluated the bot despite the equity read failing.
     expect((await broker.getPortfolio()).positions[0]?.quantity).toBe(10);
   });
+  // Eric, 2026-09-04: "configuration that nudges sauron to put in an after hours trade that is
+  // staged to be executed when the market opens (on tuesday, not monday)". Staging runs the
+  // scout's one daily scan while the market is closed, for the session Alpaca's next_open names,
+  // and SPENDS that session's budget so the in-hours cycle that day stays silent.
+  describe("stageScout (after-close staging for the next session)", () => {
+    function armed(broker: InMemoryBroker, decisions: DecisionRecord[], saved: ScoutState[] = []) {
+      return new LiveCycleRunner({
+        traders: [aBot(new NeverBuys(), broker)],
+        safety: new SafetyController(),
+        blockedReason: () => null,
+        scout: {
+          maxPicks: 2,
+          broker,
+          universe: ["MSFT", "NVDA"],
+          managedSymbols: new Set(),
+          risk: RISK,
+          mode: "live",
+        },
+        scoutState: { load: () => undefined, save: (state) => saved.push(state) },
+        onDecision: (r) => decisions.push(r),
+      });
+    }
+
+    it("stages picks for the named session, exits the previous session's picks first, and latches that session", async () => {
+      const broker = new InMemoryBroker(1_000_000, [
+        { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+        { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+      ]);
+      const decisions: DecisionRecord[] = [];
+      const saved: ScoutState[] = [];
+      const runner = armed(broker, decisions, saved);
+
+      // Friday in-hours: the scout fires on MSFT.
+      await runner.runCycle(
+        aContext({ MSFT: { last: 100, sentiment: 0.9 } }, "2026-09-04T15:00:00Z"),
+      );
+      expect(decisions).toHaveLength(1);
+
+      // Friday evening, market closed, Alpaca says next_open is TUESDAY (Labor Day Monday).
+      const staged = await runner.stageScout(
+        aContext(
+          { MSFT: { last: 100, sentiment: 0.9 }, NVDA: { last: 100, momentum: 0.03 } },
+          "2026-09-05T00:30:00Z",
+        ),
+        "2026-09-08",
+      );
+
+      // Exit of Friday's MSFT pick (the session rollover) + the new NVDA pick; MSFT is not re-bought.
+      expect(staged).toBe(1);
+      const intents = decisions.flatMap((d) =>
+        d.outcomes.map((o) => `${o.intent.side} ${o.intent.symbol}`),
+      );
+      expect(intents).toEqual(["buy MSFT", "sell MSFT", "buy NVDA"]);
+      expect(saved[saved.length - 1]).toMatchObject({
+        day: "2026-09-08",
+        ranToday: true,
+        ownedSymbols: ["NVDA"],
+      });
+
+      // Saturday: another staging poll is a no-op — the session is already spent.
+      expect(
+        await runner.stageScout(
+          aContext({ NVDA: { last: 100, momentum: 0.05 } }, "2026-09-06T01:00:00Z"),
+          "2026-09-08",
+        ),
+      ).toBe(0);
+
+      // Tuesday in-hours: the day-state says the scout already ran for 2026-09-08 — silent.
+      await runner.runCycle(
+        aContext({ MSFT: { last: 100, sentiment: 0.95 } }, "2026-09-08T14:00:00Z"),
+      );
+      expect(decisions.flatMap((d) => d.outcomes)).toHaveLength(3);
+    });
+
+    it("an empty after-hours scan stages nothing and does not spend the session", async () => {
+      const broker = new InMemoryBroker(1_000_000, [
+        { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+      ]);
+      const decisions: DecisionRecord[] = [];
+      const runner = armed(broker, decisions);
+
+      expect(
+        await runner.stageScout(
+          aContext({ MSFT: { last: 100 } }, "2026-09-05T00:30:00Z"),
+          "2026-09-08",
+        ),
+      ).toBe(0);
+      // Later that weekend the sentiment window has a read — the same session can still stage.
+      expect(
+        await runner.stageScout(
+          aContext({ MSFT: { last: 100, sentiment: 0.9 } }, "2026-09-06T00:30:00Z"),
+          "2026-09-08",
+        ),
+      ).toBe(1);
+      expect(decisions).toHaveLength(1);
+    });
+
+    it("is dark with no scout configured", async () => {
+      const broker = new InMemoryBroker(1_000_000, [
+        { symbol: "MSFT", bid: 100, ask: 100, last: 100, asOf: "t" },
+      ]);
+      const runner = new LiveCycleRunner({
+        traders: [aBot(new NeverBuys(), broker)],
+        safety: new SafetyController(),
+        blockedReason: () => null,
+      });
+      expect(
+        await runner.stageScout(aContext({ MSFT: { last: 100, sentiment: 0.9 } }), "2026-09-08"),
+      ).toBe(0);
+    });
+  });
 });

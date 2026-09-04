@@ -18,7 +18,9 @@
  *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. When
  *                            armed, and nothing organic trades on a given day, forces up to N small,
  *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
- *                            see src/playbooks/beta-scout.ts. Flip via autonomy-ops only.
+ *                            see src/playbooks/beta-scout.ts. "3+stage" also lets the scout stage
+ *                            its picks after the close for Alpaca's next open (holiday-aware) —
+ *                            see autonomous-scout-staging.ts. Flip via autonomy-ops only.
  *   SKYNET_HARDCORE_BOTS     comma-separated persona ids to run in HARDCORE research mode (Eric,
  *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
  *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
@@ -45,6 +47,7 @@ import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
+import { parseBetaForcing } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
 import { primeBotCredentials } from "./autonomous-boot-credentials.js";
@@ -59,6 +62,7 @@ import {
   seedDailyLossBaseline,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
+import { announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
 import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
@@ -260,17 +264,10 @@ async function runLive(): Promise<void> {
   // stateful orchestration, same category as smoke-trade.ts, run directly against a broker so
   // its picks still flow through the SAME guards (S2/E1, position cap) and audit trail as every
   // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off).
-  const betaForcingMaxPicks = Number(process.env.SKYNET_BETA_FORCING ?? "0");
+  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  const betaForcingMaxPicks = betaForcing.maxPicks;
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
-  if (betaForcingMaxPicks > 0 && scoutBroker) {
-    console.log(
-      `[beta-scout] armed: up to ${betaForcingMaxPicks} forced pick(s)/day when nothing organic fires, on ${traders[0]?.personaName}'s account.`,
-    );
-  } else if (betaForcingMaxPicks > 0) {
-    console.warn(
-      "[beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.",
-    );
-  }
+  announceScout(betaForcing, traders[0]?.personaName);
   const managedSymbols = new Set((botRosters[0]?.enabled ?? []).map((e) => e.playbook.symbol)); // traders[0]'s account
 
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
@@ -301,6 +298,7 @@ async function runLive(): Promise<void> {
 
   armMomentumPersistence(botsStateDb, tracker);
 
+  const contextNow = () => sentiment.overlay(tracker.context(new Date().toISOString()));
   let lastEval = 0;
   let evaluating = false;
   const maybeEvaluate = async () => {
@@ -308,10 +306,13 @@ async function runLive(): Promise<void> {
     if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketClock.isOpen()) return;
     lastEval = now;
     evaluating = true;
-    const context = sentiment.overlay(tracker.context(new Date(now).toISOString()));
-    await runner.runCycle(context);
+    await runner.runCycle(contextNow());
     evaluating = false;
   };
+  // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".
+  if (betaForcing.stageAfterClose && scoutBroker) {
+    armScoutStaging({ clock: marketClock, runner, context: contextNow, log: console.log });
+  }
 
   marketDataStream.start();
 

@@ -127,8 +127,24 @@ export class AlpacaTradingClient {
 
   /** Market clock — whether the market is currently open. */
   async isMarketOpen(): Promise<boolean> {
-    const clock = ensureOk<{ is_open?: boolean }>(await this.transport.get("/v2/clock"));
-    return clock.is_open === true;
+    return (await this.getClock()).isOpen;
+  }
+
+  /**
+   * The full market clock: open now, plus Alpaca's own `next_open` / `next_close` (ISO, ET
+   * offset). `nextOpen` is the ONLY honest source for "when does the next session start" — it
+   * carries exchange holidays (Labor Day 2026-09-07 → next open Tuesday 2026-09-08), which a
+   * weekday calculation silently gets wrong (docs/LESSONS.md, 2026-09-04).
+   */
+  async getClock(): Promise<{ isOpen: boolean; nextOpen?: string; nextClose?: string }> {
+    const clock = ensureOk<{ is_open?: boolean; next_open?: string; next_close?: string }>(
+      await this.transport.get("/v2/clock"),
+    );
+    return {
+      isOpen: clock.is_open === true,
+      ...(typeof clock.next_open === "string" ? { nextOpen: clock.next_open } : {}),
+      ...(typeof clock.next_close === "string" ? { nextClose: clock.next_close } : {}),
+    };
   }
 
   async placeOrder(params: PlaceOrderParams): Promise<AlpacaOrder> {
