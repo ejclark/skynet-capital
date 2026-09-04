@@ -409,6 +409,7 @@ body { background: var(--bg); }
    selectors can't reach inside a dark page) — values verbatim from theme.css / BRAND.md */
 .dsp-light { --bg:#f7f9fb; --surface:#ffffff; --surface-2:#f0f4f8; --border:#dce3ea; --text:#0b0f14;
   --muted:#5a6b7b; --accent:#0e9f8c; --pos:#1a7f37; --neg:#cf222e; --accent-contrast:#ffffff;
+  --ramp-hi:#0b4621; --ramp-lo:#41815a;
   background: var(--bg); color: var(--text); border-radius: 10px; padding: 18px; }
 .dsp-wrap { max-width: 1040px; margin: 0 auto; padding: 40px 24px 120px; }
 .dsp-head h1 { font-size: 30px; letter-spacing: -0.02em; margin: 0 0 8px; }

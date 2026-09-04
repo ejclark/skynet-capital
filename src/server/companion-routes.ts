@@ -1,24 +1,34 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { CompanionMessage } from "../companion/companion-chat.js";
+import { memberContext } from "../companion/companion-context.js";
 import {
+  COMPANION_MODEL_CALLS_MAX,
   COMPANION_THROTTLE_MAX,
   COMPANION_THROTTLE_WINDOW_MS,
 } from "../companion/companion-limits.js";
 import { COMPANION_DISCLOSURE, FIRST_TRADE_TOUR } from "../companion/companion-system-prompt.js";
+import { regularSessionOpen } from "../domain/market-session.js";
 import type { Session } from "./auth/session.js";
+import { recordFirstMessageSafely } from "./companion-message-log.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
+import { onboardingView } from "./onboarding-api-routes.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 import { openSseStream, sseFrame } from "./sse.js";
 
 /**
- * THE COMPANION'S HTTP SURFACE — two endpoints, both gated on the SAME `Session` every
+ * THE COMPANION'S HTTP SURFACE — three endpoints, all gated on the SAME `Session` every
  * other member-only route checks upstream (`gateRequest` in `dashboard-auth-gate.ts`, wired by
  * the caller before this file ever runs):
  *
  *   GET  /api/companion       → { enabled } — whether `ANTHROPIC_API_KEY` is set, so the client
  *                                can render "not switched on yet" instead of a dead input box.
  *   POST /api/companion/chat  → the turn, streamed back over SSE (`delta`/`done`/`error` events).
+ *   POST /api/companion/ack   → records the ladder gate's own evidence: a real message reached
+ *                                the rail. Deliberately independent of `/chat` — a message can be
+ *                                routed to a scripted reply, or straight into a feedback draft,
+ *                                without ever calling the model, and it should still count.
  *
  * THE AUTH INVARIANT THIS FILE ENFORCES: `!session` returns `false` — the route doesn't exist —
  * for BOTH endpoints, before anything else runs. `dashboard-server.ts` reaches this file only
@@ -50,6 +60,25 @@ function throttled(
   return false;
 }
 
+// The model-call budget (red-team A6): every billed call — tool round or the streamed reply —
+// counts here, in the same window as the request throttle, so a turn's 4 calls cost 4.
+const modelCalls = new Map<string, number[]>();
+function modelCallAllowed(
+  key: string,
+  now = Date.now(),
+  windowMs = COMPANION_THROTTLE_WINDOW_MS,
+  max = COMPANION_MODEL_CALLS_MAX,
+): boolean {
+  const recent = (modelCalls.get(key) ?? []).filter((t) => now - t < windowMs);
+  if (recent.length >= max) {
+    modelCalls.set(key, recent);
+    return false;
+  }
+  recent.push(now);
+  modelCalls.set(key, recent);
+  return true;
+}
+
 /** Never model- or client-trusted beyond shape: role must be one of the two literals, content a
  *  string. Length/round bounds are enforced downstream in `companion-chat.ts`. */
 function parseMessages(body: Record<string, unknown> | undefined): CompanionMessage[] {
@@ -72,6 +101,31 @@ function serveCompanionIndex(res: ServerResponse, config: DashboardServerConfig)
     disclosure: COMPANION_DISCLOSURE,
     firstTradeTour: FIRST_TRADE_TOUR,
   });
+}
+
+/** The member's live context for this turn — the same reads the Onboarding and Feedback pages
+ *  make, folded into a few lines for the volatile half of the prompt. Any read failing degrades
+ *  to "no context" rather than failing the turn: she answers from the cached help desk instead. */
+async function memberContextFor(
+  config: DashboardServerConfig,
+  session: Session,
+): Promise<string | undefined> {
+  try {
+    const [onboarding, filings] = await Promise.all([
+      onboardingView(config, session),
+      config.readFeedback ? config.readFeedback(opaqueMemberId(session.email)) : [],
+    ]);
+    return memberContext({
+      now: new Date(),
+      onboarding,
+      filings: [...filings]
+        .sort((a, b) => b.filedAt.localeCompare(a.filedAt))
+        .map((f) => ({ issueNumber: f.issueNumber, title: f.title, filedAt: f.filedAt })),
+      marketOpen: regularSessionOpen(),
+    });
+  } catch {
+    return undefined;
+  }
 }
 
 async function serveChat(
@@ -99,11 +153,16 @@ async function serveChat(
   // (`plays-api-routes.ts`) — never a client-supplied id, so a tool call can never be pointed at
   // another member's account.
   const participantId = resolveCurrentId(session, config.resolveOwnerId);
+  const context = await memberContextFor(config, session);
 
   openSseStream(res);
   let seq = 0;
   await config.companion(
-    { messages, ...(participantId ? { participantId } : {}) },
+    {
+      messages,
+      ...(participantId ? { participantId } : {}),
+      ...(context ? { context } : {}),
+    },
     {
       onText: (chunk) => {
         res.write(sseFrame(JSON.stringify({ text: chunk }), "delta", seq++));
@@ -116,8 +175,25 @@ async function serveChat(
         res.write(sseFrame(JSON.stringify({ error: message }), "error", seq++));
         res.end();
       },
+      // A drafted filing for the rail to hold — the member's reply there is what files it.
+      onHandoff: (draft) => {
+        res.write(sseFrame(JSON.stringify(draft), "handoff", seq++));
+      },
+      budget: () => modelCallAllowed(session.email),
     },
   );
+}
+
+/** Record that a real message reached the rail — independent of whether it triggered a live
+ *  reply, so a scripted-only conversation still opens the ladder. Never checks `config.companion`:
+ *  usage of the feature, not of the live model, is the bar. */
+async function serveMessageAck(
+  res: ServerResponse,
+  config: DashboardServerConfig,
+  session: Session,
+): Promise<void> {
+  await recordFirstMessageSafely(config, opaqueMemberId(session.email));
+  sendJson(res, 200, { ok: true });
 }
 
 /** Handle `/api/companion*`. Returns `false` (route doesn't exist) for anyone without a signed-in
@@ -129,7 +205,8 @@ export async function serveCompanionApi(
   config: DashboardServerConfig,
   session: Session | undefined,
 ): Promise<boolean> {
-  if (path !== "/api/companion" && path !== "/api/companion/chat") return false;
+  if (path !== "/api/companion" && path !== "/api/companion/chat" && path !== "/api/companion/ack")
+    return false;
   if (!session) return false;
   if (path === "/api/companion" && (req.method ?? "GET") === "GET") {
     serveCompanionIndex(res, config);
@@ -137,6 +214,10 @@ export async function serveCompanionApi(
   }
   if (path === "/api/companion/chat") {
     await serveChat(req, res, config, session);
+    return true;
+  }
+  if (path === "/api/companion/ack" && (req.method ?? "GET") === "POST") {
+    await serveMessageAck(res, config, session);
     return true;
   }
   return false;

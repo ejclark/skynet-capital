@@ -5,7 +5,7 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px;
   margin-top: 16px;
-  max-width: 720px;
+  max-width: var(--col-wide);
 }
 .play-card {
   display: flex;
@@ -50,7 +50,7 @@
   font-size: 11px;
   color: var(--muted);
   margin: 0 0 12px;
-  max-width: 560px;
+  max-width: 70ch;
 }
 .tkt-occ {
   font-size: 11px;

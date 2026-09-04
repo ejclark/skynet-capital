@@ -50,7 +50,10 @@ function PayoffGrid({ preview }: { readonly preview: OptionPreview }): ReactElem
     </dl>
   );
 }
-
+/** The single-leg ticket's body: cost, max loss, breakeven, and the disarm note.
+ *
+ *  @category trading
+ */
 export function OptionPreviewBody({ preview }: { readonly preview: OptionPreview }): ReactElement {
   return (
     <div className="gate-body">
@@ -71,7 +74,10 @@ export function OptionPreviewBody({ preview }: { readonly preview: OptionPreview
   );
 }
 
-/** The gate's one action, keyed to its state: review, submit (priced), or start over. */
+/** The gate's one action, keyed to its state: review, submit (priced), or start over.
+ *
+ *  @category trading
+ */
 export function GateAction({
   state,
   drafted,
@@ -112,7 +118,10 @@ export function GateAction({
     </button>
   );
 }
-
+/** The gate's status line — the current step rendered as a tone plus a headline.
+ *
+ *  @category trading
+ */
 export function OptionGateStatus({
   state,
 }: {

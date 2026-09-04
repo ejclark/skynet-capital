@@ -17,6 +17,11 @@
  */
 
 :root {
+  /* Form controls, scrollbars and the canvas follow the palette. The server-rendered
+     surfaces set this in `src/server/page-shell.ts`; without it here the React shell's
+     inputs and textareas render UA-light on a dark ground. */
+  color-scheme: dark;
+
   /* docs/BRAND.md — dark column */
   --bg: #0b0f14;
   --surface: #131a22;
@@ -34,9 +39,19 @@
 
   /* the field ladder's green ramp (Eric, live review): leaders wear the DEEP green, the tail a
      soft light green — intensity carries the standing without neon at the top or grey at the
-     bottom. Rows mix --ramp-hi → --ramp-lo by their standing. */
-  --ramp-hi: #1e8348;
-  --ramp-lo: #9ed3b2;
+     bottom. Rows mix --ramp-hi → --ramp-lo by their standing.
+     --ramp-hi is the ONE dial for the whole spectrum (#1043): every row is an interpolation
+     anchored on it, so deepening it widens the top-to-bottom spread without touching a single
+     other shade. Hue and saturation are held (H145 S63) and only lightness moves, which is what
+     keeps it forest green rather than a different colour. L27.5% is a floor, not a preference:
+     the leader's VALUE is painted in this same token against --surface-2, and one step darker
+     puts that number under the 3:1 contrast line. Deeper forest is legible on light only.
+     --ramp-lo is the tail (#1049 — most rows sit closer to this end than to the leader, so it,
+     not --ramp-hi, is what reads as "still light" on the whole board). Same hue family, lightness
+     only moved down; it still clears 5:1 against --surface-2 where .rank-val paints it as text,
+     well clear of --ramp-hi's 3:1 floor, so there was room this token's sibling didn't have. */
+  --ramp-hi: #1a723f;
+  --ramp-lo: #489e69;
 
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
@@ -55,6 +70,20 @@
   --stage-gap: 22px;
   --panel-p: 16px;
 
+  /* the fluid width scale (Eric, 2026-09-04: "the page template should be fluid and take full
+     screen real estate") — the React shell's copy of the doctrine in src/observatory/fluid-layout.ts.
+     The frame tracks the window up to --shell-max (2560px, the widest glass we design for) and the
+     stage takes everything the rail doesn't; NOTHING in shell.css caps the page narrower than that.
+     A view then picks a cap by the SHAPE of what it holds, as a percentage bounded by min(100%, …):
+     grids and lists read fine very wide (--col-wide), a single-column form or a prose panel does not
+     (--col-read) — an input stretched across 1600px is a worse page, not a fuller one. A view never
+     writes a bare pixel width of its own; a cap not on this scale is drift. */
+  --shell-max: 2560px;
+  --rail-w: 248px;
+  --gutter: clamp(16px, 2.5vw, 48px);
+  --col-wide: min(100%, 1800px);
+  --col-read: min(100%, 1180px);
+
   /* spatial motion (#738 phase 4b) — two speeds, one easing; reduced-motion zeroes both */
   --dur-quick: 140ms;
   --dur-spatial: 260ms;
@@ -70,6 +99,8 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
     /* docs/BRAND.md — light column */
     --bg: #f7f9fb;
     --surface: #ffffff;
@@ -82,8 +113,11 @@
     --neg: #cf222e;
     --accent-contrast: #ffffff;
     --pos-contrast: #ffffff;
-    --ramp-hi: #0f5e2c;
-    --ramp-lo: #7dbd95;
+    /* on white the ramp has room the dark column doesn't: deepening it RAISES the leader's
+       contrast (11:1) instead of spending it, so the light forest green goes further (#1043).
+       --ramp-lo deepened too (#1049), same reasoning as the dark column's tail. */
+    --ramp-hi: #0b4621;
+    --ramp-lo: #41815a;
     --elev-recessed: inset 0 1px 3px rgba(11, 15, 20, 0.06);
     --elev-base: 0 1px 2px rgba(11, 15, 20, 0.05);
     --elev-raised: 0 2px 6px rgba(11, 15, 20, 0.08), 0 8px 24px rgba(11, 15, 20, 0.06);
@@ -94,6 +128,8 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
+
   --bg: #f7f9fb;
   --surface: #ffffff;
   --surface-2: #f0f4f8;
@@ -105,8 +141,10 @@
   --neg: #cf222e;
   --accent-contrast: #ffffff;
   --pos-contrast: #ffffff;
-  --ramp-hi: #0f5e2c;
-  --ramp-lo: #7dbd95;
+  /* the light ramp, twice over — this block and the prefers-color-scheme copy above must move
+     together; nothing computes one from the other. */
+  --ramp-hi: #0b4621;
+  --ramp-lo: #41815a;
   --elev-recessed: inset 0 1px 3px rgba(11, 15, 20, 0.06);
   --elev-base: 0 1px 2px rgba(11, 15, 20, 0.05);
   --elev-raised: 0 2px 6px rgba(11, 15, 20, 0.08), 0 8px 24px rgba(11, 15, 20, 0.06);

@@ -15,6 +15,7 @@ import type { ReactElement, ReactNode } from "react";
  * rail column is the SAME width on every view — reserved even when a view has nothing to put in
  * it yet — so the content column never shifts left or right as you navigate. A view without rail
  * content gets an empty column, not a wider stage.
+ * @category navigation
  */
 export function PageFrame({
   rail,

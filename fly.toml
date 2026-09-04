@@ -28,6 +28,10 @@ primary_region = "ord"  # Chicago — closest to Iowa
   SKYNET_CONTROLS_FILE = "/data/bot-controls.json"
   SKYNET_ACTIVITY_DIR = "/data/activity"
   SKYNET_FEEDBACK_LOG_DIR = "/data/feedback-log"
+  # What a member has said to Moneypenny, at all (companion-message-log.ts) — the ladder gate's
+  # own low-bar evidence (Eric's 2026-09-03 ruling: a filed issue was too high a bar to gate
+  # trading on).
+  SKYNET_COMPANION_MESSAGE_LOG_DIR = "/data/companion-message-log"
   SKYNET_ORDER_AUDIT_DIR = "/data/order-audit"
   # Owner→member account links (#546, owner-link-store.ts) — who claimed an unowned board account.
   SKYNET_OWNER_LINKS_FILE = "/data/owner-links.json"

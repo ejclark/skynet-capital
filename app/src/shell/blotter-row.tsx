@@ -6,6 +6,7 @@ import type { DeskPosition } from "../live/desk";
  * One blotter row (#738 phase 2c, extracted 3b) — responsive disclosure per the round-1 verdict:
  * detail columns visible on wide viewports (`col-detail`), folded behind the chevron only when
  * the viewport hides them. The symbol is the door to the position's fill timeline.
+ * @category trading
  */
 
 export function BlotterRow({

@@ -82,7 +82,10 @@ function UnlockBannerShell({
   );
 }
 
-/** One celebratory panel for every unclaimed trade-ladder earn, with a single Claim. */
+/** One celebratory panel for every unclaimed trade-ladder earn, with a single Claim.
+ *
+ *  @category gates
+ */
 export function UnlockBanner({
   celebrations,
   onClaimed,
@@ -118,7 +121,10 @@ export function UnlockBanner({
 }
 
 /** One celebratory panel for every unclaimed engagement earn (#567) — same fanfare treatment as
- *  a trade unlock, no ladder code or "next rung" framing since it isn't a trade. */
+ *  a trade unlock, no ladder code or "next rung" framing since it isn't a trade.
+ *
+ *  @category gates
+ */
 export function EngagementUnlockBanner({
   celebrations,
   onClaimed,
@@ -197,7 +203,10 @@ function CheckResultPanel({
   );
 }
 
-/** The gate itself: what stands between a freshly earned milestone and its celebration. */
+/** The gate itself: what stands between a freshly earned milestone and its celebration.
+ *
+ *  @category gates
+ */
 export function CheckGateCard({
   gate,
   onPassed,

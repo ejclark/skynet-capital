@@ -95,7 +95,10 @@ function CloseRow({
   );
 }
 
-/** The desk's held option contracts, or nothing — a desk with no options shows no card. */
+/** The desk's held option contracts, or nothing — a desk with no options shows no card.
+ *
+ *  @category trading
+ */
 export function OptionPositionsCard({
   deskId,
   positions,

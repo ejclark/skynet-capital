@@ -47,16 +47,11 @@ function isAllowedType(type: unknown): type is AllowedType {
   return typeof type === "string" && (ALLOWED_TYPES as readonly string[]).includes(type);
 }
 
-/** Bounded, sanitized read of the form's `images` hidden field — never trusts the client's shape
- *  or size claims, same discipline as `specFromForm` in feedback-routes.ts. */
-export function parseImages(raw: string | null | undefined): readonly FeedbackImageInput[] {
-  if (!raw?.trim()) return [];
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw.slice(0, 8_000_000));
-  } catch {
-    return [];
-  }
+/** Bounded, sanitized read of an already-parsed `images` array — never trusts the client's shape
+ *  or size claims, same discipline as `specFromForm` in feedback-routes.ts. The one authority both
+ *  the submit form (via `parseImages`, a JSON string) and the coach endpoint (a JSON body already
+ *  parsed) validate through, so a second copy of these rules can never drift from this one. */
+export function sanitizeImages(parsed: unknown): readonly FeedbackImageInput[] {
   if (!Array.isArray(parsed)) return [];
   const valid: FeedbackImageInput[] = [];
   for (const item of parsed) {
@@ -71,6 +66,17 @@ export function parseImages(raw: string | null | undefined): readonly FeedbackIm
     valid.push({ name: name.slice(0, 200), type, dataUrl });
   }
   return valid;
+}
+
+/** Bounded, sanitized read of the form's `images` hidden field (a JSON-encoded string) — see
+ *  `sanitizeImages` for the actual shape rules. */
+export function parseImages(raw: string | null | undefined): readonly FeedbackImageInput[] {
+  if (!raw?.trim()) return [];
+  try {
+    return sanitizeImages(JSON.parse(raw.slice(0, 8_000_000)));
+  } catch {
+    return [];
+  }
 }
 
 /** Makes sure `feedback-assets` exists, branched off `main`'s current tip. Idempotent — a 422

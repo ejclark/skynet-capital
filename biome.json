@@ -183,7 +183,8 @@
       "!**/node_modules",
       "!**/coverage",
       "!**/spikes",
-      "!.claude/workflows"
+      "!.claude/workflows",
+      "!.design-sync/config.json"
     ]
   }
 }
