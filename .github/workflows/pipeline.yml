@@ -65,10 +65,10 @@ jobs:
         with:
           fetch-depth: 0            # commitlint needs the PR commit range
 
-      - name: Set up Node (version from .nvmrc)
+      - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
+          node-version-file: mise.toml   # mise.toml is the single source of truth — never pin here
 
       # actions/setup-node's own `cache: npm` has no restore-keys fallback (confirmed against
       # actions/setup-node#627/#1120, not assumed) — ANY lockfile change anywhere invalidates the
@@ -166,10 +166,10 @@ jobs:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Set up Node (version from .nvmrc)
+      - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
+          node-version-file: mise.toml   # mise.toml is the single source of truth — never pin here
 
       # Same restore-keys fix as `verify` (docs/LESSONS.md, 2026-09-04) — root-only here, but the
       # exact-key-only miss is the same failure mode regardless of which tree.
@@ -233,10 +233,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set up Node (version from .nvmrc)
+      - name: Set up Node (version from mise.toml)
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
+          node-version-file: mise.toml   # mise.toml is the single source of truth — never pin here
 
       # Same restore-keys fix as `verify`'s, same key shape (both lockfiles) — see the cache-warm
       # step below for why this job, not verify, is the one that has to carry the shared scope.
