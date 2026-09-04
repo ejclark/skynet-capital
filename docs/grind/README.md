@@ -137,6 +137,20 @@ A `done` with no branch on origin makes that command fail, which reports `blocke
 A missing `branch` field substitutes to an empty string and fails the same way. Every checked-in
 chore above reports its branch and expects this trailing step; the four calling conventions say so.
 
+### Two hazards the first real run hit (2026-09-04)
+
+- **Worktrees are cut from the calling session's HEAD, not from `origin/main`.** An agent reads
+  the chore file from that worktree *before* its own step 1 fetches `origin/main`, so a session
+  whose checkout is behind dispatches agents against a stale chore. The first `fix-doc-rot` run
+  did exactly that: the `docs/IDEAS.md` item read the pre-#1323 two-case file and `blocked` on
+  reasoning the third case ("an idea, not a citation") had already codified. Sync first —
+  `git fetch origin main && git rebase origin/main` (or `checkout -B … origin/main`) — then launch.
+- **Inside a worktree, local `main` is stale — only `origin/main` is ever fetched.** One agent
+  ran `git checkout main -- .`, staged ~100 files from a far-behind local `main`, and reverted
+  before anything was committed or pushed; the outcome check would have caught a push, but the
+  cheaper fix is upstream. Every chore's step 1 says `origin/main`; a chore that says bare `main`
+  anywhere is a bug in the chore.
+
 ## If `Workflow({name: "grind"})` says "not found"
 
 The Workflow tool's name registry is built **once per session, lazily, at the first `Workflow`
