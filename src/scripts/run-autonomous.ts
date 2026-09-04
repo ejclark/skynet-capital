@@ -59,7 +59,7 @@ import {
   seedDailyLossBaseline,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
-import { auditStore, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
+import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
 // claims (CRWV, MRVL). A symbol absent here has no quote, so a persona simply never sees it —
@@ -212,6 +212,7 @@ async function runLive(): Promise<void> {
   const mode = traderMode(process.env);
   const audit = auditStore(process.env);
   const onDecision = decisionSink(audit);
+  const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
   const safety = new SafetyController();
   const haltFile = process.env.SKYNET_HALT_FILE;
@@ -239,6 +240,7 @@ async function runLive(): Promise<void> {
       controls,
       bootControls,
       ...(botsStateDb ? { botsStateDb } : {}),
+      ...(botActivityBus ? { activityBus: botActivityBus } : {}),
     }),
   );
   botRosters.forEach(({ bot }, i) => {
@@ -303,9 +305,7 @@ async function runLive(): Promise<void> {
   let evaluating = false;
   const maybeEvaluate = async () => {
     const now = Date.now();
-    if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketClock.isOpen()) {
-      return;
-    }
+    if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketClock.isOpen()) return;
     lastEval = now;
     evaluating = true;
     const context = sentiment.overlay(tracker.context(new Date(now).toISOString()));

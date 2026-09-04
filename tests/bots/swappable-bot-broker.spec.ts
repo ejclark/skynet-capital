@@ -108,4 +108,33 @@ describe("SwappableBotBroker", () => {
       globalThis.fetch = original;
     }
   });
+
+  it("carries onSubmitted through a credential swap — the deps are the bot's, not one broker build's (#1211 slice 2)", async () => {
+    const { fetchFn } = fakeFetch({
+      "/v2/orders": {
+        status: 200,
+        body: { id: "o1", symbol: "AAPL", qty: "1", side: "buy", status: "accepted" },
+      },
+    });
+    const original = globalThis.fetch;
+    globalThis.fetch = fetchFn;
+    try {
+      const submitted: unknown[] = [];
+      const broker = new SwappableBotBroker(bot("OLD-KEY"), {
+        onSubmitted: (info) => submitted.push(info),
+      });
+      broker.replaceCredentials({ apiKey: "NEW-KEY", apiSecret: "new-secret" });
+      await broker.submit({
+        symbol: "AAPL",
+        quantity: 1,
+        side: "buy",
+        type: "market",
+        reason: "test",
+      });
+
+      expect(submitted).toHaveLength(1);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
 });

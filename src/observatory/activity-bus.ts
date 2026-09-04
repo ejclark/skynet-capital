@@ -66,3 +66,29 @@ export function createActivityEventBus(env: NodeJS.ProcessEnv): ActivityEventBus
 export function createBootActivityEventBus(env: NodeJS.ProcessEnv, mode: string): ActivityEventBus {
   return mode === "offline" ? new InMemoryActivityEventBus() : createActivityEventBus(env);
 }
+
+/**
+ * The bots app's own local bus (#1211 slice 2 — `AlpacaBrokerAdapter.submit`'s "no audit line at
+ * all" gap). `fly.bots.toml` mounts a volume dedicated to that app, "never shared with the
+ * dashboard's" — there is no `SKYNET_ACTIVITY_DIR` there and adding one is a deploy-topology
+ * change (`envelope.json`: `fly.toml`/`fly.bots.toml` are protected — spend + deploy topology,
+ * Eric's call). So this nests under whichever durable dir the bots app already has: the same
+ * `SKYNET_ACTIVITY_DIR` check first (in case a future deploy ever sets it), else the
+ * already-mounted, already-approved `SKYNET_AUDIT_DIR` (`/data/audit` on that volume) — a
+ * `activity-events` subfolder there can never collide with `JsonlAuditStore`'s own
+ * `<personaId>.jsonl` files sitting directly in that same dir. Dark (`undefined`) when neither is
+ * set, same posture as `autonomous-sinks.ts`'s `auditStore` — no durable dir configured means no
+ * bus this run, never a silent fallback to an ephemeral path a restart would lose anyway.
+ *
+ * This closes the "no audit line at all" gap durably; it does NOT merge bot events into the
+ * dashboard's own `/data/activity` log — the two apps' volumes stay genuinely separate until a
+ * later slice designs a cross-app bridge (the same shape `SKYNET_INSIGHTS_BRIDGE_URL` already is
+ * for Mission Control controls) to unify them for Eric's triage view.
+ */
+export function createBotActivityEventBus(env: NodeJS.ProcessEnv): ActivityEventBus | undefined {
+  if (env.SKYNET_ACTIVITY_DIR)
+    return new JsonlActivityEventBus(join(env.SKYNET_ACTIVITY_DIR, "events"));
+  if (env.SKYNET_AUDIT_DIR)
+    return new JsonlActivityEventBus(join(env.SKYNET_AUDIT_DIR, "activity-events"));
+  return undefined;
+}
