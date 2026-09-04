@@ -404,18 +404,22 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Preflight — should the bots app deploy?
-        # The decision tree (token/cutover/force/baseline/classify) lives in
+        # The decision tree (token/cutover/force/baseline/debounce/classify) lives in
         # scripts/bots-deploy-preflight.mjs, spec-tested (tests/scripts/bots-deploy-preflight.spec.ts)
         # — this step now does only the two genuinely environmental lookups (the flyctl API call,
-        # GITHUB_SHA) and translates the script's two-line verdict into $GITHUB_OUTPUT.
+        # GITHUB_SHA) and translates the script's two-line verdict into $GITHUB_OUTPUT. DEPLOYED_AT
+        # feeds the debounce gate (2026-08-26 incident class, reintroduced via the research lane's
+        # merge cadence — #1181): at most one bots redeploy per cooldown window, no matter how many
+        # bot-relevant merges land, with the next preflight past it always catching up in full.
         id: preflight
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_BOTS || secrets.FLY_ORG_TOKEN }}
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_bots_deploy && 'true' || 'false' }}
         run: |
-          DEPLOYED_SHA=$(flyctl machine list -a skynet-capital-bots --json 2>/dev/null \
-            | jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].config.env.GIT_SHA // empty' || true)
-          VERDICT=$(DEPLOYED_SHA="$DEPLOYED_SHA" HEAD_SHA="$GITHUB_SHA" node scripts/bots-deploy-preflight.mjs)
+          MACHINE_JSON=$(flyctl machine list -a skynet-capital-bots --json 2>/dev/null || true)
+          DEPLOYED_SHA=$(jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].config.env.GIT_SHA // empty' <<<"$MACHINE_JSON" 2>/dev/null || true)
+          DEPLOYED_AT=$(jq -r '[.[] | select((.config.standbys // []) | length == 0)][0].updated_at // empty' <<<"$MACHINE_JSON" 2>/dev/null || true)
+          VERDICT=$(DEPLOYED_SHA="$DEPLOYED_SHA" DEPLOYED_AT="$DEPLOYED_AT" HEAD_SHA="$GITHUB_SHA" node scripts/bots-deploy-preflight.mjs)
           echo "$VERDICT"
           DECISION=$(head -n1 <<<"$VERDICT")
           REASON=$(tail -n1 <<<"$VERDICT")
