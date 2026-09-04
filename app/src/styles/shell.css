@@ -123,6 +123,8 @@ a {
 .topnav-link[aria-current="page"] {
   color: var(--text);
   font-weight: 600;
+  background: var(--surface-2);
+  border-radius: 8px 8px 0 0;
   border-bottom-color: var(--accent);
 }
 .topbar-actions {
