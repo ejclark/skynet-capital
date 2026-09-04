@@ -117,6 +117,63 @@ describe("serveOnboardingApi", () => {
     });
   });
 
+  it("names a fresh course graduation on the account block (#469 slice 4)", async () => {
+    const view = await body(
+      configWith({
+        resolveOwnerIds: () => ["human-joe"],
+        resolveOwnerId: () => "human-joe",
+        progression: progressionWith({
+          earned: [
+            { milestoneId: "first-cash-secured-put", code: "201", orderId: "o0", at: "2026-08-31" },
+            { milestoneId: "first-covered-call", code: "202", orderId: "o1", at: "2026-09-01" },
+          ],
+          engagementEarned: [],
+          celebrating: [
+            { milestoneId: "first-covered-call", code: "202", orderId: "o1", at: "2026-09-01" },
+          ],
+        }),
+      }),
+    );
+    expect(view.account.freshGraduation).toEqual({
+      level: 200,
+      title: "The Wheel — get paid to own good stocks",
+    });
+  });
+
+  it("names nothing when the fresh earn is real but doesn't graduate a course", async () => {
+    const view = await body(
+      configWith({
+        resolveOwnerIds: () => ["human-joe"],
+        resolveOwnerId: () => "human-joe",
+        progression: progressionWith({
+          earned: [{ milestoneId: "first-buy", code: "101", orderId: "o1", at: "2026-09-01" }],
+          engagementEarned: [],
+          celebrating: [{ milestoneId: "first-buy", code: "101", orderId: "o1", at: "2026-09-01" }],
+        }),
+      }),
+    );
+    expect(view.account.freshGraduation).toBeUndefined();
+  });
+
+  it("names nothing when the course's last milestone is celebrating alone, without the earlier one — a gap, not a graduation", async () => {
+    const view = await body(
+      configWith({
+        resolveOwnerIds: () => ["human-joe"],
+        resolveOwnerId: () => "human-joe",
+        progression: progressionWith({
+          earned: [
+            { milestoneId: "first-covered-call", code: "202", orderId: "o1", at: "2026-09-01" },
+          ],
+          engagementEarned: [],
+          celebrating: [
+            { milestoneId: "first-covered-call", code: "202", orderId: "o1", at: "2026-09-01" },
+          ],
+        }),
+      }),
+    );
+    expect(view.account.freshGraduation).toBeUndefined();
+  });
+
   it("answers an unauthenticated deployment as not linked, nothing done", async () => {
     const view = await body(configWith({ auth: undefined }), undefined);
     expect(view.linked).toBe(false);

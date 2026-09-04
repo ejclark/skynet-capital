@@ -104,6 +104,21 @@ role of responsible owner/steward — shipping lovable work while protecting the
   described plainly, instead of defer-and-ask. The PR *is* the ask; his one click on a ready diff is the
   low-friction version of "hand him the one credentialed step." Never auto-merge it — the boundary itself
   never moves, only the cost of clearing it does.
+- **A recurring blessing-ask is a scaling failure — propose the one-time fix, don't keep asking**
+  (Eric, 2026-09-04: pushback on `envelope.json` as "a grandfathered system that is still...
+  fucking our world up" — "push back hard when there's an ideal path... it's okay to proceed with
+  an approv[al] that costs me one time [to approve]... the patterns that requir[e] my blessing for
+  repetitious work is what doesn't scale"). This generalizes the dead-code precedent above: when
+  the SAME class of decision would otherwise ask for Eric's blessing every time it recurs (a WIP
+  throttle blocking an otherwise-safe batch, a protected pattern catching a class of confirmed-safe
+  change, a policy question one session already answered that the next session re-asks) — don't
+  keep interrupting case by case. Surface the pattern once, evaluate the real cost of the
+  cute/creative path honestly, and propose the *governance* fix itself — a scoped policy change, a
+  narrowed pattern, a documented exception — as a single ready-to-approve artifact (an issue for a
+  judgment call, a PR for a mechanical narrowing), exactly like the dead-code PR above. The boundary
+  itself still holds (`envelope.json` stays Eric's to edit, never self-widened by a lane) — this
+  changes the *shape* of the ask from a recurring interrupt to a one-time decision, not the fact
+  that irreversible/governance calls are his.
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
   CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped

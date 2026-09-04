@@ -1,6 +1,8 @@
 import {
   COURSES,
   courseComplete,
+  graduatingLevel,
+  MILESTONE_COURSE_LEVEL,
   pointsFor,
   rankFor,
   totalPoints,
@@ -36,6 +38,56 @@ describe("curriculum", () => {
     expect(courseComplete(stocks, partial)).toBe(false);
     const all = new Set(stocks.milestones.map((m) => m.id));
     expect(courseComplete(stocks, all)).toBe(true);
+  });
+
+  it("names the course a milestone belongs to only once that WHOLE course is complete", () => {
+    const course100 = new Set(["first-buy", "first-sell"]);
+    // Either id, once the course they share is complete, names that course — membership, not
+    // canonical ladder position, is the test (see the "any order" spec below for why).
+    expect(graduatingLevel("first-buy", course100)).toBe(100);
+    expect(graduatingLevel("first-sell", course100)).toBe(100);
+    expect(graduatingLevel("first-buy", new Set(["first-buy"]))).toBeUndefined(); // 100 incomplete
+
+    const course200 = new Set([...course100, "first-cash-secured-put", "first-covered-call"]);
+    expect(graduatingLevel("first-cash-secured-put", course200)).toBe(200);
+    expect(graduatingLevel("first-covered-call", course200)).toBe(200);
+
+    const course300 = new Set([...course200, "first-long-put", "first-long-call"]);
+    expect(graduatingLevel("first-long-put", course300)).toBe(300);
+    expect(graduatingLevel("first-long-call", course300)).toBe(300); // the top rung, complete
+
+    expect(graduatingLevel("not-a-real-milestone", course300)).toBeUndefined();
+  });
+
+  it("refuses to call it a graduation when the course's last milestone is earned alone — a real gap, not a false celebration", () => {
+    // Seeded/imported history can hold a course's LAST milestone without an earlier one
+    // (`unlockedCodes`'s own doc: fills don't have to arrive in ladder order).
+    expect(graduatingLevel("first-covered-call", new Set(["first-covered-call"]))).toBeUndefined();
+    expect(graduatingLevel("first-sell", new Set(["first-sell"]))).toBeUndefined();
+  });
+
+  it("maps every milestone id to its course's level — the cheap pre-check acknowledge() uses", () => {
+    expect(MILESTONE_COURSE_LEVEL.get("first-buy")).toBe(100);
+    expect(MILESTONE_COURSE_LEVEL.get("first-sell")).toBe(100);
+    expect(MILESTONE_COURSE_LEVEL.get("first-cash-secured-put")).toBe(200);
+    expect(MILESTONE_COURSE_LEVEL.get("first-covered-call")).toBe(200);
+    expect(MILESTONE_COURSE_LEVEL.get("first-long-call")).toBe(300);
+    expect(MILESTONE_COURSE_LEVEL.get("not-a-real-milestone")).toBeUndefined();
+    expect(MILESTONE_COURSE_LEVEL.size).toBe(COURSES.reduce((n, c) => n + c.milestones.length, 0));
+  });
+
+  it("graduates whichever milestone the participant's OWN history happens to complete the course with, in ANY order", () => {
+    // The covered call (course 200's canonical LAST milestone) lands FIRST for this member —
+    // that alone must not graduate anything (courseComplete is false: no CSP yet).
+    expect(graduatingLevel("first-covered-call", new Set(["first-covered-call"]))).toBeUndefined();
+    // The CSP (canonical FIRST) lands second and completes it — THIS is the real graduation
+    // moment, even though it isn't the course's canonical-order last id.
+    expect(
+      graduatingLevel(
+        "first-cash-secured-put",
+        new Set(["first-covered-call", "first-cash-secured-put"]),
+      ),
+    ).toBe(200);
   });
 
   it("sums points and climbs ranks as milestones complete", () => {

@@ -89,7 +89,20 @@ export async function serveLearnApi(
       sendJson(res, 400, { error: "malformed claim body" });
       return true;
     }
-    await config.progression.acknowledge(id, ids);
+    const graduated = await config.progression.acknowledge(id, ids);
+    // #469 slice 4: a course graduation rides the board's ceremony channel, same one delivery
+    // seam `took_profit`/`deployed_capital` already use (`world-transitions.ts`). `acknowledge`
+    // guarantees each level appears at most once ever for this participant, so this never
+    // double-fires the fanfare for the same graduation.
+    for (const level of graduated) {
+      config.ceremonies?.emit({
+        id: `graduated:${id}:${level}`,
+        type: "graduated",
+        participantId: id,
+        level,
+        at: new Date().toISOString(),
+      });
+    }
     sendJson(res, 200, { ok: true });
     return true;
   }

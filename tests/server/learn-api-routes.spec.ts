@@ -52,7 +52,12 @@ describe("serveLearnApi", () => {
     const req = jsonReq({ ack: ["first-buy"] }, "application/x-www-form-urlencoded");
     const acked: string[][] = [];
     const config = configWith({
-      progression: { acknowledge: (_: string, ids: string[]) => acked.push(ids) } as never,
+      progression: {
+        acknowledge: (_: string, ids: string[]) => {
+          acked.push(ids);
+          return Promise.resolve([]);
+        },
+      } as never,
     });
     await serveLearnApi(req, res, "/api/learn/claim", config, session);
     expect(out.status).toBe(415); // the CSRF seam: cross-site form posts can't speak JSON
@@ -66,7 +71,7 @@ describe("serveLearnApi", () => {
       progression: {
         acknowledge: (id: string, ids: readonly string[]) => {
           seen.push({ id, ids });
-          return Promise.resolve();
+          return Promise.resolve([]);
         },
       } as never,
     });
@@ -76,9 +81,42 @@ describe("serveLearnApi", () => {
     expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
   });
 
+  it("fires the ceremony channel once per freshly graduated level (#469 slice 4)", async () => {
+    const emitted: unknown[] = [];
+    const config = configWith({
+      progression: { acknowledge: () => Promise.resolve([200]) } as never,
+      ceremonies: { emit: (t: unknown) => emitted.push(t) } as never,
+    });
+    const { res, out } = fakeRes();
+    await serveLearnApi(
+      jsonReq({ ack: ["first-covered-call"] }),
+      res,
+      "/api/learn/claim",
+      config,
+      session,
+    );
+    expect(emitted).toEqual([
+      expect.objectContaining({ type: "graduated", participantId: "human-eric", level: 200 }),
+    ]);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true });
+  });
+
+  it("acknowledges without incident when nothing graduated (the common case)", async () => {
+    const emitted: unknown[] = [];
+    const config = configWith({
+      progression: { acknowledge: () => Promise.resolve([]) } as never,
+      ceremonies: { emit: (t: unknown) => emitted.push(t) } as never,
+    });
+    const { res } = fakeRes();
+    await serveLearnApi(jsonReq({ ack: ["first-buy"] }), res, "/api/learn/claim", config, session);
+    expect(emitted).toEqual([]);
+  });
+
   it("rejects a malformed claim body with 400, never coercing", async () => {
     const { res, out } = fakeRes();
-    const config = configWith({ progression: { acknowledge: () => Promise.resolve() } as never });
+    const config = configWith({
+      progression: { acknowledge: () => Promise.resolve([]) } as never,
+    });
     await serveLearnApi(jsonReq({ ack: [42] }), res, "/api/learn/claim", config, session);
     expect(out.status).toBe(400);
   });
@@ -128,7 +166,12 @@ describe("serveLearnApi", () => {
     const called: string[] = [];
     const config = configWith({
       resolveOwnerId: () => undefined,
-      progression: { acknowledge: () => called.push("ack") } as never,
+      progression: {
+        acknowledge: () => {
+          called.push("ack");
+          return Promise.resolve([]);
+        },
+      } as never,
     });
     await serveLearnApi(jsonReq({ ack: ["x"] }), res, "/api/learn/claim", config, session);
     const parsed = JSON.parse(out.body ?? "{}");
