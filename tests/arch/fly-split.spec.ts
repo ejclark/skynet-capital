@@ -19,11 +19,21 @@ const envValue = (toml: string, key: string): string | undefined =>
   toml.match(new RegExp(`^\\s*${key}\\s*=\\s*"([^"]*)"`, "m"))?.[1];
 
 describe("fly deploy split (fly.toml ↔ fly.bots.toml)", () => {
-  it("gives the bots app NO public surface and NO volume — the stateless-disk contract", () => {
+  it("gives the bots app NO public surface", () => {
     // The shared image's default CMD is the dashboard with no auth store on this app; a public
     // surface here would be an unauthenticated dashboard. See fly.bots.toml's contract comments.
     expect(configOnly(bots)).not.toContain("[http_service]");
-    expect(configOnly(bots)).not.toContain("[mounts]");
+  });
+
+  it("mounts the bots app's own dedicated volume — never the dashboard's", () => {
+    // #1203/slice E: durable momentum/sentiment/cooldown state + the audit log. A shared volume
+    // would let the two apps race each other's writes; this must stay a separate Fly volume,
+    // mounted only on the `bots` process (never `app`, which this config doesn't even declare).
+    const dashboardSource = dashboard.match(/^\s*source\s*=\s*"([^"]+)"/m)?.[1];
+    const botsSource = bots.match(/^\s*source\s*=\s*"([^"]+)"/m)?.[1];
+    expect(botsSource).toBeTruthy();
+    expect(botsSource).not.toBe(dashboardSource);
+    expect(bots).toMatch(/^\s*processes\s*=\s*\["bots"\]/m);
   });
 
   it("keeps the bots app's bridge URL pointed at the dashboard app's `app` process group", () => {
