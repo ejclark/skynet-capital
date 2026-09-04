@@ -124,6 +124,15 @@ export interface PlaybookSubscription {
   readonly createdAt: string;
   /** ISO-8601. */
   readonly updatedAt: string;
+  /**
+   * Optional symbol-targeting filter (#885, Eric: "acts as a filter to focus/aim the playbook at
+   * specific stocks to execute against") — aims/restricts this subscription's execution to these
+   * symbols, WITHOUT changing the playbook's own default `Playbook.symbol`. Absent or empty means
+   * unrestricted: the playbook runs exactly as it always has. Enforced in `engine/guards.ts`
+   * (`clampBuy`) on the entry side only — it never blocks an exit, same posture as every other
+   * discipline guard in that file.
+   */
+  readonly symbols?: readonly string[];
 }
 
 type OrderStatus = "filled" | "rejected";

@@ -107,6 +107,20 @@ function clampBuy(
     return null;
   }
 
+  // Subscription capital sub-allocation: a playbook trades exactly one symbol, so
+  // the value already held in that symbol IS what's deployed under the subscription — no
+  // separate ledger to keep in sync with fills. `existingValue` is reused unchanged.
+  const subscription = intent.playbookId
+    ? config.subscriptions?.find((s) => s.playbookId === intent.playbookId && s.enabled)
+    : undefined;
+  // Symbol-targeting filter (#885): a subscription with a non-empty `symbols` list refuses a buy
+  // outright in any OTHER symbol — this is aim/restriction, not a soft preference. Entry side
+  // only, same posture as every discipline guard in this file: a guard blocks opening risk, never
+  // closing it, so an exit is never gated by this filter (see `clampSell`).
+  if (subscription?.symbols?.length && !subscription.symbols.includes(intent.symbol)) {
+    return null;
+  }
+
   const equity = computeEquity(portfolio, context.quotes);
   const existingValue = heldQuantity(portfolio, intent.symbol) * quote.ask;
   const positionBudget = Math.max(0, config.maxPositionPct * equity - existingValue);
@@ -115,12 +129,6 @@ function clampBuy(
   const withinPosition = Math.floor(positionBudget / quote.ask);
   const bounds = [intent.quantity, affordable, withinPosition];
 
-  // Subscription capital sub-allocation: a playbook trades exactly one symbol, so
-  // the value already held in that symbol IS what's deployed under the subscription — no
-  // separate ledger to keep in sync with fills. `existingValue` is reused unchanged.
-  const subscription = intent.playbookId
-    ? config.subscriptions?.find((s) => s.playbookId === intent.playbookId && s.enabled)
-    : undefined;
   if (subscription) {
     const subscriptionBudget = Math.max(0, subscription.capitalAllocated - existingValue);
     bounds.push(Math.floor(subscriptionBudget / quote.ask));
