@@ -10,7 +10,7 @@ outcomeCheck: 'curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: app
 # Research one bottleneck — find the superior existing solution, then battle-test it
 
 **Calling convention:** the front matter above is the calling convention — generate the call with
-`node scripts/grind-manifest.mjs --args --items '<json>' docs/grind/research-bottleneck.instructions.md`
+`node scripts/grind-manifest.mjs --args --items '<json>' --item-source '<where the list came from>' docs/grind/research-bottleneck.instructions.md`
 rather than transcribing these values by hand. `model: fable` + `effort: high` because this is research, not a mechanical chore, and
 grind's cheap defaults are the wrong fit. `isolation: none` is deliberate (no checkout, no file
 edits). Nothing is pushed; the deliverable is one comment on the issue plus a label, so the

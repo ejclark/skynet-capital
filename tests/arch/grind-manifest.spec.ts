@@ -119,8 +119,9 @@ describe("checked-in chores are held to a stricter bar than ad-hoc files", () =>
 
 describe("--args emission (the preflight a caller pastes)", () => {
   it("fills the tier into the instructions step and appends the outcome check", () => {
-    expect(argsFor(manifestOf(CHORE), ["a.ts", "b.ts"])).toEqual({
+    expect(argsFor(manifestOf(CHORE), ["a.ts", "b.ts"], "demo scan")).toEqual({
       items: ["a.ts", "b.ts"],
+      itemSource: "demo scan",
       steps: [
         {
           kind: "instructions",
@@ -139,25 +140,50 @@ describe("--args emission (the preflight a caller pastes)", () => {
       "isolation: worktree",
       "isolation: none",
     );
-    const [choreStep] = argsFor(manifestOf(src), ["x"]).steps;
+    const [choreStep] = argsFor(manifestOf(src), ["x"], "demo scan").steps;
     expect(choreStep?.model).toBeUndefined();
     expect(choreStep?.isolation).toBe(false);
   });
 
   it("emits no outcome-check step when the chore declares none", () => {
     const src = `${CHORE.split("\noutcomeCheck:")[0]}\n---\n\n# Demo chore\n`;
-    expect(argsFor(manifestOf(src), ["x"]).steps).toHaveLength(1);
+    expect(argsFor(manifestOf(src), ["x"], "demo scan").steps).toHaveLength(1);
+  });
+
+  it("passes itemSource through unchanged, whatever the caller states", () => {
+    expect(argsFor(manifestOf(CHORE), ["x"], "arch-scan --candidate").itemSource).toBe(
+      "arch-scan --candidate",
+    );
   });
 
   it("emits real args for a real chore end to end", () => {
     const out = execFileSync(
       "node",
-      [SCRIPT, "--args", "--items", '["1318"]', "docs/grind/research-bottleneck.instructions.md"],
+      [
+        SCRIPT,
+        "--args",
+        "--items",
+        '["1318"]',
+        "--item-source",
+        "issue #1318, bottleneck backlog",
+        "docs/grind/research-bottleneck.instructions.md",
+      ],
       { cwd: process.cwd(), encoding: "utf8" },
     );
     const parsed = JSON.parse(out);
     expect(parsed.items).toEqual(["1318"]);
+    expect(parsed.itemSource).toBe("issue #1318, bottleneck backlog");
     expect(parsed.steps[0]).toMatchObject({ effort: "high", model: "fable", isolation: false });
     expect(parsed.steps[1].command).toContain("bottleneck-research");
+  });
+
+  it("refuses --args without --item-source", () => {
+    expect(() =>
+      execFileSync(
+        "node",
+        [SCRIPT, "--args", "--items", '["1318"]', "docs/grind/research-bottleneck.instructions.md"],
+        { cwd: process.cwd(), encoding: "utf8", stdio: "pipe" },
+      ),
+    ).toThrow();
   });
 });

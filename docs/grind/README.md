@@ -13,7 +13,11 @@ Maps onto the codification ladder in [`../COACHES.md`](../COACHES.md): a one-off
 **Single-stage** (unchanged, still the default for a one-off):
 
 ```json
-{ "items": ["a.ts", "b.ts"], "promptTemplate": "Add a JSDoc comment to every exported function in {item}." }
+{
+  "items": ["a.ts", "b.ts"],
+  "itemSource": "hand list — a one-off doc chore with no gate of its own",
+  "promptTemplate": "Add a JSDoc comment to every exported function in {item}."
+}
 ```
 
 **Multi-stage** — each item runs the same ordered chain of steps (`args.steps`), via `pipeline()` so
@@ -22,6 +26,7 @@ items don't wait on each other's slowest step:
 ```json
 {
   "items": ["a.ts", "b.ts"],
+  "itemSource": "npx tsc --noEmit over src/**, filtered to files with errors",
   "steps": [
     { "kind": "script", "command": "npx tsc --noEmit {item}" },
     { "kind": "instructions", "path": "docs/grind/fix-type-error.instructions.md" },
@@ -35,6 +40,33 @@ checked-in chores" below for ones that actually exist.)
 
 Once a step reports `blocked` or `skipped` for an item, later steps pass it through unchanged
 rather than spending an agent on a target the chain already gave up on.
+
+## Interrogate before you call — `itemSource` and the two automatic steps
+
+`grind.js` cannot ask a clarifying question mid-run (it dispatches into the background, no
+filesystem access, no interactivity) — so the interrogation has to happen in the calling session,
+before `Workflow(grind)` is ever invoked, and its output becomes required input to the call rather
+than a checklist that is easy to skip:
+
+- **`args.itemSource`** (required) — a short string naming where `items` came from: a scan/query
+  command, or the explicit reason none applies. A hand-picked list is a smell unless the chore
+  genuinely has no gate of its own. This is the one piece no script can supply for you — depth
+  (effort/model) and width (scope) show up directly as the call's other args, but item source is a
+  judgment call every time.
+- **An envelope check runs as step 0, on by default.** Every item goes through `node
+  scripts/envelope-scan.mjs --check {item} --base origin/main` before your own steps run, closing
+  what used to be a documented gap (nothing in `grind.js` filtered `items` against
+  `envelope.json`). It is a `prompt` step, not `script` — `--check` always exits 0 and returns
+  descriptive JSON, so the dispatched agent reads it and reports `blocked` on any `blocking: true`
+  entry, `skipped` when the item plainly is not a file path (an issue number, a ticker, a PR
+  branch). Pass `skipEnvelopeCheck: true` to opt out for a non-path item list; say why in
+  `itemSource`.
+- **`verifyBranch: true`** appends a trailing `{kind:"script"}` step running `git ls-remote
+  --exit-code --heads origin {prev.branch}`, so a `done` with nothing pushed fails closed instead
+  of being trusted — the ad-hoc equivalent of a checked-in chore's own `outcomeCheck` front matter
+  (below). Only pass it for a `steps` chain that is not already going through
+  `grind-manifest.mjs` — a checked-in chore's `outcomeCheck` already does this per its own manifest,
+  and setting both would run the check twice.
 
 ## Step kinds
 
@@ -130,18 +162,22 @@ outcomeCheck: 'git ls-remote --exit-code --heads origin {prev.branch}'
 matter and prints the exact `args` object, tier filled in and the outcome-check step appended:
 
 ```bash
-node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' docs/grind/triage-comment-bloat.instructions.md
+node scripts/grind-manifest.mjs --args --items '["src/a.ts","src/b.ts"]' --item-source "comment-bloat-scan.mjs" docs/grind/triage-comment-bloat.instructions.md
 ```
 
 ```json
 {
   "items": ["src/a.ts", "src/b.ts"],
+  "itemSource": "comment-bloat-scan.mjs",
   "steps": [
     { "kind": "instructions", "path": "docs/grind/triage-comment-bloat.instructions.md", "effort": "low", "isolation": true },
     { "kind": "script", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
   ]
 }
 ```
+
+`--item-source` is required alongside `--args` — `grind.js` refuses to run without `args.itemSource`
+(see "Interrogate before you call" above), so the preflight cannot emit a call that would fail.
 
 `npm run grind:manifest` (no flags) prints what every chore declares and **exits 1** if any of them
 fails to declare `name`, `description`, `effort`, or `isolation` — blocking in CI via
@@ -220,16 +256,18 @@ appeared). Two consequences:
 
 ## Known limitations
 
-- **No built-in `envelope.json` enforcement.** An instructions.md file can tell its agent to
-  self-check and report `blocked` on a protected path, but nothing in `grind.js` itself filters the
-  `items` list before dispatch. When an item list comes from a live gate scan (knip, arch-scan,
-  etc.) rather than a fixed list you wrote by hand, filter out anything matching
-  `envelope.json`'s protected patterns yourself before calling grind — a protected-path edit still
-  gets caught at CI, but only after an agent already spent effort on a target that was never going
-  to land. `grind-manifest.mjs --args` already holds the item list, so a `--envelope` flag that
-  drops protected items is the natural home for this — but only for items that *are* paths; issue
-  numbers and `{doc, refs}` objects need their own mapping first, which is why #1325 routed it to a
-  follow-up rather than this slice.
+- **`envelope.json` enforcement is now built in, and imperfect on purpose.** `grind.js` prepends an
+  envelope-check step to every chain by default (see "Interrogate before you call" above), closing
+  the gap this bullet used to describe — a protected-path item now gets caught before any real
+  step runs, not only at CI. The follow-up this bullet originally deferred to (a `--envelope` flag
+  in `grind-manifest.mjs` that structurally drops protected items) never landed, and does not need
+  to: the blocker was that only some item shapes are file paths — issue numbers and `{doc, refs}`
+  objects need their own mapping. Routing the check through a `prompt` step sidesteps that: the
+  dispatched agent reads `envelope-scan.mjs --check`'s JSON and decides applicability itself,
+  reporting `skipped` for a non-path item rather than needing grind.js to know every item shape in
+  advance. The trade: this is agent judgment, not a hard exit-code gate, so it is a second net, not
+  a replacement for the one CI already runs — pass `skipEnvelopeCheck: true` (with the reason in
+  `itemSource`) when items are not paths at all.
 - **An agent's loop is reachable only if it lives in a skill — and only an interactive session
   can put it there.** `skill` steps reach `.claude/skills/*/SKILL.md`; the athletes that already
   kept their procedure in a skill (`decomposer` → `/decompose`, `ui-librarian` → `/dedupe`) were

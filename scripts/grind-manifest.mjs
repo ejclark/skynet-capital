@@ -186,9 +186,10 @@ export function choreFiles() {
 
 /**
  * Build the grind `args` object for one chore + item list — candidate A, the preflight, so a caller
- * pastes the tier instead of remembering it.
+ * pastes the tier instead of remembering it. `itemSource` is passed through, never derived: the
+ * manifest only knows the chore's own tier, not where the caller's `items` list came from.
  */
-export function argsFor(manifest, items) {
+export function argsFor(manifest, items, itemSource) {
   const step = {
     kind: "instructions",
     path: manifest.path,
@@ -198,7 +199,7 @@ export function argsFor(manifest, items) {
   if (manifest.model) step.model = manifest.model;
   const steps = [step];
   if (manifest.outcomeCheck) steps.push({ kind: "script", command: manifest.outcomeCheck });
-  return { items, steps };
+  return { items, itemSource, steps };
 }
 
 /** Normalise a CLI path argument to repo-relative POSIX form. */
@@ -209,7 +210,10 @@ function toRepoRelative(arg) {
 function main(argv) {
   const wantsArgs = argv.includes("--args");
   const itemsAt = argv.indexOf("--items");
-  const paths = argv.filter((a, i) => !a.startsWith("--") && i !== itemsAt + 1).map(toRepoRelative);
+  const sourceAt = argv.indexOf("--item-source");
+  const paths = argv
+    .filter((a, i) => !a.startsWith("--") && i !== itemsAt + 1 && i !== sourceAt + 1)
+    .map(toRepoRelative);
   const files = paths.length ? paths : choreFiles();
 
   const results = files.map((f) => scanChoreFile(f));
@@ -246,6 +250,13 @@ function main(argv) {
     );
     process.exit(1);
   }
+  if (sourceAt === -1 || !argv[sourceAt + 1]) {
+    console.error(
+      "✗ grind-manifest --args needs --item-source '<string>' — where the --items list came from (a scan/query command, or why none applies). grind.js refuses to run without it.",
+    );
+    process.exit(1);
+  }
+  const itemSource = argv[sourceAt + 1];
   let items;
   try {
     items = JSON.parse(argv[itemsAt + 1]);
@@ -263,7 +274,7 @@ function main(argv) {
       `note: ${manifest.path} declares no outcomeCheck, so no verify-the-world step was appended — add one to the front matter if the chore pushes a branch.`,
     );
   }
-  console.log(JSON.stringify(argsFor(manifest, items), null, 2));
+  console.log(JSON.stringify(argsFor(manifest, items, itemSource), null, 2));
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
