@@ -27,6 +27,43 @@ it. Prevention ranks, best first:
 
 ---
 
+### Two concurrent event-research sessions both registered forward-test `FT-25` — the id came from a live read of a file every sibling was also reading
+
+- **SHA:** n/a (fix on `.github/prompts/event-research.md` and `scripts/forward-test-id-scan.mjs`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** merge commit `28be7c30` on `research/hammack-remarks-2026-09-03` conflicted in
+  `docs/research/forward-tests.md` — two unrelated, already-squash-merged research PRs (a CRWV
+  conference study and a Challenger-layoffs study) had each independently registered a new row
+  numbered `FT-25`. Resolved by hand at the time, as a merge conflict, with no follow-up: the
+  underlying process gap that produced it was never diagnosed or fixed. Re-scanning the ledger for
+  this fix (`forward-test-id-scan.mjs`'s first run) also surfaced **seven** more pre-existing id
+  collisions the FT-25 fix never touched — `FT-26`, `FT-27`, `FT-32`, `FT-45`, `FT-47` (5 distinct
+  hypotheses under one id) and `FT-48` — none of which had ever produced a merge conflict because
+  each pair happened to land in separate, non-overlapping PRs.
+- **ROOT CAUSE:** `docs/research/forward-tests.md` is one shared markdown table of pre-registered
+  hypotheses with a sequential bare id (`FT-N`). `.github/workflows/moneypenny-events.yml`'s
+  "research due events" job runs MULTIPLE concurrent sessions, one matrix leg per due event, each
+  following `.github/prompts/event-research.md` — and that prompt never named an id-assignment
+  procedure at all, so every session independently read the file's current tip and assumed the
+  next integer. Two sessions starting close enough together read the same highest number before
+  either had appended its own row, and both registered the same id — a classic read-then-write
+  race with no lock, made worse by the file being shared across every concurrent leg by design.
+- **PREVENTION:** gate + doctrine, at both the source and behind it. `.github/prompts/event-research.md`
+  now instructs new forward-test registrations to use an id namespaced to the session's own
+  assigned event (`FT-<event-id>-<n>`, `<n>` counted only within that event's own prior rows) —
+  removing the race at the source, since the id no longer derives from a live read of a file every
+  concurrent sibling is also appending to, only from something each session already owns
+  exclusively. Behind that, `scripts/forward-test-id-scan.mjs` + `forward-test-id-budget.json` +
+  `tests/arch/forward-test-id.spec.ts` is a permanent, cheap (no token, no network, pure text-file
+  parse) mechanical net that reports any `FT-...` id shared by more than one row — the same
+  eye/budget/spec shape as every other gate in `docs/COACHES.md`'s roster. The existing ~53 legacy
+  bare-number rows, including the seven newly-found collisions, are grandfathered as-is; the budget
+  starts at the honestly-measured `7`, not a fabricated `0`, per "grandfather, then shrink."
+- **SIDE QUESTS:** the seven newly-found pre-existing collisions (`FT-26`/`27`/`32`/`45`/`47`/`48`)
+  are real ledger debt this fix intentionally left untouched — renumbering them is scoped-out
+  follow-up work, tracked by the new gate's non-zero budget rather than fixed in this PR.
+
+---
+
 ### CI install times swung 10s to 300+s on the same ~570 packages — setup-node's cache has no restore-keys fallback
 
 - **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
