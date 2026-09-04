@@ -239,7 +239,13 @@ export async function handleFeedbackCoach(
   } catch {
     return json(400, { ok: false, error: "bad request body" });
   }
-  const kind = typeof parsed.kind === "string" ? parsed.kind.slice(0, 20) : "feature";
+  // STRICT, same rule as `kindFromForm` (feedback-form-input.ts): a missing or unreadable kind is
+  // refused, never guessed into "feature" — that silent default is what produced a corpus where
+  // all ten member-filed issues came back labelled `enhancement` (#645).
+  const kind = typeof parsed.kind === "string" ? parsed.kind.trim().slice(0, 20) : "";
+  if (!kind) {
+    return json(400, { ok: false, error: "Pick what kind of feedback this is and try again." });
+  }
   const messages = Array.isArray(parsed.messages)
     ? parsed.messages
         .filter(
