@@ -15,13 +15,13 @@ const index = (over: Partial<JoinIndex> = {}): JoinIndex => ({
 
 function fill(fields: { name?: string; key?: string; secret?: string }) {
   if (fields.name !== undefined)
-    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: fields.name } });
+    fireEvent.change(screen.getByLabelText(/^Display name/), { target: { value: fields.name } });
   if (fields.key !== undefined)
-    fireEvent.change(screen.getByLabelText("Alpaca paper API key"), {
+    fireEvent.change(screen.getByLabelText("Alpaca paper account: key"), {
       target: { value: fields.key },
     });
   if (fields.secret !== undefined)
-    fireEvent.change(screen.getByLabelText("Alpaca paper API secret"), {
+    fireEvent.change(screen.getByLabelText("Alpaca paper account: secret"), {
       target: { value: fields.secret },
     });
 }
@@ -149,9 +149,9 @@ describe("JoinForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Start over with new keys" }));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Alpaca paper API key")).toHaveValue("");
-    expect(screen.getByLabelText("Alpaca paper API secret")).toHaveValue("");
-    expect(screen.getByLabelText("Display name")).toHaveValue("Default Dan");
+    expect(screen.getByLabelText("Alpaca paper account: key")).toHaveValue("");
+    expect(screen.getByLabelText("Alpaca paper account: secret")).toHaveValue("");
+    expect(screen.getByLabelText(/^Display name/)).toHaveValue("Default Dan");
   });
 
   it("renders any other refusal verbatim from the service", async () => {

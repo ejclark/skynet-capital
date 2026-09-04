@@ -84,6 +84,14 @@ robust, alpha fragile — is the finding.
   2025-05-14 print gapped green, and the newest print's reaction was positive.
 - **AVGO hold-the-print** (anti-S2) — win rate indistinguishable from an ordinary overnight
   (p=0.567), mean one-print-carried, and the latest print gapped −14.66%.
+- **AVGO late-week bid** (long close D-5 → close D; FT-2) — added 2026-09-03 from the
+  [avgo-2026-09-02-print close-out](events/avgo-2026-09-02-print.md). The 2026-09-02 print's window
+  returned **+3.28%** and cleared its base rate on paper (+3.58pp vs QQQ, +2.57pp vs the +0.71%
+  non-earnings 5-day baseline) — but **NVDA printed at the window's own open (2026-08-26 AMC)** and
+  the single 08-27 sympathy session returned **+4.49%**, i.e. **137% of the whole window**; ex that
+  session the window is **−1.16%**. The pre-registered sympathy clause fires, harder than the ~70%
+  that gutted the MRVL original. Do not re-propose without a D-5→D window carrying **no peer print
+  inside it** — which, on this calendar's AI-semis cadence, means checking NVDA/MRVL dates first.
 - **META gap-capture** (hold the print, sell D+1 open) — no significance at any cut; contradicts
   S2 with evidence far too weak to license the exception.
 - **AAPL late run-up** — vanishes net-of-QQQ (t≤0.6); a QQQ bet in an AAPL costume.

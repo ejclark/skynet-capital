@@ -2,7 +2,9 @@
 
 .wire-grid {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  /* fluid: the side column grows with the page (a fixed 300px next to a 1600px feed reads as
+     an afterthought), bounded so it never crowds the feed on a laptop */
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 26%, 460px);
   gap: 16px;
   align-items: start;
 }

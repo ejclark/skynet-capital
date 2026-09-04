@@ -1,11 +1,17 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { CONTROLS_BRIDGE_PATH, type ControlsState } from "../autonomous/bot-controls.js";
 import {
+  BOT_CREDENTIALS_ID_PARAM,
+  BOT_CREDENTIALS_PATH,
+  BOT_CREDENTIALS_SECRET_HEADER,
+} from "../autonomous/bot-credentials-wire.js";
+import {
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
   type InsightRecord,
   parseInsightRecord,
 } from "../autonomous/insight-record.js";
+import type { BotCredentials } from "./bot-credentials-gate.js";
 
 /**
  * One insight record, JSON-encoded, is a few hundred bytes at most. 16 KB is generous headroom
@@ -28,6 +34,17 @@ export interface InsightsListenerConfig {
    * awaited, never allowed to fail the response it rides along with.
    */
   readonly onControlsPoll?: () => void;
+  /**
+   * `GET /bot-credentials?id=<personaId>` — the one place a live Alpaca secret crosses this
+   * bridge. Deliberately a SEPARATE, real, Eric-provisioned secret from `INSIGHTS_BRIDGE_SHARED_SECRET`
+   * (which is a repo-public literal, documented as "not a credential" — an acceptable bar for
+   * booleans, not for this). Omit to 404 the route entirely — a deployment with no
+   * `SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET` set gets no route, not a route with no auth.
+   */
+  readonly botCredentials?: {
+    readonly secret: string;
+    readonly resolve: (personaId: string) => BotCredentials | undefined;
+  };
 }
 
 /**
@@ -91,6 +108,11 @@ async function handleInsightPost(
 
   if (path === CONTROLS_BRIDGE_PATH) {
     handleControlsGet(req, res, config);
+    return;
+  }
+
+  if (path === BOT_CREDENTIALS_PATH) {
+    handleBotCredentialsGet(req, res, config);
     return;
   }
 
@@ -180,6 +202,50 @@ function handleControlsGet(
     process.emitWarning(`[insights-listener] controls read failed: ${String(error)}`);
     respond(res, 502, { error: "read failed" });
   }
+}
+
+/** `GET /bot-credentials?id=<personaId>` — never logs, never echoes anything BUT the requested
+ *  bot's own credential shape. Its own secret, checked BEFORE the shared bridge header — a
+ *  deployment that hasn't provisioned `SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET` refuses every request
+ *  here even if it happens to also know the (repo-public) shared one. */
+function handleBotCredentialsGet(
+  req: IncomingMessage,
+  res: ServerResponse,
+  config: InsightsListenerConfig,
+): void {
+  if (req.method !== "GET") {
+    res.setHeader("allow", "GET");
+    respond(res, 405, { error: "method not allowed" });
+    return;
+  }
+  if (!config.botCredentials) {
+    respond(res, 404, { error: "not found" });
+    return;
+  }
+  if (req.headers[BOT_CREDENTIALS_SECRET_HEADER] !== config.botCredentials.secret) {
+    respond(res, 401, { error: "unauthorized" });
+    return;
+  }
+  const personaId = new URL(req.url ?? "/", "http://internal").searchParams.get(
+    BOT_CREDENTIALS_ID_PARAM,
+  );
+  if (!personaId) {
+    respond(res, 400, { error: "id is required" });
+    return;
+  }
+  let credentials: BotCredentials | undefined;
+  try {
+    credentials = config.botCredentials.resolve(personaId);
+  } catch (error) {
+    process.emitWarning(`[insights-listener] bot-credentials resolve failed: ${String(error)}`);
+    respond(res, 502, { error: "resolve failed" });
+    return;
+  }
+  if (!credentials) {
+    respond(res, 404, { error: "no such bot" });
+    return;
+  }
+  respond(res, 200, { ...credentials });
 }
 
 type BodyResult =

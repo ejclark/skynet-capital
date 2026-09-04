@@ -381,7 +381,7 @@ function SettingsPage(): ReactElement {
         </a>
       ))}
       <hr />
-      <a href="/app/join">Add an account</a>
+      <a href="/app/onboarding">Add an account</a>
     </>
   );
 
@@ -405,7 +405,7 @@ function SettingsPage(): ReactElement {
       ) : accounts.length === 0 ? (
         <p className="note">
           Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or add
-          your own from <a href="/app/join">the join page</a>.
+          your own from <a href="/app/onboarding">onboarding</a>.
         </p>
       ) : (
         accounts.map((account) => (

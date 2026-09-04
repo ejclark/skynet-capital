@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkFor } from "../../src/domain/comprehension-checks.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
+import type { CompanionMessageLogEntry } from "../../src/server/companion-message-log.js";
 import type { FeedbackLogEntry } from "../../src/server/feedback-log.js";
 import type { OrderAuditRecord } from "../../src/server/order-audit-log.js";
 import {
@@ -224,48 +225,57 @@ describe("progression service — the engagement track (#567)", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  const feedbackEntry = (filedAt: string): FeedbackLogEntry => ({
-    uuid: filedAt,
-    opaqueMemberId: "ann",
-    issueNumber: 1,
-    url: "https://github.com/x/y/issues/1",
-    kind: "bug",
-    title: "a bug",
-    filedAt,
-  });
+  const messageEntry = (at: string): CompanionMessageLogEntry => ({ opaqueMemberId: "ann", at });
 
-  it("earns nothing when readFeedback isn't wired — offline builds stay untouched", async () => {
+  it("earns nothing when readMessages isn't wired — offline builds stay untouched", async () => {
     const view = await service([]).view("ann");
     expect(view.engagementEarned).toEqual([]);
     expect(view.engagementCelebrating).toEqual([]);
   });
 
-  it("earns nothing from a fill history alone — filing feedback is the only way in", async () => {
+  it("earns nothing from a fill history alone — messaging her is the only way in", async () => {
     const view = await service([journalLine({})]).view("ann");
     expect(view.engagementEarned).toEqual([]);
   });
 
-  it("pre-acknowledges a pre-existing filing on first view — never a surprise fanfare", async () => {
+  it("reads messages by the opaque member id, not the account id (#1171)", async () => {
+    // The message log is keyed by `opaqueMemberId(session.email)` — a different id space than
+    // the account/participant id. A `view` call that only passes the account id must not see a
+    // message recorded under the member's opaque id, and vice versa.
+    const svc = createProgressionService({
+      readFills: () => Promise.resolve([]),
+      readTags: () => Promise.resolve([]),
+      readMessages: (id) =>
+        Promise.resolve(id === "opaque-abc" ? [messageEntry("2026-09-01T00:00:00.000Z")] : []),
+    });
+    const byAccountIdOnly = await svc.view("acct-1");
+    expect(byAccountIdOnly.engagementEarned).toEqual([]);
+
+    const byOpaqueId = await svc.view("acct-1", "opaque-abc");
+    expect(byOpaqueId.engagementEarned.map((m) => m.milestoneId)).toEqual(["first-message"]);
+  });
+
+  it("pre-acknowledges a pre-existing message on first view — never a surprise fanfare", async () => {
     const store = new ProgressionStore(join(dir, "progression.json"));
     const svc = createProgressionService({
       readFills: () => Promise.resolve([]),
       readTags: () => Promise.resolve([]),
-      readFeedback: () => Promise.resolve([feedbackEntry("2026-08-01T00:00:00.000Z")]),
+      readMessages: () => Promise.resolve([messageEntry("2026-08-01T00:00:00.000Z")]),
       store,
       now: () => new Date("2026-08-26T00:00:00.000Z"),
     });
     const view = await svc.view("ann");
-    expect(view.engagementEarned.map((m) => m.milestoneId)).toEqual(["first-feedback"]);
+    expect(view.engagementEarned.map((m) => m.milestoneId)).toEqual(["first-message"]);
     expect(view.engagementCelebrating).toEqual([]);
-    expect(store.get("ann")?.acknowledged).toEqual(["first-feedback"]);
+    expect(store.get("ann")?.acknowledged).toEqual(["first-message"]);
   });
 
-  it("celebrates a filing made AFTER the participant record already exists", async () => {
+  it("celebrates a message made AFTER the participant record already exists", async () => {
     const store = new ProgressionStore(join(dir, "progression.json"));
     const before = createProgressionService({
       readFills: () => Promise.resolve([]),
       readTags: () => Promise.resolve([]),
-      readFeedback: () => Promise.resolve([]),
+      readMessages: () => Promise.resolve([]),
       store,
       now: () => new Date("2026-08-25T16:00:00.000Z"),
     });
@@ -274,14 +284,14 @@ describe("progression service — the engagement track (#567)", () => {
     const after = createProgressionService({
       readFills: () => Promise.resolve([]),
       readTags: () => Promise.resolve([]),
-      readFeedback: () => Promise.resolve([feedbackEntry("2026-08-26T09:00:00.000Z")]),
+      readMessages: () => Promise.resolve([messageEntry("2026-08-26T09:00:00.000Z")]),
       store,
       now: () => new Date("2026-08-26T09:00:01.000Z"),
     });
     const view = await after.view("ann");
-    expect(view.engagementCelebrating.map((m) => m.milestoneId)).toEqual(["first-feedback"]);
+    expect(view.engagementCelebrating.map((m) => m.milestoneId)).toEqual(["first-message"]);
 
-    await after.acknowledge("ann", ["first-feedback"]);
+    await after.acknowledge("ann", ["first-message"]);
     expect((await after.view("ann")).engagementCelebrating).toEqual([]);
   });
 
@@ -290,16 +300,16 @@ describe("progression service — the engagement track (#567)", () => {
     const svc = createProgressionService({
       readFills: () => Promise.resolve([]),
       readTags: () => Promise.resolve([]),
-      readFeedback: () => Promise.resolve([]),
+      readMessages: () => Promise.resolve([]),
       store,
       now: () => new Date("2026-08-25T16:00:00.000Z"),
     });
     await svc.view("ann"); // seeds, nothing earned yet on either track
 
-    const withFeedback = createProgressionService({
+    const withMessage = createProgressionService({
       readFills: () => Promise.resolve([journalLine({ at: "2026-08-25T16:30:00.000Z" })]),
       readTags: () => Promise.resolve([]),
-      readFeedback: () => Promise.resolve([feedbackEntry("2026-08-25T16:31:00.000Z")]),
+      readMessages: () => Promise.resolve([messageEntry("2026-08-25T16:31:00.000Z")]),
       store,
       now: () => new Date("2026-08-25T16:32:00.000Z"),
     });
@@ -307,20 +317,90 @@ describe("progression service — the engagement track (#567)", () => {
     // mechanics the existing "celebrates a gated earn once the check passes" case relies on.
     const check = checkFor("first-buy");
     if (!check) throw new Error("first-buy is gated in the bank this spec relies on");
-    await withFeedback.submitCheck(
+    await withMessage.submitCheck(
       "ann",
       "first-buy",
       new Map(check.questions.map((q) => [q.id, String(q.answerIndex)])),
     );
-    const view = await withFeedback.view("ann");
+    const view = await withMessage.view("ann");
     expect(view.celebrating.map((m) => m.milestoneId)).toEqual(["first-buy"]);
-    expect(view.engagementCelebrating.map((m) => m.milestoneId)).toEqual(["first-feedback"]);
+    expect(view.engagementCelebrating.map((m) => m.milestoneId)).toEqual(["first-message"]);
 
-    await withFeedback.acknowledge("ann", ["first-buy"]);
-    const afterTradeAck = await withFeedback.view("ann");
+    await withMessage.acknowledge("ann", ["first-buy"]);
+    const afterTradeAck = await withMessage.view("ann");
     expect(afterTradeAck.celebrating).toEqual([]);
     expect(afterTradeAck.engagementCelebrating.map((m) => m.milestoneId)).toEqual([
-      "first-feedback",
+      "first-message",
     ]);
+  });
+
+  describe("the message gate on the ladder (#1119, lowered 2026-09-03)", () => {
+    let dir = "";
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "prog-gate-"));
+    });
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const filing = (at: string): FeedbackLogEntry =>
+      ({
+        uuid: "u",
+        opaqueMemberId: "m",
+        issueNumber: 1,
+        url: "",
+        kind: "idea",
+        title: "",
+        filedAt: at,
+      }) as FeedbackLogEntry;
+    const gatedService = (
+      messages: CompanionMessageLogEntry[],
+      journal: TradeActivityRecord[] = [],
+      feedback: FeedbackLogEntry[] = [],
+    ) =>
+      createProgressionService({
+        readFills: () => Promise.resolve(journal),
+        readTags: () => Promise.resolve([]),
+        readMessages: () => Promise.resolve(messages),
+        readFeedback: () => Promise.resolve(feedback),
+        store: new ProgressionStore(join(dir, "progression.json")),
+        now: () => new Date("2026-09-02T00:00:00.000Z"),
+      });
+
+    it("shuts every rung for a brand-new member (wheels on, nothing said) and names why", async () => {
+      const view = await gatedService([]).view("ann");
+      expect(view.wheels).toBe(true);
+      expect(view.ladderGate).toBe("first-message");
+      expect([...view.unlocked]).toEqual([]);
+      expect(view.nextUp).toBeUndefined();
+    });
+
+    it("opens the ladder the moment a message is on the log", async () => {
+      const view = await gatedService([messageEntry("2026-09-01T00:00:00.000Z")]).view("ann");
+      expect(view.ladderGate).toBeUndefined();
+      expect([...view.unlocked]).toEqual(["101"]);
+      expect(view.nextUp).toBe("101");
+    });
+
+    it("also opens for a member who filed real feedback before the message log existed", async () => {
+      const view = await gatedService([], [], [filing("2026-08-01T00:00:00.000Z")]).view("ann");
+      expect(view.ladderGate).toBeUndefined();
+      // The grandfather clause never invents an engagement earn — it only satisfies the gate.
+      expect(view.engagementEarned).toEqual([]);
+    });
+
+    it("never gates a member with fill history — seeded wheels off", async () => {
+      const view = await gatedService([], [journalLine({})]).view("ann");
+      expect(view.wheels).toBe(false);
+      expect(view.ladderGate).toBeUndefined();
+      expect(view.unlocked.has("102")).toBe(true);
+    });
+
+    it("never locks away a rung already earned, even while gated", async () => {
+      const svc = gatedService([], [journalLine({})]);
+      await svc.setWheels("ann", true);
+      const view = await svc.view("ann");
+      expect(view.ladderGate).toBe("first-message");
+      expect([...view.unlocked]).toEqual(["101"]);
+    });
   });
 });

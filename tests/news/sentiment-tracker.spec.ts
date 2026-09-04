@@ -37,4 +37,24 @@ describe("SentimentTracker", () => {
     const ctx = tracker.overlay(emptyContext());
     expect(ctx.newsSentiment?.NVDA).toBeGreaterThan(0);
   });
+
+  describe("restore/snapshot — durability across a process restart", () => {
+    it("snapshot returns exactly what was ingested", () => {
+      const tracker = new SentimentTracker();
+      tracker.ingest(article("NVDA surges", ["NVDA"]), new Set(["NVDA"]));
+      expect(tracker.snapshot().NVDA?.length).toBe(1);
+    });
+
+    it("restore seeds a fresh tracker so sentiment reads correctly with nothing re-ingested", () => {
+      const tracker = new SentimentTracker();
+      tracker.restore({ NVDA: [1, 1] });
+      expect(tracker.sentiment("NVDA")).toBeCloseTo(1, 10);
+    });
+
+    it("trims a restored series to the current window size", () => {
+      const tracker = new SentimentTracker(2);
+      tracker.restore({ NVDA: [-1, 0, 1] });
+      expect(tracker.snapshot().NVDA).toEqual([0, 1]);
+    });
+  });
 });
