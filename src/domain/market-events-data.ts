@@ -335,8 +335,11 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "The Fed's own inflation gauge — and it lands ON the NVDA print day. Compound-risk.",
   },
   // Scheduled macro releases beyond CPI/FOMC/jobs/PCE/PPI (agency schedules, checked 2026-08-18).
-  // The rate-path movers our long-duration names trade on; second-order surveys (Michigan
-  // sentiment, durable goods) and weekly jobless claims are deliberately omitted as low-impact.
+  // The rate-path movers our long-duration names trade on. The original seeding deliberately
+  // omitted second-order surveys (Michigan sentiment, durable goods) and weekly jobless claims as
+  // low-impact; durable goods and Michigan sentiment have since been admitted by adjacency sweeps
+  // that found them load-bearing for a specific event, both at low/medium impact rather than as a
+  // reversal of that judgment. Weekly jobless claims stay out (no single date to key on).
   {
     id: "consumer-confidence-2026-08-25",
     kind: "macro-print",
@@ -407,6 +410,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "Hot consumer → yields up → duration pressure; soft → supportive. Lands the day of the Sep-16 FOMC.",
+  },
+  {
+    id: "umich-sentiment-prelim-2026-09-11",
+    kind: "macro-print",
+    title: "University of Michigan consumer sentiment — preliminary (Sep 2026)",
+    date: "2026-09-11",
+    status: "estimate",
+    source:
+      'EST: the University of Michigan Surveys of Consumers\' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628) lists verbatim "September 11 September Prelim" and "September 25 September Final"; the customary release time is 10:00 ET but the schedule document itself states no time. Primary-sourced, but filed estimate per the event-research lane\'s no-self-confirm limit on an event discovered in-sweep, checked 2026-09-04',
+    impact: "low",
+    symbols: [],
+    notes:
+      "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Filed low, not medium, to respect the table's standing judgment that second-order surveys stay out — this is an admission for a named reason, not a reversal. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep.",
   },
   {
     id: "jolts-2026-09-29",
