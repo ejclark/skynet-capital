@@ -54,10 +54,42 @@ not `ship.sh merge`. (`scripts/ship.sh merge <n>` works only for an *unprotected
 
 For these: `scripts/ship.sh open` to create the PR, but do **not** arm auto-merge.
 
-## Batching
+## Batching — and the platter, for the carve-outs above
 
-Prefer one platter PR over many (fewer pushes, fewer opens, fewer merges = less of every finite
-resource). Assemble athlete branches locally with `git`, verify once, `ship open` once.
+Prefer one PR over many (fewer pushes, fewer opens, fewer merges = less of every finite resource).
+For ordinary auto-merging work: assemble athlete branches locally with `git`, verify once, `ship
+open` once.
+
+For the **carve-outs** — the changes Eric merges by hand — that same shape is the **platter**
+(#1343). The boundary never moves; only its cost does. On 2026-09-04 seven protected-path changes
+cost seven separate hand-merges, and the held set was not even enumerable.
+
+```
+scripts/ship.sh platter open <item-branch>   # cut platter/<date> off main, board item 1, open it HELD
+scripts/ship.sh platter board <item-branch>  # board the next item; push; refresh the PR's ledger
+scripts/ship.sh platter ledger [--body]      # the table (or the whole PR body), read from git
+```
+
+- **One commit per item, merged with "Create a merge commit"** — that is what keeps `git revert
+  <item sha>` able to drop a single item. Squashing the platter still lands the same tree but
+  collapses the items, and revert degrades to all-or-nothing. The PR body says so above the fold.
+- **Nothing red boards.** `board` runs `npm run verify` on the post-board tree and un-boards the
+  item on red. This matters more than it looks: `pipeline.yml`'s `verify` triggers on `pull_request:
+  branches: [main]`, so a PR based on a platter branch runs **no CI at all** — the platter PR is the
+  union's first CI run, and local verify per board is the only per-item proof that exists.
+- **Never a workspace.** A conflicting item catches up to `main` on its own branch and re-boards;
+  nothing is ever fixed on the platter.
+- **No same-file fence.** Feast mode's "two items must not touch the same file" comes from parallel
+  athletes. The platter boards sequentially onto one integration branch, so same-file items are fine
+  in order — a conflict is just an item that has to catch up first.
+- **Cadence:** ship the platter when `node scripts/digest-scan.mjs --due` says a digest is due (5
+  landed commits, or the 7-day heartbeat). An item ships alone instead only when it is **hot**:
+  `scripts/incident-scan.mjs` names an unlearned incident it fixes, or a deploy is blocked on it.
+  Anything else waits for the cadence — "it feels urgent" is not the test.
+- **It is never armed**, by two independent mechanisms: `--hold` applies `hold-merge` (which
+  `pipeline.yml`'s arm job skips) and the diff is protected (which `checkarm` refuses, exit 5).
+- **`--hold` now labels.** Any held PR, platter or not, gets `hold-merge` — so "what is waiting on
+  Eric?" is a label query rather than a guess.
 
 ## Mechanics & traps (moved here from CLAUDE.md, 2026-08-28 — this skill owns the landing detail)
 
