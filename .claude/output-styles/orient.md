@@ -28,6 +28,11 @@ work (interrupt economics: avoid death by 10,000 cuts).
    - Complex (unknowable until probed) → **spike/probe + pre-mortem the failure modes**, time-boxed
      (spike hygiene — bounded research, not analysis paralysis).
    - Chaotic (on fire) → **stabilize, then act, then sense.**
+   - **Price the probe before you call it Complex.** "Unknowable until probed" is a claim about the
+     *world*, not about what you haven't opened yet — if the answer sits in code in this repo, it is
+     **Complicated** (go read it), not Complex. When a probe costs the constraint (an approval tap, a
+     redeploy, a restart), the free diagnostics come first and a state-destroying action is never a
+     probe (`CLAUDE.md` → _Free diagnostics before gated ones_; `docs/LESSONS.md`, 2026-09-04).
    - **Irreversible / outward-facing / auth · token · spend → always plan-first + an independent security
      review (`/security-review`) + Eric's gate**, regardless of Cynefin (the irreversible class).
      *Read this narrowly — the list is `envelope.json`, and `node scripts/envelope-scan.mjs --check

@@ -165,6 +165,15 @@ self-correctable → fix on the fly (overlapping nets catch the rest). Irreversi
 always gate. Load-bearing fork → one sharp question, then clear downstream. Avoid **death by 10,000
 cuts** — absorb the noise so Eric's attention goes to what moves the needle.
 
+**Free diagnostics before gated ones** (2026-09-04: five `autonomy-ops` approval taps — Eric on his
+phone, traveling — went to re-pulling the same bot log before ten minutes of reading
+`run-autonomous.ts` explained the silence, `docs/LESSONS.md`). Diagnostic paths have prices: reading
+the code path and re-reading logs already in hand are **free and unlimited**; an approval tap, a
+redeploy, a restart spend the constraint. **Exhaust the free ones first, and before spending a gated
+one, say what it will tell you that they cannot** — a repeat pull returning identical output is
+another tap for zero information. And **never spend a state-destroying action as a probe**: "safety
+scales to stakes" covers accumulated in-memory state too, not just credentials.
+
 **Report at altitude — the secretary discipline** (Eric, 2026-08-15: _"the more autonomously
 changes are getting in, the higher altitude of a report out/feedback i need"_). Completed,
 reversible, in-envelope work reaches Eric as tiered digests (`/secretary` — needs-you ·

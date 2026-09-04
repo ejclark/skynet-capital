@@ -27,6 +27,60 @@ it. Prevention ranks, best first:
 
 ---
 
+### Five gated approval taps went to re-pulling the same bot log — the answer was sitting free in the code the whole time
+
+- **SHA:** n/a (fix on `CLAUDE.md` and `.claude/output-styles/orient.md`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric, on his phone and traveling, tapped the `autonomy-ops` GitHub Environment approval
+  five times between ~17:55 and 18:52 UTC so a session could read `skynet-capital-bots` logs — the
+  only log path Claude has, by design (no flyctl). Taps #2, #3 and #4 (18:11, 18:20, 18:42) returned
+  **byte-identical output ending at the same 18:10:15 line**, and were requested anyway; the working
+  theory oscillated between "the Fly log pipeline is stale" and "the process hung on the mid-session
+  reconnect" without either being tested. First detectable: 18:10:14, the moment the log showed
+  `[creds] sauron: broker swapped in place (rotated)` followed by a clean market-data re-auth and
+  then nothing — that pattern was already sufficient, and was on screen an hour before it was read
+  correctly. Actually detected: ~18:55, after the code was finally traced. **Detection lag ≈ 45
+  minutes and four of the five taps**, on a ~2-hour investigation.
+- **ROOT CAUSE:** the diagnostic paths available here have wildly different prices and nothing in the
+  process says to sort by price. Reading `src/scripts/run-autonomous.ts` and
+  `src/scripts/autonomous-market-clock.ts` is free, unlimited, and instant; a `logs` dispatch spends
+  the constraint (Eric's attention, on a phone, mid-travel) one manual approval at a time. The
+  situation was routed as **Complex** — probe until the world reveals itself, per
+  `.claude/output-styles/orient.md`'s Cynefin table — when it was **Complicated**: every fact needed
+  was knowable from code sitting in this repo, unread. "Unknowable until probed" is a claim about the
+  world; here it was really a claim about what had not been opened yet, and the standing "keep
+  pulling threads until you have hard proof" instinct got spent on pulling *logs* because that was
+  the thread already in hand. Ten minutes of reading would have said what the silence meant:
+  `maybeEvaluate` is price-tick-driven and gated on `marketClock.isOpen()`
+  (`src/scripts/run-autonomous.ts:303-305`), and a healthy evaluation with no trade signal writes
+  nothing to stdout — so **silence after a successful rotation is health**, and every recurring
+  failure line (the 60s clock poll, the news poll, the per-tick eval) stopping at the exact instant
+  the rotated credential applied was the proof, twice over. The escalation compounded it: a forced
+  restart was recommended as a *probe*, and `flip-mode`'s `flyctl secrets set` + machine restart
+  wiped ~36 minutes of accumulated in-memory momentum/sentiment state to learn nothing. "Safety
+  scales to stakes" was applied to credentials and never to the signal window, which was the actual
+  thing of value in that process.
+- **PREVENTION:** doctrine, in the two files every session loads — no gate is available here, because
+  the drift is in how a session *sequences its own reading*, which no script can observe.
+  `CLAUDE.md` → _Interrupt economics_ gains **"free diagnostics before gated ones"**: name the price
+  of each diagnostic path, exhaust the free ones (the code path, logs already in hand) first, state
+  what the paid one would tell you that they cannot — a repeat pull returning identical output is a
+  second tap for zero information — and never spend a state-destroying action as a probe.
+  `.claude/output-styles/orient.md` → step 2 (Route) gains the matching correction at the point the
+  misroute happens: if the answer sits in code in this repo it is Complicated, not Complex, and a
+  probe that costs the constraint is priced before it is chosen.
+- **SIDE QUESTS:** the boot log itself is a trap and stays one — a code follow-up this retro
+  deliberately did not fix. `src/scripts/run-autonomous.ts` starts the shared clock/news/price
+  connections (line 187), polls news (line 209) and seeds the daily-loss baseline (line 228) **before**
+  `await credentials.reconcile(bootControls)` (line 252) applies the bridge-delivered rotated
+  credential, so every boot prints a burst of alarming `401`s from the dead env credential
+  (`SKYNET_BOT_SAURON_KEY/SECRET`) that are expected noise — and then a healthy process prints
+  nothing at all. Noise-at-boot plus silence-as-health is a log design that invites exactly this
+  misdiagnosis from anyone skimming, including the next session. Logged to `docs/IDEAS.md`; the fix
+  is either reconciling credentials before the first outbound call or labeling the pre-reconcile
+  failures as expected.
+
+---
+
 ### Two concurrent event-research sessions both registered forward-test `FT-25` — the id came from a live read of a file every sibling was also reading
 
 - **SHA:** n/a (fix on `.github/prompts/event-research.md` and `scripts/forward-test-id-scan.mjs`)   **DATE:** 2026-09-04   **STATUS:** closed
