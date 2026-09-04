@@ -31,10 +31,14 @@
 #    from the running machine as the diff baseline (ground truth beats workflow-run archaeology —
 #    a cancelled or superseded CI run can never strand a bot-relevant commit undeployed).
 #
-# No [mounts]: this app has no volume ON PURPOSE — durable writes relay to the dashboard app's
-# volume over the 6PN insight bridge (fly.toml's SKYNET_INSIGHTS_DIR). No [build]: CI injects the
-# dashboard deploy's image via --image; the Dockerfile only applies if someone deploys this config
-# directly, which should never happen in CI.
+# [mounts]: this app OWNS a volume, dedicated to it (never shared with the dashboard's), activating
+# the already-merged-but-dark durable state code (docs/plans/trade-insights-loop.md slice 4 / #1203):
+# momentum/sentiment windows, cooldown clocks, and the decision audit log now survive a redeploy
+# instead of dying with it — the second half of the 2026-08-26 fix (restarts stopped being frequent;
+# they still erased memory until this). Both SKYNET_BOTS_DB_PATH and SKYNET_AUDIT_DIR are read
+# best-effort (src/scripts/autonomous-live-wiring.ts) — a missing/corrupt file falls back to cold-start
+# behavior, never fails boot. No [build]: CI injects the dashboard deploy's image via --image; the
+# Dockerfile only applies if someone deploys this config directly, which should never happen in CI.
 app = "skynet-capital-bots"
 primary_region = "ord"  # Chicago — same region as the dashboard, so the bridge stays local
 
@@ -45,9 +49,19 @@ primary_region = "ord"  # Chicago — same region as the dashboard, so the bridg
   # Still points at the DASHBOARD app — 6PN DNS resolves org-wide, so the hostname survives the
   # split verbatim. If this var is absent the runner silently runs env-only controls; see above.
   SKYNET_INSIGHTS_BRIDGE_URL = "http://app.process.skynet-capital.internal:8788"
+  # Durable momentum/sentiment/cooldown storage (slice D of #1181) — dark until this var is set.
+  SKYNET_BOTS_DB_PATH = "/data/bots-state.db"
+  # Decision-audit JSONL log — this app never had it wired (docs/IDEAS.md's logged gap); the volume
+  # this PR mounts makes it durable, not just present.
+  SKYNET_AUDIT_DIR = "/data/audit"
 
 [processes]
   bots = "npm run run:autonomous"
+
+[mounts]
+  source = "skynet_bots_data"
+  destination = "/data"
+  processes = ["bots"]
 
 [[vm]]
   size = "shared-cpu-1x"

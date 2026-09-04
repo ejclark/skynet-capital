@@ -33,6 +33,10 @@ const BASE_ENV = {
   HEAD_SHA: "",
 };
 
+const NOW = Date.parse("2026-09-04T16:00:00Z");
+const DEBOUNCE_MIN = 15;
+const isoMinutesAgo = (min: number) => new Date(NOW - min * 60_000).toISOString();
+
 describe("bots-deploy preflight (deploy-bots gate)", () => {
   it("skips when no bots-app Fly token is provisioned — safe no-op until Eric sets one up", () => {
     const verdict = preflight({ ...BASE_ENV, FLY_API_TOKEN: "" });
@@ -79,5 +83,66 @@ describe("bots-deploy preflight (deploy-bots gate)", () => {
   it("priority order: cutover beats force — pre-cutover wins even on a forced dispatch", () => {
     const verdict = preflight({ ...BASE_ENV, FLY_TOML_PATH: preCutoverTomlPath, FORCE: "true" });
     expect(verdict.reason).toContain("pre-cutover");
+  });
+
+  describe("debounce — the 2026-08-26 incident class, reintroduced via the research lane", () => {
+    it("skips a bot-relevant change when the last deploy was under the cooldown window", () => {
+      const verdict = preflight({
+        ...BASE_ENV,
+        DEPLOYED_SHA: "HEAD",
+        HEAD_SHA: "HEAD",
+        DEPLOYED_AT: isoMinutesAgo(5),
+        NOW_MS: String(NOW),
+      });
+      expect(verdict.deploy).toBe(false);
+      expect(verdict.reason).toContain("debounced");
+      expect(verdict.reason).toContain("5m ago");
+    });
+
+    it("falls through to the classifier once the cooldown window has passed", () => {
+      const verdict = preflight({
+        ...BASE_ENV,
+        DEPLOYED_SHA: "HEAD",
+        HEAD_SHA: "HEAD",
+        DEPLOYED_AT: isoMinutesAgo(DEBOUNCE_MIN + 1),
+        NOW_MS: String(NOW),
+      });
+      expect(verdict.reason).toContain("no changed paths");
+    });
+
+    it("never debounces a forced dispatch", () => {
+      const verdict = preflight({
+        ...BASE_ENV,
+        FORCE: "true",
+        DEPLOYED_SHA: "HEAD",
+        HEAD_SHA: "HEAD",
+        DEPLOYED_AT: isoMinutesAgo(1),
+        NOW_MS: String(NOW),
+      });
+      expect(verdict.deploy).toBe(true);
+      expect(verdict.reason).toBe("force_bots_deploy dispatch");
+    });
+
+    it("never debounces the first deploy — no baseline still wins outright", () => {
+      const verdict = preflight({
+        ...BASE_ENV,
+        DEPLOYED_SHA: "",
+        DEPLOYED_AT: isoMinutesAgo(1),
+        NOW_MS: String(NOW),
+      });
+      expect(verdict.deploy).toBe(true);
+      expect(verdict.reason).toContain("no GIT_SHA baseline");
+    });
+
+    it("fails open on a missing or unparseable DEPLOYED_AT — no debounce, straight to classify", () => {
+      const verdict = preflight({
+        ...BASE_ENV,
+        DEPLOYED_SHA: "HEAD",
+        HEAD_SHA: "HEAD",
+        DEPLOYED_AT: "not-a-timestamp",
+        NOW_MS: String(NOW),
+      });
+      expect(verdict.reason).toContain("no changed paths");
+    });
   });
 });
