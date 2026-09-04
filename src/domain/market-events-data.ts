@@ -1167,30 +1167,17 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "FERC collar (accepted 2026-04-28) covers only 2028/29 + 2029/30 — this is the cap-sunset event VST's Tier-2 gate keys on.",
   },
   {
-    id: "fed-waller-outlook-2026-09-03",
-    kind: "macro-print",
-    title: "Fed Governor Waller — Economic Outlook (Reuters NEXT newsmaker interview)",
-    date: "2026-09-03",
+    id: "meta-connect-2026-09-23",
+    kind: "product-launch",
+    title: "Meta Connect 2026 (Menlo Park + livestream) — Sep 23–24, Zuckerberg keynote day 1",
+    date: "2026-09-23",
     status: "estimate",
     source:
-      "EST: federalreserve.gov/newsevents/2026-september.htm lists 'Governor Christopher J. Waller presents on the Economic Outlook at the Reuters NEXT Newsmaker Interview (virtual), 8:30 a.m.' (fetched direct 2026-09-01) — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-09-01",
+      "EST: meta.com/connect states September 23-24 with the Zuckerberg keynote on the opening day, and meta.com/blog/connect-2026-save-the-date corroborates — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-09-01",
     impact: "medium",
-    symbols: [],
+    symbols: ["META"],
     notes:
-      "DUPLICATE, CLOSED OUT 2026-09-04: this entry and `waller-economic-outlook-2026-09-03` are the SAME event — same speaker, same 2026-09-03 08:30 ET slot, same Reuters NEXT venue, same federalreserve.gov page, same 2026-09-01 fetch date, and the Board archive carries exactly one Waller speech that day (federalreserve.gov/newsevents/speech/waller20260903a.htm, re-fetched 2026-09-04). Two sibling pulse sessions found the slot seven minutes apart on 2026-09-01 and each coined its own slug; the canonical one merged that night (#1065) and was researched (#1083) and closed out 2026-09-03, while this one merged 2026-09-04 16:03 UTC (#1068) — injecting an already-past, already-scored event into the calendar as brand new. ALL SCORING LIVES AT docs/research/events/waller-economic-outlook-2026-09-03.md and is deliberately not duplicated; docs/research/events/fed-waller-outlook-2026-09-03.md carries the identity proof, the git timeline, and the one thing the canonical close-out could not see (the 9/4 payroll print scoring Waller's own dated reaction function). Treat the two ids as ONE event in any future adjacency sweep. Kept rather than deleted so the collision stays on the record; both are past, so a duplicate costs nothing forward. PROCESS DEFECT worth a guard: `event-scan.mjs --validate` enforces unique ids and nothing enforces unique events, and this lane's `research/<event-id>` dedupe key is derived from the id, so it inherits the blind spot — same class as the FT-25 collision (docs/LESSONS.md, 2026-09-04). Original note, kept verbatim: 'Not a print — the last scheduled Board-level Fed appearance before the 09-05 communications blackout, landing 08:30 ET the session before BLS payrolls (9/4). The calendar tracks the blackout gate (`fomc-blackout-start-2026-09-05`) but tracked no speech inside the window it closes, which is the gap this fills: on 2026-08-28 a single Fed speech (Warsh at Jackson Hole) moved September hike odds ~35% -> ~57% in one session, so a governor framing the labour market 24 hours ahead of the payroll print is a live input, not diary furniture. Governor Barr also speaks 9/1 09:05 ET (Economic Outlook and Financial Inclusion), a narrower financial-inclusion venue and not tracked separately. Discovered during the jobs-2026-09-04 pulse-check adjacency sweep.'",
-  },
-  {
-    id: "ssa-cola-2027-2026-10-14",
-    kind: "macro-print",
-    title: "SSA announces the 2027 Social Security COLA (from Q3 CPI-W)",
-    date: "2026-10-14",
-    status: "estimate",
-    source:
-      'NEWS: Yahoo Finance 2026-08-04 states verbatim "the SSA will announce the 2027 Social Security COLA on Oct. 14, based on third-quarter CPI-W inflation data"; The Senior Citizens League 2026-08-12 independently repeats "October 14th, 2026" alongside its 3.6% projection — press-reported, ssa.gov not primary-verified, and this lane proposes a discovered adjacency as estimate rather than self-confirming it. Re-checked 2026-09-04 by this event\'s own initial-research session: ssa.gov returned HTTP 403 on /cola/, /oact/cola/cpiw.html and /blog/en/, so the upgrade to confirmed still has no primary SSA statement to rest on — BLS\'s CPI schedule confirms the INPUT date, not the announcement; checked 2026-09-04',
-    impact: "low",
-    symbols: [],
-    notes:
-      "Not an independent release: the COLA is arithmetic on the Q3 CPI-W average (Jul/Aug/Sep vs the year-ago quarter), so it is computed FROM cpi-2026-10-14's own data and lands the same morning. Filed low impact for that reason — it moves no rate expectation (the Fed keys on core CPI/PCE, not CPI-W) and adds no surprise the CPI print does not already carry. It is registered because it gives that print a property no other CPI on this calendar has: a STATUTORY tether. In the 2025 lapse BLS recalled furloughed staff to publish the September CPI on 2025-10-24 (delayed from 10-15) precisely so SSA could meet its benefit-payment deadline — BLS's own statement, 'This release allows the Social Security Administration to meet statutory deadlines.' That is why a FY2027 funding lapse (government-funding-deadline-2026-09-30) would DELAY the 10-14 CPI rather than delete it, unlike jobs-2026-10-02. Discovered during the cpi-2026-10-14 D-44 pulse; TSCL projected 3.6% on 2026-08-12 off a July CPI-W of 3.4%. AMENDED 2026-09-04 by this event's initial research: that tether is SPENT for this cycle — H.R. 6500 was signed 2026-09-02 as PL 119-103, funding agencies through 2026-12-11, so the 10-01 cliff is gone and nothing is left to insure against before 10-14 (the December CPI prints 12-10, the day before the next cliff). Same session recomputed the COLA off BLS index levels: it is the index-weighted average of the three Q3 CPI-W y/y rates, July 2026 is locked at exactly +3.400%, so 3.6% requires Aug and Sep y/y at ~3.70% — base case 3.4%, upside 3.5%.",
+      "Meta's own developer/product conference, and the ONLY company-controlled news venue between now and the est. 2026-10-28 print — which is the whole reason it is tracked. Zuckerberg teased new smart glasses alongside the date announcement; agenda is VR/wearables/metaverse/AI. Tiered `medium` deliberately: this is a product venue, not a numbers venue — it sets no guidance and touches neither of the two things the 10-28 print will actually be judged on (capex discipline and the ~$10B Q3 legal accrual from the 2026-08-26 state-AG settlement). The date is the first day per house convention; the keynote is day 1, so window measurement centers on 09-23 itself. It lands the same day as treasury-5y-note-2026-09-23 and the day before trump-xi-summit-2026-09-24, so no META move in the window is cleanly attributable to the conference. Discovered during the meta-2026-10-28-print pulse-check adjacency sweep (item 5, event-specific tape). Estimate status licenses nothing on its own, and no META playbook survives anyway — S1 refuted, gap-capture killed. See docs/research/events/meta-2026-10-28-print.md.",
   },
   {
     id: "treasury-2y-note-2026-09-22",
@@ -1664,6 +1651,32 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "PROPOSED AS A DATED FEDERAL MARKER ON THIS CALENDAR'S EXISTING DATA-CENTER-POWER THEME, not for a price channel — there is none on the date itself, which is why low is affirmed rather than raised. The theme is already tracked at the state and RTO level by ercot-data-center-audit-filing-2026-12-10, georgia-psc-data-center-cost-shift-2026-12-31, puct-batch-zero-report-open-meeting-2026-12-17 and the PJM capacity-auction entries; this is the nationwide federal instrument on the same question, and it is the first one with a deadline. WHAT THE DATE IS: a FILING deadline, not an order — NERC submits proposed standards to FERC, which then reviews them, so 12-31 starts a process rather than concluding one. Swett's stated rationale, quoted by POWER Magazine: 'Certain large loads like data centers and crypto mining operations that NERC calls computational load have the potential to change their demand almost instantly. And this rapid fluctuation causes voltage stability issues that threaten grid reliability', and 'we must ensure that the critical work of winning the AI race does not threaten reliability in our country.' WHAT IT IS NOT: evidence of a channel to any symbol this calendar keys. No hyperscaler capex, interconnection queue position or utility rate base changes on this date. Discovered during the gastech-2026-09-14 initial research (2026-09-04) because FERC Chairman Laura Swett is a confirmed Gastech 2026 speaker — the conference has no price channel, but the instrument she carries is dated and independent of it, the same 'unilateral agency instrument outranks the multilateral text' structure the g20-energy-abundance-ministerial-houston-2026-09-14 and g20-trade-ministerial-milwaukee-2026-09-30 ledgers found on their own tracks. A later pulse should read the order direct at ferc.gov before this date is leaned on harder than a marker. INITIAL RESEARCH 2026-09-04 (docs/research/events/nerc-computational-load-standards-2026-12-31.md) affirmed low and stand-aside, and found that the tradeable content of the date is zero BY CONSTRUCTION — a NERC filing under FPA section 215 is a proposal, enforceable only after FERC approves it (2027 at the earliest) and after an implementation-plan runway on top. What the session did upgrade is the substance: the draft package would create a new class of NERC-registered functional entity (Glossary terms Computational Load Entity/Owner/Operator, tied to Rules of Procedure Appendix 5B registry criteria), directly exposed to FERC civil penalties of $1,584,648 per violation per day. The one number that matters is the APPLICABILITY THRESHOLD, reported in draft at 'Computational Load Site of >= 50 MW total connected load, supplied through electrical equipment connected to the BPS at >= 100 kV' — BROADER than ERCOT's already-approved 75 MW rule (NOGRR282, PUCT-approved 5-0 on 2026-07-09, NOG sections 2.6.4 and 2.14), where one secondary read costs compliance at $0.5-1M per MW at some facilities. That >= 50 MW figure is single-source secondary; the primary is clo-001-1-draft-1-clean.pdf on nerc.com, located by name but not extracted, and the next pulse's first task. Incident base behind the whole regime: ~1,500 MW of data-center load lost across 60 points and 25 substations in Virginia, July 2024; ERCOT more than 25 events at 100-450 MW; NERC Level 2 alert 2025-09-09 and Level 3 alert 2026-05-04. Registered FT-nerc-computational-load-standards-2026-12-31-1 (files at full scope by 12-31) and -2 (the >= 50 MW threshold survives comment), both score-by 2027-01-15.",
   },
   {
+    id: "fed-waller-outlook-2026-09-03",
+    kind: "macro-print",
+    title: "Fed Governor Waller — Economic Outlook (Reuters NEXT newsmaker interview)",
+    date: "2026-09-03",
+    status: "estimate",
+    source:
+      "EST: federalreserve.gov/newsevents/2026-september.htm lists 'Governor Christopher J. Waller presents on the Economic Outlook at the Reuters NEXT Newsmaker Interview (virtual), 8:30 a.m.' (fetched direct 2026-09-01) — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, checked 2026-09-01",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "DUPLICATE, CLOSED OUT 2026-09-04: this entry and `waller-economic-outlook-2026-09-03` are the SAME event — same speaker, same 2026-09-03 08:30 ET slot, same Reuters NEXT venue, same federalreserve.gov page, same 2026-09-01 fetch date, and the Board archive carries exactly one Waller speech that day (federalreserve.gov/newsevents/speech/waller20260903a.htm, re-fetched 2026-09-04). Two sibling pulse sessions found the slot seven minutes apart on 2026-09-01 and each coined its own slug; the canonical one merged that night (#1065) and was researched (#1083) and closed out 2026-09-03, while this one merged 2026-09-04 16:03 UTC (#1068) — injecting an already-past, already-scored event into the calendar as brand new. ALL SCORING LIVES AT docs/research/events/waller-economic-outlook-2026-09-03.md and is deliberately not duplicated; docs/research/events/fed-waller-outlook-2026-09-03.md carries the identity proof, the git timeline, and the one thing the canonical close-out could not see (the 9/4 payroll print scoring Waller's own dated reaction function). Treat the two ids as ONE event in any future adjacency sweep. Kept rather than deleted so the collision stays on the record; both are past, so a duplicate costs nothing forward. PROCESS DEFECT worth a guard: `event-scan.mjs --validate` enforces unique ids and nothing enforces unique events, and this lane's `research/<event-id>` dedupe key is derived from the id, so it inherits the blind spot — same class as the FT-25 collision (docs/LESSONS.md, 2026-09-04). Original note, kept verbatim: 'Not a print — the last scheduled Board-level Fed appearance before the 09-05 communications blackout, landing 08:30 ET the session before BLS payrolls (9/4). The calendar tracks the blackout gate (`fomc-blackout-start-2026-09-05`) but tracked no speech inside the window it closes, which is the gap this fills: on 2026-08-28 a single Fed speech (Warsh at Jackson Hole) moved September hike odds ~35% -> ~57% in one session, so a governor framing the labour market 24 hours ahead of the payroll print is a live input, not diary furniture. Governor Barr also speaks 9/1 09:05 ET (Economic Outlook and Financial Inclusion), a narrower financial-inclusion venue and not tracked separately. Discovered during the jobs-2026-09-04 pulse-check adjacency sweep.'",
+  },
+  {
+    id: "ssa-cola-2027-2026-10-14",
+    kind: "macro-print",
+    title: "SSA announces the 2027 Social Security COLA (from Q3 CPI-W)",
+    date: "2026-10-14",
+    status: "estimate",
+    source:
+      'NEWS: Yahoo Finance 2026-08-04 states verbatim "the SSA will announce the 2027 Social Security COLA on Oct. 14, based on third-quarter CPI-W inflation data"; The Senior Citizens League 2026-08-12 independently repeats "October 14th, 2026" alongside its 3.6% projection — press-reported, ssa.gov not primary-verified, and this lane proposes a discovered adjacency as estimate rather than self-confirming it. Re-checked 2026-09-04 by this event\'s own initial-research session: ssa.gov returned HTTP 403 on /cola/, /oact/cola/cpiw.html and /blog/en/, so the upgrade to confirmed still has no primary SSA statement to rest on — BLS\'s CPI schedule confirms the INPUT date, not the announcement; checked 2026-09-04',
+    impact: "low",
+    symbols: [],
+    notes:
+      "Not an independent release: the COLA is arithmetic on the Q3 CPI-W average (Jul/Aug/Sep vs the year-ago quarter), so it is computed FROM cpi-2026-10-14's own data and lands the same morning. Filed low impact for that reason — it moves no rate expectation (the Fed keys on core CPI/PCE, not CPI-W) and adds no surprise the CPI print does not already carry. It is registered because it gives that print a property no other CPI on this calendar has: a STATUTORY tether. In the 2025 lapse BLS recalled furloughed staff to publish the September CPI on 2025-10-24 (delayed from 10-15) precisely so SSA could meet its benefit-payment deadline — BLS's own statement, 'This release allows the Social Security Administration to meet statutory deadlines.' That is why a FY2027 funding lapse (government-funding-deadline-2026-09-30) would DELAY the 10-14 CPI rather than delete it, unlike jobs-2026-10-02. Discovered during the cpi-2026-10-14 D-44 pulse; TSCL projected 3.6% on 2026-08-12 off a July CPI-W of 3.4%. AMENDED 2026-09-04 by this event's initial research: that tether is SPENT for this cycle — H.R. 6500 was signed 2026-09-02 as PL 119-103, funding agencies through 2026-12-11, so the 10-01 cliff is gone and nothing is left to insure against before 10-14 (the December CPI prints 12-10, the day before the next cliff). Same session recomputed the COLA off BLS index levels: it is the index-weighted average of the three Q3 CPI-W y/y rates, July 2026 is locked at exactly +3.400%, so 3.6% requires Aug and Sep y/y at ~3.70% — base case 3.4%, upside 3.5%.",
+  },
+  {
     id: "nerc-computational-load-phase-ii-workplan-2027-03-01",
     kind: "sector",
     title:
@@ -1676,32 +1689,6 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "PROPOSED AS THE SUCCESSOR FEDERAL INSTRUMENT to nerc-computational-load-standards-2026-12-31, and filed with the same honest limits: no price channel on the date, symbols: [], low affirmed. WHAT THE DATE IS: an INFORMATIONAL filing — a work plan for Phase II, which is one further step removed from enforceability than the 12-31 filing already is (that one is a proposal FERC must still approve; this one is a description of proposals not yet drafted). Its value on this calendar is scope: Phase I covers only the new CLO-001/002/003 standards plus FAC-001-5/FAC-002-5, while Phase II is where computational load reaches the established MOD, TOP, IRO and COM standard families — i.e. where the obligations touch modeling, real-time operations and inter-entity communications broadly rather than as a bolt-on. The one thing worth watching on 03-01 is therefore the BREADTH the work plan claims, not the date. Sibling state/RTO tracking of the same theme: ercot-data-center-audit-filing-2026-12-10, puct-batch-zero-report-open-meeting-2026-12-17, georgia-psc-data-center-cost-shift-2026-12-31 and the PJM capacity-auction entries. A pulse that succeeds in reading ferc.gov or elibrary direct should upgrade this entry and its 12-31 sibling together — they rest on the same unread order. AMENDED 2026-09-04 by initial research: the BREADTH question above is now largely answered in advance, and answered DOWNWARD. NERC's LLWG published the Phase II map itself in July 2026 (the Computational Loads SAR Roadmap, read primary off nerc.com), and it reaches wider than MOD/TOP/IRO/COM — also PRC, BAL, PER, EOP, TPL/FAC and CIP — but its Priority column puts the High-priority items in Phase 1 and Q4 2026, leaving Phase II's Q1-Q3 2027 work graded Medium and its Q4 2027 work graded Low. So Phase II is the residual tier by the authoring body's own scoring, the 03-01 filing looks closer to formalising an existing document than revealing a new one, and low impact is affirmed rather than merely inherited. Caveat kept honest: the roadmap never mentions the FERC order or March 1, 2027, so roadmap-equals-work-plan is inference, registered as FT-nerc-computational-load-phase-ii-workplan-2027-03-01-2.",
-  },
-  {
-    id: "retail-sales-2026-12-16",
-    kind: "macro-print",
-    title: "Retail Sales — advance monthly (Nov 2026)",
-    date: "2026-12-16",
-    status: "confirmed",
-    source:
-      'CENSUS: census.gov/retail/release_schedule.html lists the Advance Monthly Retail Trade Report for November 2026 data on "December 16, 2026", 08:30 ET, fetched direct 2026-09-01',
-    impact: "high",
-    symbols: [],
-    notes:
-      "The print that publishes the REVISION to the 11-17 advance estimate, and the FIRST AND ONLY Census read on the Thanksgiving/Black Friday/Cyber Monday weekend (2026-11-26/27/30) — which the 11-17 print does NOT contain, a misread its ledger flags explicitly. Also the first retail print that sits BEYOND BOTH LIVE CR EXPIRY CANDIDATES (House Dec 4, Senate Dec 11), so the appropriations risk the 09-16/10-15 ledgers made their dominant variable migrates to this slot rather than to 11-17. Lands one week after the 12-09 FOMC + SEP. Discovered during the retail-sales-2026-11-17 initial research, read off the next row of the same Census release schedule. Filed `confirmed` rather than the adjacency sweep's usual `estimate` because the date came from the Census primary release schedule — the same page and `CENSUS:` prefix that seeded the 09-16, 10-15 and 11-17 entries.",
-  },
-  {
-    id: "meta-connect-2026-09-23",
-    kind: "product-launch",
-    title: "Meta Connect 2026 (Menlo Park + livestream) — Sep 23–24, Zuckerberg keynote day 1",
-    date: "2026-09-23",
-    status: "estimate",
-    source:
-      "EST: meta.com/connect states September 23-24 with the Zuckerberg keynote on the opening day, and meta.com/blog/connect-2026-save-the-date corroborates — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-09-01",
-    impact: "medium",
-    symbols: ["META"],
-    notes:
-      "Meta's own developer/product conference, and the ONLY company-controlled news venue between now and the est. 2026-10-28 print — which is the whole reason it is tracked. Zuckerberg teased new smart glasses alongside the date announcement; agenda is VR/wearables/metaverse/AI. Tiered `medium` deliberately: this is a product venue, not a numbers venue — it sets no guidance and touches neither of the two things the 10-28 print will actually be judged on (capex discipline and the ~$10B Q3 legal accrual from the 2026-08-26 state-AG settlement). The date is the first day per house convention; the keynote is day 1, so window measurement centers on 09-23 itself. It lands the same day as treasury-5y-note-2026-09-23 and the day before trump-xi-summit-2026-09-24, so no META move in the window is cleanly attributable to the conference. Discovered during the meta-2026-10-28-print pulse-check adjacency sweep (item 5, event-specific tape). Estimate status licenses nothing on its own, and no META playbook survives anyway — S1 refuted, gap-capture killed. See docs/research/events/meta-2026-10-28-print.md.",
   },
   {
     id: "unsc-iran-panel-mandate-vote-2026-09-17",
@@ -1741,5 +1728,31 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "PROPOSED AS THE ATTENTION CORRIDOR, NOT A CATALYST — discovered during the unsc-iran-panel-mandate-expiry-2026-09-26 initial research (2026-09-04), which needed the dates to establish that the 09-26 mandate expiry falls on a UN WORKING SATURDAY: a general-debate day with heads of state at UN HQ and US markets closed. Low impact and symbols: [] are the honest filing — leaders' week has no measured reaction function in this calendar and no price channel is claimed. What it IS good for: it dates the window in which Hormuz or Iran diplomacy would surface at principals level, and it explains why headlines in 09-22 to 09-28 reach the tape through gaps rather than through sessions. The measured version of that gap channel is in the expiry ledger: WTI's absolute weekend gap runs a 1.55% median over the last 14 weekends against a 0.53% two-year median (~2.9x), while SPY's 0.32% sits BELOW its own two-year 0.35% — the reopen risk is entirely in crude, none of it in the index. The date is the debate's OPENING; the window runs through 09-28.",
+  },
+  {
+    id: "retail-sales-2026-12-16",
+    kind: "macro-print",
+    title: "Retail Sales — advance monthly (Nov 2026)",
+    date: "2026-12-16",
+    status: "confirmed",
+    source:
+      'CENSUS: census.gov/retail/release_schedule.html lists the Advance Monthly Retail Trade Report for November 2026 data on "December 16, 2026", 08:30 ET, fetched direct 2026-09-01',
+    impact: "high",
+    symbols: [],
+    notes:
+      "The print that publishes the REVISION to the 11-17 advance estimate, and the FIRST AND ONLY Census read on the Thanksgiving/Black Friday/Cyber Monday weekend (2026-11-26/27/30) — which the 11-17 print does NOT contain, a misread its ledger flags explicitly. Also the first retail print that sits BEYOND BOTH LIVE CR EXPIRY CANDIDATES (House Dec 4, Senate Dec 11), so the appropriations risk the 09-16/10-15 ledgers made their dominant variable migrates to this slot rather than to 11-17. Lands one week after the 12-09 FOMC + SEP. Discovered during the retail-sales-2026-11-17 initial research, read off the next row of the same Census release schedule. Filed `confirmed` rather than the adjacency sweep's usual `estimate` because the date came from the Census primary release schedule — the same page and `CENSUS:` prefix that seeded the 09-16, 10-15 and 11-17 entries.",
+  },
+  {
+    id: "treasury-coupon-announcement-2026-09-03",
+    kind: "rates",
+    title: "Treasury September coupon-block announcement (3Y / 10Y / 30Y sizes)",
+    date: "2026-09-03",
+    status: "estimate",
+    source:
+      "EST: api.fiscaldata.treasury.gov upcoming_auctions, fetched direct 2026-09-02, carries announcemt_date 2026-09-03 for all three September coupons — 3-Year CUSIP 91282CRL7 (auction 09-08), 9-Year 11-Month reopening CUSIP 91282CRF0 (auction 09-09) and 29-Year 11-Month reopening CUSIP 912810UW6 (auction 09-10) — with offering_amt still null on each; the ~11:00 ET slot is Treasury's standing coupon-announcement convention and is NOT separately sourced. Primary-sourced on the date, filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The moment the September coupon block stops being an unknown quantity: this is when the reopening sizes are published, and the treasury-10y-note-2026-09-09 ledger has flagged the missing size in every row since 2026-08-19 without a dated event to attach it to. Load-bearing this cycle because the supply half and the demand half of the auction setup have diverged — the 10Y sits at 4.79% (H.15, 09-01), ~11bp above where the Aug-12 note it reopens actually stopped (4.683%, $42B, bid-to-cover 2.53, indirect 76.73%, primary-verified via fiscaldata auctions_query) — so a size above the $42B run-rate would turn a demand test into a supply test, and a size at or below it removes the supply leg entirely. Lands the morning before payrolls (09-04) and two days before the Fed blackout (09-05). Discovered during the treasury-10y-note-2026-09-09 pulse-check adjacency sweep (2026-09-02).",
   },
 ];
