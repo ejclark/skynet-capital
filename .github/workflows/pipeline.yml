@@ -23,7 +23,15 @@ on:
     # stayed the latest word — which branch protection counts as a PASS. PR #322 merged that way,
     # having never run a single test in CI. It matters far more than it looks: Claude opens every
     # PR as a draft by default, so this was every Claude-authored PR, not an edge case.
-    types: [ opened, synchronize, reopened, ready_for_review ]
+    #
+    # `edited` is here for the same reason commitlint now lints the PR TITLE instead of the branch's
+    # commits (docs/LESSONS.md, 2026-09-04): without it, fixing a bad title (the one thing this gate
+    # actually checks) produces no new pull_request event at all, so `verify` never re-runs — the
+    # check sits red on the old title forever, and the only way to force a re-check would be an empty
+    # commit or a close/reopen, both explicitly off the table. `edited` also fires on body/base
+    # changes, not just the title, but this job's own cost is small (commitlint alone on a docs-only
+    # PR finishes in seconds) — cheap insurance against a check that can't otherwise be unstuck.
+    types: [ opened, synchronize, reopened, ready_for_review, edited ]
   push:
     branches: [ main ]
     # NEVER add `paths:` filters here: a non-matching push would produce NO run at all, so

@@ -11,6 +11,7 @@ import {
   type SettingsWriteResult,
   saveProfile,
 } from "../live/settings";
+import { AccountSwitcher } from "../shell/account-switcher";
 import { AccountLinksCard, GuestListCard, OpsStatusCard } from "../shell/admin-cards";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
@@ -318,7 +319,7 @@ function AccountCard({
   readonly onChanged: () => void;
 }): ReactElement {
   return (
-    <section className="set-card" id={`account-${account.id}`}>
+    <section className="set-card">
       <h2 className="set-card-h">
         {account.name}
         <span className={`chip chip-${account.kind}`}>
@@ -356,6 +357,7 @@ function SettingsPage(): ReactElement {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["settings"] });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   if (settings.isPending)
     return (
@@ -371,24 +373,11 @@ function SettingsPage(): ReactElement {
     );
 
   const { authConfigured, adminWired, accounts, timezones } = settings.data;
-  const rail = (
-    <>
-      <ProfileRail current="settings" />
-      <hr />
-      <p className="rail-label">On this page</p>
-      <a href="#preferences">Preferences</a>
-      {accounts.map((a) => (
-        <a key={a.id} href={`#account-${a.id}`}>
-          {a.name}
-        </a>
-      ))}
-      <hr />
-      <a href="/app/onboarding">Add an account</a>
-    </>
-  );
+  const first = accounts[0];
+  const selected = accounts.find((a) => a.id === selectedId) ?? first;
 
   return (
-    <PageFrame rail={rail}>
+    <PageFrame rail={<ProfileRail current="settings" />}>
       <header className="page-header">
         <h1>Settings</h1>
         <p>
@@ -404,21 +393,25 @@ function SettingsPage(): ReactElement {
         </p>
       ) : !adminWired ? (
         <p className="note">Account management isn't wired in this deployment.</p>
-      ) : accounts.length === 0 ? (
+      ) : !first ? (
         <p className="note">
           Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or add
           your own from <a href="/app/onboarding">onboarding</a>.
         </p>
       ) : (
-        accounts.map((account) => (
+        <>
+          <AccountSwitcher
+            accounts={accounts}
+            selectedId={(selected ?? first).id}
+            onSelect={setSelectedId}
+          />
           <AccountCard
-            key={account.id}
-            account={account}
+            account={selected ?? first}
             timezones={timezones}
             fleetSuspended={settings.data.fleetSuspended}
             onChanged={refresh}
           />
-        ))
+        </>
       )}
       <div id="mission-control">
         <MissionControl />
