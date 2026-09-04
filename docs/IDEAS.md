@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### The remote container runs Node 22 against `engines.node >=24`
+
+Every install warns `EBADENGINE` (package.json wants >=24, the web environment ships v22.22.2).
+Harmless today, but a Node-24-only API in a dependency would break a remote session silently. The
+fix is an environment setting in the Claude Code on the web environment config (Node version /
+setup), which is Eric's — not a repo change.
+_(src: Claude · while: retro on a remote session's dependency-install detour, 2026-09-04)_
+
 ### A screenshot harness for the React shell (`shoot:app`)
 
 `shoot:standings` / `shoot:login` shoot the legacy server-rendered pages; nothing shoots `/app/*`.
