@@ -18,12 +18,23 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { classify } from "./bot-relevant.mjs";
 
+// The 2026-08-26 incident's own number: 41 same-day merges restarted the bots machine ~every 15
+// minutes and Sauron never accumulated enough signal history to trade. That incident was caused
+// by every dashboard merge triggering this app's deploy; the split (this preflight + bot-relevant
+// classification) fixed the SOURCE, but a second source of high-frequency bot-relevant merges (the
+// automated research lane touching src/domain/market-events-data.ts every 2-3 minutes) reintroduced
+// the same restart-cadence failure mode through a different door. This debounce is the general
+// fix: no matter how many legitimately bot-relevant merges land, the bots app redeploys at most
+// once per window — the next preflight past the cooldown always sees the full accumulated diff via
+// `classify()`, so nothing is ever silently dropped, only batched.
+export const BOTS_DEPLOY_DEBOUNCE_MS = 15 * 60 * 1000;
+
 /**
- * Pure. The token/cutover/force/baseline gates, in priority order. Returns a verdict once one
- * gate decides the outcome, or `null` when none of them do and the caller must fall through to
- * classifying the actual diff against `deployedSha`.
+ * Pure. The token/cutover/force/baseline/debounce gates, in priority order. Returns a verdict
+ * once one gate decides the outcome, or `null` when none of them do and the caller must fall
+ * through to classifying the actual diff against `deployedSha`.
  */
-export function decide({ hasToken, cutoverPending, force, deployedSha }) {
+export function decide({ hasToken, cutoverPending, force, deployedSha, deployedAtMs, nowMs }) {
   if (!hasToken) {
     return {
       deploy: false,
@@ -43,6 +54,18 @@ export function decide({ hasToken, cutoverPending, force, deployedSha }) {
       reason: "no GIT_SHA baseline on the bots machine (first deploy, or a manual one)",
     };
   }
+  if (typeof deployedAtMs === "number" && typeof nowMs === "number") {
+    const sinceMs = nowMs - deployedAtMs;
+    // A negative gap (clock skew, or a bogus timestamp) fails open rather than debouncing forever.
+    if (sinceMs >= 0 && sinceMs < BOTS_DEPLOY_DEBOUNCE_MS) {
+      const minAgo = Math.round(sinceMs / 60_000);
+      const windowMin = BOTS_DEPLOY_DEBOUNCE_MS / 60_000;
+      return {
+        deploy: false,
+        reason: `debounced: last bots deploy ${minAgo}m ago, under the ${windowMin}m cooldown — the next preflight past it will pick up everything accumulated`,
+      };
+    }
+  }
   return null;
 }
 
@@ -56,13 +79,25 @@ if (process.argv[1]?.endsWith("bots-deploy-preflight.mjs")) {
   const force = process.env.FORCE === "true";
   const deployedSha = process.env.DEPLOYED_SHA || "";
   const headSha = process.env.HEAD_SHA || "";
+  // Empty/unparseable DEPLOYED_AT (older machine, or the field ever renames) fails open — no
+  // debounce rather than a crash. NOW_MS override exists for the spec, same reasoning as
+  // FLY_TOML_PATH below; the real caller never sets it and gets the actual clock.
+  const deployedAtMs = process.env.DEPLOYED_AT ? Date.parse(process.env.DEPLOYED_AT) : Number.NaN;
+  const nowMs = process.env.NOW_MS ? Number(process.env.NOW_MS) : Date.now();
   // FLY_TOML_PATH override exists for the spec (a temp fixture, never the real fly.toml) — the
   // real caller never sets it and gets the actual file.
   const tomlPath = process.env.FLY_TOML_PATH || "fly.toml";
   const tomlText = existsSync(tomlPath) ? readFileSync(tomlPath, "utf8") : "";
   const cutoverPending = cutoverPendingFromToml(tomlText);
 
-  let verdict = decide({ hasToken, cutoverPending, force, deployedSha });
+  let verdict = decide({
+    hasToken,
+    cutoverPending,
+    force,
+    deployedSha,
+    deployedAtMs: Number.isFinite(deployedAtMs) ? deployedAtMs : undefined,
+    nowMs,
+  });
   if (!verdict) {
     const since = `since ${deployedSha}`;
     try {
