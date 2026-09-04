@@ -74,19 +74,17 @@ describe("progression service — graduation ceremonies (#469 slice 4)", () => {
       store: new ProgressionStore(join(dir, "progression.json")),
     });
 
-  it("reports a course level graduated exactly once, on the acknowledge that completes it", async () => {
+  it("reports a course level graduated exactly once, on whichever acknowledge names it first", async () => {
     const svc = course100And200();
-    // first-buy graduates nothing (it isn't course 100's LAST milestone); first-sell does.
-    expect(await svc.acknowledge("ann", ["first-buy"])).toEqual([]);
-    expect(await svc.acknowledge("ann", ["first-sell"])).toEqual([100]);
-
-    // Re-acknowledging the same id (a retry, a double-submit) never re-graduates it.
-    expect(await svc.acknowledge("ann", ["first-sell"])).toEqual([]);
+    // The real ledger already proves BOTH course 100 milestones — either id names the same,
+    // already-complete course, so the FIRST one submitted is the one that graduates it.
+    expect(await svc.acknowledge("ann", ["first-buy"])).toEqual([100]);
+    expect(await svc.acknowledge("ann", ["first-sell"])).toEqual([]); // already graduated
   });
 
   it("persists which levels have already graduated, across service instances", async () => {
     const svc = course100And200();
-    await svc.acknowledge("ann", ["first-buy", "first-sell"]);
+    expect(await svc.acknowledge("ann", ["first-buy", "first-sell"])).toEqual([100]); // once, not twice
     const store = new ProgressionStore(join(dir, "progression.json"));
     expect(store.get("ann")?.graduated).toEqual([100]);
 
@@ -100,10 +98,7 @@ describe("progression service — graduation ceremonies (#469 slice 4)", () => {
 
   it("names both graduated courses when a single acknowledge spans two at once", async () => {
     const svc = course100And200();
-    const graduated = await svc.acknowledge("ann", [
-      "first-sell", // graduates 100
-      "first-covered-call", // graduates 200
-    ]);
+    const graduated = await svc.acknowledge("ann", ["first-buy", "first-cash-secured-put"]);
     const store = new ProgressionStore(join(dir, "progression.json"));
     expect([...graduated].sort()).toEqual([100, 200]);
     expect([...(store.get("ann")?.graduated ?? [])].sort()).toEqual([100, 200]);
@@ -121,8 +116,8 @@ describe("progression service — graduation ceremonies (#469 slice 4)", () => {
   });
 
   it("never graduates course 200 from the covered-call fill alone, without the CSP leg too", async () => {
-    // Seeded/imported history can hold a course's LAST milestone without an earlier one
-    // (`unlockedCodes`'s own doc) — a real gap this must never mistake for a graduation.
+    // Seeded/imported history can hold a course's canonical-order LAST milestone without an
+    // earlier one (`unlockedCodes`'s own doc) — a real gap this must never mistake for a graduation.
     const svc = createProgressionService({
       readFills: () =>
         Promise.resolve([
@@ -140,7 +135,58 @@ describe("progression service — graduation ceremonies (#469 slice 4)", () => {
     expect(await svc.acknowledge("ann", ["first-covered-call"])).toEqual([]);
   });
 
-  it("skips the ledger reads entirely for an ordinary claim that could never graduate anything", async () => {
+  it("graduates on the LATER claim of the earlier-canonical milestone, once its own fill lands — never lost forever", async () => {
+    // The covered call (course 200's canonical LAST milestone) is filled and claimed FIRST — no
+    // graduation yet, correctly, since the CSP leg hasn't happened. This is the exact case a
+    // ladder-position check would silently lose: "first-covered-call" is already acknowledged and
+    // will never be resubmitted, so if graduation only fired for THAT id, it would never fire.
+    const storePath = join(dir, "progression.json");
+    const ccOnly = createProgressionService({
+      readFills: () =>
+        Promise.resolve([
+          journalLine({
+            orderId: "cc",
+            symbol: OCC_CALL,
+            side: "sell",
+            at: "2026-08-25T17:00:00.000Z",
+          }),
+        ]),
+      readTags: () =>
+        Promise.resolve([tagLine({ orderId: "cc", code: "202", intent: "open", side: "sell" })]),
+      store: new ProgressionStore(storePath),
+    });
+    expect(await ccOnly.acknowledge("ann", ["first-covered-call"])).toEqual([]);
+
+    // Weeks later, the CSP leg finally fills too — a fresh service instance reading the NOW-full
+    // ledger. Claiming the belated CSP milestone is what genuinely completes the course, and IS
+    // caught, because the check is "is milestoneId's course complete", not "is milestoneId last".
+    const bothLegs = createProgressionService({
+      readFills: () =>
+        Promise.resolve([
+          journalLine({
+            orderId: "cc",
+            symbol: OCC_CALL,
+            side: "sell",
+            at: "2026-08-25T17:00:00.000Z",
+          }),
+          journalLine({
+            orderId: "csp",
+            symbol: OCC_PUT,
+            side: "sell",
+            at: "2026-09-01T16:00:00.000Z",
+          }),
+        ]),
+      readTags: () =>
+        Promise.resolve([
+          tagLine({ orderId: "cc", code: "202", intent: "open", side: "sell" }),
+          tagLine({ orderId: "csp", code: "201", intent: "open", side: "sell" }),
+        ]),
+      store: new ProgressionStore(storePath),
+    });
+    expect(await bothLegs.acknowledge("ann", ["first-cash-secured-put"])).toEqual([200]);
+  });
+
+  it("skips the ledger reads entirely for an id that names no course at all (engagement track)", async () => {
     let reads = 0;
     const svc = createProgressionService({
       readFills: () => {
@@ -150,12 +196,11 @@ describe("progression service — graduation ceremonies (#469 slice 4)", () => {
       readTags: () => Promise.resolve([]),
       store: new ProgressionStore(join(dir, "progression.json")),
     });
-    // "first-buy" is course 100's FIRST milestone, never its last — no read is worth doing.
-    expect(await svc.acknowledge("ann", ["first-buy", "first-message"])).toEqual([]);
+    expect(await svc.acknowledge("ann", ["first-message"])).toEqual([]);
     expect(reads).toBe(0);
   });
 
-  it("skips the ledger reads when the only graduating id is already banked", async () => {
+  it("skips the ledger reads when every named course is already banked graduated", async () => {
     let reads = 0;
     const store = new ProgressionStore(join(dir, "progression.json"));
     store.set("ann", { graduated: [100] });

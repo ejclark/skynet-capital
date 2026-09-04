@@ -1,10 +1,10 @@
 import { type CheckResult, gradeCheck } from "../domain/comprehension.js";
 import { checkFor } from "../domain/comprehension-checks.js";
 import {
-  COURSE_FINAL_MILESTONES,
   COURSES,
   type CourseLevel,
   graduatingLevel,
+  MILESTONE_COURSE_LEVEL,
   pointsFor,
   type Rank,
   rankFor,
@@ -250,7 +250,7 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       // course level already banked) — only a course's LAST id, not yet graduated, can possibly
       // change the answer, so nothing is lost by checking that first and cheaply.
       const mightGraduate = ids.some((id) => {
-        const level = COURSE_FINAL_MILESTONES.get(id);
+        const level = MILESTONE_COURSE_LEVEL.get(id);
         return level !== undefined && !alreadyGraduated.has(level);
       });
       // A course level graduates the FIRST time one of its ids is acknowledged here, AND ONLY IF

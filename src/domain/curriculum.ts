@@ -146,29 +146,32 @@ export function courseComplete(course: Course, completed: ReadonlySet<string>): 
 }
 
 /**
- * Every course's LAST milestone id → the level it MIGHT graduate (position alone, no proof).
- * A cheap pre-check for a caller deciding whether `graduatingLevel`'s real ledger read is worth
- * doing at all — `progression-service.ts`'s `acknowledge` skips reading the fill + tag ledgers
- * entirely for an ordinary claim (an id that could never graduate anything, or a course already
- * banked graduated). Never a substitute for `graduatingLevel`'s own completeness check.
+ * Every milestone id → the course it belongs to. A cheap pre-check for a caller deciding whether
+ * `graduatingLevel`'s real ledger read is worth doing at all — `progression-service.ts`'s
+ * `acknowledge` skips reading the fill + tag ledgers entirely for an id that names no course, or
+ * whose course is already banked graduated. Never a substitute for `graduatingLevel`'s own
+ * completeness check: EVERY milestone in a course can map here, not only its canonical-order last
+ * one — see `graduatingLevel`'s doc on why ladder position is the wrong test.
  */
-export const COURSE_FINAL_MILESTONES: ReadonlyMap<string, CourseLevel> = new Map(
-  COURSES.flatMap((c) => {
-    const last = c.milestones[c.milestones.length - 1];
-    return last ? [[last.id, c.level] as const] : [];
-  }),
+export const MILESTONE_COURSE_LEVEL: ReadonlyMap<string, CourseLevel> = new Map(
+  COURSES.flatMap((c) => c.milestones.map((m) => [m.id, c.level] as const)),
 );
 
 /**
- * The course a milestone GRADUATES — undefined unless `milestoneId` is that course's LAST
- * milestone AND `completed` (the participant's REAL earned set, re-derived from fills — never a
- * client-submitted list) proves the whole course, not just this one code. `unlockedCodes` gating
- * the ticket does NOT mean fills arrive in ladder order: seeded/imported history is explicitly
- * allowed to have gaps (`progression.ts`'s `unlockedCodes` doc — "a trade you have actually done
- * is never locked away from you"), so a member can hold a first-covered-call fill with no
- * first-cash-secured-put one. Without the completeness check, that reads as "graduated course 200"
- * and fires a false ceremony + companion congratulations — exactly the "flourish that implies
- * something false" this house never allows. #469 slice 4's ceremony + companion congratulation key
+ * The course a milestone GRADUATES — undefined unless `completed` (the participant's REAL earned
+ * set, re-derived from fills — never a client-submitted list) proves milestoneId's WHOLE course,
+ * not just this one code.
+ *
+ * Deliberately NOT "is milestoneId the course's canonical-order last milestone": `unlockedCodes`
+ * gating the ticket does NOT mean fills arrive in ladder order — seeded/imported history is
+ * explicitly allowed to have gaps (`progression.ts`'s `unlockedCodes` doc — "a trade you have
+ * actually done is never locked away from you"), so a member can earn a course's LAST milestone
+ * (say, a covered call) with no earlier one (a cash-secured put) on record yet. If the earlier one
+ * lands and is claimed LATER, checking ladder position alone would never re-fire for it (that id
+ * isn't the course's canonical last one either) — the graduation would be silently lost forever.
+ * Testing "is milestoneId IN this course, and is the course complete" instead catches the
+ * graduation at whichever milestone the PARTICIPANT'S OWN history happens to complete it with,
+ * in whatever order it actually happened. #469 slice 4's ceremony + companion congratulation key
  * off this (`progression-service.ts`'s `acknowledge`, `onboarding-api-routes.ts`'s
  * `freshGraduation`).
  */
@@ -177,8 +180,9 @@ export function graduatingLevel(
   completed: ReadonlySet<string>,
 ): CourseLevel | undefined {
   for (const course of COURSES) {
-    const last = course.milestones[course.milestones.length - 1];
-    if (last?.id === milestoneId && courseComplete(course, completed)) return course.level;
+    if (course.milestones.some((m) => m.id === milestoneId) && courseComplete(course, completed)) {
+      return course.level;
+    }
   }
   return undefined;
 }
