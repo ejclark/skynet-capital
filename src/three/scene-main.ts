@@ -103,7 +103,7 @@ export function start(canvas: HTMLCanvasElement): void {
 
   engine.runRenderLoop(() => scene.render());
   window.addEventListener("resize", () => engine.resize());
-  // Exposed for the screenshot harness (scripts/shoot-tower.mjs) so it can park the camera at a
+  // Exposed for the screenshot harness (scripts/shoot/tower.mjs) so it can park the camera at a
   // known pose — deterministic framing is what makes visual diffs meaningful.
   window.__towerCamera = camera;
   // The harness pauses the loop before capturing — a continuously-rendering canvas never

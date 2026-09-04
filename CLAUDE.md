@@ -63,6 +63,10 @@ role of responsible owner/steward — shipping lovable work while protecting the
   something he can judge **with his eyes** (side-by-side renders, named options, a visual tell). The
   corollary is an investment, not a detour: give him **vocabulary** — the smallest set of named terms that
   turns "make it better" into a precise request. Teaching him the words *elevates* the constraint.
+  The compute dial is the same kind of technique: he does not set model/effort for workflows or
+  agents (Eric, 2026-09-04 — he suspects he over-provisions, and expects *more* throughput from
+  the system routing by task class); [`docs/COMPUTE.md`](docs/COMPUTE.md) owns the routing, and
+  token conservation happens only on his explicit, phrase-shaped signal, never by inference.
 - **Information architecture drives implementation, never the reverse** (Eric, 2026-08-29: "routes are
   implementation details of the IA... better IA results in more intuitive and superior implementation. I
   will die on that hill" — said after a nav fix reshuffled links around an existing `/outpost` route
@@ -316,9 +320,18 @@ gate makes him the constraint on everything — severely softened). Structural, 
 all auto-merge; his taste review happens **live, post-merge** — hand him the deployed route and adapt
 from reactions. Hold a PR pre-merge only when he asks, or when Claude has a specific taste fork worth
 his eyes before shipping (say so on the PR). The irreversible carve-outs (workflow files,
-credentials/spend/outward-facing) still never auto-merge. Full merge policy:
-`.claude/skills/governor/SKILL.md`. Eric will not remember these names — that is expected and fine;
-the docs are the memory.
+credentials/spend/outward-facing) still never auto-merge — **but they board a platter, one touch
+per cadence, not one held PR each** (Eric, 2026-09-04: "10 PRs consolidated into 1 or a few PRs
+result in fewer touch points... at a higher altitude the ideology still holds up that changes are
+part of a singular change" — the items are implementation details he doesn't care about). Same
+shape as `/governor` feast mode, pointed at the irreversible class: every protected-path change
+that is already green on its own branch boards the open platter as one commit; the platter is a
+held PR whose body is a ledger (item · why · verify evidence · revert sha); it merges with a
+**merge commit, one commit per item** (the one carve-out from squash, so a bad item reverts
+alone); nothing red ever boards, and two items never touch the same file. The boundary itself
+never moves — he still merges it; the cost of clearing it drops from N to 1. Mechanism: #1343.
+Full merge policy: `.claude/skills/governor/SKILL.md`. Eric will not remember these names — that
+is expected and fine; the docs are the memory.
 
 ## Ship loop
 

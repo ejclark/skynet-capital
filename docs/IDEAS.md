@@ -46,15 +46,6 @@ correctly — but it's a real migration: build tooling, the Dockerfile, and ever
 either tree would need re-checking, not a same-session fix.
 _(src: Claude · while: retro on the CI verify job's ~7.5-minute install, 2026-09-04)_
 
-### A screenshot harness for the React shell (`shoot:app`)
-
-`shoot:standings` / `shoot:login` shoot the legacy server-rendered pages; nothing shoots `/app/*`.
-The fluid-shell PR drove five routes through an offline server with a 40-line throwaway Playwright
-script (before/after at 1920px, dark) — promote it to a standalone screenshot script with its own
-npm script, named for the app shell (mirroring the existing `shoot:*` scripts), so the next visual
-PR on the shell gets its fridge picture in one command.
-_(src: Claude · while: making the shell fluid, 2026-09-04)_
-
 ### Screenshots in Moneypenny's rail
 
 The 2026-09-03 handoff retired the feedback form and coach box (`app/src/shell/feedback-door.tsx`
@@ -1228,3 +1219,17 @@ because sessions research before they file? The scan would also be the natural f
 secretary digest's needs-you tier, so the ones that genuinely are his arrive pre-aged and
 pre-researched rather than as a pile.
 _(src: Eric · while: reflecting on the day's research/grind work, 2026-09-04)_
+
+### Report at the workflow-view altitude — a ledger over the session's workflow journals
+Eric, 2026-09-04, on the Background-tasks panel (workflow → phases → agent · model · tokens ·
+time): "That feels like the best altitude of all the views in terms of details I want to see
+and/or curate." Every recap and digest should speak that shape, and the data already exists: each
+`Workflow` run writes `journal.jsonl` under the session's `subagents/workflows/<run>/` with one
+result line per agent (label, model, tokens, duration, status). A workflow-ledger script under `scripts/` (house shape, `--candidate`-less: it reports, nothing ratchets)
+that folds those into one table — workflow · chore/phase · agents · model · tokens · wall-clock ·
+done/blocked — is the secretary digest's natural "what ran" tier, and the same table is what a
+session should print when a run completes instead of prose. Second half, the *curate* part: the
+panel's per-agent stop is the only steering today; the ledger could carry the outcome-check verdict
+and the routing label applied, so what Eric sees is also what he can send back ("re-run #1327 at
+xhigh", "un-board that item"). Rule of three already met — three hand-written status tables today.
+_(src: Eric · while: watching the #1343 research run in the workflow view, 2026-09-04)_

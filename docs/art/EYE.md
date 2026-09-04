@@ -86,7 +86,7 @@ The Eye is judged head-on **and** oblique (`npm run shoot:tower` → `tower-eye`
 Off-axis is where the cheap version fails: the pupil must shift with parallax, the chatoyant band must
 have moved, and the silhouette must still be an almond of fire with nothing holding its edge.
 
-**Full-angle coverage is mechanical, not a step to remember.** `scripts/shoot-tower.mjs`'s default
+**Full-angle coverage is mechanical, not a step to remember.** `scripts/shoot/tower.mjs`'s default
 suite includes `eye-side`, `eye-behind`, `eye-above`, `eye-below` alongside the front poses — a single
 `npm run shoot:tower` run always covers the whole bar. This exists because two separate regressions
 reached production before anyone looked from these specific angles (see "the walk-around addendum"
@@ -285,7 +285,7 @@ compatible with standing requirements before treating it as a replacement.**
 | Jagged spike mandala competing with the eye's silhouette | The corona addendum's `SPIKE_REACH`/`SPIKE_N` ray system, tuned twice, never stopped reading as noise | The entire spike block deleted. Collar and electric filaments (unrelated to the spikes, present since before the corona addendum) are untouched. |
 
 **Process fix, not just a code fix.** The declutter correction shipped alongside a change to
-`scripts/shoot-tower.mjs`: the default suite now includes `eye-side`, `eye-behind`, `eye-above`,
+`scripts/shoot/tower.mjs`: the default suite now includes `eye-side`, `eye-behind`, `eye-above`,
 `eye-below` — a single `npm run shoot:tower` run covers the whole bar above, mechanically, instead of
 depending on someone remembering to check. Both regressions this addendum documents reached production
 because the check that would have caught them wasn't the default one. `piece-wright` and `set-dresser`
