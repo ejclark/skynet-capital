@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { PlaybookMode } from "../domain/types.js";
+import { PLAYBOOK_MODES, type PlaybookMode } from "../domain/types.js";
 import { playbookStoreView } from "../observatory/playbook-store-json-view.js";
 import type { Session } from "./auth/session.js";
 import { resolveOwnedIds } from "./dashboard-identity.js";
@@ -28,7 +28,6 @@ import {
  */
 
 const BODY_CAP_BYTES = 4_096;
-const PLAYBOOK_MODES: readonly PlaybookMode[] = ["conservative", "standard", "aggressive"];
 
 interface SubscribeBody {
   readonly id: string;

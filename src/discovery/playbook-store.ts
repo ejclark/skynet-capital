@@ -11,7 +11,7 @@
 import type { Playbook } from "../playbooks/playbook.js";
 import { housePlaybooks } from "./playbook-probe.js";
 
-export interface PlaybookStoreCopy {
+interface PlaybookStoreCopy {
   readonly description: string;
   readonly enter: string;
   readonly exitTakeProfit: string;

@@ -8,7 +8,7 @@
 import { type PlaybookStoreEntry, playbookStoreCatalog } from "../discovery/playbook-store.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 
-export interface PlaybookStoreCardView extends PlaybookStoreEntry {
+interface PlaybookStoreCardView extends PlaybookStoreEntry {
   readonly subscription?: {
     readonly mode: PlaybookSubscription["mode"];
     readonly capitalAllocated: number;
