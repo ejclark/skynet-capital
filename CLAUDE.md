@@ -118,7 +118,15 @@ role of responsible owner/steward — shipping lovable work while protecting the
   judgment call, a PR for a mechanical narrowing), exactly like the dead-code PR above. The boundary
   itself still holds (`envelope.json` stays Eric's to edit, never self-widened by a lane) — this
   changes the *shape* of the ask from a recurring interrupt to a one-time decision, not the fact
-  that irreversible/governance calls are his.
+  that irreversible/governance calls are his. **The generative principle behind this and the
+  research investment** (Eric, 2026-09-04): "improving our ability to research improves our
+  ability to remediate, triage and even prevent friction. This translates into our ability to
+  prevent us from `needs-eric` state, as well as improves our ability to remove that state after
+  the fact." Research is how a lane earns the right not to ask — a call sheet that shows the
+  decision is already made, the fact already settled, or the fork false, is worth more than the
+  question — and how it clears an ask that was filed before anyone looked. Treat the open
+  `needs-eric` count and its age as a cost the research capability exists to drive down, not as
+  a queue for him to work.
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
   CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
