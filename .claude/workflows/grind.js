@@ -8,10 +8,9 @@
 // note). One long single-quoted string per field, no escaped quotes inside it.
 export const meta = {
   name: 'grind',
-  description: 'Fan out a chain of steps across many similar targets; effort routed by step kind',
+  description: 'grind — one chore, many items',
   whenToUse:
-    'For a batch of near-identical, mechanical chores — the same fix/skill/command applied across many files/PRs/branches/tickers — where doing them one at a time in the main thread burns turns without needing deep judgment per item. Not for anything requiring cross-item synthesis or a design call; that wants a purpose-built pipeline instead.\n\nBefore constructing args: args.itemSource is REQUIRED — a real description (12+ characters) of where items came from, never a placeholder like "items" or "n/a"; the call throws otherwise. Say whether it is a live scan/query or a hand-picked list, and why. This is the one part of a pre-flight this workflow can actually enforce — depth (effort/model, see Compute below) and the outcome check (verifyBranch, also below) are yours to set correctly, not validated for quality; width (scope beyond the automatic envelope check) is your judgment call with no matching arg at all.\n\nArgs: {items: [...], itemSource, effort?, model?, isolation?, verifyBranch?, skipEnvelopeCheck?, promptTemplate?, steps?}. Provide exactly one of promptTemplate or steps. Generate the call from a chore file with `node scripts/grind-manifest.mjs --args --items <json> --item-source <string> docs/grind/<chore>.instructions.md` rather than hand-writing it (docs/grind/README.md).\n\n- itemSource: required, 12+ characters, a real description of where items came from (a scan command, a query, or the explicit reason none applies) — not a rubber-stamp word. Logged at run start and included in the returned result.\n- verifyBranch: true appends a trailing {kind:"script"} step that runs "git ls-remote --exit-code --heads origin {prev.branch}" after your own steps, so a "done" with nothing pushed to origin fails closed instead of being trusted. Skipped automatically, with a log line, if your own steps already end in the identical command (a checked-in chore already covers this via its own outcomeCheck front matter).\n- skipEnvelopeCheck: a non-empty string naming why items are not file paths (issue numbers, tickers, PR branches) — skips the automatic envelope.json check normally prepended as step 0 (default on). A bare boolean is rejected; state the reason.\n- promptTemplate: "...{item}..." — single-stage mode: one agent call per item (unchanged from before).\n- steps: [{kind, ...}] — multi-stage mode: each item runs the SAME step chain in order via pipeline() (item A can be on step 3 while item B is still on step 1). Once a step reports status "blocked" or "skipped", later steps for that item pass through unchanged rather than running. A step 0 envelope check runs first automatically (see skipEnvelopeCheck above; it reports "done" rather than "skipped" for an item with no path, so it never stalls the rest of the chain), then your steps, then an optional verifyBranch check last. Any step that checks {prev.branch} against a prior result reporting no branch is blocked before dispatch rather than run — an empty-string branch argument would otherwise exit 0 and pass vacuously. Step kinds:\n  - {kind:"prompt", template} — free-text instruction, same {item} substitution as promptTemplate.\n  - {kind:"instructions", path, extra?} — points at a checked-in *.instructions.md file (see docs/grind/README.md); the agent reads it and carries it out against the item. Write the chore once, reuse the file across every grind run instead of re-pasting a template.\n  - {kind:"skill", name, args?} — the agent invokes an existing repo skill (its .claude/skills/<name>/SKILL.md), exactly as if a user typed "/<name>", targeted at the item.\n  - {kind:"script", command} — the agent runs the exact shell command (with {item}/{prev} substituted) and reports pass/fail only — no exploration, no judgment. The cheapest, fastest, most deterministic step kind; prefer it whenever the chore reduces to a command.\n  Every step after the first receives the prior step result, structured as {status, summary, branch?} — as {prev} (the whole JSON) or {prev.<field>} (one field) — in its prompt, so steps compose (e.g. script check -> skill fix -> script re-check).\n\nCompute (docs/COMPUTE.md): effort defaults by STEP KIND — "script" steps run at low (a command either exits 0 or it does not; thoroughness cannot change that), every other kind at high (it reads, writes, or judges). Model defaults to sonnet (the floor for mechanical-with-verification); a chore that needs more declares it in its front matter. Per-step effort/model override both; args.effort/args.model override the defaults for the whole run. None of these are chosen for economy — token conservation is an explicit signal from Eric, never a default.',
-  phases: [{ title: 'Grind' }],
+    'For a batch of near-identical, mechanical chores — the same fix/skill/command applied across many files/PRs/branches/tickers — where doing them one at a time in the main thread burns turns without needing deep judgment per item. Not for anything requiring cross-item synthesis or a design call; that wants a purpose-built pipeline instead.\n\nBefore constructing args: args.itemSource is REQUIRED — a real description (12+ characters) of where items came from, never a placeholder like "items" or "n/a"; the call throws otherwise. Say whether it is a live scan/query or a hand-picked list, and why. This is the one part of a pre-flight this workflow can actually enforce — depth (effort/model, see Compute below) and the outcome check (verifyBranch, also below) are yours to set correctly, not validated for quality; width (scope beyond the automatic envelope check) is your judgment call with no matching arg at all.\n\nArgs: {items: [...], itemSource, chore?, labels?, effort?, model?, isolation?, verifyBranch?, skipEnvelopeCheck?, promptTemplate?, steps?}. chore names the phase (the TOC header in the panel) when the chain has no instructions/skill step to name it. Provide exactly one of promptTemplate or steps. Generate the call from a chore file with `node scripts/grind-manifest.mjs --args --items <json> --item-source <string> docs/grind/<chore>.instructions.md` rather than hand-writing it (docs/grind/README.md).\n\n- itemSource: required, 12+ characters, a real description of where items came from (a scan command, a query, or the explicit reason none applies) — not a rubber-stamp word. Logged at run start and included in the returned result.\n- verifyBranch: true appends a trailing {kind:"script"} step that runs "git ls-remote --exit-code --heads origin {prev.branch}" after your own steps, so a "done" with nothing pushed to origin fails closed instead of being trusted. Skipped automatically, with a log line, if your own steps already end in the identical command (a checked-in chore already covers this via its own outcomeCheck front matter).\n- skipEnvelopeCheck: a non-empty string naming why items are not file paths (issue numbers, tickers, PR branches) — skips the automatic envelope.json check normally prepended as step 0 (default on). A bare boolean is rejected; state the reason.\n- promptTemplate: "...{item}..." — single-stage mode: one agent call per item (unchanged from before).\n- steps: [{kind, ...}] — multi-stage mode: each item runs the SAME step chain in order via pipeline() (item A can be on step 3 while item B is still on step 1). Once a step reports status "blocked" or "skipped", later steps for that item pass through unchanged rather than running. A step 0 envelope check runs first automatically (see skipEnvelopeCheck above; it reports "done" rather than "skipped" for an item with no path, so it never stalls the rest of the chain), then your steps, then an optional verifyBranch check last. Any step that checks {prev.branch} against a prior result reporting no branch is blocked before dispatch rather than run — an empty-string branch argument would otherwise exit 0 and pass vacuously. Step kinds:\n  - {kind:"prompt", template} — free-text instruction, same {item} substitution as promptTemplate.\n  - {kind:"instructions", path, extra?} — points at a checked-in *.instructions.md file (see docs/grind/README.md); the agent reads it and carries it out against the item. Write the chore once, reuse the file across every grind run instead of re-pasting a template.\n  - {kind:"skill", name, args?} — the agent invokes an existing repo skill (its .claude/skills/<name>/SKILL.md), exactly as if a user typed "/<name>", targeted at the item.\n  - {kind:"script", command} — the agent runs the exact shell command (with {item}/{prev} substituted) and reports pass/fail only — no exploration, no judgment. The cheapest, fastest, most deterministic step kind; prefer it whenever the chore reduces to a command.\n  Every step after the first receives the prior step result, structured as {status, summary, branch?} — as {prev} (the whole JSON) or {prev.<field>} (one field) — in its prompt, so steps compose (e.g. script check -> skill fix -> script re-check).\n\nCompute (docs/COMPUTE.md): effort defaults by STEP KIND — "script" steps run at low (a command either exits 0 or it does not; thoroughness cannot change that), every other kind at high (it reads, writes, or judges). Model defaults to sonnet (the floor for mechanical-with-verification); a chore that needs more declares it in its front matter. Per-step effort/model override both; args.effort/args.model override the defaults for the whole run. None of these are chosen for economy — token conservation is an explicit signal from Eric, never a default.\n\nWhat the run reports (#1352 — the Background-tasks panel renders names and one narrator line, nothing else): the panel is a table of contents, so every field is a terse line item. Phase = the chore name. Agent label = the item plus an optional nickname from args.labels ({"1351": "listener slice 2"} — keyed by the item string, or by item.id/label for object items), with NO step suffix on the run\'s one named step (the phase already says it) and a one-word suffix on the automatic steps (" · envelope", " · verify"). log() narrates k/N done as items finish. The run returns a ready-to-paste GFM table in its "ledger" field: print it verbatim as the completion message rather than hand-writing a status table, and paste it into the issue or PR the run served so a later session (which cannot read this session\'s run directory) can still see what happened. Agent summaries are one line (≤120 chars) plus a URL, so they fit the table they land in.',
 }
 
 const items = args?.items
@@ -123,12 +122,56 @@ const RESULT_SCHEMA = {
   required: ['status', 'summary'],
   properties: {
     status: { type: 'string', enum: ['done', 'blocked', 'skipped'] },
-    summary: { type: 'string' },
+    summary: {
+      type: 'string',
+      description: 'one line, at most 120 characters, plus the URL of anything you posted or pushed — it is rendered as a table cell in the run ledger and in the Background-tasks panel',
+    },
     branch: {
       type: 'string',
       description: 'the git branch this step pushed to origin, if it pushed one — lets a later script step verify the push happened',
     },
   },
+}
+
+// The run's own fridge picture (#1352). The Background-tasks panel renders names and one narrator
+// line — no table, no diagram (verified against code.claude.com/docs/en/workflows and the bundled
+// workflow-authoring reference; neither documents a render lever). So the picture lives in what
+// this script RETURNS: a GFM table renders in every client AND survives a paste into an issue
+// comment, which is the only place a later CI session can read it — the run directory under
+// ~/.claude/projects/ belongs to the session that ran it and no other machine can see it.
+const CELL_MAX = 140
+const STATUS_MARK = { done: '✅ done', blocked: '⛔ blocked', skipped: '➖ skipped', errored: '❌ errored' }
+
+// A summary containing a pipe or a newline would silently break the table it is rendered into —
+// escape the pipe, flatten the whitespace, and mark truncation visibly rather than dropping text.
+function cell(text) {
+  const flat = String(text ?? '').replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim()
+  return flat.length > CELL_MAX ? `${flat.slice(0, CELL_MAX - 1)}…` : flat
+}
+
+function ledgerTable(heading, rows) {
+  return [
+    heading,
+    '',
+    '| Item | Step | Status | Summary |',
+    '| --- | --- | --- | --- |',
+    ...rows.map((r) => `| ${cell(r.item)} | ${cell(r.step || '—')} | ${STATUS_MARK[r.status] || cell(r.status)} | ${cell(r.summary)} |`),
+  ].join('\n')
+}
+
+// budget is a documented global, but referencing an undeclared identifier throws rather than
+// yielding undefined — hence typeof, not budget?.spent.
+const HAS_BUDGET = typeof budget !== 'undefined' && typeof budget.spent === 'function'
+const TOKENS_AT_START = HAS_BUDGET ? budget.spent() : null
+
+// Naming (Eric, 2026-09-04: "think of these pieces as a line item on a table of contents"). The
+// panel shows literal names in very little room, so a label is the item plus an optional nickname
+// from args.labels — never a repeat of what the phase row above it already says.
+const LABELS = args?.labels && typeof args.labels === 'object' ? args.labels : {}
+function nicknameFor(item) {
+  const key = typeof item === 'string' ? item : (item.id ?? item.label ?? item.sym ?? item.file ?? item.doc ?? item.path)
+  const nick = key == null ? undefined : LABELS[String(key)]
+  return nick ? String(nick).trim() : ''
 }
 
 function labelFor(item) {
@@ -147,7 +190,9 @@ function stepName(step) {
   return step.kind
 }
 const named = steps.filter((s) => s.kind === 'instructions' || s.kind === 'skill')
-const PHASE = named.length === 1 ? stepName(named[0]) : 'Grind'
+// args.chore names the phase for a chain with no instructions/skill step (a script-only run
+// would otherwise fall back to the generic "Grind" — the smoke run for #1352 showed exactly that).
+const PHASE = (typeof args?.chore === 'string' && args.chore.trim()) || (named.length === 1 ? stepName(named[0]) : 'Grind')
 
 function substitute(template, item, prev) {
   const value = typeof item === 'string' ? item : JSON.stringify(item)
@@ -184,10 +229,21 @@ function promptFor(step, item, prev) {
   }
 }
 
+// A one-word suffix for the steps that are not the run's own named step — the automatic
+// envelope check and branch verify, or a script step in a multi-step chain.
+function suffixFor(step) {
+  if (step === ENVELOPE_STEP) return 'envelope'
+  if (step === VERIFY_BRANCH_STEP) return 'verify'
+  return stepName(step)
+}
+
 function stageOpts(step, item) {
+  const nick = nicknameFor(item)
+  const base = nick ? `${labelFor(item)} ${nick}` : labelFor(item)
+  const isTheNamedStep = named.length === 1 && step === named[0]
   return {
     phase: PHASE,
-    label: `${labelFor(item)} · ${stepName(step)}`,
+    label: isTheNamedStep ? base : `${base} · ${suffixFor(step)}`,
     effort: effortFor(step),
     model: step.model || RUN_MODEL,
     isolation: ISOLATION,
@@ -197,29 +253,52 @@ function stageOpts(step, item) {
 
 phase(PHASE)
 
+// B: the narrator line moves during the run. log() is the panel's one live lever, and the running
+// view — not the final report — is where a watcher actually looks (Prefect's progress artifact and
+// Inngest's step timeline exist for the same reason). One line per item as it finishes.
+const tally = { done: 0, blocked: 0, skipped: 0, errored: 0 }
+function finish(result) {
+  const status = tally[result?.status] === undefined ? 'errored' : result.status
+  tally[status] += 1
+  const parts = [`${tally.done}/${items.length} done`, `${tally.blocked} blocked`]
+  if (tally.skipped) parts.push(`${tally.skipped} skipped`)
+  if (tally.errored) parts.push(`${tally.errored} errored`)
+  log(`${PHASE} · ${parts.join(' · ')}`)
+  return result
+}
+
 // pipeline() gives stage 1 just (item) and every later stage (prevResult, item, index) — mirror
 // that here so the chain lines up with how pipeline actually invokes each callback.
-const stages = finalSteps.map((step, i) =>
-  i === 0
-    ? (item) => agent(promptFor(step, item, undefined), stageOpts(step, item))
+const stages = finalSteps.map((step, i) => {
+  const isLast = i === finalSteps.length - 1
+  // Stamp which step produced this result, so the ledger can say WHERE an item stopped — pipeline()
+  // returns only the last stage's value, and a blocked item's result is passed through unchanged by
+  // every later stage. Never overwrite an existing stamp: that is the pass-through case.
+  const tag = (result) => {
+    const stamped = result && typeof result === 'object' && !result.step ? { ...result, step: suffixFor(step) } : result
+    return isLast ? finish(stamped) : stamped
+  }
+  const run = (value) => Promise.resolve(value).then(tag)
+  return i === 0
+    ? (item) => run(agent(promptFor(step, item, undefined), stageOpts(step, item)))
     : (prev, item) => {
         // A step already blocked/skipped stays that way — don't spend an agent running later
         // steps against a target the chain has already given up on.
-        if (prev && prev.status !== 'done') return prev
+        if (prev && prev.status !== 'done') return tag(prev)
         // "git ls-remote ... origin ''" exits 0 (lists every head) — a step checking {prev.branch}
         // against a prev result with no branch would otherwise pass vacuously instead of catching
         // the "done" that pushed nothing docs/grind/README.md warns about.
         if (referencesPrevBranch(step) && !prev?.branch) {
-          return {
+          return tag({
             status: 'blocked',
             summary: 'this step checks {prev.branch}, but the previous step reported no branch — refusing to run a check that would otherwise pass vacuously',
-          }
+          })
         }
-        return agent(promptFor(step, item, prev), stageOpts(step, item))
-      },
-)
+        return run(agent(promptFor(step, item, prev), stageOpts(step, item)))
+      }
+})
 
-log(`items: ${items.length} · source: ${itemSource}`)
+log(`${PHASE} · 0/${items.length} done · ${itemSource}`)
 const results = await pipeline(items, ...stages)
 
 const combined = items.map((item, i) => ({ item, result: results[i] }))
@@ -228,13 +307,25 @@ const blocked = combined.filter((c) => c.result?.status === 'blocked')
 const skipped = combined.filter((c) => c.result?.status === 'skipped')
 const errored = combined.filter((c) => !c.result)
 
-log(`${PHASE}: ${done.length}/${items.length} done · ${blocked.length} blocked · ${skipped.length} skipped${errored.length ? ` · ${errored.length} errored` : ''}`)
+const tokens = TOKENS_AT_START === null ? null : Math.max(0, budget.spent() - TOKENS_AT_START)
+const rows = combined.map((c) => ({
+  item: nicknameFor(c.item) ? `${labelFor(c.item)} ${nicknameFor(c.item)}` : labelFor(c.item),
+  step: c.result?.step,
+  status: c.result?.status || 'errored',
+  summary: c.result?.summary || 'agent failed after retries',
+}))
+const counts = [`${done.length}/${items.length} done`, `${blocked.length} blocked`]
+if (skipped.length) counts.push(`${skipped.length} skipped`)
+if (errored.length) counts.push(`${errored.length} errored`)
+if (tokens !== null) counts.push(`${Math.round(tokens / 1000)}k output tokens`)
 
 return {
   chore: PHASE,
   total: items.length,
   itemSource,
   done: done.length,
+  tokens,
+  ledger: ledgerTable(`**${PHASE}** — ${counts.join(' · ')}\n_Items from: ${itemSource}_`, rows),
   blocked: blocked.map((c) => ({ item: labelFor(c.item), summary: c.result.summary })),
   results: combined.map((c) => ({ item: labelFor(c.item), ...(c.result || { status: 'errored', summary: 'agent failed after retries' }) })),
 }

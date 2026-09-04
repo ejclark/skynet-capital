@@ -259,7 +259,30 @@ A `done` with no branch on origin makes that command fail, which reports `blocke
 A missing `branch` field substitutes to an empty string and fails the same way. Every checked-in
 chore above reports its branch and expects this trailing step; the four calling conventions say so.
 
-### Two hazards the first real run hit (2026-09-04)
+### What a run reports back — print the ledger, don't rewrite it
+
+A finished run returns a `ledger` field: a GFM table, one row per item (item · step · status ·
+summary), under a headline carrying the counts, the `itemSource`, and the run's output-token
+delta from `budget.spent()`. Print it verbatim; paste it into the issue or PR the run served.
+
+Two facts fix that shape. The Background-tasks panel has no render lever — `meta.phases`,
+`phase()`, `agent()`'s `label`, `log()`'s one narrator line, and the returned value are the whole
+documented surface, so a diagram cannot live there. And a run's own directory sits under the
+session's `~/.claude/projects/`, which the digest Routine — a fresh CI session on another machine —
+cannot read. A table pasted into an issue comment is the only artifact that reaches both.
+
+**The panel is a table of contents** (Eric, 2026-09-04: "think of these pieces as a line item on
+a table of contents"), so every name is a terse line item that must not repeat the row above it:
+
+| Panel field | Convention |
+|---|---|
+| workflow description | a title, ≤ 60 chars — `grind — one chore, many items` |
+| phase | the chore name (`interrogate`, `fix-doc-rot`); `meta` declares no `phases`, so no dead `Grind` row |
+| agent label | the item plus an optional nickname from `args.labels` (`{"1351": "listener slice 2"}`); **no step suffix** on the run's one named step, a one-word suffix on the automatic ones (`· envelope`, `· verify`) |
+| narrator line | `interrogate · 1/2 done · 0 blocked`, updated as each item finishes |
+| agent summary | one line, ≤ 120 chars, plus a URL — the schema says so, and the ledger cell truncates past 140 |
+
+## Two hazards the first real run hit (2026-09-04)
 
 - **Worktrees are cut from the calling session's HEAD, not from `origin/main`.** An agent reads
   the chore file from that worktree *before* its own step 1 fetches `origin/main`, so a session
