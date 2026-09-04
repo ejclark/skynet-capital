@@ -43,6 +43,7 @@
     "incident:scan": "node scripts/incident-scan.mjs",
     "ci-duration:scan": "node scripts/ci-install-duration-scan.mjs",
     "docrot:scan": "node scripts/doc-rot-scan.mjs",
+    "forward-test-id:scan": "node scripts/forward-test-id-scan.mjs",
     "issue:lint": "node scripts/issue-lint.mjs",
     "research:lint": "node scripts/research-lint.mjs",
     "workflow:lint": "node scripts/workflow-lint.mjs",

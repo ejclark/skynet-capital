@@ -28,6 +28,22 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   instrument data (bust the instrument cache first:
   `rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
 
+**Registering a new forward test never reads the ledger's tip for "the next number."** Any
+prediction you register in `docs/research/forward-tests.md` — the first ledger row on
+`never-assessed` initial research, or a stance change registered mid-run
+(`docs/research/events/TEMPLATE.md`'s "predictions with a score-by date also register" rule) —
+gets an id namespaced to **your own assigned event**, never a shared, globally-incrementing bare
+number: `FT-<event-id>-<n>`, where `<event-id>` is the exact slug of your assigned
+`docs/research/events/<event-id>.md` file and `<n>` starts at 1 and increments only within that
+event's own prior forward-test rows (`grep 'FT-<event-id>-' docs/research/forward-tests.md` finds
+the next `<n>`; none yet found means start at 1). Two sibling sessions researching two different
+events can never collide on this id, because each derives it from the one thing it already owns
+exclusively — its own assigned event — never from a live read of a file every concurrent sibling
+is also reading and appending to (2026-09-04: this is exactly how two unrelated sessions both
+registered a bare `FT-25`, resolved by hand — docs/LESSONS.md). The ~50 legacy bare-number `FT-N`
+rows already in the ledger are grandfathered as-is; this scheme governs new registrations only,
+from here forward.
+
 **Refresh the probe-ref block on every ledger you touch.** Every ledger header carries a
 `<!-- probe-ref: {...} -->` line right after `**Last assessed:**` (docs/process/EVENT-RESEARCH.md
 → "Deterministic screening") — the deterministic screen's reference state for this event. Whenever

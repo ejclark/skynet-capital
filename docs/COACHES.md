@@ -99,6 +99,18 @@ First separate the two kinds of convention, because they create very different d
 "Adopt EARS" was ~5 files precisely because it's forward-additive — not because 80 files were
 grandfathered. Diagnose which kind you're adopting before you reach for a sweep.
 
+**Worked example, both kinds at once (2026-09-04):** the event-research lane's forward-test ids
+(`docs/research/forward-tests.md`) were a shared, globally-incrementing bare number computed by
+reading the file's live tip — a real race across concurrent sessions, caught once already (two PRs
+both registering `FT-25`, resolved by hand). The fix is forward-additive on the id *scheme*
+(`.github/prompts/event-research.md` now namespaces new ids to the session's own assigned event,
+`FT-<event-id>-<n>`, which can't collide because it never reads a file every sibling is also
+reading) but retroactive-judging on the *mechanical check behind it*: `forward-test-id-scan.mjs`
+found the already-known `FT-25` collision fixed, and also found **seven** more pre-existing id
+collisions this fix did not cause and wasn't scoped to repair. `forward-test-id-budget.json` starts
+at that measured `7`, not a fabricated `0` — the honest number, ratcheted down as those rows get
+renumbered, exactly as `clone-budget.json` starts non-zero rather than claiming clean.
+
 **Corollary — know who the convention is for.** EARS is a *developer* convention: it lives in
 dev-facing intake (the PR template, plans, the `/ears` drill). User-facing intake (the issue
 templates, the `/feedback` form) stays **plain-language** for non-technical friends & family — triage
@@ -178,6 +190,7 @@ supply-chain decision: read them fully before adopting.
 | **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | write BDD specs per ENGINEERING.md | `test-backfiller` | ✅ live |
 | **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | **Moneypenny (repair)** — `.github/workflows/moneypenny-repair.yml` + `scripts/moneypenny/repair.mjs` (event-driven, not dispatched by the governor; formerly "CI Medic") | ✅ live |
 | **CI install duration** (verify job's dependency-install wall-clock) | `scripts/ci-install-duration-scan.mjs` + `ci-install-duration-budget.json` + `tests/arch/ci-install-duration.spec.ts` (median over recent successful runs, no-op offline) | check for a missing `Cache restored` line, fix the cache scope/key, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
+| **Forward-test id collisions** (two `docs/research/forward-tests.md` rows sharing one `FT-...` id — the event-research lane's concurrent-sessions race) | `scripts/forward-test-id-scan.mjs` + `forward-test-id-budget.json` + `tests/arch/forward-test-id.spec.ts` (pure text-file check, no token/network, always runnable) | renumber the colliding row, then ratchet; new registrations use `.github/prompts/event-research.md`'s event-namespaced `FT-<event-id>-<n>` scheme so this never fires on a fresh id again | none yet (recruit on recurrence #3) | ✅ live |
 | **Doc rot** (docs that no longer describe reality: dead file refs, missing npm scripts, stale structural map) | `scripts/doc-rot-scan.mjs` + `doc-rot-budget.json` + `tests/arch/doc-rot.spec.ts` (semantic-claim rot stays with the config-audit — honestly out of a deterministic eye's reach) | fix doc to match reality, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Comment bloat** (narration comments — bare issue/PR refs, "used by X", "added for Y" — that CLAUDE.md's own house style forbids; git blame/the PR already carry that history) | `scripts/comment-bloat-scan.mjs` + `comment-bloat-budget.json` + `tests/arch/comment-bloat.spec.ts` (flags candidates only — WHY-vs-narration judgment stays with review, same honesty limit as doc-rot's semantic half) | `/code-review`/`/simplify` checklist: keep only if non-obvious WHY, else delete, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Workflow structure** (duplicate keys, dangling step/needs refs) | `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` | fix the file, diff it against the last-good version | Moneypenny's repair lane files it when a run reports zero jobs | ✅ live |
