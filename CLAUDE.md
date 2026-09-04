@@ -161,7 +161,11 @@ Eric's label/comment is the `ready` flip; Claude executes unattended, banking mi
 issue comments instead of guessing — the richer the issue, the fewer interventions. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
 not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
-ready-flip). [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
+ready-flip). **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
+Moneypenny clearing it from #1318 after a bottleneck-research call sheet found the "decision" was
+already-written policy: "that is fantastic; ideal") — evidence in a comment, the work routed on
+(`feedback` / `next-slice`), the label gone. The queue must stay honest about what actually needs
+him; a stale `needs-eric` is a blessing-ask that spends his attention on nothing. [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
 
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
 log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the
