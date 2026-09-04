@@ -1,8 +1,8 @@
 # ISM Services PMI (Aug 2026 data) — ism-services-2026-09-03
 
 **Kind:** macro-print · **Date:** 2026-09-03 (confirmed, ISM: ismworld.org ROB calendar — 10:00 ET (3rd business day), checked 2026-08-18) · **Impact:** high
-**Last assessed:** 2026-09-03
-<!-- probe-ref: {"symbols":{},"vix":15.2,"daysBand":"high:0+","adjacentIds":["adp-employment-2026-09-02","avgo-2026-09-02-print","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","treasury-3y-note-2026-09-08","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":1} -->
+**Last assessed:** 2026-09-04
+<!-- probe-ref: {"symbols":{},"vix":14.32,"daysBand":"high:0+","adjacentIds":["adp-employment-2026-09-02","avgo-2026-09-02-print","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","treasury-3y-note-2026-09-08","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -219,3 +219,187 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-04, ~02:40 UTC = the evening of the reaction session).** Macro-print mode runs
+no `earnings-cycle` / `intraday-edges` instrument — `symbols: []` by design — so the **report** is
+scored from freshly re-sourced primary text and the **tape** from Yahoo daily and hourly bars fetched
+this session after the mandated cache bust (`rm -rf node_modules/.cache/earnings-cycle
+node_modules/.cache/intraday-edges`), never from memory. Primary: ISM's own release, **"Services PMI®
+at 55.4%; August 2026 ISM® Services PMI® Report"** (PRNewswire 302868046, dateline 2026-09-03 10:00
+ET, Steve Miller CPSM CSCP chair — ISM's authorized wire distribution, since ismworld.org's own page
+stays SSO-gated per leg 1's standing limit), cross-read against a full reprint of the same release
+and against FXStreet's calendar entry for the Prices Paid line.
+
+**What printed — hot on every axis this doc named, and hotter than its own base case.**
+
+| Index | Aug | Jul | Δ | Consensus |
+|---|---|---|---|---|
+| **Services PMI** | **55.4** | 54.1 | +1.3 | **54.0** / 54.1 — **beat by 1.3–1.4** |
+| **Business Activity** | **61.7** | 59.1 | +2.6 | none published |
+| **New Orders** | **60.9** | 57.2 | +3.7 | none published |
+| **Employment** | **47.8** | 47.4 | +0.4 | none published (`n/a` at D-1) |
+| Supplier Deliveries | 51.3 | 52.8 | −1.5 | — |
+| Inventories | 56.7 | 51.4 | +5.3 | — |
+| **Prices** | **72.6** | 70.3 | **+2.3** | none published (`n/a` at D-1) |
+
+26th consecutive month of services expansion; twelve industries expanded, five contracted. **Prices
+72.6 is the highest reading since August 2022**, above 70 for the fifth time in six months and the
+111th straight month of increase, with the 12-month average up 0.4pt to **68.5**, its highest since
+April 2023. Miller's own attribution names the channel this doc's kill switch tracks, verbatim:
+tariffs and the Middle East conflict "returned as the most cited issues impacting respondents' supply
+chains," and **"petroleum-related products, diesel, and gasoline were again reported as up in price
+in August."** Employment stayed in contraction for a second straight month and has been sub-50 in
+**13 of the last 18 months**.
+
+**Scoring the stance — the guard held, the base case was too timid, and the mechanism was wrong.**
+
+- **Stand-aside was right, and cost nothing.** No position was taken or implied; the print landed
+  1.3–1.4 above consensus with the modal Polymarket band (54.0–54.9) **wrong** — 55.4 sits in the
+  55s. A directional bet keyed to the flat-54 consensus loses on the number.
+- **The base case understated the print.** The stance said "continued expansion near the July level
+  with the Prices Index holding elevated (>65)." Both halves are technically SUPPORTED and both are
+  soft: activity did not hold near July, it accelerated by 1.3pt on the headline, 2.6 on Business
+  Activity and 3.7 on New Orders; Prices did not merely hold >65, it printed 72.6.
+- **The D-1 read on the sibling manufacturing tell was directionally right.** The D-1 row banked ISM
+  **manufacturing** Prices Paid at 71.1 flat as an argument *against* the easing-cost lean, while
+  explicitly refusing to convert it into a services forecast. Services Prices then printed +2.3 to
+  72.6 — the same institute, the same August window, the same direction. The refusal to forecast off
+  it was the right discipline; the direction it pointed was correct.
+- **The load-bearing mechanism is REFUTED on its own best test case, and this is the finding.** Leg 4
+  of the initial research named the "two-axis hawkish combination" — Business Activity and New Orders
+  strong **with** hot prices — as *more* yield-forcing than hot prices on decelerating demand. August
+  delivered exactly that configuration, at the strongest levels of the year. **Yields fell.** The
+  10-year closed **4.762% from 4.796% (−3.4bp)**, TLT **+0.146%**, VIX **−5.79% to 14.32**, and the
+  longest-duration names led the upside — QQQ **+1.189%**, CRWV **+4.49%**, META **+3.01%**, MSFT
+  **+2.68%** — the precise inverse of this doc's stated sensitivity ranking under a hot print. The
+  dollar fell too (DXY 99.56 → 99.00). The doc was right about the data and wrong about what it does.
+- **Signal 1 fired and its consequence did not follow.** "Prices Index holding ≥70 or re-accelerating
+  → tightens caution on the highest-duration names (CRWV, then semis)" — the condition fired
+  decisively, and CRWV was the single best performer of the nine tracked names on the session.
+- **Signal 3 (the stagflation divergence) fired weakly.** Employment 47.8 is a second contraction
+  month against Prices 72.6, so the divergence persists — but Employment *rose* 0.4pt, so the
+  divergence narrowed at the margin rather than widening as the signal was worded.
+
+**Kill switches — one dead, one confirmed live, one out of window, one already closed.**
+
+1. **"A soft Prices Index (below ~65) on 9/3"** — **did not fire, and missed by 7.6 points.** The
+   dovish-relief branch this doc carried for eight rows is dead on the data.
+2. **"A weak jobs print the next day (9/4)"** — **out of the close-out window.** The August
+   Employment Situation prints 08:30 ET on 2026-09-04, roughly ten hours after this close-out was
+   written; it belongs to [`jobs-2026-09-04`](jobs-2026-09-04.md) and is deliberately not
+   pre-judged here.
+3. **"A published August consensus emerging"** — already **fired at the headline 2026-08-30** and
+   **closed as un-fireable on the subcomponents 2026-09-02**. The close-out confirms the second half
+   was right: ISM published Prices and Employment with no consensus ever attached to either.
+4. **"Energy de-escalation"** — **did not fire; the opposite is now confirmed inside the services
+   panel itself.** Brent settled **$95.81** on 9/3 (from $89.31 on 8/28), and the report's own chair
+   named petroleum products, diesel and gasoline as August price drivers with the Middle East conflict
+   among the most-cited supply-chain issues. The D-5/D-4 "crude reversal as a dovish input on Prices"
+   lean — withdrawn at D-3, re-withdrawn at D-1 — is now refuted by the primary rather than by
+   inference. XLE nonetheless closed **−0.74%** on the session.
+
+**Market reaction — the print was hot, the tape was dovish, and the tape was not about the print.**
+
+2026-09-03 closes (Yahoo bars, this session): S&P 500 **7,747.71 (+1.058%)**, Nasdaq Composite
+**26,584.06 (+1.397%)**, Dow **53,686.11 (+1.176%, +624.16 pts)**; SPY **773.17 (+1.047%)**, QQQ
+**717.67 (+1.189%)**, IWM **295.19 (+0.401%)**, XLF **58.56 (+1.561%)**, TLT **82.07 (+0.146%)**,
+**^TNX 4.762 (−3.4bp)**, **VIX 14.32 (−5.79%)** — back below the sub-15 band whose first break the
+D-1 row had flagged two sessions earlier.
+
+The driver was **Governor Waller at 08:30 ET**, 90 minutes ahead of the release — the two-headline
+session the D-1 row warned about, resolved in favour of the other headline. Waller said he would
+support holding the funds rate at 3.50–3.75% on 9/16 if the next two weeks' data keep showing
+disinflation ("*Give disinflation a chance. We can wait one meeting… What's the cost of waiting one
+meeting?*"), and September hike odds fell from **63.2% (9/2)** to **50.4–54%** on CME FedWatch, a
+**9–13pp** swing depending on the venue and the timestamp. The Motley Fool's midday wrap attributes
+the rally to Waller and **does not mention the ISM report at all**.
+
+**Two contradictions worth putting on the record.** (a) One post-print note narrated the 72.6 Prices
+reading as "lifting yields, volatility, and dollar" — the tape did the opposite on **all three**
+(^TNX −3.4bp, VIX −5.79%, DXY −0.56%). That is press narration inferring a mechanism instead of
+measuring one, and it is exactly the mechanism this doc itself asserted. (b) The intraday bars show
+the ISM impulse was **real, correctly signed, small and fully retraced**: ^TNX's 08:20–09:20 bar (the
+Waller bar) fell **−0.462%**, the day's largest; the 09:20–10:20 bar containing the 10:00 release rose
+**+0.338%** — yields up on hot prices, the right sign — and the two following bars gave it all back
+(−0.252%, −0.294%). So the release did move the rate desk for about an hour, in the direction leg 4
+predicted, by an amount smaller than an ordinary hour's noise. That is a more precise refutation than
+"nothing happened," and it retires the "ISM services is the biggest non-CPI rate-path mover" framing
+this doc carried from D-15, in favour of the measured non-finding its siblings already hold.
+
+**Forward tests — three due today, all keyed to this print.**
+
+- **FT-47** (*ISM's cadence rule dates the October print at 2026-10-05*) — **PASS, on the cheapest
+  possible adjudication.** The 2026-09-03 report names its successor verbatim: **"The next ISM®
+  Services PMI® Report featuring September 2026 data will be released at 10:00 a.m. ET on Monday,
+  October 5, 2026."** The holiday-aware third-business-day derivation reproduced the date exactly, the
+  `ism-services-2026-10-05` entry filed on it was right, and the [11-04 sibling's](ism-services-2026-11-04.md)
+  "10-06" is confirmed wrong (that ledger is append-only and stays unedited). The entry is **promoted
+  `estimate` → `confirmed` in this PR** on ISM's own release text — the promotion path the entry
+  itself pre-registered. This is one observation about a published schedule, never a price claim.
+- **FT-48** (*the 10:00 ET release hour is an ordinary hour — the intraday null*) — **PASS, and it is
+  the one observation this session earns.** The release-hour bar (09:30–10:30 ET for the ETFs,
+  09:20–10:20 for `^TNX`) against that instrument's own 2026 clock-hour p90 (n=169 sessions,
+  recomputed this session): **^TNX ret +0.338% vs p90 0.602, range 0.506% vs 0.985 · TLT −0.152% vs
+  0.305, range 0.249% vs 0.505 · SPY +0.100% vs 0.625, range 0.328% vs 0.939 · QQQ +0.313% vs 0.975,
+  range 0.585% vs 1.446 · IWM −0.713% vs 1.045, range 0.862% vs 1.535.** Nothing breached, on either
+  metric, in any of the five — the print landed in a hawkish regime, one session before payrolls,
+  beat consensus and printed a four-year-high Prices reading, and still did not move the hour it
+  arrived in. **Void condition judged NOT met, on the bars rather than on assertion:** the clause
+  voids on "a Waller-driven move still running at 10:00," and ^TNX's Waller bar (−0.462%) had not
+  merely stopped by the release hour, it had **reversed sign** (+0.338%) — the cleanest separation
+  this test could have hoped for on a two-headline morning. **The caveat, recorded because it cuts
+  against the pass:** the session's only p90 breach anywhere was SPY's **following** hour (10:30–11:30
+  ET) on both return (**+0.556%** vs its own p90 0.481) and range (**0.713%** vs 0.696); QQQ, IWM, XLF
+  and TLT stayed below their own 10:30-bar p90s, and no dated non-ISM headline was found inside that
+  hour. The test's single-bar construction cannot see a lagged move, and a future registration of this
+  null should measure **two** bars, not one.
+- **FT-37** (*the ISM Services release has no measurable market reaction, at daily resolution*) —
+  **VOID, not scored.** Registered readings for the record: **TLT +0.146%** against its 1.04% p90 and
+  **^TNX −0.709%** against its 1.52% p90 (2026 p90s recomputed through 09-03, n=168: 1.019% / 1.514%,
+  corroborating the registered bars) — so on its face the null passes comfortably. It does not count,
+  because the test's own void clause names "a **CPI/FOMC-grade surprise** sharing the 09-03 tape," and
+  a same-morning Fed governor moving September hike odds 9–13pp while every session wrap attributes
+  the day to him is exactly that. Voiding costs almost nothing here — the test's own stated limit is
+  that a pass is ~81% likely by construction and weakly informative — and taking the pass would bank
+  an observation on a tape that provably was not measuring ISM. **The split is the process finding:
+  FT-37's void clause is coarse (any daily window is contaminated by any same-day macro headline),
+  FT-48's is precise (it names the contaminating event, the window, and the test of whether it was
+  still running) — and on the same session the precise one survived and the coarse one did not.**
+
+**Adjacency at close-out.** No new dated event discovered; nothing proposed. The 13 ids inside this
+event's five-day corridor are unchanged from the D-1 row and are carried in the refreshed probe-ref
+block above. One **orphan flagged, deliberately not scored here**: FT-49 (registered at the
+[`avgo-2026-09-02-print`](avgo-2026-09-02-print.md) close-out, score-by 2026-09-04) carries a void
+clause reading "void if any Fed speaker moves September hike odds ≥10pp intraday" — Waller's 9/3
+remarks moved them 63.2% → 50.4%, **12.8pp**, so that clause appears met, and the ISM leg of the same
+clause (a ≥3-index-point beat) does **not** fire at +1.3/+1.4. That ledger already has an `## Outcome`
+and the scanner is therefore silent on it forever, so no session is scheduled to adjudicate FT-49; the
+readings are recorded here so whoever picks it up is not starting from memory. Scoring it is not this
+event's job and is not done in this PR.
+
+**Honest limits at close-out.** ismworld.org's release page remains SSO-gated, so every figure rests
+on ISM's own wire release rather than a fetched ismworld.org line — the standing leg-1 limit,
+unchanged since D-15. Two headline consensus figures are on the record and are **not** reconciled:
+**54.0** (TradingEconomics / Polymarket, carried by this doc since 8/30) and **54.1** (Dow Jones, per
+post-print coverage); 55.4 is a beat against either, so the split does not change the scoring. Fed-odds
+levels stay venue-split (54% futures, 50.4% on one same-day secondary, against 63–63.2% the prior
+day) — the direction and the ~10pp order of magnitude are the reliable parts, the level is not.
+Attribution of the session to Waller rests on press wraps plus the intraday bar separation above, not
+on a controlled test. Index and single-name returns are Yahoo daily bars; hourly percentiles are
+computed on 2026 sessions only (n=169 bars) and Yahoo's hourly history is the only intraday source
+available to this lane. **Discarded:** a widely syndicated wrap titled "Stock Market News for Sep 3,
+2026" reports S&P **7,666.60** and Nasdaq **26,217.83** as that day's closes — those are the
+**2026-09-02** closes (the column recaps the prior session), and taking them at face value would have
+scored a +0.5% day instead of the +1.06% that happened; caught against Yahoo bars, the same
+stale-aggregator trap this doc's method section has flagged since D-15.
+
+**Verdict.** The August print was the hot-Prices outcome this doc named as its asymmetric risk, in the
+strongest activity configuration it named as most yield-forcing — and the market went the other way,
+because a Fed governor spoke 90 minutes earlier. Stand-aside was the correct call and would have been
+correct under either outcome; the base case was directionally right and too timid; the transmission
+mechanism the doc asserted from D-15 is refuted at daily resolution and confirmed-but-trivial at
+hourly resolution. Two forward tests scored (FT-47 pass, FT-48 pass), one voided (FT-37), one
+promotion filed (`ism-services-2026-10-05` → `confirmed`). No trade was made or implied; none was
+warranted. This doc goes quiet.
