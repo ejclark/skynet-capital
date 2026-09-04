@@ -35,8 +35,7 @@
  *               `OCC:` options-expiration calendar (theocc.com / Cboe; 3rd-Friday standard) ·
  *               `BEA:` bea.gov release schedule (GDP, PCE) · `CENSUS:` census.gov schedule
  *               (retail sales, durable goods) · `ISM:` ismworld.org PMI calendar ·
- *               `CB:` conference-board.org consumer-confidence schedule ·
- *               `UMICH:` sca.isr.umich.edu Surveys of Consumers release schedule
+ *               `CB:` conference-board.org consumer-confidence schedule
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *
@@ -625,6 +624,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "Rate-path input; AI-infra names trade as long-duration assets on it.",
   },
   {
+    id: "mts-august-2026-09-11",
+    kind: "macro-print",
+    title: "Monthly Treasury Statement (Aug 2026 data) — the monthly deficit print",
+    date: "2026-09-11",
+    status: "confirmed",
+    source:
+      "TSY: two independent Treasury primaries, both PDFs downloaded from fiscaldata.treasury.gov/static-data/published-reports/mts/ and text-extracted 2026-09-03. The July 2026 edition (MonthlyTreasuryStatement_202607.pdf, p.39) reads verbatim 'The release date for the August 2026 Statement will be 2:00 p.m. EST September 11, 2026' ('EST' is Treasury's own typo; September is EDT). The November 2025 edition carries the full annual table — 'Listed below are the scheduled release dates for the Monthly Treasury Statement. The Statement is released at 2:00 p.m.' — with 'August 2026 / September 11, 2026'. Promoted from estimate by this event's own initial-research session on those primaries. Two corrections to the estimate as originally filed: the July edition was scheduled for August 12, not August 13 (both PDFs agree), and August 13 is the 9th August workday, not the 8th — the arithmetic was wrong although the derived answer was not. The 8th-workday rule itself is exact: computed against the published 2024 and 2026 calendars it reproduces 20 of 20 release dates with zero mismatches. Checked 2026-09-03",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The primary monthly measurement of the one variable this calendar's long-end ledgers keep naming as the driver and never dating. treasury-30y-bond-2026-09-10's initial research attributes the Aug-13 predecessor auction's 25-year-high clearing yield to fiscal supply, citing a $432B July deficit; CRFB's framing of that auction is investors 'demand[ing] higher compensation to finance our growing national debt'. That number has a release date and this calendar did not carry it. Placement is why it earns a slot rather than a footnote: it lands the day AFTER the 30-year reopening and ON cpi-2026-09-11, so the term-premium story's fiscal leg and its inflation leg print into the same session, one day after the auction that prices both — and inside the fomc-blackout-start-2026-09-05 window, so no Fed participant can respond to either. Tiered `medium`, not `high`, deliberately: the MTS is a backward-looking accounting statement with a well-telegraphed CBO Monthly Budget Review preview usually out days earlier, so it rarely moves the tape by itself; what it does is confirm or break the deficit trajectory the long end is pricing. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep (2026-09-03). The 'rarely moves the tape' claim was UNMEASURED when written and is now measured (initial research, 2026-09-03): 56 releases 2022-2026 give TLT p=0.249, SPY p=0.689, ^TNX p=0.839 on the day, and the 35 releases with intraday bars give a 1:30pm-to-close window of TLT -0.038% p=0.413 and SPY +0.004% p=0.946, with SPY's release-window dispersion BELOW its all-day base. The medium tier survives on the second half of the sentence, not the first.",
+  },
+  {
     id: "fomc-2026-09-16",
     kind: "macro-print",
     title: "FOMC decision (meeting Sep 15–16, SEP + dot plot)",
@@ -712,6 +724,45 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The last revision to the +1.5% Q2 base that the 10-29 Q3 advance estimate gets measured against — which is the whole reason it is tracked; a revision here shifts the acceleration story before any Q3 number exists. Lands ON the FY2027 funding deadline, so in the lapse branch it is the last federal GDP release published before the blackout (BEA cancelled the Q3 advance estimate outright in the 2025 lapse). Marked `confirmed` on BEA's own schedule page fetched 2026-08-29 — the same primary and check date as the 10-29 and PCE entries, not an inferred cadence. Discovered during the gdp-q3-2026-advance-2026-10-29 initial research.",
   },
   {
+    id: "adp-employment-2026-09-30",
+    kind: "macro-print",
+    title: "ADP National Employment Report (Sep 2026 data)",
+    date: "2026-09-30",
+    status: "confirmed",
+    source:
+      "IR: ADP's own August release (mediacenter.adp.com / PRNewswire 302867661, dateline 2026-09-02) states verbatim \"The September 2026 ADP National Employment Report will be released on September 30, 2026 at 8:15 a.m. ET\", fetched direct 2026-09-03; independently corroborated by FRED's release calendar rid=194, which lists 2026-09-30 at 07:15 CT (= 08:15 ET). Promoted from estimate by the adp-employment-2026-09-30 initial research — the no-self-confirm limit binds the sweep that proposed the entry, not a later independent session",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "Two sessions ahead of BLS payrolls (10/2), the same pre-NFP slot the 09-02 edition held; the ADP-to-NFP correlation stays loose (Aug ADP +38k vs a 47-48k consensus, while the same cycle's July BLS print was -23k). WHY THIS EDITION IS DIFFERENT: September is ADP's annual preliminary QCEW re-benchmark print — the 2025-10-01 edition's own release states the rebenchmarking 'resulted in a reduction of 43,000 jobs' and revised the prior month from +54,000 to -3,000 — so its headline is a restatement, not a hiring signal. BLS published Q1-2026 QCEW + the preliminary CES benchmark on 08-28 (nonfarm -79k, private -178k) and ADP's 09-02 release carries no benchmark language, so the adjustment is pending. CORRECTION (2026-09-03): the original note's second tracking reason — a private labor read surviving a BLS blackout on the FY2027 funding deadline — is DEAD. The House adopted the Senate CR 370-48 on 09-01 and the president signed the Continuing Appropriations and Extensions Act, 2027 on 09-02, funding through 12-11; jobs 10-02 and CPI 10-14 print normally, and the live cliff moved to cr-expiry-2026-12-11. The medium tier now rests on the pre-NFP-private-read ground alone. Also corrected: ADP DOES pre-announce this edition, in the body of the prior release. Discovered in ADP's own release while closing out adp-employment-2026-09-02.",
+  },
+  {
+    id: "adp-employment-2026-11-04",
+    kind: "macro-print",
+    title: "ADP National Employment Report (Oct 2026 data)",
+    date: "2026-11-04",
+    status: "estimate",
+    source:
+      "EST: FRED's release calendar rid=194 lists an ADP National Employment Report on 2026-11-04 at 07:15 CT (= 08:15 ET), fetched direct 2026-09-03, and the date is the Wednesday two sessions before the BLS-confirmed 11-06 payrolls Friday — the slot this series always occupies. Filed estimate because a FRED forward calendar is a projection and ADP has not itself named the date; ADP's own confirmation arrives in the body of the 09-30 release, checked 2026-09-03",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The successor edition, keeping the tracked ADP series continuous past 09-30. Ordinary by construction — the annual QCEW re-benchmark lands in the September print (and the full benchmark in the following February's), so this one should read as a plain private-payrolls measurement against a restated base; the adp-employment-2026-11-04 initial research MEASURED that claim on the one prior cycle rather than asserting it (the equivalent post-re-benchmark edition, 2025-11-05, carries no QCEW/benchmark language and revised its prior month by only 3k, -32k to -29k). WHAT ACTUALLY DISTINGUISHES THIS EDITION (2026-09-03): it prints at 08:15 ET the MORNING AFTER the 11-03 midterms, 15 minutes before the 11-04 Treasury refunding announcement and 105 minutes before ISM Services, two sessions before confirmed BLS payrolls on 11-06 — so no 11-04 tape move is attributable to it. The one same-structure precedent is exact and the same calendar date: on 2020-11-04, with the presidential result undetermined, ADP missed a 600k consensus by 39% (+365k) while futures were 'broadly unchanged following the data release' (CNBC) and the session closed S&P +2.20% / VIX -5.98 / 10y -11.4bp. Bounding it the other way, ADP's best-case day — 2025-11-05, sole labor read during the record shutdown, a beat — was S&P +0.37%. SECOND FINDING: FRED rid=194's full-year list runs Sep 2, Sep 30, Nov 4, Dec 2, so there is NO October release at all; this is the only ADP read on October that will exist, and its month-over-month delta spans a 35-day publication gap. FRED also carries 12-02, now filed as this event's own one-successor proposal. Discovered during the adp-employment-2026-09-30 initial research; assessed 2026-09-03.",
+  },
+  {
+    id: "adp-employment-2026-12-02",
+    kind: "macro-print",
+    title: "ADP National Employment Report (Nov 2026 data)",
+    date: "2026-12-02",
+    status: "estimate",
+    source:
+      "EST: FRED's release calendar rid=194 lists an ADP National Employment Report on 2026-12-02 at 07:15 CT (= 08:15 ET), re-fetched direct in full-year view 2026-09-03; the date satisfies both cadence rules the series follows — the first Wednesday of December, and two sessions before the BLS-confirmed 12-04 payrolls Friday. Filed estimate because a FRED forward calendar is a projection and ADP has not itself named the date; ADP's own naming arrives in the body of the 11-04 release, the same promotion path verified on two prior editions (the 2026-08 release named 09-30; the 2025-10 release named 2025-12-03), checked 2026-09-03",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The successor edition, keeping the tracked ADP series continuous past 11-04 — held to ONE successor, the same restraint the 09-02 and 09-30 editions applied, and ADP's weekly NER Pulse is again deliberately not tracked. Unlike 11-04 this one lands on a clean morning, but inside the year's densest policy corridor: one week before the 12-09 FOMC (the SEP + dot-plot meeting), nine days before the FY2027 CR expires on 12-11, and two sessions before the 12-04 payrolls print it previews. It also lands inside the 11-28→12-10 FOMC blackout that fomc-blackout-start-2026-11-28 tracks, so no participant may respond to it. It is the first ADP read whose reference month is fully post-midterm. Discovered during the adp-employment-2026-11-04 initial research.",
+  },
+  {
     id: "crwv-fully-connected-2026-09-29",
     kind: "product-launch",
     title: "CoreWeave Fully Connected 2026 (Moscone South, SF) — Sep 29–Oct 1",
@@ -774,6 +825,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "The successor checkpoint to opec-plus-meeting-2026-09-06, and deliberately filed `low`: the JMMC monitors DoC conformity and compensation and RECOMMENDS — it does not set quotas, which is the seven/eight-country group's job. What makes it worth tracking anyway is the 2027 baseline fight: third-party Maximum-Sustainable-Capacity audits commissioned across Jan-Sep 2026 set the 2027 baselines from which every quota derives, Iraq is pushing for a higher individual number, and Kazakhstan carries the alliance's largest cumulative compensation burden — the JMMC is where conformity and compensation get aired in public before the group decides. Discovered during the opec-plus-meeting-2026-09-06 initial research (2026-08-31).",
+  },
+  {
+    id: "ism-services-2026-10-05",
+    kind: "macro-print",
+    title: "ISM Services PMI (Sep 2026 data)",
+    date: "2026-10-05",
+    status: "confirmed",
+    source:
+      "ISM: the August-data ISM Services report (PRNewswire 302868046, dateline 2026-09-03 10:00 ET) names its own successor verbatim — \"The next ISM(R) Services PMI(R) Report featuring September 2026 data will be released at 10:00 a.m. ET on Monday, October 5, 2026.\" Promoted estimate -> confirmed on that line, which is ISM's own release text and the promotion path this entry pre-registered (forward test FT-47, scored PASS 2026-09-04); the date had been rule-derived from the third-business-day cadence, and the report's own line agrees exactly. ismworld.org's ROB calendar page remains SSO-gated (302s to ecommerce.ismworld.org/SSO/Login.aspx), so the primary is ISM's authorized wire distribution rather than ismworld.org itself — the standing limit on every ISM entry in this calendar, checked 2026-09-04",
+    impact: "high",
+    symbols: [],
+    notes:
+      'FILLS A HOLE IN THE TRACKED SERIES: the calendar carried 09-03, 11-04 and 12-03 but not October, while its manufacturing sibling ism-manufacturing-2026-10-01 was tracked — so the one Q4 services read before the 10-28 FOMC was invisible. It also CORRECTS A DATE: the ism-services-2026-11-04 ledger names the October print as "10-06" in both its signal list and its kill switches, which is the fourth business day and would only be right under the January exception; that ledger is append-only and was not edited. READ IT, DO NOT TRADE IT, on the same measured grounds as its siblings — the 11-04 initial research found release-day moves in TLT/^TNX/SPY/QQQ/XLF/IWM statistically nil across all eight 2026 releases, and the 12-03 research added that the 10:00 ET release HOUR is quieter than an ordinary hour in four of five instruments. Cheap falsifier, dated: each report names its successor, so the 2026-09-03 release\'s own "next report" line adjudicates this date within 24 hours of filing (forward test FT-47) and is also what would promote it to confirmed. THAT FALSIFIER RESOLVED: the 2026-09-03 report named "Monday, October 5, 2026" verbatim, FT-47 scored PASS on 2026-09-04, and this entry was promoted to confirmed on it — which also leaves the same cadence rule dating ism-services-2026-12-03 standing rather than under doubt. Discovered during the ism-services-2026-12-03 initial research (2026-09-02).',
   },
   {
     id: "mrvl-investor-day-2026-10-06",
@@ -1248,6 +1312,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "ercot-data-center-audit-filing-2026-12-10",
+    kind: "sector",
+    title: "ERCOT Batch Zero data-center audit filing (target) — Texas interconnection pause",
+    date: "2026-12-10",
+    status: "estimate",
+    source:
+      "NEWS: Utility Dive, 'ERCOT aims to complete Texas governor's data center audit by December' — ERCOT SVP of regulatory policy and general counsel Chad Seely at a PUCT open meeting on 2026-08-20, quoted verbatim: 'Our goal is to head toward a December 10 filing'. A stated internal goal, not a regulatory deadline — confirmed against the primary this event's initial research reached: Abbott's 2026-08-03 directive at gov.texas.gov orders the audit completed 'before any data center project moves forward' but names NO completion date, and ERCOT's own estimate of the verification process is 'several months, but less than nine months' from August. What lands on 12-10 is now specified: two reports (Batch Zero Eligibility Verification + Community Impact Review) into PUCT Docket 59220, taken up at the 2026-12-17 PUCT open meeting. Still estimate: no PUCT primary was reachable (interchange.puc.texas.gov and puc.texas.gov both failed TLS validation on 2026-09-02, after 503s on 08-19 and a TLS failure on 08-24), so the docket number is newsletter-sourced and no filing states the 12-10 date. ERCOT market notices at ercot.com WERE reached, checked 2026-09-02",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The date that actually gates the Texas data-center pause, which is currently the only dated, quantified DOWNWARD revision to AI-driven load growth on this calendar. On 2026-08-03 Governor Abbott ordered PUCT and ERCOT to run a 'comprehensive verification and audit of all data centers advancing through ERCOT's interconnection process' before any additional data center may proceed, concluding that non-complying projects 'must be denied'; ERCOT holds ~474 GW of interconnection requests (~90% data centers, >5x its record peak demand), with ~300 projects of 75 MW or larger inside the Batch Zero process. The August-2026 EIA STEO priced the consequence immediately, cutting its Texas 2027 electricity-load-growth forecast from 14% to 6% in a single month. Why it matters to this book: docs/research/ai-energy-constraint.md names ERCOT and PJM as the only two deregulated markets where the AI-power windfall accrues, and its frontier map assumes load growth is the binding input. CORRECTED by this event's initial research (2026-09-02): this filing is NOT 'the checkpoint at which the queue reopens or stays shut' as first filed — it is NECESSARY BUT NOT SUFFICIENT. The audit must complete before any data center advances, but the Batch Zero STUDY that actually classifies and energizes loads has already lost its 2027-04-09 deadline (Seely, 2026-08-20: 'We will not have the study done by April 9, 2027 ... we're still working on what that new timeline might be'), so no branch reopens the ERCOT queue in 2026. ERCOT has also missed both dated milestones set under this audit — the 08-07 classification deadline (M-A080326-01) and the 08-31 conditional classifications the PUCT itself ordered on 08-20 (M-A080326-03, 'ERCOT requires additional time'). Tiered `medium`, not `high`: it is a filing against a self-set goal with no statutory deadline, easily slipped, and it reprices no tracked name directly (`symbols: []` — the channel to CRWV is siting and narrative, not revenue). Sits two days after the December STEO (12-08) and on CPI day (12-10). Discovered during the eia-steo-2026-09-09 initial research (2026-09-02). DOCKET CORRECTION (puct-batch-zero-report-open-meeting-2026-12-17 initial research, 2026-09-02): the 'Docket 59220' this entry's source carries is WRONG — 59220 is the Crusoe/FGE Goodnight 1/Ensign net-metering case, ordered 2026-07-23 (525.5 MW curtailment obligation behind a 265.5 MW wind farm, the first SB 6 test case). ERCOT's Batch Zero filings run under 59142, where it filed three good-cause exceptions on 2026-08-10 and where interchange document 59142_20_1620380.PDF ('ERCOT Large Load Batch Study Update') sits; the December reports most plausibly land there. The error came from a single newsletter, which is itself a reason to keep the 12-17 agenda item at estimate grade.",
+  },
+  {
     id: "cr-expiry-2026-12-11",
     kind: "geopolitical",
     title: "Continuing-resolution expiry — FY2027 funding lapses absent further action",
@@ -1296,6 +1373,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes: "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator).",
+  },
+  {
+    id: "puct-batch-zero-report-open-meeting-2026-12-17",
+    kind: "sector",
+    title: "PUCT open meeting — ERCOT Batch Zero audit reports taken up",
+    date: "2026-12-17",
+    status: "estimate",
+    source:
+      "NEWS: Global Data Center Hub places a 'PUCT open meeting presentation' of ERCOT's two Batch Zero audit reports on 2026-12-17, corroborated in shape by Utility Dive's account of ERCOT SVP/GC Chad Seely at the 2026-08-20 PUCT open meeting describing delivery 'a week prior to the PUCT's December open meeting'. THE MEETING DATE IS NOW CORROBORATED (this event's initial research, 2026-09-02): ercot.com/committees/puct lists 'Dec 17, 2026' and ercot.com/calendar/12172026-PUCT-Meeting gives 9:30 AM, Travis Building Commissioners Hearing Room 7-100 — on a verified every-other-Thursday cadence (Nov 05, Nov 19, Dec 03, Dec 17), and it is the last PUCT meeting of 2026 (next 2027-01-14). THE AGENDA ITEM IS NOT: it rests on one newsletter, whose 'Docket 59220' attribution that research REFUTED (59220 is the Crusoe/FGE Goodnight 1/Ensign net-metering case ordered 2026-07-23; ERCOT's Batch Zero filings run under 59142). Still estimate, and still no PUCT primary — www.puc.texas.gov, interchange.puc.texas.gov and ftp.puc.texas.gov all failed TLS chain validation, the fourth consecutive session unable to reach one (503s 2026-08-19, TLS 2026-08-24, TLS 2026-09-02). ERCOT's own calendar and market-notice archive WERE reached, checked 2026-09-02",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The venue where ERCOT's 2026-12-10 filing actually gets taken up — proposed by the ercot-data-center-audit-filing-2026-12-10 initial research (2026-09-02) because that ledger's central finding is that the 12-10 filing is NECESSARY BUT NOT SUFFICIENT: Governor Abbott's 2026-08-03 directive (gov.texas.gov, primary) bars data centers from advancing until the audit completes but sets no deadline, while the Batch Zero STUDY that actually energizes loads has already lost its 2027-04-09 deadline on ERCOT's own record. So 12-10 delivers two reports (Batch Zero Eligibility Verification + Community Impact Review) and this meeting is the first moment a body with authority responds to them. Tiered `low`, not `medium`: no order is expected here, `symbols: []`, and a low tier keeps the cadence cheap (every 30d until D-15). Filed rather than carried as a watch trigger — unlike the Georgia PSC hearings, which were sub-steps of their own docket BEFORE its tracked date — because this is a different body acting on the tracked event's output AFTER it, in a week clean of the 12-10 corridor (FOMC 12-09, CPI 12-10, CR expiry 12-11, PPI + PJM auction 12-15) where a reaction is at least legible. The 2027-04-09 study deadline is deliberately NOT filed: ERCOT has said it will not be met. AMENDED by this event's own initial research (2026-09-02), which kept the `low` tier but corrected two of the claims above. (1) 'No order is expected here' is too strong: the PUCT GRANTED all three of ERCOT's good-cause exceptions from its 2026-08-20 open meeting, so this venue orders when a filing ASKS for something — the tell is whether the 12-10 filing requests relief (most plausibly a replacement for the abandoned 2027-04-09 study timeline), which would make 12-17 a decision date and reopen the tier. (2) The week is NOT clean: the +/-5d corridor holds ppi-2026-12-15, pjm-capacity-auction-2026-12, import-export-prices-2026-12-17 (same morning, 08:30 ET) and opex-2026-12-18 triple witching the next session, and the meeting opens 10:30 ET mid-session — cleaner than the 12-10 corridor, but evaluate on filings, never on price. Structural addition: 12-17 is the LAST PUCT meeting of 2026, so any slip costs 28 days (next meeting 2027-01-14).",
   },
   {
     id: "pce-2026-12-23",
@@ -1402,19 +1492,6 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Not an independent release: the COLA is arithmetic on the Q3 CPI-W average (Jul/Aug/Sep vs the year-ago quarter), so it is computed FROM cpi-2026-10-14's own data and lands the same morning. Filed low impact for that reason — it moves no rate expectation (the Fed keys on core CPI/PCE, not CPI-W) and adds no surprise the CPI print does not already carry. It is registered because it gives that print a property no other CPI on this calendar has: a STATUTORY tether. In the 2025 lapse BLS recalled furloughed staff to publish the September CPI on 2025-10-24 (delayed from 10-15) precisely so SSA could meet its benefit-payment deadline — BLS's own statement, 'This release allows the Social Security Administration to meet statutory deadlines.' That is why a FY2027 funding lapse (government-funding-deadline-2026-09-30) would DELAY the 10-14 CPI rather than delete it, unlike jobs-2026-10-02. Discovered during the cpi-2026-10-14 D-44 pulse; TSCL projected 3.6% on 2026-08-12 off a July CPI-W of 3.4%. AMENDED 2026-09-04 by this event's initial research: that tether is SPENT for this cycle — H.R. 6500 was signed 2026-09-02 as PL 119-103, funding agencies through 2026-12-11, so the 10-01 cliff is gone and nothing is left to insure against before 10-14 (the December CPI prints 12-10, the day before the next cliff). Same session recomputed the COLA off BLS index levels: it is the index-weighted average of the three Q3 CPI-W y/y rates, July 2026 is locked at exactly +3.400%, so 3.6% requires Aug and Sep y/y at ~3.70% — base case 3.4%, upside 3.5%.",
   },
   {
-    id: "umich-sentiment-prelim-2026-09-11",
-    kind: "macro-print",
-    title: "University of Michigan consumer sentiment — preliminary (Sep 2026)",
-    date: "2026-09-11",
-    status: "confirmed",
-    source:
-      'UMICH: sca.isr.umich.edu states verbatim "Next data release: Friday, September 11, 2026 for Preliminary September data at 10am ET" (fetched direct 2026-09-04, read back verbatim-only on a second pass); corroborated by the Surveys of Consumers\' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628), whose PDF text layer lists "September 11 September Prelim" and "September 25 September Final"',
-    impact: "low",
-    symbols: [],
-    notes:
-      "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Filed low, not medium, to respect the table's standing judgment that second-order surveys stay out — this is an admission for a named reason, not a reversal. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep; promoted to confirmed by its own initial research, which fetched the publisher's next-release line (with a time) direct.",
-  },
-  {
     id: "umich-sentiment-final-2026-09-25",
     kind: "macro-print",
     title: "University of Michigan consumer sentiment — final (Sep 2026)",
@@ -1426,71 +1503,6 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "Earns an entry rather than being a routine revision because of the collection rule in the same schedule document: final-release interviews run through the Monday before release (2026-09-21), making this the first UMich reading that can contain the 2026-09-16 FOMC decision — which the 09-11 preliminary structurally cannot (its interviews close 09-07). Discovered during umich-sentiment-prelim-2026-09-11 initial research.",
-  },
-  {
-    id: "mts-august-2026-09-11",
-    kind: "macro-print",
-    title: "Monthly Treasury Statement (Aug 2026 data) — the monthly deficit print",
-    date: "2026-09-11",
-    status: "confirmed",
-    source:
-      "TSY: two independent Treasury primaries, both PDFs downloaded from fiscaldata.treasury.gov/static-data/published-reports/mts/ and text-extracted 2026-09-03. The July 2026 edition (MonthlyTreasuryStatement_202607.pdf, p.39) reads verbatim 'The release date for the August 2026 Statement will be 2:00 p.m. EST September 11, 2026' ('EST' is Treasury's own typo; September is EDT). The November 2025 edition carries the full annual table — 'Listed below are the scheduled release dates for the Monthly Treasury Statement. The Statement is released at 2:00 p.m.' — with 'August 2026 / September 11, 2026'. Promoted from estimate by this event's own initial-research session on those primaries. Two corrections to the estimate as originally filed: the July edition was scheduled for August 12, not August 13 (both PDFs agree), and August 13 is the 9th August workday, not the 8th — the arithmetic was wrong although the derived answer was not. The 8th-workday rule itself is exact: computed against the published 2024 and 2026 calendars it reproduces 20 of 20 release dates with zero mismatches. Checked 2026-09-03",
-    impact: "medium",
-    symbols: [],
-    notes:
-      "The primary monthly measurement of the one variable this calendar's long-end ledgers keep naming as the driver and never dating. treasury-30y-bond-2026-09-10's initial research attributes the Aug-13 predecessor auction's 25-year-high clearing yield to fiscal supply, citing a $432B July deficit; CRFB's framing of that auction is investors 'demand[ing] higher compensation to finance our growing national debt'. That number has a release date and this calendar did not carry it. Placement is why it earns a slot rather than a footnote: it lands the day AFTER the 30-year reopening and ON cpi-2026-09-11, so the term-premium story's fiscal leg and its inflation leg print into the same session, one day after the auction that prices both — and inside the fomc-blackout-start-2026-09-05 window, so no Fed participant can respond to either. Tiered `medium`, not `high`, deliberately: the MTS is a backward-looking accounting statement with a well-telegraphed CBO Monthly Budget Review preview usually out days earlier, so it rarely moves the tape by itself; what it does is confirm or break the deficit trajectory the long end is pricing. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep (2026-09-03). The 'rarely moves the tape' claim was UNMEASURED when written and is now measured (initial research, 2026-09-03): 56 releases 2022-2026 give TLT p=0.249, SPY p=0.689, ^TNX p=0.839 on the day, and the 35 releases with intraday bars give a 1:30pm-to-close window of TLT -0.038% p=0.413 and SPY +0.004% p=0.946, with SPY's release-window dispersion BELOW its all-day base. The medium tier survives on the second half of the sentence, not the first.",
-  },
-  {
-    id: "adp-employment-2026-09-30",
-    kind: "macro-print",
-    title: "ADP National Employment Report (Sep 2026 data)",
-    date: "2026-09-30",
-    status: "confirmed",
-    source:
-      "IR: ADP's own August release (mediacenter.adp.com / PRNewswire 302867661, dateline 2026-09-02) states verbatim \"The September 2026 ADP National Employment Report will be released on September 30, 2026 at 8:15 a.m. ET\", fetched direct 2026-09-03; independently corroborated by FRED's release calendar rid=194, which lists 2026-09-30 at 07:15 CT (= 08:15 ET). Promoted from estimate by the adp-employment-2026-09-30 initial research — the no-self-confirm limit binds the sweep that proposed the entry, not a later independent session",
-    impact: "medium",
-    symbols: [],
-    notes:
-      "Two sessions ahead of BLS payrolls (10/2), the same pre-NFP slot the 09-02 edition held; the ADP-to-NFP correlation stays loose (Aug ADP +38k vs a 47-48k consensus, while the same cycle's July BLS print was -23k). WHY THIS EDITION IS DIFFERENT: September is ADP's annual preliminary QCEW re-benchmark print — the 2025-10-01 edition's own release states the rebenchmarking 'resulted in a reduction of 43,000 jobs' and revised the prior month from +54,000 to -3,000 — so its headline is a restatement, not a hiring signal. BLS published Q1-2026 QCEW + the preliminary CES benchmark on 08-28 (nonfarm -79k, private -178k) and ADP's 09-02 release carries no benchmark language, so the adjustment is pending. CORRECTION (2026-09-03): the original note's second tracking reason — a private labor read surviving a BLS blackout on the FY2027 funding deadline — is DEAD. The House adopted the Senate CR 370-48 on 09-01 and the president signed the Continuing Appropriations and Extensions Act, 2027 on 09-02, funding through 12-11; jobs 10-02 and CPI 10-14 print normally, and the live cliff moved to cr-expiry-2026-12-11. The medium tier now rests on the pre-NFP-private-read ground alone. Also corrected: ADP DOES pre-announce this edition, in the body of the prior release. Discovered in ADP's own release while closing out adp-employment-2026-09-02.",
-  },
-  {
-    id: "adp-employment-2026-11-04",
-    kind: "macro-print",
-    title: "ADP National Employment Report (Oct 2026 data)",
-    date: "2026-11-04",
-    status: "estimate",
-    source:
-      "EST: FRED's release calendar rid=194 lists an ADP National Employment Report on 2026-11-04 at 07:15 CT (= 08:15 ET), fetched direct 2026-09-03, and the date is the Wednesday two sessions before the BLS-confirmed 11-06 payrolls Friday — the slot this series always occupies. Filed estimate because a FRED forward calendar is a projection and ADP has not itself named the date; ADP's own confirmation arrives in the body of the 09-30 release, checked 2026-09-03",
-    impact: "medium",
-    symbols: [],
-    notes:
-      "The successor edition, keeping the tracked ADP series continuous past 09-30. Ordinary by construction — the annual QCEW re-benchmark lands in the September print (and the full benchmark in the following February's), so this one should read as a plain private-payrolls measurement against a restated base; the adp-employment-2026-11-04 initial research MEASURED that claim on the one prior cycle rather than asserting it (the equivalent post-re-benchmark edition, 2025-11-05, carries no QCEW/benchmark language and revised its prior month by only 3k, -32k to -29k). WHAT ACTUALLY DISTINGUISHES THIS EDITION (2026-09-03): it prints at 08:15 ET the MORNING AFTER the 11-03 midterms, 15 minutes before the 11-04 Treasury refunding announcement and 105 minutes before ISM Services, two sessions before confirmed BLS payrolls on 11-06 — so no 11-04 tape move is attributable to it. The one same-structure precedent is exact and the same calendar date: on 2020-11-04, with the presidential result undetermined, ADP missed a 600k consensus by 39% (+365k) while futures were 'broadly unchanged following the data release' (CNBC) and the session closed S&P +2.20% / VIX -5.98 / 10y -11.4bp. Bounding it the other way, ADP's best-case day — 2025-11-05, sole labor read during the record shutdown, a beat — was S&P +0.37%. SECOND FINDING: FRED rid=194's full-year list runs Sep 2, Sep 30, Nov 4, Dec 2, so there is NO October release at all; this is the only ADP read on October that will exist, and its month-over-month delta spans a 35-day publication gap. FRED also carries 12-02, now filed as this event's own one-successor proposal. Discovered during the adp-employment-2026-09-30 initial research; assessed 2026-09-03.",
-  },
-  {
-    id: "adp-employment-2026-12-02",
-    kind: "macro-print",
-    title: "ADP National Employment Report (Nov 2026 data)",
-    date: "2026-12-02",
-    status: "estimate",
-    source:
-      "EST: FRED's release calendar rid=194 lists an ADP National Employment Report on 2026-12-02 at 07:15 CT (= 08:15 ET), re-fetched direct in full-year view 2026-09-03; the date satisfies both cadence rules the series follows — the first Wednesday of December, and two sessions before the BLS-confirmed 12-04 payrolls Friday. Filed estimate because a FRED forward calendar is a projection and ADP has not itself named the date; ADP's own naming arrives in the body of the 11-04 release, the same promotion path verified on two prior editions (the 2026-08 release named 09-30; the 2025-10 release named 2025-12-03), checked 2026-09-03",
-    impact: "medium",
-    symbols: [],
-    notes:
-      "The successor edition, keeping the tracked ADP series continuous past 11-04 — held to ONE successor, the same restraint the 09-02 and 09-30 editions applied, and ADP's weekly NER Pulse is again deliberately not tracked. Unlike 11-04 this one lands on a clean morning, but inside the year's densest policy corridor: one week before the 12-09 FOMC (the SEP + dot-plot meeting), nine days before the FY2027 CR expires on 12-11, and two sessions before the 12-04 payrolls print it previews. It also lands inside the 11-28→12-10 FOMC blackout that fomc-blackout-start-2026-11-28 tracks, so no participant may respond to it. It is the first ADP read whose reference month is fully post-midterm. Discovered during the adp-employment-2026-11-04 initial research.",
-  },
-  {
-    id: "ism-services-2026-10-05",
-    kind: "macro-print",
-    title: "ISM Services PMI (Sep 2026 data)",
-    date: "2026-10-05",
-    status: "confirmed",
-    source:
-      "ISM: the August-data ISM Services report (PRNewswire 302868046, dateline 2026-09-03 10:00 ET) names its own successor verbatim — \"The next ISM(R) Services PMI(R) Report featuring September 2026 data will be released at 10:00 a.m. ET on Monday, October 5, 2026.\" Promoted estimate -> confirmed on that line, which is ISM's own release text and the promotion path this entry pre-registered (forward test FT-47, scored PASS 2026-09-04); the date had been rule-derived from the third-business-day cadence, and the report's own line agrees exactly. ismworld.org's ROB calendar page remains SSO-gated (302s to ecommerce.ismworld.org/SSO/Login.aspx), so the primary is ISM's authorized wire distribution rather than ismworld.org itself — the standing limit on every ISM entry in this calendar, checked 2026-09-04",
-    impact: "high",
-    symbols: [],
-    notes:
-      'FILLS A HOLE IN THE TRACKED SERIES: the calendar carried 09-03, 11-04 and 12-03 but not October, while its manufacturing sibling ism-manufacturing-2026-10-01 was tracked — so the one Q4 services read before the 10-28 FOMC was invisible. It also CORRECTS A DATE: the ism-services-2026-11-04 ledger names the October print as "10-06" in both its signal list and its kill switches, which is the fourth business day and would only be right under the January exception; that ledger is append-only and was not edited. READ IT, DO NOT TRADE IT, on the same measured grounds as its siblings — the 11-04 initial research found release-day moves in TLT/^TNX/SPY/QQQ/XLF/IWM statistically nil across all eight 2026 releases, and the 12-03 research added that the 10:00 ET release HOUR is quieter than an ordinary hour in four of five instruments. Cheap falsifier, dated: each report names its successor, so the 2026-09-03 release\'s own "next report" line adjudicates this date within 24 hours of filing (forward test FT-47) and is also what would promote it to confirmed. THAT FALSIFIER RESOLVED: the 2026-09-03 report named "Monday, October 5, 2026" verbatim, FT-47 scored PASS on 2026-09-04, and this entry was promoted to confirmed on it — which also leaves the same cadence rule dating ism-services-2026-12-03 standing rather than under doubt. Discovered during the ism-services-2026-12-03 initial research (2026-09-02).',
   },
   {
     id: "us-china-tariff-truce-expiry-2026-11-10",
@@ -1531,19 +1543,6 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "SCOPE CORRECTED BY ITS OWN INITIAL RESEARCH (2026-09-04) — the id and the original title assert a retaliatory-tariff/countermeasure snapback on this date, and there is none. China's State Council Tariff Commission on 2025-11-05 REMOVED (not suspended) the 10-15% March-2025 retaliatory tariffs on ~740 US agricultural commodity lines effective 2025-11-10; a removal has no expiry clock. Every countermeasure that DOES carry a clock runs to 2026-11-10 — the 24% reciprocal countertariff, the April-4-2025 unreliable-entity listings (the March-4 listings were removed outright), and MOFCOM/GAC Announcement No. 70's suspension of the six 2025-10-09 export-control announcements — i.e. they belong to us-china-tariff-truce-expiry-2026-11-10, not here. So this is that cliff's 51-day TAIL on its narrowest leg, not a second cliff. What is genuinely on this clock is China's standing tariff-relief channel for US goods, expiring mid-way through the unfinished $30bn 'reciprocal tariff reduction' agreed in principle at the 2026-05-13/15 Trump state visit to China (USTR dockets 2026-0430/0431; Skadden reads the vehicle as a bilateral Trade Council, NOT this exclusion process — a timing collision, not an established mechanism). GEOMETRY INVERTS VS 11/10: all three venues Bessent named in May 2026 fall BEFORE this deadline — trump-xi-summit-2026-09-24, apec-leaders-shenzhen-2026-11-18, and g20-miami-2026-12-14 — so the after-the-deadline renewal problem the 11/10 entry flags does not apply here. No symbol this calendar tracks carries the exposure; it is agricultural, and that complex had already run 10-17% in the month to 2026-09-03 on at least three drivers (China buying, Black Sea port damage, NW Corn Belt drought), so the ag tape is not a read on this date. Lands in a holiday-thinned session alongside georgia-psc-data-center-cost-shift-2026-12-31 and one day after fomc-minutes-2026-12-30. Estimate widens caution only. Discovered during the us-china-tariff-truce-expiry-2026-11-10 initial research (2026-09-04); ledger: docs/research/events/china-retaliation-suspension-expiry-2026-12-31.md.",
-  },
-  {
-    id: "ercot-data-center-audit-filing-2026-12-10",
-    kind: "sector",
-    title: "ERCOT Batch Zero data-center audit filing (target) — Texas interconnection pause",
-    date: "2026-12-10",
-    status: "estimate",
-    source:
-      "NEWS: Utility Dive, 'ERCOT aims to complete Texas governor's data center audit by December' — ERCOT SVP of regulatory policy and general counsel Chad Seely at a PUCT open meeting on 2026-08-20, quoted verbatim: 'Our goal is to head toward a December 10 filing'. A stated internal goal, not a regulatory deadline — confirmed against the primary this event's initial research reached: Abbott's 2026-08-03 directive at gov.texas.gov orders the audit completed 'before any data center project moves forward' but names NO completion date, and ERCOT's own estimate of the verification process is 'several months, but less than nine months' from August. What lands on 12-10 is now specified: two reports (Batch Zero Eligibility Verification + Community Impact Review) into PUCT Docket 59220, taken up at the 2026-12-17 PUCT open meeting. Still estimate: no PUCT primary was reachable (interchange.puc.texas.gov and puc.texas.gov both failed TLS validation on 2026-09-02, after 503s on 08-19 and a TLS failure on 08-24), so the docket number is newsletter-sourced and no filing states the 12-10 date. ERCOT market notices at ercot.com WERE reached, checked 2026-09-02",
-    impact: "medium",
-    symbols: [],
-    notes:
-      "The date that actually gates the Texas data-center pause, which is currently the only dated, quantified DOWNWARD revision to AI-driven load growth on this calendar. On 2026-08-03 Governor Abbott ordered PUCT and ERCOT to run a 'comprehensive verification and audit of all data centers advancing through ERCOT's interconnection process' before any additional data center may proceed, concluding that non-complying projects 'must be denied'; ERCOT holds ~474 GW of interconnection requests (~90% data centers, >5x its record peak demand), with ~300 projects of 75 MW or larger inside the Batch Zero process. The August-2026 EIA STEO priced the consequence immediately, cutting its Texas 2027 electricity-load-growth forecast from 14% to 6% in a single month. Why it matters to this book: docs/research/ai-energy-constraint.md names ERCOT and PJM as the only two deregulated markets where the AI-power windfall accrues, and its frontier map assumes load growth is the binding input. CORRECTED by this event's initial research (2026-09-02): this filing is NOT 'the checkpoint at which the queue reopens or stays shut' as first filed — it is NECESSARY BUT NOT SUFFICIENT. The audit must complete before any data center advances, but the Batch Zero STUDY that actually classifies and energizes loads has already lost its 2027-04-09 deadline (Seely, 2026-08-20: 'We will not have the study done by April 9, 2027 ... we're still working on what that new timeline might be'), so no branch reopens the ERCOT queue in 2026. ERCOT has also missed both dated milestones set under this audit — the 08-07 classification deadline (M-A080326-01) and the 08-31 conditional classifications the PUCT itself ordered on 08-20 (M-A080326-03, 'ERCOT requires additional time'). Tiered `medium`, not `high`: it is a filing against a self-set goal with no statutory deadline, easily slipped, and it reprices no tracked name directly (`symbols: []` — the channel to CRWV is siting and narrative, not revenue). Sits two days after the December STEO (12-08) and on CPI day (12-10). Discovered during the eia-steo-2026-09-09 initial research (2026-09-02). DOCKET CORRECTION (puct-batch-zero-report-open-meeting-2026-12-17 initial research, 2026-09-02): the 'Docket 59220' this entry's source carries is WRONG — 59220 is the Crusoe/FGE Goodnight 1/Ensign net-metering case, ordered 2026-07-23 (525.5 MW curtailment obligation behind a 265.5 MW wind farm, the first SB 6 test case). ERCOT's Batch Zero filings run under 59142, where it filed three good-cause exceptions on 2026-08-10 and where interchange document 59142_20_1620380.PDF ('ERCOT Large Load Batch Study Update') sits; the December reports most plausibly land there. The error came from a single newsletter, which is itself a reason to keep the 12-17 agenda item at estimate grade.",
   },
   {
     id: "g20-fmcbg-bangkok-2026-10-15",
@@ -1638,19 +1637,6 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "THE LAST PRE-DEADLINE VENUE, AND THE REASON THE 12/31 LEG READS DIFFERENTLY FROM THE 11/10 ONE. It sits 17 days before china-retaliation-suspension-expiry-2026-12-31 and 34 days after us-china-tariff-truce-expiry-2026-11-10 — so for the December leg all three venues Bessent named (trump-xi-summit-2026-09-24, apec-leaders-shenzhen-2026-11-18, this) fall before the clock they would extend, the inverse of the November leg's problem where two of three land after it. Reporting as of 2026-09-02 describes Trump and Xi as scheduled to meet in Washington in September, Shenzhen in November and here in December; that ladder is what makes a lapse-by-inattention on 12/31 unlikely and keeps that event a watch rather than a hedge. Day 1 of the two-day window per house convention. Estimate widens caution only. Discovered during the china-retaliation-suspension-expiry-2026-12-31 initial research (2026-09-04). ITS OWN INITIAL RESEARCH (2026-09-04) ADDS TWO THINGS. First, a G20 summit has NO price channel of its own — the only two in the modern sample that moved US equities did so through a Trump-Xi bilateral on the sidelines (Buenos Aires 2018-12-01: S&P +1% on 12-03, then fully round-tripped 12-04 on the 'Tariff Man' walk-back, Dow -799; Osaka 2019-06-29: S&P +0.77% to a record 2,964.33 on 07-01), so the base rate is n=2 for the bilateral and n=0 for the summit. Second, the DATE IS THE HAZARD: ten tracked events sit within +/-5 days (fomc-2026-12-09, cpi-2026-12-10, ercot-data-center-audit-filing-2026-12-10, government-funding-deadline-2026-12-11, cr-expiry-2026-12-11, ppi-2026-12-15, pjm-capacity-auction-2026-12, import-export-prices-2026-12-17, puct-batch-zero-report-open-meeting-2026-12-17, opex-2026-12-18), plus AVGO's Q4 FY26 print listed by aggregators at 2026-12-10 and NOT carried in earnings-calendar.ts — so never attribute a 12-14/15 tape move to this summit. Multilateral side is fracturing (China dissented from four paragraphs of the US chair's own Asheville statement 2026-09-01; South Africa disinvited, Poland added; Putin 'may or may not attend'), which lowers the odds of the joint deliverable that is the sole mechanism by which this could move prices. Ledger: docs/research/events/g20-miami-2026-12-14.md. DUPLICATE RESOLVED INTO THIS ENTRY (2026-09-04): the same summit was filed twice on the same day by two initial-research sessions that discovered it independently — this entry (from china-retaliation-suspension-expiry-2026-12-31) and g20-summit-doral-2026-12-14 (from apec-leaders-shenzhen-2026-11-18). event-scan-validation.mjs checks for duplicate IDS, not duplicate EVENTS, so nothing caught it. This id survives on three counts: it already carries the merged ledger and a closed tracking issue, its date rests on a treasury.gov primary rather than Wikipedia, and it matches the host's own branding ('G20 Miami 2026'). The retired entry's one non-overlapping fact is preserved here: SCMP (2026-09-02) ties Trump's APEC Shenzhen attendance to whether Xi agrees to come to Doral — a quid pro quo pointing from this summit BACK to apec-leaders-shenzhen-2026-11-18, not forward.",
   },
   {
-    id: "puct-batch-zero-report-open-meeting-2026-12-17",
-    kind: "sector",
-    title: "PUCT open meeting — ERCOT Batch Zero audit reports taken up",
-    date: "2026-12-17",
-    status: "estimate",
-    source:
-      "NEWS: Global Data Center Hub places a 'PUCT open meeting presentation' of ERCOT's two Batch Zero audit reports on 2026-12-17, corroborated in shape by Utility Dive's account of ERCOT SVP/GC Chad Seely at the 2026-08-20 PUCT open meeting describing delivery 'a week prior to the PUCT's December open meeting'. THE MEETING DATE IS NOW CORROBORATED (this event's initial research, 2026-09-02): ercot.com/committees/puct lists 'Dec 17, 2026' and ercot.com/calendar/12172026-PUCT-Meeting gives 9:30 AM, Travis Building Commissioners Hearing Room 7-100 — on a verified every-other-Thursday cadence (Nov 05, Nov 19, Dec 03, Dec 17), and it is the last PUCT meeting of 2026 (next 2027-01-14). THE AGENDA ITEM IS NOT: it rests on one newsletter, whose 'Docket 59220' attribution that research REFUTED (59220 is the Crusoe/FGE Goodnight 1/Ensign net-metering case ordered 2026-07-23; ERCOT's Batch Zero filings run under 59142). Still estimate, and still no PUCT primary — www.puc.texas.gov, interchange.puc.texas.gov and ftp.puc.texas.gov all failed TLS chain validation, the fourth consecutive session unable to reach one (503s 2026-08-19, TLS 2026-08-24, TLS 2026-09-02). ERCOT's own calendar and market-notice archive WERE reached, checked 2026-09-02",
-    impact: "low",
-    symbols: [],
-    notes:
-      "The venue where ERCOT's 2026-12-10 filing actually gets taken up — proposed by the ercot-data-center-audit-filing-2026-12-10 initial research (2026-09-02) because that ledger's central finding is that the 12-10 filing is NECESSARY BUT NOT SUFFICIENT: Governor Abbott's 2026-08-03 directive (gov.texas.gov, primary) bars data centers from advancing until the audit completes but sets no deadline, while the Batch Zero STUDY that actually energizes loads has already lost its 2027-04-09 deadline on ERCOT's own record. So 12-10 delivers two reports (Batch Zero Eligibility Verification + Community Impact Review) and this meeting is the first moment a body with authority responds to them. Tiered `low`, not `medium`: no order is expected here, `symbols: []`, and a low tier keeps the cadence cheap (every 30d until D-15). Filed rather than carried as a watch trigger — unlike the Georgia PSC hearings, which were sub-steps of their own docket BEFORE its tracked date — because this is a different body acting on the tracked event's output AFTER it, in a week clean of the 12-10 corridor (FOMC 12-09, CPI 12-10, CR expiry 12-11, PPI + PJM auction 12-15) where a reaction is at least legible. The 2027-04-09 study deadline is deliberately NOT filed: ERCOT has said it will not be met. AMENDED by this event's own initial research (2026-09-02), which kept the `low` tier but corrected two of the claims above. (1) 'No order is expected here' is too strong: the PUCT GRANTED all three of ERCOT's good-cause exceptions from its 2026-08-20 open meeting, so this venue orders when a filing ASKS for something — the tell is whether the 12-10 filing requests relief (most plausibly a replacement for the abandoned 2027-04-09 study timeline), which would make 12-17 a decision date and reopen the tier. (2) The week is NOT clean: the +/-5d corridor holds ppi-2026-12-15, pjm-capacity-auction-2026-12, import-export-prices-2026-12-17 (same morning, 08:30 ET) and opex-2026-12-18 triple witching the next session, and the meeting opens 10:30 ET mid-session — cleaner than the 12-10 corridor, but evaluate on filings, never on price. Structural addition: 12-17 is the LAST PUCT meeting of 2026, so any slip costs 28 days (next meeting 2027-01-14).",
-  },
-  {
     id: "nerc-computational-load-standards-2026-12-31",
     kind: "sector",
     title:
@@ -1690,5 +1676,18 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "Closes a real gap on the supply side of the channel that is currently setting this calendar's inflation risk. The calendar tracks oil supply (opec-plus-meeting-2026-09-06, opec-jmmc-68th-2026-10-04, eia-steo-2026-09-09, gastech-2026-09-14) but carries no entry on the Iran-sanctions track, even though the Strait of Hormuz conflict is what took Brent from ~$87 on 2026-08-26 to $99.38 intraday on 2026-09-03 after Iran struck Jordan, Bahrain and Kuwait in retaliation for US strikes. THE BASE CASE IS PROCEDURAL and `medium` reflects that, not the consequence if the signal breaks — the same framing the OPEC+ entry uses. What would make it break: a veto fight or a lapsed mandate becomes a dated escalation marker in a channel with no other dated markers, and it lands the day AFTER the Sep-16 FOMC and the day the communications blackout lifts, so any market effect reaches a tape with no policy interpretation available. NOTE THE TWO DIFFERENT DATES: 09-17 is the reported vote, 09-26 is the mandate's own expiry — a vote that slips still leaves a hard deadline inside the same month, and the expiry falls during the UN General Assembly leaders' week. Discovered during the jobs-2026-09-04 pulse-check adjacency sweep (2026-09-04), whose ledger records the energy escalation that motivated the search. A later pulse should read the UN Security Council programme of work for September 2026 direct and promote or correct the 09-17 date on that primary.",
+  },
+  {
+    id: "umich-sentiment-prelim-2026-09-11",
+    kind: "macro-print",
+    title: "University of Michigan consumer sentiment — preliminary (Sep 2026)",
+    date: "2026-09-11",
+    status: "confirmed",
+    source:
+      'UMICH: sca.isr.umich.edu states verbatim "Next data release: Friday, September 11, 2026 for Preliminary September data at 10am ET" (fetched direct 2026-09-04, read back verbatim-only on a second pass); corroborated by the Surveys of Consumers\' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628), whose PDF text layer lists "September 11 September Prelim" and "September 25 September Final"',
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep; promoted to confirmed by its own initial research, which fetched the publisher's next-release line (with a time) direct. Retiered low → medium (docs/research/events/treasury-20y-bond-2026-09-15.md, same-day discovery): the year-ahead INFLATION-EXPECTATIONS subcomponent, not the headline, is the live question this session — Waller's 2026-09-03 speech made his September hold explicitly conditional ('if inflation comes in hot, I would consider a rate hike') the same week Brent touched $99.38 intraday and ISM Services Prices printed 72.6 (highest since August 2022, respondents naming Iran and fuel); this survey is the cleanest same-day read on whether that shock is de-anchoring households. It also lands ON cpi-2026-09-11 and mts-august-2026-09-11, two sessions before treasury-20y-bond-2026-09-15 and three before fomc-2026-09-16, inside the 2026-09-05 blackout — so the expectations read, CPI and the deficit print all hit one session no Fed participant may respond to. That expectations-component claim is UNMEASURED here — a close-out or a future initial research should measure it rather than inherit it.",
   },
 ];
