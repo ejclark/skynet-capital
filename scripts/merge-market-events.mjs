@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Custom git merge driver for src/domain/market-events-data.ts's MARKET_EVENTS array.
 //
-// WHY (docs/LESSONS.md, 2026-09-04): 13+ open research PRs each append one new entry to this one
+// WHY (#1324, measured 2026-09-04): 13+ open research PRs each append one new entry to this one
 // shared array. Merging any single one shifts the surrounding lines enough that every other still-
 // open PR conflicts against the new base — not because their content actually disagrees, but
 // because git's line-based 3-way merge can't tell "two independent inserts at the same spot" from
@@ -25,9 +25,18 @@
 //   git config merge.market-events.driver 'node scripts/merge-market-events.mjs %O %A %B'
 //   git merge origin/main
 //
+// Registration is not manual: scripts/register-merge-drivers.sh writes the git config above, and
+// is called from scripts/setup-commit-signing.sh (the SessionStart hook every session runs) and
+// scripts/worktree-setup.sh. .git/config can't be committed, so an unregistered driver was the
+// default state for a year — see that script's header for the measured cost (#1324).
+//
 // Invoked by git as: merge-market-events.mjs <ancestor> <ours> <theirs>
-// Exit 0 and %A is the merged result → clean. Exit nonzero → git reports this file as conflicted
-// (leaving %A as git's own failed merge attempt, same as if no driver were configured).
+// Exit 0 and %A is the merged result → clean. Exit nonzero → git reports this file as conflicted.
+// On that nonzero path this driver writes ordinary `<<<<<<<` conflict markers into %A itself: with
+// a custom driver git does NOT run its own merge first (%A arrives holding plain "ours"), so
+// without this a refusal would leave a marker-free file that reads as clean to anything scanning
+// for markers — including this repo's own conflict-repair lane.
+import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const MARKER = "export const MARKET_EVENTS: readonly MarketEvent[] = [";
@@ -119,6 +128,37 @@ function pickChanged(a, b, base) {
   return a === base ? b : a;
 }
 
+/** Give up on the object-level merge, but first leave %A holding what git itself would have
+ *  produced: a line-merged file with `<<<<<<<` / `=======` / `>>>>>>>` markers. Always returns 1
+ *  so git records the file as conflicted. If `git merge-file` cannot run at all, %A is left as
+ *  the caller found it — a worse outcome, never a crash on top of an already-failing merge. */
+function refuse(ancestorPath, oursPath, theirsPath) {
+  const run = spawnSync(
+    "git",
+    // -L labels current/base/other, in that order; -p sends the result to stdout so a failed run
+    // can't half-write the file we're about to hand back to git.
+    [
+      "merge-file",
+      "-p",
+      "-L",
+      "ours",
+      "-L",
+      "base",
+      "-L",
+      "theirs",
+      oursPath,
+      ancestorPath,
+      theirsPath,
+    ],
+    { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 },
+  );
+  // Exit status is the number of conflicts (0 = line-clean), or negative/null on a real failure.
+  if (run.status !== null && run.status >= 0 && typeof run.stdout === "string") {
+    writeFileSync(oursPath, run.stdout);
+  }
+  return 1;
+}
+
 function main([ancestorPath, oursPath, theirsPath]) {
   const base = parseFile(ancestorPath);
   const ours = parseFile(oursPath);
@@ -127,8 +167,10 @@ function main([ancestorPath, oursPath, theirsPath]) {
   // The surrounding file (imports, comments, type annotation) must agree, or this is out of scope
   // for an array-entry merge — bail to a normal conflict rather than guess about unrelated edits.
   const agrees = (a, b, c) => a === b || a === c || b === c;
-  if (!agrees(ours.prefix, theirs.prefix, base.prefix)) return 1;
-  if (!agrees(ours.suffix, theirs.suffix, base.suffix)) return 1;
+  if (!agrees(ours.prefix, theirs.prefix, base.prefix))
+    return refuse(ancestorPath, oursPath, theirsPath);
+  if (!agrees(ours.suffix, theirs.suffix, base.suffix))
+    return refuse(ancestorPath, oursPath, theirsPath);
 
   const baseById = new Map(base.entries.map((e) => [e.id, e.text]));
   const oursById = new Map(ours.entries.map((e) => [e.id, e.text]));
@@ -140,7 +182,7 @@ function main([ancestorPath, oursPath, theirsPath]) {
   const addedByTheirs = [];
   for (const id of allIds) {
     const result = resolveOne(id, baseById, oursById, theirsById);
-    if (result === CONFLICT) return 1;
+    if (result === CONFLICT) return refuse(ancestorPath, oursPath, theirsPath);
     if (result === null) continue;
     if (!baseById.has(id)) {
       if (oursById.has(id) && !theirsById.has(id)) addedByOurs.push(result);
@@ -166,4 +208,15 @@ function main([ancestorPath, oursPath, theirsPath]) {
   return 0;
 }
 
-process.exit(main(process.argv.slice(2)));
+const [ancestor, ours, theirs] = process.argv.slice(2);
+let status;
+try {
+  status = main([ancestor, ours, theirs]);
+} catch (error) {
+  // A parse failure (renamed marker, unbalanced literal, an entry with no string id) is still a
+  // merge git has to report on. Refuse loudly and with markers rather than dying and leaving %A
+  // silently holding "ours".
+  process.stderr.write(`merge-market-events: ${error instanceof Error ? error.message : error}\n`);
+  status = refuse(ancestor, ours, theirs);
+}
+process.exit(status);
