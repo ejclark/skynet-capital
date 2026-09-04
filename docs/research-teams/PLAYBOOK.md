@@ -141,6 +141,15 @@ in doc, which every future pass's prompts should be written from.
   on origin fails closed (`docs/grind/README.md` → "Verify the outcome mechanically"). The
   transferable lesson: when one lane fixes a failure class, grep the other lanes for the same
   shape before calling the fix done.
+- **2026-09-04 — when a tool says "not found", distinguish "re-reads and rejects" from "never
+  re-reads" with one probe before bisecting content.** `Workflow({name: "grind"})` failed after
+  three successive meta fixes; each fix was a plausible hypothesis, and each was untestable
+  because the registry is built once per session and frozen. One probe — a fresh-named copy of a
+  known-good script dropped into the directory — showed it never re-reads, which turned the third
+  hypothesis (the original `+` concatenation) from unverifiable into consistent-with-every-fact and
+  ended the bisect. Rule: before iterating on content, spend one action establishing whether the
+  observer can see content change at all. (And prefer an invocation path that surfaces the real
+  error — `scriptPath` here — over one that only says "not found".)
 - **2026-09-04 — differentiated-role fan-out (this playbook) is not the same failure mode
   `../TECHNIQUES.md` warns about, but say so explicitly or the caveat reads as a blanket objection.**
   Recorded above under "When multi-team fan-out earns its cost" so the next reader doesn't have to
