@@ -39,14 +39,27 @@ describe("curriculum", () => {
     expect(courseComplete(stocks, all)).toBe(true);
   });
 
-  it("names the course a milestone graduates only when it is that course's LAST milestone", () => {
-    expect(graduatingLevel("first-buy")).toBeUndefined(); // course 100's first milestone
-    expect(graduatingLevel("first-sell")).toBe(100); // course 100's last
-    expect(graduatingLevel("first-cash-secured-put")).toBeUndefined(); // course 200's first
-    expect(graduatingLevel("first-covered-call")).toBe(200); // course 200's last
-    expect(graduatingLevel("first-long-put")).toBeUndefined(); // course 300's first
-    expect(graduatingLevel("first-long-call")).toBe(300); // course 300's last, the top rung
-    expect(graduatingLevel("not-a-real-milestone")).toBeUndefined();
+  it("names the course a milestone graduates only when it is that course's LAST milestone AND the whole course is complete", () => {
+    const course100 = new Set(["first-buy", "first-sell"]);
+    expect(graduatingLevel("first-buy", course100)).toBeUndefined(); // course 100's first milestone
+    expect(graduatingLevel("first-sell", course100)).toBe(100); // course 100's last, and complete
+
+    const course200 = new Set([...course100, "first-cash-secured-put", "first-covered-call"]);
+    expect(graduatingLevel("first-cash-secured-put", course200)).toBeUndefined(); // course 200's first
+    expect(graduatingLevel("first-covered-call", course200)).toBe(200); // course 200's last, and complete
+
+    const course300 = new Set([...course200, "first-long-put", "first-long-call"]);
+    expect(graduatingLevel("first-long-put", course300)).toBeUndefined(); // course 300's first
+    expect(graduatingLevel("first-long-call", course300)).toBe(300); // the top rung, complete
+
+    expect(graduatingLevel("not-a-real-milestone", course300)).toBeUndefined();
+  });
+
+  it("refuses to call it a graduation when the course's last milestone is earned alone — a real gap, not a false celebration", () => {
+    // Seeded/imported history can hold a course's LAST milestone without an earlier one
+    // (`unlockedCodes`'s own doc: fills don't have to arrive in ladder order).
+    expect(graduatingLevel("first-covered-call", new Set(["first-covered-call"]))).toBeUndefined();
+    expect(graduatingLevel("first-sell", new Set(["first-sell"]))).toBeUndefined();
   });
 
   it("sums points and climbs ranks as milestones complete", () => {

@@ -147,17 +147,24 @@ export function courseComplete(course: Course, completed: ReadonlySet<string>): 
 
 /**
  * The course a milestone GRADUATES — undefined unless `milestoneId` is that course's LAST
- * milestone. Every course's rungs fill in ladder order (`progression.ts`'s `unlockedCodes` opens a
- * code only once the one before it is earned), so earning a course's last milestone always means
- * every milestone before it in that same course is already earned too — there is no path to "302
- * earned, 301 still open." That makes this the one, unambiguous graduation moment per course:
- * #469 slice 4's ceremony + companion congratulation key off it (`progression-service.ts`'s
- * `acknowledge`, `onboarding-api-routes.ts`'s `freshGraduation`).
+ * milestone AND `completed` (the participant's REAL earned set, re-derived from fills — never a
+ * client-submitted list) proves the whole course, not just this one code. `unlockedCodes` gating
+ * the ticket does NOT mean fills arrive in ladder order: seeded/imported history is explicitly
+ * allowed to have gaps (`progression.ts`'s `unlockedCodes` doc — "a trade you have actually done
+ * is never locked away from you"), so a member can hold a first-covered-call fill with no
+ * first-cash-secured-put one. Without the completeness check, that reads as "graduated course 200"
+ * and fires a false ceremony + companion congratulations — exactly the "flourish that implies
+ * something false" this house never allows. #469 slice 4's ceremony + companion congratulation key
+ * off this (`progression-service.ts`'s `acknowledge`, `onboarding-api-routes.ts`'s
+ * `freshGraduation`).
  */
-export function graduatingLevel(milestoneId: string): CourseLevel | undefined {
+export function graduatingLevel(
+  milestoneId: string,
+  completed: ReadonlySet<string>,
+): CourseLevel | undefined {
   for (const course of COURSES) {
     const last = course.milestones[course.milestones.length - 1];
-    if (last?.id === milestoneId) return course.level;
+    if (last?.id === milestoneId && courseComplete(course, completed)) return course.level;
   }
   return undefined;
 }

@@ -98,9 +98,12 @@ export async function onboardingView(
     ? TRADE_TYPES.find((t) => t.code === progression.nextUp)
     : undefined;
   // The first still-celebrating earn that graduated a course — same "fresh, unclaimed" window the
-  // milestone banner itself uses, so this clears the instant the member claims it.
+  // milestone banner itself uses, so this clears the instant the member claims it. Checked against
+  // the REAL earned set (never just this one milestone's position) — seeded/imported history can
+  // hold a course's last milestone without an earlier one (`graduatingLevel`'s own doc).
+  const earnedIds = new Set((progression?.earned ?? []).map((m) => m.milestoneId));
   const graduatedLevel = (progression?.celebrating ?? [])
-    .map((m) => graduatingLevel(m.milestoneId))
+    .map((m) => graduatingLevel(m.milestoneId, earnedIds))
     .find((level): level is CourseLevel => level !== undefined);
   const graduatedCourse = graduatedLevel && COURSES.find((c) => c.level === graduatedLevel);
   return {

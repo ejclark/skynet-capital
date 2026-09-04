@@ -123,7 +123,10 @@ describe("serveOnboardingApi", () => {
         resolveOwnerIds: () => ["human-joe"],
         resolveOwnerId: () => "human-joe",
         progression: progressionWith({
-          earned: [],
+          earned: [
+            { milestoneId: "first-cash-secured-put", code: "201", orderId: "o0", at: "2026-08-31" },
+            { milestoneId: "first-covered-call", code: "202", orderId: "o1", at: "2026-09-01" },
+          ],
           engagementEarned: [],
           celebrating: [
             { milestoneId: "first-covered-call", code: "202", orderId: "o1", at: "2026-09-01" },
@@ -143,9 +146,28 @@ describe("serveOnboardingApi", () => {
         resolveOwnerIds: () => ["human-joe"],
         resolveOwnerId: () => "human-joe",
         progression: progressionWith({
-          earned: [],
+          earned: [{ milestoneId: "first-buy", code: "101", orderId: "o1", at: "2026-09-01" }],
           engagementEarned: [],
           celebrating: [{ milestoneId: "first-buy", code: "101", orderId: "o1", at: "2026-09-01" }],
+        }),
+      }),
+    );
+    expect(view.account.freshGraduation).toBeUndefined();
+  });
+
+  it("names nothing when the course's last milestone is celebrating alone, without the earlier one — a gap, not a graduation", async () => {
+    const view = await body(
+      configWith({
+        resolveOwnerIds: () => ["human-joe"],
+        resolveOwnerId: () => "human-joe",
+        progression: progressionWith({
+          earned: [
+            { milestoneId: "first-covered-call", code: "202", orderId: "o1", at: "2026-09-01" },
+          ],
+          engagementEarned: [],
+          celebrating: [
+            { milestoneId: "first-covered-call", code: "202", orderId: "o1", at: "2026-09-01" },
+          ],
         }),
       }),
     );
