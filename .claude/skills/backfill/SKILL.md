@@ -67,18 +67,19 @@ never re-derives the target from a fresh scan.
 
 Fan it with `{kind: "skill", name: "backfill"}`. This drill needs `effort: "high"` (judging
 correct-vs-buggy behavior before writing a spec is real work), `isolation: true` (step 1 does its
-own checkout), and a trailing outcome check. Stage a list longer than ~3 files in waves; each wave
-lands as **one** PR and `spec-gap-scan --update` runs once after it (`docs/COACHES.md` → the WIP
-limit counts open PRs, not dispatches).
+own checkout), `verifyBranch: true` (a "done" with nothing on origin fails closed), and an honest
+`itemSource` — grind refuses to run without one; the gate's scan is the answer. The envelope
+check is automatic (grind's step 0). Stage a list longer than ~3 files in waves; each wave lands
+as **one** PR and `spec-gap-scan --update` runs once after it (`docs/COACHES.md` → the WIP limit
+counts open PRs, not dispatches).
 
 ```json
 {
   "items": ["src/companion/companion-help.ts", "src/storage/participant-state.ts"],
-  "steps": [
-    { "kind": "skill", "name": "backfill", "args": "{item}", "effort": "high" },
-    { "kind": "script", "label": "verify-push", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
-  ],
-  "isolation": true
+  "itemSource": "node scripts/spec-gap-scan.mjs output, this wave",
+  "steps": [{ "kind": "skill", "name": "backfill", "args": "{item}", "effort": "high" }],
+  "isolation": true,
+  "verifyBranch": true
 }
 ```
 

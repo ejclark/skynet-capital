@@ -69,21 +69,21 @@ never re-derives the target from a fresh scan — a gate's output *is* the gate 
 ## Calling convention (grind)
 
 Fan it with `{kind: "skill", name: "bury"}`. This drill needs `effort: "high"` (judging each item is
-the hard part — grind's cheap default is strictly weaker), `isolation: true` (step 1 does its own
-checkout), a trailing outcome check, and the item list **pre-filtered against `envelope.json`**
-(`node scripts/envelope-scan.mjs --check <path>` per candidate) so no agent is spent on a target that
-was never going to land. Fan as wide as the list goes, but two items must never name a symbol in the
-same file, the wave lands as **one** PR, and `dead-scan --update` runs once after it
+the hard part), `isolation: true` (step 1 does its own checkout), `verifyBranch: true` (a "done"
+with nothing on origin fails closed), and an honest `itemSource` — grind refuses to run without
+one, and the gate's own scan is the only honest answer here. The envelope check is automatic
+(grind's step 0 reads the `file` field out of each item), so no hand pre-filter. Fan as wide as
+the list goes, but two items must never name a symbol in the same file (worktrees run in
+parallel), the wave lands as **one** PR, and `dead-scan --update` runs once after it
 (`docs/COACHES.md` → the WIP limit counts open PRs, not dispatches).
 
 ```json
 {
   "items": [{ "file": "src/a.ts", "symbol": "unusedThing" }],
-  "steps": [
-    { "kind": "skill", "name": "bury", "args": "{item}", "effort": "high" },
-    { "kind": "script", "label": "verify-push", "command": "git ls-remote --exit-code --heads origin {prev.branch}" }
-  ],
-  "isolation": true
+  "itemSource": "node scripts/dead-scan.mjs (knip) output, this wave",
+  "steps": [{ "kind": "skill", "name": "bury", "args": "{item}", "effort": "high" }],
+  "isolation": true,
+  "verifyBranch": true
 }
 ```
 
