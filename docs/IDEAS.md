@@ -26,6 +26,15 @@ fix is an environment setting in the Claude Code on the web environment config (
 setup), which is Eric's — not a repo change.
 _(src: Claude · while: retro on a remote session's dependency-install detour, 2026-09-04)_
 
+### Merge root and `app/` into one npm workspace
+
+Two npm trees means two `npm ci` calls in the `verify` CI job (root + `app/`) and, before today's
+cache fix, one of them silently re-fetching from the network on almost every run. An npm workspace
+(one lockfile, one install) would remove the second invocation entirely instead of just caching it
+correctly — but it's a real migration: build tooling, the Dockerfile, and every CI job that installs
+either tree would need re-checking, not a same-session fix.
+_(src: Claude · while: retro on the CI verify job's ~7.5-minute install, 2026-09-04)_
+
 ### A screenshot harness for the React shell (`shoot:app`)
 
 `shoot:standings` / `shoot:login` shoot the legacy server-rendered pages; nothing shoots `/app/*`.

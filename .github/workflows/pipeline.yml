@@ -70,6 +70,16 @@ jobs:
         with:
           node-version-file: .nvmrc   # .nvmrc is the single source of truth — never pin here
           cache: npm
+          # This job is the only one that also installs app/ (a separate package, its own
+          # lockfile — not an npm workspace). Without listing BOTH lockfiles here, the cache key
+          # only ever hashes the root one: a PR that doesn't touch root's package-lock.json gets a
+          # cache HIT on that key, and actions/cache only re-saves on a MISS — so every package
+          # `npm ci --prefix app` fetches during a hit run is silently discarded at job end. The
+          # symptom (docs/LESSONS.md, 2026-09-04): "Install app dependencies" paying a near-full
+          # network fetch for its ~130 packages on almost every run, run after run, never warming.
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
