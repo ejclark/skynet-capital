@@ -146,6 +146,20 @@ export function courseComplete(course: Course, completed: ReadonlySet<string>): 
 }
 
 /**
+ * Every course's LAST milestone id → the level it MIGHT graduate (position alone, no proof).
+ * A cheap pre-check for a caller deciding whether `graduatingLevel`'s real ledger read is worth
+ * doing at all — `progression-service.ts`'s `acknowledge` skips reading the fill + tag ledgers
+ * entirely for an ordinary claim (an id that could never graduate anything, or a course already
+ * banked graduated). Never a substitute for `graduatingLevel`'s own completeness check.
+ */
+export const COURSE_FINAL_MILESTONES: ReadonlyMap<string, CourseLevel> = new Map(
+  COURSES.flatMap((c) => {
+    const last = c.milestones[c.milestones.length - 1];
+    return last ? [[last.id, c.level] as const] : [];
+  }),
+);
+
+/**
  * The course a milestone GRADUATES — undefined unless `milestoneId` is that course's LAST
  * milestone AND `completed` (the participant's REAL earned set, re-derived from fills — never a
  * client-submitted list) proves the whole course, not just this one code. `unlockedCodes` gating

@@ -1,6 +1,7 @@
 import { type CheckResult, gradeCheck } from "../domain/comprehension.js";
 import { checkFor } from "../domain/comprehension-checks.js";
 import {
+  COURSE_FINAL_MILESTONES,
   COURSES,
   type CourseLevel,
   graduatingLevel,
@@ -244,17 +245,27 @@ export function createProgressionService(deps: ProgressionServiceDeps): Progress
       if (!deps.store || ids.length === 0) return [];
       const record = deps.store.get(participantId);
       const held = record?.acknowledged ?? [];
+      const alreadyGraduated = new Set(record?.graduated ?? []);
+      // The ledger re-read below is skipped for the common claim (an ordinary milestone, or a
+      // course level already banked) — only a course's LAST id, not yet graduated, can possibly
+      // change the answer, so nothing is lost by checking that first and cheaply.
+      const mightGraduate = ids.some((id) => {
+        const level = COURSE_FINAL_MILESTONES.get(id);
+        return level !== undefined && !alreadyGraduated.has(level);
+      });
       // A course level graduates the FIRST time one of its ids is acknowledged here, AND ONLY IF
       // the REAL ledgers prove the whole course, not just this one id — an acked id is a client
       // claim, never trusted alone (same posture as everything else this service reads back).
       // Re-derived fresh rather than trusted from a stale `view()`: acknowledge can be the very
       // first call this service sees for a participant.
-      const journal = await deps.readFills(participantId);
-      const tags = await deps.readTags(participantId);
-      const earnedIds = new Set(
-        deriveEarned(collapseActivity([...journal]), tags).map((m) => m.milestoneId),
-      );
-      const alreadyGraduated = new Set(record?.graduated ?? []);
+      const earnedIds = mightGraduate
+        ? new Set(
+            deriveEarned(
+              collapseActivity([...(await deps.readFills(participantId))]),
+              await deps.readTags(participantId),
+            ).map((m) => m.milestoneId),
+          )
+        : new Set<string>();
       const fresh = [
         ...new Set(
           ids

@@ -1,4 +1,5 @@
 import {
+  COURSE_FINAL_MILESTONES,
   COURSES,
   courseComplete,
   graduatingLevel,
@@ -60,6 +61,14 @@ describe("curriculum", () => {
     // (`unlockedCodes`'s own doc: fills don't have to arrive in ladder order).
     expect(graduatingLevel("first-covered-call", new Set(["first-covered-call"]))).toBeUndefined();
     expect(graduatingLevel("first-sell", new Set(["first-sell"]))).toBeUndefined();
+  });
+
+  it("maps every course's last milestone id to its level — the cheap pre-check acknowledge() uses", () => {
+    expect(COURSE_FINAL_MILESTONES.get("first-sell")).toBe(100);
+    expect(COURSE_FINAL_MILESTONES.get("first-covered-call")).toBe(200);
+    expect(COURSE_FINAL_MILESTONES.get("first-long-call")).toBe(300);
+    expect(COURSE_FINAL_MILESTONES.get("first-buy")).toBeUndefined(); // not a course's last
+    expect(COURSE_FINAL_MILESTONES.size).toBe(COURSES.length);
   });
 
   it("sums points and climbs ranks as milestones complete", () => {

@@ -139,4 +139,35 @@ describe("progression service — graduation ceremonies (#469 slice 4)", () => {
     });
     expect(await svc.acknowledge("ann", ["first-covered-call"])).toEqual([]);
   });
+
+  it("skips the ledger reads entirely for an ordinary claim that could never graduate anything", async () => {
+    let reads = 0;
+    const svc = createProgressionService({
+      readFills: () => {
+        reads++;
+        return Promise.resolve([]);
+      },
+      readTags: () => Promise.resolve([]),
+      store: new ProgressionStore(join(dir, "progression.json")),
+    });
+    // "first-buy" is course 100's FIRST milestone, never its last — no read is worth doing.
+    expect(await svc.acknowledge("ann", ["first-buy", "first-message"])).toEqual([]);
+    expect(reads).toBe(0);
+  });
+
+  it("skips the ledger reads when the only graduating id is already banked", async () => {
+    let reads = 0;
+    const store = new ProgressionStore(join(dir, "progression.json"));
+    store.set("ann", { graduated: [100] });
+    const svc = createProgressionService({
+      readFills: () => {
+        reads++;
+        return Promise.resolve([]);
+      },
+      readTags: () => Promise.resolve([]),
+      store,
+    });
+    expect(await svc.acknowledge("ann", ["first-sell"])).toEqual([]);
+    expect(reads).toBe(0);
+  });
 });
