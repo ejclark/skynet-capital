@@ -46,6 +46,7 @@ import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
+import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
 import {
   bootMissionControl,
@@ -64,7 +65,6 @@ import { auditStore, decisionSink, logResult, traderMode } from "./autonomous-si
 // adding a claim to the Prospector without adding it here is a silent no-op.
 const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
-const _EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 
 async function main(): Promise<void> {
@@ -107,7 +107,9 @@ async function runLive(): Promise<void> {
   // registry would also have qualified.
   const hardcoreRoster = resolveRoster(enabled, bootControls);
   const roster = hardcoreRoster.personas;
-  const { bots: loaded, sharedAccount } = loadBots(roster, process.env);
+  const { bots: fromEnv, sharedAccount } = loadBots(roster, process.env);
+  // Store credential first, env as the break-glass fallback — see autonomous-boot-credentials.ts.
+  const loaded = await primeBotCredentials(credentials, bootControls, fromEnv);
   for (const id of sharedAccount) {
     console.warn(
       `[creds] ${id} is trading the SHARED account (SKYNET_BOT_KEY) — its P/L is not separable from anything else already on that account.`,
@@ -151,9 +153,7 @@ async function runLive(): Promise<void> {
   }
 
   const dataCreds = bots[0]?.credentials;
-  if (!dataCreds) {
-    process.exit(1);
-  }
+  if (!dataCreds) process.exit(1);
   dataCredsPersonaId = bots[0]?.persona.id;
   // The live path (and ONLY the live path) runs the S2/E1 trade discipline: flat through every
   // print, defer non-urgent entries past the open. Deliberately absent from the offline replay
