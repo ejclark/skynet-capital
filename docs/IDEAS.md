@@ -1223,12 +1223,17 @@ _(src: Eric · while: reflecting on the day's research/grind work, 2026-09-04)_
 ### Report at the workflow-view altitude — a ledger over the session's workflow journals
 Eric, 2026-09-04, on the Background-tasks panel (workflow → phases → agent · model · tokens ·
 time): "That feels like the best altitude of all the views in terms of details I want to see
-and/or curate." Every recap and digest should speak that shape, and the data already exists: each
-`Workflow` run writes `journal.jsonl` under the session's `subagents/workflows/<run>/` with one
-result line per agent (label, model, tokens, duration, status). A workflow-ledger script under `scripts/` (house shape, `--candidate`-less: it reports, nothing ratchets)
-that folds those into one table — workflow · chore/phase · agents · model · tokens · wall-clock ·
-done/blocked — is the secretary digest's natural "what ran" tier, and the same table is what a
-session should print when a run completes instead of prose. Second half, the *curate* part: the
+and/or curate." Every recap and digest should speak that shape, and the data exists, but in three
+files, not one (corrected 2026-09-04 by #1352's interrogation run, which read six run directories
+on disk): `journal.jsonl` carries `{type, key, agentId, result}` only — no label, model, tokens or
+duration. Those live in `agent-<id>.meta.json` (`agentType`, `model`, worktree fields) and in each
+`agent-<id>.jsonl` transcript (per-message `usage`, ISO `timestamp`), which run 45–705 KB apiece.
+The whole run directory also sits under the *session's own* `~/.claude/projects/…`, so the digest
+Routine — a fresh CI session on another machine — cannot read it at all. A workflow-ledger script under `scripts/` (house shape, `--candidate`-less: it reports, nothing ratchets)
+that folds those three sources into one table — workflow · chore/phase · agents · model · tokens ·
+wall-clock · done/blocked — is still the secretary digest's natural "what ran" tier, but it is the
+*second* slice: what a session prints when a run completes should come from the run's own return
+value, which needs no file access and survives into an issue comment the digest can reach. Second half, the *curate* part: the
 panel's per-agent stop is the only steering today; the ledger could carry the outcome-check verdict
 and the routing label applied, so what Eric sees is also what he can send back ("re-run #1327 at
 xhigh", "un-board that item"). Rule of three already met — three hand-written status tables today.
