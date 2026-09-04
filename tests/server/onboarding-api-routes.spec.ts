@@ -90,14 +90,14 @@ describe("serveOnboardingApi", () => {
     expect(view.account).toBeUndefined();
   });
 
-  it("reads connect, first feedback and first trade from the ledgers, with the account block", async () => {
+  it("reads connect, first message and first trade from the ledgers, with the account block", async () => {
     const view = await body(
       configWith({
         resolveOwnerIds: () => ["sauron", "human-joe"],
         resolveOwnerId: () => "human-joe",
         progression: progressionWith({
           earned: [{ milestoneId: "first-buy", code: "101", orderId: "o1", at: "2026-09-01" }],
-          engagementEarned: [{ milestoneId: "first-feedback", at: "2026-09-01" }],
+          engagementEarned: [{ milestoneId: "first-message", at: "2026-09-01" }],
           nextUp: "102",
         }),
       }),

@@ -27,6 +27,225 @@ it. Prevention ranks, best first:
 
 ---
 
+### CI install times swung 10s to 300+s on the same ~570 packages — setup-node's cache has no restore-keys fallback
+
+- **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric: "3+ minutes to install node packages is highly suspicious; it shouldn't take
+  that long... I feel it should be less than a minute." Pulling real timing for `verify`'s two
+  install steps across 15 recent runs (via the new `ci-install-duration-scan.mjs`, itself shipped
+  this evening) showed the actual spread: root's step ranged 10s–304s, app's ranged 5s–255s, on the
+  same lockfiles the whole time. Sub-40s was already being hit repeatedly — the problem was never a
+  hard floor, it was that half the runs weren't getting anything close to it.
+- **ROOT CAUSE:** confirmed against a specific GitHub issue, not assumed: `actions/setup-node`'s
+  built-in `cache: npm` computes ONE exact-hash key and has no `restore-keys` fallback at all
+  (actions/setup-node#627, #1120). Any lockfile change anywhere — a dependency bump, or (as
+  happened three times this evening) the cache-key SHAPE itself changing — invalidates that single
+  key completely, with zero partial reuse of the rest of `~/.npm`. Every such change costs a full
+  cold install for every package, not just the ones that actually changed, and there is no middle
+  ground between "exact hit" and "total miss" the way there would be with a prefix fallback.
+- **PREVENTION:** script — `verify`, `arm-auto-merge`, and `deploy` all drop `setup-node`'s
+  implicit `cache: npm` for an explicit `actions/cache@v4` step with `restore-keys:
+  npm-${{ runner.os }}-` alongside the exact key. A future lockfile change now degrades to "mostly
+  warm, fetch the delta" instead of "cold, refetch everything" — the actual lever for consistency,
+  not a package-manager swap or a bigger runner, both of which were on the table and didn't survive
+  this root-causing.
+- **SIDE QUESTS:** this migration itself pays one more one-time full-cost run — the key FORMAT
+  changed (`npm-${{ runner.os }}-...` replacing setup-node's internal `node-cache-...` naming), so
+  nothing under the new key exists yet either. Consistent with the rest of tonight: a real, paid,
+  one-time cost in exchange for a category change in the steady state, not a repeat of the same gap.
+
+---
+
+### Eight open PRs sat red on commitlint at once — nothing in the local path ever ran the same check CI does
+
+- **SHA:** n/a (fix on `scripts/ship.sh` and `.github/prompts/event-research.md`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric, scanning open PRs after two unrelated fixes: "there are many failing due to
+  commit lint failures. This should be caught before committing to prevent this error. I expect
+  automation to guard and never fail due to this error." A scan of the 20 open PRs found 8 with a
+  failing `verify` job; reading the actual commitlint output (not assuming) showed three distinct
+  rule violations, not one: `header-max-length` (a 102-char PR title), `body-max-line-length` (an
+  unwrapped analysis paragraph in a commit body), and `type-enum` (a commit typed `research(...)`,
+  which isn't a Conventional-Commit type — `docs(research): ...` is the one every other PR here
+  uses). All eight were `docs(research): ...` PRs from the event-research automation lane.
+- **ROOT CAUSE:** this repo's local guard against a bad commit message is `.husky/commit-msg`
+  (`npx --no-install commitlint --edit "$1"`), installed by the `prepare` npm script — except
+  `prepare` reads `test -n "$CI" || husky`, deliberately skipping install whenever `$CI` is set, on
+  the ordinary assumption that a CI runner never needs a human's local hooks. The event-research
+  lane breaks that assumption: `.github/workflows/moneypenny-events.yml`'s `research due events`
+  job runs a Claude session (`claude-code-action@v1`) that composes its own commit message and
+  calls `git commit` directly from inside a GitHub Actions job — and GitHub Actions sets `CI=true`
+  unconditionally, by platform design, for every job. So the one lane whose runner IS the place a
+  human would normally rely on the hook is exactly the lane where the hook can never exist. The
+  only thing that ever checked these messages was the separate `verify` job's own
+  `commitlint --from --to`, which runs after the PR is already open — too late to prevent it, only
+  able to report it.
+  What else crosses this system: `scripts/ship.sh`'s own local `open` verify (`npm run verify`)
+  has the identical gap for every OTHER lane, research or not — it runs typecheck/lint/test but
+  never commitlint, so an engineering PR opened via `/ship` (including three opened this session)
+  passed by luck, not by a check. `.github/prompts/event-research.md` already documented the
+  `header-max-length` rule in prose, correctly, but never instructed running commitlint locally,
+  and said nothing about the other two rules — a documented rule with no mechanical check behind
+  it caught one violation type and missed two.
+- **PREVENTION:** script, at both crossing points. `scripts/ship.sh`'s `cmd_open` now runs
+  `npx commitlint --from <merge-base with origin/$base> --to HEAD --verbose` as part of its local
+  verify, fetching `origin/$base` first (the day's other lesson, applied here too: a stale local
+  ref would compare against the wrong base) — this covers every lane that ships through `ship.sh
+  open`, mechanically, not by reminder. `.github/prompts/event-research.md` (a lane that composes
+  and pushes its own commits, never touching `ship.sh open`) now instructs writing the message to a
+  file and running `npx commitlint --edit <file>` before committing, and states all three rules
+  that have actually fired, not just the one that had prose already.
+- **SIDE QUESTS:** none — the two fixes above are the whole crossing; no other lane commits from a
+  path neither covers.
+
+---
+
+### The app/ cache fix only ever warmed a scope no other PR could read — verify never runs on main
+
+- **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric, reading a live CI run: "verify is still installing dependencies twice... This
+  feels like a complete waste of time." Three separate PRs that evening (#1194, #1203, #1206) each
+  ran `verify` and each showed the identical pattern in its raw log: `Install dependencies` and
+  `Install app dependencies` both with NO `Cache restored` line, every time, on every branch,
+  regardless of how many prior runs had already "saved" a cache under the supposedly-fixed key.
+- **ROOT CAUSE:** the earlier fix (previous entry) was a real key fix in the wrong job. `verify`
+  triggers only on `pull_request` — and GitHub's own documented behavior is that a cache saved by
+  a `pull_request`-triggered run is scoped to that PR's merge ref: restorable only by a later run
+  of the SAME pull request, never by the base branch or by any other PR
+  (docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching, confirmed by
+  search rather than assumed from memory, given how much of this evening was already spent on
+  claims that turned out unverified). Nothing in this workflow ever ran the app-inclusive install
+  on a `push` to `main` — `deploy` (the one job that DOES run on push) still only ran `npm ci`
+  (root), never `npm ci --prefix app` — so the one scope every future PR's `verify` run CAN fall
+  back to (its base branch) never had anything populated in it under this key. Every PR branch was
+  therefore guaranteed to pay a full cold install for `app/`, forever, no matter how many other
+  PRs had run `verify` before it — which is exactly the pattern the logs showed and the previous
+  entry's "should warm on the next run" claim couldn't survive contact with.
+- **PREVENTION:** script — `deploy`'s `setup-node` step now carries the same
+  `cache-dependency-path`, and a new step (`npm ci --prefix app`) runs there purely to populate the
+  shared cache; `deploy` runs on every push to `main`, which IS a scope `pull_request` runs can
+  restore from. This is GitHub's own documented remedy for this exact class of gap ("ensure there
+  is a trusted workflow that keeps the cache updated... triggered by a push to the default
+  branch"), not an improvised one.
+- **SIDE QUESTS:** the previous entry's ledger claim ("the next app-touching PR's verify run should
+  show a fast install") was falsifiable and false — flagged in place rather than deleted, per this
+  evening's earlier lesson that a wrong claim gets corrected on the record, not quietly dropped.
+  This fix is unverified until a PR opened after `deploy` next runs on `main` actually shows a
+  `Cache restored` line for `app/` — that is the real proof, still pending as this entry is banked.
+
+---
+
+### The CI `verify` job's `app/` install re-fetched from the network on almost every run — the cache key never saw its lockfile [INCOMPLETE — see the follow-up entry above]
+
+- **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed (superseded — the fix below was real but insufficient; the completing entry is above this one)
+- **SIGNAL:** Eric posted the Actions log for PR #1179's `verify` job: `Install dependencies` (root)
+  5m03s, `Install app dependencies` 2m35s — the two summed almost exactly to the "7.5 minutes" he'd
+  flagged the turn before, which is what revealed the earlier ledger entry had answered the wrong
+  install. He then asked directly: "why do we need 2 separate installs? that looks like a huge
+  process smell." Detection lag: one exchange — the screenshot made it visible immediately once
+  looked at; before that, nobody had read a `verify` job's own timing.
+- **ROOT CAUSE:** `app/` is a separate package (own `package.json`, own lockfile — not an npm
+  workspace), so it genuinely needs its own `npm ci`; two installs are not themselves the smell.
+  The smell is that `actions/setup-node`'s `cache: npm` step declared no `cache-dependency-path`,
+  so its cache key hashed ONLY the root `package-lock.json`. Reading the job's raw log settled it
+  mechanically rather than by inference: one `Cache restored successfully` line, for a key derived
+  from the root lockfile only, then `npm ci` (root, 442 packages) in 5m, then `npm ci --prefix app`
+  (128 packages) in 3m with no cache activity logged for it at all. Root's lockfile is rarely
+  touched by an `app/`-only PR, so that key HITS almost every run — and `actions/cache` only
+  re-uploads on a MISS, so every package `app/`'s install fetched fresh during that hit run was
+  discarded the moment the job ended. The next PR paid full network cost again, forever, because
+  the key that would have warmed on it was never the one being watched.
+  What else crosses this system: `moneypenny-events.yml` / `moneypenny-repair.yml` also call
+  `actions/setup-node` with `cache: npm` — neither installs `app/`, so neither needed this fix
+  (checked, not assumed).
+- **PREVENTION:** script — `.github/workflows/pipeline.yml`'s `verify` job now sets
+  `cache-dependency-path` to both `package-lock.json` and `app/package-lock.json`, so the cache key
+  changes exactly when either tree's dependencies do and both trees' fetches persist across runs.
+  Root's 5m is extraction time on an already-warm cache, not a caching gap, and stays open as a
+  separate, smaller question (below).
+  **This was the right key, in the wrong place.** `verify` only ever runs on `pull_request` events,
+  and a cache a `pull_request`-triggered job saves is scoped to that PR's own merge ref — GitHub
+  restores it only on a re-run of the SAME pull request, never on the base branch or any other PR.
+  Three separate PRs' `verify` runs the same evening (#1194, #1203, #1206) each showed a cold
+  "Install app dependencies" with no `Cache restored` line, one after another, because none of them
+  could ever see a cache another PR branch had saved. The completing fix is the entry directly
+  above this one.
+- **SIDE QUESTS:** whether root's 442-package `npm ci` can be faster than 5 minutes even on a warm
+  npm cache (a bigger hosted runner? `npm ci`'s known link-step overhead on standard 2-vCPU
+  runners?) is unmeasured; unmerging root and `app/` into one npm workspace would remove the second
+  `npm ci` invocation entirely but is a real migration (build tooling, Docker, CI all touch the
+  split) — not a reactive fix (→ docs/IDEAS.md).
+
+---
+
+### A remote session's `origin/main` had genuinely diverged from the real tip, not just aged — and the first ledger entry for this got the number wrong too
+
+- **SHA:** n/a (fix on `.claude/hooks/session-start.sh`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric flagged "7.5 minutes were spent on installing dependencies" while watching a
+  session; that number turned out to belong to a *different* install (a CI `verify` job's — its own
+  ledger entry above), but the session had a real, separate problem: an install against a stale
+  `origin/main` produced three red checks (`fast-check`, `@testing-library/jest-dom`, `happy-dom`
+  all missing) several minutes after an install that should have provided them.
+  A second, worse signal followed the first fix: the ledger entry written for it claimed the ref
+  was "~390 commits behind the real tip" — a number that was never actually measured, just written
+  because it sounded plausible. Eric caught it by asking directly whether there was something to
+  learn from "the 390 overlooked commits." There wasn't a 390 to learn from; there was a fabricated
+  number in the permanent record, which is the more serious finding.
+- **ROOT CAUSE:** two, at two different levels.
+  Mechanism: the container's `origin/main` ref did not simply lag — `git merge-base --is-ancestor`
+  showed it was NOT an ancestor of the real tip at all. Measured (not estimated): 66 commits
+  reachable from the real tip and not from the old ref, 55 reachable from the old ref and not from
+  the real tip, six days apart. The old commit is still reachable from a dozen other open branches
+  and from tags on `origin` — nothing was deleted — which points to some point-in-time reordering
+  or replay of `main`'s recent history rather than data loss, but the exact mechanism was not
+  further diagnosed; that is an open question for Eric, not this entry's to answer.
+  Process: the first fix shipped a specific, confident-sounding number with no command run to back
+  it — `git rev-list --count` was never called. A plausible number in a ledger entry reads the same
+  as a verified one to the next reader; nothing distinguished them until asked.
+- **PREVENTION:** script — `.claude/hooks/session-start.sh` (wired in `.claude/settings.json`,
+  remote-only) fetches `origin/main` and installs both dependency trees against the lockfiles at
+  that refreshed tip before the first turn; the CLAUDE.md ship-loop line now reads `git fetch
+  origin main && git checkout -B … origin/main` as the same fix at the point of branching, for a
+  session that branches more than once. No custom caching layer: `npm install` (not `npm ci`) is
+  already a fast no-op when nothing changed, so there is nothing to reinvent there — an earlier
+  draft of this fix added a hand-rolled sha256 stamp file to skip a call that was already
+  sub-second, which was itself a smaller instance of the same over-fitting this entry is about.
+  Doctrine, for the process failure: a number in a ledger entry needs the command that produced it
+  in the same breath, or it doesn't go in.
+- **SIDE QUESTS:** whether `main`'s history was intentionally rewritten between 2026-08-28 and
+  2026-09-03, and if so why and whether it recurs — asked of Eric directly rather than filed, since
+  only he or GitHub's audit log can answer it, and a wrong guess here would be the same mistake
+  this entry is about.
+
+
+### The prior fix for the feedback-log seam only worked for the one call site it didn't need to fix
+
+- **SHA:** n/a   **DATE:** 2026-09-03   **STATUS:** closed
+- **SIGNAL:** found by code review while re-plumbing the ladder gate onto a new message log (a
+  member request to lower the gate from "filed an issue" to "said hello"), not by a report — the
+  binding below it never independently surfaced a symptom distinct from the incident it was meant
+  to fix. Re-reading `progression-service.ts`'s `deps.readFeedback?.(opaqueMemberId ??
+  participantId)` against the SAME-DAY fix in the entry below showed the two disagreed about which
+  id shape the wrapper receives.
+- **ROOT CAUSE:** the earlier fix's wrapper (`serve-dashboard.ts`) assumed its argument was ALWAYS
+  a raw participant id and called `ownerEmailFor(id)` unconditionally, returning an empty list the
+  moment that lookup failed. But `view()`'s own doc says "every HTTP route passes [the opaque id]
+  now" — and they do (`onboardingView`, `plays-api-routes.ts`, `option-api-routes.ts`,
+  `trade-api-routes.ts` all pass it as the second argument, which `?? ` prefers over the
+  participant id). So the wrapper's `ownerEmailFor` call was handed an opaque hash on every one of
+  those paths, never matched a participant, and read as "no owner" — silently re-breaking the
+  exact gate the earlier fix believed it had closed. Only the companion tool's bare
+  `view(participantId)` call (no session, no opaque id to pass) ever exercised the wrapper
+  correctly.
+- **PREVENTION:** script — `logKeyFor` (`owner-link-store.ts`) replaces the ad hoc wrapper: it
+  tries `resolveEmail(id)` and falls through to `id` unresolved instead of emptying, which is
+  correct for BOTH shapes (a real participant id resolves through the owner link; an
+  already-opaque id simply doesn't resolve and is used as-is). `tests/server/owner-link-store.spec.ts`
+  pins both directions. Ledger note: a fix that only proves itself against the failing report's
+  own repro, and never against every OTHER caller of the same seam, can silently reintroduce the
+  bug for whichever caller wasn't in the repro — the generalization step is part of closing the
+  incident, not optional follow-up.
+- **SIDE QUESTS:** none
+
 ### The first-feedback milestone never earned in production — the engagement track read the feedback log with the wrong key
 - **SHA:** 5813bc4   **DATE:** 2026-09-03   **STATUS:** closed
 - **SIGNAL:** Eric, live in Moneypenny's rail: "Why hasn't my onboarding … meet Moneypenny been completed?" — she could see five filings in his log (read by opaque member id) while onboarding step 2 and the ladder gate (read through the progression service) said none. Shipped in #1138 (2026-09-02); noticed ~1 day later, and only because a second reader of the same ledger disagreed with the first.

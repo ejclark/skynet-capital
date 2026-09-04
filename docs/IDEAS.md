@@ -18,6 +18,31 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### The remote container runs Node 22 against `engines.node >=24`
+
+Every install warns `EBADENGINE` (package.json wants >=24, the web environment ships v22.22.2).
+Harmless today, but a Node-24-only API in a dependency would break a remote session silently. The
+fix is an environment setting in the Claude Code on the web environment config (Node version /
+setup), which is Eric's — not a repo change.
+_(src: Claude · while: retro on a remote session's dependency-install detour, 2026-09-04)_
+
+### Merge root and `app/` into one npm workspace
+
+Two npm trees means two `npm ci` calls in the `verify` CI job (root + `app/`) and, before today's
+cache fix, one of them silently re-fetching from the network on almost every run. An npm workspace
+(one lockfile, one install) would remove the second invocation entirely instead of just caching it
+correctly — but it's a real migration: build tooling, the Dockerfile, and every CI job that installs
+either tree would need re-checking, not a same-session fix.
+_(src: Claude · while: retro on the CI verify job's ~7.5-minute install, 2026-09-04)_
+
+### A screenshot harness for the React shell (`shoot:app`)
+
+`shoot:standings` / `shoot:login` shoot the legacy server-rendered pages; nothing shoots `/app/*`.
+The fluid-shell PR drove five routes through an offline server with a 40-line throwaway Playwright
+script (before/after at 1920px, dark) — promote it to `scripts/shoot-app.mjs` + `npm run shoot:app`
+so the next visual PR on the shell gets its fridge picture in one command.
+_(src: Claude · while: making the shell fluid, 2026-09-04)_
+
 ### Screenshots in Moneypenny's rail
 
 The 2026-09-03 handoff retired the feedback form and coach box (`app/src/shell/feedback-door.tsx`

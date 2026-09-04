@@ -35,7 +35,8 @@
  *               `OCC:` options-expiration calendar (theocc.com / Cboe; 3rd-Friday standard) ·
  *               `BEA:` bea.gov release schedule (GDP, PCE) · `CENSUS:` census.gov schedule
  *               (retail sales, durable goods) · `ISM:` ismworld.org PMI calendar ·
- *               `CB:` conference-board.org consumer-confidence schedule
+ *               `CB:` conference-board.org consumer-confidence schedule ·
+ *               `UMICH:` sca.isr.umich.edu Surveys of Consumers release schedule
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *
@@ -149,7 +150,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "medium",
     symbols: [],
     notes:
-      "Bessent's 2026-08-19 announcement doubles nominal long-end liquidity-support buyback operations (10-20Y and 20-30Y sectors) from a $2B to a $4B/operation minimum, effective this date through the refunding quarter's close (2026-11-04) — a fiscal-liquidity support for long-end demand technicals landing the day before the 30Y reopening (09-10). Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep; not previously a dated calendar entry. Promoted estimate -> confirmed on the directly-fetched primary during this event's own 2026-09-02 pulse check, which is exactly the kill switch its ledger registered ('the treasury.gov primary becoming directly fetchable'). CONFIRMED HERE MEANS THE DATE AND SIZES, NOT AN EFFECT: the release's own next sentence, 'An updated tentative Treasury buyback schedule will be released at a later date', is still unfulfilled, which is why treasury-buyback-10y20y-2026-09-10 (est) still carries the superseded $2B cap; and the program's only market test to date faded inside a day (10Y -6bp on 08-19, fully round-tripped +5bp by 08-20, and ~4.77% by 09-01 — above where it sat pre-announcement). No house playbook is rates-keyed; this stays context for the Sep 1 -> Sep 16 corridor.",
+      "Bessent's 2026-08-19 announcement doubles nominal long-end liquidity-support buyback operations (10-20Y and 20-30Y sectors) from a $2B to a $4B/operation minimum, effective this date through the refunding quarter's close (2026-11-04) — a fiscal-liquidity support for long-end demand technicals landing the day before the 30Y reopening (09-10). Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep; not previously a dated calendar entry. Promoted estimate -> confirmed on the directly-fetched primary during this event's own 2026-09-02 pulse check, which is exactly the kill switch its ledger registered ('the treasury.gov primary becoming directly fetchable'). CONFIRMED HERE MEANS THE DATE AND SIZES, NOT AN EFFECT: the release's own next sentence, 'An updated tentative Treasury buyback schedule will be released at a later date', is still unfulfilled 16 days on (re-checked at the primary 2026-09-04: the posted PDF's masthead still reads 'For Publication August 5, 2026' and both long-end rows still cap at $2B), which is why treasury-buyback-10y20y-2026-09-10 (est) still carries the superseded $2B cap. AND THIS DATE IS AN ELIGIBILITY DATE, NOT AN OPERATION: the schedule lists no long-end buyback on 09-09 itself — that day's only operation is a $12.5B cash-management buyback in the 1Mo-2Y sector (announced 09-08) — so the first test of the $4B floor is the 10-20Y operation on 09-10, and the 09-09 operation announcement (preliminary CUSIP list 11:00am ET) is the first place a hard number can appear. The program's only market test to date faded inside a day (10Y -6bp on 08-19, fully round-tripped +5bp by 08-20, and ~4.77% by 09-01 — above where it sat pre-announcement). No house playbook is rates-keyed; this stays context for the Sep 1 -> Sep 16 corridor.",
   },
   {
     id: "treasury-30y-bond-2026-09-10",
@@ -335,8 +336,11 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     notes: "The Fed's own inflation gauge — and it lands ON the NVDA print day. Compound-risk.",
   },
   // Scheduled macro releases beyond CPI/FOMC/jobs/PCE/PPI (agency schedules, checked 2026-08-18).
-  // The rate-path movers our long-duration names trade on; second-order surveys (Michigan
-  // sentiment, durable goods) and weekly jobless claims are deliberately omitted as low-impact.
+  // The rate-path movers our long-duration names trade on. The original seeding deliberately
+  // omitted second-order surveys (Michigan sentiment, durable goods) and weekly jobless claims as
+  // low-impact; durable goods and Michigan sentiment have since been admitted by adjacency sweeps
+  // that found them load-bearing for a specific event, both at low/medium impact rather than as a
+  // reversal of that judgment. Weekly jobless claims stay out (no single date to key on).
   {
     id: "consumer-confidence-2026-08-25",
     kind: "macro-print",
@@ -407,6 +411,32 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "Hot consumer → yields up → duration pressure; soft → supportive. Lands the day of the Sep-16 FOMC.",
+  },
+  {
+    id: "umich-sentiment-prelim-2026-09-11",
+    kind: "macro-print",
+    title: "University of Michigan consumer sentiment — preliminary (Sep 2026)",
+    date: "2026-09-11",
+    status: "confirmed",
+    source:
+      'UMICH: sca.isr.umich.edu states verbatim "Next data release: Friday, September 11, 2026 for Preliminary September data at 10am ET" (fetched direct 2026-09-04, read back verbatim-only on a second pass); corroborated by the Surveys of Consumers\' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628), whose PDF text layer lists "September 11 September Prelim" and "September 25 September Final"',
+    impact: "low",
+    symbols: [],
+    notes:
+      "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Filed low, not medium, to respect the table's standing judgment that second-order surveys stay out — this is an admission for a named reason, not a reversal. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep; promoted to confirmed by its own initial research, which fetched the publisher's next-release line (with a time) direct.",
+  },
+  {
+    id: "umich-sentiment-final-2026-09-25",
+    kind: "macro-print",
+    title: "University of Michigan consumer sentiment — final (Sep 2026)",
+    date: "2026-09-25",
+    status: "estimate",
+    source:
+      'EST: the 2026 release-dates document of the Surveys of Consumers (data.sca.isr.umich.edu/fetchdoc.php?docid=79628) lists "September 25 September Final" in its PDF text layer, decompressed direct 2026-09-04; the customary time is 10:00 ET but the schedule document states none, and the next-release line on sca.isr.umich.edu currently names only the 09-11 preliminary. Filed estimate per the no-self-confirm limit in the event-research lane on an event discovered in-sweep',
+    impact: "low",
+    symbols: [],
+    notes:
+      "Earns an entry rather than being a routine revision because of the collection rule in the same schedule document: final-release interviews run through the Monday before release (2026-09-21), making this the first UMich reading that can contain the 2026-09-16 FOMC decision — which the 09-11 preliminary structurally cannot (its interviews close 09-07). Discovered during umich-sentiment-prelim-2026-09-11 initial research.",
   },
   {
     id: "jolts-2026-09-29",
@@ -515,13 +545,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Challenger Job-Cut Report (Aug 2026)",
     date: "2026-09-03",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: challengergray.com 2026 release calendar lists 2026-09-03 (05:30 ET) for August data — primary-sourced but filed estimate per the event-research lane's no-self-confirm limit, and the publisher's own calendar carries a 'subject to change' note, checked 2026-08-31",
+      "IR: the publisher's own August 2026 Job Cut Announcement Report (challengergray.com PDF) carries the header 'FOR RELEASE AT 5:30 A.M. ET, THURSDAY, SEPTEMBER 3, 2026' and a 'CHICAGO, September 3, 2026' dateline — the release itself is the primary confirmation, promoted from the prior EST: calendar reading at close-out 2026-09-04 on a passed event (an audit-trail correction; it licenses nothing)",
     impact: "low",
     symbols: [],
     notes:
-      "Announced-layoffs proxy, the session before BLS payrolls (9/4) and a sibling of the tracked ADP print (9/2) — it supplies the industry and geographic layoff detail weekly claims do not. Filed `low`, not `medium` like ADP, to respect this file's standing note that second-order labor surveys are noisier than the prints tracked here; weekly jobless claims stay deliberately omitted. Matters this cycle only because Warsh's 2026-08-28 keynote characterised the labor market as stable at full employment and pinned the hawkish case on inflation — announced job cuts are one of the few reads that can contradict the low-firing half of that framing before the 9/5 blackout. (The quoted 'low fire, low hire' phrasing this note previously carried is Powell-era 2025 language, not in the 8/28 remarks; corrected 2026-08-31 during this event's initial research.) Discovered during the jobs-2026-09-04 pulse-check adjacency sweep.",
+      "Announced-layoffs proxy, the session before BLS payrolls (9/4) and a sibling of the tracked ADP print (9/2) — it supplies the industry and geographic layoff detail weekly claims do not. Filed `low`, not `medium` like ADP, to respect this file's standing note that second-order labor surveys are noisier than the prints tracked here; weekly jobless claims stay deliberately omitted. Matters this cycle only because Warsh's 2026-08-28 keynote characterised the labor market as stable at full employment and pinned the hawkish case on inflation — announced job cuts are one of the few reads that can contradict the low-firing half of that framing before the 9/5 blackout. (The quoted 'low fire, low hire' phrasing this note previously carried is Powell-era 2025 language, not in the 8/28 remarks; corrected 2026-08-31 during this event's initial research.) Discovered during the jobs-2026-09-04 pulse-check adjacency sweep. SCORED 2026-09-04: printed 52,881 (−38% y/y, lowest August since 2022) and drew no attributable market reaction on a +1.2% session that every wrap credited to Waller and ISM Services — the `low` tier is now verified on the tape, not just argued. The September edition is deliberately NOT seeded; see the ledger's close-out for the condition (an official-data vacuum) that would reverse that.",
   },
   {
     id: "waller-economic-outlook-2026-09-03",
@@ -541,13 +571,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "Cleveland Fed's Hammack — remarks (July hike dissenter)",
     date: "2026-09-03",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "NEWS: zerohedge.com 'Key Events This Week' (published 2026-08-29) is the only source naming a day AND a time — 3:00 PM ET Thursday 9/3, 'Cleveland Fed President Beth Hammack will give pre-recorded opening remarks'; neilsethi.substack.com's 2026-08-30 'Week Ahead' has her speaking that week without naming the day; Newsquawk's weekly calendar for 31 Aug–4 Sep names Waller as Thursday's ONLY Fed speaker. THE DATE IS UNCONFIRMABLE AT THE PRIMARY, NOT MERELY UNCONFIRMED: clevelandfed.org was reached at HTTP 200 on 2026-09-01 (the earlier 403s were a user-agent block, not an outage) and publishes NO forward speaking calendar — its 'President's upcoming events' box is a newsletter-subscribe promo, and its speeches collection is a post-hoc archive. Stays estimate permanently unless a venue or a Cleveland Fed release surfaces; do not spend another session trying to 'confirm' it at clevelandfed.org.",
+      "FED: clevelandfed.org/president-and-ceo -> 'Speaking engagements' -> 2026 lists 'President Beth Hammack Gives Opening Remarks at the Connecting Communities Webinar, \"When Every Dollar Counts: Worker Perspectives on the Economy\"' — September 3, 2026, 3:00 pm EDT — linking the fedcommunities.org registration page, which now reads 'This event has passed' (virtual, 3:00-4:00 pm EDT, hosted by the Atlanta/Chicago/Cleveland Feds, special remarks by Goolsbee and Hammack). Fetched direct with a browser User-Agent, HTTP 200, 2026-09-03. CONFIRMED AT CLOSE-OUT, CORRECTING THIS ENTRY'S PRIOR CLAIM that the date was 'unconfirmable at the primary': the Cleveland Fed DOES publish a forward speaking calendar. It lives on /president-and-ceo inside a collapsed accordion (expandedByDefault false) — NOT on /collections/speeches or /news-and-events, where the 'President's upcoming events' box really is only a subscribe promo. METHOD FOR FUTURE RESERVE BANK SPEAKER DATES: check /president-and-ceo and expand 'Speaking engagements'; the speeches collection is a post-hoc archive and will never carry a forward date. Originally filed NEWS: zerohedge.com 'Key Events This Week' (2026-08-29), whose day AND 3:00 PM time both proved exactly right (FT-46, PASS).",
     impact: "low",
     symbols: [],
     notes:
-      "Filed `low` deliberately, and not because a voting regional president who dissented for a hike is unimportant. Two independent reasons, the first mechanical: the remarks are reported PRE-RECORDED and slotted 15:00 ET, so they cannot react to Challenger (07:30), Waller (08:30), ISM Services (10:00) that morning or payrolls on 9/4 — information content is bounded near zero by FORMAT, not by a judgement about her views. Second, her position is on the record twice over: she dissented +25bp at the 7/29 FOMC alongside Kashkari and Logan, and said live on CNBC from Jackson Hole on 2026-08-27 'I believe now is the time to act' (correcting this note's earlier 2026-08-10 attribution, which was not her latest word — fixed 2026-09-01 during this event's initial research). Her marginal information content into a September hike already priced 62–66% (CME FedWatch, 8/31) is near zero — the opposite of the same-day 08:30 Waller slot, whose speaker had been silent 52 days with a published framework the current data leaves undetermined. That contrast is the tiering rule: a speaker's information content is a function of how uncertain their position is and whether the format lets them react, not their seniority. Cross-current worth knowing: her own bank's SoFIE release (2026-08-10) has CEO 12-month CPI expectations at 3.3%, DOWN from 3.7% in Q2 — evidence against the 'inflationary mindset' argument she rests her hawkish case on. Discovered during the waller-economic-outlook-2026-09-03 initial-research adjacency sweep (2026-09-01).",
+      "CLOSED OUT 2026-09-03: the `low` tier was right and the event passed inert — no wire reported a word she said, and the day's ~13pp of September-hike repricing (~67% -> 54.6% 'in minutes' -> ~50.3-50.4%) belongs entirely to Waller at 08:30, ~6.5 hours before her slot. The venue, unknown when this was filed, turned out to be a Federal Reserve community-development webinar (Connecting Communities), which is the format argument below confirmed on substance — though 'pre-recorded' itself stayed single-source and was never corroborated. Full scoring: docs/research/events/hammack-remarks-2026-09-03.md. Filed `low` deliberately, and not because a voting regional president who dissented for a hike is unimportant. Two independent reasons, the first mechanical: the remarks are reported PRE-RECORDED and slotted 15:00 ET, so they cannot react to Challenger (07:30), Waller (08:30), ISM Services (10:00) that morning or payrolls on 9/4 — information content is bounded near zero by FORMAT, not by a judgement about her views. Second, her position is on the record twice over: she dissented +25bp at the 7/29 FOMC alongside Kashkari and Logan, and said live on CNBC from Jackson Hole on 2026-08-27 'I believe now is the time to act' (correcting this note's earlier 2026-08-10 attribution, which was not her latest word — fixed 2026-09-01 during this event's initial research). Her marginal information content into a September hike already priced 62–66% (CME FedWatch, 8/31) is near zero — the opposite of the same-day 08:30 Waller slot, whose speaker had been silent 52 days with a published framework the current data leaves undetermined. That contrast is the tiering rule: a speaker's information content is a function of how uncertain their position is and whether the format lets them react, not their seniority. Cross-current worth knowing: her own bank's SoFIE release (2026-08-10) has CEO 12-month CPI expectations at 3.3%, DOWN from 3.7% in Q2 — evidence against the 'inflationary mindset' argument she rests her hawkish case on. Discovered during the waller-economic-outlook-2026-09-03 initial-research adjacency sweep (2026-09-01).",
   },
   {
     id: "jobs-2026-09-04",
@@ -844,13 +874,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "ISM Services PMI (Sep 2026 data)",
     date: "2026-10-05",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: ISM's own release text, re-fetched verbatim from the July-data PRNewswire primary 2026-09-02, states the rule and both its exceptions — \"posted on ISM's website at www.ismrob.org on the third business day of every month after 10:00 a.m. ET. The one exception is in January, the report is released on the fourth business day of the month. *Unless the New York Stock Exchange is closed.\" October 2026 opens on a Thursday, so the first three business days are Thu 10-01, Fri 10-02 and Mon 10-05, with no NYSE closure in the window. ismworld.org's ROB calendar was re-fetched direct 2026-09-02 and still 302s to ecommerce.ismworld.org/SSO/Login.aspx, so this is a rule-derived date and nothing more, checked 2026-09-02",
+      "ISM: the August-data ISM Services report (PRNewswire 302868046, dateline 2026-09-03 10:00 ET) names its own successor verbatim — \"The next ISM(R) Services PMI(R) Report featuring September 2026 data will be released at 10:00 a.m. ET on Monday, October 5, 2026.\" Promoted estimate -> confirmed on that line, which is ISM's own release text and the promotion path this entry pre-registered (forward test FT-47, scored PASS 2026-09-04); the date had been rule-derived from the third-business-day cadence, and the report's own line agrees exactly. ismworld.org's ROB calendar page remains SSO-gated (302s to ecommerce.ismworld.org/SSO/Login.aspx), so the primary is ISM's authorized wire distribution rather than ismworld.org itself — the standing limit on every ISM entry in this calendar, checked 2026-09-04",
     impact: "high",
     symbols: [],
     notes:
-      'FILLS A HOLE IN THE TRACKED SERIES: the calendar carried 09-03, 11-04 and 12-03 but not October, while its manufacturing sibling ism-manufacturing-2026-10-01 was tracked — so the one Q4 services read before the 10-28 FOMC was invisible. It also CORRECTS A DATE: the ism-services-2026-11-04 ledger names the October print as "10-06" in both its signal list and its kill switches, which is the fourth business day and would only be right under the January exception; that ledger is append-only and was not edited. READ IT, DO NOT TRADE IT, on the same measured grounds as its siblings — the 11-04 initial research found release-day moves in TLT/^TNX/SPY/QQQ/XLF/IWM statistically nil across all eight 2026 releases, and the 12-03 research added that the 10:00 ET release HOUR is quieter than an ordinary hour in four of five instruments. Cheap falsifier, dated: each report names its successor, so the 2026-09-03 release\'s own "next report" line adjudicates this date within 24 hours of filing (forward test FT-47) and is also what would promote it to confirmed. Discovered during the ism-services-2026-12-03 initial research (2026-09-02).',
+      'FILLS A HOLE IN THE TRACKED SERIES: the calendar carried 09-03, 11-04 and 12-03 but not October, while its manufacturing sibling ism-manufacturing-2026-10-01 was tracked — so the one Q4 services read before the 10-28 FOMC was invisible. It also CORRECTS A DATE: the ism-services-2026-11-04 ledger names the October print as "10-06" in both its signal list and its kill switches, which is the fourth business day and would only be right under the January exception; that ledger is append-only and was not edited. READ IT, DO NOT TRADE IT, on the same measured grounds as its siblings — the 11-04 initial research found release-day moves in TLT/^TNX/SPY/QQQ/XLF/IWM statistically nil across all eight 2026 releases, and the 12-03 research added that the 10:00 ET release HOUR is quieter than an ordinary hour in four of five instruments. Cheap falsifier, dated: each report names its successor, so the 2026-09-03 release\'s own "next report" line adjudicates this date within 24 hours of filing (forward test FT-47) and is also what would promote it to confirmed. THAT FALSIFIER RESOLVED: the 2026-09-03 report named "Monday, October 5, 2026" verbatim, FT-47 scored PASS on 2026-09-04, and this entry was promoted to confirmed on it — which also leaves the same cadence rule dating ism-services-2026-12-03 standing rather than under doubt. Discovered during the ism-services-2026-12-03 initial research (2026-09-02).',
   },
   {
     id: "mrvl-investor-day-2026-10-06",
@@ -1230,6 +1260,59 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "us-china-tariff-truce-expiry-2026-11-10",
+    kind: "geopolitical",
+    title: "US–China tariff truce expires — Kuala Lumpur suspension of the additional 24% duty",
+    date: "2026-11-10",
+    status: "estimate",
+    source:
+      "NEWS: whitehouse.gov presidential action of 2025-11-04 (Executive Order 14358, 'Modifying Reciprocal Tariff Rates Consistent with the Economic and Trade Arrangement Between the United States and the People's Republic of China') suspends the heightened EO-14257 duties in favour of a flat additional 10% until, verbatim, '12:01 a.m. eastern standard time on November 10, 2026' — fetched direct 2026-09-04. STAYS ESTIMATE FOR A SCHEMA REASON, NOT DATE DOUBT — do not spend another session trying to promote it: the expiry language is primary and verbatim, but event-scan-validation.mjs's CONFIRMED_PREFIX admits only IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB and has no slot for a White House presidential action or a Federal Register citation. Adding a WH:/FR: prefix is a schema change, not this lane's call (same reasoning georgia-senate-runoff-2026-12-01 records for a state election authority)",
+    impact: "high",
+    symbols: [],
+    notes:
+      "THE HEADLINE MECHANISM IS DEAD AND THE RISK HAS INVERTED (initial research, 2026-09-04). This entry was filed hours earlier asserting that absent renewal the additional 24% 'Liberation Day' rate returns on top of the 10% floor. It cannot: the Supreme Court held on 2026-02-20 that IEEPA does not authorize tariffs (Learning Resources v. Trump, 24-1287, 6-3), the same-day 'Ending Certain Tariff Actions' order terminated the IEEPA duties including EO 14257 — the rate EO 14358 suspends — and CBP stopped collection 2026-02-24. The wall was rebuilt on other authorities with no Nov-10 hook (Sec. 122 10% from 02-24, expired by its 150-day cap 12:01 EDT 07-24; USTR Sec. 301 forced-labor duties 10-12.5% on ~60 economies effective the same minute, China at 12.5% stacking to ~37.5% aggregate 301). WHAT STILL EXPIRES 11/10 IS CHINA'S HALF: MOFCOM/GAC Announcement No. 70 of 2025-11-07 suspended the six 2025-10-09 export-control announcements — No. 61's 0.1% extraterritorial rule and the rare-earth FDPR, plus a delayed Ho/Er/Tm/Eu/Yb wave — until 2026-11-10, unaffected by a US court. So the exposure is rare-earth-dependent supply chains (semis, autos, robotics, aerospace, defense; ~69% of 2025 mine output, up to ~90% of processing), not tariff-sensitive importers. Structural wrinkle: the natural extension venue, APEC Shenzhen, is 2026-11-18/19 — eight days AFTER the deadline. Lands 08:30-adjacent to cpi-2026-11-10 and the est. CRWV print, so nothing that day is cleanly attributable. Estimate widens caution only — no date-keyed action. Discovered during the trump-xi-summit-2026-09-24 pulse-check adjacency sweep (2026-09-04); ledger: docs/research/events/us-china-tariff-truce-expiry-2026-11-10.md.",
+  },
+  {
+    id: "apec-leaders-shenzhen-2026-11-18",
+    kind: "geopolitical",
+    title: "APEC Economic Leaders' Meeting (33rd) — Shenzhen, China",
+    date: "2026-11-18",
+    status: "estimate",
+    source:
+      "NEWS: apec.org's own 2025 press release 'China Unveils APEC 2026 Theme and Priorities in Shenzhen' plus english.www.gov.cn and sz.gov.cn (both dated 2025-12) name Nov 18-19 2026 in Shenzhen, Guangdong for the 33rd Economic Leaders' Meeting; Treasury Sec. Bessent named it as a venue for China trade talks in May-2026 Reuters remarks. Filed estimate: the date is multiply and near-primary sourced, but this calendar has no confirmed prefix for a multilateral body's own schedule (same schema gap us-china-tariff-truce-expiry-2026-11-10 records), and leader attendance — Trump's especially — is not established. Checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "LOAD-BEARING BECAUSE OF WHERE IT SITS: eight days AFTER us-china-tariff-truce-expiry-2026-11-10, so the natural leader-level venue for extending the Kuala Lumpur arrangement lands past the clock it would extend. Of the three venues Bessent named in May 2026 while saying the administration was 'not in a hurry' to extend (the September Washington summit, this, and a December G20 in Florida), two post-date the deadline — which is why the trump-xi-summit-2026-09-24 meeting carries more weight than a routine state visit would. Day 1 of the two-day window per house convention. Estimate widens caution only. Discovered during the us-china-tariff-truce-expiry-2026-11-10 initial research (2026-09-04).",
+  },
+  {
+    id: "china-retaliation-suspension-expiry-2026-12-31",
+    kind: "geopolitical",
+    title:
+      "China's market-based tariff-exclusion process for US imports expires (Kuala Lumpur leg 2)",
+    date: "2026-12-31",
+    status: "estimate",
+    source:
+      "NEWS: whitehouse.gov fact sheet of 2025-11 ('President Donald J. Trump Strikes Deal on Economic and Trade Relations with China'), fetched direct and read clause-by-clause 2026-09-04, attaches December 31 2026 to EXACTLY ONE commitment, verbatim: 'China will further extend the expiration of its market-based tariff exclusion process for imports from the United States and exclusions will remain valid until December 31, 2026.' Its retaliatory-tariff, non-tariff-countermeasure and rare-earth clauses carry no end-date at all. Filed estimate: the commitment is US-side reporting of a Chinese action, and no MOFCOM/State Council primary was read. Checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "SCOPE CORRECTED BY ITS OWN INITIAL RESEARCH (2026-09-04) — the id and the original title assert a retaliatory-tariff/countermeasure snapback on this date, and there is none. China's State Council Tariff Commission on 2025-11-05 REMOVED (not suspended) the 10-15% March-2025 retaliatory tariffs on ~740 US agricultural commodity lines effective 2025-11-10; a removal has no expiry clock. Every countermeasure that DOES carry a clock runs to 2026-11-10 — the 24% reciprocal countertariff, the April-4-2025 unreliable-entity listings (the March-4 listings were removed outright), and MOFCOM/GAC Announcement No. 70's suspension of the six 2025-10-09 export-control announcements — i.e. they belong to us-china-tariff-truce-expiry-2026-11-10, not here. So this is that cliff's 51-day TAIL on its narrowest leg, not a second cliff. What is genuinely on this clock is China's standing tariff-relief channel for US goods, expiring mid-way through the unfinished $30bn 'reciprocal tariff reduction' agreed in principle at the 2026-05-13/15 Trump state visit to China (USTR dockets 2026-0430/0431; Skadden reads the vehicle as a bilateral Trade Council, NOT this exclusion process — a timing collision, not an established mechanism). GEOMETRY INVERTS VS 11/10: all three venues Bessent named in May 2026 fall BEFORE this deadline — trump-xi-summit-2026-09-24, apec-leaders-shenzhen-2026-11-18, and g20-miami-2026-12-14 — so the after-the-deadline renewal problem the 11/10 entry flags does not apply here. No symbol this calendar tracks carries the exposure; it is agricultural, and that complex had already run 10-17% in the month to 2026-09-03 on at least three drivers (China buying, Black Sea port damage, NW Corn Belt drought), so the ag tape is not a read on this date. Lands in a holiday-thinned session alongside georgia-psc-data-center-cost-shift-2026-12-31 and one day after fomc-minutes-2026-12-30. Estimate widens caution only. Discovered during the us-china-tariff-truce-expiry-2026-11-10 initial research (2026-09-04); ledger: docs/research/events/china-retaliation-suspension-expiry-2026-12-31.md.",
+  },
+  {
+    id: "g20-summit-doral-2026-12-14",
+    kind: "geopolitical",
+    title: "G20 Leaders' Summit — Trump National Doral, Miami (US host year)",
+    date: "2026-12-14",
+    status: "estimate",
+    source:
+      "NEWS: en.wikipedia.org/wiki/2026_G20_Miami_summit states '14-15 December 2026' at Trump National Doral Miami with Trump as chair (fetched direct 2026-09-04); corroborated by CBS News coverage of the 2025 announcement and Digital Watch's G20 Leaders' Summit 2026 listing. g20.org's own events calendar and location pages returned HTTP 403 to a direct fetch this pass, so no host-primary was read — re-verify against g20.org before any promotion. Checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "THE THIRD OF BESSENT'S THREE NAMED VENUES, AND THE LATEST ONE. In May 2026 he said the administration was 'not in a hurry' to extend the Kuala Lumpur arrangement, with time to renew it 'in meetings later this year' — the September Washington summit, APEC Shenzhen 11/18-19, and this. Two of the three post-date the 2026-11-10 export-control expiry and this one post-dates it by 34 days. Also the reported quid pro quo for Trump's APEC attendance: SCMP (2026-09-02) ties his going to Shenzhen to whether Xi agrees to come to Doral. Attendance is contested on its own terms — Trump has said South Africa will not participate. Day 1 of the two-day window per house convention. Estimate widens caution only. Discovered during the apec-leaders-shenzhen-2026-11-18 initial research (2026-09-04).",
+  },
+  {
     id: "ppi-2026-11-13",
     kind: "macro-print",
     title: "PPI release (Oct 2026 data)",
@@ -1349,6 +1432,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "The second dated checkpoint the midterm-elections-2026-11-03 entry deliberately left un-proposed 'until the chambers reconcile which' of Dec 4 (House) or Dec 11 (Senate) — 2026-09-01 reconciled it to the Senate's Dec 11, so it is proposed now. Placement is the whole point: it lands TWO DAYS AFTER the 12-09 FOMC and ONE DAY AFTER cpi-2026-12-10, i.e. inside the blackout gate fomc-2026-12-09's notes already flag, so no FOMC participant may respond to a lapse in the session it would begin. It also sits 10 days after the conditional georgia-senate-runoff-2026-12-01, which can leave Senate control unresolved going into the vote that averts it, and 35 days after jobs-2026-11-06 — far enough that the October reference month this calendar's BLS prints measure is not exposed to it, which is the reason the jobs-2026-11-06 pulse that discovered it recorded the exposure as retired for November and live for December. The lapse itself remains conditional and un-forecast here; the government-funding-deadline-2026-09-30 ledger owns the base rates (S&P median 0.0% during 22 funding gaps since 1976; the durable cost is informational, not price). Discovered during the jobs-2026-11-06 pulse-check adjacency sweep (2026-09-02).",
+  },
+  {
+    id: "g20-miami-2026-12-14",
+    kind: "geopolitical",
+    title: "G20 Leaders' Summit (21st) — Trump National Doral, Miami",
+    date: "2026-12-14",
+    status: "estimate",
+    source:
+      "NEWS: multiple secondary sources name 14-15 December 2026 at Trump National Doral Miami for the 21st G20 Leaders' Summit, which Trump hosts (CBS News on the venue announcement; the summit's own g20.org events calendar; City of Doral; Wikipedia '2026 G20 Miami summit'); State Dept confirms the US hosting year via its first G20 Sherpa meeting (2025-12). Treasury Sec. Bessent named 'a December G20 in Florida' as one of three venues for China trade talks in May-2026 remarks. Filed estimate: no primary schedule page was read direct, this calendar has no confirmed prefix for a multilateral body's own schedule (same schema gap us-china-tariff-truce-expiry-2026-11-10 records), and Xi's attendance is reported as scheduled rather than confirmed. Checked 2026-09-04",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "THE LAST PRE-DEADLINE VENUE, AND THE REASON THE 12/31 LEG READS DIFFERENTLY FROM THE 11/10 ONE. It sits 17 days before china-retaliation-suspension-expiry-2026-12-31 and 34 days after us-china-tariff-truce-expiry-2026-11-10 — so for the December leg all three venues Bessent named (trump-xi-summit-2026-09-24, apec-leaders-shenzhen-2026-11-18, this) fall before the clock they would extend, the inverse of the November leg's problem where two of three land after it. Reporting as of 2026-09-02 describes Trump and Xi as scheduled to meet in Washington in September, Shenzhen in November and here in December; that ladder is what makes a lapse-by-inattention on 12/31 unlikely and keeps that event a watch rather than a hedge. Day 1 of the two-day window per house convention. Estimate widens caution only. Discovered during the china-retaliation-suspension-expiry-2026-12-31 initial research (2026-09-04).",
   },
   {
     id: "ppi-2026-12-15",

@@ -37,7 +37,6 @@ import { createAccountService } from "../server/account-service.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
 import { toClaimAccounts } from "../server/claim-form.js";
 import { createDashboardServer } from "../server/dashboard-server.js";
-import { opaqueMemberId } from "../server/feedback-issue.js";
 import { ObservatoryHub } from "../server/observatory-hub.js";
 import { createOrderAuditLog } from "../server/order-audit-log.js";
 import { ParticipantService } from "../server/participant-service.js";
@@ -179,11 +178,13 @@ async function main(): Promise<void> {
     resolveOwnerId,
     ownerEmailFor,
   } = setupAccess(process.env, liveRoster);
-  const opsStatus = wireOpsStatus(process.env, botControls, {
-    hub,
-    activity,
-    authConfigured: Boolean(auth),
-  });
+  const credentialsBridge = { knownPersonaIds: [...knownPersonaIds], findParticipant };
+  const opsStatus = wireOpsStatus(
+    process.env,
+    botControls,
+    { hub, activity, authConfigured: Boolean(auth) },
+    credentialsBridge,
+  );
   // The broker's last word: the fill stream is the fast path, this is the authoritative slow
   // one that repairs whatever it missed — a socket gap, a restart, an order placed outside this app.
   // Reads the LIVE roster, so a runtime-added or rotated account is covered too.
@@ -212,19 +213,18 @@ async function main(): Promise<void> {
     feedbackFollowup,
     communityProgression,
   } = setupFeedback(process.env);
-  // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance.
-  const { companion, progression: progressionService } = setupCompanion(process.env, {
+  // Shares the coach's ANTHROPIC_API_KEY/cost dials; also builds the ProgressionService instance
+  // and the ladder gate's message log (dashboard-companion.ts owns crossing the id seam).
+  const {
+    companion,
+    progression: progressionService,
+    companionMessageLog,
+  } = setupCompanion(process.env, {
     hub,
     readFills: (id) => activity.list(id),
     readTags: (id) => orderAudit.list(id),
-    // The engagement track reads the FEEDBACK LOG, which is keyed by the opaque member id of the
-    // owner's email — never by the participant id the progression service is asked about. Binding
-    // the log by participant id read nothing, so the first-feedback milestone never earned
-    // (docs/LESSONS.md, 2026-09-03).
-    readFeedback: (id) => {
-      const email = ownerEmailFor(id);
-      return email ? feedbackLog.list(opaqueMemberId(email)) : Promise.resolve([]);
-    },
+    feedbackLog,
+    ownerEmailFor,
   });
 
   createDashboardServer({
@@ -282,6 +282,9 @@ async function main(): Promise<void> {
     ...(feedbackFollowup ? { submitFollowup: feedbackFollowup } : {}),
     communityProgression,
     ...(companion ? { companion } : {}),
+    // `/api/companion/ack`'s store — the caller there already has the session's own opaque id.
+    readMessages: (id) => companionMessageLog.list(id),
+    recordMessage: (id) => companionMessageLog.record(id),
     refreshParticipant: (id) => brokerSync.syncParticipant(id),
     readHistory: (id) => history.list(id),
     readTradeActivity: (id) => activity.list(id),

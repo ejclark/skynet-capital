@@ -29,6 +29,12 @@ import { existsSync } from "node:fs";
 import { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import { AlpacaMarketDataStream } from "../alpaca/market-data-stream.js";
 import { FetchAlpacaTradingTransport } from "../alpaca/trading-transport.js";
+import { resolveBotCredentialsClient } from "../autonomous/bot-credentials-client.js";
+import {
+  armMomentumPersistence,
+  persistSentiment,
+  restoreBotsState,
+} from "../autonomous/bots-state-db.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
@@ -36,6 +42,7 @@ import { SafetyController } from "../autonomous/safety.js";
 import { guardAccountCollisions } from "../bots/account-guard.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
+import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { AlpacaNewsClient } from "../news/alpaca-news-client.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
@@ -48,6 +55,7 @@ import {
   buildLiveBot,
   buildScoutDeps,
   resolveRoster,
+  seedBotsState,
   seedDailyLossBaseline,
 } from "./autonomous-live-wiring.js";
 import { startMarketClock } from "./autonomous-market-clock.js";
@@ -74,7 +82,22 @@ async function main(): Promise<void> {
 
 async function runLive(): Promise<void> {
   const enabled = new Set(enabledBotIds(process.env));
-  const { controls, bootControls } = await bootMissionControl();
+
+  // Populated below, once each bot's broker is built — the credentials client's callback is
+  // wired to this map now (a closure over a reference, not its contents) so a rotation that polls
+  // in BEFORE the map is populated is still a documented no-op (nothing to look up yet), never a
+  // crash, and every poll after boot finds the map fully populated.
+  const brokerHolders = new Map<string, SwappableBotBroker>();
+  const credentials = resolveBotCredentialsClient((personaId, next) => {
+    const broker = brokerHolders.get(personaId);
+    if (!broker) return false;
+    broker.replaceCredentials(next);
+    console.log(`[creds] ${personaId}: broker swapped in place (rotated) — no restart`);
+    return true;
+  });
+  const { controls, bootControls } = await bootMissionControl(
+    (state) => void credentials.reconcile(state),
+  );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
   // exactly one seat, and a roster of one must not be denied it because eight idle personas in the
   // registry would also have qualified.
@@ -148,6 +171,11 @@ async function runLive(): Promise<void> {
   const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
   const universeSet = new Set(UNIVERSE);
 
+  // Durable momentum/sentiment (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set; restored
+  // before the market-data stream starts, persisted on every subsequent tick/article below.
+  const botsStateDb = seedBotsState(process.env);
+  restoreBotsState(botsStateDb, tracker, sentiment);
+
   // News → sentiment, polled for the universe (news is low-frequency; a short poll is plenty).
   const newsClient = new AlpacaNewsClient(
     new FetchAlpacaTradingTransport({
@@ -161,6 +189,7 @@ async function runLive(): Promise<void> {
       for (const article of await newsClient.getNews(UNIVERSE)) {
         sentiment.ingest(article, universeSet);
       }
+      persistSentiment(botsStateDb, sentiment);
     } catch (error) {
       console.error("[news] poll failed:", error);
     }
@@ -197,8 +226,17 @@ async function runLive(): Promise<void> {
       hardcore: hardcoreRoster.hardcore,
       controls,
       bootControls,
+      ...(botsStateDb ? { botsStateDb } : {}),
     }),
   );
+  botRosters.forEach(({ bot }, i) => {
+    const broker = traders[i]?.broker;
+    if (broker instanceof SwappableBotBroker) brokerHolders.set(bot.persona.id, broker);
+  });
+  // Boot-time correction (mirrors mergeRoster's "store overrides stale env" precedent): a
+  // rotation that landed while this process was down is caught here, using the snapshot
+  // bootMissionControl already fetched, rather than waiting up to 30s for the next live poll.
+  await credentials.reconcile(bootControls);
 
   // --- beta scout: Eric's beta-phase directive (2026-08-13) — "deploying playbooks to observe
   // mechanics acting in live environments gives me confidence"; if nothing organic fires, force
@@ -247,6 +285,8 @@ async function runLive(): Promise<void> {
 
   // Gate trading on market hours (refreshed periodically).
   const marketClock = await startMarketClock(dataCreds);
+
+  armMomentumPersistence(botsStateDb, tracker);
 
   let lastEval = 0;
   let evaluating = false;

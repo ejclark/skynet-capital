@@ -243,7 +243,7 @@ table.blotter {
   box-shadow: var(--elev-base);
   text-decoration: none;
   color: var(--text);
-  max-width: 560px;
+  max-width: var(--col-read);
   transition: box-shadow 0.15s;
 }
 .trade-link-card:hover {

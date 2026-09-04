@@ -20,8 +20,8 @@ import { ProfileRail } from "../shell/profile-rail";
  *
  *   1. connect Alpaca — the five-step guide as progressive-disclosure accordions, the connect
  *      form inside step 5 (`shell/alpaca-guide.tsx`), while the viewer has no linked human account
- *   2. meet Moneypenny — opens her rail with the intro; the first filing is the step (the
- *      engagement track's own milestone)
+ *   2. meet Moneypenny — opens her rail with the intro; her first reply is the step (the
+ *      engagement track's own milestone; a filed issue is a separate, harder achievement)
  *   3. make the first trade — rung 101 on the desk, with the session hours in the viewer's zone
  *
  * `?moneypenny=intro` opens the rail on arrival — the deep link every "Meet Moneypenny ›" outside
@@ -47,7 +47,7 @@ function StepGlyph({ done, active }: { readonly done: boolean; readonly active: 
 /** The step's call to action — the rail or the desk, or nothing once done. */
 function StepAction({ step }: { readonly step: OnboardingStep }): ReactElement | null {
   if (step.done) return null;
-  if (step.id === "first-feedback")
+  if (step.id === "first-message")
     return (
       <button type="button" className="btn" onClick={() => void meetMoneypenny()}>
         Meet Moneypenny ›

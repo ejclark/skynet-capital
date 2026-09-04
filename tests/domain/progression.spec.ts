@@ -1,7 +1,7 @@
 import {
   deriveEarned,
   earnedCodes,
-  LADDER_FEEDBACK_GATE,
+  LADDER_GATE_MILESTONE,
   LADDER_GATE_NOTE,
   type LadderFill,
   type LadderTag,
@@ -119,9 +119,13 @@ describe("the ladder — sequential unlocks with training wheels on", () => {
   });
 });
 
-describe("the feedback gate on the ladder (#1119)", () => {
-  it("holds with wheels on and no filing, and lifts the moment first-feedback is earned", () => {
+describe("the message gate on the ladder (#1119, lowered 2026-09-03)", () => {
+  it("holds with wheels on and nothing said, and lifts the moment first-message is earned", () => {
     expect(ladderGated(true, new Set())).toBe(true);
+    expect(ladderGated(true, new Set(["first-message"]))).toBe(false);
+  });
+
+  it("also lifts for a member who filed real feedback — that proves a message too", () => {
     expect(ladderGated(true, new Set(["first-feedback"]))).toBe(false);
   });
 
@@ -130,7 +134,7 @@ describe("the feedback gate on the ladder (#1119)", () => {
   });
 
   it("names the remedy in one sentence a member can act on", () => {
-    expect(LADDER_GATE_NOTE).toContain("first feedback filing");
-    expect(LADDER_FEEDBACK_GATE).toBe("first-feedback");
+    expect(LADDER_GATE_NOTE).toContain("hello to Moneypenny");
+    expect(LADDER_GATE_MILESTONE).toBe("first-message");
   });
 });
