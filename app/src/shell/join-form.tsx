@@ -14,8 +14,12 @@ import { type JoinIndex, type JoinInput, type JoinResult, joinRequest } from "..
  *    found; the form renders the three-step reset walkthrough and a "start over" that clears the
  *    keys, because the remedy is a new account and a new pair, not a retry.
  *  - **The account-type picker is an operator control.** It renders for owners (and with no auth
- *    at all); a member joining sees one path — their own human account. Rendering only: the
- *    server still accepts either kind (`join-api-routes.ts`).
+ *    at all); a member joining sees one path — their own human account, with no hint that bots
+ *    exist (they open to members in Season 2). Rendering only: the server decides who is an
+ *    admin (`join-api-routes.ts`'s `canAddBots`), never this form.
+ *
+ *  Field wording follows the 2026-09-03 handoff: "key" and "secret", never "Key ID" / "Secret
+ *  Key"; the key field stays readable (Alpaca shows it any time — only the secret is shown once).
  *
  * Honesty carried whole: paper keys only, keys pasted once and never displayed, refusals rendered
  * verbatim from the service, ownership stamped from the session — the form carries no identity.
@@ -193,7 +197,9 @@ export function JoinForm({
     <div className="set-fields join-form">
       <div className="join-grid">
         <div className="field">
-          <label htmlFor={nameId}>Display name</label>
+          <label htmlFor={nameId}>
+            Display name <small>— what you want people to see</small>
+          </label>
           <input
             id={nameId}
             value={displayName}
@@ -206,15 +212,14 @@ export function JoinForm({
           />
         </div>
         <div className="field">
-          <label htmlFor={keyId}>Alpaca paper API key</label>
+          <label htmlFor={keyId}>Alpaca paper account: key</label>
           <input
             id={keyId}
             className="num"
-            type="password"
             value={apiKey}
             autoComplete="off"
             spellCheck={false}
-            placeholder="PK…"
+            placeholder="Key"
             onChange={(e) => {
               setApiKey(e.target.value);
               clearStops();
@@ -222,7 +227,7 @@ export function JoinForm({
           />
         </div>
         <div className="field">
-          <label htmlFor={secretId}>Alpaca paper API secret</label>
+          <label htmlFor={secretId}>Alpaca paper account: secret</label>
           <input
             id={secretId}
             className="num"
@@ -240,10 +245,10 @@ export function JoinForm({
         {data.canAddBots ? (
           <div className="field">
             <label htmlFor={kindId}>
-              Account type <small className="join-owner-tag">OWNER</small>
+              Account type <small className="join-owner-tag">ADMIN</small>
             </label>
             <select id={kindId} value={kind} onChange={(e) => setKind(e.target.value as never)}>
-              <option value="human">Human — you trade it yourself</option>
+              <option value="human">Human (manual trading)</option>
               <option value="bot">Bot — a persona trades it</option>
             </select>
           </div>

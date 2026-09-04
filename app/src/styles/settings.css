@@ -7,7 +7,7 @@
   box-shadow: var(--elev-base);
   padding: var(--panel-p);
   margin-bottom: 16px;
-  max-width: 640px;
+  max-width: var(--col-read);
 }
 .set-card-h {
   display: flex;

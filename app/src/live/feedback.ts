@@ -2,10 +2,12 @@ import { postJson } from "./post";
 
 /**
  * Feedback's client model (#738 phase 9d) — mirrors `/api/feedback`. The coach rides the
- * pre-existing `/feedback/coach` endpoint (JSON from birth, shared by both doors); it only
- * DRAFTS — the member's explicit Send is the one path that files anything. Screenshots are
- * serialized exactly as the legacy form's hidden field was, so the server's `parseImages`
- * stays the single authority on what an attachment may be.
+ * pre-existing `/feedback/coach` endpoint (JSON from birth); it only DRAFTS — a submit through
+ * `submitFeedbackRequest` is the one path that files anything. Since the 2026-09-03 handoff the
+ * caller is Moneypenny's rail (`moneypenny.ts`), not a form: the member's words go to the coach,
+ * its draft files, the same authorities either way. Screenshots are serialized exactly as the
+ * legacy form's hidden field was, so the server's `parseImages` stays the single authority on
+ * what an attachment may be.
  */
 
 export type FeedbackKind = "bug" | "feature" | "idea";
@@ -105,9 +107,3 @@ export const coachTurn = (input: {
   readonly kind: FeedbackKind;
   readonly messages: readonly CoachMessage[];
 }): Promise<CoachAnswer> => postJson("/feedback/coach", input);
-
-export const KIND_LABELS: readonly { readonly kind: FeedbackKind; readonly label: string }[] = [
-  { kind: "bug", label: "🐛 Bug — something's broken" },
-  { kind: "feature", label: "✨ Feature — make it do more" },
-  { kind: "idea", label: "🧪 Enhancement — extend current functionality" },
-];

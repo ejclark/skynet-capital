@@ -4,6 +4,8 @@ import type { ReactElement } from "react";
 import { fetchJourney } from "../live/learn";
 import { CourseCard, Hud } from "../shell/course-cards";
 import { PageFrame } from "../shell/frame";
+import { LadderGateCard } from "../shell/ladder-gate";
+import { ProfileMeta } from "../shell/profile-meta";
 import { ProfileRail } from "../shell/profile-rail";
 
 /**
@@ -34,6 +36,7 @@ function TradingLadderPage(): ReactElement {
   const data = journey.data;
   return (
     <PageFrame rail={rail}>
+      <ProfileMeta />
       <header className="page-header">
         <div className="join-eyebrow">Milestone M·02 · Trading progression</div>
         <h1>One fill unlocks the next rung</h1>
@@ -49,6 +52,7 @@ function TradingLadderPage(): ReactElement {
           an account yet, so the ladder shows from the start.
         </p>
       ) : null}
+      {data.gate ? <LadderGateCard note={data.gate.note} /> : null}
       <Hud journey={data} />
       {data.courses.map((course) => (
         <CourseCard key={course.level} course={course} />
