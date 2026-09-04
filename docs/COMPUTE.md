@@ -65,6 +65,35 @@ the plan-tier upgrade (Eric's gate — spend), never timidity on compute. Both p
 wait-for-the-throttle) share one trip-wire; rounding up just means we lean into quality first and let the
 data pick the moment to spend.
 
+## Eric does not set the dial — the system routes, and conservation is an explicit signal
+
+(Eric, 2026-09-04: "I don't want to dictate the model/effort applied to workflows/agents. I'd
+prefer we apply the config that delivers the best overall outcomes. If that requires Fable 5.1 at
+ultracode effort, so be it. I get the sense that I use too beefy of an LLM and too much effort in
+a way that is cost inefficient, so I anticipate we'll get more throughput by doing this, especially
+if we fan out agent workflows. If we need to conserve tokens, it'll be an explicit action/signal.")
+
+- **The system owns the dial, on every surface.** Agents, workflows, chores, and the lanes'
+  `claude_args` carry the tier the *task class* warrants (the floor table below), never a tier
+  chosen for economy. For the main session — the one dial only he can turn — Orient *advises* the
+  tier out loud when the session's setting is wrong for the work in front of it, in either
+  direction ("this batch is mechanical; Sonnet would do it as well for a fifth of the spend" is as
+  legitimate as "this needs Fable"). He follows the advice rather than arbitrating it — the compute
+  dial is a technique, and he directs by outcome.
+- **Right-sizing is a throughput play, not a savings play.** A blanket-beefy session spends the
+  same tokens on a rename as on an architecture call; routing by task class frees that spend for
+  the fan-outs that actually need it. Expect more work per token-hour, not less compute.
+- **Conservation is never inferred.** Rate-limit hits, a visible burn rate, or a hunch that a
+  run is expensive are *not* signals to route lower. The only conserve-mode trigger is an explicit
+  statement from Eric in the prompt, of the shape *"we need to conserve tokens to ensure we have
+  tokens to develop until the reset on Tuesday."* Under that signal, and only then, cut in this
+  order: waste first (`docs/process/TOKEN-EFFICIENCY.md`), then fan-out width (fewer parallel
+  items, not cheaper ones), then effort, then model — and say which cut was made.
+- **Cost-first defaults are bugs.** A default that exists "to be cheap" rather than because a
+  higher tier wouldn't change the outcome contradicts this doc; `scripts/config-audit.mjs` checks
+  agents against the floor table, and the same rubric applies to `docs/grind/*.instructions.md`
+  front matter and workflow-script defaults even where no gate reads them yet.
+
 ## The floor table (task class → model + effort FLOOR)
 
 Floors, not targets — an agent may exceed its floor, never fall below it. Aliases only.
@@ -76,6 +105,23 @@ Floors, not targets — an agent may exceed its floor, never fall below it. Alia
 | Complex / ambiguous / judgment (review, research-to-brief, art direction) | `opus` | `high` |
 | High-stakes correctness or security (security review, adversarial, irreversible-class design) | `opus` | `xhigh` |
 | Genuinely hard / unfamiliar / architecture / long multi-step, adversarial security, rigorous review of subtle diffs | `fable` | `xhigh`–`max` |
+
+Two surfaces route by a *structural* signal rather than a named task class, and both are
+best-outcome routing, not economy:
+
+- **Moneypenny's feedback builds** (`scripts/moneypenny/model-tier.mjs`, Eric's 2026-08-31 call
+  after measuring an 18.5-minute always-Opus run on a 3-criterion fix): the issue's own
+  `skynet-spec` block picks the tier — no block, incomplete readiness, or >3 criteria → `opus`;
+  ≤3 criteria, spec-complete → `sonnet`; exactly 1 criterion with zero open assumptions →
+  `haiku`. Time is an outcome; under-resourcing a complex ask is the costly failure, so anything
+  ambiguous escalates up, never down. The `haiku` band sits below this table's first row on
+  purpose — a single-fact, zero-ambiguity edit is the one case where the lightest model changes
+  nothing but wall-clock.
+- **`/grind` steps** (`.claude/workflows/grind.js`): effort defaults by step kind — `script`
+  (run a command, report its exit) at `low`, everything else at `high`; model defaults to
+  `sonnet`, and a chore that needs more declares it in its front matter (the research chore runs
+  `fable`/`high`). The two `docs/grind` chores that shipped at `low` were cost-first defaults and
+  were raised the day this section was written.
 
 ## Honest limit
 

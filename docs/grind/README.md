@@ -1,8 +1,9 @@
 # Grind — reusable batch-chore specs
 
 `/grind` (`.claude/workflows/grind.js`) fans one repetitive chore out across many similar targets —
-cheap model, low effort, one agent per item — instead of doing them one at a time in the main
-thread. This directory holds the reusable `*.instructions.md` files a grind run can point at, so a
+one agent per item, effort routed by step kind (`docs/COMPUTE.md`: a `script` step at `low`,
+anything that reads, writes, or judges at `high`; the chore's front matter raises either) —
+instead of doing them one at a time in the main thread. This directory holds the reusable `*.instructions.md` files a grind run can point at, so a
 chore gets written once and reused, instead of re-pasted into `promptTemplate` every time.
 
 Maps onto the codification ladder in [`../COACHES.md`](../COACHES.md): a one-off chore is a

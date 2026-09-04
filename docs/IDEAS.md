@@ -1219,3 +1219,17 @@ because sessions research before they file? The scan would also be the natural f
 secretary digest's needs-you tier, so the ones that genuinely are his arrive pre-aged and
 pre-researched rather than as a pile.
 _(src: Eric · while: reflecting on the day's research/grind work, 2026-09-04)_
+
+### Report at the workflow-view altitude — a ledger over the session's workflow journals
+Eric, 2026-09-04, on the Background-tasks panel (workflow → phases → agent · model · tokens ·
+time): "That feels like the best altitude of all the views in terms of details I want to see
+and/or curate." Every recap and digest should speak that shape, and the data already exists: each
+`Workflow` run writes `journal.jsonl` under the session's `subagents/workflows/<run>/` with one
+result line per agent (label, model, tokens, duration, status). A workflow-ledger script under `scripts/` (house shape, `--candidate`-less: it reports, nothing ratchets)
+that folds those into one table — workflow · chore/phase · agents · model · tokens · wall-clock ·
+done/blocked — is the secretary digest's natural "what ran" tier, and the same table is what a
+session should print when a run completes instead of prose. Second half, the *curate* part: the
+panel's per-agent stop is the only steering today; the ledger could carry the outcome-check verdict
+and the routing label applied, so what Eric sees is also what he can send back ("re-run #1327 at
+xhigh", "un-board that item"). Rule of three already met — three hand-written status tables today.
+_(src: Eric · while: watching the #1343 research run in the workflow view, 2026-09-04)_
