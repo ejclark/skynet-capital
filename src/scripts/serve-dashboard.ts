@@ -14,7 +14,10 @@
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { ALPACA_PAPER_BASE_URL } from "../bots/bot.js";
 import { reconcileBrokerActivity } from "../observatory/activity-backfill.js";
-import { createBootActivityStore } from "../observatory/activity-store.js";
+import {
+  bootPublishingActivityStore,
+  publishingOrderAuditLog,
+} from "../observatory/activity-publishing.js";
 import { createBrokerSync } from "../observatory/broker-sync.js";
 import { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import { buildDashboardData } from "../observatory/dashboard-data.js";
@@ -28,7 +31,6 @@ import { TransitionBaseline } from "../observatory/transition-baseline.js";
 import { mergeRoster, type Participant } from "../participants/participant.js";
 import { createParticipantStore } from "../participants/participant-store.js";
 import { resolveDataSource } from "../runtime/data-source.js";
-import { volumePersistenceWarnings } from "../runtime/volume-guard.js";
 import { resolveDeskTrading } from "../server/account-identity-gate.js";
 import { createAccountService } from "../server/account-service.js";
 import { ownerEmails } from "../server/auth/resolve-auth.js";
@@ -40,6 +42,7 @@ import { ParticipantService } from "../server/participant-service.js";
 import { resolvePort } from "../server/resolve-port.js";
 import { setupAccess } from "./dashboard-access.js";
 import { buildAccountAdmin } from "./dashboard-account-admin.js";
+import { warnAccountCollisions, warnUnpinnedVolumes } from "./dashboard-boot-warnings.js";
 import { setupCompanion } from "./dashboard-companion.js";
 import { setupFeedback } from "./dashboard-feedback.js";
 import { wireLadderProgress } from "./dashboard-ladder-progress.js";
@@ -48,8 +51,7 @@ import { wireOpsStatus } from "./dashboard-ops-status.js";
 const PORT = resolvePort(process.env);
 
 async function main(): Promise<void> {
-  // Boot-time backstop for drift the CI gate can't see (docs/LESSONS.md, "guest list … volume").
-  for (const warning of volumePersistenceWarnings(process.env)) console.warn(warning);
+  warnUnpinnedVolumes(process.env);
   const dataSource = resolveDataSource(process.env);
   const store = createParticipantStore(process.env);
   const envRoster = dataSource.loadParticipants();
@@ -69,15 +71,7 @@ async function main(): Promise<void> {
     history,
     await buildDashboardData(roster, { clientFactory: dataSource.clientFactory }),
   );
-  // Collision check — see docs/LESSONS.md (2026-08-11). Two participants that resolve to the
-  // SAME Alpaca account look completely healthy individually (both authenticate); nothing else
-  // would ever notice. This must be checked at boot, every boot, because it's exactly the shape
-  // of mistake a credential rotation can silently introduce.
-  for (const collision of initial.collisions) {
-    console.error(
-      `[collision] ${collision.ids.join(" and ")} are BOTH pointed at Alpaca account ${collision.accountId} — positions/P&L will merge and be unattributable. Fix the credentials before trusting either account's numbers.`,
-    );
-  }
+  warnAccountCollisions(initial.collisions);
 
   const hub = new ObservatoryHub(initial);
   const ceremonies = new CeremonyChannel();
@@ -87,8 +81,12 @@ async function main(): Promise<void> {
 
   // Durable trade-activity ledger (SKYNET_ACTIVITY_DIR → /data/activity in prod): every order
   // update from every account's trade_updates stream is journaled, so trade history survives the
-  // broker's recent-order window. Boot banks that window first — the restart-gap net.
-  const activity = createBootActivityStore(process.env, dataSource.mode);
+  // broker's recent-order window. Boot banks that window first — the restart-gap net. `bus` also
+  // gets every write, translated, for a future triage view / Moneypenny subscription (#1211).
+  const { activity, bus: activityEventBus } = bootPublishingActivityStore(
+    process.env,
+    dataSource.mode,
+  );
   // Ladder milestone auto-completion — never a client claim; see the wiring module.
   const { onActivity, sweep: sweepLadderProgress } = wireLadderProgress(process.env, activity);
   void reconcileBrokerActivity(activity, initial.participants)
@@ -189,7 +187,7 @@ async function main(): Promise<void> {
   });
   brokerSync.start();
 
-  const orderAudit = createOrderAuditLog(process.env);
+  const orderAudit = publishingOrderAuditLog(createOrderAuditLog(process.env), activityEventBus);
   const desk = resolveDeskTrading({
     findParticipant,
     clientFactory: dataSource.clientFactory,
