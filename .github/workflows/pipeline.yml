@@ -101,11 +101,28 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          # DIAGNOSTIC ONLY (temporary, this PR is not meant to merge): "-diag" suffix forces a
+          # guaranteed miss so `npm ci` actually runs, so its real internal phase timing can be
+          # measured instead of guessed at.
+          key: node-modules-diag2-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --timing --loglevel=verbose
+
+      - name: Dump npm timing breakdown (diagnostic only)
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: |
+          f=$(ls -t ~/.npm/_logs/*-timing.json | head -1)
+          echo "timing file: $f"
+          node -e '
+            const t = require(process.argv[1]);
+            const entries = Object.entries(t.timers || t)
+              .filter(([,v]) => typeof v === "number")
+              .sort((a,b) => b[1]-a[1])
+              .slice(0, 40);
+            for (const [k,v] of entries) console.log(v.toFixed(0).padStart(8), "ms  ", k);
+          ' "$f"
 
       - name: Detect non-docs changes
         id: changes
