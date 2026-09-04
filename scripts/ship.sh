@@ -129,12 +129,16 @@ EOF_TYPES
 cmd_open() {
   local title="${1:-}"; shift || true
   [ -n "$title" ] || { echo "ship open: PR title required" >&2; exit 1; }
-  local base="main" bodyfile="" verify=1 draft=0
+  local base="main" bodyfile="" verify=1 hold=0
   while [ $# -gt 0 ]; do case "$1" in
     --base) base="$2"; shift 2 ;;
     --body-file) bodyfile="$2"; shift 2 ;;
     --no-verify) verify=0; shift ;;
-    --draft) draft=1; shift ;;   # hold-for-Eric PRs (carve-outs, open questions) — no auto-merge arm
+    # hold-for-Eric PRs (carve-outs, a `Needs from you` block): opened READY FOR REVIEW with
+    # auto-merge left unarmed — never as a draft. A draft skips `verify` and reads as "Claude still
+    # has work to do" (Eric, 2026-09-04, on #1304); the hold is the unarmed merge, not the draft bit.
+    --hold) hold=1; shift ;;
+    --draft) echo "ship open: --draft is gone — use --hold (ready for review, auto-merge unarmed)" >&2; exit 1 ;;
     *) echo "ship open: unknown arg $1" >&2; exit 1 ;;
   esac; done
 
@@ -275,8 +279,9 @@ EOF_SHOTS
     sleep $((2**n)); done
 
   local body; body="$(cat "$bodyfile")"
-  local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':sys.argv[5]=='1'}))" \
-    "$title" "$branch" "$base" "$body" "$draft")"
+  # draft is always false: a draft PR skips `verify` and can't auto-merge (docs/LESSONS.md 2026-08-14).
+  local payload; payload="$(python3 -c "import json,sys; print(json.dumps({'title':sys.argv[1],'head':sys.argv[2],'base':sys.argv[3],'body':sys.argv[4],'draft':False}))" \
+    "$title" "$branch" "$base" "$body")"
   echo "ship: opening PR over REST (core bucket)…"
   local resp http body opened_hits=""; resp="$(api POST "/pulls" "$payload")"
   http="$(http_of "$resp")"; body="$(body_of "$resp")"
@@ -284,8 +289,8 @@ EOF_SHOTS
     local num url; num="$(printf '%s' "$body" | json_field number)"; url="$(printf '%s' "$body" | json_field html_url)"
     echo "ship: opened PR #$num  $url"
     echo "$num"
-    if [ "$draft" = 1 ]; then
-      echo "ship: draft PR — hold for Eric; do NOT arm auto-merge. STOP. No polling."
+    if [ "$hold" = 1 ]; then
+      echo "ship: held for Eric (ready for review, auto-merge unarmed) — do NOT arm. STOP. No polling."
     # The arming usually happens through the MCP tool, which never runs this script — so the
     # instruction printed here is the last place the envelope answer can reach the session that
     # arms. Print the REFUSAL as the next step when the diff is in the irreversible class.
