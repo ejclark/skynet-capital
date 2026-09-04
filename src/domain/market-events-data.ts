@@ -1230,6 +1230,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
   },
   {
+    id: "us-china-tariff-truce-expiry-2026-11-10",
+    kind: "geopolitical",
+    title: "US–China tariff truce expires — Kuala Lumpur suspension of the additional 24% duty",
+    date: "2026-11-10",
+    status: "estimate",
+    source:
+      "NEWS: whitehouse.gov presidential action of 2025-11-04 (Executive Order 14358, 'Modifying Reciprocal Tariff Rates Consistent with the Economic and Trade Arrangement Between the United States and the People's Republic of China') suspends the heightened EO-14257 duties in favour of a flat additional 10% until, verbatim, '12:01 a.m. eastern standard time on November 10, 2026' — fetched direct 2026-09-04. Filed estimate, not confirmed, per this lane's no-self-confirm limit on an event discovered in-sweep; the primary quote is already in hand, so its own initial research can promote it in one step (the crwv-fully-connected-2026-09-29 precedent)",
+    impact: "high",
+    symbols: [],
+    notes:
+      "The deadline the trump-xi-summit-2026-09-24 ledger already reasons about by hand but that the calendar could not point at — the two are one connected risk window, not two events, with the summit sitting ~6.5 weeks in front of it. What lapses is a SUSPENSION, so the null outcome is escalation, not continuity: absent renewal the additional 24% 'Liberation Day' retaliatory rate returns on top of the 10% floor, and the Kuala Lumpur arrangement's other legs (China's pause on rare-earth export controls, its commitments on retaliation against US semiconductor manufacturers) run on the same clock. Sector risk for the same AI-semis names the summit carries (AVGO, NVDA, MRVL, AMD), plus rare-earth/materials supply chains. Lands 08:30-adjacent to cpi-2026-11-10 and the est. CRWV print, so nothing that day is cleanly attributable. Estimate widens caution only — no date-keyed action. Discovered during the trump-xi-summit-2026-09-24 pulse-check adjacency sweep (2026-09-04).",
+  },
+  {
     id: "ppi-2026-11-13",
     kind: "macro-print",
     title: "PPI release (Oct 2026 data)",
