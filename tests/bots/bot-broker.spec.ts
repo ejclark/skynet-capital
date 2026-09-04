@@ -119,6 +119,7 @@ describe("createBotBroker", () => {
         intent,
         status: "filled",
         filledQuantity: 2,
+        orderId: "o1",
       });
     } finally {
       globalThis.fetch = original;

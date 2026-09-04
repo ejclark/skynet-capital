@@ -9,6 +9,7 @@ import {
   ticketContext,
 } from "../../src/observatory/desk-data.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+import { indexPlaybookTags } from "../../src/trading/playbook-attribution.js";
 
 /**
  * The adapter between the observatory's account snapshot and the pure trading layer — only
@@ -115,6 +116,67 @@ describe("deskLedger", () => {
     const ledger = deskLedger(snap, durable);
     expect(ledger.trips).toHaveLength(1);
     expect(ledger.trips[0]?.realized).toBe(50); // (105 - 100) * 10, not double the buy leg
+  });
+
+  it("attaches playbook attribution (#885) to a round trip when tags are supplied", () => {
+    const tags = indexPlaybookTags([
+      { orderId: "o1", playbookId: "S1-NVDA", playbookMode: "standard" },
+    ]);
+    const ledger = deskLedger(
+      snapshot([
+        {
+          orderId: "o1",
+          symbol: "NVDA",
+          side: "buy",
+          quantity: 10,
+          filledQuantity: 10,
+          price: 100,
+          status: "filled",
+          at: "2026-01-01T00:00:00Z",
+        },
+        {
+          orderId: "o2",
+          symbol: "NVDA",
+          side: "sell",
+          quantity: 10,
+          filledQuantity: 10,
+          price: 110,
+          status: "filled",
+          at: "2026-01-02T00:00:00Z",
+        },
+      ]),
+      undefined,
+      tags,
+    );
+    expect(ledger.trips[0]).toMatchObject({ playbookId: "S1-NVDA", playbookMode: "standard" });
+  });
+
+  it("leaves every trip unattributed when no tags are supplied — byte-identical to before #885", () => {
+    const ledger = deskLedger(
+      snapshot([
+        {
+          orderId: "o1",
+          symbol: "NVDA",
+          side: "buy",
+          quantity: 10,
+          filledQuantity: 10,
+          price: 100,
+          status: "filled",
+          at: "2026-01-01T00:00:00Z",
+        },
+        {
+          orderId: "o2",
+          symbol: "NVDA",
+          side: "sell",
+          quantity: 10,
+          filledQuantity: 10,
+          price: 110,
+          status: "filled",
+          at: "2026-01-02T00:00:00Z",
+        },
+      ]),
+    );
+    expect(ledger.trips[0]).not.toHaveProperty("playbookId");
   });
 });
 
@@ -237,5 +299,27 @@ describe("fillsFrom (lifecycle events, #468 criterion 6)", () => {
       },
     ]);
     expect(fills).toEqual([]);
+  });
+
+  it("attaches playbook attribution by order id, and never surfaces orderId itself (#885)", () => {
+    const tags = indexPlaybookTags([{ orderId: "o1", playbookId: "S1-NVDA" }]);
+    const fills = fillsFrom(
+      [
+        {
+          orderId: "o1",
+          symbol: "NVDA",
+          side: "buy",
+          quantity: 10,
+          filledQuantity: 10,
+          price: 100,
+          status: "filled",
+          at: "t1",
+        },
+      ],
+      tags,
+    );
+    expect(fills).toEqual([
+      { symbol: "NVDA", side: "buy", quantity: 10, price: 100, at: "t1", playbookId: "S1-NVDA" },
+    ]);
   });
 });
