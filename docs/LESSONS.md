@@ -70,9 +70,44 @@ it. Prevention ranks, best first:
 
 ---
 
-### The CI `verify` job's `app/` install re-fetched from the network on almost every run — the cache key never saw its lockfile
+### The app/ cache fix only ever warmed a scope no other PR could read — verify never runs on main
 
 - **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric, reading a live CI run: "verify is still installing dependencies twice... This
+  feels like a complete waste of time." Three separate PRs that evening (#1194, #1203, #1206) each
+  ran `verify` and each showed the identical pattern in its raw log: `Install dependencies` and
+  `Install app dependencies` both with NO `Cache restored` line, every time, on every branch,
+  regardless of how many prior runs had already "saved" a cache under the supposedly-fixed key.
+- **ROOT CAUSE:** the earlier fix (previous entry) was a real key fix in the wrong job. `verify`
+  triggers only on `pull_request` — and GitHub's own documented behavior is that a cache saved by
+  a `pull_request`-triggered run is scoped to that PR's merge ref: restorable only by a later run
+  of the SAME pull request, never by the base branch or by any other PR
+  (docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching, confirmed by
+  search rather than assumed from memory, given how much of this evening was already spent on
+  claims that turned out unverified). Nothing in this workflow ever ran the app-inclusive install
+  on a `push` to `main` — `deploy` (the one job that DOES run on push) still only ran `npm ci`
+  (root), never `npm ci --prefix app` — so the one scope every future PR's `verify` run CAN fall
+  back to (its base branch) never had anything populated in it under this key. Every PR branch was
+  therefore guaranteed to pay a full cold install for `app/`, forever, no matter how many other
+  PRs had run `verify` before it — which is exactly the pattern the logs showed and the previous
+  entry's "should warm on the next run" claim couldn't survive contact with.
+- **PREVENTION:** script — `deploy`'s `setup-node` step now carries the same
+  `cache-dependency-path`, and a new step (`npm ci --prefix app`) runs there purely to populate the
+  shared cache; `deploy` runs on every push to `main`, which IS a scope `pull_request` runs can
+  restore from. This is GitHub's own documented remedy for this exact class of gap ("ensure there
+  is a trusted workflow that keeps the cache updated... triggered by a push to the default
+  branch"), not an improvised one.
+- **SIDE QUESTS:** the previous entry's ledger claim ("the next app-touching PR's verify run should
+  show a fast install") was falsifiable and false — flagged in place rather than deleted, per this
+  evening's earlier lesson that a wrong claim gets corrected on the record, not quietly dropped.
+  This fix is unverified until a PR opened after `deploy` next runs on `main` actually shows a
+  `Cache restored` line for `app/` — that is the real proof, still pending as this entry is banked.
+
+---
+
+### The CI `verify` job's `app/` install re-fetched from the network on almost every run — the cache key never saw its lockfile [INCOMPLETE — see the follow-up entry above]
+
+- **SHA:** n/a (fix on `.github/workflows/pipeline.yml`)   **DATE:** 2026-09-04   **STATUS:** closed (superseded — the fix below was real but insufficient; the completing entry is above this one)
 - **SIGNAL:** Eric posted the Actions log for PR #1179's `verify` job: `Install dependencies` (root)
   5m03s, `Install app dependencies` 2m35s — the two summed almost exactly to the "7.5 minutes" he'd
   flagged the turn before, which is what revealed the earlier ledger entry had answered the wrong
@@ -98,6 +133,13 @@ it. Prevention ranks, best first:
   changes exactly when either tree's dependencies do and both trees' fetches persist across runs.
   Root's 5m is extraction time on an already-warm cache, not a caching gap, and stays open as a
   separate, smaller question (below).
+  **This was the right key, in the wrong place.** `verify` only ever runs on `pull_request` events,
+  and a cache a `pull_request`-triggered job saves is scoped to that PR's own merge ref — GitHub
+  restores it only on a re-run of the SAME pull request, never on the base branch or any other PR.
+  Three separate PRs' `verify` runs the same evening (#1194, #1203, #1206) each showed a cold
+  "Install app dependencies" with no `Cache restored` line, one after another, because none of them
+  could ever see a cache another PR branch had saved. The completing fix is the entry directly
+  above this one.
 - **SIDE QUESTS:** whether root's 442-package `npm ci` can be faster than 5 minutes even on a warm
   npm cache (a bigger hosted runner? `npm ci`'s known link-step overhead on standard 2-vCPU
   runners?) is unmeasured; unmerging root and `app/` into one npm workspace would remove the second
