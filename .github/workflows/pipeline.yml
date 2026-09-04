@@ -86,16 +86,16 @@ jobs:
           restore-keys: |
             npm-${{ runner.os }}-
 
-      # `npm ci` unconditionally deletes and rebuilds node_modules from scratch every run — the
-      # ~/.npm cache above only shortcuts the *download*, not that extract-and-link cost. Measured
-      # 2026-09-04 (docs/LESSONS.md): a warm ~/.npm cache still cost 3m35s for root's install on
-      # this runner, vs 12s for the same lockfile on a local machine — GH Actions' disk is far
-      # slower per small-file-write, and root's devDependency tree (typescript, biome's native
-      # binary, knip, jscpd, dependency-cruiser, semantic-release's plugin chain) is heavy on file
-      # count. Caching node_modules itself, keyed on the exact lockfile hash, lets an unchanged
-      # lockfile skip `npm ci` entirely instead of paying that rebuild every run. No restore-keys
-      # here on purpose: a partial/stale restore buys nothing since `npm ci` deletes whatever's
-      # there on any miss anyway, so only an exact hit is worth restoring.
+      # CORRECTED 2026-09-04 (docs/LESSONS.md): the theory below ("GH Actions' disk is slow") was
+      # wrong, and was corrected by getting npm's own --timing breakdown from a real run instead of
+      # continuing to infer from wall-clock deltas. Root's `npm ci` measured 114s total, of which
+      # 112s (98%) was `auditReport:getReport` — npm ci's default vulnerability-audit network call
+      # to the registry — and only 7.6s was the actual package extract/link. `--no-audit` on every
+      # `npm ci` below is the real fix for that dominant cost. This node_modules cache is a smaller,
+      # independent optimization stacked on top (skips even that 7.6s + resolve overhead when the
+      # lockfile hasn't changed) — real, but not the fix this comment originally claimed it was. No
+      # restore-keys on purpose: a partial/stale restore buys nothing since `npm ci` deletes
+      # whatever's present on any miss anyway, so only an exact hit is worth restoring.
       - name: Restore node_modules cache
         id: node-modules-cache
         uses: actions/cache@v4
@@ -105,7 +105,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --no-audit
 
       - name: Detect non-docs changes
         id: changes
@@ -134,7 +134,7 @@ jobs:
       # workspace), so it needs its own install. Root's `npm ci` above doesn't touch it.
       - name: Install app dependencies
         if: steps.changes.outputs.code == 'true' && steps.app-node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci --prefix app
+        run: npm ci --prefix app --no-audit
 
       # Typecheck/lint/test are independent checks over the same unchanged tree — nothing
       # downstream of `npm ci` depends on another's output. Backgrounding them on the shared runner
@@ -224,7 +224,7 @@ jobs:
         # before printing anything, which then fed an empty pipe into the JSON parse below and
         # failed this job outright instead of correctly finding this very PR's own diff protected.
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --no-audit
 
       - name: Is the diff protected?
         id: envelope
@@ -299,7 +299,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --no-audit
 
       # A cache saved by a `pull_request`-triggered run is scoped to that PR's own merge ref —
       # GitHub's documented behavior, confirmed here after two PRs' `verify` runs (2026-09-04,
@@ -321,7 +321,7 @@ jobs:
 
       - name: Warm the shared app/ dependency cache
         if: steps.app-node-modules-cache.outputs.cache-hit != 'true'
-        run: npm ci --prefix app
+        run: npm ci --prefix app --no-audit
 
       - name: Semantic Release
         env:
