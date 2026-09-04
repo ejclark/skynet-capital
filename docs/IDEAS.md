@@ -18,6 +18,14 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### A screenshot harness for the React shell (`shoot:app`)
+
+`shoot:standings` / `shoot:login` shoot the legacy server-rendered pages; nothing shoots `/app/*`.
+The fluid-shell PR drove five routes through an offline server with a 40-line throwaway Playwright
+script (before/after at 1920px, dark) — promote it to `scripts/shoot-app.mjs` + `npm run shoot:app`
+so the next visual PR on the shell gets its fridge picture in one command.
+_(src: Claude · while: making the shell fluid, 2026-09-04)_
+
 ### Screenshots in Moneypenny's rail
 
 The 2026-09-03 handoff retired the feedback form and coach box (`app/src/shell/feedback-door.tsx`

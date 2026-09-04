@@ -11,7 +11,7 @@
 }
 .join-guide {
   margin: 0 0 14px;
-  max-width: 720px;
+  max-width: var(--col-read);
 }
 .join-n {
   display: inline-flex;
@@ -28,7 +28,7 @@
   margin-top: 1px;
 }
 .join-form {
-  max-width: 720px;
+  max-width: var(--col-read);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -97,7 +97,7 @@
   font-style: italic;
 }
 .join-done {
-  max-width: 640px;
+  max-width: var(--col-read);
   background: var(--surface);
   border: 1px solid color-mix(in oklab, var(--accent) 50%, var(--border));
   border-radius: 12px;
@@ -174,7 +174,7 @@
   display: inline-flex;
 }
 .join-caveat {
-  max-width: 720px;
+  max-width: var(--col-read);
   margin: 12px 0 0;
   font-size: 12px;
   color: var(--muted);
@@ -186,7 +186,7 @@
 
 /* what's next — steps 2 and 3 named and linked, never marked done from here */
 .join-next {
-  max-width: 720px;
+  max-width: var(--col-read);
   margin-top: 18px;
   display: flex;
   flex-wrap: wrap;
