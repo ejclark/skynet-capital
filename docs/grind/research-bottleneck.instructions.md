@@ -4,7 +4,7 @@ description: research one bottleneck-labelled issue and leave a call sheet plus 
 model: fable
 effort: high
 isolation: none
-outcomeCheck: 'curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/ejclark/skynet-capital/issues/{item}/comments?per_page=100" | grep -q bottleneck-research'
+outcomeCheck: 'test "$(curl -sSf -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/ejclark/skynet-capital/issues/{item}/comments?per_page=100" | grep -c -- "!-- bottleneck-research --")" -gt 0'
 ---
 
 # Research one bottleneck — find the superior existing solution, then battle-test it
