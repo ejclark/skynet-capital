@@ -85,6 +85,11 @@ breaks in the other — that exact drift already shipped once).
   (empirical: PR #446's screenshots, the flagship fridge PR, were dead by 2026-08-20).
 - **One representative frame per changed surface**; prefer a before/after composite (one file)
   over a gallery. Side-by-side via a 2-column GFM table of `<img width="49%">`.
+- **Trading surfaces shoot the phone frame first** (the ticket, the options chain, the milestone
+  strip — CLAUDE.md → *Mobile-first on the trading surfaces*, Eric 2026-09-05): pass
+  `viewport: { width: 390, height: 844 }` to the harness for the first frame and the default
+  desktop viewport for the second. The phone frame is the one that proves the curation; the
+  desktop frame proves it expanded instead of floating.
 - The shoot scripts live in [`scripts/shoot/`](../scripts/shoot/) — one per surface (`npm run
   shoot:login`, `shoot:feedback`, `shoot:onboarding`, …), each just fixtures and frames over the
   shared harness in `scripts/shoot/lib.mjs` + `shell.mjs`. The harness carries the JPEG quality
