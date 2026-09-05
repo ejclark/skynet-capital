@@ -1,0 +1,11 @@
+{
+  "id": "advance-economic-indicators-2026-09-30",
+  "kind": "macro-print",
+  "title": "Advance Economic Indicators Report (advance goods trade, retail & wholesale inventories, Aug 2026 data)",
+  "date": "2026-09-30",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html lists 'Advance Economic Indicators Report (International Trade, Retail, & Wholesale) | September 30, 2026 | 8:30 AM | August 2026' (fetched direct 2026-09-05); independently corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx (fetched direct 2026-09-05), whose 2026-09-30 08:30 row reads 'GDP (Q2 3rd estimate), Personal income and outlays, NIPA underlying detail tables, Advance Economic Indicators'. Two primaries, and still filed estimate on two counts: this lane may not self-confirm an event it discovered in-sweep, and the series carries its own non-publication precedent (the January and February 2026 reference months still read 'Suspended' on the same Census page)",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "THE READ-AHEAD FOR advance-economic-indicators-2026-10-28, and the dated kill switch on its central claim. The October edition was measured to be the most composition-moving release the Atlanta Fed posts on: across 1,871 GDPNow model vintages (2014-05-01 to 2026-07-28) the 81 AEIR-driven ones carry median composition churn 0.584pp against 0.048pp for every other vintage, and median |change in net exports| of 0.265pp against 0.002pp - 12.2x and 132x respectively. This August-data edition is the next observation of that claim and the last one before the October print. Its kill switch is explicit in the successor's ledger: a net-exports contribution move below 0.10pp here would demote the whole finding to an ordinary macro print. It is also the busier 08:30 of the two - it shares the slot with the Q2 GDP third estimate and August personal income - which makes it a poorer read on the report's OWN leverage and a better read on its content: whether July's capital-goods import surge ($140.1B, +11.3% m/m, +46.9% y/y, per release CB26-141) repeats in August or was a one-month artifact. Not a tradeable print on its own (symbols: [], no house playbook is macro-keyed). Discovered during the advance-economic-indicators-2026-10-28 initial research (2026-09-05)."
+}
