@@ -91,6 +91,18 @@ role of responsible owner/steward — shipping lovable work while protecting the
 - **Exquisite granular detail is a deliberate process.** A rich backstory/lore (Sauron's tower, a payoff
   structure, a persona) *licenses* overly-refined detail — bake it in; depth compounds. Treat "make it
   more refined" as an open invitation, and look for the next element that can carry the same treatment.
+- **Mobile-first on the trading surfaces — curate at phone width, then expand** (Eric, 2026-09-05,
+  after reading Fidelity's mobile ticket and options chain against its desktop app: "we will
+  practice mobile first design here to curate that experience then expand out. The complexity
+  warrants taking this path, but it's also attractive because we can leverage what other
+  applications have built as inspiration"). Read it as *content priority*, not viewport
+  shrinking: what survives 390px is the curated set — the desktop layout *adds room* for what was
+  one swipe away (greeks beside prices instead of paged), never new concepts, and never a phone
+  column floating in a 1400px viewport. Two mechanics make it real: a ticket or chain PR's first
+  screenshot is the phone frame (`docs/PICTURES.md` → *Screenshots*), and every plan issue for
+  these surfaces carries the constraint. Study the apps that already solved the density problem
+  before inventing — the reference lives with the plan issue (#1461, #1481), never in the repo
+  (a brokerage screenshot carries account data).
 - **Domain accuracy & honesty.** Real tickers, strategy-accurate underlyings, honest `SIM`/`LIVE`
   labels. Never let a flourish imply something false about markets or P/L.
 - **Lore is a flavor layer on accurate mechanics** (D&D roots) — a character name deepens a strategy,
