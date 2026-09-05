@@ -1239,6 +1239,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The Fed's own inflation gauge, landing the morning AFTER the 10-28 statement rather than before it — the committee decides without it. Federal, so it is exposed to a 10-01 funding lapse; the pce-2026-10-29 initial research corrected what that exposure actually is (2025 precedent: a September-reference PCE was DELAYED five weeks, 10-31 to 12-05, not deleted, while the advance GDP estimate sharing its slot was cancelled outright). Discovered during the consumer-confidence-2026-10-27 initial research.",
   },
   {
+    id: "chicago-pmi-2026-10-30",
+    kind: "macro-print",
+    title: "Chicago PMI / Chicago Business Barometer (Oct 2026 data)",
+    date: "2026-10-30",
+    status: "estimate",
+    source:
+      'NEWS: mnimarkets.com Chicago Business Barometer publication calendar — the 2026 schedule lists all twelve releases at 09:45 ET on the last business day, with "October 30" at "09:45"; fetched direct 2026-09-05, the same page and the same fetch that re-verified the September entry, checked 2026-09-05',
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The follow-through read on chicago-pmi-2026-09-30, and the correction of a coverage gap rather than a new idea: every other recurring macro series in this calendar carries three or four forward instances (ISM Manufacturing 09-01/10-01/11-02/12-01, ISM Services, CPI, jobs, ADP, Beige Book), and Chicago carried exactly one. That is the anomaly. It matters because the September print is the test of a live mean-reversion call — August's Aug-data reading collapsed to 47.1 and the 09-01 national ISM then printed 54.6 in its eighth expansion month, so the series' own reliability is what is on trial, and one print cannot settle it. This October entry is where a Sep-then-Oct pair either confirms the air-pocket reading or turns a Chicago-vs-national divergence into a finding about the survey. Same two structural caveats as its September sibling: filed `estimate`/`NEWS:` because this lane never self-promotes an adjacency it proposed, and because the source-prefix table below has no confirmed-tier prefix for MNI/ISM-Chicago at all (`ISM:` is scoped to ismworld.org's national PMI calendar) — a publisher-primary date is structurally stuck at estimate here. Discovered during the chicago-pmi-2026-09-30 pulse-check adjacency sweep (2026-09-05).",
+  },
+  {
     id: "ism-manufacturing-2026-11-02",
     kind: "macro-print",
     title: "ISM Manufacturing PMI (Oct 2026 data)",

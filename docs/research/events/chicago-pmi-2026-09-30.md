@@ -1,53 +1,65 @@
 # Chicago PMI / Chicago Business Barometer (Sep 2026 data) — chicago-pmi-2026-09-30
 
 **Kind:** macro-print · **Date:** 2026-09-30 (estimate, NEWS: mnimarkets.com Chicago Business Barometer publication calendar — 09:45 ET, checked 2026-08-29) · **Impact:** medium
-**Last assessed:** 2026-08-29
-<!-- probe-ref: {"symbols":{},"vix":14.43,"daysBand":"medium:31+","adjacentIds":["consumer-confidence-2026-09-29","ism-manufacturing-2026-10-01","jobs-2026-10-02","jolts-2026-09-29","mu-2026-09-29-print"],"screenStreak":0} -->
+**Last assessed:** 2026-09-05
+<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:8+","adjacentIds":["adp-employment-2026-09-30","apple-eu-dma-terms-2026-10-01","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","durable-goods-2026-09-25","g20-trade-ministerial-milwaukee-2026-09-30","gdp-q2-2026-third-2026-09-30","government-funding-deadline-2026-09-30","ism-manufacturing-2026-10-01","ism-services-2026-10-05","jobs-2026-10-02","jolts-2026-09-29","mu-2026-09-29-print","opec-jmmc-68th-2026-10-04","pce-2026-09-30","sp-select-sector-secondary-reweight-2026-09-30","umich-sentiment-final-2026-09-25","unsc-iran-panel-mandate-expiry-2026-09-26"],"screenStreak":0} -->
 
 ## At a glance
 
-**TL;DR.** This series joined the calendar because on **2026-08-28** it collapsed to **47.1** against
-a 58.3 consensus and a 57.6 prior — a 10.5-point plunge, the year's biggest single macro surprise —
-and we could not see it coming because nobody was tracking it. The September reading lands
-**2026-09-30, 09:45 ET** (date **estimate**, MNI's own publication calendar). Two things matter more
-than the headline. **First, the August "collapse" was not a broad one:** new orders fell 15.4pt and
-production 8.8pt, but *employment rose 4.3pt into positive territory for the first time in five
-months* and supplier deliveries stayed in expansion for a 19th straight month. It was a demand-side
-air pocket in one region, not a recession signal. **Second, the number that actually mattered went
-unreported:** **Prices Paid jumped 3.8pt to its highest since February 2022**, on metal costs. Under
-a Fed that Warsh has just pinned explicitly to inflation, that is the hawkish half of a report
-everyone filed as dovish — and it is why the tape's non-reaction on 8/28 makes more sense than
-"growth misses get ignored" alone. **The call for 9/30 is mean-reversion, held at low confidence
-because this series does not deserve better:** the 2026 tape reads 54.0 · 57.7 · 52.8 · 49.2 · 62.7
-· 56.7 · 57.6 · 47.1, its trailing-12-month σ is **7.59** (up from 3.43 the prior year), and the only
-other sub-50 print of 2026 (April, 49.2) was followed immediately by the strongest print in four
-years (May, 62.7). Nothing here is a trade — this is a medium-impact regional survey on an
-`estimate` date, and its value to us is as a **two-business-day leading probe on national ISM
-Manufacturing**, not as an event in its own right.
+**TL;DR.** **The adjudicator ruled, and it ruled for this doc.** This ledger's highest-confidence
+call was *let the 9/1 national ISM decide whether Chicago's 47.1 was signal or a regional air
+pocket*. It printed **54.6** — a 0.6 miss versus consensus, but the **eighth straight month of
+manufacturing expansion**, which ISM maps to +2.4% annualized real GDP, with new orders at 53.7 and
+employment at 51.2. Nowhere near sub-50. The **sub-50-national kill switch did not fire**, and the
+Dallas Fed survey (8/31: general business activity **11.6 from 1.3**, new orders **22.0 from 6.4**)
+independently printed the mirror image of Chicago. Two corroborations the 8/29 row did not have, so
+the September mean-reversion call moves **Low → Medium** — but strictly as a *direction* (≥50), never
+a level: trailing σ is still **7.59**. **The bigger change is on prices, and it is an inversion.**
+The 8/29 kill switch expected Prices Paid to unwind as metal costs eased on "Brent below $87, fourth
+straight down session." Iran then retaliated for US strikes against Jordan, Bahrain and Kuwait:
+Brent front-month ran **89.31 → 95.83 (+7.3%)** 8/28→9/4 (touching ~$99 intraday 9/3), copper ran
+**+1.7%** over the same span, ISM manufacturing prices held **71.1 flat**, and ISM services prices
+printed **72.6, the highest since August 2022**, with the chair naming petroleum, diesel and gasoline
+by hand. That kill switch is not merely un-fired — its premise is dead, and Chicago's prices line
+holding or rising is now the **base case** rather than a watch item. **Two corridor facts changed
+too.** The **shutdown tail on 9/30 is gone** — H.R. 6500 was signed **2026-09-02**, funding through
+**12-11** — so the "private survey publishes while BLS goes dark" edge belongs to the December cliff,
+not this print. And leg 7's plan to treat 9/30 as this indicator's **first clean measurement is dead
+on arrival**: the session now carries ADP 08:15, **PCE 08:30**, GDP-third 08:30, quarter-end rebalance
+flows and a G20 trade ministerial, with Chicago at 09:45 — confounded by the calendar this time
+instead of by a Fed chair's keynote. Still never a trade: medium impact, regional sample, `estimate`
+date, no macro-keyed playbook.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-32) | Stand aside | High | A medium-impact regional survey 32 days out on an `estimate` date, with no September consensus in existence. | Nothing dated today; no September consensus exists and the date is not primary-confirmed |
-| This week | Watch **ISM Manufacturing 2026-09-01** — it adjudicates August's 47.1 | High | The national print three days out is the cleanest available test of whether Chicago's collapse was signal or regional noise, and it decides how much weight the 9/30 print deserves. | The **2026-09-01** ISM Manufacturing print landing sub-50, which would make 47.1 a national signal rather than a Chicago air pocket |
-| This month | Expect mean-reversion toward the low-to-mid 50s | Low | 2026's only other sub-50 print (April 49.2) was followed by 62.7; the August drop was concentrated in new orders while employment *improved*. Low confidence is the honest grade — trailing σ is 7.59, so a 47.1 and a 60 are both inside one standard deviation of noise. | A second consecutive sub-50 print on **2026-09-30**, which would convert a one-month air pocket into a trend and kill the mean-reversion read |
-| This quarter | Track the **Prices Paid** subcomponent, not the headline | Medium | This Fed is explicitly inflation-anchored (Warsh, 2026-08-28) and ignored the year's sharpest growth miss two days later; Chicago's prices line is at a four-and-a-half-year high and is the part of this report a rate desk can act on. | Growth data visibly repricing the Fed again — e.g. the **2026-09-04** payroll print pulling hike odds down hard — which would restore the headline as the market-relevant line |
+| Today (D-25) | Stand aside | High | Unchanged and now structural: a medium-impact regional survey 25 days out on an `estimate` date, with no September consensus yet published and no house playbook macro-keyed. The week's decision has already transferred to CPI 09-11. | Nothing dated today; no September consensus exists and the date is still not primary-confirmed |
+| This week | Watch **CPI 2026-09-11**, not this print | High | Waller said on 09-03 that the September FOMC call hinges on August CPI — hold if it cools, hike if it runs hot — and the street converged on that within hours. CPI resolves the rate question *before* Chicago prints, so 9/30 inherits a decided regime rather than informing one. | The **09-11** CPI moving September hike odds less than ~5pts, which would mean the decision was already made and this corridor's fork is elsewhere |
+| This month | Mean-reversion: the **09-30 headline prints ≥50** | Medium | Upgraded from Low. The 8/29 call rested on one precedent (Apr 49.2 → May 62.7) plus dispersion; it now also has the **national ISM at 54.6** in its eighth expansion month and **Dallas at a Jan-2025 high** — two independent reads saying manufacturing did not roll over in August. Graded Medium not High because σ 7.59 still makes the *level* unforecastable; only the ≥50 threshold is being called. | A second consecutive sub-50 print on **2026-09-30**, which converts a one-month air pocket into a trend and kills the mean-reversion read outright |
+| This quarter | **Prices Paid holds or rises** — read it before the headline | Medium | Promoted from "track it" to a base case with a named mechanism: Brent **+7.3%** and copper **+1.7%** 8/28→9/4, ISM manufacturing prices **71.1 flat**, ISM services prices **72.6** (highest since Aug 2022, petroleum/diesel/gasoline cited). The Fed stayed inflation-anchored through a +162k payroll beat, so the prices line remains the part a rate desk can act on. | Chicago's September Prices Paid giving back the whole **+3.8pt** August spike — or Brent unwinding below ~$87 on a Hormuz de-escalation before 09-30, removing the cost mechanism this call rests on |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
 - **Never a trade on this print.** Medium impact, regional sample, `estimate` date, no house playbook
   is macro-keyed (S1/S2/E1/S3/S4 + G1 are all symbol/earnings-keyed). It is an input, not an event.
-- **Prices Paid ≥ its August level** (highest since Feb 2022) — the hawkish read; corroborates the
-  inflation-anchored Fed case two days before the national ISM and three before the October payrolls.
+- **Prices Paid ≥ its August level** (highest since Feb 2022) — now the **base case**, not a watch:
+  the energy and metal channels behind the August spike both firmed rather than unwound.
 - **A second consecutive sub-50 headline** — the air pocket becomes a trend; re-read the whole
   series' leading-indicator claim against the national ISM that follows two business days later.
+  Note this would also put Chicago in direct conflict with a national ISM already in month eight of
+  expansion — the divergence, not the level, would be the finding.
 - **New orders recovering while employment holds its August gain** — the mean-reversion base case
   confirming; treat August as noise and downgrade this series' weight accordingly.
-- **Watch (dated):** ISM Manufacturing **2026-09-01** (adjudicates August) · FOMC **2026-09-16** ·
-  JOLTS **2026-09-29** · **MU print 2026-09-29 AMC** (estimate — a real memory manufacturer's order
-  book, the day before this survey, and the better demand read of the two) · Conference Board
-  consumer confidence **2026-09-29** (estimate) · **this print 2026-09-30** (estimate) · ISM
-  Manufacturing **2026-10-01** (estimate, proposed in this PR — the national print this survey leads
-  by two business days) · jobs **2026-10-02** · FOMC **2026-10-28**.
+- **Do not expect an attributable tape reaction on 09-30.** PCE at 08:30 ET, GDP-third at 08:30 and
+  quarter-end rebalancing own that session; Chicago lands 75 minutes after the print that matters.
+- **Watch (dated):** CPI **2026-09-11** (the live fork) · FOMC **2026-09-16** · **Dallas Fed
+  manufacturing 2026-09-28** (estimate — the regional analog that disagreed, two days ahead of this
+  one) · JOLTS **2026-09-29** · **MU print 2026-09-29 AMC** (estimate — a real memory manufacturer's
+  order book, the day before this survey, and the better demand read of the two) · Conference Board
+  consumer confidence **2026-09-29** · PCE + GDP-third + ADP **2026-09-30** (the session's actual
+  movers) · **this print 2026-09-30** (estimate) · ISM Manufacturing **2026-10-01** (estimate — the
+  national print this survey leads by two business days) · jobs **2026-10-02** · FOMC **2026-10-28** ·
+  **Chicago PMI 2026-10-30** (estimate, proposed in this PR — the follow-through read) · CR expiry
+  **2026-12-11** (where the data-blackout mechanism actually lives now).
 
 ## Initial research
 
@@ -225,28 +237,52 @@ two-business-day probe on national ISM Manufacturing (proposed here as `ism-manu
 `estimate`) and as an early read into the 10/2 payrolls — and the **2026-09-01** national ISM
 adjudicates August's 47.1 before any of that matters.
 
+**Stance change (2026-09-05, D-25) — two upgrades, both earned by prints that have now landed.**
+The receipt is the D-25 ledger row below. (1) **Mean-reversion goes Low → Medium**, as a directional
+≥50 call only: the 9/1 national ISM printed **54.6** in its eighth expansion month and the 8/31
+Dallas survey printed a Jan-2025 high, so the base case no longer rests on one precedent and a
+dispersion statistic. The *level* stays unforecastable at σ 7.59 and no confidence above Medium is
+honest. (2) **Prices Paid moves from a watch item to the base case** — hold or rise — because the
+cost channels behind the August spike firmed instead of unwinding (Brent +7.3%, copper +1.7%,
+8/28→9/4; ISM manufacturing prices 71.1 flat; ISM services prices 72.6, highest since Aug 2022).
+Unchanged: no position, no sizing, no playbook — the reading order and the stand-aside both hold.
+
 **Kill switches:**
 
-- **ISM Manufacturing on 2026-09-01 prints sub-50** — August's 47.1 was a national signal, not a
-  Chicago air pocket; the mean-reversion base case dies, and this series' weight in the calendar goes
-  up rather than down. Reassess from the national print, not from this doc.
+- ~~**ISM Manufacturing on 2026-09-01 prints sub-50**~~ — **RESOLVED 2026-09-01, did not fire.** The
+  national print landed **54.6**, eighth consecutive month of expansion. August's 47.1 was a Chicago
+  air pocket, not a national signal; leg 3's narrow-collapse reading is corroborated and the
+  mean-reversion base case survives with its confidence raised.
 - **A second consecutive sub-50 Chicago headline on 2026-09-30** — one month is noise, two is a
   trend; re-read leg 3's "narrow collapse" finding against the new subcomponents before repeating it.
-- **Prices Paid reverses hard** (back below its recent range as metal costs unwind, plausibly on the
-  same Brent de-escalation now running — Brent below $87, fourth straight down session as of 8/28) —
-  removes the hawkish read that is this doc's main reason to look at the report at all.
-- **The Fed stops being inflation-anchored** — e.g. the **2026-09-04** payroll print pulling hike odds
-  down hard, or the FOMC question repricing from hold-vs-hike to hold-vs-cut — at which point the
-  headline reclaims primacy over Prices Paid and this doc's reading order inverts.
+  **Live, and now the sharpest one:** with the national ISM in month eight of expansion, a second
+  sub-50 Chicago print would be a Chicago-vs-national divergence rather than a growth signal, and the
+  finding would be about this series' reliability, not about manufacturing.
+- ~~**Prices Paid reverses hard** (back below its recent range as metal costs unwind, plausibly on the
+  same Brent de-escalation now running — Brent below $87, fourth straight down session as of 8/28)~~ —
+  **PREMISE DEAD 2026-09-05, inverted rather than fired.** The Hormuz de-escalation reversed: Iran
+  retaliated for US strikes against Jordan, Bahrain and Kuwait, and Brent front-month ran **89.31 →
+  95.83 (+7.3%)** 8/28→9/4 with copper **+1.7%** alongside. Replaced by its mirror image: **a Brent
+  unwind back below ~$87 before 09-30** (a genuine Hormuz settlement) would remove the cost mechanism
+  the promoted Prices Paid base case now rests on.
+- ~~**The Fed stops being inflation-anchored** — e.g. the **2026-09-04** payroll print pulling hike odds
+  down hard~~ — **RESOLVED 2026-09-04, did not fire; it moved the other way.** Payrolls printed
+  **+162k vs +55k** with July revised **−23k → +21k**, and September hike odds went to ~59–60%. The
+  reading order (Prices Paid before the headline) stands. **Its live successor:** the **2026-09-11**
+  CPI — Waller made the September call explicitly conditional on it on 09-03 — resolving the FOMC
+  question toward hold-vs-cut, which would restore the headline's primacy over Prices Paid.
 - **A primary-tier source for the MNI release schedule becomes citable** (or the source-prefix table
   gains an MNI/ISM-Chicago prefix) — the date can then be promoted out of `estimate` by whoever owns
-  that change, which is not this lane.
+  that change, which is not this lane. **Still live and still unresolved:** MNI's own calendar was
+  re-fetched 2026-09-05 and still reads Sep 30 09:45 ET, and the entry still cannot be promoted from
+  inside this lane.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
 | 2026-08-29 | D-32 | Initial research banked (above). Date verified against MNI's own publication calendar, fetched today: 2026 releases run last-business-day at 09:45 ET, with **Sep 30** carrying September data — and the calendar's **Aug 28** entry matches the print that actually landed, the strongest accuracy check available. Entry stays `estimate`: this lane does not self-promote an adjacency it proposed, and no confirmed-tier prefix exists for MNI/ISM-Chicago (schema gap, named not fixed). Adjacency sweep — **peers:** no tracked name has a print in this window (nearest cluster MSFT 10/27, GOOG+META 10/28, AAPL+AMZN 10/29), but this event's own deterministic probe surfaced one this doc would otherwise have missed: **MU reports 2026-09-29 AMC** (`estimate`, `NEWS:` triangulation, IR blocked) — an actual memory manufacturer's order book and capex guidance landing the session *before* a regional sentiment survey asks the same question. Untracked by this book, but it reorders the reading: MU is the prior, Chicago is the confirmation (leg 9). **Macro:** the August print itself (8/28, **47.1** vs 58.3 consensus / 57.6 prior, −10.5pt, lowest of 2026) is this doc's founding datum; subcomponents fetched today materially change how it reads — New Orders **−15.4**, Production **−8.8** (first sizeable contraction since Dec 2025), but Employment **+4.3 into positive territory for the first time in five months**, Supplier Deliveries −2.6 yet expanding for a **19th** straight month, and **Prices Paid +3.8 to its highest since February 2022** on metal costs. Same session: Warsh's Jackson Hole keynote pinned the hawkish case to inflation and drove September hike odds ~35% → **56–59%** (sibling [`jackson-hole`](jackson-hole-2026-08-28.md) close-out) — so the hawkish subcomponent of this report matters more to a rate desk than its dovish headline, and the tape's non-reaction is better explained by an internally mixed print than by "growth misses get ignored." Offered as a refinement to the [`ism-manufacturing`](ism-manufacturing-2026-09-01.md) row's framing, not a correction of it. **Volatility regime:** VIX **14.43** at the 8/28 close (`event-material-scan` probe), intraday **14.1**, the lowest of 2026 — baseline established, nothing to diff against yet. **Geopolitical:** Brent below **$87**, a fourth straight down session on the Iran–Oman Hormuz agreement — directly relevant here as the input most likely to unwind the metal/energy cost pressure behind the Prices Paid spike. **Event tape:** no September consensus exists at D-32 and none is expected until the final week; 2026 series banked for base rates (54.0 · 57.7 · 52.8 · 49.2 · 62.7 · 56.7 · 57.6 · 47.1; trailing σ **7.59** vs 3.43 the prior year; April's 49.2 was followed by 62.7). **New dated adjacency found → proposed in this PR:** the national **ISM Manufacturing PMI for September data lands 2026-10-01** — the print this entire series exists to lead by two business days — and it is **not on the calendar** (the calendar carries `ism-manufacturing-2026-09-01` and then nothing until CPI 10/14). Added as `ism-manufacturing-2026-10-01`, `status: estimate` (`EST:`, ISM's first-business-day cadence; 2026-10-01 is a Thursday). | — (stance set) | 2026-09-19 (medium, ≥31d band: every 21d — moving to every 7d once inside 30 days out) |
+| 2026-09-05 | D-25 | **The adjudicator ruled and the kill switch did not fire — this row's headline finding.** ISM Manufacturing (Aug data) landed **2026-09-01 10:00 ET at 54.6** vs a 55.2 consensus: a 0.6 miss, but the **eighth consecutive month of manufacturing expansion**, which ISM maps to **+2.4% annualized real GDP**, with New Orders **53.7** (−3.0), Production 58.3, Employment 51.2 and Prices **71.1 flat** ([sibling close-out](ism-manufacturing-2026-09-01.md), scored from ISM's own wire release PRNewswire 302865127). Nowhere near sub-50. **Chicago's 47.1 was a regional air pocket, exactly as leg 3 argued** — and it is corroborated a second time by an analog now on the calendar: **`dallas-fed-mfg-2026-09-28`** printed **general business activity 11.6 from 1.3** (highest since Jan 2025) and **new orders 22.0 from 6.4** on 8/31, filed by the ISM lane explicitly to remove the selection bias this event's own addition created, and landing **two days before** this print. **Stance change → mean-reversion Low → Medium**, directional (≥50) only; σ 7.59 still forbids a level call. **Adjacency sweep — peers:** no tracked name prints in this window (nearest MSFT 10/27, GOOG+META 10/28, AAPL+AMZN 10/29); **MU 2026-09-29 AMC** (`estimate`) remains the better demand read and still leads this survey by a session, unchanged from the D-32 row. **Macro:** three prints landed. ISM Services 9/3 — headline **55.4** (6-month high, beat by 1.3–1.4), Business Activity 61.7, New Orders 60.9, but **Employment 47.8** (second month contracting) and **Prices 72.6, highest since August 2022**, chair Miller naming tariffs, the Middle East conflict and "petroleum-related products, diesel, and gasoline" verbatim. Payrolls 9/4 — **+162k vs +55k** consensus, unemployment 4.1%, **July revised −23k → +21k**, AHE +3.1% y/y (softest since mid-2021); Sep hike odds ~59–60%, the move entirely front-end (2y +5bp, 30y −0.5bp). Waller 9/3 made the September FOMC **explicitly conditional on the 09-11 CPI**. Net: **the Fed stayed inflation-anchored, so this doc's reading order holds, and the fork transferred to CPI 9/11 — which resolves before this print, so 9/30 inherits a decided regime rather than informing one.** **Volatility regime:** VIX **14.43 (8/28 baseline) → 14.53 (9/4 close)**, Δ **+0.10**, far inside the 3-point band — no regime change, though it round-tripped a spike to **16.34** on 9/1 (global bond selloff + Iran escalation). Source divergence named, not reconciled: this session's own Yahoo `^VIX` daily bars give a 09-04 close of **14.53** where [`jobs-2026-09-04`](jobs-2026-09-04.md) recorded **14.12**; the probe-ref carries the fetched close. **Geopolitical — the D-32 row's central premise inverted.** That row banked "Brent below **$87**, a fourth straight down session on the Iran–Oman Hormuz agreement" as the most likely unwind of the metal/energy cost pressure behind Prices Paid. Iran then retaliated for US strikes by hitting Jordan, Bahrain and Kuwait: **Brent front-month 89.31 (8/28) → 95.83 (9/4), +7.3%**, ~$99 intraday 9/3, and the *metal* channel Chicago actually named did not unwind either — **copper front-month 6.56 → 6.67, +1.7%** (both Yahoo daily bars fetched this session). With ISM manufacturing prices flat at 71.1 and ISM services prices at a four-year high, **Prices Paid holding or rising is promoted from watch item to base case** (Medium). **Second corridor change — the 9/30 shutdown tail is gone.** `government-funding-deadline-2026-09-30` is superseded: **H.R. 6500, the Continuing Appropriations and Extensions Act, 2027, was signed 2026-09-02**, funding through **2026-12-11** (White House briefing statement + GovTrack + Congress.gov, checked today; House adopted the Senate CR 370–48 on 09-01). The "private survey keeps publishing while federal data goes dark" edge this event would have carried is real — BLS's own lapse page, fetched today, shows the 2025 lapse **canceled** the October Employment Situation and CPI outright and the Feb-2026 lapse pushed Employment Situation 02-06 → 02-11 and CPI 02-11 → 02-13 — but it **does not apply on 9/30**; it is banked for `cr-expiry-2026-12-11`. **Correction to this doc's own leg 7:** its plan to treat 9/30 as this indicator's *first clean measurement* ("a quiet quarter-end rather than beside a Fed chair's keynote") is dead on arrival. The 09-30 session now carries ADP 08:15, **PCE 08:30 (high impact)**, GDP Q2-third 08:30, `sp-select-sector-secondary-reweight-2026-09-30` with quarter-end flows, and a G20 trade ministerial — Chicago at 09:45 lands 75 minutes after the print that owns the tape. Attribution is destroyed again, by the calendar this time. **Event tape:** still **no September consensus** at D-25, as the D-32 row predicted; expected in the final week. MNI's publication calendar re-fetched today re-verifies **Sep 30, 09:45 ET** and the entry stays `estimate` (leg-1 schema gap unchanged). **Cadence band transition:** D-25 crosses `medium:31+` (21d) → `medium:8+` (7d). **Forward tests registered (3):** `FT-chicago-pmi-2026-09-30-1` (headline ≥50), `-2` (Prices Paid does not give back the August spike), `-3` (the attribution null on a PCE-owned session). **New dated adjacency found → proposed in this PR:** **`chicago-pmi-2026-10-30`** — MNI's own calendar, re-fetched today, lists **October 30 at 09:45** and this calendar carries only the September instance, where every other recurring macro series here carries 3–4 forward entries (ISM Mfg 09-01/10-01/11-02/12-01, CPI, jobs, ADP, ISM Services). It is the print that adjudicates whether September's mean-reversion held. `status: estimate`, `NEWS:`. | **Yes — two upgrades.** Mean-reversion **Low → Medium** (directional ≥50 only) on the 9/1 national ISM at 54.6 plus Dallas at a Jan-2025 high. Prices Paid **watch → base case** (holds or rises, Medium) on the inverted energy/metal premise. Stand-aside, no-position and the Prices-Paid-first reading order all unchanged. | 2026-09-12 (medium, 8+ band: every 7d) |
 
 **Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
