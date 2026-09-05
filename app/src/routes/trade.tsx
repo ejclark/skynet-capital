@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useId } from "react";
 import { fetchDesk } from "../live/desk";
 import { fetchPlays, type PlayInfo } from "../live/options";
+import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
@@ -11,6 +12,7 @@ import { LadderGateCard } from "../shell/ladder-gate";
 import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
 import { OptionPositionsCard } from "../shell/option-positions";
+import { TicketNav } from "../shell/ticket-nav";
 import { TradeGate } from "../shell/trade-gate";
 
 /**
@@ -52,7 +54,16 @@ function AccountField({
   );
 }
 
-function DeskTicket({ desk, code }: { readonly desk: string; readonly code: string }) {
+function DeskTicket({
+  desk,
+  code,
+  onPreset,
+}: {
+  readonly desk: string;
+  readonly code: string;
+  /** The ticket's own nav and the rail both preset `?play=` through this (#1461). */
+  readonly onPreset: (code: PlayCode) => void;
+}) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const deskData = useQuery({
     queryKey: ["desk", desk],
@@ -66,21 +77,34 @@ function DeskTicket({ desk, code }: { readonly desk: string; readonly code: stri
   return (
     <>
       {plays.data ? (
-        <MilestoneStrip
-          deskId={desk}
-          current={code}
-          plays={plays.data.plays}
-          wheels={plays.data.wheels}
-          gate={plays.data.gate}
-          nextUp={plays.data.nextUp}
-        />
+        <>
+          <MilestoneStrip
+            deskId={desk}
+            current={code}
+            plays={plays.data.plays}
+            wheels={plays.data.wheels}
+            gate={plays.data.gate}
+            nextUp={plays.data.nextUp}
+          />
+          <TicketNav
+            plays={plays.data.plays}
+            code={code}
+            gate={plays.data.gate}
+            onPreset={onPreset}
+          />
+        </>
       ) : null}
       {gated ? (
         <LadderGateCard note={gate.note} />
       ) : info && info.kind === "option" ? (
         <OptionGate key={info.code} deskId={desk} play={info} />
       ) : (
-        <TradeGate key={code} deskId={desk} initialAction={code === "102" ? "sell" : "buy"} />
+        <TradeGate
+          key={code}
+          deskId={desk}
+          initialAction={code === "102" ? "sell" : "buy"}
+          showSide={false}
+        />
       )}
       {deskData.data ? (
         <OptionPositionsCard deskId={desk} positions={deskData.data.desk.positions} />
@@ -144,7 +168,11 @@ function TradePage(): ReactElement {
               onChange={(id) => navigate({ search: (prev) => ({ ...prev, desk: id }) })}
             />
           ) : null}
-          <DeskTicket desk={activeDesk} code={play ?? "101"} />
+          <DeskTicket
+            desk={activeDesk}
+            code={play ?? "101"}
+            onPreset={(code) => navigate({ search: (prev) => ({ ...prev, play: code }) })}
+          />
         </>
       ) : null}
     </PageFrame>

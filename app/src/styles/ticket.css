@@ -121,6 +121,48 @@
     display: block;
   }
 }
+/* The ticket's own nav (#1461 slice 2) — Instrument · Side · Type on the shell's toggle-group.
+   A locked segment stays visible and disabled with its reason underneath; mobile-first (wraps). */
+.ticket-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 12px 0 0;
+  max-width: var(--col-wide);
+}
+.ticket-nav-group {
+  /* a fieldset, for the a11y semantics — the chrome a fieldset brings is reset here */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.ticket-nav-label {
+  padding: 0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ticket-nav .toggle-group button:disabled {
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.seg-why {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.ticket-nav-gate {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
 .tkt-fields {
   grid-template-columns: repeat(3, 1fr);
 }
@@ -174,122 +216,5 @@
 @media (max-width: 700px) {
   .tkt-fields {
     grid-template-columns: 1fr 1fr;
-  }
-}
-
-/* The straddle view (#1481 slice 1) — calls · strike · puts. Mobile-first: five mono columns at
-   390px, tight padding; the desktop rules only loosen the padding. Tokens only. */
-.straddle {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 12px 0 14px;
-}
-.straddle-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.straddle-eyebrow {
-  color: var(--accent);
-}
-.straddle-dte {
-  color: var(--muted);
-}
-.straddle-scroll {
-  overflow-x: auto;
-}
-.straddle-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  table-layout: fixed;
-}
-.straddle-table th {
-  font-weight: 500;
-  color: var(--muted);
-  text-align: center;
-  padding: 4px 2px;
-  border-bottom: 1px solid var(--border);
-}
-.straddle-side {
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text);
-  font-weight: 600;
-}
-.straddle-sub th {
-  font-size: 10px;
-  padding-top: 2px;
-}
-.straddle-strike-h {
-  width: 22%;
-  color: var(--text);
-  font-weight: 600;
-}
-.straddle-table td {
-  text-align: center;
-  padding: 7px 2px;
-  border-bottom: 1px solid var(--border);
-}
-.straddle-strike {
-  font-weight: 700;
-  background: var(--surface-2);
-}
-.straddle-pick {
-  font: inherit;
-  font-weight: 700;
-  color: var(--text);
-  background: transparent;
-  border: 0;
-  padding: 2px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.straddle-pickable {
-  cursor: pointer;
-}
-.straddle-pickable:hover td {
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-}
-.straddle-selected .straddle-pick {
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
-  color: var(--accent);
-}
-.straddle-call-itm td:first-child {
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-.straddle-put-itm td:last-child {
-  box-shadow: inset -3px 0 0 var(--accent);
-}
-.straddle-divider td {
-  padding: 6px 2px;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--surface-2);
-  border-top: 1px solid var(--border);
-}
-.straddle-more {
-  align-self: center;
-  font: inherit;
-  font-size: 11.5px;
-  color: var(--accent);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 4px 12px;
-  cursor: pointer;
-}
-@media (min-width: 600px) {
-  .straddle-table {
-    font-size: 12.5px;
-  }
-  .straddle-table td {
-    padding: 8px 6px;
   }
 }
