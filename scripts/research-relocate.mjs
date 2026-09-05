@@ -93,6 +93,21 @@ function runInit() {
   );
 }
 
+/** One <head> entry against <base> and main: "same" (nothing to do), "write", "yield" (an
+ *  `estimate` proposal main already carries, under `--proposals-yield`), or a conflict string. */
+function classifyEntry(id, headEntry, baseEntry, head, yields) {
+  if (sameJson(headEntry, baseEntry)) return "same";
+  const onMain = readEventFile(id);
+  if (onMain === null) return "write";
+  if (baseEntry !== null)
+    return sameJson(onMain, baseEntry)
+      ? "write"
+      : `calendar entry "${id}" changed on both main and ${head}`;
+  if (sameJson(onMain, headEntry)) return "same";
+  if (yields && headEntry.status === "estimate") return "yield";
+  return `calendar entry "${id}" added on both main and ${head} with different bodies`;
+}
+
 /** Calendar half of a branch plan: what <head> changed, checked against what main has done to the
  *  same entry since the fork. Same-entry-both-sides is a conflict, never an overwrite — with one
  *  named exception under `--proposals-yield`: an adjacency PROPOSAL (`status: "estimate"`, added
@@ -104,18 +119,10 @@ function planCalendar(baseEntries, headEntries, head, conflicts, yields) {
   const events = [];
   const removals = [];
   for (const [id, headEntry] of headEntries) {
-    const baseEntry = baseEntries.get(id) ?? null;
-    if (sameJson(headEntry, baseEntry)) continue;
-    const onMain = readEventFile(id);
-    if (baseEntry !== null && onMain !== null && !sameJson(onMain, baseEntry))
-      conflicts.push(`calendar entry "${id}" changed on both main and ${head}`);
-    else if (baseEntry === null && onMain !== null && !sameJson(onMain, headEntry)) {
-      if (yields && headEntry.status === "estimate") yields.push(id);
-      else
-        conflicts.push(
-          `calendar entry "${id}" added on both main and ${head} with different bodies`,
-        );
-    } else events.push(headEntry);
+    const verdict = classifyEntry(id, headEntry, baseEntries.get(id) ?? null, head, yields);
+    if (verdict === "write") events.push(headEntry);
+    else if (verdict === "yield") yields.push(id);
+    else if (verdict !== "same") conflicts.push(verdict);
   }
   for (const id of baseEntries.keys()) {
     if (headEntries.has(id) || headEntries.size === 0) continue;
