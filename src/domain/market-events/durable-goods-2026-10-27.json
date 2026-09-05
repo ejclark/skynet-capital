@@ -1,0 +1,11 @@
+{
+  "id": "durable-goods-2026-10-27",
+  "kind": "macro-print",
+  "title": "Advance Durable Goods Orders (Sep 2026 data)",
+  "date": "2026-10-27",
+  "status": "estimate",
+  "source": "EST: census.gov/manufacturing/m3/release_schedule.html lists 'September 2026 | 10/27/2026 | 8:30 a.m.' and census.gov/economic-indicators/calendar-listview.html carries the same date and time (both fetched direct 2026-09-01). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-09-01",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The successor edition, and the one the funding branch actually threatens. It prints 08:30 on the FIRST MORNING of the Oct 27-28 FOMC meeting — the last capex read the committee sees before a decision that carries no SEP and no forward guidance — which is the whole reason it earns its own row rather than being tracked inside the 09-25 doc. In the lapse branch it may not exist on that date at all: on the 2025 precedent for this exact series, Census DELAYED rather than deleted, ~27-29 days (Oct-2025 advance 2025-11-26 -> 2025-12-23), which lands this edition in late November, after the vote. Same shape as retail-sales-2026-11-17's exposure and the opposite of BLS, which cancelled the October 2025 CPI outright. Deliberately filed `estimate` even though the date came off the Census primary: this lane never self-confirms an event in the PR that discovers it, and its own initial research is the place to flip it. Discovered during the durable-goods-2026-09-25 initial research (2026-09-01)."
+}

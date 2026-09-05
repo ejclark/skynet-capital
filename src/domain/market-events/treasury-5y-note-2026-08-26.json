@@ -1,0 +1,11 @@
+{
+  "id": "treasury-5y-note-2026-08-26",
+  "kind": "rates",
+  "title": "5-Year Treasury Note auction",
+  "date": "2026-08-26",
+  "status": "confirmed",
+  "source": "TSY: treasurydirect.gov upcoming auctions — announced, 1:00pm ET, checked 2026-08-18",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Belly supply; lands the same day as the NVDA print + PCE — a stacked-risk session."
+}

@@ -1,0 +1,11 @@
+{
+  "id": "treasury-10y-note-2026-10-07",
+  "kind": "rates",
+  "title": "10-Year Treasury Note auction (second reopening)",
+  "date": "2026-10-07",
+  "status": "estimate",
+  "source": "EST: treasury.gov Tentative Schedule of Treasury Auctions PDF, text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 17,195 bytes), row reads verbatim `10-Year NOTE R / Announcement Thursday, October 01, 2026 / Auction Wednesday, October 07, 2026 / Settlement Thursday, October 15, 2026`. Size corroborated in advance by press release sb0590 (2026-08-05), whose Oct-26 anticipated-size row puts the 10-Year at $39 billion. 1:00pm ET is Treasury's standing coupon-auction convention and is NOT separately sourced. Stays estimate on two counts: a tentative schedule is tentative by construction, and this lane may not self-confirm an event it discovered in-sweep",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "PREDICTED CUSIP 91282CRF0, term `9-Year 10-Month` — the second and final reopening of the August 2026 10-Year new issue (sold 2026-08-12 at $42B; first reopening 2026-09-09 at $39B, CUSIP confirmed live on treasurydirect's upcoming feed 2026-09-05). That is an inference from a cycle, not a fetched field: measured 2026-09-05 from `auctions_query`, every one of the 18 completed 10-Year new-issue cycles back to 2022-01 was reopened exactly twice, in the two following months, with no exceptions. Filed as a prediction rather than a fact BECAUSE it is checkable at the 10-01 announcement — see FT-treasury-coupon-announcement-2026-10-01-1. Completing this auction makes 91282CRF0 a $120B security (42 + 39 + 39). Size base rate: $39B for 20 consecutive completed 10-Year reopenings since 2024-03-12. Read it, do not trade it: `symbols: []`, date is `estimate`. Discovered during the treasury-coupon-announcement-2026-10-01 initial research (2026-09-05)."
+}

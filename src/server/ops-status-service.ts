@@ -1,3 +1,4 @@
+import type { DeploySignalsFetcher } from "./ops-status-deploy-lag.js";
 import { degradedDeploySignals } from "./ops-status-deploy-verdict.js";
 import type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js";
 
@@ -16,15 +17,19 @@ export type { OpsSignal, OpsSignalLink, OpsStatus } from "./ops-status-types.js"
  *  - `deploy-app` / `deploy-bots` — is `main` deployed? (`ops-status-deploy-lag.ts`, via the
  *    GitHub Actions API the app already reaches for feedback filing).
  *  - `bridge` — has the bots process polled Mission Control recently? The closest credential-free
- *    proxy for "is the bots app alive" this process has: it doesn't watch Fly machine state (that's
- *    slice 2's fork), but the poll IS the bots process reaching this one, every ~30s
- *    (`bot-controls-client.ts`'s `POLL_MS`), so its absence is real signal.
+ *    proxy for "is the bots app alive" this process has: it doesn't watch Fly machine state, but
+ *    the poll IS the bots process reaching this one, every ~30s (`bot-controls-client.ts`'s
+ *    `POLL_MS`), so its absence is real signal. That same poll also carries the process's own
+ *    `GIT_SHA` (`controls-poll-wire.ts`), which is what the `deploy-bots` row above answers
+ *    "on what commit?" with.
  *  - `activity` — when did a bot last place an order? A slower, second-order corroboration of the
  *    bridge signal — deliberately never alarms on its own (markets close; bots go quiet on
  *    weekends), only flagged `unknown` rather than `attention`.
  *
- * Slice 2 (deferred, per the issue's own slicing sketch): bots machine state + GIT_SHA via a Fly
- * read token, if that fork settles in favor of the richer, credentialed version.
+ * The running-commit answer originally needed a Fly read token (the issue's slice 2). It no longer
+ * does: #1301 made the bots process stamp its own `GIT_SHA` from inside, and it now reports that
+ * on the poll it was already making. A Fly token's one remaining exclusive value would be the
+ * REASON a silent process is silent — deliberately not bought until an incident needs it.
  */
 
 /** The bots process polls this app's internal bridge every 30s (`bot-controls-client.ts`'s
@@ -116,12 +121,15 @@ export interface OpsStatusInputs {
   /** Reads the bridge poll tracker (`dashboard-insights-bridge.ts`) — undefined until the bots
    *  process has polled at least once this app run. */
   readonly bridgeLastPollAt: () => string | undefined;
+  /** The commit the bots process reported on its last poll (`controls-poll-wire.ts`); undefined
+   *  when it reported none, in which case the deploy row falls back to CI's deploy record. */
+  readonly botsRunningSha: () => string | undefined;
   /** Latest `at` among bot-owned trade-activity records; undefined when none exist. Never throws
    *  — a read failure should read as "unknown", not crash the panel. */
   readonly lastBotActivityAt: () => Promise<string | undefined>;
   /** Present only when a GitHub token is configured (`resolveDeployLagFetcher`); absent = the
    *  panel's credential-free degraded mode for the two deploy signals. */
-  readonly fetchDeploySignals?: (now: Date) => Promise<{ app: OpsSignal; bots: OpsSignal }>;
+  readonly fetchDeploySignals?: DeploySignalsFetcher;
   /** `owner/repo` — used only to build the "Open Actions" deep link on every signal. */
   readonly repo: string;
 }
@@ -142,11 +150,14 @@ export function resolveOpsStatusRepo(env: Readonly<Record<string, string | undef
 export async function buildOpsStatus(inputs: OpsStatusInputs): Promise<OpsStatus> {
   const now = inputs.now();
   const link = actionsLinkFor(inputs.repo);
+  const runningSha = inputs.botsRunningSha();
   const [activityAt, deploy] = await Promise.all([
     inputs.lastBotActivityAt().catch(() => undefined),
     inputs.fetchDeploySignals
-      ? inputs.fetchDeploySignals(now).catch(() => degradedDeploySignals(link))
-      : Promise.resolve(degradedDeploySignals(link)),
+      ? inputs
+          .fetchDeploySignals(now, runningSha)
+          .catch(() => degradedDeploySignals(link, runningSha))
+      : Promise.resolve(degradedDeploySignals(link, runningSha)),
   ]);
   return {
     generatedAt: now.toISOString(),

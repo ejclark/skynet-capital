@@ -47,7 +47,8 @@ describe("serveLegacyRedirect", () => {
     // The owner pages' cards live on app Settings (9e).
     expect(target("/invite")).toBe("/app/settings");
     expect(target("/claim")).toBe("/app/settings");
-    expect(target("/ops-status")).toBe("/app/settings");
+    // Ops status is the topbar pill now (#1296), on every route — so the bookmark lands on the app.
+    expect(target("/ops-status")).toBe("/app/");
     // The retired Mission Control bookmark — the fleet switchboard for every viewer now.
     expect(target("/controls")).toBe("/app/settings");
     // The coach and preview are shared JSON endpoints, not pages — they keep serving.

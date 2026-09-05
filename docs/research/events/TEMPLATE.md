@@ -73,7 +73,9 @@
 
 <!-- The current position on this event, each trading-adjacent statement carrying the event's
      confirmed/estimate label. Every stance names the observation that would kill it. Predictions
-     with a score-by date also register in docs/research/forward-tests.md. -->
+     with a score-by date also register as a row in docs/research/forward-tests/<event-id>.md —
+     THIS event's own fragment, id FT-<event-id>-<n> (docs/research/forward-tests.md → "How to
+     register"); never in the index itself, never in another event's file. -->
 
 ## Assessment ledger
 
@@ -84,6 +86,6 @@
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
 *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
-every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
-the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
-never from memory — after which this doc goes quiet.
+every row; a dated adjacent event found gets proposed as a new `src/domain/market-events/<id>.json`
+(`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
+data (cache busted first), never from memory — after which this doc goes quiet.

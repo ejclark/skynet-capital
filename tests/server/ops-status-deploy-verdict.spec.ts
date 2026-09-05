@@ -3,6 +3,8 @@ import {
   botsDeployLag,
   botsDeploySignal,
   classifyBotRelevant,
+  degradedDeploySignals,
+  degradedFromFailure,
   deployLag,
 } from "../../src/server/ops-status-deploy-verdict.js";
 
@@ -111,5 +113,70 @@ describe("botsDeploySignal", () => {
     );
     expect(stale.verdict).toBe("attention");
     expect(stale.detail).toContain("force_bots_deploy");
+  });
+});
+
+describe("botsDeploySignal with the process's own reported commit (#666)", () => {
+  const RUNNING = "abc1234def5678000000000000000000000000aa";
+
+  it("names the running commit in every verdict, so the panel answers 'on what commit?'", () => {
+    const current = botsDeploySignal(
+      { known: true, baseline: true, lagging: false },
+      LINK,
+      RUNNING,
+    );
+    expect(current.verdict).toBe("ok");
+    expect(current.detail).toContain("running abc1234");
+
+    const stale = botsDeploySignal(
+      { known: true, baseline: true, lagging: true, reason: "2 bot-relevant path(s)" },
+      LINK,
+      RUNNING,
+    );
+    expect(stale.verdict).toBe("attention");
+    expect(stale.detail).toContain("running abc1234");
+    expect(stale.detail).toContain("STALE");
+    expect(stale.detail).toContain("force_bots_deploy");
+  });
+
+  it("still names the commit when GitHub couldn't say what changed since it", () => {
+    const signal = botsDeploySignal(
+      { known: false, baseline: false, lagging: false },
+      LINK,
+      RUNNING,
+    );
+    expect(signal.verdict).toBe("unknown");
+    expect(signal.detail).toContain("running abc1234");
+    expect(signal.detail).not.toContain("Couldn't scan Actions job history");
+  });
+
+  it("falls back to the deploy-record wording when the process reported no commit", () => {
+    const signal = botsDeploySignal({ known: true, baseline: true, lagging: false }, LINK);
+    expect(signal.detail).toBe(
+      "Bots app is current — nothing bot-relevant merged since its last deploy.",
+    );
+  });
+});
+
+describe("the degraded deploy signals carry the reported commit", () => {
+  const RUNNING = "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f";
+
+  it("says what is running but not whether it is current, with no GitHub token", () => {
+    const { app, bots } = degradedDeploySignals(LINK, RUNNING);
+    expect(app.detail).toContain("No GitHub token");
+    expect(bots.detail).toContain("running 0f0f0f0");
+    expect(bots.detail).toContain("isn't computed");
+    expect(bots.verdict).toBe("unknown");
+  });
+
+  it("keeps the token-less wording untouched when nothing was reported", () => {
+    expect(degradedDeploySignals(LINK).bots.detail).toContain("No GitHub token");
+  });
+
+  it("distinguishes an unreachable GitHub from a missing token", () => {
+    expect(degradedFromFailure(LINK, RUNNING).bots.detail).toContain("running 0f0f0f0");
+    expect(degradedFromFailure(LINK).bots.detail).toContain(
+      "Couldn't reach the GitHub Actions API",
+    );
   });
 });

@@ -1,0 +1,11 @@
+{
+  "id": "opex-2026-09-18",
+  "kind": "opex",
+  "title": "Quarterly options expiration — triple witching (September)",
+  "date": "2026-09-18",
+  "status": "confirmed",
+  "source": "OCC: theocc.com expiration calendar — quarterly triple-witching, checked 2026-08-18",
+  "impact": "high",
+  "symbols": [],
+  "notes": "Index futures + index options + stock options expire together — the year's heaviest-volume, highest-pin sessions."
+}

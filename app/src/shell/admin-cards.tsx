@@ -5,17 +5,19 @@ import {
   type AdminAnswer,
   fetchClaims,
   fetchGuestList,
-  fetchOpsStatus,
   inviteRequest,
   type LinkedAccount,
   linkRequest,
 } from "../live/admin";
 
 /**
- * THE OWNER'S CARDS (#738 phase 9e) — `/invite`, `/claim`, and `/ops-status` on the settings
- * page, self-gating exactly like Mission Control: each renders only when its API says the
- * session is an owner, and a member's settings page simply doesn't have them. Sentences render
- * verbatim from the server; linking stays deliberately owner-only (it grants order placement).
+ * THE OWNER'S CARDS (#738 phase 9e) — `/invite` and `/claim` on the settings page, self-gating
+ * exactly like Mission Control: each renders only when its API says the session is an owner, and
+ * a member's settings page simply doesn't have them. Sentences render verbatim from the server;
+ * linking stays deliberately owner-only (it grants order placement).
+ *
+ * The ops-status card was the third of these and is gone (#1296): fleet health is group-visible
+ * now, so it belongs to the shell's status pill rather than to an owner-gated settings section.
  */
 
 function useAnswer() {
@@ -258,37 +260,6 @@ export function UnclaimedAccountsCard(): ReactElement | null {
         </button>
       </div>
       {note ? <p className={note.ok ? "set-ok" : "set-err"}>{note.text}</p> : null}
-    </section>
-  );
-}
-
-/** @category admin */
-export function OpsStatusCard(): ReactElement | null {
-  const ops = useQuery({ queryKey: ["admin-ops"], queryFn: fetchOpsStatus });
-  if (!ops.data?.owner) return null;
-  const { status } = ops.data;
-  return (
-    <section className="set-card adm">
-      <h2 className="set-card-h">📡 Ops status</h2>
-      <p className="mc-sub">
-        Bots and deploy health, read-only — generated{" "}
-        {status.generatedAt.slice(0, 16).replace("T", " ")} UTC
-        {status.degraded ? " · running without a GitHub token, so the panel is smaller" : ""}.
-      </p>
-      <div className="adm-rows">
-        {status.signals.map((signal) => (
-          <div key={signal.id} className="adm-row">
-            <span className={`adm-dot adm-${signal.verdict}`} aria-hidden="true" />
-            <span className="adm-main">{signal.label}</span>
-            <span className="adm-meta">{signal.detail}</span>
-            {signal.link ? (
-              <a href={signal.link.href} target="_blank" rel="noopener noreferrer">
-                {signal.link.label}
-              </a>
-            ) : null}
-          </div>
-        ))}
-      </div>
     </section>
   );
 }
