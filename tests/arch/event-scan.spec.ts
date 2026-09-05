@@ -1,6 +1,44 @@
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.js";
 import { earningsAsEvents, MARKET_EVENTS } from "../../src/domain/market-events.js";
+
+/** One fixture events file + an empty calendar and ledger dir, validated through the real CLI. */
+function validateFixture(entryOrder: readonly (readonly [string, string])[]): string {
+  const dir = mkdtempSync(join(tmpdir(), "event-scan-order-"));
+  try {
+    const entries = entryOrder
+      .map(
+        ([id, date]) =>
+          `  { id: "${id}", kind: "macro-print", title: "${id}", date: "${date}", ` +
+          `status: "confirmed", source: "BLS: fixture", impact: "low", symbols: [] },`,
+      )
+      .join("\n");
+    writeFileSync(
+      join(dir, "market-events.ts"),
+      `export const MARKET_EVENTS: readonly MarketEvent[] = [\n${entries}\n];\n`,
+    );
+    writeFileSync(
+      join(dir, "earnings-calendar.ts"),
+      "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
+    );
+    return execFileSync(
+      "node",
+      [
+        "scripts/event-scan.mjs",
+        "--validate",
+        `--events-file=${join(dir, "market-events.ts")}`,
+        `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
+        `--ledger-dir=${join(dir, "no-ledgers")}`,
+      ],
+      { cwd: process.cwd(), encoding: "utf8", stdio: "pipe" },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 
 // Event-calendar contract gate — the committed tables (src/domain/market-events.ts +
 // earnings-calendar.ts) and every assessment ledger (docs/research/events/) must satisfy the
@@ -13,6 +51,31 @@ describe("event-scan contract", () => {
         cwd: process.cwd(),
         stdio: "pipe",
       }),
+    ).not.toThrow();
+  });
+
+  // THE ORDERING GATE (#1341): MARKET_EVENTS is STORED in (date, id) order so two research lanes
+  // adding events for different dates insert at different anchors and plain git merges them —
+  // GitHub's server-side merge never runs the custom driver #1324 wired, so file order is the only
+  // lever that works there. Nothing teaches a research session this rule (the research prompt is
+  // envelope-protected); the red gate is how they learn it, so it has to actually go red.
+  it("--validate rejects an out-of-order entry and names it", () => {
+    expect(() =>
+      validateFixture([
+        ["alpha", "2026-01-01"],
+        ["charlie", "2026-03-01"],
+        ["bravo", "2026-02-01"],
+      ]),
+    ).toThrow(/out of \(date, id\) order/);
+  });
+
+  it("--validate accepts entries in (date, id) order, tie broken by id", () => {
+    expect(() =>
+      validateFixture([
+        ["alpha", "2026-01-01"],
+        ["bravo", "2026-02-01"],
+        ["charlie", "2026-02-01"],
+      ]),
     ).not.toThrow();
   });
 
