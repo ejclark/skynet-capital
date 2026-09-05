@@ -139,3 +139,78 @@ describe("resolveDeployLagFetcher", () => {
     expect(resolveDeployLagFetcher({ SKYNET_FEEDBACK_GITHUB_TOKEN: "x" })).toBeInstanceOf(Function);
   });
 });
+
+/**
+ * #666, amended: the bots process reports its own `GIT_SHA` on the controls poll, so the bots row
+ * is judged against what is ACTUALLY running rather than against CI's record of what was last
+ * deployed. The two disagree exactly when it matters — a machine that rolled back after a
+ * successful deploy reads "current" from the record and stale from its own word.
+ */
+describe("the reported running commit as the bots baseline", () => {
+  const RUNNING = "1111111111111111111111111111111111111111";
+
+  it("calls STALE on the running commit even when CI's deploy record says current", async () => {
+    const doFetch = fakeGithub([
+      ["/commits/main", { status: 200, body: { sha: HEAD } }],
+      ["/runs?event=push&branch=main&per_page=20", CURRENT_RUNS],
+      ["/actions/runs/1/jobs", CURRENT_JOBS],
+      [
+        `/compare/${RUNNING}...${HEAD}`,
+        { status: 200, body: { commits: [], files: [{ filename: "src/bots/runner.ts" }] } },
+      ],
+    ]);
+
+    const withReport = await computeDeploySignals(
+      { token: "t", repo: "x/y" },
+      LINK,
+      doFetch,
+      RUNNING,
+    );
+    expect(withReport.bots.verdict).toBe("attention");
+    expect(withReport.bots.detail).toContain("running 1111111");
+
+    // Same GitHub state, no self-report: the deploy record alone still reads current.
+    const withoutReport = await computeDeploySignals({ token: "t", repo: "x/y" }, LINK, doFetch);
+    expect(withoutReport.bots.verdict).toBe("ok");
+  });
+
+  it("names the commit but not a verdict when GitHub can't resolve it", async () => {
+    const doFetch = fakeGithub([
+      ["/commits/main", { status: 200, body: { sha: HEAD } }],
+      ["/runs?event=push&branch=main&per_page=20", CURRENT_RUNS],
+      ["/actions/runs/1/jobs", CURRENT_JOBS],
+      // No `/compare/...` route: an unknown sha 404s, exactly as a rolled-back build would.
+    ]);
+    const { bots } = await computeDeploySignals(
+      { token: "t", repo: "x/y" },
+      LINK,
+      doFetch,
+      RUNNING,
+    );
+    expect(bots.verdict).toBe("unknown");
+    expect(bots.detail).toContain("running 1111111");
+  });
+
+  it("re-reads GitHub when the reported commit changes inside the TTL window", async () => {
+    let calls = 0;
+    const doFetch = fakeGithub([
+      ["/commits/main", { status: 200, body: { sha: HEAD } }],
+      ["/runs?event=push&branch=main&per_page=20", CURRENT_RUNS],
+      ["/actions/runs/1/jobs", CURRENT_JOBS],
+    ]);
+    const counted = (method: "GET" | "POST" | "PUT" | "DELETE", url: string) => {
+      calls++;
+      return doFetch(method, url);
+    };
+    const fetcher = createDeployLagFetcher({ token: "t", repo: "x/y" }, counted);
+    const now = new Date("2026-09-05T12:00:00.000Z");
+
+    await fetcher(now, RUNNING);
+    const afterFirst = calls;
+    await fetcher(new Date(now.getTime() + 1_000), RUNNING);
+    expect(calls).toBe(afterFirst); // same commit, inside the TTL — cached
+
+    await fetcher(new Date(now.getTime() + 2_000), HEAD);
+    expect(calls).toBeGreaterThan(afterFirst); // a redeploy must not serve the old commit
+  });
+});
