@@ -1,0 +1,11 @@
+{
+  "id": "opex-2027-03-19",
+  "kind": "opex",
+  "title": "Quarterly options expiration — triple witching (March 2027)",
+  "date": "2027-03-19",
+  "status": "estimate",
+  "source": "EST: derived from the standing third-Friday-of-the-quarter-month convention this calendar's other opex entries (opex-2026-11-20, opex-2026-12-18) already encode, with the weekday arithmetic computed mechanically by this session on 2026-09-05 — the third Friday of March 2027 is 2027-03-19. Filed estimate and NOT confirmed on purpose: the confirmed opex entries on this calendar carry an 'OCC: theocc.com expiration calendar' source, and theocc.com returned HTTP 403 to a browser-UA curl from this runner today (5,704 bytes, no calendar retrieved), so the primary was not read. A derived date is a derivation, not a source. Promote once the OCC calendar is actually fetched",
+  "impact": "high",
+  "symbols": [],
+  "notes": "DISCOVERED during the boj-decision-2027-03-18 initial-research adjacency sweep (2026-09-05). Tracked here for corridor structure rather than for a new mechanic: March quarterly expiration stacks index rebalancing and roll flows into one session, and this one falls on the day AFTER the Bank of Japan's March 2027 decision (boj-decision-2027-03-18, estimate) and shares its session with Japan's February national CPI (japan-cpi-2027-03-19, estimate, 08:30 JST). Together with the FOMC's first-SEP meeting concluding 2027-03-17 (fomc-2027-03-17, estimate), that is four dated events in three sessions, and the attribution consequence is the reason all four were filed at once: a 2027-03-19 US tape move has an opex explanation, a Japanese-CPI explanation and a two-central-bank explanation before it has a BoJ one. The same trap the boj-decision-2026-12-18 ledger recorded for its own date, one quarter's structure removed."
+}
