@@ -35,7 +35,9 @@ const TWINS: ReadonlyMap<string, string> = new Map([
   // The owner pages' cards live on app Settings (9e).
   ["/invite", "/app/settings"],
   ["/claim", "/app/settings"],
-  ["/ops-status", "/app/settings"],
+  // Ops status is the topbar's status pill now (#1296) — present on every app route, so the old
+  // page's bookmark lands on the app itself rather than on a Settings section that no longer has it.
+  ["/ops-status", "/app/"],
   ["/learn", "/app/learn"],
   // The ticket (10b): the shell speaks ?play= and ?desk=; other legacy params drop harmlessly
   // in the shell route's validateSearch.

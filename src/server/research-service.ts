@@ -93,6 +93,34 @@ export function listResearch(root: string = RESEARCH_DIR()): ResearchShelf {
   };
 }
 
+/** The forward-test register's slug: an index on disk, the whole register when served. */
+const REGISTER_SLUG = "forward-tests";
+
+/**
+ * Serve the forward-test register as ONE page while storing it as one fragment per event.
+ *
+ * Since issue #1449 `docs/research/forward-tests.md` carries no rows — every registration lives in
+ * `docs/research/forward-tests/<event-id>.md`, written only by the lane that owns that event, so
+ * concurrent research PRs never touch the same file. The reader still wants the register whole,
+ * so this composes it at request time: the index verbatim, then each fragment as a `##` section
+ * (its H1 demoted, its authoring comment dropped), legacy rows last. Relocates, never rewrites —
+ * the same doctrine as renderFolded; each event's table then folds under its own heading.
+ */
+export function composeRegister(root: string, indexMd: string): string {
+  const dir = join(root, REGISTER_SLUG);
+  if (!existsSync(dir)) return indexMd;
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith(".md"))
+    .sort((a, b) => Number(a === "legacy.md") - Number(b === "legacy.md") || a.localeCompare(b));
+  const sections = files.map((f) =>
+    readFileSync(join(dir, f), "utf8")
+      .replace(/<!--[\s\S]*?-->\n*/g, "")
+      .replace(/^#\s+/m, "## ")
+      .trim(),
+  );
+  return `${indexMd.trim()}\n\n${sections.join("\n\n")}\n`;
+}
+
 /** Ledger event-ids that have research — the calendar's link set. */
 export function researchedEventIds(root: string = RESEARCH_DIR()): ReadonlySet<string> {
   return new Set(listResearch(root).ledgers.map((d) => d.slug.slice("events/".length)));
@@ -242,7 +270,9 @@ export function findResearchDoc(slug: string, root: string = RESEARCH_DIR()): Re
   const doc = [...shelf.studies, ...shelf.ledgers].find((d) => d.slug === slug);
   if (!doc) return null;
   const file = join(root, `${doc.slug}.md`);
-  const { glanceMd, bodyMd } = extractGlance(readFileSync(file, "utf8"));
+  const raw = readFileSync(file, "utf8");
+  const md = doc.slug === REGISTER_SLUG ? composeRegister(root, raw) : raw;
+  const { glanceMd, bodyMd } = extractGlance(md);
   return {
     ...doc,
     html: rewriteDocLinks(renderFolded(bodyMd)),

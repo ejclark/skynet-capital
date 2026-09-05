@@ -1,0 +1,11 @@
+{
+  "id": "cpi-2026-09-11",
+  "kind": "macro-print",
+  "title": "CPI release (Aug 2026 data)",
+  "date": "2026-09-11",
+  "status": "confirmed",
+  "source": "BLS: bls.gov/schedule/news_release/cpi.htm — 08:30 ET, checked 2026-08-15",
+  "impact": "high",
+  "symbols": [],
+  "notes": "Rate-path input; AI-infra names trade as long-duration assets on it."
+}

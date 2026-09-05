@@ -1,0 +1,11 @@
+{
+  "id": "ism-services-2026-12-03",
+  "kind": "macro-print",
+  "title": "ISM Services PMI (Nov 2026 data)",
+  "date": "2026-12-03",
+  "status": "estimate",
+  "source": "EST: ISM publishes the Services PMI at 10:00 ET on the third business day of the month (the cadence the confirmed 2026-09-03 entry follows, and the same derivation the 2026-11-04 sibling carries); December 2026's first three business days are Tue 12-01, Wed 12-02 and Thu 12-03. ismworld.org's ROB calendar was re-fetched direct 2026-09-02 and still 302s to ecommerce.ismworld.org/SSO/Login.aspx, so this is a rule-derived date and nothing more, checked 2026-09-02",
+  "impact": "high",
+  "symbols": [],
+  "notes": "Lands 10:00 ET the day BEFORE jobs-2026-12-04 — the last activity read before the payroll that feeds the 12-09 dots, and it carries its own employment index. READ IT, DO NOT TRADE IT: the ism-services-2026-11-04 initial research measured all 8 of 2026's services releases and found release-day moves in TLT/^TNX/SPY/QQQ/XLF/IWM statistically nil, and this event's own research added that the 10:00 ET release HOUR is quieter than an ordinary hour in four of five instruments (hourly bars, n=167 sessions). WHY IT STILL MATTERS, which is the finding its own ledger banked: every federal November-reference price print lands AFTER the 12-09 vote (CPI 12-10, PPI 12-15, import/export 12-17, PCE 12-23), and this is the only 2026 services print inside an FOMC blackout (11-28→12-10) — so ISM mfg Prices Paid 12-01, this print's Prices index, and average hourly earnings on 12-04 are the Committee's entire November-data price picture. Informational, never tradable. Discovered during the jobs-2026-12-04 pulse (2026-09-02) alongside its manufacturing sibling; the earlier attribution of the eight-release measurement to the 09-03 ledger was wrong and is corrected here."
+}

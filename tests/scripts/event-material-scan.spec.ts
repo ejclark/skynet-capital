@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { closeFromChart } from "../../scripts/event-material-scan.mjs";
 
 // The deterministic material-change probe (issue #724) — driven through the real CLI entrypoint,
 // the house pattern (see deploy-lag.spec.ts): `--explain` takes the full decision state as JSON on
@@ -216,5 +217,87 @@ describe("event-material-scan applyScreen()", () => {
     });
     expect(verdict).toBe(2);
     expect((out as unknown as { error?: string }).error).toContain("Assessment ledger");
+  });
+});
+
+// The price read itself (issue #1386). Imported directly rather than driven through the CLI — the
+// price read is the one half `--explain` cannot reach (it is upstream of the decision state, behind
+// a fetch), so it gets the other house arrangement instead: a hand-written `.d.mts` beside the
+// script, exactly as envelope-scan/plan-closure-scan do. Reconstructed from the payload recorded on 2026-09-05: MU's
+// 09-04 daily bar carried `close: null` while the same payload's meta already held that session's
+// official print, and the old backward scan returned Wednesday's $958.16 as if it were Friday's
+// $1,016.59 — a +6.10% session read as ~2.6%, under the 5% materiality threshold, silently.
+const ET_OFFSET = -14_400; // EDT, the payload's own `meta.gmtoffset` in September
+const sessionOpen = (month: number, day: number) => Date.UTC(2026, month - 1, day, 13, 30) / 1000; // 09:30 ET
+const SESSION_LENGTH = 23_401; // 09:30 -> 16:00:01 ET, when Yahoo stamps the closing print
+const MU_CLOSE_0904 = sessionOpen(9, 4) + SESSION_LENGTH;
+
+const muChart = (
+  overrides: { close?: (number | null)[]; meta?: Record<string, unknown> } = {},
+): unknown => ({
+  chart: {
+    result: [
+      {
+        meta: {
+          gmtoffset: ET_OFFSET,
+          exchangeTimezoneName: "America/New_York",
+          regularMarketPrice: 1016.59,
+          regularMarketTime: MU_CLOSE_0904,
+          ...overrides.meta,
+        },
+        timestamp: (
+          [
+            [8, 31],
+            [9, 1],
+            [9, 2],
+            [9, 3],
+            [9, 4],
+          ] as const
+        ).map(([month, day]) => sessionOpen(month, day)),
+        indicators: {
+          quote: [{ close: overrides.close ?? [958.73, 933.44, 956.08, 958.16, null] }],
+        },
+      },
+    ],
+  },
+});
+
+describe("event-material-scan closeFromChart()", () => {
+  it("reads the latest bar's own close when the session has consolidated", () => {
+    const read = closeFromChart(
+      muChart({ close: [958.73, 933.44, 956.08, 958.16, 1016.59] }),
+      "MU",
+    );
+    expect(read).toEqual({ price: 1016.59, asOf: "2026-09-04", source: "bar-close" });
+  });
+
+  it("takes the session's print from meta when its latest bar has no close yet", () => {
+    const read = closeFromChart(muChart(), "MU");
+    expect(read.price).toBe(1016.59);
+    expect(read.asOf).toBe("2026-09-04");
+    expect(read.source).toBe("meta.regularMarketPrice");
+  });
+
+  it("never falls back to an earlier day's close on a null latest bar — the 2026-09-04 defect", () => {
+    expect(closeFromChart(muChart(), "MU").price).not.toBe(958.16);
+  });
+
+  it("throws rather than return an older close when meta's print predates the latest bar", () => {
+    const staleMeta = muChart({ meta: { regularMarketTime: sessionOpen(9, 3) + SESSION_LENGTH } });
+    expect(() => closeFromChart(staleMeta, "MU")).toThrow(/latest bar \(2026-09-04\) has no close/);
+  });
+
+  it("throws when a null latest bar has no usable meta price at all", () => {
+    const noMeta = muChart({ meta: { regularMarketPrice: undefined } });
+    expect(() => closeFromChart(noMeta, "MU")).toThrow(/has no close/);
+  });
+
+  it("throws on a payload carrying no bars, rather than returning nothing quietly", () => {
+    expect(() => closeFromChart({ chart: { result: [] } }, "MU")).toThrow(/no usable daily bars/);
+  });
+
+  it("rounds a meta print to cents, as the bar path already did", () => {
+    const read = closeFromChart(muChart({ meta: { regularMarketPrice: 1016.5949 } }), "MU");
+    expect(read.price).toBe(1016.59);
   });
 });

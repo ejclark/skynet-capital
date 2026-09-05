@@ -104,7 +104,7 @@ async function runLive(): Promise<void> {
     }
     return true;
   });
-  const { controls, bootControls } = await bootMissionControl(
+  const { controls, bootControls, health } = await bootMissionControl(
     (state) => void credentials.reconcile(state),
   );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
@@ -180,10 +180,10 @@ async function runLive(): Promise<void> {
   const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
   const universeSet = new Set(UNIVERSE);
 
-  // Durable momentum/sentiment (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set; restored
-  // before the market-data stream starts, persisted on every subsequent tick/article below.
+  // Durable momentum/sentiment/cooldowns (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set, and
+  // stamped on /data/health.json so the next deploy PROVES restore by being read (issue #1181).
   const botsStateDb = seedBotsState(process.env);
-  restoreBotsState(botsStateDb, tracker, sentiment);
+  health.restored(restoreBotsState(botsStateDb, tracker, sentiment, bots));
 
   // Constructed before the boot-time reconcile() below, so a credential rotated while this
   // process was down reaches these too. `onEvent` safely closes over `maybeEvaluate` (defined

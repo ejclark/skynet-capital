@@ -19,6 +19,11 @@ export interface InsightsBridgeHandle {
    *  the first one lands — the ops-status panel's credential-free "is the bots process alive"
    *  proxy. */
   readonly lastControlsPollAt: () => string | undefined;
+  /** The commit the bots process reported on its most recent poll (`controls-poll-wire.ts`), or
+   *  `undefined` when it reported none — an older bots build, or `GIT_SHA` dropped by a rollback.
+   *  Re-read from every poll rather than remembered, so a redeploy onto an unstamped build stops
+   *  claiming the old commit instead of quietly keeping it. */
+  readonly botsRunningSha: () => string | undefined;
 }
 
 export interface CredentialsBridgeDeps {
@@ -39,6 +44,7 @@ export function startInsightsBridge(
   const botCredentialsSecret = env.SKYNET_BOT_CREDENTIALS_BRIDGE_SECRET;
   const fingerprintSalt = env.SKYNET_STORE_SECRET;
   let lastControlsPollAt: string | undefined;
+  let botsRunningSha: string | undefined;
   createInsightsListener({
     record: (entry) => insights.record(entry),
     // The bots process polls Mission Control state over the same private-net bridge. Stamps a
@@ -54,8 +60,9 @@ export function startInsightsBridge(
         fingerprintSalt,
       );
     },
-    onControlsPoll: () => {
+    onControlsPoll: (report) => {
       lastControlsPollAt = new Date().toISOString();
+      botsRunningSha = report.gitSha;
     },
     ...(credentialsDeps && botCredentialsSecret
       ? {
@@ -69,5 +76,8 @@ export function startInsightsBridge(
   }).listen(insightsPort, () => {
     console.log(`[insights-bridge] internal listener on port ${insightsPort} (private-net only)`);
   });
-  return { lastControlsPollAt: () => lastControlsPollAt };
+  return {
+    lastControlsPollAt: () => lastControlsPollAt,
+    botsRunningSha: () => botsRunningSha,
+  };
 }

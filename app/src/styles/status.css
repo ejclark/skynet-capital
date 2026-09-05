@@ -1,0 +1,142 @@
+/* THE STATUS PILL AND ITS OPS ROWS (#1296) — pulled out of shell.css when fleet health moved into
+   the topbar and pushed that file past its line budget. Layout only; every colour is a theme token.
+
+   Why it lives in the bar at all: ops status used to be an owner-only card at the bottom of
+   Settings (#1295's admitted stopgap), which meant no member could see whether the bots were
+   alive. It is the group's now (#1296), so it rides the one mark that is on every route. */
+
+/* Two marks, never merged — the dot is the SSE stream, the flag is the fleet, and a live stream
+   proves nothing about whether the bots are trading. */
+.status-wrap {
+  position: relative;
+  display: flex;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.status:hover,
+.status[aria-expanded="true"] {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+.status-live .status-dot {
+  background: var(--pos);
+  box-shadow: 0 0 6px var(--pos);
+}
+.status-resyncing .status-dot {
+  background: var(--neg);
+}
+/* The fleet's own mark — sized like the stream dot so it survives the phone layout below, where
+   the pill's text is hidden and the dots are all that's left. */
+.status-flag {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--neg);
+  box-shadow: 0 0 6px var(--neg);
+  flex-shrink: 0;
+}
+.status-attn {
+  border-color: color-mix(in oklab, var(--neg) 45%, var(--border));
+}
+
+/* The ops rows, hung under the pill (elevation: popover). */
+.ops-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: min(360px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--elev-overlay);
+}
+.ops-pop-head {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.ops-pop-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.ops-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+.ops-row {
+  display: grid;
+  grid-template-columns: 9px 1fr;
+  gap: 4px 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.ops-row-label {
+  font-weight: 600;
+}
+.ops-row-detail,
+.ops-row a {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.ops-row a {
+  color: var(--accent);
+}
+.ops-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  background: var(--muted);
+}
+.ops-dot.ops-ok {
+  background: var(--pos);
+}
+.ops-dot.ops-attention {
+  background: var(--neg);
+}
+.ops-dot.ops-unknown {
+  background: var(--muted);
+}
+
+@media (max-width: 860px) {
+  /* the dots alone carry the state — the seq text has no room here, but the fleet flag still
+     shows, which is the phone glance #666 asked for */
+  .status-text {
+    display: none;
+  }
+  .status {
+    padding: 4px 6px;
+  }
+}

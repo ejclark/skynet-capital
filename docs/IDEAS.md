@@ -18,6 +18,19 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Progressive reveal on the trade ticket's play picker (and beyond)
+
+Today `PlayPicker` (`app/src/shell/play-picker.tsx`) always renders all six trade-type cards
+(101–302), locking unearned rungs with a "🔒 " prefix rather than hiding them — every card is
+visible from day one even though only 101 is ever actionable at first. As more trade types and
+surfaces get added, showing every locked rung up front risks becoming noisy/confusing for newbies
+rather than a clean, one-step-at-a-time ladder. Worth exploring a genuine progressive-reveal
+treatment (hide/collapse rungs beyond "next up," reveal on unlock) as a reusable pattern — not just
+for this picker, but as a general design principle for surfaces that will keep growing in
+complexity. IA-level call (screen real estate vs. discoverability/anticipation as a motivator) —
+show Eric a couple of rendered options rather than picking one blind.
+_(src: Eric · while: reviewing onboarding + trade-ticket screenshots, 2026-09-05)_
+
 ### Debug after-hours order staging without waiting for the market to open
 
 Tony reported staging a trade after hours that executed as soon as the market opened — that's
