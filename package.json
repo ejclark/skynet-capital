@@ -57,6 +57,7 @@
     "shoot:onboarding": "tsx scripts/shoot/onboarding.mjs",
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:status-pill": "tsx scripts/shoot/status-pill.mjs",
+    "shoot:trade": "tsx scripts/shoot/trade.mjs",
     "dev:tower": "node scripts/dev-tower.mjs",
     "smoke:trade": "tsx src/scripts/smoke-trade.ts",
     "scan:flow": "tsx src/scripts/scan-unusual-flow.ts",
