@@ -930,16 +930,23 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## In progress
 
-- Progressive reveal on the trade ticket — decided as **the rail over a standalone form**:
-  milestones gate and preset, never drive; locked plays visible-but-disabled with the unlocking
-  rung named; Sell stock never locked (an exit). IA decision + EARS + slices in #1461; rendered in
-  the [Rail Over the Form](https://claude.ai/code/artifact/fb30db30-cb21-45d7-a338-a5bc39330723)
-  mockup. Awaiting Eric's ready flip.
-  _(src: Eric · while: reviewing onboarding + trade-ticket screenshots, 2026-09-05)_
+- The options chain as the entry instrument (#1481) — slice 1 (the base straddle view) shipped
+  in #1512; slice 2 (scroll-out columns both ways, greeks passed through, tap on bid / ask presets
+  side + price) is the remainder and closes it.
+  _(src: Eric · while: reading the Fidelity options chain frames, 2026-09-05)_
 
 ---
 
 ## Shipped (recent)
+
+- Progressive reveal on the trade ticket — **the rail over a standalone form** (#1461): the
+  milestone strip replaces the play picker (#1506); the ticket owns its nav and `?play=` presets
+  it, locked segments visible-but-disabled with their reason (#1520). Mockup:
+  [Rail Over the Form](https://claude.ai/code/artifact/fb30db30-cb21-45d7-a338-a5bc39330723).
+- The straddle view of the options chain — strike centre, calls left, puts right, the
+  current-price divider, ITM rails, days to expiry (#1481 slice 1) — PR #1512
+- `/teardown` — a reference design → patterns, mechanics, a borrow / adapt / skip call sheet;
+  `scripts/teardown/redact.mjs` paints over account lines first — PR #1499
 
 - Morning brief reads the full event horizon (CPI/FOMC/sector, not just earnings prints) —
   the pipeline canary, first handoff the build machinery executed end-to-end — PR #371
