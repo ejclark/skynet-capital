@@ -70,7 +70,11 @@ describe("property: a cash-secured put is never approved uncovered", () => {
   it("refuses whenever the required collateral exceeds cash on hand, for any account", () => {
     fc.assert(
       fc.property(contextArb, requestArb("201"), (context, request) => {
-        const collateral = request.strike * request.contracts * 100;
+        // Same association as production (option-economics.ts: strike * scale, scale = contracts * 100).
+        // (strike * contracts) * 100 rounds differently at the boundary and CI hit the counterexample
+        // strike 1999.9999999999995 × 50 vs cash 9999999.999999996 (#1377): a one-ulp disagreement
+        // between the test's premise and the code's check, not a real refusal.
+        const collateral = request.strike * (request.contracts * 100);
         const preview = previewOptionOrder(request, context);
         if (collateral > context.cash) {
           expect(preview.ok).toBe(false);
@@ -83,7 +87,11 @@ describe("property: a cash-secured put is never approved uncovered", () => {
   it("never refuses on affordability grounds when the collateral is fully covered", () => {
     fc.assert(
       fc.property(contextArb, requestArb("201"), (context, request) => {
-        const collateral = request.strike * request.contracts * 100;
+        // Same association as production (option-economics.ts: strike * scale, scale = contracts * 100).
+        // (strike * contracts) * 100 rounds differently at the boundary and CI hit the counterexample
+        // strike 1999.9999999999995 × 50 vs cash 9999999.999999996 (#1377): a one-ulp disagreement
+        // between the test's premise and the code's check, not a real refusal.
+        const collateral = request.strike * (request.contracts * 100);
         fc.pre(collateral <= context.cash);
         const preview = previewOptionOrder(request, context);
         expect(preview.refusals.some((r) => r.includes("Cash-secured"))).toBe(false);
