@@ -79,6 +79,7 @@ export function setupOpsStatus(deps: OpsStatusSetupDeps): OpsStatusDeps | undefi
       buildOpsStatus({
         now: () => new Date(),
         bridgeLastPollAt: () => deps.insightsBridge.lastControlsPollAt(),
+        botsRunningSha: () => deps.insightsBridge.botsRunningSha(),
         lastBotActivityAt: () => lastBotActivityAt(deps.hub, deps.activity),
         ...(fetchDeploySignals ? { fetchDeploySignals } : {}),
         repo,

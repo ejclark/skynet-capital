@@ -1,6 +1,7 @@
 import type { AddressInfo } from "node:net";
 import type { ControlsState } from "../../src/autonomous/bot-controls.js";
 import { resolveBotControls } from "../../src/autonomous/bot-controls-client.js";
+import type { ControlsPollReport } from "../../src/autonomous/controls-poll-wire.js";
 import { createInsightsListener } from "../../src/server/insights-listener.js";
 
 /**
@@ -106,5 +107,65 @@ describe("bot-controls bridge client", () => {
         await expect(client.fetchOnce()).resolves.toEqual({ bots: {} });
       },
     );
+  });
+});
+
+/**
+ * The self-report round trip (#666): the bots process's own `GIT_SHA` riding the poll it already
+ * makes, over a real socket. This is what lets the owner's ops-status panel answer "on what
+ * commit?" without a Fly credential — so the thing worth proving is that the app receives exactly
+ * what the process claimed, and receives nothing when it claimed nothing.
+ */
+async function withReportingBridge(
+  run: (base: string, reports: ControlsPollReport[]) => Promise<void>,
+): Promise<void> {
+  const reports: ControlsPollReport[] = [];
+  const server = createInsightsListener({
+    record: () => Promise.resolve(),
+    controls: () => ({ bots: {} }),
+    onControlsPoll: (report) => reports.push(report),
+  });
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+  try {
+    await run(`http://127.0.0.1:${port}`, reports);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+}
+
+describe("the bots process's running commit on the controls poll", () => {
+  const SHA = "9a1b2c3d4e5f60000000000000000000000000ab";
+
+  it("carries GIT_SHA from the polling process to the app that serves the panel", async () => {
+    await withReportingBridge(async (base, reports) => {
+      const client = resolveBotControls({
+        SKYNET_INSIGHTS_BRIDGE_URL: base,
+        GIT_SHA: SHA,
+      } as NodeJS.ProcessEnv);
+      await client.fetchOnce();
+      expect(reports).toEqual([{ gitSha: SHA }]);
+    });
+  });
+
+  it("reports nothing when the process has no GIT_SHA — a rollback drops it (fly.toml)", async () => {
+    await withReportingBridge(async (base, reports) => {
+      const client = resolveBotControls({
+        SKYNET_INSIGHTS_BRIDGE_URL: base,
+      } as NodeJS.ProcessEnv);
+      await client.fetchOnce();
+      expect(reports).toEqual([{}]);
+    });
+  });
+
+  it("still serves the poll when the report is junk, rather than passing it on", async () => {
+    await withReportingBridge(async (base, reports) => {
+      const client = resolveBotControls({
+        SKYNET_INSIGHTS_BRIDGE_URL: base,
+        GIT_SHA: "not-a-commit",
+      } as NodeJS.ProcessEnv);
+      expect(await client.fetchOnce()).toEqual({ bots: {} });
+      expect(reports).toEqual([{}]);
+    });
   });
 });
