@@ -6,6 +6,7 @@ import { useConnection } from "../live/connection";
 import {
   fetchOpsStatus,
   type OpsSignal,
+  type OpsStatusView,
   opsAttentionCount,
   opsAttentionLabel,
 } from "../live/ops-status";
