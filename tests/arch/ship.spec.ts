@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { hermeticGitEnv } from "../support/hermetic-git.js";
 
 // Ship contract gate — the eval Eric asked for after three PRs shipped with a literal "{}"
 // description (docs/LESSONS.md 2026-08-15): a PR is a document, and ship.sh must refuse to open
@@ -289,6 +290,185 @@ describe("ship automerge — an arm that failed never reports success", () => {
     expect(classify('{"data":{"enablePullRequestAutoMerge":{"pullRequest":{"number":659}}}}')).toBe(
       "success",
     );
+  });
+});
+
+/**
+ * The platter (#1343) — one held PR per cadence instead of one per protected change.
+ *
+ * Eric merges every `envelope.json`-protected change by hand; that boundary does not move. What the
+ * platter changes is its cost: on 2026-09-04 seven protected changes cost seven separate merges,
+ * and the hold was not even enumerable — `ship open --hold` set a local flag and applied no label,
+ * so `hold-merge` sat on two closed diagnostic PRs and on none of the seven.
+ *
+ * The ledger is specced rather than the network mechanics because it is the artefact Eric actually
+ * reads, and because it is a pure function of `git log` — a body assembled from a hand-maintained
+ * file could drift from what is really boarded; this one cannot.
+ */
+describe("ship platter — the ledger is a pure function of the boarded commits", () => {
+  let dir: string;
+  let base: string;
+  const SHIP = resolve("scripts/ship.sh");
+  const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
+
+  const git = (args: string[], cwd = dir) =>
+    execFileSync("git", args, { cwd, encoding: "utf8", env, stdio: "pipe" });
+  const ledger = (args: string[]) =>
+    execFileSync("bash", [SHIP, "platter", "ledger", ...args], {
+      cwd: dir,
+      encoding: "utf8",
+      env,
+      stdio: "pipe",
+    });
+  /** One boarded item, in exactly the commit shape `platter board` writes. */
+  const board = (file: string, subject: string, trailers: string[]) => {
+    writeFileSync(join(dir, file), `${file}\n`);
+    git(["add", "-A"]);
+    git(["commit", "-q", "-m", subject, "-m", trailers.join("\n")]);
+  };
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "ship-platter-"));
+    git(["init", "-q", "-b", "main", "."]);
+    git(["config", "user.email", "spec@example.com"]);
+    git(["config", "user.name", "spec"]);
+    writeFileSync(join(dir, "seed.txt"), "seed\n");
+    git(["add", "-A"]);
+    git(["commit", "-q", "-m", "chore: seed"]);
+    base = git(["rev-parse", "HEAD"]).trim();
+    board("a.txt", "fix(ci): restore the npm cache key", [
+      "Platter-Item: fix/cache",
+      "Platter-Sha: 4c58a8a3ad4a",
+      "Platter-Verify: verify green 2026-09-04T22:05Z",
+      "Platter-Paths: .github/workflows/pipeline.yml",
+      "Platter-Paths: fly.bots.toml",
+    ]);
+    board("b.txt", "feat(bots): widen the smoke | timeout", [
+      "Platter-Item: feat/smoke",
+      "Platter-Sha: 999888777666",
+      "Platter-Verify: verify skipped (--no-verify)",
+      "Platter-Paths: none",
+    ]);
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("gives every item its own row, in boarding order, with the sha that reverts it alone", () => {
+    const rows = ledger(["--base", base]).trim().split("\n");
+    expect(rows[0]).toContain("| # | item | why | verify evidence | revert |");
+    expect(rows).toHaveLength(4); // header + separator + two items
+    expect(rows[2]).toContain("`fix/cache`");
+    expect(rows[2]).toContain("fix(ci): restore the npm cache key");
+    expect(rows[3]).toContain("`feat/smoke`");
+  });
+
+  it("carries each item's verify evidence and the protected paths it touched", () => {
+    const table = ledger(["--base", base]);
+    expect(table).toContain("verify green 2026-09-04T22:05Z");
+    expect(table).toContain("`.github/workflows/pipeline.yml`");
+    expect(table).toContain("`fly.bots.toml`");
+  });
+
+  it("says so when an item boarded unverified, rather than implying evidence it has none of", () => {
+    // An honest ledger is the whole point: 'verify skipped' must survive into the row Eric reads.
+    expect(ledger(["--base", base])).toContain("verify skipped (--no-verify)");
+  });
+
+  it("escapes a pipe in a commit subject instead of splitting the row into extra columns", () => {
+    const row = ledger(["--base", base]).trim().split("\n")[3] ?? "";
+    expect(row).toContain("widen the smoke \\| timeout");
+    expect(row.match(/(?<!\\)\|/g)).toHaveLength(6); // 5 cells → 6 unescaped delimiters
+  });
+
+  it("renders an explicit empty state rather than a headers-only table", () => {
+    expect(ledger(["--base", "HEAD"])).toContain("nothing boarded yet");
+  });
+
+  // The body the platter actually PATCHes onto the PR, run through the repo's own format gate —
+  // so the ledger can never become a picture the fridge rule would reject.
+  it("composes a PR body that passes ship checkbody", () => {
+    const file = join(dir, "body.md");
+    writeFileSync(file, ledger(["--base", base, "--body"]));
+    const { code, stdout } = run(["checkbody", file]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("passes the picture/format contract");
+  });
+
+  it("tells Eric to merge with a merge commit — squashing is what loses per-item revert", () => {
+    expect(ledger(["--base", base, "--body"])).toContain("never squash");
+  });
+});
+
+describe("ship platter — refusals that keep the platter an assembly point, not a workspace", () => {
+  // This refusal depends on the CURRENT branch, so it runs in its own repo on `main`. Against
+  // process.cwd() it went red the first time a platter was actually opened (2026-09-05): `platter
+  // open` runs `npm run verify` on the staged union while HEAD *is* a platter branch, so the
+  // refusal this test expects is exactly the one that cannot fire there.
+  it("refuses to board while HEAD is not a platter branch", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ship-board-refusal-"));
+    const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
+    const git = (args: string[]) =>
+      execFileSync("git", args, { cwd: dir, encoding: "utf8", env, stdio: "pipe" });
+    try {
+      git(["init", "-q", "-b", "main", "."]);
+      git(["config", "user.email", "spec@example.com"]);
+      git(["config", "user.name", "spec"]);
+      git(["commit", "-q", "--allow-empty", "-m", "chore: seed"]);
+      let code = 0;
+      let stderr = "";
+      try {
+        execFileSync("bash", [resolve("scripts/ship.sh"), "platter", "board", "feedback/1"], {
+          cwd: dir,
+          env,
+          stdio: "pipe",
+        });
+      } catch (error) {
+        const e = error as { status?: number; stderr?: Buffer };
+        code = e.status ?? 1;
+        stderr = e.stderr?.toString() ?? "";
+      }
+      expect(code).toBe(1);
+      expect(stderr).toContain("not a platter branch");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a platter name outside platter/ — the branch name is how the platter is found", () => {
+    const { code, stderr } = run(["platter", "open", "feedback/1", "--name", "wip/whatever"]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("platter/");
+  });
+
+  it("refuses to open a platter with no first item — a PR cannot open on an empty diff", () => {
+    const { code, stderr } = run(["platter", "open"]);
+    expect(code).toBe(1);
+    expect(stderr).toContain("item branch is required");
+  });
+
+  it("names the three subcommands when handed an unknown one", () => {
+    const { code, stderr } = run(["platter", "assemble"]);
+    expect(code).toBe(1);
+    expect(stderr).toMatch(/open .*board .*ledger/s);
+  });
+});
+
+describe("ship platter — the source contract", () => {
+  const source = readFileSync("scripts/ship.sh", "utf8");
+
+  it("applies hold-merge on --hold, so a held PR is enumerable and the arm job skips it", () => {
+    // The gap #1343 measured: --hold set a flag and printed a line, and nothing recorded WHICH PRs
+    // were waiting on Eric. You cannot batch what you cannot list.
+    expect(source).toMatch(/issues\/\$num\/labels/);
+    expect(source).toMatch(/"labels":\["hold-merge"\]/);
+  });
+
+  it("verifies the union as each item boards, and un-boards the item on red", () => {
+    expect(source).toMatch(/npm run verify >\/tmp\/ship-platter-verify\.log/);
+    expect(source).toMatch(/un-boarded it; the platter is unchanged/);
+  });
+
+  it("opens the platter held — never armed, whatever else changes around it", () => {
+    expect(source).toMatch(/--body-file "\$bodyfile" --hold --no-verify/);
   });
 });
 

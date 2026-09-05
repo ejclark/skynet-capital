@@ -18,6 +18,30 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Progressive reveal on the trade ticket's play picker (and beyond)
+
+Today `PlayPicker` (`app/src/shell/play-picker.tsx`) always renders all six trade-type cards
+(101–302), locking unearned rungs with a "🔒 " prefix rather than hiding them — every card is
+visible from day one even though only 101 is ever actionable at first. As more trade types and
+surfaces get added, showing every locked rung up front risks becoming noisy/confusing for newbies
+rather than a clean, one-step-at-a-time ladder. Worth exploring a genuine progressive-reveal
+treatment (hide/collapse rungs beyond "next up," reveal on unlock) as a reusable pattern — not just
+for this picker, but as a general design principle for surfaces that will keep growing in
+complexity. IA-level call (screen real estate vs. discoverability/anticipation as a motivator) —
+show Eric a couple of rendered options rather than picking one blind.
+_(src: Eric · while: reviewing onboarding + trade-ticket screenshots, 2026-09-05)_
+
+### Debug after-hours order staging without waiting for the market to open
+
+Tony reported staging a trade after hours that executed as soon as the market opened — that's
+observable behavior Sauron's autonomous trading logic could plausibly be driven through directly
+(replay/trigger the same code path deliberately), rather than waiting for a live after-hours →
+open window to reproduce. Couldn't find an existing tracked issue this maps to (searched issues for
+"after hours"/"market open"/"Tony" — no hits) — worth confirming with Eric which bug this is meant
+to help debug before building anything, since the technique is only useful attached to a real
+target.
+_(src: Eric · while: settings-nav session, 2026-09-04)_
+
 ### The remote container runs Node 22 against `engines.node >=24`
 
 Every install warns `EBADENGINE` (package.json wants >=24, the web environment ships v22.22.2).
@@ -34,14 +58,6 @@ cache fix, one of them silently re-fetching from the network on almost every run
 correctly — but it's a real migration: build tooling, the Dockerfile, and every CI job that installs
 either tree would need re-checking, not a same-session fix.
 _(src: Claude · while: retro on the CI verify job's ~7.5-minute install, 2026-09-04)_
-
-### A screenshot harness for the React shell (`shoot:app`)
-
-`shoot:standings` / `shoot:login` shoot the legacy server-rendered pages; nothing shoots `/app/*`.
-The fluid-shell PR drove five routes through an offline server with a 40-line throwaway Playwright
-script (before/after at 1920px, dark) — promote it to `scripts/shoot-app.mjs` + `npm run shoot:app`
-so the next visual PR on the shell gets its fridge picture in one command.
-_(src: Claude · while: making the shell fluid, 2026-09-04)_
 
 ### Screenshots in Moneypenny's rail
 
@@ -1149,3 +1165,89 @@ applies the whole time. Worth deciding whether `npm run verify` should carry a c
 freshness check of its own (same `git merge-base --is-ancestor` shape, non-blocking) — or whether
 that's over-engineering a case `ship open`'s hard stop already catches at the point that matters.
 _(src: Claude · while: /retro on PR #1219's stale-base CI failure, 2026-09-04)_
+
+### The bots boot log makes a healthy process look broken
+`src/scripts/run-autonomous.ts` starts the shared clock/news/price connections (line 187), polls news
+(line 209) and seeds the daily-loss baseline (line 228) before `credentials.reconcile(bootControls)`
+(line 252) applies the bridge-delivered rotated credential — so every boot prints a burst of `401`s
+from the dead env credential that are expected noise, and then a healthy tick-driven eval with no
+trade signal prints nothing at all. Noise-at-boot plus silence-as-health cost ~2 hours and five of
+Eric's approval taps to misread once already (docs/LESSONS.md, 2026-09-04). Worth deciding between
+reconciling credentials before the first outbound call, or explicitly labeling the pre-reconcile
+failures as expected (`[boot] pre-rotation credential — expected if a key was rotated`) so the log
+tells the truth to a skimmer.
+_(src: Claude · while: /retro on the sauron log-pull investigation, 2026-09-04)_ — **resolved by #1300** (prime the store credential before anything is built on it).
+
+### The composition root grows with every feature — the god-file detector treats the symptom
+Eric, 2026-09-04: "god files are a strong smell that there's multiple points of failure. The
+need of a god file detector in itself is a smell but required because of all the other shit
+piling up by the design choices." Evidence the same day: `run-autonomous.ts` sits at exactly
+biome's 300-line cap, so the health-file wiring (#1301) was routed into `autonomous-live-wiring.ts`
+(299 lines) to dodge it — the cap moved the code sideways instead of fixing the shape. The shape:
+`runLive()` is a ~250-line composition root where every feature (credential bridge, state DB,
+health stamp, beta scout, hardcore roster) lands as inline wiring, so the file grows linearly with
+the feature count and every boot-order bug (the 401 burst, the scout re-arm) is a bug *in the
+ordering of that one function*. The design fix is a boot pipeline of small stages that register
+themselves (each owns its env knob, its boot step, its shutdown, its health verdict) with the root
+reduced to `stages.reduce(boot)` — after which the detector has nothing to detect in this cluster.
+Candidate for a `/governor` cycle with the `decomposer` athlete; the scout/creds/health/state-db
+seams are already isolated modules, so the extraction is mostly moving the wiring, not the logic.
+_(src: Eric · while: reviewing #1301's cap dodge, 2026-09-04)_
+
+### `setup-commit-signing.sh` no longer does only commit signing
+It now also registers the market-events merge driver (#1324), because it is the one script every
+lane runs at `SessionStart` and `.git/config` cannot be a tracked file. The honest name is
+`setup-session-git.sh`. Renaming it means editing `.claude/settings.json`, whose `SessionStart` hook
+names the path — an envelope-protected edit, so a cosmetic rename
+would cost Eric an approval on its own. Worth folding into the next protected-file change that
+already needs his click, not raising as its own ask.
+_(src: Claude · while: building #1324, the merge-driver wiring, 2026-09-04)_
+
+### Skill and agent frontmatter has the same silent-absence failure mode a workflow meta just had
+`/grind` vanished from the Workflow registry for ~55 minutes because its `export const meta`
+stopped being a pure literal, and the registry drops such a script silently rather than erroring
+(docs/LESSONS.md, 2026-09-04; gate: `scripts/workflow-meta-scan.mjs`). The identical shape exists
+one directory over: `.claude/skills/*/SKILL.md` and `.claude/agents/*.md` open with a YAML
+frontmatter block (`name:`, `description:`) that the harness parses statically to build the skill
+and agent rosters. A malformed block — an unclosed `---`, a `description: >-` fold with a bad
+indent, a missing `name:` — would drop that skill or agent from the roster with no error anywhere,
+and nothing in `tests/arch/` checks it: `scripts/config-audit.mjs` reads frontmatter *values* for
+its compute-routing check but never validates that the block parses or carries both required keys.
+Worth a sibling gate to `workflow-meta-scan.mjs` (parse the block with a strict YAML loader,
+require `name` = directory/file name and a non-empty `description`), blocking for the same reason:
+a roster entry that isn't there is a broken contract, not debt.
+_(src: Claude · while: retro on the un-invokable /grind workflow, 2026-09-04)_
+
+### An eye on the `needs-eric` backlog — count and age, the cost research exists to drive down
+Eric, 2026-09-04: research capability should "prevent us from `needs-eric` state, as well as
+improve our ability to remove that state after the fact." Every other constraint here has an eye
+(`*-scan.mjs` + a ratchet budget); this one — the number of open issues waiting on a decision only
+he can make, and how long the oldest has waited — is measured by nobody. Baseline at the moment of
+writing: 6 open, oldest 9 days (#666), via one REST call
+(`GET /repos/ejclark/skynet-capital/issues?labels=needs-eric&state=open`). A `needs-eric-scan.mjs`
+in the house shape (REST core bucket only, advisory like the debt gates, `--candidate` naming the
+oldest) would make the thesis testable: after a `research-bottleneck` pass over the open set, does
+the count fall because the "decisions" turned out to be settled facts, and does it stop growing
+because sessions research before they file? The scan would also be the natural feed for the
+secretary digest's needs-you tier, so the ones that genuinely are his arrive pre-aged and
+pre-researched rather than as a pile.
+_(src: Eric · while: reflecting on the day's research/grind work, 2026-09-04)_
+
+### Report at the workflow-view altitude — a ledger over the session's workflow journals
+Eric, 2026-09-04, on the Background-tasks panel (workflow → phases → agent · model · tokens ·
+time): "That feels like the best altitude of all the views in terms of details I want to see
+and/or curate." Every recap and digest should speak that shape, and the data exists, but in three
+files, not one (corrected 2026-09-04 by #1352's interrogation run, which read six run directories
+on disk): `journal.jsonl` carries `{type, key, agentId, result}` only — no label, model, tokens or
+duration. Those live in `agent-<id>.meta.json` (`agentType`, `model`, worktree fields) and in each
+`agent-<id>.jsonl` transcript (per-message `usage`, ISO `timestamp`), which run 45–705 KB apiece.
+The whole run directory also sits under the *session's own* `~/.claude/projects/…`, so the digest
+Routine — a fresh CI session on another machine — cannot read it at all. A workflow-ledger script under `scripts/` (house shape, `--candidate`-less: it reports, nothing ratchets)
+that folds those three sources into one table — workflow · chore/phase · agents · model · tokens ·
+wall-clock · done/blocked — is still the secretary digest's natural "what ran" tier, but it is the
+*second* slice: what a session prints when a run completes should come from the run's own return
+value, which needs no file access and survives into an issue comment the digest can reach. Second half, the *curate* part: the
+panel's per-agent stop is the only steering today; the ledger could carry the outcome-check verdict
+and the routing label applied, so what Eric sees is also what he can send back ("re-run #1327 at
+xhigh", "un-board that item"). Rule of three already met — three hand-written status tables today.
+_(src: Eric · while: watching the #1343 research run in the workflow view, 2026-09-04)_

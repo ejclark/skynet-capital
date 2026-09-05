@@ -1,0 +1,11 @@
+{
+  "id": "durable-goods-2026-12-23",
+  "kind": "macro-print",
+  "title": "Advance Durable Goods Orders (Nov 2026 data)",
+  "date": "2026-12-23",
+  "status": "estimate",
+  "source": "EST: census.gov/manufacturing/m3/release_schedule.html grid lists 'November 2026 | 12/23/2026' (full report TBD), fetched direct 2026-09-04. Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "THE EDITION THE FUNDING RISK MIGRATED TO. H.R. 6500 (signed 2026-09-02) funds the government only through 2026-12-11, and this release lands 12 days past that cliff — the same exposure durable-goods-2026-10-27 was filed under before its own branch closed by signature, now transferred to the first release downstream of the new deadline. On this exact series' measured 2025 precedent Census DELAYS rather than deletes, ~27-29 days (Sep-2025 data slipped to 2025-11-26; Oct-2025 data 2025-11-26 -> 2025-12-23), which would push this edition into late January — the opposite of BLS, which cancelled the October 2025 CPI outright, and the same shape cr-expiry-2026-12-11 threatens elsewhere. Note the coincidence of dates is not an error: 2025-12-23 was the delayed slot for October-2025 data, and 2026-12-23 is the ordinary slot for November-2026 data. CONSIDERED AND DECLINED alongside this one: durable-goods-2026-11-25 (October data), which sits inside the CR window and whose only claim is that a macro print precedes the 12-09 FOMC — the generic argument this calendar's bar rejects; its absence is a decision, not an oversight. Discovered during the durable-goods-2026-10-27 initial research (2026-09-04)."
+}

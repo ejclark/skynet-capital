@@ -27,7 +27,7 @@
 // never an empty result — a scheduled caller must not mistake "broken" for "nothing due".
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { DATE_RE, runValidate } from "./event-scan-validation.mjs";
+import { compareEventOrder, DATE_RE, runValidate } from "./event-scan-validation.mjs";
 
 const ROOT = process.cwd();
 
@@ -37,7 +37,7 @@ const arg = (name) => {
 };
 const has = (name) => process.argv.includes(`--${name}`);
 
-const EVENTS_FILE = arg("events-file") ?? join(ROOT, "src", "domain", "market-events-data.ts");
+const EVENTS_DIR = arg("events-dir") ?? join(ROOT, "src", "domain", "market-events");
 const CALENDAR_FILE = arg("calendar-file") ?? join(ROOT, "src", "domain", "earnings-calendar.ts");
 const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json");
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
@@ -81,11 +81,33 @@ function extractArray(file, marker) {
   throw new Error(`event-scan: unbalanced brackets after "${marker}" in ${file}.`);
 }
 
+/** The curated calendar: one JSON file per event under EVENTS_DIR (issue #1449 — the split that
+ *  ended the research lanes' shared-file conflicts), read without `npm ci` and sorted into the
+ *  canonical (date, id) order exactly as src/domain/market-events-data.ts sorts it. `files` keeps
+ *  the file → id pairing for the validator: "file name == id" is the one rule the loader cannot
+ *  express by shape. Unreadable dir or malformed JSON throws — loud, never empty. */
+function loadCurated() {
+  if (!existsSync(EVENTS_DIR))
+    throw new Error(`event-scan: cannot read ${EVENTS_DIR} — refusing to guess.`);
+  const files = readdirSync(EVENTS_DIR)
+    .filter((f) => f.endsWith(".json"))
+    .sort();
+  const read = files.map((file) => {
+    const text = readFileSync(join(EVENTS_DIR, file), "utf8");
+    try {
+      return { file, event: JSON.parse(text) };
+    } catch (err) {
+      throw new Error(`event-scan: ${file} is not valid JSON (${err.message}).`);
+    }
+  });
+  return {
+    events: read.map((r) => r.event).sort(compareEventOrder),
+    files: read.map((r) => ({ file: r.file, id: r.event?.id })),
+  };
+}
+
 function loadEvents() {
-  const curated = extractArray(
-    EVENTS_FILE,
-    "export const MARKET_EVENTS: readonly MarketEvent[] = [",
-  );
+  const { events: curated, files } = loadCurated();
   const prints = extractArray(
     CALENDAR_FILE,
     "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [",
@@ -100,7 +122,7 @@ function loadEvents() {
     impact: "critical",
     symbols: [p.symbol],
   }));
-  return { curated, derived, all: [...curated, ...derived] };
+  return { curated, derived, all: [...curated, ...derived], files };
 }
 
 function loadCadence() {
@@ -175,7 +197,7 @@ function printDue(rows) {
 
 function printReport(rows) {
   if (!rows.length) {
-    console.log("No upcoming events. Add one to src/domain/market-events-data.ts (or a print to");
+    console.log("No upcoming events. Add one as src/domain/market-events/<id>.json (or a print to");
     console.log("earnings-calendar.ts) — see docs/process/EVENT-RESEARCH.md.");
     return;
   }
@@ -220,7 +242,7 @@ function main() {
     .map((e) => ({ e, ledger: ledgers.get(e.id), days: daysBetween(today, e.date) }))
     .map((r) => ({ ...r, verdict: assessmentDue(r.e, r.ledger, today, cadence) }))
     .filter((r) => r.verdict.due || r.days >= 0)
-    .sort((a, b) => a.e.date.localeCompare(b.e.date) || a.e.id.localeCompare(b.e.id));
+    .sort((a, b) => compareEventOrder(a.e, b.e));
 
   if (has("due")) printDue(rows);
   else printReport(rows);

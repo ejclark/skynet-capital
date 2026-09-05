@@ -1,0 +1,11 @@
+{
+  "id": "ppi-2026-11-13",
+  "kind": "macro-print",
+  "title": "PPI release (Oct 2026 data)",
+  "date": "2026-11-13",
+  "status": "confirmed",
+  "source": "BLS: bls.gov/schedule/news_release/ppi.htm (\"October 2026 | Nov. 13, 2026 | 08:30 AM\") + bls.gov/schedule/2026/11_sched.htm (Producer Price Index / October 2026 / 08:30 AM on Friday the 13th) — two independent primary views, both fetched direct 2026-08-31 (the pages 403 to plain fetchers and need a full browser header set)",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Fills the gap in the tracked PPI series (09-10, 10-15, [this], 12-15) — discovered during the ppi-2026-12-15 initial research, where it is the LAST wholesale print before that one and so the base its trend read extrapolates from. Filed estimate then per the no-self-confirm limit; promoted to confirmed by its own initial-research session on 2026-08-31 with both BLS primaries in hand. EXISTENCE RISK IS THE HEADLINE: this is the OCTOBER reference month, and BLS's own lapse page shows the October-2025 PPI news release (scheduled Fri 2025-11-14) was CANCELED outright — its data folded into the November release, which itself slipped Dec 11 -> 2026-01-14. Of the four PPI prints tracked here, this is the only slot whose 2025 analogue was deleted rather than delayed. Also the LAST PPI the 12-09 FOMC sees, and it feeds pce-2026-11-25 (Oct data) before that vote."
+}

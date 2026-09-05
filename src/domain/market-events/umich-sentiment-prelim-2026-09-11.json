@@ -1,0 +1,11 @@
+{
+  "id": "umich-sentiment-prelim-2026-09-11",
+  "kind": "macro-print",
+  "title": "University of Michigan consumer sentiment — preliminary (Sep 2026)",
+  "date": "2026-09-11",
+  "status": "confirmed",
+  "source": "UMICH: sca.isr.umich.edu states verbatim \"Next data release: Friday, September 11, 2026 for Preliminary September data at 10am ET\" (fetched direct 2026-09-04, read back verbatim-only on a second pass); corroborated by the Surveys of Consumers' own 2026 release-dates document (data.sca.isr.umich.edu/fetchdoc.php?docid=79628), whose PDF text layer lists \"September 11 September Prelim\" and \"September 25 September Final\"",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The leading consumer read this calendar quotes most often and had no entry for: retail-sales-2026-09-16 has cited UMich at every pulse since D-18 (51 in early August, from 55.2, vs a 54.5 expectation) as the sentiment half of its dollars-up/units-flat read, and the prelim lands five days ahead of that print inside the same corridor. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep; promoted to confirmed by its own initial research, which fetched the publisher's next-release line (with a time) direct. Retiered low → medium (docs/research/events/treasury-20y-bond-2026-09-15.md, same-day discovery): the year-ahead INFLATION-EXPECTATIONS subcomponent, not the headline, is the live question this session — Waller's 2026-09-03 speech made his September hold explicitly conditional ('if inflation comes in hot, I would consider a rate hike') the same week Brent touched $99.38 intraday and ISM Services Prices printed 72.6 (highest since August 2022, respondents naming Iran and fuel); this survey is the cleanest same-day read on whether that shock is de-anchoring households. It also lands ON cpi-2026-09-11 and mts-august-2026-09-11, two sessions before treasury-20y-bond-2026-09-15 and three before fomc-2026-09-16, inside the 2026-09-05 blackout — so the expectations read, CPI and the deficit print all hit one session no Fed participant may respond to. That expectations-component claim is UNMEASURED here — a close-out or a future initial research should measure it rather than inherit it."
+}

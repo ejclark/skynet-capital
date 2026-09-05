@@ -1,0 +1,11 @@
+{
+  "id": "pce-2026-10-29",
+  "kind": "macro-print",
+  "title": "PCE / Personal Income & Outlays (Sep 2026 data)",
+  "date": "2026-10-29",
+  "status": "confirmed",
+  "source": "BEA: bea.gov/news/schedule — \"Personal Income and Outlays, September 2026\", 08:30 ET, re-verified 2026-08-29",
+  "impact": "high",
+  "symbols": [],
+  "notes": "The Fed's own inflation gauge, landing the morning AFTER the 10-28 statement rather than before it — the committee decides without it. Federal, so it is exposed to a 10-01 funding lapse; the pce-2026-10-29 initial research corrected what that exposure actually is (2025 precedent: a September-reference PCE was DELAYED five weeks, 10-31 to 12-05, not deleted, while the advance GDP estimate sharing its slot was cancelled outright). Discovered during the consumer-confidence-2026-10-27 initial research."
+}

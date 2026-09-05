@@ -7,6 +7,10 @@ import type { DashboardServerConfig } from "../../src/server/dashboard-server-co
  * The owner pages' JSON twins: every non-owner learns exactly `{owner:false}` and nothing else,
  * each surface re-checks its OWN owner dep, and the claim rules port whole — an address that
  * can't sign in is refused, and linking stamps the acting owner.
+ *
+ * The last case holds the family's boundary itself: `/api/admin/*` means owner-only with no
+ * exception to remember, which is why group-visible ops status (#1296) left rather than staying
+ * as this dispatcher's one path a member could read.
  */
 
 function fakeRes() {
@@ -167,26 +171,12 @@ describe("serveAdminApi claim", () => {
   });
 });
 
-describe("serveAdminApi ops-status", () => {
-  it("serves the panel to owners only", async () => {
+describe("the admin family's boundary", () => {
+  it("does not answer ops-status — it is group-visible now, in the content family", async () => {
+    const { res } = fakeRes();
     const config = {
       hub: { getState: () => ({ participants: [] }) },
-      opsStatus: {
-        isOwner,
-        status: () =>
-          Promise.resolve({
-            generatedAt: "2026-08-28T23:00:00Z",
-            degraded: false,
-            signals: [{ id: "bots", label: "Bots", verdict: "ok", detail: "5 trading" }],
-          }),
-      },
     } as unknown as DashboardServerConfig;
-    const m = fakeRes();
-    await serveAdminApi(get(), m.res, "/api/admin/ops-status", config, member);
-    expect(JSON.parse(m.out.body ?? "{}")).toEqual({ owner: false });
-
-    const o = fakeRes();
-    await serveAdminApi(get(), o.res, "/api/admin/ops-status", config, owner);
-    expect(JSON.parse(o.out.body ?? "{}").status.signals[0].verdict).toBe("ok");
+    expect(await serveAdminApi(get(), res, "/api/admin/ops-status", config, owner)).toBe(false);
   });
 });

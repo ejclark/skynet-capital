@@ -1,5 +1,8 @@
 import type { EquitySample } from "../../src/observatory/history-store.js";
-import { deriveTransitions } from "../../src/observatory/world-transitions.js";
+import {
+  deriveTransitions,
+  type WorldTransition,
+} from "../../src/observatory/world-transitions.js";
 
 const s = (over: Partial<EquitySample>): EquitySample => ({
   at: "2026-08-09T12:00:00.000Z",
@@ -71,5 +74,28 @@ describe("deriveTransitions", () => {
     const prev = s({ realizedPl: 0, cash: 5_000, equity: 10_000 });
     const next = s({ at: later, realizedPl: 5, cash: 4_500 });
     expect(deriveTransitions(prev, next, { minRealized: 10, minCommittedPct: 0.1 })).toEqual([]);
+  });
+});
+
+describe("the graduated transition (#469 slice 4)", () => {
+  it("is never derived by deriveTransitions — it is minted directly at the Claim action", () => {
+    // A course graduation isn't visible from an equity-sample pair, so no realized/cash delta,
+    // however large, should ever produce one here.
+    const prev = s({ realizedPl: 0, cash: 5_000, equity: 10_000 });
+    const next = s({ at: later, realizedPl: 1_000, cash: 0 });
+    const types = deriveTransitions(prev, next).map((t) => t.type);
+    expect(types).not.toContain("graduated");
+  });
+
+  it("carries the course level, shaped like every other transition (participantId, at, id)", () => {
+    const transition: WorldTransition = {
+      id: "graduated:human-eric:200",
+      type: "graduated",
+      participantId: "human-eric",
+      level: 200,
+      at: later,
+    };
+    expect(transition.type).toBe("graduated");
+    expect(transition.level).toBe(200);
   });
 });

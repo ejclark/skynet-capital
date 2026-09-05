@@ -13,11 +13,17 @@ import {
 import { PageFrame } from "../shell/frame";
 
 /**
- * THE WIRE (#738 phase 5a) — the league's live pulse in the shell, on the Issues-list template:
- * a filterable trade feed (chips ⇄ query text, URL-stateful) with the booked-P&L strip and the
- * feedback pulse alongside. Same honesty seams as the server view it succeeds: reconstructed
- * provenance is labeled, an unwired feedback lane says so, filings stay pseudonymous. The GitHub
- * onramp folds behind a disclosure — reference, not front matter.
+ * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse
+ * in the shell, on the Issues-list template: a filterable trade feed (chips ⇄ query text,
+ * URL-stateful) with the booked-P&L strip and the feedback pulse alongside. IA: this is every
+ * transaction and open idea across the whole league, one feed — "Activity" says that in one word
+ * where "The Wire" made a first-time viewer guess (Eric, 2026-08-28: "i don't know what to expect
+ * when I see 'The Wire' — the verbiage should be intuitive"). The topbar link and the `?`
+ * shortcuts map already read "Activity" (#1119's canvas naming) — this finishes the rename on the
+ * page itself, so the destination matches the label that leads to it. Same honesty seams as the
+ * server view it succeeds: reconstructed provenance is labeled, an unwired feedback lane says so,
+ * filings stay pseudonymous. The GitHub onramp folds behind a disclosure — reference, not front
+ * matter.
  */
 
 const SIDE_CHIPS = [
@@ -74,7 +80,7 @@ function WireFilterBar({
     <div className="filter-bar">
       <div className="filter-query">
         <label className="visually-hidden" htmlFor={inputId}>
-          Filter the wire
+          Filter activity
         </label>
         <input
           id={inputId}
@@ -203,13 +209,13 @@ function WirePage(): ReactElement {
   if (wire.isPending)
     return (
       <PageFrame>
-        <p className="note">Tuning the wire…</p>
+        <p className="note">Tuning in…</p>
       </PageFrame>
     );
   if (wire.isError)
     return (
       <PageFrame>
-        <p className="note">The wire is unreachable.</p>
+        <p className="note">Activity is unreachable.</p>
       </PageFrame>
     );
 
@@ -219,7 +225,7 @@ function WirePage(): ReactElement {
   return (
     <PageFrame rail={<WireRail query={query} onChange={setFilter} />}>
       <header className="page-header">
-        <h1>The Wire</h1>
+        <h1>Activity</h1>
         <p>Every trade, every P&L, every open idea — the live pulse of the whole league.</p>
       </header>
       <WireFilterBar query={query} onChange={setFilter} />
@@ -229,8 +235,8 @@ function WirePage(): ReactElement {
           {shown.length === 0 ? (
             <p className="note">
               {wire.data.trades.length === 0
-                ? "No trades on the wire yet — the first fill lights it up."
-                : "Nothing on the wire matches this filter."}
+                ? "No trades yet — the first fill lights it up."
+                : "Nothing here matches this filter."}
             </p>
           ) : (
             <ul className="wire-trades">

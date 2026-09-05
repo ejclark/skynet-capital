@@ -13,6 +13,14 @@ executes it; a human session following this doc by hand is equally valid.
 rule makes it due on the next cycle (and `.github/workflows/moneypenny-events.yml` opens an
 `[event-research] <id>` issue within seconds of the merge). No other ceremony.
 
+**Place the entry by date, not at the end.** `MARKET_EVENTS` is stored in `(date, id)` order and
+`node scripts/event-scan.mjs --validate` fails a PR that breaks it (red inside `npm test`). This is
+a merge fix, not tidiness: appending every new event to the end of the array put two concurrent
+research lanes at the same anchor line — the one case plain git cannot merge, and the reason 22 of
+47 PRs touching this file were flagged conflicted at a median 13.4 h to merge (#1324). Date-ordered
+entries land at different anchors and merge clean on GitHub's own server-side merge, which never
+runs the custom driver. If the gate flags you, `node scripts/sort-market-events.mjs` fixes the file.
+
 ## The three assessment modes (keyed to the scanner's `reason` field)
 
 ### `never-assessed` → initial research
@@ -58,9 +66,14 @@ Stance section with the row as its receipt.
 5. **Event-specific tape** — consensus drift, whisper moves, implied-move changes, unusual
    positioning commentary.
 
-Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new
-`market-events.ts` entry **in the same PR**, always `status: "estimate"` (`EST:`/`NEWS:` source)
-— never `confirmed` without a primary source. That proposal is how the calendar feeds itself.
+Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new calendar file
+`src/domain/market-events/<id>.json` **in the same PR**, always `status: "estimate"` (`EST:`/`NEWS:`
+source) — never `confirmed` without a primary source. That proposal is how the calendar feeds
+itself. **One file per event** (issue #1449): your own event's amendments (a status flip, a source,
+a notes update) go in `src/domain/market-events/<your-event-id>.json` and nowhere else; a proposal
+is a brand-new file named by its id (`node scripts/event-scan.mjs --validate` fails a file whose
+name is not its `id`). There is no shared array to insert into and no ordering rule to satisfy —
+which is exactly why two research PRs can no longer conflict on the calendar.
 
 **Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
 
@@ -68,9 +81,16 @@ Any adjacent event with a **date** discovered during the sweep is PROPOSED as a 
 
 Fill the ledger's `## Outcome` section within the close-out window (`closeOutWithinDays`): what
 actually happened vs the stance, scored **from re-run instrument data, never from memory of the
-tape**. Score any forward tests this event carried in
-[`forward-tests.md`](../research/forward-tests.md) (a scored kill moves to the sweep doc's kill
-list). Once `## Outcome` exists the scanner goes silent on the event forever.
+tape**. Score any forward tests this event carried — its own fragment
+[`forward-tests/<event-id>.md`](../research/forward-tests.md) (fill the Outcome cell; a scored
+kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
+`forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the event forever.
+
+**Registering a forward test** (initial research, or a stance change mid-run) appends one row to
+`docs/research/forward-tests/<event-id>.md` — this event's own fragment, id `FT-<event-id>-<n>`
+with `<n>` counting up inside that file only. Never a row in `forward-tests.md` itself (the index
+carries no rows and `npm test` fails one), never another event's file. The full recipe is the
+index's "How to register".
 
 ## Deterministic screening (issue #724) — not every due pulse spends a session
 

@@ -62,7 +62,7 @@ function fakeProgression(view = progressionView): ProgressionService {
   return {
     view: () => Promise.resolve(view),
     setWheels: () => Promise.resolve(),
-    acknowledge: () => Promise.resolve(),
+    acknowledge: () => Promise.resolve([]),
     submitCheck: () => Promise.resolve(undefined),
   };
 }

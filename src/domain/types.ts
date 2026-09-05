@@ -124,6 +124,15 @@ export interface PlaybookSubscription {
   readonly createdAt: string;
   /** ISO-8601. */
   readonly updatedAt: string;
+  /**
+   * Optional symbol-targeting filter (#885, Eric: "acts as a filter to focus/aim the playbook at
+   * specific stocks to execute against") — aims/restricts this subscription's execution to these
+   * symbols, WITHOUT changing the playbook's own default `Playbook.symbol`. Absent or empty means
+   * unrestricted: the playbook runs exactly as it always has. Enforced in `engine/guards.ts`
+   * (`clampBuy`) on the entry side only — it never blocks an exit, same posture as every other
+   * discipline guard in that file.
+   */
+  readonly symbols?: readonly string[];
 }
 
 type OrderStatus = "filled" | "rejected";
@@ -135,4 +144,13 @@ export interface OrderResult {
   readonly filledQuantity?: number;
   readonly filledPrice?: number;
   readonly reason?: string;
+  /**
+   * The broker's own order id — present whenever the broker actually created an order (filled, or
+   * rejected after being accepted); absent only when the submission never reached that point (a
+   * transport failure, or a paper-broker rejection with no order object at all). This is the join
+   * key `trading/playbook-attribution.ts` uses to attach `intent.playbookId`/`playbookMode` onto
+   * the persisted trade/round-trip record — closing the `OrderIntent` → persisted-trade
+   * attribution gap named in #885.
+   */
+  readonly orderId?: string;
 }

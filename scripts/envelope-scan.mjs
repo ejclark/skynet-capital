@@ -5,21 +5,21 @@
 // becomes BUILD. Scope is narrow — enforces ONLY on an autonomous lane branch (envelope.json
 // `lanes`); off-lane it prints one line and exits 0. Enforced via tests/arch/envelope.spec.ts, so
 // it rides the existing `verify` job — no workflow file touched, so this lands as an ordinary PR.
-//
 //   node scripts/envelope-scan.mjs             # enforce for the current branch (exit 1 on breach)
 //   node scripts/envelope-scan.mjs --list      # print the protected list (no git, always exit 0)
-//   node scripts/envelope-scan.mjs --check <paths...>   # is this path protected? JSON, exit 0
-//   node scripts/envelope-scan.mjs --check <paths...> --base origin/main   # + real diff-aware
-//       `blocking` is what to act on — false on a diffAware rule whose diff is safe (envelope.json's
-//       $diffAwareComment); a cleared entry also carries WHICH proof cleared it as `reason`.
+//   node scripts/envelope-scan.mjs --check <paths...> [--base origin/main]   # protected? (+diff-aware)
 //   node scripts/envelope-scan.mjs --lane feedback/9 --base origin/main   # explicit, for specs
-// suiteRunnerArgv, behaviorVerifiedFacts, and exemptionReason (#852) live in envelope-behavior.mjs;
-// classifyStructuralWidening (#716/#858, a safe token-level widening) lives in envelope-widening.mjs.
-// Both split out to stay under the line budget, re-exported here so importers keep working.
+// Helpers live in envelope-behavior.mjs (#852, #1355) and envelope-widening.mjs (#716/#858) to stay
+// under the line budget; the public ones are re-exported below so importers keep working.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { behaviorVerifiedFacts, exemptionReason, suiteRunnerArgv } from "./envelope-behavior.mjs";
+import {
+  behaviorVerifiedFacts,
+  exemptionReason,
+  normalizeCheckPath,
+  suiteRunnerArgv,
+} from "./envelope-behavior.mjs";
 import { classifyStructuralWidening, MUTATING_CALL_PATTERNS } from "./envelope-widening.mjs";
 
 export { behaviorVerifiedFacts, classifyStructuralWidening, suiteRunnerArgv };
@@ -141,7 +141,8 @@ function runCheck() {
   const checkBase = argOf("--base");
   const paths = process.argv
     .slice(process.argv.indexOf("--check") + 1)
-    .filter((a, i, arr) => !a.startsWith("--") && arr[i - 1] !== "--base");
+    .filter((a, i, arr) => !a.startsWith("--") && arr[i - 1] !== "--base")
+    .map((p) => normalizeCheckPath(p));
   const out = paths.map((path) => {
     const rule = breachOf(path);
     if (!rule) return { path, protected: false, blocking: false };

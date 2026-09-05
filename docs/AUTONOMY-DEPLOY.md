@@ -43,11 +43,13 @@ group from `fly.toml` merged 2026-08-26 — post-cutover, this is the whole list
 3. Click **Actions → Autonomy ops → Run workflow → `bootstrap-bots-app`** — creates
    `skynet-capital-bots` on the default org network (idempotent; refuses loudly if the secret is
    missing).
-4. Click **Autonomy ops → `set-sauron-credentials`** (target `skynet-capital-bots`, the default) —
-   writes the Alpaca paper creds from the existing repo secrets and sets the roster. Add
-   **`set-hardcore`** with `sauron` if research mode is wanted. **Unset nothing on
-   `skynet-capital`** — the dashboard reads the same `SKYNET_BOT_*` creds for the roster and
-   leaderboard; they live on both apps permanently.
+4. Add Sauron's Alpaca paper key **in the app** — Settings → Account → Sauron → Rotate (owner-only,
+   verified against Alpaca before it's stored, encrypted at rest). The bots process pulls it over
+   the controls bridge within one 30s poll, no restart (#1200; proven live 2026-09-04). The roster
+   is `SKYNET_AUTONOMOUS_BOTS` in `fly.bots.toml`. Add **`set-hardcore`** with `sauron` if research
+   mode is wanted. The `SKYNET_BOT_*` env credentials are break-glass only (a bot the bridge can't
+   serve boots on them) and are set from a terminal with `flyctl secrets set`, never from a button —
+   the `set-*-credentials` actions were removed 2026-09-04 (#1180 slice F).
 5. Click **Actions → Pipeline → Run workflow → check `force_bots_deploy`** — stands the machine up
    in **observe** mode; the bots smoke verifies boot + the controls bridge automatically.
 6. Click **Autonomy ops → `flip-mode`, mode `live`** — during a market open, watching the logs.
@@ -65,8 +67,9 @@ the autonomy-ops Environment. Accepted deliberately (2026-08-26) to make ops pho
 narrow later, mint `fly tokens create deploy --app skynet-capital-bots` as `FLY_API_TOKEN_BOTS`
 (it takes precedence) and delete `FLY_ORG_TOKEN`.
 
-**No volume for `bots`, still.** Durable writes relay to the dashboard's volume over the bridge;
-the bots app deliberately has no `[mounts]`.
+**The bots app owns its own volume** (`skynet_bots_data`, mounted at `/data` since #1264): the
+momentum/sentiment/cooldown windows, the scout's day-state, the decision audit and the health stamp
+survive a redeploy. Never share the dashboard's volume.
 
 ### The no-terminal path — `.github/workflows/autonomy-ops.yml`
 
@@ -80,16 +83,13 @@ setup, both parts required before this actually gates anything:**
    environment → name it exactly `autonomy-ops` → **Required reviewers** → add the allowlisted
    accounts. Until this exists, referencing `environment: autonomy-ops` in the workflow auto-creates an
    *unprotected* one — the file alone does not enforce an allowlist, this UI step does.
-2. **Add the bot's paper credentials as repository secrets** (Settings → Secrets and variables →
-   Actions → New repository secret) — `BOT_DAY_TRADER_ALPACA_KEY` and `BOT_DAY_TRADER_ALPACA_SECRET`,
-   a **paper** Alpaca key/secret pair. These are read by the workflow and written on to Fly as
-   `SKYNET_BOT_DAY_TRADER_KEY/SECRET`; they're never typed into a dispatch form or shown in logs.
+2. **Bot credentials are not repository secrets any more** — they are added and rotated in the app
+   (step 4 above), same path as a human member. The old `BOT_*_ALPACA_KEY/SECRET` repository secrets
+   can be deleted; nothing reads them.
 
 Then, from the **Actions** tab → **Autonomy ops** → **Run workflow**:
 
 - **`status`** — read-only, lists Fly secret *names* only (never values). Safe to run any time.
-- **`set-day-trader-credentials`** — writes the bot's Alpaca credentials to Fly from the repo secrets
-  above, and sets `SKYNET_AUTONOMOUS_BOTS=day-trader`.
 - **`flip-mode`**, with `mode: observe` — deploy comes up in **observe**: it decides and logs every
   cycle but places nothing. Watch `fly logs -a skynet-capital-bots` for `[autonomous] mode=observe`
   and a `[gate]` line per persona; confirm it reads `READY` before going further.

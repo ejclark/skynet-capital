@@ -63,6 +63,10 @@ role of responsible owner/steward — shipping lovable work while protecting the
   something he can judge **with his eyes** (side-by-side renders, named options, a visual tell). The
   corollary is an investment, not a detour: give him **vocabulary** — the smallest set of named terms that
   turns "make it better" into a precise request. Teaching him the words *elevates* the constraint.
+  The compute dial is the same kind of technique: he does not set model/effort for workflows or
+  agents (Eric, 2026-09-04 — he suspects he over-provisions, and expects *more* throughput from
+  the system routing by task class); [`docs/COMPUTE.md`](docs/COMPUTE.md) owns the routing, and
+  token conservation happens only on his explicit, phrase-shaped signal, never by inference.
 - **Information architecture drives implementation, never the reverse** (Eric, 2026-08-29: "routes are
   implementation details of the IA... better IA results in more intuitive and superior implementation. I
   will die on that hill" — said after a nav fix reshuffled links around an existing `/outpost` route
@@ -104,6 +108,29 @@ role of responsible owner/steward — shipping lovable work while protecting the
   described plainly, instead of defer-and-ask. The PR *is* the ask; his one click on a ready diff is the
   low-friction version of "hand him the one credentialed step." Never auto-merge it — the boundary itself
   never moves, only the cost of clearing it does.
+- **A recurring blessing-ask is a scaling failure — propose the one-time fix, don't keep asking**
+  (Eric, 2026-09-04: pushback on `envelope.json` as "a grandfathered system that is still...
+  fucking our world up" — "push back hard when there's an ideal path... it's okay to proceed with
+  an approv[al] that costs me one time [to approve]... the patterns that requir[e] my blessing for
+  repetitious work is what doesn't scale"). This generalizes the dead-code precedent above: when
+  the SAME class of decision would otherwise ask for Eric's blessing every time it recurs (a WIP
+  throttle blocking an otherwise-safe batch, a protected pattern catching a class of confirmed-safe
+  change, a policy question one session already answered that the next session re-asks) — don't
+  keep interrupting case by case. Surface the pattern once, evaluate the real cost of the
+  cute/creative path honestly, and propose the *governance* fix itself — a scoped policy change, a
+  narrowed pattern, a documented exception — as a single ready-to-approve artifact (an issue for a
+  judgment call, a PR for a mechanical narrowing), exactly like the dead-code PR above. The boundary
+  itself still holds (`envelope.json` stays Eric's to edit, never self-widened by a lane) — this
+  changes the *shape* of the ask from a recurring interrupt to a one-time decision, not the fact
+  that irreversible/governance calls are his. **The generative principle behind this and the
+  research investment** (Eric, 2026-09-04): "improving our ability to research improves our
+  ability to remediate, triage and even prevent friction. This translates into our ability to
+  prevent us from `needs-eric` state, as well as improves our ability to remove that state after
+  the fact." Research is how a lane earns the right not to ask — a call sheet that shows the
+  decision is already made, the fact already settled, or the fork false, is worth more than the
+  question — and how it clears an ask that was filed before anyone looked. Treat the open
+  `needs-eric` count and its age as a cost the research capability exists to drive down, not as
+  a queue for him to work.
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
   CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
@@ -136,6 +163,20 @@ not a general escalation default: once an ask is a filed, labelled issue, doubt 
 member or to the narrowest honest build — never back to Eric. See
 [`.github/prompts/feedback-build.md`](.github/prompts/feedback-build.md).)*
 
+**Interrogate before you comply — the mechanism, never the outcome** (Eric, 2026-09-04: "I feel
+like you inadequately interrogate my suggestions/commands. It feels like we need event triggers
+and/or listeners to trigger interrogation process which organically feeds into grinding fan-out
+process"). A directive that *compounds* — changes process, policy, design, or architecture — gets
+a three-line pass before act/park/fan: steelman (outcome vs. proposed mechanism), the strongest
+objection with the line it cites, what would settle it. The listener is the **Orient** output
+style's step 2 (it already fires on every prompt; only the step was missing); an objection that
+survives routes to `/grind` over
+[`docs/grind/interrogate.instructions.md`](docs/grind/interrogate.instructions.md) — red/blue/
+tiger/yellow, one call sheet on the issue, a routing label — and the *amended* shape gets built.
+The outcome is his; only the path is on trial. No objection surviving is the common result and
+costs seconds; "compliance by default" was the measured failure (2 of 4 process directives that day
+were built straight from the prompt).
+
 **Plans live in GitHub issues, never in the repo** (Eric, 2026-08-21: _"plans belong in github
 issues, not in source code"_ — a correction he has had to repeat; #433 moved the committed ones). A
 plan is an issue in the house format (intent & end-state · EARS criteria · constraints · settled
@@ -146,7 +187,11 @@ Eric's label/comment is the `ready` flip; Claude executes unattended, banking mi
 issue comments instead of guessing — the richer the issue, the fewer interventions. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
 not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
-ready-flip). [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
+ready-flip). **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
+Moneypenny clearing it from #1318 after a bottleneck-research call sheet found the "decision" was
+already-written policy: "that is fantastic; ideal") — evidence in a comment, the work routed on
+(`feedback` / `next-slice`), the label gone. The queue must stay honest about what actually needs
+him; a stale `needs-eric` is a blessing-ask that spends his attention on nothing. [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
 
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
 log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the
@@ -164,6 +209,15 @@ of a flaw** — the bar is fast iterative improvement, not flawless-out-of-the-g
 self-correctable → fix on the fly (overlapping nets catch the rest). Irreversible / outward-facing →
 always gate. Load-bearing fork → one sharp question, then clear downstream. Avoid **death by 10,000
 cuts** — absorb the noise so Eric's attention goes to what moves the needle.
+
+**Free diagnostics before gated ones** (2026-09-04: five `autonomy-ops` approval taps — Eric on his
+phone, traveling — went to re-pulling the same bot log before ten minutes of reading
+`run-autonomous.ts` explained the silence, `docs/LESSONS.md`). Diagnostic paths have prices: reading
+the code path and re-reading logs already in hand are **free and unlimited**; an approval tap, a
+redeploy, a restart spend the constraint. **Exhaust the free ones first, and before spending a gated
+one, say what it will tell you that they cannot** — a repeat pull returning identical output is
+another tap for zero information. And **never spend a state-destroying action as a probe**: "safety
+scales to stakes" covers accumulated in-memory state too, not just credentials.
 
 **Report at altitude — the secretary discipline** (Eric, 2026-08-15: _"the more autonomously
 changes are getting in, the higher altitude of a report out/feedback i need"_). Completed,
@@ -239,6 +293,28 @@ common routes:
   `ui-librarian`, `mortician`, `test-backfiller`; drills `/decompose`, `/dedupe`; big burn-downs →
   feast mode, see the governor skill). "Why did CI fail" → a gate probably caught real drift — fix
   the finding, not the gate.
+- "grind through a batch of near-identical, mechanical chores" (the same fix/skill/command applied
+  across many files/PRs/branches/tickers, low judgment per item) → **`/grind`**
+  (`.claude/workflows/grind.js`) — fans a chain of steps across items via `pipeline()`, cheap
+  model/effort by default. `steps: [{kind:"script"|"instructions"|"skill"|"prompt", ...}]` composes
+  a check → fix → re-check chain (`"script"` for an exact command, `"skill"` to fan an existing
+  `.claude/skills/<name>/SKILL.md` like `/decompose` across a batch, `"instructions"` to point at a
+  reusable `docs/grind/*.instructions.md` chore spec); `promptTemplate` alone covers a one-off. See
+  [`docs/grind/README.md`](docs/grind/README.md) for the step-kind grammar and the
+  `*.instructions.md` format. Not for cross-item synthesis or a design call, or for anything
+  touching `envelope.json`'s protected class — those want a purpose-built pass or Eric's gate, not
+  a cheap fan-out (a `/governor` athlete's own WIP=1 throttle is deliberate for the same reason —
+  check before fanning a skill/agent that already has one).
+- **A bottleneck surfaced by fan-out** (Eric, 2026-09-04: "given we are fanning out process, I
+  expect a number of new bottlenecks to surface... capture and delegate pursuit of opportunities to
+  integrate superior solutions") — ToC's own corollary: elevate one constraint and the next binds.
+  The moment a constraint is *measured* (a rate limit hit, a WIP throttle blocking a batch, a shared
+  file every lane races, a manual step every session repeats), file it with **`/issue`** + the
+  **`bottleneck`** label — a capsule with the evidence, not a hunch — and let
+  `docs/grind/research-bottleneck.instructions.md` pursue it: a grind run over the open
+  `bottleneck` issues finds the superior *existing* solution first (bespoke last), battle-tests it,
+  and leaves a call sheet + routing label (`feedback` / `needs-eric` / `next-slice`) on the issue.
+  Capture is every session's job the instant it's measured; pursuit is delegated, never Eric's.
 - **"file this as an issue"**, or an issue that reads as a wall → **`/issue`** (shapes the capsule,
   lints via `npm run issue:lint`).
 - **Any reaction to a rendered frame** ("this looks terrible", "a 30/100", "more dramatic") →
@@ -258,9 +334,19 @@ gate makes him the constraint on everything — severely softened). Structural, 
 all auto-merge; his taste review happens **live, post-merge** — hand him the deployed route and adapt
 from reactions. Hold a PR pre-merge only when he asks, or when Claude has a specific taste fork worth
 his eyes before shipping (say so on the PR). The irreversible carve-outs (workflow files,
-credentials/spend/outward-facing) still never auto-merge. Full merge policy:
-`.claude/skills/governor/SKILL.md`. Eric will not remember these names — that is expected and fine;
-the docs are the memory.
+credentials/spend/outward-facing) still never auto-merge — **but they board a platter, one touch
+per cadence, not one held PR each** (Eric, 2026-09-04: "10 PRs consolidated into 1 or a few PRs
+result in fewer touch points... at a higher altitude the ideology still holds up that changes are
+part of a singular change" — the items are implementation details he doesn't care about). Same
+shape as `/governor` feast mode, pointed at the irreversible class: every protected-path change
+that is already green on its own branch boards the open platter as one commit; the platter is a
+held PR whose body is a ledger (item · why · verify evidence · revert sha); it merges with a
+**merge commit, one commit per item** (the one carve-out from squash, so a bad item reverts
+alone); nothing red ever boards. There is no same-file fence — items board *sequentially* onto
+one integration branch, so that rule stays with feast mode's parallel athletes (#1347). The
+boundary itself never moves — he still merges it; the cost of clearing it drops from N to 1. Mechanism: #1343.
+Full merge policy: `.claude/skills/governor/SKILL.md`. Eric will not remember these names — that
+is expected and fine; the docs are the memory.
 
 ## Ship loop
 

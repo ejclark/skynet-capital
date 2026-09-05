@@ -38,7 +38,7 @@ const isTypeOnly = (f) => {
 // WebGL/DOM-bound render code. These build meshes, materials and post-process pipelines against a
 // live GPU context; there is no honest unit assertion to make about them without a browser, and a
 // spec that only checked "a mesh was constructed" would be implementation-peeking theatre. They are
-// verified instead by the screenshot harness (scripts/shoot-tower.mjs), which is the real contract.
+// verified instead by the screenshot harness (scripts/shoot/tower.mjs), which is the real contract.
 // NOTE the deliberate split that makes this narrow: all the *decidable* logic (the tower profile
 // curve, the seeded RNG, state→render params) lives in src/three/kit/{profile,rng,params}.ts, which
 // are pure, excluded from this list, and fully specced in tests/three/kit.spec.ts.

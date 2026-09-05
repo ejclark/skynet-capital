@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   createActivityEventBus,
   createBootActivityEventBus,
+  createBotActivityEventBus,
   JsonlActivityEventBus,
 } from "../../src/observatory/activity-bus.js";
 import { type ActivityEvent, forVisibility } from "../../src/observatory/activity-event.js";
@@ -89,6 +90,39 @@ describe("createBootActivityEventBus", () => {
     expect(createBootActivityEventBus({} as NodeJS.ProcessEnv, "offline")).toBeInstanceOf(
       InMemoryActivityEventBus,
     );
+  });
+});
+
+describe("createBotActivityEventBus", () => {
+  it("is dark (undefined) when neither durable dir is configured — never a silent ephemeral fallback", () => {
+    expect(createBotActivityEventBus({} as NodeJS.ProcessEnv)).toBeUndefined();
+  });
+
+  it("prefers SKYNET_ACTIVITY_DIR when set, nesting under it like the dashboard bus", async () => {
+    const activityDir = await mkdtemp(join(tmpdir(), "skynet-bot-activity-"));
+    try {
+      const bus = createBotActivityEventBus({
+        SKYNET_ACTIVITY_DIR: activityDir,
+        SKYNET_AUDIT_DIR: "/should-not-be-used",
+      } as NodeJS.ProcessEnv);
+      await bus?.publish(event());
+      const second = new JsonlActivityEventBus(join(activityDir, "events"));
+      expect(await second.list("sauron")).toHaveLength(1);
+    } finally {
+      await rm(activityDir, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back to nesting under SKYNET_AUDIT_DIR (the bots app's own already-mounted dir)", async () => {
+    const auditDir = await mkdtemp(join(tmpdir(), "skynet-bot-audit-"));
+    try {
+      const bus = createBotActivityEventBus({ SKYNET_AUDIT_DIR: auditDir } as NodeJS.ProcessEnv);
+      await bus?.publish(event());
+      const second = new JsonlActivityEventBus(join(auditDir, "activity-events"));
+      expect(await second.list("sauron")).toHaveLength(1);
+    } finally {
+      await rm(auditDir, { recursive: true, force: true });
+    }
   });
 });
 

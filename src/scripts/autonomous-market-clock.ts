@@ -21,6 +21,12 @@ export interface MarketClock {
   /** Whether the market was open as of the most recent refresh. */
   isOpen(): boolean;
   /**
+   * Alpaca's `next_open` (ISO with ET offset) as of the most recent refresh, undefined until the
+   * first successful reading. Holiday-aware by construction — the exchange calendar is Alpaca's,
+   * never computed here (a "next weekday" guess misses Labor Day; docs/LESSONS.md 2026-09-04).
+   */
+  nextOpen(): string | undefined;
+  /**
    * Swap the credentials this clock polls with, in place — for the bot supplying them (the
    * shared market-data account) getting rotated. Rebuilds the client and triggers an immediate
    * refresh rather than waiting up to REFRESH_INTERVAL_MS, so a rotation that fixed a dead key
@@ -47,9 +53,12 @@ function buildClient(creds: ClockCredentials): AlpacaTradingClient {
 export async function startMarketClock(creds: ClockCredentials): Promise<MarketClock> {
   let clock = buildClient(creds);
   let marketOpen = false;
+  let nextOpen: string | undefined;
   const refreshOpen = async () => {
     try {
-      marketOpen = await clock.isMarketOpen();
+      const reading = await clock.getClock();
+      marketOpen = reading.isOpen;
+      nextOpen = reading.nextOpen;
     } catch (error) {
       console.error("[clock] failed:", error);
     }
@@ -58,6 +67,7 @@ export async function startMarketClock(creds: ClockCredentials): Promise<MarketC
   setInterval(() => void refreshOpen(), REFRESH_INTERVAL_MS);
   return {
     isOpen: () => marketOpen,
+    nextOpen: () => nextOpen,
     replaceCredentials: (next) => {
       clock = buildClient(next);
       void refreshOpen();

@@ -41,8 +41,9 @@ If a live route changed, add a bullet: "Review live after deploy: /route". -->
 above the fold, only when a decision only Eric can make blocks or should precede merging (a taste
 fork, an ask the diff can't settle itself). One numbered line per decision, phrased as a closed
 question or a named choice, reason trailing after an em dash — never a paragraph, never buried in
-"Design notes" below the fold. If this block is present, open the PR as a draft
-(`ship open --draft`) instead of auto-merge.
+"Design notes" below the fold. If this block is present, open the PR ready for review with
+auto-merge left unarmed (`ship open --hold`) — never as a draft: a draft skips `verify` and
+signals "Claude still has work to do" (Eric, 2026-09-04).
 
 > [!IMPORTANT]
 > **Needs from you**

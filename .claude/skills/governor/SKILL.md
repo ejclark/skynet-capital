@@ -81,6 +81,12 @@ PR for Eric's eyes, either don't enable auto-merge or add a `no-automerge` label
 | Workflow files (`.github/workflows/**`) | ❌ never | High blast radius; Eric rations runner minutes — his one-click by design |
 | Auth/tokens/spend, credentials, anything outward-facing **and hard to reverse** | ❌ never | The irreversible class stays Eric's (CLAUDE.md hard boundaries). The list is `envelope.json` — check with `envelope-scan --check`, don't reason from memory |
 
+**The two ❌ rows still never auto-merge — but they board a platter, not one held PR each**
+(#1343). `scripts/ship.sh platter {open|board|ledger}` batches every protected-path change that is
+already green onto one held PR per cadence, one commit per item, merged with a merge commit so a bad
+item reverts alone. Same shape as feast mode, pointed at the irreversible class; Eric still merges
+it. Details: `.claude/skills/ship/SKILL.md` → *Batching*.
+
 **"Outward-facing" means reachable by a non-member, or changing a contract with an external service
 — not "a user can see it".** This is a web app: every UI string is literally outward-facing, and the
 copies of this rule that dropped `and hard to reverse` are where the over-triggering came from. A

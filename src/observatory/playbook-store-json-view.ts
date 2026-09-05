@@ -13,6 +13,8 @@ interface PlaybookStoreCardView extends PlaybookStoreEntry {
     readonly mode: PlaybookSubscription["mode"];
     readonly capitalAllocated: number;
     readonly enabled: boolean;
+    /** Symbol-targeting filter (#885) — absent means unrestricted. */
+    readonly symbols?: readonly string[];
   };
 }
 
@@ -39,6 +41,7 @@ export function playbookStoreView(
               mode: sub.mode,
               capitalAllocated: sub.capitalAllocated,
               enabled: sub.enabled,
+              ...(sub.symbols ? { symbols: sub.symbols } : {}),
             },
           }
         : {}),

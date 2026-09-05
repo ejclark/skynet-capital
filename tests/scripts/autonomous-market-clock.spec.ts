@@ -20,7 +20,7 @@ function fakeClockFetch(isOpenByKey: Record<string, boolean>): {
     const isOpen = isOpenByKey[key] ?? false;
     return {
       status: 200,
-      text: async () => JSON.stringify({ is_open: isOpen }),
+      text: async () => JSON.stringify({ is_open: isOpen, next_open: "2026-09-08T09:30:00-04:00" }),
     } as unknown as Response;
   }) as unknown as typeof fetch;
   return {
@@ -37,6 +37,13 @@ describe("startMarketClock", () => {
     const clock = await startMarketClock({ apiKey: "old-key", apiSecret: "old-secret" });
     fake.restore();
     expect(clock.isOpen()).toBe(true);
+  });
+
+  it("exposes Alpaca's own next_open — the holiday-aware answer to 'when is the next session'", async () => {
+    const fake = fakeClockFetch({ "old-key": false });
+    const clock = await startMarketClock({ apiKey: "old-key", apiSecret: "old-secret" });
+    fake.restore();
+    expect(clock.nextOpen()).toBe("2026-09-08T09:30:00-04:00");
   });
 
   describe("replaceCredentials", () => {

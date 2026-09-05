@@ -127,6 +127,13 @@ function fetchCompare(
   );
 }
 
+/** What `ops-status-service.ts` calls to fill the two deploy rows. `botsRunningSha` is the commit
+ *  the bots process reported on its last controls poll — absent when it reported none. */
+export type DeploySignalsFetcher = (
+  now: Date,
+  botsRunningSha?: string,
+) => Promise<{ app: OpsSignal; bots: OpsSignal }>;
+
 export interface DeployLagConfig {
   /** GitHub token with at least read access to Actions runs/jobs on `repo` — the same
    *  `SKYNET_FEEDBACK_GITHUB_TOKEN` the feedback surface already holds. */
@@ -142,6 +149,7 @@ export async function computeDeploySignals(
   config: DeployLagConfig,
   actionsLink: OpsSignalLink,
   doFetch: DoFetch = fetchJson,
+  botsRunningSha?: string,
 ): Promise<{ app: OpsSignal; bots: OpsSignal }> {
   const headBody = await ghGet<{ sha?: string }>(
     doFetch,
@@ -150,7 +158,7 @@ export async function computeDeploySignals(
   );
   const head = headBody?.sha;
   const baselines = head ? await scanBaselines(config.repo, config.token, doFetch) : undefined;
-  if (!(head && baselines)) return degradedFromFailure(actionsLink);
+  if (!(head && baselines)) return degradedFromFailure(actionsLink, botsRunningSha);
 
   const strandedBody = await fetchCompare(
     config.repo,
@@ -171,15 +179,18 @@ export async function computeDeploySignals(
     actionsLink,
   );
 
-  const changedBody = await fetchCompare(
-    config.repo,
-    config.token,
-    doFetch,
-    baselines.botsReleased,
-    head,
-  );
+  // What the bots process SAYS it is running beats CI's record of what was last deployed to it —
+  // a machine that rolled back after a successful deploy still reads "current" from the record
+  // (#666). Falls back to the record when no sha was reported (an older bots build, or `GIT_SHA`
+  // dropped by a rollback), which is exactly the pre-existing behaviour.
+  const botsBaseline = botsRunningSha ?? baselines.botsReleased;
+  const changedBody = await fetchCompare(config.repo, config.token, doFetch, botsBaseline, head);
   const changed = changedBody?.files?.map((f) => f.filename);
-  const bots = botsDeploySignal(botsDeployLag(head, baselines.botsReleased, changed), actionsLink);
+  const bots = botsDeploySignal(
+    botsDeployLag(head, botsBaseline, changed),
+    actionsLink,
+    botsRunningSha,
+  );
 
   return { app, bots };
 }
@@ -190,19 +201,29 @@ export async function computeDeploySignals(
 export function createDeployLagFetcher(
   config: DeployLagConfig,
   doFetch: DoFetch = fetchJson,
-): (now: Date) => Promise<{ app: OpsSignal; bots: OpsSignal }> {
+): DeploySignalsFetcher {
   const actionsLink: OpsSignalLink = {
     href: `https://github.com/${config.repo}/actions/workflows/pipeline.yml`,
     label: "Open Actions",
   };
   let cached:
-    | { readonly at: number; readonly app: OpsSignal; readonly bots: OpsSignal }
+    | {
+        readonly at: number;
+        readonly sha: string | undefined;
+        readonly app: OpsSignal;
+        readonly bots: OpsSignal;
+      }
     | undefined;
   const TTL_MS = 60_000;
-  return async (now: Date) => {
-    if (cached && now.getTime() - cached.at < TTL_MS) return { app: cached.app, bots: cached.bots };
-    const result = await computeDeploySignals(config, actionsLink, doFetch);
-    cached = { at: now.getTime(), ...result };
+  return async (now: Date, botsRunningSha?: string) => {
+    // The reported sha is part of the cache key, not just the clock: a bots redeploy inside the
+    // TTL window changes the answer, and showing the previous commit for up to a minute after the
+    // process itself said otherwise is exactly the stale claim this signal exists to kill.
+    if (cached && cached.sha === botsRunningSha && now.getTime() - cached.at < TTL_MS) {
+      return { app: cached.app, bots: cached.bots };
+    }
+    const result = await computeDeploySignals(config, actionsLink, doFetch, botsRunningSha);
+    cached = { at: now.getTime(), sha: botsRunningSha, ...result };
     return result;
   };
 }
@@ -212,7 +233,7 @@ export function createDeployLagFetcher(
  *  it read-only rather than provisioning anything new. */
 export function resolveDeployLagFetcher(
   env: Readonly<Record<string, string | undefined>>,
-): ((now: Date) => Promise<{ app: OpsSignal; bots: OpsSignal }>) | undefined {
+): DeploySignalsFetcher | undefined {
   const token = env.SKYNET_FEEDBACK_GITHUB_TOKEN;
   if (!token) return undefined;
   const repo = env.SKYNET_FEEDBACK_REPO ?? "ejclark/skynet-capital";

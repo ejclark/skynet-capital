@@ -5,6 +5,7 @@ import {
   BOT_CREDENTIALS_PATH,
   BOT_CREDENTIALS_SECRET_HEADER,
 } from "../autonomous/bot-credentials-wire.js";
+import { type ControlsPollReport, controlsPollReport } from "../autonomous/controls-poll-wire.js";
 import {
   INSIGHTS_BRIDGE_SECRET_HEADER,
   INSIGHTS_BRIDGE_SHARED_SECRET,
@@ -30,10 +31,11 @@ export interface InsightsListenerConfig {
   /**
    * Fires on every AUTHENTICATED `GET /controls` poll, regardless of whether `controls` above is
    * configured — the poll itself, not its payload, is the ops-status panel's credential-free
-   * proxy for "is the bots process alive and reaching this one". Best-effort: never
-   * awaited, never allowed to fail the response it rides along with.
+   * proxy for "is the bots process alive and reaching this one", and the report it carries
+   * (`controls-poll-wire.ts`) is that process's own word on which commit it is running.
+   * Best-effort: never awaited, never allowed to fail the response it rides along with.
    */
-  readonly onControlsPoll?: () => void;
+  readonly onControlsPoll?: (report: ControlsPollReport) => void;
   /**
    * `GET /bot-credentials?id=<personaId>` — the one place a live Alpaca secret crosses this
    * bridge. Deliberately a SEPARATE, real, Eric-provisioned secret from `INSIGHTS_BRIDGE_SHARED_SECRET`
@@ -188,7 +190,7 @@ function handleControlsGet(
   // A genuine, authenticated poll — record it before the 404 branch below, since "the bridge is
   // configured but has nothing to say" is still proof the bots process reached this one.
   try {
-    config.onControlsPoll?.();
+    config.onControlsPoll?.(controlsPollReport(req.headers));
   } catch {
     /* never let an observability hook fail the poll it's observing */
   }

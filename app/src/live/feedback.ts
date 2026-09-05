@@ -33,6 +33,9 @@ export interface FeedbackIndex {
   readonly enabled: boolean;
   readonly coachEnabled: boolean;
   readonly followupEnabled: boolean;
+  /** The version this server is currently running — what a `shipped` filing is confirmed live
+   *  in (#429's "stamped with the release version"). Empty string if it couldn't be read. */
+  readonly appVersion: string;
   /** How many times this member has filed feedback — the already-durable log's own length. */
   readonly feedbackCount: number;
   /** Fresh community-track earns awaiting their one-time celebration. */

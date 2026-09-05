@@ -1,3 +1,4 @@
+import type { CourseLevel } from "../domain/curriculum.js";
 import { JsonFileStore } from "../storage/json-file-store.js";
 import { emptyParticipantKeyedState } from "../storage/participant-state.js";
 
@@ -28,6 +29,15 @@ export interface ProgressionRecord {
    * an older file: reads as an empty list, so nobody's history breaks, they just meet the gate.
    */
   readonly comprehension: readonly string[];
+  /**
+   * Course levels whose graduation ceremony (#469 slice 4) has already fired on the ceremony
+   * channel. NOT the ladder gate and NOT read by anything that decides what the ticket permits —
+   * `unlockedLevels` re-derives that fresh from fills every time, same as everything else earned.
+   * This is purely "have we told the world already", the same category of state `acknowledged`
+   * already is, so a graduation ceremony fires exactly once even though `acknowledge` may be
+   * called again later for other, unrelated milestone ids.
+   */
+  readonly graduated: readonly CourseLevel[];
   /** When this record was first written — earns dated before it never celebrate. */
   readonly since: string;
   readonly updatedAt: string;
@@ -47,12 +57,17 @@ function parseProgressionState(raw: unknown): ProgressionState | undefined {
     if (typeof value !== "object" || value === null) return undefined;
     const r = value as Partial<ProgressionRecord>;
     const passed = r.comprehension ?? [];
+    // Absent from an older file (written before #469 slice 4): reads as no ceremony fired yet,
+    // same absence-means-absence convention `comprehension` already set.
+    const graduated = r.graduated ?? [];
     if (
       typeof r.trainingWheels !== "boolean" ||
       !Array.isArray(r.acknowledged) ||
       !r.acknowledged.every((m) => typeof m === "string") ||
       !Array.isArray(passed) ||
       !passed.every((m) => typeof m === "string") ||
+      !Array.isArray(graduated) ||
+      !graduated.every((l) => l === 100 || l === 200 || l === 300) ||
       typeof r.since !== "string" ||
       typeof r.updatedAt !== "string"
     ) {
@@ -62,6 +77,7 @@ function parseProgressionState(raw: unknown): ProgressionState | undefined {
       trainingWheels: r.trainingWheels,
       acknowledged: r.acknowledged,
       comprehension: passed,
+      graduated,
       since: r.since,
       updatedAt: r.updatedAt,
     };
@@ -98,6 +114,7 @@ export class ProgressionStore {
       trainingWheels: true,
       acknowledged: [],
       comprehension: [],
+      graduated: [],
       since: at.toISOString(),
       ...held,
       ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)),
