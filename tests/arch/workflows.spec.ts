@@ -158,6 +158,83 @@ jobs:
   });
 });
 
+// Rule 7, added 2026-09-05 (#894) — the third incident of the same-day #889→#890→#892 chain, and
+// the one rule 6 did not cover. #889 shipped `pipeline.yml`'s `arm-auto-merge` job gated on
+// `!contains(github.event.pull_request.labels.*.name, 'hold-merge')` while nothing provisioned
+// `hold-merge`; #892 had to add it afterwards. Nothing fails in that state — the condition simply
+// never matches, so the documented escape hatch (hold a green PR for a taste call) did not exist for
+// anyone who reached for it. Silent, exactly like rules 5 and 6.
+describe("workflow lint — a label the vocabulary does not register", () => {
+  // The pre-#892 shape, reconstructed: the real condition from `pipeline.yml`, against a vocabulary
+  // that does not yet carry the label it names.
+  const HOLD_MERGE = `name: Sample
+on:
+  pull_request:
+    types: [opened]
+jobs:
+  arm-auto-merge:
+    if: \${{ !contains(github.event.pull_request.labels.*.name, 'hold-merge') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo arm
+`;
+
+  it("fails a label reference the registry does not carry — the #892 shape", () => {
+    const problems = lintWorkflow("sample.yml", HOLD_MERGE, [], () => false, ["needs-eric"]);
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("`hold-merge`");
+    expect(problems[0]).toContain("see #892");
+  });
+
+  it("passes once the registry carries it", () => {
+    expect(lintWorkflow("sample.yml", HOLD_MERGE, [], () => false, ["hold-merge"])).toEqual([]);
+  });
+
+  it("catches the event-filter and gh-CLI forms too", () => {
+    const yaml = `name: Sample
+on:
+  issues:
+    types: [labeled]
+jobs:
+  claim:
+    if: github.event.label.name == 'feedbck'
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh issue edit 1 --add-label needs-inf
+`;
+    const problems = lintWorkflow("sample.yml", yaml, [], () => false, ["feedback", "needs-info"]);
+
+    expect(problems.map((p) => p.match(/`([a-z-]+)`/)?.[1]).sort()).toEqual([
+      "feedbck",
+      "needs-inf",
+    ]);
+  });
+
+  it("never guesses at a label built from a shell variable", () => {
+    // `--add-label "$LABEL"` is indirection this rule deliberately skips: a false negative costs
+    // nothing, a false positive reddens a correct pipeline.
+    const yaml = `name: Sample
+on:
+  push:
+    branches: [main]
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh issue edit 1 --add-label "$LABEL"
+`;
+
+    expect(lintWorkflow("sample.yml", yaml, [], () => false, [])).toEqual([]);
+  });
+
+  it("holds for the real workflows against the real label registry", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/workflow-lint.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
+    ).not.toThrow();
+  });
+});
+
 // Rule 5, added 2026-08-22 with the prompt shims. The AI lanes now read their instructions from
 // `.github/prompts/*.md` rather than inline YAML — which keeps the envelope tunable without a
 // carve-out merge, but makes a wrong path silent: the workflow parses, the run starts, and a live

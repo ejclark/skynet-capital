@@ -1,0 +1,11 @@
+{
+  "id": "treasury-30y-bond-2026-10-08",
+  "kind": "rates",
+  "title": "30-Year Treasury Bond auction (second reopening)",
+  "date": "2026-10-08",
+  "status": "estimate",
+  "source": "EST: treasury.gov Tentative Schedule of Treasury Auctions PDF, text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 17,195 bytes), row reads verbatim `30-Year BOND R / Announcement Thursday, October 01, 2026 / Auction Thursday, October 08, 2026 / Settlement Thursday, October 15, 2026`. Size corroborated in advance by press release sb0590 (2026-08-05), whose Oct-26 anticipated-size row puts the 30-Year at $22 billion. 1:00pm ET is Treasury's standing coupon-auction convention and is NOT separately sourced. Stays estimate on two counts: a tentative schedule is tentative by construction, and this lane may not self-confirm an event it discovered in-sweep",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "PREDICTED CUSIP 912810UW6, term `29-Year 10-Month` — the second and final reopening of the August 2026 30-Year new issue (sold 2026-08-13 at $25B; first reopening 2026-09-10 at $22B, CUSIP confirmed live on treasurydirect's upcoming feed 2026-09-05). An inference from a cycle, not a fetched field: measured 2026-09-05 from `auctions_query`, all 15 completed 30-Year new-issue cycles back to 2022-11 were reopened exactly twice, in the two following months, no exceptions. Checkable at the 10-01 announcement — see FT-treasury-coupon-announcement-2026-10-01-1. Completing this auction makes 912810UW6 a $69B security (25 + 22 + 22). Size base rate: $22B for 20 consecutive completed 30-Year reopenings since 2024-03-13. THE LONG-END LEG, so it is the one of the three that sells into the doubled liquidity-support buyback bid `sb0607` (2026-08-19) put in place through 2026-11-04. Read it, do not trade it: `symbols: []`, date is `estimate`. Discovered during the treasury-coupon-announcement-2026-10-01 initial research (2026-09-05)."
+}

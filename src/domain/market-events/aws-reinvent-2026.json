@@ -1,0 +1,11 @@
+{
+  "id": "aws-reinvent-2026",
+  "kind": "sector",
+  "title": "AWS re:Invent 2026 (Las Vegas)",
+  "date": "2026-11-30",
+  "status": "confirmed",
+  "source": "IR: aws.amazon.com/events/reinvent — Nov 30–Dec 4 Las Vegas, checked 2026-08-19",
+  "impact": "medium",
+  "symbols": ["AMZN"],
+  "notes": "AWS is the whole AMZN thesis right now ($496B backlog); natural catalyst window ~4wks post-print."
+}

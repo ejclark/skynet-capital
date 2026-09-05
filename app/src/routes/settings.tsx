@@ -13,12 +13,7 @@ import {
   saveProfile,
 } from "../live/settings";
 import { AccountSwitcher } from "../shell/account-switcher";
-import {
-  AccountOwnershipLine,
-  GuestListCard,
-  OpsStatusCard,
-  UnclaimedAccountsCard,
-} from "../shell/admin-cards";
+import { AccountOwnershipLine, GuestListCard, UnclaimedAccountsCard } from "../shell/admin-cards";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl } from "../shell/mission-control";
@@ -431,7 +426,6 @@ function SettingsPage(): ReactElement {
               <MissionControl />
             </div>
             <UnclaimedAccountsCard />
-            <OpsStatusCard />
           </>
         )
       ) : null}

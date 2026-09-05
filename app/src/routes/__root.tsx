@@ -1,9 +1,9 @@
 import { createRootRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useConnection } from "../live/connection";
 import { useMoneypenny } from "../live/moneypenny";
 import { KeyboardChords } from "../shell/keyboard";
 import { MoneypennyRail } from "../shell/moneypenny-rail";
+import { StatusPill } from "../shell/status-pill";
 
 /**
  * The shell (#738, live-review round; nav reorg follow-up): the topbar carries the APP-LEVEL
@@ -18,20 +18,10 @@ import { MoneypennyRail } from "../shell/moneypenny-rail";
  * There is no Feedback tab (handoff 2026-09-03): feedback goes through Moneypenny, the ✦ button
  * at the far right of the bar, which toggles her rail — a sibling of the whole app column, so it
  * pushes everything left rather than covering the stage (`shell.css`, `.shell` / `.shell-app`).
+ *
+ * Fleet ops health has no tab either (#1296): it hangs off the status pill in the bar's actions
+ * (`status-pill.tsx`), which four signals earn without a fifth destination competing for the room.
  */
-
-function StatusPill(): ReactElement {
-  const status = useConnection((s) => s.status);
-  const seq = useConnection((s) => s.seq);
-  const label =
-    status === "live" ? `live · seq ${seq}` : status === "resyncing" ? "resyncing…" : "connecting…";
-  return (
-    <span className={`status status-${status}`} aria-live="polite">
-      <span className="status-dot" aria-hidden="true" />
-      {label}
-    </span>
-  );
-}
 
 function GearIcon(): ReactElement {
   return (

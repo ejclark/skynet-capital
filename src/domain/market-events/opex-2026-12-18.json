@@ -1,0 +1,11 @@
+{
+  "id": "opex-2026-12-18",
+  "kind": "opex",
+  "title": "Quarterly options expiration — triple witching (December)",
+  "date": "2026-12-18",
+  "status": "confirmed",
+  "source": "OCC: theocc.com expiration calendar — quarterly triple-witching, checked 2026-08-18",
+  "impact": "high",
+  "symbols": [],
+  "notes": "Year-end triple witching — expiries stack with index rebalancing and tax-loss flows."
+}

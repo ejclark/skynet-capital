@@ -1,0 +1,11 @@
+{
+  "id": "import-export-prices-2026-10-16",
+  "kind": "macro-print",
+  "title": "U.S. Import and Export Price Indexes (Sep 2026 data)",
+  "date": "2026-10-16",
+  "status": "confirmed",
+  "source": "BLS: bls.gov/schedule/news_release/ximpim.htm (\"September 2026 | Oct. 16, 2026 | 08:30 AM\") + bls.gov/schedule/2026/10_sched.htm (U.S. Import and Export Price Indexes / September 2026 / 08:30 AM on Friday the 16th) — two independent primary views, both fetched direct 2026-08-31 (the pages 403 to browser headers alone and need Referer: bls.gov/ with Sec-Fetch-Site: same-origin)",
+  "impact": "low",
+  "symbols": [],
+  "notes": "THE LAST CLEAN 12-MONTH READ in this series before the base-month hole (BLS permanently suppressed 864 of 1,625 indexes for the October 2025 reference month; this print's Sep-2025 base exists, import-export-prices-2026-11-17's does not). Filed estimate on 2026-08-31 by the sibling sweep that discovered it; promoted to confirmed the same day by its own initial-research session with both BLS primaries in hand. THE Y/Y RISES EVEN IF PASS-THROUGH STOPS: the nonfuel base declines across the comparison (EIUIREXFUELS Jul-2025 130.0 -> Aug 129.8 -> Sep 129.8), so a flat Aug-Sep 2026 still prints +4.62% against July's published +4.46%. The m/m is the evidence; the y/y is partly artifact. A 10-01 LAPSE DELAYS THIS PRINT, IT DOES NOT DELETE IT - the collection window sets destroy-vs-delay, and BLS's MXP notice says September 2025 data was collected on schedule and merely delayed 47 days (Oct 17 -> Dec 3), unlike the October reference month which was cancelled. Lands 08:30 ET on monthly opex (opex-2026-10-16), the morning after ppi-2026-10-15, and is the last BLS price release the 10-28 FOMC sees (pce-2026-10-29 publishes after the statement) and the last before the blackout begins 10-17 - none of which is a transmission channel, so the low tier is correct and was re-checked, not assumed: these indexes deflate GDP net trade, not PCE."
+}

@@ -1,0 +1,11 @@
+{
+  "id": "treasury-buyback-20y30y-2026-09-24",
+  "kind": "rates",
+  "title": "Treasury liquidity-support buyback operation (20-30Y nominal, 1:40pm ET)",
+  "date": "2026-09-24",
+  "status": "estimate",
+  "source": "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (Q3 2026 refunding, published 2026-08-05), PDF text layer read directly 2026-09-02 — row reads announce 9/23/2026, operation 9/24/2026 1:40 pm - 2:00 pm, settle 9/25/2026, Liquidity Support, Nominal Coupons 20Y to 30Y, maturity range 09/25/2046 - 09/24/2056, min $0, max $2 billion. Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, and because the $2B cap predates press release sb0607, checked 2026-09-02",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The first 20-30Y-sector buyback after sb0607's 09-09 step-up to a $4B/operation minimum, so the published $2B cap should roughly double — Treasury has not republished the schedule; the preliminary cap and eligible-CUSIP list post at least one business day prior (09-23) and the final list at ~11:00am ET on operation day. CORRECTED 2026-09-02 by this event's own initial research: its maturity range (09/25/2046 - 09/24/2056) does cover the bond sold at treasury-30y-bond-2026-09-10 (CUSIP 912810UW6, matures 2056-08-15), but range is not eligibility — TreasuryDirect's buyback FAQ excludes on-the-run securities and any 'not past their first coupon payment date', and that bond is both (reopened 09-10, first coupon 2027-02-15). The 08-18 20-30Y operation's eligible list proves the rule: it ran 912810RV2 (2047-02-15) through 912810UR7 (2056-02-15) and omitted the May- and Aug-2056 issues. So NO scheduled operation supports the reopened long bond on current rules. Second correction: the cap is a ceiling, not a purchase — on 2026-03-19, same sector, dealers offered $36.0B and Treasury accepted $205M (10% of the then-$2B cap), acceptance being a relative-value price test. Shares 09-24 with treasury-7y-note-2026-09-24 (1:00pm ET), the Trump-Xi summit (est) and scoos-2026-09-24 (14:00), so nothing that afternoon is cleanly attributable. Discovered during the treasury-30y-bond-2026-09-10 pulse-check adjacency sweep (2026-09-02)."
+}

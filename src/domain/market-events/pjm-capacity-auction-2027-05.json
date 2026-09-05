@@ -1,0 +1,11 @@
+{
+  "id": "pjm-capacity-auction-2027-05",
+  "kind": "sector",
+  "title": "PJM 2030/31 capacity auction — first potentially uncapped print",
+  "date": "2027-05-15",
+  "status": "estimate",
+  "source": "EST: esaipower.com auction calendar — BRA 2030/31 May 2027; confirm vs pjm.com, checked 2026-08-17",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "FERC collar (accepted 2026-04-28) covers only 2028/29 + 2029/30 — this is the cap-sunset event VST's Tier-2 gate keys on."
+}

@@ -6,8 +6,7 @@ import { EMAIL } from "./invite-form.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
 
 /**
- * THE OWNER PAGES AS DATA — `/invite`, `/claim`, and `/ops-status` for the
- * shell, one owner-gated family:
+ * THE OWNER PAGES AS DATA — `/invite` and `/claim` for the shell, one owner-gated family:
  *
  *   GET/POST /api/admin/invite     → the guest list: who may sign in, with the joined column;
  *                                    POST adds one address (the legacy page's only write).
@@ -16,12 +15,15 @@ import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-s
  *                                    on the account, so it stays deliberately owner-only, and
  *                                    an address that can't sign in is refused exactly as the
  *                                    HTML page refuses it.
- *   GET      /api/admin/ops-status → the read-only bots/deploy health panel.
  *
  * The rules are Mission Control's (`controls-api-routes.ts`): the owner check re-runs here on
  * every request against each surface's OWN dep, never inherited; every non-owner GET answers
  * `{owner:false}` and nothing else — a member probing an owner page learns nothing; POSTs from
  * non-owners get a flat 403. Refusal and success sentences mirror the HTML pages', minus markup.
+ *
+ * `/api/admin/*` therefore means owner-only, with no exceptions to remember. Ops status used to
+ * live here as a third member (#666); it is group-visible now (#1296) and moved OUT to
+ * `/api/ops-status` in the content family rather than becoming this family's one non-owner path.
  */
 
 const ADMIN_BODY_CAP_BYTES = 2_048;
@@ -194,17 +196,6 @@ export async function serveAdminApi(
   }
   if (path === "/api/admin/claim") {
     await serveClaim(req, res, config, session);
-    return true;
-  }
-  if (path === "/api/admin/ops-status") {
-    const owner = ownerOf(config.opsStatus?.isOwner, session);
-    sendJson(
-      res,
-      200,
-      owner && config.opsStatus
-        ? { owner: true, status: await config.opsStatus.status() }
-        : { owner: false },
-    );
     return true;
   }
   return false;
