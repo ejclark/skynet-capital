@@ -1239,6 +1239,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The Fed's own inflation gauge, landing the morning AFTER the 10-28 statement rather than before it — the committee decides without it. Federal, so it is exposed to a 10-01 funding lapse; the pce-2026-10-29 initial research corrected what that exposure actually is (2025 precedent: a September-reference PCE was DELAYED five weeks, 10-31 to 12-05, not deleted, while the advance GDP estimate sharing its slot was cancelled outright). Discovered during the consumer-confidence-2026-10-27 initial research.",
   },
   {
+    id: "eci-q3-2026-10-30",
+    kind: "macro-print",
+    title: "Employment Cost Index, Q3 2026",
+    date: "2026-10-30",
+    status: "confirmed",
+    source:
+      'BLS: bls.gov/schedule/news_release/eci.htm fetched direct 2026-09-05 — "Third Quarter 2026 | Oct. 30, 2026 | 08:30 AM"',
+    impact: "high",
+    symbols: [],
+    notes:
+      "The broadest US wage measure and the one the FOMC cites by name, landing 42.5 hours AFTER the 10-28 statement — so the committee decides without it, exactly as with pce-2026-10-29. It matters more than usual this cycle because the hawkish repricing since Warsh's 08-28 keynote runs through wages while the monthly AHE series has been cooling (3.1% y/y in the 09-04 jobs print, softest since mid-2021): ECI is the quarterly read that adjudicates between them, and it is compositionally adjusted where AHE is not. Federal, so it is exposed to a 10-01 funding lapse on the pce-2026-10-29 precedent (delay, not deletion). Discovered during the fomc-2026-10-28 D-53 adjacency sweep, which found it was the one high-impact print inside the 10-27→10-30 corridor that the calendar did not yet carry.",
+  },
+  {
     id: "ism-manufacturing-2026-11-02",
     kind: "macro-print",
     title: "ISM Manufacturing PMI (Oct 2026 data)",
