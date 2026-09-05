@@ -1,0 +1,11 @@
+{
+  "id": "productivity-costs-q3-revised-2026-12-08",
+  "kind": "macro-print",
+  "title": "Productivity and Costs, Q3 2026 (revised) — the vintage the December FOMC reads",
+  "date": "2026-12-08",
+  "status": "estimate",
+  "source": "EST: listed on bls.gov/schedule/news_release/prod2.htm as \"Dec. 08, 2026\" alongside the Nov. 05 preliminary, read direct 2026-09-05 by the eci-q3-2026-10-30 lane and recorded verbatim in the source string of productivity-costs-q3-2026-11-05.json. Filed estimate on two counts: the productivity-costs-q3-2026-11-05 lane could not re-open that page this session to confirm it firsthand (plain curl 403s and WebFetch returns an empty body on every bls.gov/schedule/* path, while bls.gov/news.release/* and the BLS public API both serve), so the date is carried secondhand; and this lane may not self-confirm an event it discovered in-sweep. The 08:30 ET slot is the standing Productivity and Costs convention and is NOT separately sourced",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The revised Q3 productivity and unit-labor-cost figures land on DAY ONE of the Dec 8-9 FOMC meeting (fomc-2026-12-09), inside the confirmed 2026-11-28 to 2026-12-10 communications blackout — so this, not the 11-05 preliminary, is the vintage the committee actually has in the room, and no Fed voice can discuss it. That matters because the regime is priced for MORE tightening after Warsh's 2026-08-28 keynote (the December hold carries 11.6%), and unit labor costs running below the 2% objective are the single cleanest datum arguing the other way. Solved from the exact ULC identity in the 11-05 ledger, the central case is ULC 4-quarter change of roughly 1.0-1.6% — below target — with productivity y/y near 1.8% after a locked +5.2% SAAR base quarter drags the headline down for reasons carrying no economic content. Discovered in the productivity-costs-q3-2026-11-05 initial-research sweep. Funding covers the date: H.R. 6500 (signed 2026-09-02) runs through 2026-12-11, three days later."
+}
