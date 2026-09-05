@@ -1,0 +1,11 @@
+{
+  "id": "advance-economic-indicators-2026-10-28",
+  "kind": "macro-print",
+  "title": "Advance Economic Indicators Report (advance goods trade, retail & wholesale inventories, Sep 2026 data)",
+  "date": "2026-10-28",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html lists 'Advance Economic Indicators Report (International Trade, Retail, & Wholesale) | October 28, 2026 | 8:30 AM | September 2026' (fetched direct 2026-09-05). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep — and the series carries its own precedent for non-publication: the same Census page still shows 'Suspended' against the January and February 2026 reference months. Checked 2026-09-05",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The last hard-data input the GDP nowcast gets before gdp-q3-2026-advance-2026-10-29, landing 08:30 the morning of the FOMC decision and 24 hours before the print itself. It earns a row because it was MEASURED to be the largest single-day mover of the Q3 2026 nowcast's composition: the July-data edition on 2026-08-27 moved GDPNow's equipment contribution 0.48 -> 1.06pp, net exports -0.14 -> -1.31pp and inventories 1.71 -> 2.10pp in one release (headline 4.61 -> 4.40%), per the Atlanta Fed's own GDPTrackingModelDataAndForecasts.xlsx fetched 2026-09-05. Those are precisely the two lowest-quality lines that the advance GDP estimate's headline turns on, so this report front-runs the composition question 10-29 is read for. It also carries the advance goods-trade balance that the AI-hardware import surge runs through - the same hardware that adds to equipment investment and subtracts from net exports. Not a tradeable print on its own (symbols: [], no house playbook is macro-keyed); tracked as the corridor's composition tell. Discovered during the gdp-q3-2026-advance-2026-10-29 pulse-check adjacency sweep (2026-09-05)."
+}
