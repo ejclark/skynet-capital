@@ -19,8 +19,10 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   (initial research + stance + kill switches + first ledger row).
 - `interval-elapsed` → pulse check appending ONE ledger row, including the mandatory adjacency sweep
   (peer prints, CPI/FOMC surprises, VIX regime moves, geopolitics touching the event's symbols) —
-  any dated adjacent event you discover is PROPOSED as an `estimate` entry in
-  `src/domain/market-events.ts` in the same PR, never `confirmed`. (Most `interval-elapsed` pulses
+  any dated adjacent event you discover is PROPOSED as a NEW FILE
+  `src/domain/market-events/<id>.json` (`"status": "estimate"`) in the same PR, never `confirmed`.
+  One file per event (issue #1449): your own event's amendments go in
+  `src/domain/market-events/<your-event-id>.json` and nowhere else — there is no shared array. (Most `interval-elapsed` pulses
   never reach you — `moneypenny-events.yml`'s deterministic screen already handled the quiet ones before
   this session started; you only see one because the probe found it material, or its own reference
   block was missing/stale, or the fetch failed. Research it exactly as any other pulse.)
@@ -28,21 +30,22 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   instrument data (bust the instrument cache first:
   `rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
 
-**Registering a new forward test never reads the ledger's tip for "the next number."** Any
-prediction you register in `docs/research/forward-tests.md` — the first ledger row on
-`never-assessed` initial research, or a stance change registered mid-run
-(`docs/research/events/TEMPLATE.md`'s "predictions with a score-by date also register" rule) —
-gets an id namespaced to **your own assigned event**, never a shared, globally-incrementing bare
-number: `FT-<event-id>-<n>`, where `<event-id>` is the exact slug of your assigned
-`docs/research/events/<event-id>.md` file and `<n>` starts at 1 and increments only within that
-event's own prior forward-test rows (`grep 'FT-<event-id>-' docs/research/forward-tests.md` finds
-the next `<n>`; none yet found means start at 1). Two sibling sessions researching two different
-events can never collide on this id, because each derives it from the one thing it already owns
-exclusively — its own assigned event — never from a live read of a file every concurrent sibling
-is also reading and appending to (2026-09-04: this is exactly how two unrelated sessions both
-registered a bare `FT-25`, resolved by hand — docs/LESSONS.md). The ~50 legacy bare-number `FT-N`
-rows already in the ledger are grandfathered as-is; this scheme governs new registrations only,
-from here forward.
+**Registering a new forward test writes ONLY your own event's fragment.** Any prediction you
+register — the first ledger row on `never-assessed` initial research, or a stance change
+registered mid-run (`docs/research/events/TEMPLATE.md`'s "predictions with a score-by date also
+register" rule) — is one table row appended to `docs/research/forward-tests/<event-id>.md`, where
+`<event-id>` is the exact slug of your assigned `docs/research/events/<event-id>.md` (create the
+fragment from the recipe in `docs/research/forward-tests.md` → "How to register" if it does not
+exist yet). Its id is namespaced to **your own assigned event**, never a shared, globally-
+incrementing bare number: `FT-<event-id>-<n>`, `<n>` = the rows already in that fragment + 1
+(`grep -c '^| FT-' docs/research/forward-tests/<event-id>.md`; no file yet means 1). Never add a
+row to `docs/research/forward-tests.md` itself — the index carries no rows and `npm test` fails
+one, naming the file it belongs in — and never touch another event's fragment. Two sibling
+sessions researching two different events can never collide, because each writes only the file
+its own assigned event names (issue #1449: the single shared table produced a merge conflict for
+every pair of open research PRs, and 2026-09-04's bare `FT-25` collision came from reading its
+live tip — docs/LESSONS.md). The legacy bare-number `FT-N` rows live in
+`docs/research/forward-tests/legacy.md`, frozen except for scoring.
 
 **Refresh the probe-ref block on every ledger you touch.** Every ledger header carries a
 `<!-- probe-ref: {...} -->` line right after `**Last assessed:**` (docs/process/EVENT-RESEARCH.md
