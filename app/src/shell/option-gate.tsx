@@ -11,6 +11,7 @@ import {
   submitOption,
 } from "../live/options";
 import { money } from "../live/ticket";
+import { ChainStraddle } from "./chain-straddle";
 import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
 
@@ -217,6 +218,15 @@ export function OptionGate({
         <p className="tkt-note num">
           {chainData.symbol} last {money(chainData.spot)}
         </p>
+      ) : null}
+      {chainData ? (
+        <ChainStraddle
+          chainSym={chainSym}
+          optionType={optionType}
+          chainData={chainData}
+          strike={strike}
+          onPickStrike={pickStrike}
+        />
       ) : null}
 
       <div className="gate" aria-live="polite">
