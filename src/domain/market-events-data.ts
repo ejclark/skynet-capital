@@ -377,6 +377,20 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The calendar's first energy-supply entry, and it closes a real gap: three ledgers (cpi-2026-09-11, ism-services-2026-09-03, ism-manufacturing-2026-09-01) name crude as the transmission channel into their inflation subcomponents, yet no dated event on the supply side of that channel was tracked. The 2026-08-02 meeting completed the rollback of ~3.5 mb/d of 2023 voluntary cuts with a final +188 kb/d for September, and the group signalled quotas held steady for the rest of 2026 — so the base case is a non-event and `medium` reflects that, not the consequence if the signal breaks. What makes this instance live: it is the first ministerial since the 2026-08-30 US strike on Larak Island re-escalated the Strait of Hormuz, and it lands inside the Sep 1 -> Sep 16 pre-FOMC corridor, three days after ISM Services and two days after payrolls. Discovered during the ism-services-2026-09-03 pulse-check adjacency sweep (2026-08-31).",
   },
   {
+    id: "missouri-map-ballot-deadline-2026-09-08",
+    kind: "geopolitical",
+    title:
+      "Missouri congressional-map ballot deadline — the US Supreme Court's window to stay the state ruling",
+    date: "2026-09-08",
+    status: "estimate",
+    source:
+      "NEWS: St. Louis Public Radio 2026-09-03 (fetched direct 2026-09-04) reports the Missouri Supreme Court's unanimous ruling that the 2022 map governs the 2026-11-03 election and states 'the state faced a September 8 deadline to implement changes for the November 3 general election'; KSMU 2026-09-04 (fetched direct) reports the same court denied Secretary of State Denny Hoskins's stay request that morning and cites the UOCAVA 45-day ballot-mailing rule as the binding constraint. Filed estimate on two counts: the 09-08 date reaches this calendar through a public-radio summary rather than the Missouri statute or a court order, and the operative event is a US Supreme Court emergency-application decision that had not been filed as of 10:00 CT on 2026-09-04",
+    impact: "low",
+    symbols: [],
+    notes:
+      "A seat-math resolution point, not a market event — filed low and expected to pass unnoticed by the tape. It is tracked because the midterm-elections-2026-11-03 ledger's leg 2 leans on a counterweight (ten states adopted new congressional maps for this cycle, estimated to net Republicans +6 to +10 seats) that this ruling directly reduces: Missouri's 2025 map, drawn to take the delegation from 6-2 to 7-1, will not be used on 11-03 unless the US Supreme Court stays the state ruling before ballots are set, and the map itself goes to a referendum on the 11-03 ballot. Silver Bulletin's FLIPR forecast page, updated 2026-09-04, names the ruling as improving Democratic chances. Discovered during the midterm-elections-2026-11-03 pulse-check adjacency sweep (2026-09-05).",
+  },
+  {
     id: "treasury-3y-note-2026-09-08",
     kind: "rates",
     title: "3-Year Treasury Note auction",
