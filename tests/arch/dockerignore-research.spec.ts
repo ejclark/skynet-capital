@@ -29,6 +29,8 @@ describe("dockerignore — research shelf ships to prod", () => {
       "docs/research/nvda-aug-2026-print.md",
       "docs/research/multi-symbol-sweep.md",
       "docs/research/forward-tests.md",
+      "docs/research/forward-tests/legacy.md",
+      "docs/research/forward-tests/fomc-2026-10-28.md",
     ]) {
       expect({ path: p, included: included(p) }).toEqual({ path: p, included: true });
     }

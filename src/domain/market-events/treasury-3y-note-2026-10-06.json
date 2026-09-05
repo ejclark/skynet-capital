@@ -1,0 +1,11 @@
+{
+  "id": "treasury-3y-note-2026-10-06",
+  "kind": "rates",
+  "title": "3-Year Treasury Note auction (new issue)",
+  "date": "2026-10-06",
+  "status": "estimate",
+  "source": "EST: treasury.gov Tentative Schedule of Treasury Auctions PDF, text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 17,195 bytes), row reads verbatim `3-Year NOTE / Announcement Thursday, October 01, 2026 / Auction Tuesday, October 06, 2026 / Settlement Thursday, October 15, 2026` — no `R` marker, i.e. a new issue, which matches every 3-Year auction in fiscaldata's `auctions_query` back to 2022 (each month is its own CUSIP). Size corroborated in advance by press release sb0590 (2026-08-05), whose Oct-26 anticipated-size row puts the 3-Year at $58 billion. 1:00pm ET is Treasury's standing coupon-auction convention and is NOT separately sourced. Stays estimate on two counts: a tentative schedule is tentative by construction, and this lane may not self-confirm an event it discovered in-sweep — the confirming primary is the 2026-10-01 announcement itself",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The largest single leg of the October coupon block ($58B of $119B) and the front-end one, so it is the first auction to price whatever the 2026-09-16 FOMC did. Its CUSIP is the one field of the 10-01 announcement that CANNOT be predicted in advance — the 3-Year is a fresh security every month, unlike the 10Y/30Y reopenings that share this block. Size base rate re-derived 2026-09-05 from `auctions_query`: $58B for 29 consecutive completed auctions since 2024-04-09, ending a nine-month +$2B/month ramp. Read it, do not trade it: `symbols: []`, the date is `estimate`, no house playbook (S1/S2/E1/S3/S4 + G1) is macro-keyed. Discovered during the treasury-coupon-announcement-2026-10-01 initial research (2026-09-05), which is the sweep the treasury-coupon-announcement-2026-10-15 entry asked for when it named these three auctions and declined to file them."
+}

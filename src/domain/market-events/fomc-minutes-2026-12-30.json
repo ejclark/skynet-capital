@@ -1,0 +1,11 @@
+{
+  "id": "fomc-minutes-2026-12-30",
+  "kind": "macro-print",
+  "title": "FOMC minutes (Dec 8-9 meeting)",
+  "date": "2026-12-30",
+  "status": "confirmed",
+  "source": "FED: two federalreserve.gov primaries re-fetched direct 2026-08-31 — newsevents/2026-december.htm lists 'FOMC Minutes' at 2:00 p.m. on December 30, and monetarypolicy/fomccalendars.htm states the convention verbatim ('The minutes of regularly scheduled meetings are released three weeks after the date of the policy decision'), with Dec 9 + 21 days = Wednesday 2026-12-30 and all five published 2026 meetings obeying the rule (Jul 28-29 -> Aug 19). The prior estimate note's caveat — the December page's 2025-06-24 last-update stamp — was tested and DISPROVED this session: the August 2026 page carries the same June-2025 stamp while naming 'Chairman Kevin Warsh', a title he did not hold on that date, so the stamp tracks the page skeleton and not its contents. PROMOTED estimate->confirmed by the fomc-minutes-2026-12-30 initial research, checked 2026-08-31",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The minutes of the year's final SEP meeting, and the only structured account of a vote taken WITHOUT the November CPI — cpi-2026-12-10 printed the morning after the decision (see fomc-blackout-start-2026-11-28). That makes the dissent language and any discussion of the missing inflation read worth more than a usual set of minutes, and it lands in the 43-day policy vacuum before the 2027-01-26/27 FOMC that ppi-2026-12-15's research named. Read it, do not trade it — minutes are three weeks stale by publication. Same series as fomc-minutes-2026-10-07 and fomc-minutes-2026-11-18; one entry per meeting. Discovered during the fomc-blackout-start-2026-11-28 initial research, off the December Board calendar fetched that session."
+}

@@ -6,6 +6,7 @@ import {
   parseControlsState,
   suspendedReason,
 } from "./bot-controls.js";
+import { controlsPollHeaders } from "./controls-poll-wire.js";
 import {
   BRIDGE_REQUEST_TIMEOUT_MS,
   INSIGHTS_BRIDGE_SECRET_HEADER,
@@ -53,6 +54,9 @@ export function resolveBotControls(
   const url = env.SKYNET_INSIGHTS_BRIDGE_URL;
   if (!url) return DISABLED_CLIENT;
   const endpoint = `${url.replace(/\/+$/, "")}${CONTROLS_BRIDGE_PATH}`;
+  // This process's own word about which commit it is running, stamped onto every poll so the
+  // owner's ops-status panel can answer "on what commit?" without a Fly credential (#666).
+  const selfReport = controlsPollHeaders(env.GIT_SHA);
 
   let snapshot: ControlsState = EMPTY_CONTROLS;
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -65,7 +69,7 @@ export function resolveBotControls(
         const response = await fetchJson(
           "GET",
           endpoint,
-          { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET },
+          { [INSIGHTS_BRIDGE_SECRET_HEADER]: INSIGHTS_BRIDGE_SHARED_SECRET, ...selfReport },
           undefined,
           controller.signal,
         );

@@ -1,0 +1,11 @@
+{
+  "id": "adp-employment-2026-09-02",
+  "kind": "macro-print",
+  "title": "ADP National Employment Report (Aug 2026 data)",
+  "date": "2026-09-02",
+  "status": "confirmed",
+  "source": "IR: mediacenter.adp.com published 'ADP National Employment Report: Private-Sector Employment Increased by 38,000 Jobs in August' with a 2026-09-02 dateline at 08:15 ET (PRNewswire 302867661) — ADP does not pre-announce, so the release itself is the primary confirmation; flipped from estimate at close-out, fetched 2026-09-03",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Two sessions ahead of BLS payrolls (9/4); private-sector proxy the market leans on pre-NFP, though the ADP-to-NFP correlation runs loose (July ADP printed +44k vs BLS's -23k the same cycle). PASSED and scored: +38,000 vs a 47-48k consensus, the slowest since January, with education/health (+45k) alone exceeding the whole print and large employers supplying +34k of it. The tape traded the soft read DOVISHLY -- Sep-16 hike odds 68.2% to 60.2-64.2%, a 20-month-high 10y round-tripped to unchanged, small caps led -- which refuted the beat-side asymmetry the ledger had installed after Jackson Hole. Close-out: docs/research/events/adp-employment-2026-09-02.md."
+}

@@ -40,6 +40,7 @@ describe("bots health file", () => {
       bootedAt: "2026-09-04T19:37:00.000Z",
       bridge: "armed",
       lastControlsPollAt: "2026-09-04T19:37:00.000Z",
+      restored: null,
       updatedAt: "2026-09-04T19:37:00.000Z",
     });
   });
@@ -67,6 +68,39 @@ describe("bots health file", () => {
       lastControlsPollAt: "2026-09-04T19:37:30.000Z",
       bootedAt: "2026-09-04T19:37:00.000Z",
     });
+  });
+
+  // Issue #1181's "verified live" step: a deploy proves durable state came back by being read,
+  // not by grepping `flyctl logs` for a populated momentum context.
+  it("stamps what the boot rehydrated off the volume", () => {
+    const health = openBotsHealthFile(path, "abc123", clock("2026-09-04T19:37:00Z"));
+    health.boot(true);
+    health.restored({ momentumSymbols: 7, sentimentSymbols: 3, cooldowns: 2 });
+    expect(read().restored).toEqual({
+      momentumSymbols: 7,
+      sentimentSymbols: 3,
+      cooldowns: 2,
+    });
+  });
+
+  it("keeps null distinct from all-zeroes, so a dark run never reads as an empty volume", () => {
+    const health = openBotsHealthFile(path, "abc123");
+    health.boot(true);
+    expect(read().restored).toBeNull(); // durability dark: no DB was opened at all
+    health.restored({ momentumSymbols: 0, sentimentSymbols: 0, cooldowns: 0 });
+    expect(read().restored).toEqual({
+      momentumSymbols: 0,
+      sentimentSymbols: 0,
+      cooldowns: 0,
+    }); // DB opened, nothing accumulated yet — a different verdict entirely
+  });
+
+  it("does not write a stamp from restore() before the boot verdict is in", () => {
+    const health = openBotsHealthFile(path, "abc123");
+    health.restored({ momentumSymbols: 4, sentimentSymbols: 0, cooldowns: 0 });
+    expect(existsSync(path)).toBe(false);
+    health.boot(true);
+    expect(read().restored).toMatchObject({ momentumSymbols: 4 });
   });
 
   it("resolves GIT_SHA from the env the deploy stamped", () => {

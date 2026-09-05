@@ -1,0 +1,11 @@
+{
+  "id": "fomc-blackout-start-2026-10-17",
+  "kind": "macro-print",
+  "title": "FOMC communications blackout begins (through 2026-10-29)",
+  "date": "2026-10-17",
+  "status": "confirmed",
+  "source": "FED: federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf ('2025-2027 FOMC Trading and External Communications Blackout Calendar') re-fetched and its text layer decompressed direct 2026-08-31 — the footnote states the rule verbatim: blackouts 'begin at 12:00 a.m. Eastern Time the second Saturday before a meeting and end at 11:59 p.m. Eastern Time the day after a meeting', with a worked example for a Tuesday-start/Wednesday-end meeting. The Oct 27-28 meeting is exactly that shape and is confirmed on the FOMC calendar (re-fetched 2026-08-31), so the source's own example gives start 2026-10-17 and end 2026-10-29, checked 2026-08-31",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Not a print — a gate on who may speak. The gate falls at midnight ET entering Saturday 10-17, which makes Friday 10-16 the last morning on which official interpretation and new price data can meet: CPI 10-14, PPI 10-15 and import-export-prices-2026-10-16 all land in the final 72 hours before it, and monthly opex is the same session. INVERSE OF THE SEPTEMBER WINDOW: fomc-blackout-start-2026-09-05 trapped PPI and CPI INSIDE the gate; here every top-tier print lands BEFORE it, so the corridor 10-19 -> 10-26 carries no tracked event at all and the risk sits at the two edges. Promoted estimate -> confirmed 2026-08-31 by its own initial-research session, which re-fetched the blackout PDF the proposing sweep could not. Discovered during the import-export-prices-2026-10-16 initial research."
+}

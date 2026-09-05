@@ -38,9 +38,6 @@ export interface NavContext {
    * this — the actual zero-typing fix — had no way in from the app).
    */
   readonly canClaim?: boolean;
-  /** Owner-only: link `/ops-status` — the read-only bots/deploy health panel. Members
-   *  see neither the link nor the page. */
-  readonly canOpsStatus?: boolean;
 }
 
 export interface DashboardViewOptions {
@@ -124,11 +121,9 @@ function renderDrawer(nav: NavContext): string {
       `<a class="dnav-link dnav-muted" href="/claim"><span class="dnav-ico" aria-hidden="true">⛓</span><span class="dnav-label">Account links</span></a>`,
     );
   }
-  if (nav.canOpsStatus) {
-    foot.push(
-      `<a class="dnav-link dnav-muted" href="/ops-status"><span class="dnav-ico" aria-hidden="true">⚑</span><span class="dnav-label">Ops status</span></a>`,
-    );
-  }
+  // No Ops status link here any more (#1296): the panel is group-visible and lives in the React
+  // shell's topbar pill, which this legacy drawer has no equivalent of. An owner-only link to a
+  // page that now redirects into the app would be the one entry here that lies about who it's for.
   foot.push(drawerLink(FEEDBACK_URL, "Feedback", "feedback", nav.active === "feedback"));
   if (nav.authed) {
     foot.push(

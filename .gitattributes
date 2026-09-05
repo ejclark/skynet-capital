@@ -1,12 +1,15 @@
-# src/domain/market-events-data.ts: 13+ concurrently open research PRs each append one entry to
-# this one shared array (#1324, measured 2026-09-04) — merging any single one shifts surrounding
-# lines enough that every other open PR conflicts against the new base, even though their content
-# never actually disagrees. A plain `merge=union` was tested and rejected: it merges by LINE, not
-# by object, so two multi-line entries inserted at the same spot get interleaved into one malformed,
-# duplicate-keyed object — silent data loss. scripts/merge-market-events.mjs merges at the object
-# level instead. The line below only names the driver; its COMMAND lives in .git/config, which git
-# cannot read from a tracked file — scripts/register-merge-drivers.sh writes it, called from the
-# SessionStart hook and from worktree-setup.sh so every lane has it. GitHub's own "mergeable" check
-# can't run a custom driver, so this only helps a local `git merge` — which is how these PRs
-# actually get resolved.
-src/domain/market-events-data.ts merge=market-events
+# Deliberately (almost) empty — and the reason is worth keeping on file.
+#
+# On 2026-09-04/05 this file carried two merge attributes for the research lanes' shared files:
+# `src/domain/market-events-data.ts merge=market-events` (a custom object-level driver, #1324) and
+# `docs/research/forward-tests.md merge=union` (#1334). Both worked exactly as designed for a LOCAL
+# `git merge` and changed nothing on GitHub, whose server-side merge runs no custom driver and
+# honours no merge attribute (a request to support merge=union has sat open since 2021). 12 of 14
+# open research PRs still read `dirty` the morning after both landed.
+#
+# Issue #1449 removed the shared files instead: the calendar is one JSON file per event under
+# src/domain/market-events/, the forward-test register is one markdown fragment per event under
+# docs/research/forward-tests/, and each research lane writes only the files its own event id
+# names. Plain git merges that every time, server-side included. If you are reaching for a merge
+# attribute or driver to fix a recurring conflict, the lesson is that the conflict is a shared
+# aggregate with many owners — split it (docs/LESSONS.md, 2026-09-05).

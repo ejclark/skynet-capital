@@ -1,0 +1,11 @@
+{
+  "id": "unga-81-general-debate-2026-09-22",
+  "kind": "geopolitical",
+  "title": "UN General Assembly 81st session — high-level general debate (leaders' week)",
+  "date": "2026-09-22",
+  "status": "estimate",
+  "source": "EST: un.org/en/ga/81/meetings/ states the 81st session's general debate runs 'from 22 September to 26 September, and on 28 September 2026', with dated high-level meetings on 09-23 (right to development; climate action and just transition), 09-24 (sea level rise), 09-25 (pandemic prevention) and 09-28 (Durban Declaration anniversary), fetched direct 2026-09-04. That is a UN primary, but CONFIRMED_PREFIX in scripts/event-scan-validation.mjs carries no UN or diplomatic slot and the event-research lane's no-self-confirm limit applies to an event discovered in-sweep — so filed estimate/EST:, checked 2026-09-04",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED AS THE ATTENTION CORRIDOR, NOT A CATALYST — discovered during the unsc-iran-panel-mandate-expiry-2026-09-26 initial research (2026-09-04), which needed the dates to establish that the 09-26 mandate expiry falls on a UN WORKING SATURDAY: a general-debate day with heads of state at UN HQ and US markets closed. Low impact and symbols: [] are the honest filing — leaders' week has no measured reaction function in this calendar and no price channel is claimed. What it IS good for: it dates the window in which Hormuz or Iran diplomacy would surface at principals level, and it explains why headlines in 09-22 to 09-28 reach the tape through gaps rather than through sessions. The measured version of that gap channel is in the expiry ledger: WTI's absolute weekend gap runs a 1.55% median over the last 14 weekends against a 0.53% two-year median (~2.9x), while SPY's 0.32% sits BELOW its own two-year 0.35% — the reopen risk is entirely in crude, none of it in the index. The date is the debate's OPENING; the window runs through 09-28."
+}

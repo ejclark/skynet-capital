@@ -1,0 +1,11 @@
+{
+  "id": "boj-decision-2026-09-18",
+  "kind": "macro-print",
+  "title": "Bank of Japan Monetary Policy Meeting decision (MPM Sep 17-18)",
+  "date": "2026-09-18",
+  "status": "estimate",
+  "source": "NEWS: boj.or.jp 'Monetary Policy Meetings' schedule page (en/mopo/mpmsche_minu/), read direct 2026-09-05 — lists the September 2026 MPM as 17-18 September, decision published at the meeting's conclusion on the second day; the 2026-09-28 date on the same row is the Summary of Opinions, not the decision. Policy rate 0.75%, its highest since 1995. THE DATE IS PRIMARY-VERIFIED AND THE STATUS STILL READS ESTIMATE for the same reason as ecb-decision-2026-09-10: the confirmed-prefix taxonomy has FED: and no slot for any other central bank. Understating the label only widens caution.",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Proposed during the fomc-2026-09-16 pulse-check adjacency sweep (2026-09-05). Lands two days after the Sep-16 FOMC, the day the US communications blackout lifts, and on quarterly triple-witching (opex-2026-09-18) — three duration-relevant things on one session. THE CHANNEL IS THE CARRY TRADE, NOT JAPAN: a BoJ move at a 0.75% policy rate propagates to this calendar's long-duration AI names through yen funding and global term premium, which is the same transmission the FOMC ledger tracks through the 10Y. It is also the first read on how a foreign central bank marks the US decision it just watched. IMPACT IS MEDIUM, deliberately: the mechanism is real but second-order for a US equity book, and the decision announcement lands overnight ET, so any effect reaches the tape as a 09-18 open — the one session of the quarter where opex pinning is the dominant microstructure. Overnight-ET timing means the statement is technically 09-18 JST; the date here is the JST decision date, matching how the BoJ itself publishes it."
+}
