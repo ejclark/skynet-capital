@@ -10,3 +10,18 @@
 # can't run a custom driver, so this only helps a local `git merge` — which is how these PRs
 # actually get resolved.
 src/domain/market-events-data.ts merge=market-events
+
+# docs/research/forward-tests.md: the same append collision on the sibling ledger (#1334, measured
+# 2026-09-05) — 13 of 24 conflict-flagged PRs since 09-03 named this file, and all 25 ledger commits
+# on main since 09-04 are pure tail appends, so any two open research PRs conflict by construction.
+# Here `merge=union` IS the right tool, for the reason it was wrong above: a registration is exactly
+# ONE LINE (one table row), which is the unit union merges, so two appends both survive intact and
+# in order. It is a git BUILT-IN, so unlike merge=market-events it needs no .git/config command and
+# reaches every clone with no registration step. Do NOT widen this to docs/research/events/*.md or
+# *.md — those carry multi-line prose, where union interleaves (scikit-learn hit exactly that and
+# reverted). Union's blind spot is two sides editing the SAME row differently: it keeps both as two
+# rows rather than conflicting. scripts/forward-test-id-scan.mjs reports the duplicate id, and that
+# is the same outcome today's hand-merge produces. GitHub's server merge ignores .gitattributes, so
+# this helps the local `git merge` the repair lane and ship.sh both run — which is how these PRs
+# actually get resolved.
+docs/research/forward-tests.md merge=union
