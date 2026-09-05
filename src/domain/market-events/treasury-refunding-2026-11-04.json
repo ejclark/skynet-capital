@@ -1,0 +1,11 @@
+{
+  "id": "treasury-refunding-2026-11-04",
+  "kind": "macro-print",
+  "title": "Treasury Quarterly Refunding Announcement (Nov 2026)",
+  "date": "2026-11-04",
+  "status": "estimate",
+  "source": "EST: Treasury holds its quarterly refunding on the first Wednesday of February, May, August and November, releasing the policy statement, TBAC report and auction/buyback schedules at 08:30 ET; home.treasury.gov's own pages put the August 2026 refunding documents at 08:30 a.m. on 2026-08-05 and name the next release 2026-11-04, and the buyback release (home.treasury.gov/news/press-releases/sb0607) states more information on future buyback sizes comes 'at the next Quarterly Refunding, scheduled for November 4, 2026', with the marketable borrowing estimates and TBAC materials on 2026-11-02. Reached via search rather than a directly-fetched primary — home.treasury.gov timed out twice on direct fetch this session — so this is filed estimate and nothing more, checked 2026-08-31",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Closes a structural gap: this calendar tracks 13 Treasury auctions and buybacks but not the announcement that SETS their sizes and schedules. It lands 08:30 ET on 2026-11-04, 90 minutes ahead of ism-services-2026-11-04 (est), and it is the reason no bond move that morning can be attributed to the ISM print — the ISM services release is the third business day and the refunding is the first Wednesday, so in 2026 they collide on 02-04, 08-05 and 11-04. That matters retroactively: the 08-05 session whose yield move the ism-services-2026-09-03 ledger attributed to ISM's 70.3 Prices reading had this announcement 90 minutes earlier (and the 10Y actually closed DOWN that day). This edition is the first refunding after the 11-03 midterms, setting coupon sizes and buyback schedules into a post-election fiscal picture, with the borrowing estimates two days earlier on 11-02. Filed medium: refunding announcements move the long end through supply rather than through the policy path, and no house playbook is macro-keyed. Discovered during the ism-services-2026-11-04 initial research (2026-08-31)."
+}

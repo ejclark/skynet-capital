@@ -399,10 +399,38 @@ describe("ship platter — the ledger is a pure function of the boarded commits"
 });
 
 describe("ship platter — refusals that keep the platter an assembly point, not a workspace", () => {
+  // This refusal depends on the CURRENT branch, so it runs in its own repo on `main`. Against
+  // process.cwd() it went red the first time a platter was actually opened (2026-09-05): `platter
+  // open` runs `npm run verify` on the staged union while HEAD *is* a platter branch, so the
+  // refusal this test expects is exactly the one that cannot fire there.
   it("refuses to board while HEAD is not a platter branch", () => {
-    const { code, stderr } = run(["platter", "board", "feedback/1"]);
-    expect(code).toBe(1);
-    expect(stderr).toContain("not a platter branch");
+    const dir = mkdtempSync(join(tmpdir(), "ship-board-refusal-"));
+    const env = hermeticGitEnv({ GH_TOKEN: "test-token-never-used" });
+    const git = (args: string[]) =>
+      execFileSync("git", args, { cwd: dir, encoding: "utf8", env, stdio: "pipe" });
+    try {
+      git(["init", "-q", "-b", "main", "."]);
+      git(["config", "user.email", "spec@example.com"]);
+      git(["config", "user.name", "spec"]);
+      git(["commit", "-q", "--allow-empty", "-m", "chore: seed"]);
+      let code = 0;
+      let stderr = "";
+      try {
+        execFileSync("bash", [resolve("scripts/ship.sh"), "platter", "board", "feedback/1"], {
+          cwd: dir,
+          env,
+          stdio: "pipe",
+        });
+      } catch (error) {
+        const e = error as { status?: number; stderr?: Buffer };
+        code = e.status ?? 1;
+        stderr = e.stderr?.toString() ?? "";
+      }
+      expect(code).toBe(1);
+      expect(stderr).toContain("not a platter branch");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("refuses a platter name outside platter/ — the branch name is how the platter is found", () => {

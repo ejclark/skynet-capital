@@ -27,6 +27,45 @@ it. Prevention ranks, best first:
 
 ---
 
+### Three merge-side fixes in one day could not stop research PRs conflicting — the shared file was the bug, not the merge
+
+- **SHA:** n/a (issue #1449)   **DATE:** 2026-09-05   **STATUS:** closed
+- **SIGNAL:** Eric, 2026-09-05 morning: "~20 PRs of research conflicted with itself again." The
+  detection lag was the whole prior day: #1324 (custom merge driver, 09-04 21:40Z), #1341/#1359
+  (date-sorted insertion + ordering gate, 00:30Z) and #1334 (`merge=union` on the register,
+  01:47Z) each shipped with a correct call sheet and a dated falsifier — #1334's read *"two weeks
+  after union … ledger flags still ≥3/day"*. Measured ~05:00Z: 13 of ~25 research PRs opened after
+  union landed were still `conflict-flagged`; simulating GitHub's plain 3-way merge on the 14 open
+  research PRs gave 11 conflicting on the register and 7 on the calendar. The falsifier fired in
+  three hours, and nothing was watching the falsifier — each issue closed when its PR merged.
+- **ROOT CAUSE:** every event-research lane owns exactly one event, but two of its write targets
+  were repo-wide aggregates every sibling lane appended to at the same time — one markdown table
+  of all forward tests, one TypeScript array of all calendar entries. Every fix optimised how the
+  aggregate *merged* (a driver, an ordering, an attribute), and every one of them ran only in a
+  local `git merge`. GitHub's server-side `mergeable` runs no driver and reads no attribute, so the
+  PRs kept reading `dirty`, each flag dispatched a paid repair session, and a repaired PR
+  re-dirtied the next time `main` took a ledger merge (every ~7 min, #1403). The three call sheets
+  all *named* this limit in a caveat and still chose the local lever, because per-event files were
+  priced as the expensive option (a protected-prompt edit, ~45 links) — a cost that was real and
+  one-time against a recurring cost that scaled with fan-out.
+- **PREVENTION:** structure, then a gate. (1) The two aggregates became one file per owner —
+  `docs/research/forward-tests/<event-id>.md` and `src/domain/market-events/<id>.json` — with the
+  register composed at read time (`composeRegister`) and the calendar assembled by
+  `loadMarketEvents`; the driver, the sorter, the whole-entry parser, the registration hook, the
+  attributes and their four specs were deleted rather than kept as belt. (2) A blocking placement
+  gate, `tests/arch/forward-tests-fragments.spec.ts` + `event-scan --validate`'s file-name rule,
+  whose failure message names the right file — so a session following the stale protected
+  instruction self-corrects on `npm test`. (3) Doctrine, `.gitattributes` header: a recurring
+  conflict on one path is a shared aggregate with many owners — split it before reaching for a
+  merge attribute. **Generalisation for the next time:** when a bottleneck call sheet rejects the
+  structural option as "for now" with a falsifier, the falsifier needs an owner — the digest scan
+  or the issue's `next-slice` label — or it will fire unobserved, as this one did.
+- **SIDE QUESTS:** #1403 (re-dispatching conflict repair) mostly dissolves with no shared writes
+  left — noted on that issue rather than built. `scripts/research-relocate.mjs branch` is the
+  migration tool for research branches that pre-date the split and can be deleted once none remain.
+
+---
+
 ### Five gated approval taps went to re-pulling the same bot log — the answer was sitting free in the code the whole time
 
 - **SHA:** n/a (fix on `CLAUDE.md` and `.claude/output-styles/orient.md`)   **DATE:** 2026-09-04   **STATUS:** closed
