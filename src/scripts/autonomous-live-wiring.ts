@@ -60,6 +60,9 @@ export async function bootMissionControl(
 ): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
+  /** Handed back so the caller can stamp what `restoreBotsState` rehydrated — that happens
+   *  later in boot, after the roster and the DB exist (`run-autonomous.ts`). */
+  health: BotsHealthFile;
 }> {
   const controls = resolveBotControls(process.env, (state) => {
     health.controlsFetched();
@@ -79,7 +82,7 @@ export async function bootMissionControl(
       "[controls] bridge configured but UNREACHABLE — env-only controls until the 30s poll succeeds",
     );
   }
-  return { controls, bootControls: fetched ?? EMPTY_CONTROLS };
+  return { controls, bootControls: fetched ?? EMPTY_CONTROLS, health };
 }
 
 /**

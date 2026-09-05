@@ -23,4 +23,5 @@ export function lintWorkflow(
   text: string,
   prompts?: string[],
   hasScriptDeps?: (scriptRelPath: string) => boolean,
+  knownLabels?: string[],
 ): string[];

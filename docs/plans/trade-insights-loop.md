@@ -50,9 +50,10 @@ insight layer's own track record and throttles it automatically if it underperfo
 - **Not the metrics layer.** `docs/plans/metrics-layer.md`'s Tier 1 stats are a downstream consumer
   of this data, not rebuilt here.
 - **Interim persistence is explicitly throwaway.** Slice 2 (file-based, via the app process's
-  existing volume) is a stopgap; slice 4 (SQLite + a dedicated `bots` volume) replaces it once Eric
-  provisions the volume. The write interface is kept narrow enough that swapping the backing store
-  is a one-file change, not a rewrite.
+  existing volume) is a stopgap; slice 4 (SQLite + a dedicated `bots` volume) replaces it. Eric
+  provisioned that volume on 2026-09-04 (`skynet_bots_data`), so the replacement is live, not
+  pending. The write interface is kept narrow enough that swapping the backing store is a one-file
+  change, not a rewrite.
 
 ## Pre-settled forks
 
@@ -67,28 +68,29 @@ insight layer's own track record and throttles it automatically if it underperfo
 - **Interim persistence (Eric, 2026-08-13)** → a small internal-only HTTP bridge: the `bots` process
   POSTs structured records to the `app` process (which already has a Fly Volume mounted at `/data`),
   over Fly's private `.internal` network — **not** the public `[http_service]` port. Zero new Fly
-  resources, zero new secrets, no action needed from Eric for this slice. Replaced by slice 4 once a
-  dedicated volume exists.
+  resources, zero new secrets, no action needed from Eric for this slice. Superseded by slice 4 —
+  the dedicated volume now exists.
 - **The eventual DB** → SQLite via Node's built-in `node:sqlite` (no new dependency), on a *second*
   Fly Volume dedicated to the `bots` process (a volume can only attach to one machine; `app` and
   `bots` are separate machines). Verified: $0.15/GB/month, no LiteFS needed for this single-machine
-  topology (LiteFS is for multi-region HA, which this app doesn't do). This is the one step that
-  needs Eric — `fly volumes create` is real spend + infra, even if trivial cost.
+  topology (LiteFS is for multi-region HA, which this app doesn't do). This was the one step that
+  needed Eric — `fly volumes create` is real spend + infra, even if trivial cost — and he took it on
+  2026-09-04: `skynet_bots_data`, mounted at `/data` by `fly.bots.toml`'s `[mounts]`.
   **Scope extended (2026-09-04, issue #1181):** the same DB/volume also carries momentum,
   sentiment, and per-persona cooldown tables — restoring trading-signal state across a deploy
   restart, not just the retrospective insight stream this plan originally scoped. One volume, one
-  `openBotsStateDb` handle (`src/autonomous/bots-state-db.ts`), still gated on the same
-  `fly volumes create` step below.
+  `openBotsStateDb` handle (`src/autonomous/bots-state-db.ts`).
 
 ## Autonomy envelope
 
 - Slices 1–3 (retrospective capture, interim persistence, effectiveness breaker): pure logic +
   internal-only network surface, paper-only, no credentials. Security-reviewed before merge (new
   network listener parsing input); auto-merge after a clean review.
-- Slice 4 (SQLite + dedicated volume): **held for Eric** — needs `fly volumes create` before the
-  code that depends on it can go live. Code itself (schema, migration path) can be built and tested
-  fully offline/locally per Eric's explicit requirement, and merged dark (unused until the volume
-  exists).
+- Slice 4 (SQLite + dedicated volume): **cleared 2026-09-04** — it was held for Eric until
+  `fly volumes create`, and he ran it. The code shipped dark first (schema and migration path built
+  and tested fully offline per his explicit requirement, unused until the volume existed), then
+  `fly.bots.toml` mounted the volume and set `SKYNET_BOTS_DB_PATH` / `SKYNET_AUDIT_DIR` /
+  `SKYNET_BOTS_HEALTH_PATH` (#1264, his own merge). Nothing on this slice is waiting on him.
 - **Never widenable here:** anything that lets an insight auto-promote to a live playbook without the
   existing research/red-team gate; anything that lets an insight-triggered action bypass `applyGuards`.
 
@@ -113,3 +115,18 @@ insight layer's own track record and throttles it automatically if it underperfo
   a deploy restart wipes bot memory. `bots-state-db.ts` adds momentum/sentiment/cooldown tables to
   the same planned volume rather than opening a second one — still fully held on Eric's
   `fly volumes create`; nothing here changes that gate.
+- **2026-09-04 — the gate cleared; slice 4 is live (PR #1264).** Eric ran `fly volumes create` for
+  `skynet_bots_data` and merged the `fly.bots.toml` change himself: `[mounts]` at `/data`, plus
+  `SKYNET_BOTS_DB_PATH`, `SKYNET_AUDIT_DIR` and `SKYNET_BOTS_HEALTH_PATH`. The two entries above
+  are left as written — they were true on their dates — and this one supersedes them. Note for a
+  future reader: the config merged slightly ahead of the volume, so three `deploy-bots` runs failed
+  pre-flight with *"needs volumes with name 'skynet_bots_data'"* before the 23:44Z deploy went
+  green. Fly refuses a deploy with an unfulfilled mount, so nothing bad reached production — but it
+  is why a `ci-failure` issue (#1265) exists for a cause that no longer exists on `main`.
+- **2026-09-05 — restore made observable (issue #1181).** The slicing sketch asked for slice 3 to be
+  "verified live … logs showing momentum/sentiment context already populated instead of empty."
+  Rather than depend on a `flyctl logs` grep — the exact read that already false-negatived a healthy
+  boot into a rollback on 2026-09-04 — the health stamp now carries a `restored` block
+  (`momentumSymbols`, `sentimentSymbols`, `cooldowns`), so every deploy's own smoke read of
+  `/data/health.json` is the proof. `null` there means durability was dark; all-zeroes means the DB
+  opened and was empty. Those are different failures and the stamp keeps them apart.
