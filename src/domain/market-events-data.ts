@@ -1203,6 +1203,20 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The successor edition, and the one the funding branch actually threatens. It prints 08:30 on the FIRST MORNING of the Oct 27-28 FOMC meeting — the last capex read the committee sees before a decision that carries no SEP and no forward guidance — which is the whole reason it earns its own row rather than being tracked inside the 09-25 doc. In the lapse branch it may not exist on that date at all: on the 2025 precedent for this exact series, Census DELAYED rather than deleted, ~27-29 days (Oct-2025 advance 2025-11-26 -> 2025-12-23), which lands this edition in late November, after the vote. Same shape as retail-sales-2026-11-17's exposure and the opposite of BLS, which cancelled the October 2025 CPI outright. Deliberately filed `estimate` even though the date came off the Census primary: this lane never self-confirms an event in the PR that discovers it, and its own initial research is the place to flip it. Discovered during the durable-goods-2026-09-25 initial research (2026-09-01).",
   },
   {
+    id: "advance-economic-indicators-2026-10-28",
+    kind: "macro-print",
+    title:
+      "Advance Economic Indicators Report (advance goods trade, retail & wholesale inventories, Sep 2026 data)",
+    date: "2026-10-28",
+    status: "estimate",
+    source:
+      "EST: census.gov/economic-indicators/calendar-listview.html lists 'Advance Economic Indicators Report (International Trade, Retail, & Wholesale) | October 28, 2026 | 8:30 AM | September 2026' (fetched direct 2026-09-05). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep — and the series carries its own precedent for non-publication: the same Census page still shows 'Suspended' against the January and February 2026 reference months. Checked 2026-09-05",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The last hard-data input the GDP nowcast gets before gdp-q3-2026-advance-2026-10-29, landing 08:30 the morning of the FOMC decision and 24 hours before the print itself. It earns a row because it was MEASURED to be the largest single-day mover of the Q3 2026 nowcast's composition: the July-data edition on 2026-08-27 moved GDPNow's equipment contribution 0.48 -> 1.06pp, net exports -0.14 -> -1.31pp and inventories 1.71 -> 2.10pp in one release (headline 4.61 -> 4.40%), per the Atlanta Fed's own GDPTrackingModelDataAndForecasts.xlsx fetched 2026-09-05. Those are precisely the two lowest-quality lines that the advance GDP estimate's headline turns on, so this report front-runs the composition question 10-29 is read for. It also carries the advance goods-trade balance that the AI-hardware import surge runs through - the same hardware that adds to equipment investment and subtracts from net exports. Not a tradeable print on its own (symbols: [], no house playbook is macro-keyed); tracked as the corridor's composition tell. Discovered during the gdp-q3-2026-advance-2026-10-29 pulse-check adjacency sweep (2026-09-05).",
+  },
+  {
     id: "fomc-2026-10-28",
     kind: "macro-print",
     title: "FOMC decision (meeting Oct 27–28)",
@@ -1223,7 +1237,7 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "high",
     symbols: [],
     notes:
-      "The first read on Q3 growth, and the third federal release stacked into the Oct 27–29 compound-risk window (this + PCE the same morning, on top of the 10-28 FOMC and the five estimated mega-cap prints). BEA is a federal agency: in the funding-lapse branch this release dies with the 10-02 payrolls and 10-14 CPI, which is exactly why the surviving PRIVATE reads that week — the Conference Board print on 10-27, ISM, ADP, UMich — get promoted. Discovered during the consumer-confidence-2026-10-27 initial research.",
+      "The first read on Q3 growth, and the third federal release stacked into the Oct 27–29 compound-risk window (this + PCE the same morning, on top of the 10-28 FOMC and the five estimated mega-cap prints). LAPSE EXPOSURE RETIRED FOR THIS DATE (2026-09-05): BEA is a federal agency and in a funding lapse this release is DELETED rather than delayed (BEA cancelled the identical Q3 2025 advance estimate outright after the FY2026 shutdown), but H.R. 6500 was signed 2026-09-02 funding agencies through 2026-12-11, so the 09-30 cliff cannot reach 10-29 and the successor cliff cr-expiry-2026-12-11 falls 43 days after it. The promotion of the surviving PRIVATE reads that week (Conference Board 10-27, ISM, ADP, UMich) is therefore contingency, not the base case. Discovered during the consumer-confidence-2026-10-27 initial research; lapse note updated by this event's own 2026-09-05 pulse check.",
   },
   {
     id: "pce-2026-10-29",
