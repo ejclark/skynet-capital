@@ -91,6 +91,38 @@ describe("merge-market-events driver", () => {
     }
   });
 
+  // #1341: the committed table is stored in (date, id) order and `event-scan.mjs --validate`
+  // enforces it inside `npm test`. This driver used to write base-order-then-append, which would
+  // hand back a merge that fails that gate every single time — the two halves only compose if the
+  // driver sorts its own output.
+  it("hands back a merge already in (date, id) order, not base-order-then-append", () => {
+    const dir = makeRepo();
+    try {
+      git(dir, ["branch", "pr-a"]);
+      git(dir, ["checkout", "-q", "pr-a"]);
+      // Dated BEFORE the existing entry, so appending it would leave the file out of order.
+      writeFileSync(join(dir, "events.ts"), insertBeforeClose(BASE, "earlier-add", "2025-06-01"));
+      git(dir, ["commit", "-aqm", "pr-a"]);
+
+      git(dir, ["checkout", "-q", "trunk"]);
+      git(dir, ["merge", "-q", "pr-a", "--no-edit"]);
+
+      git(dir, ["checkout", "-q", "-b", "pr-b", "base"]);
+      writeFileSync(join(dir, "events.ts"), insertBeforeClose(BASE, "later-add", "2026-05-01"));
+      git(dir, ["commit", "-aqm", "pr-b"]);
+
+      git(dir, ["merge", "trunk", "--no-edit"]);
+
+      const merged = readFileSync(join(dir, "events.ts"), "utf8");
+      const evaluated = new Function(
+        `${merged.replace("export const MARKET_EVENTS: readonly MarketEvent[] =", "return")}`,
+      )() as { id: string }[];
+      expect(evaluated.map((e) => e.id)).toEqual(["earlier-add", "existing-a", "later-add"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("refuses to guess when both sides edit the same entry differently — a real conflict", () => {
     const dir = makeRepo();
     try {

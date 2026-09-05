@@ -27,7 +27,7 @@
 // never an empty result — a scheduled caller must not mistake "broken" for "nothing due".
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { DATE_RE, runValidate } from "./event-scan-validation.mjs";
+import { compareEventOrder, DATE_RE, runValidate } from "./event-scan-validation.mjs";
 
 const ROOT = process.cwd();
 
@@ -220,7 +220,7 @@ function main() {
     .map((e) => ({ e, ledger: ledgers.get(e.id), days: daysBetween(today, e.date) }))
     .map((r) => ({ ...r, verdict: assessmentDue(r.e, r.ledger, today, cadence) }))
     .filter((r) => r.verdict.due || r.days >= 0)
-    .sort((a, b) => a.e.date.localeCompare(b.e.date) || a.e.id.localeCompare(b.e.id));
+    .sort((a, b) => compareEventOrder(a.e, b.e));
 
   if (has("due")) printDue(rows);
   else printReport(rows);
