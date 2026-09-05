@@ -1,25 +1,31 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { UPCOMING_PRINTS } from "../../src/domain/earnings-calendar.js";
 import { earningsAsEvents, MARKET_EVENTS } from "../../src/domain/market-events.js";
+import { loadMarketEvents } from "../../src/domain/market-events-data.js";
 
-/** One fixture events file + an empty calendar and ledger dir, validated through the real CLI. */
-function validateFixture(entryOrder: readonly (readonly [string, string])[]): string {
-  const dir = mkdtempSync(join(tmpdir(), "event-scan-order-"));
+const entry = (id: string, date: string) => ({
+  id,
+  kind: "macro-print",
+  title: id,
+  date,
+  status: "confirmed",
+  source: "BLS: fixture",
+  impact: "low",
+  symbols: [],
+});
+
+/** A fixture events DIRECTORY (one JSON file per event, issue #1449) + an empty calendar and
+ *  ledger dir, validated through the real CLI. `files` maps file name → entry, so a spec can put
+ *  an entry under the wrong name on purpose. */
+function validateFixture(files: Record<string, object>): string {
+  const dir = mkdtempSync(join(tmpdir(), "event-scan-"));
   try {
-    const entries = entryOrder
-      .map(
-        ([id, date]) =>
-          `  { id: "${id}", kind: "macro-print", title: "${id}", date: "${date}", ` +
-          `status: "confirmed", source: "BLS: fixture", impact: "low", symbols: [] },`,
-      )
-      .join("\n");
-    writeFileSync(
-      join(dir, "market-events.ts"),
-      `export const MARKET_EVENTS: readonly MarketEvent[] = [\n${entries}\n];\n`,
-    );
+    mkdirSync(join(dir, "events"));
+    for (const [name, event] of Object.entries(files))
+      writeFileSync(join(dir, "events", name), `${JSON.stringify(event, null, 2)}\n`);
     writeFileSync(
       join(dir, "earnings-calendar.ts"),
       "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
@@ -29,7 +35,7 @@ function validateFixture(entryOrder: readonly (readonly [string, string])[]): st
       [
         "scripts/event-scan.mjs",
         "--validate",
-        `--events-file=${join(dir, "market-events.ts")}`,
+        `--events-dir=${join(dir, "events")}`,
         `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
         `--ledger-dir=${join(dir, "no-ledgers")}`,
       ],
@@ -40,12 +46,12 @@ function validateFixture(entryOrder: readonly (readonly [string, string])[]): st
   }
 }
 
-// Event-calendar contract gate — the committed tables (src/domain/market-events.ts +
+// Event-calendar contract gate — the committed calendar (src/domain/market-events/*.json +
 // earnings-calendar.ts) and every assessment ledger (docs/research/events/) must satisfy the
-// contract scripts/event-scan.mjs enforces, because the daily Routine and the detect workflow
-// both act on its word. Static analysis — no network, no session, no test recursion.
+// contract scripts/event-scan.mjs enforces, because the event lane acts on its word. Static
+// analysis — no network, no session, no test recursion.
 describe("event-scan contract", () => {
-  it("the committed tables and ledgers satisfy the contract", () => {
+  it("the committed calendar and ledgers satisfy the contract", () => {
     expect(() =>
       execFileSync("node", ["scripts/event-scan.mjs", "--validate"], {
         cwd: process.cwd(),
@@ -54,29 +60,40 @@ describe("event-scan contract", () => {
     ).not.toThrow();
   });
 
-  // THE ORDERING GATE (#1341): MARKET_EVENTS is STORED in (date, id) order so two research lanes
-  // adding events for different dates insert at different anchors and plain git merges them —
-  // GitHub's server-side merge never runs the custom driver #1324 wired, so file order is the only
-  // lever that works there. Nothing teaches a research session this rule (the research prompt is
-  // envelope-protected); the red gate is how they learn it, so it has to actually go red.
-  it("--validate rejects an out-of-order entry and names it", () => {
+  // THE PLACEMENT GATE (#1449): one file per event, named by its id. That is the whole reason
+  // concurrent research PRs stopped conflicting — a lane can only write the file its own event id
+  // names — so a file whose name disagrees with its id has to go red and say which name is right.
+  it("--validate rejects a file whose name is not its id and names the fix", () => {
     expect(() =>
-      validateFixture([
-        ["alpha", "2026-01-01"],
-        ["charlie", "2026-03-01"],
-        ["bravo", "2026-02-01"],
-      ]),
-    ).toThrow(/out of \(date, id\) order/);
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "bravo.json": entry("charlie", "2026-02-01"),
+      }),
+    ).toThrow(/bravo\.json: file name must equal its id — rename it to "charlie\.json"/);
   });
 
-  it("--validate accepts entries in (date, id) order, tie broken by id", () => {
+  it("--validate accepts one well-named file per event, in any directory order", () => {
     expect(() =>
-      validateFixture([
-        ["alpha", "2026-01-01"],
-        ["bravo", "2026-02-01"],
-        ["charlie", "2026-02-01"],
-      ]),
+      validateFixture({
+        "charlie.json": entry("charlie", "2026-02-01"),
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "bravo.json": entry("bravo", "2026-02-01"),
+      }),
     ).not.toThrow();
+  });
+
+  it("the loader sorts the directory into (date, id) order and rejects a misnamed file loudly", () => {
+    const dir = mkdtempSync(join(tmpdir(), "market-events-"));
+    try {
+      writeFileSync(join(dir, "charlie.json"), JSON.stringify(entry("charlie", "2026-02-01")));
+      writeFileSync(join(dir, "alpha.json"), JSON.stringify(entry("alpha", "2026-03-01")));
+      writeFileSync(join(dir, "bravo.json"), JSON.stringify(entry("bravo", "2026-02-01")));
+      expect(loadMarketEvents(dir).map((e) => e.id)).toEqual(["bravo", "charlie", "alpha"]);
+      writeFileSync(join(dir, "delta.json"), JSON.stringify(entry("echo", "2026-04-01")));
+      expect(() => loadMarketEvents(dir)).toThrow(/delta\.json: id "echo" does not match/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   // The Routine and the detect workflow both read this one output. If its shape drifts, the
@@ -106,10 +123,10 @@ describe("event-scan contract", () => {
     }
   });
 
-  // THE DRIFT GATE: the scanner reads the TS tables by marker-string extraction (it must run
-  // without `npm ci`), which only stays honest while extraction and the real modules agree. If
-  // anyone reshapes a table so extraction breaks or diverges, this goes red the same day.
-  it("marker-string extraction matches the real module exports byte for byte", () => {
+  // THE DRIFT GATE: the scanner reads the calendar directory and the earnings TS table itself (it
+  // must run without `npm ci`), which only stays honest while its read and the real modules agree.
+  // If anyone reshapes either so the reads diverge, this goes red the same day.
+  it("the scanner's read matches the real module exports byte for byte", () => {
     const out = execFileSync("node", ["scripts/event-scan.mjs", "--dump"], {
       cwd: process.cwd(),
       encoding: "utf8",

@@ -1,0 +1,11 @@
+{
+  "id": "treasury-borrowing-estimates-2026-11-02",
+  "kind": "macro-print",
+  "title": "Treasury Marketable Borrowing Estimates (Q4 2026 / Q1 2027)",
+  "date": "2026-11-02",
+  "status": "confirmed",
+  "source": "TSY: home.treasury.gov most-recent-quarterly-refunding-documents names the 15:00 ET Monday Financing Estimates slot and states '(The next release is scheduled for November 2, 2026)', with the 08:30 Wednesday slot separately naming November 4 — fetched direct 2026-08-31. Promoted from estimate on that primary: WebFetch times out on home.treasury.gov but plain curl returns 200, so the sibling ledger's 'gated primary' was a tool artifact, not a network fact, checked 2026-08-31",
+  "impact": "low",
+  "symbols": [],
+  "notes": "The QUANTITY half of the refunding pair: this Monday release carries the aggregate dollar borrowing number plus the FIRST estimate for the following quarter, and treasury-refunding-2026-11-04 (est) allocates it across the curve 48 hours later. Filed LOW on this event's own measurement (all 15 releases since 2023, every date read off the Treasury press release): release day is NIL — on the 8 releases not sitting on an FOMC meeting-eve, TLT closed 4/8 up at +0.056% (permutation p=0.860), SPY 6/8 at +0.201% (p=0.704), ^TNX 4/8 at +0.041% (p=0.989). Both episodes market memory attributes to this release fail on the tape: 2023-07-31 ($1.007T) closed TLT +0.24%, 21st percentile; 2023-10-30 (-$76B) closed TLT -0.45%, the wrong direction. The headline revision is a cash-balance variable, not a deficit variable — all 5 editions past +/-$250B sit inside a debt-limit cycle. READ IT, DO NOT TRADE IT, and read it for the Jan-Mar 2027 estimate: debt outstanding was $40.078T on 2026-08-27 against the $41.1T limit. Attribution is impossible anyway — 13 tracked events sit within +/-5 days. Discovered during the treasury-refunding-2026-11-04 initial research (2026-08-31); measured and promoted by its own initial research the same day."
+}

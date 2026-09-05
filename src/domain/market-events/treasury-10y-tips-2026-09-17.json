@@ -1,0 +1,11 @@
+{
+  "id": "treasury-10y-tips-2026-09-17",
+  "kind": "rates",
+  "title": "10-Year TIPS auction (reopening)",
+  "date": "2026-09-17",
+  "status": "confirmed",
+  "source": "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Real-yield supply the day after the FOMC; the breakeven reaction reads inflation expectations."
+}

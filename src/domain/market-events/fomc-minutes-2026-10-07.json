@@ -1,0 +1,11 @@
+{
+  "id": "fomc-minutes-2026-10-07",
+  "kind": "macro-print",
+  "title": "FOMC minutes (Sep 15–16 meeting)",
+  "date": "2026-10-07",
+  "status": "estimate",
+  "source": "EST: federalreserve.gov/newsevents/2026-october.htm lists 'FOMC Minutes' at 2:00 p.m. on October 7 for the September 15-16 meeting (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The richest read on this Committee's reaction function available before the 10-28 decision, and the ONLY one that arrives outside the 10-17 blackout. Matters more than an ordinary minutes release because Warsh has withdrawn the usual substitute: his 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and said forward guidance has overstayed its welcome, so the vote split and the dissent language here are close to the only structured evidence on how a coin-flip September resolved. Read it, do not trade it — minutes are three weeks stale by publication. Discovered during the fomc-blackout-start-2026-10-17 initial research."
+}
