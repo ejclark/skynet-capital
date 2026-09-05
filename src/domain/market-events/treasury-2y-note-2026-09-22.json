@@ -1,0 +1,11 @@
+{
+  "id": "treasury-2y-note-2026-09-22",
+  "kind": "rates",
+  "title": "2-Year Treasury Note auction",
+  "date": "2026-09-22",
+  "status": "confirmed",
+  "source": "TSY: home.treasury.gov Tentative-Auction-Schedule.pdf lists \"2-Year NOTE / Announcement Thursday, September 17, 2026 / Auction Tuesday, September 22, 2026 / Settlement Wednesday, September 30, 2026\" — 1:00pm ET. Filed estimate on 2026-09-02 by the 5Y sibling's adjacency sweep on the lane's no-self-confirm rule (never on date doubt); upgraded to confirmed 2026-09-02 by this event's own initial-research session, which re-fetched and text-extracted the same primary PDF independently. TSY: is an authorized confirmed prefix above, already carried by every sibling auction on this identical schedule (3Y 9/8, 10Y 9/9, 30Y 9/10, 20Y 9/15, TIPS 9/17, 5Y 9/23, 7Y 9/24), checked 2026-09-02",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Opens the end-of-month 2Y/5Y/7Y block, the day before the 5Y. Shortest and most Fed-path-sensitive coupon tenor — its stop is the first read on post-FOMC front-end demand that the 5Y then inherits."
+}

@@ -1,0 +1,11 @@
+{
+  "id": "pjm-capacity-auction-2026-12",
+  "kind": "sector",
+  "title": "PJM capacity auction window closes",
+  "date": "2026-12-15",
+  "status": "estimate",
+  "source": "EST: docs/research/ai-energy-constraint.md watch list — confirm vs pjm.com",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "AI-datacenter power-cost signal (the energy-constraint watch list's dated indicator)."
+}

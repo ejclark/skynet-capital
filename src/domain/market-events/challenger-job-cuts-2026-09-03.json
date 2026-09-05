@@ -1,0 +1,11 @@
+{
+  "id": "challenger-job-cuts-2026-09-03",
+  "kind": "macro-print",
+  "title": "Challenger Job-Cut Report (Aug 2026)",
+  "date": "2026-09-03",
+  "status": "confirmed",
+  "source": "IR: the publisher's own August 2026 Job Cut Announcement Report (challengergray.com PDF) carries the header 'FOR RELEASE AT 5:30 A.M. ET, THURSDAY, SEPTEMBER 3, 2026' and a 'CHICAGO, September 3, 2026' dateline — the release itself is the primary confirmation, promoted from the prior EST: calendar reading at close-out 2026-09-04 on a passed event (an audit-trail correction; it licenses nothing)",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Announced-layoffs proxy, the session before BLS payrolls (9/4) and a sibling of the tracked ADP print (9/2) — it supplies the industry and geographic layoff detail weekly claims do not. Filed `low`, not `medium` like ADP, to respect this file's standing note that second-order labor surveys are noisier than the prints tracked here; weekly jobless claims stay deliberately omitted. Matters this cycle only because Warsh's 2026-08-28 keynote characterised the labor market as stable at full employment and pinned the hawkish case on inflation — announced job cuts are one of the few reads that can contradict the low-firing half of that framing before the 9/5 blackout. (The quoted 'low fire, low hire' phrasing this note previously carried is Powell-era 2025 language, not in the 8/28 remarks; corrected 2026-08-31 during this event's initial research.) Discovered during the jobs-2026-09-04 pulse-check adjacency sweep. SCORED 2026-09-04: printed 52,881 (−38% y/y, lowest August since 2022) and drew no attributable market reaction on a +1.2% session that every wrap credited to Waller and ISM Services — the `low` tier is now verified on the tape, not just argued. The September edition is deliberately NOT seeded; see the ledger's close-out for the condition (an official-data vacuum) that would reverse that."
+}

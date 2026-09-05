@@ -1,0 +1,11 @@
+{
+  "id": "import-export-prices-2026-09-16",
+  "kind": "macro-print",
+  "title": "U.S. Import and Export Price Indexes (Aug 2026 data)",
+  "date": "2026-09-16",
+  "status": "confirmed",
+  "source": "BLS: bls.gov/schedule/news_release/ximpim.htm (\"August 2026 | Sep. 16, 2026 | 08:30 AM\") + bls.gov/schedule/2026/09_sched.htm (\"U.S. Import and Export Price Indexes / August 2026 / 08:30 AM\", Wednesday the 16th), both fetched direct 2026-08-31",
+  "impact": "low",
+  "symbols": [],
+  "notes": "The print the 10-16 sibling nominated as the likely 'highest since 2022' import-inflation headline — downgraded by this event's own research to a COIN FLIP on a single index tick. Crossing 5.0% nonfuel y/y needs level 136.29 (+0.361% m/m) against a trailing three-month pace of +0.371%; published 136.3 prints 5.01% and 136.2 prints 4.93%, and the m/m path is decelerating inside that average. Central read +4.9% to +5.2%. Two other reasons to read it: the June–July fuel drag is modelled to end here (fuel m/m ~ +1.0% from a -0.1% prior-month Brent average, R^2 0.71), so all-imports y/y likely re-accelerates to ~6.2-6.6% rather than converging with nonfuel; and this is the LAST release in the series the FY2027 funding branch cannot touch, publishing two weeks before the 09-30 deadline. Lands 08:30 ET on FOMC decision morning (fomc-2026-09-16) alongside retail-sales-2026-09-16, so any move is unattributable — which is why the tier test defers to 10-16. Low tier: these indexes deflate GDP net trade, not PCE. Discovered during the import-export-prices-2026-10-16 initial research; date flipped estimate -> confirmed by its own session 2026-08-31."
+}
