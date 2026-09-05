@@ -1,0 +1,11 @@
+{
+  "id": "intl-transactions-q3-2026-12-18",
+  "kind": "macro-print",
+  "title": "U.S. International Transactions and Investment Position, Q3 2026 (current account / balance of payments)",
+  "date": "2026-12-18",
+  "status": "estimate",
+  "source": "EST: bea.gov/news/schedule, fetched direct 2026-09-05, whose December 2026 block reads verbatim \"December 18, 8:30 AM, News, U.S. International Transactions and Investment Position, 3rd Quarter 2026\". Primary-sourced, and filed estimate on the one count that always applies here: this lane may not self-confirm an event it discovered in-sweep — the confirming re-read of the same BEA schedule page belongs to whichever lane owns this event's own never-assessed research. The 08:30 ET time is BEA's own schedule field, not an inference",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Tracked for a scheduling reason before an economic one: this would be the FIRST BEA release inside a hypothetical FY2027 funding lapse — six days after the 12-11 cliff (cr-expiry-2026-12-11, a lapse beginning 00:00 2026-12-12) and five days before the Q3 GDP third estimate (gdp-q3-2026-third-2026-12-23). Whether it publishes on time is therefore the cheapest primary read available on whether 12-23 publishes on time, and it costs one schedule check rather than a political judgment. Discovered during the gdp-q3-2026-third-2026-12-23 initial research (2026-09-05), where the funding branch is leg 8 and rests entirely on press-grade reporting the lane could not verify. On its own economic merits the release is quarterly balance-of-payments data — the current-account balance and the net international investment position — largely already visible through the monthly FT-900 trade reports this calendar tracks (intl-trade-full-report-2026-10-06, -11-04, -12-08), which is why impact is `low`: symbols: [], no house playbook is macro-keyed, and it carries no series that moves a tracked name. It is not solo on its date — quarterly options expiration (opex-2026-12-18) and the Bank of Japan decision (boj-decision-2026-12-18) share it, and both outrank it for tape attribution."
+}
