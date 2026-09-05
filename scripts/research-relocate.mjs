@@ -20,13 +20,16 @@
 //       for the caller to replace/delete (the build PR rewrites them by hand).
 //
 //   node scripts/research-relocate.mjs branch --base <ref> --head <ref> [--restore-from <ref>]
+//                                             [--proposals-yield]
 //       On a research branch that pre-dates the split, after `git merge origin/main` (conflicted or
 //       not): take what <head> changed relative to <base> in the two legacy files — added or
 //       edited register rows, added/edited/removed calendar entries — write those changes into the
 //       per-event files, then restore both legacy files from <restore-from> (default origin/main)
 //       so the merge resolves to main's shape. Refuses (exit 2, nothing written) when both sides
 //       edited the same row or entry differently — that is a genuine content conflict for a human,
-//       never something a relocation should paper over.
+//       never something a relocation should paper over. `--proposals-yield` names the one
+//       exception: an `estimate` adjacency proposal for an id main already carries yields to
+//       main's entry (reported, never silent) — see planCalendar.
 //
 // Primitives live in research-relocate-lib.mjs. Loud-failure doctrine: an unparseable input is an
 // error, never an empty relocation.
@@ -91,8 +94,13 @@ function runInit() {
 }
 
 /** Calendar half of a branch plan: what <head> changed, checked against what main has done to the
- *  same entry since the fork. Same-entry-both-sides is a conflict, never an overwrite. */
-function planCalendar(baseEntries, headEntries, head, conflicts) {
+ *  same entry since the fork. Same-entry-both-sides is a conflict, never an overwrite — with one
+ *  named exception under `--proposals-yield`: an adjacency PROPOSAL (`status: "estimate"`, added
+ *  by <head>, absent at <base>) for an id main already carries yields to main's entry. The lane's
+ *  own contract makes a proposal provisional (docs/process/EVENT-RESEARCH.md: estimates widen
+ *  caution, never trigger action), and by the time this runs main's version has usually been
+ *  through that event's own initial research. Every yield is reported, never silent. */
+function planCalendar(baseEntries, headEntries, head, conflicts, yields) {
   const events = [];
   const removals = [];
   for (const [id, headEntry] of headEntries) {
@@ -101,9 +109,13 @@ function planCalendar(baseEntries, headEntries, head, conflicts) {
     const onMain = readEventFile(id);
     if (baseEntry !== null && onMain !== null && !sameJson(onMain, baseEntry))
       conflicts.push(`calendar entry "${id}" changed on both main and ${head}`);
-    else if (baseEntry === null && onMain !== null && !sameJson(onMain, headEntry))
-      conflicts.push(`calendar entry "${id}" added on both main and ${head} with different bodies`);
-    else events.push(headEntry);
+    else if (baseEntry === null && onMain !== null && !sameJson(onMain, headEntry)) {
+      if (yields && headEntry.status === "estimate") yields.push(id);
+      else
+        conflicts.push(
+          `calendar entry "${id}" added on both main and ${head} with different bodies`,
+        );
+    } else events.push(headEntry);
   }
   for (const id of baseEntries.keys()) {
     if (headEntries.has(id) || headEntries.size === 0) continue;
@@ -180,6 +192,10 @@ function report(plan, restoreFrom) {
   );
   for (const e of plan.events) console.log(`  event  ${e.id}`);
   for (const id of plan.removals) console.log(`  remove ${id}`);
+  for (const id of plan.yields)
+    console.log(
+      `  yield  ${id} — main already carries this event; the branch's estimate proposal dropped`,
+    );
   for (const r of plan.rows) {
     const how = r.replaces === null ? "" : r.line === null ? " (removed)" : " (edited)";
     console.log(`  row    ${r.id} → forward-tests/${r.fragment}.md${how}`);
@@ -196,6 +212,7 @@ function runBranch() {
   const baseLiteralSrc = showAt(base, REL_LITERAL);
   const headLiteralSrc = showAt(head, REL_LITERAL);
   const conflicts = [];
+  const yields = args.includes("--proposals-yield") ? [] : null;
   const fragments = readFragments();
   const known = knownEventIds([headLiteralSrc, baseLiteralSrc]);
   const { events, removals } = planCalendar(
@@ -203,6 +220,7 @@ function runBranch() {
     parseLiteral(headLiteralSrc),
     head,
     conflicts,
+    yields,
   );
   const rows = planRegister(
     parseRows(showAt(base, REL_REGISTER)),
@@ -221,7 +239,7 @@ function runBranch() {
     process.exit(2);
   }
 
-  const plan = { events, removals, rows };
+  const plan = { events, removals, rows, yields: yields ?? [] };
   applyPlan(plan, fragments);
   // Resolve the merge to main's shape for the two legacy files (the split deleted the literal and
   // emptied the register; <head>'s hunks now live in the files written above).
