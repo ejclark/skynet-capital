@@ -1065,6 +1065,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The richest read on this Committee's reaction function available before the 10-28 decision, and the ONLY one that arrives outside the 10-17 blackout. Matters more than an ordinary minutes release because Warsh has withdrawn the usual substitute: his 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and said forward guidance has overstayed its welcome, so the vote split and the dissent language here are close to the only structured evidence on how a coin-flip September resolved. Read it, do not trade it — minutes are three weeks stale by publication. Discovered during the fomc-blackout-start-2026-10-17 initial research.",
   },
   {
+    id: "ecb-account-2026-10-08",
+    kind: "macro-print",
+    title: "ECB account of the 2026-09-09/10 monetary-policy meeting",
+    date: "2026-10-08",
+    status: "estimate",
+    source:
+      "EST: ecb.europa.eu monetary-policy accounts index (press/accounts), fetched direct 2026-09-05 — states the rule verbatim, 'The accounts are typically published four weeks after the meetings', and names the next release as 8 October 2026. Corroborated by the rule's own arithmetic on the prior edition: the account of the 22-23 July 2026 meeting published 2026-08-27 (ecb.europa.eu/press/accounts/2026/html/ecb.mg260827, fetched the same session). Filed estimate on two counts — the ECB's own word is 'typically', and CONFIRMED_PREFIX carries no slot for a non-Fed central bank's schedule, the same gap ecb-decision-2026-09-10 records. Checked 2026-09-05",
+    impact: "low",
+    symbols: [],
+    notes:
+      "The account is where the 09-10 decision's ARGUMENT becomes public — the vote is not published, so this is the only structured evidence on how close the Governing Council was and on what conditions. Tiered `low` deliberately: this book holds nothing with a euro-rates channel (`symbols: []`, no house playbook is rates-keyed), and the July edition moved nothing. Its one real use is the terminal-rate question ecb-decision-2026-09-10 registers as FT-ecb-decision-2026-09-10-2 — whether the 2.50% peak was near-unanimous or contested is visible only here, ahead of the 10-29 decision. Note the collision: it lands the day after fomc-minutes-2026-10-07, so two central-bank records publish back-to-back. Discovered during the ecb-decision-2026-09-10 initial research (2026-09-05). READ IT, DO NOT TRADE IT — an account is four weeks stale by construction, and this one is stale about a decision that was ~99% priced before it happened.",
+  },
+  {
     id: "imf-world-bank-annual-meetings-2026-10-12",
     kind: "geopolitical",
     title: "IMF / World Bank Group Annual Meetings — Bangkok (Oct 12-18)",
@@ -1251,6 +1264,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     impact: "high",
     symbols: [],
     notes: "Lands ON the GOOG/META print date and a day before AMZN/AAPL — a compound-risk day.",
+  },
+  {
+    id: "ecb-decision-2026-10-29",
+    kind: "macro-print",
+    title: "ECB Governing Council monetary-policy decision + press conference (Frankfurt)",
+    date: "2026-10-29",
+    status: "estimate",
+    source:
+      "EST: ecb.europa.eu Governing Council monetary-policy meeting calendar (press/calendars/mgcgc), fetched direct 2026-09-05 — the October 2026 entries read verbatim 'Governing Council of the ECB: monetary policy meeting in Frankfurt (Day 1)' on 28/10/2026 and 'Governing Council of the ECB: monetary policy meeting in Frankfurt (Day 2), followed by press conference' on 29/10/2026. Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit and because CONFIRMED_PREFIX has no slot for a non-Fed central bank, the same gap ecb-decision-2026-09-10 records. Checked 2026-09-05",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The first venue where the 09-10 meeting's live question gets tested. That question is NOT the rate — a 25bp hike to 2.50% on 09-10 was ~98.9% priced with all 65 Reuters-poll economists agreeing — but the TERMINAL: futures priced ~100% odds of a 3.00% deposit rate by June 2027 (two more hikes) on 2026-09-04, while ~91% of economists had 2.50% standing through year-end. A hike here resolves that ~50bp gap toward the market strip. NO PRICE CHANNEL IS CLAIMED, same as the September entry: `symbols: []`, no house playbook is rates-keyed, and euro policy reaches this book only second-order via dollar translation and global term premium, both already owned by the FOMC entries. Note the stack — it lands the day after fomc-2026-10-28 and shares the date with gdp-q3-2026-advance-2026-10-29 and pce-2026-10-29, so an 08:15 ET euro presser precedes two US prints and attribution on 10-29 is already hard. Discovered during the ecb-decision-2026-09-10 initial research (2026-09-05). Estimate widens caution only; it licenses no date-keyed action.",
   },
   {
     id: "gdp-q3-2026-advance-2026-10-29",
