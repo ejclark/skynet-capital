@@ -203,6 +203,80 @@ describe("applyGuards", () => {
     });
   });
 
+  // Symbol-targeting filter (#885) — a subscription can aim/restrict itself to specific symbols
+  // WITHOUT changing the playbook's own default `Playbook.symbol`.
+  describe("a playbook subscription's symbol-targeting filter", () => {
+    const targeted = {
+      accountId: "acct-1",
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      capitalAllocated: 5_000,
+      enabled: true,
+      createdAt: "2026-08-29T00:00:00.000Z",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+      symbols: ["EEM", "AAPL"],
+    };
+
+    it("refuses a buy in a symbol outside the filter, even with ample budget", () => {
+      const context = aContext({ MSFT: { last: 100 } });
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+
+      const approved = applyGuards(
+        [{ ...buy("MSFT", 10), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        portfolio,
+        context,
+        { maxPositionPct: 1, subscriptions: [targeted] },
+      );
+
+      expect(approved).toEqual([]);
+    });
+
+    it("passes a buy in a symbol the filter names, clamped exactly as an unfiltered subscription would be", () => {
+      const context = aContext({ EEM: { last: 100 } });
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+
+      const [approved] = applyGuards(
+        [{ ...buy("EEM", 10_000), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        portfolio,
+        context,
+        { maxPositionPct: 0.2, subscriptions: [targeted] },
+      );
+
+      expect(approved?.quantity).toBeGreaterThan(0);
+      const eemAsk = context.quotes.EEM?.ask ?? 0;
+      expect((approved?.quantity ?? 0) * eemAsk).toBeLessThanOrEqual(5_000);
+    });
+
+    it("never gates an exit — a sell in a filtered-out symbol still passes", () => {
+      const context = aContext({ MSFT: { last: 100 } });
+      const portfolio = aPortfolio({ positions: [aPosition({ symbol: "MSFT", quantity: 10 })] });
+
+      const [approved] = applyGuards(
+        [{ ...sell("MSFT", 10), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        portfolio,
+        context,
+        { maxPositionPct: 0.2, subscriptions: [targeted] },
+      );
+
+      expect(approved?.quantity).toBe(10);
+    });
+
+    it("leaves an unfiltered (no `symbols`) subscription unaffected, in any symbol", () => {
+      const context = aContext({ MSFT: { last: 100 } });
+      const portfolio = aPortfolio({ cash: 1_000_000 });
+      const unfiltered = { ...targeted, symbols: undefined };
+
+      const [approved] = applyGuards(
+        [{ ...buy("MSFT", 10), playbookId: "S1-NVDA", playbookMode: "standard" }],
+        portfolio,
+        context,
+        { maxPositionPct: 1, subscriptions: [unfiltered] },
+      );
+
+      expect(approved?.quantity).toBe(10);
+    });
+  });
+
   // The graduated risk ladder (src/risk/risk-ladder.ts), block rung. Like the discipline config
   // it is OPT-IN by absence: with no tier supplied the guards behave exactly as they did before
   // the ladder existed, which is what keeps evals and the readiness gate untouched.

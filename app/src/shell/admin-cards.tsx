@@ -5,17 +5,19 @@ import {
   type AdminAnswer,
   fetchClaims,
   fetchGuestList,
-  fetchOpsStatus,
   inviteRequest,
   type LinkedAccount,
   linkRequest,
 } from "../live/admin";
 
 /**
- * THE OWNER'S CARDS (#738 phase 9e) — `/invite`, `/claim`, and `/ops-status` on the settings
- * page, self-gating exactly like Mission Control: each renders only when its API says the
- * session is an owner, and a member's settings page simply doesn't have them. Sentences render
- * verbatim from the server; linking stays deliberately owner-only (it grants order placement).
+ * THE OWNER'S CARDS (#738 phase 9e) — `/invite` and `/claim` on the settings page, self-gating
+ * exactly like Mission Control: each renders only when its API says the session is an owner, and
+ * a member's settings page simply doesn't have them. Sentences render verbatim from the server;
+ * linking stays deliberately owner-only (it grants order placement).
+ *
+ * The ops-status card was the third of these and is gone (#1296): fleet health is group-visible
+ * now, so it belongs to the shell's status pill rather than to an owner-gated settings section.
  */
 
 function useAnswer() {
@@ -147,8 +149,58 @@ function LinkRow({
   );
 }
 
-/** @category admin */
-export function AccountLinksCard(): ReactElement | null {
+/** The selected account's own ownership — a compact line, not a card, so it reads as part of
+ *  THIS account's settings (Eric, 2026-09-05: deconstruct the all-accounts card, render ownership
+ *  under the specified account) rather than a redundant roster of every account on the board.
+ *  Only ever shows an owned account here: an account nobody owns yet isn't in the switcher that
+ *  picked `accountId` in the first place — that case belongs to `UnclaimedAccountsCard`.
+ *  @category admin */
+export function AccountOwnershipLine({
+  accountId,
+  onChanged,
+}: {
+  readonly accountId: string;
+  readonly onChanged: () => void;
+}): ReactElement | null {
+  const queryClient = useQueryClient();
+  const claims = useQuery({ queryKey: ["admin-claim"], queryFn: fetchClaims });
+  const [busy, setBusy] = useState(false);
+  const { note, apply, fail } = useAnswer();
+  if (!claims.data?.owner) return null;
+  const account = claims.data.accounts.find((a) => a.id === accountId);
+  if (!account?.owner) return null;
+  const unlink = async () => {
+    setBusy(true);
+    try {
+      apply(await linkRequest({ id: account.id, unlink: true }));
+      void queryClient.invalidateQueries({ queryKey: ["admin-claim"] });
+      onChanged();
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <p className="set-hint set-ownership">
+      Owned by {account.owner}
+      <button
+        type="button"
+        className="set-ownership-unlink"
+        disabled={busy}
+        onClick={() => void unlink()}
+      >
+        {busy ? "…" : "Unlink"}
+      </button>
+      {note ? <span className={note.ok ? "set-ok" : "set-err"}> {note.text}</span> : null}
+    </p>
+  );
+}
+
+/** The residual roster admin needs a specified-account view can't cover: accounts nobody owns
+ *  yet, so they aren't reachable from any per-account view. Shrunk from listing every account
+ *  (owned included) to just the ones actually needing a first owner. @category admin */
+export function UnclaimedAccountsCard(): ReactElement | null {
   const queryClient = useQueryClient();
   const claims = useQuery({ queryKey: ["admin-claim"], queryFn: fetchClaims });
   const [id, setId] = useState("");
@@ -156,8 +208,8 @@ export function AccountLinksCard(): ReactElement | null {
   const [busy, setBusy] = useState(false);
   const { note, apply, fail } = useAnswer();
   if (!claims.data?.owner) return null;
-  const accounts = claims.data.accounts;
-  const unowned = accounts.filter((a) => !a.owner);
+  const unowned = claims.data.accounts.filter((a) => !a.owner);
+  if (unowned.length === 0) return null;
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["admin-claim"] });
   const link = async () => {
     setBusy(true);
@@ -173,76 +225,41 @@ export function AccountLinksCard(): ReactElement | null {
   };
   return (
     <section className="set-card adm">
-      <h2 className="set-card-h">🔗 Account links</h2>
+      <h2 className="set-card-h">🔗 Unclaimed accounts</h2>
       <p className="mc-sub">
-        Who the desk believes each account belongs to. An unowned account keeps its history and
-        place on the board — it just can't be traded until it's linked. Linking grants the power to
-        place orders on that account, so it is deliberately owner-only.
+        Nobody's linked to these yet — they keep their history and place on the board, but can't be
+        traded until they're linked. Linking grants the power to place orders, so it is deliberately
+        owner-only.
       </p>
       <div className="adm-rows">
-        {accounts.map((account) => (
+        {unowned.map((account) => (
           <LinkRow key={account.id} account={account} onChanged={refresh} />
         ))}
       </div>
-      {unowned.length > 0 ? (
-        <div className="adm-form">
-          <select value={id || unowned[0]?.id} onChange={(e) => setId(e.target.value)}>
-            {unowned.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.displayName}
-              </option>
-            ))}
-          </select>
-          <input
-            type="email"
-            value={email}
-            placeholder="friend@gmail.com"
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <button
-            type="button"
-            className="btn btn-primary mc-btn"
-            disabled={busy || email.trim() === ""}
-            onClick={() => void link()}
-          >
-            {busy ? "Linking…" : "Link this account"}
-          </button>
-        </div>
-      ) : (
-        <p className="note">Every account on the board already has an owner — nothing to link.</p>
-      )}
-      {note ? <p className={note.ok ? "set-ok" : "set-err"}>{note.text}</p> : null}
-    </section>
-  );
-}
-
-/** @category admin */
-export function OpsStatusCard(): ReactElement | null {
-  const ops = useQuery({ queryKey: ["admin-ops"], queryFn: fetchOpsStatus });
-  if (!ops.data?.owner) return null;
-  const { status } = ops.data;
-  return (
-    <section className="set-card adm">
-      <h2 className="set-card-h">📡 Ops status</h2>
-      <p className="mc-sub">
-        Bots and deploy health, read-only — generated{" "}
-        {status.generatedAt.slice(0, 16).replace("T", " ")} UTC
-        {status.degraded ? " · running without a GitHub token, so the panel is smaller" : ""}.
-      </p>
-      <div className="adm-rows">
-        {status.signals.map((signal) => (
-          <div key={signal.id} className="adm-row">
-            <span className={`adm-dot adm-${signal.verdict}`} aria-hidden="true" />
-            <span className="adm-main">{signal.label}</span>
-            <span className="adm-meta">{signal.detail}</span>
-            {signal.link ? (
-              <a href={signal.link.href} target="_blank" rel="noopener noreferrer">
-                {signal.link.label}
-              </a>
-            ) : null}
-          </div>
-        ))}
+      <div className="adm-form">
+        <select value={id || unowned[0]?.id} onChange={(e) => setId(e.target.value)}>
+          {unowned.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.displayName}
+            </option>
+          ))}
+        </select>
+        <input
+          type="email"
+          value={email}
+          placeholder="friend@gmail.com"
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn btn-primary mc-btn"
+          disabled={busy || email.trim() === ""}
+          onClick={() => void link()}
+        >
+          {busy ? "Linking…" : "Link this account"}
+        </button>
       </div>
+      {note ? <p className={note.ok ? "set-ok" : "set-err"}>{note.text}</p> : null}
     </section>
   );
 }

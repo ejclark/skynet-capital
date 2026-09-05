@@ -116,27 +116,51 @@ function unknownDeploySignals(
 }
 
 /** The two deploy signals when no token is configured — the honest degraded mode this panel
- *  defaults to for slice 1 rather than provisioning anything new. */
-export function degradedDeploySignals(actionsLink: OpsSignalLink): {
+ *  defaults to rather than provisioning anything new. The bots row still names the running commit
+ *  when the process reported one: knowing WHAT is running never depended on the GitHub token, only
+ *  judging whether it is current does. */
+export function degradedDeploySignals(
+  actionsLink: OpsSignalLink,
+  botsRunningSha?: string,
+): {
   app: OpsSignal;
   bots: OpsSignal;
 } {
-  return unknownDeploySignals(
+  const signals = unknownDeploySignals(
     "No GitHub token configured for this app (SKYNET_FEEDBACK_GITHUB_TOKEN) — deploy lag isn't computed here. Check Actions directly.",
     actionsLink,
   );
+  if (!botsRunningSha) return signals;
+  return {
+    app: signals.app,
+    bots: {
+      ...signals.bots,
+      detail: `Bots report running ${short(botsRunningSha)}. No GitHub token configured here, so whether that's current isn't computed — check Actions.`,
+    },
+  };
 }
 
 /** Same shape as `degradedDeploySignals`, worded for "we have a token but GitHub didn't answer"
  *  rather than "no token configured" — the two honest-degrade paths read differently on purpose. */
-export function degradedFromFailure(actionsLink: OpsSignalLink): {
+export function degradedFromFailure(
+  actionsLink: OpsSignalLink,
+  botsRunningSha?: string,
+): {
   app: OpsSignal;
   bots: OpsSignal;
 } {
-  return unknownDeploySignals(
+  const signals = unknownDeploySignals(
     "Couldn't reach the GitHub Actions API just now — check Actions directly.",
     actionsLink,
   );
+  if (!botsRunningSha) return signals;
+  return {
+    app: signals.app,
+    bots: {
+      ...signals.bots,
+      detail: `Bots report running ${short(botsRunningSha)}. Couldn't reach the GitHub Actions API just now, so whether that's current isn't computed — check Actions.`,
+    },
+  };
 }
 
 export function appDeploySignal(
@@ -175,13 +199,27 @@ export function appDeploySignal(
   };
 }
 
-export function botsDeploySignal(lag: BotsDeployLagVerdict, actionsLink: OpsSignalLink): OpsSignal {
+/**
+ * The bots row. `botsRunningSha` is the commit the bots PROCESS reported on its last controls poll
+ * (`controls-poll-wire.ts`) — when present it is both the baseline the verdict was computed
+ * against and the answer to #666's "on what commit?", so every branch below names it. It outranks
+ * CI's deploy record on purpose: a machine whose deploy succeeded but whose process later rolled
+ * back still reads "current" from the record, and reads honestly from its own word.
+ */
+export function botsDeploySignal(
+  lag: BotsDeployLagVerdict,
+  actionsLink: OpsSignalLink,
+  botsRunningSha?: string,
+): OpsSignal {
+  const running = botsRunningSha ? short(botsRunningSha) : "";
   if (!lag.known) {
     return {
       id: "deploy-bots",
       label: "Bots deploy",
       verdict: "unknown",
-      detail: "Couldn't scan Actions job history for the bots app.",
+      detail: running
+        ? `Bots report running ${running}, but GitHub couldn't say what has changed since — check Actions.`
+        : "Couldn't scan Actions job history for the bots app.",
       link: actionsLink,
     };
   }
@@ -200,14 +238,17 @@ export function botsDeploySignal(lag: BotsDeployLagVerdict, actionsLink: OpsSign
       id: "deploy-bots",
       label: "Bots deploy",
       verdict: "ok",
-      detail: "Bots app is current — nothing bot-relevant merged since its last deploy.",
+      detail: running
+        ? `Bots are running ${running} — current; nothing bot-relevant has merged since.`
+        : "Bots app is current — nothing bot-relevant merged since its last deploy.",
     };
   }
+  const since = running ? `Bots are running ${running}, STALE` : "Bots app is STALE";
   return {
     id: "deploy-bots",
     label: "Bots deploy",
     verdict: "attention",
-    detail: `Bots app is STALE — ${lag.reason ?? "bot-relevant commits pending"} since its last deploy. Recover via Pipeline → Run workflow → force_bots_deploy.`,
+    detail: `${since} — ${lag.reason ?? "bot-relevant commits pending"} since${running ? "" : " its last deploy"}. Recover via Pipeline → Run workflow → force_bots_deploy.`,
     link: actionsLink,
   };
 }

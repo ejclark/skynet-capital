@@ -123,6 +123,8 @@ a {
 .topnav-link[aria-current="page"] {
   color: var(--text);
   font-weight: 600;
+  background: var(--surface-2);
+  border-radius: 8px 8px 0 0;
   border-bottom-color: var(--accent);
 }
 .topbar-actions {
@@ -180,27 +182,6 @@ a {
   color: var(--text);
   box-shadow: var(--elev-base);
 }
-.status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted);
-}
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--muted);
-}
-.status-live .status-dot {
-  background: var(--pos);
-  box-shadow: 0 0 6px var(--pos);
-}
-.status-resyncing .status-dot {
-  background: var(--neg);
-}
 
 /* FLUID (Eric, 2026-09-04): the frame fills the window — it used to centre in a 1320px column
    with the stage capped at 880px, which left two-thirds of a wide monitor as empty margin. Now
@@ -240,11 +221,6 @@ a {
   }
   .toggle-abbr {
     display: inline;
-  }
-  /* the dot alone carries the connection state — the seq text has no room here */
-  .status {
-    font-size: 0;
-    gap: 0;
   }
   /* the topbar wraps: brand + actions hold the first row, the view nav becomes a
      full-width scrollable second row — six views no longer shove the actions off-screen */

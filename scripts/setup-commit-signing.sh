@@ -9,6 +9,10 @@ set -euo pipefail
 #
 # If GIT_SIGNING_KEY is absent (e.g. a container started before the secret existed),
 # the script no-ops so nothing breaks — commits are simply left unsigned that session.
+#
+# (2026-09-04 → 09-05: this script briefly also registered a custom git merge driver for the
+# market-events calendar, #1324. Issue #1449 split that calendar into one file per event, so there
+# is no shared file left to merge and no driver to register — the step is gone, not moved.)
 
 KEY_DIR="${HOME}/.ssh"
 # The harness points user.signingkey at /home/claude/.ssh/commit_signing_key.pub; keep

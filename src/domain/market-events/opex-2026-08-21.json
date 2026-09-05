@@ -1,0 +1,11 @@
+{
+  "id": "opex-2026-08-21",
+  "kind": "opex",
+  "title": "Monthly options expiration (August)",
+  "date": "2026-08-21",
+  "status": "confirmed",
+  "source": "OCC: theocc.com expiration calendar — 3rd-Friday standard, checked 2026-08-18",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Standard monthly expiration. Pin/gamma effects into the close; single-name weeklies settle too."
+}

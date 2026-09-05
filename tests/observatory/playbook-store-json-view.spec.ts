@@ -48,4 +48,15 @@ describe("playbookStoreView", () => {
     ]);
     expect(view.capitalUnderManagement).toBe(6_000);
   });
+
+  it("carries a symbol-targeting filter (#885) onto its card, and omits it when absent", () => {
+    const view = playbookStoreView([sub({ playbookId: "S1-NVDA", symbols: ["EEM", "AAPL"] })]);
+    const nvda = view.cards.find((c) => c.id === "S1-NVDA");
+    expect(nvda?.subscription).toEqual({
+      mode: "standard",
+      capitalAllocated: 5_000,
+      enabled: true,
+      symbols: ["EEM", "AAPL"],
+    });
+  });
 });

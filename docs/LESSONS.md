@@ -27,6 +27,99 @@ it. Prevention ranks, best first:
 
 ---
 
+### Three merge-side fixes in one day could not stop research PRs conflicting — the shared file was the bug, not the merge
+
+- **SHA:** n/a (issue #1449)   **DATE:** 2026-09-05   **STATUS:** closed
+- **SIGNAL:** Eric, 2026-09-05 morning: "~20 PRs of research conflicted with itself again." The
+  detection lag was the whole prior day: #1324 (custom merge driver, 09-04 21:40Z), #1341/#1359
+  (date-sorted insertion + ordering gate, 00:30Z) and #1334 (`merge=union` on the register,
+  01:47Z) each shipped with a correct call sheet and a dated falsifier — #1334's read *"two weeks
+  after union … ledger flags still ≥3/day"*. Measured ~05:00Z: 13 of ~25 research PRs opened after
+  union landed were still `conflict-flagged`; simulating GitHub's plain 3-way merge on the 14 open
+  research PRs gave 11 conflicting on the register and 7 on the calendar. The falsifier fired in
+  three hours, and nothing was watching the falsifier — each issue closed when its PR merged.
+- **ROOT CAUSE:** every event-research lane owns exactly one event, but two of its write targets
+  were repo-wide aggregates every sibling lane appended to at the same time — one markdown table
+  of all forward tests, one TypeScript array of all calendar entries. Every fix optimised how the
+  aggregate *merged* (a driver, an ordering, an attribute), and every one of them ran only in a
+  local `git merge`. GitHub's server-side `mergeable` runs no driver and reads no attribute, so the
+  PRs kept reading `dirty`, each flag dispatched a paid repair session, and a repaired PR
+  re-dirtied the next time `main` took a ledger merge (every ~7 min, #1403). The three call sheets
+  all *named* this limit in a caveat and still chose the local lever, because per-event files were
+  priced as the expensive option (a protected-prompt edit, ~45 links) — a cost that was real and
+  one-time against a recurring cost that scaled with fan-out.
+- **PREVENTION:** structure, then a gate. (1) The two aggregates became one file per owner —
+  `docs/research/forward-tests/<event-id>.md` and `src/domain/market-events/<id>.json` — with the
+  register composed at read time (`composeRegister`) and the calendar assembled by
+  `loadMarketEvents`; the driver, the sorter, the whole-entry parser, the registration hook, the
+  attributes and their four specs were deleted rather than kept as belt. (2) A blocking placement
+  gate, `tests/arch/forward-tests-fragments.spec.ts` + `event-scan --validate`'s file-name rule,
+  whose failure message names the right file — so a session following the stale protected
+  instruction self-corrects on `npm test`. (3) Doctrine, `.gitattributes` header: a recurring
+  conflict on one path is a shared aggregate with many owners — split it before reaching for a
+  merge attribute. **Generalisation for the next time:** when a bottleneck call sheet rejects the
+  structural option as "for now" with a falsifier, the falsifier needs an owner — the digest scan
+  or the issue's `next-slice` label — or it will fire unobserved, as this one did.
+- **SIDE QUESTS:** #1403 (re-dispatching conflict repair) mostly dissolves with no shared writes
+  left — noted on that issue rather than built. `scripts/research-relocate.mjs branch` is the
+  migration tool for research branches that pre-date the split and can be deleted once none remain.
+
+---
+
+### Five gated approval taps went to re-pulling the same bot log — the answer was sitting free in the code the whole time
+
+- **SHA:** n/a (fix on `CLAUDE.md` and `.claude/output-styles/orient.md`)   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** Eric, on his phone and traveling, tapped the `autonomy-ops` GitHub Environment approval
+  five times between ~17:55 and 18:52 UTC so a session could read `skynet-capital-bots` logs — the
+  only log path Claude has, by design (no flyctl). Taps #2, #3 and #4 (18:11, 18:20, 18:42) returned
+  **byte-identical output ending at the same 18:10:15 line**, and were requested anyway; the working
+  theory oscillated between "the Fly log pipeline is stale" and "the process hung on the mid-session
+  reconnect" without either being tested. First detectable: 18:10:14, the moment the log showed
+  `[creds] sauron: broker swapped in place (rotated)` followed by a clean market-data re-auth and
+  then nothing — that pattern was already sufficient, and was on screen an hour before it was read
+  correctly. Actually detected: ~18:55, after the code was finally traced. **Detection lag ≈ 45
+  minutes and four of the five taps**, on a ~2-hour investigation.
+- **ROOT CAUSE:** the diagnostic paths available here have wildly different prices and nothing in the
+  process says to sort by price. Reading `src/scripts/run-autonomous.ts` and
+  `src/scripts/autonomous-market-clock.ts` is free, unlimited, and instant; a `logs` dispatch spends
+  the constraint (Eric's attention, on a phone, mid-travel) one manual approval at a time. The
+  situation was routed as **Complex** — probe until the world reveals itself, per
+  `.claude/output-styles/orient.md`'s Cynefin table — when it was **Complicated**: every fact needed
+  was knowable from code sitting in this repo, unread. "Unknowable until probed" is a claim about the
+  world; here it was really a claim about what had not been opened yet, and the standing "keep
+  pulling threads until you have hard proof" instinct got spent on pulling *logs* because that was
+  the thread already in hand. Ten minutes of reading would have said what the silence meant:
+  `maybeEvaluate` is price-tick-driven and gated on `marketClock.isOpen()`
+  (`src/scripts/run-autonomous.ts:303-305`), and a healthy evaluation with no trade signal writes
+  nothing to stdout — so **silence after a successful rotation is health**, and every recurring
+  failure line (the 60s clock poll, the news poll, the per-tick eval) stopping at the exact instant
+  the rotated credential applied was the proof, twice over. The escalation compounded it: a forced
+  restart was recommended as a *probe*, and `flip-mode`'s `flyctl secrets set` + machine restart
+  wiped ~36 minutes of accumulated in-memory momentum/sentiment state to learn nothing. "Safety
+  scales to stakes" was applied to credentials and never to the signal window, which was the actual
+  thing of value in that process.
+- **PREVENTION:** doctrine, in the two files every session loads — no gate is available here, because
+  the drift is in how a session *sequences its own reading*, which no script can observe.
+  `CLAUDE.md` → _Interrupt economics_ gains **"free diagnostics before gated ones"**: name the price
+  of each diagnostic path, exhaust the free ones (the code path, logs already in hand) first, state
+  what the paid one would tell you that they cannot — a repeat pull returning identical output is a
+  second tap for zero information — and never spend a state-destroying action as a probe.
+  `.claude/output-styles/orient.md` → step 3 (Route) gains the matching correction at the point the
+  misroute happens: if the answer sits in code in this repo it is Complicated, not Complex, and a
+  probe that costs the constraint is priced before it is chosen.
+- **SIDE QUESTS:** the boot log itself is a trap and stays one — a code follow-up this retro
+  deliberately did not fix. `src/scripts/run-autonomous.ts` starts the shared clock/news/price
+  connections (line 187), polls news (line 209) and seeds the daily-loss baseline (line 228) **before**
+  `await credentials.reconcile(bootControls)` (line 252) applies the bridge-delivered rotated
+  credential, so every boot prints a burst of alarming `401`s from the dead env credential
+  (`SKYNET_BOT_SAURON_KEY/SECRET`) that are expected noise — and then a healthy process prints
+  nothing at all. Noise-at-boot plus silence-as-health is a log design that invites exactly this
+  misdiagnosis from anyone skimming, including the next session. Logged to `docs/IDEAS.md`; the fix
+  is either reconciling credentials before the first outbound call or labeling the pre-reconcile
+  failures as expected.
+
+---
+
 ### Two concurrent event-research sessions both registered forward-test `FT-25` — the id came from a live read of a file every sibling was also reading
 
 - **SHA:** n/a (fix on `.github/prompts/event-research.md` and `scripts/forward-test-id-scan.mjs`)   **DATE:** 2026-09-04   **STATUS:** closed
@@ -310,7 +403,7 @@ it. Prevention ranks, best first:
   today's 190 (post one demonstration rep — see SIDE QUESTS) and ratchets down as touched;
   `tests/arch/comment-bloat.spec.ts` runs it advisory in CI per the 2026-08-29 debt-gate policy.
   Doctrine: `docs/ENGINEERING.md`'s "Co-locate intent with structure" section now states the WHY-vs-
-  narration split explicitly, and `reviewer.md`'s checklist names it, so both the scripted eye and
+  narration split explicitly, and `.claude/agents/reviewer.md`'s checklist names it, so both the scripted eye and
   the review-time judgment call are covered — not a mass rewrite (would violate the "grandfather,
   then shrink" rule for retroactive-judging conventions, `docs/COACHES.md`). The scan also now rides
   the existing secretary digest Routine (`trig_01KaMC2uR3cFW5XTUL6rzPuS`), volume-gated (only
@@ -455,7 +548,7 @@ it. Prevention ranks, best first:
   therefore collapses to at most two survivors — whichever happened to be running plus whichever
   was queued last — and which N-2 events get dropped is an artifact of webhook delivery order, not
   anything the workflow's own logic controls. The one step that actually claims the issue
-  (`node scripts/moneypenny.mjs --claim-feedback`) was gated on `github.event.label.name ==
+  (`node scripts/moneypenny/index.mjs --claim-feedback`) was gated on `github.event.label.name ==
   'feedback'` specifically, so the bug only manifests as a *miss* when the `feedback` event is the
   one that loses the race — which is exactly what happened both times.
 - **PREVENTION:** gate. `moneypenny-events.yml`'s concurrency `group:` now includes
@@ -790,7 +883,7 @@ it. Prevention ranks, best first:
   event research and stall audit with it. The call is only exercised on a runner with a token, so
   no local check and no spec touched it; `npm test` was green on the branch that shipped it.
 - **PREVENTION:** gate. `tests/arch/gh-json-fields.spec.ts` reads every `--json` field list out of
-  `scripts/moneypenny.mjs` and checks it against the allow-list `gh` itself printed in the failure,
+  `scripts/moneypenny/index.mjs` and checks it against the allow-list `gh` itself printed in the failure,
   offline and with no token. Verified in both directions: it passes on the corrected source and
   names `closedByPullRequests` when handed the broken form.
 - **SIDE QUESTS:** the medic could not report this one — its run was cancelled by the next push,
@@ -896,10 +989,10 @@ it. Prevention ranks, best first:
   chars, no fence). Worse than a loud failure: the claim lease was already taken, so the issue read
   as claimed-and-building while nothing built it.
 - **PREVENTION:** gate + script + doctrine. (1) The decision moved out of the workflow into
-  `modelTier()` in `scripts/moneypenny.mjs` — pure, and specced across all three branches including
+  `modelTier()` in `scripts/moneypenny/index.mjs` — pure, and specced across all three branches including
   the exact 1,410-char body (`tests/scripts/model-tier.spec.ts`). (2) The claim step is now one
   specced call (`--claim-feedback`), deleting the last inline `node -e` + `jq` bash in that lane.
-  (3) The **CI Medic** lane (`.github/workflows/moneypenny-repair.yml`, `scripts/moneypenny-repair.mjs`) turns a red
+  (3) The **CI Medic** lane (`.github/workflows/moneypenny-repair.yml`, `scripts/moneypenny/repair.mjs`) turns a red
   run on `main` into a capsule issue plus a dispatched repair session, so the *next* silent failure
   is noticed by the system rather than by Eric.
 - **SIDE QUESTS:** the claim lease has no release-on-failure path — a job that dies after claiming
@@ -1450,7 +1543,7 @@ it. Prevention ranks, best first:
   silently never created. The comment directly above the code ("GitHub auto-creates a label the
   first time it is applied") describes the *intended* self-healing behavior; the missing flag is
   exactly why it didn't happen.
-- **PREVENTION:** gate/script — `scripts/moneypenny.mjs`'s `ensureLabel` now passes `--fail` on
+- **PREVENTION:** gate/script — `scripts/moneypenny/index.mjs`'s `ensureLabel` now passes `--fail` on
   both the PATCH and the POST, so a real HTTP failure (including "doesn't exist yet") throws and
   reaches the fallback, while the intentionally-swallowed "already exists" 422 on the POST still
   degrades silently exactly as designed. Fixed in this PR, not deferred.
@@ -1564,7 +1657,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SHA:** fafbbf1   **DATE:** 2026-08-26   **STATUS:** closed
 - **SIGNAL:** ten consecutive `Postmaster` push runs failed inside 45 minutes (12:31–13:13), all the
   identical one-liner: `Error: gh issue list (shipped) failed: GraphQL: API rate limit already
-  exceeded for user ID 3472134`, thrown from `gatherDeps` in `scripts/moneypenny.mjs`. Detection lag
+  exceeded for user ID 3472134`, thrown from `gatherDeps` in `scripts/moneypenny/index.mjs`. Detection lag
   was effectively zero — each run failed loudly on its own — but nobody connected the ten reds into
   one incident and banked the retro until this burn-down (#781) found them.
 - **ROOT CAUSE:** `gatherDeps`'s `shippedSweep` ran a GraphQL `gh issue list` with each issue's
@@ -1575,11 +1668,11 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   rolled over — including `ee741ea` itself, the fix commit, which landed mid-burst and still hit the
   exhausted budget on its own push (a code fix cannot un-spend an already-drained hourly quota).
 - **PREVENTION:** already landed, found already fixed rather than built here. `ee741ea` (2026-08-26)
-  cut the query in two ways, both now in `scripts/moneypenny.mjs`'s `gatherDeps`: (1) a cheap REST
+  cut the query in two ways, both now in `scripts/moneypenny/index.mjs`'s `gatherDeps`: (1) a cheap REST
   existence check (`ghRest`, the plentiful core bucket) gates whether the expensive GraphQL sweep
   runs at all — most pushes have nothing labeled `feedback`/`event-research` open and now pay
   nothing; (2) the open-issue-titles read moved off a second GraphQL query onto REST entirely. The
-  code comment at `scripts/moneypenny.mjs:301-309` narrates this exact incident inline. No further
+  code comment at `scripts/moneypenny/index.mjs:301-309` narrates this exact incident inline. No further
   code change needed; this entry exists to close the paper trail the fix never got.
 - **SIDE QUESTS:** a burst this size can still exhaust the budget again on a busier day — the fix
   lowers the cost per push, not the ceiling itself. Worth a follow-up: does GitHub expose remaining
@@ -1609,7 +1702,7 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   loop, so one un-permitted comment threw past every later intent in the same push, including intents
   that had nothing to do with commenting.
 - **PREVENTION:** already landed, found already fixed rather than built here. `runIntents` in
-  `scripts/moneypenny.mjs` (see its docstring, dated 2026-08-26) now wraps each intent in its own
+  `scripts/moneypenny/index.mjs` (see its docstring, dated 2026-08-26) now wraps each intent in its own
   try/catch: a failed intent lands in the receipt by name with an `::error::` annotation, the run
   still fails honestly, but every other intent that push still executes. A comment permission gap is
   still a real failure — closing it needs the App/PAT install `e122ee8` already named as Eric's step
@@ -1896,3 +1989,40 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   exact command, so the two lessons close together: the guard catches the staleness, its remedy text
   prevents this exact commitlint trap from recurring on the fix.
 - **SIDE QUESTS:** none.
+
+### A shipped workflow was silently un-invokable by name for ~55 minutes — its own follow-up PR broke it
+
+- **SHA:** d43587c   **DATE:** 2026-09-04   **STATUS:** closed
+- **SIGNAL:** `Workflow({name: "grind"})` answered `not found` (listing only `deep-research,
+  symbol-sweep`) on the first real attempt to run the chore it had just been built and documented
+  for, ~55 minutes after #1306 merged. No red run, no log line, no gate — `main` stayed green the
+  whole time, so `incident-scan.mjs`'s eye (a failed run on `main`) could not see it. Detected only
+  because a human-driven session tried to use the thing.
+- **ROOT CAUSE:** the Workflow tool's registry parses each `.claude/workflows/*.js` script's
+  `export const meta` STATICALLY, and its contract is strict — a pure literal, no `+`, template
+  strings, identifiers, calls, or spreads (`workflow-authoring`: "The `meta` object must be a PURE
+  LITERAL"). #1306 rewrote `whenToUse` as a `+`-concatenated string to keep lines short. A meta that
+  breaks the rule doesn't error; the script silently drops out of the registry. Two things made
+  the *diagnosis* expensive on top of the miss: the registry is built once per session, lazily at
+  the first `Workflow` call, and never re-reads (proved with a probe — a fresh-named copy of the
+  version that had registered at session start, dropped into the directory mid-session, never
+  appeared), so three successive plausible meta fixes were unobservable; and the name path only
+  says "not found", while `scriptPath` reads the file fresh and reports the real error. What else
+  crosses this system: the slash-command index also parses the same meta (and *did* list `/grind`
+  from the pre-#1306 file), the `/workflows` UI, and every other script in the directory —
+  `symbol-sweep.js` was one lazy edit away from the same fate.
+- **PREVENTION:** gate (#1331). `scripts/workflow-meta-scan.mjs` (acorn, parsing the harness's
+  top-level-`await`/`return` dialect) walks every workflow's meta initializer and refuses any
+  non-literal node, a meta that isn't the first statement, or a `name` ≠ filename;
+  `tests/arch/workflow-meta.spec.ts` runs it against the real directory, BLOCKING (a dropped
+  workflow is a broken contract, not debt to ratchet), and pins the scanner on seeded sources
+  (concatenation, template, identifier, call, spread, order, name). `npm run workflow:meta` for
+  hand use. Hardening: `acorn` had been reachable only as a transitive of `dependency-cruiser`;
+  it is now a declared devDependency so the gate can't lose its parser to an unrelated upgrade.
+  Doctrine: `docs/grind/README.md` → "If `Workflow({name})` says not found" records the
+  registry's real behavior and the `scriptPath` escape hatch; `docs/research-teams/PLAYBOOK.md`
+  banks the diagnostic lesson (before bisecting content, spend one probe establishing whether the
+  observer re-reads at all).
+- **SIDE QUESTS:** the same shape — a statically-parsed header whose failure mode is silent
+  absence, not an error — describes `.claude/skills/*/SKILL.md` and `.claude/agents/*.md`
+  frontmatter; logged to `docs/IDEAS.md` rather than built here.

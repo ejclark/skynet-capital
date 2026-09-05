@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
+import { fetchGuestList } from "../live/admin";
 import {
   fetchSettings,
   type OwnedAccount,
@@ -11,12 +12,14 @@ import {
   type SettingsWriteResult,
   saveProfile,
 } from "../live/settings";
-import { AccountLinksCard, GuestListCard, OpsStatusCard } from "../shell/admin-cards";
+import { AccountSwitcher } from "../shell/account-switcher";
+import { AccountOwnershipLine, GuestListCard, UnclaimedAccountsCard } from "../shell/admin-cards";
 import { BotSwitch } from "../shell/bot-switch";
 import { PageFrame } from "../shell/frame";
 import { MissionControl } from "../shell/mission-control";
 import { type Density, type Theme, usePrefs } from "../shell/prefs";
 import { ProfileRail } from "../shell/profile-rail";
+import { type SettingsSection, SettingsToc } from "../shell/settings-toc";
 import { Toggle } from "../shell/toggle";
 
 /**
@@ -271,7 +274,7 @@ function PreferencesCard(): ReactElement {
   const setTheme = usePrefs((s) => s.setTheme);
   const setDensity = usePrefs((s) => s.setDensity);
   return (
-    <section className="set-card" id="preferences">
+    <section className="set-card">
       <h2 className="set-card-h">Preferences</h2>
       <p className="set-hint">
         Display settings for this browser — they apply immediately and aren't tied to any account.
@@ -318,13 +321,14 @@ function AccountCard({
   readonly onChanged: () => void;
 }): ReactElement {
   return (
-    <section className="set-card" id={`account-${account.id}`}>
+    <section className="set-card">
       <h2 className="set-card-h">
         {account.name}
         <span className={`chip chip-${account.kind}`}>
           {account.kind === "bot" ? "BOT" : "HUMAN"}
         </span>
       </h2>
+      <AccountOwnershipLine accountId={account.id} onChanged={onChanged} />
       {account.hostConfigured ? (
         <>
           <p className="note">
@@ -355,7 +359,10 @@ function AccountCard({
 function SettingsPage(): ReactElement {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const guestList = useQuery({ queryKey: ["admin-invite"], queryFn: fetchGuestList });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["settings"] });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [section, setSection] = useState<SettingsSection>("preferences");
 
   if (settings.isPending)
     return (
@@ -371,19 +378,14 @@ function SettingsPage(): ReactElement {
     );
 
   const { authConfigured, adminWired, accounts, timezones } = settings.data;
+  const first = accounts[0];
+  const selected = accounts.find((a) => a.id === selectedId) ?? first;
+  const isOwner = guestList.data?.owner === true;
   const rail = (
     <>
       <ProfileRail current="settings" />
       <hr />
-      <p className="rail-label">On this page</p>
-      <a href="#preferences">Preferences</a>
-      {accounts.map((a) => (
-        <a key={a.id} href={`#account-${a.id}`}>
-          {a.name}
-        </a>
-      ))}
-      <hr />
-      <a href="/app/onboarding">Add an account</a>
+      <SettingsToc current={section} showGuests={isOwner} onSelect={setSection} />
     </>
   );
 
@@ -391,41 +393,43 @@ function SettingsPage(): ReactElement {
     <PageFrame rail={rail}>
       <header className="page-header">
         <h1>Settings</h1>
-        <p>
-          Preferences, your accounts, your rules: profile, timezone, credential rotation, and the
-          door out. Owners find the fleet's switchboard — Mission Control — at the bottom.
-        </p>
+        <p>Preferences, your accounts, your rules: profile, timezone, and credential rotation.</p>
       </header>
-      <PreferencesCard />
-      {!authConfigured ? (
-        <p className="note">
-          Settings need a signed-in session to know which accounts are yours — this deployment runs
-          without sign-in, so there's nothing to edit here.
-        </p>
-      ) : !adminWired ? (
-        <p className="note">Account management isn't wired in this deployment.</p>
-      ) : accounts.length === 0 ? (
-        <p className="note">
-          Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or add
-          your own from <a href="/app/onboarding">onboarding</a>.
-        </p>
-      ) : (
-        accounts.map((account) => (
-          <AccountCard
-            key={account.id}
-            account={account}
-            timezones={timezones}
-            fleetSuspended={settings.data.fleetSuspended}
-            onChanged={refresh}
-          />
-        ))
-      )}
-      <div id="mission-control">
-        <MissionControl />
-      </div>
-      <GuestListCard />
-      <AccountLinksCard />
-      <OpsStatusCard />
+      {section === "preferences" ? <PreferencesCard /> : null}
+      {section === "account" ? (
+        !authConfigured ? (
+          <p className="note">
+            Settings need a signed-in session to know which accounts are yours — this deployment
+            runs without sign-in, so there's nothing to edit here.
+          </p>
+        ) : !adminWired ? (
+          <p className="note">Account management isn't wired in this deployment.</p>
+        ) : !first ? (
+          <p className="note">
+            Your sign-in doesn't resolve to an account yet — ask Eric to link one from /claim, or
+            add your own from <a href="/app/onboarding">onboarding</a>.
+          </p>
+        ) : (
+          <>
+            <AccountSwitcher
+              accounts={accounts}
+              selectedId={(selected ?? first).id}
+              onSelect={setSelectedId}
+            />
+            <AccountCard
+              account={selected ?? first}
+              timezones={timezones}
+              fleetSuspended={settings.data.fleetSuspended}
+              onChanged={refresh}
+            />
+            <div id="mission-control">
+              <MissionControl />
+            </div>
+            <UnclaimedAccountsCard />
+          </>
+        )
+      ) : null}
+      {section === "guests" ? <GuestListCard /> : null}
     </PageFrame>
   );
 }

@@ -73,6 +73,23 @@ export const LABELS = {
     description: "A decision only Eric can make — the irreversible class or a genuine taste fork",
     managed: true,
   },
+  // #1357 — the fifth waiting-room, and deliberately NOT a fifth outcome. A Sliced build whose
+  // remainder lands under `.claude/` is finished as far as this lane is concerned (`next-slice`
+  // still marks it); this label only names WHO can pick the remainder up, because an unattended
+  // lane structurally cannot — `.claude/` is harness-protected for it. Measured cost of having no
+  // such marker: 52 idle minutes between the hand-off comment on #1352 and the build in #1356.
+  //
+  // Why not overload `next-slice`: it already means two things (CLAUDE.md's "depends on something
+  // landing first", this file's "first slice shipped"), and only a subset of either is an
+  // interactive-session item — an interactive session polling `next-slice` would wake for work it
+  // cannot act on, which is the cost B exists to avoid paying.
+  needsSession: {
+    name: "needs-session",
+    color: "0052cc",
+    description:
+      "The lane handed the remainder to an interactive session — nothing unattended can build it",
+    managed: true,
+  },
   plan: {
     name: "plan",
     color: "5319e7",

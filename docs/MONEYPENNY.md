@@ -113,6 +113,39 @@ that ships it):
 The written-voice half of this charter and the account-rename half are fully decoupled — one does
 not wait on the other.
 
+## The hand-off contract — when a lane can't build the remainder (#1357)
+
+`.claude/` is harness-protected for an unattended lane, so every skill, agent, or `grind.js` change
+an issue asks for ends the same way: the lane Slices, says so in a comment, and the remainder waits
+for an interactive session. Nothing was listening for that comment — `subscribe_pr_activity` is
+PR-scoped and a routine's GitHub triggers fire only on PR/Release events — so the wait was measured
+at **52 minutes on [#1352](https://github.com/ejclark/skynet-capital/issues/1352) for a 12-minute
+build**. A label plus a check-in closes it without new infrastructure:
+
+1. **The lane marks it.** A Sliced outcome whose parting comment names an interactive session or a
+   protected directory gets **`needs-session`** — applied mechanically by `guardFeedbackOutcome`
+   (`scripts/moneypenny/feedback-guard.mjs`), which the workflow already runs after every build.
+   The outcome is still Sliced and `next-slice` still marks it; `needs-session` only names *who*
+   can build the remainder. It costs Eric nothing and never routes to him.
+2. **An interactive session polls it.** The check-in's whole first act is `gh issue list --label
+   needs-session --state open`; an empty result ends the turn (ROUTINES.md, *no-op must be free* —
+   one `gh` call). Whatever comes back that is in-envelope, it builds.
+3. **Cadence follows what's in flight.** 15–20 minutes while any `feedback/*` build or
+   `claim/feedback-*` lease is live, 60 otherwise, and **none when nothing is open**. Short beats
+   long on cost as well as latency: within the plan's included usage the main conversation holds a
+   1-hour cache TTL, so three 20-minute wakes are all warm (≈10% billing each) while one 60-minute
+   wake sits on the boundary and can land cold. The inversion is the stand-down rule — once
+   `/usage` shows the session drawing on credits the TTL drops to 5 minutes, every wake is cold,
+   and the cadence must fall back to 60 or stop.
+4. **The builder clears it.** The session that ships the remainder removes `needs-session`. A label
+   nobody removes is a wake for work that is already done.
+
+The text match in step 1 is a **backstop with a known expiry**: when
+`.github/prompts/feedback-build.md` next boards the [#1343](https://github.com/ejclark/skynet-capital/issues/1343)
+platter, the Sliced row applies the label itself and the match becomes belt-and-braces. And the
+residual this does not cover — a hand-off landing when no session is open at all — is the open
+follow-on on #1357 (a fired routine), deliberately sequenced behind a probe rather than built here.
+
 ## Her opening docket
 
 The first four items in her domain are the friction-audit findings from this same session

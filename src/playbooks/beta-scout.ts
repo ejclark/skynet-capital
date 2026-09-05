@@ -24,6 +24,25 @@ export const BETA_SCOUT_ID = "BETA-SCOUT";
  *  This is a mechanics probe, not a position; "small monetary experiment" means small. */
 const BETA_SCOUT_SIZE_PCT = 0.005;
 
+/**
+ * `SKYNET_BETA_FORCING` as set by the autonomy-ops `set-beta-forcing` button: a pick count,
+ * optionally followed by `+stage`. `"2"` = up to 2 forced picks/day, in-hours only (unchanged).
+ * `"2+stage"` = the same, AND when the market is closed the scout may stage its picks for the
+ * next session (Eric, 2026-09-04: "configuration that nudges sauron to put in an after hours
+ * trade that is staged to be executed when the market opens") — day market orders Alpaca queues
+ * for its own `next_open`, which is how the exchange calendar (holidays included) stays Alpaca's
+ * problem and never ours. Anything unparseable = dark, never a guess.
+ */
+export function parseBetaForcing(raw: string | undefined): {
+  readonly maxPicks: number;
+  readonly stageAfterClose: boolean;
+} {
+  const match = /^\s*(\d+)\s*(\+\s*stage)?\s*$/i.exec(raw ?? "");
+  if (!match) return { maxPicks: 0, stageAfterClose: false };
+  const maxPicks = Number(match[1]);
+  return { maxPicks, stageAfterClose: maxPicks > 0 && match[2] !== undefined };
+}
+
 export interface BetaScoutConfig {
   /** How many picks to force when nothing organic fired (Eric: "2-3"). */
   readonly maxPicks?: number;

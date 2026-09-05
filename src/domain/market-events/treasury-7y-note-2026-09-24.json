@@ -1,0 +1,11 @@
+{
+  "id": "treasury-7y-note-2026-09-24",
+  "kind": "rates",
+  "title": "7-Year Treasury Note auction",
+  "date": "2026-09-24",
+  "status": "confirmed",
+  "source": "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Closes the September coupon calendar."
+}

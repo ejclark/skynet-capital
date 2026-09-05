@@ -4,6 +4,7 @@ import { applyGuards } from "../engine/guards.js";
 import { betaScoutExitIntents, betaScoutIntents } from "../playbooks/beta-scout.js";
 import type { BrokerPort } from "../ports/broker.js";
 import type { AutonomousTrader, TraderMode } from "./autonomous-trader.js";
+import type { ScoutState } from "./bots-state-db.js";
 import type { DecisionRecord, IntentOutcome } from "./decision-record.js";
 import { fleetEquity } from "./equity-watch.js";
 import type { SafetyController } from "./safety.js";
@@ -41,6 +42,15 @@ export interface LiveCycleDeps {
   readonly safety: SafetyController;
   readonly scout?: BetaScoutDeps;
   /**
+   * Durable home for the scout's day-state (`bots-state-db.ts`'s `scoutStateStore`). Absent =
+   * process memory only, today's cold-start behavior. Confirmed live 2026-09-04: without it every
+   * restart re-armed the scout for a fresh "day" and it placed another pair of forced picks.
+   */
+  readonly scoutState?: {
+    load(): ScoutState | undefined;
+    save(state: ScoutState): void;
+  };
+  /**
    * The kill-switch/breaker gate consulted before every scout submission. Kept as its own
    * injection point rather than reading `safety.blockedReason()` directly: the live script's
    * version also polls a halt file (filesystem I/O with no place in this pure core), and each
@@ -76,6 +86,23 @@ export class LiveCycleRunner {
 
   constructor(deps: LiveCycleDeps) {
     this.deps = deps;
+    const restored = deps.scoutState?.load();
+    if (restored) {
+      this.scoutDay = restored.day;
+      this.scoutRanToday = restored.ranToday;
+      this.scoutFiredOrganicallyToday = restored.firedOrganicallyToday;
+      for (const symbol of restored.ownedSymbols) this.scoutOwnedSymbols.add(symbol);
+    }
+  }
+
+  /** Persist the scout's day-state after every transition — best-effort, never on the hot path. */
+  private persistScoutState(): void {
+    this.deps.scoutState?.save({
+      day: this.scoutDay,
+      ranToday: this.scoutRanToday,
+      firedOrganicallyToday: this.scoutFiredOrganicallyToday,
+      ownedSymbols: [...this.scoutOwnedSymbols],
+    });
   }
 
   /**
@@ -126,15 +153,38 @@ export class LiveCycleRunner {
   // otherwise the first cycle of a new day that also happens to carry an organic fire would set
   // the flag and then immediately have the rollover wipe it back to false, letting the scout
   // fire anyway (docs/LESSONS.md, 2026-08-13).
+  /**
+   * Stage the scout for a session that has not opened yet (Eric, 2026-09-04): the market is
+   * closed, `sessionDay` is the date of Alpaca's `next_open`, and the scout runs its one daily
+   * scan NOW against the durable momentum/sentiment windows. Its picks go in as ordinary day
+   * market orders, which Alpaca queues and fills at that open — and they SPEND that session's
+   * scout budget (`scoutDay` = the session, latched), so the in-hours cycle that day stays
+   * silent instead of firing a second pair. The day rollover runs first, exactly as it would at
+   * that session's first tick: yesterday's scout picks are exited (queued for the same open).
+   * Returns how many picks were submitted; 0 when already staged/run for that session, when the
+   * scan is empty (retry later — a weekend of polls costs one portfolio read each), or when dark.
+   */
+  stageScout(context: MarketContext, sessionDay: string): Promise<number> {
+    if (this.scoutDay === sessionDay && (this.scoutRanToday || this.scoutFiredOrganicallyToday)) {
+      return Promise.resolve(0);
+    }
+    return this.runBetaScout(context, false, sessionDay);
+  }
+
   private async runBetaScout(
     context: MarketContext,
     firedOrganicallyThisCycle: boolean,
-  ): Promise<void> {
+    sessionDay?: string,
+  ): Promise<number> {
     const scout = this.deps.scout;
     if (!scout || scout.maxPicks <= 0) {
-      return;
+      return 0;
     }
-    const today = context.asOf.slice(0, 10);
+    const today = sessionDay ?? context.asOf.slice(0, 10);
+    // Symbols exited in THIS rollover never re-enter in the same scan: live, a queued exit still
+    // shows as held (so the scan skips it anyway); an instant-fill broker would otherwise let the
+    // scout sell and re-buy the same name in one breath. Churn is not a signal.
+    const exited = new Set<string>();
     if (today !== this.scoutDay) {
       this.scoutDay = today;
       this.scoutRanToday = false;
@@ -144,30 +194,50 @@ export class LiveCycleRunner {
         const exits = betaScoutExitIntents(portfolio, this.scoutOwnedSymbols);
         for (const exit of exits) {
           this.scoutOwnedSymbols.delete(exit.symbol);
+          exited.add(exit.symbol);
         }
         await this.submitScoutIntents(exits, scout);
       }
+      this.persistScoutState();
     }
-    if (firedOrganicallyThisCycle) {
+    if (firedOrganicallyThisCycle && !this.scoutFiredOrganicallyToday) {
       this.scoutFiredOrganicallyToday = true;
+      this.persistScoutState();
     }
     if (this.scoutRanToday || this.scoutFiredOrganicallyToday) {
-      return;
+      return 0;
     }
-    this.scoutRanToday = true; // set BEFORE acting — a failed submit must not retry every cycle
     const portfolio = await scout.broker.getPortfolio();
     const guarded = applyGuards(
-      betaScoutIntents(context, portfolio, scout.universe, scout.managedSymbols, false, {
-        maxPicks: scout.maxPicks,
-      }),
+      betaScoutIntents(
+        context,
+        portfolio,
+        scout.universe,
+        exited.size > 0 ? new Set([...scout.managedSymbols, ...exited]) : scout.managedSymbols,
+        false,
+        { maxPicks: scout.maxPicks },
+      ),
       portfolio,
       context,
       scout.risk,
     );
+    // An EMPTY scan must not spend the day. Confirmed live 2026-09-04: the first cycle after a
+    // restart runs on the first price tick, when the sentiment window is still empty (the first
+    // news poll lands ≥60s later) and momentum has a single tick — every candidate reads "skip",
+    // and latching before the scan burned the scout's one daily shot before the trackers were
+    // warm. The latch below guards a FAILED SUBMIT (never retry that every cycle); a scan that
+    // found nothing simply looks again next cycle, which is what "if nothing organic fires by the
+    // scout's daily check" always meant.
+    if (guarded.length === 0) {
+      return 0;
+    }
+    this.scoutRanToday = true; // set BEFORE submitting — a failed submit must not retry every cycle
     for (const intent of guarded) {
       this.scoutOwnedSymbols.add(intent.symbol);
     }
+    this.persistScoutState(); // before the submit, for the same reason the latch is
     await this.submitScoutIntents(guarded, scout);
+    return guarded.length;
   }
 
   private async submitScoutIntents(intents: OrderIntent[], scout: BetaScoutDeps): Promise<void> {

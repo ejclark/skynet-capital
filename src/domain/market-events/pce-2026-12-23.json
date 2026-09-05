@@ -1,0 +1,11 @@
+{
+  "id": "pce-2026-12-23",
+  "kind": "macro-print",
+  "title": "PCE / Personal Income & Outlays (Nov 2026 data)",
+  "date": "2026-12-23",
+  "status": "confirmed",
+  "source": "BEA: bea.gov/news/schedule re-fetched direct 2026-08-31 as RAW HTML and tag-stripped in-session, which yields the line the previous pass could not see — \"December 23 | 8:30 AM | Personal Income and Outlays, November 2026\" verbatim, alongside \"GDP (Third Estimate), Industries, Corporate Profits, State GDP, and State Personal Income, 3rd Quarter 2026\" in the same 8:30 slot. The earlier EST: label came from a TRUNCATED parse of this same page, not from a missing source; this entry's own note set the bar (\"confirm against a clean bea.gov/news/schedule line\") and that bar is now met. Flipped from estimate by the pce-2026-12-23 initial research, checked 2026-08-31",
+  "impact": "high",
+  "symbols": [],
+  "notes": "The gap in an already-tracked series — PCE runs 08-26 -> 09-30 -> 10-29 -> 11-25 and then stopped. It matters here because it is the LAST inflation read of 2026 and the fourth to land after the 12-09 vote: the Dec 8-9 Committee set both its decision and its dots without cpi-2026-12-10 (which printed the next morning), and by the time fomc-minutes-2026-12-30 publishes, the tape has also absorbed ppi-2026-12-15, import-export-prices-2026-12-17, opex-2026-12-18 and this print. Next FOMC after 12-09 is not until 2027-01-26/27 (FED calendar), so this is the last inflation data point of a 48-day policy vacuum. EXISTENCE RISK IS THE HEADLINE (pce-2026-12-23 initial research, 2026-08-31): the 2025 analogue of this exact release was CANCELED — BEA's own release page states the Oct+Nov 2025 report 'replaces releases originally scheduled for November 26 and December 19, 2025' — and published combined on 2026-01-22, 34 days late. And unlike pce-2026-11-25, this print sits OUTSIDE the funded corridor: the House CR expires 12-04 and the Senate's 12-11, both before this date. Second structural note: 12-23 is the last full session before a 1:00pm ET close 12-24 and a closed 12-25 (nyse.com), the same holiday trap as 11-25 — and the measured Christmas-week PCE slot (+0.59% / +0.17% / +1.09% close-to-close) is matched by +0.88% in 2025 when there was no print at all, so a green session here is the null, not a signal."
+}

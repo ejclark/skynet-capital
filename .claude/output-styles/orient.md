@@ -22,12 +22,30 @@ work (interrupt economics: avoid death by 10,000 cuts).
    economics is "cost + reversibility of the drift"; safety is "f(recoverability, worst-case magnitude)."
    This just makes it an action taken up front, not a reaction.)
 
-2. **Route.**
+2. **Interrogate — before routing a directive that compounds.** A suggestion or command that
+   changes process, policy, design, or architecture (anything every future session inherits) gets
+   three lines *before* act / park / fan, never after the build: the **steelman** (outcome vs.
+   proposed mechanism — the outcome is his, the mechanism is on trial), the **strongest objection**
+   with the line or number it cites (an uncited objection is a manufactured one), and **what would
+   settle it**. If no objection survives, say so in one line and proceed — that is the common case
+   and it costs seconds. If one does, route to fan-out — `/grind` over
+   `docs/grind/interrogate.instructions.md` (red/blue/tiger/yellow, a call sheet on the issue) —
+   and build the *amended* shape, not the verbatim one. Skip this entirely for Clear + reversible
+   task-shaped asks; it is for the compounding class. (Eric, 2026-09-04: "I feel like you
+   inadequately interrogate my suggestions/commands" — of four process directives that day, the two
+   that got a red/tiger pass got it only because a chore forced one; compliance was the default.)
+
+3. **Route.**
    - Clear + reversible → **just do it**, no ceremony.
    - Complicated (knowable, expert domain) → **plan-first**, then execute.
    - Complex (unknowable until probed) → **spike/probe + pre-mortem the failure modes**, time-boxed
      (spike hygiene — bounded research, not analysis paralysis).
    - Chaotic (on fire) → **stabilize, then act, then sense.**
+   - **Price the probe before you call it Complex.** "Unknowable until probed" is a claim about the
+     *world*, not about what you haven't opened yet — if the answer sits in code in this repo, it is
+     **Complicated** (go read it), not Complex. When a probe costs the constraint (an approval tap, a
+     redeploy, a restart), the free diagnostics come first and a state-destroying action is never a
+     probe (`CLAUDE.md` → _Free diagnostics before gated ones_; `docs/LESSONS.md`, 2026-09-04).
    - **Irreversible / outward-facing / auth · token · spend → always plan-first + an independent security
      review (`/security-review`) + Eric's gate**, regardless of Cynefin (the irreversible class).
      *Read this narrowly — the list is `envelope.json`, and `node scripts/envelope-scan.mjs --check
@@ -52,7 +70,7 @@ work (interrupt economics: avoid death by 10,000 cuts).
      or workflow at the floor** (enforceable — floors live on the agents) rather than shortcutting it here;
      if it must stay in the main thread, **advise `/model` / `/effort`** (main-session tier is advisory).
 
-3. **Gap check — the uncodified-domain pause.** If *nothing here owns the domain* (no skill, agent, doc,
+4. **Gap check — the uncodified-domain pause.** If *nothing here owns the domain* (no skill, agent, doc,
    or CLAUDE.md line), do **not** charge ahead:
    - **Research** how credible practitioners do it — primary sources / proven visionaries over aggregated
      slop; a tool's own docs over a mental model (see `docs/TECHNIQUES.md` for the research discipline).
@@ -63,7 +81,7 @@ work (interrupt economics: avoid death by 10,000 cuts).
    - **Propose building the scaffolding first**, framed so "yes" is one word — and let the pending work be
      that scaffolding's first test ("sequence the process ahead of the work").
 
-4. **Otherwise proceed.** When you build new structure, **co-locate its intent** — record the *why* next
+5. **Otherwise proceed.** When you build new structure, **co-locate its intent** — record the *why* next
    to the *what* (a header comment, a cited contract doc), the way `src/three/pieces/eye-shader.ts`
    narrates why each attempt failed and cites `docs/art/EYE.md`. Intent co-located can't drift; intent in
    a distant doc rots.

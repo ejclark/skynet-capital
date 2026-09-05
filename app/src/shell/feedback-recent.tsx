@@ -1,12 +1,32 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { followupRequest, type RecentFiling } from "../live/feedback";
+import { Toggle } from "./toggle";
 
 /**
  * "Your recent feedback" (#738 phase 9d) — the member's own filings with live status badges, and
  * the follow-up fold. Ownership is the server's check (against the member's own logged filings);
  * the fold here is a courtesy, never the gate.
+ *
+ * Shipped items are filtered out by default (#429's still-open EARS box: "completed filtered out
+ * by default with a toggle") — a growing ledger of finished items would otherwise bury what's
+ * still moving. "Completed" means `status === "shipped"` specifically: `next-slice` still has
+ * real work on the issue (docs/FEEDBACK.md's "four ways a build session ends" — sliced waits on
+ * nobody, but isn't done), so it stays in the default view alongside `open`/`needs-info`/
+ * `needs-eric`. The `Toggle` only appears once there's something it would reveal.
+ *
+ * A shipped filing also carries the last piece of #429's acceptance criteria: "stamped with the
+ * release version, and celebrate it." `appVersion` is this SERVER's own currently-running
+ * version (`APP_VERSION`, semantic-release-bumped) — a filing marked `shipped` right now is, by
+ * definition, confirmed live in it. `BRAND.md`'s "celebration pairs with explanation": the version
+ * line IS the explanation, so the fanfare stays a caption, not a takeover.
  */
+
+const RECENT_FILTERS = [
+  ["active", "Active"],
+  ["all", "All"],
+] as const;
+type RecentFilter = (typeof RECENT_FILTERS)[number][0];
 
 const STATUS_LABELS: Record<string, string> = {
   open: "open",
@@ -69,32 +89,58 @@ function FollowupFold({ filing }: { readonly filing: RecentFiling }): ReactEleme
 export function RecentFeedback({
   recent,
   followupEnabled,
+  appVersion,
 }: {
   readonly recent: readonly RecentFiling[];
   readonly followupEnabled: boolean;
+  /** This server's currently-running version — stamped on shipped filings. Empty string when
+   *  it couldn't be read; the celebration line is simply omitted in that case. */
+  readonly appVersion?: string;
 }): ReactElement | null {
+  const [filter, setFilter] = useState<RecentFilter>("active");
   if (recent.length === 0) return null;
+  const shippedCount = recent.filter((f) => f.status === "shipped").length;
+  const visible = filter === "all" ? recent : recent.filter((f) => f.status !== "shipped");
   return (
     <section className="fb-recent">
-      <h2 className="fb-h">Your recent feedback</h2>
-      <ul className="fb-list">
-        {recent.map((filing) => (
-          <li key={filing.issueNumber} className="fb-row">
-            <a href={filing.url} target="_blank" rel="noopener noreferrer">
-              #{filing.issueNumber} · {filing.title}
-            </a>
-            <span className="fb-meta num">
-              {filing.kind} · filed {filing.filedAt.slice(0, 10)}
-            </span>
-            {filing.status ? (
-              <span className={`fb-status fb-${filing.status}`}>
-                {STATUS_LABELS[filing.status] ?? filing.status}
-              </span>
-            ) : null}
-            {followupEnabled ? <FollowupFold filing={filing} /> : null}
-          </li>
-        ))}
-      </ul>
+      <div className="fb-recent-head">
+        <h2 className="fb-h">Your recent feedback</h2>
+        {shippedCount > 0 ? (
+          <Toggle label="Show" value={filter} options={RECENT_FILTERS} onPick={setFilter} />
+        ) : null}
+      </div>
+      {visible.length === 0 ? (
+        <p className="note fb-all-shipped">
+          🎉 Everything you've filed has shipped — nice work closing the loop.
+        </p>
+      ) : (
+        <ul className="fb-list">
+          {visible.map((filing) => {
+            const shipped = filing.status === "shipped";
+            return (
+              <li key={filing.issueNumber} className={shipped ? "fb-row fb-row-shipped" : "fb-row"}>
+                <a href={filing.url} target="_blank" rel="noopener noreferrer">
+                  #{filing.issueNumber} · {filing.title}
+                </a>
+                <span className="fb-meta num">
+                  {filing.kind} · filed {filing.filedAt.slice(0, 10)}
+                </span>
+                {filing.status ? (
+                  <span className={`fb-status fb-${filing.status}`}>
+                    {shipped ? "🚀 shipped" : (STATUS_LABELS[filing.status] ?? filing.status)}
+                  </span>
+                ) : null}
+                {shipped && appVersion ? (
+                  <span className="fb-meta fb-shipped-version num">
+                    confirmed live in v{appVersion}
+                  </span>
+                ) : null}
+                {followupEnabled ? <FollowupFold filing={filing} /> : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }

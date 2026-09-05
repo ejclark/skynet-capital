@@ -9,6 +9,7 @@
 //   node scripts/moneypenny/index.mjs --claim-feedback         # claim the labelled issue + pick its model
 //   node scripts/moneypenny/index.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
+//   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -50,6 +51,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs
 import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import { dueForResearch, routeSweep } from "./events.mjs";
+import { guardFeedbackOutcome } from "./feedback-guard.mjs";
 import { ghRest, sh } from "./gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
@@ -65,6 +67,7 @@ export {
   claimFailureReason,
   dueForResearch,
   ensureVocabulary,
+  guardFeedbackOutcome,
   LABELS,
   MANAGED_LABELS,
   mergedReference,
@@ -606,6 +609,20 @@ function runCliFlag(argv, ctx) {
       claim(ctx);
       return true;
     }
+  }
+
+  // `--guard-feedback-outcome <issue-number>` (#1028): the mechanical fallback the workflow calls
+  // right after `claude-code-action` completes on the feedback lane. A session's own contract
+  // (feedback-build.md) is a prompt's promise, not a guarantee — this is the check that catches it
+  // when the promise is broken and the run left nothing visible behind.
+  const guardIdx = argv.indexOf("--guard-feedback-outcome");
+  if (guardIdx >= 0 && argv[guardIdx + 1]) {
+    const runUrl =
+      process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+        : undefined;
+    guardFeedbackOutcome(argv[guardIdx + 1], runUrl);
+    return true;
   }
 
   return false;

@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
+import { APP_VERSION } from "../../src/server/auth/app-version.js";
 import type { DashboardServerConfig } from "../../src/server/dashboard-server-config.js";
 import { serveFeedbackApi } from "../../src/server/feedback-api-routes.js";
 import { opaqueMemberId } from "../../src/server/feedback-issue.js";
@@ -79,6 +80,16 @@ describe("serveFeedbackApi", () => {
         status: "shipped",
       },
     ]);
+  });
+
+  it("stamps the response with this server's own running version (#429)", async () => {
+    const config = configWith();
+    const { res, out } = fakeRes();
+    await serveFeedbackApi(get(), res, "/api/feedback", config, session);
+    const body = JSON.parse(out.body ?? "{}");
+    // Same value `authenticator.ts`'s login-page version tag already shows — one source, read
+    // once, never a per-issue lookup: a filing marked `shipped` is confirmed live in it.
+    expect(body.appVersion).toBe(APP_VERSION);
   });
 
   it("refuses a missing kind instead of guessing (#645)", async () => {

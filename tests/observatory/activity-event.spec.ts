@@ -1,5 +1,6 @@
 import {
   activityEventFromAuditRecord,
+  activityEventFromBotOrder,
   activityEventFromTradeRecord,
 } from "../../src/observatory/activity-event.js";
 import type { TradeActivityRecord } from "../../src/observatory/activity-record.js";
@@ -95,6 +96,43 @@ describe("activityEventFromAuditRecord", () => {
 
   it("shares its correlationId with the matching trade-record event, chaining the two", () => {
     const submitted = activityEventFromAuditRecord(auditRecord());
+    const filled = activityEventFromTradeRecord(tradeRecord());
+    expect(submitted.correlationId).toBe(filled.correlationId);
+  });
+});
+
+describe("activityEventFromBotOrder", () => {
+  it("maps a bot's accepted order to order.submitted, owner-only, actor.kind bot (#1211 slice 2)", () => {
+    const event = activityEventFromBotOrder({
+      participantId: "sauron",
+      orderId: "ord-9",
+      symbol: "NVDA",
+      side: "buy",
+      quantity: 5,
+      at: "2026-09-04T14:30:00.000Z",
+    });
+    expect(event).toMatchObject({
+      eventType: "order.submitted",
+      actor: { participantId: "sauron", kind: "bot" },
+      target: { kind: "order", id: "ord-9" },
+      correlationId: "ord-9",
+      source: "bot",
+      outcome: "success",
+      visibility: "owner-only",
+      payload: { symbol: "NVDA", side: "buy", quantity: 5 },
+    });
+    expect(event.actor).not.toHaveProperty("email");
+  });
+
+  it("shares its correlationId with the matching trade-record event, chaining the two", () => {
+    const submitted = activityEventFromBotOrder({
+      participantId: "sauron",
+      orderId: "ord-1",
+      symbol: "NVDA",
+      side: "buy",
+      quantity: 10,
+      at: "2026-08-19T14:29:00.000Z",
+    });
     const filled = activityEventFromTradeRecord(tradeRecord());
     expect(submitted.correlationId).toBe(filled.correlationId);
   });

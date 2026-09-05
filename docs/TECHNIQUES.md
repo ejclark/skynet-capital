@@ -52,6 +52,16 @@ The internet is noisy; aggregated research can taint results. Weight accordingly
   with suspicion — a fetch-and-summarize pass in this repo's own research once hallucinated a comparison
   table that wasn't in the source.
 
+## Multi-agent research and adversarial fan-out
+
+When a research or review task genuinely needs more than one perspective — see the caveat above on
+*N identical critics* first, that's not this — [`research-teams/PLAYBOOK.md`](research-teams/PLAYBOOK.md)
+has the reusable red/blue/purple/tiger/yellow team-role library (reusable prompt objectives, honest
+provenance on which role names are established vs. adapted, when the fan-out earns its cost), the
+same pattern generalized to battle-testing competing solution designs, and an append-only lessons
+log for honing how this repo runs research over time — read it before authoring a multi-team
+`Workflow` script rather than re-deriving the roles from scratch.
+
 ## Tool documentation is the authority
 
 Acting on a *mental model* of a tool instead of its actual docs is a recurring, expensive miss (a

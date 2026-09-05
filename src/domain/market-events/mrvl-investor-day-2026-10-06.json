@@ -1,0 +1,11 @@
+{
+  "id": "mrvl-investor-day-2026-10-06",
+  "kind": "product-launch",
+  "title": "MRVL Investor Day (NYC)",
+  "date": "2026-10-06",
+  "status": "confirmed",
+  "source": "IR: investor.marvell.com PR 2026-08-03 — Investor Day Tue Oct 6, checked 2026-08-17",
+  "impact": "medium",
+  "symbols": ["MRVL"],
+  "notes": "Company-set; MRVL investor days have filed Item-2.02 8-Ks — the filing class that corrupted the instrument's event list."
+}

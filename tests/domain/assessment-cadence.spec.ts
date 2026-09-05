@@ -54,16 +54,23 @@ let due: Map<string, { reason: string; intervalDays: number | null }>;
 
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), "event-scan-"));
-  const entries = FIXTURES.map(
-    (f) =>
-      `  { id: "${f.id}", kind: "macro-print", title: "${f.id}", date: "${f.date}", ` +
-      `status: "${f.status ?? "confirmed"}", source: "${f.source ?? "BLS: fixture"}", ` +
-      `impact: "${f.impact}", symbols: [] },`,
-  ).join("\n");
-  writeFileSync(
-    join(dir, "market-events.ts"),
-    `export const MARKET_EVENTS: readonly MarketEvent[] = [\n${entries}\n];\n`,
-  );
+  // One JSON file per event (issue #1449) — the same directory shape the real calendar uses.
+  const eventsDir = join(dir, "market-events");
+  mkdirSync(eventsDir);
+  for (const f of FIXTURES)
+    writeFileSync(
+      join(eventsDir, `${f.id}.json`),
+      JSON.stringify({
+        id: f.id,
+        kind: "macro-print",
+        title: f.id,
+        date: f.date,
+        status: f.status ?? "confirmed",
+        source: f.source ?? "BLS: fixture",
+        impact: f.impact,
+        symbols: [],
+      }),
+    );
   writeFileSync(
     join(dir, "earnings-calendar.ts"),
     "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [];\n",
@@ -84,7 +91,7 @@ beforeAll(() => {
       "scripts/event-scan.mjs",
       "--due",
       `--today=${TODAY}`,
-      `--events-file=${join(dir, "market-events.ts")}`,
+      `--events-dir=${join(dir, "market-events")}`,
       `--calendar-file=${join(dir, "earnings-calendar.ts")}`,
       `--ledger-dir=${ledgerDir}`,
     ],

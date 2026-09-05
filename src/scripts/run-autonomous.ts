@@ -18,7 +18,9 @@
  *   SKYNET_BETA_FORCING      beta-phase forced-pick count (e.g. "3"). 0/unset (default) = dark. When
  *                            armed, and nothing organic trades on a given day, forces up to N small,
  *                            honestly-labeled BETA-SCOUT picks from whatever signal already exists —
- *                            see src/playbooks/beta-scout.ts. Flip via autonomy-ops only.
+ *                            see src/playbooks/beta-scout.ts. "3+stage" also lets the scout stage
+ *                            its picks after the close for Alpaca's next open (holiday-aware) —
+ *                            see autonomous-scout-staging.ts. Flip via autonomy-ops only.
  *   SKYNET_HARDCORE_BOTS     comma-separated persona ids to run in HARDCORE research mode (Eric,
  *                            2026-08-20): loosened thresholds, tranche scale-in/out, momentum
  *                            scalps, 90s cooldown, every trade carrying strategy + expectation —
@@ -33,6 +35,7 @@ import {
   armMomentumPersistence,
   persistSentiment,
   restoreBotsState,
+  scoutStateStore,
 } from "../autonomous/bots-state-db.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
@@ -44,8 +47,10 @@ import { enabledBotIds, loadBots } from "../bots/bot-registry.js";
 import { SwappableBotBroker } from "../bots/swappable-bot-broker.js";
 import { UPCOMING_PRINTS } from "../domain/earnings-calendar.js";
 import { SentimentTracker } from "../news/sentiment-tracker.js";
+import { parseBetaForcing } from "../playbooks/beta-scout.js";
 import { enabledPlaybooks } from "../playbooks/registry.js";
 import type { BrokerPort } from "../ports/broker.js";
+import { primeBotCredentials } from "./autonomous-boot-credentials.js";
 import { startSharedDataConnections } from "./autonomous-data-connections.js";
 import {
   bootMissionControl,
@@ -57,14 +62,14 @@ import {
   seedDailyLossBaseline,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
-import { auditStore, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
+import { announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
+import { auditStore, botBus, decisionSink, logResult, traderMode } from "./autonomous-sinks.js";
 
 // The universe the bots watch: the Day Trader's big-tech focus, plus the Prospector's warm-up
 // claims (CRWV, MRVL). A symbol absent here has no quote, so a persona simply never sees it —
 // adding a claim to the Prospector without adding it here is a silent no-op.
 const UNIVERSE = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "CRWV", "MRVL"];
 const LIVE_EVAL_INTERVAL_MS = 15_000;
-const _EVAL_INTERVAL_MS = 15_000;
 const NEWS_POLL_MS = 60_000;
 
 async function main(): Promise<void> {
@@ -99,7 +104,7 @@ async function runLive(): Promise<void> {
     }
     return true;
   });
-  const { controls, bootControls } = await bootMissionControl(
+  const { controls, bootControls, health } = await bootMissionControl(
     (state) => void credentials.reconcile(state),
   );
   // Filter to the ENABLED roster before resolving credentials: the shared-account fallback has
@@ -107,7 +112,8 @@ async function runLive(): Promise<void> {
   // registry would also have qualified.
   const hardcoreRoster = resolveRoster(enabled, bootControls);
   const roster = hardcoreRoster.personas;
-  const { bots: loaded, sharedAccount } = loadBots(roster, process.env);
+  const { bots: fromEnv, sharedAccount } = loadBots(roster, process.env);
+  const loaded = await primeBotCredentials(credentials, bootControls, fromEnv);
   for (const id of sharedAccount) {
     console.warn(
       `[creds] ${id} is trading the SHARED account (SKYNET_BOT_KEY) — its P/L is not separable from anything else already on that account.`,
@@ -151,9 +157,7 @@ async function runLive(): Promise<void> {
   }
 
   const dataCreds = bots[0]?.credentials;
-  if (!dataCreds) {
-    process.exit(1);
-  }
+  if (!dataCreds) process.exit(1);
   dataCredsPersonaId = bots[0]?.persona.id;
   // The live path (and ONLY the live path) runs the S2/E1 trade discipline: flat through every
   // print, defer non-urgent entries past the open. Deliberately absent from the offline replay
@@ -176,10 +180,10 @@ async function runLive(): Promise<void> {
   const sentiment = new SentimentTracker(Number(process.env.SKYNET_SENTIMENT_WINDOW ?? "10"));
   const universeSet = new Set(UNIVERSE);
 
-  // Durable momentum/sentiment (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set; restored
-  // before the market-data stream starts, persisted on every subsequent tick/article below.
+  // Durable momentum/sentiment/cooldowns (slice 4) — dark unless SKYNET_BOTS_DB_PATH is set, and
+  // stamped on /data/health.json so the next deploy PROVES restore by being read (issue #1181).
   const botsStateDb = seedBotsState(process.env);
-  restoreBotsState(botsStateDb, tracker, sentiment);
+  health.restored(restoreBotsState(botsStateDb, tracker, sentiment, bots));
 
   // Constructed before the boot-time reconcile() below, so a credential rotated while this
   // process was down reaches these too. `onEvent` safely closes over `maybeEvaluate` (defined
@@ -212,6 +216,7 @@ async function runLive(): Promise<void> {
   const mode = traderMode(process.env);
   const audit = auditStore(process.env);
   const onDecision = decisionSink(audit);
+  const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
   const safety = new SafetyController();
   const haltFile = process.env.SKYNET_HALT_FILE;
@@ -239,6 +244,7 @@ async function runLive(): Promise<void> {
       controls,
       bootControls,
       ...(botsStateDb ? { botsStateDb } : {}),
+      ...(botActivityBus ? { activityBus: botActivityBus } : {}),
     }),
   );
   botRosters.forEach(({ bot }, i) => {
@@ -258,17 +264,10 @@ async function runLive(): Promise<void> {
   // stateful orchestration, same category as smoke-trade.ts, run directly against a broker so
   // its picks still flow through the SAME guards (S2/E1, position cap) and audit trail as every
   // organic trade. Dark by default (SKYNET_BETA_FORCING unset = 0 = off).
-  const betaForcingMaxPicks = Number(process.env.SKYNET_BETA_FORCING ?? "0");
+  const betaForcing = parseBetaForcing(process.env.SKYNET_BETA_FORCING);
+  const betaForcingMaxPicks = betaForcing.maxPicks;
   const scoutBroker: BrokerPort | undefined = traders[0]?.broker;
-  if (betaForcingMaxPicks > 0 && scoutBroker) {
-    console.log(
-      `[beta-scout] armed: up to ${betaForcingMaxPicks} forced pick(s)/day when nothing organic fires, on ${traders[0]?.personaName}'s account.`,
-    );
-  } else if (betaForcingMaxPicks > 0) {
-    console.warn(
-      "[beta-scout] SKYNET_BETA_FORCING set but no bot account available — staying dark.",
-    );
-  }
+  announceScout(betaForcing, traders[0]?.personaName);
   const managedSymbols = new Set((botRosters[0]?.enabled ?? []).map((e) => e.playbook.symbol)); // traders[0]'s account
 
   // The per-cycle orchestration core (docs/GAPS-2026-08.md item 7) — pure, dependency-injected,
@@ -278,6 +277,7 @@ async function runLive(): Promise<void> {
     traders,
     safety,
     blockedReason,
+    ...(botsStateDb ? { scoutState: scoutStateStore(botsStateDb) } : {}),
     scout: buildScoutDeps(betaForcingMaxPicks, scoutBroker, {
       universe: UNIVERSE,
       managedSymbols,
@@ -298,19 +298,21 @@ async function runLive(): Promise<void> {
 
   armMomentumPersistence(botsStateDb, tracker);
 
+  const contextNow = () => sentiment.overlay(tracker.context(new Date().toISOString()));
   let lastEval = 0;
   let evaluating = false;
   const maybeEvaluate = async () => {
     const now = Date.now();
-    if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketClock.isOpen()) {
-      return;
-    }
+    if (evaluating || now - lastEval < LIVE_EVAL_INTERVAL_MS || !marketClock.isOpen()) return;
     lastEval = now;
     evaluating = true;
-    const context = sentiment.overlay(tracker.context(new Date(now).toISOString()));
-    await runner.runCycle(context);
+    await runner.runCycle(contextNow());
     evaluating = false;
   };
+  // After-close staging (Eric, 2026-09-04) — dark unless SKYNET_BETA_FORCING carries "+stage".
+  if (betaForcing.stageAfterClose && scoutBroker) {
+    armScoutStaging({ clock: marketClock, runner, context: contextNow, log: console.log });
+  }
 
   marketDataStream.start();
 

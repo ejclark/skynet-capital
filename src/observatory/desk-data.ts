@@ -1,6 +1,7 @@
 import { LIFECYCLE_STATUS } from "../trading/option-lifecycle.js";
 import { isOccSymbol } from "../trading/option-symbols.js";
 import type { TicketContext } from "../trading/order-ticket.js";
+import type { PlaybookTagsByOrder } from "../trading/playbook-attribution.js";
 import { matchRoundTrips, type RoundTripLedger, type TradeFill } from "../trading/round-trips.js";
 import { escapeHtml } from "../ui/escape-html.js";
 import {
@@ -52,7 +53,17 @@ const LIFECYCLE_SYNTHETIC_CLOSE: ReadonlySet<string> = new Set([
   LIFECYCLE_STATUS.OPASN,
 ]);
 
-export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeFill[] {
+/**
+ * `playbookTags` is optional and additive (#885) — a caller that has an autonomous audit trail
+ * handy (`playbook-attribution.ts`'s `indexPlaybookTags`) can attach playbook attribution onto
+ * each fill by its order id; a caller with none (or a row with no `orderId` at all, e.g. a
+ * lifecycle-synthesized close) gets fills exactly as before. `orderId` itself never rides onto the
+ * returned `TradeFill` — it exists on the broker row only long enough to look the tag up.
+ */
+export function fillsFrom(
+  activity: readonly ActivityView[] | undefined,
+  playbookTags?: PlaybookTagsByOrder,
+): TradeFill[] {
   return (activity ?? [])
     .filter(
       (row) =>
@@ -62,6 +73,7 @@ export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeF
     )
     .map((row) => {
       const scale = isOccSymbol(row.symbol) ? OPTION_MULTIPLIER : 1;
+      const tag = row.orderId ? playbookTags?.get(row.orderId) : undefined;
       return {
         symbol: row.symbol,
         side: row.side as "buy" | "sell",
@@ -69,6 +81,8 @@ export function fillsFrom(activity: readonly ActivityView[] | undefined): TradeF
         ...(row.price !== undefined ? { price: row.price * scale } : {}),
         at: row.at,
         ...(LIFECYCLE_SYNTHETIC_CLOSE.has(row.status) ? { synthetic: true } : {}),
+        ...(tag ? { playbookId: tag.playbookId } : {}),
+        ...(tag?.playbookMode ? { playbookMode: tag.playbookMode } : {}),
       };
     });
 }
@@ -88,12 +102,14 @@ function mergedDeskActivity(
 }
 
 /** A participant's closed-trade ledger — over the full durable record when one is supplied,
- *  else whatever fill window the snapshot holds. */
+ *  else whatever fill window the snapshot holds. `playbookTags` (#885) is optional and additive —
+ *  see `fillsFrom`. */
 export function deskLedger(
   snapshot: ParticipantSnapshot,
   durable?: readonly TradeActivityRecord[],
+  playbookTags?: PlaybookTagsByOrder,
 ): RoundTripLedger {
-  return matchRoundTrips(fillsFrom(mergedDeskActivity(snapshot, durable)));
+  return matchRoundTrips(fillsFrom(mergedDeskActivity(snapshot, durable), playbookTags));
 }
 
 /** The account state an order ticket is reviewed against. */

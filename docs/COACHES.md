@@ -100,7 +100,8 @@ First separate the two kinds of convention, because they create very different d
 grandfathered. Diagnose which kind you're adopting before you reach for a sweep.
 
 **Worked example, both kinds at once (2026-09-04):** the event-research lane's forward-test ids
-(`docs/research/forward-tests.md`) were a shared, globally-incrementing bare number computed by
+(then one shared `docs/research/forward-tests.md`; since #1449 one fragment per event under
+`docs/research/forward-tests/`) were a shared, globally-incrementing bare number computed by
 reading the file's live tip — a real race across concurrent sessions, caught once already (two PRs
 both registering `FT-25`, resolved by hand). The fix is forward-additive on the id *scheme*
 (`.github/prompts/event-research.md` now namespaces new ids to the session's own assigned event,
@@ -185,12 +186,12 @@ supply-chain decision: read them fully before adopting.
 | **Size** (god files) | `scripts/arch-scan.mjs` + `arch-grandfather.json` (flat exceptions list, not a numbered budget — 2026-08-26, see the script's own header) + `tests/arch/god-file.spec.ts` | `/decompose` | `decomposer` | ✅ live |
 | **Duplication** (pasted helpers) | `scripts/dupe-scan.mjs` + `dupe-budget.json` + `tests/arch/dupe.spec.ts` | `/dedupe` | `ui-librarian` | ✅ live |
 | **Clones** (pasted blocks, renamed identifiers) | `scripts/clone-scan.mjs` (jscpd, adopted) + `.jscpd.json` + `clone-budget.json` + `tests/arch/clone.spec.ts` | `/dedupe` judgment | `ui-librarian` could extend later | ✅ live |
-| **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` | judge: un-export / delete / justify-ignore | `mortician` (recruited on recurrence #3, per the rule of three) | ✅ live |
+| **Dead code** (unused files/exports/types) | `scripts/dead-scan.mjs` (knip, adopted) + `dead-budget.json` + `tests/arch/dead.spec.ts` | `/bury` (judge: un-export / delete / justify-ignore) | `mortician` (recruited on recurrence #3, per the rule of three; preloads `/bury`) | ✅ live |
 | **Dep-graph** (cycles/orphans/layering) | `scripts/dep-graph-scan.mjs` (dependency-cruiser, adopted) + `.dependency-cruiser.cjs` + `dep-graph-budget.json` + `tests/arch/dep-graph.spec.ts` | judge: break cycle / wire-or-delete orphan / restore layer direction (`/decompose` when a cycle wants a split) | none yet (recruit on recurrence #3) | ✅ live |
-| **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | write BDD specs per ENGINEERING.md | `test-backfiller` | ✅ live |
+| **Spec gap** (src files no spec imports) | `scripts/spec-gap-scan.mjs` + `spec-gap-budget.json` + `tests/arch/spec-gap.spec.ts` (rstest has no line coverage yet — eye upgrades when it ships) | `/backfill` (BDD specs per ENGINEERING.md) | `test-backfiller` (preloads `/backfill`) | ✅ live |
 | **Unlearned incidents** (detection lag) | `scripts/incident-scan.mjs` + `incident-budget.json` + `tests/arch/lessons.spec.ts` (offline half: ledger integrity; remote half: failed `main` runs with no lesson) | `/retro` | **Moneypenny (repair)** — `.github/workflows/moneypenny-repair.yml` + `scripts/moneypenny/repair.mjs` (event-driven, not dispatched by the governor; formerly "CI Medic") | ✅ live |
 | **CI install duration** (verify job's dependency-install wall-clock) | `scripts/ci-install-duration-scan.mjs` + `ci-install-duration-budget.json` + `tests/arch/ci-install-duration.spec.ts` (median over recent successful runs, no-op offline) | check for a missing `Cache restored` line, fix the cache scope/key, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
-| **Forward-test id collisions** (two `docs/research/forward-tests.md` rows sharing one `FT-...` id — the event-research lane's concurrent-sessions race) | `scripts/forward-test-id-scan.mjs` + `forward-test-id-budget.json` + `tests/arch/forward-test-id.spec.ts` (pure text-file check, no token/network, always runnable) | renumber the colliding row, then ratchet; new registrations use `.github/prompts/event-research.md`'s event-namespaced `FT-<event-id>-<n>` scheme so this never fires on a fresh id again | none yet (recruit on recurrence #3) | ✅ live |
+| **Forward-test id collisions** (two `docs/research/forward-tests/*.md` rows sharing one `FT-...` id — the event-research lane's concurrent-sessions race) | `scripts/forward-test-id-scan.mjs` + `forward-test-id-budget.json` + `tests/arch/forward-test-id.spec.ts` (pure text-file check, no token/network, always runnable); its `--contract` mode is the BLOCKING placement gate (`tests/arch/forward-tests-fragments.spec.ts`: one fragment per event, no rows in the index — #1449) | renumber the colliding row, then ratchet; new registrations use `.github/prompts/event-research.md`'s event-namespaced `FT-<event-id>-<n>` scheme so this never fires on a fresh id again | none yet (recruit on recurrence #3) | ✅ live |
 | **Doc rot** (docs that no longer describe reality: dead file refs, missing npm scripts, stale structural map) | `scripts/doc-rot-scan.mjs` + `doc-rot-budget.json` + `tests/arch/doc-rot.spec.ts` (semantic-claim rot stays with the config-audit — honestly out of a deterministic eye's reach) | fix doc to match reality, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Comment bloat** (narration comments — bare issue/PR refs, "used by X", "added for Y" — that CLAUDE.md's own house style forbids; git blame/the PR already carry that history) | `scripts/comment-bloat-scan.mjs` + `comment-bloat-budget.json` + `tests/arch/comment-bloat.spec.ts` (flags candidates only — WHY-vs-narration judgment stays with review, same honesty limit as doc-rot's semantic half) | `/code-review`/`/simplify` checklist: keep only if non-obvious WHY, else delete, then ratchet | none yet (recruit on recurrence #3) | ✅ live |
 | **Workflow structure** (duplicate keys, dangling step/needs refs) | `scripts/workflow-lint.mjs` + `tests/arch/workflows.spec.ts` | fix the file, diff it against the last-good version | Moneypenny's repair lane files it when a run reports zero jobs | ✅ live |
@@ -273,7 +274,16 @@ with the complexity moved into the wiring.
 - Every eye enforces in CI through the ordinary test job — a Coach's dimension cannot silently regress.
 - Budgets **only ratchet down** (`--update` after a correction lands), so every win is permanent.
 - `--candidate` makes each eye name its own highest-leverage target, machine-readable — no human picks.
-- **WIP limit: one open structural PR per Coach.** The athlete doesn't start pass N+1 until pass N merges;
-  the next target is recomputed from fresh `main`, which serializes work for free.
+- **WIP limit: one open structural PR per Coach.** The unit is an **open PR awaiting merge, not a
+  concurrent dispatch** — `/governor` already fans every coach's athlete out in parallel isolated
+  worktrees and lands them as one cycle PR (feast mode goes further: multiple fenced seams per
+  dispatch, one platter PR). The limit protects two things, and both of them are *landing*-time
+  hazards: (1) the next `--candidate` is recomputed from fresh `main`, so a target is never
+  re-derived against a stale tree; (2) each coach's `--update` rewrites one shared, ratchet-down
+  budget file, so it must run **once per landed wave** — two worktrees racing it silently lose a
+  ratchet. So a batch of N independent targets for the same Coach (e.g. `/grind` fanning
+  `/decompose` across two arch-scan hits) is in bounds when **one file belongs to exactly one item**
+  and the wave lands as **one PR** with **one** `--update` after it. Docs-only chores (`doc-rot`,
+  `comment-bloat`) have no Coach and touch no `src/**` seam — this rule was never scoped to them.
 - Adding a Coach = one eval + one budget + one CI spec + one skill (+ optionally one agent). Use
   `skill-creator` and mirror an existing pair so the roster stays uniform.

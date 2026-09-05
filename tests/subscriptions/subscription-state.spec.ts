@@ -69,4 +69,26 @@ describe("parseSubscriptionsState", () => {
     const state = parseSubscriptionsState({ "acct-1": [valid, "garbage", 42] });
     expect(state?.["acct-1"]).toHaveLength(1);
   });
+
+  describe("symbol-targeting filter (#885)", () => {
+    it("parses a well-formed symbols filter", () => {
+      const state = parseSubscriptionsState({
+        "acct-1": [{ ...valid, symbols: ["EEM", "AAPL"] }],
+      });
+      expect(state?.["acct-1"]?.[0]?.symbols).toEqual(["EEM", "AAPL"]);
+    });
+
+    it("leaves symbols absent when the field was never supplied — the subscription still parses", () => {
+      const state = parseSubscriptionsState({ "acct-1": [valid] });
+      expect(state?.["acct-1"]?.[0]).not.toHaveProperty("symbols");
+    });
+
+    it("drops the whole filter (not the subscription) on a malformed symbols value", () => {
+      for (const badSymbols of [[], "EEM", 42, [1, 2], ["EEM", 42], null]) {
+        const state = parseSubscriptionsState({ "acct-1": [{ ...valid, symbols: badSymbols }] });
+        expect(state?.["acct-1"]).toHaveLength(1);
+        expect(state?.["acct-1"]?.[0]).not.toHaveProperty("symbols");
+      }
+    });
+  });
 });
