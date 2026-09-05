@@ -98,4 +98,11 @@ await shoot("trade-phone");
 await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-desktop");
 
+// A locked preset (#1461 slice 2): the rail can point at 301, the nav shows "Buy to open" disabled
+// with the rung that opens it, and the ticket shows its locked panel. Visible, disabled, explained.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=301`);
+await page.getByText("Buy to open: opens after 202 fills").waitFor();
+await shoot("trade-locked-phone");
+
 await close();

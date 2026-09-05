@@ -139,10 +139,13 @@ function GateStatus({ state }: { readonly state: GateState }): ReactElement | nu
 export function TradeGate({
   deskId,
   initialAction = "buy",
+  showSide = true,
 }: {
   readonly deskId: string;
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
   readonly initialAction?: "buy" | "sell";
+  /** False on `/trade`, where the ticket's own nav (#1461) already carries Buy / Sell. */
+  readonly showSide?: boolean;
 }): ReactElement {
   const [fields, setFields] = useState<TicketFields>({
     symbol: "",
@@ -223,17 +226,19 @@ export function TradeGate({
             onChange={(e) => edit("quantity")(e.target.value)}
           />
         </div>
-        <div className="field">
-          <label htmlFor={sideId}>Side</label>
-          <select
-            id={sideId}
-            value={fields.action}
-            onChange={(e) => edit("action")(e.target.value as "buy" | "sell")}
-          >
-            <option value="buy">Buy</option>
-            <option value="sell">Sell</option>
-          </select>
-        </div>
+        {showSide ? (
+          <div className="field">
+            <label htmlFor={sideId}>Side</label>
+            <select
+              id={sideId}
+              value={fields.action}
+              onChange={(e) => edit("action")(e.target.value as "buy" | "sell")}
+            >
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+        ) : null}
         <div className="field">
           <label htmlFor={typeId}>Order type</label>
           <select
