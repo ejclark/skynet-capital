@@ -331,6 +331,12 @@ common routes:
   lints via `npm run issue:lint`).
 - **Any reaction to a rendered frame** ("this looks terrible", "a 30/100", "more dramatic") →
   `/telestrator` — names the cause before anything gets changed (the inverse of `/vision`).
+- **Screenshots of someone else's app** ("Fidelity's mobile app is amazing", "use this for
+  inspiration", "reverse engineer this") → **`/teardown`** — redacts first, names the patterns
+  and the mechanic under each, a borrow / adapt / skip call sheet with falsifiers, a gap table
+  that reads our code, the vocabulary to ask with next time; lands on the plan issue, images in a
+  private artifact only (Eric, 2026-09-05, after the Fidelity study: "reverse engineering would be
+  a good research skill to develop… getting concepts on our radar to add tools to our toolbox").
 - **"we need an agent for X"** → `/charter` before writing any `.claude/agents/*.md` — REJECT is a
   normal, expected verdict, not a shortfall.
 - **"make a shareable page"** (field guide, dashboard, report) → the `artifact-smith` agent (builds
