@@ -30,7 +30,9 @@
 // ERROR, never a quiet pulse — "broken != quiet" (issue #724). Every impure failure here — an
 // unreadable table, an unreadable ledger, a failed fetch — throws, and every caller (this file's
 // own CLI, and the workflow step around --screen-due) treats a probe failure exactly like a
-// material verdict: dispatch the session.
+// material verdict: dispatch the session. A STALE read is a half-failed fetch and falls under the
+// same rule (issue #1386): `closeFromChart` reads the latest session or throws, and every price the
+// CLI prints carries the date and source it came from (`priceAsOf`), so a fallback is on the record.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -103,8 +105,63 @@ function loadCadence() {
   return JSON.parse(readFileSync(CADENCE_FILE, "utf8"));
 }
 
-/** Latest daily close for a Yahoo-recognized symbol ("^VIX" included). Throws loud on any HTTP or
- *  shape failure — never returns a stale or guessed price. */
+const round2 = (n) => Math.round(n * 100) / 100;
+const DAY_SECONDS = 86_400;
+
+/**
+ * The pure half of `latestClose`: one Yahoo v8 chart payload in, one DATED price out — or a throw.
+ * Exported so tests/scripts/event-material-scan.spec.ts can drive it from recorded payloads.
+ *
+ * Only the LATEST daily bar is ever read (issue #1386). The old code walked backward past a null
+ * close "to skip gaps", which on 2026-09-04 returned MU's Thursday close ($958.16) as if it were
+ * Friday's ($1,016.59, +6.10%) — a 6% session read as ~2.6%, under the 5% materiality threshold,
+ * with no signal that anything was wrong. A stale read is a half-failed fetch, and this file's
+ * loud-failure doctrine says a half-failed fetch is an ERROR, not a quiet number.
+ *
+ * Yahoo publishes the session's official print in `meta.regularMarketPrice` before it consolidates
+ * that day's OHLC bar (yfinance #2895 reports the same shape: NaN OHLC, valid Volume, latest daily
+ * bar), so the null-bar branch reads meta instead — the same fallback yfinance itself ships in
+ * `FastInfo.last_price`. It is trusted ONLY when `regularMarketTime` lands inside the null bar's own
+ * session: two fields must agree on WHICH session the number belongs to before it is accepted. The
+ * window is compared in epoch seconds rather than calendar dates on purpose — UTC dates happen to
+ * work for US symbols and `^VIX`, but break the moment a non-US symbol is tracked.
+ *
+ * Anything else throws. In particular an older non-null close — the exact value the old loop
+ * returned — is never a substitute for the latest session: a throw becomes `probe-error:` ->
+ * `stillDue` -> a real research session, which is the designed failure mode. Loud, never quiet.
+ */
+export function closeFromChart(body, symbol) {
+  const result = body?.chart?.result?.[0];
+  const closes = result?.indicators?.quote?.[0]?.close ?? [];
+  const stamps = result?.timestamp ?? [];
+  const meta = result?.meta ?? {};
+  const last = closes.length - 1;
+  if (last < 0 || stamps.length !== closes.length) {
+    throw new Error(`event-material-scan: no usable daily bars for ${symbol}`);
+  }
+  // Exchange-local session date: `gmtoffset` is in the same payload, so this reads correctly for a
+  // non-US listing too, not just the US names this calendar tracks today.
+  const sessionDate = (epoch) =>
+    new Date((epoch + (meta.gmtoffset ?? 0)) * 1000).toISOString().slice(0, 10);
+  const asOf = sessionDate(stamps[last]);
+  if (closes[last] != null) {
+    return { price: round2(closes[last]), asOf, source: "bar-close" };
+  }
+  const { regularMarketPrice: price, regularMarketTime: printedAt } = meta;
+  const printedThisSession =
+    typeof printedAt === "number" &&
+    printedAt >= stamps[last] &&
+    printedAt - stamps[last] < DAY_SECONDS;
+  if (typeof price === "number" && printedThisSession) {
+    return { price: round2(price), asOf, source: "meta.regularMarketPrice" };
+  }
+  throw new Error(
+    `event-material-scan: ${symbol} latest bar (${asOf}) has no close and meta.regularMarketPrice is not from that session`,
+  );
+}
+
+/** Latest daily price for a Yahoo-recognized symbol ("^VIX" included), as `{price, asOf, source}`.
+ *  Throws loud on any HTTP or shape failure — never returns a stale or guessed price. */
 async function latestClose(symbol) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=5d&interval=1d`;
   const res = await fetch(url, { headers: { "User-Agent": UA } });
@@ -113,12 +170,7 @@ async function latestClose(symbol) {
       `event-material-scan: ${symbol} price fetch -> ${res.status} ${res.statusText}`,
     );
   }
-  const body = await res.json();
-  const closes = body.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
-  for (let i = closes.length - 1; i >= 0; i--) {
-    if (closes[i] != null) return Math.round(closes[i] * 100) / 100;
-  }
-  throw new Error(`event-material-scan: no close price found for ${symbol}`);
+  return closeFromChart(await res.json(), symbol);
 }
 
 /** Assemble the full decision state for one event id: the table row, its ledger header, live
@@ -134,7 +186,7 @@ async function buildState(id, today, opts = {}) {
   const ledgerText = readFileSync(ledgerPath, "utf8");
   const ledger = parseLedgerHeader(ledgerText);
   const symbols = event.symbols ?? [];
-  const prices = await Promise.all(symbols.map((sym) => latestClose(sym)));
+  const reads = await Promise.all(symbols.map((sym) => latestClose(sym)));
   const vix = await latestClose("^VIX");
   const adjacentIds = computeAdjacentIds(event, allEvents);
   const state = {
@@ -142,10 +194,23 @@ async function buildState(id, today, opts = {}) {
     today,
     cadence,
     ledger,
-    market: { symbols: Object.fromEntries(symbols.map((s, i) => [s, prices[i]])), vix },
+    market: {
+      symbols: Object.fromEntries(symbols.map((s, i) => [s, reads[i].price])),
+      vix: vix.price,
+    },
     adjacentIds,
   };
-  return { state, ledgerPath, ledgerText };
+  // Provenance travels BESIDE the readings, never inside them: `market.symbols` stays a plain
+  // symbol->number map, because applyScreen serializes `decision.readings` verbatim into the
+  // ledger's probe-ref block and the next pulse diffs those numbers (event-material-decide.mjs).
+  // Kept here so the CLI's own output can name where every price came from (issue #1386).
+  const priceAsOf = Object.fromEntries(
+    [...symbols.map((s, i) => [s, reads[i]]), ["^VIX", vix]].map(([sym, read]) => [
+      sym,
+      { asOf: read.asOf, source: read.source },
+    ]),
+  );
+  return { state, ledgerPath, ledgerText, priceAsOf };
 }
 
 function readStdin() {
@@ -173,14 +238,27 @@ function runExplain() {
   process.exit(decision.verdict === "screen" ? 0 : 1);
 }
 
+/** Stderr notice for any price that did NOT come from its bar's own close — the workflow log is
+ *  where a human sees a fallback happened at all. Silence here means every read was an ordinary
+ *  consolidated bar. */
+function warnOnFallbackPrices(label, priceAsOf) {
+  for (const [sym, read] of Object.entries(priceAsOf)) {
+    if (read.source === "bar-close") continue;
+    console.error(
+      `event-material-scan: ${label} — ${sym} price is ${read.asOf} via ${read.source} (that session's daily bar had no close yet)`,
+    );
+  }
+}
+
 async function runSingle(id) {
   const today = arg("today") ?? new Date().toISOString().slice(0, 10);
-  const { state, ledgerPath, ledgerText } = await buildState(id, today);
+  const { state, ledgerPath, ledgerText, priceAsOf } = await buildState(id, today);
   const decision = decide(state);
   if (decision.verdict === "screen" && has("apply")) {
     writeFileSync(ledgerPath, applyScreen(ledgerText, state, decision));
   }
-  console.log(JSON.stringify({ id, ...decision }, null, 2));
+  warnOnFallbackPrices(id, priceAsOf);
+  console.log(JSON.stringify({ id, ...decision, priceAsOf }, null, 2));
   process.exit(decision.verdict === "screen" ? 0 : 1);
 }
 
@@ -197,16 +275,17 @@ async function runScreenDue() {
       continue;
     }
     try {
-      const { state, ledgerPath, ledgerText } = await buildState(item.id, today, {
+      const { state, ledgerPath, ledgerText, priceAsOf } = await buildState(item.id, today, {
         allEvents,
         cadence,
       });
       const decision = decide(state);
+      warnOnFallbackPrices(item.id, priceAsOf);
       if (decision.verdict === "screen") {
         writeFileSync(ledgerPath, applyScreen(ledgerText, state, decision));
-        screened.push({ id: item.id, reasons: decision.reasons });
+        screened.push({ id: item.id, reasons: decision.reasons, priceAsOf });
       } else {
-        stillDue.push({ ...item, materialReasons: decision.reasons });
+        stillDue.push({ ...item, materialReasons: decision.reasons, priceAsOf });
       }
     } catch (err) {
       console.error(`event-material-scan: probe failed for ${item.id} — ${err.message}`);
