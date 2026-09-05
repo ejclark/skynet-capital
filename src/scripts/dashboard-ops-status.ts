@@ -1,5 +1,4 @@
 import type { ActivityStore } from "../observatory/activity-store.js";
-import { ownerEmails } from "../server/auth/resolve-auth.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
 import type { ObservatoryHub } from "../server/observatory-hub.js";
 import { resolveDeployLagFetcher } from "../server/ops-status-deploy-lag.js";
@@ -23,8 +22,9 @@ export interface OpsStatusSetupDeps {
   readonly hub: ObservatoryHub;
   readonly activity: ActivityStore;
   readonly insightsBridge: InsightsBridgeHandle;
-  /** OAuth-only, same reasoning as Mission Control — password mode has no signed-in owner to
-   *  gate against, so there is no `/ops-status` to serve. */
+  /** OAuth-only. The panel is group-visible now (#1296), so what it rides is MEMBERSHIP — and
+   *  password mode has no membership, only one shared key, so there is still no panel to serve
+   *  there. */
   readonly authConfigured: boolean;
 }
 
@@ -68,13 +68,11 @@ export function setupOpsStatus(deps: OpsStatusSetupDeps): OpsStatusDeps | undefi
   const fetchDeploySignals = resolveDeployLagFetcher(deps.env);
   if (!fetchDeploySignals) {
     console.warn(
-      "ℹ️  Ops-status deploy signals are off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — /ops-status still renders the bridge/activity signals and links out to Actions.",
+      "ℹ️  Ops-status deploy signals are off (no SKYNET_FEEDBACK_GITHUB_TOKEN) — the status pill still renders the bridge/activity signals and links out to Actions.",
     );
   }
   const repo = resolveOpsStatusRepo(deps.env);
-  const owners = ownerEmails(deps.env);
   return {
-    isOwner: (email) => owners.has(email),
     status: () =>
       buildOpsStatus({
         now: () => new Date(),
