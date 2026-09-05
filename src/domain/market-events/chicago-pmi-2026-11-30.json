@@ -1,0 +1,11 @@
+{
+  "id": "chicago-pmi-2026-11-30",
+  "kind": "macro-print",
+  "title": "Chicago PMI / Chicago Business Barometer (Nov 2026 data)",
+  "date": "2026-11-30",
+  "status": "estimate",
+  "source": "NEWS: mnimarkets.com \"Chicago Business Barometer™ (aka Chicago PMI): 2025/26 Publication Calendar\" — the 2026 schedule lists all twelve releases at 09:45 ET on the last business day, with \"November 30\" at \"09:45\" (2026-11-30 is a Monday, the last business day of November); fetched direct 2026-09-05, the same page and the same fetch that re-verified the October entry, checked 2026-09-05",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The first post-midterm read on Chicagoland manufacturing sentiment, and the completion of a coverage gap this series has been closing one instance at a time: every comparable recurring macro series here carries three or four forward entries (ISM Manufacturing 09-01/10-01/11-02/12-01, ISM Services, CPI, jobs, ADP, Beige Book) and Chicago carried one until 2026-09-05, then two. It matters for two reasons the October instance cannot cover. First, its field period is the first that is entirely POST-election, so it is the control for the October print's named contaminant — the chicago-pmi-2026-10-30 ledger registers that October's survey window runs into the 11-03 midterms and that a soft October headline is inseparable, inside a diffusion index, from election-uncertainty sentiment; November is where that separates. Second, it lands inside the run-up to the 12-09 FOMC and after the 11-28 blackout starts, so it is one of the last manufacturing datapoints the committee sees without a live Fed voice to interpret it. Same two structural caveats as its September and October siblings: filed `estimate`/`NEWS:` because this lane never self-promotes an adjacency it proposed, and because the source-prefix table has no confirmed-tier prefix for MNI/ISM-Chicago at all (`ISM:` is scoped to ismworld.org's national PMI calendar) — the 10-30 research re-tested the alternative route and found chicago.ismworld.org's own report page 302s to ecommerce.ismworld.org/SSO/Login.aspx, so a publisher-primary date is structurally stuck at estimate here until the schema changes. Discovered during the chicago-pmi-2026-10-30 initial-research adjacency sweep (2026-09-05)."
+}
