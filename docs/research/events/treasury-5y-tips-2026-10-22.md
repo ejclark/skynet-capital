@@ -1,327 +1,315 @@
 # 5-Year TIPS auction (new issue) — treasury-5y-tips-2026-10-22
 
-**Kind:** rates · **Date:** 2026-10-22 (estimate, EST: treasury.gov Tentative Auction Schedule PDF, text layer decompressed direct 2026-09-05 — row reads `5-Year TIPS T / Thursday, October 15, 2026 / Thursday, October 22, 2026 / Friday, October 30, 2026`; 1:00pm ET is standing convention and is NOT separately sourced) · **Impact:** medium
+**Kind:** rates · **Date:** 2026-10-22 (estimate, EST: treasury.gov Tentative Auction Schedule PDF, text layer decompressed direct 2026-09-05 — `5-Year TIPS T` announce 10-15, auction 10-22, settle 10-30; 1:00pm ET by convention, not separately sourced) · **Impact:** medium
 **Last assessed:** 2026-09-05
-<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:31+","adjacentIds":["consumer-confidence-2026-10-27","durable-goods-2026-10-27","ecb-quiet-period-start-2026-10-21","fomc-blackout-start-2026-10-17","treasury-20y-bond-2026-10-21"],"screenStreak":0} -->
+<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:31+","adjacentIds":["consumer-confidence-2026-10-27","durable-goods-2026-10-27","ecb-bank-lending-survey-2026-10-27","ecb-monetary-developments-2026-10-27","ecb-quiet-period-start-2026-10-21","fomc-blackout-start-2026-10-17","treasury-20y-bond-2026-10-21","treasury-2y-note-2026-10-26","treasury-5y-note-2026-10-27","treasury-buyback-20y30y-2026-10-27","treasury-coupon-announcement-2026-10-22"],"screenStreak":0} -->
 
 ## At a glance
 
-**TL;DR.** The size of this auction is already spoken for — `sb0590` guides **$26B** and
-[`FT-treasury-coupon-announcement-2026-10-15-1`](../forward-tests.md) already scores it on 10-16. So
-the question this doc actually answers is the one nobody has asked: **what the auction itself reads.**
-Two things, both measured this session from primaries. First, **the stop is trackable today, for
-free** — the 5-Year TIPS auction high yield has landed within **±4.1bp of the same-day 5-Year CMT
-real yield in 14 of 14 auctions since 2023** (mean +0.2bp), and that series currently sits at
-**2.17% (09-04), the 93rd percentile of its 2026 range and 5bp off the year's high**. Priced there,
-this new issue stops at the **highest 5-Year TIPS real yield since April 2024** and carries a
-**2.125% coupon**. Second, **the flat guidance is not a demand retreat, and reading it as one would
-be the error.** The last four 5-Year TIPS auctions covered **2.51 / 2.62 / 2.57 / 2.61** with
-**record direct-bidder participation (26.7% and 27.9%)** and record tendered volume (**$70.1B**,
-2026-04) — the deepest bid the series has recorded, at exactly the tenor Treasury chose to stop
-growing. The 10-Year point is going the other way (July 2026 new issue covered **2.30**, the softest
-in the 2023+ sample), so 2026 TIPS demand is **tenor-split**, not uniformly firm. Date is
-`estimate`, `symbols: []`, no house playbook is rates-keyed: **read it, do not trade it.**
+**TL;DR.** **On the day this auction prices, Treasury's published 5-year breakeven will almost
+certainly jump about 10–19 basis points, and none of it will be an inflation-expectations move.**
+Measured this session from Treasury's own data (3,421 sessions with both a par and a par-real curve,
+2013-01-02 → 2026-09-04, against 57 five-year TIPS auctions from Fiscal Data): on the **seven**
+October 5-Year TIPS **new issues** since the slot was created in 2019, the published 5-year real
+yield fell **every single time** — mean **−11.0bp, t = −7.60, 0/7 positive** — while the nominal 5-year
+went the *other* way (**+3.6bp**) and the real 10-year did nothing (**+0.14bp**). The published
+5-year breakeven therefore rose **7 of 7, mean +14.6bp** (range +10 to +19), and against the 10-year
+breakeven it rose **+11.0bp, t = 14.55**, a move only **0.6%** of ordinary sessions produce. It is an
+artifact, and Treasury says why in its own words: its real curve uses **"the most recently auctioned
+TIPS as knot points"** (treasury.gov, fetched today), so an auction that creates a *new* on-the-run
+swaps the security under the 5-year knot. Every control agrees — **reopenings** show nothing
+(June 0.00bp, December −0.71bp), the **settlement date** shows nothing (−0.45bp), the **nominal
+curve** shows nothing (+0.07bp), **same-month non-auction sessions** show nothing (−0.02bp), it is a
+**step and not a spike** (D+1…D+5 all ≈ 0, the level still there at D+20), and the sign flips to
+**+4.75bp on the April** issue, which rolls the knot the other way. The practical output is a
+**reading instruction**, not a position: on 10-22, do not read the breakeven. Size is **$26B**,
+primary-verified. `symbols: []`, date `estimate`, nothing here is a trade.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (2026-09-05, D-47) | **Stand aside** | High | Saturday — no session; 09-07 is Labor Day and the next print is 09-08. This auction's own terms do not exist until the **2026-10-15** announcement, and its size is already owned by a registered test. | Treasury moving the 5-Year TIPS off **2026-10-22**, or pre-announcing a TIPS size change before then — either voids the deductive frame this doc inherits |
-| This week | **Watch the 5-year real yield, not this auction** | High | The stop tracks the 5Y CMT real yield (±4.1bp, 14/14) and that series is 5bp off its 2026 high; nothing between now and 10-15 changes the auction, only its indicated level. | The 5Y CMT real yield falling below **1.875%** on any session through **2026-09-11** — a 30bp drop happens in 14.8% of 33-session windows (2023-2026) and would wipe out the "highest since April 2024" framing seven weeks early |
-| This month | **Watch the tenor split, not the TIPS complex** | Medium | 5-Year demand is at record depth while the 10-Year point softened to a 2.30 cover in July 2026 — a divergence a "TIPS demand" headline would flatten. | The **2026-09-17** 10-Year TIPS reopening covering **at or above 2.51** (the 5Y slot's own October-2025 level) — that would make the split noise rather than a tenor story |
-| This quarter | **Real-rate story, still — and this is the cleanest place to test it** | Medium | The 5-year point's 2026 move decomposes **+80bp nominal = +71bp real + 9bp breakeven** (89% real), and the breakeven sits at only the **37th percentile** of its own 2026 range. | The 5-year breakeven printing above **2.72%** (its 2026 high, set 2026-05-04) on any session through **2026-10-22** — inflation expectations, not term premium, would then own the move |
+| Today (2026-09-05, D-47) | **Stand aside** | High | Saturday, no session; 09-07 is Labor Day. This auction's CUSIP, size confirmation and demand do not exist until the **2026-10-15** announcement, and `symbols: []` leaves nothing to express a view in. | Nothing dated today for this event; its terms are 40 days away |
+| This week | **Stand aside — and note the 09-17 10Y TIPS is a *reopening*, so it carries none of this** | High | The knot artifact fires only when an auction creates a new on-the-run. The Tentative Schedule marks 09-17 `10-Year TIPS **RT**`, so [that sibling's](treasury-10y-tips-2026-09-17.md) breakeven kill switch is safe as written — it just must not be copied here. | The **2026-09-17** 10Y TIPS reopening moving the 10-year breakeven relative to its neighbours by ≥ ±3bp on the day, which would say reopenings shift the knot after all and the new-issue-only claim is wrong |
+| This month | **Grade a 5Y TIPS print on the new-issue band only — never a pooled one** | Medium | New issues and reopenings draw structurally different dealer takedown (recent new issues 18.1 / 13.5 / 8.5% against reopenings 6.6 / 5.4 / 3.4%), the same size artifact the [20Y sibling](treasury-20y-bond-2026-10-21.md) found on bid-to-cover. October-slot band, n=7: dealer p25 **7.8%** · med **9.2%** · p75 **13.7%**. | Any 5Y TIPS reopening printing dealer takedown above the new-issue p25 of 7.8% — the two populations would be overlapping after all, and the separate bands would be doing no work |
+| This quarter | **Expect the artifact on 10-22 and discount it; the FOMC six days later owns the real signal** | Medium | The effect survived Treasury's own 2021-12-06 methodology change (2022–2025 October issues: −10, −16, −10, −8bp, 4/4), so the base rate carries. [`fomc-2026-10-28`](fomc-2026-10-28.md) is hold-modal and lands D+6. | A 5-year breakeven change on **2026-10-22** of **less than +5bp relative to the 10-year breakeven** — the artifact failing at the one auction this doc was written for. Registered as **FT-treasury-5y-tips-2026-10-22-1** |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Never a directional bet.** `symbols: []`, date is `estimate`, and no house playbook (S1/S2/E1/S3/S4 + G1) is rates-keyed.
-- **The stop tracker, quotable today:** 5Y TIPS stop ≈ same-day 5Y CMT real yield, **±4.1bp, 14/14 since 2023-04** (mean +0.2bp). At **2.17%** the indicated coupon is **2.125%** (`floor(stop / 0.125)`, exact on **13 of 13** new issues since 2018).
-- **The demand tell (the distinctive one):** direct-bidder share. It ran **17-18%** for six straight years, then **24.3 / 21.9 / 26.7 / 27.9%** across the last four 5-Year TIPS auctions. Below **20%** on 10-22 says that was an episode, not a level.
-- **The weak-demand tell:** a cover below **2.36**, the softest of the seven October new issues (2023). The full new-issue floor since 2018 is **2.28** (2025-04).
-- **Checked and NOT a finding:** 10-22 also carries a **~$213B** nominal announcement (2Y $69B · 5Y $70B · 7Y $44B · 2Y FRN $30B, `sb0590` Oct-26 row) at ~11:00 ET, two hours before this auction — including a same-tenor 5-Year note. That pairing is **7 for 7** since 2019 and is already inside the 2.36-2.75 cover band. Structural, not a risk.
-- **What this doc cannot score, said up front:** fiscaldata publishes no when-issued yield, so **whether the auction tails is not measurable** from the primary used here. Only the level and the demand shares are.
-- **Watch (dated):** CPI **10-14** · announcement **10-15** · dealer agenda + opex **10-16** · FOMC blackout opens **10-17** · 20Y reopening **10-21** · **this auction + the $213B nominal announcement 10-22** · FOMC **10-28** · settlement **10-30** · borrowing estimates **11-02** · refunding **11-04**.
+- **Never a directional bet.** `symbols: []`, the date is `estimate`, and no house playbook
+  (S1/S2/E1/S3/S4 + G1) is rates-keyed. This is a read-it-don't-trade-it event.
+- **The one reading instruction, so it is not re-derived:** on **2026-10-22**, Treasury's published
+  5-year breakeven jumps mechanically. Base rate **7/7** October new issues, mean **+14.6bp**
+  outright and **+11.0bp** against the 10-year breakeven, minimum **+9bp**. Read the 10-year
+  breakeven that day, or read the 5-year one on 10-21 and 10-23 — not the 5-year on the day.
+- **What the artifact is:** Treasury's real curve reads its 5-year point off "the most recently
+  auctioned TIPS," so a *new issue* changes the security under the knot and a *reopening* does not.
+  The sign is set by the incoming security's dated month: **October ≈ −11bp** on the real yield,
+  **April ≈ +4.8bp**.
+- **How to tell an artifact from a real move on the day:** the artifact is confined to the **real**
+  curve at the **5-year** point. On the seven October issues the nominal 5-year moved **+3.6bp** and
+  the real 10-year **+0.14bp**. A same-day move that also shows up in nominals or at the 10-year
+  point is a genuine market move; one that appears only in the real 5-year is the knot.
+- **The correct demand yardstick — October new-issue slot only** (n=7, competitive base):
+  bid-to-cover min **2.360** · med **2.450** · max **2.750**; dealer takedown min 6.1% · p25 **7.8%**
+  · med **9.2%** · p75 **13.7%** · max 16.7%. **Weak print** = dealer above 13.7%. **Strong print** =
+  dealer at or below 7.8%.
+- **The [5Y-note sibling's](treasury-5y-note-2026-10-27.md) substitution rule transfers here, but
+  only in the live era** — corr(indirect%, direct%) is **−0.802 (t = −6.00)** on 5Y TIPS since 2021
+  and a meaningless **+0.155 (t = 1.16)** pooled back to 2013. Use dealer takedown; do not quote the
+  pooled correlation as evidence either way.
+- **Percentages are on the competitive base** (indirect + direct + dealer), never `total_accepted` —
+  SOMA add-ons ran **$0.0–3.6B** across this series.
+- **Size is settled before it opens — $26B**, verbatim from `sb0590` (2026-08-05), read direct this
+  session; a deviation at the **2026-10-15** announcement voids every like-for-like band above. That
+  number is already spoken for by [`FT-treasury-coupon-announcement-2026-10-15-1`](../forward-tests/treasury-coupon-announcement-2026-10-15.md);
+  this auction is its confirmation, not a second test of it.
+- **Watch (dated)** — CPI **09-11** · FOMC **09-16** · 10Y TIPS reopening **09-17** · CPI **10-14** ·
+  this announcement **10-15** · blackout opens **10-17** · 20Y **10-21** · this auction **10-22** ·
+  2Y **10-26** · 5Y **10-27** · FOMC **10-28** · settlement **10-30** · the December reopening of
+  this same CUSIP **12-22**.
 
 ## Initial research
 
-### The question, plainly
+**The question, plainly:** a 5-Year TIPS new issue prices a *real* yield, and this calendar's
+standing use for a TIPS auction — set by the [30Y](treasury-30y-tips-2026-08-20.md) and
+[10Y](treasury-10y-tips-2026-09-17.md) siblings — is to read the **breakeven** around it as the
+cleanest available test of whether a long-end selloff is a real-rate story or an inflation-
+expectations story. Does that reading actually work on a 5-Year TIPS auction day?
 
-This event was created 2026-09-05 by the
-[`10-15 coupon-announcement`](treasury-coupon-announcement-2026-10-15.md) initial research, which
-found a **5-Year TIPS new issue** sharing that announcement — a security no doc in this calendar had
-noticed. That session took the interesting half of the story with it: the **size**, guided flat at
-$26B against a five-year annual ratchet, is registered as
-`FT-treasury-coupon-announcement-2026-10-15-1` and scores 2026-10-16, six days before this auction
-happens.
+**One-line verdict:** no — on the October 5-Year slot specifically it is close to guaranteed to
+mislead, because Treasury's published 5-year breakeven jumps roughly 15bp on that day for a reason
+that has nothing to do with inflation expectations, and the whole contribution of this doc is
+measuring that artifact, proving it is one, and handing the next session a rule for reading through it.
 
-Which sets the trap. If this doc is "the auction sells $26B, as already written," it duplicates a
-registered prediction and adds nothing — the same trap the 10-15 session named for itself. So the
-question here is the one the announcement doc structurally could not ask: **the announcement settles
-the supply; what does the auction settle?** Concretely: what is this security indicated to price at,
-is that knowable in advance, and does the demand record support or undercut the reading that TIPS
-issuance growth stopped in 2026?
-
-**One-line verdict:** two things, both new to this calendar. The stop is **trackable in real time
-from a free daily Treasury series** (±4.1bp, 14/14 since 2023), and it currently indicates the
-highest 5-Year TIPS real yield since April 2024 — while the demand record shows the **deepest bid
-the 5-Year TIPS series has ever recorded**, which means the flat guidance is a supply-management
-choice and not a retreat from a soft bid. The 10-Year point is softening at the same time, so the
-honest shape is a **tenor split**, not a complex-wide verdict.
-
-### Method
-
-Rates mode per [`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md). `symbols: []`, so no
-symbol-keyed instrument applies — `earnings-cycle.mjs` and `intraday-edges.mjs` have no target and
-the mandated cache bust has nothing to bust (recorded rather than skipped silently). Everything
-quantitative below was fetched from a primary **this session (2026-09-05)** and re-derived rather
-than inherited, including the numbers the parent already published:
-
-- **The schedule** — `home.treasury.gov/system/files/221/Tentative-Auction-Schedule.pdf`, plain
-  curl, HTTP 200, **17,195 bytes**, PDF streams inflated and text operators read in document order.
-- **The guidance** — `home.treasury.gov/news/press-releases/sb0590` (2026-08-05 quarterly refunding
-  statement), HTTP 200, **75,576 bytes**, tag-stripped and read in full.
-- **The auction record** — `api.fiscaldata.treasury.gov` `auctions_query`, two server-side-filtered
-  pulls: all `inflation_index_security: Yes` since 2018-01-01 (**105 rows**), and all nominal
-  `original_security_term: 5-Year` notes since 2018-01-01, used to date the month-end announcements.
-- **The tape** — Treasury's own daily par and daily **real** yield-curve CSVs, full-year files for
-  2023, 2024, 2025 and 2026 (**920 sessions**), and Yahoo `^VIX` daily closes.
+**Method:** sourced research per [`EVENT-RESEARCH.md`](../../process/EVENT-RESEARCH.md), rates mode —
+the house instruments are symbol-keyed and this event has `symbols: []`, so no `earnings-cycle` /
+`intraday-edges` run applies and no cache bust was required. Every figure below is computed this
+session from Treasury primaries fetched today: the Fiscal Data `auctions_query` dataset (198
+inflation-indexed records since 2010, of which **57 are 5-Year TIPS** and 49 match a curve session),
+and the daily **par yield curve** and **par real yield curve** CSVs for 2013–2026 (**3,421 sessions
+carrying both**, 2013-01-02 → 2026-09-04). Schedule provenance is the Tentative Auction Schedule PDF
+(home.treasury.gov, HTTP 200, 17,195 bytes, text layer decompressed direct). Size provenance is press
+release `sb0590` (2026-08-05), fetched and read as text this session. Curve-construction provenance
+is treasury.gov's own Yield Curve Methodology page (revised 2025-02-18) and the Daily Treasury Par
+Real Yield Curve Rates page, both fetched today. The control population throughout is the **3,255**
+sessions carrying no TIPS auction of any tenor. VIX is the 2026-09-04 close. Each claim dated in line.
 
 ### Conviction legs, tested
 
-**1. The date, security type and new-issue reading are right — SUPPORTED, re-derived from the
-primary rather than inherited.** The Tentative Auction Schedule's own text, in document order:
-`5-Year TIPS T / Thursday, October 15, 2026 / Thursday, October 22, 2026 / Friday, October 30,
-2026`. The `T` is the TIPS marker; there is no `R`, so it is a new issue. The neighbouring row reads
-`20-Year BOND R / Thursday, October 15, 2026 / Wednesday, October 21, 2026 / Friday, October 23,
-2026`, matching the calendar's `treasury-20y-bond-2026-10-21` entry. Independent corroboration on
-the new-issue reading: in `fiscaldata`, the October 5-Year TIPS slot is a **new issue in all seven
-years it has existed** (2019-2025), with the reopening landing each December. Two supports, neither
-of them the schedule's legend — which was not fetched, and is disclosed in the limits.
+**1. The date, the marker and the size are right, and the entry stays `estimate` on purpose —
+SUPPORTED.** The Tentative Auction Schedule carries the row verbatim: `5-Year TIPS T · Thursday,
+October 15, 2026 · Thursday, October 22, 2026 · Friday, October 30, 2026` (announcement · auction ·
+settlement). Treasury's own legend on that page reads `T --denotes TIPS` and `R --denotes reopening`;
+this row carries **T without R**, so it is a **new issue** — which, per legs 3–5, is the entire reason
+this event behaves differently from the 09-17 10Y TIPS (`10-Year TIPS **RT**`) or the December 5Y TIPS
+(`5-Year TIPS **RT**`, auction Tuesday 12-22). Size is **$26B**: `sb0590`'s TIPS FINANCING paragraph
+reads verbatim that Treasury plans "to maintain TIPS auction sizes at current levels: the August
+30-year TIPS reopening auction size at $8 billion, the September 10-year TIPS reopening auction size
+at $19 billion, and **the October 5-year TIPS new issue auction size at $26 billion**." The entry stays
+`estimate` for the same two reasons its October siblings off this identical PDF chose it — a tentative
+schedule is tentative, and this lane may not self-confirm an event it discovered in-sweep. The
+confirming primary is the 2026-10-15 announcement.
 
-**2. The auction stop is knowable in advance from a free public series — SUPPORTED, 14/14, and this
-is the finding.** Every 5-Year TIPS auction since 2023 against Treasury's own daily 5-Year CMT real
-yield published for the same date:
+**2. Treasury builds its real curve from the most recently auctioned TIPS — SUPPORTED, primary,
+verbatim.** The Daily Treasury Par Real Yield Curve Rates page (fetched today) states that par real
+yields "are read from the par real yield curve at fixed maturities, currently **5, 7, 10, 20, and 30
+years**," calculated "from indicative secondary market quotations obtained by the Federal Reserve Bank
+of New York," and carries this series-break note: **"Starting 12/01/2008, the TIPS yield curve began
+using the most recently auctioned TIPS as knot points rather than all securities."** The nominal
+methodology page (revised 2025-02-18) says the same of its own inputs — "the most recently auctioned
+securities" — and records the 2021-12-06 switch from a quasi-cubic Hermite spline to a monotone convex
+method. Two consequences follow directly and are tested below: the 5-year knot's *security* changes
+only when an auction creates a new on-the-run, and the trigger is the word **auctioned**, not settled.
 
-| Auction | Type | Stop | 5Y CMT real, same day | Basis |
+**3. THE FINDING — on an October 5-Year TIPS new issue, the published real 5-year collapses and the
+published 5-year breakeven jumps, and it is not a market move.** Close-to-close, the seven October
+new issues (2019-10-17, 2020-10-22, 2021-10-21, 2022-10-20, 2023-10-19, 2024-10-24, 2025-10-23):
+
+| Series on the auction day | n | Mean | t | Direction |
 |---|---|---|---|---|
-| 2023-04-20 | new | 1.320 | 1.35 | −3.0bp |
-| 2023-06-22 | reopen | 1.832 | 1.85 | −1.8bp |
-| 2023-10-19 | new | 2.440 | 2.43 | +1.0bp |
-| 2023-12-21 | reopen | 1.710 | 1.69 | +2.0bp |
-| 2024-04-18 | new | 2.242 | 2.24 | +0.2bp |
-| 2024-06-20 | reopen | 2.050 | 2.05 | 0.0bp |
-| 2024-10-24 | new | 1.670 | 1.70 | −3.0bp |
-| 2024-12-19 | reopen | 2.121 | 2.08 | **+4.1bp** |
-| 2025-04-17 | new | 1.702 | 1.69 | +1.2bp |
-| 2025-06-17 | reopen | 1.650 | 1.64 | +1.0bp |
-| 2025-10-23 | new | 1.182 | 1.19 | −0.8bp |
-| 2025-12-18 | reopen | 1.433 | 1.40 | +3.3bp |
-| 2026-04-23 | new | 1.367 | 1.38 | −1.3bp |
-| 2026-06-18 | reopen | 1.955 | 1.96 | −0.5bp |
+| **Real 5-year CMT** | 7 | **−11.0bp** | **−7.60** | **0/7 positive** |
+| Nominal 5-year CMT | 7 | +3.6bp | +2.29 | 5/7 positive |
+| **5-year breakeven** (nom − real) | 7 | **+14.6bp** | **+10.20** | **7/7 positive** |
+| Real 10-year CMT | 7 | +0.14bp | +0.15 | nothing |
+| 10-year breakeven | 7 | +3.6bp | +2.66 | 6/7 |
+| **5-year minus 10-year breakeven** | 7 | **+11.0bp** | **+14.55** | **7/7**, min +9bp |
+| — control, non-TIPS-auction sessions | 3,255 | −0.04bp | −0.97 | — |
 
-**Mean +0.2bp, range −3.0 to +4.1bp, 14 of 14 inside ±4.1bp.** This is not surprising — the CMT
-curve is built from the same market the auction clears into — but it had not been measured here, and
-it converts a daily public file into a live indication of where this auction prices. It is what lets
-every horizon call above be stated in levels rather than in adjectives.
+The individual prints on the last row are **+15, +10, +10, +10, +12, +11, +9bp**. Only **0.6%** of the
+3,255 control sessions reach +8bp on that measure, and **2.0%** reach +5bp. The real yield falling
+11bp while the nominal 5-year *rises* 3.6bp is the tell: a genuine flight into five-year real assets
+would not leave the nominal 5-year going the other way and the real 10-year flat.
 
-**3. Priced at today's tape, this is the highest 5-Year TIPS stop since April 2024 — SUPPORTED as an
-indication, not a forecast.** The 5-Year CMT real yield closed **2.17% on 2026-09-04**. Against the
-2026 file (171 sessions): the year's high is **2.22% (07-27)**, the low **1.11% (02-27)**, and 2.17
-sits at the **93rd percentile** with only **8 sessions all year** within 5bp of the high. Stops above
-2.17 since 2023 number exactly two — 2023-10-19 (2.440) and 2024-04-18 (2.242) — so an auction there
-would be the highest 5-Year TIPS clearing real yield in **two and a half years**. The coupon follows
-mechanically: TIPS coupons are set at the largest ⅛% increment not above the stop, which reproduces
-**13 of 13** new issues since 2018 exactly (the 10 apparent misses in the raw data are all
-reopenings, which inherit their own CUSIP's coupon — a distinction worth stating because ignoring it
-makes the rule look 23/33). At 2.17% that gives **2.125%**, tying April 2024 for the highest 5-Year
-TIPS coupon since October 2023's 2.375%. **This is an indication and nothing more:** the CMT is an
-interpolated constant-maturity series, the CUSIP's own when-issued yield does not exist until the
-10-15 announcement, and 47 calendar days is roughly 33 sessions of drift.
+**4. Five independent controls say it is the knot and not the market — SUPPORTED.** Each of these
+should be empty if the mechanism in leg 2 is the explanation, and each is:
 
-**4. The move that got the 5-year point here is real-rate, not inflation — SUPPORTED, and stated on
-the un-cherry-picked window.** Year to date (2026-01-02 → 2026-09-04), the 5-year point:
-
-| | 01-02 | 09-04 | Δ |
+| Control | Prediction if it is the knot | Measured | Verdict |
 |---|---|---|---|
-| Nominal 5Y (par) | 3.74 | **4.54** | **+80bp** |
-| Real 5Y | 1.46 | **2.17** | **+71bp** |
-| Breakeven (derived) | 2.28 | **2.37** | **+9bp** |
+| **Reopenings** (re-tap the security that is already on-the-run) | nothing | June n=8 **0.00bp** (t = 0.00); December n=7 **−0.71bp** (t = −1.00) | ✔ |
+| **Settlement date** rather than auction date | nothing (the page says *auctioned*) | new issues n=21, **−0.45bp** (t = −1.24) real, +0.24bp (t = 0.76) breakeven | ✔ |
+| **Nominal curve** on the same days | nothing (no nominal auction) | n=21, **+0.07bp** (t = 0.24) against +0.02bp control | ✔ |
+| **Same-month non-auction sessions**, 2019+ | nothing (not a calendar seasonal in the tape) | October n=141 **−0.02bp** (t = −0.15); April n=161 −0.19bp (t = −1.16) | ✔ |
+| **Persistence** — a re-anchoring is a step, a flow is a spike | level shifts and stays | rel breakeven D−1 +1.2 · **D+0 +8.2** · D+1 −0.4 · D+2 −0.7 · D+3 +0.4 · D+4 −0.9 · D+5 +0.4; the spread at **D+20 ≈ D+0** in 6 of 7 years | ✔ |
 
-**89% of the 2026 nominal move is real-rate.** The trough-anchored version is starker and is
-disclosed as trough-anchored rather than led with: from 2026-03-17 the nominal is +75bp against real
-**+100bp** and breakeven **−25bp** — i.e. inflation expectations *fell* while nominals rose. Either
-window gives the same read, and the breakeven's own position corroborates it: **2.37% is the 37th
-percentile** of a 2026 range of **2.16 (07-28) to 2.72 (05-04)**. This is the same framing the
-[10-Year TIPS sibling](treasury-10y-tips-2026-09-17.md) carries at its own tenor, re-derived here
-independently at five years rather than inherited.
+Measured on the real **10-year** knot alone rather than an average that includes the interpolated
+7-year point, the October figure is **−11.14bp (t = −7.75, 7/7)** — the reading does not depend on
+which neighbour is used.
 
-**5. The flat guidance is NOT a demand retreat — SUPPORTED, and this is the leg that inverts the
-naive read.** The parent doc established that `sb0590` guides the October 5-Year TIPS flat at $26B
-against a five-year ratchet, and that the July 10-Year TIPS new issue also held flat — "a
-complex-wide halt in TIPS issuance growth in 2026." The obvious inference is that Treasury backed
-off because the bid was soft. The auction record says the opposite at this tenor:
+**5. The sign is set by the incoming security's dated month, and it replicates across tenors —
+SUPPORTED.** The April 5-Year new issue rolls the knot the opposite way and produces the mirror image
+(2019+, n=8): real 5-year **+4.75bp** (t = 2.36), 5-year breakeven **−3.0bp** (t = −2.14), breakeven
+against the 10-year **−5.4bp** (t = −3.56, 1/8 positive). Run the same own-minus-neighbours test at
+the other TIPS tenors and the pattern holds, with the month setting the sign:
 
-| Auction | Size | Cover | Direct | Indirect | Dealers | Tendered |
+| Tenor, new issues | Month | n | Rel. real yield | t | Rel. breakeven | t |
 |---|---|---|---|---|---|---|
-| 2024-10-24 (new) | $24B | 2.40 | 17.3% | 74.5% | 7.9% | $57.9B |
-| 2025-04-17 (new) | $25B | **2.28** | 17.6% | 63.7% | **17.9%** | $58.7B |
-| 2025-10-23 (new) | $26B | 2.51 | 24.3% | 61.8% | 13.4% | $66.6B |
-| 2025-12-18 (reopen) | $24B | 2.62 | 21.9% | 72.4% | 5.4% | $65.4B |
-| 2026-04-23 (new) | $26B | 2.57 | **26.7%** | 64.1% | 8.4% | **$70.1B** |
-| 2026-06-18 (reopen) | $24B | 2.61 | **27.9%** | 68.3% | **3.4%** | $66.2B |
+| **5-Year** | October | 7 | **−8.57bp** | **−8.40** | **+8.21bp** | **+14.53** |
+| **5-Year** | April (2019+) | 8 | **+4.00bp** | +2.82 | −3.50bp | −2.75 |
+| 10-Year | January | 14 | +1.07bp | +3.32 | −0.71bp | −2.02 |
+| 10-Year | July | 14 | −0.71bp | −1.71 | +0.86bp | +1.79 |
+| 30-Year | February | 14 | **+1.64bp** | **+5.68** | −1.43bp | −4.91 |
 
-Direct-bidder share sat in a **17-18% band for six straight years** (2021-04 through 2025-04, every
-new issue) and then stepped to **24.3 / 21.9 / 26.7 / 27.9%** across the last four auctions —
-**26.7% is a record for a 5-Year TIPS new issue** in the 2018+ pull, and $70.1B tendered is a record
-outright. Dealer takedown, the residual that measures what nobody else wanted, fell to **8.4% and
-3.4%** from the 17.9% stress print of April 2025. So Treasury stopped growing this tenor into the
-deepest bid it has ever drawn there, which makes "maintain TIPS auction sizes at current levels" a
-statement about overall financing and portfolio composition, not a concession to weak demand.
+Two things worth naming. First, the 10-Year's two slots carry **opposite signs**, which is exactly why
+pooling them gives +0.18bp (t = 0.57) and makes the effect look absent at that tenor — it cancels.
+Second, the 5-Year is an order of magnitude larger than the 10-Year or 30-Year, consistent with a
+roughly fixed wedge being a much bigger share of a short real yield than a long one. **The effect also
+survives Treasury's own 2021-12-06 methodology change**: restricted to the monotone-convex era, the
+October issues print −10, −16, −10, −8bp, **4/4**, mean −11.0bp — identical to the full sample.
 
-**6. But the TIPS complex is tenor-split, and calling it uniformly strong would be wrong — MIXED,
-and this is the honest correction to leg 5.** Same pull, the 10-Year point: the **July 2026 new
-issue covered 2.30**, the softest of the eight 10-Year TIPS new issues since 2023 (2.79, 2.51, 2.62,
-2.38, 2.48, 2.41, 2.38, **2.30**), and the [10-Year sibling](treasury-10y-tips-2026-09-17.md)
-records that same auction stopping at **2.438% real — a 17-year high — with a ~2.8bp tail.** The
-30-Year point cuts the other way again: the 2026-08-20 reopening covered **2.82** with a **2.1%**
-dealer takedown, the strongest cover and the lowest dealer residual in that series since 2023. So
-the shape of 2026 TIPS demand is **strong at 5 years, softening at 10, strong at 30** — three
-different stories. Anything that says "TIPS demand is X" without a tenor is flattening this.
+**6. The two-component story that would explain the sign flip does NOT survive its one out-of-sample
+test — REFUTED, and it is stated as a failure rather than smoothed over.** The natural explanation is
+that the shift has two parts: a **maturity-roll** term (the knot's security jumps back to a full five
+years, same sign every time) and a **dated-month** term (October-dated and April-dated TIPS index off
+non-seasonally-adjusted CPI at different points in its seasonal path, opposite signs). Solving the
+2019+ means gives roll = **−2.57bp** and dated-month = **∓8.57bp**. That fits by construction — two
+equations, two unknowns — so it needs an out-of-sample check, and there is exactly one available.
+Before 2019 the 5-Year TIPS had **one** new issue a year, every April, replacing a knot that was *also*
+April-dated: the dated-month term is zero by construction and the roll is twelve months instead of six.
+A roll that scales with elapsed months predicts about **−5.1bp**. It measures **−11.0bp** (t = −5.64,
+6/6, n=6). The decomposition is therefore **not established**; the roll is non-linear in elapsed
+months, or the pre-2019 regime differs some other way (it predates the monotone-convex change and n=6).
+**What survives is the measurement, not the mechanism's arithmetic** — the October slot's sign and
+magnitude are directly measured, 7/7, and Treasury's own knot-point sentence explains *that* an
+auction-day shift exists without needing this doc to be right about how it splits.
 
-**7. The same-day $213B nominal announcement is structural, not a risk — REFUTED as a finding, and
-recorded because it looked like one.** The schedule puts the entire month-end nominal block on this
-auction's own date: `2-Year NOTE` (auction 10-26), `5-Year NOTE` (10-27), `2-Year FRN` (10-28) and
-`7-Year NOTE` (10-29) all announce **Thursday, October 22, 2026**. Sized off `sb0590`'s Oct-26 row
-(`69 58 70 44 39 13 22 30`, re-read verbatim this session), that is **$69B + $70B + $44B + $30B =
-~$213 billion** announced at ~11:00 ET — including a **same-tenor 5-Year nominal note at $70B** —
-two hours before a $26B real-yield auction prices. That reads like a tenor-matched supply headwind
-landing inside the bid window. It is not new: testing every October 5-Year TIPS new issue against
-the nominal 5-Year note's own `announcemt_date` in `fiscaldata` gives **7 for 7** — 2019, 2020,
-2021, 2022, 2023, 2024 and 2025 all sold the TIPS on the day the month-end block was announced. The
-pairing is Treasury's standing calendar structure, it is already inside the **2.36-2.75** cover band
-those seven auctions produced, and the same-day nominal 5-Year has grown from $41B (2019) to $70B
-(2024 onward) across that record without the TIPS cover deteriorating. Discarded as a signal;
-recorded so the next session does not rediscover it as one.
+**7. The demand yardstick has to be the new-issue population, and the sibling's substitution rule
+transfers only in the live era — SUPPORTED.** New issues and reopenings of this security draw
+structurally different dealer takedown: the last three new issues took **18.06% / 13.48% / 8.48%**
+against the last three reopenings' **6.55% / 5.43% / 3.43%**. Grading 10-22 against a pooled band
+would repeat exactly the error the [20Y sibling](treasury-20y-bond-2026-10-21.md) documented on
+bid-to-cover. The like-for-like bands, on the competitive base:
 
-**8. The auction sells inside the FOMC blackout, which makes it a cleaner read than its September
-sibling — SUPPORTED as a structural fact.** The Fed's blackout for the Oct 27-28 meeting runs
-**2026-10-17 → 2026-10-29** (`fomc-blackout-start-2026-10-17`, `FED:`-sourced), so 10-22 falls
-squarely inside it: **no Fed speaker can move the front end in the days before this stop.** That is
-the mirror image of the [09-17 10-Year TIPS](treasury-10y-tips-2026-09-17.md), which sold the day
-*after* an FOMC and had to be read through a fresh policy signal. Here the stop is a market-set real
-yield with no official communication in the window, six sessions ahead of a meeting that
-[`fomc-2026-10-28`](fomc-2026-10-28.md) grades a **genuine coin flip** on a hike. That ledger's own
-measured finding sharpens why this matters: on this chair, hawkish surprises price into the **front
-end of the curve, not equity volatility** (2026-08-28: 2y **+8bp**, S&P −0.13% to −0.25%, VIX
-closing at the 2026 low). A 5-year real-yield auction is close to the purest instrument this
-calendar has for that channel.
+| Population | n | Bid-to-cover (min · med · max) | Dealer % (p25 · med · p75) |
+|---|---|---|---|
+| **October new-issue slot** | 7 | 2.360 · **2.450** · 2.750 | **7.8** · **9.2** · **13.7** |
+| All new issues 2021+ | 11 | 2.280 · 2.450 · 2.730 | 7.1 · 8.5 · 11.7 |
 
-**9. No tracked name is exposed through this event — SUPPORTED, inherited.** `symbols: []`. The
-duration channel that hit CRWV −12.1% and SOX −5% on 2026-08-18 is a real-rate transmission and this
-auction is a *reading* of that rate, not a driver of it. Sensitivity tiering, if a pulse ever needs
-it, is unchanged from the 10-Year sibling: CRWV highest, then NVDA/AVGO/MRVL, then mega-cap, least
-AAPL/AMZN. Nothing here licenses a position in any of them.
+On the substitution question the [5Y-note sibling](treasury-5y-note-2026-10-27.md) settled at its own
+tenor: corr(indirect%, direct%) on 5Y TIPS is **−0.802 (t = −6.00, n=22)** since 2021, with the
+end-user sum less than two-thirds as noisy as indirect alone (sd 5.38pt vs 8.75pt) — the rule holds.
+But pooled back to 2013 the same correlation is **+0.155 (t = 1.16)**, because 2020–21 ran indirect as
+high as 89.5%. So the sibling's rule transfers, and the pooled number must not be quoted as evidence
+in either direction. The immediate predecessor, **2026-04-23** ($26B, CUSIP 91282CQP9), printed
+bid-to-cover **2.570** with dealers at **8.48%** — inside the strong half. Last October's
+(**2025-10-23**, $26B, 91282CPH8) printed 2.510 with dealers at **13.48%**, essentially at the slot's
+p75 — the weakest of the three most recent.
 
-**10. Current tape, recorded as the baseline the next pulse diffs against.** Treasury par curve
-**09-04**: 2Y **4.37** · 5Y **4.54** · 10Y **4.78** · 20Y **5.25** · 30Y **5.24**. Real curve, same
-publisher and date: 5Y **2.17** · 10Y **2.43** · 30Y **2.96**. Derived breakevens: 5Y **2.37**, 10Y
-**2.35**. **VIX 14.53** (09-04 close; 3-month range 14.25-22.22). **2026-09-05 is a Saturday**,
-09-07 is Labor Day and the next session is 09-08, so 09-04 is the freshest close available and
-nothing here is stale by neglect. Carried from the parent and not re-derived: the 5Y breakeven
-sitting above the 10Y is the **norm** (146 of 171 2026 sessions), so it carries nothing.
+**8. The corridor is dense but the auction is not its risk, and it holds no new dated adjacency —
+SUPPORTED.** Eleven tracked events sit within five days of 2026-10-22: the FOMC blackout opening on
+[10-17](fomc-blackout-start-2026-10-17.md); the [ECB quiet period](ecb-quiet-period-start-2026-10-21.md)
+and the [20Y bond](treasury-20y-bond-2026-10-21.md) on 10-21; the
+[2Y/5Y/7Y coupon announcement](treasury-coupon-announcement-2026-10-22.md) sharing this date;
+[2Y](treasury-2y-note-2026-10-26.md) on 10-26; then
+[consumer confidence](consumer-confidence-2026-10-27.md), [durable goods](durable-goods-2026-10-27.md),
+the [euro-area bank lending survey](ecb-bank-lending-survey-2026-10-27.md),
+[euro-area monetary developments](ecb-monetary-developments-2026-10-27.md), the
+[5Y note](treasury-5y-note-2026-10-27.md) and a [20-30Y buyback](treasury-buyback-20y30y-2026-10-27.md)
+on 10-27. [`fomc-2026-10-28`](fomc-2026-10-28.md) lands D+6 and reads **hold-modal** (~15–20% on its
+own conditional, not the ~50% the cumulative by-October contracts imply). **No new dated adjacency was
+found to propose** — every event the sweep turned up inside the corridor is already carried.
+**One deliberate non-proposal, recorded:** the **December 5-Year TIPS reopening** (`5-Year TIPS RT`,
+announce 12-17, auction **Tuesday 2026-12-22**, settle 12-31) off this same PDF. It is 61 days out,
+far outside the five-day corridor the siblings hold to, so it is named here rather than filed — and it
+is this doc's own natural successor, since it re-taps the very CUSIP 10-22 creates and should show
+**none** of leg 3's effect.
 
-### What the conditions support
+**What plays the conditions support:** none directional, none symbol-keyed — the standing house answer
+for this event kind. The usable output is a single **reading instruction** for whichever session pulls
+this ledger around 10-22: Treasury's published 5-year breakeven is not readable that day; use the
+10-year breakeven, or the 5-year one a session either side.
 
-Nothing directional — the standard answer for a `symbols: []`, `estimate`-dated rates event. What
-they do support is three things.
-
-**Quote a level, not an adjective.** Leg 2 means this calendar's rates ledgers can state where a
-5-Year TIPS auction is indicated to price, from a file anyone can fetch, any day, at ±4bp — and can
-say *today* that 10-22 is indicated at **~2.17% real / 2.125% coupon**, the highest since April
-2024. The same tool works on 2026-12 (the reopening) and 2027-04 without new research.
-
-**Stop saying "TIPS demand" without a tenor.** Legs 5 and 6 give three different answers at three
-points on the curve in the same calendar year. The 5-Year record is the strongest in the series'
-history; the 10-Year is the softest since 2023. A ledger that carries one of those as "TIPS demand"
-will be wrong about the other two thirds of the complex.
-
-**Read this auction as a pre-FOMC front-end probe.** Leg 8 is the reason to bother at all: a
-market-set 5-year real yield, struck inside a communications blackout, six sessions before a
-coin-flip meeting whose transmission channel this repo has already measured as *the front end*.
-That is a conditioning input on the rate read the equity book carries into 10-27/10-29 — and it is
-an input, never a trigger.
-
-### Honest limits
-
-**Nothing about this auction has happened**; every number is a document read or an indication. **The
-size question is not this doc's** — `FT-treasury-coupon-announcement-2026-10-15-1` owns it and
-scores 10-16, and re-registering it here would double-count one observation. **The stop tracker is
-measured in one policy regime** (Fed on hold at 3.50-3.75% across the 14-auction window); an auction
-struck into a live hiking repricing is out of sample for it, which is exactly the condition
-`fomc-2026-10-28` says is ~50% likely. **The CMT is interpolated constant-maturity**, not CUSIP
-912828-series when-issued, and no when-issued yield exists until the 10-15 announcement. **The
-breakevens are curve-derived** (par nominal less par real), not traded instruments. **The tail is
-not measurable here** — `fiscaldata` publishes no when-issued yield, so this doc can score the
-auction's level and its bidder shares but not whether it stopped through or tailed, and it does not
-pretend otherwise. **Bidder-class shares are Treasury's own classifications**; whether the
-direct-bidder step-up reflects genuinely new investors or dealers routing through a different bid
-channel was not investigated, and that alternative would weaken leg 5 without touching leg 6.
-**Leg 8's blackout dates are inherited** from `fomc-blackout-start-2026-10-17`, and the ~1:00pm ET
-auction time is unsourced standing convention, as the calendar entry discloses. **The date is
-`estimate`** and this lane may not self-confirm it; the confirming primary is the 2026-10-15
-announcement.
+**Honest limits.** The October population is **n=7**, and although it is 7/7 with t = −7.60 that is
+seven observations of one calendar slot, not a law. Leg 6's decomposition **fails** its out-of-sample
+check and is reported as failed; this doc knows *that* the knot shifts and roughly *how much*, and does
+**not** know the split between maturity roll and seasonal accrual. All measurements are daily
+close-to-close on CMT series **rounded to 1bp**, so nothing intraday is visible — including whether the
+shift lands at the 1:00pm result or is spread across the session — and the relative measures are
+quantized to 0.5bp. Causation is not established: an auction day is one of many things in a session,
+and the controls in leg 4 are what make the artifact reading strong rather than any single test. The
+7-year real yield is **interpolated between the 5- and 10-year knots** rather than being a knot itself,
+which is why leg 4 repeats the headline against the 10-year alone. This session did not obtain
+Treasury's actual curve-fitting code or a published statement of TIPS seasonal adjustment; the
+knot-point sentence is primary, the seasonal reading is inference. The 2013 start is a
+data-availability boundary, not a regime boundary. This auction's own CUSIP, when-issued real yield and
+demand **do not exist yet** — the announcement is 2026-10-15. `symbols: []`, `medium` impact, date
+`estimate`: nothing here licenses a position in any name.
 
 ## Stance & kill switches
 
-**Stance (date `estimate`; security type, dates and both guided sizes primary-sourced from
-Treasury's own schedule and `sb0590`, all fetched 2026-09-05).** Watch-only, no standalone play, no
-position — `symbols: []` and no house playbook is rates-keyed. This auction's **supply is settled in
-writing and owned by another test**; its content is the **stop and the bidder shares**. Read it as
-two things: a **live 5-year real-yield reading** that is trackable in advance to ±4bp from Treasury's
-own daily file and currently indicates the highest 5-Year TIPS clearing yield since April 2024, and
-a **demand check on the tenor where TIPS issuance growth stopped** — where the record shows the
-deepest bid the series has ever drawn, not a soft one. The complex is **tenor-split**: strong at 5
-years, softening at 10, strong at 30. Nothing here licenses an entry, and no duration-sensitive
-position should be opened into the 1:00pm ET release.
+**Stance (estimate-dated event; no standalone play):** watch-only, and the specific contribution is a
+**measured artifact in a number this calendar has been treating as a signal**. Treasury's par real
+yield curve reads its 5-year point off "the most recently auctioned TIPS" (primary, verbatim, fetched
+2026-09-05), so an auction that creates a **new on-the-run** — which 2026-10-22 does, per the
+schedule's `T` without `R` — swaps the security under the knot. On the seven October 5-Year TIPS new
+issues since 2019 that has moved the published real 5-year **−11.0bp (t = −7.60, 0/7 positive)** and
+the published 5-year breakeven **+14.6bp (7/7)**, or **+11.0bp against the 10-year breakeven
+(t = 14.55)**, a move only 0.6% of ordinary sessions produce — while the nominal 5-year went the other
+way and the real 10-year did nothing. Reopenings, settlement dates, the nominal curve and same-month
+non-auction sessions all show nothing, and the shift is a step that survives to D+20. So the standing
+house use of a TIPS auction — read the breakeven as the real-rate-versus-inflation-expectations tell —
+**is not usable on this date**, and the correct instruction is to read the 10-year breakeven on 10-22,
+or the 5-year one on 10-21 or 10-23. This scopes the [10Y TIPS sibling's](treasury-10y-tips-2026-09-17.md)
+breakeven kill switch rather than refuting it: that event is a **reopening**, where the artifact is
+measured at zero, so its rule is correct for its own auction and would be wrong if copied here. Grade
+the print itself on **dealer takedown against the October new-issue band** (p25 7.8% / med 9.2% /
+p75 13.7%), never a pooled band. Size is $26B, primary-verified. Nothing here is directional and no
+house playbook applies.
 
-**Two forward tests registered** in [`forward-tests.md`](../forward-tests.md), both scoreable
-**2026-10-23**, deliberately split so that a method and a claim about the world are not scored as
-one observation:
+**Kill switches (what would change this stance):**
 
-- **`FT-treasury-5y-tips-2026-10-22-1`** — the stop lands within **±5bp** of the 5-Year CMT real
-  yield Treasury publishes for 2026-10-22. Base rate 14/14 at ±4.1bp; **a pass is near-uninformative
-  and is disclosed as such**, and it is registered for its fail leg — the first out-of-sample point
-  before other ledgers lean on the tracker.
-- **`FT-treasury-5y-tips-2026-10-22-2`** — the new issue's **direct-bidder share is ≥20%** of the
-  offering. Four consecutive auctions clear it; six prior years of new issues do not. This is the
-  registrable half: it tests whether the demand step-up is a level or a twelve-month episode, and it
-  is the leg the "flat guidance is not a demand retreat" reading rests on.
-
-**Kill switches:**
-
-- **Direct-bidder share below 20% on 2026-10-22** — the distinctive one. The step-up was an episode,
-  the deepest-bid-ever framing loses its load-bearing evidence, and "Treasury stopped growing this
-  tenor into a strong bid" gets re-derived rather than patched.
-- **A cover below 2.36** — softer than any of the seven October new issues, at the largest size the
-  slot has ever carried. Combined with the leg above it would flip the read to a genuine demand
-  problem at the 5-year point.
-- **The stop missing the same-day 5Y CMT real yield by more than 5bp** — the tracker breaks, every
-  level quoted in this doc's calls becomes an adjective again, and the 12-2026 and 04-2027 auctions
-  lose their free indication.
-- **The 5-year breakeven above 2.72%** (its 2026 high, 05-04) at or before the auction — the
-  real-rate decomposition in leg 4 stops holding at this tenor, and the framing needs reassessment,
-  not a number update.
-- **A 5-Year TIPS size other than $26B announced 2026-10-15** — owned and scored by
-  `FT-treasury-coupon-announcement-2026-10-15-1` six days earlier; listed here because it kills this
-  doc's premise too, and because it is the earliest dated tell available.
-- **Treasury moving the auction off 2026-10-22, or a pre-announced TIPS size change** — voids rather
-  than kills; announced-in-advance is a different question than announced-here.
+- **The core one — the artifact failing on 2026-10-22.** If the 5-year breakeven change minus the
+  10-year breakeven change is **less than +5bp** that day, the one thing this doc measured did not
+  survive the auction it was written for, and the reading instruction must be withdrawn before the
+  December reopening and the April 2027 new issue. Registered as **FT-treasury-5y-tips-2026-10-22-1**
+  in [`forward-tests/treasury-5y-tips-2026-10-22.md`](../forward-tests/treasury-5y-tips-2026-10-22.md),
+  score by **2026-10-23**, with its null rate stated up front: **2.0%** of 3,255 control sessions
+  against **7/7** October new issues (minimum +9bp).
+- **A size change at the 2026-10-15 announcement.** $26B is written guidance in `sb0590`; any
+  deviation breaks the like-for-like series, voids the bid-to-cover and dealer-takedown bands, and
+  must be logged off-cadence regardless of when the next pulse is due. (The prediction itself belongs
+  to [`FT-treasury-coupon-announcement-2026-10-15-1`](../forward-tests/treasury-coupon-announcement-2026-10-15.md),
+  not to this doc.)
+- **The schedule marking this auction `RT` rather than `T` at the announcement** — i.e. it turns out
+  to be a reopening. Leg 3's entire base rate is conditioned on it creating a new on-the-run; a
+  reopening would predict **no** artifact, and the forward test above would then be expected to fail
+  for a reason that confirms rather than refutes the mechanism.
+- **The 2026-09-17 10Y TIPS reopening moving its own breakeven relative to neighbours by ≥ ±3bp.**
+  That is the cheapest available out-of-sample check on the new-issue-only claim, it lands 35 days
+  before this auction, and a hit would say reopenings shift the knot after all.
+- **Treasury changing its real-curve inputs or knot-point rule.** The methodology page reserves that
+  right explicitly and was last revised 2025-02-18; a change would date every base rate in this doc.
+- **A 5Y TIPS reopening printing dealer takedown above 7.8%** (the new-issue p25). The separate-band
+  claim in leg 7 rests on the two populations not overlapping.
+- **Nothing here licenses date-keyed *action*.** The date is `estimate`; observations widen caution
+  rather than licensing entries, and `symbols: []` means there is no instrument to express one in.
 
 ## Assessment ledger
 
 | Date | Days out | New info / adjacency findings | Stance change | Next check due |
 |---|---|---|---|---|
-| 2026-09-05 | D-47 | **Initial research.** Event created 2026-09-05 by the [10-15 announcement sibling](treasury-coupon-announcement-2026-10-15.md), whose registered test already owns the **$26B** size — so this doc deliberately asks what the *auction* reads, not what it sells. **Finding 1 — the stop is knowable in advance, for free.** Every 5-Year TIPS auction since 2023 (n=**14**, `fiscaldata auctions_query`, server-filtered on `inflation_index_security`) landed within **±4.1bp** of Treasury's own same-day 5-Year CMT real yield, mean **+0.2bp**, worst miss +4.1bp (2024-12-19). That series closed **2.17% (09-04)** — **93rd percentile** of its 2026 range (high 2.22 on 07-27, low 1.11 on 02-27; only 8 sessions all year within 5bp of the high). Priced there the auction stops **higher than any 5-Year TIPS since 2024-04-18 (2.242%)** and carries a **2.125%** coupon — `floor(stop/0.125)`, exact on **13 of 13 new issues** since 2018 (the 10 raw-data misses are all reopenings inheriting their CUSIP's coupon). Indication, not forecast: CMT is interpolated, no when-issued exists until 10-15. **Finding 2 — the flat guidance is not a demand retreat, at this tenor.** Last four 5-Year TIPS auctions covered **2.51 / 2.62 / 2.57 / 2.61** with direct-bidder share **24.3 / 21.9 / 26.7 / 27.9%** after six straight years in a 17-18% band; **26.7% and $70.1B tendered (2026-04) are records** for the series, and dealer takedown fell to **8.4% / 3.4%** from April 2025's 17.9% stress print. **Finding 3 — but the complex is tenor-split, which corrects finding 2 rather than extending it:** the July 2026 **10-Year** TIPS new issue covered **2.30**, softest of eight since 2023 (sibling records a 2.438% 17-year-high stop, ~2.8bp tail), while the 2026-08-20 **30-Year** reopening covered **2.82** with a **2.1%** dealer residual, its strongest since 2023. Strong at 5, soft at 10, strong at 30. **Primary re-derivation (not inherited):** schedule PDF direct, HTTP 200, 17,195 bytes — `5-Year TIPS T / Thursday, October 15, 2026 / Thursday, October 22, 2026 / Friday, October 30, 2026`, no `R`; `sb0590` direct, HTTP 200, 75,576 bytes — TIPS FINANCING sentence and Oct-26 row `69 58 70 44 39 13 22 30` both verbatim. **Checked and DISCARDED as a non-finding:** 10-22 also carries the whole month-end nominal announcement — 2Y $69B · 5Y $70B · 7Y $44B · 2Y FRN $30B ≈ **$213B** at ~11:00 ET, including a same-tenor 5-Year note, two hours before this stop. Looked like a tenor-matched headwind; it is **7 for 7** since 2019 (every October 5Y TIPS new issue has sold on the month-end block's announcement date, `announcemt_date` matched in fiscaldata), already inside the 2.36-2.75 cover band, and the same-day nominal 5Y grew $41B→$70B across that record without cover deteriorating. Structural. **Adjacency sweep — peers:** n/a, `symbols: []`. **Macro:** the auction sells **inside the FOMC blackout** (10-17 → 10-29), so no Fed speaker can move the front end into the stop — the mirror of the [09-17 10Y TIPS](treasury-10y-tips-2026-09-17.md), which sold D+1 to a meeting; [`fomc-2026-10-28`](fomc-2026-10-28.md) grades 10-28 a coin flip on a hike and has measured this chair's hawkish surprises pricing into the **front end** (08-28: 2y +8bp, S&P −0.13% to −0.25%, VIX at the 2026 low). **Rates:** par 09-04 2Y **4.37** · 5Y **4.54** · 10Y **4.78** · 20Y **5.25** · 30Y **5.24**; real 5Y **2.17** · 10Y **2.43** · 30Y **2.96**; derived breakevens 5Y **2.37** (37th pct of a 2.16-2.72 2026 range), 10Y **2.35**. 2026 decomposition at the 5-year point: nominal **+80bp = real +71bp + breakeven +9bp**, i.e. **89% real-rate**; trough-anchored from 03-17 it is +75bp nominal on **+100bp real / −25bp breakeven**. **Volatility:** VIX **14.53** (09-04 close, 3-month range 14.25-22.22) — calm, no regime shift. **Geopolitical:** nothing new touching this channel this session; the `sb0607` doubled long-end buyback caps (≥$4B through 11-04) sit at 10-20Y/20-30Y and do not reach the 5-year TIPS point. **2026-09-05 is a Saturday** (Labor Day 09-07, next session 09-08), so 09-04 is the freshest close. **Adjacency — five tracked entries already inside the ±5-day corridor** (`fomc-blackout-start-2026-10-17`, `ecb-quiet-period-start-2026-10-21`, `treasury-20y-bond-2026-10-21`, `consumer-confidence-2026-10-27`, `durable-goods-2026-10-27`); **one genuinely new dated event PROPOSED** as `estimate` in this PR: **`treasury-coupon-announcement-2026-10-22`** — the ~$213B month-end nominal announcement that shares this auction's own date and had no calendar row, despite four sibling coupon-announcement entries already being tracked. **Two forward tests registered** — `FT-treasury-5y-tips-2026-10-22-1` (stop within ±5bp of the same-day 5Y CMT real yield; base rate 14/14, pass disclosed as near-uninformative) and `FT-treasury-5y-tips-2026-10-22-2` (direct-bidder share ≥20%; 4-of-4 recently, 3-of-16 historically — the registrable one). Both score **2026-10-23**. **Not registered, and why:** the ~2.125% coupon indication would be a rate view, not an observation about a convention, on an event carrying `symbols: []` and no rates-keyed playbook. | **Stance set** — watch-only; supply owned elsewhere, the content is the stop and the bidder shares; TIPS demand is tenor-split, not uniformly firm | 2026-09-22 (medium; D-47 sits in the 31+/21d band → 09-26, but the band tightens to 7d the moment days-out crosses 30 on 2026-09-22, which makes 09-22 the real first due date) |
+| 2026-09-05 | D-47 | Initial research banked (doc above); `probe-ref` populated with real readings so this event's first `interval-elapsed` pulse is screenable rather than automatically material. **Event tape (primary).** Terms verified verbatim from home.treasury.gov's Tentative-Auction-Schedule.pdf (HTTP 200, 17,195 bytes, text layer decompressed direct today): `5-Year TIPS T` — announce **Thu 2026-10-15**, auction **Thu 2026-10-22**, settle **Fri 2026-10-30**. The legend on that page reads `T --denotes TIPS` / `R --denotes reopening`; **T without R makes this a new issue**, which per the finding below is the whole reason it behaves differently from the 09-17 10Y TIPS (`RT`) or the December 5Y TIPS (`RT`, auction Tue 12-22). Entry stays **`estimate`**, consistent with the October siblings off the identical PDF. **Size primary-read: $26B.** `sb0590` (2026-08-05) fetched and read as text this session; its TIPS FINANCING paragraph reads verbatim "the August 30-year TIPS reopening auction size at $8 billion, the September 10-year TIPS reopening auction size at $19 billion, and **the October 5-year TIPS new issue auction size at $26 billion**." **THE LOAD-BEARING FINDING — on this date Treasury's published 5-year breakeven jumps ~15bp for a reason that has nothing to do with inflation expectations, and this calendar has been treating that number as a signal.** Computed from Fiscal Data `auctions_query` (198 inflation-indexed records since 2010, 57 of them 5-Year TIPS, 49 matched to a session) against the daily par and par-real curve CSVs 2013–2026 (**3,421 sessions carrying both**, 2013-01-02 → 2026-09-04; control = the 3,255 carrying no TIPS auction of any tenor). On the **seven** October 5Y TIPS **new issues** since the slot was created in 2019: real 5Y CMT **−11.0bp, t = −7.60, 0/7 positive**; nominal 5Y **+3.6bp** (t = 2.29, i.e. the *other* way); real 10Y **+0.14bp** (t = 0.15, nothing); **5-year breakeven +14.6bp, t = 10.20, 7/7**; **5Y minus 10Y breakeven +11.0bp, t = 14.55, 7/7** (prints +15, +10, +10, +10, +12, +11, +9) against a control mean of −0.04bp, where only **0.6%** of sessions reach +8bp and **2.0%** reach +5bp. Against the real 10Y knot alone rather than an average including the interpolated 7Y point: −11.14bp (t = −7.75, 7/7). **The mechanism is primary and verbatim:** treasury.gov's Daily Treasury Par Real Yield Curve Rates page (fetched today) carries the series-break note **"Starting 12/01/2008, the TIPS yield curve began using the most recently auctioned TIPS as knot points rather than all securities"**, and the Yield Curve Methodology page (revised 2025-02-18) says the same of the nominal inputs — "the most recently auctioned securities," monotone convex since 2021-12-06. **Five controls, all empty, which is what makes it an artifact rather than a story:** reopenings, which re-tap the security already on-the-run, show **June 0.00bp (t = 0.00, n=8)** and **December −0.71bp (t = −1.00, n=7)**; the **settlement date** shows −0.45bp (t = −1.24, n=21) real and +0.24bp (t = 0.76) breakeven, so the trigger is the word *auctioned*, exactly as the page says; the **nominal curve** on those same days shows +0.07bp (t = 0.24) against +0.02bp control; **same-month non-auction sessions 2019+** show October −0.02bp (t = −0.15, n=141) and April −0.19bp (t = −1.16, n=161), so it is not a calendar seasonal in the tape; and it is a **step, not a spike** — relative breakeven D−1 +1.2, **D+0 +8.2**, D+1 −0.4, D+2 −0.7, D+3 +0.4, D+4 −0.9, D+5 +0.4, with the spread still there at **D+20 in 6 of 7 years**. **The sign is set by the incoming security's dated month and it replicates across tenors:** April 5Y new issues (2019+, n=8) are the mirror image — real 5Y **+4.75bp** (t = 2.36), breakeven −3.0bp (t = −2.14), −5.4bp against the 10Y (t = −3.56, 1/8 positive); on own-minus-neighbours, 5Y October **−8.57bp** (t = −8.40) · 5Y April **+4.00** (t = 2.82) · 10Y January **+1.07** (t = 3.32) · 10Y July **−0.71** (t = −1.71) · 30Y February **+1.64** (t = 5.68). The 10Y's two slots carry **opposite signs**, which is why pooling them gives +0.18bp (t = 0.57) and hides the effect at that tenor. The 5Y is an order of magnitude the largest, consistent with a roughly fixed wedge being a bigger share of a short real yield. **It survives Treasury's own 2021-12-06 methodology change** — monotone-convex era only, October issues print −10, −16, −10, −8bp, **4/4**, mean −11.0bp. **A decomposition was attempted and it FAILED its out-of-sample test, recorded as a failure:** solving the 2019+ means gives roll **−2.57bp** and dated-month **∓8.57bp**, but pre-2019 the 5Y TIPS had one new issue a year, every April, replacing an also-April-dated knot — dated-month term zero by construction, roll twelve months instead of six, so a linear roll predicts ~−5.1bp. It measures **−11.0bp** (t = −5.64, **6/6**, n=6). The measurement stands; the split between maturity roll and seasonal accrual does not. **SECOND FINDING — the demand yardstick must be the new-issue population.** The last three new issues took dealer **18.06% / 13.48% / 8.48%** against the last three reopenings' **6.55% / 5.43% / 3.43%**, so a pooled band repeats the [20Y sibling's](treasury-20y-bond-2026-10-21.md) documented error. October new-issue slot (n=7, competitive base): bid-to-cover min 2.360 · med **2.450** · max 2.750; dealer min 6.1 · p25 **7.8** · med **9.2** · p75 **13.7** · max 16.7. All new issues 2021+ (n=11): b/c 2.280 · 2.450 · 2.730; dealer p25 7.1 · med 8.5 · p75 11.7. **The [5Y-note sibling's](treasury-5y-note-2026-10-27.md) indirect/direct substitution rule transfers — but only in the live era:** corr **−0.802 (t = −6.00, n=22)** since 2021 with sd(end-user) 5.38pt vs sd(indirect) 8.75pt, against a meaningless **+0.155 (t = 1.16)** pooled to 2013, where 2020–21 ran indirect to 89.5%. Predecessors: **2026-04-23** ($26B, 91282CQP9) b/c 2.570, indirect 64.61, direct 26.91, **dealer 8.48%** — strong half; **2025-10-23** ($26B, 91282CPH8) b/c 2.510, **dealer 13.48%** — at the slot p75, the weakest of the three most recent. **Macro / current tape (2026-09-04 close, Treasury CSVs fetched today):** real 5Y **2.17**, real 7Y 2.29, real 10Y 2.43; nominal 5Y **4.54**, 10Y 4.78; **5-year breakeven 2.37**, 10-year 2.35, the 5Y-vs-neighbours breakeven spread **+0.015** — i.e. flat, which is the baseline the 10-22 artifact will move off. 2026 real 5Y range **1.11–2.22** (the 09-04 close sits 5bp off the year high); 2026 breakeven range 2.16–2.72, and 2.18 on 07-27 → **2.37** now. **Volatility:** VIX **14.53** (09-04 close), a hair above the 14.43 2026 low struck 08-28. **Peers:** `symbols: []`, none applicable. **Geopolitical:** nothing new touching this tenor beyond the oil-inflation channel the TIPS siblings already record. **Corridor:** eleven tracked events within 5 days (blackout 10-17; ECB quiet period + 20Y 10-21; the coupon announcement sharing 10-22; 2Y 10-26; consumer confidence, durable goods, ECB bank lending survey, ECB monetary developments, 5Y note and a 20-30Y buyback 10-27), with [`fomc-2026-10-28`](fomc-2026-10-28.md) at D+6 reading **hold-modal**. **No new dated adjacency to propose** — everything the sweep found inside the corridor is already carried. **Deliberate non-proposal, recorded:** the **December 5-Year TIPS reopening** (`5-Year TIPS RT`, announce 12-17, auction **Tue 2026-12-22**, settle 12-31) off this same PDF — 61 days out, far outside the five-day corridor the siblings hold to; it is this doc's natural successor, since it re-taps the CUSIP 10-22 creates and should show **none** of the effect. **Forward test registered: FT-treasury-5y-tips-2026-10-22-1** — the 5-year breakeven change minus the 10-year breakeven change on 10-22 is ≥ **+5bp**; null rate stated up front at **64/3,255 ≈ 2.0%** of control sessions against **7/7** October new issues (minimum +9bp), so it is informative in either direction. | — (stance set) | 2026-09-26 (medium, 31+d band: every 21d) |
 
-**Rules.** Rows append only — editing a past row is falsification. Keep a row terse: it is a note to
-the next session, not an essay. The adjacency sweep (peer prints · macro surprises · VIX regime ·
-geopolitical · event tape; see EVENT-RESEARCH.md) runs in every row; a dated adjacent event found
-gets proposed to `market-events.ts` as an `estimate` in the same PR. Close-out fills `## Outcome`
-below from re-run instrument data (cache busted first), never from memory.
+**Rules.** Rows append only — editing a past row is falsification. The adjacency sweep (peer
+prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
+every row; a dated adjacent event found gets proposed as a new `src/domain/market-events/<id>.json`
+(`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
+data (cache busted first), never from memory — after which this doc goes quiet.
