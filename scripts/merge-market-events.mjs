@@ -22,6 +22,12 @@
 // the result. That's the intended use: whoever resolves these PRs (a session, this repo's own
 // repair lane) configures the driver once, merges locally, pushes — not a GitHub-side auto-fix.
 //
+// That server-side residual is what #1341 attacks from the other side: the array is now STORED in
+// (date, id) order, so two lanes adding events for different dates insert at different anchors and
+// plain git merges them with no driver at all. This driver handles the remainder — same-date pairs
+// and edits to an existing entry — and sorts its own output so a merge it resolves still satisfies
+// the ordering gate (`node scripts/event-scan.mjs --validate`, red inside `npm test`).
+//
 //   git config merge.market-events.driver 'node scripts/merge-market-events.mjs %O %A %B'
 //   git merge origin/main
 //
@@ -37,64 +43,11 @@
 // without this a refusal would leave a marker-free file that reads as clean to anything scanning
 // for markers — including this repo's own conflict-repair lane.
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { compareEventOrder } from "./event-scan-validation.mjs";
+import { parseFile, serializeFile } from "./market-events-file.mjs";
 
-const MARKER = "export const MARKET_EVENTS: readonly MarketEvent[] = [";
 const CONFLICT = Symbol("conflict");
-
-/** Split the array's inner text into top-level, bracket-balanced object-literal substrings. */
-function splitEntries(inner) {
-  const texts = [];
-  let i = 0;
-  while (i < inner.length) {
-    const brace = inner.indexOf("{", i);
-    if (brace === -1) break;
-    let depth = 0;
-    let j = brace;
-    for (; j < inner.length; j++) {
-      if (inner[j] === "{") depth++;
-      else if (inner[j] === "}") {
-        depth--;
-        if (depth === 0) break;
-      }
-    }
-    if (depth !== 0) throw new Error("unbalanced object literal");
-    texts.push(inner.slice(brace, j + 1));
-    i = j + 1;
-  }
-  return texts;
-}
-
-/** {prefix, entries: [{id, text}], suffix} for one file. Throws if the marker or a balanced
- *  array close isn't found (same contract as event-scan.mjs's extractArray). */
-function parseFile(path) {
-  const source = readFileSync(path, "utf8");
-  const at = source.indexOf(MARKER);
-  if (at === -1) throw new Error(`marker not found in ${path}`);
-  const open = at + MARKER.length - 1;
-
-  let depth = 0;
-  let close = -1;
-  for (let i = open; i < source.length; i++) {
-    if (source[i] === "[" || source[i] === "{") depth++;
-    else if (source[i] === "]" || source[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        close = i;
-        break;
-      }
-    }
-  }
-  if (close === -1) throw new Error(`unbalanced brackets in ${path}`);
-
-  const entries = splitEntries(source.slice(open + 1, close)).map((text) => {
-    const id = new Function(`return (${text}).id;`)();
-    if (typeof id !== "string") throw new Error(`entry with no string id in ${path}`);
-    return { id, text };
-  });
-
-  return { prefix: source.slice(0, open + 1), entries, suffix: source.slice(close) };
-}
 
 /** For one id present in some combination of base/ours/theirs, decide what survives. Returns the
  *  entry text to keep, `null` to drop it, or CONFLICT to escalate to a real git conflict. */
@@ -177,34 +130,35 @@ function main([ancestorPath, oursPath, theirsPath]) {
   const theirsById = new Map(theirs.entries.map((e) => [e.id, e.text]));
   const allIds = new Set([...baseById.keys(), ...oursById.keys(), ...theirsById.keys()]);
 
-  const survivingById = new Map();
-  const addedByOurs = [];
-  const addedByTheirs = [];
+  // Whichever text survives carries its own date — including the case where one side edited it.
+  const dateByText = new Map();
+  for (const side of [base, ours, theirs])
+    for (const e of side.entries) dateByText.set(e.text, e.date);
+
+  const surviving = [];
   for (const id of allIds) {
     const result = resolveOne(id, baseById, oursById, theirsById);
     if (result === CONFLICT) return refuse(ancestorPath, oursPath, theirsPath);
     if (result === null) continue;
-    if (!baseById.has(id)) {
-      if (oursById.has(id) && !theirsById.has(id)) addedByOurs.push(result);
-      else if (!oursById.has(id) && theirsById.has(id)) addedByTheirs.push(result);
-      else survivingById.set(id, result); // proposed identically by both — keep in base order below
-    } else {
-      survivingById.set(id, result);
-    }
+    surviving.push({ id, date: dateByText.get(result) ?? "", text: result });
   }
 
-  // Preserve base's relative order for surviving/edited entries, then append each side's new
-  // entries (ours before theirs, matching git's own convention for union-style merges).
-  const finalEntries = base.entries
-    .map((e) => e.id)
-    .filter((id) => survivingById.has(id))
-    .map((id) => survivingById.get(id));
-  finalEntries.push(...addedByOurs, ...addedByTheirs);
+  // (date, id) order — NOT base-order-then-append, which is what this driver did before #1341.
+  // The committed file is now stored sorted (scripts/event-scan-validation.mjs's compareEventOrder)
+  // and `event-scan.mjs --validate` enforces it as a red gate inside `npm test`, so a driver that
+  // appended each side's new entries at the end would hand back a merge that fails the very rule
+  // the sort exists to hold. Sorting here is what makes the two halves compose: date separation
+  // stops most collisions server-side, and this driver resolves the same-date remainder locally.
+  surviving.sort(compareEventOrder);
 
-  const inner = `\n  ${finalEntries.join(",\n  ")},\n`;
-  const prefix = pickChanged(ours.prefix, theirs.prefix, base.prefix);
-  const suffix = pickChanged(ours.suffix, theirs.suffix, base.suffix);
-  writeFileSync(oursPath, prefix + inner + suffix);
+  writeFileSync(
+    oursPath,
+    serializeFile({
+      prefix: pickChanged(ours.prefix, theirs.prefix, base.prefix),
+      entries: surviving,
+      suffix: pickChanged(ours.suffix, theirs.suffix, base.suffix),
+    }),
+  );
   return 0;
 }
 
