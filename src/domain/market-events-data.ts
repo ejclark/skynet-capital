@@ -1065,6 +1065,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "Company-set; MRVL investor days have filed Item-2.02 8-Ks — the filing class that corrupted the instrument's event list.",
   },
   {
+    id: "treasury-3y-note-2026-10-06",
+    kind: "rates",
+    title: "3-Year Treasury Note auction (new issue)",
+    date: "2026-10-06",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Auctions PDF, text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 17,195 bytes), row reads verbatim `3-Year NOTE / Announcement Thursday, October 01, 2026 / Auction Tuesday, October 06, 2026 / Settlement Thursday, October 15, 2026` — no `R` marker, i.e. a new issue, which matches every 3-Year auction in fiscaldata's `auctions_query` back to 2022 (each month is its own CUSIP). Size corroborated in advance by press release sb0590 (2026-08-05), whose Oct-26 anticipated-size row puts the 3-Year at $58 billion. 1:00pm ET is Treasury's standing coupon-auction convention and is NOT separately sourced. Stays estimate on two counts: a tentative schedule is tentative by construction, and this lane may not self-confirm an event it discovered in-sweep — the confirming primary is the 2026-10-01 announcement itself",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The largest single leg of the October coupon block ($58B of $119B) and the front-end one, so it is the first auction to price whatever the 2026-09-16 FOMC did. Its CUSIP is the one field of the 10-01 announcement that CANNOT be predicted in advance — the 3-Year is a fresh security every month, unlike the 10Y/30Y reopenings that share this block. Size base rate re-derived 2026-09-05 from `auctions_query`: $58B for 29 consecutive completed auctions since 2024-04-09, ending a nine-month +$2B/month ramp. Read it, do not trade it: `symbols: []`, the date is `estimate`, no house playbook (S1/S2/E1/S3/S4 + G1) is macro-keyed. Discovered during the treasury-coupon-announcement-2026-10-01 initial research (2026-09-05), which is the sweep the treasury-coupon-announcement-2026-10-15 entry asked for when it named these three auctions and declined to file them.",
+  },
+  {
     id: "fomc-minutes-2026-10-07",
     kind: "macro-print",
     title: "FOMC minutes (Sep 15–16 meeting)",
@@ -1078,6 +1091,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The richest read on this Committee's reaction function available before the 10-28 decision, and the ONLY one that arrives outside the 10-17 blackout. Matters more than an ordinary minutes release because Warsh has withdrawn the usual substitute: his 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and said forward guidance has overstayed its welcome, so the vote split and the dissent language here are close to the only structured evidence on how a coin-flip September resolved. Read it, do not trade it — minutes are three weeks stale by publication. Discovered during the fomc-blackout-start-2026-10-17 initial research.",
   },
   {
+    id: "treasury-10y-note-2026-10-07",
+    kind: "rates",
+    title: "10-Year Treasury Note auction (second reopening)",
+    date: "2026-10-07",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Auctions PDF, text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 17,195 bytes), row reads verbatim `10-Year NOTE R / Announcement Thursday, October 01, 2026 / Auction Wednesday, October 07, 2026 / Settlement Thursday, October 15, 2026`. Size corroborated in advance by press release sb0590 (2026-08-05), whose Oct-26 anticipated-size row puts the 10-Year at $39 billion. 1:00pm ET is Treasury's standing coupon-auction convention and is NOT separately sourced. Stays estimate on two counts: a tentative schedule is tentative by construction, and this lane may not self-confirm an event it discovered in-sweep",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "PREDICTED CUSIP 91282CRF0, term `9-Year 10-Month` — the second and final reopening of the August 2026 10-Year new issue (sold 2026-08-12 at $42B; first reopening 2026-09-09 at $39B, CUSIP confirmed live on treasurydirect's upcoming feed 2026-09-05). That is an inference from a cycle, not a fetched field: measured 2026-09-05 from `auctions_query`, every one of the 18 completed 10-Year new-issue cycles back to 2022-01 was reopened exactly twice, in the two following months, with no exceptions. Filed as a prediction rather than a fact BECAUSE it is checkable at the 10-01 announcement — see FT-treasury-coupon-announcement-2026-10-01-1. Completing this auction makes 91282CRF0 a $120B security (42 + 39 + 39). Size base rate: $39B for 20 consecutive completed 10-Year reopenings since 2024-03-12. Read it, do not trade it: `symbols: []`, date is `estimate`. Discovered during the treasury-coupon-announcement-2026-10-01 initial research (2026-09-05).",
+  },
+  {
     id: "ecb-account-2026-10-08",
     kind: "macro-print",
     title: "ECB account of the 2026-09-09/10 monetary-policy meeting",
@@ -1089,6 +1115,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "The account is where the 09-10 decision's ARGUMENT becomes public — the vote is not published, so this is the only structured evidence on how close the Governing Council was and on what conditions. Tiered `low` deliberately: this book holds nothing with a euro-rates channel (`symbols: []`, no house playbook is rates-keyed), and the July edition moved nothing. Its one real use is the terminal-rate question ecb-decision-2026-09-10 registers as FT-ecb-decision-2026-09-10-2 — whether the 2.50% peak was near-unanimous or contested is visible only here, ahead of the 10-29 decision. Note the collision: it lands the day after fomc-minutes-2026-10-07, so two central-bank records publish back-to-back. Discovered during the ecb-decision-2026-09-10 initial research (2026-09-05). READ IT, DO NOT TRADE IT — an account is four weeks stale by construction, and this one is stale about a decision that was ~99% priced before it happened. AMENDED 2026-09-05 by this event's own initial research (docs/research/events/ecb-account-2026-10-08.md); status, date and impact UNCHANGED, purpose NARROWED. THE 'READ IT, DO NOT TRADE IT' LINE IS NOW MEASURED RATHER THAN ASSERTED: across the 13 accounts published 2025-26 (dates off the ECB's own 2025/2026 indexes, Yahoo adjusted bars, cache busted), mean close-to-close absolute move on the publication day was Euro Stoxx 50 0.87% vs a 0.75% all-days baseline (1.15x, n=417), DAX 0.78% vs 0.81% (0.97x) and EUR/USD 0.36% vs 0.33% (1.10x), with 1 of 13 reaching 2x baseline — and that one (2025-04-03, STOXX50E -3.59%) is the session after the US reciprocal-tariff announcement (SPX -4.84%, VIX +39.6% to 30.02), while the most recent (2026-08-27) produced 2026's largest euro-minus-US residual off NVDA +8.74% post-earnings, not off the account. A companion cut refuted the intuitive contrast and is kept: 2026-only, ECB DECISION days ran ~1.6x baseline, but 2025+2026 collapses that to 1.08x/0.99x/1.17x. TWO CORRECTIONS TO THIS NOTE'S OWN FRAMING. (1) 'the vote is not published, so this is the only structured evidence on how close the Governing Council was' is half-right: the 2026-03-05 account read in full is uniformly collective ('Members broadly agreed', 'It was argued that', 'Several concerns were raised') with NO vote count and NO names, so it yields an adjective, not a count. (2) It is not the last word before 10-29 either — the ECB quiet period is 'the seven days before a scheduled meeting' (explainer, fetched 2026-09-05), so 13 days of unrestricted Governing Council speech follow the account before the gate falls, which is why ecb-quiet-period-start-2026-10-21 is proposed in the same PR. DATE LEG QUANTIFIED: publication minus meeting Day 2 across those 13 editions is 9 at exactly four weeks and 4 at exactly five, zero anything else — the ECB's 'typically' is a ~31% one-week-slip risk with no other dispersion, registered as FT-ecb-account-2026-10-08-2 against the index's stated 'Next release: 8 October 2026'.",
+  },
+  {
+    id: "treasury-30y-bond-2026-10-08",
+    kind: "rates",
+    title: "30-Year Treasury Bond auction (second reopening)",
+    date: "2026-10-08",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Auctions PDF, text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 17,195 bytes), row reads verbatim `30-Year BOND R / Announcement Thursday, October 01, 2026 / Auction Thursday, October 08, 2026 / Settlement Thursday, October 15, 2026`. Size corroborated in advance by press release sb0590 (2026-08-05), whose Oct-26 anticipated-size row puts the 30-Year at $22 billion. 1:00pm ET is Treasury's standing coupon-auction convention and is NOT separately sourced. Stays estimate on two counts: a tentative schedule is tentative by construction, and this lane may not self-confirm an event it discovered in-sweep",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "PREDICTED CUSIP 912810UW6, term `29-Year 10-Month` — the second and final reopening of the August 2026 30-Year new issue (sold 2026-08-13 at $25B; first reopening 2026-09-10 at $22B, CUSIP confirmed live on treasurydirect's upcoming feed 2026-09-05). An inference from a cycle, not a fetched field: measured 2026-09-05 from `auctions_query`, all 15 completed 30-Year new-issue cycles back to 2022-11 were reopened exactly twice, in the two following months, no exceptions. Checkable at the 10-01 announcement — see FT-treasury-coupon-announcement-2026-10-01-1. Completing this auction makes 912810UW6 a $69B security (25 + 22 + 22). Size base rate: $22B for 20 consecutive completed 30-Year reopenings since 2024-03-13. THE LONG-END LEG, so it is the one of the three that sells into the doubled liquidity-support buyback bid `sb0607` (2026-08-19) put in place through 2026-11-04. Read it, do not trade it: `symbols: []`, date is `estimate`. Discovered during the treasury-coupon-announcement-2026-10-01 initial research (2026-09-05).",
   },
   {
     id: "imf-world-bank-annual-meetings-2026-10-12",
