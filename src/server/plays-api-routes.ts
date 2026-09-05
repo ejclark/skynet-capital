@@ -57,6 +57,9 @@ async function servePlays(
         ...(t.optionType ? { optionType: t.optionType } : {}),
         gloss: t.gloss,
         locked,
+        // Earned = a real fill proved it (`progression.ts`'s doctrine) — the milestone rail's ✓
+        // (#1461). No progression (no service, no linked desk) earns nothing, honestly.
+        earned: progression?.earnedByCode?.has(t.code) ?? false,
         ...(prev ? { opensAfter: { code: prev.code, name: prev.name } } : {}),
       };
     }),

@@ -56,7 +56,12 @@ describe("servePlaysApi plays", () => {
     const cfg = config({
       progression: {
         view: () =>
-          Promise.resolve({ wheels: true, unlocked: new Set(["101", "102"]), nextUp: "201" }),
+          Promise.resolve({
+            wheels: true,
+            unlocked: new Set(["101", "102"]),
+            nextUp: "201",
+            earnedByCode: new Map([["101", { code: "101", orderId: "o-1" }]]),
+          }),
       },
     });
     const { res, out } = fakeRes();
@@ -67,12 +72,24 @@ describe("servePlaysApi plays", () => {
     const play = (code: string) =>
       body.plays.find((p: { code: string }) => p.code === code) as {
         locked: boolean;
+        earned: boolean;
         opensAfter?: { code: string };
       };
     expect(play("101").locked).toBe(false);
     expect(play("201").locked).toBe(true);
     expect(play("201").opensAfter?.code).toBe("102");
     expect(play("302").opensAfter?.code).toBe("301");
+    // The rail's ✓ is the server's word (#1461): a fill earned 101; 102 is open but not earned.
+    expect(play("101").earned).toBe(true);
+    expect(play("102").earned).toBe(false);
+    expect(play("201").earned).toBe(false);
+  });
+
+  it("earns nothing when no progression is wired — the rail draws no ✓ it cannot prove", async () => {
+    const { res, out } = fakeRes();
+    await servePlaysApi(get(), res, "/api/trade/plays", config(), ann);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.plays.every((p: { earned: boolean }) => p.earned === false)).toBe(true);
   });
 });
 

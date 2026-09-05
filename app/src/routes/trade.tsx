@@ -8,9 +8,9 @@ import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
+import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
 import { OptionPositionsCard } from "../shell/option-positions";
-import { PlayPicker } from "../shell/play-picker";
 import { TradeGate } from "../shell/trade-gate";
 
 /**
@@ -66,11 +66,13 @@ function DeskTicket({ desk, code }: { readonly desk: string; readonly code: stri
   return (
     <>
       {plays.data ? (
-        <PlayPicker
+        <MilestoneStrip
           deskId={desk}
           current={code}
           plays={plays.data.plays}
           wheels={plays.data.wheels}
+          gate={plays.data.gate}
+          nextUp={plays.data.nextUp}
         />
       ) : null}
       {gated ? (
