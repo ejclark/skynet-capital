@@ -161,14 +161,51 @@ export function scoutStateStore(
 // --- best-effort restore/persist glue for the two in-memory trackers, kept alongside the DB
 // they read/write so callers (run-autonomous.ts) don't carry this branching themselves.
 
+/**
+ * What a boot actually rehydrated off the volume. Counts, not contents: this is the number the
+ * health stamp carries (`bots-health-file.ts`), so a deploy proves restore by being read rather
+ * than by someone grepping `flyctl logs` for a populated context — which is the "verified live"
+ * step issue #1181's slicing sketch asked for and nothing else could supply.
+ *
+ * `null` is a distinct verdict from all-zeroes: null means durability is dark (no
+ * `SKYNET_BOTS_DB_PATH`), zeroes mean the DB opened and had nothing in it yet.
+ */
+export interface RestoredBotsState {
+  /** Symbols whose price window came back non-empty. */
+  readonly momentumSymbols: number;
+  /** Symbols whose sentiment window came back non-empty. */
+  readonly sentimentSymbols: number;
+  /** Cooldown clocks restored across every persona in `personaIds`. */
+  readonly cooldowns: number;
+}
+
+const nonEmpty = (entries: Record<string, readonly number[]>): number =>
+  Object.values(entries).filter((series) => series.length > 0).length;
+
+/** Just enough of a bot to name its cooldown rows — keeps the `Bot` type out of this module. */
+type CooldownOwner = { readonly persona: { readonly id: string } };
+
+/**
+ * `roster` is the enabled bots: cooldowns are loaded per persona at trader construction
+ * (`autonomous-live-wiring.ts`), so counting them here reads the same rows that call will —
+ * nothing writes a cooldown between this point and the first order.
+ */
 export function restoreBotsState(
   db: BotsStateDb | undefined,
   tracker: MomentumTracker,
   sentiment: SentimentTracker,
-): void {
-  if (!db) return;
-  tracker.restore(db.loadMomentum());
-  sentiment.restore(db.loadSentiment());
+  roster: readonly CooldownOwner[] = [],
+): RestoredBotsState | null {
+  if (!db) return null;
+  const momentum = db.loadMomentum();
+  const sentimentScores = db.loadSentiment();
+  tracker.restore(momentum);
+  sentiment.restore(sentimentScores);
+  return {
+    momentumSymbols: nonEmpty(momentum),
+    sentimentSymbols: nonEmpty(sentimentScores),
+    cooldowns: roster.reduce((total, bot) => total + db.loadCooldowns(bot.persona.id).size, 0),
+  };
 }
 
 export function persistSentiment(db: BotsStateDb | undefined, sentiment: SentimentTracker): void {

@@ -30,14 +30,24 @@
 //      — with no install step ahead of it, crashed silently, and the job failed instead of correctly
 //      reporting "this diff touches a protected path, skip." #889 itself still merged, because this
 //      check is the one that would have caught it and did not yet exist.
+//   7. A workflow referencing a LABEL NAME that `scripts/moneypenny/labels.mjs` does not register.
+//      Added 2026-09-05 (#894), the third incident of that same-day chain: #892 had to provision
+//      `hold-merge` after the fact, because #889 shipped `pipeline.yml`'s `arm-auto-merge` job with
+//      `!contains(github.event.pull_request.labels.*.name, 'hold-merge')` while no lane created that
+//      label. Nothing fails — the condition simply never matches, so the escape hatch a session was
+//      told to reach for did not exist. Same failure shape as rules 5 and 6: a workflow naming
+//      something that has to exist elsewhere, where the mismatch is silent at run time. The
+//      reference grammar lives in `workflow-labels.mjs`, split out as script-deps.mjs was for 6.
 //
 // Dependency-free on purpose (same doctrine as arch-scan/dupe-scan): a gate that guards CI must not
-// itself depend on a package resolving. It parses only the block-style, 2-space-indented subset
-// this repo's workflows are written in, and skips block scalars (`run: |`) wholesale, which is
-// where arbitrary shell text lives.
+// itself depend on a package resolving — the two repo imports rule 7 adds reach only Node builtins.
+// It parses only the block-style, 2-space-indented subset this repo's workflows are written in, and
+// skips block scalars (`run: |`) wholesale, which is where arbitrary shell text lives.
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { LABEL_NAMES } from "./moneypenny/labels.mjs";
 import { needsInstalledDeps } from "./script-deps.mjs";
+import { unknownLabels } from "./workflow-labels.mjs";
 
 const KEY = /^(\s*)(-\s+)?([A-Za-z_][\w.-]*):(\s|$)/;
 const BLOCK_SCALAR = /:\s*[|>][-+\d]*\s*$/;
@@ -209,7 +219,13 @@ export function missingDepsInstall(text, hasDeps) {
   return problems;
 }
 
-export function lintWorkflow(name, text, prompts = [], hasScriptDeps = () => false) {
+export function lintWorkflow(
+  name,
+  text,
+  prompts = [],
+  hasScriptDeps = () => false,
+  knownLabels = [],
+) {
   return [
     ...duplicateKeys(text).map(
       (d) =>
@@ -234,6 +250,12 @@ export function lintWorkflow(name, text, prompts = [], hasScriptDeps = () => fal
       (d) =>
         `${name} job \`${d.job}\` runs \`node ${d.script}\`, which imports a package needing ` +
         `\`node_modules\`, with no earlier \`npm ci\`/\`npm install\` step in that job — see #890`,
+    ),
+    ...unknownLabels(text, knownLabels).map(
+      (label) =>
+        `${name} references the label \`${label}\`, which \`scripts/moneypenny/labels.mjs\` does ` +
+        `not register — the condition would silently never match until someone provisions it by ` +
+        `hand (see #892)`,
     ),
   ];
 }
@@ -269,7 +291,7 @@ function main(argv) {
     return cache.get(scriptRelPath);
   };
   const problems = files.flatMap((f) =>
-    lintWorkflow(f, readFileSync(join(dir, f), "utf8"), prompts, hasScriptDeps),
+    lintWorkflow(f, readFileSync(join(dir, f), "utf8"), prompts, hasScriptDeps, LABEL_NAMES),
   );
   for (const p of problems) console.error(`✗ ${p}`);
   if (problems.length) {

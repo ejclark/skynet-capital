@@ -15,6 +15,7 @@
  */
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import type { RestoredBotsState } from "./bots-state-db.js";
 
 /** Mirrors the three boot lines in `bootMissionControl` (autonomous-live-wiring.ts). */
 export type BridgeStatus = "armed" | "unreachable" | "unset";
@@ -27,6 +28,13 @@ export interface BotsHealth {
   readonly bridge: BridgeStatus;
   /** Last successful `/controls` poll — the liveness signal a silent holding day never prints. */
   readonly lastControlsPollAt: string | null;
+  /**
+   * What this boot rehydrated off the volume (issue #1181). `null` = durability is dark for this
+   * run (`SKYNET_BOTS_DB_PATH` unset, or the DB failed to open); all-zeroes = the DB opened and
+   * was empty. That distinction is the whole point — it separates "the volume isn't working" from
+   * "nothing had accumulated yet", which a boot log line cannot.
+   */
+  readonly restored: RestoredBotsState | null;
   readonly updatedAt: string;
 }
 
@@ -37,9 +45,15 @@ export interface BotsHealthFile {
   boot(bridgeConfigured: boolean): void;
   /** Wire to the controls client's `onFetched` hook — fires on the boot fetch and every poll. */
   controlsFetched(): void;
+  /** Call once `restoreBotsState` has run; `null` records that durability was dark this run. */
+  restored(state: RestoredBotsState | null): void;
 }
 
-const NOOP: BotsHealthFile = { boot: () => undefined, controlsFetched: () => undefined };
+const NOOP: BotsHealthFile = {
+  boot: () => undefined,
+  controlsFetched: () => undefined,
+  restored: () => undefined,
+};
 
 export function resolveBotsHealthFile(
   env: NodeJS.ProcessEnv = process.env,
@@ -57,6 +71,7 @@ export function openBotsHealthFile(
 ): BotsHealthFile {
   const bootedAt = now().toISOString();
   let lastControlsPollAt: string | null = null;
+  let restoredState: RestoredBotsState | null = null;
   let booted = false;
   let bridgeConfigured = false;
 
@@ -72,6 +87,7 @@ export function openBotsHealthFile(
       bootedAt,
       bridge,
       lastControlsPollAt,
+      restored: restoredState,
       updatedAt: now().toISOString(),
     };
     try {
@@ -94,6 +110,12 @@ export function openBotsHealthFile(
     controlsFetched() {
       lastControlsPollAt = now().toISOString();
       // The boot fetch fires this BEFORE boot() — remember it, and let boot() write the stamp.
+      if (booted) write();
+    },
+    restored(state) {
+      restoredState = state;
+      // Restore runs after bootMissionControl, but hold to the same rule as controlsFetched:
+      // never write a stamp that hasn't been through boot()'s bridge verdict.
       if (booted) write();
     },
   };
