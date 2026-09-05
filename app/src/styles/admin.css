@@ -107,7 +107,8 @@
   line-height: 1.5;
 }
 
-/* The owner's cards (9e) — guest list, account links, ops status. */
+/* The owner's cards (9e) — guest list, account links. Ops status moved to the topbar's status
+   pill when it became group-visible (#1296); its verdict dots went with it, to shell.css. */
 .adm-rows {
   display: flex;
   flex-direction: column;
@@ -169,20 +170,4 @@
   color: var(--text);
   font-size: 13px;
   font-family: var(--sans);
-}
-.adm-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.adm-ok.adm-dot,
-.adm-dot.adm-ok {
-  background: var(--pos);
-}
-.adm-dot.adm-attention {
-  background: var(--neg);
-}
-.adm-dot.adm-unknown {
-  background: var(--muted);
 }

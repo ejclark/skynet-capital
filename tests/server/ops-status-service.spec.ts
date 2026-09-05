@@ -1,3 +1,4 @@
+import { degradedDeploySignals } from "../../src/server/ops-status-deploy-verdict.js";
 import {
   activitySignal,
   bridgeSignal,
@@ -64,6 +65,7 @@ describe("buildOpsStatus", () => {
     const status = await buildOpsStatus({
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
+      botsRunningSha: () => undefined,
       lastBotActivityAt: async () => undefined,
       repo: "x/y",
     });
@@ -92,6 +94,7 @@ describe("buildOpsStatus", () => {
     const status = await buildOpsStatus({
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
+      botsRunningSha: () => undefined,
       lastBotActivityAt: async () => undefined,
       fetchDeploySignals: async () => ({ app, bots }),
       repo: "x/y",
@@ -105,6 +108,7 @@ describe("buildOpsStatus", () => {
     const status = await buildOpsStatus({
       now: () => NOW,
       bridgeLastPollAt: () => undefined,
+      botsRunningSha: () => undefined,
       lastBotActivityAt: () => Promise.reject(new Error("store down")),
       fetchDeploySignals: () => Promise.reject(new Error("network down")),
       repo: "x/y",
@@ -118,5 +122,38 @@ describe("resolveOpsStatusRepo", () => {
   it("defaults to the house repo, honors an override", () => {
     expect(resolveOpsStatusRepo({})).toBe("ejclark/skynet-capital");
     expect(resolveOpsStatusRepo({ SKYNET_FEEDBACK_REPO: "a/b" })).toBe("a/b");
+  });
+});
+
+describe("the bots process's reported commit reaches the deploy signals (#666)", () => {
+  const RUNNING = "7ac0ffee00000000000000000000000000000abc";
+
+  it("hands the reported commit to the deploy fetcher", async () => {
+    const seen: (string | undefined)[] = [];
+    await buildOpsStatus({
+      now: () => NOW,
+      bridgeLastPollAt: () => undefined,
+      botsRunningSha: () => RUNNING,
+      lastBotActivityAt: async () => undefined,
+      fetchDeploySignals: (_now, sha) => {
+        seen.push(sha);
+        return Promise.resolve(degradedDeploySignals({ href: "https://x", label: "Open Actions" }));
+      },
+      repo: "x/y",
+    });
+    expect(seen).toEqual([RUNNING]);
+  });
+
+  it("still names the running commit when there is no GitHub token at all", async () => {
+    const status = await buildOpsStatus({
+      now: () => NOW,
+      bridgeLastPollAt: () => undefined,
+      botsRunningSha: () => RUNNING,
+      lastBotActivityAt: async () => undefined,
+      repo: "x/y",
+    });
+    const bots = status.signals.find((s) => s.id === "deploy-bots");
+    expect(status.degraded).toBe(true);
+    expect(bots?.detail).toContain("running 7ac0ffe");
   });
 });
