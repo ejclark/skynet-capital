@@ -1153,6 +1153,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The successor print, and the one that publishes the REVISION to the 09-16 advance estimate — which retail-sales-2026-09-16's own honest-limits section says any 'surprise' framing must net against, and which the calendar could not point at because no retail-sales entry existed beyond 09-16. Also the first clean read after August's record pump prices (AAA: most expensive August on record, above $4/gal every day) wash out of the headline; the series is seasonally adjusted but explicitly NOT price-adjusted, per Census Table 1's own footnote. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep. Filed `confirmed` rather than the sweep's usual `estimate` because the date came from the Census primary release schedule — the same page and `CENSUS:` prefix that seeded the 09-16 entry (cf. the ppi-2026-10-15 precedent, 2026-08-31).",
   },
   {
+    id: "treasury-coupon-announcement-2026-10-15",
+    kind: "rates",
+    title: "Treasury coupon announcement (20Y reopening size)",
+    date: "2026-10-15",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Auctions PDF, text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 17,195 bytes) — the row reads verbatim `20-Year BOND R` with announcement Thursday, October 15, 2026, auction Wednesday, October 21, 2026, settlement Friday, October 23, 2026 (the trailing R is Treasury's own reopening marker). Corroborated on size by press release sb0590 (2026-08-05 quarterly refunding statement, fetched direct the same session), whose anticipated-auction-size table carries an Oct-26 row reading 69 58 70 44 39 13 22 28 across the 2Y/3Y/5Y/7Y/10Y/20Y/30Y/FRN headers — i.e. the 20-Year at $13 billion. Stays estimate on two counts: a tentative schedule is tentative by construction, and this lane may not self-confirm an event it discovered in-sweep. The ~11:00 ET slot is Treasury's standing coupon-announcement convention and is NOT separately sourced",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "The successor to treasury-coupon-announcement-2026-09-10, and the LAST coupon announcement whose size the current published guidance covers — which is the whole reason it earns a slot. sb0590's anticipated-size table stops at Oct-26 and its TIPS paragraph covers only the August-to-October quarter, so 10-15 is the final announcement that can be read off a document rather than forecast; the 2026-11-04 refunding sets whatever follows, and the 2026-11-12 announcement (20-Year BOND new issue, per the same tentative schedule) is the first in this cycle whose size no current Treasury primary publishes. That expiry is the point: the 09-10 initial research found announcements are scheduled nil ONLY while the guidance holds, so the dates worth tracking are the guidance's own edges. This entry is also the dated home for forward test FT-treasury-coupon-announcement-2026-09-10-1, which predicts the 20Y reopening prints $13B here and scores 2026-10-16 — the same gap the 09-03 and 09-10 entries were created to close, where a rates ledger named a date it was waiting on with no calendar row to attach it to. Base rate at filing, from fiscaldata auctions_query: the 20Y grid has run $16B new issue / $13B reopening for 37 consecutive auctions since 2023-08-23, zero deviations. Session context is crowded but not by this: CPI lands 10-14, PPI and retail sales the same morning as this announcement, and the FOMC blackout opens 10-17. Discovered during the treasury-coupon-announcement-2026-09-10 initial-research adjacency sweep (2026-09-05).",
+  },
+  {
     id: "import-export-prices-2026-10-16",
     kind: "macro-print",
     title: "U.S. Import and Export Price Indexes (Sep 2026 data)",
