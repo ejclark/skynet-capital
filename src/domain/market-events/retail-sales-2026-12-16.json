@@ -1,0 +1,11 @@
+{
+  "id": "retail-sales-2026-12-16",
+  "kind": "macro-print",
+  "title": "Retail Sales — advance monthly (Nov 2026)",
+  "date": "2026-12-16",
+  "status": "confirmed",
+  "source": "CENSUS: census.gov/retail/release_schedule.html lists the Advance Monthly Retail Trade Report for November 2026 data on \"December 16, 2026\", 08:30 ET, fetched direct 2026-09-01",
+  "impact": "high",
+  "symbols": [],
+  "notes": "The print that publishes the REVISION to the 11-17 advance estimate, and the FIRST AND ONLY Census read on the Thanksgiving/Black Friday/Cyber Monday weekend (2026-11-26/27/30) — which the 11-17 print does NOT contain, a misread its ledger flags explicitly. Also the first retail print that sits BEYOND BOTH LIVE CR EXPIRY CANDIDATES (House Dec 4, Senate Dec 11), so the appropriations risk the 09-16/10-15 ledgers made their dominant variable migrates to this slot rather than to 11-17. Lands one week after the 12-09 FOMC + SEP. Discovered during the retail-sales-2026-11-17 initial research, read off the next row of the same Census release schedule. Filed `confirmed` rather than the adjacency sweep's usual `estimate` because the date came from the Census primary release schedule — the same page and `CENSUS:` prefix that seeded the 09-16, 10-15 and 11-17 entries."
+}

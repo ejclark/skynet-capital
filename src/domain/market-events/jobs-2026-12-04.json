@@ -1,0 +1,11 @@
+{
+  "id": "jobs-2026-12-04",
+  "kind": "macro-print",
+  "title": "Employment Situation (Nov 2026 data)",
+  "date": "2026-12-04",
+  "status": "confirmed",
+  "source": "BLS: bls.gov/schedule/news_release/empsit.htm — 08:30 ET, checked 2026-08-17",
+  "impact": "high",
+  "symbols": [],
+  "notes": "First leg of the Dec 4→9→10 compound window (jobs → FOMC+dots → CPI)."
+}

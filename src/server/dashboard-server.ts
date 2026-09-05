@@ -141,7 +141,6 @@ async function serveAuthorizedRoute(
   const canControl = isOwnerOf(config.controls, session);
   const canInvite = isOwnerOf(config.invite, session);
   const canClaim = isOwnerOf(config.claim, session);
-  const canOpsStatus = isOwnerOf(config.opsStatus, session);
   const navFor = (active: NavView): NavContext => ({
     active,
     currentId: resolveCurrentId(session, config.resolveOwnerId),
@@ -150,7 +149,6 @@ async function serveAuthorizedRoute(
     ...(canControl ? { canControl } : {}),
     ...(canInvite ? { canInvite } : {}),
     ...(canClaim ? { canClaim } : {}),
-    ...(canOpsStatus ? { canOpsStatus } : {}),
   });
 
   if (path === "/events") {

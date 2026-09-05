@@ -18,8 +18,8 @@ import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
 
 /** The shell's content JSON family: the wire, the research shelf, the
- *  journey, and the discovery shelves — read-only twins of their server-rendered views, one
- *  producer each. Returns true when the request was answered. */
+ *  journey, the discovery shelves, and fleet ops status — read-only twins of their server-rendered
+ *  views, one producer each. Returns true when the request was answered. */
 export async function serveContentApi(
   res: ServerResponse,
   path: string,
@@ -54,6 +54,19 @@ export async function serveContentApi(
     // The Outpost's card catalog — derived from the registry on every call, so a
     // new exported play is browsable the moment it lands with nothing here to update.
     return json(outpostCatalog());
+  }
+  if (path === "/api/ops-status") {
+    // GROUP-VISIBLE (#1296, Eric: fleet health "should be public for the group"). Every request
+    // that reaches here is already through the auth gate (`dashboard-auth-gate.ts`), which is
+    // exactly the boundary CLAUDE.md draws: authed members see the shared universe, pre-auth sees
+    // nothing. The payload is four prose signals plus links into the public repo's Actions — no
+    // credential, no account data — so there is no owner check left to run. `available:false` is
+    // the honest answer where the panel isn't wired at all (password mode, no OAuth).
+    return json(
+      config.opsStatus
+        ? { available: true, status: await config.opsStatus.status() }
+        : { available: false },
+    );
   }
   if (path === "/api/collections") {
     const collections = browseCollections();
