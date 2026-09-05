@@ -66,9 +66,14 @@ Stance section with the row as its receipt.
 5. **Event-specific tape** — consensus drift, whisper moves, implied-move changes, unusual
    positioning commentary.
 
-Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new
-`market-events.ts` entry **in the same PR**, always `status: "estimate"` (`EST:`/`NEWS:` source)
-— never `confirmed` without a primary source. That proposal is how the calendar feeds itself.
+Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new calendar file
+`src/domain/market-events/<id>.json` **in the same PR**, always `status: "estimate"` (`EST:`/`NEWS:`
+source) — never `confirmed` without a primary source. That proposal is how the calendar feeds
+itself. **One file per event** (issue #1449): your own event's amendments (a status flip, a source,
+a notes update) go in `src/domain/market-events/<your-event-id>.json` and nowhere else; a proposal
+is a brand-new file named by its id (`node scripts/event-scan.mjs --validate` fails a file whose
+name is not its `id`). There is no shared array to insert into and no ordering rule to satisfy —
+which is exactly why two research PRs can no longer conflict on the calendar.
 
 **Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
 
@@ -76,9 +81,16 @@ Any adjacent event with a **date** discovered during the sweep is PROPOSED as a 
 
 Fill the ledger's `## Outcome` section within the close-out window (`closeOutWithinDays`): what
 actually happened vs the stance, scored **from re-run instrument data, never from memory of the
-tape**. Score any forward tests this event carried in
-[`forward-tests.md`](../research/forward-tests.md) (a scored kill moves to the sweep doc's kill
-list). Once `## Outcome` exists the scanner goes silent on the event forever.
+tape**. Score any forward tests this event carried — its own fragment
+[`forward-tests/<event-id>.md`](../research/forward-tests.md) (fill the Outcome cell; a scored
+kill moves to the sweep doc's kill list), plus any legacy `FT-N` row about this event in
+`forward-tests/legacy.md`. Once `## Outcome` exists the scanner goes silent on the event forever.
+
+**Registering a forward test** (initial research, or a stance change mid-run) appends one row to
+`docs/research/forward-tests/<event-id>.md` — this event's own fragment, id `FT-<event-id>-<n>`
+with `<n>` counting up inside that file only. Never a row in `forward-tests.md` itself (the index
+carries no rows and `npm test` fails one), never another event's file. The full recipe is the
+index's "How to register".
 
 ## Deterministic screening (issue #724) — not every due pulse spends a session
 

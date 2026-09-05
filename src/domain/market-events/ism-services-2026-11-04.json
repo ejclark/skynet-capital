@@ -1,0 +1,11 @@
+{
+  "id": "ism-services-2026-11-04",
+  "kind": "macro-print",
+  "title": "ISM Services PMI (Oct 2026 data)",
+  "date": "2026-11-04",
+  "status": "estimate",
+  "source": "EST: ISM publishes the Services PMI at 10:00 ET on the third business day of the month (the cadence the confirmed 2026-09-03 entry follows); November 2026's first three business days are Mon 11-02, Tue 11-03, Wed 11-04 — Election Day is not a market or federal holiday. ismworld.org's ROB calendar was re-fetched direct 2026-08-31 and still 302s to ecommerce.ismworld.org/SSO/Login.aspx, and no aggregator convergence was obtained for this specific date, so this is a rule-derived date and nothing more, checked 2026-08-31",
+  "impact": "high",
+  "symbols": [],
+  "notes": "The first services read after the 11-03 midterms and the first national activity data published AFTER the vote — the mirror of ism-manufacturing-2026-11-02 (est), which is the last one published before it. READ IT, DO NOT TRADE IT — and the 'services prices are the single biggest non-CPI rate-path mover in this set' claim this note used to assert is RETIRED AS UNMEASURED by this event's own initial research (2026-08-31). Measured on dividend-adjusted closes across all 8 of 2026's services releases: TLT 3/8 up at a mean +0.020% (unconditional -0.012%), ^TNX 4/8 at -0.009%, SPY with no release-day move above the 76th percentile of its own 2026 |move| distribution, and QQQ/XLF/IWM likewise nil; Spearman(Prices, TLT) -0.132 is the right sign but far short of the ~0.74 critical value at n=8, and ranks BELOW the headline's ordering. The claim's most-cited receipt inverts too: on 2026-08-05 the 10Y closed 4.617, DOWN from 4.627, against press narration of '+9bps to ~4.17%'. That is a finding about the RELEASE, not about services inflation's importance to the Fed. What actually distinguishes this date is treasury-refunding-2026-11-04 (est) at 08:30 ET, 90 minutes ahead of the 10:00 print — the same collision that contaminated the 08-05 and 02-04 releases, so no bond move that morning is attributable to this survey. Discovered during the ism-manufacturing-2026-11-02 initial research (2026-08-31): the corridor sweep found the manufacturing slot tracked for 11-02 and the services slot two days later empty."
+}

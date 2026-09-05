@@ -10,6 +10,7 @@
 // only a genuinely empty diff counts as unchanged, so an unresolvable base fails CLOSED (not proven
 // unchanged) rather than defaulting open.
 import { execFileSync } from "node:child_process";
+import { relative, resolve, sep } from "node:path";
 import { structurallySafe } from "./envelope-widening.mjs";
 
 const ROOT = process.cwd();
@@ -82,3 +83,15 @@ export function exemptionReason(path, base, rule, diff) {
   if (behaviorVerified(rule, base)) return "behavior-verified";
   return undefined;
 }
+
+// #1355 — the --check boundary normalizes its argument before matching. `./envelope.json`, an
+// absolute path, and a trailing slash all answered `protected: false` for the protected file
+// itself; every lane prompt and grind's automatic step 0 trust that answer instead of prose.
+// Normalized here, at the CLI boundary only: breachOf/globToRegExp are untouched, and the
+// enforcement path never needed it (runLaneScan's paths come from `git diff --name-only`, already
+// repo-root-relative). A path outside the repo is returned as typed — it matches nothing either
+// way, and rewriting it would hide that in the output.
+export const normalizeCheckPath = (given, root = process.cwd()) => {
+  const rel = relative(root, resolve(root, given)).split(sep).join("/");
+  return rel === "" || rel === ".." || rel.startsWith("../") ? given : rel;
+};

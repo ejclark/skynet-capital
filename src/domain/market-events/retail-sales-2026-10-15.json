@@ -1,0 +1,11 @@
+{
+  "id": "retail-sales-2026-10-15",
+  "kind": "macro-print",
+  "title": "Retail Sales — advance monthly (Sep 2026)",
+  "date": "2026-10-15",
+  "status": "confirmed",
+  "source": "CENSUS: census.gov/retail/release_schedule.html lists the Advance Monthly Retail Trade Report for September 2026 data on \"September 16, 2026\" -> next entry \"October 15, 2026\", 08:30 ET, fetched direct 2026-09-01",
+  "impact": "high",
+  "symbols": [],
+  "notes": "The successor print, and the one that publishes the REVISION to the 09-16 advance estimate — which retail-sales-2026-09-16's own honest-limits section says any 'surprise' framing must net against, and which the calendar could not point at because no retail-sales entry existed beyond 09-16. Also the first clean read after August's record pump prices (AAA: most expensive August on record, above $4/gal every day) wash out of the headline; the series is seasonally adjusted but explicitly NOT price-adjusted, per Census Table 1's own footnote. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep. Filed `confirmed` rather than the sweep's usual `estimate` because the date came from the Census primary release schedule — the same page and `CENSUS:` prefix that seeded the 09-16 entry (cf. the ppi-2026-10-15 precedent, 2026-08-31)."
+}

@@ -17,16 +17,11 @@ export const ESTIMATE_PREFIX = /^(EST|NEWS):/;
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** The calendar's canonical order — (date, id). Every reader already computed it (event-scan.mjs's
- *  report, market-events.ts's allEvents); since #1341 the FILE is stored in it too, and that is a
- *  merge fix, not a tidiness one. Research lanes used to append every new event to the end of the
- *  array, so two concurrent lanes always inserted at the same anchor line — the one case plain
- *  git cannot merge (22 of 47 PRs touching the file flagged conflicted, median 13.4 h to merge
- *  against 1 min unflagged, #1324). The custom merge driver #1324 wired fixes that locally, but
- *  GitHub's server-side mergeable computation never runs a custom driver, so PRs kept reading
- *  `dirty` in the UI. File order is the only lever that works server-side: entries for different
- *  dates now land at different anchors and plain git merges them with no driver at all. Same-date
- *  pairs still collide and still fall back to the driver — the two slices compose by design.
+/** The calendar's canonical order — (date, id). Every reader computes it (event-scan.mjs's report,
+ *  market-events.ts's allEvents, the loader in market-events-data.ts). Storage order stopped
+ *  mattering with issue #1449: the calendar is one JSON file per event, so there is no shared
+ *  array for two lanes to insert into — the whole append-collision class (#1324/#1341) is gone
+ *  rather than merged around.
  *
  *  Tolerant of a missing date/id because it runs on data this module has not validated yet. */
 export const compareEventOrder = (a, b) =>
@@ -81,17 +76,16 @@ function validateEvent(e, ids, problems) {
   validateStatus(e, where, problems);
 }
 
-/** Storage order is part of the contract (see compareEventOrder). Curated events only — the
- *  derived earnings rows are generated from earnings-calendar.ts and never hand-placed. Reports
- *  every inversion, not just the first: a lane that pasted two entries wants both named at once. */
-function validateOrder(curated, problems) {
-  for (let i = 1; i < curated.length; i++) {
-    const prev = curated[i - 1];
-    const e = curated[i];
-    if (compareEventOrder(prev, e) > 0)
+/** One file per event (issue #1449): the file's name IS the id. That is what makes the calendar
+ *  conflict-free — a lane can only write the file its own event id names, a proposed adjacent
+ *  event is a brand-new file, and a duplicate id is a duplicate file name git itself refuses. A
+ *  file whose name disagrees with its id is the one shape the loader cannot reject by type. */
+function validateFileNames(files, problems) {
+  for (const { file, id } of files ?? []) {
+    const expected = `${id}.json`;
+    if (file !== expected)
       problems.push(
-        `event "${e.id}" (${e.date}): out of (date, id) order — it belongs before "${prev.id}" ` +
-          `(${prev.date}). Run \`node scripts/sort-market-events.mjs\` to re-sort the whole file.`,
+        `src/domain/market-events/${file}: file name must equal its id — rename it to "${expected}"`,
       );
   }
 }
@@ -105,13 +99,13 @@ function validateLedgers(ledgers, ids, problems, warnings) {
   }
 }
 
-function validate({ curated, all }, cadence, ledgers) {
+function validate({ curated, all, files }, cadence, ledgers) {
   const problems = [];
   const warnings = [];
   const ids = new Set();
   validateCadence(cadence, problems);
   for (const e of all) validateEvent(e, ids, problems);
-  validateOrder(curated, problems);
+  validateFileNames(files, problems);
   for (const e of curated)
     if (e.kind === "earnings")
       problems.push(
