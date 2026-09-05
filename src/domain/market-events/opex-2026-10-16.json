@@ -1,0 +1,11 @@
+{
+  "id": "opex-2026-10-16",
+  "kind": "opex",
+  "title": "Monthly options expiration (October)",
+  "date": "2026-10-16",
+  "status": "confirmed",
+  "source": "OCC: theocc.com expiration calendar — 3rd-Friday standard, checked 2026-08-18",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "Standard monthly expiration."
+}

@@ -33,7 +33,7 @@
 // material verdict: dispatch the session. A STALE read is a half-failed fetch and falls under the
 // same rule (issue #1386): `closeFromChart` reads the latest session or throws, and every price the
 // CLI prints carries the date and source it came from (`priceAsOf`), so a fallback is on the record.
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyScreen,
@@ -50,7 +50,7 @@ const arg = (name) => {
 };
 const has = (name) => process.argv.includes(`--${name}`);
 
-const EVENTS_FILE = arg("events-file") ?? join(ROOT, "src", "domain", "market-events-data.ts");
+const EVENTS_DIR = arg("events-dir") ?? join(ROOT, "src", "domain", "market-events");
 const CALENDAR_FILE = arg("calendar-file") ?? join(ROOT, "src", "domain", "earnings-calendar.ts");
 const CADENCE_FILE = arg("cadence-file") ?? join(ROOT, "assessment-cadence.json");
 const LEDGER_DIR = arg("ledger-dir") ?? join(ROOT, "docs", "research", "events");
@@ -81,10 +81,11 @@ function extractArray(file, marker) {
 }
 
 function loadEvents() {
-  const curated = extractArray(
-    EVENTS_FILE,
-    "export const MARKET_EVENTS: readonly MarketEvent[] = [",
-  );
+  // One JSON file per event (#1449), the same read event-scan.mjs and market-events-data.ts do.
+  if (!existsSync(EVENTS_DIR)) throw new Error(`event-material-scan: cannot read ${EVENTS_DIR}.`);
+  const curated = readdirSync(EVENTS_DIR)
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => JSON.parse(readFileSync(join(EVENTS_DIR, f), "utf8")));
   const prints = extractArray(
     CALENDAR_FILE,
     "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [",

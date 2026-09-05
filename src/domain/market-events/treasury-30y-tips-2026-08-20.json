@@ -1,0 +1,11 @@
+{
+  "id": "treasury-30y-tips-2026-08-20",
+  "kind": "rates",
+  "title": "30-Year TIPS auction",
+  "date": "2026-08-20",
+  "status": "confirmed",
+  "source": "TSY: treasurydirect.gov auction schedule — 1:00pm ET, announced 08-13, checked 2026-08-18",
+  "impact": "high",
+  "symbols": [],
+  "notes": "Long-end real-yield supply the day after the 20Y — the second leg of this week's duration test."
+}

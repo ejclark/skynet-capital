@@ -1,0 +1,11 @@
+{
+  "id": "ism-manufacturing-2026-11-02",
+  "kind": "macro-print",
+  "title": "ISM Manufacturing PMI (Oct 2026 data)",
+  "date": "2026-11-02",
+  "status": "estimate",
+  "source": "EST: ISM publishes the Manufacturing PMI at 10:00 ET on the first business day of the month (the cadence the confirmed 2026-09-01 entry follows); 2026-11-02 is a Monday — ismworld.org's own ROB calendar is login-gated (302 to ecommerce.ismworld.org/SSO), so this is derived exactly as the 2026-10-01 sibling was and not re-verified against it, checked 2026-08-31",
+  "impact": "high",
+  "symbols": [],
+  "notes": "The first manufacturing read after the 10-28 FOMC and the last hard macro print before the 11-03 midterms (est) — and it beats sloos-2026-11-02 to the same day's tape by four hours, which is part of why that survey has no window to be the story. Prices-paid + new-orders reprice the Fed-cut path and 10Y real yields, the discount rate on long-duration tech. Discovered during the sloos-2026-11-02 initial research: the corridor sweep found the 09-01 and 10-01 entries tracked and the 11-02 slot empty."
+}

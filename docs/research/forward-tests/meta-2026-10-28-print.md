@@ -1,0 +1,12 @@
+# Forward tests — meta-2026-10-28-print
+
+<!-- One event's pre-registered hypotheses, written ONLY by the lane that owns
+     docs/research/events/meta-2026-10-28-print.md — never by a sibling lane, which is what lets every
+     research PR merge without touching a shared file (issue #1449). The register at
+     ../forward-tests.md is composed from these files; never add a row there. Ids are
+     FT-meta-2026-10-28-print-<n>, <n> counting up within this file. Rows append only; the Outcome
+     column is the one cell the close-out fills. -->
+
+| # | Hypothesis | Prediction | Kill switch | Score by | Outcome |
+|---|---|---|---|---|---|
+| FT-meta-2026-10-28-print-1 | **The street never marks the pre-announced charge — the 10-28 headline EPS miss is mechanical, not fundamental** — registered **2026-09-04 at D-54** of the `estimate`-dated [meta-2026-10-28-print](../events/meta-2026-10-28-print.md). Meta disclosed on 2026-08-26 that it expects to accrue **~$10B** of legal expense in **Q3 2026** for the state-AG settlement, explicitly outside the expense outlook given on the 07-29 Q2 call; on the Q2 diluted count (~2.57B) that is ≈**$3.90/share** pre-tax. Nine days later the aggregated street Q3 EPS consensus is **$6.75** (TipRanks, checked 2026-09-04) — the same number logged on 08-24, 08-29 and 09-01, i.e. **zero markdown**. A fully-marked consensus would sit near **~$2.85** | At the last pulse before the print (D-1 of the estimated **2026-10-28** date), the aggregated street Q3 EPS consensus is still **≥ $6.00** — no more than ~20% of the charge absorbed. Anchors on the record: META **$611.31** (probe 2026-09-04), 09-03 close **$613.88**; VIX **14.10**; consensus revenue ~**$63.26B** against the company guide **$61–64B** | Consensus prints **below $6.00** on any pulse before the print → the street *is* absorbing the charge, the "a headline miss carries no information" framing is retired from that event's decision header, and a 10-28 EPS miss has to be read as a real one. **Void** (not killed) if Meta restates the accrual, moves it out of Q3, or the print lands outside the Q3 reporting window; also void if an aggregator publishes the basis of its number and it proves to be an explicitly ex-charge figure, since the test then measured a labelling convention rather than an expectation. Scoring a pass is **one observation about how a pre-announced charge propagates into consensus — never a directional claim on the print**, which that ledger stands aside from either way | 2026-10-27 | _open_ |

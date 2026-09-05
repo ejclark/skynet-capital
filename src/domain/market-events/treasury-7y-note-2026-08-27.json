@@ -1,0 +1,11 @@
+{
+  "id": "treasury-7y-note-2026-08-27",
+  "kind": "rates",
+  "title": "7-Year Treasury Note auction",
+  "date": "2026-08-27",
+  "status": "confirmed",
+  "source": "TSY: treasurydirect.gov upcoming auctions — announced, 1:00pm ET, checked 2026-08-18",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "End-of-August belly supply; the 7Y is the historically wobbliest of the coupon block."
+}
