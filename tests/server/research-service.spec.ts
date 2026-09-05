@@ -247,3 +247,42 @@ describe("findResearchDoc — reader-side folds", () => {
     expect(rendered?.html).toContain("Defined-risk only");
   });
 });
+
+describe("findResearchDoc — the forward-test register is composed from per-event fragments (#1449)", () => {
+  function registerRoot(): string {
+    const root = fixtureRoot();
+    writeFileSync(
+      join(root, "forward-tests.md"),
+      "# Forward-test register\n\n<!-- no rows here -->\n\nIntro paragraph.\n",
+    );
+    mkdirSync(join(root, "forward-tests"));
+    writeFileSync(
+      join(root, "forward-tests", "legacy.md"),
+      "# Forward tests — legacy\n\n<!-- frozen -->\n\n| # | Hypothesis |\n|---|---|\n| FT-1 | legacy row |\n",
+    );
+    writeFileSync(
+      join(root, "forward-tests", "nvda-2026-08-26-print.md"),
+      "# Forward tests — nvda-2026-08-26-print\n\n<!-- owned by one lane -->\n\n| # | Hypothesis |\n|---|---|\n| FT-nvda-2026-08-26-print-1 | see [ledger](../events/nvda-2026-08-26-print.md) |\n",
+    );
+    return root;
+  }
+
+  it("serves index + every fragment as one document, legacy last, authoring comments dropped", () => {
+    const rendered = findResearchDoc("forward-tests", registerRoot());
+    expect(rendered?.html).toContain("Intro paragraph.");
+    expect(rendered?.html).toContain("FT-nvda-2026-08-26-print-1");
+    expect(rendered?.html).toContain("FT-1");
+    expect(rendered?.html).not.toContain("owned by one lane");
+    expect(rendered?.html.indexOf("FT-nvda-2026-08-26-print-1")).toBeLessThan(
+      rendered?.html.indexOf(">FT-1<") ?? -1,
+    );
+  });
+
+  it("re-anchors a fragment's relative links to live routes, and lists no fragment as its own study", () => {
+    const root = registerRoot();
+    expect(findResearchDoc("forward-tests", root)?.html).toContain(
+      'href="/research/events/nvda-2026-08-26-print"',
+    );
+    expect(listResearch(root).studies.map((d) => d.slug)).not.toContain("forward-tests/legacy");
+  });
+});

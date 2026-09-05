@@ -1,0 +1,11 @@
+{
+  "id": "consumer-confidence-2026-09-29",
+  "kind": "macro-print",
+  "title": "Conference Board Consumer Confidence Index (Sep 2026)",
+  "date": "2026-09-29",
+  "status": "confirmed",
+  "source": "CB: conference-board.org/topics/consumer-confidence — the page states verbatim \"The next release is Tuesday, September 29th at 10 AM ET\", fetched 2026-08-29 (the explicit primary line the 2026-08-25 predecessor recorded as unfetchable behind Data Central)",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The leading consumer read feeding retail sales and the goods side of PCE. The calendar carried no consumer-confidence entry beyond the passed 08-25 print, despite August's deterioration (the CB index printed below consensus; UMich fell to 51 from 55.2) being the freshest consumer signal in the window. Discovered during the retail-sales-2026-09-16 pulse-check adjacency sweep."
+}

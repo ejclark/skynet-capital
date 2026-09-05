@@ -1,0 +1,11 @@
+{
+  "id": "treasury-10y-note-2026-09-09",
+  "kind": "rates",
+  "title": "10-Year Treasury Note auction (reopening)",
+  "date": "2026-09-09",
+  "status": "confirmed",
+  "source": "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18",
+  "impact": "high",
+  "symbols": [],
+  "notes": "The benchmark. A weak 10Y lifts the whole curve and pressures long-duration tech."
+}

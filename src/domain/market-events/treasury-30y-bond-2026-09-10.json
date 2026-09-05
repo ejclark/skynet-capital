@@ -1,0 +1,11 @@
+{
+  "id": "treasury-30y-bond-2026-09-10",
+  "kind": "rates",
+  "title": "30-Year Treasury Bond auction (reopening)",
+  "date": "2026-09-10",
+  "status": "confirmed",
+  "source": "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18",
+  "impact": "high",
+  "symbols": [],
+  "notes": "Long-end supply the day after the 10Y and the day before CPI (09-11) — a compound rate week."
+}
