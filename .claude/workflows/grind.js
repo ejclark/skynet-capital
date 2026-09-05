@@ -234,6 +234,7 @@ function promptFor(step, item, prev) {
 function suffixFor(step) {
   if (step === ENVELOPE_STEP) return 'envelope'
   if (step === VERIFY_BRANCH_STEP) return 'verify'
+  if (step.kind === 'script' && !step.label) return 'check'
   return stepName(step)
 }
 
@@ -278,9 +279,19 @@ const stages = finalSteps.map((step, i) => {
     const stamped = result && typeof result === 'object' && !result.step ? { ...result, step: suffixFor(step) } : result
     return isLast ? finish(stamped) : stamped
   }
-  const run = (value) => Promise.resolve(value).then(tag)
+  // A check that passes should not overwrite what the run actually did: the first interrogate
+  // run's ledger read "marker found on issue #1355" seven times, and the call sheets it was
+  // verifying were nowhere in the table (#1352). A step that is not the run's named step keeps
+  // the previous summary when it succeeds and surfaces its own only when it fails.
+  const isNamed = named.length === 1 && step === named[0]
+  const keepSummary = (prev) => (next) => {
+    if (isNamed || !prev?.summary || !next || typeof next !== 'object') return next
+    if (next.status === 'done') return { ...next, summary: prev.summary, check: next.summary }
+    return next
+  }
+  const run = (value, prev) => Promise.resolve(value).then(keepSummary(prev)).then(tag)
   return i === 0
-    ? (item) => run(agent(promptFor(step, item, undefined), stageOpts(step, item)))
+    ? (item) => run(agent(promptFor(step, item, undefined), stageOpts(step, item)), undefined)
     : (prev, item) => {
         // A step already blocked/skipped stays that way — don't spend an agent running later
         // steps against a target the chain has already given up on.
@@ -294,7 +305,7 @@ const stages = finalSteps.map((step, i) => {
             summary: 'this step checks {prev.branch}, but the previous step reported no branch — refusing to run a check that would otherwise pass vacuously',
           })
         }
-        return run(agent(promptFor(step, item, prev), stageOpts(step, item)))
+        return run(agent(promptFor(step, item, prev), stageOpts(step, item)), prev)
       }
 })
 
