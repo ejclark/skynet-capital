@@ -1,8 +1,8 @@
 # S&P DJI September quarterly rebalance — pro-forma files released — sp-rebalance-proforma-2026-09-04
 
 **Kind:** sector · **Date:** 2026-09-04 (estimate, NEWS: spglobal.com S&P Equity Indices Policies & Practices methodology — float-adjusted pro-forma files release after the close on the first Friday, two weeks before the third-Friday effective date; checked 2026-09-01, re-checked 2026-09-04) · **Impact:** low
-**Last assessed:** 2026-09-04
-<!-- probe-ref: {"symbols":{},"vix":13.95,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","adp-employment-2026-09-02","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","eia-steo-2026-09-09","fed-waller-outlook-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","treasury-10y-note-2026-09-09","treasury-3y-note-2026-09-08","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
+**Last assessed:** 2026-09-05
+<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"low:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","adp-employment-2026-09-02","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","eia-steo-2026-09-09","fed-waller-outlook-2026-09-03","fomc-blackout-start-2026-09-05","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","treasury-10y-note-2026-09-09","treasury-3y-note-2026-09-08","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -78,3 +78,143 @@
 | 2026-09-04 | D0 | Initial research banked. **Date/mechanism:** S&P DJI *Equity Indices Policies & Practices* (March 2026) — FMC-weighted pro-formas after the close on the **first Friday, two weeks prior**; capped/alt-weighted on the **second Friday, one week prior**; share/IWF freeze from after the close on the **Tuesday before the second Friday**. Direct PDF fetch **403'd** today; rule read from search-indexed text, so the entry stays `estimate`. Precedent 2-for-2 in 2026: announced **03-06** (Fri) and **06-05** (Fri, S&P DJI PR 1483743 — MRVL + FLEX in, POOL + CPB out, effective prior to the **06-22** open). An aggregator-derived "announcement expected ~09-11" claim was **read and rejected** against both. **The central finding:** Greenwood & Sammon (*The Disappearing Index Effect*, NBER w30748 / HBS 23-025) measure inclusion impact 3.4% (80s) → 7.4% (90s) → 5.2% (00s) → **~1.0% (2010–2020), indistinguishable from zero**; deletions ~0.1% — the announced-addition trade is a measured null, not a caution. Reinforced by S&P DJI's own Indexology: ~**90%** of quarterly turnover is share/float housekeeping, and a quarter can carry **no** constituent change at all. Scale, press-grade only: ~0.8% of index cap typical, Sep-2025 ~$250B (Piper Sandler, busiest in four years, tech the only net-buy sector ~$40B); the "$27T in motion" line is **not adopted** (indexed-plus-benchmarked assets, not the rebalance trade). **Adjacency sweep — peers:** none; `symbols: []`, no tracked-name earnings inside the window (AVGO printed 09-02; next cluster Oct 27–29). **Macro:** August payrolls **+162k** vs ~53k consensus (BLS 08:30 ET today), U3 **4.1%**, AHE +0.3%, June +11k / July +44k revised up — hike odds ~52% → **~59%** post-print (unreconciled with the ~66% CME FedWatch reading `opex-2026-09-18` banked 08-31; both recorded, neither averaged). FOMC blackout starts **09-05**. **Volatility regime:** VIX **13.95** (−2.58%) midday today off a **14.32** 09-03 close (arithmetically self-consistent: 13.95 + 0.37 = 14.32; a sibling ledger banked **14.10** for a different intraday stamp today — recorded, not reconciled), with SPX **7,708.89** (−0.50%), Dow 53,325.23, Nasdaq 26,467.18 — vol *falling* on a red tape, the same calm-into-the-corridor configuration the opex ledger has flagged since 08-29. **Geopolitical:** OPEC+ meets **09-06**; no channel touching index-rebalance mechanics. **Event tape:** the 09-04 file and press release land after tonight's close, so **no constituent names are quoted or guessed**. **New dated adjacency — one proposed to `market-events.ts` as `estimate` in this PR:** `sp-rebalance-proforma-capped-2026-09-11` (kind sector, low) — the capped/alternatively-weighted half of the same pro-forma pair, the final dated read on the 09-18 MOC before it prints, landing on the same day as CPI and UMich prelim. The **09-08 freeze** is dated but deliberately **not** filed: it is a data cut-off with no observable publication. Forward test **`FT-sp-rebalance-proforma-2026-09-04-1`** registered. | — (stance set: stand aside on all four horizons; the refusal is measured, and the only output is a size read for `opex-2026-09-18`) | Close-out by **2026-09-10** — the event passes today, so the scanner flips it to `event-passed-unscored` (low band would be every 7d; `closeOutWithinDays` is 6) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first), never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (2026-09-05, ~00:40 UTC = 2026-09-04 ~20:40 ET), roughly 85 minutes after the release
+this doc was written to anticipate.** Sector mode runs no `earnings-cycle` / `intraday-edges`
+instrument — `symbols: []` by design — so the **release** is scored from the freshly-fetched press
+text and the **tape** from Yahoo daily bars pulled this session after the mandated cache bust
+(`rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`), never from memory.
+Market caps and share counts are stockanalysis.com vendor readings stamped to the 2026-09-04 16:00
+ET close. The date stays `estimate` — nothing here promotes it, because the confirming artefact is
+still an S&P DJI page this lane cannot fetch and there is still no index-provider source prefix.
+
+### What actually landed
+
+**The release hit at 19:15 ET on 2026-09-04, the exact evening this doc predicted.** Primary text:
+*"Bloom Energy, Illumina, and Everpure Set to Join S&P 500; Others to Join S&P 100, S&P MidCap 400,
+and S&P SmallCap 600"* (PRNewswire 302870517, dateline **Sep 04, 2026, 19:15 ET**), read through two
+independent renderings that agree line-for-line. Changes are **"effective prior to the open of
+trading on Monday, September 21, 2026, to coincide with the quarterly rebalance"** — i.e. executed
+in the **2026-09-18** closing auction, exactly the session `opex-2026-09-18` tracks.
+
+| S&P 500 | Company | Ticker | Sector | Mkt cap | 09-04 close | Day | After hours |
+|---|---|---|---|---|---|---|---|
+| **Add** | Bloom Energy | BE | Industrials | **$74.48B** | $252.87 | **+7.35%** | **+7.5%** |
+| **Add** | Everpure | P | Info Tech | $33.08B | $99.51 | +1.39% | +2.2% |
+| **Add** | Illumina | ILMN | Health Care | $32.95B | $218.22 | −1.55% | +2.0% |
+| **Drop** | Molson Coors | TAP | Cons. Staples | $7.55B | $40.50 | −0.17% | −1.8% (see note) |
+| **Drop** | The Trade Desk | TTD | Comm. Svcs | $6.78B | $14.43 | −4.37% | — |
+| **Drop** | Builders FirstSource | BLDR | Industrials | $7.08B | $65.79 | +2.51% | — |
+
+All three deletions drop **two tiers to the S&P SmallCap 600**, not to the MidCap 400. ILMN and P
+are promoted **out of** the MidCap 400. After-hours figures are press (Yahoo/Bloomberg wire, 17:10
+CDT); **TAP is unreconciled** — the wire reads −1.8%, stockanalysis reads **+0.07% to $40.53** at a
+later stamp. Both recorded, neither averaged.
+
+### Scoring the stance — the mechanism calls were right, the refusal is not yet decidable, and the test built to decide it is broken
+
+- **Leg 1 (the 09-04 date) — CONFIRMED.** The first-Friday-two-weeks-prior rule, inferred from a
+  403'd methodology PDF plus two 2026 precedents, produced the right evening on its first live test.
+- **Leg 2 (09-04 is the public announcement) — CONFIRMED, and the rejection was the load-bearing
+  half.** The aggregator-derived *"announcement expected ~09-11"* claim this doc read and **rejected**
+  was wrong; the primary-over-aggregator discipline that seeded this calendar paid on the tape.
+- **Leg 4 (~90% housekeeping) — NOT PUBLICLY READABLE, and this is a finding about the kill switch,
+  not about the leg.** The pro-forma files go to S&P DJI *clients*; the public artefact is the
+  press release, which carries names and nothing else. No share/float turnover decomposition and
+  **no desk dollar estimate had been published by 20:35 ET on announcement night.**
+- **Leg 5 (a quarter can pass with no constituent change) — UNTESTED this cycle.** Three in, three
+  out; the forward test's "void if no addition is named" branch does not fire.
+- **Leg 7 (the durable output is the size read for `opex-2026-09-18` leg 4) — DELIVERED, and it
+  points the OPPOSITE way from that ledger's kill switch.** See below.
+- **Leg 8 (no house playbook is index-flow-keyed) — UNCHANGED.** S1/S2/E1/S3/S4/G1 still contain no
+  index-membership hypothesis; the sweep's kill list still carries no rebalance entry.
+- **Leg 9 (a payrolls tape, not a rebalance tape) — CONFIRMED, with one reading of this doc's own
+  corrected.** The D0 row banked midday **VIX 13.95 (−2.58%)** and **SPX 7,708.89 (−0.50%)** and
+  read "vol *falling* on a red tape" as the calm-into-the-corridor configuration. **The closes
+  reverse the vol half:** VIX closed **14.53, up +0.21 (+1.47%)** from 14.32; SPX closed
+  **7,718.60 (−0.376%)**, SPY 770.19 (−0.385%), QQQ 718.96 (**+0.18%**). Vol rose on a mixed tape.
+  The sibling `opex-2026-09-18` D-14 row banked **14.07** as "a new 2026 low" off an intraday
+  stamp — the session's **close was 14.53**, and that is the number its next pulse should carry.
+
+**Horizon calls.** *Today (D0) — right, and it cost nothing:* the files and the release both landed
+after the close, so no session existed in which to be wrong. *This month ("watch the number, not
+the names") — the number came back, and it is the readable quarter of the number.* *This week* and
+*this quarter* stand unchanged; 2026-09-07 is Labor Day, so the **first session that prices this
+announcement is Tuesday 2026-09-08**.
+
+### The size read, and what it does to `opex-2026-09-18` leg 4
+
+That ledger's kill switch reads: *"The S&P DJI pro-forma files (est. 2026-09-04) show an unusually
+small index turnover for this quarter … Read the pro-forma, do not assume the average quarter."
+
+**It does not fire.** On the readable half, this is a **normal-to-heavy** constituent-change quarter:
+
+- Additions bring **$140.51B** of market cap into the index against **$21.41B** leaving — a **6.6×**
+  net upsizing, **+$119.10B**. June 2026 moved two names each way; this quarter moves three.
+- Against a vendor S&P 500 aggregate of **~$70.30T**, the additions alone are **~0.200%** of index
+  cap of one-way buying, versus the **~0.8%** all-sources turnover norm this doc carries as press
+  color. My own first-order arithmetic on full (not float-adjusted) vendor caps — **not** a house
+  stat, and it is an upper bound on the float-weighted number.
+- **Liquidity is where this bites.** Index demand as multiples of each name's own 20-session dollar
+  ADV, across a 10–20% assumed indexed share of cap (the assumption is stated because no primary
+  gives it): **BE 2.5–5.0 days** ($2.97B ADV), **ILMN 8.3–16.6 days** ($397M ADV), **Everpure
+  9.1–18.3 days** ($362M ADV). Two of the three additions face roughly **two to three weeks** of
+  their own average volume arriving in a single closing print.
+
+So the close-side half of `opex-2026-09-18`'s "the close is the bigger distortion window" guard
+**stands, and is if anything reinforced** — the stacked MOC on 09-18 carries a heavier-than-average
+constituent-change leg, on top of the $6.2T notional roll-off that ledger banked. **But the kill
+switch as written is not answerable by a non-client**: it asks a session to read a file it can never
+see. Its readable substitute is the pair this doc now supplies — the announced add/drop cap ratio,
+and the capped/alt-weighted file due **2026-09-11**, which the live sibling
+[`sp-rebalance-proforma-capped-2026-09-11`](sp-rebalance-proforma-capped-2026-09-11.md) owns.
+
+### The forward test is broken, and the arithmetic says so
+
+`FT-sp-rebalance-proforma-2026-09-04-1` kills leg 3 if **any** announced addition posts **≥ +3%**
+excess vs SPY over 09-04 → 09-18. Registered before the names were known, that threshold looked
+neutral. Measured against the names that arrived, it is not. Over the trailing year of overlapping
+10-session windows (n=242, Yahoo daily closes through 2026-09-04, excess vs SPY):
+
+| | BE | Everpure (P) | ILMN |
+|---|---|---|---|
+| Annualized vol | **113.5%** | 68.6% | 47.2% |
+| Median abs. 10-session excess | **12.82%** | 5.90% | 4.67% |
+| p90 signed 10-session excess | **+34.93%** | +10.72% | +12.72% |
+| Windows ≥ +3% excess | **52%** | 40% | 48% |
+
+**At least one of the three cleared +3% excess in 200 of 242 windows — 83%.** That is the empirical
+base rate of the test's own kill trigger, with no index effect required. A test that fires on noise
+five times in six cannot adjudicate a 40-year published null, and a "kill" scored on 2026-09-21
+would carry almost no information. **The registered prediction is not edited — that is falsification
+and never happens** — so it stays open, is scored honestly on its stated terms, and its verdict is
+read with this base rate attached. The properly-scaled companion,
+**`FT-sp-rebalance-proforma-2026-09-04-2`**, is registered instead: the equal-weight BE/P/ILMN
+basket's 10-session excess vs SPY runs mean **+3.46%**, median **+1.96%**, **p90 +15.81%** on the
+same n=242 — so the basket test uses **+15.81%** and carries a ~10% false-kill rate rather than 83%.
+
+**The generalizable lesson, and it is the most durable output of this event:** a forward test
+registered *before* its subjects are known must set its threshold from the subjects' own realized
+dispersion, not from the effect size in the literature. Greenwood & Sammon's ~1.0% is an average
+across a large sample; +3% on a single 113%-vol name is inside one ordinary week. Sizing the
+threshold to the sample, not to the claim, is what makes a null falsifiable.
+
+### Honest limits
+
+The announcement's own price effect is **not scored here and cannot be** — it landed at 19:15 ET
+Friday, 09-07 is Labor Day, and the first pricing session is Tuesday **2026-09-08**. The after-hours
+prints are press, not bars. Market caps are vendor and full-cap, not float-adjusted, so every
+percentage-of-index figure above is an upper bound. The indexed-share range used for the days-of-ADV
+arithmetic is an assumption, stated as one, and no primary source for it was found. `FT-...-1` and
+`FT-...-2` both score **2026-09-21**, after this doc goes quiet — the forward-test register carries
+them, and the live capped sibling is the natural place to read the result. Nothing above is a
+position: shorting is blocked house-wide, no house playbook is index-flow-keyed, and the event's
+date is still `estimate`. The `SPDJI:`-class prefix gap in `market-events-data.ts` stands unchanged
+and remains **Eric's / the calendar owner's** call, not this lane's.
+
+**No new dated adjacency to propose.** The 09-21 effective open and the 09-18 execution close are
+both the same session `opex-2026-09-18` already owns; the 09-11 capped file already has its own
+entry and ledger; the 09-08 share/IWF freeze is a data cut-off with no observable publication, and
+this doc declined to file it at D0 for that reason — the release changes nothing about that.
