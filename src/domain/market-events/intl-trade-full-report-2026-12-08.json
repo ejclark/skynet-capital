@@ -1,0 +1,11 @@
+{
+  "id": "intl-trade-full-report-2026-12-08",
+  "kind": "macro-print",
+  "title": "U.S. International Trade in Goods and Services, full FT-900 report (October 2026 data)",
+  "date": "2026-12-08",
+  "status": "estimate",
+  "source": "EST: bea.gov/news/schedule, fetched direct 2026-09-05, whose December 2026 block reads \"December 8, 8:30 AM — U.S. International Trade in Goods and Services, October 2026\". Filed estimate on two counts, matching the sibling entries in this same series (intl-trade-full-report-2026-10-06, -2026-11-04): this lane may not self-confirm an event it discovered in-sweep, and no `confirmed` prefix covers a joint Census/BEA release (`BEA:` and `CENSUS:` each cover one publisher's own schedule page, not a co-published one). The 08:30 ET time is BEA's own schedule field, not an inference",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Fills the one gap in a series this calendar already tracks twice (10-06 for August data, 11-04 for September) — this is the October-data edition, the first FT-900 of Q4 and therefore the first trade read that does NOT feed a Q3 GDP vintage. Discovered during the gdp-q3-2026-second-2026-11-25 initial research (2026-09-05), where the September edition (11-04) matters as a direct input to that event's revision channel; this one matters as the successor that starts measuring the next quarter. Lands the same 08:30 ET morning as the revised Q3 Productivity and Costs release (productivity-costs-q3-revised-2026-12-08) and ONE DAY before the 12-09 FOMC, inside the communications blackout that opened 11-28 — so it is among the last hard data the committee sees and nobody official will comment on it. Impact `low` carries the same measured justification the 11-04 entry records: symbols: [], no house playbook is macro-keyed, and solo FT-900 release days were statistically indistinguishable from ordinary sessions on SPY gap and range (n=32, permutation p=0.40 / 0.86) — low MARKET impact, not low information value. This edition is not solo: the productivity release shares its slot, so any trade-line reading here carries an attribution caveat."
+}
