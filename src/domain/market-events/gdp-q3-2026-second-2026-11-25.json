@@ -1,0 +1,11 @@
+{
+  "id": "gdp-q3-2026-second-2026-11-25",
+  "kind": "macro-print",
+  "title": "GDP — second estimate, Q3 2026 (with Corporate Profits)",
+  "date": "2026-11-25",
+  "status": "estimate",
+  "source": "EST: bea.gov/news/schedule, fetched direct 2026-09-05, whose November 2026 block reads \"November 25, 8:30 AM — GDP (Second Estimate) and Corporate Profits, 3rd Quarter 2026\" (the same page's December block reads \"December 23, 8:30 AM — GDP (Third Estimate), Industries, Corporate Profits, State GDP, and State Personal Income, 3rd Quarter 2026\"). Corroborated independently inside this repo: pce-2026-11-25's own source note already records that the October PCE release \"shares its 08:30 ET slot with the Q3 GDP second estimate\". Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep — the confirming read belongs to whichever lane owns this event's own never-assessed research",
+  "impact": "high",
+  "symbols": [],
+  "notes": "The second read on Q3 growth, and the last GDP vintage the 12-09 FOMC sees — BEA's third estimate lands 12-23, fourteen days after the meeting. Shares its 08:30 ET slot with October PCE (pce-2026-11-25), the only Q4 month the year's final SEP observes, three days before the 2026-11-28 communications blackout opens. Discovered during the productivity-costs-q3-revised-2026-12-08 initial research, where it matters as a mechanism rather than a headline: it is the OUTPUT input to the 12-08 revised Productivity and Costs release, so by this date every input to the number the committee reads on FOMC day one is public. That said, the same research measured the channel and found it weak — across five prelim->revised productivity vintages BEA's second estimate moved rounded nonfarm-business output in only one (Q4-2025, -1.1pp), while hourly compensation was the revising line in three. Funding covers the date: H.R. 6500 (signed 2026-09-02) runs through 2026-12-11, and BEA deletes rather than delays a release in a lapse (it cancelled the Q3 2025 advance estimate outright after the FY2026 shutdown), so the cr-expiry-2026-12-11 cliff falls 16 days after this release and cannot reach it."
+}
