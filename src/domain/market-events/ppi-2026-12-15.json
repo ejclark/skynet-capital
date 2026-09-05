@@ -1,0 +1,11 @@
+{
+  "id": "ppi-2026-12-15",
+  "kind": "macro-print",
+  "title": "PPI release (Nov 2026 data)",
+  "date": "2026-12-15",
+  "status": "confirmed",
+  "source": "BLS: bls.gov/schedule/news_release/ppi.htm (\"November 2026 | Dec. 15, 2026 | 08:30 AM\") and bls.gov/schedule/2026/12_sched.htm (\"Producer Price Index / November 2026 / 08:30 AM\" on the 15th) — two independent BLS schedule views, both fetched direct 2026-08-31 with a UA header (both 403 to plain fetchers). Flipped from estimate by the ppi-2026-12-15 initial research, checked 2026-08-31",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The first inflation print AFTER cpi-2026-12-10, and — with BEA's next Personal Income and Outlays not until 12-23 — the only other inflation read the market gets between the 12-09 FOMC and year-end. Its real job is as a PCE nowcast, not a CPI tell: PPI's portfolio-management, health-care and airfare lines feed the 12-23 core PCE directly, and the next FOMC after 12-09 is not until 2027-01-26/27 (FED calendar), so this print lands in a 43-day policy vacuum. Discovered during the cpi-2026-12-10 pulse-check adjacency sweep and filed estimate then; its own research session re-fetched the BLS primary and confirmed it."
+}
