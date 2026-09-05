@@ -1078,6 +1078,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
       "The largest single leg of the October coupon block ($58B of $119B) and the front-end one, so it is the first auction to price whatever the 2026-09-16 FOMC did. Its CUSIP is the one field of the 10-01 announcement that CANNOT be predicted in advance — the 3-Year is a fresh security every month, unlike the 10Y/30Y reopenings that share this block. Size base rate re-derived 2026-09-05 from `auctions_query`: $58B for 29 consecutive completed auctions since 2024-04-09, ending a nine-month +$2B/month ramp. Read it, do not trade it: `symbols: []`, the date is `estimate`, no house playbook (S1/S2/E1/S3/S4 + G1) is macro-keyed. Discovered during the treasury-coupon-announcement-2026-10-01 initial research (2026-09-05), which is the sweep the treasury-coupon-announcement-2026-10-15 entry asked for when it named these three auctions and declined to file them.",
   },
   {
+    id: "treasury-buyback-2y3y-2026-10-06",
+    kind: "rates",
+    title: "Treasury liquidity-support buyback operation (2-3Y nominal, 1:40pm ET)",
+    date: "2026-10-06",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (August 2026 refunding, published 2026-08-05), PDF text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 125,547 bytes) — the row reads verbatim announce 10/5/2026, operation 10/6/2026 1:40 pm - 2:00 pm, settle 10/7/2026, Liquidity Support, Nominal Coupons 2Y to 3Y, maturity range 10/07/2028 - 10/06/2029, min $0, max $4 billion. Stays estimate on two counts: a tentative schedule is tentative by construction, and the confirming primary is the 10-05 operation announcement rather than this document, checked 2026-09-05",
+    impact: "low",
+    symbols: [],
+    notes:
+      "Shares its afternoon with treasury-3y-note-2026-10-06 (1:00pm ET) — a front-end buyback 40 minutes after a $58B front-end new issue prices, in an overlapping part of the curve (the operation's 2028-2029 maturity range does NOT include the 3-Year being sold, which matures 2029-10-15, and buyback rules exclude on-the-run securities and any not past their first coupon date regardless). The $4B cap on this row is NOT the stale one: press release sb0607's doubling covers the 10-20Y and 20-30Y sectors only, and short-sector operations have carried $4B on this schedule throughout. The cap is a ceiling, not a purchase — on 2026-03-19 in the 20-30Y sector dealers offered $36.0B and Treasury accepted $205M. Read it, do not trade it: `symbols: []`, no house playbook (S1/S2/E1/S3/S4 + G1) is rates-keyed, and a $0-4B liquidity-support operation is a demand-side mechanic rather than a price signal. Discovered during the treasury-10y-note-2026-10-07 initial-research adjacency sweep (2026-09-05).",
+  },
+  {
     id: "fomc-minutes-2026-10-07",
     kind: "macro-print",
     title: "FOMC minutes (Sep 15–16 meeting)",
@@ -1128,6 +1141,19 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     symbols: [],
     notes:
       "PREDICTED CUSIP 912810UW6, term `29-Year 10-Month` — the second and final reopening of the August 2026 30-Year new issue (sold 2026-08-13 at $25B; first reopening 2026-09-10 at $22B, CUSIP confirmed live on treasurydirect's upcoming feed 2026-09-05). An inference from a cycle, not a fetched field: measured 2026-09-05 from `auctions_query`, all 15 completed 30-Year new-issue cycles back to 2022-11 were reopened exactly twice, in the two following months, no exceptions. Checkable at the 10-01 announcement — see FT-treasury-coupon-announcement-2026-10-01-1. Completing this auction makes 912810UW6 a $69B security (25 + 22 + 22). Size base rate: $22B for 20 consecutive completed 30-Year reopenings since 2024-03-13. THE LONG-END LEG, so it is the one of the three that sells into the doubled liquidity-support buyback bid `sb0607` (2026-08-19) put in place through 2026-11-04. Read it, do not trade it: `symbols: []`, date is `estimate`. Discovered during the treasury-coupon-announcement-2026-10-01 initial research (2026-09-05).",
+  },
+  {
+    id: "treasury-buyback-20y30y-2026-10-08",
+    kind: "rates",
+    title: "Treasury liquidity-support buyback operation (20-30Y nominal, 1:40pm ET)",
+    date: "2026-10-08",
+    status: "estimate",
+    source:
+      "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (August 2026 refunding, published 2026-08-05), PDF text layer decompressed direct 2026-09-05 (plain curl, HTTP 200, 125,547 bytes) — the row reads verbatim announce 10/7/2026, operation 10/8/2026 1:40 pm - 2:00 pm, settle 10/9/2026, Liquidity Support, Nominal Coupons 20Y to 30Y, maturity range 10/09/2046 - 10/08/2056, min $0, max $2 billion. Stays estimate on three counts: a tentative schedule is tentative by construction, its $2B cap is SUPERSEDED (see notes), and the confirming primary is the 10-07 operation announcement rather than this document, checked 2026-09-05",
+    impact: "medium",
+    symbols: [],
+    notes:
+      "THE PUBLISHED CAP ON THIS ROW IS STALE AND SHOULD NOT BE QUOTED — the same defect treasury-buyback-10y20y-2026-10-15 documents. Press release sb0607 (2026-08-19) doubled the 10-20Y and 20-30Y sector caps from $2B to at least $4B per operation, effective 2026-09-09 through 2026-11-04, and says an updated schedule will follow 'at a later date'; the PDF fetched 2026-09-05 still carries $2B here. So the operative cap is at least $4B. It runs 40 minutes after treasury-30y-bond-2026-10-08 (1:00pm ET) prices — the long-end auction selling into the doubled bid on the same afternoon — and its ANNOUNCEMENT lands 10-07, the same afternoon as treasury-10y-note-2026-10-07 and the 2:00pm FOMC minutes. Range is not eligibility: TreasuryDirect's buyback FAQ excludes on-the-run securities and any not past their first coupon date, so the 30-Year being reopened that morning (CUSIP 912810UW6 predicted) is excluded despite falling inside 10/09/2046-10/08/2056. The cap is a ceiling, not a purchase — on 2026-03-19 in this same sector dealers offered $36.0B and Treasury accepted $205M. Read it, do not trade it: `symbols: []`, no house playbook (S1/S2/E1/S3/S4 + G1) is rates-keyed. Discovered during the treasury-10y-note-2026-10-07 initial-research adjacency sweep (2026-09-05); the 10-21 TIPS 1Y-10Y and 10-27 20-30Y operations on the same schedule sit outside that event's corridor and are deliberately NOT filed here.",
   },
   {
     id: "imf-world-bank-annual-meetings-2026-10-12",
