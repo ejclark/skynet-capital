@@ -18,18 +18,16 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
-### Progressive reveal on the trade ticket's play picker (and beyond)
+### Fog of war as a reveal mechanic — banked for a later surface
 
-Today `PlayPicker` (`app/src/shell/play-picker.tsx`) always renders all six trade-type cards
-(101–302), locking unearned rungs with a "🔒 " prefix rather than hiding them — every card is
-visible from day one even though only 101 is ever actionable at first. As more trade types and
-surfaces get added, showing every locked rung up front risks becoming noisy/confusing for newbies
-rather than a clean, one-step-at-a-time ladder. Worth exploring a genuine progressive-reveal
-treatment (hide/collapse rungs beyond "next up," reveal on unlock) as a reusable pattern — not just
-for this picker, but as a general design principle for surfaces that will keep growing in
-complexity. IA-level call (screen real estate vs. discoverability/anticipation as a motivator) —
-show Eric a couple of rendered options rather than picking one blind.
-_(src: Eric · while: reviewing onboarding + trade-ticket screenshots, 2026-09-05)_
+From the 2026-09-05 five-option progressive-reveal exercise on the trade ticket (spotlight · rail
+· chapters · fog of war · solo): locked items stay on the board as silhouettes — shape and code,
+no words — and sharpen when the step before them completes. Eric picked the rail for the ticket
+(#1461) and named fog of war as the other pattern he liked, "just not here/now." Keep it for a
+surface where the carrot matters more than the calm — a bot roster, a playbook store, a district
+of the tower. The rendered treatment lives in the v1 version of the
+[Rail Over the Form](https://claude.ai/code/artifact/fb30db30-cb21-45d7-a338-a5bc39330723) page.
+_(src: Eric · while: choosing the trade ticket's reveal treatment, 2026-09-05)_
 
 ### Debug after-hours order staging without waiting for the market to open
 
@@ -932,7 +930,12 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
 
 ## In progress
 
-_(nothing right now)_
+- Progressive reveal on the trade ticket — decided as **the rail over a standalone form**:
+  milestones gate and preset, never drive; locked plays visible-but-disabled with the unlocking
+  rung named; Sell stock never locked (an exit). IA decision + EARS + slices in #1461; rendered in
+  the [Rail Over the Form](https://claude.ai/code/artifact/fb30db30-cb21-45d7-a338-a5bc39330723)
+  mockup. Awaiting Eric's ready flip.
+  _(src: Eric · while: reviewing onboarding + trade-ticket screenshots, 2026-09-05)_
 
 ---
 
