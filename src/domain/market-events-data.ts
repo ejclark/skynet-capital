@@ -967,13 +967,13 @@ export const MARKET_EVENTS: readonly MarketEvent[] = [
     kind: "macro-print",
     title: "ISM Manufacturing PMI (Sep 2026 data)",
     date: "2026-10-01",
-    status: "estimate",
+    status: "confirmed",
     source:
-      "EST: ISM publishes the Manufacturing PMI at 10:00 ET on the first business day of the month (the cadence the confirmed 2026-09-01 entry follows); 2026-10-01 is a Thursday — not re-verified against ismworld.org's own calendar, checked 2026-08-29",
+      "ISM: the August-data ISM Manufacturing report (PRNewswire 302865127, dateline 2026-09-01 10:00 ET) names its own successor verbatim — \"The next ISM(R) Manufacturing PMI(R) Report featuring September 2026 data will be released at 10:00 a.m. ET on Thursday, October 1, 2026.\" Promoted estimate -> confirmed on that line, the same promotion path the ism-services-2026-10-05 entry took on its own sibling report (FT-47, scored PASS 2026-09-04); the date had been rule-derived from the first-business-day cadence and the report's own line agrees exactly. Independently corroborated by Kalshi's KXISMPMI-26SEP strike ladder, whose settlement close_time is 2026-10-01T13:59:00Z = 09:59 ET, one minute before the stated release. ismworld.org's ROB calendar page remains SSO-gated (302s to ecommerce.ismworld.org/SSO/Login.aspx, re-checked today), so the primary is ISM's authorized wire distribution rather than ismworld.org itself — the standing limit on every ISM entry in this calendar, checked 2026-09-05",
     impact: "high",
     symbols: [],
     notes:
-      "The national print the Chicago Business Barometer leads by two business days, and the first manufacturing read of Q4. The calendar tracked the 09-01 release and then nothing until CPI 10-14, so the follow-through the 09-30 Chicago print exists to probe was untracked. Discovered during the chicago-pmi-2026-09-30 initial research.",
+      "The national print the Chicago Business Barometer leads by two business days, and the first manufacturing read of Q4. The calendar tracked the 09-01 release and then nothing until CPI 10-14, so the follow-through the 09-30 Chicago print exists to probe was untracked. Discovered during the chicago-pmi-2026-09-30 initial research. PROMOTED estimate -> confirmed on 2026-09-05 during this event's pulse check, which also RETIRES A STANDING CLAIM this ledger carried: its initial research recorded that promotion was structurally impossible from this lane because ismworld.org is SSO-gated. That was wrong — the gated page is not the only ISM primary, since every ISM report names its own successor's date and time in its own release text, and the services sibling had already proven the path four days earlier. The confirmed date removes date doubt without creating a reason to act: `symbols: []` and no house playbook is macro-keyed, so this stays read-it-do-not-trade-it.",
   },
   {
     id: "jobs-2026-10-02",
