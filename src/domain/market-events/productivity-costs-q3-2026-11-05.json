@@ -1,0 +1,11 @@
+{
+  "id": "productivity-costs-q3-2026-11-05",
+  "kind": "macro-print",
+  "title": "Productivity and Costs, Q3 2026 (preliminary) — nonfarm business unit labor costs",
+  "date": "2026-11-05",
+  "status": "confirmed",
+  "source": "BLS: two independent BLS primaries, both read 2026-09-05. (1) bls.gov/news.release/prod2.nr0.htm — the Q2 2026 revised release states in its own text \"The preliminary Productivity and Costs news release for third-quarter 2026 is scheduled to be published on Thursday, November 5, 2026, at 8:30 a.m. (ET)\"; 2026-11-05 is a Thursday, consistent. (2) bls.gov/schedule/news_release/prod2.htm — \"Third Quarter 2026 (P) | Nov. 05, 2026 | 08:30 AM\", read by the eci-q3-2026-10-30 lane the same day (the revised estimate is listed on that page as Dec. 08, 2026, now proposed as productivity-costs-q3-revised-2026-12-08). The schedule page in (2) will not serve this lane's runner — plain curl 403s and WebFetch returns an empty body on every bls.gov/schedule/* path — which is why (1) is cited first: it is the primary that can be re-opened",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "The print that decides what the 10-30 ECI MEANS, six days after it. Wage growth is only an inflation channel net of productivity, and on the Q2 2026 revised release (2026-09-03) that channel is shut: unit labor costs +1.4% y/y — below the Fed's 2% target — because productivity ran +2.2% y/y, with the labor share at 52.8%, the lowest in a series that starts in 1947. So an ECI at 3.4-3.5% is a margin story, not a price story, unless productivity rolls over; this release is the one that shows whether it did. Discovered in the eci-q3-2026-10-30 initial-research sweep. Filed `confirmed`/`BLS:` because the date is primary-fetched from the BLS schedule and the prefix taxonomy in market-events-data.ts admits no `estimate` slot for a BLS-primary date — the same labelling constraint the fomc-2026-10-28 lane recorded when it proposed the ECI entry itself."
+}

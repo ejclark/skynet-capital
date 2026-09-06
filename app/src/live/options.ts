@@ -20,6 +20,8 @@ export interface PlayInfo {
   readonly optionType?: "call" | "put";
   readonly gloss: string;
   readonly locked: boolean;
+  /** Proven by a real fill (#1461) — the rail's ✓; the server derives it, the client only draws it. */
+  readonly earned: boolean;
   readonly opensAfter?: { readonly code: string; readonly name: string };
 }
 

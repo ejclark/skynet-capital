@@ -42,7 +42,7 @@ function Chapters({
       <MilestoneCard
         code="M·01"
         title="Onboarding"
-        desc="Get seated at the desk: connect Alpaca, file your first feedback, make your first trade."
+        desc="Get seated at the desk: connect Alpaca, say hello to Moneypenny, make your first trade."
         state={ob?.complete ? "complete" : "progress"}
         done={ob?.done ?? 0}
         total={ob?.total ?? 3}

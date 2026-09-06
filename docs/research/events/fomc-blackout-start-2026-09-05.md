@@ -1,40 +1,48 @@
 # FOMC communications blackout begins (through 2026-09-17) — fomc-blackout-start-2026-09-05
 
 **Kind:** macro-print · **Date:** 2026-09-05 (confirmed, FED: federalreserve.gov "2025–2027 FOMC Trading and External Communications Blackout Calendar" PDF — rule text parsed directly 2026-08-30) · **Impact:** medium
-**Last assessed:** 2026-09-05
-<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","adp-employment-2026-09-02","avgo-2026-09-02-print","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","eia-steo-2026-09-09","fed-waller-outlook-2026-09-03","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jobs-2026-09-04","jolts-2026-09-01","opec-plus-meeting-2026-09-06","ppi-2026-09-10","sp-rebalance-proforma-2026-09-04","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
+**Last assessed:** 2026-09-06
+<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","adp-employment-2026-09-02","avgo-2026-09-02-print","beige-book-2026-09-02","challenger-job-cuts-2026-09-03","ecb-decision-2026-09-10","eia-steo-2026-09-09","fed-waller-outlook-2026-09-03","hammack-remarks-2026-09-03","ism-manufacturing-2026-09-01","ism-services-2026-09-03","jobs-2026-09-04","jolts-2026-09-01","missouri-map-ballot-deadline-2026-09-08","opec-plus-meeting-2026-09-06","ppi-2026-09-10","sp-rebalance-proforma-2026-09-04","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-buyback-increase-2026-09-09","treasury-coupon-announcement-2026-09-03","treasury-coupon-announcement-2026-09-10","vmware-explore-2026-08-31","waller-economic-outlook-2026-09-03"],"screenStreak":0} -->
+<!-- Close-out written 2026-09-06; the VIX figure is the 2026-09-04 close, the last reading that
+     exists — 09-05 was a Saturday and no session has traded since. This block is archival from
+     here: the event is scored and the scanner goes quiet on it. -->
+
 
 ## At a glance
 
-**TL;DR.** **The gate is live** — it fell at 12:00 a.m. ET today, 2026-09-05, and runs through Thursday
-2026-09-17. It is still not a print and not a trade. What changed is that the doc no longer has to
-*infer* why the gate matters: the last scheduled Fed voice before it said so himself. Waller, at
-08:30 ET on **2026-09-03**, made the September decision explicitly conditional on one number —
-*"if there is continued progress toward our 2 percent goal, then I am willing to support holding the
-policy rate at its current level. But if inflation comes in hot, I would consider a rate hike"* —
-and that number is **August CPI on 2026-09-11, four sessions inside the blackout**. So the decision
-variable is now a print no official may interpret. The tape has already shown what that costs:
-September hike odds ran ~68% (9/2) → ~50% on Waller (9/3) → **~59–60%** on a payroll beat (+162k vs
-53k consensus, 9/4) — **~18 points of two-way repricing in three sessions** — while VIX closed
-**14.53** on 9/4, its 25th straight session inside a 14–17 band. The posture is unchanged and now
-better paid: **no short volatility 09-05 → 09-16**, raised to High confidence and, for the first
-time, registered as a scoreable forward test (`FT-fomc-blackout-start-2026-09-05-1`). All four of
-this doc's kill switches scored today; **none fired**.
+**TL;DR.** **Closed out 2026-09-06, and the honest headline is that this doc is going quiet before
+the thing it describes has started.** The gate fell on the derived date: **12:00 a.m. ET Saturday
+2026-09-05**, running through Thursday **2026-09-17**. But 09-05 was a Saturday, 09-06 a Sunday and
+09-07 is Labor Day — a fresh bar pull made this session ends at **2026-09-04**, so **zero trading
+sessions have elapsed inside the corridor**. `closeOutWithinDays: 6` fires on a calendar clock, not
+on the window it assesses. So two things are settled and one is not, and this close-out refuses to
+blur them. **Settled:** the date leg is right and can no longer be wrong (Board blackout-calendar
+PDF, stlouisfed.org's table, and today's re-fetch of the September Board calendar all agree), and
+the speech channel is clean — the Fed's own 2026 speech archive, re-fetched today, still ends at
+Waller on **09-03**, and nothing is scheduled until the **09-16** press conference. **Not settled,
+and deliberately not scored:** the whole vol premise, which needs the eight sessions **09-08 →
+09-17** that have not happened — it stays open in
+[`FT-fomc-blackout-start-2026-09-05-1`](../forward-tests/fomc-blackout-start-2026-09-05.md), score
+by **2026-09-18**, a register that outlives this doc. **The one real defect this close-out found is
+in the doc itself:** the Fed's speech archive shows **Governor Barr spoke on 2026-09-01** with a
+rate conditional nearly identical to Waller's, and three consecutive pulses that each claimed to
+have re-checked the Board calendar never recorded him — leg 2 is downgraded **SUPPORTED → MIXED**
+below. The stance is unchanged and needs no defending: it never took a direction or a size.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today | **Stand aside** — nothing to trade; the gate is now live, not pending | High | The blackout has no issuer, prints no number, and changes who may speak rather than what anything is worth. federalreserve.gov's September calendar, re-fetched today, lists **nothing at all for 9/5–9/15** — the next scheduled Board remarks are the 9/16 press conference | An FOMC participant making on-record monetary-policy remarks between **2026-09-05** and **2026-09-16**, which would mean the gate isn't the constraint this doc rests on |
-| This week | **Treat CPI 2026-09-11 as the decision, and do not sell volatility into it** | High | Not our inference — Waller's own dated conditional (9/3, verbatim above) hands September to the August CPI print, which lands **inside** the gate with PPI the day before (9/10) and no official able to frame either. ISM Services prices paid at **72.6** (Aug, highest since mid-2022) and Brent ~$95 say the hot-inflation branch is live | August CPI landing benign **and** hike odds collapsing below ~40% on it — the conditional would resolve to a hold with the gate never having been the binding constraint |
-| This month | **Do not sell volatility across 2026-09-05 → 09-16** | High *(raised from Medium 2026-09-05)* | Three receipts, not one argument: the odds path realized **~±18 points in three sessions** (68→50→60) with no vol repricing at all (VIX 14.53, 25 sessions in a 14–17 band); the decisive input (CPI 9/11) sits inside the gate by the Fed's own conditional; and PPI (9/10) plus 10Y/30Y auctions (9/9, 9/10) land with no official damping | SPX realized close-to-close volatility over the 8 sessions **2026-09-08 → 09-17** coming in **at or below 14.53** annualized — short vol struck at the gate would have won, and this caution was overcautious (registered as `FT-fomc-blackout-start-2026-09-05-1`, score by **2026-09-18**) |
-| This quarter | **Reuse the rule, don't re-derive it** — same discipline at the Oct 27–28 and Dec 8–9 blackouts | Medium | Confirmed, not just derived: stlouisfed.org's blackout-periods table (fetched 2026-09-03) lists **Oct 17 – Oct 29** and **Nov 28 – Dec 10**, matching the calendar's tracked entries and this doc's own arithmetic | The Fed amending its external-communications policy, or a 2026 meeting date moving, either of which breaks the derivation |
+| Today | **Stand aside — spent, and it never had a session** | High | Scored: 09-05 fell on a Saturday and 09-06 is a Sunday, so the "nothing to trade" call resolved trivially rather than being tested. The gate's own first trading day is **09-08** | Already resolved — the only surviving branch is the channel kill, which reads forward to 09-17 and is scored open-and-clean below |
+| This week | **Treat CPI 2026-09-11 as the decision; do not sell volatility into it** | High *(now on two governors, not one)* | Strengthened at close-out rather than merely restated: Waller's 09-03 conditional is joined by **Barr, 09-01** — *"if inflation appears not to be moderating sufficiently, then I think we should act decisively to raise rates"* (federalreserve.gov/newsevents/speech/barr20260901a.htm, fetched today). Two Board voices pre-committed September to the inflation data, and that print lands **inside** the gate | August CPI on **2026-09-11** landing benign **and** hike odds collapsing below ~40% on it — the conditional would resolve to a hold with the gate never having bound |
+| This month | **Do not sell volatility across 2026-09-05 → 09-16** | High *(raised from Medium 2026-09-05; unscored — the window has not traded)* | The premise is unchanged and untested: ~±18 points of two-way hike-odds repricing in three pre-gate sessions (68 → 50 → 60) bought **zero** vol repricing (VIX **14.53** on 09-04, a fresh pull confirms, 25th straight session in a 14–17 band), and the decisive print sits inside the gate | SPX realized close-to-close volatility over the 8 sessions **2026-09-08 → 09-17** coming in **at or below 14.53** annualized — scored not here but in `FT-fomc-blackout-start-2026-09-05-1`, **by 2026-09-18** |
+| This quarter | **Reuse the rule, don't re-derive it** — same discipline at the Oct 27–28 and Dec 8–9 blackouts | Medium | Corroborated by a second Fed-system source and unchallenged at close-out: stlouisfed.org's blackout-periods table (fetched 2026-09-03) lists **Oct 17 – Oct 29** and **Nov 28 – Dec 10**, matching the calendar's tracked entries. Carry the method fix with it — read the **speech archive**, not only the Board calendar | The Fed amending its external-communications policy, or a 2026 meeting date moving, either of which breaks the derivation |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **The deadline is spent** — it was Waller, **2026-09-03** 08:30 ET, and it held: no second slot appeared for 9/4, and nothing is scheduled 9/5–9/15. Anything still waiting on a Fed voice waits until **2026-09-16**.
-- **Never** — short volatility across **2026-09-05 → 09-16**; the window's headline risk arrives on no schedule, and the one number that decides the meeting lands inside it.
-- **Watch (dated)** — OPEC+ **2026-09-06** (estimate; the oil channel's only venue inside the gate, expected to hold October output unchanged) · 3Y auction **2026-09-08** (estimate) · iPhone 18 launch + 10Y auction **2026-09-09** · 30Y auction + PPI **2026-09-10** · **CPI 2026-09-11 — the decision variable** · 20Y auction **2026-09-15** · retail sales + FOMC **2026-09-16** · blackout ends **2026-09-17**.
-- **The channel that stays open** — an unscheduled WSJ/Timiraos-style story is the documented mid-blackout conduit; treat it as gap risk, not as a signal to fade.
-- **Relevance kill (scored 2026-09-05 — did not fire)** — hike odds back below ~40%, or cut odds off 0%. Neither happened: odds bottomed ~50% intraday on Waller and closed the pre-gate week at ~59–60% (CME FedWatch, press-cited 9/4), cut still 0%. The condition now reads forward into the window on the same thresholds.
+- **The deadline is spent and this doc is closed** — the live documents from here are [`cpi-2026-09-11.md`](cpi-2026-09-11.md) for the fork and [`fomc-2026-09-16.md`](fomc-2026-09-16.md) for the decision and the corridor discipline.
+- **Never** — short volatility across **2026-09-05 → 09-16**; the window's headline risk arrives on no schedule, and the one number that decides the meeting lands inside it. Unscored at close-out, open until **2026-09-18**.
+- **Watch (dated)** — OPEC+ **2026-09-06** (estimate; the oil channel's only venue inside the gate, delegates reported expecting quotas held for the rest of 2026, outcome unpublished at writing) · 3Y auction **2026-09-08** (estimate) · iPhone 18 launch + 10Y auction **2026-09-09** · 30Y auction + PPI **2026-09-10** · **CPI 2026-09-11 — the decision variable** · 20Y auction **2026-09-15** · retail sales + FOMC **2026-09-16** · blackout ends **2026-09-17**.
+- **The channels that stay open — now three, not two** — the data itself; an unscheduled WSJ/Timiraos-style story; and, on a Bloomberg report published **2026-09-05**, private banker contact visible only via later FOIA. All three are gap risk, none is a signal to fade.
+- **Kill switches (all four scored; none fired)** — date · no-short-vol · relevance scored 2026-09-05; **channel scored 2026-09-06 and clean**, detail in `## Outcome`.
 
 ## Initial research
 
@@ -275,6 +283,7 @@ conditions above are registered predictions and are left verbatim; this is the s
 | 2026-09-01 | D-4 | **This row's headline is a falsifier firing — the "this week" horizon's own kill condition, and it is now amended above rather than defended.** federalreserve.gov's September 2026 Board calendar, re-fetched direct today, lists **Governor Waller — "Economic Outlook," Reuters NEXT newsmaker interview, 8:30 a.m. ET Thu 2026-09-03**, a scheduled Board voice inside the 9/1 → 9/4 window the 8/30 row named as what would prove leg 2 wrong. Proposed in this PR as `waller-economic-outlook-2026-09-03`, `estimate` (primary-sourced, but Board speaking slots are added and pulled on short notice, and this lane never self-promotes). Net effect is a **sharper** deadline, not a softer one: the last scheduled interpretation window is 9/3 08:30 ET, ahead of payrolls, so 9/4 NFP is the first release of the corridor with no scheduled official reaction. Blackout window and no-short-vol posture unchanged. **Peers** — none; `symbols: []`, exposure still inherited from [`fomc-2026-09-16.md`](fomc-2026-09-16.md). **Macro** — no print landed since the last row (ISM Mfg + JOLTS release 9/1 10:00 ET, after this row is written), but hike odds kept climbing without one: CME FedWatch **~66%** as of 11:40 ET 8/31 ([Forbes](https://www.forbes.com/sites/digital-assets/2026/08/31/cme-fedwatch-provides-a-66-chance-fed-will-hike-rates-in-september/)) vs ~56–60% at the 8/28 close, cut still 0%; Kalshi ~48% / Polymarket ~49% (press, 8/28–8/31) sit well below the futures — logged as a venue spread, **not** reconciled. The relevance kill (odds < ~40%) moved further away, but so did two-sidedness: at ~66% this is closer to hike-priced than to the coin flip the initial research described. **Volatility** — VIX **14.92** at the 8/31 close, +0.49 from a 14.43 prior close (Yahoo, fetched today; the 8/30 probe-ref carried 14.35 from a different source — ~0.5pt of source spread, immaterial either way). Still ~5pt below the ~20 no-short-vol kill; cheap convexity into the window remains cheap. **Geopolitical — new, and it is what moved the odds:** the US and Iran resumed strikes 8/30–8/31 (US forces hit Larak Island in the Strait of Hormuz; Iranian missiles on the UAE and Jordan), taking Brent **+2.71% to $90.49** and WTI **+2.83% to $85.76**, with the S&P −0.33%, the Dow −0.70% and yields higher on revived inflation fear (Reuters/Bloomberg/Motley Fool wraps, 8/31). An energy-led inflation impulse arriving with no scheduled Fed voice after 9/3 is the exact input the no-short-vol rule was written for, and it reaches PPI (9/10) and CPI (9/11) from inside the gate. **Event tape** — the corridor gained two entries from sibling sweeps since the last row: `challenger-job-cuts-2026-09-03` (est) and `opec-plus-meeting-2026-09-06` (est), the latter landing one day *inside* the blackout and now the only scheduled venue that can move the oil channel while the Fed is silent. One new dated adjacency found and proposed (the Waller slot); nothing else. | **Amended** — deadline moves earlier and gains a venue (Waller 9/3 08:30 ET, not the 9/4 close); "8/28 was the last Board voice" withdrawn. No-short-vol window 09-05 → 09-16 unchanged; still no directional call and no size. | 2026-09-03 (medium, 0–7d band: every 2d) |
 | 2026-09-03 | D-2 | **Nothing moved the gate; three things moved what it will be gating.** Written 00:32 ET, ahead of today's 08:30 Waller interview and 10:00 ISM Services — both land after this row. **Date leg strengthened:** stlouisfed.org's "Federal Reserve Blackout Periods" page (fetched today) independently lists **Sat Sep 5 – Thu Sep 17** for this meeting, a second Fed-system source agreeing with the Board PDF parsed 8/30; its 2026 table's **Oct 17 – Oct 29** and **Nov 28 – Dec 10** windows also match the already-tracked `fomc-blackout-start-2026-10-17` / `-2026-11-28`, so the "this quarter" call is corroborated. **Peers** — `symbols: []`; the one print in the corridor, AVGO 9/2 AMC, came in strong (Q3 AI semis $16.7B, +221% y/y; Q4 AI guide $21.7B), so the window opens with the AI-capex leg intact rather than impaired. **Macro — the new tension:** labor softened three ways since the last row (ISM Mfg **54.6** vs ~55.2 expected with the employment sub-index 51.2 and new orders 53.7 from 56.7; JOLTS openings 7.271M with the **quits rate 1.9%**; ADP **+38k** vs ~47k expected, weakest since January) and the Beige Book (9/2) reported only "modest" expansion with sentiment mixed "amid uncertainty about energy prices and geopolitics" — yet CME FedWatch hike odds still firmed to **~68%** (press, 9/2) from ~66% (8/31). Soft labor plus firming hike odds is exactly the two-sidedness this doc rests on, and 9/4 payrolls now carries the weight of all three with no scheduled official reaction behind it. **Volatility** — VIX **15.20** at the 9/2 close (repo probe and Yahoo agree), after a 16.34 close on 9/1; +0.28 against the 14.92 in the last probe-ref, ~5 points below the ~20 no-short-vol kill, so cheap convexity into the window is still cheap. **Geopolitical** — the oil impulse extended: fresh US strikes around the Strait of Hormuz took Brent to ~**$95** (six-week high) from $90.49 on 8/31, ~+5% in two sessions, with the honest counterweight that DoE reported 17M bbl transiting Hormuz Monday, the highest daily volume since the war began. That impulse reaches PPI (9/10) and CPI (9/11) from inside the gate. **Event tape** — the deterministic probe flagged four adjacency additions since the last row, all filed by sibling sweeps and all already on the calendar: `hammack-remarks-2026-09-03` (est, 15:00 ET, **pre-recorded** — last scheduled Fed audio, but it cannot react to Waller, ISM Services or payrolls), `eia-steo-2026-09-09` (est), `avgo-2026-09-02-print`, `vmware-explore-2026-08-31`. The "this week" falsifier **did not fire**: federalreserve.gov's September calendar re-fetched today still lists nothing for **9/4** but statistical releases. **No new dated adjacency found** — nothing to propose to `market-events.ts` this pulse. | **Unchanged, refined** — 9/3 08:30 ET deadline holds and Hammack's 15:00 pre-recorded slot does not restore an interpretation window; no-short-vol 09-05 → 09-16 unchanged and better supported (energy shock + softening labor into an unofficiated corridor). Still no directional call and no size. | 2026-09-05 (medium, 0–7d band: every 2d) |
 | 2026-09-05 | D-0 | **The gate goes live in ~3.5 hours, and the Fed spent its last voice handing the meeting to a print inside it.** Written 20:32 ET 9/4, after the cash close, before the 12:00 a.m. ET 9/5 start. **The headline:** Waller's 9/3 08:30 interview (federalreserve.gov/newsevents/speech/waller20260903a.htm, fetched today) says verbatim *"If there is continued progress toward our 2 percent goal, then I am willing to support holding the policy rate at its current level. But if inflation comes in hot, I would consider a rate hike"* — the September vote made explicitly conditional on **August CPI, 2026-09-11, four sessions inside the blackout**. This doc's core claim (closing the speech channel matters because the corridor's prints arrive unofficiated) is now the Fed's own stated reaction function rather than our inference. **Macro — the corridor's two prints both landed, pulling opposite ways:** ISM Services 9/3 came in 55.4 with **prices paid 72.6**, highest since mid-2022 (VT Markets/briefs.co, 9/3), and payrolls 9/4 printed **+162k vs 53k consensus**, u3 4.1% held, AHE +0.3% m/m / +3.1% y/y, June+July revised **+55k** — strongest month since March (BLS empsit; CNBC/UPI 9/4). Hike odds ran **~68% (9/2) → ~50% intraday on Waller (9/3) → ~59–60% (9/4)** — CNBC has 52→59, IBTimes 49.4→60.2; ~±18pts of two-way repricing in three sessions, cut still **0%**. Reaction: Dow −0.51% (53,414.25), SPX −0.38% (7,718.60), Nasdaq −0.29% (26,506.99), **2Y yield highest since January 2025**. **Volatility — the asymmetry that raises the call:** VIX closed **14.53** on 9/4 (repo probe and Yahoo agree; ~+0.21 off a 14.32 close 9/3), a **25th straight session inside 14–17**. Eighteen points of odds repricing bought zero vol repricing, ~5.5pts below the ~20 kill. **Geopolitical** — Brent ~**$95.23** 9/4 (−0.31% on the day, ~+9% on the week, after touching ~$99.38 intraday earlier in the week) on Hormuz throughput disruption; **OPEC+ meets Vienna Sun 9/6**, reported likely to hold October output unchanged — still the only venue that can move the oil channel while the Fed is silent, and it feeds PPI (9/10) and CPI (9/11) from inside the gate. **Peers** — `symbols: []`; exposure still inherited from [`fomc-2026-09-16.md`](fomc-2026-09-16.md). **Event tape** — the Board calendar re-fetched today lists **nothing for 9/4 and nothing for 9/5–9/15**; next scheduled Board remarks are the 9/16 presser, so the 9/3 deadline held and is spent. The probe's three "new" adjacency ids are all already on the calendar: `sp-rebalance-proforma-2026-09-04`, `treasury-coupon-announcement-2026-09-03`, and `fed-waller-outlook-2026-09-03` — the last being the **known duplicate** of `waller-economic-outlook-2026-09-03`, already documented and closed out in `market-events-data.ts`; counted as ONE event here, per that entry's instruction. **One dated adjacency found and NOT filed — out of lane, routed instead:** Oracle's IR release dated 2026-09-02 states Q1 FY27 results land **Thu 2026-09-10 after the close** (investor.oracle.com, fetched today) — an AI-capex read-through to CRWV/NVDA/AVGO landing the same session as PPI and the 30Y reopening, inside the gate, and untracked. `kind: "earnings"` is derived from `earnings-calendar.ts` and never hand-entered in `market-events-data.ts`, and this lane's hard limits forbid editing earnings-calendar entries — so it is surfaced here and in the PR body for a permitted lane, not filed. **Kill switches: three of four scored today, none fired** (date · no-short-vol · relevance; channel is only scoreable at close-out) — detail in the Stance section. | **Unchanged, strengthened** — "this month" no-short-vol raised **Medium → High** and, for the first time, registered as a scoreable forward test (`FT-fomc-blackout-start-2026-09-05-1`, score by 2026-09-18); "this week" re-pointed from the spent 9/3 deadline to **CPI 9/11 as the decision**. Still no directional call and no size. **For the close-out:** `closeOutWithinDays: 6` makes this due 9/6–9/11, but the window it assesses does not END until 9/17 — score only what is knowable then (did the gate hold, did the prints arrive unofficiated) and leave the vol test to `forward-tests.md`'s own 2026-09-18 date, which survives this doc going quiet. | 2026-09-06 (event passed → close-out, within 6d) |
+| 2026-09-06 | D+1 | **Close-out row — the scoring is in [`## Outcome`](#outcome) below, from data re-fetched this session after the mandated cache bust, never from memory.** Three findings the D-0 row could not have. **(a) The corridor has not traded.** A fresh Yahoo daily-bar pull ends at **2026-09-04** for every index checked — 9/5 was a Saturday, 9/6 is a Sunday, 9/7 is Labor Day. `closeOutWithinDays: 6` closes this doc **two days before the window's first session (9/8)**, so the vol premise is unscored by construction and stays with `FT-fomc-blackout-start-2026-09-05-1` (score by 2026-09-18). **(b) The channel kill is scored and did not fire.** federalreserve.gov's 2026 speech archive, re-fetched today, still ends at **Waller 9/3**; the September Board calendar carries only statistical releases 9/5 → 9/15; next scheduled remarks are the 9/16 presser. But Bloomberg published **on 9/5** that FOIA'd governors' calendars show blackout-window banker contact in past cycles (Bowman/Mass. Bankers Assn. before the Jun 16–17 FOMC; Powell-as-governor at a Jun 9 BNY Mellon reception; no violation indicated) — **not** on-record remarks, so not a kill, but a **third** conduit leg 4 never named. **(c) The doc missed a Board voice.** The speech archive lists **Barr, 9/1**, "Unlocking Opportunities for Workers and Entrepreneurs with a Criminal Record" (`barr20260901a.htm`, fetched today), whose outlook section says verbatim *"if inflation appears not to be moderating sufficiently, then I think we should act decisively to raise rates."* Three rows that each re-fetched the Board **calendar** never recorded him; the D-2 row read ~66% → ~68% odds as firming "without a print" when a governor's rate conditional was the plausible catalyst. **Leg 2 downgraded SUPPORTED → MIXED** — conclusion held (Barr spoke *before* Waller, so the 9/3 deadline stands), instrument insufficient. **Adjacency:** peers — `symbols: []`. Macro — no print since payrolls 9/4; next is PPI 9/10. Vol — VIX **14.53** (9/4) off 14.32 (9/3), fresh pull; no later reading exists. Geopolitical — Brent **BZ=F 96.28** / WTI **CL=F 91.48** at the 9/4 settle (the D-0 row's ~$95.23 was press; ~1pt source spread logged, not reconciled); **OPEC+ meets today**, outcome unpublished at writing. Event tape — three probe-ref adds, all already tracked (`ecb-decision-2026-09-10`, `treasury-coupon-announcement-2026-09-10`, `missouri-map-ballot-deadline-2026-09-08`). **No new dated adjacency to propose.** Re-surfaced from the D-0 row and still untracked: **Oracle Q1 FY27, 2026-09-10 AMC** — `kind: "earnings"` is derived from `earnings-calendar.ts`, which this lane may not edit, so it is routed in the PR body, not filed. | **Unchanged and closed** — no directional call and no size, ever. One leg downgraded (leg 2, monitoring method), one strengthened (the "this week" CPI fork now rests on **two** governors' conditionals, not Waller's alone). | — (closed; `## Outcome` filled, scanner goes quiet) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
@@ -283,3 +292,179 @@ prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT
 every row; a dated adjacent event found gets proposed to `market-events.ts` as an `estimate` in
 the same PR. Close-out fills `## Outcome` below from re-run instrument data (cache busted first),
 never from memory — after which this doc goes quiet.
+
+## Outcome
+
+**Close-out (written 2026-09-06, D+1 — one calendar day after the gate fell, and *zero* trading
+sessions into the corridor it gates.)**
+
+**Sourcing note — what "re-run instrument data" means here.** `macro-print` with `symbols: []`, so
+`earnings-cycle.mjs` / `intraday-edges.mjs` have no target and were never run (the initial research
+said so). Their caches were busted anyway per the standing rule (`rm -rf
+node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges`) and the analog was honoured
+instead: **every index level, price and VIX figure below is a fresh Yahoo daily-bar pull made this
+session**, and every Fed fact is a primary re-fetched today — the Board's September 2026 calendar,
+its 2026 speech archive, and the two speech texts named. Nothing here is from memory of the tape.
+Rate-futures odds stay press-sourced with their as-of dates attached, because CME FedWatch
+publishes no free machine endpoint.
+
+### The structural fact that shapes this entire close-out
+
+`closeOutWithinDays: 6` made this event due for scoring on **2026-09-06**. The thing being scored is
+a **12-day corridor running to 2026-09-17**, whose first trading day is **2026-09-08**. A fresh bar
+pull confirms that rather than assuming it:
+
+| Series | Last bar in a fresh pull | Level |
+|---|---|---|
+| `^VIX` | **2026-09-04** | **14.53** (off 14.32 on 09-03) |
+| `^GSPC` | 2026-09-04 | 7,718.60 |
+| `^DJI` | 2026-09-04 | 53,414.25 |
+| `^IXIC` | 2026-09-04 | 26,506.99 |
+| `BZ=F` (Brent) | 2026-09-04 | 96.28 |
+| `CL=F` (WTI) | 2026-09-04 | 91.48 |
+
+09-05 was a Saturday, 09-06 is a Sunday, 09-07 is Labor Day. **No tape exists after the D-0 row.**
+The three index closes match that row exactly, which is a verification of it rather than new
+information; the Brent figure does not — the D-0 row carried ~$95.23 from press against **96.28** on
+the front-month future. A ~1-point source spread, logged and not reconciled, exactly as this ledger
+has logged the FedWatch venue spread all cycle.
+
+So this close-out scores what is **settled** and states plainly what it is **refusing** to score.
+The alternative — writing a verdict on an eight-session volatility measurement of which zero
+sessions exist — would be falsification in a confident voice, which is the failure mode the whole
+forward-test mechanism exists to prevent.
+
+### Scored: the date leg — SUPPORTED, and it can no longer be wrong
+
+The gate began at **12:00 a.m. ET Saturday 2026-09-05** and runs through **Thursday 2026-09-17**,
+exactly as leg 1 derived on 08-30. Three independent confirmations stand at close-out: the Board's
+blackout-calendar PDF (parsed 08-30), stlouisfed.org's "Federal Reserve Blackout Periods" table
+listing **Sat Sep 5 – Thu Sep 17** (fetched 09-03), and today's re-fetch of federalreserve.gov's
+September 2026 calendar, which still carries the **FOMC meeting 09-15/16** and the **09-16 2:30
+p.m. press conference** unmoved. **The date kill did not fire and is now unfireable.** The entry
+stays `confirmed`.
+
+Worth banking because it is the reusable part: no arithmetic of ours was ever load-bearing. The
+source performed the derivation — a Tuesday-start / Wednesday-end meeting is the PDF's own worked
+example, and Sep 15–16 is exactly that shape — and this doc only read it. That is why the leg
+survived six days of re-checking without one amendment.
+
+### Scored: the channel kill — did not fire, and the gate is more porous than this doc modelled
+
+The kill as registered: *"any FOMC participant making on-record monetary-policy remarks on or after
+2026-09-05."* **It has not fired**, and nothing scheduled could fire it:
+
+- federalreserve.gov's **2026 speech archive**, re-fetched today, ends at **Waller, 09-03** — "The
+  Economic Outlook and Some Comments on My Policy Communication," Reuters NEXT Newsmaker Interview.
+- The **September 2026 Board calendar**, re-fetched today, carries nothing 09-05 → 09-15 but
+  statistical releases (G.19, H.10, H.15, Commercial Paper) and the Labor Day rescheduling note.
+  The next scheduled Board remarks are the **09-16** press conference.
+
+Honest scope: two calendar days, no trading sessions, and regional-president appearances live on
+district sites rather than the Board calendar. This is **clean-so-far** on a condition that reads
+forward to 09-17, not a closed verdict — and this doc going quiet is what makes saying so necessary
+rather than optional.
+
+**The finding that does matter, and it arrived on day one of the gate.** Bloomberg published on
+**2026-09-05** — the day the blackout began — that FOIA'd governors' calendars show blackout-window
+contact with the banking sector in earlier cycles: Vice Chair for Supervision **Bowman** met the
+head of the Massachusetts Bankers Association the week before the **June 16–17** FOMC, and
+**Powell**, now serving as a governor, attended a **June 9** reception hosted by BNY Mellon's global
+board of directors, a week ahead of that same meeting. Coverage is explicit that *"no indication has
+emerged that Bowman or Powell violated communication rules."*
+
+Three things must be said about it, in this order, because the tempting reading is the wrong one.
+
+1. **It does not fire the kill, and dressing it up as one would be dishonest.** A private meeting is
+   not on-record monetary-policy remarks. The kill was written precisely, and precisely written
+   conditions are worth something only if they are read as written.
+2. **It is evidence about the institution, not about this window.** Both events are from June 2026,
+   surfaced months later by FOIA. Nothing comparable is known — or knowable — about 09-05 → 09-17.
+3. **It nonetheless widens the risk shape the posture rests on.** Leg 4 modelled exactly two ways
+   information leaves a blackout: the data itself, and an unscheduled press story. This is a
+   **third** conduit — non-public, unscheduled, invisible until a FOIA release long after the fact.
+   That makes the "gap risk on no schedule" argument broader than the doc argued, never narrower. It
+   cuts *toward* the no-short-vol posture, which is precisely why it earns the caveats above instead
+   of an enthusiastic write-up.
+
+### Scored: leg 2 — SUPPORTED → **MIXED**. A Board voice was lost through three consecutive re-checks
+
+federalreserve.gov's 2026 speech archive, re-fetched today, lists **Governor Michael S. Barr,
+2026-09-01, "Unlocking Opportunities for Workers and Entrepreneurs with a Criminal Record,"
+Second-Chance Lending Forum, Washington, D.C.** The speech text
+(`federalreserve.gov/newsevents/speech/barr20260901a.htm`, fetched today) is overwhelmingly about
+financial inclusion, but its outlook section carries a rate conditional structurally identical to
+the one Waller gave two days later, verbatim:
+
+> *"If trends in the data give me some confidence that inflation is moderating on a path to 2
+> percent, then I think we can take a bit more time to assess our policy stance. However, if
+> inflation appears not to be moderating sufficiently, then I think we should act decisively to
+> raise rates."*
+
+**No row of this ledger ever recorded it.** The D-4 row was written **on 2026-09-01** and re-fetched
+the Board calendar that day, reporting only the newly-appeared Waller 09-03 slot. The D-2 row
+re-fetched again and read hike odds firming **~66% → ~68%** as two-sidedness arriving *"without a
+print"* — offered as evidence the market was repricing on no catalyst. There was a catalyst, and it
+was a sitting governor pre-committing to *"act decisively to raise rates."* Press the same day
+carried it as such (Yahoo Finance: *"Fed Governor Michael Barr warns of rate hike if inflation stays
+high"*; crypto.news, 2026-09-01 21:17 UTC, headlined *"Fed rate hike odds hit 72% as Barr warns on
+inflation"* — that article's body carries **no** CME print for 72%, so the figure is a headline and
+is **not** treated here as a sourced level).
+
+**What it costs, precisely, and what it does not.**
+
+- It does **not** move the deadline. Barr spoke 09-01, *before* Waller's 09-03 08:30 slot. "The last
+  scheduled interpretation window is 09-03 08:30 ET" survives intact, and so does "nothing scheduled
+  for 09-04."
+- It does **not** change the stance, which never carried a direction or a size.
+- It **does** break leg 2's *instrument*. The doc's claim to know who was scheduled to speak rested
+  entirely on re-fetching the Board **calendar** page across three sessions. The **speech archive**
+  (`/newsevents/2026-speeches.htm`) is the surface that actually carries the record, and no row ever
+  checked it. Leg 2's conclusion held; its method was insufficient, and a second Board voice in the
+  pre-gate week went unrecorded through three pulses that each claimed a re-check. That is
+  **MIXED**, not SUPPORTED.
+
+**The generalizable fix, for the Oct 17 and Nov 28 blackout ledgers** — stated here rather than
+shipped as a repo change, because it is a research habit, not a gate:
+
+1. Read the **speech archive**, not only the Board calendar. The calendar's rendering is genuinely
+   easy to mis-map: a fetch of it during this very session returned Waller under 09-01 and Barr
+   under 09-03 — both dates transposed.
+2. Use the **URL slug as the tiebreak**. `barr20260901a.htm` and `waller20260903a.htm` encode their
+   own dates and cannot be misread.
+3. Treat *"odds moved with no print"* as a **prompt to hunt for a speaker**, never as a finding. On
+   this calendar it was wrong both times it was written.
+
+### Scored: the horizon calls at D+1
+
+| Horizon | Verdict | Basis |
+|---|---|---|
+| **Today** — stand aside | **Resolved trivially, not tested** | 09-05 fell on a Saturday; there was no session in which to stand aside. Honest scoring of an untested call, not a win |
+| **This week** — CPI 09-11 is the decision, don't sell vol into it | **Open, and strengthened** | Now rests on **two** governors' conditionals (Barr 09-01, Waller 09-03), not one. Scores at the 09-11 print, in [`cpi-2026-09-11.md`](cpi-2026-09-11.md) |
+| **This month** — no short vol 09-05 → 09-16 | **Open — explicitly unscored** | Needs the 8 sessions 09-08 → 09-17. Zero exist. `FT-fomc-blackout-start-2026-09-05-1`, by **2026-09-18** |
+| **This quarter** — reuse the rule at the Oct/Dec blackouts | **Open, unchallenged** | No falsifier observed: no policy amendment, no 2026 meeting date moved |
+
+### What is deliberately NOT scored, and who scores it
+
+`FT-fomc-blackout-start-2026-09-05-1`'s Outcome cell stays **`_open_`**. The forward-test register
+says the Outcome cell is the one cell a close-out fills; this close-out declines, on the record and
+with a reason, because the measurement it calls for — SPX realized close-to-close annualized
+volatility over **2026-09-08 → 09-17** — has an n of zero today. Its score-by date is **2026-09-18**
+and the register survives this doc going quiet, which is exactly the property the D-0 row leaned on
+when it registered the test instead of leaving the posture unscoreable.
+
+The live documents from here: [`cpi-2026-09-11.md`](cpi-2026-09-11.md) for the fork, and
+[`fomc-2026-09-16.md`](fomc-2026-09-16.md) for the decision, the corridor discipline, and the
+name-level exposure tiering this doc only ever inherited.
+
+### What this event was actually worth
+
+Six days of assessment on an entry with `symbols: []`, no issuer and no print produced exactly one
+tradeable instruction — *don't sell volatility across the corridor* — and it is unscored at
+close-out. Judged honestly, the value was **not** the call. It was three things the corridor's other
+ledgers inherit: a date derived from a Fed primary's own worked example rather than from press
+restatement; the observation that a September vote had been pre-committed to a print landing inside
+the gate, which re-pointed the whole week's attention at CPI 09-11; and a monitoring failure now
+diagnosed with a named fix, found only because the close-out re-read the primary instead of the doc.
+The last is the one worth carrying forward — **this document's most useful output is the discovery
+that it had been reading the wrong page.**

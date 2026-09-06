@@ -3,7 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { fetchDesk } from "../live/desk";
+import { setWheels } from "../live/options";
 import {
+  type DelegationGateView,
   fetchPlaybookStore,
   type PlaybookMode,
   type PlaybookStoreCardView,
@@ -25,6 +27,13 @@ import { PageFrame } from "../shell/frame";
  * own capital. No cross-account visibility: `canManage` (from the server) is the only signal a
  * viewer gets about whether this is their own desk — a stranger's Playbook Store shows the
  * catalog with no subscribe controls and no capital figures.
+ *
+ * THE DELEGATION FOG (#1707) — with training wheels on and rung 102 unearned, the subscribe
+ * control renders VISIBLE and DISABLED, naming the rung that opens it (`docs/FOG-OF-WAR.md`).
+ * Everything a member needs to judge a playbook — what it does, when it enters, both exits, how
+ * to leave — stays fully readable; only the delegation itself waits. Rendering only: the server
+ * refuses a locked subscribe regardless of whether this door is ever bypassed, and unsubscribe,
+ * pause, and resume are never gated on either side.
  */
 
 function SubscribeForm({
@@ -89,6 +98,48 @@ function SubscribeForm({
         {busy ? "Subscribing…" : "Subscribe"}
       </button>
       {error ? <span className="set-err">{error}</span> : null}
+    </div>
+  );
+}
+
+/**
+ * The door, drawn: the same Subscribe button, disabled, under the server's own sentence naming the
+ * rung — plus the one action that lifts every gate, exactly as the ladder's own locked panel does
+ * (`shell/locked-panel.tsx`; `docs/FOG-OF-WAR.md` criterion 8, until #1671 settles it).
+ */
+function SubscribeLocked({
+  gate,
+  onLifted,
+}: {
+  readonly gate: DelegationGateView;
+  readonly onLifted: () => void;
+}): ReactElement {
+  const [busy, setBusy] = useState(false);
+  const off = async () => {
+    setBusy(true);
+    try {
+      await setWheels(false);
+      onLifted();
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="pb-locked">
+      <p className="pb-locked-note">◷ {gate.note}</p>
+      <div className="pb-subscription-actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled
+          title={`Opens after your first filled ${gate.unlocksAfter} (${gate.unlocksAfterName})`}
+        >
+          Subscribe
+        </button>
+        <button type="button" className="btn mc-btn" disabled={busy} onClick={() => void off()}>
+          {busy ? "…" : "Turn the wheels off"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -167,11 +218,13 @@ function PlaybookCard({
   deskId,
   card,
   canManage,
+  delegation,
   onChanged,
 }: {
   readonly deskId: string;
   readonly card: PlaybookStoreCardView;
   readonly canManage: boolean;
+  readonly delegation: DelegationGateView;
   readonly onChanged: () => void;
 }): ReactElement {
   return (
@@ -192,7 +245,10 @@ function PlaybookCard({
       </dl>
       {canManage ? (
         card.subscription ? (
+          // An existing subscription keeps every control it had — pausing and leaving are exits.
           <SubscriptionRow deskId={deskId} card={card} onChanged={onChanged} />
+        ) : delegation.locked ? (
+          <SubscribeLocked gate={delegation} onLifted={onChanged} />
         ) : (
           <SubscribeForm deskId={deskId} playbookId={card.id} onSubscribed={onChanged} />
         )
@@ -252,6 +308,7 @@ function PlaybookStorePage(): ReactElement {
             deskId={id}
             card={card}
             canManage={store.data.canManage}
+            delegation={store.data.delegation}
             onChanged={onChanged}
           />
         ))}

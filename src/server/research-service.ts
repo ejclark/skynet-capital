@@ -85,10 +85,15 @@ function docsIn(dir: string, slugPrefix: string): ResearchDoc[] {
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
-/** Everything on the shelf. `root` is injectable for specs; defaults to the real docs tree. */
+/**
+ * Everything on the shelf. `root` is injectable for specs; defaults to the real docs tree.
+ * `weeks/` (the weekly study genre, #1716) shelves WITH the studies rather than beside them: a
+ * week's call sheet is a cross-name study that happens to be keyed by date, and its `# ` title
+ * already names the week, so it sorts and reads as one of them.
+ */
 export function listResearch(root: string = RESEARCH_DIR()): ResearchShelf {
   return {
-    studies: docsIn(root, ""),
+    studies: [...docsIn(root, ""), ...docsIn(join(root, "weeks"), "weeks/")],
     ledgers: docsIn(join(root, "events"), "events/"),
   };
 }
@@ -132,7 +137,9 @@ function rewriteDocLinks(html: string): string {
     if (/^[a-z]+:\/\//.test(target)) return whole; // absolute URLs pass through
     const flat = target.replace(/^(\.\.\/)+/, "").replace(/^\.\//, "");
     const slug =
-      flat.startsWith("events/") || !flat.includes("/") ? flat.replace(/\.md$/, "") : null;
+      flat.startsWith("events/") || flat.startsWith("weeks/") || !flat.includes("/")
+        ? flat.replace(/\.md$/, "")
+        : null;
     return slug ? `href="/research/${slug}${hash ?? ""}"` : whole;
   });
 }
@@ -183,7 +190,14 @@ function extractGlance(md: string): { glanceMd: string | null; bodyMd: string } 
  * collapses for humans while staying fully present in the raw markdown the next assessment session
  * reads. There is no trade-off to manage.
  */
-const OPEN_SECTIONS = ["stance & kill switches", "the picture", "the headline"];
+const OPEN_SECTIONS = [
+  "stance & kill switches",
+  "the picture",
+  "the headline",
+  // A weekly study's board IS its live position — the same category as a ledger's stance, not a
+  // receipt (#1716). Its "How this study was composed" section is the receipt, and folds.
+  "the week's board",
+];
 
 /** Rough word count — the honest size label on a fold, so nothing is hidden silently. */
 function wordCount(md: string): number {

@@ -174,10 +174,76 @@ describe("serveTradeApi", () => {
     expect(seen).toBe(0);
   });
 
-  it("leaves a sell outside the gate — an exit is never locked", async () => {
+  it("leaves a sell outside the FEEDBACK gate specifically — an exit is never gated", async () => {
     const { res, out } = fakeRes();
+    // Distinct from the ladder-lock spec below: this fixture's `unlocked: new Set()` also locks
+    // 102 on the ladder, so the sell is refused — just never with the Moneypenny sentence.
     await serveTradeApi(post(ticket), res, "/api/trade/review", configWith(gated), session);
     const body = JSON.parse(out.body ?? "{}");
     expect(body.preview.refusals.some((r: string) => r.includes("Moneypenny"))).toBe(false);
+  });
+
+  // The per-rung ladder lock (2026-09-06 fix, #1671): 101/102 were never checked here at all, so
+  // 102 opened a fully working sell ticket before 101 was ever earned — the bug the milestone
+  // rail's own visibility surfaced. Same doctrine as the options ticket, now mirrored here.
+  const locked102 = {
+    progression: {
+      view: () => Promise.resolve({ wheels: true, unlocked: new Set(["101"]) }),
+    },
+  } as unknown as Partial<DashboardServerConfig>;
+
+  it("refuses a sell on the ladder lock before 101 is earned, naming what opens it", async () => {
+    const { res, out } = fakeRes();
+    await serveTradeApi(post(ticket), res, "/api/trade/review", configWith(locked102), session);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.preview.ok).toBe(false);
+    expect(body.preview.refusals[0]).toContain("course 102 hasn't been unlocked");
+    expect(body.preview.refusals[0]).toContain("101");
+  });
+
+  it("refuses the same sell at submit before the seam sees it", async () => {
+    const { res, out } = fakeRes();
+    let seen = 0;
+    await serveTradeApi(
+      post(ticket),
+      res,
+      "/api/trade/submit",
+      configWith({
+        ...locked102,
+        submitTrade: () => {
+          seen++;
+          return Promise.resolve({ ok: true, orderId: "x", status: "accepted", symbol: "AAPL" });
+        },
+      } as unknown as Partial<DashboardServerConfig>),
+      session,
+    );
+    expect(JSON.parse(out.body ?? "{}").ok).toBe(false);
+    expect(seen).toBe(0);
+  });
+
+  it("never refuses a buy once 101 is the open rung", async () => {
+    // Whether 101 itself can ever be locked is `unlockedCodes`'s own invariant (domain-level,
+    // covered by progression.spec.ts) — this proves only that THIS route defers to it correctly
+    // rather than refusing a buy the real server would never mark locked.
+    const { res, out } = fakeRes();
+    const cfg = configWith({
+      progression: { view: () => Promise.resolve({ wheels: true, unlocked: new Set(["101"]) }) },
+    } as unknown as Partial<DashboardServerConfig>);
+    await serveTradeApi(post({ ...ticket, action: "buy" }), res, "/api/trade/review", cfg, session);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.preview.refusals.some((r: string) => r.includes("hasn't been unlocked"))).toBe(
+      false,
+    );
+  });
+
+  it("leaves an unlocked sell alone", async () => {
+    const { res, out } = fakeRes();
+    const cfg = configWith({
+      progression: {
+        view: () => Promise.resolve({ wheels: true, unlocked: new Set(["101", "102"]) }),
+      },
+    } as unknown as Partial<DashboardServerConfig>);
+    await serveTradeApi(post(ticket), res, "/api/trade/review", cfg, session);
+    expect(JSON.parse(out.body ?? "{}").preview.ok).toBe(true);
   });
 });

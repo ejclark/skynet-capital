@@ -25,6 +25,7 @@ import { join } from "node:path";
 
 const ROOT = process.cwd();
 const EVENTS_DIR = join(ROOT, "docs", "research", "events");
+const WEEKS_DIR = join(ROOT, "docs", "research", "weeks");
 const BUDGET_FILE = join(ROOT, "research-budget.json");
 const SKIP = new Set(["TEMPLATE.md", "README.md"]);
 
@@ -39,6 +40,12 @@ export const CONFIDENCE_GRADES = ["high", "medium", "med", "low", "none"];
 
 /** The decision header is the above-the-fold budget. Wider than an issue's — it carries a table. */
 export const MAX_HEADER_CHARS = 2400;
+/**
+ * A weekly study's call sheet carries one row per TRACKED NAME, not four horizon rows (#1716), so
+ * its header grows with the roster rather than with an author's prose. Advisory either way — this
+ * only stops a structural fact from reading as drift.
+ */
+export const MAX_WEEK_HEADER_CHARS = 8000;
 /** One short line per signal, the same ceiling ship.sh checkbody puts on PR summary bullets. */
 export const MAX_BULLET = 160;
 /** An append-only ledger row is a note to the next session, not an essay. Advisory only. */
@@ -140,10 +147,10 @@ function checkRows(data, at, problems, notes) {
 }
 
 /** Prose that has drifted long. Advisory ONLY — never tax the capture habit. */
-function collectNotes(md, header, notes) {
-  if (header.length > MAX_HEADER_CHARS)
+function collectNotes(md, header, notes, maxHeader = MAX_HEADER_CHARS) {
+  if (header.length > maxHeader)
     notes.push(
-      `decision header is ${header.length} chars (soft max ${MAX_HEADER_CHARS}) — the weeds belong in the body`,
+      `decision header is ${header.length} chars (soft max ${maxHeader}) — the weeds belong in the body`,
     );
   for (const line of header.split("\n")) {
     const bullet = /^\s*[-*]\s+(.*)$/.exec(line);
@@ -161,7 +168,7 @@ function collectNotes(md, header, notes) {
  * Lint one research document. Returns { problems, notes } — problems fail the gate (the structure
  * a reader and the /research page both depend on), notes inform (prose that has drifted long).
  */
-export function lintResearchDoc(md, { name = "doc" } = {}) {
+export function lintResearchDoc(md, { name = "doc", maxHeaderChars = MAX_HEADER_CHARS } = {}) {
   const problems = [];
   const notes = [];
   checkHeaderLines(md, problems);
@@ -189,28 +196,53 @@ export function lintResearchDoc(md, { name = "doc" } = {}) {
   if (!/signals?\s*&(amp;)?\s*conditions/i.test(header))
     problems.push("decision header has no **Signals & conditions** — the buy/sell/hold triggers");
 
-  collectNotes(md, header, notes);
+  collectNotes(md, header, notes, maxHeaderChars);
   return { name, problems, notes };
 }
 
-function ledgerFiles() {
-  if (!existsSync(EVENTS_DIR)) return [];
-  return readdirSync(EVENTS_DIR)
+function mdFilesIn(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
     .filter((f) => f.endsWith(".md") && !SKIP.has(f))
     .sort();
 }
 
+/**
+ * Every gated research document: the event ledgers, plus the weekly studies under
+ * `docs/research/weeks/` (#1716 — same `## The call` contract, so the same eye reads both). Each
+ * result carries its own path so `--candidate` can point at a real file in either directory.
+ */
 function auditAll() {
-  return ledgerFiles().map((f) =>
-    lintResearchDoc(readFileSync(join(EVENTS_DIR, f), "utf8"), { name: f }),
+  const dirs = [
+    { dir: EVENTS_DIR, prefix: "", maxHeaderChars: MAX_HEADER_CHARS },
+    { dir: WEEKS_DIR, prefix: "weeks/", maxHeaderChars: MAX_WEEK_HEADER_CHARS },
+  ];
+  return dirs.flatMap(({ dir, prefix, maxHeaderChars }) =>
+    mdFilesIn(dir).map((f) => ({
+      path: join(dir, f),
+      ...lintResearchDoc(readFileSync(join(dir, f), "utf8"), {
+        name: `${prefix}${f}`,
+        maxHeaderChars,
+      }),
+    })),
   );
+}
+
+/**
+ * Emit machine-readable output and exit. `console.log` on a PIPE is asynchronous, so a payload past
+ * the pipe buffer (~64KB — this audit's `--json` is well past it) is truncated mid-string when
+ * `process.exit` follows it. Writing fd 1 synchronously is the fix; the truncation was silent, and
+ * every consumer saw it as malformed JSON rather than as a short write.
+ */
+function emitJson(payload, code) {
+  writeFileSync(1, `${JSON.stringify(payload, null, 2)}\n`);
+  process.exit(code);
 }
 
 if (process.argv.includes("--stdin")) {
   const md = readFileSync(0, "utf8");
   const { problems, notes } = lintResearchDoc(md, { name: "stdin" });
-  console.log(JSON.stringify({ problems, notes }, null, 2));
-  process.exit(problems.length ? 1 : 0);
+  emitJson({ problems, notes }, problems.length ? 1 : 0);
 }
 
 const results = auditAll();
@@ -218,8 +250,7 @@ const failing = results.filter((r) => r.problems.length > 0);
 const debt = failing.length;
 
 if (process.argv.includes("--json")) {
-  console.log(JSON.stringify({ debt, results }, null, 2));
-  process.exit(0);
+  emitJson({ debt, results }, 0);
 }
 
 if (process.argv.includes("--candidate")) {
@@ -227,18 +258,10 @@ if (process.argv.includes("--candidate")) {
   const ranked = [...failing].sort(
     (a, b) =>
       b.problems.length - a.problems.length ||
-      readFileSync(join(EVENTS_DIR, b.name), "utf8").length -
-        readFileSync(join(EVENTS_DIR, a.name), "utf8").length,
+      readFileSync(b.path, "utf8").length - readFileSync(a.path, "utf8").length,
   );
   const top = ranked[0];
-  console.log(
-    JSON.stringify(
-      top ? { target: top.name, problems: top.problems, remaining: debt } : {},
-      null,
-      2,
-    ),
-  );
-  process.exit(0);
+  emitJson(top ? { target: top.name, problems: top.problems, remaining: debt } : {}, 0);
 }
 
 const budget = existsSync(BUDGET_FILE) ? JSON.parse(readFileSync(BUDGET_FILE, "utf8")) : {};
@@ -253,10 +276,10 @@ if (process.argv.includes("--update")) {
   process.exit(0);
 }
 
-console.log("🔬 Research lint — the decision-header contract on event ledgers\n");
-console.log(`  ledgers: ${results.length} · without a usable call sheet: ${debt}`);
+console.log("🔬 Research lint — the decision-header contract on ledgers and weekly studies\n");
+console.log(`  documents: ${results.length} · without a usable call sheet: ${debt}`);
 const noted = results.filter((r) => r.notes.length > 0).length;
-console.log(`  advisory notes on ${noted} ledger(s)\n`);
+console.log(`  advisory notes on ${noted} document(s)\n`);
 for (const r of failing.slice(0, 8)) {
   console.log(`  ✗ ${r.name}`);
   for (const p of r.problems.slice(0, 3)) console.log(`      ${p}`);

@@ -62,7 +62,7 @@
  * one-directional all the way down (market-events.ts → market-events-data.ts →
  * market-events-types.ts), no cycle.
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { ImpactTier, MarketEvent } from "./market-events-types.js";
 
@@ -71,23 +71,37 @@ export type { ImpactTier, MarketEvent };
 /** Where the per-event files live, relative to the repo root (see PATH RESOLUTION above). */
 export const MARKET_EVENTS_DIR = join("src", "domain", "market-events");
 
+/**
+ * PROPOSALS (issue #1717) — the one add/add class the per-event split left behind. Two research
+ * lanes sweeping adjacencies on the same day can both discover the same dated event and each file
+ * it; under one-file-per-event they both created `<id>.json`, and git cannot merge two creations
+ * of one path (5 of the first 126 post-split research PRs stuck exactly there). So a proposal is
+ * owned by its PROPOSER, not by the event it names: `proposals/<id>.from-<proposer-event-id>.json`,
+ * always `status: "estimate"`. Two lanes can never write the same path. At read time the canonical
+ * `<id>.json` wins when it exists (the event's own initial research writes it, reading every
+ * proposal as input); otherwise the first proposal by file name stands in, deterministically.
+ * Proposals shadowed by a canonical file are inert, never deleted by another lane.
+ */
+export const PROPOSALS_SUBDIR = "proposals";
+export const PROPOSAL_FILE_RE = /^([a-z0-9][a-z0-9-]*)\.from-([a-z0-9][a-z0-9-]*)\.json$/;
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const isString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 
 /**
  * The boot-time shape guard — loud on the first malformed file, naming it. Deliberately the
  * MINIMUM that keeps a consumer from crashing on a bad field (a missing date breaks every window
- * computation); the full contract (known kinds, source-prefix ↔ status, slug ids) is the
- * scanner's `--validate`, which runs inside `npm test`.
+ * computation); the full contract (known kinds, source-prefix ↔ status, slug ids, a proposer that
+ * exists) is the scanner's `--validate`, which runs inside `npm test`.
  */
-function parseMarketEvent(raw: unknown, file: string): MarketEvent {
+function parseMarketEvent(raw: unknown, file: string, expectedId: string): MarketEvent {
   const e = raw as Record<string, unknown>;
   const fail = (what: string): never => {
     throw new Error(`market-events: ${file}: ${what}`);
   };
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) fail("not a JSON object");
   if (!isString(e.id)) fail("missing id");
-  if (e.id !== basename(file, ".json")) fail(`id "${e.id}" does not match the file name`);
+  if (e.id !== expectedId) fail(`id "${e.id}" does not match the file name`);
   if (!isString(e.kind)) fail("missing kind");
   if (!isString(e.title)) fail("missing title");
   if (!(isString(e.date) && DATE_RE.test(e.date))) fail("date must be YYYY-MM-DD");
@@ -100,17 +114,40 @@ function parseMarketEvent(raw: unknown, file: string): MarketEvent {
   return raw as MarketEvent;
 }
 
+const readJson = (file: string): unknown => JSON.parse(readFileSync(file, "utf8"));
+
 /**
- * Read every `<id>.json` under `dir` and return the calendar in `(date, id)` order. Exported so
- * specs can point it at a fixture directory; the default is the real one.
+ * Read every `<id>.json` under `dir`, then every `proposals/<id>.from-<proposer>.json` for ids no
+ * canonical file names (first by file name wins), and return the calendar in `(date, id)` order.
+ * Exported so specs can point it at a fixture directory; the default is the real one.
  */
 export function loadMarketEvents(
   dir: string = join(process.cwd(), MARKET_EVENTS_DIR),
 ): MarketEvent[] {
-  const events = readdirSync(dir)
+  const byId = new Map<string, MarketEvent>();
+  for (const f of readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
-    .map((f) => parseMarketEvent(JSON.parse(readFileSync(join(dir, f), "utf8")), f));
-  return events.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+    .sort()) {
+    const event = parseMarketEvent(readJson(join(dir, f)), f, basename(f, ".json"));
+    byId.set(event.id, event);
+  }
+  const proposalsDir = join(dir, PROPOSALS_SUBDIR);
+  if (existsSync(proposalsDir)) {
+    for (const f of readdirSync(proposalsDir)
+      .filter((f) => f.endsWith(".json"))
+      .sort()) {
+      const id = f.match(PROPOSAL_FILE_RE)?.[1];
+      if (id === undefined)
+        throw new Error(`market-events: proposals/${f}: name must be <id>.from-<proposer>.json`);
+      const event = parseMarketEvent(readJson(join(proposalsDir, f)), `proposals/${f}`, id);
+      if (event.status !== "estimate")
+        throw new Error(`market-events: proposals/${f}: a proposal is always status "estimate"`);
+      if (!byId.has(event.id)) byId.set(event.id, event);
+    }
+  }
+  return [...byId.values()].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
+  );
 }
 
 export const MARKET_EVENTS: readonly MarketEvent[] = loadMarketEvents();

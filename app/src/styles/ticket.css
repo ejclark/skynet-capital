@@ -1,45 +1,168 @@
 /* the options ticket + play picker (#738 phase 10b). Tokens only. */
 
-.play-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
-  margin-top: 16px;
-  max-width: var(--col-wide);
-}
-.play-card {
+/* The milestone strip (#1461) — eyebrow · rail · status line. Mobile-first: the base rules are the
+   phone frame (nodes, codes, count, status); names under the nodes arrive at 600px. */
+.ladder-strip {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 9px 11px;
-  border: 1px solid var(--border);
+  gap: 10px;
+  margin-top: 16px;
+  max-width: var(--col-wide);
+  padding: 10px 14px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
   border-radius: 10px;
-  background: var(--surface);
-  box-shadow: var(--elev-base);
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}
+.ladder-strip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ladder-strip-eyebrow {
+  color: var(--accent);
+}
+.ladder-strip-count {
+  color: var(--muted);
+}
+.ladder-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  align-items: start;
+  padding-top: 2px;
+}
+.ladder-rail::before {
+  content: "";
+  position: absolute;
+  left: calc(100% / 12);
+  right: calc(100% / 12);
+  top: 15px;
+  height: 2px;
+  background: var(--border);
+}
+.ladder-rail-fill {
+  position: absolute;
+  left: calc(100% / 12);
+  top: 15px;
+  height: 2px;
+  background: var(--accent);
+}
+.rung {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  text-align: center;
   text-decoration: none;
   color: var(--text);
 }
-.play-card:hover {
-  border-color: var(--accent);
+.rung:hover {
   text-decoration: none;
 }
-.play-sel {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
-}
-.play-locked {
-  opacity: 0.65;
-}
-.play-code {
+.rung-node {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  display: grid;
+  place-items: center;
   font-size: 10px;
-  color: var(--accent);
-  letter-spacing: 0.08em;
+  color: var(--muted);
 }
-.play-name {
-  font-size: 12.5px;
+.rung-earned .rung-node {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
   font-weight: 700;
 }
-.play-tldr {
+.rung-current .rung-node {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.rung-open.rung-current .rung-node {
+  color: var(--accent);
+}
+.rung-locked {
+  opacity: 0.65;
+}
+.rung:hover .rung-node {
+  border-color: var(--accent);
+}
+.rung-code {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.rung-current .rung-code {
+  color: var(--accent);
+}
+.rung-name {
+  display: none;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0 4px;
+}
+.ladder-strip-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ladder-strip-status b {
+  color: var(--text);
+  font-weight: 600;
+}
+@media (min-width: 600px) {
+  .rung-name {
+    display: block;
+  }
+}
+/* The ticket's own nav (#1461 slice 2) — Instrument · Side · Type on the shell's toggle-group.
+   A locked segment stays visible and disabled with its reason underneath; mobile-first (wraps). */
+.ticket-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 12px 0 0;
+  max-width: var(--col-wide);
+}
+.ticket-nav-group {
+  /* a fieldset, for the a11y semantics — the chrome a fieldset brings is reset here */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.ticket-nav-label {
+  padding: 0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ticket-nav .toggle-group button:disabled {
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.seg-why {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.ticket-nav-gate {
+  flex-basis: 100%;
+  margin: 0;
   font-size: 11px;
   color: var(--muted);
 }
