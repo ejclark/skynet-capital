@@ -53,6 +53,25 @@ const plays = {
       code: "301",
       name: "Buy a long put",
     }),
+    // The ladder extension (#1671) — kept in this fixture so `OptionGate`'s `zeroDte` prop reads
+    // a real (locked) 501 rather than undefined, exactly as a fresh account would see it.
+    play(
+      "401",
+      "Vertical spread",
+      "defined risk, two legs",
+      "multi-leg",
+      undefined,
+      undefined,
+      "locked",
+      {
+        code: "302",
+        name: "Buy a long call",
+      },
+    ),
+    play("501", "Zero-DTE", "the fastest clock", "option", undefined, undefined, "locked", {
+      code: "401",
+      name: "Vertical spread",
+    }),
   ],
 };
 const settings = {

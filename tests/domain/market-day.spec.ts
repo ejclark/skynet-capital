@@ -1,4 +1,4 @@
-import { MARKET_TIMEZONE, marketDayKey } from "../../src/domain/market-day.js";
+import { isSameMarketDay, MARKET_TIMEZONE, marketDayKey } from "../../src/domain/market-day.js";
 
 describe("marketDayKey", () => {
   it("keys a 3:55pm ET close to that trading day, not the next one", () => {
@@ -27,5 +27,20 @@ describe("marketDayKey", () => {
       marketDayKey(iso),
     );
     expect([...keys].sort()).toEqual(["2026-08-31", "2026-09-01"]);
+  });
+});
+
+describe('isSameMarketDay — the one place "is this zero-DTE?" is answered (#1671)', () => {
+  it("matches an instant to the plain date it falls on, in market time", () => {
+    expect(isSameMarketDay("2026-09-18T15:00:00.000Z", "2026-09-18")).toBe(true);
+  });
+
+  it("keeps 9:30pm ET on its own day rather than the naive UTC tomorrow", () => {
+    expect(isSameMarketDay("2026-09-19T01:30:00.000Z", "2026-09-18")).toBe(true);
+    expect(isSameMarketDay("2026-09-19T01:30:00.000Z", "2026-09-19")).toBe(false);
+  });
+
+  it("is false for any other date", () => {
+    expect(isSameMarketDay("2026-09-18T15:00:00.000Z", "2026-09-19")).toBe(false);
   });
 });

@@ -22,3 +22,17 @@ export function marketDayKey(iso: string, timezone: string = MARKET_TIMEZONE): s
     return date.toISOString().slice(0, 10);
   }
 }
+
+/**
+ * True when `iso` (an instant — a fill, "now") falls on the same market day as `dateOnly` (a plain
+ * `YYYY-MM-DD`, e.g. an option's own expiration) — the one place "is this zero-DTE?" is answered,
+ * shared by the ladder's earn derivation (#1671: a same-day option fill also earns 501) and the
+ * server-side gate that refuses opening one while 501 is locked.
+ */
+export function isSameMarketDay(
+  iso: string,
+  dateOnly: string,
+  timezone: string = MARKET_TIMEZONE,
+): boolean {
+  return marketDayKey(iso, timezone) === dateOnly;
+}

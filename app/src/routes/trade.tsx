@@ -77,6 +77,10 @@ function DeskTicket({
     queryFn: () => fetchDesk(desk),
   });
   const info: PlayInfo | undefined = plays.data?.plays.find((p) => p.code === code);
+  // 501 has no ticket of its own (#1671) — it's an attribute any option order can carry, looked up
+  // independently of `info` so the expiration field can disable today regardless of which rung
+  // the ticket is currently on.
+  const zeroDte = plays.data?.plays.find((p) => p.code === "501");
   // The feedback gate (#1119): while it holds, every rung that OPENS a position shows the gate card
   // instead of a ticket. A sell (102) is an exit and stays open — the server holds the same line.
   const gate = plays.data?.gate;
@@ -110,7 +114,7 @@ function DeskTicket({
           <DraftOrderBuilder deskId={desk} />
         )
       ) : info && info.kind === "option" ? (
-        <OptionGate key={info.code} deskId={desk} play={info} />
+        <OptionGate key={info.code} deskId={desk} play={info} zeroDte={zeroDte} />
       ) : (
         <TradeGate
           key={code}

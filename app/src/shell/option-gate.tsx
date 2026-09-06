@@ -23,16 +23,23 @@ import { GateAction, type OptionGateState, OptionGateStatus } from "./option-pre
  * (`chainNote`), the ticket still works with manual entry, exactly as the legacy raw mode did:
  * premiums just can't be estimated. A locked rung renders `LockedPanel` (shared with the stock
  * ticket, no self-serve way off the ladder — #1671 decision 1); the server refuses a locked play
- * regardless of what this component shows.
+ * regardless of what this component shows. Independently, `zeroDte` disables today's expiration
+ * while course 501 is locked (#1671 slice 2) — a play can be wide open and still shut out of a
+ * same-day expiration.
  */
 
 /** @category trading */
 export function OptionGate({
   deskId,
   play,
+  zeroDte,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
+  /** Course 501's own catalog entry (#1671) — independent of `play`, since a member can have this
+   *  rung wide open and still be shut out of a same-day expiration until 501 is earned. Undefined
+   *  callers (none today) skip the zero-DTE affordance; the server refuses regardless. */
+  readonly zeroDte?: PlayInfo;
 }): ReactElement {
   const [symbol, setSymbol] = useState("");
   const [chainSym, setChainSym] = useState("");
@@ -137,6 +144,12 @@ export function OptionGate({
             chainData={chainData}
             value={expiration}
             onEdit={edit(setExpiration)}
+            zeroDteLocked={Boolean(zeroDte?.locked)}
+            zeroDteReason={
+              zeroDte?.opensAfter
+                ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
+                : undefined
+            }
           />
         </div>
         <div className="field">

@@ -85,6 +85,57 @@ describe("deriveEarned — milestones from real fills, never a checkbox", () => 
   });
 });
 
+describe("zero-DTE — a same-day option OPEN also earns 501 (#1671)", () => {
+  it("earns 501 alongside the play's own code when the fill lands on the contract's own expiration", () => {
+    const fills = [
+      fill({
+        orderId: "z1",
+        symbol: OCC_PUT,
+        side: "sell",
+        filledQuantity: 2,
+        at: "2026-09-18T15:00:00.000Z",
+      }),
+    ];
+    const earned = deriveEarned(fills, [{ orderId: "z1", code: "201", intent: "open" }]);
+    expect(earned.map((m) => m.code)).toEqual(["201", "501"]);
+    expect(earned.every((m) => m.orderId === "z1")).toBe(true);
+  });
+
+  it("earns only the play's own code when the fill isn't on expiration day", () => {
+    const fills = [fill({ orderId: "n1", symbol: OCC_PUT, side: "sell", filledQuantity: 2 })]; // default `at` predates OCC_PUT's 2026-09-18
+    const earned = deriveEarned(fills, [{ orderId: "n1", code: "201", intent: "open" }]);
+    expect(earned.map((m) => m.code)).toEqual(["201"]);
+  });
+
+  it("a same-day CLOSE earns nothing at all — an exit is never a play, zero-DTE or not", () => {
+    const fills = [
+      fill({
+        orderId: "cx1",
+        symbol: OCC_PUT,
+        side: "buy",
+        filledQuantity: 2,
+        at: "2026-09-18T15:00:00.000Z",
+      }),
+    ];
+    expect(deriveEarned(fills, [{ orderId: "cx1", intent: "close" }])).toEqual([]);
+  });
+
+  it("reads the market day in US-Eastern, not naive UTC — 9:30pm ET stays on the earlier day", () => {
+    // 01:30Z on the 19th is 9:30pm ET on the 18th, the day this contract actually expires.
+    const fills = [
+      fill({
+        orderId: "z2",
+        symbol: OCC_PUT,
+        side: "sell",
+        filledQuantity: 2,
+        at: "2026-09-19T01:30:00.000Z",
+      }),
+    ];
+    const earned = deriveEarned(fills, [{ orderId: "z2", code: "201", intent: "open" }]);
+    expect(earned.map((m) => m.code)).toEqual(["201", "501"]);
+  });
+});
+
 describe("the ladder — sequential unlocks with training wheels on", () => {
   it("opens only 101 for a brand-new trader", () => {
     expect([...unlockedCodes(new Set())]).toEqual(["101"]);
