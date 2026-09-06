@@ -23,6 +23,11 @@ import { LENSES, type Lens } from "../live/research";
  * reads "4 sessions" — theta decays an extra day. Weekdays the exchange is closed are hatched and struck (never hue alone — docs/BRAND.md → Accessibility)
  * and carry the reason. Every day is pickable now: a day with no event is a fine anchor for a
  * week, and a disabled day with nothing behind it was noise, not fog (docs/FOG-OF-WAR.md).
+ *
+ * THE ALL LENS HAS NO BUTTON: tapping the pressed lens again clears it, and no lens pressed IS
+ * `lens:all` — every ledger in view (Eric, 2026-09-06: a fifth pill "getting pushed below has a
+ * clunky feel. couldn't the toggle cluster… be deselectable which implicitly enable ALL records to
+ * show?"). The head names the state — "all research · N events" — so the empty cluster reads.
  */
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"] as const;
@@ -252,7 +257,7 @@ export function EventHorizon({
       </div>
       <fieldset className="eh-lenses">
         <legend className="visually-hidden">Lens</legend>
-        {LENSES.map((option) => {
+        {LENSES.filter((option) => option !== "all").map((option) => {
           const fogged = option === "day" && dayFog !== undefined;
           return (
             <button
@@ -262,7 +267,7 @@ export function EventHorizon({
               aria-pressed={option === lens}
               disabled={fogged}
               title={fogged ? dayFog.reason : undefined}
-              onClick={() => onLens(option)}
+              onClick={() => onLens(option === lens ? "all" : option)}
             >
               {LENS_NAME[option]}
               {fogged ? (

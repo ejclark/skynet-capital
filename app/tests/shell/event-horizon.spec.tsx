@@ -42,9 +42,19 @@ describe("EventHorizon", () => {
     expect(screen.getByText("all research")).toBeInTheDocument();
     expect(screen.getByText("1 event")).toBeInTheDocument();
     expect(document.querySelectorAll(".eh-band")).toHaveLength(0);
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "All" })).toBeNull();
+    for (const name of ["Day", "Week", "Month", "Quarter"]) {
+      expect(screen.getByRole("button", { name })).toHaveAttribute("aria-pressed", "false");
+    }
     fireEvent.click(screen.getByRole("button", { name: "Next month" }));
     expect(calls.steps).toEqual([1]);
+  });
+
+  it("clears to the all lens when the pressed lens is tapped again", () => {
+    const calls = mount();
+    fireEvent.click(screen.getByRole("button", { name: "Week" }));
+    fireEvent.click(screen.getByRole("button", { name: "Month" }));
+    expect(calls.lenses).toEqual(["all", "month"]);
   });
 
   it("marks the current lens pressed and reports a new pick", () => {

@@ -45,7 +45,10 @@
 .eh-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 3px;
+  /* No column gap: the week band is one continuous shape, not seven cells with a dark seam
+     between them (Eric, 2026-09-06: "removing the dark line between days reduce[s] UI
+     complexity"). Rows keep a hair of air. */
+  gap: 3px 0;
 }
 .eh-wd {
   text-align: center;
