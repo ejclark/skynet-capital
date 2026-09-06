@@ -37,7 +37,9 @@ describe("serveLegacyRedirect", () => {
 
   it("renames the twinned pages, queries riding along", () => {
     expect(target("/learn")).toBe("/app/learn");
-    expect(target("/wire")).toBe("/app/wire");
+    expect(target("/wire")).toBe("/app/activity");
+    // The shell's own retired path — the page was renamed under a live bookmark.
+    expect(target("/app/wire", "/app/wire?q=is%3Ahuman")).toBe("/app/activity?q=is%3Ahuman");
     expect(target("/research", "/research?q=NVDA")).toBe("/app/research?q=NVDA");
     expect(target("/collections")).toBe("/app/collections");
     expect(target("/collections/wheel-desks")).toBe("/app/collections/wheel-desks");
