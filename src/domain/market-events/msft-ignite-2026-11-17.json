@@ -1,0 +1,11 @@
+{
+  "id": "msft-ignite-2026-11-17",
+  "kind": "product-launch",
+  "title": "Microsoft Ignite 2026 — San Francisco (Nov 17–20)",
+  "date": "2026-11-17",
+  "status": "estimate",
+  "source": "EST: moscone.com/events/microsoft-ignite-2026 (the venue's own event page) reads \"November 17–20 | Moscone Center | San Francisco, CA, USA\" and \"November 17 - November 20, 2026\"; registration-open coverage corroborates the same dates. Microsoft's own ignite.microsoft.com/en-US/home rendered no date text to this lane's fetcher, so this stays estimate pending an IR/primary confirmation. Discovered and checked 2026-09-06 during the msft-2026-10-27-print adjacency sweep",
+  "symbols": ["MSFT"],
+  "impact": "medium",
+  "notes": "Microsoft's flagship enterprise/IT conference and the venue where Azure, Copilot and agent-platform commercial announcements land. Filed as the next MSFT-specific catalyst after the FY27-Q1 print (est. 2026-10-27) — roughly three weeks downstream, and the first Ignite under the new two-segment reporting structure announced in the 2026-09-02 8-K. Historically a product/announcement venue rather than a reliable price event; tracked for narrative read-through, not as a tradable date. Every statement keyed to it inherits the estimate label."
+}
