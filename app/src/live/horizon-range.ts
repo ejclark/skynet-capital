@@ -144,7 +144,13 @@ export function rangeLabel(range: DayRange, lens: Lens): string {
       return `${short(range.start)} – ${short(range.end)}`;
     case "month":
       return start.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-    case "quarter":
-      return `Q${String(Math.floor(start.getUTCMonth() / 3) + 1)} ${String(start.getUTCFullYear())}`;
+    case "quarter": {
+      // A CALENDAR quarter, and the label says so by naming its months: "Q3 2026 · Jul–Sep". Fiscal
+      // quarters differ per company (NVDA's Q3 FY27 is Aug–Oct 2026) and are a later dimension;
+      // until then the observable behaviour is spelled out so the lens cannot be misread (Eric,
+      // 2026-09-06: "the labeling should also clearly articulate the observable behavior").
+      const end = toDate(range.end);
+      return `Q${String(Math.floor(start.getUTCMonth() / 3) + 1)} ${String(start.getUTCFullYear())} · ${MONTHS[start.getUTCMonth()] ?? ""}–${MONTHS[end.getUTCMonth()] ?? ""}`;
+    }
   }
 }
