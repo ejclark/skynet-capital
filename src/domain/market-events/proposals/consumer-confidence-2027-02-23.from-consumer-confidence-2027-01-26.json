@@ -1,0 +1,11 @@
+{
+  "id": "consumer-confidence-2027-02-23",
+  "kind": "macro-print",
+  "title": "Conference Board Consumer Confidence Index (February 2027), 10:00 a.m. ET",
+  "date": "2027-02-23",
+  "status": "estimate",
+  "source": "EST: conference-board.org/topics/consumer-confidence fetched direct 2026-09-06 (HTTP 200, 332,031 bytes), which states \"The Conference Board publishes the Consumer Confidence Index (R) at 10 a.m. ET on the last Tuesday of every month.\" 2027-02-23 is the last Tuesday of February 2027. The rule is corroborated for February specifically by three of the publisher's own dated next-release lines, each fetched direct 2026-09-06 at HTTP 200 and each naming that year's last Tuesday of February: CCI-Jan-2023 \"The next release is Tuesday, February 28 at 10 AM ET\", CCI-Jan-2024 \"Tuesday, February 27th\", CCI-Jan-2025 \"Tuesday, February 25th\". No February-2027 announcement exists yet, so this is the publisher's rule applied forward against a verified February record rather than a posted date. Checked 2026-09-06",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "DISCOVERED during the consumer-confidence-2027-01-26 initial-research adjacency sweep (2026-09-06) — the same chain by which the 11-24 edition proposed 12-22, one edition forward. Proposed for two concrete reasons rather than bookkeeping. First, it is the CONTROL for its proposer: this ledger's central finding is that every January CB print since 2021 is also FOMC day one, so nothing about the January release day can be attributed to the survey; February 2027 has no FOMC meeting at all (federalreserve.gov/monetarypolicy/fomccalendars.htm, fetched 2026-09-06 HTTP 200 — the 2027 schedule runs January 26-27 then March 16-17), which makes it the nearest de-confounded read of this release's own tape. Second, it shares its day with the already-tracked fhfa-hpi-2027-02-23 (confirmed), so the 9:00/10:00 ET pairing the FHFA lane named persists and only the FOMC layer drops out — exactly the contrast a later study needs. Proposed as an estimate; nothing here licenses an entry."
+}
