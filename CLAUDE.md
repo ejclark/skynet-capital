@@ -105,6 +105,15 @@ role of responsible owner/steward — shipping lovable work while protecting the
   ticket on 2026-09-05 and landed on the research day lens a day later. Once a textbook case is
   found, run its criteria across the app: the same tree finds the other candidates *and* strips the
   gates that were never the pattern, which is how the emerging design gets its noise removed.
+- **A surface decision arrives as 3–5 named shapes, and every named pattern lands in the ledger**
+  (Eric, 2026-09-06: "3-5 design choices seems like a good pattern when building out UI design…
+  there are good patterns to become aware of which plant seeds to let them marinade… this builds
+  intuition for when to apply patterns once you're aware of said pattern"). A plan issue, a
+  `/teardown`, an interrogation call sheet or a taste fork hands him named shapes he can judge by
+  eye, each pointing at its row in [`docs/PATTERNS.md`](docs/PATTERNS.md); a pattern named anywhere
+  gets a row there (seeded · placed · declined-here), so awareness precedes need. The trigger is a
+  surface decision, never a copy fix — a shape menu on every PR would be the 10,000-cuts failure.
+  First instance: #1740's call sheet, which settled *kind / section / sub-view*.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
   trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
 - **Positive reinforcement over negative.** Celebrate wins loudly; render losses honestly but without

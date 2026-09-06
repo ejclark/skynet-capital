@@ -121,6 +121,10 @@ dark mode."* The first reader of every frame cannot separate `--pos` from `--neg
 
 ## Cohesion rules (how new work stays on-brand)
 
+- **Named patterns live in [`PATTERNS.md`](PATTERNS.md)** — the seed bank of UI patterns with a
+  live instance each, and the *kind / section / sub-view* vocabulary for where information goes on
+  a page. A surface decision arrives as 3–5 named shapes from that ledger; a new pattern gets a row.
+
 - Reuse tokens and the two type stacks; bring the matrix tonality in **restrained** doses when the
   mode calls for calm (logged-in "study mode") vs. the fast cinematic `/login` preview.
 - New motifs should connect to an existing metaphor or consciously extend the set; log the extension.
