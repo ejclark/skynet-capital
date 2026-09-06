@@ -18,6 +18,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { everyEvent } from "../domain/market-events.js";
 import { trackedUnderlyings } from "../research/tracked-underlyings.js";
 import {
@@ -117,4 +118,11 @@ function main(argv: readonly string[]): number {
   return 0;
 }
 
-process.exit(main(process.argv.slice(2)));
+/**
+ * Run only when this file IS the entrypoint. Without the guard the CLI executes — and exits the
+ * process — the instant anything imports it, which put `collectEntries` (the calendar↔shelf join,
+ * the part most worth a spec) out of reach of the test suite entirely.
+ */
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.exit(main(process.argv.slice(2)));
+}

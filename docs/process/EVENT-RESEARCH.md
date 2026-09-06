@@ -199,6 +199,100 @@ classifier would be two owners of one judgment.
 run four times. The weekly study registers no forward tests of its own — the ledgers it cites already
 carry theirs.
 
+### The cadence — the one step that is Eric's (`next-slice`, #1716)
+
+The genre is complete and runs on demand; nothing yet runs it unattended. That last step edits
+`.github/workflows/moneypenny-events.yml`, an `envelope.json`-protected path (*a lane that can edit
+its own trigger has no envelope at all*), so it is his to land — it boards the platter as one item
+rather than sitting as its own held PR. There is no decision left in it, only a protected file.
+
+**The mechanism moved, and the reason is on the record.** The brief named a *Sunday 12:00 ET cron*.
+This repo has a standing directive against exactly that — Eric, 2026-08-19: *"cron jobs are generally
+terrible … focus on event driven architecture"*, codified in `docs/ROUTINES.md` and written into
+`moneypenny-events.yml`'s own trigger block (*"EVERY MERGE TO MAIN IS THE TICK — no cron"*), after a
+generation of Routines fired ~130 times into sessions with no checkout and produced nothing. The
+outcome the brief asked for — the week's call sheet standing current without anyone running a
+command — is untouched; only the clock changes. The composer is already the right shape for the
+merge tick, and the wrong shape for a cron:
+
+- **It is level-based.** It re-reads the ledger set from scratch every run, so any push reconciles
+  the open week — including whatever a missed tick would have skipped. A Sunday cron composes the
+  week *once*, from the ledgers that happened to exist on Sunday, and never picks up the ones that
+  land on Tuesday.
+- **It is idempotent, so the chain terminates.** Recomposed twice in a day it emits identical bytes;
+  across days only `**Last assessed:**` moves. A tick with no ledger change produces no diff, so no
+  PR, so no further tick.
+- **It already refuses the unsafe case.** A closed week is append-only without `--force`, and a week
+  under three researched events writes nothing and exits 0 — the job needs no conditional logic.
+
+**The step, paste-ready.** A new job in `.github/workflows/moneypenny-events.yml`, alongside `route`.
+It is its own job rather than a step inside `route` because `route` installs no dependencies and the
+composer needs `tsx`; keeping it separate leaves `route`'s fast path fast. Research docs land via a
+PR, never a direct push to `main` (#915, Eric 2026-08-30: *"some merge to main, open PRs for
+research; non-negotiable"*).
+
+```yaml
+  # THE WEEKLY STUDY (#1716) — the market week's own call sheet, composed from the ledgers already
+  # on the shelf. Rides the merge tick like everything else in this file (docs/ROUTINES.md:
+  # event-driven first, no crons): the composer is level-based, idempotent, skips a week under
+  # three researched events, and refuses to overwrite a week that has closed — so a push
+  # reconciles the open week and a quiet repo simply leaves the standing file alone.
+  week-study:
+    name: weekly study
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc   # .nvmrc is the single source of truth for CI — never pin here
+
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      - run: npm ci
+
+      - name: Compose the open week's study, and open a PR if it moved
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm run research:week
+          if [ -z "$(git status --porcelain -- docs/research/weeks/)" ]; then
+            echo "::notice::weekly study unchanged — nothing to open."
+            exit 0
+          fi
+          # `Last assessed:` moves every calendar day on its own. One changed line either way is
+          # only that date; anything more means a ledger in range actually changed.
+          if [ "$(git diff -U0 -- docs/research/weeks/ | grep -c '^[+-][^+-]')" -le 2 ]; then
+            git checkout -- docs/research/weeks/
+            echo "::notice::weekly study — only the assessed-on date moved; no PR opened."
+            exit 0
+          fi
+          BRANCH="moneypenny/week-study-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add docs/research/weeks
+          git commit -m "docs(research): recompose the open week's study from the ledgers in range"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "docs(research): recompose the open week's study from the ledgers in range" \
+            --body "Composed by \`npm run research:week\` on the merge tick. Every cell is a ledger's own \`This week\` row, quoted — this study makes no call of its own. Contract: docs/process/EVENT-RESEARCH.md → *The weekly study genre*."
+          gh pr merge --squash --auto "$BRANCH"
+```
+
+If he would rather have the literal Sunday clock the brief named, the same job takes
+`on: schedule: - cron: "0 16 * * 0"` (12:00 ET during EDT; 17:00 UTC once EST starts — a fixed cron
+cannot follow the offset, which is a third reason the tick is the better shape here). It would be
+the only cron in the repo, and it would compose each week from Sunday's ledger set alone.
+
 ## The decision header is gated (`npm run research:lint`)
 
 The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
