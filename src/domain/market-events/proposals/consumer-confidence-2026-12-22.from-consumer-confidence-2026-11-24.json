@@ -1,0 +1,11 @@
+{
+  "id": "consumer-confidence-2026-12-22",
+  "kind": "macro-print",
+  "title": "Conference Board Consumer Confidence Index (Dec 2026) — the successor edition, on the December exception rather than the last-Tuesday rule",
+  "date": "2026-12-22",
+  "status": "estimate",
+  "source": "EST: derived 2026-09-06 from two Conference Board precedents, NOT from a fetched line naming this date. The publisher's stated rule (conference-board.org/topics/consumer-confidence, fetched direct 2026-09-06, HTTP 200) is \"the last Tuesday of every month\", but that rule demonstrably fails in December: the Conference Board's own CCI-Dec-2024 press page (fetched direct 2026-09-06, HTTP 200) is dated December 23, 2024 with a stated cut-off of December 16, 2024, while the last Tuesday of December 2024 was December 31; the December 2025 edition is likewise reported at 2025-12-23 against a last Tuesday of 2025-12-30 (secondary, search-snippet fidelity, not re-fetched). Both precedents land on the Tuesday-or-Monday before Christmas rather than in the Christmas-to-New-Year week. Applying that exception to 2026 (Christmas falls Friday 2026-12-25) gives the fourth Tuesday, 2026-12-22. Filed estimate per the lane's no-self-confirm limit AND because the date derivation is the weakest part of this entry. Checked 2026-09-06",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "PROPOSED during the consumer-confidence-2026-11-24 initial research (2026-09-06). Filed because the calendar tracks this monthly series at 08-25, 09-29, 10-27 and 11-24 and then simply stops, leaving the December FOMC quarter with no consumer read on the board. The date is the honest problem and is stated as such: a naive application of the publisher's own last-Tuesday rule would give 2026-12-29, and the primary-sourced 2024 precedent says that would be WRONG — which is the finding that motivated filing this rather than 12-29. Re-verify against the Conference Board's own next-release line (it names each next date about a month ahead) before anything keys on this date; until then it is a placeholder that widens caution and licenses nothing. Whichever lane researches this id owns the flip. Two dated hooks it inherits: the December edition lands AFTER the 2026-12-09 FOMC on any of these derivations, and after the 2026-12-11 CR expiry."
+}
