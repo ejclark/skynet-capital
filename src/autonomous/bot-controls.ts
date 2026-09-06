@@ -14,8 +14,14 @@
  * Env vars remain as break-glass defaults: a control absent from the store falls back to the env
  * (`SKYNET_AUTONOMOUS_MODE`, `SKYNET_HARDCORE_BOTS`), so a lost volume or unreachable bridge can
  * never do worse than pre-GUI behavior.
+ *
+ * ONE NON-FLEET FIELD RIDES ALONG: `companionModel` (#1672 slice 4) — Moneypenny's rail isn't a
+ * bot, but Mission Control is already the owner-only switchboard this app has, and the model dial
+ * needs the same one-click, no-redeploy shape the suspend switches already have. Widening the
+ * ALLOWED set (`COMPANION_MODELS`) stays a protected-file change; picking within it does not.
  */
 
+import { COMPANION_MODELS, type CompanionModelId } from "../companion/companion-model.js";
 import { isRecord } from "../storage/parse-guards.js";
 import { credentialFingerprint } from "./bot-credential-fingerprint.js";
 
@@ -37,6 +43,9 @@ export interface ControlsState {
   /** Master switch: true = suspend ALL autonomous trading, the beta scout included (dynamic). */
   readonly allSuspended?: boolean;
   readonly bots: Readonly<Record<string, BotControls>>;
+  /** Moneypenny's model override — absent falls back to `companion-model.ts`'s own default.
+   *  Dynamic: `dashboard-companion.ts` reads it fresh per turn, no restart. */
+  readonly companionModel?: CompanionModelId;
   /** ISO time of the last edit — the page's audit line. */
   readonly updatedAt?: string;
   /** Who edited (owner email) — same audit-trail principle as the allowlist store. */
@@ -81,9 +90,11 @@ export function parseControlsState(raw: unknown): ControlsState | null {
       if (bot) bots[id] = bot;
     }
   }
+  const companionModel = COMPANION_MODELS.find((m) => m === raw.companionModel);
   return {
     bots,
     ...(typeof raw.allSuspended === "boolean" ? { allSuspended: raw.allSuspended } : {}),
+    ...(companionModel ? { companionModel } : {}),
     ...(typeof raw.updatedAt === "string" ? { updatedAt: raw.updatedAt } : {}),
     ...(typeof raw.updatedBy === "string" ? { updatedBy: raw.updatedBy } : {}),
   };

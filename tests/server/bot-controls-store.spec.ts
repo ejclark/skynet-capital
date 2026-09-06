@@ -49,6 +49,17 @@ describe("BotControlsStore", () => {
     expect(reports).toHaveLength(1);
   });
 
+  it("sets Moneypenny's model and stamps the audit line", () => {
+    const store = new BotControlsStore(path);
+    store.setBot("sauron", { suspended: true }, "owner@example.com", AT);
+    store.setCompanionModel("claude-haiku-4-5", "owner@example.com", AT);
+
+    const state = store.load();
+    expect(state.companionModel).toBe("claude-haiku-4-5");
+    expect(state.bots.sauron).toEqual({ suspended: true }); // untouched by the model swap
+    expect(state.updatedBy).toBe("owner@example.com");
+  });
+
   it("writes durable JSON a fresh store can read back", async () => {
     new BotControlsStore(path).setBot("sauron", { hardcore: true }, "owner@example.com", AT);
     const raw = JSON.parse(await readFile(path, "utf8"));

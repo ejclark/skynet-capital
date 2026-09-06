@@ -30,10 +30,10 @@ export function MissionControl(): ReactElement | null {
   if (!controls.data?.owner) return null;
   const fleet: Fleet = controls.data.fleet;
 
-  const act = async (action: ControlAction, bot?: string) => {
-    setBusy(bot ?? action);
+  const act = async (action: ControlAction, bot?: string, model?: string) => {
+    setBusy(bot ?? model ?? action);
     try {
-      setNote(await postControlAction(action, bot));
+      setNote(await postControlAction(action, bot, model));
       await queryClient.invalidateQueries({ queryKey: ["controls"] });
     } catch (err) {
       setNote({ ok: false, message: err instanceof Error ? err.message : String(err) });
@@ -111,6 +111,26 @@ export function MissionControl(): ReactElement | null {
             );
           })
         )}
+      </div>
+      <div className="mc-companion">
+        <h3 className="mc-companion-h">Moneypenny's model</h3>
+        <p className="mc-note">
+          Which model answers in the rail — moves the burn rate, not the safety rules; the eval
+          (#1672) sets which one is trustworthy.
+        </p>
+        <div className="mc-companion-row">
+          {fleet.companionModels.map((model) => (
+            <button
+              key={model}
+              type="button"
+              className={`btn mc-btn${model === fleet.companionModel ? " btn-primary" : ""}`}
+              disabled={busy !== undefined || model === fleet.companionModel}
+              onClick={() => void act("set-companion-model", undefined, model)}
+            >
+              {busy === model ? "Saving…" : model}
+            </button>
+          ))}
+        </div>
       </div>
       {fleet.updatedAt ? (
         <p className="mc-note num">

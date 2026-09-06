@@ -15,6 +15,9 @@ export interface FleetBot {
 export interface Fleet {
   readonly allSuspended: boolean;
   readonly bots: readonly FleetBot[];
+  /** Moneypenny's model dial (#1672 slice 4) — rides this same owner-only page. */
+  readonly companionModel: string;
+  readonly companionModels: readonly string[];
   readonly updatedAt?: string;
   readonly updatedBy?: string;
 }
@@ -29,10 +32,20 @@ export async function fetchControls(): Promise<ControlsView> {
   return (await res.json()) as ControlsView;
 }
 
-export type ControlAction = "suspend" | "resume" | "suspend-all" | "resume-all";
+export type ControlAction =
+  | "suspend"
+  | "resume"
+  | "suspend-all"
+  | "resume-all"
+  | "set-companion-model";
 
 export const postControlAction = (
   action: ControlAction,
   bot?: string,
+  model?: string,
 ): Promise<{ readonly ok: boolean; readonly message: string }> =>
-  postJson("/api/controls", { action, ...(bot !== undefined ? { bot } : {}) });
+  postJson("/api/controls", {
+    action,
+    ...(bot !== undefined ? { bot } : {}),
+    ...(model !== undefined ? { model } : {}),
+  });
