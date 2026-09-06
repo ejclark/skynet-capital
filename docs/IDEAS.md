@@ -829,6 +829,15 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   a real session. Small, cosmetic; deferred behind the core play work. _(src: Eric · while: calming the playcall candles — market-hours realism)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
+- **Activity's Feedback pulse mixes open and shipped filings in one flat list.** `/app/feedback`
+  already built a real Active/All toggle for exactly this (#1308, #1312: shipped filings hidden by
+  default); the condensed widget on Activity never inherited it — needs-info, needs-eric, next-slice
+  and three "Shipped" badges all sit side by side with no separation beyond a small pill. Same
+  boundary as #784's live section-switch fork, one level down. _(src: Claude · while: researching
+  Eric's "trades and issues… combining" note on #784, 2026-09-06)_
+- **"Weigh in on someone else's idea" still sits where Eric flagged it as out of place.** 2026-08-28,
+  #784: "I like this section but it feels out of place." Nine days unaddressed as of 2026-09-06,
+  visible in every Activity render since. _(src: Claude · while: the same #784 research pass)_
 - **`ship open` should say whether the branch's PR already merged before it pushes.** Twice on
   2026-09-06 a follow-up commit was pushed to a branch whose PR had auto-merged a minute earlier;
   git re-created the branch with an orphan commit (`docs/LESSONS.md`). The pre-push hook now
