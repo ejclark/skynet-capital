@@ -27,41 +27,67 @@
 // needing decompose work, not a table that grows as files are split. Removing a file from that
 // list (because it got fixed) is the only way it changes; nothing here silently drifts up.
 //
+// 2026-09-06 (#1713): this became the codebase's ONLY size cap, and it counts CODE lines.
+// Biome's noExcessiveLinesPerFile is now "off" — it was the only *blocking* counter, and it
+// counted the wrong thing in both directions: `//` lines and blanks at full price, any multi-line
+// token (a block comment, a template literal) collapsed to one. So it forced five splits in a
+// month on files that merely explained themselves, missed the 2,779-line authenticator entirely
+// (docs/LESSONS.md), and taught sessions to write WHY as a docstring instead of an inline `//`.
+// This scan therefore takes over the trees that rule used to lint, on code lines (scripts/
+// code-lines.mjs), and stays advisory — reporting debt, never blocking (tests/support/
+// advisory-scan.ts, Eric 2026-08-29).
+//
 //   node scripts/arch-scan.mjs             # report + enforce (exit 1 on any new over-cap file)
 //   node scripts/arch-scan.mjs --candidate # emit the next decompose target as JSON
 //   node scripts/arch-scan.mjs --update    # rewrite scripts-grouping-budget.json (ratchet: only lower)
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { codeLineCount } from "./code-lines.mjs";
 
 const ROOT = process.cwd();
-const SRC = join(ROOT, "src");
 const CAP = 300;
+// The trees this cap covers, with the file kinds Biome's rule used to lint in each and the ceilings
+// it used (300; 500 for tests, where a spec file's arrange/act/assert repetition is the point). An
+// src-only walk would report zero over-cap files on code lines today — a green gate that feeds the
+// decomposer nothing — so the cap follows the code Biome stopped watching.
+const TREES = [
+  { dir: "src", exts: [".ts"], cap: CAP },
+  { dir: "app/src", exts: [".ts", ".tsx", ".css"], cap: CAP },
+  { dir: "scripts", exts: [".mjs", ".js"], cap: CAP },
+  { dir: "tests", exts: [".ts"], cap: 500 },
+];
+const SKIP_DIRS = new Set(["node_modules", "dist", "coverage"]);
+const GENERATED = /(?:\.d\.ts|\.gen\.ts)$/; // routeTree.gen.ts and friends: nobody hand-edits these
 const GRANDFATHER_FILE = join(ROOT, "arch-grandfather.json");
 const grandfather = existsSync(GRANDFATHER_FILE)
   ? JSON.parse(readFileSync(GRANDFATHER_FILE, "utf8"))
   : {};
 
-function walk(dir, acc = []) {
+function walk(dir, exts, acc = []) {
+  if (!existsSync(dir)) return acc;
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
-    if (e.isDirectory()) walk(p, acc);
-    else if (e.name.endsWith(".ts") && !e.name.endsWith(".d.ts")) acc.push(p);
+    if (e.isDirectory()) {
+      if (!SKIP_DIRS.has(e.name)) walk(p, exts, acc);
+    } else if (exts.some((x) => e.name.endsWith(x)) && !GENERATED.test(e.name)) acc.push(p);
   }
   return acc;
 }
-const lineCount = (f) => readFileSync(f, "utf8").split("\n").length;
 const rel = (f) => relative(ROOT, f).split("\\").join("/");
 
-const files = walk(SRC)
-  .map((f) => ({ file: rel(f), lines: lineCount(f) }))
-  .sort((a, b) => b.lines - a.lines);
+const files = TREES.flatMap(({ dir, exts, cap }) =>
+  walk(join(ROOT, dir), exts).map((f) => {
+    const source = readFileSync(f, "utf8");
+    return { file: rel(f), lines: codeLineCount(source), physical: source.split("\n").length, cap };
+  }),
+).sort((a, b) => b.lines - b.cap - (a.lines - a.cap)); // ranked by overage, not size: the caps differ
 
 // --candidate: the decomposer agent's next target — the largest file that's over cap AND not
 // already grandfathered with a documented reason (those need a deliberate decision, not a bot).
 if (process.argv.includes("--candidate")) {
   const eligible = files
-    .filter((x) => x.lines > CAP && !(x.file in grandfather))
-    .map((x) => ({ ...x, cap: CAP, over: x.lines - CAP }));
+    .filter((x) => x.lines > x.cap && !(x.file in grandfather))
+    .map((x) => ({ ...x, over: x.lines - x.cap }));
   console.log(
     JSON.stringify({ candidate: eligible[0] ?? null, runnerUp: eligible[1] ?? null }, null, 2),
   );
@@ -70,7 +96,7 @@ if (process.argv.includes("--candidate")) {
 
 // Junk-drawer smell (docs/COACHES.md): a file named for what it ISN'T — utils/helpers/common/misc —
 // has no cohesion story and becomes a dumping ground. Name modules for the job they do.
-const JUNK = /(?:^|\/)(?:utils?|helpers?|common|misc|shared|stuff)\.ts$/i;
+const JUNK = /(?:^|\/)(?:utils?|helpers?|common|misc|shared|stuff)\.(?:ts|tsx|mjs|js|css)$/i;
 const junk = files.filter((x) => JUNK.test(x.file));
 if (junk.length) {
   console.error("\n✗ junk-drawer file name(s) — name modules for the job they do:");
@@ -78,22 +104,25 @@ if (junk.length) {
   process.exit(1);
 }
 
-const violations = files.filter((x) => x.lines > CAP && !(x.file in grandfather));
+const violations = files.filter((x) => x.lines > x.cap && !(x.file in grandfather));
 
 console.log(
-  `架 Architecture scan — cap ${CAP} lines, ${Object.keys(grandfather).length} grandfathered`,
+  `架 Architecture scan — cap ${CAP} code lines (tests ${TREES.at(-1).cap}), ` +
+    `${Object.keys(grandfather).length} grandfathered`,
 );
-for (const { file, lines } of files.slice(0, 8)) {
+for (const { file, lines, physical, cap } of files.slice(0, 8)) {
   const mark =
-    !(file in grandfather) && lines > CAP ? "✗ OVER" : lines > CAP ? "◌ grandfathered" : "· ok";
-  console.log(`  ${String(lines).padStart(5)}  ${mark}  ${file}`);
+    !(file in grandfather) && lines > cap ? "✗ OVER" : lines > cap ? "◌ grandfathered" : "· ok";
+  console.log(
+    `  ${String(lines).padStart(5)} code /${String(physical).padStart(6)}  ${mark}  ${file}`,
+  );
 }
 
 if (violations.length) {
   console.error(
-    `\n✗ ${violations.length} file(s) exceed the ${CAP}-line cap and aren't grandfathered:`,
+    `\n✗ ${violations.length} file(s) exceed the code-line cap and aren't grandfathered:`,
   );
-  for (const v of violations) console.error(`  ${v.file}: ${v.lines} lines`);
+  for (const v of violations) console.error(`  ${v.file}: ${v.lines} code lines (cap ${v.cap})`);
   console.error(
     "\nFix: decompose the file, or (only if you mean it) add it to arch-grandfather.json with a\n" +
       "one-line reason — a deliberate, reviewable act, never silent drift.",
