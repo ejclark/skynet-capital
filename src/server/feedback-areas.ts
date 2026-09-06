@@ -20,7 +20,7 @@
 export const FEEDBACK_AREAS = [
   "Portfolio",
   "Standings",
-  "The Wire",
+  "Activity",
   "Trade",
   "Research",
   "Collections",
@@ -42,7 +42,7 @@ export type FeedbackArea = (typeof FEEDBACK_AREAS)[number];
 const AREA_HINT: Record<FeedbackArea, string> = {
   Portfolio: "their own accounts and desks, /u and /account",
   Standings: "the home board of everyone's performance, /",
-  "The Wire": "the shared activity feed of who traded what, /wire",
+  Activity: "the shared activity feed of who traded what, /activity",
   Trade: "the trade ticket and order flow, /trade",
   Research: "the research lab, a symbol page, or the event calendar, /research",
   Collections: "the browsable bot and play catalogs, /collections",

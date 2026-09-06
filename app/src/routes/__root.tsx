@@ -137,7 +137,7 @@ function RootShell(): ReactElement {
               Trade
             </Link>
             <Link
-              to="/wire"
+              to="/activity"
               className="topnav-link"
               activeProps={{ "aria-current": "page" }}
               activeOptions={{ includeSearch: false }}

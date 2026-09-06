@@ -2,7 +2,7 @@
 
 **Kind:** <kind> · **Date:** <YYYY-MM-DD> (<confirmed|estimate>, <source>) · **Impact:** <tier>
 **Last assessed:** <YYYY-MM-DD>
-<!-- probe-ref: {"symbols":{"<SYM>":<price>},"vix":<vix>,"daysBand":"<tier>:<minDaysOut>+","adjacentIds":[],"screenStreak":0} -->
+<!-- probe-ref: {"symbols":{"<SYM>":<price>},"vix":<vix>,"daysBand":"<tier>:<minDaysOut>+","adjacentIds":[],"screenStreak":0,"blocked":[]} -->
 
 <!-- The `**Last assessed:**` line is scripts/event-scan.mjs's machine contract — update it with
      every assessment, or the scanner will keep marking this event due. Process:
@@ -20,6 +20,13 @@
      row like the ledger table below. A screen writes it mechanically; a full session should refresh
      it too when appending its own row, so the streak resets and the baseline stays current. See
      docs/process/EVENT-RESEARCH.md's "Deterministic screening" section for the full contract.
+
+     `blocked` (issue #1711) records every failed fetch of a cited source this event's research has
+     hit — egress block, 403, 5xx, whatever the tool reported — as
+     `{"url": "...", "status": "EGRESS_BLOCKED" | "403" | "503" | ..., "at": "YYYY-MM-DD"}`. Every
+     failed fetch of a cited source is recorded here, the ledger's source prefix downgrades to the
+     secondary's actually used (`NYSE:` → `NEWS:`), and a blocked source is never silently replaced
+     — see docs/process/EVENT-RESEARCH.md's "Honesty rules" for the full rule.
 
      Delete the intro comments (not the probe-ref line) when instantiating. -->
 

@@ -183,12 +183,14 @@ async function serveAuthorizedRoute(
     serveResearchDoc(res, path);
     return;
   }
+  // Legacy renames first: the map also carries the shell's OWN retired paths (`/app/wire` →
+  // `/app/activity`), which must 302 before the SPA fallback would hand them index.html.
+  if (serveLegacyRedirect(res, path, url, req.method ?? "GET")) {
+    return;
+  }
   // The React shell — static app/dist behind the same gate as the board.
   if (isAppShellPath(path)) {
     serveAppShell(res, path);
-    return;
-  }
-  if (serveLegacyRedirect(res, path, url, req.method ?? "GET")) {
     return;
   }
   if (serveHomePage(res, path, url, config, session)) {

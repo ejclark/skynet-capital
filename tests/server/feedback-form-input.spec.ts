@@ -63,8 +63,8 @@ describe("assembling the submission", () => {
       "area",
     );
     expect(
-      feedbackInputFromForm(form({ title: "t", area: "The Wire" }), undefined, "idea").area,
-    ).toBe("The Wire");
+      feedbackInputFromForm(form({ title: "t", area: "Activity" }), undefined, "idea").area,
+    ).toBe("Activity");
   });
 
   it("attaches the signed-in member, and nothing when there is no session", () => {

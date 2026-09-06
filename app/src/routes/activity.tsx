@@ -19,8 +19,11 @@ import { PageFrame } from "../shell/frame";
  * transaction and open idea across the whole league, one feed — "Activity" says that in one word
  * where "The Wire" made a first-time viewer guess (Eric, 2026-08-28: "i don't know what to expect
  * when I see 'The Wire' — the verbiage should be intuitive"). The topbar link and the `?`
- * shortcuts map already read "Activity" (#1119's canvas naming) — this finishes the rename on the
- * page itself, so the destination matches the label that leads to it. Same honesty seams as the
+ * shortcuts map already read "Activity" (#1119's canvas naming); the page followed in #784, and
+ * the ROUTE followed last (2026-09-06, Eric: "the route for the activity tab still shows 'wire'
+ * which is confusing af") — `/app/activity`, with `/app/wire` and `/wire` 302ing here so no
+ * bookmark strands. Routes are implementation details of the IA: the label, the page and the URL
+ * now say the same word. Same honesty seams as the
  * server view it succeeds: reconstructed provenance is labeled, an unwired feedback lane says so,
  * filings stay pseudonymous. The GitHub onramp folds behind a disclosure — reference, not front
  * matter.
@@ -254,7 +257,7 @@ function WirePage(): ReactElement {
   );
 }
 
-export const Route = createFileRoute("/wire")({
+export const Route = createFileRoute("/activity")({
   validateSearch: (search: Record<string, unknown>) => ({
     ...(typeof search.q === "string" && search.q.length > 0 && search.q.length <= 200
       ? { q: search.q }

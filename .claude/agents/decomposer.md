@@ -21,7 +21,8 @@ or redesign — you extract a cohesive seam into its own module and lock the win
    Then `bash scripts/worktree-setup.sh` — in an isolated worktree this provisions `node_modules`, without
    which every tool exits 127. Idempotent; a no-op outside a worktree.
 2. **Pick the target:** `node scripts/arch-scan.mjs --candidate` → take `candidate.file`. It's the
-   largest file over the 300-line cap that isn't already grandfathered — don't choose your own.
+   largest file over the 300 **code**-line cap (comments and blanks are free) that isn't already
+   grandfathered — don't choose your own.
 3. **Follow the `decompose` skill exactly** (`.claude/skills/decompose/SKILL.md`) — read for a seam,
    extract to the natural module, import it back, keep behavior identical.
 4. **Prove it's safe:** `graphify affected <file>` for blast radius, then verify by exit status:
