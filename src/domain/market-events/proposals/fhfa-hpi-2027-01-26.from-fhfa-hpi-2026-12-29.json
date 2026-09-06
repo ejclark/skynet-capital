@@ -1,0 +1,11 @@
+{
+  "id": "fhfa-hpi-2027-01-26",
+  "kind": "macro-print",
+  "title": "FHFA House Price Index — Monthly Index (November 2026 data), 9:00 a.m. ET",
+  "date": "2027-01-26",
+  "status": "estimate",
+  "source": "EST: two FHFA primaries fetched direct 2026-09-06 — fhfa.gov/data/hpi (HTTP 200, 89,663 bytes), whose \"2027 HPI Release Dates\" block reads \"Tuesday, January 26 | Monthly Index | November 2026\"; and the published 2026Q2 report (HTTP 200, 1,522,949 bytes, released 2026-08-25), whose \"FHFA HPI Release Dates for 2027\" appendix page carries the same row and the same \"9AM ET\" statement. Both 2027 tables carry twelve dated rows, Jan 26 -> Dec 28, every one a last Tuesday. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep, NOT because the primary is weak — it is the same forward table this proposer's own date was confirmed on. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the fhfa-hpi-2026-12-29 initial-research adjacency sweep (2026-09-06), and proposed on the same feed-the-calendar precedent by which this proposer itself was proposed one edition earlier. Two concrete reasons rather than bookkeeping. First, it is the print that SCORES this proposer's own October-2026 m/m: FHFA's monthly table publishes a \"(Previous Estimate)\" row under each of the prior five months, so the January edition carries the one-step restatement of whatever 2026-12-29 prints. Second, it is the first FHFA release of 2027 and therefore the FIRST edition landing entirely clear of the cr-expiry-2026-12-11 fork — if a lapse runs long, the pair 12-29 / 01-26 is the natural before-and-after on the statutory-immunity claim rather than either date alone. Note for whoever researches it: 2027-01-26 is also a last Tuesday, so Conference Board Consumer Confidence shares the slot at 10:00 by the same rule, and the confound carries forward unchanged. Proposed as an estimate; nothing here licenses an entry."
+}
