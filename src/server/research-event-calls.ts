@@ -23,8 +23,8 @@ export interface EventCall {
 }
 
 /** The template's four horizons, in the order the table authors them. */
-export type Horizon = "today" | "week" | "month" | "quarter";
-export const HORIZONS: readonly Horizon[] = ["today", "week", "month", "quarter"];
+type Horizon = "today" | "week" | "month" | "quarter";
+const HORIZONS: readonly Horizon[] = ["today", "week", "month", "quarter"];
 
 /** One ledger's calls by horizon — a horizon is absent when the table states no row for it. */
 export type HorizonCalls = Partial<Record<Horizon, EventCall>>;
