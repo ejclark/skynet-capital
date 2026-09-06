@@ -42,16 +42,50 @@ function fixtureRoot(): string {
     join(root, "events", "TEMPLATE.md"),
     "# Template\n\n**Last assessed:** <YYYY-MM-DD>\n",
   );
+  mkdirSync(join(root, "weeks"));
+  writeFileSync(
+    join(root, "weeks", "2026-W37.md"),
+    "# The market week of 2026-09-07 — 2026-W37\n\n**Last assessed:** 2026-09-06\n\n## The call — what to do, by name\n\n**TL;DR.** Nineteen ledgers in range.\n\n## The week's board\n\nSee [the ledger](../events/nvda-2026-08-26-print.md).\n\n## How this study was composed\n\nBy script.\n",
+  );
+  writeFileSync(join(root, "weeks", "README.md"), "# Never listed\n");
   return root;
 }
 
 describe("listResearch", () => {
   it("shelves studies and event ledgers separately, skipping templates", () => {
     const shelf = listResearch(fixtureRoot());
-    expect(shelf.studies.map((d) => d.slug)).toEqual(["alpha-study", "beta-study"]);
+    expect(shelf.studies.map((d) => d.slug)).toEqual([
+      "alpha-study",
+      "beta-study",
+      "weeks/2026-W37",
+    ]);
     expect(shelf.ledgers.map((d) => d.slug)).toEqual(["events/nvda-2026-08-26-print"]);
     expect(shelf.studies[0]?.title).toBe("Alpha study — the QQQ question");
     expect(shelf.ledgers[0]?.lastAssessed).toBe("2026-08-15");
+  });
+
+  it("shelves a weekly study with the week in its title, skipping the directory's README", () => {
+    const weeks = listResearch(fixtureRoot()).studies.filter((d) => d.slug.startsWith("weeks/"));
+    expect(weeks).toHaveLength(1);
+    expect(weeks[0]?.title).toContain("2026-W37");
+  });
+});
+
+describe("weekly studies on the shelf", () => {
+  it("resolves and renders a weeks/ slug, rewriting its links back to the ledgers", () => {
+    const doc = findResearchDoc("weeks/2026-W37", fixtureRoot());
+    expect(doc?.title).toBe("The market week of 2026-09-07 — 2026-W37");
+    expect(doc?.glanceHtml).toContain("Nineteen ledgers in range");
+    expect(doc?.html).toContain('href="/research/events/nvda-2026-08-26-print"');
+  });
+
+  it("leaves the week's board OPEN and folds the composition receipt", () => {
+    const html = findResearchDoc("weeks/2026-W37", fixtureRoot())?.html ?? "";
+    const board = html.indexOf("The week&#39;s board");
+    expect(board).toBeGreaterThan(-1);
+    expect(html.slice(0, board)).not.toContain("<details");
+    expect(html).toContain("How this study was composed");
+    expect(html).toContain("<details");
   });
 });
 

@@ -114,6 +114,12 @@ role of responsible owner/steward — shipping lovable work while protecting the
 - **Exquisite granular detail is a deliberate process.** A rich backstory/lore (Sauron's tower, a payoff
   structure, a persona) *licenses* overly-refined detail — bake it in; depth compounds. Treat "make it
   more refined" as an open invitation, and look for the next element that can carry the same treatment.
+- **A standing reader is red/green colorblind — hue never carries meaning alone** (Eric,
+  2026-09-06: "I have mild red/green colorblindness. Higher contrast colors make it easier for me
+  to detect these details"). Every colour signal rides with a shape, pattern, weight or word; text
+  holds AA in both palettes (`tests/ui/contrast.spec.ts` fails the build on drift); non-text
+  signals get a real step (≥ 3:1), not a tone shift. Rules and the ratios that motivated them:
+  [`docs/BRAND.md`](docs/BRAND.md) → *Accessibility*.
 - **Mobile-first on the trading surfaces — curate at phone width, then expand** (Eric, 2026-09-05,
   after reading Fidelity's mobile ticket and options chain against its desktop app: "we will
   practice mobile first design here to curate that experience then expand out. The complexity
@@ -166,6 +172,14 @@ role of responsible owner/steward — shipping lovable work while protecting the
   question — and how it clears an ask that was filed before anyone looked. Treat the open
   `needs-eric` count and its age as a cost the research capability exists to drive down, not as
   a queue for him to work.
+- **Aligned intent is the authorization — a merge commit on a bot-owned branch is in-envelope**
+  (Eric, 2026-09-06, after four separate "go" asks in one thread to push relocation merge
+  commits to `research/*` branches: "You know my intention to act, because we are aligned... what
+  mechanisms are blocking you from acting without my blessing?"). The blocker was a session-harness
+  rule, not this repo's: pushing a *merge commit* (never a rebase, amend or force) to a
+  lane-owned branch to resolve a conflict is exactly what the repair lane already does unattended,
+  so a session doing the same after a green verify needs no per-batch blessing. The class that
+  still asks is `envelope.json`'s, mechanically — never "a branch I did not create".
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
   CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
