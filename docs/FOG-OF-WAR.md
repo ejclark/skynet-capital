@@ -56,8 +56,9 @@ common and nobody had written down.
    shared universe holds. The invite gate is the only boundary on data (CLAUDE.md, shared-universe
    rule); fog sits inside it.
 8. **Experience sees through it.** Fog is coaching, so a member the seeding rule already trusts
-   (wheels off, fill history) is not fogged. Whether a member may lift it themselves is #1671's
-   open decision 1 — until settled, follow whatever the ladder does.
+   (wheels off, fill history) is not fogged. A member may not lift it themselves (#1671 decision
+   1, settled 2026-09-06: "block until earned" taken literally) — wheels come off only by the
+   seeding rule or a coach's hand, never a self-serve flip while a rung is still unearned.
 9. **Copy states what the rung teaches, not a warning.** "Zero-DTE — the fastest clock" is the
    house voice; "DANGER: advanced" is not (CLAUDE.md, positive reinforcement; domain honesty).
 10. **A fog ships with its own gauge.** The progression store already knows how many members sit at
@@ -73,6 +74,7 @@ common and nobody had written down.
 | `/trade` same-day expiry | any option order expiring today | rung 501 | planned (#1671) |
 | `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4) — interim: the rung is not built, and the fog says so |
 | `/u/:id/playbooks` subscribe | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
+| wheels-off button (both surfaces above) | ~~one-click self-serve bypass of every fog~~ removed | n/a — wheels off only by the seeding rule or a coach's hand | shipped (#1671 decision 1) |
 
 Add a row when a new fog ships; a fog with no row here is undocumented and gets one.
 
@@ -89,7 +91,7 @@ is gated today for reasons that are *not* fog, so the noise comes off the emergi
 | `/u/:id/playbooks` subscribe (delegating capital to a bot's playbook) | open, no rung | **fog candidate** — Q1 yes (capital), Q2 yes (the thesis stays readable), Q3 yes: the rung the playbook card already names | filed as its own issue |
 | "say hello to Moneypenny" wall before the first stock buy | gated | **not a fog** — the unlock is engagement, not skill evidence (criterion 3); an onboarding gate, name it as one | leave; never call it fog |
 | comprehension checks (`unlock-gate.tsx`) | quiz claims a milestone | a quiz may *accompany* an earn, never substitute for the fill | leave |
-| wheels-off button | one-click bypass of every fog | the door, not a fog | #1671 decision 1 |
+| wheels-off button | one-click bypass of every fog | the door, not a fog — removed | #1671 decision 1, settled |
 | `/research` week · month · quarter lenses | — | open — long-horizon awareness lowers risk (Q1 no) | #1704 |
 | options chain greeks, every call's *why* / *proves it wrong*, P/L, `SIM` labels, the leaderboard | open | never fog — protective or shared-universe (criteria 1, 7) | — |
 | `/research` calendar days with no event | disabled | **noise, not fog** — nothing is behind the door; the lens/range model makes every day pickable | #1704 slice 2 |
