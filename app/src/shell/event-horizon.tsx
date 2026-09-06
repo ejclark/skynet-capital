@@ -35,16 +35,46 @@ const LENS_NAME: Record<Lens, string> = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** The month's grid as ISO dates, padded with nulls to Monday-first weeks. */
-function monthDays(key: string): (string | null)[] {
+/**
+ * The month's grid as ISO dates in complete Monday-first rows: the days before the 1st and after
+ * the last day come from the neighbouring months (OUTSIDE DAYS), so a week that straddles a month
+ * boundary is still one full row — Eric, 2026-09-06: "week view should show a full row, even when
+ * the days are listed in different months. other visual feedback should make this obvious and
+ * verifiable to which month it belongs." The cell dims an outside day and tags every 1st with its
+ * month, so the boundary reads at a glance.
+ */
+function monthGrid(key: string): string[] {
   const first = new Date(`${key}-01T00:00:00Z`);
   const lead = (first.getUTCDay() + 6) % 7;
-  const days: (string | null)[] = Array.from({ length: lead }, () => null);
-  for (let t = first.getTime(); new Date(t).toISOString().slice(0, 7) === key; t += DAY_MS) {
-    days.push(new Date(t).toISOString().slice(0, 10));
+  const start = first.getTime() - lead * DAY_MS;
+  const days: string[] = [];
+  for (
+    let t = start;
+    days.length < lead || new Date(t).toISOString().slice(0, 7) <= key;
+    t += DAY_MS
+  ) {
+    const iso = new Date(t).toISOString().slice(0, 10);
+    if (days.length >= lead && iso.slice(0, 7) > key) break;
+    days.push(iso);
   }
+  while (days.length % 7 !== 0) days.push(addDays(days[days.length - 1] as string, 1));
   return days;
 }
+
+const MONTH_TAGS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
 
 const isWeekend = (iso: string): boolean => {
   const day = new Date(`${iso}T00:00:00Z`).getUTCDay();
@@ -169,17 +199,17 @@ export function EventHorizon({
             {d}
           </span>
         ))}
-        {monthDays(month).map((date, i) => {
-          if (date === null) return <span key={`pad-${String(i)}`} />;
+        {monthGrid(month).map((date, i) => {
           const closure = closedOn.get(date);
-          const className = dayClassName({
+          const outside = date.slice(0, 7) !== month;
+          const className = `${dayClassName({
             date,
-            column: i % 7, // monthDays pads the first row, so the index already carries the offset
+            column: i % 7,
             inRange: !blockLens && rangeDays.has(date),
             rangeDays,
             today,
             closure,
-          });
+          })}${outside ? " eh-outside" : ""}`;
           return (
             <button
               key={date}
@@ -189,6 +219,11 @@ export function EventHorizon({
               title={titleFor(date)}
               onClick={() => onPick(date)}
             >
+              {date.endsWith("-01") ? (
+                <span className="eh-month-tag" aria-hidden="true">
+                  {MONTH_TAGS[Number(date.slice(5, 7)) - 1]}
+                </span>
+              ) : null}
               <span className="eh-num">{Number(date.slice(8, 10))}</span>
               {byDate.has(date) ? (
                 <i
