@@ -47,7 +47,8 @@
  *               `OCC:` options-expiration calendar (theocc.com / Cboe; 3rd-Friday standard) ·
  *               `BEA:` bea.gov release schedule (GDP, PCE) · `CENSUS:` census.gov schedule
  *               (retail sales, durable goods) · `ISM:` ismworld.org PMI calendar ·
- *               `CB:` conference-board.org consumer-confidence schedule · `UMICH:` sca.isr.umich.edu
+ *               `CB:` conference-board.org consumer-confidence schedule · `UMICH:` sca.isr.umich.edu ·
+ *               `FHFA:` fhfa.gov HPI release-date table + the published report's own notes
  *   estimate  — `EST:` cadence/reasoning estimate · `NEWS:` press-reported, not primary-verified
  * The scanner's `--validate` mode enforces this mapping.
  *
