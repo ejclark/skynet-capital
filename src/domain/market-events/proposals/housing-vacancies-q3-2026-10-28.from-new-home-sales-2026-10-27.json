@@ -1,0 +1,11 @@
+{
+  "id": "housing-vacancies-q3-2026-10-28",
+  "kind": "macro-print",
+  "title": "Housing Vacancies and Homeownership (CPS/HVS, Third Quarter 2026 data), 10:00 a.m. ET, FOMC decision day",
+  "date": "2026-10-28",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, 179 rows parsed), row \"Housing Vacancies and Homeownership | October 28, 2026 | 10:00 AM | Third Quarter 2026\", release code A202610281000, reference A202603. The same seven Census calendars carry 28 rows of this series with a stable quarterly cadence and no Suspended marker. Not on the Atlanta Fed's GDPNow trigger or other-releases lists, so no second corroboration is claimed. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the new-home-sales-2026-10-27 initial-research adjacency sweep (2026-09-06), one day after the proposer and in the same 10:00 Census slot. It is the STOCK side of the same housing market the calendar otherwise tracks only as flow: homeowner and rental vacancy rates and the homeownership rate, none of which the calendar has an entry for. It matters to the proposer's standing `This quarter` read, which is an inventory-overhang argument — new houses for sale at 488,000 are 85.3% of their July-2006 all-time peak and the highest since December 2007, against sales at 43.7% of theirs — and the HVS vacancy rates are the independent check on whether that overhang is showing up in the occupied stock. It lands on the FOMC decision day (October 27-28 meeting, decision 10-28; federalreserve.gov FOMC calendar fetched 2026-09-06), where the proposer's own tape work measured session ranges materially WIDER than baseline across every instrument tested (ITB 3.154% vs 2.012%, p<0.0001) — so any move that morning belongs to the Fed and this release would be unreadable against it. Impact LOW, symbols empty: no house playbook is macro-keyed (0 hits, re-grepped 2026-09-06), the series is a household-survey estimate with wide sampling error, and no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
