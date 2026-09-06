@@ -49,9 +49,11 @@ on:
   # own name or path — that is loop guard 1.
   workflow_run:
     workflows:
-      ["Moneypenny Events (event-research automation)", "Pipeline", "Autonomy ops",
+      ["Moneypenny Events (event-research automation)", "Pipeline", "Autonomy ops", "Fly logs",
+       "Companion eval",
        ".github/workflows/moneypenny-events.yml", ".github/workflows/pipeline.yml",
-       ".github/workflows/autonomy-ops.yml"]
+       ".github/workflows/autonomy-ops.yml", ".github/workflows/fly-logs.yml",
+       ".github/workflows/companion-eval.yml"]
     types: [completed]
   # #909's conflict-repair entry point. `pr_number` alone, never a fixture-style event payload — a
   # `workflow_dispatch` call carries no `workflow_run` object at all, so the `triage` job below is
@@ -145,7 +147,7 @@ jobs:
           # produced a capsule issue and then died here — verified on the lane's first live outing
           # (2026-08-22, issue #487). Same two names as the feedback lane, same reasoning; the
           # triage job's guards already restrict this to failures on the default branch.
-          allowed_bots: "github-actions,claude,skynet-envoy"
+          allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see above.
           github_token: ${{ steps.app-token.outputs.token }}
@@ -168,7 +170,7 @@ jobs:
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch'
         uses: anthropics/claude-code-action@v1
         with:
-          allowed_bots: "github-actions,claude,skynet-envoy"
+          allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.app-token.outputs.token }}
           claude_args: |

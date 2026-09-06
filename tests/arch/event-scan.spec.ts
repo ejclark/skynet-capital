@@ -203,6 +203,13 @@ describe("event-scan contract", () => {
     const out = execFileSync("node", ["scripts/event-scan.mjs", "--dump"], {
       cwd: process.cwd(),
       encoding: "utf8",
+      // The dump grows with every event added, and its source/notes fields are long by design
+      // (they carry the audit trail). It crossed Node's DEFAULT 1 MiB execFileSync buffer on
+      // 2026-09-06 at 344 events — origin/main was 1,039,149 bytes, ~9 KB of headroom, and the
+      // next research PR to merge spent it, failing as `spawnSync node ENOBUFS` rather than as
+      // anything about the calendar. 64 MiB is ~60x today's size: the gate stays a gate, and it
+      // fails on real drift instead of on the calendar's own growth.
+      maxBuffer: 64 * 1024 * 1024,
     });
     const dumped = JSON.parse(out);
     expect(dumped.curated).toEqual(JSON.parse(JSON.stringify(MARKET_EVENTS)));
