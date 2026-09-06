@@ -1,0 +1,11 @@
+{
+  "id": "fhfa-hpi-2026-11-24",
+  "kind": "macro-print",
+  "title": "FHFA House Price Index — Quarterly Index with Monthly Tables (September 2026 and 2026Q3 data)",
+  "date": "2026-11-24",
+  "status": "estimate",
+  "source": "EST: fhfa.gov/data/hpi fetched direct 2026-09-06 (HTTP 200, 89,593 bytes), the agency's own \"FHFA HPI Release Dates\" table, whose \"2026 HPI Release Dates\" block reads \"Tuesday, November 24 | Quarterly Index (with Monthly Tables) | September 2026 and 2026Q3\". The table also carries the surrounding 2026 rows (Sept 29, Oct 27, Dec 29) and the full 2027 schedule, so this is a forward calendar the publisher maintains rather than a one-off announcement. No release time is stated on the primary and none is claimed here. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the new-home-sales-2026-11-25 initial-research adjacency sweep (2026-09-06). This calendar tracks the QUANTITY side of housing in four places — existing-home-sales-2026-11-12/2026-12-09, pending-home-sales-2026-12-17, housing-starts-2026-12-17 (plus the 2026-11-18 proposal), construction-spending-2026-12-01 — and now new-home sales, and it has no house-PRICE entry at all. The proposer's own release reports a median and an average new-home sales price every month (July 2026: median $393,800, -0.9% y/y; average $508,800, +5.4% y/y), so the price leg is already inside the proposer's text with no independent read beside it. This print stands one day ahead of the proposer and is the repeat-sales price read on the same market. Impact LOW, symbols empty: no house playbook is macro-keyed (0 hits, re-grepped 2026-09-06), FHFA HPI is not on the Atlanta Fed's GDPNow trigger or other-releases lists at all, and the proposer's own tape work found a well-powered null across eight housing-adjacent instruments on its own release days. The S&P CoreLogic Case-Shiller index shares this slot historically but its publisher returned HTTP 403 to this runner (recorded in the proposer's probe-ref.blocked), so it is NOT proposed — no primary, no entry. Proposed as an estimate; nothing here licenses an entry."
+}
