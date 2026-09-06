@@ -18,6 +18,20 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Multi-leg execution — the live 401 gate, and 401 finally earnable
+
+#1671 shipped everything a spread and a zero-DTE order can be gated and taught on without a real
+broker call: the catalog (401/501), the curriculum, the rail, the nav's Spread instrument, the
+builder's relocation to 401's ticket body, and the zero-DTE gate at option review/submit (#1870,
+#1891, #1899). What's left, explicitly out of #1671's own scope ("multi-leg execution stays its own
+issue"): the actual `mleg` broker submission in `draft-order-route.ts`'s `submit` (today it
+honestly refuses — "no broker call exists yet"), re-deriving the verdict from a fresh account read
+the way `option-trade-service.ts` already does for single-leg (the file's own header comment flags
+this exact trap for whoever wires it), and only then does 401 become earnable by a real fill — the
+rail will keep showing it as "open but never earned" until this lands. Needs real design: which
+broker endpoint, margin/collateral computation for a defined-risk spread, how a partial fill across
+legs is handled. _(src: Claude · while: shipping #1671 slice 2, 2026-09-06)_
+
 ### Fog of war as a reveal mechanic — codified 2026-09-06 → [`FOG-OF-WAR.md`](FOG-OF-WAR.md)
 
 From the 2026-09-05 five-option progressive-reveal exercise on the trade ticket (spotlight · rail
