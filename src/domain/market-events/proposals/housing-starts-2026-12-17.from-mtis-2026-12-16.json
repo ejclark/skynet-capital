@@ -1,0 +1,11 @@
+{
+  "id": "housing-starts-2026-12-17",
+  "kind": "macro-print",
+  "title": "New Residential Construction — building permits, housing starts and completions (November 2026 data), 8:30 a.m. ET",
+  "date": "2026-12-17",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, 178 rows parsed), row \"New Residential Construction (Building Permits, Housing Starts, and Housing Completions) | December 17, 2026 | 8:30 AM | November 2026\", release code A202612170830, reference A202611. Corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet, whose 2026-12-17 8:30 row reads \"Housing starts, Import and export prices\". Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the mtis-2026-12-16 initial-research adjacency sweep (2026-09-06), one day after the proposer's event and inside its 5-day corridor. It earns a row on a structural argument rather than an economic one: this calendar already tracks import-export-prices-2026-12-17, which is the OTHER half of the very same GDPNow vintage (\"Housing starts, Import and export prices\"), so half of a nowcast-incorporation event is tracked and half is not — the same shape of hole that left mtis-2026-12-16 itself untracked while its permanent 08:30 companion retail-sales-2026-12-16 was on the calendar. Housing starts is the larger half by any measure: it is the residential-investment input GDPNow posts a vintage for, and the Atlanta Fed names it first in the row. It also completes the December corridor's picture for anyone reading the 12-16 print, which is followed the next morning by the only other Census release in its week. Impact LOW, symbols empty, matching every sibling Census entry: no house playbook is macro-keyed (grep of trade-playbooks.md and multi-symbol-sweep.md returns 0 hits, re-run 2026-09-06) and no instrument attaches. Not researched by this lane beyond the date — a future never-assessed session owns the analysis. Proposed as an estimate; nothing here licenses an entry."
+}

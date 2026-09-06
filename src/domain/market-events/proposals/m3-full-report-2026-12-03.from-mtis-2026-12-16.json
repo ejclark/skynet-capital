@@ -1,0 +1,11 @@
+{
+  "id": "m3-full-report-2026-12-03",
+  "kind": "macro-print",
+  "title": "Full Report — Manufacturers' Shipments, Inventories and Orders (M3-2, October 2026 data), 10:00 a.m. ET",
+  "date": "2026-12-03",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, 178 rows parsed), row \"Full Report - Manufacturers' Shipments, Inventories and Orders | December 3, 2026 | 10:00 AM | October 2026\", release code A202612031000, reference A202610. ONE primary only: the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet carries NO 2026-12-03 row — M3-2 appears only in that workbook's \"Other releases (These releases will be incorporated when they are released on the same day as the releases in column J)\" column, so GDPNow folds it in opportunistically rather than posting a vintage for it. Filed estimate on both counts — single-source and discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the mtis-2026-12-16 initial-research adjacency sweep (2026-09-06). It earns a row because it is a direct INPUT to a tracked event rather than a neighbour of one: MTIS is a compilation of three surveys, and this release supplies the manufacturers' leg — 35.1% of total business inventories at the last published edition ($962.9B of $2,740.2B, June 2026, FRED MNFCTRIMSA / BUSINV fetched 2026-09-06). Together with Monthly Wholesale Trade on 12-09 (34.5%) it means 69.6% of the October aggregate is public before mtis-2026-12-16 opens, which is the measured basis of that ledger's staleness finding — so anyone reading the 12-16 print needs this date to know what was already known. It also lands eight days INSIDE PL 119-103's 2026-12-11 funded window, which is why the funding cliff exposes the publication of the October aggregate without exposing its information. Distinct from the tracked durable-goods entries: durable-goods-2026-11-25 is the ADVANCE report (M3-1) for the same October reference month at 08:30, and this is the full M3-2 that supersedes it and adds non-durables and the inventories detail MTIS consumes. Impact LOW, symbols empty: no house playbook is macro-keyed and no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
