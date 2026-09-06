@@ -57,6 +57,11 @@ describe("EventHorizon", () => {
     expect(calls.lenses).toEqual(["all", "month"]);
   });
 
+  it("marks a single-day range as both band ends, rendered as one circle in CSS", () => {
+    mount({ lens: "day", range: rangeFor("2026-09-09", "day"), anchor: "2026-09-09" });
+    expect(screen.getByRole("button", { name: "9" })).toHaveClass("eh-band-start", "eh-band-end");
+  });
+
   it("marks the current lens pressed and reports a new pick", () => {
     const calls = mount();
     expect(screen.getByRole("button", { name: "Week" })).toHaveAttribute("aria-pressed", "true");

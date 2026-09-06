@@ -162,7 +162,11 @@
   border-radius: 0 17px 17px 0;
 }
 .eh-day.eh-band-start.eh-band-end {
-  border-radius: 17px;
+  /* A one-day band (the day lens, or any single day pinned) is its own row of one — a fixed
+     17px radius on a variable cell width read as a flattened almond, not a circle (Eric,
+     2026-09-06: "wouldn't a more circular shape reduce tension/improve aesthetics?"). 50% is
+     exact at any size, because the cell is a square (aspect-ratio: 1 above). */
+  border-radius: 50%;
 }
 .eh-grid.eh-block {
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
