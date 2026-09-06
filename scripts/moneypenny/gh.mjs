@@ -7,6 +7,41 @@ export const sh = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: "utf8", stdio: "pipe", ...opts }).trim();
 
 /**
+ * Is this `gh`/network failure the kind a second try fixes? GitHub's own 5xx (2026-09-05: one
+ * `HTTP 504: Gateway Timeout` from graphql killed a whole Moneypenny route run and dispatched a
+ * repair session for it), a reset or a timeout — never a 4xx, which a retry only repeats.
+ */
+export const isTransientGhError = (text) =>
+  /HTTP 5\d\d|Gateway Timeout|Bad Gateway|Service Unavailable|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(
+    String(text ?? ""),
+  );
+
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+/**
+ * Run `fn` up to `attempts` times, sleeping `baseMs * 2^n` between tries, retrying only while
+ * `isTransient(err)` says the failure is GitHub's, not ours. Synchronous on purpose — every caller
+ * in this router is synchronous `execFileSync` code, and a 504 deserves seconds, not a rewrite.
+ */
+export function withRetry(
+  fn,
+  { attempts = 3, baseMs = 2000, isTransient = isTransientGhError, sleep = sleepSync } = {},
+) {
+  let lastErr;
+  for (let n = 0; n < attempts; n++) {
+    try {
+      return fn();
+    } catch (err) {
+      lastErr = err;
+      const text = `${err?.stderr ?? ""} ${err?.message ?? ""}`;
+      if (n === attempts - 1 || !isTransient(text)) throw err;
+      sleep(baseMs * 2 ** n);
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * A GitHub REST read, on the CORE bucket.
  *
  * WHY THIS EXISTS (2026-08-26). `gh <thing> list --json` and `gh <thing> view --json` do not hit

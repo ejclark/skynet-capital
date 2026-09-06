@@ -27,6 +27,64 @@ it. Prevention ranks, best first:
 
 ---
 
+### A mount declared before its volume existed turned 16 consecutive merges to main red
+- **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
+- **COVERS:** aaebb3a 7e39325 cd29de9 5b8b33b 4473974 bdbf5ca 90a0ab7 036b8f4 853e19d 3aa6cab cad5bb2 b46993a 586b90f e44ceec fc67f8e 7a1205d 5512017
+- **SIGNAL:** `deploy-bots` failing on every push to main from 2026-09-04 with Fly's own line — "Process group 'bots' needs volumes with name 'skynet_bots_data'" — and `5512017`'s smoke ("controls bridge never armed") rolling the dashboard back to the previous release. Sixteen incidents, sixteen repair dispatches, one cause.
+- **ROOT CAUSE:** #1264 added the `[mounts]` block to `fly.bots.toml` and the volume it names was Eric's step to create (the irreversible class — a paid resource). The mount merged first; every deploy until the volume existed was doomed at Fly's mount check, and nothing in the pipeline could tell "the volume is not there yet" from "the deploy broke". The repair lane re-diagnosed the same fact 16 times because the preflight had no gate for it.
+- **PREVENTION:** gate — `scripts/bots-deploy-preflight.mjs` now asks `flyctl volumes list --json` for the app and returns `skip` with the exact `fly volume create …` command when a declared mount has no volume (`missingVolumes()`, fail-open on a flyctl error; `tests/scripts/bots-deploy-preflight.spec.ts`). A deploy Fly will refuse is a skip with the fix spelled out, never a red run. Doctrine already existed (CLAUDE.md → hand Eric the one credentialed step, pre-verified) — the mechanism was missing.
+- **SIDE QUESTS:** the smoke rollback in `5512017` is a separate signal ("controls bridge never armed" on the dashboard) that the bots outage masked — worth its own look if it recurs → docs/IDEAS.md.
+
+### Sixteen concurrent Claude sessions at 00:42Z died in one turn each — the burst, not the prompts, was the failure
+- **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
+- **COVERS:** 77a71ca 8d12068 aaa0b3d a9fbb66 d7e545a c2662e4
+- **SIGNAL:** six moneypenny-events runs failed between 00:42 and 00:47Z on 2026-09-05; every failed leg shows 1 turn, ~400ms, $0.00 — the action started and the model call never returned a usable turn. Nothing in the diff, the prompt, or the repo changed between the last green run and these.
+- **ROOT CAUSE:** the research matrix fanned every due event into its own `claude-code-action` session with no `max-parallel`, and the feedback and repair lanes were dispatching at the same minute; sixteen sessions opened inside five minutes. A 1-turn/$0 exit is the shape of a refused first call (rate-limit or capacity), and the action hides the refusal text, so the workflow reported six unrelated-looking failures for one throttle event. Compare docs/LESSONS.md 2026-08-26 (GraphQL bucket exhausted by the same fan-out): the constraint moved one level up, exactly as ToC predicts when a lane is elevated.
+- **PREVENTION:** gate — `max-parallel` on the research matrix in `.github/workflows/moneypenny-events.yml` (a protected path; boards the platter from this session, not merged here). Ledger for the diagnosis: a batch of 1-turn/$0 failures at one timestamp is a burst, and the fix is the fan-out width, never the prompts. Concurrency was already measured as a bottleneck (#1318's call sheet); this is the incident that priced it.
+- **SIDE QUESTS:** the action swallows the API error on a refused first turn — a wrapper that prints the refusal reason into the job summary would have named this in one line → docs/IDEAS.md.
+
+### `setup-flyctl@master` resolves "latest" through an unauthenticated GitHub call that 403s under load
+- **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
+- **COVERS:** e886527
+- **SIGNAL:** a red `deploy-bots` on 2026-09-05 with "Unexpected HTTP response: 403" from the setup step, before flyctl ever ran; the very next run on the same sha was green.
+- **ROOT CAUSE:** `superfly/flyctl-actions/setup-flyctl@master` with no `version` input resolves "latest" by asking GitHub's releases API without a token, and that request shares the runner's anonymous rate budget with everything else the burst above was doing. A pinned version skips the lookup and downloads a fixed asset.
+- **PREVENTION:** gate — pin `with: version:` on all four setup-flyctl uses (`pipeline.yml` ×2, `autonomy-ops.yml`, `fly-logs.yml`; protected paths, boards the platter). A one-off 403 in a setup step is a version-resolution failure, not a flake, and the fix is a pin.
+- **SIDE QUESTS:** none.
+
+### Moneypenny's dispatch token was rejected by the action because `skynet-envoy` was not in `allowed_bots`
+- **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
+- **COVERS:** 3b4d714 42cdc4e
+- **SIGNAL:** two runs on 2026-09-05 exiting on "Workflow initiated by non-human actor: skynet-envoy… Add bot to allowed_bots" — the session never started.
+- **ROOT CAUSE:** the repair and feedback lanes dispatch through Moneypenny's app token (`skynet-envoy`), and `claude-code-action` refuses a non-human actor not named in `allowed_bots`; the lists said `github-actions,claude`. The envoy became a dispatcher after the lists were written, and nothing checked that every actor that can trigger a lane is one the action will accept.
+- **PREVENTION:** gate — `allowed_bots: "github-actions,claude,skynet-envoy"` on all three uses (`moneypenny-repair.yml` ×2, `moneypenny-events.yml`; protected paths, boards the platter). Ledger: when a new actor gains the right to dispatch a Claude lane, the `allowed_bots` lists are part of the change.
+- **SIDE QUESTS:** a workflow-lint check that every `allowed_bots` list names every dispatching actor is a small script → docs/IDEAS.md.
+
+### Two successful research sessions were reported as failures for crossing `--max-turns 90`
+- **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
+- **COVERS:** 3a208f2 dbf6880
+- **SIGNAL:** research legs on 2026-09-05 with a merged PR and a complete assessment row, red in the run list at 92 and 94 turns.
+- **ROOT CAUSE:** `--max-turns 90` was set as a runaway backstop when a research session took ~40 turns; the deterministic screen, the adjacency sweep and the proposal write each added tool calls, and a normal full session now lands in the 80s–90s. The action treats "over the cap" as a failed run even when the work landed, so the backstop became a false red that dispatched repair for finished work.
+- **PREVENTION:** gate — raise the cap in `.github/workflows/moneypenny-events.yml` (protected, boards the platter) to a number a full session never reaches on a normal day, keeping it as a runaway stop. Ledger: a turn cap is sized from the measured distribution of green runs, not from the first run that worked, and re-sized whenever the session gains a step.
+- **SIDE QUESTS:** none.
+
+### A single GitHub 504 in `gatherDeps` killed a whole Moneypenny route run
+- **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
+- **COVERS:** 666434b
+- **SIGNAL:** `moneypenny route` red on 2026-09-05 with "HTTP 504: Gateway Timeout" from `gh api graphql` inside `recheckRefs`; the retry of the same run was green.
+- **ROOT CAUSE:** `gatherDeps.json()` ran every `gh` call once and threw on any failure. That is right for a 4xx (a retry repeats the wrong answer) and wrong for a 5xx, which is GitHub's problem for a few seconds. One transient took the tick down and dispatched a repair session for a hiccup.
+- **PREVENTION:** script — `withRetry()` in `scripts/moneypenny/gh.mjs` (three tries, exponential backoff, transient-only via `isTransientGhError()`), wired into `gatherDeps`; `tests/scripts/moneypenny/gh.spec.ts`.
+- **SIDE QUESTS:** none.
+
+### setup-node read `mise.toml` as the version file and asked for "[tools]"
+- **SHA:** 3a84d73   **DATE:** 2026-09-06   **STATUS:** closed
+- **COVERS:** 2eb02a2 3727385
+- **SIGNAL:** every job red on 2026-09-04 at the setup-node step, "Unable to find Node version '[tools]'", after the commit that deleted `.nvmrc` in favour of `mise.toml`.
+- **ROOT CAUSE:** `actions/setup-node` with `node-version-file` supports `.nvmrc`, `.node-version`, `.tool-versions` and `package.json` — not mise's TOML. It read the first line of the file as the version string. The local toolchain worked (mise), CI did not, and the two were never checked against each other.
+- **PREVENTION:** `3a84d73` restored `.nvmrc` alongside `mise.toml`. Ledger: a version file that only one of {local, CI} reads is two sources of truth; keep `.nvmrc` until setup-node reads mise's file natively.
+- **SIDE QUESTS:** none.
+
+---
+
 ### Three merge-side fixes in one day could not stop research PRs conflicting — the shared file was the bug, not the merge
 
 - **SHA:** n/a (issue #1449)   **DATE:** 2026-09-05   **STATUS:** closed
