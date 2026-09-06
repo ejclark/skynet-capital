@@ -99,6 +99,31 @@ First separate the two kinds of convention, because they create very different d
 "Adopt EARS" was ~5 files precisely because it's forward-additive — not because 80 files were
 grandfathered. Diagnose which kind you're adopting before you reach for a sweep.
 
+## A gate is a momentum breaker unless it protects a constraint (2026-09-06)
+
+Eric, after one thread hit the 300-line file cap three times, the cognitive-complexity cap twice
+and commitlint's body line length once — all on a data-only refactor that caught zero defects:
+*"process like the 300-line cap may be a smell now… a possible case to completely deprecate these
+[possibly now antiquated] safety layers… That removes a momentum breaker which allows for
+compounding momentum."* Two facts settled it. First, the 2026-08-29 call already demoted every
+**debt-class** gate (arch, dupe, dead, clone, spec-gap, doc-rot) from blocking to advisory; file
+size and cognitive complexity are the same class — the arch coach owns them with a grandfather
+list and the decomposer athlete — yet they still hard-gated inside `biome check`, so the dimension
+was enforced twice, once post-merge by the athlete and once mid-flow on the author. Second, the
+tells of a gate that has outlived its convention: **carve-outs accumulate** (five per-file
+`noExcessiveLinesPerFile` overrides, three inline complexity ignores), it **fires unevenly**
+(the 2,779-line `authenticator.ts` never tripped it), and it **teaches evasion** (#1361 moved
+rationale into docstrings to dodge it). Two PRs the same morning, converging from two threads:
+#1722 (issue #1713) turned the line cap off and made `arch-scan` the **single** size cap, counted
+in code lines, still advisory; this note's PR takes `noExcessiveCognitiveComplexity` to a
+**warning** — visible in every lint run, never red — and turns commitlint's
+`body-max-line-length` off. The classification rule for the next one: a blocking gate must
+protect a *constraint* (correctness, security, the envelope, Eric's attention — the fridge rule's
+format checks stay) or a *contract another lane depends on* (the placement gates of #1449/#1717).
+A gate that protects taste or debt is advisory with a ratchet and an athlete, never a red
+mid-flow. Demoting a gate is not lowering the bar; the athlete still chips the debt, off the
+critical path.
+
 **Worked example, both kinds at once (2026-09-04):** the event-research lane's forward-test ids
 (then one shared `docs/research/forward-tests.md`; since #1449 one fragment per event under
 `docs/research/forward-tests/`) were a shared, globally-incrementing bare number computed by
