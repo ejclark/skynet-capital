@@ -1,0 +1,11 @@
+{
+  "id": "wholesale-trade-2026-11-09",
+  "kind": "macro-print",
+  "title": "Monthly Wholesale Trade: Sales and Inventories (September 2026 data) — the first monthly wholesale print on the restated AIES basis, 10:00 a.m. ET",
+  "date": "2026-11-09",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes), row \"Monthly Wholesale Trade: Sales and Inventories | November 9, 2026 | 10:00 AM | September 2026\", release code A202611091000. Corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet, whose 2026-11-09 row reads \"Wholesale trade\" — this release owns a GDPNow vintage of its own. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the mtis-2026-11-17 initial-research adjacency sweep (2026-09-06). Two measured reasons this one is not optional. First, it is 34.5% of the proposing print by June-2026 inventory weight (Census timeseries1.xlsx, fetched direct: merchant wholesalers $944.7B of $2,740.2B) and therefore one of the three releases that make the 11-17 aggregate already public before it opens. Second, and specific to 2026: the wholesale AIES benchmark restatement publishes standalone on 2026-10-26, and THIS is the first ordinary monthly wholesale print carried on the restated basis — eight days before the MTIS edition Census names as where that restatement 'is anticipated to be reflected'. So the restatement reaches the tape twice before it reaches the proposing print. The calendar already tracks the December edition (wholesale-trade-2026-12-09, October data) and has its own ledger; this is the September edition, untracked. Impact LOW and symbols empty on the same measured grounds as the sibling Census entries: no macro-keyed house playbook (grep re-run 2026-09-06, 0 hits), no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
