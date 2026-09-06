@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AlpacaOptionsClient, OptionChainRow } from "../alpaca/alpaca-options-client.js";
 import { rowPremium } from "../alpaca/alpaca-options-client.js";
+import { isSameMarketDay } from "../domain/market-day.js";
 import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import { tradeTypeByCode } from "../domain/trade-types.js";
 import { ticketContext } from "../observatory/desk-data.js";
@@ -155,6 +156,35 @@ function lockedSentence(
   }. Nothing was sent. Turn the wheels off to open the full catalog.`;
 }
 
+/** The zero-DTE gate (#1671): any option OPEN expiring today is course 501, checked independently
+ *  of the play's own rung — a member can have 301 wide open and still be shut out of a same-day
+ *  expiration until 501 is earned. No `ladderGate` branch here (unlike `lockedSentence`): the
+ *  feedback gate locks every unearned rung including the play's own, so `optionOpenRefusal` below
+ *  always catches it one line earlier — this function only ever runs once that's already cleared. */
+function zeroDteLockedSentence(): string {
+  const prev = ladderNeighbor("501", -1);
+  return `This order expires today — a zero-DTE trade — and course 501 hasn't been unlocked yet${
+    prev ? ` (it opens after your first filled ${prev.code} — ${prev.name})` : ""
+  }. Nothing was sent. Turn the wheels off to open the full catalog.`;
+}
+
+/** Every ladder refusal an OPEN can hit, resolved together since both name the same "now": the
+ *  play's own rung first (an option ticket refused for its own code names that reason, not 501's),
+ *  then the zero-DTE gate for a same-day expiration — independent gates, so a locked 301 AND a
+ *  same-day expiration only ever surfaces the first one; fixing the play's own lock still leaves
+ *  the zero-DTE refusal to clear next. */
+function optionOpenRefusal(
+  request: Extract<DeskOptionRequest, { kind: "open" }>,
+  progression: ParticipantProgression | undefined,
+  now: Date,
+): string | undefined {
+  if (playLocked(request.code, progression)) return lockedSentence(request.code, progression);
+  if (isSameMarketDay(now.toISOString(), request.expiration) && playLocked("501", progression)) {
+    return zeroDteLockedSentence();
+  }
+  return undefined;
+}
+
 async function reviewOption(
   res: ServerResponse,
   request: DeskOptionRequest,
@@ -177,16 +207,13 @@ async function reviewOption(
     });
     return;
   }
-  if (playLocked(request.code, progression)) {
+  const refusal = optionOpenRefusal(request, progression, config.now?.() ?? new Date());
+  if (refusal) {
     // The pure preview costs no broker read, so the gate can still SHOW the whole ticket — with
     // the ladder refusal in front, exactly where the legacy review put it.
     const pure = previewOptionOrder(request, base);
     sendJson(res, 200, {
-      preview: {
-        ...pure,
-        ok: false,
-        refusals: [lockedSentence(request.code, progression), ...pure.refusals],
-      },
+      preview: { ...pure, ok: false, refusals: [refusal, ...pure.refusals] },
     });
     return;
   }
@@ -216,9 +243,12 @@ async function submitOption(
   requesterId: string | undefined,
   progression: ParticipantProgression | undefined,
 ): Promise<void> {
-  if (request.kind === "open" && playLocked(request.code, progression)) {
-    sendJson(res, 200, { ok: false, refusals: [lockedSentence(request.code, progression)] });
-    return;
+  if (request.kind === "open") {
+    const refusal = optionOpenRefusal(request, progression, config.now?.() ?? new Date());
+    if (refusal) {
+      sendJson(res, 200, { ok: false, refusals: [refusal] });
+      return;
+    }
   }
   if (!config.submitOptionTrade) {
     sendJson(res, 200, {

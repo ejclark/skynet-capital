@@ -12,7 +12,7 @@ import {
   MAX_TURNS,
   TURN_LIMIT_MESSAGE,
 } from "./companion-limits.js";
-import { COMPANION_MODEL } from "./companion-model.js";
+import { COMPANION_MODEL, type CompanionModelId } from "./companion-model.js";
 import {
   ANTHROPIC_URL,
   BUDGET_SPENT_MESSAGE,
@@ -92,6 +92,10 @@ export interface CompanionChatConfig {
   readonly apiKey: string;
   /** Omit to run tools-off (the Q&A-over-catalogs-only slice — no desk to read from anyway). */
   readonly tools?: CompanionDeskDeps;
+  /** Read fresh on every turn — Mission Control's owner-only dial (#1672 slice 4) can move the
+   *  model without a redeploy. Omit for the protected file's own default; resolved ONCE at the
+   *  top of a turn, never mid-turn, so one conversation turn never splits across two models. */
+  readonly resolveModel?: () => CompanionModelId | undefined;
 }
 
 /** The one leg the member actually reads — streamed. `exhausted` only changes the volatile
@@ -99,6 +103,7 @@ export interface CompanionChatConfig {
 async function streamFinalReply(
   doStream: DoStream,
   headers: Headers,
+  model: CompanionModelId,
   volatile: string,
   exhausted: boolean,
   working: readonly unknown[],
@@ -119,7 +124,7 @@ async function streamFinalReply(
       ANTHROPIC_URL,
       headers,
       {
-        model: COMPANION_MODEL,
+        model,
         max_tokens: MAX_TOKENS_PER_REPLY,
         system: finalSystem,
         messages: working,
@@ -155,6 +160,9 @@ export function createCompanionChat(
       return;
     }
 
+    // Resolved once, here — never re-read mid-turn, so a dial flip while a reply is in flight
+    // can't split one conversation turn across two models.
+    const model = config.resolveModel?.() ?? COMPANION_MODEL;
     const canUseDesk = Boolean(config.tools && input.participantId);
     const toolsNote = canUseDesk
       ? "This member has a linked desk — the read-only tools describe their own account."
@@ -167,6 +175,7 @@ export function createCompanionChat(
     const outcome = await runToolRounds(
       doFetch,
       headers,
+      model,
       volatile,
       initial,
       config.tools ?? { snapshotFor: () => undefined },
@@ -177,6 +186,7 @@ export function createCompanionChat(
     await streamFinalReply(
       doStream,
       headers,
+      model,
       volatile,
       true,
       outcome.working,
@@ -191,10 +201,15 @@ export function createCompanionChat(
 export function resolveCompanionChat(
   env: Readonly<Record<string, string | undefined>>,
   tools?: CompanionDeskDeps,
+  resolveModel?: () => CompanionModelId | undefined,
 ): CompanionTurn | undefined {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) return undefined;
-  return createCompanionChat({ apiKey, ...(tools ? { tools } : {}) });
+  return createCompanionChat({
+    apiKey,
+    ...(tools ? { tools } : {}),
+    ...(resolveModel ? { resolveModel } : {}),
+  });
 }
 
 export type { DoStreamFetch };

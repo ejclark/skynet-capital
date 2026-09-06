@@ -1,0 +1,83 @@
+name: Companion eval
+
+# Manually-triggered replay eval for Moneypenny's rail (#1672 slice 5) — checks out the GIVEN ref
+# so it grades what a change actually proposes, not what's currently deployed, then runs
+# `npm run eval:companion` on the runner against that checked-out code.
+#
+# THE KEY, WITHOUT A NEW GITHUB SECRET: `ANTHROPIC_API_KEY` lives only as a Fly app secret on
+# skynet-capital, exactly as Eric asked ("the chatbot and feedback form is wired up to the api
+# key.. can't you get what you need from there?"). This job fetches it LIVE from the running app
+# via `flyctl ssh console` and masks it immediately (`::add-mask::`) before it can reach the log —
+# never stored as a GitHub secret, never printed.
+#
+# A DESIGN CORRECTION FROM #1672'S OWN EARLIER TEXT: that issue described running the eval entirely
+# inside the deployed machine (`flyctl ssh console -C "npm run eval:companion"`), which would only
+# ever grade the CURRENTLY DEPLOYED prompt — never a pending PR's proposed change, since the
+# deployed machine doesn't have the PR's code. This workflow checks out the PR's ref on the runner
+# instead and fetches only the credential from Fly, so it actually evaluates what's being reviewed.
+#
+# WHY MANUAL, NOT AUTOMATIC ON EVERY PR: this briefly surfaces a real production credential into
+# the Actions runner's masked environment for one job. That is an accepted, already-used pattern in
+# this repo (autonomy-ops.yml's bot-credential steps do the same under the same gate) — but it is
+# not safe to fire unattended on every push to an arbitrary branch, since the checked-out code
+# (including this eval's own fixtures/scripts) runs in the same job that holds the masked key.
+# `workflow_dispatch` plus the `autonomy-ops` Environment's required-reviewer gate means a human
+# who has already looked at the diff decides to run it, on the ref they choose.
+#
+# NOT YET LIVE-VERIFIED: this workflow has not been run end to end (no local flyctl / Actions
+# runner in the session that wrote it) — treat the first `workflow_dispatch` run as the real test.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag, or commit to evaluate (e.g. a PR's head branch)"
+        required: true
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: companion eval · ${{ inputs.ref }}
+    runs-on: ubuntu-latest
+    # Same allowlist as autonomy-ops.yml: the `autonomy-ops` GitHub Environment (Settings ->
+    # Environments), required reviewers + protected-branches-only. A workflow_dispatch run sits in
+    # "Waiting" until an allowlisted reviewer approves it.
+    environment: autonomy-ops
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Node (version from mise.toml)
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Fetch ANTHROPIC_API_KEY from the Fly app — masked immediately, never a GitHub secret
+        id: key
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          key=$(flyctl ssh console -a skynet-capital -C "printenv ANTHROPIC_API_KEY" 2>/dev/null | tr -d '\r')
+          if [ -z "$key" ]; then
+            echo "::error::ANTHROPIC_API_KEY isn't set on skynet-capital — nothing to eval with."
+            exit 1
+          fi
+          echo "::add-mask::$key"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci --no-audit
+
+      - name: Run the replay eval
+        env:
+          ANTHROPIC_API_KEY: ${{ steps.key.outputs.key }}
+        run: |
+          echo "## Companion eval — ${{ inputs.ref }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          npm run eval:companion 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"

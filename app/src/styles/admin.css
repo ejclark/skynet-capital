@@ -90,6 +90,23 @@
 .mc-row .mc-btn {
   margin-left: auto;
 }
+.mc-companion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.mc-companion-h {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mc-companion-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 /* The own-bot switch (9b) — account-tier, market colors carry the state. */
 .bot-switch {

@@ -1,5 +1,6 @@
-import { isOccSymbol } from "../trading/option-symbols.js";
+import { isOccSymbol, parseOccSymbol } from "../trading/option-symbols.js";
 import { COURSES, type Milestone } from "./curriculum.js";
+import { isSameMarketDay } from "./market-day.js";
 import { TRADE_TYPES, type TradeType, type TradeTypeCode } from "./trade-types.js";
 
 /**
@@ -50,15 +51,22 @@ export function milestoneForCode(code: TradeTypeCode): Milestone | undefined {
   return undefined;
 }
 
-/** Classify one fill to a ladder code, or undefined when it proves no play. */
-function codeForFill(
+/**
+ * Classify one fill to every ladder code it proves — usually one, but a same-day option OPEN
+ * proves its own code AND 501 (#1671: zero-DTE is an attribute of the fill, read straight off the
+ * OCC symbol's own embedded expiration against the fill's own market day — never a second tag,
+ * never a client claim). An untagged fill, or a close, proves nothing.
+ */
+function codesForFill(
   fill: LadderFill,
   tagsByOrder: ReadonlyMap<string, LadderTag>,
-): TradeTypeCode | undefined {
-  if (fill.filledQuantity <= 0) return undefined;
-  if (!isOccSymbol(fill.symbol)) return fill.side === "buy" ? "101" : "102";
+): readonly TradeTypeCode[] {
+  if (fill.filledQuantity <= 0) return [];
+  if (!isOccSymbol(fill.symbol)) return [fill.side === "buy" ? "101" : "102"];
   const tag = tagsByOrder.get(fill.orderId);
-  return tag?.intent === "open" ? tag.code : undefined;
+  if (tag?.intent !== "open" || !tag.code) return [];
+  const contract = parseOccSymbol(fill.symbol);
+  return contract && isSameMarketDay(fill.at, contract.expiration) ? [tag.code, "501"] : [tag.code];
 }
 
 /**
@@ -72,13 +80,13 @@ export function deriveEarned(
   const tagsByOrder = new Map(tags.map((t) => [t.orderId, t]));
   const byCode = new Map<TradeTypeCode, EarnedMilestone>();
   for (const fill of fills) {
-    const code = codeForFill(fill, tagsByOrder);
-    if (!code) continue;
-    const milestone = milestoneForCode(code);
-    if (!milestone) continue;
-    const held = byCode.get(code);
-    if (!held || fill.at < held.at) {
-      byCode.set(code, { milestoneId: milestone.id, code, orderId: fill.orderId, at: fill.at });
+    for (const code of codesForFill(fill, tagsByOrder)) {
+      const milestone = milestoneForCode(code);
+      if (!milestone) continue;
+      const held = byCode.get(code);
+      if (!held || fill.at < held.at) {
+        byCode.set(code, { milestoneId: milestone.id, code, orderId: fill.orderId, at: fill.at });
+      }
     }
   }
   return TRADE_TYPES.flatMap((t) => {

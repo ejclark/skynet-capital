@@ -27,9 +27,12 @@ const CONTROLS_BODY_CAP_BYTES = 2_048;
 interface ActionBody {
   readonly action: string;
   readonly bot?: string;
+  readonly model?: string;
 }
 
-/** Strict shape gate: an action word, optionally a bot id — nothing else, nothing coerced. */
+/** Strict shape gate: an action word, optionally a bot id or a model id — nothing else, nothing
+ *  coerced. Which fields an action actually reads is `applyControlsAction`'s call, not this
+ *  gate's — this only bounds shape and length. */
 function parseActionBody(raw: string): ActionBody | undefined {
   const body = parseJsonRecord(raw);
   if (!body) return undefined;
@@ -38,7 +41,14 @@ function parseActionBody(raw: string): ActionBody | undefined {
   const bot = body.bot;
   if (bot !== undefined && (typeof bot !== "string" || bot.length === 0 || bot.length > 100))
     return undefined;
-  return { action, ...(bot !== undefined ? { bot } : {}) };
+  const model = body.model;
+  if (model !== undefined && (typeof model !== "string" || model.length === 0 || model.length > 40))
+    return undefined;
+  return {
+    action,
+    ...(bot !== undefined ? { bot } : {}),
+    ...(model !== undefined ? { model } : {}),
+  };
 }
 
 function ownerEmail(
@@ -83,7 +93,7 @@ export async function serveControlsApi(
     sendJson(res, 400, { error: "malformed controls body" });
     return true;
   }
-  const result = applyControlsAction(body.action, body.bot, editor, controls);
+  const result = applyControlsAction(body.action, body.bot, editor, controls, body.model);
   sendJson(res, 200, { ok: result.ok, message: result.notice.message });
   return true;
 }

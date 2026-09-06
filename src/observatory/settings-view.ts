@@ -16,6 +16,11 @@ export interface FleetControls {
   readonly allSuspended: boolean;
   /** The bots eligible for the switchboard — known personas only (a planted row never appears). */
   readonly bots: readonly FleetBot[];
+  /** Moneypenny's rail isn't a bot, but the model dial (#1672 slice 4) rides this same owner-only
+   *  page — a plain string here, not `CompanionModelId`, to keep this file dependency-free. */
+  readonly companionModel: string;
+  /** The allowed set to pick from — a protected-file change, never widened by this page. */
+  readonly companionModels: readonly string[];
   readonly updatedAt?: string;
   readonly updatedBy?: string;
 }

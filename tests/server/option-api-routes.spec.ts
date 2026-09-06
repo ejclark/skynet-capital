@@ -228,3 +228,86 @@ describe("serveOptionApi chain", () => {
     expect(parsed.preview.refusals[0]).not.toContain("first filled");
   });
 });
+
+describe("the zero-DTE gate (#1671) — 501 is checked independently of the play's own rung", () => {
+  // 201 (and everything through 302) is open; only 401/501 are still locked — isolates the
+  // zero-DTE refusal from the play's own lock.
+  const upTo302Open = {
+    progression: {
+      view: () =>
+        Promise.resolve({
+          wheels: true,
+          unlocked: new Set(["101", "102", "201", "202", "301", "302"]),
+        }),
+    },
+  };
+  const today = (fields: Record<string, unknown> = {}) =>
+    config({ ...upTo302Open, now: () => new Date("2026-09-18T15:00:00.000Z"), ...fields });
+
+  it("refuses review for a same-day expiration, naming 401 as the rung that opens 501", async () => {
+    const { parsed } = await review(openPut({ expiration: "2026-09-18" }), today());
+    expect(parsed.preview.ok).toBe(false);
+    expect(parsed.preview.refusals[0]).toContain("expires today");
+    expect(parsed.preview.refusals[0]).toContain("course 501 hasn't been unlocked yet");
+    expect(parsed.preview.refusals[0]).toContain("401");
+  });
+
+  it("leaves a future expiration alone — 201 is open and it isn't today", async () => {
+    const { parsed } = await review(openPut({ expiration: "2026-09-25" }), today());
+    expect(parsed.preview.ok).toBe(true);
+  });
+
+  it("leaves a CLOSE exempt regardless of expiration — an exit is never gated", async () => {
+    const { parsed } = await review(
+      { kind: "close", participantId: "human-ann", occSymbol: "NVDA260918P00100000" },
+      today(),
+    );
+    expect(parsed.preview.refusals.join(" ")).not.toContain("zero-DTE");
+  });
+
+  it("the play's own lock wins when both apply — a locked 201 names 102, not 501", async () => {
+    const { parsed } = await review(
+      openPut({ expiration: "2026-09-18" }),
+      config({ ...wheelsOn, now: () => new Date("2026-09-18T15:00:00.000Z") }),
+    );
+    expect(parsed.preview.refusals[0]).toContain("102");
+    expect(parsed.preview.refusals[0]).not.toContain("zero-DTE");
+  });
+
+  it("refuses submit the same way, before the service ever sees it", async () => {
+    const calls: unknown[] = [];
+    const cfg = today({
+      submitOptionTrade: (request: unknown) => {
+        calls.push(request);
+        return Promise.resolve({ ok: true });
+      },
+    });
+    const { res, out } = fakeRes();
+    await serveOptionApi(
+      post(openPut({ expiration: "2026-09-18" })),
+      res,
+      "/api/trade/option/submit",
+      cfg,
+      ann,
+    );
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.ok).toBe(false);
+    expect(body.refusals[0]).toContain("expires today");
+    expect(calls).toEqual([]);
+  });
+
+  it("the feedback wall (which locks every unearned rung) is still caught by the play's own check first", async () => {
+    const { parsed } = await review(
+      openPut({ expiration: "2026-09-18" }),
+      config({
+        now: () => new Date("2026-09-18T15:00:00.000Z"),
+        progression: {
+          view: () =>
+            Promise.resolve({ wheels: true, unlocked: new Set(), ladderGate: "first-message" }),
+        },
+      }),
+    );
+    expect(parsed.preview.refusals[0]).toContain("hello to Moneypenny");
+    expect(parsed.preview.refusals[0]).not.toContain("zero-DTE");
+  });
+});
