@@ -116,8 +116,13 @@ tells of a gate that has outlived its convention: **carve-outs accumulate** (fiv
 rationale into docstrings to dodge it). Two PRs the same morning, converging from two threads:
 #1722 (issue #1713) turned the line cap off and made `arch-scan` the **single** size cap, counted
 in code lines, still advisory; this note's PR takes `noExcessiveCognitiveComplexity` to a
-**warning** — visible in every lint run, never red — and turns commitlint's
-`body-max-line-length` off. The classification rule for the next one: a blocking gate must
+**warning** — visible in every lint run, never red. (The same PR also switched off commitlint's
+`body-max-line-length`; Eric reversed that within the hour — the conventional-commit rules are
+a contract the release tooling and every reader of `git log` depend on, not a taste gate, and
+a 101-char body line is the author's to wrap. Restored in the follow-up PR. The lesson for the
+classification below: "debt-class" is a property of what the gate *measures* — file size and
+complexity are shape, a commit's format is an interface.) The classification rule for the next
+one: a blocking gate must
 protect a *constraint* (correctness, security, the envelope, Eric's attention — the fridge rule's
 format checks stay) or a *contract another lane depends on* (the placement gates of #1449/#1717).
 A gate that protects taste or debt is advisory with a ratchet and an athlete, never a red
