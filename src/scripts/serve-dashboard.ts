@@ -190,6 +190,7 @@ async function main(): Promise<void> {
     readTags: (id) => orderAudit.list(id),
     feedbackLog,
     ownerEmailFor,
+    botControls,
   });
 
   createDashboardServer({

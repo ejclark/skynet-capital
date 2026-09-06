@@ -11,6 +11,7 @@
 import { resolveCompanionChat } from "../companion/companion-chat.js";
 import type { CompanionDeskDeps } from "../companion/companion-tools.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
+import type { BotControlsStore } from "../server/bot-controls-store.js";
 import { createCompanionMessageLogStore } from "../server/companion-message-log.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
 import type { FeedbackLogStore } from "../server/feedback-log.js";
@@ -35,6 +36,10 @@ export interface CompanionSetupDeps {
    *  above are keyed by the OWNER's opaque id, never the desk id `progression.view` is asked
    *  about, so every read here crosses that seam via `logKeyFor`. */
   readonly ownerEmailFor: (participantId: string) => string | undefined;
+  /** Mission Control's own store (#1672 slice 4) — read fresh on every turn for the owner's
+   *  model dial, so a flip in the UI needs no redeploy. Optional: without it (offline/test
+   *  wiring) the companion just runs `companion-model.ts`'s own default, same as before slice 4. */
+  readonly botControls?: BotControlsStore;
 }
 
 export interface CompanionSetup {
@@ -62,7 +67,11 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     readTradeActivity: deps.readFills,
     progression,
   };
-  const companion = resolveCompanionChat(env, tools);
+  const companion = resolveCompanionChat(
+    env,
+    tools,
+    deps.botControls ? () => deps.botControls?.load().companionModel : undefined,
+  );
   if (!companion) {
     console.warn(
       "ℹ️  The trading companion is off (no ANTHROPIC_API_KEY) — /api/companion answers 'not switched on yet'.",
