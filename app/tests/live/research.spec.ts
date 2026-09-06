@@ -1,10 +1,12 @@
 import {
   callForLens,
   DEFAULT_LENS,
+  mentionsSymbol,
   parseResearchQuery,
   type ResearchCall,
   setLens,
   toggleOnDate,
+  toggleSymbolScope,
 } from "../../src/live/research";
 
 // The shelf's ONE query string carries three dimensions (#1704): terms, `on:` and `lens:`.
@@ -16,7 +18,25 @@ describe("parseResearchQuery — the lens dimension", () => {
 
   it("reads a lens token and keeps it out of the text terms", () => {
     const filter = parseResearchQuery("NVDA lens:month on:2026-09-07");
-    expect(filter).toEqual({ terms: ["nvda"], on: "2026-09-07", lens: "month" });
+    expect(filter).toEqual({ terms: ["nvda"], symbols: [], on: "2026-09-07", lens: "month" });
+  });
+
+  it("reads the scope and facet tokens — sym: (OR, deduped, upper-cased), kind:, impact:, call:", () => {
+    const filter = parseResearchQuery(
+      "sym:nvda sym:AVGO sym:nvda kind:opex impact:high call:watch fed",
+    );
+    expect(filter.symbols).toEqual(["NVDA", "AVGO"]);
+    expect(filter.kind).toBe("opex");
+    expect(filter.impact).toBe("high");
+    expect(filter.callClass).toBe("watch");
+    expect(filter.terms).toEqual(["fed"]);
+  });
+
+  it("leaves an unknown facet value as a plain term rather than guessing", () => {
+    expect(parseResearchQuery("impact:huge call:maybe").terms).toEqual([
+      "impact:huge",
+      "call:maybe",
+    ]);
   });
 
   it("ignores a lens it does not know rather than guessing", () => {
@@ -35,6 +55,19 @@ describe("setLens / toggleOnDate — the controls write the same string", () => 
   it("keeps the lens when the calendar pins or clears a day", () => {
     expect(toggleOnDate("lens:month", "2026-09-07")).toBe("lens:month on:2026-09-07");
     expect(toggleOnDate("lens:month on:2026-09-07", "2026-09-07")).toBe("lens:month");
+  });
+});
+
+describe("toggleSymbolScope / mentionsSymbol — the chips' scope", () => {
+  it("adds and removes a sym: token without touching the rest of the query", () => {
+    expect(toggleSymbolScope("fed lens:month", "nvda")).toBe("fed lens:month sym:NVDA");
+    expect(toggleSymbolScope("fed sym:NVDA lens:month", "NVDA")).toBe("fed lens:month");
+  });
+
+  it("matches a symbol on a word boundary only", () => {
+    expect(mentionsSymbol("the NVDA print", "NVDA")).toBe(true);
+    expect(mentionsSymbol("a MUnich trip", "MU")).toBe(false);
+    expect(mentionsSymbol(undefined, "MU")).toBe(false);
   });
 });
 

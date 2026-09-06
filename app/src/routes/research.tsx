@@ -2,18 +2,23 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import { CALL_CLASS_LABEL, CALL_CLASSES, callMix, classifyCall, hubEvents } from "../live/call-mix";
 import { inRange, marketToday, rangeFor, rangeLabel, stepAnchor } from "../live/horizon-range";
 import {
   callForLens,
   fetchResearch,
   LENS_LABEL,
-  type Lens,
+  mentionsSymbol,
   parseResearchQuery,
+  type ResearchCall,
   type ResearchDocLink,
+  type ResearchEvent,
+  type ResearchFilter,
   type ResearchShelfData,
   setLens,
   setOnDate,
   toggleOnDate,
+  toggleSymbolScope,
 } from "../live/research";
 import { EventHorizon } from "../shell/event-horizon";
 import { PageFrame } from "../shell/frame";
@@ -32,62 +37,119 @@ import { PageFrame } from "../shell/frame";
  * filter alone. The rail's lens row and arrows write the same tokens the filter bar accepts.
  */
 
+/** Symbol scope (OR): on the event, leading the id, or named in the TL;DR — any listed symbol. */
+function inSymbolScope(
+  symbols: readonly string[],
+  event: ResearchEvent | undefined,
+  eventId: string,
+  tldr: string | undefined,
+): boolean {
+  if (symbols.length === 0) return true;
+  return symbols.some(
+    (sym) =>
+      (event?.symbols ?? []).includes(sym) ||
+      eventId.toUpperCase().startsWith(`${sym}-`) ||
+      mentionsSymbol(tldr, sym),
+  );
+}
+
 function CallBoard({
   data,
-  terms,
+  filter,
   inRangeIds,
-  lens,
+  rangeName,
 }: {
   readonly data: ResearchShelfData;
-  readonly terms: readonly string[];
+  readonly filter: ResearchFilter;
   readonly inRangeIds: ReadonlySet<string>;
-  readonly lens: Lens;
+  readonly rangeName: string;
 }): ReactElement | null {
+  const { lens, terms, symbols, kind, impact, callClass } = filter;
+  const eventsById = new Map(data.events.map((e) => [e.id, e] as const));
   // One row per ledger, read through the lens; a ledger with no row for it is left out, never
   // shown with a neighbouring horizon's call in its place.
-  const rows = data.calls.flatMap((call) => {
+  const rows = data.calls.flatMap((call: ResearchCall) => {
     const row = callForLens(call, lens);
-    return row ? [{ call, row }] : [];
+    return row ? [{ call, row, event: eventsById.get(call.eventId) }] : [];
   });
   const calls = rows.filter(
-    ({ call, row }) =>
+    ({ call, row, event }) =>
       inRangeIds.has(call.eventId) &&
+      inSymbolScope(symbols, event, call.eventId, call.tldr) &&
+      (!kind || event?.kind === kind) &&
+      (!impact || event?.impact === impact) &&
+      (!callClass || classifyCall(row.call) === callClass) &&
       terms.every(
         (term) =>
-          call.eventId.toLowerCase().includes(term) || row.call.toLowerCase().includes(term),
+          call.eventId.toLowerCase().includes(term) ||
+          row.call.toLowerCase().includes(term) ||
+          (call.tldr ?? "").toLowerCase().includes(term),
       ),
   );
   if (data.calls.length === 0) return null;
+  const mix = callMix(calls.map(({ row }) => row.call));
+  const hubs = hubEvents(calls.map(({ call }) => call.adjacent ?? []));
   return (
     <section className="rx-panel">
       <h2 className="rx-h">The call board · {LENS_LABEL[lens]}</h2>
       {calls.length === 0 ? (
         <p className="note">No call in this range matches the filter.</p>
       ) : (
-        <ul className="rx-calls">
-          {calls.map(({ call, row }) => (
-            <li key={call.eventId} className="rx-call">
-              <a href={call.href} className="rx-call-event num">
-                {call.eventId}
-              </a>
-              <span className="rx-call-text">{row.call}</span>
-              <span className="rx-call-meta">
-                <span className="rx-chip" title="horizon">
-                  {row.horizon}
-                </span>
-                {row.confidence ? (
-                  <span className="rx-chip rx-conf" title="stated confidence">
-                    {row.confidence}
-                  </span>
-                ) : null}
+        <>
+          <p className="rx-readout">
+            <span className="num">{calls.length}</span> calls in {rangeName} ·{" "}
+            {CALL_CLASSES.filter((c) => mix[c] > 0).map((c, i) => (
+              <span key={c} className="rx-mix">
+                {i > 0 ? " · " : ""}
+                <span className="num">{mix[c]}</span> {CALL_CLASS_LABEL[c]}
               </span>
-            </li>
-          ))}
-        </ul>
+            ))}
+            {hubs.length > 0 ? (
+              <span className="rx-hubs">
+                {" "}
+                · hubs:{" "}
+                {hubs.map((hub, i) => (
+                  <span key={hub.id}>
+                    {i > 0 ? ", " : ""}
+                    <a
+                      href={`/research/events/${hub.id}`}
+                      className="num"
+                      title="ledgers in range naming this event as adjacent"
+                    >
+                      {hub.id}
+                    </a>{" "}
+                    <span className="num">({hub.count})</span>
+                  </span>
+                ))}
+              </span>
+            ) : null}
+          </p>
+          <ul className="rx-calls">
+            {calls.map(({ call, row }) => (
+              <li key={call.eventId} className="rx-call">
+                <a href={call.href} className="rx-call-event num">
+                  {call.eventId}
+                </a>
+                <span className="rx-call-text">{row.call}</span>
+                <span className="rx-call-meta">
+                  <span className="rx-chip" title="horizon">
+                    {row.horizon}
+                  </span>
+                  {row.confidence ? (
+                    <span className="rx-chip rx-conf" title="stated confidence">
+                      {row.confidence}
+                    </span>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       <p className="rx-note">
         Calls exactly as authored — confidence drives size, every call carries its dated falsifier
-        in the ledger behind it.
+        in the ledger behind it. The mix sorts each call by its opening words; hubs count the
+        ledgers in range whose probe-ref names the event as adjacent.
       </p>
     </section>
   );
@@ -123,8 +185,8 @@ function DocList({
   );
 }
 
-/** The top filters — the text query and the symbol chips write the same model (`on:` rides along
- *  from the rail's calendar untouched). */
+/** The top filters — the text query and the symbol chips write the same model: a chip toggles a
+ *  `sym:` token (OR scope, a watchlist); `on:` and `lens:` ride along from the rail untouched. */
 function ResearchFilters({
   data,
   query,
@@ -135,11 +197,8 @@ function ResearchFilters({
   readonly onChange: (next: string) => void;
 }): ReactElement {
   const inputId = useId();
-  const terms = parseResearchQuery(query).terms.map((t) => t.toUpperCase());
-  const toggleSymbol = (symbol: string) => {
-    const kept = query.split(/\s+/).filter((t) => t && t.toUpperCase() !== symbol);
-    onChange((terms.includes(symbol) ? kept : [...kept, symbol]).join(" "));
-  };
+  const scope = parseResearchQuery(query).symbols;
+  const toggleSymbol = (symbol: string) => onChange(toggleSymbolScope(query, symbol));
   return (
     <>
       <div className="filter-bar">
@@ -152,7 +211,7 @@ function ResearchFilters({
             type="text"
             value={query}
             spellCheck={false}
-            placeholder="filter everything below — a symbol, a title, on:2026-09-02, lens:month"
+            placeholder="filter — a word · sym:NVDA · kind:opex · impact:high · call:watch · on:2026-09-07 · lens:month"
             onChange={(e) => onChange(e.target.value)}
           />
         </div>
@@ -160,7 +219,7 @@ function ResearchFilters({
       {data.symbols.length > 0 ? (
         <div className="rx-symbols">
           {data.symbols.map((entry) => {
-            const selected = terms.includes(entry.symbol);
+            const selected = scope.includes(entry.symbol);
             return (
               <span key={entry.symbol} className="rx-symbol-wrap">
                 <button
@@ -226,14 +285,30 @@ function ResearchPage(): ReactElement {
   const range = rangeFor(anchor, filter.lens);
   // The range resolves through the served events — precise ids, never date-string guessing.
   const inRangeIds = new Set(data.events.filter((e) => inRange(e.date, range)).map((e) => e.id));
+  const eventsById = new Map(data.events.map((e) => [e.id, e] as const));
   const matchesTerms = (doc: ResearchDocLink) =>
     filter.terms.every(
       (term) => doc.title.toLowerCase().includes(term) || doc.slug.toLowerCase().includes(term),
     );
-  const studies = data.studies.filter(matchesTerms);
-  const ledgers = data.ledgers.filter(
-    (doc) => matchesTerms(doc) && [...inRangeIds].some((id) => doc.slug.endsWith(id)),
-  );
+  const inScope = (doc: ResearchDocLink, eventId?: string) =>
+    filter.symbols.length === 0 ||
+    filter.symbols.some(
+      (sym) =>
+        doc.slug.toUpperCase().includes(sym) ||
+        (eventId ? (eventsById.get(eventId)?.symbols ?? []).includes(sym) : false),
+    );
+  const studies = data.studies.filter((doc) => matchesTerms(doc) && inScope(doc));
+  const ledgers = data.ledgers.filter((doc) => {
+    const eventId = [...inRangeIds].find((id) => doc.slug.endsWith(id));
+    if (!eventId) return false;
+    const event = eventsById.get(eventId);
+    return (
+      matchesTerms(doc) &&
+      inScope(doc, eventId) &&
+      (!filter.kind || event?.kind === filter.kind) &&
+      (!filter.impact || event?.impact === filter.impact)
+    );
+  });
 
   return (
     <PageFrame
@@ -262,7 +337,12 @@ function ResearchPage(): ReactElement {
         </p>
       </header>
       <ResearchFilters data={data} query={query} onChange={setFilter} />
-      <CallBoard data={data} terms={filter.terms} inRangeIds={inRangeIds} lens={filter.lens} />
+      <CallBoard
+        data={data}
+        filter={filter}
+        inRangeIds={inRangeIds}
+        rangeName={rangeLabel(range, filter.lens)}
+      />
       <div className="rx-grid">
         <DocList
           title="Event ledgers"

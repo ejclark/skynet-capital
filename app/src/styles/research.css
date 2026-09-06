@@ -171,3 +171,22 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* the range read-out (#1704 slice 3) — the call mix and hub events, computed never generated. */
+.rx-readout {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.rx-readout .num {
+  color: var(--text);
+  font-weight: 600;
+}
+.rx-hubs a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.rx-hubs a:hover {
+  text-decoration: underline;
+}
