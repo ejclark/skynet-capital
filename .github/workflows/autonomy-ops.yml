@@ -91,6 +91,10 @@ jobs:
     steps:
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          # Pinned (2026-09-05, docs/LESSONS.md): `latest` is resolved through an unauthenticated
+          # releases call that 403s under runner load; a pinned version downloads a fixed asset.
+          version: 0.4.99
 
       - name: Status — secret NAMES only, values are never shown or settable this way
         if: ${{ inputs.action == 'status' }}
