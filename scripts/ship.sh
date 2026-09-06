@@ -161,7 +161,7 @@ cmd_open() {
 
   # SHA-pin docs/shots/ raw URLs to HEAD (the commit about to be pushed — tree is clean, so HEAD
   # is exactly what ships). Branch-form URLs 404 at squash-merge; already-pinned SHAs pass through.
-  local sha pinned; sha="$(git rev-parse HEAD)"; pinned="/tmp/ship-body-pinned.md"
+  local sha pinned; sha="$(git rev-parse HEAD)"; pinned="$(mktemp /tmp/ship-body-pinned.XXXXXX)"
   python3 - "$bodyfile" "$sha" > "$pinned" <<'PY'
 import re, sys
 body = open(sys.argv[1]).read()
