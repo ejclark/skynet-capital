@@ -1,11 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { LADDER_GATE_NOTE } from "../domain/progression.js";
+import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import { previewOrder, type TicketOrderType } from "../trading/order-ticket.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
 import { parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
+import { playLocked } from "./progression-service.js";
 
 /**
  * THE TRADE API — the React shell's pre-trade gate, as two POST endpoints.
@@ -37,6 +38,18 @@ interface TradeApiBody {
 }
 
 const TRADE_BODY_CAP_BYTES = 8_192;
+
+/**
+ * Course 101 hasn't been unlocked yet — cannot happen in practice (rung 0 is always open per
+ * `unlockedCodes`), but a locked rung earns a real sentence rather than a silent fallback either
+ * way.
+ */
+function stockLockedSentence(code: "101" | "102"): string {
+  const prev = ladderNeighbor(code, -1);
+  return `Training wheels are on, and course ${code} hasn't been unlocked yet${
+    prev ? ` — it opens after your first filled ${prev.code} (${prev.name})` : ""
+  }. Nothing was sent.`;
+}
 
 function parsePositivePrice(raw: unknown): number | undefined {
   const value = typeof raw === "number" ? raw : Number.NaN;
@@ -88,6 +101,39 @@ async function readTradeBody(
   return body;
 }
 
+/**
+ * The two ladder-level refusals a stock ticket can hit, resolved together since both need the
+ * same progression view. The feedback gate (#1119) is buy-only and wins when both hold, so the
+ * per-rung lock below is skipped then — never two refusal sentences for one order.
+ *
+ *   - **Feedback gate**: training wheels on, no feedback filed yet — every BUY refused, a sell
+ *     stays an exit and is never gated (restricting how someone leaves a position would be a
+ *     safety bug).
+ *   - **Per-rung ladder lock** (2026-09-06 fix, #1671): buy = 101, sell = 102, same doctrine as
+ *     the options ticket. 102 was exempt from the feedback gate above only; it was never meant to
+ *     be exempt from THIS lock, and wasn't in the domain rules (`unlockedCodes`) either — only the
+ *     client and this route forgot to ask.
+ */
+async function resolveStockRefusal(
+  action: "buy" | "sell",
+  requesterId: string | undefined,
+  config: DashboardServerConfig,
+  session: Session | undefined,
+): Promise<string | undefined> {
+  const progression =
+    requesterId && config.progression
+      ? await config.progression.view(
+          requesterId,
+          session ? opaqueMemberId(session.email) : undefined,
+        )
+      : undefined;
+  if (action === "buy" && progression?.ladderGate) {
+    return `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent.`;
+  }
+  const code: "101" | "102" = action === "buy" ? "101" : "102";
+  return playLocked(code, progression) ? stockLockedSentence(code) : undefined;
+}
+
 /** Handle `/api/trade/*`. Returns true when the request was answered. */
 export async function serveTradeApi(
   req: IncomingMessage,
@@ -102,20 +148,7 @@ export async function serveTradeApi(
 
   // Identity: the session and nowhere else — exactly `/trade`'s resolution.
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
-
-  // The feedback gate (#1119): with training wheels on and no feedback filed, a BUY — the one
-  // share play that opens a position — is refused before any rule or broker read. A sell is an
-  // exit and is never gated: restricting how someone leaves a position would be a safety bug.
-  const progression =
-    body.action === "buy" && requesterId && config.progression
-      ? await config.progression.view(
-          requesterId,
-          session ? opaqueMemberId(session.email) : undefined,
-        )
-      : undefined;
-  const gateRefusal = progression?.ladderGate
-    ? `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent.`
-    : undefined;
+  const refusal = await resolveStockRefusal(body.action, requesterId, config, session);
 
   if (path === "/api/trade/review") {
     const snapshot = config.hub.getState().participants.find((p) => p.id === body.participantId);
@@ -130,15 +163,15 @@ export async function serveTradeApi(
       isSelf: requesterId !== undefined && requesterId === body.participantId,
     });
     sendJson(res, 200, {
-      preview: gateRefusal
-        ? { ...preview, ok: false, refusals: [gateRefusal, ...preview.refusals] }
+      preview: refusal
+        ? { ...preview, ok: false, refusals: [refusal, ...preview.refusals] }
         : preview,
     });
     return true;
   }
 
-  if (gateRefusal) {
-    sendJson(res, 200, { ok: false, refusals: [gateRefusal] });
+  if (refusal) {
+    sendJson(res, 200, { ok: false, refusals: [refusal] });
     return true;
   }
   if (!config.submitTrade) {

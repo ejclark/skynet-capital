@@ -86,6 +86,7 @@
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
 *change* earns its sentence in the Stance section with the row as its receipt. The adjacency sweep (peer
 prints · macro surprises · VIX regime · geopolitical · event tape; see EVENT-RESEARCH.md) runs in
-every row; a dated adjacent event found gets proposed as a new `src/domain/market-events/<id>.json`
-(`status: "estimate"`) in the same PR. Close-out fills `## Outcome` below from re-run instrument
+every row; a dated adjacent event found gets proposed as a new
+`src/domain/market-events/proposals/<id>.from-<this-event-id>.json` (`status: "estimate"`) in the
+same PR — your own file, never another event's canonical one (#1717). Close-out fills `## Outcome` below from re-run instrument
 data (cache busted first), never from memory — after which this doc goes quiet.

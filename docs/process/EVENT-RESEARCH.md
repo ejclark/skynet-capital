@@ -66,14 +66,25 @@ Stance section with the row as its receipt.
 5. **Event-specific tape** — consensus drift, whisper moves, implied-move changes, unusual
    positioning commentary.
 
-Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new calendar file
-`src/domain/market-events/<id>.json` **in the same PR**, always `status: "estimate"` (`EST:`/`NEWS:`
-source) — never `confirmed` without a primary source. That proposal is how the calendar feeds
-itself. **One file per event** (issue #1449): your own event's amendments (a status flip, a source,
-a notes update) go in `src/domain/market-events/<your-event-id>.json` and nowhere else; a proposal
-is a brand-new file named by its id (`node scripts/event-scan.mjs --validate` fails a file whose
-name is not its `id`). There is no shared array to insert into and no ordering rule to satisfy —
-which is exactly why two research PRs can no longer conflict on the calendar.
+Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new file
+`src/domain/market-events/proposals/<id>.from-<your-event-id>.json` **in the same PR**, always
+`status: "estimate"` (`EST:`/`NEWS:` source) — never `confirmed` without a primary source. That
+proposal is how the calendar feeds itself. **One file per owner** (issues #1449, #1717): your own
+event's amendments (a status flip, a source, a notes update) go in
+`src/domain/market-events/<your-event-id>.json` and nowhere else; a proposal is a brand-new file
+that *you* own, named by the event it proposes and by you, so two sweeps discovering the same
+event on the same day never create the same path (that add/add was the last conflict class left
+after #1449 — 5 of the first 126 post-split PRs). The loader and the scanner prefer the canonical
+`<id>.json` when it exists and otherwise stand in the first proposal by file name;
+`node scripts/event-scan.mjs --validate` fails a misnamed proposal, a non-`estimate` one, or a
+proposer that is not an event this calendar knows, and warns on competing or shadowed proposals.
+Never write another event's canonical file, and never delete another lane's proposal. There is no
+shared array to insert into and no ordering rule to satisfy.
+
+**When your own event was proposed by others** (`never-assessed` initial research on an id that
+exists only as `proposals/<your-id>.from-*.json`): read every proposal for your id first — each is
+a sibling lane's finding — then write the canonical `src/domain/market-events/<your-id>.json`
+yourself. The proposals become inert (the canonical file shadows them) and stay where they are.
 
 **Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
 
@@ -138,7 +149,62 @@ must never be worded to imply "no change" or any other conclusion an actual asse
 draw — see CLAUDE.md's domain-accuracy-and-honesty principle. `scripts/event-material-scan.mjs`'s
 own header and `tests/scripts/event-material-scan.spec.ts` enforce this wording mechanically.
 
+## The weekly study genre (issue #1716) — what *the week* is, in one place
+
+A ledger answers "what about this event?"; nothing answered "what about this week?" — the question
+Eric's brief put plainly (#1704, item 3.1.2: *"understanding sentiment for the week… enables me to
+more intelligently exit before a dip, or hold a position"*). `docs/research/weeks/<ISO-week>.md` is
+that answer, and it is composed, not written:
+
+```
+npm run research:week                     # the market week of today (a Sunday resolves forward)
+npm run research:week -- --week 2026-W37  # a named ISO week
+npm run research:week -- --stdout         # print it, write nothing
+```
+
+**Why a script and not a session.** The brief asked for a lane to author the doc each Sunday, and in
+the same breath forbade it from generating anything: *"aggregate, never generate sentiment… no
+LLM-written 'mood'."* Those settle together on the precedent already in this file — a **deterministic
+screen** writes its own ledger row and commits it *without spending a session*, precisely so a
+mechanical check can never be worded as a verdict. A weekly study is the same shape of work: a join
+over documents that already exist. `src/research/week-study.ts` composes it; `npm run research:week`
+runs it; a cron is then one line, not a session.
+
+**What the document contains** — and what each part is allowed to be:
+
+| Section | Contents | Where every value comes from |
+|---|---|---|
+| `## The call — what to do, by name` | TL;DR, one row per tracked name (call · confidence · why · dated falsifier), then **Signals & conditions** | the nearest in-range ledger for that name, quoted; the signals name the week's critical/high market-wide ledgers rather than restating their calls |
+| `## The week's board` | every researched event dated in range, in date order, with its authored `This week` row | one row per ledger, verbatim |
+| `### Hub events` | the corridor's most-named event ids, with counts | probe-ref `adjacentIds` degrees — the same count `app/src/live/call-mix.ts`'s `hubEvents` runs for the board |
+| `## How this study was composed` | the receipt | the composer itself |
+
+**The four rules that keep the genre honest:**
+
+1. **No claim a cited ledger does not carry.** Every Call/Why/falsifier cell is a quote with its
+   ledger linked. The composer's only arithmetic is counting documents it can name.
+2. **A name with no ledger in range reads "no researched event this week."** Absence is stated, never
+   filled in.
+3. **Under three researched events in range, no document is written** — the composer says so on
+   stdout and exits 0. A quiet week is an answer.
+4. **A closed week is append-only.** The composer refuses to overwrite a past week's file without
+   `--force`, which is reserved for a correction to the underlying ledgers.
+
+**The mix stays on the board.** The four-class call mix (`stand-aside`/`watch`/`act`/`conditional`)
+lives in `app/src/live/call-mix.ts` and already drives `/research`'s week lens; the study reports the
+authored **confidence** distribution instead, which needs no classification at all. Two copies of one
+classifier would be two owners of one judgment.
+
+**Scope, for now.** Month and quarter genres are deliberately out of scope until the weekly one has
+run four times. The weekly study registers no forward tests of its own — the ledgers it cites already
+carry theirs.
+
 ## The decision header is gated (`npm run research:lint`)
+
+The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
+A weekly study's call sheet keys by name rather than by horizon, so the four-horizon rule does not
+apply to it (the lint already skips that check for a by-name table) and its advisory header budget is
+wider, because a by-name sheet grows with the roster rather than with an author's prose.
 
 A ledger without a usable call sheet fails the gate. `docs/ISSUES.md` measured why this is needed:
 *"the PR surface got a template, a guide and a gate; the issue surface got none of the three, and

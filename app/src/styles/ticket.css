@@ -89,6 +89,9 @@
 .rung-open.rung-current .rung-node {
   color: var(--accent);
 }
+.rung-locked {
+  opacity: 0.65;
+}
 .rung:hover .rung-node {
   border-color: var(--accent);
 }

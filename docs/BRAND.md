@@ -90,6 +90,27 @@ Elements with rich backstory that *license overly-refined detail*. Depth compoun
 4. **The `/login` world.** The cinematic threshold — matrix rain, storm, cityscape, spotlights,
    reveal VFX — where the brand is most concentrated.
 
+## Accessibility (a standing reader is red/green colorblind)
+
+Eric, 2026-09-06, on the research rail: *"the functionality is there but near invisible unless you
+know where to look. FWIW, I have mild red/green colorblindness. Higher contrast colors make it easier
+for me to detect these details… UX/accessibility audits would fail the contrast ratio especially in
+dark mode."* The first reader of every frame cannot separate `--pos` from `--neg` by hue. Rules:
+
+- **Hue never carries meaning alone.** Pair every colour signal with a shape, a pattern, a weight, or
+  a word: filled vs hollow dot, a hatch for a closed day, a strike, a glyph, a label. Red/green P/L
+  is honest colour, so it always rides with the sign and the number.
+- **Non-text signals need a real step, not a tone shift.** A range band, a selected row, a hover:
+  aim for ≥ 3:1 against its ground (WCAG non-text) — `--surface-2` on `--surface` is 1.05:1 and
+  reads as nothing. Use an accent tint (`color-mix`) plus a bar or ring.
+- **Text pairs hold AA (4.5:1) in both palettes**, including text on an accent fill
+  (`--accent-contrast` on `--accent`). `tests/ui/contrast.spec.ts` computes the ratios from
+  `theme.css` and fails the build on drift; a new text-on-colour pair joins that spec.
+- **Small marks get size before colour.** A 4px dot is invisible at any contrast; 6px with a 1.5px
+  ring reads. Legend and helper text sit at ≥ 11.5px.
+- **Judge dark first, then light, both by eye and by the spec** — dark is the default and where
+  low-contrast tones hide; light is where accent fills lose their text.
+
 ## Honesty & domain-accuracy rules (non-negotiable)
 
 - Paper/simulated only; label `SIM` vs `LIVE` truthfully. Diagrams are illustrative, never presented

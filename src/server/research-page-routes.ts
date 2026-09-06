@@ -35,7 +35,14 @@ const STYLE = `*{margin:0;padding:0;box-sizing:border-box}html{color-scheme:dark
   .rs-glance h2:first-child{ margin-top:0; }
   .rs-fold{ margin:0 0 14px; border:1px solid var(--border); border-radius:10px; padding:4px 16px; }
   .rs-fold summary{ cursor:pointer; padding:12px 0; font-weight:600; }
-  .rs-foldsize{ font-weight:400; color:var(--muted); font-size:12px; margin-left:8px; }`;
+  .rs-foldsize{ font-weight:400; color:var(--muted); font-size:12px; margin-left:8px; }
+  /* A call sheet is five columns wide and a research table can be wider still; at phone width the
+     overflow was CLIPPED, so the falsifier column — the one that makes a call honest — simply was
+     not there. Scroll it instead of hiding it (#1716). */
+  @media (max-width:640px){
+    table{ display:block; overflow-x:auto; }
+    th,td{ min-width:15ch; }
+  }`;
 
 /** True for the document sub-paths — `/research` alone stays the shell-listing redirect. */
 export function isResearchDocPath(path: string): boolean {
