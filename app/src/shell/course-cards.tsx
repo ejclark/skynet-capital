@@ -16,8 +16,10 @@ export function MilestoneRow({
 }): ReactElement {
   return (
     <li className={`ms-row${milestone.earned ? " ms-done" : ""}`}>
+      {/* Earned and unearned rows carried the SAME tick in two colours; the hollow ring is the
+          shape that says it, exactly as onboarding's step glyph does (docs/BRAND.md). */}
       <span className="ms-mark" aria-hidden="true">
-        ✓
+        {milestone.earned ? "✓" : "○"}
       </span>
       <span className="ms-body">
         <span className="ms-title">{milestone.title}</span>

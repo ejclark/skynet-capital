@@ -32,15 +32,23 @@
   width: auto;
   padding: 8px 16px;
 }
+/* Saved-vs-failed used to be green-vs-red text and nothing else; the mark is the second carrier,
+   matching the tick's own `gate-refusal` line (docs/BRAND.md -> Accessibility). */
 .set-ok {
   margin: 0;
   font-size: 12px;
   color: var(--pos);
 }
+.set-ok::before {
+  content: "\2713\00a0";
+}
 .set-err {
   margin: 0;
   font-size: 12px;
   color: var(--neg);
+}
+.set-err::before {
+  content: "\2715\00a0";
 }
 .set-ownership {
   display: flex;
