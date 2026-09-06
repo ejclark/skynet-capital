@@ -66,14 +66,25 @@ Stance section with the row as its receipt.
 5. **Event-specific tape** — consensus drift, whisper moves, implied-move changes, unusual
    positioning commentary.
 
-Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new calendar file
-`src/domain/market-events/<id>.json` **in the same PR**, always `status: "estimate"` (`EST:`/`NEWS:`
-source) — never `confirmed` without a primary source. That proposal is how the calendar feeds
-itself. **One file per event** (issue #1449): your own event's amendments (a status flip, a source,
-a notes update) go in `src/domain/market-events/<your-event-id>.json` and nowhere else; a proposal
-is a brand-new file named by its id (`node scripts/event-scan.mjs --validate` fails a file whose
-name is not its `id`). There is no shared array to insert into and no ordering rule to satisfy —
-which is exactly why two research PRs can no longer conflict on the calendar.
+Any adjacent event with a **date** discovered during the sweep is PROPOSED as a new file
+`src/domain/market-events/proposals/<id>.from-<your-event-id>.json` **in the same PR**, always
+`status: "estimate"` (`EST:`/`NEWS:` source) — never `confirmed` without a primary source. That
+proposal is how the calendar feeds itself. **One file per owner** (issues #1449, #1717): your own
+event's amendments (a status flip, a source, a notes update) go in
+`src/domain/market-events/<your-event-id>.json` and nowhere else; a proposal is a brand-new file
+that *you* own, named by the event it proposes and by you, so two sweeps discovering the same
+event on the same day never create the same path (that add/add was the last conflict class left
+after #1449 — 5 of the first 126 post-split PRs). The loader and the scanner prefer the canonical
+`<id>.json` when it exists and otherwise stand in the first proposal by file name;
+`node scripts/event-scan.mjs --validate` fails a misnamed proposal, a non-`estimate` one, or a
+proposer that is not an event this calendar knows, and warns on competing or shadowed proposals.
+Never write another event's canonical file, and never delete another lane's proposal. There is no
+shared array to insert into and no ordering rule to satisfy.
+
+**When your own event was proposed by others** (`never-assessed` initial research on an id that
+exists only as `proposals/<your-id>.from-*.json`): read every proposal for your id first — each is
+a sibling lane's finding — then write the canonical `src/domain/market-events/<your-id>.json`
+yourself. The proposals become inert (the canonical file shadows them) and stay where they are.
 
 **Not every `interval-elapsed` pulse reaches a session** — see "Deterministic screening" below.
 
