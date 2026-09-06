@@ -293,3 +293,72 @@
 .eh-clear:hover {
   color: var(--neg);
 }
+
+/* the lens row + range shading (#1704 slice 2) — the rail's controls for the board's horizon. */
+.eh-month {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.eh-sessions {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.eh-day.eh-in-range {
+  background: var(--surface-2);
+}
+.eh-day.eh-today {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.eh-day.eh-weekend {
+  color: var(--muted);
+}
+.eh-day.eh-closed {
+  color: var(--neg);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.eh-day.eh-early {
+  color: var(--neg);
+}
+.eh-day[aria-pressed="true"].eh-closed,
+.eh-day[aria-pressed="true"].eh-early {
+  color: var(--accent-contrast);
+}
+.eh-lenses {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  margin-top: 2px;
+}
+.eh-lens {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 5px 0;
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.eh-lens:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.eh-lens[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+}
+.eh-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 2px;
+  vertical-align: middle;
+}
+.eh-swatch-closed {
+  background: var(--neg);
+}

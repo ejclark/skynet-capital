@@ -203,7 +203,16 @@ planning session ends by starting the build, not by handing the `ready` flip bac
 rich acceptance criteria... this was intended to establish plumbing to enable you to grind through
 the work"). The written decision is the plumbing; his brief was the go signal. Label the plan
 `ready` yourself, cite the brief, and take slice 1 — the flip comes back to him only when a fork
-he alone can settle is genuinely blocking.
+he alone can settle is genuinely blocking. **Between the research and the grind, a rubber-duck
+round** (Eric, 2026-09-06: "This is a prime time to pair with coworkers when they are in this
+state... rapid ideation which produces aha moments that accelerate emergence of new designs... it
+organically battle tests talking points"). The trigger is his state, not a checklist: while he is
+thinking out loud, bounce the research findings back as short options he can react to — a pattern
+on a candidate surface, a number that contradicts a hunch, the fork the code just surfaced — and
+let the reactions amend the plan before slice 1 opens. Timeboxed, divergent, never a build; the
+interrogation pass is the adversarial half, this is the generative half. Evidence it earns its
+place: the fog-of-war audit and the propose-then-place rule both came out of the banter *after* the
+research brief, not from the research itself.
 
 **Interrogate before you comply — the mechanism, never the outcome** (Eric, 2026-09-04: "I feel
 like you inadequately interrogate my suggestions/commands. It feels like we need event triggers

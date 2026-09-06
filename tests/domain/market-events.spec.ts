@@ -2,7 +2,12 @@ import type { EarningsPrint } from "../../src/domain/earnings-calendar.js";
 // The query API (functions) lives in market-events.ts; the curated table + its shape live in the
 // market-events-data.ts leaf. The "seeded table" block below tests that leaf directly, so it imports
 // MARKET_EVENTS + the shape straight from the data module (closing the spec-gap on the leaf honestly).
-import { allEvents, earningsAsEvents, eventsWithin } from "../../src/domain/market-events.js";
+import {
+  allEvents,
+  earningsAsEvents,
+  eventsWithin,
+  everyEvent,
+} from "../../src/domain/market-events.js";
 import { MARKET_EVENTS, type MarketEvent } from "../../src/domain/market-events-data.js";
 
 const prints: readonly EarningsPrint[] = [
@@ -53,6 +58,19 @@ describe("market events", () => {
     it("drops past events — a stale entry cannot trigger anything", () => {
       const ids = allEvents("2026-09-01T00:00:00Z", curated, prints).map((e) => e.id);
       expect(ids).toEqual(["cpi-2026-09-11"]);
+    });
+  });
+
+  describe("everyEvent — the research shelf's calendar keeps history", () => {
+    it("keeps past events that allEvents drops, still date-sorted", () => {
+      const cpi = curated[0] as MarketEvent;
+      const past = { ...cpi, id: "old-2026-01-05", date: "2026-01-05" };
+      const ids = everyEvent([cpi, past], prints).map((e) => e.id);
+      expect(ids[0]).toBe("old-2026-01-05");
+      expect(ids).toHaveLength(4);
+      expect(allEvents("2026-09-01T00:00:00Z", [cpi, past], prints).map((e) => e.id)).not.toContain(
+        "old-2026-01-05",
+      );
     });
   });
 

@@ -46,8 +46,16 @@ export interface ResearchEvent {
   readonly researched: boolean;
 }
 
+/** A day the exchange is closed, or closes early — mirrors the server's MarketClosure. */
+export interface ResearchClosure {
+  readonly date: string;
+  readonly reason: string;
+  readonly early: boolean;
+}
+
 export interface ResearchShelfData {
   readonly events: readonly ResearchEvent[];
+  readonly closures: readonly ResearchClosure[];
   readonly calls: readonly ResearchCall[];
   readonly symbols: readonly ResearchSymbol[];
   readonly studies: readonly ResearchDocLink[];
@@ -57,7 +65,9 @@ export interface ResearchShelfData {
 export async function fetchResearch(): Promise<ResearchShelfData> {
   const res = await fetch("/api/research", { credentials: "same-origin" });
   if (!res.ok) throw new Error(`research ${res.status}`);
-  return (await res.json()) as ResearchShelfData;
+  const raw = (await res.json()) as Partial<ResearchShelfData>;
+  // A server from before slice 2 sends no closures; the calendar then colours nothing, honestly.
+  return { ...(raw as ResearchShelfData), closures: raw.closures ?? [] };
 }
 
 /**
@@ -129,9 +139,14 @@ export function callForLens(call: ResearchCall, lens: Lens): HorizonRow | null {
   };
 }
 
+/** Set (or, with undefined, clear) the anchor day; every other token survives. */
+export function setOnDate(query: string, date: string | undefined): string {
+  const kept = query.split(/\s+/).filter((t) => t && !ON_RE.test(t.toLowerCase()));
+  return (date ? [...kept, `on:${date}`] : kept).join(" ");
+}
+
 /** Toggle the day pin: same day clears it, a different day replaces it, text terms survive. */
 export function toggleOnDate(query: string, date: string): string {
   const { on } = parseResearchQuery(query);
-  const kept = query.split(/\s+/).filter((t) => t && !ON_RE.test(t.toLowerCase()));
-  return (on === date ? kept : [...kept, `on:${date}`]).join(" ");
+  return setOnDate(query, on === date ? undefined : date);
 }

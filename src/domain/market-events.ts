@@ -58,6 +58,20 @@ export function allEvents(
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 }
 
+/**
+ * Every event, past and upcoming, merged and date-sorted — the research shelf's calendar (#1704),
+ * which keeps history: a closed-out ledger's call is still a receipt worth stepping back to.
+ * Everything that gates or schedules keeps using `allEvents`, where a past date must drop out.
+ */
+export function everyEvent(
+  events: readonly MarketEvent[] = MARKET_EVENTS,
+  prints: readonly EarningsPrint[] = UPCOMING_PRINTS,
+): MarketEvent[] {
+  return [...events, ...earningsAsEvents(prints)].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
+  );
+}
+
 /** Events inside the next `days` calendar days — the morning-brief horizon (slice 2 seam). */
 export function eventsWithin(
   asOfIso: string,

@@ -53,6 +53,15 @@ describe("researchShelfJson", () => {
     ).not.toHaveProperty("horizons");
   });
 
+  it("carries the exchange closures it is handed, and an empty list when handed none", () => {
+    const laborDay = { date: "2026-09-07", reason: "Labor Day", early: false };
+    const view = researchShelfJson({ studies: [], ledgers: [] }, [], new Map(), [], new Map(), [
+      laborDay,
+    ]);
+    expect(view.closures).toEqual([laborDay]);
+    expect(researchShelfJson({ studies: [], ledgers: [] }, [], new Map()).closures).toEqual([]);
+  });
+
   it("carries each symbol's next dated event, or its honest absence", () => {
     const view = researchShelfJson(
       { studies: [], ledgers: [] },
