@@ -25,6 +25,7 @@ import {
 } from "../live/research";
 import { EventHorizon } from "../shell/event-horizon";
 import { PageFrame } from "../shell/frame";
+import { ScopeSentence } from "../shell/scope-sentence";
 
 /**
  * RESEARCH (#738 phase 6c; filters-first + rail-controls per Eric's live reviews) — the shelf in
@@ -233,7 +234,7 @@ function ResearchFilters({
         </div>
       </div>
       {data.symbols.length > 0 ? (
-        <div className="rx-symbols">
+        <div className="rx-symbols" id="rx-symbols">
           {data.symbols.map((entry) => {
             const selected = scope.includes(entry.symbol);
             return (
@@ -362,6 +363,13 @@ function ResearchPage(): ReactElement {
           everything below follows. Documents open on their own pages.
         </p>
       </header>
+      <ScopeSentence
+        query={query}
+        filter={filter}
+        events={data.events}
+        {...(fog.fogged ? { dayFogReason: fog.reason } : {})}
+        onChange={setFilter}
+      />
       <ResearchFilters data={data} query={query} onChange={setFilter} />
       <CallBoard
         data={data}
