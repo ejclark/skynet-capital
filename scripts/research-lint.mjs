@@ -146,6 +146,29 @@ function checkRows(data, at, problems, notes) {
   for (const cells of data) checkRow(cells, at, problems, notes);
 }
 
+/**
+ * Blocked-source visibility (#1711). A non-empty `probe-ref.blocked` array is surfaced as an
+ * ADVISORY note — never a failure, same doctrine as the rest of this file: the structural fact
+ * (a blocked source was recorded) is worth flagging, but recording one is never itself a problem.
+ * The prefix downgrade it implies is the author's job (EVENT-RESEARCH.md's Honesty rules), not
+ * this gate's to enforce — there is no reliable way to check a prose prefix mechanically.
+ */
+function checkBlockedSources(md, notes) {
+  const match = /<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/.exec(md);
+  if (!match) return;
+  let ref;
+  try {
+    ref = JSON.parse(match[1]);
+  } catch {
+    return; // malformed probe-ref is event-material-scan's problem, not this gate's
+  }
+  if (Array.isArray(ref.blocked) && ref.blocked.length > 0) {
+    notes.push(
+      `note: ${ref.blocked.length} blocked source(s) recorded — prefix must be the secondary's`,
+    );
+  }
+}
+
 /** Prose that has drifted long. Advisory ONLY — never tax the capture habit. */
 function collectNotes(md, header, notes, maxHeader = MAX_HEADER_CHARS) {
   if (header.length > maxHeader)
@@ -172,6 +195,7 @@ export function lintResearchDoc(md, { name = "doc", maxHeaderChars = MAX_HEADER_
   const problems = [];
   const notes = [];
   checkHeaderLines(md, problems);
+  checkBlockedSources(md, notes);
 
   const header = decisionHeaderOf(md);
   if (!header) {

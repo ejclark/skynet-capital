@@ -117,6 +117,16 @@ export const LABELS = {
     color: "5319e7",
     description: "A Claude Design bundle waiting to be built",
   },
+  // #1711 — a session files this the moment a constraint is MEASURED (a rate limit hit, a WIP
+  // throttle, a shared file every lane races); docs/grind/research-bottleneck.instructions.md
+  // fans over the open ones. Registered so issue-lint and the grind resolve the name; nothing here
+  // applies it — `/issue` (or the filing session) does, the same as `idea`/`feedback` below.
+  bottleneck: {
+    name: "bottleneck",
+    color: "d4c5f9",
+    description:
+      "a measured constraint surfaced by fan-out; pursued by the research-bottleneck grind",
+  },
   // The `/feedback` intake form applies BOTH of these — `idea` never travels alone
   // (.github/ISSUE_TEMPLATE/idea_to_explore.yml). Grey with no description is what they actually
   // are today; see the header note on why that is recorded rather than improved in passing.

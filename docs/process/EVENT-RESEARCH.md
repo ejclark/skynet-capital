@@ -257,3 +257,12 @@ rm -rf node_modules/.cache/earnings-cycle node_modules/.cache/intraday-edges
   flat window; it never licenses an entry.
 - **Source prefixes are the audit trail** — see the header of `market-events.ts`. `--validate`
   enforces them in CI.
+- **Blocked sources are recorded, never substituted silently.** When a fetch of a cited source
+  fails — egress block, 403, 5xx — the ledger's `probe-ref.blocked` array gets a
+  `{"url", "status", "at"}` entry (`TEMPLATE.md`) and the source prefix downgrades to the
+  secondary's actually used (`NYSE:` → `NEWS:`), never staying the primary's; the row or stance
+  text that cites the fallback states it and dates it. Two blind spots are known today: the remote
+  Claude Code session's egress proxy blocks exchange/industry-body domains (nyse.com, sifma.org,
+  nasdaqtrader.com) outright, and the GitHub Actions event-research lane meets 403s on bls.gov from
+  plain fetchers without browser headers — see [`ppi-2026-11-13.md`](../research/events/ppi-2026-11-13.md)
+  around line 60.

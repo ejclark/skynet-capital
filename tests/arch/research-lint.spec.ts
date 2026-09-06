@@ -126,6 +126,31 @@ describe("research lint — the decision-header contract", () => {
     expect(notes.join(" ")).toContain("signal over");
   });
 
+  it("notes a non-empty probe-ref.blocked array as advisory, never a failure (#1711)", () => {
+    const md = header(FULL_TABLE).replace(
+      "**Last assessed:** 2026-08-24",
+      '**Last assessed:** 2026-08-24\n<!-- probe-ref: {"symbols":{"NVDA":182.43},"vix":15.2,' +
+        '"daysBand":"critical:8+","adjacentIds":[],"screenStreak":0,' +
+        '"blocked":[{"url":"https://nyse.com/x","status":"EGRESS_BLOCKED","at":"2026-09-06"}]} -->',
+    );
+    const { problems, notes } = lintResearchDoc(md);
+    expect(problems).toEqual([]);
+    expect(notes.join(" ")).toContain(
+      "1 blocked source(s) recorded — prefix must be the secondary's",
+    );
+  });
+
+  it("stays silent on blocked sources when probe-ref carries no `blocked` field", () => {
+    const md = header(FULL_TABLE).replace(
+      "**Last assessed:** 2026-08-24",
+      '**Last assessed:** 2026-08-24\n<!-- probe-ref: {"symbols":{"NVDA":182.43},"vix":15.2,' +
+        '"daysBand":"critical:8+","adjacentIds":[],"screenStreak":0} -->',
+    );
+    const { problems, notes } = lintResearchDoc(md);
+    expect(problems).toEqual([]);
+    expect(notes.join(" ")).not.toContain("blocked source(s)");
+  });
+
   it("does not impose the horizon contract on a multi-name study table", () => {
     const byName = [
       "| Name | The call | Confidence | Why | Proves me wrong |",
