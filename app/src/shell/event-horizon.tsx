@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import {
+  addDays,
   type DayRange,
   daysOf,
   type MarketClosure,
@@ -50,6 +51,44 @@ const isWeekend = (iso: string): boolean => {
   return day === 0 || day === 6;
 };
 
+/**
+ * COMMON REGION (docs/BRAND.md → Visual grammar): "in range" is a fact about the week, so it is
+ * drawn as ONE band per row — a cell is band-start/band-end where the band begins or ends on its
+ * row — never as seven outlined cells (Tufte's 1 + 1 = 3). At the month and quarter lenses every
+ * visible day is in range, so the caller passes `inRange: false` and the grid itself is the region.
+ * Weekends and full closures share the dimmed inactive state; a closure keeps its strike.
+ */
+function dayClassName({
+  date,
+  column,
+  inRange,
+  rangeDays,
+  today,
+  closure,
+}: {
+  readonly date: string;
+  readonly column: number;
+  readonly inRange: boolean;
+  readonly rangeDays: ReadonlySet<string>;
+  readonly today: string;
+  readonly closure: MarketClosure | undefined;
+}): string {
+  const bandStart = inRange && (column === 0 || !rangeDays.has(addDays(date, -1)));
+  const bandEnd = inRange && (column === 6 || !rangeDays.has(addDays(date, 1)));
+  return [
+    "eh-day",
+    inRange ? "eh-band" : "",
+    bandStart ? "eh-band-start" : "",
+    bandEnd ? "eh-band-end" : "",
+    date === today ? "eh-today" : "",
+    closure && !closure.early ? "eh-closed" : "",
+    closure?.early ? "eh-early" : "",
+    isWeekend(date) ? "eh-weekend" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /** @category hero */
 export function EventHorizon({
   events,
@@ -80,6 +119,7 @@ export function EventHorizon({
   readonly dayFog?: { readonly reason: string; readonly held: number };
 }): ReactElement | null {
   const month = anchor.slice(0, 7);
+  const blockLens = lens === "month" || lens === "quarter";
   const byDate = new Map<string, ResearchEvent[]>();
   for (const event of events) {
     byDate.set(event.date, [...(byDate.get(event.date) ?? []), event]);
@@ -123,7 +163,7 @@ export function EventHorizon({
           ›
         </button>
       </div>
-      <div className="eh-grid">
+      <div className={blockLens ? "eh-grid eh-block" : "eh-grid"}>
         {WEEKDAYS.map((d, i) => (
           <span key={`${d}${String(i)}`} className="eh-wd" aria-hidden="true">
             {d}
@@ -132,16 +172,14 @@ export function EventHorizon({
         {monthDays(month).map((date, i) => {
           if (date === null) return <span key={`pad-${String(i)}`} />;
           const closure = closedOn.get(date);
-          const className = [
-            "eh-day",
-            rangeDays.has(date) ? "eh-in-range" : "",
-            date === today ? "eh-today" : "",
-            closure && !closure.early ? "eh-closed" : "",
-            closure?.early ? "eh-early" : "",
-            isWeekend(date) ? "eh-weekend" : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
+          const className = dayClassName({
+            date,
+            column: i % 7, // monthDays pads the first row, so the index already carries the offset
+            inRange: !blockLens && rangeDays.has(date),
+            rangeDays,
+            today,
+            closure,
+          });
           return (
             <button
               key={date}
@@ -151,7 +189,7 @@ export function EventHorizon({
               title={titleFor(date)}
               onClick={() => onPick(date)}
             >
-              {Number(date.slice(8, 10))}
+              <span className="eh-num">{Number(date.slice(8, 10))}</span>
               {byDate.has(date) ? (
                 <i
                   className={
@@ -195,7 +233,7 @@ export function EventHorizon({
       ) : null}
       <p className="eh-legend">
         <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
-        <i className="eh-swatch eh-swatch-closed" /> closed
+        <s className="eh-legend-closed num">7</s> closed
       </p>
       {pinned ? (
         <button type="button" className="eh-clear" onClick={() => onPick(anchor)}>
