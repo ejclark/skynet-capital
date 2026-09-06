@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { LADDER_GATE_NOTE, ladderNeighbor } from "../domain/progression.js";
 import type { DraftLeg, DraftOrder, DraftVerdict, NewLeg } from "../trading/draft-order.js";
 import {
   addLeg,
@@ -15,7 +16,9 @@ import { draftPreview } from "../trading/draft-order-preview.js";
 import type { Session } from "./auth/session.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { opaqueMemberId } from "./feedback-issue.js";
 import { boundedString, parseJsonRecord, readJsonPost, sendJson } from "./page-shell.js";
+import { type ParticipantProgression, playLocked } from "./progression-service.js";
 
 /**
  * THE MULTI-LEG DRAFT AS A ROUTE — one endpoint, `POST /api/trade/draft`, that
@@ -151,11 +154,30 @@ function parseRequest(raw: string): DraftRequestBody | undefined {
   return { participantId, draft: body.draft, action: action as DraftAction };
 }
 
-/** Apply exactly one transition — the same functions #635/#861 already ship and test. */
+/** The rung this whole route gates — every action here builds toward one 401 order. */
+const MULTI_LEG_CODE = "401";
+
+/** The same "training wheels" sentence the single-leg tickets use, for the one rung this route
+ *  gates (#1671) — mirrors `trade-api-routes.ts`'s `stockLockedSentence`. */
+function draftLockedSentence(progression: ParticipantProgression | undefined): string {
+  if (progression?.ladderGate) {
+    return `Training wheels are on. ${LADDER_GATE_NOTE} Nothing was sent.`;
+  }
+  const prev = ladderNeighbor(MULTI_LEG_CODE, -1);
+  return `Training wheels are on, and course ${MULTI_LEG_CODE} hasn't been unlocked yet${
+    prev ? ` — it opens after your first filled ${prev.code} (${prev.name})` : ""
+  }. Nothing was sent.`;
+}
+
+/** Apply exactly one transition — the same functions #635/#861 already ship and test. Add/remove/
+ *  reprice stay open regardless of the ladder (harmless drafting, same as filling in a single-leg
+ *  ticket's fields before review); validate/review/submit are where the gate actually bites,
+ *  mirroring the single-leg tickets' review/submit-only refusal. */
 function applyAction(
   draft: DraftOrder,
   action: DraftAction,
   account: DraftAccountContext,
+  progression: ParticipantProgression | undefined,
 ): DraftOrder {
   if (action.kind === "add-leg") {
     const leg = parseNewLeg(action.leg);
@@ -174,6 +196,9 @@ function applyAction(
         ? action.limitPrice
         : undefined;
     return id ? repriceLeg(draft, id, limitPrice) : draft;
+  }
+  if (playLocked(MULTI_LEG_CODE, progression)) {
+    return { ...draft, refusals: [draftLockedSentence(progression)] };
   }
   if (action.kind === "validate") return validateDraft(draft, validateDraftAccount(draft, account));
   if (action.kind === "review") return reviewDraft(draft);
@@ -215,7 +240,13 @@ export async function serveDraftOrderApi(
   const account: DraftAccountContext = snapshot
     ? { cash: snapshot.cash, positions: snapshot.positions }
     : { cash: 0, positions: [] };
-  const draft = applyAction(parseDraft(request.draft), request.action, account);
+  const progression = config.progression
+    ? await config.progression.view(
+        requesterId,
+        session ? opaqueMemberId(session.email) : undefined,
+      )
+    : undefined;
+  const draft = applyAction(parseDraft(request.draft), request.action, account, progression);
   sendJson(res, 200, {
     draft,
     preview: draftPreview(draft),

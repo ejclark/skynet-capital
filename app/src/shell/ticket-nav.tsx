@@ -8,6 +8,11 @@ import { navForPlay, type PlayCode, playForNav, type TicketNavState } from "../l
  * one presets `?play=` and the rail above follows; `?play=` arriving from the rail or a learn
  * link presets these the other way. Two views of one state.
  *
+ * Spread (#1671) is a third instrument, not a fourth side/type combination: it maps to a single
+ * rung (401) with no Side/Type choice of its own — the multi-leg builder's leg form carries
+ * buy/sell/put/call per leg once unlocked. Zero-DTE (501) has no ticket of its own at all; it's an
+ * attribute any option order can carry, gated at review/submit rather than through this nav.
+ *
  * Locked = visible, disabled, explained (the research condition #1461 carries): a segment whose
  * rung is locked stays on the page, disabled, with the rung that opens it named underneath —
  * never hidden, never silently dead. One exception, the server's own rule: while the
@@ -50,34 +55,39 @@ export function TicketNav({
       segments: [
         option("Stock", { ...nav, instrument: "stock" }),
         option("Option", { ...nav, instrument: "option" }),
+        option("Spread", { ...nav, instrument: "spread" }),
       ],
     },
-    nav.instrument === "stock"
-      ? {
-          label: "Side",
-          segments: [
-            option("Buy", { ...nav, side: "buy" }),
-            option("Sell", { ...nav, side: "sell" }),
-          ],
-        }
-      : {
-          label: "Side",
-          segments: [
-            option("Sell to open", { ...nav, side: "sell" }),
-            option("Buy to open", { ...nav, side: "buy" }),
-          ],
-        },
-    ...(nav.instrument === "option"
+    // Spread has no Side/Type choice at the nav level — the multi-leg builder's own leg form
+    // carries buy/sell/put/call per leg, once the rung is unlocked.
+    ...(nav.instrument === "stock"
       ? [
           {
-            label: "Type",
+            label: "Side",
             segments: [
-              option("Put", { ...nav, optionType: "put" }),
-              option("Call", { ...nav, optionType: "call" }),
+              option("Buy", { ...nav, side: "buy" }),
+              option("Sell", { ...nav, side: "sell" }),
             ],
           },
         ]
-      : []),
+      : nav.instrument === "option"
+        ? [
+            {
+              label: "Side",
+              segments: [
+                option("Sell to open", { ...nav, side: "sell" }),
+                option("Buy to open", { ...nav, side: "buy" }),
+              ],
+            },
+            {
+              label: "Type",
+              segments: [
+                option("Put", { ...nav, optionType: "put" }),
+                option("Call", { ...nav, optionType: "call" }),
+              ],
+            },
+          ]
+        : []),
   ];
   return (
     <nav className="ticket-nav" aria-label="Ticket">

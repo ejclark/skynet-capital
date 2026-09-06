@@ -13,7 +13,7 @@ const ms = (id, title, points, earned) => ({
 const learn = {
   linked: true,
   points: 50,
-  totalPoints: 200,
+  totalPoints: 295,
   rank: "Trader",
   courses: [
     {
@@ -47,6 +47,24 @@ const learn = {
       locked: true,
       done: 0,
       total: 2,
+      milestones: [],
+    },
+    {
+      level: 400,
+      title: "Spreads — defined risk, two legs",
+      subtitle: "",
+      locked: true,
+      done: 0,
+      total: 1,
+      milestones: [],
+    },
+    {
+      level: 500,
+      title: "Zero-DTE — the fastest clock",
+      subtitle: "",
+      locked: true,
+      done: 0,
+      total: 1,
       milestones: [],
     },
   ],

@@ -59,6 +59,25 @@ const freshPlays = {
       code: "301",
       name: "Buy a long put",
     }),
+    // The ladder extension (#1671): 401 and 501 name their own predecessor exactly like every
+    // other rung — the eight-node rail this fixture now proves at phone width.
+    play(
+      "401",
+      "Vertical spread",
+      "defined risk, two legs",
+      "multi-leg",
+      undefined,
+      undefined,
+      "locked",
+      {
+        code: "302",
+        name: "Buy a long call",
+      },
+    ),
+    play("501", "Zero-DTE", "the fastest clock", "option", undefined, undefined, "locked", {
+      code: "401",
+      name: "Vertical spread",
+    }),
   ],
 };
 
@@ -70,6 +89,21 @@ const plays = {
     p.code === "101"
       ? { ...p, locked: false, earned: true }
       : p.code === "102"
+        ? { ...p, locked: false, opensAfter: undefined }
+        : p,
+  ),
+};
+
+// Every rung through 302 earned: 401 OPENS for practice (its predecessor is earned) even though
+// nothing can execute yet — the rung nobody can fill still stays locked (#1671's own doctrine),
+// but the rung itself is open, exactly like any other. 501 stays shut behind it.
+const throughLongs = {
+  ...freshPlays,
+  nextUp: "401",
+  plays: freshPlays.plays.map((p) =>
+    ["101", "102", "201", "202", "301", "302"].includes(p.code)
+      ? { ...p, locked: false, earned: true, opensAfter: undefined }
+      : p.code === "401"
         ? { ...p, locked: false, opensAfter: undefined }
         : p,
   ),
@@ -133,5 +167,20 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=301`);
 await page.getByText("Buy to open: opens after 202 fills").waitFor();
 await shoot("trade-locked-phone");
+
+// The ladder extension (#1671): Spread is a THIRD instrument, not a fourth side/type combo — the
+// eight-node rail at phone width, and a locked 401 shows the same shared panel every other locked
+// rung does, naming 302 as the rung that opens it.
+await page.goto(`${origin}/app/trade?play=401`);
+await page.getByText("Spread: opens after 302 fills").waitFor();
+await shoot("trade-spread-locked-phone");
+
+// Once 302 is earned, 401 OPENS for practice even though nothing can execute yet (#1671: "a rung
+// nobody can fill yet stays locked" is about the ✓, not the door) — the multi-leg builder becomes
+// the Spread instrument's own ticket body instead of a panel under every ticket.
+currentPlays = throughLongs;
+await page.goto(`${origin}/app/trade?play=401`);
+await page.getByText("Multi-leg builder").waitFor();
+await shoot("trade-spread-open-phone");
 
 await close();

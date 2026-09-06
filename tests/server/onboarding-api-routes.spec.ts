@@ -112,7 +112,7 @@ describe("serveOnboardingApi", () => {
       cash: 992_296,
       stale: false,
       rungsEarned: 1,
-      rungsTotal: 6,
+      rungsTotal: 8,
       nextUp: { code: "102", title: "Sell stock" },
     });
   });

@@ -1,12 +1,14 @@
 import type { OptionType } from "../trading/option-symbols.js";
 
 /**
- * THE TRADE-TYPE CATALOG — the six transactions the desk ticket offers, exactly the set the
- * `/learn` milestones teach (docs/handoffs/desk-v2, Chassis Contract ruling 16). Risk-ordered by
- * course code: the number IS the difficulty, and the ARRAY ORDER IS THE LADDER — with training
- * wheels on, each row unlocks when the one before it has a filled order (`progression.ts`).
- * Course codes here are the DESK's codes from the contract; `plays.ts` numbers its
- * login-animation tiers differently and the two must not be mixed.
+ * THE TRADE-TYPE CATALOG — the desk ticket's ladder, exactly the set the `/learn` milestones
+ * teach. Ruling 16 (docs/handoffs/desk-v2, Chassis Contract) seeded the first six (101-302);
+ * 401/501 extend it (#1671). Risk-ordered by course code: the number IS the difficulty, and the
+ * ARRAY ORDER IS THE LADDER — with training wheels on, each row unlocks when the one before it
+ * has a filled order (`progression.ts`). Course codes here are the DESK's codes; `plays.ts`
+ * numbers its login-animation tiers differently and the two must not be mixed, and
+ * `domain/plays.ts`'s separate (currently unused) teaching catalog is a different concern again —
+ * pure strategy education, decoupled from this execution ladder.
  *
  * Every entry keeps its real broker term with a plain gloss (ruling 6), and the ticket built
  * on this catalog never fires an order without the review screen (ruling 10).
@@ -19,14 +21,15 @@ export type TradeTypeCode = TradeType["code"];
 
 export interface TradeType {
   /** Course code — mono label in the picker, risk-ordered ("101" is the safest). */
-  readonly code: "101" | "102" | "201" | "202" | "301" | "302";
+  readonly code: "101" | "102" | "201" | "202" | "301" | "302" | "401" | "501";
   readonly id: string;
   /** Real broker term, e.g. "Sell a cash-secured put". */
   readonly name: string;
   /** The plain-language gloss that rides under the name. */
   readonly tldr: string;
-  readonly kind: "stock" | "option";
-  readonly side: TradeSide;
+  readonly kind: "stock" | "option" | "multi-leg";
+  /** Absent for a composite/attribute rung (401, 501) that has no single side of its own. */
+  readonly side?: TradeSide;
   /** For option types: which contract this trade writes or buys. */
   readonly optionType?: OptionType;
   /** The guided-mode explainer — what you get, what you promise, in dollars-first words. */
@@ -97,6 +100,24 @@ export const TRADE_TYPES: readonly TradeType[] = [
     optionType: "call",
     gloss:
       "You pay a premium for the right to buy 100 shares per contract at your strike. The stock rising makes it worth more; the most you can lose is the premium you paid.",
+  },
+  {
+    code: "401",
+    id: "vertical-spread",
+    name: "Vertical spread",
+    tldr: "defined risk, two legs",
+    kind: "multi-leg",
+    gloss:
+      "You buy one option and sell another of the same type and expiration at a different strike — the short leg pays for part of the long leg, and together they cap both your cost and your risk. Two legs, priced and filled as one order.",
+  },
+  {
+    code: "501",
+    id: "zero-dte",
+    name: "Zero-DTE",
+    tldr: "the fastest clock",
+    kind: "option",
+    gloss:
+      "Any option order — new or part of a spread — whose expiration is today. Time value decays fastest in the last hours before the close, so a full session's move has to happen before the clock runs out.",
   },
 ];
 

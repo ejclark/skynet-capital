@@ -16,7 +16,7 @@ import type { TradeTypeCode } from "./trade-types.js";
  */
 
 /** Course level — the hundreds digit of the trade codes the course teaches. Extensible upward. */
-export type CourseLevel = 100 | 200 | 300;
+export type CourseLevel = 100 | 200 | 300 | 400 | 500;
 
 export interface Milestone {
   readonly id: string;
@@ -43,8 +43,13 @@ export interface Course {
  * The courses, in order. **Level 100 is stock basics** — own it, book it — because everything the
  * Wheel does rests on shares you actually hold. **Level 200 is the Wheel** (it writes options, so it
  * is 200-level by definition): get paid to buy lower, get paid to cap your upside, repeat. **Level
- * 300 is directional longs** — defined-risk bets with leverage. Everything riskier (spreads,
- * condors, undefined-risk) is intentionally absent until a later course.
+ * 300 is directional longs** — defined-risk bets with leverage. **Level 400 is spreads** — combining
+ * two legs, unlocked only once both directional longs are earned (#1671: Eric's own bar — "you
+ * shouldn't bother with this until you know the mechanics up to buying long put/calls" — is exactly
+ * what gating on both 301 and 302 already enforces). **Level 500 is zero-DTE** — same-day expiration,
+ * the fastest clock, gated behind spreads. A compound strategy like an iron condor (two spreads run
+ * together) is not its own course — it belongs to the Playbook Store once it has real strategy
+ * content, not the ladder (#1671's settled forks).
  */
 export const COURSES: readonly Course[] = [
   {
@@ -119,6 +124,40 @@ export const COURSES: readonly Course[] = [
           "Pay a premium for the right to buy at a strike — a defined-risk bet that a stock rises.",
         points: 40,
         tradeType: "302",
+      },
+    ],
+  },
+  {
+    level: 400,
+    id: "spreads",
+    title: "Spreads — defined risk, two legs",
+    subtitle:
+      "You know both sides of a directional bet now — combine two legs into one order and cap your cost and your risk together.",
+    milestones: [
+      {
+        id: "first-vertical-spread",
+        title: "Place your first vertical spread",
+        detail:
+          "Buy one option and sell another of the same type and expiration at a different strike, as one order. The short leg pays for part of the long leg — that's the trade-off for a lower, defined risk.",
+        points: 45,
+        tradeType: "401",
+      },
+    ],
+  },
+  {
+    level: 500,
+    id: "zero-dte",
+    title: "Zero-DTE — the fastest clock",
+    subtitle:
+      "Same principles, no runway: an option expiring today decays fastest and moves fastest. Respect the clock.",
+    milestones: [
+      {
+        id: "first-zero-dte",
+        title: "Trade your first zero-DTE order",
+        detail:
+          "Place an option order — single-leg or a spread — that expires today. Every hour that passes is a bigger share of what's left of the position's life.",
+        points: 50,
+        tradeType: "501",
       },
     ],
   },

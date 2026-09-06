@@ -193,4 +193,86 @@ describe("serveDraftOrderApi", () => {
     const { out } = await call({ participantId: "human-ann", action: { kind: "not-a-thing" } });
     expect(out.status).toBe(400);
   });
+
+  describe("the ladder lock (#1671) — 401 is a rung like any other", () => {
+    const lockedCfg = config({
+      progression: { view: () => Promise.resolve({ wheels: true, unlocked: new Set(["101"]) }) },
+    });
+
+    it("still allows drafting (add/remove/reprice) while 401 is locked — harmless, like filling in a single-leg field", async () => {
+      const { parsed } = await call(
+        {
+          participantId: "human-ann",
+          draft: undefined,
+          action: { kind: "add-leg", leg: CALL_LEG },
+        },
+        lockedCfg,
+      );
+      expect(parsed.draft.legs).toHaveLength(1);
+      expect(parsed.draft.refusals).toEqual([]);
+    });
+
+    it("refuses validate for a locked 401, naming the rung that opens it", async () => {
+      const one = await call(
+        {
+          participantId: "human-ann",
+          draft: undefined,
+          action: { kind: "add-leg", leg: CALL_LEG },
+        },
+        lockedCfg,
+      );
+      const two = await call(
+        {
+          participantId: "human-ann",
+          draft: one.parsed.draft,
+          action: { kind: "add-leg", leg: HIGHER_CALL_LEG },
+        },
+        lockedCfg,
+      );
+      const { parsed } = await call(
+        { participantId: "human-ann", draft: two.parsed.draft, action: { kind: "validate" } },
+        lockedCfg,
+      );
+      expect(parsed.draft.phase).not.toBe("validated");
+      expect(parsed.draft.refusals.join(" ")).toContain("course 401 hasn't been unlocked yet");
+      expect(parsed.draft.refusals.join(" ")).toContain("302");
+    });
+
+    it("refuses submit for a locked 401 even on an echoed reviewed draft", async () => {
+      const reviewed = {
+        phase: "reviewed",
+        legs: [
+          { ...CALL_LEG, id: "leg-1" },
+          { ...HIGHER_CALL_LEG, id: "leg-2" },
+        ],
+        refusals: [],
+        nextLegId: 3,
+      };
+      const { parsed } = await call(
+        { participantId: "human-ann", draft: reviewed, action: { kind: "submit" } },
+        lockedCfg,
+      );
+      expect(parsed.draft.phase).not.toBe("submitted");
+      expect(parsed.draft.refusals.join(" ")).toContain("course 401 hasn't been unlocked yet");
+    });
+
+    it("validates normally once 401 is open — no progression wired behaves as wheels-off, same as every other rung", async () => {
+      const one = await call({
+        participantId: "human-ann",
+        draft: undefined,
+        action: { kind: "add-leg", leg: CALL_LEG },
+      });
+      const two = await call({
+        participantId: "human-ann",
+        draft: one.parsed.draft,
+        action: { kind: "add-leg", leg: HIGHER_CALL_LEG },
+      });
+      const { parsed } = await call({
+        participantId: "human-ann",
+        draft: two.parsed.draft,
+        action: { kind: "validate" },
+      });
+      expect(parsed.draft.phase).toBe("validated");
+    });
+  });
 });

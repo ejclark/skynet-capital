@@ -15,6 +15,11 @@ describe("navForPlay / playForNav", () => {
     expect(playForNav({ instrument: "stock", side: "buy", optionType: "call" })).toBe("101");
     expect(playForNav({ instrument: "stock", side: "sell", optionType: "call" })).toBe("102");
   });
+  it("ignores side/type for a spread — 401 has no single side of its own (#1671)", () => {
+    expect(playForNav({ instrument: "spread", side: "buy", optionType: "call" })).toBe("401");
+    expect(playForNav({ instrument: "spread", side: "sell", optionType: "put" })).toBe("401");
+    expect(navForPlay("401").instrument).toBe("spread");
+  });
   it("lands an unknown code on the first rung, never on nothing", () => {
     expect(navForPlay("999")).toEqual(navForPlay("101"));
     expect(isPlayCode("999")).toBe(false);

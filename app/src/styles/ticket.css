@@ -31,22 +31,22 @@
 .ladder-rail {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   align-items: start;
   padding-top: 2px;
 }
 .ladder-rail::before {
   content: "";
   position: absolute;
-  left: calc(100% / 12);
-  right: calc(100% / 12);
+  left: calc(100% / 16);
+  right: calc(100% / 16);
   top: 15px;
   height: 2px;
   background: var(--border);
 }
 .ladder-rail-fill {
   position: absolute;
-  left: calc(100% / 12);
+  left: calc(100% / 16);
   top: 15px;
   height: 2px;
   background: var(--accent);

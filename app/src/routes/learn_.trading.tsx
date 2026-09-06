@@ -58,8 +58,8 @@ function TradingLadderPage(): ReactElement {
         <CourseCard key={course.level} course={course} />
       ))}
       <p className="note">
-        Spreads, condors, and anything with undefined risk stay off the ladder for now — later
-        course, on purpose.
+        Iron condors and anything with undefined risk stay off the ladder — a condor is a Playbook
+        Store strategy (two spreads run together), never a rung.
       </p>
     </PageFrame>
   );
