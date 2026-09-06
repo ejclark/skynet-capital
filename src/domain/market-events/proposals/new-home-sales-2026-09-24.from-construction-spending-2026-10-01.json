@@ -1,0 +1,11 @@
+{
+  "id": "new-home-sales-2026-09-24",
+  "kind": "macro-print",
+  "title": "New Residential Sales (August 2026 data) — the demand side of this print's reference month, 10:00 a.m. ET",
+  "date": "2026-09-24",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, 179 rows parsed), row \"New Residential Sales | September 24, 2026 | 10:00 AM | August 2026\", release code A202609241000, reference A202608. NOT corroborated by a posted GDPNow vintage: the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet (HTTP 200, 16,944 bytes) has NO 2026-09-24 row, because new-home sales is an \"other release\" rather than a trigger and draws a posting only when it shares a slot with one. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the construction-spending-2026-10-01 initial-research adjacency sweep (2026-09-06). It reads the SAME August 2026 reference month as the proposing print, from the new-home demand side, seven days ahead of it — the exact spacing at which construction-spending-2026-11-02 proposed new-home-sales-2026-10-27 against its own reference month, one cycle later. The series' September edition is untracked: new-home-sales-2026-11-25 and -12-23 are canonical and 10-27 exists only as a proposal, so the demand leg of the August reference month has no entry. Unlike the housing-starts sibling proposed in the same PR, this one is NOT a GDPNow trigger and draws no posted vintage on 09-24 — that asymmetry is itself the reason to track both: the corridor otherwise carries the residential supply side and not the demand side. Impact LOW and symbols empty on the same measured grounds as the sibling Census entries — no macro-keyed house playbook (re-grepped 2026-09-06 across trade-playbooks.md and multi-symbol-sweep.md, 0 hits) and no instrument attaches — and whoever researches it should re-derive both rather than inherit them. Proposed as an estimate; nothing here licenses an entry."
+}
