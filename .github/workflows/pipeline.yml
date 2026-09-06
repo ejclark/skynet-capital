@@ -355,6 +355,10 @@ jobs:
 
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          # Pinned (2026-09-05, docs/LESSONS.md): `latest` is resolved through an unauthenticated
+          # releases call that 403s under runner load; a pinned version downloads a fixed asset.
+          version: 0.4.99
 
       - name: Capture previous image
         # A shim: scripts/fly-image-ref.mjs owns the decision and is specced. It prints NOTHING when
@@ -427,6 +431,10 @@ jobs:
 
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          # Pinned (2026-09-05, docs/LESSONS.md): `latest` is resolved through an unauthenticated
+          # releases call that 403s under runner load; a pinned version downloads a fixed asset.
+          version: 0.4.99
 
       - name: Preflight — should the bots app deploy?
         # The decision tree (token/cutover/force/baseline/debounce/classify) lives in

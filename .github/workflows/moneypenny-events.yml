@@ -325,8 +325,13 @@ jobs:
     # event's work is a smaller window than 100 for a whole batch used to be), and a busy week is
     # more parallel jobs, never a shared budget several events race against. `fail-fast: false` so
     # one event's session dying never cancels its siblings' already-in-flight work.
+    # `max-parallel` (2026-09-05, docs/LESSONS.md): sixteen sessions opened inside five minutes and six
+    # of them died on their first turn (1 turn, ~400ms, $0 — a refused first call). The width of the
+    # fan-out is the constraint one level up from the GraphQL bucket; four at a time is far under the
+    # burst that failed and still clears a full due list inside one cadence.
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
         event: ${{ fromJSON(needs.route.outputs.due_events) }}
     runs-on: ubuntu-latest
@@ -375,7 +380,7 @@ jobs:
           # at turns 63 and 65-67, over cap (issue #904); 90 gives real headroom over the worst
           # observed overrun. docs/process/TOKEN-EFFICIENCY.md, 2026-08-28; issue #904, 2026-08-29.
           claude_args: |
-            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 90
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 150
           # Same shim: the protocol lives in .github/prompts/event-research.md. This run is
           # pre-assigned exactly one event (this matrix leg's) — the prompt tells it not to touch
           # any other due event even though `event-scan.mjs --due` will still list every one of
@@ -436,7 +441,7 @@ jobs:
           # not get past this even after the three real bugs behind them were fixed). Both already
           # need repo write to apply the label, so this grants no authority they lacked — it only
           # stops the action throwing away a run they could already authorize. NEVER `*`.
-          allowed_bots: "github-actions,claude"
+          allowed_bots: "github-actions,claude,skynet-envoy"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The App token, no fallback tier — see the header.
           github_token: ${{ steps.app-token.outputs.token }}
