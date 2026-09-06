@@ -1,27 +1,26 @@
 /* the wire (#738 phase 5a) — the Issues-list template on the league's pulse. Tokens only. */
 
-.wire-grid {
-  display: grid;
-  /* fluid: the side column grows with the page (a fixed 300px next to a 1600px feed reads as
-     an afterthought), bounded so it never crowds the feed on a laptop */
-  grid-template-columns: minmax(0, 1fr) clamp(300px, 26%, 460px);
-  gap: 16px;
-  align-items: start;
-}
-.wire-primary-col,
-.wire-side-col {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
+/* one section, alone, at every width (2026-09-06 — Eric: sections "always visible" read as a
+   hot mess) — capped at --col-read so a lone list on a wide screen reads as a page, never
+   stretched edge to edge or floating in mostly-empty space either side. */
 .wire-panel {
+  max-width: var(--col-read);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--elev-base);
   padding: var(--panel-p);
   min-width: 0;
+}
+.wire-h-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.wire-h-row .wire-h {
+  margin-bottom: 0;
 }
 .wire-h {
   margin: 0 0 10px;
@@ -155,16 +154,4 @@
   flex-direction: column;
   gap: 6px;
   line-height: 1.5;
-}
-@media (max-width: 900px) {
-  .wire-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* the phone pages between sections instead of stacking them (#1740): the feed runs to 60 rows,
-     so anything under it was a long scroll rather than a place. The rail's section switch is the
-     pager — it sits above this as a horizontal row, so nothing here becomes unreachable. */
-  .wire-side-col {
-    display: none;
-  }
 }

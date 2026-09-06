@@ -1,12 +1,15 @@
 import { readFileSync } from "node:fs";
-import { orderSections, type PageSection, resolveSection } from "../../app/src/shell/sections";
+import { type PageSection, resolveSection } from "../../app/src/shell/sections";
 
 /**
  * The rail's section switch (#1740) — the wargame's answer to "should tabs be the shell's third
  * navigation dimension": no, a section is the rail's existing control role, one mechanism shared by
- * every page that has sections. Two halves are checked: the pure resolve/order logic, and — the way
- * `desk-rail-settings.spec.ts` asserts a gate it has no DOM for — that the doctrine, the shape
- * difference, and the phone pager are actually present in the source they are claimed to live in.
+ * every page that has sections. EXCLUSIVE AT EVERY WIDTH (2026-09-06 — Eric, on the "beside" shape:
+ * "sections are always visible... the whole page just feels like a hot mess"): the pressed section
+ * is the only one rendered, matching Settings; there is no longer a "primary + beside" split. Two
+ * halves are checked: the pure resolve logic, and — the way `desk-rail-settings.spec.ts` asserts a
+ * gate it has no DOM for — that the doctrine and the shape difference are actually present in the
+ * source they are claimed to live in.
  */
 
 const SECTIONS: readonly PageSection<"feed" | "pnl" | "pulse">[] = [
@@ -36,26 +39,6 @@ describe("page sections", () => {
     it("resolves against the sections this viewer can see, not the full list", () => {
       const visible = SECTIONS.filter((s) => s.id !== "pulse");
       expect(resolveSection(visible, "pulse")).toBe("feed");
-    });
-  });
-
-  describe("orderSections", () => {
-    it("puts the current section first so it takes the primary column", () => {
-      expect(orderSections(SECTIONS, "pnl").map((s) => s.id)).toEqual(["pnl", "feed", "pulse"]);
-    });
-
-    it("keeps the declared order among the rest", () => {
-      expect(orderSections(SECTIONS, "pulse").map((s) => s.id)).toEqual(["pulse", "feed", "pnl"]);
-    });
-
-    it("is a no-op when the first section is already current", () => {
-      expect(orderSections(SECTIONS, "feed").map((s) => s.id)).toEqual(["feed", "pnl", "pulse"]);
-    });
-
-    it("never drops or duplicates a section", () => {
-      for (const current of ["feed", "pnl", "pulse"] as const) {
-        expect(orderSections(SECTIONS, current)).toHaveLength(SECTIONS.length);
-      }
     });
   });
 
@@ -106,10 +89,17 @@ describe("page sections", () => {
     });
   });
 
-  describe("the phone pages instead of stacking", () => {
-    it("hides Activity's secondary sections below the grid's breakpoint", () => {
+  describe("exclusive at every width, not just the phone", () => {
+    it("renders the pressed section alone — no primary-plus-beside split remains", () => {
+      const activity = read("app/src/routes/activity.tsx");
+      expect(activity).not.toContain("wire-side-col");
+      expect(activity).not.toContain("wire-primary-col");
+      expect(activity).not.toContain("orderSections");
+    });
+
+    it("caps a lone section at a reading width instead of stretching it edge to edge", () => {
       expect(read("app/src/styles/wire.css")).toMatch(
-        /@media \(max-width: 900px\)[\s\S]*\.wire-side-col\s*\{\s*display: none;/,
+        /\.wire-panel\s*\{[^}]*max-width: var\(--col-read\)/,
       );
     });
   });

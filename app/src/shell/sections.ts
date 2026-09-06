@@ -22,16 +22,3 @@ export function resolveSection<Id extends string>(
   const match = sections.find((s) => s.id === asked);
   return match?.id ?? (sections[0] as PageSection<Id>).id;
 }
-
-/**
- * The current section first, the rest in declared order — the desktop's "room" reading of
- * mobile-first (CLAUDE.md): on a phone the switch pages between sections, and on a wider screen
- * the same choice promotes one to the primary column while the others sit beside it. One control,
- * one meaning, at both widths.
- */
-export function orderSections<Id extends string>(
-  sections: readonly PageSection<Id>[],
-  current: Id,
-): readonly PageSection<Id>[] {
-  return [...sections].sort((a, b) => Number(b.id === current) - Number(a.id === current));
-}
