@@ -22,12 +22,32 @@ export interface EventCall {
   readonly confidence?: string;
 }
 
+/**
+ * A horizon row read WHOLE — the call plus the two cells a citing document must quote rather than
+ * paraphrase (the weekly study, #1716). Deliberately NOT folded into `EventCall`: that shape is
+ * serialised onto `/api/research` for every ledger × every horizon, and nothing on the board reads
+ * a Why or a falsifier, so widening it would grow the payload for no reader.
+ *
+ * `why` and `provesWrong` keep their authoring markup — a cell reads "**23** tracked events", and
+ * stripping the emphasis a ledger chose is an edit, not a quote. A GFM cell cannot contain a raw
+ * `|`, so re-emitting one into another table is always safe.
+ */
+export interface HorizonRow extends EventCall {
+  /** The `Why` cell as authored; empty string when the table carries no such column. */
+  readonly why: string;
+  /** The `Proves it wrong` cell as authored — the dated falsifier. */
+  readonly provesWrong: string;
+}
+
 /** The template's four horizons, in the order the table authors them. */
 type Horizon = "today" | "week" | "month" | "quarter";
 const HORIZONS: readonly Horizon[] = ["today", "week", "month", "quarter"];
 
 /** One ledger's calls by horizon — a horizon is absent when the table states no row for it. */
 export type HorizonCalls = Partial<Record<Horizon, EventCall>>;
+
+/** The same keying, rows read whole — what a citing document quotes from. */
+export type HorizonRows = Partial<Record<Horizon, HorizonRow>>;
 
 /**
  * The decision-header headings we recognise, in priority order. Event ledgers author
@@ -61,11 +81,13 @@ const cellsOf = (line: string): string[] =>
     .split("|")
     .map((c) => c.trim());
 
-/** The horizon table's data rows plus the two columns read by NAME, never by index. */
+/** The horizon table's data rows plus the columns read by NAME, never by index. */
 interface CallTable {
   readonly rows: readonly (readonly string[])[];
   readonly callAt: number;
   readonly confAt: number;
+  readonly whyAt: number;
+  readonly wrongAt: number;
 }
 
 /**
@@ -82,7 +104,14 @@ function callTableOf(md: string): CallTable | null {
   const cols = cellsOf(lines[0] ?? "").map((c) => c.toLowerCase());
   const callAt = cols.includes("call") ? cols.indexOf("call") : cols.indexOf("the call");
   if (callAt === -1) return null;
-  return { rows: lines.slice(2).map(cellsOf), callAt, confAt: cols.indexOf("confidence") };
+  return {
+    rows: lines.slice(2).map(cellsOf),
+    callAt,
+    confAt: cols.indexOf("confidence"),
+    whyAt: cols.indexOf("why"),
+    // The corpus authors this column as "Proves it wrong" and studies as "Proves me wrong".
+    wrongAt: cols.findIndex((c) => c.includes("proves") || c.includes("wrong")),
+  };
 }
 
 /** A cell with authoring emphasis stripped — the chip carries text, not markup. */
@@ -101,6 +130,14 @@ function rowCall(table: CallTable, cells: readonly string[]): EventCall | null {
   return confidence ? { call, horizon, confidence } : { call, horizon };
 }
 
+/** The same row, plus its Why and falsifier cells verbatim. Absent columns read as "". */
+function fullRow(table: CallTable, cells: readonly string[]): HorizonRow | null {
+  const call = rowCall(table, cells);
+  if (!call) return null;
+  const raw = (i: number): string => (i === -1 ? "" : (cells[i] ?? "").trim());
+  return { ...call, why: raw(table.whyAt), provesWrong: raw(table.wrongAt) };
+}
+
 /** Row labels often carry a parenthetical ("Today (D-13)", "Today (8/19)"), so match the prefix. */
 const HORIZON_LABELS: Record<Horizon, RegExp> = {
   today: /^today\b/i,
@@ -110,18 +147,31 @@ const HORIZON_LABELS: Record<Horizon, RegExp> = {
 };
 
 /** Every horizon row the header states, keyed by lens; the first row per horizon wins. */
-export function horizonCallsOf(md: string): HorizonCalls {
+function rowsByHorizon<T>(
+  md: string,
+  read: (table: CallTable, cells: readonly string[]) => T | null,
+): Partial<Record<Horizon, T>> {
   const table = callTableOf(md);
   if (!table) return {};
-  const out: HorizonCalls = {};
+  const out: Partial<Record<Horizon, T>> = {};
   for (const cells of table.rows) {
     const label = plain(cells, 0);
     const horizon = HORIZONS.find((h) => !out[h] && HORIZON_LABELS[h].test(label));
     if (!horizon) continue;
-    const call = rowCall(table, cells);
-    if (call) out[horizon] = call;
+    const row = read(table, cells);
+    if (row) out[horizon] = row;
   }
   return out;
+}
+
+/** The board's contract: call · horizon · confidence, keyed by lens. */
+export function horizonCallsOf(md: string): HorizonCalls {
+  return rowsByHorizon(md, rowCall);
+}
+
+/** The citing contract (#1716): the same rows with their Why and falsifier cells attached. */
+export function horizonRowsOf(md: string): HorizonRows {
+  return rowsByHorizon(md, fullRow);
 }
 
 /**

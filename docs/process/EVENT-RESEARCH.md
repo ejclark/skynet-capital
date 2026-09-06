@@ -138,7 +138,62 @@ must never be worded to imply "no change" or any other conclusion an actual asse
 draw — see CLAUDE.md's domain-accuracy-and-honesty principle. `scripts/event-material-scan.mjs`'s
 own header and `tests/scripts/event-material-scan.spec.ts` enforce this wording mechanically.
 
+## The weekly study genre (issue #1716) — what *the week* is, in one place
+
+A ledger answers "what about this event?"; nothing answered "what about this week?" — the question
+Eric's brief put plainly (#1704, item 3.1.2: *"understanding sentiment for the week… enables me to
+more intelligently exit before a dip, or hold a position"*). `docs/research/weeks/<ISO-week>.md` is
+that answer, and it is composed, not written:
+
+```
+npm run research:week                     # the market week of today (a Sunday resolves forward)
+npm run research:week -- --week 2026-W37  # a named ISO week
+npm run research:week -- --stdout         # print it, write nothing
+```
+
+**Why a script and not a session.** The brief asked for a lane to author the doc each Sunday, and in
+the same breath forbade it from generating anything: *"aggregate, never generate sentiment… no
+LLM-written 'mood'."* Those settle together on the precedent already in this file — a **deterministic
+screen** writes its own ledger row and commits it *without spending a session*, precisely so a
+mechanical check can never be worded as a verdict. A weekly study is the same shape of work: a join
+over documents that already exist. `src/research/week-study.ts` composes it; `npm run research:week`
+runs it; a cron is then one line, not a session.
+
+**What the document contains** — and what each part is allowed to be:
+
+| Section | Contents | Where every value comes from |
+|---|---|---|
+| `## The call — what to do, by name` | TL;DR, one row per tracked name (call · confidence · why · dated falsifier), then **Signals & conditions** | the nearest in-range ledger for that name, quoted; the signals name the week's critical/high market-wide ledgers rather than restating their calls |
+| `## The week's board` | every researched event dated in range, in date order, with its authored `This week` row | one row per ledger, verbatim |
+| `### Hub events` | the corridor's most-named event ids, with counts | probe-ref `adjacentIds` degrees — the same count `app/src/live/call-mix.ts`'s `hubEvents` runs for the board |
+| `## How this study was composed` | the receipt | the composer itself |
+
+**The four rules that keep the genre honest:**
+
+1. **No claim a cited ledger does not carry.** Every Call/Why/falsifier cell is a quote with its
+   ledger linked. The composer's only arithmetic is counting documents it can name.
+2. **A name with no ledger in range reads "no researched event this week."** Absence is stated, never
+   filled in.
+3. **Under three researched events in range, no document is written** — the composer says so on
+   stdout and exits 0. A quiet week is an answer.
+4. **A closed week is append-only.** The composer refuses to overwrite a past week's file without
+   `--force`, which is reserved for a correction to the underlying ledgers.
+
+**The mix stays on the board.** The four-class call mix (`stand-aside`/`watch`/`act`/`conditional`)
+lives in `app/src/live/call-mix.ts` and already drives `/research`'s week lens; the study reports the
+authored **confidence** distribution instead, which needs no classification at all. Two copies of one
+classifier would be two owners of one judgment.
+
+**Scope, for now.** Month and quarter genres are deliberately out of scope until the weekly one has
+run four times. The weekly study registers no forward tests of its own — the ledgers it cites already
+carry theirs.
+
 ## The decision header is gated (`npm run research:lint`)
+
+The gate reads **both** `docs/research/events/` and `docs/research/weeks/` — one contract, one eye.
+A weekly study's call sheet keys by name rather than by horizon, so the four-horizon rule does not
+apply to it (the lint already skips that check for a by-name table) and its advisory header budget is
+wider, because a by-name sheet grows with the roster rather than with an author's prose.
 
 A ledger without a usable call sheet fails the gate. `docs/ISSUES.md` measured why this is needed:
 *"the PR surface got a template, a guide and a gate; the issue surface got none of the three, and
