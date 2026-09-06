@@ -14,23 +14,45 @@
 // arch-scan doctrine): a file whose size is dominated by one template literal is a grandfather-list
 // case, not a decompose target.
 
-/** Lines of `source` that are neither blank nor a whole-line comment. */
-export function codeLineCount(source) {
-  let count = 0;
+/**
+ * Classify every line of `source` as code, comment or blank.
+ *
+ * Both halves are reported because both are worth seeing: the cap prices `code`, and `comment` is
+ * the intent layer it deliberately does NOT price (#1713's acceptance criterion — a reader of the
+ * scan should be able to tell a 400-line file that explains itself from one that sprawls). `physical`
+ * is the file's own line count, so `code + comment + blank === physical` always holds.
+ */
+export function lineBreakdown(source) {
+  let code = 0;
+  let comment = 0;
+  let blank = 0;
   let inBlock = false;
   for (const raw of source.split("\n")) {
     const line = raw.trim();
     if (inBlock) {
+      comment++;
       if (line.includes("*/")) inBlock = false;
       continue;
     }
-    if (line === "") continue;
-    if (line.startsWith("//")) continue;
+    if (line === "") {
+      blank++;
+      continue;
+    }
+    if (line.startsWith("//")) {
+      comment++;
+      continue;
+    }
     if (line.startsWith("/*")) {
+      comment++;
       if (!line.includes("*/")) inBlock = true;
       continue;
     }
-    count++;
+    code++;
   }
-  return count;
+  return { code, comment, blank, physical: code + comment + blank };
+}
+
+/** Lines of `source` that are neither blank nor a whole-line comment. */
+export function codeLineCount(source) {
+  return lineBreakdown(source).code;
 }

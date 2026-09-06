@@ -20,7 +20,8 @@ scale; this is the drill that fixes it. One split per PR — that discipline is 
 node scripts/arch-scan.mjs --candidate
 ```
 
-Emits the largest file over the 300-line cap that isn't already in `arch-grandfather.json` (a flat,
+Emits the largest file over the 300 **code**-line cap — blank and comment lines are not counted
+(`scripts/code-lines.mjs`) — that isn't already in `arch-grandfather.json` (a flat,
 one-line-per-file list of known legacy files with a documented reason, not a numbered budget). Take
 `candidate`. A `null` candidate means nothing new is over cap — check `arch-grandfather.json` for the
 next deliberate target instead.
@@ -51,7 +52,7 @@ Never pipe a check to `tail` — a pipeline exits with `tail`'s status and masks
 
 ## 4. Remove it from the grandfather list
 
-If the split brought the file under the 300-line cap (or it was in `arch-grandfather.json`), delete its
+If the split brought the file under the 300 code-line cap (or it was in `arch-grandfather.json`), delete its
 entry there in the same PR — the list only ever shrinks. If the new module is still over cap for a real
 reason, leave it grandfathered with an updated one-line reason instead of silently dropping it.
 
