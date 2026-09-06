@@ -2,7 +2,7 @@ import type { ServerResponse } from "node:http";
 import { browseCollections, unshelved } from "../discovery/collections.js";
 import { outpostCatalog } from "../discovery/play-cards.js";
 import { marketClosures } from "../domain/market-calendar.js";
-import { allEvents, everyEvent } from "../domain/market-events.js";
+import { everyEvent } from "../domain/market-events.js";
 import { collectionsJsonView } from "../observatory/collections-json-view.js";
 import { learnJsonView } from "../observatory/learn-json-view.js";
 import { researchShelfJson } from "../observatory/research-json-view.js";

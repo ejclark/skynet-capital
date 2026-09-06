@@ -2,7 +2,6 @@ import type { ReactElement } from "react";
 import {
   type DayRange,
   daysOf,
-  inRange,
   type MarketClosure,
   rangeLabel,
   sessionsIn,
@@ -161,7 +160,8 @@ export function EventHorizon({
           );
         })}
       </div>
-      <div className="eh-lenses" role="group" aria-label="Lens">
+      <fieldset className="eh-lenses">
+        <legend className="visually-hidden">Lens</legend>
         {LENSES.map((option) => (
           <button
             key={option}
@@ -173,7 +173,7 @@ export function EventHorizon({
             {LENS_NAME[option]}
           </button>
         ))}
-      </div>
+      </fieldset>
       <p className="eh-legend">
         <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
         <i className="eh-swatch eh-swatch-closed" /> closed
