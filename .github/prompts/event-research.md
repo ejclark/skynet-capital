@@ -19,10 +19,14 @@ matching mode in `docs/process/EVENT-RESEARCH.md` for your assigned event only:
   (initial research + stance + kill switches + first ledger row).
 - `interval-elapsed` → pulse check appending ONE ledger row, including the mandatory adjacency sweep
   (peer prints, CPI/FOMC surprises, VIX regime moves, geopolitics touching the event's symbols) —
-  any dated adjacent event you discover is PROPOSED as a NEW FILE
-  `src/domain/market-events/<id>.json` (`"status": "estimate"`) in the same PR, never `confirmed`.
-  One file per event (issue #1449): your own event's amendments go in
-  `src/domain/market-events/<your-event-id>.json` and nowhere else — there is no shared array. (Most `interval-elapsed` pulses
+  any dated adjacent event you discover is PROPOSED as a NEW FILE YOU OWN,
+  `src/domain/market-events/proposals/<id>.from-<your-event-id>.json` (`"status": "estimate"`), in
+  the same PR, never `confirmed` and never as `<id>.json` (issue #1717: two sweeps discovering the
+  same event on the same day both created `<id>.json`, the one add/add left after #1449). One file
+  per owner (issue #1449): your own event's amendments go in
+  `src/domain/market-events/<your-event-id>.json` and nowhere else — there is no shared array. On
+  `never-assessed` research of an id that exists only as `proposals/<your-id>.from-*.json`, read
+  every proposal first, then write the canonical `<your-id>.json` yourself. (Most `interval-elapsed` pulses
   never reach you — `moneypenny-events.yml`'s deterministic screen already handled the quiet ones before
   this session started; you only see one because the probe found it material, or its own reference
   block was missing/stale, or the fetch failed. Research it exactly as any other pulse.)
