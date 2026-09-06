@@ -1,0 +1,11 @@
+{
+  "id": "fhfa-hpi-2026-12-29",
+  "kind": "macro-print",
+  "title": "FHFA House Price Index — Monthly Index (October 2026 data)",
+  "date": "2026-12-29",
+  "status": "estimate",
+  "source": "EST: fhfa.gov/data/hpi fetched direct 2026-09-06 (HTTP 200, 89,663 bytes), \"2026 HPI Release Dates\" table, row \"Tuesday, December 29 | Monthly Index | October 2026\" — the same forward table that carries this proposer's own date, and corroborated by the published 2026Q2 report's release-date appendix (pages 26-27). Filed estimate because the proposal contract forbids a proposer filing any event as confirmed (docs/process/EVENT-RESEARCH.md), not because the primary is weak. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the fhfa-hpi-2026-11-24 initial research (2026-09-06), proposed for two reasons this calendar can act on. First, it is the print that SCORES that ledger's revision forward test: the December monthly report restates September 2026 one step, and 104 of 105 published one-step revisions in FHFA's own \"(Previous Estimate)\" tables moved the m/m by 0.1pp or less. Second, and the reason it is not just bookkeeping: cr-expiry-2026-12-11 sits eighteen days ahead of it, and FHFA is the calendar's one publisher a funding lapse cannot stop — 12 U.S.C. 4516(f)(2)-(3) declares its assessment income \"not ... Government or public funds or appropriated money\" and exempts it from apportionment, and 222 of 222 months since March 2008 carry a release, including two inside the 2018-19 shutdown. In a lapse branch this becomes one of the few housing reads still arriving, which is the same argument the tracked consumer-confidence-2026-10-27 entry makes for a private publisher. Proposed as an estimate; nothing here licenses an entry."
+}

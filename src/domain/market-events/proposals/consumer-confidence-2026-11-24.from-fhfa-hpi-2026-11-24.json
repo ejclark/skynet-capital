@@ -1,0 +1,11 @@
+{
+  "id": "consumer-confidence-2026-11-24",
+  "kind": "macro-print",
+  "title": "Conference Board Consumer Confidence Index (Nov 2026)",
+  "date": "2026-11-24",
+  "status": "estimate",
+  "source": "EST: conference-board.org/topics/consumer-confidence fetched direct 2026-09-06 (HTTP 200, 332,031 bytes), whose August-2026 release text states \"The Conference Board publishes the Consumer Confidence Index at 10 a.m. ET on the last Tuesday of every month\" and names 2026-09-29 explicitly but not November; 2026-11-24 is that Tuesday — cadence-derived, not a fetched primary line for this date. Same shape and same publisher rule as the tracked consumer-confidence-2026-09-29 and -2026-10-27 entries. Checked 2026-09-06",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "DISCOVERED during the fhfa-hpi-2026-11-24 initial research (2026-09-06), and it is that ledger's central measurement problem rather than a bystander. Both publishers key on the same slot: FHFA HPI landed on the last Tuesday of its month in 68 of 68 releases since 2021-01-01, and the Conference Board publishes at 10:00 ET on the last Tuesday of every month — so every FHFA HPI release day in the measured window is also a Consumer Confidence day, which is why the FHFA ledger DECLINES a tape claim instead of reporting a null. The calendar already tracks this series for 08-25, 09-29 and 10-27 and simply stops before the November edition; filing it makes the 11-24 morning legible as the two-print morning it is, one day ahead of the five-event 11-25 cluster. Proposed as an estimate on the publisher's stated cadence; nothing here licenses an entry."
+}

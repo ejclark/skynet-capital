@@ -12,7 +12,7 @@ export const KINDS = [
   "geopolitical",
 ];
 export const TIERS = ["critical", "high", "medium", "low"];
-export const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB|UMICH):/;
+export const CONFIRMED_PREFIX = /^(IR|CAL|BLS|FED|PJM|SEC|TSY|OCC|BEA|CENSUS|ISM|CB|UMICH|FHFA):/;
 export const ESTIMATE_PREFIX = /^(EST|NEWS):/;
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
