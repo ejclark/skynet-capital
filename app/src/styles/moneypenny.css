@@ -63,10 +63,11 @@
   font-size: 11px;
   color: var(--muted);
 }
-/* the two header controls — 32px targets so a thumb can hit them on a phone */
+/* the three header controls — 32px minimum targets so a thumb can hit them on a phone */
+.mp-copy,
 .mp-new,
 .mp-close {
-  width: 32px;
+  min-width: 32px;
   height: 32px;
   display: inline-flex;
   align-items: center;
@@ -77,16 +78,22 @@
   color: var(--muted);
   font-size: 16px;
   cursor: pointer;
-  padding: 0;
+  padding: 0 6px;
+}
+.mp-copy {
+  margin-left: auto;
+  font-size: 13px;
+  letter-spacing: 0.02em;
 }
 .mp-new {
-  margin-left: auto;
-  font-size: 15px;
+  font-size: 18px;
 }
+.mp-copy[disabled],
 .mp-new[disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
+.mp-copy:hover,
 .mp-new:hover,
 .mp-close:hover {
   color: var(--text);

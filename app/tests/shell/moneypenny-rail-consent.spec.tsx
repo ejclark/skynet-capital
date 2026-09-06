@@ -112,7 +112,7 @@ describe("MoneypennyRail — consent and identity", () => {
     expect(useMoneypenny.getState().draft?.title).toBe("Step 2 never completes");
   });
 
-  it("the ✦ toggle opens on her intro, and ↺ starts a fresh conversation", async () => {
+  it("the ✦ toggle opens on her intro, and + starts a fresh conversation", async () => {
     globalThis.fetch = ((url: string) =>
       Promise.resolve(
         url === "/api/onboarding" ? json(onboarding(true)) : new Response("{}", { status: 404 }),

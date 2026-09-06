@@ -43,6 +43,23 @@ describe("the companion's system prompt", () => {
     expect(COMPANION_SYSTEM_PROMPT).toContain("only the member's own reply sends it");
     expect(COMPANION_SYSTEM_PROMPT).toContain("you never file");
   });
+
+  it("holds the record firm, evidence-first — never a citation-shaped rebuttal (#1672 slice 2)", () => {
+    expect(COMPANION_SYSTEM_PROMPT).toContain("THE RECORD OUTRANKS A CLAIM");
+    expect(COMPANION_SYSTEM_PROMPT).toContain("form your answer from that record FIRST");
+    expect(COMPANION_SYSTEM_PROMPT).toContain("not as a rebuttal you're winning");
+    expect(COMPANION_SYSTEM_PROMPT).toContain(
+      "never apologize for something the record shows didn't happen",
+    );
+    expect(COMPANION_SYSTEM_PROMPT).toContain(
+      "a real mismatch this app itself might have gotten wrong",
+    );
+  });
+
+  it("shapes a filing for the AI build session that reads it, not a transcript dump", () => {
+    expect(COMPANION_SYSTEM_PROMPT).toContain("the automated build session that reads them next");
+    expect(COMPANION_SYSTEM_PROMPT).toContain("concrete and concise beats long");
+  });
 });
 
 describe("the standing disclosure", () => {

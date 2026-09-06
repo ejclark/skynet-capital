@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { KeyboardEvent, ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { type MpMessage, useMoneypenny } from "../live/moneypenny";
+import { formatTranscript, type MpMessage, useMoneypenny } from "../live/moneypenny";
 import { chipsFor } from "../live/moneypenny-script";
 
 /**
@@ -11,13 +11,16 @@ import { chipsFor } from "../live/moneypenny-script";
  * ground and hairline. Thread anatomy is the assistant-ui pattern: a scrolling message list that
  * follows every append (day breaks where the thread crosses midnight), suggestion chips that
  * come from where the member is, and a composer — Enter sends, Shift+Enter breaks a line,
- * Escape closes the rail. A ↺ control starts a new conversation. The standing disclosure the
+ * Escape closes the rail. A `+` control starts a new conversation (a circular-arrow glyph read
+ * as "retry" in a 2026-09-06 pattern pass on ChatGPT/Claude/Gemini's own convention, which is
+ * plausibly why it went unseen); a copy control sits beside it, so a thread is savable before
+ * it's wiped (NN/g's baseline chatbot guideline — #1672 slice 2). The standing disclosure the
  * companion is told the UI carries is rendered here, under the composer.
  *
  * Rendering only. What she says and when anything files is `live/moneypenny.ts`; this component
- * has one side effect of its own — after a filing it invalidates the queries that carry the
- * feedback gate (the ladder, the desk's plays, the onboarding milestone, the filings list), so
- * the unlock shows everywhere the moment the issue exists.
+ * has two side effects of its own: after a filing it invalidates the queries that carry the
+ * feedback gate (the ladder, the desk's plays, the onboarding milestone, the filings list), and
+ * the copy control writes the formatted thread to the clipboard.
  * @category feedback
  */
 
@@ -74,6 +77,7 @@ export function MoneypennyRail(): ReactElement | null {
   const closeRail = useMoneypenny((s) => s.closeRail);
   const newConversation = useMoneypenny((s) => s.newConversation);
   const [text, setText] = useState("");
+  const [copied, setCopied] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -124,6 +128,19 @@ export function MoneypennyRail(): ReactElement | null {
           firstTradeDone: firstTradeDone === true,
         })
       : [];
+  // Best-effort: a clipboard failure (no permission, no secure context) costs nothing but the
+  // "Copied" confirmation — the member's thread was never at risk of being lost by trying.
+  const copyThread = () => {
+    void navigator.clipboard
+      .writeText(formatTranscript(messages))
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {
+        // clipboard unavailable — nothing to show, nothing lost
+      });
+  };
 
   return (
     <aside className="mp-rail" aria-label="Moneypenny">
@@ -135,13 +152,23 @@ export function MoneypennyRail(): ReactElement | null {
         <span className="mp-sub">learning · feedback</span>
         <button
           type="button"
+          className="mp-copy"
+          aria-label="Copy conversation"
+          title="Copy conversation"
+          disabled={messages.length === 0}
+          onClick={copyThread}
+        >
+          {copied ? "Copied" : "⧉"}
+        </button>
+        <button
+          type="button"
           className="mp-new"
           aria-label="New conversation"
           title="New conversation"
           disabled={busy}
           onClick={() => void newConversation()}
         >
-          ↺
+          +
         </button>
         <button
           type="button"

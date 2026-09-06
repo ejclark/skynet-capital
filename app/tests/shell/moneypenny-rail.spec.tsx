@@ -199,6 +199,39 @@ describe("MoneypennyRail", () => {
     // the ack always fires, independent of routing — the gate's evidence isn't tied to the coach
     expect(calls.filter((c) => c.url === "/api/companion/ack")).toHaveLength(2);
   });
+
+  it("the copy control is disabled on an empty thread", () => {
+    mount();
+    // No need to run the full async openRail() — the control's disabled state depends only on
+    // the message count, which is already empty from a fresh store.
+    act(() => useMoneypenny.setState({ open: true }));
+    expect(screen.getByRole("button", { name: "Copy conversation" })).toBeDisabled();
+  });
+
+  it("the copy control writes the thread to the clipboard and confirms, briefly", async () => {
+    const written: string[] = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: (text: string) => {
+          written.push(text);
+          return Promise.resolve();
+        },
+      },
+    });
+    stubFetch({ "/api/onboarding": () => onboarding(false) }, calls);
+    mount();
+    await act(() => useMoneypenny.getState().openRail({ intro: true }));
+    await flush();
+    const copy = screen.getByRole("button", { name: "Copy conversation" });
+    await act(async () => {
+      fireEvent.click(copy);
+      await Promise.resolve();
+    });
+    expect(written).toHaveLength(1);
+    expect(written[0]).toContain("Moneypenny · hi, I'm Moneypenny");
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
+  });
 });
 
 // Eric, 2026-09-03: "she can look up information on the fly and be a self service tool" — a
