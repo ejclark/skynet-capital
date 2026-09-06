@@ -68,11 +68,32 @@ common and nobody had written down.
 | Where | Fogged capability | Unlock | Status |
 |---|---|---|---|
 | `/trade` option ticket | option opens beyond the earned rung | the previous rung's fill | shipped (#469, #1461) |
+| `/playbooks` store | a house playbook's full body and preview | the rung the card names (`unlocksAfter`) | shipped (#885) |
 | `/trade` multi-leg builder | spread execution | rung 401 | planned (#1671) |
 | `/trade` same-day expiry | any option order expiring today | rung 501 | planned (#1671) |
 | `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | planned (#1704) |
 
 Add a row when a new fog ships; a fog with no row here is undocumented and gets one.
+
+## Audit — the tree run across the app (2026-09-06)
+
+Eric's ask: inspect the textbook case's criteria, then illuminate what else checks them — and what
+is gated today for reasons that are *not* fog, so the noise comes off the emerging design.
+
+| Surface | Today | Verdict | Route |
+|---|---|---|---|
+| `/trade` option rungs · `/playbooks` store | fogged behind fills | fog — textbook, shipped | ledger above |
+| `/research` day lens | open (the Today row) | fog behind 501 | #1704 |
+| `/trade` multi-leg builder · same-day expiry | open, inexecutable / ungated | fog behind 401 / 501 | #1671 |
+| `/u/:id/playbooks` subscribe (delegating capital to a bot's playbook) | open, no rung | **fog candidate** — Q1 yes (capital), Q2 yes (the thesis stays readable), Q3 yes: the rung the playbook card already names | filed as its own issue |
+| "say hello to Moneypenny" wall before the first stock buy | gated | **not a fog** — the unlock is engagement, not skill evidence (criterion 3); an onboarding gate, name it as one | leave; never call it fog |
+| comprehension checks (`unlock-gate.tsx`) | quiz claims a milestone | a quiz may *accompany* an earn, never substitute for the fill | leave |
+| wheels-off button | one-click bypass of every fog | the door, not a fog | #1671 decision 1 |
+| `/research` week · month · quarter lenses | — | open — long-horizon awareness lowers risk (Q1 no) | #1704 |
+| options chain greeks, every call's *why* / *proves it wrong*, P/L, `SIM` labels, the leaderboard | open | never fog — protective or shared-universe (criteria 1, 7) | — |
+| `/research` calendar days with no event | disabled | **noise, not fog** — nothing is behind the door; the lens/range model makes every day pickable | #1704 slice 2 |
+| `/outpost` · `/collections` catalogs | open, "named and visible, never quietly dropped" | open — browsing is not a capability | — |
+| member-built bots (the north star) | not member-facing yet | future fog at a 400+ rung, when it exists | later |
 
 ## Anti-patterns
 
