@@ -52,7 +52,7 @@ import { answered, audit, gatherAuditDeps } from "./audit.mjs";
 import { CLAIM_TTL_MS, claimAgeOf, claimFailureReason, claimStamp } from "./claim-lease.mjs";
 import { dueForResearch, routeSweep } from "./events.mjs";
 import { guardFeedbackOutcome } from "./feedback-guard.mjs";
-import { ghRest, sh } from "./gh.mjs";
+import { ghRest, sh, withRetry } from "./gh.mjs";
 import { ensureLabel, ensureVocabulary, LABELS, MANAGED_LABELS } from "./labels.mjs";
 import { modelTier } from "./model-tier.mjs";
 import { planReadyIntent } from "./plan-claim.mjs";
@@ -302,7 +302,9 @@ function gatherDeps(ctx) {
   const json = (label, cmd, args) => {
     let out;
     try {
-      out = sh(cmd, args);
+      // A GitHub 5xx mid-gather used to kill the whole route run (2026-09-05, docs/LESSONS.md);
+      // three tries with backoff turn that into a pause, and a 4xx still throws on the first.
+      out = withRetry(() => sh(cmd, args));
     } catch (err) {
       throw new Error(`${label} failed: ${String(err.stderr || err.message).trim()}`);
     }

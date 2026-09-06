@@ -74,6 +74,30 @@ export function cutoverPendingFromToml(tomlText) {
   return /^\s*bots\s*=/m.test(tomlText);
 }
 
+/**
+ * Pure. The `[mounts] source` volume names fly.bots.toml declares that `flyctl volumes list --json`
+ * does NOT show. 2026-09-04: #1264 added the `skynet_bots_data` mount before the volume existed,
+ * and every one of the next 16 merges to main went red on `flyctl deploy` ("needs volumes with
+ * name 'skynet_bots_data'") — 16 incidents, 16 repair dispatches, one root cause a preflight could
+ * have named in a single line. A missing volume is a `skip` with the exact `fly volume create`
+ * command, never a red run; `scripts/deploy-lag.mjs` keeps the bots-lag baseline honest meanwhile.
+ */
+export function missingVolumes(botsTomlText, volumesJson) {
+  const declared = [...botsTomlText.matchAll(/^\s*source\s*=\s*"([^"]+)"/gm)].map((m) => m[1]);
+  let present = [];
+  try {
+    present = (JSON.parse(volumesJson || "[]") ?? []).map((v) => v.name ?? v.Name).filter(Boolean);
+  } catch {
+    return []; // unreadable listing — fail open, the deploy step reports its own error
+  }
+  return declared.filter((name) => !present.includes(name));
+}
+
+/** The app name fly.bots.toml deploys to — `app = "..."` — or null when the file has none. */
+export function botsAppFromToml(botsTomlText) {
+  return botsTomlText.match(/^\s*app\s*=\s*"([^"]+)"/m)?.[1] ?? null;
+}
+
 if (process.argv[1]?.endsWith("bots-deploy-preflight.mjs")) {
   const hasToken = Boolean(process.env.FLY_API_TOKEN);
   const force = process.env.FORCE === "true";
@@ -114,6 +138,35 @@ if (process.argv[1]?.endsWith("bots-deploy-preflight.mjs")) {
     }
   }
 
+  // The volume gate runs last and only on a would-deploy verdict: a deploy that Fly will refuse for
+  // a missing volume is a skip with the fix spelled out, not a red run. BOTS_TOML_PATH and
+  // VOLUMES_JSON are spec overrides; the real caller reads fly.bots.toml and asks flyctl.
+  if (verdict.deploy && hasToken) {
+    const botsToml = process.env.BOTS_TOML_PATH || "fly.bots.toml";
+    const botsTomlText = existsSync(botsToml) ? readFileSync(botsToml, "utf8") : "";
+    const app = botsAppFromToml(botsTomlText);
+    let volumesJson = process.env.VOLUMES_JSON;
+    if (volumesJson === undefined && app) {
+      try {
+        volumesJson = execFileSync("flyctl", ["volumes", "list", "-a", app, "--json"], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+      } catch {
+        volumesJson = undefined; // flyctl unavailable — fail open, never block on the check itself
+      }
+    }
+    const missing = volumesJson === undefined ? [] : missingVolumes(botsTomlText, volumesJson);
+    if (missing.length > 0) {
+      verdict = {
+        deploy: false,
+        reason:
+          `volume(s) ${missing.join(", ")} declared in ${botsToml} do not exist on ${app} — ` +
+          `run \`fly volume create ${missing[0]} -a ${app} -r ord -n 1\` (Eric's step); ` +
+          "deploying now would fail on Fly's own mount check",
+      };
+    }
+  }
   console.log(verdict.deploy ? "deploy" : "skip");
   console.log(verdict.reason);
 }

@@ -10,6 +10,14 @@ import { join } from "node:path";
 // FLY_TOML_PATH points at a temp fixture so the cutover gate is provable without touching this
 // repo's real fly.toml (already cut over — no `bots =` line).
 const tmpToml = mkdtempSync(join(tmpdir(), "bots-preflight-"));
+// The volume gate (2026-09-04, 16 red deploys on a mount whose volume did not exist yet) asks
+// flyctl for the app volumes; VOLUMES_JSON stands in for that answer so no spec ever shells out.
+const VOLUMES_PRESENT = JSON.stringify([{ name: "skynet_bots_data" }]);
+const botsTomlPath = join(tmpToml, "fly.bots.toml");
+writeFileSync(
+  botsTomlPath,
+  `app = "skynet-capital-bots"\n[mounts]\n  source = "skynet_bots_data"\n  destination = "/data"\n`,
+);
 const cutTomlPath = join(tmpToml, "cut-over.toml");
 const preCutoverTomlPath = join(tmpToml, "pre-cutover.toml");
 writeFileSync(cutTomlPath, "dashboard = 1\n");
@@ -20,7 +28,7 @@ afterAll(() => rmSync(tmpToml, { recursive: true, force: true }));
 const preflight = (env: Record<string, string>): { deploy: boolean; reason: string } => {
   const out = execFileSync("node", ["scripts/bots-deploy-preflight.mjs"], {
     encoding: "utf8",
-    env: { ...process.env, FLY_TOML_PATH: cutTomlPath, ...env },
+    env: { ...process.env, FLY_TOML_PATH: cutTomlPath, VOLUMES_JSON: VOLUMES_PRESENT, ...env },
   });
   const [verdict, reason] = out.trim().split("\n");
   return { deploy: verdict === "deploy", reason: reason ?? "" };
@@ -144,5 +152,51 @@ describe("bots-deploy preflight (deploy-bots gate)", () => {
       });
       expect(verdict.reason).toContain("no changed paths");
     });
+  });
+});
+
+describe("bots-deploy preflight — the volume gate (#1264 aftermath)", () => {
+  it("skips with the exact `fly volume create` when a declared mount has no volume", () => {
+    const verdict = preflight({
+      ...BASE_ENV,
+      FORCE: "true",
+      BOTS_TOML_PATH: botsTomlPath,
+      VOLUMES_JSON: "[]",
+    });
+    expect(verdict.deploy).toBe(false);
+    expect(verdict.reason).toContain("skynet_bots_data");
+    expect(verdict.reason).toContain("fly volume create skynet_bots_data -a skynet-capital-bots");
+  });
+
+  it("deploys when the listing shows the declared volume", () => {
+    const verdict = preflight({
+      ...BASE_ENV,
+      FORCE: "true",
+      BOTS_TOML_PATH: botsTomlPath,
+      VOLUMES_JSON: VOLUMES_PRESENT,
+    });
+    expect(verdict.deploy).toBe(true);
+    expect(verdict.reason).toBe("force_bots_deploy dispatch");
+  });
+
+  it("fails open on an unreadable listing — the gate never blocks on its own error", () => {
+    const verdict = preflight({
+      ...BASE_ENV,
+      FORCE: "true",
+      BOTS_TOML_PATH: botsTomlPath,
+      VOLUMES_JSON: "not json",
+    });
+    expect(verdict.deploy).toBe(true);
+  });
+
+  it("never overrides a skip verdict — a missing volume is not consulted when nothing would deploy", () => {
+    const verdict = preflight({
+      ...BASE_ENV,
+      FLY_API_TOKEN: "",
+      BOTS_TOML_PATH: botsTomlPath,
+      VOLUMES_JSON: "[]",
+    });
+    expect(verdict.deploy).toBe(false);
+    expect(verdict.reason).toContain("no bots-app Fly token");
   });
 });
