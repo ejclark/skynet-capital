@@ -1,0 +1,11 @@
+{
+  "id": "mtis-2026-10-15",
+  "kind": "macro-print",
+  "title": "Manufacturing and Trade: Inventories and Sales (August 2026 data) — the first combined business-inventories print on the restated retail basis, 10:00 a.m. ET",
+  "date": "2026-10-15",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, all 179 rows parsed), row \"Manufacturing and Trade: Inventories and Sales | October 15, 2026 | 10:00 AM | August 2026\", release code A202610151000, reference A202608. Corroborated by census.gov/mtis/index.html the same day, verbatim: \"Revisions to the retail estimates are anticipated to be reflected in the August 2026 MTIS release scheduled for October 15, 2026.\" Further corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet, whose 2026-10-15 row reads \"Retail sales + inventories, Producer Price Index\". Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the mwts-benchmark-revision-2026-10-26 initial-research adjacency sweep (2026-09-06), and proposed under the same stated rule as its sibling mtis-2026-11-17: track the MTIS editions Census itself names as carrying an AIES restatement, and no others. This is the retail half's landing spot — the first combined business-inventories print after the 2026-09-28 retail benchmark revision (also proposed in this PR). Same collision caution as every MTIS entry in this family: a tracked entry already occupies 2026-10-15, and it is a different release — retail-sales-2026-10-15 is the 08:30 Advance Monthly Retail Trade report for SEPTEMBER data (A202610150830), while this is the 10:00 MTIS for AUGUST data (A202610151000). Reading one as the other would attribute a restated history to an advance sales headline. Impact LOW and symbols empty: no house playbook is macro-keyed (grep re-run 2026-09-06, 0 hits) and no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
