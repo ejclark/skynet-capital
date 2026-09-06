@@ -26,6 +26,7 @@
     "confirm:print-dates": "tsx src/scripts/confirm-print-dates.ts",
     "brief:morning": "tsx src/scripts/morning-brief.ts",
     "shoot:login": "tsx scripts/shoot/login.mjs",
+    "scan:layout-resize": "npm run build --prefix app && tsx scripts/layout-resize-scan.mjs",
     "shoot:straddle": "tsx scripts/shoot/straddle.mjs",
     "graph:refresh": "bash scripts/refresh-graph.sh",
     "docs:claude": "node scripts/fetch-claude-docs.mjs",
