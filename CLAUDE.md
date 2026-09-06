@@ -197,7 +197,13 @@ above) — never a build of the list verbatim, and never a paragraph per item ec
 in proximity (the "talking points I have yet to see" are an explicit invitation for side quests),
 quantify the hunches against the corpus/code, and hand back the smallest vocabulary that turns his
 "feels out of place" into a precise request. Store the reasoning where it survives the session
-(the issue, `/journey`), not in chat.
+(the issue, `/journey`), not in chat. **And when the brief carries acceptance criteria, the
+planning session ends by starting the build, not by handing the `ready` flip back** (Eric,
+2026-09-06, after the research brief produced a plan issue and a "flip `ready`" ask: "I provided
+rich acceptance criteria... this was intended to establish plumbing to enable you to grind through
+the work"). The written decision is the plumbing; his brief was the go signal. Label the plan
+`ready` yourself, cite the brief, and take slice 1 — the flip comes back to him only when a fork
+he alone can settle is genuinely blocking.
 
 **Interrogate before you comply — the mechanism, never the outcome** (Eric, 2026-09-04: "I feel
 like you inadequately interrogate my suggestions/commands. It feels like we need event triggers
