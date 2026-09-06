@@ -288,6 +288,15 @@ self-correctable → fix on the fly (overlapping nets catch the rest). Irreversi
 always gate. Load-bearing fork → one sharp question, then clear downstream. Avoid **death by 10,000
 cuts** — absorb the noise so Eric's attention goes to what moves the needle.
 
+**A gate is a momentum breaker unless it protects a constraint** (Eric, 2026-09-06: "process like
+the 300-line cap may be a smell now… deprecate these [possibly now antiquated] safety layers…
+that removes a momentum breaker which allows for compounding momentum"). Blocking is for
+correctness, security, the envelope, his attention (the fridge-rule format checks), and contracts
+other lanes depend on; taste and debt dimensions are advisory with a ratchet and an athlete, never
+a red mid-flow. The tells that a gate has outlived its convention: carve-outs accumulating, inline
+ignores, uneven firing. When you meet one, demote it in the same PR and say so in
+[`docs/COACHES.md`](docs/COACHES.md) — never route around it with another carve-out.
+
 **Free diagnostics before gated ones** (2026-09-04: five `autonomy-ops` approval taps — Eric on his
 phone, traveling — went to re-pulling the same bot log before ten minutes of reading
 `run-autonomous.ts` explained the silence, `docs/LESSONS.md`). Diagnostic paths have prices: reading
