@@ -55,7 +55,7 @@ describe("the feedback area list", () => {
 
 describe("the area a coach draft claims", () => {
   it("is kept when it is one we offer", () => {
-    expect(areaFrom({ area: "The Wire" })).toEqual({ area: "The Wire" });
+    expect(areaFrom({ area: "Activity" })).toEqual({ area: "Activity" });
   });
 
   it("is dropped, not guessed, when the model invents one", () => {
@@ -77,7 +77,7 @@ describe("the clause the coach's prompt enumerates", () => {
 
   it("glosses each bare drawer word with what it covers", () => {
     // The option text stays the drawer word for the member; the model needs the route.
-    expect(AREA_PROMPT_CLAUSE).toContain("/wire");
+    expect(AREA_PROMPT_CLAUSE).toContain("/activity");
     expect(AREA_PROMPT_CLAUSE).toContain("/learn");
   });
 

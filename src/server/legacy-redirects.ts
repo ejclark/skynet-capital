@@ -42,7 +42,10 @@ const TWINS: ReadonlyMap<string, string> = new Map([
   // The ticket (10b): the shell speaks ?play= and ?desk=; other legacy params drop harmlessly
   // in the shell route's validateSearch.
   ["/trade", "/app/trade"],
-  ["/wire", "/app/wire"],
+  // "The Wire" became Activity (#784); the shell route caught up last (2026-09-06). Both the
+  // pre-shell path and the shell's own old path land on the renamed page, query preserved.
+  ["/wire", "/app/activity"],
+  ["/app/wire", "/app/activity"],
   ["/research", "/app/research"],
   ["/collections", "/app/collections"],
   // The account pages' shell home is Settings — profile, removal, rotation all live there now.

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LearnRouteImport } from './routes/learn'
@@ -19,7 +20,6 @@ import { Route as PlaybooksRouteImport } from './routes/playbooks'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TradeRouteImport } from './routes/trade'
-import { Route as WireRouteImport } from './routes/wire'
 import { Route as CollectionsIndexRouteImport } from './routes/collections.index'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as LearnTradingRouteImport } from './routes/learn_.trading'
@@ -32,6 +32,11 @@ import { Route as UIdPulseRouteImport } from './routes/u.$id.pulse'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedbackRoute = FeedbackRouteImport.update({
@@ -79,11 +84,6 @@ const TradeRoute = TradeRouteImport.update({
   path: '/trade',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WireRoute = WireRouteImport.update({
-  id: '/wire',
-  path: '/wire',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CollectionsIndexRoute = CollectionsIndexRouteImport.update({
   id: '/collections/',
   path: '/collections/',
@@ -127,6 +127,7 @@ const UIdPulseRoute = UIdPulseRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
@@ -136,7 +137,6 @@ export interface FileRoutesByFullPath {
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
-  '/wire': typeof WireRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/learn/trading': typeof LearnTradingRoute
   '/u/$id': typeof UIdRouteWithChildren
@@ -148,6 +148,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
@@ -157,7 +158,6 @@ export interface FileRoutesByTo {
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
-  '/wire': typeof WireRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/learn/trading': typeof LearnTradingRoute
   '/collections': typeof CollectionsIndexRoute
@@ -169,6 +169,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
   '/learn': typeof LearnRoute
@@ -178,7 +179,6 @@ export interface FileRoutesById {
   '/research': typeof ResearchRoute
   '/settings': typeof SettingsRoute
   '/trade': typeof TradeRoute
-  '/wire': typeof WireRoute
   '/collections/$id': typeof CollectionsIdRoute
   '/learn_/trading': typeof LearnTradingRoute
   '/u/$id': typeof UIdRouteWithChildren
@@ -192,6 +192,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/activity'
     | '/feedback'
     | '/join'
     | '/learn'
@@ -201,7 +202,6 @@ export interface FileRouteTypes {
     | '/research'
     | '/settings'
     | '/trade'
-    | '/wire'
     | '/collections/$id'
     | '/learn/trading'
     | '/u/$id'
@@ -213,6 +213,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/activity'
     | '/feedback'
     | '/join'
     | '/learn'
@@ -222,7 +223,6 @@ export interface FileRouteTypes {
     | '/research'
     | '/settings'
     | '/trade'
-    | '/wire'
     | '/collections/$id'
     | '/learn/trading'
     | '/collections'
@@ -233,6 +233,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/activity'
     | '/feedback'
     | '/join'
     | '/learn'
@@ -242,7 +243,6 @@ export interface FileRouteTypes {
     | '/research'
     | '/settings'
     | '/trade'
-    | '/wire'
     | '/collections/$id'
     | '/learn_/trading'
     | '/u/$id'
@@ -255,6 +255,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivityRoute: typeof ActivityRoute
   FeedbackRoute: typeof FeedbackRoute
   JoinRoute: typeof JoinRoute
   LearnRoute: typeof LearnRoute
@@ -264,7 +265,6 @@ export interface RootRouteChildren {
   ResearchRoute: typeof ResearchRoute
   SettingsRoute: typeof SettingsRoute
   TradeRoute: typeof TradeRoute
-  WireRoute: typeof WireRoute
   CollectionsIdRoute: typeof CollectionsIdRoute
   LearnTradingRoute: typeof LearnTradingRoute
   UIdRoute: typeof UIdRouteWithChildren
@@ -278,6 +278,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feedback': {
@@ -341,13 +348,6 @@ declare module '@tanstack/react-router' {
       path: '/trade'
       fullPath: '/trade'
       preLoaderRoute: typeof TradeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wire': {
-      id: '/wire'
-      path: '/wire'
-      fullPath: '/wire'
-      preLoaderRoute: typeof WireRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/collections/': {
@@ -427,6 +427,7 @@ const UIdRouteWithChildren = UIdRoute._addFileChildren(UIdRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivityRoute: ActivityRoute,
   FeedbackRoute: FeedbackRoute,
   JoinRoute: JoinRoute,
   LearnRoute: LearnRoute,
@@ -436,7 +437,6 @@ const rootRouteChildren: RootRouteChildren = {
   ResearchRoute: ResearchRoute,
   SettingsRoute: SettingsRoute,
   TradeRoute: TradeRoute,
-  WireRoute: WireRoute,
   CollectionsIdRoute: CollectionsIdRoute,
   LearnTradingRoute: LearnTradingRoute,
   UIdRoute: UIdRouteWithChildren,
