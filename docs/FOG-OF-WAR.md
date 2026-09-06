@@ -72,6 +72,7 @@ common and nobody had written down.
 | `/trade` multi-leg builder | spread execution | rung 401 | planned (#1671) |
 | `/trade` same-day expiry | any option order expiring today | rung 501 | planned (#1671) |
 | `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | planned (#1704) |
+| `/u/:id/playbooks` subscribe | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
 
 Add a row when a new fog ships; a fog with no row here is undocumented and gets one.
 
