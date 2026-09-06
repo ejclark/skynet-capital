@@ -193,3 +193,22 @@
 .eh-swatch-closed {
   background: var(--neg);
 }
+
+/* the day-lens fog (#1704 slice 4; docs/FOG-OF-WAR.md): visible · named · disabled · counted. */
+.eh-lens[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: var(--surface);
+  color: var(--muted);
+}
+.eh-lens-lock {
+  margin-left: 4px;
+  font-size: 10px;
+}
+.eh-fog {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}

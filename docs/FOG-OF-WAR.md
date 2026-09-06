@@ -71,7 +71,7 @@ common and nobody had written down.
 | `/playbooks` store | a house playbook's full body and preview | the rung the card names (`unlocksAfter`) | shipped (#885) |
 | `/trade` multi-leg builder | spread execution | rung 401 | planned (#1671) |
 | `/trade` same-day expiry | any option order expiring today | rung 501 | planned (#1671) |
-| `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | planned (#1704) |
+| `/research` day lens | the Today row of every ledger in range | rung 501, or wheels off | shipped (#1704 slice 4) — interim: the rung is not built, and the fog says so |
 | `/u/:id/playbooks` subscribe | delegating capital to a house playbook | rung 102, or wheels off | shipped (#1707) |
 
 Add a row when a new fog ships; a fog with no row here is undocumented and gets one.

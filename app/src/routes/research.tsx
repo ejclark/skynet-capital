@@ -3,7 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { CALL_CLASS_LABEL, CALL_CLASSES, callMix, classifyCall, hubEvents } from "../live/call-mix";
+import { dayLensFog } from "../live/fog";
 import { inRange, marketToday, rangeFor, rangeLabel, stepAnchor } from "../live/horizon-range";
+import { fetchPlays } from "../live/options";
 import {
   callForLens,
   fetchResearch,
@@ -253,6 +255,8 @@ function ResearchPage(): ReactElement {
   const { q } = Route.useSearch();
   const navigate = Route.useNavigate();
   const research = useQuery({ queryKey: ["research"], queryFn: fetchResearch });
+  // The day lens's fog reads the ladder the trade page already fetches (same key, shared cache).
+  const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays, retry: false });
   // URL-stateful filter, the desk's exact discipline: immediate locally, debounced replace.
   const [query, setQuery] = useState(q ?? "");
   const urlTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -279,12 +283,19 @@ function ResearchPage(): ReactElement {
     );
 
   const data = research.data;
-  const filter = parseResearchQuery(query);
+  const parsed = parseResearchQuery(query);
+  const fog = dayLensFog(plays.data);
+  // A fogged member who types lens:day sees the week — the fog is honest about it in the rail.
+  const filter: ResearchFilter =
+    fog.fogged && parsed.lens === "day" ? { ...parsed, lens: "week" } : parsed;
   const today = marketToday();
   const anchor = filter.on ?? today;
   const range = rangeFor(anchor, filter.lens);
   // The range resolves through the served events — precise ids, never date-string guessing.
   const inRangeIds = new Set(data.events.filter((e) => inRange(e.date, range)).map((e) => e.id));
+  const heldDayCalls = fog.fogged
+    ? data.calls.filter((c) => inRangeIds.has(c.eventId) && callForLens(c, "day") !== null).length
+    : 0;
   const eventsById = new Map(data.events.map((e) => [e.id, e] as const));
   const matchesTerms = (doc: ResearchDocLink) =>
     filter.terms.every(
@@ -326,6 +337,7 @@ function ResearchPage(): ReactElement {
           onStep={(direction) =>
             setFilter(setOnDate(query, stepAnchor(anchor, filter.lens, direction)))
           }
+          {...(fog.fogged ? { dayFog: { reason: fog.reason, held: heldDayCalls } } : {})}
         />
       }
     >
