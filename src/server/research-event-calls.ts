@@ -136,3 +136,43 @@ export function todayCallOf(md: string): EventCall | null {
     table.rows.find((cells) => HORIZON_LABELS.today.test(plain(cells, 0))) ?? table.rows[0];
   return row ? rowCall(table, row) : null;
 }
+
+/**
+ * The `**TL;DR.**` paragraph of the decision header as plain text — emphasis and link markup
+ * stripped, whitespace collapsed — or null when the header carries none. The shelf indexes it for
+ * the text filter and for symbol scope (a macro ledger whose TL;DR names NVDA is in NVDA's scope);
+ * it never renders it in place of the document.
+ */
+export function tldrOf(md: string): string | null {
+  const header = decisionHeaderOf(md);
+  if (!header) return null;
+  const marker = "**TL;DR.**";
+  const at = header.indexOf(marker);
+  if (at === -1) return null;
+  const rest = header.slice(at + marker.length);
+  const end = rest.search(/\n\s*\n/);
+  const para = (end === -1 ? rest : rest.slice(0, end))
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return para || null;
+}
+
+/**
+ * The `adjacentIds` the ledger's `probe-ref` line records (docs/process/EVENT-RESEARCH.md,
+ * deterministic screening) — the corridor graph every pulse already writes and nothing rendered
+ * until #1704. Malformed JSON reads as no edges, never as a throw.
+ */
+export function adjacentIdsOf(md: string): string[] {
+  const match = md.match(/<!--\s*probe-ref:\s*(\{[\s\S]*?\})\s*-->/);
+  if (!match?.[1]) return [];
+  try {
+    const parsed = JSON.parse(match[1]) as { adjacentIds?: unknown };
+    return Array.isArray(parsed.adjacentIds)
+      ? parsed.adjacentIds.filter((id): id is string => typeof id === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}

@@ -1,4 +1,9 @@
-import { horizonCallsOf, todayCallOf } from "../../src/server/research-event-calls.js";
+import {
+  adjacentIdsOf,
+  horizonCallsOf,
+  tldrOf,
+  todayCallOf,
+} from "../../src/server/research-event-calls.js";
 
 // Full behavioral coverage of the call-sheet contract lives in research-service.spec.ts, which
 // exercises todayCallOf through the re-export research-service.ts keeps for existing importers.
@@ -48,5 +53,24 @@ describe("horizonCallsOf — every horizon row, keyed by lens (#1704)", () => {
 
   it("agrees with todayCallOf on the Today row", () => {
     expect(horizonCallsOf(header(FOUR)).today).toEqual(todayCallOf(header(FOUR)));
+  });
+});
+
+describe("tldrOf / adjacentIdsOf — the digest's other two fields", () => {
+  it("reads the TL;DR paragraph as plain text, links and emphasis stripped", () => {
+    const md =
+      "# T\n\n## At a glance\n\n**TL;DR.** **Stand aside** — see [the Fed](fomc.md); nothing\nhere is ours.\n\n| Horizon | Call |\n|---|---|\n| Today | x |\n";
+    expect(tldrOf(md)).toBe("Stand aside — see the Fed; nothing here is ours.");
+    expect(
+      tldrOf("# T\n\n## At a glance\n\n| Horizon | Call |\n|---|---|\n| Today | x |\n"),
+    ).toBeNull();
+  });
+
+  it("reads adjacentIds from the probe-ref line and treats junk as no edges", () => {
+    const md =
+      '# T\n<!-- probe-ref: {"symbols":{},"adjacentIds":["a-1","b-2",3],"screenStreak":0} -->\n';
+    expect(adjacentIdsOf(md)).toEqual(["a-1", "b-2"]);
+    expect(adjacentIdsOf("# T\n<!-- probe-ref: {not json} -->\n")).toEqual([]);
+    expect(adjacentIdsOf("# T\n")).toEqual([]);
   });
 });

@@ -38,7 +38,14 @@ describe("researchShelfJson", () => {
       new Map([
         [
           "boj-2026-09-18",
-          { today, week: { call: "Watch CPI", horizon: "This week", confidence: "Medium" } },
+          {
+            horizons: {
+              today,
+              week: { call: "Watch CPI", horizon: "This week", confidence: "Medium" },
+            },
+            tldr: "Stand aside; the week's fork is CPI.",
+            adjacent: ["cpi-2026-09-11"],
+          },
         ],
       ]),
     );
@@ -47,6 +54,8 @@ describe("researchShelfJson", () => {
       horizon: "This week",
       confidence: "Medium",
     });
+    expect(view.calls[0]?.tldr).toBe("Stand aside; the week's fork is CPI.");
+    expect(view.calls[0]?.adjacent).toEqual(["cpi-2026-09-11"]);
     // A payload without horizons carries no key at all — older readers see the old shape.
     expect(
       researchShelfJson({ studies: [], ledgers: [] }, [], new Map([["x", today]])).calls[0],

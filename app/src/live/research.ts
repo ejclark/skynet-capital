@@ -30,6 +30,10 @@ export interface ResearchCall {
   readonly href: string;
   /** Every horizon row the ledger states (#1704); absent on a payload from before lenses. */
   readonly horizons?: Partial<Record<HorizonKey, HorizonRow>>;
+  /** The TL;DR as plain text — the filter's index and the symbol scope's second net. */
+  readonly tldr?: string;
+  /** Adjacent event ids from the ledger's probe-ref — the hub count reads these. */
+  readonly adjacent?: readonly string[];
 }
 
 export interface ResearchSymbol {
@@ -42,6 +46,10 @@ export interface ResearchEvent {
   readonly id: string;
   readonly title: string;
   readonly date: string;
+  /** macro-print · earnings · opex · rates · sector · geopolitical · product-launch */
+  readonly kind?: string;
+  /** critical · high · medium · low */
+  readonly impact?: string;
   readonly symbols: readonly string[];
   readonly researched: boolean;
 }
@@ -87,33 +95,75 @@ export const LENS_LABEL: Record<Lens, string> = {
   quarter: "this quarter",
 };
 
-/** The research query's three dimensions, ONE string: bare terms match text, `on:YYYY-MM-DD`
- *  pins a calendar day, `lens:week` picks the horizon row (the rail's controls write these;
- *  typing them works identically). */
+/**
+ * The research query, ONE string, several dimensions (the rail's controls and the chips write
+ * these; typing them works identically):
+ *   bare words      AND — every term must match the event id, the call, the TL;DR, or a doc title
+ *   `sym:NVDA`      OR scope — a watchlist; a ledger is in scope when any listed symbol is on its
+ *                   event, leads its id, or is named in its TL;DR (#1704: chips were AND over a
+ *                   corpus where 257 of 266 events carry no symbol, so three chips returned nothing)
+ *   `kind:opex`     the event's kind · `impact:high` its impact tier · `call:watch` the call class
+ *   `on:YYYY-MM-DD` the anchor day · `lens:week` the horizon row and range
+ */
 export interface ResearchFilter {
   readonly terms: readonly string[];
+  readonly symbols: readonly string[];
+  readonly kind?: string;
+  readonly impact?: string;
+  readonly callClass?: string;
   readonly on?: string;
   readonly lens: Lens;
 }
 
 const ON_RE = /^on:(\d{4}-\d{2}-\d{2})$/;
 const LENS_RE = /^lens:(day|week|month|quarter)$/;
-const isControl = (token: string): boolean => {
-  const t = token.toLowerCase();
-  return ON_RE.test(t) || LENS_RE.test(t);
-};
+const SYM_RE = /^sym:([a-z]{1,6})$/;
+const KIND_RE = /^kind:([a-z-]+)$/;
+const IMPACT_RE = /^impact:(critical|high|medium|low)$/;
+const CALL_RE = /^call:(stand-aside|watch|act|conditional)$/;
+const CONTROLS = [ON_RE, LENS_RE, SYM_RE, KIND_RE, IMPACT_RE, CALL_RE];
+const isControl = (token: string): boolean => CONTROLS.some((re) => re.test(token.toLowerCase()));
+
+const firstMatch = (tokens: readonly string[], re: RegExp): string | undefined =>
+  tokens.map((t) => re.exec(t.toLowerCase())?.[1]).find(Boolean);
 
 export function parseResearchQuery(query: string): ResearchFilter {
   const tokens = query.trim().split(/\s+/).filter(Boolean);
-  const on = tokens.map((t) => ON_RE.exec(t.toLowerCase())?.[1]).find(Boolean);
-  const lens = tokens
-    .map((t) => LENS_RE.exec(t.toLowerCase())?.[1] as Lens | undefined)
-    .find(Boolean);
+  const on = firstMatch(tokens, ON_RE);
+  const lens = firstMatch(tokens, LENS_RE) as Lens | undefined;
+  const kind = firstMatch(tokens, KIND_RE);
+  const impact = firstMatch(tokens, IMPACT_RE);
+  const callClass = firstMatch(tokens, CALL_RE);
+  const symbols = [
+    ...new Set(
+      tokens
+        .map((t) => SYM_RE.exec(t.toLowerCase())?.[1])
+        .filter((sym): sym is string => Boolean(sym))
+        .map((sym) => sym.toUpperCase()),
+    ),
+  ];
   return {
     terms: tokens.filter((t) => !isControl(t)).map((t) => t.toLowerCase()),
+    symbols,
+    ...(kind ? { kind } : {}),
+    ...(impact ? { impact } : {}),
+    ...(callClass ? { callClass } : {}),
     ...(on ? { on } : {}),
     lens: lens ?? DEFAULT_LENS,
   };
+}
+
+/** Toggle a symbol in the OR scope — the chips' write; every other token survives. */
+export function toggleSymbolScope(query: string, symbol: string): string {
+  const token = `sym:${symbol.toUpperCase()}`;
+  const tokens = query.split(/\s+/).filter(Boolean);
+  const same = (t: string) => t.toUpperCase() === token.toUpperCase();
+  return (tokens.some(same) ? tokens.filter((t) => !same(t)) : [...tokens, token]).join(" ");
+}
+
+/** Word-boundary mention of a symbol in free text — the rule `symbolResearch` uses server-side. */
+export function mentionsSymbol(text: string | undefined, symbol: string): boolean {
+  return text ? new RegExp(`\\b${symbol}\\b`).test(text) : false;
 }
 
 /** Set the lens token: the default lens writes no token at all, so a plain URL stays plain. */
