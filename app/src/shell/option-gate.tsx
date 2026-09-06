@@ -22,8 +22,8 @@ import { GateAction, type OptionGateState, OptionGateStatus } from "./option-pre
  * expirations and strikes come from the member's own connected account — and when it can't
  * (`chainNote`), the ticket still works with manual entry, exactly as the legacy raw mode did:
  * premiums just can't be estimated. A locked rung renders `LockedPanel` (shared with the stock
- * ticket) and the wheels-off door; the server refuses a locked play regardless of what this
- * component shows.
+ * ticket, no self-serve way off the ladder — #1671 decision 1); the server refuses a locked play
+ * regardless of what this component shows.
  */
 
 /** @category trading */

@@ -106,9 +106,6 @@ async function getJson<T>(url: string): Promise<T> {
 
 export const fetchPlays = (): Promise<PlaysIndex> => getJson("/api/trade/plays");
 
-export const setWheels = (wheels: boolean): Promise<{ ok: boolean; error?: string }> =>
-  postJson("/api/trade/wheels", { wheels });
-
 export const fetchChain = (
   symbol: string,
   type: "call" | "put",

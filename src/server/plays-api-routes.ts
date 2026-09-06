@@ -18,7 +18,9 @@ import { playLocked } from "./progression-service.js";
  *                            (`ladderNeighbor`), so the locked panel can name the path.
  *   POST /api/trade/wheels → the training-wheels preference, the legacy `/trade` toggle's JSON
  *                            twin. Writes the SESSION'S own record only — the body carries a
- *                            boolean and names nobody.
+ *                            boolean and names nobody. Refuses a flip to `false` while any rung
+ *                            is still unearned (#1671 decision 1: no self-serve early exit) —
+ *                            turning wheels on is always allowed.
  *
  * Locked/wheels resolution is exactly the legacy ticket's (`viewerProgression` + `playLocked`):
  * no progression service, or no linked desk, behaves as wheels-off — nothing restricted.
@@ -89,6 +91,22 @@ async function serveWheels(
       error: "This session isn't linked to a desk yet — the training wheels ride your own account.",
     });
     return;
+  }
+  // #1671 decision 1 (B): the locked panel's self-serve "turn the wheels off" button is gone —
+  // this is now the only remaining door, and it refuses the same way. Wheels come off on their
+  // own once the ladder is fully earned, or by the seeding rule for an account with fill history
+  // (`progression-service.ts`, unaffected — it never calls this endpoint). Turning wheels ON is
+  // always allowed; it only ever adds a restriction.
+  if (body.wheels === false) {
+    const progression = await config.progression.view(requesterId, undefined);
+    if (progression.nextUp) {
+      const next = TRADE_TYPES.find((t) => t.code === progression.nextUp);
+      sendJson(res, 200, {
+        ok: false,
+        error: `Training wheels come off on their own — fill ${progression.nextUp}${next ? ` (${next.name})` : ""} and they open. No self-serve early exit.`,
+      });
+      return;
+    }
   }
   await config.progression.setWheels(requesterId, body.wheels);
   sendJson(res, 200, { ok: true, wheels: body.wheels });
