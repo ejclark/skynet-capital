@@ -1,0 +1,11 @@
+{
+  "id": "construction-spending-2026-10-01",
+  "kind": "macro-print",
+  "title": "Construction Spending — Construction Put in Place (August 2026 data), 10:00 a.m. ET",
+  "date": "2026-10-01",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes), row \"Construction Spending (Construction Put in Place) | October 1, 2026 | 10:00 AM | August 2026\", release code A202610011000, reference A202608. Corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet (HTTP 200, 16,944 bytes, live path /-/media/Project/Atlanta/FRBA/Documents/cqer/...), whose 2026-10-01 row reads \"Construction spending, ISM Manufacturing Index\" — this release owns a posted GDPNow vintage of its own. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the m3-full-report-2026-10-02 initial-research adjacency sweep (2026-09-06), and proposed because it is the exact inverse of that ledger's finding, one day apart. Construction spending sits in the Atlanta Fed's TRIGGER column — the eight releases that CAUSE a posted GDPNow vintage — so 2026-10-01 draws a published nowcast update, while the M3-2 full report the very next morning draws only an InternalUpdates row that never reaches ContribArchives. Two Census 10:00 a.m. prints on consecutive days, opposite treatment by the same model; that contrast is the cleanest available evidence for the proposing ledger's stance and it needs this date on the calendar to be checkable. The calendar tracks the September-data and October-data editions (construction-spending-2026-11-02 as a sibling proposal, construction-spending-2026-12-01 with its own ledger); this August-data edition is untracked, which leaves the series' own October reading invisible to the corridor. Impact LOW and symbols empty on the same measured grounds as the sibling Census entries: no macro-keyed house playbook (grep re-run 2026-09-06, 0 hits) and no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
