@@ -59,6 +59,7 @@
     "shoot:ladder-gate": "tsx scripts/shoot/ladder-gate.mjs",
     "shoot:milestones": "tsx scripts/shoot/milestones.mjs",
     "shoot:onboarding": "tsx scripts/shoot/onboarding.mjs",
+    "shoot:moneypenny": "tsx scripts/shoot/moneypenny.mjs",
     "shoot:feedback": "tsx scripts/shoot/feedback.mjs",
     "shoot:status-pill": "tsx scripts/shoot/status-pill.mjs",
     "shoot:trade": "tsx scripts/shoot/trade.mjs",

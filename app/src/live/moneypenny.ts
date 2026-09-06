@@ -44,6 +44,15 @@ export interface MpMessage {
   readonly at?: number;
 }
 
+/** Plain-text rendering of the thread — the copy-to-clipboard affordance the rail offers before a
+ *  member wipes it with a fresh conversation (NN/g's baseline chatbot guideline: chat content
+ *  should be savable, not only discardable). Her own lines and system lines already carry their
+ *  speaker inline ("Moneypenny · ", "sauron·ops · "); only a member's own line needs one added, so
+ *  a pasted transcript reads the same as the rail itself, never doubled. */
+export function formatTranscript(messages: readonly MpMessage[]): string {
+  return messages.map((m) => (m.role === "user" ? `You: ${m.text}` : m.text)).join("\n\n");
+}
+
 const sleep = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
 
 export interface MoneypennyState extends Persisted {
