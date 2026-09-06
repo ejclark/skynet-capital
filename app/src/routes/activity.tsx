@@ -12,7 +12,8 @@ import {
 } from "../live/wire";
 import { PageFrame } from "../shell/frame";
 import { SectionSwitch } from "../shell/section-switch";
-import { orderSections, type PageSection, resolveSection } from "../shell/sections";
+import { type PageSection, resolveSection } from "../shell/sections";
+import { Toggle } from "../shell/toggle";
 
 /**
  * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse
@@ -32,9 +33,13 @@ import { orderSections, type PageSection, resolveSection } from "../shell/sectio
  *
  * SECTIONS, NOT TABS (#1740): the page holds three different SHAPES of data, so the rail carries a
  * section switch above its filter chips (`frame.tsx`'s three-word rule — a section is a boundary,
- * a kind is a qualifier). Before this, Booked P&L and the feedback pulse stacked UNDER a feed of up
- * to 60 rows at 900px, so on a phone they were a long scroll below the trades; now the switch pages
- * between them, and a wider screen keeps them beside the current one rather than adding a concept.
+ * a kind is a qualifier). EXCLUSIVE AT EVERY WIDTH (2026-09-06 — Eric, on the "beside" shape #1749
+ * shipped: "'on the page' sections are always visible just place a different section in the
+ * cockpit/driver's seat... the whole page just feels like a hot mess"): the pressed section is the
+ * only one rendered, matching Settings' own use of the same switch (`settings.tsx`) — a page that
+ * shares a mechanism should share its meaning. The section's panel is capped at `--col-read`
+ * (`wire.css`), not stretched edge to edge, so a lone list on a wide screen reads as a page, not a
+ * strip in a mostly-empty grid.
  */
 
 const SIDE_CHIPS = [
@@ -176,19 +181,38 @@ function PnlSection({ wire }: { readonly wire: WireFeed }): ReactElement {
   );
 }
 
+const PULSE_FILTERS = [
+  ["active", "Active"],
+  ["all", "All"],
+] as const;
+type PulseFilter = (typeof PULSE_FILTERS)[number][0];
+
+/** Open and shipped filings are two different things to look at — one is still moving, the other
+ *  is a record — so they don't share a list by default (the same rule `feedback-recent.tsx` set
+ *  for a member's own filings, #429; the league-wide pulse never inherited it). */
 function PulseSection({ wire }: { readonly wire: WireFeed }): ReactElement {
+  const [filter, setFilter] = useState<PulseFilter>("active");
+  const visible =
+    filter === "all" ? wire.feedback : wire.feedback.filter((f) => f.statusKey !== "shipped");
   return (
     <section className="wire-panel">
-      <h2 className="wire-h">Feedback pulse</h2>
+      <div className="wire-h-row">
+        <h2 className="wire-h">Feedback pulse</h2>
+        {wire.feedback.some((f) => f.statusKey === "shipped") ? (
+          <Toggle label="Show" value={filter} options={PULSE_FILTERS} onPick={setFilter} />
+        ) : null}
+      </div>
       {!wire.feedbackEnabled ? (
         <p className="note">Feedback isn't switched on yet, so there's nothing to show here.</p>
       ) : wire.feedback.length === 0 ? (
         <p className="note">
           No feedback filed yet — be the first from <a href="/app/feedback">the feedback form</a>.
         </p>
+      ) : visible.length === 0 ? (
+        <p className="note">Nothing active — flip to "All" to see what's already shipped.</p>
       ) : (
         <ul className="wire-fdbk">
-          {wire.feedback.map((item) => (
+          {visible.map((item) => (
             <li key={item.url}>
               <span title="kind">{item.icon}</span>
               <a href={item.url} target="_blank" rel="noopener noreferrer">
@@ -307,9 +331,6 @@ function WirePage(): ReactElement {
     ) : (
       <PulseSection wire={feed} />
     );
-  // Current section first: on a phone it is the only one rendered (`wire.css`), on a wider screen
-  // it takes the primary column and the rest sit beside it — room added, no new concept.
-  const [primary, ...beside] = orderSections(SECTIONS, section);
 
   return (
     <PageFrame
@@ -321,14 +342,7 @@ function WirePage(): ReactElement {
         <h1>Activity</h1>
         <p>Every trade, every P&L, every open idea — the live pulse of the whole league.</p>
       </header>
-      <div className="wire-grid">
-        <div className="wire-primary-col">{primary ? render(primary.id) : null}</div>
-        <div className="wire-side-col">
-          {beside.map((s) => (
-            <div key={s.id}>{render(s.id)}</div>
-          ))}
-        </div>
-      </div>
+      {render(section)}
     </PageFrame>
   );
 }
