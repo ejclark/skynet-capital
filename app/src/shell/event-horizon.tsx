@@ -19,7 +19,7 @@ import { LENSES, type Lens } from "../live/research";
  * THE LENS ROW (#1704 slice 2, Eric's brief): four lenses under the grid — day · week · month ·
  * quarter. The lens picks the RANGE around the anchor day (shaded on the grid) and the arrows
  * step by that duration; the head names the range and counts its sessions, so Labor Day week
- * reads "4 sessions" — theta decays an extra day. Weekdays the exchange is closed are coloured
+ * reads "4 sessions" — theta decays an extra day. Weekdays the exchange is closed are hatched and struck (never hue alone — docs/BRAND.md → Accessibility)
  * and carry the reason. Every day is pickable now: a day with no event is a fine anchor for a
  * week, and a disabled day with nothing behind it was noise, not fog (docs/FOG-OF-WAR.md).
  */
