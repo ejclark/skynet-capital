@@ -1,0 +1,11 @@
+{
+  "id": "consumer-confidence-2027-02-23",
+  "kind": "macro-print",
+  "title": "Conference Board Consumer Confidence Index (February 2027), 10:00 a.m. ET",
+  "date": "2027-02-23",
+  "status": "estimate",
+  "source": "EST: conference-board.org/topics/consumer-confidence fetched direct 2026-09-06 (HTTP 200, 332,031 bytes after one 301), the publisher's own August-2026 release page, re-read this session rather than carried over from a sibling. It states the standing rule in prose: \"The Conference Board publishes the Consumer Confidence Index (R) at 10 a.m. ET on the last Tuesday of every month.\" 2027-02-23 is the last Tuesday of February 2027. The same page names its next release as \"Tuesday, September 29th at 10 AM ET\", the corresponding last Tuesday, corroborating the rule against a dated instance. No February-2027 announcement exists yet, so this is the publisher's rule applied forward rather than a posted date — filed estimate on that basis as well as this lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "DISCOVERED during the fhfa-hpi-2027-02-23 initial-research adjacency sweep (2026-09-06). The Conference Board and FHFA both publish on the last Tuesday of the month, so 68 of 68 FHFA release days since 2021 are also Conference Board days and the two are an hour apart (FHFA 9:00, CB 10:00). This one matters more than the usual pairing because 2027-02-23 is otherwise the CLEANEST session on the FHFA calendar: it is 27 days past the Jan 26-27 FOMC decision, 21 days before the Mar 16-17 day one (the maximum FOMC distance any FHFA release can reach), and 11 days before fomc-blackout-start-2027-03-06. With the Fed removed, the Conference Board print at 10:00 becomes the LARGEST remaining confound on the session rather than one of three, which is exactly why the FHFA ledger's tape work is scoped to the 9:00-10:00 ET window and not to a daily bar. Sibling proposals for this series on the same publisher rule already exist for 2026-11-24, 2026-12-29 and 2027-01-26; this is the February-2027 instance and nothing more novel than that. Proposed as an estimate; nothing here licenses an entry."
+}
