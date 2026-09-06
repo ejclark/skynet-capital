@@ -28,6 +28,49 @@ describe("researchShelfJson", () => {
     });
   });
 
+  it("carries every horizon row the ledger states, so the shell can read the board by lens", () => {
+    const today: EventCall = { call: "Stand aside", horizon: "Today", confidence: "High" };
+    const view = researchShelfJson(
+      { studies: [], ledgers: [] },
+      [],
+      new Map([["boj-2026-09-18", today]]),
+      [],
+      new Map([
+        [
+          "boj-2026-09-18",
+          {
+            horizons: {
+              today,
+              week: { call: "Watch CPI", horizon: "This week", confidence: "Medium" },
+            },
+            tldr: "Stand aside; the week's fork is CPI.",
+            adjacent: ["cpi-2026-09-11"],
+          },
+        ],
+      ]),
+    );
+    expect(view.calls[0]?.horizons?.week).toEqual({
+      call: "Watch CPI",
+      horizon: "This week",
+      confidence: "Medium",
+    });
+    expect(view.calls[0]?.tldr).toBe("Stand aside; the week's fork is CPI.");
+    expect(view.calls[0]?.adjacent).toEqual(["cpi-2026-09-11"]);
+    // A payload without horizons carries no key at all — older readers see the old shape.
+    expect(
+      researchShelfJson({ studies: [], ledgers: [] }, [], new Map([["x", today]])).calls[0],
+    ).not.toHaveProperty("horizons");
+  });
+
+  it("carries the exchange closures it is handed, and an empty list when handed none", () => {
+    const laborDay = { date: "2026-09-07", reason: "Labor Day", early: false };
+    const view = researchShelfJson({ studies: [], ledgers: [] }, [], new Map(), [], new Map(), [
+      laborDay,
+    ]);
+    expect(view.closures).toEqual([laborDay]);
+    expect(researchShelfJson({ studies: [], ledgers: [] }, [], new Map()).closures).toEqual([]);
+  });
+
   it("carries each symbol's next dated event, or its honest absence", () => {
     const view = researchShelfJson(
       { studies: [], ledgers: [] },

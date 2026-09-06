@@ -11,12 +11,29 @@ export interface ResearchDocLink {
   readonly href: string;
 }
 
+/** One horizon row of a ledger's decision header, exactly as authored. */
+export interface HorizonRow {
+  readonly call: string;
+  readonly horizon: string;
+  readonly confidence?: string;
+}
+
+/** The template's four horizon rows, keyed the way the server keys them. */
+export type HorizonKey = "today" | "week" | "month" | "quarter";
+
 export interface ResearchCall {
   readonly eventId: string;
+  /** The Today row — the pre-#1704 payload shape, kept so older payloads still render. */
   readonly call: string;
   readonly horizon: string;
   readonly confidence?: string;
   readonly href: string;
+  /** Every horizon row the ledger states (#1704); absent on a payload from before lenses. */
+  readonly horizons?: Partial<Record<HorizonKey, HorizonRow>>;
+  /** The TL;DR as plain text — the filter's index and the symbol scope's second net. */
+  readonly tldr?: string;
+  /** Adjacent event ids from the ledger's probe-ref — the hub count reads these. */
+  readonly adjacent?: readonly string[];
 }
 
 export interface ResearchSymbol {
@@ -29,12 +46,24 @@ export interface ResearchEvent {
   readonly id: string;
   readonly title: string;
   readonly date: string;
+  /** macro-print · earnings · opex · rates · sector · geopolitical · product-launch */
+  readonly kind?: string;
+  /** critical · high · medium · low */
+  readonly impact?: string;
   readonly symbols: readonly string[];
   readonly researched: boolean;
 }
 
+/** A day the exchange is closed, or closes early — mirrors the server's MarketClosure. */
+export interface ResearchClosure {
+  readonly date: string;
+  readonly reason: string;
+  readonly early: boolean;
+}
+
 export interface ResearchShelfData {
   readonly events: readonly ResearchEvent[];
+  readonly closures: readonly ResearchClosure[];
   readonly calls: readonly ResearchCall[];
   readonly symbols: readonly ResearchSymbol[];
   readonly studies: readonly ResearchDocLink[];
@@ -44,31 +73,130 @@ export interface ResearchShelfData {
 export async function fetchResearch(): Promise<ResearchShelfData> {
   const res = await fetch("/api/research", { credentials: "same-origin" });
   if (!res.ok) throw new Error(`research ${res.status}`);
-  return (await res.json()) as ResearchShelfData;
+  const raw = (await res.json()) as Partial<ResearchShelfData>;
+  // A server from before slice 2 sends no closures; the calendar then colours nothing, honestly.
+  return { ...(raw as ResearchShelfData), closures: raw.closures ?? [] };
 }
 
-/** The research query's two dimensions, ONE string: bare terms match text, `on:YYYY-MM-DD`
- *  pins a calendar day (the rail's control writes it; typing it works identically). */
+/**
+ * THE LENS (#1704) — which horizon row the call board reads. Every ledger carries Today / This
+ * week / This month / This quarter (docs/research/events/TEMPLATE.md gates all four); the lens
+ * picks one. Week is the default by Eric's call (2026-09-06: "weeks are shorter intervals which
+ * foster more opportunity to discuss/banter... Week seems like a good tempo for now"); the month
+ * argument — investing is long-term — is the banked revisit condition on the issue.
+ */
+export type Lens = "day" | "week" | "month" | "quarter";
+export const LENSES: readonly Lens[] = ["day", "week", "month", "quarter"];
+export const DEFAULT_LENS: Lens = "week";
+export const LENS_LABEL: Record<Lens, string> = {
+  day: "today",
+  week: "this week",
+  month: "this month",
+  quarter: "this quarter",
+};
+
+/**
+ * The research query, ONE string, several dimensions (the rail's controls and the chips write
+ * these; typing them works identically):
+ *   bare words      AND — every term must match the event id, the call, the TL;DR, or a doc title
+ *   `sym:NVDA`      OR scope — a watchlist; a ledger is in scope when any listed symbol is on its
+ *                   event, leads its id, or is named in its TL;DR (#1704: chips were AND over a
+ *                   corpus where 257 of 266 events carry no symbol, so three chips returned nothing)
+ *   `kind:opex`     the event's kind · `impact:high` its impact tier · `call:watch` the call class
+ *   `on:YYYY-MM-DD` the anchor day · `lens:week` the horizon row and range
+ */
 export interface ResearchFilter {
   readonly terms: readonly string[];
+  readonly symbols: readonly string[];
+  readonly kind?: string;
+  readonly impact?: string;
+  readonly callClass?: string;
   readonly on?: string;
+  readonly lens: Lens;
 }
 
 const ON_RE = /^on:(\d{4}-\d{2}-\d{2})$/;
+const LENS_RE = /^lens:(day|week|month|quarter)$/;
+const SYM_RE = /^sym:([a-z]{1,6})$/;
+const KIND_RE = /^kind:([a-z-]+)$/;
+const IMPACT_RE = /^impact:(critical|high|medium|low)$/;
+const CALL_RE = /^call:(stand-aside|watch|act|conditional)$/;
+const CONTROLS = [ON_RE, LENS_RE, SYM_RE, KIND_RE, IMPACT_RE, CALL_RE];
+const isControl = (token: string): boolean => CONTROLS.some((re) => re.test(token.toLowerCase()));
+
+const firstMatch = (tokens: readonly string[], re: RegExp): string | undefined =>
+  tokens.map((t) => re.exec(t.toLowerCase())?.[1]).find(Boolean);
 
 export function parseResearchQuery(query: string): ResearchFilter {
   const tokens = query.trim().split(/\s+/).filter(Boolean);
-  const on = tokens.map((t) => ON_RE.exec(t.toLowerCase())?.[1]).find(Boolean);
+  const on = firstMatch(tokens, ON_RE);
+  const lens = firstMatch(tokens, LENS_RE) as Lens | undefined;
+  const kind = firstMatch(tokens, KIND_RE);
+  const impact = firstMatch(tokens, IMPACT_RE);
+  const callClass = firstMatch(tokens, CALL_RE);
+  const symbols = [
+    ...new Set(
+      tokens
+        .map((t) => SYM_RE.exec(t.toLowerCase())?.[1])
+        .filter((sym): sym is string => Boolean(sym))
+        .map((sym) => sym.toUpperCase()),
+    ),
+  ];
   return {
-    terms: tokens.filter((t) => !ON_RE.test(t.toLowerCase())).map((t) => t.toLowerCase()),
+    terms: tokens.filter((t) => !isControl(t)).map((t) => t.toLowerCase()),
+    symbols,
+    ...(kind ? { kind } : {}),
+    ...(impact ? { impact } : {}),
+    ...(callClass ? { callClass } : {}),
     ...(on ? { on } : {}),
+    lens: lens ?? DEFAULT_LENS,
   };
+}
+
+/** Toggle a symbol in the OR scope — the chips' write; every other token survives. */
+export function toggleSymbolScope(query: string, symbol: string): string {
+  const token = `sym:${symbol.toUpperCase()}`;
+  const tokens = query.split(/\s+/).filter(Boolean);
+  const same = (t: string) => t.toUpperCase() === token.toUpperCase();
+  return (tokens.some(same) ? tokens.filter((t) => !same(t)) : [...tokens, token]).join(" ");
+}
+
+/** Word-boundary mention of a symbol in free text — the rule `symbolResearch` uses server-side. */
+export function mentionsSymbol(text: string | undefined, symbol: string): boolean {
+  return text ? new RegExp(`\\b${symbol}\\b`).test(text) : false;
+}
+
+/** Set the lens token: the default lens writes no token at all, so a plain URL stays plain. */
+export function setLens(query: string, lens: Lens): string {
+  const kept = query.split(/\s+/).filter((t) => t && !LENS_RE.test(t.toLowerCase()));
+  return (lens === DEFAULT_LENS ? kept : [...kept, `lens:${lens}`]).join(" ");
+}
+
+/**
+ * The row a call shows under a lens — the authored row, or null when the ledger states none for
+ * that horizon (honesty: never a neighbouring row in its place). A payload from before lenses
+ * carries only the Today row, which still serves the day lens.
+ */
+export function callForLens(call: ResearchCall, lens: Lens): HorizonRow | null {
+  const key: HorizonKey = lens === "day" ? "today" : lens;
+  const row = call.horizons?.[key];
+  if (row) return row;
+  if (key !== "today") return null;
+  return {
+    call: call.call,
+    horizon: call.horizon,
+    ...(call.confidence ? { confidence: call.confidence } : {}),
+  };
+}
+
+/** Set (or, with undefined, clear) the anchor day; every other token survives. */
+export function setOnDate(query: string, date: string | undefined): string {
+  const kept = query.split(/\s+/).filter((t) => t && !ON_RE.test(t.toLowerCase()));
+  return (date ? [...kept, `on:${date}`] : kept).join(" ");
 }
 
 /** Toggle the day pin: same day clears it, a different day replaces it, text terms survive. */
 export function toggleOnDate(query: string, date: string): string {
-  const { terms, on } = parseResearchQuery(query);
-  const kept = query.split(/\s+/).filter((t) => t && !ON_RE.test(t.toLowerCase()));
-  void terms;
-  return (on === date ? kept : [...kept, `on:${date}`]).join(" ");
+  const { on } = parseResearchQuery(query);
+  return setOnDate(query, on === date ? undefined : date);
 }
