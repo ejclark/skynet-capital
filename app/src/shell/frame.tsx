@@ -30,6 +30,7 @@ import type { ReactElement, ReactNode } from "react";
  * A section switch is the rail's CONTROL role, never a new dimension: it drives the content beside
  * it and adds no app-level destinations. Nothing is both a kind and a section — if a rail toggle
  * and a section switch would offer the same thing, one of them is noise and gets deleted.
+ * `docs/PATTERNS.md` keeps the ledger these three words live in, one row per named pattern.
  * @category navigation
  */
 export function PageFrame({
