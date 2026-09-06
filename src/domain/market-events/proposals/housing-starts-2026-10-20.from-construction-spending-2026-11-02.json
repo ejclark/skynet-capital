@@ -1,0 +1,11 @@
+{
+  "id": "housing-starts-2026-10-20",
+  "kind": "macro-print",
+  "title": "New Residential Construction — Building Permits, Housing Starts and Housing Completions (September 2026 data), 8:30 a.m. ET",
+  "date": "2026-10-20",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, 179 rows parsed), row \"New Residential Construction (Building Permits, Housing Starts, and Housing Completions) | October 20, 2026 | 8:30 AM | September 2026\", release code A202610200830, reference A202609. Corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet (HTTP 200, 16,944 bytes), whose 2026-10-20 row reads \"Housing starts\" at 8:30 — a vintage of its own. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the construction-spending-2026-11-02 initial-research adjacency sweep (2026-09-06). Two measured reasons it belongs on the calendar. First, housing starts is one of the EIGHT TRIGGER releases in the Atlanta Fed workbook — the same column as construction spending, ISM Manufacturing, wholesale trade, retail sales + inventories, international trade (full report), advance Census manufacturing (M3-1) and personal income and outlays — so it causes a posted GDPNow vintage in its own right, unlike the ten 'other releases' folded in opportunistically. Second, it reads the SAME September 2026 reference month as the proposing print, from the residential-supply side; residential construction is 40.4% of the proposing print's aggregate ($871.2B of $2,157.6B SAAR, FRED TLRESCONS/TTLCONS through July 2026) and its fastest-falling component (-7.3% y/y, -11.7% below its May-2022 peak). The series is almost entirely untracked: housing-starts-2026-12-17 is canonical and housing-starts-2026-11-18 exists only as a proposal, while the October edition — the last trigger vintage before the 2026:Q4 nowcast opens on 2026-10-29 — has no entry of any kind. Impact LOW and symbols empty on the same measured grounds as the sibling Census entries: no macro-keyed house playbook (re-grepped 2026-09-06, 0 hits), no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
