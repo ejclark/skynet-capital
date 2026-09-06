@@ -19,8 +19,11 @@ Sibling docs: [`BRAND.md`](BRAND.md) (identity every pattern is checked against)
 A **surface decision** — a plan issue, a `/teardown`, an interrogation call sheet
 ([`grind/interrogate.instructions.md`](grind/interrogate.instructions.md)), a taste fork — hands
 Eric 3–5 **named shapes** he can judge by eye, never a technique to arbitrate. Each shape names the
-pattern it uses and points at its row here. First instance: #1740's call sheet (verbatim · amended ·
-reject · status quo), which settled the *kind / section / sub-view* vocabulary below.
+pattern it uses and points at its row here. Two instances so far: the five-option progressive-reveal
+exercise on 2026-09-05 (spotlight · rail · chapters · fog of war · solo — Eric: "I like the rail
+mechanic the best. This is light, and offers clickable components as a mechanic"; fog of war was
+banked and landed elsewhere a day later), and #1740's call sheet (verbatim · amended · reject ·
+status quo), which settled the *kind / section / sub-view* vocabulary below.
 
 The trigger is a surface decision, not a PR. A copy fix, a rename, a one-link move never gets a
 shape menu — that would be the 10,000-cuts failure CLAUDE.md → *Interrupt economics* names.
@@ -41,7 +44,7 @@ became `/u/:id/pulse` this way (`src/server/legacy-redirects.ts`). A tab strip a
 navigation band was rejected: at phone width the topbar and the rail already each wrap into a
 horizontal row, and a third band before content is what the mobile-first rule forbids.
 
-## The ledger
+## The ledger — shell and navigation
 
 **Status** reads: *placed* (shipped on the surface named) · *seeded* (named, no surface yet, or a
 surface chosen but not built) · *declined here* (rejected on one surface, banked for another — a
@@ -68,7 +71,40 @@ undocumented and gets one.
 | **"Build me" placeholder** | A planned item is visible but disabled and reads as "help shape it", not broken; the same treatment on a rail item and a trade type. | #784 (Trade rail, `src/domain/trade-types.ts` ladder) | Eric, 2026-08-29 | seeded |
 | **Onramp fold** | A how-to for an outside system (GitHub) folded behind a `<details>`, reference not front matter. | `app/src/routes/activity.tsx` (`.wire-onramp`) | #738 | placed — Eric, 2026-08-28: "feels out of place" (#784) |
 | **Mobile-first curation** | What survives 390px is the curated set; desktop adds room for what was one swipe away, never new concepts. | CLAUDE.md → *Mobile-first on the trading surfaces* | Eric, 2026-09-05, from Fidelity's ticket | placed (rule) |
-| **Fidelity ticket / chain patterns** | The named patterns from the `/teardown` on Fidelity's mobile ticket and options chain. | #1461, #1481 (plan issues; images private) | Eric, 2026-09-05 | seeded — rows pending, one per pattern |
+
+## The ledger — trading surfaces
+
+The milestone ↔ feature grammar (#1461, "The Rail Over the Form") and the Fidelity ticket study
+(#1461, #1481 — the `/teardown` of 2026-09-05; frames stay in the private artifact, never here).
+Skipped patterns keep a row too: a "no" with its reason is a decision the next session should not
+re-make.
+
+| Pattern | The mechanic, in a sentence | Where it lives | Came from | Status |
+|---|---|---|---|---|
+| **Milestone strip grammar** | Eyebrow · rail · status line, teal-edged, the same three parts wherever a milestone meets a feature; names only on rungs you have reached. | `app/src/shell/milestone-strip.tsx` | #1461 | placed on `/trade` |
+| **Feature layer owns its nav** | The form's controls (instrument · side · put/call) belong to the form, never to the ladder; change them and the rail's current node follows. | `app/src/shell/ticket-nav.tsx` | #1461 — Eric: "the trade form needs to stand on its own" | placed |
+| **Preset, never drive** | A rail node or a chain cell stages the form (instrument, side, price); it assists, the member decides; a locked preset still renders, disabled. | `app/src/shell/milestone-strip.tsx` (`?play=`) | #1461 — Eric: "a pre-configured preset that assists the user, but doesn't drive" | placed on the rail · seeded on the chain (#1481) |
+| **Locked = visible · disabled · explained** | Show a control disabled when the member can still earn it here, hide it only when it will never apply, and never leave it disabled without the reason beside it; exits (a sell) are never locked. | `app/src/shell/locked-panel.tsx` (`opensAfter`), `src/domain/progression.ts` | #1461; NN/g on disabled controls | placed |
+| **Quote header** | Ticker, name, last, change, bid/ask and an as-of stamp above the form, because every number on the ticket depends on the price. | — | Fidelity study row 1 | seeded — costs a broker read pre-review |
+| **Buy / Sell segmented control** | A filled segment with a check; colour is reserved for the CTA and for gains. | `app/src/shell/ticket-nav.tsx`, `app/src/shell/toggle.tsx` | Fidelity study row 2 | placed |
+| **Amount with a unit toggle** | Shares or dollars, picked in a sheet; the dollar path is the newcomer's on-ramp. | — | Fidelity study row 3 | seeded — depends on notional orders on paper |
+| **Pickers as bottom sheets** | A radio list in a sheet with one "learn about…" link at the bottom; a popover on desktop. | — | Fidelity study row 4 | seeded |
+| **Time in force as a control** | Day by default, plus good-til-cancelled; nothing else until asked. | — | Fidelity study row 6 | seeded |
+| **Contextual fields** | Limit price and conditions appear only when Limit is chosen; progressive disclosure one level below the ladder. | the ticket's `priceFieldFor` | Fidelity study row 7 | placed |
+| **Sticky footer estimate** | Estimated value, live as you type, above a full-width Preview button. | post-review estimate shipped (#704, #716) | Fidelity study row 8 | placed post-review · live-as-you-type seeded |
+| **As-of stamp** | "As of 10:04:20 AM ET" under the form; a SIM ticket never implies a price it does not have. | — | Fidelity study row 9 | seeded |
+| **Search sheet with recents** | One input, shortcut chips, recent quotes; recents for us are positions and recently traded. | — | Fidelity study row 10 | seeded |
+| **Straddle view** | One expiration at a time, strike down the centre, calls left, puts right, a current-price divider and an in-the-money rail; moneyness by geometry. | `app/src/shell/straddle-view.tsx`, `app/src/shell/chain-straddle.tsx` | Fidelity study row 11; Eric, 2026-09-05 | placed (#1481) |
+| **Expiration chips, days in words** | A weekly mark on the chip and "Expires in 4 days" under it — the theta lesson in one line. | `app/src/live/straddle.ts` | Fidelity study row 12 | placed |
+| **Scroll out from the centre** | Strike pinned; scrolling left grows the call side, right the put side; greeks are the outermost columns — additive, never base. | `app/src/shell/chain-straddle.tsx` | Fidelity study row 13; Eric: "the greeks can be a progressive enhancement/additive" | placed for the base view · greeks columns seeded (#1481 slice 2) |
+| **Tap-to-preset from a cell** | Bid (sell) and ask (buy) are tappable; a tap stages one leg at that contract and price. | — | Fidelity study row 14 | seeded (#1481 slice 2) |
+| **Header gloss at the point of choice** | Each chain column header carries a one-line gloss; an absent greek reads as absent, never 0.00. | — | Fidelity study row 15 | seeded |
+| **One leg card, add a leg** | A single leg is a one-leg spread: action · quantity · expiration · strike · call/put, "+ Add leg" beneath. | `app/src/shell/draft-order-builder.tsx` (the builder), the gate (two panels today) | Fidelity study row 16 | seeded — share the leg card, keep two panels (#582) |
+| **Bid · Mid · Ask chips** | All three shown, price prefilled from the ask on a buy; mid is the anchor a limit aims at. | — | Fidelity study row 17 | seeded |
+| **Live estimate ×100** | $6.40 becomes $640 before Preview, labelled "$0 commission · paper"; the multiplier taught without a word. | — | Fidelity study row 18 | seeded |
+| **Review as a sentence** | "Buy to open 1 $230 NVDA call · Sep 16, 2026", then Last / Bid / Ask and the warnings verbatim. | — | Fidelity study row 19 | seeded |
+| **A real desk's order-type inventory** | Eight order types and five time-in-force options listed flat. | — | Fidelity study row 5 | declined here — list only what this desk executes; vapor options disabled "coming soon" are a trap |
+| **Three buying powers, margin, strategy dropdown** | Cash · margin · option buying power, a type selector, a calls/puts strategy list. | — | Fidelity study row 20 | declined here — paper, one desk, one number; the strategy list is the rail's preset |
 
 ## How a pattern enters
 
