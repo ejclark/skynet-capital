@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { fetchDesk } from "../live/desk";
-import { setWheels } from "../live/options";
 import {
   type DelegationGateView,
   fetchPlaybookStore,
@@ -103,27 +102,13 @@ function SubscribeForm({
 }
 
 /**
- * The door, drawn: the same Subscribe button, disabled, under the server's own sentence naming the
- * rung — plus the one action that lifts every gate, exactly as the ladder's own locked panel does
- * (`shell/locked-panel.tsx`; `docs/FOG-OF-WAR.md` criterion 8, until #1671 settles it).
+ * The door, drawn: the Subscribe button, disabled, under the server's own sentence naming the
+ * rung that opens it — exactly as the ladder's own locked panel does (`shell/locked-panel.tsx`).
+ * No self-serve way past it (#1671 decision 1, 2026-09-06: "block until earned" taken literally)
+ * — this used to also offer "Turn the wheels off," the same one-click bypass `locked-panel.tsx`
+ * removed; `POST /api/trade/wheels` now refuses that flip while any rung is unearned regardless.
  */
-function SubscribeLocked({
-  gate,
-  onLifted,
-}: {
-  readonly gate: DelegationGateView;
-  readonly onLifted: () => void;
-}): ReactElement {
-  const [busy, setBusy] = useState(false);
-  const off = async () => {
-    setBusy(true);
-    try {
-      await setWheels(false);
-      onLifted();
-    } finally {
-      setBusy(false);
-    }
-  };
+function SubscribeLocked({ gate }: { readonly gate: DelegationGateView }): ReactElement {
   return (
     <div className="pb-locked">
       <p className="pb-locked-note">◷ {gate.note}</p>
@@ -135,9 +120,6 @@ function SubscribeLocked({
           title={`Opens after your first filled ${gate.unlocksAfter} (${gate.unlocksAfterName})`}
         >
           Subscribe
-        </button>
-        <button type="button" className="btn mc-btn" disabled={busy} onClick={() => void off()}>
-          {busy ? "…" : "Turn the wheels off"}
         </button>
       </div>
     </div>
@@ -248,7 +230,7 @@ function PlaybookCard({
           // An existing subscription keeps every control it had — pausing and leaving are exits.
           <SubscriptionRow deskId={deskId} card={card} onChanged={onChanged} />
         ) : delegation.locked ? (
-          <SubscribeLocked gate={delegation} onLifted={onChanged} />
+          <SubscribeLocked gate={delegation} />
         ) : (
           <SubscribeForm deskId={deskId} playbookId={card.id} onSubscribed={onChanged} />
         )

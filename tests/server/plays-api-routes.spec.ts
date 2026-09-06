@@ -94,10 +94,11 @@ describe("servePlaysApi plays", () => {
 });
 
 describe("servePlaysApi wheels", () => {
-  it("writes the SESSION's own preference and echoes the new state", async () => {
+  it("writes the SESSION's own preference and echoes the new state, once the ladder is earned", async () => {
     const calls: unknown[][] = [];
     const cfg = config({
       progression: {
+        view: () => Promise.resolve({ wheels: true, unlocked: new Set() }),
         setWheels: (id: string, wheels: boolean) => {
           calls.push([id, wheels]);
           return Promise.resolve();
@@ -108,6 +109,42 @@ describe("servePlaysApi wheels", () => {
     await servePlaysApi(post({ wheels: false }), res, "/api/trade/wheels", cfg, ann);
     expect(calls).toEqual([["human-ann", false]]);
     expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true, wheels: false });
+  });
+
+  it("always allows flipping wheels ON, without consulting progression", async () => {
+    const calls: unknown[][] = [];
+    const cfg = config({
+      progression: {
+        view: () => Promise.reject(new Error("must not be called for an on-flip")),
+        setWheels: (id: string, wheels: boolean) => {
+          calls.push([id, wheels]);
+          return Promise.resolve();
+        },
+      },
+    });
+    const { res, out } = fakeRes();
+    await servePlaysApi(post({ wheels: true }), res, "/api/trade/wheels", cfg, ann);
+    expect(calls).toEqual([["human-ann", true]]);
+    expect(JSON.parse(out.body ?? "{}")).toEqual({ ok: true, wheels: true });
+  });
+
+  it("refuses a self-serve flip to off while any rung is still unearned (#1671 decision 1)", async () => {
+    const calls: unknown[] = [];
+    const cfg = config({
+      progression: {
+        view: () => Promise.resolve({ wheels: true, unlocked: new Set(["101"]), nextUp: "102" }),
+        setWheels: (id: string) => {
+          calls.push(id);
+          return Promise.resolve();
+        },
+      },
+    });
+    const { res, out } = fakeRes();
+    await servePlaysApi(post({ wheels: false }), res, "/api/trade/wheels", cfg, ann);
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.ok).toBe(false);
+    expect(body.error).toContain("102");
+    expect(calls).toEqual([]);
   });
 
   it("tells an unlinked session honestly instead of writing anywhere", async () => {
