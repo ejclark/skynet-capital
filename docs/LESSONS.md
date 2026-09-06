@@ -2140,5 +2140,11 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   `aspect-ratio` grid item, one resize-without-reload path) that a generic scan would either miss
   or false-positive on every ordinary `1fr` grid in the app; the fix carries its own explanatory
   comment in `event-horizon.css` as the landmine flag for the next `aspect-ratio` + grid pairing.
+  **Addendum, same day:** "no gate" still holds, but the repro itself is now a reusable tool —
+  `scripts/layout-resize-scan.mjs` (`npm run scan:layout-resize`) automates load → scroll → resize
+  with no reload across every rail-bearing route and flags genuine unclipped overflow (excluding
+  `overflow-x: auto`/`hidden`, which contain by design). Advisory, run periodically by hand, not
+  wired into `verify` — Eric's call: catching this class "all the time" isn't worth the per-PR
+  cost, but a tool to sweep for it periodically is (docs/COACHES.md → Special teams).
 - **SIDE QUESTS:** none — `hero.css`'s `aspect-ratio: 21/9` sits on a fixed-width block, not a
   resizing grid track, so it doesn't share this failure mode; checked, not changed.
