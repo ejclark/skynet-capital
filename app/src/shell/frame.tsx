@@ -15,6 +15,21 @@ import type { ReactElement, ReactNode } from "react";
  * rail column is the SAME width on every view — reserved even when a view has nothing to put in
  * it yet — so the content column never shifts left or right as you navigate. A view without rail
  * content gets an empty column, not a wider stage.
+ *
+ * THREE WORDS FOR "A PAGE HAS SEVERAL THINGS ON IT" (#1740, the tabs wargame). A page that holds
+ * more than one thing picks one of these, and the word decides the mechanism — there is no fourth
+ * dimension, and no tab strip:
+ *   - a KIND is a filter over ONE list — a query qualifier the bar accepts as text, mirrored by a
+ *     rail toggle (`is:bot` on Activity, `lens:` on Research). Several may be on at once.
+ *   - a SECTION is a different SHAPE of data on the same page — the rail's section switch
+ *     (`section-switch.tsx`), exactly one current, URL-stateful via a `section` search param.
+ *     Booked P&L beside a trade feed is a section; "bot trades" is not.
+ *   - a SUB-VIEW is a full view of its own — a nested route plus rail sub-nav (`profile-rail.tsx`).
+ *     A section that outgrows its page graduates here, the way `?tab=performance` became
+ *     `/u/$id/pulse` (`src/server/legacy-redirects.ts`).
+ * A section switch is the rail's CONTROL role, never a new dimension: it drives the content beside
+ * it and adds no app-level destinations. Nothing is both a kind and a section — if a rail toggle
+ * and a section switch would offer the same thing, one of them is noise and gets deleted.
  * @category navigation
  */
 export function PageFrame({

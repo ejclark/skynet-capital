@@ -8,10 +8,12 @@
   gap: 16px;
   align-items: start;
 }
+.wire-primary-col,
 .wire-side-col {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 .wire-panel {
   background: var(--surface);
@@ -157,5 +159,12 @@
 @media (max-width: 900px) {
   .wire-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* the phone pages between sections instead of stacking them (#1740): the feed runs to 60 rows,
+     so anything under it was a long scroll rather than a place. The rail's section switch is the
+     pager — it sits above this as a horizontal row, so nothing here becomes unreachable. */
+  .wire-side-col {
+    display: none;
   }
 }

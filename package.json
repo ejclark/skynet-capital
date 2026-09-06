@@ -70,7 +70,8 @@
     "capture:lifecycle": "tsx src/scripts/capture-option-lifecycle.ts",
     "feedback:scan": "node scripts/feedback-scan.mjs",
     "latency:scan": "node scripts/latency-scan.mjs",
-    "design:cards": "node scripts/design-cards.mjs"
+    "design:cards": "node scripts/design-cards.mjs",
+    "shoot:activity": "tsx scripts/shoot/activity.mjs"
   },
   "devDependencies": {
     "@balena/dockerignore": "1.0.2",
