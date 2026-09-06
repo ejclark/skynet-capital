@@ -9,6 +9,7 @@ import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
+import { LockedPanel } from "../shell/locked-panel";
 import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
 import { OptionPositionsCard } from "../shell/option-positions";
@@ -17,9 +18,15 @@ import { TradeGate } from "../shell/trade-gate";
 
 /**
  * THE TRADE TICKET (#738, live-review round; options since phase 10b) — the dedicated trading
- * workflow surface. `?desk=` picks the account; `?play=` picks the rung from the six-play
- * catalog (101/102 side the share gate, 201+ open the options gate) — both typed, shareable
- * search params, which is also what the learn milestones' "open the ticket" links carry.
+ * workflow surface. `?desk=` picks the account; `?play=` picks the rung from the seven-play
+ * catalog (101/102 side the share gate, 201-302 open the options gate, 401 the multi-leg
+ * builder) — both typed, shareable search params, which is also what the learn milestones'
+ * "open the ticket" links carry. 501 (zero-DTE) has no ticket of its own — it's an attribute any
+ * option order can carry (#1671), gated at review/submit rather than through `?play=`.
+ *
+ * The multi-leg builder used to render unconditionally under every ticket; it is now 401's own
+ * ticket body — visible only on the Spread instrument, and only once 401 is unlocked (a locked
+ * 401 shows the shared `LockedPanel` instead, exactly like every other rung).
  *
  * Account choice is a FIELD of the ticket (`AccountField`), not a gatekeeper screen the ticket
  * waits behind — the form is always on-screen, defaulting to the session's own first account.
@@ -28,7 +35,7 @@ import { TradeGate } from "../shell/trade-gate";
  * submit, so nothing here can offer, let alone place, a ticket against someone else's desk.
  */
 
-const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302"]);
+const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
 
 function AccountField({
   accounts,
@@ -96,6 +103,12 @@ function DeskTicket({
       ) : null}
       {gated ? (
         <LadderGateCard note={gate.note} />
+      ) : info && info.kind === "multi-leg" ? (
+        info.locked ? (
+          <LockedPanel play={info} />
+        ) : (
+          <DraftOrderBuilder deskId={desk} />
+        )
       ) : info && info.kind === "option" ? (
         <OptionGate key={info.code} deskId={desk} play={info} />
       ) : (
@@ -110,7 +123,6 @@ function DeskTicket({
       {deskData.data ? (
         <OptionPositionsCard deskId={desk} positions={deskData.data.desk.positions} />
       ) : null}
-      <DraftOrderBuilder deskId={desk} />
     </>
   );
 }

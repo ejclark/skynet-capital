@@ -107,7 +107,7 @@ describe("the ladder — sequential unlocks with training wheels on", () => {
   it("points at the next unearned rung, and at nothing once the ladder is done", () => {
     const earned = new Set(["101"] as const);
     expect(nextUp(unlockedCodes(earned), earned)).toBe("102");
-    const all = new Set(["101", "102", "201", "202", "301", "302"] as const);
+    const all = new Set(["101", "102", "201", "202", "301", "302", "401", "501"] as const);
     expect(nextUp(unlockedCodes(all), all)).toBeUndefined();
   });
 

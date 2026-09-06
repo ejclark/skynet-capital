@@ -11,12 +11,13 @@ import type { TicketResult } from "./ticket";
 export type OptionPlayCode = "201" | "202" | "301" | "302";
 
 export interface PlayInfo {
-  readonly code: "101" | "102" | OptionPlayCode;
+  readonly code: "101" | "102" | OptionPlayCode | "401" | "501";
   readonly id: string;
   readonly name: string;
   readonly tldr: string;
-  readonly kind: "stock" | "option";
-  readonly side: "buy" | "sell";
+  readonly kind: "stock" | "option" | "multi-leg";
+  /** Absent for a composite/attribute rung (401, 501) that has no single side of its own. */
+  readonly side?: "buy" | "sell";
   readonly optionType?: "call" | "put";
   readonly gloss: string;
   readonly locked: boolean;

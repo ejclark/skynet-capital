@@ -48,7 +48,7 @@ describe("servePlaysApi plays", () => {
     await servePlaysApi(get(), res, "/api/trade/plays", config(), ann);
     const body = JSON.parse(out.body ?? "{}");
     expect(body.wheels).toBe(false);
-    expect(body.plays).toHaveLength(6);
+    expect(body.plays).toHaveLength(8);
     expect(body.plays.every((p: { locked: boolean }) => !p.locked)).toBe(true);
   });
 
@@ -79,10 +79,50 @@ describe("servePlaysApi plays", () => {
     expect(play("201").locked).toBe(true);
     expect(play("201").opensAfter?.code).toBe("102");
     expect(play("302").opensAfter?.code).toBe("301");
+    // The ladder extension (#1671): 401/501 name their own predecessor exactly like every
+    // other rung — nothing about them is special-cased in `servePlays`.
+    expect(play("401").locked).toBe(true);
+    expect(play("401").opensAfter?.code).toBe("302");
+    expect(play("501").locked).toBe(true);
+    expect(play("501").opensAfter?.code).toBe("401");
     // The rail's ✓ is the server's word (#1461): a fill earned 101; 102 is open but not earned.
     expect(play("101").earned).toBe(true);
     expect(play("102").earned).toBe(false);
     expect(play("201").earned).toBe(false);
+  });
+
+  it("opens 401 for practice once 302 is earned, but 501 stays shut until 401 gets a real fill", async () => {
+    // No execution path exists yet for either rung (#1671) — 401 can OPEN (its predecessor, 302,
+    // is earned) without ever being EARNABLE, and 501 stays locked behind it either way.
+    const cfg = config({
+      progression: {
+        view: () =>
+          Promise.resolve({
+            wheels: true,
+            unlocked: new Set(["101", "102", "201", "202", "301", "302", "401"]),
+            nextUp: "401",
+            earnedByCode: new Map(
+              ["101", "102", "201", "202", "301", "302"].map((code) => [
+                code,
+                { code, orderId: `o-${code}` },
+              ]),
+            ),
+          }),
+      },
+    });
+    const { res, out } = fakeRes();
+    await servePlaysApi(get(), res, "/api/trade/plays", cfg, ann);
+    const body = JSON.parse(out.body ?? "{}");
+    const play = (code: string) =>
+      body.plays.find((p: { code: string }) => p.code === code) as {
+        locked: boolean;
+        earned: boolean;
+        opensAfter?: { code: string };
+      };
+    expect(play("401").locked).toBe(false);
+    expect(play("401").earned).toBe(false);
+    expect(play("501").locked).toBe(true);
+    expect(play("501").opensAfter?.code).toBe("401");
   });
 
   it("earns nothing when no progression is wired — the rail draws no ✓ it cannot prove", async () => {

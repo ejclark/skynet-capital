@@ -32,8 +32,16 @@ describe("the unlock banner — fanfare for what went right", () => {
     expect(html).toContain('name="back" value="/learn"');
   });
 
-  it("celebrates the top rung as the ladder finished, not with a phantom next course", () => {
+  it("302 now opens 401, not the ladder's end (#1671 extended it)", () => {
     const html = renderMilestoneBanner([earn({ milestoneId: "first-long-call", code: "302" })], {
+      back: "/trade",
+    });
+    expect(html).toContain("401 — Vertical spread</b> is now open");
+    expect(html).not.toContain("the whole ladder is yours");
+  });
+
+  it("celebrates the top rung (501) as the ladder finished, not with a phantom next course", () => {
+    const html = renderMilestoneBanner([earn({ milestoneId: "first-zero-dte", code: "501" })], {
       back: "/trade",
     });
     expect(html).toContain("the whole ladder is yours");
