@@ -82,6 +82,11 @@ role of responsible owner/steward — shipping lovable work while protecting the
   already-settled call instead of re-litigating it live. This is a process step, not a gate: a trivial
   single-link move with no structural ambiguity doesn't need its own decision doc, and this doesn't
   retroactively judge #881/#886/#888, which are the motivating example, not a target for rework.
+- **Fog of war is a first-class reveal pattern, with written criteria** (Eric, 2026-09-06, on the
+  research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
+  rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
+  counted. The decision tree and the instance ledger live in
+  [`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
   trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
 - **Positive reinforcement over negative.** Celebrate wins loudly; render losses honestly but without
