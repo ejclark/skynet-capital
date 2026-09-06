@@ -1,0 +1,11 @@
+{
+  "id": "consumer-confidence-2026-12-29",
+  "kind": "macro-print",
+  "title": "Conference Board Consumer Confidence Index (December 2026), 10:00 a.m. ET",
+  "date": "2026-12-29",
+  "status": "estimate",
+  "source": "EST: conference-board.org/topics/consumer-confidence fetched direct 2026-09-06 (HTTP 200, 332,031 bytes), the publisher's own August-2026 release page, which states the standing rule in prose: \"The Conference Board publishes the Consumer Confidence Index (R) at 10 a.m. ET on the last Tuesday of every month.\" 2026-12-29 is the last Tuesday of December 2026. The same page names its next release as \"Tuesday, September 29th at 10 AM ET\", which is the corresponding last Tuesday and corroborates the rule against a dated instance. No December-specific announcement exists yet, so this is the publisher's rule applied forward, not a posted date — filed estimate on that basis as well as the lane's no-self-confirm limit. Checked 2026-09-06",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "DISCOVERED during the fhfa-hpi-2026-12-29 initial-research adjacency sweep (2026-09-06). Proposed for the same reason the sibling lane proposed consumer-confidence-2026-11-24 and one more: this is the SLOT CONFOUND that makes the FHFA tape claim unanswerable, so leaving December off the board hides the proposer's own central limitation. The calendar tracks 08-25, 09-29 and 10-27, the sibling lane proposed 11-24, and the series then stops — this closes 2026. What this session adds beyond the sibling: the two prints are now known to be AN HOUR APART, not simultaneous. FHFA's released 2026Q2 report states \"Public FHFA HPI(R) releases occur at 9AM ET\" on its release-dates appendix page, and the Conference Board states 10 a.m. ET on the page cited above. A daily bar still cannot separate them (identical session), but a 9:00-10:00 intraday window is clean in principle, which is the specific design any future attempt at attribution would need. Impact medium, matching the three tracked 2026 editions of this same print. Proposed as an estimate; nothing here licenses an entry."
+}
