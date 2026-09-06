@@ -1,3 +1,4 @@
+import type { MarketClosure } from "../domain/market-calendar.js";
 import type { MarketEvent } from "../domain/market-events-types.js";
 import type { EventCall, HorizonCalls } from "../server/research-event-calls.js";
 import type { ResearchDoc, ResearchShelf } from "../server/research-service.js";
@@ -48,6 +49,8 @@ interface SymbolView {
 
 export interface ResearchShelfJson {
   readonly events: readonly EventView[];
+  /** Exchange closures across the calendar's span (#1704 slice 2) — the rail colours and counts. */
+  readonly closures: readonly MarketClosure[];
   readonly calls: readonly CallView[];
   readonly symbols: readonly SymbolView[];
   readonly studies: readonly DocView[];
@@ -67,9 +70,11 @@ export function researchShelfJson(
   calls: ReadonlyMap<string, EventCall>,
   events: readonly MarketEvent[] = [],
   horizons: ReadonlyMap<string, HorizonCalls> = new Map(),
+  closures: readonly MarketClosure[] = [],
 ): ResearchShelfJson {
   const researched = new Set(shelf.ledgers.map((doc) => doc.slug));
   return {
+    closures,
     events: events.map((event) => ({
       id: event.id,
       title: event.title,

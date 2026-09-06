@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import { inRange, marketToday, rangeFor, rangeLabel, stepAnchor } from "../live/horizon-range";
 import {
   callForLens,
   fetchResearch,
@@ -10,6 +11,8 @@ import {
   parseResearchQuery,
   type ResearchDocLink,
   type ResearchShelfData,
+  setLens,
+  setOnDate,
   toggleOnDate,
 } from "../live/research";
 import { EventHorizon } from "../shell/event-horizon";
@@ -22,20 +25,22 @@ import { PageFrame } from "../shell/frame";
  * Up top, the text bar and the symbol chips write the same string; one filter narrows everything
  * below — calls, ledgers, studies. Documents stay server-rendered; every row crosses honestly.
  *
- * THE LENS (#1704 slice 1): the call board reads ONE horizon row per ledger — `lens:week` by
- * default — instead of only the Today row (which reads "Stand aside" on 268 of 272 ledgers). The
- * rail's lens control arrives in slice 2; until then the token in the query is the control.
+ * THE LENS (#1704): the call board reads ONE horizon row per ledger — `lens:week` by default —
+ * instead of only the Today row (which reads "Stand aside" on 268 of 272 ledgers). THE RANGE
+ * (slice 2): the lens also selects a span of days around the anchor (`on:`, or today), and the
+ * board and the ledger list keep only events inside it; studies are undated and follow the text
+ * filter alone. The rail's lens row and arrows write the same tokens the filter bar accepts.
  */
 
 function CallBoard({
   data,
   terms,
-  dayIds,
+  inRangeIds,
   lens,
 }: {
   readonly data: ResearchShelfData;
   readonly terms: readonly string[];
-  readonly dayIds: ReadonlySet<string> | null;
+  readonly inRangeIds: ReadonlySet<string>;
   readonly lens: Lens;
 }): ReactElement | null {
   // One row per ledger, read through the lens; a ledger with no row for it is left out, never
@@ -46,7 +51,7 @@ function CallBoard({
   });
   const calls = rows.filter(
     ({ call, row }) =>
-      (dayIds === null || dayIds.has(call.eventId)) &&
+      inRangeIds.has(call.eventId) &&
       terms.every(
         (term) =>
           call.eventId.toLowerCase().includes(term) || row.call.toLowerCase().includes(term),
@@ -57,7 +62,7 @@ function CallBoard({
     <section className="rx-panel">
       <h2 className="rx-h">The call board · {LENS_LABEL[lens]}</h2>
       {calls.length === 0 ? (
-        <p className="note">No call matches this filter.</p>
+        <p className="note">No call in this range matches the filter.</p>
       ) : (
         <ul className="rx-calls">
           {calls.map(({ call, row }) => (
@@ -216,48 +221,60 @@ function ResearchPage(): ReactElement {
 
   const data = research.data;
   const filter = parseResearchQuery(query);
-  const anyFilter = filter.terms.length > 0 || filter.on !== undefined;
-  // The pinned day resolves through the served events — precise ids, never date-string guessing.
-  const dayIds = filter.on
-    ? new Set(data.events.filter((e) => e.date === filter.on).map((e) => e.id))
-    : null;
-  const matches = (doc: ResearchDocLink) =>
-    (dayIds === null || [...dayIds].some((id) => doc.slug.endsWith(id))) &&
+  const today = marketToday();
+  const anchor = filter.on ?? today;
+  const range = rangeFor(anchor, filter.lens);
+  // The range resolves through the served events — precise ids, never date-string guessing.
+  const inRangeIds = new Set(data.events.filter((e) => inRange(e.date, range)).map((e) => e.id));
+  const matchesTerms = (doc: ResearchDocLink) =>
     filter.terms.every(
       (term) => doc.title.toLowerCase().includes(term) || doc.slug.toLowerCase().includes(term),
     );
-  const studies = data.studies.filter(matches);
-  const ledgers = data.ledgers.filter(matches);
+  const studies = data.studies.filter(matchesTerms);
+  const ledgers = data.ledgers.filter(
+    (doc) => matchesTerms(doc) && [...inRangeIds].some((id) => doc.slug.endsWith(id)),
+  );
 
   return (
     <PageFrame
       rail={
         <EventHorizon
           events={data.events}
-          {...(filter.on ? { selected: filter.on } : {})}
+          closures={data.closures}
+          lens={filter.lens}
+          anchor={anchor}
+          range={range}
+          today={today}
+          pinned={filter.on !== undefined}
           onPick={(date) => setFilter(toggleOnDate(query, date))}
+          onLens={(lens) => setFilter(setLens(query, lens))}
+          onStep={(direction) =>
+            setFilter(setOnDate(query, stepAnchor(anchor, filter.lens, direction)))
+          }
         />
       }
     >
       <header className="page-header">
         <h1>Research</h1>
         <p>
-          The living shelf: pick a day on the horizon, a name, or type a filter — everything below
-          follows. Documents open on their own pages.
+          The living shelf: pick a lens and a span on the horizon, a name, or type a filter —
+          everything below follows. Documents open on their own pages.
         </p>
       </header>
       <ResearchFilters data={data} query={query} onChange={setFilter} />
-      <CallBoard data={data} terms={filter.terms} dayIds={dayIds} lens={filter.lens} />
+      <CallBoard data={data} terms={filter.terms} inRangeIds={inRangeIds} lens={filter.lens} />
       <div className="rx-grid">
         <DocList
           title="Event ledgers"
           docs={ledgers}
-          empty={anyFilter ? "No ledger matches this filter." : "No event ledgers yet."}
+          empty={`No ledger in ${rangeLabel(range, filter.lens)}${
+            filter.terms.length > 0 ? " matches this filter." : "."
+          }`}
         />
         <DocList
           title="Studies"
           docs={studies}
-          empty={anyFilter ? "No study matches this filter." : "No studies yet."}
+          empty={filter.terms.length > 0 ? "No study matches this filter." : "No studies yet."}
         />
       </div>
     </PageFrame>

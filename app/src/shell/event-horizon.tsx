@@ -1,32 +1,38 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
+import {
+  type DayRange,
+  daysOf,
+  type MarketClosure,
+  rangeLabel,
+  sessionsIn,
+} from "../live/horizon-range";
 import type { ResearchEvent } from "../live/research";
+import { LENSES, type Lens } from "../live/research";
 
 /**
  * THE EVENT HORIZON (#738, rail-controls round — Eric: "view template shift controls to the left
  * rail... research can move the calendar control/filter to the left rail to drive the view").
- * A compact month calendar in the rail: dots mark event days (filled when a ledger exists),
+ * A compact month calendar in the rail: dots mark event days (filled when a ledger exists);
  * clicking a day pins `on:YYYY-MM-DD` into the page's ONE query model — the rail drives the
  * view, the URL keeps the state, and typing the same token by hand works identically.
+ *
+ * THE LENS ROW (#1704 slice 2, Eric's brief): four lenses under the grid — day · week · month ·
+ * quarter. The lens picks the RANGE around the anchor day (shaded on the grid) and the arrows
+ * step by that duration; the head names the range and counts its sessions, so Labor Day week
+ * reads "4 sessions" — theta decays an extra day. Weekdays the exchange is closed are coloured
+ * and carry the reason. Every day is pickable now: a day with no event is a fine anchor for a
+ * week, and a disabled day with nothing behind it was noise, not fog (docs/FOG-OF-WAR.md).
  */
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+const LENS_NAME: Record<Lens, string> = {
+  day: "Day",
+  week: "Week",
+  month: "Month",
+  quarter: "Quarter",
+};
 
-/** "YYYY-MM" of the month `offset` months after the first event month (or today's). */
-function monthKey(base: string, offset: number): string {
-  const [y, m] = base.split("-").map(Number);
-  const d = new Date(Date.UTC(y ?? 2026, (m ?? 1) - 1 + offset, 1));
-  return d.toISOString().slice(0, 7);
-}
-
-function monthLabel(key: string): string {
-  return new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** The month's grid as ISO dates, padded with nulls to Monday-first weeks. */
 function monthDays(key: string): (string | null)[] {
@@ -39,26 +45,53 @@ function monthDays(key: string): (string | null)[] {
   return days;
 }
 
+const isWeekend = (iso: string): boolean => {
+  const day = new Date(`${iso}T00:00:00Z`).getUTCDay();
+  return day === 0 || day === 6;
+};
+
 /** @category hero */
 export function EventHorizon({
   events,
-  selected,
+  closures,
+  lens,
+  anchor,
+  range,
+  today,
+  pinned,
   onPick,
+  onLens,
+  onStep,
 }: {
   readonly events: readonly ResearchEvent[];
-  readonly selected?: string;
+  readonly closures: readonly MarketClosure[];
+  readonly lens: Lens;
+  /** The day the range is built around — the `on:` token, or today when none is pinned. */
+  readonly anchor: string;
+  readonly range: DayRange;
+  readonly today: string;
+  /** Whether `anchor` came from the query (true) or defaulted to today (false). */
+  readonly pinned: boolean;
   readonly onPick: (date: string) => void;
+  readonly onLens: (lens: Lens) => void;
+  readonly onStep: (direction: 1 | -1) => void;
 }): ReactElement | null {
-  const firstMonth = (selected ?? events[0]?.date ?? new Date().toISOString()).slice(0, 7);
-  const [offset, setOffset] = useState(0);
-  if (events.length === 0) return null;
-
-  const month = monthKey(firstMonth, offset);
+  const month = anchor.slice(0, 7);
   const byDate = new Map<string, ResearchEvent[]>();
   for (const event of events) {
     byDate.set(event.date, [...(byDate.get(event.date) ?? []), event]);
   }
-  const lastMonth = (events[events.length - 1]?.date ?? month).slice(0, 7);
+  const closedOn = new Map(closures.map((c) => [c.date, c] as const));
+  const sessions = sessionsIn(range, closures);
+  const rangeDays = new Set(daysOf(range));
+
+  const titleFor = (date: string): string | undefined => {
+    const parts = [
+      closedOn.get(date)?.reason,
+      ...(byDate.get(date)?.map((e) => e.title) ?? []),
+    ].filter((p): p is string => Boolean(p));
+    return parts.length > 0 ? parts.join(" · ") : undefined;
+  };
 
   return (
     <div className="eh">
@@ -67,19 +100,22 @@ export function EventHorizon({
         <button
           type="button"
           className="eh-nav"
-          aria-label="Previous month"
-          disabled={offset <= 0}
-          onClick={() => setOffset(offset - 1)}
+          aria-label={`Previous ${lens}`}
+          onClick={() => onStep(-1)}
         >
           ‹
         </button>
-        <span className="eh-month">{monthLabel(month)}</span>
+        <span className="eh-month">
+          <span className="eh-range">{rangeLabel(range, lens)}</span>
+          <span className="eh-sessions num">
+            {sessions} {sessions === 1 ? "session" : "sessions"}
+          </span>
+        </span>
         <button
           type="button"
           className="eh-nav"
-          aria-label="Next month"
-          disabled={month >= lastMonth}
-          onClick={() => setOffset(offset + 1)}
+          aria-label={`Next ${lens}`}
+          onClick={() => onStep(1)}
         >
           ›
         </button>
@@ -90,20 +126,26 @@ export function EventHorizon({
             {d}
           </span>
         ))}
-        {monthDays(month).map((date, i) =>
-          date === null ? (
-            <span key={`pad-${String(i)}`} />
-          ) : (
+        {monthDays(month).map((date, i) => {
+          if (date === null) return <span key={`pad-${String(i)}`} />;
+          const closure = closedOn.get(date);
+          const className = [
+            "eh-day",
+            rangeDays.has(date) ? "eh-in-range" : "",
+            date === today ? "eh-today" : "",
+            closure && !closure.early ? "eh-closed" : "",
+            closure?.early ? "eh-early" : "",
+            isWeekend(date) ? "eh-weekend" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          return (
             <button
               key={date}
               type="button"
-              className="eh-day"
-              aria-pressed={selected === date}
-              disabled={!byDate.has(date)}
-              title={byDate
-                .get(date)
-                ?.map((e) => e.title)
-                .join(" · ")}
+              className={className}
+              aria-pressed={pinned && anchor === date}
+              title={titleFor(date)}
               onClick={() => onPick(date)}
             >
               {Number(date.slice(8, 10))}
@@ -115,15 +157,30 @@ export function EventHorizon({
                 />
               ) : null}
             </button>
-          ),
-        )}
+          );
+        })}
       </div>
+      <fieldset className="eh-lenses">
+        <legend className="visually-hidden">Lens</legend>
+        {LENSES.map((option) => (
+          <button
+            key={option}
+            type="button"
+            className="eh-lens"
+            aria-pressed={option === lens}
+            onClick={() => onLens(option)}
+          >
+            {LENS_NAME[option]}
+          </button>
+        ))}
+      </fieldset>
       <p className="eh-legend">
-        <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated
+        <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
+        <i className="eh-swatch eh-swatch-closed" /> closed
       </p>
-      {selected ? (
-        <button type="button" className="eh-clear" onClick={() => onPick(selected)}>
-          Clear {selected} ×
+      {pinned ? (
+        <button type="button" className="eh-clear" onClick={() => onPick(anchor)}>
+          Clear {anchor} ×
         </button>
       ) : null}
     </div>
