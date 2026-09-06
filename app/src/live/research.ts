@@ -88,15 +88,21 @@ export async function fetchResearch(): Promise<ResearchShelfData> {
  * picks one. Week is the default by Eric's call (2026-09-06: "weeks are shorter intervals which
  * foster more opportunity to discuss/banter... Week seems like a good tempo for now"); the month
  * argument — investing is long-term — is the banked revisit condition on the issue.
+ *
+ * ALL is the lens that is not a time filter (Eric, 2026-09-06: "it would be nice to be able to
+ * see information absent of these filters as well… a lens with all research in view/context"):
+ * every event is in range, the board reads each ledger's headline row, and the rail shades no
+ * span. It is always an explicit token — week stays the silent default.
  */
-export type Lens = "day" | "week" | "month" | "quarter";
-export const LENSES: readonly Lens[] = ["day", "week", "month", "quarter"];
+export type Lens = "day" | "week" | "month" | "quarter" | "all";
+export const LENSES: readonly Lens[] = ["day", "week", "month", "quarter", "all"];
 export const DEFAULT_LENS: Lens = "week";
 export const LENS_LABEL: Record<Lens, string> = {
   day: "today",
   week: "this week",
   month: "this month",
   quarter: "this quarter",
+  all: "all research",
 };
 
 /**
@@ -107,7 +113,8 @@ export const LENS_LABEL: Record<Lens, string> = {
  *                   event, leads its id, or is named in its TL;DR (#1704: chips were AND over a
  *                   corpus where 257 of 266 events carry no symbol, so three chips returned nothing)
  *   `kind:opex`     the event's kind · `impact:high` its impact tier · `call:watch` the call class
- *   `on:YYYY-MM-DD` the anchor day · `lens:week` the horizon row and range
+ *   `on:YYYY-MM-DD` the anchor day · `lens:week` the horizon row and range (`lens:all` — no
+ *                   time filter: every ledger, its headline row)
  */
 export interface ResearchFilter {
   readonly terms: readonly string[];
@@ -120,7 +127,7 @@ export interface ResearchFilter {
 }
 
 const ON_RE = /^on:(\d{4}-\d{2}-\d{2})$/;
-const LENS_RE = /^lens:(day|week|month|quarter)$/;
+const LENS_RE = /^lens:(day|week|month|quarter|all)$/;
 const SYM_RE = /^sym:([a-z]{1,6})$/;
 const KIND_RE = /^kind:([a-z-]+)$/;
 const IMPACT_RE = /^impact:(critical|high|medium|low)$/;
@@ -190,13 +197,17 @@ export function setLens(query: string, lens: Lens): string {
 /**
  * The row a call shows under a lens — the authored row, or null when the ledger states none for
  * that horizon (honesty: never a neighbouring row in its place). A payload from before lenses
- * carries only the Today row, which still serves the day lens.
+ * carries only the Today row, which still serves the day lens. The all lens selects no horizon,
+ * so it shows the ledger's HEADLINE row — the decision header's first line, present on every
+ * payload — with its own horizon label still on the card.
  */
 export function callForLens(call: ResearchCall, lens: Lens): HorizonRow | null {
-  const key: HorizonKey = lens === "day" ? "today" : lens;
-  const row = call.horizons?.[key];
-  if (row) return row;
-  if (key !== "today") return null;
+  if (lens !== "all") {
+    const key: HorizonKey = lens === "day" ? "today" : lens;
+    const row = call.horizons?.[key];
+    if (row) return row;
+    if (key !== "today") return null;
+  }
   return {
     call: call.call,
     horizon: call.horizon,

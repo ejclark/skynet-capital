@@ -53,9 +53,17 @@ function monthStart(iso: string, months: number): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, 1));
 }
 
+/**
+ * The all lens's range — every ISO date compares inside it, so `inRange` needs no special case.
+ * Never enumerate it (`daysOf` / `sessionsIn`); the rail checks the lens before it does.
+ */
+export const ALL_RANGE: DayRange = { start: "0000-01-01", end: "9999-12-31" };
+
 /** The span the lens selects around the anchor. */
 export function rangeFor(anchor: string, lens: Lens): DayRange {
   switch (lens) {
+    case "all":
+      return ALL_RANGE;
     case "day":
       return { start: anchor, end: anchor };
     case "week": {
@@ -79,12 +87,13 @@ export function rangeFor(anchor: string, lens: Lens): DayRange {
 /** The anchor one range forward (+1) or back (−1) — the arrows step by the lens's duration. */
 export function stepAnchor(anchor: string, lens: Lens, direction: 1 | -1): string {
   switch (lens) {
+    case "all": // no span to step — the arrows page the grid's own unit, the month
+    case "month":
+      return toIso(monthStart(anchor, direction));
     case "day":
       return addDays(anchor, direction);
     case "week":
       return addDays(anchor, 7 * direction);
-    case "month":
-      return toIso(monthStart(anchor, direction));
     case "quarter":
       return toIso(monthStart(rangeFor(anchor, "quarter").start, 3 * direction));
   }
@@ -138,6 +147,8 @@ const short = (iso: string): string => {
 export function rangeLabel(range: DayRange, lens: Lens): string {
   const start = toDate(range.start);
   switch (lens) {
+    case "all":
+      return "all research";
     case "day":
       return `${short(range.start)}, ${String(start.getUTCFullYear())}`;
     case "week":

@@ -55,6 +55,13 @@ describe("ScopeSentence", () => {
     expect(writes).toEqual(["sym:NVDA kind:macro-print", "sym:NVDA lens:quarter"]);
   });
 
+  it("offers the all lens and writes it as an explicit token", () => {
+    const writes = mount("sym:NVDA");
+    expect(screen.getByRole("option", { name: "all" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Lens"), { target: { value: "all" } });
+    expect(writes).toEqual(["sym:NVDA lens:all"]);
+  });
+
   it("defaults to the week lens and reads 'all names' and 'everything' on an empty query", () => {
     mount("");
     expect(screen.getByLabelText("Lens")).toHaveValue("week");

@@ -83,7 +83,7 @@ export function ScopeSentence({
           value={filter.lens}
           options={LENSES.map((lens: Lens) => ({
             value: lens,
-            text: lens === "day" ? "today's" : `${LENS_LABEL[lens]}'s`,
+            text: lens === "day" ? "today's" : lens === "all" ? "all" : `${LENS_LABEL[lens]}'s`,
             ...(lens === "day" && dayFogReason ? { disabled: true, title: dayFogReason } : {}),
           }))}
           onChange={(value) => onChange(setLens(query, value as Lens))}

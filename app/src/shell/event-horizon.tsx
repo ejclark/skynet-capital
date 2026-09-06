@@ -31,6 +31,15 @@ const LENS_NAME: Record<Lens, string> = {
   week: "Week",
   month: "Month",
   quarter: "Quarter",
+  all: "All",
+};
+/** What one arrow press moves — the lens's span, or the grid's month under the all lens. */
+const STEP_UNIT: Record<Lens, string> = {
+  day: "day",
+  week: "week",
+  month: "month",
+  quarter: "quarter",
+  all: "month",
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -149,14 +158,17 @@ export function EventHorizon({
   readonly dayFog?: { readonly reason: string; readonly held: number };
 }): ReactElement | null {
   const month = anchor.slice(0, 7);
+  const allLens = lens === "all";
   const blockLens = lens === "month" || lens === "quarter";
   const byDate = new Map<string, ResearchEvent[]>();
   for (const event of events) {
     byDate.set(event.date, [...(byDate.get(event.date) ?? []), event]);
   }
   const closedOn = new Map(closures.map((c) => [c.date, c] as const));
-  const sessions = sessionsIn(range, closures);
-  const rangeDays = new Set(daysOf(range));
+  // The all lens's range is unbounded: nothing to shade, no sessions to count — the head shows
+  // how many events sit on the shelf instead.
+  const sessions = allLens ? 0 : sessionsIn(range, closures);
+  const rangeDays = new Set(allLens ? [] : daysOf(range));
 
   const titleFor = (date: string): string | undefined => {
     const parts = [
@@ -173,7 +185,7 @@ export function EventHorizon({
         <button
           type="button"
           className="eh-nav"
-          aria-label={`Previous ${lens}`}
+          aria-label={`Previous ${STEP_UNIT[lens]}`}
           onClick={() => onStep(-1)}
         >
           ‹
@@ -181,13 +193,15 @@ export function EventHorizon({
         <span className="eh-month">
           <span className="eh-range">{rangeLabel(range, lens)}</span>
           <span className="eh-sessions num">
-            {sessions} {sessions === 1 ? "session" : "sessions"}
+            {allLens
+              ? `${String(events.length)} ${events.length === 1 ? "event" : "events"}`
+              : `${String(sessions)} ${sessions === 1 ? "session" : "sessions"}`}
           </span>
         </span>
         <button
           type="button"
           className="eh-nav"
-          aria-label={`Next ${lens}`}
+          aria-label={`Next ${STEP_UNIT[lens]}`}
           onClick={() => onStep(1)}
         >
           ›
