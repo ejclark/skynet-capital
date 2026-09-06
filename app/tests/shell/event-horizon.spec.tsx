@@ -82,6 +82,21 @@ describe("EventHorizon", () => {
     expect(calls.lenses).toEqual([]);
   });
 
+  it("completes a boundary week with the next month's days, dimmed and tagged, still in the band", () => {
+    mount({ anchor: "2026-07-29", range: rangeFor("2026-07-29", "week"), pinned: true });
+    // Jul 1 and Aug 1 are both on the grid; the outside one is August's.
+    const outside = (day: string) =>
+      screen.getAllByRole("button", { name: day }).find((b) => b.classList.contains("eh-outside"));
+    const aug1 = outside("1");
+    expect(aug1).toHaveClass("eh-outside", "eh-band");
+    expect(aug1).toHaveTextContent(/Aug/);
+    expect(outside("2")).toHaveClass("eh-outside", "eh-band-end");
+    expect(screen.getByRole("button", { name: "27" })).toHaveClass("eh-band-start");
+    expect(screen.getByRole("button", { name: "27" })).not.toHaveClass("eh-outside");
+    // the first row is completed by June's last two days, dimmed the same way
+    expect(outside("29")).toHaveClass("eh-outside");
+  });
+
   it("makes the whole grid the region at the month lens — no per-day band", () => {
     mount({ lens: "month", range: rangeFor("2026-09-09", "month") });
     const eight = screen.getByRole("button", { name: "8" });

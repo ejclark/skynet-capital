@@ -141,7 +141,9 @@
   border-radius: 0;
 }
 .eh-day.eh-band {
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  /* 30% — a large-area fill still needs a real step against the ground for a red/green-colourblind
+     reader (docs/BRAND.md → Accessibility); 16% read as nothing to Eric. */
+  background: color-mix(in srgb, var(--accent) 30%, var(--surface));
 }
 .eh-day.eh-band-start {
   border-radius: 17px 0 0 17px;
@@ -153,7 +155,7 @@
   border-radius: 17px;
 }
 .eh-grid.eh-block {
-  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
   border-radius: 12px;
   padding: 4px;
 }
@@ -184,14 +186,35 @@
 /* INACTIVE STATE — a day you cannot trade (weekend, full closure) is dimmed, never decorated: the
    smallest effective difference. A closed weekday keeps a strike so it reads as "a weekday, shut",
    an early close a dotted underline; the reason is on hover. */
-.eh-day.eh-weekend,
-.eh-day.eh-closed {
+.eh-day.eh-weekend {
   color: var(--muted);
   opacity: 0.6;
+}
+/* a closed WEEKDAY stays at full opacity with a high-contrast strike — the strike is the signal
+   and it has to clear the ground (Eric: the striped rows were "difficult for me to see"). */
+.eh-day.eh-closed {
+  color: var(--muted);
 }
 .eh-day.eh-closed .eh-num {
   text-decoration: line-through;
   text-decoration-thickness: 2px;
+  text-decoration-color: var(--text);
+}
+/* OUTSIDE DAYS — the neighbouring month's days that complete a row: present, dimmed, tagged. */
+.eh-day.eh-outside .eh-num {
+  color: var(--muted);
+  opacity: 0.55;
+}
+.eh-month-tag {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--sans);
 }
 .eh-day.eh-early .eh-num {
   text-decoration: underline dotted;
