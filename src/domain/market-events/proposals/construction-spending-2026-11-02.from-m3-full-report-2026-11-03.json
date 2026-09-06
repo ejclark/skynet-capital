@@ -1,0 +1,11 @@
+{
+  "id": "construction-spending-2026-11-02",
+  "kind": "macro-print",
+  "title": "Construction Spending — Construction Put in Place (September 2026 data), 10:00 a.m. ET",
+  "date": "2026-11-02",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes), row \"Construction Spending (Construction Put in Place) | November 2, 2026 | 10:00 AM | September 2026\", release code A202611021000, reference A202609. Corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet, whose 2026-11-02 10:00 row reads \"Construction spending, ISM Manufacturing Index\" — this release owns a posted GDPNow vintage. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the m3-full-report-2026-11-03 initial-research adjacency sweep (2026-09-06), and proposed on the exact inverse of that ledger's own finding. No `construction-spending` entry exists anywhere in src/domain/market-events; the only nearby artifact is the December twin's proposals/construction-spending-2026-12-01.from-m3-full-report-2026-12-03.json, so the whole series is untracked. Construction Spending is one of the eight releases in the Atlanta Fed workbook's TRIGGER column — releases that CAUSE a posted GDPNow update — alongside ISM Manufacturing, international trade (full report), wholesale trade, retail sales + inventories, housing starts, advance Census manufacturing (M3-1) and personal income and outlays. The contrast with its proposer is the argument and it is sharper here than for the December pair: 2026-11-02 draws a posted GDPNow vintage, while the proposing event one day later draws only an internal update and no public vintage at all. The corridor tracks the opportunistic half of a GDPNow morning (ism-manufacturing-2026-11-02 is tracked; this is not) and misses the causal half. It also stands one session before US midterm Election Day, which is the last ordinary macro session of that corridor. Impact LOW and symbols empty on the same measured grounds as the sibling Census entries: no macro-keyed house playbook (re-grepped 2026-09-06, 0 hits) and no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
