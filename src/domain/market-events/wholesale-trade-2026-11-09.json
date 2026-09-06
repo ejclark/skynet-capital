@@ -1,0 +1,11 @@
+{
+  "id": "wholesale-trade-2026-11-09",
+  "kind": "macro-print",
+  "title": "Monthly Wholesale Trade: Sales and Inventories (September 2026 data) — the first full monthly wholesale report after the AIES benchmark restatement, 10:00 a.m. ET",
+  "date": "2026-11-09",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, 179 rows parsed), row \"Monthly Wholesale Trade: Sales and Inventories | November 9, 2026 | 10:00 AM | September 2026\", release code A202611091000, reference A202609. Corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet, whose 2026-11-09 10:00 row reads \"Wholesale trade\" alone — this release owns a SOLO GDPNow vintage. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "CANONICAL file written 2026-09-06 by this event's own initial research, after reading the single proposal that created it (proposals/wholesale-trade-2026-11-09.from-mtis-2026-11-17.json, now shadowed). Two of the proposal's three claims survive re-derivation and one is corrected. SURVIVES: the September reference month is 34.5% of the MTIS 11-17 aggregate by inventory weight, reproduced independently from FRED (WHLSLRIMSA $944,710M of BUSINV $2,740,239M, June 2026). SURVIVES: this is the first FULL monthly wholesale report after the 2026-10-26 AIES benchmark restatement. CORRECTED: it is not the first wholesale number on the restated basis — the Advance Economic Indicators Report of 2026-10-28 08:30 publishes advance September wholesale inventories two days after the restatement and eleven days before this print, and that same 10-28 posting is GDPNow's FINAL 2026:Q3 nowcast. Census's own wholesale intention-to-revise notice names only the 10-26 date and, unlike the retail twin's notice, names NO downstream monthly release, so 'carried on the restated basis' is this calendar's inference and not Census's word. Impact LOW and symbols empty on measured grounds: a re-run grep of trade-playbooks.md and multi-symbol-sweep.md returns 0 macro-keyed hits (2026-09-06), and no instrument attaches. Estimate-dated; nothing here licenses an entry. Ledger: docs/research/events/wholesale-trade-2026-11-09.md"
+}

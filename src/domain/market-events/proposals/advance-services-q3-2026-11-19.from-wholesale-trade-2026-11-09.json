@@ -1,0 +1,11 @@
+{
+  "id": "advance-services-q3-2026-11-19",
+  "kind": "macro-print",
+  "title": "Advance Quarterly Services Report (Third Quarter 2026) — the first Q3 edition after the only Q3 this series has ever lost, 10:00 a.m. ET",
+  "date": "2026-11-19",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, 179 rows parsed), row \"Advance Services Report | November 19, 2026 | 10:00 AM | Third Quarter 2026\", release code A202611191000. The Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet lists NO GDPNow vintage on 2026-11-19 (surrounding rows are 11-18 \"Housing starts\" and 11-25 \"GDP Q3 2nd estimate, …\") — this release owns no nowcast channel. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the wholesale-trade-2026-11-09 initial-research adjacency sweep (2026-09-06). The channel is schedule risk, not data. Seven Census release calendars (calendar-listview-2020…2026.html, parsed row-wise this session) contain exactly three series that ever carry a `Suspended` row: the Advance Economic Indicators Report (5 reference months), Preliminary U.S. Imports for Consumption of Steel Products, and THIS one — the Advance Services Report, Third Quarter 2025, whose A202511201000 slot reads `Suspended`. That three-series list is the entire evidence base for the rule the proposing ledger and two of its siblings independently arrived at: Census cancels previews and keeps full reports. 2026-11-19 is the first Q3 edition scheduled after the only Q3 this series has lost, so whether it prints is the cleanest live test of that rule available in 2026, and it sits ten days after the proposing print. The calendar's Q3-2026 row carries reference code A202603 where a Q3 marker belongs — a Census data-entry oddity noted, not corrected here. Impact LOW and symbols empty: no GDPNow vintage, no macro-keyed house playbook (grep re-run 2026-09-06, 0 hits), no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
