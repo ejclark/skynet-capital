@@ -271,7 +271,14 @@ forks · open questions · Eric's steps · slicing sketch — see #429, #466), l
 `plan`, in the capsule shape every issue uses ([`docs/ISSUES.md`](docs/ISSUES.md) — one-line ask,
 metadata table, 2–4 talking points and a picture above the fold, the whole brief in one `<details>`).
 Eric's label/comment is the `ready` flip; Claude executes unattended, banking mid-flight questions as
-issue comments instead of guessing — the richer the issue, the fewer interventions. Label semantics
+issue comments instead of guessing — the richer the issue, the fewer interventions. **The blessing
+cadence is standing, not per-instance** (Eric, 2026-09-06: "my answer for 'whenever i want to bless
+work to proceed' remains consistent; now, always now"). Once a plan is `ready`, a slice closes, or a
+PR merges, the next slice starts without a fresh nod — re-asking "should I continue?" on work already
+inside the envelope is the same scaling failure as a recurring blessing-ask elsewhere in this file.
+This answers *when*, not *what*: the hard boundaries below (irreversible/governance/spend, a genuine
+taste fork, a load-bearing decision only he can settle) still always stop for him — "always now" means
+never idle on ready, in-envelope work, not never ask at all. Label semantics
 (2026-08-22): **`needs-eric` means exactly one thing — a decision only he can make.** Everything else
 not yet shippable has its own marker: `needs-info` (the member) · `next-slice` (nobody) · `plan` (a
 ready-flip). **And a lane that shows no decision remains may remove it** (Eric, 2026-09-04, on
