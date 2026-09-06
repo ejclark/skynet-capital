@@ -194,4 +194,7 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * subscribe/unsubscribe action wired.
    */
   readonly subscriptions?: SubscriptionStore;
+  /** Injectable clock — the option gate's zero-DTE check (#1671) reads "today" through this so
+   *  tests control it; omit and the wall clock (`new Date()`) is used. */
+  readonly now?: () => Date;
 }
