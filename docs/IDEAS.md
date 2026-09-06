@@ -18,6 +18,20 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Widen the repetition-miner slice to catch main-session delegation, not just recurring task shapes
+
+`docs/process/TOKEN-EFFICIENCY.md` follow-up slice 6 (repetition miner → `/charter` pipeline) mines
+`data/duel-log.jsonl` for recurring uncodified task shapes. It should also answer a narrower,
+unmeasured question: after a heavy-tier main session (Opus/Fable) sequences work into pieces, does
+it actually delegate the mechanical pieces to `Agent`/`Workflow` (sonnet-floor per `COMPUTE.md`),
+or do the mechanical follow-through inline at its own tier? `config-audit.mjs` only enforces model
+floors on subagent frontmatter — it has no signal on main-session behavior, and the duel-log's
+`fanout.agent` field is a task label, not the agent-type, so it can't answer this today either. Any
+miner built for slice 6 should carry a `fanout.agent`-type field (or equivalent) so this becomes
+checkable, not just suspected.
+_(src: Claude · while: answering whether Fable-sequenced work should hand off to cheaper models,
+2026-09-06)_
+
 ### Multi-leg execution — the live 401 gate, and 401 finally earnable
 
 #1671 shipped everything a spread and a zero-DTE order can be gated and taught on without a real
