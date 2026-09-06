@@ -67,6 +67,13 @@ role of responsible owner/steward — shipping lovable work while protecting the
   agents (Eric, 2026-09-04 — he suspects he over-provisions, and expects *more* throughput from
   the system routing by task class); [`docs/COMPUTE.md`](docs/COMPUTE.md) owns the routing, and
   token conservation happens only on his explicit, phrase-shaped signal, never by inference.
+- **DX is UX for engineering roles** (Eric, 2026-09-06, on the line-cap debate: "I see DX as UX
+  for engineering/architecture roles… UX Operations… highly relevant to shaping our research").
+  Our gates, scans, templates and skills are a product whose users are sessions and the humans
+  reading their diffs; judge them with the same research discipline as a member surface — measure
+  how they are actually used, name the pattern, give it vocabulary — never by taste or by the
+  rule's age. A gate that fires on the wrong thing (a cap counting context comments as code, #1713)
+  is a UX defect on our own tooling and gets a study before a policy flip.
 - **Information architecture drives implementation, never the reverse** (Eric, 2026-08-29: "routes are
   implementation details of the IA... better IA results in more intuitive and superior implementation. I
   will die on that hill" — said after a nav fix reshuffled links around an existing `/outpost` route
