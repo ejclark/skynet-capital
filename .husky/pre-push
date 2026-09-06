@@ -1,3 +1,16 @@
+# A push to a branch whose UPSTREAM IS GONE means its PR already merged (squash-merge deletes the
+# head): the push would silently re-create the branch with an orphan commit no PR tracks. Twice in
+# one night (2026-09-06: #1752 then #1758) auto-merge landed in under a minute and the follow-up
+# commit sailed into a re-created branch — docs/LESSONS.md. Local check, no API: an upstream that
+# points at this branch's own remote ref, and that ref no longer exists.
+branch=$(git rev-parse --abbrev-ref HEAD)
+upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+if [ "$upstream" = "origin/$branch" ] && [ -z "$(git ls-remote --heads origin "$branch")" ]; then
+  echo "pre-push: origin/$branch is gone — its PR merged; this push would re-create the branch with an orphan commit." >&2
+  echo "pre-push: restart from main instead: git fetch origin main && git checkout -B $branch origin/main && git cherry-pick <sha>, then open a new PR. Bypass knowingly: git push --no-verify." >&2
+  exit 1
+fi
+
 # The full local gate — every check CI runs, before anything leaves the machine.
 # Exists because "verify with a subset" (typecheck+test but not lint) shipped red CI twice.
 # CI is confirmation, not the first line of defense. Bypass only knowingly: git push --no-verify.

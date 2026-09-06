@@ -2084,3 +2084,28 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SIDE QUESTS:** the same shape — a statically-parsed header whose failure mode is silent
   absence, not an error — describes `.claude/skills/*/SKILL.md` and `.claude/agents/*.md`
   frontmatter; logged to `docs/IDEAS.md` rather than built here.
+
+### A follow-up push landed after auto-merge and re-created the branch with an orphan commit — twice in one night
+
+- **SHA:** 66c9031   **DATE:** 2026-09-06   **STATUS:** closed
+- **SIGNAL:** `git push` printed `[new branch]` for a branch that had been pushed minutes earlier
+  (#1752's head), and a one-time REST read showed the PR already `closed · merged`. The commit
+  (the expanded pattern ledger) was live on a re-created remote branch no PR tracked. The same
+  shape recurred forty minutes later on #1758 with a one-row commit. Nothing was red; the only
+  tell was the odd `[new branch]` line, easy to read past.
+- **ROOT CAUSE:** the repo's own posture — auto-merge armed at open, squash on green, head branch
+  deleted at merge — lands a small docs PR in under a minute, faster than a session finishes the
+  next commit on the same branch. `git push` to a deleted upstream is not an error: git re-creates
+  the ref. The session-harness rule ("develop on the designated branch") pulls toward reusing one
+  branch name across sequential PRs, which is exactly the flow that hits this. Cost: two extra
+  PRs (#1758, #1763) and a force-with-lease restart each time; no bad state on `main`.
+- **PREVENTION:** guard, local, no API. `.husky/pre-push` now refuses a push when the branch's
+  upstream points at its own remote ref and `git ls-remote --heads origin <branch>` is empty —
+  the upstream was deleted, so its PR merged — and prints the restart recipe (`git fetch origin
+  main && git checkout -B <branch> origin/main && git cherry-pick <sha>`, then a fresh PR). A
+  first push (no upstream yet) and a branch restarted from `origin/main` (upstream is `main`)
+  pass. Doctrine: a merged PR is finished; the next commit is a new PR from a fresh base, never a
+  push to the old name.
+- **SIDE QUESTS:** `scripts/ship.sh open` could print the PR's merge state at the end of `verify`
+  when the branch already has a PR, so a stacked commit knows before pushing; logged to
+  `docs/IDEAS.md` rather than built here.

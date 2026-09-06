@@ -829,6 +829,12 @@ playbook); the play **resolves** against the market → **HIT** (paid off) / **M
   a real session. Small, cosmetic; deferred behind the core play work. _(src: Eric · while: calming the playcall candles — market-hours realism)_
 
 ### Side quests (surfaced by Claude while working — proposals to prune)
+- **`ship open` should say whether the branch's PR already merged before it pushes.** Twice on
+  2026-09-06 a follow-up commit was pushed to a branch whose PR had auto-merged a minute earlier;
+  git re-created the branch with an orphan commit (`docs/LESSONS.md`). The pre-push hook now
+  refuses that push locally; the cheaper version upstream is `scripts/ship.sh open` reading the
+  branch's PR state once (REST, core bucket) at the end of `verify` and printing "merged — restart
+  from main" instead of pushing. _(src: Claude · while: the pattern-ledger PRs, 2026-09-06)_
 - **Doc-rot gate — the highest-severity gap found, and it has evidence not just a hypothesis.** Both
   known instances fixed (PR #284); the gate itself is now a drafted plan awaiting Eric's ready-flip —
   [`plans/doc-rot-gate.md`](plans/doc-rot-gate.md), the PM-mode worked example. Nothing in the repo yet
