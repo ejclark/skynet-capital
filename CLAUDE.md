@@ -175,6 +175,20 @@ not a general escalation default: once an ask is a filed, labelled issue, doubt 
 member or to the narrowest honest build — never back to Eric. See
 [`.github/prompts/feedback-build.md`](.github/prompts/feedback-build.md).)*
 
+**A brain-dump is a planning session, not a spec** (Eric, 2026-09-06, on a numbered list of
+"misc thoughts, non-exhaustive" about the research surface: "Thinking out loud — love it. This is
+exactly what I tend to do. A lot... I figured the prompt I gave would be helpful for a planning
+session"). When a prompt arrives as numbered/nested thoughts with hedges ("I can't see enough to
+grok", "not sure how to improve", "there's likely many talking points I have yet to articulate"),
+read it as a design conversation: each item is a *signal about an outcome*, the mechanism named
+beside it is a first guess, and the hedged items are the ones he most wants Claude to fill in. The
+deliverable is an assessment plus the IA decision written down (a `plan` issue, per the IA rule
+above) — never a build of the list verbatim, and never a paragraph per item echoing it back. Hunt
+in proximity (the "talking points I have yet to see" are an explicit invitation for side quests),
+quantify the hunches against the corpus/code, and hand back the smallest vocabulary that turns his
+"feels out of place" into a precise request. Store the reasoning where it survives the session
+(the issue, `/journey`), not in chat.
+
 **Interrogate before you comply — the mechanism, never the outcome** (Eric, 2026-09-04: "I feel
 like you inadequately interrogate my suggestions/commands. It feels like we need event triggers
 and/or listeners to trigger interrogation process which organically feeds into grinding fan-out
