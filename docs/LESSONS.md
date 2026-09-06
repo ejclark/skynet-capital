@@ -61,8 +61,8 @@ it. Prevention ranks, best first:
 
 ### Two successful research sessions were reported as failures for crossing `--max-turns 90`
 - **SHA:** n/a   **DATE:** 2026-09-06   **STATUS:** closed
-- **COVERS:** 3a208f2 dbf6880
-- **SIGNAL:** research legs on 2026-09-05 with a merged PR and a complete assessment row, red in the run list at 92 and 94 turns.
+- **COVERS:** 3a208f2 dbf6880 2384fa9 59d0276
+- **SIGNAL:** research legs on 2026-09-05 with a merged PR and a complete assessment row, red in the run list at 92 and 94 turns. Recurred 2026-09-06 07:10Z and 07:52Z while the raise sat on platter #1757: five legs across two runs hit 90, three of them after landing their PR (#1783, #1790); `existing-home-sales-2026-11-12` hit it twice without landing, ~$22 of research with no row to show. **Falsifier for the 150 cap:** an event that hits 150 twice is a loop in the session, not a short cap — fix the prompt, not the number.
 - **ROOT CAUSE:** `--max-turns 90` was set as a runaway backstop when a research session took ~40 turns; the deterministic screen, the adjacency sweep and the proposal write each added tool calls, and a normal full session now lands in the 80s–90s. The action treats "over the cap" as a failed run even when the work landed, so the backstop became a false red that dispatched repair for finished work.
 - **PREVENTION:** gate — raise the cap in `.github/workflows/moneypenny-events.yml` (protected, boards the platter) to a number a full session never reaches on a normal day, keeping it as a runaway stop. Ledger: a turn cap is sized from the measured distribution of green runs, not from the first run that worked, and re-sized whenever the session gains a step.
 - **SIDE QUESTS:** none.
