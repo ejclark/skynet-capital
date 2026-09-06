@@ -2109,3 +2109,36 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
 - **SIDE QUESTS:** `scripts/ship.sh open` could print the PR's merge state at the end of `verify`
   when the branch already has a PR, so a stacked commit knows before pushing; logged to
   `docs/IDEAS.md` rather than built here.
+
+### The Research calendar overflowed its rail and covered the stage — only after rotating a phone, never on a fresh load
+
+- **SHA:** (this PR)   **DATE:** 2026-09-06   **STATUS:** closed
+- **SIGNAL:** Eric, on a real phone: "regular mobile/tall mode looks fine. when turning phone
+  sideways, the content of the left rail is covered by content on the body content." Screenshots
+  showed the month calendar's later weeks and the filter-bar row occupying the same pixels — the
+  calendar visually printed OVER "Show [lens] calls for…", the ledgers/studies cards, and the
+  Day/Week/Month/Quarter row beneath it.
+- **ROOT CAUSE:** `.eh-grid { grid-template-columns: repeat(7, 1fr) }` — a bare `1fr` track's
+  floor is `minmax(auto, 1fr)`, i.e. its content's min-content width, not zero. `.eh-day` carries
+  `aspect-ratio: 1` with no explicit width, so its "content width" is whatever the browser last
+  resolved that aspect-ratio against. On a FRESH load at any width (confirmed by a sweep from
+  390px to 932px) the grid resolves correctly first try — the bug never showed up in a static
+  screenshot at any single width. It only appeared after a real resize with no reload: load
+  portrait, scroll, then resize to a landscape width (Playwright `setViewportSize`, no navigation
+  — the same thing a phone rotation does, and mobile browsers do not reset scroll or force a full
+  layout invalidation on that resize). Measured live: `.eh-day`'s width stayed pinned at the
+  portrait-era 40px (7×40 + 6×3 gap = 298px) instead of re-resolving to the rail's true
+  248px-wide share (~32.8px), so the grid's own `scrollWidth` (298px) exceeded its 248px column
+  and the overflow — visible, not clipped — bled rightward into the stage column. The interaction
+  is specifically `aspect-ratio` + a `1fr` grid track under a resize with no reload; a normal
+  width-only media-query bug would have shown on the very first static render, and it did not.
+- **PREVENTION:** `minmax(0, 1fr)` on `.eh-grid`'s track and `min-width: 0` on `.eh-day` — both
+  floor the column at zero, so there is no stale content-minimum left for a resize to hold onto.
+  Verified by the same repro (load portrait, scroll, resize to landscape, no reload) at nine
+  widths (667–932px, the real range of landscape phones) before and after: before, w900+ visibly
+  overlapped; after, none did. No new gate: this is a narrow browser-quirk interaction (one
+  `aspect-ratio` grid item, one resize-without-reload path) that a generic scan would either miss
+  or false-positive on every ordinary `1fr` grid in the app; the fix carries its own explanatory
+  comment in `event-horizon.css` as the landmine flag for the next `aspect-ratio` + grid pairing.
+- **SIDE QUESTS:** none — `hero.css`'s `aspect-ratio: 21/9` sits on a fixed-width block, not a
+  resizing grid track, so it doesn't share this failure mode; checked, not changed.
