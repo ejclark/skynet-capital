@@ -13,13 +13,13 @@ executes it; a human session following this doc by hand is equally valid.
 rule makes it due on the next cycle (and `.github/workflows/moneypenny-events.yml` opens an
 `[event-research] <id>` issue within seconds of the merge). No other ceremony.
 
-**Place the entry by date, not at the end.** `MARKET_EVENTS` is stored in `(date, id)` order and
-`node scripts/event-scan.mjs --validate` fails a PR that breaks it (red inside `npm test`). This is
-a merge fix, not tidiness: appending every new event to the end of the array put two concurrent
-research lanes at the same anchor line — the one case plain git cannot merge, and the reason 22 of
-47 PRs touching this file were flagged conflicted at a median 13.4 h to merge (#1324). Date-ordered
-entries land at different anchors and merge clean on GitHub's own server-side merge, which never
-runs the custom driver. If the gate flags you, `node scripts/sort-market-events.mjs` fixes the file.
+**One file per event, named by its id.** The calendar is `src/domain/market-events/<id>.json`
+(issue #1449) — there is no shared array and no ordering to keep; the loader sorts `(date, id)`
+at read time. `node scripts/event-scan.mjs --validate` fails a file whose name is not its `id`
+(red inside `npm test`). This replaced a single array literal that put every concurrent research
+lane at the same anchor line — 22 of 47 PRs touching it were flagged conflicted at a median 13.4 h
+to merge (#1324), and three merge-side fixes could not reach GitHub's server-side merge. An
+adjacent event you *propose* is a proposer-owned file (see the adjacency sweep below, #1717).
 
 ## The three assessment modes (keyed to the scanner's `reason` field)
 
