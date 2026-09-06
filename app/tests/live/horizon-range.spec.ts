@@ -62,6 +62,9 @@ describe("rangeLabel", () => {
     expect(rangeLabel(rangeFor("2026-09-09", "day"), "day")).toBe("Sep 9, 2026");
     expect(rangeLabel(rangeFor("2026-09-09", "week"), "week")).toBe("Sep 7 – Sep 13");
     expect(rangeLabel(rangeFor("2026-09-09", "month"), "month")).toBe("September 2026");
-    expect(rangeLabel(rangeFor("2026-09-09", "quarter"), "quarter")).toBe("Q3 2026");
+    // The quarter is a CALENDAR quarter and the label names its months, so it cannot be misread
+    // as a company's fiscal quarter (NVDA's Q3 FY27 is Aug–Oct 2026).
+    expect(rangeLabel(rangeFor("2026-09-09", "quarter"), "quarter")).toBe("Q3 2026 · Jul–Sep");
+    expect(rangeLabel(rangeFor("2027-01-15", "quarter"), "quarter")).toBe("Q1 2027 · Jan–Mar");
   });
 });
