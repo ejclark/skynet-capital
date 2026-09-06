@@ -5,6 +5,7 @@ import {
   mentionsSymbol,
   parseResearchQuery,
   type ResearchCall,
+  setFacet,
   setLens,
   toggleOnDate,
   toggleSymbolScope,
@@ -56,6 +57,15 @@ describe("setLens / toggleOnDate — the controls write the same string", () => 
   it("keeps the lens when the calendar pins or clears a day", () => {
     expect(toggleOnDate("lens:month", "2026-09-07")).toBe("lens:month on:2026-09-07");
     expect(toggleOnDate("lens:month on:2026-09-07", "2026-09-07")).toBe("lens:month");
+  });
+});
+
+describe("setFacet — one slot writes one token", () => {
+  it("sets, replaces and clears a facet while every other token survives", () => {
+    expect(setFacet("NVDA lens:month", "kind", "opex")).toBe("NVDA lens:month kind:opex");
+    expect(setFacet("kind:opex NVDA", "kind", "rates")).toBe("NVDA kind:rates");
+    expect(setFacet("kind:opex call:watch NVDA", "kind", undefined)).toBe("call:watch NVDA");
+    expect(setFacet("", "call", "act")).toBe("call:act");
   });
 });
 

@@ -16,15 +16,21 @@ import type { ReactElement, ReactNode } from "react";
  * it yet — so the content column never shifts left or right as you navigate. A view without rail
  * content gets an empty column, not a wider stage.
  *
- * WHERE INFORMATION GOES (#1740, 2026-09-06 — the wargame on "tabs as an organic boundary"): three
- * words, each with a live instance. A KIND is a filter over one list — a query qualifier plus a
- * rail chip, one model, never a tab (Activity's `is:buy`). A SECTION is a different shape of data
- * on the same page — the rail's "On this page" switch (`settings-toc.tsx`), URL-stateful, paging
- * on a phone and sitting beside on desktop. A SUB-VIEW is a full view of its own — a nested route
- * plus rail sub-nav (`profile-rail.tsx`); a section that outgrows its page graduates here. There is
- * no fourth band: at phone width the topbar and the rail already each wrap into a horizontal row,
- * so a tab strip under the header would be a third band before any content. docs/PATTERNS.md
- * keeps the ledger.
+ * THREE WORDS FOR "A PAGE HAS SEVERAL THINGS ON IT" (#1740, the tabs wargame). A page that holds
+ * more than one thing picks one of these, and the word decides the mechanism — there is no fourth
+ * dimension, and no tab strip:
+ *   - a KIND is a filter over ONE list — a query qualifier the bar accepts as text, mirrored by a
+ *     rail toggle (`is:bot` on Activity, `lens:` on Research). Several may be on at once.
+ *   - a SECTION is a different SHAPE of data on the same page — the rail's section switch
+ *     (`section-switch.tsx`), exactly one current, URL-stateful via a `section` search param.
+ *     Booked P&L beside a trade feed is a section; "bot trades" is not.
+ *   - a SUB-VIEW is a full view of its own — a nested route plus rail sub-nav (`profile-rail.tsx`).
+ *     A section that outgrows its page graduates here, the way `?tab=performance` became
+ *     `/u/$id/pulse` (`src/server/legacy-redirects.ts`).
+ * A section switch is the rail's CONTROL role, never a new dimension: it drives the content beside
+ * it and adds no app-level destinations. Nothing is both a kind and a section — if a rail toggle
+ * and a section switch would offer the same thing, one of them is noise and gets deleted.
+ * `docs/PATTERNS.md` keeps the ledger these three words live in, one row per named pattern.
  * @category navigation
  */
 export function PageFrame({

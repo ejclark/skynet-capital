@@ -170,6 +170,17 @@ export function mentionsSymbol(text: string | undefined, symbol: string): boolea
   return text ? new RegExp(`\\b${symbol}\\b`).test(text) : false;
 }
 
+/** The single-valued facets a slot can set: `kind:` · `impact:` · `call:`. */
+export type Facet = "kind" | "impact" | "call";
+const FACET_RE: Record<Facet, RegExp> = { kind: KIND_RE, impact: IMPACT_RE, call: CALL_RE };
+
+/** Set (or, with undefined, clear) one facet token; every other token survives. */
+export function setFacet(query: string, facet: Facet, value: string | undefined): string {
+  const re = FACET_RE[facet];
+  const kept = query.split(/\s+/).filter((t) => t && !re.test(t.toLowerCase()));
+  return (value ? [...kept, `${facet}:${value}`] : kept).join(" ");
+}
+
 /** Set the lens token: the default lens writes no token at all, so a plain URL stays plain. */
 export function setLens(query: string, lens: Lens): string {
   const kept = query.split(/\s+/).filter((t) => t && !LENS_RE.test(t.toLowerCase()));

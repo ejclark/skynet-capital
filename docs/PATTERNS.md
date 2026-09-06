@@ -33,7 +33,7 @@ description, when asking for a change.
 | Word | It means | The mechanism | Live instance |
 |---|---|---|---|
 | **kind** | a filter over one list | a query qualifier and a rail chip, one model; never a tab | `is:buy` / `is:bot` on Activity (`app/src/routes/activity.tsx`); `lens:` / `sym:` on Research |
-| **section** | a different *shape* of data on the same page | the rail's "On this page" switch, URL-stateful; pages on a phone, sits beside on desktop | Settings (`app/src/shell/settings-toc.tsx`); Activity's Booked P&L (#1740 slice 1) |
+| **section** | a different *shape* of data on the same page | the rail's section switch (`app/src/shell/section-switch.tsx`), exactly one current, URL-stateful via `?section=`; pages on a phone | Settings and Activity's Booked P&L (#1749) |
 | **sub-view** | a full view of its own | a nested route plus rail sub-nav | the desk's Pulse / Decisions / Playbooks (`app/src/shell/profile-rail.tsx`) |
 
 A section that grows into a full page graduates to a sub-view — the legacy desk's `?tab=performance`
@@ -54,8 +54,8 @@ undocumented and gets one.
 | **Constant geometry** | The rail column is the same width on every view, reserved even when empty, so content never shifts as you navigate. | `app/src/shell/frame.tsx` | Eric, 2026-08-28: "content shift greatly degrades user experience" | placed — Eric 2026-08-29 (#784): revisit when content breaks it |
 | **Rail as sub-nav** | Links to sibling routes under one topbar tab, the current one marked, chapters indented. | `app/src/shell/profile-rail.tsx` | #1119 | placed |
 | **Rail as controls** | A control in the rail drives the content beside it (chips, a metric picker, a calendar). | `app/src/routes/activity.tsx` (`WireRail`), `app/src/routes/index.tsx` (`RankRail`) | #738 | placed |
-| **Section switch ("On this page")** | One section renders at a time; `.railctl` with `aria-pressed` marks which; progressive disclosure instead of anchor-scrolling. | `app/src/shell/settings-toc.tsx` | Eric, 2026-09-04 | placed on Settings · seeded for Activity (#1740) |
-| **Rail becomes a strip on a phone** | At ≤860px the rail turns into a horizontal, scrollable chip row; labels hide, the current item gets an accent border. | `app/src/styles/rail.css` | #738 | placed |
+| **Section switch ("On this page")** | One section renders at a time, `aria-pressed` marks which, a leading accent bar marks it by shape not hue; progressive disclosure instead of anchor-scrolling. | `app/src/shell/section-switch.tsx` (generalized out of `settings-toc.tsx`) | Eric, 2026-09-04; #1740's wargame | placed on Settings and Activity (#1749) |
+| **Rail becomes a strip on a phone** | At ≤860px the rail turns into a horizontal, scrollable chip row; labels hide, the current item gets an accent border. Does not hold for a rail that is a block (Research's calendar stays a ~290px block above the heading at 390px). | `app/src/styles/rail.css` | #738 | placed — Research's phone rail is the open case (#784) |
 | **Chips ⇄ query text, one model** | Rail chips write the same tokens the filter bar accepts; the URL carries the query, so a link lands on the same filter. | `app/src/live/wire.ts`, `app/src/live/research.ts` | GitHub's Issues list | placed |
 | **Exclusive-group toggle** | Picking a sibling replaces, never stacks a contradiction (`is:buy` vs `is:sell`). | `app/src/live/wire.ts` (`toggleWireQualifier`) | the blotter | placed |
 | **Issues-list template** | A filterable list with a URL-stateful query and companion panels alongside. | `app/src/routes/activity.tsx` | GitHub | placed |

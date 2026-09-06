@@ -77,6 +77,22 @@
   box-shadow: var(--elev-base);
 }
 
+/* the SECTION role (#1740) — a radio (exactly one current), where the filter toggles beside it are
+   checkboxes (any number on). The two look identical under `.railctl` alone, and on a phone the
+   group labels that told them apart are hidden, so the current section gets a leading accent bar:
+   a shape difference, not a tone shift (`docs/BRAND.md` → Accessibility). */
+.railctl-section {
+  /* the bar lives inside the padding, so the label never shifts as the current section changes
+     (constant geometry, `frame.tsx`) */
+  padding-left: 15px;
+}
+
+.railctl-section[aria-pressed="true"] {
+  box-shadow:
+    inset 3px 0 0 0 var(--accent),
+    var(--elev-base);
+}
+
 /* the Profile rail (#1119): a glyph per item, chapters indented under their table of contents */
 .rail .rail-item {
   display: flex;
@@ -134,5 +150,32 @@
 
   .rail a[aria-current="page"] {
     border-color: var(--accent);
+  }
+
+  /* the row is where the group labels disappear, so the separator has to do their job: a vertical
+     divider between the section switch and the filter toggles (#1740). */
+  .rail hr {
+    border-top: none;
+    border-left: 1px solid var(--border);
+    align-self: stretch;
+    margin: 2px 4px;
+    width: 0;
+    flex: 0 0 auto;
+  }
+
+  .rail .railctl {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  /* in a row a left bar reads as a divider, so the bar goes underneath instead */
+  .railctl-section {
+    padding-left: 12px;
+  }
+
+  .railctl-section[aria-pressed="true"] {
+    box-shadow:
+      inset 0 -3px 0 0 var(--accent),
+      var(--elev-base);
   }
 }

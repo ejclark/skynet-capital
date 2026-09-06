@@ -108,8 +108,33 @@ dark mode."* The first reader of every frame cannot separate `--pos` from `--neg
   `theme.css` and fails the build on drift; a new text-on-colour pair joins that spec.
 - **Small marks get size before colour.** A 4px dot is invisible at any contrast; 6px with a 1.5px
   ring reads. Legend and helper text sit at ≥ 11.5px.
+- **A radio and a checkbox never look the same.** Two controls that share a style but not a
+  behaviour are a hue-only signal in disguise. The rail's **section switch** picks exactly one
+  (`.railctl-section`, a leading accent bar — underneath it on a phone, where the rail is a row);
+  its **filter toggles** turn any number on (`.railctl`, no bar). On a phone the group labels are
+  hidden, so the `<hr />` between them is a real vertical divider, not a decoration. The words those
+  controls stand for — **kind** vs **section** vs **sub-view** — live in `app/src/shell/frame.tsx`.
 - **Judge dark first, then light, both by eye and by the spec** — dark is the default and where
   low-contrast tones hide; light is where accent fills lose their text.
+
+## Visual grammar — the named principles behind "clean, crisp, elegant"
+
+Eric, 2026-09-06, on the research rail: *"individually highlighting days adds a lot of visual
+noise/complexity that overwhelms. This information is block level; fly it at a higher level… 7
+pieces to 1 piece per row/week."* The handles, so the next request can be one phrase:
+
+- **Encode at the granularity the data lives at.** A fact about a week gets one mark per week; a
+  fact about a day stays on the day. Ask "what is this a fact *about*?" before drawing it.
+- **Common region** (Gestalt; Palmer 1992): items inside one bounded area read as a group. The
+  range on the rail is one band per row, the month lens one block around the grid — never seven
+  outlined cells asking the eye to do the grouping.
+- **1 + 1 = 3** (Tufte, *Envisioning Information*): two adjacent bordered shapes create a third,
+  unintended shape in the gap between them. Thirty bordered tiles make sixty phantom shapes. Fewer
+  boundaries, not thinner ones.
+- **Smallest effective difference** (Tufte) for the **inactive state**: a day you cannot trade is
+  dimmed, never decorated — the difference that reads, and no more.
+- **One shape per meaning.** The pinned day is a filled circle, today a ring, the lens a single
+  segmented pill; a second solid accent fill on the same surface competes with the first.
 
 ## Honesty & domain-accuracy rules (non-negotiable)
 
