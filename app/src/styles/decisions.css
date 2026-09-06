@@ -40,11 +40,15 @@
   background: var(--pos);
   box-shadow: 0 0 6px var(--pos);
 }
+/* Rejected and halted are BOTH red — a hollow ring and a square keep them apart from each other
+   and from a placed cycle without asking anyone to separate green from red (docs/BRAND.md). */
 .cycle-rejected .cycle-glyph {
-  background: var(--neg);
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--neg);
 }
 .cycle-halted .cycle-glyph {
   background: var(--neg);
+  border-radius: 2px;
   box-shadow: 0 0 6px var(--neg);
 }
 .cycle-observed .cycle-glyph {

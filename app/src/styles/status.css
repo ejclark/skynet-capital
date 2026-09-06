@@ -41,8 +41,11 @@
   background: var(--pos);
   box-shadow: 0 0 6px var(--pos);
 }
+/* Hollow, not just red: at <=860px the pill's text is hidden and the dots are ALL that is left,
+   so live-vs-resyncing cannot ride on green-vs-red alone (docs/BRAND.md -> Accessibility). */
 .status-resyncing .status-dot {
-  background: var(--neg);
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--neg);
 }
 /* The fleet's own mark — sized like the stream dot so it survives the phone layout below, where
    the pill's text is hidden and the dots are all that's left. */
@@ -120,14 +123,18 @@
   flex-shrink: 0;
   background: var(--muted);
 }
+/* Three verdicts, three SHAPES — a filled circle, a square, a hollow ring — so the row reads
+   without separating green from red. The square echoes the fleet flag above it. */
 .ops-dot.ops-ok {
   background: var(--pos);
 }
 .ops-dot.ops-attention {
   background: var(--neg);
+  border-radius: 2px;
 }
 .ops-dot.ops-unknown {
-  background: var(--muted);
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--muted);
 }
 
 @media (max-width: 860px) {
