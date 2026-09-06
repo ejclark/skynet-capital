@@ -14,6 +14,7 @@ import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { eventHorizonCalls } from "./research-horizon-calls.js";
 import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
 
@@ -38,7 +39,13 @@ export async function serveContentApi(
   if (path === "/api/research") {
     const asOf = new Date().toISOString();
     return json(
-      researchShelfJson(listResearch(), shelfSymbols(asOf), eventCalls(), allEvents(asOf)),
+      researchShelfJson(
+        listResearch(),
+        shelfSymbols(asOf),
+        eventCalls(),
+        allEvents(asOf),
+        eventHorizonCalls(),
+      ),
     );
   }
   if (path === "/api/learn") {
