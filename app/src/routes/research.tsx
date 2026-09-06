@@ -7,6 +7,7 @@ import { dayLensFog } from "../live/fog";
 import { inRange, marketToday, rangeFor, rangeLabel, stepAnchor } from "../live/horizon-range";
 import { fetchPlays } from "../live/options";
 import {
+  assessmentAge,
   callForLens,
   fetchResearch,
   LENS_LABEL,
@@ -67,6 +68,7 @@ function CallBoard({
   readonly rangeName: string;
 }): ReactElement | null {
   const { lens, terms, symbols, kind, impact, callClass } = filter;
+  const today = marketToday();
   const eventsById = new Map(data.events.map((e) => [e.id, e] as const));
   // One row per ledger, read through the lens; a ledger with no row for it is left out, never
   // shown with a neighbouring horizon's call in its place.
@@ -127,24 +129,36 @@ function CallBoard({
             ) : null}
           </p>
           <ul className="rx-calls">
-            {calls.map(({ call, row }) => (
-              <li key={call.eventId} className="rx-call">
-                <a href={call.href} className="rx-call-event num">
-                  {call.eventId}
-                </a>
-                <span className="rx-call-text">{row.call}</span>
-                <span className="rx-call-meta">
-                  <span className="rx-chip" title="horizon">
-                    {row.horizon}
-                  </span>
-                  {row.confidence ? (
-                    <span className="rx-chip rx-conf" title="stated confidence">
-                      {row.confidence}
+            {calls.map(({ call, row }) => {
+              const age = assessmentAge(call.lastAssessed, today);
+              return (
+                <li key={call.eventId} className="rx-call">
+                  <a href={call.href} className="rx-call-event num">
+                    {call.eventId}
+                  </a>
+                  <span className="rx-call-text">{row.call}</span>
+                  <span className="rx-call-meta">
+                    <span className="rx-chip" title="horizon">
+                      {row.horizon}
                     </span>
-                  ) : null}
-                </span>
-              </li>
-            ))}
+                    {row.confidence ? (
+                      <span className="rx-chip rx-conf" title="stated confidence">
+                        {row.confidence}
+                      </span>
+                    ) : null}
+                    {age ? (
+                      <span
+                        className={`rx-chip rx-assessed num${age.stale ? " rx-stale" : ""}`}
+                        title="ledger's last assessment date"
+                      >
+                        assessed {call.lastAssessed}
+                        {age.stale ? ` · stale (${age.days}d)` : ""}
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

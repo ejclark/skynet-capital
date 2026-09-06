@@ -25,7 +25,25 @@ describe("researchShelfJson", () => {
       horizon: "Today",
       confidence: "high",
       href: "/research/events/nvda-2026-08-26-print",
+      lastAssessed: null,
     });
+  });
+
+  it("reads lastAssessed from the matching ledger doc (events/<eventId>), honestly null with none", () => {
+    const calls = new Map<string, EventCall>([
+      ["nvda-2026-08-26-print", { call: "hold through the print", horizon: "Today" }],
+      ["amd-2026-09-01-print", { call: "watch", horizon: "Today" }],
+    ]);
+    const view = researchShelfJson(
+      {
+        studies: [],
+        ledgers: [doc("events/nvda-2026-08-26-print", "NVDA print", "2026-08-27")],
+      },
+      [],
+      calls,
+    );
+    expect(view.calls[0]?.lastAssessed).toBe("2026-08-27");
+    expect(view.calls[1]?.lastAssessed).toBeNull();
   });
 
   it("carries every horizon row the ledger states, so the shell can read the board by lens", () => {
