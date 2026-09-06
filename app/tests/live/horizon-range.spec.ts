@@ -10,6 +10,12 @@ import {
 
 // The range a lens selects around an anchor day (#1704 slice 2) — pure date arithmetic.
 describe("rangeFor", () => {
+  it("puts every dated event inside the all lens's range", () => {
+    const all = rangeFor("2026-09-09", "all");
+    expect(inRange("2019-01-02", all)).toBe(true);
+    expect(inRange("2031-12-31", all)).toBe(true);
+    expect(rangeLabel(all, "all")).toBe("all research");
+  });
   it("selects the anchor day alone under the day lens", () => {
     expect(rangeFor("2026-09-09", "day")).toEqual({ start: "2026-09-09", end: "2026-09-09" });
   });
@@ -25,6 +31,10 @@ describe("rangeFor", () => {
 });
 
 describe("stepAnchor — the arrows advance by the lens's duration", () => {
+  it("pages the grid's month under the all lens, which has no span of its own", () => {
+    expect(stepAnchor("2026-09-09", "all", 1)).toBe("2026-10-01");
+    expect(stepAnchor("2026-09-09", "all", -1)).toBe("2026-08-01");
+  });
   it("steps a day, a week, a month, a quarter", () => {
     expect(stepAnchor("2026-09-09", "day", 1)).toBe("2026-09-10");
     expect(stepAnchor("2026-09-09", "week", -1)).toBe("2026-09-02");

@@ -37,6 +37,16 @@ describe("EventHorizon", () => {
     expect(screen.getByText("4 sessions")).toBeInTheDocument();
   });
 
+  it("shades no span under the all lens, counts events, and pages by month", () => {
+    const calls = mount({ lens: "all", range: rangeFor("2026-09-09", "all") });
+    expect(screen.getByText("all research")).toBeInTheDocument();
+    expect(screen.getByText("1 event")).toBeInTheDocument();
+    expect(document.querySelectorAll(".eh-band")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(calls.steps).toEqual([1]);
+  });
+
   it("marks the current lens pressed and reports a new pick", () => {
     const calls = mount();
     expect(screen.getByRole("button", { name: "Week" })).toHaveAttribute("aria-pressed", "true");
