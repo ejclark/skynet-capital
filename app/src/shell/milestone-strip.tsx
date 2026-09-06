@@ -11,13 +11,18 @@ import type { PlayInfo, PlaysIndex } from "../live/options";
  * **status line** (what's next and what opens it). It replaces the six-card picker.
  *
  * Two rules keep it a mirror and not a hand on the wheel:
- *   - **A node click is a PRESET, never a gate.** It sets `?play=` exactly as the cards did; a
- *     locked node presets too — the ticket shows the locked panel and its reason, and the server
- *     refuses at review and submit regardless (`option-api-routes.ts`). Milestones gate, they
+ *   - **A reached node is a PRESET, never a gate.** It sets `?play=` exactly as the cards did —
+ *     the ticket shows the form (or its locked panel, if wrong) and the server refuses at review
+ *     and submit regardless (`option-api-routes.ts`, `trade-api-routes.ts`). Milestones gate, they
  *     don't drive (Eric, 2026-09-05).
+ *   - **A locked node routes to the milestone, not the ticket** (Eric, 2026-09-06: the rail was
+ *     inviting a click straight into a rung that hadn't been earned, which read as "everyone's
+ *     unlocked" even with zero fills — worse, `trade-gate.tsx` had no lock check at all behind
+ *     that click). A locked rung's circle and code link to `/learn/trading` — more detail on what
+ *     unlocks it — never to a ticket it can't use yet.
  *   - **Nothing here decides earned or locked.** Both arrive from `/api/trade/plays`; the ✓ is a
  *     real fill the server derived (`progression.ts`). Wheels off, the rail still draws the
- *     earned marks — it records, it stops locking.
+ *     earned marks — it records, it stops locking (and every rung then links to the ticket).
  *
  * Mobile-first (CLAUDE.md): at phone width the rail is nodes + codes + the count, and the status
  * line carries the current rung's name; names under the nodes appear only from 600px up. The
@@ -78,15 +83,8 @@ function Rung({
 }): ReactElement {
   const reached = play.earned || !play.locked;
   const state = play.earned ? "earned" : play.locked ? "locked" : "open";
-  const label = `${play.code} ${play.name}${play.earned ? " — earned" : play.locked ? " — locked" : ""}`;
-  return (
-    <Link
-      to="/trade"
-      search={{ desk: deskId, play: play.code }}
-      className={`rung rung-${state}${current ? " rung-current" : ""}`}
-      aria-current={current ? "page" : undefined}
-      aria-label={label}
-    >
+  const node = (
+    <>
       <span className="rung-node num" aria-hidden="true">
         {play.earned ? "✓" : play.code.charAt(0)}
       </span>
@@ -98,6 +96,29 @@ function Rung({
           {play.name}
         </span>
       ) : null}
+    </>
+  );
+  const className = `rung rung-${state}${current ? " rung-current" : ""}`;
+  if (play.locked) {
+    return (
+      <Link
+        to="/learn/trading"
+        className={className}
+        aria-label={`${play.code} ${play.name} — locked, see what unlocks it`}
+      >
+        {node}
+      </Link>
+    );
+  }
+  return (
+    <Link
+      to="/trade"
+      search={{ desk: deskId, play: play.code }}
+      className={className}
+      aria-current={current ? "page" : undefined}
+      aria-label={`${play.code} ${play.name}${play.earned ? " — earned" : ""}`}
+    >
+      {node}
     </Link>
   );
 }

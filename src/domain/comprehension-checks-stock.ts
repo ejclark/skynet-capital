@@ -77,7 +77,7 @@ export const STOCK_CHECKS: readonly ComprehensionCheck[] = [
           "Borrowing shares to sell short",
         ],
         0,
-        "This desk never shorts. A sell only ever reduces shares you hold, which is also why selling is never locked behind the ladder.",
+        "This desk never shorts — a sell only ever reduces shares you already hold.",
       ),
       q(
         "red",

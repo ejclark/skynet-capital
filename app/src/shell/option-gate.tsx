@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import {
@@ -7,11 +7,11 @@ import {
   type OptionPlayCode,
   type PlayInfo,
   reviewOption,
-  setWheels,
   submitOption,
 } from "../live/options";
 import { money } from "../live/ticket";
 import { ChainStraddle } from "./chain-straddle";
+import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
 
@@ -21,41 +21,10 @@ import { GateAction, type OptionGateState, OptionGateStatus } from "./option-pre
  * desk re-checks the live account (and re-resolves the CONTRACT) at submit. The chain guides —
  * expirations and strikes come from the member's own connected account — and when it can't
  * (`chainNote`), the ticket still works with manual entry, exactly as the legacy raw mode did:
- * premiums just can't be estimated. A locked rung renders its locked panel and the wheels-off
- * door; the server refuses a locked play regardless of what this component shows.
+ * premiums just can't be estimated. A locked rung renders `LockedPanel` (shared with the stock
+ * ticket) and the wheels-off door; the server refuses a locked play regardless of what this
+ * component shows.
  */
-
-function LockedPanel({ play }: { readonly play: PlayInfo }): ReactElement {
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const off = async () => {
-    setBusy(true);
-    try {
-      await setWheels(false);
-      await queryClient.invalidateQueries({ queryKey: ["plays"] });
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <section className="panel gate-panel" aria-label="Locked play">
-      <h2 className="panel-title">🔒 {play.name}</h2>
-      <p className="panel-sub">
-        Course {play.code} · {play.tldr}
-      </p>
-      <p className="tkt-locked">
-        Training wheels are on, and this rung hasn't been unlocked yet
-        {play.opensAfter
-          ? ` — it opens after your first filled ${play.opensAfter.code} (${play.opensAfter.name})`
-          : ""}
-        .
-      </p>
-      <button type="button" className="btn" disabled={busy} onClick={() => void off()}>
-        {busy ? "…" : "Turn the wheels off — open the full catalog"}
-      </button>
-    </section>
-  );
-}
 
 /** @category trading */
 export function OptionGate({
