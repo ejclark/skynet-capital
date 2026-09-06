@@ -1,6 +1,7 @@
 import {
   adjacentIdsOf,
   horizonCallsOf,
+  horizonRowsOf,
   tldrOf,
   todayCallOf,
 } from "../../src/server/research-event-calls.js";
@@ -53,6 +54,48 @@ describe("horizonCallsOf — every horizon row, keyed by lens (#1704)", () => {
 
   it("agrees with todayCallOf on the Today row", () => {
     expect(horizonCallsOf(header(FOUR)).today).toEqual(todayCallOf(header(FOUR)));
+  });
+
+  describe("horizonRowsOf — the same rows read whole, for a citing document (#1716)", () => {
+    it("carries the Why and falsifier cells with their authoring markup intact", () => {
+      expect(horizonRowsOf(header(FOUR)).week).toEqual({
+        call: "Watch",
+        horizon: "This week",
+        confidence: "Medium",
+        why: "CPI Thursday",
+        provesWrong: "odds under 50%",
+      });
+    });
+
+    it("keeps emphasis in a quoted cell while still normalising the call itself", () => {
+      const md = header(
+        "| Horizon | Call | Confidence | Why | Proves it wrong |\n|---|---|---|---|---|\n" +
+          "| This week | **Stand aside** | High | **23** tracked events | VIX over **18** by 09-10 |",
+      );
+      expect(horizonRowsOf(md).week).toEqual({
+        call: "Stand aside",
+        horizon: "This week",
+        confidence: "High",
+        why: "**23** tracked events",
+        provesWrong: "VIX over **18** by 09-10",
+      });
+    });
+
+    it("reads an absent Why or falsifier column as empty, never as a missing row", () => {
+      const md = header("| Horizon | Call | Why |\n|---|---|---|\n| This week | Watch | pending |");
+      expect(horizonRowsOf(md).week).toEqual({
+        call: "Watch",
+        horizon: "This week",
+        why: "pending",
+        provesWrong: "",
+      });
+    });
+
+    it("keys the same rows as horizonCallsOf, so the two readers never drift", () => {
+      expect(Object.keys(horizonRowsOf(header(FOUR)))).toEqual(
+        Object.keys(horizonCallsOf(header(FOUR))),
+      );
+    });
   });
 });
 

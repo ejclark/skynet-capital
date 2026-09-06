@@ -143,4 +143,17 @@ describe("research budget", () => {
       execFileSync("node", ["scripts/research-lint.mjs"], { cwd: process.cwd(), stdio: "pipe" }),
     ).not.toThrow();
   });
+
+  it("gates the weekly studies too — one contract, one eye (#1716)", () => {
+    const audited = JSON.parse(
+      execFileSync("node", ["scripts/research-lint.mjs", "--json"], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        maxBuffer: 32 * 1024 * 1024,
+      }),
+    ) as { results: { name: string; problems: string[] }[] };
+    const weeks = audited.results.filter((r) => r.name.startsWith("weeks/"));
+    expect(weeks.length).toBeGreaterThan(0);
+    expect(weeks.flatMap((r) => r.problems)).toEqual([]);
+  });
 });
