@@ -108,6 +108,12 @@ dark mode."* The first reader of every frame cannot separate `--pos` from `--neg
   `theme.css` and fails the build on drift; a new text-on-colour pair joins that spec.
 - **Small marks get size before colour.** A 4px dot is invisible at any contrast; 6px with a 1.5px
   ring reads. Legend and helper text sit at ≥ 11.5px.
+- **A radio and a checkbox never look the same.** Two controls that share a style but not a
+  behaviour are a hue-only signal in disguise. The rail's **section switch** picks exactly one
+  (`.railctl-section`, a leading accent bar — underneath it on a phone, where the rail is a row);
+  its **filter toggles** turn any number on (`.railctl`, no bar). On a phone the group labels are
+  hidden, so the `<hr />` between them is a real vertical divider, not a decoration. The words those
+  controls stand for — **kind** vs **section** vs **sub-view** — live in `app/src/shell/frame.tsx`.
 - **Judge dark first, then light, both by eye and by the spec** — dark is the default and where
   low-contrast tones hide; light is where accent fills lose their text.
 

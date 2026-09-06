@@ -19,7 +19,8 @@ import { PageFrame } from "../shell/frame";
 import { MissionControl } from "../shell/mission-control";
 import { type Density, type Theme, usePrefs } from "../shell/prefs";
 import { ProfileRail } from "../shell/profile-rail";
-import { type SettingsSection, SettingsToc } from "../shell/settings-toc";
+import { resolveSection } from "../shell/sections";
+import { SETTINGS_SECTIONS, type SettingsSection, SettingsToc } from "../shell/settings-toc";
 import { Toggle } from "../shell/toggle";
 
 /**
@@ -362,7 +363,11 @@ function SettingsPage(): ReactElement {
   const guestList = useQuery({ queryKey: ["admin-invite"], queryFn: fetchGuestList });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["settings"] });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [section, setSection] = useState<SettingsSection>("preferences");
+  // The section lives in the URL (#1740), so a link can land on the card it is talking about.
+  const navigate = Route.useNavigate();
+  const asked = Route.useSearch().section;
+  const setSection = (next: SettingsSection) =>
+    void navigate({ search: next === "preferences" ? {} : { section: next }, replace: true });
 
   if (settings.isPending)
     return (
@@ -381,6 +386,12 @@ function SettingsPage(): ReactElement {
   const first = accounts[0];
   const selected = accounts.find((a) => a.id === selectedId) ?? first;
   const isOwner = guestList.data?.owner === true;
+  // Resolved against what this viewer can actually see: `?section=guests` on a non-owner falls
+  // back to the first section rather than stranding them on an empty stage.
+  const section = resolveSection(
+    SETTINGS_SECTIONS.filter((s) => s.id !== "guests" || isOwner),
+    asked,
+  );
   const rail = (
     <>
       <ProfileRail current="settings" />
@@ -434,4 +445,11 @@ function SettingsPage(): ReactElement {
   );
 }
 
-export const Route = createFileRoute("/settings")({ component: SettingsPage });
+export const Route = createFileRoute("/settings")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...(typeof search.section === "string" && SETTINGS_SECTIONS.some((s) => s.id === search.section)
+      ? { section: search.section as SettingsSection }
+      : {}),
+  }),
+  component: SettingsPage,
+});
