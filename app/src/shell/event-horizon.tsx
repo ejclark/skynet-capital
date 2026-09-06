@@ -62,6 +62,7 @@ export function EventHorizon({
   onPick,
   onLens,
   onStep,
+  dayFog,
 }: {
   readonly events: readonly ResearchEvent[];
   readonly closures: readonly MarketClosure[];
@@ -75,6 +76,8 @@ export function EventHorizon({
   readonly onPick: (date: string) => void;
   readonly onLens: (lens: Lens) => void;
   readonly onStep: (direction: 1 | -1) => void;
+  /** The day lens's fog (docs/FOG-OF-WAR.md): the door's label and how many calls sit behind it. */
+  readonly dayFog?: { readonly reason: string; readonly held: number };
 }): ReactElement | null {
   const month = anchor.slice(0, 7);
   const byDate = new Map<string, ResearchEvent[]>();
@@ -162,18 +165,34 @@ export function EventHorizon({
       </div>
       <fieldset className="eh-lenses">
         <legend className="visually-hidden">Lens</legend>
-        {LENSES.map((option) => (
-          <button
-            key={option}
-            type="button"
-            className="eh-lens"
-            aria-pressed={option === lens}
-            onClick={() => onLens(option)}
-          >
-            {LENS_NAME[option]}
-          </button>
-        ))}
+        {LENSES.map((option) => {
+          const fogged = option === "day" && dayFog !== undefined;
+          return (
+            <button
+              key={option}
+              type="button"
+              className="eh-lens"
+              aria-pressed={option === lens}
+              disabled={fogged}
+              title={fogged ? dayFog.reason : undefined}
+              onClick={() => onLens(option)}
+            >
+              {LENS_NAME[option]}
+              {fogged ? (
+                <span className="eh-lens-lock" aria-hidden="true">
+                  ◷
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </fieldset>
+      {dayFog ? (
+        <p className="eh-fog">
+          Day lens held until rung 501 (zero-DTE) — <span className="num">{dayFog.held}</span>{" "}
+          {dayFog.held === 1 ? "call" : "calls"} in range behind it.
+        </p>
+      ) : null}
       <p className="eh-legend">
         <i className="eh-dot eh-hot" /> researched · <i className="eh-dot" /> dated ·{" "}
         <i className="eh-swatch eh-swatch-closed" /> closed

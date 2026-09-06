@@ -67,6 +67,18 @@ describe("EventHorizon", () => {
     expect(calls.picks).toEqual(["2026-09-08"]);
   });
 
+  it("draws the day-lens fog as visible, named, disabled and counted", () => {
+    const calls = mount({ dayFog: { reason: "Held until rung 501 (zero-DTE)", held: 3 } });
+    const day = screen.getByRole("button", { name: /^Day/ });
+    expect(day).toBeDisabled();
+    expect(day).toHaveAttribute("title", "Held until rung 501 (zero-DTE)");
+    expect(screen.getByText(/Day lens held until rung 501/).textContent).toMatch(
+      /3 calls in range behind it/,
+    );
+    fireEvent.click(day);
+    expect(calls.lenses).toEqual([]);
+  });
+
   it("offers Clear only while a day is pinned", () => {
     mount({ pinned: false });
     expect(screen.queryByRole("button", { name: /^Clear/ })).toBeNull();

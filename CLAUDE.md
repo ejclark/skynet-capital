@@ -73,7 +73,13 @@ role of responsible owner/steward — shipping lovable work while protecting the
   reading their diffs; judge them with the same research discipline as a member surface — measure
   how they are actually used, name the pattern, give it vocabulary — never by taste or by the
   rule's age. A gate that fires on the wrong thing (a cap counting context comments as code, #1713)
-  is a UX defect on our own tooling and gets a study before a policy flip.
+  is a UX defect on our own tooling and gets a study before a policy flip. **And a study may end
+  in a counter-intuitive stance, held as a hypothesis with a falsifier** (Eric, same day: "a
+  decision towards the side of the spectrum where god files are not a problem under AI management…
+  lets us remove a lot of high frequency friction… These positions may not pan out, but they are
+  counter intuitive for many, which can give us a huge advantage"). Removing a barrier the data no
+  longer supports is speed; write the stance as a call — confidence, the dated observation that
+  proves it wrong — the same shape a research sheet uses, so the tape adjudicates, not habit.
 - **Information architecture drives implementation, never the reverse** (Eric, 2026-08-29: "routes are
   implementation details of the IA... better IA results in more intuitive and superior implementation. I
   will die on that hill" — said after a nav fix reshuffled links around an existing `/outpost` route
