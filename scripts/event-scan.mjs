@@ -28,6 +28,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { compareEventOrder, DATE_RE, runValidate } from "./event-scan-validation.mjs";
+import { readCalendarDir } from "./market-events-read.mjs";
 
 const ROOT = process.cwd();
 
@@ -86,24 +87,16 @@ function extractArray(file, marker) {
  *  canonical (date, id) order exactly as src/domain/market-events-data.ts sorts it. `files` keeps
  *  the file → id pairing for the validator: "file name == id" is the one rule the loader cannot
  *  express by shape. Unreadable dir or malformed JSON throws — loud, never empty. */
+/** Canonical files, then proposals (`proposals/<id>.from-<proposer>.json`, issue #1717) for ids no
+ *  canonical file names — first by file name wins, the same rule as loadMarketEvents. `files`
+ *  carries every file read (shadowed proposals included) for the validator. */
 function loadCurated() {
-  if (!existsSync(EVENTS_DIR))
-    throw new Error(`event-scan: cannot read ${EVENTS_DIR} — refusing to guess.`);
-  const files = readdirSync(EVENTS_DIR)
-    .filter((f) => f.endsWith(".json"))
-    .sort();
-  const read = files.map((file) => {
-    const text = readFileSync(join(EVENTS_DIR, file), "utf8");
-    try {
-      return { file, event: JSON.parse(text) };
-    } catch (err) {
-      throw new Error(`event-scan: ${file} is not valid JSON (${err.message}).`);
-    }
-  });
-  return {
-    events: read.map((r) => r.event).sort(compareEventOrder),
-    files: read.map((r) => ({ file: r.file, id: r.event?.id })),
-  };
+  try {
+    const { events, files } = readCalendarDir(EVENTS_DIR);
+    return { events: events.sort(compareEventOrder), files };
+  } catch (err) {
+    throw new Error(`event-scan: ${err.message}`);
+  }
 }
 
 function loadEvents() {

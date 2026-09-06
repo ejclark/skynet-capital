@@ -104,6 +104,7 @@ function DeskTicket({
           deskId={desk}
           initialAction={code === "102" ? "sell" : "buy"}
           showSide={false}
+          play={info}
         />
       )}
       {deskData.data ? (

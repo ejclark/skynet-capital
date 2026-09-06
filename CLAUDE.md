@@ -67,6 +67,19 @@ role of responsible owner/steward — shipping lovable work while protecting the
   agents (Eric, 2026-09-04 — he suspects he over-provisions, and expects *more* throughput from
   the system routing by task class); [`docs/COMPUTE.md`](docs/COMPUTE.md) owns the routing, and
   token conservation happens only on his explicit, phrase-shaped signal, never by inference.
+- **DX is UX for engineering roles** (Eric, 2026-09-06, on the line-cap debate: "I see DX as UX
+  for engineering/architecture roles… UX Operations… highly relevant to shaping our research").
+  Our gates, scans, templates and skills are a product whose users are sessions and the humans
+  reading their diffs; judge them with the same research discipline as a member surface — measure
+  how they are actually used, name the pattern, give it vocabulary — never by taste or by the
+  rule's age. A gate that fires on the wrong thing (a cap counting context comments as code, #1713)
+  is a UX defect on our own tooling and gets a study before a policy flip. **And a study may end
+  in a counter-intuitive stance, held as a hypothesis with a falsifier** (Eric, same day: "a
+  decision towards the side of the spectrum where god files are not a problem under AI management…
+  lets us remove a lot of high frequency friction… These positions may not pan out, but they are
+  counter intuitive for many, which can give us a huge advantage"). Removing a barrier the data no
+  longer supports is speed; write the stance as a call — confidence, the dated observation that
+  proves it wrong — the same shape a research sheet uses, so the tape adjudicates, not habit.
 - **Information architecture drives implementation, never the reverse** (Eric, 2026-08-29: "routes are
   implementation details of the IA... better IA results in more intuitive and superior implementation. I
   will die on that hill" — said after a nav fix reshuffled links around an existing `/outpost` route
@@ -82,6 +95,16 @@ role of responsible owner/steward — shipping lovable work while protecting the
   already-settled call instead of re-litigating it live. This is a process step, not a gate: a trivial
   single-link move with no structural ambiguity doesn't need its own decision doc, and this doesn't
   retroactively judge #881/#886/#888, which are the motivating example, not a target for rework.
+- **Fog of war is a first-class reveal pattern, with written criteria** (Eric, 2026-09-06, on the
+  research day lens: "a spot on / perfect scenario"). Withhold a *capability* behind an earnable
+  rung, never *information* a member needs to stay safe; draw the door visible · named · disabled ·
+  counted. The decision tree and the instance ledger live in
+  [`docs/FOG-OF-WAR.md`](docs/FOG-OF-WAR.md) — run a candidate through it before fogging anything. **The general rule this instance taught:** Claude *proposes* patterns it
+  knows how to deliver, rendered on a candidate surface; Eric *places* them. A rejected placement
+  banks the pattern (`docs/IDEAS.md` inbox), never the idea — fog of war was declined for the
+  ticket on 2026-09-05 and landed on the research day lens a day later. Once a textbook case is
+  found, run its criteria across the app: the same tree finds the other candidates *and* strips the
+  gates that were never the pattern, which is how the emerging design gets its noise removed.
 - **Fun is the flywheel, not the wrapper.** "Make it fun to play" is a first-class goal: engagement,
   trust, and compounding capital all come from one gamified design (see `LIVING-UNIVERSE.md`).
 - **Positive reinforcement over negative.** Celebrate wins loudly; render losses honestly but without
@@ -91,6 +114,12 @@ role of responsible owner/steward — shipping lovable work while protecting the
 - **Exquisite granular detail is a deliberate process.** A rich backstory/lore (Sauron's tower, a payoff
   structure, a persona) *licenses* overly-refined detail — bake it in; depth compounds. Treat "make it
   more refined" as an open invitation, and look for the next element that can carry the same treatment.
+- **A standing reader is red/green colorblind — hue never carries meaning alone** (Eric,
+  2026-09-06: "I have mild red/green colorblindness. Higher contrast colors make it easier for me
+  to detect these details"). Every colour signal rides with a shape, pattern, weight or word; text
+  holds AA in both palettes (`tests/ui/contrast.spec.ts` fails the build on drift); non-text
+  signals get a real step (≥ 3:1), not a tone shift. Rules and the ratios that motivated them:
+  [`docs/BRAND.md`](docs/BRAND.md) → *Accessibility*.
 - **Mobile-first on the trading surfaces — curate at phone width, then expand** (Eric, 2026-09-05,
   after reading Fidelity's mobile ticket and options chain against its desktop app: "we will
   practice mobile first design here to curate that experience then expand out. The complexity
@@ -143,6 +172,14 @@ role of responsible owner/steward — shipping lovable work while protecting the
   question — and how it clears an ask that was filed before anyone looked. Treat the open
   `needs-eric` count and its age as a cost the research capability exists to drive down, not as
   a queue for him to work.
+- **Aligned intent is the authorization — a merge commit on a bot-owned branch is in-envelope**
+  (Eric, 2026-09-06, after four separate "go" asks in one thread to push relocation merge
+  commits to `research/*` branches: "You know my intention to act, because we are aligned... what
+  mechanisms are blocking you from acting without my blessing?"). The blocker was a session-harness
+  rule, not this repo's: pushing a *merge commit* (never a rebase, amend or force) to a
+  lane-owned branch to resolve a conflict is exactly what the repair lane already does unattended,
+  so a session doing the same after a green verify needs no per-batch blessing. The class that
+  still asks is `envelope.json`'s, mechanically — never "a branch I did not create".
 - **The list is [`envelope.json`](envelope.json), not a paragraph** — `node scripts/envelope-scan.mjs
   --check <paths>` answers "is this the irreversible class?" mechanically, and enforces it as a red
   CI check on autonomous lanes. It was restated in prose in eight places and several copies dropped
@@ -174,6 +211,35 @@ doubt-rule is about **routing a raw thought in a live session**, where Eric is r
 not a general escalation default: once an ask is a filed, labelled issue, doubt routes to the
 member or to the narrowest honest build — never back to Eric. See
 [`.github/prompts/feedback-build.md`](.github/prompts/feedback-build.md).)*
+
+**A brain-dump is a planning session, not a spec** (Eric, 2026-09-06, on a numbered list of
+"misc thoughts, non-exhaustive" about the research surface: "Thinking out loud — love it. This is
+exactly what I tend to do. A lot... I figured the prompt I gave would be helpful for a planning
+session"). When a prompt arrives as numbered/nested thoughts with hedges ("I can't see enough to
+grok", "not sure how to improve", "there's likely many talking points I have yet to articulate"),
+read it as a design conversation: each item is a *signal about an outcome*, the mechanism named
+beside it is a first guess, and the hedged items are the ones he most wants Claude to fill in. The
+deliverable is an assessment plus the IA decision written down (a `plan` issue, per the IA rule
+above) — never a build of the list verbatim, and never a paragraph per item echoing it back. Hunt
+in proximity (the "talking points I have yet to see" are an explicit invitation for side quests),
+quantify the hunches against the corpus/code, and hand back the smallest vocabulary that turns his
+"feels out of place" into a precise request. Store the reasoning where it survives the session
+(the issue, `/journey`), not in chat. **And when the brief carries acceptance criteria, the
+planning session ends by starting the build, not by handing the `ready` flip back** (Eric,
+2026-09-06, after the research brief produced a plan issue and a "flip `ready`" ask: "I provided
+rich acceptance criteria... this was intended to establish plumbing to enable you to grind through
+the work"). The written decision is the plumbing; his brief was the go signal. Label the plan
+`ready` yourself, cite the brief, and take slice 1 — the flip comes back to him only when a fork
+he alone can settle is genuinely blocking. **Between the research and the grind, a rubber-duck
+round** (Eric, 2026-09-06: "This is a prime time to pair with coworkers when they are in this
+state... rapid ideation which produces aha moments that accelerate emergence of new designs... it
+organically battle tests talking points"). The trigger is his state, not a checklist: while he is
+thinking out loud, bounce the research findings back as short options he can react to — a pattern
+on a candidate surface, a number that contradicts a hunch, the fork the code just surfaced — and
+let the reactions amend the plan before slice 1 opens. Timeboxed, divergent, never a build; the
+interrogation pass is the adversarial half, this is the generative half. Evidence it earns its
+place: the fog-of-war audit and the propose-then-place rule both came out of the banter *after* the
+research brief, not from the research itself.
 
 **Interrogate before you comply — the mechanism, never the outcome** (Eric, 2026-09-04: "I feel
 like you inadequately interrogate my suggestions/commands. It feels like we need event triggers

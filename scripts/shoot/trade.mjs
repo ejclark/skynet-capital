@@ -1,8 +1,7 @@
 // Visual harness for /app/trade (#1461) — the milestone rail over the ticket, from the REAL built
-// shell over stub APIs, as a member one fill in sees it: 101 earned, 102 next up, 201+ locked with
-// the rung that opens each named. Two frames, PHONE FIRST (docs/PICTURES.md → "Trading surfaces
-// shoot the phone frame first"): the 390px frame proves the curation, the desktop frame proves it
-// expanded instead of floating. JPEG ≤100KB.
+// shell over stub APIs. PHONE FIRST (docs/PICTURES.md → "Trading surfaces shoot the phone frame
+// first"): the 390px frame proves the curation, the desktop frame proves it expanded instead of
+// floating. JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:trade [outdir]
 import { openShell } from "./shell.mjs";
 
@@ -19,13 +18,19 @@ const play = (code, name, tldr, kind, side, optionType, state, opensAfter) => ({
   earned: state === "earned",
   ...(opensAfter ? { opensAfter } : {}),
 });
-const plays = {
+
+// Day one: nothing filled. 102 is LOCKED here — an exit is exempt from the feedback wall, never
+// from the per-rung ladder lock (`unlockedCodes`) — which is the fact the 2026-09-06 fix restores.
+const freshPlays = {
   linked: true,
   wheels: true,
-  nextUp: "102",
+  nextUp: "101",
   plays: [
-    play("101", "Buy stock", "own the shares", "stock", "buy", undefined, "earned"),
-    play("102", "Sell stock", "take profit or cut a loss", "stock", "sell", undefined, "open"),
+    play("101", "Buy stock", "own the shares", "stock", "buy", undefined, "open"),
+    play("102", "Sell stock", "take profit or cut a loss", "stock", "sell", undefined, "locked", {
+      code: "101",
+      name: "Buy stock",
+    }),
     play(
       "201",
       "Sell a cash-secured put",
@@ -56,6 +61,20 @@ const plays = {
     }),
   ],
 };
+
+// One fill in: 101 earned, 102 the next-up frontier and correctly open.
+const plays = {
+  ...freshPlays,
+  nextUp: "102",
+  plays: freshPlays.plays.map((p) =>
+    p.code === "101"
+      ? { ...p, locked: false, earned: true }
+      : p.code === "102"
+        ? { ...p, locked: false, opensAfter: undefined }
+        : p,
+  ),
+};
+
 const settings = {
   authConfigured: true,
   adminWired: false,
@@ -85,12 +104,22 @@ const desk = {
   },
 };
 
+let currentPlays = freshPlays;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
-  stubs: { "/api/trade/plays": plays, "/api/settings": settings, "/api/desk/*": desk },
+  stubs: { "/api/trade/plays": () => currentPlays, "/api/settings": settings, "/api/desk/*": desk },
 });
 
+// THE BUG THIS FIXES (2026-09-06): a fresh account, nothing earned. 102 (Sell stock) used to open
+// a fully working, submittable ticket here — `trade-gate.tsx` never checked `play.locked` at all,
+// even though `unlockedCodes` already said 102 stays shut until 101 is earned. Proof it's fixed:
+// the same locked panel a locked OPTION rung has always shown now shows for 102 too.
+await page.goto(`${origin}/app/trade?play=102`);
+await page.getByText("hasn't been unlocked yet").waitFor();
+await shoot("trade-102-locked-phone");
+
+currentPlays = plays;
 await page.goto(`${origin}/app/trade?play=102`);
 await page.getByText("Milestone · Trading ladder").waitFor();
 await shoot("trade-phone");

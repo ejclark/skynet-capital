@@ -4,8 +4,8 @@
   "title": "MRVL Investor Day (NYC)",
   "date": "2026-10-06",
   "status": "confirmed",
-  "source": "IR: investor.marvell.com PR 2026-08-03 — Investor Day Tue Oct 6, checked 2026-08-17",
+  "source": "IR: investor.marvell.com PR 2026-08-03 — Investor Day Tue Oct 6, re-verified 2026-09-06",
   "impact": "medium",
   "symbols": ["MRVL"],
-  "notes": "Company-set; MRVL investor days have filed Item-2.02 8-Ks — the filing class that corrupted the instrument's event list."
+  "notes": "Company-set; agenda pre-announced on the 2026-08-27 call (FY29 revenue trajectories, Google-agreement parameters, updated long-term operating model). INSTRUMENT HAZARD: earningsDates() keeps the FIRST Item-2.02 8-K per calendar quarter, so an Oct-6 filing carrying Item 2.02 would evict MRVL's real FQ3 FY27 print (~2026-12-01). Precedent is this event's own postponement notice — 2025-05-06, acc 0001193125-25-113881, Item 2.02 because it reaffirmed guidance — which evicted the 2025-05-29 print. Repair candidate: real MRVL prints self-file under accession prefix 0001835632; both known corruptions came via 0001193125 (24/24). See docs/research/events/mrvl-investor-day-2026-10-06.md."
 }
