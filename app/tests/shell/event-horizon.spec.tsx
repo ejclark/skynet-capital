@@ -51,7 +51,7 @@ describe("EventHorizon", () => {
     expect(calls.steps).toEqual([1, -1]);
   });
 
-  it("colours a closed weekday and names the reason; an event day names the event", () => {
+  it("dims and strikes a closed weekday and names the reason; an event day names the event", () => {
     mount();
     const seventh = screen.getByRole("button", { name: "7" });
     expect(seventh).toHaveClass("eh-closed");
@@ -59,10 +59,13 @@ describe("EventHorizon", () => {
     expect(screen.getByRole("button", { name: "11" })).toHaveAttribute("title", "CPI");
   });
 
-  it("shades the range and lets any day be picked — a day with no event is a fine anchor", () => {
+  it("draws the week as ONE band per row — first and last cells carry the rounded ends", () => {
     const calls = mount();
-    expect(screen.getByRole("button", { name: "8" })).toHaveClass("eh-in-range");
-    expect(screen.getByRole("button", { name: "20" })).not.toHaveClass("eh-in-range");
+    expect(screen.getByRole("button", { name: "7" })).toHaveClass("eh-band", "eh-band-start");
+    expect(screen.getByRole("button", { name: "8" })).toHaveClass("eh-band");
+    expect(screen.getByRole("button", { name: "8" })).not.toHaveClass("eh-band-start");
+    expect(screen.getByRole("button", { name: "13" })).toHaveClass("eh-band", "eh-band-end");
+    expect(screen.getByRole("button", { name: "20" })).not.toHaveClass("eh-band");
     fireEvent.click(screen.getByRole("button", { name: "8" }));
     expect(calls.picks).toEqual(["2026-09-08"]);
   });
@@ -77,6 +80,13 @@ describe("EventHorizon", () => {
     );
     fireEvent.click(day);
     expect(calls.lenses).toEqual([]);
+  });
+
+  it("makes the whole grid the region at the month lens — no per-day band", () => {
+    mount({ lens: "month", range: rangeFor("2026-09-09", "month") });
+    const eight = screen.getByRole("button", { name: "8" });
+    expect(eight).not.toHaveClass("eh-band");
+    expect(eight.parentElement).toHaveClass("eh-block");
   });
 
   it("offers Clear only while a day is pinned", () => {
