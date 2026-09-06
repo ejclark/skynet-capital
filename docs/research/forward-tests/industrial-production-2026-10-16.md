@@ -1,0 +1,16 @@
+# Forward tests — industrial-production-2026-10-16
+
+<!-- One event's pre-registered hypotheses, written ONLY by the lane that owns
+     docs/research/events/industrial-production-2026-10-16.md — never by a sibling lane, which is
+     what lets every research PR merge without touching a shared file (issue #1449). The register
+     at ../forward-tests.md is composed from these files; never add a row there. Ids are
+     FT-industrial-production-2026-10-16-<n>, <n> counting up within this file. Rows append only;
+     the Outcome column is the one cell the close-out fills. -->
+
+| # | Hypothesis | Prediction | Kill switch | Score by | Outcome |
+|---|---|---|---|---|---|
+| FT-industrial-production-2026-10-16-1 | The Atlanta Fed does not run a GDPNow vintage on this date — its `PostedUpdates` sheet schedules 2026-10-15 (retail + PPI) and 2026-10-20 (housing starts) and skips 2026-10-16, so September industrial production is absorbed four days later rather than on its own morning ([ledger](../events/industrial-production-2026-10-16.md) Leg 4) | No GDPNow vintage dated 2026-10-16 appears in `ContribArchives`; the next vintage after 2026-10-15 is dated 2026-10-20 | A vintage dated 2026-10-16 posts | 2026-10-21 | — |
+| FT-industrial-production-2026-10-16-2 | A month-3 G.17 with no 08:30 retail co-release does not move the pre-open tape: this class gaps 0.3196% (p=0.5423, n=30) against a 0.2822% baseline, and retail sales print 2026-10-15 (Leg 5) | SPY's 2026-10-16 overnight gap is **below 0.542%** of the 2026-10-15 close (the 2014-05+ baseline p75) | The gap reaches 0.542% or more | 2026-10-16 | — |
+| FT-industrial-production-2026-10-16-3 | An opex Friday carrying a retail-free G.17 trades an ordinary — if anything narrower — session: this class ranges 0.6602% (p=0.0775) against a 0.8741% baseline, and both prior October-opex G.17 sessions ran 0.674% / 1.051% (Leg 5) | SPY's 2026-10-16 session high-low range is **below 1.325%** of its close (the baseline p75) | The range reaches 1.325% or more | 2026-10-16 | — |
+| FT-industrial-production-2026-10-16-4 | The 2026 annual revision does not preempt or supersede this print: all 12 revisions on record are month-end standalone noon releases (11 at day-of-month ≥ 21, the twelfth 2016-04-01), none mid-month, and the shortest dated notice is 11 days — so a pre-print date needs its notice by 2026-10-05 (Leg on the annual revision) | The 2026 G.17 annual revision is **not published on or before 2026-10-16**; this print lands on the current 2017-base vintage | The Board publishes the annual revision on or before 2026-10-16, or announces a date on or before 2026-10-16 for it | 2026-10-16 | — |
+| FT-industrial-production-2026-10-16-5 | The overnight-gap elevation on a G.17 morning belongs to the 08:30 consumption print, not the 09:15 G.17 — with-retail G.17 days gap 0.4285% (p=0.0038, n=59) against 0.3109% (p=0.4731, n=83) retail-free — stated as one paired observation on this corridor's own consecutive dates (Leg 5) | SPY's overnight gap into **2026-10-16** (this G.17, no retail) is **smaller** than its gap into **2026-10-15** (advance retail sales + PPI) | The 2026-10-16 gap is the larger of the two | 2026-10-16 | — |
