@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useId, useState } from "react";
+import type { PlayInfo } from "../live/options";
 import {
   buildDraft,
   money,
@@ -15,6 +16,7 @@ import {
   type TicketResult,
 } from "../live/ticket";
 import { DisarmNote, GateHead } from "./gate-frame";
+import { LockedPanel } from "./locked-panel";
 
 /**
  * THE PRE-TRADE GATE (#738 phase 2e) — the merge-box state machine on a real ticket.
@@ -140,12 +142,20 @@ export function TradeGate({
   deskId,
   initialAction = "buy",
   showSide = true,
+  play,
 }: {
   readonly deskId: string;
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
   readonly initialAction?: "buy" | "sell";
   /** False on `/trade`, where the ticket's own nav (#1461) already carries Buy / Sell. */
   readonly showSide?: boolean;
+  /**
+   * The resolved rung, when the caller has it (#1461's ladder-lock fix, 2026-09-06). Stock plays
+   * were never checked here — only the options ticket rendered its locked panel — so 102 opened a
+   * fully working sell ticket before 101 was ever earned, in spite of `unlockedCodes` correctly
+   * saying it was locked. Undefined callers (none today) get the old, unchecked behavior.
+   */
+  readonly play?: PlayInfo;
 }): ReactElement {
   const [fields, setFields] = useState<TicketFields>({
     symbol: "",
@@ -193,6 +203,8 @@ export function TradeGate({
       setState({ step: "error", message: String(error) });
     }
   };
+
+  if (play?.locked) return <LockedPanel play={play} />;
 
   const busy = state.step === "reviewing" || state.step === "submitting";
   return (
