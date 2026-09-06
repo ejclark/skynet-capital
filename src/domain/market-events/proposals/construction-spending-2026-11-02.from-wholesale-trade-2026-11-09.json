@@ -1,0 +1,11 @@
+{
+  "id": "construction-spending-2026-11-02",
+  "kind": "macro-print",
+  "title": "Construction Spending / Construction Put in Place (September 2026 data) — the second GDPNow vintage of the 2026:Q4 nowcast, 10:00 a.m. ET",
+  "date": "2026-11-02",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes, 179 rows parsed), row \"Construction Spending (Construction Put in Place) | November 2, 2026 | 10:00 AM | September 2026\", release code A202611021000, reference A202609. Corroborated by the Atlanta Fed's GDPNowcastDataReleaseDates.xlsx PostedUpdates sheet, whose 2026-11-02 10:00 row reads \"Construction spending, ISM Manufacturing Index\". Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the wholesale-trade-2026-11-09 initial-research adjacency sweep (2026-09-06). The channel is measured, and it is the nowcast rather than the tape. The proposing ledger's central finding is that a wholesale vintage's size tracks how EARLY in the nowcast quarter it lands, not the reference month's position: across 78 wholesale GDPNow vintages, those falling in the first five postings of a quarter move the change-in-inventory-investment contribution a median 0.0872pp against 0.0413pp for postings 16 and later (n=23 vs n=47). 2026-11-02 is 2026:Q4 posting #2 and 2026-11-09 is #4, so this release is one of the three vintages that set the base the proposing print is then measured against. Its co-release ISM Manufacturing is already tracked as `ism-manufacturing-2026-11-02`; the Census half — which is what carries the GDPNow structures line — is not. Impact LOW and symbols empty on the same measured grounds as the sibling Census entries: no macro-keyed house playbook (grep re-run 2026-09-06, 0 hits), no instrument attaches. Proposed as an estimate; nothing here licenses an entry."
+}
