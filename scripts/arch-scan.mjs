@@ -35,14 +35,15 @@
 // (docs/LESSONS.md), and taught sessions to write WHY as a docstring instead of an inline `//`.
 // This scan therefore takes over the trees that rule used to lint, on code lines (scripts/
 // code-lines.mjs), and stays advisory — reporting debt, never blocking (tests/support/
-// advisory-scan.ts, Eric 2026-08-29).
+// advisory-scan.ts, Eric 2026-08-29). It REPORTS code and comment lines separately while capping
+// only the first, so the output shows both what is priced and what deliberately is not.
 //
 //   node scripts/arch-scan.mjs             # report + enforce (exit 1 on any new over-cap file)
 //   node scripts/arch-scan.mjs --candidate # emit the next decompose target as JSON
 //   node scripts/arch-scan.mjs --update    # rewrite scripts-grouping-budget.json (ratchet: only lower)
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { codeLineCount } from "./code-lines.mjs";
+import { lineBreakdown } from "./code-lines.mjs";
 
 const ROOT = process.cwd();
 const CAP = 300;
@@ -77,8 +78,8 @@ const rel = (f) => relative(ROOT, f).split("\\").join("/");
 
 const files = TREES.flatMap(({ dir, exts, cap }) =>
   walk(join(ROOT, dir), exts).map((f) => {
-    const source = readFileSync(f, "utf8");
-    return { file: rel(f), lines: codeLineCount(source), physical: source.split("\n").length, cap };
+    const { code, comment, physical } = lineBreakdown(readFileSync(f, "utf8"));
+    return { file: rel(f), lines: code, comment, physical, cap };
   }),
 ).sort((a, b) => b.lines - b.cap - (a.lines - a.cap)); // ranked by overage, not size: the caps differ
 
@@ -110,11 +111,15 @@ console.log(
   `架 Architecture scan — cap ${CAP} code lines (tests ${TREES.at(-1).cap}), ` +
     `${Object.keys(grandfather).length} grandfathered`,
 );
-for (const { file, lines, physical, cap } of files.slice(0, 8)) {
+// Code and comment lines are printed side by side on purpose: only the first is capped, and seeing
+// the second is how a reader tells a long file that explains itself from one that sprawls (#1713).
+console.log("  code  comment  total");
+for (const { file, lines, comment, physical, cap } of files.slice(0, 8)) {
   const mark =
     !(file in grandfather) && lines > cap ? "✗ OVER" : lines > cap ? "◌ grandfathered" : "· ok";
   console.log(
-    `  ${String(lines).padStart(5)} code /${String(physical).padStart(6)}  ${mark}  ${file}`,
+    `  ${String(lines).padStart(4)}  ${String(comment).padStart(7)}  ${String(physical).padStart(5)}` +
+      `  ${mark}  ${file}`,
   );
 }
 
@@ -122,7 +127,10 @@ if (violations.length) {
   console.error(
     `\n✗ ${violations.length} file(s) exceed the code-line cap and aren't grandfathered:`,
   );
-  for (const v of violations) console.error(`  ${v.file}: ${v.lines} code lines (cap ${v.cap})`);
+  for (const v of violations)
+    console.error(
+      `  ${v.file}: ${v.lines} code lines (cap ${v.cap}) — ${v.comment} comment lines, not counted`,
+    );
   console.error(
     "\nFix: decompose the file, or (only if you mean it) add it to arch-grandfather.json with a\n" +
       "one-line reason — a deliberate, reviewable act, never silent drift.",
