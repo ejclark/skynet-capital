@@ -205,22 +205,24 @@
 
 /* the scope sentence (#1704 direction G): the one query string as prose; slots are native selects
    styled as pills — one region each, no borders between words (docs/BRAND.md → Visual grammar). */
-.rx-sentence {
-  margin: 4px 0 12px;
+.rx-facets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
 }
-.rx-sentence-text {
-  margin: 0;
-  font-size: 15px;
-  line-height: 2.1;
-  color: var(--muted);
-}
-.rx-slot {
+.rx-facet {
   display: inline-flex;
   align-items: center;
-  vertical-align: baseline;
+  gap: 6px;
 }
-.rx-slot select,
-.rx-slot-link {
+.rx-facet label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.rx-facet select {
   appearance: none;
   border: none;
   background: var(--surface);
@@ -229,36 +231,24 @@
   font: inherit;
   font-weight: 600;
   line-height: 1.4;
-  padding: 2px 22px 2px 9px;
+  padding: 4px 24px 4px 10px;
   border-radius: 7px;
   cursor: pointer;
-  text-decoration: none;
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
   background-position:
-    calc(100% - 12px) 55%,
-    calc(100% - 8px) 55%;
+    calc(100% - 13px) 55%,
+    calc(100% - 9px) 55%;
   background-size:
     4px 4px,
     4px 4px;
   background-repeat: no-repeat;
 }
-.rx-slot-link {
-  padding-right: 9px;
-  background-image: none;
-}
-.rx-slot select:hover,
-.rx-slot-link:hover {
+.rx-facet select:hover {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
-.rx-slot select:focus-visible,
-.rx-slot-link:focus-visible {
+.rx-facet select:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
-}
-.rx-sentence-tokens {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: var(--muted);
 }

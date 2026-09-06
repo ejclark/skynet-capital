@@ -24,8 +24,8 @@ import {
   toggleSymbolScope,
 } from "../live/research";
 import { EventHorizon } from "../shell/event-horizon";
+import { FacetRow } from "../shell/facet-row";
 import { PageFrame } from "../shell/frame";
-import { ScopeSentence } from "../shell/scope-sentence";
 
 /**
  * RESEARCH (#738 phase 6c; filters-first + rail-controls per Eric's live reviews) — the shelf in
@@ -102,7 +102,8 @@ function CallBoard({
       ) : (
         <>
           <p className="rx-readout">
-            <span className="num">{calls.length}</span> calls in {rangeName} ·{" "}
+            <span className="num">{calls.length}</span> {calls.length === 1 ? "call" : "calls"} in{" "}
+            {rangeName} ·{" "}
             {CALL_CLASSES.filter((c) => mix[c] > 0).map((c, i) => (
               <span key={c} className="rx-mix">
                 {i > 0 ? " · " : ""}
@@ -214,7 +215,8 @@ function ResearchFilters({
   readonly onChange: (next: string) => void;
 }): ReactElement {
   const inputId = useId();
-  const scope = parseResearchQuery(query).symbols;
+  const parsed = parseResearchQuery(query);
+  const scope = parsed.symbols;
   const toggleSymbol = (symbol: string) => onChange(toggleSymbolScope(query, symbol));
   return (
     <>
@@ -232,6 +234,7 @@ function ResearchFilters({
             onChange={(e) => onChange(e.target.value)}
           />
         </div>
+        <FacetRow query={query} filter={parsed} events={data.events} onChange={onChange} />
       </div>
       {data.symbols.length > 0 ? (
         <div className="rx-symbols" id="rx-symbols">
@@ -363,13 +366,6 @@ function ResearchPage(): ReactElement {
           everything below follows. Documents open on their own pages.
         </p>
       </header>
-      <ScopeSentence
-        query={query}
-        filter={filter}
-        events={data.events}
-        {...(fog.fogged ? { dayFogReason: fog.reason } : {})}
-        onChange={setFilter}
-      />
       <ResearchFilters data={data} query={query} onChange={setFilter} />
       <CallBoard
         data={data}
