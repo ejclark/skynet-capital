@@ -1,0 +1,11 @@
+{
+  "id": "m3-full-report-2026-10-02",
+  "kind": "macro-print",
+  "title": "Full Report on Manufacturers' Shipments, Inventories and Orders (M3-2, August 2026 data) — 10:00 a.m. ET",
+  "date": "2026-10-02",
+  "status": "estimate",
+  "source": "EST: census.gov/economic-indicators/calendar-listview.html fetched direct 2026-09-06 (HTTP 200, 91,396 bytes), row \"Full Report - Manufacturers' Shipments, Inventories and Orders | October 2, 2026 | 10:00 AM | August 2026\", release code A202610021000, reference A202608. The Atlanta Fed's PostedUpdates sheet lists no GDPNow vintage on 2026-10-02 (the surrounding rows are 2026-10-06 \"International trade (Full report)\" and 2026-10-08 \"Wholesale trade\") — the same absence the November and December twins' ledgers recorded for M3-2. Filed estimate per the lane's no-self-confirm limit on an event discovered in-sweep. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the mtis-2026-10-15 initial-research adjacency sweep (2026-09-06), and proposed for one measured reason: it is the manufacturers' leg of the proposing print, 35.1% of the aggregate by June-2026 inventory weight (Census timeseries1.xlsx: $962.9B of $2,740.2B), and it publishes thirteen days ahead of it — one of the two component releases that make 69.6% of the August MTIS aggregate public before that print opens. The calendar tracks the September-data and October-data twins (m3-full-report-2026-11-03 as a sibling proposal, m3-full-report-2026-12-03 with its own ledger); this is the August-data edition, untracked. The asymmetry worth carrying into its own research is the same one both twins carry: the M3 special notice on census.gov/mtis freezes M3 revised historical data and seasonal-adjustment models 'for the remainder of 2026', so this leg is the one part of the October MTIS aggregate that is NOT re-benchmarked on the 2023/2024 AIES. Impact LOW and symbols empty on the same measured grounds as the sibling Census entries: no macro-keyed house playbook (grep re-run 2026-09-06, 0 hits), no instrument attaches, and no GDPNow vintage of its own. Proposed as an estimate; nothing here licenses an entry."
+}
