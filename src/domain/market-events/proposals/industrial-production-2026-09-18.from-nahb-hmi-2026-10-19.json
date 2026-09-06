@@ -1,0 +1,11 @@
+{
+  "id": "industrial-production-2026-09-18",
+  "kind": "macro-print",
+  "title": "Industrial Production and Capacity Utilization — G.17 (August 2026 data), 9:15 a.m. ET",
+  "date": "2026-09-18",
+  "status": "estimate",
+  "source": "EST: the same two federalreserve.gov primaries fetched direct 2026-09-06 as the sibling proposal for 2026-10-16. The Board's maintained release-date table (releases/g17/release_dates.htm, HTTP 200, 117,098 bytes, footer 'Last Update: August 18, 2026') carries the row 'September 2026 | 18-September-2026', and the Board's announcements feed (feeds/g17.html, HTTP 200, 614,006 bytes) names September 18 in its verbatim 2026 schedule sentence: 'In 2026, the G.17 release on Industrial Production and Capacity Utilization will be published at 9:15 a.m. on January 16, February 18, March 16, April 16, May 15, June 15, July 17, August 18, September 18, October 16, November 17, and December 16.' Filed `estimate` per this lane's no-self-confirm limit on an event discovered in-sweep; industrial-production-2026-11-17 is `confirmed`/`FED:` off these same two documents. Checked 2026-09-06",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the nahb-hmi-2026-10-19 initial-research adjacency sweep (2026-09-06), from the same primary table that resolved this lane's own stacking question. Filed with the scope stated honestly: 2026-09-18 is 31 days from the proposing event and therefore OUTSIDE the 5-day adjacency radius the sweep normally proposes within. It is proposed anyway because the omission is the same omission — reading the Board's 2026 schedule showed the calendar tracks the November and December G.17 releases and nothing earlier, and leaving a primary-sourced 09:15 macro print 12 days out off the calendar to respect a radius would be the worse outcome. It is also materially adjacent to work already in flight: nahb-hmi-2026-09-16 is due for initial research right now and is described as the FOMC-decision-day HMI, and 2026-09-18 is two sessions later. Under issue #1717 the filename is namespaced to this proposer, so a sibling lane proposing the same id the same day collides with nothing. Proposed as an estimate; nothing here licenses an entry."
+}
