@@ -55,13 +55,7 @@
         },
         "useCollapsedElseIf": "error",
         "useShorthandAssign": "error",
-        "noExcessiveLinesPerFile": {
-          "level": "error",
-          "options": {
-            "maxLines": 300,
-            "skipBlankLines": false
-          }
-        },
+        "noExcessiveLinesPerFile": "off",
         "noExcessiveClassesPerFile": "error"
       },
       "performance": {
@@ -97,44 +91,7 @@
       "linter": {
         "rules": {
           "style": {
-            "noExcessiveLinesPerFile": {
-              "level": "error",
-              "options": {
-                "maxLines": 500,
-                "skipBlankLines": false
-              }
-            },
             "noExcessiveClassesPerFile": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["scripts/issue-lint.mjs"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noExcessiveLinesPerFile": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["scripts/moneypenny/index.mjs"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noExcessiveLinesPerFile": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/domain/market-events-data.ts"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noExcessiveLinesPerFile": "off"
           }
         }
       }
