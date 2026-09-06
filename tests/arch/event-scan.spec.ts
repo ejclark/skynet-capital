@@ -23,7 +23,7 @@ const entry = (id: string, date: string) => ({
 function validateFixture(files: Record<string, object>): string {
   const dir = mkdtempSync(join(tmpdir(), "event-scan-"));
   try {
-    mkdirSync(join(dir, "events"));
+    mkdirSync(join(dir, "events", "proposals"), { recursive: true });
     for (const [name, event] of Object.entries(files))
       writeFileSync(join(dir, "events", name), `${JSON.stringify(event, null, 2)}\n`);
     writeFileSync(
@@ -80,6 +80,79 @@ describe("event-scan contract", () => {
         "bravo.json": entry("bravo", "2026-02-01"),
       }),
     ).not.toThrow();
+  });
+
+  // PROPOSALS (#1717): the add/add the split left behind — two sweeps proposing the same event —
+  // is gone once the proposer owns the file. The read-side rule must hold in both readers.
+  it("--validate rejects a misnamed, non-estimate, or orphan-proposer proposal and names each", () => {
+    const proposal = (id: string, status = "estimate") => ({
+      ...entry(id, "2026-05-01"),
+      status,
+      source: status === "estimate" ? "EST: fixture" : "BLS: fixture",
+    });
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "proposals/bravo.from-alpha.json": proposal("bravo"),
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "proposals/bravo.json": proposal("bravo"),
+      }),
+    ).toThrow(/proposals\/bravo\.json: a proposal is named <id>\.from-<proposer-event-id>\.json/);
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "proposals/bravo.from-alpha.json": proposal("bravo", "confirmed"),
+      }),
+    ).toThrow(/always status "estimate"/);
+    expect(() =>
+      validateFixture({
+        "alpha.json": entry("alpha", "2026-01-01"),
+        "proposals/bravo.from-zulu.json": proposal("bravo"),
+      }),
+    ).toThrow(/proposer "zulu" is not an event this calendar knows/);
+  });
+
+  it("the loader prefers the canonical file, else the first proposal by name, and rejects a bad proposal", () => {
+    const dir = mkdtempSync(join(tmpdir(), "market-events-"));
+    try {
+      mkdirSync(join(dir, "proposals"));
+      writeFileSync(join(dir, "alpha.json"), JSON.stringify(entry("alpha", "2026-01-01")));
+      const proposal = (id: string, title: string) => ({
+        ...entry(id, "2026-05-01"),
+        title,
+        status: "estimate",
+        source: "EST: fixture",
+      });
+      writeFileSync(
+        join(dir, "proposals", "alpha.from-bravo.json"),
+        JSON.stringify(proposal("alpha", "shadowed")),
+      );
+      writeFileSync(
+        join(dir, "proposals", "charlie.from-bravo.json"),
+        JSON.stringify(proposal("charlie", "second")),
+      );
+      writeFileSync(
+        join(dir, "proposals", "charlie.from-alpha.json"),
+        JSON.stringify(proposal("charlie", "first")),
+      );
+      const loaded = loadMarketEvents(dir);
+      expect(loaded.map((e) => e.id)).toEqual(["alpha", "charlie"]);
+      expect(loaded.find((e) => e.id === "alpha")?.title).toBe("alpha");
+      expect(loaded.find((e) => e.id === "charlie")?.title).toBe("first");
+      writeFileSync(
+        join(dir, "proposals", "delta.from-alpha.json"),
+        JSON.stringify(entry("delta", "2026-06-01")),
+      );
+      expect(() => loadMarketEvents(dir)).toThrow(
+        /proposals\/delta\.from-alpha\.json: a proposal is always status "estimate"/,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("the loader sorts the directory into (date, id) order and rejects a misnamed file loudly", () => {

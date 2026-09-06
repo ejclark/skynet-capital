@@ -76,16 +76,59 @@ function validateEvent(e, ids, problems) {
   validateStatus(e, where, problems);
 }
 
+export const PROPOSAL_FILE_RE =
+  /^proposals\/([a-z0-9][a-z0-9-]*)\.from-([a-z0-9][a-z0-9-]*)\.json$/;
+
 /** One file per event (issue #1449): the file's name IS the id. That is what makes the calendar
- *  conflict-free — a lane can only write the file its own event id names, a proposed adjacent
- *  event is a brand-new file, and a duplicate id is a duplicate file name git itself refuses. A
- *  file whose name disagrees with its id is the one shape the loader cannot reject by type. */
-function validateFileNames(files, problems) {
-  for (const { file, id } of files ?? []) {
-    const expected = `${id}.json`;
-    if (file !== expected)
-      problems.push(
-        `src/domain/market-events/${file}: file name must equal its id — rename it to "${expected}"`,
+ *  conflict-free — a lane can only write the file its own event id names, and a duplicate id is a
+ *  duplicate file name git itself refuses. Proposals (issue #1717) extend the rule one level: an
+ *  adjacent event a sweep discovers is `proposals/<id>.from-<proposer>.json`, owned by the
+ *  proposer, always `estimate`, its proposer an event that exists — so two sweeps finding the same
+ *  event never create the same path. Shadowed and competing proposals are reported as warnings:
+ *  the event's own initial research reads them all before writing the canonical file. */
+const where = (file) => `src/domain/market-events/${file}`;
+
+/** One proposal file's naming/shape rules; returns the proposed id, or null when misnamed. */
+function validateProposal(file, event, knownIds, problems) {
+  const m = file.match(PROPOSAL_FILE_RE);
+  if (!m) {
+    problems.push(`${where(file)}: a proposal is named <id>.from-<proposer-event-id>.json`);
+    return null;
+  }
+  const [, id, proposer] = m;
+  if (event?.id !== id) problems.push(`${where(file)}: id "${event?.id}" must equal "${id}"`);
+  if (event?.status !== "estimate")
+    problems.push(
+      `${where(file)}: a proposal is always status "estimate" — its own research confirms it in <id>.json`,
+    );
+  if (!knownIds.has(proposer))
+    problems.push(`${where(file)}: proposer "${proposer}" is not an event this calendar knows`);
+  return id;
+}
+
+function validateFileNames(files, knownIds, problems, warnings) {
+  const canonicalIds = new Set();
+  const proposalsFor = new Map();
+  for (const { file, event } of files ?? []) {
+    if (!file.startsWith("proposals/")) {
+      canonicalIds.add(event?.id);
+      if (file !== `${event?.id}.json`)
+        problems.push(
+          `${where(file)}: file name must equal its id — rename it to "${event?.id}.json"`,
+        );
+      continue;
+    }
+    const id = validateProposal(file, event, knownIds, problems);
+    if (id !== null) proposalsFor.set(id, (proposalsFor.get(id) ?? []).concat(file));
+  }
+  for (const [id, list] of proposalsFor) {
+    if (canonicalIds.has(id))
+      warnings.push(
+        `${id}: ${list.length} inert proposal(s) shadowed by ${id}.json — safe to prune`,
+      );
+    else if (list.length > 1)
+      warnings.push(
+        `${id}: ${list.length} competing proposals (${list.join(", ")}) — the first by name stands in until ${id}.json exists`,
       );
   }
 }
@@ -105,7 +148,8 @@ function validate({ curated, all, files }, cadence, ledgers) {
   const ids = new Set();
   validateCadence(cadence, problems);
   for (const e of all) validateEvent(e, ids, problems);
-  validateFileNames(files, problems);
+  const knownIds = new Set([...ids, ...ledgers.keys()]);
+  validateFileNames(files, knownIds, problems, warnings);
   for (const e of curated)
     if (e.kind === "earnings")
       problems.push(
