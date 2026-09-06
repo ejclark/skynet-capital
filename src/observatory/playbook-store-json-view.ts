@@ -6,6 +6,7 @@
  */
 
 import { type PlaybookStoreEntry, playbookStoreCatalog } from "../discovery/playbook-store.js";
+import { type DelegationGateView, delegationGateView } from "../domain/playbook-delegation.js";
 import type { PlaybookSubscription } from "../domain/types.js";
 
 interface PlaybookStoreCardView extends PlaybookStoreEntry {
@@ -25,10 +26,18 @@ export interface PlaybookStoreView {
   readonly capitalUnderManagement: number;
   /** Whether the viewer may subscribe at all — absent when nobody's account is open here. */
   readonly canManage: boolean;
+  /**
+   * The delegation fog (#1707) — whether NEW subscriptions are held until rung 102, and the words
+   * the door is drawn with. Always present so the client never has to invent the copy; `locked`
+   * false is the ordinary case (wheels off, rung earned, or no progression wired at all).
+   * Never gates unsubscribe, pause, or resume — an exit is not a lesson.
+   */
+  readonly delegation: DelegationGateView;
 }
 
 export function playbookStoreView(
   subscriptions: readonly PlaybookSubscription[] | undefined,
+  delegationLocked = false,
 ): PlaybookStoreView {
   const byPlaybookId = new Map(subscriptions?.map((s) => [s.playbookId, s]));
   const cards = playbookStoreCatalog().map((entry) => {
@@ -50,5 +59,10 @@ export function playbookStoreView(
   const capitalUnderManagement = (subscriptions ?? [])
     .filter((s) => s.enabled)
     .reduce((sum, s) => sum + s.capitalAllocated, 0);
-  return { cards, capitalUnderManagement, canManage: subscriptions !== undefined };
+  return {
+    cards,
+    capitalUnderManagement,
+    canManage: subscriptions !== undefined,
+    delegation: delegationGateView(delegationLocked),
+  };
 }

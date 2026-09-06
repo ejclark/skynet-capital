@@ -18,7 +18,7 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
-### Fog of war as a reveal mechanic — banked for a later surface
+### Fog of war as a reveal mechanic — codified 2026-09-06 → [`FOG-OF-WAR.md`](FOG-OF-WAR.md)
 
 From the 2026-09-05 five-option progressive-reveal exercise on the trade ticket (spotlight · rail
 · chapters · fog of war · solo): locked items stay on the board as silhouettes — shape and code,

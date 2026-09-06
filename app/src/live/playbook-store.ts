@@ -24,10 +24,19 @@ export interface PlaybookStoreCardView {
   };
 }
 
+/** The delegation fog (#1707) — mirrors `DelegationGateView`. The server owns the copy. */
+export interface DelegationGateView {
+  readonly locked: boolean;
+  readonly unlocksAfter: string;
+  readonly unlocksAfterName: string;
+  readonly note: string;
+}
+
 export interface PlaybookStoreView {
   readonly cards: readonly PlaybookStoreCardView[];
   readonly capitalUnderManagement: number;
   readonly canManage: boolean;
+  readonly delegation: DelegationGateView;
 }
 
 export interface SubscriptionWriteResult {

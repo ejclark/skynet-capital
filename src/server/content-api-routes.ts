@@ -1,7 +1,8 @@
 import type { ServerResponse } from "node:http";
 import { browseCollections, unshelved } from "../discovery/collections.js";
 import { outpostCatalog } from "../discovery/play-cards.js";
-import { allEvents } from "../domain/market-events.js";
+import { marketClosures } from "../domain/market-calendar.js";
+import { everyEvent } from "../domain/market-events.js";
 import { collectionsJsonView } from "../observatory/collections-json-view.js";
 import { learnJsonView } from "../observatory/learn-json-view.js";
 import { researchShelfJson } from "../observatory/research-json-view.js";
@@ -14,6 +15,7 @@ import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { serveDeskJson } from "./desk-json-routes.js";
 import { opaqueMemberId } from "./feedback-issue.js";
+import { ledgerDigests } from "./research-horizon-calls.js";
 import { eventCalls, listResearch, shelfSymbols } from "./research-service.js";
 import { serveWireJson } from "./wire-routes.js";
 
@@ -37,8 +39,21 @@ export async function serveContentApi(
   }
   if (path === "/api/research") {
     const asOf = new Date().toISOString();
+    // The shelf's calendar keeps history (everyEvent) — a closed-out call is a receipt worth
+    // stepping back to — and carries the exchange closures across that whole span, so the rail
+    // can colour a closed weekday and count a week's sessions without a broker credential.
+    const events = everyEvent();
+    const first = events[0]?.date ?? asOf.slice(0, 10);
+    const last = events[events.length - 1]?.date ?? first;
     return json(
-      researchShelfJson(listResearch(), shelfSymbols(asOf), eventCalls(), allEvents(asOf)),
+      researchShelfJson(
+        listResearch(),
+        shelfSymbols(asOf),
+        eventCalls(),
+        events,
+        ledgerDigests(),
+        marketClosures(first < asOf.slice(0, 10) ? first : asOf.slice(0, 10), last),
+      ),
     );
   }
   if (path === "/api/learn") {

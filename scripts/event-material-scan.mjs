@@ -33,7 +33,7 @@
 // material verdict: dispatch the session. A STALE read is a half-failed fetch and falls under the
 // same rule (issue #1386): `closeFromChart` reads the latest session or throws, and every price the
 // CLI prints carries the date and source it came from (`priceAsOf`), so a fallback is on the record.
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyScreen,
@@ -41,6 +41,7 @@ import {
   decide,
   parseLedgerHeader,
 } from "./event-material-decide.mjs";
+import { readCalendarDir } from "./market-events-read.mjs";
 import { reexecWithProxy } from "./proxy-reexec.mjs";
 
 const ROOT = process.cwd();
@@ -81,11 +82,8 @@ function extractArray(file, marker) {
 }
 
 function loadEvents() {
-  // One JSON file per event (#1449), the same read event-scan.mjs and market-events-data.ts do.
-  if (!existsSync(EVENTS_DIR)) throw new Error(`event-material-scan: cannot read ${EVENTS_DIR}.`);
-  const curated = readdirSync(EVENTS_DIR)
-    .filter((f) => f.endsWith(".json"))
-    .map((f) => JSON.parse(readFileSync(join(EVENTS_DIR, f), "utf8")));
+  // Per-event files (#1449) + proposer-owned proposals (#1717), one shared read rule.
+  const curated = readCalendarDir(EVENTS_DIR).events;
   const prints = extractArray(
     CALENDAR_FILE,
     "export const UPCOMING_PRINTS: readonly EarningsPrint[] = [",

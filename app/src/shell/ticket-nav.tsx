@@ -10,10 +10,14 @@ import { navForPlay, type PlayCode, playForNav, type TicketNavState } from "../l
  *
  * Locked = visible, disabled, explained (the research condition #1461 carries): a segment whose
  * rung is locked stays on the page, disabled, with the rung that opens it named underneath —
- * never hidden, never silently dead. Two exceptions, both the server's own rules: **Sell stock is
- * never disabled** (a sell is an exit, `progression.ts`), and while the first-message gate holds
- * the per-segment reasons are withheld and the gate's one sentence is shown once instead.
- * Nothing here decides anything — locked arrives computed, and the server refuses regardless.
+ * never hidden, never silently dead. One exception, the server's own rule: while the
+ * first-message gate holds, the per-segment reasons are withheld and the gate's one sentence is
+ * shown once instead. Sell stock (102) locks like every other rung — it is exempt only from the
+ * feedback wall (`trade-api-routes.ts`'s buy-only gate), never from the per-rung ladder lock; an
+ * earlier pass here special-cased it as if it were, which reopened the exact ticket the ladder
+ * was built to keep shut (fixed 2026-09-06, alongside `trade-gate.tsx` gaining the same check
+ * `option-gate.tsx` already had). Nothing here decides anything — locked arrives computed, and
+ * the server refuses regardless.
  * @category trading
  */
 export function TicketNav({
@@ -33,7 +37,7 @@ export function TicketNav({
   const option = (label: string, next: TicketNavState): Segment => {
     const target = playForNav(next);
     const play = byCode.get(target);
-    const locked = Boolean(play?.locked) && target !== "102";
+    const locked = Boolean(play?.locked);
     const why =
       locked && !gate && play?.opensAfter
         ? `${label}: opens after ${play.opensAfter.code} fills`
