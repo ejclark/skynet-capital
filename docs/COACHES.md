@@ -236,6 +236,16 @@ supply-chain decision: read them fully before adopting.
 Not every play is a down-in/down-out defensive loop. Special teams are situational crews with their own playbooks, run occasionally:
 
 - **dep-warden** — reviews dependency-update PRs: reads changelogs, runs the suite, merges patch/minor on green, escalates majors. Built: `.claude/agents/dep-warden.md`.
+- **Layout-resize audit** — a phone rotation (load, scroll, resize with no reload) on every
+  rail-bearing `/app/*` route, checking whether anything inside `.rail` leaks past its own box or
+  into `.stage`. Catches a class a per-width screenshot sweep structurally cannot: CSS that
+  resolves correctly on every fresh load and only breaks across a resize (docs/LESSONS.md,
+  2026-09-06 — the Research calendar's `aspect-ratio` + grid-track interaction). Deliberately not
+  a gate: Eric's call (2026-09-06) was that catching this "all the time" isn't worth the per-PR
+  cost, but a periodic sweep is. `npm run scan:layout-resize` (human report) / `-- --json` (a
+  `/grind` fan-out's input, if a sweep ever turns up several instances at once); `--strict` exits
+  1, for a future promotion to the defensive roster if repeated sweeps keep finding real bugs
+  (the rule of three, same as any other eye). Built: `scripts/layout-resize-scan.mjs`.
 - **Migrations** — one-shot tool/platform upgrades (e.g. Biome 2.x): run the migrator, triage fallout with judgment, land as one PR.
 - **Incident response** — rollback drills, post-deploy failure handling (the pipeline's smoke → rollback is the mechanized first responder).
 - **Release verification** — periodic prod screenshot/probe beyond the smoke test.
