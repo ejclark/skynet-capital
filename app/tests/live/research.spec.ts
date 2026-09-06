@@ -41,6 +41,12 @@ describe("parseResearchQuery — the lens dimension", () => {
     ]);
   });
 
+  it("reads the all lens as an explicit token only — week stays the silent default", () => {
+    expect(parseResearchQuery("lens:all").lens).toBe("all");
+    expect(setLens("NVDA", "all")).toBe("NVDA lens:all");
+    expect(setLens("NVDA lens:all", "week")).toBe("NVDA");
+  });
+
   it("ignores a lens it does not know rather than guessing", () => {
     expect(parseResearchQuery("lens:decade").lens).toBe("week");
     expect(parseResearchQuery("lens:decade").terms).toEqual(["lens:decade"]);
@@ -102,6 +108,14 @@ describe("callForLens — the row a lens shows", () => {
 
   it("returns null for a horizon the ledger does not state — never a neighbour's row", () => {
     expect(callForLens(call, "quarter")).toBeNull();
+  });
+
+  it("shows the ledger's headline row under the all lens, which selects no horizon", () => {
+    expect(callForLens(call, "all")).toEqual({
+      call: "Stand aside",
+      horizon: "Today",
+      confidence: "High",
+    });
   });
 
   it("serves the day lens from a pre-lens payload that carries only the Today row", () => {

@@ -228,7 +228,7 @@ function ResearchFilters({
             type="text"
             value={query}
             spellCheck={false}
-            placeholder="filter — a word · sym:NVDA · kind:opex · impact:high · call:watch · on:2026-09-07 · lens:month"
+            placeholder="filter — a word · sym:NVDA · kind:opex · impact:high · call:watch · on:2026-09-07 · lens:month · lens:all"
             onChange={(e) => onChange(e.target.value)}
           />
         </div>
