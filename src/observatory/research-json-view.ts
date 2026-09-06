@@ -29,6 +29,10 @@ interface CallView {
   readonly confidence?: string;
   /** The event's ledger doc — the receipt behind the call. */
   readonly href: string;
+  /** When the ledger behind this call was last assessed (its `ResearchDoc.lastAssessed`), not
+   *  the event date — a horizon row is only as fresh as the day it was authored. Null when no
+   *  matching ledger doc carries a stamp. */
+  readonly lastAssessed: string | null;
   /** Every horizon row the ledger states (#1704) — the shell picks the row for its lens. */
   readonly horizons?: HorizonCalls;
   /** The TL;DR as plain text — the shell's search and scope index. */
@@ -92,6 +96,7 @@ export function researchShelfJson(
   closures: readonly MarketClosure[] = [],
 ): ResearchShelfJson {
   const researched = new Set(shelf.ledgers.map((doc) => doc.slug));
+  const ledgersBySlug = new Map(shelf.ledgers.map((doc) => [doc.slug, doc] as const));
   return {
     closures,
     events: events.map((event) => ({
@@ -109,6 +114,7 @@ export function researchShelfJson(
       horizon: call.horizon,
       ...(call.confidence ? { confidence: call.confidence } : {}),
       href: `/research/events/${eventId}`,
+      lastAssessed: ledgersBySlug.get(`events/${eventId}`)?.lastAssessed ?? null,
       ...digestView(digests.get(eventId)),
     })),
     symbols: symbols.map((entry) => ({

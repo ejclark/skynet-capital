@@ -68,6 +68,18 @@
   color: var(--accent);
   border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
 }
+/* Assessment age (follow-on to #1704): a dashed border shape-distinguishes the assessed chip from
+ * the confidence chip. Staleness itself is carried by the WORD "stale" in the text; weight + a
+ * dotted underline only add emphasis, never a colour change alone (CLAUDE.md — hue never carries
+ * meaning alone). */
+.rx-assessed {
+  border-style: dashed;
+}
+.rx-stale {
+  font-weight: 600;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
 .rx-note {
   margin: 10px 0 0;
   font-size: 10.5px;

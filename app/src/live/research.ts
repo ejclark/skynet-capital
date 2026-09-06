@@ -34,6 +34,10 @@ export interface ResearchCall {
   readonly tldr?: string;
   /** Adjacent event ids from the ledger's probe-ref — the hub count reads these. */
   readonly adjacent?: readonly string[];
+  /** When the ledger behind this call was last assessed — null (or absent, pre-#follow-on payload)
+   *  when no matching ledger doc carries a stamp. A horizon row is only as fresh as the day it was
+   *  authored, which is NOT the event date. */
+  readonly lastAssessed?: string | null;
 }
 
 export interface ResearchSymbol {
@@ -187,6 +191,25 @@ export function callForLens(call: ResearchCall, lens: Lens): HorizonRow | null {
     horizon: call.horizon,
     ...(call.confidence ? { confidence: call.confidence } : {}),
   };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How stale a call's ledger is (follow-on to #1704): a horizon row is authored relative to the
+ * ledger's LAST ASSESSMENT date, not the event date — a "This week" row assessed three weeks ago
+ * describes an old week. Null when the ledger carries no stamp (honesty: no age claimed from
+ * nothing); `stale` past a week, the same rhythm the default lens reads at.
+ */
+export function assessmentAge(
+  lastAssessed: string | null | undefined,
+  today: string,
+): { readonly days: number; readonly stale: boolean } | null {
+  if (!lastAssessed) return null;
+  const days = Math.round(
+    (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${lastAssessed}T00:00:00Z`)) / DAY_MS,
+  );
+  return { days, stale: days > 7 };
 }
 
 /** Set (or, with undefined, clear) the anchor day; every other token survives. */

@@ -1,4 +1,5 @@
 import {
+  assessmentAge,
   callForLens,
   DEFAULT_LENS,
   mentionsSymbol,
@@ -101,5 +102,22 @@ describe("callForLens — the row a lens shows", () => {
       confidence: "High",
     });
     expect(callForLens(legacy, "week")).toBeNull();
+  });
+});
+
+describe("assessmentAge — how old the ledger behind a call row is", () => {
+  it("returns null when the ledger carries no stamp — never a claimed age from nothing", () => {
+    expect(assessmentAge(null, "2026-09-06")).toBeNull();
+    expect(assessmentAge(undefined, "2026-09-06")).toBeNull();
+  });
+
+  it("counts whole days from the last assessment to today, fresh at exactly a week", () => {
+    expect(assessmentAge("2026-09-06", "2026-09-06")).toEqual({ days: 0, stale: false });
+    expect(assessmentAge("2026-08-30", "2026-09-06")).toEqual({ days: 7, stale: false });
+  });
+
+  it("flags stale once the assessment is more than a week old", () => {
+    expect(assessmentAge("2026-08-16", "2026-09-06")).toEqual({ days: 21, stale: true });
+    expect(assessmentAge("2026-08-29", "2026-09-06")).toEqual({ days: 8, stale: true });
   });
 });
