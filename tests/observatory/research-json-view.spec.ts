@@ -28,6 +28,31 @@ describe("researchShelfJson", () => {
     });
   });
 
+  it("carries every horizon row the ledger states, so the shell can read the board by lens", () => {
+    const today: EventCall = { call: "Stand aside", horizon: "Today", confidence: "High" };
+    const view = researchShelfJson(
+      { studies: [], ledgers: [] },
+      [],
+      new Map([["boj-2026-09-18", today]]),
+      [],
+      new Map([
+        [
+          "boj-2026-09-18",
+          { today, week: { call: "Watch CPI", horizon: "This week", confidence: "Medium" } },
+        ],
+      ]),
+    );
+    expect(view.calls[0]?.horizons?.week).toEqual({
+      call: "Watch CPI",
+      horizon: "This week",
+      confidence: "Medium",
+    });
+    // A payload without horizons carries no key at all — older readers see the old shape.
+    expect(
+      researchShelfJson({ studies: [], ledgers: [] }, [], new Map([["x", today]])).calls[0],
+    ).not.toHaveProperty("horizons");
+  });
+
   it("carries each symbol's next dated event, or its honest absence", () => {
     const view = researchShelfJson(
       { studies: [], ledgers: [] },

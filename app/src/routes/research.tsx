@@ -3,7 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import {
+  callForLens,
   fetchResearch,
+  LENS_LABEL,
+  type Lens,
   parseResearchQuery,
   type ResearchDocLink,
   type ResearchShelfData,
@@ -18,46 +21,58 @@ import { PageFrame } from "../shell/frame";
  * rail drives content): the event-horizon calendar pins a day into the page's ONE query model.
  * Up top, the text bar and the symbol chips write the same string; one filter narrows everything
  * below — calls, ledgers, studies. Documents stay server-rendered; every row crosses honestly.
+ *
+ * THE LENS (#1704 slice 1): the call board reads ONE horizon row per ledger — `lens:week` by
+ * default — instead of only the Today row (which reads "Stand aside" on 268 of 272 ledgers). The
+ * rail's lens control arrives in slice 2; until then the token in the query is the control.
  */
 
 function CallBoard({
   data,
   terms,
   dayIds,
+  lens,
 }: {
   readonly data: ResearchShelfData;
   readonly terms: readonly string[];
   readonly dayIds: ReadonlySet<string> | null;
+  readonly lens: Lens;
 }): ReactElement | null {
-  const calls = data.calls.filter(
-    (call) =>
+  // One row per ledger, read through the lens; a ledger with no row for it is left out, never
+  // shown with a neighbouring horizon's call in its place.
+  const rows = data.calls.flatMap((call) => {
+    const row = callForLens(call, lens);
+    return row ? [{ call, row }] : [];
+  });
+  const calls = rows.filter(
+    ({ call, row }) =>
       (dayIds === null || dayIds.has(call.eventId)) &&
       terms.every(
         (term) =>
-          call.eventId.toLowerCase().includes(term) || call.call.toLowerCase().includes(term),
+          call.eventId.toLowerCase().includes(term) || row.call.toLowerCase().includes(term),
       ),
   );
   if (data.calls.length === 0) return null;
   return (
     <section className="rx-panel">
-      <h2 className="rx-h">The call board</h2>
+      <h2 className="rx-h">The call board · {LENS_LABEL[lens]}</h2>
       {calls.length === 0 ? (
         <p className="note">No call matches this filter.</p>
       ) : (
         <ul className="rx-calls">
-          {calls.map((call) => (
+          {calls.map(({ call, row }) => (
             <li key={call.eventId} className="rx-call">
               <a href={call.href} className="rx-call-event num">
                 {call.eventId}
               </a>
-              <span className="rx-call-text">{call.call}</span>
+              <span className="rx-call-text">{row.call}</span>
               <span className="rx-call-meta">
                 <span className="rx-chip" title="horizon">
-                  {call.horizon}
+                  {row.horizon}
                 </span>
-                {call.confidence ? (
+                {row.confidence ? (
                   <span className="rx-chip rx-conf" title="stated confidence">
-                    {call.confidence}
+                    {row.confidence}
                   </span>
                 ) : null}
               </span>
@@ -132,7 +147,7 @@ function ResearchFilters({
             type="text"
             value={query}
             spellCheck={false}
-            placeholder="filter everything below — a symbol, a title, on:2026-09-02"
+            placeholder="filter everything below — a symbol, a title, on:2026-09-02, lens:month"
             onChange={(e) => onChange(e.target.value)}
           />
         </div>
@@ -232,7 +247,7 @@ function ResearchPage(): ReactElement {
         </p>
       </header>
       <ResearchFilters data={data} query={query} onChange={setFilter} />
-      <CallBoard data={data} terms={filter.terms} dayIds={dayIds} />
+      <CallBoard data={data} terms={filter.terms} dayIds={dayIds} lens={filter.lens} />
       <div className="rx-grid">
         <DocList
           title="Event ledgers"

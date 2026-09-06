@@ -1,19 +1,33 @@
 /**
- * Parsing the verbatim "call" out of a research doc's decision header (`## At a glance` / `## The
- * call`) — the machine contract research-service.ts and the observatory agenda both read. Split
- * out of research-service.ts (2026-08-26, keeping that file under the line-count budget); this
- * module is pure markdown parsing with no filesystem or domain dependency of its own.
+ * Parsing the verbatim calls out of a research doc's decision header (`## At a glance` / `## The
+ * call`) — the machine contract research-service.ts, the observatory agenda and the shelf's call
+ * board all read. Split out of research-service.ts (2026-08-26, keeping that file under the
+ * line-count budget); this module is pure markdown parsing with no filesystem or domain
+ * dependency of its own.
+ *
+ * Two readers, one table (#1704): `todayCallOf` returns the nearest-horizon row (the agenda's
+ * contract since 2026-08-26), `horizonCallsOf` returns every horizon row keyed by lens — Today /
+ * This week / This month / This quarter, the four rows docs/research/events/TEMPLATE.md gates into
+ * every ledger. Before #1704 the shelf rendered only the Today row, which read "Stand aside" on
+ * 268 of 272 ledgers; the information lives in the other three.
  */
 
-/** The verbatim call a ledger's decision header reached for the current moment. */
+/** The verbatim call a ledger's decision header reached for one horizon. */
 export interface EventCall {
-  /** The `Call` cell of the nearest horizon row, exactly as authored. */
+  /** The `Call` cell of the row, exactly as authored. */
   readonly call: string;
   /** That row's horizon label ("Today", "Today (D-13)", "This week"), for the row's tooltip. */
   readonly horizon: string;
   /** The `Confidence` cell, when the header carries that column. */
   readonly confidence?: string;
 }
+
+/** The template's four horizons, in the order the table authors them. */
+type Horizon = "today" | "week" | "month" | "quarter";
+const HORIZONS: readonly Horizon[] = ["today", "week", "month", "quarter"];
+
+/** One ledger's calls by horizon — a horizon is absent when the table states no row for it. */
+export type HorizonCalls = Partial<Record<Horizon, EventCall>>;
 
 /**
  * The decision-header headings we recognise, in priority order. Event ledgers author
@@ -47,37 +61,78 @@ const cellsOf = (line: string): string[] =>
     .split("|")
     .map((c) => c.trim());
 
+/** The horizon table's data rows plus the two columns read by NAME, never by index. */
+interface CallTable {
+  readonly rows: readonly (readonly string[])[];
+  readonly callAt: number;
+  readonly confAt: number;
+}
+
 /**
- * The `Today` row of a decision header's horizon table, read VERBATIM.
- *
- * Columns are located BY HEADER NAME, never by index: the corpus is mid-migration from the old
- * three-column `| Horizon | Call | Why |` shape to the five-column shape that also carries
- * confidence and a dated falsifier, so both must parse with the same code. Confidence is optional
- * for exactly that reason.
- *
- * Honesty: this EXTRACTS, it never summarises. Anything unparseable returns null and the row falls
- * back to its plain research link — a missing call is honest, an invented one is not.
+ * Columns are located BY HEADER NAME: the corpus is mid-migration from the old three-column
+ * `| Horizon | Call | Why |` shape to the five-column shape that also carries confidence and a
+ * dated falsifier, so both must parse with the same code. Confidence is optional for exactly that
+ * reason. Row 1 of the table is the `|---|` separator, so data starts at row 2.
  */
-export function todayCallOf(md: string): EventCall | null {
+function callTableOf(md: string): CallTable | null {
   const header = decisionHeaderOf(md);
   if (!header) return null;
-  const rows = header.split("\n").filter((l) => l.trim().startsWith("|"));
-  if (rows.length < 3) return null;
-  const cols = cellsOf(rows[0] ?? "").map((c) => c.toLowerCase());
+  const lines = header.split("\n").filter((l) => l.trim().startsWith("|"));
+  if (lines.length < 3) return null;
+  const cols = cellsOf(lines[0] ?? "").map((c) => c.toLowerCase());
   const callAt = cols.includes("call") ? cols.indexOf("call") : cols.indexOf("the call");
-  const confAt = cols.indexOf("confidence");
   if (callAt === -1) return null;
-  // Row 1 is the |---|---| separator. Prefer an explicit Today row — its label often carries a
-  // parenthetical ("Today (D-13)", "Today (8/19)"), so match the prefix — and otherwise fall back
-  // to the first data row, which is the nearest horizon by the table's own ordering.
-  const data = rows.slice(2);
-  const row = data.find((r) => /^\|\s*\**\s*today\b/i.test(r)) ?? data[0];
-  if (!row) return null;
-  const cells = cellsOf(row);
-  const plain = (i: number): string => (cells[i] ?? "").replace(/\*\*/g, "").trim();
-  const call = plain(callAt);
+  return { rows: lines.slice(2).map(cellsOf), callAt, confAt: cols.indexOf("confidence") };
+}
+
+/** A cell with authoring emphasis stripped — the chip carries text, not markup. */
+const plain = (cells: readonly string[], i: number): string =>
+  (cells[i] ?? "").replace(/\*\*/g, "").trim();
+
+/**
+ * Honesty: this EXTRACTS, it never summarises. An empty call cell returns null and the row falls
+ * back to its plain research link — a missing call is honest, an invented one is not.
+ */
+function rowCall(table: CallTable, cells: readonly string[]): EventCall | null {
+  const call = plain(cells, table.callAt);
   if (!call) return null;
-  const horizon = plain(0);
-  const confidence = confAt === -1 ? undefined : plain(confAt);
+  const horizon = plain(cells, 0);
+  const confidence = table.confAt === -1 ? undefined : plain(cells, table.confAt);
   return confidence ? { call, horizon, confidence } : { call, horizon };
+}
+
+/** Row labels often carry a parenthetical ("Today (D-13)", "Today (8/19)"), so match the prefix. */
+const HORIZON_LABELS: Record<Horizon, RegExp> = {
+  today: /^today\b/i,
+  week: /^this week\b/i,
+  month: /^this month\b/i,
+  quarter: /^this quarter\b/i,
+};
+
+/** Every horizon row the header states, keyed by lens; the first row per horizon wins. */
+export function horizonCallsOf(md: string): HorizonCalls {
+  const table = callTableOf(md);
+  if (!table) return {};
+  const out: HorizonCalls = {};
+  for (const cells of table.rows) {
+    const label = plain(cells, 0);
+    const horizon = HORIZONS.find((h) => !out[h] && HORIZON_LABELS[h].test(label));
+    if (!horizon) continue;
+    const call = rowCall(table, cells);
+    if (call) out[horizon] = call;
+  }
+  return out;
+}
+
+/**
+ * The `Today` row of a decision header's horizon table, read VERBATIM. Prefers an explicit Today
+ * row and otherwise falls back to the first data row, which is the nearest horizon by the table's
+ * own ordering (a study's `## The call` table has no horizons at all — its first name wins).
+ */
+export function todayCallOf(md: string): EventCall | null {
+  const table = callTableOf(md);
+  if (!table) return null;
+  const row =
+    table.rows.find((cells) => HORIZON_LABELS.today.test(plain(cells, 0))) ?? table.rows[0];
+  return row ? rowCall(table, row) : null;
 }
