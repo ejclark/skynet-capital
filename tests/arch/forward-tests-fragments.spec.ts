@@ -64,6 +64,28 @@ describe("forward-test fragments — placement contract (blocking)", () => {
     ).toEqual([expect.stringMatching(/not namespaced/)]);
   });
 
+  it("month- and year-granular event ids can register, and still cannot swallow a bare number", () => {
+    // Not every event on this calendar resolves to a day. Requiring YYYY-MM-DD in the id pattern
+    // made a forward test unregisterable for all three coarser entries (2026-09-08) — the rule was
+    // fine, the pattern could not spell it. The second half is the property the widening must not
+    // cost: a bare-number id outside legacy.md is still a violation.
+    expect(
+      placementProblems({
+        indexMd: "",
+        fragments: [
+          fragment("pjm-capacity-auction-2026-12", ["FT-pjm-capacity-auction-2026-12-1"]),
+          fragment("aws-reinvent-2026", ["FT-aws-reinvent-2026-2"]),
+        ],
+      }),
+    ).toEqual([]);
+    expect(
+      placementProblems({
+        indexMd: "",
+        fragments: [fragment("pjm-capacity-auction-2026-12", ["FT-12"])],
+      }),
+    ).toEqual([expect.stringMatching(/not namespaced/)]);
+  });
+
   it("a fragment without the table header is named", () => {
     expect(
       placementProblems({ indexMd: "", fragments: [fragment("cpi-2026-09-11", [], false)] }),
