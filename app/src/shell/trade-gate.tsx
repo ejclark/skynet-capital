@@ -143,6 +143,8 @@ export function TradeGate({
   initialAction = "buy",
   showSide = true,
   play,
+  initialSymbol,
+  onSymbolCommit,
 }: {
   readonly deskId: string;
   /** `?play=102` preselects Sell — the catalog's stock rungs are the same gate, sided. */
@@ -156,9 +158,14 @@ export function TradeGate({
    * saying it was locked. Undefined callers (none today) get the old, unchecked behavior.
    */
   readonly play?: PlayInfo;
+  /** `?symbol=` (#2017 cockpit plan) — seeds the symbol field on mount so a remount (every
+   *  Instrument/Side switch keys this component fresh) doesn't drop a hand-typed symbol. */
+  readonly initialSymbol?: string;
+  /** Fires when the symbol field commits, so the route can keep `?symbol=` in sync. */
+  readonly onSymbolCommit?: (symbol: string) => void;
 }): ReactElement {
   const [fields, setFields] = useState<TicketFields>({
-    symbol: "",
+    symbol: initialSymbol ?? "",
     quantity: "",
     action: initialAction,
     orderType: "market",
@@ -221,7 +228,10 @@ export function TradeGate({
           placeholder="AAPL"
           maxLength={8}
           onChange={edit("symbol")}
-          onCommit={edit("symbol")}
+          onCommit={(s) => {
+            edit("symbol")(s);
+            onSymbolCommit?.(s);
+          }}
         />
         <div className="field">
           <label htmlFor={qtyId}>Shares</label>

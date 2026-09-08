@@ -113,7 +113,7 @@ function Rung({
   return (
     <Link
       to="/trade"
-      search={{ desk: deskId, play: play.code }}
+      search={(prev) => ({ ...prev, desk: deskId, play: play.code })}
       className={className}
       aria-current={current ? "page" : undefined}
       aria-label={`${play.code} ${play.name}${play.earned ? " — earned" : ""}`}

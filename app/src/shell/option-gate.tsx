@@ -34,6 +34,8 @@ export function OptionGate({
   deskId,
   play,
   zeroDte,
+  initialSymbol,
+  onSymbolCommit,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
@@ -41,9 +43,15 @@ export function OptionGate({
    *  rung wide open and still be shut out of a same-day expiration until 501 is earned. Undefined
    *  callers (none today) skip the zero-DTE affordance; the server refuses regardless. */
   readonly zeroDte?: PlayInfo;
+  /** `?symbol=` (#2017 cockpit plan) — seeds both the field and the chain fetch on mount, so a
+   *  remount (every Instrument/Side switch keys this component fresh) picks the chain back up
+   *  immediately instead of waiting for another commit. */
+  readonly initialSymbol?: string;
+  /** Fires when the symbol field commits, so the route can keep `?symbol=` in sync. */
+  readonly onSymbolCommit?: (symbol: string) => void;
 }): ReactElement {
-  const [symbol, setSymbol] = useState("");
-  const [chainSym, setChainSym] = useState("");
+  const [symbol, setSymbol] = useState(initialSymbol ?? "");
+  const [chainSym, setChainSym] = useState(initialSymbol ?? "");
   const [expiration, setExpiration] = useState("");
   const [strike, setStrike] = useState("");
   const [contracts, setContracts] = useState("1");
@@ -133,6 +141,7 @@ export function OptionGate({
           onCommit={(s) => {
             edit(setSymbol)(s);
             setChainSym(s);
+            onSymbolCommit?.(s);
           }}
         />
         <div className="field">

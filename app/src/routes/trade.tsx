@@ -6,6 +6,7 @@ import { fetchDesk } from "../live/desk";
 import { fetchPlays, type PlayInfo } from "../live/options";
 import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import { normalizeSymbol } from "../live/symbol";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
@@ -65,11 +66,19 @@ function DeskTicket({
   desk,
   code,
   onPreset,
+  initialSymbol,
+  onSymbolCommit,
 }: {
   readonly desk: string;
   readonly code: string;
   /** The ticket's own nav and the rail both preset `?play=` through this (#1461). */
   readonly onPreset: (code: PlayCode) => void;
+  /** `?symbol=` — the value a fresh (or remounted) ticket starts from. */
+  readonly initialSymbol?: string;
+  /** Committing a symbol in either gate writes it back to `?symbol=` (cockpit plan, red-team
+   *  finding): both gates remount on every Instrument/Side switch (`key={info.code}` /
+   *  `key={code}` below), which used to drop a hand-typed symbol on every switch. */
+  readonly onSymbolCommit?: (symbol: string) => void;
 }) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const deskData = useQuery({
@@ -114,7 +123,14 @@ function DeskTicket({
           <DraftOrderBuilder deskId={desk} />
         )
       ) : info && info.kind === "option" ? (
-        <OptionGate key={info.code} deskId={desk} play={info} zeroDte={zeroDte} />
+        <OptionGate
+          key={info.code}
+          deskId={desk}
+          play={info}
+          zeroDte={zeroDte}
+          initialSymbol={initialSymbol}
+          onSymbolCommit={onSymbolCommit}
+        />
       ) : (
         <TradeGate
           key={code}
@@ -122,6 +138,8 @@ function DeskTicket({
           initialAction={code === "102" ? "sell" : "buy"}
           showSide={false}
           play={info}
+          initialSymbol={initialSymbol}
+          onSymbolCommit={onSymbolCommit}
         />
       )}
       {deskData.data ? (
@@ -132,8 +150,26 @@ function DeskTicket({
 }
 
 function TradePage(): ReactElement {
-  const { desk, play } = Route.useSearch();
+  const { desk, play, symbol } = Route.useSearch();
   const navigate = Route.useNavigate();
+  /** Committing a symbol writes it into `?symbol=` so it survives the remount every
+   *  Instrument/Side switch causes (#2017 cockpit plan). Guarded against the current search value
+   *  so a blur that didn't change anything (e.g. right after mounting from `initialSymbol`)
+   *  doesn't push a redundant history entry — and `replace: true` regardless, since a symbol edit
+   *  is a refinement of the same ticket, not a new page to land back on. */
+  const commitSymbol = (s: string) => {
+    const next = normalizeSymbol(s);
+    if (next === symbol) return;
+    navigate({
+      replace: true,
+      search: (prev) => {
+        const nextSearch = { ...prev };
+        if (next) nextSearch.symbol = next;
+        else delete nextSearch.symbol;
+        return nextSearch;
+      },
+    });
+  };
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
   const accounts = settings.data?.accounts ?? [];
   // A bookmarked or shared `?desk=` only sticks if it's still an account the session owns —
@@ -189,6 +225,8 @@ function TradePage(): ReactElement {
             desk={activeDesk}
             code={play ?? "101"}
             onPreset={(code) => navigate({ search: (prev) => ({ ...prev, play: code }) })}
+            initialSymbol={symbol}
+            onSymbolCommit={commitSymbol}
           />
         </>
       ) : null}
@@ -201,11 +239,15 @@ export const Route = createFileRoute("/trade")({
     // The router JSON-parses search values, so a legacy ?play=201 arrives as a NUMBER — normalize
     // through String before gating against the catalog's codes.
     const play = typeof search.play === "object" ? "" : String(search.play ?? "");
+    // `?symbol=` (cockpit plan, red-team finding): a hand-typed or stale value that doesn't match
+    // the accepted shape is dropped rather than passed through — see normalizeSymbol's doc comment.
+    const symbol = normalizeSymbol(search.symbol);
     return {
       ...(typeof search.desk === "string" && search.desk.length > 0 && search.desk.length <= 100
         ? { desk: search.desk }
         : {}),
       ...(PLAY_CODES.has(play) ? { play: play as PlayInfo["code"] } : {}),
+      ...(symbol !== undefined ? { symbol } : {}),
     };
   },
   component: TradePage,
