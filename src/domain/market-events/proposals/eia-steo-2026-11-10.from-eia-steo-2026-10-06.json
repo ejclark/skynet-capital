@@ -1,0 +1,11 @@
+{
+  "id": "eia-steo-2026-11-10",
+  "kind": "macro-print",
+  "title": "EIA Short-Term Energy Outlook (November 2026) — the Winter Fuels Outlook edition",
+  "date": "2026-11-10",
+  "status": "estimate",
+  "source": "EST: eia.gov/outlooks/steo/release_schedule.php, fetched direct 2026-09-08 (HTTP 200), lists \"11/10/2026\" for the November 2026 edition and annotates that row as the Winter Fuels Outlook — the one edition of the year carrying a distinct product rather than a routine monthly update. The date reproduces independently from the same page's stated rule (\"the first Tuesday following the first Thursday of each month\", with a Federal holiday on the preceding Monday pushing the release to Wednesday): 2026-11-05 is a Thursday, the following Tuesday is 11-10, and 11-09 is not a Federal holiday, so no adjustment applies. Release window is stated on the same page as 12:00-12:15 pm ET. Filed estimate on two counts, neither of them date doubt: this calendar defines no `confirmed` prefix for the EIA (the standing schema gap eia-steo-2026-09-09 named), and this lane never self-confirms an event it discovered in-sweep",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Discovered during eia-steo-2026-10-06's never-assessed initial research (2026-09-08), off the same EIA release-schedule primary that dates the October edition. Proposed because the Winter Fuels Outlook is the natural-gas edition, and this session measured the gas base rate that governs how it should be read: across the eight 2026 STEO release dates, NG=F's 12:00-13:00 ET release hour has a median |move| of 0.24% against 0.56% for all 502 noon hours in a 2y Yahoo hourly sample, and its full-day median |move| is 0.97% against 2.45% for all days — natural gas is markedly QUIETER on STEO days than on ordinary ones, in both windows. So even the most gas-specific edition of the year carries no measured release effect, and the honest prior for 11-10 is the same stand-aside the September and October ledgers reach. Filed `low` on the sibling entries' reasoning: a forecast publication sets no policy and moves no equity tape, and this calendar's names are `symbols: []` away from it."
+}
