@@ -3,8 +3,8 @@
   "kind": "macro-print",
   "title": "FOMC minutes (Sep 15–16 meeting)",
   "date": "2026-10-07",
-  "status": "estimate",
-  "source": "EST: federalreserve.gov/newsevents/2026-october.htm lists 'FOMC Minutes' at 2:00 p.m. on October 7 for the September 15-16 meeting (fetched direct 2026-08-31). Primary-sourced, but filed estimate per the event-research lane's no-self-confirm limit on an event discovered in-sweep, checked 2026-08-31",
+  "status": "confirmed",
+  "source": "FED: federalreserve.gov/newsevents/2026-october.htm lists 'FOMC Minutes / Meeting of September 15-16' at 2:00 p.m. on October 7 — re-fetched direct 2026-09-08 and unchanged from the 2026-08-31 read. Corroborated by an independent Fed primary that needs no calendar page: federalreserve.gov/monetarypolicy/fomccalendars.htm states the governing rule verbatim, 'The minutes of regularly scheduled meetings are released three weeks after the date of the policy decision', and 2026-09-16 + 21d = Wednesday 2026-10-07. Promoted estimate -> confirmed 2026-09-08 by this event's own dedicated research session, which is the closing path the no-self-confirm limit leaves open to a proposing sweep (same path treasury-buyback-increase-2026-09-09 used); the ledger header has carried 'confirmed' since 2026-08-31 and this file had not been written through, checked 2026-09-08",
   "impact": "medium",
   "symbols": [],
   "notes": "The richest read on this Committee's reaction function available before the 10-28 decision, and the ONLY one that arrives outside the 10-17 blackout. Matters more than an ordinary minutes release because Warsh has withdrawn the usual substitute: his 2026-08-28 Jackson Hole keynote argued for 'a quieter Fed' and said forward guidance has overstayed its welcome, so the vote split and the dissent language here are close to the only structured evidence on how a coin-flip September resolved. Read it, do not trade it — minutes are three weeks stale by publication. Discovered during the fomc-blackout-start-2026-10-17 initial research."
