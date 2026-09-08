@@ -534,6 +534,34 @@ function commentAndFlagConflict(i) {
   }
 }
 
+/**
+ * The event-research twin of `commentAndFlagConflict`'s repair dispatch. `flag-stall` (unlike
+ * `flag-silent-feedback`/`flag-plan-stall`, which need a human's or Eric's judgment, not a code
+ * fix) is exclusively about `[event-research]` receipt issues (gatherAuditDeps only builds
+ * `unclaimedIssues` from that title pattern) — a stalled one usually means the same matrix-leg
+ * session has been failing silently, push after push, since only a merged PR ever touches the
+ * issue. Dispatched after the comment/label lands, same "never turn a transient `gh` failure into
+ * a comment storm" doctrine as the conflict twin.
+ */
+function dispatchEventStallRepair(issueNumber) {
+  if (!issueNumber) return;
+  try {
+    sh("gh", [
+      "workflow",
+      "run",
+      "moneypenny-repair.yml",
+      "--ref",
+      "main",
+      "-f",
+      `issue_number=${issueNumber}`,
+    ]);
+  } catch (err) {
+    console.log(
+      `::warning::could not dispatch stall repair for #${issueNumber}: ${String(err.message).slice(0, 200)}`,
+    );
+  }
+}
+
 function executeOne(i) {
   if (i.kind === "noop") {
     console.log(`· nothing to do (${i.reason})`);
@@ -575,8 +603,9 @@ function executeOne(i) {
   }
   if (i.kind === "flag-stall") {
     commentAndFlagStall(i);
+    dispatchEventStallRepair(i.issueNumber);
     console.log(`::warning::stall — ${i.title} quiet ${i.quietDays}d`);
-    return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber})` : ""}`;
+    return `⏱ stall flagged — \`${i.title}\` quiet ${i.quietDays}d${i.issueNumber ? ` (commented on #${i.issueNumber}, repair dispatched)` : ""}`;
   }
   if (i.kind === "close-shipped") {
     sh("gh", ["issue", "comment", String(i.issueNumber), "--body", i.body]);
