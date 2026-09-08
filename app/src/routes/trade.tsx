@@ -8,6 +8,7 @@ import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
 import { normalizeStrike } from "../live/strike";
 import { normalizeSymbol } from "../live/symbol";
+import { ChartSection } from "../shell/chart-section";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
 import { LadderGateCard } from "../shell/ladder-gate";
@@ -15,6 +16,8 @@ import { LockedPanel } from "../shell/locked-panel";
 import { MilestoneStrip } from "../shell/milestone-strip";
 import { OptionGate } from "../shell/option-gate";
 import { OptionPositionsCard } from "../shell/option-positions";
+import { SectionSwitch } from "../shell/section-switch";
+import { type PageSection, resolveSection } from "../shell/sections";
 import { TicketNav } from "../shell/ticket-nav";
 import { TradeGate } from "../shell/trade-gate";
 
@@ -35,9 +38,24 @@ import { TradeGate } from "../shell/trade-gate";
  * The options list is `/api/settings`'s `accounts`, which only ever names accounts the session
  * owns (`ownsAccount`'s doc comment) — the same server-side identity the desk gate re-checks at
  * submit, so nothing here can offer, let alone place, a ticket against someone else's desk.
+ *
+ * SECTIONS (#2017 Phase 1 chart build-out; the mechanism is #1740's): the page holds two SHAPES
+ * of data for one symbol — the ticket and its daily chart — so the rail carries the section
+ * switch, exclusive at every width, URL-stateful via `?section=`. "ticket" is the default and the
+ * untyped state (the param is omitted when it's chosen), so a member who never touches the switch
+ * sees exactly the ticket they always have. The chart reads the same `?symbol=` the ticket commits
+ * — no second symbol input; with none committed, `ChartSection` says so and the Ticket section is
+ * where one gets picked.
  */
 
 const PLAY_CODES = new Set(["101", "102", "201", "202", "301", "302", "401"]);
+
+type TradeSection = "ticket" | "chart";
+
+const SECTIONS: readonly PageSection<TradeSection>[] = [
+  { id: "ticket", label: "Ticket" },
+  { id: "chart", label: "Chart" },
+];
 
 function AccountField({
   accounts,
@@ -169,8 +187,14 @@ function DeskTicket({
 }
 
 function TradePage(): ReactElement {
-  const { desk, play, symbol, strike } = Route.useSearch();
+  const { desk, play, symbol, strike, section: askedSection } = Route.useSearch();
   const navigate = Route.useNavigate();
+  const section = resolveSection(SECTIONS, askedSection);
+  const onSection = (next: TradeSection) =>
+    void navigate({
+      search: (prev) => ({ ...prev, section: next === "ticket" ? undefined : next }),
+      replace: true,
+    });
   /** Committing a symbol writes it into `?symbol=` so it survives the remount every
    *  Instrument/Side switch causes (#2017 cockpit plan). Guarded against the current search value
    *  so a blur that didn't change anything (e.g. right after mounting from `initialSymbol`)
@@ -230,6 +254,8 @@ function TradePage(): ReactElement {
         The ticket
       </span>
       <hr />
+      <SectionSwitch sections={SECTIONS} current={section} onSelect={onSection} />
+      <hr />
       {activeDesk ? (
         <Link to="/u/$id" params={{ id: activeDesk }}>
           ← Back to the desk
@@ -261,15 +287,19 @@ function TradePage(): ReactElement {
               onChange={(id) => navigate({ search: (prev) => ({ ...prev, desk: id }) })}
             />
           ) : null}
-          <DeskTicket
-            desk={activeDesk}
-            code={play ?? "101"}
-            onPreset={(code) => navigate({ search: (prev) => ({ ...prev, play: code }) })}
-            initialSymbol={symbol}
-            onSymbolCommit={commitSymbol}
-            initialStrike={strike}
-            onStrikeCommit={commitStrike}
-          />
+          {section === "chart" ? (
+            <ChartSection symbol={symbol ?? ""} />
+          ) : (
+            <DeskTicket
+              desk={activeDesk}
+              code={play ?? "101"}
+              onPreset={(code) => navigate({ search: (prev) => ({ ...prev, play: code }) })}
+              initialSymbol={symbol}
+              onSymbolCommit={commitSymbol}
+              initialStrike={strike}
+              onStrikeCommit={commitStrike}
+            />
+          )}
         </>
       ) : null}
     </PageFrame>
@@ -293,6 +323,11 @@ export const Route = createFileRoute("/trade")({
       ...(PLAY_CODES.has(play) ? { play: play as PlayInfo["code"] } : {}),
       ...(symbol !== undefined ? { symbol } : {}),
       ...(strike !== undefined ? { strike } : {}),
+      // `?section=` (#2017 Phase 1 chart build-out): only a known section id passes, exactly as
+      // `activity.tsx` narrows its own; anything else is dropped and `resolveSection` falls back.
+      ...(typeof search.section === "string" && SECTIONS.some((s) => s.id === search.section)
+        ? { section: search.section as TradeSection }
+        : {}),
     };
   },
   component: TradePage,
