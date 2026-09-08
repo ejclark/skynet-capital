@@ -265,8 +265,15 @@ export class AlpacaOptionsClient {
   }
 }
 
+/** Round to the cent, round-half-up. Options premiums are never sub-cent in practice, so this is
+ *  correct, not lossy — it exists to kill float noise (a raw mid rendered `2.9450000000000003` in
+ *  the Limit /share field) at the source, once, for every consumer. */
+function toCents(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 /** The premium a chain row can honestly quote: the bid/ask mid when both sides exist, else last close. */
 export function rowPremium(row: OptionChainRow): number | undefined {
-  if (row.bid !== undefined && row.ask !== undefined) return (row.bid + row.ask) / 2;
-  return row.closePrice;
+  if (row.bid !== undefined && row.ask !== undefined) return toCents((row.bid + row.ask) / 2);
+  return row.closePrice !== undefined ? toCents(row.closePrice) : undefined;
 }

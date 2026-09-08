@@ -305,3 +305,21 @@ describe("AlpacaOptionsClient", () => {
     });
   });
 });
+
+describe("rowPremium — rounds to the cent at the source (round-half-up)", () => {
+  it("rounds the bid/ask mid to the cent", () => {
+    const rounded = rowPremium({ bid: 2.94, ask: 2.95 } as never);
+    expect(rounded).toBe(2.95);
+    // guard the float-noise bug directly: the raw mid is 2.9450000000000003 (unrounded),
+    // so pin that at most two decimals survive.
+    expect(String(rounded)).toMatch(/^\d+(\.\d{1,2})?$/);
+  });
+
+  it("rounds a closePrice fallback to the cent", () => {
+    expect(rowPremium({ closePrice: 1.005 } as never)).toBe(1.01);
+  });
+
+  it("returns undefined when neither bid/ask nor closePrice is present", () => {
+    expect(rowPremium({} as never)).toBeUndefined();
+  });
+});
