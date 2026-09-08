@@ -115,6 +115,18 @@ Rules that make it work, in priority order:
    closing slice in the sketch (`"slice 3 closes this"`), and that slice's PR body carries `Closes
    #N` — `scripts/plan-closure-scan.mjs` flags a merged branch that referenced the issue without one.
 
+### An optional block: capturing a raw idea before it's a plan
+
+Sometimes an idea needs filing before anyone has argued with it — no candidate mechanism yet, nothing
+settled, not ready for `/journey` (which needs an actual claim → challenge → resolution exchange to
+bank, not a one-way brainstorm). For that case, add a **"Raw idea (verbatim)"** subsection inside the
+fold, first, before "Where it stands today": quote the originating message(s) completely unedited —
+typos, fragments, trailing thoughts and all, the same discipline `/journey`'s rule 2 uses for exactly
+this reason. Mark the issue `Status: draft` in the metadata table so `/work-issues` and Moneypenny
+both skip it until a human flips it, per `.claude/skills/work-issues/SKILL.md`'s existing
+draft-marker convention.
+Worked example: #1977.
+
 ## Pictures in issues (Eric, 2026-08-21: *"pictures are also ideal"*)
 
 Same decision table, same honesty rules, same waiver right as [`PICTURES.md`](PICTURES.md) — read it
