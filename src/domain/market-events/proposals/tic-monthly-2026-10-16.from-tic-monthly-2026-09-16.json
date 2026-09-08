@@ -1,0 +1,11 @@
+{
+  "id": "tic-monthly-2026-10-16",
+  "kind": "macro-print",
+  "title": "Treasury International Capital (TIC) monthly release (August 2026 data), 4:00 p.m. ET",
+  "date": "2026-10-16",
+  "status": "estimate",
+  "source": "EST: home.treasury.gov/data/treasury-international-capital-tic-system/release-dates-of-tic-data, fetched direct 2026-09-08 (plain curl, HTTP 200) — its 2026 table's October row reads '16' in the Monthly column (the '30 - final' beside it is the annual SHC report on U.S. portfolio holdings of foreign securities, a different series), under the page header 'All data releases occur at 4 p.m. Washington, D.C. time'. Reference month August 2026 by the page's own 1.5-month lag rule. Corroborated mechanically by the same page's '11th business day plus 0 to 3 days' rule: the 11th business day of October 2026 is the 15th, so the rule permits 10-15 through 10-18. Filed estimate rather than confirmed on one count only — this lane may not self-confirm an event it discovered in-sweep, and no Treasury press release naming 2026-10-16 exists yet (the September release will carry that line, exactly as the June release carried the September date). The DATE is not in doubt; the estimate label is about provenance, not evidence. Checked 2026-09-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the tic-monthly-2026-09-16 initial research (2026-09-08). Proposed so the capital-account series does not die after one entry: it is the next observation of the same monthly gauge, and the next chance to score this ledger's valuation model (FT-tic-monthly-2026-09-16-1) out of sample. Impact LOW and symbols empty for the same reasons as its September sibling — 16:00 ET is after the equity cash close and the data is six weeks stale — with one difference worth noting: October's slot is far LESS crowded than September's, sharing the date with import-export-prices-2026-10-16 (08:30), industrial-production-2026-10-16 and opex-2026-10-16 but with no FOMC decision on it, so it is the cleaner date on which to test whether this print moves anything at all. September's does not carry that test, because a 14:00 ET Fed decision owns the session. Proposed as an estimate; nothing here licenses an entry."
+}
