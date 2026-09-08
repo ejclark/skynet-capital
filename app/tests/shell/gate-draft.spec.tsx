@@ -82,7 +82,7 @@ describe("the gate's idle draft step", () => {
     expect(gate?.getAttribute("aria-live")).toBe("polite");
   });
 
-  it("OptionGate labels the underlying field Symbol and the quantity field Contracts (100 shares)", () => {
+  it("OptionGate labels the underlying field Symbol", () => {
     const client = new QueryClient();
     render(
       <QueryClientProvider client={client}>
@@ -90,7 +90,8 @@ describe("the gate's idle draft step", () => {
       </QueryClientProvider>,
     );
 
+    // The Contracts field (and the rest of the chain-gated fields) is withheld until a symbol
+    // resolves (#2017 Phase 0 task 4d) — see option-gate.spec.tsx for its own label assertions.
     expect(screen.getByLabelText("Symbol")).toBeInTheDocument();
-    expect(screen.getByLabelText("Contracts (100 shares)")).toBeInTheDocument();
   });
 });

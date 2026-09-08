@@ -4,7 +4,14 @@ import { EXPIRATION_PATTERN, UNDERLYING_PATTERN } from "../trading/option-symbol
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { sendJson } from "./page-shell.js";
 
-/** Chain data for the ticket, degrading exactly as the legacy `ticketData` degrades. */
+/**
+ * Chain data for the ticket, degrading exactly as the legacy `ticketData` degrades.
+ *
+ * Every degraded response carries a machine-readable `reason` alongside the prose `chainNote`
+ * so the client can branch on *why* the chain didn't load without parsing English text:
+ * `"unlinked"` (no connected account yet), `"no-options"` (a genuine dead end — the symbol has
+ * no listed options), or `"failed"` (a feed/broker error — the ticket still works manually).
+ */
 export async function serveChain(
   res: ServerResponse,
   url: string,
@@ -29,6 +36,7 @@ export async function serveChain(
     sendJson(res, 200, {
       chainNote:
         "Live option chains load through your own connected account, and your session isn't linked to one yet.",
+      reason: "unlinked",
     });
     return;
   }
@@ -36,7 +44,10 @@ export async function serveChain(
     const today = new Date().toISOString().slice(0, 10);
     const expirations = await client.getExpirations(symbol, today);
     if (expirations.length === 0) {
-      sendJson(res, 200, { chainNote: `No listed options found for ${symbol}. Check the symbol.` });
+      sendJson(res, 200, {
+        chainNote: `No listed options found for ${symbol}. Check the symbol.`,
+        reason: "no-options",
+      });
       return;
     }
     const expiration =
@@ -68,6 +79,7 @@ export async function serveChain(
   } catch (error) {
     sendJson(res, 200, {
       chainNote: `Couldn't load the option chain right now — ${String(error)}. The ticket still works; premiums just can't be estimated.`,
+      reason: "failed",
     });
   }
 }
