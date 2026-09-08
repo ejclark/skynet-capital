@@ -8,9 +8,12 @@
  * the same reason `dashboard-feedback.ts` is: keep that file's own complexity budget
  * (`scripts/arch-scan.mjs`).
  */
+import { assembleChain } from "../adapters/alpaca-recommend-chain.js";
+import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import { resolveCompanionChat } from "../companion/companion-chat.js";
 import type { CompanionDeskDeps } from "../companion/companion-tools.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
+import { rankStructures } from "../options/recommend.js";
 import type { BotControlsStore } from "../server/bot-controls-store.js";
 import { createCompanionMessageLogStore } from "../server/companion-message-log.js";
 import { opaqueMemberId } from "../server/feedback-issue.js";
@@ -40,6 +43,10 @@ export interface CompanionSetupDeps {
    *  model dial, so a flip in the UI needs no redeploy. Optional: without it (offline/test
    *  wiring) the companion just runs `companion-model.ts`'s own default, same as before slice 4. */
   readonly botControls?: BotControlsStore;
+  /** Resolves a participant's own linked options client — the recommender tool's data source.
+   *  Optional, like `botControls`: without it, `get_structures_for_outlook` degrades to "not
+   *  available" rather than throwing. */
+  readonly optionsClientFor?: (participantId: string) => AlpacaOptionsClient | undefined;
 }
 
 export interface CompanionSetup {
@@ -62,10 +69,27 @@ export function setupCompanion(env: NodeJS.ProcessEnv, deps: CompanionSetupDeps)
     readFeedback: (id) => deps.feedbackLog.list(keyFor(id)),
     store: createProgressionStore(env, (m) => console.error(m)),
   });
+  const optionsClientFor = deps.optionsClientFor;
   const tools: CompanionDeskDeps = {
     snapshotFor: (id) => deps.hub.getState().participants.find((p) => p.id === id),
     readTradeActivity: deps.readFills,
     progression,
+    ...(optionsClientFor
+      ? {
+          rankFor: async (participantId, outlook) => {
+            const client = optionsClientFor(participantId);
+            if (!client) return undefined;
+            const today = new Date().toISOString().slice(0, 10);
+            const assembled = await assembleChain(client, outlook.symbol, today);
+            if (!assembled) return undefined;
+            return rankStructures(
+              outlook,
+              { spot: assembled.spot, volatility: assembled.volatility },
+              assembled.chain,
+            );
+          },
+        }
+      : {}),
   };
   const companion = resolveCompanionChat(
     env,

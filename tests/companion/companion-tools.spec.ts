@@ -15,8 +15,9 @@ import type {
 /**
  * The companion's ENTIRE tool surface — a closed allow-list of read-only lookups. This is one
  * half of the "never fires an order" invariant (`companion-no-order-path.spec.ts` is the other):
- * this file proves the dispatcher answers only the four named tools and refuses everything else,
- * including names an adversarial or confused model might invent.
+ * this file proves the dispatcher answers only the named tools and refuses everything else,
+ * including names an adversarial or confused model might invent. The fifth lookup,
+ * `get_structures_for_outlook`, has its own spec (`companion-recommend-tool.spec.ts`).
  */
 
 const snapshot: ParticipantSnapshot = {

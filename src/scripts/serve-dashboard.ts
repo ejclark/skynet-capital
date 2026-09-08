@@ -191,6 +191,9 @@ async function main(): Promise<void> {
     feedbackLog,
     ownerEmailFor,
     botControls,
+    // The same per-participant resolver the server config gets below — the recommender tool reads
+    // its chain through the member's OWN linked options client, never a shared one.
+    optionsClientFor: (id) => clientFor(id, dataSource.optionsClientFactory),
   });
 
   createDashboardServer({
