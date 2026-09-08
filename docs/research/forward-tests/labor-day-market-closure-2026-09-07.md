@@ -126,3 +126,51 @@ its own trailing-12 mean of 2.656** (sd 0.083, z +0.77), above 10 of the last 12
 leg 4](../events/labor-day-market-closure-2026-09-07.md)'s compression null, and it is recorded there as
 such — but FT-…-2 names the **10Y reopening**, and a forward test is scored on the instrument it
 registered or not at all.
+
+**The session settled, the guard held, and the drift alarm was itself wrong — 2026-09-08 16:53 ET,
+post-close. FT-…-1 is STILL NOT SCORED. No row above is edited.** A sixth cache-busted pull returns
+`^VIX` 2026-09-08 = **15.72**, and this one is settled rather than accumulating:
+
+| Pull (ET) | `^VIX` 09-08 value | `meta.regularMarketTime` (`^VIX`) | Settled? |
+|---|---|---|---|
+| 07:44 | 15.74 | 07:28 ET | no — 8.8 h before `regular.end` |
+| ~10:06 / ~10:09 / 10:11 | 15.69 / 15.65 / 15.50 | ~09:56 ET | no |
+| 13:52 | 15.28 | (intraday) | no |
+| **16:53** | **15.72** | **16:15:01 ET** = exactly `currentTradingPeriod.regular.end` | **yes** |
+
+Two pulls 90 s apart returned identical values for `^VIX` (15.72) and `^GSPC` (7673.52); `^GSPC`'s own
+stamp reads 16:20:01 ET against a 16:00 ET session end.
+
+**The 13:52 note's reading is falsified, and the correction matters more than the confirmation.** That
+note upgraded the hazard to "the reads were early **and travelling toward the line that decides the
+test**," measuring a monotone 38% closure of the gap to 14.53. The settle shows the full path was
+15.74 → 15.69 → 15.65 → 15.50 → 15.28 → **15.72** — a **round trip**, not a trend. The intraday
+sequence was noise sampled four times, and reading a direction into it was the same class of error as
+the three guards: a story built on a number that had not finished moving. What survives is the guard's
+*rationale* (an unsettled bar is not a close); what dies is its *alarm* (the answer was never
+travelling).
+
+**Why the test is still not scored, when the number is now settled.** The registered guard is a
+**sampling-date** rule: score the 09-08 close only from a pull dated strictly after 2026-09-08 (ET).
+This pull is dated 2026-09-08, so the test is unscorable today — and 15.72 is above 14.53, which is
+precisely why the rule is obeyed rather than reinterpreted. Three guards have already failed here, and
+every one of them failed in the direction that **agreed with the hypothesis**; a fourth reinterpretation
+made at 16:53 ET, on the same day, while the reading passes, would be indistinguishable from that
+pattern from the outside. It costs nothing: **Score by** is **2026-09-09**, so the first correctly-timed
+pull is still an on-time one.
+
+**A candidate replacement guard, evidenced today but NOT adopted for FT-…-1.** Two checks composed:
+(a) the symbol's `meta.regularMarketTime` is at or past its own `currentTradingPeriod.regular.end`, and
+(b) `^GSPC` carries a bar for the same date. Today's six pulls separate cleanly on (a) — every
+in-progress read fails it, the 16:53 read is the first to pass. (a) alone would **not** have caught the
+2026-09-07 holiday phantom, which is a completed bar on a closed equity session and would carry its own
+end-of-session stamp — that hazard is (b)'s job, and (b) alone went TRUE at the 09:30 opening bell.
+Together they cover both. **This is reasoned for the phantom half and measured for the in-progress
+half** — the 09-07 stamp was never captured before the fact, so that leg is an inference, labelled as
+one. It is banked for a future event, not used here: FT-…-1 scores tomorrow under the guard it
+registered, which doubles as the composed criterion's first out-of-sample check.
+
+**FT-…-2 is live, not void — re-verified from the primary.** A cache-busted `auctions_query` (HTTP 200)
+at 16:53 ET shows the 09-09 10Y reopening `91282CRF0` still **$39B**, announce-dated 2026-09-03, with
+`bid_to_cover_ratio` `null` — it prints ~13:00 ET on 2026-09-09. No re-announcement, resize or
+postponement, so the void clause has not fired and the 2.35 line stands exactly as pre-committed.
