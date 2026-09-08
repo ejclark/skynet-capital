@@ -1,8 +1,8 @@
 # Treasury long-end buyback size increase takes effect ($4B/op, 10-30Y) — treasury-buyback-increase-2026-09-09
 
 **Kind:** rates · **Date:** 2026-09-09 (confirmed, TSY: home.treasury.gov/news/press-releases/sb0607, dated 2026-08-19 — sizes/sectors/dates read verbatim off the primary, fetched direct via plain curl (HTTP 200) 2026-09-02) · **Impact:** medium
-**Last assessed:** 2026-09-06
-<!-- probe-ref: {"symbols":{},"vix":14.53,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","jobs-2026-09-04","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-plus-meeting-2026-09-06","ppi-2026-09-10","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11"],"screenStreak":0} -->
+**Last assessed:** 2026-09-08
+<!-- probe-ref: {"symbols":{},"vix":15.74,"daysBand":"medium:0+","adjacentIds":["aapl-iphone-18-launch-2026-09-09","buyback-blackout-start-2026-09-12","cpi-2026-09-11","ecb-decision-2026-09-10","eia-steo-2026-09-09","fomc-blackout-start-2026-09-05","g20-energy-abundance-ministerial-houston-2026-09-14","gastech-2026-09-14","iea-omr-2026-09-11","jobs-2026-09-04","labor-day-market-closure-2026-09-07","missouri-map-ballot-deadline-2026-09-08","mts-august-2026-09-11","opec-momr-2026-09-10","opec-plus-meeting-2026-09-06","ppi-2026-09-10","qss-q2-2026-09-09","sp-rebalance-proforma-2026-09-04","sp-rebalance-proforma-capped-2026-09-11","treasury-10y-note-2026-09-09","treasury-30y-bond-2026-09-10","treasury-3y-note-2026-09-08","treasury-buyback-10y20y-2026-09-10","treasury-coupon-announcement-2026-09-10","umich-sentiment-prelim-2026-09-11"],"screenStreak":0} -->
 
 ## At a glance
 
@@ -14,22 +14,25 @@ swaps long-term for short-term debt; no new bank reserves) — and its own first
 inside a day: the 10Y fell ~6bps on announcement, fully round-tripped by 8/20, and by 9/1 sat
 ~**4.77%**, *above* its pre-announcement level, with the 30Y ~**5.27%** after a 19-year high.
 **Two facts keep 9/9 a non-event on its own date.** The promised updated buyback schedule is
-**still unpublished** — re-fetched 9/6, 18 days on, masthead still "For Publication August 5, 2026",
-every long-end row still capped at $2B — so no published number yet confirms the step-up. And the
-schedule lists **no long-end operation on 9/9 itself**: 9/9 is an eligibility date, and the first
-test of the $4B floor is the 10-20Y operation on **9/10**, whose preliminary eligible-CUSIP list
-posts 9/9 at 11:00 ET. **Updated 9/6:** the hot August jobs print (+162k vs +53k consensus)
-bear-flattened the curve — the 2Y hit a Jan-2025 high of **4.377%** while the **30Y was little
-changed at 5.245%**, below its 9/2 peak. That is the corridor's first hawkish surprise *not* to
-make a fresh long-end high — but it is not evidence this program works, because no operation has
-yet run at the doubled size. Nothing here is a trade: read 9/9 as context for the Sep 1→16
-rate-path corridor, not as its own catalyst.
+**still unpublished** — re-fetched 9/8, 20 days on, byte-identical, masthead still "For Publication
+August 5, 2026", every long-end row still capped at $2B — so no published number yet confirms the
+step-up. And the schedule lists **no long-end operation on 9/9 itself**: 9/9 is an eligibility date,
+and the first test of the $4B floor is the 10-20Y operation on **9/10**, whose preliminary
+eligible-CUSIP list posts 9/9 at 11:00 ET. **Updated 9/8, and it cuts both ways.** The increase is
+**more real in execution than assumed** — Treasury's own operations data shows the $2B cap has been
+*binding*, not demand: 10-20Y filled its cap **25 of 25** times since May-2024 and 20-30Y **24 of
+26**, on offers never below **$6.4B**. But it is also **smaller than it sounds**: every other
+nominal sector (1Mo-2Y, 2-3Y, 3-5Y, 5-7Y, 7-10Y) *already* ran a $4B cap, so 9/9 lifts the long end
+to parity rather than creating a new tier — and the seven doubled operations through 11/4 add
+**~$14B** of buying against **$61B** of 10Y+30Y supply auctioned this week alone, with coupon sizes
+unchanged from June. Nothing here is a trade: read 9/9 as context for the Sep 1→16 rate-path
+corridor, not as its own catalyst.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-3) | Stand aside | High | Three days out, and 9/9 carries no long-end operation — it is an eligibility date whose only hard artifact is an 11:00 ET CUSIP list; the announcement (8/19) already happened and its yield relief round-tripped. | A fresh Treasury statement materially expanding the program (size, sectors, or funding) before **2026-09-09** |
+| Today (D-1) | Stand aside | High | One day out, and 9/9 still carries no long-end operation — it is an eligibility date whose only hard artifact is an 11:00 ET CUSIP list; the announcement (8/19) already happened and its yield relief round-tripped. | A fresh Treasury statement materially expanding the program (size, sectors, or funding) before **2026-09-09** |
 | This week | Stand aside | High | The tape belongs to the stack around this date, not to it: 10Y auction 9/9, then 30Y auction + coupon announcement + first 10-20Y op at the new size + PPI + ECB all on 9/10, CPI 9/11 — with the Fed silent in blackout since 9/5, so those prints carry the marginal weight. | A ≥$4B size printing on the 9/9 announcement and the long end visibly rallying through that stack |
-| This month | Watch | Medium | Operations begin 9/9, inside the same window as the 10Y (9/9), 30Y (9/10), PPI (9/10), CPI (9/11) and FOMC (9/16) — a genuine but secondary input to the same duration channel; size nothing into it alone given the fast-faded first reaction. | Long-end yields making a fresh high despite the larger buybacks running, confirming analysts' "limited relief" read |
+| This month | Watch | Medium | Operations begin 9/9, inside the same window as the 10Y (9/9), 30Y (9/10), PPI (9/10), CPI (9/11) and FOMC (9/16) — a genuine but secondary input to the same duration channel; size nothing into it alone given the fast-faded first reaction and the ~$14B-vs-$61B scale gap. | The **30Y par yield closing below 5.00% on 2026-09-30**, after the first three doubled-size operations — a >24bp durable rally that would break the "structural supply, not liquidity" read (registered as FT-treasury-buyback-increase-2026-09-09-2) |
 | This quarter | Stand aside on this program specifically | Medium | Analysts already frame it as unlikely to change the long-end yield trajectory on its own — deficit concerns, above-target inflation, and heavy corporate issuance are the structural drivers, not something a buyback fixes. | Bessent expanding the program beyond $4B/op or tapping the ~$1T TGA at scale, which would be a materially bigger fiscal lever than what's dated here |
 
 **Signals & conditions:**
@@ -43,13 +46,18 @@ rate-path corridor, not as its own catalyst.
   scale to fund it → a genuinely bigger fiscal lever than what's dated here; would need its own
   reassessment, not a footnote to this one.
 - The updated tentative buyback schedule sb0607 promised is **still unpublished** (re-checked at the
-  primary 9/6, 18 days on) → until it posts, the 9/9 operation announcement (preliminary
-  eligible-CUSIP list 11:00am ET) is the only place a hard $4B-or-more number can appear.
-- **Watch (dated):** jobs **9/4** (+162k, done) · Fed blackout **9/5→9/17** · OPEC+ **9/6** · 3Y
-  **9/8** · 10Y auction + buyback increase effective (eligibility only; no long-end op that day) +
-  first ≥$4B CUSIP list 11:00 ET **9/9** · 30Y + coupon announcement + **first 10-20Y op at the new
-  size** + PPI + ECB **9/10** · CPI **9/11** · FOMC **9/16** · 20-30Y op **9/24** · 10-20Y op
-  **10/1** (proposed) · program window closes at the Quarterly Refunding **11/4**.
+  primary 9/8, 20 days on, byte-identical) → until it posts, the 9/9 operation announcement
+  (preliminary eligible-CUSIP list 11:00am ET) is the only place a hard $4B-or-more number can appear.
+- **The 9/10 operation's accepted par is the single cleanest read on whether the step-up is real** —
+  the $2B cap bound in 25 of 25 prior 10-20Y operations, so anything materially under $3.5B accepted
+  means Treasury is rationing on price, not size (FT-treasury-buyback-increase-2026-09-09-1).
+- **Watch (dated):** jobs **9/4** (+162k, done) · Fed blackout **9/5→9/17** · OPEC+ **9/6** (held
+  October output flat; next 10/4) · 3Y **9/8** · 10Y auction ($39B) + buyback increase effective
+  (eligibility only; no long-end op that day) + first ≥$4B CUSIP list 11:00 ET **9/9** · 30Y ($22B)
+  + coupon announcement + **first 10-20Y op at the new size** + PPI + ECB **9/10** · CPI **9/11** ·
+  TIPS 10-30Y op, $500M, *not* covered by the increase **9/15** (proposed) · FOMC **9/16** · 7-10Y
+  op at its standing $4B cap **9/17** (proposed) · 20-30Y op **9/24** · 10-20Y op **10/1** ·
+  program window closes at the Quarterly Refunding **11/4**.
 
 ## Initial research
 
@@ -175,6 +183,24 @@ guard-shaped. **2026-09-02 update, and it cuts the base case's way:** with the 1
 relief has reversed a full week before the larger operations run — the "structural supply problem,
 not a liquidity problem" read is now the tape's read too, not just the analysts'.
 
+**2026-09-08 update — the mechanism is better understood, and the stance is unchanged because the
+two new facts cancel.** Both come off Treasury's own operations data (`fiscaldata.treasury.gov`
+`buybacks_operations`), read directly for the first time in this ledger rather than through press
+narration. *Upward:* the $2B ceiling has been the **binding constraint, not demand** — the 10-20Y
+bucket accepted the full cap in **25 of 25** operations since 2024-05 and 20-30Y in **24 of 26**, on
+offers whose minimum was **$6.4B** and median **$19.7B**. Doubling a cap that binds every time is a
+real change in executed purchases, not a symbolic ceiling. *Downward, and larger:* the increase
+lifts the long end to **parity with a size the rest of the nominal curve already had** — 1Mo-2Y,
+2-3Y, 3-5Y, 5-7Y and 7-10Y all ran $4B caps before sb0607 existed, and only the two long-end
+buckets sat at $2B — so this is the removal of a discount, not an extraordinary intervention. And
+the totals are small: **+$2B per operation × 7 operations** in the 09-09→11-04 window ≈ **+$14B**
+over eight weeks, against **$61B** of 10Y+30Y issuance in this single week, at reopening sizes
+(**$39B**/**$22B**) **identical to June's** — which independently corroborates Bessent's stated
+"auctions will continue as usual despite the expanded buyback program" (Fox Business). The program
+adds to demand; it subtracts nothing from supply. **Neither fact is directional**, and the base
+case stands: modest, technical, context for the corridor — never a catalyst. Registered as
+FT-treasury-buyback-increase-2026-09-09-1 (execution) and -2 (the base case's dated guard).
+
 **Kill switches:**
 
 - **Long-end yields (10Y/30Y) easing durably (multiple sessions, not one day) after operations begin
@@ -207,6 +233,7 @@ not a liquidity problem" read is now the tape's read too, not just the analysts'
 | 2026-09-02 | D-7 | **Primary resolved — kill switch 4 fired.** sb0607 fetched direct, plain curl HTTP 200 (WebFetch still times out — the tool artifact already recorded on treasury-borrowing-estimates-2026-11-02). Verbatim: $2B/op max → "at least $4 billion per operation", 10-20Y + 20-30Y, "effective September 9, 2026 … through November 4, 2026". Leg-1 caveat retired; calendar entry flipped estimate → confirmed (`TSY:`) in this PR. One line the press never carried: "An updated tentative Treasury buyback schedule will be released at a later date" — still unpublished, so treasury-buyback-10y20y-2026-09-10 (est) keeps its superseded $2B cap. **Tape: the relief is reversed, not merely faded** — 10Y ~4.77% (9/1), highest since Jan-2025, vs ~4.68% pre-announcement 8/19; 30Y 5.27% after a 19-year-high 5.34%; Bloomberg 9/1 calls it the 30-year's worst stretch since 2006. Adjacency — peers: n/a (`symbols: []`). Macro: Warsh's 8/28 keynote hawkish (2Y +12bp to 4.356%, 10Y 4.726%, 30Y 5.211%; Sep hike odds ~35% → ~57%); ISM Mfg 54.6 vs 55.2 cons. and JOLTS openings 7.271M / quits 1.9% (both 9/1) — yields rose anyway, supply over data. VIX 16.44 (9/1) from ~15.2, +1.2pt, under the 3pt bar but off a sub-15 8/31 close. Geopolitics reverses the last row's de-escalation read: Larak Island strike (8/30), Iranian attacks on two US bases in Jordan, Kharg Island threatened, Brent ~$91-94. Cadence band stepped medium:8+ → medium:0+. No new dated adjacency: sb0607's own "next Quarterly Refunding, scheduled for November 4, 2026" is already tracked as treasury-refunding-2026-11-04 (est); the escalation paths (TGA ~$950B, >$4B/op, Bessent's "Treasury Twist") stay undated. | Stance survives and strengthens; estimate → confirmed is a date/size label change only, not directional | 2026-09-04 (medium, 0-7d band: every 2d) |
 | 2026-09-04 | D-5 | **Replacement watch item re-checked at the primary — still open.** Tentative Buyback Schedule re-fetched direct (home.treasury.gov/system/files/221/Tentative-Buyback-Schedule.pdf, HTTP 200, text layer read): masthead still "For Publication August 5, 2026" — the pre-announcement edition, 16 days after sb0607 — with the 09-10 10-20Y row and the 09-24 20-30Y row both still capped at $2B. No published number confirms the step-up yet; the 09-09 operation announcement (preliminary CUSIPs 11:00am ET) remains the first place one can appear. **Date nuance the schedule settles:** there is NO long-end operation on 09-09 itself — that day's only op is a $12.5B cash-management buyback in 1Mo-2Y (announced 09-08) — so 09-09 is an eligibility date and the $4B floor's first real test is the 09-10 10-20Y op. Adjacency — peers: n/a (`symbols: []`). Macro: Waller 09-03 said he'd be inclined to hold absent inflation surprises → Sep hike odds 63.2%→50.4% (CME FedWatch), 10Y ~4.78%→~4.75%, 30Y ~5.25%, 2Y 4.317%, S&P +1.06% to 7,747.71 — a Fed-path move, not a buyback move. **Jobs (09-04, 08:30 ET, cons. +53k / U-3 4.1%) had not printed when this row was written (22:40 ET 09-03); unscored here, first item for the next row.** VIX 15.20 (09-03) from 16.44, −1.24, under the 3pt bar. Geopolitics escalated again: Iran missiles at Kuwait, Brent >$96 (09-03), crude +7% on the week, Hormuz transit a wartime-record 17mb/d under US escort — inflation-side pressure against durable long-end relief. Adjacency set gained two already-tracked ids (eia-steo-2026-09-09, mts-august-2026-09-11); no new dated event found — every row on the re-fetched schedule is either tracked or outside the corridor. | None — stance unchanged | 2026-09-06 (medium, 0-7d band: every 2d) |
 | 2026-09-06 | D-3 | **Jobs scored (the last row's deferred item) — the corridor's first hawkish surprise that did NOT print a fresh long-end high.** BLS primary: +162k vs +53k cons. (best since March), U-3 4.1% unchanged, AHE +0.3% to $37.75, June/July revised +55k net (Jul −23k → +21k). Tape bear-flattened: 2Y +4bp to 4.377% (highest since Jan-2025), 10Y +2bp to 4.784%, **30Y little changed at 5.245%** — below its 09-02 peak of 5.27%. Sep hike odds 50.4% → ~58%. **Read honestly: this is not evidence the buyback works** — no long-end operation has run at the doubled size and none can before 09-10; it is front-end repricing, and the "fresh cycle high" kill switch simply did not fire this week. **Schedule still stale at 18 days:** re-fetched direct 09-06 (HTTP 200, 125,547 bytes, md5 79b65955…), byte-identical in size to the 09-03/09-05 fetches, masthead still "For Publication August 5, 2026", every post-09-09 10-20Y/20-30Y row still $2B. Footnote 1 verbatim: "A preliminary list of eligible CUSIPs will be disclosed at 11:00 am ET on the Announcement Date" — the 09-10 op's Announcement Date is 09-09, so 09-09 11:00 ET stays the first place a hard ≥$4B number can appear. Adjacency — peers: n/a (`symbols: []`). Macro: jobs above; **Fed blackout began 09-05** (through 09-17), so no Fed speech can move this corridor before FOMC and the marginal weight shifts onto PPI 09-10, CPI 09-11 and the 10Y/30Y auctions. VIX 14.53 (09-04) from 15.20, −0.67, under the 3pt bar. Geopolitics: Brent front-month settled $95.04 on 09-04, ~+9% on the week (best since mid-July) on resumed US-Iran strikes and Kuwait engaging Iranian missiles/drones; 09-04-dated coverage puts Hormuz throughput at ~4.9mb/d vs 21.6 pre-war — the prior row's "17mb/d" does not survive that, left standing (rows are append-only) and superseded here. OPEC+ meets **today 09-06** on October quotas; no outcome published at write time (Q4 pause already signalled 08-02). Adjacency set grew 12 → 21 tracked ids; the one that matters is **treasury-coupon-announcement-2026-09-10** (~11:00 ET) stacking onto 09-10 beside the 30Y auction, PPI and the ECB — the first $4B-eligible long-end operation's own tape effect will be unmeasurable. No new dated event inside the corridor, but the primary schedule carries two long-end ops under the doubled regime the calendar did not track — proposed here as estimates: `treasury-buyback-10y20y-2026-10-01` and `treasury-buyback-10y20y-2026-11-04`, completing the 09-09 → 11-04 series. | None — stance unchanged | 2026-09-08 (medium, 0-7d band: every 2d) |
+| 2026-09-08 | D-1 | **First direct read of Treasury's own operations data, and it reframes the event in both directions.** `fiscaldata.treasury.gov` `buybacks_operations` (plain curl, HTTP 200), all operations since 2024-05: the **$2B cap has been binding, not demand** — 10-20Y accepted the full cap **25/25**, 20-30Y **24/26**, on offers never below **$6.4B** (10-20Y median $19.7B, max $36.0B; the two exceptions are 20-30Y taking $205M against $36.0B offered on 2026-03-19 and $785M against $25.4B on 2025-11-20, so Treasury *can* ration on price). Doubling a cap that binds every time is a real execution change. **But the same schedule shows it is parity, not escalation:** every other nominal sector already ran $4B — 1Mo-2Y (08/06), 3Y-5Y (08/21), 5Y-7Y (08/26), 7Y-10Y (09/17), 2Y-3Y (10/06) — only 10-20Y and 20-30Y sat at $2B. **Scale, primary-verified:** +$2B × **7** long-end ops in the 09-09→11-04 window ≈ **+$14B** over eight weeks, versus `auctions_query`'s **$39B** 10Y (09-09) + **$22B** 30Y (09-10) = **$61B** in this week alone, at reopening sizes **identical to June's $39B/$22B** — corroborating Bessent's "auctions will continue as usual" (Fox Business). Additive to demand, subtractive from nothing. **Schedule still stale at 20 days:** re-fetched 09-08, HTTP 200, 125,547 bytes, md5 `79b65955…` — byte-identical to the 09-03/09-05/09-06 fetches, masthead still "For Publication August 5, 2026", 09-10 row still $2B. Treasury's press-release index re-read: latest is **sb0621** (09-08, IRS/tax-exempt) and **sb0607** remains the last buyback release — no expansion, no TGA confirmation, no updated schedule. Adjacency — peers: n/a (`symbols: []`). **Macro: there is no new tape.** Labor Day closed cash equities and bonds 09-07 and 09-08 had not opened at write time (07:44 ET), so the Treasury par curve still ends **09-04** (2Y 4.37 · 10Y 4.78 · 20Y 5.25 · 30Y 5.24) — the same readings the last row scored jobs against. VIX **15.74** at 07:29 ET 09-08 (Cboe pre-open, not a close) vs the **14.53** 09-04 close, +1.21, under the 3pt bar. Geopolitics: Brent **$97.05** on 09-07, highest since July 2026, on resumed direct US-Iran strikes — up from $95.04 on 09-04 and the clearest inflation-side pressure against durable long-end relief. OPEC+ **held October output unchanged on 09-06** and meets next **10/4**; that date is already proposed by the treasury-3y-note-2026-09-08 lane, so no duplicate filed here. Adjacency set 21 → 25 (new: iea-omr-2026-09-11, labor-day-market-closure-2026-09-07, opec-momr-2026-09-10, qss-q2-2026-09-09). Two new dated events proposed off the schedule primary: `treasury-buyback-tips-10y30y-2026-09-15` (the only other long-end op in the window, explicitly NOT covered by sb0607, $500M cap that has never filled above ~28%) and `treasury-buyback-7y10y-2026-09-17` (the $4B parity benchmark, day after FOMC). Registered FT-treasury-buyback-increase-2026-09-09-**1** (09-10 op accepts ≥$3.5B) and **-2** (30Y par ≥5.00% on 09-30). | None — the two findings cut opposite ways and cancel; base case stands | 2026-09-10 — but the event passes 09-09, so the next assessment is the close-out, not a pulse |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
