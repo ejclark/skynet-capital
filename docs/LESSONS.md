@@ -2165,3 +2165,41 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   added as their own scripts, so it runs the same five checks CI's `verify` job runs. `ship.sh
   open` now refuses to push what CI would reject.
 - **SIDE QUESTS:** none.
+
+### The entire event-research lane went dark — every matrix leg failed identically, `claude-code-action@v1`'s floating tag moved to a broken release mid-session
+
+- **SHA:** (this PR)   **DATE:** 2026-09-08   **STATUS:** closed
+- **SIGNAL:** Eric asked why ~89 `[event-research]` receipt issues were piling up with zero pickup
+  (#1923 among them) despite the pipeline looking otherwise healthy. Investigation first found a
+  narrower gap (`flag-stall`'s audit was comment-only, #2221) — but a second pass, prompted by
+  "wouldn't solving the root cause prevent this entire mess", pulled the actual run logs instead of
+  reasoning from the workflow's own doc comments.
+- **ROOT CAUSE:** two consecutive `workflow_dispatch(scan)` runs (run #2210 at 22:24, #2215 at
+  22:29) failed **every single `research due events (...)` matrix leg** — not one event, all of
+  them, ~14–25 per run — each in 9–12 seconds with the identical error: `ReferenceError: Claude
+  Code native binary not found at /home/runner/.local/bin/claude ... errorClass:
+  "executable_not_found", code: "ENOENT"`, immediately after the installer itself printed "✔
+  Claude Code successfully installed!". Comparing resolved SHAs across runs: a run at 17:50 the
+  same day (success) resolved the floating `anthropics/claude-code-action@v1` tag to SHA
+  `9c5ddab2...` and installed **Claude Code v2.1.263** — worked fine. The 22:24/22:29 runs resolved
+  the *same* `@v1` tag to a *different* SHA `0d0e0876...`, installing **v2.1.265** — a newer
+  release whose install step regressed. The pipeline is entirely push-driven (a merged research PR
+  is the only thing that re-triggers the next scan), so once every leg in a batch fails, zero PRs
+  merge, zero pushes land, and the whole self-perpetuating chain goes silent — not "one stuck
+  event," the entire lane, until something else pushes to `main` or a human manually re-dispatches.
+- **PREVENTION:** all 6 `anthropics/claude-code-action@v1` call sites across
+  `moneypenny-events.yml`, `moneypenny-repair.yml`, and `claude.yml` are now pinned to the last
+  confirmed-good SHA (`9c5ddab2e6d17b83ea679153b31f1d5f023cf636`, v2.1.263) instead of the floating
+  `v1` tag. A floating major-version tag on a third-party action is a supply-chain risk this repo
+  had no defense against — any upstream release can silently break every session using it, with no
+  warning and no revert path short of "notice the backlog and dig through run logs." Bumping
+  forward again should happen deliberately (verify one matrix leg succeeds on the new SHA before
+  repinning), never by letting the tag float again.
+- **SIDE QUESTS:** #2221 (the `flag-stall` repair-dispatch gap) still ships — it's a genuine,
+  independent gap (a single event's session dying for its own reason while the rest of the lane
+  works fine) and remains the backstop for that rarer case; it just isn't the reason ~89 issues
+  piled up at once. Whether the workflow's own "no cron, event-driven only" design (accepted
+  residual: "a completely quiet repo checks nothing until the next merge or a manual scan
+  dispatch") should grow a cheap self-check after a fully-failed batch is a separate, smaller
+  question — logged to `docs/IDEAS.md` rather than built here, since this pin already removes the
+  actual trigger for it.

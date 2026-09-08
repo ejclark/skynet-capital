@@ -140,7 +140,7 @@ jobs:
             carries the evidence but nothing will repair it.
 
       - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           # Without this the lane can DETECT but never REPAIR. A run of this lane is woken by
           # `workflow_run` and inherits the failed run's actor, so a failure that a bot triggered
@@ -168,7 +168,7 @@ jobs:
       # with the step above by construction (one needs `needs.triage.outputs.issue`, this needs
       # `workflow_dispatch`), so exactly one of the two ever runs per invocation of this job.
       - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch'
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           allowed_bots: "github-actions,claude"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
