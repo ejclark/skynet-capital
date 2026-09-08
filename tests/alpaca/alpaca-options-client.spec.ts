@@ -398,6 +398,86 @@ describe("AlpacaOptionsClient", () => {
     });
   });
 
+  describe("getBars (#2017 Phase 1 chart backfill)", () => {
+    const bar = (t: string, o: number, h: number, l: number, c: number, v: number) => ({
+      t,
+      o,
+      h,
+      l,
+      c,
+      v,
+    });
+    const withBars = (body: unknown) =>
+      new AlpacaOptionsClient(fakeTransport({}), fakeTransport({ "/v2/stocks/MSFT/bars": body }));
+
+    it("is undefined when there is no data transport", async () => {
+      const bare = new AlpacaOptionsClient(fakeTransport({}));
+      expect(await bare.getBars("MSFT", "2026-03-01", "2026-09-08")).toBeUndefined();
+    });
+
+    it("parses OHLCV bars in feed order, every field a number and t a string", async () => {
+      const log: Array<{ path: string; body?: unknown }> = [];
+      const client = new AlpacaOptionsClient(
+        fakeTransport({}),
+        fakeTransport(
+          {
+            "/v2/stocks/MSFT/bars": {
+              bars: [
+                bar("2026-09-03T04:00:00Z", 420.1, 428.6, 419.8, 425.1, 18_204_000),
+                bar("2026-09-04T04:00:00Z", 425.5, 431.2, 424.9, 430.0, 21_010_500),
+              ],
+            },
+          },
+          log,
+        ),
+      );
+      const bars = await client.getBars("MSFT", "2026-03-01", "2026-09-08");
+      expect(bars).toEqual([
+        { t: "2026-09-03T04:00:00Z", o: 420.1, h: 428.6, l: 419.8, c: 425.1, v: 18_204_000 },
+        { t: "2026-09-04T04:00:00Z", o: 425.5, h: 431.2, l: 424.9, c: 430.0, v: 21_010_500 },
+      ]);
+      expect(log[0]?.path).toContain(
+        "/v2/stocks/MSFT/bars?timeframe=1Day&start=2026-03-01&end=2026-09-08&limit=1000",
+      );
+    });
+
+    it("drops a bar missing a field whole and keeps the rest — never a partial bar", async () => {
+      const client = withBars({
+        bars: [
+          bar("2026-09-03T04:00:00Z", 420.1, 428.6, 419.8, 425.1, 18_204_000),
+          { t: "2026-09-04T04:00:00Z", o: 425.5, h: 431.2, l: 424.9, v: 21_010_500 },
+          { t: "2026-09-05T04:00:00Z", o: 430.2, h: "not a number", l: 428.0, c: 429.5, v: 1 },
+          { o: 430.2, h: 433.0, l: 428.0, c: 429.5, v: 1 },
+          bar("2026-09-08T04:00:00Z", 429.0, 429.0, 429.0, 429.0, 0),
+        ],
+      });
+      const bars = await client.getBars("MSFT", "2026-03-01", "2026-09-08");
+      expect(bars?.map((b) => b.t)).toEqual(["2026-09-03T04:00:00Z", "2026-09-08T04:00:00Z"]);
+      // A zero-volume bar is a legitimate bar, not a corrupt one.
+      expect(bars?.[1]?.v).toBe(0);
+    });
+
+    it("returns an EMPTY array for a real empty answer — not the undefined of a failure", async () => {
+      const empty = await withBars({ bars: [] }).getBars("MSFT", "2026-03-01", "2026-09-08");
+      expect(empty).toEqual([]);
+      expect(empty).not.toBeUndefined();
+      // A 2xx with no `bars` key at all is the same honest nothing.
+      expect(await withBars({}).getBars("MSFT", "2026-03-01", "2026-09-08")).toEqual([]);
+    });
+
+    it("fails soft on a non-2xx response and on a throw", async () => {
+      const notFound = new AlpacaOptionsClient(fakeTransport({}), fakeTransport({}));
+      expect(await notFound.getBars("MSFT", "2026-03-01", "2026-09-08")).toBeUndefined();
+
+      const throwing = new AlpacaOptionsClient(fakeTransport({}), {
+        get: () => Promise.reject(new Error("network down")),
+        post: () => Promise.reject(new Error("unused")),
+        delete: () => Promise.reject(new Error("unused")),
+      });
+      expect(await throwing.getBars("MSFT", "2026-03-01", "2026-09-08")).toBeUndefined();
+    });
+  });
+
   describe("getOptionLifecycleActivities (#468 criterion 6)", () => {
     it("reads the four lifecycle activity types, newest first, from the trading transport", async () => {
       const log: Array<{ path: string; body?: unknown }> = [];

@@ -12,6 +12,7 @@ import {
   previewOptionOrder,
 } from "../trading/option-ticket.js";
 import type { Session } from "./auth/session.js";
+import { serveBars } from "./bars-route.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
 import { opaqueMemberId } from "./feedback-issue.js";
@@ -57,7 +58,7 @@ async function reviewEstimates(
 
 /**
  * THE OPTIONS TICKET AS DATA — the shell's twin of the legacy `/trade` option
- * pipeline (`option-order-review.ts`), three endpoints:
+ * pipeline (`option-order-review.ts`), plus the cockpit's read-only enrichment feeds:
  *
  *   GET  /api/trade/chain          → expirations + one expiration's chain + spot, through the
  *                                    REQUESTER'S OWN options client only — exactly the legacy
@@ -66,6 +67,9 @@ async function reviewEstimates(
  *   GET  /api/trade/quote          → last price + day $/% change for one symbol (#2017 Phase 0.9's
  *                                    quote header), same requester-only client and fail-soft
  *                                    `quoteNote` degrade as the chain (`quote-route.ts`).
+ *   GET  /api/trade/bars           → daily OHLC+volume bars for the chart section (#2017 Phase 1's
+ *                                    chart build-out), same requester-only client and fail-soft
+ *                                    `barsNote` degrade (`bars-route.ts`).
  *   POST /api/trade/option/review  → the pure `option-ticket.ts` rules against the desk snapshot
  *                                    plus best-effort premium/spot estimates. A refused order is
  *                                    a rendered explanation, never an error.
@@ -264,8 +268,8 @@ async function submitOption(
   sendJson(res, 200, await config.submitOptionTrade(request, requesterId));
 }
 
-/** Handle `/api/trade/chain`, `/api/trade/quote`, and `/api/trade/option/*`. Returns true when
- *  answered. */
+/** Handle `/api/trade/chain`, `/api/trade/quote`, `/api/trade/bars`, and `/api/trade/option/*`.
+ *  Returns true when answered. */
 export async function serveOptionApi(
   req: IncomingMessage,
   res: ServerResponse,
@@ -274,7 +278,14 @@ export async function serveOptionApi(
   session: Session | undefined,
 ): Promise<boolean> {
   const isOrder = path === "/api/trade/option/review" || path === "/api/trade/option/submit";
-  if (path !== "/api/trade/chain" && path !== "/api/trade/quote" && !isOrder) return false;
+  if (
+    path !== "/api/trade/chain" &&
+    path !== "/api/trade/quote" &&
+    path !== "/api/trade/bars" &&
+    !isOrder
+  ) {
+    return false;
+  }
   // Identity: the session and nowhere else — exactly the legacy ticket's resolution.
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
   if (path === "/api/trade/chain") {
@@ -283,6 +294,10 @@ export async function serveOptionApi(
   }
   if (path === "/api/trade/quote") {
     if (requireGet(req, res)) await serveQuote(res, req.url ?? "/", config, requesterId);
+    return true;
+  }
+  if (path === "/api/trade/bars") {
+    if (requireGet(req, res)) await serveBars(res, req.url ?? "/", config, requesterId);
     return true;
   }
   const raw = await readJsonPost(req, res, OPTION_BODY_CAP_BYTES);
