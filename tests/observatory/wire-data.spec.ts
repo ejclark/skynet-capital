@@ -73,6 +73,52 @@ describe("buildWireTradeRows", () => {
     );
     expect(buildWireTradeRows(many, [snapshot()], 2)).toHaveLength(2);
   });
+
+  // #2017 Phase 1 slice 12 — the who-else-traded row's server-side symbol filtering.
+  describe("underlyingFilter", () => {
+    it("keeps a symbol's option fills whose OCC underlying matches, even though the raw symbol isn't the bare ticker", () => {
+      const rows = buildWireTradeRows(
+        [record({ orderId: "opt", symbol: "NVDA261016C00185000" })],
+        [snapshot()],
+        10,
+        "NVDA",
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.symbol).toBe("NVDA261016C00185000");
+    });
+
+    it("drops non-matching rows, even ones that would otherwise fit within the original limit", () => {
+      const rows = buildWireTradeRows(
+        [
+          record({ orderId: "a", symbol: "NVDA" }),
+          record({ orderId: "b", symbol: "TSLA" }),
+          record({ orderId: "c", symbol: "TSLA260918P00420000" }),
+        ],
+        [snapshot()],
+        10,
+        "NVDA",
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.symbol).toBe("NVDA");
+    });
+
+    it("filters BEFORE the `limit` slice, so an older matching fill survives an unrelated global cap", () => {
+      // 3 recent TSLA fills (unrelated to the ticket's symbol) followed by an OLDER NVDA fill.
+      // A naive filter-after-slice at limit=3 would slice down to the 3 TSLA rows first and
+      // silently drop the NVDA fill before the filter ever saw it.
+      const records = [
+        record({ orderId: "t1", symbol: "TSLA", at: "2026-08-22T00:00:00.000Z" }),
+        record({ orderId: "t2", symbol: "TSLA", at: "2026-08-21T00:00:00.000Z" }),
+        record({ orderId: "t3", symbol: "TSLA", at: "2026-08-20T00:00:00.000Z" }),
+        record({ orderId: "old-nvda", symbol: "NVDA", at: "2026-08-19T00:00:00.000Z" }),
+      ];
+
+      const rows = buildWireTradeRows(records, [snapshot()], 3, "NVDA");
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.symbol).toBe("NVDA");
+    });
+  });
 });
 
 describe("buildWirePnlRows", () => {

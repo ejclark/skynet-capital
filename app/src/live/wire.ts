@@ -49,6 +49,19 @@ export async function fetchWire(): Promise<WireFeed> {
   return body.wire;
 }
 
+/** The options ticket's "who else traded this" row (#2017 Phase 1 slice 12) — the SAME feed,
+ *  scoped server-side to one underlying before the 60-row cap (`wire-routes.ts`'s `serveWireJson`).
+ *  A thin sibling to `fetchWire`, not a variant of it: this never touches the query-filter grammar
+ *  above, which is client-side filtering over the full feed for the Activity page. */
+export async function fetchWireForSymbol(symbol: string): Promise<WireFeed> {
+  const res = await fetch(`/api/wire?symbol=${encodeURIComponent(symbol)}`, {
+    credentials: "same-origin",
+  });
+  if (!res.ok) throw new Error(`wire ${res.status}`);
+  const body = (await res.json()) as { wire: WireFeed };
+  return body.wire;
+}
+
 const WIRE_QUALIFIERS = ["is:buy", "is:sell", "is:bot", "is:human"] as const;
 type WireQualifier = (typeof WIRE_QUALIFIERS)[number];
 

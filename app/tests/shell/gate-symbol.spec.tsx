@@ -27,6 +27,11 @@ rstest.mock("../../src/live/options", () => ({
 rstest.mock("../../src/live/quote", () => ({
   fetchQuote: () => Promise.resolve({ quoteNote: "test fixture — no live quote" }),
 }));
+// The options gate also mounts `WireRow` (#2017 Phase 1 slice 12), same reason.
+rstest.mock("../../src/live/wire", () => ({
+  fetchWireForSymbol: () =>
+    Promise.resolve({ trades: [], pnl: [], feedbackEnabled: false, feedback: [] }),
+}));
 
 const unlockedOptionPlay: PlayInfo = {
   code: "201",

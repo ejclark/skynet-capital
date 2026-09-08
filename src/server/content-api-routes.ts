@@ -25,6 +25,7 @@ import { serveWireJson } from "./wire-routes.js";
 export async function serveContentApi(
   res: ServerResponse,
   path: string,
+  url: string,
   config: DashboardServerConfig,
   session: Session | undefined,
 ): Promise<boolean> {
@@ -34,7 +35,7 @@ export async function serveContentApi(
     return true;
   };
   if (path === "/api/wire") {
-    await serveWireJson(res, config, Boolean(config.submitFeedback));
+    await serveWireJson(res, url, config, Boolean(config.submitFeedback));
     return true;
   }
   if (path === "/api/research") {
@@ -136,7 +137,7 @@ export async function serveJsonApi(
   channel: BoardPatchChannel,
   session: Session | undefined,
 ): Promise<boolean> {
-  if (await serveContentApi(res, path, config, session)) {
+  if (await serveContentApi(res, path, url, config, session)) {
     return true;
   }
   if (path === "/api/board") {
