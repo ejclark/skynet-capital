@@ -45,6 +45,16 @@ export interface OptionChainRow {
   readonly rho?: number;
 }
 
+/** One daily OHLC+volume bar (Alpaca `/v2/stocks/{symbol}/bars`). */
+export interface Bar {
+  readonly t: string;
+  readonly o: number;
+  readonly h: number;
+  readonly l: number;
+  readonly c: number;
+  readonly v: number;
+}
+
 /** Contract payload subset (Trading API `/v2/options/contracts`). Numbers arrive as strings. */
 export interface AlpacaOptionContract {
   readonly symbol: string;
@@ -136,6 +146,15 @@ const barVolume = (value: unknown): number | undefined => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 };
+
+/**
+ * One OHLCV field of a daily bar — the same finiteness-only gate as `greek`, under a name that
+ * says what it reads. Zero is legitimate here too (a zero-volume day, a halted bar), so `num`'s
+ * `> 0` would silently drop a real bar; and non-numeric junk (`null`, `""`, `[]`, `true`) stays
+ * ABSENT rather than coercing to a confident 0, so `getBars` drops a corrupt bar whole instead of
+ * feeding a fabricated close into indicator math downstream.
+ */
+const barField = (value: unknown): number | undefined => greek(value);
 
 export class AlpacaOptionsClient {
   private readonly trading: AlpacaTradingTransport;
@@ -230,6 +249,56 @@ export class AlpacaOptionsClient {
       const prevClose = num(body?.prevDailyBar?.c);
       if (last === undefined || prevClose === undefined) return undefined;
       return { last, prevClose };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Daily OHLC+volume bars for the underlying, oldest first — the chart section's backfill data
+   * source (#2017 Phase 1). Data-host only, like `getUnderlyingPrice`/`getUnderlyingQuote`, and
+   * fail-soft — but with a distinction the chart must be able to read: `undefined` means the feed
+   * couldn't be reached (no data transport, a non-2xx, a throw), while an EMPTY array is a real,
+   * successful answer meaning the feed has nothing for this symbol/window (a brand-new or halted
+   * ticker). The two are never conflated. Takes explicit `start`/`end` so it stays a thin, testable
+   * wrapper; the lookback-window arithmetic and its clamp belong to the route that builds the URL.
+   */
+  async getBars(
+    symbol: string,
+    start: string,
+    end: string,
+    limit = 1000,
+  ): Promise<Bar[] | undefined> {
+    if (!this.data) return undefined;
+    try {
+      const response = await this.data.get(
+        `/v2/stocks/${encodeURIComponent(symbol)}/bars?timeframe=1Day&start=${start}&end=${end}&limit=${limit}&feed=iex&adjustment=raw`,
+      );
+      if (response.status < 200 || response.status >= 300) return undefined;
+      const body = response.body as { bars?: Record<string, unknown>[] } | null;
+      const bars: Bar[] = [];
+      for (const raw of body?.bars ?? []) {
+        const t = typeof raw.t === "string" ? raw.t : undefined;
+        const o = barField(raw.o);
+        const h = barField(raw.h);
+        const l = barField(raw.l);
+        const c = barField(raw.c);
+        const v = barField(raw.v);
+        // A bar missing any OHLCV field or a usable timestamp is dropped WHOLE, never partially
+        // fabricated — one made-up close would cascade into wrong SMA/RSI math for every bar after it.
+        if (
+          t === undefined ||
+          o === undefined ||
+          h === undefined ||
+          l === undefined ||
+          c === undefined ||
+          v === undefined
+        ) {
+          continue;
+        }
+        bars.push({ t, o, h, l, c, v });
+      }
+      return bars;
     } catch {
       return undefined;
     }

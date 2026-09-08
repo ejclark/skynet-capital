@@ -228,6 +228,14 @@ describe("serveOptionApi chain", () => {
     expect(JSON.parse(out.body ?? "{}").quoteNote).toContain("isn't linked to one yet");
   });
 
+  // serveBars's own degrade paths are bars-route.spec.ts's job — this is just the wiring:
+  // GET /api/trade/bars actually reaches it.
+  it("routes GET /api/trade/bars to the bars handler", async () => {
+    const { res, out } = fakeRes();
+    await serveOptionApi(get("/api/trade/bars?symbol=NVDA"), res, "/api/trade/bars", config(), ann);
+    expect(JSON.parse(out.body ?? "{}").barsNote).toContain("isn't linked to one yet");
+  });
+
   it("names the message gate as the remedy when it holds, not the rung below", async () => {
     const { parsed } = await review(
       openPut(),
