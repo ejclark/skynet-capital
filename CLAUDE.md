@@ -285,7 +285,17 @@ ready-flip). **And a lane that shows no decision remains may remove it** (Eric, 
 Moneypenny clearing it from #1318 after a bottleneck-research call sheet found the "decision" was
 already-written policy: "that is fantastic; ideal") — evidence in a comment, the work routed on
 (`feedback` / `next-slice`), the label gone. The queue must stay honest about what actually needs
-him; a stale `needs-eric` is a blessing-ask that spends his attention on nothing. [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
+him; a stale `needs-eric` is a blessing-ask that spends his attention on nothing. **And a fork
+thin on data is not `needs-eric` yet** (Eric, 2026-09-07, deferring all four forks a cockpit-roadmap
+plan had put to him: "I tend to defer these decisions. Completing other known work consistently
+provides extra insights that result in strong enough data points to make an informed decision; the
+fork erodes into a clear/linear path"). Two checks before the label, both written down: *erosion* —
+defer only while work already in the plan could reveal or reshape the answer, naming the slice whose
+landing reopens it (`next-slice`); if nothing upcoming bears on it, it is not eroding, it is
+unanswered — and *the deciding question* — name the one question whose answer would settle it and
+go get it ("craft the right questions to ask… Having the answers to all the right questions
+provides the data points to make an informed decision") before it reaches him. The mechanical step
+is `docs/grind/interrogate.instructions.md` → step 8. [`docs/plans/`](docs/plans/README.md) holds only legacy in-flight plans — never add files there.
 
 **Side quests — Claude generates ideas too.** Hunt questions/clues in *proximity* to the current work;
 log the worthy ones to `IDEAS.md`, tagged `_(src: Eric | Claude · while: <context>)_` — source sets the
