@@ -131,7 +131,7 @@ export class AlpacaOptionsClient {
    * enough to enumerate the near expirations the ticket offers; a symbol with more listings
    * than one page simply shows its nearest months, which is what a learner wants anyway.
    */
-  async getExpirations(underlying: string, onOrAfter: string, limit = 8): Promise<string[]> {
+  async getExpirations(underlying: string, onOrAfter: string, limit = 20): Promise<string[]> {
     const path = `/v2/options/contracts?underlying_symbols=${encodeURIComponent(underlying)}&type=call&status=active&expiration_date_gte=${onOrAfter}&limit=1000`;
     const body = ensureOk<{ option_contracts?: AlpacaOptionContract[] }>(
       await this.trading.get(path),

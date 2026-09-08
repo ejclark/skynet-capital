@@ -51,6 +51,38 @@ describe("AlpacaOptionsClient", () => {
     expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(["2026-09-18", "2026-10-16"]);
   });
 
+  /** N sequential Friday-ish weekly dates from a fixed anchor, guaranteed valid calendar dates. */
+  const weeklyDates = (n: number): string[] =>
+    Array.from({ length: n }, (_, i) => {
+      const d = new Date("2026-09-11T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + i * 7);
+      return d.toISOString().slice(0, 10);
+    });
+
+  it("returns all expirations when a symbol lists more than the old 8-row cap but no more than 20 (#2017 4c)", async () => {
+    const dates = weeklyDates(14);
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: dates.map((d) => contract(`SYM-${d}`, d, "100")),
+        },
+      }),
+    );
+    expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(dates);
+  });
+
+  it("truncates at the new 20-expiration ceiling when a symbol lists more (#2017 4c)", async () => {
+    const dates = weeklyDates(25);
+    const client = new AlpacaOptionsClient(
+      fakeTransport({
+        "/v2/options/contracts?": {
+          option_contracts: dates.map((d) => contract(`SYM-${d}`, d, "100")),
+        },
+      }),
+    );
+    expect(await client.getExpirations("MSFT", "2026-08-19")).toEqual(dates.slice(0, 20));
+  });
+
   it("returns the chain strikes ascending, dropping untradable and unpriced-strike rows", async () => {
     const client = new AlpacaOptionsClient(
       fakeTransport({

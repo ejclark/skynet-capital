@@ -147,7 +147,24 @@ const quote = { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, ton
 const chain = {
   symbol: "NVDA",
   optionType: "put",
-  expirations: ["2026-09-09", "2026-09-11", "2026-09-16"],
+  // 13 sequential Friday-ish weeklies-plus-monthlies (#2017 Phase 0 task 4c) — enough to prove the
+  // expiration tab strip actually needs a horizontal swipe at 390px, not just render the 2-3 dates
+  // that would have fit in the old <select> just as well.
+  expirations: [
+    "2026-09-09",
+    "2026-09-11",
+    "2026-09-16",
+    "2026-09-18",
+    "2026-09-25",
+    "2026-10-02",
+    "2026-10-09",
+    "2026-10-16",
+    "2026-10-23",
+    "2026-10-30",
+    "2026-11-20",
+    "2026-12-18",
+    "2027-01-15",
+  ],
   expiration: "2026-09-09",
   spot: 181.32,
   rows: [175, 177.5, 180, 182.5, 185].map((strike, i) => ({
@@ -207,6 +224,11 @@ await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
 await page.getByText("▲").waitFor();
 await shoot("trade-quote-options-phone");
+
+// The expiration field's horizontal tab strip (#2017 Phase 0 task 4c) — 13 expirations, more than
+// fit in the old 8-row-capped <select>, prove the strip needs a real horizontal swipe at 390px.
+await page.getByRole("button", { name: "2026-09-09" }).waitFor();
+await shoot("trade-exp-tabs-phone");
 currentPlays = plays;
 
 // A locked preset (#1461 slice 2): the rail can point at 301, the nav shows "Buy to open" disabled
