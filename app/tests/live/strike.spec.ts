@@ -39,10 +39,15 @@ describe("normalizeStrike", () => {
     expect(normalizeStrike("")).toBeUndefined();
   });
 
-  it("drops a non-string value", () => {
-    expect(normalizeStrike(40)).toBeUndefined();
+  it("accepts a number — the router JSON-parses a purely-numeric ?strike= on a fresh load", () => {
+    expect(normalizeStrike(40)).toBe("40");
+    expect(normalizeStrike(182.5)).toBe("182.5");
+  });
+
+  it("drops a non-numeric shape", () => {
     expect(normalizeStrike({ strike: 40 })).toBeUndefined();
     expect(normalizeStrike(undefined)).toBeUndefined();
     expect(normalizeStrike(null)).toBeUndefined();
+    expect(normalizeStrike(true)).toBeUndefined();
   });
 });
