@@ -99,9 +99,10 @@ export const UPCOMING_PRINTS: readonly EarningsPrint[] = [
   },
   {
     symbol: "MU",
-    date: "2026-09-29",
-    status: "estimate",
-    source: "NEWS: Tue Sep 29 AMC per TipRanks/WSH/MarketBeat triangulation 2026-08-22; IR blocked",
+    date: "2026-09-30",
+    status: "confirmed",
+    source:
+      'IR: investors.micron.com press release "Micron Technology to Report Fiscal Fourth Quarter Results on September 30, 2026", dateline Aug 26 2026, names Wed Sep 30 2:30pm MT = 16:30 ET AMC, fetched 2026-09-05',
   },
 ];
 
