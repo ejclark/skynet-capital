@@ -229,6 +229,14 @@ await shoot("trade-quote-options-phone");
 // fit in the old 8-row-capped <select>, prove the strip needs a real horizontal swipe at 390px.
 await page.getByRole("button", { name: "2026-09-09" }).waitFor();
 await shoot("trade-exp-tabs-phone");
+
+// Progressive disclosure (#2017 Phase 0 task 4d): with no `?symbol=` committed yet, the five
+// chain-gated fields (Expiration/Strike/Contracts/Order/Limit) are withheld entirely — the panel
+// title is the only stable marker to wait on, since the idle state renders nothing else.
+await page.goto(`${origin}/app/trade?play=201`);
+await page.getByRole("heading", { name: "Sell a cash-secured put" }).waitFor();
+await shoot("progressive-disclosure-idle-phone");
+
 currentPlays = plays;
 
 // A locked preset (#1461 slice 2): the rail can point at 301, the nav shows "Buy to open" disabled

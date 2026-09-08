@@ -18,7 +18,7 @@ const chainCalls: string[] = [];
 rstest.mock("../../src/live/options", () => ({
   fetchChain: (symbol: string) => {
     chainCalls.push(symbol);
-    return Promise.resolve({ chainNote: "test fixture — no live chain" });
+    return Promise.resolve({ chainNote: "test fixture — no live chain", reason: "failed" });
   },
   reviewOption: () => Promise.reject(new Error("not used in this spec")),
   submitOption: () => Promise.reject(new Error("not used in this spec")),

@@ -1,0 +1,166 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
+import type { ChainAnswer, ChainData, PlayInfo } from "../../src/live/options";
+import { OptionGate } from "../../src/shell/option-gate";
+
+/**
+ * `OptionGate`'s progressive disclosure (#2017 Phase 0 task 4d) — the five chain-gated fields
+ * (Expiration/Strike/Contracts/Order/Limit) are withheld until the chain query settles, and then
+ * branch three ways on the server's machine-readable `reason` rather than always falling back to
+ * manual entry: idle (no symbol yet) shows nothing, loading shows a single note, a genuine dead
+ * end (`reason: "no-options"`) stops with just its note, and everything else — a real chain, or a
+ * degraded/unrecognized answer — shows the fields (plus the note, when there is one).
+ */
+
+let chainResult: ChainAnswer = { chainNote: "unset", reason: "failed" };
+let chainNeverResolves = false;
+
+rstest.mock("../../src/live/options", () => ({
+  fetchChain: () =>
+    chainNeverResolves
+      ? new Promise<ChainAnswer>(() => {
+          // Deliberately never resolves — pins the "loading" state for the test to observe.
+        })
+      : Promise.resolve(chainResult),
+  reviewOption: () => Promise.reject(new Error("not used in this spec")),
+  submitOption: () => Promise.reject(new Error("not used in this spec")),
+}));
+// OptionGate also mounts QuoteHeader, which would otherwise fire a real fetch in jsdom.
+rstest.mock("../../src/live/quote", () => ({
+  fetchQuote: () => Promise.resolve({ quoteNote: "test fixture — no live quote" }),
+}));
+
+const unlockedCallPlay: PlayInfo = {
+  code: "201",
+  id: "201",
+  name: "Buy Call",
+  tldr: "",
+  kind: "option",
+  side: "buy",
+  optionType: "call",
+  gloss: "",
+  locked: false,
+  earned: true,
+};
+
+const fullChain: ChainData = {
+  symbol: "NVDA",
+  optionType: "call",
+  expirations: ["2026-09-18"],
+  expiration: "2026-09-18",
+  spot: 180,
+  rows: [
+    {
+      strike: 180,
+      occSymbol: "NVDA260918C00180000",
+      premium: 5,
+      bid: 4.8,
+      ask: 5.2,
+      openInterest: 100,
+    },
+  ],
+};
+
+const LABELED_FIELDS = ["Strike", "Contracts (100 shares)", "Order"];
+
+/** No `expect` in here — biome's `noMisplacedAssertion` wants assertions lexically inside an
+ *  `it`, so this just reports the fact and the test itself asserts on the boolean.
+ *
+ *  `ExpirationField`'s tab-strip branch (rendered once a real chain loads) doesn't wire its
+ *  buttons to the `<label htmlFor>` the way the plain date-input fallback does, so "Expiration"
+ *  is checked either way: by label (manual/degraded entry) or by its `.exp-tabs` wrapper (a
+ *  resolved chain) — a pre-existing gap in that component, out of scope for this slice. */
+function fieldsPresent(): boolean {
+  const labeled = LABELED_FIELDS.every((label) => screen.queryByLabelText(label) !== null);
+  const expiration =
+    screen.queryByLabelText("Expiration") !== null || document.querySelector(".exp-tabs") !== null;
+  return labeled && expiration;
+}
+
+function renderGate(initialSymbol?: string): ReactElement {
+  const client = new QueryClient();
+  return (
+    <QueryClientProvider client={client}>
+      <OptionGate deskId="desk-1" play={unlockedCallPlay} initialSymbol={initialSymbol} />
+    </QueryClientProvider>
+  );
+}
+
+beforeEach(() => {
+  chainNeverResolves = false;
+  chainResult = { chainNote: "unset", reason: "failed" };
+});
+
+describe("OptionGate — progressive disclosure", () => {
+  it("idle: renders no fields and no note before a symbol is committed", () => {
+    render(renderGate(""));
+
+    expect(fieldsPresent()).toBe(false);
+    expect(screen.queryByText(/Looking up options/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No listed options/)).not.toBeInTheDocument();
+  });
+
+  it("loading: renders only the looking-up note while the chain query is pending", async () => {
+    chainNeverResolves = true;
+    render(renderGate("NVDA"));
+
+    await waitFor(() =>
+      expect(screen.getByText("Looking up options for NVDA…")).toBeInTheDocument(),
+    );
+    expect(fieldsPresent()).toBe(false);
+  });
+
+  it("stopped: a no-options reason renders only the dead-end note", async () => {
+    chainResult = {
+      chainNote: "No listed options found for ZZZZ. Check the symbol.",
+      reason: "no-options",
+    };
+    render(renderGate("NVDA"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("No listed options found for ZZZZ. Check the symbol."),
+      ).toBeInTheDocument(),
+    );
+    expect(fieldsPresent()).toBe(false);
+  });
+
+  it("resolved: a real chain renders the fields with no note", async () => {
+    chainResult = fullChain;
+    render(renderGate("NVDA"));
+
+    await waitFor(() => expect(fieldsPresent()).toBe(true));
+    expect(screen.queryByText(/Looking up options/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No listed options/)).not.toBeInTheDocument();
+  });
+
+  it("degraded (failed): renders both the note and the fields", async () => {
+    chainResult = {
+      chainNote: "Couldn't load the option chain right now — feed down. The ticket still works.",
+      reason: "failed",
+    };
+    render(renderGate("NVDA"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Couldn't load the option chain right now — feed down. The ticket still works.",
+        ),
+      ).toBeInTheDocument(),
+    );
+    expect(fieldsPresent()).toBe(true);
+  });
+
+  it("degraded (unlinked): renders both the note and the fields", async () => {
+    chainResult = {
+      chainNote:
+        "Live option chains load through your own connected account, and your session isn't linked to one yet.",
+      reason: "unlinked",
+    };
+    render(renderGate("NVDA"));
+
+    await waitFor(() => expect(screen.getByText(/isn't linked to one yet/)).toBeInTheDocument());
+    expect(fieldsPresent()).toBe(true);
+  });
+});

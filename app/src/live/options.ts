@@ -53,8 +53,14 @@ export interface ChainData {
   readonly rows: readonly ChainRow[];
 }
 
+/** Why the chain degraded (#2017 Phase 0 task 4d) — machine-readable, so the client branches on
+ *  this instead of parsing `chainNote` prose. */
+export type ChainDegradeReason = "unlinked" | "no-options" | "failed";
+
 /** The honest degrade: no linked client, no listed options, or a feed failure — a sentence. */
-export type ChainAnswer = ChainData | { readonly chainNote: string };
+export type ChainAnswer =
+  | ChainData
+  | { readonly chainNote: string; readonly reason: ChainDegradeReason };
 
 export interface OptionPreview {
   readonly code: string;

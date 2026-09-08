@@ -20,9 +20,13 @@ import { SymbolField } from "./symbol-field";
  * THE OPTIONS TICKET (#738 phase 10b) — the legacy `/trade` option plays in the shell, on the
  * same merge-box state machine as the share gate: any edit disarms a standing review, and the
  * desk re-checks the live account (and re-resolves the CONTRACT) at submit. The chain guides —
- * expirations and strikes come from the member's own connected account — and when it can't
- * (`chainNote`), the ticket still works with manual entry, exactly as the legacy raw mode did:
- * premiums just can't be estimated. A locked rung renders `LockedPanel` (shared with the stock
+ * expirations and strikes come from the member's own connected account. The five fields below the
+ * symbol (Expiration/Strike/Contracts/Order/Limit) are WITHHELD until the chain resolves — no
+ * empty, unfillable fields cluttering the first paint (#2017 Phase 0 task 4d). Once a symbol is
+ * committed the chain's own answer branches three ways: a genuine dead end (`reason: "no-options"`)
+ * stops with just that note, a degraded feed (`"unlinked"`/`"failed"`/unrecognized) falls back to
+ * manual entry — same fields as before, plus the explanatory `chainNote` — and a real chain shows
+ * the fields driven by live data. A locked rung renders `LockedPanel` (shared with the stock
  * ticket, no self-serve way off the ladder — #1671 decision 1); the server refuses a locked play
  * regardless of what this component shows. Independently, `zeroDte` disables today's expiration
  * while course 501 is locked (#1671 slice 2) — a play can be wide open and still shut out of a
@@ -73,6 +77,15 @@ export function OptionGate({
   });
   const chainData = chain.data && !("chainNote" in chain.data) ? chain.data : undefined;
   const chainNote = chain.data && "chainNote" in chain.data ? chain.data.chainNote : undefined;
+  const chainReason = chain.data && "reason" in chain.data ? chain.data.reason : undefined;
+
+  /** Withhold state (#2017 Phase 0 task 4d): idle → nothing, loading → a note, stopped → a note
+   *  (genuine dead end), otherwise (resolved chain, or a degraded/unrecognized answer) → fields. */
+  const symbolCommitted = chainSym !== "";
+  const chainSettled = chain.data !== undefined;
+  const stopped = symbolCommitted && chainSettled && chainReason === "no-options";
+  const showFields = symbolCommitted && chainSettled && !stopped;
+  const showLoading = symbolCommitted && !chainSettled;
 
   /** Any edit disarms a standing review — straight back to draft. */
   const edit = <T,>(set: (v: T) => void) => {
@@ -148,64 +161,69 @@ export function OptionGate({
             onSymbolCommit?.(s);
           }}
         />
-        <div className="field">
-          <label htmlFor={expId}>Expiration</label>
-          <ExpirationField
-            id={expId}
-            chainData={chainData}
-            value={expiration}
-            onEdit={edit(setExpiration)}
-            zeroDteLocked={Boolean(zeroDte?.locked)}
-            zeroDteReason={
-              zeroDte?.opensAfter
-                ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
-                : undefined
-            }
-          />
-        </div>
-        <div className="field">
-          <label htmlFor={strikeId}>Strike</label>
-          <StrikeField id={strikeId} chainData={chainData} value={strike} onEdit={pickStrike} />
-        </div>
-        <div className="field">
-          <label htmlFor={qtyId}>Contracts (100 shares)</label>
-          <input
-            id={qtyId}
-            type="number"
-            min={1}
-            step={1}
-            inputMode="numeric"
-            value={contracts}
-            onChange={(e) => edit(setContracts)(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor={typeId}>Order</label>
-          <select
-            id={typeId}
-            value={orderType}
-            onChange={(e) => edit(setOrderType)(e.target.value as "limit" | "market")}
-          >
-            <option value="limit">Limit</option>
-            <option value="market">Market</option>
-          </select>
-        </div>
-        {orderType === "limit" ? (
-          <div className="field">
-            <label htmlFor={limitId}>Limit /share</label>
-            <input
-              id={limitId}
-              type="number"
-              min={0.01}
-              step={0.01}
-              inputMode="decimal"
-              value={limitPrice}
-              placeholder="2.50"
-              onChange={(e) => edit(setLimitPrice)(e.target.value)}
-            />
-          </div>
+        {showFields ? (
+          <>
+            <div className="field">
+              <label htmlFor={expId}>Expiration</label>
+              <ExpirationField
+                id={expId}
+                chainData={chainData}
+                value={expiration}
+                onEdit={edit(setExpiration)}
+                zeroDteLocked={Boolean(zeroDte?.locked)}
+                zeroDteReason={
+                  zeroDte?.opensAfter
+                    ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
+                    : undefined
+                }
+              />
+            </div>
+            <div className="field">
+              <label htmlFor={strikeId}>Strike</label>
+              <StrikeField id={strikeId} chainData={chainData} value={strike} onEdit={pickStrike} />
+            </div>
+            <div className="field">
+              <label htmlFor={qtyId}>Contracts (100 shares)</label>
+              <input
+                id={qtyId}
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={contracts}
+                onChange={(e) => edit(setContracts)(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor={typeId}>Order</label>
+              <select
+                id={typeId}
+                value={orderType}
+                onChange={(e) => edit(setOrderType)(e.target.value as "limit" | "market")}
+              >
+                <option value="limit">Limit</option>
+                <option value="market">Market</option>
+              </select>
+            </div>
+            {orderType === "limit" ? (
+              <div className="field">
+                <label htmlFor={limitId}>Limit /share</label>
+                <input
+                  id={limitId}
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  inputMode="decimal"
+                  value={limitPrice}
+                  placeholder="2.50"
+                  onChange={(e) => edit(setLimitPrice)(e.target.value)}
+                />
+              </div>
+            ) : null}
+          </>
         ) : null}
       </div>
+      {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
       {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
       {chainData ? (
         <ChainStraddle

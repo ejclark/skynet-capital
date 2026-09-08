@@ -41,7 +41,9 @@ describe("serveChain", () => {
   it("tells an unlinked session the honest note instead of erroring", async () => {
     const { res, out } = fakeRes();
     await serveChain(res, "/x?symbol=NVDA&type=put", config(undefined), "human-ann");
-    expect(JSON.parse(out.body ?? "{}").chainNote).toContain("isn't linked to one yet");
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.chainNote).toContain("isn't linked to one yet");
+    expect(body.reason).toBe("unlinked");
   });
 
   it("serves expirations, the requested expiration's rows, and the premium precomputed", async () => {
@@ -78,13 +80,17 @@ describe("serveChain", () => {
     };
     const { res, out } = fakeRes();
     await serveChain(res, "/x?symbol=ZZZZ&type=call", config(client), "human-ann");
-    expect(JSON.parse(out.body ?? "{}").chainNote).toContain("No listed options found for ZZZZ");
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.chainNote).toContain("No listed options found for ZZZZ");
+    expect(body.reason).toBe("no-options");
   });
 
   it("degrades a chain failure to the honest can't-estimate note", async () => {
     const client = { getExpirations: () => Promise.reject(new Error("feed down")) };
     const { res, out } = fakeRes();
     await serveChain(res, "/x?symbol=NVDA&type=call", config(client), "human-ann");
-    expect(JSON.parse(out.body ?? "{}").chainNote).toContain("premiums just can't be estimated");
+    const body = JSON.parse(out.body ?? "{}");
+    expect(body.chainNote).toContain("premiums just can't be estimated");
+    expect(body.reason).toBe("failed");
   });
 });
