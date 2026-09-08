@@ -74,7 +74,7 @@ describe("serveWireJson", () => {
     const { res, out } = capture();
     const deps: WireRouteDeps = { hub: hubWith([snapshot()]) };
 
-    await serveWireJson(res, deps, false);
+    await serveWireJson(res, "/api/wire", deps, false);
 
     expect(out.status).toBe(200);
     const wire = JSON.parse(out.body).wire;
@@ -89,7 +89,7 @@ describe("serveWireJson", () => {
       readAllTradeActivity: () => Promise.resolve([record()]),
     };
 
-    await serveWireJson(res, deps, true);
+    await serveWireJson(res, "/api/wire", deps, true);
 
     const [trade] = JSON.parse(out.body).wire.trades;
     expect(trade.symbol).toBe("NVDA");
@@ -103,7 +103,7 @@ describe("serveWireJson", () => {
       readAllFeedback: () => Promise.resolve([entry({ title: "Shared idea" })]),
     };
 
-    await serveWireJson(res, deps, true);
+    await serveWireJson(res, "/api/wire", deps, true);
 
     const [feedback] = JSON.parse(out.body).wire.feedback;
     expect(feedback.title).toBe("Shared idea");
@@ -121,7 +121,7 @@ describe("serveWireJson", () => {
       },
     };
 
-    await serveWireJson(res, deps, true);
+    await serveWireJson(res, "/api/wire", deps, true);
 
     expect(requested).toEqual([[7]]);
   });
@@ -138,8 +138,60 @@ describe("serveWireJson", () => {
       },
     };
 
-    await serveWireJson(res, deps, true);
+    await serveWireJson(res, "/api/wire", deps, true);
 
     expect(called).toBe(false);
+  });
+
+  // #2017 Phase 1 slice 12 — the who-else-traded row's server-side symbol scoping.
+  describe("?symbol= filtering", () => {
+    it("with no ?symbol= at all, behaves exactly as the plain Wire", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () =>
+          Promise.resolve([
+            record({ orderId: "a", symbol: "NVDA" }),
+            record({ orderId: "b", symbol: "TSLA" }),
+          ]),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      const { trades } = JSON.parse(out.body).wire;
+      expect(trades).toHaveLength(2);
+    });
+
+    it("with a valid ?symbol=, filters the trade feed to that underlying", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () =>
+          Promise.resolve([
+            record({ orderId: "a", symbol: "NVDA" }),
+            record({ orderId: "b", symbol: "TSLA" }),
+          ]),
+      };
+
+      await serveWireJson(res, "/api/wire?symbol=NVDA", deps, false);
+
+      const { trades } = JSON.parse(out.body).wire;
+      expect(trades).toHaveLength(1);
+      expect(trades[0].symbol).toBe("NVDA");
+    });
+
+    it("silently ignores a malformed ?symbol= rather than 400ing the whole page", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve([record({ symbol: "NVDA" })]),
+      };
+
+      await serveWireJson(res, "/api/wire?symbol=!!not-valid!!", deps, false);
+
+      expect(out.status).toBe(200);
+      const { trades } = JSON.parse(out.body).wire;
+      expect(trades).toHaveLength(1);
+    });
   });
 });

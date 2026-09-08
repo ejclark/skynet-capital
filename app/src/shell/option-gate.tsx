@@ -16,6 +16,7 @@ import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
 import { QuoteHeader } from "./quote-header";
 import { SymbolField } from "./symbol-field";
+import { WireRow } from "./wire-row";
 
 /**
  * THE OPTIONS TICKET (#738 phase 10b) — the legacy `/trade` option plays in the shell, on the
@@ -356,6 +357,11 @@ export function OptionGate({
       ) : null}
       {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
       {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
+
+      {/* Last piece of intel before the review/submit action (#2017 Phase 1 slice 12's IA
+          decision) — the component itself withholds rendering for an uncommitted symbol, so
+          mounting it unconditionally here is just about not cluttering this JSX. */}
+      <WireRow symbol={chainSym} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
         <OptionGateStatus state={state} />

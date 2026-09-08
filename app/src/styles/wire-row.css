@@ -1,0 +1,53 @@
+/* The who-else-traded row (#2017 Phase 1 slice 12) — a compact intel panel under the options
+ * ticket's chain, own file so a small addition doesn't push `ticket.css` over the line cap
+ * (`node scripts/arch-scan.mjs`, same call the 4c chain-tab-strip slice made for `straddle.css`).
+ * Same small-text register as `ticket.css`'s `.tkt-note`; reuses the board's `.chip-*`/`.tone-*`
+ * tokens rather than redefining them. Real names always (consent doctrine, see `wire-row.tsx`'s
+ * header comment) — there's no anonymizing treatment to style here.
+ */
+.wr-panel {
+  margin: 12px 0 0;
+  max-width: var(--col-wide);
+}
+.wr-h {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wr-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.wr-row:last-child {
+  border-bottom: 0;
+}
+.wr-who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wr-when {
+  color: var(--muted);
+  font-size: 11px;
+}
+.wr-more {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
