@@ -32,6 +32,11 @@ rstest.mock("../../src/live/wire", () => ({
   fetchWireForSymbol: () =>
     Promise.resolve({ trades: [], pnl: [], feedbackEnabled: false, feedback: [] }),
 }));
+// Both gates now mount `RecentOrdersStrip` (#2017 Phase 1 slice 13), same reason — TradeGate's
+// `quoteSym` is seeded from `initialSymbol` immediately, so it fires without waiting for a commit.
+rstest.mock("../../src/live/desk", () => ({
+  fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
+}));
 
 const unlockedOptionPlay: PlayInfo = {
   code: "201",

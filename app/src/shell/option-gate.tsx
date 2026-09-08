@@ -15,6 +15,7 @@ import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
 import { QuoteHeader } from "./quote-header";
+import { RecentOrdersStrip } from "./recent-orders-strip";
 import { SymbolField } from "./symbol-field";
 import { WireRow } from "./wire-row";
 
@@ -211,6 +212,14 @@ export function OptionGate({
     onPreset(target);
   };
 
+  /** The currently-selected CONTRACT's real OCC symbol (task 3a) — sourced from the matched chain
+   *  row, never hand-assembled: `buildOccSymbol` exists server-side/in `option-symbols.ts` for
+   *  constructing one from partial state, which is more machinery than this slice needs. Empty
+   *  until a chain row actually matches the picked strike, so `RecentOrdersStrip` renders nothing
+   *  rather than guessing at a malformed symbol mid-pick. */
+  const resolvedOccSymbol =
+    chainData?.rows.find((r) => String(r.strike) === strike)?.occSymbol ?? "";
+
   const draft = (): OptionDraft => ({
     kind: "open",
     participantId: deskId,
@@ -358,9 +367,13 @@ export function OptionGate({
       {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
       {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
 
-      {/* Last piece of intel before the review/submit action (#2017 Phase 1 slice 12's IA
-          decision) — the component itself withholds rendering for an uncommitted symbol, so
-          mounting it unconditionally here is just about not cluttering this JSX. */}
+      {/* Self, then others (#2017 Phase 1 slice 13 review fix): the drawer-narrative order Eric's
+          plan comment sketched — "here's what you've done, here's what others are doing, now
+          decide" — reads back-to-front if `WireRow` (others' trades) comes first, so the viewer's
+          own recent orders lead. Both components withhold rendering until their own symbol is
+          committed/resolved, so mounting them unconditionally here is just about not cluttering
+          this JSX. */}
+      <RecentOrdersStrip symbol={resolvedOccSymbol} deskId={deskId} />
       <WireRow symbol={chainSym} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
