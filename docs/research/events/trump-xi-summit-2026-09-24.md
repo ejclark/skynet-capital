@@ -1,41 +1,47 @@
 # Trump–Xi summit (Washington) — trade, export-control, AI-governance agenda — trump-xi-summit-2026-09-24
 
 **Kind:** geopolitical · **Date:** 2026-09-24 (estimate, NEWS: Atlantic Council/CSIS Trump-Xi 2026 Summit coverage + techtimes semiconductor-tariff reporting, checked 2026-08-28) · **Impact:** high
-**Last assessed:** 2026-09-04
-<!-- probe-ref: {"symbols":{},"vix":14.32,"daysBand":"high:8+","adjacentIds":["consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","durable-goods-2026-09-25","jolts-2026-09-29","mu-2026-09-29-print","scoos-2026-09-24","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24"],"screenStreak":0} -->
+**Last assessed:** 2026-09-08
+<!-- probe-ref: {"symbols":{},"vix":15.7,"daysBand":"high:8+","adjacentIds":["census-benchmark-revision-nsa-2026-09-28","consumer-confidence-2026-09-29","crwv-fully-connected-2026-09-29","dallas-fed-mfg-2026-09-28","durable-goods-2026-09-25","ecb-economic-bulletin-2026-09-24","fhfa-hpi-2026-09-29","jolts-2026-09-29","meta-connect-2026-09-23","missouri-uocava-ballot-mailing-2026-09-19","mu-2026-09-29-print","new-home-sales-2026-09-24","retail-benchmark-revision-2026-09-28","russell-quarterly-ipo-review-effective-2026-09-21","scoos-2026-09-24","treasury-2y-frn-2026-09-23","treasury-2y-note-2026-09-22","treasury-5y-note-2026-09-23","treasury-7y-note-2026-09-24","treasury-buyback-20y30y-2026-09-24","umich-sentiment-final-2026-09-25","unga-81-general-debate-2026-09-22","unsc-iran-panel-mandate-expiry-2026-09-26"],"screenStreak":0,"blocked":[{"url":"https://www.cnbc.com/2026/09/02/trump-xi-summit-iran-china-trade-elections.html","status":"403","at":"2026-09-08"},{"url":"https://www.cnbc.com/2026/09/05/us-china-gear-up-for-mid-september-ai-safety-talks-reuters.html","status":"403","at":"2026-09-08"},{"url":"https://www.techtimes.com/articles/326273/20260903/china-tells-us-agree-what-ai-safety-means-september-talks-cannot-proceed.htm","status":"403","at":"2026-09-08"}]} -->
 
 ## At a glance
 
 **TL;DR.** Xi Jinping is set to make a state visit to the White House on Sep 24, billed to cover AI
 dominance, trade, and export controls — squarely the semis-sensitive agenda this doc exists to track.
 The date is heavily press-corroborated (Trump's own Beijing banquet toast, a specific
-arrival/departure itinerary, skipping UNGA); whitehouse.gov's own news index was fetched direct on
-2026-09-04 and carries no announcement of it, so the date stays **estimate**. The one genuinely new
-thing since the initial research cuts the *upside* tail: Commerce Secretary Lutnick said on 2026-09-02
-he does not think US chip export controls will be on the table at the summit, because China has not
-used the carveout adopted earlier this year (InsideTrade, 2026-09-03). The Oct-2025 Kuala Lumpur
-relief rally's one concrete semis deliverable was exactly that lever — an Entity List pause — so a
-sitting Commerce Secretary pre-denying it removes the known mechanism by which this summit could
-repeat that outcome, while the May-2026 Beijing downside case ("nothing of real substance", KOSPI
-−6%) is untouched. Meanwhile the sector is selling good news on its own: MRVL beat and fell −10.3% the
-next session (8/28), AVGO beat with AI revenue +221% y/y and fell −2.75% (9/3). Still nothing here
-licenses a trade — a narrowed upside tail is not a short — but AI-semis exposure (AVGO, NVDA, MRVL,
-AMD) carried into 9/24 is guarding a less symmetric event than it was on 8/28.
+arrival/departure itinerary, skipping UNGA); whitehouse.gov's own news index was fetched direct again
+on 2026-09-08 and still carries no announcement of it (latest post: Labor Day, 9/7), so the date stays
+**estimate**. The 2026-09-04 pulse narrowed the *upside* tail on one official's word — Lutnick, 9/2,
+"chip controls not on the table." This pulse finds that narrowing is **structural, not rhetorical**,
+which is the load-bearing change: the US already granted the H200 concession in Dec-2025, ~10 Chinese
+firms hold licenses for up to 75,000 units each, and **not one H200 has shipped**, because Beijing
+directs its own firms to buy domestic — and USTR's Greer confirmed semis were not even on the May
+Beijing agenda. So a US-side walkback of Lutnick no longer restores the Oct-2025 relief-rally
+mechanism; only a *Beijing-side* acceptance signal would. Meanwhile the second plausible deliverable
+degraded too: Reuters (9/4) reports Chinese suppliers have refused **licensed** rare-earth shipments
+to US buyers since early August, against a truce that explicitly committed China to pausing exactly
+those controls. The escalation flag is now checked against a primary source and is **untripped** —
+federalregister.gov returns zero Section-301 overcapacity documents since 2026-08-01 (fetched 9/8),
+with the report reported as "legally challenging to finalize." Still nothing here licenses a trade —
+two eroded deliverables are not a short — but AI-semis exposure (AVGO, NVDA, MRVL, AMD) carried into
+9/24 is guarding a materially less symmetric event than it was on 8/28.
 
 | Horizon | Call | Confidence | Why | Proves it wrong |
 |---|---|---|---|---|
-| Today (D-20) | Stand aside | High | Nothing actionable 20 days out; this is a calendar-watch entry, not a live setup. | Any credible primary source (whitehouse.gov, a formal WH announcement) canceling or moving the visit |
-| This week | Watch | Medium | The load-bearing watch item is now official-signal drift on summit content, not the date: Lutnick's 9/2 "chip controls not on the table" is one official's read, and a contrary WH/USTR signal would restore the upside tail. | The reportedly-pending 7.5% Section-301 overcapacity tariff layer being formally imposed before the summit (still not imposed as of 2026-09-04 — no Notice of Action found) |
-| This month (through 9/24) | Treat AI-semis exposure as elevated event risk into the summit | High | The summit closes a stacked September calendar (AVGO 9/2 done, jobs 9/4, CPI ~9/11, FOMC 9/16) and is explicitly billed to cover AI/export controls — the same names already carrying flat-by-print discipline should extend defined-risk framing through 9/24, not reset it name-by-name. | Two consecutive benign, low-volatility reactions across the remaining prints/macro prints between now and the summit, decoupling semis sentiment from the summit's own risk — NOT met on the 8/28–9/3 window (MRVL −13.5%, AVGO −3.9%, SOXX −4.4% while VIX round-tripped 14.4→16.3→14.3) |
-| This quarter | Avoid new directional bets on trade-headline risk | Medium | n=2 prior 2026 summits gave opposite reactions (muted relief rally in Oct-2025 vs a global selloff in May-2026) — no clean base rate exists to trade either "rally on deal" or "selloff on disappointment." | The Kuala Lumpur truce's Nov-10 tariff-suspension deadline (now tracked as `us-china-tariff-truce-expiry-2026-11-10`, estimate) resolving cleanly without a repricing event, which would retroactively argue the summit itself was the load-bearing risk, not the deadline |
+| Today (D-16) | Stand aside | High | Nothing actionable 16 days out; this is a calendar-watch entry, not a live setup. VIX 15.7 (9/8 pre-open) vs 14.32 last row — +1.4pt, no regime shift. | Any credible primary source (whitehouse.gov, a formal WH announcement) canceling or moving the visit |
+| This week | Watch — the deliverable pipeline, not the date | Medium | Two of three plausible deliverables visibly eroded since 8/28: chips (structural stalemate, zero H200 units shipped) and rare earths (Reuters 9/4, licensed shipments refused since early August). The third, a Section-301 *escalation*, is verified unpublished. | A Beijing-side signal — a Chinese firm confirming H200 acceptance, or MOFCOM restoring licensed rare-earth flow — which would restore a real upside deliverable rather than a US-side statement |
+| This month (through 9/24) | Treat AI-semis exposure as elevated event risk into the summit | High | The summit closes a stacked September calendar (AVGO 9/2 done, jobs 9/4 hot, CPI 9/11, FOMC 9/16 with hike odds ~60–65%) and is explicitly billed to cover AI/export controls — the same names already carrying flat-by-print discipline should extend defined-risk framing through 9/24, not reset it name-by-name. | Two consecutive benign, low-volatility reactions across the remaining prints between now and the summit, decoupling semis sentiment from the summit's own risk — NOT met: the 9/4 jobs beat (162k v ~53k est) sent the S&P −0.38% while SOXX rallied +3.5% and MRVL +7.0%, i.e. dispersion widened rather than compressed |
+| This quarter | Avoid new directional bets on trade-headline risk | Medium | n=2 prior 2026 summits gave opposite reactions (muted relief rally in Oct-2025 vs a global selloff in May-2026) — no clean base rate exists to trade either "rally on deal" or "selloff on disappointment." | The Kuala Lumpur truce's Nov-10 tariff-suspension deadline (tracked as `us-china-tariff-truce-expiry-2026-11-10`, estimate) resolving cleanly without a repricing event, which would retroactively argue the summit itself was the load-bearing risk, not the deadline |
 
 **Signals & conditions** — the buy/sell/hold triggers:
 
-- **Never** — pre-position AI-semis exposure directionally on a Trump-Xi outcome guess; the n=2 base rate is a coin flip with fat tails on both sides, and a narrowed upside tail is not a short thesis.
-- **Watch (dated)** — jobs report **2026-09-04** · CPI **2026-09-11** · FOMC **2026-09-16** · opex **2026-09-18** · the summit itself **2026-09-24 (estimate)** · tariff-truce expiry **2026-11-10 (estimate)**.
-- **Escalation flag** — the pending 7.5% Section-301 overcapacity tariff layer being formally imposed on Chinese semiconductors (would push combined Section-301 exposure to ~70%) before or during the summit window. Not tripped as of 2026-09-04.
-- **Upside-tail flag (new 2026-09-04)** — any WH/USTR/Commerce signal walking back Lutnick's "chip controls not on the table", or naming an Entity-List/H200-class deliverable, restores the Oct-2025-style relief-rally mechanism this pulse just removed.
-- **Date-confirmation kill (mechanical, not a trading trigger)** — a direct fetch of a primary government source confirming or revising Sep 24 flips the source-grade label; whitehouse.gov/news was fetched 2026-09-04 and carried nothing, so it has not fired.
+- **Never** — pre-position AI-semis exposure directionally on a Trump-Xi outcome guess; the n=2 base rate is a coin flip with fat tails on both sides, and two eroded deliverables are not a short thesis.
+- **Watch (dated)** — CPI **2026-09-11** · FOMC **2026-09-16** · opex **2026-09-18** · UNGA-81 general debate **2026-09-22 (estimate — the meeting Xi is reportedly skipping to make this trip)** · the summit itself **2026-09-24 (estimate)** · UNSC Iran panel mandate expiry **2026-09-26 (estimate)** · tariff-truce expiry **2026-11-10 (estimate)**.
+- **Escalation flag** — the pending 7.5% Section-301 overcapacity tariff layer being formally imposed on Chinese semiconductors before or during the summit window. **Not tripped as of 2026-09-08, now verified from the primary source**: federalregister.gov's document API returns zero matches for Section-301 overcapacity published since 2026-08-01.
+- **Upside-tail flag (amended 2026-09-08)** — supersedes the 2026-09-04 version. A US-side walkback of Lutnick is **no longer sufficient**: Washington already granted the H200 concession and zero units moved. What restores the Oct-2025-style mechanism is a **Beijing-side** signal — a named Chinese buyer taking H200 delivery, or licensed rare-earth flow resuming — not another US statement.
+- **Deliverable-erosion flag (new 2026-09-08)** — Chinese suppliers refusing *licensed* rare-earth shipments since early August (Reuters, 9/4; gallium exports −65%, yttrium −98% YTD per Chinese customs) cuts against the Kuala Lumpur truce's own rare-earth commitment six weeks before it expires. Treat further named refusals as truce-compliance decay, not headline noise.
+- **One forward test registered (2026-09-08)** — `FT-trump-xi-summit-2026-09-24-1`, the deliverable null. It scores this doc's central claim without taking a position sized to the outcome.
+- **Date-confirmation kill (mechanical, not a trading trigger)** — a direct fetch of a primary government source confirming or revising Sep 24 flips the source-grade label; whitehouse.gov/news was fetched 2026-09-04 and again 2026-09-08 and carried nothing, so it has not fired.
 
 ## Initial research
 
@@ -157,6 +163,33 @@ none of which this doc can handicap. The "elevated event risk into 9/24" call th
 rather than expires — and its own kill switch was tested and not met this window: VIX compressed
 (14.4 → 16.3 → 14.3) but AI-semis realized vol did not, with two beats sold in five sessions.
 
+**Stance update 2026-09-08 (pulse check; receipt = the 2026-09-08 ledger row).** The position call is
+still none keyed to this event, and the guard-shaped framing is unchanged — but the *reason* the upside
+tail is narrow got much stronger, and one more prospective deliverable eroded. Last row filed Lutnick's
+9/2 "chip controls not on the table" as one official's expectation-setting, "exactly the kind of line
+that gets walked back." That framing under-read it. Washington already made the concession this summit
+would otherwise be asked to make: H200 sales were authorised in Dec-2025, roughly ten Chinese firms
+hold licences for up to 75,000 units each, and **not a single H200 has shipped**, because Beijing
+directs its own firms to prioritise domestic silicon while US licences require in-China use — mutually
+exclusive conditions (artificialintelligence-news, 2026-05-19). USTR's Greer separately confirmed
+semiconductors were not on the May Beijing agenda at all. The obstruction is structural and sits on
+*Beijing's* side, so the doc's own upside-tail flag is amended above: a US walkback restores nothing;
+only a Beijing-side acceptance signal does. Second, the rare-earth deliverable degraded — Reuters
+(2026-09-04) reports Chinese suppliers refusing *licensed* shipments to US buyers since early August
+after Beijing sanctioned the Responsible Business Alliance, with gallium exports −65% and yttrium −98%
+YTD; the Kuala Lumpur truce explicitly committed China to pausing rare-earth controls, so this is
+truce-compliance decay six weeks before that truce expires. Against those two, the escalation flag did
+**not** trip and is now checked against a primary source rather than press absence (federalregister.gov,
+zero Section-301 overcapacity documents since 2026-08-01, fetched 9/8). Net: no position, no short, and
+the "elevated event risk into 9/24" call strengthens again — a summit with two visibly-thinned
+deliverables and an unresolved tariff escalation still pending is a wider outcome distribution than one
+with a known lever to pull. This is also why the pre-summit AI-safety dialogue reported for
+mid-September (Reuters via CNBC, 9/5; Bessent-led) is recorded here but **not** proposed to the calendar:
+no specific date was reported, the venue is undetermined, and a White House official said flatly "there
+is currently no planned AI-related meeting in mid-September." An undated, officially-denied meeting fails
+this lane's dated bar, and inventing a date to satisfy the sweep would be the exact false precision the
+estimate label exists to prevent.
+
 **Kill switches.**
 
 - *"No position keyed to this event"* dies only if a registered forward test on a Trump-Xi-summit-style
@@ -171,8 +204,11 @@ rather than expires — and its own kill switch was tested and not met this wind
 - *"Fat-tailed, no clean base rate"* — would need a third 2026 Trump-Xi-style meeting's reaction to
   start narrowing the sample; none is currently scheduled before this one.
 
-No forward test registered in [`forward-tests.md`](../forward-tests.md) — this is guard-shaped, not a
-scored directional call.
+One forward test registered 2026-09-08 in
+[`forward-tests/trump-xi-summit-2026-09-24.md`](../forward-tests/trump-xi-summit-2026-09-24.md) —
+`FT-trump-xi-summit-2026-09-24-1`, the deliverable null. It scores this doc's central claim (no US-side
+semiconductor export-control deliverable at the summit) and takes no position sized to the outcome; the
+stance stays guard-shaped and unpriced.
 
 ## Assessment ledger
 
@@ -180,6 +216,7 @@ scored directional call.
 |---|---|---|---|---|
 | 2026-08-28 | D-27 | Initial research banked (above). Date: heavily press-corroborated (Trump's own Beijing banquet toast, Aug-17 reconfirmation with a specific Sep-23-arrival/Sep-25-departure itinerary, skipping UNGA) but no primary government source fetched this pass — stays `estimate`. Agenda: AI dominance framed as the central topic across multiple outlets, alongside trade/Taiwan/Iran. Reaction function: n=2 prior 2026 Trump-Xi meetings gave opposite outcomes — Oct-2025 Kuala Lumpur/Busan (muted relief rally, one-year Entity List pause as a semis upside catalyst) vs. May-2026 Beijing (pre-summit NVDA optimism on H200 hopes, then a global selloff — CSI 300 −1.12%, KOSPI >−6%, S&P futures −1% — on "nothing of real substance"). Tariff context: combined Section-301 exposure on Chinese semiconductors near 70% once a reportedly-pending 7.5% overcapacity layer is formally imposed (on top of a 12.5% forced-labor tariff effective Jul 24 and the standing 50% semiconductor rate) — reported as being finalized ahead of the summit (techtimes). Kuala Lumpur truce's Nov-10 tariff-suspension deadline sits ~6 weeks after this summit, making the two one connected risk window. No adjacency sweep run this row (initial research, not yet a pulse check) — the event itself was surfaced via AVGO's own 2026-08-28 adjacency sweep. | — (stance set) | 2026-09-04 (high, 21-60d band: every 7d) |
 | 2026-09-04 | D-20 | **Adjacency sweep.** *Peers — two AI-semis beats both sold:* MRVL (8/27 PM, rev +37% to $2.7B, FY28 raised to ~$18B from $16.5B) −10.3% on 8/28, −13.5% over 8/27→9/3; AVGO (9/2 PM, EPS $3.32 v $3.24, rev $29.59B v $29.36B, AI semis +221% y/y, Q4 guide $34.8B) −2.75% on 9/3, −3.9% on the window; NVDA +0.2%, SOXX −4.4%. *Macro:* ISM Services 55.4 v 54.2 est (activity 61.7, employment 47.8, 2nd month contracting); jobs-2026-09-04 had NOT printed at write time (22:40 ET 9/3) — no claim made on it. *VIX:* 14.43 (8/29) → 16.34 (9/2) → 14.32 (9/3 close) — round trip inside 3pts, no regime shift. *Geopolitical, load-bearing:* Commerce Sec. Lutnick, 9/2 presser at the G20 Innovation Ministerial (Chapel Hill NC), said he does not think US chip export controls will be on the table at the summit — China has not used the early-2026 carveout (InsideTrade, pub. 9/3). That is the exact lever behind Oct-2025's relief rally, so the upside tail narrows while the downside case is untouched. 7.5% Section-301 overcapacity layer still PENDING — no Notice of Action found this pass. *Tape/date:* whitehouse.gov/news fetched direct 9/4 carries no Xi state-visit item (latest posts 9/2) → stays `estimate`; the mechanical date kill did not fire. *Proposed to `market-events.ts` (estimate):* `us-china-tariff-truce-expiry-2026-11-10`, off EO 14358's verbatim "12:01 a.m. eastern standard time on November 10, 2026" — the deadline this doc already reasoned about had no calendar entry. | Asymmetry narrowed, position unchanged — see Stance update 2026-09-04 | 2026-09-07 (high, 8-20d band: every 3d) |
+| 2026-09-08 | D-16 | **Adjacency sweep.** *Peers/tape:* the "beats get sold" pattern reversed on 9/4 — MRVL +7.0%, AMD +4.7%, SOXX +3.5%, NVDA +0.8%, AVGO +0.2% while the S&P fell −0.38%; MRVL still −7.4% vs its 8/27 pre-print close. *Macro:* Aug payrolls +162k v ~53k est, u-rate 4.1%, June/July revised up ~+55k; CME September **hike** odds ~60–65% (Kalshi 51.5%, Polymarket ~52%), cut odds 0%. *VIX:* 14.53 (9/4 close) → 15.7 (9/8 pre-open) vs 14.32 last row — +1.4pt, under the 3pt threshold, no regime shift. *Geopolitical, load-bearing:* the narrowed upside tail is **structural, not one official's line** — H200 sales were authorised Dec-2025, ~10 Chinese firms hold licences for up to 75,000 units each, and zero units have shipped because Beijing directs domestic-first purchasing while US licences require in-China use; Greer confirmed semis were not on the May Beijing agenda (artificialintelligence-news, 5/19). *Second deliverable eroded:* Reuters (9/4) — Chinese suppliers refusing **licensed** rare-earth shipments to US buyers since early August after Beijing sanctioned the RBA; gallium −65%, yttrium −98% YTD, against a truce that committed China to pausing exactly those controls. *Escalation flag untripped, now primary-sourced:* federalregister.gov API returns **zero** Section-301 overcapacity documents since 2026-08-01 (fetched 9/8); reporting says the report is "legally challenging to finalize." *Date:* whitehouse.gov/news fetched direct 9/8 — latest post Labor Day 9/7, no Xi state-visit item → stays `estimate`, mechanical date kill did not fire. *Adjacency, calendar side:* 23 tracked events now within ±5d, up from 11; the two that matter here are `unga-81-general-debate-2026-09-22` (the meeting Xi is reportedly skipping for this trip) and `unsc-iran-panel-mandate-expiry-2026-09-26` (the Iran channel — Bessent's Aug "Operation Economic Outcast" secondary sanctions target Iran's oil buyers, and China is the largest). *No proposal filed:* a Bessent-led pre-summit AI-safety dialogue is reported for "mid-September" (Reuters via CNBC, 9/5) but carries no date, no venue, and a WH denial — fails the dated bar; recorded in the Stance instead. Three cited sources 403'd and are logged in `probe-ref.blocked`. | Upside-tail flag amended (Beijing-side, not US-side); deliverable-erosion flag added; `FT-trump-xi-summit-2026-09-24-1` registered — see Stance update 2026-09-08 | 2026-09-11 (high, 8-20d band: every 3d) |
 
 **Rules.** Rows append only — editing a past row is falsification. Keep a row terse (the lint
 notes any row past ~1,200 chars): it is a note to the next session, not an essay, and a stance
