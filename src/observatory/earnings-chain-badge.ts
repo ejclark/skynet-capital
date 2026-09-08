@@ -27,10 +27,14 @@ import { escapeHtml } from "../ui/escape-html.js";
  * "Earnings in 4 days"), the status rides visibly in the badge, and the calendar entry's own
  * source is the tooltip. Absence renders as NOTHING — no "no earnings" zero-state, which would
  * read as a checked, cleared all-clear the table cannot actually promise.
+ *
+ * REACT PORT: `app/src/shell/earnings-badge.tsx` (#2017 Phase 1 slice 11) is the React-shell
+ * consumer — it imports `earningsProximity`/`headline`/`GLOSS`/`TONE` straight from here rather
+ * than re-deriving equivalent logic, so the two renderers can never drift apart.
  */
 
 /** How close the print is, in the house's own terms. */
-type PrintNearness = "flat-zone" | "dead-zone" | "just-printed";
+export type PrintNearness = "flat-zone" | "dead-zone" | "just-printed";
 
 export interface EarningsProximity {
   readonly print: EarningsPrint;
@@ -66,7 +70,7 @@ export function earningsProximity(
 }
 
 /** Plain English for a signed day count — the desk never makes anyone decode "D-2". */
-const whenPhrase = (days: number): string => {
+export const whenPhrase = (days: number): string => {
   if (days === 0) return "today, after the close";
   if (days === 1) return "tomorrow";
   if (days > 1) return `in ${days} days`;
@@ -74,7 +78,7 @@ const whenPhrase = (days: number): string => {
 };
 
 /** An estimated date must never be spoken as a fact — "expected", not a flat assertion. */
-function headline(near: EarningsProximity): string {
+export function headline(near: EarningsProximity): string {
   const estimated = near.print.status === "estimate";
   const when = whenPhrase(near.days);
   if (near.days < 0) {
@@ -87,7 +91,7 @@ function headline(near: EarningsProximity): string {
  * What the proximity MEANS for the premium in front of you. Educational and hedged — these are
  * tendencies, and the desk never states a market outcome as certain.
  */
-const GLOSS: Record<PrintNearness, string> = {
+export const GLOSS: Record<PrintNearness, string> = {
   "flat-zone": "the bots open nothing this close to a print — the move is binary from here",
   "dead-zone": "premiums usually carry an event premium into a print, and you'd be paying it",
   "just-printed": "premiums usually deflate once the number is out",
@@ -98,7 +102,7 @@ const GLOSS: Record<PrintNearness, string> = {
  * refuses new risk, which is the alarm role BRAND reserves the colour for. The wider dead zone
  * is informative (machine teal), and a print already behind us is past tense (muted).
  */
-const TONE: Record<PrintNearness, string> = {
+export const TONE: Record<PrintNearness, string> = {
   "flat-zone": "var(--neg)",
   "dead-zone": "var(--accent)",
   "just-printed": "var(--muted)",

@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { nextPrint } from "../../../src/domain/earnings-calendar";
 import type { ChainData } from "../live/options";
 import { daysToExpiry } from "../live/straddle";
 
@@ -10,7 +11,11 @@ import { daysToExpiry } from "../live/straddle";
  * to manual entry when it couldn't — the legacy raw mode's posture, so the ticket always works.
  * Strike ALWAYS renders as a free-typed number input — the chain, when loaded, only adds a
  * `<datalist>` of suggested strikes (plus the chain table's own row-click-to-fill); it never
- * becomes the only way to name a strike.
+ * becomes the only way to name a strike. `ExpirationField`'s tabs also carry the per-expiration
+ * print mark (#2017 Phase 1 slice 11): a ⚡ on any tab whose contract lives through the symbol's
+ * next earnings print, reusing `nextPrint` (`src/domain/earnings-calendar.ts`) — the same
+ * comparison `expirationPrintMark` in `earnings-chain-badge.ts` makes, ported here as additive
+ * decoration rather than the legacy function's HTML-string form.
  * @category trading
  */
 
@@ -51,11 +56,21 @@ export function ExpirationField({
       />
     );
   }
+  const next = chainData.symbol ? nextPrint(chainData.symbol, new Date().toISOString()) : undefined;
   return (
     <div className="exp-tabs">
       {chainData.expirations.map((exp) => {
         const disabled = zeroDteLocked && daysToExpiry(exp, new Date()) === 0;
         const active = exp === chainData.expiration;
+        // ISO dates compare lexicographically; the print lands after the close, so same-day
+        // counts as held — mirrors `expirationPrintMark`'s exact comparison.
+        const printMark = next !== undefined && next.date <= exp;
+        const printReason = printMark
+          ? `${chainData.symbol} reports on or before this expiration — this contract lives through the print`
+          : undefined;
+        const title = [disabled ? zeroDteReason : undefined, printReason]
+          .filter((part): part is string => part !== undefined)
+          .join(" · ");
         return (
           <button
             key={exp}
@@ -63,10 +78,11 @@ export function ExpirationField({
             className={active ? "exp-tab exp-tab-active" : "exp-tab"}
             aria-pressed={active}
             disabled={disabled}
-            title={disabled ? zeroDteReason : undefined}
+            title={title !== "" ? title : undefined}
             onClick={() => onEdit(exp)}
           >
             {exp}
+            {printMark ? <span aria-hidden="true"> ⚡</span> : null}
             {disabled ? " — locked (0DTE)" : ""}
           </button>
         );

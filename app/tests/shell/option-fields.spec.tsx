@@ -187,4 +187,51 @@ describe("ExpirationField", () => {
     const openTab = screen.getByText("2026-10-16");
     expect(openTab).not.toBeDisabled();
   });
+
+  describe("the earnings print mark (#2017 Phase 1 slice 11)", () => {
+    // MU's confirmed print is 2026-09-30 (`src/domain/earnings-calendar.ts`). `nextPrint` reads
+    // the real system clock (no injectable `now` on this field, mirroring the zero-DTE case just
+    // above, which already reasons about "today" via the real `new Date()` rather than a mock) —
+    // so this exercises the real `UPCOMING_PRINTS` table against the real clock, which is safely
+    // before 2026-09-30 for the lifetime of this fixture.
+    const chainAroundMuPrint: ChainData = {
+      symbol: "MU",
+      optionType: "call",
+      expirations: ["2026-09-25", "2026-09-30", "2026-10-16"],
+      expiration: "2026-09-30",
+      rows: [],
+    };
+
+    it("marks an expiration that lives through the print with a ⚡ and an explanatory title", () => {
+      render(
+        <ExpirationField
+          id="exp"
+          chainData={chainAroundMuPrint}
+          value="2026-09-30"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />,
+      );
+
+      const heldTab = screen.getByRole("button", { name: /2026-09-30/ });
+      expect(heldTab.querySelector('[aria-hidden="true"]')?.textContent).toContain("⚡");
+      expect(heldTab.getAttribute("title")).toContain("lives through the print");
+    });
+
+    it("leaves an expiration before the print unmarked", () => {
+      render(
+        <ExpirationField
+          id="exp"
+          chainData={chainAroundMuPrint}
+          value="2026-09-30"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />,
+      );
+
+      const earlyTab = screen.getByRole("button", { name: "2026-09-25" });
+      expect(earlyTab.querySelector('[aria-hidden="true"]')).not.toBeInTheDocument();
+      expect(earlyTab).not.toHaveAttribute("title");
+    });
+  });
 });
