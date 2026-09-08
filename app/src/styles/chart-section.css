@@ -46,8 +46,61 @@
   background: var(--surface);
   box-shadow: var(--elev-recessed);
 }
+/* RSI's own pane (the studies slice) needs its own vertical room — +100px on the phone, +150px at
+   the breakpoint — so the price + volume pane keeps the height it had and the second pane is
+   added, never carved out of the first. The mount reads the grown box on the re-mount a toggle
+   triggers; the observer follows it after that. */
+.chart-canvas.has-rsi {
+  height: 360px;
+}
 @media (min-width: 600px) {
   .chart-canvas {
     height: 420px;
   }
+  .chart-canvas.has-rsi {
+    height: 570px;
+  }
+}
+/* The study toggles — `.railctl` chips (rail.css) laid as a wrapping row under the canvas, the
+   same "any number on" checkbox idiom the activity feed's filters use. Pressed carries a shape as
+   well as the accent: a ✓ in a fixed slot, so the label never shifts and the state is never hue
+   alone (a standing reader is red/green colourblind). */
+.chart-studies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.chart-studies .railctl {
+  width: auto;
+  padding: 6px 10px 6px 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  white-space: nowrap;
+}
+.chart-studies .railctl::before {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  text-align: center;
+}
+.chart-studies .railctl[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+.chart-studies .railctl[aria-pressed="true"]::before {
+  content: "✓";
+}
+/* One line per active study — the `src/indicators/` gloss, plain text a touch can read (no hover). */
+.chart-gloss {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.chart-gloss b {
+  color: var(--text);
+  font-weight: 600;
 }
