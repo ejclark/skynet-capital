@@ -127,8 +127,7 @@ export function OptionGateStatus({
 }: {
   readonly state: OptionGateState;
 }): ReactElement | null {
-  if (state.step === "draft")
-    return <GateHead tone="draft">Draft — nothing is sent until every check passes</GateHead>;
+  if (state.step === "draft") return null;
   if (state.step === "reviewing")
     return <GateHead tone="checks">Reviewing against the desk…</GateHead>;
   if (state.step === "reviewed" || state.step === "submitting")

@@ -53,6 +53,12 @@
   box-shadow: var(--elev-recessed);
   margin-bottom: 12px;
 }
+/* An empty region on the idle draft step: keep it mounted for aria-live, draw no chrome. */
+.gate:empty {
+  border: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+}
 .gate-head {
   display: flex;
   align-items: center;
