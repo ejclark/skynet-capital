@@ -263,3 +263,15 @@ Eric-only governance change) — then `@semantic-release/git` can be added back.
   view stylesheet — a 640px card looks right on a laptop and leaves two-thirds of a monitor empty.
 - **Honor `prefers-reduced-motion` for anything animated** — every animated surface needs the
   reduced-motion path, not just the cinematic ones.
+- **`lightweight-charts` throws under `happy-dom`** (`app/rstest.config.ts`'s test environment) —
+  `createChart` calls `getRgbStringViaBrowser()` to resolve a colour via a detached element's
+  `getComputedStyle`, and happy-dom hands back the raw hex instead of `rgb(...)`, which the
+  library's parser rejects (`Failed to parse color: #191919`). Not a canvas problem — a null 2D
+  context is tolerated fine. Fix: pass a small custom hex parser via `layout: { colorParsers: [...] }`
+  (`LayoutOptions.colorParsers`, `typings.d.ts`) — verified end to end (candles + a volume overlay +
+  a second pane all construct, `chart.remove()` tears down clean). Prefer not mounting the chart in
+  specs at all where possible — spec the pure data-mapping layer (bars → series data) instead; use
+  the `colorParsers` shim only for a deliberate mount smoke-test. (#2017 Phase 1 chart-section spike,
+  2026-09-08 — also corrects that plan's own assumption: the package's licence is **Apache-2.0**, not
+  MIT, which carries an attribution clause the library satisfies by default via `attributionLogo:
+  true`; leave that option alone unless Eric routes a `docs/BRAND.md` call to remove it.)
