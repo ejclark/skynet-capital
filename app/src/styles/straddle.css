@@ -23,6 +23,44 @@
 .straddle-dte {
   color: var(--muted);
 }
+
+/* The earnings badge (#2017 Phase 1 slice 11) — the chain header's own print tell, right after
+   `.straddle-head`. Tone rides on a real border/background step, never colour alone (a standing
+   reader is red/green colourblind), and the class names below mirror `TONE`'s own keys in
+   `earnings-chain-badge.ts` exactly, so a display change to one is a display change to both. */
+.ec-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.ec-badge-meta {
+  opacity: 0.8;
+  font-family: var(--mono);
+}
+.ec-badge-gloss {
+  opacity: 0.75;
+}
+.ec-badge-flat-zone {
+  color: var(--neg);
+  border: 1px solid color-mix(in srgb, var(--neg) 45%, transparent);
+  background: color-mix(in srgb, var(--neg) 10%, transparent);
+}
+.ec-badge-dead-zone {
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.ec-badge-just-printed {
+  color: var(--muted);
+  border: 1px solid color-mix(in srgb, var(--muted) 45%, transparent);
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+}
 .straddle-scroll {
   overflow-x: auto;
 }

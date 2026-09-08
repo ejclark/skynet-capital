@@ -3,6 +3,8 @@
 // first"): the 390px frame proves the curation, the desktop frame proves it expanded instead of
 // floating. JPEG ≤100KB.
 // Usage: npm run build --prefix app && npm run shoot:trade [outdir]
+import { resolve } from "node:path";
+import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
 
 const play = (code, name, tldr, kind, side, optionType, state, opensAfter) => ({
@@ -178,6 +180,10 @@ const chain = {
 };
 
 let currentPlays = freshPlays;
+// Mutable so the earnings-badge scenario below can swap in an MU chain/quote without disturbing
+// every earlier shot's fixed NVDA fixtures (mirrors `currentPlays`'s own pattern).
+let currentChain = chain;
+let currentQuote = quote;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
@@ -185,8 +191,8 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/plays": () => currentPlays,
     "/api/settings": settings,
     "/api/desk/*": desk,
-    "/api/trade/quote": quote,
-    "/api/trade/chain": chain,
+    "/api/trade/quote": () => currentQuote,
+    "/api/trade/chain": () => currentChain,
   },
 });
 
@@ -275,5 +281,40 @@ currentPlays = throughLongs;
 await page.goto(`${origin}/app/trade?play=401`);
 await page.getByText("Multi-leg builder").waitFor();
 await shoot("trade-spread-open-phone");
+
+// The earnings badge + ⚡ print marks (#2017 Phase 1 slice 11) — MU's confirmed print is
+// 2026-09-30 (`src/domain/earnings-calendar.ts`). The harness's real wall clock is nowhere near
+// that date, and neither `EarningsBadge` nor `ExpirationField` take an injectable "now" (by
+// design — they read the same `new Date()` the rest of the ticket does, so the badge and the DTE
+// line can never disagree), so the clock itself is faked via Playwright's own `page.clock`
+// (https://playwright.dev/docs/clock) rather than bending the fixture dates to match real time,
+// which would need re-editing every time this script is next run. `setFixedTime` two days before
+// the print lands the badge in the flat zone (`entryFlatDays: 2`); the 2026-09-29 expiration
+// (before the print) stays unmarked, and the 2026-09-30/2026-10-16 expirations (on/after it) carry
+// the ⚡ — 2026-09-29 is also chosen to sit AFTER "now" so it doesn't also trip the unrelated
+// zero-DTE lock, which floors any already-past expiration's DTE to 0 (`daysToExpiry`, `straddle.ts`).
+currentPlays = throughLongs;
+currentChain = {
+  symbol: "MU",
+  optionType: "put",
+  expirations: ["2026-09-29", "2026-09-30", "2026-10-16"],
+  expiration: "2026-09-30",
+  spot: 118.4,
+  rows: [110, 115, 118, 120, 125].map((strike, i) => ({
+    strike,
+    occSymbol: `MU260930P${String(strike * 1000).padStart(8, "0")}`,
+    premium: Number((0.6 + i * 0.9).toFixed(2)),
+    bid: Number((0.5 + i * 0.9).toFixed(2)),
+    ask: Number((0.7 + i * 0.9).toFixed(2)),
+    openInterest: 400 + i * 80,
+  })),
+};
+currentQuote = { symbol: "MU", last: 118.4, change: 1.05, changePct: 0.89, tone: "pos" };
+await page.clock.setFixedTime(new Date("2026-09-28T14:00:00Z"));
+await page.goto(`${origin}/app/trade?play=201&symbol=MU`);
+await page.getByText(/^Chain ·/).waitFor();
+await page.getByText("⚡").first().waitFor();
+const shootEarningsBadge = shooter(page, resolve("docs/shots/earnings-badge"));
+await shootEarningsBadge("earnings-badge-phone");
 
 await close();

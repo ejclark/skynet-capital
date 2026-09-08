@@ -11,6 +11,7 @@ import {
   windowRows,
 } from "../live/straddle";
 import { money } from "../live/ticket";
+import { EarningsBadge } from "./earnings-badge";
 
 /**
  * THE STRADDLE VIEW (#1481, slice 1) — one expiration's chain as the entry instrument: strike down
@@ -67,6 +68,7 @@ export function StraddleView({
         </span>
         <span className="straddle-dte">{expiresIn(daysToExpiry(expiration, now))}</span>
       </div>
+      <EarningsBadge symbol={symbol} now={now} />
       <div className="straddle-scroll">
         <table className="straddle-table">
           <thead>
