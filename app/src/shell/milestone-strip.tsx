@@ -113,7 +113,9 @@ function Rung({
   return (
     <Link
       to="/trade"
-      search={(prev) => ({ ...prev, desk: deskId, play: play.code })}
+      // A rung is a TICKET action: it lands on the ticket section (the untyped default) whatever
+      // section the page was on, so `section` is dropped from the URL rather than carried over.
+      search={(prev) => ({ ...prev, desk: deskId, play: play.code, section: undefined })}
       className={className}
       aria-current={current ? "page" : undefined}
       aria-label={`${play.code} ${play.name}${play.earned ? " — earned" : ""}`}

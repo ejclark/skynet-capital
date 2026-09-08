@@ -1,0 +1,53 @@
+/* The chart section (#2017 Phase 1 chart build-out, the mount slice) — candles + a volume band for
+   the ticket's committed symbol, the /trade page's second section. Tokens only. MOBILE-FIRST
+   (CLAUDE.md → "curate at phone width, then expand"): the pane is 260px tall at 390px — dense but
+   readable for a combined candle + volume pane — and the SAME 600px breakpoint ticket.css and
+   straddle.css already use adds vertical room only. Same chart, more room to read it; never a new
+   concept on the desktop. Width is always the container's (`fluid-shell-css.spec.ts`): the mount
+   forwards the box to the chart, so no pixel cap belongs here. */
+.chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 14px;
+  max-width: var(--col-wide);
+  min-width: 0;
+}
+/* The legend — the plain-text companion the candle hue is supplementary to (a standing reader is
+   red/green colourblind). Wraps at 390px; one row wherever it fits. */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.chart-legend-day {
+  color: var(--text);
+}
+.chart-legend-k {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.chart-legend b {
+  color: var(--text);
+  font-weight: 600;
+}
+.chart-canvas {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--elev-recessed);
+}
+@media (min-width: 600px) {
+  .chart-canvas {
+    height: 420px;
+  }
+}

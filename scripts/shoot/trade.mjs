@@ -143,6 +143,42 @@ const desk = {
 
 const quote = { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" };
 
+// Twenty daily bars for the chart section (#2017 Phase 1 chart build-out, the mount slice) —
+// deterministic, hand-shaped rather than realistic finance: the closes walk up with real
+// pullbacks and one sharp down day (bar 19) so the frame proves BOTH candle colours, and the
+// volumes spike on the big moves so the histogram band shows real variation. Ends on the quote's
+// own last (181.32) so the two fixtures agree. Business days only, counted back from 2026-09-08.
+const barCloses = [
+  172.4, 174.1, 173.2, 176.8, 178.9, 177.3, 175.6, 179.2, 181.0, 180.1, 183.4, 182.2, 185.7, 184.3,
+  181.9, 183.8, 186.5, 185.2, 179.4, 181.32,
+];
+const barVolumesM = [
+  31.2, 28.4, 25.9, 40.1, 44.6, 33.0, 30.8, 47.3, 51.9, 29.5, 55.2, 34.7, 60.8, 38.1, 42.4, 36.9,
+  49.5, 33.3, 71.6, 45.0,
+];
+const barDays = [];
+for (let d = new Date("2026-09-08T00:00:00Z"); barDays.length < barCloses.length; ) {
+  const dow = d.getUTCDay();
+  if (dow !== 0 && dow !== 6) barDays.unshift(d.toISOString());
+  d = new Date(d.getTime() - 86_400_000);
+}
+const bars = {
+  symbol: "NVDA",
+  bars: barCloses.map((c, i) => {
+    const o = i === 0 ? 171.5 : barCloses[i - 1];
+    const hi = Math.max(o, c) + 0.6 + (i % 3) * 0.4;
+    const lo = Math.min(o, c) - 0.5 - (i % 2) * 0.5;
+    return {
+      t: barDays[i],
+      o,
+      h: Number(hi.toFixed(2)),
+      l: Number(lo.toFixed(2)),
+      c,
+      v: Math.round(barVolumesM[i] * 1e6),
+    };
+  }),
+};
+
 // The empty Wire feed used by every earlier shot that happens to land on a committed symbol
 // (`WireRow` mounts under the chain on any of them) — #2017 Phase 1 slice 12's own fixture,
 // swapped for a populated one only in that shot's own scene below.
@@ -256,6 +292,8 @@ const { page, origin, shoot, close } = await openShell({
     "/api/desk/human-eric/activity": recentOrdersActivity,
     "/api/trade/quote": () => currentQuote,
     "/api/trade/chain": () => currentChain,
+    // Matched by pathname alone (`lib.mjs`'s `stubBody`), so one key covers any `?symbol=&days=`.
+    "/api/trade/bars": bars,
     "/api/wire": () => currentWire,
   },
 });
@@ -275,6 +313,37 @@ await shoot("trade-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-desktop");
+
+// The chart section (#2017 Phase 1 chart build-out, the mount slice) — `?section=chart` swaps
+// the ticket for daily candles + a volume band on the committed `?symbol=`, the legend above
+// reading the latest bar as words (a standing reader is red/green colourblind — the candle hue
+// is supplementary). PHONE FIRST: the 390px frame proves the 260px pane is readable; the desktop
+// frame proves the same chart got vertical room, not a phone column floating in a wide stage.
+// `lightweight-charts` paints to <canvas>, which no text locator can wait on, so the wait is a
+// real non-blank check on the pane's pixels — the same idea as `tower.mjs`'s readiness gate.
+const chartPainted = () =>
+  page.waitForFunction(() => {
+    const canvases = Array.from(document.querySelectorAll(".chart-canvas canvas"));
+    return canvases.some((canvas) => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx || canvas.width === 0 || canvas.height === 0) return false;
+      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      for (let i = 3; i < data.length; i += 4) if (data[i] !== 0) return true;
+      return false;
+    });
+  });
+const shootChartSection = shooter(page, resolve("docs/shots/chart-section"));
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?section=chart&symbol=NVDA`);
+await page.getByText("Vol").waitFor();
+await chartPainted();
+await shootChartSection("chart-section-phone");
+
+await page.setViewportSize({ width: 1280, height: 900 });
+// The ResizeObserver re-fits the chart to the wider, taller box; give it a frame to repaint.
+await page.waitForTimeout(400);
+await chartPainted();
+await shootChartSection("chart-section-desktop");
 
 // The quote header (#2017 Phase 0.9): last price, day $ change and % change, with a glyph + sign
 // carrying tone alongside colour (a standing reader is red/green colourblind — hue never carries
