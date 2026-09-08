@@ -1,12 +1,16 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ChainData } from "../../src/live/options";
-import { StrikeField } from "../../src/shell/option-fields";
+import { ExpirationField, StrikeField } from "../../src/shell/option-fields";
 
 /**
  * `StrikeField` (#2017 Phase 0 task 4b): the numeric input always renders — a chain page is never
  * the only way to name a strike. When a chain has loaded rows, a `<datalist>` adds native
  * autocomplete suggestions on top of that same input; typing a value the chain doesn't list is
  * still a normal edit, not a blocked one.
+ *
+ * `ExpirationField` (#2017 Phase 0 task 4c): with no chain, the raw date input is unchanged. With
+ * a chain, expiration renders as a horizontal strip of toggle buttons (one per
+ * `chainData.expirations` entry) instead of a `<select>`.
  */
 
 const noop = () => {
@@ -90,5 +94,97 @@ describe("StrikeField", () => {
     const input = screen.getByRole("spinbutton");
     expect(input).not.toHaveAttribute("list");
     expect(container.querySelector("datalist")).not.toBeInTheDocument();
+  });
+});
+
+const chainManyExpirations: ChainData = {
+  symbol: "NVDA",
+  optionType: "call",
+  expirations: ["2026-09-08", "2026-09-11", "2026-09-18", "2026-10-16"],
+  expiration: "2026-09-18",
+  rows: [],
+};
+
+describe("ExpirationField", () => {
+  it("renders the plain date input unchanged when there's no chain", () => {
+    render(
+      <ExpirationField
+        id="exp"
+        chainData={undefined}
+        value="2026-09-20"
+        onEdit={noop}
+        zeroDteLocked={false}
+      />,
+    );
+
+    const input = screen.getByDisplayValue("2026-09-20");
+    expect(input).toHaveAttribute("type", "date");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("renders one tab per expiration, with the chain's resolved expiration marked active", () => {
+    render(
+      <ExpirationField
+        id="exp"
+        chainData={chainManyExpirations}
+        value="2026-09-08"
+        onEdit={noop}
+        zeroDteLocked={false}
+      />,
+    );
+
+    const tabs = screen.getAllByRole("button");
+    expect(tabs.map((t) => t.textContent)).toEqual(chainManyExpirations.expirations);
+
+    const active = screen.getByText("2026-09-18");
+    expect(active).toHaveAttribute("aria-pressed", "true");
+    for (const exp of chainManyExpirations.expirations.filter((e) => e !== "2026-09-18")) {
+      expect(screen.getByText(exp)).toHaveAttribute("aria-pressed", "false");
+    }
+  });
+
+  it("calls onEdit with the clicked tab's date when an inactive tab is clicked", () => {
+    let edited: string | undefined;
+    render(
+      <ExpirationField
+        id="exp"
+        chainData={chainManyExpirations}
+        value="2026-09-08"
+        onEdit={(v) => {
+          edited = v;
+        }}
+        zeroDteLocked={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("2026-10-16"));
+    expect(edited).toBe("2026-10-16");
+  });
+
+  it("disables today's tab with a visible non-colour cue and the lock reason when zero-DTE is locked", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const chainWithToday: ChainData = {
+      ...chainManyExpirations,
+      expirations: [today, "2026-10-16"],
+      expiration: today,
+    };
+    render(
+      <ExpirationField
+        id="exp"
+        chainData={chainWithToday}
+        value={today}
+        onEdit={noop}
+        zeroDteLocked={true}
+        zeroDteReason="course 501 isn't earned yet"
+      />,
+    );
+
+    const lockedTab = screen.getByText((content) => content.startsWith(today));
+    expect(lockedTab).toBeDisabled();
+    expect(lockedTab).toHaveAttribute("title", "course 501 isn't earned yet");
+    expect(lockedTab.textContent).toContain("locked");
+
+    const openTab = screen.getByText("2026-10-16");
+    expect(openTab).not.toBeDisabled();
   });
 });

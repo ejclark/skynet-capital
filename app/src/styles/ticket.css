@@ -255,3 +255,36 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+/* The expiration field's horizontal tab strip (#2017 Phase 0 task 4c) — a thumb-swipeable row of
+   toggle buttons replaces the plain <select>, matching straddle.css's own `.straddle-scroll`
+   idiom for the chain table right below this field (a sibling rule, not a shared class — that
+   file is scoped to the chain table). Mobile-first: fits 390px, swipes past whatever doesn't. */
+.exp-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  padding-bottom: 2px;
+}
+.exp-tab {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.exp-tab-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.exp-tab:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

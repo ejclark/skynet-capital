@@ -3,9 +3,11 @@ import type { ChainData } from "../live/options";
 import { daysToExpiry } from "../live/straddle";
 
 /**
- * The options ticket's chain-driven fields (#738 phase 10b, strike per #2017 Phase 0 task 4b):
- * expiration renders as a select fed by the member's own chain when it loaded, and falls back to
- * manual entry when it couldn't — the legacy raw mode's posture, so the ticket always works.
+ * The options ticket's chain-driven fields (#738 phase 10b, strike per #2017 Phase 0 task 4b,
+ * expiration per task 4c): expiration renders as a horizontally-scrolling row of tab buttons fed
+ * by the member's own chain when it loaded — a thumb-swipeable strip beats a long `<select>` on
+ * mobile, matching the chain table's own `.straddle-scroll` idiom right below it — and falls back
+ * to manual entry when it couldn't — the legacy raw mode's posture, so the ticket always works.
  * Strike ALWAYS renders as a free-typed number input — the chain, when loaded, only adds a
  * `<datalist>` of suggested strikes (plus the chain table's own row-click-to-fill); it never
  * becomes the only way to name a strike.
@@ -50,22 +52,26 @@ export function ExpirationField({
     );
   }
   return (
-    <select id={id} value={chainData.expiration} onChange={(e) => onEdit(e.target.value)}>
+    <div className="exp-tabs">
       {chainData.expirations.map((exp) => {
         const disabled = zeroDteLocked && daysToExpiry(exp, new Date()) === 0;
+        const active = exp === chainData.expiration;
         return (
-          <option
+          <button
             key={exp}
-            value={exp}
+            type="button"
+            className={active ? "exp-tab exp-tab-active" : "exp-tab"}
+            aria-pressed={active}
             disabled={disabled}
             title={disabled ? zeroDteReason : undefined}
+            onClick={() => onEdit(exp)}
           >
             {exp}
             {disabled ? " — locked (0DTE)" : ""}
-          </option>
+          </button>
         );
       })}
-    </select>
+    </div>
   );
 }
 
