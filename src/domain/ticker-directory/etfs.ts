@@ -1,0 +1,32 @@
+import type { TickerEntry } from "./types.js";
+
+/** Broad-market, sector and commodity ETFs — the "I don't have a name, I have a thesis" set. */
+export const ETFS: readonly TickerEntry[] = [
+  { symbol: "SPY", name: "SPDR S&P 500 ETF", sector: "ETF" },
+  { symbol: "QQQ", name: "Invesco QQQ Trust (Nasdaq-100)", sector: "ETF" },
+  { symbol: "IWM", name: "iShares Russell 2000 ETF", sector: "ETF" },
+  { symbol: "DIA", name: "SPDR Dow Jones Industrial Average ETF", sector: "ETF" },
+  { symbol: "VTI", name: "Vanguard Total Stock Market ETF", sector: "ETF" },
+  { symbol: "VOO", name: "Vanguard S&P 500 ETF", sector: "ETF" },
+  { symbol: "VEA", name: "Vanguard FTSE Developed Markets ETF", sector: "ETF" },
+  { symbol: "VWO", name: "Vanguard FTSE Emerging Markets ETF", sector: "ETF" },
+  { symbol: "XLK", name: "Technology Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLF", name: "Financial Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLE", name: "Energy Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLV", name: "Health Care Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLY", name: "Consumer Discretionary Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLP", name: "Consumer Staples Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLI", name: "Industrial Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLU", name: "Utilities Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLB", name: "Materials Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLRE", name: "Real Estate Select Sector SPDR", sector: "ETF" },
+  { symbol: "XLC", name: "Communication Services Select Sector SPDR", sector: "ETF" },
+  { symbol: "SMH", name: "VanEck Semiconductor ETF", sector: "ETF" },
+  { symbol: "SOXX", name: "iShares Semiconductor ETF", sector: "ETF" },
+  { symbol: "ARKK", name: "ARK Innovation ETF", sector: "ETF" },
+  { symbol: "GLD", name: "SPDR Gold Shares", sector: "ETF" },
+  { symbol: "SLV", name: "iShares Silver Trust", sector: "ETF" },
+  { symbol: "TLT", name: "iShares 20+ Year Treasury Bond ETF", sector: "ETF" },
+  { symbol: "HYG", name: "iShares iBoxx High Yield Corporate Bond ETF", sector: "ETF" },
+  { symbol: "EEM", name: "iShares MSCI Emerging Markets ETF", sector: "ETF" },
+];

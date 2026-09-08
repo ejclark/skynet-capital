@@ -14,6 +14,7 @@ import { ChainStraddle } from "./chain-straddle";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
+import { SymbolField } from "./symbol-field";
 
 /**
  * THE OPTIONS TICKET (#738 phase 10b) — the legacy `/trade` option plays in the shell, on the
@@ -122,21 +123,18 @@ export function OptionGate({
         Course {play.code} · {play.gloss}
       </p>
       <div className="gate-fields tkt-fields">
-        <div className="field">
-          <label htmlFor={symId}>Symbol</label>
-          <input
-            id={symId}
-            value={symbol}
-            placeholder="NVDA"
-            maxLength={12}
-            spellCheck={false}
-            onChange={(e) => edit(setSymbol)(e.target.value)}
-            onBlur={() => setChainSym(symbol.trim().toUpperCase())}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setChainSym(symbol.trim().toUpperCase());
-            }}
-          />
-        </div>
+        <SymbolField
+          id={symId}
+          label="Symbol"
+          value={symbol}
+          placeholder="NVDA"
+          maxLength={12}
+          onChange={edit(setSymbol)}
+          onCommit={(s) => {
+            edit(setSymbol)(s);
+            setChainSym(s);
+          }}
+        />
         <div className="field">
           <label htmlFor={expId}>Expiration</label>
           <ExpirationField
