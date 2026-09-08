@@ -2148,3 +2148,20 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   cost, but a tool to sweep for it periodically is (docs/COACHES.md → Special teams).
 - **SIDE QUESTS:** none — `hero.css`'s `aspect-ratio: 21/9` sits on a fixed-width block, not a
   resizing grid track, so it doesn't share this failure mode; checked, not changed.
+
+### #2024 went red in CI on `app-typecheck` after a green local `verify`
+
+- **SHA:** n/a (fix on `package.json`)   **DATE:** 2026-09-08   **STATUS:** closed
+- **SIGNAL:** PR #2024 passed local `npm run verify` (`run-p typecheck lint test`, root only) and
+  still went red in CI's `verify` job on `app-typecheck`, within ~1 minute of push — one CI cycle
+  spent on a check the local run never ran.
+- **ROOT CAUSE:** `.github/workflows/pipeline.yml`'s `verify` job runs `npm run typecheck --prefix
+  app` and `npm test --prefix app` in addition to the root's `typecheck lint test`, but root
+  `package.json`'s `verify` script never called into `app/`. `scripts/ship.sh open` runs `npm run
+  verify` and calls it "parity with CI" — the parity claim was false for anything the app package
+  alone broke.
+- **PREVENTION:** script — root `verify` is now `run-p typecheck lint test typecheck:app test:app`,
+  with `typecheck:app` (`npm run typecheck --prefix app`) and `test:app` (`npm test --prefix app`)
+  added as their own scripts, so it runs the same five checks CI's `verify` job runs. `ship.sh
+  open` now refuses to push what CI would reject.
+- **SIDE QUESTS:** none.
