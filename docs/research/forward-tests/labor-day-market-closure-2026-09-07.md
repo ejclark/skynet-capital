@@ -25,3 +25,25 @@ defect. `SPY`, `^GSPC` and `^TNX` all correctly end at **2026-09-04**.
 scorer that takes the last `^VIX` bar would read **15.30**, which is above 14.53, and pass the test a
 day early on a session that never happened. Select the bar whose date is exactly `2026-09-08`; if no
 such bar exists, the test is unscorable that day, never inferred from a neighbour.
+
+**The guard above is INSUFFICIENT — corrected 2026-09-08 07:44 ET, before either row is scored. No
+row above is edited.** Pulled cache-busted at 07:44 ET, `^VIX` already carries a **2026-09-08** bar:
+open 15.56, close **15.74**, with `meta.regularMarketTime` = **07:28 ET**. It is an **in-progress**
+bar, not a close — the cash equity session had not opened. The date-equality rule written above
+would therefore have scored FT-…-1 a **PASS today** (15.74 > 14.53), a full trading day early, on a
+number that has not settled.
+
+**The mechanism, which also replaces yesterday's "new and partial defect" reading.** Yahoo reports
+`^VIX` on Cboe's clock: `exchangeTimezoneName` `America/Chicago`, and its `currentTradingPeriod.regular`
+runs **03:00 → 16:15 ET** (global trading hours). `^GSPC` runs **09:30 → 16:00 ET**. So on any pull
+after 03:00 ET, `^VIX` carries a same-day bar hours before an equity bar exists — one session-hours
+asymmetry that explains the live 09-08 bar and the populated 09-07 holiday bar together, rather than
+two unrelated feed faults.
+
+**Replacement guard — cross-symbol, and verified before adoption.** Score the `^VIX` **2026-09-08**
+bar only once **`^GSPC` also carries a `2026-09-08` bar**; until then the test is unscorable, never
+inferred. This is safe in both directions: across the full history there are **0 dates (of 9,237)**
+where `^GSPC` has a bar and `^VIX` does not, so the cross-check can never block a legitimately
+scorable day — while it removes both hazards at once (the 09-07 phantom and any in-progress bar).
+Dates carrying a populated `^VIX` bar with no `^GSPC` bar now number **three**: 2026-05-25,
+2026-09-07, and 2026-09-08 (live, and expected to resolve on today's close).
