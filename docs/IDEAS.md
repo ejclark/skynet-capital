@@ -18,6 +18,11 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- Decide the app/src ↔ root src/domain boundary rule: symbol-field.tsx is the first app import of
+  root code (the ticker directory, pure data); app/src/live/*.ts hand-duplicates API shapes
+  instead. Shared package, path alias, or keep duplicating? _(src: Claude · while: slice 8a symbol
+  autocomplete)_
+
 ### Prior research/summaries needed re-verification against source 3+ times in one execution pass
 
 Building the meta-orchestrator plan's slices, the same pattern recurred: a documented or

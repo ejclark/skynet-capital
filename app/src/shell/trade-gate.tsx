@@ -17,6 +17,7 @@ import {
 } from "../live/ticket";
 import { DisarmNote, GateHead } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
+import { SymbolField } from "./symbol-field";
 
 /**
  * THE PRE-TRADE GATE (#738 phase 2e) — the merge-box state machine on a real ticket.
@@ -213,17 +214,15 @@ export function TradeGate({
         Paper account · market, limit or stop · the gate reviews before anything is sent
       </p>
       <div className="gate-fields">
-        <div className="field">
-          <label htmlFor={symId}>Symbol</label>
-          <input
-            id={symId}
-            value={fields.symbol}
-            placeholder="AAPL"
-            maxLength={8}
-            spellCheck={false}
-            onChange={(e) => edit("symbol")(e.target.value)}
-          />
-        </div>
+        <SymbolField
+          id={symId}
+          label="Symbol"
+          value={fields.symbol}
+          placeholder="AAPL"
+          maxLength={8}
+          onChange={edit("symbol")}
+          onCommit={edit("symbol")}
+        />
         <div className="field">
           <label htmlFor={qtyId}>Shares</label>
           <input

@@ -1,0 +1,33 @@
+import type { TickerEntry } from "./types.js";
+
+/** Aerospace/defense, machinery, transport and industrial-conglomerate names. */
+export const INDUSTRIALS: readonly TickerEntry[] = [
+  { symbol: "CAT", name: "Caterpillar", sector: "Industrials" },
+  { symbol: "BA", name: "Boeing", sector: "Industrials" },
+  { symbol: "HON", name: "Honeywell", sector: "Industrials" },
+  { symbol: "UPS", name: "United Parcel Service", sector: "Industrials" },
+  { symbol: "RTX", name: "RTX (Raytheon)", sector: "Industrials" },
+  { symbol: "LMT", name: "Lockheed Martin", sector: "Industrials" },
+  { symbol: "GE", name: "GE Aerospace", sector: "Industrials" },
+  { symbol: "DE", name: "Deere & Company", sector: "Industrials" },
+  { symbol: "UNP", name: "Union Pacific", sector: "Industrials" },
+  { symbol: "MMM", name: "3M", sector: "Industrials" },
+  { symbol: "NOC", name: "Northrop Grumman", sector: "Industrials" },
+  { symbol: "GD", name: "General Dynamics", sector: "Industrials" },
+  { symbol: "FDX", name: "FedEx", sector: "Industrials" },
+  { symbol: "CSX", name: "CSX", sector: "Industrials" },
+  { symbol: "NSC", name: "Norfolk Southern", sector: "Industrials" },
+  { symbol: "EMR", name: "Emerson Electric", sector: "Industrials" },
+  { symbol: "ETN", name: "Eaton", sector: "Industrials" },
+  { symbol: "ITW", name: "Illinois Tool Works", sector: "Industrials" },
+  { symbol: "PH", name: "Parker Hannifin", sector: "Industrials" },
+  { symbol: "CMI", name: "Cummins", sector: "Industrials" },
+  { symbol: "WM", name: "Waste Management", sector: "Industrials" },
+  { symbol: "RSG", name: "Republic Services", sector: "Industrials" },
+  { symbol: "PCAR", name: "PACCAR", sector: "Industrials" },
+  { symbol: "TT", name: "Trane Technologies", sector: "Industrials" },
+  { symbol: "JCI", name: "Johnson Controls", sector: "Industrials" },
+  { symbol: "LHX", name: "L3Harris Technologies", sector: "Industrials" },
+  { symbol: "TDG", name: "TransDigm Group", sector: "Industrials" },
+  { symbol: "ODFL", name: "Old Dominion Freight Line", sector: "Industrials" },
+];
