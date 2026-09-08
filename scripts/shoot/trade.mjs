@@ -179,6 +179,38 @@ const bars = {
   }),
 };
 
+// Sixty bars for the STUDIES scene (#2017 Phase 1 chart build-out, the studies slice) — the base
+// twenty above stay exactly as they are (the studies-off shots prove that view unchanged), but a
+// 20-window SMA/Bollinger has ONE point on a twenty-bar series, which draws no line at all. Forty
+// hand-shaped closes are prepended — a gentle drift with two real swings — and the walk lands
+// near the base fixture's first open so the join reads as one continuous tape.
+const studyPrefixCloses = Array.from({ length: 40 }, (_, i) =>
+  Number((165 + 4 * Math.sin(i / 4) + i * 0.15).toFixed(2)),
+);
+const studyCloses = [...studyPrefixCloses, ...barCloses];
+const studyDays = [];
+for (let d = new Date("2026-09-08T00:00:00Z"); studyDays.length < studyCloses.length; ) {
+  const dow = d.getUTCDay();
+  if (dow !== 0 && dow !== 6) studyDays.unshift(d.toISOString());
+  d = new Date(d.getTime() - 86_400_000);
+}
+const studyBars = {
+  symbol: "NVDA",
+  bars: studyCloses.map((c, i) => {
+    const o = i === 0 ? 164.2 : studyCloses[i - 1];
+    const hi = Math.max(o, c) + 0.6 + (i % 3) * 0.4;
+    const lo = Math.min(o, c) - 0.5 - (i % 2) * 0.5;
+    return {
+      t: studyDays[i],
+      o,
+      h: Number(hi.toFixed(2)),
+      l: Number(lo.toFixed(2)),
+      c,
+      v: Math.round((28 + 20 * Math.abs(Math.sin(i / 2.5))) * 1e6),
+    };
+  }),
+};
+
 // The empty Wire feed used by every earlier shot that happens to land on a committed symbol
 // (`WireRow` mounts under the chain on any of them) — #2017 Phase 1 slice 12's own fixture,
 // swapped for a populated one only in that shot's own scene below.
@@ -280,6 +312,8 @@ let currentQuote = quote;
 // string before looking a stub up — `lib.mjs`'s `stubBody`), so one exact key covers every
 // `?symbol=` this script commits, same as `/api/trade/chain` above.
 let currentWire = emptyWire;
+// The base twenty bars for every chart shot but the studies scene, which swaps in `studyBars`.
+let currentBars = bars;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
@@ -293,7 +327,7 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/quote": () => currentQuote,
     "/api/trade/chain": () => currentChain,
     // Matched by pathname alone (`lib.mjs`'s `stubBody`), so one key covers any `?symbol=&days=`.
-    "/api/trade/bars": bars,
+    "/api/trade/bars": () => currentBars,
     "/api/wire": () => currentWire,
   },
 });
@@ -344,6 +378,31 @@ await page.setViewportSize({ width: 1280, height: 900 });
 await page.waitForTimeout(400);
 await chartPainted();
 await shootChartSection("chart-section-desktop");
+
+// The canned studies (the studies slice) — SMA (solid) and EMA (dashed) over the candles in the
+// one accent hue, and RSI in ITS OWN pane below, with the dashed 70/30 reference lines and the
+// `.has-rsi` room the CSS adds for it; the legend grows a cell per study and the gloss lines
+// print under the toggle row. Pressed via the real chips, the way a member does it. Phone frame
+// only: the second pane at 390px is the layout this frame exists to prove. Studies are component
+// state, so a fresh `goto` is the studies-off base again — no clean-up toggle needed.
+currentBars = studyBars;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?section=chart&symbol=NVDA`);
+await page.getByText("Vol").waitFor();
+await chartPainted();
+for (const name of ["SMA", "EMA", "RSI"]) {
+  await page.getByRole("button", { name, exact: true }).click();
+}
+await page.locator(".chart-canvas.has-rsi").waitFor();
+// The RSI click grew the canvas UNDER the pointer, which would park the crosshair mid-chart and
+// its value label over the 70 reference label — so the pointer leaves the canvas first, and the
+// legend falls back to the latest bar the way it does for a member who lifts a finger.
+await page.mouse.move(8, 8);
+// The toggle re-mounts the chart into the grown box; give it a frame to lay out both panes.
+await page.waitForTimeout(400);
+await chartPainted();
+await shootChartSection("chart-section-studies-phone");
+currentBars = bars;
 
 // The quote header (#2017 Phase 0.9): last price, day $ change and % change, with a glyph + sign
 // carrying tone alongside colour (a standing reader is red/green colourblind — hue never carries
