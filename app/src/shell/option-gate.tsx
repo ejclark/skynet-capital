@@ -123,7 +123,7 @@ export function OptionGate({
       </p>
       <div className="gate-fields tkt-fields">
         <div className="field">
-          <label htmlFor={symId}>Underlying</label>
+          <label htmlFor={symId}>Symbol</label>
           <input
             id={symId}
             value={symbol}
@@ -157,7 +157,7 @@ export function OptionGate({
           <StrikeField id={strikeId} chainData={chainData} value={strike} onEdit={pickStrike} />
         </div>
         <div className="field">
-          <label htmlFor={qtyId}>Contracts</label>
+          <label htmlFor={qtyId}>Contracts (100 shares)</label>
           <input
             id={qtyId}
             type="number"

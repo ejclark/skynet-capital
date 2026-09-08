@@ -71,4 +71,16 @@ describe("the gate's idle draft step", () => {
     expect(gate?.childElementCount).toBe(0);
     expect(gate?.getAttribute("aria-live")).toBe("polite");
   });
+
+  it("OptionGate labels the underlying field Symbol and the quantity field Contracts (100 shares)", () => {
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <OptionGate deskId="desk-1" play={unlockedCallPlay} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByLabelText("Symbol")).toBeInTheDocument();
+    expect(screen.getByLabelText("Contracts (100 shares)")).toBeInTheDocument();
+  });
 });
