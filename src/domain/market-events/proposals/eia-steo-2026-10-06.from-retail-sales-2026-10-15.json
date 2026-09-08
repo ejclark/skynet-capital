@@ -1,0 +1,11 @@
+{
+  "id": "eia-steo-2026-10-06",
+  "kind": "macro-print",
+  "title": "EIA Short-Term Energy Outlook (October 2026)",
+  "date": "2026-10-06",
+  "status": "estimate",
+  "source": "EST: eia.gov/outlooks/steo/release_schedule.php lists \"10/06/2026\" for the October 2026 edition, and states the STEO \"is normally released between 12:00 pm (noon) and 12:15 pm EDT (summer)/EST (winter)\" — fetched direct 2026-09-08. Primary-sourced, but this calendar defines no `confirmed` prefix for the EIA (the standing fourth schema gap the eia-steo-2026-09-09 entry named), so it stays estimate on prefix grounds, not date doubt; this lane also never self-confirms an event it discovered in-sweep",
+  "impact": "low",
+  "symbols": [],
+  "notes": "The last EIA publication before retail-sales-2026-10-15 (09 days prior), and the instrument that adjudicates that print's newly load-bearing gasoline leg. As of the 2026-09-08 pulse, September pump prices are tracking ~1.8% ABOVE August against a 2021-25 median Aug->Sep path of -0.10% (AAA regular $4.1514 on 09-08 vs an EIA August monthly of $4.058), which puts ~+0.15pp of non-demand lift back into the September retail headline that ledger had argued would wash out with August. This edition publishes EIA's own September retail-gasoline monthly average and re-forecasts Q4, so it is where that estimate is measured rather than tracked. It also scores the September STEO's stated assumption that Hormuz flows 'slowly increase in September' -- the same assumption eia-steo-2026-09-09 was filed to test one edition earlier. Filed `low` on that entry's own reasoning: a forecast publication sets no policy and moves no equity tape. Discovered during the retail-sales-2026-10-15 pulse-check adjacency sweep (2026-09-08); the calendar tracked the September edition and nothing beyond it."
+}
