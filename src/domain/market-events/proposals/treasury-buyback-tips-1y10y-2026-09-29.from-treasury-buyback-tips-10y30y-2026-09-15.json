@@ -1,0 +1,11 @@
+{
+  "id": "treasury-buyback-tips-1y10y-2026-09-29",
+  "kind": "rates",
+  "title": "Treasury liquidity-support buyback operation (TIPS 1-10Y, $750M cap, 1:40pm ET)",
+  "date": "2026-09-29",
+  "status": "estimate",
+  "source": "EST: treasury.gov Tentative Schedule of Treasury Buyback Operations (August 2026 refunding, masthead 'For Publication August 5, 2026'), PDF text layer decompressed direct 2026-09-08 (plain curl, HTTP 200, 125,547 bytes, md5 79b65955e74a59f6bebff3adf8ba7b35) — the row reads verbatim announce 9/28/2026, operation 9/29/2026 1:40 pm - 2:00 pm, settle 9/30/2026, Liquidity Support, TIPS 1Y to 10Y, maturity range 09/30/2027 - 09/29/2036, min $0, max $750 million. Estimate, not confirmed, on the two counts every buyback row off this document carries: a tentative schedule is tentative by construction, and the confirming primary is the 09-28 operation announcement rather than this document. Checked 2026-09-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during treasury-buyback-tips-10y30y-2026-09-15 initial research (2026-09-08), off the same schedule primary. Filed because it is the direct control for its 09-15 sibling: the two TIPS buckets behave in opposite ways and the contrast is the whole analytical content. Primary-verified from fiscaldata buybacks_operations (fetched 2026-09-08): the 1Y-10Y bucket FILLS its $750M cap almost always — 100%, 98.0%, 99.3%, 98.0%, 100%, 100% across 2025-09-24 through 2026-06-24 — while the 10Y-30Y bucket has taken only 18-28% of its $500M cap in all four operations under that label. The 1Y-10Y streak then BROKE on 2026-07-22: $405M accepted against a $750M cap, a 54.0% fill, the first miss in the new regime, on $3.194B offered (a 12.7% hit rate). So 09-29 is the first read on whether that miss was a one-off or the start of the same price-rationing posture the long bucket already runs. Low impact is honest about size ($750M is noise against 2026 TIPS issuance); its value is as the comparandum. Proposed as an estimate; nothing here licenses an entry."
+}

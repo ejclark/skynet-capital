@@ -1,0 +1,11 @@
+{
+  "id": "existing-home-sales-2026-10-13",
+  "kind": "macro-print",
+  "title": "Existing-Home Sales (NAR, September 2026 data) \u2014 the closings half of the residential pair, 10:00 a.m. ET",
+  "date": "2026-10-13",
+  "status": "estimate",
+  "source": "EST: nar.realtor/press-releases/nar-statistical-news-release-schedule, re-fetched direct 2026-09-08 (302 from /newsroom/..., HTTP 200, 483,177 bytes, byte-identical to the 2026-09-06 fetch), whose 2026 table reads \"Tue., Oct. 13 | September Existing-Home Sales\" under the standing note \"All releases are distributed at 10 a.m. Eastern Time\"; corroborated row-for-row by the downloadable twin /sites/default/files/2025-11/2026-nar-statistical-news-release-schedule.docx (HTTP 200, 55,384 bytes, published 2025-11). NAR produces this series rather than reporting someone else's, which is the precedent the confirmed pending-home-sales-2026-12-17 and existing-home-sales-2026-11-12 entries cite for treating this calendar as primary. Filed `estimate` on the single count that is not date doubt: this lane may not self-confirm an event it discovered in-sweep. The schedule's 2026 execution record, scored this session from NAR's own newsroom <time> elements, is 2 for 2 to the exact day and hour (June data 2026-07-16T09:00:00-05:00, July data 2026-08-18T09:01:00-05:00). Checked 2026-09-08",
+  "impact": "low",
+  "symbols": [],
+  "notes": "DISCOVERED during the pending-home-sales-2026-09-17 initial-research adjacency sweep (2026-09-08, D-9), in the same primary NAR fetch that promoted that event to `confirmed`. The gap it fills: this calendar carries the 11-12 and 12-09 editions of Existing-Home Sales but not the October one, so the September-data closings read had no row. Impact `low` and `symbols: []` on the same measured basis as the two sibling PHSI ledgers: no house playbook is macro- or housing-keyed, no instrument attaches, and the 12-17 lane measured the print's own 10:00-11:00 hour indistinguishable from an ordinary hour on ITB (33.9% vs 35.3% of session range, p=0.79), XHB and SPY. Nothing here licenses an entry; an estimate widens caution rather than triggering action."
+}
