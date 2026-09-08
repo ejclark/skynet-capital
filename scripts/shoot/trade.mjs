@@ -6,6 +6,7 @@
 import { resolve } from "node:path";
 import { shooter } from "./lib.mjs";
 import { openShell } from "./shell.mjs";
+import { recentOrdersActivity } from "./trade-recent-orders-fixture.mjs";
 
 const play = (code, name, tldr, kind, side, optionType, state, opensAfter) => ({
   code,
@@ -250,6 +251,9 @@ const { page, origin, shoot, close } = await openShell({
     "/api/trade/plays": () => currentPlays,
     "/api/settings": settings,
     "/api/desk/*": desk,
+    // Exact key beats the `/api/desk/*` prefix above (`lib.mjs`'s `stubBody`) — every fixture in
+    // this script logs in as the same "human-eric" account (`settings.accounts[0].id`).
+    "/api/desk/human-eric/activity": recentOrdersActivity,
     "/api/trade/quote": () => currentQuote,
     "/api/trade/chain": () => currentChain,
     "/api/wire": () => currentWire,
@@ -339,6 +343,18 @@ await page.getByText("Also trading NVDA").waitFor();
 await page.getByText("Also trading NVDA").scrollIntoViewIfNeeded();
 const shootWireRow = shooter(page, resolve("docs/shots/wire-row"));
 await shootWireRow("wire-row-phone");
+
+// The recent-orders strip (#2017 Phase 1 slice 13, task 3a) — the viewer's OWN order history for
+// the EXACT contract in front of them, self first then WireRow's "others" (the ordering decision
+// from the plan's review pass), both in frame together at 390px since they fit naturally here. A
+// strike has to actually resolve to a chain row before `RecentOrdersStrip` renders anything (it
+// takes the matched row's real `occSymbol`, never a hand-assembled one), so this navigation commits
+// `?strike=180` — the same row `trade-recent-orders-fixture.mjs`'s two events are keyed to.
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA&strike=180`);
+await page.getByText("Your recent orders").waitFor();
+await page.getByText("Your recent orders").scrollIntoViewIfNeeded();
+await shooter(page, resolve("docs/shots/recent-orders"))("recent-orders-phone");
+
 currentWire = emptyWire;
 
 // Progressive disclosure (#2017 Phase 0 task 4d): with no `?symbol=` committed yet, the five

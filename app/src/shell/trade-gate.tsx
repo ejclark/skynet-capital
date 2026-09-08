@@ -18,6 +18,7 @@ import {
 import { DisarmNote, GateHead } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
 import { QuoteHeader } from "./quote-header";
+import { RecentOrdersStrip } from "./recent-orders-strip";
 import { SymbolField } from "./symbol-field";
 
 /**
@@ -298,6 +299,11 @@ export function TradeGate({
         ) : null}
       </div>
       <p className="gate-note">{orderTypeNote(fields.orderType)}</p>
+
+      {/* Instrument-agnostic (task 3a, unlike the options-chain-only earnings badge/wire-row) —
+          this stock ticket gets its own compact "here's what you've done" strip, same relative
+          position (right before the status block) as the options ticket's own intel elements. */}
+      <RecentOrdersStrip symbol={quoteSym} deskId={deskId} />
 
       <div className="gate" aria-live="polite">
         <GateStatus state={state} />

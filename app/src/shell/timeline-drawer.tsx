@@ -13,7 +13,7 @@ import { type DeskActivityEvent, fetchDeskActivity } from "../live/desk";
  * recorded, not laundered — and where the evidence doesn't reach, nothing is marked.
  */
 
-function EventLine({ event }: { readonly event: DeskActivityEvent }): ReactElement {
+export function EventLine({ event }: { readonly event: DeskActivityEvent }): ReactElement {
   const when = new Date(event.at);
   const stamp = Number.isNaN(when.getTime())
     ? event.at

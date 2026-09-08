@@ -35,6 +35,11 @@ rstest.mock("../../src/live/wire", () => ({
   fetchWireForSymbol: () =>
     Promise.resolve({ trades: [], pnl: [], feedbackEnabled: false, feedback: [] }),
 }));
+// ...and RecentOrdersStrip (#2017 Phase 1 slice 13) — fires once a chain-cell pick resolves an
+// OCC symbol in the "chain cell picking" specs below.
+rstest.mock("../../src/live/desk", () => ({
+  fetchDeskActivity: () => Promise.resolve({ available: true, activity: [] }),
+}));
 
 const unlockedCallPlay: PlayInfo = {
   code: "201",
