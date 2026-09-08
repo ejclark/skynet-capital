@@ -81,3 +81,48 @@ costs nothing here: FT-…-1's **Score by** is **2026-09-09**, so the first corr
 an on-time one. The earlier guards are retained above rather than deleted, because the sequence is the
 finding. **If a same-day pull is ever unavoidable, it is unscorable** — never inferred from a
 neighbour, never taken from an in-progress bar.
+
+**The sampling-date guard held, and the drift shows why it mattered — 2026-09-08 13:52 ET. No row above
+is edited.** A fourth cache-busted pull returned `^VIX` 09-08 = **15.28**, a fifth distinct value for the
+same "close":
+
+| Pull (ET) | `^VIX` 2026-09-08 "close" | Distance above the 14.53 kill line |
+|---|---|---|
+| 07:44 | 15.74 | +1.21 |
+| ~10:06 / ~10:09 / 10:11 | 15.69 / 15.65 / 15.50 | +1.16 / +1.12 / +0.97 |
+| 13:52 | **15.28** | **+0.75** |
+
+The drift is monotone **downward** and has closed **38%** of the gap to the threshold in six hours. This
+upgrades the earlier note from "the reads were early" to "the reads were early **and travelling toward
+the line that decides the test**" — the direction that could actually change the answer. The guard is
+unchanged and was obeyed: this pull is dated 2026-09-08, so FT-…-1 remains **unscorable today**. Score
+by **2026-09-09** is unaffected.
+
+**FT-…-2 — the anchor cohort is ambiguous, and it is pre-committed HERE, before the print. No row above
+is edited.** The 09-09 10Y reopening prints ~13:00 ET tomorrow. Two different trailing-12 anchors for it
+are on the record and **both reproduce exactly** from a fresh `auctions_query` pull (HTTP 200) — the
+difference is a cohort definition nobody had named:
+
+| Trailing-12 cohort (through 2026-08-12) | Mean | sd | Min | Where 2.35 sits |
+|---|---|---|---|---|
+| **All 10Y auctions**, incl. the $21B off-cycle taps — *matches the registered anchor* | **2.451** | 0.103 | 2.30 | **−0.98 sd**, below 1 of 12 |
+| **$39B+ on-cycle only**, excluding the taps — *matches the 07:44 ledger row's read* | 2.502 | 0.096 | **2.35** | −1.59 sd, equal to the cohort minimum |
+
+The taps in the window are 2026-07-23 (2.30), 2026-01-22 (2.38), 2025-07-24 (2.41). Since the 09-09
+auction is a **$39B on-cycle reopening**, the tighter cohort is the better comparison — which makes the
+registered kill **harder to trigger** than registration stated, not easier.
+
+**The pre-commitment, made while the outcome is still unknown:** FT-…-2 scores on the **literal
+registered line — bid-to-cover ≥ 2.35 passes, below 2.35 fails.** The registered threshold is not moved,
+narrowed or reinterpreted; the cohort question governs only *how extreme* a fail reads in the write-up
+(−1.0 sd against all 10Y, −1.6 sd and a cohort-minimum against on-cycle peers). Fixing this after seeing
+the print would be choosing the yardstick to fit the result, which is the same failure mode as the three
+scoring guards above — each of which looked fine precisely because it agreed with the hypothesis.
+
+**Neither test is scored by the 2026-09-08 3Y note, and the substitution was available and declined.**
+The 3Y (`91282CRL7`, $58B) stopped at **2.72** inside the same $304B compressed session — **+0.064 over
+its own trailing-12 mean of 2.656** (sd 0.083, z +0.77), above 10 of the last 12, with indirect at
+**61.7% vs 64.6%** trailing-12 (**−2.8pp**, the one soft spot). That is real live evidence for [ledger
+leg 4](../events/labor-day-market-closure-2026-09-07.md)'s compression null, and it is recorded there as
+such — but FT-…-2 names the **10Y reopening**, and a forward test is scored on the instrument it
+registered or not at all.
