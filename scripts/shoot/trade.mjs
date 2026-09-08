@@ -210,14 +210,28 @@ const chain = {
   ],
   expiration: "2026-09-09",
   spot: 181.32,
-  rows: [175, 177.5, 180, 182.5, 185].map((strike, i) => ({
-    strike,
-    occSymbol: `NVDA260909P${String(strike * 1000).padStart(8, "0")}`,
-    premium: Number((0.4 + i * 1.1).toFixed(2)),
-    bid: Number((0.32 + i * 1.1).toFixed(2)),
-    ask: Number((0.48 + i * 1.1).toFixed(2)),
-    openInterest: 900 + i * 120,
-  })),
+  // Row 4 (the 185 strike) carries NO stats at all — the fixture proves both paths at once: the
+  // "—" path for a stat-less row, and the happy path for the other four (#2017 Phase 1 slice 14,
+  // reused by the chain-stats scene below rather than inventing a fourth chain fixture).
+  rows: [175, 177.5, 180, 182.5, 185].map((strike, i) => {
+    const base = {
+      strike,
+      occSymbol: `NVDA260909P${String(strike * 1000).padStart(8, "0")}`,
+      premium: Number((0.4 + i * 1.1).toFixed(2)),
+      bid: Number((0.32 + i * 1.1).toFixed(2)),
+      ask: Number((0.48 + i * 1.1).toFixed(2)),
+    };
+    if (i === 4) return base;
+    return {
+      ...base,
+      openInterest: 900 + i * 120,
+      volume: 300 + i * 90,
+      delta: Number((-0.15 - i * 0.18).toFixed(4)),
+      gamma: Number((0.008 + i * 0.002).toFixed(4)),
+      theta: Number((-0.05 - i * 0.03).toFixed(4)),
+      vega: Number((0.12 + i * 0.04).toFixed(4)),
+    };
+  }),
 };
 
 let currentPlays = freshPlays;
@@ -287,6 +301,20 @@ await shoot("trade-exp-tabs-phone");
 // directly under Expiration, above Strike/Contracts/Order/Limit, with a real loaded chain.
 await page.getByText(/^Chain ·/).waitFor();
 await shoot("trade-chain-above-fields-phone");
+
+// The scroll-out stat columns (#2017 Phase 1 slice 14) — OI/Vol/Δ/Γ/Θ/Vega past the base
+// Bid/Ask/Strike/Bid/Ask five, in the SAME `.straddle-scroll` container (no new UI mechanism).
+// Unscrolled proves the base five still read cleanly at the left edge; scrolled — via
+// `scrollLeft = scrollWidth`, the standard way to reveal an overflow-x container's far edge
+// (https://playwright.dev/docs/evaluating) — proves the new columns render past them, including
+// the "—" path on the 185-strike row's stat-less fixture above.
+const shootChainStats = shooter(page, resolve("docs/shots/chain-stats"));
+await shootChainStats("trade-chain-stats-phone");
+await page.evaluate(() => {
+  const scroller = document.querySelector(".straddle-scroll");
+  if (scroller) scroller.scrollLeft = scroller.scrollWidth;
+});
+await shootChainStats("trade-chain-stats-scrolled-phone");
 
 // Review fix (2026-09-08): the chain used to sit INSIDE the .gate-fields grid as a spanning item,
 // which inherited the grid's own overflow from the (non-wrapping) expiration tab strip and clipped

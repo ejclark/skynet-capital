@@ -61,6 +61,44 @@ describe("serveChain", () => {
     expect(body.rows[0].premium).toBe(2.5); // the bid/ask mid, computed server-side
   });
 
+  it("carries volume/delta/gamma/theta/vega when the chain client supplies them, and omits them (never null/0) when it doesn't (#2017 Phase 1 slice 14)", async () => {
+    const client = {
+      getExpirations: () => Promise.resolve(["2026-09-18", "2026-10-16"]),
+      getChain: () =>
+        Promise.resolve([
+          {
+            occSymbol: "NVDA261016P00100000",
+            strike: 100,
+            bid: 2,
+            ask: 3,
+            volume: 214,
+            delta: -0.42,
+            gamma: 0.0138,
+            theta: -0.19,
+            vega: 0.53,
+            rho: 0.01, // out of scope — must NOT appear on the row below
+          },
+          { occSymbol: "NVDA261016P00105000", strike: 105, bid: 1, ask: 1.5 }, // none supplied
+        ]),
+      getUnderlyingPrice: () => Promise.resolve(105),
+    };
+    const { res, out } = fakeRes();
+    await serveChain(res, "/x?symbol=NVDA&type=put&exp=2026-10-16", config(client), "human-ann");
+    const body = JSON.parse(out.body ?? "{}");
+    const [full, bare] = body.rows;
+    expect(full).toMatchObject({
+      volume: 214,
+      delta: -0.42,
+      gamma: 0.0138,
+      theta: -0.19,
+      vega: 0.53,
+    });
+    expect(full).not.toHaveProperty("rho");
+    for (const key of ["volume", "delta", "gamma", "theta", "vega"]) {
+      expect(bare).not.toHaveProperty(key);
+    }
+  });
+
   it("falls back to the first expiration when the requested one isn't listed", async () => {
     const client = {
       getExpirations: () => Promise.resolve(["2026-09-18"]),

@@ -210,6 +210,71 @@ describe("AlpacaOptionsClient", () => {
     expect(c).toMatchObject({ bid: 1.1, ask: 1.3 }); // quotes still merge without greeks
   });
 
+  describe("volume (#2017 Phase 1 slice 14)", () => {
+    it("merges a real dailyBar.v number onto the row", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({
+          "/v2/options/contracts?": {
+            option_contracts: [contract("MSFT260918P00420000", "2026-09-18", "420")],
+          },
+        }),
+        fakeTransport({
+          "/v1beta1/options/snapshots/MSFT": {
+            snapshots: { MSFT260918P00420000: { dailyBar: { v: 214 } } },
+          },
+        }),
+      );
+      const chain = await client.getChain("MSFT", "2026-09-18", "put");
+      expect(chain[0]?.volume).toBe(214);
+    });
+
+    it("reads null, absent, and an empty string as unreported — never a fabricated 0", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({
+          "/v2/options/contracts?": {
+            option_contracts: [
+              contract("A", "2026-09-18", "410"),
+              contract("B", "2026-09-18", "420"),
+              contract("C", "2026-09-18", "430"),
+            ],
+          },
+        }),
+        fakeTransport({
+          "/v1beta1/options/snapshots/MSFT": {
+            snapshots: {
+              A: { dailyBar: { v: null } },
+              B: { dailyBar: {} }, // key absent entirely
+              C: { dailyBar: { v: "" } },
+            },
+          },
+        }),
+      );
+      const [a, b, c] = await client.getChain("MSFT", "2026-09-18", "put");
+      expect(a?.volume).toBeUndefined();
+      expect(a).not.toHaveProperty("volume");
+      expect(b?.volume).toBeUndefined();
+      expect(c?.volume).toBeUndefined();
+    });
+
+    it("passes a genuine zero-volume day through AS 0, not dropped as absent", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({
+          "/v2/options/contracts?": {
+            option_contracts: [contract("MSFT260918P00420000", "2026-09-18", "420")],
+          },
+        }),
+        fakeTransport({
+          "/v1beta1/options/snapshots/MSFT": {
+            snapshots: { MSFT260918P00420000: { dailyBar: { v: 0 } } },
+          },
+        }),
+      );
+      const chain = await client.getChain("MSFT", "2026-09-18", "put");
+      expect(chain[0]?.volume).toBe(0);
+      expect(chain[0]).toHaveProperty("volume");
+    });
+  });
+
   it("parses greeks that arrive as numeric strings, as the contracts endpoint does", async () => {
     const client = new AlpacaOptionsClient(
       fakeTransport({

@@ -24,6 +24,10 @@ export interface OptionChainRow {
   /** Previous close premium $/share, from the contracts endpoint. */
   readonly closePrice?: number;
   readonly openInterest?: number;
+  // Session volume from the same options-snapshot payload the quotes/greeks come from
+  // (`dailyBar.v`) — absent whenever the feed hasn't reported one yet, never a fabricated 0 that
+  // would misread "nothing traded" where the honest answer is "no data".
+  readonly volume?: number;
   readonly bid?: number;
   readonly ask?: number;
   // The greeks the data host quoted for this contract, each carried ONLY when it arrived as a
@@ -115,6 +119,22 @@ const greeksOf = (raw: RawGreeks | undefined): Partial<Record<GreekKey, number>>
     if (value !== undefined) out[key] = value;
   }
   return out;
+};
+
+/**
+ * A daily bar's volume field, when the feed reported a usable one. `null`, `undefined` and an
+ * empty string are UNREPORTED — deliberately not run through `Number()`, which turns all three
+ * into a perfectly plausible 0 and would let "the feed said nothing" render as "nothing traded".
+ * Unlike `num`, zero IS a legitimate value here (a real zero-volume day), so the gate is
+ * finite-and->=0, not finite-and->0 — a fresh small local copy of `alpaca-options-flow.ts`'s
+ * `barVolume`, kept separate on purpose: this client is the lower-level, protected module that
+ * adapter reads FROM, never the reverse.
+ */
+const barVolume = (value: unknown): number | undefined => {
+  if (typeof value !== "number" && typeof value !== "string") return undefined;
+  if (value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 };
 
 export class AlpacaOptionsClient {
@@ -268,7 +288,11 @@ export class AlpacaOptionsClient {
       const body = response.body as {
         snapshots?: Record<
           string,
-          { latestQuote?: { bp?: unknown; ap?: unknown }; greeks?: RawGreeks }
+          {
+            latestQuote?: { bp?: unknown; ap?: unknown };
+            greeks?: RawGreeks;
+            dailyBar?: { v?: unknown };
+          }
         >;
       } | null;
       const snapshots = body?.snapshots ?? {};
@@ -282,6 +306,9 @@ export class AlpacaOptionsClient {
             : {}),
           ...(num(snap.latestQuote?.ap) !== undefined
             ? { ask: num(snap.latestQuote?.ap) as number }
+            : {}),
+          ...(barVolume(snap.dailyBar?.v) !== undefined
+            ? { volume: barVolume(snap.dailyBar?.v) as number }
             : {}),
           ...greeksOf(snap.greeks),
         };

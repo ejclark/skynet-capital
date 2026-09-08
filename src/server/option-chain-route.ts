@@ -11,6 +11,10 @@ import { sendJson } from "./page-shell.js";
  * so the client can branch on *why* the chain didn't load without parsing English text:
  * `"unlinked"` (no connected account yet), `"no-options"` (a genuine dead end — the symbol has
  * no listed options), or `"failed"` (a feed/broker error — the ticket still works manually).
+ *
+ * The row payload widened for the scroll-out chain columns (#2017 Phase 1 slice 14): volume and
+ * the four commonly-shown greeks (delta/gamma/theta/vega) now ride alongside bid/ask/openInterest,
+ * each still absent — never a fabricated value — whenever the client didn't compute it.
  */
 export async function serveChain(
   res: ServerResponse,
@@ -73,6 +77,11 @@ export async function serveChain(
           ...(row.bid !== undefined ? { bid: row.bid } : {}),
           ...(row.ask !== undefined ? { ask: row.ask } : {}),
           ...(row.openInterest !== undefined ? { openInterest: row.openInterest } : {}),
+          ...(row.volume !== undefined ? { volume: row.volume } : {}),
+          ...(row.delta !== undefined ? { delta: row.delta } : {}),
+          ...(row.gamma !== undefined ? { gamma: row.gamma } : {}),
+          ...(row.theta !== undefined ? { theta: row.theta } : {}),
+          ...(row.vega !== undefined ? { vega: row.vega } : {}),
         };
       }),
     });

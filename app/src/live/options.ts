@@ -42,6 +42,17 @@ export interface ChainRow {
   readonly bid?: number;
   readonly ask?: number;
   readonly openInterest?: number;
+  // The scroll-out stat columns (#2017 Phase 1 slice 14) — each absent-means-unreported, same
+  // discipline as `openInterest` above: the server never fabricates a value the feed didn't quote.
+  readonly volume?: number;
+  /** Premium change per $1 of spot. Calls (0,1); puts (-1,0). */
+  readonly delta?: number;
+  /** Delta change per $1 of spot. */
+  readonly gamma?: number;
+  /** Dollars per share per day of decay. Negative for a long option. */
+  readonly theta?: number;
+  /** Dollars per share per 1 volatility point. */
+  readonly vega?: number;
 }
 
 export interface ChainData {
