@@ -36,6 +36,21 @@ describe("doc-rot budget (advisory)", () => {
   });
 });
 
+// Unlike the budget above, structural-graph staleness is a real, blocking gate — see
+// scripts/doc-rot-scan.mjs's header comment for why. Runs against the real repo (not a fixture):
+// the fact being checked is "is docs/STRUCTURE-graph.md actually stale right now", which only the
+// real repo can answer. Exit code 2 is the scanner's distinct signal for this check.
+describe("structural graph freshness (blocking)", () => {
+  it("docs/STRUCTURE-graph.md is not stale — run `npm run graph:refresh` if this fails", () => {
+    try {
+      execFileSync("node", [SCRIPT], { encoding: "utf8" });
+    } catch (err) {
+      const e = err as { status?: number; stdout?: string; stderr?: string };
+      expect(e.status).not.toBe(2);
+    }
+  });
+});
+
 describe("doc-rot scanner behavior (seeded fixtures)", () => {
   it("flags a doc referencing a repo file that does not exist", () => {
     const { status, out } = scanFixture((root) => {

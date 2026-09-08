@@ -282,6 +282,16 @@ a table of contents"), so every name is a terse line item that must not repeat t
 | narrator line | `interrogate · 1/2 done · 0 blocked`, updated as each item finishes |
 | agent summary | one line, ≤ 120 chars, plus a URL — the schema says so, and the ledger cell truncates past 140 |
 
+### After the run — a cheap retro pass on the ledger
+
+`grind.js` itself has no judgment to apply here (it's mechanical, per its own effort-routing
+comment above) — but the *invoking* session does. Once, at the end of a run, scan the returned
+ledger for a `blocked`/`skipped` reason repeating across ≥2 items — that's a signal the chore itself
+has a gap, not that those items are each uniquely unlucky. Log it to `docs/IDEAS.md`
+(`(src: Claude · while: grind run on <chore>)`); nothing recurring → say nothing. Same no-new-gate,
+no-per-item shape as `/governor`'s and `/work-issues`' own cycle-close retro line — the ledger you're
+already printing is the free checkpoint, not a new one.
+
 ## Two hazards the first real run hit (2026-09-04)
 
 - **Worktrees are cut from the calling session's HEAD, not from `origin/main`.** An agent reads
@@ -360,10 +370,14 @@ appeared). Two consequences:
 
 - **One target, needs judgment** → do it directly, no grind.
 - **Many near-identical targets, low judgment per item** → grind (this directory).
-- **Structural debt with its own gate + ratchet (dead code, duplication, file size)** →
-  `/governor` already dispatches those one PR at a time; grind is for chores that don't have a
-  standing gate/athlete of their own, or where you want the whole batch run in one shot rather than
-  one per cycle.
+- **Structural debt with its own gate + ratchet (dead code, duplication, file size)** → the decision
+  is `docs/COACHES.md`'s "`/governor`'s normal cycle vs. feast mode vs. `/grind` on a Coach's own
+  athlete" rule, not this bullet (a narrower, now-stale version of it used to live here). Short
+  version: grind fanning a coach's own athlete (`/bury`, `/backfill`, `/decompose`, `/dedupe`) is in
+  bounds for a known, fixed batch with no dynamic re-triggering needed, landed the same shape
+  `/governor`'s own LAND step uses — never via `scripts/ship.sh platter`, a different mechanism
+  reserved for the irreversible class. See COACHES.md for the full rule and why feast mode is the
+  better fit when the target list isn't fully known up front.
 - **Cross-item synthesis needed** (a judgment that depends on comparing all items together) → a
   purpose-built workflow script (see `workflow-authoring`), not grind — grind's items are
   independent by design.

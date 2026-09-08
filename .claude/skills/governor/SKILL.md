@@ -48,7 +48,13 @@ earned after the policy proves out over reps.
    and GitHub API calls — the measured constraints. Exception: isolate a rep in its own PR when it is
    unusually large or risky enough that independent revert matters more than the savings.
    On a failure report: surface it to the human head coach verbatim; do not retry in-cycle.
-5. **STOP.** One dispatch per coach per cycle. The next cycle recomputes targets from the NEW main —
+5. **RETRO.** One line, at cycle close, never per-athlete: did anything recur across this cycle's
+   dispatches, cost more than expected, or surface a pattern worth a new athlete? Log it to
+   `docs/IDEAS.md` (`(src: Claude · while: governor cycle <n>)`); nothing to note → say nothing — this
+   is the same "surface the opportunity either way, never sit on it silently" habit feast mode's own
+   cost-test bullet already practices for one narrow case, generalized to the whole cycle. Never a new
+   gate: no cycle waits on this, and a dry cycle costs nothing.
+6. **STOP.** One dispatch per coach per cycle. The next cycle recomputes targets from the NEW main —
    that re-derivation is the serializer that prevents two reps racing the same file.
 
 ## Feast mode — planned parallel burn-down

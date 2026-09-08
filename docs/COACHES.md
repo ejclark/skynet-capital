@@ -325,5 +325,24 @@ with the complexity moved into the wiring.
   `/decompose` across two arch-scan hits) is in bounds when **one file belongs to exactly one item**
   and the wave lands as **one PR** with **one** `--update` after it. Docs-only chores (`doc-rot`,
   `comment-bloat`) have no Coach and touch no `src/**` seam — this rule was never scoped to them.
+- **`/governor`'s normal cycle vs. feast mode vs. `/grind` on a Coach's own athlete — one rule, not
+  two half-agreeing docs** (`docs/grind/README.md`'s own "when to reach for this" section points
+  here rather than restating a narrower version). Pick by whether the target list is known up front
+  and whether dynamic re-triggering is needed:
+  - Routine, one-target-at-a-time burn-down → `/governor`'s normal cycle. The default.
+  - The target list isn't fully known up front, or new targets should unblock reactively as fenced
+    seams land within one sitting → `/governor` feast mode — its "every athlete completion is a
+    mini-cycle trigger" re-checks the fence ledger for newly-unblocked work, something a static item
+    list cannot do.
+  - A known, fixed batch of targets for one athlete's own chore, no dynamic re-triggering needed →
+    `/grind` fanning that athlete's skill (already true today for `/bury`/`/backfill`; `/decompose`/
+    `/dedupe` are equally fannable, just not yet checked in as manifest chores). Land the wave the
+    *same shape* feast mode's own platter step already uses — merge each item's verified branch into
+    one wave branch, verify the union once, open one PR, auto-merge normally per the merge-policy
+    table below — **never** via `scripts/ship.sh platter`, a different mechanism reserved for the
+    irreversible class (it never auto-merges, by design — see its own header comment). The two share
+    a name and nothing else; don't conflate them.
+  - No coach/athlete involved at all (research, doc-rot, comment-bloat) → `/grind`, its primary and
+    uncontested case.
 - Adding a Coach = one eval + one budget + one CI spec + one skill (+ optionally one agent). Use
   `skill-creator` and mirror an existing pair so the roster stays uniform.
