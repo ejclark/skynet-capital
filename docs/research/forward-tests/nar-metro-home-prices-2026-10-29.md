@@ -1,0 +1,12 @@
+# Forward tests — nar-metro-home-prices-2026-10-29
+
+| # | Hypothesis | Prediction | Kill switch | Score by | Outcome |
+|---|---|---|---|---|---|
+| FT-nar-metro-home-prices-2026-10-29-1 | NAR's own 2026 forward schedule governs this series' date, on a 3-for-3 execution record with no contradicting NAR surface ([ledger](../events/nar-metro-home-prices-2026-10-29.md) Leg 1) | NAR publishes Third Quarter 2026 Metro Home Prices on **2026-10-29 at 10:00 a.m. ET** | Publication on any other date, or at an hour other than 10:00 ET — which reverts this entry to `estimate` | 2026-10-29 | — |
+| FT-nar-metro-home-prices-2026-10-29-2 | The general FOMC+1 homebuilder widening (ITB 2.093% vs 1.826%, n=96, p=0.002) does **not** hold on the October/November-meeting subset (ITB 2.039%, n=10, p=0.766), so 10-29 is an ordinary session despite being FOMC+1 (Leg 3) | ITB's **2026-10-29** session range prints **below 2.504%** of its open — the 2014+ baseline p75, so the base rate is 75% and a fail is informative | ITB's 2026-10-29 range printing at or above 2.504% of its open | 2026-10-30 | — |
+| FT-nar-metro-home-prices-2026-10-29-3 | The builder-earnings collision the 09-17 PHSI lane refuted for September **fires** in late October: DHI's ~+28/29d Q4 lag off its 09-30 fiscal year end put its 8-K on 2024-10-29 and 2025-10-28 (Leg 5) | **DHI** files its FY2026 Q4 8-K Item 2.02 **on or before 2026-10-30** | No DHI 8-K Item 2.02 on EDGAR dated on or before 2026-10-30 — which would say the two-year early-filing pattern reverted to the pre-2024 November window | 2026-10-30 | — |
+| FT-nar-metro-home-prices-2026-10-29-4 | The quarterly national median is a pooled-quarter figure **bounded by** — not derived from — the monthly single-family medians NAR already published, so the print restates rather than reveals (Leg 2) | The Q3 2026 national median existing single-family price published 2026-10-29 falls **within the range spanned by** NAR's own published July, August and September 2026 monthly single-family medians (the last of which prints 2026-10-13) | The published Q3 figure landing above the highest or below the lowest of those three monthly medians | 2026-10-29 | — |
+
+**Rules.** An outcome is scored from re-run instrument data after the score-by date, never from memory
+of the tape. A scored `kill` moves the hypothesis to the sweep doc's kill list; a scored `pass` is one
+observation, not a promotion. Editing a registered prediction after the fact is falsification.
