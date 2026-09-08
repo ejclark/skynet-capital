@@ -6,7 +6,14 @@ import { Route } from "../../src/routes/trade";
  * unchanged and untested here.
  */
 describe("/trade validateSearch — symbol", () => {
-  const parse = (search: Record<string, unknown>) => Route.options.validateSearch?.(search);
+  // TanStack types `validateSearch` as a union of validator shapes; ours is the plain function
+  // form the route actually passes.
+  const validateSearch = Route.options.validateSearch as (search: Record<string, unknown>) => {
+    desk?: string;
+    play?: string;
+    symbol?: string;
+  };
+  const parse = (search: Record<string, unknown>) => validateSearch(search);
 
   it("normalizes a lowercase symbol to uppercase", () => {
     expect(parse({ symbol: "nvda" })).toMatchObject({ symbol: "NVDA" });
