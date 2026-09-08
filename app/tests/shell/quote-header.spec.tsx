@@ -21,9 +21,12 @@ function withClient(node: ReactElement) {
 }
 
 describe("QuoteHeader", () => {
-  it("renders nothing for an empty symbol", () => {
+  it("keeps the aria-live wrapper mounted but empty for an uncommitted symbol", () => {
     const { container } = render(withClient(<QuoteHeader symbol="" />));
-    expect(container).toBeEmptyDOMElement();
+    const header = container.querySelector(".quote-header");
+    expect(header).not.toBeNull();
+    expect(header?.childElementCount).toBe(0);
+    expect(header?.getAttribute("aria-live")).toBe("polite");
   });
 
   it("renders the glyph, sign and tone-pos class for a positive quote", async () => {
@@ -35,6 +38,12 @@ describe("QuoteHeader", () => {
     expect(screen.getByText(/\+1\.19%/)).toBeInTheDocument();
     const change = screen.getByText("▲").closest(".quote-change");
     expect(change).toHaveClass("tone-pos");
+    expect(screen.getByText("▲")).toHaveAttribute("aria-hidden", "true");
+
+    const hidden = change?.parentElement?.querySelector(".visually-hidden");
+    expect(hidden).not.toBeNull();
+    expect(hidden?.textContent).toContain("up");
+    expect(hidden?.textContent).not.toContain("today");
   });
 
   it("renders the down glyph and tone-neg class for a negative quote", async () => {
@@ -44,14 +53,44 @@ describe("QuoteHeader", () => {
     await waitFor(() => expect(screen.getByText("▼")).toBeInTheDocument());
     const change = screen.getByText("▼").closest(".quote-change");
     expect(change).toHaveClass("tone-neg");
+    expect(screen.getByText("▼")).toHaveAttribute("aria-hidden", "true");
+
+    const hidden = change?.parentElement?.querySelector(".visually-hidden");
+    expect(hidden?.textContent).toContain("down");
   });
 
-  it("renders the note text when the feed degrades", async () => {
-    nextAnswer = { quoteNote: "No quote for NVDA right now." };
+  it("renders the flat glyph and tone-flat class with no sign for a zero-change quote", async () => {
+    nextAnswer = { symbol: "NVDA", last: 180.0, change: 0, changePct: 0, tone: "flat" };
     render(withClient(<QuoteHeader symbol="NVDA" />));
+
+    await waitFor(() => expect(screen.getByText("·")).toBeInTheDocument());
+    const change = screen.getByText("·").closest(".quote-change");
+    expect(change).toHaveClass("tone-flat");
+    expect(screen.getByText(/\$0\.00/)).toBeInTheDocument();
+    expect(screen.queryByText(/\+0\.00%|−0\.00%/)).not.toBeInTheDocument();
+  });
+
+  it("signs the percent from a real sub-cent decline even though the rounded dollar change is flat", async () => {
+    // The bug this pins (review finding #1): tone/sign must read the RAW pre-round delta, not
+    // the rounded-to-cent dollar change, or a real decline on a cheap ticker shows flat.
+    nextAnswer = { symbol: "XYZ", last: 0.4489, change: 0, changePct: -0.75, tone: "neg" };
+    render(withClient(<QuoteHeader symbol="XYZ" />));
+
+    await waitFor(() => expect(screen.getByText("▼")).toBeInTheDocument());
+    expect(screen.getByText(/−0\.75%/)).toBeInTheDocument();
+    const change = screen.getByText("▼").closest(".quote-change");
+    expect(change).toHaveClass("tone-neg");
+  });
+
+  it("renders the note text when the feed degrades, inside the same aria-live wrapper", async () => {
+    nextAnswer = { quoteNote: "No quote for NVDA right now." };
+    const { container } = render(withClient(<QuoteHeader symbol="NVDA" />));
 
     await waitFor(() =>
       expect(screen.getByText("No quote for NVDA right now.")).toBeInTheDocument(),
     );
+    const header = container.querySelector(".quote-header");
+    expect(header?.getAttribute("aria-live")).toBe("polite");
+    expect(header?.querySelector(".quote-note")).not.toBeNull();
   });
 });

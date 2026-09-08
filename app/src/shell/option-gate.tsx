@@ -130,6 +130,9 @@ export function OptionGate({
       <p className="panel-sub">
         Course {play.code} · {play.gloss}
       </p>
+      {/* Duplicates the chain fetch's own spot (StraddleView's "Current price" line, `chain.data.spot`) —
+          consolidating the two into one round trip is real scope for the Phase-0 chain-redesign
+          slices (#2017 tasks #11-13), not this slice; see docs/IDEAS.md. */}
       <QuoteHeader symbol={chainSym} />
       <div className="gate-fields tkt-fields">
         <SymbolField

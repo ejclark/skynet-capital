@@ -33,8 +33,11 @@ export function quoteView(
   if (prevClose <= 0) {
     return { symbol, last, change: 0, changePct: 0, tone: "flat" };
   }
-  const change = round2(last - prevClose);
-  const changePct = round2(((last - prevClose) / prevClose) * 100);
-  const tone: QuoteTone = change > 0 ? "pos" : change < 0 ? "neg" : "flat";
+  const raw = last - prevClose;
+  const change = round2(raw);
+  const changePct = round2((raw / prevClose) * 100);
+  // Tone reads the RAW delta's sign, not the rounded-to-cent `change` — a sub-cent move on a
+  // cheap ticker can round to $0.00 while still being a real decline (or gain).
+  const tone: QuoteTone = raw > 0 ? "pos" : raw < 0 ? "neg" : "flat";
   return { symbol, last, change, changePct, tone };
 }

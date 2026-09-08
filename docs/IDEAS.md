@@ -18,6 +18,9 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+- `quote-header` and the option chain fetch the underlying price independently; consolidate once
+  the chain route is reshaped (Phase 0 tasks #11-13). _(src: Claude · while: quote-header review,
+  #2017)_
 - Decide the app/src ↔ root src/domain boundary rule: symbol-field.tsx is the first app import of
   root code (the ticker directory, pure data); app/src/live/*.ts hand-duplicates API shapes
   instead. Shared package, path alias, or keep duplicating? _(src: Claude · while: slice 8a symbol

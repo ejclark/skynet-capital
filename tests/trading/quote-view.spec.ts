@@ -39,4 +39,13 @@ describe("quoteView", () => {
     expect(String(view.change)).toMatch(/^-?\d+(\.\d{1,2})?$/);
     expect(view.change).toBeCloseTo(0.05);
   });
+
+  it("tones a sub-cent decline neg even though the rounded dollar change is flat", () => {
+    const view = quoteView("XYZ", { last: 0.4489, prevClose: 0.4523 });
+    // Rounds to -$0.00 (a real -0, not a fabricated +0) — toBeCloseTo doesn't care about the
+    // sign of zero, which is exactly the point: the DOLLAR figure is flat either way.
+    expect(view.change).toBeCloseTo(0);
+    expect(view.changePct).not.toBe(0);
+    expect(view.tone).toBe("neg");
+  });
 });

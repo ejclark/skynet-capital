@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { fetchQuote, type QuoteTone } from "../live/quote";
+import { fetchQuote, type QuoteAnswer, type QuoteTone } from "../live/quote";
 import { money } from "../live/ticket";
 
 /**
@@ -10,10 +10,18 @@ import { money } from "../live/ticket";
  * `staleTime` so switching Instrument/Side doesn't re-fetch a symbol just quoted.
  *
  * A standing reader is red/green colourblind (CLAUDE.md): the tone never rides on hue alone — a
- * glyph (▲/▼/·) and an explicit sign carry direction too, and the change span's `aria-label`
- * states it again in words for a screen reader. Fail-soft everywhere: no linked session, no quote,
- * or a feed failure all render a single muted note, never an error; an uncommitted symbol or a
- * still-loading quote renders nothing.
+ * glyph (▲/▼/·) and an explicit sign carry direction too, and a `.visually-hidden` sentence
+ * states it again in words for a screen reader (the repo's own idiom — grep `.visually-hidden`).
+ * Fail-soft everywhere: no linked session, no quote, or a feed failure all render a single muted
+ * note, never an error. No wording here claims freshness ("today") — `getUnderlyingQuote` reads
+ * the broker's last trade with no timestamp check, so after-hours or on a weekend that could be a
+ * stale prior-session move; broker-timestamp plumbing to make the claim honest is out of scope for
+ * this slice (#2017), so the copy simply never makes it.
+ *
+ * The wrapping `.quote-header` element is ALWAYS mounted with `aria-live="polite"`, empty until
+ * there's something to say (mirrors `.gate`'s draft-step pattern, `gate-draft.spec.tsx`) — a live
+ * region that appears already full commonly goes unannounced by assistive tech. `.quote-header:empty`
+ * in `ticket.css` collapses its chrome so an empty region takes no visual space.
  */
 
 const GLYPH: Record<QuoteTone, string> = { pos: "▲", neg: "▼", flat: "·" };
@@ -27,15 +35,38 @@ function signedMoney(change: number, tone: QuoteTone): string {
   return money(0);
 }
 
-function signedPct(changePct: number, tone: QuoteTone): string {
+/** Signs from `changePct`'s OWN sign, never from `tone` — `tone` and the rounded-to-cent dollar
+ *  `change` can both read flat on a sub-cent move while the percent is still genuinely nonzero,
+ *  and that real decline/gain must never silently lose its sign. */
+function signedPct(changePct: number): string {
   const magnitude = Math.abs(changePct).toFixed(2);
-  if (tone === "pos") return `+${magnitude}`;
-  if (tone === "neg") return `${MINUS}${magnitude}`;
+  if (changePct > 0) return `+${magnitude}`;
+  if (changePct < 0) return `${MINUS}${magnitude}`;
   return magnitude;
 }
 
+function QuoteHeaderBody({ answer }: { readonly answer: QuoteAnswer }): ReactElement {
+  if ("quoteNote" in answer) {
+    return <span className="quote-note">{answer.quoteNote}</span>;
+  }
+  // Render the server's OWN symbol field, not the caller's prop — the client renders the
+  // server's answer verbatim (see `app/src/live/quote.ts`'s header comment).
+  const { symbol, last, change, changePct, tone } = answer;
+  const label = `${DIRECTION_WORD[tone]} ${Math.abs(change).toFixed(2)} dollars, ${Math.abs(changePct).toFixed(2)} percent`;
+  return (
+    <span className="quote-line num">
+      <span className="quote-sym">{symbol}</span> <span className="quote-last">{money(last)}</span>{" "}
+      <span className={`quote-change tone-${tone}`}>
+        <span aria-hidden="true">{GLYPH[tone]}</span> {signedMoney(change, tone)} (
+        {signedPct(changePct)}%)
+      </span>
+      <span className="visually-hidden">{label}</span>
+    </span>
+  );
+}
+
 /** @category trading */
-export function QuoteHeader({ symbol }: { readonly symbol: string }): ReactElement | null {
+export function QuoteHeader({ symbol }: { readonly symbol: string }): ReactElement {
   const query = useQuery({
     queryKey: ["quote", symbol],
     queryFn: () => fetchQuote(symbol),
@@ -43,21 +74,11 @@ export function QuoteHeader({ symbol }: { readonly symbol: string }): ReactEleme
     staleTime: 15_000,
   });
 
-  if (symbol === "" || query.isLoading || !query.data) return null;
+  const answer = symbol !== "" && !query.isLoading ? query.data : undefined;
 
-  if ("quoteNote" in query.data) {
-    return <p className="quote-header quote-note">{query.data.quoteNote}</p>;
-  }
-
-  const { last, change, changePct, tone } = query.data;
-  const label = `${DIRECTION_WORD[tone]} ${Math.abs(change).toFixed(2)} dollars, ${Math.abs(changePct).toFixed(2)} percent today`;
   return (
-    <p className="quote-header num" aria-live="polite">
-      <span className="quote-sym">{symbol}</span> <span className="quote-last">{money(last)}</span>{" "}
-      <output className={`quote-change tone-${tone}`} aria-label={label}>
-        <span aria-hidden="true">{GLYPH[tone]}</span> {signedMoney(change, tone)} (
-        {signedPct(changePct, tone)}%)
-      </output>
-    </p>
+    <div className="quote-header" aria-live="polite">
+      {answer ? <QuoteHeaderBody answer={answer} /> : null}
+    </div>
   );
 }
