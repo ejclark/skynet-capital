@@ -47,3 +47,37 @@ where `^GSPC` has a bar and `^VIX` does not, so the cross-check can never block 
 scorable day — while it removes both hazards at once (the 09-07 phantom and any in-progress bar).
 Dates carrying a populated `^VIX` bar with no `^GSPC` bar now number **three**: 2026-05-25,
 2026-09-07, and 2026-09-08 (live, and expected to resolve on today's close).
+
+**The cross-symbol guard is ALSO INSUFFICIENT — corrected 2026-09-08 10:15 ET, four hours after it was
+written, before either row is scored. No row above is edited.** `^GSPC`'s regular session opens at
+09:30 ET, so from 09:30 onward it carries a `2026-09-08` bar of its own — an **in-progress** one. The
+cross-check therefore went TRUE at the opening bell, six hours before any close, and a pull at
+10:08 ET would have scored FT-…-1 a **PASS** on `^VIX` = 15.69. Presence of a `^GSPC` bar proves the
+equity session has *started*, never that it has *ended*; the previous note mistook one for the other.
+
+**Measured, not argued.** Three cache-busted pulls inside ~5 minutes this session returned three
+different values for the same "close":
+
+| Pull (ET) | `^VIX` 2026-09-08 close | `^GSPC` 2026-09-08 close |
+|---|---|---|
+| ~10:06 | 15.69 | 7682.32 |
+| ~10:09 | 15.65 | 7680.91 |
+| 10:11 | **15.50** | **7677.93** |
+
+`meta.currentTradingPeriod.regular` ends **16:15 ET** for `^VIX` and **16:00 ET** for `^GSPC`, and the
+`^VIX` quote stamp lagged the wall clock by ~15 minutes (09:56 ET on a 10:11 ET pull) — so even the
+symbols' own end-of-session markers do not agree with each other, and none had been reached.
+
+**Why three guards in a row failed the same way — the honesty point.** Each guard picked a different
+*field* (last bar; bar dated 09-08; bar dated 09-08 with an `^GSPC` sibling) and each would have
+scored FT-…-1 **PASS** — the same direction the hypothesis predicts. A scoring bug that agrees with
+your prediction produces no surprise to investigate, which is exactly why it survived two corrections.
+
+**Replacement guard — a sampling-date rule, needing no feed metadata.** Score the `2026-09-08` `^VIX`
+close only from a pull made on a **calendar date strictly after 2026-09-08** (ET). A bar dated before
+the pull's own session date cannot still be accumulating, so this holds regardless of session hours,
+feed clocks, holiday phantoms or quote lag — the three things that defeated the earlier guards. It
+costs nothing here: FT-…-1's **Score by** is **2026-09-09**, so the first correctly-timed pull is also
+an on-time one. The earlier guards are retained above rather than deleted, because the sequence is the
+finding. **If a same-day pull is ever unavoidable, it is unscorable** — never inferred from a
+neighbour, never taken from an in-progress bar.
