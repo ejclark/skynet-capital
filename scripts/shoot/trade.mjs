@@ -230,6 +230,21 @@ await shoot("trade-quote-options-phone");
 await page.getByRole("button", { name: "2026-09-09" }).waitFor();
 await shoot("trade-exp-tabs-phone");
 
+// The chain table above the fields it drives (#2017 Phase 0 task 4e) — same navigation as the
+// quote-header/exp-tabs shots above (still `?play=201&symbol=NVDA`), proving the chain now renders
+// directly under Expiration, above Strike/Contracts/Order/Limit, with a real loaded chain.
+await page.getByText(/^Chain ·/).waitFor();
+await shoot("trade-chain-above-fields-phone");
+
+// Review fix (2026-09-08): the chain used to sit INSIDE the .gate-fields grid as a spanning item,
+// which inherited the grid's own overflow from the (non-wrapping) expiration tab strip and clipped
+// off the phone frame. It's now an ordinary block sibling between two separate grids instead — this
+// desktop shot proves the second grid (Strike/Contracts/Order/Limit) still lays out as a sane
+// 3-column grid, with the chain sitting as a full-width block above it, not a mid-grid gap.
+await page.setViewportSize({ width: 1280, height: 900 });
+await shoot("trade-chain-above-fields-desktop");
+await page.setViewportSize({ width: 390, height: 844 });
+
 // Progressive disclosure (#2017 Phase 0 task 4d): with no `?symbol=` committed yet, the five
 // chain-gated fields (Expiration/Strike/Contracts/Order/Limit) are withheld entirely — the panel
 // title is the only stable marker to wait on, since the idle state renders nothing else.

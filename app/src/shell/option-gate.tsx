@@ -9,6 +9,7 @@ import {
   reviewOption,
   submitOption,
 } from "../live/options";
+import { navForPlay, type PlayCode, playForNav } from "../live/plays";
 import { ChainStraddle } from "./chain-straddle";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
@@ -31,6 +32,37 @@ import { SymbolField } from "./symbol-field";
  * regardless of what this component shows. Independently, `zeroDte` disables today's expiration
  * while course 501 is locked (#1671 slice 2) — a play can be wide open and still shut out of a
  * same-day expiration.
+ *
+ * THE CHAIN DRIVES THE FORM (#2017 Phase 0 task 4e, the last of five ticket-hygiene slices): the
+ * chain table now renders directly under Expiration, above Strike/Contracts/Order/Limit — where a
+ * member reads it before it decides anything, instead of after the fields it fills. It is an
+ * ORDINARY block-level sibling between the two `.gate-fields` grids, never a grid item itself
+ * (review fix, 2026-09-08): a spanning grid cell inherited the grid's own min-content overflow
+ * from `.exp-tabs`'s non-wrapping tab strip and clipped off the phone frame edge
+ * (`docs/shots/chain-above-fields/`) — sitting outside the grid entirely sidesteps that instead of
+ * patching around it. Every chain cell is clickable (strike, call, and put), and a call/put cell
+ * can do more than a strike cell: picking one fills the strike (as always) and, when it's safe,
+ * ALSO switches the ticket's Side/Type to match — the target rung is `playForNav({
+ * ...navForPlay(play.code), optionType: clickedSide })`, mirroring `ticket-nav.tsx`'s own preset
+ * arithmetic. Two things a chain click can change (strike, and — only when unlocked — Side/Type)
+ * and one it never can: a locked rung. A not-found target counts as locked too (review fix — a
+ * lookup miss used to fall through to `undefined`, which is falsy, i.e. fail OPEN; the check now
+ * defaults to locked, `?? true`, so the one job this rule has — never open a door the ladder
+ * hasn't — holds even on a target this component can't identify). A locked-target click still
+ * fills strike and surfaces a `.tkt-note` saying why the ticket didn't switch (`ticket-nav.tsx`'s
+ * own rule: "Locked = visible, disabled, explained… never hidden, never silently dead"). Switching
+ * rungs remounts this whole component (`trade.tsx` keys `OptionGate` on `info.code`), so the
+ * clicked strike is committed to `?strike=` FIRST (`onStrikeCommit`) and re-seeds through
+ * `initialStrike` on the fresh mount, surviving the remount the same way `?symbol=`/
+ * `initialSymbol`/`onSymbolCommit` already do — but the two no longer commit on quite the same
+ * cadence (review fix): a strike change that STICKS now reaches `onStrikeCommit`, not just a
+ * rung-switching pick — a same-rung chain click commits too (immediately, it's a one-shot click),
+ * and so does a hand-typed strike, though throttled to blur, the same way `SymbolField` throttles
+ * its own typed commits (see `StrikeField`'s `onCommit`), so typing doesn't fire a `navigate()` on
+ * every keystroke. A LOCKED-target click is the one pick that still doesn't commit — the rung
+ * didn't change, and the strike shown against it is provisional (the note says as much), so `?strike=`
+ * stays whatever it already was. Known gap, out of scope for this pass: a rung switch doesn't
+ * re-seed the limit price from the new rung's own chain — only the strike survives the remount.
  */
 
 /** @category trading */
@@ -40,6 +72,10 @@ export function OptionGate({
   zeroDte,
   initialSymbol,
   onSymbolCommit,
+  initialStrike,
+  onStrikeCommit,
+  plays,
+  onPreset,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
@@ -53,15 +89,38 @@ export function OptionGate({
   readonly initialSymbol?: string;
   /** Fires when the symbol field commits, so the route can keep `?symbol=` in sync. */
   readonly onSymbolCommit?: (symbol: string) => void;
+  /** `?strike=` (task 4e) — seeds the strike field on mount, so a chain-click rung switch (which
+   *  remounts this component) doesn't lose the strike that was just picked. */
+  readonly initialStrike?: string;
+  /** Fires on every strike change that STICKS (review fix — not just a rung-switching chain pick),
+   *  so the route can keep `?strike=` honest: a same-rung or rung-switching chain-cell click calls
+   *  it immediately, a hand-typed strike calls it on blur (see `StrikeField`'s `onCommit`). A
+   *  locked-target click does NOT call it — the rung stays put, so the strike shown against it is
+   *  provisional, not a real change of ticket state. When a click IS switching rungs, this fires
+   *  before `onPreset` remounts this component, so the fresh mount finds the strike already in the
+   *  URL. */
+  readonly onStrikeCommit?: (strike: string) => void;
+  /** The full catalog, for the locked-lookup a chain cell pick needs (task 4e) — optional so any
+   *  caller that doesn't wire up cell-driven rung switching still degrades safely (see
+   *  `onChainCellPick` below). */
+  readonly plays?: readonly PlayInfo[];
+  /** The same preset handler `TicketNav` already uses to change `?play=` — a chain cell pick calls
+   *  it exactly like a nav segment does, only ever for an UNLOCKED target. */
+  readonly onPreset?: (code: PlayCode) => void;
 }): ReactElement {
   const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
   const [expiration, setExpiration] = useState("");
-  const [strike, setStrike] = useState("");
+  const [strike, setStrike] = useState(initialStrike ?? "");
   const [contracts, setContracts] = useState("1");
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [limitPrice, setLimitPrice] = useState("");
   const [state, setState] = useState<OptionGateState>({ step: "draft" });
+  /** A locked-target chain-cell click fills strike but can't switch rungs (safety-critical, see the
+   *  header comment) — this is the visible explanation the house rule requires ("Locked = visible,
+   *  disabled, explained… never hidden, never silently dead", `ticket-nav.tsx`). Cleared on every
+   *  other edit path via `edit()` below, so it disappears the moment the member does anything else. */
+  const [lockedPickNote, setLockedPickNote] = useState<string | undefined>();
   const symId = useId();
   const expId = useId();
   const strikeId = useId();
@@ -87,10 +146,13 @@ export function OptionGate({
   const showFields = symbolCommitted && chainSettled && !stopped;
   const showLoading = symbolCommitted && !chainSettled;
 
-  /** Any edit disarms a standing review — straight back to draft. */
+  /** Any edit disarms a standing review — straight back to draft — and clears a standing
+   *  locked-pick note (review fix): the note explains one specific click, and any other edit means
+   *  the member has moved on from it. */
   const edit = <T,>(set: (v: T) => void) => {
     return (value: T) => {
       set(value);
+      setLockedPickNote(undefined);
       setState((s) => (s.step === "reviewed" || s.step === "done" ? { step: "draft" } : s));
     };
   };
@@ -100,6 +162,52 @@ export function OptionGate({
     edit(setStrike)(value);
     const row = chainData?.rows.find((r) => String(r.strike) === value);
     if (row?.premium !== undefined) setLimitPrice(String(row.premium));
+  };
+
+  /** A one-shot chain pick (a table row or cell click, never a keystroke) — sets the strike and
+   *  commits it to `?strike=` immediately. The manual `StrikeField` input goes through `pickStrike`
+   *  directly instead (see its `onEdit` wiring below) and commits separately, on blur — see the
+   *  header comment's note on why the two commit on different cadences. */
+  const pickStrikeAndCommit = (value: string) => {
+    pickStrike(value);
+    onStrikeCommit?.(value);
+  };
+
+  /** A call/put chain cell pick (task 4e) — the resolution rule, already decided (see the header
+   *  comment): the target rung keeps this ticket's current instrument/side and only flips
+   *  `optionType` to the clicked side. Same rung → fill strike and commit it (no rung switch, so no
+   *  remount, but `?strike=` still needs to reflect the pick). A different, UNLOCKED rung → commit
+   *  the strike to `?strike=` first, then preset the rung (order matters: `onPreset` remounts this
+   *  component, so the fresh mount has to find the strike already in the URL). A different, LOCKED
+   *  rung — or a target this component can't find in `plays` at all, which fails SAFE (locked), not
+   *  open — fills strike LOCALLY only, same as before this pass (no `onStrikeCommit`, no
+   *  `onPreset`), but now also surfaces a `.tkt-note` explaining why the ticket stayed put, so the
+   *  click is never silently dead. With no `plays`/`onPreset` wired up at all, this degrades to the
+   *  same-rung behavior (fill and commit) for every click. */
+  const onChainCellPick = (clickedStrike: number, side: "call" | "put") => {
+    setLockedPickNote(undefined);
+    const value = String(clickedStrike);
+    if (!(plays && onPreset)) {
+      pickStrikeAndCommit(value);
+      return;
+    }
+    const target = playForNav({ ...navForPlay(play.code), optionType: side });
+    if (target === play.code) {
+      pickStrikeAndCommit(value);
+      return;
+    }
+    // Safety-critical, fail SAFE: a target this component can't find in `plays` is treated as
+    // locked, not unlocked — a lookup miss must never read as "go ahead".
+    const targetLocked = plays.find((p) => p.code === target)?.locked ?? true;
+    if (targetLocked) {
+      // Never widen a locked rung from a chain click. Fill strike only — no onStrikeCommit, no
+      // onPreset — but explain why (visible, disabled, explained — never silently dead).
+      pickStrike(value);
+      setLockedPickNote(`Strike filled — the ${side} side isn't unlocked yet.`);
+      return;
+    }
+    onStrikeCommit?.(value);
+    onPreset(target);
   };
 
   const draft = (): OptionDraft => ({
@@ -162,78 +270,92 @@ export function OptionGate({
           }}
         />
         {showFields ? (
-          <>
-            <div className="field">
-              <label htmlFor={expId}>Expiration</label>
-              <ExpirationField
-                id={expId}
-                chainData={chainData}
-                value={expiration}
-                onEdit={edit(setExpiration)}
-                zeroDteLocked={Boolean(zeroDte?.locked)}
-                zeroDteReason={
-                  zeroDte?.opensAfter
-                    ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
-                    : undefined
-                }
-              />
-            </div>
-            <div className="field">
-              <label htmlFor={strikeId}>Strike</label>
-              <StrikeField id={strikeId} chainData={chainData} value={strike} onEdit={pickStrike} />
-            </div>
-            <div className="field">
-              <label htmlFor={qtyId}>Contracts (100 shares)</label>
-              <input
-                id={qtyId}
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={contracts}
-                onChange={(e) => edit(setContracts)(e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor={typeId}>Order</label>
-              <select
-                id={typeId}
-                value={orderType}
-                onChange={(e) => edit(setOrderType)(e.target.value as "limit" | "market")}
-              >
-                <option value="limit">Limit</option>
-                <option value="market">Market</option>
-              </select>
-            </div>
-            {orderType === "limit" ? (
-              <div className="field">
-                <label htmlFor={limitId}>Limit /share</label>
-                <input
-                  id={limitId}
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  inputMode="decimal"
-                  value={limitPrice}
-                  placeholder="2.50"
-                  onChange={(e) => edit(setLimitPrice)(e.target.value)}
-                />
-              </div>
-            ) : null}
-          </>
+          <div className="field">
+            <label htmlFor={expId}>Expiration</label>
+            <ExpirationField
+              id={expId}
+              chainData={chainData}
+              value={expiration}
+              onEdit={edit(setExpiration)}
+              zeroDteLocked={Boolean(zeroDte?.locked)}
+              zeroDteReason={
+                zeroDte?.opensAfter
+                  ? `opens after your first filled ${zeroDte.opensAfter.code} (${zeroDte.opensAfter.name})`
+                  : undefined
+              }
+            />
+          </div>
         ) : null}
       </div>
-      {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
-      {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
+      {/* An ordinary block sibling, NOT a grid item (review fix — see the header comment): a
+          full-row grid span inherited the grid's own overflow from `.exp-tabs`'s non-wrapping tab
+          strip and clipped off the phone frame. `ChainStraddle`'s own `.straddle-scroll` already
+          handles sitting here — it did before this slice moved the chain table up the page too. */}
       {chainData ? (
         <ChainStraddle
           chainSym={chainSym}
           optionType={optionType}
           chainData={chainData}
           strike={strike}
-          onPickStrike={pickStrike}
+          onPickStrike={pickStrikeAndCommit}
+          onPickSide={onChainCellPick}
         />
       ) : null}
+      {lockedPickNote ? <p className="tkt-note">{lockedPickNote}</p> : null}
+      {showFields ? (
+        <div className="gate-fields tkt-fields">
+          <div className="field">
+            <label htmlFor={strikeId}>Strike</label>
+            <StrikeField
+              id={strikeId}
+              chainData={chainData}
+              value={strike}
+              onEdit={pickStrike}
+              onCommit={(v) => onStrikeCommit?.(v)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor={qtyId}>Contracts (100 shares)</label>
+            <input
+              id={qtyId}
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              value={contracts}
+              onChange={(e) => edit(setContracts)(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor={typeId}>Order</label>
+            <select
+              id={typeId}
+              value={orderType}
+              onChange={(e) => edit(setOrderType)(e.target.value as "limit" | "market")}
+            >
+              <option value="limit">Limit</option>
+              <option value="market">Market</option>
+            </select>
+          </div>
+          {orderType === "limit" ? (
+            <div className="field">
+              <label htmlFor={limitId}>Limit /share</label>
+              <input
+                id={limitId}
+                type="number"
+                min={0.01}
+                step={0.01}
+                inputMode="decimal"
+                value={limitPrice}
+                placeholder="2.50"
+                onChange={(e) => edit(setLimitPrice)(e.target.value)}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
+      {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
 
       <div className="gate" aria-live="polite">
         <OptionGateStatus state={state} />

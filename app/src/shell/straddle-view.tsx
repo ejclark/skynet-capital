@@ -23,6 +23,13 @@ import { money } from "../live/ticket";
  * around the divider and says how many it hid. A row click is a PRESET — it hands the strike to
  * the ticket's `pickStrike`, which also seeds the limit from the quoted mid. Nothing here prices
  * anything: every number is the server's, drawn verbatim, "—" where the feed had none.
+ *
+ * A call or put PRICE cell can be its own preset too (#2017 Phase 0 task 4e, `onPickSide`): the
+ * caller decides what a call/put pick means (in `OptionGate`, it can also switch Side/Type when
+ * that's safe) — this component only reports which strike and which side got clicked. Cells with
+ * no quoted value are still clickable — the contract exists in the chain regardless of whether a
+ * live quote came back for it. Omitting `onPickSide` renders cells exactly as before (plain,
+ * non-interactive), for any caller that doesn't wire this up.
  * @category trading
  */
 export function StraddleView({
@@ -33,6 +40,7 @@ export function StraddleView({
   puts,
   selectedStrike,
   onPickStrike,
+  onPickSide,
   now = new Date(),
 }: {
   readonly symbol: string;
@@ -42,6 +50,9 @@ export function StraddleView({
   readonly puts: readonly ChainRow[];
   readonly selectedStrike?: number;
   readonly onPickStrike?: (strike: number) => void;
+  /** A call/put price cell pick (task 4e) — fires with the row's strike and which side was
+   *  clicked. Optional: omitted, cells render as plain, non-interactive text (unchanged). */
+  readonly onPickSide?: (strike: number, side: "call" | "put") => void;
   readonly now?: Date;
 }): ReactElement {
   const [showAll, setShowAll] = useState(false);
@@ -85,6 +96,7 @@ export function StraddleView({
                 divider={i === divider}
                 selected={row.strike === selectedStrike}
                 onPick={onPickStrike}
+                onPickSide={onPickSide}
               />
             ))}
             {divider !== undefined && divider === rows.length && spot !== undefined ? (
@@ -118,12 +130,14 @@ function RowGroup({
   divider,
   selected,
   onPick,
+  onPickSide,
 }: {
   readonly row: StraddleRow;
   readonly spot?: number;
   readonly divider: boolean;
   readonly selected: boolean;
   readonly onPick?: (strike: number) => void;
+  readonly onPickSide?: (strike: number, side: "call" | "put") => void;
 }): ReactElement {
   const callItm = inTheMoney(row.strike, spot, "call");
   const putItm = inTheMoney(row.strike, spot, "put");
@@ -140,8 +154,8 @@ function RowGroup({
     <>
       {divider && spot !== undefined ? <DividerRow spot={spot} /> : null}
       <tr className={cls} onClick={onPick ? () => onPick(row.strike) : undefined}>
-        <Cell value={row.call?.bid} />
-        <Cell value={row.call?.ask} />
+        <SideCell value={row.call?.bid} strike={row.strike} side="call" onPickSide={onPickSide} />
+        <SideCell value={row.call?.ask} strike={row.strike} side="call" onPickSide={onPickSide} />
         <td className="straddle-strike num">
           {onPick ? (
             <button
@@ -156,14 +170,45 @@ function RowGroup({
             row.strike
           )}
         </td>
-        <Cell value={row.put?.bid} />
-        <Cell value={row.put?.ask} />
+        <SideCell value={row.put?.bid} strike={row.strike} side="put" onPickSide={onPickSide} />
+        <SideCell value={row.put?.ask} strike={row.strike} side="put" onPickSide={onPickSide} />
       </tr>
     </>
   );
 }
 
-/** A premium the feed quoted, or "—" — never a confident 0.00 nobody measured. */
-function Cell({ value }: { readonly value: number | undefined }): ReactElement {
-  return <td className="num">{value === undefined ? "—" : money(value)}</td>;
+/** A premium the feed quoted, or "—" — never a confident 0.00 nobody measured. Plain when
+ *  `onPickSide` isn't wired up (unchanged from before task 4e); a clickable button when it is —
+ *  even over a "—", since the contract exists in the chain regardless of whether a live quote
+ *  came back for it. */
+function SideCell({
+  value,
+  strike,
+  side,
+  onPickSide,
+}: {
+  readonly value: number | undefined;
+  readonly strike: number;
+  readonly side: "call" | "put";
+  readonly onPickSide?: (strike: number, side: "call" | "put") => void;
+}): ReactElement {
+  const text = value === undefined ? "—" : money(value);
+  if (!onPickSide) return <td className="num">{text}</td>;
+  return (
+    <td className="num">
+      <button
+        type="button"
+        className="straddle-cell-pick"
+        aria-label={`Pick the ${strike} ${side}`}
+        onClick={(event) => {
+          // Nested inside the row's own onClick (the strike-only pick) — stop it from also firing,
+          // so a cell click fires only the more specific side pick (review fix, 2026-09-08).
+          event.stopPropagation();
+          onPickSide(strike, side);
+        }}
+      >
+        {text}
+      </button>
+    </td>
+  );
 }

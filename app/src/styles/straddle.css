@@ -84,6 +84,21 @@
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
   color: var(--accent);
 }
+/* A call/put price cell's own pick button (#2017 Phase 0 task 4e) — distinct from `.straddle-pick`
+   (the strike button), which carries active/selected styling that doesn't apply here: a call/put
+   pick has no "selected" state of its own, only a hover affordance. */
+.straddle-cell-pick {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.straddle-cell-pick:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-radius: 4px;
+}
 .straddle-call-itm td:first-child {
   box-shadow: inset 3px 0 0 var(--accent);
 }
