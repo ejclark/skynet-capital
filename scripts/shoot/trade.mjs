@@ -304,10 +304,14 @@ await shoot("trade-chain-above-fields-phone");
 
 // The scroll-out stat columns (#2017 Phase 1 slice 14) — OI/Vol/Δ/Γ/Θ/Vega past the base
 // Bid/Ask/Strike/Bid/Ask five, in the SAME `.straddle-scroll` container (no new UI mechanism).
-// Unscrolled proves the base five still read cleanly at the left edge; scrolled — via
+// FIX (review, this slice): the base five used to be first in DOM order, so the unscrolled shot
+// showed them "for free" — but that was the bug (stats sat between Bid/Ask and Strike, so an
+// unscrolled real chain showed calls' stats instead of Strike). Stats now sit on each side's OUTER
+// edge and `StraddleView` opens with an initial `scrollLeft` offset onto the base five, so the
+// unscrolled shot here is proving the FIX, not a DOM-order coincidence. Scrolled — via
 // `scrollLeft = scrollWidth`, the standard way to reveal an overflow-x container's far edge
-// (https://playwright.dev/docs/evaluating) — proves the new columns render past them, including
-// the "—" path on the 185-strike row's stat-less fixture above.
+// (https://playwright.dev/docs/evaluating) — swipes RIGHT past puts' Bid/Ask to reveal puts' own
+// OI/Vol/Δ/Γ/Θ/Vega, including the "—" path on the 185-strike row's stat-less fixture above.
 const shootChainStats = shooter(page, resolve("docs/shots/chain-stats"));
 await shootChainStats("trade-chain-stats-phone");
 await page.evaluate(() => {

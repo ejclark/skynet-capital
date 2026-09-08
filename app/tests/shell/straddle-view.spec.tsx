@@ -180,4 +180,77 @@ describe("StraddleView — scroll-out stat columns", () => {
     const divider = container.querySelector(".straddle-divider td");
     expect(divider?.getAttribute("colspan")).toBe("17");
   });
+
+  it("orders calls' stats on the outer edge and Bid/Ask adjacent to Strike, mirrored on puts", () => {
+    const { container } = render(
+      <StraddleView
+        symbol="NVDA"
+        expiration="2026-09-18"
+        spot={180}
+        calls={[fullRow]}
+        puts={[fullPut]}
+      />,
+    );
+    const subHeaders = Array.from(container.querySelectorAll(".straddle-sub th")).map(
+      (th) => th.textContent,
+    );
+    // Calls: stats first (outer edge), then Bid/Ask (adjacent to Strike) — Puts: unchanged.
+    expect(subHeaders).toEqual([
+      "OI",
+      "Vol",
+      "Δ",
+      "Γ",
+      "Θ",
+      "Vega",
+      "Bid",
+      "Ask",
+      "", // Strike's empty sub-header cell.
+      "Bid",
+      "Ask",
+      "OI",
+      "Vol",
+      "Δ",
+      "Γ",
+      "Θ",
+      "Vega",
+    ]);
+
+    const rowCells = Array.from(
+      container.querySelectorAll("tbody tr.straddle-row")[0]?.children ?? [],
+    );
+    // Same order in the body row: calls' first cell is the OI stat, not Bid — the outer edge — and
+    // the 7th/8th cells (Bid/Ask) sit immediately left of Strike (the 9th).
+    expect(rowCells[0]?.textContent).toBe("8,213"); // calls OI
+    expect(rowCells[5]?.textContent).toBe("0.53"); // calls vega
+    expect(rowCells[6]?.textContent).toBe("$4.80"); // calls bid
+    expect(rowCells[7]?.textContent).toBe("$5.20"); // calls ask
+    expect(rowCells[8]?.textContent).toBe("180"); // strike
+    expect(rowCells[9]?.textContent).toBe("$3.10"); // puts bid
+    expect(rowCells[10]?.textContent).toBe("$3.40"); // puts ask
+  });
+
+  it("opens scrolled past calls' stat columns so the base five are visible by default", () => {
+    const { container } = render(
+      <StraddleView symbol="NVDA" expiration="2026-09-18" spot={180} calls={calls} puts={puts} />,
+    );
+    const scroll = container.querySelector(".straddle-scroll") as HTMLDivElement | null;
+    expect(scroll).not.toBeNull();
+    // 6 stat columns × 44px (`.straddle-col-stat` in straddle.css) = 264px — set imperatively by
+    // the mount effect, not by real layout (happy-dom doesn't compute pixel widths), so this
+    // asserts the effect ran and wrote the expected offset, not rendered geometry.
+    expect(scroll?.scrollLeft).toBe(264);
+  });
+
+  it("re-scrolls to the base five when the expiration changes (no remount boundary at either call site)", () => {
+    const { container, rerender } = render(
+      <StraddleView symbol="NVDA" expiration="2026-09-18" spot={180} calls={calls} puts={puts} />,
+    );
+    const scroll = container.querySelector(".straddle-scroll") as HTMLDivElement;
+    // Simulate a member having scrolled away from the default offset before the expiration changes.
+    scroll.scrollLeft = 0;
+    rerender(
+      <StraddleView symbol="NVDA" expiration="2026-10-16" spot={180} calls={calls} puts={puts} />,
+    );
+    expect(scroll.scrollLeft).toBe(264);
+  });
 });

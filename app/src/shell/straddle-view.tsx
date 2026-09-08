@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChainRow } from "../live/options";
 import {
   daysToExpiry,
@@ -18,6 +18,13 @@ import { EarningsBadge } from "./earnings-badge";
  *  markup can never drift apart. */
 const TOTAL_COLUMNS = 17;
 
+/** Width of calls' 6 stat columns (`OI, Vol, Δ, Γ, Θ, Vega`) in px — the initial `scrollLeft`
+ *  offset that opens the view on the base five instead of calls' stats (see the FIX note above).
+ *  `44` mirrors `.straddle-col-stat`'s width in `straddle.css`; there's no clean way to share a
+ *  single literal across the `.ts`/`.css` boundary, so keep the two in sync by hand if either
+ *  changes. */
+const CALLS_STAT_WIDTH = 6 * 44;
+
 /**
  * THE STRADDLE VIEW (#1481, slice 1) — one expiration's chain as the entry instrument: strike down
  * the centre, call bid/ask to the left, put bid/ask to the right, a "Current price" divider row,
@@ -26,15 +33,29 @@ const TOTAL_COLUMNS = 17;
  * interest and the four core greeks now ship too (#2017 Phase 1 slice 14, below) — last trade
  * price is still out of scope, the one column this component's base-five promise still owes.
  *
- * Mobile-first: five narrow mono columns fit 390px without scrolling; the window keeps ±8 strikes
- * around the divider and says how many it hid. A row click is a PRESET — it hands the strike to
- * the ticket's `pickStrike`, which also seeds the limit from the quoted mid. Nothing here prices
- * anything: every number is the server's, drawn verbatim, "—" where the feed had none.
+ * Mobile-first: the base five (Calls Bid/Ask, Strike, Puts Bid/Ask) are what's actually ON SCREEN
+ * at 390px, by construction, not just by column count — see the fix below. The window keeps ±8
+ * strikes around the divider and says how many it hid. A row click is a PRESET — it hands the
+ * strike to the ticket's `pickStrike`, which also seeds the limit from the quoted mid. Nothing
+ * here prices anything: every number is the server's, drawn verbatim, "—" where the feed had none.
  *
  * Open interest, volume, and the four core greeks (delta/gamma/theta/vega) ship as scroll-out
- * columns past the base five (#2017 Phase 1 slice 14) — the SAME `.straddle-scroll` horizontal
- * container, just more columns, exactly as this comment used to promise. They are plain, never
- * clickable (only Bid/Ask/Strike are presets). "Last trade price" and rho stay out of scope.
+ * columns past the base five (#2017 Phase 1 slice 14), in the SAME `.straddle-scroll` horizontal
+ * container, just more columns. They are plain, never clickable (only Bid/Ask/Strike are presets).
+ * "Last trade price" and rho stay out of scope.
+ *
+ * FIX (found in review, #2017 Phase 1 slice 14): the six stat columns per side originally sat
+ * BETWEEN Bid/Ask and Strike (`Bid, Ask, OI, Vol, Δ, Γ, Θ, Vega`), so an unscrolled 390px view —
+ * `.straddle-scroll` starts at `scrollLeft: 0` — showed calls' stats instead of Strike and the
+ * Puts side, breaking the base-five promise above. Fixed two ways together: (1) each side's 8
+ * columns are now ordered with the stats on the OUTER edge, away from Strike — Calls reads
+ * `OI, Vol, Δ, Γ, Θ, Vega, Bid, Ask` (stats then Bid/Ask, closest to Strike), Puts reads
+ * `Bid, Ask, OI, Vol, Δ, Γ, Θ, Vega` (Bid/Ask closest to Strike, then stats) — so Bid/Ask/Strike
+ * are contiguous in the DOM; (2) the scroll container opens with an initial `scrollLeft` offset
+ * (see the mount effect below) equal to the width of calls' six stat columns, so that contiguous
+ * base five is what's actually visible by default, not merely reachable. A member can still swipe
+ * LEFT of that offset for calls' OI/Vol/greeks, or RIGHT past Puts' Bid/Ask for puts' OI/Vol/
+ * greeks — both directions, both discoverable via the same "scroll for more" affordance.
  *
  * A call or put PRICE cell can be its own preset too (#2017 Phase 0 task 4e, `onPickSide`): the
  * caller decides what a call/put pick means (in `OptionGate`, it can also switch Side/Type when
@@ -71,6 +92,20 @@ export function StraddleView({
   const all = mergeStraddle(calls, puts);
   const { rows, hidden } = showAll ? { rows: all, hidden: 0 } : windowRows(all, spot);
   const divider = dividerIndex(rows, spot);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Open centred on the base five (Calls Bid/Ask, Strike, Puts Bid/Ask) — see the header comment's
+  // FIX note. A plain `scrollLeft` assignment (not `scrollTo({ behavior: "smooth" })`) is instant,
+  // not animated, so it respects `prefers-reduced-motion` for free — there's no motion to reduce.
+  // `StraddleView` isn't remounted per expiration (no `key` at either call site,
+  // `chain-straddle.tsx` / `option-gate.tsx`), so `symbol`/`expiration` ARE the trigger for
+  // re-running this on a fresh chain rather than relying on a fresh mount; it does NOT depend on
+  // `selectedStrike` or other props, so picking a strike never resets a member's own scroll
+  // position.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: symbol/expiration ARE the trigger
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = CALLS_STAT_WIDTH;
+  }, [symbol, expiration]);
   return (
     <section className="straddle" aria-label={`Options chain for ${symbol}`}>
       <div className="straddle-head">
@@ -80,7 +115,7 @@ export function StraddleView({
         <span className="straddle-dte">{expiresIn(daysToExpiry(expiration, now))}</span>
       </div>
       <EarningsBadge symbol={symbol} now={now} />
-      <div className="straddle-scroll">
+      <div className="straddle-scroll" ref={scrollRef}>
         <table className="straddle-table">
           <colgroup>
             {/* Bid/Ask/OI/Vol/Δ/Γ/Θ/Vega × 2 sides + Strike = 17 columns total (`TOTAL_COLUMNS`).
@@ -88,15 +123,16 @@ export function StraddleView({
                 container and `.straddle-scroll`'s overflow-x kicks in, instead of the 5-column
                 percentage layout compressing to fit — `table-layout: fixed` only honors the FIRST
                 row's per-column cells, and that row is the colSpan=8 group header, so widths live
-                on `<col>` here rather than on the sub-header `<th>`s below. */}
+                on `<col>` here rather than on the sub-header `<th>`s below. Order per side matches
+                the fix above: stats on the OUTER edge, Bid/Ask adjacent to Strike. */}
+            <col className="straddle-col-stat" />
+            <col className="straddle-col-stat" />
+            <col className="straddle-col-stat" />
+            <col className="straddle-col-stat" />
+            <col className="straddle-col-stat" />
+            <col className="straddle-col-stat" />
             <col className="straddle-col-bidask" />
             <col className="straddle-col-bidask" />
-            <col className="straddle-col-stat" />
-            <col className="straddle-col-stat" />
-            <col className="straddle-col-stat" />
-            <col className="straddle-col-stat" />
-            <col className="straddle-col-stat" />
-            <col className="straddle-col-stat" />
             <col className="straddle-col-strike" />
             <col className="straddle-col-bidask" />
             <col className="straddle-col-bidask" />
@@ -118,14 +154,14 @@ export function StraddleView({
               </th>
             </tr>
             <tr className="straddle-sub">
-              <th>Bid</th>
-              <th>Ask</th>
               <th className="straddle-stat">OI</th>
               <th className="straddle-stat">Vol</th>
               <th className="straddle-stat">Δ</th>
               <th className="straddle-stat">Γ</th>
               <th className="straddle-stat">Θ</th>
               <th className="straddle-stat">Vega</th>
+              <th>Bid</th>
+              <th>Ask</th>
               <th />
               <th>Bid</th>
               <th>Ask</th>
@@ -204,14 +240,14 @@ function RowGroup({
     <>
       {divider && spot !== undefined ? <DividerRow spot={spot} /> : null}
       <tr className={cls} onClick={onPick ? () => onPick(row.strike) : undefined}>
-        <SideCell value={row.call?.bid} strike={row.strike} side="call" onPickSide={onPickSide} />
-        <SideCell value={row.call?.ask} strike={row.strike} side="call" onPickSide={onPickSide} />
         <StatCell value={row.call?.openInterest} kind="count" />
         <StatCell value={row.call?.volume} kind="count" />
         <StatCell value={row.call?.delta} kind="greek" />
         <StatCell value={row.call?.gamma} kind="greek" />
         <StatCell value={row.call?.theta} kind="greek" />
         <StatCell value={row.call?.vega} kind="greek" />
+        <SideCell value={row.call?.bid} strike={row.strike} side="call" onPickSide={onPickSide} />
+        <SideCell value={row.call?.ask} strike={row.strike} side="call" onPickSide={onPickSide} />
         <td className="straddle-strike num">
           {onPick ? (
             <button
