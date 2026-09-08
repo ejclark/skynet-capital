@@ -80,6 +80,12 @@ export function ExpirationField({
  * name a strike). When a chain has loaded rows, a `<datalist>` adds native autocomplete
  * suggestions of the chain's actual strikes on top of that input; it's purely additive — nothing
  * about typing a strike the chain doesn't list, or that doesn't match any row, changes.
+ *
+ * `onEdit` fires on every keystroke (unchanged) — the caller uses it to keep the field itself and
+ * the seeded limit premium live. `onCommit` (task 4e review fix) fires only on blur, mirroring
+ * `SymbolField`'s own onChange/onCommit split: a hand-typed strike now reaches `?strike=` too, but
+ * throttled the same way a hand-typed symbol already is, so typing doesn't fire a `navigate()` on
+ * every keystroke.
  * @category trading
  */
 export function StrikeField({
@@ -87,11 +93,15 @@ export function StrikeField({
   chainData,
   value,
   onEdit,
+  onCommit,
 }: {
   readonly id: string;
   readonly chainData: ChainData | undefined;
   readonly value: string;
   readonly onEdit: (value: string) => void;
+  /** Fires on blur with the field's current value — omit for a caller that doesn't track
+   *  `?strike=` (unchanged behavior). */
+  readonly onCommit?: (value: string) => void;
 }): ReactElement {
   const hasSuggestions = chainData !== undefined && chainData.rows.length > 0;
   const listId = `${id}-strikes`;
@@ -107,6 +117,9 @@ export function StrikeField({
         placeholder="40"
         list={hasSuggestions ? listId : undefined}
         onChange={(e) => onEdit(e.target.value)}
+        onBlur={() => {
+          if (value !== "") onCommit?.(value);
+        }}
       />
       {hasSuggestions ? (
         <datalist id={listId}>

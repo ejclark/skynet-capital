@@ -200,7 +200,12 @@ function SideCell({
         type="button"
         className="straddle-cell-pick"
         aria-label={`Pick the ${strike} ${side}`}
-        onClick={() => onPickSide(strike, side)}
+        onClick={(event) => {
+          // Nested inside the row's own onClick (the strike-only pick) — stop it from also firing,
+          // so a cell click fires only the more specific side pick (review fix, 2026-09-08).
+          event.stopPropagation();
+          onPickSide(strike, side);
+        }}
       >
         {text}
       </button>

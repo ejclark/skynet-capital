@@ -197,6 +197,11 @@ const playsWithLockedTarget: readonly PlayInfo[] = [
   { ...chainPickPlay, code: "201", id: "201", name: "Sell a cash-secured put", locked: true },
 ];
 
+// Fail-safe coverage (review fix): the target code (201) is simply ABSENT from `plays` — not
+// present with `locked: true`, just missing entirely. A lookup miss must resolve to locked, never
+// to the old fail-open `undefined` (falsy).
+const playsMissingTarget: readonly PlayInfo[] = [chainPickPlay];
+
 function renderChainPickGate({
   plays,
   onPreset,
@@ -278,8 +283,77 @@ describe("OptionGate — chain cell picking", () => {
 
     // Safety-critical: a chain click must never open a rung the member hasn't earned. Locked
     // means locked — regardless of what the strike or the clicked side would otherwise target.
+    // The strike fills locally (proven below) but never reaches the URL for a refused switch.
     expect(presets).toEqual([]);
     expect(committedStrikes).toEqual([]);
     await waitFor(() => expect(screen.getByLabelText("Strike")).toHaveValue(180));
+  });
+
+  it("target ABSENT from plays: fails SAFE (treated as locked) — never onPreset, never onStrikeCommit", async () => {
+    const presets: string[] = [];
+    const committedStrikes: string[] = [];
+    render(
+      renderChainPickGate({
+        plays: playsMissingTarget,
+        onPreset: (code) => presets.push(code),
+        onStrikeCommit: (s) => committedStrikes.push(s),
+      }),
+    );
+
+    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    fireEvent.click(putCells[0] as HTMLElement);
+
+    // A lookup miss must never read as "unlocked, go ahead" — the old fail-open bug (a missing
+    // play's `?.locked` reads `undefined`, i.e. falsy) would have let this switch rungs.
+    expect(presets).toEqual([]);
+    expect(committedStrikes).toEqual([]);
+    await waitFor(() => expect(screen.getByLabelText("Strike")).toHaveValue(180));
+  });
+});
+
+/**
+ * The locked-pick note (review fix) — the house rule ("Locked = visible, disabled, explained…
+ * never hidden, never silently dead", `ticket-nav.tsx`) applies to a chain-cell click too: a
+ * locked-target pick used to be a silent no-op beyond filling strike. It now surfaces a `.tkt-note`
+ * explaining why the ticket didn't switch, and the note clears on the next unrelated edit.
+ */
+describe("OptionGate — locked-pick note", () => {
+  beforeEach(() => {
+    chainResult = fullChain;
+  });
+
+  it("clicking a locked-target cell surfaces an explanatory note", async () => {
+    // onPreset MUST be wired for onChainCellPick to reach the locked-rung branch at all — with it
+    // absent, the handler degrades to same-rung behavior for every click (no lock lookup happens).
+    render(renderChainPickGate({ plays: playsWithLockedTarget, onPreset: () => undefined }));
+
+    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    fireEvent.click(putCells[0] as HTMLElement);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Strike filled — the put side isn't unlocked yet."),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("clears the note on a subsequent unrelated edit", async () => {
+    render(renderChainPickGate({ plays: playsWithLockedTarget, onPreset: () => undefined }));
+
+    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    fireEvent.click(putCells[0] as HTMLElement);
+    await waitFor(() =>
+      expect(
+        screen.getByText("Strike filled — the put side isn't unlocked yet."),
+      ).toBeInTheDocument(),
+    );
+
+    fireEvent.change(screen.getByLabelText("Contracts (100 shares)"), { target: { value: "2" } });
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Strike filled — the put side isn't unlocked yet."),
+      ).not.toBeInTheDocument(),
+    );
   });
 });

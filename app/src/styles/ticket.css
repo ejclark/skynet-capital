@@ -198,12 +198,6 @@
 .tkt-fields {
   grid-template-columns: repeat(3, 1fr);
 }
-/* The chain table sits mid-grid, between Expiration and Strike (#2017 Phase 0 task 4e) — a
-   spanning item is valid CSS inside a grid; the fields after it keep laying out in the row(s)
-   below normally. */
-.gate-fields-span {
-  grid-column: 1 / -1;
-}
 .tkt-note {
   font-size: 11px;
   color: var(--muted);

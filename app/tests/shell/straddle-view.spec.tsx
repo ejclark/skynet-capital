@@ -67,4 +67,28 @@ describe("StraddleView — chain cell picking", () => {
     expect(screen.queryByRole("button", { name: /pick the/i })).not.toBeInTheDocument();
     expect(screen.getByText("$4.80")).toBeInTheDocument();
   });
+
+  // Review fix (2026-09-08): the cell button sits INSIDE the row's own onClick (onPickStrike),
+  // with no stopPropagation — a cell click used to fire both callbacks. Only the more specific one
+  // (onPickSide) should fire.
+  it("clicking a call/put cell calls onPickSide but not the row's own onPickStrike", () => {
+    const onPickSide = rstest.fn();
+    const onPickStrike = rstest.fn();
+    render(
+      <StraddleView
+        symbol="NVDA"
+        expiration="2026-09-18"
+        spot={180}
+        calls={calls}
+        puts={puts}
+        onPickStrike={onPickStrike}
+        onPickSide={onPickSide}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Pick the 180 call" })[0] as HTMLElement);
+
+    expect(onPickSide).toHaveBeenCalledWith(180, "call");
+    expect(onPickStrike).not.toHaveBeenCalled();
+  });
 });

@@ -83,9 +83,15 @@ function DeskTicket({
    *  finding): both gates remount on every Instrument/Side switch (`key={info.code}` /
    *  `key={code}` below), which used to drop a hand-typed symbol on every switch. */
   readonly onSymbolCommit?: (symbol: string) => void;
-  /** `?strike=` (task 4e) — mirrors `initialSymbol`/`onSymbolCommit` exactly: a chain cell that
-   *  switches the ticket to a different rung remounts `OptionGate`, so the strike it just picked
-   *  has to survive the remount through route state, same as a hand-typed symbol already does. */
+  /** `?strike=` (task 4e) — survives a rung-switch remount the same way `initialSymbol`/
+   *  `onSymbolCommit` does (a chain cell that switches the ticket to a different rung remounts
+   *  `OptionGate`, so the strike it just picked has to come back through route state, same as a
+   *  hand-typed symbol already does), but the two don't commit on the same cadence (review fix,
+   *  2026-09-08): a chain-cell strike pick against a rung the member CAN reach (the current one, or
+   *  an unlocked target it's about to switch to) commits immediately, while a hand-typed strike
+   *  commits on blur, throttled the same way `SymbolField` throttles its own typed commits (see
+   *  `option-gate.tsx`'s header comment). A locked-target pick fills strike but never commits —
+   *  the rung didn't change, so there's nothing new for the URL to say. */
   readonly initialStrike?: string;
   readonly onStrikeCommit?: (strike: string) => void;
 }) {
@@ -169,7 +175,10 @@ function TradePage(): ReactElement {
    *  Instrument/Side switch causes (#2017 cockpit plan). Guarded against the current search value
    *  so a blur that didn't change anything (e.g. right after mounting from `initialSymbol`)
    *  doesn't push a redundant history entry — and `replace: true` regardless, since a symbol edit
-   *  is a refinement of the same ticket, not a new page to land back on. */
+   *  is a refinement of the same ticket, not a new page to land back on. A new symbol also drops
+   *  any `?strike=` already in the URL (review fix, 2026-09-08) — a strike picked against the OLD
+   *  underlying's chain is meaningless once the symbol changes; guarded on `prev.strike` actually
+   *  being present so this doesn't churn the search object on every symbol edit for nothing. */
   const commitSymbol = (s: string) => {
     const next = normalizeSymbol(s);
     if (next === symbol) return;
@@ -179,6 +188,7 @@ function TradePage(): ReactElement {
         const nextSearch = { ...prev };
         if (next) nextSearch.symbol = next;
         else delete nextSearch.symbol;
+        if (prev.strike !== undefined) delete nextSearch.strike;
         return nextSearch;
       },
     });
