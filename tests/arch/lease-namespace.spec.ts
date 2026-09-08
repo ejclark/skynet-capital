@@ -37,3 +37,30 @@ describe("claim lease ref namespace", () => {
     expect(source()).toContain("claimStamp(slug, sha, nowMs)");
   });
 });
+
+// isClaimed exists so a caller (`/work-issues`) can peek at a lease without joining the claim
+// protocol — it must never write. Same offline-stand-in shape as the tests above: no `gh` CLI or
+// network access in a unit test, so the guarantee is verified against the source text.
+describe("isClaimed is read-only", () => {
+  const fnBody = () => {
+    const text = source();
+    const start = text.indexOf("export function isClaimed");
+    const end = text.indexOf("export function claimFeedback");
+    return text.slice(start, end);
+  };
+
+  it("never issues a write — no -X POST or -X DELETE anywhere in its body", () => {
+    const fn = fnBody();
+
+    expect(fn).not.toMatch(/-X["'\s,]+POST/);
+    expect(fn).not.toMatch(/-X["'\s,]+DELETE/);
+    expect(fn).toContain('sh("gh", ["api", `repos/{owner}/{repo}/git/ref/tags/${ref}`])');
+  });
+
+  it("treats a stale lease as unclaimed, matching claimHandoff's own reclaim semantics", () => {
+    const fn = fnBody();
+
+    expect(fn).toContain("age < staleAfterMs");
+    expect(fn).toMatch(/claimed:\s*false/);
+  });
+});

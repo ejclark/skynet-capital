@@ -10,6 +10,7 @@
 //   node scripts/moneypenny/index.mjs --claim-plan              # claim a ready-flipped plan issue (#823)
 //   node scripts/moneypenny/index.mjs --model-tier < body.md   # just the tier decision
 //   node scripts/moneypenny/index.mjs --guard-feedback-outcome 1234  # #1028's silent-stall guard
+//   node scripts/moneypenny/index.mjs --check-claim feedback-1234  # read-only lease peek, never claims
 //
 // WHY THIS EXISTS (Eric, 2026-08-17: "the handoff system has a lot of workflows which feels
 // extra… it'd be nice to have a postmaster"). Four workflows had grown to 482 lines carrying **202
@@ -195,6 +196,36 @@ export function releaseClaim(slug) {
   } catch {
     return false;
   }
+}
+
+/**
+ * READ-ONLY peek at a lease — never claims, never reclaims a stale one, never writes anything.
+ * Exists so a caller that only wants to SKIP work Moneypenny already holds (e.g. `/work-issues`,
+ * which checks for an open PR but had no visibility into a claim taken before any PR exists) can
+ * ask "is this held right now?" without joining the claim protocol itself.
+ *
+ * Mirrors `claimHandoff`'s own read + staleness math exactly (same `readRef`/`claimAgeOf` shape) so
+ * the two never disagree about what counts as "currently claimed" — a stale lease is reclaimable, so
+ * it reads as unclaimed here too.
+ *
+ * @returns {{ claimed: boolean, reason: string }}
+ */
+export function isClaimed(slug, nowMs = Date.now(), staleAfterMs = CLAIM_TTL_MS) {
+  const ref = `claim/${slug}`;
+  let existing;
+  try {
+    existing = JSON.parse(sh("gh", ["api", `repos/{owner}/{repo}/git/ref/tags/${ref}`]));
+  } catch {
+    return { claimed: false, reason: "no lease found" }; // 404 — unclaimed
+  }
+  const age = nowMs - Date.parse(claimAgeOf(existing.object.sha));
+  if (age < staleAfterMs) {
+    return { claimed: true, reason: `held by a live claim (${Math.round(age / 60000)}m old)` };
+  }
+  return {
+    claimed: false,
+    reason: `lease is stale (${Math.round(age / 60000)}m old) — reclaimable`,
+  };
 }
 
 /**
@@ -600,6 +631,16 @@ function runCliFlag(argv, ctx) {
         ? `::notice::released the lease for ${slug}`
         : `::notice::no lease held for ${slug} — nothing to release`,
     );
+    return true;
+  }
+
+  // `--check-claim <slug>` (e.g. `feedback-1234`, `plan-1234`): read-only, never claims or writes.
+  // For a caller (e.g. `/work-issues`) that wants to skip an issue Moneypenny already holds, before
+  // any PR exists to signal it — see `isClaimed`'s own doc comment for why this exists.
+  const checkIdx = argv.indexOf("--check-claim");
+  if (checkIdx >= 0 && argv[checkIdx + 1]) {
+    const slug = slugify(argv[checkIdx + 1]);
+    console.log(JSON.stringify(isClaimed(slug)));
     return true;
   }
 
