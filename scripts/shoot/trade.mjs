@@ -138,11 +138,18 @@ const desk = {
   },
 };
 
+const quote = { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" };
+
 let currentPlays = freshPlays;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
-  stubs: { "/api/trade/plays": () => currentPlays, "/api/settings": settings, "/api/desk/*": desk },
+  stubs: {
+    "/api/trade/plays": () => currentPlays,
+    "/api/settings": settings,
+    "/api/desk/*": desk,
+    "/api/trade/quote": quote,
+  },
 });
 
 // THE BUG THIS FIXES (2026-09-06): a fresh account, nothing earned. 102 (Sell stock) used to open
@@ -160,6 +167,17 @@ await shoot("trade-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-desktop");
+
+// The quote header (#2017 Phase 0.9): last price, day $ change and % change, with a glyph + sign
+// carrying tone alongside colour (a standing reader is red/green colourblind — hue never carries
+// meaning alone).
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.getByText("▲").waitFor();
+await shoot("trade-quote-phone");
+
+await page.setViewportSize({ width: 1280, height: 900 });
+await shoot("trade-quote-desktop");
 
 // A locked preset (#1461 slice 2): the rail can point at 301, the nav shows "Buy to open" disabled
 // with the rung that opens it, and the ticket shows its locked panel. Visible, disabled, explained.

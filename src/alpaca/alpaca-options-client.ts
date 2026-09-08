@@ -189,6 +189,33 @@ export class AlpacaOptionsClient {
   }
 
   /**
+   * The underlying's last trade + previous close, from the data host — enrichment for a quote
+   * header, never the order path. Fail-soft like `getUnderlyingPrice`: undefined with no data
+   * transport, on a non-2xx, when either field is missing, or on any throw.
+   */
+  async getUnderlyingQuote(
+    symbol: string,
+  ): Promise<{ last: number; prevClose: number } | undefined> {
+    if (!this.data) return undefined;
+    try {
+      const response = await this.data.get(
+        `/v2/stocks/${encodeURIComponent(symbol)}/snapshot?feed=iex`,
+      );
+      if (response.status < 200 || response.status >= 300) return undefined;
+      const body = response.body as {
+        latestTrade?: { p?: unknown };
+        prevDailyBar?: { c?: unknown };
+      } | null;
+      const last = num(body?.latestTrade?.p);
+      const prevClose = num(body?.prevDailyBar?.c);
+      if (last === undefined || prevClose === undefined) return undefined;
+      return { last, prevClose };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * The four option lifecycle activity types: `OPEXP` (expired worthless),
    * `OPASN` (assigned), `OPEXC` (exercised), `OPTRD` (the paired underlying-share settlement
    * trade). Read-only and never on the execution path, so this fails SOFT like `mergeQuotes` —

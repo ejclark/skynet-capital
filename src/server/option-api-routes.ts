@@ -25,6 +25,7 @@ import {
   sendJson,
 } from "./page-shell.js";
 import { type ParticipantProgression, playLocked } from "./progression-service.js";
+import { serveQuote } from "./quote-route.js";
 
 /** Trade-type codes that ride the OPTION preview/review pipeline. */
 const OPTION_CODES = new Set(["201", "202", "301", "302"]);
@@ -62,6 +63,9 @@ async function reviewEstimates(
  *                                    REQUESTER'S OWN options client only — exactly the legacy
  *                                    ticket's `ticketData`, with every failure degrading to an
  *                                    honest `chainNote` instead of an error.
+ *   GET  /api/trade/quote          → last price + day $/% change for one symbol (#2017 Phase 0.9's
+ *                                    quote header), same requester-only client and fail-soft
+ *                                    `quoteNote` degrade as the chain (`quote-route.ts`).
  *   POST /api/trade/option/review  → the pure `option-ticket.ts` rules against the desk snapshot
  *                                    plus best-effort premium/spot estimates. A refused order is
  *                                    a rendered explanation, never an error.
@@ -260,7 +264,8 @@ async function submitOption(
   sendJson(res, 200, await config.submitOptionTrade(request, requesterId));
 }
 
-/** Handle `/api/trade/chain` and `/api/trade/option/*`. Returns true when answered. */
+/** Handle `/api/trade/chain`, `/api/trade/quote`, and `/api/trade/option/*`. Returns true when
+ *  answered. */
 export async function serveOptionApi(
   req: IncomingMessage,
   res: ServerResponse,
@@ -269,11 +274,15 @@ export async function serveOptionApi(
   session: Session | undefined,
 ): Promise<boolean> {
   const isOrder = path === "/api/trade/option/review" || path === "/api/trade/option/submit";
-  if (path !== "/api/trade/chain" && !isOrder) return false;
+  if (path !== "/api/trade/chain" && path !== "/api/trade/quote" && !isOrder) return false;
   // Identity: the session and nowhere else — exactly the legacy ticket's resolution.
   const requesterId = config.auth ? resolveCurrentId(session, config.resolveOwnerId) : undefined;
   if (path === "/api/trade/chain") {
     if (requireGet(req, res)) await serveChain(res, req.url ?? "/", config, requesterId);
+    return true;
+  }
+  if (path === "/api/trade/quote") {
+    if (requireGet(req, res)) await serveQuote(res, req.url ?? "/", config, requesterId);
     return true;
   }
   const raw = await readJsonPost(req, res, OPTION_BODY_CAP_BYTES);
