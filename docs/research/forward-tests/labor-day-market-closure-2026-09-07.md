@@ -9,3 +9,19 @@
 (cache busted first) and a fresh `auctions_query` fetch for the auction result — never from memory
 of the tape. One observation is not a promotion. Editing a registered prediction after the fact is
 falsification. The parent event is `estimate`; both tests are observations, never a licence to act.
+
+**Scoring hazard — found 2026-09-08, recorded before either row is scored. No row above is edited.**
+`^VIX` carries a **populated** daily bar for **2026-09-07**, a session on which the market was shut:
+open 15.02, high 15.32, low 14.99, close **15.30**. That bar is a feed artifact, not a session.
+Measured this session from a cache-busted pull: across the **33 Labor Days 1993–2025** `^VIX` has no
+usable bar at all (the row is absent, or present with null OHLC, which `scripts/research/market-data.mjs`
+filters out); and since 2000 exactly **two** dates carry a populated `^VIX` bar with no `^GSPC` bar —
+**2026-05-25** (Memorial Day) and **2026-09-07** (Labor Day), both 2026 Monday closures, both
+narrow-range against their neighbours (0.34 and 0.33 points). **2026-07-03**, observed Independence
+Day, still returns the correct null row, so this is not "every holiday" — it is a new and partial
+defect. `SPY`, `^GSPC` and `^TNX` all correctly end at **2026-09-04**.
+
+**Why it matters here:** FT-…-1 scores the **2026-09-08** close against 14.53 and nothing else. A
+scorer that takes the last `^VIX` bar would read **15.30**, which is above 14.53, and pass the test a
+day early on a session that never happened. Select the bar whose date is exactly `2026-09-08`; if no
+such bar exists, the test is unscorable that day, never inferred from a neighbour.
