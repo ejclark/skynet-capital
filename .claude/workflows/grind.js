@@ -16,6 +16,18 @@ export const meta = {
 const items = args?.items
 if (!items?.length) throw new Error('grind requires args.items: a non-empty array')
 
+// Defense-in-depth beyond the Workflow tool host's own 1000-agent-per-run backstop: that cap exists
+// far above any real workflow as a runaway-loop guard, not a sanity check on one grind call. A
+// mis-scoped scan (a bad glob matching thousands of files) should fail fast and cheaply here rather
+// than burn most of the host ceiling before anyone notices. Raise via a hand-edit if a genuinely
+// larger batch is intended — this is a sanity floor, not a policy.
+const MAX_ITEMS = 200
+if (items.length > MAX_ITEMS) {
+  throw new Error(
+    `grind: args.items has ${items.length} entries, over the ${MAX_ITEMS}-item sanity cap — batch this into smaller runs, or raise MAX_ITEMS in grind.js if this batch is genuinely intended to be this large.`,
+  )
+}
+
 // The 12-char floor exists to reject rubber-stamp answers ("items", "n/a", "list") that satisfy a
 // bare non-empty check while carrying zero real information — a red-team pass on the first version
 // of this gate landed exactly that attack.
