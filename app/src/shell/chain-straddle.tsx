@@ -16,6 +16,7 @@ export function ChainStraddle({
   chainData,
   strike,
   onPickStrike,
+  onPickSide,
 }: {
   readonly chainSym: string;
   readonly optionType: "call" | "put";
@@ -23,6 +24,9 @@ export function ChainStraddle({
   /** The ticket's strike field, as typed — "" until picked. */
   readonly strike: string;
   readonly onPickStrike: (strike: string) => void;
+  /** A call/put price cell pick (#2017 Phase 0 task 4e) — threaded straight through to
+   *  `StraddleView`, same as `onPickStrike`. */
+  readonly onPickSide?: (strike: number, side: "call" | "put") => void;
 }): ReactElement {
   const otherType = optionType === "call" ? "put" : "call";
   const other = useQuery({
@@ -39,6 +43,7 @@ export function ChainStraddle({
       puts={optionType === "put" ? chainData.rows : otherRows}
       selectedStrike={strike === "" ? undefined : Number(strike)}
       onPickStrike={(value) => onPickStrike(String(value))}
+      onPickSide={onPickSide}
     />
   );
 }

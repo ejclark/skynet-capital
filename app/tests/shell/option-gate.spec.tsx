@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import type { ChainAnswer, ChainData, PlayInfo } from "../../src/live/options";
 import { OptionGate } from "../../src/shell/option-gate";
@@ -162,5 +162,124 @@ describe("OptionGate — progressive disclosure", () => {
 
     await waitFor(() => expect(screen.getByText(/isn't linked to one yet/)).toBeInTheDocument());
     expect(fieldsPresent()).toBe(true);
+  });
+});
+
+/**
+ * Chain cell picking (#2017 Phase 0 task 4e) — a call/put chain cell can fill strike AND, when
+ * it's safe, switch the ticket's Side/Type. The current ticket is course 202 (Sell a covered
+ * call: sell/call per `plays.ts`'s NAV table), so per the resolution rule
+ * (`playForNav({ ...navForPlay(play.code), optionType: clickedSide })`):
+ *   - clicking the CALL cell targets 202 itself (same rung, since the ticket is already on call).
+ *   - clicking the PUT cell targets 201 (sell/put) — a different rung, whose lock state each case
+ *     below controls.
+ */
+const chainPickPlay: PlayInfo = {
+  code: "202",
+  id: "202",
+  name: "Sell a covered call",
+  tldr: "",
+  kind: "option",
+  side: "sell",
+  optionType: "call",
+  gloss: "",
+  locked: false,
+  earned: true,
+};
+
+const playsWithUnlockedTarget: readonly PlayInfo[] = [
+  chainPickPlay,
+  { ...chainPickPlay, code: "201", id: "201", name: "Sell a cash-secured put", locked: false },
+];
+
+const playsWithLockedTarget: readonly PlayInfo[] = [
+  chainPickPlay,
+  { ...chainPickPlay, code: "201", id: "201", name: "Sell a cash-secured put", locked: true },
+];
+
+function renderChainPickGate({
+  plays,
+  onPreset,
+  onStrikeCommit,
+}: {
+  readonly plays?: readonly PlayInfo[];
+  readonly onPreset?: (code: string) => void;
+  readonly onStrikeCommit?: (strike: string) => void;
+}): ReactElement {
+  const client = new QueryClient();
+  return (
+    <QueryClientProvider client={client}>
+      <OptionGate
+        deskId="desk-1"
+        play={chainPickPlay}
+        initialSymbol="NVDA"
+        plays={plays}
+        onPreset={onPreset}
+        onStrikeCommit={onStrikeCommit}
+      />
+    </QueryClientProvider>
+  );
+}
+
+describe("OptionGate — chain cell picking", () => {
+  beforeEach(() => {
+    chainResult = fullChain;
+  });
+
+  it("same rung: fills strike locally and never calls onPreset", async () => {
+    const presets: string[] = [];
+    render(
+      renderChainPickGate({
+        plays: playsWithUnlockedTarget,
+        onPreset: (code) => presets.push(code),
+      }),
+    );
+
+    // Both bid and ask cells for a strike/side share the same aria-label — click the bid cell.
+    // findAllByRole throws (rather than returning []) when nothing matches, so index 0 is safe.
+    const callCells = await screen.findAllByRole("button", { name: "Pick the 180 call" });
+    fireEvent.click(callCells[0] as HTMLElement);
+
+    expect(presets).toEqual([]);
+    await waitFor(() => expect(screen.getByLabelText("Strike")).toHaveValue(180));
+  });
+
+  it("different, unlocked rung: commits the strike then presets the target rung", async () => {
+    const presets: string[] = [];
+    const committedStrikes: string[] = [];
+    render(
+      renderChainPickGate({
+        plays: playsWithUnlockedTarget,
+        onPreset: (code) => presets.push(code),
+        onStrikeCommit: (s) => committedStrikes.push(s),
+      }),
+    );
+
+    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    fireEvent.click(putCells[0] as HTMLElement);
+
+    expect(committedStrikes).toEqual(["180"]);
+    expect(presets).toEqual(["201"]);
+  });
+
+  it("different, LOCKED rung: never widens the lock — fills strike only, no onPreset/onStrikeCommit", async () => {
+    const presets: string[] = [];
+    const committedStrikes: string[] = [];
+    render(
+      renderChainPickGate({
+        plays: playsWithLockedTarget,
+        onPreset: (code) => presets.push(code),
+        onStrikeCommit: (s) => committedStrikes.push(s),
+      }),
+    );
+
+    const putCells = await screen.findAllByRole("button", { name: "Pick the 180 put" });
+    fireEvent.click(putCells[0] as HTMLElement);
+
+    // Safety-critical: a chain click must never open a rung the member hasn't earned. Locked
+    // means locked — regardless of what the strike or the clicked side would otherwise target.
+    expect(presets).toEqual([]);
+    expect(committedStrikes).toEqual([]);
+    await waitFor(() => expect(screen.getByLabelText("Strike")).toHaveValue(180));
   });
 });

@@ -9,6 +9,7 @@ import {
   reviewOption,
   submitOption,
 } from "../live/options";
+import { navForPlay, type PlayCode, playForNav } from "../live/plays";
 import { ChainStraddle } from "./chain-straddle";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
@@ -31,6 +32,22 @@ import { SymbolField } from "./symbol-field";
  * regardless of what this component shows. Independently, `zeroDte` disables today's expiration
  * while course 501 is locked (#1671 slice 2) — a play can be wide open and still shut out of a
  * same-day expiration.
+ *
+ * THE CHAIN DRIVES THE FORM (#2017 Phase 0 task 4e, the last of five ticket-hygiene slices): the
+ * chain table now renders directly under Expiration, above Strike/Contracts/Order/Limit — where a
+ * member reads it before it decides anything, instead of after the fields it fills. Every chain
+ * cell is clickable (strike, call, and put), and a call/put cell can do more than a strike cell:
+ * picking one fills the strike (as always) and, when it's safe, ALSO switches the ticket's
+ * Side/Type to match — the target rung is `playForNav({ ...navForPlay(play.code), optionType:
+ * clickedSide })`, mirroring `ticket-nav.tsx`'s own preset arithmetic. Two things a chain click can
+ * change (strike, and — only when unlocked — Side/Type) and one it never can: a locked rung. If
+ * the target rung is locked for this member, the click fills strike ONLY and never calls
+ * `onPreset` — the one non-negotiable rule this slice builds, the same lock `ticket-nav.tsx`
+ * already reads (`plays.find((p) => p.code === target)?.locked`), so a chain click can never open
+ * a door the ladder hasn't. Switching rungs remounts this whole component (`trade.tsx` keys
+ * `OptionGate` on `info.code`), so the clicked strike is committed to `?strike=` FIRST
+ * (`onStrikeCommit`) and re-seeds through `initialStrike` on the fresh mount — the same
+ * survives-a-remount mechanism `?symbol=`/`initialSymbol`/`onSymbolCommit` already use.
  */
 
 /** @category trading */
@@ -40,6 +57,10 @@ export function OptionGate({
   zeroDte,
   initialSymbol,
   onSymbolCommit,
+  initialStrike,
+  onStrikeCommit,
+  plays,
+  onPreset,
 }: {
   readonly deskId: string;
   readonly play: PlayInfo;
@@ -53,11 +74,24 @@ export function OptionGate({
   readonly initialSymbol?: string;
   /** Fires when the symbol field commits, so the route can keep `?symbol=` in sync. */
   readonly onSymbolCommit?: (symbol: string) => void;
+  /** `?strike=` (task 4e) — seeds the strike field on mount, so a chain-click rung switch (which
+   *  remounts this component) doesn't lose the strike that was just picked. */
+  readonly initialStrike?: string;
+  /** Fires when a chain click commits a strike ahead of a rung switch, so the route can keep
+   *  `?strike=` in sync before `onPreset` remounts this component. */
+  readonly onStrikeCommit?: (strike: string) => void;
+  /** The full catalog, for the locked-lookup a chain cell pick needs (task 4e) — optional so any
+   *  caller that doesn't wire up cell-driven rung switching still degrades safely (see
+   *  `onChainCellPick` below). */
+  readonly plays?: readonly PlayInfo[];
+  /** The same preset handler `TicketNav` already uses to change `?play=` — a chain cell pick calls
+   *  it exactly like a nav segment does, only ever for an UNLOCKED target. */
+  readonly onPreset?: (code: PlayCode) => void;
 }): ReactElement {
   const [symbol, setSymbol] = useState(initialSymbol ?? "");
   const [chainSym, setChainSym] = useState(initialSymbol ?? "");
   const [expiration, setExpiration] = useState("");
-  const [strike, setStrike] = useState("");
+  const [strike, setStrike] = useState(initialStrike ?? "");
   const [contracts, setContracts] = useState("1");
   const [orderType, setOrderType] = useState<"limit" | "market">("limit");
   const [limitPrice, setLimitPrice] = useState("");
@@ -100,6 +134,35 @@ export function OptionGate({
     edit(setStrike)(value);
     const row = chainData?.rows.find((r) => String(r.strike) === value);
     if (row?.premium !== undefined) setLimitPrice(String(row.premium));
+  };
+
+  /** A call/put chain cell pick (task 4e) — the resolution rule, already decided (see the header
+   *  comment): the target rung keeps this ticket's current instrument/side and only flips
+   *  `optionType` to the clicked side. Same rung → just fill strike, no route change. A different,
+   *  UNLOCKED rung → commit the strike to `?strike=` first, then preset the rung (order matters:
+   *  `onPreset` remounts this component, so the fresh mount has to find the strike already in the
+   *  URL). A different, LOCKED rung → fill strike ONLY, never `onPreset` — a chain click must never
+   *  open a rung the member hasn't earned, no exception. With no `plays`/`onPreset` wired up at
+   *  all, this degrades to the same-rung behavior for every click. */
+  const onChainCellPick = (clickedStrike: number, side: "call" | "put") => {
+    const value = String(clickedStrike);
+    if (!(plays && onPreset)) {
+      pickStrike(value);
+      return;
+    }
+    const target = playForNav({ ...navForPlay(play.code), optionType: side });
+    if (target === play.code) {
+      pickStrike(value);
+      return;
+    }
+    const locked = plays.find((p) => p.code === target)?.locked;
+    if (locked) {
+      // Safety-critical: never widen a locked rung from a chain click. Fill strike only.
+      pickStrike(value);
+      return;
+    }
+    onStrikeCommit?.(value);
+    onPreset(target);
   };
 
   const draft = (): OptionDraft => ({
@@ -178,6 +241,18 @@ export function OptionGate({
                 }
               />
             </div>
+            {chainData ? (
+              <div className="gate-fields-span">
+                <ChainStraddle
+                  chainSym={chainSym}
+                  optionType={optionType}
+                  chainData={chainData}
+                  strike={strike}
+                  onPickStrike={pickStrike}
+                  onPickSide={onChainCellPick}
+                />
+              </div>
+            ) : null}
             <div className="field">
               <label htmlFor={strikeId}>Strike</label>
               <StrikeField id={strikeId} chainData={chainData} value={strike} onEdit={pickStrike} />
@@ -225,15 +300,6 @@ export function OptionGate({
       </div>
       {showLoading ? <p className="tkt-note">Looking up options for {chainSym}…</p> : null}
       {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
-      {chainData ? (
-        <ChainStraddle
-          chainSym={chainSym}
-          optionType={optionType}
-          chainData={chainData}
-          strike={strike}
-          onPickStrike={pickStrike}
-        />
-      ) : null}
 
       <div className="gate" aria-live="polite">
         <OptionGateStatus state={state} />

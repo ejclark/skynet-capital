@@ -6,6 +6,7 @@ import { fetchDesk } from "../live/desk";
 import { fetchPlays, type PlayInfo } from "../live/options";
 import type { PlayCode } from "../live/plays";
 import { fetchSettings, type OwnedAccount } from "../live/settings";
+import { normalizeStrike } from "../live/strike";
 import { normalizeSymbol } from "../live/symbol";
 import { DraftOrderBuilder } from "../shell/draft-order-builder";
 import { PageFrame } from "../shell/frame";
@@ -68,10 +69,13 @@ function DeskTicket({
   onPreset,
   initialSymbol,
   onSymbolCommit,
+  initialStrike,
+  onStrikeCommit,
 }: {
   readonly desk: string;
   readonly code: string;
-  /** The ticket's own nav and the rail both preset `?play=` through this (#1461). */
+  /** The ticket's own nav and the rail both preset `?play=` through this (#1461); a chain cell
+   *  pick that switches side/type (task 4e) presets through the same handler. */
   readonly onPreset: (code: PlayCode) => void;
   /** `?symbol=` — the value a fresh (or remounted) ticket starts from. */
   readonly initialSymbol?: string;
@@ -79,6 +83,11 @@ function DeskTicket({
    *  finding): both gates remount on every Instrument/Side switch (`key={info.code}` /
    *  `key={code}` below), which used to drop a hand-typed symbol on every switch. */
   readonly onSymbolCommit?: (symbol: string) => void;
+  /** `?strike=` (task 4e) — mirrors `initialSymbol`/`onSymbolCommit` exactly: a chain cell that
+   *  switches the ticket to a different rung remounts `OptionGate`, so the strike it just picked
+   *  has to survive the remount through route state, same as a hand-typed symbol already does. */
+  readonly initialStrike?: string;
+  readonly onStrikeCommit?: (strike: string) => void;
 }) {
   const plays = useQuery({ queryKey: ["plays"], queryFn: fetchPlays });
   const deskData = useQuery({
@@ -130,6 +139,10 @@ function DeskTicket({
           zeroDte={zeroDte}
           initialSymbol={initialSymbol}
           onSymbolCommit={onSymbolCommit}
+          initialStrike={initialStrike}
+          onStrikeCommit={onStrikeCommit}
+          plays={plays.data?.plays ?? []}
+          onPreset={onPreset}
         />
       ) : (
         <TradeGate
@@ -150,7 +163,7 @@ function DeskTicket({
 }
 
 function TradePage(): ReactElement {
-  const { desk, play, symbol } = Route.useSearch();
+  const { desk, play, symbol, strike } = Route.useSearch();
   const navigate = Route.useNavigate();
   /** Committing a symbol writes it into `?symbol=` so it survives the remount every
    *  Instrument/Side switch causes (#2017 cockpit plan). Guarded against the current search value
@@ -166,6 +179,23 @@ function TradePage(): ReactElement {
         const nextSearch = { ...prev };
         if (next) nextSearch.symbol = next;
         else delete nextSearch.symbol;
+        return nextSearch;
+      },
+    });
+  };
+  /** `?strike=` (task 4e) — a chain cell pick always writes a definite, already-normalized numeric
+   *  value (never a manual edit), so this is simpler than `commitSymbol`: still guarded against the
+   *  current search value and `replace: true` for the same reason, and still deletes the param on
+   *  an invalid/empty value for safety, even though a chain click never actually sends one. */
+  const commitStrike = (s: string) => {
+    const next = normalizeStrike(s);
+    if (next === strike) return;
+    navigate({
+      replace: true,
+      search: (prev) => {
+        const nextSearch = { ...prev };
+        if (next) nextSearch.strike = next;
+        else delete nextSearch.strike;
         return nextSearch;
       },
     });
@@ -227,6 +257,8 @@ function TradePage(): ReactElement {
             onPreset={(code) => navigate({ search: (prev) => ({ ...prev, play: code }) })}
             initialSymbol={symbol}
             onSymbolCommit={commitSymbol}
+            initialStrike={strike}
+            onStrikeCommit={commitStrike}
           />
         </>
       ) : null}
@@ -242,12 +274,15 @@ export const Route = createFileRoute("/trade")({
     // `?symbol=` (cockpit plan, red-team finding): a hand-typed or stale value that doesn't match
     // the accepted shape is dropped rather than passed through — see normalizeSymbol's doc comment.
     const symbol = normalizeSymbol(search.symbol);
+    // `?strike=` (task 4e): same shape check pattern as symbol, mirrored one-for-one.
+    const strike = normalizeStrike(search.strike);
     return {
       ...(typeof search.desk === "string" && search.desk.length > 0 && search.desk.length <= 100
         ? { desk: search.desk }
         : {}),
       ...(PLAY_CODES.has(play) ? { play: play as PlayInfo["code"] } : {}),
       ...(symbol !== undefined ? { symbol } : {}),
+      ...(strike !== undefined ? { strike } : {}),
     };
   },
   component: TradePage,

@@ -230,6 +230,12 @@ await shoot("trade-quote-options-phone");
 await page.getByRole("button", { name: "2026-09-09" }).waitFor();
 await shoot("trade-exp-tabs-phone");
 
+// The chain table above the fields it drives (#2017 Phase 0 task 4e) — same navigation as the
+// quote-header/exp-tabs shots above (still `?play=201&symbol=NVDA`), proving the chain now renders
+// directly under Expiration, above Strike/Contracts/Order/Limit, with a real loaded chain.
+await page.getByText(/^Chain ·/).waitFor();
+await shoot("trade-chain-above-fields-phone");
+
 // Progressive disclosure (#2017 Phase 0 task 4d): with no `?symbol=` committed yet, the five
 // chain-gated fields (Expiration/Strike/Contracts/Order/Limit) are withheld entirely — the panel
 // title is the only stable marker to wait on, since the idle state renders nothing else.
