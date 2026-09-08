@@ -30,6 +30,38 @@ describe("mergeStraddle", () => {
   });
 });
 
+describe("mergeStraddle — scroll-out stat passthrough (#2017 Phase 1 slice 14)", () => {
+  it("carries volume/OI/greeks through untouched on row.call and row.put", () => {
+    const statCall: ChainRow = {
+      strike: 230,
+      occSymbol: "X230C",
+      bid: 2.4,
+      ask: 2.6,
+      openInterest: 812,
+      volume: 214,
+      delta: 0.42,
+      gamma: 0.0138,
+      theta: -0.19,
+      vega: 0.53,
+    };
+    const statPut: ChainRow = {
+      strike: 230,
+      occSymbol: "X230P",
+      bid: 1.1,
+      ask: 1.3,
+      openInterest: 500,
+      volume: 90,
+      delta: -0.38,
+      gamma: 0.012,
+      theta: -0.15,
+      vega: 0.48,
+    };
+    const merged = mergeStraddle([statCall], [statPut]);
+    expect(merged[0]?.call).toEqual(statCall);
+    expect(merged[0]?.put).toEqual(statPut);
+  });
+});
+
 describe("dividerIndex", () => {
   const rows = mergeStraddle([row(225, 1, 1), row(230, 1, 1), row(235, 1, 1)], []);
   it("sits after the last strike at or below spot", () => {

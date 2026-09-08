@@ -64,11 +64,29 @@
 .straddle-scroll {
   overflow-x: auto;
 }
+/* 17 columns (#2017 Phase 1 slice 14): Strike (72px) + 2 sides × (Bid 52px + Ask 52px + 6 stat
+   columns × 44px) = 72 + 2*(52+52+6*44) = 72 + 2*368 = 808px of column width before border/
+   padding — a 760px `min-width` is the readable floor at these font sizes (the exact total isn't
+   load-bearing, only "wider than 390px so .straddle-scroll's overflow-x kicks in" is). Percentage
+   widths worked at 5 columns; they don't scale to 17 that need to OVERFLOW rather than compress,
+   so every column gets a fixed pixel width via `<colgroup>` (`straddle-view.tsx`) — not per-`<th>`
+   widths, since `table-layout: fixed` only reads the table's FIRST row, which here is the
+   colSpan=8 group-header row, not the sub-header row the individual columns live on. */
 .straddle-table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
   font-size: 12px;
   table-layout: fixed;
+}
+.straddle-col-strike {
+  width: 72px;
+}
+.straddle-col-bidask {
+  width: 52px;
+}
+.straddle-col-stat {
+  width: 44px;
 }
 .straddle-table th {
   font-weight: 500;
@@ -89,7 +107,6 @@
   padding-top: 2px;
 }
 .straddle-strike-h {
-  width: 22%;
   color: var(--text);
   font-weight: 600;
 }
