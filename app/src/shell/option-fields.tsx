@@ -1,12 +1,14 @@
 import type { ReactElement } from "react";
 import type { ChainData } from "../live/options";
 import { daysToExpiry } from "../live/straddle";
-import { money } from "../live/ticket";
 
 /**
- * The options ticket's chain-driven fields (#738 phase 10b): expiration and strike render as
- * selects fed by the member's own chain when it loaded, and fall back to manual entry when it
- * couldn't — the legacy raw mode's posture, so the ticket always works.
+ * The options ticket's chain-driven fields (#738 phase 10b, strike per #2017 Phase 0 task 4b):
+ * expiration renders as a select fed by the member's own chain when it loaded, and falls back to
+ * manual entry when it couldn't — the legacy raw mode's posture, so the ticket always works.
+ * Strike ALWAYS renders as a free-typed number input — the chain, when loaded, only adds a
+ * `<datalist>` of suggested strikes (plus the chain table's own row-click-to-fill); it never
+ * becomes the only way to name a strike.
  * @category trading
  */
 
@@ -67,7 +69,13 @@ export function ExpirationField({
   );
 }
 
-/** @category trading */
+/**
+ * Free entry always renders (#2017 Phase 0 task 4b — a chain page must never be the only way to
+ * name a strike). When a chain has loaded rows, a `<datalist>` adds native autocomplete
+ * suggestions of the chain's actual strikes on top of that input; it's purely additive — nothing
+ * about typing a strike the chain doesn't list, or that doesn't match any row, changes.
+ * @category trading
+ */
 export function StrikeField({
   id,
   chainData,
@@ -79,8 +87,10 @@ export function StrikeField({
   readonly value: string;
   readonly onEdit: (value: string) => void;
 }): ReactElement {
-  if (!chainData) {
-    return (
+  const hasSuggestions = chainData !== undefined && chainData.rows.length > 0;
+  const listId = `${id}-strikes`;
+  return (
+    <>
       <input
         id={id}
         type="number"
@@ -89,19 +99,16 @@ export function StrikeField({
         inputMode="decimal"
         value={value}
         placeholder="40"
+        list={hasSuggestions ? listId : undefined}
         onChange={(e) => onEdit(e.target.value)}
       />
-    );
-  }
-  return (
-    <select id={id} value={value} onChange={(e) => onEdit(e.target.value)}>
-      <option value="">pick from the chain…</option>
-      {chainData.rows.map((row) => (
-        <option key={row.occSymbol} value={row.strike}>
-          ${row.strike}
-          {row.premium !== undefined ? ` · ${money(row.premium)} /share` : ""}
-        </option>
-      ))}
-    </select>
+      {hasSuggestions ? (
+        <datalist id={listId}>
+          {chainData.rows.map((row) => (
+            <option key={row.occSymbol} value={row.strike} />
+          ))}
+        </datalist>
+      ) : null}
+    </>
   );
 }
