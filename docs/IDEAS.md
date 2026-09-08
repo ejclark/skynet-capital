@@ -18,6 +18,43 @@ Eric-sourced.
 
 ## Inbox (captured, not yet started)
 
+### Prior research/summaries needed re-verification against source 3+ times in one execution pass
+
+Building the meta-orchestrator plan's slices, the same pattern recurred: a documented or
+agent-summarized description of a mechanism (envelope-scan's branch scoping, `ship.sh platter`'s
+auto-merge behavior, `doc-rot-scan.mjs`'s advisory status) turned out subtly incomplete or wrong once
+the actual source was read — each time caught before shipping, none after. Not a new problem to fix,
+but a reinforced discipline worth naming: treat a research summary as a lead, not ground truth,
+especially before touching anything CI/merge-gating-shaped. Surfaced by `/governor`'s own new
+cycle-close retro line's sibling discipline in `/work-issues` and this plan's demonstrated pass.
+_(src: Claude · while: executing the meta-orchestrator plan's slices A–D, 2026-09-08)_
+
+### TOKEN-EFFICIENCY.md's "Follow-up slices" list goes stale the moment a slice ships
+
+Slice 6 (repetition miner → `/charter` pipeline) was already built (`scripts/
+config-audit-intent-clusters.mjs`) but the doc's slice list still read as open — nothing currently
+checks a shipped slice off against its closing PR. `scripts/plan-closure-scan.mjs` already does the
+analogous thing for issues (flags a merged branch referencing an issue with no `Closes #N`); a
+similar check for a doc's own numbered "follow-up slices" list could catch this class generally, not
+just for this one doc.
+_(src: Claude · while: executing the meta-orchestrator plan's slices A–D, 2026-09-08)_
+
+### Eric's own brainstorming mid-session is a journaling pattern worth documenting
+
+Riffing/thinking-out-loud mid-session (the GitHub-Projects/event-bus/developer-mode riff banked in
+#1977 is the first instance) produced real durable reasoning — feeds into plans, is worth
+`/journey`-ing once it produces an actual claim → challenge → resolution exchange. Worth exploring
+whether this deserves a standing habit (when to trigger `/journey` vs. a captured-idea issue) rather
+than leaving it to whichever session happens to notice.
+_(src: Eric · while: the meta-orchestrator audit session, 2026-09-08)_
+
+### Promote the "Raw idea, verbatim" issue-capture block to a real skill once it recurs
+
+The block invented for #1977 (documented in `docs/ISSUES.md`) digests a raw brain dump into
+something interrogatable — occurrence #1. Per the rule of three (`docs/COACHES.md`), don't build a
+dedicated capture skill/agent yet; promote it once this shape has recurred two more times.
+_(src: Eric · while: the meta-orchestrator audit session, 2026-09-08)_
+
 ### Widen the repetition-miner slice to catch main-session delegation, not just recurring task shapes
 
 `docs/process/TOKEN-EFFICIENCY.md` follow-up slice 6 (repetition miner → `/charter` pipeline) mines
