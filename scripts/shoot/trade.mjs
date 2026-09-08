@@ -138,11 +138,39 @@ const desk = {
   },
 };
 
+const quote = { symbol: "NVDA", last: 181.32, change: 2.14, changePct: 1.19, tone: "pos" };
+
+// One expiration's put chain around the quote's spot, the same shape `straddle.mjs` uses — needed
+// only by the options-ticket quote shot below (#2017 Phase 0.9 review, item 5): with no stub the
+// endpoint falls through to `stubBody`'s `{}` default, which `OptionGate` reads as a present-but-
+// empty `ChainData` rather than a `chainNote` degrade, and the straddle view crashes on it.
+const chain = {
+  symbol: "NVDA",
+  optionType: "put",
+  expirations: ["2026-09-09", "2026-09-11", "2026-09-16"],
+  expiration: "2026-09-09",
+  spot: 181.32,
+  rows: [175, 177.5, 180, 182.5, 185].map((strike, i) => ({
+    strike,
+    occSymbol: `NVDA260909P${String(strike * 1000).padStart(8, "0")}`,
+    premium: Number((0.4 + i * 1.1).toFixed(2)),
+    bid: Number((0.32 + i * 1.1).toFixed(2)),
+    ask: Number((0.48 + i * 1.1).toFixed(2)),
+    openInterest: 900 + i * 120,
+  })),
+};
+
 let currentPlays = freshPlays;
 const { page, origin, shoot, close } = await openShell({
   name: "trade",
   viewport: { width: 390, height: 844 },
-  stubs: { "/api/trade/plays": () => currentPlays, "/api/settings": settings, "/api/desk/*": desk },
+  stubs: {
+    "/api/trade/plays": () => currentPlays,
+    "/api/settings": settings,
+    "/api/desk/*": desk,
+    "/api/trade/quote": quote,
+    "/api/trade/chain": chain,
+  },
 });
 
 // THE BUG THIS FIXES (2026-09-06): a fresh account, nothing earned. 102 (Sell stock) used to open
@@ -160,6 +188,26 @@ await shoot("trade-phone");
 
 await page.setViewportSize({ width: 1280, height: 900 });
 await shoot("trade-desktop");
+
+// The quote header (#2017 Phase 0.9): last price, day $ change and % change, with a glyph + sign
+// carrying tone alongside colour (a standing reader is red/green colourblind — hue never carries
+// meaning alone).
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=101&symbol=NVDA`);
+await page.getByText("▲").waitFor();
+await shoot("trade-quote-phone");
+
+await page.setViewportSize({ width: 1280, height: 900 });
+await shoot("trade-quote-desktop");
+
+// The options ticket's own quote header (#2017 Phase 0.9 review, item 5) — the same header, on
+// an unlocked option play (201 needs the ladder through 102 earned, so `throughLongs` here).
+currentPlays = throughLongs;
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${origin}/app/trade?play=201&symbol=NVDA`);
+await page.getByText("▲").waitFor();
+await shoot("trade-quote-options-phone");
+currentPlays = plays;
 
 // A locked preset (#1461 slice 2): the rail can point at 301, the nav shows "Buy to open" disabled
 // with the rung that opens it, and the ticket shows its locked panel. Visible, disabled, explained.

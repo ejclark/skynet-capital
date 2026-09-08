@@ -166,6 +166,35 @@
   font-size: 11px;
   color: var(--muted);
 }
+/* The quote header (#2017 Phase 0.9) — last price + day change, above the fields so it's the
+   first thing read after the symbol. Tabular figures via the shared `.num` convention. Always
+   mounted for `aria-live` (`quote-header.tsx`); empty until there's something to say. */
+.quote-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+/* An empty region before a quote loads (or for an uncommitted symbol): keep it mounted for
+   aria-live, draw no chrome — same idiom as `.gate:empty` in gate.css. */
+.quote-header:empty {
+  margin: 0;
+}
+.quote-sym {
+  font-weight: 600;
+}
+.quote-change.tone-flat {
+  color: var(--muted, inherit);
+}
+.quote-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 12px;
+  max-width: 70ch;
+}
+
 .tkt-fields {
   grid-template-columns: repeat(3, 1fr);
 }

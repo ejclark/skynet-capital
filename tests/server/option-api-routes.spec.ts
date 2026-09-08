@@ -214,6 +214,20 @@ describe("serveOptionApi chain", () => {
     expect(JSON.parse(out.body ?? "{}").chainNote).toContain("isn't linked to one yet");
   });
 
+  // serveQuote's own degrade paths (no client, no quote, a broker failure) are quote-route.spec.ts's
+  // job — this is just the wiring: GET /api/trade/quote actually reaches it.
+  it("routes GET /api/trade/quote to the quote handler", async () => {
+    const { res, out } = fakeRes();
+    await serveOptionApi(
+      get("/api/trade/quote?symbol=NVDA"),
+      res,
+      "/api/trade/quote",
+      config(),
+      ann,
+    );
+    expect(JSON.parse(out.body ?? "{}").quoteNote).toContain("isn't linked to one yet");
+  });
+
   it("names the message gate as the remedy when it holds, not the rung below", async () => {
     const { parsed } = await review(
       openPut(),

@@ -33,13 +33,23 @@ const DRAFT_TEXT = "nothing is sent until every check passes";
 
 describe("the gate's idle draft step", () => {
   it("TradeGate renders no status head on fresh mount", () => {
-    render(<TradeGate deskId="desk-1" />);
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <TradeGate deskId="desk-1" />
+      </QueryClientProvider>,
+    );
 
     expect(screen.queryByText(DRAFT_TEXT, { exact: false })).not.toBeInTheDocument();
   });
 
   it("TradeGate keeps the aria-live region mounted but empty on fresh mount", () => {
-    const { container } = render(<TradeGate deskId="desk-1" />);
+    const client = new QueryClient();
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <TradeGate deskId="desk-1" />
+      </QueryClientProvider>,
+    );
 
     const gate = container.querySelector(".gate");
     expect(gate).not.toBeNull();

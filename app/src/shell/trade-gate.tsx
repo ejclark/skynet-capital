@@ -17,6 +17,7 @@ import {
 } from "../live/ticket";
 import { DisarmNote, GateHead } from "./gate-frame";
 import { LockedPanel } from "./locked-panel";
+import { QuoteHeader } from "./quote-header";
 import { SymbolField } from "./symbol-field";
 
 /**
@@ -173,6 +174,9 @@ export function TradeGate({
     stopPrice: "",
   });
   const [state, setState] = useState<GateState>({ step: "draft" });
+  /** The quote header's own committed symbol (#2017 Phase 0.9) — fetches on COMMIT only, never a
+   *  keystroke, mirroring the chain fetch's `chainSym` on the options ticket. */
+  const [quoteSym, setQuoteSym] = useState(initialSymbol ?? "");
   const symId = useId();
   const qtyId = useId();
   const sideId = useId();
@@ -220,6 +224,7 @@ export function TradeGate({
       <p className="panel-sub">
         Paper account · market, limit or stop · the gate reviews before anything is sent
       </p>
+      <QuoteHeader symbol={quoteSym} />
       <div className="gate-fields">
         <SymbolField
           id={symId}
@@ -230,6 +235,7 @@ export function TradeGate({
           onChange={edit("symbol")}
           onCommit={(s) => {
             edit("symbol")(s);
+            setQuoteSym(s.trim().toUpperCase());
             onSymbolCommit?.(s);
           }}
         />

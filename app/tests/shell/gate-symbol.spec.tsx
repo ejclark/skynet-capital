@@ -23,6 +23,10 @@ rstest.mock("../../src/live/options", () => ({
   reviewOption: () => Promise.reject(new Error("not used in this spec")),
   submitOption: () => Promise.reject(new Error("not used in this spec")),
 }));
+// Both gates now mount `QuoteHeader`, which would otherwise fire a real fetch in jsdom.
+rstest.mock("../../src/live/quote", () => ({
+  fetchQuote: () => Promise.resolve({ quoteNote: "test fixture — no live quote" }),
+}));
 
 const unlockedOptionPlay: PlayInfo = {
   code: "201",
@@ -43,20 +47,28 @@ beforeEach(() => {
 
 describe("TradeGate — initial symbol and commit", () => {
   it("starts the symbol field filled from initialSymbol", () => {
-    render(<TradeGate deskId="desk-1" initialSymbol="NVDA" />);
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <TradeGate deskId="desk-1" initialSymbol="NVDA" />
+      </QueryClientProvider>,
+    );
 
     expect(screen.getByLabelText("Symbol")).toHaveValue("NVDA");
   });
 
   it("calls onSymbolCommit when the symbol field commits", () => {
     let committed: string | undefined;
+    const client = new QueryClient();
     render(
-      <TradeGate
-        deskId="desk-1"
-        onSymbolCommit={(s) => {
-          committed = s;
-        }}
-      />,
+      <QueryClientProvider client={client}>
+        <TradeGate
+          deskId="desk-1"
+          onSymbolCommit={(s) => {
+            committed = s;
+          }}
+        />
+      </QueryClientProvider>,
     );
 
     fireEvent.change(screen.getByLabelText("Symbol"), { target: { value: "aapl" } });

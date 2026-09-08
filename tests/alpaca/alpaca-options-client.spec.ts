@@ -259,6 +259,48 @@ describe("AlpacaOptionsClient", () => {
     expect(await priced.getUnderlyingPrice("MSFT")).toBe(428.6);
   });
 
+  describe("getUnderlyingQuote", () => {
+    it("parses latestTrade.p and prevDailyBar.c from the snapshot endpoint", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({}),
+        fakeTransport({
+          "/v2/stocks/MSFT/snapshot": {
+            latestTrade: { p: 428.6 },
+            prevDailyBar: { c: 425.1 },
+          },
+        }),
+      );
+      expect(await client.getUnderlyingQuote("MSFT")).toEqual({ last: 428.6, prevClose: 425.1 });
+    });
+
+    it("is undefined when prevDailyBar is missing", async () => {
+      const client = new AlpacaOptionsClient(
+        fakeTransport({}),
+        fakeTransport({
+          "/v2/stocks/MSFT/snapshot": { latestTrade: { p: 428.6 } },
+        }),
+      );
+      expect(await client.getUnderlyingQuote("MSFT")).toBeUndefined();
+    });
+
+    it("is undefined when there is no data transport", async () => {
+      const bare = new AlpacaOptionsClient(fakeTransport({}));
+      expect(await bare.getUnderlyingQuote("MSFT")).toBeUndefined();
+    });
+
+    it("fails soft on a non-2xx response and on a throw", async () => {
+      const notFound = new AlpacaOptionsClient(fakeTransport({}), fakeTransport({}));
+      expect(await notFound.getUnderlyingQuote("MSFT")).toBeUndefined();
+
+      const throwing = new AlpacaOptionsClient(fakeTransport({}), {
+        get: () => Promise.reject(new Error("network down")),
+        post: () => Promise.reject(new Error("unused")),
+        delete: () => Promise.reject(new Error("unused")),
+      });
+      expect(await throwing.getUnderlyingQuote("MSFT")).toBeUndefined();
+    });
+  });
+
   describe("getOptionLifecycleActivities (#468 criterion 6)", () => {
     it("reads the four lifecycle activity types, newest first, from the trading transport", async () => {
       const log: Array<{ path: string; body?: unknown }> = [];

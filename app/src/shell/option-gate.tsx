@@ -9,11 +9,11 @@ import {
   reviewOption,
   submitOption,
 } from "../live/options";
-import { money } from "../live/ticket";
 import { ChainStraddle } from "./chain-straddle";
 import { LockedPanel } from "./locked-panel";
 import { ExpirationField, StrikeField } from "./option-fields";
 import { GateAction, type OptionGateState, OptionGateStatus } from "./option-preview";
+import { QuoteHeader } from "./quote-header";
 import { SymbolField } from "./symbol-field";
 
 /**
@@ -130,6 +130,10 @@ export function OptionGate({
       <p className="panel-sub">
         Course {play.code} · {play.gloss}
       </p>
+      {/* Duplicates the chain fetch's own spot (StraddleView's "Current price" line, `chain.data.spot`) —
+          consolidating the two into one round trip is real scope for the Phase-0 chain-redesign
+          slices (#2017 tasks #11-13), not this slice; see docs/IDEAS.md. */}
+      <QuoteHeader symbol={chainSym} />
       <div className="gate-fields tkt-fields">
         <SymbolField
           id={symId}
@@ -203,11 +207,6 @@ export function OptionGate({
         ) : null}
       </div>
       {chainNote ? <p className="tkt-note">{chainNote}</p> : null}
-      {chainData?.spot !== undefined ? (
-        <p className="tkt-note num">
-          {chainData.symbol} last {money(chainData.spot)}
-        </p>
-      ) : null}
       {chainData ? (
         <ChainStraddle
           chainSym={chainSym}
