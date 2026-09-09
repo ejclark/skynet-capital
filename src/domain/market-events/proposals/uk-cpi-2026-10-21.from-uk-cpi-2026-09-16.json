@@ -1,0 +1,11 @@
+{
+  "id": "uk-cpi-2026-10-21",
+  "kind": "macro-print",
+  "title": "UK CPI — September 2026 consumer price inflation (ONS, 07:00 London / 02:00 ET), the last inflation print before the Autumn Budget and the November MPR",
+  "date": "2026-10-21",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/consumerpriceinflationukseptember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Consumer price inflation, UK: September 2026', 'Release date: 21 October 2026 7:00am', and states 'This release is not yet published'. Primary-sourced (the publisher's own release calendar), filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has BLS:/BEA:/CENSUS: and no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-cpi-2026-09-16, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2026-09-16 LANE, 2026-09-09. Why it earns a slot: it is the LAST CPI print before both the 2026-10-28 Autumn Budget (proposed separately as uk-autumn-budget-2026-10-28.from-boe-decision-2026-09-17) and the 2026-11-05 MPC meeting, which is the next one carrying a full Monetary Policy Report forecast round. It is also the print that still does NOT contain the 1 October zero-rating of VAT on domestic electricity (gov.uk, 21 July 2026, quantified at about -0.10pp on CPI): September prices predate it, so the mechanical drag first shows in the OCTOBER print published mid-November, i.e. AFTER the MPC votes on 05 November. Two dated distortions land in the September data itself and go the other way: fuel duty rose 1p on 2026-09-01 (about 1.2p at the pump with VAT), and the September 2025 base was itself an air-fare month. Tiered LOW on the same grounds as its September sibling: symbols: [], no rates- or sterling-keyed house playbook, attribution value only. Estimate widens caution only."
+}
