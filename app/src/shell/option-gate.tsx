@@ -281,7 +281,9 @@ export function OptionGate({
         />
         {showFields ? (
           <div className="field">
-            <label htmlFor={expId}>Expiration</label>
+            <label htmlFor={expId} id={`${expId}-label`}>
+              Expiration
+            </label>
             <ExpirationField
               id={expId}
               chainData={chainData}
