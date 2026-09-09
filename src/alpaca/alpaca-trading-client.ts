@@ -116,6 +116,14 @@ export class AlpacaTradingClient {
     return ensureOk<AlpacaOrder[]>(await this.transport.get(`/v2/orders?${query.toString()}`));
   }
 
+  /** One order by id, with whatever fill data Alpaca has for it right now — the read
+   *  `AlpacaBrokerAdapter.submit()`'s post-fill poll uses to learn the real `filled_avg_price`/
+   *  `filled_qty` a market order's initial "accepted" response doesn't yet carry. An unknown id
+   *  throws `AlpacaApiError`, same as any other non-2xx response. */
+  async getOrder(id: string): Promise<AlpacaOrder> {
+    return ensureOk<AlpacaOrder>(await this.transport.get(`/v2/orders/${id}`));
+  }
+
   /** Cancels a still-open order. Alpaca returns 204 on success; a filled/already-canceled order
    *  (or an unknown id) throws `AlpacaApiError`, same as any other non-2xx response. */
   async cancelOrder(id: string): Promise<void> {
