@@ -201,8 +201,66 @@ describe("AutonomousTrader", () => {
     expect(blocked).toHaveLength(0);
     expect(records[1]?.halted).toBe("manual");
     expect(records[1]?.outcomes).toHaveLength(0);
+    // The market context is captured even on a halted cycle — a halt is exactly the kind of
+    // cycle the replay/counterfactual measures want on the tape, not a gap in it.
+    expect(records[1]?.context).toEqual(context(100, 0.05));
     // portfolio only reflects the one order from before the halt
     expect((await broker.getPortfolio()).positions[0]?.quantity).toBe(10);
+  });
+
+  it("captures the market context the persona reasoned over on every cycle", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const records: DecisionRecord[] = [];
+    const trader = new AutonomousTrader({
+      persona: new AlwaysBuys(),
+      broker,
+      onDecision: (r) => records.push(r),
+    });
+
+    await trader.evaluate(context(100, 0.05));
+
+    expect(records[0]?.context).toEqual(context(100, 0.05));
+  });
+
+  it("names the guard that refused an intent, in a real (non-money-moving) risk config", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const records: DecisionRecord[] = [];
+    const trader = new AutonomousTrader({
+      persona: new AlwaysBuys(),
+      broker,
+      // restricted blocks every buy via the ladder — a refusal with no money moved.
+      risk: { maxPositionPct: 0.2, accountTier: "restricted" },
+      onDecision: (r) => records.push(r),
+    });
+
+    const results = await trader.evaluate(context(100, 0.05));
+
+    expect(results).toHaveLength(0);
+    expect(records[0]?.guardedIntents).toEqual([]);
+    expect(records[0]?.outcomes).toEqual([]);
+    expect(records[0]?.refusals).toHaveLength(1);
+    expect(records[0]?.refusals?.[0]).toMatchObject({ reason: "ladder-block" });
+    expect(records[0]?.refusals?.[0]?.intent.symbol).toBe("NVDA");
+  });
+
+  it("omits refusals entirely when nothing was refused this cycle", async () => {
+    const broker = new InMemoryBroker(1_000_000, [
+      { symbol: "NVDA", bid: 100, ask: 100, last: 100, asOf: "t" },
+    ]);
+    const records: DecisionRecord[] = [];
+    const trader = new AutonomousTrader({
+      persona: new AlwaysBuys(),
+      broker,
+      onDecision: (r) => records.push(r),
+    });
+
+    await trader.evaluate(context(100, 0.05));
+
+    expect(records[0]).not.toHaveProperty("refusals");
   });
 
   it("drives a real persona from a momentum tracker's context", async () => {

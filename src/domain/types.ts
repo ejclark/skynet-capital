@@ -103,6 +103,35 @@ export interface OrderIntent {
    * what we predicted — so intent can be scored against outcome later.
    */
   readonly expectation?: string;
+  /**
+   * The structured half of `expectation` — a direction/invalidator claim a scoring pass can grade
+   * without parsing prose (the calibration gap named in `docs/plans/trade-insights-loop.md` and
+   * `docs/plans/metrics-layer.md`: "the signal that fired is prose only"). `magnitudePct` and
+   * `horizonMs` are individually optional because a persona's actual rule may state neither — a
+   * trigger/exit signal with no time-bound thesis is a true statement about that persona's edge,
+   * never a placeholder to fill in later. Optional and additive: a bare persona reflex may still
+   * carry only `expectation` prose.
+   */
+  readonly forecast?: OrderForecast;
+}
+
+/**
+ * See `OrderIntent.forecast`. `invalidator` is always stated, even when the honest answer is that
+ * the underlying rule has no automatic exit — "none" is a finding worth recording, not an absent
+ * field. `direction` is the predicted move of the underlying price, the one thing every forecast
+ * can be scored against regardless of what else the persona's rule states.
+ */
+export interface OrderForecast {
+  readonly direction: "up" | "down";
+  /** Expected move size, if the persona's rule implies one. Omit rather than guess at a number. */
+  readonly magnitudePct?: number;
+  /** How long the thesis is expected to hold, if the persona's rule is time-bound. Omit if it
+   *  isn't — inventing a horizon the rule doesn't have would score the wrong claim. */
+  readonly horizonMs?: number;
+  /** What observation would prove THIS directional call wrong — never "not applicable"; even a
+   *  full-exit trade with no remaining position is a falsifiable prediction about what happens
+   *  next. */
+  readonly invalidator: string;
 }
 
 /**

@@ -49,7 +49,21 @@ export function createDashboardServer(config: DashboardServerConfig): Server {
   const channel = createBoardChannel();
   driveBoardChannel(config.hub, channel, config.ceremonies);
   return createServer((req, res) => {
-    void handle(req, res, config, channel);
+    void handle(req, res, config, channel).catch((error: unknown) => {
+      // Last-resort net (mirrors insights-listener.ts): every route handler below is expected to
+      // catch what it can reason about, but nothing here may ever escape to become an uncaught
+      // exception on Node's unhandled-rejection path — which on this runtime terminates the
+      // process. A crash here is a real production outage of the public dashboard, not a quietly
+      // dropped request, so failing closed with a response is not optional. `process.emitWarning`,
+      // not `console` — this is library code (the repo reserves console for scripts).
+      process.emitWarning(`[dashboard-server] unhandled error: ${String(error)}`);
+      if (!res.headersSent) {
+        res.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "internal error" }));
+      } else {
+        res.end();
+      }
+    });
   });
 }
 

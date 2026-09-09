@@ -2,7 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useState } from "react";
-import { type DecisionCycle, fetchDesk, fetchDeskDecisions } from "../live/desk";
+import {
+  type DecisionCycle,
+  fetchDesk,
+  fetchDeskDecisions,
+  type RefusedIntent,
+} from "../live/desk";
 import { DeskRail } from "../shell/desk-rail";
 import { PageFrame } from "../shell/frame";
 
@@ -22,18 +27,51 @@ function OutcomeLine({ outcome }: { readonly outcome: DecisionCycle["outcomes"][
         {outcome.side.toUpperCase()} {outcome.quantity} {outcome.symbol}
       </span>
       {outcome.playbook ? <span className="chip chip-bot">{outcome.playbook}</span> : null}
+      {outcome.strategy ? <span className="chip chip-bot">{outcome.strategy}</span> : null}
       {outcome.fill ? <span className="num cycle-fill">{outcome.fill}</span> : null}
       {outcome.resultStatus && !outcome.fill ? (
         <span className="cycle-fill">{outcome.resultStatus}</span>
       ) : null}
       <span className="cycle-reason">“{outcome.reason}”</span>
+      {outcome.expectation ? (
+        <p className="cycle-expectation">
+          Expected: {outcome.expectation}
+          {outcome.forecast ? (
+            <span className="cycle-invalidator">
+              {" "}
+              — proves it wrong: {outcome.forecast.invalidator}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
+/** A raw intent the guards refused in full this cycle — the row the "nothing happened" quiet
+ *  bucket used to swallow (e.g. "Sauron wanted NVDA at −0.82 panic; S2 blocked it"). No guard
+ *  attribution yet (`applyGuards` doesn't name which rule fired) — the persona's own ask, verbatim. */
+function RefusedLine({ intent }: { readonly intent: RefusedIntent }) {
+  return (
+    <li className="cycle-outcome cycle-outcome-refused">
+      <span className="cycle-action cycle-action-refused">refused</span>
+      <span className="cycle-intent num">
+        {intent.side.toUpperCase()} {intent.quantity} {intent.symbol}
+      </span>
+      {intent.strategy ? <span className="chip chip-bot">{intent.strategy}</span> : null}
+      <span className="cycle-reason">“{intent.reason}”</span>
+      {intent.expectation ? (
+        <p className="cycle-expectation">Expected: {intent.expectation}</p>
+      ) : null}
     </li>
   );
 }
 
 function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactElement {
-  // Halted and rejected cycles arrive open — the reader came for the failure.
-  const [open, setOpen] = useState(cycle.status === "halted" || cycle.status === "rejected");
+  // Halted, rejected, and refused cycles arrive open — the reader came for the failure.
+  const [open, setOpen] = useState(
+    cycle.status === "halted" || cycle.status === "rejected" || cycle.status === "refused",
+  );
   const when = new Date(cycle.at);
   const stamp = Number.isNaN(when.getTime())
     ? cycle.at
@@ -71,6 +109,16 @@ function CycleRow({ cycle }: { readonly cycle: DecisionCycle }): ReactElement {
                 <OutcomeLine
                   key={`${outcome.symbol}-${outcome.side}-${outcome.quantity}-${outcome.action}-${outcome.reason}`}
                   outcome={outcome}
+                />
+              ))}
+            </ul>
+          ) : null}
+          {cycle.refusedIntents && cycle.refusedIntents.length > 0 ? (
+            <ul className="cycle-outcomes">
+              {cycle.refusedIntents.map((intent) => (
+                <RefusedLine
+                  key={`${intent.symbol}-${intent.side}-${intent.quantity}-${intent.reason}`}
+                  intent={intent}
                 />
               ))}
             </ul>

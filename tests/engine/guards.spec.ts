@@ -1,5 +1,5 @@
 import type { OrderIntent, PlaybookMode } from "../../src/domain/types.js";
-import { applyGuards } from "../../src/engine/guards.js";
+import { applyGuards, applyGuardsWithVerdicts } from "../../src/engine/guards.js";
 import { aContext, aPortfolio, aPosition } from "../support/builders.js";
 
 const buy = (symbol: string, quantity: number): OrderIntent => ({
@@ -432,5 +432,168 @@ describe("applyGuards", () => {
       });
       expect(approved).toHaveLength(1);
     });
+  });
+});
+
+/**
+ * The additive superset `applyGuards` is now a thin wrapper over — every refusal reason a raw
+ * intent can earn, so the audit trail (and the "guard opportunity cost" measure it feeds) can say
+ * WHY without re-deriving this file's own logic. `applyGuards([...]).approved` must always equal
+ * what the pre-existing `applyGuards` calls above already assert; these specs cover the `refused`
+ * half only.
+ */
+describe("applyGuardsWithVerdicts", () => {
+  it("names ladder-block for a buy the risk ladder's BLOCK rung refuses", () => {
+    const context = aContext({ EEM: { last: 100 } });
+    const portfolio = aPortfolio({ cash: 10_000 });
+    const intent = buy("EEM", 10);
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, {
+      maxPositionPct: 0.2,
+      accountTier: "restricted",
+    });
+
+    expect(result.approved).toEqual([]);
+    expect(result.refused).toEqual([{ intent, reason: "ladder-block" }]);
+  });
+
+  it("names s2-print and e1-open for the two trade-discipline refusals", () => {
+    const calendar = [
+      { symbol: "EEM", date: "2026-08-26", status: "estimate" as const, source: "test" },
+    ];
+    const discipline = { calendar };
+    const portfolio = aPortfolio({ cash: 10_000 });
+
+    const printIntent = buy("EEM", 10);
+    const printResult = applyGuardsWithVerdicts(
+      [printIntent],
+      portfolio,
+      aContext({ EEM: { last: 100 } }, "2026-08-25T15:00:00.000Z"), // D-1, 11:00 ET
+      { maxPositionPct: 0.2, discipline },
+    );
+    expect(printResult.refused).toEqual([{ intent: printIntent, reason: "s2-print" }]);
+
+    const openIntent = buy("EEM", 10);
+    const openResult = applyGuardsWithVerdicts(
+      [openIntent],
+      portfolio,
+      aContext({ EEM: { last: 100 } }, "2026-08-14T13:35:00.000Z"), // 09:35 ET, no print nearby
+      { maxPositionPct: 0.2, discipline },
+    );
+    expect(openResult.refused).toEqual([{ intent: openIntent, reason: "e1-open" }]);
+  });
+
+  it("names subscription-filter for a buy outside the subscription's aimed symbols", () => {
+    const targeted = {
+      accountId: "acct-1",
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      capitalAllocated: 5_000,
+      enabled: true,
+      createdAt: "2026-08-29T00:00:00.000Z",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+      symbols: ["EEM"],
+    };
+    const context = aContext({ MSFT: { last: 100 } });
+    const portfolio = aPortfolio({ cash: 1_000_000 });
+    const intent = { ...buy("MSFT", 10), playbookId: "S1-NVDA", playbookMode: "standard" as const };
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, {
+      maxPositionPct: 1,
+      subscriptions: [targeted],
+    });
+
+    expect(result.refused).toEqual([{ intent, reason: "subscription-filter" }]);
+  });
+
+  it("names no-quote when the symbol has no live quote", () => {
+    const context = aContext({ EEM: { last: 100 } });
+    const portfolio = aPortfolio({ cash: 10_000 });
+    const intent = buy("MSFT", 10); // no quote for MSFT in this context
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, { maxPositionPct: 0.2 });
+
+    expect(result.refused).toEqual([{ intent, reason: "no-quote" }]);
+  });
+
+  it("names insufficient-cash when cash rounds down to zero shares", () => {
+    const context = aContext({ EEM: { last: 100 } });
+    const portfolio = aPortfolio({ cash: 0 });
+    const intent = buy("EEM", 10);
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, { maxPositionPct: 0.2 });
+
+    expect(result.refused).toEqual([{ intent, reason: "insufficient-cash" }]);
+  });
+
+  it("names position-cap when the per-position budget is already exhausted, not insufficient-cash", () => {
+    const context = aContext({ EEM: { last: 100 } });
+    // Already holding well past the 20%-of-equity cap; plenty of cash remains.
+    const portfolio = aPortfolio({
+      cash: 1_000_000,
+      positions: [aPosition({ symbol: "EEM", quantity: 3_000 })],
+    });
+    const intent = buy("EEM", 10);
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, { maxPositionPct: 0.2 });
+
+    expect(result.refused).toEqual([{ intent, reason: "position-cap" }]);
+  });
+
+  it("names subscription-budget when only the subscription's own allocation is exhausted", () => {
+    const subscription = {
+      accountId: "acct-1",
+      playbookId: "S1-NVDA",
+      mode: "standard" as const,
+      capitalAllocated: 5_000,
+      enabled: true,
+      createdAt: "2026-08-29T00:00:00.000Z",
+      updatedAt: "2026-08-29T00:00:00.000Z",
+    };
+    const context = aContext({ EEM: { last: 100 } });
+    // Ample cash and ample position-cap room; only the $5,000 subscription budget is spent.
+    const portfolio = aPortfolio({
+      cash: 1_000_000,
+      positions: [aPosition({ symbol: "EEM", quantity: 60 })], // ~$6,000 held > $5,000 budget
+    });
+    const intent = { ...buy("EEM", 10), playbookId: "S1-NVDA", playbookMode: "standard" as const };
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, {
+      maxPositionPct: 1,
+      subscriptions: [subscription],
+    });
+
+    expect(result.refused).toEqual([{ intent, reason: "subscription-budget" }]);
+  });
+
+  it("names nothing-held for a sell against a symbol with nothing held", () => {
+    const context = aContext({ EEM: { last: 100 } });
+    const portfolio = aPortfolio({ cash: 0 });
+    const intent = sell("EEM", 10);
+
+    const result = applyGuardsWithVerdicts([intent], portfolio, context, { maxPositionPct: 0.2 });
+
+    expect(result.refused).toEqual([{ intent, reason: "nothing-held" }]);
+  });
+
+  it("refused.length === intents.length - approved.length, and approved matches applyGuards exactly", () => {
+    const context = aContext({ EEM: { last: 100 }, MSFT: { last: 50 } });
+    const portfolio = aPortfolio({
+      cash: 1_000_000,
+      positions: [aPosition({ symbol: "EEM", quantity: 30 })],
+    });
+    const intents = [
+      buy("EEM", 10_000), // clamped by the position cap, still approved (not refused)
+      buy("MSFT", 10), // approved
+      sell("EEM", 30), // approved
+      sell("MSFT", 5), // refused: nothing held
+    ];
+
+    const result = applyGuardsWithVerdicts(intents, portfolio, context, { maxPositionPct: 0.2 });
+    const legacyApproved = applyGuards(intents, portfolio, context, { maxPositionPct: 0.2 });
+
+    expect(result.refused).toHaveLength(intents.length - result.approved.length);
+    expect(result.approved).toEqual(legacyApproved);
+    expect(result.refused).toEqual([{ intent: intents[3], reason: "nothing-held" }]);
   });
 });
