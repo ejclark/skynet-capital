@@ -1,0 +1,11 @@
+{
+  "id": "thanksgiving-market-closure-2028-11-23",
+  "kind": "sector",
+  "title": "US equity markets closed — Thanksgiving Day 2028",
+  "date": "2028-11-23",
+  "status": "estimate",
+  "source": "NEWS: nyse.com/markets/hours-calendars, fetched direct 2026-09-09 (HTTP 200 after its 302, 109,180 bytes; needs curl -L, and its holiday data parses as JSON-ish '\"text\":\"...\"' cells rather than HTML table markup). The page states 'All NYSE markets observe U.S. holidays as listed below for 2026, 2027, and 2028' and its Thanksgiving Day row carries 'Thursday, November 23***' in the 2028 column. Independently reproduced by weekday arithmetic: Thanksgiving is the fourth Thursday in November (5 U.S.C. 6103), and the fourth Thursday of November 2028 is the 23rd. Filed estimate on the two counts every sibling closure entry records: the confirmed-prefix taxonomy in market-events-data.ts has no slot for an exchange operator's own hours page (see open issue #2552, which measures 37 of 37 closure entries stuck at estimate for exactly this reason), and this lane may not self-confirm an event it discovered in-sweep. Discovered in the never-assessed initial research of presidential-election-2028-11-07, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED by the presidential-election-2028-11-07 initial research (2026-09-09), whose corridor sweep -- run mechanically over all 925 tracked events and proposals -- returned NOTHING within plus or minus 60 days of the election except fed-board-closure-2028-11-10. That emptiness is what earns this row: the two weeks after the furthest-out event on this calendar are entirely unmapped, and the NYSE's own 2028 column names both of the dates that structurally thin the tape there. This is the full closure; its early-close sibling is proposed in the same PR as thanksgiving-half-day-2028-11-24. Why it matters to the proposer's own event and not merely as bookkeeping: the election ledger's one measured finding is a DISPERSION fact about the sessions around 2028-11-07, and any later attribution of tape behaviour in the D+11 to D+17 window has to know that 11-23 is shut and 11-24 closes at 1:00 p.m. ET before reading anything off it. NOTHING TRADEABLE IS CLAIMED: symbols is empty, impact is low, no house playbook is calendar-keyed, and estimate widens caution and licenses no entry."
+}
