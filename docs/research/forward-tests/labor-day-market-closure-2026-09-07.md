@@ -240,3 +240,54 @@ against Saudi Aramco assets and the 400kb/d Jazan refinery (CNBC/NBC, 2026-09-08
 because it sharpens tomorrow's reading rather than changing it: **2.35 is the on-cycle cohort's
 literal minimum**, so a print of exactly 2.35 **passes** the registered line while simultaneously
 tying the tighter cohort's floor. Scoring follows the registered line as pre-committed on 2026-09-08.
+
+**Held a FIFTH time, and the refusal was pre-committed 12 minutes before the guard would have cleared
+— 2026-09-09 03:48 UTC = 2026-09-08 23:48 ET. No row above is edited.** The registered guard scores
+the 09-08 `^VIX` close only from a pull made on a calendar date **strictly after 2026-09-08 (ET)**.
+This session ran 12 minutes short of that boundary, holding a reading that **passes**: `^VIX` 09-08 =
+**15.72**, now identical across three cache-busted pulls (16:53, 20:01, 23:48 ET), with
+`meta.regularMarketTime` **16:15:01 ET** = exactly its `currentTradingPeriod.regular.end`.
+
+**The option was to wait out the clock inside the session, and it is declined on the record, while
+the outcome is still unscored.** A pull deliberately timed to cross a date boundary by minutes — made
+while already holding a number that agrees with the hypothesis — satisfies the guard's letter and
+defeats its purpose. Three guards have failed on this test, and **every one failed in the direction
+that agreed with the prediction**, which is exactly why none of them looked wrong at the time. A
+fourth move with that same signature would be indistinguishable from the first three, whatever its
+justification.
+
+**It also buys nothing, which is what makes the refusal cheap rather than principled-at-a-cost.**
+FT-…-2 keys on the 09-09 10Y reopening, which prints ~13:00 ET on 2026-09-09 — roughly thirteen hours
+after this session. The parent ledger's `## Outcome` cannot be written until both tests are scored, so
+scoring FT-…-1 alone tonight would not advance the close-out by one dispatch; it would only split the
+two scores and abandon the plan the 20:01 ET note put on the record ("a dispatch at ≈2026-09-09 20:00
+ET both clears the guard AND postdates the 10Y print, so it can score **both**"). **Score by** is
+2026-09-09, so the first correctly-timed pull remains an on-time one.
+
+**The un-populating hazard has RESOLVED, and the correction is to my own predecessor note.** The
+20:01 ET entry recorded `SPY`'s 2026-09-08 bar carrying `open` and `volume` but `close`/`adjclose`
+**null**, measured as **1 date of 8,458** since 1993 on which `^GSPC` had a bar and `SPY` did not. At
+23:48 ET that bar is populated — close and adjclose **765.96**, series length **8,459** — and
+`^GSPC`-with-no-`SPY` is back to **0 of 8,459**. So it was a **fill lag of roughly four hours, not a
+hole**, and the 16:53 ET ledger row's settled SPY figure is reproducible after all. **What survives is
+the sharper half of the lesson:** a filtered bar series hides a present-but-incomplete bar in *both*
+directions, and its state is not stable within a single day — so "the symbol has no bar for date D" is
+a statement about **the pull**, never about D. Only the sampling-date rule distinguishes them without
+consulting the feed, which is the second time that rule has been the one to survive.
+
+**FT-…-2 re-verified live at 23:48 ET.** A cache-busted `auctions_query` (HTTP 200) still shows
+`91282CRF0` at **$39B**, announce-dated 2026-09-03, `bid_to_cover_ratio` **`null`** — no
+re-announcement, resize or postponement, so the void clause has not fired and the **2.35** line stands
+exactly as pre-committed on 2026-09-08. The 09-08 session settled at exactly **$304B** as filed and
+there is still **no 2026-09-07 auction row**.
+
+**A third confound for FT-…-1, named before it is scored.** Registration named the $304B slate, the 3Y
+note and two days of unpriced weekend news. Two more have since attached: the Houthi strikes on Saudi
+facilities (Brent settled **97.92** on 09-08 by our own `BZ=F` bar — correcting the **98.61**
+aggregator figure the 20:01 note took on trust — and reading **99.36** overnight into 09-09, an
+in-progress bar and therefore not a reading), and **Canada's counter-tariffs on ~C$27.6B of US goods,
+which took effect on 2026-09-08 itself** (`canada-counter-tariffs-effective-2026-09-08`, `estimate`,
+proposed by the `jobs-2026-10-02` lane). Third-party session context matches our bars: Dow
+**−1.18%**, S&P **−0.58% to 7,673.52**, Nasdaq **−0.32%** — a risk-off session driven by oil. The
+registered "scored as an observation, never as a mechanism" clause is now carrying three named
+alternative explanations, not one.
