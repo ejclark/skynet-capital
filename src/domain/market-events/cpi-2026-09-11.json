@@ -4,7 +4,7 @@
   "title": "CPI release (Aug 2026 data)",
   "date": "2026-09-11",
   "status": "confirmed",
-  "source": "BLS: bls.gov/schedule/news_release/cpi.htm — reads verbatim 'August 2026 | Sep. 11, 2026 | 08:30 AM'; primary re-fetched direct 2026-09-08, fourth consecutive pass (2026-09-04, 2026-09-05, 2026-09-06, 2026-09-08), first checked 2026-08-15",
+  "source": "BLS: bls.gov/schedule/news_release/cpi.htm — reads verbatim 'August 2026 | Sep. 11, 2026 | 08:30 AM'; primary re-fetched direct 2026-09-09, fifth consecutive pass (2026-09-04, 2026-09-05, 2026-09-06, 2026-09-08, 2026-09-09), first checked 2026-08-15. Note for anyone reconciling secondaries: 2026-09-11 is a FRIDAY, and any source dating this release to 'Thursday, Sept. 11' is relaying the August 2025 release (2025-09-11 was the Thursday) — confirmed at bls.gov/news.release/archives/cpi_09112025.htm, fetched direct 2026-09-09",
   "impact": "high",
   "symbols": [],
   "notes": "Rate-path input; AI-infra names trade as long-duration assets on it."
