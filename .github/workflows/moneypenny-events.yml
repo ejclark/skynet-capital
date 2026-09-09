@@ -258,10 +258,20 @@ jobs:
       # all failed this way). It DOES support `workflow_dispatch`, so on a push with due events we
       # re-fire ourselves as a dispatch instead of letting `build-events` invoke the action directly
       # under `push`. `build-events` below only runs on that re-dispatched pass (see its `if:`).
+      #
+      # THE APP TOKEN, NOT GITHUB_TOKEN (docs/LESSONS.md, 2026-09-08) — a third recurrence of the
+      # loop-guard this file's own header already names twice: GitHub suppresses events emitted by a
+      # GITHUB_TOKEN-authenticated action, and that suppression turned out to reach past the run this
+      # call starts — it also swallows THAT run's own completion `workflow_run` event, so
+      # moneypenny-repair.yml's self-healing lane never sees a `build-events` matrix leg fail. Every
+      # dispatch this step made with GITHUB_TOKEN was invisible to repair for as long as the bug
+      # lived, across every event that ever failed inside it. The App token is a real,
+      # non-suppressed identity — same fix already applied to every PR-opening step in this file, for
+      # the same underlying mechanism (see the header).
       - name: Re-dispatch for event research (claude-code-action can't see `push`)
         if: github.event_name == 'push' && steps.screen.outputs.due != '' && steps.screen.outputs.due != '[]'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh workflow run moneypenny-events.yml --ref "$GITHUB_REF_NAME" -f command=scan
 
       # THE FEEDBACK LANE'S GATE (2026-08-19, Eric: "I expected the issues to get received and
