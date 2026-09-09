@@ -61,7 +61,8 @@ function ExitIcon(): ReactElement {
   );
 }
 
-/** Every route under the Profile rail lights the Profile tab (Accounts is `/`, exactly). */
+/** Every route under the Profile rail lights the Profile tab. `/` is a thin redirect to
+ *  `/leaderboard` now (#2321), so it no longer belongs to this family. */
 export const PROFILE_PATHS = [
   "/learn",
   "/onboarding",
@@ -73,13 +74,13 @@ export const PROFILE_PATHS = [
 
 export function isProfilePath(pathname: string): boolean {
   const path = pathname.replace(/^\/app(?=\/|$)/, "") || "/";
-  return path === "/" || PROFILE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+  return PROFILE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
 }
 
 /**
- * THE PROFILE TAB (#1119, the canvas's top bar: Profile · Trade · Activity · Research · Feedback).
- * Profile is a family of routes, not one, so its active state is computed from the location
- * rather than a single route match; it opens on the milestones table of contents.
+ * THE PROFILE TAB (#1119, the canvas's top bar: Leaderboard · Profile · Trade · Activity ·
+ * Research). Profile is a family of routes, not one, so its active state is computed from the
+ * location rather than a single route match; it opens on the milestones table of contents.
  */
 function ProfileTab(): ReactElement {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -127,6 +128,15 @@ function RootShell(): ReactElement {
             Skynet Capital
           </span>
           <nav className="topnav" aria-label="Views">
+            <Link
+              to="/leaderboard"
+              search={{ by: "equity" }}
+              className="topnav-link"
+              activeProps={{ "aria-current": "page" }}
+              activeOptions={{ includeSearch: false }}
+            >
+              Leaderboard
+            </Link>
             <ProfileTab />
             <Link
               to="/trade"

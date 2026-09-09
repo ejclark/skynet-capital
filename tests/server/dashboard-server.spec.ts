@@ -223,11 +223,11 @@ describe("dashboard-server — Standings fold (2026-08-25)", () => {
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
       const bare = await fetch(`${base}/leaderboard`, { redirect: "manual" });
       expect(bare.status).toBe(302);
-      expect(bare.headers.get("location")).toBe("/");
+      expect(bare.headers.get("location")).toBe("/app/leaderboard");
 
       const withMetric = await fetch(`${base}/leaderboard?by=return`, { redirect: "manual" });
       expect(withMetric.status).toBe(302);
-      expect(withMetric.headers.get("location")).toBe("/?by=return");
+      expect(withMetric.headers.get("location")).toBe("/app/leaderboard?by=return");
     });
   });
 
@@ -235,7 +235,7 @@ describe("dashboard-server — Standings fold (2026-08-25)", () => {
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
       const res = await fetch(`${base}/bots-vs-humans`, { redirect: "manual" });
       expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/");
+      expect(res.headers.get("location")).toBe("/app/leaderboard");
     });
   });
 
@@ -269,11 +269,11 @@ describe("dashboard-server — Standings fold (2026-08-25)", () => {
     await withServer({ hub: new ObservatoryHub(board()) }, async (base) => {
       const bare = await fetch(`${base}/compare`, { redirect: "manual" });
       expect(bare.status).toBe(302);
-      expect(bare.headers.get("location")).toBe("/");
+      expect(bare.headers.get("location")).toBe("/app/leaderboard");
 
       const withPair = await fetch(`${base}/compare?a=p1&b=p2`, { redirect: "manual" });
       expect(withPair.status).toBe(302);
-      expect(withPair.headers.get("location")).toBe("/?a=p1&b=p2");
+      expect(withPair.headers.get("location")).toBe("/app/leaderboard?a=p1&b=p2");
     });
   });
 
