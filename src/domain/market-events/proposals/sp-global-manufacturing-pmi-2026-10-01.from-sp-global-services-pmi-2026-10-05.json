@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-manufacturing-pmi-2026-10-01",
+  "kind": "macro-print",
+  "title": "S&P Global US Manufacturing PMI (final, Sep 2026 data) — 09:45 ET, 15 minutes before ISM Manufacturing",
+  "date": "2026-10-01",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own calendar listing, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct 2026-09-09 (HTTP 200, 23,858 bytes) by the sp-global-services-pmi-2026-10-05 initial research: 'October 01 ... 13:45 UTC S&P Global US Manufacturing PMI'. 13:45 UTC is 09:45 ET under EDT. Independently consistent with the page's own stated rule, quoted verbatim on the same fetch — 'Manufacturing PMI: first working day' — and October 2026 opens on Thursday 10-01. Filed estimate on the standing schema gap (no confirmed-source prefix covers a private PMI compiler) and because this lane does not self-confirm an event it discovered in-sweep; the date is not in doubt.",
+  "impact": "low",
+  "symbols": [],
+  "notes": "THE MANUFACTURING TWIN OF THE 10-05 PAIR, AND THE CHEAPEST AVAILABLE TEST OF THE 10-05 GEOMETRY — it runs the same 09:45-ET-then-ISM-at-10:00 structure three sessions earlier, against ism-manufacturing-2026-10-01 (already tracked, high impact). The sp-global-services-pmi-2026-10-05 ledger measured the S&P Global 09:45-10:00 window BELOW its own median in 9 of 10 instrument-days across two SERVICES release days; 10-01 is a free out-of-sample observation of the identical structure on the manufacturing side, available four days before the finding is used. Same pre-announcement mechanic applies: the manufacturing flash publishes ~2 weeks earlier (2026-09-23, proposed separately in this PR), so this print carries only the revision. Read it, do not trade it — nothing here licenses an entry, and the 10-05 measurement is n=2 release days and does not transfer to manufacturing without being run. Discovered during the sp-global-services-pmi-2026-10-05 initial research (2026-09-09)."
+}
