@@ -2203,3 +2203,76 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   dispatch") should grow a cheap self-check after a fully-failed batch is a separate, smaller
   question — logged to `docs/IDEAS.md` rather than built here, since this pin already removes the
   actual trigger for it.
+
+---
+
+### The self-healing repair lane never saw `build-events` matrix-leg failures — the re-dispatch step signed with `GITHUB_TOKEN`, so its own run's completion event was suppressed
+
+- **SHA:** 04aec2c   **DATE:** 2026-09-06   **STATUS:** closed
+- **SHA:** 02ae543   **DATE:** 2026-09-06   **STATUS:** closed
+- **SHA:** b11b2aa   **DATE:** 2026-09-06   **STATUS:** closed
+- **SHA:** 5d0457e   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** 1c2c554   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** 79c8f42   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** e15fde9   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** 5fe36af   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** d7317ca   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** b5e30d1   **DATE:** 2026-09-08   **STATUS:** closed
+- **SHA:** ec4d11c   **DATE:** 2026-09-08   **STATUS:** closed
+- **COVERS:** every "Moneypenny Events (event-research automation)" failure on `main` between the
+  first of these and PR #2292 merging — the bug is still live (the fix is an open, held PR, not yet
+  merged) and `incident-scan.mjs` picked up 6 more recurrences in the time it took to write this
+  entry, growing the same never-assessed backlog from ~10 stuck events to 20+. Add the fix commit's
+  own sha here once #2292 lands, per `incident-scan.mjs`'s `isLearned()` matching convention.
+- **SIGNAL:** `ship.sh open`'s advisory `incident-scan` check, run on an unrelated PR, flagged 5
+  unlearned "Moneypenny Events (event-research automation)" failures on `main` over 14 days —
+  routed here rather than fixed inline since the failing branch's own work was unrelated. Pulling
+  each commit's check-runs (not just `incident-scan`'s display-title echo, which says nothing about
+  *why* a run failed) showed the same 8–10 far-future `never-assessed` calendar events
+  (`fomc-2027-12-08`, `fhfa-hpi-2027-11-30`, `fhfa-hpi-2027-12-28`, `fomc-minutes-2027-11-17`,
+  `fomc-blackout-start-2027-11-27`, `consumer-confidence-2027-12-22`,
+  `sifma-bond-holiday-close-2027-10-11`, `vix-expiration-2027-10-20`, and others) failing their
+  `research due events (…)` matrix leg on every single push, each with `claude-code-action`'s SDK
+  reporting `subtype: success, is_error: true` after ~17 turns and ~$1.47 — a real, completed
+  session that judged its own result a failure, not a crash or a timeout. Detection lag: at least
+  the full 14-day window `incident-scan.mjs` covers, likely longer — nothing had ever surfaced these
+  as a capsule issue, so there is no earlier data point to measure from.
+- **ROOT CAUSE:** `claude-code-action@v1` rejects `push` as an event type, so `moneypenny-events.yml`
+  re-fires itself as a `workflow_dispatch` on a push with due events (the "Re-dispatch for event
+  research" step, `gh workflow run moneypenny-events.yml … -f command=scan`) and `build-events` only
+  ever runs inside that re-dispatched run. That step signed the `gh workflow run` call with
+  `secrets.GITHUB_TOKEN`. GitHub's infinite-loop guard — **events triggered by GITHUB_TOKEN do not
+  start other workflow runs** — is the same mechanism this file's own header already documents
+  twice (the `issues.opened` hop that never fired `claude.yml`, and the `pull_request.opened` hop
+  that never fired `verify`), but it reaches one hop further than either: it also suppressed the
+  **completion** (`workflow_run`) event of the run that GITHUB_TOKEN itself started. So
+  `moneypenny-repair.yml`'s triage job — which exists specifically to file a capsule issue the
+  moment a run fails on `main` — never once fired for a `build-events` matrix leg, for as long as
+  the bug lived. Verified directly: for each of the 5 SHAs above, the actual failing
+  `research due events (fhfa-hpi-…)` run's completion timestamp has no corresponding
+  `moneypenny-repair.yml` run anywhere near it (checked ±30–60 min; the nearest real triage
+  invocation is unrelated, a `push`-triggered `route`-job failure that correctly filed #1421). By
+  contrast, every genuinely `push`-triggered failure on this same workflow (#1421, #1390, #1561) DID
+  get a capsule filed — confirming the gap is specific to the GITHUB_TOKEN-signed re-dispatch path,
+  not the repair lane in general. **What else crosses this system:** any future step that mints its
+  own `gh workflow run`/`gh pr merge`/similar call under `secrets.GITHUB_TOKEN` inherits the same
+  blind spot — the loop guard doesn't just hide the token's direct writes, it hides everything
+  downstream of the run that write started, including that run's own outcome.
+- **PREVENTION:** gate/script, PR #2292 (held for Eric — `.github/workflows/**` never auto-merges).
+  The re-dispatch step now signs with `steps.app-token.outputs.token` (already minted earlier in the
+  same `route` job for every other write in this file), the same fix already applied to every
+  PR-opening step for the identical underlying mechanism. This does not fix why these specific
+  events return `is_error: true` — that diagnosis becomes possible for the first time once the
+  capsule issue the repair lane files carries the actual log tail; before this fix, nobody could
+  even see that these events were failing at all.
+- **SIDE QUESTS:** → docs/IDEAS.md — (a) `event-scan.mjs --due` has no circuit breaker: an event
+  that fails every research attempt gets re-attempted on every single push, forever, at real API
+  cost (~$1.47 × every push × ~8 stuck events, sustained for days) with no backoff or
+  escalation-after-N-failures; (b) #2221 (open PR, `flag-stall` repair-dispatch) is a related but
+  independent detection path — it fires on a receipt *issue* sitting quiet 2+ days, via a direct
+  `workflow_dispatch` call rather than a `workflow_run` listener, so it does not inherit this bug —
+  but it is a slower backstop (days) for exactly this shape of failure, not a substitute for the
+  fast path this entry restores; (c) worth an audit of every other `gh workflow run` / `gh api -X
+  POST .../merges` call anywhere in `scripts/moneypenny/*.mjs` for the same
+  GITHUB_TOKEN-vs-App-token question, now that the mechanism is confirmed to reach past the
+  immediate write.
