@@ -1,0 +1,11 @@
+{
+  "id": "boe-decision-2026-11-05",
+  "kind": "macro-print",
+  "title": "Bank of England MPC decision + November Monetary Policy Report and forecast round (12:00 London / 07:00 ET)",
+  "date": "2026-11-05",
+  "status": "estimate",
+  "source": "EST: bankofengland.co.uk/monetary-policy/upcoming-mpc-dates, fetched direct 2026-09-09 — the 2026 announcement list carries '5 November' and flags it as one of the four dates that 'includes Monetary Policy Report' (February, April, July, November). Filed estimate per this lane's no-self-confirm limit and because the confirmed-prefix taxonomy has no slot for a non-Fed central bank. Discovered in the never-assessed initial research of boe-decision-2026-09-17, 2026-09-09",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "PROPOSED BY THE boe-decision-2026-09-17 LANE, 2026-09-09, and it is the venue where that ledger's terminal-rate call gets adjudicated. September carries NO Monetary Policy Report, so it publishes a vote split and minutes but no fresh forecast round; November is the next full one, and it is also the first MPC meeting AFTER the 2026-10-28 Autumn Budget and its OBR forecast. Market pricing on 2026-09-08 (centralbank.watch, fetched) put 54.2% on a higher rate at this meeting (implied 3.89%) against 93.1% hold on 09-17 and 94.6% higher by 2026-12-17 (implied 4.11%) — i.e. the whole 37bp of tightening the strip carries across the next three meetings sits at THIS meeting and December, not at September. Tiered medium on the same reasoning as the September entry: symbols: [], no rates-keyed playbook, no sterling exposure in any tracked name. Estimate widens caution only."
+}

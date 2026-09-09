@@ -1,0 +1,11 @@
+{
+  "id": "uk-labour-market-2026-09-15",
+  "kind": "macro-print",
+  "title": "UK labour market overview — earnings, unemployment and vacancies (ONS, 07:00 London / 02:00 ET), the MPC's wage read",
+  "date": "2026-09-15",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/employmentandlabourmarket/.../bulletins/uklabourmarket/august2026, fetched direct 2026-09-09 (HTTP 200) — the August bulletin states 'Released: 18 August 2026' and 'Next release: 15 September 2026', corroborated by the ONS release-calendar entry 'UK Labour Market: September 2026 ... 15 September 2026 at 7:00am'. Primary-sourced (the publisher's own schedule), filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy has BLS:/BEA:/CENSUS: and no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of boe-decision-2026-09-17, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE boe-decision-2026-09-17 LANE, 2026-09-09. It is the wage number the MPC's second-round-effects argument is actually about, published two days before the vote. August base (ONS, fetched 2026-09-09, covering April-June 2026): regular pay ex-bonus +3.5% y/y, total pay +4.1%, unemployment 4.9%, vacancies 707,000 (down 6,000 / 0.8% on the quarter, May-July early estimate). The July MPC minutes rest their hold on 'a loose labour market and slowing wage growth'; this release is what confirms or breaks that premise. Tiered LOW for the same reason as uk-cpi-2026-09-16: UK-only, symbols: [], no rates-keyed playbook, and only the second-order global-term-premium route into this book. Estimate widens caution only."
+}
