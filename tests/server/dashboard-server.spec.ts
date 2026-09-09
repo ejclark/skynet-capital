@@ -389,3 +389,51 @@ describe("dashboard-server /add", () => {
     });
   });
 });
+
+/**
+ * A throwing route handler must never take the whole dashboard down with it. Regression for the
+ * gap this repo's own honesty rules already warn about: a malformed relayed record reaching
+ * `decisionCyclesView` (`cycleStatus`'s `record.outcomes.some(...)`) previously escaped `handle()`
+ * uncaught, which on this Node runtime terminates the process — one bad row, one crash loop, on a
+ * process serving every viewer. `createDashboardServer`'s top-level `.catch` (mirroring
+ * `insights-listener.ts`'s last-resort net) is the fix; this proves the server survives and a
+ * SECOND request still gets an answer, not a dropped connection.
+ */
+describe("dashboard-server — a throwing route survives", () => {
+  const fleetWithBot = (): DashboardData => ({
+    generatedAt: "t",
+    collisions: [],
+    participants: [
+      {
+        id: "sauron",
+        displayName: "Sauron",
+        kind: "bot",
+        personaId: "sauron",
+        cash: 1_000,
+        equity: 1_000,
+        positions: [],
+      },
+    ],
+  });
+
+  it("survives a route that throws mid-response, and answers the next request", async () => {
+    await withServer(
+      {
+        hub: new ObservatoryHub(fleetWithBot()),
+        // A record missing `outcomes`/`rawIntents`/`guardedIntents` — exactly what a malformed
+        // relayed payload looks like — throws inside `decisionCyclesView`.
+        readDecisions: () =>
+          Promise.resolve([{ at: 1, personaId: "sauron", mode: "observe" }] as never),
+      },
+      async (base) => {
+        // The throwing request itself never hangs and never gets a raw socket reset — the
+        // connection resolves (headers were already written before the throw, so `.end()` is the
+        // honest close, same as insights-listener's own headersSent branch).
+        await expect(fetch(`${base}/api/desk/sauron/decisions`)).resolves.toBeDefined();
+        // The process — and this server — are still alive for an unrelated request.
+        const board = await fetch(`${base}/api/join`);
+        expect(board.status).toBe(200);
+      },
+    );
+  });
+});
