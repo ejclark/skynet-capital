@@ -1,0 +1,11 @@
+{
+  "id": "uk-labour-market-2026-11-17",
+  "kind": "macro-print",
+  "title": "UK labour market overview — earnings, unemployment and vacancies (ONS, 07:00 London / 02:00 ET), the first wage read AFTER the Budget and the November MPR, and the one that scores both",
+  "date": "2026-11-17",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/uklabourmarketnovember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release-calendar entry reads verbatim 'UK Labour Market: November 2026', '17 November 2026 7:00am', 'Estimates of employment, unemployment, inactivity, average weekly earnings, vacancies and other labour market related statistics for the UK', marked 'This release is not yet published.' Primary-sourced from the publisher's own release calendar; filed estimate per this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-labour-market-2026-10-20, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-labour-market-2026-10-20 LANE, 2026-09-09. Why it earns a slot rather than waiting for the next sweep: it is the first labour reading published AFTER both the 2026-10-28 Autumn Budget and the 2026-11-05 MPC forecast round, which makes it the print that scores them. It carries Jul-Sep 2026 LFS/AWE, Aug-Oct vacancies and the October payrolled-employees early estimate — so it is also the first release whose reference window contains any month after the 2026-10-01 zero-rating of VAT on domestic electricity, and the first that could show a wage response to whatever the Budget did to employer costs. It sits 12 days after the MPC votes and 5 days before nothing else this calendar tracks in its own week. Tiered LOW on the same argued grounds as its October and September siblings: symbols: [], this repo tracks no UK-listed symbol, no house playbook is rates- or sterling-keyed, and the measured cable reaction to the 2026-08-18 release was ~0.1% on a two-sided beat. Estimate widens caution only."
+}
