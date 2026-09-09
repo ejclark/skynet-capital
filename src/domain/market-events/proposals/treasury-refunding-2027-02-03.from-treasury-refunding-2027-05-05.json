@@ -1,0 +1,11 @@
+{
+  "id": "treasury-refunding-2027-02-03",
+  "kind": "macro-print",
+  "title": "Treasury Quarterly Refunding Announcement (Feb 2027), 08:30 ET",
+  "date": "2027-02-03",
+  "status": "estimate",
+  "source": "EST: derived by the same primary-anchored rule as treasury-refunding-2027-05-05, from api.fiscaldata.treasury.gov auctions_query fetched direct 2026-09-09 (HTTP 200) - the `announcemt_date` of every non-reopened mid-quarter 3y/10y/30y issue since 2022-11 (16 editions, all three tenors agreeing). The announcement is the first Wednesday of the refunding month whenever that Wednesday falls on the 1st-5th (9 of 9, no exception); the first Wednesday of February 2027 is 2027-02-03, day-of-month 3, inside that band. Filed estimate: Treasury has published no 2027 refunding date, and this lane may not self-confirm a date it derived. Discovered during the never-assessed initial research of treasury-refunding-2027-05-05, 2026-09-09",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "PROPOSED because the calendar has a structural gap: it tracks treasury-refunding-2026-11-04 and now treasury-refunding-2027-05-05, with the edition BETWEEN them missing entirely. That edition is not filler - it is the informational hinge for its successor. The sibling ledger's leg 2 established that Treasury's refunding date is credible because Treasury NAMES its own next date in each statement (home.treasury.gov's most-recent-documents page, fetched direct 2026-09-09, carries exactly that construction: '(The next release is scheduled for November 4 , 2026)'). So the 2027-02-03 statement is where 2027-05-05 stops being a derivation and becomes a Treasury-named date - it is the scheduled event that promotes its successor from estimate to confirmed, and the free checkpoint that scores FT-treasury-refunding-2027-05-05-1. Impact MEDIUM, matching both siblings. Its own marketable borrowing estimates would fall 2027-02-01 at 15:00 ET; NOT proposed here, because this session measured the T-2 Monday to be a non-event on the same 16-edition record (TLT clean subset 4/8 up, +0.056%, permutation p=0.870; ^TNX 4/8, +0.041%, p=0.981), so filing it would be calendar completeness without informational content. Estimate-labelled; nothing here licenses an entry."
+}
