@@ -15,6 +15,7 @@ import {
 import { serveCompanionApi } from "./companion-routes.js";
 import { serveJsonApi } from "./content-api-routes.js";
 import { serveControlsApi } from "./controls-api-routes.js";
+import { serveCouncilApi } from "./council-api-routes.js";
 import { gateRequest, isOwnerOf } from "./dashboard-auth-gate.js";
 import { servePublicRoute } from "./dashboard-board-routes.js";
 import { resolveCurrentId } from "./dashboard-identity.js";
@@ -134,6 +135,7 @@ async function serveWriteApis(
   if (await serveOnboardingApi(req, res, path, config, session)) return true;
   if (await servePlaybooksApi(req, res, path, config, session)) return true;
   if (await serveControlsApi(req, res, path, config, session)) return true;
+  if (await serveCouncilApi(req, res, path, config.council, session)) return true;
   if (await serveFeedbackApi(req, res, path, config, session)) return true;
   if (await serveCompanionApi(req, res, path, config, session)) return true;
   if (await serveAdminApi(req, res, path, config, session)) return true;

@@ -12,6 +12,7 @@ import { createDefaultPersonas } from "../personas/registry.js";
 import { createAllowlistStore } from "../server/auth/allowlist-store.js";
 import { resolveAuth } from "../server/auth/resolve-auth.js";
 import { createBotControlsStore } from "../server/bot-controls-store.js";
+import { createCouncilStore } from "../server/council-store.js";
 import {
   createOwnerLinkStore,
   ownerEmailFor,
@@ -22,6 +23,7 @@ import { createSubscriptionStore } from "../server/subscription-store.js";
 export interface AccessSetup {
   allowlist: ReturnType<typeof createAllowlistStore>;
   botControls: ReturnType<typeof createBotControlsStore>;
+  council: ReturnType<typeof createCouncilStore>;
   subscriptions: ReturnType<typeof createSubscriptionStore>;
   knownPersonaIds: Set<string>;
   auth: ReturnType<typeof resolveAuth>;
@@ -50,6 +52,9 @@ export function setupAccess(
   // Mission Control state, on the volume beside the other member data (SKYNET_CONTROLS_FILE →
   // /data/bot-controls.json in prod). Plain JSON — switches, not secrets.
   const botControls = createBotControlsStore(env, (m) => console.error(m));
+  // The Sunday Council's weekly thesis lines (issue #2224 shape 1) — a sibling file next to
+  // bot-controls.json, no new env var, no fly.toml change (envelope-protected).
+  const council = createCouncilStore(env, (m) => console.error(m));
   // Playbook Store subscriptions (issue #885), on the volume beside the other member data
   // (SKYNET_SUBSCRIPTIONS_FILE → /data/playbook-subscriptions.json in prod). Plain JSON — an
   // account's own playbook picks and capital sub-allocations, not a secret.
@@ -91,6 +96,7 @@ export function setupAccess(
   return {
     allowlist,
     botControls,
+    council,
     subscriptions,
     knownPersonaIds,
     auth,
