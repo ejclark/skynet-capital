@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-investment-manager-index-2026-09-15",
+  "kind": "macro-print",
+  "title": "S&P Global Investment Manager Index (Sep 2026) — 10:00 ET, an institutional risk-appetite survey the day before the FOMC votes",
+  "date": "2026-09-15",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own calendar listing, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct 2026-09-09 (HTTP 200, 23,858 bytes) by the sp-global-manufacturing-pmi-2026-10-01 initial research: 'September 15 ... 14:00 UTC S&P Global Investment Manager Index'. 14:00 UTC is 10:00 ET under EDT. Filed estimate on the same standing schema gap the S&P Global PMI entries already name — market-events-data.ts defines no confirmed-source prefix for a private survey compiler — and because this lane does not self-confirm an event it discovered in-sweep.",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED AS A CLASS THIS CALENDAR TRACKS NOTHING OF: positioning. Every macro entry here is an economic print (what the economy did); the IMI is a monthly survey of US-equity institutional investors on risk appetite, expected returns and the drivers they say are moving them — the sentiment/positioning read several ledgers reach for and none can cite. Its date makes it sharper than its impact tier suggests: it lands 10:00 ET on 2026-09-15, INSIDE the two-day FOMC meeting and the morning before the 09-16 decision that the ism-manufacturing-2026-10-01, ism-services-2026-10-05 and sp-global-services-pmi-2026-10-05 ledgers all name as the regime-setter their calls are read against. It is also the last positioning datum before that vote. NOT A TRADE and not yet researched: status is estimate, symbols is empty, no house playbook is macro-keyed, and this proposal makes no claim about the index's tradeability — only that a positioning series is worth having on the board before someone needs one. Discovered during the sp-global-manufacturing-pmi-2026-10-01 initial research (2026-09-09)."
+}

@@ -1,0 +1,11 @@
+{
+  "id": "sp-global-pmi-commodity-price-supply-2026-10-01",
+  "kind": "macro-print",
+  "title": "S&P Global PMI Commodity Price & Supply Indicators (Sep 2026) — 11:00 ET, the input-cost and supply-delay channel in its own release",
+  "date": "2026-10-01",
+  "status": "estimate",
+  "source": "EST: read verbatim off S&P Global's own calendar listing, pmi.spglobal.com/Public/Release/ReleaseDates?language=en, fetched direct 2026-09-09 (HTTP 200, 23,858 bytes) by the sp-global-manufacturing-pmi-2026-10-01 initial research: 'October 01 ... 15:00 UTC S&P Global PMI Commodity Price & Supply Indicators'. 15:00 UTC is 11:00 ET under EDT. Filed estimate on the same standing schema gap the S&P Global and ISM entries already name — market-events-data.ts defines no confirmed-source prefix for a private PMI compiler — and because this lane does not self-confirm an event it discovered in-sweep.",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BECAUSE IT IS THE ONLY TRACKED-CALENDAR CANDIDATE THAT CARRIES THE FUEL/SUPPLY CHANNEL ON ITS OWN. The ism-manufacturing-2026-10-01 ledger named exactly one genuinely new thing to read in the September survey window: it is the first window fully containing the Iran escalation, with WTI $83.40 -> $91.22 (08-28 -> 09-04, +9.4%) and ISM Services Prices at 72.6 on 09-03, its highest since Aug 2022. Both PMI headlines bury that channel inside one index number. This release publishes the price and supply-delay sub-indicators as the series, at 11:00 ET on the same day — thirty minutes past ISM Manufacturing's 10:00 print and outside the 09:30-10:30 window every intraday test in this corridor measures, which also makes it a clean PLACEBO slot for those tests. Corroborating the channel is live, from the S&P Global US Manufacturing PMI final PDF fetched direct this session (rel 2026-09-01, HTTP 200): manufacturers 'continued to report difficulties sourcing and receiving raw materials because of supply delays and price rises... commonly linked to the war in the Middle East.' NOT A TRADE and not yet researched: status is estimate, symbols is empty, and no house playbook is macro-keyed. Discovered during the sp-global-manufacturing-pmi-2026-10-01 initial research (2026-09-09)."
+}
