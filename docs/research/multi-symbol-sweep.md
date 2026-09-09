@@ -71,6 +71,22 @@ robust, alpha fragile — is the finding.
 
 ## Kill list — recorded so they are never re-proposed
 
+- **3Y front-end auction demand fenced by a range-of-n band (FT-20)** — added 2026-09-09 from the
+  [treasury-3y-note-2026-09-08 close-out](events/treasury-3y-note-2026-09-08.md). The 2026-09-08 3Y
+  covered **2.72** against a `2.54–2.71` band drawn as the observed range of the eight prior 2026
+  auctions — **outside by one tick, on the strong side**, at the series' highest stop (**4.474%**,
+  +18.3bp through August) on its largest competitive tender. **The mechanism is not what died; the
+  fence is.** A range of n draws is broken by a new max or min with probability **2/(n+1) ≈ 22%** at
+  n=8, so the test carried a ~22% false-kill rate before any economics — and against the 29-auction
+  constant-size era (mean 2.608, σ 0.098, range 2.43–2.85) the print is a routine **+1.1σ**. Do not
+  re-propose a demand test fenced by an observed range; use a dispersion interval on the full
+  constant-size sample, as `FT-treasury-3y-note-2026-10-06-1` already does — it was registered
+  2026-09-05, three days before the kill landed, having written down that FT-20's band *"holds in
+  only 19 of 29 (66%)."* **And do not re-propose bid-to-cover alone as the demand read:** this print
+  covered at a series high while **indirect fell to 62.1%** (below its 63.3% mean) and the
+  stop-through decayed to **−0.1bp**, so the cover and the foreign bid moved in opposite directions
+  — a composition change no cover band of any width can see.
+
 - **NVDA earnings-gap hold (anti-S2)** — added 2026-08-15 ([`nvda-aug-2026-print.md`](nvda-aug-2026-print.md)):
   win 9/14 vs the 60% ordinary-overnight base (p=0.486 — indistinguishable from any overnight);
   the +5.35% mean is carried entirely by four 2023-24 gaps (ex-top-4 +1.72%) against a pooled
