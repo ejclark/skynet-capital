@@ -174,3 +174,69 @@ registered, which doubles as the composed criterion's first out-of-sample check.
 at 16:53 ET shows the 09-09 10Y reopening `91282CRF0` still **$39B**, announce-dated 2026-09-03, with
 `bid_to_cover_ratio` `null` — it prints ~13:00 ET on 2026-09-09. No re-announcement, resize or
 postponement, so the void clause has not fired and the 2.35 line stands exactly as pre-committed.
+
+**Held a fourth time on a TIMEZONE — recorded 2026-09-09 00:01 UTC = 2026-09-08 20:01 ET. No row
+above is edited.** The registered sampling-date guard scores the 09-08 `^VIX` close only from a pull
+made on a calendar date **strictly after 2026-09-08 (ET)**. This session's wall clock is already
+2026-09-09 in UTC — the date the dispatching workflow and `event-scan.mjs` both use — but **20:01 ET
+on 2026-09-08** in the timezone the guard names. The guard therefore still bites, and it is held.
+
+**Why it is held rather than reasoned around.** The 09-08 `^VIX` bar is, by every available marker,
+settled: close **15.72**, `meta.regularMarketTime` **16:15:01 ET** = exactly its
+`currentTradingPeriod.regular.end`, unchanged from the 16:53 ET reading four hours earlier. That is
+precisely the argument the sampling-date guard was written to refuse. Three earlier guards each
+picked a different *field*, each looked settled, and each would have scored this test **PASS** — the
+direction the hypothesis predicts. A fourth override, justified by feed metadata, would reinstate the
+exact failure mode the third correction removed, and it would again err toward agreeing with the
+prediction. The cost of holding is one dispatch.
+
+**A latent defect this exposes, named for the close-out and deliberately not patched here.** The
+guard is timezone-qualified; the **Score by** column is not, anywhere in this system. FT-…-1's
+score-by is **2026-09-09**, which under ET is met on time by the next dispatch and under UTC is
+missed by one day. Nothing above is edited to resolve it — a registered test is not re-specified
+after the fact — but the ambiguity is now on the record, and the concrete consequence is favourable:
+a dispatch at **≈2026-09-09 20:00 ET** both clears the guard and postdates the 10Y auction print
+(13:00 ET), so it can score **FT-…-1 and FT-…-2 together**.
+
+**A fourth hazard class, and the first that runs in the SAFE direction: a bar can UN-populate.**
+Every hazard logged above made a test look scorable **too early**. This one does the reverse. On a
+cache-busted pull at 20:01 ET, `SPY`'s **2026-09-08** bar carries `open` **769.07** and `volume`
+**43,496,831** but `close` and `adjclose` **`null`** — four hours after its own `regularMarketTime`
+of **16:00:00 ET**, which equals its `currentTradingPeriod.regular.end` exactly. Because
+`scripts/research/market-data.mjs` filters out any bar with a null close, `SPY` now **ends at
+2026-09-04** in the adjusted series, and the settled **765.96** recorded in the 16:53 ET ledger row
+is no longer reproducible from re-run data.
+
+**Measured, and it is unprecedented.** Across the full adjusted history there is exactly **1 date of
+8,458 since 1993-01-29** on which `^GSPC` carries a bar and `SPY` does not: **2026-09-08** itself. By
+contrast the `^VIX` orphan list *shrank* as predicted — `^VIX`-with-no-`^GSPC` since 2000 is back to
+**two** dates (2026-05-25, 2026-09-07), the live 09-08 entry having resolved on the close — and
+`^GSPC`-with-no-`^VIX` remains **0 of 9,238**, so the cross-symbol guard's evidence base reproduces.
+
+**Why it does not touch either test.** FT-…-1 keys on `^VIX` alone, which is populated and settled;
+FT-…-2 keys on `auctions_query`, not on bars. The defect's only casualty is the equity-reopen ranking
+in the 16:53 ET ledger row, which is corrected in the ledger's At-a-glance (with `^GSPC` substituted
+and the SPY figures recomputed in SPY's own cohort), never in a registered row here. The general
+lesson is worth more than the instance: a filtered bar series makes a **present-but-incomplete** bar
+invisible, so "the symbol has no bar for date D" and "date D has not happened yet" are not the same
+statement, and only the sampling-date rule distinguishes them without consulting the feed.
+
+**Context for scoring FT-…-1, measured this session and pre-committed before it is scored.** Across
+the 33 historical Labor Day reopens the vol rebound is close to **independent** of the session's
+realized move: corr(ΔVIX, |Δ10Y|) = **+0.298** Pearson / **+0.196** Spearman, and
+corr(ΔVIX, |Δ^GSPC|) = **−0.111** / **0.000**. 2026's live pairing — bottom-decile |Δ10Y| (2.20bp,
+5th of 34) with above-median ΔVIX (+1.19, 21st of 34) — has **4 of 33** precedents (1996, 2000, 2011,
+2020). So the combination is uncommon but not aberrant, and a pass tomorrow **cannot** be read as the
+holiday gap forcing a rates repricing. The registered "scored as an observation, never as a
+mechanism" clause governs, and the confound it named has strengthened rather than faded: Brent
+**$98.61 (+1.67%)**, touching **$99** and **+8% month-to-date**, on Houthi drone and missile strikes
+against Saudi Aramco assets and the 400kb/d Jazan refinery (CNBC/NBC, 2026-09-08).
+
+**FT-…-2 re-verified live at 20:01 ET, and its anchor reproduces both ways.** A cache-busted
+`auctions_query` (HTTP 200) still shows `91282CRF0` at **$39B**, announce-dated 2026-09-03, BTC
+`null` — no re-announcement, resize or postponement, so the void clause has not fired. Trailing-12
+10Y bid-to-cover recomputes to **2.451 / sd 0.103 / min 2.30** including the two $21B off-cycle taps
+(2.35 = −0.98 sd, matching registration) and **2.502 / sd 0.096** excluding them (−1.59 sd). Noted
+because it sharpens tomorrow's reading rather than changing it: **2.35 is the on-cycle cohort's
+literal minimum**, so a print of exactly 2.35 **passes** the registered line while simultaneously
+tying the tighter cohort's floor. Scoring follows the registered line as pre-committed on 2026-09-08.
