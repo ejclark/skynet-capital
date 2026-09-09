@@ -1364,3 +1364,14 @@ lane already fires in real time on `conclusion == 'failure'`; worth checking whe
 fired for this incident (I found no capsule issue for it, unconfirmed why) before designing
 anything new — is a smaller, separate question than the pin itself.
 _(src: Claude · while: root-causing the 2026-09-08 event-research backlog, #2221/pin-PR)_
+
+### Inline fill-timeline row may need a viewport-width cap at 390px, not table-scroll width
+The new inline accordion (`blotter-row.tsx`, #2321) replaced the right-rail drawer, but its
+`<td colSpan={10}>` inherits the blotter table's own horizontal-scroll width (`min-width: 520px`),
+so on a 390px frame the timeline content's flex-wrap kicks in at 520px rather than the visible
+viewport — the tail (a fill's timestamp) sits past the fold rather than wrapping onto a new line.
+Confirmed by screenshot, not yet judged live. This matches the interrogation's own yellow-loop
+item on #2321: judge it live through 2026-09-16 — if it reads as unreadable, the fix is either a
+`position: sticky; left: 0` pin on `.row-timeline td` or breaking the timeline out to a sibling
+block under the table on narrow widths (a bottom sheet per `docs/PATTERNS.md`), not a redesign.
+_(src: Claude · while: screenshotting #2321's inline-accordion slice, 2026-09-09)_

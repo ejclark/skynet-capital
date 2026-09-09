@@ -18,31 +18,6 @@
   animation: stage-enter var(--dur-spatial) var(--ease-spatial) both;
 }
 
-@keyframes sheet-enter {
-  from {
-    transform: translateX(24px);
-    opacity: 0.4;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
-}
-.drawer {
-  animation: sheet-enter var(--dur-spatial) var(--ease-spatial) both;
-}
-@keyframes scrim-enter {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-.drawer-scrim {
-  animation: scrim-enter var(--dur-spatial) ease-out both;
-}
-
 /* hover lift — one elevation step toward the eye, and settle back */
 .desk-tile,
 .trade-link-card,
