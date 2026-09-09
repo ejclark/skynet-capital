@@ -4,8 +4,8 @@
   "title": "10-Year TIPS auction (reopening)",
   "date": "2026-09-17",
   "status": "confirmed",
-  "source": "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18",
+  "source": "TSY: treasury.gov tentative schedule — 1:00pm ET, formal announce ~6bd prior, checked 2026-08-18. RE-VERIFIED AT TWO TREASURY PRIMARIES 2026-09-09 by this event's own D-8 pulse, which upgrades the security identity from press/secondary to primary: treasurydirect.gov TA_WS/securities/upcoming (fetched direct, HTTP 200, its own updatedTimestamp 2026-09-04T14:31:27) and api.fiscaldata.treasury.gov upcoming_auctions (fetched direct, HTTP 200) both carry the same row — CUSIP 91282CRE3, security term 9-Year 10-Month, reopening Yes, auction 2026-09-17, issue 2026-09-30, offering amount still empty. So the reopened security is confirmed to be the July 2026 new issue at a primary source rather than at tipswatch.com, and the formal-announcement date is 2026-09-10 (fiscaldata announcemt_date), ONE DAY EARLIER than the ~2026-09-11 this event's ledger had carried since D-29; that release is already tracked as treasury-coupon-announcement-2026-09-10. Offering amount stays unpublished until it",
   "impact": "medium",
   "symbols": [],
-  "notes": "Real-yield supply the day after the FOMC; the breakeven reaction reads inflation expectations."
+  "notes": "Real-yield supply the day after the FOMC; the breakeven reaction reads inflation expectations. Size ~$19B remains ESTIMATE until the 2026-09-10 announcement, but the auction record now corroborates the press figure independently: the last three 10-Year TIPS reopenings all printed $19B (2025-09-18 and 2026-03-19 at the 9-Year 10-Month term, 2026-05-21 at 9-Year 8-Month; fiscaldata auctions_query, fetched 2026-09-09). Ledger: docs/research/events/treasury-10y-tips-2026-09-17.md."
 }
