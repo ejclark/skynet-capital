@@ -45,6 +45,12 @@ export interface OptionChainRow {
   readonly rho?: number;
 }
 
+/** One row of Alpaca's tradable-asset list (`GET /v2/assets`). */
+export interface AlpacaAssetRow {
+  readonly symbol: string;
+  readonly name?: string;
+}
+
 /** One daily OHLC+volume bar (Alpaca `/v2/stocks/{symbol}/bars`). */
 export interface Bar {
   readonly t: string;
@@ -299,6 +305,32 @@ export class AlpacaOptionsClient {
         bars.push({ t, o, h, l, c, v });
       }
       return bars;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * The full active, tradable US-equity asset list — the tier-2 symbol-search fallback's raw
+   * source (`alpaca-asset-cache.ts`). Fail-soft like every other method here: `undefined` on a
+   * non-2xx or a throw, never a fabricated list. This is a big response (Alpaca's whole equity
+   * universe, ~10-11k rows) — callers cache it, this method itself does no caching. TRADING host,
+   * same as `getExpirations`/`getChain`/`getContract` — not the DATA host.
+   */
+  async getAssets(): Promise<AlpacaAssetRow[] | undefined> {
+    try {
+      const response = await this.trading.get("/v2/assets?status=active&asset_class=us_equity");
+      if (response.status < 200 || response.status >= 300) return undefined;
+      const body = response.body;
+      if (!Array.isArray(body)) return undefined;
+      const rows: AlpacaAssetRow[] = [];
+      for (const raw of body as Record<string, unknown>[]) {
+        const symbol = typeof raw.symbol === "string" ? raw.symbol : undefined;
+        if (!symbol) continue;
+        const name = typeof raw.name === "string" ? raw.name : undefined;
+        rows.push({ symbol, ...(name !== undefined ? { name } : {}) });
+      }
+      return rows;
     } catch {
       return undefined;
     }

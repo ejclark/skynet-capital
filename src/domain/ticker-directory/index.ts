@@ -34,8 +34,10 @@ export type { TickerEntry } from "./types.js";
  * architecture fitness gate's per-file code-line cap — the split carries no ranking meaning.
  *
  * KNOWN GAP: a brand-new IPO won't be in here until someone adds it by hand. That's expected and
- * fine — free text still works. A live fallback for directory misses (querying Alpaca's own asset
- * list) is a separate, later slice, not this one.
+ * fine — free text still works, and now also gets a tier-2 assist: on a curated-directory miss,
+ * `SymbolField` (app/src/shell/symbol-field.tsx) falls through to a live Alpaca asset lookup
+ * (`src/alpaca/alpaca-asset-cache.ts`, via `/api/symbols/search`) before free text is the only
+ * option.
  */
 export const TICKER_DIRECTORY: readonly TickerEntry[] = [
   ...TECHNOLOGY,
