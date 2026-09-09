@@ -1,0 +1,11 @@
+{
+  "id": "uk-ppi-2027-01-20",
+  "kind": "macro-print",
+  "title": "UK PPI — December 2026, including services October to December 2026 (ONS, 07:00 London / 02:00 ET) — the quarterly SPPI print, same minute as the December CPI",
+  "date": "2027-01-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/producerpriceinflationukdecember2026includingservicesoctobertodecember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads verbatim 'Producer price inflation, UK: December 2026 including services, October to December 2026', 'Release date: 20 January 2027 7:00am', 'This release is not yet published'. Filed estimate on this lane's no-self-confirm limit and because market-events-data.ts's confirmed-prefix taxonomy has no slot for the UK Office for National Statistics. Proposed by the never-assessed initial research of uk-cpi-2027-01-20, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-cpi-2027-01-20 LANE, 2026-09-09. Why it earns a slot: it publishes at the SAME 07:00 London minute as uk-cpi-2027-01-20, so if anything in this book moves at 02:00 ET on that date it is the other candidate and neither is a reason to act. It is also the QUARTERLY services edition — SPPI covers October to December 2026, the same quarter the CPI print closes — which is the cadence uk-ppi-2026-10-21 documented (the quarterly SPPI rides the January, April, July and October releases). Tiered LOW on the same grounds as every sibling ONS entry: symbols: [], no UK listing and no rates- or sterling-keyed house playbook. Estimate widens caution only; it licenses no date-keyed action."
+}
