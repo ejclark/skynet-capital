@@ -1,0 +1,11 @@
+{
+  "id": "jgb-liquidity-enhancement-5-11y-2026-11-27",
+  "kind": "rates",
+  "title": "Japan Liquidity Enhancement Auction, remaining maturities 5–11 years (¥650bn anticipated) — the confirming print after 2026-10-22, and the last mid-zone auction of 2026 on a published calendar",
+  "date": "2026-11-27",
+  "status": "estimate",
+  "source": "EST: mof.go.jp English November 2026 auction calendar (policy/jgbs/auction/calendar/2611e.htm), fetched direct 2026-09-09 (HTTP 200, 25,188 bytes) by the jgb-liquidity-enhancement-5-11y-2026-10-22 initial research; its table row reads 'Nov. 27, 2026 | Liquidity Enhancement Auction (remaining maturities of 5-11 years)'. No November row carries an announcement href on 2026-09-09 (terms due ~2026-11-20 on MOF's own about-one-week-prior rule), so the ¥650bn size is anticipated from MOF's twenty-five-auction run of 'About 650 billion yen' announcements, 2024-08-22 through 2026-08-26. The November slate carries only the 1-5y (Nov. 20) and 5-11y (Nov. 27) zones and no super-long one, exactly as the odd/even alternation across all 35 published calendars requires. It is the LAST mid-zone date this calendar can source: the December 2026 slate (2612e.htm) returns 404 and is not yet published. Filed `estimate` on the standing counts — size not announced, issue list unpublished, and market-events-data.ts's confirmed-prefix taxonomy has no slot for a non-US sovereign debt office",
+  "impact": "low",
+  "symbols": [],
+  "notes": "Discovered 2026-09-09 during the jgb-liquidity-enhancement-5-11y-2026-10-22 initial-research adjacency sweep, on MOF's own November calendar. It earns a slot as the CONFIRMING observation for the 10-22 ledger's registered forward tests: a single print can flip on one large bidder, and the coupon-preference reading this family now rests on needs two prints in the same direction, not one. It also sits in a corridor worth naming: it is the trading session after the US Thanksgiving half-day (sifma-bond-early-close-2026-11-27) and five days after jgb-40y-auction-2026-11-25, so a soft print here is confounded with a thin global bid and should be read with that stated. NO PRICE CHANNEL IS CLAIMED and impact is `low`: no tracked symbol carries yen-rates exposure and no house playbook is rates-keyed. Estimate widens caution only; it licenses no date-keyed action."
+}
