@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OutpostRouteImport } from './routes/outpost'
@@ -47,6 +48,11 @@ const FeedbackRoute = FeedbackRouteImport.update({
 const JoinRoute = JoinRouteImport.update({
   id: '/join',
   path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LearnRoute = LearnRouteImport.update({
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
   '/outpost': typeof OutpostRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
   '/outpost': typeof OutpostRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/activity': typeof ActivityRoute
   '/feedback': typeof FeedbackRoute
   '/join': typeof JoinRoute
+  '/leaderboard': typeof LeaderboardRoute
   '/learn': typeof LearnRoute
   '/onboarding': typeof OnboardingRoute
   '/outpost': typeof OutpostRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/feedback'
     | '/join'
+    | '/leaderboard'
     | '/learn'
     | '/onboarding'
     | '/outpost'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/feedback'
     | '/join'
+    | '/leaderboard'
     | '/learn'
     | '/onboarding'
     | '/outpost'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/activity'
     | '/feedback'
     | '/join'
+    | '/leaderboard'
     | '/learn'
     | '/onboarding'
     | '/outpost'
@@ -258,6 +270,7 @@ export interface RootRouteChildren {
   ActivityRoute: typeof ActivityRoute
   FeedbackRoute: typeof FeedbackRoute
   JoinRoute: typeof JoinRoute
+  LeaderboardRoute: typeof LeaderboardRoute
   LearnRoute: typeof LearnRoute
   OnboardingRoute: typeof OnboardingRoute
   OutpostRoute: typeof OutpostRoute
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       path: '/join'
       fullPath: '/join'
       preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/learn': {
@@ -430,6 +450,7 @@ const rootRouteChildren: RootRouteChildren = {
   ActivityRoute: ActivityRoute,
   FeedbackRoute: FeedbackRoute,
   JoinRoute: JoinRoute,
+  LeaderboardRoute: LeaderboardRoute,
   LearnRoute: LearnRoute,
   OnboardingRoute: OnboardingRoute,
   OutpostRoute: OutpostRoute,

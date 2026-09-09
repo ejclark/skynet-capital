@@ -72,8 +72,8 @@ export function DeskRail({
       )}
       {isOwnDesk ? <Link to="/settings">Settings</Link> : null}
       <hr />
-      <Link to="/" search={{ by: "equity" }}>
-        ← Accounts
+      <Link to="/leaderboard" search={{ by: "equity" }}>
+        ← Leaderboard
       </Link>
     </>
   );

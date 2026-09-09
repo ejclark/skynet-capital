@@ -71,14 +71,15 @@ export function serveLegacyRedirect(
   if (method !== "GET" && method !== "HEAD") return false;
   const search = new URL(url, "http://localhost").search;
 
-  // The pre-shell board names fold into the front door exactly as before.
+  // The pre-shell board names land on their shell twin directly (#2321: the board is
+  // `/app/leaderboard` now, not the shell's own front door).
   if (path === "/leaderboard") {
     const by = new URL(url, "http://localhost").searchParams.get("by");
-    res.writeHead(302, { location: by ? `/?by=${by}` : "/" });
+    res.writeHead(302, { location: by ? `/app/leaderboard?by=${by}` : "/app/leaderboard" });
   } else if (path === "/bots-vs-humans") {
-    res.writeHead(302, { location: "/" });
+    res.writeHead(302, { location: "/app/leaderboard" });
   } else if (path === "/compare") {
-    res.writeHead(302, { location: `/${search}` });
+    res.writeHead(302, { location: `/app/leaderboard${search}` });
   } else if (TWINS.has(path)) {
     res.writeHead(302, { location: `${TWINS.get(path)}${search}` });
   } else if (path.startsWith("/collections/")) {

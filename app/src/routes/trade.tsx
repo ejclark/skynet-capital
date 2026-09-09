@@ -261,8 +261,8 @@ function TradePage(): ReactElement {
           ← Back to the desk
         </Link>
       ) : (
-        <Link to="/" search={{ by: "equity" }}>
-          ← Accounts
+        <Link to="/leaderboard" search={{ by: "equity" }}>
+          ← Leaderboard
         </Link>
       )}
     </>
