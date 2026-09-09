@@ -1,0 +1,11 @@
+{
+  "id": "uk-labour-market-2026-12-15",
+  "kind": "macro-print",
+  "title": "UK labour market overview — earnings, unemployment and vacancies (ONS, 07:00 London / 02:00 ET), the last labour print before the 17 December MPC and only two days ahead of it",
+  "date": "2026-12-15",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/uklabourmarketdecember2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release-calendar entry reads 'UK Labour Market: December 2026', publication '15 December 2026 at 7:00am', marked 'This release is not yet published.' Primary-sourced from the publisher's own release calendar; filed estimate per this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of uk-labour-market-2026-11-17, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-labour-market-2026-11-17 LANE, 2026-09-09. Why it earns a slot rather than waiting for the next sweep: it is the reason the proposing lane could NOT call its own event 'the last labour read the December MPC sees'. boe-decision-2026-12-17 is a Summary-and-minutes round with no Monetary Policy Report (the Bank's own 2026 MPC dates page, fetched 2026-09-09, pairs a Report with 5 February, 30 April, 30 July and 5 November only), and this print lands at 07:00 London on the Tuesday, D-2 from a Thursday 12:00 announcement. Whether a D-2 print is inside a non-Report round's briefing set is an open question this calendar could not settle from a primary in 2026-09 — the proposing lane registered it as a forward test scored off the December minutes rather than asserting either answer. Reference-window arithmetic on the ONS publication pattern (August 2026 bulletin: Apr-Jun AWE/LFS, May-Jul vacancies, July payroll flash) puts this release at Aug-Oct AWE/LFS, Sep-Nov vacancies and the November payroll flash — the first labour reference window that is wholly after the 2026-10-28 Autumn Budget. Tiered LOW on the same argued grounds as its September, October and November siblings: symbols [], this repo tracks no UK-listed symbol, no house playbook is rates- or sterling-keyed, and the measured cable reaction to the 2026-08-18 release was ~0.1% on a two-sided beat. Estimate widens caution only."
+}
