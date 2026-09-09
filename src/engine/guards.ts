@@ -96,6 +96,21 @@ export type GuardRefusalReason =
   /** A sell against a symbol with nothing (or a non-positive quantity) held. */
   | "nothing-held";
 
+/** The single source of truth for the reason literals above — so a validator crossing a process
+ *  boundary (`decision-wire-parts.ts`, on the bots↔app replication bridge) can check a foreign
+ *  string against the real set instead of re-typing it a third time. */
+export const GUARD_REFUSAL_REASONS: readonly GuardRefusalReason[] = [
+  "ladder-block",
+  "s2-print",
+  "e1-open",
+  "subscription-filter",
+  "no-quote",
+  "insufficient-cash",
+  "position-cap",
+  "subscription-budget",
+  "nothing-held",
+];
+
 /** One raw intent the guards refused outright this cycle — the persona's own ask, unfiltered,
  *  paired with which rule refused it. */
 export interface GuardRefusal {

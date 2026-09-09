@@ -58,6 +58,10 @@ export async function bootMissionControl(
   // as the log lines below, but readable the instant they're written — what scripts/smoke-bots.sh
   // reads instead of lagging `flyctl logs`. Dark unless SKYNET_BOTS_HEALTH_PATH is set.
   health: BotsHealthFile = resolveBotsHealthFile(process.env),
+  // Fires on every poll with the app's decisionsCursor (decision-replication-client.ts's hook) —
+  // threaded straight through to resolveBotControls, see that file's own doc for why this is a
+  // separate hook from onFetched rather than folded into ControlsState.
+  onDecisionsCursor?: (cursor: Readonly<Record<string, number>>) => void,
 ): Promise<{
   controls: BotControlsClient;
   bootControls: ControlsState;
@@ -65,10 +69,14 @@ export async function bootMissionControl(
    *  later in boot, after the roster and the DB exist (`run-autonomous.ts`). */
   health: BotsHealthFile;
 }> {
-  const controls = resolveBotControls(process.env, (state) => {
-    health.controlsFetched();
-    onFetched?.(state);
-  });
+  const controls = resolveBotControls(
+    process.env,
+    (state) => {
+      health.controlsFetched();
+      onFetched?.(state);
+    },
+    onDecisionsCursor,
+  );
   const fetched = await controls.fetchOnce();
   health.boot(controls.enabled);
   if (health.path) console.log(`[health] stamping ${health.path}`);

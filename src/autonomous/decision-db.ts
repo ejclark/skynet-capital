@@ -36,6 +36,16 @@ export interface DecisionDb {
   /** The exact `orderId` join `playbook-attribution.ts` wants — O(1) via the `intents.order_id`
    *  index, never `decision-context.ts`'s fuzzy symbol+side+time match. */
   findByOrderId(orderId: string): { record: DecisionRecord; intent: OrderIntent } | undefined;
+  /** Writes every entry with `record()`'s own idempotency guarantee, wrapped in one transaction —
+   *  the app-side replication listener's insert path (PR 4). */
+  recordBatch(entries: readonly DecisionRecord[]): void;
+  /** The most recent `at` this store holds, per persona — the app side's own replication cursor
+   *  (`decision-wire.ts`'s `decisionsCursor`), always computed fresh from the data itself, never a
+   *  separately persisted value that could drift from what was actually written. */
+  maxAtAll(): Record<string, number>;
+  /** Every decision strictly AFTER `afterAt` for one persona, oldest first, bounded to
+   *  `[1, MAX_PAGE]` — the bots side's own "what have I not sent yet" read. */
+  listSince(personaId: string, afterAt: number, limit?: number): DecisionRecord[];
   close(): void;
 }
 
@@ -146,6 +156,12 @@ export function openDecisionDb(path: string): DecisionDb {
   const selectIntentsFor = db.prepare(
     "SELECT * FROM intents WHERE decision_id = ? ORDER BY id ASC",
   );
+  const selectMaxAtAll = db.prepare(
+    "SELECT persona_id, MAX(at) AS max_at FROM decisions GROUP BY persona_id",
+  );
+  const selectSince = db.prepare(
+    "SELECT id, at, persona_id, mode, halted, context_json FROM decisions WHERE persona_id = ? AND at > ? ORDER BY at ASC, id ASC LIMIT ?",
+  );
   const selectByOrderId = db.prepare(`
     SELECT intents.*, decisions.id AS decision_id, decisions.at AS decision_at,
            decisions.persona_id AS decision_persona_id, decisions.mode AS decision_mode,
@@ -159,61 +175,97 @@ export function openDecisionDb(path: string): DecisionDb {
     return (selectIntentsFor.all(decisionId) as Record<string, unknown>[]).map(intentRowToStored);
   }
 
+  function recordOne(entry: DecisionRecord): void {
+    const contextJson = entry.context ? JSON.stringify(entry.context) : null;
+    insertDecision.run(entry.at, entry.personaId, entry.mode, entry.halted ?? null, contextJson);
+    const decisionRow = findDecisionId.get(entry.personaId, entry.at) as { id: number } | undefined;
+    // `INSERT OR IGNORE` means a re-run of the SAME (persona, at) — the migration's own
+    // idempotency guarantee — leaves the row untouched; only a genuinely new decision gets its
+    // intents inserted below (guarded a second way by `hasIntents`, in case a prior `record()`
+    // call inserted the decision row but crashed before its intents finished).
+    if (!decisionRow) return;
+    const decisionId = decisionRow.id;
+    if (hasIntents.get(decisionId)) return;
+
+    const usedOutcomes = new Set<number>();
+    for (const raw of entry.rawIntents) {
+      insertIntent.run(decisionId, ...paramsForRawIntent(raw, entry, usedOutcomes));
+    }
+
+    if (entry.context) {
+      for (const [symbol, quote] of Object.entries(entry.context.quotes)) {
+        insertSignal.run(
+          entry.at,
+          symbol,
+          entry.context.momentum?.[symbol] ?? null,
+          entry.context.newsSentiment?.[symbol] ?? null,
+          quote.bid,
+          quote.ask,
+          quote.last,
+        );
+      }
+    }
+  }
+
+  function rowsToRecords(
+    rows: readonly {
+      id: number;
+      at: number;
+      persona_id: string;
+      mode: "observe" | "live";
+      halted: string | null;
+      context_json: string | null;
+    }[],
+  ): DecisionRecord[] {
+    return rows.map((row) =>
+      decisionFrom(
+        row.at,
+        row.persona_id,
+        row.mode,
+        row.halted,
+        row.context_json,
+        intentRowsFor(row.id),
+      ),
+    );
+  }
+
   return {
-    record(entry: DecisionRecord): void {
-      const contextJson = entry.context ? JSON.stringify(entry.context) : null;
-      insertDecision.run(entry.at, entry.personaId, entry.mode, entry.halted ?? null, contextJson);
-      const decisionRow = findDecisionId.get(entry.personaId, entry.at) as
-        | { id: number }
-        | undefined;
-      // `INSERT OR IGNORE` means a re-run of the SAME (persona, at) — the migration's own
-      // idempotency guarantee — leaves the row untouched; only a genuinely new decision gets its
-      // intents inserted below (guarded a second way by `hasIntents`, in case a prior `record()`
-      // call inserted the decision row but crashed before its intents finished).
-      if (!decisionRow) return;
-      const decisionId = decisionRow.id;
-      if (hasIntents.get(decisionId)) return;
+    record: recordOne,
 
-      const usedOutcomes = new Set<number>();
-      for (const raw of entry.rawIntents) {
-        insertIntent.run(decisionId, ...paramsForRawIntent(raw, entry, usedOutcomes));
+    recordBatch(entries: readonly DecisionRecord[]): void {
+      db.exec("BEGIN");
+      try {
+        for (const entry of entries) recordOne(entry);
+        db.exec("COMMIT");
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
       }
+    },
 
-      if (entry.context) {
-        for (const [symbol, quote] of Object.entries(entry.context.quotes)) {
-          insertSignal.run(
-            entry.at,
-            symbol,
-            entry.context.momentum?.[symbol] ?? null,
-            entry.context.newsSentiment?.[symbol] ?? null,
-            quote.bid,
-            quote.ask,
-            quote.last,
-          );
-        }
-      }
+    maxAtAll(): Record<string, number> {
+      const rows = selectMaxAtAll.all() as { persona_id: string; max_at: number }[];
+      const out: Record<string, number> = {};
+      for (const row of rows) out[row.persona_id] = row.max_at;
+      return out;
+    },
+
+    listSince(personaId, afterAt, limit = DEFAULT_PAGE): DecisionRecord[] {
+      const clamped = Math.max(1, Math.min(limit, MAX_PAGE));
+      return rowsToRecords(
+        selectSince.all(personaId, afterAt, clamped) as unknown as Parameters<
+          typeof rowsToRecords
+        >[0],
+      );
     },
 
     listByPersona(personaId, opts = {}): DecisionRecord[] {
       const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE, MAX_PAGE));
       const beforeAt = opts.beforeAt ?? Number.MAX_SAFE_INTEGER;
-      const rows = selectDecisionsPage.all(personaId, beforeAt, limit) as {
-        id: number;
-        at: number;
-        persona_id: string;
-        mode: "observe" | "live";
-        halted: string | null;
-        context_json: string | null;
-      }[];
-      return rows.map((row) =>
-        decisionFrom(
-          row.at,
-          row.persona_id,
-          row.mode,
-          row.halted,
-          row.context_json,
-          intentRowsFor(row.id),
-        ),
+      return rowsToRecords(
+        selectDecisionsPage.all(personaId, beforeAt, limit) as unknown as Parameters<
+          typeof rowsToRecords
+        >[0],
       );
     },
 

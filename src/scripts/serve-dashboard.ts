@@ -152,7 +152,7 @@ async function main(): Promise<void> {
     ownerEmailFor,
   } = setupAccess(process.env, liveRoster);
   const credentialsBridge = { knownPersonaIds: [...knownPersonaIds], findParticipant };
-  const opsStatus = wireOpsStatus(
+  const { opsStatus, insightsBridge } = wireOpsStatus(
     process.env,
     botControls,
     { hub, activity, authConfigured: Boolean(auth) },
@@ -263,7 +263,15 @@ async function main(): Promise<void> {
     readAllTradeActivity: () => activity.list(),
     readAllFeedback: () => feedbackLog.list(),
     progression: progressionService,
-    ...(auditDir ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) } : {}),
+    // Prefer the replicated decision store (PR 4 — populated over the bots↔app `/decisions`
+    // bridge, works regardless of which machine's volume this process runs on) over the JSONL
+    // audit trail, which only ever had data when SKYNET_AUDIT_DIR happened to be set on THIS
+    // machine — never true in prod, since that dir lives on the bots machine's own volume.
+    ...(insightsBridge.readDecisions
+      ? { readDecisions: insightsBridge.readDecisions }
+      : auditDir
+        ? { readDecisions: (id: string) => new JsonlAuditStore(auditDir).list(id) }
+        : {}),
     tradingEnabled: desk.enabled,
     submitTrade: desk.submit,
     submitOptionTrade: desk.submitOption,
