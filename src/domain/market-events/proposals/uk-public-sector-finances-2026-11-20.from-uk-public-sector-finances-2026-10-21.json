@@ -1,0 +1,11 @@
+{
+  "id": "uk-public-sector-finances-2026-11-20",
+  "kind": "macro-print",
+  "title": "UK public sector finances, October 2026 (ONS, 07:00 London / 02:00 ET) — the first borrowing outturn published against the new Budget-day OBR profile",
+  "date": "2026-11-20",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/publicsectorfinancesukoctober2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release-calendar entry reads verbatim 'Public sector finances, UK: October 2026', '20 November 2026 7:00am', marked 'This release is not yet published.' Corroborated by publication-cadence arithmetic on the publisher's own past-release listing (70 bulletins, 2020-11-20 to 2026-08-21, all on the 19th-26th). Filed estimate on the taxonomy gap and this lane's no-self-confirm limit. Discovered in the never-assessed initial research of uk-public-sector-finances-2026-10-21, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE uk-public-sector-finances-2026-10-21 LANE, 2026-09-09. It earns a slot because it is the first release on the OTHER side of the forecast reset. Every ONS PSF bulletin compares the month's outturn to a named OBR profile — the July 2026 bulletin states verbatim that its comparisons use 'the Economic and fiscal outlook — March 2026 report' — and that profile is replaced on 2026-10-28. So 2026-11-20 is the first print whose 'versus forecast' line is scored against the Budget-day EFO rather than a superseded one, and therefore the first honest read on whether the Chancellor's arithmetic survived contact with an outturn. It is also the first borrowing print after the 2026-11-05 MPC and MPR. Tiered LOW on the proposer's own measured null: across 70 PSF release days since 2020-11-20, IGLT.L moved 1.14x an ordinary day (t = 1.02), GBP/USD 0.88x, the US 10y 0.90x, the FTSE 100 0.92x. symbols: [], no fiscal-, rates- or sterling-keyed house playbook, no UK-listed name tracked. Estimate widens caution only; nothing date-keyed may act on this."
+}
