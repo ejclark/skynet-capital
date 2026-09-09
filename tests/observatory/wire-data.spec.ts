@@ -1,6 +1,22 @@
 import type { TradeActivityRecord } from "../../src/observatory/activity-store.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
-import { buildWirePnlRows, buildWireTradeRows } from "../../src/observatory/wire-data.js";
+import {
+  buildWirePnlRows,
+  buildWireTradeRows as buildWireTradeRowsPage,
+  type WireTradeRow,
+} from "../../src/observatory/wire-data.js";
+
+/** PR 5 (issue #2287) turned the bare `limit: number` param into a `{limit, before}` page request
+ *  and the bare-array return into `{rows, nextCursor}` — this thin wrapper keeps every existing
+ *  bare-`limit`/bare-array test below unchanged. */
+function buildWireTradeRows(
+  records: readonly TradeActivityRecord[],
+  participants: readonly ParticipantSnapshot[],
+  limit: number,
+  underlyingFilter?: string,
+): WireTradeRow[] {
+  return buildWireTradeRowsPage(records, participants, { limit }, underlyingFilter).rows;
+}
 
 const record = (overrides: Partial<TradeActivityRecord> = {}): TradeActivityRecord => ({
   orderId: "ord-1",
@@ -118,6 +134,36 @@ describe("buildWireTradeRows", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.symbol).toBe("NVDA");
     });
+  });
+});
+
+describe("buildWireTradeRows — pagination (PR 5, issue #2287)", () => {
+  const records = Array.from({ length: 5 }, (_, i) =>
+    record({ orderId: `ord-${i}`, at: `2026-08-2${i}T00:00:00.000Z` }),
+  );
+
+  it("omits nextCursor when the page isn't full", () => {
+    const page = buildWireTradeRowsPage(records, [snapshot()], { limit: 1_000 });
+    expect(page.rows).toHaveLength(5);
+    expect(page).not.toHaveProperty("nextCursor");
+  });
+
+  it("pages with an exclusive before cursor, newest first", () => {
+    const first = buildWireTradeRowsPage(records, [snapshot()], { limit: 2 });
+    expect(first.rows.map((r) => r.at)).toEqual([
+      "2026-08-24T00:00:00.000Z",
+      "2026-08-23T00:00:00.000Z",
+    ]);
+    expect(first.nextCursor).toBe("2026-08-23T00:00:00.000Z");
+
+    const next = buildWireTradeRowsPage(records, [snapshot()], {
+      limit: 2,
+      before: first.nextCursor,
+    });
+    expect(next.rows.map((r) => r.at)).toEqual([
+      "2026-08-22T00:00:00.000Z",
+      "2026-08-21T00:00:00.000Z",
+    ]);
   });
 });
 

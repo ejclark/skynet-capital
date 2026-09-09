@@ -1,3 +1,4 @@
+import { paginateDesc } from "../server/pagination.js";
 import { parseOccSymbol } from "../trading/option-symbols.js";
 import { collapseActivity, type TradeActivityRecord } from "./activity-store.js";
 import type { ParticipantSnapshot } from "./participant-snapshot.js";
@@ -36,20 +37,28 @@ function matchesUnderlying(recordSymbol: string, underlying: string): boolean {
   return parseOccSymbol(recordSymbol)?.underlying === underlying;
 }
 
+export interface WireTradeRowsPage {
+  readonly rows: WireTradeRow[];
+  /** ISO timestamp of the oldest row on this page — pass back as `before` for the next page.
+   *  Absent means this page wasn't full, so there's nothing further back to fetch. */
+  readonly nextCursor?: string;
+}
+
 /** Collapse the durable ledger to one row per order, join in each order's participant, newest
- *  first, bounded to `limit` — a wire is a glance, not an archive. Unfilled/cancelled orders
- *  carry no honest side to show, so they're dropped (same rule as fillsFrom in desk-data.ts).
+ *  first, keyset-paginated (PR 5, issue #2287 — replaces the old bare `limit` cap). Unfilled/
+ *  cancelled orders carry no honest side to show, so they're dropped (same rule as fillsFrom in
+ *  desk-data.ts).
  *
- * `underlyingFilter`, when given, narrows to fills on that underlying (stock or option)
- * BEFORE the `limit` slice — #2017 Phase 1 slice 12. The unfiltered Wire's global 60-row cap is
- * an unrelated window; filtering after that slice would let it silently drop a symbol's own older
- * fill, so the filter always runs first. Omitted, behavior is byte-identical to the plain feed. */
+ * `underlyingFilter`, when given, narrows to fills on that underlying (stock or option) BEFORE
+ * pagination — #2017 Phase 1 slice 12. The unfiltered Wire's page bound is an unrelated window;
+ * filtering after paginating would let it silently drop a symbol's own older fill, so the filter
+ * always runs first. Omitted, behavior is byte-identical to the plain feed. */
 export function buildWireTradeRows(
   records: readonly TradeActivityRecord[],
   participants: readonly ParticipantSnapshot[],
-  limit: number,
+  opts: { readonly limit: number; readonly before?: string },
   underlyingFilter?: string,
-): WireTradeRow[] {
+): WireTradeRowsPage {
   const byId = new Map(participants.map((p) => [p.id, p]));
   const collapsed = collapseActivity(records).filter(
     (r) => r.filledQuantity > 0 && (r.side === "buy" || r.side === "sell"),
@@ -57,7 +66,11 @@ export function buildWireTradeRows(
   const scoped = underlyingFilter
     ? collapsed.filter((r) => matchesUnderlying(r.symbol, underlyingFilter))
     : collapsed;
-  return scoped.slice(0, limit).map((r) => {
+  const { items, nextCursor } = paginateDesc(scoped, (r) => r.at, {
+    limit: opts.limit,
+    ...(opts.before !== undefined ? { before: opts.before } : {}),
+  });
+  const rows = items.map((r) => {
     const participant = byId.get(r.participantId);
     return {
       participantId: r.participantId,
@@ -71,6 +84,7 @@ export function buildWireTradeRows(
       reconstructed: r.source !== "stream",
     };
   });
+  return { rows, ...(nextCursor !== undefined ? { nextCursor } : {}) };
 }
 
 export interface WirePnlRow {

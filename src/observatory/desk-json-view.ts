@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { humanizeOptionSymbol, isOccSymbol } from "../trading/option-symbols.js";
 import type { TradeActivityRecord } from "./activity-record.js";
 import { collapseActivity } from "./activity-store.js";
@@ -137,29 +138,40 @@ export interface DeskActivityEvent {
   readonly origin: OrderOrigin;
 }
 
-const ACTIVITY_CAP = 80;
+export interface DeskActivityPage {
+  readonly activity: DeskActivityEvent[];
+  /** ISO timestamp of the oldest row on this page — pass back as `before` for the next page.
+   *  Absent means this page wasn't full, so there's nothing further back to fetch. */
+  readonly nextCursor?: string;
+}
 
 /** The desk's recent activity as data (`/api/desk/:id/activity`): journal lines collapsed to the
- *  latest state per order (the store's own fold), newest first, capped. Without an origin index
- *  every row reads `unknown` — the honest default when no audit evidence was handed in. */
+ *  latest state per order (the store's own fold), newest first, keyset-paginated (PR 5). Without
+ *  an origin index every row reads `unknown` — the honest default when no audit evidence was
+ *  handed in. */
 export function deskActivityView(
   records: readonly TradeActivityRecord[],
   origins: OrderOriginIndex = NO_ORIGIN_EVIDENCE,
-): DeskActivityEvent[] {
-  return collapseActivity(records)
-    .sort((a, b) => (a.at < b.at ? 1 : -1))
-    .slice(0, ACTIVITY_CAP)
-    .map((record) => ({
-      orderId: record.orderId,
-      symbol: record.symbol,
-      display: humanizeOptionSymbol(record.symbol),
-      side: record.side,
-      quantity: record.quantity,
-      filled: record.filledQuantity,
-      price: record.price === undefined ? "—" : formatPrice(record.price),
-      status: record.status,
-      at: record.at,
-      backfilled: record.source === "backfill",
-      origin: orderOrigin(record, origins),
-    }));
+  opts: { readonly limit?: number; readonly before?: string } = {},
+): DeskActivityPage {
+  const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
+  const { items, nextCursor } = paginateDesc(
+    collapseActivity(records).sort((a, b) => (a.at < b.at ? 1 : -1)),
+    (record) => record.at,
+    { limit, ...(opts.before !== undefined ? { before: opts.before } : {}) },
+  );
+  const activity = items.map((record) => ({
+    orderId: record.orderId,
+    symbol: record.symbol,
+    display: humanizeOptionSymbol(record.symbol),
+    side: record.side,
+    quantity: record.quantity,
+    filled: record.filledQuantity,
+    price: record.price === undefined ? "—" : formatPrice(record.price),
+    status: record.status,
+    at: record.at,
+    backfilled: record.source === "backfill",
+    origin: orderOrigin(record, origins),
+  }));
+  return { activity, ...(nextCursor !== undefined ? { nextCursor } : {}) };
 }

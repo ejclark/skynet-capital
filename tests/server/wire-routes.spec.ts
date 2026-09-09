@@ -11,11 +11,15 @@ import { serveWireJson, type WireRouteDeps } from "../../src/server/wire-routes.
 // wired, and each wired dep's data actually reaches the shell's JSON. Rendering detail lives in
 // wire-json-view.spec.ts.
 
-const capture = (): { res: ServerResponse; out: { status: number; body: string } } => {
-  const out = { status: 0, body: "" };
+const capture = (): {
+  res: ServerResponse;
+  out: { status: number; body: string; headers: Record<string, string> };
+} => {
+  const out = { status: 0, body: "", headers: {} as Record<string, string> };
   const res = {
-    writeHead(status: number) {
+    writeHead(status: number, headers?: Record<string, string>) {
       out.status = status;
+      out.headers = headers ?? {};
       return res;
     },
     end(payload: string) {
@@ -192,6 +196,63 @@ describe("serveWireJson", () => {
       expect(out.status).toBe(200);
       const { trades } = JSON.parse(out.body).wire;
       expect(trades).toHaveLength(1);
+    });
+  });
+
+  describe("?per_page=/?before= pagination (PR 5, issue #2287)", () => {
+    const many = Array.from({ length: 5 }, (_, i) =>
+      record({ orderId: `ord-${i}`, at: `2026-08-2${i}T00:00:00.000Z` }),
+    );
+
+    it("defaults to 30 with no Link header when the page isn't full", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve(many),
+      };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      expect(JSON.parse(out.body).wire.trades).toHaveLength(5);
+      expect(out.headers.link).toBeUndefined();
+    });
+
+    it('clamps per_page, and a full page carries a Link: rel="next" header', async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve(many),
+      };
+
+      await serveWireJson(res, "/api/wire?per_page=2", deps, false);
+
+      const { trades } = JSON.parse(out.body).wire;
+      expect(trades).toHaveLength(2);
+      expect(trades[0].key.includes("2026-08-24T00:00:00.000Z")).toBe(true);
+      expect(trades[1].key.includes("2026-08-23T00:00:00.000Z")).toBe(true);
+      expect(out.headers.link).toBe(
+        '</api/wire?per_page=2&before=2026-08-23T00%3A00%3A00.000Z>; rel="next"',
+      );
+    });
+
+    it("follows the Link header's own before cursor to the next page", async () => {
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve(many),
+      };
+      const first = capture();
+      await serveWireJson(first.res, "/api/wire?per_page=2", deps, false);
+
+      const second = capture();
+      await serveWireJson(
+        second.res,
+        "/api/wire?per_page=2&before=2026-08-23T00:00:00.000Z",
+        deps,
+        false,
+      );
+      const { trades } = JSON.parse(second.out.body).wire;
+      expect(trades[0].key.includes("2026-08-22T00:00:00.000Z")).toBe(true);
+      expect(trades[1].key.includes("2026-08-21T00:00:00.000Z")).toBe(true);
     });
   });
 });

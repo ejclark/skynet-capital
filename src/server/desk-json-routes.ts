@@ -6,13 +6,17 @@ import { deskPulseView } from "../observatory/pulse-json-view.js";
 import { botLandmarkProminence } from "../observatory/standings.js";
 import { empireHealth, projectEmpire } from "../universe/project.js";
 import type { DashboardServerConfig } from "./dashboard-server-config.js";
+import { resolvePageSize } from "./pagination.js";
 
 /** The desk as data — same gate, same formatters as /u/:id's own views.
  *  `/api/desk/:id` is the blotter; `/activity` the fill timeline; `/decisions` the bot's mind;
- *  `/pulse` the Insights-style recap (equity curve, weekly realized, the doubling race). */
+ *  `/pulse` the Insights-style recap (equity curve, weekly realized, the doubling race).
+ *  `/activity` and `/decisions` are keyset-paginated (`per_page`/`before`, PR 5 — issue #2287):
+ *  a growing feed replaces its own hardcoded caps rather than truncating silently. */
 export async function serveDeskJson(
   res: ServerResponse,
   path: string,
+  url: string,
   config: DashboardServerConfig,
 ): Promise<void> {
   const rest = decodeURIComponent(path.slice("/api/desk/".length));
@@ -26,6 +30,12 @@ export async function serveDeskJson(
     return;
   }
   res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+  const params = new URL(url, "http://localhost").searchParams;
+  const limit = resolvePageSize(params.get("per_page"));
+  const before = params.get("before");
+  // A malformed `before` (not a finite epoch ms) is treated as absent — clamp, never error, same
+  // posture `resolvePageSize` takes on a bad `per_page`.
+  const beforeAt = before !== null && Number.isFinite(Number(before)) ? Number(before) : undefined;
   if (sub === "activity") {
     // No ledger wired (offline runs without SKYNET_ACTIVITY_DIR) says so — never an empty lie.
     // The audit lines ride alongside so each row can say who PLACED it; with no audit log
@@ -38,7 +48,10 @@ export async function serveDeskJson(
     res.end(
       JSON.stringify(
         records
-          ? { available: true, activity: deskActivityView(records, origins) }
+          ? {
+              available: true,
+              ...deskActivityView(records, origins, { limit, before: before ?? undefined }),
+            }
           : { available: false, activity: [] },
       ),
     );
@@ -54,7 +67,11 @@ export async function serveDeskJson(
     res.end(
       JSON.stringify(
         records
-          ? { available: true, kind: "bot", cycles: decisionCyclesView(records) }
+          ? {
+              available: true,
+              kind: "bot",
+              ...decisionCyclesView(records, { limit, before: beforeAt }),
+            }
           : { available: false, kind: "bot", cycles: [] },
       ),
     );

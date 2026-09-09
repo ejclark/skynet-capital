@@ -1,5 +1,11 @@
 import type { DecisionRecord } from "../../src/autonomous/decision-record.js";
-import { decisionCyclesView } from "../../src/observatory/decision-json-view.js";
+import { decisionCyclesView as decisionCyclesPage } from "../../src/observatory/decision-json-view.js";
+
+/** PR 5 (issue #2287) made `decisionCyclesView` return a paginated `{cycles, nextCursor}` page
+ *  rather than a bare array — this thin wrapper keeps every existing test's `view[0]`/`view.length`
+ *  assertions unchanged by unwrapping `.cycles` once, here, instead of at every call site. */
+const decisionCyclesView = (...args: Parameters<typeof decisionCyclesPage>) =>
+  decisionCyclesPage(...args).cycles;
 
 /** The bot's mind as data: run-row status at a glance, guard work shown, reasons verbatim. */
 
@@ -185,5 +191,29 @@ describe("decisionCyclesView", () => {
   it("sorts newest first", () => {
     const view = decisionCyclesView([record({ at: 1 }), record({ at: 2 })]);
     expect(new Date(view[0]?.at ?? 0).getTime()).toBe(2);
+  });
+});
+
+describe("decisionCyclesView — pagination (PR 5, issue #2287)", () => {
+  const records = Array.from({ length: 5 }, (_, i) => record({ at: i + 1 }));
+
+  it("defaults to page size 30 and carries no cursor when the page isn't full", () => {
+    const page = decisionCyclesPage(records);
+    expect(page.cycles).toHaveLength(5);
+    expect(page).not.toHaveProperty("nextCursor");
+  });
+
+  it("clamps limit to [1, 100] rather than erroring on an out-of-range ask", () => {
+    expect(decisionCyclesPage(records, { limit: 0 }).cycles).toHaveLength(1);
+    expect(decisionCyclesPage(records, { limit: 1_000 }).cycles).toHaveLength(5);
+  });
+
+  it("pages with an exclusive before cursor, newest first", () => {
+    const first = decisionCyclesPage(records, { limit: 2 });
+    expect(first.cycles.map((c) => new Date(c.at).getTime())).toEqual([5, 4]);
+    expect(first.nextCursor).toBe(4);
+
+    const next = decisionCyclesPage(records, { limit: 2, before: first.nextCursor });
+    expect(next.cycles.map((c) => new Date(c.at).getTime())).toEqual([3, 2]);
   });
 });
