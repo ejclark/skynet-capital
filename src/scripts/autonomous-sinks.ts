@@ -6,6 +6,7 @@
  * no state of their own beyond the audit store they construct.
  */
 import type { TraderMode } from "../autonomous/autonomous-trader.js";
+import type { DecisionDb } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import { JsonlAuditStore } from "../autonomous/jsonl-audit-store.js";
 import { createBotActivityEventBus } from "../observatory/activity-bus.js";
@@ -54,8 +55,17 @@ export function botOrderPublisher(
   };
 }
 
-/** Console + audit-store sink for one decision cycle. Never throws on the audit write. */
-export function decisionSink(audit: JsonlAuditStore | undefined): (r: DecisionRecord) => void {
+/**
+ * Console + audit-store sink for one decision cycle. Never throws on either write: `audit` is
+ * async (JSONL, the existing backstop) and errors are caught; `decisionDb` is `DatabaseSync`
+ * (fully synchronous — a throw would propagate synchronously, not via a rejected promise), so its
+ * call is wrapped in try/catch instead. Both are optional and independent — a `decisionDb` write
+ * failure never touches the JSONL line or vice versa.
+ */
+export function decisionSink(
+  audit: JsonlAuditStore | undefined,
+  decisionDb?: DecisionDb,
+): (r: DecisionRecord) => void {
   return (r) => {
     const placed = r.outcomes.filter((o) => o.action === "placed").length;
     const observed = r.outcomes.filter((o) => o.action === "observed").length;
@@ -65,6 +75,11 @@ export function decisionSink(audit: JsonlAuditStore | undefined): (r: DecisionRe
     }
     if (placed > 0) console.log(`[cycle] ${r.personaId} placed ${placed} order(s)`);
     audit?.record(r).catch((e) => console.error("[audit] write failed:", e));
+    try {
+      decisionDb?.record(r);
+    } catch (error) {
+      console.error("[decision-db] write failed:", error);
+    }
   };
 }
 

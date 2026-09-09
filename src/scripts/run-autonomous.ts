@@ -37,6 +37,7 @@ import {
   restoreBotsState,
   scoutStateStore,
 } from "../autonomous/bots-state-db.js";
+import { migrateAuditToDecisionDb } from "../autonomous/decision-db-migration.js";
 import type { LiveBot } from "../autonomous/live-cycle.js";
 import { LiveCycleRunner } from "../autonomous/live-cycle.js";
 import { MomentumTracker } from "../autonomous/momentum-tracker.js";
@@ -60,6 +61,7 @@ import {
   resolveRoster,
   seedBotsState,
   seedDailyLossBaseline,
+  seedDecisionDb,
 } from "./autonomous-live-wiring.js";
 import { runOffline } from "./autonomous-offline-runner.js";
 import { announceScout, armScoutStaging } from "./autonomous-scout-staging.js";
@@ -215,7 +217,17 @@ async function runLive(): Promise<void> {
 
   const mode = traderMode(process.env);
   const audit = auditStore(process.env);
-  const onDecision = decisionSink(audit);
+  const decisionDb = seedDecisionDb(process.env);
+  if (decisionDb && audit) {
+    // Best-effort, idempotent (see decision-db-migration.ts) — a missing/corrupt read must never
+    // fail boot, it just leaves this boot's backfill incomplete until the next one retries it.
+    migrateAuditToDecisionDb(audit, decisionDb)
+      .then(
+        (n) => n > 0 && console.log(`[decision-db] migrated ${n} historical cycle(s) from JSONL`),
+      )
+      .catch((error) => console.warn("[decision-db] JSONL migration failed (non-fatal):", error));
+  }
+  const onDecision = decisionSink(audit, decisionDb);
   const botActivityBus = botBus(process.env); // #1211 slice 2 — dark unless configured
   // Kill switch + circuit breakers. Throwing the switch is as simple as `touch $SKYNET_HALT_FILE`.
   const safety = new SafetyController();
