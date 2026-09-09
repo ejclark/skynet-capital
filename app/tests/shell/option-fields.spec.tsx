@@ -161,6 +161,25 @@ describe("ExpirationField", () => {
     expect(edited).toBe("2026-10-16");
   });
 
+  it("labels the tab strip as a group via aria-labelledby, since it's not a single form control", () => {
+    render(
+      <div className="field">
+        <label htmlFor="exp" id="exp-label">
+          Expiration
+        </label>
+        <ExpirationField
+          id="exp"
+          chainData={chainManyExpirations}
+          value="2026-09-08"
+          onEdit={noop}
+          zeroDteLocked={false}
+        />
+      </div>,
+    );
+
+    expect(screen.getByRole("group", { name: "Expiration" })).toBeInTheDocument();
+  });
+
   it("disables today's tab with a visible non-colour cue and the lock reason when zero-DTE is locked", () => {
     const today = new Date().toISOString().slice(0, 10);
     const chainWithToday: ChainData = {
