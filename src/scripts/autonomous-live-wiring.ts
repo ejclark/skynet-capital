@@ -19,6 +19,7 @@ import { type BotsHealthFile, resolveBotsHealthFile } from "../autonomous/bots-h
 import type { BotsStateDb } from "../autonomous/bots-state-db.js";
 import { openBotsStateDb } from "../autonomous/bots-state-db.js";
 import { fleetDayOpenEquity, parseDayOpenEquity } from "../autonomous/day-open-equity.js";
+import { type DecisionDb, decisionDbPathFrom, openDecisionDb } from "../autonomous/decision-db.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { BetaScoutDeps, LiveBot } from "../autonomous/live-cycle.js";
 import { assessReadiness } from "../autonomous/readiness.js";
@@ -140,6 +141,31 @@ export function seedBotsState(env: NodeJS.ProcessEnv): BotsStateDb | undefined {
     return db;
   } catch (error) {
     console.warn("[bots-state] open failed (non-fatal) — falling back to cold-start state:", error);
+    return undefined;
+  }
+}
+
+/**
+ * Opens the queryable decision store (`docs/plans/where-are-we-documenting-*.md` PR 3 / issue
+ * #2287) on a path DERIVED from `SKYNET_BOTS_DB_PATH` — a sibling `decisions.db` in the same
+ * directory, never a new env var (declaring one with its own relative-path fallback would trip
+ * the blocking `tests/arch/volume-persistence.spec.ts` gate, which scans for exactly that shape).
+ * Dark exactly when bots-state durability is dark; best-effort, same posture as `seedBotsState` —
+ * a missing/corrupt file must never fail boot.
+ */
+export function seedDecisionDb(env: NodeJS.ProcessEnv): DecisionDb | undefined {
+  const botsStatePath = env.SKYNET_BOTS_DB_PATH;
+  if (!botsStatePath) return undefined;
+  try {
+    const path = decisionDbPathFrom(botsStatePath);
+    const db = openDecisionDb(path);
+    console.log(`[decision-db] queryable decision store armed: ${path}`);
+    return db;
+  } catch (error) {
+    console.warn(
+      "[decision-db] open failed (non-fatal) — falling back to JSONL-audit-only behavior:",
+      error,
+    );
     return undefined;
   }
 }
