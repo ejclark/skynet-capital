@@ -72,6 +72,7 @@ undocumented and gets one.
 | **"Build me" placeholder** | A planned item is visible but disabled and reads as "help shape it", not broken; the same treatment on a rail item and a trade type. | #784 (Trade rail, `src/domain/trade-types.ts` ladder) | Eric, 2026-08-29 | seeded |
 | **Onramp fold** | A how-to for an outside system (GitHub) folded behind a `<details>`, reference not front matter. | `app/src/routes/activity.tsx` (`.wire-onramp`) | #738 | placed — Eric, 2026-08-28: "feels out of place" (#784) |
 | **Mobile-first curation** | What survives 390px is the curated set; desktop adds room for what was one swipe away, never new concepts. | CLAUDE.md → *Mobile-first on the trading surfaces* | Eric, 2026-09-05, from Fidelity's ticket | placed (rule) |
+| **Budget bar** | A gauge's fill answers "how much room is left against ITS OWN cap," never "what is the value" — always paired with a word and a number (hue never carries meaning alone), and an honest "not yet measured" state that renders as such, never as zero or a full bar. | `app/src/shell/wire-trade-row.tsx` (`GaugeBar`, generalized from `.pulse-progress` in `pulse.css`) | Eric, on the activity row's system-vitals gauges: "high level succinct feedback to state the health of the system and if it is healthy or in an unsustainable state" | placed on Activity's trade-row detail (PR 6, issue #2287) |
 
 ## The ledger — trading surfaces
 

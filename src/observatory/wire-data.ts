@@ -26,6 +26,11 @@ export interface WireTradeRow {
    *  same provenance activity-store.ts already tracks, surfaced so the wire never implies a trade
    *  was watched landing when it was actually reconstructed. */
   readonly reconstructed: boolean;
+  /** The broker's own order id — deliberately widened onto this row (PR 6, issue #2287; it used to
+   *  be dropped here even though `TradeActivityRecord` always carries it) so the wire route can
+   *  join a trade to the `DecisionRecord` that produced it via `DecisionDb.findByOrderId`'s exact
+   *  index, rather than `decision-context.ts`'s fuzzy symbol+side+time match. */
+  readonly orderId: string;
 }
 
 /** True when a raw broker order symbol names a fill in `underlying` — a plain stock symbol
@@ -82,6 +87,7 @@ export function buildWireTradeRows(
       ...(r.price !== undefined ? { price: r.price } : {}),
       at: r.at,
       reconstructed: r.source !== "stream",
+      orderId: r.orderId,
     };
   });
   return { rows, ...(nextCursor !== undefined ? { nextCursor } : {}) };

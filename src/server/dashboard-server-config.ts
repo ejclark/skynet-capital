@@ -2,6 +2,7 @@ import type { AlpacaOptionsClient } from "../alpaca/alpaca-options-client.js";
 import type { AlpacaTradingClient } from "../alpaca/alpaca-trading-client.js";
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { CompanionTurn } from "../companion/companion-chat.js";
+import type { OrderIntent } from "../domain/types.js";
 import type { TradeActivityRecord } from "../observatory/activity-store.js";
 import type { CeremonyChannel } from "../observatory/ceremony-channel.js";
 import type { EquitySample } from "../observatory/history-store.js";
@@ -108,6 +109,16 @@ export interface DashboardServerConfig extends FeedbackRouteDeps, WireRouteDeps 
    * a bot equals its persona id.
    */
   readonly readDecisions?: (participantId: string) => Promise<readonly DecisionRecord[]>;
+  /**
+   * The exact broker-order-id join into the decision store (PR 6, issue #2287) — an indexed,
+   * synchronous lookup (unlike `readDecisions`'s per-persona list), so the wire route can attach
+   * "why did that trade fire" to a row without knowing which persona (or which persona's BROKER —
+   * beta-scout submits on another persona's account) produced it. Omit to leave wire rows with no
+   * reasoning attached — never a fabricated one.
+   */
+  readonly findByOrderId?: (
+    orderId: string,
+  ) => { readonly record: DecisionRecord; readonly intent: OrderIntent } | undefined;
   /**
    * Reads a participant's durable trade-activity ledger (`activity-store.ts`) for the history and
    * analysis tabs. Omit to leave those views bounded by the broker's recent-order window — they

@@ -255,4 +255,84 @@ describe("serveWireJson", () => {
       expect(trades[1].key.includes("2026-08-21T00:00:00.000Z")).toBe(true);
     });
   });
+
+  describe("reasoning + vitals (PR 6, issue #2287)", () => {
+    const intent = {
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 10,
+      type: "market" as const,
+      reason: "panic fade",
+      strategy: "sauron-panic-claim",
+    };
+    const decision = {
+      at: 1,
+      personaId: "sauron",
+      mode: "live" as const,
+      rawIntents: [intent],
+      guardedIntents: [intent],
+      outcomes: [{ intent, action: "placed" as const }],
+    };
+
+    it("attaches reasoning to a bot row via the exact order-id join, none to a human row", async () => {
+      const { res, out } = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot(), snapshot({ id: "eric", kind: "human" })]),
+        readAllTradeActivity: () =>
+          Promise.resolve([
+            record({ orderId: "ord-bot", participantId: "sauron" }),
+            record({ orderId: "ord-human", participantId: "eric" }),
+          ]),
+        findByOrderId: (orderId) =>
+          orderId === "ord-bot" ? { record: decision, intent } : undefined,
+      };
+
+      await serveWireJson(res, "/api/wire", deps, false);
+
+      const { trades } = JSON.parse(out.body).wire;
+      const bot = trades.find((t: { whoId: string }) => t.whoId === "sauron");
+      const human = trades.find((t: { whoId: string }) => t.whoId === "eric");
+      expect(bot.reasoning).toMatchObject({ reason: "panic fade", strategy: "sauron-panic-claim" });
+      expect(human.reasoning).toBeUndefined();
+    });
+
+    it("attaches a live Loss headroom gauge when history is wired, nothing when it isn't", async () => {
+      const withHistory = capture();
+      const deps: WireRouteDeps = {
+        hub: hubWith([snapshot()]),
+        readAllTradeActivity: () => Promise.resolve([record({ orderId: "ord-bot" })]),
+        findByOrderId: () => ({ record: decision, intent }),
+        readHistory: () =>
+          Promise.resolve([
+            {
+              at: "2026-08-19T00:00:00.000Z",
+              participantId: "sauron",
+              equity: 100_000,
+              cash: 0,
+              realizedPl: 0,
+            },
+            {
+              at: "2026-08-19T14:30:00.000Z",
+              participantId: "sauron",
+              equity: 100_000,
+              cash: 0,
+              realizedPl: 0,
+            },
+          ]),
+      };
+      await serveWireJson(withHistory.res, "/api/wire", deps, false);
+      const withHistoryTrades = JSON.parse(withHistory.out.body).wire.trades;
+      expect(withHistoryTrades[0].vitals.lossHeadroom.measured).toBe(true);
+
+      const withoutHistory = capture();
+      await serveWireJson(
+        withoutHistory.res,
+        "/api/wire",
+        { ...deps, readHistory: undefined },
+        false,
+      );
+      const withoutHistoryTrades = JSON.parse(withoutHistory.out.body).wire.trades;
+      expect(withoutHistoryTrades[0].vitals).toBeUndefined();
+    });
+  });
 });

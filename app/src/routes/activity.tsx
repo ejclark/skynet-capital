@@ -8,12 +8,12 @@ import {
   parseWireQuery,
   toggleWireQualifier,
   type WireFeed,
-  type WireTrade,
 } from "../live/wire";
 import { PageFrame } from "../shell/frame";
 import { SectionSwitch } from "../shell/section-switch";
 import { type PageSection, resolveSection } from "../shell/sections";
 import { Toggle } from "../shell/toggle";
+import { TradeRow } from "../shell/wire-trade-row";
 
 /**
  * ACTIVITY (#738 phase 5a; renamed from "The Wire" — #784 naming pass) — the league's live pulse
@@ -130,29 +130,6 @@ function WireFilterBar({
         />
       </div>
     </div>
-  );
-}
-
-function TradeRow({ trade }: { readonly trade: WireTrade }): ReactElement {
-  return (
-    <li className="wire-trade">
-      <span className={`wire-side tone-${trade.side === "buy" ? "pos" : "neg"}`}>
-        {trade.side.toUpperCase()}
-      </span>
-      <span className="wire-sym">{trade.symbol}</span>
-      <span className="num wire-qty">{trade.quantity}</span>
-      <span className="num wire-price">{trade.price}</span>
-      <Link to="/u/$id" params={{ id: trade.whoId }} className="wire-who">
-        {trade.who}
-      </Link>
-      <span className={`chip chip-${trade.kind}`}>{trade.kind === "bot" ? "BOT" : "HUMAN"}</span>
-      {trade.reconstructed ? (
-        <span className="wire-recon" title="Recovered after the fact, not watched live">
-          reconstructed
-        </span>
-      ) : null}
-      <span className="wire-when num">{trade.when}</span>
-    </li>
   );
 }
 

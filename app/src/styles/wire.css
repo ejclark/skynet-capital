@@ -51,6 +51,139 @@
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* the expand toggle (PR 6, issue #2287) — a plain flex sub-group at the row's own alignment, NOT
+   `display: contents` (that can strip a <button>'s semantics from the accessibility tree in some
+   browsers). A `<button>` may never nest the `<a>` (`.wire-who`) that follows it, so the toggle
+   wraps only the fields before it; the row stays clickable-to-expand on the side/symbol/qty/price
+   half, with the trader link and chips as independently-clickable siblings. */
+.wire-trade-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.wire-trade-row:disabled {
+  cursor: default;
+}
+/* a hollow-vs-filled triangle, never hue alone, for the expand/collapse state. */
+.wire-disclosure {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--muted);
+  transition: transform 0.15s ease;
+}
+.wire-trade-row[aria-expanded="true"] .wire-disclosure {
+  transform: rotate(90deg);
+}
+.wire-trade-body {
+  flex-basis: 100%;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 260px);
+  gap: 14px;
+}
+@media (max-width: 620px) {
+  .wire-trade-body {
+    grid-template-columns: 1fr;
+  }
+}
+.wire-trade-why .chip {
+  margin-bottom: 4px;
+}
+.wire-guard-delta {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.wire-vitals {
+  border-left: 1px solid var(--border);
+  padding-left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@media (max-width: 620px) {
+  .wire-vitals {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px dashed var(--border);
+    padding-top: 8px;
+  }
+}
+.wire-vitals-h {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+/* the "Budget bar" named UI pattern (docs/PATTERNS.md) — a fill against ITS OWN cap, generalized
+   from `.pulse-progress` (pulse.css) so both surfaces share one gauge shape. */
+.vital-gauge {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px 8px;
+}
+.vital-label {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.vital-value {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.vital-detail {
+  grid-column: 2 / -1;
+  font-size: 10px;
+  color: var(--muted);
+}
+.vital-gauge-unmeasured .vital-value {
+  color: var(--muted);
+  font-weight: 400;
+  font-style: italic;
+}
+.budget-bar {
+  height: 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--elev-recessed);
+}
+/* an unmeasured gauge's track carries a diagonal hatch — a SHAPE distinct from an empty measured
+   bar (0% left would still be a plain track), so "not yet measured" never reads as "zero" even
+   before the italic word is read (docs/BRAND.md: hue never carries meaning alone). */
+.vital-gauge-unmeasured .budget-bar {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--border) 0,
+    var(--border) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+}
+.budget-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent) 55%, transparent),
+    var(--accent)
+  );
+}
 .wire-side {
   font-family: var(--mono);
   font-weight: 700;
