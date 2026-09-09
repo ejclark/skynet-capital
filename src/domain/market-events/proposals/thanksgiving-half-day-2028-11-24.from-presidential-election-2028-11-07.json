@@ -1,0 +1,11 @@
+{
+  "id": "thanksgiving-half-day-2028-11-24",
+  "kind": "sector",
+  "title": "US equity markets close early at 1:00 p.m. ET — the day after Thanksgiving 2028",
+  "date": "2028-11-24",
+  "status": "estimate",
+  "source": "NEWS: nyse.com/markets/hours-calendars, fetched direct 2026-09-09 (HTTP 200 after its 302, 109,180 bytes). Footnote *** on the Thanksgiving Day row reads verbatim: 'Each market will close early at 1:00 p.m. (1:15 p.m. for eligible options) on Friday, November 27, 2026, Friday, November 26, 2027, and Friday, November 24, 2028 (the day after Thanksgiving). NYSE American Equities, NYSE Arca Equities, NYSE National, and NYSE Texas late trading sessions will close at 5:00 p.m. All times are Eastern Time.' The 2028 date is named explicitly in the footnote text, not inferred from the Thursday. Filed estimate on the same two counts as every sibling half-day entry (thanksgiving-half-day-2026-11-27, thanksgiving-half-day-2027-11-26): the confirmed-prefix taxonomy has no slot for an exchange operator's hours page (open issue #2552), and this lane may not self-confirm an event it discovered in-sweep. Discovered in the never-assessed initial research of presidential-election-2028-11-07, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED by the presidential-election-2028-11-07 initial research (2026-09-09). Same corridor finding as its full-closure sibling thanksgiving-market-closure-2028-11-23, proposed in the same PR: the plus-or-minus-60-day window around this calendar's furthest-out event was completely empty apart from fed-board-closure-2028-11-10, and these are the two dates the NYSE's own 2028 column puts in it. Reuses the exact precedent thanksgiving-half-day-2026-11-27 set -- kind 'sector', impact low, symbols [], status estimate, NEWS: prefix -- so no new kind is invented and validation is unchanged. Recorded as a market-structure fact that changes how OTHER events in the window are read, never as an event with directional content of its own: a half session at D+17 of an election week is a thin tape, and no attribution should be taken off it. Estimate widens caution and licenses no entry."
+}
