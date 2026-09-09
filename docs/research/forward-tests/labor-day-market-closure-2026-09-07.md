@@ -401,3 +401,42 @@ at registration — the difference is which off-cycle `9-Year N-Month` taps a co
 on-cycle cohort is definition-stable and the all-taps one is not. **This changes nothing about
 scoring:** FT-…-2 scores on the literal registered line, **bid-to-cover ≥ 2.35 passes**, as
 pre-committed on 2026-09-08 at 13:52 ET. The cohort question governs only how extreme a fail reads.
+
+**A prior note of mine is WRONG on the sign, and it is corrected here rather than edited — 2026-09-09
+09:28 ET, before FT-…-2 is scored. No note above and no registered row is altered.** The 2026-09-08
+13:52 ET note ("Neither test is scored by the 2026-09-08 3Y note…") recorded the 3Y's composition as
+indirect **61.7% vs 64.6%** trailing-12, **−2.8pp**, and called it "the one soft spot." Recomputed
+this session from a cache-busted `auctions_query` (HTTP 200) over the full 3-Year note series — **234
+auctions**, every one `security_term` `3-Year`, zero reopenings, so this cohort admits none of the
+definitional ambiguity that split the 10Y anchors — the trailing-12 indirect share through
+2026-08-11 is **58.12%**, and 2026-09-08's **61.74%** is **+3.62pp**, not −2.88pp. The same note's
+bid-to-cover anchor (**2.656 / sd 0.083**, excess **+0.064**) reproduces to three figures from the
+identical pull, so the error is isolated to the indirect figure; **64.6%** appears in no trailing
+window I can construct. **Consequence, stated plainly because it runs against my own earlier
+reading:** the 09-08 session's cover *and* its composition both came in above trailing-12, so the
+one datum that pointed the seeding thesis's way is withdrawn. It does not touch FT-…-2, which scores
+on the 09-09 10Y's bid-to-cover and on nothing else.
+
+**Composition and cover are ORTHOGONAL, which bounds what the corrected number above is allowed to
+mean — measured 2026-09-09 09:28 ET, before the print.** Two things are true at once across
+`auctions_query`, 2010 →: indirect-share excess **carries strongly** from a 3Y to the 10Y auctioned
+1–4 days later (**Pearson +0.496 / Spearman +0.504**, n=183 — more than twice the **+0.223** the
+08:02 ET note measured for bid-to-cover; after a firm-composition 3Y the next-day 10Y averages
+**+3.01pp** indirect excess against **−4.69pp** after a soft one), **and** indirect-share excess has
+**no relationship at all** to bid-to-cover excess within the same 10Y auction (**Pearson −0.003**,
+n=268). So 2026's firm 3Y composition predicts a firm 10Y *composition* and licenses **no** update to
+FT-…-2's pass prior in either direction. The 08:02 ET prior of roughly **95–99%** stands unchanged,
+and only a fail still carries information.
+
+**The sampling-date guard must extend to `^TNX`, and today is the first pull that shows why — 09:28
+ET.** FT-…-1's registered guard was written for `^VIX`. FT-…-2's kill switch requires the concurrent
+`^TNX`/`^VIX` tape to be recorded alongside a weak print, so the close-out will read a **`^TNX`**
+close. This pull sits after Cboe's 03:00 ET open and **before** the 09:30 ET equity open, and `^TNX`
+carries an **in-progress 2026-09-09 bar (4.808)** while `^GSPC` carries none. Measured: `^TNX` bars
+with no `^GSPC` bar number **1 of 9,208 since 2000 — 2026-09-09 itself**; `^VIX`-with-no-`^GSPC` is
+now **3** (2026-05-25, 2026-09-07 @ 15.30, and today's live bar); `SPY`-with-no-`^GSPC` is **0 of
+8,459** and `^GSPC`-with-no-`^VIX` **0 of 9,238**. **Guard, in force for the close-out:** the
+09-09 `^TNX` and `^VIX` closes are readable only from a pull dated strictly after 2026-09-09 (ET) —
+the same rule, the same reason, one more symbol. The settled 09-08 marks are unaffected: `^VIX`
+**15.72** (FT-…-1, PASS, reproduced a seventh time), `^GSPC` **7673.52**, `SPY` **765.96**, `^TNX`
+**4.806**.
