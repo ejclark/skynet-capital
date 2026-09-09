@@ -2276,3 +2276,42 @@ never what lies beyond it; the shell's own behavior is the app's concern, not th
   POST .../merges` call anywhere in `scripts/moneypenny/*.mjs` for the same
   GITHUB_TOKEN-vs-App-token question, now that the mechanism is confirmed to reach past the
   immediate write.
+
+### `max-parallel: 4` was a guess with a safety margin, not a measured ceiling — and the 2026-09-05 incident it cites is a different failure class than the 2026-09-08 one, not the same bug twice
+
+- **SHA:** (this PR)   **DATE:** 2026-09-09   **STATUS:** closed
+- **SIGNAL:** Eric, on hearing "4 parallel, 15-20 min each ≈ 12-16 events/hour": "something feels
+  wrong" — then, on the proposal to raise it, a sharper question: is the 2026-09-05 burst incident
+  actually the same `claude-code-action` install-crash class just fixed (this doc, the entry above),
+  meaning the whole throttle was built to work around a phantom problem?
+- **ROOT CAUSE (of the confusion):** the 2026-09-05 entry above was written blind — its own text
+  says "the action hides the refusal text" — so its ROOT CAUSE line inferred "the shape of a
+  refused first call (rate-limit or capacity)" without ever seeing the actual result payload.
+  Re-pulling the raw logs for that incident's own covering SHAs (77a71ca, 8d12068, aaa0b3d,
+  a9fbb66, d7e545a, c2662e4) with the same technique that found 2026-09-08's cause settles it:
+  the two incidents are **not** the same bug. 2026-09-08 fails at spawn — `ReferenceError: Claude
+  Code native binary not found` — before the CLI subprocess ever reports back, because the install
+  step itself regressed. 2026-09-05's failing legs print `"Claude Code initialized"` cleanly (CLI
+  v2.1.261, a normal install), then 469ms later the CLI's own structured result comes back
+  `{"type":"result","subtype":"success","is_error":true,"duration_ms":469,"num_turns":1,
+  "total_cost_usd":0,"modelUsage":{}}` — zero tokens processed, no completion, no error text
+  (the action's own log: "Running Claude Code via SDK (full output hidden for security)... enable
+  `show_full_output: true` for full output"). A clean init followed by an instant, zero-usage,
+  unexplained reject is the signature of an upstream rejection at the first API call (rate-limit or
+  capacity), not a crash in this repo's control. So `max-parallel` is guarding a real constraint —
+  but the value itself (4) was chosen as "far under the 16 that broke," never as a measured safe
+  ceiling; nothing between 4 and 16 concurrent sessions has ever been tried.
+- **PREVENTION:** two changes, together, in `moneypenny-events.yml`'s `build-events` job. (1)
+  `max-parallel` raised 4 → 8 — a bounded step toward the untested middle, not a jump to the
+  known-bad 16, chosen because the repo's own research volume is expected to keep growing and the
+  4-wide throttle was costing real hours against a number nobody derived. (2) A failure-only step
+  that `cat`s the CLI's own fixed-path result file (`/home/runner/work/_temp/claude-execution-output.json`)
+  into the job log — closes the exact gap that turned 2026-09-05 into an inferred-not-confirmed
+  diagnosis. Deliberately not `show_full_output: true` (dumps the whole conversation transcript,
+  the thing the action's own security note is about) — just the terminal result envelope. If a
+  future batch shows the same is_error/zero-`modelUsage` signature at 8-wide, that step names it
+  immediately instead of requiring another hours-long log dig, and the number drops back to 4 (never
+  higher without new data).
+- **SIDE QUESTS:** none — this closes the "action swallows the refusal text" side quest banked
+  2026-09-06 (never actually filed to `docs/IDEAS.md`, only pointed to from the lesson entry —
+  built directly instead of parking it twice).

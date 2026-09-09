@@ -326,12 +326,18 @@ jobs:
     # more parallel jobs, never a shared budget several events race against. `fail-fast: false` so
     # one event's session dying never cancels its siblings' already-in-flight work.
     # `max-parallel` (2026-09-05, docs/LESSONS.md): sixteen sessions opened inside five minutes and six
-    # of them died on their first turn (1 turn, ~400ms, $0 — a refused first call). The width of the
-    # fan-out is the constraint one level up from the GraphQL bucket; four at a time is far under the
-    # burst that failed and still clears a full due list inside one cadence.
+    # of them died on their first turn (1 turn, ~400ms, $0, empty modelUsage — a rejection before any
+    # tokens were generated). The action hid the actual reason ("full output hidden for security");
+    # re-read from the raw job logs 2026-09-09 confirms it is NOT the 2026-09-08 install-crash class
+    # (that fails before "Claude Code initialized" even prints) — clean init, then an instant zero-usage
+    # reject is the shape of a real upstream throttle, not a repo bug. 4 was chosen as "far under 16",
+    # never as a measured ceiling — nothing between 4 and 16 has ever been tried. 8 is a bounded step
+    # up, not a jump to the known-bad number, paired with the failure-diagnostics step below so a
+    # repeat is a one-line read instead of an hours-long archaeology dig. Revert to 4 (never higher
+    # without new data) if that step ever shows the same is_error/zero-usage signature again.
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 8
       matrix:
         event: ${{ fromJSON(needs.route.outputs.due_events) }}
     runs-on: ubuntu-latest
@@ -393,6 +399,22 @@ jobs:
             its own sibling matrix job running in parallel right now, each responsible for its own
             id only. If `${{ matrix.event.id }}` is no longer due when you check (another run
             already handled it), say so and stop rather than picking a different one.
+
+      # THE SWALLOWED-ERROR FIX (docs/IDEAS.md side quest, banked 2026-09-06, built here 2026-09-09).
+      # claude-code-action prints "full output hidden for security" and buries the actual CLI result
+      # JSON — which is exactly what turned the 2026-09-05 burst incident into an hours-long log dig
+      # instead of a one-line read. The CLI always writes its structured result to this fixed temp
+      # path regardless of outcome; on failure, print it. This is NOT `show_full_output: true` (which
+      # would dump the whole conversation transcript, the thing the security note is about) — just the
+      # terminal result envelope (is_error, duration_ms, num_turns, total_cost_usd, modelUsage, and any
+      # error text it carries), which is diagnostic, not transcript.
+      - if: always() && steps.build.outcome == 'failure'
+        name: Surface the swallowed Claude result on failure
+        run: |
+          echo "::group::Claude execution result (the action hides this by default)"
+          cat /home/runner/work/_temp/claude-execution-output.json 2>/dev/null || \
+            echo "(no execution-output.json — failure happened before Claude Code produced one, e.g. an install/spawn crash rather than an API-level rejection)"
+          echo "::endgroup::"
 
   # ═══ THE FEEDBACK LANE (2026-08-19) ═══
   # A member filed feedback through the app (docs/FEEDBACK.md) and the app labelled the issue
