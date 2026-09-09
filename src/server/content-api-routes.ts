@@ -145,7 +145,7 @@ export async function serveJsonApi(
     return true;
   }
   if (path.startsWith("/api/desk/")) {
-    await serveDeskJson(res, path, config);
+    await serveDeskJson(res, path, url, config);
     return true;
   }
   return false;

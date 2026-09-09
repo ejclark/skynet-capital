@@ -51,14 +51,14 @@ const answered = (out: Answer): Record<string, unknown> => JSON.parse(out.body ?
 describe("serveDeskJson", () => {
   it("answers an unknown desk with a plain 404", async () => {
     const { res, out } = fakeRes();
-    await serveDeskJson(res, "/api/desk/nobody", configWith());
+    await serveDeskJson(res, "/api/desk/nobody", "/api/desk/nobody", configWith());
     expect(out.status).toBe(404);
     expect(answered(out).error).toBe("no such desk");
   });
 
   it("serves the blotter view for a known desk", async () => {
     const { res, out } = fakeRes();
-    await serveDeskJson(res, "/api/desk/sauron", configWith());
+    await serveDeskJson(res, "/api/desk/sauron", "/api/desk/sauron", configWith());
     expect(out.status).toBe(200);
     expect(answered(out).desk).toMatchObject({ id: "sauron", kind: "bot" });
   });
@@ -69,6 +69,7 @@ describe("serveDeskJson", () => {
     await serveDeskJson(
       res,
       "/api/desk/sauron",
+      "/api/desk/sauron",
       configWith({
         hub: { getState: () => ({ generatedAt: "t", participants: [landmarked], collisions: [] }) },
       } as never),
@@ -78,7 +79,7 @@ describe("serveDeskJson", () => {
     expect(dials.health).toBeCloseTo(260 / 1500); // (1760 − 1500) / 1500, the R2 rule
 
     const plain = fakeRes();
-    await serveDeskJson(plain.res, "/api/desk/human-eric", configWith());
+    await serveDeskJson(plain.res, "/api/desk/human-eric", "/api/desk/human-eric", configWith());
     expect(answered(plain.out).landmark).toBeUndefined();
   });
 
@@ -95,6 +96,7 @@ describe("serveDeskJson", () => {
     await serveDeskJson(
       res,
       "/api/desk/trailer",
+      "/api/desk/trailer",
       configWith({
         hub: {
           getState: () => ({ generatedAt: "t", participants: [leader, trailer], collisions: [] }),
@@ -107,12 +109,18 @@ describe("serveDeskJson", () => {
 
   it("says when no activity ledger is wired — never an empty lie", async () => {
     const { res, out } = fakeRes();
-    await serveDeskJson(res, "/api/desk/sauron/activity", configWith());
+    await serveDeskJson(
+      res,
+      "/api/desk/sauron/activity",
+      "/api/desk/sauron/activity",
+      configWith(),
+    );
     expect(answered(out)).toEqual({ available: false, activity: [] });
 
     const wired = fakeRes();
     await serveDeskJson(
       wired.res,
+      "/api/desk/sauron/activity",
       "/api/desk/sauron/activity",
       configWith({ readTradeActivity: async () => [] }),
     );
@@ -121,17 +129,89 @@ describe("serveDeskJson", () => {
 
   it("keeps the decisions trail bots-only, and honest about an unwired store", async () => {
     const { res, out } = fakeRes();
-    await serveDeskJson(res, "/api/desk/human-eric/decisions", configWith());
+    await serveDeskJson(
+      res,
+      "/api/desk/human-eric/decisions",
+      "/api/desk/human-eric/decisions",
+      configWith(),
+    );
     expect(answered(out)).toMatchObject({ available: false, kind: "human" });
 
     const unwired = fakeRes();
-    await serveDeskJson(unwired.res, "/api/desk/sauron/decisions", configWith());
+    await serveDeskJson(
+      unwired.res,
+      "/api/desk/sauron/decisions",
+      "/api/desk/sauron/decisions",
+      configWith(),
+    );
     expect(answered(unwired.out)).toMatchObject({ available: false, kind: "bot" });
+  });
+
+  it("paginates activity via per_page/before query params (PR 5, issue #2287)", async () => {
+    const records = Array.from({ length: 5 }, (_, i) => ({
+      orderId: `ord-${i}`,
+      participantId: "sauron",
+      symbol: "NVDA",
+      side: "buy" as const,
+      quantity: 1,
+      filledQuantity: 1,
+      status: "filled",
+      at: `2026-08-2${i}T00:00:00.000Z`,
+      source: "stream" as const,
+    }));
+    const config = configWith({ readTradeActivity: async () => records });
+
+    const first = fakeRes();
+    await serveDeskJson(
+      first.res,
+      "/api/desk/sauron/activity",
+      "/api/desk/sauron/activity?per_page=2",
+      config,
+    );
+    const firstBody = answered(first.out) as {
+      activity: { orderId: string }[];
+      nextCursor: string;
+    };
+    expect(firstBody.activity.map((r) => r.orderId)).toEqual(["ord-4", "ord-3"]);
+    expect(firstBody.nextCursor).toBe("2026-08-23T00:00:00.000Z");
+
+    const next = fakeRes();
+    await serveDeskJson(
+      next.res,
+      "/api/desk/sauron/activity",
+      `/api/desk/sauron/activity?per_page=2&before=${firstBody.nextCursor}`,
+      config,
+    );
+    const nextBody = answered(next.out) as { activity: { orderId: string }[] };
+    expect(nextBody.activity.map((r) => r.orderId)).toEqual(["ord-2", "ord-1"]);
+  });
+
+  it("ignores a malformed before cursor on /decisions rather than emptying the page", async () => {
+    const config = configWith({
+      readDecisions: async () => [
+        {
+          at: 1,
+          personaId: "sauron",
+          mode: "observe",
+          rawIntents: [],
+          guardedIntents: [],
+          outcomes: [],
+        },
+      ],
+    });
+    const { res, out } = fakeRes();
+    await serveDeskJson(
+      res,
+      "/api/desk/sauron/decisions",
+      "/api/desk/sauron/decisions?before=not-a-number",
+      config,
+    );
+    expect((answered(out).cycles as unknown[]).length).toBe(1);
   });
 
   it("serves the pulse with each section owning its empty state", async () => {
     const { res, out } = fakeRes();
-    await serveDeskJson(res, "/api/desk/sauron/pulse", configWith());
+    await serveDeskJson(res, "/api/desk/sauron/pulse", "/api/desk/sauron/pulse", configWith());
     const pulse = answered(out).pulse as Record<string, unknown>;
     expect(pulse.curve).toBeNull(); // no history wired — still accruing
     expect(pulse.weeks).toEqual([]); // no closed trade

@@ -1,6 +1,15 @@
-import { deskActivityView, deskView } from "../../src/observatory/desk-json-view.js";
+import {
+  deskActivityView as deskActivityPage,
+  deskView,
+} from "../../src/observatory/desk-json-view.js";
 import { orderOriginIndex } from "../../src/observatory/order-origin.js";
 import type { ParticipantSnapshot } from "../../src/observatory/participant-snapshot.js";
+
+/** PR 5 (issue #2287) made `deskActivityView` return a paginated `{activity, nextCursor}` page
+ *  rather than a bare array — unwrap `.activity` once here so the existing bare-array assertions
+ *  below stay unchanged. */
+const deskActivityView = (...args: Parameters<typeof deskActivityPage>) =>
+  deskActivityPage(...args).activity;
 
 /** The desk's JSON twin: same figures as the blotter, formatted once, filterable raws alongside. */
 
@@ -98,5 +107,26 @@ describe("deskActivityView", () => {
   it("defaults every row to unknown with no evidence — knowledge and authorship stay separate", () => {
     // `source: "broker"` says the reconcile learned the row; it says nothing about who placed it.
     expect(deskActivityView([line({ source: "broker" })])[0]?.origin).toBe("unknown");
+  });
+
+  describe("pagination (PR 5, issue #2287)", () => {
+    const lines = Array.from({ length: 5 }, (_, i) =>
+      line({ orderId: `ord-${i}`, at: `2026-08-28T14:0${i}:00Z` }),
+    );
+
+    it("clamps limit to [1, 100] and omits nextCursor when the page isn't full", () => {
+      const page = deskActivityPage(lines, undefined, { limit: 1_000 });
+      expect(page.activity).toHaveLength(5);
+      expect(page).not.toHaveProperty("nextCursor");
+    });
+
+    it("pages with an exclusive before cursor, newest first", () => {
+      const first = deskActivityPage(lines, undefined, { limit: 2 });
+      expect(first.activity.map((e) => e.orderId)).toEqual(["ord-4", "ord-3"]);
+      expect(first.nextCursor).toBe("2026-08-28T14:03:00Z");
+
+      const next = deskActivityPage(lines, undefined, { limit: 2, before: first.nextCursor });
+      expect(next.activity.map((e) => e.orderId)).toEqual(["ord-2", "ord-1"]);
+    });
   });
 });

@@ -1,6 +1,7 @@
 import type { DecisionRecord } from "../autonomous/decision-record.js";
 import type { OrderForecast } from "../domain/types.js";
 import type { GuardRefusalReason } from "../engine/guards.js";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, paginateDesc } from "../server/pagination.js";
 import { formatPrice } from "./desk-data.js";
 
 /**
@@ -76,8 +77,6 @@ export interface DecisionCycleView {
   readonly halted?: string;
 }
 
-const CYCLE_CAP = 50;
-
 function cycleStatus(record: DecisionRecord): CycleStatus {
   if (record.halted) return "halted";
   if (record.outcomes.some((o) => o.action === "placed")) return "placed";
@@ -109,55 +108,69 @@ function cycleHeadline(record: DecisionRecord, status: CycleStatus): string {
   return parts.join(" · ");
 }
 
-export function decisionCyclesView(records: readonly DecisionRecord[]): DecisionCycleView[] {
-  return [...records]
-    .sort((a, b) => b.at - a.at)
-    .slice(0, CYCLE_CAP)
-    .map((record) => {
-      const status = cycleStatus(record);
-      return {
-        at: new Date(record.at).toISOString(),
-        mode: record.mode,
-        status,
-        headline: cycleHeadline(record, status),
-        rawCount: record.rawIntents.length,
-        guardedCount: record.guardedIntents.length,
-        outcomes: record.outcomes.map((outcome) => ({
-          symbol: outcome.intent.symbol,
-          side: outcome.intent.side,
-          quantity: outcome.intent.quantity,
-          ...(outcome.intent.playbookId ? { playbook: outcome.intent.playbookId } : {}),
-          ...(outcome.intent.strategy ? { strategy: outcome.intent.strategy } : {}),
-          reason: outcome.intent.reason,
-          ...(outcome.intent.expectation ? { expectation: outcome.intent.expectation } : {}),
-          ...(outcome.intent.forecast ? { forecast: outcome.intent.forecast } : {}),
-          action: outcome.action,
-          ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
-          ...(outcome.result?.filledPrice !== undefined
-            ? {
-                fill: `${outcome.result.filledQuantity ?? outcome.intent.quantity} @ ${formatPrice(outcome.result.filledPrice)}`,
-              }
-            : {}),
-        })),
-        ...(status === "refused"
+export interface DecisionCyclesPage {
+  readonly cycles: DecisionCycleView[];
+  /** Epoch ms of the oldest cycle on this page — pass back as `before` to fetch the next page.
+   *  Absent means this page wasn't full, so there's nothing further back to fetch. */
+  readonly nextCursor?: number;
+}
+
+export function decisionCyclesView(
+  records: readonly DecisionRecord[],
+  opts: { readonly limit?: number; readonly before?: number } = {},
+): DecisionCyclesPage {
+  const limit = Math.max(1, Math.min(opts.limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
+  const { items, nextCursor } = paginateDesc(
+    [...records].sort((a, b) => b.at - a.at),
+    (record) => record.at,
+    { limit, ...(opts.before !== undefined ? { before: opts.before } : {}) },
+  );
+  const cycles = items.map((record) => {
+    const status = cycleStatus(record);
+    return {
+      at: new Date(record.at).toISOString(),
+      mode: record.mode,
+      status,
+      headline: cycleHeadline(record, status),
+      rawCount: record.rawIntents.length,
+      guardedCount: record.guardedIntents.length,
+      outcomes: record.outcomes.map((outcome) => ({
+        symbol: outcome.intent.symbol,
+        side: outcome.intent.side,
+        quantity: outcome.intent.quantity,
+        ...(outcome.intent.playbookId ? { playbook: outcome.intent.playbookId } : {}),
+        ...(outcome.intent.strategy ? { strategy: outcome.intent.strategy } : {}),
+        reason: outcome.intent.reason,
+        ...(outcome.intent.expectation ? { expectation: outcome.intent.expectation } : {}),
+        ...(outcome.intent.forecast ? { forecast: outcome.intent.forecast } : {}),
+        action: outcome.action,
+        ...(outcome.result ? { resultStatus: outcome.result.status } : {}),
+        ...(outcome.result?.filledPrice !== undefined
           ? {
-              // Prefer the attributed set (`refusals`, from `applyGuardsWithVerdicts`) when this
-              // record captured it; fall back to the bare raw intents (no guard named) for a
-              // record written before that field existed, or a path that doesn't populate it yet.
-              refusedIntents: (
-                record.refusals ?? record.rawIntents.map((intent) => ({ intent }))
-              ).map((r) => ({
-                symbol: r.intent.symbol,
-                side: r.intent.side,
-                quantity: r.intent.quantity,
-                ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
-                reason: r.intent.reason,
-                ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
-                ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
-              })),
+              fill: `${outcome.result.filledQuantity ?? outcome.intent.quantity} @ ${formatPrice(outcome.result.filledPrice)}`,
             }
           : {}),
-        ...(record.halted ? { halted: record.halted } : {}),
-      };
-    });
+      })),
+      ...(status === "refused"
+        ? {
+            // Prefer the attributed set (`refusals`, from `applyGuardsWithVerdicts`) when this
+            // record captured it; fall back to the bare raw intents (no guard named) for a
+            // record written before that field existed, or a path that doesn't populate it yet.
+            refusedIntents: (
+              record.refusals ?? record.rawIntents.map((intent) => ({ intent }))
+            ).map((r) => ({
+              symbol: r.intent.symbol,
+              side: r.intent.side,
+              quantity: r.intent.quantity,
+              ...(r.intent.strategy ? { strategy: r.intent.strategy } : {}),
+              reason: r.intent.reason,
+              ...(r.intent.expectation ? { expectation: r.intent.expectation } : {}),
+              ...("reason" in r ? { guardReason: REFUSAL_LABEL[r.reason] } : {}),
+            })),
+          }
+        : {}),
+      ...(record.halted ? { halted: record.halted } : {}),
+    };
+  });
+  return { cycles, ...(nextCursor !== undefined ? { nextCursor } : {}) };
 }
