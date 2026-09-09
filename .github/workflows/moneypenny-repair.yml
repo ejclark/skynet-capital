@@ -36,6 +36,15 @@ name: Moneypenny Repair (CI self-healing)
 # named target" job, so a conflicted PR reuses it rather than earning a second workflow file. Its
 # own memory (the router's `conflict-flagged` label) is the dedupe; this lane adds none of its own
 # for that path, deliberately — one label owner, not two.
+#
+# A THIRD ENTRY POINT (the event-research stall gap): the router's audit already flags a stalled
+# `[event-research]` issue (`flag-stall`) with a comment, but nothing ever acted on it — the comment
+# is a warning nobody reads, not a repair. `never-assessed` events are unconditionally due, so
+# `event-scan.mjs --due` keeps re-listing a stuck event forever, but a `build-events` matrix leg
+# that dies mid-run touches nothing on the receipt issue itself (only a merged PR does), so the same
+# failure repeats silently, push after push. `issue_number` hands this lane the stalled issue,
+# reusing the same generic dispatch job a third way. `stall-flagged` is the router's memory, same
+# division as `conflict-flagged` above.
 
 on:
   # THE LIST IS REQUIRED IN PRACTICE. Dropping it (to catch unparseable files, whose runs are named
@@ -63,7 +72,11 @@ on:
     inputs:
       pr_number:
         description: PR number to attempt a conflict repair on
-        required: true
+        required: false
+        type: string
+      issue_number:
+        description: Event-research issue number to diagnose a stall on
+        required: false
         type: string
 
 permissions:
@@ -74,10 +87,11 @@ permissions:
 
 concurrency:
   # Per signature-ish: one repair-lane run per watched workflow at a time, never cancelling a triage
-  # mid-file (a half-filed issue is worse than a queued one). A `workflow_dispatch` conflict-repair
-  # carries no `workflow_run` object at all, so it keys on the PR number instead — two different
-  # PRs' repairs must never serialize behind each other, but the same PR dispatched twice should.
-  group: moneypenny-repair-${{ github.event.workflow_run.name || format('pr-{0}', github.event.inputs.pr_number) }}
+  # mid-file (a half-filed issue is worse than a queued one). A `workflow_dispatch` carries no
+  # `workflow_run` object at all, so it keys on whichever input was given instead — different
+  # targets (two PRs, two stalled issues, a PR and an issue) must never serialize behind each other,
+  # but the same target dispatched twice should.
+  group: moneypenny-repair-${{ github.event.workflow_run.name || (github.event.inputs.issue_number != '' && format('issue-{0}', github.event.inputs.issue_number)) || format('pr-{0}', github.event.inputs.pr_number) }}
   cancel-in-progress: false
 
 jobs:
@@ -136,7 +150,7 @@ jobs:
           token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           blocked-message: >-
             CLAUDE_CODE_OAUTH_TOKEN missing —
-            ${{ needs.triage.outputs.issue != '' && format('issue #{0}', needs.triage.outputs.issue) || format('PR #{0}', github.event.inputs.pr_number) }}
+            ${{ needs.triage.outputs.issue != '' && format('issue #{0}', needs.triage.outputs.issue) || (github.event.inputs.issue_number != '' && format('stalled issue #{0}', github.event.inputs.issue_number)) || format('PR #{0}', github.event.inputs.pr_number) }}
             carries the evidence but nothing will repair it.
 
       - if: steps.gate.outputs.armed == 'true' && needs.triage.outputs.issue != ''
@@ -165,9 +179,9 @@ jobs:
 
       # #909's second entry point — a `workflow_dispatch` conflict-repair carries no repair issue at
       # all, just a PR number. Same job, same gate, a different instruction set: mutually exclusive
-      # with the step above by construction (one needs `needs.triage.outputs.issue`, this needs
-      # `workflow_dispatch`), so exactly one of the two ever runs per invocation of this job.
-      - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch'
+      # with the other workflow_dispatch step by construction (`pr_number` vs `issue_number`, never
+      # both on the same dispatch), so exactly one of the three steps here ever runs per invocation.
+      - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.pr_number != ''
         uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
         with:
           allowed_bots: "github-actions,claude"
@@ -182,3 +196,28 @@ jobs:
             your complete instruction set for this run.
 
             The PR to repair is #${{ github.event.inputs.pr_number }} in this repo.
+
+      # The event-research stall entry point (the audit's `flag-stall` intent, per the header note
+      # above) — same job, same gate, a third instruction set. `issue_number` is only ever set
+      # alongside `pr_number` being empty (the router never fires both in one dispatch), so this
+      # stays mutually exclusive with the step above by construction, same as that step is with the
+      # `needs.triage.outputs.issue` one.
+      - if: steps.gate.outputs.armed == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.issue_number != ''
+        uses: anthropics/claude-code-action@9c5ddab2e6d17b83ea679153b31f1d5f023cf636  # v1 tag (2026-09-08 pin — v2.1.265 broke native-binary install, see docs/LESSONS.md)
+        with:
+          allowed_bots: "github-actions,claude"
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          # WebSearch/WebFetch on top of the other repair lanes' tool list — diagnosing a stalled
+          # research pulse can end with this session doing the research itself (event-research.md's
+          # own tool list), not just fixing a script. --max-turns matches build-events' own ceiling:
+          # the heaviest outcome here is the same never-assessed write-up a normal matrix leg does.
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch" --model claude-opus-5 --max-turns 150
+          # The repair envelope lives in .github/prompts/moneypenny-event-stall-repair.md, same
+          # reasoning as the other two prompts above — never in this workflow file.
+          prompt: |
+            Read `.github/prompts/moneypenny-event-stall-repair.md` in this repo and follow it exactly.
+            It is your complete instruction set for this run.
+
+            The stalled issue is #${{ github.event.inputs.issue_number }} in this repo.
