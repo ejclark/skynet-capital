@@ -1,0 +1,11 @@
+{
+  "id": "uk-cpi-2026-09-16",
+  "kind": "macro-print",
+  "title": "UK CPI — August 2026 consumer price inflation (ONS, 07:00 London / 02:00 ET), the last data the MPC sees before it votes",
+  "date": "2026-09-16",
+  "status": "estimate",
+  "source": "EST: ons.gov.uk/releases/consumerpriceinflationukaugust2026, fetched direct 2026-09-09 (HTTP 200) — the ONS release page reads 'Consumer price inflation, UK: August 2026', scheduled '16 September 2026 at 7:00am', not yet published. Primary-sourced (the publisher's own release calendar), but filed estimate on this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has BLS:/BEA:/CENSUS: and no slot for the UK Office for National Statistics. Discovered in the never-assessed initial research of boe-decision-2026-09-17, 2026-09-09",
+  "impact": "low",
+  "symbols": [],
+  "notes": "PROPOSED BY THE boe-decision-2026-09-17 LANE, 2026-09-09. Why it matters to this calendar at all: it lands 07:00 London the morning BEFORE the 2026-09-17 MPC announcement, so it is the last input to a vote where three members (Greene, Mann, Pill) already dissented FOR a hike in July and the question is whether a fourth and fifth join them. July 2026 base: headline 2.9% y/y (from a 15-month low of 2.6%), core 2.6% unchanged, services 3.4% (from 3.6%), the jump 'almost entirely energy' with housing/household services 4.1% on a 14.7% gas rise after an Ofgem cap change (ONS July bulletin + press, 2026-09-09). Tiered LOW, deliberately: this is a UK-only print, symbols: [] , no house playbook is rates-keyed, and its only route to this book is the same second-order global-term-premium channel fomc-2026-09-16 already owns. It earns a slot as the MPC's own input and as an attribution anchor, not as a tradable event. Estimate widens caution only."
+}
