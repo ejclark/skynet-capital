@@ -1,0 +1,11 @@
+{
+  "id": "boe-decision-2026-12-17",
+  "kind": "macro-print",
+  "title": "Bank of England MPC decision — the last 2026 meeting, no Monetary Policy Report (12:00 London / 07:00 ET)",
+  "date": "2026-12-17",
+  "status": "estimate",
+  "source": "EST: bankofengland.co.uk/monetary-policy/upcoming-mpc-dates, fetched direct 2026-09-09 (HTTP 200) — the 2026 announcement table's final row is '17 December', flagged as NOT including a Monetary Policy Report (the 2026 MPR months are February, April, July and November). Filed estimate per this lane's no-self-confirm limit and because the confirmed-prefix taxonomy in market-events-data.ts has FED: and no slot for a non-Fed central bank. Discovered in the never-assessed initial research of boe-decision-2026-11-05, 2026-09-09",
+  "impact": "medium",
+  "symbols": [],
+  "notes": "PROPOSED BY THE boe-decision-2026-11-05 LANE, 2026-09-09. Why it is filed: it is the scoring venue for a forward test already registered by a sibling lane — FT-boe-decision-2026-09-17-3, which takes the under on the strip's December path — and it is the meeting that absorbs whatever the 2026-11-05 decision does not deliver. The strip on 2026-09-08 (centralbank.watch, fetched 2026-09-09) prices 94.6% HIGHER by this date at an implied 4.11%, against 54.2% at 11-05: the December number is CUMULATIVE, so a hold on 11-05 forces the entire priced tightening into this single meeting, and a hike on 11-05 leaves December pricing a second one. That makes December the conditional half of one two-meeting question rather than an independent event, which is why it is proposed together with the November canonical file rather than left to be discovered later. It carries no forecast round and no press conference: the next Monetary Policy Report is 2027-02-04 on the Bank's provisional 2027 list. Tiered medium to match the November and September entries; NO PRICE CHANNEL IS CLAIMED: symbols: [], no house playbook is rates- or sterling-keyed. Estimate widens caution only."
+}
