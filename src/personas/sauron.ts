@@ -75,6 +75,17 @@ export class SauronPersona extends ConfiguredPersona<SauronConfig> {
           quantity: held,
           type: "market",
           reason: `Order restored: euphoria ${sentiment.toFixed(2)} exhausting (momentum ${momentum.toFixed(2)}) — selling into the greed`,
+          strategy: "sauron-euphoria-fade",
+          // No stop rides on this call: the exit is full (quantity: held), so there is nothing
+          // left open to invalidate against a config threshold — only the directional call itself
+          // (that the euphoria was actually exhausted) can be scored later.
+          expectation:
+            "Expect the crowd's exhausted euphoria to fade from here. The exit is complete, so no further position rides on this call being right.",
+          forecast: {
+            direction: "down",
+            invalidator:
+              "sentiment or momentum strengthens further from here instead of rolling over — the euphoria was not yet exhausted",
+          },
         });
         continue;
       }
@@ -99,6 +110,20 @@ export class SauronPersona extends ConfiguredPersona<SauronConfig> {
             quantity,
             type: "market",
             reason: `Imposing order: panic ${sentiment.toFixed(2)} exhausting (momentum ${momentum.toFixed(2)}) — claiming the discarded at ${conviction.toFixed(2)}x`,
+            strategy: "sauron-panic-claim",
+            // Written down here because it is otherwise invisible: plain Sauron (unlike
+            // sauron-hardcore.ts, which carries a stopMomentum) has NO stop-loss rule at all.
+            // Once this fills, the only planned exit is the reciprocal euphoria-fade condition —
+            // sentiment recovering to euphoriaSentiment with momentum rolled over — however long
+            // that takes. This is a real risk-management gap, not a copy omission; see
+            // docs/BOTS-SAURON.md's doctrine call sheet.
+            expectation:
+              "Expect a mean-reversion bounce off the fear low. No stop exists in this config: the position is held until the reciprocal euphoria-fade condition fires on this symbol, however long that takes.",
+            forecast: {
+              direction: "up",
+              invalidator:
+                "sentiment or momentum deteriorates further from here instead of rebounding — the panic was not yet exhausted",
+            },
           });
         }
       }

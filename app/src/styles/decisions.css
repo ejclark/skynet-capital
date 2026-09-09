@@ -54,6 +54,14 @@
 .cycle-observed .cycle-glyph {
   background: var(--accent);
 }
+/* Refused: a real signal the house's own risk policy overrode, not a failure — so it gets its OWN
+   shape (a hollow square, distinct from rejected's hollow ring and halted's filled square) rather
+   than reusing --neg's alarm colour (docs/BRAND.md: hue never carries meaning alone). */
+.cycle-refused .cycle-glyph {
+  background: transparent;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
 .cycle-headline {
   font-size: 13px;
   font-weight: 600;
@@ -116,6 +124,10 @@
   color: var(--neg);
   border-color: var(--neg);
 }
+.cycle-action-refused {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .cycle-intent {
   font-weight: 600;
 }
@@ -129,4 +141,17 @@
   font-style: italic;
   font-size: 12px;
   padding-left: 2px;
+}
+/* The forward claim, distinct from `.cycle-reason` (why it acted): what it predicted, and — via
+   `.cycle-invalidator` — what would prove that prediction wrong. Non-italic so it reads as a
+   separate, structured fact rather than a continuation of the persona's own sentence. */
+.cycle-expectation {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  padding-left: 2px;
+}
+.cycle-invalidator {
+  color: var(--text);
 }

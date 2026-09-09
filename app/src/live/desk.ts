@@ -141,25 +141,48 @@ export async function fetchDeskActivity(id: string): Promise<DeskActivity> {
   return (await res.json()) as DeskActivity;
 }
 
+/** Mirrors `domain/types.ts`'s `OrderForecast` — the structured, scoreable half of a persona's
+ *  forward claim, kept alongside the free-form `expectation` prose. */
+export interface DecisionForecast {
+  readonly direction: "up" | "down";
+  readonly magnitudePct?: number;
+  readonly horizonMs?: number;
+  readonly invalidator: string;
+}
+
 export interface DecisionOutcome {
   readonly symbol: string;
   readonly side: string;
   readonly quantity: number;
   readonly playbook?: string;
+  readonly strategy?: string;
   readonly reason: string;
+  readonly expectation?: string;
+  readonly forecast?: DecisionForecast;
   readonly action: "placed" | "rejected" | "observed" | "cooldown-skipped";
   readonly resultStatus?: string;
   readonly fill?: string;
 }
 
+/** A raw intent the guards refused in full this cycle — see `decision-json-view.ts`. */
+export interface RefusedIntent {
+  readonly symbol: string;
+  readonly side: string;
+  readonly quantity: number;
+  readonly strategy?: string;
+  readonly reason: string;
+  readonly expectation?: string;
+}
+
 export interface DecisionCycle {
   readonly at: string;
   readonly mode: "observe" | "live";
-  readonly status: "halted" | "placed" | "rejected" | "observed" | "quiet";
+  readonly status: "halted" | "placed" | "rejected" | "observed" | "refused" | "quiet";
   readonly headline: string;
   readonly rawCount: number;
   readonly guardedCount: number;
   readonly outcomes: readonly DecisionOutcome[];
+  readonly refusedIntents?: readonly RefusedIntent[];
   readonly halted?: string;
 }
 

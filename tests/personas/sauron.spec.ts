@@ -14,6 +14,22 @@ describe("SauronPersona", () => {
       expect(intents[0]).toMatchObject({ symbol: "NVDA", side: "buy" });
     });
 
+    it("carries a structured strategy tag and forward claim — no stop exists in this config", () => {
+      const context = aContext({ NVDA: { last: 100, momentum: 0.01, sentiment: -0.8 } });
+
+      const intents = persona.decide(context, aPortfolio());
+
+      expect(intents[0]).toMatchObject({
+        strategy: "sauron-panic-claim",
+        forecast: { direction: "up" },
+      });
+      expect(intents[0]?.expectation).toBeTruthy();
+      expect(intents[0]?.forecast?.invalidator).toBeTruthy();
+      // The finding this PR exists to surface: plain Sauron has no stopMomentum field at all
+      // (unlike sauron-hardcore.ts) — the forward claim must say so rather than inventing a stop.
+      expect(intents[0]?.expectation).toContain("No stop exists");
+    });
+
     it("sizes up with conviction the deeper the panic ran", () => {
       const shallow = persona.decide(
         aContext({ NVDA: { last: 100, momentum: 0.01, sentiment: -0.7 } }),
@@ -36,6 +52,19 @@ describe("SauronPersona", () => {
       const intents = persona.decide(context, portfolio);
 
       expect(intents[0]).toMatchObject({ symbol: "NVDA", side: "sell", quantity: 300 });
+    });
+
+    it("carries a structured strategy tag and forward claim on the fade leg", () => {
+      const context = aContext({ NVDA: { last: 200, momentum: -0.01, sentiment: 0.8 } });
+      const portfolio = aPortfolio({ positions: [aPosition({ symbol: "NVDA", quantity: 300 })] });
+
+      const intents = persona.decide(context, portfolio);
+
+      expect(intents[0]).toMatchObject({
+        strategy: "sauron-euphoria-fade",
+        forecast: { direction: "down" },
+      });
+      expect(intents[0]?.forecast?.invalidator).toBeTruthy();
     });
   });
 
